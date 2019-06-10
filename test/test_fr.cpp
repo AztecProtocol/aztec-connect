@@ -29,35 +29,32 @@ TEST(fr, mul)
     constexpr size_t N = 10;
     for (size_t i = 0; i < N; ++i)
     {
-        uint64_t inputs[8] = {0};
-        int got_entropy = getentropy((void *)&inputs[0], 64);
+        fr::field_t inputs[2];
+        int got_entropy = getentropy((void *)&inputs[0].data[0], 64);
         EXPECT_EQ(got_entropy, 0);
-        uint64_t *a = &inputs[0];
-        uint64_t *b = &inputs[4];
-        // uint64_t a[4] = { 1, 0, 0, 0 };
-        // uint64_t b[4] = { 2, 0, 0, 0 };
-        uint64_t result[4] = {0};
-        a[3] &= 0x7fffffffffffffff;
-        b[3] &= 0x7fffffffffffffff;
+        inputs[0].data[3] &= 0x7fffffffffffffff;
+        inputs[1].data[3] &= 0x7fffffffffffffff;
+
+        fr::field_t result;
 
         libff::alt_bn128_Fr a_fr;
-        a_fr.mont_repr.data[0] = a[0];
-        a_fr.mont_repr.data[1] = a[1];
-        a_fr.mont_repr.data[2] = a[2];
-        a_fr.mont_repr.data[3] = a[3];
+        a_fr.mont_repr.data[0] = inputs[0].data[0];
+        a_fr.mont_repr.data[1] = inputs[0].data[1];
+        a_fr.mont_repr.data[2] = inputs[0].data[2];
+        a_fr.mont_repr.data[3] = inputs[0].data[3];
 
         libff::bigint<4> b_bigint;
-        b_bigint.data[0] = b[0];
-        b_bigint.data[1] = b[1];
-        b_bigint.data[2] = b[2];
-        b_bigint.data[3] = b[3];
+        b_bigint.data[0] = inputs[1].data[0];
+        b_bigint.data[1] = inputs[1].data[1];
+        b_bigint.data[2] = inputs[1].data[2];
+        b_bigint.data[3] = inputs[1].data[3];
 
-        fr::mul(a, b, result);
+        fr::mul(inputs[0], inputs[1], result);
         a_fr.mul_reduce(b_bigint);
 
         for (size_t j = 0; j < 4; ++j)
         {
-            EXPECT_EQ(result[j], a_fr.mont_repr.data[j]);
+            EXPECT_EQ(result.data[j], a_fr.mont_repr.data[j]);
         }
     }
 }
@@ -67,197 +64,167 @@ TEST(fr, sqr)
     constexpr size_t N = 1;
     for (size_t i = 0; i < N; ++i)
     {
-        uint64_t inputs[8] = {0};
-        int got_entropy = getentropy((void *)&inputs[0], 64);
+        fr::field_t a;
+        int got_entropy = getentropy((void *)&a.data[0], 32);
         EXPECT_EQ(got_entropy, 0);
-        uint64_t *a = &inputs[0];
-        a[3] &= 0x7fffffffffffffff;
-        // uint64_t modulus[4] = {
-        //     uint256::modulus[0],
-        //     uint256::modulus[1],
-        //     uint256::modulus[2],
-        //     uint256::modulus[3]
-        // };
-        // for (size_t j = 0; j < 4; ++j)
-        // {
-        //     uint256::subtract(a, &modulus[0], a);
-        // }
+        a.data[3] &= 0x7fffffffffffffff;
 
+        fr::field_t result;
+        fr::field_t expected;
 
-        uint64_t result[4] = { 0, 0, 0, 0  };
-        uint64_t expected[4] = { 0, 0, 0, 0 };
-
-        fr::mul(&a[0], &a[0], &expected[0]);
-        fr::sqr(&a[0], &result[0]);
+        fr::mul(a, a, expected);
+        fr::sqr(a, result);
 
         for (size_t j = 0; j < 4; ++j)
         {            
-            EXPECT_EQ(result[j], expected[j]);
+            EXPECT_EQ(result.data[j], expected.data[j]);
         }
     }
 }
 
 TEST(fr, add)
 {
-    uint64_t inputs[8] = {0};
-    int got_entropy = getentropy((void *)&inputs[0], 64);
-    inputs[3] &= 0x7fffffffffffffff;
-    inputs[7] &= 0x7fffffffffffffff;
+    fr::field_t inputs[2];
+    int got_entropy = getentropy((void *)&inputs[0].data[0], 64);
     EXPECT_EQ(got_entropy, 0);
+    inputs[0].data[3] &= 0x7fffffffffffffff;
+    inputs[1].data[3] &= 0x7fffffffffffffff;
+    
     libff::alt_bn128_Fr a_fr;
     libff::alt_bn128_Fr b_fr;
-    to_bigint(&inputs[0], a_fr.mont_repr);
-    to_bigint(&inputs[4], b_fr.mont_repr);
-    uint64_t* a = &inputs[0];
-    uint64_t* b = &inputs[4];
-    uint64_t result[4] = {0};
+    to_bigint(&inputs[0].data[0], a_fr.mont_repr);
+    to_bigint(&inputs[1].data[0], b_fr.mont_repr);
 
-    fr::add(a, b, result);
+    fr::field_t result;
+
+    fr::add(inputs[0], inputs[1], result);
     a_fr = a_fr + b_fr;
     for (size_t j = 0; j < 4; ++j)
     {
-        EXPECT_EQ(result[j], a_fr.mont_repr.data[j]);
+        EXPECT_EQ(result.data[j], a_fr.mont_repr.data[j]);
     }
 }
 
 TEST(fr, sub)
 {
-    uint64_t inputs[8] = {0};
-    int got_entropy = getentropy((void *)&inputs[0], 64);
-    inputs[3] &= 0x7fffffffffffffff;
-    inputs[7] &= 0x7fffffffffffffff;
+    fr::field_t inputs[2];
+    int got_entropy = getentropy((void *)&inputs[0].data[0], 64);
     EXPECT_EQ(got_entropy, 0);
+    inputs[0].data[3] &= 0x7fffffffffffffff;
+    inputs[1].data[3] &= 0x7fffffffffffffff;
+    
     libff::alt_bn128_Fr a_fr;
     libff::alt_bn128_Fr b_fr;
-    to_bigint(&inputs[0], a_fr.mont_repr);
-    to_bigint(&inputs[4], b_fr.mont_repr);
-    uint64_t* a = &inputs[0];
-    uint64_t* b = &inputs[4];
-    uint64_t result[4] = {0};
+    to_bigint(&inputs[0].data[0], a_fr.mont_repr);
+    to_bigint(&inputs[1].data[0], b_fr.mont_repr);
 
-    fr::sub(a, b, result);
+    fr::field_t result;
+
+    fr::sub(inputs[0], inputs[1], result);
     a_fr = a_fr - b_fr;
     for (size_t j = 0; j < 4; ++j)
     {
-        EXPECT_EQ(result[j], a_fr.mont_repr.data[j]);
+        EXPECT_EQ(result.data[j], a_fr.mont_repr.data[j]);
     }
 }
 
 TEST(fr, to_montgomery_form)
 {
-    libff::init_alt_bn128_params();
-    uint64_t inputs[4] = {0};
-    int got_entropy = getentropy((void *)&inputs[0], 32);
+    fr::field_t input;
+    int got_entropy = getentropy((void *)&input.data[0], 32);
     EXPECT_EQ(got_entropy, 0);
+    input.data[3] &= 0x7fffffffffffffff;
+    while(gt(input, fr::modulus_plus_one))
+    {
+        fr::sub(input, fr::modulus, input);
+    }
 
     libff::bigint<4> input_bigint;
-    to_bigint(&inputs[0], input_bigint);
+    to_bigint(&input.data[0], input_bigint);
     libff::alt_bn128_Fr expected = libff::alt_bn128_Fr(input_bigint);
     
-    uint64_t result[4] = {0};
+    fr::field_t result;
 
-    fr::to_montgomery_form(inputs, result);
+    fr::to_montgomery_form(input, result);
 
     for (size_t j = 0; j < 4; ++j)
     {
-        EXPECT_EQ(result[j], expected.mont_repr.data[j]);
+        EXPECT_EQ(result.data[j], expected.mont_repr.data[j]);
     }
 }
 
 TEST(fr, from_montgomery_form)
 {
-    libff::init_alt_bn128_params();
-    uint64_t inputs[4] = {0};
-    int got_entropy = getentropy((void *)&inputs[0], 32);
+    fr::field_t input;
+    int got_entropy = getentropy((void *)&input.data[0], 32);
     EXPECT_EQ(got_entropy, 0);
+    input.data[3] &= 0x7fffffffffffffff;
+    while(gt(input, fr::modulus_plus_one))
+    {
+        fr::sub(input, fr::modulus, input);
+    }
 
     libff::bigint<4> input_bigint;
-    to_bigint(inputs, input_bigint);
+    to_bigint(&input.data[0], input_bigint);
     libff::alt_bn128_Fr libff_fr = libff::alt_bn128_Fr(input_bigint);
     libff::bigint<4> expected_bigint = libff_fr.as_bigint();
 
-    uint64_t result[4] = {0};
-    fr::to_montgomery_form(inputs, result);
+    fr::field_t result;
+    fr::to_montgomery_form(input, result);
     fr::from_montgomery_form(result, result);
     for (size_t j = 0; j < 4; ++j)
     {
-        EXPECT_EQ(result[j], expected_bigint.data[j]);
+        EXPECT_EQ(result.data[j], expected_bigint.data[j]);
     }
 }
 
-TEST(fr, montgomery_round_trip_libff)
-{
-    libff::init_alt_bn128_params();
-    uint64_t inputs[4] = {0};
-    int got_entropy = getentropy((void *)&inputs[0], 32);
-    inputs[3] &= 0x0fffffffffffffff;
-
-    EXPECT_EQ(got_entropy, 0);
-
-    libff::bigint<4> input_bigint;
-    to_bigint(inputs, input_bigint);
-    libff::alt_bn128_Fr libff_fr = libff::alt_bn128_Fr(input_bigint);
-    libff::bigint<4> expected_bigint = libff_fr.as_bigint();
-
-    for (size_t j = 0; j < 4; ++j)
-    {
-        EXPECT_EQ(expected_bigint.data[j], inputs[j]);
-    }
-}
 
 TEST(fr, montgomery_round_trip)
 {
-    libff::init_alt_bn128_params();
-    uint64_t inputs[4] = {0};
-    int got_entropy = getentropy((void *)&inputs[0], 32);
+    fr::field_t input = { .data = { 0, 0, 0, 0 }};
+    int got_entropy = getentropy((void *)&input.data[0], 32);
     EXPECT_EQ(got_entropy, 0);
-    inputs[3] &= 0x0fffffffffffffff;
+    input.data[3] &= 0x7fffffffffffffff;
 
-    uint64_t a[4] = { inputs[0], inputs[1], inputs[2], inputs[3] };
+    while(gt(input, fr::modulus_plus_one))
+    {
+        fr::sub(input, fr::modulus, input);
+    }
+    // fr::field_t a = { .data = { 0, 0, 0, 0 }};
+
+    fr::field_t a = { .data = { input.data[0], input.data[1], input.data[2], input.data[3] }};
     fr::to_montgomery_form(a, a);
     fr::from_montgomery_form(a, a);
 
     for (size_t j = 0; j < 4; ++j)
     {
-        EXPECT_EQ(a[j], inputs[j]);
+        EXPECT_EQ(a.data[j], input.data[j]);
     }
 }
 
 TEST(fr, split_into_endomorphism_scalars)
 {
-    static uint64_t lambda[4] = {
-        0x93e7cede4a0329b3UL,
-        0x7d4fdca77a96c167UL,
-        0x8be4ba08b19a750aUL,
-        0x1cbd5653a5661c25UL
-    };
-
-    // static uint64_t normal_lambda[4] = {
-    //     0x8b17ea66b99c90dd,
-    //     0x5bfc41088d8daaa7,
-    //     0xb3c4d79d41a91758,
-    //     0x00
-    // };
-
-    uint64_t inputs[4] = {0};
-    int got_entropy = getentropy((void *)&inputs[0], 32);
+    fr::field_t input = { .data = { 0, 0, 0, 0 }};
+    int got_entropy = getentropy((void *)&input.data[0], 32);
     EXPECT_EQ(got_entropy, 0);
-    inputs[3] &= 0x0fffffffffffffff;
+    input.data[3] &= 0x7fffffffffffffff;
 
-    uint64_t k[4] = { inputs[0], inputs[1], inputs[2], inputs[3] };
-    uint64_t k1[4] = { 0 };
-    uint64_t k2[4] = { 0 };
-    
+
+    fr::field_t k = { .data = { input.data[0], input.data[1], input.data[2], input.data[3] }};
+    fr::field_t k1 = { .data = { 0, 0, 0, 0 }};
+    fr::field_t k2 = { .data = { 0, 0, 0, 0 }};
+    // fr::copy(input, k);
+
     // fr::random_element(k);
     fr::split_into_endomorphism_scalars(k, k1, k2);
 
-    uint64_t result[4] = { 0 };
+    fr::field_t result = { .data = { 0, 0, 0, 0 }};
     // uint64_t t[4] = { 0 };
     // fr::to_montgomery_form(k, k);
     fr::to_montgomery_form(k1, k1);
     fr::to_montgomery_form(k2, k2);
 
-    fr::mul(k2, lambda, result);
+    fr::mul(k2, fr::lambda, result);
     fr::sub(k1, result, result);
 
     // fr::normalize(result, result);
@@ -265,60 +232,36 @@ TEST(fr, split_into_endomorphism_scalars)
     fr::from_montgomery_form(result, result);
     for (size_t i = 0; i < 4; ++i)
     {
-        EXPECT_EQ(result[i], k[i]);
+        EXPECT_EQ(result.data[i], k.data[i]);
     }
 }
 
 TEST(fr, split_into_endomorphism_scalars_simple)
 {
-    static uint64_t lambda[4] = {
-        0x93e7cede4a0329b3UL,
-        0x7d4fdca77a96c167UL,
-        0x8be4ba08b19a750aUL,
-        0x1cbd5653a5661c25UL
-    };
 
-    uint64_t k[4] = { 1, 0, 0, 0 };
-    uint64_t k1[4] = { 0 };
-    uint64_t k2[4] = { 0 };
-    
-    fr::random_element(k);
+    fr::field_t input = { .data = { 1, 0, 0, 0 }};
+    fr::field_t k = { .data = { 0, 0, 0, 0 }};
+    fr::field_t k1 = { .data = { 0, 0, 0, 0 }};
+    fr::field_t k2 = { .data = { 0, 0, 0, 0 }};
+    fr::copy(input, k);
+
+    // fr::random_element(k);
     fr::split_into_endomorphism_scalars(k, k1, k2);
 
-    uint64_t result[4] = { 0 };
-    fr::mul(k2, lambda, result);
+    fr::field_t result = { .data = { 0, 0, 0, 0 }};
+    // uint64_t t[4] = { 0 };
+    // fr::to_montgomery_form(k, k);
+    fr::to_montgomery_form(k1, k1);
+    fr::to_montgomery_form(k2, k2);
+
+    fr::mul(k2, fr::lambda, result);
     fr::sub(k1, result, result);
 
+    // fr::normalize(result, result);
+    // fr::from_montgomery_form(result, result);
+    fr::from_montgomery_form(result, result);
     for (size_t i = 0; i < 4; ++i)
     {
-        EXPECT_EQ(result[i], k[i]);
+        EXPECT_EQ(result.data[i], k.data[i]);
     }
 }
-/*
-TEST(uint256, convert_to_fr)
-{
-    libff::init_alt_bn128_params()./;
-    constexpr size_t N = 10;
-    for (size_t i = 0; i < N; ++i)
-    {
-        uint64_t inputs[4] = { 0 };
-        int got_entropy = getentropy((void*)&inputs[0], 32);
-        EXPECT_EQ(got_entropy, 0);
-
-        libff::bigint<4> input_bigint;
-        input_bigint.data[0] = inputs[0];
-        input_bigint.data[1] = inputs[1];
-        input_bigint.data[2] = inputs[2];
-        input_bigint.data[3] = inputs[3];
-        libff::alt_bn128_Fr expected = libff::alt_bn128_Fr(input_bigint);
-
-        uint64_t result[4] = { 0 };
-        uint256::convert_to_fr(&inputs[0], &result[0]);
-
-        for (size_t j = 0; j < 4; ++j)
-        {
-            EXPECT_EQ(result[j], expected.mont_repr.data[j]);
-        }
-    }
-}
-*/

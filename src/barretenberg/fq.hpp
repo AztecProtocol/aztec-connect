@@ -14,29 +14,48 @@
 
 namespace fq
 {
-constexpr field_t curve_b = { 0x3, 0x0, 0x0, 0x0 };
+constexpr field_t curve_b = { .data = { 0x3, 0x0, 0x0, 0x0 } };
 
 // compute a * b, put result in r
-inline void mul(const uint64_t* a, const uint64_t* b, uint64_t* r);
+inline void mul(const field_t& a, const field_t& b, const field_t& r);
+
+// compute a * b, put result in r. Do not perform final reduction check
+inline void mul_without_reduction(const field_t& a, const field_t& b, const field_t& r);
 
 // compute a * a, put result in r
-inline void sqr(const uint64_t* a, const uint64_t* r);
+inline void sqr(const field_t& a, const field_t& r);
+
+// compute a * a, put result in r. Do not perform final reduction check
+inline void sqr_without_reduction(const field_t& a, const field_t& r);
 
 // compute a + b, put result in r
-inline void add(const uint64_t* a, const uint64_t* b, uint64_t* r);
+inline void add(const field_t& a, const field_t& b, field_t& r);
+
+// compute a + b, put result in r. Do not perform final reduction check
+inline void add_without_reduction(const field_t& a, const field_t& b, field_t& r);
 
 // compute a - b, put result in r
-inline void sub(const uint64_t* a, const uint64_t* b, uint64_t* r);
+inline void sub(const field_t& a, const field_t& b, field_t& r);
 
 /**
  * copy src into dest. AVX implementation requires words to be aligned on 32 byte bounary
  **/ 
-inline void copy(const uint64_t* src, uint64_t* dest);
+inline void copy(const field_t& src, field_t& dest);
+
+
+inline bool gt(const field_t& a, const field_t& b)
+{
+    bool t0 = a.data[3] > b.data[3];
+    bool t1 = (a.data[3] == b.data[3]) && (a.data[2] > b.data[2]);
+    bool t2 = (a.data[3] == b.data[3]) && (a.data[2] == b.data[2]) && (a.data[1] > b.data[1]);
+    bool t3 = (a.data[3] == b.data[3]) && (a.data[2] == b.data[2]) && (a.data[1] == b.data[1]) && (a.data[0] > b.data[0]);
+    return (t0 || t1 || t2 || t3);
+}
 
 /**
  * Multiply field_t `a` by the cube root of unity, modulo `q`. Store result in `r`
  **/ 
-inline void mul_beta(const uint64_t* a, uint64_t* r)
+inline void mul_beta(const field_t& a, field_t& r)
 {
     fq::mul(a, beta, r);
 }
@@ -44,7 +63,7 @@ inline void mul_beta(const uint64_t* a, uint64_t* r)
 /**
  * Negate field_t element `a`, mod `q`, place result in `r`
  **/ 
-inline void neg(const uint64_t* a, uint64_t* r)
+inline void neg(const field_t& a, field_t& r)
 {
     fq::sub(modulus, a, r);
 }
@@ -52,21 +71,21 @@ inline void neg(const uint64_t* a, uint64_t* r)
 /**
  * Convert a field element into montgomery form
  **/ 
-inline void to_montgomery_form(const uint64_t *a, uint64_t *r)
+inline void to_montgomery_form(const field_t& a, field_t& r)
 {
     copy(a, r);
     while (gt(r, modulus_plus_one))
     {
         sub(r, modulus, r);
     }
-    mul(r, &r_squared[0], r);
+    mul(r, r_squared, r);
 }
 
 /**
  * Convert a field element out of montgomery form by performing a modular
  * reduction against 1
  **/ 
-inline void from_montgomery_form(const uint64_t *a, uint64_t *r)
+inline void from_montgomery_form(const field_t& a, field_t& r)
 {
     mul(a, one_raw, r);
 }
@@ -74,17 +93,17 @@ inline void from_montgomery_form(const uint64_t *a, uint64_t *r)
 /**
  * Get the value of a given bit
  **/ 
-inline bool get_bit(const uint64_t* a, size_t bit_index)
+inline bool get_bit(const field_t& a, size_t bit_index)
 {
     size_t idx = bit_index / 64;
     size_t shift = bit_index & 63;
-    return bool((a[idx] >> shift) & 1);
+    return bool((a.data[idx] >> shift) & 1);
 }
 
 /**
  * compute a^b mod q, return result in r
  **/
-inline void pow(const uint64_t* a, const uint64_t* b, uint64_t* r)
+inline void pow(const field_t& a, const field_t& b, field_t& r)
 {
     field_t accumulator;
     copy(a, accumulator);
@@ -100,11 +119,15 @@ inline void pow(const uint64_t* a, const uint64_t* b, uint64_t* r)
     for (; i < 256; --i)
     {
         sqr_count++;
-        fq::sqr(accumulator, accumulator);
+        fq::sqr_without_reduction(accumulator, accumulator);
         if (get_bit(b, i))
         {
-            fq::mul(accumulator, a, accumulator);
+            fq::mul_without_reduction(accumulator, a, accumulator);
         }
+    }
+    while (gt(accumulator, modulus_plus_one))
+    {
+        sub(accumulator, modulus, accumulator);
     }
     copy(accumulator, r);
 }
@@ -112,7 +135,7 @@ inline void pow(const uint64_t* a, const uint64_t* b, uint64_t* r)
 /**
  * compute a^{q - 2} mod q, place result in r
  **/ 
-inline void invert(uint64_t* a, uint64_t* r)
+inline void invert(field_t& a, field_t& r)
 {
     // q - 2
     constexpr field_t modulus_minus_two = {
@@ -122,11 +145,11 @@ inline void invert(uint64_t* a, uint64_t* r)
         0x30644e72e131a029UL};
      pow(a, modulus_minus_two, r);
 }
-// 21888242871839275222246405745257275088696311157297823662689037894645226208584
+
 /**
  * compute a^{(q + 1) / 2}, place result in r
  **/ 
-inline void sqrt(uint64_t* a, uint64_t* r)
+inline void sqrt(field_t& a, field_t& r)
 {
     // (q + 1) / 2
     constexpr field_t modulus_plus_one_div_two = {
@@ -141,9 +164,9 @@ inline void sqrt(uint64_t* a, uint64_t* r)
 /**
  * Get a random field element in montgomery form, place in `r`
  **/ 
-inline void random_element(uint64_t* r)
+inline void random_element(field_t& r)
 {
-    int got_entropy = getentropy((void *)r, 32);
+    int got_entropy = getentropy((void *)r.data, 32);
     ASSERT(got_entropy == 0);
     to_montgomery_form(r, r);
 }
@@ -151,7 +174,7 @@ inline void random_element(uint64_t* r)
 /**
  * Set `r` to equal 1, in montgomery form
  **/ 
-inline void one(uint64_t *r)
+inline void one(field_t& r)
 {
     copy(one_mont, r);
 }
@@ -159,13 +182,13 @@ inline void one(uint64_t *r)
 /**
  * print `r`
  **/ 
-inline void print(uint64_t* a)
+inline void print(field_t& a)
 {
-    printf("fq: [%lx, %lx, %lx, %lx]\n", a[0], a[1], a[2], a[3]);
+    printf("fq: [%lx, %lx, %lx, %lx]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
 }
 
-inline bool eq(uint64_t* a, uint64_t* b)
+inline bool eq(field_t& a, field_t& b)
 {
-    return (a[0] == b[0]) && (a[1] == b[1]) && (a[2] == b[2]) && (a[3] == b[3]);
+    return (a.data[0] == b.data[0]) && (a.data[1] == b.data[1]) && (a.data[2] == b.data[2]) && (a.data[3] == b.data[3]);
 }
 } // namespace fq

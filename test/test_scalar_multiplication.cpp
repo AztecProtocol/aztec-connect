@@ -80,14 +80,14 @@ libff::alt_bn128_G1 libff_scalar_mul(uint64_t* scalars, g1::affine_element* poin
         scalar_data.data[2] = scalars[i * 4 + 2];
         scalar_data.data[3] = scalars[i * 4 + 3];
         libff_scalars[i] = libff::alt_bn128_Fr(scalar_data);
-        libff_points[i].X.mont_repr.data[0] = points[i].x[0];
-        libff_points[i].X.mont_repr.data[1] = points[i].x[1];
-        libff_points[i].X.mont_repr.data[2] = points[i].x[2];
-        libff_points[i].X.mont_repr.data[3] = points[i].x[3];
-        libff_points[i].Y.mont_repr.data[0] = points[i].y[0];
-        libff_points[i].Y.mont_repr.data[1] = points[i].y[1];
-        libff_points[i].Y.mont_repr.data[2] = points[i].y[2];
-        libff_points[i].Y.mont_repr.data[3] = points[i].y[3];
+        libff_points[i].X.mont_repr.data[0] = points[i].x.data[0];
+        libff_points[i].X.mont_repr.data[1] = points[i].x.data[1];
+        libff_points[i].X.mont_repr.data[2] = points[i].x.data[2];
+        libff_points[i].X.mont_repr.data[3] = points[i].x.data[3];
+        libff_points[i].Y.mont_repr.data[0] = points[i].y.data[0];
+        libff_points[i].Y.mont_repr.data[1] = points[i].y.data[1];
+        libff_points[i].Y.mont_repr.data[2] = points[i].y.data[2];
+        libff_points[i].Y.mont_repr.data[3] = points[i].y.data[3];
         libff_points[i].Z = libff::alt_bn128_Fq::one();
     }
     printf("calling libff::multi_exp\n");
@@ -105,26 +105,27 @@ libff::alt_bn128_G1 libff_scalar_mul(uint64_t* scalars, g1::affine_element* poin
 TEST(scalar_multiplication, endomorphism_split)
 {
     libff::init_alt_bn128_params();
-    uint64_t scalar[4];
+    fr::field_t scalar;
     fr::random_element(scalar);
 
     libff::bigint<4> scalar_bigint;
-    to_bigint(scalar, scalar_bigint);
+    to_bigint(&scalar.data[0], scalar_bigint);
 
     libff::alt_bn128_G1 expected = scalar_bigint * libff::alt_bn128_G1::one();
     expected.to_affine_coordinates();
-    uint64_t* k1 = &scalar[0];
-    uint64_t* k2 = &scalar[2];
-    fr::split_into_endomorphism_scalars(scalar, k1, k2);
+    fr::field_t* k1 = &scalar;
+    fr::field_t* k2 = (fr::field_t*)(&scalar.data[2]);
+
+    fr::split_into_endomorphism_scalars(scalar, *k1, *k2);
 
     libff::bigint<4> k1_bigint;
     libff::bigint<4> k2_bigint;
-    to_endo_bigint(k1, k1_bigint);
-    to_endo_bigint(k2, k2_bigint);
+    to_endo_bigint(&k1->data[0], k1_bigint);
+    to_endo_bigint(&k2->data[0], k2_bigint);
     libff::alt_bn128_G1 a = libff::alt_bn128_G1::one();
     libff::alt_bn128_G1 b = libff::alt_bn128_G1::one();
 
-    fq::mul_beta((uint64_t*)&b.X.mont_repr.data[0], (uint64_t*)&b.X.mont_repr.data[0]);
+    fq::mul_beta(*(fq::field_t*)&b.X.mont_repr.data[0], *(fq::field_t*)&b.X.mont_repr.data[0]);
     libff::alt_bn128_G1 result = (k1_bigint * a) - (k2_bigint * b);
     result.to_affine_coordinates();
     for (size_t i = 0; i < 4; ++i)
@@ -140,19 +141,19 @@ TEST(scalar_multiplication, pippenger)
     size_t num_points = 100000;
     size_t bucket_bits = 12;
 
-    uint64_t* scalars = (uint64_t*)aligned_alloc(32, sizeof(uint64_t) * 4 * num_points);
+    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
 
-    g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 );
+    g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 +1);
 
     printf("computing random point data\n");
     for (size_t i = 0; i < num_points; ++i)
     {
-        fr::random_element(&scalars[i * 4]);
+        fr::random_element(scalars[i]);
     }
     generate_points(points, num_points);
 
     printf("calling libff scalar mul\n");
-    libff::alt_bn128_G1 expected = libff_scalar_mul(scalars, points, num_points); // TODO PUT BACK IN
+    libff::alt_bn128_G1 expected = libff_scalar_mul((uint64_t*)(&scalars[0].data[0]), points, num_points); // TODO PUT BACK IN
     expected.to_affine_coordinates();
 
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
@@ -165,9 +166,9 @@ TEST(scalar_multiplication, pippenger)
 
     for (size_t i = 0; i < 4; ++i)
     {
-        EXPECT_EQ(result.x[i], expected.X.mont_repr.data[i]);
-        EXPECT_EQ(result.y[i], expected.Y.mont_repr.data[i]);
-        EXPECT_EQ(result.z[i], expected.Z.mont_repr.data[i]);
+        EXPECT_EQ(result.x.data[i], expected.X.mont_repr.data[i]);
+        EXPECT_EQ(result.y.data[i], expected.Y.mont_repr.data[i]);
+        EXPECT_EQ(result.z.data[i], expected.Z.mont_repr.data[i]);
     }
 
 }

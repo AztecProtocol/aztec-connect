@@ -5,7 +5,8 @@ add_library(
     barretenberg STATIC
     types.hpp
     wnaf.hpp
-    fr_impl.cpp
+    fr_impl_asm.hpp
+    fr_impl_int128.hpp
     fr.hpp
     fq_impl_asm.hpp
     fq_impl_int128.hpp

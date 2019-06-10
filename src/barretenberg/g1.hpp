@@ -9,31 +9,31 @@ namespace g1
 {
     struct affine_element
     {
-        alignas(32) uint64_t x[4];
-        alignas(32) uint64_t y[4];
+        fq::field_t x;
+        fq::field_t y;
     };
 
     struct element
     {
-        alignas(32) uint64_t x[4];
-        alignas(32) uint64_t y[4];
-        alignas(32) uint64_t z[4];
+        fq::field_t x;
+        fq::field_t y;
+        fq::field_t z;
     };
 
     inline void print(g1::affine_element& p)
     {
-        printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x[0], p.x[1], p.x[2], p.x[3]);
-        printf("p.y: [%lx, %lx, %lx, %lx]\n", p.y[0], p.y[1], p.y[2], p.y[3]);
+        printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
+        printf("p.y: [%lx, %lx, %lx, %lx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
     }
 
     inline void print(g1::element& p)
     {
-        printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x[0], p.x[1], p.x[2], p.x[3]);
-        printf("p.y: [%lx, %lx, %lx, %lx]\n", p.y[0], p.y[1], p.y[2], p.y[3]);
-        printf("p.z: [%lx, %lx, %lx, %lx]\n", p.z[0], p.z[1], p.z[2], p.z[3]);
+        printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
+        printf("p.y: [%lx, %lx, %lx, %lx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
+        printf("p.z: [%lx, %lx, %lx, %lx]\n", p.z.data[0], p.z.data[1], p.z.data[2], p.z.data[3]);
     }
 
-    inline void random_coordinates_on_curve(uint64_t *x, uint64_t *y)
+    inline void random_coordinates_on_curve(fq::field_t& x, fq::field_t& y)
     {
         bool found_one = false;
         fq::field_t yy;
@@ -93,20 +93,26 @@ namespace g1
 
     inline void set_infinity(element& p)
     {
-        p.y[3] |= (1UL << 63);
+        p.y.data[3] |= (1UL << 63);
+    }
+
+
+    inline void set_infinity(affine_element& p)
+    {
+        p.y.data[3] |= (1UL << 63);
     }
 
     inline void dbl(element&p1, element&p2)
     {
-        if (p1.y[3] >> 63 == 1)
+        if (p1.y.data[3] >> 63 == 1)
         {
             set_infinity(p2);
             return;
         }
-        uint64_t T0[4];
-        uint64_t T1[4];
-        uint64_t T2[4];
-        uint64_t T3[4];
+        fq::field_t T0;
+        fq::field_t T1;
+        fq::field_t T2;
+        fq::field_t T3;
 
        // z2 = 2*y*z
         fq::add(p1.z, p1.z, p2.z);
@@ -162,19 +168,12 @@ namespace g1
         fq::sub(p2.y, T2, p2.y); 
     }
 
-    inline void mixed_add(element& p1, affine_element& p2, element& p3)
+    inline void mixed_add_inner(element& p1, affine_element& p2, element& p3)
     {
-        if (__builtin_expect(((p1.y[3] >> 63) == 1), 0))
-        {
-            fq::copy(p2.x, p3.x);
-            fq::copy(p2.y, p3.y);
-            fq::one(p3.z);
-            return;
-        }
-        uint64_t T0[4];
-        uint64_t T1[4];
-        uint64_t T2[4];
-        uint64_t T3[4];
+        fq::field_t T0;
+        fq::field_t T1;
+        fq::field_t T2;
+        fq::field_t T3;
 
         // T0 = z1.z1
         fq::sqr(p1.z, T0);
@@ -186,7 +185,7 @@ namespace g1
         fq::sub(T1, p1.x, T1);
 
         // T2 = T0.z1 = z1.z1.z1
-        fq::mul(p1.z, T0, T2);
+        fq::mul_without_reduction(p1.z, T0, T2);
 
         // T2 = T2.y2 = y2.z1.z1.z1
         fq::mul(T2, p2.y, T2);
@@ -194,9 +193,9 @@ namespace g1
         // T2 = T2 - y1 = y2.z1.z1.z1 - y1
         fq::sub(T2, p1.y, T2);
 
-        if (__builtin_expect(((T1[0] | T1[1] | T1[2] | T1[3]) == 0), 0))
+        if (__builtin_expect(((T1.data[0] | T1.data[1] | T1.data[2] | T1.data[3]) == 0), 0))
         {
-            if ((T2[0] | T2[1] | T2[2] | T2[3]) == 0)
+            if ((T2.data[0] | T2.data[1] | T2.data[2] | T2.data[3]) == 0)
             {
                 // y2 equals y1, x2 equals x1, double x1
                 dbl(p1, p3);
@@ -210,24 +209,24 @@ namespace g1
         }
 
         // T2 = 2T2 = 2(y2.z1.z1.z1 - y1) = R
-        fq::add(T2, T2, T2);
+        fq::add_without_reduction(T2, T2, T2);
 
         // T3 = T1*T1 = HH
         fq::sqr(T1, T3);
         
         // z3 = z1 + H
-        fq::add(p1.z, T1, p3.z);
+        fq::add_without_reduction(p1.z, T1, p3.z);
 
         // z3 = (z1 + H)*(z1 + H)
         fq::sqr(p3.z, p3.z);
 
         // z3 = z3 - z1z1 - HH
+        fq::add(T0, T3, T0);
         fq::sub(p3.z, T0, p3.z);
-        fq::sub(p3.z, T3, p3.z);
 
         // T3 = 4HH
         fq::add(T3, T3, T3);
-        fq::add(T3, T3, T3);
+        fq::add_without_reduction(T3, T3, T3);
 
         // T1 = T1*T3 = 4HHH
         fq::mul(T1, T3, T1);
@@ -261,10 +260,33 @@ namespace g1
         fq::sub(T3, T1, p3.y);
     }
 
+    inline void mixed_add(element &p1, affine_element &p2, element &p3)
+    {
+        if (__builtin_expect(((p1.y.data[3] >> 63)), 0))
+        {
+            fq::copy(p2.x, p3.x);
+            fq::copy(p2.y, p3.y);
+            fq::one(p3.z);
+            return;
+        }
+        mixed_add_inner(p1, p2, p3);
+    }
+
+    inline void mixed_add_expect_empty(element &p1, affine_element &p2, element &p3)
+    {
+        if (__builtin_expect(((p1.y.data[3] >> 63)), 1))
+        {
+            fq::copy(p2.x, p3.x);
+            fq::copy(p2.y, p3.y);
+            fq::one(p3.z);
+            return;
+        }
+        mixed_add_inner(p1, p2, p3);
+    }
 
     inline void mixed_sub(element& p1, affine_element& p2, element& p3)
     {
-        if (__builtin_expect(((p1.y[3] >> 63) == 1), 0))
+        if (__builtin_expect(((p1.y.data[3] >> 63) == 1), 0))
         {
             fq::copy(p2.x, p3.x);
             fq::copy(p2.y, p3.y);
@@ -272,10 +294,10 @@ namespace g1
             fq::sub(fq::modulus, p3.y, p3.y);
             return;
         }
-        uint64_t T0[4];
-        uint64_t T1[4];
-        uint64_t T2[4];
-        uint64_t T3[4];
+        fq::field_t T0;
+        fq::field_t T1;
+        fq::field_t T2;
+        fq::field_t T3;
     
         // T0 = z1.z1
         fq::sqr(p1.z, T0);
@@ -295,9 +317,9 @@ namespace g1
         // T2 = T2 - y1 = y2.z1.z1.z1 - y1
         fq::sub(T2, p1.y, T2);
 
-        if (__builtin_expect(((T1[0] | T1[1] | T1[2] | T1[3]) == 0), 0))
+        if (__builtin_expect(((T1.data[0] | T1.data[1] | T1.data[2] | T1.data[3]) == 0), 0))
         {
-            if ((T2[0] | T2[1] | T2[2] | T2[3]) == 0)
+            if ((T2.data[0] | T2.data[1] | T2.data[2] | T2.data[3]) == 0)
             {
                 dbl(p1, p3);
                 return;
@@ -364,8 +386,8 @@ namespace g1
 
     inline void add(element& p1, element& p2, element& p3)
     {
-        bool p1_zero = (p1.y[3] >> 63) == 1;
-        bool p2_zero = (p2.y[3] >> 63) == 1; // ((p2.z[0] | p2.z[1] | p2.z[2] | p2.z[3]) == 0);
+        bool p1_zero = (p1.y.data[3] >> 63) == 1;
+        bool p2_zero = (p2.y.data[3] >> 63) == 1; // ((p2.z.data[0] | p2.z.data[1] | p2.z.data[2] | p2.z.data[3]) == 0);
         if (__builtin_expect((p1_zero || p2_zero), 0))
         {
             if (p1_zero && !p2_zero)
@@ -385,16 +407,16 @@ namespace g1
             set_infinity(p3);
             return;
         }
-        uint64_t Z1Z1[4];
-        uint64_t Z2Z2[4];
-        uint64_t U1[4];
-        uint64_t U2[4];
-        uint64_t S1[4];
-        uint64_t S2[4];
-        uint64_t F[4];
-        uint64_t H[4];
-        uint64_t I[4];
-        uint64_t J[4];
+        fq::field_t Z1Z1;
+        fq::field_t Z2Z2;
+        fq::field_t U1;
+        fq::field_t U2;
+        fq::field_t S1;
+        fq::field_t S2;
+        fq::field_t F;
+        fq::field_t H;
+        fq::field_t I;
+        fq::field_t J;
 
         // Z1Z1 = Z1*Z1
         fq::sqr(p1.z, Z1Z1);
@@ -417,9 +439,9 @@ namespace g1
         // F = S2 - S1
         fq::sub(S2, S1, F);
 
-        if (__builtin_expect((H[0] | H[1] | H[2] | H[3]) == 0, 0))
+        if (__builtin_expect((H.data[0] | H.data[1] | H.data[2] | H.data[3]) == 0, 0))
         {
-            if ((F[0] | F[1] | F[2] | F[3]) == 0)
+            if ((F.data[0] | F.data[1] | F.data[2] | F.data[3]) == 0)
             {
                 // y2 equals y1, x2 equals x1, double x1
                 dbl(p1, p3);
@@ -649,18 +671,18 @@ namespace g1
         * the inverse of the z-coordinate of the point at the next iteration cycle
         * e.g. Imagine we have 4 points, such that:
         *
-        * accumulator = 1 / z[0]*z[1]*z[2]*z[3]
-        * temporaries[3] = z[0]*z[1]*z[2]
-        * temporaries[2] = z[0]*z[1]
-        * temporaries[1] = z[0]
+        * accumulator = 1 / z.data[0]*z.data[1]*z.data[2]*z.data[3]
+        * temporaries[3] = z.data[0]*z.data[1]*z.data[2]
+        * temporaries[2] = z.data[0]*z.data[1]
+        * temporaries[1] = z.data[0]
         * temporaries[0] = 1
         *
-        * At the first iteration, accumulator * temporaries[3] = z[0]*z[1]*z[2] / z[0]*z[1]*z[2]*z[3]  = (1 / z[3])
+        * At the first iteration, accumulator * temporaries[3] = z.data[0]*z.data[1]*z.data[2] / z.data[0]*z.data[1]*z.data[2]*z.data[3]  = (1 / z.data[3])
         * We then update accumulator, such that:
         *
-        * accumulator = accumulator * z[3] = 1 / z[0]*z[1]*z[2]
+        * accumulator = accumulator * z.data[3] = 1 / z.data[0]*z.data[1]*z.data[2]
         *
-        * At the second iteration, accumulator * temporaries[2] = z[0]*z[1] / z[0]*z[1]*z[2] = (1 / z[2])
+        * At the second iteration, accumulator * temporaries[2] = z.data[0]*z.data[1] / z.data[0]*z.data[1]*z.data[2] = (1 / z.data[2])
         * And so on, until we have computed every z-inverse!
         * 
         * We can then convert out of Jacobian form (x = X / Z^2, y = Y / Z^3) with 4 muls and 1 square.

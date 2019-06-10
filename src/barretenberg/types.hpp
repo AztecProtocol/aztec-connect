@@ -2,10 +2,21 @@
 
 namespace fq
 {
-    typedef uint64_t __attribute((aligned(32))) field_t[4];
+    struct field_t
+    {
+        alignas(32) uint64_t data[4];
+    };
 }
 
 namespace fr
 {
-    typedef uint64_t __attribute((aligned(32))) field_t[4];
+    struct field_t
+    {
+        alignas(32) uint64_t data[4];
+    };
+
+    struct field_wide_t
+    {
+        alignas(64) uint64_t data[8];
+    };
 }

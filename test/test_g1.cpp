@@ -9,12 +9,12 @@
 
 namespace
 {
-void to_bigint(uint64_t *a, libff::bigint<4>& a_bigint)
+void to_bigint(fq::field_t& a, libff::bigint<4>& a_bigint)
 {
-    a_bigint.data[0] = a[0];
-    a_bigint.data[1] = a[1];
-    a_bigint.data[2] = a[2];
-    a_bigint.data[3] = a[3];
+    a_bigint.data[0] = a.data[0];
+    a_bigint.data[1] = a.data[1];
+    a_bigint.data[2] = a.data[2];
+    a_bigint.data[3] = a.data[3];
 }
 
 // libff::alt_bn128_G1 mixed_add(libff::alt_bn128_G1& lhs, libff::alt_bn128_G1 &other)
@@ -98,9 +98,9 @@ TEST(group, mixed_add)
 
     for (size_t j = 0; j < 3; ++j)
     {
-        EXPECT_EQ(result.x[j], g1_result.X.mont_repr.data[j]);
-        EXPECT_EQ(result.y[j], g1_result.Y.mont_repr.data[j]);
-        EXPECT_EQ(result.z[j], g1_result.Z.mont_repr.data[j]);
+        EXPECT_EQ(result.x.data[j], g1_result.X.mont_repr.data[j]);
+        EXPECT_EQ(result.y.data[j], g1_result.Y.mont_repr.data[j]);
+        EXPECT_EQ(result.z.data[j], g1_result.Z.mont_repr.data[j]);
     }
 }
 
@@ -129,9 +129,9 @@ TEST(group, mixed_sub)
     g1::mixed_sub(lhs, rhs, result);
     for (size_t j = 0; j < 3; ++j)
     {
-        EXPECT_EQ(result.x[j], g1_result.X.mont_repr.data[j]);
-        EXPECT_EQ(result.y[j], g1_result.Y.mont_repr.data[j]);
-        EXPECT_EQ(result.z[j], g1_result.Z.mont_repr.data[j]);
+        EXPECT_EQ(result.x.data[j], g1_result.X.mont_repr.data[j]);
+        EXPECT_EQ(result.y.data[j], g1_result.Y.mont_repr.data[j]);
+        EXPECT_EQ(result.z.data[j], g1_result.Z.mont_repr.data[j]);
     }
 }
 TEST(group, dbl)
@@ -156,9 +156,9 @@ TEST(group, dbl)
 
     for (size_t j = 0; j < 3; ++j)
     {
-        EXPECT_EQ(result.x[j], g1_result.X.mont_repr.data[j]);
-        EXPECT_EQ(result.y[j], g1_result.Y.mont_repr.data[j]);
-        EXPECT_EQ(result.z[j], g1_result.Z.mont_repr.data[j]);
+        EXPECT_EQ(result.x.data[j], g1_result.X.mont_repr.data[j]);
+        EXPECT_EQ(result.y.data[j], g1_result.Y.mont_repr.data[j]);
+        EXPECT_EQ(result.z.data[j], g1_result.Z.mont_repr.data[j]);
     }
 }
 
@@ -186,9 +186,9 @@ TEST(group, add)
 
     for (size_t j = 0; j < 3; ++j)
     {
-        EXPECT_EQ(result.x[j], g1_result.X.mont_repr.data[j]);
-        EXPECT_EQ(result.y[j], g1_result.Y.mont_repr.data[j]);
-        EXPECT_EQ(result.z[j], g1_result.Z.mont_repr.data[j]);
+        EXPECT_EQ(result.x.data[j], g1_result.X.mont_repr.data[j]);
+        EXPECT_EQ(result.y.data[j], g1_result.Y.mont_repr.data[j]);
+        EXPECT_EQ(result.z.data[j], g1_result.Z.mont_repr.data[j]);
     }
 }
 
@@ -220,8 +220,8 @@ TEST(group, batch_inverse)
 
         for (size_t j = 0; j < 4; ++j)
         {
-            EXPECT_EQ(result_x[j], points[i].x[j]);
-            EXPECT_EQ(result_y[j], points[i].y[j]);
+            EXPECT_EQ(result_x.data[j], points[i].x.data[j]);
+            EXPECT_EQ(result_y.data[j], points[i].y.data[j]);
         }
     }
 }

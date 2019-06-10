@@ -9,9 +9,9 @@ include(CableCompilerSettings)
 include(CableToolchains)
 include(GNUInstallDirs)
 
-cable_configure_toolchain(DEFAULT cxx17-pic)
+cable_configure_toolchain(DEFAULT cxx17)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2 -mavx")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2 -mavx -O3")
 
 include(HunterConfig)
 
