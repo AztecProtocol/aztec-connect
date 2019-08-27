@@ -179,6 +179,13 @@ inline void one(field_t& r)
     copy(one_mont, r);
 }
 
+inline void zero(field_t& r)
+{
+    r.data[0] = 0;
+    r.data[1] = 0;
+    r.data[2] = 0;
+    r.data[3] = 0;
+}
 /**
  * print `r`
  **/ 

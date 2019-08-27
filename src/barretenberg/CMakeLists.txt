@@ -12,7 +12,9 @@ add_library(
     fq_impl_asm.hpp
     fq_impl_int128.hpp
     fq.hpp
+    fq2.hpp
     g1.hpp
+    g2.hpp
     scalar_multiplication.hpp
 )
 
@@ -39,7 +41,9 @@ add_executable(
     fq_impl_asm.hpp
     fq_impl_int128.hpp
     fq.hpp
+    fq2.hpp
     g1.hpp
+    g2.hpp
     scalar_multiplication.hpp
 )
 

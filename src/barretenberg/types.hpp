@@ -20,3 +20,12 @@ namespace fr
         alignas(64) uint64_t data[8];
     };
 }
+
+namespace fq2
+{
+    struct fq2_t
+    {
+        fq::field_t c0;
+        fq::field_t c1;
+    };
+}
