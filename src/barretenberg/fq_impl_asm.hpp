@@ -11,23 +11,23 @@ namespace fq
 {
 namespace
 {
-static const field_t r_squared = { .data = {
+constexpr field_t r_squared = { .data = {
     0xF32CFC5B538AFA89UL,
     0xB5E71911D44501FBUL,
     0x47AB1EFF0A417FF6UL,
     0x06D89F71CAB8351FUL,
 }};
 
-static const field_t modulus_plus_one = { .data = {
+constexpr field_t modulus_plus_one = { .data = {
     0x3C208C16D87CFD48UL,
     0x97816a916871ca8dUL,
     0xb85045b68181585dUL,
     0x30644e72e131a029UL
 }};
 
-static const field_t one_raw = { .data = { 1, 0, 0, 0 } };
+constexpr field_t one_raw = { .data = { 1, 0, 0, 0 } };
 
-static const field_t one_mont = { .data = {
+constexpr field_t one_mont = { .data = {
     0xd35d438dc58f0d9d,
     0x0a78eb28f5c70b3d,
     0x666ea36f7879462c,
@@ -35,12 +35,12 @@ static const field_t one_mont = { .data = {
 }};
 
 // negative modulus, in two's complement form (inverted + 1)
-static const uint64_t not_modulus_0 = ((~0x3C208C16D87CFD47UL) + 1);
-static const uint64_t not_modulus_1 = ~0x97816a916871ca8dUL;
-static const uint64_t not_modulus_2 = ~0xb85045b68181585dUL;
-static const uint64_t not_modulus_3 = ~0x30644e72e131a029UL;
+constexpr uint64_t not_modulus_0 = ((~0x3C208C16D87CFD47UL) + 1);
+constexpr uint64_t not_modulus_1 = ~0x97816a916871ca8dUL;
+constexpr uint64_t not_modulus_2 = ~0xb85045b68181585dUL;
+constexpr uint64_t not_modulus_3 = ~0x30644e72e131a029UL;
 
-static const field_t not_modulus = { .data = {
+constexpr field_t not_modulus = { .data = {
     ((~0x3C208C16D87CFD47UL) + 1),
     ~0x97816a916871ca8dUL,
     ~0xb85045b68181585dUL,
@@ -48,13 +48,13 @@ static const field_t not_modulus = { .data = {
 }};
 
 // cube root of unity modulo (modulus), converted into montgomery form
-static const field_t beta = {
+constexpr field_t beta = {
     0x71930c11d782e155UL,
     0xa6bb947cffbe3323UL,
     0xaa303344d4741444UL,
     0x2c3b3f0d26594943UL};
 
-static const uint64_t r_inv = 0x87d20782e4866389UL;
+constexpr uint64_t r_inv = 0x87d20782e4866389UL;
 
 // sometimes we don't have any free registers to store 0.
 // When adding carry flags into a limb, apparently adding relative
@@ -64,12 +64,12 @@ static uint64_t zero_reference = 0;
 } // namespace
 
 // modulus of field q
-static const uint64_t modulus_0 = 0x3C208C16D87CFD47UL;
-static const uint64_t modulus_1 = 0x97816a916871ca8dUL;
-static const uint64_t modulus_2 = 0xb85045b68181585dUL;
-static const uint64_t modulus_3 = 0x30644e72e131a029UL;
+constexpr uint64_t modulus_0 = 0x3C208C16D87CFD47UL;
+constexpr uint64_t modulus_1 = 0x97816a916871ca8dUL;
+constexpr uint64_t modulus_2 = 0xb85045b68181585dUL;
+constexpr uint64_t modulus_3 = 0x30644e72e131a029UL;
 
-static const field_t modulus = {
+constexpr field_t modulus = {
     0x3C208C16D87CFD47UL,
     0x97816a916871ca8dUL,
     0xb85045b68181585dUL,
@@ -83,14 +83,14 @@ inline void copy(const field_t& src, field_t& dest)
 #ifdef __AVX__
     ASSERT((((uintptr_t)src.data & 0x1f) == 0));
     ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
-    __asm__ __volatile__(
+    __asm__ (
         "vmovdqa 0(%0), %%ymm0              \n\t"
         "vmovdqa %%ymm0, 0(%1)              \n\t"
         :
         : "r"(src.data), "r"(dest.data)
         : "%ymm0", "memory");
 #else
-    __asm__ __volatile__(
+    __asm__ (
         "movq 0(%0), %%r8                       \n\t"
         "movq 8(%0), %%r9                       \n\t"
         "movq 16(%0), %%r10                     \n\t"
@@ -111,7 +111,7 @@ inline void copy(const field_t& src, field_t& dest)
  **/ 
 inline void add(const field_t& a, const field_t& b, field_t& r)
 {
-    __asm__ __volatile__(
+    __asm__ (
         ADD("%%rbx", "%%rcx")
         REDUCE_RESULT("%%rsi")
         :
@@ -126,7 +126,7 @@ inline void add(const field_t& a, const field_t& b, field_t& r)
  **/ 
 inline void add_without_reduction(const field_t& a, const field_t& b, field_t& r)
 {
-    __asm__ __volatile__(
+    __asm__ (
         ADD("%%rbx", "%%rcx")
         // Save result
         "movq %%r12, 0(%%rsi)                       \n\t"
@@ -144,7 +144,7 @@ inline void add_without_reduction(const field_t& a, const field_t& b, field_t& r
  **/ 
 inline void sub(const field_t& a, const field_t& b, field_t& r)
 {
-    __asm__ __volatile__(
+    __asm__ (
         SUB("%%rbx", "%%rcx", "%%rsi")
         :
         : "b"(&a), "c"(&b), "S"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3)
@@ -157,7 +157,7 @@ inline void sub(const field_t& a, const field_t& b, field_t& r)
  **/ 
 inline void sqr(const field_t& a, field_t& r)
 {
-    __asm__ __volatile__(
+    __asm__ (
         SQR("%%rbx")
         "movq %[r_ptr], %%rsi                   \n\t"
         REDUCE_RESULT("%%rsi")
@@ -174,7 +174,7 @@ inline void sqr(const field_t& a, field_t& r)
  **/ 
 inline void sqr_without_reduction(const field_t& a, field_t& r)
 {
-    __asm__ __volatile__(
+    __asm__ (
         SQR("%%rbx")
         "movq %[r_ptr], %%rsi                   \n\t"
         // store output. Can be either r or (r + p)
@@ -202,12 +202,12 @@ inline void mul(const field_t& a, const field_t& b, field_t& r)
          *            %rcx: pointer to `b`
          *            %rdx: work register for multiplication operand
          */
-    __asm__ __volatile__(
-        MUL("%%rbx", "%%rcx", "%%rsi")
-        REDUCE_RESULT("%%rsi")
+    __asm__ (
+        MUL("%1", "%0")
+        REDUCE_RESULT("%2")
         :
-        : "c"(&b), "b"(&a), [r_ptr] "m"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
-        : "%rsi", "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+        : "r"(&b), "r"(&a), "r"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
+        : "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
 /**
@@ -225,16 +225,16 @@ inline void mul_without_reduction(const field_t& a, const field_t& b, field_t& r
          *            %rcx: pointer to `b`
          *            %rdx: work register for multiplication operand
          */
-    __asm__ __volatile__(
-        MUL("%%rbx", "%%rcx", "%%rsi")
+    __asm__ (
+        MUL("%1", "%0")
         // store output. Result may be r, or r + p.
-        "movq %%r12, 0(%%rsi)                       \n\t" // set r'[0]
-        "movq %%r13, 8(%%rsi)                       \n\t" // set r'[1]
-        "movq %%r14, 16(%%rsi)                      \n\t" // set r'[2]
-        "movq %%r15, 24(%%rsi)                      \n\t" // set r'[3]
+        "movq %%r12, 0(%2)                       \n\t" // set r'[0]
+        "movq %%r13, 8(%2)                       \n\t" // set r'[1]
+        "movq %%r14, 16(%2)                      \n\t" // set r'[2]
+        "movq %%r15, 24(%2)                      \n\t" // set r'[3]
         :
-        : "c"(&b), "b"(&a), [r_ptr] "m"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
-        : "%rsi", "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+        : "r"(&b), "r"(&a), "r"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
+        : "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 } // namespace fq
 

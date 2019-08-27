@@ -104,8 +104,8 @@ TEST(fq, add)
     uint64_t inputs[8] = {0};
     int got_entropy = getentropy((void *)&inputs[0], 64);
     EXPECT_EQ(got_entropy, 0);
-    inputs[3] &= 0x7fffffffffffffff;
-    inputs[7] &= 0x7fffffffffffffff;
+    inputs[3] &= 0x00ffffffffffffff;
+    inputs[7] &= 0x00ffffffffffffff;
     libff::alt_bn128_Fq a_fq;
     libff::alt_bn128_Fq b_fq;
     to_bigint(&inputs[0], a_fq.mont_repr);

@@ -4,16 +4,16 @@
 // #define STR(x) STR_HELPER(x)
 #define STRF(x) x
 
-#define ADD(a, r) \
+#define ADD(a, b) \
         "xorq %%r12, %%r12                        \n\t"                                     \
         "movq 0(" a "), %%r12                   \n\t"                                     \
         "movq 8(" a "), %%r13                   \n\t"                                     \
         "movq 16(" a "), %%r14                 \n\t"                                     \
         "movq 24(" a "), %%r15                 \n\t"                                     \
-        "adcxq 0(" r "), %%r12                 \n\t"                                     \
-        "adcxq 8(" r "), %%r13                 \n\t"                                     \
-        "adcxq 16(" r "), %%r14               \n\t"                                     \
-        "adcxq 24(" r "), %%r15               \n\t"                                   
+        "adcxq 0(" b "), %%r12                 \n\t"                                     \
+        "adcxq 8(" b "), %%r13                 \n\t"                                     \
+        "adcxq 16(" b "), %%r14               \n\t"                                     \
+        "adcxq 24(" b "), %%r15               \n\t"                                   
 
 /**
  * Take a 4-limb integer, r, in (%r12, %r13, %r14, %r15)
@@ -88,6 +88,153 @@
  * We proceed by computing limb multiplications that aren't squares (e.g. a[0]*a[1]), and add into 8-limb result %r8-%r15.
  * We then double the result, and add the squares a[0]^2, a[1]^2, a[2]^2, a[3]^2
  **/
+
+// "movq 0(" a "), %%r8 \n\t"
+// "movq 8(" a "), %%r14 \n\t"
+// "movq 16(" a "), %%r10 \n\t"
+// // "movq 24(" a "), %%r11 \n\t"
+
+// // a0a0, a0a1, a0a2, a0a3
+// "movq %%r8, %%rdx \n\t"
+// "mulxq %%r8, %%rdi, %%r9 \n\t"
+// "mulxq %%r14, %%r13, %%r15 \n\t"
+// "mulxq 24(" a "), %%rax, %%r12 \n\t"
+// "mulxq %%r10, %%rcx, %%rdx \n\t"
+
+// r12 = r[4], r13 = r[1], r14 = r[2], rax = r[3], rdi = r[0], r15 = t[0], rcx = t[1], rdx = t[2]
+// rdi r15
+//     r13 r14
+//         rcx rdx
+//             rax r12
+// r13 += r13 + r15
+// r14 += r14 + rcx + rcx
+// rax += rax + rdx + rdx
+// r12 += r12
+
+// r13 += r13
+// r14 += r14
+// rax += rax
+// r12 += r12
+
+// r13 += r15
+// rcx += rcx
+// rdx += rdx
+// r12 += carry
+
+// r14 += rcx
+// rax += rdx
+// r12 += carry
+// "adcxq %%r13, %%r13 \n\t"
+// "adcxq %%r15, %%r15 \n\t"
+// "adcxq %%rax, %%rax \n\t"
+// "adcxq %%r12, %%r12 \n\t"
+
+// "adoxq %%r9, %%r13 \n\t"
+// "adoxq %%rcx, %%rcx \n\t"
+// "adoxq %%rdx, %%rdx \n\t"
+// "adoxq %[zero_reference], %%r12 \n\t"
+
+// "adcxq %%rcx, %%r15 \n\t"
+// "adcxq %%rdx, %%rax \n\t"
+// "adcxq %[zero_reference], %%r12 \n\t"
+// // reduce by r[0]
+// // we have r15, rcx, rdx as free registers
+// // we no longer need a[0], so %%r8 is also free
+// // (as is %r11)
+//                                                                                         
+// /* perform modular reduction: r[0] */                                            
+// "movq %%rdi, %%rdx                       \n\t" /* move r8 into %rdx           */  
+// "mulxq %[r_inv], %%rdx, %%r9           \n\t" /* (%rdx, _) <- k = r[0] * r_inv */ 
+// "mulxq %[modulus_0], %%r9, %%rcx       \n\t" /* (t[0], t[1]) <- (modulus[0] * k) */ 
+// "mulxq %[modulus_1], %%r8, %%r11       \n\t" /* (t[2], t[3]) <- (modulus[1] * k) */ 
+// "adcxq %%r9, %%rdi                      \n\t" /* r[0] += t[0] (%rdi now free) */  
+// "adoxq %%r8, %%r13                      \n\t" /* r[1] += t[2]                */  
+// "adcxq %%rcx, %%r13                      \n\t" /* r[1] += t[1] + flag_c       */  
+// "adoxq %%r11, %%r15                     \n\t" /* r[2] += t[3] + flag_o       */  
+// "mulxq %[modulus_2], %%r9, %%rcx       \n\t" /* (t[0], t[1]) <- (modulus[3] * k) */ 
+// "mulxq %[modulus_3], %%r8, %%r11       \n\t" /* (t[2], t[3]) <- (modulus[2] * k) */ 
+// "adcxq %%r9, %%r15                     \n\t" /* r[2] += t[0] + flag_c       */  
+// "adoxq %%rcx, %%rax                     \n\t" /* r[3] += t[2] + flag_o       */  
+// "adcxq %%r8, %%rax                     \n\t" /* r[3] += t[1] + flag_c       */  
+// "adoxq %%r11, %%r12                     \n\t" /* r[4] += t[3] + flag_o       */  
+// "adcxq %[zero_reference], %%r12         \n\t" /* r[4] += flag_c              */  
+// /* "adoxq %[zero_reference], %%r13         \n\t" /* r[5] += flag_o                \ */
+
+// /* perform modular reduction: r[1] */
+// "movq %%r13, %%rdx \n\t"
+// "mulxq %[r_inv], %%rdx, %%r9 \n\t"
+// "mulxq %[modulus_0], %%r15, %%rcx \n\t"
+// "mulxq %[modulus_1], %%r8, %%r11 \n\t"
+// "adcxq %%r9, %%r13 \n\t"
+// "adoxq %%rcx, %%r15 \n\t"
+// "adcxq %%r8, %%r15 \n\t"
+// "adoxq %%11, %%rax \n\t"
+// "mulxq %[modulus_2], %%r9, %%rcx \n\t"
+// "mulxq %[modulus_3] %%r8, %%r13 \n\t"
+// "adcxq %%r9, %%rax \n\t"
+// "adoxq %%rcx, %%r12 \n\t"
+// "adcxq %%r8, %%r12 \n\t"
+// "adoxq %[zero_reference], %%r13 \n\t"
+// "adcxq %[zero_reference], %%r13 \n\t"
+
+// // our free registers are now:
+// // r8, r13, rcx, r11, rdi
+// // a[1]*a[1], a[1]*a[2], a[1]*a[3]
+// // r12 = r[4], r14 = r[2], rax = r[3], r13 = r[5]
+
+// "movq %%r14, %%rdx \n\t"
+// "mulxq %%15, %%r9, %%rcx \n\t" // t[2] to r[2], t[3] to r[3]
+// "mulxq %%r10, %%r8, %%r11 \n\t" // t[3] to r[3], t[4] to r[4]
+// "mulxq 24(" a "), %%rdx, %%rdi \n\t" // t[4] to r[4], t[5] to r[5]
+// "adcxq %%r9, %%r15 \n\t"
+// "adoxq %%rcx, %%rax \n\t"
+// "adcxq %%r8, %%rax \n\t"
+// "adoxq %%r11, %%r12 \n\t"
+// "adcxq %%rdx, %%r12 \n\t"
+// "adoxq %%rdi, %%r13 \n\t"
+// "adcxq %[zero_reference], %%r13 \n\t"
+
+// /* perform modular reduction: r[2] */
+// "movq %%r15, %%rdx \n\t"
+// "mulxq %[r_inv], %%rdx, %%r9 \n\t"
+// "mulxq %[modulus_0], %%r9, %%rcx \n\t"
+// "mulxq %[modulus_1], %%r8, %%r11 \n\t"
+// "adcxq %%r9, %%r15 \n\t"
+// "adoxq %%rcx, %%rax \n\t"
+// "adcxq %%r8, %%rax \n\t"
+// "adoxq %%11, %%r12 \n\t"
+// "mulxq %[modulus_2], %%r9, %%rcx \n\t"
+// "mulxq %[modulus_3] %%r8, %%r14 \n\t"
+// "adcxq %%r9, %%r12 \n\t"
+// "adoxq %%rcx, %%r13 \n\t"
+// "adcxq %%r8, %%r13 \n\t"
+// "adoxq %[zero_reference], %%r14 \n\t"
+// "adcxq %[zero_reference], %%r14 \n\t"
+
+
+// /* perform modular reduction: r[3] */
+// "movq %%rax, %%rdx \n\t"
+// "mulxq %[r_inv], %%rdx, %%r9 \n\t"
+// "mulxq %[modulus_0], %%r9, %%rcx \n\t"
+// "mulxq %[modulus_1], %%r8, %%r11 \n\t"
+// "adcxq %%r9, %%rax \n\t"
+// "adoxq %%rcx, %%r12 \n\t"
+// "adcxq %%r8, %%r12 \n\t"
+// "adoxq %%11, %%r13 \n\t"
+// "mulxq %[modulus_2], %%r9, %%rcx \n\t"
+// "mulxq %[modulus_3] %%r8, %%r15 \n\t"
+// "adcxq %%r9, %%r13 \n\t"
+// "adoxq %%rcx, %%r14 \n\t"
+// "adcxq %%r8, %%r14 \n\t"
+// "adoxq %[zero_reference], %%r15 \n\t"
+// "adcxq %[zero_reference], %%r15 \n\t"
+
+// a[2] * a[2], a[2] * a[3], a[3] * a[3]
+// r12 = r4, r13 = r5, r9 = r6, r14 = r7
+// r10 = a[1]
+
+
+//
 #define SQR(a) \
         "movq 0(" a "), %%rdx                   \n\t" /* load a[0] into %rdx */          \
                                                                                          \
@@ -96,18 +243,19 @@
         "mulxq 8(" a "), %%r9, %%r10            \n\t" /* (r[1], r[2]) <- a[0] * a[1] */  \
         "mulxq 16(" a "), %%r8, %%r15           \n\t" /* (t[1], t[2]) <- a[0] * a[2] */  \
         "mulxq 24(" a "), %%r11, %%r12          \n\t" /* (r[3], r[4]) <- a[0] * a[3] */  \
-        "movq 8(" a "), %%rdx                   \n\t" /* load a[1] into %r%dx        */  \
-        "mulxq 16(" a "), %%rdi, %%rsi          \n\t" /* (t[5], t[6]) <- a[1] * a[2] */  \
-        "mulxq 24(" a "), %%rax, %%rcx          \n\t" /* (t[3], t[4]) <- a[1] * a[3] */  \
-        "movq 24(" a "), %%rdx                  \n\t" /* load a[3] into %%rdx        */  \
-        "mulxq 16(" a "), %%r13, %%r14          \n\t" /* (r[5], r[6]) <- a[3] * a[2] */  \
+                                                                                         \
                                                                                          \
         /* accumulate products into result registers */                                  \
         "adoxq %%r8, %%r10                      \n\t" /* r[2] += t[1]                */  \
         "adcxq %%r15, %%r11                     \n\t" /* r[3] += t[2]                */  \
-        "adoxq %%rdi, %%r11                     \n\t" /* r[3] += t[5]                */  \
+        "movq 8(" a "), %%rdx                   \n\t" /* load a[1] into %r%dx        */  \
+        "mulxq 16(" a "), %%r8, %%r15          \n\t" /* (t[5], t[6]) <- a[1] * a[2] */  \
+        "mulxq 24(" a "), %%rax, %%rcx          \n\t" /* (t[3], t[4]) <- a[1] * a[3] */  \
+        "movq 24(" a "), %%rdx                  \n\t" /* load a[3] into %%rdx        */  \
+        "mulxq 16(" a "), %%r13, %%r14          \n\t" /* (r[5], r[6]) <- a[3] * a[2] */  \
+        "adoxq %%r8, %%r11                     \n\t" /* r[3] += t[5]                */  \
         "adcxq %%rax, %%r12                     \n\t" /* r[4] += t[3]                */  \
-        "adoxq %%rsi, %%r12                     \n\t" /* r[4] += t[6]                */  \
+        "adoxq %%r15, %%r12                     \n\t" /* r[4] += t[6]                */  \
         "adcxq %%rcx, %%r13                     \n\t" /* r[5] += t[4] + flag_o       */  \
         "adoxq %[zero_reference], %%r13         \n\t" /* r[5] += flag_o              */  \
         "adcxq %[zero_reference], %%r14         \n\t" /* r[6] += flag_c              */  \
@@ -133,10 +281,10 @@
         "adoxq %%rax, %%r13                     \n\t" /* r[5] += t[8]                */  \
                                                                                          \
         "movq 8(" a "), %%rdx                   \n\t" /* load a[1] into %rdx         */  \
-        "mulxq %%rdx, %%rax, %%rsi              \n\t" /* (t[3], t[6]) <- a[1] * a[1] */  \
+        "mulxq %%rdx, %%rax, %%rdx              \n\t" /* (t[3], t[6]) <- a[1] * a[1] */  \
                                                                                          \
         "adcxq %%rax, %%r10                     \n\t" /* r[2] += t[3]                */  \
-        "adcxq %%rsi, %%r11                     \n\t" /* r[3] += t[6]                */  \
+        "adcxq %%rdx, %%r11                     \n\t" /* r[3] += t[6]                */  \
         "adoxq %%rdi, %%r14                     \n\t" /* r[6] += t[5]                */  \
         "adcxq %[zero_reference], %%r12         \n\t" /* r[4] += flag_c              */  \
         "adoxq %[zero_reference], %%r15         \n\t" /* r[7] += flag_o              */  \
@@ -217,7 +365,7 @@
  * Compute Montgomery multiplication of a, b.
  * Result is stored, in (%%r12, %%r13, %%r14, %%r15), in preparation for being stored in "r"
  **/
-#define MUL(a, b, r) \
+#define MUL(a, b) \
         "movq 0(" a "), %%rdx                       \n\t" /* load a[0] into %rdx                             */         \
                                                                                                                         \
         /* front-load mul ops, can parallelize 4 of these but latency is 4 cycles */                                    \
@@ -230,7 +378,7 @@
                                                                                                                         \
         /* start computing modular reduction */                                                                         \
         "movq %%r13, %%rdx                          \n\t" /* move r[0] into %rdx                             */         \
-        "mulxq %[r_inv], %%rdx, %%rsi               \n\t" /* (%rdx, _) <- k = r[1] * r_inv                   */         \
+        "mulxq %[r_inv], %%rdx, %%r11               \n\t" /* (%rdx, _) <- k = r[1] * r_inv                   */         \
                                                                                                                         \
         /* start first addition chain */                                                                                \
         "adcxq %%r8, %%r14                          \n\t" /* r[1] += t[0]                                    */         \
@@ -241,17 +389,17 @@
                                                                                                                         \
         /* reduce by r[0] * k */                                                                                        \
         "mulxq %[modulus_0], %%r8, %%r9             \n\t" /* (t[0], t[1]) <- (modulus.data[0] * k)           */         \
-        "mulxq %[modulus_1], %%rdi, %%rsi           \n\t" /* (t[0], t[1]) <- (modulus.data[1] * k)           */         \
+        "mulxq %[modulus_1], %%rdi, %%r11           \n\t" /* (t[0], t[1]) <- (modulus.data[1] * k)           */         \
         "adoxq %%r8, %%r13                          \n\t" /* r[0] += t[0] (%r13 now free)                    */         \
         "adcxq %%rdi, %%r14                         \n\t" /* r[1] += t[0]                                    */         \
         "adoxq %%r9, %%r14                          \n\t" /* r[1] += t[1] + flag_o                           */         \
-        "adcxq %%rsi, %%r15                         \n\t" /* r[2] += t[1] + flag_c                           */         \
+        "adcxq %%r11, %%r15                         \n\t" /* r[2] += t[1] + flag_c                           */         \
         "mulxq %[modulus_2], %%r8, %%r9             \n\t" /* (t[0], t[1]) <- (modulus.data[2] * k)           */         \
-        "mulxq %[modulus_3], %%rdi, %%rsi           \n\t" /* (t[2], t[3]) <- (modulus.data[3] * k)           */         \
+        "mulxq %[modulus_3], %%rdi, %%r11           \n\t" /* (t[2], t[3]) <- (modulus.data[3] * k)           */         \
         "adoxq %%r8, %%r15                          \n\t" /* r[2] += t[0] + flag_o                           */         \
         "adcxq %%rdi, %%rax                         \n\t" /* r[3] += t[2] + flag_c                           */         \
         "adoxq %%r9, %%rax                          \n\t" /* r[3] += t[1] + flag_o                           */         \
-        "adcxq %%rsi, %%r12                         \n\t" /* r[4] += t[3] + flag_c                           */         \
+        "adcxq %%r11, %%r12                         \n\t" /* r[4] += t[3] + flag_c                           */         \
         "adoxq %%r10, %%r12                         \n\t" /* r[4] += flag_i                                  */         \
                                                                                                                         \
         /* modulus = 254 bits, so max(t[3])  = 62 bits                                                       */         \
@@ -263,11 +411,11 @@
         /* a[1] * b */                                                                                                  \
         "movq 8(" a "), %%rdx                      \n\t" /* load a[1] into %rdx                              */         \
         "mulxq 0(" b "), %%r8, %%r9                \n\t" /* (t[0], t[1]) <- (a[1] * b[0])                    */         \
-        "mulxq 8(" b "), %%rdi, %%rsi              \n\t" /* (t[4], t[5]) <- (a[1] * b[1])                    */         \
+        "mulxq 8(" b "), %%rdi, %%r11              \n\t" /* (t[4], t[5]) <- (a[1] * b[1])                    */         \
         "adcxq %%r8, %%r14                         \n\t" /* r[1] += t[0] + flag_c                            */         \
         "adoxq %%r9, %%r15                         \n\t" /* r[2] += t[1] + flag_o                            */         \
         "adcxq %%rdi, %%r15                        \n\t" /* r[2] += t[0] + flag_c                            */         \
-        "adoxq %%rsi, %%rax                        \n\t" /* r[3] += t[1] + flag_o                            */         \
+        "adoxq %%r11, %%rax                        \n\t" /* r[3] += t[1] + flag_o                            */         \
                                                                                                                         \
         "mulxq 16(" b "), %%r8, %%r9               \n\t" /* (t[2], t[3]) <- (a[1] * b[2])                    */         \
         "mulxq 24(" b "), %%rdi, %%r13             \n\t" /* (t[6], r[5]) <- (a[1] * b[3])                    */         \
@@ -281,27 +429,27 @@
         "movq %%r14, %%rdx                         \n\t"  /* move r[1] into %rdx                             */         \
         "mulxq %[r_inv], %%rdx, %%r8               \n\t"  /* (%rdx, _) <- k = r[1] * r_inv                   */         \
         "mulxq %[modulus_0], %%r8, %%r9            \n\t"  /* (t[0], t[1]) <- (modulus.data[0] * k)           */         \
-        "mulxq %[modulus_1], %%rdi, %%rsi          \n\t"  /* (t[0], t[1]) <- (modulus.data[1] * k)           */         \
+        "mulxq %[modulus_1], %%rdi, %%r11          \n\t"  /* (t[0], t[1]) <- (modulus.data[1] * k)           */         \
         "adoxq %%r8, %%r14                         \n\t"  /* r[1] += t[0] (%r14 now free)                    */         \
         "adcxq %%rdi, %%r15                        \n\t"  /* r[2] += t[0] + flag_c                           */         \
         "adoxq %%r9, %%r15                         \n\t"  /* r[2] += t[1] + flag_o                           */         \
-        "adcxq %%rsi, %%rax                        \n\t"  /* r[3] += t[1] + flag_c                           */         \
+        "adcxq %%r11, %%rax                        \n\t"  /* r[3] += t[1] + flag_c                           */         \
         "mulxq %[modulus_2], %%r8, %%r9            \n\t"  /* (t[0], t[1]) <- (modulus.data[2] * k)           */         \
-        "mulxq %[modulus_3], %%rdi, %%rsi          \n\t"  /* (t[2], t[3]) <- (modulus.data[3] * k)           */         \
+        "mulxq %[modulus_3], %%rdi, %%r11          \n\t"  /* (t[2], t[3]) <- (modulus.data[3] * k)           */         \
         "adoxq %%r8, %%rax                         \n\t"  /* r[3] += t[0] + flag_o                           */         \
         "adcxq %%r9, %%r12                         \n\t"  /* r[4] += t[2] + flag_c                           */         \
         "adoxq %%rdi, %%r12                        \n\t"  /* r[4] += t[1] + flag_o                           */         \
-        "adcxq %%rsi, %%r13                        \n\t"  /* r[5] += t[3] + flag_c                           */         \
+        "adcxq %%r11, %%r13                        \n\t"  /* r[5] += t[3] + flag_c                           */         \
         "adoxq %%r10, %%r13                        \n\t"  /* r[5] += flag_o                                  */         \
                                                                                                                         \
         /* a[2] * b */                                                                                                  \
         "movq 16(" a "), %%rdx                     \n\t" /* load a[2] into %rdx                              */         \
         "mulxq 0(" b "), %%r8, %%r9                \n\t" /* (t[0], t[1]) <- (a[2] * b[0])                    */         \
-        "mulxq 8(" b "), %%rdi, %%rsi              \n\t" /* (t[0], t[1]) <- (a[2] * b[1])                    */         \
+        "mulxq 8(" b "), %%rdi, %%r11              \n\t" /* (t[0], t[1]) <- (a[2] * b[1])                    */         \
         "adcxq %%r8, %%r15                         \n\t" /* r[2] += t[0] + flag_c                            */         \
         "adoxq %%r9, %%rax                         \n\t" /* r[3] += t[1] + flag_o                            */         \
         "adcxq %%rdi, %%rax                        \n\t" /* r[3] += t[0] + flag_c                            */         \
-        "adoxq %%rsi, %%r12                        \n\t" /* r[4] += t[1] + flag_o                            */         \
+        "adoxq %%r11, %%r12                        \n\t" /* r[4] += t[1] + flag_o                            */         \
         "mulxq 16(" b "), %%r8, %%r9               \n\t" /* (t[0], t[1]) <- (a[2] * b[2])                    */         \
         "mulxq 24(" b "), %%rdi, %%r14             \n\t" /* (t[2], r[6]) <- (a[2] * b[3])                    */         \
         "adcxq %%r8, %%r12                         \n\t" /* r[4] += t[0] + flag_c                            */         \
@@ -314,27 +462,27 @@
         "movq %%r15, %%rdx                         \n\t"  /* move r[2] into %rdx                             */         \
         "mulxq %[r_inv], %%rdx, %%r8               \n\t"  /* (%rdx, _) <- k = r[1] * r_inv                   */         \
         "mulxq %[modulus_0], %%r8, %%r9            \n\t"  /* (t[0], t[1]) <- (modulus.data[0] * k)           */         \
-        "mulxq %[modulus_1], %%rdi, %%rsi          \n\t"  /* (t[0], t[1]) <- (modulus.data[1] * k)           */         \
+        "mulxq %[modulus_1], %%rdi, %%r11          \n\t"  /* (t[0], t[1]) <- (modulus.data[1] * k)           */         \
         "adoxq %%r8, %%r15                         \n\t"  /* r[2] += t[0] (%r15 now free)                    */         \
         "adcxq %%r9, %%rax                         \n\t"  /* r[3] += t[0] + flag_c                           */         \
         "adoxq %%rdi, %%rax                        \n\t"  /* r[3] += t[1] + flag_o                           */         \
-        "adcxq %%rsi, %%r12                        \n\t"  /* r[4] += t[1] + flag_c                           */         \
+        "adcxq %%r11, %%r12                        \n\t"  /* r[4] += t[1] + flag_c                           */         \
         "mulxq %[modulus_2], %%r8, %%r9            \n\t"  /* (t[0], t[1]) <- (modulus.data[2] * k)           */         \
-        "mulxq %[modulus_3], %%rdi, %%rsi          \n\t"  /* (t[2], t[3]) <- (modulus.data[3] * k)           */         \
+        "mulxq %[modulus_3], %%rdi, %%r11          \n\t"  /* (t[2], t[3]) <- (modulus.data[3] * k)           */         \
         "adoxq %%r8, %%r12                         \n\t"  /* r[4] += t[0] + flag_o                           */         \
         "adcxq %%r9, %%r13                         \n\t"  /* r[5] += t[2] + flag_c                           */         \
         "adoxq %%rdi, %%r13                        \n\t"  /* r[5] += t[1] + flag_o                           */         \
-        "adcxq %%rsi, %%r14                        \n\t"  /* r[6] += t[3] + flag_c                           */         \
+        "adcxq %%r11, %%r14                        \n\t"  /* r[6] += t[3] + flag_c                           */         \
         "adoxq %%r10, %%r14                        \n\t"  /* r[6] += flag_o                                  */         \
                                                                                                                         \
         /* a[3] * b */                                                                                                  \
         "movq 24(" a "), %%rdx                     \n\t"  /* load a[3] into %rdx                             */         \
         "mulxq 0(" b "), %%r8, %%r9                \n\t"  /* (t[0], t[1]) <- (a[3] * b[0])                   */         \
-        "mulxq 8(" b "), %%rdi, %%rsi              \n\t"  /* (t[4], t[5]) <- (a[3] * b[1])                   */         \
+        "mulxq 8(" b "), %%rdi, %%r11              \n\t"  /* (t[4], t[5]) <- (a[3] * b[1])                   */         \
         "adcxq %%r8, %%rax                         \n\t"  /* r[3] += t[0] + flag_c                           */         \
         "adoxq %%r9, %%r12                         \n\t"  /* r[4] += t[2] + flag_o                           */         \
         "adcxq %%rdi, %%r12                        \n\t"  /* r[4] += t[1] + flag_c                           */         \
-        "adoxq %%rsi, %%r13                        \n\t"  /* r[5] += t[3] + flag_o                           */         \
+        "adoxq %%r11, %%r13                        \n\t"  /* r[5] += t[3] + flag_o                           */         \
                                                                                                                         \
         "mulxq 16(" b "), %%r8, %%r9               \n\t"  /* (t[2], t[3]) <- (a[3] * b[2])                   */         \
         "mulxq 24(" b "), %%rdi, %%r15             \n\t"  /* (t[6], r[7]) <- (a[3] * b[3])                   */         \
@@ -349,7 +497,7 @@
         "mulxq %[r_inv], %%rdx, %%r8               \n\t" /* (%rdx, _) <- k = r[1] * r_inv                    */         \
         "mulxq %[modulus_0], %%r8, %%r9            \n\t" /* (t[0], t[1]) <- (modulus.data[0] * k)            */         \
         "mulxq %[modulus_1], %%rdi, %%r11          \n\t" /* (t[2], t[3]) <- (modulus.data[1] * k)            */         \
-        "movq %[r_ptr], " r "                    \n\t" /* pre-load output ptr into out                     */         \
+       /* "movq %[r_ptr], " r "                    \n\t" *//* pre-load output ptr into out                     */         \
         "adoxq %%r8, %%rax                         \n\t" /* r[3] += t[0] (%rax now free)                     */         \
         "adcxq %%r9, %%r12                         \n\t" /* r[4] += t[2] + flag_c                            */         \
         "adoxq %%rdi, %%r12                        \n\t" /* r[4] += t[1] + flag_o                            */         \
@@ -362,5 +510,62 @@
         "adoxq %%rdi, %%r14                        \n\t" /* r[6] += t[5] + flag_o                            */         \
         "adcxq %%rdx, %%r15                        \n\t" /* r[7] += t[7] + flag_c                            */         \
         "adoxq %%r10, %%r15                        \n\t" /* r[7] += flag_o                                   */
+
+
+
+
+/**
+ * Compute 256-bit multiplication of a, b.
+ * Result is stored, r. // in (%%r12, %%r13, %%r14, %%r15), in preparation for being stored in "r"
+ **/
+#define MUL_256(a, b, r) \
+        "movq 0(" a "), %%rdx                       \n\t" /* load a[0] into %rdx                             */         \
+                                                                                                                        \
+        /* front-load mul ops, can parallelize 4 of these but latency is 4 cycles */                                    \
+        "mulxq 8(" b "), %%r8, %%r9                 \n\t" /* (t[0], t[1]) <- a[0] * b[1]                     */         \
+        "mulxq 24(" b "), %%rdi, %%r12              \n\t" /* (t[2], r[4]) <- a[0] * b[3] (overwrite a[0])    */         \
+        "mulxq 0(" b "), %%r13, %%r14               \n\t" /* (r[0], r[1]) <- a[0] * b[0]                     */         \
+        "mulxq 16(" b "), %%r15, %%rax              \n\t" /* (r[2] , r[3]) <- a[0] * b[2]                    */         \
+        /* zero flags */                                                                                                \
+        "xorq %%r10, %%r10                          \n\t" /* clear r10 register, we use this when we need 0  */         \
+                                                                                                                        \
+                                                                                                                        \
+        /* start first addition chain */                                                                                \
+        "adcxq %%r8, %%r14                          \n\t" /* r[1] += t[0]                                    */         \
+        "adoxq %%rdi, %%rax                         \n\t" /* r[3] += t[2] + flag_o                           */         \
+        "adcxq %%r9, %%r15                          \n\t" /* r[2] += t[1] + flag_c                           */         \
+        /*"adoxq %%r10, %%r12                         \n\t" */ /* r[4] += flag_c                                  */         \
+        "adcxq %%r10, %%rax                         \n\t" /* r[3] += flag_o                                  */         \
+                                                                                                                        \
+        /* a[1] * b */                                                                                                  \
+        "movq 8(" a "), %%rdx                      \n\t" /* load a[1] into %rdx                              */         \
+        "mulxq 0(" b "), %%r8, %%r9                \n\t" /* (t[0], t[1]) <- (a[1] * b[0])                    */         \
+        "mulxq 8(" b "), %%rdi, %%rsi              \n\t" /* (t[4], t[5]) <- (a[1] * b[1])                    */         \
+        "adcxq %%r8, %%r14                         \n\t" /* r[1] += t[0] + flag_c                            */         \
+        "adoxq %%r9, %%r15                         \n\t" /* r[2] += t[1] + flag_o                            */         \
+        "adcxq %%rdi, %%r15                        \n\t" /* r[2] += t[0] + flag_c                            */         \
+        "adoxq %%rsi, %%rax                        \n\t" /* r[3] += t[1] + flag_o                            */         \
+                                                                                                                        \
+        "mulxq 16(" b "), %%r8, %%r9               \n\t" /* (t[2], t[3]) <- (a[1] * b[2])                    */         \
+        "adcxq %%r8, %%rax                         \n\t" /* r[3] += t[0] + flag_c                            */         \
+                                                                                                                        \
+        /* a[2] * b */                                                                                                  \
+        "movq 16(" a "), %%rdx                     \n\t" /* load a[2] into %rdx                              */         \
+        "mulxq 0(" b "), %%r8, %%r9                \n\t" /* (t[0], t[1]) <- (a[2] * b[0])                    */         \
+        "mulxq 8(" b "), %%rdi, %%rsi              \n\t" /* (t[0], t[1]) <- (a[2] * b[1])                    */         \
+        "adcxq %%r8, %%r15                         \n\t" /* r[2] += t[0] + flag_c                            */         \
+        "adoxq %%r9, %%rax                         \n\t" /* r[3] += t[1] + flag_o                            */         \
+        "adcxq %%rdi, %%rax                        \n\t" /* r[3] += t[0] + flag_c                            */         \
+                                                                                                                        \
+                                                                                                                        \
+        /* a[3] * b */                                                                                                  \
+        "movq 24(" a "), %%rdx                     \n\t"  /* load a[3] into %rdx                             */         \
+        "mulxq 0(" b "), %%r8, %%r9                \n\t"  /* (t[0], t[1]) <- (a[3] * b[0])                   */         \
+        "mulxq 8(" b "), %%rdi, %%rsi              \n\t"  /* (t[4], t[5]) <- (a[3] * b[1])                   */         \
+        "adcxq %%r8, %%rax                         \n\t"  /* r[3] += t[0] + flag_c                           */         \
+        "movq %%r13, 0(" r ")                       \n\t" \
+        "movq %%r14, 8(" r ")                       \n\t" \
+        "movq %%r15, 16(" r ")                       \n\t" \
+        "movq %%rax, 24(" r ")                       \n\t"
 
 

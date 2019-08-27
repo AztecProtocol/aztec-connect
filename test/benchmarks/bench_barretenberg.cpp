@@ -9,6 +9,7 @@ using namespace benchmark;
 #include <libff/algebra/curves/alt_bn128/alt_bn128_init.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
 #include <libff/algebra/scalar_multiplication/multiexp.hpp>
+#include <pthread.h> 
 
 #include <barretenberg/g1.hpp>
 #include <barretenberg/fq.hpp>
@@ -23,15 +24,23 @@ struct multiplication_data
     std::vector<libff::alt_bn128_Fr> libff_scalars; 
 };
 
-constexpr size_t NUM_POINTS = 10000000;
-
-void generate_points(multiplication_data& data, size_t num_points)
+struct pippenger_point_data
 {
-    data.scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * NUM_POINTS);
-    data.points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * NUM_POINTS * 2);
+    fr::field_t* scalars;
+    g1::affine_element* points;
+};
 
-    data.libff_points.reserve(num_points);
-    data.libff_scalars.reserve(num_points);
+constexpr size_t NUM_POINTS = 1000000;
+constexpr size_t NUM_THREADS = 8;
+constexpr size_t NUM_BUCKETS = 15;
+
+void generate_points(multiplication_data& data)
+{
+    data.scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * NUM_POINTS * NUM_THREADS);
+    data.points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * NUM_POINTS * 2 * NUM_THREADS);
+
+    data.libff_points.reserve(NUM_POINTS * NUM_THREADS);
+    data.libff_scalars.reserve(NUM_POINTS * NUM_THREADS);
 
     g1::element small_table[10000];
     for (size_t i = 0; i < 10000; ++i)
@@ -39,7 +48,7 @@ void generate_points(multiplication_data& data, size_t num_points)
         small_table[i] = g1::random_element();
     }
     g1::element current_table[10000];
-    for (size_t i = 0; i < (num_points / 10000); ++i)
+    for (size_t i = 0; i < ((NUM_POINTS * NUM_THREADS) / 10000); ++i)
     {
         for (size_t j = 0; j < 10000; ++j)
         {
@@ -48,36 +57,36 @@ void generate_points(multiplication_data& data, size_t num_points)
         g1::batch_normalize(&current_table[0], 10000);
         for (size_t j = 0; j < 10000; ++j)
         {
-            libff::alt_bn128_G1 libff_pt = libff::alt_bn128_G1::one();
+            // libff::alt_bn128_G1 libff_pt = libff::alt_bn128_G1::one();
             fq::copy(current_table[j].x, data.points[i * 10000 + j].x);
             fq::copy(current_table[j].y, data.points[i * 10000 + j].y);
-            fq::copy(current_table[j].x, *(fq::field_t*)&libff_pt.X.mont_repr.data);
-            fq::copy(current_table[j].y, *(fq::field_t*)&libff_pt.Y.mont_repr.data);
-            data.libff_points.emplace_back(libff_pt);
+            // fq::copy(current_table[j].x, *(fq::field_t*)&libff_pt.X.mont_repr.data);
+            // fq::copy(current_table[j].y, *(fq::field_t*)&libff_pt.Y.mont_repr.data);
+            // data.libff_points.emplace_back(libff_pt);
         }
     }
     g1::batch_normalize(small_table, 10000);
-    size_t rounded = (num_points / 10000) * 10000;
-    size_t leftovers = num_points - rounded;
+    size_t rounded = ((NUM_POINTS * NUM_THREADS) / 10000) * 10000;
+    size_t leftovers = (NUM_POINTS * NUM_THREADS) - rounded;
     for (size_t j = 0;  j < leftovers; ++j)
     {
-            libff::alt_bn128_G1 libff_pt = libff::alt_bn128_G1::one();
+            // libff::alt_bn128_G1 libff_pt = libff::alt_bn128_G1::one();
             fq::copy(small_table[j].x, data.points[rounded + j].x);
             fq::copy(small_table[j].y, data.points[rounded + j].y);
         
-            fq::copy(small_table[j].x, *(fq::field_t*)&libff_pt.X.mont_repr.data);
-            fq::copy(small_table[j].y, *(fq::field_t*)&libff_pt.Y.mont_repr.data);
-            data.libff_points.emplace_back(libff_pt);
+            // fq::copy(small_table[j].x, *(fq::field_t*)&libff_pt.X.mont_repr.data);
+            // fq::copy(small_table[j].y, *(fq::field_t*)&libff_pt.Y.mont_repr.data);
+            // data.libff_points.emplace_back(libff_pt);
     }
 
-    for (size_t i = 0; i < num_points; ++i)
+    for (size_t i = 0; i < (NUM_POINTS * NUM_THREADS); ++i)
     {
         fr::random_element(data.scalars[i]);
-        libff::alt_bn128_Fr libff_scalar;
-        fr::copy(data.scalars[i], *(fr::field_t*)&libff_scalar.mont_repr.data);
-        data.libff_scalars.emplace_back(libff_scalar);
+        // libff::alt_bn128_Fr libff_scalar;
+        // fr::copy(data.scalars[i], *(fr::field_t*)&libff_scalar.mont_repr.data);
+        // data.libff_scalars.emplace_back(libff_scalar);
     }
-    scalar_multiplication::generate_pippenger_point_table(data.points, data.points, num_points);
+    scalar_multiplication::generate_pippenger_point_table(data.points, data.points, (NUM_POINTS * NUM_THREADS));
 }
 
 multiplication_data point_data;
@@ -85,7 +94,7 @@ multiplication_data point_data;
 const auto init = []() {
     libff::init_alt_bn128_params();
     printf("generating point data\n");
-    generate_points(point_data, NUM_POINTS);
+    generate_points(point_data);
     printf("generated point data\n");
     return true;
 }();
@@ -125,13 +134,45 @@ inline uint64_t fq_mul_libff(libff::alt_bn128_Fq& a, libff::alt_bn128_Fq& r)
     return 1;
 }
 
+void *pippenger_single(void* v_args) noexcept
+{
+    pippenger_point_data* data = (pippenger_point_data*)v_args;
+    scalar_multiplication::pippenger(&data->scalars[0], &data->points[0], NUM_POINTS, NUM_BUCKETS);
+    return NULL;
+}
 
+void pippenger_multicore_bench(State& state) noexcept
+{
+    pthread_t thread[NUM_THREADS]; 
+    printf("Before Thread\n");
+    pippenger_point_data *inputs = (pippenger_point_data*)malloc(sizeof(pippenger_point_data) * NUM_THREADS);
+    for (auto _ : state)
+    {
+        for (size_t i = 0; i < NUM_THREADS; ++i)
+        {
+            size_t inc = i * NUM_POINTS;
+            inputs[i].scalars = &point_data.scalars[inc];
+            inputs[i].points = &point_data.points[inc];
+            pthread_create(&thread[i], NULL, &pippenger_single, (void *)(&inputs[i]));
+        }
+        for (size_t j = 0; j < NUM_THREADS; ++j)
+        {
+            pthread_join(thread[j], NULL);
+        }
+    }
+    printf("After Thread\n"); 
+    free(inputs);
+}
+BENCHMARK(pippenger_multicore_bench);
 
 void pippenger_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
-        DoNotOptimize(scalar_multiplication::pippenger(&point_data.scalars[0], &point_data.points[0], NUM_POINTS, 21));
+        // uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&point_data.scalars[0], &point_data.points[0], NUM_POINTS, NUM_BUCKETS));
+        // uint64_t after = rdtsc();
+        // printf("clock cycles = %lu\n", (after - before));
     }
 }
 BENCHMARK(pippenger_bench);
@@ -272,32 +313,38 @@ BENCHMARK(mixed_add_libff_bench);
 
 void fq_sqr_asm_bench(State& state) noexcept
 {
-    // uint64_t count = 0;
-    // uint64_t i = 0;
+    uint64_t count = 0;
+    uint64_t i = 0;
     fq::field_t a = { .data = { 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
     fq::field_t r = { .data = { 1, 0, 0, 0 } };
     for (auto _ : state)
     {
+        size_t before = rdtsc();
         (DoNotOptimize(fq_sqr_asm(a, r)));
-        // ++i;
+        size_t after = rdtsc();
+        count += after - before;
+        ++i;
     }
-    // printf("number of cycles = %lu\n", count / i);
+    printf("sqr number of cycles = %lu\n", count / i);
     // printf("r_2 = [%lu, %lu, %lu, %lu]\n", r_2[0], r_2[1], r_2[2], r_2[3]);
 }
 BENCHMARK(fq_sqr_asm_bench);
 
 void fq_mul_asm_bench(State& state) noexcept
 {
-    // uint64_t count = 0;
-    // uint64_t i = 0;
+    uint64_t count = 0;
+    uint64_t i = 0;
     fq::field_t a = { .data = { 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
     fq::field_t r = { .data = { 1, 0, 0, 0 } };
     for (auto _ : state)
     {
+        size_t before = rdtsc();
         (DoNotOptimize(fq_mul_asm(a, r)));
-        // ++i;
+        size_t after = rdtsc();
+        count += after - before;
+        ++i;
     }
-    // printf("number of cycles = %lu\n", count / i);
+    printf("mul number of cycles = %lu\n", count / i);
     // printf("r_2 = [%lu, %lu, %lu, %lu]\n", r_2[0], r_2[1], r_2[2], r_2[3]);
 }
 BENCHMARK(fq_mul_asm_bench);

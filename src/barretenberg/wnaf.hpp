@@ -12,14 +12,24 @@ constexpr size_t SCALAR_BITS = 127;
 
 inline uint32_t get_wnaf_bits(uint64_t* scalar, size_t bits, size_t bit_position)
 {
-    size_t lo_word_index = bit_position / 64;
-    // size_t hi_word_index = (bit_position + bits - 1) / 64;
-    // if (lo_word_index == hi_word_index)
-    // {
-    //     uint64_t sliced = (scalar[lo_word_index] >> (bit_position & 63)) & ((((uint64_t)1) << bits) - 1);
-    //     return sliced;
-    // }
-    return (uint32_t)((scalar[lo_word_index] >> (bit_position & 63)) | (scalar[lo_word_index + 1] << (64 - (bit_position & 63)))) & ((((uint64_t)1) << bits) - 1);
+    /**
+     *  we want to take a 128 bit scalar and shift it down by (bit_position).
+     * We then wish to mask out `bits` number of bits.
+     * Low limb contains first 64 bits, so we wish to shift this limb by (bit_position mod 64), which is also (bit_position & 63)
+     * If we require bits from the high limb, these need to be shifted left, not right.
+     * Actual bit position of bit in high limb = `b`. Desired position = 64 - (amount we shifted low limb by) = 64 - (bit_position & 63)
+     * 
+     * So, step 1:
+     * get low limb and shift right by (bit_position & 63)
+     * get high limb and shift left by (64 - (bit_position & 63))
+     * 
+     * If low limb == high limb, we know that the high limb will be shifted left by a bit count that moves it out of the result mask
+     */
+    size_t lo_idx = bit_position >> 6;
+    size_t hi_idx = (bit_position + bits - 1) >> 6;
+    uint32_t lo = scalar[lo_idx] >> (bit_position & 63);
+    uint32_t hi = (scalar[hi_idx] << (64 - (bit_position & 63)));
+    return (lo | hi) & ((1UL << bits) - 1);
 }
 
 
@@ -28,7 +38,7 @@ inline void fixed_wnaf(uint64_t* scalar, uint32_t* wnaf, bool& skew_map, size_t 
     size_t wnaf_entries = (SCALAR_BITS + wnaf_bits - 1) / wnaf_bits;
     skew_map = ((scalar[0] & 1) == 0);
 
-    if (scalar[0] == 0 && scalar[1] == 0)
+    if ((scalar[0] == 0) && (scalar[1] == 0))
     {
         skew_map = false;
         for (size_t i = 0; i < wnaf_entries; ++i)
@@ -38,7 +48,7 @@ inline void fixed_wnaf(uint64_t* scalar, uint32_t* wnaf, bool& skew_map, size_t 
         return;
     }
 
-    uint32_t previous = (get_wnaf_bits(scalar, wnaf_bits, 0) + skew_map);
+    uint32_t previous = get_wnaf_bits(scalar, wnaf_bits, 0) + (uint32_t)skew_map;
     for (size_t i = 1; i < wnaf_entries - 1; ++i)
     {
         uint32_t slice = get_wnaf_bits(scalar, wnaf_bits, i * wnaf_bits);
@@ -48,13 +58,13 @@ inline void fixed_wnaf(uint64_t* scalar, uint32_t* wnaf, bool& skew_map, size_t 
         // if the wnaf entry is negative, we want to set the most significant bit to 'true'
         // the actual wnaf value is either... (previous), or ((1 << wnaf_bits) - previous)
         // (then divided by two to get a bucket index)
-        wnaf[(wnaf_entries - i) * num_points] = (((previous - (predicate << wnaf_bits)) ^ (0 - predicate)) >> 1) | (predicate << 31);
+        wnaf[(wnaf_entries - i) * num_points] = (((previous - (predicate << ((uint32_t)wnaf_bits /*+ 1*/))) ^ (0U - predicate)) >> 1U) | (predicate << 31U);
         previous = slice + predicate;
     }
     size_t final_bits = SCALAR_BITS - (SCALAR_BITS / wnaf_bits) * wnaf_bits;
     uint32_t slice = get_wnaf_bits(scalar, final_bits, (wnaf_entries - 1) * wnaf_bits);
     uint32_t predicate = ((slice & 1) == 0);
-    wnaf[num_points] = (((previous - (predicate << wnaf_bits)) ^ (0 - predicate)) >> 1) | (predicate << 31);
+    wnaf[num_points] = (((previous - (predicate << ((uint32_t)wnaf_bits /*+ 1*/))) ^ (0U - predicate)) >> 1U) | (predicate << 31);
     wnaf[0] = ((slice + predicate) >> 1);
 }
 

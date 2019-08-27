@@ -11,49 +11,48 @@ namespace fr
 {
 namespace
 {
-static const uint64_t modulus_0 = 0x43E1F593F0000001UL;
-static const uint64_t modulus_1 = 0x2833E84879B97091UL;
-static const uint64_t modulus_2 = 0xB85045B68181585DUL;
-static const uint64_t modulus_3 = 0x30644E72E131A029UL;
-static const uint64_t not_modulus_0 = (~0x43E1F593F0000001UL) + 1;
-static const uint64_t not_modulus_1 = ~0x2833E84879B97091UL;
-static const uint64_t not_modulus_2 = ~0xB85045B68181585DUL;
-static const uint64_t not_modulus_3 = ~0x30644E72E131A029UL;
-static const uint64_t  r_inv = 0xc2e1f593efffffffUL;
+constexpr uint64_t modulus_0 = 0x43E1F593F0000001UL;
+constexpr uint64_t modulus_1 = 0x2833E84879B97091UL;
+constexpr uint64_t modulus_2 = 0xB85045B68181585DUL;
+constexpr uint64_t modulus_3 = 0x30644E72E131A029UL;
+constexpr uint64_t not_modulus_0 = (~0x43E1F593F0000001UL) + 1;
+constexpr uint64_t not_modulus_1 = ~0x2833E84879B97091UL;
+constexpr uint64_t not_modulus_2 = ~0xB85045B68181585DUL;
+constexpr uint64_t not_modulus_3 = ~0x30644E72E131A029UL;
+constexpr uint64_t  r_inv = 0xc2e1f593efffffffUL;
 
-static uint64_t zero_reference = 0;
+constexpr uint64_t zero_reference = 0;
 } // namespace
 
 /**
  * copy src into dest. AVX implementation requires words to be aligned on 32 byte bounary
  **/ 
-/* inline void copy(const field_t& src, field_t& dest)
-{
-#ifdef __AVX__
-    ASSERT((((uintptr_t)src.data & 0x1f) == 0));
-    ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
-    __asm__ __volatile__(
-        "vmovdqa 0(%0), %%ymm0              \n\t"
-        "vmovdqa %%ymm0, 0(%1)              \n\t"
-        :
-        : "r"(src.data), "r"(dest.data)
-        : "%ymm0", "memory");
-#else
-    __asm__ __volatile__(
-        "movq 0(%0), %%r8                       \n\t"
-        "movq 8(%0), %%r9                       \n\t"
-        "movq 16(%0), %%r10                     \n\t"
-        "movq 24(%0), %%r11                     \n\t"
-        "movq %%r8, 0(%1)                       \n\t"
-        "movq %%r9, 8(%1)                       \n\t"
-        "movq %%r10, 16(%1)                     \n\t"
-        "movq %%r11, 24(%1)                     \n\t"
-        :
-        : "r"(src.data), "r"(dest.data)
-        : "%r8", "%r9", "%r10", "%r11", "memory");
-#endif
-} */
-
+// inline void copy(const field_t& src, field_t& dest)
+// {
+// #ifdef __AVX__
+//     ASSERT((((uintptr_t)src.data & 0x1f) == 0));
+//     ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
+//     __asm__ (
+//         "vmovdqa 0(%0), %%ymm0              \n\t"
+//         "vmovdqa %%ymm0, 0(%1)              \n\t"
+//         :
+//         : "r"(src.data), "r"(dest.data)
+//         : "%ymm0", "memory");
+// #else
+//     __asm__ (
+//         "movq 0(%0), %%r8                       \n\t"
+//         "movq 8(%0), %%r9                       \n\t"
+//         "movq 16(%0), %%r10                     \n\t"
+//         "movq 24(%0), %%r11                     \n\t"
+//         "movq %%r8, 0(%1)                       \n\t"
+//         "movq %%r9, 8(%1)                       \n\t"
+//         "movq %%r10, 16(%1)                     \n\t"
+//         "movq %%r11, 24(%1)                     \n\t"
+//         :
+//         : "r"(src.data), "r"(dest.data)
+//         : "%r8", "%r9", "%r10", "%r11", "memory");
+// #endif
+// }
 inline void copy(const field_t& a, field_t& r)
 {
     r.data[0] = a.data[0];
@@ -67,7 +66,7 @@ inline void copy(const field_t& a, field_t& r)
  **/ 
 inline void add(const field_t& a, const field_t& b, field_t& r)
 {
-    __asm__ __volatile__(
+    __asm__ (
         ADD("%%rbx", "%%rcx")
         REDUCE_RESULT("%%rsi")
         :
@@ -81,7 +80,7 @@ inline void add(const field_t& a, const field_t& b, field_t& r)
  **/ 
 inline void sub(const field_t& a, const field_t& b, field_t& r)
 {
-    __asm__ __volatile__(
+    __asm__ (
         SUB("%%rbx", "%%rcx", "%%rsi")
         :
         : "b"(&a), "c"(&b), "S"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3)
@@ -94,7 +93,7 @@ inline void sub(const field_t& a, const field_t& b, field_t& r)
  **/ 
 inline void sqr(const field_t& a, field_t& r)
 {
-    __asm__ __volatile__(
+    __asm__ (
         SQR("%%rbx")
         "movq %[r_ptr], %%rsi                   \n\t"
         REDUCE_RESULT("%%rsi")
@@ -119,12 +118,12 @@ inline void mul(const field_t& a, const field_t& b, field_t& r)
          *            %rcx: pointer to `b`
          *            %rdx: work register for multiplication operand
          */
-    __asm__ __volatile__(
-        MUL("%%rbx", "%%rcx", "%%rsi")
+    __asm__ (
+        MUL("%%rbx", "%%rcx")
         REDUCE_RESULT("%%rsi")
         :
-        : "c"(&b), "b"(&a), [r_ptr] "m"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
-        : "%rsi", "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+        : "c"(&b), "b"(&a), "S"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
+        : "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
 

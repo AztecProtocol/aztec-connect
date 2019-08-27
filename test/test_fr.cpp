@@ -108,10 +108,12 @@ TEST(fr, add)
 TEST(fr, sub)
 {
     fr::field_t inputs[2];
+    inputs[0] = { .data = { 0, 0, 0, 0 }};
+    inputs[1] = { .data = { 0, 0, 0, 0 }};
     int got_entropy = getentropy((void *)&inputs[0].data[0], 64);
     EXPECT_EQ(got_entropy, 0);
-    inputs[0].data[3] &= 0x7fffffffffffffff;
-    inputs[1].data[3] &= 0x7fffffffffffffff;
+    inputs[0].data[3] &= 0x0ffffffffffffff;
+    inputs[1].data[3] &= 0x0ffffffffffffff;
     
     libff::alt_bn128_Fr a_fr;
     libff::alt_bn128_Fr b_fr;
@@ -119,8 +121,11 @@ TEST(fr, sub)
     to_bigint(&inputs[1].data[0], b_fr.mont_repr);
 
     fr::field_t result;
+    fr::print(inputs[0]);
+    fr::print(inputs[1]);
 
     fr::sub(inputs[0], inputs[1], result);
+
     a_fr = a_fr - b_fr;
     for (size_t j = 0; j < 4; ++j)
     {
@@ -209,7 +214,10 @@ TEST(fr, split_into_endomorphism_scalars)
     EXPECT_EQ(got_entropy, 0);
     input.data[3] &= 0x7fffffffffffffff;
 
-
+    while(gt(input, fr::modulus_plus_one))
+    {
+        fr::sub(input, fr::modulus, input);
+    }
     fr::field_t k = { .data = { input.data[0], input.data[1], input.data[2], input.data[3] }};
     fr::field_t k1 = { .data = { 0, 0, 0, 0 }};
     fr::field_t k2 = { .data = { 0, 0, 0, 0 }};

@@ -117,7 +117,6 @@ namespace g1
        // z2 = 2*y*z
         fq::add(p1.z, p1.z, p2.z);
         fq::mul(p2.z, p1.y, p2.z);
-    
         // T0 = x*x
         fq::sqr(p1.x, T0);
 
@@ -254,15 +253,17 @@ namespace g1
 
         // T1 = T1 * y1 = 4HHH*y1
         fq::mul(T1, p1.y, T1);
-        // T1 = 2T1 = 8HHH*y1 = 8*y1*y1*y1*y1
+        // T1 = 2T1 = 8HHH*y1
         fq::add(T1, T1, T1);
-        // y3 = T3 - T1 = R*(4HH*x1 - x3) - 8*y1*y1*y1*y1
+        // y3 = T3 - T1
         fq::sub(T3, T1, p3.y);
     }
 
     inline void mixed_add(element &p1, affine_element &p2, element &p3)
     {
-        if (__builtin_expect(((p1.y.data[3] >> 63)), 0))
+        // TODO: quantitavely check if __builtin_expect helps here
+        // if (__builtin_expect(((p1.y.data[3] >> 63)), 0))
+        if (p1.y.data[3] >> 63)
         {
             fq::copy(p2.x, p3.x);
             fq::copy(p2.y, p3.y);
@@ -378,9 +379,9 @@ namespace g1
 
         // T1 = T1 * y1 = 4HHH*y1
         fq::mul(T1, p1.y, T1);
-        // T1 = 2T1 = 8HHH*y1 = 8*y1*y1*y1*y1
+        // T1 = 2T1 = 8HHH*y
         fq::add(T1, T1, T1);
-        // y3 = T3 - T1 = R*(4HH*x1 - x3) - 8*y1*y1*y1*y1
+        // y3 = T3 - T1
         fq::sub(T3, T1, p3.y);
     }
 

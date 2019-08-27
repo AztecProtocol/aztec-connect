@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <gmp.h>
 #include <vector>
 
 #include <libff/algebra/fields/fp.hpp>

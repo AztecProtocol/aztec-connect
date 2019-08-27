@@ -13,32 +13,32 @@
 
 namespace fr
 {
-static const field_t r_squared = {.data = {
+constexpr field_t r_squared = {.data = {
     0x1BB8E645AE216DA7UL,
     0x53FE3AB1E35C59E3UL,
     0x8C49833D53BB8085UL,
     0x216D0B17F4E44A5UL}};
 
 // lambda = curve root of unity modulo n, converted to montgomery form
-static const field_t lambda = {.data = {
+constexpr field_t lambda = {.data = {
     0x93e7cede4a0329b3UL,
     0x7d4fdca77a96c167UL,
     0x8be4ba08b19a750aUL,
     0x1cbd5653a5661c25UL}};
 
-static const field_t modulus = {.data = {
+constexpr field_t modulus = {.data = {
     0x43E1F593F0000001UL,
     0x2833E84879B97091UL,
     0xB85045B68181585DUL,
     0x30644E72E131A029UL}};
 
-static const field_t modulus_plus_one = {.data = {
+constexpr field_t modulus_plus_one = {.data = {
     0x43E1F593F0000002UL,
     0x2833E84879B97091UL,
     0xB85045B68181585DUL,
     0x30644E72E131A029UL}};
 
-static const field_t one_raw = {.data = {1, 0, 0, 0}};
+constexpr field_t one_raw = {.data = {1, 0, 0, 0}};
 
 // compute a * b mod p, put result in r
 inline void mul(const field_t &a, const field_t &b, field_t &r);
@@ -99,25 +99,25 @@ inline void split_into_endomorphism_scalars(field_t &k, field_t &k1, field_t &k2
     // uint64_t lambda_reduction[4] = { 0 };
     // to_montgomery_form(lambda, lambda_reduction);
 
-    static const field_t g1 = { .data = {
+    constexpr field_t g1 = { .data = {
         0x7a7bd9d4391eb18dUL,
         0x4ccef014a773d2cfUL,
         0x0000000000000002UL,
         0}};
 
-    static const field_t g2 = { .data = {
+    constexpr field_t g2 = { .data = {
         0xd91d232ec7e0b3d7UL,
         0x0000000000000002UL,
         0,
         0}};
 
-    static const field_t minus_b1 = { .data = {
+    constexpr field_t minus_b1 = { .data = {
         0x8211bbeb7d4f1128UL,
         0x6f4d8248eeb859fcUL,
         0,
         0}};
 
-    static const field_t b2 = { .data = {
+    constexpr field_t b2 = { .data = {
         0x89d3256894d213e3UL,
         0,
         0,

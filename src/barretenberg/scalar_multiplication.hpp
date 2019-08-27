@@ -32,7 +32,6 @@ struct multiplication_runtime_state
     size_t num_buckets;
     size_t switch_point;
 
-    g1::affine_element *points;
     g1::element *buckets;
 
     g1::affine_element addition_temporary;
@@ -40,14 +39,14 @@ struct multiplication_runtime_state
     g1::element running_sum;
 };
 
-inline void compute_next_bucket_index(wnaf_runtime_state &state)
+inline void compute_next_bucket_index(wnaf_runtime_state &state) noexcept
 {
     uint32_t wnaf_entry = *state.wnaf_iterator;
     state.next_sign = (wnaf_entry >> 31) & 1;//(uint64_t)(wnaf_entry >> state.bits_per_wnaf) & 1; // 0 - sign_bit;
     state.next_idx = wnaf_entry & 0x0fffffffU; // ((wnaf_entry ^ sign_mask) /*& state.mask*/) >> 1;
 }
 
-inline void generate_pippenger_point_table(g1::affine_element *points, g1::affine_element *table, size_t num_points)
+inline void generate_pippenger_point_table(g1::affine_element *points, g1::affine_element *table, size_t num_points) noexcept
 {
     // iterate backwards, so that `points` and `table` can point to the same memory location
     for (size_t i = num_points - 1; i < num_points; --i)
@@ -68,23 +67,18 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element *points, s
     wnaf_runtime_state wnaf_state;
     wnaf_state.bits_per_wnaf = bits_per_bucket + 1;
 
-
     // allocate space for buckets
-    state.buckets = (g1::element *)aligned_alloc(32, sizeof(g1::element) * state.num_buckets);
+    state.buckets = (g1::element *)aligned_alloc(64, sizeof(g1::element) * (state.num_buckets));
     for (size_t i = 0; i < state.num_buckets; ++i)
     {
         g1::set_infinity(state.buckets[i]);
     }
     // allocate space for wnaf table. We need 1 extra entry because our pointer iterator will overflow by 1 in the main loop
-    wnaf_state.wnaf_table = (uint32_t *)malloc(sizeof(uint32_t) * state.num_rounds * state.num_points + 1);
-    wnaf_state.skew_table = (bool *)malloc(sizeof(bool) * state.num_points + 1);
+    wnaf_state.wnaf_table = (uint32_t *)aligned_alloc(64, sizeof(uint32_t) * (state.num_rounds) * state.num_points + 1);
+    wnaf_state.skew_table = (bool *)aligned_alloc(64, sizeof(bool) * state.num_points + 1);
 
     for (size_t i = 0; i < num_initial_points; ++i)
     {
-        if (i % 1000000 == 0)
-        {
-            printf("processing point %d\n", (int)i);
-        }
         fr::split_into_endomorphism_scalars(scalars[i], scalars[i], *(fr::field_t*)&scalars[i].data[2]);
         wnaf::fixed_wnaf(&scalars[i].data[0], &wnaf_state.wnaf_table[2 * i], wnaf_state.skew_table[2 * i], state.num_points, bits_per_bucket + 1);
         wnaf::fixed_wnaf(&scalars[i].data[2], &wnaf_state.wnaf_table[2 * i + 1], wnaf_state.skew_table[2 * i + 1], state.num_points, bits_per_bucket + 1);
@@ -103,7 +97,7 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element *points, s
     // (1/x)ln(0.5) = ln(1 - 1/n)
     // x = ln(0.5) / ln(1 - 1/n)
     // but... that's a faff! 0.5 * bucket_size is a reasonable kludge
-    state.switch_point = (state.num_points > state.num_buckets * 0.5) ? (state.num_buckets * 0.5) : state.num_points;
+    // state.switch_point = (state.num_points > (state.num_buckets * 0.5)) ? (state.num_buckets * 0.5) : state.num_points;
 
     for (size_t i = 0; i < state.num_rounds; ++i)
     {
@@ -118,7 +112,7 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element *points, s
                 }
             }
         }
-        for (size_t j = 0; j < state.switch_point; ++j)
+        for (size_t j = 0; j < state.num_points; ++j)
         {
             wnaf_state.current_idx = wnaf_state.next_idx;
             wnaf_state.current_sign = wnaf_state.next_sign;
@@ -126,22 +120,67 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element *points, s
             // we can issue a prefetch instruction and cache the bucket
             compute_next_bucket_index(wnaf_state);
             __builtin_prefetch(&state.buckets[wnaf_state.next_idx]);
-            ++wnaf_state.wnaf_iterator;
+            __builtin_prefetch(++wnaf_state.wnaf_iterator);
             g1::conditional_negate_affine(&points[j], &state.addition_temporary, wnaf_state.current_sign);
-            g1::mixed_add_expect_empty(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
-        }
-        for (size_t j = state.switch_point; j < state.num_points; ++j)
-        {
-            wnaf_state.current_idx = wnaf_state.next_idx;
-            wnaf_state.current_sign = wnaf_state.next_sign;
-            // compute the bucket index one step ahead of our current point, so that
-            // we can issue a prefetch instruction and cache the bucket
-            compute_next_bucket_index(wnaf_state);
-            __builtin_prefetch(&state.buckets[wnaf_state.next_idx]);
-            ++wnaf_state.wnaf_iterator;
-            g1::conditional_negate_affine(&points[j], &state.addition_temporary, wnaf_state.current_sign);
+            __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
             g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
         }
+        // for (size_t j = 0; j < (state.num_points >> 4); ++j)
+        // {
+        //     __builtin_prefetch(wnaf_state.wnaf_iterator + 16);
+        //     for (size_t k = 0; k < 16; ++k)
+        //     {
+        //         wnaf_state.current_idx = wnaf_state.next_idx;
+        //         wnaf_state.current_sign = wnaf_state.next_sign;
+        //         // compute the bucket index one step ahead of our current point, so that
+        //         // we can issue a prefetch instruction and cache the bucket
+        //         compute_next_bucket_index(wnaf_state);
+        //         __builtin_prefetch(&state.buckets[wnaf_state.next_idx]);
+        //         ++wnaf_state.wnaf_iterator;
+        //         g1::conditional_negate_affine(&points[(j << 4) + k], &state.addition_temporary, wnaf_state.current_sign);
+        //         __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
+        //         g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
+        //     }
+        // }
+        // for (size_t j = (state.num_points >> 4) << 4; j < state.num_points; ++j)
+        // {
+        //     wnaf_state.current_idx = wnaf_state.next_idx;
+        //     wnaf_state.current_sign = wnaf_state.next_sign;
+        //     // compute the bucket index one step ahead of our current point, so that
+        //     // we can issue a prefetch instruction and cache the bucket
+        //     compute_next_bucket_index(wnaf_state);
+        //     __builtin_prefetch(&state.buckets[wnaf_state.next_idx]);
+        //     ++wnaf_state.wnaf_iterator;
+        //     g1::conditional_negate_affine(&points[j], &state.addition_temporary, wnaf_state.current_sign);
+        //     __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
+        //     g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
+        // }
+        // for (size_t j = 0; j < state.switch_point; ++j)
+        // {
+        //     wnaf_state.current_idx = wnaf_state.next_idx;
+        //     wnaf_state.current_sign = wnaf_state.next_sign;
+        //     // compute the bucket index one step ahead of our current point, so that
+        //     // we can issue a prefetch instruction and cache the bucket
+        //     compute_next_bucket_index(wnaf_state);
+        //     __builtin_prefetch(&state.buckets[wnaf_state.next_idx]);
+        //     __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
+        //     __builtin_prefetch(++wnaf_state.wnaf_iterator);
+        //     g1::conditional_negate_affine(&points[j], &state.addition_temporary, wnaf_state.current_sign);
+        //     g1::mixed_add/*g1::mixed_add_expect_empty*/(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
+        // }
+        // for (size_t j = state.switch_point; j < state.num_points; ++j)
+        // {
+        //     wnaf_state.current_idx = wnaf_state.next_idx;
+        //     wnaf_state.current_sign = wnaf_state.next_sign;
+        //     // compute the bucket index one step ahead of our current point, so that
+        //     // we can issue a prefetch instruction and cache the bucket
+        //     compute_next_bucket_index(wnaf_state);
+        //     __builtin_prefetch(&state.buckets[wnaf_state.next_idx]);
+        //     __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
+        //     __builtin_prefetch(++wnaf_state.wnaf_iterator);
+        //     g1::conditional_negate_affine(&points[j], &state.addition_temporary, wnaf_state.current_sign);
+        //     g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
+        // }
         if (i > 0)
         {
             // we want to perform *bits_per_wnaf* number of doublings (i.e. bits_per_bucket + 1)
@@ -154,7 +193,8 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element *points, s
         g1::set_infinity(state.running_sum);
         for (int j = state.num_buckets - 1; j > 0; --j)
         {
-            __builtin_prefetch(&state.buckets[j - 1]);
+            __builtin_prefetch(&state.buckets[(size_t)j - 1]);
+            __builtin_prefetch(&state.buckets[(size_t)j - 1].z);
             g1::add(state.running_sum, state.buckets[(size_t)j], state.running_sum);
             g1::add(state.accumulator, state.running_sum, state.accumulator);
             g1::set_infinity(state.buckets[(size_t)j]);
@@ -165,7 +205,6 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element *points, s
         g1::set_infinity(state.buckets[0]);
     }
 
-    printf("finished pippenger, freeing memory\n");
     free(wnaf_state.wnaf_table);
     free(wnaf_state.skew_table);
     free(state.buckets);
