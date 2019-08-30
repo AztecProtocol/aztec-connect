@@ -37,7 +37,7 @@ TEST(fq, mul)
 
         // uint64_t a[4] = { 1, 0, 0, 0 };
         // uint64_t b[4] = { 2, 0, 0, 0 };
-        fq::field_t result = {.data = { 0, 0, 0, 0 } };
+        // fq::field_t result = {.data = { 0, 0, 0, 0 } };
         a.data[3] &= 0x7fffffffffffffff;
         b.data[3] &= 0x7fffffffffffffff;
 
@@ -54,12 +54,12 @@ TEST(fq, mul)
         b_fq.mont_repr.data[3] = b.data[3];
 
 
-        fq::mul(a, b, result);
+        fq::mul(a, b, a);
         libff::alt_bn128_Fq c_fq = a_fq * b_fq;
 
         for (size_t j = 0; j < 4; ++j)
         {
-            EXPECT_EQ(result.data[j], c_fq.mont_repr.data[j]);
+            EXPECT_EQ(a.data[j], c_fq.mont_repr.data[j]);
         }
     }
 }

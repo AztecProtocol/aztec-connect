@@ -96,7 +96,7 @@ TEST(group, mixed_add)
 
     g1::mixed_add(lhs, rhs, result);
 
-    for (size_t j = 0; j < 3; ++j)
+    for (size_t j = 0; j < 4; ++j)
     {
         EXPECT_EQ(result.x.data[j], g1_result.X.mont_repr.data[j]);
         EXPECT_EQ(result.y.data[j], g1_result.Y.mont_repr.data[j]);
@@ -127,13 +127,14 @@ TEST(group, mixed_sub)
     libff::alt_bn128_G1 g1_result = g1_lhs.mixed_add(g1_rhs);
 
     g1::mixed_sub(lhs, rhs, result);
-    for (size_t j = 0; j < 3; ++j)
+    for (size_t j = 0; j < 4; ++j)
     {
         EXPECT_EQ(result.x.data[j], g1_result.X.mont_repr.data[j]);
         EXPECT_EQ(result.y.data[j], g1_result.Y.mont_repr.data[j]);
         EXPECT_EQ(result.z.data[j], g1_result.Z.mont_repr.data[j]);
     }
 }
+
 TEST(group, dbl)
 {
     libff::init_alt_bn128_params();

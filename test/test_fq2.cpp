@@ -50,8 +50,8 @@ TEST(fq2, mul)
         fq2::fq2_t a = *(fq2::fq2_t*)(&inputs[0]);
         fq2::fq2_t b = *(fq2::fq2_t*)(&inputs[8]);
 
-        fq2::fq2_t result;
-        fq2::zero(result);
+        // fq2::fq2_t result;
+        // fq2::zero(result);
         
         fq::to_montgomery_form(a.c0, a.c0);
         fq::to_montgomery_form(a.c1, a.c1);
@@ -61,12 +61,12 @@ TEST(fq2, mul)
         libff::alt_bn128_Fq2 a_fq2 = to_libff_fq2(a);
         libff::alt_bn128_Fq2 b_fq2 = to_libff_fq2(b);
 
-        fq2::mul(a, b, result);
+        fq2::mul(a, b, a);
         libff::alt_bn128_Fq2 c_fq2 = a_fq2 * b_fq2;
         for (size_t j = 0; j < 4; ++j)
         {
-            EXPECT_EQ(result.c0.data[j], c_fq2.c0.mont_repr.data[j]);
-            EXPECT_EQ(result.c1.data[j], c_fq2.c1.mont_repr.data[j]);
+            EXPECT_EQ(a.c0.data[j], c_fq2.c0.mont_repr.data[j]);
+            EXPECT_EQ(a.c1.data[j], c_fq2.c1.mont_repr.data[j]);
         }
     }
 }
@@ -84,18 +84,21 @@ TEST(fq2, sqr)
         fq::to_montgomery_form(a.c0, a.c0);
         fq::to_montgomery_form(a.c1, a.c1);
 
-        fq2::fq2_t result;
-        fq2::fq2_t expected;
-        fq2::zero(result);
-        fq2::zero(expected);
+        // fq2::fq2_t result;
+        // fq2::fq2_t expected;
+        // // fq2::zero(result);
+        // fq2::zero(expected);
 
-        fq2::mul(a, a, expected);
+        libff::alt_bn128_Fq2 a_fq2 = to_libff_fq2(a);
+        libff::alt_bn128_Fq2 expected = a_fq2.squared();
+        // fq2::mul(a, a, expected);
+        fq2::fq2_t result;
         fq2::sqr(a, result);
 
         for (size_t j = 0; j < 4; ++j)
         {            
-            EXPECT_EQ(result.c0.data[j], expected.c0.data[j]);
-            EXPECT_EQ(result.c1.data[j], expected.c1.data[j]);
+            EXPECT_EQ(result.c0.data[j], expected.c0.mont_repr.data[j]);
+            EXPECT_EQ(result.c1.data[j], expected.c1.mont_repr.data[j]);
         }
     }
 }
@@ -119,15 +122,15 @@ TEST(fq2, add)
     libff::alt_bn128_Fq2 a_fq2 = to_libff_fq2(a);
     libff::alt_bn128_Fq2 b_fq2 = to_libff_fq2(b);
 
-    fq2::fq2_t result;
-    fq2::zero(result);
+    // fq2::fq2_t result;
+    // fq2::zero(result);
 
-    fq2::add(a, b, result);
+    fq2::add(a, b, a);
     a_fq2 = a_fq2 + b_fq2;
     for (size_t j = 0; j < 4; ++j)
     {
-        EXPECT_EQ(result.c0.data[j], a_fq2.c0.mont_repr.data[j]);
-        EXPECT_EQ(result.c1.data[j], a_fq2.c1.mont_repr.data[j]);
+        EXPECT_EQ(a.c0.data[j], a_fq2.c0.mont_repr.data[j]);
+        EXPECT_EQ(a.c1.data[j], a_fq2.c1.mont_repr.data[j]);
     }
 }
 
@@ -149,15 +152,15 @@ TEST(fq2, sub)
     libff::alt_bn128_Fq2 a_fq2 = to_libff_fq2(a);
     libff::alt_bn128_Fq2 b_fq2 = to_libff_fq2(b);
 
-    fq2::fq2_t result;
-    fq2::zero(result);
+    // fq2::fq2_t result;
+    // fq2::zero(result);
 
-    fq2::sub(a, b, result);
+    fq2::sub(a, b, a);
     a_fq2 = a_fq2 - b_fq2;
     for (size_t j = 0; j < 4; ++j)
     {
-        EXPECT_EQ(result.c0.data[j], a_fq2.c0.mont_repr.data[j]);
-        EXPECT_EQ(result.c1.data[j], a_fq2.c1.mont_repr.data[j]);
+        EXPECT_EQ(a.c0.data[j], a_fq2.c0.mont_repr.data[j]);
+        EXPECT_EQ(a.c1.data[j], a_fq2.c1.mont_repr.data[j]);
     }
 }
 

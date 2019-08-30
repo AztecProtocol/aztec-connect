@@ -20,6 +20,7 @@ add_executable(
     test_fq2.cpp
     test_fr.cpp
     test_g1.cpp
+    test_g2.cpp
     test_scalar_multiplication.cpp
 )
 

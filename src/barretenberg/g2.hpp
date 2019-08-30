@@ -1,13 +1,14 @@
 #pragma once
 
 #include "fq2.hpp"
+#include "fr.hpp"
 
 namespace g2
 {
-    constexpr fq::field_t xc0 = { .data = { 0x46DEBD5CD992F6ED, 0x674322D4F75EDADD, 0x426A00665E5C4479, 0x1800DEEF121F1E76 } };
-    constexpr fq::field_t xc1 = { .data = { 0x198E9393920D483A, 0x7260BFB731FB5D25, 0xF1AA493335A9E712, 0x97E485B7AEF312C2 } };
-    constexpr fq::field_t yc0 = { .data = { 0x12C85EA5DB8C6DEB, 0x4AAB71808DCB408F, 0xE3D1E7690C43D37B, 0x4CE6CC0166FA7DAA } };
-    constexpr fq::field_t yc1 = { .data = { 0x090689D0585FF075, 0xEC9E99AD690C3395, 0xBC4B313370B38EF3, 0x55ACDADCD122975B } };
+    constexpr fq::field_t xc0 = { .data = { 0x8e83b5d102bc2026, 0xdceb1935497b0172, 0xfbb8264797811adf, 0x19573841af96503b } };
+    constexpr fq::field_t xc1 = { .data = { 0xafb4737da84c6140, 0x6043dd5a5802d8c4, 0x09e950fc52a02f86, 0x14fef0833aea7b6b } };
+    constexpr fq::field_t yc0 = { .data = { 0x619dfa9d886be9f6, 0xfe7fd297f59e9b78, 0xff9e1a62231b7dfe, 0x28fd7eebae9e4206 } };
+    constexpr fq::field_t yc1 = { .data = { 0x64095b56c71856ee, 0xdc57f922327d3cbb, 0x55f935be33351076, 0x0da4a0e693fd6482 } };
 
     struct affine_element
     {
@@ -25,10 +26,10 @@ namespace g2
     inline element one()
     {
         element result;
-        fq::to_montgomery_form(xc0, result.x.c0);
-        fq::to_montgomery_form(xc1, result.x.c1);
-        fq::to_montgomery_form(yc0, result.y.c0);
-        fq::to_montgomery_form(yc1, result.y.c1);
+        result.x.c0 = xc0;
+        result.x.c1 = xc1;
+        result.y.c0 = yc0;
+        result.y.c1 = yc1;
         fq::one(result.z.c0);
         fq::zero(result.z.c1);
         return result;
@@ -37,11 +38,11 @@ namespace g2
     inline affine_element affine_one()
     {
         affine_element result;
-        element result;
-        fq::to_montgomery_form(xc0, result.x.c0);
-        fq::to_montgomery_form(xc1, result.x.c1);
-        fq::to_montgomery_form(yc0, result.y.c0);
-        fq::to_montgomery_form(yc1, result.y.c1);
+        result.x.c0 = xc0;
+        result.x.c1 = xc1;
+        result.y.c0 = yc0;
+        result.y.c1 = yc1;        
+        return result;
     }
 
     inline void set_infinity(element& p)
@@ -56,20 +57,22 @@ namespace g2
             set_infinity(p2);
             return;
         }
-        fq2::fq2_t T0;
-        fq2::fq2_t T1;
-        fq2::fq2_t T2;
-        fq2::fq2_t T3;
+        fq2::fq2_t T0; // = { c0: { 0, 0, 0, 0 }, c1: { 0, 0, 0, 0} };
+        fq2::fq2_t T1; // = { c0: { 0, 0, 0, 0 }, c1: { 0, 0, 0, 0} };
+        fq2::fq2_t T2; // = { c0: { 0, 0, 0, 0 }, c1: { 0, 0, 0, 0} };
+        fq2::fq2_t T3; // = { c0: { 0, 0, 0, 0 }, c1: { 0, 0, 0, 0} };
 
-       // z2 = 2*y*z
+ 
+        // z2 = 2*y*z
         fq2::add(p1.z, p1.z, p2.z);
         fq2::mul(p2.z, p1.y, p2.z);
+
         // T0 = x*x
         fq2::sqr(p1.x, T0);
 
         // T1 = y*y
         fq2::sqr(p1.y, T1);
-
+    
         // T2 = T2*T1 = y*y*y*y
         fq2::sqr(T1, T2);
 
@@ -82,7 +85,7 @@ namespace g2
         // T3 = T0 + T2 = xx + y*y*y*y
         fq2::add(T0, T2, T3);
 
-        // T1 = T1 - T3 = x*x + y*y*y*y + 2*x*x*y*y*y*y - x*x - 7*y*y*y = 2*x*x*y*y*y*y = 2*S
+        // T1 = T1 - T3 = x*x + y*y*y*y + 2*x*x*y*y*y*y - x*x - y*y*y*y = 2*x*x*y*y*y*y = 2*S
         fq2::sub(T1, T3, T1);
 
         // T1 = 2T1 = 4*S
@@ -100,7 +103,6 @@ namespace g2
 
         // x2 = x2 - 2T1
         fq2::sub(p2.x, T0, p2.x);
-    
         // T2 = 8T2
         fq2::add(T2, T2, T2);
         fq2::add(T2, T2, T2);
@@ -479,13 +481,15 @@ namespace g2
         element point;
         copy_from_affine(a, work_element);
         copy_from_affine(a, point);
-        bool scalar_bits[256];
+        fr::field_t converted_scalar;
+        fr::from_montgomery_form(scalar, converted_scalar);
+        bool scalar_bits[256] = {0};
         for (size_t i = 0; i < 64; ++i)
         {
-            scalar_bits[i] = (bool)((scalar.data[0] >> i) & 0x1);
-            scalar_bits[64 + i] = (bool)((scalar.data[1] >> i) & 0x1);
-            scalar_bits[128 + i] = (bool)((scalar.data[2] >> i) & 0x1);
-            scalar_bits[192 + i] = (bool)((scalar.data[3] >> i) & 0x1);
+            scalar_bits[i] = (bool)((converted_scalar.data[0] >> i) & 0x1);
+            scalar_bits[64 + i] = (bool)((converted_scalar.data[1] >> i) & 0x1);
+            scalar_bits[128 + i] = (bool)((converted_scalar.data[2] >> i) & 0x1);
+            scalar_bits[192 + i] = (bool)((converted_scalar.data[3] >> i) & 0x1);
         }
 
         bool found = false;
@@ -506,5 +510,15 @@ namespace g2
         }
 
         return convert_to_affine(work_element);
+    }
+
+    void print(element& a)
+    {
+        printf("g2: \n x: ");
+        fq2::print(a.x);
+        printf("y: \n");
+        fq2::print(a.y);
+        printf("z: \n");
+        fq2::print(a.z);
     }
 }

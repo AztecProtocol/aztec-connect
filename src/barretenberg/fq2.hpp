@@ -17,14 +17,14 @@ namespace fq2
         // t2 = a.c1 * b.c1
         fq::mul(a.c1, b.c1, t2);
 
-        // r.c0 = (a.c0 * b.c0) - (a.c1 * b.c1)
-        fq::sub(t1, t2, r.c0);
-
         // t3 = (a.c0 + a.c1)
         fq::add(a.c0, a.c1, t3);
 
         // t4 = (b.c0 + b.c1)
         fq::add(b.c0, b.c1, t4);
+
+        // r.c0 = (a.c0 * b.c0) - (a.c1 * b.c1)
+        fq::sub(t1, t2, r.c0);
 
         // t.c1 = (a.c0 + a.c1)(b.c0 + b.c1) - (a.c0 * b.c0) - (a.c1 * b.c1)
         fq::mul(t3, t4, r.c1);
@@ -32,10 +32,10 @@ namespace fq2
         fq::sub(r.c1, t2, r.c1);
     }
 
-    inline void sqr(const fq2_t& a, fq2_t& r)
+    inline void sqr(fq2_t& a, fq2_t& r)
     {
-        fq::field_t t1;
-        fq::field_t t2;
+        fq::field_t t1 = { .data = { 0, 0, 0, 0 } };
+        fq::field_t t2 = { .data = { 0, 0, 0, 0 } };
 
         // t1 = a.c0 + a.c1
         fq::add(a.c0, a.c1, t1);
