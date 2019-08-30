@@ -18,6 +18,7 @@ add_executable(
     test_wnaf.cpp
     test_fq.cpp
     test_fq2.cpp
+    test_fq6.cpp
     test_fr.cpp
     test_g1.cpp
     test_g2.cpp

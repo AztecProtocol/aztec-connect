@@ -29,3 +29,13 @@ namespace fq2
         fq::field_t c1;
     };
 }
+
+namespace fq6
+{
+    struct fq6_t
+    {
+        fq2::fq2_t c0;
+        fq2::fq2_t c1;
+        fq2::fq2_t c2;
+    };
+}

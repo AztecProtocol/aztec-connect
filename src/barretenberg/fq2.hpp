@@ -32,7 +32,7 @@ namespace fq2
         fq::sub(r.c1, t2, r.c1);
     }
 
-    inline void sqr(fq2_t& a, fq2_t& r)
+    inline void sqr(const fq2_t& a, fq2_t& r)
     {
         fq::field_t t1 = { .data = { 0, 0, 0, 0 } };
         fq::field_t t2 = { .data = { 0, 0, 0, 0 } };
