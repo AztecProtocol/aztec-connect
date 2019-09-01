@@ -231,12 +231,12 @@ inline void one(field_t &r)
     to_montgomery_form(one_raw, r);
 }
 
-inline bool eq(field_t &a, field_t &b)
+inline bool eq(const field_t &a, const field_t &b)
 {
     return (a.data[0] == b.data[0]) && (a.data[1] == b.data[1]) && (a.data[2] == b.data[2]) && (a.data[3] == b.data[3]);
 }
 
-inline void print(field_t &a)
+inline void print(const field_t &a)
 {
     printf("fr: [%lx, %lx, %lx, %lx]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
 }

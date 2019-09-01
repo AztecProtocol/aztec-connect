@@ -179,15 +179,22 @@ inline void one(field_t& r)
     copy(one_mont, r);
 }
 
+inline void zero(field_t& r)
+{
+    r.data[0] = 0;
+    r.data[1] = 0;
+    r.data[2] = 0;
+    r.data[3] = 0;
+}
 /**
  * print `r`
  **/ 
-inline void print(field_t& a)
+inline void print(const field_t& a)
 {
     printf("fq: [%lx, %lx, %lx, %lx]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
 }
 
-inline bool eq(field_t& a, field_t& b)
+inline bool eq(const field_t& a, const field_t& b)
 {
     return (a.data[0] == b.data[0]) && (a.data[1] == b.data[1]) && (a.data[2] == b.data[2]) && (a.data[3] == b.data[3]);
 }

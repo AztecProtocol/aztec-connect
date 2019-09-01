@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "fr.hpp"
 #include "fq.hpp"
 #include "assert.hpp"
 
@@ -38,6 +39,9 @@ namespace g1
         bool found_one = false;
         fq::field_t yy;
         fq::field_t t0;
+
+        fq::field_t b_mont;
+        fq::to_montgomery_form(fq::curve_b, b_mont);
         while (!found_one)
         {
             // generate a random x-coordinate
@@ -45,16 +49,17 @@ namespace g1
             // derive y^2 = x^3 + b
             fq::sqr(x, yy);
             fq::mul(x, yy, yy);
-            fq::add(yy, fq::curve_b, yy);
+            fq::add(yy, b_mont, yy);
             // compute sqrt(y)
             fq::sqrt(yy, y);
             fq::sqr(y, t0);
             // does yy have a valid quadratic residue? is y a valid square root?
+            fq::from_montgomery_form(yy, yy);
+            fq::from_montgomery_form(t0, t0);
             found_one = fq::eq(yy, t0);
         }
     }
 
-    // TODO: actually make this random
     inline affine_element random_affine_element()
     {
         affine_element output;
@@ -62,8 +67,6 @@ namespace g1
         return output;
     }
 
-
-    // TODO: actually make this random
     inline element random_element()
     {
         element output;
@@ -704,17 +707,23 @@ namespace g1
 
     inline bool on_curve(g1::affine_element& pt)
     {
+        fq::field_t b_mont;
+        fq::to_montgomery_form(fq::curve_b, b_mont);
         fq::field_t yy;
         fq::field_t xxx;
         fq::sqr(pt.x, xxx);
         fq::mul(pt.x, xxx, xxx);
-        fq::add(xxx, fq::curve_b, xxx);
+        fq::add(xxx, b_mont, xxx);
         fq::sqr(pt.y, yy);
+        fq::from_montgomery_form(xxx, xxx);
+        fq::from_montgomery_form(yy, yy);
         return fq::eq(xxx, yy);
     }
 
     inline bool on_curve(g1::element& pt)
     {
+        fq::field_t b_mont;
+        fq::to_montgomery_form(fq::curve_b, b_mont);
         fq::field_t yy;
         fq::field_t xxx;
         fq::field_t zz;
@@ -722,11 +731,66 @@ namespace g1
         fq::sqr(pt.z, zz);
         fq::sqr(zz, bz_6);
         fq::mul(zz, bz_6, bz_6);
-        fq::mul(bz_6, fq::curve_b, bz_6);
+        fq::mul(bz_6, b_mont, bz_6);
         fq::sqr(pt.x, xxx);
         fq::mul(pt.x, xxx, xxx);
         fq::add(xxx, bz_6, xxx);
         fq::sqr(pt.y, yy);
         return fq::eq(xxx, yy);
+    }
+
+    inline void copy_from_affine(const affine_element& a, element& r)
+    {
+        fq::copy(a.x, r.x);
+        fq::copy(a.y, r.y);
+        fq::one(r.z);
+    }
+
+    inline void copy_affine(const affine_element& a, affine_element& r)
+    {
+        fq::copy(a.x, r.x);
+        fq::copy(a.y, r.y);
+    }
+
+    inline affine_element group_exponentiation(const affine_element& a, const fr::field_t& scalar)
+    {
+        // TODO: if we need to speed up G2, use a fixed-window WNAF
+        element work_element;
+        element point;
+        copy_from_affine(a, work_element);
+        copy_from_affine(a, point);
+        fr::field_t converted_scalar;
+        fr::from_montgomery_form(scalar, converted_scalar);
+        bool scalar_bits[256] = {0};
+        for (size_t i = 0; i < 64; ++i)
+        {
+            scalar_bits[i] = (bool)((converted_scalar.data[0] >> i) & 0x1);
+            scalar_bits[64 + i] = (bool)((converted_scalar.data[1] >> i) & 0x1);
+            scalar_bits[128 + i] = (bool)((converted_scalar.data[2] >> i) & 0x1);
+            scalar_bits[192 + i] = (bool)((converted_scalar.data[3] >> i) & 0x1);
+        }
+
+        bool found = false;
+        size_t i = 255;
+        while (!found)
+        {
+            found = scalar_bits[i] == true;
+            --i;
+        }
+
+        for(; i < (size_t)(-1); --i)
+        {
+            dbl(work_element, work_element);
+            if (scalar_bits[i] == true)
+            {
+                add(work_element, point, work_element);
+            }
+        }
+
+        batch_normalize(&work_element, 1);
+        affine_element result;
+        fq::copy(work_element.x, result.x);
+        fq::copy(work_element.y, result.y);
+        return result;
     }
 }

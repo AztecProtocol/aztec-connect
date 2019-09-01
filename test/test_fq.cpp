@@ -37,7 +37,7 @@ TEST(fq, mul)
 
         // uint64_t a[4] = { 1, 0, 0, 0 };
         // uint64_t b[4] = { 2, 0, 0, 0 };
-        fq::field_t result = {.data = { 0, 0, 0, 0 } };
+        // fq::field_t result = {.data = { 0, 0, 0, 0 } };
         a.data[3] &= 0x7fffffffffffffff;
         b.data[3] &= 0x7fffffffffffffff;
 
@@ -47,25 +47,26 @@ TEST(fq, mul)
         a_fq.mont_repr.data[2] = a.data[2];
         a_fq.mont_repr.data[3] = a.data[3];
 
-        libff::bigint<4> b_bigint;
-        b_bigint.data[0] = b.data[0];
-        b_bigint.data[1] = b.data[1];
-        b_bigint.data[2] = b.data[2];
-        b_bigint.data[3] = b.data[3];
+        libff::alt_bn128_Fq b_fq;
+        b_fq.mont_repr.data[0] = b.data[0];
+        b_fq.mont_repr.data[1] = b.data[1];
+        b_fq.mont_repr.data[2] = b.data[2];
+        b_fq.mont_repr.data[3] = b.data[3];
 
-        fq::mul(a, b, result);
-        a_fq.mul_reduce(b_bigint);
+
+        fq::mul(a, b, a);
+        libff::alt_bn128_Fq c_fq = a_fq * b_fq;
 
         for (size_t j = 0; j < 4; ++j)
         {
-            EXPECT_EQ(result.data[j], a_fq.mont_repr.data[j]);
+            EXPECT_EQ(a.data[j], c_fq.mont_repr.data[j]);
         }
     }
 }
 
 TEST(fq, sqr)
 {
-    constexpr size_t N = 1;
+    constexpr size_t N = 10;
     for (size_t i = 0; i < N; ++i)
     {
         uint64_t inputs[8] = {0};

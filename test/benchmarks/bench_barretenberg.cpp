@@ -12,9 +12,11 @@ using namespace benchmark;
 #include <pthread.h> 
 
 #include <barretenberg/g1.hpp>
+#include <barretenberg/g2.hpp>
 #include <barretenberg/fq.hpp>
 #include <barretenberg/fr.hpp>
 #include <barretenberg/scalar_multiplication.hpp>
+#include <barretenberg/pairing.hpp>
 
 struct multiplication_data
 {
@@ -91,8 +93,20 @@ void generate_points(multiplication_data& data)
 
 multiplication_data point_data;
 
+g1::affine_element g1_pair_points[2];
+g2::affine_element g2_pair_points[2];
+
+void generate_pairing_points(g1::affine_element* p1s, g2::affine_element* p2s)
+{
+    p1s[0] = g1::random_affine_element();
+    p1s[1] = g1::random_affine_element();
+    p2s[0] = g2::random_affine_element();
+    p2s[1] = g2::random_affine_element();
+}
+
 const auto init = []() {
     libff::init_alt_bn128_params();
+    generate_pairing_points(&g1_pair_points[0], &g2_pair_points[0]);
     printf("generating point data\n");
     generate_points(point_data);
     printf("generated point data\n");
@@ -137,9 +151,25 @@ inline uint64_t fq_mul_libff(libff::alt_bn128_Fq& a, libff::alt_bn128_Fq& r)
 void *pippenger_single(void* v_args) noexcept
 {
     pippenger_point_data* data = (pippenger_point_data*)v_args;
+    uint64_t clk_start = rdtsc();
     scalar_multiplication::pippenger(&data->scalars[0], &data->points[0], NUM_POINTS, NUM_BUCKETS);
+    uint64_t clk_end = rdtsc();
+    printf("num clks = %lu\n", clk_end - clk_start);
     return NULL;
 }
+
+
+void pairing_twin_bench(State& state) noexcept
+{
+    for (auto _ : state)
+    {
+        // uint64_t before = rdtsc();
+        DoNotOptimize(pairing::reduced_ate_pairing_batch(&g1_pair_points[0], &g2_pair_points[0], 2));
+        // uint64_t after = rdtsc();
+        // printf("twin pairing clock cycles = %lu\n", (after - before));
+    }
+}
+BENCHMARK(pairing_twin_bench);
 
 void pippenger_multicore_bench(State& state) noexcept
 {
@@ -169,10 +199,10 @@ void pippenger_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
-        // uint64_t before = rdtsc();
+        uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(&point_data.scalars[0], &point_data.points[0], NUM_POINTS, NUM_BUCKETS));
-        // uint64_t after = rdtsc();
-        // printf("clock cycles = %lu\n", (after - before));
+        uint64_t after = rdtsc();
+        printf("pippenger single clock cycles = %lu\n", (after - before));
     }
 }
 BENCHMARK(pippenger_bench);

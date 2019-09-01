@@ -12,8 +12,13 @@ add_library(
     fq_impl_asm.hpp
     fq_impl_int128.hpp
     fq.hpp
+    fq2.hpp
+    fq6.hpp
+    fq12.hpp
     g1.hpp
+    g2.hpp
     scalar_multiplication.hpp
+    pairing.hpp
 )
 
 set_target_properties(barretenberg PROPERTIES LINKER_LANGUAGE CXX)
@@ -39,8 +44,13 @@ add_executable(
     fq_impl_asm.hpp
     fq_impl_int128.hpp
     fq.hpp
+    fq2.hpp
+    fq6.hpp
+    fq12.hpp
     g1.hpp
+    g2.hpp
     scalar_multiplication.hpp
+    pairing.hpp
 )
 
 target_link_libraries(
