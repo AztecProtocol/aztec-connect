@@ -10,6 +10,17 @@ namespace g2
     constexpr fq::field_t yc0 = { .data = { 0x619dfa9d886be9f6, 0xfe7fd297f59e9b78, 0xff9e1a62231b7dfe, 0x28fd7eebae9e4206 } };
     constexpr fq::field_t yc1 = { .data = { 0x64095b56c71856ee, 0xdc57f922327d3cbb, 0x55f935be33351076, 0x0da4a0e693fd6482 } };
 
+
+    constexpr fq2::fq2_t twist_mul_by_q_x = {
+        .c0 = { .data = { 0xb5773b104563ab30, 0x347f91c8a9aa6454, 0x7a007127242e0991, 0x1956bcd8118214ec } },
+        .c1 = { .data = { 0x6e849f1ea0aa4757, 0xaa1c7b6d89f89141, 0xb6e713cdfae0ca3a, 0x26694fbb4e82ebc3 } }
+    };
+
+    constexpr fq2::fq2_t twist_mul_by_q_y = {
+        .c0 = { .data = { 0xe4bbdd0c2936b629, 0xbb30f162e133bacb, 0x31a9d1b6f9645366, 0x253570bea500f8dd } },
+        .c1 = { .data = { 0xa1d77ce45ffe77c7, 0x07affd117826d1db, 0x6d16bd27bb7edc6b, 0x2c87200285defecc } }
+    };
+
     struct affine_element
     {
         fq2::fq2_t x;
@@ -444,6 +455,17 @@ namespace g2
         fq2::mul(p3.z, H, p3.z);
     }
 
+    inline void mul_by_q(const element& a, element& r)
+    {
+        fq2::fq2_t T0;
+        fq2::fq2_t T1;
+        fq2::frobenius_map(a.x, T0);
+        fq2::frobenius_map(a.y, T1);
+        fq2::mul(twist_mul_by_q_x, T0, r.x);
+        fq2::mul(twist_mul_by_q_y, T1, r.y);
+        fq2::frobenius_map(a.z, r.z);
+    }
+
     inline affine_element convert_to_affine(const element& a)
     {
         affine_element result = { .x = { .c0 = { .data = { 0, 0, 0, 0 } }, .c1 = {.data = { 0, 0, 0, 0 } } }, .y = { .c0 = { .data = { 0, 0, 0, 0 } }, .c1 = { .data = { 0, 0, 0, 0 } } } };
@@ -464,6 +486,13 @@ namespace g2
         return result;
     }
 
+    inline void neg(const element& a, element& r)
+    {
+        fq2::copy(a.x, r.x);
+        fq2::copy(a.y, r.y);
+        fq2::neg(r.y, r.y);
+    }
+
     inline void copy_from_affine(const affine_element& a, element& r)
     {
         fq::copy(a.x.c0, r.x.c0);
@@ -474,7 +503,20 @@ namespace g2
         fq::zero(r.z.c1);
     }
 
-    affine_element group_exponentiation(const affine_element& a, const fr::field_t& scalar)
+    inline void copy(const element& a, element& r)
+    {
+        fq2::copy(a.x, r.x);
+        fq2::copy(a.y, r.y);
+        fq2::copy(a.z, r.z);
+    }
+
+    inline void copy_affine(const affine_element& a, affine_element& r)
+    {
+        fq2::copy(a.x, r.x);
+        fq2::copy(a.y, r.y);
+    }
+
+    inline affine_element group_exponentiation(const affine_element& a, const fr::field_t& scalar)
     {
         // TODO: if we need to speed up G2, use a fixed-window WNAF
         element work_element;
@@ -512,7 +554,25 @@ namespace g2
         return convert_to_affine(work_element);
     }
 
-    void print(element& a)
+    inline element random_element()
+    {
+        fr::field_t scalar;
+        fr::random_element(scalar);
+        g2::affine_element res = g2::affine_one();
+        res = g2::group_exponentiation(res, scalar);
+        g2::element out;
+        g2::copy_from_affine(res, out);
+        return out;
+    }
+
+    inline affine_element random_affine_element()
+    {
+        element ele = random_element();
+        affine_element res = convert_to_affine(ele);
+        return res;
+    }
+
+    inline void print(element& a)
     {
         printf("g2: \n x: ");
         fq2::print(a.x);

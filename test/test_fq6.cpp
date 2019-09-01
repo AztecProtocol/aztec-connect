@@ -6,21 +6,6 @@
 
 #include <barretenberg/fq6.hpp>
 
-// namespace
-// {
-// void to_bigint(uint64_t *a, libff::bigint<4>& a_bigint)
-// {
-//     a_bigint.data[0] = a[0];
-//     a_bigint.data[1] = a[1];
-//     a_bigint.data[2] = a[2];
-//     a_bigint.data[3] = a[3];
-// }
-// // uint64_t rdtsc(){
-// //     unsigned int lo,hi;
-// //     __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-// //     return ((uint64_t)hi << 32) | lo;
-// // }
-// }
 namespace
 {
     libff::alt_bn128_Fq6 to_libff_fq6(fq6::fq6_t a)

@@ -32,6 +32,12 @@ namespace fq2
         fq::sub(r.c1, t2, r.c1);
     }
 
+    inline void mul_by_fq(const fq::field_t& a, const fq2_t& b, fq2_t& r)
+    {
+        fq::mul(a, b.c0, r.c0);
+        fq::mul(a, b.c1, r.c1);
+    }
+
     inline void sqr(const fq2_t& a, fq2_t& r)
     {
         fq::field_t t1 = { .data = { 0, 0, 0, 0 } };
@@ -90,6 +96,12 @@ namespace fq2
         fq::neg(r.c1, r.c1);
     }
 
+    inline void frobenius_map(const fq2_t& a, fq2_t& r)
+    {
+        fq::copy(a.c0, r.c0);
+        fq::neg(a.c1, r.c1);
+    }
+
     inline void one(fq2_t& r)
     {
         fq::one(r.c0);
@@ -102,13 +114,25 @@ namespace fq2
         fq::zero(r.c1);
     }
 
+    inline void from_montgomery_form(const fq2_t& a, fq2_t& r)
+    {
+        fq::from_montgomery_form(a.c0, r.c0);
+        fq::from_montgomery_form(a.c1, r.c1);
+    }
+
     inline void copy(const fq2_t& a, fq2_t& r)
     {
         fq::copy(a.c0, r.c0);
         fq::copy(a.c1, r.c1);
     }
 
-    inline void print(fq2_t& a)
+    inline void random_element(fq2_t& r)
+    {
+        fq::random_element(r.c0);
+        fq::random_element(r.c1);
+    }
+
+    inline void print(const fq2_t& a)
     {
         printf("fq2: \n");
         fq::print(a.c0);

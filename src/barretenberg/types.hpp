@@ -39,3 +39,22 @@ namespace fq6
         fq2::fq2_t c2;
     };
 }
+
+namespace fq12
+{
+    struct fq12_t
+    {
+        fq6::fq6_t c0;
+        fq6::fq6_t c1;
+    };
+}
+
+namespace pairing
+{
+    struct ell_coeffs
+    {
+        fq2::fq2_t o;
+        fq2::fq2_t vw;
+        fq2::fq2_t vv;
+    };
+}

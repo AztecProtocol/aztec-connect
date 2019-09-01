@@ -19,10 +19,12 @@ add_executable(
     test_fq.cpp
     test_fq2.cpp
     test_fq6.cpp
+    test_fq12.cpp
     test_fr.cpp
     test_g1.cpp
     test_g2.cpp
     test_scalar_multiplication.cpp
+    test_pairing.cpp
 )
 
 target_link_libraries(

@@ -5,6 +5,36 @@
 
 namespace fq6
 {
+    constexpr fq2::fq2_t frobenius_coeffs_c1_one = {
+        .c0 = { .data = { 0xb5773b104563ab30, 0x347f91c8a9aa6454, 0x7a007127242e0991, 0x1956bcd8118214ec } },
+        .c1 = { .data = { 0x6e849f1ea0aa4757, 0xaa1c7b6d89f89141, 0xb6e713cdfae0ca3a, 0x26694fbb4e82ebc3 } }
+    };
+
+    constexpr fq2::fq2_t frobenius_coeffs_c1_two = {
+        .c0 = { .data = { 0x3350c88e13e80b9c, 0x7dce557cdb5e56b9, 0x6001b4b8b615564a, 0x2682e617020217e0 } },
+        .c1 = { .data = { 0, 0, 0, 0 } }
+    };
+
+    constexpr fq2::fq2_t frobenius_coeffs_c1_three = {
+        .c0 = { .data = { 0xc9af22f716ad6bad, 0xb311782a4aa662b2, 0x19eeaf64e248c7f4, 0x20273e77e3439f82 } },
+        .c1 = { .data = { 0xacc02860f7ce93ac, 0x3933d5817ba76b4c, 0x69e6188b446c8467, 0x0a46036d4417cc55 } }
+    };
+
+    constexpr fq2::fq2_t frobenius_coeffs_c2_one = {
+        .c0 = { .data = { 0x7361d77f843abe92, 0xa5bb2bd3273411fb, 0x9c941f314b3e2399, 0x15df9cddbb9fd3ec } },
+        .c1 = { .data = { 0x5dddfd154bd8c949, 0x62cb29a5a4445b60, 0x37bc870a0c7dd2b9, 0x24830a9d3171f0fd } }
+    };
+
+    constexpr fq2::fq2_t frobenius_coeffs_c2_two = {
+        .c0 = { .data = { 0x71930c11d782e155, 0xa6bb947cffbe3323, 0xaa303344d4741444, 0x2c3b3f0d26594943 } },
+        .c1 = { .data = { 0, 0, 0, 0 } }
+    };
+
+    constexpr fq2::fq2_t frobenius_coeffs_c2_three = {
+        .c0 = { .data = { 0x448a93a57b6762df, 0xbfd62df528fdeadf, 0xd858f5d00e9bd47a, 0x06b03d4d3476ec58 } },
+        .c1 = { .data = { 0x2b19daf4bcc936d1, 0xa1a54e7a56f4299f, 0xb533eee05adeaef1, 0x170c812b84dda0b2 } }
+    };
+
     // non residue = 9 + i \in Fq2
     // const fq::field_t non_residue = { .data = { 0, 0, 0, 0 } };
     inline void mul_by_non_residue(const fq2::fq2_t& a, fq2::fq2_t& r)
@@ -43,6 +73,13 @@ namespace fq6
         fq2::sub(a.c0, b.c0, r.c0);
         fq2::sub(a.c1, b.c1, r.c1);
         fq2::sub(a.c2, b.c2, r.c2);   
+    }
+
+    inline void neg(const fq6_t& a, fq6_t& r)
+    {
+        fq2::neg(a.c0, r.c0);
+        fq2::neg(a.c1, r.c1);
+        fq2::neg(a.c2, r.c2);
     }
 
     inline void mul(const fq6_t& a, const fq6_t& b, fq6_t& r)
@@ -256,5 +293,73 @@ namespace fq6
 
         // r.c2 = T0 * C2
         fq2::mul(T0, C2, r.c2);
+    }
+
+    inline void mul_by_fq2(const fq2::fq2_t& a, const fq6_t& b, fq6_t& r)
+    {
+        fq2::mul(a, b.c0, r.c0);
+        fq2::mul(a, b.c1, r.c1);
+        fq2::mul(a, b.c2, r.c2);
+    }
+
+    inline void frobenius_map_three(const fq6_t& a, fq6_t& r)
+    {
+        fq2::fq2_t T0;
+        fq2::fq2_t T1;
+        fq2::frobenius_map(a.c1, T0);
+        fq2::frobenius_map(a.c2, T1);
+        fq2::frobenius_map(a.c0, r.c0);
+        fq2::mul(frobenius_coeffs_c1_three, T0, r.c1);
+        fq2::mul(frobenius_coeffs_c2_three, T1, r.c2);
+    }
+
+    inline void frobenius_map_two(const fq6_t& a, fq6_t& r)
+    {
+        fq2::copy(a.c0, r.c0);
+        fq2::mul(frobenius_coeffs_c1_two, a.c1, r.c1);
+        fq2::mul(frobenius_coeffs_c2_two, a.c2, r.c2);
+    }
+
+    inline void frobenius_map_one(const fq6_t& a, fq6_t& r)
+    {
+        fq2::fq2_t T0;
+        fq2::fq2_t T1;
+        fq2::frobenius_map(a.c1, T0);
+        fq2::frobenius_map(a.c2, T1);
+        fq2::frobenius_map(a.c0, r.c0);
+        fq2::mul(frobenius_coeffs_c1_one, T0, r.c1);
+        fq2::mul(frobenius_coeffs_c2_one, T1, r.c2);
+    }
+
+    inline void random_element(fq6_t& r)
+    {
+        fq2::random_element(r.c0);
+        fq2::random_element(r.c1);
+        fq2::random_element(r.c2);
+    }
+
+    inline void from_montgomery_form(const fq6_t& a, fq6_t& r)
+    {
+        fq2::from_montgomery_form(a.c0, r.c0);
+        fq2::from_montgomery_form(a.c1, r.c1);
+        fq2::from_montgomery_form(a.c2, r.c2);
+    }
+
+    inline void copy(const fq6_t& a,fq6_t& r)
+    {
+        fq2::copy(a.c0, r.c0);
+        fq2::copy(a.c1, r.c1);
+        fq2::copy(a.c2, r.c2);
+    }
+
+    inline void print(const fq6_t& a)
+    {
+        printf("fq6:\n");
+        printf("c0:\n");
+        fq2::print(a.c0);
+        printf("c1: \n");
+        fq2::print(a.c1);
+        printf("c2: \n");
+        fq2::print(a.c2);
     }
 }

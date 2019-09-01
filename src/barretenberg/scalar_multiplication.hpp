@@ -125,62 +125,7 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element *points, s
             __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
             g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
         }
-        // for (size_t j = 0; j < (state.num_points >> 4); ++j)
-        // {
-        //     __builtin_prefetch(wnaf_state.wnaf_iterator + 16);
-        //     for (size_t k = 0; k < 16; ++k)
-        //     {
-        //         wnaf_state.current_idx = wnaf_state.next_idx;
-        //         wnaf_state.current_sign = wnaf_state.next_sign;
-        //         // compute the bucket index one step ahead of our current point, so that
-        //         // we can issue a prefetch instruction and cache the bucket
-        //         compute_next_bucket_index(wnaf_state);
-        //         __builtin_prefetch(&state.buckets[wnaf_state.next_idx]);
-        //         ++wnaf_state.wnaf_iterator;
-        //         g1::conditional_negate_affine(&points[(j << 4) + k], &state.addition_temporary, wnaf_state.current_sign);
-        //         __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
-        //         g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
-        //     }
-        // }
-        // for (size_t j = (state.num_points >> 4) << 4; j < state.num_points; ++j)
-        // {
-        //     wnaf_state.current_idx = wnaf_state.next_idx;
-        //     wnaf_state.current_sign = wnaf_state.next_sign;
-        //     // compute the bucket index one step ahead of our current point, so that
-        //     // we can issue a prefetch instruction and cache the bucket
-        //     compute_next_bucket_index(wnaf_state);
-        //     __builtin_prefetch(&state.buckets[wnaf_state.next_idx]);
-        //     ++wnaf_state.wnaf_iterator;
-        //     g1::conditional_negate_affine(&points[j], &state.addition_temporary, wnaf_state.current_sign);
-        //     __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
-        //     g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
-        // }
-        // for (size_t j = 0; j < state.switch_point; ++j)
-        // {
-        //     wnaf_state.current_idx = wnaf_state.next_idx;
-        //     wnaf_state.current_sign = wnaf_state.next_sign;
-        //     // compute the bucket index one step ahead of our current point, so that
-        //     // we can issue a prefetch instruction and cache the bucket
-        //     compute_next_bucket_index(wnaf_state);
-        //     __builtin_prefetch(&state.buckets[wnaf_state.next_idx]);
-        //     __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
-        //     __builtin_prefetch(++wnaf_state.wnaf_iterator);
-        //     g1::conditional_negate_affine(&points[j], &state.addition_temporary, wnaf_state.current_sign);
-        //     g1::mixed_add/*g1::mixed_add_expect_empty*/(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
-        // }
-        // for (size_t j = state.switch_point; j < state.num_points; ++j)
-        // {
-        //     wnaf_state.current_idx = wnaf_state.next_idx;
-        //     wnaf_state.current_sign = wnaf_state.next_sign;
-        //     // compute the bucket index one step ahead of our current point, so that
-        //     // we can issue a prefetch instruction and cache the bucket
-        //     compute_next_bucket_index(wnaf_state);
-        //     __builtin_prefetch(&state.buckets[wnaf_state.next_idx]);
-        //     __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
-        //     __builtin_prefetch(++wnaf_state.wnaf_iterator);
-        //     g1::conditional_negate_affine(&points[j], &state.addition_temporary, wnaf_state.current_sign);
-        //     g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
-        // }
+
         if (i > 0)
         {
             // we want to perform *bits_per_wnaf* number of doublings (i.e. bits_per_bucket + 1)
