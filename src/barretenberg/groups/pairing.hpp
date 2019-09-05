@@ -2,10 +2,10 @@
 
 #include "g1.hpp"
 #include "g2.hpp"
-#include "fq.hpp"
-#include "fq6.hpp"
-#include "fq12.hpp"
-#include "types.hpp"
+#include "../fields/fq.hpp"
+#include "../fields/fq6.hpp"
+#include "../fields/fq12.hpp"
+#include "../types.hpp"
 
 namespace pairing
 {

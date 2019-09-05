@@ -15,6 +15,165 @@
         "adcxq 16(" b "), %%r14               \n\t"                                     \
         "adcxq 24(" b "), %%r15               \n\t"                                   
 
+
+#define DOUBLE(a) \
+        "xorq %%r12, %%r12                        \n\t"                                     \
+        "movq 0(" a "), %%r12                   \n\t"                                     \
+        "movq 8(" a "), %%r13                   \n\t"                                     \
+        "movq 16(" a "), %%r14                 \n\t"                                     \
+        "movq 24(" a "), %%r15                 \n\t"                                     \
+        "adcxq %%r12, %%r12                 \n\t"                                     \
+        "adcxq %%r13, %%r13                 \n\t"                                     \
+        "adcxq %%r14, %%r14               \n\t"                                     \
+        "adcxq %%r15, %%r15               \n\t"                                   
+
+#define QUAD(a) \
+        "xorq %%r12, %%r12                  \n\t" \
+        "movq 0(" a "), %%r12                   \n\t"                                     \
+        "movq 8(" a "), %%r13                   \n\t"                                     \
+        "movq 16(" a "), %%r14                 \n\t"                                     \
+        "movq 24(" a "), %%r15                 \n\t"                                     \
+        "adcxq %%r12, %%r12              \n\t"   \
+        "adoxq %%r12, %%r12                 \n\t" \
+        "adcxq %%r13, %%r13              \n\t" \
+        "adoxq %%r13, %%r13                 \n\t" \
+        "adcxq %%r14, %%r14             \n\t" \
+        "adoxq %%r14, %%r14                 \n\t" \
+        "adcxq %%r15, %%r15             \n\t" \
+        "adoxq %%r15, %%r15                 \n\t"
+
+
+#define OCT(a, r) \
+        "xorq %%r12, %%r12                          \n\t" \
+        "movq 0(" a "), %%r12                       \n\t"                                     \
+        "movq 8(" a "), %%r13                       \n\t"                                     \
+        "movq 16(" a "), %%r14                      \n\t"                                     \
+        "movq 24(" a "), %%r15                      \n\t"                                     \
+        "adcxq %%r12, %%r12                         \n\t"   \
+        "adoxq %%r12, %%r12                         \n\t" \
+        "adcxq %%r13, %%r13                         \n\t" \
+        "adoxq %%r13, %%r13                         \n\t" \
+        "adcxq %%r14, %%r14                         \n\t" \
+        "adoxq %%r14, %%r14                         \n\t" \
+        "adcxq %%r15, %%r15                         \n\t" \
+        "adoxq %%r15, %%r15                         \n\t" \
+        /* Duplicate `r` */                                                               \
+        "movq %%r12, %%r8                       \n\t"                                     \
+        "movq %%r13, %%r9                       \n\t"                                     \
+        "movq %%r14, %%r10                      \n\t"                                     \
+        "movq %%r15, %%r11                      \n\t"                                     \
+        /* Add the negative representation of 'modulus' into `r`. We do this instead */   \
+        /* of subtracting, because we can use `adoxq`.                               */   \
+        /* This opcode only has a dependence on the overflow                         */   \
+        /* flag (sub/sbb changes both carry and overflow flags).                     */   \
+        /* We can process an `adcxq` and `acoxq` opcode simultaneously.              */   \
+        "adoxq %[twice_not_modulus_0], %%r12          \n\t" /* r'[0] -= modulus.data[0]    */   \
+        "adoxq %[twice_not_modulus_1], %%r13          \n\t" /* r'[1] -= modulus.data[1]    */   \
+        "adoxq %[twice_not_modulus_2], %%r14          \n\t" /* r'[2] -= modulus.data[2]    */   \
+        "adoxq %[twice_not_modulus_3], %%r15          \n\t" /* r'[3] -= modulus.data[3]    */   \
+                                                                                          \
+        /* if r does not need to be reduced, overflow flag is 1 */                        \
+        /* set r' = r if this flag is set                       */                        \
+        "cmovnoq %%r8, %%r12                    \n\t"                                     \
+        "cmovnoq %%r9, %%r13                    \n\t"                                     \
+        "cmovnoq %%r10, %%r14                   \n\t"                                     \
+        "cmovnoq %%r11, %%r15                   \n\t"                                     \
+        "xorq %%r8, %%r8                        \n\t" /* clear flags */ \
+        /* move from 4a -> 8a */ \
+        "adcxq %%r12, %%r12                     \n\t" \
+        "adcxq %%r13, %%r13                     \n\t" \
+        "adcxq %%r14, %%r14                     \n\t" \
+        "adcxq %%r15, %%r15                     \n\t" \
+        /* Duplicate `r` */                                                               \
+        "movq %%r12, %%r8                       \n\t"                                     \
+        "movq %%r13, %%r9                       \n\t"                                     \
+        "movq %%r14, %%r10                      \n\t"                                     \
+        "movq %%r15, %%r11                      \n\t"                                     \
+        /* Add the negative representation of 'modulus' into `r`. We do this instead */   \
+        /* of subtracting, because we can use `adoxq`.                               */   \
+        /* This opcode only has a dependence on the overflow                         */   \
+        /* flag (sub/sbb changes both carry and overflow flags).                     */   \
+        /* We can process an `adcxq` and `acoxq` opcode simultaneously.              */   \
+        "adoxq %[twice_not_modulus_0], %%r12          \n\t" /* r'[0] -= modulus.data[0]    */   \
+        "adoxq %[twice_not_modulus_1], %%r13          \n\t" /* r'[1] -= modulus.data[1]    */   \
+        "adoxq %[twice_not_modulus_2], %%r14          \n\t" /* r'[2] -= modulus.data[2]    */   \
+        "adoxq %[twice_not_modulus_3], %%r15          \n\t" /* r'[3] -= modulus.data[3]    */   \
+                                                                                          \
+        /* if r does not need to be reduced, overflow flag is 1 */                        \
+        /* set r' = r if this flag is set                       */                        \
+        "cmovnoq %%r8, %%r12                    \n\t"                                     \
+        "cmovnoq %%r9, %%r13                    \n\t"                                     \
+        "cmovnoq %%r10, %%r14                   \n\t"                                     \
+        "cmovnoq %%r11, %%r15                   \n\t"                                     \
+        /* result could still be > p. Reduce 1 more time */ \
+        /* Duplicate `r` */                                                               \
+        "movq %%r12, %%r8                       \n\t"                                     \
+        "movq %%r13, %%r9                       \n\t"                                     \
+        "movq %%r14, %%r10                      \n\t"                                     \
+        "movq %%r15, %%r11                      \n\t"                                     \
+        /* Add the negative representation of 'modulus' into `r`. We do this instead */   \
+        /* of subtracting, because we can use `adoxq`.                               */   \
+        /* This opcode only has a dependence on the overflow                         */   \
+        /* flag (sub/sbb changes both carry and overflow flags).                     */   \
+        /* We can process an `adcxq` and `acoxq` opcode simultaneously.              */   \
+        "adcxq %[not_modulus_0], %%r12          \n\t" /* r'[0] -= modulus.data[0]    */   \
+        "adcxq %[not_modulus_1], %%r13          \n\t" /* r'[1] -= modulus.data[1]    */   \
+        "adcxq %[not_modulus_2], %%r14          \n\t" /* r'[2] -= modulus.data[2]    */   \
+        "adcxq %[not_modulus_3], %%r15          \n\t" /* r'[3] -= modulus.data[3]    */   \
+                                                                                          \
+        /* if r does not need to be reduced, overflow flag is 1 */                        \
+        /* set r' = r if this flag is set                       */                        \
+        "cmovncq %%r8, %%r12                    \n\t"                                     \
+        "movq %%r12, 0(" r ")                 \n\t"                                       \
+        "cmovncq %%r9, %%r13                    \n\t"                                     \
+        "movq %%r13, 8(" r ")                 \n\t"                                       \
+        "cmovncq %%r10, %%r14                   \n\t"                                     \
+        "movq %%r14, 16(" r ")                \n\t"                                       \
+        "cmovncq %%r11, %%r15                   \n\t"                                     \
+        "movq %%r15, 24(" r ")                \n\t"                                     
+
+
+
+
+// add x0
+#define DOUBLE_WITH_ADD(a, b) \
+        "xorq %%r12, %%r12                  \n\t" \
+        "movq 0(" b "), %%r8                   \n\t"                                    \
+        "movq 8(" b "), %%r9                   \n\t"                                    \
+        "movq 16(" b "), %%r10                   \n\t"                                    \
+        "movq 24(" b "), %%r11                   \n\t"                                    \
+        "movq 0(" a "), %%r12                   \n\t"                                     \
+        "movq 8(" a "), %%r13                   \n\t"                                     \
+        "movq 16(" a "), %%r14                 \n\t"                                     \
+        "movq 24(" a "), %%r15                 \n\t"                                     \
+        "adcxq %%r12, %%r12                     \n\t" \
+        "adoxq %%r8, %%r12                      \n\t" \
+        "adcxq %%r13, %%r13                     \n\t" \
+        "adoxq %%r9, %%r13                      \n\t" \
+        "adcxq %%r14, %%r14                     \n\t" \
+        "adoxq %%r10, %%r14                     \n\t" \
+        "adcxq %%r15, %%r15                     \n\t" \
+        "adoxq %%r11, %%r15                     \n\t"
+
+// add x0
+#define ADD_TWO(x_0, x_1, y_0, y_1) \
+        "movq 0(" x_0 "), %%r8                   \n\t"                                    \
+        "movq 8(" x_0 "), %%r9                   \n\t"                                    \
+        "movq 16(" x_0 "), %%r10                   \n\t"                                    \
+        "movq 24(" x_0 "), %%r11                   \n\t"                                    \
+        "movq 0(" y_0 "), %%r12                   \n\t"                                     \
+        "movq 8(" y_1 "), %%r13                   \n\t"                                     \
+        "movq 16(" y_2 "), %%r14                 \n\t"                                     \
+        "movq 24(" y_3 "), %%r15                 \n\t"                                     \
+        "adcxq 0(" x_1 "), %%r8                  \n\t" \
+        "adoxq 0(" y_1 "), %%r12                 \n\t" \
+        "adcxq 8(" x_1 "), %%r9                  \n\t" \
+        "adoxq 8(" y_1 "), %%r13                 \n\t" \
+        "adcxq 16(" x_1 "), %%r10                  \n\t" \
+        "adoxq 16(" y_1 "), %%r14                 \n\t" \
+        "adcxq 24(" x_1 "), %%r11                  \n\t" \
+        "adoxq 24(" y_1 "), %%r15                 \n\t" \
+
 /**
  * Take a 4-limb integer, r, in (%r12, %r13, %r14, %r15)
  * and conditionally subtract modulus, if r > p.
@@ -45,6 +204,82 @@
         "movq %%r14, 16(" r ")                \n\t"                                       \
         "cmovnoq %%r11, %%r15                   \n\t"                                     \
         "movq %%r15, 24(" r ")                \n\t"                                     
+
+#define REDUCE_RESULT_COARSE(r) \
+        /* Duplicate `r` */                                                               \
+        "movq %%r12, %%r8                       \n\t"                                     \
+        "movq %%r13, %%r9                       \n\t"                                     \
+        "movq %%r14, %%r10                      \n\t"                                     \
+        "movq %%r15, %%r11                      \n\t"                                     \
+        /* Add the negative representation of 'modulus' into `r`. We do this instead */   \
+        /* of subtracting, because we can use `adoxq`.                               */   \
+        /* This opcode only has a dependence on the overflow                         */   \
+        /* flag (sub/sbb changes both carry and overflow flags).                     */   \
+        /* We can process an `adcxq` and `acoxq` opcode simultaneously.              */   \
+        "adoxq %[twice_not_modulus_0], %%r12          \n\t" /* r'[0] -= modulus.data[0]    */   \
+        "adoxq %[twice_not_modulus_1], %%r13          \n\t" /* r'[1] -= modulus.data[1]    */   \
+        "adoxq %[twice_not_modulus_2], %%r14          \n\t" /* r'[2] -= modulus.data[2]    */   \
+        "adoxq %[twice_not_modulus_3], %%r15          \n\t" /* r'[3] -= modulus.data[3]    */   \
+                                                                                          \
+        /* if r does not need to be reduced, overflow flag is 1 */                        \
+        /* set r' = r if this flag is set                       */                        \
+        "cmovnoq %%r8, %%r12                    \n\t"                                     \
+        "movq %%r12, 0(" r ")                 \n\t"                                       \
+        "cmovnoq %%r9, %%r13                    \n\t"                                     \
+        "movq %%r13, 8(" r ")                 \n\t"                                       \
+        "cmovnoq %%r10, %%r14                   \n\t"                                     \
+        "movq %%r14, 16(" r ")                \n\t"                                       \
+        "cmovnoq %%r11, %%r15                   \n\t"                                     \
+        "movq %%r15, 24(" r ")                \n\t"   
+
+/**
+ * Take a 4-limb integer, r, in (%r12, %r13, %r14, %r15)
+ * and conditionally subtract modulus, if r > p.
+ **/ 
+#define REDUCE_RESULT_TWICE() \
+        /* Duplicate `r` */                                                               \
+        "movq %%r12, %%r8                       \n\t"                                     \
+        "movq %%r13, %%r9                       \n\t"                                     \
+        "movq %%r14, %%r10                      \n\t"                                     \
+        "movq %%r15, %%r11                      \n\t"                                     \
+        /* %rax", "%rsi", "%rdx" "%rdi" */ \
+        "movq %%r12, %%rax                      \n\t" \
+        "movq %%r13, %%rsi                      \n\t" \
+        "movq %%r14, %%rdx                      \n\t" \
+        "movq %%r15, %%rdi                      \n\t" \
+        /* Add the negative representation of 'modulus' into `r`. We do this instead */   \
+        /* of subtracting, because we can use `adoxq`.                               */   \
+        /* This opcode only has a dependence on the overflow                         */   \
+        /* flag (sub/sbb changes both carry and overflow flags).                     */   \
+        /* We can process an `adcxq` and `acoxq` opcode simultaneously.              */   \
+        /* Do the same in parallel, adding neg of `2 * modulus` into `r`             */   \
+        "adcxq %[not_modulus_0], %%r12          \n\t" /* r'[0] -= modulus.data[0]    */   \
+        "adoxq %[twice_not_modulus_0], %%rax    \n\t" \
+        "adcxq %[not_modulus_1], %%r13          \n\t" /* r'[1] -= modulus.data[1]    */   \
+        "adoxq %[twice_not_modulus_1], %%rsi    \n\t" \
+        "adcxq %[not_modulus_2], %%r14          \n\t" /* r'[2] -= modulus.data[2]    */   \
+        "adoxq %[twice_not_modulus_2], %%rdx    \n\t" \
+        "adcxq %[not_modulus_3], %%r15          \n\t" /* r'[3] -= modulus.data[3]    */   \
+        "adoxq %[twice_not_modulus_3], %%rdi    \n\t" \
+        /* If carry flag is 1 and overflow flag is 1, need to sub 2p */ \
+        /* If carry flag is 1 and overflow flag is 0, need to sub p */ \
+        /* Start by conditionally moving 2p reduced sum into 1p reduced sum */ \
+        "cmovoq %%rax, %%r12                   \n\t" \
+        "cmovoq %%rsi, %%r13                   \n\t" \
+        "cmovoq %%rdx, %%r14                   \n\t" \
+        "cmovoq %%rdi, %%r15                   \n\t" \
+        "movq %[dest], %%rsi                    \n\t" \
+        /* if r does not need to be reduced, carry flag is 0 */                        \
+        /* set r' = r if this flag is set                       */                        \
+        "cmovncq %%r8, %%r12                    \n\t"                                     \
+        "movq %%r12, 0(%%rsi)                 \n\t"                                       \
+        "cmovncq %%r9, %%r13                    \n\t"                                     \
+        "movq %%r13, 8(%%rsi)                 \n\t"                                       \
+        "cmovncq %%r10, %%r14                   \n\t"                                     \
+        "movq %%r14, 16(%%rsi)                \n\t"                                       \
+        "cmovncq %%r11, %%r15                   \n\t"                                     \
+        "movq %%r15, 24(%%rsi)                \n\t"                                     
+
 
 #define SUB(a, b, r) \
         /* clear flags */                                                                 \
@@ -563,9 +798,9 @@
         "mulxq 0(" b "), %%r8, %%r9                \n\t"  /* (t[0], t[1]) <- (a[3] * b[0])                   */         \
         "mulxq 8(" b "), %%rdi, %%rsi              \n\t"  /* (t[4], t[5]) <- (a[3] * b[1])                   */         \
         "adcxq %%r8, %%rax                         \n\t"  /* r[3] += t[0] + flag_c                           */         \
-        "movq %%r13, 0(" r ")                       \n\t" \
-        "movq %%r14, 8(" r ")                       \n\t" \
-        "movq %%r15, 16(" r ")                       \n\t" \
-        "movq %%rax, 24(" r ")                       \n\t"
+        "movq %%r13, 0(" r ")                      \n\t" \
+        "movq %%r14, 8(" r ")                      \n\t" \
+        "movq %%r15, 16(" r ")                     \n\t" \
+        "movq %%rax, 24(" r ")                     \n\t"
 
 

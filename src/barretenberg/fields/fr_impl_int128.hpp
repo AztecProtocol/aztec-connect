@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <stdio.h>
 
-#include "assert.hpp"
+#include "../assert.hpp"
 
 #include "fr.hpp"
 

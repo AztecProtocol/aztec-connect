@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include "assert.hpp"
-#include "types.hpp"
+#include "../assert.hpp"
+#include "../types.hpp"
 #include "asm_macros.hpp"
 namespace fr
 {
@@ -27,39 +27,74 @@ constexpr uint64_t zero_reference = 0;
 /**
  * copy src into dest. AVX implementation requires words to be aligned on 32 byte bounary
  **/ 
-// inline void copy(const field_t& src, field_t& dest)
-// {
-// #ifdef __AVX__
-//     ASSERT((((uintptr_t)src.data & 0x1f) == 0));
-//     ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
-//     __asm__ (
-//         "vmovdqa 0(%0), %%ymm0              \n\t"
-//         "vmovdqa %%ymm0, 0(%1)              \n\t"
-//         :
-//         : "r"(src.data), "r"(dest.data)
-//         : "%ymm0", "memory");
-// #else
-//     __asm__ (
-//         "movq 0(%0), %%r8                       \n\t"
-//         "movq 8(%0), %%r9                       \n\t"
-//         "movq 16(%0), %%r10                     \n\t"
-//         "movq 24(%0), %%r11                     \n\t"
-//         "movq %%r8, 0(%1)                       \n\t"
-//         "movq %%r9, 8(%1)                       \n\t"
-//         "movq %%r10, 16(%1)                     \n\t"
-//         "movq %%r11, 24(%1)                     \n\t"
-//         :
-//         : "r"(src.data), "r"(dest.data)
-//         : "%r8", "%r9", "%r10", "%r11", "memory");
-// #endif
-// }
-inline void copy(const field_t& a, field_t& r)
+inline void copy(const field_t& src, field_t& dest)
 {
-    r.data[0] = a.data[0];
-    r.data[1] = a.data[1];
-    r.data[2] = a.data[2];
-    r.data[3] = a.data[3];
+#ifdef __AVX__
+    ASSERT((((uintptr_t)src.data & 0x1f) == 0));
+    ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
+    __asm__ (
+        "vmovdqa 0(%0), %%ymm0              \n\t"
+        "vmovdqa %%ymm0, 0(%1)              \n\t"
+        :
+        : "r"(src.data), "r"(dest.data)
+        : "%ymm0", "memory");
+#else
+    __asm__ (
+        "movq 0(%0), %%r8                       \n\t"
+        "movq 8(%0), %%r9                       \n\t"
+        "movq 16(%0), %%r10                     \n\t"
+        "movq 24(%0), %%r11                     \n\t"
+        "movq %%r8, 0(%1)                       \n\t"
+        "movq %%r9, 8(%1)                       \n\t"
+        "movq %%r10, 16(%1)                     \n\t"
+        "movq %%r11, 24(%1)                     \n\t"
+        :
+        : "r"(src.data), "r"(dest.data)
+        : "%r8", "%r9", "%r10", "%r11", "memory");
+#endif
 }
+
+
+/**
+ * swap src and dest. AVX implementation requires words to be aligned on 32 byte bounary
+ **/ 
+inline void swap(const field_t& src, field_t& dest)
+{
+#ifdef __AVX__
+    ASSERT((((uintptr_t)src.data & 0x1f) == 0));
+    ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
+    __asm__ (
+        "vmovdqa 0(%0), %%ymm0              \n\t"
+        "vmovdqa 0(%1), %%ymm1              \n\t"
+        "vmovdqa %%ymm0, 0(%1)              \n\t"
+        "vmovdqa %%ymm1, 0(%0)              \n\t"
+        :
+        : "r"(src.data), "r"(dest.data)
+        : "%ymm0", "memory");
+#else
+    __asm__ (
+        "movq 0(%0), %%r8                       \n\t"
+        "movq 8(%0), %%r9                       \n\t"
+        "movq 16(%0), %%r10                     \n\t"
+        "movq 24(%0), %%r11                     \n\t"
+        "movq 0(%1), %%r12                       \n\t"
+        "movq 8(%1), %%r13                       \n\t"
+        "movq 16(%1), %%r14                     \n\t"
+        "movq 24(%1), %%r15                     \n\t"
+        "movq %%r8, 0(%1)                       \n\t"
+        "movq %%r9, 8(%1)                       \n\t"
+        "movq %%r10, 16(%1)                     \n\t"
+        "movq %%r11, 24(%1)                     \n\t"
+        "movq %%r12, 0(%0)                       \n\t"
+        "movq %%r13, 8(%0)                       \n\t"
+        "movq %%r14, 16(%0)                     \n\t"
+        "movq %%r15, 24(%0)                     \n\t"
+        :
+        : "r"(src.data), "r"(dest.data)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "memory");
+#endif
+}
+
 /**
  * Add field_t elements `a` and `b` modulo `q`, store the result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb

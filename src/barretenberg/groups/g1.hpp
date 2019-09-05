@@ -2,9 +2,9 @@
 
 #include <stdint.h>
 
-#include "fr.hpp"
-#include "fq.hpp"
-#include "assert.hpp"
+#include "../fields/fr.hpp"
+#include "../fields/fq.hpp"
+#include "../assert.hpp"
 
 namespace g1
 {
@@ -117,8 +117,8 @@ namespace g1
         fq::field_t T2;
         fq::field_t T3;
 
-       // z2 = 2*y*z
-        fq::add(p1.z, p1.z, p2.z);
+        // z2 = 2*y*z
+        fq::add_without_reduction(p1.z, p1.z, p2.z);
         fq::mul(p2.z, p1.y, p2.z);
         // T0 = x*x
         fq::sqr(p1.x, T0);
@@ -130,7 +130,7 @@ namespace g1
         fq::sqr(T1, T2);
 
         // T1 = T1 + x = x + y*y
-        fq::add(T1, p1.x, T1);
+        fq::add_without_reduction(T1, p1.x, T1);
 
         // T1 = T1 * T1
         fq::sqr(T1, T1);
@@ -145,29 +145,32 @@ namespace g1
         fq::add(T1, T1, T1);
 
         // T3 = 3T0
-        fq::add(T0, T0, T3);
-        fq::add(T3, T0, T3);
-
-        // x2 = T3*T3
-        fq::sqr(T3, p2.x);
+        fq::double_with_add_with_coarse_reduction(T0, T0, T3);
+        // fq::add(T0, T0, T3);
+        // fq::add(T3, T0, T3);
 
         // T0 = 2T1
         fq::add(T1, T1, T0);
 
-        // x2 = x2 - 2T1
-        fq::sub(p2.x, T0, p2.x);
+        fq::sqr_then_sub(T3, T0, p2.x);
+        // // x2 = T3*T3
+        // fq::sqr(T3, p2.x);
+        // // x2 = x2 - 2T1
+        // fq::sub(p2.x, T0, p2.x);
     
         // T2 = 8T2
-        fq::add(T2, T2, T2);
-        fq::add(T2, T2, T2);
-        fq::add(T2, T2, T2);
-
+        // fq::add(T2, T2, T2);
+        // fq::add(T2, T2, T2);
+        // fq::add(T2, T2, T2);
+        fq::oct(T2, T2);
         // y2 = T1 - x2
         fq::sub(T1, p2.x, p2.y);
-        // y2 = y2 * T3
-        fq::mul(p2.y, T3, p2.y);
-        // y2 = y2 - T2
-        fq::sub(p2.y, T2, p2.y); 
+
+        fq::mul_then_sub(p2.y, T3, T2, p2.y);
+        // // y2 = y2 * T3
+        // fq::mul(p2.y, T3, p2.y);
+        // // y2 = y2 - T2
+        // fq::sub(p2.y, T2, p2.y); 
     }
 
     inline void mixed_add_inner(element& p1, affine_element& p2, element& p3)
@@ -180,20 +183,21 @@ namespace g1
         // T0 = z1.z1
         fq::sqr(p1.z, T0);
     
-        // T1 = x2.t0 = x2.z1.z1
-        fq::mul(p2.x, T0, T1);
+        fq::mul_then_sub(p2.x, T0, p1.x, T1);
+        // // T1 = x2.t0 = x2.z1.z1
+        // fq::mul(p2.x, T0, T1);
 
-        // T1 = T1 - x1 = x2.z1.z1 - x1 (H)
-        fq::sub(T1, p1.x, T1);
+        // // T1 = T1 - x1 = x2.z1.z1 - x1 (H)
+        // fq::sub(T1, p1.x, T1);
 
         // T2 = T0.z1 = z1.z1.z1
         fq::mul_without_reduction(p1.z, T0, T2);
 
-        // T2 = T2.y2 = y2.z1.z1.z1
-        fq::mul(T2, p2.y, T2);
-
-        // T2 = T2 - y1 = y2.z1.z1.z1 - y1
-        fq::sub(T2, p1.y, T2);
+        fq::mul_then_sub(T2, p2.y, p1.y, T2);
+        // // T2 = T2.y2 = y2.z1.z1.z1
+        // fq::mul(T2, p2.y, T2);
+        // // T2 = T2 - y1 = y2.z1.z1.z1 - y1
+        // fq::sub(T2, p1.y, T2);
 
         if (__builtin_expect(((T1.data[0] | T1.data[1] | T1.data[2] | T1.data[3]) == 0), 0))
         {
@@ -210,25 +214,26 @@ namespace g1
             }
         }
 
-        // T2 = 2T2 = 2(y2.z1.z1.z1 - y1) = R
-        fq::add_without_reduction(T2, T2, T2);
+        fq::double_add_twinned_without_reduction(T2, p1.z, T1, p3.z);
+        // // T2 = 2T2 = 2(y2.z1.z1.z1 - y1) = R
+        // fq::add_without_reduction(T2, T2, T2); 
+        // // z3 = z1 + H
+        // fq::add_without_reduction(p1.z, T1, p3.z);
 
         // T3 = T1*T1 = HH
         fq::sqr(T1, T3);
-        
-        // z3 = z1 + H
-        fq::add_without_reduction(p1.z, T1, p3.z);
-
-        // z3 = (z1 + H)*(z1 + H)
-        fq::sqr(p3.z, p3.z);
-
         // z3 = z3 - z1z1 - HH
         fq::add(T0, T3, T0);
-        fq::sub(p3.z, T0, p3.z);
+
+        // z3 = (z1 + H)*(z1 + H)
+        fq::sqr_then_sub(p3.z, T0, p3.z);
+        // fq::sqr(p3.z, p3.z);
+        // fq::sub(p3.z, T0, p3.z);
 
         // T3 = 4HH
-        fq::add(T3, T3, T3);
-        fq::add_without_reduction(T3, T3, T3);
+        fq::quad_with_partial_reduction(T3, T3);
+        // fq::add(T3, T3, T3);
+        // fq::add_without_reduction(T3, T3, T3);
 
         // T1 = T1*T3 = 4HHH
         fq::mul(T1, T3, T1);
@@ -236,30 +241,34 @@ namespace g1
         // T3 = T3 * x1 = 4HH*x1
         fq::mul(T3, p1.x, T3);
 
-        // T0 = 2T3
-        fq::add(T3, T3, T0);
+        fq::double_with_add(T3, T1, T0);
+        // // T0 = 2T3
+        // fq::add(T3, T3, T0);
 
-        // T0 = T0 * T1 = 2(4HH*x1) + 4HHH
-        fq::add(T0, T1, T0);
+        // // T0 = T0 + T1 = 2(4HH*x1) + 4HHH
+        // fq::add(T0, T1, T0);
+        fq::sqr_then_sub(T2, T0, p3.x);
+        // // x3 = T2*T2 = R*R
+        // fq::sqr(T2, p3.x);
 
-        // x3 = T2*T2 = R*R
-        fq::sqr(T2, p3.x);
-
-        // x3 = x3 - T0 = R*R - 8HH*x1 -4HHH
-        fq::sub(p3.x, T0, p3.x);
+        // // x3 = x3 - T0 = R*R - 8HH*x1 -4HHH
+        // fq::sub(p3.x, T0, p3.x);
 
         // T3 = T3 - x3 = 4HH*x1 - x3
         fq::sub(T3, p3.x, T3);
 
-        // T3 = T2 * T3 = R*(4HH*x1 - x3)
-        fq::mul(T3, T2, T3);
 
-        // T1 = T1 * y1 = 4HHH*y1
-        fq::mul(T1, p1.y, T1);
-        // T1 = 2T1 = 8HHH*y1
-        fq::add(T1, T1, T1);
+        fq::mul_then_double(T1, p1.y, T1);
+        // // T1 = T1 * y1 = 4HHH*y1
+        // fq::mul(T1, p1.y, T1);
+        // // T1 = 2T1 = 8HHH*y1
+        // fq::add(T1, T1, T1);
+        // T3 = T2 * T3 = R*(4HH*x1 - x3)
+        // fq::mul(T3, T2, T3);
         // y3 = T3 - T1
-        fq::sub(T3, T1, p3.y);
+        // fq::sub(T3, T1, p3.y);
+        fq::mul_then_sub(T3, T2, T1, p3.y);
+
     }
 
     inline void mixed_add(element &p1, affine_element &p2, element &p3)
@@ -459,9 +468,10 @@ namespace g1
         }
 
         // F = 2F = 2(S2 - S1)
-        fq::add(F, F, F);
-        // I = 2*H
-        fq::add(H, H, I);
+        // fq::add_without_reduction(F, F, F);
+        // // I = 2*H
+        // fq::add_without_reduction(H, H, I);
+        fq::double_add_twinned_without_reduction(F, H, H, I);
         // I = I * I = 4*H*H
         fq::sqr(I, I);
         // J = H * I = 4*H*H*H
@@ -469,32 +479,42 @@ namespace g1
         // U1 (V) = U1*I
         fq::mul(U1, I, U1);
         // U2 (W) = 2*V
-        fq::add(U1, U1, U2);
+        // fq::add(U1, U1, U2);
         // W = W + J = 2*V + 4*H*H*H
-        fq::add(U2, J, U2);
-        // X3 = F*F = 4(S2 - S1)(S2 - S1)
-        fq::sqr(F, p3.x);
-        // X3 = X3 - w = 4(S2 - S1)(S2 - S1) - 2*V - 4*H*H*H
-        fq::sub(p3.x, U2, p3.x);
-        // J = J*S1
-        fq::mul(J, S1, J);
-        // J = 2J
-        fq::add(J, J, J);
+        // fq::add(U2, J, U2);
+        fq::double_with_add(U1, J, U2);
+
+        fq::sqr_then_sub(F, U2, p3.x);
+        // // X3 = F*F = 4(S2 - S1)(S2 - S1)
+        // fq::sqr(F, p3.x);
+        // // X3 = X3 - w = 4(S2 - S1)(S2 - S1) - 2*V - 4*H*H*H
+        // fq::sub(p3.x, U2, p3.x);
+
+        fq::mul_then_double(J, S1, J);
+        // // J = J*S1
+        // fq::mul(J, S1, J);
+        // // J = 2J
+        // fq::add(J, J, J);
 
         // Y3 = V - X3
         fq::sub(U1, p3.x, p3.y);
-        // Y3 = Y3 * F
-        fq::mul(p3.y, F, p3.y);
-        // Y3 = Y3 - J
-        fq::sub(p3.y, J, p3.y);
+
+        fq::mul_then_sub(p3.y, F, J, p3.y);
+        // // Y3 = Y3 * F
+        // fq::mul(p3.y, F, p3.y);
+        // // Y3 = Y3 - J
+        // fq::sub(p3.y, J, p3.y);
 
         // Z3 = Z1 + Z2
         fq::add(p1.z, p2.z, p3.z);
-        // Z3 = (Z1 + Z2)(Z1 + Z2)
-        fq::sqr(p3.z, p3.z);
+
         // Z3 = Z3 - (Z1Z1 + Z2Z2)
         fq::add(Z1Z1, Z2Z2, Z1Z1);
-        fq::sub(p3.z, Z1Z1, p3.z);
+
+        fq::sqr_then_sub(p3.z, Z1Z1, p3.z);
+        // // Z3 = (Z1 + Z2)(Z1 + Z2)
+        // fq::sqr(p3.z, p3.z);
+        // fq::sub(p3.z, Z1Z1, p3.z);
         fq::mul(p3.z, H, p3.z);
     }
 

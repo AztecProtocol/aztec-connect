@@ -8,10 +8,10 @@
 #include <libff/algebra/curves/alt_bn128/alt_bn128_init.hpp>
 #include <libff/algebra/scalar_multiplication/multiexp.hpp>
 
-#include <barretenberg/scalar_multiplication.hpp>
-#include <barretenberg/g1.hpp>
-#include <barretenberg/fq.hpp>
-#include <barretenberg/fr.hpp>
+#include <barretenberg/groups/scalar_multiplication.hpp>
+#include <barretenberg/groups/g1.hpp>
+#include <barretenberg/fields/fq.hpp>
+#include <barretenberg/fields/fr.hpp>
 
 namespace
 {

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "types.hpp"
 #include "fq6.hpp"
 
 namespace fq12

@@ -1,10 +1,10 @@
-#include <barretenberg/fr.hpp>
+#include <barretenberg/fields/fr.hpp>
 
 #include <gtest/gtest.h>
 #include "stdint.h"
 #include "stdio.h"
 
-#include <barretenberg/wnaf.hpp>
+#include <barretenberg/groups/wnaf.hpp>
 
 namespace
 {

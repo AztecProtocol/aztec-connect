@@ -11,12 +11,12 @@ using namespace benchmark;
 #include <libff/algebra/scalar_multiplication/multiexp.hpp>
 #include <pthread.h> 
 
-#include <barretenberg/g1.hpp>
-#include <barretenberg/g2.hpp>
-#include <barretenberg/fq.hpp>
-#include <barretenberg/fr.hpp>
-#include <barretenberg/scalar_multiplication.hpp>
-#include <barretenberg/pairing.hpp>
+#include <barretenberg/fields/fq.hpp>
+#include <barretenberg/fields/fr.hpp>
+#include <barretenberg/groups/g1.hpp>
+#include <barretenberg/groups/g2.hpp>
+#include <barretenberg/groups/scalar_multiplication.hpp>
+#include <barretenberg/groups/pairing.hpp>
 
 struct multiplication_data
 {
@@ -32,10 +32,11 @@ struct pippenger_point_data
     g1::affine_element* points;
 };
 
-constexpr size_t NUM_POINTS = 1000000;
+constexpr size_t NUM_POINTS = 1048576;
 constexpr size_t NUM_THREADS = 8;
-constexpr size_t NUM_BUCKETS = 15;
+constexpr size_t NUM_BUCKETS = 15; // (for 2^23): 17 was 4.3us 18 was 3.88us, 19 was 4us, 20 was 4.3us
 
+// optimal bucket count for 1 million = 15
 void generate_points(multiplication_data& data)
 {
     data.scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * NUM_POINTS * NUM_THREADS);
@@ -50,7 +51,7 @@ void generate_points(multiplication_data& data)
         small_table[i] = g1::random_element();
     }
     g1::element current_table[10000];
-    for (size_t i = 0; i < ((NUM_POINTS * NUM_THREADS) / 10000); ++i)
+    for (size_t i = 0; i < ((NUM_POINTS) / 10000); ++i)
     {
         for (size_t j = 0; j < 10000; ++j)
         {
@@ -68,8 +69,8 @@ void generate_points(multiplication_data& data)
         }
     }
     g1::batch_normalize(small_table, 10000);
-    size_t rounded = ((NUM_POINTS * NUM_THREADS) / 10000) * 10000;
-    size_t leftovers = (NUM_POINTS * NUM_THREADS) - rounded;
+    size_t rounded = ((NUM_POINTS) / 10000) * 10000;
+    size_t leftovers = (NUM_POINTS) - rounded;
     for (size_t j = 0;  j < leftovers; ++j)
     {
             // libff::alt_bn128_G1 libff_pt = libff::alt_bn128_G1::one();
@@ -81,14 +82,21 @@ void generate_points(multiplication_data& data)
             // data.libff_points.emplace_back(libff_pt);
     }
 
-    for (size_t i = 0; i < (NUM_POINTS * NUM_THREADS); ++i)
+    for (size_t i = 0; i < (NUM_POINTS); ++i)
     {
         fr::random_element(data.scalars[i]);
         // libff::alt_bn128_Fr libff_scalar;
         // fr::copy(data.scalars[i], *(fr::field_t*)&libff_scalar.mont_repr.data);
         // data.libff_scalars.emplace_back(libff_scalar);
     }
-    scalar_multiplication::generate_pippenger_point_table(data.points, data.points, (NUM_POINTS * NUM_THREADS));
+    scalar_multiplication::generate_pippenger_point_table(data.points, data.points, (NUM_POINTS));
+    printf("boop\n");
+    for (size_t i = 1; i < NUM_THREADS; ++i)
+    {
+        memcpy((void*)&data.points[NUM_POINTS * i], (void*)&data.points[0], sizeof(g1::affine_element) * NUM_POINTS);
+        memcpy((void*)&data.scalars[NUM_POINTS * i], (void*)&data.scalars[0], sizeof(fr::field_t) * NUM_POINTS);
+
+    }
 }
 
 multiplication_data point_data;

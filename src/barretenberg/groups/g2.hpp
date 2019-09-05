@@ -1,7 +1,7 @@
 #pragma once
 
-#include "fq2.hpp"
-#include "fr.hpp"
+#include "../fields/fq2.hpp"
+#include "../fields/fr.hpp"
 
 namespace g2
 {

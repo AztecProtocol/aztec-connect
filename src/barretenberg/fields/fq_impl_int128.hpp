@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include "assert.hpp"
+#include "../assert.hpp"
 
 #include "fq.hpp"
 

@@ -4,9 +4,9 @@
 #include "malloc.h"
 
 #include "g1.hpp"
-#include "fr.hpp"
 #include "wnaf.hpp"
-#include "assert.hpp"
+#include "../fields/fr.hpp"
+#include "../assert.hpp"
 
 namespace scalar_multiplication
 {

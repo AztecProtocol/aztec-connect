@@ -2,7 +2,7 @@
 #include <valgrind/callgrind.h>
 #include <pthread.h> 
 
-#include "scalar_multiplication.hpp"
+#include "groups/scalar_multiplication.hpp"
 #include "assert.hpp"
 
 void generate_points(g1::affine_element* points, size_t num_points)

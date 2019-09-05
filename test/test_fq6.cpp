@@ -4,7 +4,7 @@
 #include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_init.hpp>
 
-#include <barretenberg/fq6.hpp>
+#include <barretenberg/fields/fq6.hpp>
 
 namespace
 {

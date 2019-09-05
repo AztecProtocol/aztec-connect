@@ -5,8 +5,8 @@
 #include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_init.hpp>
 
-#include <barretenberg/fr.hpp>
-#include <barretenberg/g1.hpp>
+#include <barretenberg/fields/fr.hpp>
+#include <barretenberg/groups/g1.hpp>
 
 namespace
 {
@@ -206,6 +206,16 @@ TEST(group, random_affine_element)
 
 TEST(group, group_exponentiation)
 {
+
+    fq::field_t foo;
+    foo.data[0] = 0x3C208C16D87CFD47UL;
+    foo.data[1] = 0x97816a916871ca8dUL;
+    foo.data[2] = 0xb85045b68181585dUL;
+    foo.data[3] = 0x30644e72e131a029UL;
+    fq::add_without_reduction(foo, foo, foo);
+    printf("foo \n");
+    fq::print(foo);
+
     libff::init_alt_bn128_params();
 
     fr::field_t scalar;

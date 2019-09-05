@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "assert.hpp"
-#include "types.hpp"
+#include "../assert.hpp"
+#include "../types.hpp"
 
 #ifdef NO_FUNNY_BUSINESS 
     #include "fq_impl_int128.hpp"
@@ -33,6 +33,9 @@ inline void add(const field_t& a, const field_t& b, field_t& r);
 
 // compute a + b, put result in r. Do not perform final reduction check
 inline void add_without_reduction(const field_t& a, const field_t& b, field_t& r);
+
+// quadruple a, perform a reduction check that reduces to either (r mod p) or p + (r mod p)
+inline void quad_with_partial_reduction(const field_t& a, const field_t& r);
 
 // compute a - b, put result in r
 inline void sub(const field_t& a, const field_t& b, field_t& r);

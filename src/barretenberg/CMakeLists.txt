@@ -4,21 +4,22 @@
 add_library(
     barretenberg STATIC
     types.hpp
-    asm_macros.hpp
-    wnaf.hpp
-    fr_impl_asm.hpp
-    fr_impl_int128.hpp
-    fr.hpp
-    fq_impl_asm.hpp
-    fq_impl_int128.hpp
-    fq.hpp
-    fq2.hpp
-    fq6.hpp
-    fq12.hpp
-    g1.hpp
-    g2.hpp
-    scalar_multiplication.hpp
-    pairing.hpp
+    fields/asm_macros.hpp
+    fields/fr_impl_asm.hpp
+    fields/fr_impl_int128.hpp
+    fields/fr.hpp
+    fields/fq_impl_asm.hpp
+    fields/fq_impl_int128.hpp
+    fields/fq.hpp
+    fields/fq2.hpp
+    fields/fq6.hpp
+    fields/fq12.hpp
+    groups/wnaf.hpp
+    groups/g1.hpp
+    groups/g2.hpp
+    groups/scalar_multiplication.hpp
+    groups/pairing.hpp
+    polynomials/fft.hpp
 )
 
 set_target_properties(barretenberg PROPERTIES LINKER_LANGUAGE CXX)
@@ -35,22 +36,23 @@ find_package(Threads REQUIRED)
 add_executable(
     barretenberg_profiling
     main.cpp
-    asm_macros.hpp
+    fields/asm_macros.hpp
     types.hpp
-    wnaf.hpp
-    fr_impl_asm.hpp
-    fr_impl_int128.hpp
-    fr.hpp
-    fq_impl_asm.hpp
-    fq_impl_int128.hpp
-    fq.hpp
-    fq2.hpp
-    fq6.hpp
-    fq12.hpp
-    g1.hpp
-    g2.hpp
-    scalar_multiplication.hpp
-    pairing.hpp
+    fields/fr_impl_asm.hpp
+    fields/fr_impl_int128.hpp
+    fields/fr.hpp
+    fields/fq_impl_asm.hpp
+    fields/fq_impl_int128.hpp
+    fields/fq.hpp
+    fields/fq2.hpp
+    fields/fq6.hpp
+    fields/fq12.hpp
+    groups/wnaf.hpp
+    groups/g1.hpp
+    groups/g2.hpp
+    groups/scalar_multiplication.hpp
+    groups/pairing.hpp
+    polynomials/fft.hpp
 )
 
 target_link_libraries(
@@ -66,4 +68,6 @@ install(
     DIRECTORY
     ${include_dir}/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING
+    PATTERN "*.hpp"
 )

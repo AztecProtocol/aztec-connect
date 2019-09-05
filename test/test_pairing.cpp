@@ -8,10 +8,10 @@
 #include <libff/algebra/curves/alt_bn128/alt_bn128_pairing.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_init.hpp>
 
-#include <barretenberg/g2.hpp>
-#include <barretenberg/fr.hpp>
-#include <barretenberg/fq12.hpp>
-#include <barretenberg/pairing.hpp>
+#include <barretenberg/groups/g2.hpp>
+#include <barretenberg/fields/fr.hpp>
+#include <barretenberg/fields/fq12.hpp>
+#include <barretenberg/groups/pairing.hpp>
 
 namespace
 {

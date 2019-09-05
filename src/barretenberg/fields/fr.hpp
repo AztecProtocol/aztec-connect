@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "types.hpp"
+#include "../types.hpp"
 
 #ifdef NO_FUNNY_BUSINESS 
     #include "fr_impl_int128.hpp"
@@ -39,6 +39,10 @@ constexpr field_t modulus_plus_one = {.data = {
     0x30644E72E131A029UL}};
 
 constexpr field_t one_raw = {.data = {1, 0, 0, 0}};
+
+constexpr field_t root_of_unity = { .data = { 0x636e735580d13d9c, 0xa22bf3742445ffd6, 0x56452ac01eb203d8, 0x1860ef942963f9e7 } };
+
+constexpr size_t S = 28; // 2^S = maximum degree of a polynomial that's amenable to radix-2 FFT 
 
 // compute a * b mod p, put result in r
 inline void mul(const field_t &a, const field_t &b, field_t &r);
@@ -231,9 +235,135 @@ inline void one(field_t &r)
     to_montgomery_form(one_raw, r);
 }
 
+// TODO: MAKE THESE CONSTEXPR constants
+inline field_t one() {
+    fr::field_t r;
+    one(r);
+    return r;
+}
+
+inline field_t multiplicative_generator() {
+    fr::field_t r = { .data = { 5, 0, 0, 0 } };
+    to_montgomery_form(r, r);
+    return r;
+}
+
+inline field_t multiplicative_generator_inverse() {
+    fr::field_t gen = multiplicative_generator();
+    invert(gen, gen);
+    return gen;
+}
+
+inline void zero(field_t& r)
+{
+    r.data[0] = 0;
+    r.data[1] = 0;
+    r.data[2] = 0;
+    r.data[3] = 0;
+}
+
 inline bool eq(const field_t &a, const field_t &b)
 {
     return (a.data[0] == b.data[0]) && (a.data[1] == b.data[1]) && (a.data[2] == b.data[2]) && (a.data[3] == b.data[3]);
+}
+
+
+/**
+ * Get the value of a given bit
+ **/ 
+inline bool get_bit(const field_t& a, size_t bit_index)
+{
+    size_t idx = bit_index / 64;
+    size_t shift = bit_index & 63;
+    return bool((a.data[idx] >> shift) & 1);
+}
+
+/**
+ * compute a^b mod q, return result in r
+ **/
+inline void pow(const field_t& a, const field_t& b, field_t& r)
+{
+    field_t accumulator;
+    copy(a, accumulator);
+
+    bool found_one = false;
+    size_t i = 255;
+    while (!found_one)
+    {
+        found_one = get_bit(b, i);
+        --i;
+    }
+    size_t sqr_count = 0;
+    for (; i < 256; --i)
+    {
+        sqr_count++;
+        fr::sqr(accumulator, accumulator);
+        if (get_bit(b, i))
+        {
+            fr::mul(accumulator, a, accumulator);
+        }
+    }
+    while (gt(accumulator, modulus_plus_one))
+    {
+        sub(accumulator, modulus, accumulator);
+    }
+    copy(accumulator, r);
+}
+
+inline void pow_small(const field_t& a, const size_t exponent, field_t& r)
+{
+    field_t accumulator;
+    copy(a, accumulator);
+
+    bool found_one = false;
+    size_t i = 63;
+    while (!found_one)
+    {
+        found_one = (exponent >> (i)) & 1;
+        --i;
+    }
+    size_t sqr_count = 0;
+    for (; i < 64; --i)
+    {
+        sqr_count++;
+        fr::sqr(accumulator, accumulator);
+        bool bit = (exponent >> (i)) & 1;
+        printf("POWI = %lu\n", i);
+        printf("bit = %u\n", bit);
+        if (bit)
+        {
+            fr::mul(accumulator, a, accumulator);
+        }
+    }
+    while (gt(accumulator, modulus_plus_one))
+    {
+        sub(accumulator, modulus, accumulator);
+    }
+    copy(accumulator, r);
+}
+
+
+/**
+ * compute a^{q - 2} mod q, place result in r
+ **/ 
+inline void invert(field_t& a, field_t& r)
+{
+    // q - 2
+    constexpr field_t modulus_minus_two = {
+        0x43E1F593EFFFFFFFUL,
+        0x2833E84879B97091UL,
+        0xB85045B68181585DUL,
+        0x30644E72E131A029UL};
+     pow(a, modulus_minus_two, r);
+}
+
+inline void get_root_of_unity(size_t degree, field_t& r)
+{
+    fr::copy(root_of_unity, r);
+    for (size_t i = S; i > degree; --i)
+    {
+        fr::sqr(r, r);
+    }
 }
 
 inline void print(const field_t &a)
