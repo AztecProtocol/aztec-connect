@@ -227,33 +227,6 @@ inline void random_element(field_t &r)
     to_montgomery_form(r, r);
 }
 
-/**
-     * Set `r` to equal 1, in montgomery form
-     **/
-inline void one(field_t &r)
-{
-    to_montgomery_form(one_raw, r);
-}
-
-// TODO: MAKE THESE CONSTEXPR constants
-inline field_t one() {
-    fr::field_t r;
-    one(r);
-    return r;
-}
-
-inline field_t multiplicative_generator() {
-    fr::field_t r = { .data = { 5, 0, 0, 0 } };
-    to_montgomery_form(r, r);
-    return r;
-}
-
-inline field_t multiplicative_generator_inverse() {
-    fr::field_t gen = multiplicative_generator();
-    invert(gen, gen);
-    return gen;
-}
-
 inline void zero(field_t& r)
 {
     r.data[0] = 0;
@@ -328,8 +301,6 @@ inline void pow_small(const field_t& a, const size_t exponent, field_t& r)
         sqr_count++;
         fr::sqr(accumulator, accumulator);
         bool bit = (exponent >> (i)) & 1;
-        printf("POWI = %lu\n", i);
-        printf("bit = %u\n", bit);
         if (bit)
         {
             fr::mul(accumulator, a, accumulator);
@@ -357,12 +328,60 @@ inline void invert(field_t& a, field_t& r)
      pow(a, modulus_minus_two, r);
 }
 
+
+/**
+     * Set `r` to equal 1, in montgomery form
+     **/
+inline void one(field_t &r)
+{
+    to_montgomery_form(one_raw, r);
+}
+
+// TODO: MAKE THESE CONSTEXPR constants
+inline field_t one() {
+    fr::field_t r;
+    one(r);
+    return r;
+}
+
+inline field_t multiplicative_generator() {
+    fr::field_t r = { .data = { 5, 0, 0, 0 } };
+    to_montgomery_form(r, r);
+    return r;
+}
+
+inline field_t multiplicative_generator_inverse() {
+    fr::field_t gen = multiplicative_generator();
+    invert(gen, gen);
+    return gen;
+}
+
 inline void get_root_of_unity(size_t degree, field_t& r)
 {
     fr::copy(root_of_unity, r);
     for (size_t i = S; i > degree; --i)
     {
         fr::sqr(r, r);
+    }
+}
+
+inline void batch_invert(field_t* coeffs, size_t n, field_t* temporaries)
+{
+    fr::field_t accumulator;
+    fr::one(accumulator);
+    for (size_t i = 0; i < n; ++i)
+    {
+        fr::copy(accumulator, temporaries[i]);
+        fr::mul(accumulator, coeffs[i], accumulator);
+    }
+    fr::invert(accumulator, accumulator);
+
+    fr::field_t T0;
+    for (size_t i = n - 1; i < n; --i)
+    {
+        fr::mul(accumulator, temporaries[i], T0);
+        fr::mul(accumulator, coeffs[i], accumulator);
+        fr::copy(T0, coeffs[i]);
     }
 }
 

@@ -96,13 +96,13 @@ namespace g1
 
     inline void set_infinity(element& p)
     {
-        p.y.data[3] |= (1UL << 63);
+        p.y.data[3] = 0 | (1UL << 63);
     }
 
 
     inline void set_infinity(affine_element& p)
     {
-        p.y.data[3] |= (1UL << 63);
+        p.y.data[3] = 0 | (1UL << 63);
     }
 
     inline void dbl(element&p1, element&p2)
@@ -651,10 +651,6 @@ namespace g1
         fq::field_t zzz_inv;
 
         fq::invert(src.z, z_inv);
-        printf("normal normalize. src.z = ");
-        fq::print(src.z);
-        printf("inverting normal normalize : ");
-        fq::print(z_inv);
         fq::sqr(z_inv, zz_inv);
         fq::mul(z_inv, zz_inv, zzz_inv);
         fq::mul(src.x, zz_inv, dest.x);

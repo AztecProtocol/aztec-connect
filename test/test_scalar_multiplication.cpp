@@ -138,7 +138,6 @@ TEST(scalar_multiplication, pippenger)
 {
     libff::init_alt_bn128_params();
     size_t num_points = 100000;
-    size_t bucket_bits = 12;
 
     fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
 
@@ -157,7 +156,7 @@ TEST(scalar_multiplication, pippenger)
 
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
     printf("calling scalar multiplication algorithm\n");
-    g1::element result = scalar_multiplication::pippenger(scalars, points, num_points, bucket_bits);
+    g1::element result = scalar_multiplication::pippenger(scalars, points, num_points);
     result = g1::normalize(result);
 
     free(scalars);
@@ -170,4 +169,59 @@ TEST(scalar_multiplication, pippenger)
         EXPECT_EQ(result.z.data[i], expected.Z.mont_repr.data[i]);
     }
 
+}
+
+TEST(scalar_multiplication, batched_scalar_multiplication)
+{
+    libff::init_alt_bn128_params();
+    size_t num_points = 100000;
+    size_t num_exponentiations = 5;
+
+    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points * 2);
+
+    g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 4 + 2);
+
+    printf("computing random point data\n");
+
+    generate_points(points, num_points);
+    size_t points_per_iteration = num_points / num_exponentiations;
+    for (size_t i = 0; i < num_points; ++i)
+    {
+        fr::random_element(scalars[i]);
+        fr::copy(scalars[i], scalars[i + num_points]);
+        g1::copy(&points[i], &points[i + (num_points * 2)]);
+    }
+    scalar_multiplication::multiplication_state inputs[2 * num_exponentiations];
+    for (size_t i = 0; i < num_exponentiations; ++i)
+    {
+        inputs[i].points = &points[i * (points_per_iteration * 2)];
+        inputs[i + num_exponentiations].points = &points[i * (points_per_iteration * 2) + (num_points * 2)];
+        inputs[i].scalars = &scalars[i * points_per_iteration];
+        inputs[i + num_exponentiations].scalars = &scalars[i * points_per_iteration + num_points];
+        inputs[i].num_elements = points_per_iteration;
+        inputs[i + num_exponentiations].num_elements = points_per_iteration;
+    }
+
+    scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
+    scalar_multiplication::generate_pippenger_point_table(points + (num_points * 2), points + (num_points * 2), num_points);
+
+    for (size_t i = 0; i < num_exponentiations; ++i)
+    {
+        inputs[i].output = scalar_multiplication::pippenger(inputs[i].scalars, inputs[i].points, inputs[i].num_elements);
+        inputs[i].output = g1::normalize(inputs[i].output);
+    }
+
+    scalar_multiplication::batched_scalar_multiplications(&inputs[num_exponentiations], num_exponentiations);
+    free(scalars);
+    free(points);
+
+    for (size_t j = 0; j < num_exponentiations; ++j)
+    {
+        for (size_t i = 0; i < 4; ++i)
+        {
+            EXPECT_EQ(inputs[j].output.x.data[i], inputs[j + num_exponentiations].output.x.data[i]);
+            EXPECT_EQ(inputs[j].output.y.data[i], inputs[j + num_exponentiations].output.y.data[i]);
+            EXPECT_EQ(inputs[j].output.z.data[i], inputs[j + num_exponentiations].output.z.data[i]);
+        }
+    }
 }

@@ -26,6 +26,15 @@ add_executable(
     test_scalar_multiplication.cpp
     test_pairing.cpp
     test_fft.cpp
+    test_waffle.cpp
+)
+
+set_target_properties(
+    barretenberg_tests
+    PROPERTIES
+    
+    COMPILE_FLAGS "-fopenmp"
+    RUNTIME_OUTPUT_DIRECTORY .
 )
 
 target_link_libraries(
@@ -45,10 +54,6 @@ target_include_directories(
         ${include_dir}
 )
 
-set_target_properties(
-    barretenberg_tests
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY .
-)
 gtest_add_tests(
     TARGET
     barretenberg_tests

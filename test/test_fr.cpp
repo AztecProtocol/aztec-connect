@@ -273,3 +273,47 @@ TEST(fr, split_into_endomorphism_scalars_simple)
         EXPECT_EQ(result.data[i], k.data[i]);
     }
 }
+
+TEST(fr, invert)
+{
+    fr::field_t a;
+    fr::field_t b;
+    fr::random_element(a);
+    fr::invert(a, b);
+    fr::mul(a, b, a);
+    fr::from_montgomery_form(a, a);
+    EXPECT_EQ(a.data[0], 1);
+    EXPECT_EQ(a.data[1], 0);
+    EXPECT_EQ(a.data[2], 0);
+    EXPECT_EQ(a.data[3], 0);
+}
+
+TEST(fr, batch_invert)
+{
+    size_t n = 10;
+    fr::field_t coeffs[n];
+    fr::field_t inverses[n];
+    fr::field_t temp[n];
+    fr::field_t one;
+    fr::one(one);
+    for (size_t i = 0; i < n; ++i)
+    {
+        fr::random_element(coeffs[i]);
+        fr::copy(coeffs[i], inverses[i]);
+    }
+    fr::batch_invert(inverses, n, temp);
+
+    for (size_t i = 0; i < n; ++i)
+    {
+        fr::mul(coeffs[i], inverses[i], coeffs[i]);
+        fr::sub(coeffs[i], one, coeffs[i]);
+    }
+
+    for (size_t i = 0; i < n; ++i)
+    {
+        EXPECT_EQ(coeffs[i].data[0], 0);
+        EXPECT_EQ(coeffs[i].data[1], 0);
+        EXPECT_EQ(coeffs[i].data[2], 0);
+        EXPECT_EQ(coeffs[i].data[3], 0);
+    }
+}

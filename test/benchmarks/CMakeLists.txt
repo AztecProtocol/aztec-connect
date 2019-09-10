@@ -23,5 +23,8 @@ target_include_directories(
 
 set_target_properties(
     barretenberg_bench
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ..
+    PROPERTIES
+    
+    COMPILE_FLAGS "-fopenmp"
+    RUNTIME_OUTPUT_DIRECTORY ..
 )

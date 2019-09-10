@@ -57,13 +57,12 @@ struct pippenger_point_data
 };
 
 constexpr size_t NUM_POINTS = 10000;
-constexpr size_t NUM_BUCKETS = 16;
 constexpr size_t NUM_THREADS = 4;
 
 void *pippenger_single(void* v_args) noexcept
 {
     pippenger_point_data* data = (pippenger_point_data*)v_args;
-    scalar_multiplication::pippenger(&data->scalars[0], &data->points[0], NUM_POINTS, NUM_BUCKETS);
+    scalar_multiplication::pippenger(&data->scalars[0], &data->points[0], NUM_POINTS);
     return NULL;
 }
 

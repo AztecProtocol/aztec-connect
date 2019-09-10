@@ -34,7 +34,6 @@ struct pippenger_point_data
 
 constexpr size_t NUM_POINTS = 1048576;
 constexpr size_t NUM_THREADS = 8;
-constexpr size_t NUM_BUCKETS = 15; // (for 2^23): 17 was 4.3us 18 was 3.88us, 19 was 4us, 20 was 4.3us
 
 // optimal bucket count for 1 million = 15
 void generate_points(multiplication_data& data)
@@ -160,7 +159,7 @@ void *pippenger_single(void* v_args) noexcept
 {
     pippenger_point_data* data = (pippenger_point_data*)v_args;
     uint64_t clk_start = rdtsc();
-    scalar_multiplication::pippenger(&data->scalars[0], &data->points[0], NUM_POINTS, NUM_BUCKETS);
+    scalar_multiplication::pippenger(&data->scalars[0], &data->points[0], NUM_POINTS);
     uint64_t clk_end = rdtsc();
     printf("num clks = %lu\n", clk_end - clk_start);
     return NULL;
@@ -208,7 +207,7 @@ void pippenger_bench(State& state) noexcept
     for (auto _ : state)
     {
         uint64_t before = rdtsc();
-        DoNotOptimize(scalar_multiplication::pippenger(&point_data.scalars[0], &point_data.points[0], NUM_POINTS, NUM_BUCKETS));
+        DoNotOptimize(scalar_multiplication::pippenger(&point_data.scalars[0], &point_data.points[0], NUM_POINTS));
         uint64_t after = rdtsc();
         printf("pippenger single clock cycles = %lu\n", (after - before));
     }

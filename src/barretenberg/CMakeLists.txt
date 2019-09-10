@@ -20,9 +20,16 @@ add_library(
     groups/scalar_multiplication.hpp
     groups/pairing.hpp
     polynomials/fft.hpp
+    waffle/waffle.hpp
 )
 
-set_target_properties(barretenberg PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(
+    barretenberg
+    
+    PROPERTIES
+    LINKER_LANGUAGE CXX
+    COMPILE_FLAGS "-fopenmp"
+)
 
 target_link_libraries(
     barretenberg
@@ -53,6 +60,7 @@ add_executable(
     groups/scalar_multiplication.hpp
     groups/pairing.hpp
     polynomials/fft.hpp
+    waffle/waffle.hpp
 )
 
 target_link_libraries(
@@ -61,7 +69,11 @@ target_link_libraries(
 )
 set_target_properties(
     barretenberg_profiling
-    PROPERTIES LINKER_LANGUAGE CXX RUNTIME_OUTPUT_DIRECTORY ../../test
+
+    PROPERTIES
+    COMPILE_FLAGS "-fopenmp"
+    LINKER_LANGUAGE CXX
+    RUNTIME_OUTPUT_DIRECTORY ../../test
 )
 
 install(
