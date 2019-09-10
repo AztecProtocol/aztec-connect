@@ -62,16 +62,16 @@ inline evaluation_domain get_domain(size_t num_elements)
     fr::invert(domain.short_root, domain.short_root_inverse);
     fr::invert(domain.mid_root, domain.mid_root_inverse);
     fr::invert(domain.long_root, domain.long_root_inverse);
-    fr::field_t domain_inverse = {.data = { domain.short_domain, 0, 0, 0}};
+    fr::field_t domain_inverse = {.data = {domain.short_domain, 0, 0, 0}};
     fr::to_montgomery_form(domain_inverse, domain_inverse);
     fr::invert(domain_inverse, domain.short_domain_inverse);
-    domain_inverse = {.data = { domain.mid_domain, 0, 0, 0}};
+    domain_inverse = {.data = {domain.mid_domain, 0, 0, 0}};
     fr::to_montgomery_form(domain_inverse, domain_inverse);
     fr::invert(domain_inverse, domain.mid_domain_inverse);
-    domain_inverse = {.data = { domain.long_domain, 0, 0, 0}};
+    domain_inverse = {.data = {domain.long_domain, 0, 0, 0}};
     fr::to_montgomery_form(domain_inverse, domain_inverse);
     fr::invert(domain_inverse, domain.long_domain_inverse);
-    
+
     domain.generator = fr::multiplicative_generator();
     domain.generator_inverse = fr::multiplicative_generator_inverse();
 
@@ -193,10 +193,10 @@ inline void ifft_with_coset(fr::field_t *coeffs, const fr::field_t &root_inverse
 // For L_1(X) = (X^{n} - 1 / (X - 1)) * (1 / n)
 // Compute the 2n-fft of L_1(X)
 // We can use this to compute the 2n-fft evaluations of any L_i(X).
-// We can consider `l_1_coefficients` to be a 2n-sized vector of the evaluations of L_1(X), 
+// We can consider `l_1_coefficients` to be a 2n-sized vector of the evaluations of L_1(X),
 // for all X = 2n'th roots of unity.
 // To compute the vector for the 2n-fft transform of L_i(X), we perform a (2i)-left-shift of this vector
-inline void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients, evaluation_domain &domain, fr::field_t* scratch_memory)
+inline void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, evaluation_domain &domain, fr::field_t *scratch_memory)
 {
     // L_1(X) = (X^{n} - 1 / (X - 1)) * (1 / n)
     // when evaluated at the 2n'th roots of unity, the term X^{n} forms a subgroup of order 2
@@ -250,7 +250,7 @@ inline void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients, evalu
     for (size_t i = 0; i < domain.mid_domain; i += 2)
     {
         fr::mul(l_1_coefficients[i], root_subgroup[0], l_1_coefficients[i]);
-        fr::mul(l_1_coefficients[i+1], root_subgroup[1], l_1_coefficients[i+1]);
+        fr::mul(l_1_coefficients[i + 1], root_subgroup[1], l_1_coefficients[i + 1]);
     }
 }
 
@@ -269,4 +269,5 @@ inline void compute_split_lagrange_polynomial_fft(fr::field_t *l_1_coefficients,
     memset((void *)(l_n_coefficients + n), 0, (n) * sizeof(fr::field_t));
     polynomials::fft_with_coset(l_1_coefficients, domain.mid_root, domain.generator, domain.mid_domain);
     polynomials::fft_with_coset(l_n_coefficients, domain.mid_root, domain.generator, domain.mid_domain);
+}
 } // namespace polynomials
