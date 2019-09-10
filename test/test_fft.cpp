@@ -18,7 +18,6 @@ TEST(fft, evaluation_domain)
     EXPECT_EQ(domain.log2_long_domain, 10);
 }
 
-
 TEST(fft, domain_roots)
 {
     size_t n = 256;
@@ -124,14 +123,13 @@ TEST(fft, fft_ifft_with_coset_consistency)
     }
 }
 
-
 TEST(fft, fft_ifft_with_coset_cross_consistency)
 {
     size_t n = 2;
     fr::field_t expected[n];
-    fr::field_t poly_a[4*n];
-    fr::field_t poly_b[4*n];
-    fr::field_t poly_c[4*n];
+    fr::field_t poly_a[4 * n];
+    fr::field_t poly_b[4 * n];
+    fr::field_t poly_c[4 * n];
 
     for (size_t i = 0; i < n; ++i)
     {
@@ -150,15 +148,14 @@ TEST(fft, fft_ifft_with_coset_cross_consistency)
     }
     polynomials::evaluation_domain domain = polynomials::get_domain(n);
 
-
     polynomials::fft_with_coset(poly_a, domain.short_root, domain.generator, domain.short_domain);
     polynomials::fft_with_coset(poly_b, domain.mid_root, domain.generator, domain.mid_domain);
     polynomials::fft_with_coset(poly_c, domain.long_root, domain.generator, domain.long_domain);
- 
+
     for (size_t i = 0; i < n; ++i)
     {
-        fr::add(poly_a[i], poly_c[4*i], poly_a[i]);
-        fr::add(poly_a[i], poly_b[2*i], poly_a[i]);
+        fr::add(poly_a[i], poly_c[4 * i], poly_a[i]);
+        fr::add(poly_a[i], poly_b[2 * i], poly_a[i]);
     }
 
     polynomials::ifft_with_coset(poly_a, domain.short_root_inverse, domain.generator_inverse, domain.short_domain);
@@ -172,14 +169,13 @@ TEST(fft, fft_ifft_with_coset_cross_consistency)
     }
 }
 
-
 TEST(fft, compute_lagrange_polynomial_fft)
 {
     size_t n = 256;
     polynomials::evaluation_domain domain = polynomials::get_domain(n);
 
     fr::field_t l_1_coefficients[2 * n];
-    fr::field_t scratch_memory[2 * n + 2];
+    fr::field_t scratch_memory[2 * n + 4];
     for (size_t i = 0; i < 2 * n; ++i)
     {
         fr::zero(l_1_coefficients[i]);
@@ -188,15 +184,17 @@ TEST(fft, compute_lagrange_polynomial_fft)
     polynomials::compute_lagrange_polynomial_fft(l_1_coefficients, domain, scratch_memory);
 
     polynomials::copy_polynomial(l_1_coefficients, scratch_memory, 2 * n, 2 * n);
-    
+
     polynomials::ifft_with_coset(l_1_coefficients, domain.mid_root_inverse, domain.generator_inverse, domain.mid_domain);
     polynomials::fft(l_1_coefficients, domain.short_root, domain.short_domain);
-    
+
     fr::copy(scratch_memory[0], scratch_memory[2 * n]);
     fr::copy(scratch_memory[1], scratch_memory[2 * n + 1]);
-    fr::field_t* l_n_coefficients = &scratch_memory[2];
-    polynomials::ifft_with_coset(l_n_coefficients, domain.mid_root_inverse, domain.generator_inverse, domain.mid_domain);
-    polynomials::fft(l_n_coefficients, domain.short_root, domain.short_domain);
+    fr::copy(scratch_memory[2], scratch_memory[2 * n + 2]);
+    fr::copy(scratch_memory[3], scratch_memory[2 * n + 3]);
+    fr::field_t *l_n_minus_one_coefficients = &scratch_memory[4];
+    polynomials::ifft_with_coset(l_n_minus_one_coefficients, domain.mid_root_inverse, domain.generator_inverse, domain.mid_domain);
+    polynomials::fft(l_n_minus_one_coefficients, domain.short_root, domain.short_domain);
 
     fr::field_t T0;
     fr::from_montgomery_form(l_1_coefficients[0], T0);
@@ -212,16 +210,17 @@ TEST(fft, compute_lagrange_polynomial_fft)
         }
     }
 
-    fr::from_montgomery_form(l_n_coefficients[n - 1], T0);
+    fr::from_montgomery_form(l_n_minus_one_coefficients[n - 2], T0);
     EXPECT_EQ(T0.data[0], 1);
     EXPECT_EQ(T0.data[1], 0);
     EXPECT_EQ(T0.data[2], 0);
     EXPECT_EQ(T0.data[3], 0);
-    for (size_t i = 0; i < n - 1; ++i)
+    for (size_t i = 0; i < n; ++i)
     {
+        if (i == (n - 2)) { continue; }
         for (size_t j = 0; j < 4; ++j)
         {
-            EXPECT_EQ(l_n_coefficients[i].data[j], 0);
+            EXPECT_EQ(l_n_minus_one_coefficients[i].data[j], 0);
         }
     }
 }

@@ -66,6 +66,10 @@ struct circuit_state
     fr::field_t *product_1;
     fr::field_t *product_2;
     fr::field_t *product_3;
+
+    fr::field_t *w_l_lagrange_base;
+    fr::field_t *w_r_lagrange_base;
+    fr::field_t *w_o_lagrange_base;
     size_t n;
 };
 
@@ -84,9 +88,18 @@ struct fft_pointers
     fr::field_t* gate_poly_mid;
     fr::field_t* gate_poly_long;
 
+    fr::field_t* quotient_poly;
+
     fr::field_t* q_c_poly;
     fr::field_t* q_r_poly;
     fr::field_t* q_l_poly;
+
+    fr::field_t* sigma_1_poly;
+    fr::field_t* sigma_2_poly;
+    fr::field_t* sigma_3_poly;
+    fr::field_t* l_1_poly;
+    fr::field_t* permutation_start_poly;
+    fr::field_t* permutation_end_poly;
     fr::field_t* scratch_memory;
 };
 
@@ -133,9 +146,9 @@ inline void compute_wire_coefficients(circuit_state &state, polynomials::evaluat
 {
     const size_t n = state.n;
 
-    polynomials::copy_polynomial(state.w_l, state.z_1, n, n);
-    polynomials::copy_polynomial(state.w_r, state.z_2, n, n);
-    polynomials::copy_polynomial(state.w_o, state.t, n, n);
+    polynomials::copy_polynomial(state.w_l, state.w_l_lagrange_base, n, n);
+    polynomials::copy_polynomial(state.w_r, state.w_r_lagrange_base, n, n);
+    polynomials::copy_polynomial(state.w_o, state.w_o_lagrange_base, n, n);
 
     polynomials::ifft(state.w_l, domain.short_root_inverse, n);
     polynomials::ifft(state.w_r, domain.short_root_inverse, n);
@@ -167,15 +180,15 @@ inline void compute_z_coefficients(circuit_state& state, polynomials::evaluation
     {
         fr::mul(state.sigma_1[i], state.beta, state.product_1[i]);
         fr::add(state.product_1[i], state.gamma, state.product_1[i]);
-        fr::add(state.product_1[i], state.w_l[i], state.product_1[i]);
+        fr::add(state.product_1[i], state.w_l_lagrange_base[i], state.product_1[i]);
 
         fr::mul(state.sigma_2[i], state.beta, state.product_2[i]);
         fr::add(state.product_2[i], state.gamma, state.product_2[i]);
-        fr::add(state.product_2[i], state.w_r[i], state.product_2[i]);
+        fr::add(state.product_2[i], state.w_r_lagrange_base[i], state.product_2[i]);
 
         fr::mul(state.sigma_3[i], state.beta, state.product_3[i]);
         fr::add(state.product_3[i], state.gamma, state.product_3[i]);
-        fr::add(state.product_3[i], state.w_o[i], state.product_3[i]);
+        fr::add(state.product_3[i], state.w_o_lagrange_base[i], state.product_3[i]);
 
         fr::mul(state.product_1[i], state.product_2[i], state.z_2[i+1]);
         fr::mul(state.z_2[i+1], state.product_3[i], state.z_2[i+1]);
@@ -183,17 +196,17 @@ inline void compute_z_coefficients(circuit_state& state, polynomials::evaluation
         fr::add(beta_identity, state.beta, beta_identity);
     
         fr::add(beta_identity, state.gamma, state.z_1[i+1]);
-        fr::add(state.z_1[i+1], state.w_l[i], state.z_1[i+1]);
+        fr::add(state.z_1[i+1], state.w_l_lagrange_base[i], state.z_1[i+1]);
 
         fr::add(beta_identity, state.gamma, T0);
         fr::add(beta_n, T0, T0);
-        fr::add(T0, state.w_r[i], T0);
+        fr::add(T0, state.w_r_lagrange_base[i], T0);
 
         fr::mul(state.z_1[i+1], T0, state.z_1[i+1]);
 
         fr::add(beta_identity, state.gamma, T0);
         fr::add(beta_n_2, T0, T0);
-        fr::add(T0, state.w_o[i], T0);
+        fr::add(T0, state.w_o_lagrange_base[i], T0);
 
         fr::mul(state.z_1[i+1], T0, state.z_1[i+1]);
     }
@@ -373,6 +386,7 @@ inline void compute_arithmetisation_coefficients(circuit_state& state, polynomia
     polynomials::ifft(state.q_m, domain.short_root_inverse, domain.short_domain);
     polynomials::copy_polynomial(state.q_m, ffts.gate_poly_long, n, 4 * n);
     polynomials::fft_with_coset_and_constant(ffts.gate_poly_long, domain.long_root, domain.generator, state.alpha, domain.long_domain);
+    // polynomials::fft_with_coset(ffts.gate_poly_long, domain.long_root, domain.generator, domain.long_domain);
 
     for (size_t i = 0; i < domain.long_domain; ++i)
     {
@@ -393,6 +407,7 @@ inline void concatenate_arithmetic_and_identity_coefficients(circuit_state& stat
 
     // when we transform z_1 into point-evaluation form, scale up by `alpha_squared` - saves us a mul later on
     polynomials::fft_with_coset_and_constant(ffts.z_1_poly, domain.long_root, domain.generator, state.alpha_squared, domain.long_domain);
+    // polynomials::fft_with_coset(ffts.z_1_poly, domain.long_root, domain.generator, domain.long_domain);
 
     // we have the 4n component of the arithmetistion polynomial in `gate_poly_long`
     // and the identity grand product polynomial in `identity_poly` = I(X)
@@ -403,53 +418,50 @@ inline void concatenate_arithmetic_and_identity_coefficients(circuit_state& stat
     // and create a pointer to the shifted poly
     for (size_t i = 0; i < 4; ++i)
     {
-        fr::copy(ffts.z_1_poly[i], ffts.z_1_poly[n+i]);
+        fr::copy(ffts.z_1_poly[i], ffts.z_1_poly[4 * n + i]);
     }
-    fr::field_t* shifted_z_1_poly = ffts.z_1_poly + 4; // tadaa
+    fr::field_t* shifted_z_1_poly = &ffts.z_1_poly[4]; // tadaa
     for (size_t i = 0; i < domain.long_domain; ++i)
     {
         // multiply identity evaluation by normal z_1 evaluation
-        fr::mul(ffts.identity_poly[i], ffts.z_1_poly[i], ffts.identity_poly[i]);
+        fr::mul(ffts.identity_poly[i], ffts.z_1_poly[i], ffts.quotient_poly[i]);
     
         // subtract the shifted evaluation from result
-        fr::sub(ffts.identity_poly[i], shifted_z_1_poly[i], ffts.identity_poly[i]);
+        fr::sub(ffts.quotient_poly[i], shifted_z_1_poly[i], ffts.quotient_poly[i]);
 
         // and add the gate poly evaluation into the result
-        fr::add(ffts.identity_poly[i], ffts.gate_poly_long[i], ffts.identity_poly[i]);
+        fr::add(ffts.quotient_poly[i], ffts.gate_poly_long[i], ffts.quotient_poly[i]);
     }
 }
 
-inline void compute_permutation_grand_product_coefficients(circuit_state& state, polynomials::evaluation_domain& domain, fr::field_t* gate_poly_mid, fr::field_t* quotient_poly, fr::field_t* z_1_poly, fr::field_t* scratch_memory)
+inline void compute_permutation_grand_product_coefficients(circuit_state& state, polynomials::evaluation_domain& domain, fft_pointers& ffts)
 {
     // The final steps are:
     // 1: Compute the permutation grand product
     // 2: Compute permutation check coefficients
     size_t n = state.n;
-    fr::field_t* sigma_1_poly = &scratch_memory[0];
-    fr::field_t* sigma_2_poly = &scratch_memory[domain.long_domain];
-    fr::field_t* l_1_poly = &scratch_memory[2 * domain.long_domain];
     // // free memory: w_r, w_o
     // fr::field_t* l_1_poly = w_r_poly;
     // fr::field_t* l_n_poly = w_r_poly + domain.mid_domain;
 
-    polynomials::compute_lagrange_polynomial_fft(l_1_poly, domain, &scratch_memory[2 * domain.long_domain + domain.mid_domain + 4]);
+    polynomials::compute_lagrange_polynomial_fft(ffts.l_1_poly, domain, ffts.l_1_poly + domain.mid_domain);
 
-    fr::copy(l_1_poly[0], l_1_poly[domain.mid_domain]);
-    fr::copy(l_1_poly[1], l_1_poly[domain.mid_domain + 1]);
-    fr::copy(l_1_poly[2], l_1_poly[domain.mid_domain + 2]);
-    fr::copy(l_1_poly[3], l_1_poly[domain.mid_domain + 3]);
-    fr::copy(z_1_poly[0], z_1_poly[domain.long_domain]);
-    fr::copy(z_1_poly[1], z_1_poly[domain.long_domain + 1]);
-    fr::copy(z_1_poly[2], z_1_poly[domain.long_domain + 2]);
-    fr::copy(z_1_poly[3], z_1_poly[domain.long_domain + 3]);
-    fr::field_t* l_n_minus_1_poly = &l_1_poly[4];
-    fr::field_t* shifted_z_1_poly = &z_1_poly[4];
+    fr::copy(ffts.l_1_poly[0], ffts.l_1_poly[domain.mid_domain]);
+    fr::copy(ffts.l_1_poly[1], ffts.l_1_poly[domain.mid_domain + 1]);
+    fr::copy(ffts.l_1_poly[2], ffts.l_1_poly[domain.mid_domain + 2]);
+    fr::copy(ffts.l_1_poly[3], ffts.l_1_poly[domain.mid_domain + 3]);
+    fr::copy(ffts.z_1_poly[0], ffts.z_1_poly[domain.long_domain]);
+    fr::copy(ffts.z_1_poly[1], ffts.z_1_poly[domain.long_domain + 1]);
+    fr::copy(ffts.z_1_poly[2], ffts.z_1_poly[domain.long_domain + 2]);
+    fr::copy(ffts.z_1_poly[3], ffts.z_1_poly[domain.long_domain + 3]);
+    fr::field_t* l_n_minus_1_poly = &ffts.l_1_poly[4];
+    fr::field_t* shifted_z_1_poly = &ffts.z_1_poly[4];
     for (size_t i = 0; i < domain.mid_domain; ++i)
     {
-        fr::mul(l_1_poly[i], z_1_poly[i * 2], l_1_poly[i]);
-        fr::mul(l_n_minus_1_poly[i], shifted_z_1_poly[i * 2], l_n_minus_1_poly[i]);
-        fr::mul(l_1_poly[i], state.alpha_squared, l_1_poly[i]);
-        fr::mul(l_n_minus_1_poly[i], state.alpha_cubed, l_n_minus_1_poly[i]);
+        fr::mul(ffts.l_1_poly[i], ffts.z_1_poly[i * 2], ffts.permutation_start_poly[i]);
+        fr::mul(l_n_minus_1_poly[i], shifted_z_1_poly[i * 2], ffts.permutation_end_poly[i]);
+        fr::mul(ffts.permutation_start_poly[i], state.alpha_squared, ffts.permutation_start_poly[i]);
+        fr::mul(ffts.permutation_end_poly[i], state.alpha_cubed, ffts.permutation_end_poly[i]);
     }
 
     // we've computed the fft evaluation of z_1(X) * l_1(X)
@@ -459,285 +471,72 @@ inline void compute_permutation_grand_product_coefficients(circuit_state& state,
 
     // fr::field_t* sigma_1_poly = w_l_poly;
     // fr::field_t* sigma_2_poly = w_o_poly;
-    polynomials::copy_polynomial(state.sigma_1, sigma_1_poly, n, 4 * n);
-    polynomials::copy_polynomial(state.sigma_2, sigma_2_poly, n, 4 * n);
+    polynomials::ifft(state.product_1, domain.short_root_inverse, domain.short_domain);
+    polynomials::ifft(state.product_2, domain.short_root_inverse, domain.short_domain);
+    polynomials::ifft(state.product_3, domain.short_root_inverse, domain.short_domain);
 
-    polynomials::fft_with_coset(sigma_1_poly, domain.long_root, domain.generator, domain.long_domain);
-    polynomials::fft_with_coset(sigma_2_poly, domain.long_root, domain.generator, domain.long_domain);
+    polynomials::copy_polynomial(state.product_1, ffts.sigma_1_poly, n, 4 * n);
+    polynomials::copy_polynomial(state.product_2, ffts.sigma_2_poly, n, 4 * n);
+
+    polynomials::fft_with_coset(ffts.sigma_1_poly, domain.long_root, domain.generator, domain.long_domain);
+    polynomials::fft_with_coset(ffts.sigma_2_poly, domain.long_root, domain.generator, domain.long_domain);
 
     for (size_t i = 0; i < domain.long_domain; ++i)
     {
-        fr::mul(sigma_1_poly[i], sigma_2_poly[i], sigma_1_poly[i]);
+        fr::mul(ffts.sigma_1_poly[i], ffts.sigma_2_poly[i], ffts.sigma_1_poly[i]);
     }
 
-    fr::field_t* sigma_3_poly = z_1_poly;
-    polynomials::copy_polynomial(state.sigma_3, sigma_3_poly, n, 4 * n);
-    polynomials::fft_with_coset(sigma_3_poly, domain.long_root, domain.generator, domain.long_domain);
+    // fr::field_t* sigma_3_poly = ffts.z_1_poly;
+    polynomials::copy_polynomial(state.product_3, ffts.sigma_3_poly, n, 4 * n);
+    polynomials::fft_with_coset(ffts.sigma_3_poly, domain.long_root, domain.generator, domain.long_domain);
 
     for (size_t i = 0; i < domain.long_domain; ++i)
     {
-        fr::mul(sigma_1_poly[i], sigma_3_poly[i], sigma_1_poly[i]);
+        fr::mul(ffts.sigma_1_poly[i], ffts.sigma_3_poly[i], ffts.sigma_1_poly[i]);
     }
 
-    fr::field_t* z_2_poly = z_1_poly;
-    polynomials::copy_polynomial(state.z_2, z_2_poly, n, 4 * n);
-    polynomials::fft_with_coset_and_constant(z_2_poly, domain.long_root, domain.generator, state.alpha_cubed, domain.long_domain);
-    fr::copy(z_2_poly[0], z_2_poly[domain.long_domain]);
-    fr::copy(z_2_poly[1], z_2_poly[domain.long_domain + 1]);
-    fr::copy(z_2_poly[2], z_2_poly[domain.long_domain + 2]);
-    fr::copy(z_2_poly[3], z_2_poly[domain.long_domain + 3]);
-    fr::field_t* shifted_z_2_poly = &z_2_poly[4];
+    // z_1_poly shares mem with z_2_poly
+    polynomials::copy_polynomial(state.z_2, ffts.z_2_poly, n, 4 * n);
+    polynomials::fft_with_coset_and_constant(ffts.z_2_poly, domain.long_root, domain.generator, state.alpha_cubed, domain.long_domain);
+    fr::copy(ffts.z_2_poly[0], ffts.z_2_poly[domain.long_domain]);
+    fr::copy(ffts.z_2_poly[1], ffts.z_2_poly[domain.long_domain + 1]);
+    fr::copy(ffts.z_2_poly[2], ffts.z_2_poly[domain.long_domain + 2]);
+    fr::copy(ffts.z_2_poly[3], ffts.z_2_poly[domain.long_domain + 3]);
+    fr::field_t* shifted_z_2_poly = &ffts.z_2_poly[4];
     for (size_t i = 0; i < domain.long_domain; ++i)
     {
-        size_t shifted_index = i < (domain.long_domain - 4) ? i + 4 : 4 - (domain.long_domain - i);
-        fr::mul(sigma_1_poly[i], z_2_poly[i], sigma_1_poly[i]);
-        fr::sub(sigma_1_poly[i], z_2_poly[shifted_index], sigma_1_poly[i]);
+        fr::mul(ffts.sigma_1_poly[i], ffts.z_2_poly[i], ffts.sigma_1_poly[i]);
+        fr::sub(ffts.sigma_1_poly[i], shifted_z_2_poly[i], ffts.sigma_1_poly[i]);
 
         // combine product term into quotient poly
-        fr::mul(quotient_poly[i], sigma_1_poly[i], quotient_poly[i]);
+        fr::add(ffts.quotient_poly[i], ffts.sigma_1_poly[i], ffts.quotient_poly[i]);
     }
 
     fr::field_t T0;
     // accumulate degree-2n terms into gate_poly_mid
     for (size_t i = 0; i < domain.mid_domain; ++i)
     {
-        fr::mul(z_2_poly[i], state.alpha, T0);
-        fr::sub(l_1_poly[i], T0, l_1_poly[i]);
+        fr::mul(ffts.z_2_poly[2 * i], state.alpha, T0);
+        fr::mul(T0, ffts.l_1_poly[i], T0);
+        fr::sub(ffts.permutation_start_poly[i], T0, ffts.permutation_start_poly[i]);
 
-        fr::mul(shifted_z_2_poly[i], state.alpha_squared, T0);
-        fr::sub(l_n_minus_1_poly[i], T0, l_n_minus_1_poly[i]);
-
-        fr::add(gate_poly_mid[i], l_1_poly[i], gate_poly_mid[i]);
-        fr::add(gate_poly_mid[i], l_n_minus_1_poly[i], gate_poly_mid[i]);
+        fr::mul(shifted_z_2_poly[2 * i], state.alpha_squared, T0);
+        fr::mul(T0, l_n_minus_1_poly[i], T0);
+        fr::sub(ffts.permutation_end_poly[i], T0, ffts.permutation_end_poly[i]);
+        
+        fr::add(ffts.gate_poly_mid[i], ffts.permutation_start_poly[i], ffts.gate_poly_mid[i]);
+        fr::add(ffts.gate_poly_mid[i], ffts.permutation_end_poly[i], ffts.gate_poly_mid[i]);
     }
+    polynomials::ifft_with_coset(ffts.gate_poly_mid, domain.mid_root_inverse, domain.generator_inverse, domain.mid_domain);
+    memset((void *)(ffts.gate_poly_mid + domain.mid_domain), 0, (domain.mid_domain) * sizeof(fr::field_t));
 
-    polynomials::ifft_with_coset(gate_poly_mid, domain.mid_root_inverse, domain.generator_inverse, domain.mid_domain);
-    memset((void *)(gate_poly_mid + domain.mid_domain), 0, (domain.mid_domain) * sizeof(fr::field_t));
-
-    polynomials::fft_with_coset(gate_poly_mid, domain.long_root, domain.generator, domain.long_domain);
+    polynomials::fft_with_coset(ffts.gate_poly_mid, domain.long_root, domain.generator, domain.long_domain);
 
     for (size_t i = 0; i < domain.long_domain; ++i)
     {
-        fr::add(quotient_poly[i], gate_poly_mid[i], quotient_poly[i]);
+        fr::add(ffts.quotient_poly[i], ffts.gate_poly_mid[i], ffts.quotient_poly[i]);
     }
 
 }
 
-inline void compute_quotient_polynomial(circuit_state& state, polynomials::evaluation_domain &domain, const plonk_srs &)
-{
-    // q_c
-    // w_o.q_o
-    // w_l.q_l
-    // w_r.q_r
-    // (w_l + b.s_id + g) = sigma_1
-    // (w_r + b.s_id + (g + n.b)) = sigma_2
-    // (w_o + b.s_id + (g + 2n.b)) = sigma_3
-    // (w_l + b.s_s1 + g)
-    // (w_r + b.s_s2 + g)
-    // (w_o + b.s_s3 + g)
-
-    // By this point, we have already computed the z_1, z_2 coefficients, which are now represented in Lagrange-base form
-    // Reserve 20n bytes of memory for our fft transforms
-    size_t n = state.n;
-    fr::field_t* scratch_space = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * n * 20);
-    // 4 (4n) 'registers'
-    fr::field_t* w_l_poly = &scratch_space[0];
-    fr::field_t* w_r_poly = &scratch_space[4 * n];
-    fr::field_t* w_o_poly = &scratch_space[8 * n];
-    fr::field_t* identity_poly = &scratch_space[12 * n];
-    // 2 (2n) 'registers'
-    fr::field_t* gate_poly_mid = &scratch_space[16 * n];
-    // fr::field_t* mid_work_register = &scratch_space[18 * n];
-
-    // compute 4n fft transforms for w_l, w_r, w_o and the identity permutation
-    polynomials::copy_polynomial(state.w_l, w_l_poly, n, 4 * n);
-    polynomials::copy_polynomial(state.w_r, w_r_poly, n, 4 * n);
-    polynomials::copy_polynomial(state.w_o, w_o_poly, n, 4 * n);
-
-    polynomials::fft_with_coset(w_l_poly, domain.long_root, domain.generator, domain.long_domain);
-    polynomials::fft_with_coset(w_r_poly, domain.long_root, domain.generator, domain.long_domain);
-    polynomials::fft_with_coset(w_o_poly, domain.long_root, domain.generator, domain.long_domain);
-
-    // TODO: optimize this out!
-    fr::one(identity_poly[0]);
-    for (size_t i = 1; i < n; ++i)
-    {
-        fr::add(identity_poly[i], identity_poly[i-1], identity_poly[i]);
-    }
-    memset((void *)(identity_poly + domain.short_domain), 0, (domain.long_domain - domain.short_domain) * sizeof(fr::field_t));
-    polynomials::fft_with_coset_and_constant(identity_poly, domain.long_root, domain.generator, state.beta, domain.long_domain);
-    
-    // compute identity grand product
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
-    fr::field_t T3;
-    fr::field_t beta_n = { .data = { n, 0, 0, 0 } };
-    fr::to_montgomery_form(beta_n, beta_n);
-    fr::mul(beta_n, state.beta, beta_n);
-    fr::field_t beta_n_2;
-    fr::add(beta_n, beta_n, beta_n_2);
-    for (size_t i = 0; i < domain.long_domain; ++i)
-    {
-        fr::add(identity_poly[i], state.gamma, T0);
-        fr::add(T0, w_l_poly[i], T1);
-        fr::add(T0, w_r_poly[i], T2);
-        fr::add(T0, w_o_poly[i], T3);
-        fr::add(T2, beta_n, T2);
-        fr::add(T3, beta_n_2, T3);
-        fr::mul(T1, T2, identity_poly[i]);
-        fr::mul(identity_poly[i], T3, identity_poly[i]);
-    }
-
-    // compute q.o * w.o
-    polynomials::ifft(state.q_o, domain.short_root_inverse, domain.short_domain);
-    polynomials::copy_polynomial(state.q_o, gate_poly_mid, n, 2 * n);
-    polynomials::fft_with_coset(gate_poly_mid, domain.mid_root, domain.generator, domain.mid_domain);
-
-    // the fft transform on q.o is half that of w.o - access every other index of w.o
-    for (size_t i = 0; i < domain.mid_domain; ++i)
-    {
-        fr::mul(w_o_poly[i * 2], gate_poly_mid[i], gate_poly_mid[i]);
-    }
-
-    // great! we've freed up w_o now
-    // we can use that scratch space to compute q.l*w.l and q.r*w.r
-
-    // compute q.r * w.r
-    fr::field_t* q_r_poly = w_o_poly; // hehe
-    fr::field_t* q_l_poly = w_o_poly + domain.mid_domain;
-    polynomials::ifft(state.q_r, domain.short_root_inverse, domain.short_domain);
-    polynomials::ifft(state.q_l, domain.short_root_inverse, domain.short_domain);
-
-    polynomials::copy_polynomial(state.q_r, q_r_poly, n, 2 * n);
-    polynomials::copy_polynomial(state.q_l, q_l_poly, n, 2 * n);
-    polynomials::fft_with_coset(q_r_poly, domain.mid_root, domain.generator, domain.mid_domain);
-    polynomials::fft_with_coset(q_l_poly, domain.mid_root, domain.generator, domain.mid_domain);
-
-    // the fft transform on q.o is half that of w.o - access every other index of w.o
-    for (size_t i = 0; i < domain.mid_domain; ++i)
-    {
-        fr::mul(w_r_poly[i * 2], q_r_poly[i], T0);
-        fr::mul(w_l_poly[i * 2], q_l_poly[i], T1);
-        fr::add(T1, T0, T1);
-        fr::add(gate_poly_mid[i], T1, gate_poly_mid[i]);
-    }
-
-    // The next step is to compute q_m.w_l.w_r - we need a 4n fft for this
-    // requisition the memory that w_o was using
-    fr::field_t* q_m_poly = w_o_poly;
-    polynomials::ifft(state.q_m, domain.short_root_inverse, domain.short_domain);
-    polynomials::copy_polynomial(state.q_m, q_m_poly, n, 4 * n);
-    polynomials::fft_with_coset_and_constant(q_m_poly, domain.long_root, domain.generator, state.alpha, domain.long_domain);
-
-    for (size_t i = 0; i < domain.long_domain; ++i)
-    {
-        fr::mul(w_l_poly[i], w_r_poly[i], T0);
-        fr::mul(q_m_poly[i], T0, q_m_poly[i]);
-    }
-
-    // we've now freed up use of w_l and w_r, but w_o is occupied with q_m.q_l.q_r
-
-    // we can free up this memory by combining the grand-product term with q_m.q_l.q_r
-    fr::field_t* z_1_poly = w_l_poly; // <-- already performed an ifft transform for this one
-    polynomials::copy_polynomial(state.z_1, z_1_poly, n, 4 * n);
-    polynomials::fft_with_coset_and_constant(z_1_poly, domain.long_root, domain.generator, state.alpha_squared, domain.long_domain);
-    // we want both z_1(X) and z_1(X \omega^-1) - repeat the final 4 indices of the fft to get this
-    for (size_t i = 0; i < 4; ++i)
-    {
-        fr::copy(z_1_poly[4 * n - 4 + i], z_1_poly[4 * n + i]);
-    }
-    // fr::field_t* shifted_z_1_poly = z_1_poly + 4;
-
-    for (size_t i = 0; i < domain.long_domain; ++i)
-    {
-        size_t shifted_index = i < (domain.long_domain - 4) ? i + 4 : 4 - (domain.long_domain - i);
-        fr::mul(identity_poly[i], z_1_poly[i], identity_poly[i]);
-        fr::sub(identity_poly[i], z_1_poly[shifted_index], identity_poly[i]);
-        fr::add(identity_poly[i], q_m_poly[i], identity_poly[i]);
-    }
-
-    // create placeholder local variable for the quotient polynomial
-    fr::field_t* quotient_poly = identity_poly;
-    // free memory: w_r, w_o
-    fr::field_t* l_1_poly = w_r_poly;
-    fr::field_t* l_n_poly = w_r_poly + domain.mid_domain;
-
-    // TODO: implement an O(n) version of this
-    polynomials::compute_split_lagrange_polynomial_fft(l_1_poly, l_n_poly, domain);
-
-    for (size_t i = 0; i < domain.mid_domain; ++i)
-    {
-        size_t shifted_index = i < (domain.mid_domain - 2) ? (i + 2) * 2 : (2 - (domain.mid_domain - i)) * 2;
-        fr::mul(l_1_poly[i], z_1_poly[i * 2], l_1_poly[i]);
-        fr::mul(l_n_poly[i], z_1_poly[shifted_index], l_n_poly[i]);
-        fr::mul(l_1_poly[i], state.alpha_squared, l_1_poly[i]);
-        fr::mul(l_n_poly[i], state.alpha_cubed, l_n_poly[i]);
-    }
-
-    // z_1 is now free
-    // => w_o, w_l are now free
-
-    fr::field_t* sigma_1_poly = w_l_poly;
-    fr::field_t* sigma_2_poly = w_o_poly;
-    polynomials::copy_polynomial(state.sigma_1, sigma_1_poly, n, 4 * n);
-    polynomials::copy_polynomial(state.sigma_2, sigma_2_poly, n, 4 * n);
-
-    polynomials::fft_with_coset(sigma_1_poly, domain.long_root, domain.generator, domain.long_domain);
-    polynomials::fft_with_coset(sigma_2_poly, domain.long_root, domain.generator, domain.long_domain);
-
-    for (size_t i = 0; i < domain.long_domain; ++i)
-    {
-        fr::mul(sigma_1_poly[i], sigma_2_poly[i], sigma_1_poly[i]);
-    }
-
-    fr::field_t* sigma_3_poly = w_o_poly;
-    polynomials::copy_polynomial(state.sigma_3, sigma_3_poly, n, 4 * n);
-    polynomials::fft_with_coset(sigma_3_poly, domain.long_root, domain.generator, domain.long_domain);
-
-    for (size_t i = 0; i < domain.long_domain; ++i)
-    {
-        fr::mul(sigma_1_poly[i], sigma_3_poly[i], sigma_3_poly[i]);
-    }
-
-    fr::field_t* z_2_poly = w_o_poly;
-    polynomials::copy_polynomial(state.sigma_2, sigma_2_poly, n, 4 * n);
-    polynomials::fft_with_coset_and_constant(z_2_poly, domain.long_root, domain.generator, state.alpha_cubed, domain.long_domain);
-
-    for (size_t i = 0; i < domain.long_domain; ++i)
-    {
-        size_t shifted_index = i < (domain.long_domain - 4) ? i + 4 : 4 - (domain.long_domain - i);
-        fr::mul(sigma_1_poly[i], z_2_poly[i], sigma_1_poly[i]);
-        fr::sub(sigma_1_poly[i], z_2_poly[shifted_index], sigma_1_poly[i]);
-
-        // combine product term into quotient poly
-        fr::mul(quotient_poly[i], sigma_1_poly[i], quotient_poly[i]);
-    }
-
-    // accumulate degree-2n terms into gate_poly_mid
-    for (size_t i = 0; i < domain.mid_domain; ++i)
-    {
-        fr::mul(z_2_poly[i], state.alpha, T0);
-        fr::sub(l_1_poly[i], T0, l_1_poly[i]);
-
-        size_t shifted_index = i < (domain.mid_domain - 2) ? (i + 2) * 2 : (2 - (domain.mid_domain - i)) * 2;
-        fr::mul(z_2_poly[shifted_index], state.alpha_squared, T0);
-        fr::sub(l_n_poly[i], T0, l_n_poly[i]);
-
-        fr::add(gate_poly_mid[i], l_1_poly[i], gate_poly_mid[i]);
-        fr::add(gate_poly_mid[i], l_n_poly[i], gate_poly_mid[i]);
-    }
-
-    polynomials::ifft_with_coset(gate_poly_mid, domain.mid_root_inverse, domain.generator_inverse, domain.mid_domain);
-    memset((void *)(gate_poly_mid + domain.mid_domain), 0, (domain.mid_domain) * sizeof(fr::field_t));
-
-    polynomials::fft_with_coset(gate_poly_mid, domain.long_root, domain.generator, domain.long_domain);
-
-    for (size_t i = 0; i < domain.long_domain; ++i)
-    {
-        fr::add(quotient_poly[i], gate_poly_mid[i], quotient_poly[i]);
-    }
-
-    // final step is to divide by the vanishing polynomial...
-}
 } // namespace waffle
