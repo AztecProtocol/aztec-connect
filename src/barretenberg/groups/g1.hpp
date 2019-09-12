@@ -2,25 +2,13 @@
 
 #include <stdint.h>
 
+#include "../types.hpp"
 #include "../fields/fr.hpp"
 #include "../fields/fq.hpp"
 #include "../assert.hpp"
 
 namespace g1
 {
-    struct affine_element
-    {
-        fq::field_t x;
-        fq::field_t y;
-    };
-
-    struct element
-    {
-        fq::field_t x;
-        fq::field_t y;
-        fq::field_t z;
-    };
-
     inline void print(g1::affine_element& p)
     {
         printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
@@ -762,6 +750,13 @@ namespace g1
         fq::one(r.z);
     }
 
+    inline void copy_to_affine(element& a, affine_element& r)
+    {
+        a = normalize(a);
+        fq::copy(a.x, r.x);
+        fq::copy(a.y, r.y);
+    }
+
     inline void copy_affine(const affine_element& a, affine_element& r)
     {
         fq::copy(a.x, r.x);
@@ -776,7 +771,9 @@ namespace g1
         copy_from_affine(a, work_element);
         copy_from_affine(a, point);
         fr::field_t converted_scalar;
+        // TODO ADD BACK IN!
         fr::from_montgomery_form(scalar, converted_scalar);
+        // fr::copy(scalar, converted_scalar);
         bool scalar_bits[256] = {0};
         for (size_t i = 0; i < 64; ++i)
         {

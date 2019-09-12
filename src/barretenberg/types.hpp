@@ -58,3 +58,54 @@ namespace pairing
         fq2::fq2_t vv;
     };
 }
+
+namespace g1
+{
+    struct affine_element
+    {
+        fq::field_t x;
+        fq::field_t y;
+    };
+
+    struct element
+    {
+        fq::field_t x;
+        fq::field_t y;
+        fq::field_t z;
+    };
+}
+
+namespace g2
+{
+    struct affine_element
+    {
+        fq2::fq2_t x;
+        fq2::fq2_t y;
+    };
+
+    struct element
+    {
+        fq2::fq2_t x;
+        fq2::fq2_t y;
+        fq2::fq2_t z;
+    };
+}
+
+namespace polynomials
+{
+    struct polynomial
+    {
+        fr::field_t* coeffs;
+        size_t size;
+    };
+}
+
+namespace srs
+{
+    struct plonk_srs
+    {
+        g1::affine_element *monomials;
+        g2::affine_element t2;
+        size_t degree;
+    };
+}

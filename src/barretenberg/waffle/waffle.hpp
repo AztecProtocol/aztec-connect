@@ -7,17 +7,10 @@
 #include "../groups/pairing.hpp"
 #include "../groups/scalar_multiplication.hpp"
 #include "../polynomials/fft.hpp"
+#include "../types.hpp"
 
 namespace waffle
 {
-
-struct plonk_srs
-{
-    g1::affine_element *monomials;
-    g2::affine_element t2;
-    size_t degree;
-};
-
 // contains the state of a PLONK proof, including witness values, instance values
 // and Kate polynomial commitments
 struct circuit_state
@@ -102,45 +95,6 @@ struct fft_pointers
     fr::field_t* permutation_end_poly;
     fr::field_t* scratch_memory;
 };
-
-inline void init_srs(size_t size, plonk_srs& res)
-{
-    // res->monomials = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * 4 * size);
-    printf("pre scalars\n");
-    fr::field_t *scalars = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * size);
-    printf("post scalars\n");
-    // TODO: load this from disk. Dummy SRS for now
-    fr::field_t x;
-    fr::random_element(x);
-
-    g1::affine_element X = g1::affine_one();
-
-    printf("copying\n");
-    g1::copy(&X, &res.monomials[0]);
-    fr::one(scalars[0]);
-    printf("about to do more copying\n");
-    for (size_t i = 1; i < size; ++i)
-    {
-        g1::copy(&X, &res.monomials[i]);
-        fr::mul(scalars[i - 1], x, scalars[i]);
-    }
-    printf("g2 group exponentiation\n");
-    g2::affine_element g2_input = g2::affine_one();
-    g2_input = g2::group_exponentiation(g2_input, x);
-    // res.t2 = g2::affine_one();
-    // res.t2 = g2::group_exponentiation(res.t2, x);
-    printf("about to copy into res.t2\n");
-    g2::copy_affine(g2_input, res.t2);
-    printf("copied\n");
-    res.degree = size;
-    printf("post g2 group exponentiation\n");
-    printf("pre point table\n");
-    scalar_multiplication::generate_pippenger_point_table(res.monomials, res.monomials, size);
-    printf("post point table\n");
-    free(scalars);
-    // blah blah blah
-}
-
 
 inline void compute_wire_coefficients(circuit_state &state, polynomials::evaluation_domain &domain, fft_pointers& ffts)
 {
@@ -228,23 +182,24 @@ inline void compute_z_coefficients(circuit_state& state, polynomials::evaluation
     polynomials::copy_polynomial(state.z_2, &ffts.z_2_poly[0], n, n);
 }
 
-inline void compute_wire_commitments(circuit_state &state, fr::field_t* wire_coefficients, plonk_srs &srs)
+inline void compute_wire_commitments(circuit_state &state, srs::plonk_srs &srs)
 {
     size_t n = state.n;
+    
     scalar_multiplication::multiplication_state mul_state[3];
     mul_state[0].num_elements = n;
-    mul_state[0].scalars = &wire_coefficients[0];
+    mul_state[0].scalars = &state.w_l[0];
     mul_state[0].points = srs.monomials;
     mul_state[1].num_elements = n;
-    mul_state[1].scalars = &wire_coefficients[n];
+    mul_state[1].scalars = &state.w_r[0];
     mul_state[1].points = srs.monomials;
     mul_state[2].num_elements = n;
-    mul_state[2].scalars = &wire_coefficients[n];
+    mul_state[2].scalars = &state.w_o[0];
     mul_state[2].points = srs.monomials;
 
-    // scalar_multiplication::batched_scalar_multiplications(mul_state, 3);
+    scalar_multiplication::batched_scalar_multiplications(mul_state, 3);
 
-    // TODO: make a method for normal-to-affine :/
+    // TODO: make a method for normal-to-affine copies :/
     fq::copy(mul_state[0].output.x, state.W_L.x);
     fq::copy(mul_state[1].output.x, state.W_R.x);
     fq::copy(mul_state[2].output.x, state.W_O.x);
@@ -258,7 +213,7 @@ inline void compute_wire_commitments(circuit_state &state, fr::field_t* wire_coe
     fr::random_element(state.gamma);
 }
 
-inline void compute_z_commitments(circuit_state& state, fr::field_t* z_coefficients, plonk_srs& srs)
+inline void compute_z_commitments(circuit_state& state, fr::field_t* z_coefficients, srs::plonk_srs& srs)
 {
     size_t n = state.n;
     scalar_multiplication::multiplication_state mul_state[3];
@@ -536,7 +491,26 @@ inline void compute_permutation_grand_product_coefficients(circuit_state& state,
     {
         fr::add(ffts.quotient_poly[i], ffts.gate_poly_mid[i], ffts.quotient_poly[i]);
     }
-
 }
 
+inline void compute_quotient_polynomial(circuit_state& state, polynomials::evaluation_domain& domain, fft_pointers& ffts)
+{
+
+    waffle::compute_wire_coefficients(state, domain, ffts);
+
+    // compute_wire_commitments
+
+    waffle::compute_z_coefficients(state, domain, ffts);
+
+    // compute z commitments
+    waffle::compute_identity_grand_product_coefficients(state, domain, ffts);
+
+    waffle::compute_arithmetisation_coefficients(state, domain, ffts);
+
+    waffle::concatenate_arithmetic_and_identity_coefficients(state, domain, ffts);
+
+    waffle::compute_permutation_grand_product_coefficients(state, domain, ffts);
+
+    polynomials::divide_by_pseudo_vanishing_polynomial_long(ffts.quotient_poly, domain);
+}
 } // namespace waffle

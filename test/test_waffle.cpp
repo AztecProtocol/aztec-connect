@@ -3,6 +3,8 @@
 #include <barretenberg/waffle/waffle.hpp>
 
 
+namespace
+{
 void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
 {
     size_t n = state.n;
@@ -125,6 +127,7 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     fr::add(state.sigma_3[shift-1], n_mont, state.sigma_3[shift-1]);
 
 }
+}
 
 TEST(waffle, compute_z_coefficients)
 {
@@ -226,7 +229,7 @@ TEST(waffle, compute_z_coefficients)
     }
 }
 
-TEST(waffle, compute_wire_commitments)
+TEST(waffle, compute_wire_coefficients)
 {
     size_t n = 256;
     fr::field_t data[12 * n];
@@ -457,11 +460,6 @@ TEST(waffle, compute_arithmetisation_coefficients)
 
     waffle::compute_identity_grand_product_coefficients(state, domain, ffts);
 
-    // fr::field_t* ffts.w_l_poly = &scratch_space[0];
-    // fr::field_t* w_r_poly = &scratch_space[4 * n];
-    // fr::field_t* w_o_poly = &scratch_space[8 * n];
-    // fr::field_t* gate_poly_mid = &scratch_space[16 * n];
-
     // are ffts.w_l_poly, w_r_poly, w_o_poly computed correctly?
     for (size_t i = 0; i < n; ++i)
     {
@@ -654,5 +652,86 @@ TEST(waffle, compute_permutation_grand_product_coefficients)
         EXPECT_EQ(result[4 * i].data[1], 0);
         EXPECT_EQ(result[4 * i].data[2], 0);
         EXPECT_EQ(result[4 * i].data[3], 0);
+    }
+}
+
+TEST(waffle, compute_wire_commitments)
+{
+    size_t n = 256;
+    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+
+    waffle::circuit_state state;
+    state.n = n;
+    fr::random_element(state.beta);
+    fr::random_element(state.gamma);
+    fr::random_element(state.alpha);
+    fr::field_t data[24 * n];
+
+    fr::field_t scratch_space[12 * n];
+
+    waffle::fft_pointers ffts;
+    ffts.scratch_memory = scratch_space;
+    ffts.w_l_poly = &ffts.scratch_memory[0];
+    ffts.w_r_poly = &ffts.scratch_memory[4 * n];
+    ffts.w_o_poly = &ffts.scratch_memory[8 * n];
+    generate_test_data(state, data);
+
+    fr::field_t x;
+    fr::random_element(x);
+    srs::plonk_srs srs;
+    g1::affine_element monomials[2 * n + 1];
+    monomials[0] = g1::affine_one();
+
+    for (size_t i = 1; i < n; ++i)
+    {
+        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+    }
+    scalar_multiplication::generate_pippenger_point_table(monomials, monomials, n);
+    srs.monomials = monomials;
+    srs.degree = n;
+
+    waffle::compute_wire_coefficients(state, domain, ffts);
+
+    fr::field_t w_l_copy[n];
+    fr::field_t w_r_copy[n];
+    fr::field_t w_o_copy[n];
+    polynomials::copy_polynomial(state.w_l, w_l_copy, n, n);
+    polynomials::copy_polynomial(state.w_r, w_r_copy, n, n);
+    polynomials::copy_polynomial(state.w_o, w_o_copy, n, n);
+
+    fr::field_t w_l_eval;
+    fr::field_t w_r_eval;
+    fr::field_t w_o_eval;
+
+    // TODO: our scalar mul algorithm currently doesn't convert values out of montgomery representation
+    // do we want to do this? is expensive, can probably work around and leave everything in mont form?
+    // we can 'normalize' our evaluation check by adding an extra factor of R to each scalar
+    for (size_t i = 0; i < n; ++i)
+    {
+        fr::to_montgomery_form(w_l_copy[i], w_l_copy[i]);
+        fr::to_montgomery_form(w_r_copy[i], w_r_copy[i]);
+        fr::to_montgomery_form(w_o_copy[i], w_o_copy[i]);
+    }
+
+    polynomials::eval(w_l_copy, x, n, w_l_eval);
+    polynomials::eval(w_r_copy, x, n, w_r_eval);
+    polynomials::eval(w_o_copy, x, n, w_o_eval);
+
+
+    waffle::compute_wire_commitments(state, srs);
+
+    g1::affine_element generator = g1::affine_one();
+    g1::affine_element expected_w_l = g1::group_exponentiation(generator, w_l_eval);
+    g1::affine_element expected_w_r = g1::group_exponentiation(generator, w_r_eval);
+    g1::affine_element expected_w_o = g1::group_exponentiation(generator, w_o_eval);
+
+    for (size_t i = 0; i < 1; ++i)
+    {
+        EXPECT_EQ(state.W_L.x.data[i], expected_w_l.x.data[i]);
+        EXPECT_EQ(state.W_L.y.data[i], expected_w_l.y.data[i]);
+        EXPECT_EQ(state.W_R.x.data[i], expected_w_r.x.data[i]);
+        EXPECT_EQ(state.W_R.y.data[i], expected_w_r.y.data[i]);
+        EXPECT_EQ(state.W_O.x.data[i], expected_w_o.x.data[i]);
+        EXPECT_EQ(state.W_O.y.data[i], expected_w_o.y.data[i]);
     }
 }

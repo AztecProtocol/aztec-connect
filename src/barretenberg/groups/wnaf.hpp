@@ -38,16 +38,6 @@ inline void fixed_wnaf(uint64_t* scalar, uint32_t* wnaf, bool& skew_map, size_t 
     size_t wnaf_entries = (SCALAR_BITS + wnaf_bits - 1) / wnaf_bits;
     skew_map = ((scalar[0] & 1) == 0);
 
-    if ((scalar[0] == 0) && (scalar[1] == 0))
-    {
-        skew_map = false;
-        for (size_t i = 0; i < wnaf_entries; ++i)
-        {
-            wnaf[i * num_points] = 0;
-        }
-        return;
-    }
-
     uint32_t previous = get_wnaf_bits(scalar, wnaf_bits, 0) + (uint32_t)skew_map;
     for (size_t i = 1; i < wnaf_entries - 1; ++i)
     {

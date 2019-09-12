@@ -119,7 +119,7 @@ inline void generate_pippenger_point_table(g1::affine_element *points, g1::affin
     }
 }
 
-inline g1::element pippenger(fr::field_t* scalars, g1::affine_element *points, size_t num_initial_points) noexcept
+inline g1::element pippenger_internal(fr::field_t* scalars, g1::affine_element *points, size_t num_initial_points, fr::field_t* endo_scalars) noexcept
 {
     size_t bits_per_bucket = get_optimal_bucket_width(num_initial_points);
     multiplication_runtime_state state;
@@ -142,9 +142,9 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element *points, s
 
     for (size_t i = 0; i < num_initial_points; ++i)
     {
-        fr::split_into_endomorphism_scalars(scalars[i], scalars[i], *(fr::field_t*)&scalars[i].data[2]);
-        wnaf::fixed_wnaf(&scalars[i].data[0], &wnaf_state.wnaf_table[2 * i], wnaf_state.skew_table[2 * i], state.num_points, bits_per_bucket + 1);
-        wnaf::fixed_wnaf(&scalars[i].data[2], &wnaf_state.wnaf_table[2 * i + 1], wnaf_state.skew_table[2 * i + 1], state.num_points, bits_per_bucket + 1);
+        fr::split_into_endomorphism_scalars(scalars[i], endo_scalars[i], *(fr::field_t*)&endo_scalars[i].data[2]);
+        wnaf::fixed_wnaf(&endo_scalars[i].data[0], &wnaf_state.wnaf_table[2 * i], wnaf_state.skew_table[2 * i], state.num_points, bits_per_bucket + 1);
+        wnaf::fixed_wnaf(&endo_scalars[i].data[2], &wnaf_state.wnaf_table[2 * i + 1], wnaf_state.skew_table[2 * i + 1], state.num_points, bits_per_bucket + 1);
     }
     g1::set_infinity(state.accumulator);
 
@@ -220,6 +220,14 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element *points, s
     return state.accumulator;
 }
 
+inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, size_t num_initial_points) noexcept
+{
+    fr::field_t* endo_scalars = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * (num_initial_points));
+    g1::element res = pippenger_internal(scalars, points, num_initial_points, endo_scalars);
+    free(endo_scalars);
+    return res;
+}
+
 struct multiplication_state
 {
     g1::affine_element* points;
@@ -287,7 +295,6 @@ inline void batched_scalar_multiplications(multiplication_state* mul_state, size
     multiplication_state threaded_inputs[split * num_exponentiations];
 
     // Compute the multi-exponentiation parameters for each thread
-    printf("num elements of each exp in the batch = %lu\n", mul_state[0].num_elements);
     for (size_t i = 0; i < num_exponentiations; ++i)
     {
         size_t range_index = 0;
@@ -318,7 +325,6 @@ inline void batched_scalar_multiplications(multiplication_state* mul_state, size
     size_t threshold = split * num_exponentiations;
     if (num_threads < threshold)
     {
-        printf("calling batch scalar mul again, num inputs = %lu\n", threshold - num_threads);
         batched_scalar_multiplications(&threaded_inputs[num_threads], threshold - num_threads);
     }
 

@@ -2,6 +2,7 @@
 
 #include "../fields/fq2.hpp"
 #include "../fields/fr.hpp"
+#include "../types.hpp"
 
 namespace g2
 {
@@ -19,19 +20,6 @@ namespace g2
     constexpr fq2::fq2_t twist_mul_by_q_y = {
         .c0 = { .data = { 0xe4bbdd0c2936b629, 0xbb30f162e133bacb, 0x31a9d1b6f9645366, 0x253570bea500f8dd } },
         .c1 = { .data = { 0xa1d77ce45ffe77c7, 0x07affd117826d1db, 0x6d16bd27bb7edc6b, 0x2c87200285defecc } }
-    };
-
-    struct affine_element
-    {
-        fq2::fq2_t x;
-        fq2::fq2_t y;
-    };
-
-    struct element
-    {
-        fq2::fq2_t x;
-        fq2::fq2_t y;
-        fq2::fq2_t z;
     };
 
     inline element one()

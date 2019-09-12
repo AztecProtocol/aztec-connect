@@ -224,3 +224,172 @@ TEST(fft, compute_lagrange_polynomial_fft)
         }
     }
 }
+
+TEST(fft, divide_by_pseudo_vanishing_polynomial)
+{
+    size_t n = 256;
+    fr::field_t a[4 * n];
+    fr::field_t b[4 * n];
+    fr::field_t c[4 * n];
+
+    fr::field_t T0;
+    for (size_t i = 0; i < n; ++i)
+    {
+        fr::random_element(a[i]);
+        fr::random_element(b[i]);
+        fr::mul(a[i], b[i], c[i]);
+        fr::neg(c[i], c[i]);
+        fr::mul(a[i], b[i], T0);
+        fr::add(T0, c[i], T0);
+
+    }
+    for (size_t i = n; i < 4 * n; ++i)
+    {
+        fr::zero(a[i]);
+        fr::zero(b[i]);
+        fr::zero(c[i]);
+    }
+
+    // make the final evaluation not vanish
+    // fr::one(c[n-1]);
+    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+
+    polynomials::ifft(a, domain.short_root_inverse, domain.short_domain);
+    polynomials::ifft(b, domain.short_root_inverse, domain.short_domain);
+    polynomials::ifft(c, domain.short_root_inverse, domain.short_domain);
+
+    polynomials::fft_with_coset(a, domain.mid_root, domain.generator, domain.mid_domain);
+    polynomials::fft_with_coset(b, domain.mid_root, domain.generator, domain.mid_domain);
+    polynomials::fft_with_coset(c, domain.mid_root, domain.generator, domain.mid_domain);
+
+
+    fr::field_t result[domain.mid_domain];
+    for (size_t i = 0; i < domain.mid_domain; ++i)
+    {
+        fr::mul(a[i], b[i], result[i]);
+        fr::add(result[i], c[i], result[i]);
+    }
+
+    polynomials::divide_by_pseudo_vanishing_polynomial_mid(&result[0], domain);
+
+    polynomials::ifft_with_coset(result, domain.mid_root_inverse, domain.generator_inverse, domain.mid_domain);
+
+    for (size_t i = n + 1; i < domain.mid_domain; ++i)
+    {
+        EXPECT_EQ(result[i].data[0], 0);
+        EXPECT_EQ(result[i].data[1], 0);
+        EXPECT_EQ(result[i].data[2], 0);
+        EXPECT_EQ(result[i].data[3], 0);
+    }
+
+}
+
+TEST(fft, divide_by_pseudo_vanishing_polynomial_long)
+{
+    size_t n = 256;
+    fr::field_t a[4 * n];
+    fr::field_t b[4 * n];
+    fr::field_t c[4 * n];
+
+    fr::field_t T0;
+    for (size_t i = 0; i < n; ++i)
+    {
+        fr::random_element(a[i]);
+        fr::random_element(b[i]);
+        fr::mul(a[i], b[i], c[i]);
+        fr::neg(c[i], c[i]);
+        fr::mul(a[i], b[i], T0);
+        fr::add(T0, c[i], T0);
+
+    }
+    for (size_t i = n; i < 4 * n; ++i)
+    {
+        fr::zero(a[i]);
+        fr::zero(b[i]);
+        fr::zero(c[i]);
+    }
+
+    // make the final evaluation not vanish
+    fr::random_element(c[n-1]);
+
+    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+
+    polynomials::ifft(a, domain.short_root_inverse, domain.short_domain);
+    polynomials::ifft(b, domain.short_root_inverse, domain.short_domain);
+    polynomials::ifft(c, domain.short_root_inverse, domain.short_domain);
+
+    polynomials::fft_with_coset(a, domain.long_root, domain.generator, domain.long_domain);
+    polynomials::fft_with_coset(b, domain.long_root, domain.generator, domain.long_domain);
+    polynomials::fft_with_coset(c, domain.long_root, domain.generator, domain.long_domain);
+
+    fr::field_t result[domain.long_domain];
+    for (size_t i = 0; i < domain.long_domain; ++i)
+    {
+        fr::mul(a[i], b[i], result[i]);
+        fr::add(result[i], c[i], result[i]);
+    }
+
+    polynomials::divide_by_pseudo_vanishing_polynomial_long(&result[0], domain);
+
+    polynomials::ifft_with_coset(result, domain.long_root_inverse, domain.generator_inverse, domain.long_domain);
+    for (size_t i = n + 1; i < domain.long_domain; ++i)
+    {
+        EXPECT_EQ(result[i].data[0], 0);
+        EXPECT_EQ(result[i].data[1], 0);
+        EXPECT_EQ(result[i].data[2], 0);
+        EXPECT_EQ(result[i].data[3], 0);
+    }
+}
+
+TEST(fft, compute_kate_opening_coefficients)
+{
+    // generate random polynomial F(X) = coeffs
+    size_t n = 256;
+    fr::field_t coeffs[2 * n];
+    fr::field_t W[2 * n];
+    for (size_t i = 0; i < n; ++i)
+    {
+        fr::random_element(coeffs[i]);
+        fr::zero(coeffs[i + n]);
+    }
+    polynomials::copy_polynomial(coeffs, W, 2 * n, 2 * n);
+
+    // generate random evaluation point z
+    fr::field_t z;
+    fr::random_element(z);
+
+    // compute opening polynomial W(X), and evaluation f = F(z)
+    fr::field_t f = polynomials::compute_kate_opening_coefficients(W, z, n);
+
+    // validate that W(X)(X - z) = F(X) - F(z)
+    // compute (X - z) in coefficient form
+    fr::field_t multiplicand[2 * n];
+    fr::neg(z, multiplicand[0]);
+    fr::one(multiplicand[1]);
+    for (size_t i = 2; i < 2 * n; ++i)
+    {
+        fr::zero(multiplicand[i]);
+    }
+
+    // set F(X) = F(X) - F(z)
+    fr::sub(coeffs[0], f, coeffs[0]);
+
+    // compute fft of polynomials
+    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+    polynomials::fft_with_coset(coeffs, domain.mid_root, domain.generator, domain.mid_domain);
+    polynomials::fft_with_coset(W, domain.mid_root, domain.generator, domain.mid_domain);
+    polynomials::fft_with_coset(multiplicand, domain.mid_root, domain.generator, domain.mid_domain);
+
+    // validate that, at each evaluation, W(X)(X - z) = F(X) - F(z)
+    fr::field_t result;
+    fr::field_t expected;
+    for (size_t i = 0; i < domain.mid_domain; ++i)
+    {
+        fr::mul(W[i], multiplicand[i], result);
+        fr::copy(coeffs[i], expected);
+        for (size_t j = 0; j < 4; ++j)
+        {
+            EXPECT_EQ(result.data[j], expected.data[j]);
+        }
+    }
+}
