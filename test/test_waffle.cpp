@@ -14,22 +14,23 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     state.w_o = &data[2 * n];
     state.z_1 = &data[3 * n];
     state.z_2 = &data[4 * n];
-    state.t = &data[5 * n];
-    state.q_c = &data[8 * n];
-    state.q_l = &data[9 * n];
-    state.q_r = &data[10 * n];
-    state.q_o = &data[11 * n];
-    state.q_m = &data[12 * n];
-    state.sigma_1 = &data[13 * n];
-    state.sigma_2 = &data[14 * n];
-    state.sigma_3 = &data[15 * n];
-    state.s_id = &data[16 * n];
-    state.product_1 = &data[17 * n];
-    state.product_2 = &data[18 * n];
-    state.product_3 = &data[19 * n];
+    state.q_c = &data[5 * n + 2];
+    state.q_l = &data[6 * n + 2];
+    state.q_r = &data[7 * n + 2];
+    state.q_o = &data[8 * n + 2];
+    state.q_m = &data[9 * n + 2];
+    state.sigma_1 = &data[10 * n + 2];
+    state.sigma_2 = &data[11 * n + 2];
+    state.sigma_3 = &data[12 * n + 2];
+    state.s_id = &data[13 * n + 2];
+    state.t = &data[14 * n + 2];
+
+    state.product_1 = &data[17 * n + 5];
+    state.product_2 = &data[18 * n + 6];
+    state.product_3 = &data[19 * n + 7];
     state.w_l_lagrange_base = state.t;
-    state.w_r_lagrange_base = &state.t[n];
-    state.w_o_lagrange_base = &state.t[2 * n];
+    state.w_r_lagrange_base = &state.t[n + 1];
+    state.w_o_lagrange_base = &state.t[2 * n + 2];
 
     fr::random_element(state.beta);
     fr::random_element(state.gamma);
@@ -227,6 +228,40 @@ TEST(waffle, compute_z_coefficients)
         EXPECT_EQ(z_1_expected.data[0], z_1_evaluations[i]);
         EXPECT_EQ(z_2_expected.data[0], z_2_evaluations[i]);
     }
+
+    fr::field_t z_coeffs[4 * n];
+    fr::field_t z_coeffs_copy[4 * n + 4];
+    polynomials::copy_polynomial(state.z_1, z_coeffs, n, 4 * n);
+    polynomials::fft(z_coeffs, domain.long_root, domain.long_domain);
+    polynomials::copy_polynomial(z_coeffs, z_coeffs_copy, 4 * n, 4 * n);
+
+    fr::copy(z_coeffs_copy[0], z_coeffs_copy[4 * n]);
+    fr::copy(z_coeffs_copy[1], z_coeffs_copy[4 * n + 1]);
+    fr::copy(z_coeffs_copy[2], z_coeffs_copy[4 * n + 2]);
+    fr::copy(z_coeffs_copy[3], z_coeffs_copy[4 * n + 3]);
+
+    polynomials::ifft(z_coeffs, domain.long_root_inverse, domain.long_domain);
+
+    fr::field_t* shifted_z = &z_coeffs_copy[4];
+
+    polynomials::ifft(shifted_z, domain.long_root_inverse, domain.long_domain);
+
+
+    fr::field_t x;
+    fr::field_t shifted_x;
+    fr::random_element(x);
+    fr::mul(x, domain.short_root, shifted_x);
+
+    fr::field_t z_eval;
+    fr::field_t shifted_z_eval;
+    polynomials::eval(z_coeffs, shifted_x, domain.short_domain, z_eval);
+    polynomials::eval(shifted_z, x, domain.short_domain, shifted_z_eval);
+
+    for (size_t i = 0; i < 4; ++i)
+    {
+        EXPECT_EQ(z_eval.data[i], shifted_z_eval.data[i]);
+    }
+
 }
 
 TEST(waffle, compute_wire_coefficients)
@@ -459,17 +494,16 @@ TEST(waffle, compute_arithmetisation_coefficients)
     waffle::compute_z_coefficients(state, domain, ffts);
 
     waffle::compute_identity_grand_product_coefficients(state, domain, ffts);
-
     // are ffts.w_l_poly, w_r_poly, w_o_poly computed correctly?
-    for (size_t i = 0; i < n; ++i)
-    {
-        for (size_t j = 0; j < 4; ++j)
-        {
-            EXPECT_EQ(ffts.w_l_poly[4 * i].data[j], w_l_copy[i].data[j]);
-            EXPECT_EQ(ffts.w_r_poly[4 * i].data[j], w_r_copy[i].data[j]);
-            EXPECT_EQ(ffts.w_o_poly[4 * i].data[j], w_o_copy[i].data[j]);
-        }
-    }
+    // for (size_t i = 0; i < n; ++i)
+    // {
+    //     for (size_t j = 0; j < 4; ++j)
+    //     {
+    //         EXPECT_EQ(ffts.w_l_poly[4 * i].data[j], w_l_copy[i].data[j]);
+    //         EXPECT_EQ(ffts.w_r_poly[4 * i].data[j], w_r_copy[i].data[j]);
+    //         EXPECT_EQ(ffts.w_o_poly[4 * i].data[j], w_o_copy[i].data[j]);
+    //     }
+    // }
 
     // compute arithmetisation coefficients - split into 2 polynomials
     // w_o_poly contains coefficients of 4n fourier transform
@@ -511,7 +545,7 @@ TEST(waffle, concatenate_arithmetic_and_identity_coefficients)
     fr::random_element(state.beta);
     fr::random_element(state.gamma);
     fr::random_element(state.alpha);
-    fr::field_t data[20 * n];
+    fr::field_t data[21 * n];
 
     fr::field_t scratch_space[35 * n + 8];
 
@@ -541,16 +575,13 @@ TEST(waffle, concatenate_arithmetic_and_identity_coefficients)
     waffle::compute_identity_grand_product_coefficients(state, domain, ffts);
 
     fr::field_t eval_space[20 * n];
-
     polynomials::copy_polynomial(state.z_1, eval_space, n, 4 * n);
     polynomials::fft(eval_space, domain.long_root, 4 * n);
     polynomials::copy_polynomial(ffts.identity_poly, &eval_space[4 * n], 4 * n, 4 * n);
     polynomials::ifft_with_coset(&eval_space[4 * n], domain.long_root_inverse, domain.generator_inverse, domain.long_domain);
     polynomials::fft(&eval_space[4 * n], domain.long_root, 4 * n);
 
-
     waffle::compute_arithmetisation_coefficients(state, domain, ffts);
-
     waffle::concatenate_arithmetic_and_identity_coefficients(state, domain, ffts);
 
     // we want to convert `gate_poly_mid` into a 4d fft, so that we can add it into the quotient poly
@@ -610,8 +641,6 @@ TEST(waffle, compute_permutation_grand_product_coefficients)
     ffts.sigma_2_poly = &ffts.scratch_memory[36 * n + 8];
     ffts.sigma_3_poly = &ffts.scratch_memory[40 * n + 8];
     ffts.l_1_poly = &ffts.scratch_memory[44 * n + 8];
-    ffts.permutation_start_poly = &ffts.scratch_memory[48 * n + 12];
-    ffts.permutation_end_poly = &ffts.scratch_memory[50 * n + 16];
     ffts.q_c_poly = ffts.w_o_poly;
     ffts.q_r_poly = ffts.w_o_poly;
     ffts.q_l_poly = ffts.w_o_poly + domain.mid_domain;
@@ -808,5 +837,114 @@ TEST(waffle, compute_z_commitments)
         EXPECT_EQ(state.Z_1.y.data[i], expected_z_1.y.data[i]);
         EXPECT_EQ(state.Z_2.x.data[i], expected_z_2.x.data[i]);
         EXPECT_EQ(state.Z_2.y.data[i], expected_z_2.y.data[i]);
+    }
+}
+
+TEST(waffle, compute_quotient_polynomial)
+{
+    size_t n = 256;
+    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+
+    waffle::circuit_state state;
+    state.n = n;
+    fr::random_element(state.beta);
+    fr::random_element(state.gamma);
+    fr::random_element(state.alpha);
+    fr::field_t data[17 * n + 2];
+
+    fr::field_t scratch_space[18 * n + 8];
+
+    waffle::fft_pointers ffts;
+    ffts.scratch_memory = scratch_space;
+    generate_test_data(state, data);
+
+    fr::field_t x;
+    fr::random_element(x);
+    srs::plonk_srs srs;
+    g1::affine_element monomials[6 * n + 1];
+    monomials[0] = g1::affine_one();
+
+    for (size_t i = 1; i < 3 * n; ++i)
+    {
+        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+    }
+    scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
+    srs.monomials = monomials;
+    srs.degree = n;
+
+    waffle::compute_quotient_polynomial(state, domain, ffts, srs);
+    
+    // check that the max degree of our quotient polynomial is 3n
+    for (size_t i = 3 * n; i < 4 * n; ++i)
+    {
+        for (size_t j = 0; j < 4; ++j)
+        {
+            EXPECT_EQ(ffts.quotient_poly[i].data[j], 0);
+        }
+    }
+}
+
+TEST(waffle, compute_linearisation_coefficients)
+{
+    size_t n = 256;
+    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+
+    waffle::circuit_state state;
+    state.n = n;
+
+    fr::field_t data[18 * n + 2];
+
+    fr::field_t scratch_space[18 * n + 8];
+
+    waffle::fft_pointers ffts;
+    ffts.scratch_memory = scratch_space;
+    // generate_simple_test_data(state, data);
+    generate_test_data(state, data);
+
+    fr::field_t x;
+    fr::random_element(x);
+    srs::plonk_srs srs;
+    g1::affine_element monomials[6 * n + 1];
+    monomials[0] = g1::affine_one();
+
+    for (size_t i = 1; i < 3 * n; ++i)
+    {
+        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+    }
+    scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
+    srs.monomials = monomials;
+    srs.degree = n;
+
+    waffle::compute_quotient_polynomial(state, domain, ffts, srs);
+
+    fr::random_element(state.z);
+    state.linear_poly = &data[17 * n + 2];
+
+    waffle::compute_linearisation_coefficients(state, domain, ffts);
+
+    polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(state.z, domain);
+
+    fr::field_t rhs;
+    fr::field_t lhs;
+    fr::field_t T0;
+    fr::field_t T1;
+    fr::field_t T2;
+    fr::mul(lagrange_evals.l_n_minus_1, state.alpha_squared, T0);
+    fr::mul(T0, state.alpha_cubed, T0);
+
+    fr::sub(state.z_1_shifted_eval, state.z_2_shifted_eval, T1);
+    fr::mul(T0, T1, T0);
+
+    fr::mul(state.z_1_shifted_eval, state.alpha_squared, T1);
+    fr::mul(state.z_2_shifted_eval, state.alpha_cubed, T2);
+    fr::add(T1, T2, T1);
+    fr::sub(T0, T1, T0);
+    fr::add(T0, state.linear_eval, rhs);
+
+    fr::mul(state.t_eval, lagrange_evals.vanishing_poly, lhs);
+
+    for (size_t i = 0; i < 4; ++i)
+    {
+        EXPECT_EQ(lhs.data[i], rhs.data[i]);
     }
 }

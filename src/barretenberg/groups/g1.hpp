@@ -763,7 +763,7 @@ namespace g1
         fq::copy(a.y, r.y);
     }
 
-    inline affine_element group_exponentiation(const affine_element& a, const fr::field_t& scalar)
+    inline g1::element group_exponentiation_inner(const affine_element& a, const fr::field_t& scalar)
     {
         // TODO: if we need to speed up G2, use a fixed-window WNAF
         element work_element;
@@ -800,10 +800,16 @@ namespace g1
             }
         }
 
-        batch_normalize(&work_element, 1);
+        return work_element;
+    }
+
+    inline affine_element group_exponentiation(const affine_element& a, const fr::field_t& scalar)
+    {
+        element res = group_exponentiation_inner(a, scalar);
+        batch_normalize(&res, 1);
         affine_element result;
-        fq::copy(work_element.x, result.x);
-        fq::copy(work_element.y, result.y);
+        fq::copy(res.x, result.x);
+        fq::copy(res.y, result.y);
         return result;
     }
 }

@@ -290,7 +290,11 @@ inline void batched_scalar_multiplications(multiplication_state* mul_state, size
     // we need to make sure that we allocate this extra 'remainder' term to a thread
     // (when we recurse we want a constant # of exponentiations)
     size_t single_range = num_elements / split;
-    size_t single_remainder = num_elements - (single_range * split);
+    if (single_range == 0)
+    {
+        single_range = 1;
+    }
+    size_t single_remainder = (num_elements > (single_range * split)) ? num_elements - (single_range * split) : 0;
 
     multiplication_state threaded_inputs[split * num_exponentiations];
 

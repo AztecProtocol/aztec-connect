@@ -213,8 +213,6 @@ TEST(group, group_exponentiation)
     foo.data[2] = 0xb85045b68181585dUL;
     foo.data[3] = 0x30644e72e131a029UL;
     fq::add_without_reduction(foo, foo, foo);
-    printf("foo \n");
-    fq::print(foo);
 
     libff::init_alt_bn128_params();
 

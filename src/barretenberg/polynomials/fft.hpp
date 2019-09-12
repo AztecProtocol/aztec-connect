@@ -406,4 +406,46 @@ inline fr::field_t compute_kate_opening_coefficients(fr::field_t* coeffs, const 
     return f;
 }
 
+struct lagrange_evaluations
+{
+    fr::field_t vanishing_poly;
+    fr::field_t l_1;
+    fr::field_t l_n_minus_1;
+};
+
+// compute Z_H*(z), l_1(z), l_{n-1}(z)
+inline lagrange_evaluations get_lagrange_evaluations(const fr::field_t& z, evaluation_domain& domain)
+{
+    fr::field_t one = fr::one();
+    fr::field_t z_pow;
+    fr::copy(z, z_pow);
+    for (size_t i = 0; i < domain.log2_short_domain; ++i)
+    {
+        fr::sqr(z_pow, z_pow);
+    }
+
+    fr::field_t numerator;
+    fr::sub(z_pow, one, numerator);
+
+    fr::field_t denominators[6];
+    fr::sub(z, one, denominators[1]);
+
+    fr::mul(z, domain.short_root, denominators[2]);
+    fr::mul(denominators[2], domain.short_root, denominators[2]);
+    fr::sub(denominators[2], one, denominators[2]);
+
+    fr::sub(z, domain.short_root_inverse, denominators[0]);
+    // fr::mul(z, domain.short_root_inverse, denominators[0]);
+    // fr::sub(denominators[0], one, denominators[0]);
+
+    fr::batch_invert(denominators, 3, &denominators[3]);
+
+    lagrange_evaluations result;
+    fr::mul(numerator, denominators[0], result.vanishing_poly);
+
+    fr::mul(numerator, domain.short_domain_inverse, numerator);
+    fr::mul(numerator, denominators[1], result.l_1);
+    fr::mul(numerator, denominators[2], result.l_n_minus_1);
+    return result;
+}
 } // namespace polynomials
