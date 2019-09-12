@@ -213,20 +213,25 @@ inline void compute_wire_commitments(circuit_state &state, srs::plonk_srs &srs)
     fr::random_element(state.gamma);
 }
 
-inline void compute_z_commitments(circuit_state& state, fr::field_t* z_coefficients, srs::plonk_srs& srs)
+inline void compute_z_commitments(circuit_state& state, srs::plonk_srs& srs)
 {
     size_t n = state.n;
     scalar_multiplication::multiplication_state mul_state[3];
 
     mul_state[0].num_elements = n;
-    mul_state[0].scalars = &z_coefficients[0];
+    mul_state[0].scalars = &state.z_1[0];
     mul_state[0].points = srs.monomials;
     mul_state[1].num_elements = n;
-    mul_state[1].scalars = &z_coefficients[n];
+    mul_state[1].scalars = &state.z_2[0];
     mul_state[1].points = srs.monomials;
 
     scalar_multiplication::batched_scalar_multiplications(mul_state, 2);
 
+    // TODO: make a method for normal-to-affine copies :/
+    fq::copy(mul_state[0].output.x, state.Z_1.x);
+    fq::copy(mul_state[1].output.x, state.Z_2.x);
+    fq::copy(mul_state[0].output.y, state.Z_1.y);
+    fq::copy(mul_state[1].output.y, state.Z_2.y);
     // compute alpha
     // TODO: use keccak256, this is just for testing
     // precompute some powers of alpha for later on

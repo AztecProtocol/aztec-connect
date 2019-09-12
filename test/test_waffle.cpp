@@ -735,3 +735,78 @@ TEST(waffle, compute_wire_commitments)
         EXPECT_EQ(state.W_O.y.data[i], expected_w_o.y.data[i]);
     }
 }
+
+TEST(waffle, compute_z_commitments)
+{
+    size_t n = 256;
+    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+
+    waffle::circuit_state state;
+    state.n = n;
+    fr::random_element(state.beta);
+    fr::random_element(state.gamma);
+    fr::random_element(state.alpha);
+    fr::field_t data[24 * n];
+
+    fr::field_t scratch_space[20 * n];
+
+    waffle::fft_pointers ffts;
+    ffts.scratch_memory = scratch_space;
+    ffts.w_l_poly = &ffts.scratch_memory[0];
+    ffts.w_r_poly = &ffts.scratch_memory[4 * n];
+    ffts.w_o_poly = &ffts.scratch_memory[8 * n];
+    ffts.z_1_poly = &ffts.scratch_memory[12 * n];
+    ffts.z_2_poly = &ffts.scratch_memory[16 * n];
+    generate_test_data(state, data);
+
+    fr::field_t x;
+    fr::random_element(x);
+    srs::plonk_srs srs;
+    g1::affine_element monomials[2 * n + 1];
+    monomials[0] = g1::affine_one();
+
+    for (size_t i = 1; i < n; ++i)
+    {
+        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+    }
+    scalar_multiplication::generate_pippenger_point_table(monomials, monomials, n);
+    srs.monomials = monomials;
+    srs.degree = n;
+
+    waffle::compute_wire_coefficients(state, domain, ffts);
+    waffle::compute_z_coefficients(state, domain, ffts);
+
+    fr::field_t z_1_copy[n];
+    fr::field_t z_2_copy[n];
+    polynomials::copy_polynomial(state.z_1, z_1_copy, n, n);
+    polynomials::copy_polynomial(state.z_2, z_2_copy, n, n);
+
+    fr::field_t z_1_eval;
+    fr::field_t z_2_eval;
+
+    // TODO: our scalar mul algorithm currently doesn't convert values out of montgomery representation
+    // do we want to do this? is expensive, can probably work around and leave everything in mont form?
+    // we can 'normalize' our evaluation check by adding an extra factor of R to each scalar
+    for (size_t i = 0; i < n; ++i)
+    {
+        fr::to_montgomery_form(z_1_copy[i], z_1_copy[i]);
+        fr::to_montgomery_form(z_2_copy[i], z_2_copy[i]);
+    }
+
+    polynomials::eval(z_1_copy, x, n, z_1_eval);
+    polynomials::eval(z_2_copy, x, n, z_2_eval);
+
+    waffle::compute_z_commitments(state, srs);
+
+    g1::affine_element generator = g1::affine_one();
+    g1::affine_element expected_z_1 = g1::group_exponentiation(generator, z_1_eval);
+    g1::affine_element expected_z_2 = g1::group_exponentiation(generator, z_2_eval);
+
+    for (size_t i = 0; i < 1; ++i)
+    {
+        EXPECT_EQ(state.Z_1.x.data[i], expected_z_1.x.data[i]);
+        EXPECT_EQ(state.Z_1.y.data[i], expected_z_1.y.data[i]);
+        EXPECT_EQ(state.Z_2.x.data[i], expected_z_2.x.data[i]);
+        EXPECT_EQ(state.Z_2.y.data[i], expected_z_2.y.data[i]);
+    }
+}
