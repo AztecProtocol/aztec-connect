@@ -515,6 +515,7 @@ namespace g1
         ASSERT((((uintptr_t)src & 0x1f) == 0));
         ASSERT((((uintptr_t)dest & 0x1f) == 0));
         __asm__ __volatile__ (
+            "xorq %%r8, %%r8                              \n\t"
             "movq 32(%0), %%r8                            \n\t"
             "movq 40(%0), %%r9                            \n\t"
             "movq 48(%0), %%r10                          \n\t"
@@ -551,6 +552,7 @@ namespace g1
         ASSERT((((uintptr_t)src & 0x1f) == 0));
         ASSERT((((uintptr_t)dest & 0x1f) == 0));
         __asm__ __volatile__ (
+            "xorq %%r8, %%r8                              \n\t"
             "movq 32(%0), %%r8                            \n\t"
             "movq 40(%0), %%r9                            \n\t"
             "movq 48(%0), %%r10                          \n\t"
@@ -568,18 +570,18 @@ namespace g1
             "cmovcq %%r13, %%r9                               \n\t"
             "cmovcq %%r14, %%r10                              \n\t"
             "cmovcq %%r15, %%r11                              \n\t"
-            "movq 0(%0), %%r10                            \n\t"
-            "movq 8(%0), %%r11                            \n\t"
-            "movq 16(%0), %%r12                          \n\t"
-            "movq 24(%0), %%r13                          \n\t"
+            "movq 0(%0), %%r12                            \n\t"
+            "movq 8(%0), %%r13                            \n\t"
+            "movq 16(%0), %%r14                          \n\t"
+            "movq 24(%0), %%r15                          \n\t"
             "movq %%r8, 32(%1)                             \n\t"
             "movq %%r9, 40(%1)                             \n\t"
             "movq %%r10, 48(%1)                           \n\t"
             "movq %%r11, 56(%1)                           \n\t"
             "movq %%r12, 0(%1)                              \n\t"
             "movq %%r13, 8(%1)                          \n\t"
-            "movq %%r14, 8(%1)                          \n\t"
-            "movq %%r15, 8(%1)                          \n\t"
+            "movq %%r14, 16(%1)                          \n\t"
+            "movq %%r15, 24(%1)                          \n\t"
             :
             : "r" (src), "r" (dest), "r" (predicate)
             : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "memory", "cc"

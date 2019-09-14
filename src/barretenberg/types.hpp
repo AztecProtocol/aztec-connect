@@ -1,5 +1,7 @@
 #pragma once
 
+#define NO_MULTITHREADING 1
+
 namespace fq
 {
     struct field_t

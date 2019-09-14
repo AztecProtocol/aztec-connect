@@ -131,14 +131,14 @@ inline g1::element pippenger_internal(fr::field_t* scalars, g1::affine_element *
     wnaf_state.bits_per_wnaf = bits_per_bucket + 1;
 
     // allocate space for buckets
-    state.buckets = (g1::element *)aligned_alloc(64, sizeof(g1::element) * (state.num_buckets));
+    state.buckets = (g1::element *)aligned_alloc(32, sizeof(g1::element) * (state.num_buckets));
     for (size_t i = 0; i < state.num_buckets; ++i)
     {
         g1::set_infinity(state.buckets[i]);
     }
     // allocate space for wnaf table. We need 1 extra entry because our pointer iterator will overflow by 1 in the main loop
-    wnaf_state.wnaf_table = (uint32_t *)aligned_alloc(64, sizeof(uint32_t) * (state.num_rounds) * state.num_points + 1);
-    wnaf_state.skew_table = (bool *)aligned_alloc(64, sizeof(bool) * state.num_points + 1);
+    wnaf_state.wnaf_table = (uint32_t *)aligned_alloc(32, sizeof(uint32_t) * (state.num_rounds) * state.num_points + 1);
+    wnaf_state.skew_table = (bool *)aligned_alloc(32, sizeof(bool) * state.num_points + 1);
 
     for (size_t i = 0; i < num_initial_points; ++i)
     {

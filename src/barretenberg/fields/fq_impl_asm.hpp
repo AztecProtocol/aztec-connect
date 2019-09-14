@@ -95,6 +95,8 @@ inline void copy(const field_t& src, field_t& dest)
         : "r"(src.data), "r"(dest.data)
         : "%ymm0", "memory");
 #else
+    ASSERT((((uintptr_t)src.data & 0x1f) == 0));
+    ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
     __asm__ (
         "movq 0(%0), %%r8                       \n\t"
         "movq 8(%0), %%r9                       \n\t"
@@ -106,7 +108,7 @@ inline void copy(const field_t& src, field_t& dest)
         "movq %%r11, 24(%1)                     \n\t"
         :
         : "r"(src.data), "r"(dest.data)
-        : "%r8", "%r9", "%r10", "%r11", "memory");
+        : "%r8", "%r9", "%r10", "%r11", "cc", "memory");
 #endif
 }
 
