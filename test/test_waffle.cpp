@@ -142,7 +142,7 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
 // polynomials::evaluation_domain glob_domain = polynomials::get_domain(n);
 
 
-TEST(waffle, compute_quotient_polynomial_new)
+TEST(waffler, compute_quotient_polynomial)
 {
     size_t n = 256;
 
@@ -178,7 +178,7 @@ TEST(waffle, compute_quotient_polynomial_new)
     srs.monomials = monomials;
     srs.degree = n;
 
-    waffle::compute_quotient_polynomial_new(state, ffts, srs);
+    waffle::compute_quotient_polynomial(state, ffts, srs);
     
 
     // for (size_t i = 0; i < 4 * n; ++i)
@@ -197,7 +197,7 @@ TEST(waffle, compute_quotient_polynomial_new)
     free(scratch_space);
 }
 
-TEST(waffle, compute_quotient_polynomial_new_two)
+TEST(waffle, compute_quotient_polynomial_two)
 {
     size_t n = 256;
 
@@ -233,7 +233,7 @@ TEST(waffle, compute_quotient_polynomial_new_two)
     srs.monomials = monomials;
     srs.degree = n;
 
-    waffle::compute_quotient_polynomial_new(state, ffts, srs);
+    waffle::compute_quotient_polynomial(state, ffts, srs);
     
 
     // for (size_t i = 0; i < 4 * n; ++i)
@@ -724,7 +724,7 @@ TEST(waffle, compute_linearisation_coefficients)
     srs.monomials = monomials;
     srs.degree = n;
 
-    waffle::compute_quotient_polynomial_new(state, ffts, srs);
+    waffle::compute_quotient_polynomial(state, ffts, srs);
     fr::random_element(state.z);
     // fr::field_t foobar[4 * n];
     state.linear_poly = &ffts.scratch_memory[4 * n];

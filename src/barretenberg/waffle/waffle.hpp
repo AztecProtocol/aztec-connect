@@ -10,11 +10,81 @@
 
 namespace waffle
 {
+struct circuit_vectors
+{
+    fr::field_t* w_l;
+    fr::field_t* w_r;
+    fr::field_t* w_o;
+
+    fr::field_t* sigma_1;
+    fr::field_t* sigma_2;
+    fr::field_t* sigma_3;
+    fr::field_t* q_m;
+    fr::field_t* q_l;
+    fr::field_t* q_r;
+    fr::field_t* q_o;
+    fr::field_t* q_c;
+};
+
+struct plonk_proof
+{
+    // Kate polynomial commitments required for a proof of knowledge
+    g1::affine_element W_L;
+    g1::affine_element W_R;
+    g1::affine_element W_O;
+    g1::affine_element Z_1;
+    g1::affine_element Z_2;
+    g1::affine_element T;
+    g1::affine_element PI_Z;
+    g1::affine_element PI_Z_OMEGA;
+
+    fr::field_t w_l_eval;
+    fr::field_t w_r_eval;
+    fr::field_t w_o_eval;
+    fr::field_t s_id_eval;
+    fr::field_t sigma_1_eval;
+    fr::field_t sigma_2_eval;
+    fr::field_t sigma_3_eval;
+    fr::field_t t_eval;
+    fr::field_t z_1_shifted_eval;
+    fr::field_t z_2_shifted_eval;
+    fr::field_t linear_eval;
+};
+
+struct runtime_state
+{
+    polynomials::evaluation_domain small_domain;
+    polynomials::evaluation_domain mid_domain;
+    polynomials::evaluation_domain large_domain;
+
+    // random challenges
+    fr::field_t gamma;
+    fr::field_t beta;
+    fr::field_t alpha;
+    fr::field_t alpha_squared;
+    fr::field_t alpha_cubed;
+    fr::field_t z;
+    fr::field_t nu;
+
+    fr::field_t* w_l_poly;
+    fr::field_t* w_r_poly;
+    fr::field_t* w_o_poly;
+
+    fr::field_t* s_id_poly;
+    fr::field_t* sigma_1_poly;
+    fr::field_t* sigma_2_poly;
+    fr::field_t* sigma_3_poly;
+    fr::field_t* q_m_poly;
+    fr::field_t* q_l_poly;
+    fr::field_t* q_r_poly;
+    fr::field_t* q_o_poly;
+
+    fr::field_t* l_1_poly;
+};
 // contains the state of a PLONK proof, including witness values, instance values
 // and Kate polynomial commitments
 struct circuit_state
 {
-    // Kate polynomial commitments required for a proof of knowledge
     g1::affine_element W_L;
     g1::affine_element W_R;
     g1::affine_element W_O;
@@ -309,7 +379,7 @@ inline void compute_quotient_commitment(circuit_state& state, fr::field_t* coeff
 // ~ 72 * logn. For 2^20 @ 1440 * n
 
 
-inline void compute_permutation_grand_product_coefficients_new(circuit_state& state, fft_pointers& ffts)
+inline void compute_permutation_grand_product_coefficients(circuit_state& state, fft_pointers& ffts)
 {
     // The final steps are:
     // 1: Compute the permutation grand product
@@ -323,35 +393,45 @@ inline void compute_permutation_grand_product_coefficients_new(circuit_state& st
     polynomials::fft_with_coset(ffts.w_r_poly, state.large_domain);
     polynomials::fft_with_coset(ffts.w_o_poly, state.large_domain);
 
-    polynomials::ifft(state.sigma_1, state.small_domain);
+    // when computing coefficients of sigma_1, sigma_2, sigma_3, scale the polynomial by \beta to save a mul
+    polynomials::ifft_with_constant(state.sigma_1, state.small_domain, state.beta);
+    polynomials::ifft_with_constant(state.sigma_2, state.small_domain, state.beta);
+    polynomials::ifft_with_constant(state.sigma_3, state.small_domain, state.beta);
+
     polynomials::copy_polynomial(state.sigma_1, ffts.sigma_1_poly, n, 4 * n);
-    polynomials::fft_with_coset_and_constant(ffts.sigma_1_poly, state.large_domain, state.beta);
-
-    fr::field_t T0;
-    for (size_t i = 0; i < state.large_domain.size; ++i)
+    // add `gamma/beta` to sigma_1(X), so that we don't have to add it into each evaluation
+    // and add w_l(X) as well for good measure
+    fr::add(ffts.sigma_1_poly[0], state.gamma, ffts.sigma_1_poly[0]);
+    for (size_t i = 0; i < state.small_domain.size; ++i)
     {
-        fr::add(ffts.w_l_poly[i], state.gamma, T0);
-        fr::add(ffts.sigma_1_poly[i], T0, ffts.sigma_1_poly[i]);
+        fr::add(ffts.sigma_1_poly[i], state.w_l[i], ffts.sigma_1_poly[i]);
     }
+    polynomials::fft_with_coset(ffts.sigma_1_poly, state.large_domain);
 
-    polynomials::ifft(state.sigma_2, state.small_domain);
+    // repeat for sigma_2, sigma_3, multiplying each term into sigma_1
     polynomials::copy_polynomial(state.sigma_2, ffts.sigma_2_poly, n, 4 * n);
-    // TODO: if we add (gamma / beta) into this polynomial, we save ourselves O(4n) additions...
-    polynomials::fft_with_coset_and_constant(ffts.sigma_2_poly, state.large_domain, state.beta);
+    fr::add(ffts.sigma_2_poly[0], state.gamma, ffts.sigma_2_poly[0]);
+    for (size_t i = 0; i < state.small_domain.size; ++i)
+    {
+        fr::add(ffts.sigma_2_poly[i], state.w_r[i], ffts.sigma_2_poly[i]);
+    }
+    polynomials::fft_with_coset(ffts.sigma_2_poly, state.large_domain);
+
     for (size_t i = 0; i < state.large_domain.size; ++i)
     {
-        fr::add(ffts.w_r_poly[i], state.gamma, T0);
-        fr::add(ffts.sigma_2_poly[i], T0, ffts.sigma_2_poly[i]);
         fr::mul(ffts.sigma_1_poly[i], ffts.sigma_2_poly[i], ffts.sigma_1_poly[i]);
     }
 
-    polynomials::ifft(state.sigma_3, state.small_domain);
     polynomials::copy_polynomial(state.sigma_3, ffts.sigma_3_poly, n, 4 * n);
-    polynomials::fft_with_coset_and_constant(ffts.sigma_3_poly, state.large_domain, state.beta);
+    fr::add(ffts.sigma_3_poly[0], state.gamma, ffts.sigma_3_poly[0]);
+    for (size_t i = 0; i < state.small_domain.size; ++i)
+    {
+        fr::add(ffts.sigma_3_poly[i], state.w_o[i], ffts.sigma_3_poly[i]);
+    }
+    polynomials::fft_with_coset(ffts.sigma_3_poly, state.large_domain);
+
     for (size_t i = 0; i < state.large_domain.size; ++i)
     {
-        fr::add(ffts.w_o_poly[i], state.gamma, T0);
-        fr::add(ffts.sigma_3_poly[i], T0, ffts.sigma_3_poly[i]);
         fr::mul(ffts.sigma_1_poly[i], ffts.sigma_3_poly[i], ffts.sigma_1_poly[i]);
     }
 
@@ -372,8 +452,7 @@ inline void compute_permutation_grand_product_coefficients_new(circuit_state& st
 }
 
 
-
-inline void compute_identity_grand_product_coefficients_new(circuit_state& state, fft_pointers& ffts)
+inline void compute_identity_grand_product_coefficients(circuit_state& state, fft_pointers& ffts)
 {
     // TODO: optimize this!
     fr::one(state.s_id[0]);
@@ -384,11 +463,12 @@ inline void compute_identity_grand_product_coefficients_new(circuit_state& state
         fr::add(state.s_id[i-1], one, state.s_id[i]);
     }
     fr::zero(state.s_id[state.n - 1]);
-    polynomials::ifft(state.s_id, state.small_domain);
+    polynomials::ifft_with_constant(state.s_id, state.small_domain, state.beta);
     polynomials::copy_polynomial(state.s_id, ffts.identity_poly, state.small_domain.size, state.large_domain.size);
 
+    fr::add(ffts.identity_poly[0], state.gamma, ffts.identity_poly[0]);
     // when we transform z_1 into point-evaluation form, scale up by `alpha_squared` - saves us a mul later on
-    polynomials::fft_with_coset_and_constant(ffts.identity_poly, state.large_domain, state.beta);
+    polynomials::fft_with_coset(ffts.identity_poly, state.large_domain);
 
     // compute partial identity grand product
     fr::field_t T0;
@@ -403,12 +483,12 @@ inline void compute_identity_grand_product_coefficients_new(circuit_state& state
     for (size_t i = 0; i < state.large_domain.size; ++i)
     {
         // compute \beta.S_id + \gamma = T0
-        fr::add(ffts.identity_poly[i], state.gamma, T0);
+        // fr::add(ffts.identity_poly[i], state.gamma, T0);
 
         // compute three identity product terms
-        fr::add(T0, ffts.w_l_poly[i], T1);
-        fr::add(T0, ffts.w_r_poly[i], T2);
-        fr::add(T0, ffts.w_o_poly[i], T3);
+        fr::add(ffts.identity_poly[i], ffts.w_l_poly[i], T1);
+        fr::add(ffts.identity_poly[i], ffts.w_r_poly[i], T2);
+        fr::add(ffts.identity_poly[i], ffts.w_o_poly[i], T3);
         fr::add(T2, beta_n, T2);
         fr::add(T3, beta_n_2, T3);
 
@@ -463,19 +543,17 @@ inline void compute_identity_grand_product_coefficients_new(circuit_state& state
     }
 }
 
-
-inline void compute_arithmetisation_coefficients_new(circuit_state& state, fft_pointers& ffts)
+inline void compute_arithmetisation_coefficients(circuit_state& state, fft_pointers& ffts)
 {
-
     polynomials::ifft(state.q_l, state.small_domain);
     polynomials::ifft(state.q_r, state.small_domain);
     polynomials::ifft(state.q_o, state.small_domain);
     polynomials::copy_polynomial(state.q_l, ffts.q_l_poly, state.small_domain.size, state.mid_domain.size);
     polynomials::copy_polynomial(state.q_r, ffts.q_r_poly, state.small_domain.size, state.mid_domain.size);
     polynomials::copy_polynomial(state.q_o, ffts.q_o_poly, state.small_domain.size, state.mid_domain.size);
-    polynomials::fft_with_coset(ffts.q_o_poly, state.mid_domain);
-    polynomials::fft_with_coset(ffts.q_r_poly, state.mid_domain);
-    polynomials::fft_with_coset(ffts.q_l_poly, state.mid_domain);
+    polynomials::fft_with_coset_and_constant(ffts.q_o_poly, state.mid_domain, state.alpha);
+    polynomials::fft_with_coset_and_constant(ffts.q_r_poly, state.mid_domain, state.alpha);
+    polynomials::fft_with_coset_and_constant(ffts.q_l_poly, state.mid_domain, state.alpha);
 
     // the fft transform on q.o is half that of w.o - access every other index of w.o
     fr::field_t T0;
@@ -488,13 +566,12 @@ inline void compute_arithmetisation_coefficients_new(circuit_state& state, fft_p
         fr::mul(ffts.w_o_poly_small[i], ffts.q_o_poly[i], T2);
         fr::add(T0, T1, T0);
         fr::add(T0, T2, T0);
-        fr::mul(T0, state.alpha, T0);
+        // fr::mul(T0, state.alpha, T0);
         fr::add(ffts.gate_poly_mid[i], T0, ffts.gate_poly_mid[i]);
     }
 }
 
-
-inline void compute_quotient_polynomial_new(circuit_state& state, fft_pointers& ffts, srs::plonk_srs& reference_string)
+inline void compute_quotient_polynomial(circuit_state& state, fft_pointers& ffts, srs::plonk_srs& reference_string)
 {
     size_t n = state.small_domain.size;
 
@@ -551,30 +628,27 @@ inline void compute_quotient_polynomial_new(circuit_state& state, fft_pointers& 
     // Set up phase 2 pointers
     // allocate memory for identity poly
     // Offset by 8 elements, as we're going to be storing Z1 in W_l_poly, Z2 in w_o_poly
-    waffle::compute_permutation_grand_product_coefficients_new(state, ffts);
+    waffle::compute_permutation_grand_product_coefficients(state, ffts);
 
     waffle::compute_multiplication_gate_coefficients(state, ffts);
 
-    waffle::compute_identity_grand_product_coefficients_new(state, ffts);
+    waffle::compute_identity_grand_product_coefficients(state, ffts);
     // ffts.q_c_poly = ffts.w_o_poly;
     // ffts.q_r_poly = ffts.w_o_poly;
     // ffts.q_l_poly = &ffts.w_o_poly[2 * n];
     // ffts.gate_poly_long = ffts.w_o_poly;
-    waffle::compute_arithmetisation_coefficients_new(state, ffts);
+    waffle::compute_arithmetisation_coefficients(state, ffts);
 
     polynomials::ifft_with_coset(ffts.gate_poly_mid, state.mid_domain);
 
     memset((void *)(ffts.gate_poly_mid + state.mid_domain.size), 0, (state.mid_domain.size) * sizeof(fr::field_t));
 
     // add state.q_c into accumulator
-    polynomials::ifft(state.q_c, state.small_domain);
-    // polynomials::copy_polynomial(state.q_c, ffts.q_c_poly, n, 2 * n);
-    // polynomials::fft_with_coset(ffts.q_c_poly, state.mid_domain);
-    fr::field_t T0;
+    polynomials::ifft_with_constant(state.q_c, state.small_domain, state.alpha);
     for (size_t i = 0; i < state.small_domain.size; ++i)
     {
-        fr::mul(state.q_c[i], state.alpha, T0);
-        fr::add(ffts.gate_poly_mid[i], T0, ffts.gate_poly_mid[i]);
+        // fr::mul(state.q_c[i], state.alpha, T0);
+        fr::add(ffts.gate_poly_mid[i], state.q_c[i], ffts.gate_poly_mid[i]);
     }
     polynomials::fft_with_coset(ffts.gate_poly_mid, state.large_domain);
 
@@ -595,6 +669,8 @@ inline void compute_linearisation_coefficients(circuit_state& state, fft_pointer
     // polynomials::ifft(state.sigma_2, state.small_domain);
     // polynomials::ifft(state.sigma_3, state.small_domain);
     // ok... now we need to evaluate polynomials. Jeepers
+    fr::field_t beta_inv;
+    fr::invert(state.beta, beta_inv);
     fr::field_t shifted_z;
     fr::mul(state.z, state.small_domain.root, shifted_z);
     polynomials::eval(state.w_l, state.z, state.n, state.w_l_eval);
@@ -607,6 +683,13 @@ inline void compute_linearisation_coefficients(circuit_state& state, fft_pointer
     polynomials::eval(ffts.quotient_poly, state.z, (state.n * 3), state.t_eval);
     polynomials::eval(state.z_1, shifted_z, state.n, state.z_1_shifted_eval);
     polynomials::eval(state.z_2, shifted_z, state.n, state.z_2_shifted_eval);
+
+    // we scaled the sigma polynomials up by beta, so scale back down
+    fr::mul(state.sigma_1_eval, beta_inv, state.sigma_1_eval);
+    fr::mul(state.sigma_2_eval, beta_inv, state.sigma_2_eval);
+    fr::mul(state.sigma_3_eval, beta_inv, state.sigma_3_eval);
+    fr::mul(state.s_id_eval, beta_inv, state.s_id_eval);
+
     fr::field_t T0;
     fr::field_t T1;
     fr::field_t T2;
@@ -620,7 +703,7 @@ inline void compute_linearisation_coefficients(circuit_state& state, fft_pointer
     fr::field_t r_q_l_term;
     fr::field_t r_q_r_term;
     fr::field_t r_q_o_term;
-    fr::field_t r_q_c_term;
+    // fr::field_t r_q_c_term;
 
     fr::field_t beta_n = { .data = { state.n, 0, 0, 0 } };
     fr::to_montgomery_form(beta_n, beta_n);
@@ -672,7 +755,7 @@ inline void compute_linearisation_coefficients(circuit_state& state, fft_pointer
     fr::neg(T0, T0);
     fr::add(r_z_2_term, T0, r_z_2_term);
 
-    fr::copy(state.alpha, r_q_c_term);
+    // fr::copy(fr::one(), r_q_c_term);
 
     fr::mul(state.w_o_eval, state.alpha, r_q_o_term);
     fr::mul(state.w_r_eval, state.alpha, r_q_r_term);
@@ -685,7 +768,7 @@ inline void compute_linearisation_coefficients(circuit_state& state, fft_pointer
     {
         fr::mul(state.z_1[i], r_z_1_term, T0);
         fr::mul(state.z_2[i], r_z_2_term, T1);
-        fr::mul(state.q_c[i], r_q_c_term, T2);
+        fr::copy(state.q_c[i], T2);
         fr::mul(state.q_o[i], r_q_o_term, T3);
         fr::mul(state.q_r[i], r_q_r_term, T4);
         fr::mul(state.q_l[i], r_q_l_term, T5);
@@ -703,7 +786,7 @@ inline void compute_linearisation_coefficients(circuit_state& state, fft_pointer
 
 inline void construct_proof(circuit_state& state, fft_pointers& ffts, srs::plonk_srs& reference_string)
 {
-    compute_quotient_polynomial_new(state, ffts, reference_string);
+    compute_quotient_polynomial(state, ffts, reference_string);
 
     compute_quotient_commitment(state, ffts.quotient_poly, reference_string);
 

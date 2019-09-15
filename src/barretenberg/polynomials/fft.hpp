@@ -257,6 +257,17 @@ inline void ifft(fr::field_t *coeffs, const evaluation_domain& domain)
     }
 }
 
+inline void ifft_with_constant(fr::field_t *coeffs, const evaluation_domain& domain, const fr::field_t& value)
+{
+    fft_inner(coeffs, domain.root_inverse, domain.size);
+    fr::field_t T0;
+    fr::mul(domain.domain_inverse, value, T0);
+    for (size_t i = 0; i < domain.size; ++i)
+    {
+        fr::mul(coeffs[i], T0, coeffs[i]);
+    }
+}
+
 inline void fft_with_coset(fr::field_t *coeffs, const evaluation_domain& domain)
 {
     scale_by_generator(coeffs, domain.size, fr::one(), fr::multiplicative_generator());
