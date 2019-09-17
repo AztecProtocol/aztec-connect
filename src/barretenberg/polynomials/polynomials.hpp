@@ -8,35 +8,13 @@
 #include "../fields/fr.hpp"
 #include "../assert.hpp"
 
+#include "../types.hpp"
 #ifndef NO_MULTITHREADING
 #include <omp.h>
 #endif
 
 namespace polynomials
 {
-
-struct evaluation_domain
-{
-    size_t size;
-    size_t log2_size;
-    fr::field_t root;
-    fr::field_t root_inverse;
-    fr::field_t generator;
-    fr::field_t generator_inverse;
-    fr::field_t domain;
-    fr::field_t domain_inverse;
-    size_t num_threads;
-    size_t thread_size;
-    size_t log2_thread_size;
-    size_t log2_num_threads;
-};
-
-struct lagrange_evaluations
-{
-    fr::field_t vanishing_poly;
-    fr::field_t l_1;
-    fr::field_t l_n_minus_1;
-};
 
 void copy_polynomial(fr::field_t *src, fr::field_t *dest, size_t num_src_coefficients, size_t num_target_coefficients);
 evaluation_domain get_domain(size_t num_elements);

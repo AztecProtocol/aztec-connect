@@ -19,8 +19,13 @@ add_library(
     groups/g2.hpp
     groups/scalar_multiplication.hpp
     groups/pairing.hpp
+    keccak/hash_types.h
+    keccak/keccakf1600.c
+    keccak/keccak.c
+    keccak/keccak.h
     polynomials/polynomials.cpp
     polynomials/polynomials.hpp
+    waffle/challenge.hpp
     waffle/waffle.cpp
     waffle/waffle.hpp
 )
@@ -61,8 +66,13 @@ add_executable(
     groups/g2.hpp
     groups/scalar_multiplication.hpp
     groups/pairing.hpp
+    keccak/hash_types.h
+    keccak/keccakf1600.c
+    keccak/keccak.c
+    keccak/keccak.h
     polynomials/polynomials.cpp
     polynomials/polynomials.hpp
+    waffle/challenge.hpp
     waffle/waffle.cpp
     waffle/waffle.hpp
 )
