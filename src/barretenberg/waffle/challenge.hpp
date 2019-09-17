@@ -87,8 +87,8 @@ void compute_evaluation_challenge(circuit_state &state)
     add_grand_product_commitments_to_buffer(state, &input_buffer[24]);
     add_quotient_commitment_to_buffer(state, &input_buffer[40]);
     keccak256 hash = hash_field_elements(input_buffer, 12);
-    fr::copy(*(fr::field_t*)&hash.word64s[0], state.alpha);
-    fr::to_montgomery_form(state.alpha, state.alpha);
+    fr::copy(*(fr::field_t*)&hash.word64s[0], state.z);
+    fr::to_montgomery_form(state.z, state.z);
 }
 
 void compute_linearisation_challenge(circuit_state &state)
