@@ -5,7 +5,7 @@
 #include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_init.hpp>
 
-#include <barretenberg/polynomials/fft.hpp>
+#include <barretenberg/polynomials/polynomials.hpp>
 
 TEST(fft, evaluation_domain)
 {
@@ -24,7 +24,6 @@ TEST(fft, domain_roots)
     fr::field_t result;
     fr::field_t expected;
     fr::one(expected);
-    // fr::mul(domain.short_root, domain.short_root_inverse, result);
     fr::pow_small(domain.root, n, result);
 
     for (size_t j = 0; j < 4; ++j)
@@ -60,6 +59,32 @@ TEST(fft, fft_with_small_degree)
             EXPECT_EQ(fft_transform[i].data[j], expected.data[j]);
         }
         fr::mul(work_root, domain.root, work_root);
+    }
+}
+
+
+TEST(fft, basic_fft)
+{
+    size_t n = 16;
+    fr::field_t result[n];
+    fr::field_t expected[n];
+    for (size_t i = 0; i < n; ++i)
+    {
+        fr::random_element(result[i]);
+        fr::copy(result[i], expected[i]);
+    }
+
+    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+
+    polynomials::fft(result, domain);
+    polynomials::ifft(result, domain);
+
+    for (size_t i = 0; i < n; ++i)
+    {
+        for (size_t j = 0; j < 4; ++j)
+        {
+            EXPECT_EQ(result[i].data[j], expected[i].data[j]);
+        }
     }
 }
 

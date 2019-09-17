@@ -1,6 +1,11 @@
 #pragma once
 
+#include "stdint.h"
+#include "stddef.h"
+
+#if 0
 #define NO_MULTITHREADING 1
+#endif
 
 namespace fq
 {

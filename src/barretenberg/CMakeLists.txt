@@ -19,7 +19,9 @@ add_library(
     groups/g2.hpp
     groups/scalar_multiplication.hpp
     groups/pairing.hpp
-    polynomials/fft.hpp
+    polynomials/polynomials.cpp
+    polynomials/polynomials.hpp
+    waffle/waffle.cpp
     waffle/waffle.hpp
 )
 
@@ -59,7 +61,9 @@ add_executable(
     groups/g2.hpp
     groups/scalar_multiplication.hpp
     groups/pairing.hpp
-    polynomials/fft.hpp
+    polynomials/polynomials.cpp
+    polynomials/polynomials.hpp
+    waffle/waffle.cpp
     waffle/waffle.hpp
 )
 

@@ -1,8 +1,8 @@
 #ifndef FQ_IMPL_ASM
 #define FQ_IMPL_ASM
 
-#include <stdint.h>
-#include <unistd.h>
+#include "stdint.h"
+#include "unistd.h"
 
 #include "../assert.hpp"
 #include "../types.hpp"

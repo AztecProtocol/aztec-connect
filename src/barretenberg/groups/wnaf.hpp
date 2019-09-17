@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdint.h>
-#include <stddef.h>
+#include "stdint.h"
+#include "stddef.h"
 
 namespace wnaf
 {

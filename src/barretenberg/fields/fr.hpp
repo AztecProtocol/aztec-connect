@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdint.h>
-#include <stdio.h>
+#include "stdint.h"
+#include "stdio.h"
 
 #include "../types.hpp"
 
@@ -43,6 +43,12 @@ constexpr field_t one_raw = {.data = {1, 0, 0, 0}};
 constexpr field_t root_of_unity = { .data = { 0x636e735580d13d9c, 0xa22bf3742445ffd6, 0x56452ac01eb203d8, 0x1860ef942963f9e7 } };
 
 constexpr size_t S = 28; // 2^S = maximum degree of a polynomial that's amenable to radix-2 FFT 
+
+
+inline void print(const field_t &a)
+{
+    printf("fr: [%lx, %lx, %lx, %lx]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
+}
 
 // compute a * b mod p, put result in r
 inline void mul(const field_t &a, const field_t &b, field_t &r);
@@ -240,7 +246,10 @@ inline bool eq(const field_t &a, const field_t &b)
     return (a.data[0] == b.data[0]) && (a.data[1] == b.data[1]) && (a.data[2] == b.data[2]) && (a.data[3] == b.data[3]);
 }
 
-
+inline bool iszero(const field_t &r)
+{
+    return (r.data[0] == 0) && (r.data[1] == 0) && (r.data[2] == 0) & (r.data[3] == 0);
+}
 /**
  * Get the value of a given bit
  **/ 
@@ -283,8 +292,21 @@ inline void pow(const field_t& a, const field_t& b, field_t& r)
     copy(accumulator, r);
 }
 
+/**
+ * Set `r` to equal 1, in montgomery form
+**/
+inline void one(field_t &r)
+{
+    to_montgomery_form(one_raw, r);
+}
+
 inline void pow_small(const field_t& a, const size_t exponent, field_t& r)
 {
+    if (exponent == 0)
+    {
+        fr::one(r);
+        return;
+    }
     field_t accumulator;
     copy(a, accumulator);
 
@@ -326,15 +348,6 @@ inline void invert(field_t& a, field_t& r)
         0xB85045B68181585DUL,
         0x30644E72E131A029UL};
      pow(a, modulus_minus_two, r);
-}
-
-
-/**
-     * Set `r` to equal 1, in montgomery form
-     **/
-inline void one(field_t &r)
-{
-    to_montgomery_form(one_raw, r);
 }
 
 // TODO: MAKE THESE CONSTEXPR constants
@@ -385,8 +398,4 @@ inline void batch_invert(field_t* coeffs, size_t n, field_t* temporaries)
     }
 }
 
-inline void print(const field_t &a)
-{
-    printf("fr: [%lx, %lx, %lx, %lx]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
-}
 } // namespace fr
