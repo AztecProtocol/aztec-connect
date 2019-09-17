@@ -596,8 +596,8 @@ void construct_proof(circuit_state &state, fft_pointers &ffts, srs::plonk_srs &r
 
     compute_linearisation_coefficients(state, ffts);
 
-    // TODO: replace with keccak256
-    fr::random_element(state.nu);
+    compute_linearisation_challenge(state);
+    // fr::random_element(state.nu);
 
     fr::field_t nu_powers[10];
     fr::copy(state.nu, nu_powers[0]);
