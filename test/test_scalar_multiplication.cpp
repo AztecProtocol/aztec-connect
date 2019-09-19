@@ -104,8 +104,7 @@ libff::alt_bn128_G1 libff_scalar_mul(uint64_t* scalars, g1::affine_element* poin
 TEST(scalar_multiplication, endomorphism_split)
 {
     libff::init_alt_bn128_params();
-    fr::field_t scalar;
-    fr::random_element(scalar);
+    fr::field_t scalar = fr::random_element();
 
     libff::bigint<4> scalar_bigint;
     to_bigint(&scalar.data[0], scalar_bigint);
@@ -146,7 +145,7 @@ TEST(scalar_multiplication, pippenger)
     printf("computing random point data\n");
     for (size_t i = 0; i < num_points; ++i)
     {
-        fr::random_element(scalars[i]);
+        scalars[i] = fr::random_element();
     }
     generate_points(points, num_points);
 
@@ -187,7 +186,7 @@ TEST(scalar_multiplication, batched_scalar_multiplication)
     size_t points_per_iteration = num_points / num_exponentiations;
     for (size_t i = 0; i < num_points; ++i)
     {
-        fr::random_element(scalars[i]);
+        scalars[i] = fr::random_element();
         fr::copy(scalars[i], scalars[i + num_points]);
         g1::copy(&points[i], &points[i + (num_points * 2)]);
     }

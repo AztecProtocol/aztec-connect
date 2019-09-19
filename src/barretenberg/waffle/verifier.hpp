@@ -9,7 +9,7 @@ namespace waffle
 namespace verifier
 {
 
-bool verify_proof(const waffle::plonk_proof &proof, const waffle::plonk_instance &instance, const g2::affine_element &SRS_T2)
+bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instance &instance, const g2::affine_element &SRS_T2)
 {
     // blah. Where do we begin?
     polynomials::evaluation_domain domain = polynomials::get_domain(instance.n);
@@ -18,8 +18,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::plonk_instance
     fr::field_t nu_pow[10];
     fr::field_t gamma = compute_gamma(proof);
     fr::field_t beta = compute_beta(proof, gamma);
-    fr::field_t u;
-    fr::random_element(u);
+    fr::field_t u = fr::random_element();
     alpha_pow[0] = compute_alpha(proof);
     fr::field_t z = compute_evaluation_challenge(proof);
     nu_pow[0] = compute_linearisation_challenge(proof);

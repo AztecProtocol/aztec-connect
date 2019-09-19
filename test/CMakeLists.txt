@@ -26,6 +26,7 @@ add_executable(
     test_scalar_multiplication.cpp
     test_pairing.cpp
     test_fft.cpp
+    test_preprocess.cpp
     test_waffle.cpp
 )
 

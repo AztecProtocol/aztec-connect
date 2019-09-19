@@ -823,4 +823,9 @@ namespace g1
         fq::copy(res.y, result.y);
         return result;
     }
+
+    inline bool eq(const affine_element& a, const affine_element& b)
+    {
+        return (fq::eq(a.x, b.x) && fq::eq(a.y, b.y));
+    }
 }

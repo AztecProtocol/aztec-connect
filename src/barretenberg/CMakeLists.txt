@@ -26,8 +26,10 @@ add_library(
     polynomials/polynomials.cpp
     polynomials/polynomials.hpp
     waffle/challenge.hpp
+    waffle/preprocess.hpp
     waffle/waffle.cpp
     waffle/waffle.hpp
+    waffle/verifier.hpp
 )
 
 set_target_properties(
@@ -73,8 +75,10 @@ add_executable(
     polynomials/polynomials.cpp
     polynomials/polynomials.hpp
     waffle/challenge.hpp
+    waffle/preprocess.hpp
     waffle/waffle.cpp
     waffle/waffle.hpp
+    waffle/verifier.hpp
 )
 
 target_link_libraries(

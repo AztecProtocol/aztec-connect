@@ -83,7 +83,7 @@ void generate_points(multiplication_data& data)
 
     for (size_t i = 0; i < (NUM_POINTS); ++i)
     {
-        fr::random_element(data.scalars[i]);
+        data.scalars[i] = fr::random_element();
         // libff::alt_bn128_Fr libff_scalar;
         // fr::copy(data.scalars[i], *(fr::field_t*)&libff_scalar.mont_repr.data);
         // data.libff_scalars.emplace_back(libff_scalar);

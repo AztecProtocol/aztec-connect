@@ -184,8 +184,7 @@ TEST(g2, group_exponentiation)
 {
     libff::init_alt_bn128_params();
 
-    fr::field_t scalar;
-    fr::random_element(scalar);
+    fr::field_t scalar = fr::random_element();
     g2::affine_element input = g2::affine_one();
     g2::affine_element result = g2::group_exponentiation(input, scalar);
 

@@ -544,8 +544,7 @@ namespace g2
 
     inline element random_element()
     {
-        fr::field_t scalar;
-        fr::random_element(scalar);
+        fr::field_t scalar = fr::random_element();
         g2::affine_element res = g2::affine_one();
         res = g2::group_exponentiation(res, scalar);
         g2::element out;

@@ -226,11 +226,13 @@ inline void from_montgomery_form(const field_t &a, field_t &r)
 /**
      * Get a random field element in montgomery form, place in `r`
      **/
-inline void random_element(field_t &r)
+inline field_t random_element()
 {
+    fr::field_t r;
     int got_entropy = getentropy((void *)r.data, 32);
     ASSERT(got_entropy == 0);
     to_montgomery_form(r, r);
+    return r;
 }
 
 inline void zero(field_t& r)

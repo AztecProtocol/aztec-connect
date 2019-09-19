@@ -207,7 +207,7 @@ struct circuit_state
     polynomials::evaluation_domain large_domain;
 };
 
-struct plonk_instance
+struct circuit_instance
 {
     g1::affine_element Q_M;
     g1::affine_element Q_L;

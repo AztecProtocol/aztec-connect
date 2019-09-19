@@ -216,8 +216,7 @@ TEST(group, group_exponentiation)
 
     libff::init_alt_bn128_params();
 
-    fr::field_t scalar;
-    fr::random_element(scalar);
+    fr::field_t scalar = fr::random_element();
     g1::affine_element input = g1::random_affine_element();
     g1::affine_element result = g1::group_exponentiation(input, scalar);
 

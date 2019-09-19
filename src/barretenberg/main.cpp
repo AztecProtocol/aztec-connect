@@ -75,7 +75,7 @@ void pippenger_multicore() noexcept
     printf("Before Thread\n");
     for (size_t i = 0; i < NUM_POINTS; ++i)
     {
-        fr::random_element(scalars[i]);
+        scalars[i] = fr::random_element();
     }
 
     generate_points(points, NUM_POINTS * NUM_THREADS);

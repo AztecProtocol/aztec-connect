@@ -19,7 +19,7 @@ namespace polynomials
 void copy_polynomial(fr::field_t *src, fr::field_t *dest, size_t num_src_coefficients, size_t num_target_coefficients);
 evaluation_domain get_domain(size_t num_elements);
 
-void eval(fr::field_t *coeffs, const fr::field_t &z, const size_t n, fr::field_t &r);
+fr::field_t evaluate(fr::field_t *coeffs, const fr::field_t &z, const size_t n);
 
 void fft(fr::field_t *coeffs, const evaluation_domain &domain);
 

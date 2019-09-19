@@ -475,16 +475,16 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts
     fr::invert(state.beta, beta_inv);
     fr::field_t shifted_z;
     fr::mul(state.z, state.small_domain.root, shifted_z);
-    polynomials::eval(state.w_l, state.z, state.n, proof.w_l_eval);
-    polynomials::eval(state.w_r, state.z, state.n, proof.w_r_eval);
-    polynomials::eval(state.w_o, state.z, state.n, proof.w_o_eval);
-    polynomials::eval(state.s_id, state.z, state.n, proof.s_id_eval);
-    polynomials::eval(state.sigma_1, state.z, state.n, proof.sigma_1_eval);
-    polynomials::eval(state.sigma_2, state.z, state.n, proof.sigma_2_eval);
-    polynomials::eval(state.sigma_3, state.z, state.n, proof.sigma_3_eval);
-    polynomials::eval(ffts.quotient_poly, state.z, (state.n * 3), proof.t_eval);
-    polynomials::eval(state.z_1, shifted_z, state.n, proof.z_1_shifted_eval);
-    polynomials::eval(state.z_2, shifted_z, state.n, proof.z_2_shifted_eval);
+    proof.w_l_eval = polynomials::evaluate(state.w_l, state.z, state.n);
+    proof.w_r_eval = polynomials::evaluate(state.w_r, state.z, state.n);
+    proof.w_o_eval = polynomials::evaluate(state.w_o, state.z, state.n);
+    proof.s_id_eval = polynomials::evaluate(state.s_id, state.z, state.n);
+    proof.sigma_1_eval = polynomials::evaluate(state.sigma_1, state.z, state.n);
+    proof.sigma_2_eval = polynomials::evaluate(state.sigma_2, state.z, state.n);
+    proof.sigma_3_eval = polynomials::evaluate(state.sigma_3, state.z, state.n);
+    proof.t_eval = polynomials::evaluate(ffts.quotient_poly, state.z, (state.n * 3));
+    proof.z_1_shifted_eval = polynomials::evaluate(state.z_1, shifted_z, state.n);
+    proof.z_2_shifted_eval = polynomials::evaluate(state.z_2, shifted_z, state.n);
 
     // we scaled the sigma polynomials up by beta, so scale back down
     fr::mul(proof.sigma_1_eval, beta_inv, proof.sigma_1_eval);
@@ -582,7 +582,7 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts
         fr::add(T3, T0, state.linear_poly[i]);
     }
 
-    polynomials::eval(state.linear_poly, state.z, state.small_domain.size, proof.linear_eval);
+    proof.linear_eval = polynomials::evaluate(state.linear_poly, state.z, state.small_domain.size);
 }
 
 plonk_proof construct_proof(circuit_state &state, fft_pointers &ffts, srs::plonk_srs &reference_string)

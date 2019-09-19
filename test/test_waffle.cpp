@@ -65,19 +65,13 @@ namespace
 void generate_point_addition_data_inner(waffle::circuit_state& state, size_t index)
 {
     size_t n = state.n;
-    fr::field_t x_1;
-    fr::field_t x_2;
+    fr::field_t x_1 = fr::random_element();
+    fr::field_t x_2 = fr::random_element();
     fr::field_t x_3;
-    fr::field_t y_1;
-    fr::field_t y_2;
+    fr::field_t y_1 = fr::random_element();
+    fr::field_t y_2 = fr::random_element();
     fr::field_t y_3;
     fr::field_t t[7];
-
-    fr::random_element(x_1);
-    fr::random_element(y_1);
-    fr::random_element(x_2);
-    fr::random_element(y_2);
-
 
     fr::sub(y_2, y_1, t[0]);
     fr::sub(x_2, x_1, t[1]);
@@ -236,9 +230,9 @@ void generate_point_addition_data(waffle::circuit_state& state, fr::field_t* dat
 {
     size_t n = 16;
     state.n = n;
-    fr::random_element(state.beta);
-    fr::random_element(state.gamma);
-    fr::random_element(state.alpha);
+    state.beta = fr::random_element();
+    state.gamma= fr::random_element();
+    state.alpha= fr::random_element();
     fr::sqr(state.alpha, state.alpha_squared);
     fr::mul(state.alpha_squared, state.alpha, state.alpha_cubed);
 
@@ -267,9 +261,9 @@ void generate_point_addition_data(waffle::circuit_state& state, fr::field_t* dat
     state.w_o_lagrange_base = &state.t[2 * n + 2];
 
 
-    fr::random_element(state.beta);
-    fr::random_element(state.gamma);
-    fr::random_element(state.alpha);
+    state.beta = fr::random_element();
+    state.gamma= fr::random_element();
+    state.alpha= fr::random_element();
     fr::sqr(state.alpha, state.alpha_squared);
     fr::mul(state.alpha_squared, state.alpha, state.alpha_cubed);
     // create some constraints that satisfy our arithmetic circuit relation
@@ -329,9 +323,9 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     state.w_r_lagrange_base = &state.t[n + 1];
     state.w_o_lagrange_base = &state.t[2 * n + 2];
 
-    fr::random_element(state.beta);
-    fr::random_element(state.gamma);
-    fr::random_element(state.alpha);
+    state.beta = fr::random_element();
+    state.gamma= fr::random_element();
+    state.alpha= fr::random_element();
     fr::sqr(state.alpha, state.alpha_squared);
     fr::mul(state.alpha_squared, state.alpha, state.alpha_cubed);
     // create some constraints that satisfy our arithmetic circuit relation
@@ -345,8 +339,8 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     // even indices = mul gates, odd incides = add gates
     for (size_t i = 0; i < n / 4; ++i)
     {
-        fr::random_element(state.w_l[2 * i]);
-        fr::random_element(state.w_r[2 * i]);
+        state.w_l[2 * i] = fr::random_element();
+        state.w_r[2 * i] = fr::random_element();
         fr::mul(state.w_l[2 * i], state.w_r[2 * i], state.w_o[2 * i]);
         fr::copy(zero, state.q_l[2 * i]);
         fr::copy(zero, state.q_r[2 * i]);
@@ -354,9 +348,9 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
         fr::copy(zero, state.q_c[2 * i]);
         fr::copy(one, state.q_m[2 * i]);
 
-        fr::random_element(state.w_l[2 * i + 1]);
-        fr::random_element(state.w_r[2 * i + 1]);
-        fr::random_element(state.w_o[2 * i + 1]);
+        state.w_l[2 * i + 1] = fr::random_element();
+        state.w_r[2 * i + 1] = fr::random_element();
+        state.w_o[2 * i + 1] = fr::random_element();
 
         fr::add(state.w_l[2 * i + 1], state.w_r[2 * i + 1], T0);
         fr::add(T0, state.w_o[2 * i + 1], state.q_c[2 * i + 1]);
@@ -504,8 +498,7 @@ TEST(megawiffle, megawiffle)
     }
 
     printf("making srs \n");
-    fr::field_t x;
-    fr::random_element(x);
+    fr::field_t x = fr::random_element();
     srs::plonk_srs srs;
     g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 8)));
     monomials[0] = g1::affine_one();
@@ -543,9 +536,9 @@ TEST(waffler, compute_quotient_polynomial)
     state.mid_domain = polynomials::get_domain(2 * n);
     state.large_domain = polynomials::get_domain(4 * n);
     state.n = n;
-    fr::random_element(state.beta);
-    fr::random_element(state.gamma);
-    fr::random_element(state.alpha);
+    state.beta = fr::random_element();
+    state.gamma= fr::random_element();
+    state.alpha= fr::random_element();
     // fr::field_t data[28 * n + 2];
 
     // fr::field_t scratch_space[19 * n + 8];
@@ -557,8 +550,7 @@ TEST(waffler, compute_quotient_polynomial)
     ffts.scratch_memory = scratch_space;
     generate_point_addition_data(state, data);
 
-    fr::field_t x;
-    fr::random_element(x);
+    fr::field_t x = fr::random_element();
     srs::plonk_srs srs;
     g1::affine_element monomials[6 * n + 2];
     monomials[0] = g1::affine_one();
@@ -601,9 +593,9 @@ TEST(waffle, compute_quotient_polynomial_two)
     state.mid_domain = polynomials::get_domain(2 * n);
     state.large_domain = polynomials::get_domain(4 * n);
     state.n = n;
-    fr::random_element(state.beta);
-    fr::random_element(state.gamma);
-    fr::random_element(state.alpha);
+    state.beta = fr::random_element();
+    state.gamma= fr::random_element();
+    state.alpha= fr::random_element();
     fr::field_t data[28 * n + 2];
 
     // fr::field_t scratch_space[19 * n + 8];
@@ -614,8 +606,7 @@ TEST(waffle, compute_quotient_polynomial_two)
     ffts.scratch_memory = scratch_space;
     generate_test_data(state, data);
 
-    fr::field_t x;
-    fr::random_element(x);
+    fr::field_t x = fr::random_element();
     srs::plonk_srs srs;
     g1::affine_element monomials[6 * n + 2];
     monomials[0] = g1::affine_one();
@@ -741,8 +732,8 @@ TEST(waffle, compute_z_coefficients)
 
     for (size_t i = 0; i < n; ++i)
     {
-        polynomials::eval(state.z_1, work_root, n, z_1_expected);
-        polynomials::eval(state.z_2, work_root, n, z_2_expected);
+        z_1_expected = polynomials::evaluate(state.z_1, work_root, n);
+        z_2_expected = polynomials::evaluate(state.z_2, work_root, n);
         fr::from_montgomery_form(z_1_expected, z_1_expected);
         fr::from_montgomery_form(z_2_expected, z_2_expected);
         fr::mul(work_root, state.small_domain.root, work_root);
@@ -768,15 +759,14 @@ TEST(waffle, compute_z_coefficients)
     polynomials::ifft(shifted_z, state.large_domain);
 
 
-    fr::field_t x;
+    fr::field_t x = fr::random_element();
     fr::field_t shifted_x;
-    fr::random_element(x);
     fr::mul(x, state.small_domain.root, shifted_x);
 
     fr::field_t z_eval;
     fr::field_t shifted_z_eval;
-    polynomials::eval(z_coeffs, shifted_x, state.small_domain.size, z_eval);
-    polynomials::eval(shifted_z, x, state.small_domain.size, shifted_z_eval);
+    z_eval = polynomials::evaluate(z_coeffs, shifted_x, state.small_domain.size);
+    shifted_z_eval = polynomials::evaluate(shifted_z, x, state.small_domain.size);
 
     for (size_t i = 0; i < 4; ++i)
     {
@@ -851,9 +841,9 @@ TEST(waffle, compute_wire_coefficients)
 
     for (size_t i = 0; i < n; ++i)
     {
-        polynomials::eval(state.w_l, work_root, n, w_l_expected);
-        polynomials::eval(state.w_r, work_root, n, w_r_expected);
-        polynomials::eval(state.w_o, work_root, n, w_o_expected);
+        w_l_expected = polynomials::evaluate(state.w_l, work_root, n);
+        w_r_expected = polynomials::evaluate(state.w_r, work_root, n);
+        w_o_expected = polynomials::evaluate(state.w_o, work_root, n);
         fr::mul(work_root, state.small_domain.root, work_root);
         for (size_t j = 0; j < 4; ++j)
         {
@@ -873,9 +863,9 @@ TEST(waffle, compute_wire_commitments)
     state.mid_domain = polynomials::get_domain(2 * n);
     state.large_domain = polynomials::get_domain(4 * n);
     state.n = n;
-    fr::random_element(state.beta);
-    fr::random_element(state.gamma);
-    fr::random_element(state.alpha);
+    state.beta = fr::random_element();
+    state.gamma= fr::random_element();
+    state.alpha= fr::random_element();
     fr::field_t data[25 * n];
 
     fr::field_t scratch_space[12 * n];
@@ -887,8 +877,7 @@ TEST(waffle, compute_wire_commitments)
     ffts.w_o_poly = &ffts.scratch_memory[8 * n];
     generate_test_data(state, data);
 
-    fr::field_t x;
-    fr::random_element(x);
+    fr::field_t x = fr::random_element();
     srs::plonk_srs srs;
     g1::affine_element monomials[2 * n + 1];
     monomials[0] = g1::affine_one();
@@ -924,9 +913,9 @@ TEST(waffle, compute_wire_commitments)
         fr::to_montgomery_form(w_o_copy[i], w_o_copy[i]);
     }
 
-    polynomials::eval(w_l_copy, x, n, w_l_eval);
-    polynomials::eval(w_r_copy, x, n, w_r_eval);
-    polynomials::eval(w_o_copy, x, n, w_o_eval);
+    w_l_eval = polynomials::evaluate(w_l_copy, x, n);
+    w_r_eval = polynomials::evaluate(w_r_copy, x, n);
+    w_o_eval = polynomials::evaluate(w_o_copy, x, n);
 
     waffle::plonk_proof proof;
     waffle::compute_wire_commitments(state, proof, srs);
@@ -956,9 +945,9 @@ TEST(waffle, compute_z_commitments)
     state.mid_domain = polynomials::get_domain(2 * n);
     state.large_domain = polynomials::get_domain(4 * n);
     state.n = n;
-    fr::random_element(state.beta);
-    fr::random_element(state.gamma);
-    fr::random_element(state.alpha);
+    state.beta = fr::random_element();
+    state.gamma= fr::random_element();
+    state.alpha= fr::random_element();
 
     fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (28 * n + 2)));
     fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (70 * n + 8)));
@@ -977,8 +966,7 @@ TEST(waffle, compute_z_commitments)
     ffts.z_2_poly = &ffts.scratch_memory[16 * n];
     generate_test_data(state, data);
 
-    fr::field_t x;
-    fr::random_element(x);
+    fr::field_t x = fr::random_element();
     srs::plonk_srs srs;
     // g1::affine_element monomials[2 * n + 1];
     monomials[0] = g1::affine_one();
@@ -1011,8 +999,8 @@ TEST(waffle, compute_z_commitments)
         fr::to_montgomery_form(z_2_copy[i], z_2_copy[i]);
     }
 
-    polynomials::eval(z_1_copy, x, n, z_1_eval);
-    polynomials::eval(z_2_copy, x, n, z_2_eval);
+    z_1_eval = polynomials::evaluate(z_1_copy, x, n);
+    z_2_eval = polynomials::evaluate(z_2_copy, x, n);
 
     waffle::plonk_proof proof;
     waffle::compute_z_commitments(state, proof, srs);
@@ -1041,9 +1029,9 @@ TEST(waffle, compute_z_commitments)
 
 //     waffle::circuit_state state;
 //     state.n = n;
-//     fr::random_element(state.beta);
-//     fr::random_element(state.gamma);
-//     fr::random_element(state.alpha);
+//     state.beta = fr::random_element();
+//     state.gamma= fr::random_element();
+//     state.alpha= fr::random_element();
 //     fr::field_t data[20 * n + 2];
 
 //     // fr::field_t scratch_space[19 * n + 8];
@@ -1107,8 +1095,7 @@ TEST(waffle, compute_linearisation_coefficients)
     // generate_simple_test_data(state, data);
     generate_test_data(state, data);
 
-    fr::field_t x;
-    fr::random_element(x);
+    fr::field_t x = fr::random_element();
     srs::plonk_srs srs;
     // g1::affine_element monomials[6 * n + 1];
     monomials[0] = g1::affine_one();
@@ -1122,7 +1109,7 @@ TEST(waffle, compute_linearisation_coefficients)
     srs.degree = n;
     waffle::plonk_proof proof;
     waffle::compute_quotient_polynomial(state, ffts, proof, srs);
-    fr::random_element(state.z);
+    state.z = fr::random_element();
     // fr::field_t foobar[4 * n];
     state.linear_poly = &ffts.scratch_memory[4 * n];
 

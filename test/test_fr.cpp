@@ -276,9 +276,8 @@ TEST(fr, split_into_endomorphism_scalars_simple)
 
 TEST(fr, invert)
 {
-    fr::field_t a;
+    fr::field_t a = fr::random_element();
     fr::field_t b;
-    fr::random_element(a);
     fr::invert(a, b);
     fr::mul(a, b, a);
     fr::from_montgomery_form(a, a);
@@ -298,7 +297,7 @@ TEST(fr, batch_invert)
     fr::one(one);
     for (size_t i = 0; i < n; ++i)
     {
-        fr::random_element(coeffs[i]);
+        coeffs[i] = fr::random_element();
         fr::copy(coeffs[i], inverses[i]);
     }
     fr::batch_invert(inverses, n, temp);

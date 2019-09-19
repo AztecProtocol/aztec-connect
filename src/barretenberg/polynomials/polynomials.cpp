@@ -240,8 +240,9 @@ void ifft_with_coset(fr::field_t *coeffs, const evaluation_domain &domain)
     scale_by_generator(coeffs, domain.size, fr::one(), fr::multiplicative_generator_inverse());
 }
 
-void eval(fr::field_t *coeffs, const fr::field_t &z, const size_t n, fr::field_t &r)
+fr::field_t evaluate(fr::field_t *coeffs, const fr::field_t &z, const size_t n)
 {
+    fr::field_t r;
     fr::field_t work_var;
     fr::field_t z_acc;
     fr::zero(work_var);
@@ -253,6 +254,7 @@ void eval(fr::field_t *coeffs, const fr::field_t &z, const size_t n, fr::field_t
         fr::add(r, work_var, r);
         fr::mul(z_acc, z, z_acc);
     }
+    return r;
 }
 
 // For L_1(X) = (X^{n} - 1 / (X - 1)) * (1 / n)
@@ -387,8 +389,7 @@ fr::field_t compute_kate_opening_coefficients(fr::field_t *coeffs, const fr::fie
     // We assume that the commitment is well-formed and that there is no remainder term.
     // Under these conditions we can perform this polynomial division in linear time with good constants
 
-    fr::field_t f;
-    eval(coeffs, z, n, f);
+    fr::field_t f = evaluate(coeffs, z, n);
     // compute (1 / -z)
     fr::field_t divisor;
     fr::neg(z, divisor);
