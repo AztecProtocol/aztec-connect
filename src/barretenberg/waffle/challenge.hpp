@@ -10,7 +10,7 @@
 
 namespace waffle
 {
-void add_wire_commitments_to_buffer(const plonk_proof &proof, uint64_t* input_buffer)
+inline void add_wire_commitments_to_buffer(const plonk_proof &proof, uint64_t* input_buffer)
 {
     fq::from_montgomery_form(proof.W_L.x, *(fq::field_t *)&input_buffer[0]);
     fq::from_montgomery_form(proof.W_L.y, *(fq::field_t *)&input_buffer[4]);
@@ -20,7 +20,7 @@ void add_wire_commitments_to_buffer(const plonk_proof &proof, uint64_t* input_bu
     fq::from_montgomery_form(proof.W_O.y, *(fq::field_t *)&input_buffer[20]);
 }
 
-void add_grand_product_commitments_to_buffer(const plonk_proof &proof, uint64_t* input_buffer)
+inline void add_grand_product_commitments_to_buffer(const plonk_proof &proof, uint64_t* input_buffer)
 {
     fq::from_montgomery_form(proof.Z_1.x, *(fq::field_t *)&input_buffer[0]);
     fq::from_montgomery_form(proof.Z_1.y, *(fq::field_t *)&input_buffer[4]);
@@ -28,7 +28,7 @@ void add_grand_product_commitments_to_buffer(const plonk_proof &proof, uint64_t*
     fq::from_montgomery_form(proof.Z_2.y, *(fq::field_t *)&input_buffer[12]);
 }
 
-void add_quotient_commitment_to_buffer(const plonk_proof &proof, uint64_t* input_buffer)
+inline void add_quotient_commitment_to_buffer(const plonk_proof &proof, uint64_t* input_buffer)
 {
     fq::from_montgomery_form(proof.T.x, *(fq::field_t *)&input_buffer[0]);
     fq::from_montgomery_form(proof.T.y, *(fq::field_t *)&input_buffer[4]);
@@ -36,7 +36,7 @@ void add_quotient_commitment_to_buffer(const plonk_proof &proof, uint64_t* input
 
 // one gate in 35.9 microseconds...
 
-void add_polynomial_evaluations_to_buffer(const plonk_proof &proof, uint64_t* input_buffer)
+inline void add_polynomial_evaluations_to_buffer(const plonk_proof &proof, uint64_t* input_buffer)
 {
     fr::from_montgomery_form(proof.w_l_eval, *(fr::field_t*)&input_buffer[0]);
     fr::from_montgomery_form(proof.w_r_eval, *(fr::field_t*)&input_buffer[4]);
@@ -51,7 +51,7 @@ void add_polynomial_evaluations_to_buffer(const plonk_proof &proof, uint64_t* in
     fr::from_montgomery_form(proof.linear_eval, *(fr::field_t*)&input_buffer[40]);
 }
 
-fr::field_t compute_gamma(const plonk_proof &proof)
+inline fr::field_t compute_gamma(const plonk_proof &proof)
 {
     fr::field_t gamma;
     uint64_t input_buffer[6 * 4];
@@ -62,7 +62,7 @@ fr::field_t compute_gamma(const plonk_proof &proof)
     return gamma;
 }
 
-fr::field_t compute_beta(const plonk_proof &proof, const fr::field_t &alpha)
+inline fr::field_t compute_beta(const plonk_proof &proof, const fr::field_t &alpha)
 {
     fr::field_t beta;
     uint64_t input_buffer[7 * 4];
@@ -74,7 +74,7 @@ fr::field_t compute_beta(const plonk_proof &proof, const fr::field_t &alpha)
     return beta;
 }
 
-fr::field_t compute_alpha(const plonk_proof &proof)
+inline fr::field_t compute_alpha(const plonk_proof &proof)
 {
     fr::field_t alpha;
     uint64_t input_buffer[10 * 4];
@@ -88,7 +88,7 @@ fr::field_t compute_alpha(const plonk_proof &proof)
     // fr::mul(state.alpha, state.alpha_squared, state.alpha_cubed);
 }
 
-fr::field_t compute_evaluation_challenge(const plonk_proof &proof)
+inline fr::field_t compute_evaluation_challenge(const plonk_proof &proof)
 {
     fr::field_t z;
     uint64_t input_buffer[12 * 4];
@@ -101,7 +101,7 @@ fr::field_t compute_evaluation_challenge(const plonk_proof &proof)
     return z;
 }
 
-fr::field_t compute_linearisation_challenge(const plonk_proof &proof)
+inline fr::field_t compute_linearisation_challenge(const plonk_proof &proof)
 {
     fr::field_t nu;
     uint64_t input_buffer[23 * 4];

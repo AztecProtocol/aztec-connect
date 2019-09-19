@@ -25,6 +25,7 @@ add_library(
     keccak/keccak.h
     polynomials/polynomials.cpp
     polynomials/polynomials.hpp
+    waffle/linearizer.hpp
     waffle/challenge.hpp
     waffle/preprocess.hpp
     waffle/waffle.cpp
@@ -74,6 +75,7 @@ add_executable(
     keccak/keccak.h
     polynomials/polynomials.cpp
     polynomials/polynomials.hpp
+    waffle/linearizer.hpp
     waffle/challenge.hpp
     waffle/preprocess.hpp
     waffle/waffle.cpp

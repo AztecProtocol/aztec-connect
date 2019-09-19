@@ -73,7 +73,6 @@ libff::alt_bn128_G1 libff_scalar_mul(uint64_t* scalars, g1::affine_element* poin
     for (size_t i = 0; i < num_points; ++i)
     {
         libff::bigint<4> scalar_data;
-        
         scalar_data.data[0] = scalars[i * 4];
         scalar_data.data[1] = scalars[i * 4 + 1];
         scalar_data.data[2] = scalars[i * 4 + 2];
@@ -139,8 +138,9 @@ TEST(scalar_multiplication, pippenger)
     size_t num_points = 100000;
 
     fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
+    fr::field_t* scalars_copy = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
 
-    g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 +1);
+    g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
     printf("computing random point data\n");
     for (size_t i = 0; i < num_points; ++i)
@@ -150,7 +150,12 @@ TEST(scalar_multiplication, pippenger)
     generate_points(points, num_points);
 
     printf("calling libff scalar mul\n");
-    libff::alt_bn128_G1 expected = libff_scalar_mul((uint64_t*)(&scalars[0].data[0]), points, num_points); // TODO PUT BACK IN
+
+    for (size_t i = 0; i < num_points; ++i)
+    {
+        fr::from_montgomery_form(scalars[i], scalars_copy[i]);
+    }
+    libff::alt_bn128_G1 expected = libff_scalar_mul((uint64_t*)(&scalars_copy[0].data[0]), points, num_points); // TODO PUT BACK IN
     expected.to_affine_coordinates();
 
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);

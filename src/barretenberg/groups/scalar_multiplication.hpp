@@ -223,7 +223,11 @@ inline g1::element pippenger_internal(fr::field_t* scalars, g1::affine_element *
 inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, size_t num_initial_points) noexcept
 {
     fr::field_t* endo_scalars = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * (num_initial_points));
-    g1::element res = pippenger_internal(scalars, points, num_initial_points, endo_scalars);
+    for (size_t i = 0; i < num_initial_points; ++i)
+    {
+        fr::from_montgomery_form(scalars[i], endo_scalars[i]);
+    }
+    g1::element res = pippenger_internal(endo_scalars, points, num_initial_points, endo_scalars);
     free(endo_scalars);
     return res;
 }

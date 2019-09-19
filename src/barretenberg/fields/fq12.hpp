@@ -32,6 +32,13 @@ inline void one(fq12_t &r)
     fq::zero(r.c1.c2.c1);
 }
 
+inline fq12_t one()
+{
+    fq12_t res;
+    one(res);
+    return res;
+}
+
 inline void mul_by_non_residue(const fq6::fq6_t &a, fq6::fq6_t &r)
 {
     fq2::fq2_t T0;
@@ -272,5 +279,10 @@ inline void print(const fq12_t &a)
 inline bool iszero(const fq12_t &a)
 {
     return (iszero(a.c0) && iszero(a.c1));
+}
+
+inline bool eq(const fq12_t& a, const fq12_t &b)
+{
+    return (fq6::eq(a.c0, b.c0) && fq6::eq(a.c1, b.c1));
 }
 } // namespace fq12

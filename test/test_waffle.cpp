@@ -203,21 +203,6 @@ void generate_point_addition_data_inner(waffle::circuit_state& state, size_t ind
     state.sigma_3[index + 7] = { .data = { n+n+4, 0, 0, 0 } };
     state.sigma_3[index + 8] = { .data = { n+n+5, 0, 0, 0 } };
 
-    // for (size_t i = 9; i < state.n; ++i)
-    // {
-    //     fr::zero(state.w_l[i]);
-    //     fr::zero(state.w_r[i]);
-    //     fr::zero(state.w_o[i]);
-    //     fr::zero(state.q_m[i]);
-    //     fr::zero(state.q_l[i]);
-    //     fr::zero(state.q_r[i]);
-    //     fr::zero(state.q_o[i]);
-    //     fr::zero(state.q_c[i]);
-
-    //     state.sigma_1[i] = { .data = { i + 1, 0, 0, 0 } };
-    //     state.sigma_2[i] = { .data = { state.n + i + 1, 0, 0, 0 } };
-    //     state.sigma_3[i] = { .data = { state.n + state.n + i + 1, 0, 0, 0 } };
-    // }
 
     for (size_t i = 0; i < 9; ++i)
     {
@@ -230,11 +215,11 @@ void generate_point_addition_data(waffle::circuit_state& state, fr::field_t* dat
 {
     size_t n = 16;
     state.n = n;
-    state.beta = fr::random_element();
-    state.gamma= fr::random_element();
-    state.alpha= fr::random_element();
-    fr::sqr(state.alpha, state.alpha_squared);
-    fr::mul(state.alpha_squared, state.alpha, state.alpha_cubed);
+    state.challenges.beta = fr::random_element();
+    state.challenges.gamma= fr::random_element();
+    state.challenges.alpha= fr::random_element();
+    fr::sqr(state.challenges.alpha, state.alpha_squared);
+    fr::mul(state.alpha_squared, state.challenges.alpha, state.alpha_cubed);
 
     state.w_l = &data[0];
     state.w_r = &data[n];
@@ -261,11 +246,6 @@ void generate_point_addition_data(waffle::circuit_state& state, fr::field_t* dat
     state.w_o_lagrange_base = &state.t[2 * n + 2];
 
 
-    state.beta = fr::random_element();
-    state.gamma= fr::random_element();
-    state.alpha= fr::random_element();
-    fr::sqr(state.alpha, state.alpha_squared);
-    fr::mul(state.alpha_squared, state.alpha, state.alpha_cubed);
     // create some constraints that satisfy our arithmetic circuit relation
     fr::field_t one;
     fr::field_t zero;
@@ -323,11 +303,11 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     state.w_r_lagrange_base = &state.t[n + 1];
     state.w_o_lagrange_base = &state.t[2 * n + 2];
 
-    state.beta = fr::random_element();
-    state.gamma= fr::random_element();
-    state.alpha= fr::random_element();
-    fr::sqr(state.alpha, state.alpha_squared);
-    fr::mul(state.alpha_squared, state.alpha, state.alpha_cubed);
+    state.challenges.beta = fr::random_element();
+    state.challenges.gamma= fr::random_element();
+    state.challenges.alpha= fr::random_element();
+    fr::sqr(state.challenges.alpha, state.alpha_squared);
+    fr::mul(state.alpha_squared, state.challenges.alpha, state.alpha_cubed);
     // create some constraints that satisfy our arithmetic circuit relation
     fr::field_t one;
     fr::field_t zero;
@@ -425,109 +405,107 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     fr::zero(state.q_o[n - 1]);
     fr::zero(state.q_m[n - 1]);
 
-    // fr::zero(state.q_c[n-1]);
 }
 }
 
-// polynomials::evaluation_domain glob_domain = polynomials::get_domain(n);
 
-TEST(megawiffle, megawiffle)
-{
-    size_t n = 1048576;
+// TEST(megawaffle, megawaffle)
+// {
+//     size_t n = 1048576;
 
-    size_t num_rounds = n / 9;
+//     size_t num_rounds = n / 9;
 
-    // size_t leftovers = n - num_rounds * 9;
-    waffle::circuit_state state;
-    state.small_domain = polynomials::get_domain(n);
-    state.mid_domain = polynomials::get_domain(2 * n);
-    state.large_domain = polynomials::get_domain(4 * n);
-    state.n = n;
+//     // size_t leftovers = n - num_rounds * 9;
+//     waffle::circuit_state state;
+//     state.small_domain = polynomials::get_domain(n);
+//     state.mid_domain = polynomials::get_domain(2 * n);
+//     state.large_domain = polynomials::get_domain(4 * n);
+//     state.n = n;
 
-    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22/*22*/ * n + 8)));
-    fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (/*17*/ 17 * n + 8)));
+//     fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22/*22*/ * n + 8)));
+//     fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (/*17*/ 17 * n + 8)));
 
-    waffle::fft_pointers ffts;
-    ffts.scratch_memory = scratch_space;
+//     waffle::fft_pointers ffts;
+//     ffts.scratch_memory = scratch_space;
 
-    state.w_l = &data[0];
-    state.w_r = &data[n];
-    state.w_o = &data[2 * n];
-    state.z_1 = &data[3 * n];
-    state.z_2 = &data[4 * n + 1];
-    state.q_c = &data[5 * n + 2];
-    state.q_l = &data[6 * n + 2];
-    state.q_r = &data[7 * n + 2];
-    state.q_o = &data[8 * n + 2];
-    state.q_m = &data[9 * n + 2];
-    state.sigma_1 = &data[10 * n + 2];
-    state.sigma_2 = &data[11 * n + 2];
-    state.sigma_3 = &data[12 * n + 2];
-    state.s_id = &data[13 * n + 2];
-    state.t = &data[14 * n + 2];
-    state.linear_poly = &ffts.scratch_memory[4 * n];
+//     state.w_l = &data[0];
+//     state.w_r = &data[n];
+//     state.w_o = &data[2 * n];
+//     state.z_1 = &data[3 * n];
+//     state.z_2 = &data[4 * n + 1];
+//     state.q_c = &data[5 * n + 2];
+//     state.q_l = &data[6 * n + 2];
+//     state.q_r = &data[7 * n + 2];
+//     state.q_o = &data[8 * n + 2];
+//     state.q_m = &data[9 * n + 2];
+//     state.sigma_1 = &data[10 * n + 2];
+//     state.sigma_2 = &data[11 * n + 2];
+//     state.sigma_3 = &data[12 * n + 2];
+//     state.s_id = &data[13 * n + 2];
+//     state.t = &data[14 * n + 2];
+//     state.linear_poly = &ffts.scratch_memory[4 * n];
 
-    state.w_l_lagrange_base = state.t;
-    state.w_r_lagrange_base = &state.t[n + 1];
-    state.w_o_lagrange_base = &state.t[2 * n + 2];
+//     state.w_l_lagrange_base = state.t;
+//     state.w_r_lagrange_base = &state.t[n + 1];
+//     state.w_o_lagrange_base = &state.t[2 * n + 2];
 
-    printf("making data \n");
-    for (size_t i = 0; i < num_rounds; ++i)
-    {
-        generate_point_addition_data_inner(state, i * 9);        
-    }
+//     printf("making data \n");
+//     for (size_t i = 0; i < num_rounds; ++i)
+//     {
+//         generate_point_addition_data_inner(state, i * 9);        
+//     }
 
-    for (size_t i = num_rounds * 9; i < n; ++i)
-    {
-        state.sigma_1[i] = { .data = { i + 1, 0, 0, 0 } };
-        state.sigma_2[i] = { .data = { n + i + 1, 0, 0, 0 } };
-        state.sigma_3[i] = { .data = { n + n + i + 1, 0, 0, 0 } };
+//     for (size_t i = num_rounds * 9; i < n; ++i)
+//     {
+//         state.sigma_1[i] = { .data = { i + 1, 0, 0, 0 } };
+//         state.sigma_2[i] = { .data = { n + i + 1, 0, 0, 0 } };
+//         state.sigma_3[i] = { .data = { n + n + i + 1, 0, 0, 0 } };
 
-        fr::zero(state.w_l[i]);
-        fr::zero(state.w_r[i]);
-        fr::zero(state.w_o[i]);
-        fr::zero(state.q_m[i]);
-        fr::zero(state.q_l[i]);
-        fr::zero(state.q_r[i]);
-        fr::zero(state.q_o[i]);
-        fr::zero(state.q_c[i]);
+//         fr::zero(state.w_l[i]);
+//         fr::zero(state.w_r[i]);
+//         fr::zero(state.w_o[i]);
+//         fr::zero(state.q_m[i]);
+//         fr::zero(state.q_l[i]);
+//         fr::zero(state.q_r[i]);
+//         fr::zero(state.q_o[i]);
+//         fr::zero(state.q_c[i]);
 
-        fr::to_montgomery_form(state.sigma_1[i], state.sigma_1[i]);
-        fr::to_montgomery_form(state.sigma_2[i], state.sigma_2[i]);
-        fr::to_montgomery_form(state.sigma_3[i], state.sigma_3[i]);
-    }
+//         fr::to_montgomery_form(state.sigma_1[i], state.sigma_1[i]);
+//         fr::to_montgomery_form(state.sigma_2[i], state.sigma_2[i]);
+//         fr::to_montgomery_form(state.sigma_3[i], state.sigma_3[i]);
+//     }
 
-    printf("making srs \n");
-    fr::field_t x = fr::random_element();
-    srs::plonk_srs srs;
-    g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 8)));
-    monomials[0] = g1::affine_one();
+//     printf("making srs \n");
+//     fr::field_t x = fr::random_element();
+//     srs::plonk_srs srs;
+//     g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 8)));
+//     monomials[0] = g1::affine_one();
 
-    for (size_t i = 1; i < 3 * n; ++i)
-    {
-        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
-    }
-    scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
-    srs.monomials = monomials;
-    srs.degree = n;
+//     for (size_t i = 1; i < 3 * n; ++i)
+//     {
+//         monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+//     }
+//     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
+//     srs.monomials = monomials;
+//     srs.degree = n;
 
-    printf("making proof\n");
-    waffle::construct_proof(state, ffts, srs);
-    printf("end\n");
-    // for (size_t i = 3 * n; i < 4 * n; ++i)
-    // {
-    //     for (size_t j = 0; j < 4; ++j)
-    //     {
-    //         EXPECT_EQ(ffts.quotient_poly[i].data[j], 0);
-    //     }
-    // }
+//     printf("making proof\n");
+//     waffle::construct_proof(state, ffts, srs);
+//     printf("end\n");
+//     // for (size_t i = 3 * n; i < 4 * n; ++i)
+//     // {
+//     //     for (size_t j = 0; j < 4; ++j)
+//     //     {
+//     //         EXPECT_EQ(ffts.quotient_poly[i].data[j], 0);
+//     //     }
+//     // }
 
-    free(scratch_space);
-    free(monomials);
-    free(data);
-}
+//     free(scratch_space);
+//     free(monomials);
+//     free(data);
+// }
 
-TEST(waffler, compute_quotient_polynomial)
+TEST(waffler, compute_quotient_polynomial_for_structured_circuit)
 {
     size_t n = 16;
 
@@ -536,9 +514,7 @@ TEST(waffler, compute_quotient_polynomial)
     state.mid_domain = polynomials::get_domain(2 * n);
     state.large_domain = polynomials::get_domain(4 * n);
     state.n = n;
-    state.beta = fr::random_element();
-    state.gamma= fr::random_element();
-    state.alpha= fr::random_element();
+
     // fr::field_t data[28 * n + 2];
 
     // fr::field_t scratch_space[19 * n + 8];
@@ -584,7 +560,7 @@ TEST(waffler, compute_quotient_polynomial)
     free(data);
 }
 
-TEST(waffle, compute_quotient_polynomial_two)
+TEST(waffle, compute_quotient_polynomial)
 {
     size_t n = 256;
 
@@ -593,9 +569,7 @@ TEST(waffle, compute_quotient_polynomial_two)
     state.mid_domain = polynomials::get_domain(2 * n);
     state.large_domain = polynomials::get_domain(4 * n);
     state.n = n;
-    state.beta = fr::random_element();
-    state.gamma= fr::random_element();
-    state.alpha= fr::random_element();
+
     fr::field_t data[28 * n + 2];
 
     // fr::field_t scratch_space[19 * n + 8];
@@ -667,8 +641,8 @@ TEST(waffle, compute_z_coefficients)
     state.permutation_product = &data[15 * n + 2];
     state.n = n;
 
-    fr::one(state.gamma);
-    fr::add(state.gamma, state.gamma, state.beta);
+    fr::one(state.challenges.gamma);
+    fr::add(state.challenges.gamma, state.challenges.gamma, state.challenges.beta);
 
     fr::field_t i_mont;
     fr::field_t one;
@@ -863,9 +837,6 @@ TEST(waffle, compute_wire_commitments)
     state.mid_domain = polynomials::get_domain(2 * n);
     state.large_domain = polynomials::get_domain(4 * n);
     state.n = n;
-    state.beta = fr::random_element();
-    state.gamma= fr::random_element();
-    state.alpha= fr::random_element();
     fr::field_t data[25 * n];
 
     fr::field_t scratch_space[12 * n];
@@ -903,15 +874,6 @@ TEST(waffle, compute_wire_commitments)
     fr::field_t w_r_eval;
     fr::field_t w_o_eval;
 
-    // TODO: our scalar mul algorithm currently doesn't convert values out of montgomery representation
-    // do we want to do this? is expensive, can probably work around and leave everything in mont form?
-    // we can 'normalize' our evaluation check by adding an extra factor of R to each scalar
-    for (size_t i = 0; i < n; ++i)
-    {
-        fr::to_montgomery_form(w_l_copy[i], w_l_copy[i]);
-        fr::to_montgomery_form(w_r_copy[i], w_r_copy[i]);
-        fr::to_montgomery_form(w_o_copy[i], w_o_copy[i]);
-    }
 
     w_l_eval = polynomials::evaluate(w_l_copy, x, n);
     w_r_eval = polynomials::evaluate(w_r_copy, x, n);
@@ -945,17 +907,10 @@ TEST(waffle, compute_z_commitments)
     state.mid_domain = polynomials::get_domain(2 * n);
     state.large_domain = polynomials::get_domain(4 * n);
     state.n = n;
-    state.beta = fr::random_element();
-    state.gamma= fr::random_element();
-    state.alpha= fr::random_element();
 
     fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (28 * n + 2)));
     fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (70 * n + 8)));
     g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
-
-    // fr::field_t data[25 * n];
-
-    // fr::field_t scratch_space[20 * n];
 
     waffle::fft_pointers ffts;
     ffts.scratch_memory = scratch_space;
@@ -990,14 +945,6 @@ TEST(waffle, compute_z_commitments)
     fr::field_t z_1_eval;
     fr::field_t z_2_eval;
 
-    // TODO: our scalar mul algorithm currently doesn't convert values out of montgomery representation
-    // do we want to do this? is expensive, can probably work around and leave everything in mont form?
-    // we can 'normalize' our evaluation check by adding an extra factor of R to each scalar
-    for (size_t i = 0; i < n; ++i)
-    {
-        fr::to_montgomery_form(z_1_copy[i], z_1_copy[i]);
-        fr::to_montgomery_form(z_2_copy[i], z_2_copy[i]);
-    }
 
     z_1_eval = polynomials::evaluate(z_1_copy, x, n);
     z_2_eval = polynomials::evaluate(z_2_copy, x, n);
@@ -1021,57 +968,6 @@ TEST(waffle, compute_z_commitments)
     free(scratch_space);
     free(data);
 }
-
-// TEST(waffle, compute_quotient_polynomial)
-// {
-//     size_t n = 256;
-//     polynomials::evaluation_domain domain = polynomials::get_domain(n);
-
-//     waffle::circuit_state state;
-//     state.n = n;
-//     state.beta = fr::random_element();
-//     state.gamma= fr::random_element();
-//     state.alpha= fr::random_element();
-//     fr::field_t data[20 * n + 2];
-
-//     // fr::field_t scratch_space[19 * n + 8];
-//     fr::field_t scratch_space[70 * n + 8];
-
-//     waffle::fft_pointers ffts;
-//     ffts.scratch_memory = scratch_space;
-//     generate_test_data(state, data);
-
-//     fr::field_t x;
-//     fr::random_element(x);
-//     srs::plonk_srs srs;
-//     g1::affine_element monomials[6 * n + 1];
-//     monomials[0] = g1::affine_one();
-
-//     for (size_t i = 1; i < 3 * n; ++i)
-//     {
-//         monomials[i] = g1::group_exponentiation(monomials[i-1], x);
-//     }
-//     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
-//     srs.monomials = monomials;
-//     srs.degree = n;
-
-//     waffle::compute_quotient_polynomial(state, domain, ffts, srs);
-    
-
-//     // for (size_t i = 0; i < 4 * n; ++i)
-//     // {
-//     //     fr::print(ffts.quotient_poly[i]);
-//     // }
-//     // check that the max degree of our quotient polynomial is 3n
-//     for (size_t i = 3 * n; i < 4 * n; ++i)
-//     {
-//         for (size_t j = 0; j < 4; ++j)
-//         {
-//             EXPECT_EQ(ffts.quotient_poly[i].data[j], 0);
-//         }
-//     }
-// }
-
 TEST(waffle, compute_linearisation_coefficients)
 {
     size_t n = 256;
@@ -1109,13 +1005,13 @@ TEST(waffle, compute_linearisation_coefficients)
     srs.degree = n;
     waffle::plonk_proof proof;
     waffle::compute_quotient_polynomial(state, ffts, proof, srs);
-    state.z = fr::random_element();
+    state.challenges.z = fr::random_element();
     // fr::field_t foobar[4 * n];
     state.linear_poly = &ffts.scratch_memory[4 * n];
 
     waffle::compute_linearisation_coefficients(state, ffts, proof);
 
-    polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(state.z, state.small_domain);
+    polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(state.challenges.z, state.small_domain);
 
     fr::field_t rhs;
     fr::field_t lhs;

@@ -68,11 +68,6 @@ TEST(preprocess, preprocess)
     for (size_t i = 0; i < 9; ++i)
     {
         polynomials::ifft(polys[i], state.small_domain);
-        // TODO: fix this!
-        for (size_t j = 0; j < n; ++j)
-        {
-            fr::to_montgomery_form(polys[i][j], polys[i][j]);
-        }
     }
     // fr::to_montgomery_form(x, x);
     fr::field_t sigma_1_eval = polynomials::evaluate(state.sigma_1, x, n);

@@ -6,7 +6,7 @@
 #include "../types.hpp"
 namespace waffle
 {
-circuit_instance preprocess_circuit(const waffle::circuit_state& state, const srs::plonk_srs &srs)
+inline circuit_instance preprocess_circuit(const waffle::circuit_state& state, const srs::plonk_srs &srs)
 {
     size_t n = state.n;
     
@@ -26,6 +26,16 @@ circuit_instance preprocess_circuit(const waffle::circuit_state& state, const sr
 
     // polynomials::evaluation_domain domain = polynomials::get_domain(n);
 
+    // TODO: optimize this!
+    fr::one(state.s_id[0]);
+    fr::field_t one;
+    fr::one(one);
+    for (size_t i = 1; i < state.n - 1; ++i)
+    {
+        fr::add(state.s_id[i - 1], one, state.s_id[i]);
+    }
+    fr::zero(state.s_id[state.n - 1]);
+
     // copy polynomials so that we don't mutate inputs
     polynomials::copy_polynomial(state.sigma_1, polys[0], n, n);
     polynomials::copy_polynomial(state.sigma_2, polys[1], n, n);
@@ -36,6 +46,7 @@ circuit_instance preprocess_circuit(const waffle::circuit_state& state, const sr
     polynomials::copy_polynomial(state.q_r, polys[6], n, n);
     polynomials::copy_polynomial(state.q_o, polys[7], n, n);
     polynomials::copy_polynomial(state.q_c, polys[8], n, n);
+
 
     for (size_t i = 0; i < 9; ++i)
     {
@@ -56,7 +67,6 @@ circuit_instance preprocess_circuit(const waffle::circuit_state& state, const sr
     {
         mul_state[i].output = scalar_multiplication::pippenger(mul_state[i].scalars, srs.monomials, n);
     }
-    // scalar_multiplication::batched_scalar_multiplications(mul_state, 9);
 
     circuit_instance instance;
     instance.n = n;

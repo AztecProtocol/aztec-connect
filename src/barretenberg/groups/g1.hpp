@@ -83,6 +83,11 @@ namespace g1
         return output;
     }
 
+    inline bool is_point_at_infinity(element& p)
+    {
+        return (bool)((p.y.data[3] >> 63) & 1);
+    }
+
     inline void set_infinity(element& p)
     {
         p.y.data[3] = 0 | (1UL << 63);
@@ -814,13 +819,22 @@ namespace g1
         return work_element;
     }
 
-    inline affine_element group_exponentiation(const affine_element& a, const fr::field_t& scalar)
+    inline affine_element group_exponentiation(const affine_element &a, const fr::field_t &scalar)
     {
         element res = group_exponentiation_inner(a, scalar);
-        batch_normalize(&res, 1);
         affine_element result;
-        fq::copy(res.x, result.x);
-        fq::copy(res.y, result.y);
+        if (is_point_at_infinity(res))
+        {
+            fq::zero(result.x);
+            fq::zero(result.y);
+            set_infinity(result);
+        }
+        else
+        {
+            batch_normalize(&res, 1);
+            fq::copy(res.x, result.x);
+            fq::copy(res.y, result.y);
+        }
         return result;
     }
 

@@ -28,6 +28,7 @@ add_executable(
     test_fft.cpp
     test_preprocess.cpp
     test_waffle.cpp
+    test_verifier.cpp
 )
 
 set_target_properties(

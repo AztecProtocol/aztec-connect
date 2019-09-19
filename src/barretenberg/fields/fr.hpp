@@ -81,6 +81,32 @@ inline bool gt(field_t& a, const field_t& b)
 }
 
 /**
+     * Convert a field element into montgomery form
+     **/
+inline void to_montgomery_form(const field_t &a, field_t &r)
+{
+    copy(a, r);
+    while (gt(r, modulus_plus_one))
+    {
+        sub(r, modulus, r);
+    }
+    mul(r, r_squared, r);
+}
+
+/**
+     * Convert a field element out of montgomery form by performing a modular
+     * reduction against 1
+     **/
+inline void from_montgomery_form(const field_t &a, field_t &r)
+{
+    mul(a, one_raw, r);
+    // while (gt(r, modulus_plus_one))
+    // {
+    //     sub(r, modulus, r);
+    // }
+}
+
+/**
  * For short Weierstrass curves y^2 = x^3 + b mod r, if there exists a cube root of unity mod r,
  * we can take advantage of an enodmorphism to decompose a 254 bit scalar into 2 128 bit scalars.
  * \beta = cube root of 1, mod q (q = order of fq)
@@ -161,6 +187,8 @@ inline void split_into_endomorphism_scalars(field_t &k, field_t &k1, field_t &k2
 
     sub(q2_lo, q1_lo, t1);
 
+    // if k = k'.R
+    // and t2 = t2'.R...so, k2 = t1'.R, k1 = t2'.R?
     // to_montgomery_form(t1, t1);
     mul(t1, lambda, t2);
     // from_montgomery_form(t2, t2);
@@ -195,32 +223,6 @@ inline void mul_lambda(field_t &a, field_t &r)
 inline void neg(const field_t &a, field_t &r)
 {
     sub(modulus, a, r);
-}
-
-/**
-     * Convert a field element into montgomery form
-     **/
-inline void to_montgomery_form(const field_t &a, field_t &r)
-{
-    copy(a, r);
-    while (gt(r, modulus_plus_one))
-    {
-        sub(r, modulus, r);
-    }
-    mul(r, r_squared, r);
-}
-
-/**
-     * Convert a field element out of montgomery form by performing a modular
-     * reduction against 1
-     **/
-inline void from_montgomery_form(const field_t &a, field_t &r)
-{
-    mul(a, one_raw, r);
-    // while (gt(r, modulus_plus_one))
-    // {
-    //     sub(r, modulus, r);
-    // }
 }
 
 /**
