@@ -140,26 +140,26 @@ namespace waffle
 // and Kate polynomial commitments
 struct circuit_state
 {
-    g1::affine_element W_L;
-    g1::affine_element W_R;
-    g1::affine_element W_O;
-    g1::affine_element Z_1;
-    g1::affine_element Z_2;
-    g1::affine_element T;
-    g1::affine_element PI_Z;
-    g1::affine_element PI_Z_OMEGA;
+    // g1::affine_element W_L;
+    // g1::affine_element W_R;
+    // g1::affine_element W_O;
+    // g1::affine_element Z_1;
+    // g1::affine_element Z_2;
+    // g1::affine_element T;
+    // g1::affine_element PI_Z;
+    // g1::affine_element PI_Z_OMEGA;
 
-    fr::field_t w_l_eval;
-    fr::field_t w_r_eval;
-    fr::field_t w_o_eval;
-    fr::field_t s_id_eval;
-    fr::field_t sigma_1_eval;
-    fr::field_t sigma_2_eval;
-    fr::field_t sigma_3_eval;
-    fr::field_t t_eval;
-    fr::field_t z_1_shifted_eval;
-    fr::field_t z_2_shifted_eval;
-    fr::field_t linear_eval;
+    // fr::field_t w_l_eval;
+    // fr::field_t w_r_eval;
+    // fr::field_t w_o_eval;
+    // fr::field_t s_id_eval;
+    // fr::field_t sigma_1_eval;
+    // fr::field_t sigma_2_eval;
+    // fr::field_t sigma_3_eval;
+    // fr::field_t t_eval;
+    // fr::field_t z_1_shifted_eval;
+    // fr::field_t z_2_shifted_eval;
+    // fr::field_t linear_eval;
 
     // random challenges
     fr::field_t gamma;
@@ -206,4 +206,44 @@ struct circuit_state
     polynomials::evaluation_domain mid_domain;
     polynomials::evaluation_domain large_domain;
 };
+
+struct plonk_instance
+{
+    g1::affine_element Q_M;
+    g1::affine_element Q_L;
+    g1::affine_element Q_R;
+    g1::affine_element Q_O;
+    g1::affine_element Q_C;
+    g1::affine_element SIGMA_1;
+    g1::affine_element SIGMA_2;
+    g1::affine_element SIGMA_3;
+    g1::affine_element S_ID;
+    size_t n;
+};
+
+struct plonk_proof
+{
+    // Kate polynomial commitments required for a proof of knowledge
+    g1::affine_element W_L;
+    g1::affine_element W_R;
+    g1::affine_element W_O;
+    g1::affine_element Z_1;
+    g1::affine_element Z_2;
+    g1::affine_element T;
+    g1::affine_element PI_Z;
+    g1::affine_element PI_Z_OMEGA;
+
+    fr::field_t w_l_eval;
+    fr::field_t w_r_eval;
+    fr::field_t w_o_eval;
+    fr::field_t s_id_eval;
+    fr::field_t sigma_1_eval;
+    fr::field_t sigma_2_eval;
+    fr::field_t sigma_3_eval;
+    fr::field_t t_eval;
+    fr::field_t z_1_shifted_eval;
+    fr::field_t z_2_shifted_eval;
+    fr::field_t linear_eval;
+};
+
 } // namespace waffle

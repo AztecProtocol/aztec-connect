@@ -2,9 +2,309 @@
 
 #include <barretenberg/waffle/waffle.hpp>
 
+/*
+```
+elliptic curve point addition on a short weierstrass curve.
+
+circuit has 9 gates, I've added 7 dummy gates so that the polynomial degrees are a power of 2 
+
+input points: (x_1, y_1), (x_2, y_2)
+output point: (x_3, y_3)
+intermediate variables: (t_1, t_2, t_3, t_4, t_5, t_6, t_7)
+
+Variable assignments:
+t_1 = (y_2 - y_1)
+t_2 = (x_2 - x_1)
+t_3 = (y_2 - y_1) / (x_2 - x_1)
+x_3 = t_3*t_3 - x_2 - x_1
+y_3 = t_3*(x_1 - x_3) - y_1
+t_4 = (x_3 + x_1)
+t_5 = (t_4 + x_2)
+t_6 = (y_3 + y_1)
+t_7 = (x_1 - x_3)
+
+Constraints:
+(y_2 - y_1) - t_1 = 0
+(x_2 - x_1) - t_2 = 0
+(x_1 + x_2) - t_4 = 0
+(t_4 + x_3) - t_5 = 0
+(y_3 + y_1) - t_6 = 0
+(x_1 - x_3) - t_7 = 0
+ (t_3 * t_2) - t_1 = 0
+-(t_3 * t_3) + t_5 = 0
+-(t_3 * t_7) + t_6 = 0
+
+Wire polynomials:
+w_l = [y_2, x_2, x_1, t_4, y_3, x_1, t_3, t_3, t_3, 0, 0, 0, 0, 0, 0, 0]
+w_r = [y_1, x_1, x_2, x_3, y_1, x_3, t_2, t_3, t_7, 0, 0, 0, 0, 0, 0, 0]
+w_o = [t_1, t_2, t_4, t_5, t_6, t_7, t_1, t_5, t_6, 0, 0, 0, 0, 0, 0, 0]
+
+Gate polynomials:
+q_m = [ 0,  0,  0,  0,  0,  0,  1, -1, -1, 0, 0, 0, 0, 0, 0, 0]
+q_l = [ 1,  1,  1,  1,  1,  1,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0]
+q_r = [-1, -1,  1,  1,  1, -1,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0]
+q_o = [-1, -1, -1, -1, -1, -1, -1,  1,  1, 0, 0, 0, 0, 0, 0, 0]
+q_c = [ 0,  0,  0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0]
+
+Permutation polynomials:
+s_id = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+sigma_1 = [1, 3+n, 6, 3+2n, 5, 2+n, 8, 9, 8+n, 10, 11, 12, 13, 14, 15, 16]
+sigma_2 = [5+n, 3, 2, 6+n, 1+n, 4+n, 2+2n, 7, 6+2n, 10+n, 11+n, 12+n, 13+n, 14+n, 15+n, 16+n]
+sigma_3 = [7+2n, 7+n, 4, 8+2n, 9+2n, 9+n, 1+2n, 4+2n, 5+2n, 10+2n, 11+2n, 12+2n, 13+2n, 14+2n, 15+2n]
+
+(for n = 16, permutation polynomials are)
+sigma_1 = [1, 19, 6, 35, 5, 18, 8, 9, 24, 10, 11, 12, 13, 14, 15, 16]
+sigma_2 = [21, 3, 2, 22, 17, 20, 34, 7, 38, 26, 27, 28, 29, 30, 31, 32]
+sigma_3 = [39, 23, 4, 40, 41, 25, 33, 36, 37, 42, 43, 44, 45, 46, 47, 48]
+```
+*/
 
 namespace
 {
+
+void generate_point_addition_data_inner(waffle::circuit_state& state, size_t index)
+{
+    size_t n = state.n;
+    fr::field_t x_1;
+    fr::field_t x_2;
+    fr::field_t x_3;
+    fr::field_t y_1;
+    fr::field_t y_2;
+    fr::field_t y_3;
+    fr::field_t t[7];
+
+    fr::random_element(x_1);
+    fr::random_element(y_1);
+    fr::random_element(x_2);
+    fr::random_element(y_2);
+
+
+    fr::sub(y_2, y_1, t[0]);
+    fr::sub(x_2, x_1, t[1]);
+    fr::invert(t[1], t[2]);
+    fr::mul(t[2], t[0], t[2]);
+    fr::sqr(t[2], x_3);
+    fr::sub(x_3, x_2, x_3);
+    fr::sub(x_3, x_1, x_3);
+    fr::add(x_2, x_1, t[3]);
+    fr::add(t[3], x_3, t[4]);
+    fr::sub(x_1, x_3, t[6]);
+    fr::mul(t[2], t[6], y_3);
+    fr::sub(y_3, y_1, y_3);
+    fr::add(y_3, y_1, t[5]);
+
+    fr::copy(y_2, state.w_l[index + 0]);
+    fr::copy(x_2, state.w_l[index + 1]);
+    fr::copy(x_1, state.w_l[index + 2]);
+    fr::copy(t[3], state.w_l[index + 3]);
+    fr::copy(y_3, state.w_l[index + 4]);
+    fr::copy(x_1, state.w_l[index + 5]);
+    fr::copy(t[2], state.w_l[index + 6]);
+    fr::copy(t[2], state.w_l[index + 7]);
+    fr::copy(t[2], state.w_l[index + 8]);
+
+    fr::copy(y_1, state.w_r[index + 0]);
+    fr::copy(x_1, state.w_r[index + 1]);
+    fr::copy(x_2, state.w_r[index + 2]);
+    fr::copy(x_3, state.w_r[index + 3]);
+    fr::copy(y_1, state.w_r[index + 4]);
+    fr::copy(x_3, state.w_r[index + 5]);
+    fr::copy(t[1], state.w_r[index + 6]);
+    fr::copy(t[2], state.w_r[index + 7]);
+    fr::copy(t[6], state.w_r[index + 8]);
+
+    fr::copy(t[0], state.w_o[index + 0]);
+    fr::copy(t[1], state.w_o[index + 1]);
+    fr::copy(t[3], state.w_o[index + 2]);
+    fr::copy(t[4], state.w_o[index + 3]);
+    fr::copy(t[5], state.w_o[index + 4]);
+    fr::copy(t[6], state.w_o[index + 5]);
+    fr::copy(t[0], state.w_o[index + 6]);
+    fr::copy(t[4], state.w_o[index + 7]);
+    fr::copy(t[5], state.w_o[index + 8]);
+
+    fr::zero(state.q_m[index + 0]);
+    fr::zero(state.q_m[index + 1]);
+    fr::zero(state.q_m[index + 2]);
+    fr::zero(state.q_m[index + 3]);
+    fr::zero(state.q_m[index + 4]);
+    fr::zero(state.q_m[index + 5]);
+    fr::one(state.q_m[index + 6]);
+    fr::neg(fr::one(), state.q_m[index + 7]);
+    fr::neg(fr::one(), state.q_m[index + 8]);
+
+    fr::one(state.q_l[index + 0]);
+    fr::one(state.q_l[index + 1]);
+    fr::one(state.q_l[index + 2]);
+    fr::one(state.q_l[index + 3]);
+    fr::one(state.q_l[index + 4]);
+    fr::one(state.q_l[index + 5]);
+
+    fr::zero(state.q_l[index + 6]);
+    fr::zero(state.q_l[index + 7]);
+    fr::zero(state.q_l[index + 8]);
+
+    fr::neg(fr::one(), state.q_r[index + 0]);
+    fr::neg(fr::one(), state.q_r[index + 1]);
+    fr::one(state.q_r[index + 2]);
+    fr::one(state.q_r[index + 3]);
+    fr::one(state.q_r[index + 4]);
+    fr::neg(fr::one(), state.q_r[index + 5]);
+    fr::zero(state.q_r[index + 6]);
+    fr::zero(state.q_r[index + 7]);
+    fr::zero(state.q_r[index + 8]);
+
+    fr::neg(fr::one(), state.q_o[index + 0]);
+    fr::neg(fr::one(), state.q_o[index + 1]);
+    fr::neg(fr::one(), state.q_o[index + 2]);
+    fr::neg(fr::one(), state.q_o[index + 3]);
+    fr::neg(fr::one(), state.q_o[index + 4]);
+    fr::neg(fr::one(), state.q_o[index + 5]);
+    fr::neg(fr::one(), state.q_o[index + 6]);
+    fr::one(state.q_o[index + 7]);
+    fr::one(state.q_o[index + 8]);
+
+    fr::zero(state.q_c[index + 0]);
+    fr::zero(state.q_c[index + 1]);
+    fr::zero(state.q_c[index + 2]);
+    fr::zero(state.q_c[index + 3]);
+    fr::zero(state.q_c[index + 4]);
+    fr::zero(state.q_c[index + 5]);
+    fr::zero(state.q_c[index + 6]);
+    fr::zero(state.q_c[index + 7]);
+    fr::zero(state.q_c[index + 8]);
+
+    // size_t sigma_1_int[16] = { 1, 19, 6, 35, 5, 18, 8, 9, 24, 10, 11, 12, 13, 14, 15, 16 };
+    // size_t sigma_2_int[16] = { 21, 3, 2, 22, 17, 20, 34, 7, 38, 26, 27, 28, 29, 30, 31, 32 };
+    // size_t sigma_3_int[16] = { 39, 23, 4, 40, 41, 25, 33, 36, 37, 42, 43, 44, 45, 46, 47, 48 };
+
+    state.sigma_1[index + 0] = { .data = { 1, 0, 0, 0 } };
+    state.sigma_1[index + 1] = { .data = { 19, 0, 0, 0 } };
+    state.sigma_1[index + 2] = { .data = { 6, 0, 0, 0 } };
+    state.sigma_1[index + 3] = { .data = { 35, 0, 0, 0 } };
+    state.sigma_1[index + 4] = { .data = { 5, 0, 0, 0 } };
+    state.sigma_1[index + 5] = { .data = { 2+n, 0, 0, 0 } };
+    state.sigma_1[index + 6] = { .data = { 8, 0, 0, 0 } };
+    state.sigma_1[index + 7] = { .data = { 9, 0, 0, 0 } };
+    state.sigma_1[index + 8] = { .data = { 8+n, 0, 0, 0 } };
+
+
+    state.sigma_2[index + 0] = { .data = { 5+n, 0, 0, 0 } };
+    state.sigma_2[index + 1] = { .data = { 3, 0, 0, 0 } };
+    state.sigma_2[index + 2] = { .data = { 2, 0, 0, 0 } };
+    state.sigma_2[index + 3] = { .data = { 6+n, 0, 0, 0 } };
+    state.sigma_2[index + 4] = { .data = { 1+n, 0, 0, 0 } };
+    state.sigma_2[index + 5] = { .data = { 4+n, 0, 0, 0 } };
+    state.sigma_2[index + 6] = { .data = { 2+n+n, 0, 0, 0 } };
+    state.sigma_2[index + 7] = { .data = { 7, 0, 0, 0 } };
+    state.sigma_2[index + 8] = { .data = { n+n+6, 0, 0, 0 } };
+
+    state.sigma_3[index + 0] = { .data = { n+n+7, 0, 0, 0 } };
+    state.sigma_3[index + 1] = { .data = { n+7, 0, 0, 0 } };
+    state.sigma_3[index + 2] = { .data = { 4, 0, 0, 0 } };
+    state.sigma_3[index + 3] = { .data = { n+n+8, 0, 0, 0 } };
+    state.sigma_3[index + 4] = { .data = { n+n+9, 0, 0, 0 } };
+    state.sigma_3[index + 5] = { .data = { n+9, 0, 0, 0 } };
+    state.sigma_3[index + 6] = { .data = { n+n+1, 0, 0, 0 } };
+    state.sigma_3[index + 7] = { .data = { n+n+4, 0, 0, 0 } };
+    state.sigma_3[index + 8] = { .data = { n+n+5, 0, 0, 0 } };
+
+    // for (size_t i = 9; i < state.n; ++i)
+    // {
+    //     fr::zero(state.w_l[i]);
+    //     fr::zero(state.w_r[i]);
+    //     fr::zero(state.w_o[i]);
+    //     fr::zero(state.q_m[i]);
+    //     fr::zero(state.q_l[i]);
+    //     fr::zero(state.q_r[i]);
+    //     fr::zero(state.q_o[i]);
+    //     fr::zero(state.q_c[i]);
+
+    //     state.sigma_1[i] = { .data = { i + 1, 0, 0, 0 } };
+    //     state.sigma_2[i] = { .data = { state.n + i + 1, 0, 0, 0 } };
+    //     state.sigma_3[i] = { .data = { state.n + state.n + i + 1, 0, 0, 0 } };
+    // }
+
+    for (size_t i = 0; i < 9; ++i)
+    {
+        fr::to_montgomery_form(state.sigma_1[index + i], state.sigma_1[index + i]);
+        fr::to_montgomery_form(state.sigma_2[index + i], state.sigma_2[index + i]);
+        fr::to_montgomery_form(state.sigma_3[index + i], state.sigma_3[index + i]);
+    }
+}
+void generate_point_addition_data(waffle::circuit_state& state, fr::field_t* data)
+{
+    size_t n = 16;
+    state.n = n;
+    fr::random_element(state.beta);
+    fr::random_element(state.gamma);
+    fr::random_element(state.alpha);
+    fr::sqr(state.alpha, state.alpha_squared);
+    fr::mul(state.alpha_squared, state.alpha, state.alpha_cubed);
+
+    state.w_l = &data[0];
+    state.w_r = &data[n];
+    state.w_o = &data[2 * n];
+    state.z_1 = &data[3 * n];
+    state.z_2 = &data[4 * n + 1];
+    state.q_c = &data[5 * n + 2];
+    state.q_l = &data[6 * n + 2];
+    state.q_r = &data[7 * n + 2];
+    state.q_o = &data[8 * n + 2];
+    state.q_m = &data[9 * n + 2];
+    state.sigma_1 = &data[10 * n + 2];
+    state.sigma_2 = &data[11 * n + 2];
+    state.sigma_3 = &data[12 * n + 2];
+    state.s_id = &data[13 * n + 2];
+    state.t = &data[14 * n + 2];
+    
+    state.product_1 = &data[17 * n + 5];
+    state.product_2 = &data[18 * n + 6];
+    state.product_3 = &data[19 * n + 7];
+    state.permutation_product = &data[20 * n + 8];
+    state.w_l_lagrange_base = state.t;
+    state.w_r_lagrange_base = &state.t[n + 1];
+    state.w_o_lagrange_base = &state.t[2 * n + 2];
+
+
+    fr::random_element(state.beta);
+    fr::random_element(state.gamma);
+    fr::random_element(state.alpha);
+    fr::sqr(state.alpha, state.alpha_squared);
+    fr::mul(state.alpha_squared, state.alpha, state.alpha_cubed);
+    // create some constraints that satisfy our arithmetic circuit relation
+    fr::field_t one;
+    fr::field_t zero;
+    fr::field_t minus_one;
+    fr::one(one);
+    fr::neg(one, minus_one);
+    fr::zero(zero);
+    // fr::field_t T0;
+
+    generate_point_addition_data_inner(state, 0);
+
+    for (size_t i = 9; i < n; ++i)
+    {
+        state.sigma_1[i] = { .data = { i + 1, 0, 0, 0 } };
+        state.sigma_2[i] = { .data = { n + i + 1, 0, 0, 0 } };
+        state.sigma_3[i] = { .data = { n + n + i + 1, 0, 0, 0 } };
+
+        fr::zero(state.w_l[i]);
+        fr::zero(state.w_r[i]);
+        fr::zero(state.w_o[i]);
+        fr::zero(state.q_m[i]);
+        fr::zero(state.q_l[i]);
+        fr::zero(state.q_r[i]);
+        fr::zero(state.q_o[i]);
+        fr::zero(state.q_c[i]);
+
+        fr::to_montgomery_form(state.sigma_1[i], state.sigma_1[i]);
+        fr::to_montgomery_form(state.sigma_2[i], state.sigma_2[i]);
+        fr::to_montgomery_form(state.sigma_3[i], state.sigma_3[i]);
+    }
+
+}
+
 void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
 {
     size_t n = state.n;
@@ -25,10 +325,6 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     state.s_id = &data[13 * n + 2];
     state.t = &data[14 * n + 2];
 
-    state.product_1 = &data[17 * n + 5];
-    state.product_2 = &data[18 * n + 6];
-    state.product_3 = &data[19 * n + 7];
-    state.permutation_product = &data[20 * n + 8];
     state.w_l_lagrange_base = state.t;
     state.w_r_lagrange_base = &state.t[n + 1];
     state.w_o_lagrange_base = &state.t[2 * n + 2];
@@ -141,10 +437,106 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
 
 // polynomials::evaluation_domain glob_domain = polynomials::get_domain(n);
 
+TEST(megawiffle, megawiffle)
+{
+    size_t n = 1048576;
+
+    size_t num_rounds = n / 9;
+
+    // size_t leftovers = n - num_rounds * 9;
+    waffle::circuit_state state;
+    state.small_domain = polynomials::get_domain(n);
+    state.mid_domain = polynomials::get_domain(2 * n);
+    state.large_domain = polynomials::get_domain(4 * n);
+    state.n = n;
+
+    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22/*22*/ * n + 8)));
+    fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (/*17*/ 17 * n + 8)));
+
+    waffle::fft_pointers ffts;
+    ffts.scratch_memory = scratch_space;
+
+    state.w_l = &data[0];
+    state.w_r = &data[n];
+    state.w_o = &data[2 * n];
+    state.z_1 = &data[3 * n];
+    state.z_2 = &data[4 * n + 1];
+    state.q_c = &data[5 * n + 2];
+    state.q_l = &data[6 * n + 2];
+    state.q_r = &data[7 * n + 2];
+    state.q_o = &data[8 * n + 2];
+    state.q_m = &data[9 * n + 2];
+    state.sigma_1 = &data[10 * n + 2];
+    state.sigma_2 = &data[11 * n + 2];
+    state.sigma_3 = &data[12 * n + 2];
+    state.s_id = &data[13 * n + 2];
+    state.t = &data[14 * n + 2];
+    state.linear_poly = &ffts.scratch_memory[4 * n];
+
+    state.w_l_lagrange_base = state.t;
+    state.w_r_lagrange_base = &state.t[n + 1];
+    state.w_o_lagrange_base = &state.t[2 * n + 2];
+
+    printf("making data \n");
+    for (size_t i = 0; i < num_rounds; ++i)
+    {
+        generate_point_addition_data_inner(state, i * 9);        
+    }
+
+    for (size_t i = num_rounds * 9; i < n; ++i)
+    {
+        state.sigma_1[i] = { .data = { i + 1, 0, 0, 0 } };
+        state.sigma_2[i] = { .data = { n + i + 1, 0, 0, 0 } };
+        state.sigma_3[i] = { .data = { n + n + i + 1, 0, 0, 0 } };
+
+        fr::zero(state.w_l[i]);
+        fr::zero(state.w_r[i]);
+        fr::zero(state.w_o[i]);
+        fr::zero(state.q_m[i]);
+        fr::zero(state.q_l[i]);
+        fr::zero(state.q_r[i]);
+        fr::zero(state.q_o[i]);
+        fr::zero(state.q_c[i]);
+
+        fr::to_montgomery_form(state.sigma_1[i], state.sigma_1[i]);
+        fr::to_montgomery_form(state.sigma_2[i], state.sigma_2[i]);
+        fr::to_montgomery_form(state.sigma_3[i], state.sigma_3[i]);
+    }
+
+    printf("making srs \n");
+    fr::field_t x;
+    fr::random_element(x);
+    srs::plonk_srs srs;
+    g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 8)));
+    monomials[0] = g1::affine_one();
+
+    for (size_t i = 1; i < 3 * n; ++i)
+    {
+        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+    }
+    scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
+    srs.monomials = monomials;
+    srs.degree = n;
+
+    printf("making proof\n");
+    waffle::construct_proof(state, ffts, srs);
+    printf("end\n");
+    // for (size_t i = 3 * n; i < 4 * n; ++i)
+    // {
+    //     for (size_t j = 0; j < 4; ++j)
+    //     {
+    //         EXPECT_EQ(ffts.quotient_poly[i].data[j], 0);
+    //     }
+    // }
+
+    free(scratch_space);
+    free(monomials);
+    free(data);
+}
 
 TEST(waffler, compute_quotient_polynomial)
 {
-    size_t n = 256;
+    size_t n = 16;
 
     waffle::circuit_state state;
     state.small_domain = polynomials::get_domain(n);
@@ -154,15 +546,16 @@ TEST(waffler, compute_quotient_polynomial)
     fr::random_element(state.beta);
     fr::random_element(state.gamma);
     fr::random_element(state.alpha);
-    fr::field_t data[28 * n + 2];
+    // fr::field_t data[28 * n + 2];
 
     // fr::field_t scratch_space[19 * n + 8];
     // fr::field_t scratch_space[70 * n + 4];
-    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (70 * n + 8)));
+    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22 * n + 8)));
+    fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (17 * n + 8)));
 
     waffle::fft_pointers ffts;
     ffts.scratch_memory = scratch_space;
-    generate_test_data(state, data);
+    generate_point_addition_data(state, data);
 
     fr::field_t x;
     fr::random_element(x);
@@ -178,7 +571,8 @@ TEST(waffler, compute_quotient_polynomial)
     srs.monomials = monomials;
     srs.degree = n;
 
-    waffle::compute_quotient_polynomial(state, ffts, srs);
+    waffle::plonk_proof proof;
+    waffle::compute_quotient_polynomial(state, ffts, proof, srs);
     
 
     // for (size_t i = 0; i < 4 * n; ++i)
@@ -195,6 +589,7 @@ TEST(waffler, compute_quotient_polynomial)
     }
 
     free(scratch_space);
+    free(data);
 }
 
 TEST(waffle, compute_quotient_polynomial_two)
@@ -233,7 +628,8 @@ TEST(waffle, compute_quotient_polynomial_two)
     srs.monomials = monomials;
     srs.degree = n;
 
-    waffle::compute_quotient_polynomial(state, ffts, srs);
+    waffle::plonk_proof proof;
+    waffle::compute_quotient_polynomial(state, ffts, proof, srs);
     
 
     // for (size_t i = 0; i < 4 * n; ++i)
@@ -532,8 +928,8 @@ TEST(waffle, compute_wire_commitments)
     polynomials::eval(w_r_copy, x, n, w_r_eval);
     polynomials::eval(w_o_copy, x, n, w_o_eval);
 
-
-    waffle::compute_wire_commitments(state, srs);
+    waffle::plonk_proof proof;
+    waffle::compute_wire_commitments(state, proof, srs);
 
     g1::affine_element generator = g1::affine_one();
     g1::affine_element expected_w_l = g1::group_exponentiation(generator, w_l_eval);
@@ -542,12 +938,12 @@ TEST(waffle, compute_wire_commitments)
 
     for (size_t i = 0; i < 1; ++i)
     {
-        EXPECT_EQ(state.W_L.x.data[i], expected_w_l.x.data[i]);
-        EXPECT_EQ(state.W_L.y.data[i], expected_w_l.y.data[i]);
-        EXPECT_EQ(state.W_R.x.data[i], expected_w_r.x.data[i]);
-        EXPECT_EQ(state.W_R.y.data[i], expected_w_r.y.data[i]);
-        EXPECT_EQ(state.W_O.x.data[i], expected_w_o.x.data[i]);
-        EXPECT_EQ(state.W_O.y.data[i], expected_w_o.y.data[i]);
+        EXPECT_EQ(proof.W_L.x.data[i], expected_w_l.x.data[i]);
+        EXPECT_EQ(proof.W_L.y.data[i], expected_w_l.y.data[i]);
+        EXPECT_EQ(proof.W_R.x.data[i], expected_w_r.x.data[i]);
+        EXPECT_EQ(proof.W_R.y.data[i], expected_w_r.y.data[i]);
+        EXPECT_EQ(proof.W_O.x.data[i], expected_w_o.x.data[i]);
+        EXPECT_EQ(proof.W_O.y.data[i], expected_w_o.y.data[i]);
     }
 }
 
@@ -618,7 +1014,8 @@ TEST(waffle, compute_z_commitments)
     polynomials::eval(z_1_copy, x, n, z_1_eval);
     polynomials::eval(z_2_copy, x, n, z_2_eval);
 
-    waffle::compute_z_commitments(state, srs);
+    waffle::plonk_proof proof;
+    waffle::compute_z_commitments(state, proof, srs);
 
     g1::affine_element generator = g1::affine_one();
     g1::affine_element expected_z_1 = g1::group_exponentiation(generator, z_1_eval);
@@ -626,10 +1023,10 @@ TEST(waffle, compute_z_commitments)
 
     for (size_t i = 0; i < 1; ++i)
     {
-        EXPECT_EQ(state.Z_1.x.data[i], expected_z_1.x.data[i]);
-        EXPECT_EQ(state.Z_1.y.data[i], expected_z_1.y.data[i]);
-        EXPECT_EQ(state.Z_2.x.data[i], expected_z_2.x.data[i]);
-        EXPECT_EQ(state.Z_2.y.data[i], expected_z_2.y.data[i]);
+        EXPECT_EQ(proof.Z_1.x.data[i], expected_z_1.x.data[i]);
+        EXPECT_EQ(proof.Z_1.y.data[i], expected_z_1.y.data[i]);
+        EXPECT_EQ(proof.Z_2.x.data[i], expected_z_2.x.data[i]);
+        EXPECT_EQ(proof.Z_2.y.data[i], expected_z_2.y.data[i]);
     }
 
     free(monomials);
@@ -723,13 +1120,13 @@ TEST(waffle, compute_linearisation_coefficients)
     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
     srs.monomials = monomials;
     srs.degree = n;
-
-    waffle::compute_quotient_polynomial(state, ffts, srs);
+    waffle::plonk_proof proof;
+    waffle::compute_quotient_polynomial(state, ffts, proof, srs);
     fr::random_element(state.z);
     // fr::field_t foobar[4 * n];
     state.linear_poly = &ffts.scratch_memory[4 * n];
 
-    waffle::compute_linearisation_coefficients(state, ffts);
+    waffle::compute_linearisation_coefficients(state, ffts, proof);
 
     polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(state.z, state.small_domain);
 
@@ -741,16 +1138,16 @@ TEST(waffle, compute_linearisation_coefficients)
     fr::mul(lagrange_evals.l_n_minus_1, state.alpha_squared, T0);
     fr::mul(T0, state.alpha_cubed, T0);
 
-    fr::sub(state.z_1_shifted_eval, state.z_2_shifted_eval, T1);
+    fr::sub(proof.z_1_shifted_eval, proof.z_2_shifted_eval, T1);
     fr::mul(T0, T1, T0);
 
-    fr::mul(state.z_1_shifted_eval, state.alpha_squared, T1);
-    fr::mul(state.z_2_shifted_eval, state.alpha_cubed, T2);
+    fr::mul(proof.z_1_shifted_eval, state.alpha_squared, T1);
+    fr::mul(proof.z_2_shifted_eval, state.alpha_cubed, T2);
     fr::add(T1, T2, T1);
     fr::sub(T0, T1, T0);
-    fr::add(T0, state.linear_eval, rhs);
+    fr::add(T0, proof.linear_eval, rhs);
 
-    fr::mul(state.t_eval, lagrange_evals.vanishing_poly, lhs);
+    fr::mul(proof.t_eval, lagrange_evals.vanishing_poly, lhs);
 
     for (size_t i = 0; i < 4; ++i)
     {

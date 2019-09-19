@@ -746,6 +746,14 @@ namespace g1
         return fq::eq(xxx, yy);
     }
 
+    inline void neg(const element& a, element& r)
+    {
+        fq::copy(a.x, r.x);
+        fq::copy(a.y, r.y);
+        fq::copy(a.z, r.z);
+        fq::neg(r.y, r.y);
+    }
+
     inline void copy_from_affine(const affine_element& a, element& r)
     {
         fq::copy(a.x, r.x);

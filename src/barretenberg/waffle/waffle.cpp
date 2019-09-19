@@ -83,7 +83,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &)
     polynomials::ifft(state.z_2, state.small_domain);
 }
 
-inline void compute_wire_commitments(circuit_state &state, srs::plonk_srs &srs)
+inline void compute_wire_commitments(circuit_state &state, plonk_proof& proof, srs::plonk_srs &srs)
 {
     size_t n = state.n;
 
@@ -101,22 +101,22 @@ inline void compute_wire_commitments(circuit_state &state, srs::plonk_srs &srs)
     scalar_multiplication::batched_scalar_multiplications(mul_state, 3);
 
     // TODO: make a method for normal-to-affine copies :/
-    fq::copy(mul_state[0].output.x, state.W_L.x);
-    fq::copy(mul_state[1].output.x, state.W_R.x);
-    fq::copy(mul_state[2].output.x, state.W_O.x);
-    fq::copy(mul_state[0].output.y, state.W_L.y);
-    fq::copy(mul_state[1].output.y, state.W_R.y);
-    fq::copy(mul_state[2].output.y, state.W_O.y);
+    fq::copy(mul_state[0].output.x, proof.W_L.x);
+    fq::copy(mul_state[1].output.x, proof.W_R.x);
+    fq::copy(mul_state[2].output.x, proof.W_O.x);
+    fq::copy(mul_state[0].output.y, proof.W_L.y);
+    fq::copy(mul_state[1].output.y, proof.W_R.y);
+    fq::copy(mul_state[2].output.y, proof.W_O.y);
 
     // compute beta, gamma
     // TODO: use keccak256
     // fr::random_element(state.beta);
     // fr::random_element(state.gamma);
-    compute_gamma(state);
-    compute_beta(state);
+    state.gamma = compute_gamma(proof);
+    state.beta = compute_beta(proof, state.gamma);
 }
 
-void compute_z_commitments(circuit_state &state, srs::plonk_srs &srs)
+void compute_z_commitments(circuit_state &state, plonk_proof& proof, srs::plonk_srs &srs)
 {
     size_t n = state.n;
     scalar_multiplication::multiplication_state mul_state[3];
@@ -131,18 +131,19 @@ void compute_z_commitments(circuit_state &state, srs::plonk_srs &srs)
     scalar_multiplication::batched_scalar_multiplications(mul_state, 2);
 
     // TODO: make a method for normal-to-affine copies :/
-    fq::copy(mul_state[0].output.x, state.Z_1.x);
-    fq::copy(mul_state[1].output.x, state.Z_2.x);
-    fq::copy(mul_state[0].output.y, state.Z_1.y);
-    fq::copy(mul_state[1].output.y, state.Z_2.y);
+    fq::copy(mul_state[0].output.x, proof.Z_1.x);
+    fq::copy(mul_state[1].output.x, proof.Z_2.x);
+    fq::copy(mul_state[0].output.y, proof.Z_1.y);
+    fq::copy(mul_state[1].output.y, proof.Z_2.y);
 
     // compute alpha
     // TODO: use keccak256, this is just for testing
     // precompute some powers of alpha for later on
     // fr::random_element(state.alpha);
-    // fr::mul(state.alpha, state.alpha, state.alpha_squared);
-    // fr::mul(state.alpha_squared, state.alpha, state.alpha_cubed);
-    compute_alpha(state);
+    state.alpha = compute_alpha(proof);
+    fr::mul(state.alpha, state.alpha, state.alpha_squared);
+    fr::mul(state.alpha_squared, state.alpha, state.alpha_cubed);
+
 }
 
 void compute_multiplication_gate_coefficients(circuit_state &state, fft_pointers &ffts)
@@ -162,7 +163,7 @@ void compute_multiplication_gate_coefficients(circuit_state &state, fft_pointers
     }
 }
 
-void compute_quotient_commitment(circuit_state &state, fr::field_t *coeffs, const srs::plonk_srs &srs)
+void compute_quotient_commitment(circuit_state &state, fr::field_t *coeffs, plonk_proof &proof, const srs::plonk_srs &srs)
 {
     size_t n = state.n;
     scalar_multiplication::multiplication_state mul_state[3];
@@ -185,9 +186,9 @@ void compute_quotient_commitment(circuit_state &state, fr::field_t *coeffs, cons
     g1::add(mul_state[0].output, mul_state[1].output, res);
     g1::add(res, mul_state[2].output, res);
 
-    g1::copy_to_affine(res, state.T);
+    g1::copy_to_affine(res, proof.T);
 
-    compute_evaluation_challenge(state);
+    state.z = compute_evaluation_challenge(proof);
     // TODO: replace with keccak256
     // fr::random_element(state.z);
 }
@@ -383,7 +384,7 @@ void compute_arithmetisation_coefficients(circuit_state &state, fft_pointers &ff
     }
 }
 
-void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, srs::plonk_srs &reference_string)
+void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk_proof &proof, srs::plonk_srs &reference_string)
 {
     size_t n = state.small_domain.size;
 
@@ -423,19 +424,15 @@ void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, srs::
     state.w_l_lagrange_base = &state.t[0];
     state.w_r_lagrange_base = &state.t[n];
     state.w_o_lagrange_base = &state.t[2 * n];
-    // can store product terms in same location as lagrange base temporaries
-    state.product_1 = &state.t[0];
-    state.product_2 = &state.t[n];
-    state.product_3 = &state.t[2 * n];
 
     // compute wire coefficients
     waffle::compute_wire_coefficients(state, ffts);
     // compute wire commitments
-    waffle::compute_wire_commitments(state, reference_string);
+    waffle::compute_wire_commitments(state, proof, reference_string);
     // compute_wire_commitments
     waffle::compute_z_coefficients(state, ffts);
     // compute z commitments
-    waffle::compute_z_commitments(state, reference_string);
+    waffle::compute_z_commitments(state, proof, reference_string);
 
     // Set up phase 2 pointers
     // allocate memory for identity poly
@@ -471,29 +468,29 @@ void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, srs::
     polynomials::ifft_with_coset(ffts.quotient_poly, state.large_domain);
 }
 
-void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts)
+void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts, plonk_proof &proof)
 {
     // ok... now we need to evaluate polynomials. Jeepers
     fr::field_t beta_inv;
     fr::invert(state.beta, beta_inv);
     fr::field_t shifted_z;
     fr::mul(state.z, state.small_domain.root, shifted_z);
-    polynomials::eval(state.w_l, state.z, state.n, state.w_l_eval);
-    polynomials::eval(state.w_r, state.z, state.n, state.w_r_eval);
-    polynomials::eval(state.w_o, state.z, state.n, state.w_o_eval);
-    polynomials::eval(state.s_id, state.z, state.n, state.s_id_eval);
-    polynomials::eval(state.sigma_1, state.z, state.n, state.sigma_1_eval);
-    polynomials::eval(state.sigma_2, state.z, state.n, state.sigma_2_eval);
-    polynomials::eval(state.sigma_3, state.z, state.n, state.sigma_3_eval);
-    polynomials::eval(ffts.quotient_poly, state.z, (state.n * 3), state.t_eval);
-    polynomials::eval(state.z_1, shifted_z, state.n, state.z_1_shifted_eval);
-    polynomials::eval(state.z_2, shifted_z, state.n, state.z_2_shifted_eval);
+    polynomials::eval(state.w_l, state.z, state.n, proof.w_l_eval);
+    polynomials::eval(state.w_r, state.z, state.n, proof.w_r_eval);
+    polynomials::eval(state.w_o, state.z, state.n, proof.w_o_eval);
+    polynomials::eval(state.s_id, state.z, state.n, proof.s_id_eval);
+    polynomials::eval(state.sigma_1, state.z, state.n, proof.sigma_1_eval);
+    polynomials::eval(state.sigma_2, state.z, state.n, proof.sigma_2_eval);
+    polynomials::eval(state.sigma_3, state.z, state.n, proof.sigma_3_eval);
+    polynomials::eval(ffts.quotient_poly, state.z, (state.n * 3), proof.t_eval);
+    polynomials::eval(state.z_1, shifted_z, state.n, proof.z_1_shifted_eval);
+    polynomials::eval(state.z_2, shifted_z, state.n, proof.z_2_shifted_eval);
 
     // we scaled the sigma polynomials up by beta, so scale back down
-    fr::mul(state.sigma_1_eval, beta_inv, state.sigma_1_eval);
-    fr::mul(state.sigma_2_eval, beta_inv, state.sigma_2_eval);
-    fr::mul(state.sigma_3_eval, beta_inv, state.sigma_3_eval);
-    fr::mul(state.s_id_eval, beta_inv, state.s_id_eval);
+    fr::mul(proof.sigma_1_eval, beta_inv, proof.sigma_1_eval);
+    fr::mul(proof.sigma_2_eval, beta_inv, proof.sigma_2_eval);
+    fr::mul(proof.sigma_3_eval, beta_inv, proof.sigma_3_eval);
+    fr::mul(proof.s_id_eval, beta_inv, proof.s_id_eval);
 
     fr::field_t T0;
     fr::field_t T1;
@@ -515,17 +512,17 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts
     fr::field_t beta_n_2;
     fr::add(beta_n, beta_n, beta_n_2);
 
-    fr::mul(state.s_id_eval, state.beta, T0);
-    fr::add(T0, state.w_l_eval, T0);
+    fr::mul(proof.s_id_eval, state.beta, T0);
+    fr::add(T0, proof.w_l_eval, T0);
     fr::add(T0, state.gamma, T0);
 
-    fr::mul(state.s_id_eval, state.beta, T1);
-    fr::add(T1, state.w_r_eval, T1);
+    fr::mul(proof.s_id_eval, state.beta, T1);
+    fr::add(T1, proof.w_r_eval, T1);
     fr::add(T1, state.gamma, T1);
     fr::add(T1, beta_n, T1);
 
-    fr::mul(state.s_id_eval, state.beta, T2);
-    fr::add(T2, state.w_o_eval, T2);
+    fr::mul(proof.s_id_eval, state.beta, T2);
+    fr::add(T2, proof.w_o_eval, T2);
     fr::add(T2, state.gamma, T2);
     fr::add(T2, beta_n_2, T2);
 
@@ -533,16 +530,16 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts
     fr::mul(T1, T0, T0);
     fr::mul(T0, state.alpha_squared, r_z_1_term);
 
-    fr::mul(state.sigma_1_eval, state.beta, T0);
-    fr::add(T0, state.w_l_eval, T0);
+    fr::mul(proof.sigma_1_eval, state.beta, T0);
+    fr::add(T0, proof.w_l_eval, T0);
     fr::add(T0, state.gamma, T0);
 
-    fr::mul(state.sigma_2_eval, state.beta, T1);
-    fr::add(T1, state.w_r_eval, T1);
+    fr::mul(proof.sigma_2_eval, state.beta, T1);
+    fr::add(T1, proof.w_r_eval, T1);
     fr::add(T1, state.gamma, T1);
 
-    fr::mul(state.sigma_3_eval, state.beta, T2);
-    fr::add(T2, state.w_o_eval, T2);
+    fr::mul(proof.sigma_3_eval, state.beta, T2);
+    fr::add(T2, proof.w_o_eval, T2);
     fr::add(T2, state.gamma, T2);
 
     fr::mul(T2, T1, T1);
@@ -561,11 +558,11 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts
 
     // fr::copy(fr::one(), r_q_c_term);
 
-    fr::mul(state.w_o_eval, state.alpha, r_q_o_term);
-    fr::mul(state.w_r_eval, state.alpha, r_q_r_term);
-    fr::mul(state.w_l_eval, state.alpha, r_q_l_term);
+    fr::mul(proof.w_o_eval, state.alpha, r_q_o_term);
+    fr::mul(proof.w_r_eval, state.alpha, r_q_r_term);
+    fr::mul(proof.w_l_eval, state.alpha, r_q_l_term);
 
-    fr::mul(state.w_l_eval, state.w_r_eval, r_q_m_term);
+    fr::mul(proof.w_l_eval, proof.w_r_eval, r_q_m_term);
     fr::mul(r_q_m_term, state.alpha, r_q_m_term);
 
     for (size_t i = 0; i < state.small_domain.size; ++i)
@@ -585,20 +582,22 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts
         fr::add(T3, T0, state.linear_poly[i]);
     }
 
-    polynomials::eval(state.linear_poly, state.z, state.small_domain.size, state.linear_eval);
+    polynomials::eval(state.linear_poly, state.z, state.small_domain.size, proof.linear_eval);
 }
 
-void construct_proof(circuit_state &state, fft_pointers &ffts, srs::plonk_srs &reference_string)
+plonk_proof construct_proof(circuit_state &state, fft_pointers &ffts, srs::plonk_srs &reference_string)
 {
-    compute_quotient_polynomial(state, ffts, reference_string);
-
-    compute_quotient_commitment(state, ffts.quotient_poly, reference_string);
-
-    compute_linearisation_coefficients(state, ffts);
-
-    compute_linearisation_challenge(state);
+    plonk_proof proof;
+    printf("computing quotient poly\n");
+    compute_quotient_polynomial(state, ffts, proof, reference_string);
+    printf("computing quotient commitment\n");
+    compute_quotient_commitment(state, ffts.quotient_poly, proof, reference_string);
+    printf("computing linearisation coefficients\n");
+    compute_linearisation_coefficients(state, ffts, proof);
+    printf("computing linearisation challenge\n");
+    state.nu = compute_linearisation_challenge(proof);
     // fr::random_element(state.nu);
-
+    printf("computing nu powers thingy\n");
     fr::field_t nu_powers[10];
     fr::copy(state.nu, nu_powers[0]);
     for (size_t i = 1; i < 10; ++i)
@@ -606,17 +605,17 @@ void construct_proof(circuit_state &state, fft_pointers &ffts, srs::plonk_srs &r
         fr::mul(nu_powers[i - 1], nu_powers[0], nu_powers[i]);
     }
 
-    fr::sub(ffts.quotient_poly[0], state.t_eval, ffts.quotient_poly[0]);
-    fr::sub(state.linear_poly[0], state.linear_eval, state.linear_poly[0]);
-    fr::sub(state.w_l[0], state.w_l_eval, state.w_l[0]);
-    fr::sub(state.w_r[0], state.w_r_eval, state.w_r[0]);
-    fr::sub(state.w_o[0], state.w_o_eval, state.w_o[0]);
-    fr::sub(state.s_id[0], state.s_id_eval, state.s_id[0]);
-    fr::sub(state.sigma_1[0], state.sigma_1_eval, state.sigma_1[0]);
-    fr::sub(state.sigma_2[0], state.sigma_2_eval, state.sigma_2[0]);
-    fr::sub(state.sigma_3[0], state.sigma_3_eval, state.sigma_3[0]);
-    fr::sub(state.z_1[0], state.z_1_shifted_eval, state.z_1[0]);
-    fr::sub(state.z_2[0], state.z_2_shifted_eval, state.z_2[0]);
+    fr::sub(ffts.quotient_poly[0], proof.t_eval, ffts.quotient_poly[0]);
+    fr::sub(state.linear_poly[0], proof.linear_eval, state.linear_poly[0]);
+    fr::sub(state.w_l[0], proof.w_l_eval, state.w_l[0]);
+    fr::sub(state.w_r[0], proof.w_r_eval, state.w_r[0]);
+    fr::sub(state.w_o[0], proof.w_o_eval, state.w_o[0]);
+    fr::sub(state.s_id[0], proof.s_id_eval, state.s_id[0]);
+    fr::sub(state.sigma_1[0], proof.sigma_1_eval, state.sigma_1[0]);
+    fr::sub(state.sigma_2[0], proof.sigma_2_eval, state.sigma_2[0]);
+    fr::sub(state.sigma_3[0], proof.sigma_3_eval, state.sigma_3[0]);
+    fr::sub(state.z_1[0], proof.z_1_shifted_eval, state.z_1[0]);
+    fr::sub(state.z_2[0], proof.z_2_shifted_eval, state.z_2[0]);
 
     fr::field_t T0;
     fr::field_t T1;
@@ -654,9 +653,11 @@ void construct_proof(circuit_state &state, fft_pointers &ffts, srs::plonk_srs &r
 
     fr::field_t shifted_z;
     fr::mul(state.z, state.small_domain.root, shifted_z);
+    printf("computing first opening coefficients\n");
     polynomials::compute_kate_opening_coefficients(opening_poly, state.z, state.small_domain.size * 3);
+    printf("computing second opening coefficients\n");
     polynomials::compute_kate_opening_coefficients(shifted_opening_poly, shifted_z, state.small_domain.size);
-
+    printf("about to call final scalar multiplication\n");
     scalar_multiplication::multiplication_state mul_state[4];
 
     mul_state[0].scalars = opening_poly;
@@ -675,12 +676,14 @@ void construct_proof(circuit_state &state, fft_pointers &ffts, srs::plonk_srs &r
     mul_state[3].num_elements = state.small_domain.size;
 
     scalar_multiplication::batched_scalar_multiplications(mul_state, 4);
-
+    printf("finished scalar muls\n");
     g1::element res;
     g1::add(mul_state[0].output, mul_state[1].output, res);
     g1::add(res, mul_state[2].output, res);
 
-    g1::copy_to_affine(res, state.PI_Z);
-    g1::copy_to_affine(mul_state[3].output, state.PI_Z_OMEGA);
+    g1::copy_to_affine(res, proof.PI_Z);
+    g1::copy_to_affine(mul_state[3].output, proof.PI_Z_OMEGA);
+    printf("finished\n");
+    return proof;
 }
 } // namespace waffle

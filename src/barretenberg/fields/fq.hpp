@@ -201,4 +201,9 @@ inline bool eq(const field_t& a, const field_t& b)
 {
     return (a.data[0] == b.data[0]) && (a.data[1] == b.data[1]) && (a.data[2] == b.data[2]) && (a.data[3] == b.data[3]);
 }
+
+inline bool iszero(const field_t& a)
+{
+    return ((a.data[0] == 0) && (a.data[1] == 0) && (a.data[2] == 0) && (a.data[3] == 0));
+}
 } // namespace fq

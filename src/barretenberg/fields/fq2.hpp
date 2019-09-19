@@ -138,4 +138,9 @@ namespace fq2
         fq::print(a.c0);
         fq::print(a.c1);
     }
+
+    inline bool iszero(const fq2_t& a)
+    {
+        return (iszero(a.c0) && iszero(a.c1));
+    }
 }

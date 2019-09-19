@@ -23,31 +23,6 @@ struct circuit_vectors
     fr::field_t *q_c;
 };
 
-struct plonk_proof
-{
-    // Kate polynomial commitments required for a proof of knowledge
-    g1::affine_element W_L;
-    g1::affine_element W_R;
-    g1::affine_element W_O;
-    g1::affine_element Z_1;
-    g1::affine_element Z_2;
-    g1::affine_element T;
-    g1::affine_element PI_Z;
-    g1::affine_element PI_Z_OMEGA;
-
-    fr::field_t w_l_eval;
-    fr::field_t w_r_eval;
-    fr::field_t w_o_eval;
-    fr::field_t s_id_eval;
-    fr::field_t sigma_1_eval;
-    fr::field_t sigma_2_eval;
-    fr::field_t sigma_3_eval;
-    fr::field_t t_eval;
-    fr::field_t z_1_shifted_eval;
-    fr::field_t z_2_shifted_eval;
-    fr::field_t linear_eval;
-};
-
 struct runtime_state
 {
     polynomials::evaluation_domain small_domain;
@@ -117,21 +92,21 @@ void compute_wire_coefficients(circuit_state &state, fft_pointers &);
 
 void compute_z_coefficients(circuit_state &state, fft_pointers &);
 
-void compute_wire_commitments(circuit_state &state, srs::plonk_srs &srs);
+void compute_wire_commitments(circuit_state &state, plonk_proof &proof, srs::plonk_srs &srs);
 
-void compute_z_commitments(circuit_state &state, srs::plonk_srs &srs);
+void compute_z_commitments(circuit_state &state, plonk_proof &proof, srs::plonk_srs &srs);
 
 void compute_multiplication_gate_coefficients(circuit_state &state, fft_pointers &ffts);
 
-void compute_quotient_commitment(circuit_state &state, fr::field_t *coeffs, const srs::plonk_srs &srs);
+void compute_quotient_commitment(circuit_state &state, fr::field_t *coeffs, plonk_proof &proof, const srs::plonk_srs &srs);
 
 void compute_permutation_grand_product_coefficients(circuit_state &state, fft_pointers &ffts);
 
 void compute_identity_grand_product_coefficients(circuit_state &state, fft_pointers &ffts);
 
-void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, srs::plonk_srs &reference_string);
+void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk_proof &proof, srs::plonk_srs &reference_string);
 
-void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts);
+void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts, plonk_proof &proof);
 
-void construct_proof(circuit_state &state, fft_pointers &ffts, srs::plonk_srs &reference_string);
+plonk_proof construct_proof(circuit_state &state, fft_pointers &ffts, srs::plonk_srs &reference_string);
 } // namespace waffle
