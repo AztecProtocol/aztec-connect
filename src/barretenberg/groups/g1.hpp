@@ -167,7 +167,7 @@ namespace g1
         // fq::sub(p2.y, T2, p2.y); 
     }
 
-    inline void mixed_add_inner(element& p1, affine_element& p2, element& p3)
+    inline void mixed_add_inner(element& p1, const affine_element& p2, element& p3)
     {
         fq::field_t T0;
         fq::field_t T1;
@@ -265,7 +265,7 @@ namespace g1
 
     }
 
-    inline void mixed_add(element &p1, affine_element &p2, element &p3)
+    inline void mixed_add(element &p1, const affine_element &p2, element &p3)
     {
         // TODO: quantitavely check if __builtin_expect helps here
         // if (__builtin_expect(((p1.y.data[3] >> 63)), 0))

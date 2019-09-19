@@ -152,16 +152,6 @@ inline g1::element pippenger_internal(fr::field_t* scalars, g1::affine_element *
     compute_next_bucket_index(wnaf_state);
     ++wnaf_state.wnaf_iterator;
 
-    // for a given round, when we start adding points into buckets, the probability of the bucket being empty is high.
-    // We want to identify the number of iterations required for the probability of a bucket being empty is > 0.5.
-    // This is so we can switch our conditional branch from LIKELY to UNLIKELY.
-    // For a bucket size of n, iterations required for p=0.5: p = (1 - (1/n))^x = 0.5
-    // => (0.5)^{1/x} = 1 - (1/n)
-    // (1/x)ln(0.5) = ln(1 - 1/n)
-    // x = ln(0.5) / ln(1 - 1/n)
-    // but... that's a faff! 0.5 * bucket_size is a reasonable kludge
-    // state.switch_point = (state.num_points > (state.num_buckets * 0.5)) ? (state.num_buckets * 0.5) : state.num_points;
-
     for (size_t i = 0; i < state.num_rounds; ++i)
     {
         // handle 0 as special case

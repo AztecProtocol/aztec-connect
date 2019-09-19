@@ -74,107 +74,111 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::mul(nu_pow[9], u, T0);
     fr::add(linear_terms.z_2, T0, linear_terms.z_2);
 
-    // TODO: use multi-exp!
-    g1::element d_evals[14];
-    d_evals[0] = g1::group_exponentiation_inner(instance.Q_M, linear_terms.q_m);
-    d_evals[1] = g1::group_exponentiation_inner(instance.Q_L, linear_terms.q_l);
-    d_evals[2] = g1::group_exponentiation_inner(instance.Q_R, linear_terms.q_r);
-    d_evals[3] = g1::group_exponentiation_inner(instance.Q_O, linear_terms.q_o);
-    d_evals[4] = g1::group_exponentiation_inner(instance.Q_C, linear_terms.q_c);
-    d_evals[5] = g1::group_exponentiation_inner(proof.Z_1, linear_terms.z_1);
-    d_evals[6] = g1::group_exponentiation_inner(proof.Z_2, linear_terms.z_2);
-    d_evals[7] = g1::group_exponentiation_inner(proof.W_L, nu_pow[1]);
-    d_evals[8] = g1::group_exponentiation_inner(proof.W_R, nu_pow[2]);
-    d_evals[9] = g1::group_exponentiation_inner(proof.W_O, nu_pow[3]);
-    d_evals[10] = g1::group_exponentiation_inner(instance.S_ID, nu_pow[4]);
-    d_evals[11] = g1::group_exponentiation_inner(instance.SIGMA_1, nu_pow[5]);
-    d_evals[12] = g1::group_exponentiation_inner(instance.SIGMA_2, nu_pow[6]);
-    d_evals[13] = g1::group_exponentiation_inner(instance.SIGMA_3, nu_pow[7]);
-
-    g1::element F;
-    g1::copy_from_affine(proof.T, F);
-    g1::add(F, d_evals[0], F);
-    g1::add(F, d_evals[1], F);
-    g1::add(F, d_evals[2], F);
-    g1::add(F, d_evals[3], F);
-    g1::add(F, d_evals[4], F);
-    g1::add(F, d_evals[5], F);
-    g1::add(F, d_evals[6], F);
-    g1::add(F, d_evals[7], F);
-    g1::add(F, d_evals[8], F);
-    g1::add(F, d_evals[9], F);
-    g1::add(F, d_evals[10], F);
-    g1::add(F, d_evals[11], F);
-    g1::add(F, d_evals[12], F);
-    g1::add(F, d_evals[13], F);
-
-    fr::field_t T3;
-    fr::field_t T4;
-    fr::field_t T5;
-    fr::field_t T6;
-    fr::field_t T7;
-    fr::field_t T8;
-    fr::field_t T9;
+  
     fr::field_t batch_evaluation;
-    fr::mul(nu_pow[0], proof.linear_eval, T0);
-    fr::mul(nu_pow[1], proof.w_l_eval, T1);
-    fr::mul(nu_pow[2], proof.w_r_eval, T2);
-    fr::mul(nu_pow[3], proof.w_o_eval, T3);
-    fr::mul(nu_pow[4], proof.s_id_eval, T4);
-    fr::mul(nu_pow[5], proof.sigma_1_eval, T5);
-    fr::mul(nu_pow[6], proof.sigma_2_eval, T6);
-    fr::mul(nu_pow[7], proof.sigma_3_eval, T7);
-    fr::mul(nu_pow[8], u, T8);
-    fr::mul(T8, proof.z_1_shifted_eval, T8);
-    fr::mul(nu_pow[9], u, T9);
-    fr::mul(T9, proof.z_2_shifted_eval, T9);
-
     fr::copy(t_eval, batch_evaluation);
+    fr::mul(nu_pow[0], proof.linear_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
-    fr::add(batch_evaluation, T1, batch_evaluation);
-    fr::add(batch_evaluation, T2, batch_evaluation);
-    fr::add(batch_evaluation, T3, batch_evaluation);
-    fr::add(batch_evaluation, T4, batch_evaluation);
-    fr::add(batch_evaluation, T5, batch_evaluation);
-    fr::add(batch_evaluation, T6, batch_evaluation);
-    fr::add(batch_evaluation, T7, batch_evaluation);
-    fr::add(batch_evaluation, T8, batch_evaluation);
-    fr::add(batch_evaluation, T9, batch_evaluation);
 
-    g1::element E = g1::group_exponentiation_inner(g1::affine_one(), batch_evaluation);
+    fr::mul(nu_pow[1], proof.w_l_eval, T0);
+    fr::add(batch_evaluation, T0, batch_evaluation);
 
-    // construct G1 elements of Kate opening proof
-    g1::element TEMP_1;
-    g1::element TEMP_2;
-    g1::element LHS;
-    g1::element RHS;
+    fr::mul(nu_pow[2], proof.w_r_eval, T0);
+    fr::add(batch_evaluation, T0, batch_evaluation);
+
+    fr::mul(nu_pow[3], proof.w_o_eval, T0);
+    fr::add(batch_evaluation, T0, batch_evaluation);
+
+    fr::mul(nu_pow[4], proof.s_id_eval, T0);
+    fr::add(batch_evaluation, T0, batch_evaluation);
+
+    fr::mul(nu_pow[5], proof.sigma_1_eval, T0);
+    fr::add(batch_evaluation, T0, batch_evaluation);
+
+    fr::mul(nu_pow[6], proof.sigma_2_eval, T0);
+    fr::add(batch_evaluation, T0, batch_evaluation);
+
+    fr::mul(nu_pow[7], proof.sigma_3_eval, T0);
+    fr::add(batch_evaluation, T0, batch_evaluation);
+
+    fr::mul(nu_pow[8], u, T0);
+    fr::mul(T0, proof.z_1_shifted_eval, T0);
+    fr::add(batch_evaluation, T0, batch_evaluation);
+
+    fr::mul(nu_pow[9], u, T0);
+    fr::mul(T0, proof.z_2_shifted_eval, T0);
+    fr::add(batch_evaluation, T0, batch_evaluation);
+
+    fr::neg(batch_evaluation, batch_evaluation);
 
     fr::field_t z_omega_scalar;
     fr::mul(challenges.z, domain.root, z_omega_scalar);
     fr::mul(z_omega_scalar, u, z_omega_scalar);
-    TEMP_1 = g1::group_exponentiation_inner(proof.PI_Z_OMEGA, z_omega_scalar);
-    TEMP_2 = g1::group_exponentiation_inner(proof.PI_Z, challenges.z);
-    g1::neg(E, E);
-    g1::add(F, E, RHS);
-    g1::add(RHS, TEMP_1, RHS);
-    g1::add(RHS, TEMP_2, RHS);
 
-    LHS = g1::group_exponentiation_inner(proof.PI_Z_OMEGA, u);
-    g1::copy_from_affine(proof.PI_Z, TEMP_1);
-    g1::add(LHS, TEMP_1, LHS);
-    g1::neg(LHS, LHS);
+    // TODO: make a wrapper around g1 ops so...this guff isn't needed each time we want to do a scalar mul
+    fr::field_t* scalar_exponents = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * 17);
+    fr::copy(linear_terms.q_m, scalar_exponents[0]);
+    fr::copy(linear_terms.q_l, scalar_exponents[1]);
+    fr::copy(linear_terms.q_r, scalar_exponents[2]);
+    fr::copy(linear_terms.q_o, scalar_exponents[3]);
+    fr::copy(linear_terms.q_c, scalar_exponents[4]);
+    fr::copy(linear_terms.z_1, scalar_exponents[5]);
+    fr::copy(linear_terms.z_2, scalar_exponents[6]);
+    fr::copy(nu_pow[1], scalar_exponents[7]);
+    fr::copy(nu_pow[2], scalar_exponents[8]);
+    fr::copy(nu_pow[3], scalar_exponents[9]);
+    fr::copy(nu_pow[4], scalar_exponents[10]);
+    fr::copy(nu_pow[5], scalar_exponents[11]);
+    fr::copy(nu_pow[6], scalar_exponents[12]);
+    fr::copy(nu_pow[7], scalar_exponents[13]);
+    fr::copy(batch_evaluation, scalar_exponents[14]);
+    fr::copy(z_omega_scalar, scalar_exponents[15]);
+    fr::copy(challenges.z, scalar_exponents[16]);
 
-    // Validate correctness of supplied polynomial evaluations
-    g1::affine_element P[2];
-    g2::affine_element Q[2];
+    g1::affine_element* lhs_ge = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * 36);
 
-    g1::copy_to_affine(LHS, P[0]);
-    g1::copy_to_affine(RHS, P[1]);
+    g1::copy_affine(instance.Q_M, lhs_ge[0]);
+    g1::copy_affine(instance.Q_L, lhs_ge[1]);
+    g1::copy_affine(instance.Q_R, lhs_ge[2]);
+    g1::copy_affine(instance.Q_O, lhs_ge[3]);
+    g1::copy_affine(instance.Q_C, lhs_ge[4]);
+    g1::copy_affine(proof.Z_1, lhs_ge[5]);
+    g1::copy_affine(proof.Z_2, lhs_ge[6]);
+    g1::copy_affine(proof.W_L, lhs_ge[7]);
+    g1::copy_affine(proof.W_R, lhs_ge[8]);
+    g1::copy_affine(proof.W_O, lhs_ge[9]);
+    g1::copy_affine(instance.S_ID, lhs_ge[10]);
+    g1::copy_affine(instance.SIGMA_1, lhs_ge[11]);
+    g1::copy_affine(instance.SIGMA_2, lhs_ge[12]);
+    g1::copy_affine(instance.SIGMA_3, lhs_ge[13]);
+    g1::copy_affine(g1::affine_one(), lhs_ge[14]);
+    g1::copy_affine(proof.PI_Z_OMEGA, lhs_ge[15]);
+    g1::copy_affine(proof.PI_Z, lhs_ge[16]);
 
-    g2::copy_affine(SRS_T2, Q[0]);
-    g2::copy_affine(g2::affine_one(), Q[1]);
-    fq12::fq12_t result = pairing::reduced_ate_pairing_batch(P, Q, 2);
+    scalar_multiplication::generate_pippenger_point_table(lhs_ge, lhs_ge, 17);
+    g1::element P[2];
+    P[1] = scalar_multiplication::pippenger(scalar_exponents, lhs_ge, 17);
+    P[0] = g1::group_exponentiation_inner(proof.PI_Z_OMEGA, u);
+    g1::mixed_add(P[1], proof.T, P[1]);
+    g1::mixed_add(P[0], proof.PI_Z, P[0]);
+    g1::neg(P[0], P[0]);
+    g1::batch_normalize(P, 2);
 
+    g1::affine_element P_affine[2];
+    fq::copy(P[0].x, P_affine[0].x);
+    fq::copy(P[0].y, P_affine[0].y);
+    fq::copy(P[1].x, P_affine[1].x);
+    fq::copy(P[1].y, P_affine[1].y);
+
+    g2::affine_element Q_affine[2];
+
+    g2::copy_affine(SRS_T2, Q_affine[0]);
+    g2::copy_affine(g2::affine_one(), Q_affine[1]);
+
+    fq12::fq12_t result = pairing::reduced_ate_pairing_batch(P_affine, Q_affine, 2);
+
+    free(lhs_ge);
+    free(scalar_exponents);
     return fq12::eq(result, fq12::one()); // wheeee
 }
 } // namespace verifier
