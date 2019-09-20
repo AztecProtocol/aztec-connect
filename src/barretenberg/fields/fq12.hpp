@@ -18,27 +18,20 @@ constexpr fq2::fq2_t frobenius_coefficients_three = {
     .c0 = {.data = {0x365316184e46d97d, 0x0af7129ed4c96d9f, 0x659da72fca1009b5, 0x08116d8983a20d23}},
     .c1 = {.data = {0xb1df4af7c39c1939, 0x3d9f02878a73bf7f, 0x9b2220928caf0ae0, 0x26684515eff054a6}}};
 
-inline void one(fq12_t &r)
-{
-    fq::one(r.c0.c0.c0);
-    fq::zero(r.c0.c0.c1);
-    fq::zero(r.c0.c1.c0);
-    fq::zero(r.c0.c1.c1);
-    fq::zero(r.c0.c2.c0);
-    fq::zero(r.c0.c2.c1);
-    fq::zero(r.c1.c0.c0);
-    fq::zero(r.c1.c0.c1);
-    fq::zero(r.c1.c1.c0);
-    fq::zero(r.c1.c1.c1);
-    fq::zero(r.c1.c2.c0);
-    fq::zero(r.c1.c2.c1);
-}
-
 inline fq12_t one()
 {
-    fq12_t res;
-    one(res);
-    return res;
+    fq12_t r;
+    r.c0 = fq6::one();
+    r.c1 = fq6::zero();
+    return r;
+}
+
+inline fq12_t zero()
+{
+    fq12_t r;
+    r.c0 = fq6::zero();
+    r.c1 = fq6::zero();
+    return r;
 }
 
 inline void mul_by_non_residue(const fq6::fq6_t &a, fq6::fq6_t &r)
@@ -251,10 +244,18 @@ inline void unitary_inverse(const fq12_t &a, fq12_t &r)
     fq6::neg(a.c1, r.c1);
 }
 
-inline void random_element(fq12_t &r)
+inline fq12_t random_element()
 {
-    fq6::random_element(r.c0);
-    fq6::random_element(r.c1);
+    fq12_t r;
+    r.c0 = fq6::random_element();
+    r.c1 = fq6::random_element();
+    return r;
+}
+
+inline void to_montgomery_form(const fq12_t &a, fq12_t &r)
+{
+    fq6::to_montgomery_form(a.c0, r.c0);
+    fq6::to_montgomery_form(a.c1, r.c1);
 }
 
 inline void from_montgomery_form(const fq12_t &a, fq12_t &r)

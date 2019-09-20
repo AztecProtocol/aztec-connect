@@ -59,6 +59,29 @@ inline void copy(const field_t &src, field_t &dest)
 #endif
 }
 
+inline void zero(field_t &r)
+{
+#ifdef __AVX__
+    ASSERT((((uintptr_t)r.data & 0x1f) == 0));
+    __asm__(
+        "vpxor  %%ymm0, %%ymm0, %%ymm0             \n\t"
+        "vmovdqa %%ymm0, 0(%0)              \n\t"
+        :
+        : "r"(r.data)
+        : "memory");
+#else
+    ASSERT((((uintptr_t)r.data & 0x1f) == 0));
+    __asm__(
+        "movq $0, 0(%0)                         \n\t"
+        "movq $0, 8(%0)                         \n\t"
+        "movq $0, 16(%0)                         \n\t"
+        "movq $0, 24(%0)                         \n\t"
+        :
+        : "r"(r.data)
+        : "memory");
+#endif
+}
+
 /**
  * swap src and dest. AVX implementation requires words to be aligned on 32 byte bounary
  **/

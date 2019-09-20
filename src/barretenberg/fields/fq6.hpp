@@ -326,11 +326,38 @@ inline void frobenius_map_one(const fq6_t &a, fq6_t &r)
     fq2::mul(frobenius_coeffs_c2_one, T1, r.c2);
 }
 
-inline void random_element(fq6_t &r)
+inline fq6_t random_element()
 {
-    fq2::random_element(r.c0);
-    fq2::random_element(r.c1);
-    fq2::random_element(r.c2);
+    fq6_t r;
+    r.c0 = fq2::random_element();
+    r.c1 = fq2::random_element();
+    r.c2 = fq2::random_element();
+    return r;
+}
+
+inline fq6_t one()
+{
+    fq6_t r;
+    r.c0 = fq2::one();
+    r.c1 = fq2::zero();
+    r.c2 = fq2::zero();
+    return r;
+}
+
+inline fq6_t zero()
+{
+    fq6_t r;
+    r.c0 = fq2::zero();
+    r.c1 = fq2::zero();
+    r.c2 = fq2::zero();
+    return r;
+}
+
+inline void to_montgomery_form(const fq6_t &a, fq6_t &r)
+{
+    fq2::to_montgomery_form(a.c0, r.c0);
+    fq2::to_montgomery_form(a.c1, r.c1);
+    fq2::to_montgomery_form(a.c2, r.c2);
 }
 
 inline void from_montgomery_form(const fq6_t &a, fq6_t &r)

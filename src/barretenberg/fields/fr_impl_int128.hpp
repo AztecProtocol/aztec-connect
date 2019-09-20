@@ -57,6 +57,14 @@ inline void subtract(field_t& a, field_t& b, field_t& r)
     addc(r.data[3], modulus[3] & borrow, carry, r.data[3], carry);
 }
 
+inline void zero(field_t& a)
+{
+    a.data[0] = 0;
+    a.data[1] = 0;
+    a.data[2] = 0;
+    a.data[3] = 0;
+}
+
 inline void add(field_t& a, field_t& b, field_t& r)
 {
     uint64_t carry = 0;

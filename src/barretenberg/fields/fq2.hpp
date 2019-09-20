@@ -104,16 +104,26 @@ inline void frobenius_map(const fq2_t &a, fq2_t &r)
     fq::neg(a.c1, r.c1);
 }
 
-inline void one(fq2_t &r)
+inline fq2_t one()
 {
-    fq::one(r.c0);
-    fq::zero(r.c1);
+    fq2_t r;
+    r.c0 = fq::one();
+    r.c1 = fq::zero();
+    return r;
 }
 
-inline void zero(fq2_t &r)
+inline fq2_t zero()
 {
-    fq::zero(r.c0);
-    fq::zero(r.c1);
+    fq2_t r;
+    r.c0 = fq::zero();
+    r.c1 = fq::zero();
+    return r;
+}
+
+inline void to_montgomery_form(const fq2_t &a, fq2_t &r)
+{
+    fq::to_montgomery_form(a.c0, r.c0);
+    fq::to_montgomery_form(a.c1, r.c1);
 }
 
 inline void from_montgomery_form(const fq2_t &a, fq2_t &r)
@@ -128,10 +138,12 @@ inline void copy(const fq2_t &a, fq2_t &r)
     fq::copy(a.c1, r.c1);
 }
 
-inline void random_element(fq2_t &r)
+inline fq2_t random_element()
 {
-    fq::random_element(r.c0);
-    fq::random_element(r.c1);
+    fq2_t r;
+    r.c0 = fq::random_element();
+    r.c1 = fq::random_element();
+    return r;
 }
 
 inline void print(const fq2_t &a)

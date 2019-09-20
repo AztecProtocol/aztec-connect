@@ -225,7 +225,7 @@ TEST(group, group_exponentiation)
     g1::element copy;
     fq::copy(input.x, copy.x);
     fq::copy(input.y, copy.y);
-    fq::one(copy.z);
+    copy.z = fq::one();
     libff::alt_bn128_G1 libff_input = to_libff_g1(copy);
     libff::alt_bn128_Fr libff_scalar = to_libff_fr(scalar);
 

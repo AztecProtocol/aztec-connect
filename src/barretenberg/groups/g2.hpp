@@ -28,8 +28,8 @@ inline element one()
     result.x.c1 = xc1;
     result.y.c0 = yc0;
     result.y.c1 = yc1;
-    fq::one(result.z.c0);
-    fq::zero(result.z.c1);
+    result.z.c0 = fq::one();
+    result.z.c1 = fq::zero();
     return result;
 }
 
@@ -213,7 +213,7 @@ inline void mixed_add(element &p1, affine_element &p2, element &p3)
     {
         fq2::copy(p2.x, p3.x);
         fq2::copy(p2.y, p3.y);
-        fq2::one(p3.z);
+        p3.z = fq2::one();
         return;
     }
     mixed_add_inner(p1, p2, p3);
@@ -225,7 +225,7 @@ inline void mixed_add_expect_empty(element &p1, affine_element &p2, element &p3)
     {
         fq2::copy(p2.x, p3.x);
         fq2::copy(p2.y, p3.y);
-        fq2::one(p3.z);
+        p3.z = fq2::one();
         return;
     }
     mixed_add_inner(p1, p2, p3);
@@ -237,7 +237,7 @@ inline void mixed_sub(element &p1, affine_element &p2, element &p3)
     {
         fq2::copy(p2.x, p3.x);
         fq2::copy(p2.y, p3.y);
-        fq2::one(p3.z);
+        p3.z = fq2::one();
         fq2::neg(p3.y, p3.y);
         return;
     }
@@ -485,8 +485,8 @@ inline void copy_from_affine(const affine_element &a, element &r)
     fq::copy(a.x.c1, r.x.c1);
     fq::copy(a.y.c0, r.y.c0);
     fq::copy(a.y.c1, r.y.c1);
-    fq::one(r.z.c0);
-    fq::zero(r.z.c1);
+    r.z.c0 = fq::one();
+    r.z.c1 = fq::zero();
 }
 
 inline void copy(const element &a, element &r)

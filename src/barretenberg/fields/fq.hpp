@@ -16,6 +16,8 @@ namespace barretenberg
 {
 namespace fq
 {
+constexpr field_t __zero = { .data = { 0x00, 0x00, 0x00, 0x00 } };
+
 constexpr field_t curve_b = {.data = {0x3, 0x0, 0x0, 0x0}};
 
 // compute a * b, put result in r
@@ -167,28 +169,28 @@ inline void sqrt(field_t &a, field_t &r)
 /**
  * Get a random field element in montgomery form, place in `r`
  **/
-inline void random_element(field_t &r)
+inline field_t random_element()
 {
+    fq::field_t r;
     int got_entropy = getentropy((void *)r.data, 32);
     ASSERT(got_entropy == 0);
     to_montgomery_form(r, r);
+    return r;
 }
 
 /**
  * Set `r` to equal 1, in montgomery form
  **/
-inline void one(field_t &r)
+inline field_t one()
 {
-    copy(one_mont, r);
+    return one_mont;
 }
 
-inline void zero(field_t &r)
+inline field_t zero()
 {
-    r.data[0] = 0;
-    r.data[1] = 0;
-    r.data[2] = 0;
-    r.data[3] = 0;
+    return __zero;
 }
+
 /**
  * print `r`
  **/

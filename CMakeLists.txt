@@ -11,9 +11,8 @@ include(GNUInstallDirs)
 
 cable_configure_toolchain(DEFAULT cxx17)
 
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=broadwell -msse2 -mavx -O3 -fopenmp")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx -fopenmp")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=broadwell -msse2 -mavx -O3 -fopenmp")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
 include(HunterConfig)
 

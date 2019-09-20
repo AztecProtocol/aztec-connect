@@ -90,7 +90,7 @@ TEST(pairing, reduced_ate_pairing)
     }
 }
 
-TEST(pairing, reduced_ate_pairing_mul_check)
+TEST(pairing, reduced_ate_pairing_consistency_check)
 {
     g1::affine_element P = g1::random_affine_element();
     g2::affine_element Q = g2::random_affine_element();
@@ -124,7 +124,7 @@ TEST(pairing, reduced_ate_pairing_mul_check)
 }
 
 
-TEST(pairing, reduced_ate_pairing_mul_check_batch)
+TEST(pairing, reduced_ate_pairing_consistency_check_batch)
 {
     size_t num_points = 10;
 

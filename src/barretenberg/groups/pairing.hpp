@@ -167,8 +167,7 @@ inline void precompute_miller_lines(const g2::element &Q, miller_lines &lines)
 
 inline fq12::fq12_t miller_loop(g1::element &P, miller_lines &lines)
 {
-    fq12::fq12_t work_scalar;
-    fq12::one(work_scalar);
+    fq12::fq12_t work_scalar = fq12::one();
 
     size_t it = 0;
     pairing::ell_coeffs work_line;
@@ -208,8 +207,7 @@ inline fq12::fq12_t miller_loop(g1::element &P, miller_lines &lines)
 
 inline fq12::fq12_t miller_loop_batch(g1::element *points, miller_lines *lines, size_t num_pairs)
 {
-    fq12::fq12_t work_scalar;
-    fq12::one(work_scalar);
+    fq12::fq12_t work_scalar = fq12::one();
 
     size_t it = 0;
     pairing::ell_coeffs work_line;

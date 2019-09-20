@@ -66,6 +66,8 @@ inline void add(const field_t &a, const field_t &b, field_t &r);
 // compute a - b, put result in r
 inline void sub(const field_t &a, const field_t &b, field_t &r);
 
+inline void zero(field_t &r);
+
 /**
  * copy src into dest. AVX implementation requires words to be aligned on 32 byte bounary
  **/
@@ -247,12 +249,11 @@ inline field_t random_element()
     return r;
 }
 
-inline void zero(field_t &r)
+inline field_t zero()
 {
-    r.data[0] = 0;
-    r.data[1] = 0;
-    r.data[2] = 0;
-    r.data[3] = 0;
+    fr::field_t r;
+    fr::zero(r);
+    return r;
 }
 
 inline bool eq(const field_t &a, const field_t &b)

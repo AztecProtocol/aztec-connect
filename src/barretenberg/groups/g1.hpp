@@ -36,7 +36,7 @@ inline void random_coordinates_on_curve(fq::field_t &x, fq::field_t &y)
     while (!found_one)
     {
         // generate a random x-coordinate
-        fq::random_element(x);
+        x = fq::random_element();
         // derive y^2 = x^3 + b
         fq::sqr(x, yy);
         fq::mul(x, yy, yy);
@@ -62,16 +62,16 @@ inline element random_element()
 {
     element output;
     random_coordinates_on_curve(output.x, output.y);
-    fq::one(output.z);
+    output.z = fq::one();
     return output;
 }
 
 inline element one()
 {
     element output;
-    fq::one(output.x);
-    fq::one(output.y);
-    fq::one(output.z);
+    output.x = fq::one();
+    output.y = fq::one();
+    output.z = fq::one();
     fq::add(output.y, output.y, output.y);
     return output;
 }
@@ -79,8 +79,8 @@ inline element one()
 inline affine_element affine_one()
 {
     affine_element output;
-    fq::one(output.x);
-    fq::one(output.y);
+    output.x = fq::one();
+    output.y = fq::one();
     fq::add(output.y, output.y, output.y);
     return output;
 }
@@ -272,7 +272,7 @@ inline void mixed_add(element &p1, const affine_element &p2, element &p3)
     {
         fq::copy(p2.x, p3.x);
         fq::copy(p2.y, p3.y);
-        fq::one(p3.z);
+        fq::copy(fq::one_mont, p3.z);
         return;
     }
     mixed_add_inner(p1, p2, p3);
@@ -284,7 +284,7 @@ inline void mixed_add_expect_empty(element &p1, affine_element &p2, element &p3)
     {
         fq::copy(p2.x, p3.x);
         fq::copy(p2.y, p3.y);
-        fq::one(p3.z);
+        fq::copy(fq::one_mont, p3.z);
         return;
     }
     mixed_add_inner(p1, p2, p3);
@@ -296,7 +296,7 @@ inline void mixed_sub(element &p1, affine_element &p2, element &p3)
     {
         fq::copy(p2.x, p3.x);
         fq::copy(p2.y, p3.y);
-        fq::one(p3.z);
+        fq::copy(fq::one_mont, p3.z);
         fq::sub(fq::modulus, p3.y, p3.y);
         return;
     }
@@ -646,7 +646,7 @@ inline element normalize(element &src)
     fq::mul(z_inv, zz_inv, zzz_inv);
     fq::mul(src.x, zz_inv, dest.x);
     fq::mul(src.y, zzz_inv, dest.y);
-    fq::one(dest.z);
+    dest.z = fq::one();
     return dest;
 }
 
@@ -657,12 +657,10 @@ inline element normalize(element &src)
 inline void batch_normalize(element *points, size_t num_points)
 {
     fq::field_t *temporaries = (fq::field_t *)(aligned_alloc(32, sizeof(fq::field_t) * num_points));
-    fq::field_t accumulator;
+    fq::field_t accumulator = fq::one();
     fq::field_t z_inv;
     fq::field_t zz_inv;
     fq::field_t zzz_inv;
-
-    fq::one(accumulator);
 
     // Iterate over the points, computing the product of their z-coordinates.
     // At each iteration, store the currently-accumulated z-coordinate in `temporaries`
@@ -706,7 +704,7 @@ inline void batch_normalize(element *points, size_t num_points)
         fq::mul(points[i].x, zz_inv, points[i].x);
         fq::mul(points[i].y, zzz_inv, points[i].y);
         fq::mul(accumulator, points[i].z, accumulator);
-        fq::one(points[i].z);
+        points[i].z = fq::one();
     }
 
     free(temporaries);
@@ -758,7 +756,7 @@ inline void copy_from_affine(const affine_element &a, element &r)
 {
     fq::copy(a.x, r.x);
     fq::copy(a.y, r.y);
-    fq::one(r.z);
+    r.z = fq::one();
 }
 
 inline void copy_to_affine(element &a, affine_element &r)
@@ -820,8 +818,8 @@ inline affine_element group_exponentiation(const affine_element &a, const fr::fi
     affine_element result;
     if (is_point_at_infinity(res))
     {
-        fq::zero(result.x);
-        fq::zero(result.y);
+        result.x = fq::zero();
+        result.y = fq::zero();
         set_infinity(result);
     }
     else
