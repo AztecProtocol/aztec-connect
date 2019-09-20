@@ -107,34 +107,57 @@ uint64_t rdtsc(){
     return ((uint64_t)hi << 32) | lo;
 }
 
-
+constexpr size_t NUM_SQUARINGS = 10000000;
 inline uint64_t fq_sqr_asm(fq::field_t& a, fq::field_t& r) noexcept
 {
-    for (size_t i = 0; i < 10000000; ++i)
+    for (size_t i = 0; i < NUM_SQUARINGS; ++i)
     {
         fq::sqr(a, r);
     }
     return 1;
 }
 
+constexpr size_t NUM_MULTIPLICATIONS = 10000000;
 inline uint64_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
 {
-    for (size_t i = 0; i < 10000000; ++i)
+    for (size_t i = 0; i < NUM_MULTIPLICATIONS; ++i)
     {
         fq::mul(a, r, r);
     }
     return 1;
 }
 
-void pairing_twin_bench(State& state) noexcept
+void pairing_bench(State& state) noexcept
 {
+    uint64_t count = 0;
+    uint64_t i = 0;
     for (auto _ : state)
     {
-        // uint64_t before = rdtsc();
-        DoNotOptimize(pairing::reduced_ate_pairing_batch(&g1_pair_points[0], &g2_pair_points[0], 2));
-        // uint64_t after = rdtsc();
-        // printf("twin pairing clock cycles = %lu\n", (after - before));
+        uint64_t before = rdtsc();
+        DoNotOptimize(pairing::reduced_ate_pairing(g1_pair_points[0], g2_pair_points[0]));
+        uint64_t after = rdtsc();
+        count += (after - before);
+        ++i;
     }
+    uint64_t avg_cycles = count / i;
+    printf("single pairing clock cycles = %lu\n", (avg_cycles));
+}
+BENCHMARK(pairing_bench);
+
+void pairing_twin_bench(State& state) noexcept
+{
+    uint64_t count = 0;
+    uint64_t i = 0;
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(pairing::reduced_ate_pairing_batch(&g1_pair_points[0], &g2_pair_points[0], 2));
+        uint64_t after = rdtsc();
+        count += (after - before);
+        ++i;
+    }
+    uint64_t avg_cycles = count / i;
+    printf("twin pairing clock cycles = %lu\n", (avg_cycles));
 }
 BENCHMARK(pairing_twin_bench);
 
@@ -161,44 +184,51 @@ void pippenger_bench(State& state) noexcept
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(&point_data.scalars[0], &point_data.points[0], NUM_POINTS));
         uint64_t after = rdtsc();
-        printf("pippenger single clock cycles = %lu\n", (after - before));
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / NUM_POINTS);
     }
 }
 BENCHMARK(pippenger_bench);
 
-
+constexpr size_t NUM_G1_ADDITIONS = 10000000;
 void add_bench(State& state) noexcept
 {
-    // uint64_t count = 0;
-    // uint64_t i = 0;
+    uint64_t count = 0;
+    uint64_t j = 0;
     g1::element a = g1::random_element();
     g1::element b = g1::random_element();
     for (auto _ : state)
     {
-        for (size_t i = 0; i < 10000000; ++i)
+        uint64_t before = rdtsc();
+        for (size_t i = 0; i < NUM_G1_ADDITIONS; ++i)
         {
             g1::add(a, b, a);
         }
+        uint64_t after = rdtsc();
+        count += (after - before);
+        ++j;
     }
-    // printf("number of cycles = %lu\n", count / i);
-    // printf("r_2 = [%lu, %lu, %lu, %lu]\n", r_2[0], r_2[1], r_2[2], r_2[3]);
+    printf("g1 add number of cycles = %lu\n", count / (j * NUM_G1_ADDITIONS));
 }
 BENCHMARK(add_bench);
 
 void mixed_add_bench(State& state) noexcept
 {
-    // uint64_t count = 0;
-    // uint64_t i = 0;
+    uint64_t count = 0;
+    uint64_t j = 0;
     g1::element a = g1::random_element();
     g1::affine_element b = g1::random_affine_element();
     for (auto _ : state)
     {
-        for (size_t i = 0; i < 10000000; ++i)
+        uint64_t before = rdtsc();
+        for (size_t i = 0; i < NUM_G1_ADDITIONS; ++i)
         {
             g1::mixed_add(a, b, a);
         }
+        uint64_t after = rdtsc();
+        count += (after - before);
+        ++j;
     }
-    // printf("number of cycles = %lu\n", count / i);
+    printf("g1 mixed add number of cycles = %lu\n", count / (j * NUM_G1_ADDITIONS));
     // printf("r_2 = [%lu, %lu, %lu, %lu]\n", r_2[0], r_2[1], r_2[2], r_2[3]);
 }
 BENCHMARK(mixed_add_bench);
@@ -217,7 +247,7 @@ void fq_sqr_asm_bench(State& state) noexcept
         count += after - before;
         ++i;
     }
-    printf("sqr number of cycles = %lu\n", count / i);
+    printf("sqr number of cycles = %lu\n", count / (i * NUM_SQUARINGS));
     // printf("r_2 = [%lu, %lu, %lu, %lu]\n", r_2[0], r_2[1], r_2[2], r_2[3]);
 }
 BENCHMARK(fq_sqr_asm_bench);
@@ -236,7 +266,7 @@ void fq_mul_asm_bench(State& state) noexcept
         count += after - before;
         ++i;
     }
-    printf("mul number of cycles = %lu\n", count / i);
+    printf("mul number of cycles = %lu\n", count / (i * NUM_MULTIPLICATIONS));
     // printf("r_2 = [%lu, %lu, %lu, %lu]\n", r_2[0], r_2[1], r_2[2], r_2[3]);
 }
 BENCHMARK(fq_mul_asm_bench);
