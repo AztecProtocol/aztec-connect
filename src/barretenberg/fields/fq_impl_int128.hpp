@@ -5,6 +5,8 @@
 
 #include "fq.hpp"
 
+namespace barretenberg
+{
 namespace fq
 {
 namespace
@@ -12,20 +14,19 @@ namespace
 using uint128_t = unsigned __int128;
 constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 
-
 // N.B. Commented data is F_squared for Fr NOT Fq
 // 216D0B17F4E44A5 // 8C49833D53BB8085 // 53FE3AB1E35C59E3 // 1BB8E645AE216DA7
 
-constexpr field_t r_squared = { .data = {
-    0xF32CFC5B538AFA89UL,
-    0xB5E71911D44501FBUL,
-    0x47AB1EFF0A417FF6UL,
-    0x06D89F71CAB8351FUL,
-}};
+constexpr field_t r_squared = {.data = {
+                                   0xF32CFC5B538AFA89UL,
+                                   0xB5E71911D44501FBUL,
+                                   0x47AB1EFF0A417FF6UL,
+                                   0x06D89F71CAB8351FUL,
+                               }};
 
-constexpr field_t one_raw = { .data = { 1, 0, 0, 0 } };
+constexpr field_t one_raw = {.data = {1, 0, 0, 0}};
 
-inline bool gt(field_t& a, field_t& b)
+inline bool gt(field_t &a, field_t &b)
 {
     bool t0 = a[3] > b[3];
     bool t1 = (a[3] == b[3]) && (a[2] > b[2]);
@@ -58,7 +59,7 @@ inline void mac(uint64_t a, uint64_t b, uint64_t c, uint64_t carry_in, uint64_t 
     r = (uint64_t)(res & lo_mask);
 }
 
-inline void subtract(const field_t& a, const field_t& b, field_t& r)
+inline void subtract(const field_t &a, const field_t &b, field_t &r)
 {
     uint64_t borrow = 0;
     uint64_t carry = 0;
@@ -73,7 +74,7 @@ inline void subtract(const field_t& a, const field_t& b, field_t& r)
     addc(r[3], modulus[3] & borrow, carry, r[3], carry);
 }
 
-inline void montgomery_reduce(field_t& r, field_t& out)
+inline void montgomery_reduce(field_t &r, field_t &out)
 {
     uint64_t carry = 0;
     uint64_t carry_2 = 0;
@@ -110,11 +111,11 @@ inline void montgomery_reduce(field_t& r, field_t& out)
     out[1] = r[5];
     out[2] = r[6];
     out[3] = r[7];
-    subtract(&r[4], (field_t& )&modulus[0], out);
+    subtract(&r[4], (field_t &)&modulus[0], out);
 }
-}
+} // namespace
 
-inline void add(const field_t& a, const field_t& b, field_t& r)
+inline void add(const field_t &a, const field_t &b, field_t &r)
 {
     uint64_t carry = 0;
     addc(a[0], b[0], 0, r[0], carry);
@@ -124,42 +125,41 @@ inline void add(const field_t& a, const field_t& b, field_t& r)
     subtract(r, modulus, r);
 }
 
-inline void add_without_reduction(const field_t& a, const field_t& b, field_t& r)
+inline void add_without_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     add(a, b, r);
 }
 
-inline void mul(field_t& lhs, field_t& rhs, field_t& r)
+inline void mul(field_t &lhs, field_t &rhs, field_t &r)
 {
     uint64_t temp[8];
     mul_512(lhs, rhs, &temp[0]);
     montgomery_reduce(&temp[0], r);
 }
 
-
-inline void mul_without_reduction(field_t& lhs, field_t& rhs, field_t& r)
+inline void mul_without_reduction(field_t &lhs, field_t &rhs, field_t &r)
 {
     mul(lhs, rhs, r);
 }
 
-inline void sqr(field_t& a, field_t& r)
+inline void sqr(field_t &a, field_t &r)
 {
     uint64_t temp[8];
     mul_512(a, a, &temp[0]);
     montgomery_reduce(&temp[0], r);
 }
 
-inline void sqr_without_reduction(field_t& a, field_t& r)
+inline void sqr_without_reduction(field_t &a, field_t &r)
 {
     sqr(a, r);
 }
 
-inline void sub(field_t& a, field_t& b, field_t& r)
+inline void sub(field_t &a, field_t &b, field_t &r)
 {
     subtract(a, b, r);
 }
 
-inline void mul_512(field_t& a, field_t& b, field_t& r)
+inline void mul_512(field_t &a, field_t &b, field_t &r)
 {
     uint64_t carry = 0;
     mac(0, a[0], b[0], 0, r[0], carry);
@@ -183,7 +183,7 @@ inline void mul_512(field_t& a, field_t& b, field_t& r)
     mac(r[6], a[3], b[3], carry, r[6], r[7]);
 }
 
-inline void to_montgomery_form(field_t& a, field_t& r)
+inline void to_montgomery_form(field_t &a, field_t &r)
 {
     while (gt(a, modulus_plus_one))
     {
@@ -192,24 +192,24 @@ inline void to_montgomery_form(field_t& a, field_t& r)
     mul(a, &r_squared[0], r);
 }
 
-inline void from_montgomery_form(field_t& a, field_t& r)
+inline void from_montgomery_form(field_t &a, field_t &r)
 {
     mul(a, one_raw, r);
 }
 
-inline void random_element(field_t& r)
+inline void random_element(field_t &r)
 {
     int got_entropy = getentropy((void *)r, 32);
     ASSERT(got_entropy == 0);
     to_montgomery_form(r, r);
 }
 
-inline void one(field_t& r)
+inline void one(field_t &r)
 {
     to_montgomery_form(one_raw, r);
 }
 
-inline void copy(const field_t& a, field_t& r)
+inline void copy(const field_t &a, field_t &r)
 {
     r.data[0] = a.data[0];
     r.data[1] = a.data[1];
@@ -217,3 +217,4 @@ inline void copy(const field_t& a, field_t& r)
     r.data[3] = a.data[3];
 }
 } // namespace fq
+} // namespace barretenberg

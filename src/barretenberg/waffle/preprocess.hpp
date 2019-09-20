@@ -4,25 +4,27 @@
 #include "../groups/scalar_multiplication.hpp"
 
 #include "../types.hpp"
+
+using namespace barretenberg;
+
 namespace waffle
 {
-inline circuit_instance preprocess_circuit(const waffle::circuit_state& state, const srs::plonk_srs &srs)
+inline circuit_instance preprocess_circuit(const waffle::circuit_state &state, const srs::plonk_srs &srs)
 {
     size_t n = state.n;
-    
-    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (9 * state.n)));
 
-    fr::field_t* polys[9] = {
+    fr::field_t *scratch_space = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (9 * state.n)));
+
+    fr::field_t *polys[9] = {
         &scratch_space[0],
         &scratch_space[n],
-        &scratch_space[2*n],
-        &scratch_space[3*n],
-        &scratch_space[4*n],
-        &scratch_space[5*n],
-        &scratch_space[6*n],
-        &scratch_space[7*n],
-        &scratch_space[8*n]
-    };
+        &scratch_space[2 * n],
+        &scratch_space[3 * n],
+        &scratch_space[4 * n],
+        &scratch_space[5 * n],
+        &scratch_space[6 * n],
+        &scratch_space[7 * n],
+        &scratch_space[8 * n]};
 
     // polynomials::evaluation_domain domain = polynomials::get_domain(n);
 
@@ -47,7 +49,6 @@ inline circuit_instance preprocess_circuit(const waffle::circuit_state& state, c
     polynomials::copy_polynomial(state.q_o, polys[7], n, n);
     polynomials::copy_polynomial(state.q_c, polys[8], n, n);
 
-
     for (size_t i = 0; i < 9; ++i)
     {
         polynomials::ifft(polys[i], state.small_domain);
@@ -61,8 +62,7 @@ inline circuit_instance preprocess_circuit(const waffle::circuit_state& state, c
         mul_state[i].points = srs.monomials;
         mul_state[i].scalars = polys[i];
     }
-    
-    
+
     for (size_t i = 0; i < 9; ++i)
     {
         mul_state[i].output = scalar_multiplication::pippenger(mul_state[i].scalars, srs.monomials, n);
@@ -83,4 +83,4 @@ inline circuit_instance preprocess_circuit(const waffle::circuit_state& state, c
     free(scratch_space);
     return instance;
 }
-}
+} // namespace waffle

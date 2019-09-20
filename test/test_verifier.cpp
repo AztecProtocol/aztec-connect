@@ -7,6 +7,8 @@
 namespace
 {
 
+using namespace barretenberg;
+
 void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
 {
     size_t n = state.n;

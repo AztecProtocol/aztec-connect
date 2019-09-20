@@ -8,6 +8,7 @@
 
 namespace waffle
 {
+using namespace barretenberg;
 void compute_wire_coefficients(circuit_state &state, fft_pointers &)
 {
     const size_t n = state.n;
@@ -35,7 +36,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &)
     fr::add(beta_n, beta_n, beta_n_2);
 
     // TODO: multithread this part!
-    fr::field_t beta_identity = { .data = {0, 0, 0, 0 } };
+    fr::field_t beta_identity = {.data = {0, 0, 0, 0}};
     // for the sigma permutation, as we compute each product term, store the intermediates in `product_1/2/3`.
 
     fr::one(state.z_1[0]);
@@ -84,7 +85,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &)
     polynomials::ifft(state.z_2, state.small_domain);
 }
 
-inline void compute_wire_commitments(circuit_state &state, plonk_proof& proof, srs::plonk_srs &srs)
+inline void compute_wire_commitments(circuit_state &state, plonk_proof &proof, srs::plonk_srs &srs)
 {
     size_t n = state.n;
 
@@ -117,7 +118,7 @@ inline void compute_wire_commitments(circuit_state &state, plonk_proof& proof, s
     state.challenges.beta = compute_beta(proof, state.challenges.gamma);
 }
 
-void compute_z_commitments(circuit_state &state, plonk_proof& proof, srs::plonk_srs &srs)
+void compute_z_commitments(circuit_state &state, plonk_proof &proof, srs::plonk_srs &srs)
 {
     size_t n = state.n;
     scalar_multiplication::multiplication_state mul_state[3];
@@ -144,7 +145,6 @@ void compute_z_commitments(circuit_state &state, plonk_proof& proof, srs::plonk_
     state.challenges.alpha = compute_alpha(proof);
     fr::mul(state.challenges.alpha, state.challenges.alpha, state.alpha_squared);
     fr::mul(state.alpha_squared, state.challenges.alpha, state.alpha_cubed);
-
 }
 
 void compute_multiplication_gate_coefficients(circuit_state &state, fft_pointers &ffts)
@@ -584,7 +584,7 @@ plonk_proof construct_proof(circuit_state &state, fft_pointers &ffts, srs::plonk
     fr::field_t shifted_z;
     fr::mul(state.challenges.z, state.small_domain.root, shifted_z);
 
-    polynomials::compute_kate_opening_coefficients(opening_poly, state.challenges.z, state.small_domain.size * 3/* * 3 ADD BACK IN  */);
+    polynomials::compute_kate_opening_coefficients(opening_poly, state.challenges.z, state.small_domain.size * 3 /* * 3 ADD BACK IN  */);
     polynomials::compute_kate_opening_coefficients(shifted_opening_poly, shifted_z, state.small_domain.size);
 
     // PI_Z(X)'s degree is 3x that of PI_Z_OMEGA(X)

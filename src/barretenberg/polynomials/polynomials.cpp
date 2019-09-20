@@ -1,5 +1,7 @@
 #include "./polynomials.hpp"
 
+namespace barretenberg
+{
 namespace polynomials
 {
 namespace
@@ -456,3 +458,4 @@ void compress_fft(const fr::field_t *src, fr::field_t *dest, const size_t curren
     }
 }
 } // namespace polynomials
+} // namespace barretenberg

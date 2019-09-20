@@ -2,6 +2,8 @@
 
 #include "fq.hpp"
 
+namespace barretenberg
+{
 namespace fq2
 {
 inline void mul(const fq2_t &a, const fq2_t &b, fq2_t &r)
@@ -149,3 +151,4 @@ inline bool eq(const fq2_t &a, const fq2_t &b)
     return (fq::eq(a.c0, b.c0) && fq::eq(a.c1, b.c1));
 }
 } // namespace fq2
+}

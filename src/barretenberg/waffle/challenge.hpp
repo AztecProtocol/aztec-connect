@@ -10,6 +10,8 @@
 
 namespace waffle
 {
+using namespace barretenberg;
+
 inline void add_wire_commitments_to_buffer(const plonk_proof &proof, uint64_t* input_buffer)
 {
     fq::from_montgomery_form(proof.W_L.x, *(fq::field_t *)&input_buffer[0]);

@@ -12,6 +12,8 @@
 #include "../fields/fr.hpp"
 #include "../assert.hpp"
 
+namespace barretenberg
+{
 namespace scalar_multiplication
 {
 struct wnaf_runtime_state
@@ -21,9 +23,9 @@ struct wnaf_runtime_state
     size_t current_idx;
     size_t next_idx;
     size_t bits_per_wnaf;
-    uint32_t* wnaf_iterator;
-    uint32_t* wnaf_table;
-    bool* skew_table;
+    uint32_t *wnaf_iterator;
+    uint32_t *wnaf_table;
+    bool *skew_table;
 };
 
 struct multiplication_runtime_state
@@ -104,7 +106,7 @@ inline size_t get_optimal_bucket_width(size_t num_points) noexcept
 inline void compute_next_bucket_index(wnaf_runtime_state &state) noexcept
 {
     uint32_t wnaf_entry = *state.wnaf_iterator;
-    state.next_sign = (wnaf_entry >> 31) & 1;//(uint64_t)(wnaf_entry >> state.bits_per_wnaf) & 1; // 0 - sign_bit;
+    state.next_sign = (wnaf_entry >> 31) & 1;  //(uint64_t)(wnaf_entry >> state.bits_per_wnaf) & 1; // 0 - sign_bit;
     state.next_idx = wnaf_entry & 0x0fffffffU; // ((wnaf_entry ^ sign_mask) /*& state.mask*/) >> 1;
 }
 
@@ -119,7 +121,7 @@ inline void generate_pippenger_point_table(g1::affine_element *points, g1::affin
     }
 }
 
-inline g1::element pippenger_internal(fr::field_t* scalars, g1::affine_element *points, size_t num_initial_points, fr::field_t* endo_scalars) noexcept
+inline g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points, size_t num_initial_points, fr::field_t *endo_scalars) noexcept
 {
     size_t bits_per_bucket = get_optimal_bucket_width(num_initial_points);
     multiplication_runtime_state state;
@@ -142,7 +144,7 @@ inline g1::element pippenger_internal(fr::field_t* scalars, g1::affine_element *
 
     for (size_t i = 0; i < num_initial_points; ++i)
     {
-        fr::split_into_endomorphism_scalars(scalars[i], endo_scalars[i], *(fr::field_t*)&endo_scalars[i].data[2]);
+        fr::split_into_endomorphism_scalars(scalars[i], endo_scalars[i], *(fr::field_t *)&endo_scalars[i].data[2]);
         wnaf::fixed_wnaf(&endo_scalars[i].data[0], &wnaf_state.wnaf_table[2 * i], wnaf_state.skew_table[2 * i], state.num_points, bits_per_bucket + 1);
         wnaf::fixed_wnaf(&endo_scalars[i].data[2], &wnaf_state.wnaf_table[2 * i + 1], wnaf_state.skew_table[2 * i + 1], state.num_points, bits_per_bucket + 1);
     }
@@ -210,9 +212,9 @@ inline g1::element pippenger_internal(fr::field_t* scalars, g1::affine_element *
     return state.accumulator;
 }
 
-inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, size_t num_initial_points) noexcept
+inline g1::element pippenger(fr::field_t *scalars, g1::affine_element *points, size_t num_initial_points) noexcept
 {
-    fr::field_t* endo_scalars = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * (num_initial_points));
+    fr::field_t *endo_scalars = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * (num_initial_points));
     for (size_t i = 0; i < num_initial_points; ++i)
     {
         fr::from_montgomery_form(scalars[i], endo_scalars[i]);
@@ -224,13 +226,13 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, s
 
 struct multiplication_state
 {
-    g1::affine_element* points;
-    fr::field_t* scalars;
+    g1::affine_element *points;
+    fr::field_t *scalars;
     size_t num_elements;
     g1::element output;
 };
 
-inline void batched_scalar_multiplications(multiplication_state* mul_state, size_t num_exponentiations)
+inline void batched_scalar_multiplications(multiplication_state *mul_state, size_t num_exponentiations)
 {
     // When performing a pippenger multi-exponentiation, the runtime is O(n / logn)
     // Therefore, when we are performing multiple multi-exponentiations, we need to
@@ -240,7 +242,7 @@ inline void batched_scalar_multiplications(multiplication_state* mul_state, size
 
     // Splitting up each multi-exponentiation into small batches, and running pippenger on each batch on a thread, is also suboptimal.
     // This is because we have decreased then number of points in each multi-exponentiation (i.e. optimal pippenger for small ranges requires more buckets)
-    
+
     // To maximize the number of points each thread is working on, we want to perform the all of the multiple multi-exponentiations in parallel
 
     // E.g. consider 4 multi-exps, each with 2^{20} points, where we have 8 threads
@@ -265,11 +267,11 @@ inline void batched_scalar_multiplications(multiplication_state* mul_state, size
         }
     }
 
-    #ifndef NO_MULTITHREADING
+#ifndef NO_MULTITHREADING
     size_t num_threads = omp_get_max_threads();
-    #else
+#else
     size_t num_threads = 1;
-    #endif
+#endif
 
     // Step 1: Figure out the optimal number of mini-exponentiations required to
     // divide up all multi-exponentiations amongst available threads
@@ -279,7 +281,7 @@ inline void batched_scalar_multiplications(multiplication_state* mul_state, size
         ++split;
     }
 
-    // once we've allocated point ranges to threads, there is likely to be a spillover term 
+    // once we've allocated point ranges to threads, there is likely to be a spillover term
     // if the number of points in a multi-exp does not evenly divide the # of points in a thread
     // we need to make sure that we allocate this extra 'remainder' term to a thread
     // (when we recurse we want a constant # of exponentiations)
@@ -299,19 +301,19 @@ inline void batched_scalar_multiplications(multiplication_state* mul_state, size
         for (size_t j = 0; j < split; ++j)
         {
             // we want the first threads to each map to a different multi-exponentiation, to deal with the 'remainder' term
-            threaded_inputs[j* num_exponentiations + i].scalars = &mul_state[i].scalars[range_index];
+            threaded_inputs[j * num_exponentiations + i].scalars = &mul_state[i].scalars[range_index];
             // each 'point' in the point table is actually 2 points (it's endomorphism counterpart), so double range_index
-            threaded_inputs[j* num_exponentiations + i].points = &mul_state[i].points[range_index * 2];
+            threaded_inputs[j * num_exponentiations + i].points = &mul_state[i].points[range_index * 2];
             size_t remainder_term = (j == 0) ? single_remainder : 0;
             range_index += single_range + remainder_term;
             threaded_inputs[j * num_exponentiations + i].num_elements = single_range + remainder_term;
         }
     }
 
-    // Call pippenger algorithm for each thread
-    #ifndef NO_MULTITHREADING
-    #pragma omp parallel for
-    #endif
+// Call pippenger algorithm for each thread
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
     for (size_t i = 0; i < num_threads; ++i)
     {
         threaded_inputs[i].output = pippenger(threaded_inputs[i].scalars, threaded_inputs[i].points, threaded_inputs[i].num_elements);
@@ -350,3 +352,4 @@ inline void batched_scalar_multiplications(multiplication_state* mul_state, size
     }
 }
 } // namespace scalar_multiplication
+} // namespace barretenberg

@@ -3,14 +3,15 @@
 #include "stdint.h"
 #include "stddef.h"
 
+namespace barretenberg
+{
 namespace wnaf
 {
 constexpr size_t SCALAR_BITS = 127;
 
-
 #define WNAF_SIZE(x) ((wnaf::SCALAR_BITS + x - 1) / (x))
 
-inline uint32_t get_wnaf_bits(uint64_t* scalar, size_t bits, size_t bit_position)
+inline uint32_t get_wnaf_bits(uint64_t *scalar, size_t bits, size_t bit_position)
 {
     /**
      *  we want to take a 128 bit scalar and shift it down by (bit_position).
@@ -32,8 +33,7 @@ inline uint32_t get_wnaf_bits(uint64_t* scalar, size_t bits, size_t bit_position
     return (lo | hi) & ((1UL << bits) - 1);
 }
 
-
-inline void fixed_wnaf(uint64_t* scalar, uint32_t* wnaf, bool& skew_map, size_t num_points, size_t wnaf_bits)
+inline void fixed_wnaf(uint64_t *scalar, uint32_t *wnaf, bool &skew_map, size_t num_points, size_t wnaf_bits)
 {
     size_t wnaf_entries = (SCALAR_BITS + wnaf_bits - 1) / wnaf_bits;
     skew_map = ((scalar[0] & 1) == 0);
@@ -84,12 +84,12 @@ inline void compute_wnaf_5(uint64_t hi, uint64_t lo, uint8_t *wnaf)
     {
         hi += lo;
     }
-    else if (lo > 0) {
+    else if (lo > 0)
+    {
         size_t lo_bits = 64 - i;
         uint64_t hi_mask = (0x01 << (5 - lo_bits)) - 1;
         uint64_t m = (uint8_t)(
-            (hi & hi_mask) << lo_bits | lo
-        );
+            (hi & hi_mask) << lo_bits | lo);
         wnaf[i] = m;
         hi += (16 >> lo_bits);
         hi &= ~hi_mask;
@@ -107,4 +107,5 @@ inline void compute_wnaf_5(uint64_t hi, uint64_t lo, uint8_t *wnaf)
         hi &= ~(0x1fULL);
     }
 }
-}
+} // namespace wnaf
+} // namespace barretenberg

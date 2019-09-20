@@ -7,6 +7,8 @@
 
 #include <barretenberg/fields/fq.hpp>
 
+using namespace barretenberg;
+
 namespace
 {
 void to_bigint(uint64_t *a, libff::bigint<4>& a_bigint)

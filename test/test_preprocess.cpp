@@ -2,6 +2,8 @@
 
 #include <barretenberg/waffle/preprocess.hpp>
 
+using namespace barretenberg;
+
 namespace
 {
 srs::plonk_srs compute_dummy_srs(const size_t n, const fr::field_t& x, g1::affine_element* monomials)

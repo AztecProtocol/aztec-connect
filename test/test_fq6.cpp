@@ -6,6 +6,8 @@
 
 #include <barretenberg/fields/fq6.hpp>
 
+using namespace barretenberg;
+
 namespace
 {
     libff::alt_bn128_Fq6 to_libff_fq6(fq6::fq6_t a)

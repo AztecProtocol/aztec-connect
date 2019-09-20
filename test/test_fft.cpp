@@ -7,6 +7,8 @@
 
 #include <barretenberg/polynomials/polynomials.hpp>
 
+using namespace barretenberg;
+
 TEST(fft, evaluation_domain)
 {
     size_t n = 256;

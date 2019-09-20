@@ -7,6 +7,9 @@
 #include "../assert.hpp"
 #include "../types.hpp"
 #include "asm_macros.hpp"
+
+namespace barretenberg
+{
 namespace fr
 {
 namespace
@@ -19,20 +22,20 @@ constexpr uint64_t not_modulus_0 = (~0x43E1F593F0000001UL) + 1;
 constexpr uint64_t not_modulus_1 = ~0x2833E84879B97091UL;
 constexpr uint64_t not_modulus_2 = ~0xB85045B68181585DUL;
 constexpr uint64_t not_modulus_3 = ~0x30644E72E131A029UL;
-constexpr uint64_t  r_inv = 0xc2e1f593efffffffUL;
+constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
 
 constexpr uint64_t zero_reference = 0;
 } // namespace
 
 /**
  * copy src into dest. AVX implementation requires words to be aligned on 32 byte bounary
- **/ 
-inline void copy(const field_t& src, field_t& dest)
+ **/
+inline void copy(const field_t &src, field_t &dest)
 {
 #ifdef __AVX__
     ASSERT((((uintptr_t)src.data & 0x1f) == 0));
     ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
-    __asm__ (
+    __asm__(
         "vmovdqa 0(%0), %%ymm0              \n\t"
         "vmovdqa %%ymm0, 0(%1)              \n\t"
         :
@@ -41,7 +44,7 @@ inline void copy(const field_t& src, field_t& dest)
 #else
     ASSERT((((uintptr_t)src.data & 0x1f) == 0));
     ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
-    __asm__ (
+    __asm__(
         "movq 0(%0), %%r8                       \n\t"
         "movq 8(%0), %%r9                       \n\t"
         "movq 16(%0), %%r10                     \n\t"
@@ -56,16 +59,15 @@ inline void copy(const field_t& src, field_t& dest)
 #endif
 }
 
-
 /**
  * swap src and dest. AVX implementation requires words to be aligned on 32 byte bounary
- **/ 
-inline void swap(const field_t& src, field_t& dest)
+ **/
+inline void swap(const field_t &src, field_t &dest)
 {
 #ifdef __AVX__
     ASSERT((((uintptr_t)src.data & 0x1f) == 0));
     ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
-    __asm__ (
+    __asm__(
         "vmovdqa 0(%0), %%ymm0              \n\t"
         "vmovdqa 0(%1), %%ymm1              \n\t"
         "vmovdqa %%ymm0, 0(%1)              \n\t"
@@ -74,7 +76,7 @@ inline void swap(const field_t& src, field_t& dest)
         : "r"(src.data), "r"(dest.data)
         : "%ymm0", "memory");
 #else
-    __asm__ (
+    __asm__(
         "movq 0(%0), %%r8                       \n\t"
         "movq 8(%0), %%r9                       \n\t"
         "movq 16(%0), %%r10                     \n\t"
@@ -100,12 +102,12 @@ inline void swap(const field_t& src, field_t& dest)
 /**
  * Add field_t elements `a` and `b` modulo `q`, store the result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
- **/ 
-inline void add(const field_t& a, const field_t& b, field_t& r)
+ **/
+inline void add(const field_t &a, const field_t &b, field_t &r)
 {
-    __asm__ (
+    __asm__(
         ADD("%%rbx", "%%rcx")
-        REDUCE_RESULT("%%rsi")
+            REDUCE_RESULT("%%rsi")
         :
         : "b"(&a), "c"(&b), "S"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
@@ -114,10 +116,10 @@ inline void add(const field_t& a, const field_t& b, field_t& r)
 /**
  * Subtract `b` from `a` modulo `q`, store result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
- **/ 
-inline void sub(const field_t& a, const field_t& b, field_t& r)
+ **/
+inline void sub(const field_t &a, const field_t &b, field_t &r)
 {
-    __asm__ (
+    __asm__(
         SUB("%%rbx", "%%rcx", "%%rsi")
         :
         : "b"(&a), "c"(&b), "S"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3)
@@ -127,24 +129,21 @@ inline void sub(const field_t& a, const field_t& b, field_t& r)
 /**
  * Compute the square of `a`, modulo `q`. Store result in `r`
  * We assume `a` is 254 bits and do not perform carry checks on most significant limb
- **/ 
-inline void sqr(const field_t& a, field_t& r)
+ **/
+inline void sqr(const field_t &a, field_t &r)
 {
-    __asm__ (
-        SQR("%%rbx")
-        "movq %[r_ptr], %%rsi                   \n\t"
-        REDUCE_RESULT("%%rsi")
+    __asm__(
+        SQR("%%rbx") "movq %[r_ptr], %%rsi                   \n\t" REDUCE_RESULT("%%rsi")
         :
-        : "b"(&a), [zero_reference] "m"(zero_reference), [r_ptr] "m"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m" (r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
+        : "b"(&a), [zero_reference] "m"(zero_reference), [r_ptr] "m"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
         : "%rax", "rcx", "%rdx", "%rdi", "%rsi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
-
 
 /**
  * Compute `a` * `b` mod `q`, store result in `r`
  * We assume `a` is 254 bits and do not perform carry checks on most significant limb
- **/ 
-inline void mul(const field_t& a, const field_t& b, field_t& r)
+ **/
+inline void mul(const field_t &a, const field_t &b, field_t &r)
 {
     /**
          * Registers: rax:rdx = multiplication accumulator
@@ -155,20 +154,19 @@ inline void mul(const field_t& a, const field_t& b, field_t& r)
          *            %rcx: pointer to `b`
          *            %rdx: work register for multiplication operand
          */
-    __asm__ (
+    __asm__(
         MUL("%%rbx", "%%rcx")
-        REDUCE_RESULT("%%rsi")
+            REDUCE_RESULT("%%rsi")
         :
         : "c"(&b), "b"(&a), "S"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
         : "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
-
-inline void mul_512(const field_t& a, const field_t& b, field_wide_t& r)
+inline void mul_512(const field_t &a, const field_t &b, field_wide_t &r)
 {
     // TODO REMOVE THIS
-    //uint64_t cache[4] = { b.data[0], b.data[1], b.data[2], b.data[3] }; 
-    uint64_t* TODO_remove_this = (uint64_t*)&b.data[0];
+    //uint64_t cache[4] = { b.data[0], b.data[1], b.data[2], b.data[3] };
+    uint64_t *TODO_remove_this = (uint64_t *)&b.data[0];
     /**
      * Registers: rax:rdx = multiplication accumulator
      *            r8-r9  = t[0-1], work registers for multipliation results
@@ -184,7 +182,7 @@ inline void mul_512(const field_t& a, const field_t& b, field_wide_t& r)
      *            r11     = b.data[2]
      *            r10     = b.data[3]
      */
-    __asm__ __volatile__ (
+    __asm__ __volatile__(
         /* load b0 - b4 into r10-r13*/
         "movq 0(%%rax), %%rcx           \n\t"
         "movq 8(%%rax), %%rdi           \n\t"
@@ -324,9 +322,9 @@ inline void mul_512(const field_t& a, const field_t& b, field_wide_t& r)
         "movq %%r15, 56(%%rsi)              \n\t"
         : "+a"(TODO_remove_this)
         : "S"(&r), "b"(&a)
-        : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory"
-    );
+        : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 } // namespace fr
+} // namespace barretenberg
 
 #endif

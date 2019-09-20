@@ -5,63 +5,63 @@
 #define STRF(x) x
 
 #define ADD(a, b) \
-        "xorq %%r12, %%r12                        \n\t"                                     \
-        "movq 0(" a "), %%r12                   \n\t"                                     \
-        "movq 8(" a "), %%r13                   \n\t"                                     \
-        "movq 16(" a "), %%r14                 \n\t"                                     \
-        "movq 24(" a "), %%r15                 \n\t"                                     \
-        "adcxq 0(" b "), %%r12                 \n\t"                                     \
-        "adcxq 8(" b "), %%r13                 \n\t"                                     \
-        "adcxq 16(" b "), %%r14               \n\t"                                     \
-        "adcxq 24(" b "), %%r15               \n\t"                                   
+        "xorq %%r12, %%r12                        \n\t"                                   \
+        "movq 0(" a "), %%r12                     \n\t"                                   \
+        "movq 8(" a "), %%r13                     \n\t"                                   \
+        "movq 16(" a "), %%r14                    \n\t"                                   \
+        "movq 24(" a "), %%r15                    \n\t"                                   \
+        "adcxq 0(" b "), %%r12                    \n\t"                                   \
+        "adcxq 8(" b "), %%r13                    \n\t"                                   \
+        "adcxq 16(" b "), %%r14                   \n\t"                                   \
+        "adcxq 24(" b "), %%r15                   \n\t"                                   
 
 
 #define DOUBLE(a) \
-        "xorq %%r12, %%r12                        \n\t"                                     \
-        "movq 0(" a "), %%r12                   \n\t"                                     \
-        "movq 8(" a "), %%r13                   \n\t"                                     \
-        "movq 16(" a "), %%r14                 \n\t"                                     \
-        "movq 24(" a "), %%r15                 \n\t"                                     \
-        "adcxq %%r12, %%r12                 \n\t"                                     \
-        "adcxq %%r13, %%r13                 \n\t"                                     \
-        "adcxq %%r14, %%r14               \n\t"                                     \
-        "adcxq %%r15, %%r15               \n\t"                                   
+        "xorq %%r12, %%r12                        \n\t"                                   \
+        "movq 0(" a "), %%r12                     \n\t"                                   \
+        "movq 8(" a "), %%r13                     \n\t"                                   \
+        "movq 16(" a "), %%r14                    \n\t"                                   \
+        "movq 24(" a "), %%r15                    \n\t"                                   \
+        "adcxq %%r12, %%r12                       \n\t"                                   \
+        "adcxq %%r13, %%r13                       \n\t"                                   \
+        "adcxq %%r14, %%r14                       \n\t"                                   \
+        "adcxq %%r15, %%r15                       \n\t"                                   
 
 #define QUAD(a) \
-        "xorq %%r12, %%r12                  \n\t" \
-        "movq 0(" a "), %%r12                   \n\t"                                     \
-        "movq 8(" a "), %%r13                   \n\t"                                     \
-        "movq 16(" a "), %%r14                 \n\t"                                     \
-        "movq 24(" a "), %%r15                 \n\t"                                     \
-        "adcxq %%r12, %%r12              \n\t"   \
-        "adoxq %%r12, %%r12                 \n\t" \
-        "adcxq %%r13, %%r13              \n\t" \
-        "adoxq %%r13, %%r13                 \n\t" \
-        "adcxq %%r14, %%r14             \n\t" \
-        "adoxq %%r14, %%r14                 \n\t" \
-        "adcxq %%r15, %%r15             \n\t" \
-        "adoxq %%r15, %%r15                 \n\t"
+        "xorq %%r12, %%r12                        \n\t"                                   \
+        "movq 0(" a "), %%r12                     \n\t"                                   \
+        "movq 8(" a "), %%r13                     \n\t"                                   \
+        "movq 16(" a "), %%r14                    \n\t"                                   \
+        "movq 24(" a "), %%r15                    \n\t"                                   \
+        "adcxq %%r12, %%r12                       \n\t"                                   \
+        "adoxq %%r12, %%r12                       \n\t"                                   \
+        "adcxq %%r13, %%r13                       \n\t"                                   \
+        "adoxq %%r13, %%r13                       \n\t"                                   \
+        "adcxq %%r14, %%r14                       \n\t"                                   \
+        "adoxq %%r14, %%r14                       \n\t"                                   \
+        "adcxq %%r15, %%r15                       \n\t"                                   \
+        "adoxq %%r15, %%r15                       \n\t"
 
 
 #define OCT(a, r) \
-        "xorq %%r12, %%r12                          \n\t" \
-        "movq 0(" a "), %%r12                       \n\t"                                     \
-        "movq 8(" a "), %%r13                       \n\t"                                     \
-        "movq 16(" a "), %%r14                      \n\t"                                     \
-        "movq 24(" a "), %%r15                      \n\t"                                     \
-        "adcxq %%r12, %%r12                         \n\t"   \
-        "adoxq %%r12, %%r12                         \n\t" \
-        "adcxq %%r13, %%r13                         \n\t" \
-        "adoxq %%r13, %%r13                         \n\t" \
-        "adcxq %%r14, %%r14                         \n\t" \
-        "adoxq %%r14, %%r14                         \n\t" \
-        "adcxq %%r15, %%r15                         \n\t" \
-        "adoxq %%r15, %%r15                         \n\t" \
+        "xorq %%r12, %%r12                          \n\t"                                 \
+        "movq 0(" a "), %%r12                       \n\t"                                 \
+        "movq 8(" a "), %%r13                       \n\t"                                 \
+        "movq 16(" a "), %%r14                      \n\t"                                 \
+        "movq 24(" a "), %%r15                      \n\t"                                 \
+        "adcxq %%r12, %%r12                         \n\t"                                 \
+        "adoxq %%r12, %%r12                         \n\t"                                 \
+        "adcxq %%r13, %%r13                         \n\t"                                 \
+        "adoxq %%r13, %%r13                         \n\t"                                 \
+        "adcxq %%r14, %%r14                         \n\t"                                 \
+        "adoxq %%r14, %%r14                         \n\t"                                 \
+        "adcxq %%r15, %%r15                         \n\t"                                 \
+        "adoxq %%r15, %%r15                         \n\t"                                 \
         /* Duplicate `r` */                                                               \
-        "movq %%r12, %%r8                       \n\t"                                     \
-        "movq %%r13, %%r9                       \n\t"                                     \
-        "movq %%r14, %%r10                      \n\t"                                     \
-        "movq %%r15, %%r11                      \n\t"                                     \
+        "movq %%r12, %%r8                           \n\t"                                 \
+        "movq %%r13, %%r9                           \n\t"                                 \
+        "movq %%r14, %%r10                          \n\t"                                 \
+        "movq %%r15, %%r11                          \n\t"                                 \
         /* Add the negative representation of 'modulus' into `r`. We do this instead */   \
         /* of subtracting, because we can use `adoxq`.                               */   \
         /* This opcode only has a dependence on the overflow                         */   \

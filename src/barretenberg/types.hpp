@@ -7,6 +7,8 @@
 #define NO_MULTITHREADING 1
 #endif
 
+namespace barretenberg
+{
 namespace fq
 {
 struct field_t
@@ -123,19 +125,21 @@ struct lagrange_evaluations
     fr::field_t l_n_minus_1;
 };
 } // namespace polynomials
+} // namespace barretenberg
 
 namespace srs
 {
 struct plonk_srs
 {
-    g1::affine_element *monomials;
-    g2::affine_element SRS_T2;
+    barretenberg::g1::affine_element *monomials;
+    barretenberg::g2::affine_element SRS_T2;
     size_t degree;
 };
 } // namespace srs
 
 namespace waffle
 {
+using namespace barretenberg;
 struct circuit_instance
 {
     g1::affine_element Q_M;
@@ -228,5 +232,4 @@ struct plonk_proof
     fr::field_t z_2_shifted_eval;
     fr::field_t linear_eval;
 };
-
 } // namespace waffle

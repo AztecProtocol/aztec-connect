@@ -8,6 +8,9 @@
 
 #include <barretenberg/groups/g2.hpp>
 #include <barretenberg/fields/fr.hpp>
+
+using namespace barretenberg;
+
 namespace
 {
 

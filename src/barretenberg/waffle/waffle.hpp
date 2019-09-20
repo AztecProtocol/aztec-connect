@@ -7,6 +7,7 @@
 
 namespace waffle
 {
+using namespace barretenberg;
 struct circuit_vectors
 {
     fr::field_t *w_l;

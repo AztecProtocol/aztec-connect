@@ -9,8 +9,6 @@ target_link_libraries(
     barretenberg_bench
     PUBLIC
     barretenberg
-    ${GMP_LIBRARIES}
-    ${LIBFF}
     PRIVATE
     benchmark::benchmark
 )

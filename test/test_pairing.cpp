@@ -13,6 +13,8 @@
 #include <barretenberg/fields/fq12.hpp>
 #include <barretenberg/groups/pairing.hpp>
 
+using namespace barretenberg;
+
 namespace
 {
 

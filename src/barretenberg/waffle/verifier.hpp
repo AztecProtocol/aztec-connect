@@ -8,6 +8,7 @@
 #include "../types.hpp"
 namespace waffle
 {
+using namespace barretenberg;
 namespace verifier
 {
 
@@ -23,13 +24,13 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     challenges.alpha = compute_alpha(proof);
     challenges.gamma = compute_gamma(proof);
     challenges.beta = compute_beta(proof, challenges.gamma);
-    fr::field_t u = fr::random_element();
     challenges.z = compute_evaluation_challenge(proof);
-    challenges.nu =  compute_linearisation_challenge(proof);
+    challenges.nu = compute_linearisation_challenge(proof);
+    fr::field_t u = fr::random_element();
     fr::copy(challenges.nu, nu_pow[0]);
     fr::copy(challenges.alpha, alpha_pow[0]);
     polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(challenges.z, domain);
-    
+
     // compute the terms we need to derive R(X)
     plonk_linear_terms linear_terms = compute_linear_terms(proof, challenges, lagrange_evals.l_1, instance.n);
 
@@ -74,7 +75,6 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::mul(nu_pow[9], u, T0);
     fr::add(linear_terms.z_2, T0, linear_terms.z_2);
 
-  
     fr::field_t batch_evaluation;
     fr::copy(t_eval, batch_evaluation);
     fr::mul(nu_pow[0], proof.linear_eval, T0);
@@ -116,7 +116,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::mul(z_omega_scalar, u, z_omega_scalar);
 
     // TODO: make a wrapper around g1 ops so...this guff isn't needed each time we want to do a scalar mul
-    fr::field_t* scalar_exponents = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * 17);
+    fr::field_t *scalar_exponents = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * 17);
     fr::copy(linear_terms.q_m, scalar_exponents[0]);
     fr::copy(linear_terms.q_l, scalar_exponents[1]);
     fr::copy(linear_terms.q_r, scalar_exponents[2]);
@@ -135,7 +135,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::copy(z_omega_scalar, scalar_exponents[15]);
     fr::copy(challenges.z, scalar_exponents[16]);
 
-    g1::affine_element* lhs_ge = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * 36);
+    g1::affine_element *lhs_ge = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * 36);
 
     g1::copy_affine(instance.Q_M, lhs_ge[0]);
     g1::copy_affine(instance.Q_L, lhs_ge[1]);
@@ -171,7 +171,6 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fq::copy(P[1].y, P_affine[1].y);
 
     g2::affine_element Q_affine[2];
-
     g2::copy_affine(SRS_T2, Q_affine[0]);
     g2::copy_affine(g2::affine_one(), Q_affine[1]);
 

@@ -7,6 +7,8 @@
 #include "../fields/fq12.hpp"
 #include "../types.hpp"
 
+namespace barretenberg
+{
 namespace pairing
 {
 constexpr size_t loop_length = 64;
@@ -14,14 +16,12 @@ constexpr size_t neg_z_loop_length = 62;
 constexpr size_t precomputed_coefficients_length = 87;
 
 constexpr uint8_t loop_bits[loop_length] = {
-    1,0,1,0,0,0,3,0,3,0,0,0,3,0,1,0,3,0,0,3,0,0,0,0,0,1,0,0,3,0,1,0,0,3,0,0,0,0,3,0,1,0,0,0,3,0,3,0,0,1,0,0,0,3,0,0,3,0,1,0,1,0,0,0
-};
+    1, 0, 1, 0, 0, 0, 3, 0, 3, 0, 0, 0, 3, 0, 1, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 1, 0, 0, 3, 0, 1, 0, 0, 3, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 3, 0, 3, 0, 0, 1, 0, 0, 0, 3, 0, 0, 3, 0, 1, 0, 1, 0, 0, 0};
 
 constexpr bool neg_z_loop_bits[neg_z_loop_length] = {
-    0,0,0,1,0,0,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,0,1,0,1,1,0,1,0,0,0,1,0,0,1,0,1,0,0,1,1,0,1,0,0,1,0,0,0,0,1,0,0,1,1,1,1,1,0,0,0,1
-};
+    0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1};
 
-constexpr fq::field_t two_inv = { .data = {0x87bee7d24f060572, 0xd0fd2add2f1c6ae5, 0x8f5f7492fcfd4f44, 0x1f37631a3d9cbfac} };
+constexpr fq::field_t two_inv = {.data = {0x87bee7d24f060572, 0xd0fd2add2f1c6ae5, 0x8f5f7492fcfd4f44, 0x1f37631a3d9cbfac}};
 
 constexpr fq2::fq2_t twist_coeff_b = {
     .c0 = {.data = {0x3bf938e377b802a8, 0x020b1b273633535d, 0x26b7edf049755260, 0x2514c6324384a86d}},
@@ -206,7 +206,7 @@ inline fq12::fq12_t miller_loop(g1::element &P, miller_lines &lines)
     return work_scalar;
 }
 
-inline fq12::fq12_t miller_loop_batch(g1::element* points, miller_lines* lines, size_t num_pairs)
+inline fq12::fq12_t miller_loop_batch(g1::element *points, miller_lines *lines, size_t num_pairs)
 {
     fq12::fq12_t work_scalar;
     fq12::one(work_scalar);
@@ -218,7 +218,8 @@ inline fq12::fq12_t miller_loop_batch(g1::element* points, miller_lines* lines, 
     {
         fq12::sqr(work_scalar, work_scalar);
 
-        for (size_t j = 0; j < num_pairs; ++j) {
+        for (size_t j = 0; j < num_pairs; ++j)
+        {
             fq2::copy(lines[j].lines[it].o, work_line.o);
             fq2::mul_by_fq(points[j].y, lines[j].lines[it].vw, work_line.vw);
             fq2::mul_by_fq(points[j].x, lines[j].lines[it].vv, work_line.vv);
@@ -227,7 +228,8 @@ inline fq12::fq12_t miller_loop_batch(g1::element* points, miller_lines* lines, 
         ++it;
         if (loop_bits[i] != 0)
         {
-            for (size_t j = 0; j < num_pairs; ++j) {
+            for (size_t j = 0; j < num_pairs; ++j)
+            {
                 fq2::copy(lines[j].lines[it].o, work_line.o);
                 fq2::mul_by_fq(points[j].y, lines[j].lines[it].vw, work_line.vw);
                 fq2::mul_by_fq(points[j].x, lines[j].lines[it].vv, work_line.vv);
@@ -237,14 +239,16 @@ inline fq12::fq12_t miller_loop_batch(g1::element* points, miller_lines* lines, 
         }
     }
 
-    for (size_t j = 0; j < num_pairs; ++j) {
+    for (size_t j = 0; j < num_pairs; ++j)
+    {
         fq2::copy(lines[j].lines[it].o, work_line.o);
         fq2::mul_by_fq(points[j].y, lines[j].lines[it].vw, work_line.vw);
         fq2::mul_by_fq(points[j].x, lines[j].lines[it].vv, work_line.vv);
         fq12::sparse_mul(work_scalar, work_line, work_scalar);
     }
     ++it;
-    for (size_t j = 0; j < num_pairs; ++j) {
+    for (size_t j = 0; j < num_pairs; ++j)
+    {
         fq2::copy(lines[j].lines[it].o, work_line.o);
         fq2::mul_by_fq(points[j].y, lines[j].lines[it].vw, work_line.vw);
         fq2::mul_by_fq(points[j].x, lines[j].lines[it].vv, work_line.vv);
@@ -254,7 +258,7 @@ inline fq12::fq12_t miller_loop_batch(g1::element* points, miller_lines* lines, 
     return work_scalar;
 }
 
-inline void final_exponentiation_easy_part(const fq12::fq12_t& elt, fq12::fq12_t& r)
+inline void final_exponentiation_easy_part(const fq12::fq12_t &elt, fq12::fq12_t &r)
 {
     fq12::fq12_t a;
     fq12::fq12_t b;
@@ -267,7 +271,7 @@ inline void final_exponentiation_easy_part(const fq12::fq12_t& elt, fq12::fq12_t
     fq12::mul(a, b, r);
 }
 
-inline void final_exponentiation_exp_by_neg_z(const fq12::fq12_t& elt, fq12::fq12_t& r)
+inline void final_exponentiation_exp_by_neg_z(const fq12::fq12_t &elt, fq12::fq12_t &r)
 {
     fq12::fq12_t scalar;
     fq12::copy(elt, scalar);
@@ -284,7 +288,7 @@ inline void final_exponentiation_exp_by_neg_z(const fq12::fq12_t& elt, fq12::fq1
     fq12::unitary_inverse(r, r);
 }
 
-inline void final_exponentiation_tricky_part(const fq12::fq12_t& elt, fq12::fq12_t& r)
+inline void final_exponentiation_tricky_part(const fq12::fq12_t &elt, fq12::fq12_t &r)
 {
     fq12::fq12_t A;
     fq12::fq12_t B;
@@ -334,7 +338,7 @@ inline void final_exponentiation_tricky_part(const fq12::fq12_t& elt, fq12::fq12
     fq12::mul(R, U, r);
 }
 
-inline fq12::fq12_t reduced_ate_pairing(const g1::affine_element& P_affine, const g2::affine_element& Q_affine)
+inline fq12::fq12_t reduced_ate_pairing(const g1::affine_element &P_affine, const g2::affine_element &Q_affine)
 {
     g1::element P;
     g2::element Q;
@@ -350,7 +354,7 @@ inline fq12::fq12_t reduced_ate_pairing(const g1::affine_element& P_affine, cons
     return result;
 }
 
-inline fq12::fq12_t reduced_ate_pairing_batch(const g1::affine_element* P_affines, const g2::affine_element* Q_affines, size_t num_points)
+inline fq12::fq12_t reduced_ate_pairing_batch(const g1::affine_element *P_affines, const g2::affine_element *Q_affines, size_t num_points)
 {
     g1::element P[num_points];
     g2::element Q[num_points];
@@ -370,3 +374,4 @@ inline fq12::fq12_t reduced_ate_pairing_batch(const g1::affine_element* P_affine
 }
 
 } // namespace pairing
+} // namespace barretenberg

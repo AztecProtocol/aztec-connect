@@ -6,6 +6,8 @@
 
 #include "fr.hpp"
 
+namespace barretenberg
+{
 namespace fr
 {
 namespace
@@ -149,3 +151,4 @@ inline void copy(const field_t& a, field_t& r)
     r.data[3] = a.data[3];
 }
 } // namespace fr
+} // namespace barretenberg

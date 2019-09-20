@@ -6,6 +6,8 @@
 
 #include <barretenberg/groups/wnaf.hpp>
 
+using namespace barretenberg;
+
 namespace
 {
 

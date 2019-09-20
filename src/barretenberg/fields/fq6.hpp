@@ -2,6 +2,8 @@
 
 #include "fq2.hpp"
 
+namespace barretenberg
+{
 namespace fq6
 {
 constexpr fq2::fq2_t frobenius_coeffs_c1_one = {
@@ -361,8 +363,9 @@ inline bool iszero(const fq6_t &a)
     return (iszero(a.c0) && iszero(a.c1) && iszero(a.c2));
 }
 
-inline bool eq(const fq6_t& a, const fq6_t &b)
+inline bool eq(const fq6_t &a, const fq6_t &b)
 {
     return (fq2::eq(a.c0, b.c0) && fq2::eq(a.c1, b.c1) && fq2::eq(a.c2, b.c2));
 }
 } // namespace fq6
+} // namespace barretenberg

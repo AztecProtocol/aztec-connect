@@ -6,6 +6,7 @@
 
 namespace waffle
 {
+    using namespace barretenberg;
     struct plonk_linear_terms
     {
         fr::field_t w_l;
