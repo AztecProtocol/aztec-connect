@@ -117,7 +117,6 @@ inline uint64_t fq_sqr_asm(fq::field_t& a, fq::field_t& r) noexcept
     return 1;
 }
 
-
 inline uint64_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
 {
     for (size_t i = 0; i < 10000000; ++i)
@@ -126,17 +125,6 @@ inline uint64_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
     }
     return 1;
 }
-
-void *pippenger_single(void* v_args) noexcept
-{
-    pippenger_point_data* data = (pippenger_point_data*)v_args;
-    uint64_t clk_start = rdtsc();
-    scalar_multiplication::pippenger(&data->scalars[0], &data->points[0], NUM_POINTS);
-    uint64_t clk_end = rdtsc();
-    printf("num clks = %lu\n", clk_end - clk_start);
-    return NULL;
-}
-
 
 void pairing_twin_bench(State& state) noexcept
 {
@@ -150,29 +138,21 @@ void pairing_twin_bench(State& state) noexcept
 }
 BENCHMARK(pairing_twin_bench);
 
-void pippenger_multicore_bench(State& state) noexcept
+void batched_scalar_multiplications_bench(State& state) noexcept
 {
-    pthread_t thread[NUM_THREADS]; 
-    printf("Before Thread\n");
-    pippenger_point_data *inputs = (pippenger_point_data*)malloc(sizeof(pippenger_point_data) * NUM_THREADS);
+    scalar_multiplication::multiplication_state mul_state[NUM_THREADS];
+    for (size_t i = 0; i < NUM_THREADS; ++i)
+    {
+        mul_state[i].num_elements = NUM_POINTS;
+        mul_state[i].scalars = &point_data.scalars[i * NUM_POINTS];
+        mul_state[i].points = &point_data.points[0];
+    }
     for (auto _ : state)
     {
-        for (size_t i = 0; i < NUM_THREADS; ++i)
-        {
-            size_t inc = i * NUM_POINTS;
-            inputs[i].scalars = &point_data.scalars[inc];
-            inputs[i].points = &point_data.points[inc];
-            pthread_create(&thread[i], NULL, &pippenger_single, (void *)(&inputs[i]));
-        }
-        for (size_t j = 0; j < NUM_THREADS; ++j)
-        {
-            pthread_join(thread[j], NULL);
-        }
+        (scalar_multiplication::batched_scalar_multiplications(mul_state, NUM_THREADS));
     }
-    printf("After Thread\n"); 
-    free(inputs);
 }
-BENCHMARK(pippenger_multicore_bench);
+BENCHMARK(batched_scalar_multiplications_bench);
 
 void pippenger_bench(State& state) noexcept
 {
@@ -186,19 +166,6 @@ void pippenger_bench(State& state) noexcept
 }
 BENCHMARK(pippenger_bench);
 
-// void libff_pippenger_bench(State &state) noexcept
-// {
-//     for (auto _ : state)
-//     {
-//         DoNotOptimize(libff::multi_exp<libff::alt_bn128_G1, libff::alt_bn128_Fr, libff::multi_exp_method_BDLO12>(
-//             point_data.libff_points.begin(),
-//             point_data.libff_points.end(),
-//             point_data.libff_scalars.begin(),
-//             point_data.libff_scalars.end(),
-//             1));
-//     }
-// }
-// BENCHMARK(libff_pippenger_bench);
 
 void add_bench(State& state) noexcept
 {
