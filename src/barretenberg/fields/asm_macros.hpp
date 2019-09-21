@@ -318,6 +318,43 @@
         "movq %%r11, 24(" r ")                  \n\t"
 
 
+#define SUB_COARSE(a, b, r) \
+        /* clear flags */                                                                 \
+        "xorq %%r8, %%r8                        \n\t"                                     \
+        "movq 0(" a "), %%r8                   \n\t"                                      \
+        "movq 8(" a "), %%r9                   \n\t"                                      \
+        "movq 16(" a "), %%r10                 \n\t"                                      \
+        "movq 24(" a "), %%r11                 \n\t"                                      \
+                                                                                          \
+        "subq 0(" b "), %%r8                  \n\t"                                       \
+        "sbbq 8(" b "), %%r9                  \n\t"                                       \
+        "sbbq 16(" b "), %%r10                \n\t"                                       \
+        "sbbq 24(" b "), %%r11                \n\t"                                       \
+                                                                                          \
+        "movq %%r8, %%r12                       \n\t"                                     \
+        "movq %%r9, %%r13                       \n\t"                                     \
+        "movq %%r10, %%r14                      \n\t"                                     \
+        "movq %%r11, %%r15                      \n\t"                                     \
+                                                                                          \
+        "adoxq %[twice_modulus_0], %%r8               \n\t" /* r'[0] -= modulus.data[0]  */     \
+        "adoxq %[twice_modulus_1], %%r9               \n\t" /* r'[1] -= modulus.data[1]  */     \
+        "adoxq %[twice_modulus_2], %%r10              \n\t" /* r'[2] -= modulus.data[2]  */     \
+        "adoxq %[twice_modulus_3], %%r11              \n\t" /* r'[3] -= modulus.data[3]  */     \
+                                                                                          \
+        /* if the carry flag is set, then b > a and we need to                     */     \
+        /* add a modulus back into the result                                      */     \
+        /* i.e. if the carry is *not* set, then r8-r11 represents                  */     \
+        /* the correct result of subtraction, otherwise, swap with r8-r11          */     \
+        "cmovncq %%r12, %%r8                    \n\t"                                     \
+        "movq %%r8, 0(" r ")                    \n\t"                                     \
+        "cmovncq %%r13, %%r9                    \n\t"                                     \
+        "movq %%r9, 8(" r ")                    \n\t"                                     \
+        "cmovncq %%r14, %%r10                   \n\t"                                     \
+        "movq %%r10, 16(" r ")                  \n\t"                                     \
+        "cmovncq %%r15, %%r11                   \n\t"                                     \
+        "movq %%r11, 24(" r ")                  \n\t"
+
+
 /**
  * Compute Montgomery multiplication a*a. Store result in (%%r12, %%r13, %%r14, %%r15)
  * We proceed by computing limb multiplications that aren't squares (e.g. a[0]*a[1]), and add into 8-limb result %r8-%r15.
@@ -745,8 +782,6 @@
         "adoxq %%rdi, %%r14                        \n\t" /* r[6] += t[5] + flag_o                            */         \
         "adcxq %%rdx, %%r15                        \n\t" /* r[7] += t[7] + flag_c                            */         \
         "adoxq %%r10, %%r15                        \n\t" /* r[7] += flag_o                                   */
-
-
 
 
 /**

@@ -1,16 +1,16 @@
 #include <gtest/gtest.h>
 
-#include <gmp.h>
-#include <libff/algebra/fields/fp.hpp>
-#include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
-#include <libff/algebra/curves/alt_bn128/alt_bn128_init.hpp>
-
 #include <barretenberg/polynomials/polynomials.hpp>
 
 using namespace barretenberg;
 
 TEST(fft, evaluation_domain)
 {
+    fr::field_t foo = fr::modulus;
+    fr::field_t bar;
+    fr::add_without_reduction(foo, foo, bar);
+    printf("foobar\n");
+    fr::print(bar);
     size_t n = 256;
     polynomials::evaluation_domain domain = polynomials::get_domain(n);
 

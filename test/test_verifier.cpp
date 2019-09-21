@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <barretenberg/io/io.hpp>
 #include <barretenberg/waffle/waffle.hpp>
 #include <barretenberg/waffle/preprocess.hpp>
 #include <barretenberg/waffle/verifier.hpp>
@@ -129,14 +130,12 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     fr::zero(state.q_r[n - 1]);
     fr::zero(state.q_o[n - 1]);
     fr::zero(state.q_m[n - 1]);
-
-    // fr::zero(state.q_c[n-1]);
 }
 }
 
 TEST(verifier, verifier)
 {
-    size_t n = 1 << 10;
+    size_t n = 1 << 12;
 
     waffle::circuit_state state;
     state.small_domain = polynomials::get_domain(n);
@@ -147,32 +146,31 @@ TEST(verifier, verifier)
 
     fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (17 * n + 2)));
     fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22 * n + 8)));
-    g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
 
     waffle::fft_pointers ffts;
     ffts.scratch_memory = scratch_space;
     generate_test_data(state, data);
 
-    fr::field_t x = fr::random_element();
+    // load structured reference string from disk
     srs::plonk_srs srs;
-    monomials[0] = g1::affine_one();
-    for (size_t i = 1; i < 3 * n; ++i)
-    {
-        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
-    }
-    scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
-    srs.monomials = monomials;
-    srs.degree = n;
+    srs.degree = 3 * n;
+    srs.monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
+    io::read_transcript(srs, "../srs_db/transcript.dat");
 
-    srs.SRS_T2 = g2::group_exponentiation(g2::affine_one(), x);
+    scalar_multiplication::generate_pippenger_point_table(srs.monomials, srs.monomials, 3 * n);
 
+    // process circuit
     waffle::circuit_instance instance = waffle::preprocess_circuit(state, srs);
+
+    // construct proof
     waffle::plonk_proof proof = waffle::construct_proof(state, ffts, srs);
+
+    // verify proof
     bool result = waffle::verifier::verify_proof(proof, instance, srs.SRS_T2);
 
     EXPECT_EQ(result, true);
 
     free(scratch_space);
     free(data);
-    free(monomials);
+    free(srs.monomials);
 }

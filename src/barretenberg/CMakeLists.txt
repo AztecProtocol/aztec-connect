@@ -19,6 +19,7 @@ add_library(
     groups/g2.hpp
     groups/scalar_multiplication.hpp
     groups/pairing.hpp
+    io/io.hpp
     keccak/hash_types.h
     keccak/keccakf1600.c
     keccak/keccak.c
@@ -69,6 +70,7 @@ add_executable(
     groups/g2.hpp
     groups/scalar_multiplication.hpp
     groups/pairing.hpp
+    io/io.hpp
     keccak/hash_types.h
     keccak/keccakf1600.c
     keccak/keccak.c

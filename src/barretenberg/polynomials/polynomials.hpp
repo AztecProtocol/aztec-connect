@@ -15,6 +15,27 @@
 
 namespace barretenberg
 {
+// Some hacky macros that allow us to parallelize iterating over a polynomial's point-evaluations
+#ifndef NO_MULTITHREADING
+#define ITERATE_OVER_DOMAIN_START(domain)                                                  \
+    for (size_t j = 0; j < domain.num_threads; ++j)                                        \
+    {                                                                                      \
+        for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i) \
+        {
+
+#define ITERATE_OVER_DOMAIN_END \
+    }                           \
+    }
+#else
+#define ITERATE_OVER_DOMAIN_START(domain)    \
+    for (size_t i = 0; i < domain.size; ++i) \
+    {
+
+#define ITERATE_OVER_DOMAIN_END \
+    }
+#endif
+
+
 namespace polynomials
 {
 
@@ -34,6 +55,10 @@ void fft_with_coset(fr::field_t *coeffs, const evaluation_domain &domain);
 void fft_with_coset_and_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &constant);
 
 void ifft_with_coset(fr::field_t *coeffs, const evaluation_domain &domain);
+
+void add(fr::field_t *a_coeffs, fr::field_t *b_coeffs, fr::field_t *r_coeffs, const evaluation_domain &domain);
+
+void mul(fr::field_t *a_coeffs, fr::field_t *b_coeffs, fr::field_t *r_coeffs, const evaluation_domain &domain);
 
 // For L_1(X) = (X^{n} - 1 / (X - 1)) * (1 / n)
 // Compute the 2n-fft of L_1(X)

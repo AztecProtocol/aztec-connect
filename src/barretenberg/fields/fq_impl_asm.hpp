@@ -141,7 +141,7 @@ inline void double_with_add_with_coarse_reduction(const field_t &a, const field_
 {
     __asm__(
         DOUBLE_WITH_ADD("%%rbx", "%%rcx")
-            REDUCE_RESULT_COARSE("%%rsi")
+        REDUCE_RESULT_COARSE("%%rsi")
         :
         : "b"(&a), "c"(&b), "S"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
         : "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");

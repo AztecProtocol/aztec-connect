@@ -128,7 +128,6 @@ inline g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *
     state.num_points = num_initial_points + num_initial_points;
     state.num_rounds = WNAF_SIZE(bits_per_bucket + 1);
     state.num_buckets = (1 << bits_per_bucket);
-
     wnaf_runtime_state wnaf_state;
     wnaf_state.bits_per_wnaf = bits_per_bucket + 1;
 
