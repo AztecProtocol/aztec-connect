@@ -145,12 +145,12 @@ void scale_by_generator(fr::field_t *coeffs, const evaluation_domain &domain, co
         fr::field_t work_generator;
         fr::field_t thread_shift;
         fr::pow_small(generator_shift, j * domain.thread_size, thread_shift);
-        fr::mul(generator_start, thread_shift, work_generator);
+        fr::mul_without_reduction(generator_start, thread_shift, work_generator);
         size_t offset = j * domain.thread_size;
         for (size_t i = offset; i < offset + domain.thread_size; ++i)
         {
             fr::mul(coeffs[i], work_generator, coeffs[i]);
-            fr::mul(work_generator, generator_shift, work_generator);
+            fr::mul_without_reduction(work_generator, generator_shift, work_generator);
         }
     }
 }
@@ -308,7 +308,7 @@ size_t num_threads = 1;
         {
             fr::mul(coeffs[i], z_acc, work_var);
             fr::add(evaluations[j], work_var, evaluations[j]);
-            fr::mul(z_acc, z, z_acc);
+            fr::mul_without_reduction(z_acc, z, z_acc);
         }
     }
 
@@ -357,7 +357,7 @@ void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, const evalua
         for (size_t i = offset; i < offset + target_domain.thread_size; ++i)
         {
             fr::sub(work_root, one, l_1_coefficients[i]);
-            fr::mul(work_root, multiplicand, work_root);
+            fr::mul_without_reduction(work_root, multiplicand, work_root);
         }
     }
 
@@ -470,9 +470,9 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, evaluation_domai
             for (size_t j = 0; j < subgroup_size; ++j)
             {
                 fr::mul(coeffs[i + j], subgroup_roots[j], coeffs[i + j]);
-                fr::add(work_root, numerator_constant, T0);
+                fr::add_without_reduction(work_root, numerator_constant, T0);
                 fr::mul(coeffs[i + j], T0, coeffs[i + j]);
-                fr::mul(work_root, target_domain.root, work_root);
+                fr::mul_without_reduction(work_root, target_domain.root, work_root);
             }
         }
     }
@@ -494,7 +494,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, evaluation_domai
                 fr::mul(coeffs[i + j], subgroup_roots[j], coeffs[i + j]);
                 fr::add(work_root, numerator_constant, T0);
                 fr::mul(coeffs[i + j], T0, coeffs[i + j]);
-                fr::mul(work_root, target_domain.root, work_root);
+                fr::mul_without_reduction(work_root, target_domain.root, work_root);
             }
         }
     }
@@ -515,13 +515,14 @@ fr::field_t compute_kate_opening_coefficients(fr::field_t *coeffs, const fr::fie
     fr::neg(z, divisor);
     fr::invert(divisor, divisor);
 
-    fr::sub(coeffs[0], f, coeffs[0]);
-    fr::mul(coeffs[0], divisor, coeffs[0]);
-
+    // we're about to shove these coefficients into a pippenger multi-exponentiation routine, where we need
+    // to convert out of montgomery form. So, we can use lazy reduction techniques here without triggering overflows
+    fr::sub_with_coarse_reduction(coeffs[0], f, coeffs[0]);
+    fr::mul_without_reduction(coeffs[0], divisor, coeffs[0]);
     for (size_t i = 1; i < n; ++i)
     {
-        fr::sub(coeffs[i], coeffs[i - 1], coeffs[i]);
-        fr::mul(coeffs[i], divisor, coeffs[i]);
+        fr::sub_with_coarse_reduction(coeffs[i], coeffs[i - 1], coeffs[i]);
+        fr::mul_without_reduction(coeffs[i], divisor, coeffs[i]);
     }
 
     return f;
