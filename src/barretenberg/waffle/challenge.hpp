@@ -36,8 +36,6 @@ inline void add_quotient_commitment_to_buffer(const plonk_proof &proof, uint64_t
     fq::from_montgomery_form(proof.T.y, *(fq::field_t *)&input_buffer[4]);
 }
 
-// one gate in 35.9 microseconds...
-
 inline void add_polynomial_evaluations_to_buffer(const plonk_proof &proof, uint64_t* input_buffer)
 {
     fr::from_montgomery_form(proof.w_l_eval, *(fr::field_t*)&input_buffer[0]);
@@ -49,8 +47,7 @@ inline void add_polynomial_evaluations_to_buffer(const plonk_proof &proof, uint6
     fr::from_montgomery_form(proof.sigma_3_eval, *(fr::field_t*)&input_buffer[24]);
     fr::from_montgomery_form(proof.z_1_shifted_eval, *(fr::field_t*)&input_buffer[28]);
     fr::from_montgomery_form(proof.z_2_shifted_eval, *(fr::field_t*)&input_buffer[32]);
-    // fr::from_montgomery_form(proof.t_eval, *(fr::field_t*)&input_buffer[36]);
-    fr::from_montgomery_form(proof.linear_eval, *(fr::field_t*)&input_buffer[40]);
+    fr::from_montgomery_form(proof.linear_eval, *(fr::field_t*)&input_buffer[36]);
 }
 
 inline fr::field_t compute_gamma(const plonk_proof &proof)
@@ -86,8 +83,6 @@ inline fr::field_t compute_alpha(const plonk_proof &proof)
     fr::copy(*(fr::field_t*)&hash.word64s[0], alpha);
     fr::to_montgomery_form(alpha, alpha);
     return alpha;
-    // fr::sqr(state.alpha, state.alpha_squared);
-    // fr::mul(state.alpha, state.alpha_squared, state.alpha_cubed);
 }
 
 inline fr::field_t compute_evaluation_challenge(const plonk_proof &proof)
@@ -106,12 +101,12 @@ inline fr::field_t compute_evaluation_challenge(const plonk_proof &proof)
 inline fr::field_t compute_linearisation_challenge(const plonk_proof &proof)
 {
     fr::field_t nu;
-    uint64_t input_buffer[23 * 4];
+    uint64_t input_buffer[22 * 4];
     add_wire_commitments_to_buffer(proof, input_buffer);
     add_grand_product_commitments_to_buffer(proof, &input_buffer[24]);
     add_quotient_commitment_to_buffer(proof, &input_buffer[40]);
     add_polynomial_evaluations_to_buffer(proof, &input_buffer[48]);
-    keccak256 hash = hash_field_elements(input_buffer, 23);
+    keccak256 hash = hash_field_elements(input_buffer, 22);
     fr::copy(*(fr::field_t*)&hash.word64s[0], nu);
     fr::to_montgomery_form(nu, nu);
     return nu;

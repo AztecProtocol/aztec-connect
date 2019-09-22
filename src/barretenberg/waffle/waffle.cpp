@@ -37,13 +37,14 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &)
     fr::field_t beta_n_2;
     fr::add(beta_n, beta_n, beta_n_2);
 
-    // TODO: multithread this part!
     fr::field_t beta_identity = {.data = {0, 0, 0, 0}};
     // for the sigma permutation, as we compute each product term, store the intermediates in `product_1/2/3`.
 
     fr::one(state.z_1[0]);
     fr::one(state.z_2[0]);
 
+    // TODO: try and multithread this.
+    // Hard to do perfectly, but we can consume at least 6 cores by running grand products in parallel
     for (size_t i = 0; i < n - 1; ++i)
     {
         fr::add(beta_identity, state.challenges.beta, beta_identity);
@@ -113,9 +114,6 @@ inline void compute_wire_commitments(circuit_state &state, plonk_proof &proof, s
     fq::copy(mul_state[2].output.y, proof.W_O.y);
 
     // compute beta, gamma
-    // TODO: use keccak256
-    // fr::random_element(state.challenges.beta);
-    // fr::random_element(state.challenges.gamma);
     state.challenges.gamma = compute_gamma(proof);
     state.challenges.beta = compute_beta(proof, state.challenges.gamma);
 }
@@ -141,9 +139,7 @@ void compute_z_commitments(circuit_state &state, plonk_proof &proof, srs::plonk_
     fq::copy(mul_state[1].output.y, proof.Z_2.y);
 
     // compute alpha
-    // TODO: use keccak256, this is just for testing
-    // precompute some powers of alpha for later on
-    // fr::random_element(state.challenges.alpha);
+    // TODO: does this really belong here?
     state.challenges.alpha = compute_alpha(proof);
     fr::mul(state.challenges.alpha, state.challenges.alpha, state.alpha_squared);
     fr::mul(state.alpha_squared, state.challenges.alpha, state.alpha_cubed);
@@ -191,8 +187,6 @@ void compute_quotient_commitment(circuit_state &state, fr::field_t *coeffs, plon
     g1::copy_to_affine(res, proof.T);
 
     state.challenges.z = compute_evaluation_challenge(proof);
-    // TODO: replace with keccak256
-    // fr::random_element(state.z);
 }
 
 void compute_permutation_grand_product_coefficients(circuit_state &state, fft_pointers &ffts)
@@ -251,13 +245,10 @@ void compute_permutation_grand_product_coefficients(circuit_state &state, fft_po
     fr::copy(ffts.z_2_poly[3], ffts.z_2_poly[state.large_domain.size + 3]);
     fr::field_t *shifted_z_2_poly = &ffts.z_2_poly[4];
 
-    // TODO: is there a way of creating a nice interface for multithreaded, custom polynomial arithmetic?
-    //       e.g. we could just call polynomials::mul, followed by polynomials::sub, but that adds a lot of overheads...
     ITERATE_OVER_DOMAIN_START(state.large_domain);
         fr::mul(ffts.sigma_1_poly[i], ffts.z_2_poly[i], ffts.sigma_1_poly[i]);
         fr::sub(ffts.sigma_1_poly[i], shifted_z_2_poly[i], ffts.quotient_poly[i]);
     ITERATE_OVER_DOMAIN_END;
-
 
     polynomials::compress_fft(ffts.z_2_poly, ffts.z_2_poly_small, state.large_domain.size + 4, 2);
 }
@@ -277,7 +268,6 @@ void compute_identity_grand_product_coefficients(circuit_state &state, fft_point
     polynomials::copy_polynomial(state.s_id, ffts.identity_poly, state.small_domain.size, state.large_domain.size);
 
     fr::add(ffts.identity_poly[0], state.challenges.gamma, ffts.identity_poly[0]);
-    // when we transform z_1 into point-evaluation form, scale up by `alpha_squared` - saves us a mul later on
     polynomials::fft_with_coset(ffts.identity_poly, state.large_domain);
 
     // compute partial identity grand product
@@ -395,6 +385,7 @@ void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk
     ffts.z_2_poly = &ffts.scratch_memory[16 * n];
     ffts.z_2_poly_small = &ffts.scratch_memory[16 * n];
 
+    // the z polynomial coefficients will bleed over by 2 field elements, need to keep track of that...
     ffts.q_m_poly = &ffts.scratch_memory[18 * n + 2];
 
     ffts.identity_poly = &ffts.scratch_memory[18 * n + 2];
@@ -439,7 +430,9 @@ void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk
     waffle::compute_arithmetisation_coefficients(state, ffts);
 
     polynomials::ifft_with_coset(ffts.gate_poly_mid, state.mid_domain);
-
+    
+    // we need to perform an fft transform on gate_poly_mid, to double the evaluation domain.
+    // zero out the high-order coefficients
     memset((void *)(ffts.gate_poly_mid + state.mid_domain.size), 0, (state.mid_domain.size) * sizeof(fr::field_t));
 
     // add state.q_c into accumulator

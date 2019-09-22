@@ -284,17 +284,38 @@ void mul(fr::field_t *a_coeffs, fr::field_t *b_coeffs, fr::field_t *r_coeffs, co
 
 fr::field_t evaluate(fr::field_t *coeffs, const fr::field_t &z, const size_t n)
 {
-    fr::field_t r;
-    fr::field_t work_var;
-    fr::field_t z_acc;
-    fr::zero(work_var);
-    fr::zero(r);
-    fr::one(z_acc);
-    for (size_t i = 0; i < n; ++i)
+#ifndef NO_MULTITHREADING
+size_t num_threads = omp_get_max_threads();
+#else
+size_t num_threads = 1;
+#endif
+
+    size_t range_per_thread = n / num_threads;
+    size_t leftovers = n - (range_per_thread * num_threads);
+    fr::field_t evaluations[num_threads];
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+    for (size_t j = 0; j < num_threads; ++j)
     {
-        fr::mul(coeffs[i], z_acc, work_var);
-        fr::add(r, work_var, r);
-        fr::mul(z_acc, z, z_acc);
+        fr::field_t z_acc;
+        fr::field_t work_var;
+        fr::pow_small(z, j * range_per_thread, z_acc);
+        size_t offset = j * range_per_thread;
+        evaluations[j] = fr::zero();
+        size_t end = (j == num_threads - 1) ? offset + range_per_thread + leftovers : offset + range_per_thread;
+        for (size_t i = offset; i < end; ++i)
+        {
+            fr::mul(coeffs[i], z_acc, work_var);
+            fr::add(evaluations[j], work_var, evaluations[j]);
+            fr::mul(z_acc, z, z_acc);
+        }
+    }
+
+    fr::field_t r = fr::zero();
+    for (size_t j = 0; j < num_threads; ++j)
+    {
+        fr::add(r, evaluations[j], r);
     }
     return r;
 }
