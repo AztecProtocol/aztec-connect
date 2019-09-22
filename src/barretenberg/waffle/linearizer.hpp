@@ -25,9 +25,11 @@ namespace waffle
         fr::field_t sigma_3;
     };
 
-    // when computing Kate commitments to the PLONK polynomials, we wish to find the minimum number of polynomial evaluatiosn that the
+    // This linearisation trick was originated from Mary Maller and the SONIC paper. When computing Kate commitments to the PLONK polynomials, we wish to find the minimum number of polynomial evaluations that the
     // prover must send to the verifier. I.e. we want to find the minimum number of polynomial evaluations that are needed, so that the remaining
-    // polynomial evaluations can be expressed as a linear relationship. We must, then, only commit to this linear polynomial.
+    // polynomial evaluations can be expressed as a linear sum of polynomials. The verifier can derive the prover's commitment to this linear polynomial
+    // from the original commitments - the prover can provide an evaluation of this linear polynomial, instead of the evaluations of its consitutent polynomials.
+    // This shaves 6 field elements off of the proof size!
     inline plonk_linear_terms compute_linear_terms(const plonk_proof& proof, const plonk_challenges& challenges, const fr::field_t& l_1, const size_t n)
     {
         plonk_linear_terms result;

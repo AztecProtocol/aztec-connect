@@ -227,7 +227,6 @@ struct plonk_proof
     fr::field_t sigma_1_eval;
     fr::field_t sigma_2_eval;
     fr::field_t sigma_3_eval;
-    fr::field_t t_eval;
     fr::field_t z_1_shifted_eval;
     fr::field_t z_2_shifted_eval;
     fr::field_t linear_eval;

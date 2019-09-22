@@ -4,13 +4,8 @@
 
 using namespace barretenberg;
 
-TEST(fft, evaluation_domain)
+TEST(polynomials, evaluation_domain)
 {
-    fr::field_t foo = fr::modulus;
-    fr::field_t bar;
-    fr::add_without_reduction(foo, foo, bar);
-    printf("foobar\n");
-    fr::print(bar);
     size_t n = 256;
     polynomials::evaluation_domain domain = polynomials::get_domain(n);
 
@@ -18,7 +13,7 @@ TEST(fft, evaluation_domain)
     EXPECT_EQ(domain.log2_size, 8);
 }
 
-TEST(fft, domain_roots)
+TEST(polynomials, domain_roots)
 {
     size_t n = 256;
     polynomials::evaluation_domain domain = polynomials::get_domain(n);
@@ -34,7 +29,7 @@ TEST(fft, domain_roots)
     }
 }
 
-TEST(fft, fft_with_small_degree)
+TEST(polynomials, fft_with_small_degree)
 {
     size_t n = 4;
     fr::field_t fft_transform[n];
@@ -65,7 +60,7 @@ TEST(fft, fft_with_small_degree)
 }
 
 
-TEST(fft, basic_fft)
+TEST(polynomials, basic_fft)
 {
     size_t n = 16;
     fr::field_t result[n];
@@ -90,7 +85,7 @@ TEST(fft, basic_fft)
     }
 }
 
-TEST(fft, fft_ifft_consistency)
+TEST(polynomials, fft_ifft_consistency)
 {
     size_t n = 256;
     fr::field_t result[n];
@@ -115,7 +110,7 @@ TEST(fft, fft_ifft_consistency)
     }
 }
 
-TEST(fft, fft_ifft_with_coset_consistency)
+TEST(polynomials, fft_ifft_with_coset_consistency)
 {
     size_t n = 256;
     fr::field_t result[n];
@@ -148,7 +143,7 @@ TEST(fft, fft_ifft_with_coset_consistency)
     }
 }
 
-TEST(fft, fft_ifft_with_coset_cross_consistency)
+TEST(polynomials, fft_ifft_with_coset_cross_consistency)
 {
     size_t n = 2;
     fr::field_t expected[n];
@@ -196,7 +191,7 @@ TEST(fft, fft_ifft_with_coset_cross_consistency)
     }
 }
 
-TEST(fft, compute_lagrange_polynomial_fft)
+TEST(polynomials, compute_lagrange_polynomial_fft)
 {
     size_t n = 256;
     polynomials::evaluation_domain small_domain = polynomials::get_domain(n);
@@ -270,7 +265,7 @@ TEST(fft, compute_lagrange_polynomial_fft)
     }
 }
 
-TEST(fft, divide_by_pseudo_vanishing_polynomial)
+TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
 {
     size_t n = 256;
     fr::field_t a[4 * n];
@@ -330,7 +325,7 @@ TEST(fft, divide_by_pseudo_vanishing_polynomial)
 
 }
 
-// TEST(fft, divide_by_pseudo_vanishing_polynomial_long)
+// TEST(polynomials, divide_by_pseudo_vanishing_polynomial_long)
 // {
 //     size_t n = 16;
 //     fr::field_t a[4 * n];
@@ -390,7 +385,7 @@ TEST(fft, divide_by_pseudo_vanishing_polynomial)
 //     }
 // }
 
-TEST(fft, compute_kate_opening_coefficients)
+TEST(polynomials, compute_kate_opening_coefficients)
 {
     // generate random polynomial F(X) = coeffs
     size_t n = 256;
@@ -442,7 +437,7 @@ TEST(fft, compute_kate_opening_coefficients)
     }
 }
 
-TEST(fft, get_lagrange_evaluations)
+TEST(polynomials, get_lagrange_evaluations)
 {
     size_t n = 16;
     

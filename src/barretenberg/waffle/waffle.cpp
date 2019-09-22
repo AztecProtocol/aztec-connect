@@ -456,13 +456,16 @@ void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk
     polynomials::ifft_with_coset(ffts.quotient_poly, state.large_domain);
 }
 
-void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts, plonk_proof &proof)
+void compute_linearisation_coefficients(circuit_state &state, fft_pointers &, plonk_proof &proof)
 {
     // ok... now we need to evaluate polynomials. Jeepers
     fr::field_t beta_inv;
     fr::invert(state.challenges.beta, beta_inv);
     fr::field_t shifted_z;
     fr::mul(state.challenges.z, state.small_domain.root, shifted_z);
+
+    // evaluate the prover and instance polynomials.
+    // (we don't need to evaluate the quotient polynomial, that can be derived by the verifier)
     proof.w_l_eval = polynomials::evaluate(state.w_l, state.challenges.z, state.n);
     proof.w_r_eval = polynomials::evaluate(state.w_r, state.challenges.z, state.n);
     proof.w_o_eval = polynomials::evaluate(state.w_o, state.challenges.z, state.n);
@@ -470,7 +473,6 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts
     proof.sigma_1_eval = polynomials::evaluate(state.sigma_1, state.challenges.z, state.n);
     proof.sigma_2_eval = polynomials::evaluate(state.sigma_2, state.challenges.z, state.n);
     proof.sigma_3_eval = polynomials::evaluate(state.sigma_3, state.challenges.z, state.n);
-    proof.t_eval = polynomials::evaluate(ffts.quotient_poly, state.challenges.z, (state.n * 3));
     proof.z_1_shifted_eval = polynomials::evaluate(state.z_1, shifted_z, state.n);
     proof.z_2_shifted_eval = polynomials::evaluate(state.z_2, shifted_z, state.n);
 

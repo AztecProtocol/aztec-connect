@@ -26,7 +26,7 @@ add_executable(
     test_scalar_multiplication.cpp
     test_pairing.cpp
     test_io.cpp
-    test_fft.cpp
+    test_polynomials.cpp
     test_preprocess.cpp
     test_waffle.cpp
     test_verifier.cpp

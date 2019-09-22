@@ -8,7 +8,7 @@
 
 using namespace barretenberg;
 
-TEST(io, will_load_file)
+TEST(io, read_transcript_loads_well_formed_srs)
 {
     srs::plonk_srs srs;
     srs.degree = 100000;

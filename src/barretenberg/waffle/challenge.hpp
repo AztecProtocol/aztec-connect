@@ -49,7 +49,7 @@ inline void add_polynomial_evaluations_to_buffer(const plonk_proof &proof, uint6
     fr::from_montgomery_form(proof.sigma_3_eval, *(fr::field_t*)&input_buffer[24]);
     fr::from_montgomery_form(proof.z_1_shifted_eval, *(fr::field_t*)&input_buffer[28]);
     fr::from_montgomery_form(proof.z_2_shifted_eval, *(fr::field_t*)&input_buffer[32]);
-    fr::from_montgomery_form(proof.t_eval, *(fr::field_t*)&input_buffer[36]);
+    // fr::from_montgomery_form(proof.t_eval, *(fr::field_t*)&input_buffer[36]);
     fr::from_montgomery_form(proof.linear_eval, *(fr::field_t*)&input_buffer[40]);
 }
 

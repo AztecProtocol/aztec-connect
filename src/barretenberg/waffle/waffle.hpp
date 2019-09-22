@@ -8,52 +8,6 @@
 namespace waffle
 {
 using namespace barretenberg;
-struct circuit_vectors
-{
-    fr::field_t *w_l;
-    fr::field_t *w_r;
-    fr::field_t *w_o;
-
-    fr::field_t *sigma_1;
-    fr::field_t *sigma_2;
-    fr::field_t *sigma_3;
-    fr::field_t *q_m;
-    fr::field_t *q_l;
-    fr::field_t *q_r;
-    fr::field_t *q_o;
-    fr::field_t *q_c;
-};
-
-struct runtime_state
-{
-    polynomials::evaluation_domain small_domain;
-    polynomials::evaluation_domain mid_domain;
-    polynomials::evaluation_domain large_domain;
-
-    // random challenges
-    fr::field_t gamma;
-    fr::field_t beta;
-    fr::field_t alpha;
-    fr::field_t alpha_squared;
-    fr::field_t alpha_cubed;
-    fr::field_t z;
-    fr::field_t nu;
-
-    fr::field_t *w_l_poly;
-    fr::field_t *w_r_poly;
-    fr::field_t *w_o_poly;
-
-    fr::field_t *s_id_poly;
-    fr::field_t *sigma_1_poly;
-    fr::field_t *sigma_2_poly;
-    fr::field_t *sigma_3_poly;
-    fr::field_t *q_m_poly;
-    fr::field_t *q_l_poly;
-    fr::field_t *q_r_poly;
-    fr::field_t *q_o_poly;
-
-    fr::field_t *l_1_poly;
-};
 
 // Stores pointers to various polynomials required during proof construction
 // Note: these pointers can overlap! We want to efficiently use available memory,

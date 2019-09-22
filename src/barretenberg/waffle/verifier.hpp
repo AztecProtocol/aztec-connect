@@ -34,7 +34,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     // compute the terms we need to derive R(X)
     plonk_linear_terms linear_terms = compute_linear_terms(proof, challenges, lagrange_evals.l_1, instance.n);
 
-    // reconstruct evaluation of quotient polynomial from proverm essages
+    // reconstruct evaluation of quotient polynomial from prover messages
     fr::field_t t_eval;
     fr::field_t T0;
     fr::field_t T1;
