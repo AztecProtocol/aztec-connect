@@ -552,8 +552,6 @@ inline void conditional_negate_affine(affine_element *src, affine_element *dest,
 // n.b. requires src and dest to be aligned on 32 byte boundary
 inline void conditional_negate_affine(affine_element *src, affine_element *dest, uint64_t predicate)
 {
-    ASSERT((((uintptr_t)src & 0x1f) == 0));
-    ASSERT((((uintptr_t)dest & 0x1f) == 0));
     __asm__ __volatile__(
         "xorq %%r8, %%r8                              \n\t"
         "movq 32(%0), %%r8                            \n\t"

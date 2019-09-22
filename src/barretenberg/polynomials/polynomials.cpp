@@ -6,7 +6,6 @@ namespace polynomials
 {
 namespace
 {
-
 inline uint32_t reverse_bits(uint32_t x, uint32_t bit_length)
 {
     x = (((x & 0xaaaaaaaa) >> 1) | ((x & 0x55555555) << 1));
@@ -179,18 +178,6 @@ void compute_multiplicative_subgroup(const size_t log2_subgroup_size, const eval
 }
 } // namespace
 
-void copy_polynomial(fr::field_t *src, fr::field_t *dest, size_t num_src_coefficients, size_t num_target_coefficients)
-{
-    // TODO: fiddle around with avx2 asm to see if we can speed up
-    memcpy((void *)dest, (void *)src, num_src_coefficients * sizeof(fr::field_t));
-
-    if (num_target_coefficients > num_src_coefficients)
-    {
-        // fill out the polynomial coefficients with zeroes
-        memset((void *)(dest + num_src_coefficients), 0, (num_target_coefficients - num_src_coefficients) * sizeof(fr::field_t));
-    }
-}
-
 evaluation_domain get_domain(size_t num_elements)
 {
     size_t n = log2(num_elements);
@@ -203,7 +190,6 @@ evaluation_domain get_domain(size_t num_elements)
     domain.log2_size = n;
     fr::get_root_of_unity(domain.log2_size, domain.root);
     fr::invert(domain.root, domain.root_inverse);
-
     domain.domain = {.data = {domain.size, 0, 0, 0}};
     fr::to_montgomery_form(domain.domain, domain.domain);
     fr::invert(domain.domain, domain.domain_inverse);
@@ -222,6 +208,18 @@ evaluation_domain get_domain(size_t num_elements)
     domain.log2_thread_size = domain.log2_size - domain.log2_num_threads;
     domain.thread_size = 1 << domain.log2_thread_size;
     return domain;
+}
+
+void copy_polynomial(fr::field_t *src, fr::field_t *dest, size_t num_src_coefficients, size_t num_target_coefficients)
+{
+    // TODO: fiddle around with avx asm to see if we can speed up
+    memcpy((void *)dest, (void *)src, num_src_coefficients * sizeof(fr::field_t));
+
+    if (num_target_coefficients > num_src_coefficients)
+    {
+        // fill out the polynomial coefficients with zeroes
+        memset((void *)(dest + num_src_coefficients), 0, (num_target_coefficients - num_src_coefficients) * sizeof(fr::field_t));
+    }
 }
 
 void fft(fr::field_t *coeffs, const evaluation_domain &domain)
@@ -245,6 +243,14 @@ void ifft_with_constant(fr::field_t *coeffs, const evaluation_domain &domain, co
     ITERATE_OVER_DOMAIN_START(domain);
         fr::mul(coeffs[i], T0, coeffs[i]);
     ITERATE_OVER_DOMAIN_END;
+}
+
+void fft_with_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &value)
+{
+    fft_inner_parallel(coeffs, domain, domain.root);
+     ITERATE_OVER_DOMAIN_START(domain);
+        fr::mul(coeffs[i], value, coeffs[i]);
+    ITERATE_OVER_DOMAIN_END;   
 }
 
 void fft_with_coset(fr::field_t *coeffs, const evaluation_domain &domain)

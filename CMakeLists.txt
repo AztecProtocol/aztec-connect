@@ -1,41 +1,34 @@
-# barretenburg
-# copyright 2019 Spilsbury Holdings
+# barretenberg
+# copyright 2019 Spilsbry Holdings Ltd
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.14)
 
-include(cmake/cable/bootstrap.cmake)
-include(CableBuildType)
-include(CableCompilerSettings)
-include(CableToolchains)
 include(GNUInstallDirs)
-
-cable_configure_toolchain(DEFAULT cxx17)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=broadwell -msse2 -mavx -O3 -fopenmp")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-
-include(HunterConfig)
-
-cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug Release)
+include(cmake/OptimizeForArchitecture.cmake)
+include(cmake/AddCompilerFlag.cmake)
 
 set(PROJECT_VERSION 0.1.0)
-project(barretenberg)
+project(Barretenberg
+    DESCRIPTION "BN254 elliptic curve library, and PLONK SNARK prover"
+    LANGUAGES CXX C)
 
-set(HUNTER_NO_TOOLCHAIN_ID_RECALCULATION ON)
+set(default_build_type "Release")
 
-cable_configure_compiler(NO_PEDANTIC NO_CONVERSION_WARNINGS)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_EXTENSIONS ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_CXX_EXTENSIONS ON)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -O3 -fopenmp")
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)
 set(DEPENDS_DIR ${PROJECT_SOURCE_DIR}/depends)
 
-message(INFO " INCLUDE_DIR = ${include_dir}\n")
-message(INFO " DEPENDS_DIR = ${DEPENDS_DIR}\n")
-
-
-### DEPENDENCIES
-
+message(INFO "INCLUDE_DIR = ${include_dir}\n")
+message(INFO "DEPENDS_DIR = ${DEPENDS_DIR}\n")
+message(INFO "CMAKE_INSTALL_INCLUDEDIR = ${CMAKE_INSTALL_INCLUDEDIR}\n")
 
 add_subdirectory(src)
 

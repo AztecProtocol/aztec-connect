@@ -450,10 +450,7 @@ TEST(waffle, compute_quotient_polynomial_for_structured_circuit)
     // check that the max degree of our quotient polynomial is 3n
     for (size_t i = 3 * n; i < 4 * n; ++i)
     {
-        for (size_t j = 0; j < 4; ++j)
-        {
-            EXPECT_EQ(ffts.quotient_poly[i].data[j], 0);
-        }
+        EXPECT_EQ(fr::eq(ffts.quotient_poly[i], fr::zero()), true);
     }
 
     free(scratch_space);
@@ -497,10 +494,7 @@ TEST(waffle, compute_quotient_polynomial)
     // check that the max degree of our quotient polynomial is 3n
     for (size_t i = 3 * n; i < 4 * n; ++i)
     {
-        for (size_t j = 0; j < 4; ++j)
-        {
-            EXPECT_EQ(ffts.quotient_poly[i].data[j], 0);
-        }
+        EXPECT_EQ(fr::eq(ffts.quotient_poly[i], fr::zero()), true);
     }
 
     free(scratch_space);
@@ -626,11 +620,7 @@ TEST(waffle, compute_z_coefficients)
     z_eval = polynomials::evaluate(z_coeffs, shifted_x, state.small_domain.size);
     shifted_z_eval = polynomials::evaluate(shifted_z, x, state.small_domain.size);
 
-    for (size_t i = 0; i < 4; ++i)
-    {
-        EXPECT_EQ(z_eval.data[i], shifted_z_eval.data[i]);
-    }
-
+    EXPECT_EQ(fr::eq(z_eval, shifted_z_eval), true);
 }
 
 TEST(waffle, compute_wire_coefficients)
@@ -703,12 +693,9 @@ TEST(waffle, compute_wire_coefficients)
         w_r_expected = polynomials::evaluate(state.w_r, work_root, n);
         w_o_expected = polynomials::evaluate(state.w_o, work_root, n);
         fr::mul(work_root, state.small_domain.root, work_root);
-        for (size_t j = 0; j < 4; ++j)
-        {
-            EXPECT_EQ(w_l_reference[i].data[j], w_l_expected.data[j]);
-            EXPECT_EQ(w_r_reference[i].data[j], w_r_expected.data[j]);
-            EXPECT_EQ(w_o_reference[i].data[j], w_o_expected.data[j]);
-        }
+        EXPECT_EQ(fr::eq(w_l_reference[i], w_l_expected), true);
+        EXPECT_EQ(fr::eq(w_r_reference[i], w_r_expected), true);
+        EXPECT_EQ(fr::eq(w_o_reference[i], w_o_expected), true);
     }
 }
 
@@ -771,15 +758,12 @@ TEST(waffle, compute_wire_commitments)
     g1::affine_element expected_w_r = g1::group_exponentiation(generator, w_r_eval);
     g1::affine_element expected_w_o = g1::group_exponentiation(generator, w_o_eval);
 
-    for (size_t i = 0; i < 1; ++i)
-    {
-        EXPECT_EQ(proof.W_L.x.data[i], expected_w_l.x.data[i]);
-        EXPECT_EQ(proof.W_L.y.data[i], expected_w_l.y.data[i]);
-        EXPECT_EQ(proof.W_R.x.data[i], expected_w_r.x.data[i]);
-        EXPECT_EQ(proof.W_R.y.data[i], expected_w_r.y.data[i]);
-        EXPECT_EQ(proof.W_O.x.data[i], expected_w_o.x.data[i]);
-        EXPECT_EQ(proof.W_O.y.data[i], expected_w_o.y.data[i]);
-    }
+    EXPECT_EQ(fq::eq(proof.W_L.x, expected_w_l.x), true);
+    EXPECT_EQ(fq::eq(proof.W_L.y, expected_w_l.y), true);
+    EXPECT_EQ(fq::eq(proof.W_R.x, expected_w_r.x), true);
+    EXPECT_EQ(fq::eq(proof.W_R.y, expected_w_r.y), true);
+    EXPECT_EQ(fq::eq(proof.W_O.x, expected_w_o.x), true);
+    EXPECT_EQ(fq::eq(proof.W_O.y, expected_w_o.y), true);
 }
 
 TEST(waffle, compute_z_commitments)
@@ -840,18 +824,16 @@ TEST(waffle, compute_z_commitments)
     g1::affine_element expected_z_1 = g1::group_exponentiation(generator, z_1_eval);
     g1::affine_element expected_z_2 = g1::group_exponentiation(generator, z_2_eval);
 
-    for (size_t i = 0; i < 1; ++i)
-    {
-        EXPECT_EQ(proof.Z_1.x.data[i], expected_z_1.x.data[i]);
-        EXPECT_EQ(proof.Z_1.y.data[i], expected_z_1.y.data[i]);
-        EXPECT_EQ(proof.Z_2.x.data[i], expected_z_2.x.data[i]);
-        EXPECT_EQ(proof.Z_2.y.data[i], expected_z_2.y.data[i]);
-    }
+    EXPECT_EQ(fq::eq(proof.Z_1.x, expected_z_1.x), true);
+    EXPECT_EQ(fq::eq(proof.Z_1.y, expected_z_1.y), true);
+    EXPECT_EQ(fq::eq(proof.Z_2.x, expected_z_2.x), true);
+    EXPECT_EQ(fq::eq(proof.Z_2.y, expected_z_2.y), true);
 
     free(monomials);
     free(scratch_space);
     free(data);
 }
+
 TEST(waffle, compute_linearisation_coefficients)
 {
     size_t n = 256;
@@ -914,10 +896,8 @@ TEST(waffle, compute_linearisation_coefficients)
 
     fr::mul(t_eval, lagrange_evals.vanishing_poly, lhs);
 
-    for (size_t i = 0; i < 4; ++i)
-    {
-        EXPECT_EQ(lhs.data[i], rhs.data[i]);
-    }
+    EXPECT_EQ(fr::eq(lhs, rhs), true);
+
     free(scratch_space);
     free(data);
     free(monomials);

@@ -316,9 +316,9 @@ TEST(fr, batch_invert)
 
     for (size_t i = 0; i < n; ++i)
     {
-        EXPECT_EQ(coeffs[i].data[0], 0);
-        EXPECT_EQ(coeffs[i].data[1], 0);
-        EXPECT_EQ(coeffs[i].data[2], 0);
-        EXPECT_EQ(coeffs[i].data[3], 0);
+        EXPECT_EQ(coeffs[i].data[0], 0UL);
+        EXPECT_EQ(coeffs[i].data[1], 0UL);
+        EXPECT_EQ(coeffs[i].data[2], 0UL);
+        EXPECT_EQ(coeffs[i].data[3], 0UL);
     }
 }

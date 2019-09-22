@@ -1,5 +1,17 @@
-hunter_add_package(benchmark)
-find_package(benchmark CONFIG REQUIRED)
+include(FetchContent)
+
+### DEPENDENCIES
+FetchContent_Declare(
+    benchmark
+    GIT_REPOSITORY https://github.com/google/benchmark
+    GIT_TAG v1.5.0
+)
+
+FetchContent_GetProperties(benchmark)
+if(NOT benchmark_POPULATED)
+  fetchcontent_populate(benchmark)
+  add_subdirectory(${benchmark_SOURCE_DIR} ${benchmark_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 
 add_executable(
     barretenberg_bench
@@ -10,7 +22,7 @@ target_link_libraries(
     PUBLIC
     barretenberg
     PRIVATE
-    benchmark::benchmark
+    benchmark
 )
 target_include_directories(
     barretenberg_bench
@@ -23,6 +35,5 @@ set_target_properties(
     barretenberg_bench
     PROPERTIES
     
-    COMPILE_FLAGS "-fopenmp"
     RUNTIME_OUTPUT_DIRECTORY ..
 )

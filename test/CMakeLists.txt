@@ -1,15 +1,31 @@
 # barretenberg
 # copyright 2019 Spilsbury Holdings
 
-include(GoogleTest)
+include(FetchContent)
+
+### DEPENDENCIES
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG release-1.8.0
+)
+
+FetchContent_GetProperties(googletest)
+if(NOT googletest_POPULATED)
+    FetchContent_Populate(googletest)
+    add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
+mark_as_advanced(
+    BUILD_GMOCK BUILD_GTEST BUILD_SHARED_LIBS
+    gmock_build_tests gtest_build_samples gtest_build_tests
+    gtest_disable_pthreads gtest_force_shared_crt gtest_hide_internal_symbols
+)
 
 set(setup_private_include_dir ${PROJECT_SOURCE_DIR}/src)
 
-hunter_add_package(GTest)
-find_package(GTest CONFIG REQUIRED)
-
-hunter_add_package(benchmark)
-find_package(benchmark CONFIG REQUIRED)
+# hunter_add_package(benchmark)
+# find_package(benchmark CONFIG REQUIRED)
 
 add_subdirectory(benchmarks)
 
@@ -36,7 +52,6 @@ set_target_properties(
     barretenberg_tests
     PROPERTIES
     
-    COMPILE_FLAGS "-fopenmp"
     RUNTIME_OUTPUT_DIRECTORY .
 )
 
@@ -47,9 +62,11 @@ target_link_libraries(
     ${GMP_LIBRARIES}
     ${LIBFF}
     PRIVATE
-        GTest::gtest
-        GTest::main
+        gtest
+        gmock
+        gtest_main
 )
+
 target_include_directories(
     barretenberg_tests
     PRIVATE
@@ -57,7 +74,7 @@ target_include_directories(
         ${include_dir}
 )
 
-gtest_add_tests(
+add_test(
     TARGET
     barretenberg_tests
     TEST_PREFIX

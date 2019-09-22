@@ -145,10 +145,6 @@ TEST(verifier, verifier)
     state.n = n;
 
     fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (17 * n + 2)));
-    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22 * n + 8)));
-
-    waffle::fft_pointers ffts;
-    ffts.scratch_memory = scratch_space;
     generate_test_data(state, data);
 
     // load structured reference string from disk
@@ -163,14 +159,12 @@ TEST(verifier, verifier)
     waffle::circuit_instance instance = waffle::preprocess_circuit(state, srs);
 
     // construct proof
-    waffle::plonk_proof proof = waffle::construct_proof(state, ffts, srs);
+    waffle::plonk_proof proof = waffle::construct_proof(state, srs);
 
     // verify proof
     bool result = waffle::verifier::verify_proof(proof, instance, srs.SRS_T2);
 
     EXPECT_EQ(result, true);
-
-    free(scratch_space);
     free(data);
     free(srs.monomials);
 }

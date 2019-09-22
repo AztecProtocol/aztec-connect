@@ -39,7 +39,6 @@ set_target_properties(
     
     PROPERTIES
     LINKER_LANGUAGE CXX
-    COMPILE_FLAGS "-fopenmp"
 )
 
 target_link_libraries(
@@ -93,14 +92,13 @@ set_target_properties(
     barretenberg_profiling
 
     PROPERTIES
-    COMPILE_FLAGS "-fopenmp"
     LINKER_LANGUAGE CXX
     RUNTIME_OUTPUT_DIRECTORY ../../test
 )
 
 install(
     DIRECTORY
-    ${include_dir}/
+    ${include_dir}
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING
     PATTERN "*.hpp"

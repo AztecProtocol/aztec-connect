@@ -50,6 +50,8 @@ void ifft(fr::field_t *coeffs, const evaluation_domain &domain);
 
 void ifft_with_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &value);
 
+void fft_with_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &value);
+
 void fft_with_coset(fr::field_t *coeffs, const evaluation_domain &domain);
 
 void fft_with_coset_and_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &constant);

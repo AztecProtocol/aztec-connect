@@ -504,8 +504,12 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers &, pl
     proof.linear_eval = polynomials::evaluate(state.linear_poly, state.challenges.z, state.small_domain.size);
 }
 
-plonk_proof construct_proof(circuit_state &state, fft_pointers &ffts, srs::plonk_srs &reference_string)
+plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_string)
 {
+    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22 * state.n + 8)));
+    waffle::fft_pointers ffts;
+    ffts.scratch_memory = scratch_space;
+
     plonk_proof proof;
     state.linear_poly = &ffts.scratch_memory[4 * state.n]; // TODO: this should probably be somewhere else...
     compute_quotient_polynomial(state, ffts, proof, reference_string);
@@ -597,6 +601,7 @@ plonk_proof construct_proof(circuit_state &state, fft_pointers &ffts, srs::plonk
 
     g1::copy_to_affine(mul_state[3].output, proof.PI_Z_OMEGA);
 
+    free(scratch_space);
     return proof;
 }
 } // namespace waffle

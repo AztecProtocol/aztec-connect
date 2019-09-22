@@ -282,7 +282,6 @@ inline void pow(const field_t &a, const field_t &b, field_t &r)
 {
     field_t accumulator;
     copy(a, accumulator);
-
     bool found_one = false;
     size_t i = 255;
     while (!found_one)

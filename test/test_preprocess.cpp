@@ -39,7 +39,6 @@ TEST(preprocess, preprocess)
         &scratch_space[7*n],
         &scratch_space[8*n]
     };
-
     for (size_t i = 0; i < 9; ++i)
     {
         for (size_t j = 0; j < n; ++j)
@@ -47,7 +46,6 @@ TEST(preprocess, preprocess)
             polys[i][j] = fr::random_element();
         }
     }
-
     waffle::circuit_state state;
     state.small_domain = polynomials::get_domain(n);
     state.n = n;
@@ -60,13 +58,11 @@ TEST(preprocess, preprocess)
     state.q_r = polys[6];
     state.q_o = polys[7];
     state.q_c = polys[8];
-
     g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
     fr::field_t x = fr::random_element();
     srs::plonk_srs srs = compute_dummy_srs(3 * n, x, monomials);
 
     waffle::circuit_instance instance = waffle::preprocess_circuit(state, srs);
-
     for (size_t i = 0; i < 9; ++i)
     {
         polynomials::ifft(polys[i], state.small_domain);

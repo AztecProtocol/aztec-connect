@@ -104,14 +104,14 @@ namespace polynomials
 {
 struct evaluation_domain
 {
-    size_t size;
-    size_t log2_size;
     fr::field_t root;
     fr::field_t root_inverse;
     fr::field_t generator;
     fr::field_t generator_inverse;
     fr::field_t domain;
     fr::field_t domain_inverse;
+    size_t size;
+    size_t log2_size;
     size_t num_threads;
     size_t thread_size;
     size_t log2_thread_size;
