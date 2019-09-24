@@ -205,6 +205,10 @@ struct circuit_state
     fr::field_t *w_l_lagrange_base;
     fr::field_t *w_r_lagrange_base;
     fr::field_t *w_o_lagrange_base;
+
+    uint32_t *sigma_1_mapping;
+    uint32_t *sigma_2_mapping;
+    uint32_t *sigma_3_mapping;
     size_t n;
 
     polynomials::evaluation_domain small_domain;

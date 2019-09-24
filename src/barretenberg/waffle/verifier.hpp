@@ -66,7 +66,6 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::pow_small(challenges.z, instance.n * 2, z_pow_2n);
     fr::mul(proof.t_mid_eval, z_pow_n, T0);
     fr::mul(proof.t_hi_eval, z_pow_2n, T1);
-
     fr::sub(t_eval, T0, t_eval);
     fr::sub(t_eval, T1, t_eval);
 
@@ -98,8 +97,8 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::mul(nu_pow[3], proof.w_o_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[4], proof.s_id_eval, T0);
-    fr::add(batch_evaluation, T0, batch_evaluation);
+    // fr::mul(nu_pow[4], proof.s_id_eval, T0);
+    // fr::add(batch_evaluation, T0, batch_evaluation);
 
     fr::mul(nu_pow[5], proof.sigma_1_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
@@ -131,7 +130,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::mul(z_omega_scalar, u, z_omega_scalar);
 
     // TODO: make a wrapper around g1 ops so...this guff isn't needed each time we want to do a scalar mul
-    fr::field_t *scalar_exponents = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * 19);
+    fr::field_t *scalar_exponents = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * 18);
     fr::copy(linear_terms.q_m, scalar_exponents[0]);
     fr::copy(linear_terms.q_l, scalar_exponents[1]);
     fr::copy(linear_terms.q_r, scalar_exponents[2]);
@@ -142,17 +141,17 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::copy(nu_pow[1], scalar_exponents[7]);
     fr::copy(nu_pow[2], scalar_exponents[8]);
     fr::copy(nu_pow[3], scalar_exponents[9]);
-    fr::copy(nu_pow[4], scalar_exponents[10]);
-    fr::copy(nu_pow[5], scalar_exponents[11]);
-    fr::copy(nu_pow[6], scalar_exponents[12]);
-    fr::copy(nu_pow[7], scalar_exponents[13]);
-    fr::copy(batch_evaluation, scalar_exponents[14]);
-    fr::copy(z_omega_scalar, scalar_exponents[15]);
-    fr::copy(challenges.z, scalar_exponents[16]);
-    fr::copy(nu_pow[10], scalar_exponents[17]);
-    fr::copy(nu_pow[11], scalar_exponents[18]);
+    // fr::copy(nu_pow[4], scalar_exponents[10]);
+    fr::copy(nu_pow[5], scalar_exponents[10]);
+    fr::copy(nu_pow[6], scalar_exponents[11]);
+    fr::copy(nu_pow[7], scalar_exponents[12]);
+    fr::copy(batch_evaluation, scalar_exponents[13]);
+    fr::copy(z_omega_scalar, scalar_exponents[14]);
+    fr::copy(challenges.z, scalar_exponents[15]);
+    fr::copy(nu_pow[10], scalar_exponents[16]);
+    fr::copy(nu_pow[11], scalar_exponents[17]);
 
-    g1::affine_element *lhs_ge = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * 40);
+    g1::affine_element *lhs_ge = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * 38);
 
     g1::copy_affine(instance.Q_M, lhs_ge[0]);
     g1::copy_affine(instance.Q_L, lhs_ge[1]);
@@ -164,19 +163,19 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     g1::copy_affine(proof.W_L, lhs_ge[7]);
     g1::copy_affine(proof.W_R, lhs_ge[8]);
     g1::copy_affine(proof.W_O, lhs_ge[9]);
-    g1::copy_affine(instance.S_ID, lhs_ge[10]);
-    g1::copy_affine(instance.SIGMA_1, lhs_ge[11]);
-    g1::copy_affine(instance.SIGMA_2, lhs_ge[12]);
-    g1::copy_affine(instance.SIGMA_3, lhs_ge[13]);
-    g1::copy_affine(g1::affine_one(), lhs_ge[14]);
-    g1::copy_affine(proof.PI_Z_OMEGA, lhs_ge[15]);
-    g1::copy_affine(proof.PI_Z, lhs_ge[16]);
-    g1::copy_affine(proof.T_MID, lhs_ge[17]);
-    g1::copy_affine(proof.T_HI, lhs_ge[18]);
+    // g1::copy_affine(instance.S_ID, lhs_ge[10]);
+    g1::copy_affine(instance.SIGMA_1, lhs_ge[10]);
+    g1::copy_affine(instance.SIGMA_2, lhs_ge[11]);
+    g1::copy_affine(instance.SIGMA_3, lhs_ge[12]);
+    g1::copy_affine(g1::affine_one(), lhs_ge[13]);
+    g1::copy_affine(proof.PI_Z_OMEGA, lhs_ge[14]);
+    g1::copy_affine(proof.PI_Z, lhs_ge[15]);
+    g1::copy_affine(proof.T_MID, lhs_ge[16]);
+    g1::copy_affine(proof.T_HI, lhs_ge[17]);
 
-    scalar_multiplication::generate_pippenger_point_table(lhs_ge, lhs_ge, 19);
+    scalar_multiplication::generate_pippenger_point_table(lhs_ge, lhs_ge, 18);
     g1::element P[2];
-    P[1] = scalar_multiplication::pippenger(scalar_exponents, lhs_ge, 19);
+    P[1] = scalar_multiplication::pippenger(scalar_exponents, lhs_ge, 18);
     P[0] = g1::group_exponentiation_inner(proof.PI_Z_OMEGA, u);
     g1::mixed_add(P[1], proof.T_LO, P[1]);
     g1::mixed_add(P[0], proof.PI_Z, P[0]);

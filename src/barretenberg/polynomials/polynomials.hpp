@@ -18,6 +18,7 @@ namespace barretenberg
 // Some hacky macros that allow us to parallelize iterating over a polynomial's point-evaluations
 #ifndef NO_MULTITHREADING
 #define ITERATE_OVER_DOMAIN_START(domain)                                                  \
+    _Pragma("omp parallel for")                                                            \
     for (size_t j = 0; j < domain.num_threads; ++j)                                        \
     {                                                                                      \
         for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i) \

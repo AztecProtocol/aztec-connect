@@ -43,6 +43,8 @@ struct fft_pointers
     fr::field_t *scratch_memory;
 };
 
+void compute_permutation_lagrange_base(fr::field_t* roots, fr::field_t* output, uint32_t* permutation, size_t n);
+
 void compute_wire_coefficients(circuit_state &state, fft_pointers &);
 
 void compute_z_coefficients(circuit_state &state, fft_pointers &);
