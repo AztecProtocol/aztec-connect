@@ -21,11 +21,11 @@ inline uint32_t reverse_bits(uint32_t x, uint32_t bit_length)
 void fft_inner_serial(fr::field_t *coeffs, const fr::field_t &root, const size_t domain_size)
 {
     fr::field_t temp;
-    size_t log2_size = log2(domain_size);
+    size_t log2_size = (size_t)log2(domain_size);
     // efficiently separate odd and even indices - (An introduction to algorithms, section 30.3)
     for (size_t i = 0; i <= domain_size; ++i)
     {
-        uint32_t swap_index = (uint32_t)reverse_bits((uint32_t)i, log2_size);
+        uint32_t swap_index = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)log2_size);
         // TODO: should probably use CMOV here insead of an if statement
         if (i < swap_index)
         {
@@ -156,7 +156,7 @@ void scale_by_generator(fr::field_t *coeffs, const evaluation_domain &domain, co
 
 void compute_multiplicative_subgroup(const size_t log2_subgroup_size, const evaluation_domain &src_domain, fr::field_t *subgroup_roots)
 {
-    size_t subgroup_size = 1 << log2_subgroup_size;
+    size_t subgroup_size = 1UL << log2_subgroup_size;
     // Step 1: get primitive 4th root of unity
     fr::field_t subgroup_root;
     fr::get_root_of_unity(log2_subgroup_size, subgroup_root);
@@ -180,7 +180,7 @@ void compute_multiplicative_subgroup(const size_t log2_subgroup_size, const eval
 
 evaluation_domain get_domain(size_t num_elements)
 {
-    size_t n = log2(num_elements);
+    size_t n = (size_t)log2(num_elements);
     if ((1UL << n) != num_elements)
     {
         ++n;
@@ -196,7 +196,7 @@ evaluation_domain get_domain(size_t num_elements)
     domain.generator = fr::multiplicative_generator();
     domain.generator_inverse = fr::multiplicative_generator_inverse();
 #ifndef NO_MULTITHREADING
-    domain.num_threads = omp_get_max_threads();
+    domain.num_threads = (size_t)omp_get_max_threads();
 #else
     domain.num_threads = 1;
 #endif
@@ -204,9 +204,9 @@ evaluation_domain get_domain(size_t num_elements)
     {
         domain.num_threads = 1;
     }
-    domain.log2_num_threads = log2(domain.num_threads);
+    domain.log2_num_threads = (size_t)log2(domain.num_threads);
     domain.log2_thread_size = domain.log2_size - domain.log2_num_threads;
-    domain.thread_size = 1 << domain.log2_thread_size;
+    domain.thread_size = 1UL << domain.log2_thread_size;
     return domain;
 }
 
@@ -291,7 +291,7 @@ void mul(fr::field_t *a_coeffs, fr::field_t *b_coeffs, fr::field_t *r_coeffs, co
 fr::field_t evaluate(fr::field_t *coeffs, const fr::field_t &z, const size_t n)
 {
 #ifndef NO_MULTITHREADING
-size_t num_threads = omp_get_max_threads();
+size_t num_threads = (size_t)omp_get_max_threads();
 #else
 size_t num_threads = 1;
 #endif
@@ -383,7 +383,7 @@ void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, const evalua
     // For odd indices: (X^{n} - 1)/n = (-g^n - 1)/n
 
     size_t log2_subgroup_size = target_domain.log2_size - src_domain.log2_size;
-    size_t subgroup_size = 1 << log2_subgroup_size;
+    size_t subgroup_size = 1UL << log2_subgroup_size;
     ASSERT(target_domain.log2_size >= src_domain.log2_size);
 
     fr::field_t subgroup_roots[subgroup_size];
@@ -441,7 +441,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, evaluation_domai
     // If X = w^{i + j/2 + k/4}, P(X) = w^{n/4}.-1 = -w^{i} = -sqrt(-1)
     // i.e. the 4th roots of unity
     size_t log2_subgroup_size = target_domain.log2_size - src_domain.log2_size;
-    size_t subgroup_size = 1 << log2_subgroup_size;
+    size_t subgroup_size = 1UL << log2_subgroup_size;
     ASSERT(target_domain.log2_size >= src_domain.log2_size);
 
     fr::field_t subgroup_roots[subgroup_size];
@@ -574,7 +574,7 @@ lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, evaluation_d
 void compress_fft(const fr::field_t *src, fr::field_t *dest, const size_t current_size, const size_t compress_factor)
 {
     // iterate from top to bottom, allows `dest` to overlap with `src`
-    size_t log2_compress_factor = log2(compress_factor);
+    size_t log2_compress_factor = (size_t)log2(compress_factor);
     ASSERT(1 << log2_compress_factor == compress_factor);
     size_t new_size = current_size >> log2_compress_factor;
     for (size_t i = 0; i < new_size; ++i)
@@ -582,5 +582,6 @@ void compress_fft(const fr::field_t *src, fr::field_t *dest, const size_t curren
         fr::copy(src[i << log2_compress_factor], dest[i]);
     }
 }
+
 } // namespace polynomials
 } // namespace barretenberg

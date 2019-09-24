@@ -6,6 +6,10 @@ namespace barretenberg
 {
 namespace fq2
 {
+constexpr fq2_t twist_coeff_b = {
+    .c0 = {.data = {0x3bf938e377b802a8, 0x020b1b273633535d, 0x26b7edf049755260, 0x2514c6324384a86d}},
+    .c1 = {.data = {0x38e7ecccd1dcff67, 0x65f0b37d93ce0d3e, 0xd749d0dd22ac00aa, 0x0141b9ce4a688d4d}}};
+
 inline void mul(const fq2_t &a, const fq2_t &b, fq2_t &r)
 {
     fq::field_t t1;

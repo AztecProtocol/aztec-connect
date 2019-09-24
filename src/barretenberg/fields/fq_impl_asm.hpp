@@ -40,6 +40,11 @@ constexpr uint64_t not_modulus_1 = ~0x97816a916871ca8dUL;
 constexpr uint64_t not_modulus_2 = ~0xb85045b68181585dUL;
 constexpr uint64_t not_modulus_3 = ~0x30644e72e131a029UL;
 
+constexpr uint64_t twice_modulus_0 = 0x7841182db0f9fa8eUL;
+constexpr uint64_t twice_modulus_1 = 0x2f02d522d0e3951aUL;
+constexpr uint64_t twice_modulus_2 = 0x70a08b6d0302b0bbUL;
+constexpr uint64_t twice_modulus_3 = 0x60c89ce5c2634053UL;
+
 constexpr uint64_t twice_not_modulus_0 = ((~0x7841182db0f9fa8eUL) + 1);
 constexpr uint64_t twice_not_modulus_1 = ~(0x2f02d522d0e3951aUL);
 constexpr uint64_t twice_not_modulus_2 = ~(0x70a08b6d0302b0bbUL);
@@ -63,7 +68,7 @@ constexpr uint64_t r_inv = 0x87d20782e4866389UL;
 // sometimes we don't have any free registers to store 0.
 // When adding carry flags into a limb, apparently adding relative
 // to a memory location that stores 0 is faster than changing the
-// asm code to free up a register we can zero
+// asm code to free up a register we can zero...I think (TODO: zero register?)
 static uint64_t zero_reference = 0;
 } // namespace
 
@@ -110,16 +115,63 @@ inline void copy(const field_t &src, field_t &dest)
 }
 
 /**
+ * Conditionally subtract p from field element a, store result in r
+ **/
+inline void reduce_once(field_t& a, field_t& r)
+{
+    __asm__(
+        "xorq %%r12, %%r12              \n\t" \
+        "movq 0(%0), %%r12          \n\t" \
+        "movq 8(%0), %%r13          \n\t" \
+        "movq 16(%0), %%r14          \n\t" \
+        "movq 24(%0), %%r15          \n\t" \
+        REDUCE_RESULT("%1")
+        :
+        : "r"(&a), "r"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+
+}
+
+/**
  * Add field_t elements `a` and `b` modulo `q`, store the result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
 inline void add(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
-        ADD("%%rbx", "%%rcx")
-            REDUCE_RESULT("%%rsi")
+        ADD("%0", "%1")
+        REDUCE_RESULT("%2")
         :
-        : "b"(&a), "c"(&b), "S"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
+        : "r"(&a), "r"(&b), "r"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+
+/**
+ * Add field_t elements `a` and `b` modulo `q`, store the result in `r`
+ * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
+ **/
+inline void add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+{
+    __asm__(
+        ADD("%0", "%1")
+        REDUCE_RESULT_COARSE("%2")
+        :
+        : "r"(&a), "r"(&b), "r"(&r), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+
+/**
+ * Add field_t elements `a` and `b` modulo `q`, store the result in `r`
+ * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
+ **/
+inline void sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+{
+    __asm__(
+        SUB_COARSE("%0", "%1", "%2")
+        :
+        : "r"(&a), "r"(&b), "r"(&r), [twice_modulus_0] "m"(twice_modulus_0), [twice_modulus_1] "m"(twice_modulus_1), [twice_modulus_2] "m"(twice_modulus_2), [twice_modulus_3] "m"(twice_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -127,10 +179,10 @@ inline void add(const field_t &a, const field_t &b, field_t &r)
 inline void double_with_add(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
-        DOUBLE_WITH_ADD("%%rbx", "%%rcx")
+        DOUBLE_WITH_ADD("%0", "%1")
             REDUCE_RESULT_TWICE()
         :
-        : "b"(&a), "c"(&b), [dest] "m"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
+        : "r"(&a), "r"(&b), [dest] "m"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
         : "%rax", "%rdx", "%rdi", "%rsi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -138,20 +190,63 @@ inline void double_with_add(const field_t &a, const field_t &b, field_t &r)
 inline void double_with_add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
-        DOUBLE_WITH_ADD("%%rbx", "%%rcx")
-        REDUCE_RESULT_COARSE("%%rsi")
+        DOUBLE_WITH_ADD("%0", "%1")
+        REDUCE_RESULT_COARSE("%2")
         :
-        : "b"(&a), "c"(&b), "S"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
+        : "r"(&a), "r"(&b), "r"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
         : "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
-inline void quad_with_partial_reduction(const field_t &a, field_t &r)
+inline void quad_with_coarse_reduction(const field_t &a, field_t &r)
 {
     __asm__(
-        QUAD("%%rbx")
-            REDUCE_RESULT_COARSE("%%rsi")
+        "xorq %%r12, %%r12                        \n\t"  
+        "movq 0(%0), %%r12                     \n\t"  
+        "movq 8(%0), %%r13                     \n\t"  
+        "movq 16(%0), %%r14                    \n\t"  
+        "movq 24(%0), %%r15                    \n\t"  
+
+        "adcxq %%r12, %%r12                       \n\t"  
+        "movq  %%r12, %%r8                        \n\t"  
+        "adoxq %[twice_not_modulus_0], %%r12      \n\t"  
+        "adcxq %%r13, %%r13                       \n\t"  
+        "movq  %%r13, %%r9                        \n\t"  
+        "adoxq %[twice_not_modulus_1], %%r13      \n\t"  
+        "adcxq %%r14, %%r14                       \n\t"  
+        "movq  %%r14, %%r10                        \n\t"
+        "adoxq %[twice_not_modulus_2], %%r14      \n\t"  
+        "adcxq %%r15, %%r15                       \n\t"  
+        "movq  %%r15, %%r11                        \n\t"
+        "adoxq %[twice_not_modulus_3], %%r15      \n\t"  
+
+        "cmovnoq %%r8, %%r12                    \n\t"    
+        "cmovnoq %%r9, %%r13                    \n\t"    
+        "cmovnoq %%r10, %%r14                   \n\t"    
+        "cmovnoq %%r11, %%r15                   \n\t"    
+
+        "adcxq %%r12, %%r12                       \n\t"  
+        "movq  %%r12, %%r8                        \n\t"  
+        "adoxq %[twice_not_modulus_0], %%r12      \n\t"  
+        "adcxq %%r13, %%r13                       \n\t"  
+        "movq  %%r13, %%r9                        \n\t"  
+        "adoxq %[twice_not_modulus_1], %%r13      \n\t"  
+        "adcxq %%r14, %%r14                       \n\t"  
+        "movq  %%r14, %%r10                        \n\t"
+        "adoxq %[twice_not_modulus_2], %%r14      \n\t"  
+        "adcxq %%r15, %%r15                       \n\t"  
+        "movq  %%r15, %%r11                        \n\t"
+        "adoxq %[twice_not_modulus_3], %%r15      \n\t"  
+    
+        "cmovnoq %%r8, %%r12                    \n\t" 
+        "movq %%r12, 0(%1)                 \n\t"   
+        "cmovnoq %%r9, %%r13                    \n\t" 
+        "movq %%r13, 8(%1)                 \n\t"   
+        "cmovnoq %%r10, %%r14                   \n\t" 
+        "movq %%r14, 16(%1)                \n\t"   
+        "cmovnoq %%r11, %%r15                   \n\t" 
+        "movq %%r15, 24(%1)                \n\t" 
         :
-        : "b"(&a), "S"(&r), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
+        : "r"(&a), "r"(&r), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
         : "%rax", "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -168,7 +263,7 @@ inline void double_with_double_reduction(const field_t &a, field_t &r)
 {
     __asm__(
         ADD("%%rbx", "%%rbx")
-            REDUCE_RESULT_TWICE()
+        REDUCE_RESULT_TWICE()
         :
         : "b"(&a), [dest] "m"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
         : "%rax", "%rdx", "%rdi", "%rsi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
@@ -250,7 +345,8 @@ inline void sub(const field_t &a, const field_t &b, field_t &r)
 inline void sqr(const field_t &a, field_t &r)
 {
     __asm__(
-        SQR("%%rbx") "movq %[r_ptr], %%rsi                   \n\t" REDUCE_RESULT("%%rsi")
+        SQR("%%rbx") "movq %[r_ptr], %%rsi                   \n\t"
+        REDUCE_RESULT("%%rsi")
         :
         : "b"(&a), [zero_reference] "m"(zero_reference), [r_ptr] "m"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
         : "%rax", "rcx", "%rdx", "%rdi", "%rsi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
@@ -383,32 +479,35 @@ inline void mul_then_sub(const field_t &a, const field_t &b, const field_t &c, f
          *            %rdx: work register for multiplication operand
          */
     __asm__(
-        MUL("%1", "%0") "movq %[c_term], %%r8           \n\t"
-                        "subq 0(%%r8), %%r12            \n\t"
-                        "sbbq 8(%%r8), %%r13            \n\t"
-                        "sbbq 16(%%r8), %%r14            \n\t"
-                        "sbbq 24(%%r8), %%r15            \n\t"
-                        "movq %%r12, %%r8                       \n\t"
-                        "movq %%r13, %%r9                       \n\t"
-                        "movq %%r14, %%r10                      \n\t"
-                        "movq %%r15, %%r11                      \n\t"
+        MUL("%1", "%0")
+        "movq %[c_term], %%r8                   \n\t"
+        "subq 0(%%r8), %%r12                    \n\t"
+        "sbbq 8(%%r8), %%r13                    \n\t"
+        "sbbq 16(%%r8), %%r14                   \n\t"
+        "sbbq 24(%%r8), %%r15                   \n\t"
+        "movq %%r12, %%r8                       \n\t"
+        "movq %%r13, %%r9                       \n\t"
+        "movq %%r14, %%r10                      \n\t"
+        "movq %%r15, %%r11                      \n\t"
 
-                        "adoxq %[modulus_0], %%r8               \n\t" /* r'[0] -= modulus.data[0]  */
-                        "adoxq %[modulus_1], %%r9               \n\t" /* r'[1] -= modulus.data[1]  */
-                        "adoxq %[modulus_2], %%r10              \n\t" /* r'[2] -= modulus.data[2]  */
-                        "adoxq %[modulus_3], %%r11              \n\t" /* r'[3] -= modulus.data[3]  */
-                        /* if the carry flag is set, then b > a and we need to                     */
-                        /* add a modulus back into the result                                      */
-                        /* i.e. if the carry is *not* set, then r8-r11 represents                  */
-                        /* the correct result of subtraction, otherwise, swap with r8-r11          */
-                        "cmovcq %%r8, %%r12                   \n\t"
-                        "cmovcq %%r9, %%r13                   \n\t"
-                        "cmovcq %%r10, %%r14                   \n\t"
-                        "cmovcq %%r11, %%r15                   \n\t" REDUCE_RESULT("%2")
+        "adoxq %[modulus_0], %%r8               \n\t" /* r'[0] -= modulus.data[0]  */
+        "adoxq %[modulus_1], %%r9               \n\t" /* r'[1] -= modulus.data[1]  */
+        "adoxq %[modulus_2], %%r10              \n\t" /* r'[2] -= modulus.data[2]  */
+        "adoxq %[modulus_3], %%r11              \n\t" /* r'[3] -= modulus.data[3]  */
+        /* if the carry flag is set, then b > a and we need to                     */
+        /* add a modulus back into the result                                      */
+        /* i.e. if the carry is *not* set, then r8-r11 represents                  */
+        /* the correct result of subtraction, otherwise, swap with r8-r11          */
+        "cmovcq %%r8, %%r12                     \n\t"
+        "cmovcq %%r9, %%r13                     \n\t"
+        "cmovcq %%r10, %%r14                    \n\t"
+        "cmovcq %%r11, %%r15                    \n\t"
+        REDUCE_RESULT("%2")
         :
         : "r"(&b), "r"(&a), "r"(&r), [c_term] "m"(&c), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
         : "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
+
 /**
  * Compute `a` * `b` mod `q`, store result in `r`
  * We assume `a` is 254 bits and do not perform carry checks on most significant limb

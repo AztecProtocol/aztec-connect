@@ -26,23 +26,13 @@ set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)
 set(DEPENDS_DIR ${PROJECT_SOURCE_DIR}/depends)
 
-message(INFO "INCLUDE_DIR = ${include_dir}\n")
-message(INFO "DEPENDS_DIR = ${DEPENDS_DIR}\n")
-message(INFO "CMAKE_INSTALL_INCLUDEDIR = ${CMAKE_INSTALL_INCLUDEDIR}\n")
 
+add_definitions(-DBARRETENBERG_SRS_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/srs_db/transcript.dat\")
 add_subdirectory(src)
 
 option(BARRETENBERG_TESTING "Build tests" ON)
 
 if(BARRETENBERG_TESTING)
-    # GMP
-    find_path(GMP_INCLUDE_DIR NAMES gmp.h)
-    find_library(GMP_LIBRARIES NAMES gmp libgmp)
-    find_library(GMPXX_LIBRARIES NAMES gmpxx libgmpxx)
-
-    find_path(LIBFF_INCLUDE_DIR NAMES libff.a)
-    find_library(LIBFF NAMES libff libff.a ibff HINTS /usr/local/lib)
-
     enable_testing()
     add_subdirectory(test)
 endif()

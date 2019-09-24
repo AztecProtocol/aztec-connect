@@ -127,7 +127,7 @@ inline g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *
     multiplication_runtime_state state;
     state.num_points = num_initial_points + num_initial_points;
     state.num_rounds = WNAF_SIZE(bits_per_bucket + 1);
-    state.num_buckets = (1 << bits_per_bucket);
+    state.num_buckets = (1UL << bits_per_bucket);
     wnaf_runtime_state wnaf_state;
     wnaf_state.bits_per_wnaf = bits_per_bucket + 1;
 
@@ -162,7 +162,8 @@ inline g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *
             {
                 if (wnaf_state.skew_table[j])
                 {
-                    g1::mixed_sub(state.buckets[0], points[j], state.buckets[0]);
+                    g1::neg(points[j], state.addition_temporary);
+                    g1::mixed_add(state.buckets[0], state.addition_temporary, state.buckets[0]);
                 }
             }
         }
@@ -190,7 +191,7 @@ inline g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *
             }
         }
         g1::set_infinity(state.running_sum);
-        for (int j = state.num_buckets - 1; j > 0; --j)
+        for (int j = (int)state.num_buckets - 1; j > 0; --j)
         {
             __builtin_prefetch(&state.buckets[(size_t)j - 1]);
             __builtin_prefetch(&state.buckets[(size_t)j - 1].z);
@@ -267,7 +268,7 @@ inline void batched_scalar_multiplications(multiplication_state *mul_state, size
     }
 
 #ifndef NO_MULTITHREADING
-    size_t num_threads = omp_get_max_threads();
+    size_t num_threads = (size_t)omp_get_max_threads();
 #else
     size_t num_threads = 1;
 #endif

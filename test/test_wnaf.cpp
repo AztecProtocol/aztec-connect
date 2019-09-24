@@ -1,10 +1,7 @@
 #include <barretenberg/fields/fr.hpp>
+#include <barretenberg/groups/wnaf.hpp>
 
 #include <gtest/gtest.h>
-#include "stdint.h"
-#include "stdio.h"
-
-#include <barretenberg/groups/wnaf.hpp>
 
 using namespace barretenberg;
 
@@ -15,18 +12,18 @@ void recover_fixed_wnaf(uint32_t* wnaf, bool skew, uint64_t& hi, uint64_t& lo, s
 {
     size_t wnaf_entries = (127 + wnaf_bits - 1) / wnaf_bits;
     unsigned __int128 scalar = 0; // (unsigned __int128)(skew);
-    for (int i = wnaf_entries - 1; i >= 0; --i)
+    for (int i = (int)wnaf_entries - 1; i >= 0; --i)
     {
         uint32_t entry_formatted = wnaf[(size_t)i];
         bool negative = entry_formatted >> 31;
         uint32_t entry = ((entry_formatted & 0x0fffffffU) << 1) + 1;
         if (negative)
         {
-            scalar -= (unsigned __int128)((unsigned __int128)entry) << (unsigned __int128)(wnaf_bits * (wnaf_entries - 1 - i)); 
+            scalar -= (unsigned __int128)((unsigned __int128)entry) << (unsigned __int128)(wnaf_bits * (wnaf_entries - 1 - (size_t)i)); 
         }
         else
         {
-            scalar += (unsigned __int128)((unsigned __int128)entry) << (unsigned __int128)(wnaf_bits * (wnaf_entries - 1 - i));
+            scalar += (unsigned __int128)((unsigned __int128)entry) << (unsigned __int128)(wnaf_bits * (wnaf_entries - 1 - (size_t)i));
         }
     }
     scalar -= (unsigned __int128)(skew);

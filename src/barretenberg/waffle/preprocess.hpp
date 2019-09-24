@@ -70,15 +70,15 @@ inline circuit_instance preprocess_circuit(const waffle::circuit_state &state, c
 
     circuit_instance instance;
     instance.n = n;
-    g1::copy_to_affine(mul_state[0].output, instance.SIGMA_1);
-    g1::copy_to_affine(mul_state[1].output, instance.SIGMA_2);
-    g1::copy_to_affine(mul_state[2].output, instance.SIGMA_3);
-    g1::copy_to_affine(mul_state[3].output, instance.S_ID);
-    g1::copy_to_affine(mul_state[4].output, instance.Q_M);
-    g1::copy_to_affine(mul_state[5].output, instance.Q_L);
-    g1::copy_to_affine(mul_state[6].output, instance.Q_R);
-    g1::copy_to_affine(mul_state[7].output, instance.Q_O);
-    g1::copy_to_affine(mul_state[8].output, instance.Q_C);
+    g1::jacobian_to_affine(mul_state[0].output, instance.SIGMA_1);
+    g1::jacobian_to_affine(mul_state[1].output, instance.SIGMA_2);
+    g1::jacobian_to_affine(mul_state[2].output, instance.SIGMA_3);
+    g1::jacobian_to_affine(mul_state[3].output, instance.S_ID);
+    g1::jacobian_to_affine(mul_state[4].output, instance.Q_M);
+    g1::jacobian_to_affine(mul_state[5].output, instance.Q_L);
+    g1::jacobian_to_affine(mul_state[6].output, instance.Q_R);
+    g1::jacobian_to_affine(mul_state[7].output, instance.Q_O);
+    g1::jacobian_to_affine(mul_state[8].output, instance.Q_C);
 
     free(scratch_space);
     return instance;

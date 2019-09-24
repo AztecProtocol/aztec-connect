@@ -12,13 +12,13 @@ namespace barretenberg
 {
 namespace g1
 {
-inline void print(g1::affine_element &p)
+inline void print(affine_element &p)
 {
     printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
     printf("p.y: [%lx, %lx, %lx, %lx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
 }
 
-inline void print(g1::element &p)
+inline void print(element &p)
 {
     printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
     printf("p.y: [%lx, %lx, %lx, %lx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
@@ -62,7 +62,13 @@ inline element random_element()
 {
     element output;
     random_coordinates_on_curve(output.x, output.y);
-    output.z = fq::one();
+    output.z = fq::random_element();
+    fq::field_t zz;
+    fq::field_t zzz;
+    fq::sqr(output.z, zz);
+    fq::mul(output.z, zz, zzz);
+    fq::mul(output.x, zz, output.x);
+    fq::mul(output.y, zzz, output.y);
     return output;
 }
 
@@ -85,7 +91,12 @@ inline affine_element affine_one()
     return output;
 }
 
-inline bool is_point_at_infinity(element &p)
+inline bool is_point_at_infinity(const affine_element &p)
+{
+    return (bool)((p.y.data[3] >> 63) & 1);
+}
+
+inline bool is_point_at_infinity(const element &p)
 {
     return (bool)((p.y.data[3] >> 63) & 1);
 }
@@ -176,7 +187,8 @@ inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
     fq::field_t T3;
 
     // T0 = z1.z1
-    fq::sqr(p1.z, T0);
+    // fq::sqr(p1.z, T0);
+    fq::sqr_without_reduction(p1.z, T0);
 
     fq::mul_then_sub(p2.x, T0, p1.x, T1);
     // // T1 = x2.t0 = x2.z1.z1
@@ -188,11 +200,8 @@ inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
     // T2 = T0.z1 = z1.z1.z1
     fq::mul_without_reduction(p1.z, T0, T2);
 
+    // // T2 = T2.y2 - y1 = y2.z1.z1.z1 - y1
     fq::mul_then_sub(T2, p2.y, p1.y, T2);
-    // // T2 = T2.y2 = y2.z1.z1.z1
-    // fq::mul(T2, p2.y, T2);
-    // // T2 = T2 - y1 = y2.z1.z1.z1 - y1
-    // fq::sub(T2, p1.y, T2);
 
     if (__builtin_expect(((T1.data[0] | T1.data[1] | T1.data[2] | T1.data[3]) == 0), 0))
     {
@@ -216,58 +225,56 @@ inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
     // fq::add_without_reduction(p1.z, T1, p3.z);
 
     // T3 = T1*T1 = HH
-    fq::sqr(T1, T3);
+    // fq::sqr(T1, T3);
+    fq::sqr_without_reduction(T1, T3);
+
     // z3 = z3 - z1z1 - HH
-    fq::add(T0, T3, T0);
+    fq::add_with_coarse_reduction(T0, T3, T0);
 
     // z3 = (z1 + H)*(z1 + H)
-    fq::sqr_then_sub(p3.z, T0, p3.z);
-    // fq::sqr(p3.z, p3.z);
-    // fq::sub(p3.z, T0, p3.z);
+    fq::sqr_without_reduction(p3.z, p3.z);
+    fq::sub_with_coarse_reduction(p3.z, T0, p3.z);
+    fq::reduce_once(p3.z, p3.z);
 
     // T3 = 4HH
-    fq::quad_with_partial_reduction(T3, T3);
-    // fq::add(T3, T3, T3);
-    // fq::add_without_reduction(T3, T3, T3);
+    fq::quad_with_coarse_reduction(T3, T3);
 
     // T1 = T1*T3 = 4HHH
-    fq::mul(T1, T3, T1);
+    fq::mul_without_reduction(T1, T3, T1);
 
     // T3 = T3 * x1 = 4HH*x1
-    fq::mul(T3, p1.x, T3);
+    fq::mul_without_reduction(T3, p1.x, T3);
 
-    fq::double_with_add(T3, T1, T0);
-    // // T0 = 2T3
-    // fq::add(T3, T3, T0);
+    // T0 = 2T3
+    fq::add_with_coarse_reduction(T3, T3, T0);
 
-    // // T0 = T0 + T1 = 2(4HH*x1) + 4HHH
-    // fq::add(T0, T1, T0);
-    fq::sqr_then_sub(T2, T0, p3.x);
-    // // x3 = T2*T2 = R*R
-    // fq::sqr(T2, p3.x);
+    // T0 = T0 + T1 = 2(4HH*x1) + 4HHH
+    fq::add_with_coarse_reduction(T0, T1, T0);
+    fq::sqr_without_reduction(T2, p3.x);
 
     // // x3 = x3 - T0 = R*R - 8HH*x1 -4HHH
-    // fq::sub(p3.x, T0, p3.x);
+    fq::sub_with_coarse_reduction(p3.x, T0, p3.x);
 
     // T3 = T3 - x3 = 4HH*x1 - x3
-    fq::sub(T3, p3.x, T3);
+    fq::sub_with_coarse_reduction(T3, p3.x, T3);
+    fq::reduce_once(p3.x, p3.x);
 
-    fq::mul_then_double(T1, p1.y, T1);
-    // // T1 = T1 * y1 = 4HHH*y1
-    // fq::mul(T1, p1.y, T1);
-    // // T1 = 2T1 = 8HHH*y1
-    // fq::add(T1, T1, T1);
+    fq::mul_without_reduction(T1, p1.y, T1);
+    fq::add_with_coarse_reduction(T1, T1, T1);
+
     // T3 = T2 * T3 = R*(4HH*x1 - x3)
-    // fq::mul(T3, T2, T3);
+    fq::mul_without_reduction(T3, T2, T3);
     // y3 = T3 - T1
-    // fq::sub(T3, T1, p3.y);
-    fq::mul_then_sub(T3, T2, T1, p3.y);
+    fq::sub_with_coarse_reduction(T3, T1, p3.y);
+    fq::reduce_once(p3.y, p3.y);
 }
 
 inline void mixed_add(element &p1, const affine_element &p2, element &p3)
 {
     // TODO: quantitavely check if __builtin_expect helps here
     // if (__builtin_expect(((p1.y.data[3] >> 63)), 0))
+
+    // N.B. we implicitly assume p2 is not a point at infinity, as it will be coming from a lookup table of constants
     if (p1.y.data[3] >> 63)
     {
         fq::copy(p2.x, p3.x);
@@ -280,7 +287,7 @@ inline void mixed_add(element &p1, const affine_element &p2, element &p3)
 
 inline void mixed_add_expect_empty(element &p1, affine_element &p2, element &p3)
 {
-    if (__builtin_expect(((p1.y.data[3] >> 63)), 1))
+    if (__builtin_expect((long)((p1.y.data[3] >> 63UL)), true))
     {
         fq::copy(p2.x, p3.x);
         fq::copy(p2.y, p3.y);
@@ -288,106 +295,6 @@ inline void mixed_add_expect_empty(element &p1, affine_element &p2, element &p3)
         return;
     }
     mixed_add_inner(p1, p2, p3);
-}
-
-inline void mixed_sub(element &p1, affine_element &p2, element &p3)
-{
-    if (__builtin_expect(((p1.y.data[3] >> 63) == 1), 0))
-    {
-        fq::copy(p2.x, p3.x);
-        fq::copy(p2.y, p3.y);
-        fq::copy(fq::one_mont, p3.z);
-        fq::sub(fq::modulus, p3.y, p3.y);
-        return;
-    }
-    fq::field_t T0;
-    fq::field_t T1;
-    fq::field_t T2;
-    fq::field_t T3;
-
-    // T0 = z1.z1
-    fq::sqr(p1.z, T0);
-
-    // T1 = x2.t0 = x2.z1.z1
-    fq::mul(p2.x, T0, T1);
-
-    // T1 = T1 - x1 = x2.z1.z1 - x1 (H)
-    fq::sub(T1, p1.x, T1);
-
-    // T2 = T0.z1 = z1.z1.z1
-    fq::mul(p1.z, T0, T2);
-
-    fq::sub(fq::modulus, p2.y, T3);
-    // T2 = T2.y2 = y2.z1.z1.z1
-    fq::mul(T2, T3, T2);
-    // T2 = T2 - y1 = y2.z1.z1.z1 - y1
-    fq::sub(T2, p1.y, T2);
-
-    if (__builtin_expect(((T1.data[0] | T1.data[1] | T1.data[2] | T1.data[3]) == 0), 0))
-    {
-        if ((T2.data[0] | T2.data[1] | T2.data[2] | T2.data[3]) == 0)
-        {
-            dbl(p1, p3);
-            return;
-        }
-        else
-        {
-            // y2 equals y1, x2 equals x1, double x1
-            set_infinity(p3);
-            return;
-        }
-    }
-
-    // T2 = 2T2 = 2(y2.z1.z1.z1 - y1) = R
-    fq::add(T2, T2, T2);
-
-    // T3 = T1*T1 = HH
-    fq::sqr(T1, T3);
-
-    // z3 = z1 + H
-    fq::add(p1.z, T1, p3.z);
-
-    // z3 = (z1 + H)*(z1 + H)
-    fq::sqr(p3.z, p3.z);
-
-    // z3 = z3 - z1z1 - HH
-    fq::sub(p3.z, T0, p3.z);
-    fq::sub(p3.z, T3, p3.z);
-
-    // T3 = 4HH
-    fq::add(T3, T3, T3);
-    fq::add(T3, T3, T3);
-
-    // T1 = T1*T3 = 4HHH
-    fq::mul(T1, T3, T1);
-
-    // T3 = T3 * x1 = 4HH*x1
-    fq::mul(T3, p1.x, T3);
-
-    // T0 = 2T3
-    fq::add(T3, T3, T0);
-
-    // T0 = T0 * T1 = 2(4HH*x1) + 4HHH
-    fq::add(T0, T1, T0);
-
-    // x3 = T2*T2 = R*R
-    fq::sqr(T2, p3.x);
-
-    // x3 = x3 - T0 = R*R - 8HH*x1 -4HHH
-    fq::sub(p3.x, T0, p3.x);
-
-    // T3 = T3 - x3 = 4HH*x1 - x3
-    fq::sub(T3, p3.x, T3);
-
-    // T3 = T2 * T3 = R*(4HH*x1 - x3)
-    fq::mul(T3, T2, T3);
-
-    // T1 = T1 * y1 = 4HHH*y1
-    fq::mul(T1, p1.y, T1);
-    // T1 = 2T1 = 8HHH*y
-    fq::add(T1, T1, T1);
-    // y3 = T3 - T1
-    fq::sub(T3, T1, p3.y);
 }
 
 inline void add(element &p1, element &p2, element &p3)
@@ -511,11 +418,11 @@ inline void add(element &p1, element &p2, element &p3)
     fq::mul(p3.z, H, p3.z);
 }
 
-#ifdef __AVX__
 // copies src into dest, inverting y-coordinate if 'predicate' is true
 // n.b. requires src and dest to be aligned on 32 byte boundary
 inline void conditional_negate_affine(affine_element *src, affine_element *dest, uint64_t predicate)
 {
+#ifdef __AVX__
     ASSERT((((uintptr_t)src & 0x1f) == 0));
     ASSERT((((uintptr_t)dest & 0x1f) == 0));
     __asm__ __volatile__(
@@ -546,12 +453,7 @@ inline void conditional_negate_affine(affine_element *src, affine_element *dest,
         :
         : "r"(src), "r"(dest), "r"(predicate)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "%ymm0", "memory", "cc");
-}
 #else
-// copies src into dest, inverting y-coordinate if 'predicate' is true
-// n.b. requires src and dest to be aligned on 32 byte boundary
-inline void conditional_negate_affine(affine_element *src, affine_element *dest, uint64_t predicate)
-{
     __asm__ __volatile__(
         "xorq %%r8, %%r8                              \n\t"
         "movq 32(%0), %%r8                            \n\t"
@@ -586,8 +488,8 @@ inline void conditional_negate_affine(affine_element *src, affine_element *dest,
         :
         : "r"(src), "r"(dest), "r"(predicate)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "memory", "cc");
-}
 #endif
+}
 
 // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
 inline void copy(affine_element *src, affine_element *dest)
@@ -708,8 +610,12 @@ inline void batch_normalize(element *points, size_t num_points)
     free(temporaries);
 }
 
-inline bool on_curve(g1::affine_element &pt)
+inline bool on_curve(affine_element &pt)
 {
+    if (is_point_at_infinity(pt))
+    {
+        return false;
+    }
     fq::field_t b_mont;
     fq::to_montgomery_form(fq::curve_b, b_mont);
     fq::field_t yy;
@@ -723,8 +629,12 @@ inline bool on_curve(g1::affine_element &pt)
     return fq::eq(xxx, yy);
 }
 
-inline bool on_curve(g1::element &pt)
+inline bool on_curve(element &pt)
 {
+    if (is_point_at_infinity(pt))
+    {
+        return false;
+    }
     fq::field_t b_mont;
     fq::to_montgomery_form(fq::curve_b, b_mont);
     fq::field_t yy;
@@ -750,14 +660,20 @@ inline void neg(const element &a, element &r)
     fq::neg(r.y, r.y);
 }
 
-inline void copy_from_affine(const affine_element &a, element &r)
+inline void neg(const affine_element &a, affine_element &r)
+{
+    fq::copy(a.x, r.x);
+    fq::neg(a.y, r.y);
+}
+
+inline void affine_to_jacobian(const affine_element &a, element &r)
 {
     fq::copy(a.x, r.x);
     fq::copy(a.y, r.y);
     r.z = fq::one();
 }
 
-inline void copy_to_affine(element &a, affine_element &r)
+inline void jacobian_to_affine(element &a, affine_element &r)
 {
     a = normalize(a);
     fq::copy(a.x, r.x);
@@ -770,13 +686,21 @@ inline void copy_affine(const affine_element &a, affine_element &r)
     fq::copy(a.y, r.y);
 }
 
-inline g1::element group_exponentiation_inner(const affine_element &a, const fr::field_t &scalar)
+inline element group_exponentiation_inner(const affine_element &a, const fr::field_t &scalar)
 {
-    // TODO: if we need to speed up G2, use a fixed-window WNAF
+    if (fr::eq(scalar, fr::zero()))
+    {
+        element result;
+        result.x = fq::zero();
+        result.y = fq::zero();
+        result.z = fq::zero();
+        set_infinity(result);
+        return result;
+    }
     element work_element;
     element point;
-    copy_from_affine(a, work_element);
-    copy_from_affine(a, point);
+    affine_to_jacobian(a, work_element);
+    affine_to_jacobian(a, point);
     fr::field_t converted_scalar;
     // TODO ADD BACK IN!
     fr::from_montgomery_form(scalar, converted_scalar);
@@ -812,9 +736,9 @@ inline g1::element group_exponentiation_inner(const affine_element &a, const fr:
 
 inline affine_element group_exponentiation(const affine_element &a, const fr::field_t &scalar)
 {
-    element res = group_exponentiation_inner(a, scalar);
+    element output = group_exponentiation_inner(a, scalar);
     affine_element result;
-    if (is_point_at_infinity(res))
+    if (is_point_at_infinity(output))
     {
         result.x = fq::zero();
         result.y = fq::zero();
@@ -822,16 +746,48 @@ inline affine_element group_exponentiation(const affine_element &a, const fr::fi
     }
     else
     {
-        batch_normalize(&res, 1);
-        fq::copy(res.x, result.x);
-        fq::copy(res.y, result.y);
+        batch_normalize(&output, 1);
+        fq::copy(output.x, result.x);
+        fq::copy(output.y, result.y);
     }
     return result;
 }
 
+inline bool eq(const element &a, const element &b)
+{
+    bool both_infinity = is_point_at_infinity(a) && is_point_at_infinity(b);
+
+    fq::field_t a_zz;
+    fq::field_t a_zzz;
+    fq::field_t b_zz;
+    fq::field_t b_zzz;
+
+    fq::sqr(a.z, a_zz);
+    fq::mul(a.z, a_zz, a_zzz);
+
+    fq::sqr(b.z, b_zz);
+    fq::mul(b.z, b_zz, b_zzz);
+
+    fq::field_t T0;
+    fq::field_t T1;
+    fq::field_t T2;
+    fq::field_t T3;
+    fq::mul(a.x, b_zz, T0);
+    fq::mul(a.y, b_zzz, T1);
+    fq::mul(b.x, a_zz, T2);
+    fq::mul(b.y, a_zzz, T3);
+
+    return both_infinity || ((fq::eq(T0, T2) && fq::eq(T1, T3)));
+}
+
 inline bool eq(const affine_element &a, const affine_element &b)
 {
-    return (fq::eq(a.x, b.x) && fq::eq(a.y, b.y));
+    element a_ele;
+    element b_ele;
+    affine_to_jacobian(a, a_ele);
+    affine_to_jacobian(b, b_ele);
+    return eq(a_ele, b_ele);
 }
+
 } // namespace g1
 } // namespace barretenberg

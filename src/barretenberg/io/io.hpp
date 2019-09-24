@@ -134,7 +134,7 @@ constexpr size_t BLAKE2B_CHECKSUM_LENGTH = 64;
         {
             return 0;
         }
-        return st.st_size;
+        return (size_t)st.st_size;
     }
 
     inline std::vector<char> read_file_into_buffer(std::string const &filename, size_t offset = 0, size_t size = 0)
@@ -143,8 +143,8 @@ constexpr size_t BLAKE2B_CHECKSUM_LENGTH = 64;
         std::vector<char> buffer(file_size);
         std::ifstream file;
         file.open(filename, std::ifstream::binary);
-        file.seekg(offset);
-        file.read(&buffer[0], buffer.size());
+        file.seekg((int)offset);
+        file.read(&buffer[0], (int)buffer.size());
         file.close();
         return buffer;
     }

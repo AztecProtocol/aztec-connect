@@ -21,11 +21,6 @@ constexpr uint8_t loop_bits[loop_length] = {
 constexpr bool neg_z_loop_bits[neg_z_loop_length] = {
     0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1};
 
-constexpr fq::field_t two_inv = {.data = {0x87bee7d24f060572, 0xd0fd2add2f1c6ae5, 0x8f5f7492fcfd4f44, 0x1f37631a3d9cbfac}};
-
-constexpr fq2::fq2_t twist_coeff_b = {
-    .c0 = {.data = {0x3bf938e377b802a8, 0x020b1b273633535d, 0x26b7edf049755260, 0x2514c6324384a86d}},
-    .c1 = {.data = {0x38e7ecccd1dcff67, 0x65f0b37d93ce0d3e, 0xd749d0dd22ac00aa, 0x0141b9ce4a688d4d}}};
 
 struct miller_lines
 {
@@ -47,20 +42,20 @@ inline void doubling_step_for_flipped_miller_loop(g2::element &current, pairing:
     fq2::fq2_t j;
     fq2::fq2_t k;
 
-    fq2::mul_by_fq(pairing::two_inv, current.x, a);
+    fq2::mul_by_fq(fq::two_inv, current.x, a);
     fq2::mul(a, current.y, a);
 
     fq2::sqr(current.y, b);
     fq2::sqr(current.z, c);
     fq2::add(c, c, d);
     fq2::add(d, c, d);
-    fq2::mul(twist_coeff_b, d, e);
+    fq2::mul(fq2::twist_coeff_b, d, e);
     fq2::add(e, e, f);
 
     fq2::add(f, e, f);
 
     fq2::add(b, f, g);
-    fq2::mul_by_fq(pairing::two_inv, g, g);
+    fq2::mul_by_fq(fq::two_inv, g, g);
 
     fq2::add(current.y, current.z, h);
     fq2::sqr(h, h);
@@ -340,8 +335,8 @@ inline fq12::fq12_t reduced_ate_pairing(const g1::affine_element &P_affine, cons
 {
     g1::element P;
     g2::element Q;
-    g1::copy_from_affine(P_affine, P);
-    g2::copy_from_affine(Q_affine, Q);
+    g1::affine_to_jacobian(P_affine, P);
+    g2::affine_to_jacobian(Q_affine, Q);
 
     miller_lines lines;
     precompute_miller_lines(Q, lines);
@@ -359,8 +354,8 @@ inline fq12::fq12_t reduced_ate_pairing_batch(const g1::affine_element *P_affine
     miller_lines lines[num_points];
     for (size_t i = 0; i < num_points; ++i)
     {
-        g1::copy_from_affine(P_affines[i], P[i]);
-        g2::copy_from_affine(Q_affines[i], Q[i]);
+        g1::affine_to_jacobian(P_affines[i], P[i]);
+        g2::affine_to_jacobian(Q_affines[i], Q[i]);
 
         precompute_miller_lines(Q[i], lines[i]);
     }

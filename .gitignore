@@ -2,4 +2,4 @@
 build
 cmake/cable
 useful_commands.txt
-srs_db
+srs_db/transcript.dat

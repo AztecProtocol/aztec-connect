@@ -1,6 +1,9 @@
 # barretenburg
 # copyright 2019 Spilsbury Holdings
 
+add_compile_options(-Werror -Wall -Wextra -Wshadow)
+add_compile_options(-Wconversion -Wsign-conversion)
+
 add_library(
     barretenberg STATIC
     types.hpp
@@ -43,12 +46,7 @@ set_target_properties(
 
 target_link_libraries(
     barretenberg
-    PUBLIC
-        ${GMP_LIBRARIES}
 )
-
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
 
 add_executable(
     barretenberg_profiling
@@ -86,7 +84,6 @@ add_executable(
 
 target_link_libraries(
     barretenberg_profiling
-    Threads::Threads
 )
 set_target_properties(
     barretenberg_profiling

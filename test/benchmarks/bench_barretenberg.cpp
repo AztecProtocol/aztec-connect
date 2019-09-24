@@ -185,51 +185,6 @@ void generate_scalars(fr::field_t *scalars)
         fr::copy(acc, scalars[i]);
     }
 }
-// {
-//     data.scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * NUM_POINTS * NUM_THREADS);
-//     data.points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * NUM_POINTS * 2 * NUM_THREADS);
-
-//     g1::element small_table[10000];
-//     for (size_t i = 0; i < 10000; ++i)
-//     {
-//         small_table[i] = g1::random_element();
-//     }
-//     g1::element current_table[10000];
-//     for (size_t i = 0; i < ((NUM_POINTS) / 10000); ++i)
-//     {
-//         for (size_t j = 0; j < 10000; ++j)
-//         {
-//             g1::add(small_table[i], small_table[j], current_table[j]);
-//         }
-//         g1::batch_normalize(&current_table[0], 10000);
-//         for (size_t j = 0; j < 10000; ++j)
-//         {
-//             fq::copy(current_table[j].x, data.points[i * 10000 + j].x);
-//             fq::copy(current_table[j].y, data.points[i * 10000 + j].y);
-//         }
-//     }
-//     g1::batch_normalize(small_table, 10000);
-//     size_t rounded = ((NUM_POINTS) / 10000) * 10000;
-//     size_t leftovers = (NUM_POINTS) - rounded;
-//     for (size_t j = 0;  j < leftovers; ++j)
-//     {
-//             fq::copy(small_table[j].x, data.points[rounded + j].x);
-//             fq::copy(small_table[j].y, data.points[rounded + j].y);
-//     }
-
-//     for (size_t i = 0; i < (NUM_POINTS); ++i)
-//     {
-//         data.scalars[i] = fr::random_element();
-//     }
-//     scalar_multiplication::generate_pippenger_point_table(data.points, data.points, (NUM_POINTS));
-//     printf("boop\n");
-//     for (size_t i = 1; i < NUM_THREADS; ++i)
-//     {
-//         memcpy((void*)&data.points[NUM_POINTS * i], (void*)&data.points[0], sizeof(g1::affine_element) * NUM_POINTS);
-//         memcpy((void*)&data.scalars[NUM_POINTS * i], (void*)&data.scalars[0], sizeof(fr::field_t) * NUM_POINTS);
-
-//     }
-// }
 
 void generate_pairing_points(g1::affine_element* p1s, g2::affine_element* p2s)
 {
@@ -264,7 +219,8 @@ const auto init = []() {
     globals.reference_string.degree =  MAX_NUM_POINTS;
     globals.reference_string.monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (2 * MAX_NUM_POINTS + 2)));
     globals.scalars = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * MAX_NUM_POINTS));
-    io::read_transcript(globals.reference_string, "../srs_db/transcript.dat");
+    std::string my_file_path = std::string(BARRETENBERG_SRS_PATH);
+    io::read_transcript(globals.reference_string, my_file_path);
     // globals.reference_string.degree = 3 * NUM_GATES;
     scalar_multiplication::generate_pippenger_point_table(globals.reference_string.monomials, globals.reference_string.monomials, 3 * MAX_GATES);
     printf("generating test data\n");
@@ -282,39 +238,6 @@ const auto init = []() {
         globals.plonk_instances.push_back(waffle::preprocess_circuit(globals.plonk_states[i], globals.reference_string));
     }
 
-
-    // for (size_t i = 0; i < NUM_WAFFLE_STEPS; ++i)
-    // {
-    //     size_t n = NUM_STARTING_GATES << i;
-    //     waffle::circuit_state state;
-    //     waffle::circuit_instance instance;
-    //     state.n = n;
-    //     instance.n = n;
-    //     state.small_domain = polynomials::get_domain(n);
-    //     state.mid_domain = polynomials::get_domain(2 * n);
-    //     state.large_domain = polynomials::get_domain(3 * n);
-    //     state.w_l = globals.plonk_state.w_l;
-    //     state.w_r = globals.plonk_state.w_r;
-    //     state.w_o = globals.plonk_state.w_o;
-    //     state.z_1 = globals.plonk_state.z_1;
-    //     state.z_2 = globals.plonk_state.z_2;
-    //     state.sigma_1 = globals.plonk_state.sigma_1;
-    //     state.sigma_2 = globals.plonk_state.sigma_2;
-    //     state.sigma_3 = globals.plonk_state.sigma_3;
-    //     state.s_id = globals.plonk_state.s_id;
-    //     state.t = globals.plonk_state.t;
-    //     state.w_l_lagrange_base = globals.plonk_state.w_l_lagrange_base;
-    //     state.w_r_lagrange_base = globals.plonk_state.w_r_lagrange_base;
-    //     state.w_o_lagrange_base = globals.plonk_state.w_o_lagrange_base;
-    //     state.q_m = globals.plonk_state.q_m;
-    //     state.q_l = globals.plonk_state.q_l;
-    //     state.q_r = globals.plonk_state.q_r;
-    //     state.q_o = globals.plonk_state.q_o;
-    //     state.q_c = globals.plonk_state.q_c;
-    //     globals.plonk_states.push_back(state);
-
-    //     globals.plonk_instances.push_back(waffle::preprocess_circuit(state, globals.reference_string));
-    // }
     generate_pairing_points(&globals.g1_pair_points[0], &globals.g2_pair_points[0]);
     printf("generating scalar mul scalars\n");
     generate_scalars(globals.scalars);
@@ -365,7 +288,7 @@ void construct_proof_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = log2((size_t)state.range(0)) - log2(START);
+        size_t idx = (size_t)log2(state.range(0)) - (int)log2(START);
         waffle::plonk_proof proof = waffle::construct_proof(globals.plonk_states[idx], globals.reference_string);
         state.PauseTiming();
         bool res = waffle::verifier::verify_proof(proof, globals.plonk_instances[idx], globals.reference_string.SRS_T2);

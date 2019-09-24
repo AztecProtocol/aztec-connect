@@ -20,6 +20,8 @@ constexpr field_t __zero = { .data = { 0x00, 0x00, 0x00, 0x00 } };
 
 constexpr field_t curve_b = {.data = {0x3, 0x0, 0x0, 0x0}};
 
+constexpr field_t two_inv = {.data = {0x87bee7d24f060572, 0xd0fd2add2f1c6ae5, 0x8f5f7492fcfd4f44, 0x1f37631a3d9cbfac}};
+
 // compute a * b, put result in r
 inline void mul(const field_t &a, const field_t &b, const field_t &r);
 

@@ -14,7 +14,7 @@ TEST(io, read_transcript_loads_well_formed_srs)
     srs.degree = 100000;
     srs.monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (srs.degree + 2)));
 
-    io::read_transcript(srs, "../srs_db/transcript.dat");
+    io::read_transcript(srs, BARRETENBERG_SRS_PATH);
 
     g1::affine_element P[2];
     g2::affine_element Q[2];

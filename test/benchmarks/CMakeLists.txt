@@ -13,6 +13,9 @@ if(NOT benchmark_POPULATED)
   add_subdirectory(${benchmark_SOURCE_DIR} ${benchmark_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
+add_compile_options(-Werror -Wall -Wextra -Wshadow)
+add_compile_options(-Wconversion -Wsign-conversion)
+
 add_executable(
     barretenberg_bench
     bench_barretenberg.cpp

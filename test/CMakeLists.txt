@@ -29,6 +29,9 @@ set(setup_private_include_dir ${PROJECT_SOURCE_DIR}/src)
 
 add_subdirectory(benchmarks)
 
+add_compile_options(-Werror -Wall -Wextra -Wshadow)
+add_compile_options(-Wconversion -Wsign-conversion)
+
 add_executable(
     barretenberg_tests
     test_wnaf.cpp
@@ -59,8 +62,6 @@ target_link_libraries(
     barretenberg_tests
     PUBLIC
     barretenberg
-    ${GMP_LIBRARIES}
-    ${LIBFF}
     PRIVATE
         gtest
         gmock

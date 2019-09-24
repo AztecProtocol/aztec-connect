@@ -184,7 +184,7 @@ void compute_quotient_commitment(circuit_state &state, fr::field_t *coeffs, plon
     g1::add(mul_state[0].output, mul_state[1].output, res);
     g1::add(res, mul_state[2].output, res);
 
-    g1::copy_to_affine(res, proof.T);
+    g1::jacobian_to_affine(res, proof.T);
 
     state.challenges.z = compute_evaluation_challenge(proof);
 }
@@ -597,9 +597,9 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
     g1::element res;
     g1::add(mul_state[0].output, mul_state[1].output, res);
     g1::add(res, mul_state[2].output, res);
-    g1::copy_to_affine(res, proof.PI_Z);
+    g1::jacobian_to_affine(res, proof.PI_Z);
 
-    g1::copy_to_affine(mul_state[3].output, proof.PI_Z_OMEGA);
+    g1::jacobian_to_affine(mul_state[3].output, proof.PI_Z_OMEGA);
 
     free(scratch_space);
     return proof;

@@ -28,9 +28,9 @@ inline uint32_t get_wnaf_bits(uint64_t *scalar, size_t bits, size_t bit_position
      */
     size_t lo_idx = bit_position >> 6;
     size_t hi_idx = (bit_position + bits - 1) >> 6;
-    uint32_t lo = scalar[lo_idx] >> (bit_position & 63);
-    uint32_t hi = (scalar[hi_idx] << (64 - (bit_position & 63)));
-    return (lo | hi) & ((1UL << bits) - 1);
+    uint32_t lo = (uint32_t)(scalar[lo_idx] >> (bit_position & 63UL));
+    uint32_t hi = (uint32_t)(scalar[hi_idx] << (64UL - (bit_position & 63UL)));
+    return (lo | hi) & ((1U << (uint32_t)bits) - 1U);
 }
 
 inline void fixed_wnaf(uint64_t *scalar, uint32_t *wnaf, bool &skew_map, size_t num_points, size_t wnaf_bits)
@@ -63,7 +63,7 @@ inline void compute_wnaf_5(uint64_t hi, uint64_t lo, uint8_t *wnaf)
     size_t count;
     size_t i = 0;
 
-    count = __builtin_ctzll(lo);
+    count = (size_t)__builtin_ctzll(lo);
     lo >>= count;
     i += count;
     while (i < 60)
@@ -71,7 +71,7 @@ inline void compute_wnaf_5(uint64_t hi, uint64_t lo, uint8_t *wnaf)
         wnaf[i] = (uint8_t)(lo)&0x1f;
         lo += 16;
         lo &= ~(0x1fULL);
-        count = __builtin_ctzll(lo);
+        count = (size_t)__builtin_ctzll(lo);
         lo >>= count;
         i += count;
     }
@@ -86,12 +86,11 @@ inline void compute_wnaf_5(uint64_t hi, uint64_t lo, uint8_t *wnaf)
     }
     else if (lo > 0)
     {
-        size_t lo_bits = 64 - i;
-        uint64_t hi_mask = (0x01 << (5 - lo_bits)) - 1;
-        uint64_t m = (uint8_t)(
-            (hi & hi_mask) << lo_bits | lo);
+        size_t lo_bits = 64UL - i;
+        uint64_t hi_mask = (1UL << (5UL - lo_bits)) - 1UL;
+        uint8_t m = (uint8_t)((hi & hi_mask) << lo_bits | lo);
         wnaf[i] = m;
-        hi += (16 >> lo_bits);
+        hi += (16UL >> lo_bits);
         hi &= ~hi_mask;
     }
 
@@ -99,7 +98,7 @@ inline void compute_wnaf_5(uint64_t hi, uint64_t lo, uint8_t *wnaf)
 
     while (hi > 0)
     {
-        count = __builtin_ctzll(hi);
+        count = (size_t)__builtin_ctzll(hi);
         hi >>= count;
         i += count;
         wnaf[i] = (uint8_t)(hi)&0x1f;
