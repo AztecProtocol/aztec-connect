@@ -70,6 +70,10 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
     fr::add(output_shift, fr::one(), output_shift);
     fr::add(output_shift, fr::one(), output_shift);
 
+
+    // in order to compute Z1(X), Z2(X), we need to compute the accumulated products of the coefficients of 6 polynomials.
+    // To parallelize as much as possible, we first compute the terms we need to accumulate, and store them in `accumulators`
+    // (we re-use memory reserved for the fast fourier transforms, at this stage of the proof, this memory should be free)
     fr::field_t* accumulators[6] = {
         ffts.quotient_poly,
         &ffts.quotient_poly[state.small_domain.size],
@@ -79,6 +83,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
         &ffts.w_l_poly[state.small_domain.size * 2],
     };
 
+    // compute accumulator terms
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
@@ -120,6 +125,8 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
         }
     }
 
+    // step 2: compute the constituent components of Z1(X), Z2(X). This is a small bottleneck, as we have
+    // 6 non-parallelizable processes
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
@@ -132,6 +139,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
         }
     }
 
+    // step 3: concatenate together the accumulator elements into Z1(X), Z2(X)
     ITERATE_OVER_DOMAIN_START(state.small_domain);
         fr::mul(accumulators[0][i], accumulators[1][i], state.z_1[i]);
         fr::mul(state.z_1[i], accumulators[2][i], state.z_1[i]);
@@ -576,9 +584,9 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
     compute_quotient_commitment(state, ffts.quotient_poly, proof, reference_string);
     compute_linearisation_coefficients(state, ffts, proof);
     state.challenges.nu = compute_linearisation_challenge(proof);
-    fr::field_t nu_powers[12];
+    fr::field_t nu_powers[11];
     fr::copy(state.challenges.nu, nu_powers[0]);
-    for (size_t i = 1; i < 12; ++i)
+    for (size_t i = 1; i < 11; ++i)
     {
         fr::mul(nu_powers[i - 1], nu_powers[0], nu_powers[i]);
     }
@@ -597,43 +605,55 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
         fr::field_t T1;
         fr::field_t T2;
         fr::field_t T3;
+        fr::field_t T4;
         fr::field_t T5;
         fr::field_t T6;
         fr::field_t T7;
         fr::field_t T8;
         fr::field_t T9;
-        fr::field_t T10;
         fr::mul(state.linear_poly[i], nu_powers[0], T0);
         fr::mul(state.w_l[i], nu_powers[1], T1);
         fr::mul(state.w_r[i], nu_powers[2], T2);
         fr::mul(state.w_o[i], nu_powers[3], T3);
-        fr::mul(state.sigma_1[i], nu_powers[5], T5);
-        fr::mul(state.sigma_2[i], nu_powers[6], T6);
-        fr::mul(state.sigma_3[i], nu_powers[7], T7);
-        fr::mul(state.z_1[i], nu_powers[8], T8);
-        fr::mul(state.z_2[i], nu_powers[9], shifted_opening_poly[i]);
-        fr::mul(ffts.quotient_poly[i + state.n], nu_powers[10], T9);
-        fr::mul(ffts.quotient_poly[i + state.n + state.n], nu_powers[11], T10);
-        fr::add(T9, T10, T9);
-        fr::add(T7, T6, T7);
+        fr::mul(state.sigma_1[i], nu_powers[4], T4);
+        fr::mul(state.sigma_2[i], nu_powers[5], T5);
+        fr::mul(state.sigma_3[i], nu_powers[6], T6);
+        fr::mul(state.z_1[i], nu_powers[7], T7);
+        fr::mul(state.z_2[i], nu_powers[8], shifted_opening_poly[i]);
+        fr::mul(ffts.quotient_poly[i + state.n], nu_powers[9], T8);
+        fr::mul(ffts.quotient_poly[i + state.n + state.n], nu_powers[10], T9);
+        fr::add(T8, T9, T8);
+        fr::add(T6, T5, T6);
         fr::add(T3, T2, T3);
         fr::add(T1, T0, T1);
-        fr::add(T7, T5, T7);
+        fr::add(T6, T4, T6);
         // we added a \beta multiplier to sigma_1(X), sigma_2(X), sigma_3(X), s_id(X) - need to undo that here
-        fr::mul(T7, beta_inv, T7);
+        fr::mul(T6, beta_inv, T6);
         fr::add(T3, T1, T3);
-        fr::add(T7, T3, T7);
-        fr::add(T7, T9, T7);
-        fr::add(shifted_opening_poly[i], T8, shifted_opening_poly[i]);
-        fr::add(ffts.quotient_poly[i], T7, opening_poly[i]);
+        fr::add(T6, T3, T6);
+        fr::add(T6, T8, T6);
+        fr::add(shifted_opening_poly[i], T7, shifted_opening_poly[i]);
+        fr::add(ffts.quotient_poly[i], T6, opening_poly[i]);
     ITERATE_OVER_DOMAIN_END;
 
 
     fr::field_t shifted_z;
     fr::mul(state.challenges.z, state.small_domain.root, shifted_z);
 
-    polynomials::compute_kate_opening_coefficients(opening_poly, state.challenges.z, state.small_domain.size /* * 3 ADD BACK IN  */);
-    polynomials::compute_kate_opening_coefficients(shifted_opening_poly, shifted_z, state.small_domain.size);
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+    for (size_t i = 0; i < 2; ++i)
+    {
+        if (i == 0)
+        {
+            polynomials::compute_kate_opening_coefficients(opening_poly, state.challenges.z, state.small_domain.size);
+        }
+        else
+        {
+            polynomials::compute_kate_opening_coefficients(shifted_opening_poly, shifted_z, state.small_domain.size);
+        }
+    }
 
     // Compute PI_Z(X) and PI_Z_OMEGA(X)
     scalar_multiplication::multiplication_state mul_state[2];

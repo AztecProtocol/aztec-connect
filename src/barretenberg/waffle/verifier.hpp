@@ -20,7 +20,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     // reconstruct challenges
     plonk_challenges challenges;
     fr::field_t alpha_pow[5];
-    fr::field_t nu_pow[12];
+    fr::field_t nu_pow[11];
     challenges.alpha = compute_alpha(proof);
     challenges.gamma = compute_gamma(proof);
     challenges.beta = compute_beta(proof, challenges.gamma);
@@ -43,7 +43,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     {
         fr::mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
     }
-    for (size_t i = 1; i < 12; ++i)
+    for (size_t i = 1; i < 11; ++i)
     {
         fr::mul(nu_pow[i - 1], nu_pow[0], nu_pow[i]);
     }
@@ -78,9 +78,9 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::mul(linear_terms.z_1, nu_pow[0], linear_terms.z_1);
     fr::mul(linear_terms.z_2, nu_pow[0], linear_terms.z_2);
 
-    fr::mul(nu_pow[8], u, T0);
+    fr::mul(nu_pow[7], u, T0);
     fr::add(linear_terms.z_1, T0, linear_terms.z_1);
-    fr::mul(nu_pow[9], u, T0);
+    fr::mul(nu_pow[8], u, T0);
     fr::add(linear_terms.z_2, T0, linear_terms.z_2);
 
     fr::field_t batch_evaluation;
@@ -97,30 +97,27 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::mul(nu_pow[3], proof.w_o_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    // fr::mul(nu_pow[4], proof.s_id_eval, T0);
-    // fr::add(batch_evaluation, T0, batch_evaluation);
-
-    fr::mul(nu_pow[5], proof.sigma_1_eval, T0);
+    fr::mul(nu_pow[4], proof.sigma_1_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[6], proof.sigma_2_eval, T0);
+    fr::mul(nu_pow[5], proof.sigma_2_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[7], proof.sigma_3_eval, T0);
+    fr::mul(nu_pow[6], proof.sigma_3_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[8], u, T0);
+    fr::mul(nu_pow[7], u, T0);
     fr::mul(T0, proof.z_1_shifted_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[9], u, T0);
+    fr::mul(nu_pow[8], u, T0);
     fr::mul(T0, proof.z_2_shifted_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[10], proof.t_mid_eval, T0);
+    fr::mul(nu_pow[9], proof.t_mid_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[11], proof.t_hi_eval, T0);
+    fr::mul(nu_pow[10], proof.t_hi_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
     fr::neg(batch_evaluation, batch_evaluation);
@@ -141,15 +138,14 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::copy(nu_pow[1], scalar_exponents[7]);
     fr::copy(nu_pow[2], scalar_exponents[8]);
     fr::copy(nu_pow[3], scalar_exponents[9]);
-    // fr::copy(nu_pow[4], scalar_exponents[10]);
-    fr::copy(nu_pow[5], scalar_exponents[10]);
-    fr::copy(nu_pow[6], scalar_exponents[11]);
-    fr::copy(nu_pow[7], scalar_exponents[12]);
+    fr::copy(nu_pow[4], scalar_exponents[10]);
+    fr::copy(nu_pow[5], scalar_exponents[11]);
+    fr::copy(nu_pow[6], scalar_exponents[12]);
     fr::copy(batch_evaluation, scalar_exponents[13]);
     fr::copy(z_omega_scalar, scalar_exponents[14]);
     fr::copy(challenges.z, scalar_exponents[15]);
-    fr::copy(nu_pow[10], scalar_exponents[16]);
-    fr::copy(nu_pow[11], scalar_exponents[17]);
+    fr::copy(nu_pow[9], scalar_exponents[16]);
+    fr::copy(nu_pow[10], scalar_exponents[17]);
 
     g1::affine_element *lhs_ge = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * 38);
 
@@ -163,7 +159,6 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     g1::copy_affine(proof.W_L, lhs_ge[7]);
     g1::copy_affine(proof.W_R, lhs_ge[8]);
     g1::copy_affine(proof.W_O, lhs_ge[9]);
-    // g1::copy_affine(instance.S_ID, lhs_ge[10]);
     g1::copy_affine(instance.SIGMA_1, lhs_ge[10]);
     g1::copy_affine(instance.SIGMA_2, lhs_ge[11]);
     g1::copy_affine(instance.SIGMA_3, lhs_ge[12]);
