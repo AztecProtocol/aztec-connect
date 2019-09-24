@@ -171,8 +171,8 @@ void compute_quotient_commitment(circuit_state &state, fr::field_t *coeffs, plon
     mul_state[2].scalars = &coeffs[2 * n];
 
     mul_state[0].points = srs.monomials;
-    mul_state[1].points = &srs.monomials[2 * n];
-    mul_state[2].points = &srs.monomials[4 * n];
+    mul_state[1].points = srs.monomials;
+    mul_state[2].points = srs.monomials;
 
     mul_state[0].num_elements = n;
     mul_state[1].num_elements = n;
@@ -180,11 +180,9 @@ void compute_quotient_commitment(circuit_state &state, fr::field_t *coeffs, plon
 
     scalar_multiplication::batched_scalar_multiplications(mul_state, 3);
 
-    g1::element res;
-    g1::add(mul_state[0].output, mul_state[1].output, res);
-    g1::add(res, mul_state[2].output, res);
-
-    g1::jacobian_to_affine(res, proof.T);
+    g1::jacobian_to_affine(mul_state[0].output, proof.T_LO);
+    g1::jacobian_to_affine(mul_state[1].output, proof.T_MID);
+    g1::jacobian_to_affine(mul_state[2].output, proof.T_HI);
 
     state.challenges.z = compute_evaluation_challenge(proof);
 }
@@ -449,7 +447,7 @@ void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk
     polynomials::ifft_with_coset(ffts.quotient_poly, state.large_domain);
 }
 
-void compute_linearisation_coefficients(circuit_state &state, fft_pointers &, plonk_proof &proof)
+void compute_linearisation_coefficients(circuit_state &state, fft_pointers & ffts, plonk_proof &proof)
 {
     // ok... now we need to evaluate polynomials. Jeepers
     fr::field_t beta_inv;
@@ -468,6 +466,8 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers &, pl
     proof.sigma_3_eval = polynomials::evaluate(state.sigma_3, state.challenges.z, state.n);
     proof.z_1_shifted_eval = polynomials::evaluate(state.z_1, shifted_z, state.n);
     proof.z_2_shifted_eval = polynomials::evaluate(state.z_2, shifted_z, state.n);
+    proof.t_mid_eval = polynomials::evaluate(&ffts.quotient_poly[state.n], state.challenges.z, state.n);
+    proof.t_hi_eval = polynomials::evaluate(&ffts.quotient_poly[state.n + state.n], state.challenges.z, state.n);
 
     // we scaled the sigma polynomials up by beta, so scale back down
     fr::mul(proof.sigma_1_eval, beta_inv, proof.sigma_1_eval);
@@ -516,9 +516,9 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
     compute_quotient_commitment(state, ffts.quotient_poly, proof, reference_string);
     compute_linearisation_coefficients(state, ffts, proof);
     state.challenges.nu = compute_linearisation_challenge(proof);
-    fr::field_t nu_powers[10];
+    fr::field_t nu_powers[12];
     fr::copy(state.challenges.nu, nu_powers[0]);
-    for (size_t i = 1; i < 10; ++i)
+    for (size_t i = 1; i < 12; ++i)
     {
         fr::mul(nu_powers[i - 1], nu_powers[0], nu_powers[i]);
     }
@@ -542,6 +542,8 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
         fr::field_t T6;
         fr::field_t T7;
         fr::field_t T8;
+        fr::field_t T9;
+        fr::field_t T10;
         fr::mul(state.linear_poly[i], nu_powers[0], T0);
         fr::mul(state.w_l[i], nu_powers[1], T1);
         fr::mul(state.w_r[i], nu_powers[2], T2);
@@ -552,6 +554,9 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
         fr::mul(state.sigma_3[i], nu_powers[7], T7);
         fr::mul(state.z_1[i], nu_powers[8], T8);
         fr::mul(state.z_2[i], nu_powers[9], shifted_opening_poly[i]);
+        fr::mul(ffts.quotient_poly[i + state.n], nu_powers[10], T9);
+        fr::mul(ffts.quotient_poly[i + state.n + state.n], nu_powers[11], T10);
+        fr::add(T9, T10, T9);
         fr::add(T7, T6, T7);
         fr::add(T5, T4, T5);
         fr::add(T3, T2, T3);
@@ -561,6 +566,7 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
         fr::mul(T7, beta_inv, T7);
         fr::add(T3, T1, T3);
         fr::add(T7, T3, T7);
+        fr::add(T7, T9, T7);
         fr::add(shifted_opening_poly[i], T8, shifted_opening_poly[i]);
         fr::add(ffts.quotient_poly[i], T7, opening_poly[i]);
     ITERATE_OVER_DOMAIN_END;
@@ -569,37 +575,25 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
     fr::field_t shifted_z;
     fr::mul(state.challenges.z, state.small_domain.root, shifted_z);
 
-    polynomials::compute_kate_opening_coefficients(opening_poly, state.challenges.z, state.small_domain.size * 3 /* * 3 ADD BACK IN  */);
+    polynomials::compute_kate_opening_coefficients(opening_poly, state.challenges.z, state.small_domain.size /* * 3 ADD BACK IN  */);
     polynomials::compute_kate_opening_coefficients(shifted_opening_poly, shifted_z, state.small_domain.size);
 
-    // PI_Z(X)'s degree is 3x that of PI_Z_OMEGA(X)
-    // Split PI_Z(X) into three equal-sized chunks so we can maximize
-    // the size of each thread's multi-exponentiation job
-    scalar_multiplication::multiplication_state mul_state[4];
+    // Compute PI_Z(X) and PI_Z_OMEGA(X)
+    scalar_multiplication::multiplication_state mul_state[2];
 
     mul_state[0].scalars = opening_poly;
-    mul_state[1].scalars = &opening_poly[state.small_domain.size];
-    mul_state[2].scalars = &opening_poly[2 * state.small_domain.size];
-    mul_state[3].scalars = shifted_opening_poly;
+    mul_state[1].scalars = shifted_opening_poly;
 
     mul_state[0].points = reference_string.monomials;
-    mul_state[1].points = &reference_string.monomials[2 * state.small_domain.size];
-    mul_state[2].points = &reference_string.monomials[4 * state.small_domain.size];
-    mul_state[3].points = reference_string.monomials;
+    mul_state[1].points = reference_string.monomials;
 
     mul_state[0].num_elements = state.small_domain.size;
     mul_state[1].num_elements = state.small_domain.size;
-    mul_state[2].num_elements = state.small_domain.size;
-    mul_state[3].num_elements = state.small_domain.size;
 
-    scalar_multiplication::batched_scalar_multiplications(mul_state, 4);
+    scalar_multiplication::batched_scalar_multiplications(mul_state, 2);
 
-    g1::element res;
-    g1::add(mul_state[0].output, mul_state[1].output, res);
-    g1::add(res, mul_state[2].output, res);
-    g1::jacobian_to_affine(res, proof.PI_Z);
-
-    g1::jacobian_to_affine(mul_state[3].output, proof.PI_Z_OMEGA);
+    g1::jacobian_to_affine(mul_state[0].output, proof.PI_Z);
+    g1::jacobian_to_affine(mul_state[1].output, proof.PI_Z_OMEGA);
 
     free(scratch_space);
     return proof;

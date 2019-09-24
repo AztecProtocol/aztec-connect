@@ -220,7 +220,9 @@ struct plonk_proof
     g1::affine_element W_O;
     g1::affine_element Z_1;
     g1::affine_element Z_2;
-    g1::affine_element T;
+    g1::affine_element T_LO;
+    g1::affine_element T_MID;
+    g1::affine_element T_HI;
     g1::affine_element PI_Z;
     g1::affine_element PI_Z_OMEGA;
 
@@ -234,5 +236,7 @@ struct plonk_proof
     fr::field_t z_1_shifted_eval;
     fr::field_t z_2_shifted_eval;
     fr::field_t linear_eval;
+    fr::field_t t_mid_eval;
+    fr::field_t t_hi_eval;
 };
 } // namespace waffle

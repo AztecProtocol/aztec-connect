@@ -20,7 +20,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     // reconstruct challenges
     plonk_challenges challenges;
     fr::field_t alpha_pow[5];
-    fr::field_t nu_pow[10];
+    fr::field_t nu_pow[12];
     challenges.alpha = compute_alpha(proof);
     challenges.gamma = compute_gamma(proof);
     challenges.beta = compute_beta(proof, challenges.gamma);
@@ -43,7 +43,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     {
         fr::mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
     }
-    for (size_t i = 1; i < 10; ++i)
+    for (size_t i = 1; i < 12; ++i)
     {
         fr::mul(nu_pow[i - 1], nu_pow[0], nu_pow[i]);
     }
@@ -60,6 +60,15 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::add(T0, proof.linear_eval, t_eval);
     fr::invert(lagrange_evals.vanishing_poly, T0);
     fr::mul(t_eval, T0, t_eval);
+    fr::field_t z_pow_n;
+    fr::field_t z_pow_2n;
+    fr::pow_small(challenges.z, instance.n, z_pow_n);
+    fr::pow_small(challenges.z, instance.n * 2, z_pow_2n);
+    fr::mul(proof.t_mid_eval, z_pow_n, T0);
+    fr::mul(proof.t_hi_eval, z_pow_2n, T1);
+
+    fr::sub(t_eval, T0, t_eval);
+    fr::sub(t_eval, T1, t_eval);
 
     // reconstruct Kate opening commitments from committed values
     fr::mul(linear_terms.q_m, nu_pow[0], linear_terms.q_m);
@@ -109,6 +118,12 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::mul(T0, proof.z_2_shifted_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
+    fr::mul(nu_pow[10], proof.t_mid_eval, T0);
+    fr::add(batch_evaluation, T0, batch_evaluation);
+
+    fr::mul(nu_pow[11], proof.t_hi_eval, T0);
+    fr::add(batch_evaluation, T0, batch_evaluation);
+
     fr::neg(batch_evaluation, batch_evaluation);
 
     fr::field_t z_omega_scalar;
@@ -116,7 +131,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::mul(z_omega_scalar, u, z_omega_scalar);
 
     // TODO: make a wrapper around g1 ops so...this guff isn't needed each time we want to do a scalar mul
-    fr::field_t *scalar_exponents = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * 17);
+    fr::field_t *scalar_exponents = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * 19);
     fr::copy(linear_terms.q_m, scalar_exponents[0]);
     fr::copy(linear_terms.q_l, scalar_exponents[1]);
     fr::copy(linear_terms.q_r, scalar_exponents[2]);
@@ -134,8 +149,10 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::copy(batch_evaluation, scalar_exponents[14]);
     fr::copy(z_omega_scalar, scalar_exponents[15]);
     fr::copy(challenges.z, scalar_exponents[16]);
+    fr::copy(nu_pow[10], scalar_exponents[17]);
+    fr::copy(nu_pow[11], scalar_exponents[18]);
 
-    g1::affine_element *lhs_ge = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * 36);
+    g1::affine_element *lhs_ge = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * 40);
 
     g1::copy_affine(instance.Q_M, lhs_ge[0]);
     g1::copy_affine(instance.Q_L, lhs_ge[1]);
@@ -154,12 +171,14 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     g1::copy_affine(g1::affine_one(), lhs_ge[14]);
     g1::copy_affine(proof.PI_Z_OMEGA, lhs_ge[15]);
     g1::copy_affine(proof.PI_Z, lhs_ge[16]);
+    g1::copy_affine(proof.T_MID, lhs_ge[17]);
+    g1::copy_affine(proof.T_HI, lhs_ge[18]);
 
-    scalar_multiplication::generate_pippenger_point_table(lhs_ge, lhs_ge, 17);
+    scalar_multiplication::generate_pippenger_point_table(lhs_ge, lhs_ge, 19);
     g1::element P[2];
-    P[1] = scalar_multiplication::pippenger(scalar_exponents, lhs_ge, 17);
+    P[1] = scalar_multiplication::pippenger(scalar_exponents, lhs_ge, 19);
     P[0] = g1::group_exponentiation_inner(proof.PI_Z_OMEGA, u);
-    g1::mixed_add(P[1], proof.T, P[1]);
+    g1::mixed_add(P[1], proof.T_LO, P[1]);
     g1::mixed_add(P[0], proof.PI_Z, P[0]);
     g1::neg(P[0], P[0]);
     g1::batch_normalize(P, 2);
