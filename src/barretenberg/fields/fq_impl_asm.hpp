@@ -121,15 +121,14 @@ inline void reduce_once(field_t& a, field_t& r)
 {
     __asm__(
         "xorq %%r12, %%r12              \n\t" \
-        "movq 0(%0), %%r12          \n\t" \
-        "movq 8(%0), %%r13          \n\t" \
-        "movq 16(%0), %%r14          \n\t" \
-        "movq 24(%0), %%r15          \n\t" \
+        "movq 0(%0), %%r12              \n\t" \
+        "movq 8(%0), %%r13              \n\t" \
+        "movq 16(%0), %%r14             \n\t" \
+        "movq 24(%0), %%r15             \n\t" \
         REDUCE_RESULT("%1")
         :
         : "r"(&a), "r"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-
 }
 
 /**
@@ -161,20 +160,6 @@ inline void add_with_coarse_reduction(const field_t &a, const field_t &b, field_
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
-
-/**
- * Add field_t elements `a` and `b` modulo `q`, store the result in `r`
- * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
- **/
-inline void sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
-{
-    __asm__(
-        SUB_COARSE("%0", "%1", "%2")
-        :
-        : "r"(&a), "r"(&b), "r"(&r), [twice_modulus_0] "m"(twice_modulus_0), [twice_modulus_1] "m"(twice_modulus_1), [twice_modulus_2] "m"(twice_modulus_2), [twice_modulus_3] "m"(twice_modulus_3)
-        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-}
-
 // r = a + a + b mod p
 inline void double_with_add(const field_t &a, const field_t &b, field_t &r)
 {
@@ -195,6 +180,25 @@ inline void double_with_add_with_coarse_reduction(const field_t &a, const field_
         :
         : "r"(&a), "r"(&b), "r"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
         : "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+
+/**
+ * Add field_t elements `a` and `b` modulo `q`, store the result in `r`
+ * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
+ **/
+inline void add_without_reduction(const field_t &a, const field_t &b, field_t &r)
+{
+    __asm__(
+        ADD("%%rbx", "%%rcx")
+        // Save result
+        "movq %%r12, 0(%%rsi)                       \n\t"
+        "movq %%r13, 8(%%rsi)                       \n\t"
+        "movq %%r14, 16(%%rsi)                      \n\t"
+        "movq %%r15, 24(%%rsi)                      \n\t"
+        :
+        : "b"(&a), "c"(&b), "S"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
+        : "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
 inline void quad_with_coarse_reduction(const field_t &a, field_t &r)
@@ -259,33 +263,23 @@ inline void oct(const field_t &a, field_t &r)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
-inline void double_with_double_reduction(const field_t &a, field_t &r)
-{
-    __asm__(
-        ADD("%%rbx", "%%rbx")
-        REDUCE_RESULT_TWICE()
-        :
-        : "b"(&a), [dest] "m"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
-        : "%rax", "%rdx", "%rdi", "%rsi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-}
 
 /**
  * Add field_t elements `a` and `b` modulo `q`, store the result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
-inline void add_without_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
-        ADD("%%rbx", "%%rcx")
-        // Save result
-        "movq %%r12, 0(%%rsi)                       \n\t"
-        "movq %%r13, 8(%%rsi)                       \n\t"
-        "movq %%r14, 16(%%rsi)                      \n\t"
-        "movq %%r15, 24(%%rsi)                      \n\t"
+        SUB_COARSE("%0", "%1", "%2")
         :
-        : "b"(&a), "c"(&b), "S"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
-        : "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+        : "r"(&a), "r"(&b), "r"(&r), [twice_modulus_0] "m"(twice_modulus_0), [twice_modulus_1] "m"(twice_modulus_1), [twice_modulus_2] "m"(twice_modulus_2), [twice_modulus_3] "m"(twice_modulus_3)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
+
+
+
+
 
 // compute x_0 = x_0 + x_0
 // compute r = y_0 + y_1

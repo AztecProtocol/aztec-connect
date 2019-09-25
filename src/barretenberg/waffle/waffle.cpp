@@ -52,19 +52,6 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
 {
     // compute Z1, Z2
 
-    // fr::field_t beta_n = {.data = {n, 0, 0, 0}};
-    // fr::to_montgomery_form(beta_n, beta_n);
-    // fr::mul(beta_n, state.challenges.beta, beta_n);
-    // fr::field_t beta_n_2;
-    // fr::add(beta_n, beta_n, beta_n_2);
-
-    // fr::field_t beta_identity = {.data = {0, 0, 0, 0}};
-    // for the sigma permutation, as we compute each product term, store the intermediates in `product_1/2/3`.
-
-
-    // TODO: try and multithread this.
-    // Hard to do perfectly, but we can consume at least 6 cores by running grand products in parallel
-
     fr::field_t right_shift = fr::multiplicative_generator();
     fr::field_t output_shift = fr::multiplicative_generator();
     fr::add(output_shift, fr::one(), output_shift);
@@ -212,7 +199,6 @@ void compute_z_commitments(circuit_state &state, plonk_proof &proof, srs::plonk_
 void compute_multiplication_gate_coefficients(circuit_state &state, fft_pointers &ffts)
 {
     // The next step is to compute q_m.w_l.w_r - we need a 4n fft for this
-    // requisition the memory that w_o was using
     polynomials::ifft(state.q_m, state.small_domain);
     polynomials::copy_polynomial(state.q_m, ffts.q_m_poly, state.small_domain.size, state.large_domain.size);
     polynomials::fft_with_coset_and_constant(ffts.q_m_poly, state.large_domain, state.challenges.alpha);
@@ -528,7 +514,6 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers & fft
     proof.w_l_eval = polynomials::evaluate(state.w_l, state.challenges.z, state.n);
     proof.w_r_eval = polynomials::evaluate(state.w_r, state.challenges.z, state.n);
     proof.w_o_eval = polynomials::evaluate(state.w_o, state.challenges.z, state.n);
-    // proof.s_id_eval = polynomials::evaluate(state.s_id, state.challenges.z, state.n);
     proof.sigma_1_eval = polynomials::evaluate(state.sigma_1, state.challenges.z, state.n);
     proof.sigma_2_eval = polynomials::evaluate(state.sigma_2, state.challenges.z, state.n);
     proof.sigma_3_eval = polynomials::evaluate(state.sigma_3, state.challenges.z, state.n);
@@ -541,7 +526,6 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers & fft
     fr::mul(proof.sigma_1_eval, beta_inv, proof.sigma_1_eval);
     fr::mul(proof.sigma_2_eval, beta_inv, proof.sigma_2_eval);
     fr::mul(proof.sigma_3_eval, beta_inv, proof.sigma_3_eval);
-    // fr::mul(proof.s_id_eval, beta_inv, proof.s_id_eval);
 
     polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(state.challenges.z, state.small_domain);
     plonk_linear_terms linear_terms = compute_linear_terms(proof, state.challenges, lagrange_evals.l_1, state.n);
