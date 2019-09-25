@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CHALLENGE
+#define CHALLENGE
 
 #include "stdint.h"
 
@@ -119,3 +120,5 @@ inline fr::field_t compute_linearisation_challenge(const plonk_proof &proof)
     return nu;
 }
 }
+
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FR
+#define FR
 
 #include "stdint.h"
 #include "stdio.h"
@@ -416,3 +417,5 @@ inline void batch_invert(field_t *coeffs, size_t n, field_t *temporaries)
 
 } // namespace fr
 } // namespace barretenberg
+
+#endif

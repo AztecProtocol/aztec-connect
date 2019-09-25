@@ -27,14 +27,10 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     state.sigma_1 = &data[10 * n + 2];
     state.sigma_2 = &data[11 * n + 2];
     state.sigma_3 = &data[12 * n + 2];
-    // state.s_id = &data[13 * n + 2];
+    state.sigma_1_mapping = (uint32_t*)&data[13 * n + 2];
+    state.sigma_2_mapping = (uint32_t*)((uintptr_t*)&data[13 * n + 2] + (n * sizeof(uint32_t)));
+    state.sigma_3_mapping = (uint32_t*)((uintptr_t*)&data[13 * n + 2] + ((2 * n) * sizeof(uint32_t)));
     state.t = &data[14 * n + 2];
-    // state.sigma_1_mapping = (uint32_t*)&data[13 * n + 2];
-    // state.sigma_2_mapping = (uint32_t*)((uintptr_t*)&data[13 * n + 2] + (n * sizeof(uint32_t)));
-    // state.sigma_3_mapping = (uint32_t*)((uintptr_t*)&data[13 * n + 2] + ((2 * n) * sizeof(uint32_t)));
-    state.sigma_1_mapping = (uint32_t*)&data[17 * n + 2];
-    state.sigma_2_mapping = (uint32_t*)&data[18 * n + 2];
-    state.sigma_3_mapping = (uint32_t*)&data[19 * n + 2];
 
     state.w_l_lagrange_base = state.t;
     state.w_r_lagrange_base = &state.t[n + 1];
@@ -84,45 +80,16 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     polynomials::copy_polynomial(state.q_o, state.q_o + shift, shift, shift);
     polynomials::copy_polynomial(state.q_c, state.q_c + shift, shift, shift);
 
-
-    fr::field_t T1 = { .data = { shift + 1, 0, 0, 0 } };
-    fr::field_t n_mont = { .data = { n, 0, 0, 0 } } ;
-    fr::one(T0);
-    fr::to_montgomery_form(T1, T1);
-    fr::to_montgomery_form(n_mont, n_mont);
-    uint32_t tt0 = 0;
-    uint32_t tt1 = (uint32_t)shift;
-
+    // create basic permutation - second half of witness vector is a copy of the first half
     for (size_t i = 0; i < n / 2; ++i)
     {
-        state.sigma_1_mapping[shift + i] = tt0;
-        state.sigma_2_mapping[shift + i] = tt0 + (1U << 30U);
-        state.sigma_3_mapping[shift + i] = tt0 + (1U << 31U);
-        // fr::copy(T0, state.sigma_1[shift + i]);
-        // fr::copy(T0, state.sigma_2[shift + i]);
-        // fr::copy(T0, state.sigma_3[shift + i]);
-
-        // fr::add(state.sigma_2[shift + i], n_mont, state.sigma_2[shift + i]);
-        // fr::add(state.sigma_3[shift + i], n_mont, state.sigma_3[shift + i]);
-        // fr::add(state.sigma_3[shift + i], n_mont, state.sigma_3[shift + i]);
-
-        state.sigma_1_mapping[i] = tt1;
-        state.sigma_2_mapping[i] = tt1 + (1U << 30U);
-        state.sigma_3_mapping[i] = tt1 + (1U << 31U);
-        tt0 += 1;
-        tt1 += 1;
-        // fr::copy(T1, state.sigma_1[i]);
-        // fr::copy(T1, state.sigma_2[i]);
-        // fr::copy(T1, state.sigma_3[i]);
-
-        // fr::add(state.sigma_2[i], n_mont, state.sigma_2[i]);
-        // fr::add(state.sigma_3[i], n_mont, state.sigma_3[i]);
-        // fr::add(state.sigma_3[i], n_mont, state.sigma_3[i]);
-
-        // fr::add(T0, one, T0);
-        // fr::add(T1, one, T1);
+        state.sigma_1_mapping[shift + i] = (uint32_t)i;
+        state.sigma_2_mapping[shift + i] = (uint32_t)i + (1U << 30U);
+        state.sigma_3_mapping[shift + i] = (uint32_t)i + (1U << 31U);
+        state.sigma_1_mapping[i] = (uint32_t)(i + shift);
+        state.sigma_2_mapping[i] = (uint32_t)(i + shift) + (1U << 30U);
+        state.sigma_3_mapping[i] = (uint32_t)(i + shift) + (1U << 31U);
     }
-
 
     fr::zero(state.w_l[n-1]);
     fr::zero(state.w_r[n-1]);
@@ -133,6 +100,7 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     fr::zero(state.w_o[shift-1]);
     fr::zero(state.q_c[shift-1]);
 
+    // make last permutation the same as identity permutation
     state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
     state.sigma_2_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 30U);
     state.sigma_3_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 31U);
@@ -140,44 +108,10 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     state.sigma_2_mapping[n - 1] = (uint32_t)n - 1 + (1U << 30U);
     state.sigma_3_mapping[n - 1] = (uint32_t)n - 1 + (1U << 31U);
 
-
-    // for (size_t i = 0; i < n; ++i)
-    // {
-    //     state.sigma_1_mapping[i] = (uint32_t)i;
-    //     state.sigma_2_mapping[i] = (uint32_t)i + (1U << 30U);
-    //     state.sigma_3_mapping[i] = (uint32_t)i + (1U << 31U);
-    // }
-    // fr::field_t T2 = { .data = { shift, 0, 0, 0 } };
-    // fr::to_montgomery_form(T2, T2);
-    // fr::copy(T2, state.sigma_1[shift-1]);
-    // fr::copy(T2, state.sigma_2[shift-1]);
-    // fr::copy(T2, state.sigma_3[shift-1]);
-    // fr::add(state.sigma_2[shift-1], n_mont, state.sigma_2[shift-1]);
-    // fr::add(state.sigma_3[shift-1], n_mont, state.sigma_3[shift-1]);
-    // fr::add(state.sigma_3[shift-1], n_mont, state.sigma_3[shift-1]);
-
-    // fr::zero(state.sigma_1[n-1]);
-    // fr::zero(state.sigma_2[n-1]);
-    // fr::zero(state.sigma_3[n-1]);
-
     fr::zero(state.q_l[n - 1]);
     fr::zero(state.q_r[n - 1]);
     fr::zero(state.q_o[n - 1]);
     fr::zero(state.q_m[n - 1]);
-
-    fr::field_t* roots = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * state.small_domain.size);
-
-    fr::copy(fr::one(), roots[0]);
-    for (size_t i = 1; i < state.small_domain.size; ++i)
-    {
-        fr::mul(roots[i-1], state.small_domain.root, roots[i]);
-    }
-
-    waffle::compute_permutation_lagrange_base(roots, state.sigma_3, state.sigma_3_mapping, state.small_domain.size);
-    waffle::compute_permutation_lagrange_base(roots, state.sigma_2, state.sigma_2_mapping, state.small_domain.size);
-    waffle::compute_permutation_lagrange_base(roots, state.sigma_1, state.sigma_1_mapping, state.small_domain.size);
-
-    free(roots);
 }
 }
 
@@ -192,16 +126,16 @@ TEST(verifier, verifier)
 
     state.n = n;
 
-    fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (20 * n + 2)));
+    fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (17 * n + 2)));
     generate_test_data(state, data);
 
     // load structured reference string from disk
     srs::plonk_srs srs;
-    srs.degree = 3 * n;
-    srs.monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
+    srs.degree = n;
+    srs.monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (2 * n + 2)));
     io::read_transcript(srs, "../srs_db/transcript.dat");
 
-    scalar_multiplication::generate_pippenger_point_table(srs.monomials, srs.monomials, 3 * n);
+    scalar_multiplication::generate_pippenger_point_table(srs.monomials, srs.monomials, n);
 
     // process circuit
     waffle::circuit_instance instance = waffle::preprocess_circuit(state, srs);

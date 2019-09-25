@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SCALAR_MULTIPLICATION
+#define SCALAR_MULTIPLICATION
 
 #include "stddef.h"
 #include "malloc.h"
@@ -353,3 +354,5 @@ inline void batched_scalar_multiplications(multiplication_state *mul_state, size
 }
 } // namespace scalar_multiplication
 } // namespace barretenberg
+
+#endif

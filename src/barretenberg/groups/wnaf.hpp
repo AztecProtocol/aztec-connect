@@ -1,4 +1,5 @@
-#pragma once
+#ifndef WNAF
+#define WNAF
 
 #include "stdint.h"
 #include "stddef.h"
@@ -108,3 +109,5 @@ inline void compute_wnaf_5(uint64_t hi, uint64_t lo, uint8_t *wnaf)
 }
 } // namespace wnaf
 } // namespace barretenberg
+
+#endif

@@ -1,6 +1,7 @@
 #include "./waffle.hpp"
 #include "./challenge.hpp"
 #include "./linearizer.hpp"
+#include "./permutation.hpp"
 
 #include "string.h"
 #include "stddef.h"
@@ -10,30 +11,6 @@
 namespace waffle
 {
 using namespace barretenberg;
-
-
-void compute_permutation_lagrange_base(fr::field_t* roots, fr::field_t* output, uint32_t* permutation, size_t n)
-{
-    fr::field_t gen = fr::multiplicative_generator();
-    fr::field_t seven = fr::multiplicative_generator();
-    fr::add(seven, fr::one(), seven);
-    fr::add(seven, fr::one(), seven);
-
-    uint32_t mask = (1U << 29) - 1;
-    for (size_t i = 0; i < n; ++i)
-    {
-        size_t idx = (size_t)(permutation[i]) & (size_t)(mask);
-        fr::copy(roots[i], output[idx]);
-        if (((permutation[i] >> 30U) & 1) == 1)
-        {
-            fr::mul(output[idx], gen, output[idx]);
-        }
-        else if (((permutation[i] >> 31U) & 1) == 1)
-        {
-            fr::mul(output[idx], seven, output[idx]);
-        }
-    }
-}
 
 void compute_wire_coefficients(circuit_state &state, fft_pointers &)
 {
@@ -62,12 +39,12 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
     // To parallelize as much as possible, we first compute the terms we need to accumulate, and store them in `accumulators`
     // (we re-use memory reserved for the fast fourier transforms, at this stage of the proof, this memory should be free)
     fr::field_t* accumulators[6] = {
-        ffts.quotient_poly,
-        &ffts.quotient_poly[state.small_domain.size],
-        &ffts.quotient_poly[state.small_domain.size * 2],
-        ffts.w_l_poly,
-        &ffts.w_l_poly[state.small_domain.size],
-        &ffts.w_l_poly[state.small_domain.size * 2],
+        &ffts.w_l_poly[0],
+        &ffts.w_l_poly[state.small_domain.size + 1],
+        &ffts.w_l_poly[state.small_domain.size * 2 + 2],
+        &ffts.w_r_poly[3],
+        &ffts.w_r_poly[state.small_domain.size + 4],
+        &ffts.w_r_poly[state.small_domain.size * 2 + 5],
     };
 
     // compute accumulator terms
@@ -122,7 +99,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
         fr::one(accumulators[i][0]);
         for (size_t j = 1; j < state.small_domain.size; ++j)
         {
-            fr::mul(accumulators[i][j], accumulators[i][j - 1], accumulators[i][j]);
+            fr::mul(accumulators[i][j + 1], accumulators[i][j], accumulators[i][j + 1]);
         }
     }
 
@@ -558,6 +535,7 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers & fft
 
 plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_string)
 {
+    convert_permutations_into_lagrange_base_form(state);
     fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22 * state.n + 8)));
     waffle::fft_pointers ffts;
     ffts.scratch_memory = scratch_space;

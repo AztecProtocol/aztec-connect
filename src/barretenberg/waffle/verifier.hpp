@@ -1,4 +1,5 @@
-#pragma once
+#ifndef VERIFIER
+#define VERIFIER
 
 #include "./waffle.hpp"
 #include "./challenge.hpp"
@@ -195,3 +196,5 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
 }
 } // namespace verifier
 } // namespace waffle
+
+#endif

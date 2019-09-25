@@ -1,4 +1,5 @@
-#pragma once
+#ifndef WAFFLE
+#define WAFFLE
 
 #include "../groups/pairing.hpp"
 #include "../groups/scalar_multiplication.hpp"
@@ -43,8 +44,6 @@ struct fft_pointers
     fr::field_t *scratch_memory;
 };
 
-void compute_permutation_lagrange_base(fr::field_t* roots, fr::field_t* output, uint32_t* permutation, size_t n);
-
 void compute_wire_coefficients(circuit_state &state, fft_pointers &);
 
 void compute_z_coefficients(circuit_state &state, fft_pointers &);
@@ -67,3 +66,5 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts
 
 plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_string);
 } // namespace waffle
+
+#endif

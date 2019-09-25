@@ -1,3 +1,6 @@
+#ifndef FQ_IMPL_INT128
+#define FQ_IMPL_INT128
+
 #include "stdint.h"
 #include "unistd.h"
 
@@ -218,3 +221,5 @@ inline void copy(const field_t &a, field_t &r)
 }
 } // namespace fq
 } // namespace barretenberg
+
+#endif

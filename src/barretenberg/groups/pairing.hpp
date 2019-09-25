@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PAIRING
+#define PAIRING
 
 #include "g1.hpp"
 #include "g2.hpp"
@@ -368,3 +369,5 @@ inline fq12::fq12_t reduced_ate_pairing_batch(const g1::affine_element *P_affine
 
 } // namespace pairing
 } // namespace barretenberg
+
+#endif

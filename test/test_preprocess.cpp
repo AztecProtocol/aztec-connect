@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <barretenberg/waffle/preprocess.hpp>
+#include <barretenberg/waffle/permutation.hpp>
 
 using namespace barretenberg;
 
@@ -39,39 +40,73 @@ TEST(preprocess, preprocess)
         &scratch_space[7*n],
         &scratch_space[8*n]
     };
-    for (size_t i = 0; i < 9; ++i)
+
+    uint32_t* sigma_memory = (uint32_t*)(aligned_alloc(32, sizeof(uint32_t) * 3 * n));
+
+    uint32_t* sigma_mappings[3] = { 
+        &sigma_memory[0],
+        &sigma_memory[n],
+        &sigma_memory[n + n]
+    };
+
+    for (size_t i = 0; i < 6; ++i)
     {
         for (size_t j = 0; j < n; ++j)
         {
             polys[i][j] = fr::random_element();
         }
     }
+
+    for (size_t i = 0; i < 3; ++i)
+    {
+        for (size_t j = 0; j < n; ++j)
+        {
+            sigma_mappings[i][j] = (uint32_t)(j + ((i / 3) << 30U));
+        }
+    }
+
     waffle::circuit_state state;
     state.small_domain = polynomials::get_domain(n);
     state.n = n;
-    state.sigma_1 = polys[1];
-    state.sigma_2 = polys[0];
-    state.sigma_3 = polys[2];
-    state.s_id = polys[3];
-    state.q_m = polys[4];
-    state.q_l = polys[5];
-    state.q_r = polys[6];
-    state.q_o = polys[7];
-    state.q_c = polys[8];
+    state.sigma_1 = polys[6];
+    state.sigma_2 = polys[7];
+    state.sigma_3 = polys[8];
+    state.s_id = polys[0];
+    state.q_m = polys[1];
+    state.q_l = polys[2];
+    state.q_r = polys[3];
+    state.q_o = polys[4];
+    state.q_c = polys[5];
+    state.sigma_1_mapping = sigma_mappings[0];
+    state.sigma_2_mapping = sigma_mappings[1];
+    state.sigma_3_mapping = sigma_mappings[2];
+
     g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
     fr::field_t x = fr::random_element();
     srs::plonk_srs srs = compute_dummy_srs(3 * n, x, monomials);
 
     waffle::circuit_instance instance = waffle::preprocess_circuit(state, srs);
+    fr::field_t* roots = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * state.small_domain.size);
+    fr::copy(fr::one(), roots[0]);
+    for (size_t i = 1; i < state.small_domain.size; ++i)
+    {
+        fr::mul(roots[i-1], state.small_domain.root, roots[i]);
+    }
+
+    waffle::compute_permutation_lagrange_base(roots, state.sigma_1, sigma_mappings[0], state.n);
+    waffle::compute_permutation_lagrange_base(roots, state.sigma_2, sigma_mappings[1], state.n);
+    waffle::compute_permutation_lagrange_base(roots, state.sigma_3, sigma_mappings[2], state.n);
+
+    free(roots);
     for (size_t i = 0; i < 9; ++i)
     {
         polynomials::ifft(polys[i], state.small_domain);
     }
+
     // fr::to_montgomery_form(x, x);
     fr::field_t sigma_1_eval = polynomials::evaluate(state.sigma_1, x, n);
     fr::field_t sigma_2_eval = polynomials::evaluate(state.sigma_2, x, n);
     fr::field_t sigma_3_eval = polynomials::evaluate(state.sigma_3, x, n);
-    fr::field_t s_id_eval = polynomials::evaluate(state.s_id, x, n);
     fr::field_t q_m_eval = polynomials::evaluate(state.q_m, x, n);
     fr::field_t q_l_eval = polynomials::evaluate(state.q_l, x, n);
     fr::field_t q_r_eval = polynomials::evaluate(state.q_r, x, n);
@@ -81,7 +116,6 @@ TEST(preprocess, preprocess)
     g1::affine_element sigma_1_expected = g1::group_exponentiation(g1::affine_one(), sigma_1_eval);
     g1::affine_element sigma_2_expected = g1::group_exponentiation(g1::affine_one(), sigma_2_eval);
     g1::affine_element sigma_3_expected = g1::group_exponentiation(g1::affine_one(), sigma_3_eval);
-    g1::affine_element s_id_expected = g1::group_exponentiation(g1::affine_one(), s_id_eval);
     g1::affine_element q_m_expected = g1::group_exponentiation(g1::affine_one(), q_m_eval);
     g1::affine_element q_l_expected = g1::group_exponentiation(g1::affine_one(), q_l_eval);
     g1::affine_element q_r_expected = g1::group_exponentiation(g1::affine_one(), q_r_eval);
@@ -91,7 +125,6 @@ TEST(preprocess, preprocess)
     EXPECT_EQ(g1::eq(instance.SIGMA_1, sigma_1_expected), true);
     EXPECT_EQ(g1::eq(instance.SIGMA_2, sigma_2_expected), true);
     EXPECT_EQ(g1::eq(instance.SIGMA_3, sigma_3_expected), true);
-    EXPECT_EQ(g1::eq(instance.S_ID, s_id_expected), true);
     EXPECT_EQ(g1::eq(instance.Q_M, q_m_expected), true);
     EXPECT_EQ(g1::eq(instance.Q_L, q_l_expected), true);
     EXPECT_EQ(g1::eq(instance.Q_R, q_r_expected), true);

@@ -1,3 +1,5 @@
+#ifndef FR_IMPL_INT128
+#define FR_IMPL_INT128
 #include "stdint.h"
 #include "unistd.h"
 #include "stdio.h"
@@ -160,3 +162,5 @@ inline void copy(const field_t& a, field_t& r)
 }
 } // namespace fr
 } // namespace barretenberg
+
+#endif

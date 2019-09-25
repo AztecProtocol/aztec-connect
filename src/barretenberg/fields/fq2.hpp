@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FQ2
+#define FQ2
 
 #include "fq.hpp"
 
@@ -168,3 +169,5 @@ inline bool eq(const fq2_t &a, const fq2_t &b)
 }
 } // namespace fq2
 }
+
+#endif

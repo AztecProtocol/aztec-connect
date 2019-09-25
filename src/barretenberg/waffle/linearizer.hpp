@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LINEARIZER
+#define LINEARIZER
 
 #include "../fields/fr.hpp"
 
@@ -106,3 +107,5 @@ namespace waffle
         return result;
     }
 }
+
+#endif

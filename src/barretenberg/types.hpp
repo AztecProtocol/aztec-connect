@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TYPES
+#define TYPES
 
 #include "stdint.h"
 #include "stddef.h"
@@ -244,3 +245,5 @@ struct plonk_proof
     fr::field_t t_hi_eval;
 };
 } // namespace waffle
+
+#endif

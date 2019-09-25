@@ -1,4 +1,5 @@
-#pragma once
+#ifndef G2
+#define G2
 
 #include "../fields/fq2.hpp"
 #include "../fields/fr.hpp"
@@ -644,3 +645,5 @@ inline void print(element &a)
 }
 } // namespace g2
 } // namespace barretenberg
+
+#endif

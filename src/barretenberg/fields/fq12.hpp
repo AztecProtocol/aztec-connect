@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FQ12
+#define FQ12
 
 #include "fq6.hpp"
 
@@ -290,3 +291,5 @@ inline bool eq(const fq12_t &a, const fq12_t &b)
 }
 } // namespace fq12
 } // namespace barretenberg
+
+#endif

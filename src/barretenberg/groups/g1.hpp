@@ -1,4 +1,5 @@
-#pragma once
+#ifndef G1
+#define G1
 
 #include "stdint.h"
 #include "stdlib.h"
@@ -787,3 +788,5 @@ inline bool eq(const affine_element &a, const affine_element &b)
 
 } // namespace g1
 } // namespace barretenberg
+
+#endif

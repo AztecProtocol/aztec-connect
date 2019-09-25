@@ -1,4 +1,5 @@
-#pragma once
+#ifndef POLYNOMIALS
+#define POLYNOMIALS
 
 #include "stdint.h"
 #include "string.h"
@@ -82,3 +83,5 @@ lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, evaluation_d
 void compress_fft(const fr::field_t *src, fr::field_t *dest, const size_t current_size, const size_t compress_factor);
 } // namespace polynomials
 } // namespace barretenberg
+
+#endif

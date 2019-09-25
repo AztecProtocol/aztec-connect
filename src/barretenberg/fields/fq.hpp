@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FQ
+#define FQ
 
 #include "stdint.h"
 #include "stdio.h"
@@ -247,3 +248,5 @@ inline bool iszero(const field_t &a)
 }
 } // namespace fq
 } // namespace barretenberg
+
+#endif

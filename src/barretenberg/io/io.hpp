@@ -1,3 +1,6 @@
+#ifndef IO
+#define IO
+
 #include "stddef.h"
 #include "stdint.h"
 #include "memory.h"
@@ -172,3 +175,5 @@ constexpr size_t BLAKE2B_CHECKSUM_LENGTH = 64;
     }
 }
 } // namespace barretenberg
+
+#endif

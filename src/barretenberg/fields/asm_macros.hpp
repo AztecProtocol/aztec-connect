@@ -1,20 +1,21 @@
-#pragma once
+#ifndef ASM_MACROS
+#define ASM_MACROS
 
 /**
  * Clear all flags via xorq opcode
  **/ 
-#define CLEAR_FLAGS(empty_reg) \
-        "xorq " empty_reg ", " empty_reg "         \n\t "
+#define CLEAR_FLAGS(empty_reg)                                                                                           \
+        "xorq " empty_reg ", " empty_reg "      \n\t"
 
 /**
  * Load 4-limb field element, pointed to by a, into
  * registers (lolo, lohi, hilo, hihi)
  **/
-#define LOAD_FIELD_ELEMENT(a, lolo, lohi, hilo, hihi) \
-        "movq 0(" a "), " lolo "                            \n\t" \
-        "movq 8(" a "), " lohi "                            \n\t" \
-        "movq 16(" a "), " hilo "                           \n\t" \
-        "movq 24(" a "), " hihi "                           \n\t"
+#define LOAD_FIELD_ELEMENT(a, lolo, lohi, hilo, hihi)                                                                    \
+        "movq 0(" a "), " lolo "                \n\t"                                                                    \
+        "movq 8(" a "), " lohi "                \n\t"                                                                    \
+        "movq 16(" a "), " hilo "               \n\t"                                                                    \
+        "movq 24(" a "), " hihi "               \n\t"
 
 /**
  * Store 4-limb field element located in
@@ -469,4 +470,4 @@
         "movq %%r15, 16(" r ")                     \n\t"                                                                \
         "movq %%rax, 24(" r ")                     \n\t"
 
-
+#endif
