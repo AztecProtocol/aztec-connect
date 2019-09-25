@@ -166,14 +166,15 @@ inline void dbl(element &p1, element &p2)
     fq::reduce_once(p2.x, p2.x);
 
     // T2 = 8T2
-    fq::reduce_once(T2, T2);
-    fq::oct(T2, T2);
+    fq::oct_with_coarse_reduction(T2, T2);
 
     // y2 = T1 - x2
     fq::sub_with_coarse_reduction(T1, p2.x, p2.y);
 
     // y2 = y2 * T3 - T2
-    fq::mul_then_sub(p2.y, T3, T2, p2.y);
+    fq::mul_without_reduction(p2.y, T3, p2.y);
+    fq::sub_with_coarse_reduction(p2.y, T2, p2.y);
+    fq::reduce_once(p2.y, p2.y);
 }
 
 inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
@@ -213,7 +214,7 @@ inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
 
     // T2 = 2T2 = 2(y2.z1.z1.z1 - y1) = R
     // z3 = z1 + H
-    fq::double_add_twinned_without_reduction(T2, p1.z, T1, p3.z);
+    fq::paralell_double_and_add_without_reduction(T2, p1.z, T1, p3.z);
 
     // T3 = T1*T1 = HH
     fq::sqr_without_reduction(T1, T3);
@@ -364,7 +365,7 @@ inline void add(element &p1, element &p2, element &p3)
     // I = 2*H
     // perform both additions in tandem, so that we can take
     // advantage of ADCX/ADOX addition chain
-    fq::double_add_twinned_without_reduction(F, H, H, I);
+    fq::paralell_double_and_add_without_reduction(F, H, H, I);
 
     // I = I * I = 4*H*H
     fq::sqr_without_reduction(I, I);

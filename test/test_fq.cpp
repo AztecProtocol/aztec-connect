@@ -123,11 +123,13 @@ TEST(fq, add_check_against_constants)
 
 TEST(fq, sub_check_against_constants)
 {
-    fq::field_t a = { .data = { 0x12ad8d97fb90f8c3, 0xc0e7423fe4d23b33, 0xc13fe0ad583bf2a5, 0x3d1d4c93e9c2ef7c } };
-    fq::field_t b = { .data = { 0xa513bad12f95ebd8, 0x1acb44185aa8c610, 0xe5b2d3f2b66569ba, 0x745ccf27c82ae470 } };
-    fq::field_t expected = { .data = { 0xa9ba5edda4780a32, 0x3d9d68b8f29b3faf, 0x93dd52712357e149, 0xf924cbdf02c9ab35 } };
+    fq::field_t a = { .data = { 0xd68d01812313fb7c, 0x2965d7ae7c6070a5, 0x08ef9af6d6ba9a48, 0x0cb8fe2108914f53 } };
+    fq::field_t b = { .data = { 0x2cd2a2a37e9bf14a, 0xebc86ef589c530f6, 0x75124885b362b8fe, 0x1394324205c7a41d } };
+    fq::field_t expected = { .data = { 0xe5daeaf47cf50779, 0xd51ed34a5b0d0a3c, 0x4c2d9827a4d939a6, 0x29891a51e3fb4b5f } };
     fq::field_t result;
     fq::sub(a, b, result);
+    printf("sub result =:\n");
+    fq::print(result);
     EXPECT_EQ(fq::eq(result, expected), true);
 }
 
