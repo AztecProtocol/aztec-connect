@@ -48,9 +48,9 @@ namespace waffle
         fr::field_t output_shift = fr::multiplicative_generator();
         fr::add(output_shift, fr::one(), output_shift);
         fr::add(output_shift, fr::one(), output_shift);
-        fr::field_t alpha_pow[5];
+        fr::field_t alpha_pow[6];
         fr::copy(challenges.alpha, alpha_pow[0]);
-        for (size_t i = 1; i < 5; ++i)
+        for (size_t i = 1; i < 6; ++i)
         {
             fr::mul(alpha_pow[i-1], alpha_pow[0], alpha_pow[i]);
         }
@@ -90,9 +90,9 @@ namespace waffle
         fr::mul(T0, alpha_pow[2], result.z_2);
 
 
-        fr::mul(l_1, alpha_pow[3], T0);
+        fr::mul(l_1, alpha_pow[4], T0);
         fr::add(result.z_1, T0, result.z_1);
-        fr::neg(T0, T0);
+        fr::mul(l_1, alpha_pow[5], T0);
         fr::add(result.z_2, T0, result.z_2);
 
         fr::mul(proof.w_o_eval, alpha_pow[0], result.q_o);

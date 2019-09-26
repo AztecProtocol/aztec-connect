@@ -830,16 +830,26 @@ TEST(waffle, compute_linearisation_coefficients)
 
     polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(state.challenges.z, state.small_domain);
 
+    fr::field_t alpha_five;
+    fr::field_t alpha_six;
+    fr::mul(state.alpha_squared, state.alpha_cubed, alpha_five);
+    fr::mul(alpha_five, state.challenges.alpha, alpha_six);
     fr::field_t rhs;
     fr::field_t lhs;
     fr::field_t T0;
     fr::field_t T1;
     fr::field_t T2;
-    fr::mul(lagrange_evals.l_n_minus_1, state.alpha_squared, T0);
-    fr::mul(T0, state.alpha_cubed, T0);
+
+
+    fr::mul(lagrange_evals.l_n_minus_1, state.alpha_cubed, T0);
+    fr::mul(T0, state.challenges.alpha, T0);
 
     fr::sub(proof.z_1_shifted_eval, proof.z_2_shifted_eval, T1);
     fr::mul(T0, T1, T0);
+
+    fr::add(alpha_five, alpha_six, T2);
+    fr::mul(T2, lagrange_evals.l_1, T2);
+    fr::sub(T0, T2, T0);
 
     fr::mul(proof.z_1_shifted_eval, state.alpha_squared, T1);
     fr::mul(proof.z_2_shifted_eval, state.alpha_cubed, T2);

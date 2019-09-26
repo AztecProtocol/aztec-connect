@@ -121,6 +121,7 @@ struct evaluation_domain
     size_t thread_size;
     size_t log2_thread_size;
     size_t log2_num_threads;
+    fr::field_t *roots;
 };
 
 struct lagrange_evaluations

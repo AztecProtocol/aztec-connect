@@ -66,6 +66,135 @@ void fft_inner_serial(fr::field_t *coeffs, const fr::field_t &root, const size_t
     }
 }
 
+// TODO: need to compare the following:
+//  1. Compute all of the roots of unity over and over again like it's groundhog day
+//  2. Compute a lookup table of the roots of unity, and suffer through cache misses from nonlinear access patterns
+void fft_alternate_inner_serial(fr::field_t *coeffs, const fr::field_t &, const size_t domain_size, fr::field_t *roots, const size_t big_domain_size, const size_t domain_offset)
+{
+    fr::field_t temp;
+    size_t log2_size = (size_t)log2(domain_size);
+    // efficiently separate odd and even indices - (An introduction to algorithms, section 30.3)
+    for (size_t i = 0; i <= domain_size; ++i)
+    {
+        uint32_t swap_index = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)log2_size);
+        // TODO: should probably use CMOV here insead of an if statement
+        if (i < swap_index)
+        {
+            fr::swap(coeffs[i], coeffs[swap_index]);
+        }
+    }
+
+    // For butterfly operations, we use lazy reduction techniques.
+    // Modulus is 254 bits, so we can 'overload' a field element by 4x and still fit it in 4 machine words.
+    // We can validate that field elements are <2p and not risk overflowing. Means we can cut
+    // two modular reductions from the main loop
+
+    // perform first butterfly iteration explicitly: x0 = x0 + x1, x1 = x0 - x1
+    size_t domain_mask = big_domain_size - 1;
+    for (size_t k = 0; k < domain_size; k += 2)
+    {
+        fr::copy(coeffs[k + 1], temp);
+        fr::sub_with_coarse_reduction(coeffs[k], coeffs[k + 1], coeffs[k + 1]);
+        fr::add_with_coarse_reduction(temp, coeffs[k], coeffs[k]);
+    }
+    for (size_t m = 2; m < domain_size; m *= 2)
+    {
+        // fr::copy(root, round_root);
+        // fr::pow_small(round_root, (domain_size / (2 * m)), round_root);
+        size_t root_step = domain_offset * (domain_size / (2 * m));
+        for (size_t k = 0; k < domain_size; k += (2 * m))
+        {
+            // TODO: special case for j = 0, k = 0
+            // fr::one(work_root);
+            size_t root_idx = 0;
+            for (size_t j = 0; j < m; ++j)
+            {
+                // adding root_idx at each iteration
+                // size_t idx = (root_step * j) & domain_mask;
+                __builtin_prefetch(&roots[(root_idx + root_step) & domain_mask]);
+
+                fr::mul_without_reduction(roots[root_idx & domain_mask], coeffs[k + j + m], temp);
+                fr::sub_with_coarse_reduction(coeffs[k + j], temp, coeffs[k + j + m]);
+                fr::add_with_coarse_reduction(coeffs[k + j], temp, coeffs[k + j]);
+                root_idx += root_step;
+                // fr::mul_without_reduction(work_root, round_root, work_root);
+            }
+        }
+    }
+}
+
+
+void fft_alternate_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &root)
+{
+    if (domain.num_threads >= domain.size)
+    {
+        printf("owiejroiawerowaierjowirjowir\n");
+        fft_alternate_inner_serial(coeffs, root, domain.size, domain.roots, domain.size, 1);
+
+        for (size_t i = 0; i < domain.size; ++i)
+        {
+            fr::reduce_once(coeffs[i], coeffs[i]);
+        }
+        return;
+    }
+
+    fr::field_t *thread_coeffs = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * domain.size);
+    // TODO: do we care about core sizes that aren't powers of 2?
+    // ASSERT(2 ** log2_num_threads == num_threads);
+
+    fr::field_t thread_omega;
+    fr::pow_small(root, (1UL << domain.log2_num_threads), thread_omega);
+
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+    for (size_t i = 0; i < domain.num_threads; ++i)
+    {
+        fr::field_t work_root;
+        fr::field_t work_step;
+        fr::pow_small(root, i, work_root);
+        fr::pow_small(root, (i << domain.log2_thread_size), work_step);
+
+        // fr::field_t accumulator = fr::one();
+        size_t index_mask = domain.size - 1;
+        size_t thread_coeffs_index = i * domain.thread_size;
+        fr::field_t T0;
+        fr::field_t T1;
+        size_t root_index = 0;
+        size_t domain_mask = domain.size - 1;
+        for (size_t j = 0; j < (1UL << domain.log2_thread_size); ++j)
+        {
+            fr::zero(T0);
+            for (size_t k = 0; k < domain.size; k += domain.thread_size)
+            {
+                size_t idx = (j + k) & index_mask;
+                fr::mul_without_reduction(coeffs[idx], domain.roots[root_index & domain_mask], T1);
+                fr::add_with_coarse_reduction(T0, T1, T0);
+                root_index += (i << domain.log2_thread_size);
+            }
+            fr::copy(T0, thread_coeffs[thread_coeffs_index + j]);
+            root_index += i;
+        }
+
+        fft_alternate_inner_serial(&thread_coeffs[thread_coeffs_index], thread_omega, domain.thread_size, domain.roots, domain.size, (1UL << domain.log2_num_threads));
+    }
+
+    // We need to copy our redults from the temporary array, into our coefficient array.
+    // We also need to correct for lazy reduction - coefficients may be p greater than the actual value
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+    for (size_t i = 0; i < domain.num_threads; ++i)
+    {
+        for (size_t j = 0; j < domain.thread_size; ++j)
+        {
+            fr::reduce_once(thread_coeffs[i * domain.thread_size + j], coeffs[(j << domain.log2_num_threads) + i]);
+        }
+    }
+
+    free(thread_coeffs);
+}
+
 void fft_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &root)
 {
     if (domain.num_threads >= domain.size)
@@ -220,6 +349,11 @@ void copy_polynomial(fr::field_t *src, fr::field_t *dest, size_t num_src_coeffic
         // fill out the polynomial coefficients with zeroes
         memset((void *)(dest + num_src_coefficients), 0, (num_target_coefficients - num_src_coefficients) * sizeof(fr::field_t));
     }
+}
+
+void fft_alternate(fr::field_t *coeffs, const evaluation_domain &domain)
+{
+    fft_alternate_inner_parallel(coeffs, domain, domain.root);
 }
 
 void fft(fr::field_t *coeffs, const evaluation_domain &domain)

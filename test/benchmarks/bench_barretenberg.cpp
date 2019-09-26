@@ -138,6 +138,7 @@ void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *da
 
 struct global_vars
 {
+    polynomials::evaluation_domain domain;
     alignas(32) g1::affine_element g1_pair_points[2];
     alignas(32) g2::affine_element g2_pair_points[2];
     waffle::circuit_state plonk_state;
@@ -149,6 +150,8 @@ struct global_vars
     srs::plonk_srs reference_string;
     fr::field_t *data;
     fr::field_t *scalars;
+    fr::field_t *roots;
+    fr::field_t *coefficients;
 };
 
 global_vars globals;
@@ -217,6 +220,20 @@ const auto init = []() {
     globals.plonk_instances.resize(8);
     globals.plonk_proofs.resize(8);
 
+    globals.roots = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * 4 * MAX_GATES));
+    globals.coefficients = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * 4 * MAX_GATES));
+    
+
+    fr::one(globals.roots[0]);
+    fr::one(globals.coefficients[0]);
+    fr::field_t z = fr::random_element();
+    globals.domain = polynomials::get_domain(4 * MAX_GATES);
+    for (size_t i = 1; i < 4 * MAX_GATES; ++i)
+    {
+        fr::mul(globals.roots[i - 1], globals.domain.root, globals.roots[i]);
+        fr::mul(globals.coefficients[i - 1], z, globals.coefficients[i]);
+    }
+    globals.domain.roots = globals.roots;
     printf("finished generating test data\n");
     return true;
 }();
@@ -303,6 +320,7 @@ void verify_proof_bench(State& state) noexcept
     }
 }
 BENCHMARK(verify_proof_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
+
 
 void pairing_bench(State& state) noexcept
 {

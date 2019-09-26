@@ -46,6 +46,8 @@ evaluation_domain get_domain(size_t num_elements);
 
 fr::field_t evaluate(fr::field_t *coeffs, const fr::field_t &z, const size_t n);
 
+void fft_alternate(fr::field_t *coeffs, const evaluation_domain &domain);
+
 void fft(fr::field_t *coeffs, const evaluation_domain &domain);
 
 void ifft(fr::field_t *coeffs, const evaluation_domain &domain);

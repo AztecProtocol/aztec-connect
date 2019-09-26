@@ -20,7 +20,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
 
     // reconstruct challenges
     plonk_challenges challenges;
-    fr::field_t alpha_pow[5];
+    fr::field_t alpha_pow[6];
     fr::field_t nu_pow[11];
     challenges.alpha = compute_alpha(proof);
     challenges.gamma = compute_gamma(proof);
@@ -40,7 +40,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::field_t T0;
     fr::field_t T1;
     fr::field_t T2;
-    for (size_t i = 1; i < 5; ++i)
+    for (size_t i = 1; i < 6; ++i)
     {
         fr::mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
     }
@@ -49,7 +49,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
         fr::mul(nu_pow[i - 1], nu_pow[0], nu_pow[i]);
     }
 
-    fr::mul(lagrange_evals.l_n_minus_1, alpha_pow[4], T0);
+    fr::mul(lagrange_evals.l_n_minus_1, alpha_pow[3], T0);
 
     fr::sub(proof.z_1_shifted_eval, proof.z_2_shifted_eval, T1);
     fr::mul(T0, T1, T0);
@@ -58,6 +58,10 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::mul(proof.z_2_shifted_eval, alpha_pow[2], T2);
     fr::add(T1, T2, T1);
     fr::sub(T0, T1, T0);
+
+    fr::add(alpha_pow[4], alpha_pow[5], T2);
+    fr::mul(T2, lagrange_evals.l_1, T2);
+    fr::sub(T0, T2, T0);
     fr::add(T0, proof.linear_eval, t_eval);
     fr::invert(lagrange_evals.vanishing_poly, T0);
     fr::mul(t_eval, T0, t_eval);
@@ -71,54 +75,54 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::sub(t_eval, T1, t_eval);
 
     // reconstruct Kate opening commitments from committed values
-    fr::mul(linear_terms.q_m, nu_pow[0], linear_terms.q_m);
-    fr::mul(linear_terms.q_l, nu_pow[0], linear_terms.q_l);
-    fr::mul(linear_terms.q_r, nu_pow[0], linear_terms.q_r);
-    fr::mul(linear_terms.q_o, nu_pow[0], linear_terms.q_o);
-    fr::mul(linear_terms.q_c, nu_pow[0], linear_terms.q_c);
-    fr::mul(linear_terms.z_1, nu_pow[0], linear_terms.z_1);
-    fr::mul(linear_terms.z_2, nu_pow[0], linear_terms.z_2);
+    fr::mul(linear_terms.q_m, nu_pow[2], linear_terms.q_m);
+    fr::mul(linear_terms.q_l, nu_pow[2], linear_terms.q_l);
+    fr::mul(linear_terms.q_r, nu_pow[2], linear_terms.q_r);
+    fr::mul(linear_terms.q_o, nu_pow[2], linear_terms.q_o);
+    fr::mul(linear_terms.q_c, nu_pow[2], linear_terms.q_c);
+    fr::mul(linear_terms.z_1, nu_pow[2], linear_terms.z_1);
+    fr::mul(linear_terms.z_2, nu_pow[2], linear_terms.z_2);
 
-    fr::mul(nu_pow[7], u, T0);
+    fr::mul(nu_pow[9], u, T0);
     fr::add(linear_terms.z_1, T0, linear_terms.z_1);
-    fr::mul(nu_pow[8], u, T0);
+    fr::mul(nu_pow[10], u, T0);
     fr::add(linear_terms.z_2, T0, linear_terms.z_2);
 
     fr::field_t batch_evaluation;
     fr::copy(t_eval, batch_evaluation);
-    fr::mul(nu_pow[0], proof.linear_eval, T0);
+    fr::mul(nu_pow[2], proof.linear_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[1], proof.w_l_eval, T0);
+    fr::mul(nu_pow[3], proof.w_l_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[2], proof.w_r_eval, T0);
+    fr::mul(nu_pow[4], proof.w_r_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[3], proof.w_o_eval, T0);
+    fr::mul(nu_pow[5], proof.w_o_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[4], proof.sigma_1_eval, T0);
+    fr::mul(nu_pow[6], proof.sigma_1_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[5], proof.sigma_2_eval, T0);
+    fr::mul(nu_pow[7], proof.sigma_2_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[6], proof.sigma_3_eval, T0);
+    fr::mul(nu_pow[8], proof.sigma_3_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[7], u, T0);
+    fr::mul(nu_pow[9], u, T0);
     fr::mul(T0, proof.z_1_shifted_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[8], u, T0);
+    fr::mul(nu_pow[10], u, T0);
     fr::mul(T0, proof.z_2_shifted_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[9], proof.t_mid_eval, T0);
+    fr::mul(nu_pow[0], proof.t_mid_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[10], proof.t_hi_eval, T0);
+    fr::mul(nu_pow[1], proof.t_hi_eval, T0);
     fr::add(batch_evaluation, T0, batch_evaluation);
 
     fr::neg(batch_evaluation, batch_evaluation);
@@ -136,17 +140,17 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::copy(linear_terms.q_c, scalar_exponents[4]);
     fr::copy(linear_terms.z_1, scalar_exponents[5]);
     fr::copy(linear_terms.z_2, scalar_exponents[6]);
-    fr::copy(nu_pow[1], scalar_exponents[7]);
-    fr::copy(nu_pow[2], scalar_exponents[8]);
-    fr::copy(nu_pow[3], scalar_exponents[9]);
-    fr::copy(nu_pow[4], scalar_exponents[10]);
-    fr::copy(nu_pow[5], scalar_exponents[11]);
-    fr::copy(nu_pow[6], scalar_exponents[12]);
+    fr::copy(nu_pow[3], scalar_exponents[7]);
+    fr::copy(nu_pow[4], scalar_exponents[8]);
+    fr::copy(nu_pow[5], scalar_exponents[9]);
+    fr::copy(nu_pow[6], scalar_exponents[10]);
+    fr::copy(nu_pow[7], scalar_exponents[11]);
+    fr::copy(nu_pow[8], scalar_exponents[12]);
     fr::copy(batch_evaluation, scalar_exponents[13]);
     fr::copy(z_omega_scalar, scalar_exponents[14]);
     fr::copy(challenges.z, scalar_exponents[15]);
-    fr::copy(nu_pow[9], scalar_exponents[16]);
-    fr::copy(nu_pow[10], scalar_exponents[17]);
+    fr::copy(nu_pow[0], scalar_exponents[16]);
+    fr::copy(nu_pow[1], scalar_exponents[17]);
 
     g1::affine_element *lhs_ge = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * 38);
 

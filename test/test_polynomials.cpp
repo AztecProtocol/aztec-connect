@@ -53,10 +53,39 @@ TEST(polynomials, fft_with_small_degree)
     }
 }
 
+TEST(polynomials, basic_fft_alternate)
+{
+    size_t n = 256;
+    fr::field_t* roots = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * n);
+    fr::field_t result[n];
+    fr::field_t expected[n];
+    for (size_t i = 0; i < n; ++i)
+    {
+        result[i] = fr::random_element();
+        fr::copy(result[i], expected[i]);
+    }
+
+
+    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+    fr::copy(fr::one(), roots[0]);
+    for (size_t i = 1; i < n; ++i)
+    {
+        fr::mul(roots[i-1], domain.root, roots[i]);
+    }
+    domain.roots = roots;
+    polynomials::fft(expected, domain);
+    polynomials::fft_alternate(result, domain);
+
+    for (size_t i = 0; i < n; ++i)
+    {
+        EXPECT_EQ(fr::eq(result[i], expected[i]), true);
+    }
+    free(roots);
+}
 
 TEST(polynomials, basic_fft)
 {
-    size_t n = 16;
+    size_t n = 256;
     fr::field_t result[n];
     fr::field_t expected[n];
     for (size_t i = 0; i < n; ++i)
