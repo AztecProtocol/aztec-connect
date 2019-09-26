@@ -62,7 +62,7 @@ void compute_identity_grand_product_coefficients(circuit_state &state, fft_point
 
 void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk_proof &proof, srs::plonk_srs &reference_string);
 
-void compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts, plonk_proof &proof);
+fr::field_t compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts, plonk_proof &proof);
 
 plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_string);
 } // namespace waffle

@@ -221,12 +221,6 @@ void compute_permutation_grand_product_coefficients(circuit_state &state, fft_po
     // 2: Compute permutation check coefficients
     size_t n = state.n;
 
-    polynomials::copy_polynomial(state.w_l, &ffts.w_l_poly[0], state.small_domain.size, state.large_domain.size);
-    polynomials::copy_polynomial(state.w_r, &ffts.w_r_poly[0], state.small_domain.size, state.large_domain.size);
-    polynomials::copy_polynomial(state.w_o, &ffts.w_o_poly[0], state.small_domain.size, state.large_domain.size);
-    polynomials::fft_with_coset(ffts.w_l_poly, state.large_domain);
-    polynomials::fft_with_coset(ffts.w_r_poly, state.large_domain);
-    polynomials::fft_with_coset(ffts.w_o_poly, state.large_domain);
 
     // when computing coefficients of sigma_1, sigma_2, sigma_3, scale the polynomial by \beta to save a mul
     polynomials::ifft_with_constant(state.sigma_1, state.small_domain, state.challenges.beta);
@@ -234,35 +228,24 @@ void compute_permutation_grand_product_coefficients(circuit_state &state, fft_po
     polynomials::ifft_with_constant(state.sigma_3, state.small_domain, state.challenges.beta);
 
     polynomials::copy_polynomial(state.sigma_1, ffts.sigma_1_poly, n, 4 * n);
+    polynomials::copy_polynomial(state.sigma_2, ffts.sigma_2_poly, n, 4 * n);
+    polynomials::copy_polynomial(state.sigma_3, ffts.sigma_3_poly, n, 4 * n);
+    polynomials::copy_polynomial(state.z_2, ffts.z_2_poly, state.small_domain.size, state.large_domain.size);
+
     // add `gamma/beta` to sigma_1(X), so that we don't have to add it into each evaluation
     // and add w_l(X) as well for good measure
-
     fr::add(ffts.sigma_1_poly[0], state.challenges.gamma, ffts.sigma_1_poly[0]);
-
-    polynomials::add(ffts.sigma_1_poly, state.w_l, ffts.sigma_1_poly, state.small_domain);
+    fr::add(ffts.sigma_2_poly[0], state.challenges.gamma, ffts.sigma_2_poly[0]);
+    fr::add(ffts.sigma_3_poly[0], state.challenges.gamma, ffts.sigma_3_poly[0]);
+    ITERATE_OVER_DOMAIN_START(state.small_domain);
+    fr::add(ffts.sigma_1_poly[i], state.w_l[i], ffts.sigma_1_poly[i]);
+    fr::add(ffts.sigma_2_poly[i], state.w_r[i], ffts.sigma_2_poly[i]);
+    fr::add(ffts.sigma_3_poly[i], state.w_o[i], ffts.sigma_3_poly[i]);
+    ITERATE_OVER_DOMAIN_END;
 
     polynomials::fft_with_coset(ffts.sigma_1_poly, state.large_domain);
-
-    // repeat for sigma_2, sigma_3, multiplying each term into sigma_1
-    polynomials::copy_polynomial(state.sigma_2, ffts.sigma_2_poly, n, 4 * n);
-    fr::add(ffts.sigma_2_poly[0], state.challenges.gamma, ffts.sigma_2_poly[0]);
-
-    polynomials::add(ffts.sigma_2_poly, state.w_r, ffts.sigma_2_poly, state.small_domain);
-
     polynomials::fft_with_coset(ffts.sigma_2_poly, state.large_domain);
-
-    polynomials::mul(ffts.sigma_1_poly, ffts.sigma_2_poly, ffts.sigma_1_poly, state.large_domain);
-
-    polynomials::copy_polynomial(state.sigma_3, ffts.sigma_3_poly, n, 4 * n);
-    fr::add(ffts.sigma_3_poly[0], state.challenges.gamma, ffts.sigma_3_poly[0]);
-
-    polynomials::add(ffts.sigma_3_poly, state.w_o, ffts.sigma_3_poly, state.small_domain);
-
     polynomials::fft_with_coset(ffts.sigma_3_poly, state.large_domain);
-
-    polynomials::mul(ffts.sigma_1_poly, ffts.sigma_3_poly, ffts.sigma_1_poly, state.large_domain);
-
-    polynomials::copy_polynomial(state.z_2, ffts.z_2_poly, state.small_domain.size, state.large_domain.size);
     polynomials::fft_with_coset_and_constant(ffts.z_2_poly, state.large_domain, state.alpha_cubed);
     fr::copy(ffts.z_2_poly[0], ffts.z_2_poly[state.large_domain.size]);
     fr::copy(ffts.z_2_poly[1], ffts.z_2_poly[state.large_domain.size + 1]);
@@ -271,11 +254,19 @@ void compute_permutation_grand_product_coefficients(circuit_state &state, fft_po
     fr::field_t *shifted_z_2_poly = &ffts.z_2_poly[4];
 
     ITERATE_OVER_DOMAIN_START(state.large_domain);
+        fr::mul(ffts.sigma_1_poly[i], ffts.sigma_2_poly[i], ffts.sigma_1_poly[i]);
+        fr::mul(ffts.sigma_1_poly[i], ffts.sigma_3_poly[i], ffts.sigma_1_poly[i]);
         fr::mul(ffts.sigma_1_poly[i], ffts.z_2_poly[i], ffts.sigma_1_poly[i]);
         fr::sub(ffts.sigma_1_poly[i], shifted_z_2_poly[i], ffts.quotient_poly[i]);
     ITERATE_OVER_DOMAIN_END;
 
     polynomials::compress_fft(ffts.z_2_poly, ffts.z_2_poly_small, state.large_domain.size + 4, 2);
+    polynomials::copy_polynomial(state.w_l, &ffts.w_l_poly[0], state.small_domain.size, state.large_domain.size);
+    polynomials::copy_polynomial(state.w_r, &ffts.w_r_poly[0], state.small_domain.size, state.large_domain.size);
+    polynomials::copy_polynomial(state.w_o, &ffts.w_o_poly[0], state.small_domain.size, state.large_domain.size);
+    polynomials::fft_with_coset(ffts.w_l_poly, state.large_domain);
+    polynomials::fft_with_coset(ffts.w_r_poly, state.large_domain);
+    polynomials::fft_with_coset(ffts.w_o_poly, state.large_domain);
 }
 
 void compute_identity_grand_product_coefficients(circuit_state &state, fft_pointers &ffts)
@@ -412,9 +403,10 @@ void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk
     ffts.w_r_poly = &ffts.scratch_memory[8 * n];
     ffts.w_o_poly = &ffts.scratch_memory[12 * n];
 
-    ffts.sigma_2_poly = &ffts.scratch_memory[16 * n];
-    ffts.sigma_3_poly = &ffts.scratch_memory[16 * n];
-
+    // ffts.sigma_2_poly = &ffts.scratch_memory[16 * n];
+    // ffts.sigma_3_poly = &ffts.scratch_memory[16 * n];
+    ffts.sigma_2_poly = &ffts.scratch_memory[4 * n];
+    ffts.sigma_3_poly = &ffts.scratch_memory[8 * n];
     ffts.z_2_poly = &ffts.scratch_memory[16 * n];
     ffts.z_2_poly_small = &ffts.scratch_memory[16 * n];
 
@@ -485,7 +477,7 @@ void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk
     polynomials::ifft_with_coset(ffts.quotient_poly, state.large_domain);
 }
 
-void compute_linearisation_coefficients(circuit_state &state, fft_pointers & ffts, plonk_proof &proof)
+fr::field_t compute_linearisation_coefficients(circuit_state &state, fft_pointers & ffts, plonk_proof &proof)
 {
     // ok... now we need to evaluate polynomials. Jeepers
     fr::field_t beta_inv;
@@ -503,6 +495,7 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers & fft
     proof.sigma_3_eval = polynomials::evaluate(state.sigma_3, state.challenges.z, state.n);
     proof.z_1_shifted_eval = polynomials::evaluate(state.z_1, shifted_z, state.n);
     proof.z_2_shifted_eval = polynomials::evaluate(state.z_2, shifted_z, state.n);
+    fr::field_t t_lo_eval =  polynomials::evaluate(&ffts.quotient_poly[0], state.challenges.z, state.n);
     proof.t_mid_eval = polynomials::evaluate(&ffts.quotient_poly[state.n], state.challenges.z, state.n);
     proof.t_hi_eval = polynomials::evaluate(&ffts.quotient_poly[state.n + state.n], state.challenges.z, state.n);
 
@@ -538,6 +531,7 @@ void compute_linearisation_coefficients(circuit_state &state, fft_pointers & fft
     ITERATE_OVER_DOMAIN_END;
 
     proof.linear_eval = polynomials::evaluate(state.linear_poly, state.challenges.z, state.small_domain.size);
+    return t_lo_eval;
 }
 
 plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_string)
@@ -551,8 +545,8 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
     state.linear_poly = &ffts.scratch_memory[4 * state.n]; // TODO: this should probably be somewhere else...
     compute_quotient_polynomial(state, ffts, proof, reference_string);
     compute_quotient_commitment(state, ffts.quotient_poly, proof, reference_string);
-    compute_linearisation_coefficients(state, ffts, proof);
-    state.challenges.nu = compute_linearisation_challenge(proof);
+    fr::field_t t_lo_eval = compute_linearisation_coefficients(state, ffts, proof);
+    state.challenges.nu = compute_linearisation_challenge(proof, t_lo_eval);
     fr::field_t nu_powers[11];
     fr::copy(state.challenges.nu, nu_powers[0]);
     for (size_t i = 1; i < 11; ++i)

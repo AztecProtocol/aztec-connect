@@ -823,7 +823,6 @@ TEST(waffle, compute_linearisation_coefficients)
     state.challenges.z = fr::random_element();
 
     fr::field_t t_eval = polynomials::evaluate(ffts.quotient_poly, state.challenges.z, 3 * n);
-    // fr::field_t foobar[4 * n];
     state.linear_poly = &ffts.scratch_memory[4 * n];
 
     waffle::compute_linearisation_coefficients(state, ffts, proof);
@@ -839,7 +838,6 @@ TEST(waffle, compute_linearisation_coefficients)
     fr::field_t T0;
     fr::field_t T1;
     fr::field_t T2;
-
 
     fr::mul(lagrange_evals.l_n_minus_1, state.alpha_cubed, T0);
     fr::mul(T0, state.challenges.alpha, T0);

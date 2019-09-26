@@ -26,9 +26,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     challenges.gamma = compute_gamma(proof);
     challenges.beta = compute_beta(proof, challenges.gamma);
     challenges.z = compute_evaluation_challenge(proof);
-    challenges.nu = compute_linearisation_challenge(proof);
     fr::field_t u = fr::random_element();
-    fr::copy(challenges.nu, nu_pow[0]);
     fr::copy(challenges.alpha, alpha_pow[0]);
     polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(challenges.z, domain);
 
@@ -43,10 +41,6 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     for (size_t i = 1; i < 6; ++i)
     {
         fr::mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
-    }
-    for (size_t i = 1; i < 11; ++i)
-    {
-        fr::mul(nu_pow[i - 1], nu_pow[0], nu_pow[i]);
     }
 
     fr::mul(lagrange_evals.l_n_minus_1, alpha_pow[3], T0);
@@ -73,6 +67,13 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::mul(proof.t_hi_eval, z_pow_2n, T1);
     fr::sub(t_eval, T0, t_eval);
     fr::sub(t_eval, T1, t_eval);
+
+    challenges.nu = compute_linearisation_challenge(proof, t_eval);
+    fr::copy(challenges.nu, nu_pow[0]);
+    for (size_t i = 1; i < 11; ++i)
+    {
+        fr::mul(nu_pow[i - 1], nu_pow[0], nu_pow[i]);
+    }
 
     // reconstruct Kate opening commitments from committed values
     fr::mul(linear_terms.q_m, nu_pow[2], linear_terms.q_m);
