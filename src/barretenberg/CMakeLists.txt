@@ -31,6 +31,7 @@ add_library(
     polynomials/polynomials.hpp
     waffle/linearizer.hpp
     waffle/challenge.hpp
+    waffle/permutation.hpp
     waffle/preprocess.hpp
     waffle/waffle.cpp
     waffle/waffle.hpp
@@ -76,6 +77,7 @@ add_executable(
     polynomials/polynomials.hpp
     waffle/linearizer.hpp
     waffle/challenge.hpp
+    waffle/permutation.hpp
     waffle/preprocess.hpp
     waffle/waffle.cpp
     waffle/waffle.hpp

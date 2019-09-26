@@ -196,7 +196,6 @@ struct circuit_state
     fr::field_t *sigma_1;
     fr::field_t *sigma_2;
     fr::field_t *sigma_3;
-    fr::field_t *s_id;
 
     fr::field_t *product_1;
     fr::field_t *product_2;
@@ -234,7 +233,6 @@ struct plonk_proof
     fr::field_t w_l_eval;
     fr::field_t w_r_eval;
     fr::field_t w_o_eval;
-    fr::field_t s_id_eval;
     fr::field_t sigma_1_eval;
     fr::field_t sigma_2_eval;
     fr::field_t sigma_3_eval;

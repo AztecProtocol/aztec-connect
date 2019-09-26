@@ -560,7 +560,7 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
     // We have two evaluation points: z and z.omega
     // We need to create random linear combinations of each individual polynomial and combine them
     fr::field_t *opening_poly = ffts.quotient_poly;
-    fr::field_t *shifted_opening_poly = state.z_2;
+    fr::field_t *shifted_opening_poly = ffts.w_l_poly;
 
     ITERATE_OVER_DOMAIN_START(state.small_domain);
         fr::field_t T0;
@@ -628,12 +628,10 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
 
     mul_state[0].num_elements = state.small_domain.size;
     mul_state[1].num_elements = state.small_domain.size;
-
     scalar_multiplication::batched_scalar_multiplications(mul_state, 2);
 
     g1::jacobian_to_affine(mul_state[0].output, proof.PI_Z);
     g1::jacobian_to_affine(mul_state[1].output, proof.PI_Z_OMEGA);
-
     free(scratch_space);
     return proof;
 }

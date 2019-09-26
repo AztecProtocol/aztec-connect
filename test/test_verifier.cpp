@@ -28,8 +28,8 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     state.sigma_2 = &data[11 * n + 2];
     state.sigma_3 = &data[12 * n + 2];
     state.sigma_1_mapping = (uint32_t*)&data[13 * n + 2];
-    state.sigma_2_mapping = (uint32_t*)((uintptr_t*)&data[13 * n + 2] + (n * sizeof(uint32_t)));
-    state.sigma_3_mapping = (uint32_t*)((uintptr_t*)&data[13 * n + 2] + ((2 * n) * sizeof(uint32_t)));
+    state.sigma_2_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (n * sizeof(uint32_t)));
+    state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + ((2 * n) * sizeof(uint32_t)));
     state.t = &data[14 * n + 2];
 
     state.w_l_lagrange_base = state.t;

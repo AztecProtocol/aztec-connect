@@ -71,7 +71,6 @@ TEST(preprocess, preprocess)
     state.sigma_1 = polys[6];
     state.sigma_2 = polys[7];
     state.sigma_3 = polys[8];
-    state.s_id = polys[0];
     state.q_m = polys[1];
     state.q_l = polys[2];
     state.q_r = polys[3];
@@ -93,9 +92,9 @@ TEST(preprocess, preprocess)
         fr::mul(roots[i-1], state.small_domain.root, roots[i]);
     }
 
-    waffle::compute_permutation_lagrange_base(roots, state.sigma_1, sigma_mappings[0], state.n);
-    waffle::compute_permutation_lagrange_base(roots, state.sigma_2, sigma_mappings[1], state.n);
-    waffle::compute_permutation_lagrange_base(roots, state.sigma_3, sigma_mappings[2], state.n);
+    waffle::compute_permutation_lagrange_base(roots, state.sigma_1, sigma_mappings[0], state.small_domain);
+    waffle::compute_permutation_lagrange_base(roots, state.sigma_2, sigma_mappings[1], state.small_domain);
+    waffle::compute_permutation_lagrange_base(roots, state.sigma_3, sigma_mappings[2], state.small_domain);
 
     free(roots);
     for (size_t i = 0; i < 9; ++i)

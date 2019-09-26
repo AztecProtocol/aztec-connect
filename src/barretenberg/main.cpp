@@ -99,6 +99,8 @@ void pippenger_multicore() noexcept
     }
     printf("After Thread\n");
     free(inputs);
+    free(scalars);
+    free(points);
 }
 
 int main()

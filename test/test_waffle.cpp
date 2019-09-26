@@ -225,8 +225,8 @@ void generate_point_addition_data(waffle::circuit_state& state, fr::field_t* dat
     state.sigma_2 = &data[11 * n + 2];
     state.sigma_3 = &data[12 * n + 2];
     state.sigma_1_mapping = (uint32_t*)&data[17 * n + 2];
-    state.sigma_2_mapping = (uint32_t*)((uintptr_t*)&data[18 * n + 2] + (n * sizeof(uint32_t)));
-    state.sigma_3_mapping = (uint32_t*)((uintptr_t*)&data[19 * n + 2] + ((2 * n) * sizeof(uint32_t)));
+    state.sigma_2_mapping = (uint32_t*)((uintptr_t)&data[18 * n + 2] + (n * sizeof(uint32_t)));
+    state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[19 * n + 2] + ((2 * n) * sizeof(uint32_t)));
     state.t = &data[14 * n + 2];
     
     state.product_1 = &data[17 * n + 5];
@@ -275,8 +275,8 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     state.sigma_2 = &data[11 * n + 2];
     state.sigma_3 = &data[12 * n + 2];
     state.sigma_1_mapping = (uint32_t*)&data[13 * n + 2];
-    state.sigma_2_mapping = (uint32_t*)((uintptr_t*)&data[13 * n + 2] + (n * sizeof(uint32_t)));
-    state.sigma_3_mapping = (uint32_t*)((uintptr_t*)&data[13 * n + 2] + ((2 * n) * sizeof(uint32_t)));
+    state.sigma_2_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (n * sizeof(uint32_t)));
+    state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + ((2 * n) * sizeof(uint32_t)));
     state.t = &data[14 * n + 2];
 
     state.w_l_lagrange_base = state.t;
@@ -467,7 +467,6 @@ TEST(waffle, compute_quotient_polynomial)
 //     state.sigma_1 = &data[5 * n + 2];
 //     state.sigma_2 = &data[6 * n + 2];
 //     state.sigma_3 = &data[7 * n + 2];
-//     state.s_id = &data[8 * n + 2];
 //     state.product_1 = &data[9 * n + 2];
 //     state.product_2 = &data[10 * n + 2];
 //     state.product_3 = &data[11 * n + 2];

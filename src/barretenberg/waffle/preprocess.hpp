@@ -34,14 +34,10 @@ inline circuit_instance preprocess_circuit(waffle::circuit_state &state, const s
         fr::mul(roots[i-1], state.small_domain.root, roots[i]);
     }
 
-    compute_permutation_lagrange_base(roots, polys[0], state.sigma_1_mapping, state.n);
-    compute_permutation_lagrange_base(roots, polys[1], state.sigma_2_mapping, state.n);
-    compute_permutation_lagrange_base(roots, polys[2], state.sigma_3_mapping, state.n);
-
     // copy polynomials so that we don't mutate inputs
-    // polynomials::copy_polynomial(state.sigma_1, polys[0], n, n);
-    // polynomials::copy_polynomial(state.sigma_2, polys[1], n, n);
-    // polynomials::copy_polynomial(state.sigma_3, polys[2], n, n);
+    compute_permutation_lagrange_base(roots, polys[0], state.sigma_1_mapping, state.small_domain);
+    compute_permutation_lagrange_base(roots, polys[1], state.sigma_2_mapping, state.small_domain);
+    compute_permutation_lagrange_base(roots, polys[2], state.sigma_3_mapping, state.small_domain);
     polynomials::copy_polynomial(state.q_m, polys[3], n, n);
     polynomials::copy_polynomial(state.q_l, polys[4], n, n);
     polynomials::copy_polynomial(state.q_r, polys[5], n, n);
@@ -62,17 +58,17 @@ inline circuit_instance preprocess_circuit(waffle::circuit_state &state, const s
         mul_state[i].scalars = polys[i];
     }
 
-    for (size_t i = 0; i < 8; ++i)
-    {
-        mul_state[i].output = scalar_multiplication::pippenger(mul_state[i].scalars, srs.monomials, n);
-    }
+    scalar_multiplication::batched_scalar_multiplications(mul_state, 8);
+    // for (size_t i = 0; i < 8; ++i)
+    // {
+    //     mul_state[i].output = scalar_multiplication::pippenger(mul_state[i].scalars, srs.monomials, n);
+    // }
 
     circuit_instance instance;
     instance.n = n;
     g1::jacobian_to_affine(mul_state[0].output, instance.SIGMA_1);
     g1::jacobian_to_affine(mul_state[1].output, instance.SIGMA_2);
     g1::jacobian_to_affine(mul_state[2].output, instance.SIGMA_3);
-    // g1::jacobian_to_affine(mul_state[3].output, instance.S_ID);
     g1::jacobian_to_affine(mul_state[3].output, instance.Q_M);
     g1::jacobian_to_affine(mul_state[4].output, instance.Q_L);
     g1::jacobian_to_affine(mul_state[5].output, instance.Q_R);
@@ -80,6 +76,7 @@ inline circuit_instance preprocess_circuit(waffle::circuit_state &state, const s
     g1::jacobian_to_affine(mul_state[7].output, instance.Q_C);
 
     free(scratch_space);
+    free(roots);
     return instance;
 }
 } // namespace waffle
