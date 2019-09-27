@@ -15,6 +15,8 @@ project(Barretenberg
     DESCRIPTION "BN254 elliptic curve library, and PLONK SNARK prover"
     LANGUAGES CXX C)
 
+find_package(OpenMP REQUIRED)
+
 set(default_build_type "Release")
 # Set a default build type if none was specified
 
