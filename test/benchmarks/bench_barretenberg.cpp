@@ -68,43 +68,82 @@ void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *da
     fr::zero(zero);
     fr::field_t T0;
     fr::field_t T1;
+    fr::field_t T2;
     // even indices = mul gates, odd incides = add gates
     // make selector polynomials / wire values randomly distributed (subject to gate constraints)
-    for (size_t i = 0; i < n / 4; ++i)
+    fr::field_t q_m_seed = fr::random_element();
+    fr::field_t q_l_seed = fr::random_element();
+    fr::field_t q_r_seed = fr::random_element();
+    fr::field_t q_o_seed = fr::random_element();
+    fr::field_t q_c_seed = fr::random_element();
+    fr::field_t w_l_seed = fr::random_element();
+    fr::field_t w_r_seed = fr::random_element();
+    fr::field_t q_m_acc;
+    fr::field_t q_l_acc;
+    fr::field_t q_r_acc;
+    fr::field_t q_o_acc;
+    fr::field_t q_c_acc;
+    fr::field_t w_l_acc;
+    fr::field_t w_r_acc;
+    fr::copy(q_m_seed, q_m_acc);
+    fr::copy(q_l_seed, q_l_acc);
+    fr::copy(q_r_seed, q_r_acc);
+    fr::copy(q_o_seed, q_o_acc);
+    fr::copy(q_c_seed, q_c_acc);
+    fr::copy(w_l_seed, w_l_acc);
+    fr::copy(w_r_seed, w_r_acc);
+
+    for (size_t i = 0; i < n / 2; i += 2)
     {
-        state.q_m[i] = fr::random_element();
-        state.q_c[i] = fr::random_element();
-        state.q_l[i] = fr::zero();
-        state.q_r[i] = fr::zero();
-        state.q_o[i] = fr::random_element();
+        fr::copy(q_m_acc, state.q_m[i]);
+        fr::copy(fr::zero(), state.q_l[i]);
+        fr::copy(fr::zero(), state.q_r[i]);
+        fr::copy(q_o_acc, state.q_o[i]);
+        fr::copy(q_c_acc, state.q_c[i]);
+        fr::copy(w_l_acc, state.w_l[i]);
+        fr::copy(w_r_acc, state.w_r[i]);
+        fr::copy(state.q_o[i], state.w_o[i]);
 
-        state.w_l[i] = fr::random_element();
-        state.w_r[i] = fr::random_element();
+        fr::mul(q_m_acc, q_m_seed, q_m_acc);
+        fr::mul(q_l_acc, q_l_seed, q_l_acc);
+        fr::mul(q_r_acc, q_r_seed, q_r_acc);
+        fr::mul(q_o_acc, q_o_seed, q_o_acc);
+        fr::mul(q_c_acc, q_c_seed, q_c_acc);
+        fr::mul(w_l_acc, w_l_seed, w_l_acc);
+        fr::mul(w_r_acc, w_r_seed, w_r_acc);
 
-        fr::mul(state.w_l[i], state.w_r[i], T0);
-        fr::mul(T0, state.q_m[i], T0);
+        fr::copy(fr::zero(), state.q_m[i + 1]);
+        fr::copy(q_l_acc, state.q_l[i + 1]);
+        fr::copy(q_r_acc, state.q_r[i + 1]);
+        fr::copy(q_o_acc, state.q_o[i + 1]);
+        fr::copy(q_c_acc, state.q_c[i + 1]);
+        fr::copy(w_l_acc, state.w_l[i + 1]);
+        fr::copy(w_r_acc, state.w_r[i + 1]);
+        fr::copy(state.q_o[i + 1], state.w_o[i + 1]);
+
+        fr::mul(q_m_acc, q_m_seed, q_m_acc);
+        fr::mul(q_l_acc, q_l_seed, q_l_acc);
+        fr::mul(q_r_acc, q_r_seed, q_r_acc);
+        fr::mul(q_o_acc, q_o_seed, q_o_acc);
+        fr::mul(q_c_acc, q_c_seed, q_c_acc);
+        fr::mul(w_l_acc, w_l_seed, w_l_acc);
+        fr::mul(w_r_acc, w_r_seed, w_r_acc);
+    }
+    fr::field_t* scratch_mem = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * n / 2));
+    fr::batch_invert(state.w_o, n / 2, scratch_mem);
+    free(scratch_mem);
+    for (size_t i = 0; i < n / 2; ++i)
+    {
+        fr::mul(state.q_l[i], state.w_l[i], T0);
+        fr::mul(state.q_r[i], state.w_r[i], T1);
+        fr::mul(state.w_l[i], state.w_r[i], T2);
+        fr::mul(T2, state.q_m[i], T2);
+        fr::add(T0, T1, T0);
+        fr::add(T0, T2, T0);
         fr::add(T0, state.q_c[i], T0);
         fr::neg(T0, T0);
-        fr::invert(state.q_o[i], T1);
-        fr::mul(T0, T1, state.w_o[i]);
-
-        state.q_m[2 * i] = fr::zero();
-        state.q_l[2 * i] = fr::random_element();
-        state.q_r[2 * i] = fr::random_element();
-        state.q_o[2 * i] = fr::random_element();
-        state.q_c[2 * i] = fr::random_element();
-        state.w_l[2 * i] = fr::random_element();
-        state.w_r[2 * i] = fr::random_element();
-
-        fr::mul(state.q_l[2 * i], state.w_l[2 * i], T0);
-        fr::mul(state.q_r[2 * i], state.w_r[2 * i], T1);
-        fr::add(T0, T1, T0);
-        fr::add(T0, state.q_c[2 * i], T0);
-        fr::neg(T0, T0);
-        fr::invert(state.q_o[2 * i], T1);
-        fr::mul(T0, T1, state.w_o[2 * i]);
+        fr::mul(state.w_o[i], T0, state.w_o[i]);
     }
-
     size_t shift = n / 2;
     polynomials::copy_polynomial(state.w_l, state.w_l + shift, shift, shift);
     polynomials::copy_polynomial(state.w_r, state.w_r + shift, shift, shift);
@@ -134,7 +173,10 @@ void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *da
     fr::zero(state.w_r[shift-1]);
     fr::zero(state.w_o[shift-1]);
     fr::zero(state.q_c[shift-1]);
-
+    fr::zero(state.q_m[shift-1]);
+    fr::zero(state.q_l[shift-1]);
+    fr::zero(state.q_r[shift-1]);
+    fr::zero(state.q_o[shift-1]);
     // make last permutation the same as identity permutation
     state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
     state.sigma_2_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 30U);
