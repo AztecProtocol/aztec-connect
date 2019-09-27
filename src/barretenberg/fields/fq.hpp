@@ -7,7 +7,24 @@
 #include "../assert.hpp"
 #include "../types.hpp"
 
-#ifdef NO_FUNNY_BUSINESS
+namespace barretenberg
+{
+namespace fq
+{
+constexpr field_t modulus = { .data = {
+    0x3C208C16D87CFD47UL,
+    0x97816a916871ca8dUL,
+    0xb85045b68181585dUL,
+    0x30644e72e131a029UL}};
+
+namespace internal
+{
+constexpr uint64_t r_inv = 0x87d20782e4866389UL;
+}
+} // namespace fr
+} // namespace barretenberg
+
+#ifdef DISABLE_SHENANIGANS
 #include "fq_impl_int128.hpp"
 #else
 #include "fq_impl_asm.hpp"
@@ -22,12 +39,6 @@ constexpr field_t __zero = { .data = { 0x00, 0x00, 0x00, 0x00 } };
 constexpr field_t curve_b = {.data = {0x3, 0x0, 0x0, 0x0}};
 
 constexpr field_t two_inv = {.data = {0x87bee7d24f060572, 0xd0fd2add2f1c6ae5, 0x8f5f7492fcfd4f44, 0x1f37631a3d9cbfac}};
-
-constexpr field_t modulus = { .data = {
-    0x3C208C16D87CFD47UL,
-    0x97816a916871ca8dUL,
-    0xb85045b68181585dUL,
-    0x30644e72e131a029UL}};
 
 constexpr field_t modulus_plus_one = {.data = {
     0x3C208C16D87CFD48UL,

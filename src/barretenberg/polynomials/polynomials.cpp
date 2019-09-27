@@ -707,7 +707,7 @@ void compress_fft(const fr::field_t *src, fr::field_t *dest, const size_t curren
 {
     // iterate from top to bottom, allows `dest` to overlap with `src`
     size_t log2_compress_factor = (size_t)log2(compress_factor);
-    ASSERT(1 << log2_compress_factor == compress_factor);
+    ASSERT(1UL << log2_compress_factor == compress_factor);
     size_t new_size = current_size >> log2_compress_factor;
     for (size_t i = 0; i < new_size; ++i)
     {

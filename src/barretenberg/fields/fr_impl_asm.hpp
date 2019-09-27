@@ -34,8 +34,6 @@ constexpr uint64_t twice_not_modulus_1 = ~0x5067d090f372e122UL;
 constexpr uint64_t twice_not_modulus_2 = ~0x70a08b6d0302b0baUL;
 constexpr uint64_t twice_not_modulus_3 = ~0x60c89ce5c2634053UL;
 
-constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
-
 constexpr uint64_t zero_reference = 0;
 } // namespace
 
@@ -134,7 +132,7 @@ inline void swap(const field_t &src, field_t &dest)
 /**
  * Conditionally subtract p from field element a, store result in r
  **/
-inline void reduce_once(field_t &a, field_t &r)
+inline void reduce_once(const field_t &a, field_t &r)
 {
     __asm__(
         CLEAR_FLAGS("%%r12")

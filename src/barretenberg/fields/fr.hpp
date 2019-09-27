@@ -6,7 +6,23 @@
 
 #include "../types.hpp"
 
-#ifdef NO_FUNNY_BUSINESS
+namespace barretenberg
+{
+namespace fr
+{
+constexpr field_t modulus = {.data = {
+    0x43E1F593F0000001UL,
+    0x2833E84879B97091UL,
+    0xB85045B68181585DUL,
+    0x30644E72E131A029UL}};
+namespace internal
+{
+constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
+}
+} // namespace fr
+} // namespace barretenberg
+
+#ifdef DISABLE_SHENANIGANS
 #include "fr_impl_int128.hpp"
 #else
 #include "fr_impl_asm.hpp"
@@ -28,12 +44,6 @@ constexpr field_t lambda = {.data = {
                                 0x7d4fdca77a96c167UL,
                                 0x8be4ba08b19a750aUL,
                                 0x1cbd5653a5661c25UL}};
-
-constexpr field_t modulus = {.data = {
-                                 0x43E1F593F0000001UL,
-                                 0x2833E84879B97091UL,
-                                 0xB85045B68181585DUL,
-                                 0x30644E72E131A029UL}};
 
 constexpr field_t modulus_plus_one = {.data = {
                                           0x43E1F593F0000002UL,
@@ -370,6 +380,13 @@ inline field_t one()
     fr::field_t r;
     one(r);
     return r;
+}
+
+inline field_t neg_one()
+{
+    field_t res = fr::modulus;
+    --res.data[0];
+    return res;
 }
 
 inline field_t multiplicative_generator()
