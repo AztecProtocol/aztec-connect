@@ -21,7 +21,7 @@ To run tests, in the /build directory run
 test/barretenberg_tests
 ```
 
-To run benchmarks, in the /build reictory run
+To run benchmarks, in the /build directory run
 
 ```
 test/barretenberg_bench
