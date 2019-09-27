@@ -690,8 +690,6 @@ lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, evaluation_d
     fr::sub(denominators[2], one, denominators[2]);
 
     fr::sub(z, domain.root_inverse, denominators[0]);
-    // fr::mul(z, domain.short_root_inverse, denominators[0]);
-    // fr::sub(denominators[0], one, denominators[0]);
 
     fr::batch_invert(denominators, 3, &denominators[3]);
 
