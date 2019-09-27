@@ -1,3 +1,0 @@
-[submodule "cmake/cable"]
-	path = cmake/cable
-	url = https://github.com/ethereum/cable
