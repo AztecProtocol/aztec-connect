@@ -12,7 +12,6 @@ project(Barretenberg
     DESCRIPTION "BN254 elliptic curve library, and PLONK SNARK prover"
     LANGUAGES CXX C)
 
-find_package(OpenMP REQUIRED)
 if(APPLE)
 message(Status "Debug Test A")
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
@@ -33,6 +32,7 @@ message(Status "Debug Test B")
   set(OpenMP_libiomp5_LIBRARY ${OpenMP_CXX_LIB_NAMES})
 endif()
 endif()
+find_package(OpenMP REQUIRED)
 
 set(default_build_type "Release")
 # Set a default build type if none was specified
