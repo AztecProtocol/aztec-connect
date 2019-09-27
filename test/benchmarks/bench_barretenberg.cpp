@@ -67,29 +67,42 @@ void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *da
     fr::neg(one, minus_one);
     fr::zero(zero);
     fr::field_t T0;
+    fr::field_t T1;
     // even indices = mul gates, odd incides = add gates
+    // make selector polynomials / wire values randomly distributed (subject to gate constraints)
     for (size_t i = 0; i < n / 4; ++i)
     {
+        state.q_m[i] = fr::random_element();
+        state.q_c[i] = fr::random_element();
+        state.q_l[i] = fr::zero();
+        state.q_r[i] = fr::zero();
+        state.q_o[i] = fr::random_element();
+
+        state.w_l[i] = fr::random_element();
+        state.w_r[i] = fr::random_element();
+
+        fr::mul(state.w_l[i], state.w_r[i], T0);
+        fr::mul(T0, state.q_m[i], T0);
+        fr::add(T0, state.q_c[i], T0);
+        fr::neg(T0, T0);
+        fr::invert(state.q_o[i], T1);
+        fr::mul(T0, T1, state.w_o[i]);
+
+        state.q_m[2 * i] = fr::zero();
+        state.q_l[2 * i] = fr::random_element();
+        state.q_r[2 * i] = fr::random_element();
+        state.q_o[2 * i] = fr::random_element();
+        state.q_c[2 * i] = fr::random_element();
         state.w_l[2 * i] = fr::random_element();
         state.w_r[2 * i] = fr::random_element();
-        fr::mul(state.w_l[2 * i], state.w_r[2 * i], state.w_o[2 * i]);
-        fr::copy(zero, state.q_l[2 * i]);
-        fr::copy(zero, state.q_r[2 * i]);
-        fr::copy(minus_one, state.q_o[2 * i]);
-        fr::copy(zero, state.q_c[2 * i]);
-        fr::copy(one, state.q_m[2 * i]);
 
-        state.w_l[2 * i + 1] = fr::random_element();
-        state.w_r[2 * i + 1] = fr::random_element();
-        state.w_o[2 * i + 1] = fr::random_element();
-
-        fr::add(state.w_l[2 * i + 1], state.w_r[2 * i + 1], T0);
-        fr::add(T0, state.w_o[2 * i + 1], state.q_c[2 * i + 1]);
-        fr::neg(state.q_c[2 * i + 1], state.q_c[2 * i + 1]);
-        fr::one(state.q_l[2 * i + 1]);
-        fr::one(state.q_r[2 * i + 1]);
-        fr::one(state.q_o[2 * i + 1]);
-        fr::zero(state.q_m[2 * i + 1]);
+        fr::mul(state.q_l[2 * i], state.w_l[2 * i], T0);
+        fr::mul(state.q_r[2 * i], state.w_r[2 * i], T1);
+        fr::add(T0, T1, T0);
+        fr::add(T0, state.q_c[2 * i], T0);
+        fr::neg(T0, T0);
+        fr::invert(state.q_o[2 * i], T1);
+        fr::mul(T0, T1, state.w_o[2 * i]);
     }
 
     size_t shift = n / 2;
@@ -196,6 +209,7 @@ void reset_proof_state(waffle::circuit_state& state)
 }
 
 const auto init = []() {
+    printf("generating test data\n");
     globals.reference_string.degree =  MAX_GATES;
     globals.reference_string.monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (2 * MAX_GATES + 2)));
     globals.scalars = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * MAX_GATES));
@@ -209,7 +223,7 @@ const auto init = []() {
     for (size_t i = 0; i < 8; ++i)
     {
         size_t n = (MAX_GATES >> 7) << i;
-        printf("n %lu\n", n);
+        printf("%lu\n", n);
         fr::field_t *data = &globals.data[pointer_offset];
         generate_random_plonk_circuit(globals.plonk_states[i], data, n);
         pointer_offset += 17 * n + 2;
