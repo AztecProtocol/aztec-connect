@@ -7,15 +7,30 @@ include(GNUInstallDirs)
 include(cmake/OptimizeForArchitecture.cmake)
 include(cmake/AddCompilerFlag.cmake)
 
-set(CMAKE_C_COMPILER "gcc")
-set(CMAKE_CXX_COMPILER "g++")
-
 set(PROJECT_VERSION 0.1.0)
 project(Barretenberg
     DESCRIPTION "BN254 elliptic curve library, and PLONK SNARK prover"
     LANGUAGES CXX C)
 
 find_package(OpenMP REQUIRED)
+if(APPLE)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    set(OpenMP_C "${CMAKE_C_COMPILER}")
+    set(OpenMP_C_FLAGS "-fopenmp=libomp -Wno-unused-command-line-argument")
+    set(OpenMP_C_LIB_NAMES "libomp" "libgomp" "libiomp5")
+    set(OpenMP_libomp_LIBRARY ${OpenMP_C_LIB_NAMES})
+    set(OpenMP_libgomp_LIBRARY ${OpenMP_C_LIB_NAMES})
+    set(OpenMP_libiomp5_LIBRARY ${OpenMP_C_LIB_NAMES})
+endif()
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(OpenMP_CXX "${CMAKE_CXX_COMPILER}")
+  set(OpenMP_CXX_FLAGS "-fopenmp=libomp -Wno-unused-command-line-argument")
+  set(OpenMP_CXX_LIB_NAMES "libomp" "libgomp" "libiomp5")
+  set(OpenMP_libomp_LIBRARY ${OpenMP_CXX_LIB_NAMES})
+  set(OpenMP_libgomp_LIBRARY ${OpenMP_CXX_LIB_NAMES})
+  set(OpenMP_libiomp5_LIBRARY ${OpenMP_CXX_LIB_NAMES})
+endif()
+endif()
 
 set(default_build_type "Release")
 # Set a default build type if none was specified
