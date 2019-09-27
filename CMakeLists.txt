@@ -12,6 +12,13 @@ project(Barretenberg
     DESCRIPTION "BN254 elliptic curve library, and PLONK SNARK prover"
     LANGUAGES CXX C)
 
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_EXTENSIONS ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_CXX_EXTENSIONS ON)
+
 if(APPLE)
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(STATUS "foo")
@@ -51,12 +58,6 @@ if(DISABLE_SHENANIGANS)
     message(STATUS "Using fallback non-assembly methods for field multiplications")
     add_definitions(-DDISABLE_SHENANIGANS=1)
 endif()
-
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_EXTENSIONS ON)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-set(CMAKE_CXX_EXTENSIONS ON)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -O3 -fopenmp")
 
