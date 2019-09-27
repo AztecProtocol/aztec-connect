@@ -7,6 +7,9 @@ include(GNUInstallDirs)
 include(cmake/OptimizeForArchitecture.cmake)
 include(cmake/AddCompilerFlag.cmake)
 
+set(CMAKE_C_COMPILER "gcc")
+set(CMAKE_CXX_COMPILER "g++")
+
 set(PROJECT_VERSION 0.1.0)
 project(Barretenberg
     DESCRIPTION "BN254 elliptic curve library, and PLONK SNARK prover"
