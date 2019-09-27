@@ -1,69 +1,104 @@
 # barretenburg
 # copyright 2019 Spilsbury Holdings
 
+add_compile_options(-Werror -Wall -Wextra -Wshadow)
+add_compile_options(-Wconversion -Wsign-conversion)
+
 add_library(
     barretenberg STATIC
     types.hpp
-    asm_macros.hpp
-    wnaf.hpp
-    fr_impl_asm.hpp
-    fr_impl_int128.hpp
-    fr.hpp
-    fq_impl_asm.hpp
-    fq_impl_int128.hpp
-    fq.hpp
-    fq2.hpp
-    fq6.hpp
-    fq12.hpp
-    g1.hpp
-    g2.hpp
-    scalar_multiplication.hpp
-    pairing.hpp
+    fields/asm_macros.hpp
+    fields/fr_impl_asm.hpp
+    fields/fr_impl_int128.hpp
+    fields/fr.hpp
+    fields/fq_impl_asm.hpp
+    fields/fq_impl_int128.hpp
+    fields/fq.hpp
+    fields/fq2.hpp
+    fields/fq6.hpp
+    fields/fq12.hpp
+    groups/wnaf.hpp
+    groups/g1.hpp
+    groups/g2.hpp
+    groups/scalar_multiplication.hpp
+    groups/pairing.hpp
+    io/io.hpp
+    keccak/hash_types.h
+    keccak/keccakf1600.c
+    keccak/keccak.c
+    keccak/keccak.h
+    polynomials/polynomials.cpp
+    polynomials/polynomials.hpp
+    waffle/linearizer.hpp
+    waffle/challenge.hpp
+    waffle/permutation.hpp
+    waffle/preprocess.hpp
+    waffle/waffle.cpp
+    waffle/waffle.hpp
+    waffle/verifier.hpp
 )
 
-set_target_properties(barretenberg PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(
+    barretenberg
+    
+    PROPERTIES
+    LINKER_LANGUAGE CXX
+)
 
 target_link_libraries(
     barretenberg
-    PUBLIC
-        ${GMP_LIBRARIES}
 )
-
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
 
 add_executable(
     barretenberg_profiling
     main.cpp
-    asm_macros.hpp
+    fields/asm_macros.hpp
     types.hpp
-    wnaf.hpp
-    fr_impl_asm.hpp
-    fr_impl_int128.hpp
-    fr.hpp
-    fq_impl_asm.hpp
-    fq_impl_int128.hpp
-    fq.hpp
-    fq2.hpp
-    fq6.hpp
-    fq12.hpp
-    g1.hpp
-    g2.hpp
-    scalar_multiplication.hpp
-    pairing.hpp
+    fields/fr_impl_asm.hpp
+    fields/fr_impl_int128.hpp
+    fields/fr.hpp
+    fields/fq_impl_asm.hpp
+    fields/fq_impl_int128.hpp
+    fields/fq.hpp
+    fields/fq2.hpp
+    fields/fq6.hpp
+    fields/fq12.hpp
+    groups/wnaf.hpp
+    groups/g1.hpp
+    groups/g2.hpp
+    groups/scalar_multiplication.hpp
+    groups/pairing.hpp
+    io/io.hpp
+    keccak/hash_types.h
+    keccak/keccakf1600.c
+    keccak/keccak.c
+    keccak/keccak.h
+    polynomials/polynomials.cpp
+    polynomials/polynomials.hpp
+    waffle/linearizer.hpp
+    waffle/challenge.hpp
+    waffle/permutation.hpp
+    waffle/preprocess.hpp
+    waffle/waffle.cpp
+    waffle/waffle.hpp
+    waffle/verifier.hpp
 )
 
 target_link_libraries(
     barretenberg_profiling
-    Threads::Threads
 )
 set_target_properties(
     barretenberg_profiling
-    PROPERTIES LINKER_LANGUAGE CXX RUNTIME_OUTPUT_DIRECTORY ../../test
+
+    PROPERTIES
+    LINKER_LANGUAGE CXX
+    RUNTIME_OUTPUT_DIRECTORY ../../test
 )
 
 install(
     DIRECTORY
-    ${include_dir}/
+    ${include_dir}
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING
+    PATTERN "*.hpp"
 )
