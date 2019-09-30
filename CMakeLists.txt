@@ -7,8 +7,8 @@ include(GNUInstallDirs)
 include(cmake/OptimizeForArchitecture.cmake)
 include(cmake/AddCompilerFlag.cmake)
 
-set(CMAKE_CXX_COMPILER "/usr/local/clang_9.0.0/bin/clang++")
-set(CMAKE_C_COMPILER "/usr/local/clang_9.0.0/bin/clang")
+# set(CMAKE_CXX_COMPILER "/usr/local/clang_9.0.0/bin/clang++")
+# set(CMAKE_C_COMPILER "/usr/local/clang_9.0.0/bin/clang")
 
 set(PROJECT_VERSION 0.1.0)
 project(Barretenberg

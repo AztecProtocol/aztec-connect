@@ -176,21 +176,6 @@ void compute_z_commitments(circuit_state &state, plonk_proof &proof, srs::plonk_
     fr::mul(state.alpha_squared, state.challenges.alpha, state.alpha_cubed);
 }
 
-void compute_multiplication_gate_coefficients(circuit_state &state, fft_pointers &ffts)
-{
-    // The next step is to compute q_m.w_l.w_r - we need a 4n fft for this
-    polynomials::ifft(state.q_m, state.small_domain);
-    polynomials::copy_polynomial(state.q_m, ffts.q_m_poly, state.small_domain.size, state.large_domain.size);
-    polynomials::fft_with_coset_and_constant(ffts.q_m_poly, state.large_domain, state.challenges.alpha);
-
-    ITERATE_OVER_DOMAIN_START(state.large_domain);
-    fr::field_t T0;
-    fr::mul(ffts.w_l_poly[i], ffts.w_r_poly[i], T0);
-    fr::mul(T0, ffts.q_m_poly[i], T0);
-    fr::add(ffts.quotient_poly[i], T0, ffts.quotient_poly[i]);
-    ITERATE_OVER_DOMAIN_END;
-}
-
 void compute_quotient_commitment(circuit_state &state, fr::field_t *coeffs, plonk_proof &proof, const srs::plonk_srs &srs)
 {
     size_t n = state.n;
@@ -223,7 +208,6 @@ void compute_permutation_grand_product_coefficients(circuit_state &state, fft_po
     // 1: Compute the permutation grand product
     // 2: Compute permutation check coefficients
     size_t n = state.n;
-
 
     // when computing coefficients of sigma_1, sigma_2, sigma_3, scale the polynomial by \beta to save a mul
     polynomials::ifft_with_constant(state.sigma_1, state.small_domain, state.challenges.beta);
@@ -373,23 +357,30 @@ void compute_arithmetisation_coefficients(circuit_state &state, fft_pointers &ff
     polynomials::ifft(state.q_l, state.small_domain);
     polynomials::ifft(state.q_r, state.small_domain);
     polynomials::ifft(state.q_o, state.small_domain);
+    polynomials::ifft(state.q_m, state.small_domain);
     polynomials::copy_polynomial(state.q_l, ffts.q_l_poly, state.small_domain.size, state.mid_domain.size);
     polynomials::copy_polynomial(state.q_r, ffts.q_r_poly, state.small_domain.size, state.mid_domain.size);
     polynomials::copy_polynomial(state.q_o, ffts.q_o_poly, state.small_domain.size, state.mid_domain.size);
+    polynomials::copy_polynomial(state.q_m, ffts.q_m_poly, state.small_domain.size, state.mid_domain.size);
     polynomials::fft_with_coset_and_constant(ffts.q_o_poly, state.mid_domain, state.challenges.alpha);
     polynomials::fft_with_coset_and_constant(ffts.q_r_poly, state.mid_domain, state.challenges.alpha);
     polynomials::fft_with_coset_and_constant(ffts.q_l_poly, state.mid_domain, state.challenges.alpha);
+    polynomials::fft_with_coset_and_constant(ffts.q_m_poly, state.mid_domain, state.challenges.alpha);
 
     // the fft transform on q.o is half that of w.o - access every other index of w.o
     ITERATE_OVER_DOMAIN_START(state.mid_domain);
         fr::field_t T0;
         fr::field_t T1;
         fr::field_t T2;
+        fr::field_t T3;
         fr::mul(ffts.w_r_poly_small[i], ffts.q_r_poly[i], T0);
         fr::mul(ffts.w_l_poly_small[i], ffts.q_l_poly[i], T1);
         fr::mul(ffts.w_o_poly_small[i], ffts.q_o_poly[i], T2);
+        fr::mul(ffts.w_l_poly_small[i], ffts.w_r_poly_small[i], T3);
+        fr::mul(T3, ffts.q_m_poly[i], T3);
         fr::add(T0, T1, T0);
         fr::add(T0, T2, T0);
+        fr::add(T0, T3, T0);
         fr::add(ffts.gate_poly_mid[i], T0, ffts.gate_poly_mid[i]);
     ITERATE_OVER_DOMAIN_END;
 }
@@ -454,30 +445,21 @@ void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk
     // Offset by 8 elements, as we're going to be storing Z1 in W_l_poly, Z2 in w_o_poly
     waffle::compute_permutation_grand_product_coefficients(state, ffts);
 
-    waffle::compute_multiplication_gate_coefficients(state, ffts);
-
     waffle::compute_identity_grand_product_coefficients(state, ffts);
 
     waffle::compute_arithmetisation_coefficients(state, ffts);
 
-    polynomials::ifft_with_coset(ffts.gate_poly_mid, state.mid_domain);
-    
-    // we need to perform an fft transform on gate_poly_mid, to double the evaluation domain.
-    // zero out the high-order coefficients
-    memset((void *)(ffts.gate_poly_mid + state.mid_domain.size), 0, (state.mid_domain.size) * sizeof(fr::field_t));
-
-    // add state.q_c into accumulator
     polynomials::ifft_with_constant(state.q_c, state.small_domain, state.challenges.alpha);
+    polynomials::copy_polynomial(state.q_c, ffts.q_m_poly, state.small_domain.size, state.mid_domain.size);
+    polynomials::fft_with_coset(ffts.q_m_poly, state.mid_domain);
+    polynomials::add(ffts.gate_poly_mid, ffts.q_m_poly, ffts.gate_poly_mid, state.mid_domain);
 
-    polynomials::add(ffts.gate_poly_mid, state.q_c, ffts.gate_poly_mid, state.small_domain);
-
-    polynomials::fft_with_coset(ffts.gate_poly_mid, state.large_domain);
-
-    polynomials::add(ffts.quotient_poly, ffts.gate_poly_mid, ffts.quotient_poly, state.large_domain);
-
+    polynomials::divide_by_pseudo_vanishing_polynomial(ffts.gate_poly_mid, state.small_domain, state.mid_domain);
     polynomials::divide_by_pseudo_vanishing_polynomial(ffts.quotient_poly, state.small_domain, state.large_domain);
 
+    polynomials::ifft_with_coset(ffts.gate_poly_mid, state.mid_domain);
     polynomials::ifft_with_coset(ffts.quotient_poly, state.large_domain);
+    polynomials::add(ffts.quotient_poly, ffts.gate_poly_mid, ffts.quotient_poly, state.mid_domain);
 }
 
 fr::field_t compute_linearisation_coefficients(circuit_state &state, fft_pointers & ffts, plonk_proof &proof)
