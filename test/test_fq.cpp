@@ -52,15 +52,16 @@ TEST(fq, mul_check_against_constants)
 {
     // test against some randomly generated test data
     fq::field_t a = { .data = { 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf } };
+    fq::field_t a_copy = { .data = { 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf } };
     fq::field_t b = { .data = { 0xb68aee5e4c8fc17c, 0xc5193de7f401d5e8, 0xb8777d4dde671db3, 0xe513e75c087b0bb } };
+    fq::field_t b_copy = { .data = { 0xb68aee5e4c8fc17c, 0xc5193de7f401d5e8, 0xb8777d4dde671db3, 0xe513e75c087b0bb } };
     fq::field_t expected = { .data = { 0x7ed4174114b521c4, 0x58f5bd1d4279fdc2, 0x6a73ac09ee843d41, 0x687a76ae9b3425c } };
-    fq::field_t result;
+    fq::field_t result = { .data = { 0,0,0,0 } };
     fq::mul(a, b, result);
+
     EXPECT_EQ(fq::eq(result, expected), true);
-    for (size_t i = 0; i < 4; ++i)
-    {
-        EXPECT_EQ(result.data[i], expected.data[i]);
-    }
+    EXPECT_EQ(fq::eq(a, a_copy), true);
+    EXPECT_EQ(fq::eq(b, b_copy), true);
 }
 
 // validate that zero-value limbs don't cause any problems

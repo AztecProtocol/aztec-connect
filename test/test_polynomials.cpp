@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <barretenberg/polynomials/polynomials.hpp>
+#include <barretenberg/fields/fr.hpp>
 
 using namespace barretenberg;
 

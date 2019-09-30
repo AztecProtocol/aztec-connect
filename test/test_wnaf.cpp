@@ -12,7 +12,7 @@ void recover_fixed_wnaf(uint32_t* wnaf, bool skew, uint64_t& hi, uint64_t& lo, s
 {
     size_t wnaf_entries = (127 + wnaf_bits - 1) / wnaf_bits;
     unsigned __int128 scalar = 0; // (unsigned __int128)(skew);
-    for (int i = (int)wnaf_entries - 1; i >= 0; --i)
+    for (int i = (int)0; i < (int)wnaf_entries; ++i)
     {
         uint32_t entry_formatted = wnaf[(size_t)i];
         bool negative = entry_formatted >> 31;
@@ -30,52 +30,9 @@ void recover_fixed_wnaf(uint32_t* wnaf, bool skew, uint64_t& hi, uint64_t& lo, s
     hi = (uint64_t)(unsigned __int128)(scalar >> (unsigned __int128)(64));
     lo = (uint64_t)(unsigned __int128)(scalar & (unsigned __int128)0xffffffffffffffff);
 }
-
-void naive_wnaf(uint64_t hi, uint64_t lo, uint8_t* wnaf)
-{
-    unsigned __int128 scalar = 0;
-    scalar += lo;
-    scalar += ((unsigned __int128)(hi) << 64);
-
-    size_t i = 0;
-    while (scalar > 0)
-    {
-        if ((scalar & (unsigned __int128)0x01) == 1)
-        {
-            unsigned __int128 m = scalar & 0x1f;
-            wnaf[i] = (uint8_t)m;
-            scalar -= m;
-            if (m > 16)
-            {
-                scalar += 32;
-            }
-        }
-        scalar >>= 1;
-        i += 1;
-    }
-}
 }
 
-TEST(barretenberg, wnaf_5)
-{
-    uint64_t rand_buffer[2] = { 0 };
-    int got_entropy = getentropy((void*)&rand_buffer[0], 16);
-    EXPECT_EQ(got_entropy, 0);
-    uint64_t hi = rand_buffer[0];
-    uint64_t lo = rand_buffer[1];
-    hi &= 0x7fffffffffffffffUL;
-    uint8_t wnaf[128] = { 0 };
-    uint8_t expected[128] = { 0 };
-    wnaf::compute_wnaf_5(hi, lo, &wnaf[0]);
-    naive_wnaf(hi, lo, &expected[0]);
-
-    for (size_t i = 0; i < 128; ++i)
-    {
-        EXPECT_EQ(wnaf[i], expected[i]);
-    }
-}
-
-TEST(barretenberg, wnaf_fixed)
+TEST(wnaf, wnaf_fixed)
 {
     uint64_t rand_buffer[2] = { 0 };
     int got_entropy = getentropy((void*)&rand_buffer[0], 16);
@@ -91,7 +48,7 @@ TEST(barretenberg, wnaf_fixed)
     EXPECT_EQ(rand_buffer[1], recovered_hi);
 }
 
-TEST(barretenberg, wnaf_fixed_simple_lo)
+TEST(wnaf, wnaf_fixed_simple_lo)
 {
     uint64_t rand_buffer[2] = { 1, 0 };
     uint32_t wnaf[WNAF_SIZE(5)] = { 0 };
@@ -104,7 +61,7 @@ TEST(barretenberg, wnaf_fixed_simple_lo)
     EXPECT_EQ(rand_buffer[1], recovered_hi);
 }
 
-TEST(barretenberg, wnaf_fixed_simple_hi)
+TEST(wnaf_foo, wnaf_fixed_simple_hi)
 {
     uint64_t rand_buffer[2] = { 0, 1 };
     uint32_t wnaf[WNAF_SIZE(5)] = { 0 };
@@ -117,7 +74,7 @@ TEST(barretenberg, wnaf_fixed_simple_hi)
     EXPECT_EQ(rand_buffer[1], recovered_hi);
 }
 
-TEST(barretenberg, wnaf_fixed_with_endo_split)
+TEST(wnaf, wnaf_fixed_with_endo_split)
 {
     uint64_t rand_buffer[4];
     int got_entropy = getentropy((void*)&rand_buffer[0], 32);

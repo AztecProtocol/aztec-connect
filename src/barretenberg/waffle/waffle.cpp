@@ -7,6 +7,9 @@
 #include "stddef.h"
 #include "stdint.h"
 
+#include "../groups/g1.hpp"
+#include "../groups/scalar_multiplication.hpp"
+#include "../polynomials/polynomials.hpp"
 
 namespace waffle
 {
@@ -116,7 +119,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
     polynomials::ifft(state.z_2, state.small_domain);
 }
 
-inline void compute_wire_commitments(circuit_state &state, plonk_proof &proof, srs::plonk_srs &srs)
+void compute_wire_commitments(circuit_state &state, plonk_proof &proof, srs::plonk_srs &srs)
 {
     size_t n = state.n;
 

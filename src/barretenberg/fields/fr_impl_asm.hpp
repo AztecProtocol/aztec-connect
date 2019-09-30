@@ -49,7 +49,7 @@ inline void copy(const field_t &src, field_t &dest)
         "vmovdqa 0(%0), %%ymm0                  \n\t"
         "vmovdqa %%ymm0, 0(%1)                  \n\t"
         :
-        : "r"(src.data), "r"(dest.data)
+        : "r"(&src), "r"(&dest)
         : "%ymm0", "memory");
 #else
     __asm__(
@@ -62,7 +62,7 @@ inline void copy(const field_t &src, field_t &dest)
         "movq %%r10, 16(%1)                     \n\t"
         "movq %%r11, 24(%1)                     \n\t"
         :
-        : "r"(src.data), "r"(dest.data)
+        : "r"(&src), "r"(&dest)
         : "%r8", "%r9", "%r10", "%r11", "memory", "cc");
 #endif
 }
@@ -75,7 +75,7 @@ inline void zero(field_t &r)
         "vpxor  %%ymm0, %%ymm0, %%ymm0          \n\t"
         "vmovdqa %%ymm0, 0(%0)                  \n\t"
         :
-        : "r"(r.data)
+        : "r"(&r)
         : "memory");
 #else
     __asm__(
@@ -84,7 +84,7 @@ inline void zero(field_t &r)
         "movq $0, 16(%0)                        \n\t"
         "movq $0, 24(%0)                        \n\t"
         :
-        : "r"(r.data)
+        : "r"(&r)
         : "memory");
 #endif
 }
@@ -103,7 +103,7 @@ inline void swap(const field_t &src, field_t &dest)
         "vmovdqa %%ymm0, 0(%1)                  \n\t"
         "vmovdqa %%ymm1, 0(%0)                  \n\t"
         :
-        : "r"(src.data), "r"(dest.data)
+        : "r"(&src), "r"(&dest)
         : "%ymm0", "memory");
 #else
     __asm__(
@@ -124,7 +124,7 @@ inline void swap(const field_t &src, field_t &dest)
         "movq %%r14, 16(%0)                     \n\t"
         "movq %%r15, 24(%0)                     \n\t"
         :
-        : "r"(src.data), "r"(dest.data)
+        : "r"(&src), "r"(&dest)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 #endif
 }
@@ -244,12 +244,11 @@ inline void sqr(const field_t &a, field_t &r)
      **/
     __asm__(
         SQR("%0")
-        "movq %[r_ptr], %%rsi                   \n\t"
         REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
-        STORE_FIELD_ELEMENT("%%rsi", "%%r12", "%%r13", "%%r14", "%%r15")
+        STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "r"(&a), [zero_reference] "m"(internal::zero_reference), [r_ptr] "m"(&r), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3), [r_inv] "m"(internal::r_inv), [not_modulus_0] "m"(internal::not_modulus_0), [not_modulus_1] "m"(internal::not_modulus_1), [not_modulus_2] "m"(internal::not_modulus_2), [not_modulus_3] "m"(internal::not_modulus_3)
-        : "%rax", "rcx", "%rdx", "%rdi", "%rsi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+        : "r"(&a), "r"(&r), [zero_reference] "m"(internal::zero_reference), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3), [r_inv] "m"(internal::r_inv), [not_modulus_0] "m"(internal::not_modulus_0), [not_modulus_1] "m"(internal::not_modulus_1), [not_modulus_2] "m"(internal::not_modulus_2), [not_modulus_3] "m"(internal::not_modulus_3)
+        : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
 /**
@@ -268,11 +267,10 @@ inline void sqr_without_reduction(const field_t &a, field_t &r)
      **/
     __asm__(
         SQR("%0") 
-        "movq %[r_ptr], %%rsi                   \n\t"
-        STORE_FIELD_ELEMENT("%%rsi", "%%r12", "%%r13", "%%r14", "%%r15")
+        STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "r"(&a), [zero_reference] "m"(internal::zero_reference), [r_ptr] "m"(&r), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3), [r_inv] "m"(internal::r_inv)
-        : "%rax", "rcx", "%rdx", "%rdi", "%rsi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+        : "r"(&a), "r"(&r), [zero_reference] "m"(internal::zero_reference), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3), [r_inv] "m"(internal::r_inv)
+        : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
 /**
@@ -291,12 +289,12 @@ inline void mul(const field_t &a, const field_t &b, field_t &r)
      *            %2: poitner to `r`
      **/
     __asm__(
-        MUL("%1", "%0")
+        MUL("%0", "%1")
         REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
         STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "%r"(&b), "%r"(&a), "r"(&r), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3), [r_inv] "m"(internal::r_inv), [not_modulus_0] "m"(internal::not_modulus_0), [not_modulus_1] "m"(internal::not_modulus_1), [not_modulus_2] "m"(internal::not_modulus_2), [not_modulus_3] "m"(internal::not_modulus_3)
-        : "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+        : "%r"(&a), "%r"(&b), "r"(&r), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3), [r_inv] "m"(internal::r_inv), [not_modulus_0] "m"(internal::not_modulus_0), [not_modulus_1] "m"(internal::not_modulus_1), [not_modulus_2] "m"(internal::not_modulus_2), [not_modulus_3] "m"(internal::not_modulus_3), [zero_reference] "m"(internal::zero_reference)
+        : "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
 /**
@@ -315,11 +313,11 @@ inline void mul_without_reduction(const field_t &a, const field_t &b, field_t &r
      *            %2: pointer to `r`
      **/
     __asm__(
-        MUL("%1", "%0")
+        MUL("%0", "%1")
         STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "%r"(&b), "%r"(&a), "r"(&r), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3), [r_inv] "m"(internal::r_inv)
-        : "%rax", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+        : "%r"(&a), "%r"(&b), "r"(&r), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3), [r_inv] "m"(internal::r_inv), [zero_reference] "m"(internal::zero_reference)
+        : "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
 inline void mul_512(const field_t &a, const field_t &b, field_wide_t &r)

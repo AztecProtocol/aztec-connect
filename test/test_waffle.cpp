@@ -3,6 +3,9 @@
 #include <barretenberg/waffle/waffle.hpp>
 #include <barretenberg/waffle/permutation.hpp>
 
+#include <barretenberg/groups/g1.hpp>
+#include <barretenberg/groups/scalar_multiplication.hpp>
+
 /*
 ```
 elliptic curve point addition on a short weierstrass curve.

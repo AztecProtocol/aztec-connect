@@ -325,7 +325,7 @@ void construct_instances_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = (size_t)log2(state.range(0)) - (int)log2(START);
+        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
         waffle::circuit_instance instance = waffle::preprocess_circuit(globals.plonk_states[idx], globals.reference_string);
         // waffle::plonk_proof proof = waffle::construct_proof(globals.plonk_states[idx], globals.reference_string);
         state.PauseTiming();
@@ -345,7 +345,7 @@ void construct_proof_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = (size_t)log2(state.range(0)) - (int)log2(START);
+        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
         waffle::plonk_proof proof = waffle::construct_proof(globals.plonk_states[idx], globals.reference_string);
         state.PauseTiming();
         globals.plonk_proofs[idx] = (proof);
@@ -365,7 +365,7 @@ void verify_proof_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = (size_t)log2(state.range(0)) - (int)log2(START);
+        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
         bool res = waffle::verifier::verify_proof(globals.plonk_proofs[idx], globals.plonk_instances[idx], globals.reference_string.SRS_T2);
         state.PauseTiming();
         if (!res)

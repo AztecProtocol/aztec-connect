@@ -3,8 +3,10 @@
 
 #include "./waffle.hpp"
 #include "./challenge.hpp"
+#include <barretenberg/fields/fq12.hpp>
+#include <barretenberg/groups/pairing.hpp>
+#include <barretenberg/polynomials/polynomials.hpp>
 #include "linearizer.hpp"
-#include "../groups/pairing.hpp"
 
 #include "../types.hpp"
 namespace waffle

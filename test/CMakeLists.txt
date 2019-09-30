@@ -24,9 +24,6 @@ mark_as_advanced(
 
 set(setup_private_include_dir ${PROJECT_SOURCE_DIR}/src)
 
-# hunter_add_package(benchmark)
-# find_package(benchmark CONFIG REQUIRED)
-
 add_subdirectory(benchmarks)
 
 add_compile_options(-Werror -Wall -Wextra -Wshadow)

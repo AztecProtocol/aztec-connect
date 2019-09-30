@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <barretenberg/groups/g1.hpp>
 #include <barretenberg/groups/g2.hpp>
 #include <barretenberg/fields/fr.hpp>
 #include <barretenberg/fields/fq12.hpp>

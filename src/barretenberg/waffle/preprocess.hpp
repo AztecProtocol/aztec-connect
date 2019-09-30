@@ -7,6 +7,8 @@
 
 #include "./permutation.hpp"
 
+#include <barretenberg/groups/g1.hpp>
+
 using namespace barretenberg;
 
 namespace waffle

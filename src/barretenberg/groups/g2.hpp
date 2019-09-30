@@ -1,6 +1,7 @@
 #ifndef G2
 #define G2
 
+#include "stdlib.h"
 #include "../fields/fq2.hpp"
 #include "../fields/fr.hpp"
 #include "../types.hpp"
@@ -371,7 +372,7 @@ inline void mul_by_q(const element &a, element &r)
 inline void neg(const element &a, element &r)
 {
     fq2::copy(a.x, r.x);
-    fq2::copy(a.y, r.y);
+    fq2::copy(a.z, r.z);
     fq2::neg(r.y, r.y);
 }
 

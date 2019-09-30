@@ -1,9 +1,6 @@
 #ifndef WAFFLE
 #define WAFFLE
 
-#include "../groups/pairing.hpp"
-#include "../groups/scalar_multiplication.hpp"
-#include "../polynomials/polynomials.hpp"
 #include "../types.hpp"
 
 namespace waffle

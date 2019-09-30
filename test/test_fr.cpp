@@ -60,8 +60,8 @@ TEST(fr, mul)
 
 TEST(fr, sqr)
 {
-    fr::field_t a = {.data = {0xca82500eceae81c2, 0x9c0bf6cd7e3143f, 0x80a9c4d587797aeb, 0x4ecc6979d0d52e1f}};
-    fr::field_t expected = {.data = {0x6decb7ee400af992, 0x49c750b52efb4aac, 0x6c00e3601ece650c, 0x22e3ed5320338284}};
+    fr::field_t a = { .data = { 0x95f946723a1fc34f, 0x641ec0482fc40bb9, 0xb8d645bc49dd513d, 0x1c1bffd317599dbc } };
+    fr::field_t expected = { .data = { 0xc787f7d9e2c72714, 0xcf21cf53d8f65f67, 0x8db109903dac0008, 0x26ab4dd65f46be5f } };
     fr::field_t result;
     fr::sqr(a, result);
     EXPECT_EQ(fr::eq(result, expected), true);

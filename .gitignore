@@ -2,3 +2,5 @@
 build
 cmake/cable
 useful_commands.txt
+composer/
+circuits/

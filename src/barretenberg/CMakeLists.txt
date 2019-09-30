@@ -20,7 +20,9 @@ add_library(
     groups/wnaf.hpp
     groups/g1.hpp
     groups/g2.hpp
+    groups/scalar_multiplication.cpp
     groups/scalar_multiplication.hpp
+    groups/pairing.cpp
     groups/pairing.hpp
     io/io.hpp
     keccak/hash_types.h
@@ -66,7 +68,9 @@ add_executable(
     groups/wnaf.hpp
     groups/g1.hpp
     groups/g2.hpp
+    groups/scalar_multiplication.cpp
     groups/scalar_multiplication.hpp
+    groups/pairing.cpp
     groups/pairing.hpp
     io/io.hpp
     keccak/hash_types.h

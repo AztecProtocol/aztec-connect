@@ -1,5 +1,7 @@
 #include "./polynomials.hpp"
 
+#include "../fields/fr.hpp"
+
 namespace barretenberg
 {
 namespace polynomials

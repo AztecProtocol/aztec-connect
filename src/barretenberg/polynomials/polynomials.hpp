@@ -5,8 +5,6 @@
 #include "string.h"
 #include "math.h"
 
-#include "../groups/g1.hpp"
-#include "../fields/fr.hpp"
 #include "../assert.hpp"
 
 #include "../types.hpp"

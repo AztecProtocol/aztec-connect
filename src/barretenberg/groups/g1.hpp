@@ -190,13 +190,15 @@ inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
     fq::sqr_without_reduction(p1.z, T0);
 
     // T1 = x2.t0 - x1 = x2.z1.z1 - x1
-    fq::mul_then_sub(p2.x, T0, p1.x, T1);
+    fq::mul(p2.x, T0, T1);
+    fq::sub(T1, p1.x, T1);
 
     // T2 = T0.z1 = z1.z1.z1
     fq::mul_without_reduction(p1.z, T0, T2);
 
     // // T2 = T2.y2 - y1 = y2.z1.z1.z1 - y1
-    fq::mul_then_sub(T2, p2.y, p1.y, T2);
+    fq::mul(T2, p2.y, T2);
+    fq::sub(T2, p1.y, T2);
 
     if (__builtin_expect(((T1.data[0] | T1.data[1] | T1.data[2] | T1.data[3]) == 0), 0))
     {
