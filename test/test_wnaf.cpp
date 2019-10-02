@@ -105,8 +105,8 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
     recover_fixed_wnaf(endo_wnaf, endo_skew, k2_recovered.data[1], k2_recovered.data[0], 5);
 
     fr::field_t result;
-    fr::mul_lambda(k2_recovered, result);
-    fr::sub(k1_recovered, result, result);
+    fr::__mul_lambda(k2_recovered, result);
+    fr::__sub(k1_recovered, result, result);
 
     EXPECT_EQ(result.data[0], k.data[0]);
     EXPECT_EQ(result.data[1], k.data[1]);

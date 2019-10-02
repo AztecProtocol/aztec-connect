@@ -13,9 +13,9 @@ base_widget(const size_t&) {}
 
 base_widget(const base_widget &) {}
 
-virtual base_widget& operator=(const base_widget &) {}
+// virtual base_widget& operator=(const base_widget &) {}
 
-virtual base_widget& operator=(base_widget &&) {}
+// virtual base_widget& operator=(base_widget &&) {}
 
 virtual ~base_widget() {}
 

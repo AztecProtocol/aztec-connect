@@ -13,7 +13,7 @@ int main()
     barretenberg::fq::field_t b_copy = { .data = { 0xb68aee5e4c8fc17c, 0xc5193de7f401d5e8, 0xb8777d4dde671db3, 0xe513e75c087b0bb } };
     barretenberg::fq::field_t expected = { .data = { 0x7ed4174114b521c4, 0x58f5bd1d4279fdc2, 0x6a73ac09ee843d41, 0x687a76ae9b3425c } };
     barretenberg::fq::field_t result = { .data = { 0,0,0,0 } };
-    barretenberg::fq::mul(a, b, result);
+    barretenberg::fq::__mul(a, b, result);
     barretenberg::fq::print(a);
     barretenberg::fq::print(b);
     barretenberg::fq::print(result);

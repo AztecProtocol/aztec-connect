@@ -90,7 +90,7 @@ void generate_pippenger_point_table(g1::affine_element *points, g1::affine_eleme
     for (size_t i = num_points - 1; i < num_points; --i)
     {
         g1::copy(&points[i], &table[i * 2]);
-        fq::mul_beta(points[i].x, table[i * 2 + 1].x);
+        fq::__mul_beta(points[i].x, table[i * 2 + 1].x);
         fq::neg(points[i].y, table[i * 2 + 1].y);
     }
 }

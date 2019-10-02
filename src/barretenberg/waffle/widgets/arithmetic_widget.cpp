@@ -39,12 +39,12 @@ void arithmetic_widget::compute_quotient_polynomial_contribution(const circuit_s
         fr::field_t T0;
         fr::field_t T1;
         fr::field_t T2;
-        fr::mul(ffts.w_r_mid[i], q_r_poly[i], T0);
-        fr::mul(ffts.w_l_mid[i], q_l_poly[i], T1);
-        fr::mul(ffts.w_o_mid[i], q_o_poly[i], T2);
-        fr::add(T0, T1, T0);
-        fr::add(T0, T2, T0);
-        fr::add(quotient_polynomial_mid[i], T0, quotient_polynomial_mid[i]);
+        fr::__mul(ffts.w_r_mid[i], q_r_poly[i], T0);
+        fr::__mul(ffts.w_l_mid[i], q_l_poly[i], T1);
+        fr::__mul(ffts.w_o_mid[i], q_o_poly[i], T2);
+        fr::__add(T0, T1, T0);
+        fr::__add(T0, T2, T0);
+        fr::__add(quotient_polynomial_mid[i], T0, quotient_polynomial_mid[i]);
     ITERATE_OVER_DOMAIN_END;
 
     polynomials::ifft(&q_m[0], state.small_domain);
@@ -53,9 +53,9 @@ void arithmetic_widget::compute_quotient_polynomial_contribution(const circuit_s
 
     ITERATE_OVER_DOMAIN_START(state.large_domain);
     fr::field_t T0;
-    fr::mul(ffts.w_l_large[i], ffts.w_r_large[i], T0);
-    fr::mul(T0, q_m_poly[i], T0);
-    fr::add(quotient_polynomial_large[i], T0, quotient_polynomial_large[i]);
+    fr::__mul(ffts.w_l_large[i], ffts.w_r_large[i], T0);
+    fr::__mul(T0, q_m_poly[i], T0);
+    fr::__add(quotient_polynomial_large[i], T0, quotient_polynomial_large[i]);
     ITERATE_OVER_DOMAIN_END;
 }
 }

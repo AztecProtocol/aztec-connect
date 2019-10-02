@@ -133,3 +133,8 @@ struct keccak256 hash_field_elements(const uint64_t *limbs, size_t num_elements)
 
     return ethash_keccak256(input_buffer, num_elements * 32);
 }
+
+struct keccak256 hash_field_element(const uint64_t* limb)
+{
+    return hash_field_elements(limb, 1);
+}

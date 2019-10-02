@@ -104,13 +104,13 @@ void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *da
         fr::copy(w_r_acc, state.w_r[i]);
         fr::copy(state.q_o[i], state.w_o[i]);
 
-        fr::mul(q_m_acc, q_m_seed, q_m_acc);
-        fr::mul(q_l_acc, q_l_seed, q_l_acc);
-        fr::mul(q_r_acc, q_r_seed, q_r_acc);
-        fr::mul(q_o_acc, q_o_seed, q_o_acc);
-        fr::mul(q_c_acc, q_c_seed, q_c_acc);
-        fr::mul(w_l_acc, w_l_seed, w_l_acc);
-        fr::mul(w_r_acc, w_r_seed, w_r_acc);
+        fr::__mul(q_m_acc, q_m_seed, q_m_acc);
+        fr::__mul(q_l_acc, q_l_seed, q_l_acc);
+        fr::__mul(q_r_acc, q_r_seed, q_r_acc);
+        fr::__mul(q_o_acc, q_o_seed, q_o_acc);
+        fr::__mul(q_c_acc, q_c_seed, q_c_acc);
+        fr::__mul(w_l_acc, w_l_seed, w_l_acc);
+        fr::__mul(w_r_acc, w_r_seed, w_r_acc);
 
         fr::copy(fr::zero(), state.q_m[i + 1]);
         fr::copy(q_l_acc, state.q_l[i + 1]);
@@ -121,28 +121,28 @@ void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *da
         fr::copy(w_r_acc, state.w_r[i + 1]);
         fr::copy(state.q_o[i + 1], state.w_o[i + 1]);
 
-        fr::mul(q_m_acc, q_m_seed, q_m_acc);
-        fr::mul(q_l_acc, q_l_seed, q_l_acc);
-        fr::mul(q_r_acc, q_r_seed, q_r_acc);
-        fr::mul(q_o_acc, q_o_seed, q_o_acc);
-        fr::mul(q_c_acc, q_c_seed, q_c_acc);
-        fr::mul(w_l_acc, w_l_seed, w_l_acc);
-        fr::mul(w_r_acc, w_r_seed, w_r_acc);
+        fr::__mul(q_m_acc, q_m_seed, q_m_acc);
+        fr::__mul(q_l_acc, q_l_seed, q_l_acc);
+        fr::__mul(q_r_acc, q_r_seed, q_r_acc);
+        fr::__mul(q_o_acc, q_o_seed, q_o_acc);
+        fr::__mul(q_c_acc, q_c_seed, q_c_acc);
+        fr::__mul(w_l_acc, w_l_seed, w_l_acc);
+        fr::__mul(w_r_acc, w_r_seed, w_r_acc);
     }
     fr::field_t* scratch_mem = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * n / 2));
     fr::batch_invert(state.w_o, n / 2, scratch_mem);
     free(scratch_mem);
     for (size_t i = 0; i < n / 2; ++i)
     {
-        fr::mul(state.q_l[i], state.w_l[i], T0);
-        fr::mul(state.q_r[i], state.w_r[i], T1);
-        fr::mul(state.w_l[i], state.w_r[i], T2);
-        fr::mul(T2, state.q_m[i], T2);
-        fr::add(T0, T1, T0);
-        fr::add(T0, T2, T0);
-        fr::add(T0, state.q_c[i], T0);
+        fr::__mul(state.q_l[i], state.w_l[i], T0);
+        fr::__mul(state.q_r[i], state.w_r[i], T1);
+        fr::__mul(state.w_l[i], state.w_r[i], T2);
+        fr::__mul(T2, state.q_m[i], T2);
+        fr::__add(T0, T1, T0);
+        fr::__add(T0, T2, T0);
+        fr::__add(T0, state.q_c[i], T0);
         fr::neg(T0, T0);
-        fr::mul(state.w_o[i], T0, state.w_o[i]);
+        fr::__mul(state.w_o[i], T0, state.w_o[i]);
     }
     size_t shift = n / 2;
     polynomials::copy_polynomial(state.w_l, state.w_l + shift, shift, shift);
@@ -220,7 +220,7 @@ void generate_scalars(fr::field_t *scalars)
     fr::copy(T0, acc);
     for (size_t i = 0; i < MAX_GATES; ++i)
     {
-        fr::mul(acc, T0, acc);
+        fr::__mul(acc, T0, acc);
         fr::copy(acc, scalars[i]);
     }
 }
@@ -238,8 +238,8 @@ void reset_proof_state(waffle::circuit_state& state)
 {
     fr::field_t beta_inv;
     fr::field_t alpha_inv;
-    fr::invert(state.challenges.beta, beta_inv);
-    fr::invert(state.challenges.alpha, alpha_inv);
+    fr::__invert(state.challenges.beta, beta_inv);
+    fr::__invert(state.challenges.alpha, alpha_inv);
     polynomials::fft(state.w_l, state.small_domain);
     polynomials::fft(state.w_r, state.small_domain);
     polynomials::fft(state.w_o, state.small_domain);
@@ -286,8 +286,8 @@ const auto init = []() {
     globals.domain = polynomials::get_domain(4 * MAX_GATES);
     for (size_t i = 1; i < 4 * MAX_GATES; ++i)
     {
-        fr::mul(globals.roots[i - 1], globals.domain.root, globals.roots[i]);
-        fr::mul(globals.coefficients[i - 1], z, globals.coefficients[i]);
+        fr::__mul(globals.roots[i - 1], globals.domain.root, globals.roots[i]);
+        fr::__mul(globals.coefficients[i - 1], z, globals.coefficients[i]);
     }
     globals.domain.roots = globals.roots;
     printf("finished generating test data\n");
@@ -306,7 +306,7 @@ inline uint64_t fq_sqr_asm(fq::field_t& a, fq::field_t& r) noexcept
 {
     for (size_t i = 0; i < NUM_SQUARINGS; ++i)
     {
-        fq::sqr(a, r);
+        fq::__sqr(a, r);
     }
     return 1;
 }
@@ -316,7 +316,7 @@ inline uint64_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
 {
     for (size_t i = 0; i < NUM_MULTIPLICATIONS; ++i)
     {
-        fq::mul(a, r, r);
+        fq::__mul(a, r, r);
     }
     return 1;
 }

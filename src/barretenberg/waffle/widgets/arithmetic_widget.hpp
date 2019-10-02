@@ -25,22 +25,22 @@ public:
 
     arithmetic_widget(const arithmetic_widget &other) : base_widget(other)
     {
-        std::copy(other.q_m.begin(), other.q_m.end(), q_m);
-        std::copy(other.q_l.begin(), other.q_l.end(), q_l);
-        std::copy(other.q_r.begin(), other.q_r.end(), q_r);
-        std::copy(other.q_o.begin(), other.q_o.end(), q_o);
-        std::copy(other.q_c.begin(), other.q_c.end(), q_c);
+        // std::copy(other.q_m.begin(), other.q_m.end(), q_m);
+        // std::copy(other.q_l.begin(), other.q_l.end(), q_l);
+        // std::copy(other.q_r.begin(), other.q_r.end(), q_r);
+        // std::copy(other.q_o.begin(), other.q_o.end(), q_o);
+        // std::copy(other.q_c.begin(), other.q_c.end(), q_c);
     }
 
-    arithmetic_widget& operator=(const arithmetic_widget &other)
-    {
+    // arithmetic_widget& operator=(const arithmetic_widget &)
+    // {
 
-    }
+    // }
 
-    arithmetic_widget& operator=(arithmetic_widget &&other)
-    {
+    // arithmetic_widget& operator=(arithmetic_widget &&)
+    // {
 
-    }
+    // }
 
     ~arithmetic_widget()
     {

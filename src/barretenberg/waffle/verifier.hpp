@@ -42,97 +42,97 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instan
     fr::field_t T2;
     for (size_t i = 1; i < 6; ++i)
     {
-        fr::mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
+        fr::__mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
     }
 
-    fr::mul(lagrange_evals.l_n_minus_1, alpha_pow[3], T0);
+    fr::__mul(lagrange_evals.l_n_minus_1, alpha_pow[3], T0);
 
-    fr::sub(proof.z_1_shifted_eval, proof.z_2_shifted_eval, T1);
-    fr::mul(T0, T1, T0);
+    fr::__sub(proof.z_1_shifted_eval, proof.z_2_shifted_eval, T1);
+    fr::__mul(T0, T1, T0);
 
-    fr::mul(proof.z_1_shifted_eval, alpha_pow[1], T1);
-    fr::mul(proof.z_2_shifted_eval, alpha_pow[2], T2);
-    fr::add(T1, T2, T1);
-    fr::sub(T0, T1, T0);
+    fr::__mul(proof.z_1_shifted_eval, alpha_pow[1], T1);
+    fr::__mul(proof.z_2_shifted_eval, alpha_pow[2], T2);
+    fr::__add(T1, T2, T1);
+    fr::__sub(T0, T1, T0);
 
-    fr::add(alpha_pow[4], alpha_pow[5], T2);
-    fr::mul(T2, lagrange_evals.l_1, T2);
-    fr::sub(T0, T2, T0);
-    fr::add(T0, proof.linear_eval, t_eval);
-    fr::invert(lagrange_evals.vanishing_poly, T0);
-    fr::mul(t_eval, T0, t_eval);
+    fr::__add(alpha_pow[4], alpha_pow[5], T2);
+    fr::__mul(T2, lagrange_evals.l_1, T2);
+    fr::__sub(T0, T2, T0);
+    fr::__add(T0, proof.linear_eval, t_eval);
+    fr::__invert(lagrange_evals.vanishing_poly, T0);
+    fr::__mul(t_eval, T0, t_eval);
     fr::field_t z_pow_n;
     fr::field_t z_pow_2n;
     fr::pow_small(challenges.z, instance.n, z_pow_n);
     fr::pow_small(challenges.z, instance.n * 2, z_pow_2n);
-    fr::mul(proof.t_mid_eval, z_pow_n, T0);
-    fr::mul(proof.t_hi_eval, z_pow_2n, T1);
-    fr::sub(t_eval, T0, t_eval);
-    fr::sub(t_eval, T1, t_eval);
+    fr::__mul(proof.t_mid_eval, z_pow_n, T0);
+    fr::__mul(proof.t_hi_eval, z_pow_2n, T1);
+    fr::__sub(t_eval, T0, t_eval);
+    fr::__sub(t_eval, T1, t_eval);
 
     challenges.nu = compute_linearisation_challenge(proof, t_eval);
     fr::copy(challenges.nu, nu_pow[0]);
     for (size_t i = 1; i < 11; ++i)
     {
-        fr::mul(nu_pow[i - 1], nu_pow[0], nu_pow[i]);
+        fr::__mul(nu_pow[i - 1], nu_pow[0], nu_pow[i]);
     }
 
     // reconstruct Kate opening commitments from committed values
-    fr::mul(linear_terms.q_m, nu_pow[2], linear_terms.q_m);
-    fr::mul(linear_terms.q_l, nu_pow[2], linear_terms.q_l);
-    fr::mul(linear_terms.q_r, nu_pow[2], linear_terms.q_r);
-    fr::mul(linear_terms.q_o, nu_pow[2], linear_terms.q_o);
-    fr::mul(linear_terms.q_c, nu_pow[2], linear_terms.q_c);
-    fr::mul(linear_terms.z_1, nu_pow[2], linear_terms.z_1);
-    fr::mul(linear_terms.z_2, nu_pow[2], linear_terms.z_2);
+    fr::__mul(linear_terms.q_m, nu_pow[2], linear_terms.q_m);
+    fr::__mul(linear_terms.q_l, nu_pow[2], linear_terms.q_l);
+    fr::__mul(linear_terms.q_r, nu_pow[2], linear_terms.q_r);
+    fr::__mul(linear_terms.q_o, nu_pow[2], linear_terms.q_o);
+    fr::__mul(linear_terms.q_c, nu_pow[2], linear_terms.q_c);
+    fr::__mul(linear_terms.z_1, nu_pow[2], linear_terms.z_1);
+    fr::__mul(linear_terms.z_2, nu_pow[2], linear_terms.z_2);
 
-    fr::mul(nu_pow[9], u, T0);
-    fr::add(linear_terms.z_1, T0, linear_terms.z_1);
-    fr::mul(nu_pow[10], u, T0);
-    fr::add(linear_terms.z_2, T0, linear_terms.z_2);
+    fr::__mul(nu_pow[9], u, T0);
+    fr::__add(linear_terms.z_1, T0, linear_terms.z_1);
+    fr::__mul(nu_pow[10], u, T0);
+    fr::__add(linear_terms.z_2, T0, linear_terms.z_2);
 
     fr::field_t batch_evaluation;
     fr::copy(t_eval, batch_evaluation);
-    fr::mul(nu_pow[2], proof.linear_eval, T0);
-    fr::add(batch_evaluation, T0, batch_evaluation);
+    fr::__mul(nu_pow[2], proof.linear_eval, T0);
+    fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[3], proof.w_l_eval, T0);
-    fr::add(batch_evaluation, T0, batch_evaluation);
+    fr::__mul(nu_pow[3], proof.w_l_eval, T0);
+    fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[4], proof.w_r_eval, T0);
-    fr::add(batch_evaluation, T0, batch_evaluation);
+    fr::__mul(nu_pow[4], proof.w_r_eval, T0);
+    fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[5], proof.w_o_eval, T0);
-    fr::add(batch_evaluation, T0, batch_evaluation);
+    fr::__mul(nu_pow[5], proof.w_o_eval, T0);
+    fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[6], proof.sigma_1_eval, T0);
-    fr::add(batch_evaluation, T0, batch_evaluation);
+    fr::__mul(nu_pow[6], proof.sigma_1_eval, T0);
+    fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[7], proof.sigma_2_eval, T0);
-    fr::add(batch_evaluation, T0, batch_evaluation);
+    fr::__mul(nu_pow[7], proof.sigma_2_eval, T0);
+    fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[8], proof.sigma_3_eval, T0);
-    fr::add(batch_evaluation, T0, batch_evaluation);
+    fr::__mul(nu_pow[8], proof.sigma_3_eval, T0);
+    fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[9], u, T0);
-    fr::mul(T0, proof.z_1_shifted_eval, T0);
-    fr::add(batch_evaluation, T0, batch_evaluation);
+    fr::__mul(nu_pow[9], u, T0);
+    fr::__mul(T0, proof.z_1_shifted_eval, T0);
+    fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[10], u, T0);
-    fr::mul(T0, proof.z_2_shifted_eval, T0);
-    fr::add(batch_evaluation, T0, batch_evaluation);
+    fr::__mul(nu_pow[10], u, T0);
+    fr::__mul(T0, proof.z_2_shifted_eval, T0);
+    fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[0], proof.t_mid_eval, T0);
-    fr::add(batch_evaluation, T0, batch_evaluation);
+    fr::__mul(nu_pow[0], proof.t_mid_eval, T0);
+    fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::mul(nu_pow[1], proof.t_hi_eval, T0);
-    fr::add(batch_evaluation, T0, batch_evaluation);
+    fr::__mul(nu_pow[1], proof.t_hi_eval, T0);
+    fr::__add(batch_evaluation, T0, batch_evaluation);
 
     fr::neg(batch_evaluation, batch_evaluation);
 
     fr::field_t z_omega_scalar;
-    fr::mul(challenges.z, domain.root, z_omega_scalar);
-    fr::mul(z_omega_scalar, u, z_omega_scalar);
+    fr::__mul(challenges.z, domain.root, z_omega_scalar);
+    fr::__mul(z_omega_scalar, u, z_omega_scalar);
 
     // TODO: make a wrapper around g1 ops so...this guff isn't needed each time we want to do a scalar mul
     fr::field_t *scalar_exponents = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * 18);
