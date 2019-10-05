@@ -42,18 +42,18 @@ inline void mul_by_non_residue(const fq2::fq2_t &a, fq2::fq2_t &r)
     fq::field_t T1;
     fq::field_t T2;
 
-    fq::add(a.c0, a.c0, T0); // T0 = 2a.c0
-    fq::add(T0, T0, T0);     // T0 = 4a.c0
-    fq::add(T0, T0, T0);     // T0 = 8a.c0
-    fq::add(T0, a.c0, T0);   // T0 = 9a.c0
+    fq::__add(a.c0, a.c0, T0); // T0 = 2a.c0
+    fq::__add(T0, T0, T0);     // T0 = 4a.c0
+    fq::__add(T0, T0, T0);     // T0 = 8a.c0
+    fq::__add(T0, a.c0, T0);   // T0 = 9a.c0
 
-    fq::add(a.c1, a.c1, T1); // T1 = 2a.c1
-    fq::add(T1, T1, T1);     // T1 = 4a.c1
-    fq::add(T1, T1, T1);     // T1 = 8a.c1
-    fq::add(T1, a.c1, T1);   // T1 = 9a.c1
+    fq::__add(a.c1, a.c1, T1); // T1 = 2a.c1
+    fq::__add(T1, T1, T1);     // T1 = 4a.c1
+    fq::__add(T1, T1, T1);     // T1 = 8a.c1
+    fq::__add(T1, a.c1, T1);   // T1 = 9a.c1
 
-    fq::sub(T0, a.c1, T2);   // T2 = 9a.c0 - a.c1
-    fq::add(T1, a.c0, r.c1); // r.c1 = 9a.c1 + a.c0
+    fq::__sub(T0, a.c1, T2);   // T2 = 9a.c0 - a.c1
+    fq::__add(T1, a.c0, r.c1); // r.c1 = 9a.c1 + a.c0
     fq::copy(T2, r.c0);      // r.c0 = T2
 }
 

@@ -7,11 +7,13 @@ include(GNUInstallDirs)
 include(cmake/OptimizeForArchitecture.cmake)
 include(cmake/AddCompilerFlag.cmake)
 
+# set(CMAKE_CXX_COMPILER "/usr/local/clang_9.0.0/bin/clang++")
+# set(CMAKE_C_COMPILER "/usr/local/clang_9.0.0/bin/clang")
+
 set(PROJECT_VERSION 0.1.0)
 project(Barretenberg
     DESCRIPTION "BN254 elliptic curve library, and PLONK SNARK prover"
     LANGUAGES CXX C)
-
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_EXTENSIONS ON)
@@ -21,7 +23,6 @@ set(CMAKE_CXX_EXTENSIONS ON)
 
 if(APPLE)
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
-    set(STATUS "foo")
     set(OpenMP_C "${CMAKE_C_COMPILER}")
     set(OpenMP_C_FLAGS "-fopenmp=libomp -Wno-unused-command-line-argument")
     set(OpenMP_C_LIB_NAMES "libomp" "libgomp" "libiomp5")
@@ -38,7 +39,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(OpenMP_libiomp5_LIBRARY ${OpenMP_CXX_LIB_NAMES})
 endif()
 endif()
-find_package(OpenMP REQUIRED)
+# find_package(OpenMP REQUIRED)
 
 set(default_build_type "Release")
 # Set a default build type if none was specified
@@ -59,7 +60,8 @@ if(DISABLE_SHENANIGANS)
     add_definitions(-DDISABLE_SHENANIGANS=1)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -O3 -fopenmp")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native -O3 -m64 -fopenmp")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -fopenmp -save-temps")
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)
@@ -72,7 +74,7 @@ add_subdirectory(src)
 option(BARRETENBERG_TESTING "Build tests" ON)
 
 if(BARRETENBERG_TESTING)
-    message(STATUS "Compiling tests and benchmarks")
+    message(STATUS "Configuring tests and benchmarks")
     enable_testing()
     add_subdirectory(test)
 endif()

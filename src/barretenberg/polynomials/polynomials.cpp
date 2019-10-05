@@ -1,11 +1,13 @@
 #include "./polynomials.hpp"
 
+#include "../fields/fr.hpp"
+
 namespace barretenberg
 {
 namespace polynomials
 {
-namespace
-{
+// namespace
+// {
 inline uint32_t reverse_bits(uint32_t x, uint32_t bit_length)
 {
     x = (((x & 0xaaaaaaaa) >> 1) | ((x & 0x55555555) << 1));
@@ -15,65 +17,123 @@ inline uint32_t reverse_bits(uint32_t x, uint32_t bit_length)
     return (((x >> 16) | (x << 16))) >> (32 - bit_length);
 }
 
-// TODO: need to compare the following:
-//  1. Compute all of the roots of unity over and over again like it's groundhog day
-//  2. Compute a lookup table of the roots of unity, and suffer through cache misses from nonlinear access patterns
-void fft_inner_serial(fr::field_t *coeffs, const fr::field_t &root, const size_t domain_size)
+void compute_root_table(fr::field_t& input_root, size_t size, fr::field_t* roots, fr::field_t** round_roots)
 {
-    fr::field_t temp;
-    size_t log2_size = (size_t)log2(domain_size);
-    // efficiently separate odd and even indices - (An introduction to algorithms, section 30.3)
-    for (size_t i = 0; i <= domain_size; ++i)
+    size_t num_rounds = (size_t)log2(size);
+    // roots = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * size);
+    // round_roots = (fr::field_t **)malloc(sizeof(fr::field_t *) * num_rounds);
+    round_roots[0] = &roots[0];
+    for (size_t i = 1; i < num_rounds - 1; ++i)
     {
-        uint32_t swap_index = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)log2_size);
-        // TODO: should probably use CMOV here insead of an if statement
-        if (i < swap_index)
-        {
-            fr::swap(coeffs[i], coeffs[swap_index]);
-        }
+        round_roots[i] = round_roots[i - 1] + (1UL << (i));
     }
 
-    // For butterfly operations, we use lazy reduction techniques.
-    // Modulus is 254 bits, so we can 'overload' a field element by 4x and still fit it in 4 machine words.
-    // We can validate that field elements are <2p and not risk overflowing. Means we can cut
-    // two modular reductions from the main loop
-
-    // perform first butterfly iteration explicitly: x0 = x0 + x1, x1 = x0 - x1
-    for (size_t k = 0; k < domain_size; k += 2)
-    {
-        fr::copy(coeffs[k + 1], temp);
-        fr::sub_with_coarse_reduction(coeffs[k], coeffs[k + 1], coeffs[k + 1]);
-        fr::add_with_coarse_reduction(temp, coeffs[k], coeffs[k]);
-    }
     fr::field_t round_root;
-    fr::field_t work_root;
-    for (size_t m = 2; m < domain_size; m *= 2)
+    for (size_t i = 0; i < num_rounds - 1; ++i)
     {
-        fr::copy(root, round_root);
-        fr::pow_small(round_root, (domain_size / (2 * m)), round_root);
-        for (size_t k = 0; k < domain_size; k += (2 * m))
+        size_t m = 1UL << (i + 1);
+        fr::copy(input_root, round_root);
+        fr::pow_small(round_root, (size / (2 * m)), round_root);
+        fr::one(round_roots[i][0]);
+
+        for (size_t j = 1; j < m; ++j)
         {
-            // TODO: special case for j = 0, k = 0
-            fr::one(work_root);
-            for (size_t j = 0; j < m; ++j)
-            {
-                fr::mul_without_reduction(work_root, coeffs[k + j + m], temp);
-                fr::sub_with_coarse_reduction(coeffs[k + j], temp, coeffs[k + j + m]);
-                fr::add_with_coarse_reduction(coeffs[k + j], temp, coeffs[k + j]);
-                fr::mul_without_reduction(work_root, round_root, work_root);
-            }
+            fr::__mul_without_reduction(round_roots[i][j - 1], round_root, round_roots[i][j]);
         }
     }
 }
 
-// TODO: need to compare the following:
-//  1. Compute all of the roots of unity over and over again like it's groundhog day
-//  2. Compute a lookup table of the roots of unity, and suffer through cache misses from nonlinear access patterns
-void fft_alternate_inner_serial(fr::field_t *coeffs, const fr::field_t &, const size_t domain_size, fr::field_t *roots, const size_t big_domain_size, const size_t domain_offset)
+evaluation_domain::evaluation_domain(size_t num_elements, bool skip_roots)
+{
+    size_t n = (size_t)log2(num_elements);
+    if ((1UL << n) != num_elements)
+    {
+        ++n;
+    }
+    size = 1UL << n;
+    log2_size = n;
+    fr::get_root_of_unity(log2_size, root);
+    fr::__invert(root, root_inverse);
+    domain = {.data = {size, 0, 0, 0}};
+    fr::to_montgomery_form(domain, domain);
+    fr::__invert(domain, domain_inverse);
+    generator = fr::multiplicative_generator();
+    generator_inverse = fr::multiplicative_generator_inverse();
+#ifndef NO_MULTITHREADING
+    num_threads = (size_t)omp_get_max_threads();
+#else
+    num_threads = 1;
+#endif
+    if (num_threads >= size)
+    {
+        num_threads = 1;
+    }
+    log2_num_threads = (size_t)log2(num_threads);
+    log2_thread_size = log2_size - log2_num_threads;
+    thread_size = 1UL << log2_thread_size;
+ 
+    if (skip_roots)
+    {
+        roots = nullptr;
+        round_roots = nullptr;
+        inverse_roots = nullptr;
+        inverse_round_roots = nullptr;
+    }
+    else
+    {
+        roots = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * size);
+        round_roots = (fr::field_t **)malloc(sizeof(fr::field_t *) * log2_size);
+        inverse_roots = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * size);
+        inverse_round_roots = (fr::field_t **)malloc(sizeof(fr::field_t *) * log2_size);
+
+        compute_root_table(root, size, roots, round_roots);
+        compute_root_table(root_inverse, size, inverse_roots, inverse_round_roots);
+    }
+}
+
+evaluation_domain::evaluation_domain(const evaluation_domain& other)
+{
+    printf("TODO: implement evaluation domain copy constructor!n");
+    ASSERT(true == false);
+    fr::copy(other.generator, generator);
+    fr::copy(other.generator_inverse, generator_inverse);
+    fr::copy(other.domain, domain);
+    fr::copy(other.domain_inverse, domain_inverse);
+    fr::copy(other.root_inverse, root_inverse);
+    fr::copy(other.root, root);
+    size = other.size;
+    num_threads = other.num_threads;
+    log2_num_threads = other.log2_num_threads;
+    log2_thread_size = other.log2_thread_size;
+    thread_size = other.thread_size;
+    log2_size = other.log2_size;
+}
+
+evaluation_domain::~evaluation_domain() {
+    if (roots != nullptr)
+    {
+        free(roots);
+    }
+    if (inverse_roots != nullptr)
+    {
+        free(inverse_roots);
+    }
+    if (round_roots != nullptr)
+    {
+        free(round_roots);
+    }
+    if (inverse_round_roots != nullptr)
+    {
+        free(inverse_round_roots);
+    }
+}
+
+void fft_inner_serial(fr::field_t *coeffs, const size_t domain_size, const fr::field_t** root_table)
 {
     fr::field_t temp;
     size_t log2_size = (size_t)log2(domain_size);
     // efficiently separate odd and even indices - (An introduction to algorithms, section 30.3)
+
     for (size_t i = 0; i <= domain_size; ++i)
     {
         uint32_t swap_index = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)log2_size);
@@ -90,116 +150,146 @@ void fft_alternate_inner_serial(fr::field_t *coeffs, const fr::field_t &, const 
     // two modular reductions from the main loop
 
     // perform first butterfly iteration explicitly: x0 = x0 + x1, x1 = x0 - x1
-    size_t domain_mask = big_domain_size - 1;
     for (size_t k = 0; k < domain_size; k += 2)
     {
         fr::copy(coeffs[k + 1], temp);
-        fr::sub_with_coarse_reduction(coeffs[k], coeffs[k + 1], coeffs[k + 1]);
-        fr::add_with_coarse_reduction(temp, coeffs[k], coeffs[k]);
+        fr::__sub_with_coarse_reduction(coeffs[k], coeffs[k + 1], coeffs[k + 1]);
+        fr::__add_with_coarse_reduction(temp, coeffs[k], coeffs[k]);
     }
+
     for (size_t m = 2; m < domain_size; m *= 2)
     {
-        // fr::copy(root, round_root);
-        // fr::pow_small(round_root, (domain_size / (2 * m)), round_root);
-        size_t root_step = domain_offset * (domain_size / (2 * m));
+        const size_t i = (size_t)log2(m);
         for (size_t k = 0; k < domain_size; k += (2 * m))
         {
-            // TODO: special case for j = 0, k = 0
-            // fr::one(work_root);
-            size_t root_idx = 0;
             for (size_t j = 0; j < m; ++j)
             {
-                // adding root_idx at each iteration
-                // size_t idx = (root_step * j) & domain_mask;
-                __builtin_prefetch(&roots[(root_idx + root_step) & domain_mask]);
-
-                fr::mul_without_reduction(roots[root_idx & domain_mask], coeffs[k + j + m], temp);
-                fr::sub_with_coarse_reduction(coeffs[k + j], temp, coeffs[k + j + m]);
-                fr::add_with_coarse_reduction(coeffs[k + j], temp, coeffs[k + j]);
-                root_idx += root_step;
-                // fr::mul_without_reduction(work_root, round_root, work_root);
+                fr::__mul_without_reduction(root_table[i - 1][j], coeffs[k + j + m], temp);
+                fr::__sub_with_coarse_reduction(coeffs[k + j], temp, coeffs[k + j + m]);
+                fr::__add_with_coarse_reduction(coeffs[k + j], temp, coeffs[k + j]);
             }
         }
     }
 }
 
 
-void fft_alternate_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &root)
+void fft_inner_parallel_old(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &, const fr::field_t** root_table)
 {
-    if (domain.num_threads >= domain.size)
+    if (domain.size < 32)
     {
-        printf("owiejroiawerowaierjowirjowir\n");
-        fft_alternate_inner_serial(coeffs, root, domain.size, domain.roots, domain.size, 1);
-
+        fft_inner_serial(coeffs, domain.size, root_table);
         for (size_t i = 0; i < domain.size; ++i)
         {
             fr::reduce_once(coeffs[i], coeffs[i]);
         }
         return;
     }
+    size_t log2_size = (size_t)log2(domain.size);
+    // efficiently separate odd and even indices - (An introduction to algorithms, section 30.3)
 
-    fr::field_t *thread_coeffs = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * domain.size);
-    // TODO: do we care about core sizes that aren't powers of 2?
-    // ASSERT(2 ** log2_num_threads == num_threads);
-
-    fr::field_t thread_omega;
-    fr::pow_small(root, (1UL << domain.log2_num_threads), thread_omega);
+    fr::field_t* scratch_space = (fr::field_t*)aligned_alloc(64, sizeof(fr::field_t) * domain.size);
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+    for (size_t j = 0; j < domain.num_threads; ++j)
+    {
+        for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i)
+        {
+            uint32_t swap_index = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)log2_size);
+            fr::copy(coeffs[i], scratch_space[swap_index]);
+        }
+    }
 
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
-    for (size_t i = 0; i < domain.num_threads; ++i)
+    for (size_t j = 0; j < domain.num_threads; ++j)
     {
-        fr::field_t work_root;
-        fr::field_t work_step;
-        fr::pow_small(root, i, work_root);
-        fr::pow_small(root, (i << domain.log2_thread_size), work_step);
-
-        // fr::field_t accumulator = fr::one();
-        size_t index_mask = domain.size - 1;
-        size_t thread_coeffs_index = i * domain.thread_size;
-        fr::field_t T0;
-        fr::field_t T1;
-        size_t root_index = 0;
-        size_t domain_mask = domain.size - 1;
-        for (size_t j = 0; j < (1UL << domain.log2_thread_size); ++j)
+        fr::field_t temp;
+        for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); i += 2)
         {
-            fr::zero(T0);
-            for (size_t k = 0; k < domain.size; k += domain.thread_size)
+            fr::copy(scratch_space[i + 1], temp);
+            fr::__sub_with_coarse_reduction(scratch_space[i], scratch_space[i + 1], scratch_space[i + 1]);
+            fr::__add_with_coarse_reduction(temp, scratch_space[i], scratch_space[i]);
+        }
+    }
+
+   // size_t end = domain.size >> 1;
+    //size_t thread_end = domain.thread_size >> 1;
+    size_t thread_step = domain.thread_size >> 1;
+    for (size_t m = 2; m < (domain.size >> 1); m <<= 1)
+    {
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+        for (size_t q = 0; q < domain.num_threads; ++q)
+        {
+            const size_t i = (size_t)log2(m);
+            const size_t block_mask = m - 1;
+            fr::field_t temp1;
+            // fr::field_t temp2;
+            size_t thread_end = (q + 1) * thread_step;
+            const fr::field_t* roots = root_table[i - 1];
+            for (size_t z = (q * (thread_step)); z < thread_end; ++z)
             {
-                size_t idx = (j + k) & index_mask;
-                fr::mul_without_reduction(coeffs[idx], domain.roots[root_index & domain_mask], T1);
-                fr::add_with_coarse_reduction(T0, T1, T0);
-                root_index += (i << domain.log2_thread_size);
+                size_t k1 = z >> i << (i + 1); // (z / (m)) * (m * 2);        // k
+                size_t j1 = z & block_mask; // j
+                // if ((k + j) == m - 1 || (k + j) == m - 2)
+                // {
+                //     printf("thread %lu. k = %lu, j = %lu, k + j = %lu\n", q, k, j, k+j);
+                // }
+                // __builtin_prefetch(&scratch_space[k1 + j1 + 2]);
+                // __builtin_prefetch(&scratch_space[k1 + j1 + m + 2]);
+                fr::__mul_without_reduction(roots[j1], scratch_space[k1 + j1 + m], temp1);
+                // fr::__mul_without_reduction(roots[j1 + 1], scratch_space[k1 + j1 + m + 1], temp2);
+                fr::__sub_with_coarse_reduction(scratch_space[k1 + j1], temp1, scratch_space[k1 + j1 + m]);
+                fr::__add_with_coarse_reduction(scratch_space[k1 + j1], temp1, scratch_space[k1 + j1]);
+                // fr::__sub_with_coarse_reduction(scratch_space[k1 + j1 + 1], temp2, scratch_space[k1 + j1 + m + 1]);
+                // fr::__add_with_coarse_reduction(scratch_space[k1 + j1 + 1], temp2, scratch_space[k1 + j1 + 1]);
             }
-            fr::copy(T0, thread_coeffs[thread_coeffs_index + j]);
-            root_index += i;
         }
-
-        fft_alternate_inner_serial(&thread_coeffs[thread_coeffs_index], thread_omega, domain.thread_size, domain.roots, domain.size, (1UL << domain.log2_num_threads));
     }
 
-    // We need to copy our redults from the temporary array, into our coefficient array.
-    // We also need to correct for lazy reduction - coefficients may be p greater than the actual value
+    if (domain.size < 4) // disgusting! TODO: fix ugly exception
+    {
+        for (size_t i = 0; i < domain.size; ++i)
+        {
+            fr::reduce_once(scratch_space[i], coeffs[i]);
+        }
+        free(scratch_space);
+        return;
+    }
+
+    size_t m = domain.size / 2;
+
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
-    for (size_t i = 0; i < domain.num_threads; ++i)
+    for (size_t q = 0; q < domain.num_threads; ++q)
     {
-        for (size_t j = 0; j < domain.thread_size; ++j)
+        size_t thread_end = (q + 1) * thread_step;
+        fr::field_t temp;
+        const size_t i = (size_t)log2(m);
+        const size_t block_mask = m - 1;
+        for (size_t z = (q * (thread_step)); z < thread_end; ++z)
         {
-            fr::reduce_once(thread_coeffs[i * domain.thread_size + j], coeffs[(j << domain.log2_num_threads) + i]);
+            size_t k = z >> i << (i + 1); // (z / (m)) * (m * 2);        // k
+            size_t j = z & block_mask;      // j
+            // printf("thread %lu. k = %lu, j = %lu, k + j = %lu\n", q, k, j, k+j);
+            fr::__mul_without_reduction(root_table[i - 1][j], scratch_space[k + j + m], temp);
+            fr::__sub_with_coarse_reduction(scratch_space[k + j], temp, scratch_space[k + j + m]);
+            fr::reduce_once(scratch_space[k + j + m], coeffs[k + j + m]);
+            fr::__add_with_coarse_reduction(scratch_space[k + j], temp, scratch_space[k + j]);
+            fr::reduce_once(scratch_space[k + j], coeffs[k + j]);
         }
     }
-
-    free(thread_coeffs);
+    free(scratch_space);
 }
-
-void fft_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &root)
+void fft_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &root, const fr::field_t** root_table)
 {
     if (domain.num_threads >= domain.size)
     {
-        fft_inner_serial(coeffs, root, domain.size);
+        fft_inner_serial(coeffs, domain.size, (const fr::field_t**)root_table);
 
         for (size_t i = 0; i < domain.size; ++i)
         {
@@ -207,7 +297,6 @@ void fft_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, co
         }
         return;
     }
-
     fr::field_t *thread_coeffs = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * domain.size);
     // TODO: do we care about core sizes that aren't powers of 2?
     // ASSERT(2 ** log2_num_threads == num_threads);
@@ -236,15 +325,15 @@ void fft_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, co
             for (size_t k = 0; k < domain.size; k += domain.thread_size)
             {
                 size_t idx = (j + k) & index_mask;
-                fr::mul_without_reduction(coeffs[idx], accumulator, T1);
-                fr::add_with_coarse_reduction(T0, T1, T0);
-                fr::mul_without_reduction(accumulator, work_step, accumulator);
+                fr::__mul_without_reduction(coeffs[idx], accumulator, T1);
+                fr::__add_with_coarse_reduction(T0, T1, T0);
+                fr::__mul_without_reduction(accumulator, work_step, accumulator);
             }
             fr::copy(T0, thread_coeffs[thread_coeffs_index + j]);
-            fr::mul_without_reduction(accumulator, work_root, accumulator);
+            fr::__mul_without_reduction(accumulator, work_root, accumulator);
         }
 
-        fft_inner_serial(&thread_coeffs[thread_coeffs_index], thread_omega, domain.thread_size);
+        fft_inner_serial(&thread_coeffs[thread_coeffs_index], domain.thread_size, (const fr::field_t**) root_table);
     }
 
     // We need to copy our redults from the temporary array, into our coefficient array.
@@ -273,12 +362,12 @@ void scale_by_generator(fr::field_t *coeffs, const evaluation_domain &domain, co
         fr::field_t work_generator;
         fr::field_t thread_shift;
         fr::pow_small(generator_shift, j * domain.thread_size, thread_shift);
-        fr::mul_without_reduction(generator_start, thread_shift, work_generator);
+        fr::__mul_without_reduction(generator_start, thread_shift, work_generator);
         size_t offset = j * domain.thread_size;
         for (size_t i = offset; i < offset + domain.thread_size; ++i)
         {
-            fr::mul(coeffs[i], work_generator, coeffs[i]);
-            fr::mul_without_reduction(work_generator, generator_shift, work_generator);
+            fr::__mul(coeffs[i], work_generator, coeffs[i]);
+            fr::__mul_without_reduction(work_generator, generator_shift, work_generator);
         }
     }
 }
@@ -295,49 +384,27 @@ void compute_multiplicative_subgroup(const size_t log2_subgroup_size, const eval
     fr::copy(fr::multiplicative_generator(), accumulator);
     for (size_t i = 0; i < src_domain.log2_size; ++i)
     {
-        fr::sqr(accumulator, accumulator);
+        fr::__sqr(accumulator, accumulator);
     }
 
     // Step 3: fill array with 4 values of (g.X)^n - 1, scaled by the cofactor
     fr::copy(accumulator, subgroup_roots[0]); // subgroup_root, accumulator, subgroup_roots[1]);
     for (size_t i = 1; i < subgroup_size; ++i)
     {
-        fr::mul(subgroup_roots[i - 1], subgroup_root, subgroup_roots[i]);
+        fr::__mul(subgroup_roots[i - 1], subgroup_root, subgroup_roots[i]);
     }
 }
-} // namespace
+// } // namespace
 
-evaluation_domain get_domain(size_t num_elements)
+void print_polynomial(const fr::field_t *src, const size_t n)
 {
-    size_t n = (size_t)log2(num_elements);
-    if ((1UL << n) != num_elements)
+    for(size_t i = 0; i < n; ++i)
     {
-        ++n;
+        printf("i = %lu: ", i);
+        fr::print(src[i]);
     }
-    evaluation_domain domain;
-    domain.size = 1UL << n;
-    domain.log2_size = n;
-    fr::get_root_of_unity(domain.log2_size, domain.root);
-    fr::invert(domain.root, domain.root_inverse);
-    domain.domain = {.data = {domain.size, 0, 0, 0}};
-    fr::to_montgomery_form(domain.domain, domain.domain);
-    fr::invert(domain.domain, domain.domain_inverse);
-    domain.generator = fr::multiplicative_generator();
-    domain.generator_inverse = fr::multiplicative_generator_inverse();
-#ifndef NO_MULTITHREADING
-    domain.num_threads = (size_t)omp_get_max_threads();
-#else
-    domain.num_threads = 1;
-#endif
-    if (domain.num_threads >= domain.size)
-    {
-        domain.num_threads = 1;
-    }
-    domain.log2_num_threads = (size_t)log2(domain.num_threads);
-    domain.log2_thread_size = domain.log2_size - domain.log2_num_threads;
-    domain.thread_size = 1UL << domain.log2_thread_size;
-    return domain;
 }
+
 
 void copy_polynomial(fr::field_t *src, fr::field_t *dest, size_t num_src_coefficients, size_t num_target_coefficients)
 {
@@ -351,39 +418,34 @@ void copy_polynomial(fr::field_t *src, fr::field_t *dest, size_t num_src_coeffic
     }
 }
 
-void fft_alternate(fr::field_t *coeffs, const evaluation_domain &domain)
-{
-    fft_alternate_inner_parallel(coeffs, domain, domain.root);
-}
-
 void fft(fr::field_t *coeffs, const evaluation_domain &domain)
 {
-    fft_inner_parallel(coeffs, domain, domain.root);
+    fft_inner_parallel(coeffs, domain, domain.root, (const fr::field_t**)domain.round_roots);
 }
 
 void ifft(fr::field_t *coeffs, const evaluation_domain &domain)
 {
-    fft_inner_parallel(coeffs, domain, domain.root_inverse);
+    fft_inner_parallel(coeffs, domain, domain.root_inverse, (const fr::field_t**)domain.inverse_round_roots);
     ITERATE_OVER_DOMAIN_START(domain);
-        fr::mul(coeffs[i], domain.domain_inverse, coeffs[i]);
+        fr::__mul(coeffs[i], domain.domain_inverse, coeffs[i]);
     ITERATE_OVER_DOMAIN_END;
 }
 
 void ifft_with_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &value)
 {
-    fft_inner_parallel(coeffs, domain, domain.root_inverse);
+    fft_inner_parallel(coeffs, domain, domain.root_inverse, (const fr::field_t**)domain.inverse_round_roots);
     fr::field_t T0;
-    fr::mul(domain.domain_inverse, value, T0);
+    fr::__mul(domain.domain_inverse, value, T0);
     ITERATE_OVER_DOMAIN_START(domain);
-        fr::mul(coeffs[i], T0, coeffs[i]);
+        fr::__mul(coeffs[i], T0, coeffs[i]);
     ITERATE_OVER_DOMAIN_END;
 }
 
 void fft_with_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &value)
 {
-    fft_inner_parallel(coeffs, domain, domain.root);
+    fft_inner_parallel(coeffs, domain, domain.root, (const fr::field_t**)domain.round_roots);
      ITERATE_OVER_DOMAIN_START(domain);
-        fr::mul(coeffs[i], value, coeffs[i]);
+        fr::__mul(coeffs[i], value, coeffs[i]);
     ITERATE_OVER_DOMAIN_END;   
 }
 
@@ -396,7 +458,7 @@ void fft_with_coset(fr::field_t *coeffs, const evaluation_domain &domain)
 void fft_with_coset_and_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &constant)
 {
     fr::field_t start = fr::one();
-    fr::mul(start, constant, start);
+    fr::__mul(start, constant, start);
     scale_by_generator(coeffs, domain, start, fr::multiplicative_generator());
     fft(coeffs, domain);
 }
@@ -410,14 +472,14 @@ void ifft_with_coset(fr::field_t *coeffs, const evaluation_domain &domain)
 void add(fr::field_t *a_coeffs, fr::field_t *b_coeffs, fr::field_t *r_coeffs, const evaluation_domain &domain)
 {
     ITERATE_OVER_DOMAIN_START(domain);
-        fr::add(a_coeffs[i], b_coeffs[i], r_coeffs[i]);
+        fr::__add(a_coeffs[i], b_coeffs[i], r_coeffs[i]);
     ITERATE_OVER_DOMAIN_END;
 }
 
 void mul(fr::field_t *a_coeffs, fr::field_t *b_coeffs, fr::field_t *r_coeffs, const evaluation_domain &domain)
 {
     ITERATE_OVER_DOMAIN_START(domain);
-        fr::mul(a_coeffs[i], b_coeffs[i], r_coeffs[i]);
+        fr::__mul(a_coeffs[i], b_coeffs[i], r_coeffs[i]);
     ITERATE_OVER_DOMAIN_END;
 }
 
@@ -446,16 +508,16 @@ size_t num_threads = 1;
         size_t end = (j == num_threads - 1) ? offset + range_per_thread + leftovers : offset + range_per_thread;
         for (size_t i = offset; i < end; ++i)
         {
-            fr::mul(coeffs[i], z_acc, work_var);
-            fr::add(evaluations[j], work_var, evaluations[j]);
-            fr::mul_without_reduction(z_acc, z, z_acc);
+            fr::__mul(coeffs[i], z_acc, work_var);
+            fr::__add(evaluations[j], work_var, evaluations[j]);
+            fr::__mul_without_reduction(z_acc, z, z_acc);
         }
     }
 
     fr::field_t r = fr::zero();
     for (size_t j = 0; j < num_threads; ++j)
     {
-        fr::add(r, evaluations[j], r);
+        fr::__add(r, evaluations[j], r);
     }
     return r;
 }
@@ -492,12 +554,12 @@ void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, const evalua
         fr::field_t work_root;
         fr::field_t root_shift;
         fr::pow_small(multiplicand, j * target_domain.thread_size, root_shift);
-        fr::mul(fr::multiplicative_generator(), root_shift, work_root);
+        fr::__mul(fr::multiplicative_generator(), root_shift, work_root);
         size_t offset = j * target_domain.thread_size;
         for (size_t i = offset; i < offset + target_domain.thread_size; ++i)
         {
-            fr::sub(work_root, one, l_1_coefficients[i]);
-            fr::mul_without_reduction(work_root, multiplicand, work_root);
+            fr::__sub(work_root, one, l_1_coefficients[i]);
+            fr::__mul_without_reduction(work_root, multiplicand, work_root);
         }
     }
 
@@ -527,8 +589,8 @@ void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, const evalua
     // want to compute (1/n)(wi^n - 1)
     for (size_t i = 0; i < subgroup_size; ++i)
     {
-        fr::sub(subgroup_roots[i], fr::one(), subgroup_roots[i]);
-        fr::mul(subgroup_roots[i], src_domain.domain_inverse, subgroup_roots[i]);
+        fr::__sub(subgroup_roots[i], fr::one(), subgroup_roots[i]);
+        fr::__mul(subgroup_roots[i], src_domain.domain_inverse, subgroup_roots[i]);
     }
 
     // TODO: this is disgusting! Fix it fix it fix it fix it...
@@ -538,7 +600,7 @@ void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, const evalua
         {
             for (size_t j = 0; j < subgroup_size; ++j)
             {
-                fr::mul(l_1_coefficients[i + j], subgroup_roots[j], l_1_coefficients[i + j]);
+                fr::__mul(l_1_coefficients[i + j], subgroup_roots[j], l_1_coefficients[i + j]);
             }
         }
     }
@@ -554,7 +616,7 @@ void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, const evalua
             {
                 for (size_t j = 0; j < subgroup_size; ++j)
                 {
-                    fr::mul(l_1_coefficients[i + j], subgroup_roots[j], l_1_coefficients[i + j]);
+                    fr::__mul(l_1_coefficients[i + j], subgroup_roots[j], l_1_coefficients[i + j]);
                 }
             }
         }
@@ -584,7 +646,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, evaluation_domai
     // Step 3: fill array with values of (g.X)^n - 1, scaled by the cofactor
     for (size_t i = 0; i < subgroup_size; ++i)
     {
-        fr::sub(subgroup_roots[i], fr::one(), subgroup_roots[i]);
+        fr::__sub(subgroup_roots[i], fr::one(), subgroup_roots[i]);
     }
 
     // Step 4: invert array entries to compute denominator term of 1/Z_H*(X)
@@ -609,10 +671,10 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, evaluation_domai
         {
             for (size_t j = 0; j < subgroup_size; ++j)
             {
-                fr::mul(coeffs[i + j], subgroup_roots[j], coeffs[i + j]);
-                fr::add_without_reduction(work_root, numerator_constant, T0);
-                fr::mul(coeffs[i + j], T0, coeffs[i + j]);
-                fr::mul_without_reduction(work_root, target_domain.root, work_root);
+                fr::__mul(coeffs[i + j], subgroup_roots[j], coeffs[i + j]);
+                fr::__add_without_reduction(work_root, numerator_constant, T0);
+                fr::__mul(coeffs[i + j], T0, coeffs[i + j]);
+                fr::__mul_without_reduction(work_root, target_domain.root, work_root);
             }
         }
     }
@@ -625,16 +687,16 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, evaluation_domai
         fr::field_t root_shift;
         fr::field_t work_root;
         fr::pow_small(target_domain.root, offset, root_shift);
-        fr::mul(fr::multiplicative_generator(), root_shift, work_root);
+        fr::__mul(fr::multiplicative_generator(), root_shift, work_root);
         fr::field_t T0;
         for (size_t i = offset; i < offset + target_domain.thread_size; i += subgroup_size)
         {
             for (size_t j = 0; j < subgroup_size; ++j)
             {
-                fr::mul(coeffs[i + j], subgroup_roots[j], coeffs[i + j]);
-                fr::add(work_root, numerator_constant, T0);
-                fr::mul(coeffs[i + j], T0, coeffs[i + j]);
-                fr::mul_without_reduction(work_root, target_domain.root, work_root);
+                fr::__mul(coeffs[i + j], subgroup_roots[j], coeffs[i + j]);
+                fr::__add(work_root, numerator_constant, T0);
+                fr::__mul(coeffs[i + j], T0, coeffs[i + j]);
+                fr::__mul_without_reduction(work_root, target_domain.root, work_root);
             }
         }
     }
@@ -653,16 +715,16 @@ fr::field_t compute_kate_opening_coefficients(fr::field_t *coeffs, const fr::fie
     // compute (1 / -z)
     fr::field_t divisor;
     fr::neg(z, divisor);
-    fr::invert(divisor, divisor);
+    fr::__invert(divisor, divisor);
 
     // we're about to shove these coefficients into a pippenger multi-exponentiation routine, where we need
     // to convert out of montgomery form. So, we can use lazy reduction techniques here without triggering overflows
-    fr::sub_with_coarse_reduction(coeffs[0], f, coeffs[0]);
-    fr::mul_without_reduction(coeffs[0], divisor, coeffs[0]);
+    fr::__sub_with_coarse_reduction(coeffs[0], f, coeffs[0]);
+    fr::__mul_without_reduction(coeffs[0], divisor, coeffs[0]);
     for (size_t i = 1; i < n; ++i)
     {
-        fr::sub_with_coarse_reduction(coeffs[i], coeffs[i - 1], coeffs[i]);
-        fr::mul_without_reduction(coeffs[i], divisor, coeffs[i]);
+        fr::__sub_with_coarse_reduction(coeffs[i], coeffs[i - 1], coeffs[i]);
+        fr::__mul_without_reduction(coeffs[i], divisor, coeffs[i]);
     }
 
     return f;
@@ -676,29 +738,29 @@ lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, evaluation_d
     fr::copy(z, z_pow);
     for (size_t i = 0; i < domain.log2_size; ++i)
     {
-        fr::sqr(z_pow, z_pow);
+        fr::__sqr(z_pow, z_pow);
     }
 
     fr::field_t numerator;
-    fr::sub(z_pow, one, numerator);
+    fr::__sub(z_pow, one, numerator);
 
     fr::field_t denominators[6];
-    fr::sub(z, one, denominators[1]);
+    fr::__sub(z, one, denominators[1]);
 
-    fr::mul(z, domain.root, denominators[2]);
-    fr::mul(denominators[2], domain.root, denominators[2]);
-    fr::sub(denominators[2], one, denominators[2]);
+    fr::__mul(z, domain.root, denominators[2]);
+    fr::__mul(denominators[2], domain.root, denominators[2]);
+    fr::__sub(denominators[2], one, denominators[2]);
 
-    fr::sub(z, domain.root_inverse, denominators[0]);
+    fr::__sub(z, domain.root_inverse, denominators[0]);
 
     fr::batch_invert(denominators, 3, &denominators[3]);
 
     lagrange_evaluations result;
-    fr::mul(numerator, denominators[0], result.vanishing_poly);
+    fr::__mul(numerator, denominators[0], result.vanishing_poly);
 
-    fr::mul(numerator, domain.domain_inverse, numerator);
-    fr::mul(numerator, denominators[1], result.l_1);
-    fr::mul(numerator, denominators[2], result.l_n_minus_1);
+    fr::__mul(numerator, domain.domain_inverse, numerator);
+    fr::__mul(numerator, denominators[1], result.l_1);
+    fr::__mul(numerator, denominators[2], result.l_n_minus_1);
     return result;
 }
 

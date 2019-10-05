@@ -24,9 +24,6 @@ mark_as_advanced(
 
 set(setup_private_include_dir ${PROJECT_SOURCE_DIR}/src)
 
-# hunter_add_package(benchmark)
-# find_package(benchmark CONFIG REQUIRED)
-
 add_subdirectory(benchmarks)
 
 add_compile_options(-Werror -Wall -Wextra -Wshadow)
@@ -49,6 +46,7 @@ add_executable(
     test_preprocess.cpp
     test_waffle.cpp
     test_verifier.cpp
+#    test_composer.cpp
 )
 
 set_target_properties(

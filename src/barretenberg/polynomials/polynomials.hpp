@@ -5,8 +5,6 @@
 #include "string.h"
 #include "math.h"
 
-#include "../groups/g1.hpp"
-#include "../fields/fr.hpp"
 #include "../assert.hpp"
 
 #include "../types.hpp"
@@ -41,12 +39,14 @@ namespace barretenberg
 namespace polynomials
 {
 
+void print_polynomial(const fr::field_t *src, const size_t n);
+
 void copy_polynomial(fr::field_t *src, fr::field_t *dest, size_t num_src_coefficients, size_t num_target_coefficients);
-evaluation_domain get_domain(size_t num_elements);
 
 fr::field_t evaluate(fr::field_t *coeffs, const fr::field_t &z, const size_t n);
 
-void fft_alternate(fr::field_t *coeffs, const evaluation_domain &domain);
+//  2. Compute a lookup table of the roots of unity, and suffer through cache misses from nonlinear access patterns
+void fft_inner_serial(fr::field_t *coeffs, const size_t domain_size, const fr::field_t** root_table);
 
 void fft(fr::field_t *coeffs, const evaluation_domain &domain);
 

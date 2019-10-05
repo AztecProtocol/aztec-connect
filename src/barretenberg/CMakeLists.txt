@@ -20,7 +20,9 @@ add_library(
     groups/wnaf.hpp
     groups/g1.hpp
     groups/g2.hpp
+    groups/scalar_multiplication.cpp
     groups/scalar_multiplication.hpp
+    groups/pairing.cpp
     groups/pairing.hpp
     io/io.hpp
     keccak/hash_types.h
@@ -36,6 +38,13 @@ add_library(
     waffle/waffle.cpp
     waffle/waffle.hpp
     waffle/verifier.hpp
+#   waffle/widgets/base_widget.hpp
+#   waffle/widgets/arithmetic_widget.cpp
+#   waffle/widgets/arithmetic_widget.hpp
+#    waffle/composer/composer.cpp
+#    waffle/composer/composer.hpp
+#    waffle/circuits/mimc.cpp
+#    waffle/circuits/mimc.hpp
 )
 
 set_target_properties(
@@ -66,7 +75,9 @@ add_executable(
     groups/wnaf.hpp
     groups/g1.hpp
     groups/g2.hpp
+    groups/scalar_multiplication.cpp
     groups/scalar_multiplication.hpp
+    groups/pairing.cpp
     groups/pairing.hpp
     io/io.hpp
     keccak/hash_types.h

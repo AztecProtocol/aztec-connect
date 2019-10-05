@@ -13,9 +13,9 @@ using namespace barretenberg;
 void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
 {
     size_t n = state.n;
-    state.small_domain = polynomials::get_domain(n);
-    state.mid_domain = polynomials::get_domain(2 * n);
-    state.large_domain = polynomials::get_domain(4 * n);
+    // state.small_domain = polynomials::evaluation_domain(n);
+    // state.mid_domain = polynomials::evaluation_domain(2 * n);
+    // state.large_domain = polynomials::evaluation_domain(4 * n);
     state.w_l = &data[0];
     state.w_r = &data[n];
     state.w_o = &data[2 * n];
@@ -85,13 +85,13 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
         fr::copy(w_r_acc, state.w_r[i]);
         fr::copy(state.q_o[i], state.w_o[i]);
 
-        fr::mul(q_m_acc, q_m_seed, q_m_acc);
-        fr::mul(q_l_acc, q_l_seed, q_l_acc);
-        fr::mul(q_r_acc, q_r_seed, q_r_acc);
-        fr::mul(q_o_acc, q_o_seed, q_o_acc);
-        fr::mul(q_c_acc, q_c_seed, q_c_acc);
-        fr::mul(w_l_acc, w_l_seed, w_l_acc);
-        fr::mul(w_r_acc, w_r_seed, w_r_acc);
+        fr::__mul(q_m_acc, q_m_seed, q_m_acc);
+        fr::__mul(q_l_acc, q_l_seed, q_l_acc);
+        fr::__mul(q_r_acc, q_r_seed, q_r_acc);
+        fr::__mul(q_o_acc, q_o_seed, q_o_acc);
+        fr::__mul(q_c_acc, q_c_seed, q_c_acc);
+        fr::__mul(w_l_acc, w_l_seed, w_l_acc);
+        fr::__mul(w_r_acc, w_r_seed, w_r_acc);
 
         // fr::copy(fr::zero(), state.q_m[i + 1]);
         fr::copy(q_m_acc, state.q_m[i + 1]);
@@ -103,28 +103,28 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
         fr::copy(w_r_acc, state.w_r[i + 1]);
         fr::copy(state.q_o[i + 1], state.w_o[i + 1]);
 
-        fr::mul(q_m_acc, q_m_seed, q_m_acc);
-        fr::mul(q_l_acc, q_l_seed, q_l_acc);
-        fr::mul(q_r_acc, q_r_seed, q_r_acc);
-        fr::mul(q_o_acc, q_o_seed, q_o_acc);
-        fr::mul(q_c_acc, q_c_seed, q_c_acc);
-        fr::mul(w_l_acc, w_l_seed, w_l_acc);
-        fr::mul(w_r_acc, w_r_seed, w_r_acc);
+        fr::__mul(q_m_acc, q_m_seed, q_m_acc);
+        fr::__mul(q_l_acc, q_l_seed, q_l_acc);
+        fr::__mul(q_r_acc, q_r_seed, q_r_acc);
+        fr::__mul(q_o_acc, q_o_seed, q_o_acc);
+        fr::__mul(q_c_acc, q_c_seed, q_c_acc);
+        fr::__mul(w_l_acc, w_l_seed, w_l_acc);
+        fr::__mul(w_r_acc, w_r_seed, w_r_acc);
     }
     fr::field_t* scratch_mem = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * n / 2));
     fr::batch_invert(state.w_o, n / 2, scratch_mem);
     free(scratch_mem);
     for (size_t i = 0; i < n / 2; ++i)
     {
-        fr::mul(state.q_l[i], state.w_l[i], T0);
-        fr::mul(state.q_r[i], state.w_r[i], T1);
-        fr::mul(state.w_l[i], state.w_r[i], T2);
-        fr::mul(T2, state.q_m[i], T2);
-        fr::add(T0, T1, T0);
-        fr::add(T0, T2, T0);
-        fr::add(T0, state.q_c[i], T0);
+        fr::__mul(state.q_l[i], state.w_l[i], T0);
+        fr::__mul(state.q_r[i], state.w_r[i], T1);
+        fr::__mul(state.w_l[i], state.w_r[i], T2);
+        fr::__mul(T2, state.q_m[i], T2);
+        fr::__add(T0, T1, T0);
+        fr::__add(T0, T2, T0);
+        fr::__add(T0, state.q_c[i], T0);
         fr::neg(T0, T0);
-        fr::mul(state.w_o[i], T0, state.w_o[i]);
+        fr::__mul(state.w_o[i], T0, state.w_o[i]);
     }
     size_t shift = n / 2;
     polynomials::copy_polynomial(state.w_l, state.w_l + shift, shift, shift);
@@ -178,10 +178,10 @@ TEST(verifier, verifier)
 {
     size_t n = 1 << 12;
 
-    waffle::circuit_state state;
-    state.small_domain = polynomials::get_domain(n);
-    state.mid_domain = polynomials::get_domain(2 * n);
-    state.large_domain = polynomials::get_domain(4 * n);
+    waffle::circuit_state state(n);
+    // state.small_domain = polynomials::evaluation_domain(n);
+    // state.mid_domain = polynomials::evaluation_domain(2 * n);
+    // state.large_domain = polynomials::evaluation_domain(4 * n);
 
     state.n = n;
 

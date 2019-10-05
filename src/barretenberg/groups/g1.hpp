@@ -39,12 +39,12 @@ inline void random_coordinates_on_curve(fq::field_t &x, fq::field_t &y)
         // generate a random x-coordinate
         x = fq::random_element();
         // derive y^2 = x^3 + b
-        fq::sqr(x, yy);
-        fq::mul(x, yy, yy);
-        fq::add(yy, b_mont, yy);
+        fq::__sqr(x, yy);
+        fq::__mul(x, yy, yy);
+        fq::__add(yy, b_mont, yy);
         // compute sqrt(y)
-        fq::sqrt(yy, y);
-        fq::sqr(y, t0);
+        fq::__sqrt(yy, y);
+        fq::__sqr(y, t0);
         // does yy have a valid quadratic residue? is y a valid square root?
         fq::from_montgomery_form(yy, yy);
         fq::from_montgomery_form(t0, t0);
@@ -66,10 +66,10 @@ inline element random_element()
     output.z = fq::random_element();
     fq::field_t zz;
     fq::field_t zzz;
-    fq::sqr(output.z, zz);
-    fq::mul(output.z, zz, zzz);
-    fq::mul(output.x, zz, output.x);
-    fq::mul(output.y, zzz, output.y);
+    fq::__sqr(output.z, zz);
+    fq::__mul(output.z, zz, zzz);
+    fq::__mul(output.x, zz, output.x);
+    fq::__mul(output.y, zzz, output.y);
     return output;
 }
 
@@ -79,7 +79,7 @@ inline element one()
     output.x = fq::one();
     output.y = fq::one();
     output.z = fq::one();
-    fq::add(output.y, output.y, output.y);
+    fq::__add(output.y, output.y, output.y);
     return output;
 }
 
@@ -88,7 +88,7 @@ inline affine_element affine_one()
     affine_element output;
     output.x = fq::one();
     output.y = fq::one();
-    fq::add(output.y, output.y, output.y);
+    fq::__add(output.y, output.y, output.y);
     return output;
 }
 
@@ -125,56 +125,56 @@ inline void dbl(element &p1, element &p2)
     fq::field_t T3;
 
     // z2 = 2*y*z
-    fq::add_without_reduction(p1.z, p1.z, p2.z);
-    fq::mul_without_reduction(p2.z, p1.y, p2.z);
+    fq::__add_without_reduction(p1.z, p1.z, p2.z);
+    fq::__mul_without_reduction(p2.z, p1.y, p2.z);
     fq::reduce_once(p2.z, p2.z);
 
     // T0 = x*x
-    fq::sqr_without_reduction(p1.x, T0);
+    fq::__sqr_without_reduction(p1.x, T0);
 
     // T1 = y*y
-    fq::sqr_without_reduction(p1.y, T1);
+    fq::__sqr_without_reduction(p1.y, T1);
 
     // T2 = T2*T1 = y*y*y*y
-    fq::sqr_without_reduction(T1, T2);
+    fq::__sqr_without_reduction(T1, T2);
 
     // T1 = T1 + x = x + y*y
-    fq::add_with_coarse_reduction(T1, p1.x, T1);
+    fq::__add_with_coarse_reduction(T1, p1.x, T1);
 
     // T1 = T1 * T1
-    fq::sqr_without_reduction(T1, T1);
+    fq::__sqr_without_reduction(T1, T1);
 
     // T3 = T0 + T2 = xx + y*y*y*y
-    fq::add_with_coarse_reduction(T0, T2, T3);
+    fq::__add_with_coarse_reduction(T0, T2, T3);
 
     // T1 = T1 - T3 = x*x + y*y*y*y + 2*x*x*y*y*y*y - x*x - 7*y*y*y = 2*x*x*y*y*y*y = 2*S
-    fq::sub_with_coarse_reduction(T1, T3, T1);
+    fq::__sub_with_coarse_reduction(T1, T3, T1);
 
     // T1 = 2T1 = 4*S
-    fq::add_with_coarse_reduction(T1, T1, T1);
+    fq::__add_with_coarse_reduction(T1, T1, T1);
 
     // T3 = 3T0
-    fq::add_with_coarse_reduction(T0, T0, T3);
-    fq::add_with_coarse_reduction(T3, T0, T3);
+    fq::__add_with_coarse_reduction(T0, T0, T3);
+    fq::__add_with_coarse_reduction(T3, T0, T3);
 
     // T0 = 2T1
-    fq::add_with_coarse_reduction(T1, T1, T0);
+    fq::__add_with_coarse_reduction(T1, T1, T0);
 
     // x2 = T3*T3
-    fq::sqr_without_reduction(T3, p2.x);
+    fq::__sqr_without_reduction(T3, p2.x);
     // x2 = x2 - 2T1
-    fq::sub_with_coarse_reduction(p2.x, T0, p2.x);
+    fq::__sub_with_coarse_reduction(p2.x, T0, p2.x);
     fq::reduce_once(p2.x, p2.x);
 
     // T2 = 8T2
     fq::oct_with_coarse_reduction(T2, T2);
 
     // y2 = T1 - x2
-    fq::sub_with_coarse_reduction(T1, p2.x, p2.y);
+    fq::__sub_with_coarse_reduction(T1, p2.x, p2.y);
 
     // y2 = y2 * T3 - T2
-    fq::mul_without_reduction(p2.y, T3, p2.y);
-    fq::sub_with_coarse_reduction(p2.y, T2, p2.y);
+    fq::__mul_without_reduction(p2.y, T3, p2.y);
+    fq::__sub_with_coarse_reduction(p2.y, T2, p2.y);
     fq::reduce_once(p2.y, p2.y);
 }
 
@@ -186,17 +186,19 @@ inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
     fq::field_t T3;
 
     // T0 = z1.z1
-    // fq::sqr(p1.z, T0);
-    fq::sqr_without_reduction(p1.z, T0);
+    // fq::__sqr(p1.z, T0);
+    fq::__sqr_without_reduction(p1.z, T0);
 
     // T1 = x2.t0 - x1 = x2.z1.z1 - x1
-    fq::mul_then_sub(p2.x, T0, p1.x, T1);
+    fq::__mul(p2.x, T0, T1);
+    fq::__sub(T1, p1.x, T1);
 
     // T2 = T0.z1 = z1.z1.z1
-    fq::mul_without_reduction(p1.z, T0, T2);
+    fq::__mul_without_reduction(p1.z, T0, T2);
 
     // // T2 = T2.y2 - y1 = y2.z1.z1.z1 - y1
-    fq::mul_then_sub(T2, p2.y, p1.y, T2);
+    fq::__mul(T2, p2.y, T2);
+    fq::__sub(T2, p1.y, T2);
 
     if (__builtin_expect(((T1.data[0] | T1.data[1] | T1.data[2] | T1.data[3]) == 0), 0))
     {
@@ -218,47 +220,47 @@ inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
     fq::paralell_double_and_add_without_reduction(T2, p1.z, T1, p3.z);
 
     // T3 = T1*T1 = HH
-    fq::sqr_without_reduction(T1, T3);
+    fq::__sqr_without_reduction(T1, T3);
 
     // z3 = z3 - z1z1 - HH
-    fq::add_with_coarse_reduction(T0, T3, T0);
+    fq::__add_with_coarse_reduction(T0, T3, T0);
 
     // z3 = (z1 + H)*(z1 + H)
-    fq::sqr_without_reduction(p3.z, p3.z);
-    fq::sub_with_coarse_reduction(p3.z, T0, p3.z);
+    fq::__sqr_without_reduction(p3.z, p3.z);
+    fq::__sub_with_coarse_reduction(p3.z, T0, p3.z);
     fq::reduce_once(p3.z, p3.z);
 
     // T3 = 4HH
     fq::quad_with_coarse_reduction(T3, T3);
 
     // T1 = T1*T3 = 4HHH
-    fq::mul_without_reduction(T1, T3, T1);
+    fq::__mul_without_reduction(T1, T3, T1);
 
     // T3 = T3 * x1 = 4HH*x1
-    fq::mul_without_reduction(T3, p1.x, T3);
+    fq::__mul_without_reduction(T3, p1.x, T3);
 
     // T0 = 2T3
-    fq::add_with_coarse_reduction(T3, T3, T0);
+    fq::__add_with_coarse_reduction(T3, T3, T0);
 
     // T0 = T0 + T1 = 2(4HH*x1) + 4HHH
-    fq::add_with_coarse_reduction(T0, T1, T0);
-    fq::sqr_without_reduction(T2, p3.x);
+    fq::__add_with_coarse_reduction(T0, T1, T0);
+    fq::__sqr_without_reduction(T2, p3.x);
 
     // x3 = x3 - T0 = R*R - 8HH*x1 -4HHH
-    fq::sub_with_coarse_reduction(p3.x, T0, p3.x);
+    fq::__sub_with_coarse_reduction(p3.x, T0, p3.x);
 
     // T3 = T3 - x3 = 4HH*x1 - x3
-    fq::sub_with_coarse_reduction(T3, p3.x, T3);
+    fq::__sub_with_coarse_reduction(T3, p3.x, T3);
     fq::reduce_once(p3.x, p3.x);
 
-    fq::mul_without_reduction(T1, p1.y, T1);
-    fq::add_with_coarse_reduction(T1, T1, T1);
+    fq::__mul_without_reduction(T1, p1.y, T1);
+    fq::__add_with_coarse_reduction(T1, T1, T1);
 
     // T3 = T2 * T3 = R*(4HH*x1 - x3)
-    fq::mul_without_reduction(T3, T2, T3);
+    fq::__mul_without_reduction(T3, T2, T3);
 
     // y3 = T3 - T1
-    fq::sub_with_coarse_reduction(T3, T1, p3.y);
+    fq::__sub_with_coarse_reduction(T3, T1, p3.y);
     fq::reduce_once(p3.y, p3.y);
 }
 
@@ -325,26 +327,26 @@ inline void add(element &p1, element &p2, element &p3)
     fq::field_t J;
 
     // Z1Z1 = Z1*Z1
-    fq::sqr_without_reduction(p1.z, Z1Z1);
+    fq::__sqr_without_reduction(p1.z, Z1Z1);
     // Z2Z2 = Z2*Z2
-    fq::sqr_without_reduction(p2.z, Z2Z2);
+    fq::__sqr_without_reduction(p2.z, Z2Z2);
     // U1 = Z2Z2*X1
-    fq::mul_without_reduction(p1.x, Z2Z2, U1);
+    fq::__mul_without_reduction(p1.x, Z2Z2, U1);
     // U2 = Z1Z1*X2
-    fq::mul_without_reduction(p2.x, Z1Z1, U2);
+    fq::__mul_without_reduction(p2.x, Z1Z1, U2);
     // S1 = Z2*Z2*Z2
-    fq::mul_without_reduction(p2.z, Z2Z2, S1);
+    fq::__mul_without_reduction(p2.z, Z2Z2, S1);
     // S2 = Z1*Z1*Z1
-    fq::mul_without_reduction(p1.z, Z1Z1, S2);
+    fq::__mul_without_reduction(p1.z, Z1Z1, S2);
     // S1 = Z2*Z2*Z2*Y1
-    fq::mul_without_reduction(S1, p1.y, S1);
+    fq::__mul_without_reduction(S1, p1.y, S1);
     // S2 = Z1*Z1*Z1*Y2
-    fq::mul_without_reduction(S2, p2.y, S2);
+    fq::__mul_without_reduction(S2, p2.y, S2);
     // H = U2 - U1
-    fq::sub_with_coarse_reduction(U2, U1, H);
+    fq::__sub_with_coarse_reduction(U2, U1, H);
     fq::reduce_once(H, H);
     // F = S2 - S1
-    fq::sub_with_coarse_reduction(S2, S1, F);
+    fq::__sub_with_coarse_reduction(S2, S1, F);
     fq::reduce_once(F, F);
 
     if (__builtin_expect((H.data[0] | H.data[1] | H.data[2] | H.data[3]) == 0, 0))
@@ -369,50 +371,50 @@ inline void add(element &p1, element &p2, element &p3)
     fq::paralell_double_and_add_without_reduction(F, H, H, I);
 
     // I = I * I = 4*H*H
-    fq::sqr_without_reduction(I, I);
+    fq::__sqr_without_reduction(I, I);
 
     // J = H * I = 4*H*H*H
-    fq::mul_without_reduction(H, I, J);
+    fq::__mul_without_reduction(H, I, J);
 
     // U1 (V) = U1*I
-    fq::mul_without_reduction(U1, I, U1);
+    fq::__mul_without_reduction(U1, I, U1);
 
     // U2 (W) = 2*V
-    fq::add_with_coarse_reduction(U1, U1, U2);
+    fq::__add_with_coarse_reduction(U1, U1, U2);
     // W = W + J = 2*V + 4*H*H*H
-    fq::add_with_coarse_reduction(U2, J, U2);
+    fq::__add_with_coarse_reduction(U2, J, U2);
 
     // // X3 = F*F = 4(S2 - S1)(S2 - S1)
-    fq::sqr_without_reduction(F, p3.x);
+    fq::__sqr_without_reduction(F, p3.x);
 
     // // X3 = X3 - w = 4(S2 - S1)(S2 - S1) - 2*V - 4*H*H*H
-    fq::sub_with_coarse_reduction(p3.x, U2, p3.x);
+    fq::__sub_with_coarse_reduction(p3.x, U2, p3.x);
     fq::reduce_once(p3.x, p3.x); // ensure p3.x < p
 
     // // J = J*S1
-    fq::mul_without_reduction(J, S1, J);
+    fq::__mul_without_reduction(J, S1, J);
     // // J = 2J
-    fq::add_with_coarse_reduction(J, J, J);
+    fq::__add_with_coarse_reduction(J, J, J);
 
     // Y3 = V - X3
-    fq::sub_with_coarse_reduction(U1, p3.x, p3.y);
+    fq::__sub_with_coarse_reduction(U1, p3.x, p3.y);
 
     // // Y3 = Y3 * F
-    fq::mul_without_reduction(p3.y, F, p3.y);
+    fq::__mul_without_reduction(p3.y, F, p3.y);
     // // Y3 = Y3 - J
-    fq::sub_with_coarse_reduction(p3.y, J, p3.y);
+    fq::__sub_with_coarse_reduction(p3.y, J, p3.y);
     fq::reduce_once(p3.y, p3.y); // ensure p3.y < p
 
     // Z3 = Z1 + Z2
-    fq::add_with_coarse_reduction(p1.z, p2.z, p3.z);
+    fq::__add_with_coarse_reduction(p1.z, p2.z, p3.z);
 
     // Z3 = Z3 - (Z1Z1 + Z2Z2)
-    fq::add_with_coarse_reduction(Z1Z1, Z2Z2, Z1Z1);
+    fq::__add_with_coarse_reduction(Z1Z1, Z2Z2, Z1Z1);
 
     // // Z3 = (Z1 + Z2)(Z1 + Z2)
-    fq::sqr_without_reduction(p3.z, p3.z);
-    fq::sub_with_coarse_reduction(p3.z, Z1Z1, p3.z);
-    fq::mul(p3.z, H, p3.z);
+    fq::__sqr_without_reduction(p3.z, p3.z);
+    fq::__sub_with_coarse_reduction(p3.z, Z1Z1, p3.z);
+    fq::__mul(p3.z, H, p3.z);
 }
 
 // copies src into dest, inverting y-coordinate if 'predicate' is true
@@ -538,11 +540,11 @@ inline element normalize(element &src)
     fq::field_t zz_inv;
     fq::field_t zzz_inv;
 
-    fq::invert(src.z, z_inv);
-    fq::sqr(z_inv, zz_inv);
-    fq::mul(z_inv, zz_inv, zzz_inv);
-    fq::mul(src.x, zz_inv, dest.x);
-    fq::mul(src.y, zzz_inv, dest.y);
+    fq::__invert(src.z, z_inv);
+    fq::__sqr(z_inv, zz_inv);
+    fq::__mul(z_inv, zz_inv, zzz_inv);
+    fq::__mul(src.x, zz_inv, dest.x);
+    fq::__mul(src.y, zzz_inv, dest.y);
     dest.z = fq::one();
     return dest;
 }
@@ -564,11 +566,11 @@ inline void batch_normalize(element *points, size_t num_points)
     for (size_t i = 0; i < num_points; ++i)
     {
         fq::copy(accumulator, temporaries[i]);
-        fq::mul(accumulator, points[i].z, accumulator);
+        fq::__mul(accumulator, points[i].z, accumulator);
     }
     // For the rest of this method I'll refer to the product of all z-coordinates as the 'global' z-coordinate
     // Invert the global z-coordinate and store in `accumulator`
-    fq::invert(accumulator, accumulator);
+    fq::__invert(accumulator, accumulator);
 
     /**
         * We now proceed to iterate back down the array of points.
@@ -595,12 +597,12 @@ inline void batch_normalize(element *points, size_t num_points)
         **/
     for (size_t i = num_points - 1; i < num_points; --i)
     {
-        fq::mul(accumulator, temporaries[i], z_inv);
-        fq::sqr(z_inv, zz_inv);
-        fq::mul(z_inv, zz_inv, zzz_inv);
-        fq::mul(points[i].x, zz_inv, points[i].x);
-        fq::mul(points[i].y, zzz_inv, points[i].y);
-        fq::mul(accumulator, points[i].z, accumulator);
+        fq::__mul(accumulator, temporaries[i], z_inv);
+        fq::__sqr(z_inv, zz_inv);
+        fq::__mul(z_inv, zz_inv, zzz_inv);
+        fq::__mul(points[i].x, zz_inv, points[i].x);
+        fq::__mul(points[i].y, zzz_inv, points[i].y);
+        fq::__mul(accumulator, points[i].z, accumulator);
         points[i].z = fq::one();
     }
 
@@ -617,10 +619,10 @@ inline bool on_curve(affine_element &pt)
     fq::to_montgomery_form(fq::curve_b, b_mont);
     fq::field_t yy;
     fq::field_t xxx;
-    fq::sqr(pt.x, xxx);
-    fq::mul(pt.x, xxx, xxx);
-    fq::add(xxx, b_mont, xxx);
-    fq::sqr(pt.y, yy);
+    fq::__sqr(pt.x, xxx);
+    fq::__mul(pt.x, xxx, xxx);
+    fq::__add(xxx, b_mont, xxx);
+    fq::__sqr(pt.y, yy);
     fq::from_montgomery_form(xxx, xxx);
     fq::from_montgomery_form(yy, yy);
     return fq::eq(xxx, yy);
@@ -638,14 +640,14 @@ inline bool on_curve(element &pt)
     fq::field_t xxx;
     fq::field_t zz;
     fq::field_t bz_6;
-    fq::sqr(pt.z, zz);
-    fq::sqr(zz, bz_6);
-    fq::mul(zz, bz_6, bz_6);
-    fq::mul(bz_6, b_mont, bz_6);
-    fq::sqr(pt.x, xxx);
-    fq::mul(pt.x, xxx, xxx);
-    fq::add(xxx, bz_6, xxx);
-    fq::sqr(pt.y, yy);
+    fq::__sqr(pt.z, zz);
+    fq::__sqr(zz, bz_6);
+    fq::__mul(zz, bz_6, bz_6);
+    fq::__mul(bz_6, b_mont, bz_6);
+    fq::__sqr(pt.x, xxx);
+    fq::__mul(pt.x, xxx, xxx);
+    fq::__add(xxx, bz_6, xxx);
+    fq::__sqr(pt.y, yy);
     return fq::eq(xxx, yy);
 }
 
@@ -759,20 +761,20 @@ inline bool eq(const element &a, const element &b)
     fq::field_t b_zz;
     fq::field_t b_zzz;
 
-    fq::sqr(a.z, a_zz);
-    fq::mul(a.z, a_zz, a_zzz);
+    fq::__sqr(a.z, a_zz);
+    fq::__mul(a.z, a_zz, a_zzz);
 
-    fq::sqr(b.z, b_zz);
-    fq::mul(b.z, b_zz, b_zzz);
+    fq::__sqr(b.z, b_zz);
+    fq::__mul(b.z, b_zz, b_zzz);
 
     fq::field_t T0;
     fq::field_t T1;
     fq::field_t T2;
     fq::field_t T3;
-    fq::mul(a.x, b_zz, T0);
-    fq::mul(a.y, b_zzz, T1);
-    fq::mul(b.x, a_zz, T2);
-    fq::mul(b.y, a_zzz, T3);
+    fq::__mul(a.x, b_zz, T0);
+    fq::__mul(a.y, b_zzz, T1);
+    fq::__mul(b.x, a_zz, T2);
+    fq::__mul(b.y, a_zzz, T3);
 
     return both_infinity || ((fq::eq(T0, T2) && fq::eq(T1, T3)));
 }

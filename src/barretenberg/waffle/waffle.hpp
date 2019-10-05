@@ -1,9 +1,6 @@
 #ifndef WAFFLE
 #define WAFFLE
 
-#include "../groups/pairing.hpp"
-#include "../groups/scalar_multiplication.hpp"
-#include "../polynomials/polynomials.hpp"
 #include "../types.hpp"
 
 namespace waffle
@@ -19,14 +16,11 @@ struct fft_pointers
     fr::field_t *w_r_poly;
     fr::field_t *w_o_poly;
     fr::field_t *z_1_poly;
-    fr::field_t *z_2_poly;
 
     fr::field_t *w_l_poly_small;
     fr::field_t *w_r_poly_small;
     fr::field_t *w_o_poly_small;
     fr::field_t *z_1_poly_small;
-    fr::field_t *z_2_poly_small;
-    fr::field_t *identity_poly;
     fr::field_t *gate_poly_mid;
     fr::field_t *gate_poly_long;
 
