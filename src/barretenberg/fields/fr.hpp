@@ -63,19 +63,48 @@ inline void print(const field_t &a)
 }
 
 // compute a * b mod p, put result in r
-inline void mul(const field_t &a, const field_t &b, field_t &r);
+inline void __mul(const field_t &a, const field_t &b, field_t &r);
 
 // compute a * b, put 512-bit result in r
 inline void mul_512(const field_t &a, const field_t &b, const field_wide_t &r);
 
 // compute a * a, put result in r
-inline void sqr(const field_t &a, field_t &r);
+inline void __sqr(const field_t &a, field_t &r);
 
 // compute a + b, put result in r
-inline void add(const field_t &a, const field_t &b, field_t &r);
+inline void __add(const field_t &a, const field_t &b, field_t &r);
 
 // compute a - b, put result in r
-inline void sub(const field_t &a, const field_t &b, field_t &r);
+inline void __sub(const field_t &a, const field_t &b, field_t &r);
+
+
+inline field_t add(const field_t &a, const field_t &b)
+{
+    field_t r;
+    __add(a, b, r);
+    return r;
+}
+
+inline field_t sub(const field_t &a, const field_t &b)
+{
+    field_t r;
+    __sub(a, b, r);
+    return r;
+}
+
+inline field_t sqr(const field_t &a)
+{
+    field_t r;
+    __sqr(a, r);
+    return r;
+}
+
+inline field_t mul(const field_t &a, const field_t &b)
+{
+    field_t r;
+    __mul(a, b, r);
+    return r;
+}
 
 inline void zero(field_t &r);
 
@@ -101,9 +130,9 @@ inline void to_montgomery_form(const field_t &a, field_t &r)
     copy(a, r);
     while (gt(r, modulus_plus_one))
     {
-        sub(r, modulus, r);
+        __sub(r, modulus, r);
     }
-    mul(r, r_squared, r);
+    __mul(r, r_squared, r);
 }
 
 /**
@@ -112,7 +141,7 @@ inline void to_montgomery_form(const field_t &a, field_t &r)
      **/
 inline void from_montgomery_form(const field_t &a, field_t &r)
 {
-    mul(a, one_raw, r);
+    __mul(a, one_raw, r);
     // while (gt(r, modulus_plus_one))
     // {
     //     sub(r, modulus, r);
@@ -208,14 +237,14 @@ inline void split_into_endomorphism_scalars(field_t &k, field_t &k1, field_t &k2
     field_t q1_lo = {.data = {q1.data[0], q1.data[1], q1.data[2], q1.data[3]}}; // *(field_t*)((uintptr_t)(&q1) + (4 * sizeof(uint64_t)));
     field_t q2_lo = {.data = {q2.data[0], q2.data[1], q2.data[2], q2.data[3]}}; // *(field_t*)((uintptr_t)(&q2) + (4 * sizeof(uint64_t)));
 
-    sub(q2_lo, q1_lo, t1);
+    __sub(q2_lo, q1_lo, t1);
 
     // if k = k'.R
     // and t2 = t2'.R...so, k2 = t1'.R, k1 = t2'.R?
     // to_montgomery_form(t1, t1);
-    mul(t1, lambda, t2);
+    __mul(t1, lambda, t2);
     // from_montgomery_form(t2, t2);
-    add(k, t2, t2);
+    __add(k, t2, t2);
 
     k2.data[0] = t1.data[0];
     k2.data[1] = t1.data[1];
@@ -231,13 +260,13 @@ inline void normalize(field_t &a, field_t &r)
     r.data[3] = a.data[3];
     while (gt(r, modulus_plus_one))
     {
-        sub(r, modulus, r);
+        __sub(r, modulus, r);
     }
 }
 
-inline void mul_lambda(field_t &a, field_t &r)
+inline void __mul_lambda(field_t &a, field_t &r)
 {
-    mul(a, lambda, r);
+    __mul(a, lambda, r);
 }
 
 /**
@@ -245,7 +274,7 @@ inline void mul_lambda(field_t &a, field_t &r)
      **/
 inline void neg(const field_t &a, field_t &r)
 {
-    sub(modulus, a, r);
+    __sub(modulus, a, r);
 }
 
 /**
@@ -304,15 +333,15 @@ inline void pow(const field_t &a, const field_t &b, field_t &r)
     for (; i < 256; --i)
     {
         sqr_count++;
-        fr::sqr(accumulator, accumulator);
+        __sqr(accumulator, accumulator);
         if (get_bit(b, i))
         {
-            fr::mul(accumulator, a, accumulator);
+            __mul(accumulator, a, accumulator);
         }
     }
     while (gt(accumulator, modulus_plus_one))
     {
-        sub(accumulator, modulus, accumulator);
+        __sub(accumulator, modulus, accumulator);
     }
     copy(accumulator, r);
 }
@@ -346,16 +375,16 @@ inline void pow_small(const field_t &a, const size_t exponent, field_t &r)
     for (; i < 64; --i)
     {
         sqr_count++;
-        fr::sqr(accumulator, accumulator);
+        __sqr(accumulator, accumulator);
         bool bit = (exponent >> (i)) & 1;
         if (bit)
         {
-            fr::mul(accumulator, a, accumulator);
+            __mul(accumulator, a, accumulator);
         }
     }
     while (gt(accumulator, modulus_plus_one))
     {
-        sub(accumulator, modulus, accumulator);
+        __sub(accumulator, modulus, accumulator);
     }
     copy(accumulator, r);
 }
@@ -363,7 +392,7 @@ inline void pow_small(const field_t &a, const size_t exponent, field_t &r)
 /**
  * compute a^{q - 2} mod q, place result in r
  **/
-inline void invert(field_t &a, field_t &r)
+inline void __invert(field_t &a, field_t &r)
 {
     // q - 2
     constexpr field_t modulus_minus_two = {
@@ -372,6 +401,13 @@ inline void invert(field_t &a, field_t &r)
         0xB85045B68181585DUL,
         0x30644E72E131A029UL};
     pow(a, modulus_minus_two, r);
+}
+
+inline field_t invert(field_t &a)
+{
+    field_t r;
+    __invert(a, r);
+    return r;
 }
 
 // TODO: MAKE THESE CONSTEXPR constants
@@ -384,9 +420,8 @@ inline field_t one()
 
 inline field_t neg_one()
 {
-    field_t res = fr::modulus;
-    --res.data[0];
-    return res;
+    fr::field_t r = fr::sub(fr::zero(), fr::one());
+    return r;
 }
 
 inline field_t multiplicative_generator()
@@ -399,36 +434,36 @@ inline field_t multiplicative_generator()
 inline field_t multiplicative_generator_inverse()
 {
     fr::field_t gen = multiplicative_generator();
-    invert(gen, gen);
+    __invert(gen, gen);
     return gen;
 }
 
 inline void get_root_of_unity(size_t degree, field_t &r)
 {
-    fr::copy(root_of_unity, r);
+    copy(root_of_unity, r);
     for (size_t i = S; i > degree; --i)
     {
-        fr::sqr(r, r);
+        __sqr(r, r);
     }
 }
 
 inline void batch_invert(field_t *coeffs, size_t n, field_t *temporaries)
 {
-    fr::field_t accumulator;
-    fr::one(accumulator);
+    field_t accumulator;
+    one(accumulator);
     for (size_t i = 0; i < n; ++i)
     {
-        fr::copy(accumulator, temporaries[i]);
-        fr::mul(accumulator, coeffs[i], accumulator);
+        copy(accumulator, temporaries[i]);
+        __mul(accumulator, coeffs[i], accumulator);
     }
-    fr::invert(accumulator, accumulator);
+    __invert(accumulator, accumulator);
 
-    fr::field_t T0;
+    field_t T0;
     for (size_t i = n - 1; i < n; --i)
     {
-        fr::mul(accumulator, temporaries[i], T0);
-        fr::mul(accumulator, coeffs[i], accumulator);
-        fr::copy(T0, coeffs[i]);
+        __mul(accumulator, temporaries[i], T0);
+        __mul(accumulator, coeffs[i], accumulator);
+        copy(T0, coeffs[i]);
     }
 }
 

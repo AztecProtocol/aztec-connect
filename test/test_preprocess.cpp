@@ -67,8 +67,8 @@ TEST(preprocess, preprocess)
         }
     }
 
-    waffle::circuit_state state;
-    state.small_domain = polynomials::get_domain(n);
+    waffle::circuit_state state(n);
+    // state.small_domain = polynomials::evaluation_domain(n);
     state.n = n;
     state.sigma_1 = polys[6];
     state.sigma_2 = polys[7];
@@ -91,7 +91,7 @@ TEST(preprocess, preprocess)
     fr::copy(fr::one(), roots[0]);
     for (size_t i = 1; i < state.small_domain.size; ++i)
     {
-        fr::mul(roots[i-1], state.small_domain.root, roots[i]);
+        fr::__mul(roots[i-1], state.small_domain.root, roots[i]);
     }
 
     waffle::compute_permutation_lagrange_base(roots, state.sigma_1, sigma_mappings[0], state.small_domain);

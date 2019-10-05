@@ -32,6 +32,9 @@ void ethash_keccakf1600(uint64_t state[25]) NOEXCEPT;
 struct keccak256 ethash_keccak256(const uint8_t* data, size_t size) NOEXCEPT;
 
 struct keccak256 hash_field_elements(const uint64_t* limbs, size_t num_elements);
+
+struct keccak256 hash_field_element(const uint64_t* limb);
+
 #ifdef __cplusplus
 }
 #endif

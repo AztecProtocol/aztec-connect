@@ -293,7 +293,7 @@ TEST(g2, group_exponentiation_consistency_check)
     fr::field_t b = fr::random_element();
 
     fr::field_t c;
-    fr::mul(a, b, c);
+    fr::__mul(a, b, c);
 
     g2::affine_element input = g2::affine_one();
     g2::affine_element result = g2::group_exponentiation(input, a);

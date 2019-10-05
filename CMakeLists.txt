@@ -7,8 +7,8 @@ include(GNUInstallDirs)
 include(cmake/OptimizeForArchitecture.cmake)
 include(cmake/AddCompilerFlag.cmake)
 
-set(CMAKE_CXX_COMPILER "/usr/local/clang_9.0.0/bin/clang++")
-set(CMAKE_C_COMPILER "/usr/local/clang_9.0.0/bin/clang")
+# set(CMAKE_CXX_COMPILER "/usr/local/clang_9.0.0/bin/clang++")
+# set(CMAKE_C_COMPILER "/usr/local/clang_9.0.0/bin/clang")
 
 set(PROJECT_VERSION 0.1.0)
 project(Barretenberg
@@ -60,7 +60,8 @@ if(DISABLE_SHENANIGANS)
     add_definitions(-DDISABLE_SHENANIGANS=1)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native -O3 -m64 -fopenmp -save-temps")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native -O3 -m64 -fopenmp")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -fopenmp -save-temps")
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)

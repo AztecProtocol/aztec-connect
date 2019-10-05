@@ -94,7 +94,7 @@ inline void reduce_once(const field_t &a, field_t &r)
  * Add field_t elements `a` and `b` modulo `q`, store the result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
-inline void add(const field_t &a, const field_t &b, field_t &r)
+inline void __add(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -110,7 +110,7 @@ inline void add(const field_t &a, const field_t &b, field_t &r)
  * Add field_t elements `a` and `b` modulo `2q`, store the result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
-inline void add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -126,7 +126,7 @@ inline void add_with_coarse_reduction(const field_t &a, const field_t &b, field_
  * Add field_t elements `a` and `b`, store the result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
-inline void add_without_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __add_without_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -201,7 +201,7 @@ inline void paralell_double_and_add_without_reduction(field_t &x_0, const field_
  * Subtract `b` from `a` modulo `q`, store result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
-inline void sub(const field_t &a, const field_t &b, field_t &r)
+inline void __sub(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -220,7 +220,7 @@ inline void sub(const field_t &a, const field_t &b, field_t &r)
  * Subtract `b` from `a` modulo `2q`, store result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
-inline void sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -237,7 +237,7 @@ inline void sub_with_coarse_reduction(const field_t &a, const field_t &b, field_
  * Compute the square of `a`, modulo `q`. Store result in `r`
  * We assume `a` is 254 bits and do not perform carry checks on most significant limb
  **/
-inline void sqr(const field_t &a, field_t &r)
+inline void __sqr(const field_t &a, field_t &r)
 {
     /**
      * Registers: rax:rdx = multiplication accumulator
@@ -261,7 +261,7 @@ inline void sqr(const field_t &a, field_t &r)
  * Compute the square of `a`, modulo `q`. Store result in `r`
  * We assume `a` is 254 bits and do not perform carry checks on most significant limb
  **/
-inline void sqr_without_reduction(const field_t &a, field_t &r)
+inline void __sqr_without_reduction(const field_t &a, field_t &r)
 {
     /**
      * Registers: rax:rdx = multiplication accumulator
@@ -284,7 +284,7 @@ inline void sqr_without_reduction(const field_t &a, field_t &r)
  * Compute `a` * `b` mod `q`, store result in `r`
  * We assume `a` is 254 bits and do not perform carry checks on most significant limb
  **/
-inline void mul(const field_t &a, const field_t &b, field_t &r)
+inline void __mul(const field_t &a, const field_t &b, field_t &r)
 {
     /**
      * Registers: rax:rdx = multiplication accumulator
@@ -308,7 +308,7 @@ inline void mul(const field_t &a, const field_t &b, field_t &r)
  * Compute `a` * `b` mod `q`, store result in `r`
  * We assume `a` is 254 bits and do not perform carry checks on most significant limb
  **/
-inline void mul_without_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __mul_without_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     /**
      * Registers: rax:rdx = multiplication accumulator

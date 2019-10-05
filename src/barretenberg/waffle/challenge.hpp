@@ -27,8 +27,6 @@ inline void add_grand_product_commitments_to_buffer(const plonk_proof &proof, ui
 {
     fq::from_montgomery_form(proof.Z_1.x, *(fq::field_t *)&input_buffer[0]);
     fq::from_montgomery_form(proof.Z_1.y, *(fq::field_t *)&input_buffer[4]);
-    fq::from_montgomery_form(proof.Z_2.x, *(fq::field_t *)&input_buffer[8]);
-    fq::from_montgomery_form(proof.Z_2.y, *(fq::field_t *)&input_buffer[12]);
 }
 
 inline void add_quotient_commitment_to_buffer(const plonk_proof &proof, uint64_t* input_buffer)
@@ -41,20 +39,18 @@ inline void add_quotient_commitment_to_buffer(const plonk_proof &proof, uint64_t
     fq::from_montgomery_form(proof.T_HI.y, *(fq::field_t *)&input_buffer[20]);
 }
 
-inline void add_polynomial_evaluations_to_buffer(const plonk_proof &proof, const fr::field_t& t_lo_eval, uint64_t* input_buffer)
+inline void add_polynomial_evaluations_to_buffer(const plonk_proof &proof, const fr::field_t& t_eval, uint64_t* input_buffer)
 {
     fr::from_montgomery_form(proof.w_l_eval, *(fr::field_t*)&input_buffer[0]);
     fr::from_montgomery_form(proof.w_r_eval, *(fr::field_t*)&input_buffer[4]);
     fr::from_montgomery_form(proof.w_o_eval, *(fr::field_t*)&input_buffer[8]);
     fr::from_montgomery_form(proof.sigma_1_eval, *(fr::field_t*)&input_buffer[12]);
     fr::from_montgomery_form(proof.sigma_2_eval, *(fr::field_t*)&input_buffer[16]);
-    fr::from_montgomery_form(proof.sigma_3_eval, *(fr::field_t*)&input_buffer[20]);
-    fr::from_montgomery_form(proof.z_1_shifted_eval, *(fr::field_t*)&input_buffer[24]);
-    fr::from_montgomery_form(proof.z_2_shifted_eval, *(fr::field_t*)&input_buffer[28]);
-    fr::from_montgomery_form(proof.linear_eval, *(fr::field_t*)&input_buffer[32]);
-    fr::from_montgomery_form(t_lo_eval, *(fr::field_t*)&input_buffer[36]);
-    fr::from_montgomery_form(proof.t_mid_eval, *(fr::field_t*)&input_buffer[40]);
-    fr::from_montgomery_form(proof.t_hi_eval, *(fr::field_t*)&input_buffer[44]);
+    // fr::from_montgomery_form(proof.sigma_3_eval, *(fr::field_t*)&input_buffer[20]);
+    fr::from_montgomery_form(proof.z_1_shifted_eval, *(fr::field_t*)&input_buffer[20]);
+    // fr::from_montgomery_form(proof.z_2_shifted_eval, *(fr::field_t*)&input_buffer[24]);
+    fr::from_montgomery_form(proof.linear_eval, *(fr::field_t*)&input_buffer[24]);
+    fr::from_montgomery_form(t_eval, *(fr::field_t*)&input_buffer[28]);
 }
 
 inline fr::field_t compute_gamma(const plonk_proof &proof)
@@ -83,10 +79,10 @@ inline fr::field_t compute_beta(const plonk_proof &proof, const fr::field_t &alp
 inline fr::field_t compute_alpha(const plonk_proof &proof)
 {
     fr::field_t alpha;
-    uint64_t input_buffer[10 * 4];
+    uint64_t input_buffer[8 * 4];
     add_wire_commitments_to_buffer(proof, input_buffer);
     add_grand_product_commitments_to_buffer(proof, &input_buffer[24]);
-    keccak256 hash = hash_field_elements(input_buffer, 10);
+    keccak256 hash = hash_field_elements(input_buffer, 8);
     fr::copy(*(fr::field_t*)&hash.word64s[0], alpha);
     fr::to_montgomery_form(alpha, alpha);
     return alpha;
@@ -95,25 +91,25 @@ inline fr::field_t compute_alpha(const plonk_proof &proof)
 inline fr::field_t compute_evaluation_challenge(const plonk_proof &proof)
 {
     fr::field_t z;
-    uint64_t input_buffer[16 * 4];
+    uint64_t input_buffer[14 * 4];
     add_wire_commitments_to_buffer(proof, input_buffer);
     add_grand_product_commitments_to_buffer(proof, &input_buffer[24]);
-    add_quotient_commitment_to_buffer(proof, &input_buffer[40]);
-    keccak256 hash = hash_field_elements(input_buffer, 16);
+    add_quotient_commitment_to_buffer(proof, &input_buffer[32]);
+    keccak256 hash = hash_field_elements(input_buffer, 14);
     fr::copy(*(fr::field_t*)&hash.word64s[0], z);
     fr::to_montgomery_form(z, z);
     return z;
 }
 
-inline fr::field_t compute_linearisation_challenge(const plonk_proof &proof, const fr::field_t &t_lo_eval)
+inline fr::field_t compute_linearisation_challenge(const plonk_proof &proof, const fr::field_t &t_eval)
 {
     fr::field_t nu;
-    uint64_t input_buffer[28 * 4];
+    uint64_t input_buffer[22 * 4];
     add_wire_commitments_to_buffer(proof, input_buffer);
     add_grand_product_commitments_to_buffer(proof, &input_buffer[24]);
-    add_quotient_commitment_to_buffer(proof, &input_buffer[40]);
-    add_polynomial_evaluations_to_buffer(proof, t_lo_eval, &input_buffer[64]);
-    keccak256 hash = hash_field_elements(input_buffer, 28);
+    add_quotient_commitment_to_buffer(proof, &input_buffer[32]);
+    add_polynomial_evaluations_to_buffer(proof, t_eval, &input_buffer[56]);
+    keccak256 hash = hash_field_elements(input_buffer, 22);
     fr::copy(*(fr::field_t*)&hash.word64s[0], nu);
     fr::to_montgomery_form(nu, nu);
     return nu;

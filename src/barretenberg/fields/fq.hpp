@@ -70,28 +70,28 @@ constexpr field_t beta = { .data = {
 
 
 // compute a * b, put result in r
-inline void mul(const field_t &a, const field_t &b, const field_t &r);
+inline void __mul(const field_t &a, const field_t &b, const field_t &r);
 
 // compute a * b, put result in r. Do not perform final reduction check
-inline void mul_without_reduction(const field_t &a, const field_t &b, const field_t &r);
+inline void __mul_without_reduction(const field_t &a, const field_t &b, const field_t &r);
 
 // compute a * a, put result in r
-inline void sqr(const field_t &a, const field_t &r);
+inline void __sqr(const field_t &a, const field_t &r);
 
 // compute a * a, put result in r. Do not perform final reduction check
-inline void sqr_without_reduction(const field_t &a, const field_t &r);
+inline void __sqr_without_reduction(const field_t &a, const field_t &r);
 
 // compute a + b, put result in r
-inline void add(const field_t &a, const field_t &b, field_t &r);
+inline void __add(const field_t &a, const field_t &b, field_t &r);
 
 // compute a + b, put result in r. Do not perform final reduction check
-inline void add_without_reduction(const field_t &a, const field_t &b, field_t &r);
+inline void __add_without_reduction(const field_t &a, const field_t &b, field_t &r);
 
 // quadruple a, perform a reduction check that reduces to either (r mod p) or p + (r mod p)
 inline void quad_with_partial_reduction(const field_t &a, const field_t &r);
 
 // compute a - b, put result in r
-inline void sub(const field_t &a, const field_t &b, field_t &r);
+inline void __sub(const field_t &a, const field_t &b, field_t &r);
 
 /**
  * copy src into dest. AVX implementation requires words to be aligned on 32 byte bounary
@@ -110,9 +110,9 @@ inline bool gt(const field_t &a, const field_t &b)
 /**
  * Multiply field_t `a` by the cube root of unity, modulo `q`. Store result in `r`
  **/
-inline void mul_beta(const field_t &a, field_t &r)
+inline void __mul_beta(const field_t &a, field_t &r)
 {
-    fq::mul(a, beta, r);
+    fq::__mul(a, beta, r);
 }
 
 /**
@@ -120,7 +120,7 @@ inline void mul_beta(const field_t &a, field_t &r)
  **/
 inline void neg(const field_t &a, field_t &r)
 {
-    fq::sub(modulus, a, r);
+    fq::__sub(modulus, a, r);
 }
 
 /**
@@ -131,9 +131,9 @@ inline void to_montgomery_form(const field_t &a, field_t &r)
     copy(a, r);
     while (gt(r, modulus_plus_one))
     {
-        sub(r, modulus, r);
+        __sub(r, modulus, r);
     }
-    mul(r, r_squared, r);
+    __mul(r, r_squared, r);
 }
 
 /**
@@ -142,7 +142,7 @@ inline void to_montgomery_form(const field_t &a, field_t &r)
  **/
 inline void from_montgomery_form(const field_t &a, field_t &r)
 {
-    mul(a, one_raw, r);
+    __mul(a, one_raw, r);
 }
 
 /**
@@ -174,15 +174,15 @@ inline void pow(const field_t &a, const field_t &b, field_t &r)
     for (; i < 256; --i)
     {
         sqr_count++;
-        fq::sqr_without_reduction(accumulator, accumulator);
+        fq::__sqr_without_reduction(accumulator, accumulator);
         if (get_bit(b, i))
         {
-            fq::mul_without_reduction(accumulator, a, accumulator);
+            fq::__mul_without_reduction(accumulator, a, accumulator);
         }
     }
     while (gt(accumulator, modulus_plus_one))
     {
-        sub(accumulator, modulus, accumulator);
+        __sub(accumulator, modulus, accumulator);
     }
     copy(accumulator, r);
 }
@@ -190,7 +190,7 @@ inline void pow(const field_t &a, const field_t &b, field_t &r)
 /**
  * compute a^{q - 2} mod q, place result in r
  **/
-inline void invert(field_t &a, field_t &r)
+inline void __invert(field_t &a, field_t &r)
 {
     // q - 2
     constexpr field_t modulus_minus_two = {
@@ -204,7 +204,7 @@ inline void invert(field_t &a, field_t &r)
 /**
  * compute a^{(q + 1) / 2}, place result in r
  **/
-inline void sqrt(field_t &a, field_t &r)
+inline void __sqrt(field_t &a, field_t &r)
 {
     // (q + 1) / 2
     constexpr field_t modulus_plus_one_div_two = {

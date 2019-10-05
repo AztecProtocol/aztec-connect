@@ -33,7 +33,7 @@ inline circuit_instance preprocess_circuit(waffle::circuit_state &state, const s
     fr::copy(fr::one(), roots[0]);
     for (size_t i = 1; i < state.small_domain.size; ++i)
     {
-        fr::mul(roots[i-1], state.small_domain.root, roots[i]);
+        fr::__mul(roots[i-1], state.small_domain.root, roots[i]);
     }
 
     // copy polynomials so that we don't mutate inputs
@@ -61,10 +61,6 @@ inline circuit_instance preprocess_circuit(waffle::circuit_state &state, const s
     }
 
     scalar_multiplication::batched_scalar_multiplications(mul_state, 8);
-    // for (size_t i = 0; i < 8; ++i)
-    // {
-    //     mul_state[i].output = scalar_multiplication::pippenger(mul_state[i].scalars, srs.monomials, n);
-    // }
 
     circuit_instance instance;
     instance.n = n;
