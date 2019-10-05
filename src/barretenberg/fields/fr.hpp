@@ -420,9 +420,8 @@ inline field_t one()
 
 inline field_t neg_one()
 {
-    field_t res = fr::modulus;
-    --res.data[0];
-    return res;
+    fr::field_t r = fr::sub(fr::zero(), fr::one());
+    return r;
 }
 
 inline field_t multiplicative_generator()

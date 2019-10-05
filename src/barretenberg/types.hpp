@@ -112,8 +112,10 @@ struct element
 
 namespace polynomials
 {
+
 struct evaluation_domain
 {
+public:
     fr::field_t root;
     fr::field_t root_inverse;
     fr::field_t generator;
@@ -126,7 +128,18 @@ struct evaluation_domain
     size_t thread_size;
     size_t log2_thread_size;
     size_t log2_num_threads;
-    fr::field_t *roots;
+
+    fr::field_t** round_roots;
+    fr::field_t* roots;
+    fr::field_t** inverse_round_roots;
+    fr::field_t* inverse_roots;
+
+    evaluation_domain() : round_roots(nullptr), roots(nullptr), inverse_round_roots(nullptr), inverse_roots(nullptr) {};
+    evaluation_domain(size_t size, bool skip_roots = false);
+    evaluation_domain(const evaluation_domain& other);
+    evaluation_domain(evaluation_domain&& other) = delete;
+    ~evaluation_domain();
+
 };
 
 struct lagrange_evaluations
@@ -219,6 +232,9 @@ struct circuit_state
     barretenberg::polynomials::evaluation_domain small_domain;
     barretenberg::polynomials::evaluation_domain mid_domain;
     barretenberg::polynomials::evaluation_domain large_domain;
+
+    circuit_state(size_t n);
+    circuit_state(const circuit_state& other);
 };
 
 struct witness_ffts
@@ -238,7 +254,6 @@ struct plonk_proof
     barretenberg::g1::affine_element W_R;
     barretenberg::g1::affine_element W_O;
     barretenberg::g1::affine_element Z_1;
-    barretenberg::g1::affine_element Z_2;
     barretenberg::g1::affine_element T_LO;
     barretenberg::g1::affine_element T_MID;
     barretenberg::g1::affine_element T_HI;
@@ -250,12 +265,8 @@ struct plonk_proof
     barretenberg::fr::field_t w_o_eval;
     barretenberg::fr::field_t sigma_1_eval;
     barretenberg::fr::field_t sigma_2_eval;
-    barretenberg::fr::field_t sigma_3_eval;
     barretenberg::fr::field_t z_1_shifted_eval;
-    barretenberg::fr::field_t z_2_shifted_eval;
     barretenberg::fr::field_t linear_eval;
-    barretenberg::fr::field_t t_mid_eval;
-    barretenberg::fr::field_t t_hi_eval;
 };
 } // namespace waffle
 

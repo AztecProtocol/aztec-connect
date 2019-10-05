@@ -67,8 +67,8 @@ TEST(preprocess, preprocess)
         }
     }
 
-    waffle::circuit_state state;
-    state.small_domain = polynomials::get_domain(n);
+    waffle::circuit_state state(n);
+    // state.small_domain = polynomials::evaluation_domain(n);
     state.n = n;
     state.sigma_1 = polys[6];
     state.sigma_2 = polys[7];

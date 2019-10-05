@@ -41,10 +41,10 @@ add_library(
     waffle/widgets/base_widget.hpp
     waffle/widgets/arithmetic_widget.cpp
     waffle/widgets/arithmetic_widget.hpp
-    waffle/composer/composer.cpp
-    waffle/composer/composer.hpp
-    waffle/circuits/mimc.cpp
-    waffle/circuits/mimc.hpp
+#    waffle/composer/composer.cpp
+#    waffle/composer/composer.hpp
+#    waffle/circuits/mimc.cpp
+#    waffle/circuits/mimc.hpp
 )
 
 set_target_properties(

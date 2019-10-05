@@ -46,6 +46,7 @@ add_executable(
     test_preprocess.cpp
     test_waffle.cpp
     test_verifier.cpp
+#    test_composer.cpp
 )
 
 set_target_properties(

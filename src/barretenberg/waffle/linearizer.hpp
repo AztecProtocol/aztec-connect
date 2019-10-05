@@ -14,14 +14,11 @@ namespace waffle
         fr::field_t w_r;
         fr::field_t w_o;
         fr::field_t z_1;
-        fr::field_t z_2;
         fr::field_t q_m;
         fr::field_t q_l;
         fr::field_t q_r;
         fr::field_t q_o;
         fr::field_t q_c;
-        fr::field_t sigma_1;
-        fr::field_t sigma_2;
         fr::field_t sigma_3;
     };
 
@@ -81,19 +78,16 @@ namespace waffle
         fr::__add(T1, proof.w_r_eval, T1);
         fr::__add(T1, challenges.gamma, T1);
 
-        fr::__mul(proof.sigma_3_eval, challenges.beta, T2);
-        fr::__add(T2, proof.w_o_eval, T2);
-        fr::__add(T2, challenges.gamma, T2);
 
-        fr::__mul(T2, T1, T1);
         fr::__mul(T1, T0, T0);
-        fr::__mul(T0, alpha_pow[2], result.z_2);
+        fr::__mul(T0, proof.z_1_shifted_eval, T0);
+        fr::__mul(T0, alpha_pow[1], result.sigma_3);
+        fr::neg(result.sigma_3, result.sigma_3);
+        fr::__mul(result.sigma_3, challenges.beta, result.sigma_3);
 
 
-        fr::__mul(l_1, alpha_pow[4], T0);
+        fr::__mul(l_1, alpha_pow[3], T0);
         fr::__add(result.z_1, T0, result.z_1);
-        fr::__mul(l_1, alpha_pow[5], T0);
-        fr::__add(result.z_2, T0, result.z_2);
 
         fr::__mul(proof.w_o_eval, alpha_pow[0], result.q_o);
         fr::__mul(proof.w_r_eval, alpha_pow[0], result.q_r);

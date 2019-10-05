@@ -34,9 +34,6 @@ constexpr size_t START = (1 << 20) >> 7;
 void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *data, size_t n)
 {
     state.n = n;
-    state.small_domain = polynomials::get_domain(n);
-    state.mid_domain = polynomials::get_domain(2 * n);
-    state.large_domain = polynomials::get_domain(4 * n);
     state.w_l = &data[0];
     state.w_r = &data[n];
     state.w_o = &data[2 * n];
@@ -193,10 +190,8 @@ void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *da
 
 struct global_vars
 {
-    polynomials::evaluation_domain domain;
     alignas(32) g1::affine_element g1_pair_points[2];
     alignas(32) g2::affine_element g2_pair_points[2];
-    waffle::circuit_state plonk_state;
     std::vector<waffle::circuit_state> plonk_states;
     waffle::circuit_instance plonk_instance;
     std::vector<waffle::circuit_instance> plonk_instances;
@@ -207,6 +202,8 @@ struct global_vars
     fr::field_t *scalars;
     fr::field_t *roots;
     fr::field_t *coefficients;
+
+    polynomials::evaluation_domain domains[10];
 };
 
 global_vars globals;
@@ -260,14 +257,15 @@ const auto init = []() {
     scalar_multiplication::generate_pippenger_point_table(globals.reference_string.monomials, globals.reference_string.monomials, MAX_GATES);
     globals.data =  (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (8 * 17 * MAX_GATES)));
 
-    globals.plonk_states.resize(8);
     size_t pointer_offset = 0;
     for (size_t i = 0; i < 8; ++i)
     {
         size_t n = (MAX_GATES >> 7) << i;
         printf("%lu\n", n);
         fr::field_t *data = &globals.data[pointer_offset];
-        generate_random_plonk_circuit(globals.plonk_states[i], data, n);
+        waffle::circuit_state state(n);
+        generate_random_plonk_circuit(state, data, n);
+        globals.plonk_states.push_back(state);
         pointer_offset += 17 * n + 2;
     }
 
@@ -276,20 +274,6 @@ const auto init = []() {
     globals.plonk_instances.resize(8);
     globals.plonk_proofs.resize(8);
 
-    globals.roots = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * 4 * MAX_GATES));
-    globals.coefficients = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * 4 * MAX_GATES));
-    
-
-    fr::one(globals.roots[0]);
-    fr::one(globals.coefficients[0]);
-    fr::field_t z = fr::random_element();
-    globals.domain = polynomials::get_domain(4 * MAX_GATES);
-    for (size_t i = 1; i < 4 * MAX_GATES; ++i)
-    {
-        fr::__mul(globals.roots[i - 1], globals.domain.root, globals.roots[i]);
-        fr::__mul(globals.coefficients[i - 1], z, globals.coefficients[i]);
-    }
-    globals.domain.roots = globals.roots;
     printf("finished generating test data\n");
     return true;
 }();
@@ -377,6 +361,27 @@ void verify_proof_bench(State& state) noexcept
 }
 BENCHMARK(verify_proof_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
 
+
+void fft_bench_parallel(State& state) noexcept
+{
+    for (auto _ : state)
+    {
+        size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
+        barretenberg::polynomials::fft(globals.data, globals.plonk_states[idx].large_domain);
+    }
+}
+BENCHMARK(fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
+
+
+void fft_bench_serial(State& state) noexcept
+{
+    for (auto _ : state)
+    {
+        size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
+        barretenberg::polynomials::fft_inner_serial(globals.data, globals.plonk_states[idx].large_domain.thread_size, (const barretenberg::fr::field_t**)globals.plonk_states[idx].large_domain.round_roots);
+    }
+}
+BENCHMARK(fft_bench_serial)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
 
 void pairing_bench(State& state) noexcept
 {
@@ -518,7 +523,6 @@ void fq_mul_asm_bench(State& state) noexcept
         ++i;
     }
     printf("mul number of cycles = %lu\n", count / (i * NUM_MULTIPLICATIONS));
-    // printf("r_2 = [%lu, %lu, %lu, %lu]\n", r_2[0], r_2[1], r_2[2], r_2[3]);
 }
 BENCHMARK(fq_mul_asm_bench);
 

@@ -391,12 +391,11 @@ TEST(waffle, compute_quotient_polynomial_for_structured_circuit)
 {
     size_t n = 16;
 
-    waffle::circuit_state state;
-    state.small_domain = polynomials::get_domain(n);
-    state.mid_domain = polynomials::get_domain(2 * n);
-    state.large_domain = polynomials::get_domain(4 * n);
+    waffle::circuit_state state(n);
+    // state.small_domain = polynomials::evaluation_domain(n);
+    // state.mid_domain = polynomials::evaluation_domain(2 * n);
+    // state.large_domain = polynomials::evaluation_domain(4 * n);
     state.n = n;
-
     fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22 * n + 8)));
     fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22 * n + 8)));
 
@@ -420,7 +419,6 @@ TEST(waffle, compute_quotient_polynomial_for_structured_circuit)
     waffle::plonk_proof proof;
     waffle::convert_permutations_into_lagrange_base_form(state);
     waffle::compute_quotient_polynomial(state, ffts, proof, srs);
-    
     for (size_t i = 3 * n; i < 4 * n; ++i)
     {
         EXPECT_EQ(fr::eq(ffts.quotient_poly[i], fr::zero()), true);
@@ -434,10 +432,10 @@ TEST(waffle, compute_quotient_polynomial)
 {
     size_t n = 256;
 
-    waffle::circuit_state state;
-    state.small_domain = polynomials::get_domain(n);
-    state.mid_domain = polynomials::get_domain(2 * n);
-    state.large_domain = polynomials::get_domain(4 * n);
+    waffle::circuit_state state(n);
+    // state.small_domain = polynomials::evaluation_domain(n);
+    // state.mid_domain = polynomials::evaluation_domain(2 * n);
+    // state.large_domain = polynomials::evaluation_domain(4 * n);
     state.n = n;
 
     fr::field_t data[28 * n + 2];
@@ -480,9 +478,9 @@ TEST(waffle, compute_quotient_polynomial)
 
 //     fr::field_t data[16 * n + 2];
 //     waffle::circuit_state state;
-//     state.small_domain = polynomials::get_domain(n);
-//     state.mid_domain = polynomials::get_domain(2 * n);
-//     state.large_domain = polynomials::get_domain(4 * n);
+//     state.small_domain = polynomials::evaluation_domain(n);
+//     state.mid_domain = polynomials::evaluation_domain(2 * n);
+//     state.large_domain = polynomials::evaluation_domain(4 * n);
 
 //     state.w_l = &data[0];
 //     state.w_r = &data[n];
@@ -603,10 +601,10 @@ TEST(waffle, compute_wire_coefficients)
     size_t n = 256;
     fr::field_t data[13 * n];
 
-    waffle::circuit_state state;
-    state.small_domain = polynomials::get_domain(n);
-    state.mid_domain = polynomials::get_domain(2 * n);
-    state.large_domain = polynomials::get_domain(4 * n);
+    waffle::circuit_state state(n);
+    // state.small_domain = polynomials::evaluation_domain(n);
+    // state.mid_domain = polynomials::evaluation_domain(2 * n);
+    // state.large_domain = polynomials::evaluation_domain(4 * n);
 
     state.w_l = &data[0];
     state.w_r = &data[n];
@@ -651,9 +649,7 @@ TEST(waffle, compute_wire_coefficients)
     ffts.w_l_poly = &scratch_space[0];
     ffts.w_r_poly = &scratch_space[4 * n];
     ffts.w_o_poly = &scratch_space[8 * n];
-    ffts.identity_poly = &scratch_space[12 * n];
     ffts.z_1_poly = &scratch_space[16 * n];
-    ffts.z_2_poly = &scratch_space[20 * n + 4];
     waffle::compute_wire_coefficients(state, ffts);
 
     fr::field_t work_root;
@@ -678,10 +674,10 @@ TEST(waffle, compute_wire_commitments)
 {
     size_t n = 256;
 
-    waffle::circuit_state state;
-    state.small_domain = polynomials::get_domain(n);
-    state.mid_domain = polynomials::get_domain(2 * n);
-    state.large_domain = polynomials::get_domain(4 * n);
+    waffle::circuit_state state(n);
+    // state.small_domain = polynomials::evaluation_domain(n);
+    // state.mid_domain = polynomials::evaluation_domain(2 * n);
+    // state.large_domain = polynomials::evaluation_domain(4 * n);
     state.n = n;
     fr::field_t data[25 * n];
 
@@ -745,10 +741,10 @@ TEST(waffle, compute_z_commitments)
 {
     size_t n = 256;
 
-    waffle::circuit_state state;
-    state.small_domain = polynomials::get_domain(n);
-    state.mid_domain = polynomials::get_domain(2 * n);
-    state.large_domain = polynomials::get_domain(4 * n);
+    waffle::circuit_state state(n);
+    // state.small_domain = polynomials::evaluation_domain(n);
+    // state.mid_domain = polynomials::evaluation_domain(2 * n);
+    // state.large_domain = polynomials::evaluation_domain(4 * n);
     state.n = n;
 
     fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (28 * n + 2)));
@@ -761,7 +757,6 @@ TEST(waffle, compute_z_commitments)
     ffts.w_r_poly = &ffts.scratch_memory[4 * n];
     ffts.w_o_poly = &ffts.scratch_memory[8 * n];
     ffts.z_1_poly = &ffts.scratch_memory[12 * n];
-    ffts.z_2_poly = &ffts.scratch_memory[16 * n];
     ffts.quotient_poly = &ffts.scratch_memory[20 * n];
     generate_test_data(state, data);
 
@@ -783,28 +778,21 @@ TEST(waffle, compute_z_commitments)
     waffle::compute_z_coefficients(state, ffts);
 
     fr::field_t z_1_copy[n];
-    fr::field_t z_2_copy[n];
     polynomials::copy_polynomial(state.z_1, z_1_copy, n, n);
-    polynomials::copy_polynomial(state.z_2, z_2_copy, n, n);
 
     fr::field_t z_1_eval;
-    fr::field_t z_2_eval;
 
 
     z_1_eval = polynomials::evaluate(z_1_copy, x, n);
-    z_2_eval = polynomials::evaluate(z_2_copy, x, n);
 
     waffle::plonk_proof proof;
     waffle::compute_z_commitments(state, proof, srs);
 
     g1::affine_element generator = g1::affine_one();
     g1::affine_element expected_z_1 = g1::group_exponentiation(generator, z_1_eval);
-    g1::affine_element expected_z_2 = g1::group_exponentiation(generator, z_2_eval);
 
     EXPECT_EQ(fq::eq(proof.Z_1.x, expected_z_1.x), true);
     EXPECT_EQ(fq::eq(proof.Z_1.y, expected_z_1.y), true);
-    EXPECT_EQ(fq::eq(proof.Z_2.x, expected_z_2.x), true);
-    EXPECT_EQ(fq::eq(proof.Z_2.y, expected_z_2.y), true);
 
     free(monomials);
     free(scratch_space);
@@ -815,10 +803,10 @@ TEST(waffle, compute_linearisation_coefficients)
 {
     size_t n = 256;
 
-    waffle::circuit_state state;
-    state.small_domain = polynomials::get_domain(n);
-    state.mid_domain = polynomials::get_domain(2 * n);
-    state.large_domain = polynomials::get_domain(4 * n);
+    waffle::circuit_state state(n);
+    // state.small_domain = polynomials::evaluation_domain(n);
+    // state.mid_domain = polynomials::evaluation_domain(2 * n);
+    // state.large_domain = polynomials::evaluation_domain(4 * n);
 
     state.n = n;
 
@@ -854,35 +842,47 @@ TEST(waffle, compute_linearisation_coefficients)
 
     polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(state.challenges.z, state.small_domain);
 
-    fr::field_t alpha_five;
-    fr::field_t alpha_six;
-    fr::__mul(state.alpha_squared, state.alpha_cubed, alpha_five);
-    fr::__mul(alpha_five, state.challenges.alpha, alpha_six);
-    fr::field_t rhs;
-    fr::field_t lhs;
+    fr::field_t alpha_pow[6];
+    fr::copy(state.challenges.alpha, alpha_pow[0]);
+    for (size_t i = 1; i < 6; ++i)
+    {
+        fr::__mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
+    }
+
     fr::field_t T0;
     fr::field_t T1;
     fr::field_t T2;
+    fr::field_t T3;
+    fr::__mul(proof.sigma_1_eval, state.challenges.beta, T0);
+    fr::__add(proof.w_l_eval, state.challenges.gamma, T1);
+    fr::__add(T0, T1, T0);
 
-    fr::__mul(lagrange_evals.l_n_minus_1, state.alpha_cubed, T0);
-    fr::__mul(T0, state.challenges.alpha, T0);
+    fr::__mul(proof.sigma_2_eval, state.challenges.beta, T2);
+    fr::__add(proof.w_r_eval, state.challenges.gamma, T1);
+    fr::__add(T2, T1, T2);
 
-    fr::__sub(proof.z_1_shifted_eval, proof.z_2_shifted_eval, T1);
-    fr::__mul(T0, T1, T0);
+    fr::__add(proof.w_o_eval, state.challenges.gamma, T3);
 
-    fr::__add(alpha_five, alpha_six, T2);
-    fr::__mul(T2, lagrange_evals.l_1, T2);
-    fr::__sub(T0, T2, T0);
+    fr::__mul(T0, T2, T0);
+    fr::__mul(T0, T3, T0);
+    fr::__mul(T0, proof.z_1_shifted_eval, T0);
+    fr::__mul(T0, alpha_pow[1], T0);
 
-    fr::__mul(proof.z_1_shifted_eval, state.alpha_squared, T1);
-    fr::__mul(proof.z_2_shifted_eval, state.alpha_cubed, T2);
-    fr::__add(T1, T2, T1);
-    fr::__sub(T0, T1, T0);
-    fr::__add(T0, proof.linear_eval, rhs);
+    fr::__sub(proof.z_1_shifted_eval, fr::one(), T1);
+    fr::__mul(T1, lagrange_evals.l_n_minus_1, T1);
+    fr::__mul(T1, alpha_pow[2], T1);
 
-    fr::__mul(t_eval, lagrange_evals.vanishing_poly, lhs);
+    fr::__mul(lagrange_evals.l_1, alpha_pow[3], T2);
 
-    EXPECT_EQ(fr::eq(lhs, rhs), true);
+    fr::__sub(T1, T2, T1);
+    fr::__sub(T1, T0, T1);
+
+    fr::field_t rhs;
+    fr::__add(T1, proof.linear_eval, rhs);
+    fr::__invert(lagrange_evals.vanishing_poly, T0);
+    fr::__mul(rhs, T0, rhs);
+
+    EXPECT_EQ(fr::eq(t_eval, rhs), true);
 
     free(scratch_space);
     free(data);

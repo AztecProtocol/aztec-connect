@@ -61,10 +61,6 @@ inline circuit_instance preprocess_circuit(waffle::circuit_state &state, const s
     }
 
     scalar_multiplication::batched_scalar_multiplications(mul_state, 8);
-    // for (size_t i = 0; i < 8; ++i)
-    // {
-    //     mul_state[i].output = scalar_multiplication::pippenger(mul_state[i].scalars, srs.monomials, n);
-    // }
 
     circuit_instance instance;
     instance.n = n;

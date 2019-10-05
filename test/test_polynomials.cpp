@@ -8,7 +8,7 @@ using namespace barretenberg;
 TEST(polynomials, evaluation_domain)
 {
     size_t n = 256;
-    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+    polynomials::evaluation_domain domain = polynomials::evaluation_domain(n);
 
     EXPECT_EQ(domain.size, 256UL);
     EXPECT_EQ(domain.log2_size, 8UL);
@@ -17,7 +17,7 @@ TEST(polynomials, evaluation_domain)
 TEST(polynomials, domain_roots)
 {
     size_t n = 256;
-    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+    polynomials::evaluation_domain domain = polynomials::evaluation_domain(n);
 
     fr::field_t result;
     fr::field_t expected;
@@ -27,9 +27,9 @@ TEST(polynomials, domain_roots)
     EXPECT_EQ(fr::eq(result, expected), true);
 }
 
-TEST(polynomials, fft_with_small_degree)
+TEST(polynomialss, fft_with_small_degree)
 {
-    size_t n = 4;
+    size_t n = 16;
     fr::field_t fft_transform[n];
     fr::field_t poly[n];
 
@@ -39,7 +39,7 @@ TEST(polynomials, fft_with_small_degree)
         fr::copy(poly[i], fft_transform[i]);
     }
 
-    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+    polynomials::evaluation_domain domain = polynomials::evaluation_domain(n);
 
     polynomials::fft(fft_transform, domain);
 
@@ -54,48 +54,19 @@ TEST(polynomials, fft_with_small_degree)
     }
 }
 
-TEST(polynomials, basic_fft_alternate)
+TEST(polynomialse, basic_fft)
 {
-    size_t n = 256;
-    fr::field_t* roots = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * n);
-    fr::field_t result[n];
-    fr::field_t expected[n];
+    size_t n = 1 << 20;
+    fr::field_t* data = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * n * 2);
+    fr::field_t* result = &data[0];
+    fr::field_t* expected = &data[n];
     for (size_t i = 0; i < n; ++i)
     {
         result[i] = fr::random_element();
         fr::copy(result[i], expected[i]);
     }
 
-
-    polynomials::evaluation_domain domain = polynomials::get_domain(n);
-    fr::copy(fr::one(), roots[0]);
-    for (size_t i = 1; i < n; ++i)
-    {
-        fr::__mul(roots[i-1], domain.root, roots[i]);
-    }
-    domain.roots = roots;
-    polynomials::fft(expected, domain);
-    polynomials::fft_alternate(result, domain);
-
-    for (size_t i = 0; i < n; ++i)
-    {
-        EXPECT_EQ(fr::eq(result[i], expected[i]), true);
-    }
-    free(roots);
-}
-
-TEST(polynomials, basic_fft)
-{
-    size_t n = 256;
-    fr::field_t result[n];
-    fr::field_t expected[n];
-    for (size_t i = 0; i < n; ++i)
-    {
-        result[i] = fr::random_element();
-        fr::copy(result[i], expected[i]);
-    }
-
-    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+    polynomials::evaluation_domain domain = polynomials::evaluation_domain(n);
 
     polynomials::fft(result, domain);
     polynomials::ifft(result, domain);
@@ -104,6 +75,7 @@ TEST(polynomials, basic_fft)
     {
         EXPECT_EQ(fr::eq(result[i], expected[i]), true);
     }
+    free(data);
 }
 
 TEST(polynomials, fft_ifft_consistency)
@@ -117,7 +89,7 @@ TEST(polynomials, fft_ifft_consistency)
         fr::copy(result[i], expected[i]);
     }
 
-    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+    polynomials::evaluation_domain domain = polynomials::evaluation_domain(n);
 
     polynomials::fft(result, domain);
     polynomials::ifft(result, domain);
@@ -139,7 +111,7 @@ TEST(polynomials, fft_ifft_with_coset_consistency)
         fr::copy(result[i], expected[i]);
     }
 
-    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+    polynomials::evaluation_domain domain = polynomials::evaluation_domain(n);
 
     fr::field_t T0;
     fr::__mul(domain.generator, domain.generator_inverse, T0);
@@ -178,9 +150,9 @@ TEST(polynomials, fft_ifft_with_coset_cross_consistency)
         fr::zero(poly_b[i]);
         fr::zero(poly_c[i]);
     }
-    polynomials::evaluation_domain small_domain = polynomials::get_domain(n);
-    polynomials::evaluation_domain mid_domain = polynomials::get_domain(2 * n);
-    polynomials::evaluation_domain large_domain = polynomials::get_domain(4 * n);
+    polynomials::evaluation_domain small_domain = polynomials::evaluation_domain(n);
+    polynomials::evaluation_domain mid_domain = polynomials::evaluation_domain(2 * n);
+    polynomials::evaluation_domain large_domain = polynomials::evaluation_domain(4 * n);
 
     polynomials::fft_with_coset(poly_a, small_domain);
     polynomials::fft_with_coset(poly_b, mid_domain);
@@ -203,8 +175,8 @@ TEST(polynomials, fft_ifft_with_coset_cross_consistency)
 TEST(polynomials, compute_lagrange_polynomial_fft)
 {
     size_t n = 256;
-    polynomials::evaluation_domain small_domain = polynomials::get_domain(n);
-    polynomials::evaluation_domain mid_domain = polynomials::get_domain(2 * n);
+    polynomials::evaluation_domain small_domain = polynomials::evaluation_domain(n);
+    polynomials::evaluation_domain mid_domain = polynomials::evaluation_domain(2 * n);
 
     fr::field_t l_1_coefficients[2 * n];
     fr::field_t scratch_memory[2 * n + 4];
@@ -285,8 +257,8 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
 
     // make the final evaluation not vanish
     // fr::one(c[n-1]);
-    polynomials::evaluation_domain small_domain = polynomials::get_domain(n);
-    polynomials::evaluation_domain mid_domain = polynomials::get_domain(4 * n);
+    polynomials::evaluation_domain small_domain = polynomials::evaluation_domain(n);
+    polynomials::evaluation_domain mid_domain = polynomials::evaluation_domain(4 * n);
 
     polynomials::ifft(a, small_domain);
     polynomials::ifft(b, small_domain);
@@ -349,7 +321,7 @@ TEST(polynomials, compute_kate_opening_coefficients)
     fr::__sub(coeffs[0], f, coeffs[0]);
 
     // compute fft of polynomials
-    polynomials::evaluation_domain domain = polynomials::get_domain(2 * n);
+    polynomials::evaluation_domain domain = polynomials::evaluation_domain(2 * n);
     polynomials::fft_with_coset(coeffs, domain);
     polynomials::fft_with_coset(W, domain);
     polynomials::fft_with_coset(multiplicand, domain);
@@ -367,7 +339,7 @@ TEST(polynomials, get_lagrange_evaluations)
 {
     size_t n = 16;
     
-    polynomials::evaluation_domain domain = polynomials::get_domain(n);
+    polynomials::evaluation_domain domain = polynomials::evaluation_domain(n);
 
     fr::field_t z = fr::random_element();
 

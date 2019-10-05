@@ -13,9 +13,9 @@ using namespace barretenberg;
 void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
 {
     size_t n = state.n;
-    state.small_domain = polynomials::get_domain(n);
-    state.mid_domain = polynomials::get_domain(2 * n);
-    state.large_domain = polynomials::get_domain(4 * n);
+    // state.small_domain = polynomials::evaluation_domain(n);
+    // state.mid_domain = polynomials::evaluation_domain(2 * n);
+    // state.large_domain = polynomials::evaluation_domain(4 * n);
     state.w_l = &data[0];
     state.w_r = &data[n];
     state.w_o = &data[2 * n];
@@ -178,10 +178,10 @@ TEST(verifier, verifier)
 {
     size_t n = 1 << 12;
 
-    waffle::circuit_state state;
-    state.small_domain = polynomials::get_domain(n);
-    state.mid_domain = polynomials::get_domain(2 * n);
-    state.large_domain = polynomials::get_domain(4 * n);
+    waffle::circuit_state state(n);
+    // state.small_domain = polynomials::evaluation_domain(n);
+    // state.mid_domain = polynomials::evaluation_domain(2 * n);
+    // state.large_domain = polynomials::evaluation_domain(4 * n);
 
     state.n = n;
 
