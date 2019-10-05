@@ -27,7 +27,7 @@ TEST(polynomials, domain_roots)
     EXPECT_EQ(fr::eq(result, expected), true);
 }
 
-TEST(polynomialss, fft_with_small_degree)
+TEST(polynomials, fft_with_small_degree)
 {
     size_t n = 16;
     fr::field_t fft_transform[n];
@@ -54,7 +54,7 @@ TEST(polynomialss, fft_with_small_degree)
     }
 }
 
-TEST(polynomialse, basic_fft)
+TEST(polynomials, basic_fft)
 {
     size_t n = 1 << 20;
     fr::field_t* data = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * n * 2);

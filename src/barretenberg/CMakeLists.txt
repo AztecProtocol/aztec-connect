@@ -38,9 +38,9 @@ add_library(
     waffle/waffle.cpp
     waffle/waffle.hpp
     waffle/verifier.hpp
-    waffle/widgets/base_widget.hpp
-    waffle/widgets/arithmetic_widget.cpp
-    waffle/widgets/arithmetic_widget.hpp
+#   waffle/widgets/base_widget.hpp
+#   waffle/widgets/arithmetic_widget.cpp
+#   waffle/widgets/arithmetic_widget.hpp
 #    waffle/composer/composer.cpp
 #    waffle/composer/composer.hpp
 #    waffle/circuits/mimc.cpp
