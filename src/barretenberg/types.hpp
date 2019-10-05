@@ -113,6 +113,9 @@ struct element
 namespace polynomials
 {
 
+// TODO: move this into polynomials.hpp
+// TODO: fix move constructor
+// TODO: use shared_ptr for lookup table
 struct evaluation_domain
 {
 public:
@@ -188,6 +191,7 @@ struct plonk_challenges
 
 // contains the state of a PLONK proof, including witness values, instance values
 // and Kate polynomial commitments
+// TODO: add proper constructors, copy constructors, destructor
 struct circuit_state
 {
     plonk_challenges challenges;
