@@ -104,7 +104,7 @@ TEST(preprocess, preprocess)
         polynomials::ifft(polys[i], state.small_domain);
     }
 
-    // fr::to_montgomery_form(x, x);
+    // fr::__to_montgomery_form(x, x);
     fr::field_t sigma_1_eval = polynomials::evaluate(state.sigma_1, x, n);
     fr::field_t sigma_2_eval = polynomials::evaluate(state.sigma_2, x, n);
     fr::field_t sigma_3_eval = polynomials::evaluate(state.sigma_3, x, n);

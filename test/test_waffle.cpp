@@ -254,10 +254,6 @@ void generate_point_addition_data(waffle::circuit_state& state, fr::field_t* dat
     state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[19 * n + 2] + ((2 * n) * sizeof(uint32_t)));
     state.t = &data[14 * n + 2];
     
-    state.product_1 = &data[17 * n + 5];
-    state.product_2 = &data[18 * n + 6];
-    state.product_3 = &data[19 * n + 7];
-    state.permutation_product = &data[20 * n + 8];
     state.w_l_lagrange_base = state.t;
     state.w_r_lagrange_base = &state.t[n + 1];
     state.w_o_lagrange_base = &state.t[2 * n + 2];
@@ -559,8 +555,8 @@ TEST(waffle, compute_quotient_polynomial)
 //     {
 //         z_1_expected = polynomials::evaluate(state.z_1, work_root, n);
 //         z_2_expected = polynomials::evaluate(state.z_2, work_root, n);
-//         fr::from_montgomery_form(z_1_expected, z_1_expected);
-//         fr::from_montgomery_form(z_2_expected, z_2_expected);
+//         fr::__from_montgomery_form(z_1_expected, z_1_expected);
+//         fr::__from_montgomery_form(z_2_expected, z_2_expected);
 //         fr::__mul(work_root, state.small_domain.root, work_root);
 //         EXPECT_EQ(z_1_expected.data[0], z_1_evaluations[i]);
 //         EXPECT_EQ(z_2_expected.data[0], z_2_evaluations[i]);
@@ -618,7 +614,6 @@ TEST(waffle, compute_wire_coefficients)
     state.w_l_lagrange_base = &data[9 * n];
     state.w_r_lagrange_base = &data[10 * n];
     state.w_o_lagrange_base = &data[11 * n];
-    state.permutation_product = &data[12 * n];
     state.n = n;
 
     fr::field_t w_l_reference[n];

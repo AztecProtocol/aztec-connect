@@ -87,8 +87,8 @@ constexpr size_t BLAKE2B_CHECKSUM_LENGTH = 64;
                 elements[i].y.data[1] = __builtin_bswap64(elements[i].y.data[1]);
                 elements[i].y.data[2] = __builtin_bswap64(elements[i].y.data[2]);
                 elements[i].y.data[3] = __builtin_bswap64(elements[i].y.data[3]);
-                fq::to_montgomery_form(elements[i].x, elements[i].x);
-                fq::to_montgomery_form(elements[i].y, elements[i].y);
+                fq::__to_montgomery_form(elements[i].x, elements[i].x);
+                fq::__to_montgomery_form(elements[i].y, elements[i].y);
             }
         }
     }
@@ -121,10 +121,10 @@ constexpr size_t BLAKE2B_CHECKSUM_LENGTH = 64;
                 elements[i].y.c1.data[1] = __builtin_bswap64(elements[i].y.c1.data[1]);
                 elements[i].y.c1.data[2] = __builtin_bswap64(elements[i].y.c1.data[2]);
                 elements[i].y.c1.data[3] = __builtin_bswap64(elements[i].y.c1.data[3]);
-                fq::to_montgomery_form(elements[i].x.c0, elements[i].x.c0);
-                fq::to_montgomery_form(elements[i].x.c1, elements[i].x.c1);
-                fq::to_montgomery_form(elements[i].y.c0, elements[i].y.c0);
-                fq::to_montgomery_form(elements[i].y.c1, elements[i].y.c1);
+                fq::__to_montgomery_form(elements[i].x.c0, elements[i].x.c0);
+                fq::__to_montgomery_form(elements[i].x.c1, elements[i].x.c1);
+                fq::__to_montgomery_form(elements[i].y.c0, elements[i].y.c0);
+                fq::__to_montgomery_form(elements[i].y.c1, elements[i].y.c1);
             }
         }
     }
@@ -155,15 +155,19 @@ constexpr size_t BLAKE2B_CHECKSUM_LENGTH = 64;
     inline void read_transcript(srs::plonk_srs &srs, std::string const &path)
     {
         Manifest manifest;
+
         auto buffer = read_file_into_buffer(path);
 
         read_manifest(buffer, manifest);
+
         const size_t manifest_size = sizeof(Manifest);
+
         ASSERT(manifest.num_g1_points >= (srs.degree - 1));
 
         const size_t g1_buffer_size = sizeof(fq::field_t) * 2 * (srs.degree - 1);
         const size_t g2_buffer_offset = sizeof(fq::field_t) * 2 * manifest.num_g1_points;
         const size_t g2_buffer_size = sizeof(fq2::fq2_t) * 2 * 2;
+
         g2::affine_element* g2_buffer = (g2::affine_element*)(aligned_alloc(32, sizeof(g2::affine_element) * (2)));
 
         // read g1 elements at second array position - first point is the basic generator

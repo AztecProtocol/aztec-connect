@@ -33,7 +33,7 @@ inline void random_coordinates_on_curve(fq::field_t &x, fq::field_t &y)
     fq::field_t t0;
 
     fq::field_t b_mont;
-    fq::to_montgomery_form(fq::curve_b, b_mont);
+    fq::__to_montgomery_form(fq::curve_b, b_mont);
     while (!found_one)
     {
         // generate a random x-coordinate
@@ -46,8 +46,8 @@ inline void random_coordinates_on_curve(fq::field_t &x, fq::field_t &y)
         fq::__sqrt(yy, y);
         fq::__sqr(y, t0);
         // does yy have a valid quadratic residue? is y a valid square root?
-        fq::from_montgomery_form(yy, yy);
-        fq::from_montgomery_form(t0, t0);
+        fq::__from_montgomery_form(yy, yy);
+        fq::__from_montgomery_form(t0, t0);
         found_one = fq::eq(yy, t0);
     }
 }
@@ -555,7 +555,7 @@ inline element normalize(element &src)
      **/
 inline void batch_normalize(element *points, size_t num_points)
 {
-    fq::field_t *temporaries = (fq::field_t *)(aligned_alloc(32, sizeof(fq::field_t) * num_points));
+    fq::field_t *temporaries = (fq::field_t *)(aligned_alloc(32, sizeof(fq::field_t) * num_points * 2));
     fq::field_t accumulator = fq::one();
     fq::field_t z_inv;
     fq::field_t zz_inv;
@@ -616,15 +616,15 @@ inline bool on_curve(affine_element &pt)
         return false;
     }
     fq::field_t b_mont;
-    fq::to_montgomery_form(fq::curve_b, b_mont);
+    fq::__to_montgomery_form(fq::curve_b, b_mont);
     fq::field_t yy;
     fq::field_t xxx;
     fq::__sqr(pt.x, xxx);
     fq::__mul(pt.x, xxx, xxx);
     fq::__add(xxx, b_mont, xxx);
     fq::__sqr(pt.y, yy);
-    fq::from_montgomery_form(xxx, xxx);
-    fq::from_montgomery_form(yy, yy);
+    fq::__from_montgomery_form(xxx, xxx);
+    fq::__from_montgomery_form(yy, yy);
     return fq::eq(xxx, yy);
 }
 
@@ -635,7 +635,7 @@ inline bool on_curve(element &pt)
         return false;
     }
     fq::field_t b_mont;
-    fq::to_montgomery_form(fq::curve_b, b_mont);
+    fq::__to_montgomery_form(fq::curve_b, b_mont);
     fq::field_t yy;
     fq::field_t xxx;
     fq::field_t zz;
@@ -702,7 +702,7 @@ inline element group_exponentiation_inner(const affine_element &a, const fr::fie
     affine_to_jacobian(a, point);
     fr::field_t converted_scalar;
     // TODO ADD BACK IN!
-    fr::from_montgomery_form(scalar, converted_scalar);
+    fr::__from_montgomery_form(scalar, converted_scalar);
     // fr::copy(scalar, converted_scalar);
     bool scalar_bits[256] = {0};
     for (size_t i = 0; i < 64; ++i)

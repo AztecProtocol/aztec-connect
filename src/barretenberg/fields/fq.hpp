@@ -126,7 +126,7 @@ inline void neg(const field_t &a, field_t &r)
 /**
  * Convert a field element into montgomery form
  **/
-inline void to_montgomery_form(const field_t &a, field_t &r)
+inline void __to_montgomery_form(const field_t &a, field_t &r)
 {
     copy(a, r);
     while (gt(r, modulus_plus_one))
@@ -140,7 +140,7 @@ inline void to_montgomery_form(const field_t &a, field_t &r)
  * Convert a field element out of montgomery form by performing a modular
  * reduction against 1
  **/
-inline void from_montgomery_form(const field_t &a, field_t &r)
+inline void __from_montgomery_form(const field_t &a, field_t &r)
 {
     __mul(a, one_raw, r);
 }
@@ -223,7 +223,7 @@ inline field_t random_element()
     fq::field_t r;
     int got_entropy = getentropy((void *)r.data, 32);
     ASSERT(got_entropy == 0);
-    to_montgomery_form(r, r);
+    __to_montgomery_form(r, r);
     return r;
 }
 

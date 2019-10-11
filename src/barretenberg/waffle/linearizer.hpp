@@ -35,7 +35,7 @@ namespace waffle
         fr::field_t T2;
 
         // fr::field_t beta_n = {.data = {n, 0, 0, 0}};
-        // fr::to_montgomery_form(beta_n, beta_n);
+        // fr::__to_montgomery_form(beta_n, beta_n);
         // fr::__mul(beta_n, challenges.beta, beta_n);
         // fr::field_t beta_n_2;
         // fr::__add(beta_n, beta_n, beta_n_2);

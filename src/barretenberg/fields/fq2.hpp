@@ -125,16 +125,16 @@ inline fq2_t zero()
     return r;
 }
 
-inline void to_montgomery_form(const fq2_t &a, fq2_t &r)
+inline void __to_montgomery_form(const fq2_t &a, fq2_t &r)
 {
-    fq::to_montgomery_form(a.c0, r.c0);
-    fq::to_montgomery_form(a.c1, r.c1);
+    fq::__to_montgomery_form(a.c0, r.c0);
+    fq::__to_montgomery_form(a.c1, r.c1);
 }
 
-inline void from_montgomery_form(const fq2_t &a, fq2_t &r)
+inline void __from_montgomery_form(const fq2_t &a, fq2_t &r)
 {
-    fq::from_montgomery_form(a.c0, r.c0);
-    fq::from_montgomery_form(a.c1, r.c1);
+    fq::__from_montgomery_form(a.c0, r.c0);
+    fq::__from_montgomery_form(a.c1, r.c1);
 }
 
 inline void copy(const fq2_t &a, fq2_t &r)

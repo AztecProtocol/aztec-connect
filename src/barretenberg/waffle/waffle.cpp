@@ -16,7 +16,22 @@ namespace waffle
 {
 using namespace barretenberg;
 
-circuit_state::circuit_state(size_t circuit_size) : small_domain(circuit_size), mid_domain(2 * circuit_size), large_domain(4 * circuit_size) {}
+circuit_state::circuit_state(size_t circuit_size) : small_domain(circuit_size), mid_domain(2 * circuit_size), large_domain(4 * circuit_size)
+{
+    data = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * circuit_size * 20);
+    n = circuit_size;
+    w_l = &data[0];
+    w_r = &data[n];
+    w_o = &data[2 * n];
+    q_c = &data[3 * n];
+    q_m = &data[4 * n];
+    q_l = &data[5 * n];
+    q_r = &data[6 * n];
+    q_o = &data[7 * n];
+    sigma_1 = &data[8 * n];
+    sigma_2 = &data[9 * n];
+    sigma_3 = &data[10 * n];
+}
 
 circuit_state::circuit_state(const circuit_state& other) : small_domain(other.n), mid_domain(2 * other.n), large_domain(4 * other.n) {
     w_l = other.w_l;
@@ -35,11 +50,6 @@ circuit_state::circuit_state(const circuit_state& other) : small_domain(other.n)
     sigma_2 = other.sigma_2;
     sigma_3 = other.sigma_3;
 
-    product_1 = other.product_1;
-    product_2 = other.product_2;
-    product_3 = other.product_3;
-    permutation_product = other.permutation_product;
-
     w_l_lagrange_base = other.w_l_lagrange_base;
     w_r_lagrange_base = other.w_r_lagrange_base;
     w_o_lagrange_base = other.w_o_lagrange_base;
@@ -51,6 +61,13 @@ circuit_state::circuit_state(const circuit_state& other) : small_domain(other.n)
     n = other.n;
 }
 
+circuit_state::~circuit_state()
+{
+    if (data != nullptr)
+    {
+        free(data);
+    }
+}
 
 void compute_wire_coefficients(circuit_state &state, fft_pointers &)
 {
@@ -95,7 +112,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
     {
         fr::field_t work_root;
         fr::field_t thread_root;
-        fr::pow_small(state.small_domain.root, j * state.small_domain.thread_size, thread_root);
+        fr::__pow_small(state.small_domain.root, j * state.small_domain.thread_size, thread_root);
         fr::__mul(thread_root, state.challenges.beta, work_root);
         for (size_t i = (j * state.small_domain.thread_size); i < ((j + 1) * state.small_domain.thread_size); ++i)
         {
@@ -313,7 +330,7 @@ void compute_identity_grand_product_coefficients(circuit_state &state, fft_point
         fr::field_t beta_id;
 
         fr::field_t work_root;
-        fr::pow_small(state.large_domain.root, j * state.large_domain.thread_size, work_root);
+        fr::__pow_small(state.large_domain.root, j * state.large_domain.thread_size, work_root);
         fr::__mul(work_root, fr::multiplicative_generator(), work_root);
         for (size_t i = (j * state.large_domain.thread_size); i < ((j + 1) * state.large_domain.thread_size); ++i)
         {
@@ -562,8 +579,8 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
 
     fr::field_t z_pow_n;
     fr::field_t z_pow_2_n;
-    fr::pow_small(state.challenges.z, state.n, z_pow_n);
-    fr::pow_small(state.challenges.z, 2 * state.n, z_pow_2_n);
+    fr::__pow_small(state.challenges.z, state.n, z_pow_n);
+    fr::__pow_small(state.challenges.z, 2 * state.n, z_pow_2_n);
 
     ITERATE_OVER_DOMAIN_START(state.small_domain);
         fr::field_t T0;

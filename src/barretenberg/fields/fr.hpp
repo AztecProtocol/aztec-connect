@@ -125,7 +125,7 @@ inline bool gt(field_t &a, const field_t &b)
 /**
      * Convert a field element into montgomery form
      **/
-inline void to_montgomery_form(const field_t &a, field_t &r)
+inline void __to_montgomery_form(const field_t &a, field_t &r)
 {
     copy(a, r);
     while (gt(r, modulus_plus_one))
@@ -139,7 +139,7 @@ inline void to_montgomery_form(const field_t &a, field_t &r)
      * Convert a field element out of montgomery form by performing a modular
      * reduction against 1
      **/
-inline void from_montgomery_form(const field_t &a, field_t &r)
+inline void __from_montgomery_form(const field_t &a, field_t &r)
 {
     __mul(a, one_raw, r);
     // while (gt(r, modulus_plus_one))
@@ -148,6 +148,19 @@ inline void from_montgomery_form(const field_t &a, field_t &r)
     // }
 }
 
+inline field_t from_montgomery_form(const field_t &a)
+{
+    field_t r;
+    __from_montgomery_form(a, r);
+    return r;
+}
+
+inline field_t to_montgomery_form(const field_t &a)
+{
+    field_t r;
+    __to_montgomery_form(a, r);
+    return r;
+}
 /**
  * For short Weierstrass curves y^2 = x^3 + b mod r, if there exists a cube root of unity mod r,
  * we can take advantage of an enodmorphism to decompose a 254 bit scalar into 2 128 bit scalars.
@@ -175,7 +188,7 @@ inline void from_montgomery_form(const field_t &a, field_t &r)
 inline void split_into_endomorphism_scalars(field_t &k, field_t &k1, field_t &k2)
 {
     // uint64_t lambda_reduction[4] = { 0 };
-    // to_montgomery_form(lambda, lambda_reduction);
+    // __to_montgomery_form(lambda, lambda_reduction);
 
     constexpr field_t g1 = {.data = {
                                 0x7a7bd9d4391eb18dUL,
@@ -241,9 +254,9 @@ inline void split_into_endomorphism_scalars(field_t &k, field_t &k1, field_t &k2
 
     // if k = k'.R
     // and t2 = t2'.R...so, k2 = t1'.R, k1 = t2'.R?
-    // to_montgomery_form(t1, t1);
+    // __to_montgomery_form(t1, t1);
     __mul(t1, lambda, t2);
-    // from_montgomery_form(t2, t2);
+    // __from_montgomery_form(t2, t2);
     __add(k, t2, t2);
 
     k2.data[0] = t1.data[0];
@@ -285,7 +298,7 @@ inline field_t random_element()
     fr::field_t r;
     int got_entropy = getentropy((void *)r.data, 32);
     ASSERT(got_entropy == 0);
-    to_montgomery_form(r, r);
+    __to_montgomery_form(r, r);
     return r;
 }
 
@@ -351,10 +364,10 @@ inline void pow(const field_t &a, const field_t &b, field_t &r)
 **/
 inline void one(field_t &r)
 {
-    to_montgomery_form(one_raw, r);
+    __to_montgomery_form(one_raw, r);
 }
 
-inline void pow_small(const field_t &a, const size_t exponent, field_t &r)
+inline void __pow_small(const field_t &a, const size_t exponent, field_t &r)
 {
     if (exponent == 0)
     {
@@ -389,10 +402,16 @@ inline void pow_small(const field_t &a, const size_t exponent, field_t &r)
     copy(accumulator, r);
 }
 
+inline field_t pow_small(const field_t& a, const size_t exponent)
+{
+    field_t result;
+    __pow_small(a, exponent, result);
+    return result;
+}
 /**
  * compute a^{q - 2} mod q, place result in r
  **/
-inline void __invert(field_t &a, field_t &r)
+inline void __invert(const field_t &a, field_t &r)
 {
     // q - 2
     constexpr field_t modulus_minus_two = {
@@ -403,7 +422,7 @@ inline void __invert(field_t &a, field_t &r)
     pow(a, modulus_minus_two, r);
 }
 
-inline field_t invert(field_t &a)
+inline field_t invert(const field_t &a)
 {
     field_t r;
     __invert(a, r);
@@ -426,25 +445,33 @@ inline field_t neg_one()
 
 inline field_t multiplicative_generator()
 {
-    fr::field_t r = {.data = {5, 0, 0, 0}};
-    to_montgomery_form(r, r);
-    return r;
+    return to_montgomery_form({.data={5,0,0,0}});
 }
 
 inline field_t multiplicative_generator_inverse()
 {
-    fr::field_t gen = multiplicative_generator();
-    __invert(gen, gen);
-    return gen;
+    return invert(multiplicative_generator());
 }
 
-inline void get_root_of_unity(size_t degree, field_t &r)
+inline field_t alternate_multiplicative_generator()
+{
+    return to_montgomery_form({.data = {7, 0, 0, 0}});
+}
+
+inline void __get_root_of_unity(const size_t degree, field_t &r)
 {
     copy(root_of_unity, r);
     for (size_t i = S; i > degree; --i)
     {
         __sqr(r, r);
     }
+}
+
+inline field_t get_root_of_unity(const size_t degree)
+{
+    field_t r;
+    __get_root_of_unity(degree, r);
+    return r;
 }
 
 inline void batch_invert(field_t *coeffs, size_t n, field_t *temporaries)

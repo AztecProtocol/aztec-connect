@@ -29,6 +29,12 @@ add_library(
     keccak/keccakf1600.c
     keccak/keccak.c
     keccak/keccak.h
+    polynomials/evaluation_domain.cpp
+    polynomials/evaluation_domain.hpp
+    polynomials/polynomial_arithmetic.cpp
+    polynomials/polynomial_arithmetic.hpp
+    polynomials/polynomial.cpp
+    polynomials/polynomial.hpp
     polynomials/polynomials.cpp
     polynomials/polynomials.hpp
     waffle/linearizer.hpp
@@ -38,6 +44,8 @@ add_library(
     waffle/waffle.cpp
     waffle/waffle.hpp
     waffle/verifier.hpp
+    waffle/prover.cpp
+    waffle/prover.hpp
 #   waffle/widgets/base_widget.hpp
 #   waffle/widgets/arithmetic_widget.cpp
 #   waffle/widgets/arithmetic_widget.hpp
@@ -84,6 +92,12 @@ add_executable(
     keccak/keccakf1600.c
     keccak/keccak.c
     keccak/keccak.h
+    polynomials/evaluation_domain.cpp
+    polynomials/evaluation_domain.hpp
+    polynomials/polynomial_arithmetic.cpp
+    polynomials/polynomial_arithmetic.hpp
+    polynomials/polynomial.cpp
+    polynomials/polynomial.hpp
     polynomials/polynomials.cpp
     polynomials/polynomials.hpp
     waffle/linearizer.hpp
@@ -93,6 +107,8 @@ add_executable(
     waffle/waffle.cpp
     waffle/waffle.hpp
     waffle/verifier.hpp
+    waffle/prover.cpp
+    waffle/prover.hpp
 )
 
 target_link_libraries(

@@ -22,7 +22,7 @@ TEST(polynomials, domain_roots)
     fr::field_t result;
     fr::field_t expected;
     fr::one(expected);
-    fr::pow_small(domain.root, n, result);
+    fr::__pow_small(domain.root, n, result);
 
     EXPECT_EQ(fr::eq(result, expected), true);
 }
@@ -359,7 +359,7 @@ TEST(polynomials, get_lagrange_evaluations)
     fr::one(l_n_minus_1_poly[n-2]);
 
     fr::field_t n_mont = { .data = { n, 0, 0, 0 } };
-    fr::to_montgomery_form(n_mont, n_mont);
+    fr::__to_montgomery_form(n_mont, n_mont);
     fr::__mul(n_mont, domain.root, vanishing_poly[n-1]);
 
     polynomials::ifft(l_1_poly, domain);

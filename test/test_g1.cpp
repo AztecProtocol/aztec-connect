@@ -52,14 +52,14 @@ TEST(group, mixed_add_check_against_constants)
     g1::affine_element rhs;
     g1::element result;
     g1::element expected;
-    fq::to_montgomery_form(a_x, lhs.x);
-    fq::to_montgomery_form(a_y, lhs.y);
-    fq::to_montgomery_form(a_z, lhs.z);
-    fq::to_montgomery_form(b_x, rhs.x);
-    fq::to_montgomery_form(b_y, rhs.y);
-    fq::to_montgomery_form(expected_x, expected.x);
-    fq::to_montgomery_form(expected_y, expected.y);
-    fq::to_montgomery_form(expected_z, expected.z);
+    fq::__to_montgomery_form(a_x, lhs.x);
+    fq::__to_montgomery_form(a_y, lhs.y);
+    fq::__to_montgomery_form(a_z, lhs.z);
+    fq::__to_montgomery_form(b_x, rhs.x);
+    fq::__to_montgomery_form(b_y, rhs.y);
+    fq::__to_montgomery_form(expected_x, expected.x);
+    fq::__to_montgomery_form(expected_y, expected.y);
+    fq::__to_montgomery_form(expected_z, expected.z);
     g1::mixed_add(lhs, rhs, result);
 
     EXPECT_EQ(g1::eq(result, expected), true);
@@ -76,12 +76,12 @@ TEST(group, dbl_check_against_constants)
     g1::element lhs;
     g1::element result;
     g1::element expected;
-    fq::to_montgomery_form(a_x, lhs.x);
-    fq::to_montgomery_form(a_y, lhs.y);
-    fq::to_montgomery_form(a_z, lhs.z);
-    fq::to_montgomery_form(expected_x, expected.x);
-    fq::to_montgomery_form(expected_y, expected.y);
-    fq::to_montgomery_form(expected_z, expected.z);
+    fq::__to_montgomery_form(a_x, lhs.x);
+    fq::__to_montgomery_form(a_y, lhs.y);
+    fq::__to_montgomery_form(a_z, lhs.z);
+    fq::__to_montgomery_form(expected_x, expected.x);
+    fq::__to_montgomery_form(expected_y, expected.y);
+    fq::__to_montgomery_form(expected_z, expected.z);
 
     g1::dbl(lhs, result);
     g1::dbl(result, result);
@@ -106,15 +106,15 @@ TEST(group, add_check_against_constants)
     g1::element result;
     g1::element expected;
 
-    fq::to_montgomery_form(a_x, lhs.x);
-    fq::to_montgomery_form(a_y, lhs.y);
-    fq::to_montgomery_form(a_z, lhs.z);
-    fq::to_montgomery_form(b_x, rhs.x);
-    fq::to_montgomery_form(b_y, rhs.y);
-    fq::to_montgomery_form(b_z, rhs.z);
-    fq::to_montgomery_form(expected_x, expected.x);
-    fq::to_montgomery_form(expected_y, expected.y);
-    fq::to_montgomery_form(expected_z, expected.z);
+    fq::__to_montgomery_form(a_x, lhs.x);
+    fq::__to_montgomery_form(a_y, lhs.y);
+    fq::__to_montgomery_form(a_z, lhs.z);
+    fq::__to_montgomery_form(b_x, rhs.x);
+    fq::__to_montgomery_form(b_y, rhs.y);
+    fq::__to_montgomery_form(b_z, rhs.z);
+    fq::__to_montgomery_form(expected_x, expected.x);
+    fq::__to_montgomery_form(expected_y, expected.y);
+    fq::__to_montgomery_form(expected_z, expected.z);
 
     g1::add(lhs, rhs, result);
 
@@ -288,14 +288,14 @@ TEST(group, batch_normalize)
 TEST(group, group_exponentiation_check_against_constants)
 {
     fr::field_t a = {.data = {0xb67299b792199cf0, 0xc1da7df1e7e12768, 0x692e427911532edf, 0x13dd85e87dc89978}};
-    fr::to_montgomery_form(a, a);
+    fr::__to_montgomery_form(a, a);
 
     fq::field_t expected_x = {.data = {0x9bf840faf1b4ba00, 0xe81b7260d068e663, 0x7610c9a658d2c443, 0x278307cd3d0cddb0}};
     fq::field_t expected_y = {.data = {0xf6ed5fb779ebecb, 0x414ca771acbe183c, 0xe3692cb56dfbdb67, 0x3d3c5ed19b080a3}};
 
     g1::affine_element expected;
-    fq::to_montgomery_form(expected_x, expected.x);
-    fq::to_montgomery_form(expected_y, expected.y);
+    fq::__to_montgomery_form(expected_x, expected.x);
+    fq::__to_montgomery_form(expected_y, expected.y);
 
     g1::affine_element result = g1::group_exponentiation(g1::affine_one(), a);
 

@@ -253,16 +253,16 @@ inline fq12_t random_element()
     return r;
 }
 
-inline void to_montgomery_form(const fq12_t &a, fq12_t &r)
+inline void __to_montgomery_form(const fq12_t &a, fq12_t &r)
 {
-    fq6::to_montgomery_form(a.c0, r.c0);
-    fq6::to_montgomery_form(a.c1, r.c1);
+    fq6::__to_montgomery_form(a.c0, r.c0);
+    fq6::__to_montgomery_form(a.c1, r.c1);
 }
 
-inline void from_montgomery_form(const fq12_t &a, fq12_t &r)
+inline void __from_montgomery_form(const fq12_t &a, fq12_t &r)
 {
-    fq6::from_montgomery_form(a.c0, r.c0);
-    fq6::from_montgomery_form(a.c1, r.c1);
+    fq6::__from_montgomery_form(a.c0, r.c0);
+    fq6::__from_montgomery_form(a.c1, r.c1);
 }
 
 inline void copy(const fq12_t &a, fq12_t &r)

@@ -1,142 +1,841 @@
-// #include "stdlib.h"
-// #include <valgrind/callgrind.h>
-// // #include <pthread.h>
-// #include "./types.hpp"
-// #include "fields/fq.hpp"
-// #include "polynomials/polynomials.hpp"
+
+
+#include "./groups/g1.hpp"
+#include "./groups/scalar_multiplication.hpp"
+
+#include "./waffle/prover.hpp"
+#include "./polynomials/polynomial_arithmetic.hpp"
+#include "./io/io.hpp"
+
+#include "string.h"
+/*
+```
+elliptic curve point addition on a short weierstrass curve.
+
+circuit has 9 gates, I've added 7 dummy gates so that the polynomial degrees are a power of 2 
+
+input points: (x_1, y_1), (x_2, y_2)
+output point: (x_3, y_3)
+intermediate variables: (t_1, t_2, t_3, t_4, t_5, t_6, t_7)
+
+Variable assignments:
+t_1 = (y_2 - y_1)
+t_2 = (x_2 - x_1)
+t_3 = (y_2 - y_1) / (x_2 - x_1)
+x_3 = t_3*t_3 - x_2 - x_1
+y_3 = t_3*(x_1 - x_3) - y_1
+t_4 = (x_3 + x_1)
+t_5 = (t_4 + x_2)
+t_6 = (y_3 + y_1)
+t_7 = (x_1 - x_3)
+
+Constraints:
+(y_2 - y_1) - t_1 = 0
+(x_2 - x_1) - t_2 = 0
+(x_1 + x_2) - t_4 = 0
+(t_4 + x_3) - t_5 = 0
+(y_3 + y_1) - t_6 = 0
+(x_1 - x_3) - t_7 = 0
+ (t_3 * t_2) - t_1 = 0
+-(t_3 * t_3) + t_5 = 0
+-(t_3 * t_7) + t_6 = 0
+
+Wire polynomials:
+w_l = [y_2, x_2, x_1, t_4, y_3, x_1, t_3, t_3, t_3, 0, 0, 0, 0, 0, 0, 0]
+w_r = [y_1, x_1, x_2, x_3, y_1, x_3, t_2, t_3, t_7, 0, 0, 0, 0, 0, 0, 0]
+w_o = [t_1, t_2, t_4, t_5, t_6, t_7, t_1, t_5, t_6, 0, 0, 0, 0, 0, 0, 0]
+
+Gate polynomials:
+q_m = [ 0,  0,  0,  0,  0,  0,  1, -1, -1, 0, 0, 0, 0, 0, 0, 0]
+q_l = [ 1,  1,  1,  1,  1,  1,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0]
+q_r = [-1, -1,  1,  1,  1, -1,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0]
+q_o = [-1, -1, -1, -1, -1, -1, -1,  1,  1, 0, 0, 0, 0, 0, 0, 0]
+q_c = [ 0,  0,  0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0]
+
+Permutation polynomials:
+s_id = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+sigma_1 = [1, 3+n, 6, 3+2n, 5, 2+n, 8, 9, 8+n, 10, 11, 12, 13, 14, 15, 16]
+sigma_2 = [5+n, 3, 2, 6+n, 1+n, 4+n, 2+2n, 7, 6+2n, 10+n, 11+n, 12+n, 13+n, 14+n, 15+n, 16+n]
+sigma_3 = [7+2n, 7+n, 4, 8+2n, 9+2n, 9+n, 1+2n, 4+2n, 5+2n, 10+2n, 11+2n, 12+2n, 13+2n, 14+2n, 15+2n]
+
+(for n = 16, permutation polynomials are)
+sigma_1 = [1, 19, 6, 35, 5, 18, 8, 9, 24, 10, 11, 12, 13, 14, 15, 16]
+sigma_2 = [21, 3, 2, 22, 17, 20, 34, 7, 38, 26, 27, 28, 29, 30, 31, 32]
+sigma_3 = [39, 23, 4, 40, 41, 25, 33, 36, 37, 42, 43, 44, 45, 46, 47, 48]
+```
+*/
+using namespace barretenberg;
+
+namespace
+{
+
+// void generate_point_addition_data_inner(waffle::plonk_circuit_state& state, size_t index)
+// {
+//     fr::field_t x_1 = fr::random_element();
+//     fr::field_t x_2 = fr::random_element();
+//     fr::field_t x_3;
+//     fr::field_t y_1 = fr::random_element();
+//     fr::field_t y_2 = fr::random_element();
+//     fr::field_t y_3;
+//     fr::field_t t[7];
+
+//     fr::__sub(y_2, y_1, t[0]);
+//     fr::__sub(x_2, x_1, t[1]);
+//     fr::__invert(t[1], t[2]);
+//     fr::__mul(t[2], t[0], t[2]);
+//     fr::__sqr(t[2], x_3);
+//     fr::__sub(x_3, x_2, x_3);
+//     fr::__sub(x_3, x_1, x_3);
+//     fr::__add(x_2, x_1, t[3]);
+//     fr::__add(t[3], x_3, t[4]);
+//     fr::__sub(x_1, x_3, t[6]);
+//     fr::__mul(t[2], t[6], y_3);
+//     fr::__sub(y_3, y_1, y_3);
+//     fr::__add(y_3, y_1, t[5]);
+
+//     fr::copy(y_2, state.w_l[index + 0]);
+//     fr::copy(x_2, state.w_l[index + 1]);
+//     fr::copy(x_1, state.w_l[index + 2]);
+//     fr::copy(t[3], state.w_l[index + 3]);
+//     fr::copy(y_3, state.w_l[index + 4]);
+//     fr::copy(x_1, state.w_l[index + 5]);
+//     fr::copy(t[2], state.w_l[index + 6]);
+//     fr::copy(t[2], state.w_l[index + 7]);
+//     fr::copy(t[2], state.w_l[index + 8]);
+
+//     fr::copy(y_1, state.w_r[index + 0]);
+//     fr::copy(x_1, state.w_r[index + 1]);
+//     fr::copy(x_2, state.w_r[index + 2]);
+//     fr::copy(x_3, state.w_r[index + 3]);
+//     fr::copy(y_1, state.w_r[index + 4]);
+//     fr::copy(x_3, state.w_r[index + 5]);
+//     fr::copy(t[1], state.w_r[index + 6]);
+//     fr::copy(t[2], state.w_r[index + 7]);
+//     fr::copy(t[6], state.w_r[index + 8]);
+
+//     fr::copy(t[0], state.w_o[index + 0]);
+//     fr::copy(t[1], state.w_o[index + 1]);
+//     fr::copy(t[3], state.w_o[index + 2]);
+//     fr::copy(t[4], state.w_o[index + 3]);
+//     fr::copy(t[5], state.w_o[index + 4]);
+//     fr::copy(t[6], state.w_o[index + 5]);
+//     fr::copy(t[0], state.w_o[index + 6]);
+//     fr::copy(t[4], state.w_o[index + 7]);
+//     fr::copy(t[5], state.w_o[index + 8]);
+
+//     fr::zero(state.q_m[index + 0]);
+//     fr::zero(state.q_m[index + 1]);
+//     fr::zero(state.q_m[index + 2]);
+//     fr::zero(state.q_m[index + 3]);
+//     fr::zero(state.q_m[index + 4]);
+//     fr::zero(state.q_m[index + 5]);
+//     fr::one(state.q_m[index + 6]);
+//     fr::neg(fr::one(), state.q_m[index + 7]);
+//     fr::neg(fr::one(), state.q_m[index + 8]);
+
+//     fr::one(state.q_l[index + 0]);
+//     fr::one(state.q_l[index + 1]);
+//     fr::one(state.q_l[index + 2]);
+//     fr::one(state.q_l[index + 3]);
+//     fr::one(state.q_l[index + 4]);
+//     fr::one(state.q_l[index + 5]);
+
+//     fr::zero(state.q_l[index + 6]);
+//     fr::zero(state.q_l[index + 7]);
+//     fr::zero(state.q_l[index + 8]);
+
+//     fr::neg(fr::one(), state.q_r[index + 0]);
+//     fr::neg(fr::one(), state.q_r[index + 1]);
+//     fr::one(state.q_r[index + 2]);
+//     fr::one(state.q_r[index + 3]);
+//     fr::one(state.q_r[index + 4]);
+//     fr::neg(fr::one(), state.q_r[index + 5]);
+//     fr::zero(state.q_r[index + 6]);
+//     fr::zero(state.q_r[index + 7]);
+//     fr::zero(state.q_r[index + 8]);
+
+//     fr::neg(fr::one(), state.q_o[index + 0]);
+//     fr::neg(fr::one(), state.q_o[index + 1]);
+//     fr::neg(fr::one(), state.q_o[index + 2]);
+//     fr::neg(fr::one(), state.q_o[index + 3]);
+//     fr::neg(fr::one(), state.q_o[index + 4]);
+//     fr::neg(fr::one(), state.q_o[index + 5]);
+//     fr::neg(fr::one(), state.q_o[index + 6]);
+//     fr::one(state.q_o[index + 7]);
+//     fr::one(state.q_o[index + 8]);
+
+//     fr::zero(state.q_c[index + 0]);
+//     fr::zero(state.q_c[index + 1]);
+//     fr::zero(state.q_c[index + 2]);
+//     fr::zero(state.q_c[index + 3]);
+//     fr::zero(state.q_c[index + 4]);
+//     fr::zero(state.q_c[index + 5]);
+//     fr::zero(state.q_c[index + 6]);
+//     fr::zero(state.q_c[index + 7]);
+//     fr::zero(state.q_c[index + 8]);
+
+//     uint32_t shift = (1U << 30U);
+//     state.sigma_1_mapping[index + 0] = (uint32_t)index+0;
+//     state.sigma_1_mapping[index + 1] = (uint32_t)index+2+shift;
+//     state.sigma_1_mapping[index + 2] = (uint32_t)index+5;
+//     state.sigma_1_mapping[index + 3] = (uint32_t)index+2+shift+shift;
+//     state.sigma_1_mapping[index + 4] = (uint32_t)index+4;
+//     state.sigma_1_mapping[index + 5] = (uint32_t)index+1+shift;
+//     state.sigma_1_mapping[index + 6] = (uint32_t)index+7;
+//     state.sigma_1_mapping[index + 7] = (uint32_t)index+8;
+//     state.sigma_1_mapping[index + 8] = (uint32_t)index+7+shift;
+
+//     state.sigma_2_mapping[index + 0] = (uint32_t)index+4+shift;
+//     state.sigma_2_mapping[index + 1] = (uint32_t)index+2;
+//     state.sigma_2_mapping[index + 2] = (uint32_t)index+1;
+//     state.sigma_2_mapping[index + 3] = (uint32_t)index+5+shift;
+//     state.sigma_2_mapping[index + 4] = (uint32_t)index+0+shift;
+//     state.sigma_2_mapping[index + 5] = (uint32_t)index+3+shift;
+//     state.sigma_2_mapping[index + 6] = (uint32_t)index+1+shift+shift;
+//     state.sigma_2_mapping[index + 7] = (uint32_t)index+6;
+//     state.sigma_2_mapping[index + 8] = (uint32_t)index+5+shift+shift;
+
+//     state.sigma_3_mapping[index + 0] = (uint32_t)index+6+shift+shift;
+//     state.sigma_3_mapping[index + 1] = (uint32_t)index+6+shift;
+//     state.sigma_3_mapping[index + 2] = (uint32_t)index+3;
+//     state.sigma_3_mapping[index + 3] = (uint32_t)index+7+shift+shift;
+//     state.sigma_3_mapping[index + 4] = (uint32_t)index+8+shift+shift;
+//     state.sigma_3_mapping[index + 5] = (uint32_t)index+8+shift;
+//     state.sigma_3_mapping[index + 6] = (uint32_t)index+0+shift+shift;
+//     state.sigma_3_mapping[index + 7] = (uint32_t)index+3+shift+shift;
+//     state.sigma_3_mapping[index + 8] = (uint32_t)index+4+shift+shift;
+
+
+// void generate_point_addition_data(waffle::plonk_circuit_state& state)
+// {
+//     size_t n = 16;
+//     state.n = n;
+//     state.challenges.beta = fr::random_element();
+//     state.challenges.gamma= fr::random_element();
+//     state.challenges.alpha= fr::random_element();
+//     fr::__sqr(state.challenges.alpha, state.alpha_squared);
+//     fr::__mul(state.alpha_squared, state.challenges.alpha, state.alpha_cubed);
+
+//     state.w_l = &data[0];
+//     state.w_r = &data[n];
+//     state.w_o = &data[2 * n];
+//     state.z_1 = &data[3 * n];
+//     state.z_2 = &data[4 * n + 1];
+//     state.q_c = &data[5 * n + 2];
+//     state.q_l = &data[6 * n + 2];
+//     state.q_r = &data[7 * n + 2];
+//     state.q_o = &data[8 * n + 2];
+//     state.q_m = &data[9 * n + 2];
+//     state.sigma_1 = &data[10 * n + 2];
+//     state.sigma_2 = &data[11 * n + 2];
+//     state.sigma_3 = &data[12 * n + 2];
+//     state.sigma_1_mapping = (uint32_t*)&data[17 * n + 2];
+//     state.sigma_2_mapping = (uint32_t*)((uintptr_t)&data[18 * n + 2] + (n * sizeof(uint32_t)));
+//     state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[19 * n + 2] + ((2 * n) * sizeof(uint32_t)));
+//     state.t = &data[14 * n + 2];
+    
+//     state.w_l_lagrange_base = state.t;
+//     state.w_r_lagrange_base = &state.t[n + 1];
+//     state.w_o_lagrange_base = &state.t[2 * n + 2];
+
+//     generate_point_addition_data_inner(state, 0);
+
+//     for (size_t i = 9; i < n; ++i)
+//     {
+//         state.sigma_1_mapping[i] = (uint32_t)i;
+//         state.sigma_2_mapping[i] = (uint32_t)(i + (1U << 30));
+//         state.sigma_3_mapping[i] = (uint32_t)(i + (1U << 31));
+
+//         fr::zero(state.w_l[i]);
+//         fr::zero(state.w_r[i]);
+//         fr::zero(state.w_o[i]);
+//         fr::zero(state.q_m[i]);
+//         fr::zero(state.q_l[i]);
+//         fr::zero(state.q_r[i]);
+//         fr::zero(state.q_o[i]);
+//         fr::zero(state.q_c[i]);
+//     }
+// }
+
+void generate_test_data(waffle::plonk_circuit_state& state)
+{
+    size_t n = state.n;
+
+
+    // create some constraints that satisfy our arithmetic circuit relation
+    fr::field_t one;
+    fr::field_t zero;
+    fr::field_t minus_one;
+    fr::one(one);
+    fr::neg(one, minus_one);
+    fr::zero(zero);
+    fr::field_t T0;
+    // even indices = mul gates, odd incides = add gates
+
+    state.w_l.reserve(n);
+    state.w_r.reserve(n);
+    state.w_o.reserve(n);
+    state.q_m.reserve(n);
+    state.q_l.reserve(n);
+    state.q_r.reserve(n);
+    state.q_o.reserve(n);
+    state.q_c.reserve(n);
+    for (size_t i = 0; i < n / 4; ++i)
+    {
+        state.w_l.at(2 * i) = fr::random_element();
+        state.w_r.at(2 * i) = fr::random_element();
+        fr::__mul(state.w_l.at(2 * i), state.w_r.at(2 * i), state.w_o.at(2 * i));
+        fr::copy(zero, state.q_l.at(2 * i));
+        fr::copy(zero, state.q_r.at(2 * i));
+        fr::copy(minus_one, state.q_o.at(2 * i));
+        fr::copy(zero, state.q_c.at(2 * i));
+        fr::copy(one, state.q_m.at(2 * i));
+
+        state.w_l.at(2 * i + 1) = fr::random_element();
+        state.w_r.at(2 * i + 1) = fr::random_element();
+        state.w_o.at(2 * i + 1) = fr::random_element();
+
+        fr::__add(state.w_l.at(2 * i + 1), state.w_r.at(2 * i + 1), T0);
+        fr::__add(T0, state.w_o.at(2 * i + 1), state.q_c.at(2 * i + 1));
+        fr::neg(state.q_c.at(2 * i + 1), state.q_c.at(2 * i + 1));
+        fr::one(state.q_l.at(2 * i + 1));
+        fr::one(state.q_r.at(2 * i + 1));
+        fr::one(state.q_o.at(2 * i + 1));
+        fr::zero(state.q_m.at(2 * i + 1));
+    }
+    size_t shift = n / 2;
+    polynomial_arithmetic::copy_polynomial(&state.w_l.at(0), &state.w_l.at(shift), shift, shift);
+    polynomial_arithmetic::copy_polynomial(&state.w_r.at(0), &state.w_r.at(shift), shift, shift);
+    polynomial_arithmetic::copy_polynomial(&state.w_o.at(0), &state.w_o.at(shift), shift, shift);
+    polynomial_arithmetic::copy_polynomial(&state.q_m.at(0), &state.q_m.at(shift), shift, shift);
+    polynomial_arithmetic::copy_polynomial(&state.q_l.at(0), &state.q_l.at(shift), shift, shift);
+    polynomial_arithmetic::copy_polynomial(&state.q_r.at(0), &state.q_r.at(shift), shift, shift);
+    polynomial_arithmetic::copy_polynomial(&state.q_o.at(0), &state.q_o.at(shift), shift, shift);
+    polynomial_arithmetic::copy_polynomial(&state.q_c.at(0), &state.q_c.at(shift), shift, shift);
+
+    // create basic permutation - second half of witness vector is a copy of the first half
+    state.sigma_1_mapping.resize(n);
+    state.sigma_2_mapping.resize(n);
+    state.sigma_3_mapping.resize(n);
+
+    for (size_t i = 0; i < n / 2; ++i)
+    {
+        state.sigma_1_mapping[shift + i] = (uint32_t)i;
+        state.sigma_2_mapping[shift + i] = (uint32_t)i + (1U << 30U);
+        state.sigma_3_mapping[shift + i] = (uint32_t)i + (1U << 31U);
+        state.sigma_1_mapping[i] = (uint32_t)(i + shift);
+        state.sigma_2_mapping[i] = (uint32_t)(i + shift) + (1U << 30U);
+        state.sigma_3_mapping[i] = (uint32_t)(i + shift) + (1U << 31U);
+    }
+
+    fr::zero(state.w_l.at(n-1));
+    fr::zero(state.w_r.at(n-1));
+    fr::zero(state.w_o.at(n-1));
+    fr::zero(state.q_c.at(n-1));
+    fr::zero(state.w_l.at(shift-1));
+    fr::zero(state.w_r.at(shift-1));
+    fr::zero(state.w_o.at(shift-1));
+    fr::zero(state.q_c.at(shift-1));
+
+    // make last permutation the same as identity permutation
+    state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
+    state.sigma_2_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 30U);
+    state.sigma_3_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 31U);
+    state.sigma_1_mapping[n - 1] = (uint32_t)n - 1;
+    state.sigma_2_mapping[n - 1] = (uint32_t)n - 1 + (1U << 30U);
+    state.sigma_3_mapping[n - 1] = (uint32_t)n - 1 + (1U << 31U);
+
+    fr::zero(state.q_l.at(n - 1));
+    fr::zero(state.q_r.at(n - 1));
+    fr::zero(state.q_o.at(n - 1));
+    fr::zero(state.q_m.at(n - 1));
+}
+}
+
+// void compute_quotient_polynomial_for_structured_circuit()
+// {
+//     size_t n = 16;
+
+//     waffle::circuit_state state(n);
+//     // state.small_domain = polynomials::evaluation_domain(n);
+//     // state.mid_domain = polynomials::evaluation_domain(2 * n);
+//     // state.large_domain = polynomials::evaluation_domain(4 * n);
+//     state.n = n;
+//     fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22 * n + 8)));
+//     fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22 * n + 8)));
+
+//     waffle::fft_pointers ffts;
+//     ffts.scratch_memory = scratch_space;
+//     generate_point_addition_data(state, data);
+
+//     fr::field_t x = fr::random_element();
+//     srs::plonk_srs srs;
+//     g1::affine_element monomials[6 * n + 2];
+//     monomials[0] = g1::affine_one();
+
+//     for (size_t i = 1; i < 3 * n; ++i)
+//     {
+//         monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+//     }
+//     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
+//     srs.monomials = monomials;
+//     srs.degree = n;
+
+//     waffle::plonk_proof proof;
+//     waffle::convert_permutations_into_lagrange_base_form(state);
+//     waffle::compute_quotient_polynomial(state, ffts, proof, srs);
+//     for (size_t i = 3 * n; i < 4 * n; ++i)
+//     {
+//         EXPECT_EQ(fr::eq(ffts.quotient_poly[i], fr::zero()), true);
+//     }
+
+//     free(scratch_space);
+//     free(data);
+// }
+
+void compute_quotient_polynomial()
+{
+    size_t n = 1024;
+
+    waffle::plonk_circuit_state state(n);
+    state.reference_string.degree = n;
+    state.reference_string.monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * 6 * n));
+    io::read_transcript(state.reference_string, BARRETENBERG_SRS_PATH);
+    generate_test_data(state);
+
+    state.compute_permutation_lagrange_base_full();
+    state.compute_quotient_polynomial();
+
+    // check that the max degree of our quotient polynomial is 3n
+    bool invalid = false;
+    for (size_t i = 3 * n; i < 4 * n; ++i)
+    {
+        invalid |= fr::eq(state.quotient_large.at(i), fr::zero());
+    }
+    printf("quotient polynomial valid = %u\n", !invalid);
+    free(state.reference_string.monomials);
+}
+
 
 int main()
 {
+    printf("in main\n");
+    compute_quotient_polynomial();
     return 1;
 }
-// #include "groups/g1.hpp"
-// #include "groups/scalar_multiplication.hpp"
-// #include "assert.hpp"
-
-// using namespace barretenberg;
-
-// void generate_points(g1::affine_element *points, size_t num_points)
+// TEST(waffle, compute_z_coefficients)
 // {
-//     g1::element small_table[10000];
-//     printf("making small table\n");
-//     g1::element one = g1::one();
-//     uint8_t number = 0;
+//     size_t n = 16;
 
-//     for (size_t i = 0; i < 10000; ++i)
+//     fr::field_t data[16 * n + 2];
+//     waffle::circuit_state state;
+//     state.small_domain = polynomials::evaluation_domain(n);
+//     state.mid_domain = polynomials::evaluation_domain(2 * n);
+//     state.large_domain = polynomials::evaluation_domain(4 * n);
+
+//     state.w_l = &data[0];
+//     state.w_r = &data[n];
+//     state.w_o = &data[2 * n];
+//     state.z_1 = &data[3 * n];
+//     state.z_2 = &data[4 * n + 1];
+//     state.sigma_1 = &data[5 * n + 2];
+//     state.sigma_2 = &data[6 * n + 2];
+//     state.sigma_3 = &data[7 * n + 2];
+//     state.product_1 = &data[9 * n + 2];
+//     state.product_2 = &data[10 * n + 2];
+//     state.product_3 = &data[11 * n + 2];
+//     state.w_l_lagrange_base = &data[12 * n + 2];
+//     state.w_r_lagrange_base = &data[13 * n + 2];
+//     state.w_o_lagrange_base = &data[14 * n + 2];
+//     state.permutation_product = &data[15 * n + 2];
+//     state.n = n;
+
+//     fr::one(state.challenges.gamma);
+//     fr::__add(state.challenges.gamma, state.challenges.gamma, state.challenges.beta);
+
+//     fr::field_t i_mont;
+//     fr::field_t one;
+//     fr::zero(i_mont);
+//     fr::one(one);
+//     for (size_t i = 0; i < n; ++i)
 //     {
-//         int got_entropy = getentropy((void *)&number, 1);
-//         ASSERT(got_entropy == 0);
-//         g1::element pt = g1::one();
-//         for (size_t j = 0; j < number; ++j)
-//         {
-//             g1::add(one, pt, pt);
-//         }
-//         small_table[i] = pt;
+//         fr::copy(i_mont, state.w_l[i]);
+//         fr::copy(state.w_l[i], state.w_l_lagrange_base[i]);
+//         fr::__add(state.w_l[i], state.w_l[i], state.w_r[i]);
+//         fr::copy(state.w_r[i], state.w_r_lagrange_base[i]);
+//         fr::__add(state.w_l[i], state.w_r[i], state.w_o[i]);
+//         fr::copy(state.w_o[i], state.w_o_lagrange_base[i]);
+//         fr::__add(i_mont, one, i_mont);
+
+//         fr::one(state.sigma_1[i]);
+//         fr::__add(state.sigma_1[i], state.sigma_1[i], state.sigma_2[i]);
+//         fr::__add(state.sigma_1[i], state.sigma_2[i], state.sigma_3[i]);
 //     }
-//     g1::element current_table[10000];
-//     printf("iterating over num_points / 10000 \n");
-//     for (size_t i = 0; i < (num_points / 10000); ++i)
+
+//     fr::field_t scratch_space[8 * n + 4];
+//     waffle::fft_pointers ffts;
+//     ffts.z_1_poly = &scratch_space[0];
+//     ffts.z_2_poly = &scratch_space[4 * n + 4];
+//     waffle::convert_permutations_into_lagrange_base_form(state);
+//     waffle::compute_z_coefficients(state, ffts);
+
+//     size_t z_1_evaluations[n];
+//     size_t z_2_evaluations[n];
+//     z_1_evaluations[0] = 1;
+//     z_2_evaluations[0] = 1;
+//     for (size_t i = 0; i < n - 1; ++i)
 //     {
-//         for (size_t j = 0; j < 10000; ++j)
-//         {
-//             g1::add(small_table[i], small_table[j], current_table[j]);
-//         }
-//         g1::batch_normalize(&current_table[0], 10000);
-//         for (size_t j = 0; j < 10000; ++j)
-//         {
-//             fq::copy(current_table[j].x, points[i * 10000 + j].x);
-//             fq::copy(current_table[j].y, points[i * 10000 + j].y);
-//         }
+        
+//         uint64_t product_1 = i + 3;
+//         uint64_t product_2 = (2 * i) + 5;
+//         uint64_t product_3 = (3 * i) + 7;
+
+//         uint64_t s_id = i + 1;
+//         uint64_t id_1 = i + (2 * s_id) + 1;
+//         uint64_t id_2 = (2 * i) + (2 * s_id) + 1 + (2 * n);
+//         uint64_t id_3 = (3 * i) + (2 * s_id) + 1 + (4 * n);
+//         uint64_t id_product = id_1 * id_2 * id_3;
+//         uint64_t sigma_product = product_1 * product_2 * product_3;
+
+//         z_1_evaluations[i + 1] = z_1_evaluations[i] * id_product;
+//         z_2_evaluations[i + 1] = z_2_evaluations[i] * sigma_product;
 //     }
-//     printf("calling batch normalize\n");
-//     g1::batch_normalize(small_table, 10000);
-//     size_t rounded = (num_points / 10000) * 10000;
-//     size_t leftovers = num_points - rounded;
-//     printf("fixing up leftovers\n");
-//     for (size_t j = 0; j < leftovers; ++j)
+
+//     fr::field_t work_root;
+//     fr::field_t z_1_expected;
+//     fr::field_t z_2_expected;
+//     fr::one(work_root);
+
+//     for (size_t i = 0; i < n; ++i)
 //     {
-//         fq::copy(small_table[j].x, points[rounded + j].x);
-//         fq::copy(small_table[j].y, points[rounded + j].y);
+//         z_1_expected = polynomials::evaluate(state.z_1, work_root, n);
+//         z_2_expected = polynomials::evaluate(state.z_2, work_root, n);
+//         fr::__from_montgomery_form(z_1_expected, z_1_expected);
+//         fr::__from_montgomery_form(z_2_expected, z_2_expected);
+//         fr::__mul(work_root, state.small_domain.root, work_root);
+//         EXPECT_EQ(z_1_expected.data[0], z_1_evaluations[i]);
+//         EXPECT_EQ(z_2_expected.data[0], z_2_evaluations[i]);
+//     }
+
+//     fr::field_t z_coeffs[4 * n];
+//     fr::field_t z_coeffs_copy[4 * n + 4];
+//     polynomials::copy_polynomial(state.z_1, z_coeffs, n, 4 * n);
+//     polynomials::fft(z_coeffs, state.large_domain);
+//     polynomials::copy_polynomial(z_coeffs, z_coeffs_copy, 4 * n, 4 * n);
+
+//     fr::copy(z_coeffs_copy[0], z_coeffs_copy[4 * n]);
+//     fr::copy(z_coeffs_copy[1], z_coeffs_copy[4 * n + 1]);
+//     fr::copy(z_coeffs_copy[2], z_coeffs_copy[4 * n + 2]);
+//     fr::copy(z_coeffs_copy[3], z_coeffs_copy[4 * n + 3]);
+
+//     polynomials::ifft(z_coeffs, state.large_domain);
+
+//     fr::field_t* shifted_z = &z_coeffs_copy[4];
+
+//     polynomials::ifft(shifted_z, state.large_domain);
+
+
+//     fr::field_t x = fr::random_element();
+//     fr::field_t shifted_x;
+//     fr::__mul(x, state.small_domain.root, shifted_x);
+
+//     fr::field_t z_eval;
+//     fr::field_t shifted_z_eval;
+//     z_eval = polynomials::evaluate(z_coeffs, shifted_x, state.small_domain.size);
+//     shifted_z_eval = polynomials::evaluate(shifted_z, x, state.small_domain.size);
+
+//     EXPECT_EQ(fr::eq(z_eval, shifted_z_eval), true);
+// }
+
+// void compute_wire_coefficients()
+// {
+//     size_t n = 256;
+//     fr::field_t data[13 * n];
+
+//     waffle::circuit_state state(n);
+//     // state.small_domain = polynomials::evaluation_domain(n);
+//     // state.mid_domain = polynomials::evaluation_domain(2 * n);
+//     // state.large_domain = polynomials::evaluation_domain(4 * n);
+
+//     state.w_l = &data[0];
+//     state.w_r = &data[n];
+//     state.w_o = &data[2 * n];
+//     state.z_1 = &data[6 * n];
+//     state.z_2 = &data[7 * n];
+//     state.t = &data[8 * n];
+//     state.sigma_1 = &data[3 * n];
+//     state.sigma_2 = &data[4 * n];
+//     state.sigma_3 = &data[5 * n];
+//     state.w_l_lagrange_base = &data[9 * n];
+//     state.w_r_lagrange_base = &data[10 * n];
+//     state.w_o_lagrange_base = &data[11 * n];
+//     state.n = n;
+
+//     fr::field_t w_l_reference[n];
+//     fr::field_t w_r_reference[n];
+//     fr::field_t w_o_reference[n];
+//     fr::field_t i_mont;
+//     fr::field_t one;
+//     fr::zero(i_mont);
+//     fr::one(one);
+//     for (size_t i = 0; i < n; ++i)
+//     {
+//         fr::copy(i_mont, state.w_l[i]);
+//         fr::__add(state.w_l[i], state.w_l[i], state.w_r[i]);
+//         fr::__add(state.w_l[i], state.w_r[i], state.w_o[i]);
+//         fr::__add(i_mont, one, i_mont);
+
+//         fr::one(state.sigma_1[i]);
+//         fr::__add(state.sigma_1[i], state.sigma_1[i], state.sigma_2[i]);
+//         fr::__add(state.sigma_1[i], state.sigma_2[i], state.sigma_3[i]);
+
+//         fr::copy(state.w_l[i], w_l_reference[i]);
+//         fr::copy(state.w_r[i], w_r_reference[i]);
+//         fr::copy(state.w_o[i], w_o_reference[i]);
+//     }
+
+//     fr::field_t scratch_space[24 * n + 8];
+//     waffle::fft_pointers ffts;
+//     ffts.w_l_poly = &scratch_space[0];
+//     ffts.w_r_poly = &scratch_space[4 * n];
+//     ffts.w_o_poly = &scratch_space[8 * n];
+//     ffts.z_1_poly = &scratch_space[16 * n];
+//     waffle::compute_wire_coefficients(state, ffts);
+
+//     fr::field_t work_root;
+//     fr::field_t w_l_expected;
+//     fr::field_t w_r_expected;
+//     fr::field_t w_o_expected;
+//     fr::one(work_root);
+
+//     for (size_t i = 0; i < n; ++i)
+//     {
+//         w_l_expected = polynomials::evaluate(state.w_l, work_root, n);
+//         w_r_expected = polynomials::evaluate(state.w_r, work_root, n);
+//         w_o_expected = polynomials::evaluate(state.w_o, work_root, n);
+//         fr::__mul(work_root, state.small_domain.root, work_root);
+//         EXPECT_EQ(fr::eq(w_l_reference[i], w_l_expected), true);
+//         EXPECT_EQ(fr::eq(w_r_reference[i], w_r_expected), true);
+//         EXPECT_EQ(fr::eq(w_o_reference[i], w_o_expected), true);
 //     }
 // }
 
-// // struct pippenger_point_data
-// // {
-// //     fr::field_t *scalars;
-// //     g1::affine_element *points;
-// // };
-
-// constexpr size_t NUM_POINTS = 1 << 19;
-
-// // void *pippenger_single(void *v_args) noexcept
-// // {
-// //     pippenger_point_data *data = (pippenger_point_data *)v_args;
-// //     scalar_multiplication::pippenger(&data->scalars[0], &data->points[0], NUM_POINTS);
-// //     return NULL;
-// // }
-
-// // void pippenger_multicore() noexcept
-// // {
-// //     fr::field_t *scalars = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * NUM_POINTS * NUM_THREADS);
-// //     g1::affine_element *points = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * NUM_POINTS * NUM_THREADS * 2);
-
-// //     pthread_t thread[NUM_THREADS];
-// //     printf("Before Thread\n");
-// //     for (size_t i = 0; i < NUM_POINTS; ++i)
-// //     {
-// //         scalars[i] = fr::random_element();
-// //     }
-
-// //     generate_points(points, NUM_POINTS * NUM_THREADS);
-
-// //     printf("generating point table\n");
-// //     scalar_multiplication::generate_pippenger_point_table(points, points, NUM_POINTS * NUM_THREADS);
-
-// //     pippenger_point_data *inputs = (pippenger_point_data *)malloc(sizeof(pippenger_point_data) * NUM_THREADS);
-// //     for (size_t i = 0; i < NUM_THREADS; ++i)
-// //     {
-// //         size_t inc = i * NUM_POINTS;
-// //         inputs[i].scalars = &scalars[inc];
-// //         inputs[i].points = &points[inc];
-// //         pthread_create(&thread[i], NULL, &pippenger_single, (void *)(&inputs[i]));
-// //     }
-// //     for (size_t j = 0; j < NUM_THREADS; ++j)
-// //     {
-// //         pthread_join(thread[j], NULL);
-// //     }
-// //     printf("After Thread\n");
-// //     free(inputs);
-// //     free(scalars);
-// //     free(points);
-// // }
-
-// // int main()
-// // {
-// //     pippenger_multicore();
-// // }
-// // // small .exe for profiling
-// int main()
+// void compute_wire_commitments()
 // {
-//     CALLGRIND_STOP_INSTRUMENTATION;
-//     printf("allocating memory for scalars and points\n");
-//     fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * NUM_POINTS);
+//     size_t n = 256;
 
-//     printf("generating scalars\n");
-//     for (size_t i = 0; i < NUM_POINTS; ++i)
+//     waffle::circuit_state state(n);
+//     // state.small_domain = polynomials::evaluation_domain(n);
+//     // state.mid_domain = polynomials::evaluation_domain(2 * n);
+//     // state.large_domain = polynomials::evaluation_domain(4 * n);
+//     state.n = n;
+//     fr::field_t data[25 * n];
+
+//     fr::field_t scratch_space[12 * n];
+
+//     waffle::fft_pointers ffts;
+//     ffts.scratch_memory = scratch_space;
+//     ffts.w_l_poly = &ffts.scratch_memory[0];
+//     ffts.w_r_poly = &ffts.scratch_memory[4 * n];
+//     ffts.w_o_poly = &ffts.scratch_memory[8 * n];
+//     generate_test_data(state, data);
+
+//     fr::field_t x = fr::random_element();
+//     srs::plonk_srs srs;
+//     g1::affine_element monomials[2 * n + 1];
+//     monomials[0] = g1::affine_one();
+
+//     for (size_t i = 1; i < n; ++i)
 //     {
-//         scalars[i] = fr::random_element();
+//         monomials[i] = g1::group_exponentiation(monomials[i-1], x);
 //     }
-//     polynomials::evaluation_domain domain = polynomials::evaluation_domain(NUM_POINTS);
-//     printf("calling fft\n");
-//     CALLGRIND_START_INSTRUMENTATION;
-//     // for (size_t i = (NUM_POINTS * 2) - 1; i > 0; --i)
-//     // {
-//     //     printf("point[%lu] = :", i);
-//     //     g1::print(points[i]);
-//     //     printf("\n");
-//     // }
-//     polynomials::fft(scalars, domain);
-//     CALLGRIND_STOP_INSTRUMENTATION;
-//     CALLGRIND_DUMP_STATS;
-//     free(scalars);
+//     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, n);
+//     srs.monomials = monomials;
+//     srs.degree = n;
+
+//     waffle::compute_wire_coefficients(state, ffts);
+
+//     fr::field_t w_l_copy[n];
+//     fr::field_t w_r_copy[n];
+//     fr::field_t w_o_copy[n];
+//     polynomials::copy_polynomial(state.w_l, w_l_copy, n, n);
+//     polynomials::copy_polynomial(state.w_r, w_r_copy, n, n);
+//     polynomials::copy_polynomial(state.w_o, w_o_copy, n, n);
+
+//     fr::field_t w_l_eval;
+//     fr::field_t w_r_eval;
+//     fr::field_t w_o_eval;
+
+
+//     w_l_eval = polynomials::evaluate(w_l_copy, x, n);
+//     w_r_eval = polynomials::evaluate(w_r_copy, x, n);
+//     w_o_eval = polynomials::evaluate(w_o_copy, x, n);
+
+//     waffle::plonk_proof proof;
+//     waffle::compute_wire_commitments(state, proof, srs);
+
+//     g1::affine_element generator = g1::affine_one();
+//     g1::affine_element expected_w_l = g1::group_exponentiation(generator, w_l_eval);
+//     g1::affine_element expected_w_r = g1::group_exponentiation(generator, w_r_eval);
+//     g1::affine_element expected_w_o = g1::group_exponentiation(generator, w_o_eval);
+
+//     EXPECT_EQ(fq::eq(proof.W_L.x, expected_w_l.x), true);
+//     EXPECT_EQ(fq::eq(proof.W_L.y, expected_w_l.y), true);
+//     EXPECT_EQ(fq::eq(proof.W_R.x, expected_w_r.x), true);
+//     EXPECT_EQ(fq::eq(proof.W_R.y, expected_w_r.y), true);
+//     EXPECT_EQ(fq::eq(proof.W_O.x, expected_w_o.x), true);
+//     EXPECT_EQ(fq::eq(proof.W_O.y, expected_w_o.y), true);
 // }
+
+// void compute_z_coefficients()
+// {
+//     size_t n = 256;
+
+//     waffle::circuit_state state(n);
+//     // state.small_domain = polynomials::evaluation_domain(n);
+//     // state.mid_domain = polynomials::evaluation_domain(2 * n);
+//     // state.large_domain = polynomials::evaluation_domain(4 * n);
+//     state.n = n;
+
+//     fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (28 * n + 2)));
+//     fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (24 * n + 8)));
+//     g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
+
+//     waffle::fft_pointers ffts;
+//     ffts.scratch_memory = scratch_space;
+//     ffts.w_l_poly = &ffts.scratch_memory[0];
+//     ffts.w_r_poly = &ffts.scratch_memory[4 * n];
+//     ffts.w_o_poly = &ffts.scratch_memory[8 * n];
+//     ffts.z_1_poly = &ffts.scratch_memory[12 * n];
+//     ffts.quotient_poly = &ffts.scratch_memory[20 * n];
+//     generate_test_data(state, data);
+
+//     fr::field_t x = fr::random_element();
+//     srs::plonk_srs srs;
+//     // g1::affine_element monomials[2 * n + 1];
+//     monomials[0] = g1::affine_one();
+
+//     for (size_t i = 1; i < n; ++i)
+//     {
+//         monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+//     }
+//     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, n);
+//     srs.monomials = monomials;
+//     srs.degree = n;
+//     waffle::convert_permutations_into_lagrange_base_form(state);
+//     waffle::compute_wire_coefficients(state, ffts);
+
+//     waffle::compute_z_coefficients(state, ffts);
+
+//     fr::field_t z_1_copy[n];
+//     polynomials::copy_polynomial(state.z_1, z_1_copy, n, n);
+
+//     fr::field_t z_1_eval;
+
+
+//     z_1_eval = polynomials::evaluate(z_1_copy, x, n);
+
+//     waffle::plonk_proof proof;
+//     waffle::compute_z_commitments(state, proof, srs);
+
+//     g1::affine_element generator = g1::affine_one();
+//     g1::affine_element expected_z_1 = g1::group_exponentiation(generator, z_1_eval);
+
+//     EXPECT_EQ(fq::eq(proof.Z_1.x, expected_z_1.x), true);
+//     EXPECT_EQ(fq::eq(proof.Z_1.y, expected_z_1.y), true);
+
+//     free(monomials);
+//     free(scratch_space);
+//     free(data);
+// }
+
+// void compute_linearisation_coefficients()
+// {
+//     size_t n = 256;
+
+//     waffle::circuit_state state(n);
+//     // state.small_domain = polynomials::evaluation_domain(n);
+//     // state.mid_domain = polynomials::evaluation_domain(2 * n);
+//     // state.large_domain = polynomials::evaluation_domain(4 * n);
+
+//     state.n = n;
+
+//     // fr::field_t data[28 * n + 2];
+//     fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (28 * n + 2)));
+//     fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (70 * n + 8)));
+//     g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
+
+//     waffle::fft_pointers ffts;
+//     ffts.scratch_memory = scratch_space;
+//     generate_test_data(state, data);
+
+//     fr::field_t x = fr::random_element();
+//     srs::plonk_srs srs;
+//     monomials[0] = g1::affine_one();
+
+//     for (size_t i = 1; i < 3 * n; ++i)
+//     {
+//         monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+//     }
+//     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
+//     srs.monomials = monomials;
+//     srs.degree = n;
+//     waffle::plonk_proof proof;
+//     waffle::convert_permutations_into_lagrange_base_form(state);
+//     waffle::compute_quotient_polynomial(state, ffts, proof, srs);
+//     state.challenges.z = fr::random_element();
+
+//     fr::field_t t_eval = polynomials::evaluate(ffts.quotient_poly, state.challenges.z, 3 * n);
+//     state.linear_poly = &ffts.scratch_memory[4 * n];
+
+//     waffle::compute_linearisation_coefficients(state, ffts, proof);
+
+//     polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(state.challenges.z, state.small_domain);
+
+//     fr::field_t alpha_pow[6];
+//     fr::copy(state.challenges.alpha, alpha_pow[0]);
+//     for (size_t i = 1; i < 6; ++i)
+//     {
+//         fr::__mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
+//     }
+
+//     fr::field_t T0;
+//     fr::field_t T1;
+//     fr::field_t T2;
+//     fr::field_t T3;
+//     fr::__mul(proof.sigma_1_eval, state.challenges.beta, T0);
+//     fr::__add(proof.w_l_eval, state.challenges.gamma, T1);
+//     fr::__add(T0, T1, T0);
+
+//     fr::__mul(proof.sigma_2_eval, state.challenges.beta, T2);
+//     fr::__add(proof.w_r_eval, state.challenges.gamma, T1);
+//     fr::__add(T2, T1, T2);
+
+//     fr::__add(proof.w_o_eval, state.challenges.gamma, T3);
+
+//     fr::__mul(T0, T2, T0);
+//     fr::__mul(T0, T3, T0);
+//     fr::__mul(T0, proof.z_1_shifted_eval, T0);
+//     fr::__mul(T0, alpha_pow[1], T0);
+
+//     fr::__sub(proof.z_1_shifted_eval, fr::one(), T1);
+//     fr::__mul(T1, lagrange_evals.l_n_minus_1, T1);
+//     fr::__mul(T1, alpha_pow[2], T1);
+
+//     fr::__mul(lagrange_evals.l_1, alpha_pow[3], T2);
+
+//     fr::__sub(T1, T2, T1);
+//     fr::__sub(T1, T0, T1);
+
+//     fr::field_t rhs;
+//     fr::__add(T1, proof.linear_eval, rhs);
+//     fr::__invert(lagrange_evals.vanishing_poly, T0);
+//     fr::__mul(rhs, T0, rhs);
+
+//     EXPECT_EQ(fr::eq(t_eval, rhs), true);
+
+//     free(scratch_space);
+//     free(data);
+//     free(monomials);
+// }
+

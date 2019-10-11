@@ -10,6 +10,8 @@ using namespace barretenberg;
 // Stores pointers to various polynomials required during proof construction
 // Note: these pointers can overlap! We want to efficiently use available memory,
 // and only a handful of these polynomials are required at any one time
+
+
 struct fft_pointers
 {
     fr::field_t *w_l_poly;

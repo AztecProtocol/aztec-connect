@@ -142,7 +142,6 @@ public:
     evaluation_domain(const evaluation_domain& other);
     evaluation_domain(evaluation_domain&& other) = delete;
     ~evaluation_domain();
-
 };
 
 struct lagrange_evaluations
@@ -166,19 +165,9 @@ struct plonk_srs
 
 namespace waffle
 {
-struct circuit_instance
-{
-    barretenberg::g1::affine_element Q_M;
-    barretenberg::g1::affine_element Q_L;
-    barretenberg::g1::affine_element Q_R;
-    barretenberg::g1::affine_element Q_O;
-    barretenberg::g1::affine_element Q_C;
-    barretenberg::g1::affine_element SIGMA_1;
-    barretenberg::g1::affine_element SIGMA_2;
-    barretenberg::g1::affine_element SIGMA_3;
-    barretenberg::g1::affine_element S_ID;
-    size_t n;
-};
+// contains the state of a PLONK proof, including witness values, instance values
+// and Kate polynomial commitments
+// TODO: add proper constructors, copy constructors, destructor
 
 struct plonk_challenges
 {
@@ -189,9 +178,6 @@ struct plonk_challenges
     barretenberg::fr::field_t nu;
 };
 
-// contains the state of a PLONK proof, including witness values, instance values
-// and Kate polynomial commitments
-// TODO: add proper constructors, copy constructors, destructor
 struct circuit_state
 {
     plonk_challenges challenges;
@@ -219,11 +205,6 @@ struct circuit_state
     barretenberg::fr::field_t *sigma_2;
     barretenberg::fr::field_t *sigma_3;
 
-    barretenberg::fr::field_t *product_1;
-    barretenberg::fr::field_t *product_2;
-    barretenberg::fr::field_t *product_3;
-    barretenberg::fr::field_t *permutation_product;
-
     barretenberg::fr::field_t *w_l_lagrange_base;
     barretenberg::fr::field_t *w_r_lagrange_base;
     barretenberg::fr::field_t *w_o_lagrange_base;
@@ -239,6 +220,24 @@ struct circuit_state
 
     circuit_state(size_t n);
     circuit_state(const circuit_state& other);
+    ~circuit_state();
+
+private:
+    barretenberg::fr::field_t *data;
+};
+
+struct circuit_instance
+{
+    barretenberg::g1::affine_element Q_M;
+    barretenberg::g1::affine_element Q_L;
+    barretenberg::g1::affine_element Q_R;
+    barretenberg::g1::affine_element Q_O;
+    barretenberg::g1::affine_element Q_C;
+    barretenberg::g1::affine_element SIGMA_1;
+    barretenberg::g1::affine_element SIGMA_2;
+    barretenberg::g1::affine_element SIGMA_3;
+    barretenberg::g1::affine_element S_ID;
+    size_t n;
 };
 
 struct witness_ffts

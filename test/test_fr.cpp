@@ -91,7 +91,7 @@ TEST(fr, to_montgomery_form)
 {
     fr::field_t result = {.data = {0x01, 0x00, 0x00, 0x00}};
     fr::field_t expected = fr::one();
-    fr::to_montgomery_form(result, result);
+    fr::__to_montgomery_form(result, result);
     EXPECT_EQ(fr::eq(result, expected), true);
 }
 
@@ -99,7 +99,7 @@ TEST(fr, from_montgomery_form)
 {
     fr::field_t result = fr::one();
     fr::field_t expected = {.data = {0x01, 0x00, 0x00, 0x00}};
-    fr::from_montgomery_form(result, result);
+    fr::__from_montgomery_form(result, result);
     EXPECT_EQ(fr::eq(result, expected), true);
 }
 
@@ -116,21 +116,21 @@ TEST(fr, montgomery_consistency_check)
     fr::field_t result_b;
     fr::field_t result_c;
     fr::field_t result_d;
-    fr::to_montgomery_form(a, aR);
-    fr::to_montgomery_form(aR, aRR);
-    fr::to_montgomery_form(b, bR);
-    fr::to_montgomery_form(bR, bRR);
-    fr::to_montgomery_form(bRR, bRRR);
+    fr::__to_montgomery_form(a, aR);
+    fr::__to_montgomery_form(aR, aRR);
+    fr::__to_montgomery_form(b, bR);
+    fr::__to_montgomery_form(bR, bRR);
+    fr::__to_montgomery_form(bRR, bRRR);
     fr::__mul(aRR, bRR, result_a); // abRRR
     fr::__mul(aR, bRRR, result_b); // abRRR
     fr::__mul(aR, bR, result_c);   // abR
     fr::__mul(a, b, result_d);     // abR^-1
     EXPECT_EQ(fr::eq(result_a, result_b), true);
-    fr::from_montgomery_form(result_a, result_a); // abRR
-    fr::from_montgomery_form(result_a, result_a); // abR
-    fr::from_montgomery_form(result_a, result_a); // ab
-    fr::from_montgomery_form(result_c, result_c); // ab
-    fr::to_montgomery_form(result_d, result_d);   // ab
+    fr::__from_montgomery_form(result_a, result_a); // abRR
+    fr::__from_montgomery_form(result_a, result_a); // abR
+    fr::__from_montgomery_form(result_a, result_a); // ab
+    fr::__from_montgomery_form(result_c, result_c); // ab
+    fr::__to_montgomery_form(result_d, result_d);   // ab
     EXPECT_EQ(fr::eq(result_a, result_c), true);
     EXPECT_EQ(fr::eq(result_a, result_d), true);
 }
@@ -138,7 +138,7 @@ TEST(fr, montgomery_consistency_check)
 TEST(fr, add_mul_consistency)
 {
     fr::field_t multiplicand = {.data = {0x09, 0, 0, 0}};
-    fr::to_montgomery_form(multiplicand, multiplicand);
+    fr::__to_montgomery_form(multiplicand, multiplicand);
 
     fr::field_t a = fr::random_element();
     fr::field_t result;
@@ -156,7 +156,7 @@ TEST(fr, add_mul_consistency)
 TEST(fr, sub_mul_consistency)
 {
     fr::field_t multiplicand = {.data = {0x05, 0, 0, 0}};
-    fr::to_montgomery_form(multiplicand, multiplicand);
+    fr::__to_montgomery_form(multiplicand, multiplicand);
 
     fr::field_t a = fr::random_element();
     fr::field_t result;
@@ -255,13 +255,13 @@ TEST(fr, split_into_endomorphism_scalars)
 
     fr::field_t result = {.data = {0, 0, 0, 0}};
 
-    fr::to_montgomery_form(k1, k1);
-    fr::to_montgomery_form(k2, k2);
+    fr::__to_montgomery_form(k1, k1);
+    fr::__to_montgomery_form(k2, k2);
 
     fr::__mul(k2, fr::lambda, result);
     fr::__sub(k1, result, result);
 
-    fr::from_montgomery_form(result, result);
+    fr::__from_montgomery_form(result, result);
     for (size_t i = 0; i < 4; ++i)
     {
         EXPECT_EQ(result.data[i], k.data[i]);
@@ -280,13 +280,13 @@ TEST(fr, split_into_endomorphism_scalars_simple)
     fr::split_into_endomorphism_scalars(k, k1, k2);
 
     fr::field_t result = {.data = {0, 0, 0, 0}};
-    fr::to_montgomery_form(k1, k1);
-    fr::to_montgomery_form(k2, k2);
+    fr::__to_montgomery_form(k1, k1);
+    fr::__to_montgomery_form(k2, k2);
 
     fr::__mul(k2, fr::lambda, result);
     fr::__sub(k1, result, result);
 
-    fr::from_montgomery_form(result, result);
+    fr::__from_montgomery_form(result, result);
     for (size_t i = 0; i < 4; ++i)
     {
         EXPECT_EQ(result.data[i], k.data[i]);

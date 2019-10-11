@@ -95,7 +95,7 @@ TEST(fq2, to_montgomery_form)
     fq2::fq2_t result = fq2::zero();
     result.c0.data[0] = 1;
     fq2::fq2_t expected = fq2::one();
-    fq2::to_montgomery_form(result, result);
+    fq2::__to_montgomery_form(result, result);
     EXPECT_EQ(fq2::eq(result, expected), true);
 }
 
@@ -104,7 +104,7 @@ TEST(fq2, from_montgomery_form)
     fq2::fq2_t result = fq2::one();
     fq2::fq2_t expected = fq2::zero();
     expected.c0.data[0] = 1;
-    fq2::from_montgomery_form(result, result);
+    fq2::__from_montgomery_form(result, result);
     EXPECT_EQ(fq2::eq(result, expected), true);
 }
 
@@ -121,21 +121,21 @@ TEST(fq2, montgomery_consistency_check)
     fq2::fq2_t result_b;
     fq2::fq2_t result_c;
     fq2::fq2_t result_d;
-    fq2::to_montgomery_form(a, aR);
-    fq2::to_montgomery_form(aR, aRR);
-    fq2::to_montgomery_form(b, bR);
-    fq2::to_montgomery_form(bR, bRR);
-    fq2::to_montgomery_form(bRR, bRRR);
+    fq2::__to_montgomery_form(a, aR);
+    fq2::__to_montgomery_form(aR, aRR);
+    fq2::__to_montgomery_form(b, bR);
+    fq2::__to_montgomery_form(bR, bRR);
+    fq2::__to_montgomery_form(bRR, bRRR);
     fq2::mul(aRR, bRR, result_a); // abRRR
     fq2::mul(aR, bRRR, result_b); // abRRR
     fq2::mul(aR, bR, result_c);   // abR
     fq2::mul(a, b, result_d);     // abR^-1
     EXPECT_EQ(fq2::eq(result_a, result_b), true);
-    fq2::from_montgomery_form(result_a, result_a); // abRR
-    fq2::from_montgomery_form(result_a, result_a); // abR
-    fq2::from_montgomery_form(result_a, result_a); // ab
-    fq2::from_montgomery_form(result_c, result_c); // ab
-    fq2::to_montgomery_form(result_d, result_d);   // ab
+    fq2::__from_montgomery_form(result_a, result_a); // abRR
+    fq2::__from_montgomery_form(result_a, result_a); // abR
+    fq2::__from_montgomery_form(result_a, result_a); // ab
+    fq2::__from_montgomery_form(result_c, result_c); // ab
+    fq2::__to_montgomery_form(result_d, result_d);   // ab
     EXPECT_EQ(fq2::eq(result_a, result_c), true);
     EXPECT_EQ(fq2::eq(result_a, result_d), true);
 }
@@ -161,7 +161,7 @@ TEST(fq2, mul_sqr_consistency)
 TEST(fq2, add_mul_consistency)
 {
     fq2::fq2_t multiplicand = { .c0 = { .data = { 0x09, 0x00, 0x00, 0x00 } }, .c1 = { .data = { 0x00, 0x00, 0x00, 0x00 } } };
-    fq2::to_montgomery_form(multiplicand, multiplicand);
+    fq2::__to_montgomery_form(multiplicand, multiplicand);
 
     fq2::fq2_t a = fq2::random_element();
     fq2::fq2_t result;
@@ -180,7 +180,7 @@ TEST(fq2, add_mul_consistency)
 TEST(fq2, sub_mul_consistency)
 {
     fq2::fq2_t multiplicand = { .c0 = { .data = { 0x05, 0, 0, 0 } } , .c1 = { .data = { 0x00, 0x00, 0x00, 0x00 } } };
-    fq2::to_montgomery_form(multiplicand, multiplicand);
+    fq2::__to_montgomery_form(multiplicand, multiplicand);
 
     fq2::fq2_t a = fq2::random_element();
     fq2::fq2_t result;

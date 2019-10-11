@@ -84,7 +84,7 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
 
     fr::field_t k = { .data = { 0, 0, 0, 0 }};
     fr::copy(*(fr::field_t*)&rand_buffer[0], k);
-    // fr::to_montgomery_form(k, k);
+    // fr::__to_montgomery_form(k, k);
     fr::field_t k1 = { .data = { 0, 0, 0, 0 }};;
     fr::field_t k2 = { .data = { 0, 0, 0, 0 }};;
  

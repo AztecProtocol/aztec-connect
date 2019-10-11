@@ -78,8 +78,8 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
 
     fr::field_t z_pow_n;
     fr::field_t z_pow_2n;
-    fr::pow_small(challenges.z, instance.n, z_pow_n);
-    fr::pow_small(challenges.z, instance.n * 2, z_pow_2n);
+    fr::__pow_small(challenges.z, instance.n, z_pow_n);
+    fr::__pow_small(challenges.z, instance.n * 2, z_pow_2n);
 
 
     challenges.nu = compute_linearisation_challenge(proof, t_eval);

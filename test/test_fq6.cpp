@@ -100,7 +100,7 @@ TEST(fq6, to_montgomery_form)
     fq6::fq6_t result = fq6::zero();
     result.c0.c0.data[0] = 1;
     fq6::fq6_t expected = fq6::one();
-    fq6::to_montgomery_form(result, result);
+    fq6::__to_montgomery_form(result, result);
     EXPECT_EQ(fq6::eq(result, expected), true);
 }
 
@@ -109,7 +109,7 @@ TEST(fq6, from_montgomery_form)
     fq6::fq6_t result = fq6::one();
     fq6::fq6_t expected = fq6::zero();
     expected.c0.c0.data[0] = 1;
-    fq6::from_montgomery_form(result, result);
+    fq6::__from_montgomery_form(result, result);
     EXPECT_EQ(fq6::eq(result, expected), true);
 }
 
@@ -126,21 +126,21 @@ TEST(fq6, montgomery_consistency_check)
     fq6::fq6_t result_b;
     fq6::fq6_t result_c;
     fq6::fq6_t result_d;
-    fq6::to_montgomery_form(a, aR);
-    fq6::to_montgomery_form(aR, aRR);
-    fq6::to_montgomery_form(b, bR);
-    fq6::to_montgomery_form(bR, bRR);
-    fq6::to_montgomery_form(bRR, bRRR);
+    fq6::__to_montgomery_form(a, aR);
+    fq6::__to_montgomery_form(aR, aRR);
+    fq6::__to_montgomery_form(b, bR);
+    fq6::__to_montgomery_form(bR, bRR);
+    fq6::__to_montgomery_form(bRR, bRRR);
     fq6::mul(aRR, bRR, result_a); // abRRR
     fq6::mul(aR, bRRR, result_b); // abRRR
     fq6::mul(aR, bR, result_c);   // abR
     fq6::mul(a, b, result_d);     // abR^-1
     EXPECT_EQ(fq6::eq(result_a, result_b), true);
-    fq6::from_montgomery_form(result_a, result_a); // abRR
-    fq6::from_montgomery_form(result_a, result_a); // abR
-    fq6::from_montgomery_form(result_a, result_a); // ab
-    fq6::from_montgomery_form(result_c, result_c); // ab
-    fq6::to_montgomery_form(result_d, result_d);   // ab
+    fq6::__from_montgomery_form(result_a, result_a); // abRR
+    fq6::__from_montgomery_form(result_a, result_a); // abR
+    fq6::__from_montgomery_form(result_a, result_a); // ab
+    fq6::__from_montgomery_form(result_c, result_c); // ab
+    fq6::__to_montgomery_form(result_d, result_d);   // ab
     EXPECT_EQ(fq6::eq(result_a, result_c), true);
     EXPECT_EQ(fq6::eq(result_a, result_d), true);
 }
@@ -167,7 +167,7 @@ TEST(fq6, add_mul_consistency)
 {
     fq6::fq6_t multiplicand = fq6::zero();
     multiplicand.c0.c0.data[0] = 9;
-    fq6::to_montgomery_form(multiplicand, multiplicand);
+    fq6::__to_montgomery_form(multiplicand, multiplicand);
 
     fq6::fq6_t a = fq6::random_element();
     fq6::fq6_t result;
@@ -187,7 +187,7 @@ TEST(fq6, sub_mul_consistency)
 {
     fq6::fq6_t multiplicand = fq6::zero();
     multiplicand.c0.c0.data[0] = 5;
-    fq6::to_montgomery_form(multiplicand, multiplicand);
+    fq6::__to_montgomery_form(multiplicand, multiplicand);
     fq6::fq6_t a = fq6::random_element();
     fq6::fq6_t result;
     fq6::add(a, a, result);             // 2

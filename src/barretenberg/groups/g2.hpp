@@ -477,8 +477,8 @@ inline bool on_curve(affine_element &pt)
     fq2::mul(pt.x, xxx, xxx);
     fq2::add(xxx, fq2::twist_coeff_b, xxx);
     fq2::sqr(pt.y, yy);
-    fq2::from_montgomery_form(xxx, xxx);
-    fq2::from_montgomery_form(yy, yy);
+    fq2::__from_montgomery_form(xxx, xxx);
+    fq2::__from_montgomery_form(yy, yy);
     return fq2::eq(xxx, yy);
 }
 
@@ -532,7 +532,7 @@ inline element group_exponentiation_inner(const affine_element &a, const fr::fie
     affine_to_jacobian(a, work_element);
     affine_to_jacobian(a, point);
     fr::field_t converted_scalar;
-    fr::from_montgomery_form(scalar, converted_scalar);
+    fr::__from_montgomery_form(scalar, converted_scalar);
     bool scalar_bits[256] = {0};
     for (size_t i = 0; i < 64; ++i)
     {
