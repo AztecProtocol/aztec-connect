@@ -30,9 +30,6 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
     challenges.beta = compute_beta(proof, challenges.gamma);
     challenges.z = compute_evaluation_challenge(proof);
 
-    // fr::field_t u = fr::random_element(); TODO REPLACE WITH HASH
-    fr::field_t u{{ 0x0001020304050607, 0x08090a0b0c0d0e0f, 0x1011121314151617, 0x18191a1b1c1d1e1f }};
-    fr::copy(challenges.alpha, alpha_pow[0]);
     polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(challenges.z, domain);
 
     // compute the terms we need to derive R(X)
@@ -44,6 +41,7 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
     fr::field_t T1;
     fr::field_t T2;
     fr::field_t T3;
+    fr::copy(challenges.alpha, alpha_pow[0]);
     for (size_t i = 1; i < 4; ++i)
     {
         fr::__mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
@@ -78,22 +76,14 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
     fr::__invert(lagrange_evals.vanishing_poly, T0);
     fr::__mul(t_eval, T0, t_eval);
 
-    printf("verifier t eval");
-    fr::print(t_eval);
     fr::field_t z_pow_n;
     fr::field_t z_pow_2n;
     fr::__pow_small(challenges.z, instance.n, z_pow_n);
     fr::__pow_small(challenges.z, instance.n * 2, z_pow_2n);
 
-    // printf("verifier challenges:");
-    // fr::print(challenges.alpha);
-    // fr::print(challenges.beta);
-    // fr::print(challenges.gamma);
-    // fr::print(challenges.z);
-
     challenges.nu = compute_linearisation_challenge(proof, t_eval);
-    printf("nu value = ");
-    fr::print(challenges.nu);
+
+    fr::field_t u = compute_kate_separation_challenge(proof, t_eval);
     fr::copy(challenges.nu, nu_pow[0]);
     for (size_t i = 1; i < 7; ++i)
     {
@@ -165,12 +155,6 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
     fr::copy(z_pow_n, scalar_exponents[15]);
     fr::copy(z_pow_2n, scalar_exponents[16]);
 
-    printf("verifier linear terms z1 = ");
-    fr::print(linear_terms.z_1);
-    printf("verifier z \n");
-    fr::print(challenges.z);
-
-    printf("###\n");
     g1::affine_element *lhs_ge = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * 34);
 
     g1::copy_affine(instance.Q_M, lhs_ge[0]);
@@ -192,10 +176,7 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
     g1::copy_affine(proof.T_HI, lhs_ge[16]);
 
     printf("verifier group elements \n");
-    for (size_t i = 0; i < 17; ++i)
-    {
-        g1::print(lhs_ge[i]);
-    }
+
     scalar_multiplication::generate_pippenger_point_table(lhs_ge, lhs_ge, 17);
     g1::element P[2];
 

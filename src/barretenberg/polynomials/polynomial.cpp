@@ -241,13 +241,7 @@ void polynomial::coset_fft(const evaluation_domain &domain)
     {
         bump_memory(domain.size);
     }
-    for (size_t i = size; i < domain.size; ++i)
-    {
-        if (!fr::eq(coefficients[i], fr::zero()))
-        {
-            printf("coset fft zero error at i = %lu\n", size + i);
-        }
-    }
+
     polynomial_arithmetic::coset_fft(coefficients, domain);
     size = domain.size;
 }
@@ -258,13 +252,7 @@ void polynomial::coset_fft_with_constant(const evaluation_domain &domain, const 
     {
         bump_memory(domain.size);
     }
-    for (size_t i = size; i < domain.size; ++i)
-    {
-        if (!fr::eq(coefficients[i], fr::zero()))
-        {
-            printf("coset fft zero error at i = %lu\n", size + i);
-        }
-    }
+
     polynomial_arithmetic::coset_fft_with_constant(coefficients, domain, constant);
     size = domain.size;
 }
@@ -275,13 +263,7 @@ void polynomial::ifft(const evaluation_domain &domain)
     {
         bump_memory(domain.size);
     }
-    for (size_t i = size; i < domain.size; ++i)
-    {
-        if (!fr::eq(coefficients[i], fr::zero()))
-        {
-            printf("ifft zero error at i = %lu\n", size + i);
-        }
-    }
+
     polynomial_arithmetic::ifft(coefficients, domain);
     size = domain.size;
 }
@@ -292,13 +274,7 @@ void polynomial::ifft_with_constant(const evaluation_domain &domain, const barre
     {
         bump_memory(domain.size);
     }
-    for (size_t i = size; i < domain.size; ++i)
-    {
-        if (!fr::eq(coefficients[i], fr::zero()))
-        {
-            printf("ifft with constant zero error at i = %lu\n", size + i);
-        }
-    }
+
     polynomial_arithmetic::ifft_with_constant(coefficients, domain, constant);
     size = domain.size;
 }
@@ -309,13 +285,7 @@ void polynomial::coset_ifft(const evaluation_domain &domain)
     {
         bump_memory(domain.size);
     }
-    for (size_t i = size; i < domain.size; ++i)
-    {
-        if (!fr::eq(coefficients[i], fr::zero()))
-        {
-            printf("coset ifft zero error at i = %lu\n", size + i);
-        }
-    }
+
     polynomial_arithmetic::coset_ifft(coefficients, domain);
     size = domain.size;
 }
@@ -340,7 +310,7 @@ void polynomial::shrink_evaluation_domain(const size_t shrink_factor)
     // TODO SUPPORT MORE THAN 2X SHRINK
     size_t log2_shrink_factor = static_cast<size_t>(log2(shrink_factor));
     ASSERT(1UL << log2_shrink_factor == shrink_factor);
-    printf("size = %lu\n", size);
+
     fr::field_t* new_memory = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * max_size >> log2_shrink_factor));
     for (size_t i = 0; i < size; i += shrink_factor)
     {
