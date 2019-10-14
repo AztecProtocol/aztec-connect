@@ -34,7 +34,13 @@ namespace waffle
         fr::field_t T1;
         fr::field_t T2;
 
-        // fr::field_t beta_n = {.data = {n, 0, 0, 0}};
+        printf("challenges\n");
+        fr::print(challenges.alpha);
+        fr::print(challenges.beta);
+        fr::print(challenges.gamma);
+        fr::print(challenges.z);
+        printf("###\n");
+        // fr::field_t beta_n = {{n, 0, 0, 0}};
         // fr::__to_montgomery_form(beta_n, beta_n);
         // fr::__mul(beta_n, challenges.beta, beta_n);
         // fr::field_t beta_n_2;
@@ -42,9 +48,9 @@ namespace waffle
 
 
         fr::field_t right_shift = fr::multiplicative_generator();
-        fr::field_t output_shift = fr::multiplicative_generator();
-        fr::__add(output_shift, fr::one(), output_shift);
-        fr::__add(output_shift, fr::one(), output_shift);
+        fr::field_t output_shift = fr::alternate_multiplicative_generator();
+        // fr::__add(output_shift, fr::one(), output_shift);
+        // fr::__add(output_shift, fr::one(), output_shift);
         fr::field_t alpha_pow[6];
         fr::copy(challenges.alpha, alpha_pow[0]);
         for (size_t i = 1; i < 6; ++i)
@@ -88,7 +94,8 @@ namespace waffle
 
         fr::__mul(l_1, alpha_pow[3], T0);
         fr::__add(result.z_1, T0, result.z_1);
-
+        printf("in linearizer, z_1 term = ");
+        fr::print(result.z_1);
         fr::__mul(proof.w_o_eval, alpha_pow[0], result.q_o);
         fr::__mul(proof.w_r_eval, alpha_pow[0], result.q_r);
         fr::__mul(proof.w_l_eval, alpha_pow[0], result.q_l);

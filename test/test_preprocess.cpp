@@ -31,7 +31,7 @@ TEST(preprocess, preprocess)
 
     fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * 10 * n));
     
-    fr::field_t* polys[9] = {
+    fr::field_t* polys[9]{
         &scratch_space[0],
         &scratch_space[n],
         &scratch_space[2*n],
@@ -45,7 +45,7 @@ TEST(preprocess, preprocess)
 
     uint32_t* sigma_memory = (uint32_t*)(aligned_alloc(32, sizeof(uint32_t) * 3 * n));
 
-    uint32_t* sigma_mappings[3] = { 
+    uint32_t* sigma_mappings[3]{ 
         &sigma_memory[0],
         &sigma_memory[n],
         &sigma_memory[n + n]

@@ -283,7 +283,7 @@ size_t num_threads = 1;
 
     size_t range_per_thread = n / num_threads;
     size_t leftovers = n - (range_per_thread * num_threads);
-    fr::field_t evaluations[num_threads];
+    fr::field_t *evaluations = new fr::field_t[num_threads];
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
@@ -308,6 +308,7 @@ size_t num_threads = 1;
     {
         fr::__add(r, evaluations[j], r);
     }
+    delete evaluations;
     return r;
 }
 
@@ -328,7 +329,6 @@ void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, const evalua
 
     // We also want to compute fft using subgroup union a coset (the multiplicative generator g), so we're not dividing by zero
 
-    fr::field_t* scratch_memory = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * target_domain.size));
     // Step 1: compute the denominator for each evaluation: 1 / (X.g - 1)
     // fr::field_t work_root;
     fr::field_t one = fr::one();
@@ -354,7 +354,7 @@ void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, const evalua
     }
 
     // use Montgomery's trick to invert all of these at once
-    fr::batch_invert(l_1_coefficients, target_domain.size, scratch_memory);
+    fr::batch_invert(l_1_coefficients, target_domain.size);
 
     // next: compute numerator multiplicand: w'^{n}.g^n
     // Here, w' is the primitive 2n'th root of unity
@@ -372,7 +372,7 @@ void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, const evalua
     size_t subgroup_size = 1UL << log2_subgroup_size;
     ASSERT(target_domain.log2_size >= src_domain.log2_size);
 
-    fr::field_t subgroup_roots[subgroup_size];
+    fr::field_t *subgroup_roots = new fr::field_t[subgroup_size];
     compute_multiplicative_subgroup(log2_subgroup_size, src_domain, &subgroup_roots[0]);
 
     // Each element of `subgroup_roots[i]` contains some root wi^n
@@ -411,8 +411,7 @@ void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, const evalua
             }
         }
     }
-
-    free(scratch_memory);
+    delete subgroup_roots;
 }
 
 void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, const evaluation_domain &src_domain, const evaluation_domain &target_domain)
@@ -432,7 +431,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, const evaluation
     size_t subgroup_size = 1UL << log2_subgroup_size;
     ASSERT(target_domain.log2_size >= src_domain.log2_size);
 
-    fr::field_t subgroup_roots[subgroup_size];
+    fr::field_t *subgroup_roots = new fr::field_t[subgroup_size];
     compute_multiplicative_subgroup(log2_subgroup_size, src_domain, &subgroup_roots[0]);
 
     // Step 3: fill array with values of (g.X)^n - 1, scaled by the cofactor
@@ -442,8 +441,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, const evaluation
     }
 
     // Step 4: invert array entries to compute denominator term of 1/Z_H*(X)
-    fr::field_t scratch_data[subgroup_size];
-    fr::batch_invert(&subgroup_roots[0], subgroup_size, &scratch_data[0]);
+    fr::batch_invert(&subgroup_roots[0], subgroup_size);
 
     // The numerator term of Z_H*(X) is the polynomial (X - w^{n-1})
     // => (g.w_i - w^{n-1})
@@ -492,6 +490,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, const evaluation
             }
         }
     }
+    delete subgroup_roots;
 }
 
 fr::field_t compute_kate_opening_coefficients(const fr::field_t *src, fr::field_t *dest, const fr::field_t &z, const size_t n)
@@ -536,7 +535,7 @@ lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, const evalua
     fr::field_t numerator;
     fr::__sub(z_pow, one, numerator);
 
-    fr::field_t denominators[6];
+    fr::field_t denominators[3];
     fr::__sub(z, one, denominators[1]);
 
     fr::__mul(z, domain.root, denominators[2]);
@@ -545,7 +544,7 @@ lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, const evalua
 
     fr::__sub(z, domain.root_inverse, denominators[0]);
 
-    fr::batch_invert(denominators, 3, &denominators[3]);
+    fr::batch_invert(denominators, 3);
 
     lagrange_evaluations result;
     fr::__mul(numerator, denominators[0], result.vanishing_poly);

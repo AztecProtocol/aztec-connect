@@ -337,9 +337,9 @@ fq12::fq12_t reduced_ate_pairing(const g1::affine_element &P_affine, const g2::a
 
 fq12::fq12_t reduced_ate_pairing_batch(const g1::affine_element *P_affines, const g2::affine_element *Q_affines, size_t num_points)
 {
-    g1::element P[num_points];
-    g2::element Q[num_points];
-    miller_lines lines[num_points];
+    g1::element *P = new g1::element[num_points];
+    g2::element *Q = new g2::element[num_points];
+    miller_lines *lines = new miller_lines[num_points];
     for (size_t i = 0; i < num_points; ++i)
     {
         g1::affine_to_jacobian(P_affines[i], P[i]);
@@ -351,6 +351,9 @@ fq12::fq12_t reduced_ate_pairing_batch(const g1::affine_element *P_affines, cons
     fq12::fq12_t result = miller_loop_batch(&P[0], &lines[0], num_points);
     final_exponentiation_easy_part(result, result);
     final_exponentiation_tricky_part(result, result);
+    delete P;
+    delete Q;
+    delete lines;
     return result;
 }
 

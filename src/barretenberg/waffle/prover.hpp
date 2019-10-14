@@ -25,13 +25,14 @@ public:
     void compute_wire_commitments();
     void compute_z_commitment();
     void compute_quotient_commitment();
-    void compute_permutation_grand_product_coefficients();
-    void compute_identity_grand_product_coefficients();
+    void compute_permutation_grand_product_coefficients(polynomial &z_fft);
+    void compute_identity_grand_product_coefficients(polynomial &z_fft);
     void compute_arithmetisation_coefficients();
     void compute_quotient_polynomial();
     barretenberg::fr::field_t compute_linearisation_coefficients();
     plonk_proof construct_proof();
-    
+    circuit_instance construct_instance();
+
     size_t n;
     polynomial w_l;
     polynomial w_r;

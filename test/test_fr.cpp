@@ -6,12 +6,12 @@ using namespace barretenberg;
 
 TEST(fr, eq)
 {
-    fr::field_t a = {.data = {0x01, 0x02, 0x03, 0x04}};
-    fr::field_t b = {.data = {0x01, 0x02, 0x03, 0x04}};
-    fr::field_t c = {.data = {0x01, 0x02, 0x03, 0x05}};
-    fr::field_t d = {.data = {0x01, 0x02, 0x04, 0x04}};
-    fr::field_t e = {.data = {0x01, 0x03, 0x03, 0x04}};
-    fr::field_t f = {.data = {0x02, 0x02, 0x03, 0x04}};
+    fr::field_t a{{0x01, 0x02, 0x03, 0x04}};
+    fr::field_t b{{0x01, 0x02, 0x03, 0x04}};
+    fr::field_t c{{0x01, 0x02, 0x03, 0x05}};
+    fr::field_t d{{0x01, 0x02, 0x04, 0x04}};
+    fr::field_t e{{0x01, 0x03, 0x03, 0x04}};
+    fr::field_t f{{0x02, 0x02, 0x03, 0x04}};
     EXPECT_EQ(fr::eq(a, b), true);
     EXPECT_EQ(fr::eq(a, c), false);
     EXPECT_EQ(fr::eq(a, d), false);
@@ -50,9 +50,9 @@ TEST(fr, random_element)
 
 TEST(fr, mul)
 {
-    fr::field_t a = {.data = {0x192f9ddc938ea63, 0x1db93d61007ec4fe, 0xc89284ec31fa49c0, 0x2478d0ff12b04f0f}};
-    fr::field_t b = {.data = {0x7aade4892631231c, 0x8e7515681fe70144, 0x98edb76e689b6fd8, 0x5d0886b15fc835fa}};
-    fr::field_t expected = {.data = {0xab961ef46b4756b6, 0xbc6b636fc29678c8, 0xd247391ed6b5bd16, 0x12e8538b3bde6784}};
+    fr::field_t a{{0x192f9ddc938ea63, 0x1db93d61007ec4fe, 0xc89284ec31fa49c0, 0x2478d0ff12b04f0f}};
+    fr::field_t b{{0x7aade4892631231c, 0x8e7515681fe70144, 0x98edb76e689b6fd8, 0x5d0886b15fc835fa}};
+    fr::field_t expected{{0xab961ef46b4756b6, 0xbc6b636fc29678c8, 0xd247391ed6b5bd16, 0x12e8538b3bde6784}};
     fr::field_t result;
     fr::__mul(a, b, result);
     EXPECT_EQ(fr::eq(result, expected), true);
@@ -60,8 +60,8 @@ TEST(fr, mul)
 
 TEST(fr, sqr)
 {
-    fr::field_t a = { .data = { 0x95f946723a1fc34f, 0x641ec0482fc40bb9, 0xb8d645bc49dd513d, 0x1c1bffd317599dbc } };
-    fr::field_t expected = { .data = { 0xc787f7d9e2c72714, 0xcf21cf53d8f65f67, 0x8db109903dac0008, 0x26ab4dd65f46be5f } };
+    fr::field_t a{{ 0x95f946723a1fc34f, 0x641ec0482fc40bb9, 0xb8d645bc49dd513d, 0x1c1bffd317599dbc } };
+    fr::field_t expected{{ 0xc787f7d9e2c72714, 0xcf21cf53d8f65f67, 0x8db109903dac0008, 0x26ab4dd65f46be5f } };
     fr::field_t result;
     fr::__sqr(a, result);
     EXPECT_EQ(fr::eq(result, expected), true);
@@ -69,9 +69,9 @@ TEST(fr, sqr)
 
 TEST(fr, add)
 {
-    fr::field_t a = {.data = {0x20565a572c565a66, 0x7bccd0f01f5f7bff, 0x63ec2beaad64711f, 0x624953caaf44a814}};
-    fr::field_t b = {.data = {0xa17307a2108adeea, 0x74629976c14c5e2b, 0x9ce6f072ab1740ee, 0x398c753702b2bef0}};
-    fr::field_t expected = {.data = {0x7de76c654ce1394f, 0xc7fb821e66f26999, 0x4882d6a6d6fa59b0, 0x6b717a8ed0c5c6db}};
+    fr::field_t a{{0x20565a572c565a66, 0x7bccd0f01f5f7bff, 0x63ec2beaad64711f, 0x624953caaf44a814}};
+    fr::field_t b{{0xa17307a2108adeea, 0x74629976c14c5e2b, 0x9ce6f072ab1740ee, 0x398c753702b2bef0}};
+    fr::field_t expected{{0x7de76c654ce1394f, 0xc7fb821e66f26999, 0x4882d6a6d6fa59b0, 0x6b717a8ed0c5c6db}};
     fr::field_t result;
     fr::__add(a, b, result);
     EXPECT_EQ(fr::eq(result, expected), true);
@@ -79,9 +79,9 @@ TEST(fr, add)
 
 TEST(fr, sub)
 {
-    fr::field_t a = {.data = {0xcfbcfcf457cf2d38, 0x7b27af26ce62aa61, 0xf0378e90d48f2b92, 0x4734b22cb21ded}};
-    fr::field_t b = {.data = {0x569fdb1db5198770, 0x446ddccef8347d52, 0xef215227182d22a, 0x8281b4fb109306}};
-    fr::field_t expected = {.data = {0xbcff176a92b5a5c9, 0x5eedbaa04fe79da0, 0x9995bf24e48db1c5, 0x3029017012d32b11}};
+    fr::field_t a{{0xcfbcfcf457cf2d38, 0x7b27af26ce62aa61, 0xf0378e90d48f2b92, 0x4734b22cb21ded}};
+    fr::field_t b{{0x569fdb1db5198770, 0x446ddccef8347d52, 0xef215227182d22a, 0x8281b4fb109306}};
+    fr::field_t expected{{0xbcff176a92b5a5c9, 0x5eedbaa04fe79da0, 0x9995bf24e48db1c5, 0x3029017012d32b11}};
     fr::field_t result;
     fr::__sub(a, b, result);
     EXPECT_EQ(fr::eq(result, expected), true);
@@ -89,7 +89,7 @@ TEST(fr, sub)
 
 TEST(fr, to_montgomery_form)
 {
-    fr::field_t result = {.data = {0x01, 0x00, 0x00, 0x00}};
+    fr::field_t result{{0x01, 0x00, 0x00, 0x00}};
     fr::field_t expected = fr::one();
     fr::__to_montgomery_form(result, result);
     EXPECT_EQ(fr::eq(result, expected), true);
@@ -98,7 +98,7 @@ TEST(fr, to_montgomery_form)
 TEST(fr, from_montgomery_form)
 {
     fr::field_t result = fr::one();
-    fr::field_t expected = {.data = {0x01, 0x00, 0x00, 0x00}};
+    fr::field_t expected{{0x01, 0x00, 0x00, 0x00}};
     fr::__from_montgomery_form(result, result);
     EXPECT_EQ(fr::eq(result, expected), true);
 }
@@ -137,7 +137,7 @@ TEST(fr, montgomery_consistency_check)
 
 TEST(fr, add_mul_consistency)
 {
-    fr::field_t multiplicand = {.data = {0x09, 0, 0, 0}};
+    fr::field_t multiplicand = {{0x09, 0, 0, 0}};
     fr::__to_montgomery_form(multiplicand, multiplicand);
 
     fr::field_t a = fr::random_element();
@@ -155,7 +155,7 @@ TEST(fr, add_mul_consistency)
 
 TEST(fr, sub_mul_consistency)
 {
-    fr::field_t multiplicand = {.data = {0x05, 0, 0, 0}};
+    fr::field_t multiplicand = {{0x05, 0, 0, 0}};
     fr::__to_montgomery_form(multiplicand, multiplicand);
 
     fr::field_t a = fr::random_element();
@@ -177,7 +177,7 @@ TEST(fr, lambda)
 {
     fr::field_t x = fr::random_element();
 
-    fr::field_t lambda_x = {.data = {x.data[0], x.data[1], x.data[2], x.data[3]}};
+    fr::field_t lambda_x = {{x.data[0], x.data[1], x.data[2], x.data[3]}};
     fr::__mul_lambda(lambda_x, lambda_x);
 
     // compute x^3
@@ -238,7 +238,7 @@ TEST(fr, neg)
 
 TEST(fr, split_into_endomorphism_scalars)
 {
-    fr::field_t input = {.data = {0, 0, 0, 0}};
+    fr::field_t input = {{0, 0, 0, 0}};
     int got_entropy = getentropy((void *)&input.data[0], 32);
     EXPECT_EQ(got_entropy, 0);
     input.data[3] &= 0x7fffffffffffffff;
@@ -247,13 +247,13 @@ TEST(fr, split_into_endomorphism_scalars)
     {
         fr::__sub(input, fr::modulus, input);
     }
-    fr::field_t k = {.data = {input.data[0], input.data[1], input.data[2], input.data[3]}};
-    fr::field_t k1 = {.data = {0, 0, 0, 0}};
-    fr::field_t k2 = {.data = {0, 0, 0, 0}};
+    fr::field_t k = {{input.data[0], input.data[1], input.data[2], input.data[3]}};
+    fr::field_t k1 = {{0, 0, 0, 0}};
+    fr::field_t k2 = {{0, 0, 0, 0}};
 
     fr::split_into_endomorphism_scalars(k, k1, k2);
 
-    fr::field_t result = {.data = {0, 0, 0, 0}};
+    fr::field_t result{{0, 0, 0, 0}};
 
     fr::__to_montgomery_form(k1, k1);
     fr::__to_montgomery_form(k2, k2);
@@ -271,15 +271,15 @@ TEST(fr, split_into_endomorphism_scalars)
 TEST(fr, split_into_endomorphism_scalars_simple)
 {
 
-    fr::field_t input = {.data = {1, 0, 0, 0}};
-    fr::field_t k = {.data = {0, 0, 0, 0}};
-    fr::field_t k1 = {.data = {0, 0, 0, 0}};
-    fr::field_t k2 = {.data = {0, 0, 0, 0}};
+    fr::field_t input = {{1, 0, 0, 0}};
+    fr::field_t k = {{0, 0, 0, 0}};
+    fr::field_t k1 = {{0, 0, 0, 0}};
+    fr::field_t k2 = {{0, 0, 0, 0}};
     fr::copy(input, k);
 
     fr::split_into_endomorphism_scalars(k, k1, k2);
 
-    fr::field_t result = {.data = {0, 0, 0, 0}};
+    fr::field_t result{{0, 0, 0, 0}};
     fr::__to_montgomery_form(k1, k1);
     fr::__to_montgomery_form(k2, k2);
 
@@ -298,7 +298,6 @@ TEST(fr, batch_invert)
     size_t n = 10;
     fr::field_t coeffs[n];
     fr::field_t inverses[n];
-    fr::field_t temp[n];
     fr::field_t one;
     fr::one(one);
     for (size_t i = 0; i < n; ++i)
@@ -306,7 +305,7 @@ TEST(fr, batch_invert)
         coeffs[i] = fr::random_element();
         fr::copy(coeffs[i], inverses[i]);
     }
-    fr::batch_invert(inverses, n, temp);
+    fr::batch_invert(inverses, n);
 
     for (size_t i = 0; i < n; ++i)
     {

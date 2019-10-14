@@ -7,7 +7,7 @@
 
 #include "./permutation.hpp"
 
-#include <barretenberg/groups/g1.hpp>
+#include "../groups/g1.hpp"
 
 using namespace barretenberg;
 
@@ -20,7 +20,7 @@ inline circuit_instance preprocess_circuit(waffle::circuit_state &state, const s
     fr::field_t *scratch_space = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (8 * state.n)));
     fr::field_t* roots = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * state.small_domain.size);
 
-    fr::field_t *polys[8] = {
+    fr::field_t *polys[8]{
         &scratch_space[0],
         &scratch_space[n],
         &scratch_space[2 * n],

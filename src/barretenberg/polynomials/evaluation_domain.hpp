@@ -14,12 +14,12 @@ public:
                           log2_size(0),
                           log2_thread_size(0),
                           log2_num_threads(0),
-                          root({.data={0,0,0,0}}),
-                          root_inverse({.data={0,0,0,0}}),
-                          domain({.data={0,0,0,0}}),
-                          domain_inverse({.data={0,0,0,0}}),
-                          generator({.data={0,0,0,0}}),
-                          generator_inverse({.data={0,0,0,0}}),
+                          root({{0,0,0,0}}),
+                          root_inverse({{0,0,0,0}}),
+                          domain({{0,0,0,0}}),
+                          domain_inverse({{0,0,0,0}}),
+                          generator({{0,0,0,0}}),
+                          generator_inverse({{0,0,0,0}}),
                           roots(nullptr) {};
 
     evaluation_domain(const size_t domain_size);

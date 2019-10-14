@@ -4,6 +4,9 @@
 #include "./groups/scalar_multiplication.hpp"
 
 #include "./waffle/prover.hpp"
+#include "./waffle/verifier.hpp"
+#include "./waffle/preprocess.hpp"
+
 #include "./polynomials/polynomial_arithmetic.hpp"
 #include "./io/io.hpp"
 
@@ -257,11 +260,9 @@ namespace
 //     }
 // }
 
-void generate_test_data(waffle::plonk_circuit_state& state)
+void generate_test_data(waffle::plonk_circuit_state& state, waffle::circuit_state& old_state, fr::field_t *data)
 {
     size_t n = state.n;
-
-
     // create some constraints that satisfy our arithmetic circuit relation
     fr::field_t one;
     fr::field_t zero;
@@ -272,14 +273,14 @@ void generate_test_data(waffle::plonk_circuit_state& state)
     fr::field_t T0;
     // even indices = mul gates, odd incides = add gates
 
-    state.w_l.reserve(n);
-    state.w_r.reserve(n);
-    state.w_o.reserve(n);
-    state.q_m.reserve(n);
-    state.q_l.reserve(n);
-    state.q_r.reserve(n);
-    state.q_o.reserve(n);
-    state.q_c.reserve(n);
+    state.w_l.resize(n);
+    state.w_r.resize(n);
+    state.w_o.resize(n);
+    state.q_m.resize(n);
+    state.q_l.resize(n);
+    state.q_r.resize(n);
+    state.q_o.resize(n);
+    state.q_c.resize(n);
     for (size_t i = 0; i < n / 4; ++i)
     {
         state.w_l.at(2 * i) = fr::random_element();
@@ -318,6 +319,13 @@ void generate_test_data(waffle::plonk_circuit_state& state)
     state.sigma_2_mapping.resize(n);
     state.sigma_3_mapping.resize(n);
 
+    // TODO REMOVE
+    // for (size_t i = 0; i < n; ++i)
+    // {
+    //     state.sigma_1_mapping[i] = (uint32_t)(i);
+    //     state.sigma_2_mapping[i] = (uint32_t)(i) + (1U << 30U);
+    //     state.sigma_3_mapping[i] = (uint32_t)(i) + (1U << 31U);
+    // }
     for (size_t i = 0; i < n / 2; ++i)
     {
         state.sigma_1_mapping[shift + i] = (uint32_t)i;
@@ -327,16 +335,6 @@ void generate_test_data(waffle::plonk_circuit_state& state)
         state.sigma_2_mapping[i] = (uint32_t)(i + shift) + (1U << 30U);
         state.sigma_3_mapping[i] = (uint32_t)(i + shift) + (1U << 31U);
     }
-
-    fr::zero(state.w_l.at(n-1));
-    fr::zero(state.w_r.at(n-1));
-    fr::zero(state.w_o.at(n-1));
-    fr::zero(state.q_c.at(n-1));
-    fr::zero(state.w_l.at(shift-1));
-    fr::zero(state.w_r.at(shift-1));
-    fr::zero(state.w_o.at(shift-1));
-    fr::zero(state.q_c.at(shift-1));
-
     // make last permutation the same as identity permutation
     state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
     state.sigma_2_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 30U);
@@ -345,10 +343,59 @@ void generate_test_data(waffle::plonk_circuit_state& state)
     state.sigma_2_mapping[n - 1] = (uint32_t)n - 1 + (1U << 30U);
     state.sigma_3_mapping[n - 1] = (uint32_t)n - 1 + (1U << 31U);
 
+    fr::zero(state.w_l.at(n-1));
+    fr::zero(state.w_r.at(n-1));
+    fr::zero(state.w_o.at(n-1));
+    fr::zero(state.q_c.at(n-1));
     fr::zero(state.q_l.at(n - 1));
     fr::zero(state.q_r.at(n - 1));
     fr::zero(state.q_o.at(n - 1));
     fr::zero(state.q_m.at(n - 1));
+
+    fr::zero(state.w_l.at(shift-1));
+    fr::zero(state.w_r.at(shift-1));
+    fr::zero(state.w_o.at(shift-1));
+    fr::zero(state.q_c.at(shift-1));
+
+
+
+    // ### old stuff
+    old_state.n = state.n;
+    old_state.w_l = &data[0];
+    old_state.w_r = &data[n];
+    old_state.w_o = &data[2 * n];
+    old_state.z_1 = &data[3 * n];
+    old_state.z_2 = &data[4 * n + 1];
+    old_state.q_c = &data[5 * n + 2];
+    old_state.q_l = &data[6 * n + 2];
+    old_state.q_r = &data[7 * n + 2];
+    old_state.q_o = &data[8 * n + 2];
+    old_state.q_m = &data[9 * n + 2];
+    old_state.sigma_1 = &data[10 * n + 2];
+    old_state.sigma_2 = &data[11 * n + 2];
+    old_state.sigma_3 = &data[12 * n + 2];
+    old_state.sigma_1_mapping = (uint32_t*)&data[13 * n + 2];
+    old_state.sigma_2_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (uintptr_t)(n * sizeof(uint32_t)));
+    old_state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (uintptr_t)((2 * n) * sizeof(uint32_t)));
+    old_state.t = &data[14 * n + 2];
+    old_state.w_l_lagrange_base = old_state.t;
+    old_state.w_r_lagrange_base = &old_state.t[n + 1];
+    old_state.w_o_lagrange_base = &old_state.t[2 * n + 2];
+    polynomial_arithmetic::copy_polynomial(&state.w_l.at(0), old_state.w_l, n, n);
+    polynomial_arithmetic::copy_polynomial(&state.w_r.at(0), old_state.w_r, n, n);
+    polynomial_arithmetic::copy_polynomial(&state.w_o.at(0), old_state.w_o, n, n);
+    polynomial_arithmetic::copy_polynomial(&state.q_m.at(0), old_state.q_m, n, n);
+    polynomial_arithmetic::copy_polynomial(&state.q_l.at(0), old_state.q_l, n, n);
+    polynomial_arithmetic::copy_polynomial(&state.q_r.at(0), old_state.q_r, n, n);
+    polynomial_arithmetic::copy_polynomial(&state.q_o.at(0), old_state.q_o, n, n);
+    polynomial_arithmetic::copy_polynomial(&state.q_c.at(0), old_state.q_c, n, n);
+    for (size_t i = 0; i < n; ++i)
+    {
+        old_state.sigma_1_mapping[i] = state.sigma_1_mapping.at(i);
+        old_state.sigma_2_mapping[i] = state.sigma_2_mapping.at(i);
+        old_state.sigma_3_mapping[i] = state.sigma_3_mapping.at(i);
+    }
+    // ###
 }
 }
 
@@ -393,34 +440,74 @@ void generate_test_data(waffle::plonk_circuit_state& state)
 //     free(data);
 // }
 
-void compute_quotient_polynomial()
-{
-    size_t n = 1024;
+// void compute_quotient_polynomial()
+// {
+//     size_t n = 1024;
+//     waffle::plonk_circuit_state state(n);
+//     state.reference_string.degree = n;
+//     state.reference_string.monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * 6 * n));
+//     io::read_transcript(state.reference_string, BARRETENBERG_SRS_PATH);
+//     generate_test_data(state);
 
+//     state.compute_permutation_lagrange_base_full();
+//     state.compute_quotient_polynomial();
+
+//     // check that the max degree of our quotient polynomial is 3n
+//     bool valid = true;
+//     for (size_t i = 3 * n; i < 4 * n; ++i)
+//     {
+//         valid &= fr::eq(state.quotient_large.at(i), fr::zero());
+//     }
+    
+//     printf("quotient polynomial valid = %u\n", valid);
+//     free(state.reference_string.monomials);
+// }
+
+// void compute_linearisation_coefficients()
+// {
+//     size_t n = 1024;
+//     waffle::plonk_circuit_state state(n);
+//     state.reference_string.degree = n;
+//     state.reference_string.monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * 6 * n));
+//     io::read_transcript(state.reference_string, BARRETENBERG_SRS_PATH);
+//     generate_test_data(state);
+
+//     state.compute_permutation_lagrange_base_full();
+//     state.compute_quotient_polynomial();
+
+// }
+
+void test_proof_construction_and_verification()
+{
+    size_t n = 32;
     waffle::plonk_circuit_state state(n);
     state.reference_string.degree = n;
-    state.reference_string.monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * 6 * n));
+    state.reference_string.monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (2 * n + 2)));
     io::read_transcript(state.reference_string, BARRETENBERG_SRS_PATH);
-    generate_test_data(state);
+    scalar_multiplication::generate_pippenger_point_table(state.reference_string.monomials, state.reference_string.monomials, n);
 
-    state.compute_permutation_lagrange_base_full();
-    state.compute_quotient_polynomial();
 
-    // check that the max degree of our quotient polynomial is 3n
-    bool invalid = false;
-    for (size_t i = 3 * n; i < 4 * n; ++i)
-    {
-        invalid |= fr::eq(state.quotient_large.at(i), fr::zero());
-    }
-    printf("quotient polynomial valid = %u\n", !invalid);
+    fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (17 * n + 2)));
+    waffle::circuit_state old_state(n);
+    generate_test_data(state, old_state, data);
+
+    waffle::circuit_instance instance = state.construct_instance();
+    waffle::plonk_proof old_proof = waffle::construct_proof(old_state, state.reference_string);
+    bool old_result = waffle::verifier::verify_proof(old_proof, instance, state.reference_string.SRS_T2);
+    printf("old result = %u\n", old_result);
+
+    waffle::plonk_proof proof = state.construct_proof();
+    bool valid = waffle::verifier::verify_proof(proof, instance, state.reference_string.SRS_T2);
+    printf("output of validator = %u\n", valid);
     free(state.reference_string.monomials);
+    free(data);
 }
-
 
 int main()
 {
     printf("in main\n");
-    compute_quotient_polynomial();
+    // compute_quotient_polynomial();
+    test_proof_construction_and_verification();
     return 1;
 }
 // TEST(waffle, compute_z_coefficients)

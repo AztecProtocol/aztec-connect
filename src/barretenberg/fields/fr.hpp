@@ -3,6 +3,7 @@
 
 #include "stdint.h"
 #include "stdio.h"
+#include "stdlib.h"
 
 #include "../types.hpp"
 
@@ -10,7 +11,7 @@ namespace barretenberg
 {
 namespace fr
 {
-constexpr field_t modulus = {.data = {
+constexpr field_t modulus{{
     0x43E1F593F0000001UL,
     0x2833E84879B97091UL,
     0xB85045B68181585DUL,
@@ -32,28 +33,25 @@ namespace barretenberg
 {
 namespace fr
 {
-constexpr field_t r_squared = {.data = {
-                                   0x1BB8E645AE216DA7UL,
-                                   0x53FE3AB1E35C59E3UL,
-                                   0x8C49833D53BB8085UL,
-                                   0x216D0B17F4E44A5UL}};
+constexpr field_t r_squared{{0x1BB8E645AE216DA7UL,
+                             0x53FE3AB1E35C59E3UL,
+                             0x8C49833D53BB8085UL,
+                             0x216D0B17F4E44A5UL}};
 
 // lambda = curve root of unity modulo n, converted to montgomery form
-constexpr field_t lambda = {.data = {
-                                0x93e7cede4a0329b3UL,
-                                0x7d4fdca77a96c167UL,
-                                0x8be4ba08b19a750aUL,
-                                0x1cbd5653a5661c25UL}};
+constexpr field_t lambda{{0x93e7cede4a0329b3UL,
+                          0x7d4fdca77a96c167UL,
+                          0x8be4ba08b19a750aUL,
+                          0x1cbd5653a5661c25UL}};
 
-constexpr field_t modulus_plus_one = {.data = {
-                                          0x43E1F593F0000002UL,
-                                          0x2833E84879B97091UL,
-                                          0xB85045B68181585DUL,
-                                          0x30644E72E131A029UL}};
+constexpr field_t modulus_plus_one{{0x43E1F593F0000002UL,
+                                    0x2833E84879B97091UL,
+                                    0xB85045B68181585DUL,
+                                    0x30644E72E131A029UL}};
 
-constexpr field_t one_raw = {.data = {1, 0, 0, 0}};
+constexpr field_t one_raw{{1, 0, 0, 0}};
 
-constexpr field_t root_of_unity = {.data = {0x636e735580d13d9c, 0xa22bf3742445ffd6, 0x56452ac01eb203d8, 0x1860ef942963f9e7}};
+constexpr field_t root_of_unity = {{0x636e735580d13d9c, 0xa22bf3742445ffd6, 0x56452ac01eb203d8, 0x1860ef942963f9e7}};
 
 constexpr size_t S = 28; // 2^S = maximum degree of a polynomial that's amenable to radix-2 FFT
 
@@ -77,6 +75,7 @@ inline void __add(const field_t &a, const field_t &b, field_t &r);
 // compute a - b, put result in r
 inline void __sub(const field_t &a, const field_t &b, field_t &r);
 
+inline void __conditional_negate(const fr::field_t& a, field_t &r, const bool predicate);
 
 inline field_t add(const field_t &a, const field_t &b)
 {
@@ -190,25 +189,25 @@ inline void split_into_endomorphism_scalars(field_t &k, field_t &k1, field_t &k2
     // uint64_t lambda_reduction[4] = { 0 };
     // __to_montgomery_form(lambda, lambda_reduction);
 
-    constexpr field_t g1 = {.data = {
+    constexpr field_t g1 = {{
                                 0x7a7bd9d4391eb18dUL,
                                 0x4ccef014a773d2cfUL,
                                 0x0000000000000002UL,
                                 0}};
 
-    constexpr field_t g2 = {.data = {
+    constexpr field_t g2 = {{
                                 0xd91d232ec7e0b3d7UL,
                                 0x0000000000000002UL,
                                 0,
                                 0}};
 
-    constexpr field_t minus_b1 = {.data = {
+    constexpr field_t minus_b1 = {{
                                       0x8211bbeb7d4f1128UL,
                                       0x6f4d8248eeb859fcUL,
                                       0,
                                       0}};
 
-    constexpr field_t b2 = {.data = {
+    constexpr field_t b2 = {{
                                 0x89d3256894d213e3UL,
                                 0,
                                 0,
@@ -226,29 +225,29 @@ inline void split_into_endomorphism_scalars(field_t &k, field_t &k1, field_t &k2
     field_wide_t q1;
     field_wide_t q2;
     // TODO remove data duplication
-    field_t c1_hi = {.data = {c1.data[4], c1.data[5], c1.data[6], c1.data[7]}}; // *(field_t*)((uintptr_t)(&c1) + (4 * sizeof(uint64_t)));
-    field_t c2_hi = {.data = {c2.data[4], c2.data[5], c2.data[6], c2.data[7]}}; // *(field_t*)((uintptr_t)(&c2) + (4 * sizeof(uint64_t)));
+    field_t c1_hi = {{c1.data[4], c1.data[5], c1.data[6], c1.data[7]}}; // *(field_t*)((uintptr_t)(&c1) + (4 * sizeof(uint64_t)));
+    field_t c2_hi = {{c2.data[4], c2.data[5], c2.data[6], c2.data[7]}}; // *(field_t*)((uintptr_t)(&c2) + (4 * sizeof(uint64_t)));
 
     // compute q1 = c1 * -b1
     mul_512(c1_hi, minus_b1, q1);
     // compute q2 = c2 * b2
     mul_512(c2_hi, b2, q2);
 
-    field_t t1 = {.data = {
+    field_t t1 = {{
                       0,
                       0,
                       0,
                       0,
                   }};
-    field_t t2 = {.data = {
+    field_t t2 = {{
                       0,
                       0,
                       0,
                       0,
                   }};
     // TODO: this doesn't have to be a 512-bit multiply...
-    field_t q1_lo = {.data = {q1.data[0], q1.data[1], q1.data[2], q1.data[3]}}; // *(field_t*)((uintptr_t)(&q1) + (4 * sizeof(uint64_t)));
-    field_t q2_lo = {.data = {q2.data[0], q2.data[1], q2.data[2], q2.data[3]}}; // *(field_t*)((uintptr_t)(&q2) + (4 * sizeof(uint64_t)));
+    field_t q1_lo = {{q1.data[0], q1.data[1], q1.data[2], q1.data[3]}}; // *(field_t*)((uintptr_t)(&q1) + (4 * sizeof(uint64_t)));
+    field_t q2_lo = {{q2.data[0], q2.data[1], q2.data[2], q2.data[3]}}; // *(field_t*)((uintptr_t)(&q2) + (4 * sizeof(uint64_t)));
 
     __sub(q2_lo, q1_lo, t1);
 
@@ -445,7 +444,7 @@ inline field_t neg_one()
 
 inline field_t multiplicative_generator()
 {
-    return to_montgomery_form({.data={5,0,0,0}});
+    return to_montgomery_form({{5,0,0,0}});
 }
 
 inline field_t multiplicative_generator_inverse()
@@ -455,7 +454,7 @@ inline field_t multiplicative_generator_inverse()
 
 inline field_t alternate_multiplicative_generator()
 {
-    return to_montgomery_form({.data = {7, 0, 0, 0}});
+    return to_montgomery_form({{7, 0, 0, 0}});
 }
 
 inline void __get_root_of_unity(const size_t degree, field_t &r)
@@ -474,8 +473,9 @@ inline field_t get_root_of_unity(const size_t degree)
     return r;
 }
 
-inline void batch_invert(field_t *coeffs, size_t n, field_t *temporaries)
+inline void batch_invert(field_t *coeffs, size_t n)
 {
+    fr::field_t *temporaries = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * n);
     field_t accumulator;
     one(accumulator);
     for (size_t i = 0; i < n; ++i)
@@ -492,6 +492,7 @@ inline void batch_invert(field_t *coeffs, size_t n, field_t *temporaries)
         __mul(accumulator, coeffs[i], accumulator);
         copy(T0, coeffs[i]);
     }
+    free(temporaries);
 }
 
 } // namespace fr

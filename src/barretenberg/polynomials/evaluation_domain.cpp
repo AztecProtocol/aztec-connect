@@ -63,7 +63,7 @@ evaluation_domain::evaluation_domain(const size_t domain_size):
     log2_num_threads(static_cast<size_t>(log2(num_threads))),
     root(fr::get_root_of_unity(log2_size)),
     root_inverse(fr::invert(root)),
-    domain(fr::to_montgomery_form({.data={size,0,0,0}})),
+    domain(fr::to_montgomery_form({{size,0,0,0}})),
     domain_inverse(fr::invert(domain)),
     generator(fr::multiplicative_generator()),
     generator_inverse(fr::multiplicative_generator_inverse()),
@@ -83,7 +83,7 @@ evaluation_domain::evaluation_domain(const evaluation_domain& other):
     log2_num_threads(static_cast<size_t>(log2(num_threads))),
     root(fr::get_root_of_unity(log2_size)),
     root_inverse(fr::invert(root)),
-    domain(fr::to_montgomery_form({.data={size,0,0,0}})),
+    domain(fr::to_montgomery_form({{size,0,0,0}})),
     domain_inverse(fr::invert(domain)),
     generator(fr::multiplicative_generator()),
     generator_inverse(fr::multiplicative_generator_inverse())
@@ -121,7 +121,7 @@ evaluation_domain::evaluation_domain(evaluation_domain&& other):
     log2_num_threads(static_cast<size_t>(log2(num_threads))),
     root(fr::get_root_of_unity(log2_size)),
     root_inverse(fr::invert(root)),
-    domain(fr::to_montgomery_form({.data={size,0,0,0}})),
+    domain(fr::to_montgomery_form({{size,0,0,0}})),
     domain_inverse(fr::invert(domain)),
     generator(fr::multiplicative_generator()),
     generator_inverse(fr::multiplicative_generator_inverse())

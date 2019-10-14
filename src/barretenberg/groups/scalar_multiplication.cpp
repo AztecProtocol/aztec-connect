@@ -258,7 +258,7 @@ void batched_scalar_multiplications(multiplication_state *mul_state, size_t num_
     }
     size_t single_remainder = (num_elements > (single_range * split)) ? num_elements - (single_range * split) : 0;
 
-    multiplication_state threaded_inputs[split * num_exponentiations];
+    multiplication_state *threaded_inputs = new multiplication_state[split * num_exponentiations];
 
     // Compute the multi-exponentiation parameters for each thread
     for (size_t i = 0; i < num_exponentiations; ++i)
@@ -296,7 +296,7 @@ void batched_scalar_multiplications(multiplication_state *mul_state, size_t num_
 
     // great! by this point, all of our group elements should be in threaded_output.
     // all that's left is to concatenate them into the result
-    g1::element outputs[num_exponentiations];
+    g1::element *outputs = new g1::element[num_exponentiations];
     for (size_t i = 0; i < num_exponentiations; ++i)
     {
         g1::copy(&threaded_inputs[i].output, &outputs[i]);
@@ -316,6 +316,8 @@ void batched_scalar_multiplications(multiplication_state *mul_state, size_t num_
     {
         g1::copy(&outputs[i], &mul_state[i].output);
     }
+    delete outputs;
+    delete threaded_inputs;
 }
 } // namespace scalar_multiplication
 } // namespace barretenberg

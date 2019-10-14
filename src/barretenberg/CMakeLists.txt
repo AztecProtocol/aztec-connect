@@ -1,7 +1,7 @@
 # barretenburg
 # copyright 2019 Spilsbury Holdings
 
-add_compile_options(-Werror -Wall -Wextra -Wshadow)
+add_compile_options(-Werror -Wall -Wextra -Wshadow -Wpedantic)
 add_compile_options(-Wconversion -Wsign-conversion)
 
 add_library(

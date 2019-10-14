@@ -95,7 +95,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
     // in order to compute Z1(X), Z2(X), we need to compute the accumulated products of the coefficients of 6 polynomials.
     // To parallelize as much as possible, we first compute the terms we need to accumulate, and store them in `accumulators`
     // (we re-use memory reserved for the fast fourier transforms, at this stage of the proof, this memory should be free)
-    fr::field_t* accumulators[6] = {
+    fr::field_t* accumulators[6]{
         &ffts.w_l_poly[0],
         &ffts.w_l_poly[state.small_domain.size + 1],
         &ffts.w_l_poly[state.small_domain.size * 2 + 2],
@@ -154,7 +154,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
     for (size_t i = 0; i < 6; ++i)
     {
         fr::one(accumulators[i][0]);
-        for (size_t j = 1; j < state.small_domain.size; ++j)
+        for (size_t j = 1; j < state.small_domain.size - 1; ++j)
         {
             fr::__mul(accumulators[i][j + 1], accumulators[i][j], accumulators[i][j + 1]);
         }
@@ -169,14 +169,11 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
         fr::__mul(state.z_2[i], accumulators[5][i], state.z_2[i]);
     ITERATE_OVER_DOMAIN_END;
 
-    fr::field_t* scratch = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * state.small_domain.size);
-    fr::batch_invert(state.z_2, state.small_domain.size, scratch);
+    fr::batch_invert(state.z_2, state.small_domain.size);
 
     ITERATE_OVER_DOMAIN_START(state.small_domain);
         fr::__mul(state.z_1[i], state.z_2[i], state.z_1[i]);
     ITERATE_OVER_DOMAIN_END;
-
-    free(scratch);
 
     polynomials::ifft(state.z_1, state.small_domain);
 }
@@ -362,6 +359,7 @@ void compute_identity_grand_product_coefficients(circuit_state &state, fft_point
     polynomials::compress_fft(ffts.z_1_poly, ffts.z_1_poly_small, state.large_domain.size + 4, 2);
 
     polynomials::compute_lagrange_polynomial_fft(ffts.l_1_poly, state.small_domain, state.mid_domain, ffts.l_1_poly + state.mid_domain.size);
+
     fr::copy(ffts.l_1_poly[0], ffts.l_1_poly[state.mid_domain.size]);
     fr::copy(ffts.l_1_poly[1], ffts.l_1_poly[state.mid_domain.size + 1]);
     fr::copy(ffts.l_1_poly[2], ffts.l_1_poly[state.mid_domain.size + 2]);
@@ -376,6 +374,8 @@ void compute_identity_grand_product_coefficients(circuit_state &state, fft_point
 
     fr::__mul(state.alpha_squared, state.alpha_cubed, alpha_five);
     fr::__mul(alpha_five, state.challenges.alpha, alpha_six);
+
+
     ITERATE_OVER_DOMAIN_START(state.mid_domain);
         fr::field_t T4;
         fr::field_t T6;
@@ -389,7 +389,6 @@ void compute_identity_grand_product_coefficients(circuit_state &state, fft_point
     
         fr::__add(T4, T6, ffts.gate_poly_mid[i]);
     ITERATE_OVER_DOMAIN_END;
-
 }
 
 void compute_arithmetisation_coefficients(circuit_state &state, fft_pointers &ffts)
@@ -489,7 +488,9 @@ void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk
 
     polynomials::ifft_with_coset(ffts.gate_poly_mid, state.mid_domain);
     polynomials::ifft_with_coset(ffts.quotient_poly, state.large_domain);
+
     polynomials::add(ffts.quotient_poly, ffts.gate_poly_mid, ffts.quotient_poly, state.mid_domain);
+
 }
 
 fr::field_t compute_linearisation_coefficients(circuit_state &state, fft_pointers & ffts, plonk_proof &proof)

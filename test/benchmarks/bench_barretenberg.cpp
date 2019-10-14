@@ -126,9 +126,8 @@ void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *da
         fr::__mul(w_l_acc, w_l_seed, w_l_acc);
         fr::__mul(w_r_acc, w_r_seed, w_r_acc);
     }
-    fr::field_t* scratch_mem = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * n / 2));
-    fr::batch_invert(state.w_o, n / 2, scratch_mem);
-    free(scratch_mem);
+    fr::batch_invert(state.w_o, n / 2);
+
     for (size_t i = 0; i < n / 2; ++i)
     {
         fr::__mul(state.q_l[i], state.w_l[i], T0);
@@ -493,8 +492,8 @@ void fq_sqr_asm_bench(State& state) noexcept
 {
     uint64_t count = 0;
     uint64_t i = 0;
-    fq::field_t a = { .data = { 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
-    fq::field_t r = { .data = { 1, 0, 0, 0 } };
+    fq::field_t a{{ 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
+    fq::field_t r{{ 1, 0, 0, 0 } };
     for (auto _ : state)
     {
         size_t before = rdtsc();
@@ -512,8 +511,8 @@ void fq_mul_asm_bench(State& state) noexcept
 {
     uint64_t count = 0;
     uint64_t i = 0;
-    fq::field_t a = { .data = { 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
-    fq::field_t r = { .data = { 1, 0, 0, 0 } };
+    fq::field_t a{{ 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
+    fq::field_t r{{ 1, 0, 0, 0 } };
     for (auto _ : state)
     {
         size_t before = rdtsc();

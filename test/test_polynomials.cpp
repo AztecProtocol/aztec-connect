@@ -358,7 +358,7 @@ TEST(polynomials, get_lagrange_evaluations)
     fr::one(l_1_poly[0]);
     fr::one(l_n_minus_1_poly[n-2]);
 
-    fr::field_t n_mont = { .data = { n, 0, 0, 0 } };
+    fr::field_t n_mont{{ n, 0, 0, 0 } };
     fr::__to_montgomery_form(n_mont, n_mont);
     fr::__mul(n_mont, domain.root, vanishing_poly[n-1]);
 

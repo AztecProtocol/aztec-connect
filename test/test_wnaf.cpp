@@ -34,7 +34,7 @@ void recover_fixed_wnaf(uint32_t* wnaf, bool skew, uint64_t& hi, uint64_t& lo, s
 
 TEST(wnaf, wnaf_fixed)
 {
-    uint64_t rand_buffer[2] = { 0 };
+    uint64_t rand_buffer[2]{ 0 };
     int got_entropy = getentropy((void*)&rand_buffer[0], 16);
     EXPECT_EQ(got_entropy, 0);
     rand_buffer[1] &= 0x7fffffffffffffffUL;
@@ -50,8 +50,8 @@ TEST(wnaf, wnaf_fixed)
 
 TEST(wnaf, wnaf_fixed_simple_lo)
 {
-    uint64_t rand_buffer[2] = { 1, 0 };
-    uint32_t wnaf[WNAF_SIZE(5)] = { 0 };
+    uint64_t rand_buffer[2]{ 1, 0 };
+    uint32_t wnaf[WNAF_SIZE(5)]{ 0 };
     bool skew =  false;
     wnaf::fixed_wnaf(rand_buffer, wnaf, skew, 1, 5);
     uint64_t recovered_hi;
@@ -82,11 +82,11 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
     rand_buffer[3] &= 0x0fffffffffffffffUL;
 
 
-    fr::field_t k = { .data = { 0, 0, 0, 0 }};
+    fr::field_t k{{ 0, 0, 0, 0 }};
     fr::copy(*(fr::field_t*)&rand_buffer[0], k);
     // fr::__to_montgomery_form(k, k);
-    fr::field_t k1 = { .data = { 0, 0, 0, 0 }};;
-    fr::field_t k2 = { .data = { 0, 0, 0, 0 }};;
+    fr::field_t k1{{ 0, 0, 0, 0 }};;
+    fr::field_t k2{{ 0, 0, 0, 0 }};;
  
 
     fr::split_into_endomorphism_scalars(k, k1, k2);
@@ -97,8 +97,8 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
     wnaf::fixed_wnaf(&k1.data[0], wnaf, skew, 1, 5);
     wnaf::fixed_wnaf(&k2.data[0], endo_wnaf, endo_skew, 1, 5);
 
-    fr::field_t k1_recovered = { .data = { 0, 0, 0, 0 }};;
-    fr::field_t k2_recovered = { .data = { 0, 0, 0, 0 }};;
+    fr::field_t k1_recovered{{ 0, 0, 0, 0 }};;
+    fr::field_t k2_recovered{{ 0, 0, 0, 0 }};;
 
 
     recover_fixed_wnaf(wnaf, skew, k1_recovered.data[1], k1_recovered.data[0], 5);

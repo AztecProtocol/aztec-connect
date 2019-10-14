@@ -11,10 +11,10 @@ constexpr size_t loop_length = 64;
 constexpr size_t neg_z_loop_length = 62;
 constexpr size_t precomputed_coefficients_length = 87;
 
-constexpr uint8_t loop_bits[loop_length] = {
+constexpr uint8_t loop_bits[loop_length]{
     1, 0, 1, 0, 0, 0, 3, 0, 3, 0, 0, 0, 3, 0, 1, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 1, 0, 0, 3, 0, 1, 0, 0, 3, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 3, 0, 3, 0, 0, 1, 0, 0, 0, 3, 0, 0, 3, 0, 1, 0, 1, 0, 0, 0};
 
-constexpr bool neg_z_loop_bits[neg_z_loop_length] = {
+constexpr bool neg_z_loop_bits[neg_z_loop_length]{
     0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1};
 
 

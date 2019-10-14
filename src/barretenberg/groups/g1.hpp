@@ -704,7 +704,7 @@ inline element group_exponentiation_inner(const affine_element &a, const fr::fie
     // TODO ADD BACK IN!
     fr::__from_montgomery_form(scalar, converted_scalar);
     // fr::copy(scalar, converted_scalar);
-    bool scalar_bits[256] = {0};
+    bool scalar_bits[256]{0};
     for (size_t i = 0; i < 64; ++i)
     {
         scalar_bits[i] = (bool)((converted_scalar.data[0] >> i) & 0x1);
