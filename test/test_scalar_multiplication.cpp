@@ -103,6 +103,40 @@ TEST(scalar_multiplication, pippenger)
     EXPECT_EQ(g1::eq(result, expected), true);
 }
 
+TEST(scalar_multiplication, pippenger_low_memory)
+{
+    size_t num_points = 1000;
+
+    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
+
+    g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points);
+
+    for (size_t i = 0; i < num_points; ++i)
+    {
+        scalars[i] = fr::random_element();
+        points[i] = g1::random_affine_element();
+    }
+
+    g1::element expected;
+    g1::set_infinity(expected);
+    for (size_t i = 0; i < num_points; ++i)
+    {
+        g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
+        g1::add(expected, temp, expected);
+    }
+    expected = g1::normalize(expected);
+
+    g1::element result = scalar_multiplication::pippenger_low_memory(scalars, points, num_points);
+
+    result = g1::normalize(result);
+
+    free(scalars);
+    free(points);
+
+    EXPECT_EQ(g1::eq(result, expected), true);
+}
+
+
 TEST(scalar_multiplication, batched_scalar_multiplication)
 {
     size_t num_points = 10000;
