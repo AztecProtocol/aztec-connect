@@ -5,6 +5,8 @@
 
 #include "./evaluation_domain.hpp"
 
+namespace barretenberg
+{
 class polynomial
 {
 public:
@@ -46,11 +48,12 @@ public:
 
     void reserve(const size_t new_max_size);
     void resize(const size_t new_size);
+    void resize_unsafe(const size_t new_size);
     void shrink_evaluation_domain(const size_t shrink_factor);
 
 private:
     const static size_t DEFAULT_SIZE_HINT = 1 << 20;
-
+    const static size_t DEFAULT_PAGE_SPILL = 20;
     void add_coefficient_internal(const barretenberg::fr::field_t &coefficient);
     void bump_memory(const size_t new_size);
 
@@ -61,5 +64,5 @@ private:
     size_t max_size;
     size_t allocated_pages;
 };
-
+}
 #endif

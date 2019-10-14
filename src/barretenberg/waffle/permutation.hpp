@@ -6,18 +6,21 @@
 
 #include "../types.hpp"
 #include "../fields/fr.hpp"
-#include "../polynomials/polynomials.hpp"
+#include "../polynomials/polynomial.hpp"
 
 namespace waffle
 {
 using namespace barretenberg;
 
-inline void compute_permutation_lagrange_base(const fr::field_t* roots, fr::field_t* output, const uint32_t* permutation, const polynomials::evaluation_domain& domain)
+
+inline void compute_permutation_lagrange_base_single(polynomial &output, const std::vector<uint32_t> &permutation, const evaluation_domain& small_domain)
 {
-    fr::field_t gen = fr::multiplicative_generator();
-    fr::field_t seven = fr::multiplicative_generator(); // TODO: hardcode a constant for 7 :/
-    fr::__add(seven, fr::one(), seven);
-    fr::__add(seven, fr::one(), seven);
+    if (output.get_size() < permutation.size())
+    {
+        output.resize_unsafe(permutation.size());
+    }
+    fr::field_t k1 = fr::multiplicative_generator();
+    fr::field_t k2 = fr::alternate_multiplicative_generator();
 
     // permutation encoding:
     // low 28 bits defines the location in witness polynomial
@@ -26,33 +29,22 @@ inline void compute_permutation_lagrange_base(const fr::field_t* roots, fr::fiel
     // 1 = right
     // 2 = output
     const uint32_t mask = (1U << 29) - 1;
-    ITERATE_OVER_DOMAIN_START(domain);
-        const size_t idx = (size_t)(permutation[i]) & (size_t)(mask);
-        fr::copy(roots[idx], output[i]);
+    const fr::field_t *roots = small_domain.get_round_roots()[small_domain.log2_size - 2];
+    ITERATE_OVER_DOMAIN_START(small_domain);
+        const size_t raw_idx = (size_t)(permutation[i]) & (size_t)(mask);
+        const bool negative_idx = raw_idx >= (small_domain.size >> 1UL);
+        const size_t idx = negative_idx ? raw_idx - (small_domain.size >> 1UL): raw_idx;
+        fr::__conditionally_subtract_double_modulus(roots[idx], output.at(i), static_cast<uint64_t>(negative_idx));
+
         if (((permutation[i] >> 30U) & 1) == 1)
         {
-            fr::__mul(output[i], gen, output[i]);
+            fr::__mul(output.at(i), k1, output.at(i));
         }
         else if (((permutation[i] >> 31U) & 1) == 1)
         {
-            fr::__mul(output[i], seven, output[i]);
+            fr::__mul(output.at(i), k2, output.at(i));
         }
     ITERATE_OVER_DOMAIN_END;
-}
-
-inline void convert_permutations_into_lagrange_base_form(circuit_state& state)
-{
-    fr::field_t* roots = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * state.small_domain.size);
-    fr::copy(fr::one(), roots[0]);
-    for (size_t i = 1; i < state.small_domain.size; ++i)
-    {
-        fr::__mul(roots[i-1], state.small_domain.root, roots[i]);
-    }
-
-    compute_permutation_lagrange_base(roots, state.sigma_1, state.sigma_1_mapping, state.small_domain);
-    compute_permutation_lagrange_base(roots, state.sigma_2, state.sigma_2_mapping, state.small_domain);
-    compute_permutation_lagrange_base(roots, state.sigma_3, state.sigma_3_mapping, state.small_domain);
-    free(roots);
 }
 }
 

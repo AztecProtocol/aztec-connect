@@ -35,14 +35,10 @@ add_library(
     polynomials/polynomial_arithmetic.hpp
     polynomials/polynomial.cpp
     polynomials/polynomial.hpp
-    polynomials/polynomials.cpp
-    polynomials/polynomials.hpp
     waffle/linearizer.hpp
     waffle/challenge.hpp
     waffle/permutation.hpp
     waffle/preprocess.hpp
-    waffle/waffle.cpp
-    waffle/waffle.hpp
     waffle/verifier.hpp
     waffle/prover.cpp
     waffle/prover.hpp
@@ -98,14 +94,10 @@ add_executable(
     polynomials/polynomial_arithmetic.hpp
     polynomials/polynomial.cpp
     polynomials/polynomial.hpp
-    polynomials/polynomials.cpp
-    polynomials/polynomials.hpp
     waffle/linearizer.hpp
     waffle/challenge.hpp
     waffle/permutation.hpp
     waffle/preprocess.hpp
-    waffle/waffle.cpp
-    waffle/waffle.hpp
     waffle/verifier.hpp
     waffle/prover.cpp
     waffle/prover.hpp

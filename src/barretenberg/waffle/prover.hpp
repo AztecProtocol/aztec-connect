@@ -17,7 +17,7 @@ public:
     plonk_circuit_state& operator=(const plonk_circuit_state &other) = delete;
     plonk_circuit_state& operator=(plonk_circuit_state &&other) = delete;
 
-    ~plonk_circuit_state() {}
+    ~plonk_circuit_state();
 
     void compute_permutation_lagrange_base_full();
     void compute_wire_coefficients();
@@ -25,45 +25,45 @@ public:
     void compute_wire_commitments();
     void compute_z_commitment();
     void compute_quotient_commitment();
-    void compute_permutation_grand_product_coefficients(polynomial &z_fft);
-    void compute_identity_grand_product_coefficients(polynomial &z_fft);
+    void compute_permutation_grand_product_coefficients(barretenberg::polynomial &z_fft);
+    void compute_identity_grand_product_coefficients(barretenberg::polynomial &z_fft);
     void compute_arithmetisation_coefficients();
     void compute_quotient_polynomial();
     barretenberg::fr::field_t compute_linearisation_coefficients();
     plonk_proof construct_proof();
-    circuit_instance construct_instance();
+    void reset();
 
     size_t n;
-    polynomial w_l;
-    polynomial w_r;
-    polynomial w_o;
-    polynomial q_m;
-    polynomial q_l;
-    polynomial q_r;
-    polynomial q_o;
-    polynomial q_c;
-    polynomial sigma_1;
-    polynomial sigma_2;
-    polynomial sigma_3;
-    polynomial z;
+    barretenberg::polynomial w_l;
+    barretenberg::polynomial w_r;
+    barretenberg::polynomial w_o;
+    barretenberg::polynomial q_m;
+    barretenberg::polynomial q_l;
+    barretenberg::polynomial q_r;
+    barretenberg::polynomial q_o;
+    barretenberg::polynomial q_c;
+    barretenberg::polynomial sigma_1;
+    barretenberg::polynomial sigma_2;
+    barretenberg::polynomial sigma_3;
+    barretenberg::polynomial z;
 
-    polynomial p_rax;
-    polynomial p_rbx;
-    polynomial p_rcx;
-    polynomial p_rdx;
-    polynomial p_rdi;
-    polynomial p_rsi;
-    polynomial p_r8;
-    polynomial p_r9;
+    barretenberg::polynomial p_rax;
+    barretenberg::polynomial p_rbx;
+    barretenberg::polynomial p_rcx;
+    barretenberg::polynomial p_rdx;
+    barretenberg::polynomial p_rdi;
+    barretenberg::polynomial p_rsi;
+    barretenberg::polynomial p_r8;
+    barretenberg::polynomial p_r9;
 
-    polynomial r;
+    barretenberg::polynomial r;
 
-    polynomial quotient_large;
-    polynomial quotient_mid;
+    barretenberg::polynomial quotient_large;
+    barretenberg::polynomial quotient_mid;
 
-    evaluation_domain small_domain;
-    evaluation_domain mid_domain;
-    evaluation_domain large_domain;
+    barretenberg::evaluation_domain small_domain;
+    barretenberg::evaluation_domain mid_domain;
+    barretenberg::evaluation_domain large_domain;
 
     std::vector<uint32_t> sigma_1_mapping;
     std::vector<uint32_t> sigma_2_mapping;

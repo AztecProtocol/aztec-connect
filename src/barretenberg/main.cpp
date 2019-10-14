@@ -69,8 +69,7 @@ sigma_3 = [39, 23, 4, 40, 41, 25, 33, 36, 37, 42, 43, 44, 45, 46, 47, 48]
 */
 using namespace barretenberg;
 
-namespace
-{
+
 
 // void generate_point_addition_data_inner(waffle::plonk_circuit_state& state, size_t index)
 // {
@@ -260,7 +259,7 @@ namespace
 //     }
 // }
 
-void generate_test_data(waffle::plonk_circuit_state& state, waffle::circuit_state& old_state, fr::field_t *data)
+void generate_test_data(waffle::plonk_circuit_state& state)
 {
     size_t n = state.n;
     // create some constraints that satisfy our arithmetic circuit relation
@@ -356,47 +355,6 @@ void generate_test_data(waffle::plonk_circuit_state& state, waffle::circuit_stat
     fr::zero(state.w_r.at(shift-1));
     fr::zero(state.w_o.at(shift-1));
     fr::zero(state.q_c.at(shift-1));
-
-
-
-    // ### old stuff
-    old_state.n = state.n;
-    old_state.w_l = &data[0];
-    old_state.w_r = &data[n];
-    old_state.w_o = &data[2 * n];
-    old_state.z_1 = &data[3 * n];
-    old_state.z_2 = &data[4 * n + 1];
-    old_state.q_c = &data[5 * n + 2];
-    old_state.q_l = &data[6 * n + 2];
-    old_state.q_r = &data[7 * n + 2];
-    old_state.q_o = &data[8 * n + 2];
-    old_state.q_m = &data[9 * n + 2];
-    old_state.sigma_1 = &data[10 * n + 2];
-    old_state.sigma_2 = &data[11 * n + 2];
-    old_state.sigma_3 = &data[12 * n + 2];
-    old_state.sigma_1_mapping = (uint32_t*)&data[13 * n + 2];
-    old_state.sigma_2_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (uintptr_t)(n * sizeof(uint32_t)));
-    old_state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (uintptr_t)((2 * n) * sizeof(uint32_t)));
-    old_state.t = &data[14 * n + 2];
-    old_state.w_l_lagrange_base = old_state.t;
-    old_state.w_r_lagrange_base = &old_state.t[n + 1];
-    old_state.w_o_lagrange_base = &old_state.t[2 * n + 2];
-    polynomial_arithmetic::copy_polynomial(&state.w_l.at(0), old_state.w_l, n, n);
-    polynomial_arithmetic::copy_polynomial(&state.w_r.at(0), old_state.w_r, n, n);
-    polynomial_arithmetic::copy_polynomial(&state.w_o.at(0), old_state.w_o, n, n);
-    polynomial_arithmetic::copy_polynomial(&state.q_m.at(0), old_state.q_m, n, n);
-    polynomial_arithmetic::copy_polynomial(&state.q_l.at(0), old_state.q_l, n, n);
-    polynomial_arithmetic::copy_polynomial(&state.q_r.at(0), old_state.q_r, n, n);
-    polynomial_arithmetic::copy_polynomial(&state.q_o.at(0), old_state.q_o, n, n);
-    polynomial_arithmetic::copy_polynomial(&state.q_c.at(0), old_state.q_c, n, n);
-    for (size_t i = 0; i < n; ++i)
-    {
-        old_state.sigma_1_mapping[i] = state.sigma_1_mapping.at(i);
-        old_state.sigma_2_mapping[i] = state.sigma_2_mapping.at(i);
-        old_state.sigma_3_mapping[i] = state.sigma_3_mapping.at(i);
-    }
-    // ###
-}
 }
 
 // void compute_quotient_polynomial_for_structured_circuit()
@@ -479,28 +437,15 @@ void generate_test_data(waffle::plonk_circuit_state& state, waffle::circuit_stat
 
 void test_proof_construction_and_verification()
 {
-    size_t n = 32;
+    size_t n = 1 << 13;
     waffle::plonk_circuit_state state(n);
-    state.reference_string.degree = n;
-    state.reference_string.monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (2 * n + 2)));
-    io::read_transcript(state.reference_string, BARRETENBERG_SRS_PATH);
-    scalar_multiplication::generate_pippenger_point_table(state.reference_string.monomials, state.reference_string.monomials, n);
 
-
-    fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (17 * n + 2)));
-    waffle::circuit_state old_state(n);
-    generate_test_data(state, old_state, data);
-
-    waffle::circuit_instance instance = state.construct_instance();
-    waffle::plonk_proof old_proof = waffle::construct_proof(old_state, state.reference_string);
-    bool old_result = waffle::verifier::verify_proof(old_proof, instance, state.reference_string.SRS_T2);
-    printf("old result = %u\n", old_result);
+    generate_test_data(state);
+    waffle::circuit_instance instance = waffle::construct_instance(state);
 
     waffle::plonk_proof proof = state.construct_proof();
     bool valid = waffle::verifier::verify_proof(proof, instance, state.reference_string.SRS_T2);
     printf("output of validator = %u\n", valid);
-    free(state.reference_string.monomials);
-    free(data);
 }
 
 int main()

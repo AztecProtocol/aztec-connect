@@ -5,29 +5,9 @@
 #include "math.h"
 #include "memory.h"
 
-// Some hacky macros that allow us to parallelize iterating over a polynomial's point-evaluations
-#ifndef NO_MULTITHREADING
-#define ITERATE_OVER_DOMAIN_START(domain)                                                  \
-    _Pragma("omp parallel for")                                                            \
-    for (size_t j = 0; j < domain.num_threads; ++j)                                        \
-    {                                                                                      \
-        for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i) \
-        {
 
-#define ITERATE_OVER_DOMAIN_END \
-    }                           \
-    }
-#else
-#define ITERATE_OVER_DOMAIN_START(domain)    \
-    for (size_t i = 0; i < domain.size; ++i) \
-    {
-
-#define ITERATE_OVER_DOMAIN_END \
-    }
-#endif
-
-using namespace barretenberg;
-
+namespace barretenberg
+{
 namespace polynomial_arithmetic
 {
 // namespace
@@ -522,7 +502,7 @@ fr::field_t compute_kate_opening_coefficients(const fr::field_t *src, fr::field_
 }
 
 // compute Z_H*(z), l_1(z), l_{n-1}(z)
-lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, const evaluation_domain &domain)
+barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, const evaluation_domain &domain)
 {
     fr::field_t one = fr::one();
     fr::field_t z_pow;
@@ -546,7 +526,7 @@ lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, const evalua
 
     fr::batch_invert(denominators, 3);
 
-    lagrange_evaluations result;
+    barretenberg::polynomial_arithmetic::lagrange_evaluations result;
     fr::__mul(numerator, denominators[0], result.vanishing_poly);
 
     fr::__mul(numerator, domain.domain_inverse, numerator);
@@ -569,7 +549,7 @@ void compress_fft(const fr::field_t *src, fr::field_t *dest, const size_t curren
 }
 
 } // namespace polynomials
-
+}
 /*
 
 void fft_inner_parallel_old(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &, const fr::field_t** root_table)

@@ -1,12 +1,12 @@
 #ifndef VERIFIER
 #define VERIFIER
 
-#include "./waffle.hpp"
 #include "./challenge.hpp"
 #include "../groups/g2.hpp"
 #include "../fields/fq12.hpp"
 #include "../groups/pairing.hpp"
-#include "../polynomials/polynomials.hpp"
+#include "../polynomials/evaluation_domain.hpp"
+#include "../polynomials/polynomial_arithmetic.hpp"
 #include "linearizer.hpp"
 
 #include "../types.hpp"
@@ -18,7 +18,7 @@ namespace verifier
 
 inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instance &instance, const g2::affine_element &SRS_T2)
 {
-    polynomials::evaluation_domain domain = polynomials::evaluation_domain(instance.n, true);
+    evaluation_domain domain = evaluation_domain(instance.n);
     // TODO: validate everything is in the correct field/group
 
     // reconstruct challenges
@@ -30,7 +30,7 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
     challenges.beta = compute_beta(proof, challenges.gamma);
     challenges.z = compute_evaluation_challenge(proof);
 
-    polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(challenges.z, domain);
+    polynomial_arithmetic::lagrange_evaluations lagrange_evals = polynomial_arithmetic::get_lagrange_evaluations(challenges.z, domain);
 
     // compute the terms we need to derive R(X)
     plonk_linear_terms linear_terms = compute_linear_terms(proof, challenges, lagrange_evals.l_1, instance.n);
@@ -174,8 +174,6 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
     g1::copy_affine(proof.PI_Z, lhs_ge[14]);
     g1::copy_affine(proof.T_MID, lhs_ge[15]);
     g1::copy_affine(proof.T_HI, lhs_ge[16]);
-
-    printf("verifier group elements \n");
 
     scalar_multiplication::generate_pippenger_point_table(lhs_ge, lhs_ge, 17);
     g1::element P[2];

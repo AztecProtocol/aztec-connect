@@ -33,11 +33,13 @@ polynomial::polynomial(const size_t initial_size, const size_t initial_max_size_
     allocated_pages(0)
 {
     ASSERT(page_size != 0);
-    size_t target_max_size = std::max(initial_size, initial_max_size_hint);
+    size_t target_max_size = std::max(initial_size, initial_max_size_hint + DEFAULT_PAGE_SPILL);
     if (target_max_size > 0)
     {
-        bump_memory(target_max_size);
-        memset(static_cast<void*>(coefficients), 0, max_size);
+        coefficients = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * target_max_size));
+        max_size = target_max_size;
+        // bump_memory(target_max_size);
+        // memset(static_cast<void*>(coefficients), 0, max_size);
     }
 }
 
@@ -45,7 +47,7 @@ polynomial::polynomial(const polynomial& other, const size_t target_max_size) :
     representation(other.representation),
     size(other.size),
     page_size(other.page_size),
-    max_size(std::max(clamp(target_max_size, page_size), other.max_size)),
+    max_size(std::max(clamp(target_max_size, page_size + DEFAULT_PAGE_SPILL), other.max_size)),
     allocated_pages(max_size / page_size)
 {
     ASSERT(page_size != 0);
@@ -85,7 +87,7 @@ polynomial::polynomial(polynomial&& other, const size_t target_max_size) :
     representation(other.representation),
     size(other.size),
     page_size(other.page_size),
-    max_size(std::max(clamp(target_max_size, page_size), other.max_size)),
+    max_size(std::max(clamp(target_max_size, page_size + DEFAULT_PAGE_SPILL), other.max_size)),
     allocated_pages(max_size / page_size)
 {
     ASSERT(page_size != 0);
@@ -216,6 +218,18 @@ void polynomial::resize(const size_t new_size)
     fr::field_t* back = &coefficients[size];
     memset(static_cast<void*>(back), 0, sizeof(fr::field_t) * (new_size - size));
     size = new_size;
+}
+
+// does not zero out memory
+void polynomial::resize_unsafe(const size_t new_size)
+{
+    // ASSERT(new_size > size);
+    
+    if (new_size > max_size)
+    {
+        bump_memory(new_size);
+        size = new_size;
+    }
 }
 
 /**

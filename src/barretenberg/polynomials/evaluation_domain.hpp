@@ -5,6 +5,8 @@
 #include "stdio.h"
 #include <vector>
 
+namespace barretenberg
+{
 class evaluation_domain
 {
 public:
@@ -62,4 +64,5 @@ private:
 
     barretenberg::fr::field_t* roots;
 };
+}
 #endif

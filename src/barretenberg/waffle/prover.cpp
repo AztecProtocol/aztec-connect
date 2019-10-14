@@ -3,37 +3,14 @@
 #include "../groups/g1.hpp"
 #include "../groups/scalar_multiplication.hpp"
 #include "../polynomials/polynomial_arithmetic.hpp"
+#include "../polynomials/polynomial.hpp"
 #include "../fields/fr.hpp"
 #include "./linearizer.hpp"
 #include "./challenge.hpp"
-
-
-#include "../polynomials/polynomials.hpp"
+#include "./permutation.hpp"
+#include "../io/io.hpp"
 
 using namespace barretenberg;
-
-// TODO: PUT SOMEWHERE
-// Some hacky macros that allow us to parallelize iterating over a polynomial's point-evaluations
-#ifndef NO_MULTITHREADING
-#define ITERATE_OVER_DOMAIN_START(domain)                                                  \
-    _Pragma("omp parallel for")                                                            \
-    for (size_t j = 0; j < domain.num_threads; ++j)                                        \
-    {                                                                                      \
-        for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i) \
-        {
-
-#define ITERATE_OVER_DOMAIN_END \
-    }                           \
-    }
-#else
-#define ITERATE_OVER_DOMAIN_START(domain)    \
-    for (size_t i = 0; i < domain.size; ++i) \
-    {
-
-#define ITERATE_OVER_DOMAIN_END \
-    }
-#endif
-
 
 namespace waffle
 {
@@ -47,8 +24,16 @@ large_domain(4 * n)
     small_domain.compute_lookup_table();
     mid_domain.compute_lookup_table();
     large_domain.compute_lookup_table();
+    reference_string.degree = n;
+    reference_string.monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (2 * n + 2)));
+    io::read_transcript(reference_string, BARRETENBERG_SRS_PATH);
+    scalar_multiplication::generate_pippenger_point_table(reference_string.monomials, reference_string.monomials, n);
 }
 
+plonk_circuit_state::~plonk_circuit_state()
+{
+    free(reference_string.monomials);
+}
 
 void plonk_circuit_state::compute_wire_commitments()
 {
@@ -277,6 +262,7 @@ void plonk_circuit_state::compute_permutation_grand_product_coefficients(polynom
     z_fft.add_lagrange_base_coefficient(z_fft.at(2));
     z_fft.add_lagrange_base_coefficient(z_fft.at(3));
 
+
     // Step 4: Set the quotient polynomial to be equal to
     // (w_l(X) + \beta.sigma1(X) + \gamma).(w_r(X) + \beta.sigma2(X) + \gamma).(w_o(X) + \beta.sigma3(X) + \gamma).Z(X).alpha
     ITERATE_OVER_DOMAIN_START(large_domain);
@@ -435,13 +421,19 @@ void plonk_circuit_state::compute_quotient_polynomial()
     quotient_mid.resize(2 * n);
 
     compute_wire_coefficients();
+
     compute_wire_commitments();
+
     compute_z_coefficients();
+
     compute_z_commitment();
 
-    polynomial z_fft(z, 4 * n);
+    polynomial z_fft(z, 4 * n + 4);
+
     compute_permutation_grand_product_coefficients(z_fft);
+
     compute_identity_grand_product_coefficients(z_fft);
+
     compute_arithmetisation_coefficients();
 
     polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(quotient_mid.get_coefficients(), small_domain, mid_domain);
@@ -458,7 +450,7 @@ void plonk_circuit_state::compute_quotient_polynomial()
 
 fr::field_t plonk_circuit_state::compute_linearisation_coefficients()
 {
-    r.resize(n);
+    r.resize_unsafe(n);
     // ok... now we need to evaluate polynomials. Jeepers
     fr::field_t beta_inv;
     fr::__invert(challenges.beta, beta_inv);
@@ -512,100 +504,15 @@ fr::field_t plonk_circuit_state::compute_linearisation_coefficients()
     return t_eval;
 }
 
-void compute_permutation_lagrange_base(polynomial &output, const std::vector<uint32_t> &permutation, const evaluation_domain& small_domain)
-{
-    output = polynomial(permutation.size());
-    fr::field_t k1 = fr::multiplicative_generator();
-    fr::field_t k2 = fr::alternate_multiplicative_generator();
-
-    // permutation encoding:
-    // low 28 bits defines the location in witness polynomial
-    // upper 2 bits defines the witness polynomial:
-    // 0 = left
-    // 1 = right
-    // 2 = output
-    const uint32_t mask = (1U << 29) - 1;
-    const fr::field_t *roots = small_domain.get_round_roots()[small_domain.log2_size - 2];
-    ITERATE_OVER_DOMAIN_START(small_domain);
-        const size_t raw_idx = (size_t)(permutation[i]) & (size_t)(mask);
-        const bool negative_idx = raw_idx >= (small_domain.size >> 1UL);
-        const size_t idx = negative_idx ? raw_idx - (small_domain.size >> 1UL): raw_idx;
-        fr::__conditionally_subtract_double_modulus(roots[idx], output.at(i), static_cast<uint64_t>(negative_idx));
-
-        if (((permutation[i] >> 30U) & 1) == 1)
-        {
-            fr::__mul(output.at(i), k1, output.at(i));
-        }
-        else if (((permutation[i] >> 31U) & 1) == 1)
-        {
-            fr::__mul(output.at(i), k2, output.at(i));
-        }
-    ITERATE_OVER_DOMAIN_END;
-}
-
-void plonk_circuit_state::compute_permutation_lagrange_base_full()
-{
-    compute_permutation_lagrange_base(sigma_1, sigma_1_mapping, small_domain);
-    compute_permutation_lagrange_base(sigma_2, sigma_2_mapping, small_domain);
-    compute_permutation_lagrange_base(sigma_3, sigma_3_mapping, small_domain);
-}
-
-circuit_instance plonk_circuit_state::construct_instance()
-{
-    polynomial polys[8]{
-        polynomial(n, n),
-        polynomial(n, n),
-        polynomial(n, n),
-        polynomial(q_m),
-        polynomial(q_l),
-        polynomial(q_r),
-        polynomial(q_o),
-        polynomial(q_c),
-    };
-
-    // copy polynomials so that we don't mutate inputs
-    compute_permutation_lagrange_base(polys[0], sigma_1_mapping, small_domain);
-    compute_permutation_lagrange_base(polys[1], sigma_2_mapping, small_domain);
-    compute_permutation_lagrange_base(polys[2], sigma_3_mapping, small_domain);
-
-    for (size_t i = 0; i < 8; ++i)
-    {
-        polys[i].ifft(small_domain);
-    }
-
-    scalar_multiplication::multiplication_state mul_state[8];
-
-    for (size_t i = 0; i < 8; ++i)
-    {
-        mul_state[i].num_elements = n;
-        mul_state[i].points = reference_string.monomials;
-        mul_state[i].scalars = polys[i].get_coefficients();
-    }
-
-    scalar_multiplication::batched_scalar_multiplications(mul_state, 8);
-
-    circuit_instance instance;
-    instance.n = n;
-    g1::jacobian_to_affine(mul_state[0].output, instance.SIGMA_1);
-    g1::jacobian_to_affine(mul_state[1].output, instance.SIGMA_2);
-    g1::jacobian_to_affine(mul_state[2].output, instance.SIGMA_3);
-    g1::jacobian_to_affine(mul_state[3].output, instance.Q_M);
-    g1::jacobian_to_affine(mul_state[4].output, instance.Q_L);
-    g1::jacobian_to_affine(mul_state[5].output, instance.Q_R);
-    g1::jacobian_to_affine(mul_state[6].output, instance.Q_O);
-    g1::jacobian_to_affine(mul_state[7].output, instance.Q_C);
-
-    return instance;
-}
-
 plonk_proof plonk_circuit_state::construct_proof()
 {
-    compute_permutation_lagrange_base_full();
+    compute_permutation_lagrange_base_single(sigma_1, sigma_1_mapping, small_domain);
+    compute_permutation_lagrange_base_single(sigma_2, sigma_2_mapping, small_domain);
+    compute_permutation_lagrange_base_single(sigma_3, sigma_3_mapping, small_domain);
     compute_quotient_polynomial();
     compute_quotient_commitment();
 
     fr::field_t t_eval = compute_linearisation_coefficients();
-
     challenges.nu = compute_linearisation_challenge(proof, t_eval);
 
     fr::field_t nu_powers[7];
@@ -680,4 +587,15 @@ plonk_proof plonk_circuit_state::construct_proof()
     return proof;
 }
 
+void plonk_circuit_state::reset()
+{
+    w_l.fft(small_domain);
+    w_r.fft(small_domain);
+    w_o.fft(small_domain);
+    q_m.fft(small_domain);
+    q_l.fft(small_domain);
+    q_r.fft(small_domain);
+    q_o.fft(small_domain);
+    q_c.fft(small_domain);
+}
 } // namespace waffle
