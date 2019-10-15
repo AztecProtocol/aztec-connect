@@ -687,7 +687,11 @@ inline void copy_affine(const affine_element &a, affine_element &r)
 
 inline element group_exponentiation_inner(const affine_element &a, const fr::field_t &scalar)
 {
-    if (fr::eq(scalar, fr::zero()))
+    fr::field_t converted_scalar;
+
+    fr::from_montgomery_form(scalar, converted_scalar);
+
+    if (fr::eq(converted_scalar, fr::zero()))
     {
         element result;
         result.x = fq::zero();
@@ -700,9 +704,7 @@ inline element group_exponentiation_inner(const affine_element &a, const fr::fie
     element point;
     affine_to_jacobian(a, work_element);
     affine_to_jacobian(a, point);
-    fr::field_t converted_scalar;
     // TODO ADD BACK IN!
-    fr::from_montgomery_form(scalar, converted_scalar);
     // fr::copy(scalar, converted_scalar);
     bool scalar_bits[256] = {0};
     for (size_t i = 0; i < 64; ++i)
