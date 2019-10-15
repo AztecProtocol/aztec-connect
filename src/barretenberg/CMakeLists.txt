@@ -42,6 +42,12 @@ add_library(
     waffle/verifier.hpp
     waffle/prover.cpp
     waffle/prover.hpp
+    waffle/widgets/widget_base.hpp
+    waffle/widgets/arithmetic_widget.cpp
+    waffle/widgets/arithmetic_widget.hpp
+    waffle/widget_prover.cpp
+    waffle/widget_prover.hpp
+    waffle/widget_verifier.hpp
 #   waffle/widgets/base_widget.hpp
 #   waffle/widgets/arithmetic_widget.cpp
 #   waffle/widgets/arithmetic_widget.hpp
@@ -101,6 +107,12 @@ add_executable(
     waffle/verifier.hpp
     waffle/prover.cpp
     waffle/prover.hpp
+    waffle/widgets/widget_base.hpp
+    waffle/widgets/arithmetic_widget.cpp
+    waffle/widgets/arithmetic_widget.hpp
+    waffle/widget_prover.cpp
+    waffle/widget_prover.hpp
+    waffle/widget_verifier.hpp
 )
 
 target_link_libraries(
