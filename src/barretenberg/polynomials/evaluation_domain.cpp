@@ -14,6 +14,7 @@ using namespace barretenberg;
 
 namespace
 {
+// constexpr size_t MIN_THREADED_SIZE = 32;
 
 size_t compute_num_threads(const size_t size)
 {
@@ -22,13 +23,12 @@ size_t compute_num_threads(const size_t size)
 #else
     size_t num_threads = 1;
 #endif
-    if (size <= num_threads)
+    if (size <= num_threads)// || size <= MIN_THREADED_SIZE)
     {
         num_threads = 1;
     }
     return num_threads;
 }
-
 
 void compute_lookup_table_single(const fr::field_t& input_root, const size_t size, fr::field_t* const roots, std::vector<fr::field_t*>& round_roots)
 {

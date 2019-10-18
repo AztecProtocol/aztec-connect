@@ -39,9 +39,6 @@ add_library(
     waffle/challenge.hpp
     waffle/permutation.hpp
     waffle/preprocess.hpp
-    waffle/verifier.hpp
-    waffle/prover.cpp
-    waffle/prover.hpp
     waffle/widgets/widget_base.hpp
     waffle/widgets/arithmetic_widget.cpp
     waffle/widgets/arithmetic_widget.hpp
@@ -107,9 +104,6 @@ add_executable(
     waffle/challenge.hpp
     waffle/permutation.hpp
     waffle/preprocess.hpp
-    waffle/verifier.hpp
-    waffle/prover.cpp
-    waffle/prover.hpp
     waffle/widgets/widget_base.hpp
     waffle/widgets/arithmetic_widget.cpp
     waffle/widgets/arithmetic_widget.hpp

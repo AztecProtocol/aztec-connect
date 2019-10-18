@@ -239,6 +239,11 @@ void batched_scalar_multiplications(multiplication_state *mul_state, size_t num_
     size_t num_threads = 1;
 #endif
 
+    if (num_exponentiations <= num_threads)
+    {
+        num_threads = 1;
+    }
+
     // Step 1: Figure out the optimal number of mini-exponentiations required to
     // divide up all multi-exponentiations amongst available threads
     size_t split = num_threads / num_exponentiations;
@@ -246,7 +251,6 @@ void batched_scalar_multiplications(multiplication_state *mul_state, size_t num_
     {
         ++split;
     }
-
     // once we've allocated point ranges to threads, there is likely to be a spillover term
     // if the number of points in a multi-exp does not evenly divide the # of points in a thread
     // we need to make sure that we allocate this extra 'remainder' term to a thread
@@ -284,7 +288,6 @@ void batched_scalar_multiplications(multiplication_state *mul_state, size_t num_
     {
         threaded_inputs[i].output = pippenger(threaded_inputs[i].scalars, threaded_inputs[i].points, threaded_inputs[i].num_elements);
     }
-
     // If number of threads does not evenly divide number of exponentiations, we're going to have some spillover terms.
     // (or, the number of multi-exponentiations was larger than the number of threads)
     // Call this method recursively until we've completed all multi-exponentiations

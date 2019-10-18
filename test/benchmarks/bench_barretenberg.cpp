@@ -18,7 +18,9 @@ using namespace benchmark;
 #include <barretenberg/groups/scalar_multiplication.hpp>
 #include <barretenberg/groups/pairing.hpp>
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
-#include <barretenberg/waffle/verifier.hpp>
+#include <barretenberg/waffle/widget_verifier.hpp>
+#include <barretenberg/waffle/widget_prover.hpp>
+#include <barretenberg/waffle/widgets/arithmetic_widget.hpp>
 #include <barretenberg/waffle/preprocess.hpp>
 #include <barretenberg/io/io.hpp>
 
@@ -32,17 +34,18 @@ constexpr size_t START = (1 << 20) >> 7;
 #define CIRCUIT_STATE_SIZE(x) ((x * 17 * sizeof(fr::field_t)) + (x * 3 * sizeof(uint32_t)) )
 #define FFT_SIZE(x) (x * 22 * sizeof(fr::field_t))
 
-void generate_random_plonk_circuit(waffle::plonk_circuit_state &state)
+void generate_random_plonk_circuit(waffle::Prover &state)
 {
     size_t n = state.n;
+    std::unique_ptr<waffle::ProverArithmeticWidget> widget = std::make_unique<waffle::ProverArithmeticWidget>(n);
     state.w_l.resize(n);
     state.w_r.resize(n);
     state.w_o.resize(n);
-    state.q_m.resize(n);
-    state.q_l.resize(n);
-    state.q_r.resize(n);
-    state.q_o.resize(n);
-    state.q_c.resize(n);
+    widget->q_m.resize(n);
+    widget->q_l.resize(n);
+    widget->q_r.resize(n);
+    widget->q_o.resize(n);
+    widget->q_c.resize(n);
 
     fr::field_t T0;
     fr::field_t T1;
@@ -73,14 +76,14 @@ void generate_random_plonk_circuit(waffle::plonk_circuit_state &state)
 
     for (size_t i = 0; i < n / 2; i += 2)
     {
-        fr::copy(q_m_acc, state.q_m.at(i));
-        fr::copy(fr::zero(), state.q_l.at(i));
-        fr::copy(fr::zero(), state.q_r.at(i));
-        fr::copy(q_o_acc, state.q_o.at(i));
-        fr::copy(q_c_acc, state.q_c.at(i));
+        fr::copy(q_m_acc, widget->q_m.at(i));
+        fr::copy(fr::zero(), widget->q_l.at(i));
+        fr::copy(fr::zero(), widget->q_r.at(i));
+        fr::copy(q_o_acc, widget->q_o.at(i));
+        fr::copy(q_c_acc, widget->q_c.at(i));
         fr::copy(w_l_acc, state.w_l.at(i));
         fr::copy(w_r_acc, state.w_r.at(i));
-        fr::copy(state.q_o.at(i), state.w_o.at(i));
+        fr::copy(widget->q_o.at(i), state.w_o.at(i));
 
         fr::__mul(q_m_acc, q_m_seed, q_m_acc);
         fr::__mul(q_l_acc, q_l_seed, q_l_acc);
@@ -90,14 +93,14 @@ void generate_random_plonk_circuit(waffle::plonk_circuit_state &state)
         fr::__mul(w_l_acc, w_l_seed, w_l_acc);
         fr::__mul(w_r_acc, w_r_seed, w_r_acc);
 
-        fr::copy(fr::zero(), state.q_m.at(i+1));
-        fr::copy(q_l_acc, state.q_l.at(i+1));
-        fr::copy(q_r_acc, state.q_r.at(i+1));
-        fr::copy(q_o_acc, state.q_o.at(i+1));
-        fr::copy(q_c_acc, state.q_c.at(i+1));
+        fr::copy(fr::zero(), widget->q_m.at(i+1));
+        fr::copy(q_l_acc, widget->q_l.at(i+1));
+        fr::copy(q_r_acc, widget->q_r.at(i+1));
+        fr::copy(q_o_acc, widget->q_o.at(i+1));
+        fr::copy(q_c_acc, widget->q_c.at(i+1));
         fr::copy(w_l_acc, state.w_l.at(i+1));
         fr::copy(w_r_acc, state.w_r.at(i+1));
-        fr::copy(state.q_o.at(i+1), state.w_o.at(i+1));
+        fr::copy(widget->q_o.at(i+1), state.w_o.at(i+1));
 
         fr::__mul(q_m_acc, q_m_seed, q_m_acc);
         fr::__mul(q_l_acc, q_l_seed, q_l_acc);
@@ -112,13 +115,13 @@ void generate_random_plonk_circuit(waffle::plonk_circuit_state &state)
 
     for (size_t i = 0; i < n / 2; ++i)
     {
-        fr::__mul(state.q_l.at(i), state.w_l.at(i), T0);
-        fr::__mul(state.q_r.at(i), state.w_r.at(i), T1);
+        fr::__mul(widget->q_l.at(i), state.w_l.at(i), T0);
+        fr::__mul(widget->q_r.at(i), state.w_r.at(i), T1);
         fr::__mul(state.w_l.at(i), state.w_r.at(i), T2);
-        fr::__mul(T2, state.q_m.at(i), T2);
+        fr::__mul(T2, widget->q_m.at(i), T2);
         fr::__add(T0, T1, T0);
         fr::__add(T0, T2, T0);
-        fr::__add(T0, state.q_c.at(i), T0);
+        fr::__add(T0, widget->q_c.at(i), T0);
         fr::__neg(T0, T0);
         fr::__mul(state.w_o.at(i), T0, state.w_o.at(i));
     }
@@ -126,11 +129,11 @@ void generate_random_plonk_circuit(waffle::plonk_circuit_state &state)
     polynomial_arithmetic::copy_polynomial(&state.w_l.at(0), &state.w_l.at(shift), shift, shift);
     polynomial_arithmetic::copy_polynomial(&state.w_r.at(0), &state.w_r.at(shift), shift, shift);
     polynomial_arithmetic::copy_polynomial(&state.w_o.at(0), &state.w_o.at(shift), shift, shift);
-    polynomial_arithmetic::copy_polynomial(&state.q_m.at(0), &state.q_m.at(shift), shift, shift);
-    polynomial_arithmetic::copy_polynomial(&state.q_l.at(0), &state.q_l.at(shift), shift, shift);
-    polynomial_arithmetic::copy_polynomial(&state.q_r.at(0), &state.q_r.at(shift), shift, shift);
-    polynomial_arithmetic::copy_polynomial(&state.q_o.at(0), &state.q_o.at(shift), shift, shift);
-    polynomial_arithmetic::copy_polynomial(&state.q_c.at(0), &state.q_c.at(shift), shift, shift);
+    polynomial_arithmetic::copy_polynomial(&widget->q_m.at(0), &widget->q_m.at(shift), shift, shift);
+    polynomial_arithmetic::copy_polynomial(&widget->q_l.at(0), &widget->q_l.at(shift), shift, shift);
+    polynomial_arithmetic::copy_polynomial(&widget->q_r.at(0), &widget->q_r.at(shift), shift, shift);
+    polynomial_arithmetic::copy_polynomial(&widget->q_o.at(0), &widget->q_o.at(shift), shift, shift);
+    polynomial_arithmetic::copy_polynomial(&widget->q_c.at(0), &widget->q_c.at(shift), shift, shift);
 
     state.sigma_1_mapping.resize(n);
     state.sigma_2_mapping.resize(n);
@@ -149,15 +152,15 @@ void generate_random_plonk_circuit(waffle::plonk_circuit_state &state)
     fr::zero(state.w_l.at(n-1));
     fr::zero(state.w_r.at(n-1));
     fr::zero(state.w_o.at(n-1));
-    fr::zero(state.q_c.at(n-1));
+    fr::zero(widget->q_c.at(n-1));
     fr::zero(state.w_l.at(shift-1));
     fr::zero(state.w_r.at(shift-1));
     fr::zero(state.w_o.at(shift-1));
-    fr::zero(state.q_c.at(shift-1));
-    fr::zero(state.q_m.at(shift-1));
-    fr::zero(state.q_l.at(shift-1));
-    fr::zero(state.q_r.at(shift-1));
-    fr::zero(state.q_o.at(shift-1));
+    fr::zero(widget->q_c.at(shift-1));
+    fr::zero(widget->q_m.at(shift-1));
+    fr::zero(widget->q_l.at(shift-1));
+    fr::zero(widget->q_r.at(shift-1));
+    fr::zero(widget->q_o.at(shift-1));
     // make last permutation the same as identity permutation
     state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
     state.sigma_2_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 30U);
@@ -166,201 +169,20 @@ void generate_random_plonk_circuit(waffle::plonk_circuit_state &state)
     state.sigma_2_mapping[n - 1] = (uint32_t)n - 1 + (1U << 30U);
     state.sigma_3_mapping[n - 1] = (uint32_t)n - 1 + (1U << 31U);
 
-    fr::zero(state.q_l.at(n - 1));
-    fr::zero(state.q_r.at(n - 1));
-    fr::zero(state.q_o.at(n - 1));
-    fr::zero(state.q_m.at(n - 1));
+    fr::zero(widget->q_l.at(n - 1));
+    fr::zero(widget->q_r.at(n - 1));
+    fr::zero(widget->q_o.at(n - 1));
+    fr::zero(widget->q_m.at(n - 1));
+
+    state.widgets.emplace_back(std::move(widget));
 }
-
-// void generate_random_plonk_circuit(waffle::plonk_circuit_state &new_state, waffle::circuit_state &state, fr::field_t *data, size_t n)
-// {
-//     state.n = n;
-//     state.w_l = &data[0];
-//     state.w_r = &data[n];
-//     state.w_o = &data[2 * n];
-//     state.z_1 = &data[3 * n];
-//     state.z_2 = &data[4 * n + 1];
-//     state.q_c = &data[5 * n + 2];
-//     state.q_l = &data[6 * n + 2];
-//     state.q_r = &data[7 * n + 2];
-//     state.q_o = &data[8 * n + 2];
-//     state.q_m = &data[9 * n + 2];
-//     state.sigma_1 = &data[10 * n + 2];
-//     state.sigma_2 = &data[11 * n + 2];
-//     state.sigma_3 = &data[12 * n + 2];
-//     state.sigma_1_mapping = (uint32_t*)&data[13 * n + 2];
-//     state.sigma_2_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (uintptr_t)(n * sizeof(uint32_t)));
-//     state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (uintptr_t)((2 * n) * sizeof(uint32_t)));
-//     state.t = &data[14 * n + 2];
-
-//     state.w_l_lagrange_base = state.t;
-//     state.w_r_lagrange_base = &state.t[n + 1];
-//     state.w_o_lagrange_base = &state.t[2 * n + 2];
-
-//     // create some constraints that satisfy our arithmetic circuit relation
-//     fr::field_t one;
-//     fr::field_t zero;
-//     fr::field_t minus_one;
-//     fr::one(one);
-//     fr::__neg(one, minus_one);
-//     fr::zero(zero);
-//     fr::field_t T0;
-//     fr::field_t T1;
-//     fr::field_t T2;
-//     // even indices = mul gates, odd incides = add gates
-//     // make selector polynomial_arithmetic / wire values randomly distributed (subject to gate constraints)
-//     fr::field_t q_m_seed = fr::random_element();
-//     fr::field_t q_l_seed = fr::random_element();
-//     fr::field_t q_r_seed = fr::random_element();
-//     fr::field_t q_o_seed = fr::random_element();
-//     fr::field_t q_c_seed = fr::random_element();
-//     fr::field_t w_l_seed = fr::random_element();
-//     fr::field_t w_r_seed = fr::random_element();
-//     fr::field_t q_m_acc;
-//     fr::field_t q_l_acc;
-//     fr::field_t q_r_acc;
-//     fr::field_t q_o_acc;
-//     fr::field_t q_c_acc;
-//     fr::field_t w_l_acc;
-//     fr::field_t w_r_acc;
-//     fr::copy(q_m_seed, q_m_acc);
-//     fr::copy(q_l_seed, q_l_acc);
-//     fr::copy(q_r_seed, q_r_acc);
-//     fr::copy(q_o_seed, q_o_acc);
-//     fr::copy(q_c_seed, q_c_acc);
-//     fr::copy(w_l_seed, w_l_acc);
-//     fr::copy(w_r_seed, w_r_acc);
-
-//     for (size_t i = 0; i < n / 2; i += 2)
-//     {
-//         fr::copy(q_m_acc, state.q_m[i]);
-//         fr::copy(fr::zero(), state.q_l[i]);
-//         fr::copy(fr::zero(), state.q_r[i]);
-//         fr::copy(q_o_acc, state.q_o[i]);
-//         fr::copy(q_c_acc, state.q_c[i]);
-//         fr::copy(w_l_acc, state.w_l[i]);
-//         fr::copy(w_r_acc, state.w_r[i]);
-//         fr::copy(state.q_o[i], state.w_o[i]);
-
-//         fr::__mul(q_m_acc, q_m_seed, q_m_acc);
-//         fr::__mul(q_l_acc, q_l_seed, q_l_acc);
-//         fr::__mul(q_r_acc, q_r_seed, q_r_acc);
-//         fr::__mul(q_o_acc, q_o_seed, q_o_acc);
-//         fr::__mul(q_c_acc, q_c_seed, q_c_acc);
-//         fr::__mul(w_l_acc, w_l_seed, w_l_acc);
-//         fr::__mul(w_r_acc, w_r_seed, w_r_acc);
-
-//         fr::copy(fr::zero(), state.q_m[i + 1]);
-//         fr::copy(q_l_acc, state.q_l[i + 1]);
-//         fr::copy(q_r_acc, state.q_r[i + 1]);
-//         fr::copy(q_o_acc, state.q_o[i + 1]);
-//         fr::copy(q_c_acc, state.q_c[i + 1]);
-//         fr::copy(w_l_acc, state.w_l[i + 1]);
-//         fr::copy(w_r_acc, state.w_r[i + 1]);
-//         fr::copy(state.q_o[i + 1], state.w_o[i + 1]);
-
-//         fr::__mul(q_m_acc, q_m_seed, q_m_acc);
-//         fr::__mul(q_l_acc, q_l_seed, q_l_acc);
-//         fr::__mul(q_r_acc, q_r_seed, q_r_acc);
-//         fr::__mul(q_o_acc, q_o_seed, q_o_acc);
-//         fr::__mul(q_c_acc, q_c_seed, q_c_acc);
-//         fr::__mul(w_l_acc, w_l_seed, w_l_acc);
-//         fr::__mul(w_r_acc, w_r_seed, w_r_acc);
-//     }
-//     fr::batch_invert(state.w_o, n / 2);
-
-//     for (size_t i = 0; i < n / 2; ++i)
-//     {
-//         fr::__mul(state.q_l[i], state.w_l[i], T0);
-//         fr::__mul(state.q_r[i], state.w_r[i], T1);
-//         fr::__mul(state.w_l[i], state.w_r[i], T2);
-//         fr::__mul(T2, state.q_m[i], T2);
-//         fr::__add(T0, T1, T0);
-//         fr::__add(T0, T2, T0);
-//         fr::__add(T0, state.q_c[i], T0);
-//         fr::__neg(T0, T0);
-//         fr::__mul(state.w_o[i], T0, state.w_o[i]);
-//     }
-//     size_t shift = n / 2;
-//     polynomial_arithmetic::copy_polynomial(state.w_l, state.w_l + shift, shift, shift);
-//     polynomial_arithmetic::copy_polynomial(state.w_r, state.w_r + shift, shift, shift);
-//     polynomial_arithmetic::copy_polynomial(state.w_o, state.w_o + shift, shift, shift);
-//     polynomial_arithmetic::copy_polynomial(state.q_m, state.q_m + shift, shift, shift);
-//     polynomial_arithmetic::copy_polynomial(state.q_l, state.q_l + shift, shift, shift);
-//     polynomial_arithmetic::copy_polynomial(state.q_r, state.q_r + shift, shift, shift);
-//     polynomial_arithmetic::copy_polynomial(state.q_o, state.q_o + shift, shift, shift);
-//     polynomial_arithmetic::copy_polynomial(state.q_c, state.q_c + shift, shift, shift);
-
-//     // create basic permutation - second half of witness vector is a copy of the first half
-//     for (size_t i = 0; i < n / 2; ++i)
-//     {
-//         state.sigma_1_mapping[shift + i] = (uint32_t)i;
-//         state.sigma_2_mapping[shift + i] = (uint32_t)i + (1U << 30U);
-//         state.sigma_3_mapping[shift + i] = (uint32_t)i + (1U << 31U);
-//         state.sigma_1_mapping[i] = (uint32_t)(i + shift);
-//         state.sigma_2_mapping[i] = (uint32_t)(i + shift) + (1U << 30U);
-//         state.sigma_3_mapping[i] = (uint32_t)(i + shift) + (1U << 31U);
-//     }
-
-//     fr::zero(state.w_l[n-1]);
-//     fr::zero(state.w_r[n-1]);
-//     fr::zero(state.w_o[n-1]);
-//     fr::zero(state.q_c[n-1]);
-//     fr::zero(state.w_l[shift-1]);
-//     fr::zero(state.w_r[shift-1]);
-//     fr::zero(state.w_o[shift-1]);
-//     fr::zero(state.q_c[shift-1]);
-//     fr::zero(state.q_m[shift-1]);
-//     fr::zero(state.q_l[shift-1]);
-//     fr::zero(state.q_r[shift-1]);
-//     fr::zero(state.q_o[shift-1]);
-//     // make last permutation the same as identity permutation
-//     state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
-//     state.sigma_2_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 30U);
-//     state.sigma_3_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 31U);
-//     state.sigma_1_mapping[n - 1] = (uint32_t)n - 1;
-//     state.sigma_2_mapping[n - 1] = (uint32_t)n - 1 + (1U << 30U);
-//     state.sigma_3_mapping[n - 1] = (uint32_t)n - 1 + (1U << 31U);
-
-//     fr::zero(state.q_l[n - 1]);
-//     fr::zero(state.q_r[n - 1]);
-//     fr::zero(state.q_o[n - 1]);
-//     fr::zero(state.q_m[n - 1]);
-
-//     new_state.w_l.resize_unsafe(n);
-//     new_state.w_r.resize_unsafe(n);
-//     new_state.w_o.resize_unsafe(n);
-//     new_state.q_m.resize_unsafe(n);
-//     new_state.q_l.resize_unsafe(n);
-//     new_state.q_r.resize_unsafe(n);
-//     new_state.q_o.resize_unsafe(n);
-//     new_state.q_c.resize_unsafe(n);
-
-//     polynomial_arithmetic::copy_polynomial(state.w_l, new_state.w_l.get_coefficients(), n, n);
-//     polynomial_arithmetic::copy_polynomial(state.w_r, new_state.w_r.get_coefficients(), n, n);
-//     polynomial_arithmetic::copy_polynomial(state.w_o, new_state.w_o.get_coefficients(), n, n);
-//     polynomial_arithmetic::copy_polynomial(state.q_m, new_state.q_m.get_coefficients(), n, n);
-//     polynomial_arithmetic::copy_polynomial(state.q_l, new_state.q_l.get_coefficients(), n, n);
-//     polynomial_arithmetic::copy_polynomial(state.q_r, new_state.q_r.get_coefficients(), n, n);
-//     polynomial_arithmetic::copy_polynomial(state.q_o, new_state.q_o.get_coefficients(), n, n);
-//     polynomial_arithmetic::copy_polynomial(state.q_c, new_state.q_c.get_coefficients(), n, n);
-//     new_state.sigma_1_mapping.resize(n);
-//     new_state.sigma_2_mapping.resize(n);
-//     new_state.sigma_3_mapping.resize(n);
-//     for (size_t i = 0; i < n; ++i)
-//     {
-//         new_state.sigma_1_mapping[i] = state.sigma_1_mapping[i];
-//         new_state.sigma_2_mapping[i] = state.sigma_2_mapping[i];
-//         new_state.sigma_3_mapping[i] = state.sigma_3_mapping[i];
-//     }
-// }
 
 struct global_vars
 {
     alignas(32) g1::affine_element g1_pair_points[2];
     alignas(32) g2::affine_element g2_pair_points[2];
     waffle::circuit_instance plonk_instance;
-    std::vector<waffle::circuit_instance> plonk_instances;
+    std::vector<waffle::base_circuit_instance> plonk_instances;
     waffle::plonk_proof plonk_proof;
     std::vector<waffle::plonk_proof> plonk_proofs;
     srs::plonk_srs reference_string;
@@ -372,15 +194,15 @@ struct global_vars
 
 global_vars globals;
 
-waffle::plonk_circuit_state plonk_circuit_states[8]{
-    waffle::plonk_circuit_state(START),
-    waffle::plonk_circuit_state(START * 2),
-    waffle::plonk_circuit_state(START * 4),
-    waffle::plonk_circuit_state(START * 8),
-    waffle::plonk_circuit_state(START * 16),
-    waffle::plonk_circuit_state(START * 32),
-    waffle::plonk_circuit_state(START * 64),
-    waffle::plonk_circuit_state(START * 128),
+waffle::Prover plonk_circuit_states[8]{
+    waffle::Prover(START),
+    waffle::Prover(START * 2),
+    waffle::Prover(START * 4),
+    waffle::Prover(START * 8),
+    waffle::Prover(START * 16),
+    waffle::Prover(START * 32),
+    waffle::Prover(START * 64),
+    waffle::Prover(START * 128),
 };
 
 constexpr size_t NUM_THREADS = 8;
@@ -463,10 +285,10 @@ void construct_instances_bench(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
-        waffle::circuit_instance instance = waffle::construct_instance(plonk_circuit_states[idx]);
+        waffle::base_circuit_instance instance = waffle::test_construct_instance(plonk_circuit_states[idx]);
         // waffle::plonk_proof proof = waffle::construct_proof(globals.plonk_states[idx], globals.reference_string);
         state.PauseTiming();
-        globals.plonk_instances[idx] = (instance);
+        globals.plonk_instances[idx] = std::move(instance);
         // bool res = waffle::verifier::verify_proof(proof, globals.plonk_instances[idx], globals.reference_string.SRS_T2);
         // if (res == false)
         // {
@@ -504,7 +326,7 @@ void verify_proof_bench(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
-        bool res = waffle::verifier::verify_proof(globals.plonk_proofs[idx], globals.plonk_instances[idx], globals.reference_string.SRS_T2);
+        bool res = waffle::test_verifier::verify_proof(globals.plonk_proofs[idx], globals.plonk_instances[idx], globals.reference_string.SRS_T2);
         state.PauseTiming();
         if (!res)
         {
@@ -521,7 +343,7 @@ void fft_bench_parallel(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
-        barretenberg::polynomial_arithmetic::fft(globals.data, plonk_circuit_states[idx].large_domain);
+        barretenberg::polynomial_arithmetic::fft(globals.data, plonk_circuit_states[idx].circuit_state.large_domain);
     }
 }
 BENCHMARK(fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
@@ -532,7 +354,7 @@ void fft_bench_serial(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
-        barretenberg::polynomial_arithmetic::fft_inner_serial(globals.data, plonk_circuit_states[idx].large_domain.thread_size, plonk_circuit_states[idx].large_domain.get_round_roots());
+        barretenberg::polynomial_arithmetic::fft_inner_serial(globals.data, plonk_circuit_states[idx].circuit_state.large_domain.thread_size, plonk_circuit_states[idx].circuit_state.large_domain.get_round_roots());
     }
 }
 BENCHMARK(fft_bench_serial)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);

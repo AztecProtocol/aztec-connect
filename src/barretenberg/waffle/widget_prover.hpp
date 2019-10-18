@@ -12,8 +12,8 @@ namespace waffle
 class Prover
 {
 public:
-    Prover() = delete;
-    Prover(const size_t n);
+    Prover();
+    Prover(const size_t n = 0);
     Prover(Prover&& other);
     Prover(const Prover& other) = delete;
     Prover& operator=(const Prover &other) = delete;

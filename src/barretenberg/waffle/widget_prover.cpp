@@ -600,6 +600,10 @@ void Prover::reset()
     w_l.fft(circuit_state.small_domain);
     w_r.fft(circuit_state.small_domain);
     w_o.fft(circuit_state.small_domain);
+    for (size_t i = 0; i < widgets.size(); ++i)
+    {
+        widgets[i]->reset(circuit_state.small_domain);
+    }
     // TODO RESET WIDGETS
 }
 } // namespace waffle
