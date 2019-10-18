@@ -60,7 +60,7 @@ void doubling_step_for_flipped_miller_loop(g2::element &current, pairing::ell_co
     fq2::mul(b, h, current.z);
 
     fq6::mul_by_non_residue(i, ell.o);
-    fq2::neg(h, ell.vw);
+    fq2::__neg(h, ell.vw);
     fq2::add(j, j, ell.vv);
     fq2::add(ell.vv, j, ell.vv);
 }
@@ -102,7 +102,7 @@ void mixed_addition_step_for_flipped_miller_loop(const g2::element &base, g2::el
     fq2::mul(d, base.y, i);
     fq2::sub(h, i, h);
     fq6::mul_by_non_residue(h, line.o);
-    fq2::neg(e, line.vv);
+    fq2::__neg(e, line.vv);
     fq2::copy(d, line.vw);
 }
 
@@ -110,9 +110,9 @@ void precompute_miller_lines(const g2::element &Q, miller_lines &lines)
 {
     g2::element Q_neg;
     fq2::copy(Q.x, Q_neg.x);
-    fq2::neg(Q.y, Q_neg.y);
+    fq2::__neg(Q.y, Q_neg.y);
     Q_neg.z = fq2::one();
-    // g2::neg(Q, Q_neg);
+    // g2::__neg(Q, Q_neg);
     g2::element work_point;
     g2::element result_point;
     g2::copy(Q, work_point);
@@ -139,8 +139,8 @@ void precompute_miller_lines(const g2::element &Q, miller_lines &lines)
     g2::element Q2;
     g2::mul_by_q(Q, Q1);
     g2::mul_by_q(Q1, Q2);
-    g2::neg(Q2, Q2);
-    // fq2::neg(Q2.y, Q2.y);
+    g2::__neg(Q2, Q2);
+    // fq2::__neg(Q2.y, Q2.y);
     // fq2::copy(Q2.x, Q2.x);
     // Q2.z = fq2::one();
     mixed_addition_step_for_flipped_miller_loop(Q1, work_point, lines.lines[it]);
@@ -245,7 +245,7 @@ void final_exponentiation_easy_part(const fq12::fq12_t &elt, fq12::fq12_t &r)
     fq12::fq12_t b;
 
     fq12::copy(elt, a);
-    fq6::neg(a.c1, a.c1);
+    fq6::__neg(a.c1, a.c1);
     fq12::invert(elt, b);
     fq12::mul(a, b, a);
     fq12::frobenius_map_two(a, b);

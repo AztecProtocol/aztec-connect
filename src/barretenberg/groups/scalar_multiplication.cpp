@@ -91,7 +91,7 @@ void generate_pippenger_point_table(g1::affine_element *points, g1::affine_eleme
     {
         g1::copy(&points[i], &table[i * 2]);
         fq::__mul_beta(points[i].x, table[i * 2 + 1].x);
-        fq::neg(points[i].y, table[i * 2 + 1].y);
+        fq::__neg(points[i].y, table[i * 2 + 1].y);
     }
 }
 
@@ -136,7 +136,7 @@ g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points,
             {
                 if (wnaf_state.skew_table[j])
                 {
-                    g1::neg(points[j], state.addition_temporary);
+                    g1::__neg(points[j], state.addition_temporary);
                     g1::mixed_add(state.buckets[0], state.addition_temporary, state.buckets[0]);
                 }
             }

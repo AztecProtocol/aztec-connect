@@ -1,5 +1,5 @@
-#ifndef CHALLENGE
-#define CHALLENGE
+#ifndef CHALLENGE_HPP
+#define CHALLENGE_HPP
 
 #include "stdint.h"
 

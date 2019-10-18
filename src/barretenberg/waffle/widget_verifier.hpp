@@ -23,7 +23,46 @@ namespace test_verifier
 inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_instance &instance, const g2::affine_element &SRS_T2)
 {
     evaluation_domain domain = evaluation_domain(instance.n);
-    // TODO: validate everything is in the correct field/group
+
+    bool inputs_valid = g1::on_curve(proof.T_LO)
+        && g1::on_curve(proof.T_MID)
+        && g1::on_curve(proof.T_HI)
+        && g1::on_curve(proof.W_L)
+        && g1::on_curve(proof.W_R)
+        && g1::on_curve(proof.W_O)
+        && g1::on_curve(proof.Z_1)
+        && g1::on_curve(proof.PI_Z)
+        && g1::on_curve(proof.PI_Z_OMEGA);
+
+    if (!inputs_valid)
+    {
+        printf("inputs not valid!\n");
+        return false;
+    }
+    bool instance_valid = true;
+
+    for (size_t i = 0; i < instance.widget_verifiers.size(); ++i)
+    {
+        instance_valid = instance_valid && instance.widget_verifiers[i]->verify_instance_commitments();
+    }
+    if (!instance_valid)
+    {
+        printf("instance not valid!\n");
+        return false;
+    }
+
+    bool field_elements_valid = !fr::eq(proof.w_l_eval, fr::zero())
+        && !fr::eq(proof.w_r_eval, fr::zero())
+        && !fr::eq(proof.w_o_eval, fr::zero())
+        && !fr::eq(proof.z_1_shifted_eval, fr::zero())
+        && !fr::eq(proof.sigma_1_eval, fr::zero())
+        && !fr::eq(proof.sigma_2_eval, fr::zero())
+        && !fr::eq(proof.linear_eval, fr::zero());
+    if (!field_elements_valid)
+    {
+        printf("proof field elements not valid!\n");
+        return false;
+    }
 
     // reconstruct challenges
     plonk_challenges challenges;
@@ -132,7 +171,7 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_ci
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
 
-    fr::neg(batch_evaluation, batch_evaluation);
+    fr::__neg(batch_evaluation, batch_evaluation);
 
     fr::field_t z_omega_scalar;
     fr::__mul(challenges.z, domain.root, z_omega_scalar);
@@ -199,7 +238,7 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_ci
 
     g1::mixed_add(P[1], proof.T_LO, P[1]);
     g1::mixed_add(P[0], proof.PI_Z, P[0]);
-    g1::neg(P[0], P[0]);
+    g1::__neg(P[0], P[0]);
     g1::batch_normalize(P, 2);
 
     g1::affine_element P_affine[2];

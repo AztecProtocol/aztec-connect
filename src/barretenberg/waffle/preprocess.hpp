@@ -16,13 +16,14 @@ using namespace barretenberg;
 
 namespace waffle
 {
-inline base_circuit_instance test_construct_instance(waffle::test_circuit_state &state)
+inline base_circuit_instance test_construct_instance(waffle::Prover &state)
 {
     polynomial polys[3]{
         polynomial(state.n, state.n),
         polynomial(state.n, state.n),
         polynomial(state.n, state.n),    
     };
+
     // copy polynomials so that we don't mutate inputs
     compute_permutation_lagrange_base_single(polys[0], state.sigma_1_mapping, state.circuit_state.small_domain);
     compute_permutation_lagrange_base_single(polys[1], state.sigma_2_mapping, state.circuit_state.small_domain);

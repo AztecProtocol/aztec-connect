@@ -247,7 +247,7 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
         a[i] = fr::random_element();
         b[i] = fr::random_element();
         fr::__mul(a[i], b[i], c[i]);
-        fr::neg(c[i], c[i]);
+        fr::__neg(c[i], c[i]);
         fr::__mul(a[i], b[i], T0);
         fr::__add(T0, c[i], T0);
 
@@ -316,7 +316,7 @@ TEST(polynomials, compute_kate_opening_coefficients)
     // validate that W(X)(X - z) = F(X) - F(z)
     // compute (X - z) in coefficient form
     fr::field_t multiplicand[2 * n];
-    fr::neg(z, multiplicand[0]);
+    fr::__neg(z, multiplicand[0]);
     fr::one(multiplicand[1]);
     for (size_t i = 2; i < 2 * n; ++i)
     {

@@ -132,8 +132,8 @@ using namespace barretenberg;
 //     fr::zero(state.q_m[index + 4]);
 //     fr::zero(state.q_m[index + 5]);
 //     fr::one(state.q_m[index + 6]);
-//     fr::neg(fr::one(), state.q_m[index + 7]);
-//     fr::neg(fr::one(), state.q_m[index + 8]);
+//     fr::__neg(fr::one(), state.q_m[index + 7]);
+//     fr::__neg(fr::one(), state.q_m[index + 8]);
 
 //     fr::one(state.q_l[index + 0]);
 //     fr::one(state.q_l[index + 1]);
@@ -146,23 +146,23 @@ using namespace barretenberg;
 //     fr::zero(state.q_l[index + 7]);
 //     fr::zero(state.q_l[index + 8]);
 
-//     fr::neg(fr::one(), state.q_r[index + 0]);
-//     fr::neg(fr::one(), state.q_r[index + 1]);
+//     fr::__neg(fr::one(), state.q_r[index + 0]);
+//     fr::__neg(fr::one(), state.q_r[index + 1]);
 //     fr::one(state.q_r[index + 2]);
 //     fr::one(state.q_r[index + 3]);
 //     fr::one(state.q_r[index + 4]);
-//     fr::neg(fr::one(), state.q_r[index + 5]);
+//     fr::__neg(fr::one(), state.q_r[index + 5]);
 //     fr::zero(state.q_r[index + 6]);
 //     fr::zero(state.q_r[index + 7]);
 //     fr::zero(state.q_r[index + 8]);
 
-//     fr::neg(fr::one(), state.q_o[index + 0]);
-//     fr::neg(fr::one(), state.q_o[index + 1]);
-//     fr::neg(fr::one(), state.q_o[index + 2]);
-//     fr::neg(fr::one(), state.q_o[index + 3]);
-//     fr::neg(fr::one(), state.q_o[index + 4]);
-//     fr::neg(fr::one(), state.q_o[index + 5]);
-//     fr::neg(fr::one(), state.q_o[index + 6]);
+//     fr::__neg(fr::one(), state.q_o[index + 0]);
+//     fr::__neg(fr::one(), state.q_o[index + 1]);
+//     fr::__neg(fr::one(), state.q_o[index + 2]);
+//     fr::__neg(fr::one(), state.q_o[index + 3]);
+//     fr::__neg(fr::one(), state.q_o[index + 4]);
+//     fr::__neg(fr::one(), state.q_o[index + 5]);
+//     fr::__neg(fr::one(), state.q_o[index + 6]);
 //     fr::one(state.q_o[index + 7]);
 //     fr::one(state.q_o[index + 8]);
 
@@ -267,7 +267,7 @@ void generate_test_data(waffle::plonk_circuit_state& state)
     fr::field_t zero;
     fr::field_t minus_one;
     fr::one(one);
-    fr::neg(one, minus_one);
+    fr::__neg(one, minus_one);
     fr::zero(zero);
     fr::field_t T0;
     // even indices = mul gates, odd incides = add gates
@@ -297,7 +297,7 @@ void generate_test_data(waffle::plonk_circuit_state& state)
 
         fr::__add(state.w_l.at(2 * i + 1), state.w_r.at(2 * i + 1), T0);
         fr::__add(T0, state.w_o.at(2 * i + 1), state.q_c.at(2 * i + 1));
-        fr::neg(state.q_c.at(2 * i + 1), state.q_c.at(2 * i + 1));
+        fr::__neg(state.q_c.at(2 * i + 1), state.q_c.at(2 * i + 1));
         fr::one(state.q_l.at(2 * i + 1));
         fr::one(state.q_r.at(2 * i + 1));
         fr::one(state.q_o.at(2 * i + 1));

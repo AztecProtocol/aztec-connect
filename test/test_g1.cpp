@@ -127,7 +127,7 @@ TEST(group, add_exception_test_infinity)
     g1::element rhs;
     g1::element result;
 
-    g1::neg(lhs, rhs);
+    g1::__neg(lhs, rhs);
 
     g1::add(lhs, rhs, result);
 
@@ -173,7 +173,7 @@ TEST(group, add_dbl_consistency)
     g1::element dbl_result;
 
     g1::add(a, b, c);
-    g1::neg(b, b);
+    g1::__neg(b, b);
     g1::add(a, b, d);
 
     g1::add(c, d, add_result);
@@ -210,7 +210,7 @@ TEST(group, mixed_add_exception_test_infinity)
     g1::element lhs = g1::one();
     g1::affine_element rhs = g1::random_affine_element();
     fq::copy(rhs.x, lhs.x);
-    fq::neg(rhs.y, lhs.y);
+    fq::__neg(rhs.y, lhs.y);
 
     g1::element result;
     g1::mixed_add(lhs, rhs, result);

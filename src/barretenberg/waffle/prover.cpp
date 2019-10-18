@@ -30,6 +30,7 @@ large_domain(4 * n)
     scalar_multiplication::generate_pippenger_point_table(reference_string.monomials, reference_string.monomials, n);
 }
 
+
 plonk_circuit_state::~plonk_circuit_state()
 {
     free(reference_string.monomials);
@@ -269,7 +270,7 @@ void plonk_circuit_state::compute_permutation_grand_product_coefficients(polynom
         fr::__mul(sigma1_fft.at(i), sigma2_fft.at(i), sigma1_fft.at(i)); // sigma1_fft = (w_l(X) + B.sigma_1(X) + \gamma).(w_r(X) + B.sigma_2(X) + \gamma)
         fr::__mul(sigma1_fft.at(i), sigma3_fft.at(i), sigma1_fft.at(i)); // sigma1_fft = (w_l(X) + B.sigma_1(X) + \gamma).(w_r(X) + B.sigma_2(X) + \gamma).(w_o(X) + B.sigma_3(X) + \gamma)
         fr::__mul(sigma1_fft.at(i), z_fft.at(i + 4), sigma1_fft.at(i)); // sigma1_fft = (w_l(X) + B.sigma_1(X) + \gamma).(w_r(X) + B.sigma_2(X) + \gamma).(w_o(X) + B.sigma_3(X) + \gamma).Z(X.omega)
-        fr::neg(sigma1_fft.at(i), quotient_large.at(i)); // Q(X) -= (w_l(X) + B.sigma_1(X) + \gamma).(w_r(X) + B.sigma_2(X) + \gamma).(w_o(X) + B.sigma_3(X) + \gamma).Z(X.omega)
+        fr::__neg(sigma1_fft.at(i), quotient_large.at(i)); // Q(X) -= (w_l(X) + B.sigma_1(X) + \gamma).(w_r(X) + B.sigma_2(X) + \gamma).(w_o(X) + B.sigma_3(X) + \gamma).Z(X.omega)
     ITERATE_OVER_DOMAIN_END;
 }
 

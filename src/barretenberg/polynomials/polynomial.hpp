@@ -27,11 +27,13 @@ public:
     polynomial &operator=(const polynomial &other);
     ~polynomial();
 
+    barretenberg::fr::field_t &operator[](const size_t i) const { return coefficients[i]; }
+
     // void copy(const polynomial &other, const size_t target_max_size = 0);
     barretenberg::fr::field_t* get_coefficients() const { return coefficients; };
     size_t get_size() const { return size; };
     size_t get_max_size() const { return max_size; };
-    barretenberg::fr::field_t& at(size_t i) const { return coefficients[i]; };
+    barretenberg::fr::field_t& at(const size_t i) const { return coefficients[i]; };
     barretenberg::fr::field_t evaluate(const barretenberg::fr::field_t& z, const size_t target_size) const;
 
     void fft(const evaluation_domain &domain);

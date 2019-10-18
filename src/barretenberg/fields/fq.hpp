@@ -110,17 +110,26 @@ inline bool gt(const field_t &a, const field_t &b)
  **/
 inline void __mul_beta(const field_t &a, field_t &r)
 {
-    fq::__mul(a, beta, r);
+    __mul(a, beta, r);
 }
 
 /**
  * Negate field_t element `a`, mod `q`, place result in `r`
  **/
-inline void neg(const field_t &a, field_t &r)
+inline void __neg(const field_t &a, field_t &r)
 {
-    fq::__sub(modulus, a, r);
+    __sub(modulus, a, r);
 }
 
+/**
+ * Negate field_t element `a`, mod `q`, place result in `r`
+ **/
+inline field_t neg(const field_t &a)
+{
+    field_t r;
+    __neg(a, r);
+    return r;
+}
 /**
  * Convert a field element into montgomery form
  **/

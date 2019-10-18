@@ -9,17 +9,17 @@
 namespace waffle
 {
 
-class test_circuit_state
+class Prover
 {
 public:
-    test_circuit_state() = delete;
-    test_circuit_state(const size_t n);
-    test_circuit_state(const test_circuit_state& other) = delete;
-    test_circuit_state(test_circuit_state&& other) = delete;
-    test_circuit_state& operator=(const test_circuit_state &other) = delete;
-    test_circuit_state& operator=(test_circuit_state &&other) = delete;
+    Prover() = delete;
+    Prover(const size_t n);
+    Prover(Prover&& other);
+    Prover(const Prover& other) = delete;
+    Prover& operator=(const Prover &other) = delete;
+    Prover& operator=(Prover &&other) = delete;
 
-    ~test_circuit_state();
+    ~Prover();
 
     void compute_permutation_lagrange_base_full();
     void compute_wire_coefficients();

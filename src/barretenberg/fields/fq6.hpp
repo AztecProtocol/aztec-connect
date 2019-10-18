@@ -71,11 +71,11 @@ inline void sub(const fq6_t &a, const fq6_t &b, fq6_t &r)
     fq2::sub(a.c2, b.c2, r.c2);
 }
 
-inline void neg(const fq6_t &a, fq6_t &r)
+inline void __neg(const fq6_t &a, fq6_t &r)
 {
-    fq2::neg(a.c0, r.c0);
-    fq2::neg(a.c1, r.c1);
-    fq2::neg(a.c2, r.c2);
+    fq2::__neg(a.c0, r.c0);
+    fq2::__neg(a.c1, r.c1);
+    fq2::__neg(a.c2, r.c2);
 }
 
 inline void mul(const fq6_t &a, const fq6_t &b, fq6_t &r)

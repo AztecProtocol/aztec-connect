@@ -13,13 +13,13 @@ namespace barretenberg
 {
 namespace g1
 {
-inline void print(affine_element &p)
+inline void print(const affine_element &p)
 {
     printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
     printf("p.y: [%lx, %lx, %lx, %lx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
 }
 
-inline void print(element &p)
+inline void print(const element &p)
 {
     printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
     printf("p.y: [%lx, %lx, %lx, %lx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
@@ -609,7 +609,7 @@ inline void batch_normalize(element *points, size_t num_points)
     free(temporaries);
 }
 
-inline bool on_curve(affine_element &pt)
+inline bool on_curve(const affine_element &pt)
 {
     if (is_point_at_infinity(pt))
     {
@@ -628,7 +628,7 @@ inline bool on_curve(affine_element &pt)
     return fq::eq(xxx, yy);
 }
 
-inline bool on_curve(element &pt)
+inline bool on_curve(const element &pt)
 {
     if (is_point_at_infinity(pt))
     {
@@ -651,18 +651,18 @@ inline bool on_curve(element &pt)
     return fq::eq(xxx, yy);
 }
 
-inline void neg(const element &a, element &r)
+inline void __neg(const element &a, element &r)
 {
     fq::copy(a.x, r.x);
     fq::copy(a.y, r.y);
     fq::copy(a.z, r.z);
-    fq::neg(r.y, r.y);
+    fq::__neg(r.y, r.y);
 }
 
-inline void neg(const affine_element &a, affine_element &r)
+inline void __neg(const affine_element &a, affine_element &r)
 {
     fq::copy(a.x, r.x);
-    fq::neg(a.y, r.y);
+    fq::__neg(a.y, r.y);
 }
 
 inline void affine_to_jacobian(const affine_element &a, element &r)

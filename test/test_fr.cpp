@@ -230,7 +230,7 @@ TEST(fr, neg)
 {
     fr::field_t a = fr::random_element();
     fr::field_t b;
-    fr::neg(a, b);
+    fr::__neg(a, b);
     fr::field_t result;
     fr::__add(a, b, result);
     EXPECT_EQ(fr::eq(result, fr::zero()), true);

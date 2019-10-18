@@ -18,7 +18,7 @@ void generate_test_data(waffle::plonk_circuit_state& state)
     fr::field_t zero;
     fr::field_t minus_one;
     fr::one(one);
-    fr::neg(one, minus_one);
+    fr::__neg(one, minus_one);
     fr::zero(zero);
     fr::field_t T0;
     // even indices = mul gates, odd incides = add gates
@@ -48,7 +48,7 @@ void generate_test_data(waffle::plonk_circuit_state& state)
 
         fr::__add(state.w_l.at(2 * i + 1), state.w_r.at(2 * i + 1), T0);
         fr::__add(T0, state.w_o.at(2 * i + 1), state.q_c.at(2 * i + 1));
-        fr::neg(state.q_c.at(2 * i + 1), state.q_c.at(2 * i + 1));
+        fr::__neg(state.q_c.at(2 * i + 1), state.q_c.at(2 * i + 1));
         fr::one(state.q_l.at(2 * i + 1));
         fr::one(state.q_r.at(2 * i + 1));
         fr::one(state.q_o.at(2 * i + 1));

@@ -48,6 +48,9 @@ add_library(
     waffle/widget_prover.cpp
     waffle/widget_prover.hpp
     waffle/widget_verifier.hpp
+    waffle/composer/composer_base.hpp
+    waffle/composer/standard_composer.cpp
+    waffle/composer/standard_composer.hpp
 #   waffle/widgets/base_widget.hpp
 #   waffle/widgets/arithmetic_widget.cpp
 #   waffle/widgets/arithmetic_widget.hpp
@@ -113,6 +116,9 @@ add_executable(
     waffle/widget_prover.cpp
     waffle/widget_prover.hpp
     waffle/widget_verifier.hpp
+    waffle/composer/composer_base.hpp
+    waffle/composer/standard_composer.cpp
+    waffle/composer/standard_composer.hpp
 )
 
 target_link_libraries(

@@ -284,9 +284,19 @@ inline void __mul_lambda(field_t &a, field_t &r)
 /**
      * Negate field_t element `a`, mod `q`, place result in `r`
      **/
-inline void neg(const field_t &a, field_t &r)
+inline void __neg(const field_t &a, field_t &r)
 {
     __sub(modulus, a, r);
+}
+
+/**
+     * Negate field_t element `a`, mod `q`, place result in `r`
+     **/
+inline field_t neg(const field_t &a)
+{
+    field_t r;
+    __neg(a, r);
+    return r;
 }
 
 /**

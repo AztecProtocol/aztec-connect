@@ -76,10 +76,10 @@ inline void sub(const fq2_t &a, const fq2_t &b, fq2_t &r)
     fq::__sub(a.c1, b.c1, r.c1);
 }
 
-inline void neg(const fq2_t &a, fq2_t &r)
+inline void __neg(const fq2_t &a, fq2_t &r)
 {
-    fq::neg(a.c0, r.c0);
-    fq::neg(a.c1, r.c1);
+    fq::__neg(a.c0, r.c0);
+    fq::__neg(a.c1, r.c1);
 }
 
 inline void invert(const fq2_t &a, fq2_t &r)
@@ -100,13 +100,13 @@ inline void invert(const fq2_t &a, fq2_t &r)
     fq::__mul(a.c0, t3, r.c0);
     // c1 = - a.c1 / (a.c0*a.c0 + a.c1*a.c1)
     fq::__mul(a.c1, t3, r.c1);
-    fq::neg(r.c1, r.c1);
+    fq::__neg(r.c1, r.c1);
 }
 
 inline void frobenius_map(const fq2_t &a, fq2_t &r)
 {
     fq::copy(a.c0, r.c0);
-    fq::neg(a.c1, r.c1);
+    fq::__neg(a.c1, r.c1);
 }
 
 inline fq2_t one()

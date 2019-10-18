@@ -119,7 +119,7 @@ void generate_random_plonk_circuit(waffle::plonk_circuit_state &state)
         fr::__add(T0, T1, T0);
         fr::__add(T0, T2, T0);
         fr::__add(T0, state.q_c.at(i), T0);
-        fr::neg(T0, T0);
+        fr::__neg(T0, T0);
         fr::__mul(state.w_o.at(i), T0, state.w_o.at(i));
     }
     size_t shift = n / 2;
@@ -202,7 +202,7 @@ void generate_random_plonk_circuit(waffle::plonk_circuit_state &state)
 //     fr::field_t zero;
 //     fr::field_t minus_one;
 //     fr::one(one);
-//     fr::neg(one, minus_one);
+//     fr::__neg(one, minus_one);
 //     fr::zero(zero);
 //     fr::field_t T0;
 //     fr::field_t T1;
@@ -278,7 +278,7 @@ void generate_random_plonk_circuit(waffle::plonk_circuit_state &state)
 //         fr::__add(T0, T1, T0);
 //         fr::__add(T0, T2, T0);
 //         fr::__add(T0, state.q_c[i], T0);
-//         fr::neg(T0, T0);
+//         fr::__neg(T0, T0);
 //         fr::__mul(state.w_o[i], T0, state.w_o[i]);
 //     }
 //     size_t shift = n / 2;

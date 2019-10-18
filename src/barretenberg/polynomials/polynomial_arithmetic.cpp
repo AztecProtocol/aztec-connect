@@ -428,7 +428,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, const evaluation
     fr::field_t numerator_constant;
 
     // Compute w^{n-1}
-    fr::neg(src_domain.root_inverse, numerator_constant);
+    fr::__neg(src_domain.root_inverse, numerator_constant);
     // Compute first value of g.w_i
 
     // Step 5: iterate over point evaluations, scaling each one by the inverse of the vanishing polynomial
@@ -485,7 +485,7 @@ fr::field_t compute_kate_opening_coefficients(const fr::field_t *src, fr::field_
     fr::field_t f = evaluate(src, z, n);
     // compute (1 / -z)
     fr::field_t divisor;
-    fr::neg(z, divisor);
+    fr::__neg(z, divisor);
     fr::__invert(divisor, divisor);
 
     // we're about to shove these coefficients into a pippenger multi-exponentiation routine, where we need

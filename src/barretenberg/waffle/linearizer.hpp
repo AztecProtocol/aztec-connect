@@ -75,7 +75,7 @@ namespace waffle
         fr::__mul(T1, T0, T0);
         fr::__mul(T0, proof.z_1_shifted_eval, T0);
         fr::__mul(T0, alpha_pow[1], result.sigma_3);
-        fr::neg(result.sigma_3, result.sigma_3);
+        fr::__neg(result.sigma_3, result.sigma_3);
         fr::__mul(result.sigma_3, challenges.beta, result.sigma_3);
 
 

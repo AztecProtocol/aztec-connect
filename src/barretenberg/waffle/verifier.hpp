@@ -1,5 +1,5 @@
-#ifndef VERIFIER
-#define VERIFIER
+#ifndef VERIFIER_HPP
+#define VERIFIER_HPP
 
 #include "./challenge.hpp"
 #include "../groups/g2.hpp"
@@ -128,7 +128,7 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
 
-    fr::neg(batch_evaluation, batch_evaluation);
+    fr::__neg(batch_evaluation, batch_evaluation);
 
     fr::field_t z_omega_scalar;
     fr::__mul(challenges.z, domain.root, z_omega_scalar);
@@ -183,7 +183,7 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
 
     g1::mixed_add(P[1], proof.T_LO, P[1]);
     g1::mixed_add(P[0], proof.PI_Z, P[0]);
-    g1::neg(P[0], P[0]);
+    g1::__neg(P[0], P[0]);
     g1::batch_normalize(P, 2);
 
     g1::affine_element P_affine[2];

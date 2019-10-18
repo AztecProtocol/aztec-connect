@@ -309,7 +309,7 @@ TEST(fq, neg)
 {
     fq::field_t a = fq::random_element();
     fq::field_t b;
-    fq::neg(a, b);
+    fq::__neg(a, b);
     fq::field_t result;
     fq::__add(a, b, result);
     EXPECT_EQ(fq::eq(result, fq::zero()), true);

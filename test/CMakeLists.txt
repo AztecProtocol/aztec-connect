@@ -47,7 +47,7 @@ add_executable(
     test_prover.cpp
     test_verifier.cpp
     test_widget_verifier.cpp
-#    test_composer.cpp
+    test_composer.cpp
 )
 
 set_target_properties(

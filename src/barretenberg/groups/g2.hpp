@@ -369,11 +369,11 @@ inline void mul_by_q(const element &a, element &r)
     fq2::frobenius_map(a.z, r.z);
 }
 
-inline void neg(const element &a, element &r)
+inline void __neg(const element &a, element &r)
 {
     fq2::copy(a.x, r.x);
     fq2::copy(a.z, r.z);
-    fq2::neg(r.y, r.y);
+    fq2::__neg(r.y, r.y);
 }
 
 inline void copy(const element &a, element &r)

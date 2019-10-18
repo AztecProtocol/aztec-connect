@@ -206,7 +206,7 @@ inline void invert(const fq12_t &a, fq12_t &r)
     fq6::invert(T0, T0);
     fq6::mul(a.c0, T0, r.c0);
     fq6::mul(a.c1, T0, r.c1);
-    fq6::neg(r.c1, r.c1);
+    fq6::__neg(r.c1, r.c1);
 }
 
 inline void frobenius_map_three(const fq12_t &a, fq12_t &r)
@@ -242,7 +242,7 @@ inline void cyclotomic_squared(const fq12_t &a, fq12_t &r)
 inline void unitary_inverse(const fq12_t &a, fq12_t &r)
 {
     fq6::copy(a.c0, r.c0);
-    fq6::neg(a.c1, r.c1);
+    fq6::__neg(a.c1, r.c1);
 }
 
 inline fq12_t random_element()

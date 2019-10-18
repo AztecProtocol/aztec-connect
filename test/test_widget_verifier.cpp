@@ -13,7 +13,7 @@ namespace
 
 using namespace barretenberg;
 
-void generate_test_data(waffle::test_circuit_state& state, waffle::plonk_circuit_state &old_state)
+void generate_test_data(waffle::Prover& state, waffle::plonk_circuit_state &old_state)
 {
     size_t n = state.n;
     std::unique_ptr<waffle::ProverArithmeticWidget> widget = std::make_unique<waffle::ProverArithmeticWidget>(n);
@@ -24,7 +24,7 @@ void generate_test_data(waffle::test_circuit_state& state, waffle::plonk_circuit
     fr::field_t zero;
     fr::field_t minus_one;
     fr::one(one);
-    fr::neg(one, minus_one);
+    fr::__neg(one, minus_one);
     fr::zero(zero);
     fr::field_t T0;
     // even indices = mul gates, odd incides = add gates
@@ -50,7 +50,7 @@ void generate_test_data(waffle::test_circuit_state& state, waffle::plonk_circuit
 
         fr::__add(state.w_l.at(2 * i + 1), state.w_r.at(2 * i + 1), T0);
         fr::__add(T0, state.w_o.at(2 * i + 1), widget->q_c.at(2 * i + 1));
-        fr::neg(widget->q_c.at(2 * i + 1), widget->q_c.at(2 * i + 1));
+        fr::__neg(widget->q_c.at(2 * i + 1), widget->q_c.at(2 * i + 1));
         fr::one(widget->q_l.at(2 * i + 1));
         fr::one(widget->q_r.at(2 * i + 1));
         fr::one(widget->q_o.at(2 * i + 1));
@@ -133,7 +133,7 @@ TEST(widget_verifier, verify_arithmetic_proof)
 {
     size_t n = 1 << 14;
 
-    waffle::test_circuit_state state(n);
+    waffle::Prover state(n);
     waffle::plonk_circuit_state old_state(n);
 
     generate_test_data(state, old_state);
