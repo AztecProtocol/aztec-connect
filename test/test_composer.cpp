@@ -202,11 +202,11 @@ TEST(composer, test_add_gate_proofs)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::base_circuit_instance instance = waffle::compute_instance(prover);
+    waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
-    bool result = waffle::verifier::verify_proof(proof, instance, prover.reference_string.SRS_T2);
+    bool result = verifier.verify_proof(proof); // instance, prover.reference_string.SRS_T2);
     EXPECT_EQ(result, true);
 }
 
@@ -269,10 +269,10 @@ TEST(composer, test_mul_gate_proofs)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::base_circuit_instance instance = waffle::compute_instance(prover);
+    waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
-    bool result = waffle::verifier::verify_proof(proof, instance, prover.reference_string.SRS_T2);
+    bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }

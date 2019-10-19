@@ -1,6 +1,3 @@
-#ifndef verifier_HPP
-#define verifier_HPP
-
 #include "./verifier.hpp"
 
 #include "../challenge.hpp"
@@ -23,11 +20,47 @@ using namespace barretenberg;
 
 namespace waffle
 {
-namespace verifier
+Verifier::Verifier(const size_t subgroup_size) : n(subgroup_size) {}
+
+Verifier::Verifier(const Verifier &other) : n(other.n)
 {
-bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_instance &instance, const g2::affine_element &SRS_T2)
+    g2::copy_affine(other.G2_X, G2_X);
+    g1::copy_affine(other.SIGMA_1, SIGMA_1);
+    g1::copy_affine(other.SIGMA_2, SIGMA_2);
+    g1::copy_affine(other.SIGMA_3, SIGMA_3);
+}
+
+Verifier::Verifier(Verifier &&other) : n(other.n)
 {
-    evaluation_domain domain = evaluation_domain(instance.n);
+    g2::copy_affine(other.G2_X, G2_X);
+    g1::copy_affine(other.SIGMA_1, SIGMA_1);
+    g1::copy_affine(other.SIGMA_2, SIGMA_2);
+    g1::copy_affine(other.SIGMA_3, SIGMA_3);
+    for (size_t i = 0; i < other.verifier_widgets.size(); ++i)
+    {
+        verifier_widgets.emplace_back(std::move(other.verifier_widgets[i]));
+    }
+}
+
+Verifier& Verifier::operator=(Verifier &&other)
+{
+    n = other.n;
+    g2::copy_affine(other.G2_X, G2_X);
+    g1::copy_affine(other.SIGMA_1, SIGMA_1);
+    g1::copy_affine(other.SIGMA_2, SIGMA_2);
+    g1::copy_affine(other.SIGMA_3, SIGMA_3);
+    for (size_t i = 0; i < other.verifier_widgets.size(); ++i)
+    {
+        verifier_widgets.emplace_back(std::move(other.verifier_widgets[i]));
+    }
+    return *this;
+}
+
+Verifier::~Verifier() {}
+
+bool Verifier::verify_proof(const waffle::plonk_proof &proof)
+{
+    evaluation_domain domain = evaluation_domain(n);
 
     bool inputs_valid = g1::on_curve(proof.T_LO)
         && g1::on_curve(proof.T_MID)
@@ -46,9 +79,9 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_i
     }
     bool instance_valid = true;
 
-    for (size_t i = 0; i < instance.verifiers.size(); ++i)
+    for (size_t i = 0; i < verifier_widgets.size(); ++i)
     {
-        instance_valid = instance_valid && instance.verifiers[i]->verify_instance_commitments();
+        instance_valid = instance_valid && verifier_widgets[i]->verify_instance_commitments();
     }
     if (!instance_valid)
     {
@@ -81,7 +114,7 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_i
     polynomial_arithmetic::lagrange_evaluations lagrange_evals = polynomial_arithmetic::get_lagrange_evaluations(challenges.z, domain);
 
     // compute the terms we need to derive R(X)
-    plonk_linear_terms linear_terms = compute_linear_terms(proof, challenges, lagrange_evals.l_1, instance.n);
+    plonk_linear_terms linear_terms = compute_linear_terms(proof, challenges, lagrange_evals.l_1, n);
 
     // reconstruct evaluation of quotient polynomial from prover messages
     fr::field_t t_eval;
@@ -126,8 +159,8 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_i
 
     fr::field_t z_pow_n;
     fr::field_t z_pow_2n;
-    fr::__pow_small(challenges.z, instance.n, z_pow_n);
-    fr::__pow_small(challenges.z, instance.n * 2, z_pow_2n);
+    fr::__pow_small(challenges.z, n, z_pow_n);
+    fr::__pow_small(challenges.z, n * 2, z_pow_2n);
 
     challenges.nu = compute_linearisation_challenge(proof, t_eval);
 
@@ -197,13 +230,13 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_i
     elements.emplace_back(proof.W_O);
     scalars.emplace_back(nu_pow[3]);
 
-    elements.emplace_back(instance.SIGMA_1);
+    elements.emplace_back(SIGMA_1);
     scalars.emplace_back(nu_pow[4]);
 
-    elements.emplace_back(instance.SIGMA_2);
+    elements.emplace_back(SIGMA_2);
     scalars.emplace_back(nu_pow[5]);
 
-    elements.emplace_back(instance.SIGMA_3);
+    elements.emplace_back(SIGMA_3);
     scalars.emplace_back(linear_terms.sigma_3);
 
     elements.emplace_back(g1::affine_one());
@@ -222,9 +255,9 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_i
     scalars.emplace_back(z_pow_2n);
 
     fr::field_t alpha_base = challenges.alpha;
-    for (size_t i = 0; i < instance.verifiers.size(); ++i)
+    for (size_t i = 0; i < verifier_widgets.size(); ++i)
     {
-        alpha_base = instance.verifiers[i]->append_scalar_multiplication_inputs(
+        alpha_base = verifier_widgets[i]->append_scalar_multiplication_inputs(
             alpha_base,
             challenges.alpha,
             challenges.nu,
@@ -253,14 +286,12 @@ bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_i
     fq::copy(P[1].y, P_affine[1].y);
 
     g2::affine_element Q_affine[2];
-    g2::copy_affine(SRS_T2, Q_affine[0]);
+    g2::copy_affine(G2_X, Q_affine[0]);
     g2::copy_affine(g2::affine_one(), Q_affine[1]);
 
     fq12::fq12_t result = pairing::reduced_ate_pairing_batch(P_affine, Q_affine, 2);
 
     return fq12::eq(result, fq12::one());
 }
-} // namespace verifier
-} // namespace waffle
 
-#endif
+} // namespace waffle

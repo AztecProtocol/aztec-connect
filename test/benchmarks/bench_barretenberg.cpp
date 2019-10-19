@@ -176,7 +176,7 @@ struct global_vars
 {
     alignas(32) g1::affine_element g1_pair_points[2];
     alignas(32) g2::affine_element g2_pair_points[2];
-    std::vector<waffle::base_circuit_instance> plonk_instances;
+    std::vector<waffle::Verifier> plonk_instances;
     waffle::plonk_proof plonk_proof;
     std::vector<waffle::plonk_proof> plonk_proofs;
     srs::plonk_srs reference_string;
@@ -279,7 +279,7 @@ void construct_instances_bench(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
-        globals.plonk_instances[idx] = waffle::compute_instance(plonk_circuit_states[idx]);
+        globals.plonk_instances[idx] = waffle::preprocess(plonk_circuit_states[idx]);
         // waffle::plonk_proof proof = waffle::construct_proof(globals.plonk_states[idx], globals.reference_string);
         state.PauseTiming();
         // bool res = waffle::verifier::verify_proof(proof, globals.plonk_instances[idx], globals.reference_string.SRS_T2);
@@ -321,7 +321,7 @@ void verify_proof_bench(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
-        bool res = waffle::verifier::verify_proof(globals.plonk_proofs[idx], globals.plonk_instances[idx], globals.reference_string.SRS_T2);
+        bool res = globals.plonk_instances[idx].verify_proof(globals.plonk_proofs[idx]); // waffle::verifier::verify_proof(globals.plonk_proofs[idx], globals.plonk_instances[idx], globals.reference_string.SRS_T2);
         state.PauseTiming();
         if (!res)
         {

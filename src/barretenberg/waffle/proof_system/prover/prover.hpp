@@ -36,6 +36,7 @@ public:
     void reset();
 
     size_t n;
+
     barretenberg::polynomial w_l;
     barretenberg::polynomial w_r;
     barretenberg::polynomial w_o;
@@ -46,6 +47,7 @@ public:
 
     barretenberg::polynomial r;
 
+    // TODO change to fft_state;
     waffle::CircuitFFTState circuit_state;
 
     std::vector<uint32_t> sigma_1_mapping;

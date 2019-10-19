@@ -118,13 +118,13 @@ TEST(verifier, verify_arithmetic_proof_small)
 
     generate_test_data(state);
 
-    waffle::base_circuit_instance instance = waffle::compute_instance(state);
+    waffle::Verifier verifier = waffle::preprocess(state);
 
     // construct proof
     waffle::plonk_proof proof = state.construct_proof();
     
     // verify proof
-    bool result = waffle::verifier::verify_proof(proof, instance, state.reference_string.SRS_T2);
+    bool result = verifier.verify_proof(proof);
 
     EXPECT_EQ(result, true);
 }
@@ -138,13 +138,13 @@ TEST(verifier, verify_arithmetic_proof)
 
     generate_test_data(state);
 
-    waffle::base_circuit_instance instance = waffle::compute_instance(state);
+    waffle::Verifier verifier = waffle::preprocess(state);
 
     // construct proof
     waffle::plonk_proof proof = state.construct_proof();
     
     // verify proof
-    bool result = waffle::verifier::verify_proof(proof, instance, state.reference_string.SRS_T2);
+    bool result = verifier.verify_proof(proof);
 
     EXPECT_EQ(result, true);
 }

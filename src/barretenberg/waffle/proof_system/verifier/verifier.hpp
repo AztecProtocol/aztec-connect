@@ -7,10 +7,30 @@
 
 namespace waffle
 {
-namespace verifier
+class Verifier
 {
-bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_instance &instance, const barretenberg::g2::affine_element &SRS_T2);
-} // namespace verifier
+public:
+    Verifier(const size_t subgroup_size = 0);
+    Verifier(const Verifier &other);
+    Verifier(Verifier &&other);
+    Verifier& operator=(Verifier &&other);
+
+    ~Verifier();
+
+    bool verify_proof(const plonk_proof &proof);
+
+    barretenberg::g2::affine_element G2_X;
+    barretenberg::g1::affine_element SIGMA_1;
+    barretenberg::g1::affine_element SIGMA_2;
+    barretenberg::g1::affine_element SIGMA_3;
+    std::vector<std::unique_ptr<VerifierBaseWidget> > verifier_widgets;
+    size_t n;
+};
+
+// namespace verifier
+// {
+// bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_instance &instance, const barretenberg::g2::affine_element &SRS_T2);
+// } // namespace verifier
 } // namespace waffle
 
 #endif
