@@ -239,7 +239,7 @@ void batched_scalar_multiplications(multiplication_state *mul_state, size_t num_
     size_t num_threads = 1;
 #endif
 
-    if (num_exponentiations <= num_threads)
+    if (num_elements * 32 <= num_threads)
     {
         num_threads = 1;
     }

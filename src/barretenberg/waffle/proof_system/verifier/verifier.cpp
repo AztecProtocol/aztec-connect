@@ -1,26 +1,31 @@
-#ifndef WIDGET_VERIFIER_HPP
-#define WIDGET_VERIFIER_HPP
+#ifndef verifier_HPP
+#define verifier_HPP
 
-#include "./challenge.hpp"
-#include "../groups/g1.hpp"
-#include "../groups/g2.hpp"
-#include "../fields/fq12.hpp"
-#include "../groups/pairing.hpp"
-#include "../polynomials/evaluation_domain.hpp"
-#include "../polynomials/polynomial_arithmetic.hpp"
-#include "linearizer.hpp"
+#include "./verifier.hpp"
 
-#include "../types.hpp"
-#include "./widgets/widget_base.hpp"
-#include "../groups/scalar_multiplication.hpp"
+#include "../challenge.hpp"
+#include "../../../groups/g1.hpp"
+#include "../../../groups/g2.hpp"
+#include "../../../fields/fq12.hpp"
+#include "../../../groups/pairing.hpp"
+#include "../../../polynomials/evaluation_domain.hpp"
+#include "../../../polynomials/polynomial_arithmetic.hpp"
+
+#include "../../../types.hpp"
+#include "../widgets/base_widget.hpp"
+#include "../../../groups/scalar_multiplication.hpp"
+
+
+#include "../linearizer.hpp"
+
+
+using namespace barretenberg;
 
 namespace waffle
 {
-using namespace barretenberg;
-namespace test_verifier
+namespace verifier
 {
-
-inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_instance &instance, const g2::affine_element &SRS_T2)
+bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_instance &instance, const g2::affine_element &SRS_T2)
 {
     evaluation_domain domain = evaluation_domain(instance.n);
 
@@ -41,9 +46,9 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_ci
     }
     bool instance_valid = true;
 
-    for (size_t i = 0; i < instance.widget_verifiers.size(); ++i)
+    for (size_t i = 0; i < instance.verifiers.size(); ++i)
     {
-        instance_valid = instance_valid && instance.widget_verifiers[i]->verify_instance_commitments();
+        instance_valid = instance_valid && instance.verifiers[i]->verify_instance_commitments();
     }
     if (!instance_valid)
     {
@@ -217,9 +222,9 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_ci
     scalars.emplace_back(z_pow_2n);
 
     fr::field_t alpha_base = challenges.alpha;
-    for (size_t i = 0; i < instance.widget_verifiers.size(); ++i)
+    for (size_t i = 0; i < instance.verifiers.size(); ++i)
     {
-        alpha_base = instance.widget_verifiers[i]->append_scalar_multiplication_inputs(
+        alpha_base = instance.verifiers[i]->append_scalar_multiplication_inputs(
             alpha_base,
             challenges.alpha,
             challenges.nu,
@@ -253,7 +258,7 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_ci
 
     fq12::fq12_t result = pairing::reduced_ate_pairing_batch(P_affine, Q_affine, 2);
 
-    return fq12::eq(result, fq12::one()); // wheeee
+    return fq12::eq(result, fq12::one());
 }
 } // namespace verifier
 } // namespace waffle

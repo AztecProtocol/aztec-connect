@@ -1,15 +1,17 @@
-#include "./widget_prover.hpp"
+#include "./prover.hpp"
 
-#include "../groups/g1.hpp"
-#include "../groups/scalar_multiplication.hpp"
-#include "../polynomials/polynomial_arithmetic.hpp"
-#include "../polynomials/polynomial.hpp"
-#include "../fields/fr.hpp"
-#include "./linearizer.hpp"
-#include "./challenge.hpp"
-#include "./permutation.hpp"
-#include "../io/io.hpp"
-#include "./widgets/widget_base.hpp"
+#include "../../../groups/g1.hpp"
+#include "../../../groups/scalar_multiplication.hpp"
+#include "../../../polynomials/polynomial_arithmetic.hpp"
+#include "../../../polynomials/polynomial.hpp"
+#include "../../../fields/fr.hpp"
+#include "../../../io/io.hpp"
+
+#include "../widgets/base_widget.hpp"
+
+#include "../linearizer.hpp"
+#include "../challenge.hpp"
+#include "../permutation.hpp"
 
 using namespace barretenberg;
 

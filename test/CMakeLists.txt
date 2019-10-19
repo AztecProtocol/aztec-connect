@@ -45,8 +45,8 @@ add_executable(
     test_polynomial_arithmetic.cpp
     test_preprocess.cpp
     test_prover.cpp
-    test_widget_verifier.cpp
-    test_widget_verifier.cpp
+    test_verifier.cpp
+    test_verifier.cpp
     test_composer.cpp
 )
 

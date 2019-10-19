@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/waffle/widget_prover.hpp>
-#include <barretenberg/waffle/preprocess.hpp>
-#include <barretenberg/waffle/widget_verifier.hpp>
+#include <barretenberg/waffle/proof_system/prover/prover.hpp>
+#include <barretenberg/waffle/proof_system/preprocess.hpp>
+#include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
-#include <barretenberg/waffle/widgets/arithmetic_widget.hpp>
+#include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
 #include <memory>
 namespace
 {
@@ -110,7 +110,7 @@ void generate_test_data(waffle::Prover& state)
 }
 
 
-TEST(widget_verifier, verify_arithmetic_proof_small)
+TEST(verifier, verify_arithmetic_proof_small)
 {
     size_t n = 16;
 
@@ -118,19 +118,19 @@ TEST(widget_verifier, verify_arithmetic_proof_small)
 
     generate_test_data(state);
 
-    waffle::base_circuit_instance instance = waffle::test_construct_instance(state);
+    waffle::base_circuit_instance instance = waffle::compute_instance(state);
 
     // construct proof
     waffle::plonk_proof proof = state.construct_proof();
     
     // verify proof
-    bool result = waffle::test_verifier::verify_proof(proof, instance, state.reference_string.SRS_T2);
+    bool result = waffle::verifier::verify_proof(proof, instance, state.reference_string.SRS_T2);
 
     EXPECT_EQ(result, true);
 }
 
 
-TEST(widget_verifier, verify_arithmetic_proof)
+TEST(verifier, verify_arithmetic_proof)
 {
     size_t n = 1 << 14;
 
@@ -138,13 +138,13 @@ TEST(widget_verifier, verify_arithmetic_proof)
 
     generate_test_data(state);
 
-    waffle::base_circuit_instance instance = waffle::test_construct_instance(state);
+    waffle::base_circuit_instance instance = waffle::compute_instance(state);
 
     // construct proof
     waffle::plonk_proof proof = state.construct_proof();
     
     // verify proof
-    bool result = waffle::test_verifier::verify_proof(proof, instance, state.reference_string.SRS_T2);
+    bool result = waffle::verifier::verify_proof(proof, instance, state.reference_string.SRS_T2);
 
     EXPECT_EQ(result, true);
 }

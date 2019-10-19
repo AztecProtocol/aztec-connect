@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/waffle/widgets/arithmetic_widget.hpp>
-#include <barretenberg/waffle/widget_prover.hpp>
-#include <barretenberg/waffle/permutation.hpp>
+#include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
+#include <barretenberg/waffle/proof_system/prover/prover.hpp>
+#include <barretenberg/waffle/proof_system/permutation.hpp>
 #include <barretenberg/polynomials/polynomial.hpp>
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 

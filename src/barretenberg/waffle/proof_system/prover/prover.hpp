@@ -1,10 +1,10 @@
-#ifndef WIDGET_PROVER_HPP
-#define WIDGET_PROVER_HPP
+#ifndef prover_HPP
+#define prover_HPP
 
-#include "../types.hpp"
-#include "../polynomials/polynomial.hpp"
+#include "../../../types.hpp"
+#include "../../../polynomials/polynomial.hpp"
 
-#include "./widgets/widget_base.hpp"
+#include "../widgets/base_widget.hpp"
 
 namespace waffle
 {
@@ -46,14 +46,14 @@ public:
 
     barretenberg::polynomial r;
 
-    waffle::base_circuit_state circuit_state;
+    waffle::CircuitFFTState circuit_state;
 
     std::vector<uint32_t> sigma_1_mapping;
     std::vector<uint32_t> sigma_2_mapping;
     std::vector<uint32_t> sigma_3_mapping;
 
     // Hmm, mixing runtime polymorphism and zero-knowledge proof generation. This seems fine...
-    std::vector<std::unique_ptr<ProverWidgetBase> > widgets;
+    std::vector<std::unique_ptr<ProverBaseWidget> > widgets;
     plonk_challenges challenges;
     plonk_proof proof;
     srs::plonk_srs reference_string;

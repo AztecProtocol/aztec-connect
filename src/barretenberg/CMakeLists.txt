@@ -35,26 +35,20 @@ add_library(
     polynomials/polynomial_arithmetic.hpp
     polynomials/polynomial.cpp
     polynomials/polynomial.hpp
-    waffle/linearizer.hpp
-    waffle/challenge.hpp
-    waffle/permutation.hpp
-    waffle/preprocess.hpp
-    waffle/widgets/widget_base.hpp
-    waffle/widgets/arithmetic_widget.cpp
-    waffle/widgets/arithmetic_widget.hpp
-    waffle/widget_prover.cpp
-    waffle/widget_prover.hpp
-    waffle/widget_verifier.hpp
+    waffle/proof_system/linearizer.hpp
+    waffle/proof_system/challenge.hpp
+    waffle/proof_system/permutation.hpp
+    waffle/proof_system/preprocess.hpp
+    waffle/proof_system/widgets/base_widget.hpp
+    waffle/proof_system/widgets/arithmetic_widget.cpp
+    waffle/proof_system/widgets/arithmetic_widget.hpp
+    waffle/proof_system/prover/prover.cpp
+    waffle/proof_system/prover/prover.hpp
+    waffle/proof_system/verifier/verifier.cpp
+    waffle/proof_system/verifier/verifier.hpp
     waffle/composer/composer_base.hpp
     waffle/composer/standard_composer.cpp
     waffle/composer/standard_composer.hpp
-#   waffle/widgets/base_widget.hpp
-#   waffle/widgets/arithmetic_widget.cpp
-#   waffle/widgets/arithmetic_widget.hpp
-#    waffle/composer/composer.cpp
-#    waffle/composer/composer.hpp
-#    waffle/circuits/mimc.cpp
-#    waffle/circuits/mimc.hpp
 )
 
 set_target_properties(
@@ -100,16 +94,17 @@ add_executable(
     polynomials/polynomial_arithmetic.hpp
     polynomials/polynomial.cpp
     polynomials/polynomial.hpp
-    waffle/linearizer.hpp
-    waffle/challenge.hpp
-    waffle/permutation.hpp
-    waffle/preprocess.hpp
-    waffle/widgets/widget_base.hpp
-    waffle/widgets/arithmetic_widget.cpp
-    waffle/widgets/arithmetic_widget.hpp
-    waffle/widget_prover.cpp
-    waffle/widget_prover.hpp
-    waffle/widget_verifier.hpp
+    waffle/proof_system/linearizer.hpp
+    waffle/proof_system/challenge.hpp
+    waffle/proof_system/permutation.hpp
+    waffle/proof_system/preprocess.hpp
+    waffle/proof_system/widgets/base_widget.hpp
+    waffle/proof_system/widgets/arithmetic_widget.cpp
+    waffle/proof_system/widgets/arithmetic_widget.hpp
+    waffle/proof_system/prover/prover.cpp
+    waffle/proof_system/prover/prover.hpp
+    waffle/proof_system/verifier/verifier.cpp
+    waffle/proof_system/verifier/verifier.hpp
     waffle/composer/composer_base.hpp
     waffle/composer/standard_composer.cpp
     waffle/composer/standard_composer.hpp

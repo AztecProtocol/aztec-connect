@@ -130,9 +130,11 @@ evaluation_domain::evaluation_domain(evaluation_domain&& other):
     {
         free(roots);
     }
-    roots = other.roots; // yoink!
-    std::copy(other.round_roots.begin(), other.round_roots.end(), round_roots.begin());
-    std::copy(other.inverse_round_roots.begin(), other.inverse_round_roots.end(), round_roots.begin());
+    roots = other.roots;
+    round_roots = std::move(other.round_roots);
+    inverse_round_roots = std::move(other.inverse_round_roots);
+    // std::copy(other.round_roots.begin(), other.round_roots.end(), round_roots.begin());
+    // std::copy(other.inverse_round_roots.begin(), other.inverse_round_roots.end(), round_roots.begin());
 }
 
 evaluation_domain::~evaluation_domain()

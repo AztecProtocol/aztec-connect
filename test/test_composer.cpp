@@ -1,11 +1,12 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/waffle/widget_prover.hpp>
-#include <barretenberg/waffle/preprocess.hpp>
-#include <barretenberg/waffle/widget_verifier.hpp>
-#include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 #include <barretenberg/waffle/composer/standard_composer.hpp>
-#include <barretenberg/waffle/widgets/arithmetic_widget.hpp>
+#include <barretenberg/waffle/proof_system/preprocess.hpp>
+#include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
+#include <barretenberg/waffle/proof_system/prover/prover.hpp>
+#include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
+
+#include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 #include <memory>
 namespace
 {
@@ -201,11 +202,11 @@ TEST(composer, test_add_gate_proofs)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::base_circuit_instance instance = waffle::test_construct_instance(prover);
+    waffle::base_circuit_instance instance = waffle::compute_instance(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
-    bool result = waffle::test_verifier::verify_proof(proof, instance, prover.reference_string.SRS_T2);
+    bool result = waffle::verifier::verify_proof(proof, instance, prover.reference_string.SRS_T2);
     EXPECT_EQ(result, true);
 }
 
@@ -249,13 +250,29 @@ TEST(composer, test_mul_gate_proofs)
     composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
     composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
     composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::base_circuit_instance instance = waffle::test_construct_instance(prover);
+    waffle::base_circuit_instance instance = waffle::compute_instance(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
-    bool result = waffle::test_verifier::verify_proof(proof, instance, prover.reference_string.SRS_T2);
+    bool result = waffle::verifier::verify_proof(proof, instance, prover.reference_string.SRS_T2);
     EXPECT_EQ(result, true);
 }

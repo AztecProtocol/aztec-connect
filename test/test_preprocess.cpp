@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/waffle/preprocess.hpp>
-#include <barretenberg/waffle/permutation.hpp>
+#include <barretenberg/waffle/proof_system/preprocess.hpp>
+#include <barretenberg/waffle/proof_system/permutation.hpp>
 #include <barretenberg/polynomials/polynomial.hpp>
-#include <barretenberg/waffle/widgets/arithmetic_widget.hpp>
+#include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
 #include <barretenberg/groups/g1.hpp>
 
 using namespace barretenberg;
@@ -73,7 +73,7 @@ TEST(preprocess, preprocess)
 
     g1::affine_element* cached = state.reference_string.monomials;
     state.reference_string.monomials = monomials;
-    waffle::base_circuit_instance instance = waffle::test_construct_instance(state);
+    waffle::base_circuit_instance instance = waffle::compute_instance(state);
     state.sigma_1.resize(n);
     state.sigma_2.resize(n);
     state.sigma_3.resize(n);
@@ -117,11 +117,11 @@ TEST(preprocess, preprocess)
     EXPECT_EQ(g1::eq(instance.SIGMA_1, sigma_1_expected), true);
     EXPECT_EQ(g1::eq(instance.SIGMA_2, sigma_2_expected), true);
     EXPECT_EQ(g1::eq(instance.SIGMA_3, sigma_3_expected), true);
-    EXPECT_EQ(g1::eq(instance.widget_verifiers[0]->instance[0], q_m_expected), true);
-    EXPECT_EQ(g1::eq(instance.widget_verifiers[0]->instance[1], q_l_expected), true);
-    EXPECT_EQ(g1::eq(instance.widget_verifiers[0]->instance[2], q_r_expected), true);
-    EXPECT_EQ(g1::eq(instance.widget_verifiers[0]->instance[3], q_o_expected), true);
-    EXPECT_EQ(g1::eq(instance.widget_verifiers[0]->instance[4], q_c_expected), true);
+    EXPECT_EQ(g1::eq(instance.verifiers[0]->instance[0], q_m_expected), true);
+    EXPECT_EQ(g1::eq(instance.verifiers[0]->instance[1], q_l_expected), true);
+    EXPECT_EQ(g1::eq(instance.verifiers[0]->instance[2], q_r_expected), true);
+    EXPECT_EQ(g1::eq(instance.verifiers[0]->instance[3], q_o_expected), true);
+    EXPECT_EQ(g1::eq(instance.verifiers[0]->instance[4], q_c_expected), true);
     EXPECT_EQ(instance.n, n);
 
     state.reference_string.monomials = cached;

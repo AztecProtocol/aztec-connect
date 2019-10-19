@@ -18,10 +18,10 @@ using namespace benchmark;
 #include <barretenberg/groups/scalar_multiplication.hpp>
 #include <barretenberg/groups/pairing.hpp>
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
-#include <barretenberg/waffle/widget_verifier.hpp>
-#include <barretenberg/waffle/widget_prover.hpp>
-#include <barretenberg/waffle/widgets/arithmetic_widget.hpp>
-#include <barretenberg/waffle/preprocess.hpp>
+#include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
+#include <barretenberg/waffle/proof_system/prover/prover.hpp>
+#include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
+#include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/io/io.hpp>
 
 using namespace barretenberg;
@@ -41,11 +41,6 @@ void generate_random_plonk_circuit(waffle::Prover &state)
     state.w_l.resize(n);
     state.w_r.resize(n);
     state.w_o.resize(n);
-    widget->q_m.resize(n);
-    widget->q_l.resize(n);
-    widget->q_r.resize(n);
-    widget->q_o.resize(n);
-    widget->q_c.resize(n);
 
     fr::field_t T0;
     fr::field_t T1;
@@ -181,7 +176,6 @@ struct global_vars
 {
     alignas(32) g1::affine_element g1_pair_points[2];
     alignas(32) g2::affine_element g2_pair_points[2];
-    waffle::circuit_instance plonk_instance;
     std::vector<waffle::base_circuit_instance> plonk_instances;
     waffle::plonk_proof plonk_proof;
     std::vector<waffle::plonk_proof> plonk_proofs;
@@ -285,10 +279,9 @@ void construct_instances_bench(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
-        waffle::base_circuit_instance instance = waffle::test_construct_instance(plonk_circuit_states[idx]);
+        globals.plonk_instances[idx] = waffle::compute_instance(plonk_circuit_states[idx]);
         // waffle::plonk_proof proof = waffle::construct_proof(globals.plonk_states[idx], globals.reference_string);
         state.PauseTiming();
-        globals.plonk_instances[idx] = std::move(instance);
         // bool res = waffle::verifier::verify_proof(proof, globals.plonk_instances[idx], globals.reference_string.SRS_T2);
         // if (res == false)
         // {
@@ -297,7 +290,7 @@ void construct_instances_bench(State& state) noexcept
         state.ResumeTiming();
     }
 }
-BENCHMARK(construct_instances_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
+BENCHMARK(construct_instances_bench)->RangeMultiplier(2)->Range(START, START * 4/*MAX_GATES*/);
 
 
 void construct_proof_bench(State& state) noexcept
@@ -308,7 +301,9 @@ void construct_proof_bench(State& state) noexcept
         waffle::plonk_proof proof = plonk_circuit_states[idx].construct_proof();
         state.PauseTiming();
         globals.plonk_proofs[idx] = (proof);
-        plonk_circuit_states[idx].reset();
+        // printf("foo\n");
+       //  plonk_circuit_states[idx].reset();
+        // printf("bar\n");
         // bool res = waffle::verifier::verify_proof(proof, globals.plonk_instances[idx], globals.reference_string.SRS_T2);
         // if (res == false)
         // {
@@ -326,7 +321,7 @@ void verify_proof_bench(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
-        bool res = waffle::test_verifier::verify_proof(globals.plonk_proofs[idx], globals.plonk_instances[idx], globals.reference_string.SRS_T2);
+        bool res = waffle::verifier::verify_proof(globals.plonk_proofs[idx], globals.plonk_instances[idx], globals.reference_string.SRS_T2);
         state.PauseTiming();
         if (!res)
         {
