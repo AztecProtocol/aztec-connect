@@ -170,6 +170,7 @@ TEST(composer, test_add_gate_proofs)
 
     composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({b_idx, a_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });

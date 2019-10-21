@@ -42,6 +42,8 @@ add_library(
     waffle/proof_system/widgets/base_widget.hpp
     waffle/proof_system/widgets/arithmetic_widget.cpp
     waffle/proof_system/widgets/arithmetic_widget.hpp
+    waffle/proof_system/widgets/mimc_widget.cpp
+    waffle/proof_system/widgets/mimc_widget.hpp
     waffle/proof_system/prover/prover.cpp
     waffle/proof_system/prover/prover.hpp
     waffle/proof_system/verifier/verifier.cpp
@@ -49,6 +51,10 @@ add_library(
     waffle/composer/composer_base.hpp
     waffle/composer/standard_composer.cpp
     waffle/composer/standard_composer.hpp
+    waffle/composer/mimc_composer.cpp
+    waffle/composer/mimc_composer.hpp
+    waffle/pstd/field/field.tcc
+    waffle/pstd/field/field.hpp
 )
 
 set_target_properties(
@@ -101,6 +107,8 @@ add_executable(
     waffle/proof_system/widgets/base_widget.hpp
     waffle/proof_system/widgets/arithmetic_widget.cpp
     waffle/proof_system/widgets/arithmetic_widget.hpp
+    waffle/proof_system/widgets/mimc_widget.cpp
+    waffle/proof_system/widgets/mimc_widget.hpp
     waffle/proof_system/prover/prover.cpp
     waffle/proof_system/prover/prover.hpp
     waffle/proof_system/verifier/verifier.cpp
@@ -108,6 +116,10 @@ add_executable(
     waffle/composer/composer_base.hpp
     waffle/composer/standard_composer.cpp
     waffle/composer/standard_composer.hpp
+    waffle/composer/mimc_composer.cpp
+    waffle/composer/mimc_composer.hpp
+    waffle/pstd/field/field.tcc
+    waffle/pstd/field/field.hpp
 )
 
 target_link_libraries(

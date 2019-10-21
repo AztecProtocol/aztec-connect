@@ -47,7 +47,9 @@ add_executable(
     test_prover.cpp
     test_verifier.cpp
     test_verifier.cpp
-    test_composer.cpp
+    test_standard_composer.cpp
+    test_mimc_composer.cpp
+    test_pstd_field.cpp
 )
 
 set_target_properties(

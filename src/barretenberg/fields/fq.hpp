@@ -7,6 +7,12 @@
 #include "../assert.hpp"
 #include "../types.hpp"
 
+// TODO: make interface consistent
+// 1: remove unneccessary forward declaration of assembly/int128 methods
+// 2: all methods that pass in a reference to the return value should be prefixed by __
+// 3: all methods that have a __ prefix, should have a partner method that returns by value
+// 4: this should be consistent with fr
+ 
 namespace barretenberg
 {
 namespace fq

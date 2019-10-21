@@ -1,8 +1,9 @@
-#ifndef TYPES
-#define TYPES
+#ifndef TYPES_HPP
+#define TYPES_HPP
 
 #include "stdint.h"
 #include "stddef.h"
+#include <vector>
 
 #ifndef BARRETENBERG_SRS_PATH
 #define BARRETENBERG_SRS_PATH ""
@@ -220,6 +221,13 @@ struct plonk_proof
     barretenberg::fr::field_t sigma_2_eval;
     barretenberg::fr::field_t z_1_shifted_eval;
     barretenberg::fr::field_t linear_eval;
+
+    barretenberg::fr::field_t w_l_shifted_eval;
+    barretenberg::fr::field_t w_r_shifted_eval;
+    barretenberg::fr::field_t w_o_shifted_eval;
+    barretenberg::fr::field_t q_c_eval;
+    barretenberg::fr::field_t q_mimc_coefficient_eval;
+    std::vector<barretenberg::fr::field_t> custom_gate_evaluations;
 };
 } // namespace waffle
 

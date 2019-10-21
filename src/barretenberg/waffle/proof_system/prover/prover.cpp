@@ -38,7 +38,6 @@ sigma_1_mapping(std::move(other.sigma_1_mapping)),
 sigma_2_mapping(std::move(other.sigma_2_mapping)),
 sigma_3_mapping(std::move(other.sigma_3_mapping))
 {
-    printf("other n = %lu\n", other.n);
     for (size_t i = 0; i < other.widgets.size(); ++i)
     {
         widgets.emplace_back(std::move(other.widgets[i]));
@@ -297,8 +296,6 @@ void Prover::compute_identity_grand_product_coefficients(polynomial &z_fft)
     fr::field_t right_shift = fr::multiplicative_generator();
     fr::field_t output_shift = fr::alternate_multiplicative_generator();
 
-
-
 #ifndef NO_MULTITHREADING
     #pragma omp parallel for
 #endif
@@ -397,11 +394,6 @@ void Prover::compute_identity_grand_product_coefficients(polynomial &z_fft)
     ITERATE_OVER_DOMAIN_END;
 }
 
-void Prover::compute_arithmetisation_coefficients()
-{
-
-}
-
 void Prover::compute_quotient_polynomial()
 {
     circuit_state.quotient_large.resize(4 * n);
@@ -415,12 +407,28 @@ void Prover::compute_quotient_polynomial()
 
     compute_z_commitment();
 
-    circuit_state.w_l_fft = polynomial(w_l, 4 * n);
-    circuit_state.w_r_fft = polynomial(w_r, 4 * n);
-    circuit_state.w_o_fft = polynomial(w_o, 4 * n);
+    circuit_state.w_l_fft = polynomial(w_l, 4 * n + 4);
+    circuit_state.w_r_fft = polynomial(w_r, 4 * n + 4);
+    circuit_state.w_o_fft = polynomial(w_o, 4 * n + 4);
+
+    // // TODO REMOVE
     circuit_state.w_l_fft.coset_fft(circuit_state.large_domain);
     circuit_state.w_r_fft.coset_fft(circuit_state.large_domain);
     circuit_state.w_o_fft.coset_fft(circuit_state.large_domain);
+
+
+    circuit_state.w_l_fft.add_lagrange_base_coefficient(circuit_state.w_l_fft[0]);
+    circuit_state.w_l_fft.add_lagrange_base_coefficient(circuit_state.w_l_fft[1]);
+    circuit_state.w_l_fft.add_lagrange_base_coefficient(circuit_state.w_l_fft[2]);
+    circuit_state.w_l_fft.add_lagrange_base_coefficient(circuit_state.w_l_fft[3]);
+    circuit_state.w_r_fft.add_lagrange_base_coefficient(circuit_state.w_r_fft[0]);
+    circuit_state.w_r_fft.add_lagrange_base_coefficient(circuit_state.w_r_fft[1]);
+    circuit_state.w_r_fft.add_lagrange_base_coefficient(circuit_state.w_r_fft[2]);
+    circuit_state.w_r_fft.add_lagrange_base_coefficient(circuit_state.w_r_fft[3]);
+    circuit_state.w_o_fft.add_lagrange_base_coefficient(circuit_state.w_o_fft[0]);
+    circuit_state.w_o_fft.add_lagrange_base_coefficient(circuit_state.w_o_fft[1]);
+    circuit_state.w_o_fft.add_lagrange_base_coefficient(circuit_state.w_o_fft[2]);
+    circuit_state.w_o_fft.add_lagrange_base_coefficient(circuit_state.w_o_fft[3]);
     polynomial z_fft(z, 4 * n + 4);
 
     compute_permutation_grand_product_coefficients(z_fft);
@@ -431,15 +439,19 @@ void Prover::compute_quotient_polynomial()
     fr::copy(challenges.alpha, alpha_base);
     for (size_t i = 0; i < widgets.size(); ++i)
     {
+        // TODO: alpha here overlaps with the permutation checks. FIX FIX FIX FIX FIX
         alpha_base = widgets[i]->compute_quotient_contribution(alpha_base, challenges.alpha, circuit_state);
     }
-    // compute_arithmetisation_coefficients();
 
     polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(circuit_state.quotient_mid.get_coefficients(), circuit_state.small_domain, circuit_state.mid_domain);
     polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(circuit_state.quotient_large.get_coefficients(), circuit_state.small_domain, circuit_state.large_domain);
 
+
     circuit_state.quotient_mid.coset_ifft(circuit_state.mid_domain);
+    // TODO FIX AFTER DEBUG
+
     circuit_state.quotient_large.coset_ifft(circuit_state.large_domain);
+
 
     ITERATE_OVER_DOMAIN_START(circuit_state.mid_domain);
         fr::__add(circuit_state.quotient_large[i], circuit_state.quotient_mid[i], circuit_state.quotient_large[i]);
@@ -461,10 +473,38 @@ fr::field_t Prover::compute_linearisation_coefficients()
     proof.w_l_eval = w_l.evaluate(challenges.z, n);
     proof.w_r_eval = w_r.evaluate(challenges.z, n);
     proof.w_o_eval = w_o.evaluate(challenges.z, n);
+    
+    // printf("test = %u\n", widgets[0]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_L_SHIFTED));
+    bool needs_w_l_shifted = false;
+    bool needs_w_r_shifted = false;
+    bool needs_w_o_shifted = false;
+    for (size_t i = 0; i < widgets.size(); ++i)
+    {
+        needs_w_l_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_L_SHIFTED);
+        needs_w_r_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_R_SHIFTED);
+        needs_w_o_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_O_SHIFTED);
+    }
+    if (needs_w_l_shifted)
+    {
+        proof.w_l_shifted_eval = w_l.evaluate(shifted_z, n);
+    }
+    if (needs_w_r_shifted)
+    {
+        proof.w_r_shifted_eval = w_r.evaluate(shifted_z, n);
+    }
+    if (needs_w_o_shifted)
+    {
+        proof.w_o_shifted_eval = w_o.evaluate(shifted_z, n);
+    }
+
     proof.sigma_1_eval = sigma_1.evaluate(challenges.z, n);
     proof.sigma_2_eval = sigma_2.evaluate(challenges.z, n);
     proof.z_1_shifted_eval = z.evaluate(shifted_z, n);
 
+    for (size_t i = 0; i < widgets.size(); ++i)
+    {
+        widgets[i]->compute_proof_elements(proof, challenges.z);
+    }
     fr::field_t t_eval = circuit_state.quotient_large.evaluate(challenges.z, 3 * n);
 
     // we scaled the sigma polynomials up by beta, so scale back down
@@ -477,29 +517,11 @@ fr::field_t Prover::compute_linearisation_coefficients()
     ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
         fr::field_t T0;
         fr::field_t T1;
-        // fr::field_t T2;
-        // fr::field_t T3;
-        // fr::field_t T4;
-        // fr::field_t T5;
-        // fr::field_t T6;
         fr::__mul(z[i], linear_terms.z_1, T0);
         fr::__mul(sigma_3[i], linear_terms.sigma_3, T1);
         // we scaled sigma_3[i] by beta, need to correct for that...
         fr::__mul(T1, beta_inv, T1);
         fr::__add(T0, T1, r[i]);
-
-        // TODO SPLIT OUT WIDGET TERMS
-        // fr::__mul(q_c[i], linear_terms.q_c, T2);
-        // fr::__mul(q_o[i], linear_terms.q_o, T3);
-        // fr::__mul(q_r[i], linear_terms.q_r, T4);
-        // fr::__mul(q_l[i], linear_terms.q_l, T5);
-        // fr::__mul(q_m[i], linear_terms.q_m, T6);
-        // fr::__add(T6, T5, T5);
-        // fr::__add(T4, T3, T3);
-        // fr::__add(T2, T1, T1);
-        // fr::__add(T5, T3, T3);
-        // fr::__add(T1, T0, T0);
-        // fr::__add(T3, T0, r[i]);
     ITERATE_OVER_DOMAIN_END;
 
     fr::field_t alpha_base;
@@ -525,9 +547,9 @@ plonk_proof Prover::construct_proof()
 
     challenges.nu = compute_linearisation_challenge(proof, t_eval);
 
-    fr::field_t nu_powers[7];
+    fr::field_t nu_powers[8];
     fr::copy(challenges.nu, nu_powers[0]);
-    for (size_t i = 1; i < 7; ++i)
+    for (size_t i = 1; i < 8; ++i)
     {
         fr::__mul(nu_powers[i - 1], nu_powers[0], nu_powers[i]);
     }
@@ -575,6 +597,37 @@ plonk_proof Prover::construct_proof()
         fr::__add(circuit_state.quotient_large[i], T4, opening_poly[i]);
     ITERATE_OVER_DOMAIN_END;
 
+    fr::field_t nu_base = nu_powers[7];
+    for (size_t i = 0; i < widgets.size(); ++i)
+    {
+        nu_base = widgets[i]->compute_opening_poly_contribution(&opening_poly[0], circuit_state.small_domain, nu_base, nu_powers[0]);
+    }
+
+    // TODO ADD IN SHIFTED EVALUATIONS..
+    // bool needs_w_l_shifted = false;
+    // bool needs_w_r_shifted = false;
+    // bool needs_w_o_shifted = false;
+    // for (size_t i = 0; i < widgets.size(); ++i)
+    // {
+    //     needs_w_l_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_L_SHIFTED);
+    //     needs_w_r_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_R_SHIFTED);
+    //     needs_w_o_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_O_SHIFTED);
+    // }
+    // if (needs_w_l_shifted)
+    // {
+    //     ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
+
+    //     ITERATE_OVER_DOMAIN_END;
+    // }
+    // if (needs_w_r_shifted)
+    // {
+    //     proof.w_r_shifted_eval = w_r.evaluate(shifted_z, n);
+    // }
+    // if (needs_w_o_shifted)
+    // {
+    //     printf("blah\n");
+    //     proof.w_o_shifted_eval = w_o.evaluate(shifted_z, n);
+    // }
 
     fr::field_t shifted_z;
     fr::__mul(challenges.z, circuit_state.small_domain.root, shifted_z);
