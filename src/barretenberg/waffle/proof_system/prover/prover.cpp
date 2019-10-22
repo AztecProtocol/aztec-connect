@@ -262,12 +262,11 @@ void Prover::compute_permutation_grand_product_coefficients(polynomial& z_fft)
     // Step 2c: perform fft transforms to map into point-evaluation form.
     // (use coset fft so that we get evaluations over the roots of unity * multiplicative generator)
     // (if we evaluated at the raw roots of unity, dividing by the vanishing polynomial would require dividing by zero)
-    fr::field_t alpha_squared = fr::sqr(challenges.alpha);
     sigma1_fft.coset_fft(circuit_state.large_domain);
     sigma2_fft.coset_fft(circuit_state.large_domain);
     sigma3_fft.coset_fft(circuit_state.large_domain);
     // Multiply Z(X) by \alpha^2 when performing fft transform - we get this for free if we roll \alpha^2 into the multiplicative generator
-    z_fft.coset_fft_with_constant(circuit_state.large_domain, alpha_squared);
+    z_fft.coset_fft_with_constant(circuit_state.large_domain, challenges.alpha);
 
     // We actually want Z(X.w), not Z(X)! But that's easy to get. z_fft contains Z(X) evaluated at the 4n'th roots of unity.
     // So z_fft(i) = Z(w^{i/4})
@@ -376,7 +375,7 @@ void Prover::compute_identity_grand_product_coefficients(polynomial &z_fft)
         // z_fft already contains evaluations of Z(X).(\alpha^2)
         // at the (2n)'th roots of unity
         // => to get Z(X.w) instead of Z(X), index element (i+2) instead of i
-        fr::__sub(z_fft[2 * i + 4], alpha_squared, T6); // T6 = (Z(X.w) - 1).(\alpha^2)
+        fr::__sub(z_fft[2 * i + 4], challenges.alpha, T6); // T6 = (Z(X.w) - 1).(\alpha^2)
         fr::__mul(T6, challenges.alpha, T6); // T6 = (Z(X.w) - 1).(\alpha^3)
         fr::__mul(T6, l_1[i + 4], T6); // T6 = (Z(X.w) - 1).(\alpha^3).L{n-1}(X)
 
@@ -385,7 +384,7 @@ void Prover::compute_identity_grand_product_coefficients(polynomial &z_fft)
         // i.e. Z(X) starts at 1 and ends at 1
         // The `alpha^4` term is so that we can add this as a linearly independent term in our quotient polynomial
 
-        fr::__sub(z_fft[2 * i], alpha_squared, T4); // T4 = (Z(X) - 1).(\alpha^2)
+        fr::__sub(z_fft[2 * i], challenges.alpha, T4); // T4 = (Z(X) - 1).(\alpha^2)
         fr::__mul(T4, alpha_squared, T4); // T4 = (Z(X) - 1).(\alpha^4)
         fr::__mul(T4, l_1[i], T4); // T4 = (Z(X) - 1).(\alpha^2).L1(X)
     
@@ -435,8 +434,8 @@ void Prover::compute_quotient_polynomial()
 
     compute_identity_grand_product_coefficients(z_fft);
 
-    fr::field_t alpha_base;
-    fr::copy(challenges.alpha, alpha_base);
+    fr::field_t alpha_base = fr::sqr(fr::sqr(challenges.alpha));
+    fr::mul(challenges.alpha, alpha_base);
     for (size_t i = 0; i < widgets.size(); ++i)
     {
         // TODO: alpha here overlaps with the permutation checks. FIX FIX FIX FIX FIX
@@ -524,8 +523,7 @@ fr::field_t Prover::compute_linearisation_coefficients()
         fr::__add(T0, T1, r[i]);
     ITERATE_OVER_DOMAIN_END;
 
-    fr::field_t alpha_base;
-    fr::copy(challenges.alpha, alpha_base);
+    fr::field_t alpha_base = fr::sqr(fr::sqr(challenges.alpha));
     for (size_t i = 0; i < widgets.size(); ++i)
     {
         alpha_base = widgets[i]->compute_linear_contribution(alpha_base, challenges.alpha, proof, circuit_state.small_domain, r);

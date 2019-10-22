@@ -151,13 +151,13 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::__mul(T0, T2, T0);
     fr::__mul(T0, T3, T0);
     fr::__mul(T0, proof.z_1_shifted_eval, T0);
-    fr::__mul(T0, alpha_pow[1], T0);
+    fr::__mul(T0, alpha_pow[0], T0);
 
     fr::__sub(proof.z_1_shifted_eval, fr::one(), T1);
     fr::__mul(T1, lagrange_evals.l_n_minus_1, T1);
-    fr::__mul(T1, alpha_pow[2], T1);
+    fr::__mul(T1, alpha_pow[1], T1);
 
-    fr::__mul(lagrange_evals.l_1, alpha_pow[3], T2);
+    fr::__mul(lagrange_evals.l_1, alpha_pow[2], T2);
 
     fr::__sub(T1, T2, T1);
     fr::__sub(T1, T0, T1);
@@ -275,7 +275,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     scalars.emplace_back(z_pow_2n);
 
     VerifierBaseWidget::challenge_coefficients coeffs{
-        challenges.alpha,
+        fr::sqr(fr::sqr(challenges.alpha)),
         challenges.alpha,
         nu_pow[7],
         challenges.nu,

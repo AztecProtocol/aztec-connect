@@ -60,7 +60,7 @@ namespace waffle
 
         barretenberg::fr::__mul(T2, T1, T1);
         barretenberg::fr::__mul(T1, T0, T0);
-        barretenberg::fr::__mul(T0, alpha_pow[1], result.z_1);
+        barretenberg::fr::__mul(T0, alpha_pow[0], result.z_1);
 
         barretenberg::fr::__mul(proof.sigma_1_eval, challenges.beta, T0);
         barretenberg::fr::__add(T0, proof.w_l_eval, T0);
@@ -73,23 +73,13 @@ namespace waffle
 
         barretenberg::fr::__mul(T1, T0, T0);
         barretenberg::fr::__mul(T0, proof.z_1_shifted_eval, T0);
-        barretenberg::fr::__mul(T0, alpha_pow[1], result.sigma_3);
+        barretenberg::fr::__mul(T0, alpha_pow[0], result.sigma_3);
         barretenberg::fr::__neg(result.sigma_3, result.sigma_3);
         barretenberg::fr::__mul(result.sigma_3, challenges.beta, result.sigma_3);
 
 
-        barretenberg::fr::__mul(l_1, alpha_pow[3], T0);
+        barretenberg::fr::__mul(l_1, alpha_pow[2], T0);
         barretenberg::fr::__add(result.z_1, T0, result.z_1);
-
-
-        barretenberg::fr::__mul(proof.w_o_eval, alpha_pow[0], result.q_o);
-        barretenberg::fr::__mul(proof.w_r_eval, alpha_pow[0], result.q_r);
-        barretenberg::fr::__mul(proof.w_l_eval, alpha_pow[0], result.q_l);
-
-        barretenberg::fr::__mul(proof.w_l_eval, proof.w_r_eval, result.q_m);
-        barretenberg::fr::__mul(result.q_m, alpha_pow[0], result.q_m);
-
-        barretenberg::fr::copy(challenges.alpha, result.q_c);
 
         return result;
     }
