@@ -1,5 +1,4 @@
-#ifndef G1
-#define G1
+#pragma once
 
 #include "stdint.h"
 #include "stdlib.h"
@@ -593,7 +592,7 @@ inline void batch_normalize(element *points, size_t num_points)
         *
         * At the second iteration, accumulator * temporaries[2] = z.data[0]*z.data[1] / z.data[0]*z.data[1]*z.data[2] = (1 / z.data[2])
         * And so on, until we have computed every z-inverse!
-        * 
+        *
         * We can then convert out of Jacobian form (x = X / Z^2, y = Y / Z^3) with 4 muls and 1 square.
         **/
     for (size_t i = num_points - 1; i < num_points; --i)
@@ -686,7 +685,7 @@ inline void copy_affine(const affine_element &a, affine_element &r)
     fq::copy(a.y, r.y);
 }
 
-inline element group_exponentiation_inner(const affine_element &a, const fr::field_t &scalar)
+inline element group_exponentiation(const element &a, const fr::field_t &scalar)
 {
     fr::field_t converted_scalar;
 
@@ -701,14 +700,13 @@ inline element group_exponentiation_inner(const affine_element &a, const fr::fie
         set_infinity(result);
         return result;
     }
-    element point;
-    affine_to_jacobian(a, point);
+    element& point = const_cast<element&>(a);
 
     constexpr size_t lookup_size = 8;
     constexpr size_t num_rounds = 32;
     constexpr size_t num_wnaf_bits = 4;
-    element* precomp_table = (element*)(aligned_alloc(64, sizeof(element) * lookup_size));
-    affine_element* lookup_table = (affine_element*)(aligned_alloc(64, sizeof(element) * lookup_size));
+    element *precomp_table = (element *)(aligned_alloc(64, sizeof(element) * lookup_size));
+    affine_element *lookup_table = (affine_element *)(aligned_alloc(64, sizeof(element) * lookup_size));
 
     element d2;
     copy(&point, &precomp_table[0]); // 1
@@ -723,10 +721,10 @@ inline element group_exponentiation_inner(const affine_element &a, const fr::fie
         fq::copy(precomp_table[i].x, lookup_table[i].x);
         fq::copy(precomp_table[i].y, lookup_table[i].y);
     }
-    
+
     uint32_t wnaf_table[num_rounds * 2];
     fr::field_t endo_scalar;
-    fr::split_into_endomorphism_scalars(converted_scalar, endo_scalar, *(fr::field_t*)&endo_scalar.data[2]);
+    fr::split_into_endomorphism_scalars(converted_scalar, endo_scalar, *(fr::field_t *)&endo_scalar.data[2]);
     bool skew = false;
     bool endo_skew = false;
     wnaf::fixed_wnaf(&endo_scalar.data[0], &wnaf_table[0], skew, 2, num_wnaf_bits);
@@ -791,6 +789,13 @@ inline element group_exponentiation_inner(const affine_element &a, const fr::fie
     return work_element;
 }
 
+inline element group_exponentiation_inner(const affine_element &a, const fr::field_t &scalar)
+{
+    element point;
+    affine_to_jacobian(a, point);
+    return group_exponentiation(point, scalar);
+}
+
 inline affine_element group_exponentiation(const affine_element &a, const fr::field_t &scalar)
 {
     element output = group_exponentiation_inner(a, scalar);
@@ -848,5 +853,3 @@ inline bool eq(const affine_element &a, const affine_element &b)
 
 } // namespace g1
 } // namespace barretenberg
-
-#endif

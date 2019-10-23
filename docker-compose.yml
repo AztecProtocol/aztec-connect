@@ -1,0 +1,11 @@
+version: '3'
+services:
+  build-env:
+    build: .
+    image: aztec/barretenberg-build
+    entrypoint: /bin/bash
+    tty: true
+    environment:
+      MAKEFLAGS: '-j8'
+    volumes:
+      - .:/usr/src/barretenberg
