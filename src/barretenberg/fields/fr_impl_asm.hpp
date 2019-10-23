@@ -42,7 +42,7 @@ constexpr uint64_t zero_reference = 0;
  **/
 inline void copy(const field_t &src, field_t &dest)
 {
-#ifdef __AVX__
+#if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src.data & 0x1f) == 0));
     ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
     __asm__(
@@ -69,7 +69,7 @@ inline void copy(const field_t &src, field_t &dest)
 
 inline void zero(field_t &r)
 {
-#ifdef __AVX__
+#if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)r.data & 0x1f) == 0));
     __asm__(
         "vpxor  %%ymm0, %%ymm0, %%ymm0          \n\t"
@@ -94,7 +94,7 @@ inline void zero(field_t &r)
  **/
 inline void swap(const field_t &src, field_t &dest)
 {
-#ifdef __AVX__
+#if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src.data & 0x1f) == 0));
     ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
     __asm__(

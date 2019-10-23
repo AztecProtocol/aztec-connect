@@ -12,6 +12,10 @@
 #define NO_MULTITHREADING 1
 #endif
 
+#if 0
+#define USE_AVX
+#endif
+
 namespace barretenberg
 {
 namespace fq

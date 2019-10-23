@@ -50,7 +50,7 @@ constexpr uint64_t zero_reference = 0;
  **/
 inline void copy(const field_t &src, field_t &dest)
 {
-#ifdef __AVX__
+#if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src.data & 0x1f) == 0));
     ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
     __asm__(

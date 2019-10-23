@@ -8,6 +8,7 @@
 #include "../fields/fr.hpp"
 #include "../fields/fq.hpp"
 #include "../assert.hpp"
+#include "./wnaf.hpp"
 
 namespace barretenberg
 {
@@ -421,7 +422,7 @@ inline void add(element &p1, element &p2, element &p3)
 // n.b. requires src and dest to be aligned on 32 byte boundary
 inline void conditional_negate_affine(affine_element *src, affine_element *dest, uint64_t predicate)
 {
-#ifdef __AVX__
+#if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src & 0x1f) == 0));
     ASSERT((((uintptr_t)dest & 0x1f) == 0));
     __asm__ __volatile__(
@@ -493,7 +494,7 @@ inline void conditional_negate_affine(affine_element *src, affine_element *dest,
 // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
 inline void copy(affine_element *src, affine_element *dest)
 {
-#ifdef __AVX__
+#if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src & 0x1f) == 0));
     ASSERT((((uintptr_t)dest & 0x1f) == 0));
     __asm__ __volatile__(
@@ -513,7 +514,7 @@ inline void copy(affine_element *src, affine_element *dest)
 // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
 inline void copy(element *src, element *dest)
 {
-#ifdef __AVX__
+#if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src & 0x1f) == 0));
     ASSERT((((uintptr_t)dest & 0x1f) == 0));
     __asm__ __volatile__(
@@ -700,38 +701,93 @@ inline element group_exponentiation_inner(const affine_element &a, const fr::fie
         set_infinity(result);
         return result;
     }
-    element work_element;
     element point;
-    affine_to_jacobian(a, work_element);
     affine_to_jacobian(a, point);
-    // TODO ADD BACK IN!
-    // fr::copy(scalar, converted_scalar);
-    bool scalar_bits[256] = {0};
-    for (size_t i = 0; i < 64; ++i)
-    {
-        scalar_bits[i] = (bool)((converted_scalar.data[0] >> i) & 0x1);
-        scalar_bits[64 + i] = (bool)((converted_scalar.data[1] >> i) & 0x1);
-        scalar_bits[128 + i] = (bool)((converted_scalar.data[2] >> i) & 0x1);
-        scalar_bits[192 + i] = (bool)((converted_scalar.data[3] >> i) & 0x1);
-    }
 
-    bool found = false;
-    size_t i = 255;
-    while (!found)
-    {
-        found = scalar_bits[i] == true;
-        --i;
-    }
+    constexpr size_t lookup_size = 8;
+    constexpr size_t num_rounds = 32;
+    constexpr size_t num_wnaf_bits = 4;
+    element* precomp_table = (element*)(aligned_alloc(64, sizeof(element) * lookup_size));
+    affine_element* lookup_table = (affine_element*)(aligned_alloc(64, sizeof(element) * lookup_size));
 
-    for (; i < (size_t)(-1); --i)
+    element d2;
+    copy(&point, &precomp_table[0]); // 1
+    dbl(point, d2);                  // 2
+    for (size_t i = 1; i < lookup_size; ++i)
     {
-        dbl(work_element, work_element);
-        if (scalar_bits[i] == true)
+        add(precomp_table[i - 1], d2, precomp_table[i]);
+    }
+    batch_normalize(precomp_table, lookup_size);
+    for (size_t i = 0; i < lookup_size; ++i)
+    {
+        fq::copy(precomp_table[i].x, lookup_table[i].x);
+        fq::copy(precomp_table[i].y, lookup_table[i].y);
+    }
+    
+    uint32_t wnaf_table[num_rounds * 2];
+    fr::field_t endo_scalar;
+    fr::split_into_endomorphism_scalars(converted_scalar, endo_scalar, *(fr::field_t*)&endo_scalar.data[2]);
+    bool skew = false;
+    bool endo_skew = false;
+    wnaf::fixed_wnaf(&endo_scalar.data[0], &wnaf_table[0], skew, 2, num_wnaf_bits);
+    wnaf::fixed_wnaf(&endo_scalar.data[2], &wnaf_table[1], endo_skew, 2, num_wnaf_bits);
+
+    element work_element = one();
+    element dummy_element = one();
+    affine_element temporary;
+    set_infinity(work_element);
+
+    uint32_t wnaf_entry;
+    uint32_t index;
+    bool sign;
+    for (size_t i = 0; i < num_rounds; ++i)
+    {
+        wnaf_entry = wnaf_table[2 * i];
+        index = wnaf_entry & 0x0fffffffU;
+        sign = static_cast<bool>((wnaf_entry >> 31) & 1);
+        copy(&lookup_table[index], &temporary);
+        conditional_negate_affine(&lookup_table[index], &temporary, sign);
+        mixed_add(work_element, temporary, work_element);
+        wnaf_entry = wnaf_table[2 * i + 1];
+        index = wnaf_entry & 0x0fffffffU;
+        sign = static_cast<bool>((wnaf_entry >> 31) & 1);
+        copy(&lookup_table[index], &temporary);
+        conditional_negate_affine(&lookup_table[index], &temporary, !sign);
+        fq::__mul_beta(temporary.x, temporary.x);
+        mixed_add(work_element, temporary, work_element);
+
+        if (i != num_rounds - 1)
         {
-            add(work_element, point, work_element);
+            dbl(work_element, work_element);
+            dbl(work_element, work_element);
+            dbl(work_element, work_element);
+            dbl(work_element, work_element);
         }
     }
+    neg(lookup_table[0], temporary);
+    if (skew)
+    {
+        mixed_add(work_element, temporary, work_element);
+    }
+    else
+    {
+        // grotty attempt at making this constant-time
+        mixed_add(dummy_element, temporary, dummy_element);
+    }
+    copy(&lookup_table[0], &temporary);
+    fq::__mul_beta(temporary.x, temporary.x);
+    if (endo_skew)
+    {
+        mixed_add(work_element, temporary, work_element);
+    }
+    else
+    {
+        // grotty attempt at making this constant-time
+        mixed_add(dummy_element, temporary, dummy_element);
+    }
 
+    free(precomp_table);
+    free(lookup_table);
     return work_element;
 }
 
