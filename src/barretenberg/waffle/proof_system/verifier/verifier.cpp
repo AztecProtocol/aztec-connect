@@ -242,6 +242,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     scalars.emplace_back(linear_terms.z_1);
 
     elements.emplace_back(proof.W_L);
+    
     scalars.emplace_back(nu_pow[1]);
 
     elements.emplace_back(proof.W_R);

@@ -438,7 +438,6 @@ void Prover::compute_quotient_polynomial()
     fr::mul(challenges.alpha, alpha_base);
     for (size_t i = 0; i < widgets.size(); ++i)
     {
-        // TODO: alpha here overlaps with the permutation checks. FIX FIX FIX FIX FIX
         alpha_base = widgets[i]->compute_quotient_contribution(alpha_base, challenges.alpha, circuit_state);
     }
 
@@ -447,8 +446,6 @@ void Prover::compute_quotient_polynomial()
 
 
     circuit_state.quotient_mid.coset_ifft(circuit_state.mid_domain);
-    // TODO FIX AFTER DEBUG
-
     circuit_state.quotient_large.coset_ifft(circuit_state.large_domain);
 
 
@@ -596,36 +593,49 @@ plonk_proof Prover::construct_proof()
     ITERATE_OVER_DOMAIN_END;
 
     fr::field_t nu_base = nu_powers[7];
+    /*
+    // TODO compute 'needs_blah_shifted' in constructor
+    bool needs_w_l_shifted = false;
+    bool needs_w_r_shifted = false;
+    bool needs_w_o_shifted = false;
+    for (size_t i = 0; i < widgets.size(); ++i)
+    {
+        needs_w_l_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_L_SHIFTED);
+        needs_w_r_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_R_SHIFTED);
+        needs_w_o_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_O_SHIFTED);
+    }
+    if (needs_w_l_shifted)
+    {
+        ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
+            fr::field_t T0;
+            fr::__mul(nu_base, w_l[i], T0);
+            fr::__add(shited_opening_poly[i], T0, shifted_opening_poly[i]);
+        ITERATE_OVER_DOMAIN_END;
+        nu_base = fr::mul(nu_base, challenges.nu);
+    }
+    if (needs_w_r_shifted)
+    {
+        ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
+            fr::field_t T0;
+            fr::__mul(nu_base, w_r[i], T0);
+            fr::__add(shited_opening_poly[i], T0, shifted_opening_poly[i]);
+        ITERATE_OVER_DOMAIN_END;
+        nu_base = fr::mul(nu_base, challenges.nu);
+    }
+    if (needs_w_o_shifted)
+    {
+        ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
+            fr::field_t T0;
+            fr::__mul(nu_base, w_o[i], T0);
+            fr::__add(shited_opening_poly[i], T0, shifted_opening_poly[i]);
+        ITERATE_OVER_DOMAIN_END;
+        nu_base = fr::mul(nu_base, challenges.nu);
+    } */
+
     for (size_t i = 0; i < widgets.size(); ++i)
     {
         nu_base = widgets[i]->compute_opening_poly_contribution(&opening_poly[0], circuit_state.small_domain, nu_base, nu_powers[0]);
     }
-
-    // TODO ADD IN SHIFTED EVALUATIONS..
-    // bool needs_w_l_shifted = false;
-    // bool needs_w_r_shifted = false;
-    // bool needs_w_o_shifted = false;
-    // for (size_t i = 0; i < widgets.size(); ++i)
-    // {
-    //     needs_w_l_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_L_SHIFTED);
-    //     needs_w_r_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_R_SHIFTED);
-    //     needs_w_o_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_O_SHIFTED);
-    // }
-    // if (needs_w_l_shifted)
-    // {
-    //     ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
-
-    //     ITERATE_OVER_DOMAIN_END;
-    // }
-    // if (needs_w_r_shifted)
-    // {
-    //     proof.w_r_shifted_eval = w_r.evaluate(shifted_z, n);
-    // }
-    // if (needs_w_o_shifted)
-    // {
-    //     printf("blah\n");
-    //     proof.w_o_shifted_eval = w_o.evaluate(shifted_z, n);
-    // }
 
     fr::field_t shifted_z;
     fr::__mul(challenges.z, circuit_state.small_domain.root, shifted_z);
