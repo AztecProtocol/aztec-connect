@@ -69,15 +69,15 @@ evaluation_domain::evaluation_domain(const size_t domain_size):
     generator_inverse(fr::multiplicative_generator_inverse()),
     roots(nullptr)
 {
-    ASSERT((1UL << log2_size) == size);
-    ASSERT((1UL << log2_thread_size) == thread_size);
-    ASSERT((1UL << log2_num_threads) == num_threads);
+    ASSERT((1UL << log2_size) == size || (size == 0));
+    ASSERT((1UL << log2_thread_size) == thread_size || (size == 0));
+    ASSERT((1UL << log2_num_threads) == num_threads || (size == 0));
 }
 
 evaluation_domain::evaluation_domain(const evaluation_domain& other):
     size(other.size),
     num_threads(compute_num_threads(other.size)),
-    thread_size(other.size / thread_size),
+    thread_size(other.size / num_threads),
     log2_size(static_cast<size_t>(log2(size))),
     log2_thread_size(static_cast<size_t>(log2(thread_size))),
     log2_num_threads(static_cast<size_t>(log2(num_threads))),
@@ -115,7 +115,7 @@ evaluation_domain::evaluation_domain(const evaluation_domain& other):
 evaluation_domain::evaluation_domain(evaluation_domain&& other):
     size(other.size),
     num_threads(compute_num_threads(other.size)),
-    thread_size(other.size / thread_size),
+    thread_size(other.size / num_threads),
     log2_size(static_cast<size_t>(log2(size))),
     log2_thread_size(static_cast<size_t>(log2(thread_size))),
     log2_num_threads(static_cast<size_t>(log2(num_threads))),
@@ -126,15 +126,39 @@ evaluation_domain::evaluation_domain(evaluation_domain&& other):
     generator(fr::multiplicative_generator()),
     generator_inverse(fr::multiplicative_generator_inverse())
 {
+    roots = other.roots;
+    round_roots = std::move(other.round_roots);
+    inverse_round_roots = std::move(other.inverse_round_roots);
+    other.roots = nullptr;
+}
+
+evaluation_domain& evaluation_domain::operator=(evaluation_domain &&other)
+{
+    size = other.size;
+    num_threads = compute_num_threads(other.size);
+    thread_size = other.size / num_threads;
+    log2_size = static_cast<size_t>(log2(size));
+    log2_thread_size = static_cast<size_t>(log2(thread_size));
+    log2_num_threads = static_cast<size_t>(log2(num_threads));
+    fr::copy(other.root, root);
+    fr::copy(other.root_inverse, root_inverse);
+    fr::copy(other.domain, domain);
+    fr::copy(other.domain_inverse, domain_inverse);
+    fr::copy(other.generator, generator);
+    fr::copy(other.generator_inverse, generator_inverse);
     if (roots != nullptr)
     {
         free(roots);
     }
-    roots = other.roots;
-    round_roots = std::move(other.round_roots);
-    inverse_round_roots = std::move(other.inverse_round_roots);
-    // std::copy(other.round_roots.begin(), other.round_roots.end(), round_roots.begin());
-    // std::copy(other.inverse_round_roots.begin(), other.inverse_round_roots.end(), round_roots.begin());
+    roots = nullptr;
+    if (other.roots != nullptr)
+    {
+        roots = other.roots;
+        round_roots = std::move(other.round_roots);
+        inverse_round_roots = std::move(other.inverse_round_roots);
+    }
+    other.roots = nullptr;
+    return *this;
 }
 
 evaluation_domain::~evaluation_domain()
