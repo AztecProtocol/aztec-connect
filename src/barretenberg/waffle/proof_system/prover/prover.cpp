@@ -1,6 +1,7 @@
 #include "./prover.hpp"
 
 #include "../../../groups/g1.hpp"
+#include "../../../groups/g2.hpp"
 #include "../../../groups/scalar_multiplication.hpp"
 #include "../../../polynomials/polynomial_arithmetic.hpp"
 #include "../../../polynomials/polynomial.hpp"
@@ -22,10 +23,17 @@ Prover::Prover(const size_t __n) :
 n(__n),
 circuit_state(n)
 {
-    reference_string.degree = n;
-    reference_string.monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (2 * n + 2)));
-    io::read_transcript(reference_string, BARRETENBERG_SRS_PATH);
-    scalar_multiplication::generate_pippenger_point_table(reference_string.monomials, reference_string.monomials, n);
+    if (n > 0)
+    {
+        reference_string.degree = n;
+        reference_string.monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (2 * n + 2)));
+        io::read_transcript(reference_string, BARRETENBERG_SRS_PATH);
+        scalar_multiplication::generate_pippenger_point_table(reference_string.monomials, reference_string.monomials, n);
+    }
+    else
+    {
+        reference_string.monomials = nullptr;
+    }
 }
 
 Prover::Prover(Prover &&other) :
@@ -33,7 +41,7 @@ n(other.n),
 w_l(std::move(other.w_l)),
 w_r(std::move(other.w_r)),
 w_o(std::move(other.w_o)),
-circuit_state(other.n),
+circuit_state(std::move(other.circuit_state)),
 sigma_1_mapping(std::move(other.sigma_1_mapping)),
 sigma_2_mapping(std::move(other.sigma_2_mapping)),
 sigma_3_mapping(std::move(other.sigma_3_mapping))
@@ -43,14 +51,45 @@ sigma_3_mapping(std::move(other.sigma_3_mapping))
         widgets.emplace_back(std::move(other.widgets[i]));
     }
     reference_string.degree = n;
-    reference_string.monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (2 * n + 2)));
-    io::read_transcript(reference_string, BARRETENBERG_SRS_PATH);
-    scalar_multiplication::generate_pippenger_point_table(reference_string.monomials, reference_string.monomials, n);
+
+    reference_string.monomials = other.reference_string.monomials; // (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (2 * n + 2)));
+    g2::copy_affine(other.reference_string.SRS_T2, reference_string.SRS_T2);
+    reference_string.degree = other.reference_string.degree;
+    other.reference_string.monomials = nullptr;
+}
+
+Prover& Prover::operator=(Prover &&other)
+{
+    n = other.n;
+    w_l = std::move(other.w_l);
+    w_r = std::move(other.w_r);
+    w_o = std::move(other.w_o);
+    circuit_state = waffle::CircuitFFTState(std::move(other.circuit_state));
+    sigma_1_mapping = std::move(other.sigma_1_mapping);
+    sigma_2_mapping = std::move(other.sigma_2_mapping);
+    sigma_3_mapping = std::move(other.sigma_3_mapping);
+    widgets.resize(0);
+    for (size_t i = 0; i < other.widgets.size(); ++i)
+    {
+        widgets.emplace_back(std::move(other.widgets[i]));
+    }
+    if (reference_string.monomials != nullptr)
+    {
+        free(reference_string.monomials);
+    }
+    reference_string.monomials = other.reference_string.monomials;
+    g2::copy_affine(other.reference_string.SRS_T2, reference_string.SRS_T2);
+    reference_string.degree = other.reference_string.degree;
+    other.reference_string.monomials = nullptr;
+    return *this;
 }
 
 Prover::~Prover()
 {
-    free(reference_string.monomials);
+    if (reference_string.monomials != nullptr)
+    {
+        free(reference_string.monomials);
+    }
 }
 
 void Prover::compute_wire_commitments()
@@ -662,10 +701,18 @@ void Prover::reset()
     w_l.fft(circuit_state.small_domain);
     w_r.fft(circuit_state.small_domain);
     w_o.fft(circuit_state.small_domain);
+    sigma_1 = polynomial(0, 0);
+    sigma_2 = polynomial(0, 0);
+    sigma_3 = polynomial(0, 0);
+    circuit_state.w_l_fft = polynomial(0, 0);
+    circuit_state.w_r_fft = polynomial(0, 0);
+    circuit_state.w_o_fft = polynomial(0, 0);
+    circuit_state.quotient_mid = polynomial(0, 0);
+    circuit_state.quotient_large = polynomial(0, 0);
+    r = polynomial(0, 0);
     for (size_t i = 0; i < widgets.size(); ++i)
     {
         widgets[i]->reset(circuit_state.small_domain);
     }
-    // TODO RESET WIDGETS
 }
 } // namespace waffle
