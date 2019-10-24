@@ -38,8 +38,6 @@ polynomial::polynomial(const size_t initial_size, const size_t initial_max_size_
     {
         coefficients = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * target_max_size));
         max_size = target_max_size;
-        // bump_memory(target_max_size);
-        // memset(static_cast<void*>(coefficients), 0, max_size);
     }
 }
 
@@ -70,7 +68,10 @@ polynomial& polynomial::operator=(const polynomial& other)
     representation = other.representation;
     page_size = other.page_size;
     size = other.size;
-
+    if (coefficients != nullptr)
+    {
+        free(coefficients);
+    }
     coefficients = nullptr;
     if (other.max_size > max_size)
     {
@@ -91,10 +92,6 @@ polynomial::polynomial(polynomial&& other, const size_t target_max_size) :
     allocated_pages(max_size / page_size)
 {
     ASSERT(page_size != 0);
-    if (coefficients != nullptr)
-    {
-        free(coefficients);
-    }
     if (other.coefficients != nullptr)
     {
         coefficients = other.coefficients;
@@ -146,6 +143,7 @@ polynomial::~polynomial()
     {
         free(coefficients);
     }
+    coefficients = nullptr;
 }
 
 // #######
@@ -244,6 +242,7 @@ void polynomial::fft(const evaluation_domain &domain)
     }
 
     // (ZERO OUT MEMORY!)
+    // TODO: wait, do we still need this?
     // memset(static_cast<void*>(back), 0, sizeof(fr::field_t) * (new_size - size));
     polynomial_arithmetic::fft(coefficients, domain);
     size = domain.size;
