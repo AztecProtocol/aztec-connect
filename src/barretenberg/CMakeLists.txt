@@ -53,10 +53,10 @@ add_library(
     waffle/composer/standard_composer.hpp
     waffle/composer/mimc_composer.cpp
     waffle/composer/mimc_composer.hpp
-    waffle/pstd/field/field.tcc
-    waffle/pstd/field/field.hpp
-    waffle/pstd/mimc.cpp
-    waffle/pstd/mimc.hpp
+    waffle/stdlib/field/field.tcc
+    waffle/stdlib/field/field.hpp
+    waffle/stdlib/mimc.cpp
+    waffle/stdlib/mimc.hpp
 )
 
 set_target_properties(
@@ -120,10 +120,10 @@ add_executable(
     waffle/composer/standard_composer.hpp
     waffle/composer/mimc_composer.cpp
     waffle/composer/mimc_composer.hpp
-    waffle/pstd/field/field.tcc
-    waffle/pstd/field/field.hpp
-    waffle/pstd/mimc.cpp
-    waffle/pstd/mimc.hpp
+    waffle/stdlib/field/field.tcc
+    waffle/stdlib/field/field.hpp
+    waffle/stdlib/mimc.cpp
+    waffle/stdlib/mimc.hpp
 )
 
 target_link_libraries(

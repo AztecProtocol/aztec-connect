@@ -6,16 +6,16 @@
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
 
-#include <barretenberg/waffle/pstd/field/field.hpp>
-#include <barretenberg/waffle/pstd/mimc.hpp>
+#include <barretenberg/waffle/stdlib/field/field.hpp>
+#include <barretenberg/waffle/stdlib/mimc.hpp>
 
 #include <memory>
 
 
 using namespace barretenberg;
-using namespace pstd;
+using namespace plonk;
 
-TEST(pstd_mimc, composer_consistency_check)
+TEST(stdlib_mimc, composer_consistency_check)
 {
     waffle::StandardComposer standard_composer = waffle::StandardComposer();
     waffle::MiMCComposer mimc_composer = waffle::MiMCComposer();
@@ -23,16 +23,16 @@ TEST(pstd_mimc, composer_consistency_check)
     fr::field_t input = fr::random_element();
     fr::field_t k_in = fr::zero();
 
-    field_t<waffle::StandardComposer> standard_input(&standard_composer, pstd::witness_t(input));
-    field_t<waffle::StandardComposer> standard_k(&standard_composer, pstd::witness_t(k_in));
+    stdlib::field_t<waffle::StandardComposer> standard_input(&standard_composer, stdlib::witness_t(input));
+    stdlib::field_t<waffle::StandardComposer> standard_k(&standard_composer, stdlib::witness_t(k_in));
 
-    field_t<waffle::MiMCComposer> mimc_input(&mimc_composer, pstd::witness_t(input));
-    field_t<waffle::MiMCComposer> mimc_k(&mimc_composer, pstd::witness_t(k_in));
+    stdlib::field_t<waffle::MiMCComposer> mimc_input(&mimc_composer, stdlib::witness_t(input));
+    stdlib::field_t<waffle::MiMCComposer> mimc_k(&mimc_composer, stdlib::witness_t(k_in));
 
-    field_t<waffle::StandardComposer> standard_out = mimc_hash(standard_input, standard_k);
+    stdlib::field_t<waffle::StandardComposer> standard_out = mimc_hash(standard_input, standard_k);
     standard_out = standard_out.normalize();
 
-    field_t<waffle::MiMCComposer> mimc_out = mimc_hash(mimc_input, mimc_k);
+    stdlib::field_t<waffle::MiMCComposer> mimc_out = mimc_hash(mimc_input, mimc_k);
 
     EXPECT_EQ(fr::eq(standard_out.witness, mimc_out.witness), true);
 
@@ -56,15 +56,15 @@ TEST(pstd_mimc, composer_consistency_check)
     EXPECT_EQ(results[1], true);
 }
 
-TEST(pstd_mimc, repeated_hashing)
+TEST(stdlib_mimc, repeated_hashing)
 {
     waffle::MiMCComposer mimc_composer = waffle::MiMCComposer();
     fr::field_t input = fr::random_element();
     fr::field_t k_in = fr::zero();
 
-    field_t<waffle::MiMCComposer> mimc_input(&mimc_composer, pstd::witness_t(input));
-    field_t<waffle::MiMCComposer> mimc_k(&mimc_composer, pstd::witness_t(k_in));
-    field_t<waffle::MiMCComposer> mimc_output(&mimc_composer);
+    stdlib::field_t<waffle::MiMCComposer> mimc_input(&mimc_composer, stdlib::witness_t(input));
+    stdlib::field_t<waffle::MiMCComposer> mimc_k(&mimc_composer, stdlib::witness_t(k_in));
+    stdlib::field_t<waffle::MiMCComposer> mimc_output(&mimc_composer);
     constexpr size_t num_hashes = 100;
 
     for (size_t i = 0; i < num_hashes; ++i)

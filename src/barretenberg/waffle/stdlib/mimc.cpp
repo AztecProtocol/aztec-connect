@@ -4,7 +4,9 @@
 
 #include "../../keccak/keccak.h"
 
-namespace pstd
+namespace plonk
+{
+namespace stdlib
 {
 namespace
 {
@@ -103,5 +105,6 @@ field_t<waffle::StandardComposer> mimc_hash(field_t<waffle::StandardComposer> in
         x_in = x_out;
     }
     return x_out;
+}
 }
 }

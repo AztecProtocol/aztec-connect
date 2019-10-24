@@ -6,7 +6,9 @@
 
 using namespace barretenberg;
 
-namespace pstd
+namespace plonk
+{
+namespace stdlib
 {
 template <typename ComposerContext>
 field_t<ComposerContext>::field_t(ComposerContext *parent_context) :
@@ -235,6 +237,7 @@ field_t<ComposerContext> field_t<ComposerContext>::normalize()
 // {
 // }
 
+}
 }
 
 #endif

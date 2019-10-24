@@ -8,19 +8,20 @@
 
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 
-#include <barretenberg/waffle/pstd/field/field.hpp>
+#include <barretenberg/waffle/stdlib/field/field.hpp>
 
 #include <memory>
 
 
 using namespace barretenberg;
+using namespace plonk;
 
-typedef pstd::field_t<waffle::StandardComposer> field_t;
+typedef stdlib::field_t<waffle::StandardComposer> field_t;
 
 void fibbonaci(waffle::StandardComposer &composer)
 {
-    field_t a(&composer, pstd::witness_t(fr::one()));
-    field_t b(&composer, pstd::witness_t(fr::one()));
+    field_t a(&composer, stdlib::witness_t(fr::one()));
+    field_t b(&composer, stdlib::witness_t(fr::one()));
 
     field_t c = a + b;
     
@@ -34,7 +35,7 @@ void fibbonaci(waffle::StandardComposer &composer)
 
 uint64_t fidget(waffle::StandardComposer &composer)
 {
-    field_t a(&composer, pstd::witness_t(fr::one())); // a is a legit wire value in our circuit
+    field_t a(&composer, stdlib::witness_t(fr::one())); // a is a legit wire value in our circuit
     field_t b(&composer, (fr::one()));                // b is just a constant, and should not turn up as a wire value in our circuit
 
      // this shouldn't create a constraint - we just need to scale the addition/multiplication gates that `a` is involved in
@@ -64,7 +65,7 @@ uint64_t fidget(waffle::StandardComposer &composer)
     return cc;
 }
 
-TEST(pstd_field, test_field_fibbonaci)
+TEST(stdlib_field, test_field_fibbonaci)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
 
@@ -82,7 +83,7 @@ TEST(pstd_field, test_field_fibbonaci)
     EXPECT_EQ(result, true);
 }
 
-TEST(pstd_field, test_add_mul_with_constants)
+TEST(stdlib_field, test_add_mul_with_constants)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
 

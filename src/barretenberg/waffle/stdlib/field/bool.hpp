@@ -3,7 +3,9 @@
 
 #include "../../../fields/fr.hpp"
 
-namespace pstd
+namespace plonk
+{
+namespace stdlib
 {
 
 
@@ -35,6 +37,7 @@ public:
     barretenberg::fr::field_t witness;
     uint32_t witness_index = static_cast<uint32_t>(-1);    
 };
+}
 }
 
 #include "./bool.tcc"

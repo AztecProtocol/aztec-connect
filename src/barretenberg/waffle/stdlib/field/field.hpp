@@ -3,7 +3,9 @@
 
 #include "../../../fields/fr.hpp"
 
-namespace pstd
+namespace plonk
+{
+namespace stdlib
 {
 struct witness_t
 {
@@ -45,6 +47,7 @@ public:
     uint32_t witness_index = static_cast<uint32_t>(-1);    
     // field_t operator+(const barretenberg::fr::field_t &other);    
 };
+}
 }
 
 #include "./field.tcc"
