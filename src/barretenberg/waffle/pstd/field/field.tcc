@@ -58,7 +58,7 @@ field_t<ComposerContext>::field_t(field_t &&other) : context(other.context)
 }
 
 template <typename ComposerContext>
-field_t<ComposerContext>::~field_t() {};
+field_t<ComposerContext>::~field_t() {}
 
 template <typename ComposerContext>
 field_t<ComposerContext>& field_t<ComposerContext>::operator=(const field_t &other)
@@ -206,7 +206,30 @@ field_t<ComposerContext> field_t<ComposerContext>::operator*(const field_t &othe
     return result;    
 }
 
+template <typename ComposerContext>
+field_t<ComposerContext> field_t<ComposerContext>::normalize()
+{
+    field_t<ComposerContext> result(context);
+    fr::__mul(witness, multiplicative_constant, result.witness);
+    fr::__add(result.witness, additive_constant, result.witness);
 
+    result.witness_index = context->add_variable(result.witness);
+
+    const waffle::poly_triple gate_coefficients{
+        witness_index,
+        witness_index,
+        result.witness_index,
+        {{0,0,0,0}},
+        multiplicative_constant,
+        {{0,0,0,0}},
+        fr::neg_one(),
+        additive_constant
+    };
+
+    context->create_poly_gate(gate_coefficients);
+
+    return result;
+}
 // template <typename ComposerContext>
 // field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t &other)
 // {

@@ -36,6 +36,8 @@ public:
     // field_t operator/(const field_t &other);
     // field_t operator==(const field_t &other);
 
+    field_t normalize();
+
     ComposerContext *context;
     barretenberg::fr::field_t additive_constant;
     barretenberg::fr::field_t multiplicative_constant;

@@ -50,6 +50,7 @@ add_executable(
     test_standard_composer.cpp
     test_mimc_composer.cpp
     test_pstd_field.cpp
+    test_pstd_mimc.cpp
 )
 
 set_target_properties(

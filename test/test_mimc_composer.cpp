@@ -13,7 +13,7 @@ using namespace barretenberg;
 
 TEST(mimc_composer, test_mimc_gate_proof)
 {
-    size_t n = 64;
+    size_t n = 95;
     waffle::MiMCComposer composer = waffle::MiMCComposer(n);
     fr::field_t c[n];
     for (size_t i = 0; i < n; ++i)
