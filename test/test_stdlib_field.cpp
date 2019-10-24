@@ -65,6 +65,22 @@ uint64_t fidget(waffle::StandardComposer &composer)
     return cc;
 }
 
+void generate_test_plonk_circuit(waffle::StandardComposer &composer, size_t num_gates)
+{
+    plonk::stdlib::field_t a(&composer, plonk::stdlib::witness_t(barretenberg::fr::random_element()));
+    plonk::stdlib::field_t b(&composer, plonk::stdlib::witness_t(barretenberg::fr::random_element()));
+    plonk::stdlib::field_t c(&composer);
+    for (size_t i = 0; i < (num_gates / 4) - 4; ++i)
+    {
+        c = a + b;
+        c = a * c;
+        a = b * b;
+        b = c * c;
+    }
+}
+
+
+
 TEST(stdlib_field, test_field_fibbonaci)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
@@ -100,4 +116,22 @@ TEST(stdlib_field, test_add_mul_with_constants)
 
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_field, test_larger_circuit)
+{
+    size_t n = 16384;
+    waffle::StandardComposer composer = waffle::StandardComposer(n);
+    waffle::StandardComposer composer_b = waffle::StandardComposer(n);
+    generate_test_plonk_circuit(composer, n);
+    generate_test_plonk_circuit(composer_b, n);
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+
 }
