@@ -644,6 +644,14 @@ inline void print(element &a)
     printf("z: \n");
     fq2::print(a.z);
 }
+
+inline void print(affine_element &a)
+{
+    printf("g2: \n x: ");
+    fq2::print(a.x);
+    printf("y: \n");
+    fq2::print(a.y);
+}
 } // namespace g2
 } // namespace barretenberg
 
