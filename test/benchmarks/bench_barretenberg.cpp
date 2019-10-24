@@ -2,7 +2,6 @@
 
 using namespace benchmark;
 
-#include <gmp.h>
 #include <iostream>
 #include <time.h>
 #include <string.h>
@@ -301,15 +300,6 @@ void construct_proof_bench(State& state) noexcept
         waffle::plonk_proof proof = plonk_circuit_states[idx].construct_proof();
         state.PauseTiming();
         globals.plonk_proofs[idx] = (proof);
-        // printf("foo\n");
-       //  plonk_circuit_states[idx].reset();
-        // printf("bar\n");
-        // bool res = waffle::verifier::verify_proof(proof, globals.plonk_instances[idx], globals.reference_string.SRS_T2);
-        // if (res == false)
-        // {
-        //     printf("hey! this proof isn't valid!\n");
-        // }
-        // reset_proof_state(plonk_states[idx]);
         state.ResumeTiming();
     }
 }
