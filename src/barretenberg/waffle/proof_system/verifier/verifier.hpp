@@ -11,8 +11,9 @@ class Verifier
 {
 public:
     Verifier(const size_t subgroup_size = 0);
-    Verifier(const Verifier &other);
     Verifier(Verifier &&other);
+    Verifier(const Verifier &other) = delete;
+    Verifier& operator=(const Verifier &other) = delete;
     Verifier& operator=(Verifier &&other);
 
     ~Verifier();

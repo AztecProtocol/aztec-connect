@@ -22,14 +22,6 @@ namespace waffle
 {
 Verifier::Verifier(const size_t subgroup_size) : n(subgroup_size) {}
 
-Verifier::Verifier(const Verifier &other) : n(other.n)
-{
-    g2::copy_affine(other.G2_X, G2_X);
-    g1::copy_affine(other.SIGMA_1, SIGMA_1);
-    g1::copy_affine(other.SIGMA_2, SIGMA_2);
-    g1::copy_affine(other.SIGMA_3, SIGMA_3);
-}
-
 Verifier::Verifier(Verifier &&other) : n(other.n)
 {
     g2::copy_affine(other.G2_X, G2_X);
@@ -49,6 +41,7 @@ Verifier& Verifier::operator=(Verifier &&other)
     g1::copy_affine(other.SIGMA_1, SIGMA_1);
     g1::copy_affine(other.SIGMA_2, SIGMA_2);
     g1::copy_affine(other.SIGMA_3, SIGMA_3);
+    verifier_widgets.resize(0);
     for (size_t i = 0; i < other.verifier_widgets.size(); ++i)
     {
         verifier_widgets.emplace_back(std::move(other.verifier_widgets[i]));
