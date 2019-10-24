@@ -164,11 +164,6 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
 
     fr::__add(T1, proof.linear_eval, t_eval);
 
-    // for (size_t i = 0; i < verifier_widgets.size(); ++i)
-    // {
-    //     verifier_widgets[i]->compute_quotient_evaluation_contribution(t_eval, proof, challenges);
-    // }
-
     fr::__invert(lagrange_evals.vanishing_poly, T0);
     fr::__mul(t_eval, T0, t_eval);
 
@@ -181,7 +176,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
 
     fr::field_t u = compute_kate_separation_challenge(proof, t_eval);
     fr::copy(challenges.nu, nu_pow[0]);
-    for (size_t i = 1; i < 8; ++i)
+    for (size_t i = 1; i < 9; ++i)
     {
         fr::__mul(nu_pow[i - 1], nu_pow[0], nu_pow[i]);
     }
@@ -224,6 +219,38 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
     fr::field_t nu_base = nu_pow[7];
+
+    // TODO compute 'needs_blah_shifted' in constructor
+    bool needs_w_l_shifted = false;
+    bool needs_w_r_shifted = false;
+    bool needs_w_o_shifted = false;
+    for (size_t i = 0; i < verifier_widgets.size(); ++i)
+    {
+        needs_w_l_shifted |= verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
+        needs_w_r_shifted |= verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
+        needs_w_o_shifted |= verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
+    }
+    if (needs_w_l_shifted)
+    {
+        fr::__mul(proof.w_l_shifted_eval, nu_base, T0);
+        fr::__mul(T0, u, T0);
+        fr::__add(batch_evaluation, T0, batch_evaluation);
+        fr::__mul(nu_base, nu_pow[0], nu_base);
+    }
+    if (needs_w_r_shifted)
+    {
+        fr::__mul(proof.w_r_shifted_eval, nu_base, T0);
+        fr::__mul(T0, u, T0);
+        fr::__add(batch_evaluation, T0, batch_evaluation);
+        fr::__mul(nu_base, nu_pow[0], nu_base);
+    }
+    if (needs_w_o_shifted)
+    {
+        fr::__mul(proof.w_o_shifted_eval, nu_base, T0);
+        fr::__mul(T0, u, T0);
+        fr::__add(batch_evaluation, T0, batch_evaluation);
+        fr::__mul(nu_base, nu_pow[0], nu_base);
+    }
     for (size_t i = 0; i < verifier_widgets.size(); ++i)
     {
         nu_base = verifier_widgets[i]->compute_batch_evaluation_contribution(batch_evaluation, nu_base, nu_pow[0], proof);
@@ -241,15 +268,46 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     elements.emplace_back(proof.Z_1);
     scalars.emplace_back(linear_terms.z_1);
 
+    fr::copy(nu_pow[7], nu_base);
     elements.emplace_back(proof.W_L);
-    
-    scalars.emplace_back(nu_pow[1]);
+    if (needs_w_l_shifted)
+    {
+        fr::__mul(nu_base, u, T0);
+        fr::__add(T0, nu_pow[1], T0);
+        scalars.emplace_back(T0);
+        // scalars.emplace_back(fr::add(nu_pow[1], nu_base));
+        fr::__mul(nu_base, nu_pow[0], nu_base);
+    }
+    else
+    {
+        scalars.emplace_back(nu_pow[1]);
+    }
 
     elements.emplace_back(proof.W_R);
-    scalars.emplace_back(nu_pow[2]);
+    if (needs_w_r_shifted)
+    {
+        fr::__mul(nu_base, u, T0);
+        fr::__add(T0, nu_pow[2], T0);
+        scalars.emplace_back(T0);
+        fr::__mul(nu_base, nu_pow[0], nu_base);
+    }
+    else
+    {
+        scalars.emplace_back(nu_pow[2]);
+    }
 
     elements.emplace_back(proof.W_O);
-    scalars.emplace_back(nu_pow[3]);
+    if (needs_w_o_shifted)
+    {
+        fr::__mul(nu_base, u, T0);
+        fr::__add(T0, nu_pow[3], T0);
+        scalars.emplace_back(T0);
+        fr::__mul(nu_base, nu_pow[0], nu_base);
+    }
+    else
+    {
+        scalars.emplace_back(nu_pow[3]);
+    }
 
     elements.emplace_back(SIGMA_1);
     scalars.emplace_back(nu_pow[4]);
@@ -278,10 +336,11 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     VerifierBaseWidget::challenge_coefficients coeffs{
         fr::sqr(fr::sqr(challenges.alpha)),
         challenges.alpha,
-        nu_pow[7],
+        nu_base,
         challenges.nu,
         challenges.nu
     };
+
     for (size_t i = 0; i < verifier_widgets.size(); ++i)
     {
         coeffs = verifier_widgets[i]->append_scalar_multiplication_inputs(

@@ -470,15 +470,14 @@ fr::field_t Prover::compute_linearisation_coefficients()
     proof.w_r_eval = w_r.evaluate(challenges.z, n);
     proof.w_o_eval = w_o.evaluate(challenges.z, n);
     
-    // printf("test = %u\n", widgets[0]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_L_SHIFTED));
     bool needs_w_l_shifted = false;
     bool needs_w_r_shifted = false;
     bool needs_w_o_shifted = false;
     for (size_t i = 0; i < widgets.size(); ++i)
     {
-        needs_w_l_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_L_SHIFTED);
-        needs_w_r_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_R_SHIFTED);
-        needs_w_o_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_O_SHIFTED);
+        needs_w_l_shifted |= widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
+        needs_w_r_shifted |= widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
+        needs_w_o_shifted |= widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
     }
     if (needs_w_l_shifted)
     {
@@ -593,23 +592,23 @@ plonk_proof Prover::construct_proof()
     ITERATE_OVER_DOMAIN_END;
 
     fr::field_t nu_base = nu_powers[7];
-    /*
+    
     // TODO compute 'needs_blah_shifted' in constructor
     bool needs_w_l_shifted = false;
     bool needs_w_r_shifted = false;
     bool needs_w_o_shifted = false;
     for (size_t i = 0; i < widgets.size(); ++i)
     {
-        needs_w_l_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_L_SHIFTED);
-        needs_w_r_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_R_SHIFTED);
-        needs_w_o_shifted |= widgets[i]->has_dependency(ProverBaseWidget::Dependencies::REQUIRES_W_O_SHIFTED);
+        needs_w_l_shifted |= widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
+        needs_w_r_shifted |= widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
+        needs_w_o_shifted |= widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
     }
     if (needs_w_l_shifted)
     {
         ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
             fr::field_t T0;
             fr::__mul(nu_base, w_l[i], T0);
-            fr::__add(shited_opening_poly[i], T0, shifted_opening_poly[i]);
+            fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
         ITERATE_OVER_DOMAIN_END;
         nu_base = fr::mul(nu_base, challenges.nu);
     }
@@ -618,7 +617,7 @@ plonk_proof Prover::construct_proof()
         ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
             fr::field_t T0;
             fr::__mul(nu_base, w_r[i], T0);
-            fr::__add(shited_opening_poly[i], T0, shifted_opening_poly[i]);
+            fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
         ITERATE_OVER_DOMAIN_END;
         nu_base = fr::mul(nu_base, challenges.nu);
     }
@@ -627,10 +626,10 @@ plonk_proof Prover::construct_proof()
         ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
             fr::field_t T0;
             fr::__mul(nu_base, w_o[i], T0);
-            fr::__add(shited_opening_poly[i], T0, shifted_opening_poly[i]);
+            fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
         ITERATE_OVER_DOMAIN_END;
         nu_base = fr::mul(nu_base, challenges.nu);
-    } */
+    }
 
     for (size_t i = 0; i < widgets.size(); ++i)
     {
