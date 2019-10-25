@@ -62,9 +62,9 @@ TEST(preprocess, preprocess)
 
     for (size_t i = 0; i < n; ++i)
     {
-        state.sigma_1_mapping[i] =  (uint32_t)(i + ((0) << 30U));
-        state.sigma_2_mapping[i] =  (uint32_t)(i + ((1U) << 30U));
-        state.sigma_3_mapping[i] =  (uint32_t)(i + ((1U) << 31U));
+        state.sigma_3_mapping[i] =  (uint32_t)((n - 1 - i) + ((0) << 30U));
+        state.sigma_2_mapping[i] =  (uint32_t)((n - 1 - i) + ((1U) << 30U));
+        state.sigma_1_mapping[i] =  (uint32_t)((n - 1 - i) + ((1U) << 31U));
     }
 
     state.widgets.emplace_back(std::move(widget));
