@@ -77,72 +77,6 @@ void fft_inner_serial(fr::field_t *coeffs, const size_t domain_size, const std::
         }
     }
 }
-void fft_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &root, const std::vector<fr::field_t*>& root_table)
-{
-    if (domain.num_threads >= domain.size)
-    {
-        fft_inner_serial(coeffs, domain.size, root_table);
-
-        for (size_t i = 0; i < domain.size; ++i)
-        {
-            fr::reduce_once(coeffs[i], coeffs[i]);
-        }
-        return;
-    }
-    fr::field_t *thread_coeffs = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * domain.size);
-    // TODO: do we care about core sizes that aren't powers of 2?
-    // ASSERT(2 ** log2_num_threads == num_threads);
-
-    fr::field_t thread_omega;
-    fr::__pow_small(root, (1UL << domain.log2_num_threads), thread_omega);
-
-#ifndef NO_MULTITHREADING
-#pragma omp parallel for
-#endif
-    for (size_t i = 0; i < domain.num_threads; ++i)
-    {
-        fr::field_t work_root;
-        fr::field_t work_step;
-        fr::__pow_small(root, i, work_root);
-        fr::__pow_small(root, (i << domain.log2_thread_size), work_step);
-
-        fr::field_t accumulator = fr::one();
-        size_t index_mask = domain.size - 1;
-        size_t thread_coeffs_index = i * domain.thread_size;
-        fr::field_t T0;
-        fr::field_t T1;
-        for (size_t j = 0; j < (1UL << domain.log2_thread_size); ++j)
-        {
-            fr::zero(T0);
-            for (size_t k = 0; k < domain.size; k += domain.thread_size)
-            {
-                size_t idx = (j + k) & index_mask;
-                fr::__mul_without_reduction(coeffs[idx], accumulator, T1);
-                fr::__add_with_coarse_reduction(T0, T1, T0);
-                fr::__mul_without_reduction(accumulator, work_step, accumulator);
-            }
-            fr::copy(T0, thread_coeffs[thread_coeffs_index + j]);
-            fr::__mul_without_reduction(accumulator, work_root, accumulator);
-        }
-
-        fft_inner_serial(&thread_coeffs[thread_coeffs_index], domain.thread_size, root_table);
-    }
-
-    // We need to copy our redults from the temporary array, into our coefficient array.
-    // We also need to correct for lazy reduction - coefficients may be p greater than the actual value
-#ifndef NO_MULTITHREADING
-#pragma omp parallel for
-#endif
-    for (size_t i = 0; i < domain.num_threads; ++i)
-    {
-        for (size_t j = 0; j < domain.thread_size; ++j)
-        {
-            fr::reduce_once(thread_coeffs[i * domain.thread_size + j], coeffs[(j << domain.log2_num_threads) + i]);
-        }
-    }
-
-    free(thread_coeffs);
-}
 
 void scale_by_generator(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &generator_start, const fr::field_t &generator_shift)
 {
@@ -185,6 +119,137 @@ void compute_multiplicative_subgroup(const size_t log2_subgroup_size, const eval
     {
         fr::__mul(subgroup_roots[i - 1], subgroup_root, subgroup_roots[i]);
     }
+}
+
+
+void fft_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &, const std::vector<fr::field_t*> &root_table)
+{
+    if (domain.num_threads >= domain.size || (domain.size < 32))
+    {
+        fft_inner_serial(coeffs, domain.size, root_table);
+        for (size_t i = 0; i < domain.size; ++i)
+        {
+            fr::reduce_once(coeffs[i], coeffs[i]);
+        }
+        return;
+    }
+
+    fr::field_t* scratch_space = (fr::field_t*)aligned_alloc(64, sizeof(fr::field_t) * domain.size);
+#ifndef NO_MULTITHREADING
+#pragma omp parallel
+#endif
+    {
+
+    // Step 1: perform bit-reverseal, so fft evaluations are 'in order'
+    // TODO: remove this part! Will need a refactor of prover.hpp
+    #ifndef NO_MULTITHREADING
+    #pragma omp for
+    #endif
+        for (size_t j = 0; j < domain.num_threads; ++j)
+        {
+            for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i)
+            {
+                // in order to parallelize this part, we want to make sure that we're writing to memory in a sequential manner
+                // so that we don't try to write the same cache line from two different threads (reading is fine).
+                // We do a straight copy instead of a swap, so that there's no inter-thread communication
+                uint32_t swap_index = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)domain.log2_size);
+                fr::copy(coeffs[swap_index], scratch_space[i]);
+            }
+        }
+
+    // First FFT round is a special case - no need to multiply by root table, because all entries are 1
+    #ifndef NO_MULTITHREADING
+    #pragma omp for
+    #endif
+        for (size_t j = 0; j < domain.num_threads; ++j)
+        {
+            fr::field_t temp;
+            for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); i += 2)
+            {
+                fr::copy(scratch_space[i + 1], temp);
+                fr::__sub_with_coarse_reduction(scratch_space[i], scratch_space[i + 1], scratch_space[i + 1]);
+                fr::__add_with_coarse_reduction(temp, scratch_space[i], scratch_space[i]);
+            }
+        }
+
+        // outer FFT loop
+        for (size_t m = 2; m < (domain.size); m <<= 1)
+        {
+    #ifndef NO_MULTITHREADING
+    #pragma omp for
+    #endif
+            for (size_t j = 0; j < domain.num_threads; ++j)
+            {
+                fr::field_t temp;
+
+                // Ok! So, what's going on here? This is the inner loop of the FFT algorithm, and we want to break it out into multiple independent threads.
+                // For `num_threads`, each thread will evaluation `domain.size / num_threads` of the polynomial.
+                // The actual iteration length will be half of this, because we leverage the fact that \omega^{n/2} = -\omega (where \omega is a root of unity)
+
+                // Here, `start` and `end` are used as our iterator limits, so that we can use our iterator `i` to directly access the roots of unity lookup table
+                const size_t start = j * (domain.thread_size >> 1);
+                const size_t end = (j + 1) * (domain.thread_size >> 1);
+
+                // For all but the last round of our FFT, the roots of unity that we need, will be a subset of our lookup table.
+                // e.g. for a size 2^n FFT, the 2^n'th roots create a multiplicative subgroup of order 2^n
+                //      the 1st round will use the roots from the multiplicative subgroup of order 2 : the 2'th roots of unity
+                //      the 2nd round will use the roots from the multiplicative subgroup of order 4 : the 4'th roots of unity
+                // i.e. each successive FFT round will double the set of roots that we need to index.
+                // We have already laid out the `root_table` container so that each FFT round's roots are linearly ordered in memory.
+                // For all FFT rounds, the number of elements we're iterating over is greater than the size of our lookup table.
+                // We need to access this table in a cyclical fasion - i.e. for a subgroup of size x, the first x iterations will index the subgroup elements in order,
+                // then for the next x iterations, we loop back to the start.
+
+                // We could implement the algorithm by having 2 nested loops (where the inner loop iterates over the root table),
+                // but we want to flatten this out - as for the first few rounds, the inner loop will be tiny and we'll have quite a bit of unneccesary branch checks
+                // For each iteration of our flattened loop, indexed by `i`, the element of the root table we need to access will be `i % (current round subgroup size)`
+                // Given that each round subgroup size is `m`, which is a power of 2, we can index the root table with a very cheap `i & (m - 1)`
+                // Which is why we have this odd `block_mask` variable
+                const size_t block_mask = m - 1;
+
+                // The next problem to tackle, is we now need to efficiently index the polynomial element in `scratch_space` in our flattened loop
+                // If we used nested loops, the outer loop (e.g. `y`) iterates from 0 to 'domain size', in steps of 2 * m,
+                // with the inner loop (e.g. `z`) iterating from 0 to m.
+                // We have our inner loop indexer with `i & (m - 1)`. We need to add to this our outer loop indexer,
+                // which is equivalent to taking our indexer `i`, masking out the bits used in the 'inner loop', and doubling the result.
+                // i.e. polynomial indexer = (i & (m - 1)) + ((i & ~(m - 1)) >> 1)
+                // To simplify this, we cache index_mask = ~block_mask, meaning that our indexer is just `((i & index_mask) << 1 + (i & block_mask)`
+                const size_t index_mask = ~block_mask;
+
+                // `round_roots` fetches the pointer to this round's lookup table. We use `log2(m) - 1` as our indexer, because we don't store
+                // the precomputed root values for the 1st round (because they're all 1).
+                const fr::field_t *round_roots = root_table[static_cast<size_t>(log2(m)) - 1];
+
+                // Finally, we want to treat the final round differently from the others,
+                // so that we can reduce out of our 'coarse' reduction and store the output in `coeffs` instead of `scratch_space`
+                if (m != (domain.size >> 1))
+                {
+                    for (size_t i = start; i < end; ++i)
+                    {
+                        size_t k1 = (i & index_mask) << 1;
+                        size_t j1 = i & block_mask;
+                        fr::__mul_without_reduction(round_roots[j1], scratch_space[k1 + j1 + m], temp);
+                        fr::__sub_with_coarse_reduction(scratch_space[k1 + j1], temp, scratch_space[k1 + j1 + m]);
+                        fr::__add_with_coarse_reduction(scratch_space[k1 + j1], temp, scratch_space[k1 + j1]);
+                    }
+                }
+                else
+                {
+                    for (size_t i = start; i < end; ++i)
+                    {
+                        size_t k1 = (i & index_mask) << 1;
+                        size_t j1 = i & block_mask;
+                        fr::__mul_without_reduction(round_roots[j1], scratch_space[k1 + j1 + m], temp);
+                        fr::__sub_with_coarse_reduction(scratch_space[k1 + j1], temp, scratch_space[k1 + j1 + m]);
+                        fr::reduce_once(scratch_space[k1 + j1 + m], coeffs[k1 + j1 + m]);
+                        fr::__add_with_coarse_reduction(scratch_space[k1 + j1], temp, scratch_space[k1 + j1]);
+                        fr::reduce_once(scratch_space[k1 + j1], coeffs[k1 + j1]);
+                    }
+                }
+            }
+        }
+    }
+    free(scratch_space);
 }
 
 void fft(fr::field_t *coeffs, const evaluation_domain &domain)

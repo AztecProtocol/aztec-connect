@@ -41,7 +41,7 @@ TEST(polynomials, fft_with_small_degree)
     }
 
     evaluation_domain domain = evaluation_domain(n);
-
+    domain.compute_lookup_table();
     polynomial_arithmetic::fft(fft_transform, domain);
 
     fr::field_t work_root;
