@@ -1,5 +1,5 @@
-#ifndef BOOL_HPP
-#define BOOL_HPP
+#ifndef PLONK_BOOL_HPP
+#define PLONK_BOOL_HPP
 
 #include "../../../fields/fr.hpp"
 
@@ -7,7 +7,6 @@ namespace plonk
 {
 namespace stdlib
 {
-
 
 template <typename ComposerContext>
 class bool_t
@@ -34,6 +33,7 @@ public:
     // field_t operator==(const field_t &other);
 
     ComposerContext *context;
+    bool witness_bool;
     barretenberg::fr::field_t witness;
     uint32_t witness_index = static_cast<uint32_t>(-1);    
 };

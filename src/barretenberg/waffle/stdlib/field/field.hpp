@@ -1,5 +1,5 @@
-#ifndef FIELD_HPP
-#define FIELD_HPP
+#ifndef PLONK_FIELD_HPP
+#define PLONK_FIELD_HPP
 
 #include "../../../fields/fr.hpp"
 

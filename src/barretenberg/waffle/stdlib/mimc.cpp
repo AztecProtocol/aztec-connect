@@ -4,6 +4,8 @@
 
 #include "../../keccak/keccak.h"
 
+using namespace barretenberg;
+
 namespace plonk
 {
 namespace stdlib
