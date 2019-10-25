@@ -273,56 +273,6 @@ inline uint64_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
     return 1;
 }
 
-void construct_instances_bench(State& state) noexcept
-{
-    for (auto _ : state)
-    {
-        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
-        globals.plonk_instances[idx] = waffle::preprocess(plonk_circuit_states[idx]);
-        // waffle::plonk_proof proof = waffle::construct_proof(globals.plonk_states[idx], globals.reference_string);
-        state.PauseTiming();
-        // bool res = waffle::verifier::verify_proof(proof, globals.plonk_instances[idx], globals.reference_string.SRS_T2);
-        // if (res == false)
-        // {
-        //     printf("hey! this proof isn't valid!\n");
-        // }
-        state.ResumeTiming();
-    }
-}
-BENCHMARK(construct_instances_bench)->RangeMultiplier(2)->Range(START, START * 4/*MAX_GATES*/);
-
-
-void construct_proof_bench(State& state) noexcept
-{
-    for (auto _ : state)
-    {
-        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
-        waffle::plonk_proof proof = plonk_circuit_states[idx].construct_proof();
-        state.PauseTiming();
-        globals.plonk_proofs[idx] = (proof);
-        state.ResumeTiming();
-    }
-}
-BENCHMARK(construct_proof_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
-
-
-void verify_proof_bench(State& state) noexcept
-{
-    for (auto _ : state)
-    {
-        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
-        bool res = globals.plonk_instances[idx].verify_proof(globals.plonk_proofs[idx]); // waffle::verifier::verify_proof(globals.plonk_proofs[idx], globals.plonk_instances[idx], globals.reference_string.SRS_T2);
-        state.PauseTiming();
-        if (!res)
-        {
-            printf("hey! proof isn't valid!\n");
-        }
-        state.ResumeTiming();
-    }
-}
-BENCHMARK(verify_proof_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
-
-
 void fft_bench_parallel(State& state) noexcept
 {
     for (auto _ : state)
@@ -332,7 +282,6 @@ void fft_bench_parallel(State& state) noexcept
     }
 }
 BENCHMARK(fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
-
 
 void fft_bench_serial(State& state) noexcept
 {
