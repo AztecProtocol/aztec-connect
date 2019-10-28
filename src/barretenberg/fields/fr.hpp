@@ -63,19 +63,38 @@ inline void print(const field_t &a)
 // compute a * b mod p, put result in r
 inline void __mul(const field_t &a, const field_t &b, field_t &r);
 
+// compute a * b, put result in r. Do not perform final reduction check
+inline void __mul_without_reduction(const field_t &a, const field_t &b, const field_t &r);
+
 // compute a * b, put 512-bit result in r
 inline void mul_512(const field_t &a, const field_t &b, const field_wide_t &r);
 
 // compute a * a, put result in r
 inline void __sqr(const field_t &a, field_t &r);
 
+// compute a * a, put result in r. Do not perform final reduction check
+inline void __sqr_without_reduction(const field_t &a, const field_t &r);
+
 // compute a + b, put result in r
 inline void __add(const field_t &a, const field_t &b, field_t &r);
+
+// compute a + b, put result in r. Do not perform final reduction check
+inline void __add_without_reduction(const field_t &a, const field_t &b, field_t &r);
+
+// compute a + b, put result in r. Do not perform final reduction check
+inline void __add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r);
 
 // compute a - b, put result in r
 inline void __sub(const field_t &a, const field_t &b, field_t &r);
 
+// compute a - b, put result in r
+inline void __sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r);
+
+inline void __conditionally_subtract_double_modulus(const field_t &a, field_t &r, const uint64_t predicate);
+
 inline void __conditional_negate(const fr::field_t& a, field_t &r, const bool predicate);
+
+inline void mul_512(const field_t &a, const field_t &b, field_wide_t &r);
 
 inline field_t add(const field_t &a, const field_t &b)
 {

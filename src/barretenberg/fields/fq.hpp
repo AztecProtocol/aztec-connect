@@ -91,11 +91,23 @@ inline void __add(const field_t &a, const field_t &b, field_t &r);
 // compute a + b, put result in r. Do not perform final reduction check
 inline void __add_without_reduction(const field_t &a, const field_t &b, field_t &r);
 
+inline void __add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r);
+
 // quadruple a, perform a reduction check that reduces to either (r mod p) or p + (r mod p)
 inline void quad_with_partial_reduction(const field_t &a, const field_t &r);
 
+inline void quad_with_coarse_reduction(const field_t &a, field_t &r);
+
+inline void oct_with_coarse_reduction(const field_t &a, field_t &r);
+
+inline void paralell_double_and_add_without_reduction(field_t &x_0, const field_t &y_0, const field_t &y_1, field_t &r);
+
 // compute a - b, put result in r
 inline void __sub(const field_t &a, const field_t &b, field_t &r);
+
+inline void __sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r);
+
+inline void reduce_once(const field_t &a, field_t &r);
 
 /**
  * copy src into dest. AVX implementation requires words to be aligned on 32 byte bounary

@@ -18,59 +18,59 @@ namespace scalar_multiplication
 
 size_t get_optimal_bucket_width(size_t num_points) 
 {
-    if (num_points >= 0x10000000) // 2^28!
-    {
-        return 25;
-    }
-    if (num_points >= 0x1000000) // 2^24
+    if (num_points >= 14617149)
     {
         return 21;
     }
-    if (num_points >= 0x400000) // 2^22
+    if (num_points >= 2139094)
     {
         return 18;
     }
-    if (num_points >= 0x40000) // 2^18
+    if (num_points >= 155975)
     {
         return 15;
     }
-    if (num_points >= 0x8000) // 2^15
+    if (num_points >= 144834)
+    {
+        return 14;
+    }
+    if (num_points >= 25067)
     {
         return 12;
     }
-    if (num_points >= 0x4000) // 2^14
+    if (num_points >= 13926)
     {
         return 11;
     }
-    if (num_points >= 0x2000) // 2^13
+    if (num_points >= 7659)
     {
         return 10;
     }
-    if (num_points >= 0x800) // 2^11
+    if (num_points >= 2436)
     {
         return 9;
     }
-    if (num_points >= 0x200) // 2^9
+    if (num_points >= 376)
     {
         return 7;
     }
-    if (num_points >= 0x100) // 2^8
+    if (num_points >= 231)
     {
         return 6;
     }
-    if (num_points >= 0x80) // 2^7
+    if (num_points >= 97)
     {
         return 5;
     }
-    if (num_points >= 0x40) // 2^6
+    if (num_points >= 35)
     {
         return 4;
     }
-    if (num_points >= 0x10) // 2^4
+    if (num_points >= 10)
     {
         return 3;
     }
-    if (num_points >= 0x04) // 2^2
+    if (num_points >= 2)
     {
         return 2;
     }
@@ -95,14 +95,12 @@ void generate_pippenger_point_table(g1::affine_element *points, g1::affine_eleme
     }
 }
 
-g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points, size_t num_initial_points, fr::field_t *endo_scalars) 
+void compute_wnaf_state(multiplication_runtime_state &state, wnaf_runtime_state &wnaf_state, fr::field_t *scalars, g1::affine_element *, size_t num_initial_points, fr::field_t *endo_scalars)
 {
     size_t bits_per_bucket = get_optimal_bucket_width(num_initial_points);
-    multiplication_runtime_state state;
     state.num_points = num_initial_points + num_initial_points;
     state.num_rounds = WNAF_SIZE(bits_per_bucket + 1);
     state.num_buckets = (1UL << bits_per_bucket);
-    wnaf_runtime_state wnaf_state;
     wnaf_state.bits_per_wnaf = bits_per_bucket + 1;
 
     // allocate space for buckets
@@ -125,6 +123,16 @@ g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points,
 
     wnaf_state.wnaf_iterator = wnaf_state.wnaf_table;
     compute_next_bucket_index(wnaf_state);
+}
+
+// 12 rounds vs 11 rouds..
+g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points, size_t num_initial_points, fr::field_t *endo_scalars) 
+{
+    multiplication_runtime_state state;
+    wnaf_runtime_state wnaf_state;
+
+    size_t bits_per_bucket = get_optimal_bucket_width(num_initial_points);
+    compute_wnaf_state(state, wnaf_state, scalars, points, num_initial_points, endo_scalars);
     ++wnaf_state.wnaf_iterator;
 
     for (size_t i = 0; i < state.num_rounds; ++i)

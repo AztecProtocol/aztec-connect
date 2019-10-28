@@ -58,7 +58,16 @@ waffle::Verifier mimc_verifiers[NUM_CIRCUITS];
 waffle::plonk_proof mimc_proofs[NUM_CIRCUITS];
 
 // ###
-
+const int64_t hash_sizes[8]{
+    78,
+    156,
+    312,
+    625,
+    1250,
+    2500,
+    5000,
+    10000
+};
 void construct_mimc_witnesses_bench(State &state) noexcept
 {
     for (auto _ : state)
@@ -69,7 +78,7 @@ void construct_mimc_witnesses_bench(State &state) noexcept
         mimc_provers[idx] = composer.preprocess();
     }
 }
-BENCHMARK(construct_mimc_witnesses_bench)->RangeMultiplier(2)->Range(START_HASH_ROUNDS, MAX_HASH_ROUNDS);
+BENCHMARK(construct_mimc_witnesses_bench)->Arg(hash_sizes[0])->Arg(hash_sizes[1])->Arg(hash_sizes[2])->Arg(hash_sizes[3])->Arg(hash_sizes[4])->Arg(hash_sizes[5])->Arg(hash_sizes[6])->Arg(hash_sizes[7]);
 
 void construct_mimc_instances_bench(State &state) noexcept
 {
@@ -79,7 +88,7 @@ void construct_mimc_instances_bench(State &state) noexcept
         mimc_verifiers[idx] = (waffle::preprocess(mimc_provers[idx]));
     }
 }
-BENCHMARK(construct_mimc_instances_bench)->RangeMultiplier(2)->Range(START_HASH_ROUNDS, MAX_HASH_ROUNDS);
+BENCHMARK(construct_mimc_instances_bench)->Arg(hash_sizes[0])->Arg(hash_sizes[1])->Arg(hash_sizes[2])->Arg(hash_sizes[3])->Arg(hash_sizes[4])->Arg(hash_sizes[5])->Arg(hash_sizes[6])->Arg(hash_sizes[7]);
 
 void construct_mimc_proofs_bench(State &state) noexcept
 {
@@ -92,7 +101,7 @@ void construct_mimc_proofs_bench(State &state) noexcept
         state.ResumeTiming();
     }
 }
-BENCHMARK(construct_mimc_proofs_bench)->RangeMultiplier(2)->Range(START_HASH_ROUNDS, MAX_HASH_ROUNDS);
+BENCHMARK(construct_mimc_proofs_bench)->Arg(hash_sizes[0])->Arg(hash_sizes[1])->Arg(hash_sizes[2])->Arg(hash_sizes[3])->Arg(hash_sizes[4])->Arg(hash_sizes[5])->Arg(hash_sizes[6])->Arg(hash_sizes[7]);
 
 void verify_mimc_proofs_bench(State &state) noexcept
 {
@@ -109,7 +118,7 @@ void verify_mimc_proofs_bench(State &state) noexcept
         state.ResumeTiming();
     }
 }
-BENCHMARK(verify_mimc_proofs_bench)->RangeMultiplier(2)->Range(START_HASH_ROUNDS, MAX_HASH_ROUNDS);
+BENCHMARK(verify_mimc_proofs_bench)->Arg(hash_sizes[0])->Arg(hash_sizes[1])->Arg(hash_sizes[2])->Arg(hash_sizes[3])->Arg(hash_sizes[4])->Arg(hash_sizes[5])->Arg(hash_sizes[6])->Arg(hash_sizes[7]);
 
 // ###
 

@@ -35,6 +35,7 @@ public:
     ComposerContext *context;
     bool witness_bool;
     barretenberg::fr::field_t witness;
+    bool witness_inverted = false;
     uint32_t witness_index = static_cast<uint32_t>(-1);    
 };
 }

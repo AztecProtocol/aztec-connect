@@ -568,13 +568,8 @@ fr::field_t Prover::compute_linearisation_coefficients()
     return t_eval;
 }
 
-plonk_proof Prover::construct_proof()
+void Prover::compute_opening_elements()
 {
-    compute_permutation_lagrange_base_single(sigma_1, sigma_1_mapping, circuit_state.small_domain);
-    compute_permutation_lagrange_base_single(sigma_2, sigma_2_mapping, circuit_state.small_domain);
-    compute_permutation_lagrange_base_single(sigma_3, sigma_3_mapping, circuit_state.small_domain);
-    compute_quotient_polynomial();
-    compute_quotient_commitment();
 
     fr::field_t t_eval = compute_linearisation_coefficients();
 
@@ -692,7 +687,16 @@ plonk_proof Prover::construct_proof()
 
     g1::jacobian_to_affine(mul_state[0].output, proof.PI_Z);
     g1::jacobian_to_affine(mul_state[1].output, proof.PI_Z_OMEGA);
+}
 
+plonk_proof Prover::construct_proof()
+{
+    compute_permutation_lagrange_base_single(sigma_1, sigma_1_mapping, circuit_state.small_domain);
+    compute_permutation_lagrange_base_single(sigma_2, sigma_2_mapping, circuit_state.small_domain);
+    compute_permutation_lagrange_base_single(sigma_3, sigma_3_mapping, circuit_state.small_domain);
+    compute_quotient_polynomial();
+    compute_quotient_commitment();
+    compute_opening_elements();
     return proof;
 }
 

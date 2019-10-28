@@ -25,6 +25,7 @@ void copy_polynomial(fr::field_t *src, fr::field_t *dest, size_t num_src_coeffic
 
 //  2. Compute a lookup table of the roots of unity, and suffer through cache misses from nonlinear access patterns
 void fft_inner_serial(fr::field_t *coeffs, const size_t domain_size, const std::vector<fr::field_t*>& root_table);
+void fft_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &, const std::vector<fr::field_t*> &root_table);
 
 void fft(fr::field_t *coeffs, const evaluation_domain &domain);
 void fft_with_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &value);

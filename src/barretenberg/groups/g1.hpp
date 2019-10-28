@@ -263,6 +263,7 @@ inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
     fq::__sub_with_coarse_reduction(T3, T1, p3.y);
     fq::reduce_once(p3.y, p3.y);
 }
+// add: 10 mul_w_o_reduction 1 mul, 5 sqr
 
 inline void mixed_add(element &p1, const affine_element &p2, element &p3)
 {
@@ -416,6 +417,7 @@ inline void add(element &p1, element &p2, element &p3)
     fq::__sub_with_coarse_reduction(p3.z, Z1Z1, p3.z);
     fq::__mul(p3.z, H, p3.z);
 }
+
 
 // copies src into dest, inverting y-coordinate if 'predicate' is true
 // n.b. requires src and dest to be aligned on 32 byte boundary
