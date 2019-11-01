@@ -6,11 +6,26 @@ services:
       dockerfile: Dockerfile.cmake
     image: aztecprotocol/cmake:3.15.4
 
-  linux-openmp:
+  clang:
     build:
       context: .
-      dockerfile: Dockerfile.linux-openmp
-    image: aztecprotocol/barretenberg:linux-openmp
+      dockerfile: Dockerfile.clang
+    image: aztecprotocol/clang:9.0.0
+
+  x86-gcc-openmp:
+    build:
+      context: .
+      dockerfile: Dockerfile.x86-gcc-openmp
+    image: aztecprotocol/barretenberg:x86-gcc-openmp
+    tty: true
+    environment:
+      MAKEFLAGS: '-j8'
+
+  x86-clang-openmp:
+    build:
+      context: .
+      dockerfile: Dockerfile.x86-clang-openmp
+    image: aztecprotocol/barretenberg:x86-clang-openmp
     tty: true
     environment:
       MAKEFLAGS: '-j8'
