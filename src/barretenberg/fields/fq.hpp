@@ -75,7 +75,7 @@ inline void __mul(const field_t &a, const field_t &b, const field_t &r);
 inline void __mul_without_reduction(const field_t &a, const field_t &b, const field_t &r);
 
 // compute a * a, put result in r
-inline void __sqr(const field_t &a, const field_t &r);
+inline void __sqr(const field_t &a, field_t &r);
 
 // compute a * a, put result in r. Do not perform final reduction check
 inline void __sqr_without_reduction(const field_t &a, const field_t &r);

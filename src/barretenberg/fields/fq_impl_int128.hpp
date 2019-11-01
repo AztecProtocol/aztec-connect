@@ -175,7 +175,7 @@ inline void reduce_once(const field_t &a, field_t &r)
     internal::subtract(a, modulus, r);
 }
 
-inline void add_without_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __add_without_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     uint64_t carry = 0;
     internal::addc(a.data[0], b.data[0], 0, r.data[0], carry);
@@ -184,80 +184,80 @@ inline void add_without_reduction(const field_t &a, const field_t &b, field_t &r
     internal::addc(a.data[3], b.data[3], carry, r.data[3], carry);
 }
 
-inline void add(const field_t &a, const field_t &b, field_t &r)
+inline void __add(const field_t &a, const field_t &b, field_t &r)
 {
-    add_without_reduction(a, b, r);
+    __add_without_reduction(a, b, r);
     internal::subtract(r, modulus, r);
 }
 
-inline void add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
 {
-    add_without_reduction(a, b, r);
+    __add_without_reduction(a, b, r);
     internal::subtract_coarse(r, internal::twice_modulus, r);
 }
 
 inline void quad_with_coarse_reduction(const field_t &a, field_t &r)
 {
-    add_without_reduction(a, a, r);
+    __add_without_reduction(a, a, r);
     internal::subtract(r, internal::twice_modulus, r);
-    add_without_reduction(r, r, r);
+    __add_without_reduction(r, r, r);
     internal::subtract(r, internal::twice_modulus, r);
 }
 
 inline void oct_with_coarse_reduction(const field_t &a, field_t &r)
 {
-    add_without_reduction(a, a, r);
+    __add_without_reduction(a, a, r);
     internal::subtract(r, internal::twice_modulus, r);
-    add_without_reduction(r, r, r);
+    __add_without_reduction(r, r, r);
     internal::subtract(r, internal::twice_modulus, r);
-    add_without_reduction(r, r, r);
+    __add_without_reduction(r, r, r);
     internal::subtract(r, internal::twice_modulus, r);
 }
 
 inline void paralell_double_and_add_without_reduction(field_t &x_0, const field_t &y_0, const field_t &y_1, field_t &r)
 {
-    add_without_reduction(x_0, x_0, x_0);
-    add_without_reduction(y_0, y_1, r);
+    __add_without_reduction(x_0, x_0, x_0);
+    __add_without_reduction(y_0, y_1, r);
 }
 
-inline void sub(const field_t &a, const field_t &b, field_t &r)
+inline void __sub(const field_t &a, const field_t &b, field_t &r)
 {
     internal::subtract(a, b, r);
 }
 
-inline void sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     internal::subtract_coarse(a, b, r);
 }
 
-inline void mul(const field_t &lhs, const field_t &rhs, field_t &r)
+inline void __mul(const field_t &lhs, const field_t &rhs, field_t &r)
 {
     field_wide_t temp;
     internal::mul_512(lhs, rhs, temp);
     internal::montgomery_reduce(temp, r);
 }
 
-inline void mul_without_reduction(const field_t &lhs, const field_t &rhs, field_t &r)
+inline void __mul_without_reduction(const field_t &lhs, const field_t &rhs, field_t &r)
 {
-    mul(lhs, rhs, r);
+    __mul(lhs, rhs, r);
 }
 
-inline void sqr(const field_t &a, field_t &r)
+inline void __sqr(const field_t &a, field_t &r)
 {
     field_wide_t temp;
     internal::mul_512(a, a, temp);
     internal::montgomery_reduce(temp, r);
 }
 
-inline void sqr_without_reduction(const field_t &a, field_t &r)
+inline void __sqr_without_reduction(const field_t &a, field_t &r)
 {
-    sqr(a, r);
+    __sqr(a, r);
 }
 
 inline void mul_then_sub(const field_t &a, const field_t &b, const field_t &c, field_t &r)
 {
-    mul(a, b, r);
-    sub(r, c, r);
+    __mul(a, b, r);
+    __sub(r, c, r);
 }
 } // namespace fq
 } // namespace barretenberg

@@ -154,7 +154,7 @@ inline void reduce_once(const field_t &a, field_t &r)
     internal::subtract(a, modulus, r);
 }
 
-inline void add_without_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __add_without_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     uint64_t carry = 0;
     internal::addc(a.data[0], b.data[0], 0, r.data[0], carry);
@@ -163,24 +163,24 @@ inline void add_without_reduction(const field_t &a, const field_t &b, field_t &r
     internal::addc(a.data[3], b.data[3], carry, r.data[3], carry);
 }
 
-inline void add(const field_t &a, const field_t &b, field_t &r)
+inline void __add(const field_t &a, const field_t &b, field_t &r)
 {
-    add_without_reduction(a, b, r);
+    __add_without_reduction(a, b, r);
     internal::subtract(r, modulus, r);
 }
 
-inline void add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
 {
-    add_without_reduction(a, b, r);
+    __add_without_reduction(a, b, r);
     internal::subtract_coarse(r, internal::twice_modulus, r);
 }
 
-inline void sub(const field_t &a, const field_t &b, field_t &r)
+inline void __sub(const field_t &a, const field_t &b, field_t &r)
 {
     internal::subtract(a, b, r);
 }
 
-inline void sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     internal::subtract_coarse(a, b, r);
 }
@@ -213,22 +213,22 @@ inline void sqr_without_reduction(const field_t &a, field_t &r)
     internal::montgomery_reduce(temp, r);
 }
 
-inline void sqr(const field_t &a, field_t &r)
+inline void __sqr(const field_t &a, field_t &r)
 {
     sqr_without_reduction(a, r);
     internal::subtract(r, modulus, r);
 }
 
-inline void mul_without_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __mul_without_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     field_wide_t temp;
     mul_512(a, b, temp);
     internal::montgomery_reduce(temp, r);
 }
 
-inline void mul(const field_t &a, const field_t &b, field_t &r)
+inline void __mul(const field_t &a, const field_t &b, field_t &r)
 {
-    mul_without_reduction(a, b, r);
+    __mul_without_reduction(a, b, r);
     internal::subtract(r, modulus, r);
 }
 } // namespace fr
