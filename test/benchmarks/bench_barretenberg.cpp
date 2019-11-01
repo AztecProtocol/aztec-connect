@@ -2,7 +2,6 @@
 
 using namespace benchmark;
 
-#include <gmp.h>
 #include <iostream>
 #include <time.h>
 #include <string.h>
@@ -23,12 +22,10 @@ using namespace benchmark;
 
 using namespace barretenberg;
 
-
 constexpr size_t MAX_GATES = 1 << 20;
 constexpr size_t START = (1 << 20) >> 7;
 
-
-#define CIRCUIT_STATE_SIZE(x) ((x * 17 * sizeof(fr::field_t)) + (x * 3 * sizeof(uint32_t)) )
+#define CIRCUIT_STATE_SIZE(x) ((x * 17 * sizeof(fr::field_t)) + (x * 3 * sizeof(uint32_t)))
 #define FFT_SIZE(x) (x * 22 * sizeof(fr::field_t))
 
 void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *data, size_t n)
@@ -47,9 +44,9 @@ void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *da
     state.sigma_1 = &data[10 * n + 2];
     state.sigma_2 = &data[11 * n + 2];
     state.sigma_3 = &data[12 * n + 2];
-    state.sigma_1_mapping = (uint32_t*)&data[13 * n + 2];
-    state.sigma_2_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (uintptr_t)(n * sizeof(uint32_t)));
-    state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (uintptr_t)((2 * n) * sizeof(uint32_t)));
+    state.sigma_1_mapping = (uint32_t *)&data[13 * n + 2];
+    state.sigma_2_mapping = (uint32_t *)((uintptr_t)&data[13 * n + 2] + (uintptr_t)(n * sizeof(uint32_t)));
+    state.sigma_3_mapping = (uint32_t *)((uintptr_t)&data[13 * n + 2] + (uintptr_t)((2 * n) * sizeof(uint32_t)));
     state.t = &data[14 * n + 2];
 
     state.w_l_lagrange_base = state.t;
@@ -126,7 +123,7 @@ void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *da
         fr::__mul(w_l_acc, w_l_seed, w_l_acc);
         fr::__mul(w_r_acc, w_r_seed, w_r_acc);
     }
-    fr::field_t* scratch_mem = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * n / 2));
+    fr::field_t *scratch_mem = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * n / 2));
     fr::batch_invert(state.w_o, n / 2, scratch_mem);
     free(scratch_mem);
     for (size_t i = 0; i < n / 2; ++i)
@@ -162,18 +159,18 @@ void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *da
         state.sigma_3_mapping[i] = (uint32_t)(i + shift) + (1U << 31U);
     }
 
-    fr::zero(state.w_l[n-1]);
-    fr::zero(state.w_r[n-1]);
-    fr::zero(state.w_o[n-1]);
-    fr::zero(state.q_c[n-1]);
-    fr::zero(state.w_l[shift-1]);
-    fr::zero(state.w_r[shift-1]);
-    fr::zero(state.w_o[shift-1]);
-    fr::zero(state.q_c[shift-1]);
-    fr::zero(state.q_m[shift-1]);
-    fr::zero(state.q_l[shift-1]);
-    fr::zero(state.q_r[shift-1]);
-    fr::zero(state.q_o[shift-1]);
+    fr::zero(state.w_l[n - 1]);
+    fr::zero(state.w_r[n - 1]);
+    fr::zero(state.w_o[n - 1]);
+    fr::zero(state.q_c[n - 1]);
+    fr::zero(state.w_l[shift - 1]);
+    fr::zero(state.w_r[shift - 1]);
+    fr::zero(state.w_o[shift - 1]);
+    fr::zero(state.q_c[shift - 1]);
+    fr::zero(state.q_m[shift - 1]);
+    fr::zero(state.q_l[shift - 1]);
+    fr::zero(state.q_r[shift - 1]);
+    fr::zero(state.q_o[shift - 1]);
     // make last permutation the same as identity permutation
     state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
     state.sigma_2_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 30U);
@@ -222,7 +219,7 @@ void generate_scalars(fr::field_t *scalars)
     }
 }
 
-void generate_pairing_points(g1::affine_element* p1s, g2::affine_element* p2s)
+void generate_pairing_points(g1::affine_element *p1s, g2::affine_element *p2s)
 {
     p1s[0] = g1::random_affine_element();
     p1s[1] = g1::random_affine_element();
@@ -230,8 +227,7 @@ void generate_pairing_points(g1::affine_element* p1s, g2::affine_element* p2s)
     p2s[1] = g2::random_affine_element();
 }
 
-
-void reset_proof_state(waffle::circuit_state& state)
+void reset_proof_state(waffle::circuit_state &state)
 {
     fr::field_t beta_inv;
     fr::field_t alpha_inv;
@@ -249,13 +245,13 @@ void reset_proof_state(waffle::circuit_state& state)
 
 const auto init = []() {
     printf("generating test data\n");
-    globals.reference_string.degree =  MAX_GATES;
-    globals.reference_string.monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (2 * MAX_GATES + 2)));
-    globals.scalars = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * MAX_GATES));
+    globals.reference_string.degree = MAX_GATES;
+    globals.reference_string.monomials = (g1::affine_element *)(aligned_alloc(32, sizeof(g1::affine_element) * (2 * MAX_GATES + 2)));
+    globals.scalars = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * MAX_GATES));
     std::string my_file_path = std::string(BARRETENBERG_SRS_PATH);
     io::read_transcript(globals.reference_string, my_file_path);
     scalar_multiplication::generate_pippenger_point_table(globals.reference_string.monomials, globals.reference_string.monomials, MAX_GATES);
-    globals.data =  (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (8 * 17 * MAX_GATES)));
+    globals.data = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (8 * 17 * MAX_GATES)));
 
     size_t pointer_offset = 0;
     for (size_t i = 0; i < 8; ++i)
@@ -278,15 +274,16 @@ const auto init = []() {
     return true;
 }();
 
-
-uint64_t rdtsc(){
-    unsigned int lo,hi;
-    __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+uint64_t rdtsc()
+{
+    unsigned int lo, hi;
+    __asm__ __volatile__("rdtsc"
+                         : "=a"(lo), "=d"(hi));
     return ((uint64_t)hi << 32) | lo;
 }
 
 constexpr size_t NUM_SQUARINGS = 10000000;
-inline uint64_t fq_sqr_asm(fq::field_t& a, fq::field_t& r) noexcept
+inline uint64_t fq_sqr_asm(fq::field_t &a, fq::field_t &r) noexcept
 {
     for (size_t i = 0; i < NUM_SQUARINGS; ++i)
     {
@@ -296,7 +293,7 @@ inline uint64_t fq_sqr_asm(fq::field_t& a, fq::field_t& r) noexcept
 }
 
 constexpr size_t NUM_MULTIPLICATIONS = 10000000;
-inline uint64_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
+inline uint64_t fq_mul_asm(fq::field_t &a, fq::field_t &r) noexcept
 {
     for (size_t i = 0; i < NUM_MULTIPLICATIONS; ++i)
     {
@@ -305,7 +302,7 @@ inline uint64_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
     return 1;
 }
 
-void construct_instances_bench(State& state) noexcept
+void construct_instances_bench(State &state) noexcept
 {
     for (auto _ : state)
     {
@@ -324,8 +321,7 @@ void construct_instances_bench(State& state) noexcept
 }
 BENCHMARK(construct_instances_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
 
-
-void construct_proof_bench(State& state) noexcept
+void construct_proof_bench(State &state) noexcept
 {
     for (auto _ : state)
     {
@@ -344,8 +340,7 @@ void construct_proof_bench(State& state) noexcept
 }
 BENCHMARK(construct_proof_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
 
-
-void verify_proof_bench(State& state) noexcept
+void verify_proof_bench(State &state) noexcept
 {
     for (auto _ : state)
     {
@@ -361,8 +356,7 @@ void verify_proof_bench(State& state) noexcept
 }
 BENCHMARK(verify_proof_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
 
-
-void fft_bench_parallel(State& state) noexcept
+void fft_bench_parallel(State &state) noexcept
 {
     for (auto _ : state)
     {
@@ -372,18 +366,17 @@ void fft_bench_parallel(State& state) noexcept
 }
 BENCHMARK(fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
 
-
-void fft_bench_serial(State& state) noexcept
+void fft_bench_serial(State &state) noexcept
 {
     for (auto _ : state)
     {
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
-        barretenberg::polynomials::fft_inner_serial(globals.data, globals.plonk_states[idx].large_domain.thread_size, (const barretenberg::fr::field_t**)globals.plonk_states[idx].large_domain.round_roots);
+        barretenberg::polynomials::fft_inner_serial(globals.data, globals.plonk_states[idx].large_domain.thread_size, (const barretenberg::fr::field_t **)globals.plonk_states[idx].large_domain.round_roots);
     }
 }
 BENCHMARK(fft_bench_serial)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
 
-void pairing_bench(State& state) noexcept
+void pairing_bench(State &state) noexcept
 {
     uint64_t count = 0;
     uint64_t i = 0;
@@ -396,11 +389,11 @@ void pairing_bench(State& state) noexcept
         ++i;
     }
     uint64_t avg_cycles = count / i;
-    printf("single pairing clock cycles = %lu\n", (avg_cycles));
+    printf("single pairing clock cycles = %llu\n", (avg_cycles));
 }
 BENCHMARK(pairing_bench);
 
-void pairing_twin_bench(State& state) noexcept
+void pairing_twin_bench(State &state) noexcept
 {
     uint64_t count = 0;
     uint64_t i = 0;
@@ -413,11 +406,11 @@ void pairing_twin_bench(State& state) noexcept
         ++i;
     }
     uint64_t avg_cycles = count / i;
-    printf("twin pairing clock cycles = %lu\n", (avg_cycles));
+    printf("twin pairing clock cycles = %llu\n", (avg_cycles));
 }
 BENCHMARK(pairing_twin_bench);
 
-void batched_scalar_multiplications_bench(State& state) noexcept
+void batched_scalar_multiplications_bench(State &state) noexcept
 {
     scalar_multiplication::multiplication_state mul_state[NUM_THREADS];
     for (size_t i = 0; i < NUM_THREADS; ++i)
@@ -433,20 +426,20 @@ void batched_scalar_multiplications_bench(State& state) noexcept
 }
 BENCHMARK(batched_scalar_multiplications_bench);
 
-void pippenger_bench(State& state) noexcept
+void pippenger_bench(State &state) noexcept
 {
     for (auto _ : state)
     {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES));
         uint64_t after = rdtsc();
-        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / MAX_GATES);
+        printf("pippenger single, clock cycles per scalar mul = %llu\n", (after - before) / MAX_GATES);
     }
 }
 BENCHMARK(pippenger_bench);
 
 constexpr size_t NUM_G1_ADDITIONS = 10000000;
-void add_bench(State& state) noexcept
+void add_bench(State &state) noexcept
 {
     uint64_t count = 0;
     uint64_t j = 0;
@@ -463,11 +456,11 @@ void add_bench(State& state) noexcept
         count += (after - before);
         ++j;
     }
-    printf("g1 add number of cycles = %lu\n", count / (j * NUM_G1_ADDITIONS));
+    printf("g1 add number of cycles = %llu\n", count / (j * NUM_G1_ADDITIONS));
 }
 BENCHMARK(add_bench);
 
-void mixed_add_bench(State& state) noexcept
+void mixed_add_bench(State &state) noexcept
 {
     uint64_t count = 0;
     uint64_t j = 0;
@@ -484,17 +477,17 @@ void mixed_add_bench(State& state) noexcept
         count += (after - before);
         ++j;
     }
-    printf("g1 mixed add number of cycles = %lu\n", count / (j * NUM_G1_ADDITIONS));
+    printf("g1 mixed add number of cycles = %llu\n", count / (j * NUM_G1_ADDITIONS));
     // printf("r_2 = [%lu, %lu, %lu, %lu]\n", r_2[0], r_2[1], r_2[2], r_2[3]);
 }
 BENCHMARK(mixed_add_bench);
 
-void fq_sqr_asm_bench(State& state) noexcept
+void fq_sqr_asm_bench(State &state) noexcept
 {
     uint64_t count = 0;
     uint64_t i = 0;
-    fq::field_t a = { .data = { 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
-    fq::field_t r = { .data = { 1, 0, 0, 0 } };
+    fq::field_t a = {.data = {0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7}};
+    fq::field_t r = {.data = {1, 0, 0, 0}};
     for (auto _ : state)
     {
         size_t before = rdtsc();
@@ -503,17 +496,17 @@ void fq_sqr_asm_bench(State& state) noexcept
         count += after - before;
         ++i;
     }
-    printf("sqr number of cycles = %lu\n", count / (i * NUM_SQUARINGS));
+    printf("sqr number of cycles = %llu\n", count / (i * NUM_SQUARINGS));
     // printf("r_2 = [%lu, %lu, %lu, %lu]\n", r_2[0], r_2[1], r_2[2], r_2[3]);
 }
 BENCHMARK(fq_sqr_asm_bench);
 
-void fq_mul_asm_bench(State& state) noexcept
+void fq_mul_asm_bench(State &state) noexcept
 {
     uint64_t count = 0;
     uint64_t i = 0;
-    fq::field_t a = { .data = { 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
-    fq::field_t r = { .data = { 1, 0, 0, 0 } };
+    fq::field_t a = {.data = {0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7}};
+    fq::field_t r = {.data = {1, 0, 0, 0}};
     for (auto _ : state)
     {
         size_t before = rdtsc();
@@ -522,7 +515,7 @@ void fq_mul_asm_bench(State& state) noexcept
         count += after - before;
         ++i;
     }
-    printf("mul number of cycles = %lu\n", count / (i * NUM_MULTIPLICATIONS));
+    printf("mul number of cycles = %llu\n", count / (i * NUM_MULTIPLICATIONS));
 }
 BENCHMARK(fq_mul_asm_bench);
 

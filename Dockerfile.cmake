@@ -8,7 +8,3 @@ RUN wget https://cmake.org/files/v3.15/cmake-3.15.4.tar.gz \
   && make install \
   && cd .. \
   && rm -rf cmake*
-RUN apt-get install -y libgmp3-dev
-WORKDIR /usr/src/barretenberg
-COPY . .
-RUN mkdir build && cd build && cmake .. && cmake --build .

@@ -1,5 +1,5 @@
 #include "stddef.h"
-#include "malloc.h"
+#include <stdlib.h>
 
 #ifndef NO_MULTITHREADING
 #include <omp.h>
@@ -16,7 +16,7 @@ namespace barretenberg
 namespace scalar_multiplication
 {
 
-size_t get_optimal_bucket_width(size_t num_points) 
+size_t get_optimal_bucket_width(size_t num_points)
 {
     if (num_points >= 0x10000000) // 2^28!
     {
@@ -77,14 +77,14 @@ size_t get_optimal_bucket_width(size_t num_points)
     return 1;
 }
 
-void compute_next_bucket_index(wnaf_runtime_state &state) 
+void compute_next_bucket_index(wnaf_runtime_state &state)
 {
     uint32_t wnaf_entry = *state.wnaf_iterator;
     state.next_sign = (wnaf_entry >> 31) & 1;  //(uint64_t)(wnaf_entry >> state.bits_per_wnaf) & 1; // 0 - sign_bit;
     state.next_idx = wnaf_entry & 0x0fffffffU; // ((wnaf_entry ^ sign_mask) /*& state.mask*/) >> 1;
 }
 
-void generate_pippenger_point_table(g1::affine_element *points, g1::affine_element *table, size_t num_points) 
+void generate_pippenger_point_table(g1::affine_element *points, g1::affine_element *table, size_t num_points)
 {
     // iterate backwards, so that `points` and `table` can point to the same memory location
     for (size_t i = num_points - 1; i < num_points; --i)
@@ -164,7 +164,7 @@ g1::element pippenger_low_memory(fr::field_t *scalars, g1::affine_element *point
             g1::conditional_negate_affine(&points[j], &state.addition_temporary, wnaf_state.current_sign);
             __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
             g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
-            
+
             wnaf_state.current_idx = wnaf_state.next_idx;
             wnaf_state.current_sign = wnaf_state.next_sign;
             compute_next_bucket_index(wnaf_state);
@@ -172,7 +172,7 @@ g1::element pippenger_low_memory(fr::field_t *scalars, g1::affine_element *point
             __builtin_prefetch(++wnaf_state.wnaf_iterator);
             g1::conditional_negate_affine(&points[j], &state.addition_temporary, wnaf_state.current_sign);
             fq::__mul_beta(state.addition_temporary.x, state.addition_temporary.x);
-            fq::neg(state.addition_temporary.y , state.addition_temporary.y);
+            fq::neg(state.addition_temporary.y, state.addition_temporary.y);
             __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
             g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
         }
@@ -206,7 +206,7 @@ g1::element pippenger_low_memory(fr::field_t *scalars, g1::affine_element *point
     return state.accumulator;
 }
 
-g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points, size_t num_initial_points, fr::field_t *endo_scalars) 
+g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points, size_t num_initial_points, fr::field_t *endo_scalars)
 {
     size_t bits_per_bucket = get_optimal_bucket_width(num_initial_points);
     multiplication_runtime_state state;
@@ -297,7 +297,7 @@ g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points,
     return state.accumulator;
 }
 
-g1::element pippenger(fr::field_t *scalars, g1::affine_element *points, size_t num_initial_points) 
+g1::element pippenger(fr::field_t *scalars, g1::affine_element *points, size_t num_initial_points)
 {
     fr::field_t *endo_scalars = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * (num_initial_points));
     for (size_t i = 0; i < num_initial_points; ++i)

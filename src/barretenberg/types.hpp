@@ -3,6 +3,15 @@
 
 #include "stdint.h"
 #include "stddef.h"
+#include "stdlib.h"
+#include <sys/random.h>
+
+inline void *aligned_alloc(size_t alignment, size_t size)
+{
+    void *t;
+    posix_memalign(&t, alignment, size);
+    return t;
+}
 
 #ifndef BARRETENBERG_SRS_PATH
 #define BARRETENBERG_SRS_PATH ""
@@ -136,17 +145,16 @@ public:
     size_t log2_thread_size;
     size_t log2_num_threads;
 
-    fr::field_t** round_roots;
-    fr::field_t* roots;
-    fr::field_t** inverse_round_roots;
-    fr::field_t* inverse_roots;
+    fr::field_t **round_roots;
+    fr::field_t *roots;
+    fr::field_t **inverse_round_roots;
+    fr::field_t *inverse_roots;
 
-    evaluation_domain() : round_roots(nullptr), roots(nullptr), inverse_round_roots(nullptr), inverse_roots(nullptr) {};
+    evaluation_domain() : round_roots(nullptr), roots(nullptr), inverse_round_roots(nullptr), inverse_roots(nullptr){};
     evaluation_domain(size_t size, bool skip_roots = false);
-    evaluation_domain(const evaluation_domain& other);
-    evaluation_domain(evaluation_domain&& other) = delete;
+    evaluation_domain(const evaluation_domain &other);
+    evaluation_domain(evaluation_domain &&other) = delete;
     ~evaluation_domain();
-
 };
 
 struct lagrange_evaluations
@@ -242,17 +250,17 @@ struct circuit_state
     barretenberg::polynomials::evaluation_domain large_domain;
 
     circuit_state(size_t n);
-    circuit_state(const circuit_state& other);
+    circuit_state(const circuit_state &other);
 };
 
 struct witness_ffts
 {
-    barretenberg::fr::field_t* w_l_large;
-    barretenberg::fr::field_t* w_r_large;
-    barretenberg::fr::field_t* w_o_large;
-    barretenberg::fr::field_t* w_l_mid;
-    barretenberg::fr::field_t* w_r_mid;
-    barretenberg::fr::field_t* w_o_mid;
+    barretenberg::fr::field_t *w_l_large;
+    barretenberg::fr::field_t *w_r_large;
+    barretenberg::fr::field_t *w_o_large;
+    barretenberg::fr::field_t *w_l_mid;
+    barretenberg::fr::field_t *w_r_mid;
+    barretenberg::fr::field_t *w_o_mid;
 };
 
 struct plonk_proof

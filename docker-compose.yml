@@ -1,9 +1,16 @@
 version: '3'
 services:
-  build-env:
-    build: .
-    image: aztec/barretenberg-build
-    entrypoint: /bin/bash
+  cmake:
+    build:
+      context: .
+      dockerfile: Dockerfile.cmake
+    image: aztecprotocol/cmake:3.15.4
+
+  linux-openmp:
+    build:
+      context: .
+      dockerfile: Dockerfile.linux-openmp
+    image: aztecprotocol/barretenberg:linux-openmp
     tty: true
     environment:
       MAKEFLAGS: '-j8'

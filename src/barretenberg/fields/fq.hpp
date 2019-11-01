@@ -11,17 +11,17 @@ namespace barretenberg
 {
 namespace fq
 {
-constexpr field_t modulus = { .data = {
-    0x3C208C16D87CFD47UL,
-    0x97816a916871ca8dUL,
-    0xb85045b68181585dUL,
-    0x30644e72e131a029UL}};
+constexpr field_t modulus = {.data = {
+                                 0x3C208C16D87CFD47UL,
+                                 0x97816a916871ca8dUL,
+                                 0xb85045b68181585dUL,
+                                 0x30644e72e131a029UL}};
 
 namespace internal
 {
 constexpr uint64_t r_inv = 0x87d20782e4866389UL;
 }
-} // namespace fr
+} // namespace fq
 } // namespace barretenberg
 
 #ifdef DISABLE_SHENANIGANS
@@ -34,40 +34,38 @@ namespace barretenberg
 {
 namespace fq
 {
-constexpr field_t __zero = { .data = { 0x00, 0x00, 0x00, 0x00 } };
+constexpr field_t __zero = {.data = {0x00, 0x00, 0x00, 0x00}};
 
 constexpr field_t curve_b = {.data = {0x3, 0x0, 0x0, 0x0}};
 
 constexpr field_t two_inv = {.data = {0x87bee7d24f060572, 0xd0fd2add2f1c6ae5, 0x8f5f7492fcfd4f44, 0x1f37631a3d9cbfac}};
 
 constexpr field_t modulus_plus_one = {.data = {
-    0x3C208C16D87CFD48UL,
-    0x97816a916871ca8dUL,
-    0xb85045b68181585dUL,
-    0x30644e72e131a029UL}};
+                                          0x3C208C16D87CFD48UL,
+                                          0x97816a916871ca8dUL,
+                                          0xb85045b68181585dUL,
+                                          0x30644e72e131a029UL}};
 
 constexpr field_t r_squared = {.data = {
-    0xF32CFC5B538AFA89UL,
-    0xB5E71911D44501FBUL,
-    0x47AB1EFF0A417FF6UL,
-    0x06D89F71CAB8351FUL}};
+                                   0xF32CFC5B538AFA89UL,
+                                   0xB5E71911D44501FBUL,
+                                   0x47AB1EFF0A417FF6UL,
+                                   0x06D89F71CAB8351FUL}};
 
 constexpr field_t one_raw = {.data = {1, 0, 0, 0}};
 
-
-constexpr field_t one_mont = { .data = {
-    0xd35d438dc58f0d9d,
-    0x0a78eb28f5c70b3d,
-    0x666ea36f7879462c,
-    0x0e0a77c19a07df2f}};
+constexpr field_t one_mont = {.data = {
+                                  0xd35d438dc58f0d9d,
+                                  0x0a78eb28f5c70b3d,
+                                  0x666ea36f7879462c,
+                                  0x0e0a77c19a07df2f}};
 
 // cube root of unity modulo (modulus), converted into montgomery form
-constexpr field_t beta = { .data = {
-    0x71930c11d782e155UL,
-    0xa6bb947cffbe3323UL,
-    0xaa303344d4741444UL,
-    0x2c3b3f0d26594943UL}};
-
+constexpr field_t beta = {.data = {
+                              0x71930c11d782e155UL,
+                              0xa6bb947cffbe3323UL,
+                              0xaa303344d4741444UL,
+                              0x2c3b3f0d26594943UL}};
 
 // compute a * b, put result in r
 inline void __mul(const field_t &a, const field_t &b, const field_t &r);
@@ -245,7 +243,7 @@ inline field_t zero()
  **/
 inline void print(const field_t &a)
 {
-    printf("fq: [%lx, %lx, %lx, %lx]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
+    printf("fq: [%llx, %llx, %llx, %llx]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
 }
 
 inline bool eq(const field_t &a, const field_t &b)

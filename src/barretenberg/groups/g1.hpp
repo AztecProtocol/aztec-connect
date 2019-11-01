@@ -15,15 +15,15 @@ namespace g1
 {
 inline void print(affine_element &p)
 {
-    printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
-    printf("p.y: [%lx, %lx, %lx, %lx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
+    printf("p.x: [%llx, %llx, %llx, %llx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
+    printf("p.y: [%llx, %llx, %llx, %llx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
 }
 
 inline void print(element &p)
 {
-    printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
-    printf("p.y: [%lx, %lx, %lx, %lx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
-    printf("p.z: [%lx, %lx, %lx, %lx]\n", p.z.data[0], p.z.data[1], p.z.data[2], p.z.data[3]);
+    printf("p.x: [%llx, %llx, %llx, %llx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
+    printf("p.y: [%llx, %llx, %llx, %llx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
+    printf("p.z: [%llx, %llx, %llx, %llx]\n", p.z.data[0], p.z.data[1], p.z.data[2], p.z.data[3]);
 }
 
 inline void random_coordinates_on_curve(fq::field_t &x, fq::field_t &y)
@@ -700,7 +700,7 @@ inline element group_exponentiation(const element &a, const fr::field_t &scalar)
         set_infinity(result);
         return result;
     }
-    element& point = const_cast<element&>(a);
+    element &point = const_cast<element &>(a);
 
     constexpr size_t lookup_size = 8;
     constexpr size_t num_rounds = 32;

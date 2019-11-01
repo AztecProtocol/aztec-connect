@@ -11,10 +11,10 @@ namespace barretenberg
 namespace fr
 {
 constexpr field_t modulus = {.data = {
-    0x43E1F593F0000001UL,
-    0x2833E84879B97091UL,
-    0xB85045B68181585DUL,
-    0x30644E72E131A029UL}};
+                                 0x43E1F593F0000001UL,
+                                 0x2833E84879B97091UL,
+                                 0xB85045B68181585DUL,
+                                 0x30644E72E131A029UL}};
 namespace internal
 {
 constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
@@ -59,7 +59,7 @@ constexpr size_t S = 28; // 2^S = maximum degree of a polynomial that's amenable
 
 inline void print(const field_t &a)
 {
-    printf("fr: [%lx, %lx, %lx, %lx]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
+    printf("fr: [%llx, %llx, %llx, %llx]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
 }
 
 // compute a * b mod p, put result in r
@@ -76,7 +76,6 @@ inline void __add(const field_t &a, const field_t &b, field_t &r);
 
 // compute a - b, put result in r
 inline void __sub(const field_t &a, const field_t &b, field_t &r);
-
 
 inline field_t add(const field_t &a, const field_t &b)
 {
@@ -153,18 +152,18 @@ inline void from_montgomery_form(const field_t &a, field_t &r)
  * we can take advantage of an enodmorphism to decompose a 254 bit scalar into 2 128 bit scalars.
  * \beta = cube root of 1, mod q (q = order of fq)
  * \lambda = cube root of 1, mod r (r = order of fr)
- * 
+ *
  * For a point P1 = (X, Y), where Y^2 = X^3 + b, we know that
  * the point P2 = (X * \beta, Y) is also a point on the curve
  * We can represent P2 as a scalar multiplication of P1, where P2 = \lambda * P1
- * 
+ *
  * For a generic multiplication of P1 by a 254 bit scalar k, we can decompose k
- * into 2 127 bit scalars (k1, k2), such that k = k1 - (k2 * \lambda) 
- * 
+ * into 2 127 bit scalars (k1, k2), such that k = k1 - (k2 * \lambda)
+ *
  * We can now represent (k * P1) as (k1 * P1) - (k2 * P2), where P2 = (X * \beta, Y).
  * As k1, k2 have half the bit length of k, we have reduced the number of loop iterations of our
  * scalar multiplication algorithm in half
- * 
+ *
  * To find k1, k2, We use the extended euclidean algorithm to find 4 short scalars [a1, a2], [b1, b2] such that
  * modulus = (a1 * b2) - (b1 * a2)
  * We then compube scalars c1 = round(b2 * k / r), c2 = round(b1 * k / r), where
