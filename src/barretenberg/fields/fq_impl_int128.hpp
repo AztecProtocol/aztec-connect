@@ -21,18 +21,18 @@ constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 // 216D0B17F4E44A5 // 8C49833D53BB8085 // 53FE3AB1E35C59E3 // 1BB8E645AE216DA7
 
 constexpr field_t r_squared = {.data = {
-    0xF32CFC5B538AFA89UL,
-    0xB5E71911D44501FBUL,
-    0x47AB1EFF0A417FF6UL,
-    0x06D89F71CAB8351FUL}};
+                                   0xF32CFC5B538AFA89UL,
+                                   0xB5E71911D44501FBUL,
+                                   0x47AB1EFF0A417FF6UL,
+                                   0x06D89F71CAB8351FUL}};
 
 constexpr field_t one_raw = {.data = {1, 0, 0, 0}};
 
 constexpr field_t twice_modulus = {.data = {
-    0x7841182db0f9fa8eUL,
-    0x2f02d522d0e3951aUL,
-    0x70a08b6d0302b0bbUL,
-    0x60c89ce5c2634053UL}};
+                                       0x7841182db0f9fa8eUL,
+                                       0x2f02d522d0e3951aUL,
+                                       0x70a08b6d0302b0bbUL,
+                                       0x60c89ce5c2634053UL}};
 
 inline bool gt(field_t &a, field_t &b)
 {
@@ -160,8 +160,7 @@ inline void mul_512(const field_t &a, const field_t &b, field_wide_t &r)
     mac(r.data[5], a.data[3], b.data[2], carry, r.data[5], carry);
     mac(r.data[6], a.data[3], b.data[3], carry, r.data[6], r.data[7]);
 }
-} // namespace
-
+} // namespace internal
 
 inline void copy(const field_t &a, field_t &r)
 {
@@ -173,7 +172,7 @@ inline void copy(const field_t &a, field_t &r)
 
 inline void reduce_once(const field_t &a, field_t &r)
 {
-    internal::subtract(a, modulus, r);    
+    internal::subtract(a, modulus, r);
 }
 
 inline void add_without_reduction(const field_t &a, const field_t &b, field_t &r)

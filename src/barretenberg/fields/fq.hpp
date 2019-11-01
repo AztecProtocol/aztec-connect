@@ -3,6 +3,7 @@
 
 #include "stdint.h"
 #include "stdio.h"
+#include "inttypes.h"
 
 #include "../assert.hpp"
 #include "../types.hpp"
@@ -243,7 +244,7 @@ inline field_t zero()
  **/
 inline void print(const field_t &a)
 {
-    printf("fq: [%llx, %llx, %llx, %llx]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
+    printf("fq: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
 }
 
 inline bool eq(const field_t &a, const field_t &b)

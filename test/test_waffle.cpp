@@ -10,7 +10,7 @@
 ```
 elliptic curve point addition on a short weierstrass curve.
 
-circuit has 9 gates, I've added 7 dummy gates so that the polynomial degrees are a power of 2 
+circuit has 9 gates, I've added 7 dummy gates so that the polynomial degrees are a power of 2
 
 input points: (x_1, y_1), (x_2, y_2)
 output point: (x_3, y_3)
@@ -67,7 +67,7 @@ using namespace barretenberg;
 namespace
 {
 
-void generate_point_addition_data_inner(waffle::circuit_state& state, size_t index)
+void generate_point_addition_data_inner(waffle::circuit_state &state, size_t index)
 {
     fr::field_t x_1 = fr::random_element();
     fr::field_t x_2 = fr::random_element();
@@ -173,35 +173,35 @@ void generate_point_addition_data_inner(waffle::circuit_state& state, size_t ind
     fr::zero(state.q_c[index + 8]);
 
     uint32_t shift = (1U << 30U);
-    state.sigma_1_mapping[index + 0] = (uint32_t)index+0;
-    state.sigma_1_mapping[index + 1] = (uint32_t)index+2+shift;
-    state.sigma_1_mapping[index + 2] = (uint32_t)index+5;
-    state.sigma_1_mapping[index + 3] = (uint32_t)index+2+shift+shift;
-    state.sigma_1_mapping[index + 4] = (uint32_t)index+4;
-    state.sigma_1_mapping[index + 5] = (uint32_t)index+1+shift;
-    state.sigma_1_mapping[index + 6] = (uint32_t)index+7;
-    state.sigma_1_mapping[index + 7] = (uint32_t)index+8;
-    state.sigma_1_mapping[index + 8] = (uint32_t)index+7+shift;
+    state.sigma_1_mapping[index + 0] = (uint32_t)index + 0;
+    state.sigma_1_mapping[index + 1] = (uint32_t)index + 2 + shift;
+    state.sigma_1_mapping[index + 2] = (uint32_t)index + 5;
+    state.sigma_1_mapping[index + 3] = (uint32_t)index + 2 + shift + shift;
+    state.sigma_1_mapping[index + 4] = (uint32_t)index + 4;
+    state.sigma_1_mapping[index + 5] = (uint32_t)index + 1 + shift;
+    state.sigma_1_mapping[index + 6] = (uint32_t)index + 7;
+    state.sigma_1_mapping[index + 7] = (uint32_t)index + 8;
+    state.sigma_1_mapping[index + 8] = (uint32_t)index + 7 + shift;
 
-    state.sigma_2_mapping[index + 0] = (uint32_t)index+4+shift;
-    state.sigma_2_mapping[index + 1] = (uint32_t)index+2;
-    state.sigma_2_mapping[index + 2] = (uint32_t)index+1;
-    state.sigma_2_mapping[index + 3] = (uint32_t)index+5+shift;
-    state.sigma_2_mapping[index + 4] = (uint32_t)index+0+shift;
-    state.sigma_2_mapping[index + 5] = (uint32_t)index+3+shift;
-    state.sigma_2_mapping[index + 6] = (uint32_t)index+1+shift+shift;
-    state.sigma_2_mapping[index + 7] = (uint32_t)index+6;
-    state.sigma_2_mapping[index + 8] = (uint32_t)index+5+shift+shift;
+    state.sigma_2_mapping[index + 0] = (uint32_t)index + 4 + shift;
+    state.sigma_2_mapping[index + 1] = (uint32_t)index + 2;
+    state.sigma_2_mapping[index + 2] = (uint32_t)index + 1;
+    state.sigma_2_mapping[index + 3] = (uint32_t)index + 5 + shift;
+    state.sigma_2_mapping[index + 4] = (uint32_t)index + 0 + shift;
+    state.sigma_2_mapping[index + 5] = (uint32_t)index + 3 + shift;
+    state.sigma_2_mapping[index + 6] = (uint32_t)index + 1 + shift + shift;
+    state.sigma_2_mapping[index + 7] = (uint32_t)index + 6;
+    state.sigma_2_mapping[index + 8] = (uint32_t)index + 5 + shift + shift;
 
-    state.sigma_3_mapping[index + 0] = (uint32_t)index+6+shift+shift;
-    state.sigma_3_mapping[index + 1] = (uint32_t)index+6+shift;
-    state.sigma_3_mapping[index + 2] = (uint32_t)index+3;
-    state.sigma_3_mapping[index + 3] = (uint32_t)index+7+shift+shift;
-    state.sigma_3_mapping[index + 4] = (uint32_t)index+8+shift+shift;
-    state.sigma_3_mapping[index + 5] = (uint32_t)index+8+shift;
-    state.sigma_3_mapping[index + 6] = (uint32_t)index+0+shift+shift;
-    state.sigma_3_mapping[index + 7] = (uint32_t)index+3+shift+shift;
-    state.sigma_3_mapping[index + 8] = (uint32_t)index+4+shift+shift;
+    state.sigma_3_mapping[index + 0] = (uint32_t)index + 6 + shift + shift;
+    state.sigma_3_mapping[index + 1] = (uint32_t)index + 6 + shift;
+    state.sigma_3_mapping[index + 2] = (uint32_t)index + 3;
+    state.sigma_3_mapping[index + 3] = (uint32_t)index + 7 + shift + shift;
+    state.sigma_3_mapping[index + 4] = (uint32_t)index + 8 + shift + shift;
+    state.sigma_3_mapping[index + 5] = (uint32_t)index + 8 + shift;
+    state.sigma_3_mapping[index + 6] = (uint32_t)index + 0 + shift + shift;
+    state.sigma_3_mapping[index + 7] = (uint32_t)index + 3 + shift + shift;
+    state.sigma_3_mapping[index + 8] = (uint32_t)index + 4 + shift + shift;
 }
 
 // void generate_fibonnaci_data(waffle::circuit_state& state, fr::field_t* data)
@@ -226,13 +226,13 @@ void generate_point_addition_data_inner(waffle::circuit_state& state, size_t ind
 //     }
 // }
 
-void generate_point_addition_data(waffle::circuit_state& state, fr::field_t* data)
+void generate_point_addition_data(waffle::circuit_state &state, fr::field_t *data)
 {
-    size_t n = 16;
+    size_t n = 64;
     state.n = n;
     state.challenges.beta = fr::random_element();
-    state.challenges.gamma= fr::random_element();
-    state.challenges.alpha= fr::random_element();
+    state.challenges.gamma = fr::random_element();
+    state.challenges.alpha = fr::random_element();
     fr::__sqr(state.challenges.alpha, state.alpha_squared);
     fr::__mul(state.alpha_squared, state.challenges.alpha, state.alpha_cubed);
 
@@ -249,11 +249,11 @@ void generate_point_addition_data(waffle::circuit_state& state, fr::field_t* dat
     state.sigma_1 = &data[10 * n + 2];
     state.sigma_2 = &data[11 * n + 2];
     state.sigma_3 = &data[12 * n + 2];
-    state.sigma_1_mapping = (uint32_t*)&data[17 * n + 2];
-    state.sigma_2_mapping = (uint32_t*)((uintptr_t)&data[18 * n + 2] + (n * sizeof(uint32_t)));
-    state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[19 * n + 2] + ((2 * n) * sizeof(uint32_t)));
+    state.sigma_1_mapping = (uint32_t *)&data[17 * n + 2];
+    state.sigma_2_mapping = (uint32_t *)((uintptr_t)&data[18 * n + 2] + (n * sizeof(uint32_t)));
+    state.sigma_3_mapping = (uint32_t *)((uintptr_t)&data[19 * n + 2] + ((2 * n) * sizeof(uint32_t)));
     state.t = &data[14 * n + 2];
-    
+
     state.product_1 = &data[17 * n + 5];
     state.product_2 = &data[18 * n + 6];
     state.product_3 = &data[19 * n + 7];
@@ -279,10 +279,9 @@ void generate_point_addition_data(waffle::circuit_state& state, fr::field_t* dat
         fr::zero(state.q_o[i]);
         fr::zero(state.q_c[i]);
     }
-
 }
 
-void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
+void generate_test_data(waffle::circuit_state &state, fr::field_t *data)
 {
     size_t n = state.n;
 
@@ -299,9 +298,9 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     state.sigma_1 = &data[10 * n + 2];
     state.sigma_2 = &data[11 * n + 2];
     state.sigma_3 = &data[12 * n + 2];
-    state.sigma_1_mapping = (uint32_t*)&data[13 * n + 2];
-    state.sigma_2_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (n * sizeof(uint32_t)));
-    state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + ((2 * n) * sizeof(uint32_t)));
+    state.sigma_1_mapping = (uint32_t *)&data[13 * n + 2];
+    state.sigma_2_mapping = (uint32_t *)((uintptr_t)&data[13 * n + 2] + (n * sizeof(uint32_t)));
+    state.sigma_3_mapping = (uint32_t *)((uintptr_t)&data[13 * n + 2] + ((2 * n) * sizeof(uint32_t)));
     state.t = &data[14 * n + 2];
 
     state.w_l_lagrange_base = state.t;
@@ -363,14 +362,14 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
         state.sigma_3_mapping[i] = (uint32_t)(i + shift) + (1U << 31U);
     }
 
-    fr::zero(state.w_l[n-1]);
-    fr::zero(state.w_r[n-1]);
-    fr::zero(state.w_o[n-1]);
-    fr::zero(state.q_c[n-1]);
-    fr::zero(state.w_l[shift-1]);
-    fr::zero(state.w_r[shift-1]);
-    fr::zero(state.w_o[shift-1]);
-    fr::zero(state.q_c[shift-1]);
+    fr::zero(state.w_l[n - 1]);
+    fr::zero(state.w_r[n - 1]);
+    fr::zero(state.w_o[n - 1]);
+    fr::zero(state.q_c[n - 1]);
+    fr::zero(state.w_l[shift - 1]);
+    fr::zero(state.w_r[shift - 1]);
+    fr::zero(state.w_o[shift - 1]);
+    fr::zero(state.q_c[shift - 1]);
 
     // make last permutation the same as identity permutation
     state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
@@ -385,19 +384,19 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     fr::zero(state.q_o[n - 1]);
     fr::zero(state.q_m[n - 1]);
 }
-}
+} // namespace
 
 TEST(waffle, compute_quotient_polynomial_for_structured_circuit)
 {
-    size_t n = 16;
+    size_t n = 64;
 
     waffle::circuit_state state(n);
     // state.small_domain = polynomials::evaluation_domain(n);
     // state.mid_domain = polynomials::evaluation_domain(2 * n);
     // state.large_domain = polynomials::evaluation_domain(4 * n);
     state.n = n;
-    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22 * n + 8)));
-    fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (22 * n + 8)));
+    fr::field_t *scratch_space = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (22 * n + 8)));
+    fr::field_t *data = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (22 * n + 8)));
 
     waffle::fft_pointers ffts;
     ffts.scratch_memory = scratch_space;
@@ -410,7 +409,7 @@ TEST(waffle, compute_quotient_polynomial_for_structured_circuit)
 
     for (size_t i = 1; i < 3 * n; ++i)
     {
-        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+        monomials[i] = g1::group_exponentiation(monomials[i - 1], x);
     }
     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
     srs.monomials = monomials;
@@ -440,7 +439,7 @@ TEST(waffle, compute_quotient_polynomial)
 
     fr::field_t data[28 * n + 2];
 
-    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (70 * n + 8)));
+    fr::field_t *scratch_space = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (70 * n + 8)));
 
     waffle::fft_pointers ffts;
     ffts.scratch_memory = scratch_space;
@@ -453,7 +452,7 @@ TEST(waffle, compute_quotient_polynomial)
 
     for (size_t i = 1; i < 3 * n; ++i)
     {
-        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+        monomials[i] = g1::group_exponentiation(monomials[i - 1], x);
     }
     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
     srs.monomials = monomials;
@@ -534,7 +533,7 @@ TEST(waffle, compute_quotient_polynomial)
 //     z_2_evaluations[0] = 1;
 //     for (size_t i = 0; i < n - 1; ++i)
 //     {
-        
+
 //         uint64_t product_1 = i + 3;
 //         uint64_t product_2 = (2 * i) + 5;
 //         uint64_t product_3 = (3 * i) + 7;
@@ -582,7 +581,6 @@ TEST(waffle, compute_quotient_polynomial)
 //     fr::field_t* shifted_z = &z_coeffs_copy[4];
 
 //     polynomials::ifft(shifted_z, state.large_domain);
-
 
 //     fr::field_t x = fr::random_element();
 //     fr::field_t shifted_x;
@@ -697,7 +695,7 @@ TEST(waffle, compute_wire_commitments)
 
     for (size_t i = 1; i < n; ++i)
     {
-        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+        monomials[i] = g1::group_exponentiation(monomials[i - 1], x);
     }
     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, n);
     srs.monomials = monomials;
@@ -715,7 +713,6 @@ TEST(waffle, compute_wire_commitments)
     fr::field_t w_l_eval;
     fr::field_t w_r_eval;
     fr::field_t w_o_eval;
-
 
     w_l_eval = polynomials::evaluate(w_l_copy, x, n);
     w_r_eval = polynomials::evaluate(w_r_copy, x, n);
@@ -747,9 +744,9 @@ TEST(waffle, compute_z_commitments)
     // state.large_domain = polynomials::evaluation_domain(4 * n);
     state.n = n;
 
-    fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (28 * n + 2)));
-    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (24 * n + 8)));
-    g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
+    fr::field_t *data = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (28 * n + 2)));
+    fr::field_t *scratch_space = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (24 * n + 8)));
+    g1::affine_element *monomials = (g1::affine_element *)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
 
     waffle::fft_pointers ffts;
     ffts.scratch_memory = scratch_space;
@@ -767,7 +764,7 @@ TEST(waffle, compute_z_commitments)
 
     for (size_t i = 1; i < n; ++i)
     {
-        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+        monomials[i] = g1::group_exponentiation(monomials[i - 1], x);
     }
     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, n);
     srs.monomials = monomials;
@@ -781,7 +778,6 @@ TEST(waffle, compute_z_commitments)
     polynomials::copy_polynomial(state.z_1, z_1_copy, n, n);
 
     fr::field_t z_1_eval;
-
 
     z_1_eval = polynomials::evaluate(z_1_copy, x, n);
 
@@ -811,9 +807,9 @@ TEST(waffle, compute_linearisation_coefficients)
     state.n = n;
 
     // fr::field_t data[28 * n + 2];
-    fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (28 * n + 2)));
-    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (70 * n + 8)));
-    g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
+    fr::field_t *data = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (28 * n + 2)));
+    fr::field_t *scratch_space = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (70 * n + 8)));
+    g1::affine_element *monomials = (g1::affine_element *)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
 
     waffle::fft_pointers ffts;
     ffts.scratch_memory = scratch_space;
@@ -825,7 +821,7 @@ TEST(waffle, compute_linearisation_coefficients)
 
     for (size_t i = 1; i < 3 * n; ++i)
     {
-        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+        monomials[i] = g1::group_exponentiation(monomials[i - 1], x);
     }
     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, 3 * n);
     srs.monomials = monomials;
@@ -888,4 +884,3 @@ TEST(waffle, compute_linearisation_coefficients)
     free(data);
     free(monomials);
 }
-

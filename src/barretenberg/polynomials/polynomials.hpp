@@ -17,8 +17,7 @@ namespace barretenberg
 // Some hacky macros that allow us to parallelize iterating over a polynomial's point-evaluations
 #ifndef NO_MULTITHREADING
 #define ITERATE_OVER_DOMAIN_START(domain)                                                  \
-    _Pragma("omp parallel for")                                                            \
-    for (size_t j = 0; j < domain.num_threads; ++j)                                        \
+    _Pragma("omp parallel for") for (size_t j = 0; j < domain.num_threads; ++j)            \
     {                                                                                      \
         for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i) \
         {
@@ -35,7 +34,6 @@ namespace barretenberg
     }
 #endif
 
-
 namespace polynomials
 {
 
@@ -46,7 +44,7 @@ void copy_polynomial(fr::field_t *src, fr::field_t *dest, size_t num_src_coeffic
 fr::field_t evaluate(fr::field_t *coeffs, const fr::field_t &z, const size_t n);
 
 //  2. Compute a lookup table of the roots of unity, and suffer through cache misses from nonlinear access patterns
-void fft_inner_serial(fr::field_t *coeffs, const size_t domain_size, const fr::field_t** root_table);
+void fft_inner_serial(fr::field_t *coeffs, const size_t domain_size, const fr::field_t **root_table);
 
 void fft(fr::field_t *coeffs, const evaluation_domain &domain);
 

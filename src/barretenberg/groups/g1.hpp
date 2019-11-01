@@ -2,6 +2,7 @@
 
 #include "stdint.h"
 #include "stdlib.h"
+#include "inttypes.h"
 
 #include "../types.hpp"
 #include "../fields/fr.hpp"
@@ -15,15 +16,15 @@ namespace g1
 {
 inline void print(affine_element &p)
 {
-    printf("p.x: [%llx, %llx, %llx, %llx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
-    printf("p.y: [%llx, %llx, %llx, %llx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
+    printf("p.x: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
+    printf("p.y: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
 }
 
 inline void print(element &p)
 {
-    printf("p.x: [%llx, %llx, %llx, %llx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
-    printf("p.y: [%llx, %llx, %llx, %llx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
-    printf("p.z: [%llx, %llx, %llx, %llx]\n", p.z.data[0], p.z.data[1], p.z.data[2], p.z.data[3]);
+    printf("p.x: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
+    printf("p.y: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
+    printf("p.z: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", p.z.data[0], p.z.data[1], p.z.data[2], p.z.data[3]);
 }
 
 inline void random_coordinates_on_curve(fq::field_t &x, fq::field_t &y)

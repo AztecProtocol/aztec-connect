@@ -14,5 +14,3 @@ services:
     tty: true
     environment:
       MAKEFLAGS: '-j8'
-    volumes:
-      - .:/usr/src/barretenberg

@@ -6,6 +6,7 @@ using namespace benchmark;
 #include <time.h>
 #include <string.h>
 #include <vector>
+#include <inttypes.h>
 
 #include <barretenberg/types.hpp>
 
@@ -389,7 +390,7 @@ void pairing_bench(State &state) noexcept
         ++i;
     }
     uint64_t avg_cycles = count / i;
-    printf("single pairing clock cycles = %llu\n", (avg_cycles));
+    printf("single pairing clock cycles = %" PRIu64 "\n", (avg_cycles));
 }
 BENCHMARK(pairing_bench);
 
@@ -406,7 +407,7 @@ void pairing_twin_bench(State &state) noexcept
         ++i;
     }
     uint64_t avg_cycles = count / i;
-    printf("twin pairing clock cycles = %llu\n", (avg_cycles));
+    printf("twin pairing clock cycles = %" PRIu64 "\n", (avg_cycles));
 }
 BENCHMARK(pairing_twin_bench);
 
@@ -433,7 +434,7 @@ void pippenger_bench(State &state) noexcept
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES));
         uint64_t after = rdtsc();
-        printf("pippenger single, clock cycles per scalar mul = %llu\n", (after - before) / MAX_GATES);
+        printf("pippenger single, clock cycles per scalar mul = %" PRIu64 "\n", (after - before) / MAX_GATES);
     }
 }
 BENCHMARK(pippenger_bench);
@@ -456,7 +457,7 @@ void add_bench(State &state) noexcept
         count += (after - before);
         ++j;
     }
-    printf("g1 add number of cycles = %llu\n", count / (j * NUM_G1_ADDITIONS));
+    printf("g1 add number of cycles = %" PRIu64 "\n", count / (j * NUM_G1_ADDITIONS));
 }
 BENCHMARK(add_bench);
 
@@ -477,7 +478,7 @@ void mixed_add_bench(State &state) noexcept
         count += (after - before);
         ++j;
     }
-    printf("g1 mixed add number of cycles = %llu\n", count / (j * NUM_G1_ADDITIONS));
+    printf("g1 mixed add number of cycles = %" PRIu64 "\n", count / (j * NUM_G1_ADDITIONS));
     // printf("r_2 = [%lu, %lu, %lu, %lu]\n", r_2[0], r_2[1], r_2[2], r_2[3]);
 }
 BENCHMARK(mixed_add_bench);
@@ -496,7 +497,7 @@ void fq_sqr_asm_bench(State &state) noexcept
         count += after - before;
         ++i;
     }
-    printf("sqr number of cycles = %llu\n", count / (i * NUM_SQUARINGS));
+    printf("sqr number of cycles = %" PRIu64 "\n", count / (i * NUM_SQUARINGS));
     // printf("r_2 = [%lu, %lu, %lu, %lu]\n", r_2[0], r_2[1], r_2[2], r_2[3]);
 }
 BENCHMARK(fq_sqr_asm_bench);
@@ -515,7 +516,7 @@ void fq_mul_asm_bench(State &state) noexcept
         count += after - before;
         ++i;
     }
-    printf("mul number of cycles = %llu\n", count / (i * NUM_MULTIPLICATIONS));
+    printf("mul number of cycles = %" PRIu64 "\n", count / (i * NUM_MULTIPLICATIONS));
 }
 BENCHMARK(fq_mul_asm_bench);
 

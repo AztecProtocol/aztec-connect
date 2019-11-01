@@ -3,6 +3,7 @@
 
 #include "stdint.h"
 #include "stdio.h"
+#include "inttypes.h"
 
 #include "../types.hpp"
 
@@ -59,7 +60,7 @@ constexpr size_t S = 28; // 2^S = maximum degree of a polynomial that's amenable
 
 inline void print(const field_t &a)
 {
-    printf("fr: [%llx, %llx, %llx, %llx]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
+    printf("fr: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
 }
 
 // compute a * b mod p, put result in r

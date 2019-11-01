@@ -6,12 +6,14 @@
 #include "stdlib.h"
 #include <sys/random.h>
 
+#ifdef __APPLE__
 inline void *aligned_alloc(size_t alignment, size_t size)
 {
-    void *t;
+    void *t = 0;
     posix_memalign(&t, alignment, size);
     return t;
 }
+#endif
 
 #ifndef BARRETENBERG_SRS_PATH
 #define BARRETENBERG_SRS_PATH ""
