@@ -26,6 +26,8 @@ target_link_libraries(
     barretenberg
     PRIVATE
     benchmark
+  wsock32
+  ws2_32
 )
 target_include_directories(
     barretenberg_bench
@@ -37,6 +39,6 @@ target_include_directories(
 set_target_properties(
     barretenberg_bench
     PROPERTIES
-    
+
     RUNTIME_OUTPUT_DIRECTORY ..
 )

@@ -200,9 +200,9 @@ g1::element pippenger_low_memory(fr::field_t *scalars, g1::affine_element *point
         g1::add(state.accumulator, state.running_sum, state.accumulator);
         g1::set_infinity(state.buckets[0]);
     }
-    free(wnaf_state.wnaf_table);
-    free(wnaf_state.skew_table);
-    free(state.buckets);
+    aligned_free(wnaf_state.wnaf_table);
+    aligned_free(wnaf_state.skew_table);
+    aligned_free(state.buckets);
     return state.accumulator;
 }
 
@@ -290,9 +290,9 @@ g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points,
         g1::set_infinity(state.buckets[0]);
     }
 
-    free(wnaf_state.wnaf_table);
-    free(wnaf_state.skew_table);
-    free(state.buckets);
+    aligned_free(wnaf_state.wnaf_table);
+    aligned_free(wnaf_state.skew_table);
+    aligned_free(state.buckets);
 
     return state.accumulator;
 }
@@ -305,7 +305,7 @@ g1::element pippenger(fr::field_t *scalars, g1::affine_element *points, size_t n
         fr::from_montgomery_form(scalars[i], endo_scalars[i]);
     }
     g1::element res = pippenger_internal(endo_scalars, points, num_initial_points, endo_scalars);
-    free(endo_scalars);
+    aligned_free(endo_scalars);
     return res;
 }
 

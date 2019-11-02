@@ -52,7 +52,7 @@ inline void convert_permutations_into_lagrange_base_form(circuit_state& state)
     compute_permutation_lagrange_base(roots, state.sigma_1, state.sigma_1_mapping, state.small_domain);
     compute_permutation_lagrange_base(roots, state.sigma_2, state.sigma_2_mapping, state.small_domain);
     compute_permutation_lagrange_base(roots, state.sigma_3, state.sigma_3_mapping, state.small_domain);
-    free(roots);
+    aligned_free(roots);
 }
 }
 

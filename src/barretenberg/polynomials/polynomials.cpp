@@ -19,7 +19,7 @@ inline uint32_t reverse_bits(uint32_t x, uint32_t bit_length)
 
 void compute_root_table(fr::field_t &input_root, size_t size, fr::field_t *roots, fr::field_t **round_roots)
 {
-    size_t num_rounds = (size_t)log2(size);
+    size_t num_rounds = (size_t)log2((double)size);
     // roots = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * size);
     // round_roots = (fr::field_t **)malloc(sizeof(fr::field_t *) * num_rounds);
     round_roots[0] = &roots[0];
@@ -45,7 +45,7 @@ void compute_root_table(fr::field_t &input_root, size_t size, fr::field_t *roots
 
 evaluation_domain::evaluation_domain(size_t num_elements, bool skip_roots)
 {
-    size_t n = (size_t)log2(num_elements);
+    size_t n = (size_t)log2((double)num_elements);
     if ((1UL << n) != num_elements)
     {
         ++n;
@@ -68,7 +68,7 @@ evaluation_domain::evaluation_domain(size_t num_elements, bool skip_roots)
     {
         num_threads = 1;
     }
-    log2_num_threads = (size_t)log2(num_threads);
+    log2_num_threads = (size_t)log2((double)num_threads);
     log2_thread_size = log2_size - log2_num_threads;
     thread_size = 1UL << log2_thread_size;
 
@@ -113,11 +113,11 @@ evaluation_domain::~evaluation_domain()
 {
     if (roots != nullptr)
     {
-        free(roots);
+        aligned_free(roots);
     }
     if (inverse_roots != nullptr)
     {
-        free(inverse_roots);
+        aligned_free(inverse_roots);
     }
     if (round_roots != nullptr)
     {
@@ -132,7 +132,7 @@ evaluation_domain::~evaluation_domain()
 void fft_inner_serial(fr::field_t *coeffs, const size_t domain_size, const fr::field_t **root_table)
 {
     fr::field_t temp;
-    size_t log2_size = (size_t)log2(domain_size);
+    size_t log2_size = (size_t)log2((double)domain_size);
     // efficiently separate odd and even indices - (An introduction to algorithms, section 30.3)
 
     for (size_t i = 0; i <= domain_size; ++i)
@@ -160,7 +160,7 @@ void fft_inner_serial(fr::field_t *coeffs, const size_t domain_size, const fr::f
 
     for (size_t m = 2; m < domain_size; m *= 2)
     {
-        const size_t i = (size_t)log2(m);
+        const size_t i = (size_t)log2((double)m);
         for (size_t k = 0; k < domain_size; k += (2 * m))
         {
             for (size_t j = 0; j < m; ++j)
@@ -184,7 +184,7 @@ void fft_inner_parallel_old(fr::field_t *coeffs, const evaluation_domain &domain
         }
         return;
     }
-    size_t log2_size = (size_t)log2(domain.size);
+    size_t log2_size = (size_t)log2((double)domain.size);
     // efficiently separate odd and even indices - (An introduction to algorithms, section 30.3)
 
     fr::field_t *scratch_space = (fr::field_t *)aligned_alloc(64, sizeof(fr::field_t) * domain.size);
@@ -224,7 +224,7 @@ void fft_inner_parallel_old(fr::field_t *coeffs, const evaluation_domain &domain
 #endif
         for (size_t q = 0; q < domain.num_threads; ++q)
         {
-            const size_t i = (size_t)log2(m);
+            const size_t i = (size_t)log2((double)m);
             const size_t block_mask = m - 1;
             fr::field_t temp1;
             // fr::field_t temp2;
@@ -256,7 +256,7 @@ void fft_inner_parallel_old(fr::field_t *coeffs, const evaluation_domain &domain
         {
             fr::reduce_once(scratch_space[i], coeffs[i]);
         }
-        free(scratch_space);
+        aligned_free(scratch_space);
         return;
     }
 
@@ -269,7 +269,7 @@ void fft_inner_parallel_old(fr::field_t *coeffs, const evaluation_domain &domain
     {
         size_t thread_end = (q + 1) * thread_step;
         fr::field_t temp;
-        const size_t i = (size_t)log2(m);
+        const size_t i = (size_t)log2((double)m);
         const size_t block_mask = m - 1;
         for (size_t z = (q * (thread_step)); z < thread_end; ++z)
         {
@@ -283,7 +283,7 @@ void fft_inner_parallel_old(fr::field_t *coeffs, const evaluation_domain &domain
             fr::reduce_once(scratch_space[k + j], coeffs[k + j]);
         }
     }
-    free(scratch_space);
+    aligned_free(scratch_space);
 }
 void fft_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &root, const fr::field_t **root_table)
 {
@@ -349,7 +349,7 @@ void fft_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, co
         }
     }
 
-    free(thread_coeffs);
+    aligned_free(thread_coeffs);
 }
 
 void scale_by_generator(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &generator_start, const fr::field_t &generator_shift)
@@ -765,7 +765,7 @@ lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, evaluation_d
 void compress_fft(const fr::field_t *src, fr::field_t *dest, const size_t current_size, const size_t compress_factor)
 {
     // iterate from top to bottom, allows `dest` to overlap with `src`
-    size_t log2_compress_factor = (size_t)log2(compress_factor);
+    size_t log2_compress_factor = (size_t)log2((double)compress_factor);
     ASSERT(1UL << log2_compress_factor == compress_factor);
     size_t new_size = current_size >> log2_compress_factor;
     for (size_t i = 0; i < new_size; ++i)

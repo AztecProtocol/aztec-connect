@@ -31,5 +31,5 @@ TEST(io, read_transcript_loads_well_formed_srs)
     {
         EXPECT_EQ(g1::on_curve(srs.monomials[i]), true);
     }
-    free(srs.monomials);
+    aligned_free(srs.monomials);
 }

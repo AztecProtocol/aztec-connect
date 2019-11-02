@@ -45,24 +45,24 @@ inline affine_element affine_one()
     return result;
 }
 
-inline bool is_point_at_infinity(const element& p)
+inline bool is_point_at_infinity(const element &p)
 {
     return (bool)((p.y.c0.data[3] >> 63) & 1);
 }
 
-inline bool is_point_at_infinity(const affine_element& p)
+inline bool is_point_at_infinity(const affine_element &p)
 {
     return (bool)((p.y.c0.data[3] >> 63) & 1);
 }
 
 inline void set_infinity(element &p)
 {
-    p.y.c0.data[3] |= (1UL << 63);
+    p.y.c0.data[3] |= (1ULL << 63);
 }
 
 inline void set_infinity(affine_element &p)
 {
-    p.y.c0.data[3] |= (1UL << 63);
+    p.y.c0.data[3] |= (1ULL << 63);
 }
 
 inline void dbl(element &p1, element &p2)
@@ -389,7 +389,6 @@ inline void copy_affine(const affine_element &a, affine_element &r)
     fq2::copy(a.y, r.y);
 }
 
-
 inline element normalize(element &src)
 {
     element dest;
@@ -449,7 +448,7 @@ inline void batch_normalize(element *points, size_t num_points)
         *
         * At the second iteration, accumulator * temporaries[2] = z.data[0]*z.data[1] / z.data[0]*z.data[1]*z.data[2] = (1 / z.data[2])
         * And so on, until we have computed every z-inverse!
-        * 
+        *
         * We can then convert out of Jacobian form (x = X / Z^2, y = Y / Z^3) with 4 muls and 1 square.
         **/
     for (size_t i = num_points - 1; i < num_points; --i)
@@ -463,12 +462,13 @@ inline void batch_normalize(element *points, size_t num_points)
         points[i].z = fq2::one();
     }
 
-    free(temporaries);
+    aligned_free(temporaries);
 }
 
 inline bool on_curve(affine_element &pt)
 {
-    if (is_point_at_infinity(pt)) {
+    if (is_point_at_infinity(pt))
+    {
         return false;
     }
     fq2::fq2_t yy;
@@ -484,7 +484,8 @@ inline bool on_curve(affine_element &pt)
 
 inline bool on_curve(element &pt)
 {
-    if (is_point_at_infinity(pt)) {
+    if (is_point_at_infinity(pt))
+    {
         return false;
     }
     fq2::fq2_t yy;
@@ -562,7 +563,7 @@ inline element group_exponentiation_inner(const affine_element &a, const fr::fie
     return work_element;
 }
 
-inline affine_element group_exponentiation(const affine_element& a, const fr::field_t& scalar)
+inline affine_element group_exponentiation(const affine_element &a, const fr::field_t &scalar)
 {
     element output = group_exponentiation_inner(a, scalar);
     affine_element result;
@@ -599,7 +600,7 @@ inline affine_element random_affine_element()
     return result;
 }
 
-inline bool eq(const element& a, const element& b)
+inline bool eq(const element &a, const element &b)
 {
     bool both_infinity = is_point_at_infinity(a) && is_point_at_infinity(b);
 
@@ -626,7 +627,7 @@ inline bool eq(const element& a, const element& b)
     return both_infinity || ((fq2::eq(T0, T2) && fq2::eq(T1, T3)));
 }
 
-inline bool eq(const affine_element& a, const affine_element& b)
+inline bool eq(const affine_element &a, const affine_element &b)
 {
     element a_ele;
     element b_ele;

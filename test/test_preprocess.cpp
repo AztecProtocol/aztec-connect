@@ -30,7 +30,7 @@ TEST(preprocess, preprocess)
     size_t n = 256;
 
     fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * 10 * n));
-    
+
     fr::field_t* polys[9] = {
         &scratch_space[0],
         &scratch_space[n],
@@ -45,7 +45,7 @@ TEST(preprocess, preprocess)
 
     uint32_t* sigma_memory = (uint32_t*)(aligned_alloc(32, sizeof(uint32_t) * 3 * n));
 
-    uint32_t* sigma_mappings[3] = { 
+    uint32_t* sigma_mappings[3] = {
         &sigma_memory[0],
         &sigma_memory[n],
         &sigma_memory[n + n]
@@ -98,7 +98,7 @@ TEST(preprocess, preprocess)
     waffle::compute_permutation_lagrange_base(roots, state.sigma_2, sigma_mappings[1], state.small_domain);
     waffle::compute_permutation_lagrange_base(roots, state.sigma_3, sigma_mappings[2], state.small_domain);
 
-    free(roots);
+    aligned_free(roots);
     for (size_t i = 0; i < 9; ++i)
     {
         polynomials::ifft(polys[i], state.small_domain);

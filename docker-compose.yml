@@ -29,3 +29,12 @@ services:
     tty: true
     environment:
       MAKEFLAGS: '-j8'
+
+  x86_64-win32:
+    build:
+      context: .
+      dockerfile: Dockerfile.x86-mxe
+    image: aztecprotocol/barretenberg:x86_64-win32
+    tty: true
+    environment:
+      MAKEFLAGS: '-j8'

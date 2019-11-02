@@ -105,12 +105,12 @@ inline bool is_point_at_infinity(const element &p)
 
 inline void set_infinity(element &p)
 {
-    p.y.data[3] = 0 | (1UL << 63);
+    p.y.data[3] = 0 | (1ULL << 63);
 }
 
 inline void set_infinity(affine_element &p)
 {
-    p.y.data[3] = 0 | (1UL << 63);
+    p.y.data[3] = 0 | (1ULL << 63);
 }
 
 inline void dbl(element &p1, element &p2)
@@ -607,7 +607,7 @@ inline void batch_normalize(element *points, size_t num_points)
         points[i].z = fq::one();
     }
 
-    free(temporaries);
+    aligned_free(temporaries);
 }
 
 inline bool on_curve(affine_element &pt)
@@ -785,8 +785,8 @@ inline element group_exponentiation(const element &a, const fr::field_t &scalar)
         mixed_add(dummy_element, temporary, dummy_element);
     }
 
-    free(precomp_table);
-    free(lookup_table);
+    aligned_free(precomp_table);
+    aligned_free(lookup_table);
     return work_element;
 }
 

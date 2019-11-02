@@ -157,7 +157,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
     fr::__mul(state.z_1[i], state.z_2[i], state.z_1[i]);
     ITERATE_OVER_DOMAIN_END;
 
-    free(scratch);
+    aligned_free(scratch);
 
     polynomials::ifft(state.z_1, state.small_domain);
 }
@@ -622,7 +622,7 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
 
     g1::jacobian_to_affine(mul_state[0].output, proof.PI_Z);
     g1::jacobian_to_affine(mul_state[1].output, proof.PI_Z_OMEGA);
-    free(scratch_space);
+    aligned_free(scratch_space);
     return proof;
 }
 } // namespace waffle

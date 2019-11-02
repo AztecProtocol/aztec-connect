@@ -47,7 +47,6 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
         fr::__mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
     }
 
-
     fr::__mul(proof.sigma_1_eval, challenges.beta, T0);
     fr::__add(proof.w_l_eval, challenges.gamma, T1);
     fr::__add(T0, T1, T0);
@@ -80,7 +79,6 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
     fr::field_t z_pow_2n;
     fr::pow_small(challenges.z, instance.n, z_pow_n);
     fr::pow_small(challenges.z, instance.n * 2, z_pow_2n);
-
 
     challenges.nu = compute_linearisation_challenge(proof, t_eval);
     fr::copy(challenges.nu, nu_pow[0]);
@@ -121,11 +119,9 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
     fr::__mul(nu_pow[5], proof.sigma_2_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
-
     fr::__mul(nu_pow[6], u, T0);
     fr::__mul(T0, proof.z_1_shifted_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
-
 
     fr::neg(batch_evaluation, batch_evaluation);
 
@@ -196,8 +192,8 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
 
     fq12::fq12_t result = pairing::reduced_ate_pairing_batch(P_affine, Q_affine, 2);
 
-    free(lhs_ge);
-    free(scalar_exponents);
+    aligned_free(lhs_ge);
+    aligned_free(scalar_exponents);
     return fq12::eq(result, fq12::one()); // wheeee
 }
 } // namespace verifier

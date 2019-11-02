@@ -52,7 +52,7 @@ add_executable(
 set_target_properties(
     barretenberg_tests
     PROPERTIES
-    
+
     RUNTIME_OUTPUT_DIRECTORY .
 )
 
@@ -64,6 +64,8 @@ target_link_libraries(
         gtest
         gmock
         gtest_main
+  wsock32
+  ws2_32
 )
 
 target_include_directories(
@@ -72,6 +74,7 @@ target_include_directories(
         ${private_include_dir}
         ${include_dir}
 )
+
 
 add_test(
     TARGET

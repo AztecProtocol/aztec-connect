@@ -126,7 +126,7 @@ void generate_random_plonk_circuit(waffle::circuit_state &state, fr::field_t *da
     }
     fr::field_t *scratch_mem = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * n / 2));
     fr::batch_invert(state.w_o, n / 2, scratch_mem);
-    free(scratch_mem);
+    aligned_free(scratch_mem);
     for (size_t i = 0; i < n / 2; ++i)
     {
         fr::__mul(state.q_l[i], state.w_l[i], T0);
@@ -244,6 +244,7 @@ void reset_proof_state(waffle::circuit_state &state)
     polynomials::fft_with_constant(state.q_c, state.small_domain, alpha_inv);
 }
 
+#pragma GCC diagnostic ignored "-Wunused-variable"
 const auto init = []() {
     printf("generating test data\n");
     globals.reference_string.degree = MAX_GATES;
@@ -307,7 +308,7 @@ void construct_instances_bench(State &state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
+        size_t idx = (size_t)log2((double)state.range(0)) - (size_t)log2((double)START);
         waffle::circuit_instance instance = waffle::preprocess_circuit(globals.plonk_states[idx], globals.reference_string);
         // waffle::plonk_proof proof = waffle::construct_proof(globals.plonk_states[idx], globals.reference_string);
         state.PauseTiming();
@@ -326,7 +327,7 @@ void construct_proof_bench(State &state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
+        size_t idx = (size_t)log2((double)state.range(0)) - (size_t)log2((double)START);
         waffle::plonk_proof proof = waffle::construct_proof(globals.plonk_states[idx], globals.reference_string);
         state.PauseTiming();
         globals.plonk_proofs[idx] = (proof);
@@ -345,7 +346,7 @@ void verify_proof_bench(State &state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
+        size_t idx = (size_t)log2((double)state.range(0)) - (size_t)log2((double)START);
         bool res = waffle::verifier::verify_proof(globals.plonk_proofs[idx], globals.plonk_instances[idx], globals.reference_string.SRS_T2);
         state.PauseTiming();
         if (!res)
@@ -361,7 +362,7 @@ void fft_bench_parallel(State &state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
+        size_t idx = (size_t)log2((double)state.range(0) / 4) - (size_t)log2((double)START);
         barretenberg::polynomials::fft(globals.data, globals.plonk_states[idx].large_domain);
     }
 }
@@ -371,7 +372,7 @@ void fft_bench_serial(State &state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
+        size_t idx = (size_t)log2((double)state.range(0) / 4) - (size_t)log2((double)START);
         barretenberg::polynomials::fft_inner_serial(globals.data, globals.plonk_states[idx].large_domain.thread_size, (const barretenberg::fr::field_t **)globals.plonk_states[idx].large_domain.round_roots);
     }
 }
