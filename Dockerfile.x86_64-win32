@@ -1,0 +1,113 @@
+FROM aztecprotocol/cmake:3.15.4
+
+ENV WINEARCH win64
+ARG MXE_TARGET_ARCH=x86_64
+ARG MXE_TARGET_THREAD=
+ARG MXE_TARGET_LINK=static
+
+ARG MXE_GIT_TAG=2ce5587c94fc355b2c826c786a3ee018479d88d1
+
+ENV CMAKE_TOOLCHAIN_FILE /usr/src/mxe/usr/${MXE_TARGET_ARCH}-w64-mingw32.${MXE_TARGET_LINK}${MXE_TARGET_THREAD}/share/cmake/mxe-conf.cmake
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN dpkg --add-architecture i386 && apt-get update && apt-get install -y wine64 && wine hostname
+
+RUN apt-get install --no-install-recommends --yes \
+    autoconf \
+    automake \
+    autopoint \
+    bash \
+    bison \
+    bzip2 \
+    flex \
+    gettext \
+    git \
+    g++ \
+    g++-multilib \
+    gperf \
+    intltool \
+    libffi-dev \
+    libgdk-pixbuf2.0-dev \
+    libtool-bin \
+    libltdl-dev \
+    libssl-dev \
+    libxml-parser-perl \
+    libc6-dev-i386 \
+    lzip \
+    make \
+    openssl \
+    p7zip-full \
+    patch \
+    perl \
+    pkg-config \
+    python \
+    ruby \
+    scons \
+    sed \
+    unzip \
+    wget \
+    xz-utils
+
+WORKDIR /usr/src
+RUN git clone https://github.com/mxe/mxe.git
+WORKDIR /usr/src/mxe
+RUN make download
+RUN echo "MXE_TARGETS := ${MXE_TARGET_ARCH}-w64-mingw32.${MXE_TARGET_LINK}${MXE_TARGET_THREAD}" > settings.mk && \
+  echo "LOCAL_PKG_LIST := cc cmake"                                              >> settings.mk && \
+  echo ".DEFAULT local-pkg-list:"                                                >> settings.mk && \
+  echo "local-pkg-list: \$(LOCAL_PKG_LIST)"                                      >> settings.mk
+RUN make -j$(nproc)
+RUN echo 'set(CMAKE_CROSSCOMPILING_EMULATOR "/usr/bin/wine")' >> ${CMAKE_TOOLCHAIN_FILE}
+ENV PATH ${PATH}:/usr/src/mxe/usr/bin
+RUN cd /usr/src/mxe/usr/x86_64-w64-mingw32.static/lib/ && ln -s libshlwapi.a libShlwapi.a
+
+WORKDIR /usr/src/barretenberg
+COPY . .
+RUN mkdir build && cd build && /usr/src/mxe/usr/bin/x86_64-w64-mingw32.static-cmake -Dgtest_disable_pthreads=ON .. && make -j$(nproc)
+RUN cd build && wine ./test/barretenberg_tests.exe
+ENTRYPOINT /bin/bash
+
+
+#  #
+#  # Cleanup: By keeping the MXE build system (Makefile, ...), derived images will be able to install
+#  #          additional packages.
+#  #
+#  rm -rf log pkg && \
+#  #
+#  # Update MXE toolchain file
+#  #
+#  echo 'set(CMAKE_CROSSCOMPILING_EMULATOR "/usr/bin/wine")' >> ${CMAKE_TOOLCHAIN_FILE} && \
+#  #
+#  # Replace cmake and cpack binaries
+#  #
+#  cd /usr/bin && \
+#  rm cmake cpack && \
+#  ln -s /usr/src/mxe/usr/bin/${MXE_TARGET_ARCH}-w64-mingw32.${MXE_TARGET_LINK}${MXE_TARGET_THREAD}-cmake cmake && \
+#  ln -s /usr/src/mxe/usr/bin/${MXE_TARGET_ARCH}-w64-mingw32.${MXE_TARGET_LINK}${MXE_TARGET_THREAD}-cpack cpack
+#
+#ENV PATH ${PATH}:/usr/src/mxe/usr/bin
+#ENV CROSS_TRIPLE ${MXE_TARGET_ARCH}-w64-mingw32.${MXE_TARGET_LINK}${MXE_TARGET_THREAD}
+#ENV AS=/usr/src/mxe/usr/bin/${CROSS_TRIPLE}-as \
+#    AR=/usr/src/mxe/usr/bin/${CROSS_TRIPLE}-ar \
+#    CC=/usr/src/mxe/usr/bin/${CROSS_TRIPLE}-gcc \
+#    CPP=/usr/src/mxe/usr/bin/${CROSS_TRIPLE}-cpp \
+#    CXX=/usr/src/mxe/usr/bin/${CROSS_TRIPLE}-g++ \
+#    LD=/usr/src/mxe/usr/bin/${CROSS_TRIPLE}-ld \
+#    FC=/usr/src/mxe/usr/bin/${CROSS_TRIPLE}-gfortran
+#
+#WORKDIR /work
+
+# Build-time metadata as defined at http://label-schema.org
+#ARG BUILD_DATE
+#ARG IMAGE=dockcross/windows-static-x64
+#ARG VERSION=latest
+#ARG VCS_REF
+#ARG VCS_URL
+#LABEL org.label-schema.build-date=$BUILD_DATE \
+      #org.label-schema.name=$IMAGE \
+      #org.label-schema.version=$VERSION \
+      #org.label-schema.vcs-ref=$VCS_REF \
+      #org.label-schema.vcs-url=$VCS_URL \
+      #org.label-schema.schema-version="1.0"
+#ENV DEFAULT_DOCKCROSS_IMAGE ${IMAGE}:${VERSION}

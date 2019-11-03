@@ -33,7 +33,7 @@ services:
   x86_64-win32:
     build:
       context: .
-      dockerfile: Dockerfile.x86-mxe
+      dockerfile: Dockerfile.x86_64-win32
     image: aztecprotocol/barretenberg:x86_64-win32
     tty: true
     environment:
