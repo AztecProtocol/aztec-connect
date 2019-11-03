@@ -56,17 +56,29 @@ set_target_properties(
     RUNTIME_OUTPUT_DIRECTORY .
 )
 
-target_link_libraries(
-    barretenberg_tests
-    PUBLIC
-    barretenberg
-    PRIVATE
+if (WIN32)
+    target_link_libraries(
+        barretenberg_tests
+        PUBLIC
+        barretenberg
+        PRIVATE
         gtest
         gmock
         gtest_main
-  wsock32
-  ws2_32
-)
+        wsock32
+        ws2_32
+    )
+else()
+    target_link_libraries(
+        barretenberg_tests
+        PUBLIC
+        barretenberg
+        PRIVATE
+        gtest
+        gmock
+        gtest_main
+    )
+endif()
 
 target_include_directories(
     barretenberg_tests
