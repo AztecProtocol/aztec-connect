@@ -49,7 +49,9 @@ add_executable(
     test_verifier.cpp
     test_standard_composer.cpp
     test_mimc_composer.cpp
+    test_stdlib_bool.cpp
     test_stdlib_field.cpp
+    test_stdlib_uint32.cpp
     test_stdlib_mimc.cpp
 )
 

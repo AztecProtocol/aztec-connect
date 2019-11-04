@@ -58,6 +58,8 @@ add_library(
     waffle/stdlib/bool/bool.hpp
     waffle/stdlib/field/field.tcc
     waffle/stdlib/field/field.hpp
+    waffle/stdlib/uint32/uint32.tcc
+    waffle/stdlib/uint32/uint32.hpp
     waffle/stdlib/mimc.cpp
     waffle/stdlib/mimc.hpp
 )

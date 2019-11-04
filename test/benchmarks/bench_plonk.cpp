@@ -24,8 +24,8 @@ constexpr size_t START_HASH_ROUNDS = 64;
 
 void generate_test_plonk_circuit(waffle::StandardComposer &composer, size_t num_gates)
 {
-    plonk::stdlib::field_t a(&composer, plonk::stdlib::witness_t(barretenberg::fr::random_element()));
-    plonk::stdlib::field_t b(&composer, plonk::stdlib::witness_t(barretenberg::fr::random_element()));
+    plonk::stdlib::field_t a(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
+    plonk::stdlib::field_t b(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
     plonk::stdlib::field_t c(&composer);
     for (size_t i = 0; i < (num_gates / 4) - 4; ++i)
     {
@@ -36,10 +36,17 @@ void generate_test_plonk_circuit(waffle::StandardComposer &composer, size_t num_
     }
 }
 
+
+waffle::Prover provers[NUM_CIRCUITS];
+waffle::Verifier verifiers[NUM_CIRCUITS];
+waffle::plonk_proof proofs[NUM_CIRCUITS];
+
+/*
+
 void generate_test_mimc_circuit(waffle::MiMCComposer &mimc_composer, size_t num_hashes)
 {
-    plonk::stdlib::field_t<waffle::MiMCComposer> mimc_input(&mimc_composer, plonk::stdlib::witness_t(barretenberg::fr::random_element()));
-    plonk::stdlib::field_t<waffle::MiMCComposer> mimc_k(&mimc_composer, plonk::stdlib::witness_t(barretenberg::fr::zero()));
+    plonk::stdlib::field_t<waffle::MiMCComposer> mimc_input(plonk::stdlib::witness_t(&mimc_composer, barretenberg::fr::random_element()));
+    plonk::stdlib::field_t<waffle::MiMCComposer> mimc_k(plonk::stdlib::witness_t(&mimc_composer, barretenberg::fr::zero()));
     plonk::stdlib::field_t<waffle::MiMCComposer> mimc_output(&mimc_composer);
     for (size_t i = 0; i < num_hashes; ++i)
     {
@@ -48,10 +55,6 @@ void generate_test_mimc_circuit(waffle::MiMCComposer &mimc_composer, size_t num_
         mimc_input = mimc_output;
     }
 }
-
-waffle::Prover provers[NUM_CIRCUITS];
-waffle::Verifier verifiers[NUM_CIRCUITS];
-waffle::plonk_proof proofs[NUM_CIRCUITS];
 
 waffle::Prover mimc_provers[NUM_CIRCUITS];
 waffle::Verifier mimc_verifiers[NUM_CIRCUITS];
@@ -68,6 +71,7 @@ const int64_t hash_sizes[8]{
     5000,
     10000
 };
+
 void construct_mimc_witnesses_bench(State &state) noexcept
 {
     for (auto _ : state)
@@ -119,7 +123,7 @@ void verify_mimc_proofs_bench(State &state) noexcept
     }
 }
 BENCHMARK(verify_mimc_proofs_bench)->Arg(hash_sizes[0])->Arg(hash_sizes[1])->Arg(hash_sizes[2])->Arg(hash_sizes[3])->Arg(hash_sizes[4])->Arg(hash_sizes[5])->Arg(hash_sizes[6])->Arg(hash_sizes[7]);
-
+*/
 // ###
 
 void construct_witnesses_bench(State &state) noexcept

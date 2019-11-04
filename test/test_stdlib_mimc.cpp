@@ -23,11 +23,11 @@ TEST(stdlib_mimc, composer_consistency_check)
     fr::field_t input = fr::random_element();
     fr::field_t k_in = fr::zero();
 
-    stdlib::field_t<waffle::StandardComposer> standard_input(&standard_composer, stdlib::witness_t(input));
-    stdlib::field_t<waffle::StandardComposer> standard_k(&standard_composer, stdlib::witness_t(k_in));
+    stdlib::field_t<waffle::StandardComposer> standard_input(stdlib::witness_t<waffle::StandardComposer>(&standard_composer, input));
+    stdlib::field_t<waffle::StandardComposer> standard_k(stdlib::witness_t<waffle::StandardComposer>(&standard_composer, k_in));
 
-    stdlib::field_t<waffle::MiMCComposer> mimc_input(&mimc_composer, stdlib::witness_t(input));
-    stdlib::field_t<waffle::MiMCComposer> mimc_k(&mimc_composer, stdlib::witness_t(k_in));
+    stdlib::field_t<waffle::MiMCComposer> mimc_input(stdlib::witness_t<waffle::MiMCComposer>(&mimc_composer, input));
+    stdlib::field_t<waffle::MiMCComposer> mimc_k(stdlib::witness_t<waffle::MiMCComposer>(&mimc_composer, k_in));
 
     stdlib::field_t<waffle::StandardComposer> standard_out = mimc_hash(standard_input, standard_k);
     standard_out = standard_out.normalize();
@@ -62,8 +62,8 @@ TEST(stdlib_mimc, repeated_hashing)
     fr::field_t input = fr::random_element();
     fr::field_t k_in = fr::zero();
 
-    stdlib::field_t<waffle::MiMCComposer> mimc_input(&mimc_composer, stdlib::witness_t(input));
-    stdlib::field_t<waffle::MiMCComposer> mimc_k(&mimc_composer, stdlib::witness_t(k_in));
+    stdlib::field_t<waffle::MiMCComposer> mimc_input(stdlib::witness_t(&mimc_composer, input));
+    stdlib::field_t<waffle::MiMCComposer> mimc_k(stdlib::witness_t(&mimc_composer, k_in));
     stdlib::field_t<waffle::MiMCComposer> mimc_output(&mimc_composer);
     constexpr size_t num_hashes = 100;
 
