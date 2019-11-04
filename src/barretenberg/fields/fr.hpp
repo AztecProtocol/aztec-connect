@@ -361,6 +361,11 @@ inline bool get_bit(const field_t &a, size_t bit_index)
  **/
 inline void pow(const field_t &a, const field_t &b, field_t &r)
 {
+    if (eq(a, zero()))
+    {
+        copy(zero(), r);
+        return;
+    }
     field_t accumulator;
     copy(a, accumulator);
     bool found_one = false;
