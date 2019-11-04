@@ -103,6 +103,76 @@ TEST(scalar_multiplication, pippenger)
     EXPECT_EQ(g1::eq(result, expected), true);
 }
 
+TEST(scalar_multiplication_alt, pippenger_internal)
+{
+    size_t num_points = 1000;
+
+    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
+
+    g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
+
+    for (size_t i = 0; i < num_points; ++i)
+    {
+        scalars[i] = fr::random_element();
+        points[i] = g1::random_affine_element();
+    }
+
+    g1::element expected;
+    g1::set_infinity(expected);
+    for (size_t i = 0; i < num_points; ++i)
+    {
+        g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
+        g1::add(expected, temp, expected);
+    }
+    expected = g1::normalize(expected);
+    scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
+
+    g1::element result = scalar_multiplication::alt_pippenger(scalars, points, num_points);
+    result = g1::normalize(result);
+
+    free(scalars);
+    free(points);
+
+    EXPECT_EQ(g1::eq(result, expected), true);
+}
+
+TEST(scalar_multiplication_precompute, precomputed_pippenger)
+{
+    size_t num_points = 1000;
+
+    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
+
+    g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
+
+    for (size_t i = 0; i < num_points; ++i)
+    {
+        scalars[i] = fr::random_element();
+        points[i] = g1::random_affine_element();
+    }
+
+    size_t bits_per_bucket = scalar_multiplication::get_optimal_bucket_width(num_points);
+    size_t num_rounds = (127 + bits_per_bucket) / (bits_per_bucket + 1);
+    g1::affine_element *precompute_table = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * (num_rounds - 1));
+    
+    std::vector<g1::affine_element*> round_points = scalar_multiplication::generate_pippenger_precompute_table(points, precompute_table, num_points, bits_per_bucket);
+    g1::element expected;
+    g1::set_infinity(expected);
+    for (size_t i = 0; i < num_points; ++i)
+    {
+        g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
+        g1::add(expected, temp, expected);
+    }
+    expected = g1::normalize(expected);
+    // scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
+    g1::element result = scalar_multiplication::pippenger_precomputed(scalars, round_points, num_points);
+    result = g1::normalize(result);
+
+    free(scalars);
+    free(points);
+
+    EXPECT_EQ(g1::eq(result, expected), true);
+}
+
 TEST(scalar_multiplication, batched_scalar_multiplication)
 {
     size_t num_points = 10000;

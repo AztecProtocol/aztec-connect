@@ -9,7 +9,7 @@
 #define BARRETENBERG_SRS_PATH ""
 #endif
 
-#if 1
+#if 0
 #define NO_MULTITHREADING 1
 #endif
 
