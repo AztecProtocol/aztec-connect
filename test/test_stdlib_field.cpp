@@ -20,8 +20,8 @@ typedef stdlib::field_t<waffle::StandardComposer> field_t;
 
 void fibbonaci(waffle::StandardComposer &composer)
 {
-    field_t a(&composer, stdlib::witness_t(fr::one()));
-    field_t b(&composer, stdlib::witness_t(fr::one()));
+    field_t a(stdlib::witness_t(&composer, fr::one()));
+    field_t b(stdlib::witness_t(&composer, fr::one()));
 
     field_t c = a + b;
     
@@ -35,7 +35,7 @@ void fibbonaci(waffle::StandardComposer &composer)
 
 uint64_t fidget(waffle::StandardComposer &composer)
 {
-    field_t a(&composer, stdlib::witness_t(fr::one())); // a is a legit wire value in our circuit
+    field_t a(stdlib::witness_t(&composer, fr::one())); // a is a legit wire value in our circuit
     field_t b(&composer, (fr::one()));                // b is just a constant, and should not turn up as a wire value in our circuit
 
      // this shouldn't create a constraint - we just need to scale the addition/multiplication gates that `a` is involved in
@@ -67,8 +67,8 @@ uint64_t fidget(waffle::StandardComposer &composer)
 
 void generate_test_plonk_circuit(waffle::StandardComposer &composer, size_t num_gates)
 {
-    plonk::stdlib::field_t a(&composer, plonk::stdlib::witness_t(barretenberg::fr::random_element()));
-    plonk::stdlib::field_t b(&composer, plonk::stdlib::witness_t(barretenberg::fr::random_element()));
+    plonk::stdlib::field_t a(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
+    plonk::stdlib::field_t b(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
     plonk::stdlib::field_t c(&composer);
     for (size_t i = 0; i < (num_gates / 4) - 4; ++i)
     {

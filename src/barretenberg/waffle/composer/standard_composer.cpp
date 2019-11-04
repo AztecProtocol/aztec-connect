@@ -122,8 +122,8 @@ namespace waffle
         w_o.emplace_back(add_variable(fr::neg(fr::to_montgomery_form({{20,0,0,0}}))));
         // ###
 
-        size_t log2_n = static_cast<size_t>(log2(n));
-        if ((1UL << log2_n) != n)
+        size_t log2_n = static_cast<size_t>(log2(n + 1));
+        if ((1UL << log2_n) != (n + 1))
         {
             ++log2_n;
         }

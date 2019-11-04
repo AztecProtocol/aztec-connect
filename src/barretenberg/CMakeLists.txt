@@ -53,6 +53,9 @@ add_library(
     waffle/composer/standard_composer.hpp
     waffle/composer/mimc_composer.cpp
     waffle/composer/mimc_composer.hpp
+    waffle/stdlib/common.hpp
+    waffle/stdlib/bool/bool.tcc
+    waffle/stdlib/bool/bool.hpp
     waffle/stdlib/field/field.tcc
     waffle/stdlib/field/field.hpp
     waffle/stdlib/mimc.cpp
@@ -120,8 +123,13 @@ add_executable(
     waffle/composer/standard_composer.hpp
     waffle/composer/mimc_composer.cpp
     waffle/composer/mimc_composer.hpp
+    waffle/stdlib/common.hpp
+    waffle/stdlib/bool/bool.tcc
+    waffle/stdlib/bool/bool.hpp
     waffle/stdlib/field/field.tcc
     waffle/stdlib/field/field.hpp
+    waffle/stdlib/uint32/uint32.tcc
+    waffle/stdlib/uint32/uint32.hpp
     waffle/stdlib/mimc.cpp
     waffle/stdlib/mimc.hpp
 )

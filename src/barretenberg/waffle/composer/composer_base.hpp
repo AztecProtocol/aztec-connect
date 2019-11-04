@@ -69,6 +69,11 @@ public:
 
     virtual Prover preprocess() = 0;
 
+    virtual bool supports_feature(const Features target_feature)
+    {
+        return ((features & static_cast<size_t>(target_feature)) == 0);
+    }
+
     virtual void create_add_gate(const add_triple &in) = 0;
     virtual void create_mul_gate(const mul_triple &in) = 0;
     virtual void create_bool_gate(const uint32_t a) = 0;
@@ -79,6 +84,16 @@ public:
         variables.emplace_back(in);
         wire_epicycles.push_back(std::vector<epicycle>());
         return static_cast<uint32_t>(variables.size()) - 1U;
+    }
+
+    virtual void assert_equal(const uint32_t a_idx, const uint32_t b_idx)
+    {
+        ASSERT(barretenberg::fr::eq(variables[a_idx], variables[b_idx]));
+        for (size_t i = 0; i < wire_epicycles[b_idx].size(); ++i)
+        {
+            wire_epicycles[a_idx].emplace_back(wire_epicycles[b_idx][i]);
+        }
+        wire_epicycles[b_idx] = std::vector<epicycle>();
     }
 
     void compute_sigma_permutations(Prover &output_state)

@@ -129,8 +129,6 @@ TEST(fq, sub_check_against_constants)
     fq::field_t expected{{ 0xe5daeaf47cf50779, 0xd51ed34a5b0d0a3c, 0x4c2d9827a4d939a6, 0x29891a51e3fb4b5f } };
     fq::field_t result;
     fq::__sub(a, b, result);
-    printf("sub result =:\n");
-    fq::print(result);
     EXPECT_EQ(fq::eq(result, expected), true);
 }
 

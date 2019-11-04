@@ -12,6 +12,7 @@ using namespace benchmark;
 
 #include <barretenberg/fields/fq.hpp>
 #include <barretenberg/fields/fr.hpp>
+#include <barretenberg/groups/wnaf.hpp>
 #include <barretenberg/groups/g1.hpp>
 #include <barretenberg/groups/g2.hpp>
 #include <barretenberg/groups/scalar_multiplication.hpp>
@@ -183,6 +184,8 @@ struct global_vars
     fr::field_t *scalars;
     fr::field_t *roots;
     fr::field_t *coefficients;
+    g1::affine_element *precompute_point_table;
+    std::vector<g1::affine_element *> point_table_pointers;
 };
 
 global_vars globals;
@@ -242,6 +245,10 @@ const auto init = []() {
     globals.plonk_instances.resize(8);
     globals.plonk_proofs.resize(8);
 
+    size_t bucket_width = scalar_multiplication::get_optimal_bucket_width(MAX_GATES);
+    size_t num_rounds = WNAF_SIZE(bucket_width);
+    globals.precompute_point_table = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * (MAX_GATES) * num_rounds);
+    globals.point_table_pointers = scalar_multiplication::generate_pippenger_precompute_table(globals.reference_string.monomials, globals.precompute_point_table, (MAX_GATES), bucket_width);
     printf("finished generating test data\n");
     return true;
 }();
@@ -272,6 +279,329 @@ inline uint64_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
     }
     return 1;
 }
+
+void pippenger_bench(State& state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES, 15));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / (MAX_GATES));
+    }
+}
+BENCHMARK(pippenger_bench);
+
+void pippenger_precompute_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger_precomputed(&globals.scalars[0], globals.point_table_pointers, MAX_GATES));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / (MAX_GATES));
+    }
+}
+BENCHMARK(pippenger_precompute_bench);
+
+
+void pippenger_2_pow_16_12_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 4, 12));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / (MAX_GATES >> 4));
+    }
+}
+BENCHMARK(pippenger_2_pow_16_12_bench);
+
+
+void pippenger_2_pow_16_15_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 4, 15));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / (MAX_GATES >> 4));
+    }
+}
+BENCHMARK(pippenger_2_pow_16_15_bench);
+// so what's the plan?????
+// 1: determine the optimal number of rounds for each power of two breakpoint
+// 2: write algorithm to precompute exponentiated powers of relevant generators
+// 3: write an SRS class?
+
+// i.e. our prover will want to multi-exponentiate based off of:
+// 1: splitting n into chunks of 4
+// 2: splitting n into chunks of 8
+// (we could try chunks of 3 but let's not overcomplicate for now - benchmarks don't seem to rate 3)
+
+// both chunk types will have different round sizes, most likely
+// so we will need to cache these generator powers
+
+// so....
+// what about...
+// each 'round index' has a block of memory attributed to it
+// and we create pointers to each index
+
+// e.g. in the SRS class, we input 'n', and split down into 'n/2', 'n/4' - compute the desired round structure for these,
+// and load from relevant files
+// we then fill a pointer array with pointers to memory.
+
+// Total memory required will be...erm...so let's say we have a 7-round and 8-round structure...
+// we'll need 14 'rounds' (1st round shared)
+// orrrrr we just load in the lowest common denominator...
+// hom
+// hum
+// hmm
+// no let's load all the rounds. if we need to memory optmize, we can ditch the n/4 memory later on
+
+// 765625000 2^17
+// 6125000000 = (2^17 * 3) // man...
+// 4093750000 2^20
+
+// 1921875000 = 2^18
+// 7687500000
+// 3781250000 = 2^20
+// 4375000000 = 2^20 from 2^17
+void pippenger_2_pow_17_12_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 3, 12));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / (MAX_GATES >> 3));
+    }
+}
+BENCHMARK(pippenger_2_pow_17_12_bench);
+
+
+void pippenger_2_pow_17_15_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 3, 15));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / (MAX_GATES >> 3));
+    }
+}
+BENCHMARK(pippenger_2_pow_17_15_bench);
+
+
+
+void pippenger_2_pow_18_12_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 1, 12));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / (MAX_GATES >> 2));
+    }
+}
+BENCHMARK(pippenger_2_pow_18_12_bench);
+
+
+void pippenger_2_pow_18_15_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 1, 15));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / (MAX_GATES >> 2));
+    }
+}
+BENCHMARK(pippenger_2_pow_18_15_bench);
+
+
+
+
+void pippenger_2_pow_19_12_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 1, 12));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / (MAX_GATES >> 1));
+    }
+}
+BENCHMARK(pippenger_2_pow_19_12_bench);
+
+
+void pippenger_2_pow_19_15_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 1, 15));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / (MAX_GATES >> 1));
+    }
+}
+BENCHMARK(pippenger_2_pow_19_15_bench);
+
+
+
+
+void pippenger_one_million_12_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES, 12));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / MAX_GATES);
+    }
+}
+BENCHMARK(pippenger_one_million_12_bench);
+
+
+void pippenger_one_million_15_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES, 15));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / MAX_GATES);
+    }
+}
+BENCHMARK(pippenger_one_million_15_bench);
+
+
+void pippenger_one_million_18_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES, 18));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / MAX_GATES);
+    }
+}
+BENCHMARK(pippenger_one_million_18_bench);
+
+void alt_pippenger_bench(State& state) noexcept
+{
+    for (auto _ : state)
+    {
+        uint64_t before = rdtsc();
+        DoNotOptimize(scalar_multiplication::alt_pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES));
+        uint64_t after = rdtsc();
+        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / MAX_GATES);
+    }
+}
+BENCHMARK(alt_pippenger_bench);
+
+void three_non_batched_scalar_multiplications_bench(State& state) noexcept
+{
+    for (auto _ : state)
+    {
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES));
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES));
+        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES));
+    }
+}
+BENCHMARK(three_non_batched_scalar_multiplications_bench);
+
+
+void one_batched_scalar_multiplications_bench(State& state) noexcept
+{
+    size_t num_batches = 1;
+    scalar_multiplication::multiplication_state mul_state[num_batches];
+    for (size_t i = 0; i < num_batches; ++i)
+    {
+        mul_state[i].num_elements = MAX_GATES;
+        mul_state[i].scalars = &globals.scalars[0];
+        mul_state[i].points = &globals.reference_string.monomials[0];
+    }
+    for (auto _ : state)
+    {
+        (scalar_multiplication::batched_scalar_multiplications(mul_state, num_batches));
+    }
+}
+BENCHMARK(one_batched_scalar_multiplications_bench);
+
+void two_batched_scalar_multiplications_bench(State& state) noexcept
+{
+    size_t num_batches = 2;
+    scalar_multiplication::multiplication_state mul_state[num_batches];
+    for (size_t i = 0; i < num_batches; ++i)
+    {
+        mul_state[i].num_elements = MAX_GATES;
+        mul_state[i].scalars = &globals.scalars[0];
+        mul_state[i].points = &globals.reference_string.monomials[0];
+    }
+    for (auto _ : state)
+    {
+        (scalar_multiplication::batched_scalar_multiplications(mul_state, num_batches));
+    }
+}
+BENCHMARK(two_batched_scalar_multiplications_bench);
+
+void three_batched_scalar_multiplications_bench(State& state) noexcept
+{
+    size_t num_batches = 3;
+    scalar_multiplication::multiplication_state mul_state[num_batches];
+    for (size_t i = 0; i < num_batches; ++i)
+    {
+        mul_state[i].num_elements = MAX_GATES;
+        mul_state[i].scalars = &globals.scalars[0];
+        mul_state[i].points = &globals.reference_string.monomials[0];
+    }
+    for (auto _ : state)
+    {
+        (scalar_multiplication::batched_scalar_multiplications(mul_state, num_batches));
+    }
+}
+BENCHMARK(three_batched_scalar_multiplications_bench);
+
+
+void plonk_scalar_multiplications_bench(State& state) noexcept
+{
+    scalar_multiplication::multiplication_state mul_state_a[3];
+    scalar_multiplication::multiplication_state mul_state_b[1];
+    scalar_multiplication::multiplication_state mul_state_c[3];
+    scalar_multiplication::multiplication_state mul_state_d[2];
+
+    for (size_t i = 0; i < 3; ++i)
+    {
+        mul_state_a[i].num_elements = MAX_GATES;
+        mul_state_a[i].scalars = &globals.scalars[0];
+        mul_state_a[i].points = &globals.reference_string.monomials[0];
+        mul_state_c[i].num_elements = MAX_GATES;
+        mul_state_c[i].scalars = &globals.scalars[0];
+        mul_state_c[i].points = &globals.reference_string.monomials[0];
+        if (i < 1)
+        {
+            mul_state_b[i].num_elements = MAX_GATES;
+            mul_state_b[i].scalars = &globals.scalars[0];
+            mul_state_b[i].points = &globals.reference_string.monomials[0];
+        }
+        if (i < 2)
+        {
+            mul_state_d[i].num_elements = MAX_GATES;
+            mul_state_d[i].scalars = &globals.scalars[0];
+            mul_state_d[i].points = &globals.reference_string.monomials[0];
+        }
+    }
+    for (auto _ : state)
+    {
+        (scalar_multiplication::batched_scalar_multiplications(mul_state_a, 3));
+        (scalar_multiplication::batched_scalar_multiplications(mul_state_b, 1));
+        (scalar_multiplication::batched_scalar_multiplications(mul_state_c, 3));
+        (scalar_multiplication::batched_scalar_multiplications(mul_state_d, 2));
+    }
+}
+BENCHMARK(plonk_scalar_multiplications_bench);
+
 
 void fft_bench_parallel(State& state) noexcept
 {
@@ -342,18 +672,6 @@ void batched_scalar_multiplications_bench(State& state) noexcept
     }
 }
 BENCHMARK(batched_scalar_multiplications_bench);
-
-void pippenger_bench(State& state) noexcept
-{
-    for (auto _ : state)
-    {
-        uint64_t before = rdtsc();
-        DoNotOptimize(scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES));
-        uint64_t after = rdtsc();
-        printf("pippenger single, clock cycles per scalar mul = %lu\n", (after - before) / MAX_GATES);
-    }
-}
-BENCHMARK(pippenger_bench);
 
 constexpr size_t NUM_G1_ADDITIONS = 10000000;
 void add_bench(State& state) noexcept

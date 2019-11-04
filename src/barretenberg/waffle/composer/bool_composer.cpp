@@ -201,6 +201,7 @@ namespace waffle
         w_r.emplace_back(add_variable(fr::to_montgomery_form({{1,0,0,0}})));
         w_o.emplace_back(add_variable(fr::field_t({{0,0,0,0}})));
         ++n;
+
         // ###
 
         size_t log2_n = static_cast<size_t>(log2(n));

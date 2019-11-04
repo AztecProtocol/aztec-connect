@@ -9,13 +9,14 @@
 #include "./waffle/proof_system/preprocess.hpp"
 
 
+#include "./waffle/stdlib/common.hpp"
 #include "./waffle/stdlib/field/field.hpp"
 #include "./waffle/stdlib/mimc.hpp"
 
 void generate_test_plonk_circuit(waffle::StandardComposer &composer, size_t num_gates)
 {
-    plonk::stdlib::field_t a(&composer, plonk::stdlib::witness_t(barretenberg::fr::random_element()));
-    plonk::stdlib::field_t b(&composer, plonk::stdlib::witness_t(barretenberg::fr::random_element()));
+    plonk::stdlib::field_t a(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
+    plonk::stdlib::field_t b(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
     plonk::stdlib::field_t c(&composer);
     for (size_t i = 0; i < (num_gates / 4) - 4; ++i)
     {
