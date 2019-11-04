@@ -59,12 +59,41 @@ TEST(stdlib_uint32, test_mul)
     uint32 a = first_input;
     uint32 b = second_input;
     uint32 c = a + b;
-    for (size_t i = 0; i < 32; ++i)
+    for (size_t i = 0; i < 100; ++i)
     {
         b = a;
         a = c;
         c = a * b;
     }
+    waffle::Prover prover = composer.preprocess();
+
+    printf("prover gates = %lu\n", prover.n);
+ 
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_uint32, test_xor)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    witness_t first_input(&composer, 0xa3b10422);
+    witness_t second_input(&composer, 0xeac21343);
+
+    uint32 a = first_input;
+    uint32 b = second_input;
+    uint32 c = a ^ b;
+    // for (size_t i = 0; i < 32; ++i)
+    // {
+    //     b = a;
+    //     a = c;
+    //     c = a + b;
+    //     a = c ^ a;
+    // }
     waffle::Prover prover = composer.preprocess();
 
     printf("prover gates = %lu\n", prover.n);

@@ -21,28 +21,28 @@ namespace stdlib
 // ### Internal methods
 namespace {
 template <typename ComposerContext>
-field_t<ComposerContext> internal_and(const field_t<ComposerContext> &left, const field_t<ComposerContext> &right)
+field_t<ComposerContext> internal_and(field_t<ComposerContext> &left, field_t<ComposerContext> &right)
 {
-    return static_cast<bool_t<ComposerContext> >(left) & static_cast<bool_t<ComposerContext> >(right); 
+    return field_t<ComposerContext>(static_cast<bool_t<ComposerContext> >(left) & static_cast<bool_t<ComposerContext> >(right)); 
 }
 
 template <typename ComposerContext>
-field_t<ComposerContext> internal_xor(const field_t<ComposerContext> &left, const field_t<ComposerContext> &right)
+field_t<ComposerContext> internal_xor(field_t<ComposerContext> &left, field_t<ComposerContext> &right)
 {
-    return static_cast<bool_t<ComposerContext> >(left) | static_cast<bool_t<ComposerContext> >(right); 
+    return field_t<ComposerContext>(static_cast<bool_t<ComposerContext> >(left) ^ static_cast<bool_t<ComposerContext> >(right)); 
 }
 
 template <typename ComposerContext>
-field_t<ComposerContext> internal_or(const field_t<ComposerContext> &left, const field_t<ComposerContext> &right)
+field_t<ComposerContext> internal_or(field_t<ComposerContext> &left, field_t<ComposerContext> &right)
 {
-    return static_cast<bool_t<ComposerContext> >(left) ^ static_cast<bool_t<ComposerContext> >(right); 
+    return field_t<ComposerContext>(static_cast<bool_t<ComposerContext> >(left) | static_cast<bool_t<ComposerContext> >(right)); 
 }
 
 template <typename ComposerContext>
 uint32<ComposerContext> internal_logic_operation(
     uint32<ComposerContext> &left,
     uint32<ComposerContext> &right,
-    void (*wire_logic_op)(const field_t<ComposerContext> &, const field_t<ComposerContext> &))
+    field_t<ComposerContext> (*wire_logic_op)(field_t<ComposerContext> &, field_t<ComposerContext> &))
 {
     ASSERT(left.context == right.context || (left.context == nullptr && right.context != nullptr) || (right.context == nullptr && left.context != nullptr));
     ComposerContext *context = left.context == nullptr ? right.context : left.context;
@@ -73,7 +73,7 @@ uint32<ComposerContext> internal_logic_operation(
     for (size_t i = 0; i < 32; ++i)
     {
         result.field_wires[i] = wire_logic_op(left.field_wires[i], right.field_wires[i]);
-        if (context->supportsFeature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
+        if (context->supports_feature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
         {
             if (i > 0)
             {
@@ -87,7 +87,7 @@ uint32<ComposerContext> internal_logic_operation(
         }
     }
     result.num_witness_bits = 32;
-    if (context->supportsFeature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
+    if (context->supports_feature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
     {
         result.witness = result.accumulators[31].witness;
         result.witness_index = result.accumulators[31].witness_index;
@@ -305,6 +305,7 @@ void uint32<ComposerContext>::concatenate()
     // if we have advanced addition gates, this should be optimized at the composer level
     field_t<ComposerContext> const_mul(context, barretenberg::fr::one());
     accumulators[0] = field_wires[0];
+    const_mul = const_mul + const_mul;
     for (size_t i = 1; i < 31; ++i)
     {
         accumulators[i] = accumulators[i - 1] + (field_wires[i] * const_mul);
