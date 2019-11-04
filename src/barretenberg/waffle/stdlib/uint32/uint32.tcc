@@ -323,6 +323,7 @@ void uint32<ComposerContext>::decompose()
 {
     std::vector<field_t<ComposerContext> > overhead_wires;
     field_t<ComposerContext> normalized(context);
+
     // hacky special case for constants - we don't want to add any constraints in this scenario
     if (witness_index == static_cast<uint32_t>(-1))
     {
@@ -340,12 +341,13 @@ void uint32<ComposerContext>::decompose()
         {
             normalized.additive_constant = barretenberg::fr::to_montgomery_form({{ static_cast<uint64_t>(additive_constant), 0, 0, 0 }});
             normalized.multiplicative_constant = barretenberg::fr::to_montgomery_form({{ static_cast<uint64_t>(multiplicative_constant), 0, 0, 0 }});
-            normalized.normalize();
+            normalized = normalized.normalize();
         }
+        barretenberg::fr::field_t test_scalar = barretenberg::fr::from_montgomery_form(normalized.witness);
 
         for (size_t i = 0; i < num_witness_bits; ++i)
         {
-            bool bit = get_bit(normalized.witness, i);
+            bool bit = get_bit(test_scalar, i);
             if (i < 32)
             {
                 field_wires[i] = field_t<ComposerContext>(bool_t<ComposerContext>(witness_t(context, bit)));
@@ -360,17 +362,20 @@ void uint32<ComposerContext>::decompose()
     // if our uint is a constant, none of the following should add any constraints
     field_t<ComposerContext> const_mul(context, barretenberg::fr::one());
     accumulators[0] = field_wires[0];
+    const_mul = const_mul + const_mul;
     for (size_t i = 1; i < 32; ++i)
     {
         accumulators[i] = accumulators[i - 1] + (field_wires[i] * const_mul);
         const_mul = const_mul + const_mul;
     }
+
     if (num_witness_bits > 32)
     {
         field_t<ComposerContext> overhead_accumulator = overhead_wires[0] * const_mul;
+        const_mul = const_mul + const_mul;
         for (size_t i = 33; i < num_witness_bits; ++i)
         {
-            overhead_accumulator = overhead_accumulator + (overhead_wires[i] * const_mul);
+            overhead_accumulator = overhead_accumulator + (overhead_wires[i - 32] * const_mul);
             const_mul = const_mul + const_mul;
         }
         if (witness_index != static_cast<uint32_t>(-1))
@@ -388,6 +393,7 @@ void uint32<ComposerContext>::decompose()
 
     witness = accumulators[31].witness;
     witness_index = accumulators[31].witness_index;
+    num_witness_bits = 32;
     witness_status = WitnessStatus::OK;
 }
 
@@ -518,12 +524,13 @@ uint32<ComposerContext> uint32<ComposerContext>::operator*(uint32 &other)
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();
 
-    uint32<ComposerContext> result();
+    uint32<ComposerContext> result = uint32<ComposerContext>();
     result.context = (context == nullptr) ? other.context : context;
 
     bool lhs_constant = witness_index == static_cast<uint32_t>(-1);
     bool rhs_constant = other.witness_index == static_cast<uint32_t>(-1);
 
+    // TODO: fix up bit lengths for constant terms
     if (lhs_constant && rhs_constant)
     {
         result = (*this);
@@ -531,7 +538,7 @@ uint32<ComposerContext> uint32<ComposerContext>::operator*(uint32 &other)
     }
     else if (!lhs_constant && rhs_constant)
     {
-        result = copy(*this);
+        result = (*this);
         result.additive_constant = additive_constant * other.additive_constant;
         multiplicative_constant = multiplicative_constant * other.additive_constant;
     }
@@ -543,8 +550,8 @@ uint32<ComposerContext> uint32<ComposerContext>::operator*(uint32 &other)
     }
     else
     {
-        result.additive_constant = barretenberg::fr::zero();
-        result.multiplicative_constant = barretenberg::fr::one();
+        result.additive_constant = 0;
+        result.multiplicative_constant = 1;
 
         // both inputs map to circuit varaibles - create a * constraint
         // we have (m1.x + a1).(m2.y + a2)
@@ -591,9 +598,9 @@ uint32<ComposerContext> uint32<ComposerContext>::operator*(uint32 &other)
 
         size_t multiplicative_bit_length = static_cast<size_t>(get_msb(multiplicative_constant)) + static_cast<size_t>(get_msb(other.multiplicative_constant));
         multiplicative_bit_length = multiplicative_bit_length > 32 ? 32 : multiplicative_bit_length;
-
-        size_t left_bit_length = static_cast<size_t>(get_msb(additive_constant));
-        size_t right_bit_length = static_cast<size_t>(get_msb(other.additive_constant));
+        multiplicative_bit_length += (num_witness_bits + other.num_witness_bits);
+        size_t left_bit_length = num_witness_bits + static_cast<size_t>(get_msb(additive_constant));
+        size_t right_bit_length = other.num_witness_bits + static_cast<size_t>(get_msb(other.additive_constant));
         size_t linear_bit_length = std::max(left_bit_length, right_bit_length) + static_cast<size_t>(left_bit_length == right_bit_length);
         size_t output_bit_length = std::max(multiplicative_bit_length, linear_bit_length) + static_cast<size_t>(multiplicative_bit_length == linear_bit_length);
         result.num_witness_bits = output_bit_length;

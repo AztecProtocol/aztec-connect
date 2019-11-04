@@ -41,11 +41,10 @@ inline bool get_bit(barretenberg::fr::field_t &scalar, size_t bit_position)
      * 
      * If low limb == high limb, we know that the high limb will be shifted left by a bit count that moves it out of the result mask
      */
-    barretenberg::fr::field_t mont_scalar = barretenberg::fr::from_montgomery_form(scalar);
     size_t bit_idx = bit_position >> 6;
     // size_t lo_idx = bit_position >> 6;
     // size_t hi_idx = (bit_position + 1 - 1) >> 6;
-    return (bool)((mont_scalar.data[bit_idx] >> (bit_position & 63UL)) & 1UL);
+    return (bool)((scalar.data[bit_idx] >> (bit_position & 63UL)) & 1UL);
 }
 
 template <typename ComposerContext>

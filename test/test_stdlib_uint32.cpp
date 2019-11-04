@@ -36,34 +36,39 @@ TEST(stdlib_uint32, test_add)
         a = c;
         c = a + b;
     }
-
     waffle::Prover prover = composer.preprocess();
 
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[0]), {{ 1, 0, 0, 0 }}), true);
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[0]), {{ 1, 0, 0, 0 }}), true);
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[0]), {{ 1, 0, 0, 0 }}), true);
+    printf("prover gates = %lu\n", prover.n);
+ 
+    waffle::Verifier verifier = waffle::preprocess(prover);
 
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[1]), {{ 0, 0, 0, 0 }}), true);
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[1]), {{ 0, 0, 0, 0 }}), true);
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[1]), {{ 0, 0, 0, 0 }}), true);
+    waffle::plonk_proof proof = prover.construct_proof();
 
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[2]), {{ 1, 0, 0, 0 }}), true);
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[2]), {{ 0, 0, 0, 0 }}), true);
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[2]), {{ 1, 0, 0, 0 }}), true);
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
 
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[3]), {{ 1, 0, 0, 0 }}), true);
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[3]), {{ 0, 0, 0, 0 }}), true);
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[3]), {{ 1, 0, 0, 0 }}), true);
 
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[4]), {{ 1, 0, 0, 0 }}), true);
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[4]), {{ 0, 0, 0, 0 }}), true);
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[4]), {{ 0, 0, 0, 0 }}), true);
+TEST(stdlib_uint32, test_mul)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[5]), {{ 0, 0, 0, 0 }}), true);
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[5]), {{ 1, 0, 0, 0 }}), true);
-    // EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[5]), {{ 1, 0, 0, 0 }}), true);
+    witness_t first_input(&composer, 1U);
+    witness_t second_input(&composer, 2U);
 
-    // EXPECT_EQ(prover.n, 8UL);
+    uint32 a = first_input;
+    uint32 b = second_input;
+    uint32 c = a + b;
+    for (size_t i = 0; i < 32; ++i)
+    {
+        b = a;
+        a = c;
+        c = a * b;
+    }
+    waffle::Prover prover = composer.preprocess();
+
+    printf("prover gates = %lu\n", prover.n);
+ 
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();

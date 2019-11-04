@@ -23,7 +23,6 @@ public:
         NOT_NORMALIZED,
         IN_BINARY_FORM
     };
-    // possible statuses:
 
     uint32();
     uint32(ComposerContext *parent_context);
@@ -46,7 +45,7 @@ public:
 
     // TODO: change the naming scheme for this
     // 'concatenate' will use + gates to create a witness out of boolean 'field wires'
-    // 'decompose' will use + ates to create boolean 'field wires' from a witness
+    // 'decompose' will use + and bool gates to create boolean 'field wires' from a witness
     void concatenate();
     void decompose();
 
@@ -60,6 +59,7 @@ public:
     uint32 operator-(uint32 &other);
     uint32 operator*(uint32 &other);
     uint32 operator/(uint32 &other);
+    uint32 operator%(uint32 &other);
 
     uint32 operator&(uint32 &other);
     uint32 operator|(uint32 &other);
@@ -78,6 +78,22 @@ public:
     bool_t<ComposerContext> operator<=(uint32 &other);
     bool_t<ComposerContext> operator==(uint32 &other);
     bool_t<ComposerContext> operator!=(uint32 &other);
+
+    uint32 operator++();
+    uint32 operator--();
+
+    uint32 operator+=(uint32 &other);
+    uint32 operator-=(uint32 &other);
+    uint32 operator*=(uint32 &other);
+    uint32 operator/=(uint32 &other);
+    uint32 operator%=(uint32 &other);
+
+    uint32 operator&=(uint32 &other);
+    uint32 operator^=(uint32 &other);
+    uint32 operator|=(uint32 &other);
+
+    uint32 operator>>=(uint32 &other);
+    uint32 operator<<=(uint32 &other);
 
     uint32 ternary_operator(const bool_t<ComposerContext> &predicate, const uint32 &lhs, const uint32 &rhs);
 
