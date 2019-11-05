@@ -306,7 +306,7 @@ void uint32<ComposerContext>::concatenate()
     field_t<ComposerContext> const_mul(context, barretenberg::fr::one());
     accumulators[0] = field_wires[0];
     const_mul = const_mul + const_mul;
-    for (size_t i = 1; i < 31; ++i)
+    for (size_t i = 1; i < 32; ++i)
     {
         accumulators[i] = accumulators[i - 1] + (field_wires[i] * const_mul);
         const_mul = const_mul + const_mul;
@@ -479,10 +479,9 @@ uint32<ComposerContext> uint32<ComposerContext>::operator+(uint32 &other)
 
         size_t left_bit_length = static_cast<size_t>(get_msb((ql_32))) + num_witness_bits;
         size_t right_bit_length = static_cast<size_t>(get_msb((qr_32))) + other.num_witness_bits;
-        size_t constant_bit_length = static_cast<size_t>(get_msb((qc_32)));
+        // size_t constant_bit_length = static_cast<size_t>(get_msb((qc_32)));
 
-        size_t output_bit_length = std::max(left_bit_length, right_bit_length) + static_cast<size_t>(left_bit_length == right_bit_length);
-        output_bit_length = std::max(output_bit_length, constant_bit_length) + static_cast<size_t>(output_bit_length == constant_bit_length);
+        size_t output_bit_length = std::max(left_bit_length, right_bit_length) + 1;
         result.num_witness_bits = output_bit_length;
         result.context->create_add_gate(gate_coefficients);
         result.witness_status = WitnessStatus::NOT_NORMALIZED;

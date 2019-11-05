@@ -71,7 +71,7 @@ public:
 
     virtual bool supports_feature(const Features target_feature)
     {
-        return ((features & static_cast<size_t>(target_feature)) == 0);
+        return ((features & static_cast<size_t>(target_feature)) != 0);
     }
 
     virtual void create_add_gate(const add_triple &in) = 0;

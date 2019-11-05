@@ -14,7 +14,7 @@ template <typename ComposerContext>
 field_t<ComposerContext>::field_t() :
     context(nullptr),
     additive_constant(barretenberg::fr::zero()),
-    multiplicative_constant(barretenberg::fr::zero()),
+    multiplicative_constant(barretenberg::fr::one()),
     witness(barretenberg::fr::zero()),
     witness_index(static_cast<uint32_t>(-1)) {}
 
@@ -96,6 +96,7 @@ field_t<ComposerContext>::operator bool_t<ComposerContext>()
     result.witness_bool = barretenberg::fr::eq(witness, barretenberg::fr::one());
     result.witness_inverted = inverted_check;
     result.witness_index = witness_index;
+    // TODO THIS SHOULD ADD A BOOL GATE
     return result;
 }
 

@@ -49,12 +49,6 @@ public:
     void concatenate();
     void decompose();
 
-    // same as above, but using the uint's 'logical representation',
-    // where the scalar's bits are interleaved with zero-value bits to create
-    // a sparse representation
-    void logic_concatenate();
-    void logic_decompose();
-
     uint32 operator+(uint32 &other);
     uint32 operator-(uint32 &other);
     uint32 operator*(uint32 &other);
