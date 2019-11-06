@@ -278,10 +278,14 @@ const auto init = []() {
 
 uint64_t rdtsc()
 {
+#ifdef DISABLE_SHENANIGANS
+    return 0;
+#else
     unsigned int lo, hi;
     __asm__ __volatile__("rdtsc"
                          : "=a"(lo), "=d"(hi));
     return ((uint64_t)hi << 32) | lo;
+#endif
 }
 
 constexpr size_t NUM_SQUARINGS = 10000000;

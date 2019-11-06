@@ -418,11 +418,60 @@ inline void add(element &p1, element &p2, element &p3)
     fq::__mul(p3.z, H, p3.z);
 }
 
+// copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
+inline void copy(affine_element *src, affine_element *dest)
+{
+#if defined __AVX__ && defined USE_AVX
+    ASSERT((((uintptr_t)src & 0x1f) == 0));
+    ASSERT((((uintptr_t)dest & 0x1f) == 0));
+    __asm__ __volatile__(
+        "vmovdqa 0(%0), %%ymm0              \n\t"
+        "vmovdqa 32(%0), %%ymm1             \n\t"
+        "vmovdqa %%ymm0, 0(%1)              \n\t"
+        "vmovdqa %%ymm1, 32(%1)             \n\t"
+        :
+        : "r"(src), "r"(dest)
+        : "%ymm0", "%ymm1", "memory");
+#else
+    fq::copy(src->x, dest->x);
+    fq::copy(src->y, dest->y);
+#endif
+}
+
+// copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
+inline void copy(element *src, element *dest)
+{
+#if defined __AVX__ && defined USE_AVX
+    ASSERT((((uintptr_t)src & 0x1f) == 0));
+    ASSERT((((uintptr_t)dest & 0x1f) == 0));
+    __asm__ __volatile__(
+        "vmovdqa 0(%0), %%ymm0              \n\t"
+        "vmovdqa 32(%0), %%ymm1             \n\t"
+        "vmovdqa 64(%0), %%ymm2             \n\t"
+        "vmovdqa %%ymm0, 0(%1)              \n\t"
+        "vmovdqa %%ymm1, 32(%1)             \n\t"
+        "vmovdqa %%ymm2, 64(%1)             \n\t"
+        :
+        : "r"(src), "r"(dest)
+        : "%ymm0", "%ymm1", "%ymm2", "memory");
+#else
+    fq::copy(src->x, dest->x);
+    fq::copy(src->y, dest->y);
+    fq::copy(src->z, dest->z);
+#endif
+}
+
 // copies src into dest, inverting y-coordinate if 'predicate' is true
 // n.b. requires src and dest to be aligned on 32 byte boundary
 inline void conditional_negate_affine(affine_element *src, affine_element *dest, uint64_t predicate)
 {
-#if defined __AVX__ && defined USE_AVX
+#ifdef DISABLE_SHENANIGANS
+    copy(src, dest);
+    if (predicate)
+    {
+        fq::neg(dest->y, dest->y);
+    }
+#elif defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src & 0x1f) == 0));
     ASSERT((((uintptr_t)dest & 0x1f) == 0));
     __asm__ __volatile__(
@@ -488,49 +537,6 @@ inline void conditional_negate_affine(affine_element *src, affine_element *dest,
         :
         : "r"(src), "r"(dest), "r"(predicate)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "memory", "cc");
-#endif
-}
-
-// copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-inline void copy(affine_element *src, affine_element *dest)
-{
-#if defined __AVX__ && defined USE_AVX
-    ASSERT((((uintptr_t)src & 0x1f) == 0));
-    ASSERT((((uintptr_t)dest & 0x1f) == 0));
-    __asm__ __volatile__(
-        "vmovdqa 0(%0), %%ymm0              \n\t"
-        "vmovdqa 32(%0), %%ymm1             \n\t"
-        "vmovdqa %%ymm0, 0(%1)              \n\t"
-        "vmovdqa %%ymm1, 32(%1)             \n\t"
-        :
-        : "r"(src), "r"(dest)
-        : "%ymm0", "%ymm1", "memory");
-#else
-    fq::copy(src->x, dest->x);
-    fq::copy(src->y, dest->y);
-#endif
-}
-
-// copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-inline void copy(element *src, element *dest)
-{
-#if defined __AVX__ && defined USE_AVX
-    ASSERT((((uintptr_t)src & 0x1f) == 0));
-    ASSERT((((uintptr_t)dest & 0x1f) == 0));
-    __asm__ __volatile__(
-        "vmovdqa 0(%0), %%ymm0              \n\t"
-        "vmovdqa 32(%0), %%ymm1             \n\t"
-        "vmovdqa 64(%0), %%ymm2             \n\t"
-        "vmovdqa %%ymm0, 0(%1)              \n\t"
-        "vmovdqa %%ymm1, 32(%1)             \n\t"
-        "vmovdqa %%ymm2, 64(%1)             \n\t"
-        :
-        : "r"(src), "r"(dest)
-        : "%ymm0", "%ymm1", "%ymm2", "memory");
-#else
-    fq::copy(src->x, dest->x);
-    fq::copy(src->y, dest->y);
-    fq::copy(src->z, dest->z);
 #endif
 }
 
