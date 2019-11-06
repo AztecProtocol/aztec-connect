@@ -834,23 +834,11 @@ uint32<ComposerContext> uint32<ComposerContext>::operator~()
 
     uint32<ComposerContext> result = (*this);
 
-    field_t<ComposerContext> field_accumulator = 0;
-    field_t<ComposerContext> const_multiplier = 0;
     for (size_t i = 0; i < 32; ++i)
     {
-        bool_t<ComposerContext> field_wire = ~bool_t<ComposerContext>(field_wires[i]);
-        result.field_wires[i] = field_t<ComposerContext>(field_wire);
-        if (witness_status == WitnessStatus::OK)
-        {
-            result.accumulators[i] = accumulators[i];
-            result.accumulators[i].additive_constant = uint32_max;
-            result.accumulators[i].multiplicative_constant = barretenberg::fr::neg_one();
-        }
+        result.field_wires[i] = field_t<ComposerContext>(~static_cast<bool_t<ComposerContext> >(result.field_wires[i]));
     }
-
-    field_t<ComposerContext> witness_adjustment = accumulators[31];
-    result.witness = witness_adjustment.witness;
-    result.witness_index = witness_adjustment.witness_index;
+    result.witness_status = WitnessStatus::IN_BINARY_FORM;
     return result;
 }
 
@@ -936,41 +924,15 @@ uint32<ComposerContext> uint32<ComposerContext>::ror(const uint32_t const_rotati
 
     uint32<ComposerContext> result(context);
     
-    for (size_t i = const_rotation; i < 32; ++i)
+    for (size_t i = 0; i < 32 - const_rotation; ++i)
     {
-        result.accumulators[i] = accumulators[i - const_rotation];
-        result.field_wires[i] = field_wires[i - const_rotation];
+        result.field_wires[i] = field_wires[i + const_rotation];
     }
     for (size_t i = 0; i < const_rotation; ++i)
     {
-        result.accumulators[31 - const_rotation] = accumulators[i];
-        result.field_wires[31 - const_rotation] = field_wires[i];
+        result.field_wires[32 - const_rotation + i] = field_wires[i];
     }
     result.witness_status = WitnessStatus::IN_BINARY_FORM;
-    // field_t<ComposerContext> field_breakpoint = field_wires[const_rotation - 1];
-    // field_t<ComposerContext> field_endpoint = field_wires[31];
-
-    // // a = field_breakpoint
-    // // b = field_endpoint
-    // // c = output
-    // // c = a * (1 << (32 - ror) - 1 / (1 << ror)) + (b) / (1 << ror))
-    
-    // // option A
-    // field_t<ComposerContext> numerator = 1UL;
-    // field_t<ComposerContext> denominator = static_cast<uint64_t>(1UL << static_cast<uint64_t>(const_rotation));
-    // field_t<ComposerContext> inverted_rotation = numerator / denominator;
-    // field_t<ComposerContext> rotation_shift = static_cast<uint64_t>(1UL << (32UL - static_cast<uint64_t>(const_rotation)));
-    // field_t<ComposerContext> breakpoint_multiplier = rotation_shift - inverted_rotation;
-
-    // // should create 1 addition gate...
-    // field_t<ComposerContext> output = (field_breakpoint * breakpoint_multiplier) + (field_endpoint * inverted_rotation);
-
-    // result.witness = output.witness;
-    // result.witness_index = output.witness_index;
-    // result.witness_uint32 = (witness_uint32 >> const_rotation) + ((witness_uint32 & ((1 << const_rotation) - 1)) << const_rotation);
-    // result.concatenated = concatenated;
-    // result.logic_concatenated = logic_concatenated;
-
     return result;
 }
 

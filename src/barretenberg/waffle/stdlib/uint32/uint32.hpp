@@ -55,10 +55,36 @@ public:
     uint32 operator/(uint32 &other);
     uint32 operator%(uint32 &other);
 
+    // We need to define separate methods that accept rvalue references. When working with lvalue's, we don't want the input
+    // argument to be const, because if we need to decompose a uint32 into binary wires (or concatenate binary wires into a sum),
+    // we want to ensure that this is only performed once per unique operand.
+    // For example, imagine we have a uint32 `a`, that is in a NOT_NORMALIZED state as it has been composed out of a `+` operator.
+    // If we have two statements: `uint32 c = foo ^ a; uint32 d = bar & a`, then to compute `c`, we need to split out `a` into its
+    // individual binary wires. We also need to do this to compute d - so we want to be able to mutate the operand of any operator call.
+    // Now, when computing `uint32 c = foo ^ a`, we add a side-effect that splits `a` into binary wires. When computing 
+    // `uint32 d = bar & a`, `a` is correctly formatted, and we can avoid repeating the binary decomposition.
+    // However! This means that rvalue references cannot be used as operands. e.g. `uint32 foo = bar ^ baz ^ faz`,
+    // (baz ^ faz) is a temporary rvalue, that the compiler cannot convert to a non-const lvalue. This is because any non-const
+    // side effects are going to be discarded. However! In our context, this is absolutely fine, the non-const-ness of the operand
+    // is purely for efficiency reasons - it is absolutely fine for a 'mutated' operand to be discarded as the side-effect exists purely
+    // to reduce the number of constraints in the composer circuit. I.e. the 'state' that is represented by the rvalue does not change,
+    // only how it is represented.
+    // TLDR: we need to overload our operators to take rvalue references, and use the copy constructor to force them into lvalues,
+    // before feeding them into the original operator method. Bleurgh.
+    uint32 operator+(uint32 &&other) { return operator+(other); }
+    uint32 operator-(uint32 &&other) { return operator-(other); }
+    uint32 operator*(uint32 &&other) { return operator*(other); }
+    uint32 operator/(uint32 &&other) { return operator/(other); }
+    uint32 operator%(uint32 &&other) { return operator%(other); }
+
     uint32 operator&(uint32 &other);
     uint32 operator|(uint32 &other);
     uint32 operator^(uint32 &other);
     uint32 operator~();
+
+    uint32 operator&(uint32 &&other) { return operator&(other); }
+    uint32 operator|(uint32 &&other) { return operator|(other); }
+    uint32 operator^(uint32 &&other) { return operator^(other); }
 
     uint32 operator>>(const uint32_t const_shift);
     uint32 operator<<(const uint32_t const_shift);

@@ -128,8 +128,8 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator&(const bool_t &other) 
             other.witness_index,
             result.witness_index,
             (witness_inverted ^ other.witness_inverted) ? barretenberg::fr::neg_one() :barretenberg::fr::one(),
-            witness_inverted ? barretenberg::fr::neg_one() :barretenberg::fr::zero(),
-            other.witness_inverted ? barretenberg::fr::neg_one() :barretenberg::fr::zero(),
+            other.witness_inverted ? barretenberg::fr::one() :barretenberg::fr::zero(),
+            witness_inverted ? barretenberg::fr::one() :barretenberg::fr::zero(),
            barretenberg::fr::neg_one(),
             (witness_inverted & other.witness_inverted) ? barretenberg::fr::one() :barretenberg::fr::zero()
         };

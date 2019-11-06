@@ -90,6 +90,7 @@ field_t<ComposerContext>::operator bool_t<ComposerContext>()
     {
         normalize();
     }
+
     ASSERT(barretenberg::fr::eq(witness, barretenberg::fr::zero()) || barretenberg::fr::eq(witness, barretenberg::fr::one()));
     bool_t<ComposerContext> result(context);
     result.witness = witness;

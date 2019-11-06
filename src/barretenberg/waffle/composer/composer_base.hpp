@@ -79,6 +79,12 @@ public:
     virtual void create_bool_gate(const uint32_t a) = 0;
     virtual void create_poly_gate(const poly_triple &in) = 0;    
 
+    barretenberg::fr::field_t get_variable(const uint32_t index) const
+    {
+        ASSERT(variables.size() > index);
+        return variables[index];
+    }
+
     virtual uint32_t add_variable(const barretenberg::fr::field_t &in)
     {
         variables.emplace_back(in);
