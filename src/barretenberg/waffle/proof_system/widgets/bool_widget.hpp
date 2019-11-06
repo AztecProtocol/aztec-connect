@@ -17,7 +17,7 @@ public:
     ~VerifierBoolWidget() {};
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
-        const challenge_coefficients &challenge,
+        const VerifierBaseWidget::challenge_coefficients &challenge,
         const waffle::plonk_proof &proof,
         std::vector<barretenberg::g1::affine_element> &points,
         std::vector<barretenberg::fr::field_t> &scalars

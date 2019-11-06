@@ -42,6 +42,8 @@ add_library(
     waffle/proof_system/widgets/base_widget.hpp
     waffle/proof_system/widgets/arithmetic_widget.cpp
     waffle/proof_system/widgets/arithmetic_widget.hpp
+    waffle/proof_system/widgets/bool_widget.cpp
+    waffle/proof_system/widgets/bool_widget.hpp
     waffle/proof_system/widgets/mimc_widget.cpp
     waffle/proof_system/widgets/mimc_widget.hpp
     waffle/proof_system/prover/prover.cpp
@@ -51,6 +53,8 @@ add_library(
     waffle/composer/composer_base.hpp
     waffle/composer/standard_composer.cpp
     waffle/composer/standard_composer.hpp
+    waffle/composer/bool_composer.cpp
+    waffle/composer/bool_composer.hpp
     waffle/composer/mimc_composer.cpp
     waffle/composer/mimc_composer.hpp
     waffle/stdlib/common.hpp
@@ -114,6 +118,8 @@ add_executable(
     waffle/proof_system/widgets/base_widget.hpp
     waffle/proof_system/widgets/arithmetic_widget.cpp
     waffle/proof_system/widgets/arithmetic_widget.hpp
+    waffle/proof_system/widgets/bool_widget.cpp
+    waffle/proof_system/widgets/bool_widget.hpp
     waffle/proof_system/widgets/mimc_widget.cpp
     waffle/proof_system/widgets/mimc_widget.hpp
     waffle/proof_system/prover/prover.cpp
@@ -123,6 +129,8 @@ add_executable(
     waffle/composer/composer_base.hpp
     waffle/composer/standard_composer.cpp
     waffle/composer/standard_composer.hpp
+    waffle/composer/bool_composer.cpp
+    waffle/composer/bool_composer.hpp
     waffle/composer/mimc_composer.cpp
     waffle/composer/mimc_composer.hpp
     waffle/stdlib/common.hpp

@@ -18,14 +18,14 @@ public:
         features |= static_cast<size_t>(Features::BOOL_SELECTORS);
     };
 
-    ~MiMCComposer() {};
+    ~BoolComposer() {};
 
     Prover preprocess();
 
     virtual uint32_t add_variable(const barretenberg::fr::field_t &in)
     {
         pending_bool_selectors.emplace_back(false);
-        return BaseComposer::add_variable(in);
+        return ComposerBase::add_variable(in);
     }
 
     void create_add_gate(const add_triple &in);

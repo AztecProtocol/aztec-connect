@@ -63,7 +63,7 @@ fr::field_t ProverBoolWidget::compute_quotient_contribution(const barretenberg::
     polynomial q_br_fft = polynomial(q_br, circuit_state.mid_domain.size);
 
     q_bl_fft.coset_fft_with_constant(circuit_state.mid_domain, alpha_base);
-    q_br_fft.coset_fft(circuit_state.mid_domain, fr::mul(alpha_base, alpha_step));
+    q_br_fft.coset_fft_with_constant(circuit_state.mid_domain, fr::mul(alpha_base, alpha_step));
     ITERATE_OVER_DOMAIN_START(circuit_state.large_domain);
         fr::field_t T0;
         fr::field_t T1;
@@ -101,7 +101,7 @@ fr::field_t ProverBoolWidget::compute_linear_contribution(const fr::field_t &alp
     return fr::mul(alpha_base, fr::sqr(alpha_step));
 }
 
-fr::field_t ProverBoolWidget::compute_opening_poly_contribution(barretenberg::fr::field_t* poly, const evaluation_domain& domain, const fr::field_t &nu_base, const fr::field_t &nu_step)
+fr::field_t ProverBoolWidget::compute_opening_poly_contribution(barretenberg::fr::field_t*, const evaluation_domain&, const fr::field_t &nu_base, const fr::field_t &)
 {
     return nu_base;
 }
@@ -156,13 +156,13 @@ VerifierBoolWidget::VerifierBoolWidget(std::vector<barretenberg::g1::affine_elem
     };
 }
 
-barretenberg::fr::field_t VerifierBoolWidget::compute_batch_evaluation_contribution(barretenberg::fr::field_t &batch_eval, barretenberg::fr::field_t &nu_base, barretenberg::fr::field_t &nu_step, const plonk_proof &proof)
+barretenberg::fr::field_t VerifierBoolWidget::compute_batch_evaluation_contribution(barretenberg::fr::field_t &, barretenberg::fr::field_t &nu_base, barretenberg::fr::field_t &, const plonk_proof &)
 {
     return nu_base;
 }
 
 VerifierBaseWidget::challenge_coefficients VerifierBoolWidget::append_scalar_multiplication_inputs(
-    const challenge_coefficients &challenge,
+    const VerifierBaseWidget::challenge_coefficients &challenge,
     const waffle::plonk_proof &proof,
     std::vector<barretenberg::g1::affine_element> &points,
     std::vector<barretenberg::fr::field_t> &scalars)
@@ -173,8 +173,8 @@ VerifierBaseWidget::challenge_coefficients VerifierBoolWidget::append_scalar_mul
     }
     scalars.push_back(challenge.nu_base);
 
-    fr::field_t left_bool_multiplier = fr::mul(fr::sub(fr::sqr(proof.w_l_eval), proof.w_l_eval), alpha_base);
-    fr::field_t right_bool_multiplier =  fr::mul(fr::mul(fr::sub(fr::sqr(proof.w_l_eval), proof.w_l_eval), alpha_base), alpha_step);
+    fr::field_t left_bool_multiplier = fr::mul(fr::sub(fr::sqr(proof.w_l_eval), proof.w_l_eval), challenge.alpha_base);
+    fr::field_t right_bool_multiplier =  fr::mul(fr::mul(fr::sub(fr::sqr(proof.w_l_eval), proof.w_l_eval), challenge.alpha_base), challenge.alpha_step);
     left_bool_multiplier = fr::mul(left_bool_multiplier, challenge.linear_nu);
     right_bool_multiplier = fr::mul(right_bool_multiplier, challenge.linear_nu);
 
@@ -182,7 +182,7 @@ VerifierBaseWidget::challenge_coefficients VerifierBoolWidget::append_scalar_mul
     scalars.push_back(right_bool_multiplier);
 
 
-    return challenge_coefficients{
+    return VerifierBaseWidget::challenge_coefficients{
         fr::mul(challenge.alpha_base, fr::sqr(challenge.alpha_step)),
         challenge.alpha_step,
         challenge.nu_base,

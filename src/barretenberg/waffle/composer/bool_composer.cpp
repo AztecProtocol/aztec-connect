@@ -3,6 +3,7 @@
 #include "../../assert.hpp"
 #include "../../fields/fr.hpp"
 #include "../proof_system/widgets/bool_widget.hpp"
+#include "../proof_system/widgets/arithmetic_widget.hpp"
 
 #include "math.h"
 
@@ -23,7 +24,7 @@ namespace waffle
             else if (!pending_bool_selectors[to_add.b])
             {
                 std::swap(to_add.b, to_add.c);
-                fr::sqap(to_add.b_scaling, to_add.c_scaling);
+                fr::swap(to_add.b_scaling, to_add.c_scaling);
             }
         }
         StandardComposer::create_add_gate(to_add);
@@ -35,7 +36,7 @@ namespace waffle
         }
         else
         {
-            q_left_bools.emplace(fr::field_t({{0,0,0,0}}));
+            q_left_bools.emplace_back(fr::field_t({{0,0,0,0}}));
         }
 
         if (pending_bool_selectors[to_add.b])
@@ -59,7 +60,7 @@ namespace waffle
         }
         else
         {
-            q_left_bools.emplace(fr::field_t({{0,0,0,0}}));
+            q_left_bools.emplace_back(fr::field_t({{0,0,0,0}}));
         }
         if (pending_bool_selectors[in.b])
         {
@@ -87,7 +88,7 @@ namespace waffle
         }
         else
         {
-            q_left_bools.emplace(fr::field_t({{0,0,0,0}}));
+            q_left_bools.emplace_back(fr::field_t({{0,0,0,0}}));
         }
         if (pending_bool_selectors[in.b])
         {
@@ -135,7 +136,7 @@ namespace waffle
                     q_right_bools.emplace_back(fr::one());
                     w_l.emplace_back(static_cast<uint32_t>(i));
                     w_r.emplace_back(static_cast<uint32_t>(pending_pair));
-                    w_o.emplace_back(static_cast<uint32_t>(i);
+                    w_o.emplace_back(static_cast<uint32_t>(i));
                     epicycle left{static_cast<uint32_t>(n), WireType::LEFT};
                     epicycle right{static_cast<uint32_t>(n), WireType::RIGHT};
                     epicycle out{static_cast<uint32_t>(n), WireType::OUTPUT};
@@ -155,10 +156,10 @@ namespace waffle
             q_o.emplace_back(fr::field_t({{0,0,0,0}}));
             q_c.emplace_back(fr::field_t({{0,0,0,0}}));
             q_left_bools.emplace_back(fr::one());
-            q_right_bools.emplace_back(fr::field_t({{0,0,0,0}});
+            q_right_bools.emplace_back(fr::field_t({{0,0,0,0}}));
             w_l.emplace_back(static_cast<uint32_t>(pending_pair));
             w_r.emplace_back(static_cast<uint32_t>(pending_pair));
-            w_o.emplace_back(static_cast<uint32_t>(pending_pair);
+            w_o.emplace_back(static_cast<uint32_t>(pending_pair));
             epicycle left{static_cast<uint32_t>(n), WireType::LEFT};
             epicycle right{static_cast<uint32_t>(n), WireType::RIGHT};
             epicycle out{static_cast<uint32_t>(n), WireType::OUTPUT};
@@ -247,7 +248,7 @@ namespace waffle
             fr::copy(q_o[i], arithmetic_widget->q_o[i]);
             fr::copy(q_c[i], arithmetic_widget->q_c[i]);
             fr::copy(q_left_bools[i], bool_widget->q_bl[i]);
-            fr::copy(q_right_bools[i], mimc_widget->q_br[i]);
+            fr::copy(q_right_bools[i], bool_widget->q_br[i]);
         }
 
         output_state.widgets.emplace_back(std::move(arithmetic_widget));

@@ -23,7 +23,7 @@ public:
 
     ~StandardComposer() {};
 
-    Prover preprocess();
+    virtual Prover preprocess();
 
     virtual void create_add_gate(const add_triple &in);
     virtual void create_mul_gate(const mul_triple &in);
