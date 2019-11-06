@@ -127,7 +127,7 @@ public:
     WitnessStatus witness_status;
     size_t num_witness_bits;
 
-    field_t<ComposerContext> field_wires[32];
+    bool_t<ComposerContext> field_wires[32];
     field_t<ComposerContext> accumulators[32];
 
     static constexpr size_t MAXIMUM_BIT_LENGTH = 110UL; // (2x + 33 = 253 => 2x = 220 => x = 110)

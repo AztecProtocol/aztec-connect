@@ -10,6 +10,7 @@
 
 #include <barretenberg/waffle/stdlib/common.hpp>
 #include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
+#include <barretenberg/waffle/stdlib/field/field.hpp>
 
 #include <memory>
 
@@ -17,6 +18,7 @@
 using namespace barretenberg;
 using namespace plonk;
 
+typedef stdlib::field_t<waffle::StandardComposer> field_t;
 typedef stdlib::uint32<waffle::StandardComposer> uint32;
 typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
 
@@ -271,7 +273,7 @@ TEST(stdlib_uint32, test_ror)
     EXPECT_EQ(result, true);
 }
 
-uint32_t k_constants[64]{
+uint32_t k_constants[64] {
    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -281,34 +283,75 @@ uint32_t k_constants[64]{
    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
+uint32_t round_values[8] { 0x01020304, 0x0a0b0c0d, 0x1a2b3e4d, 0x03951bd3, 0x0e0fa3fe, 0x01000000, 0x0f0eeea1, 0x12345678 };
 
 TEST(stdlib_uint32, test_sha256_rounds)
 {
+    uint32_t w_alt[64];
+
+    for (size_t i = 0; i < 64; ++i)
+    {
+        w_alt[i] = static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+    }
+    uint32_t a_alt = round_values[0];
+    uint32_t b_alt = round_values[1];
+    uint32_t c_alt = round_values[2];
+    uint32_t d_alt = round_values[3];
+    uint32_t e_alt = round_values[4];
+    uint32_t f_alt = round_values[5];
+    uint32_t g_alt = round_values[6];
+    uint32_t h_alt = round_values[7];
+    for (size_t i = 0; i < 64; ++i)
+    {
+        uint32_t S1_alt = rotate(e_alt, 7) ^ rotate(e_alt, 11) ^ rotate(e_alt, 25);
+        uint32_t ch_alt = (e_alt & f_alt) ^ ((~e_alt) & g_alt);
+        uint32_t temp1_alt = h_alt + S1_alt + ch_alt + k_constants[i] + w_alt[i];
+
+        uint32_t S0_alt = rotate(a_alt, 2) ^ rotate(a_alt, 13) ^ rotate(a_alt, 22);
+        uint32_t maj_alt = (a_alt & b_alt) ^ (a_alt & c_alt) ^ (b_alt & c_alt);
+        uint32_t temp2_alt = S0_alt + maj_alt;
+
+        h_alt = g_alt;
+        g_alt = f_alt;
+        f_alt = e_alt;
+        e_alt = d_alt + temp1_alt;
+        d_alt = c_alt;
+        c_alt = b_alt;
+        b_alt = a_alt;
+        a_alt = temp1_alt + temp2_alt;
+    }
     waffle::StandardComposer composer = waffle::StandardComposer();
 
     std::vector<uint32> w;
     std::vector<uint32> k;
     for (size_t i = 0; i < 64; ++i)
     {
-        w.emplace_back(uint32(witness_t(&composer, static_cast<uint32_t>(barretenberg::fr::random_element().data[0]))));
+        w.emplace_back(uint32(witness_t(&composer, w_alt[i])));
         k.emplace_back(uint32(&composer, k_constants[i]));
     }
-    uint32 a = witness_t(&composer, 0x01020304U);
-    uint32 b = witness_t(&composer, 0x0a0b0c0dU);
-    uint32 c = witness_t(&composer, 0x1a2b3e4dU);
-    uint32 d = witness_t(&composer, 0x03951bd3U);
-    uint32 e = witness_t(&composer, 0x0e0fa3feU);
-    uint32 f = witness_t(&composer, 0x01000000U);
-    uint32 g = witness_t(&composer, 0x0f0eeea1U);
-    uint32 h = witness_t(&composer, 0x12345678U);
+    uint32 a = witness_t(&composer, round_values[0]);
+    uint32 b = witness_t(&composer, round_values[1]);
+    uint32 c = witness_t(&composer, round_values[2]);
+    uint32 d = witness_t(&composer, round_values[3]);
+    uint32 e = witness_t(&composer, round_values[4]);
+    uint32 f = witness_t(&composer, round_values[5]);
+    uint32 g = witness_t(&composer, round_values[6]);
+    uint32 h = witness_t(&composer, round_values[7]);
     for (size_t i = 0; i < 64; ++i)
     {
         uint32 S1 = e.ror(7U) ^ e.ror(11U) ^ e.ror(25U);
-        uint32 ch = (e & f) ^ ((~e) & g);
+        // uint32 ch = (e & f) ^ ((~e) & g);
+        uint32 R0 = (e & f);
+        uint32 R1 = (~e) & g;
+        uint32 ch = R0 + R1;
         uint32 temp1 = h + S1 + ch + k[i] + w[i];
 
         uint32 S0 = a.ror(2U) ^ a.ror(13U) ^ a.ror(22U);
-        uint32 maj = (a & b) ^ (a & c) ^ (b & c);
+        uint32 T0 = (b & c);
+        uint32 T1 = (b - T0) + (c - T0);
+        uint32 T2 = a & T1;
+        uint32 maj = T2 + T0;
+        // uint32 maj = (a & b) ^ (a & c) ^ (b & c);
         uint32 temp2 = S0 + maj;
 
         h = g;
@@ -320,6 +363,33 @@ TEST(stdlib_uint32, test_sha256_rounds)
         b = a;
         a = temp1 + temp2;
     }
+    a.decompose();
+    b.decompose();
+    c.decompose();
+    d.decompose();
+    e.decompose();
+    f.decompose();
+    g.decompose();
+    h.decompose();
+
+    uint32_t a_result = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(a.witness_index)).data[0]);
+    uint32_t b_result = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(b.witness_index)).data[0]);
+    uint32_t c_result = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(c.witness_index)).data[0]);
+    uint32_t d_result = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(d.witness_index)).data[0]);
+    uint32_t e_result = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(e.witness_index)).data[0]);
+    uint32_t f_result = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(f.witness_index)).data[0]);
+    uint32_t g_result = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(g.witness_index)).data[0]);
+    uint32_t h_result = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(h.witness_index)).data[0]);
+
+    EXPECT_EQ(a_result, a_alt);
+    EXPECT_EQ(b_result, b_alt);
+    EXPECT_EQ(c_result, c_alt);
+    EXPECT_EQ(d_result, d_alt);
+    EXPECT_EQ(e_result, e_alt);
+    EXPECT_EQ(f_result, f_alt);
+    EXPECT_EQ(g_result, g_alt);
+    EXPECT_EQ(h_result, h_alt);
+
     waffle::Prover prover = composer.preprocess();
 
     printf("prover gates = %lu\n", prover.n);

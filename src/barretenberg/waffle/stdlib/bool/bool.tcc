@@ -9,11 +9,20 @@ namespace stdlib
 {
 
 template <typename ComposerContext>
+bool_t<ComposerContext>::bool_t() :
+context(nullptr),
+witness(barretenberg::fr::zero()),
+witness_bool(false),
+witness_inverted(false),
+witness_index(static_cast<uint32_t>(-1)) {}
+
+template <typename ComposerContext>
 bool_t<ComposerContext>::bool_t(ComposerContext *parent_context) : context(parent_context)
 {
     ASSERT(parent_context != nullptr);
     witness = barretenberg::fr::zero();
     witness_bool = false;
+    witness_inverted = false;
     witness_index = static_cast<uint32_t>(-1);
 }
 
@@ -26,6 +35,7 @@ bool_t<ComposerContext>::bool_t(const witness_t<ComposerContext> &value) : conte
     context->create_bool_gate(witness_index);
     barretenberg::fr::copy(value.witness, witness);
     witness_bool = barretenberg::fr::eq(value.witness, barretenberg::fr::one());
+    witness_inverted = false;
 }
 
 template <typename ComposerContext>

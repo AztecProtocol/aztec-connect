@@ -13,6 +13,7 @@ template <typename ComposerContext>
 class bool_t
 {
 public:
+    bool_t();
     bool_t(ComposerContext *parent_context);
     bool_t(ComposerContext *parent_context, const bool value);
     bool_t(const witness_t<ComposerContext> &value);
@@ -32,21 +33,6 @@ public:
     bool_t operator^(const bool_t &other) const;
     bool_t operator!() const;
 
-    // aritmetic operations
-    bool_t operator+(const bool_t &other) const
-    {
-        return operator^(other);
-    }
-
-    bool_t operator-(const bool_t &other) const
-    {
-        return operator^(other);
-    }
-
-    bool_t operator*(const bool_t &other) const
-    {
-        return operator&(other);
-    }
 
     // equality checks
     bool_t operator==(const bool_t &other) const
@@ -91,14 +77,9 @@ public:
         *this = operator^(other);
     }
 
-    void operator++() const
-    {
-        *this = operator!(*this);
-    }
-
     ComposerContext *context;
-    bool witness_bool;
     barretenberg::fr::field_t witness;
+    bool witness_bool;
     bool witness_inverted = false;
     uint32_t witness_index = static_cast<uint32_t>(-1);    
 };
