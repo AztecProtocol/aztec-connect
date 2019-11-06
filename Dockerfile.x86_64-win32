@@ -47,17 +47,17 @@ RUN apt-get install --no-install-recommends --yes \
     sed \
     unzip \
     wget \
-    xz-utils
+    xz-utils \
+    && apt-get clean --yes
 
 WORKDIR /usr/src
 RUN git clone https://github.com/mxe/mxe.git
 WORKDIR /usr/src/mxe
-RUN make download
 RUN echo "MXE_TARGETS := ${MXE_TARGET_ARCH}-w64-mingw32.${MXE_TARGET_LINK}${MXE_TARGET_THREAD}" > settings.mk && \
   echo "LOCAL_PKG_LIST := cc cmake"                                              >> settings.mk && \
   echo ".DEFAULT local-pkg-list:"                                                >> settings.mk && \
   echo "local-pkg-list: \$(LOCAL_PKG_LIST)"                                      >> settings.mk
-RUN make -j$(nproc)
+RUN make -j$(nproc) && rm -rf pkg log
 RUN echo 'set(CMAKE_CROSSCOMPILING_EMULATOR "/usr/bin/wine")' >> ${CMAKE_TOOLCHAIN_FILE}
 ENV PATH ${PATH}:/usr/src/mxe/usr/bin
 RUN cd /usr/src/mxe/usr/x86_64-w64-mingw32.static/lib/ && ln -s libshlwapi.a libShlwapi.a
