@@ -22,6 +22,21 @@ typedef stdlib::field_t<waffle::StandardComposer> field_t;
 typedef stdlib::uint32<waffle::StandardComposer> uint32;
 typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
 
+std::vector<uint32_t> get_random_ints(size_t n)
+{
+    std::vector<uint32_t> res;
+    for (size_t i = 0; i < n; ++i)
+    {
+        res.push_back(static_cast<uint32_t>(barretenberg::fr::random_element().data[0]));
+    }
+    return res;
+}
+
+uint32_t get_value(uint32 &input)
+{
+    return static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(static_cast<field_t>(input).get()).data[0]);
+}
+
 TEST(stdlib_uint32, test_add)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
@@ -50,6 +65,53 @@ TEST(stdlib_uint32, test_add)
     EXPECT_EQ(result, true);
 }
 
+
+TEST(stdlib_uint32s, test_add_wth_constants)
+{
+    size_t n = 32;
+    std::vector<uint32_t> witnesses = get_random_ints(3 * n);
+    uint32_t expected[8];
+    for (size_t i = 0; i < n; ++i)
+    {
+        expected[0] = witnesses[3 * i];
+        expected[1] = witnesses[3 * i + 1];
+        expected[2] = witnesses[3 * i + 2];
+        expected[3] = expected[0] + expected[1];
+        expected[4] = expected[1] + expected[0];
+        expected[5] = expected[1] + expected[2];
+        expected[6] = expected[3] + expected[4];
+        expected[7] = expected[4] + expected[5];
+    }
+
+    waffle::StandardComposer composer = waffle::StandardComposer();
+    uint32 result[8];
+    for (size_t i = 0; i < n; ++i)
+    {
+        result[0] = uint32(&composer, witnesses[3 * i]);
+        result[1] = (witness_t(&composer, witnesses[3 * i + 1]));
+        result[2] = (witness_t(&composer, witnesses[3 * i + 2]));
+        result[3] = result[0] + result[1];
+        result[4] = result[1] + result[0];
+        result[5] = result[1] + result[2];
+        result[6] = result[3] + result[4];
+        result[7] = result[4] + result[5];
+    }
+
+    for (size_t i = 0; i < 8; ++i)
+    {
+        EXPECT_EQ(get_value(result[i]), expected[i]);
+    }
+    waffle::Prover prover = composer.preprocess();
+
+    printf("prover gates = %lu\n", prover.n);
+ 
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_valid = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_valid, true);
+}
 
 TEST(stdlib_uint32, test_mul)
 {

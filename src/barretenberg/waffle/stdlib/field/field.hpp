@@ -42,6 +42,8 @@ public:
 
     field_t normalize();
 
+    barretenberg::fr::field_t get(); // for debug atm
+
     ComposerContext *context;
     barretenberg::fr::field_t additive_constant;
     barretenberg::fr::field_t multiplicative_constant;

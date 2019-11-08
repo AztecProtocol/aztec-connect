@@ -74,10 +74,20 @@ template <typename ComposerContext>
 field_t<ComposerContext>::field_t(const bool_t<ComposerContext> &other)
 {
     context = other.context;
-    witness = other.witness;
-    witness_index = other.witness_index;
-    additive_constant = other.witness_inverted ? barretenberg::fr::one() : barretenberg::fr::zero();
-    multiplicative_constant = other.witness_inverted ? barretenberg::fr::neg_one() : barretenberg::fr::one();
+    if (other.witness_index == static_cast<uint32_t>(-1))
+    {
+        additive_constant = (other.witness_bool ^ other.witness_inverted) ? barretenberg::fr::one() : barretenberg::fr::zero();
+        multiplicative_constant = barretenberg::fr::one();
+        witness = barretenberg::fr::zero();
+        witness_index = static_cast<uint32_t>(-1);
+    }
+    else
+    {
+        witness = other.witness;
+        witness_index = other.witness_index;
+        additive_constant = other.witness_inverted ? barretenberg::fr::one() : barretenberg::fr::zero();
+        multiplicative_constant = other.witness_inverted ? barretenberg::fr::neg_one() : barretenberg::fr::one();
+    }
 }
 
 template <typename ComposerContext>
@@ -393,6 +403,19 @@ field_t<ComposerContext> field_t<ComposerContext>::normalize()
     context->create_poly_gate(gate_coefficients);
 
     return result;
+}
+
+template <typename ComposerContext>
+barretenberg::fr::field_t field_t<ComposerContext>::get()
+{
+    if (witness_index != static_cast<uint32_t>(-1))
+    {
+        return witness;
+    }
+    else
+    {
+        return additive_constant;
+    }
 }
 // template <typename ComposerContext>
 // field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t &other)

@@ -33,6 +33,8 @@ public:
     uint32(const uint32 &other);
     uint32(uint32 &&other);
     
+    operator field_t<ComposerContext> ();
+
     uint32 & operator=(const uint32 &other);
     uint32 & operator=(uint32 &&other);
     uint32 & operator=(const uint32_t value);
@@ -48,6 +50,7 @@ public:
     // 'decompose' will use + and bool gates to create boolean 'field wires' from a witness
     void concatenate();
     void decompose();
+    void normalize(); // ensures uint32 both has valid binary wires and a valid witness
 
     uint32 operator+(uint32 &other);
     uint32 operator-(uint32 &other);

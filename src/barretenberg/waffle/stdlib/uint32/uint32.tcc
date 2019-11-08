@@ -327,7 +327,7 @@ void uint32<ComposerContext>::decompose()
     {
         for (size_t i = 0; i < 32; ++i)
         {
-            bool bit = static_cast<bool>(additive_constant >> i);
+            bool bit = static_cast<bool>((additive_constant >> i) & 1);
             field_wires[i] = bool_t<ComposerContext>(context, bit);
         }
     }
@@ -396,6 +396,26 @@ void uint32<ComposerContext>::decompose()
 }
 
 template <typename ComposerContext>
+void uint32<ComposerContext>::normalize()
+{
+    if (witness_status == WitnessStatus::IN_BINARY_FORM)
+    {
+        concatenate();
+    }
+    else if (witness_status == WitnessStatus::NOT_NORMALIZED)
+    {
+        decompose();
+    }
+}
+
+template <typename ComposerContext>
+uint32<ComposerContext>::operator field_t<ComposerContext>()
+{
+    normalize();
+    return accumulators[31];
+}
+
+template <typename ComposerContext>
 void uint32<ComposerContext>::prepare_for_arithmetic_operations()
 {
     if (witness_status == WitnessStatus::IN_BINARY_FORM)
@@ -432,20 +452,29 @@ uint32<ComposerContext> uint32<ComposerContext>::operator+(uint32 &other)
     {
         result = *this;
         result.multiplicative_constant *= 2;
+        result.additive_constant = additive_constant + other.additive_constant;
+        result.num_witness_bits = static_cast<size_t>(get_msb((result.multiplicative_constant))) + num_witness_bits;
+        result.witness_status = WitnessStatus::NOT_NORMALIZED;
     }
     else if (lhs_constant && rhs_constant)
     {
         result.additive_constant = additive_constant + other.additive_constant;
+        result.num_witness_bits = num_witness_bits + 1;
+        result.witness_status = WitnessStatus::OK;
     }
     else if (!lhs_constant && rhs_constant)
     {
-        result = *this;
+        result = uint32(*this);
         result.additive_constant = additive_constant + other.additive_constant;
+        result.num_witness_bits = num_witness_bits + 1;
+        result.witness_status = WitnessStatus::NOT_NORMALIZED;
     }
     else if (lhs_constant && !rhs_constant)
     {
-        result = *this;
+        result = uint32(other);
         result.additive_constant = additive_constant + other.additive_constant;
+        result.num_witness_bits = num_witness_bits + 1;
+        result.witness_status = WitnessStatus::NOT_NORMALIZED;
     }
     else
     {
