@@ -1,9 +1,10 @@
-#ifndef verifier_HPP
-#define verifier_HPP
+#ifndef VERIFIER_HPP
+#define VERIFIER_HPP
 
 #include "../../../types.hpp"
 #include "../widgets/base_widget.hpp"
 #include "../../../groups/scalar_multiplication.hpp"
+#include "../../reference_string/reference_string.hpp"
 
 namespace waffle
 {
@@ -20,7 +21,8 @@ public:
 
     bool verify_proof(const plonk_proof &proof);
 
-    barretenberg::g2::affine_element G2_X;
+    ReferenceString reference_string;
+
     barretenberg::g1::affine_element SIGMA_1;
     barretenberg::g1::affine_element SIGMA_2;
     barretenberg::g1::affine_element SIGMA_3;
@@ -28,10 +30,6 @@ public:
     size_t n;
 };
 
-// namespace verifier
-// {
-// bool verify_proof(const waffle::plonk_proof &proof, const waffle::base_circuit_instance &instance, const barretenberg::g2::affine_element &SRS_T2);
-// } // namespace verifier
 } // namespace waffle
 
 #endif

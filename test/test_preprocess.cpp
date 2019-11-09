@@ -7,26 +7,30 @@
 #include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
 #include <barretenberg/groups/g1.hpp>
 
-using namespace barretenberg;
+#include <barretenberg/waffle/reference_string/reference_string.hpp>
 
+using namespace barretenberg;
 
 namespace
 {
-srs::plonk_srs compute_dummy_srs(const size_t n, const fr::field_t& x, g1::affine_element* monomials)
+class DummyReferenceString : public waffle::ReferenceString
 {
-    srs::plonk_srs srs;
-    monomials[0] = g1::affine_one();
+public:
+    DummyReferenceString(size_t n) : waffle::ReferenceString(n) {}
 
-    for (size_t i = 1; i < n; ++i)
+    void compute_dummy_srs(const fr::field_t &x)
     {
-        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
-    }
-    scalar_multiplication::generate_pippenger_point_table(monomials, monomials, n);
+        ASSERT(monomials != nullptr);
 
-    srs.monomials = monomials;
-    srs.degree = n;
-    return srs;
-}
+        monomials[0] = g1::affine_one();
+
+        for (size_t i = 1; i < degree; ++i)
+        {
+            monomials[i] = g1::group_exponentiation(monomials[i - 1], x);
+        }
+        scalar_multiplication::generate_pippenger_point_table(monomials, monomials, degree);
+    }
+};
 } // namespace
 
 TEST(preprocess, preprocess)
@@ -68,13 +72,15 @@ TEST(preprocess, preprocess)
     }
 
     state.widgets.emplace_back(std::move(widget));
-    g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (6 * n + 2)));
-    fr::field_t x = fr::random_element();
-    compute_dummy_srs(n, x, monomials);
 
-    g1::affine_element* cached = state.reference_string.monomials;
-    state.reference_string.monomials = monomials;
+    fr::field_t x = fr::random_element();
+    DummyReferenceString fake_srs(n);
+    fake_srs.compute_dummy_srs(x);
+
+    state.reference_string = std::move(static_cast<waffle::ReferenceString>(fake_srs));
+
     waffle::Verifier verifier = waffle::preprocess(state);
+
     state.sigma_1.resize(n);
     state.sigma_2.resize(n);
     state.sigma_3.resize(n);
@@ -124,7 +130,4 @@ TEST(preprocess, preprocess)
     EXPECT_EQ(g1::eq(verifier.verifier_widgets[0]->instance[3], q_o_expected), true);
     EXPECT_EQ(g1::eq(verifier.verifier_widgets[0]->instance[4], q_c_expected), true);
     EXPECT_EQ(verifier.n, n);
-
-    state.reference_string.monomials = cached;
-    free(monomials);
 }

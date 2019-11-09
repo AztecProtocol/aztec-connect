@@ -5,6 +5,7 @@
 #include "../../../polynomials/polynomial.hpp"
 
 #include "../widgets/base_widget.hpp"
+#include "../../reference_string/reference_string.hpp"
 
 namespace waffle
 {
@@ -58,7 +59,7 @@ public:
     std::vector<std::unique_ptr<ProverBaseWidget> > widgets;
     plonk_challenges challenges;
     plonk_proof proof;
-    srs::plonk_srs reference_string;
+    ReferenceString reference_string;
 };
 
 }

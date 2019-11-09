@@ -188,7 +188,7 @@ fq12::fq12_t miller_loop(g1::element &P, miller_lines &lines)
     return work_scalar;
 }
 
-fq12::fq12_t miller_loop_batch(g1::element *points, miller_lines *lines, size_t num_pairs)
+fq12::fq12_t miller_loop_batch(const g1::element *points, const miller_lines *lines, size_t num_pairs)
 {
     fq12::fq12_t work_scalar = fq12::one();
 
@@ -332,6 +332,20 @@ fq12::fq12_t reduced_ate_pairing(const g1::affine_element &P_affine, const g2::a
     fq12::fq12_t result = miller_loop(P, lines);
     final_exponentiation_easy_part(result, result);
     final_exponentiation_tricky_part(result, result);
+    return result;
+}
+
+fq12::fq12_t reduced_ate_pairing_batch_precomputed(const g1::affine_element *P_affines, const miller_lines *lines, size_t num_points)
+{
+    g1::element *P = new g1::element[num_points];
+    for (size_t i = 0; i < num_points; ++i)
+    {
+        g1::affine_to_jacobian(P_affines[i], P[i]);
+    }
+    fq12::fq12_t result = miller_loop_batch(&P[0], &lines[0], num_points);
+    final_exponentiation_easy_part(result, result);
+    final_exponentiation_tricky_part(result, result);
+    delete P;
     return result;
 }
 

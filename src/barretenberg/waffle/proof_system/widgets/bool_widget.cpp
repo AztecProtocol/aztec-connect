@@ -106,7 +106,7 @@ fr::field_t ProverBoolWidget::compute_opening_poly_contribution(barretenberg::fr
     return nu_base;
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverBoolWidget::compute_preprocessed_commitments(const evaluation_domain& domain, const srs::plonk_srs &reference_string) const
+std::unique_ptr<VerifierBaseWidget> ProverBoolWidget::compute_preprocessed_commitments(const evaluation_domain& domain, const ReferenceString &reference_string) const
 {
     polynomial polys[2]{
         polynomial(q_bl, domain.size),

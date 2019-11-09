@@ -35,6 +35,8 @@ add_library(
     polynomials/polynomial_arithmetic.hpp
     polynomials/polynomial.cpp
     polynomials/polynomial.hpp
+    waffle/reference_string/reference_string.cpp
+    waffle/reference_string/reference_string.hpp
     waffle/proof_system/linearizer.hpp
     waffle/proof_system/challenge.hpp
     waffle/proof_system/permutation.hpp
@@ -111,6 +113,8 @@ add_executable(
     polynomials/polynomial_arithmetic.hpp
     polynomials/polynomial.cpp
     polynomials/polynomial.hpp
+    waffle/reference_string/reference_string.cpp
+    waffle/reference_string/reference_string.hpp
     waffle/proof_system/linearizer.hpp
     waffle/proof_system/challenge.hpp
     waffle/proof_system/permutation.hpp

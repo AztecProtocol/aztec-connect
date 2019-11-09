@@ -178,8 +178,8 @@ struct global_vars
     alignas(32) g2::affine_element g2_pair_points[2];
     std::vector<waffle::Verifier> plonk_instances;
     waffle::plonk_proof plonk_proof;
+    waffle::ReferenceString reference_string;
     std::vector<waffle::plonk_proof> plonk_proofs;
-    srs::plonk_srs reference_string;
     fr::field_t *data;
     fr::field_t *scalars;
     fr::field_t *roots;
@@ -225,12 +225,9 @@ void generate_pairing_points(g1::affine_element* p1s, g2::affine_element* p2s)
 
 const auto init = []() {
     printf("generating test data\n");
-    globals.reference_string.degree =  MAX_GATES;
-    globals.reference_string.monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (2 * MAX_GATES + 2)));
+    globals.reference_string =  waffle::ReferenceString(MAX_GATES);
     globals.scalars = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * MAX_GATES));
     std::string my_file_path = std::string(BARRETENBERG_SRS_PATH);
-    io::read_transcript(globals.reference_string, my_file_path);
-    scalar_multiplication::generate_pippenger_point_table(globals.reference_string.monomials, globals.reference_string.monomials, MAX_GATES);
     globals.data =  (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (8 * 17 * MAX_GATES)));
 
     for (size_t i = 0; i < 8; ++i)

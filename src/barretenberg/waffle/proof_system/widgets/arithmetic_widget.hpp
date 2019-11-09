@@ -43,7 +43,7 @@ public:
     }
 
     
-    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const barretenberg::evaluation_domain &domain, const srs::plonk_srs &reference_string) const;
+    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const barretenberg::evaluation_domain &domain, const ReferenceString &reference_string) const;
     void compute_proof_elements(plonk_proof&, const barretenberg::fr::field_t&) {};
     void reset(const barretenberg::evaluation_domain& domain);
 

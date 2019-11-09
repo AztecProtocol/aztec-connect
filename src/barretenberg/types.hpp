@@ -176,16 +176,6 @@ struct lagrange_evaluations
 } // namespace polynomials
 } // namespace barretenberg
 
-namespace srs
-{
-struct plonk_srs
-{
-    barretenberg::g1::affine_element *monomials;
-    barretenberg::g2::affine_element SRS_T2;
-    size_t degree;
-};
-} // namespace srs
-
 namespace waffle
 {
 // contains the state of a PLONK proof, including witness values, instance values

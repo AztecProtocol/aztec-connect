@@ -109,7 +109,6 @@ TEST(stdlib_bool, xor_constants)
         }
         else
         {
-            printf("setting a to constant\n");
             bool_t a(&composer, (bool)(i % 2));
             bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
             bool_t c = a ^ b;

@@ -347,6 +347,12 @@ uint32_t k_constants[64] {
 };
 uint32_t round_values[8] { 0x01020304, 0x0a0b0c0d, 0x1a2b3e4d, 0x03951bd3, 0x0e0fa3fe, 0x01000000, 0x0f0eeea1, 0x12345678 };
 
+// subtraction
+// A - B
+// = 2^{32} - B + A
+// ...but only if constants are zero
+// can also do (2^{32} - B + A) + (2^{32} - B.const)
+// ...but what about multiplicative value? Um...erm...
 TEST(stdlib_uint32, test_sha256_rounds)
 {
     uint32_t w_alt[64];
@@ -402,10 +408,7 @@ TEST(stdlib_uint32, test_sha256_rounds)
     for (size_t i = 0; i < 64; ++i)
     {
         uint32 S1 = e.ror(7U) ^ e.ror(11U) ^ e.ror(25U);
-        // uint32 ch = (e & f) ^ ((~e) & g);
-        uint32 R0 = (e & f);
-        uint32 R1 = (~e) & g;
-        uint32 ch = R0 + R1;
+        uint32 ch = (e & f) + ((~e) & g);
         uint32 temp1 = h + S1 + ch + k[i] + w[i];
 
         uint32 S0 = a.ror(2U) ^ a.ror(13U) ^ a.ror(22U);
@@ -413,7 +416,6 @@ TEST(stdlib_uint32, test_sha256_rounds)
         uint32 T1 = (b - T0) + (c - T0);
         uint32 T2 = a & T1;
         uint32 maj = T2 + T0;
-        // uint32 maj = (a & b) ^ (a & c) ^ (b & c);
         uint32 temp2 = S0 + maj;
 
         h = g;

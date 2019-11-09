@@ -47,7 +47,8 @@ inline Verifier preprocess(const Prover &prover)
     barretenberg::g1::jacobian_to_affine(mul_state[0].output, verifier.SIGMA_1);
     barretenberg::g1::jacobian_to_affine(mul_state[1].output, verifier.SIGMA_2);
     barretenberg::g1::jacobian_to_affine(mul_state[2].output, verifier.SIGMA_3);
-    barretenberg::g2::copy_affine(prover.reference_string.SRS_T2, verifier.G2_X);
+
+    verifier.reference_string = prover.reference_string.get_verifier_reference_string();
     // TODO: this whole method should be part of the class that owns prover.widgets
     for (size_t i = 0; i < prover.widgets.size(); ++i)
     {

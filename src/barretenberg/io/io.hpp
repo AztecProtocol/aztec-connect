@@ -152,7 +152,7 @@ constexpr size_t BLAKE2B_CHECKSUM_LENGTH = 64;
         return buffer;
     }
 
-    inline void read_transcript(srs::plonk_srs &srs, std::string const &path)
+    inline void read_transcript(g1::affine_element *monomials, g2::affine_element &g2_x, size_t degree, std::string const &path)
     {
         Manifest manifest;
 
@@ -162,19 +162,19 @@ constexpr size_t BLAKE2B_CHECKSUM_LENGTH = 64;
 
         const size_t manifest_size = sizeof(Manifest);
 
-        ASSERT(manifest.num_g1_points >= (srs.degree - 1));
+        ASSERT(manifest.num_g1_points >= (degree - 1));
 
-        const size_t g1_buffer_size = sizeof(fq::field_t) * 2 * (srs.degree - 1);
+        const size_t g1_buffer_size = sizeof(fq::field_t) * 2 * (degree - 1);
         const size_t g2_buffer_offset = sizeof(fq::field_t) * 2 * manifest.num_g1_points;
         const size_t g2_buffer_size = sizeof(fq2::fq2_t) * 2 * 2;
 
         g2::affine_element* g2_buffer = (g2::affine_element*)(aligned_alloc(32, sizeof(g2::affine_element) * (2)));
 
         // read g1 elements at second array position - first point is the basic generator
-        g1::copy_affine(g1::affine_one(), srs.monomials[0]); // (copy generator into first point)
-        read_g1_elements_from_buffer(&srs.monomials[1], &buffer[manifest_size], g1_buffer_size);
+        g1::copy_affine(g1::affine_one(), monomials[0]); // (copy generator into first point)
+        read_g1_elements_from_buffer(&monomials[1], &buffer[manifest_size], g1_buffer_size);
         read_g2_elements_from_buffer(g2_buffer, &buffer[manifest_size + g2_buffer_offset], g2_buffer_size);
-        g2::copy_affine(g2_buffer[1], srs.SRS_T2);
+        g2::copy_affine(g2_buffer[1], g2_x);
         free(g2_buffer);
     }
 }

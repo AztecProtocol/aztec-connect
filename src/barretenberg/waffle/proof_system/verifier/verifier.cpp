@@ -24,7 +24,7 @@ Verifier::Verifier(const size_t subgroup_size) : n(subgroup_size) {}
 
 Verifier::Verifier(Verifier &&other) : n(other.n)
 {
-    g2::copy_affine(other.G2_X, G2_X);
+    reference_string = std::move(other.reference_string);
     g1::copy_affine(other.SIGMA_1, SIGMA_1);
     g1::copy_affine(other.SIGMA_2, SIGMA_2);
     g1::copy_affine(other.SIGMA_3, SIGMA_3);
@@ -37,7 +37,8 @@ Verifier::Verifier(Verifier &&other) : n(other.n)
 Verifier& Verifier::operator=(Verifier &&other)
 {
     n = other.n;
-    g2::copy_affine(other.G2_X, G2_X);
+    reference_string = std::move(other.reference_string);
+
     g1::copy_affine(other.SIGMA_1, SIGMA_1);
     g1::copy_affine(other.SIGMA_2, SIGMA_2);
     g1::copy_affine(other.SIGMA_3, SIGMA_3);
@@ -357,16 +358,12 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     g1::batch_normalize(P, 2);
 
     g1::affine_element P_affine[2];
-    fq::copy(P[0].x, P_affine[0].x);
-    fq::copy(P[0].y, P_affine[0].y);
-    fq::copy(P[1].x, P_affine[1].x);
-    fq::copy(P[1].y, P_affine[1].y);
+    fq::copy(P[0].x, P_affine[1].x);
+    fq::copy(P[0].y, P_affine[1].y);
+    fq::copy(P[1].x, P_affine[0].x);
+    fq::copy(P[1].y, P_affine[0].y);
 
-    g2::affine_element Q_affine[2];
-    g2::copy_affine(G2_X, Q_affine[0]);
-    g2::copy_affine(g2::affine_one(), Q_affine[1]);
-
-    fq12::fq12_t result = pairing::reduced_ate_pairing_batch(P_affine, Q_affine, 2);
+    fq12::fq12_t result = pairing::reduced_ate_pairing_batch_precomputed(P_affine, reference_string.precomputed_g2_lines, 2);
 
     return fq12::eq(result, fq12::one());
 }

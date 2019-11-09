@@ -41,7 +41,7 @@ public:
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t &alpha_base, const barretenberg::fr::field_t &, const waffle::plonk_proof &proof, const barretenberg::evaluation_domain& domain, barretenberg::polynomial &r);
     barretenberg::fr::field_t compute_opening_poly_contribution(barretenberg::fr::field_t* poly, const barretenberg::evaluation_domain &domain, const barretenberg::fr::field_t &nu_base, const barretenberg::fr::field_t &nu_step);
 
-    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const barretenberg::evaluation_domain &domain, const srs::plonk_srs &reference_string) const;
+    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const barretenberg::evaluation_domain &domain, const ReferenceString &reference_string) const;
     void compute_proof_elements(plonk_proof &proof, const barretenberg::fr::field_t &z);
     void reset(const barretenberg::evaluation_domain& domain);
 

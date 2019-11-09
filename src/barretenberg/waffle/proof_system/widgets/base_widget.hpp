@@ -7,6 +7,8 @@
 #include "../../../polynomials/polynomial.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
 #include "../../../groups/g1.hpp"
+#include "../../reference_string/reference_string.hpp"
+
 #include "../circuit_state.hpp"
 
 namespace waffle
@@ -99,7 +101,7 @@ public:
     virtual barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base, const barretenberg::fr::field_t& alpha_step, CircuitFFTState& circuit_state) = 0;
     virtual barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base, const barretenberg::fr::field_t &, const waffle::plonk_proof &proof, const barretenberg::evaluation_domain& domain, barretenberg::polynomial &r) = 0;
     virtual barretenberg::fr::field_t compute_opening_poly_contribution(barretenberg::fr::field_t* poly, const barretenberg::evaluation_domain &domain, const barretenberg::fr::field_t &nu_base, const barretenberg::fr::field_t &nu_step) = 0;
-    virtual std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const barretenberg::evaluation_domain &domain, const srs::plonk_srs &reference_string) const = 0;
+    virtual std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const barretenberg::evaluation_domain &domain, const ReferenceString &reference_string) const = 0;
     virtual void compute_proof_elements(plonk_proof&, const barretenberg::fr::field_t&) {};
     virtual void reset(const barretenberg::evaluation_domain &domain) = 0;
 

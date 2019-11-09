@@ -118,7 +118,7 @@ fr::field_t ProverMiMCWidget::compute_opening_poly_contribution(barretenberg::fr
     return fr::mul(nu_base, nu_step);
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverMiMCWidget::compute_preprocessed_commitments(const evaluation_domain& domain, const srs::plonk_srs &reference_string) const
+std::unique_ptr<VerifierBaseWidget> ProverMiMCWidget::compute_preprocessed_commitments(const evaluation_domain& domain, const ReferenceString &reference_string) const
 {
     polynomial polys[2]{
         polynomial(q_mimc_coefficient, domain.size),

@@ -21,19 +21,9 @@ namespace waffle
 
 Prover::Prover(const size_t __n) :
 n(__n),
-circuit_state(n)
+circuit_state(n),
+reference_string(n)
 {
-    if (n > 0)
-    {
-        reference_string.degree = n;
-        reference_string.monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (2 * n + 2)));
-        io::read_transcript(reference_string, BARRETENBERG_SRS_PATH);
-        scalar_multiplication::generate_pippenger_point_table(reference_string.monomials, reference_string.monomials, n);
-    }
-    else
-    {
-        reference_string.monomials = nullptr;
-    }
 }
 
 Prover::Prover(Prover &&other) :
@@ -50,12 +40,7 @@ sigma_3_mapping(std::move(other.sigma_3_mapping))
     {
         widgets.emplace_back(std::move(other.widgets[i]));
     }
-    reference_string.degree = n;
-
-    reference_string.monomials = other.reference_string.monomials; // (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (2 * n + 2)));
-    g2::copy_affine(other.reference_string.SRS_T2, reference_string.SRS_T2);
-    reference_string.degree = other.reference_string.degree;
-    other.reference_string.monomials = nullptr;
+    reference_string = std::move(other.reference_string);
 }
 
 Prover& Prover::operator=(Prover &&other)
@@ -73,24 +58,11 @@ Prover& Prover::operator=(Prover &&other)
     {
         widgets.emplace_back(std::move(other.widgets[i]));
     }
-    if (reference_string.monomials != nullptr)
-    {
-        free(reference_string.monomials);
-    }
-    reference_string.monomials = other.reference_string.monomials;
-    g2::copy_affine(other.reference_string.SRS_T2, reference_string.SRS_T2);
-    reference_string.degree = other.reference_string.degree;
-    other.reference_string.monomials = nullptr;
+    reference_string = std::move(other.reference_string);
     return *this;
 }
 
-Prover::~Prover()
-{
-    if (reference_string.monomials != nullptr)
-    {
-        free(reference_string.monomials);
-    }
-}
+Prover::~Prover() {}
 
 void Prover::compute_wire_commitments()
 {

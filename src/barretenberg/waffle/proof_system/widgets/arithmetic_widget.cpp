@@ -121,7 +121,7 @@ fr::field_t ProverArithmeticWidget::compute_linear_contribution(const fr::field_
     return fr::mul(alpha_base, alpha_step);
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverArithmeticWidget::compute_preprocessed_commitments(const evaluation_domain& domain, const srs::plonk_srs &reference_string) const
+std::unique_ptr<VerifierBaseWidget> ProverArithmeticWidget::compute_preprocessed_commitments(const evaluation_domain& domain, const ReferenceString &reference_string) const
 {
     polynomial polys[5]{
         polynomial(q_m, domain.size),
