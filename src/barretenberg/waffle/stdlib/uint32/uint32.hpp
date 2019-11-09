@@ -102,21 +102,21 @@ public:
     bool_t<ComposerContext> operator==(uint32 &other);
     bool_t<ComposerContext> operator!=(uint32 &other);
 
-    uint32 operator++();
-    uint32 operator--();
+    uint32 operator++() { return operator+(uint32(context, barretenberg::fr::one())); };
+    uint32 operator--() { return operator-(uint32(context, barretenberg::fr::one())); };
 
-    uint32 operator+=(uint32 &other);
-    uint32 operator-=(uint32 &other);
-    uint32 operator*=(uint32 &other);
-    uint32 operator/=(uint32 &other);
-    uint32 operator%=(uint32 &other);
+    uint32 operator+=(uint32 &other) { *this = operator+(other); };
+    uint32 operator-=(uint32 &other) { *this = operator-(other); };
+    uint32 operator*=(uint32 &other) { *this = operator*(other); };
+    uint32 operator/=(uint32 &other) { *this = operator/(other); };
+    uint32 operator%=(uint32 &other) { *this = operator%(other); };
 
-    uint32 operator&=(uint32 &other);
-    uint32 operator^=(uint32 &other);
-    uint32 operator|=(uint32 &other);
+    uint32 operator&=(uint32 &other) { *this = operator&(other); };
+    uint32 operator^=(uint32 &other) { *this = operator^(other); };
+    uint32 operator|=(uint32 &other) { *this = operator|(other); };
 
-    uint32 operator>>=(uint32 &other);
-    uint32 operator<<=(uint32 &other);
+    uint32 operator>>=(uint32 &other) { *this = operator>>(other); };
+    uint32 operator<<=(uint32 &other) { *this = operator<<(other); };
 
     uint32 ternary_operator(const bool_t<ComposerContext> &predicate, const uint32 &lhs, const uint32 &rhs);
 
