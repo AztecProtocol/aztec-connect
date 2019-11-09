@@ -10,6 +10,7 @@
 
 #include <barretenberg/waffle/stdlib/common.hpp>
 #include <barretenberg/waffle/stdlib/bool/bool.hpp>
+#include <barretenberg/waffle/stdlib/field/field.hpp>
 
 #include <memory>
 
@@ -17,8 +18,15 @@
 using namespace barretenberg;
 using namespace plonk;
 
+typedef stdlib::field_t<waffle::StandardComposer> field_t;
 typedef stdlib::bool_t<waffle::StandardComposer> bool_t;
 typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
+
+
+bool get_value(bool_t &input)
+{
+    return static_cast<bool>(barretenberg::fr::from_montgomery_form(field_t(input).get()).data[0]);
+}
 
 TEST(stdlib_bool, test_basic_operations)
 {
@@ -143,6 +151,40 @@ TEST(stdlib_bool, and)
     EXPECT_EQ(result, true);
 }
 
+TEST(stdlib_bool, and_constants)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+    for (size_t i = 0; i < 32; ++i)
+    {
+        bool_t a = witness_t(&composer, (bool)(i % 2));
+        bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
+        bool_t c = a & b;
+    }
+    for (size_t i = 0; i < 32; ++i)
+    {
+        if (i % 2 == 0)
+        {
+            bool_t a = witness_t(&composer, (bool)(i % 2));
+            bool_t b(&composer, (bool)(i % 3 == 1));
+            bool_t c = a & b;
+        }
+        else
+        {
+            bool_t a(&composer, (bool)(i % 2));
+            bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
+            bool_t c = a & b;
+        }
+    }
+    waffle::Prover prover = composer.preprocess();
+    printf("num gates = %lu\n", prover.n);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
 TEST(stdlib_bool, or)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
@@ -151,6 +193,103 @@ TEST(stdlib_bool, or)
         bool_t a = witness_t(&composer, (bool)(i % 2));
         bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
         bool_t c = a | b;
+    }
+    waffle::Prover prover = composer.preprocess();
+    printf("num gates = %lu\n", prover.n);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+
+TEST(stdlib_bool, or_constants)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+    for (size_t i = 0; i < 32; ++i)
+    {
+        bool_t a = witness_t(&composer, (bool)(i % 2));
+        bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
+        bool_t c = a | b;
+    }
+    for (size_t i = 0; i < 32; ++i)
+    {
+        if (i % 2 == 0)
+        {
+            bool_t a = witness_t(&composer, (bool)(i % 2));
+            bool_t b(&composer, (bool)(i % 3 == 1));
+            bool_t c = a | b;
+        }
+        else
+        {
+            bool_t a(&composer, (bool)(i % 2));
+            bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
+            bool_t c = a | b;
+        }
+    }
+    waffle::Prover prover = composer.preprocess();
+    printf("num gates = %lu\n", prover.n);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_bool, eq)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+    bool a_alt[32];
+    bool b_alt[32];
+    bool c_alt[32];
+    bool d_alt[32];
+    for (size_t i = 0; i < 32; ++i)
+    {
+        if (i % 2 == 0)
+        {
+            a_alt[i] = bool(i % 2);
+            b_alt[i] = false;
+            c_alt[i] = a_alt[i] ^ b_alt[i];
+            d_alt[i] = a_alt[i] == c_alt[i];
+        }
+        else
+        {
+            a_alt[i] = true;
+            b_alt[i] = false;
+            c_alt[i] = false;
+            d_alt[i] = false;
+        }
+    }
+    bool_t a[32];
+    bool_t b[32];
+    bool_t c[32];
+    bool_t d[32];
+    for (size_t i = 0; i < 32; ++i)
+    {
+        if (i % 2 == 0)
+        {
+            a[i] = witness_t(&composer, (bool)(i % 2));
+            b[i] = witness_t(&composer, (bool)(0));
+            c[i] = a[i] ^ b[i];
+            d[i] = a[i] == c[i];
+        }
+        else
+        {
+            a[i] = witness_t(&composer, (bool)(1));
+            b[i] = witness_t(&composer, (bool)(0));
+            c[i] = a[i] & b[i];
+            d[i] = a[i] == c[i];
+        }
+    }
+    for (size_t i = 0; i < 32; ++i)
+    {
+        EXPECT_EQ(get_value(a[i]), a_alt[i]);
+        EXPECT_EQ(get_value(b[i]), b_alt[i]);
+        EXPECT_EQ(get_value(c[i]), c_alt[i]);
+        EXPECT_EQ(get_value(d[i]), d_alt[i]);
     }
     waffle::Prover prover = composer.preprocess();
     printf("num gates = %lu\n", prover.n);
@@ -183,10 +322,10 @@ TEST(stdlib_bool, test_simple_proof)
         a = witness_t(&composer, (bool)(i % 2));
         b = witness_t(&composer, (bool)(i % 3 == 1));
         c = a ^ b;
-        // a = b ^ c;
-        // c = a;
-        // a = b;
-       // f = b;
+        a = b ^ c;
+        c = a;
+        a = b;
+        f = b;
     }
     waffle::Prover prover = composer.preprocess();
     printf("num gates = %lu\n", prover.n);

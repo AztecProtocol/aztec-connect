@@ -35,10 +35,7 @@ public:
 
 
     // equality checks
-    bool_t operator==(const bool_t &other) const
-    {
-        return operator&(other);
-    }
+    bool_t operator==(const bool_t &other) const;
 
     bool_t operator!=(const bool_t &other) const
     {

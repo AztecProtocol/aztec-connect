@@ -107,6 +107,7 @@ template <typename ComposerContext>
 bool_t<ComposerContext>& bool_t<ComposerContext>::operator=(const witness_t<ComposerContext> &other)
 {
     ASSERT(barretenberg::fr::eq(other.witness, barretenberg::fr::one()) || barretenberg::fr::eq(other.witness, barretenberg::fr::zero()));
+    context = other.context;
     witness_bool = barretenberg::fr::eq(other.witness, barretenberg::fr::zero()) ? false : true;
     witness = other.witness;
     witness_index = other.witness_index;
@@ -311,7 +312,7 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator^(const bool_t &other) 
             multiplicative_coefficient = barretenberg::fr::add(barretenberg::fr::one(), barretenberg::fr::one());
             left_coefficient =barretenberg::fr::neg_one();
             right_coefficient =barretenberg::fr::neg_one();
-            constant_coefficient =barretenberg::fr::zero();
+            constant_coefficient =barretenberg::fr::one();
         }
         const waffle::poly_triple gate_coefficients{
             witness_index,
@@ -368,6 +369,82 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator!() const
     bool_t<ComposerContext> result(*this);
     result.witness_inverted = !result.witness_inverted;
     return result;
+}
+
+template <typename ComposerContext>
+bool_t<ComposerContext> bool_t<ComposerContext>::operator==(const bool_t &other) const
+{
+    ASSERT(context == other.context || (context == nullptr && other.context != nullptr) || (context != nullptr && other.context == nullptr));
+    if ((other.witness_index == static_cast<uint32_t>(-1))  && (witness_index == static_cast<uint32_t>(-1)))
+    {
+        bool_t<ComposerContext> result(context == nullptr ? other.context : context);
+        result.witness_bool = (witness_bool ^ witness_inverted) == (other.witness_bool ^ other.witness_inverted);
+        result.witness = result.witness_bool ? barretenberg::fr::one() : barretenberg::fr::zero();
+        result.witness_index = static_cast<uint32_t>(-1);
+        return result;
+    }
+    else if ((witness_index != static_cast<uint32_t>(-1)) && (other.witness_index == static_cast<uint32_t>(-1)))
+    {
+        if (other.witness_bool ^ other.witness_inverted)
+        {
+            return (*this);
+        }
+        else
+        {
+            return !(*this);
+        }
+    }
+    else if ((witness_index == static_cast<uint32_t>(-1)) && (other.witness_index != static_cast<uint32_t>(-1)))
+    {
+        if (witness_bool ^ witness_inverted)
+        {
+            return other;
+        }
+        else
+        {
+            return !(other);
+        }
+    }
+    else
+    {
+        bool_t<ComposerContext> result(context == nullptr ? other.context : context);
+        result.witness_bool = (witness_bool ^ witness_inverted) == (other.witness_bool ^ other.witness_inverted);
+        result.witness = result.witness_bool ? barretenberg::fr::one() : barretenberg::fr::zero();
+        result.witness_index = context->add_variable(result.witness);
+        // norm a, norm b or both inv: 1 - a - b + 2ab
+        // inv a or inv b = a + b - 2ab
+        barretenberg::fr::field_t multiplicative_coefficient;
+        barretenberg::fr::field_t left_coefficient;
+        barretenberg::fr::field_t right_coefficient;
+        barretenberg::fr::field_t constant_coefficient;
+        if ((witness_inverted && other.witness_inverted) || (!witness_inverted && !other.witness_inverted))
+        {
+            multiplicative_coefficient = barretenberg::fr::add(barretenberg::fr::one(), barretenberg::fr::one());
+            left_coefficient =barretenberg::fr::neg_one();
+            right_coefficient = barretenberg::fr::neg_one();
+            constant_coefficient =barretenberg::fr::one();
+        }
+        else
+        {
+            multiplicative_coefficient = barretenberg::fr::add(barretenberg::fr::neg_one(), barretenberg::fr::neg_one());
+            left_coefficient =barretenberg::fr::one();
+            right_coefficient =barretenberg::fr::one();
+            constant_coefficient =barretenberg::fr::zero();
+        }
+        const waffle::poly_triple gate_coefficients{
+            witness_index,
+            other.witness_index,
+            result.witness_index,
+            multiplicative_coefficient,
+            left_coefficient,
+            right_coefficient,
+            barretenberg::fr::neg_one(),
+            constant_coefficient
+        };
+        context->create_poly_gate(gate_coefficients);
+        return result;
+    }
+
 }
 
 }
