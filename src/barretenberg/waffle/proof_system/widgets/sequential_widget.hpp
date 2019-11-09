@@ -1,15 +1,15 @@
-#ifndef ARITHMETIC_WIDGET_HPP
-#define ARITHMETIC_WIDGET_HPP
+#ifndef SEQUENTIAL_WIDGET_HPP
+#define SEQUENTIAL_WIDGET_HPP
 
 #include "./base_widget.hpp"
 
 namespace waffle
 {
-class VerifierArithmeticWidget : public VerifierBaseWidget
+class VerifierSequentialWidget : public VerifierBaseWidget
 {
 public:
-    VerifierArithmeticWidget(std::vector<barretenberg::g1::affine_element> &instance_commitments);
-    ~VerifierArithmeticWidget() {};
+    VerifierSequentialWidget(std::vector<barretenberg::g1::affine_element> &instance_commitments);
+    ~VerifierSequentialWidget() {};
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
         const challenge_coefficients &challenge,
@@ -23,16 +23,16 @@ public:
     };
 };
 
-class ProverArithmeticWidget : public ProverBaseWidget
+class ProverSequentialWidget : public ProverBaseWidget
 {
 public:
 
-    ProverArithmeticWidget(const size_t n);
-    ProverArithmeticWidget(const ProverArithmeticWidget &other);
-    ProverArithmeticWidget(ProverArithmeticWidget &&other);
-    ProverArithmeticWidget& operator=(const ProverArithmeticWidget &other);
-    ProverArithmeticWidget& operator=(ProverArithmeticWidget &&other);
-    ~ProverArithmeticWidget() {};
+    ProverSequentialWidget(const size_t n);
+    ProverSequentialWidget(const ProverSequentialWidget &other);
+    ProverSequentialWidget(ProverSequentialWidget &&other);
+    ProverSequentialWidget& operator=(const ProverSequentialWidget &other);
+    ProverSequentialWidget& operator=(ProverSequentialWidget &&other);
+    ~ProverSequentialWidget() {};
 
     barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t &alpha_base, const barretenberg::fr::field_t& alpha_step, CircuitFFTState& circuit_state);
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t &alpha_base, const barretenberg::fr::field_t &, const waffle::plonk_proof &proof, const barretenberg::evaluation_domain& domain, barretenberg::polynomial &r);
@@ -46,13 +46,9 @@ public:
     void compute_proof_elements(plonk_proof&, const barretenberg::fr::field_t&) {};
     void reset(const barretenberg::evaluation_domain& domain);
 
-    barretenberg::polynomial q_m;
-    barretenberg::polynomial q_l;
-    barretenberg::polynomial q_r;
-    barretenberg::polynomial q_o;
-    barretenberg::polynomial q_c;
+    barretenberg::polynomial q_o_next;
 };
-
-
 }
+
+
 #endif

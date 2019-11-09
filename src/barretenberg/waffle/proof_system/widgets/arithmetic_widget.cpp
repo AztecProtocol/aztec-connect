@@ -220,7 +220,7 @@ VerifierBaseWidget::challenge_coefficients VerifierArithmeticWidget::append_scal
     fr::__mul(challenge.alpha_base, challenge.linear_nu, q_c_term);
     scalars.push_back(q_c_term);
 
-    return challenge_coefficients{
+    return VerifierBaseWidget::challenge_coefficients{
         fr::mul(challenge.alpha_base, challenge.alpha_step),
         challenge.alpha_step,
         challenge.nu_base,

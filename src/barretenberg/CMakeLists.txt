@@ -48,6 +48,8 @@ add_library(
     waffle/proof_system/widgets/bool_widget.hpp
     waffle/proof_system/widgets/mimc_widget.cpp
     waffle/proof_system/widgets/mimc_widget.hpp
+    waffle/proof_system/widgets/sequential_widget.cpp
+    waffle/proof_system/widgets/sequential_widget.hpp
     waffle/proof_system/prover/prover.cpp
     waffle/proof_system/prover/prover.hpp
     waffle/proof_system/verifier/verifier.cpp
@@ -126,6 +128,8 @@ add_executable(
     waffle/proof_system/widgets/bool_widget.hpp
     waffle/proof_system/widgets/mimc_widget.cpp
     waffle/proof_system/widgets/mimc_widget.hpp
+    waffle/proof_system/widgets/sequential_widget.cpp
+    waffle/proof_system/widgets/sequential_widget.hpp
     waffle/proof_system/prover/prover.cpp
     waffle/proof_system/prover/prover.hpp
     waffle/proof_system/verifier/verifier.cpp
