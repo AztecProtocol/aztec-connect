@@ -1,5 +1,4 @@
-#ifndef TYPES
-#define TYPES
+#pragma once
 
 #include "stdint.h"
 #include "stddef.h"
@@ -308,5 +307,3 @@ struct plonk_proof
     barretenberg::fr::field_t linear_eval;
 };
 } // namespace waffle
-
-#endif
