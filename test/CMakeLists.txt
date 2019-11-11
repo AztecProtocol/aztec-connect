@@ -47,9 +47,9 @@ add_executable(
     test_prover.cpp
     test_verifier.cpp
     test_verifier.cpp
-    test_standard_composer.cpp
-    test_mimc_composer.cpp
-    test_bool_composer.cpp
+    composer/test_standard_composer.cpp
+    composer/test_mimc_composer.cpp
+    composer/test_bool_composer.cpp
     stdlib/test_stdlib_bool.cpp
     stdlib/test_stdlib_field.cpp
     stdlib/test_stdlib_uint32.cpp
