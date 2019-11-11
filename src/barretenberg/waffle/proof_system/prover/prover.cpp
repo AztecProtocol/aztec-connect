@@ -512,7 +512,6 @@ fr::field_t Prover::compute_linearisation_coefficients()
         widgets[i]->compute_proof_elements(proof, challenges.z);
     }
     fr::field_t t_eval = circuit_state.quotient_large.evaluate(challenges.z, 3 * n);
-
     // we scaled the sigma polynomials up by beta, so scale back down
     fr::__mul(proof.sigma_1_eval, beta_inv, proof.sigma_1_eval);
     fr::__mul(proof.sigma_2_eval, beta_inv, proof.sigma_2_eval);

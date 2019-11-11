@@ -12,7 +12,9 @@ namespace stdlib
 {
 namespace
 {
-constexpr size_t num_mimc_rounds = 95;
+// num rounds = ceil((security parameter) / log2(mimc exponent))
+// for 129 bit security parameter, and x^7, num rounds = 46
+constexpr size_t num_mimc_rounds = 46;
 
 fr::field_t mimc_round_constants[num_mimc_rounds];
 

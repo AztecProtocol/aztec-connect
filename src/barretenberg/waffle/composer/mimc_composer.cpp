@@ -118,6 +118,57 @@ namespace waffle
         ++n;
     }
 
+    void MiMCComposer::create_dummy_gates()
+    {
+        StandardComposer::create_dummy_gates();
+        q_mimc_coefficient.emplace_back(fr::zero());
+        q_mimc_selector.emplace_back(fr::zero());
+        q_mimc_coefficient.emplace_back(fr::zero());
+        q_mimc_selector.emplace_back(fr::zero());
+
+
+        // add in dummy gates to ensure that all of our polynomials are not zero and not identical
+        // TODO: sanitise this :/
+        q_m.emplace_back(fr::field_t({{0,0,0,0}}));
+        q_l.emplace_back(fr::field_t({{0,0,0,0}}));
+        q_r.emplace_back(fr::field_t({{0,0,0,0}}));
+        q_o.emplace_back(fr::field_t({{0,0,0,0}}));
+        q_c.emplace_back(fr::field_t({{0,0,0,0}}));
+        q_mimc_coefficient.emplace_back(fr::field_t({{0,0,0,0}}));
+        q_mimc_selector.emplace_back(fr::one());
+        w_l.emplace_back(zero_idx);
+        w_r.emplace_back(zero_idx);
+        w_o.emplace_back(zero_idx);
+        epicycle left{static_cast<uint32_t>(n), WireType::LEFT};
+        epicycle right{static_cast<uint32_t>(n), WireType::RIGHT};
+        epicycle out{static_cast<uint32_t>(n), WireType::OUTPUT};
+        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(left);
+        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(right);
+        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(out);
+
+        ++n;
+
+        q_m.emplace_back(fr::field_t({{0,0,0,0}}));
+        q_l.emplace_back(fr::field_t({{0,0,0,0}}));
+        q_r.emplace_back(fr::field_t({{0,0,0,0}}));
+        q_o.emplace_back(fr::field_t({{0,0,0,0}}));
+        q_c.emplace_back(fr::field_t({{0,0,0,0}}));
+        q_mimc_coefficient.emplace_back(fr::one());
+        q_mimc_selector.emplace_back(fr::field_t({{0,0,0,0}}));
+        w_l.emplace_back(zero_idx);
+        w_r.emplace_back(zero_idx);
+        w_o.emplace_back(zero_idx);
+    
+        // add a permutation on zero_idx to ensure SIGMA_1, SIGMA_2, SIGMA_3 are well formed
+        left = {static_cast<uint32_t>(n), WireType::LEFT};
+        right = {static_cast<uint32_t>(n), WireType::RIGHT};
+        out = {static_cast<uint32_t>(n), WireType::OUTPUT};
+        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(left);
+        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(right);
+        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(out);
+        ++n;
+    }
+
     Prover MiMCComposer::preprocess()
     {
         ASSERT(wire_epicycles.size() == variables.size());
@@ -146,52 +197,8 @@ namespace waffle
             ++n;
         }
 
-        // add in dummy gates to ensure that all of our polynomials are not zero and not identical
-        // TODO: sanitise this :/
-        q_m.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_l.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_r.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_o.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_c.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_mimc_coefficient.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_mimc_selector.emplace_back(fr::one());
-        w_l.emplace_back(zero_idx);
-        w_r.emplace_back(zero_idx);
-        w_o.emplace_back(zero_idx);
-        ++n;
-
-        q_m.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_l.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_r.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_o.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_c.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_mimc_coefficient.emplace_back(fr::one());
-        q_mimc_selector.emplace_back(fr::field_t({{0,0,0,0}}));
-        w_l.emplace_back(zero_idx);
-        w_r.emplace_back(zero_idx);
-        w_o.emplace_back(zero_idx);
     
-        // add a permutation on zero_idx to ensure SIGMA_1, SIGMA_2, SIGMA_3 are well formed
-        epicycle left{static_cast<uint32_t>(n), WireType::LEFT};
-        epicycle right{static_cast<uint32_t>(n), WireType::RIGHT};
-        epicycle out{static_cast<uint32_t>(n), WireType::OUTPUT};
-        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(left);
-        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(right);
-        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(out);
-        ++n;
-    
-        q_m.emplace_back(fr::to_montgomery_form({{1,0,0,0}}));
-        q_l.emplace_back(fr::to_montgomery_form({{2,0,0,0}}));
-        q_r.emplace_back(fr::to_montgomery_form({{3,0,0,0}}));
-        q_o.emplace_back(fr::to_montgomery_form({{4,0,0,0}}));
-        q_c.emplace_back(fr::to_montgomery_form({{5,0,0,0}}));
-        q_mimc_coefficient.emplace_back(fr::to_montgomery_form({{0,0,0,0}}));
-        q_mimc_selector.emplace_back(fr::to_montgomery_form({{0,0,0,0}}));
-        w_l.emplace_back(add_variable(fr::to_montgomery_form({{6,0,0,0}})));
-        w_r.emplace_back(add_variable(fr::to_montgomery_form({{7,0,0,0}})));
-        w_o.emplace_back(add_variable(fr::neg(fr::to_montgomery_form({{20,0,0,0}}))));
-        ++n;
-
+        create_dummy_gates();
         // ###
 
         size_t log2_n = static_cast<size_t>(log2(n));

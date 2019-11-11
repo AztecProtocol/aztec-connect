@@ -29,6 +29,7 @@ public:
     virtual void create_mul_gate(const mul_triple &in);
     virtual void create_bool_gate(const uint32_t a);
     virtual void create_poly_gate(const poly_triple &in);
+    virtual void create_dummy_gates();
 
     size_t zero_idx;
     size_t n;

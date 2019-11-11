@@ -13,8 +13,7 @@ public:
     {
         q_left_bools.reserve(size_hint);
         q_right_bools.reserve(size_hint);
-        add_variable(barretenberg::fr::field_t({{0,0,0,0}}));
-        zero_idx = 0;
+        zero_idx = add_variable(barretenberg::fr::field_t({{0,0,0,0}}));
         features |= static_cast<size_t>(Features::BOOL_SELECTORS);
     };
 
@@ -32,6 +31,7 @@ public:
     void create_mul_gate(const mul_triple &in);
     void create_bool_gate(const uint32_t a);
     void create_poly_gate(const poly_triple &in);
+    void create_dummy_gates();
 
     std::vector<barretenberg::fr::field_t> q_left_bools;
     std::vector<barretenberg::fr::field_t> q_right_bools;

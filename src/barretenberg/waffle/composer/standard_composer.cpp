@@ -58,6 +58,7 @@ namespace waffle
 
     void StandardComposer::create_bool_gate(const uint32_t variable_index)
     {
+        printf("in standard composer bool???\n");
         w_l.emplace_back(variable_index);
         w_r.emplace_back(variable_index);
         w_o.emplace_back(variable_index);
@@ -101,6 +102,58 @@ namespace waffle
         ++n;
     }
 
+    void StandardComposer::create_dummy_gates()
+    {
+        // add in a dummy gate to ensure that all of our polynomials are not zero and not identical
+        q_m.emplace_back(fr::to_montgomery_form({{1,0,0,0}}));
+        q_l.emplace_back(fr::to_montgomery_form({{2,0,0,0}}));
+        q_r.emplace_back(fr::to_montgomery_form({{3,0,0,0}}));
+        q_o.emplace_back(fr::to_montgomery_form({{4,0,0,0}}));
+        q_c.emplace_back(fr::to_montgomery_form({{5,0,0,0}}));
+
+        uint32_t a_idx = add_variable(fr::to_montgomery_form({{6,0,0,0}}));
+        uint32_t b_idx = add_variable(fr::to_montgomery_form({{7,0,0,0}}));
+        uint32_t c_idx = add_variable(fr::neg(fr::to_montgomery_form({{20,0,0,0}})));
+
+        w_l.emplace_back(a_idx);
+        w_r.emplace_back(b_idx);
+        w_o.emplace_back(c_idx);
+
+        epicycle left{static_cast<uint32_t>(n), WireType::LEFT};
+        epicycle right{static_cast<uint32_t>(n), WireType::RIGHT};
+        epicycle out{static_cast<uint32_t>(n), WireType::OUTPUT};
+        ASSERT(wire_epicycles.size() > a_idx);
+        ASSERT(wire_epicycles.size() > b_idx);
+        ASSERT(wire_epicycles.size() > c_idx);
+        wire_epicycles[static_cast<size_t>(a_idx)].emplace_back(left);
+        wire_epicycles[static_cast<size_t>(b_idx)].emplace_back(right);
+        wire_epicycles[static_cast<size_t>(c_idx)].emplace_back(out);
+        ++n;
+
+        // add a second dummy gate the ensure our permutation polynomials are also
+        // distinct from the identity permutation
+        q_m.emplace_back(fr::to_montgomery_form({{1,0,0,0}}));
+        q_l.emplace_back(fr::to_montgomery_form({{1,0,0,0}}));
+        q_r.emplace_back(fr::to_montgomery_form({{1,0,0,0}}));
+        q_o.emplace_back(fr::to_montgomery_form({{1,0,0,0}}));
+        q_c.emplace_back((fr::to_montgomery_form({{127,0,0,0}})));
+
+        w_l.emplace_back(c_idx);
+        w_r.emplace_back(a_idx);
+        w_o.emplace_back(b_idx);
+
+        left = {static_cast<uint32_t>(n), WireType::LEFT};
+        right = {static_cast<uint32_t>(n), WireType::RIGHT};
+        out = {static_cast<uint32_t>(n), WireType::OUTPUT};
+        ASSERT(wire_epicycles.size() > c_idx);
+        ASSERT(wire_epicycles.size() > a_idx);
+        ASSERT(wire_epicycles.size() > b_idx);
+        wire_epicycles[static_cast<size_t>(c_idx)].emplace_back(left);
+        wire_epicycles[static_cast<size_t>(a_idx)].emplace_back(right);
+        wire_epicycles[static_cast<size_t>(b_idx)].emplace_back(out);
+        ++n;
+    }
+
     Prover StandardComposer::preprocess()
     {
         ASSERT(wire_epicycles.size() == variables.size());
@@ -110,18 +163,9 @@ namespace waffle
         ASSERT(n == q_o.size());
         ASSERT(n == q_o.size());
 
-        // add in a dummy gate to ensure that all of our polynomials are not zero and not identical
-        q_m.emplace_back(fr::to_montgomery_form({{1,0,0,0}}));
-        q_l.emplace_back(fr::to_montgomery_form({{2,0,0,0}}));
-        q_r.emplace_back(fr::to_montgomery_form({{3,0,0,0}}));
-        q_o.emplace_back(fr::to_montgomery_form({{4,0,0,0}}));
-        q_c.emplace_back(fr::to_montgomery_form({{5,0,0,0}}));
-        ++n;
-        w_l.emplace_back(add_variable(fr::to_montgomery_form({{6,0,0,0}})));
-        w_r.emplace_back(add_variable(fr::to_montgomery_form({{7,0,0,0}})));
-        w_o.emplace_back(add_variable(fr::neg(fr::to_montgomery_form({{20,0,0,0}}))));
-        // ###
-
+        // ensure witness / instance polynomials are non-zero
+        create_dummy_gates();
+    
         size_t log2_n = static_cast<size_t>(log2(n + 1));
         if ((1UL << log2_n) != (n + 1))
         {
