@@ -165,3 +165,67 @@ TEST(bool_composers, test_bool_gate_proofs)
     bool result = verifier.verify_proof(proof); // instance, prover.reference_string.SRS_T2);
     EXPECT_EQ(result, true);
 }
+
+TEST(bool_composers, test_deferred_bool_gate_proofs)
+{
+    waffle::BoolComposer composer = waffle::BoolComposer();
+
+    size_t n = 27;
+    for (size_t i = 0; i < n; ++i)
+    {
+        fr::field_t a = fr::one();
+        fr::field_t b = fr::zero();
+        fr::field_t c = fr::one();
+        uint32_t a_idx = composer.add_variable(a);
+        uint32_t b_idx = composer.add_variable(b);
+        uint32_t c_idx = composer.add_variable(c);
+        composer.create_bool_gate(a_idx);
+        composer.create_bool_gate(b_idx);
+        composer.create_bool_gate(c_idx);
+        composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    }
+
+    waffle::Prover prover = composer.preprocess();
+    EXPECT_EQ(composer.n, 41UL + composer.get_num_constant_gates());
+    EXPECT_EQ(prover.n, 64UL);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof); // instance, prover.reference_string.SRS_T2);
+    EXPECT_EQ(result, true);
+}
+
+
+TEST(bool_composers, test_repeated_bool_gate_proofs)
+{
+    waffle::BoolComposer composer = waffle::BoolComposer();
+
+    size_t n = 27;
+    for (size_t i = 0; i < n; ++i)
+    {
+        fr::field_t a = fr::one();
+        fr::field_t b = fr::zero();
+        fr::field_t c = fr::one();
+        uint32_t a_idx = composer.add_variable(a);
+        uint32_t b_idx = composer.add_variable(b);
+        uint32_t c_idx = composer.add_variable(c);
+        composer.create_bool_gate(a_idx);
+        composer.create_bool_gate(b_idx);
+        composer.create_bool_gate(c_idx);
+        composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+        composer.create_bool_gate(a_idx);
+        composer.create_bool_gate(b_idx);
+        composer.create_bool_gate(c_idx); // heyho
+    }
+
+    waffle::Prover prover = composer.preprocess();
+    EXPECT_EQ(composer.n, 41UL + composer.get_num_constant_gates());
+    EXPECT_EQ(prover.n, 64UL);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof); // instance, prover.reference_string.SRS_T2);
+    EXPECT_EQ(result, true);
+}

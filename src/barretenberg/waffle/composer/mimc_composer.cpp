@@ -197,7 +197,6 @@ namespace waffle
             ++n;
         }
 
-    
         create_dummy_gates();
         // ###
 

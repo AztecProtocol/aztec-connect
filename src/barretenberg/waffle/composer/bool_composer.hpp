@@ -24,6 +24,7 @@ public:
     virtual uint32_t add_variable(const barretenberg::fr::field_t &in)
     {
         pending_bool_selectors.emplace_back(false);
+        processed_bool_selectors.emplace_back(false);
         return ComposerBase::add_variable(in);
     }
 
@@ -32,11 +33,13 @@ public:
     void create_bool_gate(const uint32_t a);
     void create_poly_gate(const poly_triple &in);
     void create_dummy_gates();
+    virtual size_t get_num_constant_gates() { return StandardComposer::get_num_constant_gates() + 1; }
 
     std::vector<barretenberg::fr::field_t> q_left_bools;
     std::vector<barretenberg::fr::field_t> q_right_bools;
 
     std::vector<bool> pending_bool_selectors;
+    std::vector<bool> processed_bool_selectors;
     uint32_t zero_idx;
 };
 }

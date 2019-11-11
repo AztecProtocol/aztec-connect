@@ -69,13 +69,7 @@ TEST(stdlib_bool, test_basic_operations)
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[5]), {{ 1, 0, 0, 0 }}), true);
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[5]), {{ 1, 0, 0, 0 }}), true);
 
-    EXPECT_EQ(prover.n, 8UL);
-    // waffle::Verifier verifier = waffle::preprocess(prover);
-
-    // waffle::plonk_proof proof = prover.construct_proof();
-
-    // bool result = verifier.verify_proof(proof);
-    // EXPECT_EQ(result, true);
+    EXPECT_EQ(prover.n, 16UL);
 }
 
 

@@ -34,6 +34,7 @@ namespace waffle
         {
             q_left_bools.emplace_back(fr::one());
             pending_bool_selectors[to_add.a] = false;
+            processed_bool_selectors[to_add.a] = true;
         }
         else
         {
@@ -44,6 +45,7 @@ namespace waffle
         {
             q_right_bools.emplace_back(fr::one());
             pending_bool_selectors[to_add.b] = false;
+            processed_bool_selectors[to_add.b] = true;
         }
         else
         {
@@ -58,6 +60,7 @@ namespace waffle
         {
             q_left_bools.emplace_back(fr::one());
             pending_bool_selectors[in.a] = false;
+            processed_bool_selectors[in.a] = true;
         }
         else
         {
@@ -67,6 +70,7 @@ namespace waffle
         {
             q_right_bools.emplace_back(fr::one());
             pending_bool_selectors[in.b] = false;
+            processed_bool_selectors[in.b] = true;
         }
         else
         {
@@ -76,7 +80,10 @@ namespace waffle
 
     void BoolComposer::create_bool_gate(const uint32_t variable_index)
     {
-        pending_bool_selectors[variable_index] = true;
+        if (processed_bool_selectors[variable_index] == false)
+        {
+            pending_bool_selectors[variable_index] = true;
+        }
     }
 
     void BoolComposer::create_poly_gate(const poly_triple &in)
@@ -86,6 +93,7 @@ namespace waffle
         {
             q_left_bools.emplace_back(fr::one());
             pending_bool_selectors[in.a] = false;
+            processed_bool_selectors[in.a] = true;
         }
         else
         {
@@ -95,6 +103,7 @@ namespace waffle
         {
             q_right_bools.emplace_back(fr::one());
             pending_bool_selectors[in.b] = false;
+            processed_bool_selectors[in.b] = true;
         }
         else
         {

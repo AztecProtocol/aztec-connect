@@ -58,7 +58,6 @@ namespace waffle
 
     void StandardComposer::create_bool_gate(const uint32_t variable_index)
     {
-        printf("in standard composer bool???\n");
         w_l.emplace_back(variable_index);
         w_r.emplace_back(variable_index);
         w_o.emplace_back(variable_index);
@@ -165,14 +164,12 @@ namespace waffle
 
         // ensure witness / instance polynomials are non-zero
         create_dummy_gates();
-    
         size_t log2_n = static_cast<size_t>(log2(n + 1));
         if ((1UL << log2_n) != (n + 1))
         {
             ++log2_n;
         }
         size_t new_n = 1UL << log2_n;
-
         variables.emplace_back(fr::zero());
         zero_idx = variables.size() - 1;
         for (size_t i = n; i < new_n; ++i)

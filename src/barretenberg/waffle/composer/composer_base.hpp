@@ -78,6 +78,7 @@ public:
     virtual void create_mul_gate(const mul_triple &in) = 0;
     virtual void create_bool_gate(const uint32_t a) = 0;
     virtual void create_poly_gate(const poly_triple &in) = 0;    
+    virtual size_t get_num_constant_gates() = 0;
 
     barretenberg::fr::field_t get_variable(const uint32_t index) const
     {

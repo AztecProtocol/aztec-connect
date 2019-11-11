@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/waffle/composer/standard_composer.hpp>
+#include <barretenberg/waffle/composer/bool_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
@@ -18,9 +18,9 @@
 using namespace barretenberg;
 using namespace plonk;
 
-typedef stdlib::field_t<waffle::StandardComposer> field_t;
-typedef stdlib::uint32<waffle::StandardComposer> uint32;
-typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
+typedef stdlib::field_t<waffle::BoolComposer> field_t;
+typedef stdlib::uint32<waffle::BoolComposer> uint32;
+typedef stdlib::witness_t<waffle::BoolComposer> witness_t;
 
 std::vector<uint32_t> get_random_ints(size_t n)
 {
@@ -39,7 +39,7 @@ uint32_t get_value(uint32 &input)
 
 TEST(stdlib_uint32, test_add)
 {
-    waffle::StandardComposer composer = waffle::StandardComposer();
+    waffle::BoolComposer composer = waffle::BoolComposer();
 
     witness_t first_input(&composer, 1U);
     witness_t second_input(&composer, 0U);
@@ -83,7 +83,7 @@ TEST(stdlib_uint32s, test_add_wth_constants)
         expected[7] = expected[4] + expected[5];
     }
 
-    waffle::StandardComposer composer = waffle::StandardComposer();
+    waffle::BoolComposer composer = waffle::BoolComposer();
     uint32 result[8];
     for (size_t i = 0; i < n; ++i)
     {
@@ -125,7 +125,7 @@ TEST(stdlib_uint32, test_mul)
         c_expected = a_expected * b_expected;
     }
 
-    waffle::StandardComposer composer = waffle::StandardComposer();
+    waffle::BoolComposer composer = waffle::BoolComposer();
 
     witness_t first_input(&composer, 1U);
     witness_t second_input(&composer, 2U);
@@ -167,7 +167,7 @@ TEST(stdlib_uint32, test_xor)
         a_expected = c_expected ^ a_expected;
     }
 
-    waffle::StandardComposer composer = waffle::StandardComposer();
+    waffle::BoolComposer composer = waffle::BoolComposer();
 
     witness_t first_input(&composer, 0xa3b10422);
     witness_t second_input(&composer, 0xeac21343);
@@ -210,7 +210,7 @@ TEST(stdlib_uint32s, test_and)
         a_expected = c_expected & a_expected;
     }
 
-    waffle::StandardComposer composer = waffle::StandardComposer();
+    waffle::BoolComposer composer = waffle::BoolComposer();
 
     witness_t first_input(&composer, 0xa3b10422);
     witness_t second_input(&composer, 0xeac21343);
@@ -254,7 +254,7 @@ TEST(stdlib_uint32, test_or)
         a_expected = c_expected | a_expected;
     }
 
-    waffle::StandardComposer composer = waffle::StandardComposer();
+    waffle::BoolComposer composer = waffle::BoolComposer();
 
     witness_t first_input(&composer, 0xa3b10422);
     witness_t second_input(&composer, 0xeac21343);
@@ -304,7 +304,7 @@ TEST(stdlib_uint32, test_ror)
         a_expected = rotate(c_expected, i % 31) + rotate(a_expected, (i + 1) % 31);
     }
 
-    waffle::StandardComposer composer = waffle::StandardComposer();
+    waffle::BoolComposer composer = waffle::BoolComposer();
 
     witness_t first_input(&composer, 0xa3b10422);
     witness_t second_input(&composer, 0xeac21343);
@@ -388,7 +388,7 @@ TEST(stdlib_uint32, test_sha256_rounds)
         b_alt = a_alt;
         a_alt = temp1_alt + temp2_alt;
     }
-    waffle::StandardComposer composer = waffle::StandardComposer();
+    waffle::BoolComposer composer = waffle::BoolComposer();
 
     std::vector<uint32> w;
     std::vector<uint32> k;
@@ -457,7 +457,7 @@ TEST(stdlib_uint32, test_sha256_rounds)
     waffle::Prover prover = composer.preprocess();
 
     printf("prover gates = %lu\n", prover.n);
- 
+    printf("composer gates = %lu\n", composer.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();

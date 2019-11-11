@@ -30,6 +30,7 @@ public:
     virtual void create_bool_gate(const uint32_t a);
     virtual void create_poly_gate(const poly_triple &in);
     virtual void create_dummy_gates();
+    virtual size_t get_num_constant_gates() { return 2; }
 
     size_t zero_idx;
     size_t n;
