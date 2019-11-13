@@ -12,7 +12,7 @@
 using namespace barretenberg;
 
 
-TEST(bool_composera, test_add_gate_proofs)
+TEST(bool_composer, test_add_gate_proofs)
 {
     waffle::BoolComposer composer = waffle::BoolComposer();
     fr::field_t a = fr::one();
@@ -137,7 +137,7 @@ TEST(bool_composer, test_mul_gate_proofs)
     EXPECT_EQ(result, true);
 }
 
-TEST(bool_composers, test_bool_gate_proofs)
+TEST(bool_composer, test_bool_gate_proofs)
 {
     waffle::BoolComposer composer = waffle::BoolComposer();
 
