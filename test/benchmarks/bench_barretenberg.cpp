@@ -278,13 +278,18 @@ const auto init = []() {
 
 uint64_t rdtsc()
 {
-#ifdef DISABLE_SHENANIGANS
-    return 0;
-#else
+#ifdef __aarch64__
+    uint64_t pmccntr;
+    __asm__ __volatile__("mrs %0, pmccntr_el0"
+                         : "=r"(pmccntr));
+    return pmccntr;
+#elif __x86_64__
     unsigned int lo, hi;
     __asm__ __volatile__("rdtsc"
                          : "=a"(lo), "=d"(hi));
     return ((uint64_t)hi << 32) | lo;
+#else
+    return 0;
 #endif
 }
 
