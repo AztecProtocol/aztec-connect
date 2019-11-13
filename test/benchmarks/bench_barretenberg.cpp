@@ -294,23 +294,25 @@ uint64_t rdtsc()
 }
 
 constexpr size_t NUM_SQUARINGS = 10000000;
-inline uint64_t fq_sqr_asm(fq::field_t &a, fq::field_t &r) noexcept
+inline fq::field_t fq_sqr_asm(fq::field_t &a, fq::field_t &r) noexcept
 {
     for (size_t i = 0; i < NUM_SQUARINGS; ++i)
     {
         fq::__sqr(a, r);
     }
-    return 1;
+    DoNotOptimize(r);
+    return r;
 }
 
 constexpr size_t NUM_MULTIPLICATIONS = 10000000;
-inline uint64_t fq_mul_asm(fq::field_t &a, fq::field_t &r) noexcept
+inline fq::field_t fq_mul_asm(fq::field_t &a, fq::field_t &r) noexcept
 {
     for (size_t i = 0; i < NUM_MULTIPLICATIONS; ++i)
     {
         fq::__mul(a, r, r);
     }
-    return 1;
+    DoNotOptimize(r);
+    return r;
 }
 
 void construct_instances_bench(State &state) noexcept
