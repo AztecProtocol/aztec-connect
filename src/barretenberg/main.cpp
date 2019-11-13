@@ -105,9 +105,9 @@ int main()
 // //         pthread_join(thread[j], NULL);
 // //     }
 // //     printf("After Thread\n");
-// //     free(inputs);
-// //     free(scalars);
-// //     free(points);
+// //     aligned_free(inputs);
+// //     aligned_free(scalars);
+// //     aligned_free(points);
 // // }
 
 // // int main()
@@ -138,5 +138,5 @@ int main()
 //     polynomials::fft(scalars, domain);
 //     CALLGRIND_STOP_INSTRUMENTATION;
 //     CALLGRIND_DUMP_STATS;
-//     free(scalars);
+//     aligned_free(scalars);
 // }

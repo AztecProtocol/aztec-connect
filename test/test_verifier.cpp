@@ -10,7 +10,7 @@ namespace
 
 using namespace barretenberg;
 
-void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
+void generate_test_data(waffle::circuit_state &state, fr::field_t *data)
 {
     size_t n = state.n;
     // state.small_domain = polynomials::evaluation_domain(n);
@@ -29,9 +29,9 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     state.sigma_1 = &data[10 * n + 2];
     state.sigma_2 = &data[11 * n + 2];
     state.sigma_3 = &data[12 * n + 2];
-    state.sigma_1_mapping = (uint32_t*)&data[13 * n + 2];
-    state.sigma_2_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (uintptr_t)(n * sizeof(uint32_t)));
-    state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (uintptr_t)((2 * n) * sizeof(uint32_t)));
+    state.sigma_1_mapping = (uint32_t *)&data[13 * n + 2];
+    state.sigma_2_mapping = (uint32_t *)((uintptr_t)&data[13 * n + 2] + (uintptr_t)(n * sizeof(uint32_t)));
+    state.sigma_3_mapping = (uint32_t *)((uintptr_t)&data[13 * n + 2] + (uintptr_t)((2 * n) * sizeof(uint32_t)));
     state.t = &data[14 * n + 2];
 
     state.w_l_lagrange_base = state.t;
@@ -111,9 +111,9 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
         fr::__mul(w_l_acc, w_l_seed, w_l_acc);
         fr::__mul(w_r_acc, w_r_seed, w_r_acc);
     }
-    fr::field_t* scratch_mem = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * n / 2));
+    fr::field_t *scratch_mem = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * n / 2));
     fr::batch_invert(state.w_o, n / 2, scratch_mem);
-    free(scratch_mem);
+    aligned_free(scratch_mem);
     for (size_t i = 0; i < n / 2; ++i)
     {
         fr::__mul(state.q_l[i], state.w_l[i], T0);
@@ -147,18 +147,18 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
         state.sigma_3_mapping[i] = (uint32_t)(i + shift) + (1U << 31U);
     }
 
-    fr::zero(state.w_l[n-1]);
-    fr::zero(state.w_r[n-1]);
-    fr::zero(state.w_o[n-1]);
-    fr::zero(state.q_c[n-1]);
-    fr::zero(state.w_l[shift-1]);
-    fr::zero(state.w_r[shift-1]);
-    fr::zero(state.w_o[shift-1]);
-    fr::zero(state.q_c[shift-1]);
-    fr::zero(state.q_m[shift-1]);
-    fr::zero(state.q_l[shift-1]);
-    fr::zero(state.q_r[shift-1]);
-    fr::zero(state.q_o[shift-1]);
+    fr::zero(state.w_l[n - 1]);
+    fr::zero(state.w_r[n - 1]);
+    fr::zero(state.w_o[n - 1]);
+    fr::zero(state.q_c[n - 1]);
+    fr::zero(state.w_l[shift - 1]);
+    fr::zero(state.w_r[shift - 1]);
+    fr::zero(state.w_o[shift - 1]);
+    fr::zero(state.q_c[shift - 1]);
+    fr::zero(state.q_m[shift - 1]);
+    fr::zero(state.q_l[shift - 1]);
+    fr::zero(state.q_r[shift - 1]);
+    fr::zero(state.q_o[shift - 1]);
     // make last permutation the same as identity permutation
     state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
     state.sigma_2_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 30U);
@@ -171,8 +171,8 @@ void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
     fr::zero(state.q_r[n - 1]);
     fr::zero(state.q_o[n - 1]);
     fr::zero(state.q_m[n - 1]);
-    }
 }
+} // namespace
 
 TEST(verifier, verifier)
 {
@@ -185,14 +185,14 @@ TEST(verifier, verifier)
 
     state.n = n;
 
-    fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (17 * n + 2)));
+    fr::field_t *data = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (17 * n + 2)));
     generate_test_data(state, data);
 
     // load structured reference string from disk
     srs::plonk_srs srs;
     srs.degree = n;
-    srs.monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (2 * n + 2)));
-    io::read_transcript(srs, "../srs_db/transcript.dat");
+    srs.monomials = (g1::affine_element *)(aligned_alloc(32, sizeof(g1::affine_element) * (2 * n + 2)));
+    io::read_transcript(srs, BARRETENBERG_SRS_PATH);
 
     scalar_multiplication::generate_pippenger_point_table(srs.monomials, srs.monomials, n);
 
@@ -206,6 +206,6 @@ TEST(verifier, verifier)
     bool result = waffle::verifier::verify_proof(proof, instance, srs.SRS_T2);
 
     EXPECT_EQ(result, true);
-    free(data);
-    free(srs.monomials);
+    aligned_free(data);
+    aligned_free(srs.monomials);
 }

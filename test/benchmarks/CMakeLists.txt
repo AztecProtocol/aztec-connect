@@ -20,13 +20,27 @@ add_executable(
     barretenberg_bench
     bench_barretenberg.cpp
 )
-target_link_libraries(
-    barretenberg_bench
-    PUBLIC
-    barretenberg
-    PRIVATE
-    benchmark
-)
+
+if (WIN32)
+    target_link_libraries(
+        barretenberg_bench
+        PUBLIC
+        barretenberg
+        PRIVATE
+        benchmark
+        wsock32
+        ws2_32
+    )
+else()
+    target_link_libraries(
+        barretenberg_bench
+        PUBLIC
+        barretenberg
+        PRIVATE
+        benchmark
+    )
+endif()
+
 target_include_directories(
     barretenberg_bench
     PRIVATE
@@ -37,6 +51,6 @@ target_include_directories(
 set_target_properties(
     barretenberg_bench
     PROPERTIES
-    
+
     RUNTIME_OUTPUT_DIRECTORY ..
 )

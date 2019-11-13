@@ -1,6 +1,6 @@
 FROM aztecprotocol/cmake:3.15.4
 WORKDIR /usr/src/barretenberg
 COPY . .
-RUN mkdir build && cd build && cmake .. && MAKEFLAGS=-j8 cmake --build .
+RUN mkdir build && cd build && cmake .. && make -j$(nproc)
 RUN cd build && ./test/barretenberg_tests
 ENTRYPOINT /bin/bash

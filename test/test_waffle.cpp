@@ -423,8 +423,8 @@ TEST(waffle, compute_quotient_polynomial_for_structured_circuit)
         EXPECT_EQ(fr::eq(ffts.quotient_poly[i], fr::zero()), true);
     }
 
-    free(scratch_space);
-    free(data);
+    aligned_free(scratch_space);
+    aligned_free(data);
 }
 
 TEST(waffle, compute_quotient_polynomial)
@@ -468,7 +468,7 @@ TEST(waffle, compute_quotient_polynomial)
         EXPECT_EQ(fr::eq(ffts.quotient_poly[i], fr::zero()), true);
     }
 
-    free(scratch_space);
+    aligned_free(scratch_space);
 }
 
 // TEST(waffle, compute_z_coefficients)
@@ -790,9 +790,9 @@ TEST(waffle, compute_z_commitments)
     EXPECT_EQ(fq::eq(proof.Z_1.x, expected_z_1.x), true);
     EXPECT_EQ(fq::eq(proof.Z_1.y, expected_z_1.y), true);
 
-    free(monomials);
-    free(scratch_space);
-    free(data);
+    aligned_free(monomials);
+    aligned_free(scratch_space);
+    aligned_free(data);
 }
 
 TEST(waffle, compute_linearisation_coefficients)
@@ -880,7 +880,7 @@ TEST(waffle, compute_linearisation_coefficients)
 
     EXPECT_EQ(fr::eq(t_eval, rhs), true);
 
-    free(scratch_space);
-    free(data);
-    free(monomials);
+    aligned_free(scratch_space);
+    aligned_free(data);
+    aligned_free(monomials);
 }

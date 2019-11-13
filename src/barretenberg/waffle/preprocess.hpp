@@ -73,8 +73,8 @@ inline circuit_instance preprocess_circuit(waffle::circuit_state &state, const s
     g1::jacobian_to_affine(mul_state[6].output, instance.Q_O);
     g1::jacobian_to_affine(mul_state[7].output, instance.Q_C);
 
-    free(scratch_space);
-    free(roots);
+    aligned_free(scratch_space);
+    aligned_free(roots);
     return instance;
 }
 } // namespace waffle

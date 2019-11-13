@@ -6,26 +6,42 @@ services:
       dockerfile: Dockerfile.cmake
     image: aztecprotocol/cmake:3.15.4
 
+  crosstool-ng:
+    build:
+      context: .
+      dockerfile: Dockerfile.crosstool-ng
+    image: aztecprotocol/crosstool-ng:1.24.0
+
   clang:
     build:
       context: .
       dockerfile: Dockerfile.clang
     image: aztecprotocol/clang:9.0.0
 
-  x86-gcc-openmp:
+  x86_64-linux-gcc:
     build:
       context: .
-      dockerfile: Dockerfile.x86-gcc-openmp
-    image: aztecprotocol/barretenberg:x86-gcc-openmp
+      dockerfile: Dockerfile.x86_64-linux-gcc
+    image: aztecprotocol/barretenberg:x86_64-linux-gcc
     tty: true
-    environment:
-      MAKEFLAGS: '-j8'
 
-  x86-clang-openmp:
+  x86_64-linux-clang:
     build:
       context: .
-      dockerfile: Dockerfile.x86-clang-openmp
-    image: aztecprotocol/barretenberg:x86-clang-openmp
+      dockerfile: Dockerfile.x86_64-linux-clang
+    image: aztecprotocol/barretenberg:x86_64-linux-clang
     tty: true
-    environment:
-      MAKEFLAGS: '-j8'
+
+  x86_64-win32-mingw:
+    build:
+      context: .
+      dockerfile: Dockerfile.x86_64-win32-mingw
+    image: aztecprotocol/barretenberg:x86_64-win32-mingw
+    tty: true
+
+  arm64-linux-gcc:
+    build:
+      context: .
+      dockerfile: Dockerfile.arm64-linux-gcc
+    image: aztecprotocol/barretenberg:arm64-linux-gcc
+    tty: true

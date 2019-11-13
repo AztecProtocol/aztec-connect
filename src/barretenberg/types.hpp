@@ -1,12 +1,32 @@
-#ifndef TYPES
-#define TYPES
+#pragma once
 
 #include "stdint.h"
 #include "stddef.h"
 #include "stdlib.h"
-#include <sys/random.h>
+
+// TODO: WARNING! getentropy is using rand()! Should probably be called dontgetentropy()!
+#ifdef _WIN32
+#define PRIx64 "llx"
+#define PRIu64 "llu"
+inline void *aligned_alloc(size_t alignment, size_t size)
+{
+    return _aligned_malloc(size, alignment);
+}
+#define aligned_free _aligned_free
+inline int getentropy(void *buf, size_t size)
+{
+    for (size_t i = 0; i < size; ++i)
+    {
+        ((char *)buf)[i] = (char)rand();
+    }
+    return 0;
+}
+#else
+#define aligned_free free
+#endif
 
 #ifdef __APPLE__
+#include <sys/random.h>
 inline void *aligned_alloc(size_t alignment, size_t size)
 {
     void *t = 0;
@@ -131,7 +151,7 @@ namespace polynomials
 // TODO: move this into polynomials.hpp
 // TODO: fix move constructor
 // TODO: use shared_ptr for lookup table
-struct evaluation_domain
+class evaluation_domain
 {
 public:
     fr::field_t root;
@@ -155,7 +175,7 @@ public:
     evaluation_domain() : round_roots(nullptr), roots(nullptr), inverse_round_roots(nullptr), inverse_roots(nullptr){};
     evaluation_domain(size_t size, bool skip_roots = false);
     evaluation_domain(const evaluation_domain &other);
-    evaluation_domain(evaluation_domain &&other) = delete;
+    //evaluation_domain(evaluation_domain &&other) = delete;
     ~evaluation_domain();
 };
 
@@ -287,5 +307,3 @@ struct plonk_proof
     barretenberg::fr::field_t linear_eval;
 };
 } // namespace waffle
-
-#endif

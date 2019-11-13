@@ -97,8 +97,8 @@ TEST(scalar_multiplication, pippenger)
     g1::element result = scalar_multiplication::pippenger(scalars, points, num_points);
     result = g1::normalize(result);
 
-    free(scalars);
-    free(points);
+    aligned_free(scalars);
+    aligned_free(points);
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
@@ -130,8 +130,8 @@ TEST(scalar_multiplication, pippenger_low_memory)
 
     result = g1::normalize(result);
 
-    free(scalars);
-    free(points);
+    aligned_free(scalars);
+    aligned_free(points);
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
@@ -175,8 +175,8 @@ TEST(scalar_multiplication, batched_scalar_multiplication)
     }
 
     scalar_multiplication::batched_scalar_multiplications(&inputs[num_exponentiations], num_exponentiations);
-    free(scalars);
-    free(points);
+    aligned_free(scalars);
+    aligned_free(points);
 
     for (size_t j = 0; j < num_exponentiations; ++j)
     {

@@ -38,11 +38,16 @@ if(APPLE)
         set(OpenMP_CXX_LIB_NAMES_WORK "libomp")
         set(OpenMP_libomp_LIBRARY "/usr/local/lib/libomp.a")
     endif()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new")
 endif()
 
+option(MULTITHREADING default ON)
+
 find_package(OpenMP)
-if(OpenMP_CXX_FOUND)
+if(OpenMP_CXX_FOUND AND MULTITHREADING)
     link_libraries(OpenMP::OpenMP_CXX)
+else()
+    add_definitions(-DNO_MULTITHREADING=1)
 endif()
 
 set(default_build_type "Release")
@@ -64,15 +69,14 @@ if(DISABLE_SHENANIGANS)
     add_definitions(-DDISABLE_SHENANIGANS=1)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native -O3 -m64")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -fopenmp -save-temps")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wno-format -Wno-conversion")
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)
 set(DEPENDS_DIR ${PROJECT_SOURCE_DIR}/depends)
 
 
-add_definitions(-DBARRETENBERG_SRS_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/srs_db/transcript.dat\")
+add_definitions(-DBARRETENBERG_SRS_PATH=\"../srs_db/transcript.dat\")
 add_subdirectory(src)
 
 option(BARRETENBERG_TESTING "Build tests" ON)
