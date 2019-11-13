@@ -278,30 +278,41 @@ const auto init = []() {
 
 uint64_t rdtsc()
 {
+#ifdef __aarch64__
+    uint64_t pmccntr;
+    __asm__ __volatile__("mrs %0, pmccntr_el0"
+                         : "=r"(pmccntr));
+    return pmccntr;
+#elif __x86_64__
     unsigned int lo, hi;
     __asm__ __volatile__("rdtsc"
                          : "=a"(lo), "=d"(hi));
     return ((uint64_t)hi << 32) | lo;
+#else
+    return 0;
+#endif
 }
 
 constexpr size_t NUM_SQUARINGS = 10000000;
-inline uint64_t fq_sqr_asm(fq::field_t &a, fq::field_t &r) noexcept
+inline fq::field_t fq_sqr_asm(fq::field_t &a, fq::field_t &r) noexcept
 {
     for (size_t i = 0; i < NUM_SQUARINGS; ++i)
     {
         fq::__sqr(a, r);
     }
-    return 1;
+    DoNotOptimize(r);
+    return r;
 }
 
 constexpr size_t NUM_MULTIPLICATIONS = 10000000;
-inline uint64_t fq_mul_asm(fq::field_t &a, fq::field_t &r) noexcept
+inline fq::field_t fq_mul_asm(fq::field_t &a, fq::field_t &r) noexcept
 {
     for (size_t i = 0; i < NUM_MULTIPLICATIONS; ++i)
     {
         fq::__mul(a, r, r);
     }
-    return 1;
+    DoNotOptimize(r);
+    return r;
 }
 
 void construct_instances_bench(State &state) noexcept

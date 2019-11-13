@@ -38,6 +38,7 @@ if(APPLE)
         set(OpenMP_CXX_LIB_NAMES_WORK "libomp")
         set(OpenMP_libomp_LIBRARY "/usr/local/lib/libomp.a")
     endif()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new")
 endif()
 
 option(MULTITHREADING default ON)
@@ -68,8 +69,7 @@ if(DISABLE_SHENANIGANS)
     add_definitions(-DDISABLE_SHENANIGANS=1)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native -O3 -m64 -Wno-format -Wno-conversion")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -fopenmp -save-temps")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wno-format -Wno-conversion")
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)
