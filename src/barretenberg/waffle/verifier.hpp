@@ -1,12 +1,12 @@
 #ifndef VERIFIER
 #define VERIFIER
 
-#include "./waffle.hpp"
 #include "./challenge.hpp"
+#include "./waffle.hpp"
+#include "linearizer.hpp"
 #include <barretenberg/fields/fq12.hpp>
 #include <barretenberg/groups/pairing.hpp>
 #include <barretenberg/polynomials/polynomials.hpp>
-#include "linearizer.hpp"
 
 #include "../types.hpp"
 namespace waffle
@@ -15,7 +15,9 @@ using namespace barretenberg;
 namespace verifier
 {
 
-inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit_instance &instance, const g2::affine_element &SRS_T2)
+inline bool verify_proof(const waffle::plonk_proof& proof,
+                         const waffle::circuit_instance& instance,
+                         const g2::affine_element& SRS_T2)
 {
     polynomials::evaluation_domain domain = polynomials::evaluation_domain(instance.n, true);
     // TODO: validate everything is in the correct field/group
@@ -130,7 +132,7 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
     fr::__mul(z_omega_scalar, u, z_omega_scalar);
 
     // TODO: make a wrapper around g1 ops so...this guff isn't needed each time we want to do a scalar mul
-    fr::field_t *scalar_exponents = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * 17);
+    fr::field_t* scalar_exponents = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * 17);
     fr::copy(linear_terms.q_m, scalar_exponents[0]);
     fr::copy(linear_terms.q_l, scalar_exponents[1]);
     fr::copy(linear_terms.q_r, scalar_exponents[2]);
@@ -149,7 +151,7 @@ inline bool verify_proof(const waffle::plonk_proof &proof, const waffle::circuit
     fr::copy(z_pow_n, scalar_exponents[15]);
     fr::copy(z_pow_2n, scalar_exponents[16]);
 
-    g1::affine_element *lhs_ge = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * 34);
+    g1::affine_element* lhs_ge = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 34);
 
     g1::copy_affine(instance.Q_M, lhs_ge[0]);
     g1::copy_affine(instance.Q_L, lhs_ge[1]);

@@ -1,13 +1,13 @@
 #pragma once
 
+#include "inttypes.h"
 #include "stdint.h"
 #include "stdlib.h"
-#include "inttypes.h"
 
-#include "../types.hpp"
-#include "../fields/fr.hpp"
-#include "../fields/fq.hpp"
 #include "../assert.hpp"
+#include "../fields/fq.hpp"
+#include "../fields/fr.hpp"
+#include "../types.hpp"
 #include "./wnaf.hpp"
 
 #ifdef DISABLE_SHENANIGANS
@@ -20,20 +20,40 @@ namespace barretenberg
 {
 namespace g1
 {
-inline void print(affine_element &p)
+inline void print(affine_element& p)
 {
-    printf("p.x: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
-    printf("p.y: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
+    printf("p.x: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
+           p.x.data[0],
+           p.x.data[1],
+           p.x.data[2],
+           p.x.data[3]);
+    printf("p.y: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
+           p.y.data[0],
+           p.y.data[1],
+           p.y.data[2],
+           p.y.data[3]);
 }
 
-inline void print(element &p)
+inline void print(element& p)
 {
-    printf("p.x: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
-    printf("p.y: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
-    printf("p.z: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", p.z.data[0], p.z.data[1], p.z.data[2], p.z.data[3]);
+    printf("p.x: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
+           p.x.data[0],
+           p.x.data[1],
+           p.x.data[2],
+           p.x.data[3]);
+    printf("p.y: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
+           p.y.data[0],
+           p.y.data[1],
+           p.y.data[2],
+           p.y.data[3]);
+    printf("p.z: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
+           p.z.data[0],
+           p.z.data[1],
+           p.z.data[2],
+           p.z.data[3]);
 }
 
-inline void random_coordinates_on_curve(fq::field_t &x, fq::field_t &y)
+inline void random_coordinates_on_curve(fq::field_t& x, fq::field_t& y)
 {
     bool found_one = false;
     fq::field_t yy;
@@ -99,27 +119,27 @@ inline affine_element affine_one()
     return output;
 }
 
-inline bool is_point_at_infinity(const affine_element &p)
+inline bool is_point_at_infinity(const affine_element& p)
 {
     return (bool)((p.y.data[3] >> 63) & 1);
 }
 
-inline bool is_point_at_infinity(const element &p)
+inline bool is_point_at_infinity(const element& p)
 {
     return (bool)((p.y.data[3] >> 63) & 1);
 }
 
-inline void set_infinity(element &p)
+inline void set_infinity(element& p)
 {
     p.y.data[3] = 0 | (1ULL << 63);
 }
 
-inline void set_infinity(affine_element &p)
+inline void set_infinity(affine_element& p)
 {
     p.y.data[3] = 0 | (1ULL << 63);
 }
 
-inline void dbl(element &p1, element &p2)
+inline void dbl(element& p1, element& p2)
 {
     if (p1.y.data[3] >> 63 == 1)
     {
@@ -185,7 +205,7 @@ inline void dbl(element &p1, element &p2)
     fq::reduce_once(p2.y, p2.y);
 }
 
-inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
+inline void mixed_add_inner(element& p1, const affine_element& p2, element& p3)
 {
     fq::field_t T0;
     fq::field_t T1;
@@ -271,7 +291,7 @@ inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
     fq::reduce_once(p3.y, p3.y);
 }
 
-inline void mixed_add(element &p1, const affine_element &p2, element &p3)
+inline void mixed_add(element& p1, const affine_element& p2, element& p3)
 {
     // TODO: quantitavely check if __builtin_expect helps here
     // if (__builtin_expect(((p1.y.data[3] >> 63)), 0))
@@ -287,7 +307,7 @@ inline void mixed_add(element &p1, const affine_element &p2, element &p3)
     mixed_add_inner(p1, p2, p3);
 }
 
-inline void mixed_add_expect_empty(element &p1, affine_element &p2, element &p3)
+inline void mixed_add_expect_empty(element& p1, affine_element& p2, element& p3)
 {
     if (__builtin_expect((long)((p1.y.data[3] >> 63UL)), true))
     {
@@ -299,7 +319,7 @@ inline void mixed_add_expect_empty(element &p1, affine_element &p2, element &p3)
     mixed_add_inner(p1, p2, p3);
 }
 
-inline void add(element &p1, element &p2, element &p3)
+inline void add(element& p1, element& p2, element& p3)
 {
     bool p1_zero = (p1.y.data[3] >> 63) == 1;
     bool p2_zero = (p2.y.data[3] >> 63) == 1; // ((p2.z.data[0] | p2.z.data[1] | p2.z.data[2] | p2.z.data[3]) == 0);
@@ -424,7 +444,7 @@ inline void add(element &p1, element &p2, element &p3)
     fq::__mul(p3.z, H, p3.z);
 }
 
-inline element normalize(element &src)
+inline element normalize(element& src)
 {
     element dest;
     fq::field_t z_inv;
@@ -441,12 +461,12 @@ inline element normalize(element &src)
 }
 
 /**
-     * Normalize a batch of affine points via Montgomery's trick, so that their z-coordinate's are equal to unity
-     * Requires: 6 mul, 1 sqr per point, plus 1 inverse
-     **/
-inline void batch_normalize(element *points, size_t num_points)
+ * Normalize a batch of affine points via Montgomery's trick, so that their z-coordinate's are equal to unity
+ * Requires: 6 mul, 1 sqr per point, plus 1 inverse
+ **/
+inline void batch_normalize(element* points, size_t num_points)
 {
-    fq::field_t *temporaries = (fq::field_t *)(aligned_alloc(32, sizeof(fq::field_t) * num_points));
+    fq::field_t* temporaries = (fq::field_t*)(aligned_alloc(32, sizeof(fq::field_t) * num_points));
     fq::field_t accumulator = fq::one();
     fq::field_t z_inv;
     fq::field_t zz_inv;
@@ -464,28 +484,27 @@ inline void batch_normalize(element *points, size_t num_points)
     fq::__invert(accumulator, accumulator);
 
     /**
-        * We now proceed to iterate back down the array of points.
-        * At each iteration we update the accumulator to contain the z-coordinate of the currently worked-upon z-coordinate.
-        * We can then multiply this accumulator with `temporaries`, to get a scalar that is equal to
-        * the inverse of the z-coordinate of the point at the next iteration cycle
-        * e.g. Imagine we have 4 points, such that:
-        *
-        * accumulator = 1 / z.data[0]*z.data[1]*z.data[2]*z.data[3]
-        * temporaries[3] = z.data[0]*z.data[1]*z.data[2]
-        * temporaries[2] = z.data[0]*z.data[1]
-        * temporaries[1] = z.data[0]
-        * temporaries[0] = 1
-        *
-        * At the first iteration, accumulator * temporaries[3] = z.data[0]*z.data[1]*z.data[2] / z.data[0]*z.data[1]*z.data[2]*z.data[3]  = (1 / z.data[3])
-        * We then update accumulator, such that:
-        *
-        * accumulator = accumulator * z.data[3] = 1 / z.data[0]*z.data[1]*z.data[2]
-        *
-        * At the second iteration, accumulator * temporaries[2] = z.data[0]*z.data[1] / z.data[0]*z.data[1]*z.data[2] = (1 / z.data[2])
-        * And so on, until we have computed every z-inverse!
-        *
-        * We can then convert out of Jacobian form (x = X / Z^2, y = Y / Z^3) with 4 muls and 1 square.
-        **/
+     * We now proceed to iterate back down the array of points.
+     * At each iteration we update the accumulator to contain the z-coordinate of the currently worked-upon
+     *z-coordinate. We can then multiply this accumulator with `temporaries`, to get a scalar that is equal to the
+     *inverse of the z-coordinate of the point at the next iteration cycle e.g. Imagine we have 4 points, such that:
+     *
+     * accumulator = 1 / z.data[0]*z.data[1]*z.data[2]*z.data[3]
+     * temporaries[3] = z.data[0]*z.data[1]*z.data[2]
+     * temporaries[2] = z.data[0]*z.data[1]
+     * temporaries[1] = z.data[0]
+     * temporaries[0] = 1
+     *
+     * At the first iteration, accumulator * temporaries[3] = z.data[0]*z.data[1]*z.data[2] /
+     *z.data[0]*z.data[1]*z.data[2]*z.data[3]  = (1 / z.data[3]) We then update accumulator, such that:
+     *
+     * accumulator = accumulator * z.data[3] = 1 / z.data[0]*z.data[1]*z.data[2]
+     *
+     * At the second iteration, accumulator * temporaries[2] = z.data[0]*z.data[1] / z.data[0]*z.data[1]*z.data[2] = (1
+     */ z.data[2]) And so on, until we have computed every z-inverse!
+     *
+     * We can then convert out of Jacobian form (x = X / Z^2, y = Y / Z^3) with 4 muls and 1 square.
+     **/
     for (size_t i = num_points - 1; i < num_points; --i)
     {
         fq::__mul(accumulator, temporaries[i], z_inv);
@@ -500,7 +519,7 @@ inline void batch_normalize(element *points, size_t num_points)
     aligned_free(temporaries);
 }
 
-inline bool on_curve(affine_element &pt)
+inline bool on_curve(affine_element& pt)
 {
     if (is_point_at_infinity(pt))
     {
@@ -519,7 +538,7 @@ inline bool on_curve(affine_element &pt)
     return fq::eq(xxx, yy);
 }
 
-inline bool on_curve(element &pt)
+inline bool on_curve(element& pt)
 {
     if (is_point_at_infinity(pt))
     {
@@ -542,7 +561,7 @@ inline bool on_curve(element &pt)
     return fq::eq(xxx, yy);
 }
 
-inline void neg(const element &a, element &r)
+inline void neg(const element& a, element& r)
 {
     fq::copy(a.x, r.x);
     fq::copy(a.y, r.y);
@@ -550,33 +569,33 @@ inline void neg(const element &a, element &r)
     fq::neg(r.y, r.y);
 }
 
-inline void neg(const affine_element &a, affine_element &r)
+inline void neg(const affine_element& a, affine_element& r)
 {
     fq::copy(a.x, r.x);
     fq::neg(a.y, r.y);
 }
 
-inline void affine_to_jacobian(const affine_element &a, element &r)
+inline void affine_to_jacobian(const affine_element& a, element& r)
 {
     fq::copy(a.x, r.x);
     fq::copy(a.y, r.y);
     r.z = fq::one();
 }
 
-inline void jacobian_to_affine(element &a, affine_element &r)
+inline void jacobian_to_affine(element& a, affine_element& r)
 {
     a = normalize(a);
     fq::copy(a.x, r.x);
     fq::copy(a.y, r.y);
 }
 
-inline void copy_affine(const affine_element &a, affine_element &r)
+inline void copy_affine(const affine_element& a, affine_element& r)
 {
     fq::copy(a.x, r.x);
     fq::copy(a.y, r.y);
 }
 
-inline element group_exponentiation(const element &a, const fr::field_t &scalar)
+inline element group_exponentiation(const element& a, const fr::field_t& scalar)
 {
     fr::field_t converted_scalar;
 
@@ -591,13 +610,13 @@ inline element group_exponentiation(const element &a, const fr::field_t &scalar)
         set_infinity(result);
         return result;
     }
-    element &point = const_cast<element &>(a);
+    element& point = const_cast<element&>(a);
 
     constexpr size_t lookup_size = 8;
     constexpr size_t num_rounds = 32;
     constexpr size_t num_wnaf_bits = 4;
-    element *precomp_table = (element *)(aligned_alloc(64, sizeof(element) * lookup_size));
-    affine_element *lookup_table = (affine_element *)(aligned_alloc(64, sizeof(element) * lookup_size));
+    element* precomp_table = (element*)(aligned_alloc(64, sizeof(element) * lookup_size));
+    affine_element* lookup_table = (affine_element*)(aligned_alloc(64, sizeof(element) * lookup_size));
 
     element d2;
     copy(&point, &precomp_table[0]); // 1
@@ -615,7 +634,7 @@ inline element group_exponentiation(const element &a, const fr::field_t &scalar)
 
     uint32_t wnaf_table[num_rounds * 2];
     fr::field_t endo_scalar;
-    fr::split_into_endomorphism_scalars(converted_scalar, endo_scalar, *(fr::field_t *)&endo_scalar.data[2]);
+    fr::split_into_endomorphism_scalars(converted_scalar, endo_scalar, *(fr::field_t*)&endo_scalar.data[2]);
     bool skew = false;
     bool endo_skew = false;
     wnaf::fixed_wnaf(&endo_scalar.data[0], &wnaf_table[0], skew, 2, num_wnaf_bits);
@@ -680,14 +699,14 @@ inline element group_exponentiation(const element &a, const fr::field_t &scalar)
     return work_element;
 }
 
-inline element group_exponentiation_inner(const affine_element &a, const fr::field_t &scalar)
+inline element group_exponentiation_inner(const affine_element& a, const fr::field_t& scalar)
 {
     element point;
     affine_to_jacobian(a, point);
     return group_exponentiation(point, scalar);
 }
 
-inline affine_element group_exponentiation(const affine_element &a, const fr::field_t &scalar)
+inline affine_element group_exponentiation(const affine_element& a, const fr::field_t& scalar)
 {
     element output = group_exponentiation_inner(a, scalar);
     affine_element result;
@@ -706,7 +725,7 @@ inline affine_element group_exponentiation(const affine_element &a, const fr::fi
     return result;
 }
 
-inline bool eq(const element &a, const element &b)
+inline bool eq(const element& a, const element& b)
 {
     bool both_infinity = is_point_at_infinity(a) && is_point_at_infinity(b);
 
@@ -733,7 +752,7 @@ inline bool eq(const element &a, const element &b)
     return both_infinity || ((fq::eq(T0, T2) && fq::eq(T1, T3)));
 }
 
-inline bool eq(const affine_element &a, const affine_element &b)
+inline bool eq(const affine_element& a, const affine_element& b)
 {
     element a_ele;
     element b_ele;

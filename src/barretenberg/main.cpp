@@ -78,7 +78,8 @@ int main()
 // // void pippenger_multicore() noexcept
 // // {
 // //     fr::field_t *scalars = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * NUM_POINTS * NUM_THREADS);
-// //     g1::affine_element *points = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * NUM_POINTS * NUM_THREADS * 2);
+// //     g1::affine_element *points = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * NUM_POINTS *
+// NUM_THREADS * 2);
 
 // //     pthread_t thread[NUM_THREADS];
 // //     printf("Before Thread\n");

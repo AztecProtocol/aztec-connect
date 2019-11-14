@@ -3,9 +3,9 @@
 #include "./linearizer.hpp"
 #include "./permutation.hpp"
 
-#include "string.h"
 #include "stddef.h"
 #include "stdint.h"
+#include "string.h"
 
 #include "../groups/g1.hpp"
 #include "../groups/scalar_multiplication.hpp"
@@ -15,9 +15,13 @@ namespace waffle
 {
 using namespace barretenberg;
 
-circuit_state::circuit_state(size_t circuit_size) : small_domain(circuit_size), mid_domain(2 * circuit_size), large_domain(4 * circuit_size) {}
+circuit_state::circuit_state(size_t circuit_size)
+    : small_domain(circuit_size), mid_domain(2 * circuit_size), large_domain(4 * circuit_size)
+{
+}
 
-circuit_state::circuit_state(const circuit_state &other) : small_domain(other.n), mid_domain(2 * other.n), large_domain(4 * other.n)
+circuit_state::circuit_state(const circuit_state& other)
+    : small_domain(other.n), mid_domain(2 * other.n), large_domain(4 * other.n)
 {
     w_l = other.w_l;
     w_r = other.w_r;
@@ -51,7 +55,7 @@ circuit_state::circuit_state(const circuit_state &other) : small_domain(other.n)
     n = other.n;
 }
 
-void compute_wire_coefficients(circuit_state &state, fft_pointers &)
+void compute_wire_coefficients(circuit_state& state, fft_pointers&)
 {
     const size_t n = state.n;
 
@@ -64,7 +68,7 @@ void compute_wire_coefficients(circuit_state &state, fft_pointers &)
     polynomials::ifft(state.w_o, state.small_domain);
 }
 
-void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
+void compute_z_coefficients(circuit_state& state, fft_pointers& ffts)
 {
     // compute Z1, Z2
 
@@ -73,10 +77,11 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
     fr::__add(output_shift, fr::one(), output_shift);
     fr::__add(output_shift, fr::one(), output_shift);
 
-    // in order to compute Z1(X), Z2(X), we need to compute the accumulated products of the coefficients of 6 polynomials.
-    // To parallelize as much as possible, we first compute the terms we need to accumulate, and store them in `accumulators`
-    // (we re-use memory reserved for the fast fourier transforms, at this stage of the proof, this memory should be free)
-    fr::field_t *accumulators[6] = {
+    // in order to compute Z1(X), Z2(X), we need to compute the accumulated products of the coefficients of 6
+    // polynomials. To parallelize as much as possible, we first compute the terms we need to accumulate, and store them
+    // in `accumulators` (we re-use memory reserved for the fast fourier transforms, at this stage of the proof, this
+    // memory should be free)
+    fr::field_t* accumulators[6] = {
         &ffts.w_l_poly[0],
         &ffts.w_l_poly[state.small_domain.size + 1],
         &ffts.w_l_poly[state.small_domain.size * 2 + 2],
@@ -150,7 +155,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
     fr::__mul(state.z_2[i], accumulators[5][i], state.z_2[i]);
     ITERATE_OVER_DOMAIN_END;
 
-    fr::field_t *scratch = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * state.small_domain.size);
+    fr::field_t* scratch = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * state.small_domain.size);
     fr::batch_invert(state.z_2, state.small_domain.size, scratch);
 
     ITERATE_OVER_DOMAIN_START(state.small_domain);
@@ -162,7 +167,7 @@ void compute_z_coefficients(circuit_state &state, fft_pointers &ffts)
     polynomials::ifft(state.z_1, state.small_domain);
 }
 
-void compute_wire_commitments(circuit_state &state, plonk_proof &proof, srs::plonk_srs &srs)
+void compute_wire_commitments(circuit_state& state, plonk_proof& proof, srs::plonk_srs& srs)
 {
     size_t n = state.n;
 
@@ -192,7 +197,7 @@ void compute_wire_commitments(circuit_state &state, plonk_proof &proof, srs::plo
     state.challenges.beta = compute_beta(proof, state.challenges.gamma);
 }
 
-void compute_z_commitments(circuit_state &state, plonk_proof &proof, srs::plonk_srs &srs)
+void compute_z_commitments(circuit_state& state, plonk_proof& proof, srs::plonk_srs& srs)
 {
     size_t n = state.n;
     scalar_multiplication::multiplication_state mul_state;
@@ -214,7 +219,10 @@ void compute_z_commitments(circuit_state &state, plonk_proof &proof, srs::plonk_
     fr::__mul(state.alpha_squared, state.challenges.alpha, state.alpha_cubed);
 }
 
-void compute_quotient_commitment(circuit_state &state, fr::field_t *coeffs, plonk_proof &proof, const srs::plonk_srs &srs)
+void compute_quotient_commitment(circuit_state& state,
+                                 fr::field_t* coeffs,
+                                 plonk_proof& proof,
+                                 const srs::plonk_srs& srs)
 {
     size_t n = state.n;
     scalar_multiplication::multiplication_state mul_state[3];
@@ -240,7 +248,7 @@ void compute_quotient_commitment(circuit_state &state, fr::field_t *coeffs, plon
     state.challenges.z = compute_evaluation_challenge(proof);
 }
 
-void compute_permutation_grand_product_coefficients(circuit_state &state, fft_pointers &ffts)
+void compute_permutation_grand_product_coefficients(circuit_state& state, fft_pointers& ffts)
 {
     // The final steps are:
     // 1: Compute the permutation grand product
@@ -275,7 +283,7 @@ void compute_permutation_grand_product_coefficients(circuit_state &state, fft_po
     fr::copy(ffts.z_1_poly[1], ffts.z_1_poly[state.large_domain.size + 1]);
     fr::copy(ffts.z_1_poly[2], ffts.z_1_poly[state.large_domain.size + 2]);
     fr::copy(ffts.z_1_poly[3], ffts.z_1_poly[state.large_domain.size + 3]);
-    fr::field_t *shifted_z_1_poly = &ffts.z_1_poly[4];
+    fr::field_t* shifted_z_1_poly = &ffts.z_1_poly[4];
 
     ITERATE_OVER_DOMAIN_START(state.large_domain);
     fr::__mul(ffts.sigma_1_poly[i], ffts.sigma_2_poly[i], ffts.sigma_1_poly[i]);
@@ -292,7 +300,7 @@ void compute_permutation_grand_product_coefficients(circuit_state &state, fft_po
     polynomials::fft_with_coset(ffts.w_o_poly, state.large_domain);
 }
 
-void compute_identity_grand_product_coefficients(circuit_state &state, fft_pointers &ffts)
+void compute_identity_grand_product_coefficients(circuit_state& state, fft_pointers& ffts)
 {
     fr::field_t right_shift = fr::multiplicative_generator();
     fr::field_t output_shift = fr::multiplicative_generator();
@@ -341,13 +349,14 @@ void compute_identity_grand_product_coefficients(circuit_state &state, fft_point
     polynomials::compress_fft(ffts.w_o_poly, ffts.w_o_poly_small, state.large_domain.size, 2);
     polynomials::compress_fft(ffts.z_1_poly, ffts.z_1_poly_small, state.large_domain.size + 4, 2);
 
-    polynomials::compute_lagrange_polynomial_fft(ffts.l_1_poly, state.small_domain, state.mid_domain, ffts.l_1_poly + state.mid_domain.size);
+    polynomials::compute_lagrange_polynomial_fft(
+        ffts.l_1_poly, state.small_domain, state.mid_domain, ffts.l_1_poly + state.mid_domain.size);
     fr::copy(ffts.l_1_poly[0], ffts.l_1_poly[state.mid_domain.size]);
     fr::copy(ffts.l_1_poly[1], ffts.l_1_poly[state.mid_domain.size + 1]);
     fr::copy(ffts.l_1_poly[2], ffts.l_1_poly[state.mid_domain.size + 2]);
     fr::copy(ffts.l_1_poly[3], ffts.l_1_poly[state.mid_domain.size + 3]);
-    fr::field_t *l_n_minus_1_poly = &ffts.l_1_poly[4];
-    fr::field_t *shifted_z_1_poly = &ffts.z_1_poly_small[2];
+    fr::field_t* l_n_minus_1_poly = &ffts.l_1_poly[4];
+    fr::field_t* shifted_z_1_poly = &ffts.z_1_poly_small[2];
 
     // accumulate degree-2n terms into gate_poly_mid
     fr::field_t alpha_five;
@@ -370,7 +379,7 @@ void compute_identity_grand_product_coefficients(circuit_state &state, fft_point
     ITERATE_OVER_DOMAIN_END;
 }
 
-void compute_arithmetisation_coefficients(circuit_state &state, fft_pointers &ffts)
+void compute_arithmetisation_coefficients(circuit_state& state, fft_pointers& ffts)
 {
     polynomials::ifft(state.q_l, state.small_domain);
     polynomials::ifft(state.q_r, state.small_domain);
@@ -403,7 +412,10 @@ void compute_arithmetisation_coefficients(circuit_state &state, fft_pointers &ff
     ITERATE_OVER_DOMAIN_END;
 }
 
-void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk_proof &proof, srs::plonk_srs &reference_string)
+void compute_quotient_polynomial(circuit_state& state,
+                                 fft_pointers& ffts,
+                                 plonk_proof& proof,
+                                 srs::plonk_srs& reference_string)
 {
     size_t n = state.small_domain.size;
 
@@ -469,7 +481,7 @@ void compute_quotient_polynomial(circuit_state &state, fft_pointers &ffts, plonk
     polynomials::add(ffts.quotient_poly, ffts.gate_poly_mid, ffts.quotient_poly, state.mid_domain);
 }
 
-fr::field_t compute_linearisation_coefficients(circuit_state &state, fft_pointers &ffts, plonk_proof &proof)
+fr::field_t compute_linearisation_coefficients(circuit_state& state, fft_pointers& ffts, plonk_proof& proof)
 {
     // ok... now we need to evaluate polynomials. Jeepers
     fr::field_t beta_inv;
@@ -491,7 +503,8 @@ fr::field_t compute_linearisation_coefficients(circuit_state &state, fft_pointer
     fr::__mul(proof.sigma_1_eval, beta_inv, proof.sigma_1_eval);
     fr::__mul(proof.sigma_2_eval, beta_inv, proof.sigma_2_eval);
 
-    polynomials::lagrange_evaluations lagrange_evals = polynomials::get_lagrange_evaluations(state.challenges.z, state.small_domain);
+    polynomials::lagrange_evaluations lagrange_evals =
+        polynomials::get_lagrange_evaluations(state.challenges.z, state.small_domain);
     plonk_linear_terms linear_terms = compute_linear_terms(proof, state.challenges, lagrange_evals.l_1, state.n);
 
     ITERATE_OVER_DOMAIN_START(state.small_domain);
@@ -523,10 +536,10 @@ fr::field_t compute_linearisation_coefficients(circuit_state &state, fft_pointer
     return t_eval;
 }
 
-plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_string)
+plonk_proof construct_proof(circuit_state& state, srs::plonk_srs& reference_string)
 {
     convert_permutations_into_lagrange_base_form(state);
-    fr::field_t *scratch_space = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (30 * state.n + 8)));
+    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (30 * state.n + 8)));
     waffle::fft_pointers ffts;
     ffts.scratch_memory = scratch_space;
 
@@ -551,8 +564,8 @@ plonk_proof construct_proof(circuit_state &state, srs::plonk_srs &reference_stri
     // Next step: compute the two Kate polynomial commitments, and associated opening proofs
     // We have two evaluation points: z and z.omega
     // We need to create random linear combinations of each individual polynomial and combine them
-    fr::field_t *opening_poly = ffts.quotient_poly;
-    fr::field_t *shifted_opening_poly = ffts.w_l_poly;
+    fr::field_t* opening_poly = ffts.quotient_poly;
+    fr::field_t* shifted_opening_poly = ffts.w_l_poly;
 
     fr::field_t z_pow_n;
     fr::field_t z_pow_2_n;

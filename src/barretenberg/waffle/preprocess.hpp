@@ -1,8 +1,8 @@
 #ifndef PREPROCESS
 #define PREPROCESS
 
-#include "../polynomials/polynomials.hpp"
 #include "../groups/scalar_multiplication.hpp"
+#include "../polynomials/polynomials.hpp"
 #include "../types.hpp"
 
 #include "./permutation.hpp"
@@ -13,27 +13,26 @@ using namespace barretenberg;
 
 namespace waffle
 {
-inline circuit_instance preprocess_circuit(waffle::circuit_state &state, const srs::plonk_srs &srs)
+inline circuit_instance preprocess_circuit(waffle::circuit_state& state, const srs::plonk_srs& srs)
 {
     size_t n = state.n;
 
-    fr::field_t *scratch_space = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (8 * state.n)));
+    fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (8 * state.n)));
     fr::field_t* roots = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * state.small_domain.size);
 
-    fr::field_t *polys[8] = {
-        &scratch_space[0],
-        &scratch_space[n],
-        &scratch_space[2 * n],
-        &scratch_space[3 * n],
-        &scratch_space[4 * n],
-        &scratch_space[5 * n],
-        &scratch_space[6 * n],
-        &scratch_space[7 * n]};
+    fr::field_t* polys[8] = {&scratch_space[0],
+                             &scratch_space[n],
+                             &scratch_space[2 * n],
+                             &scratch_space[3 * n],
+                             &scratch_space[4 * n],
+                             &scratch_space[5 * n],
+                             &scratch_space[6 * n],
+                             &scratch_space[7 * n]};
 
     fr::copy(fr::one(), roots[0]);
     for (size_t i = 1; i < state.small_domain.size; ++i)
     {
-        fr::__mul(roots[i-1], state.small_domain.root, roots[i]);
+        fr::__mul(roots[i - 1], state.small_domain.root, roots[i]);
     }
 
     // copy polynomials so that we don't mutate inputs

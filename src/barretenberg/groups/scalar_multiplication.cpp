@@ -5,11 +5,11 @@
 #include <omp.h>
 #endif
 
+#include "../assert.hpp"
+#include "../fields/fr.hpp"
 #include "./scalar_multiplication.hpp"
 #include "g1.hpp"
 #include "wnaf.hpp"
-#include "../fields/fr.hpp"
-#include "../assert.hpp"
 
 namespace barretenberg
 {
@@ -77,14 +77,14 @@ size_t get_optimal_bucket_width(size_t num_points)
     return 1;
 }
 
-void compute_next_bucket_index(wnaf_runtime_state &state)
+void compute_next_bucket_index(wnaf_runtime_state& state)
 {
     uint32_t wnaf_entry = *state.wnaf_iterator;
     state.next_sign = (wnaf_entry >> 31) & 1;  //(uint64_t)(wnaf_entry >> state.bits_per_wnaf) & 1; // 0 - sign_bit;
     state.next_idx = wnaf_entry & 0x0fffffffU; // ((wnaf_entry ^ sign_mask) /*& state.mask*/) >> 1;
 }
 
-void generate_pippenger_point_table(g1::affine_element *points, g1::affine_element *table, size_t num_points)
+void generate_pippenger_point_table(g1::affine_element* points, g1::affine_element* table, size_t num_points)
 {
     // iterate backwards, so that `points` and `table` can point to the same memory location
     for (size_t i = num_points - 1; i < num_points; --i)
@@ -95,7 +95,7 @@ void generate_pippenger_point_table(g1::affine_element *points, g1::affine_eleme
     }
 }
 
-g1::element pippenger_low_memory(fr::field_t *scalars, g1::affine_element *points, size_t num_points)
+g1::element pippenger_low_memory(fr::field_t* scalars, g1::affine_element* points, size_t num_points)
 {
     for (size_t i = 0; i < num_points; ++i)
     {
@@ -110,20 +110,30 @@ g1::element pippenger_low_memory(fr::field_t *scalars, g1::affine_element *point
     wnaf_state.bits_per_wnaf = bits_per_bucket + 1;
 
     // allocate space for buckets
-    state.buckets = (g1::element *)aligned_alloc(32, sizeof(g1::element) * (state.num_buckets));
+    state.buckets = (g1::element*)aligned_alloc(32, sizeof(g1::element) * (state.num_buckets));
     for (size_t i = 0; i < state.num_buckets; ++i)
     {
         g1::set_infinity(state.buckets[i]);
     }
-    // allocate space for wnaf table. We need 1 extra entry because our pointer iterator will overflow by 1 in the main loop
-    wnaf_state.wnaf_table = (uint32_t *)aligned_alloc(32, sizeof(uint32_t) * (state.num_rounds) * state.num_points * 2 + 2);
-    wnaf_state.skew_table = (bool *)aligned_alloc(32, sizeof(bool) * state.num_points * 2 + 2);
+    // allocate space for wnaf table. We need 1 extra entry because our pointer iterator will overflow by 1 in the main
+    // loop
+    wnaf_state.wnaf_table =
+        (uint32_t*)aligned_alloc(32, sizeof(uint32_t) * (state.num_rounds) * state.num_points * 2 + 2);
+    wnaf_state.skew_table = (bool*)aligned_alloc(32, sizeof(bool) * state.num_points * 2 + 2);
 
     for (size_t i = 0; i < num_points; ++i)
     {
-        fr::split_into_endomorphism_scalars(scalars[i], scalars[i], *(fr::field_t *)&scalars[i].data[2]);
-        wnaf::fixed_wnaf(&scalars[i].data[0], &wnaf_state.wnaf_table[2 * i], wnaf_state.skew_table[2 * i], state.num_points * 2, bits_per_bucket + 1);
-        wnaf::fixed_wnaf(&scalars[i].data[2], &wnaf_state.wnaf_table[2 * i + 1], wnaf_state.skew_table[2 * i + 1], state.num_points * 2, bits_per_bucket + 1);
+        fr::split_into_endomorphism_scalars(scalars[i], scalars[i], *(fr::field_t*)&scalars[i].data[2]);
+        wnaf::fixed_wnaf(&scalars[i].data[0],
+                         &wnaf_state.wnaf_table[2 * i],
+                         wnaf_state.skew_table[2 * i],
+                         state.num_points * 2,
+                         bits_per_bucket + 1);
+        wnaf::fixed_wnaf(&scalars[i].data[2],
+                         &wnaf_state.wnaf_table[2 * i + 1],
+                         wnaf_state.skew_table[2 * i + 1],
+                         state.num_points * 2,
+                         bits_per_bucket + 1);
     }
     g1::set_infinity(state.accumulator);
 
@@ -163,7 +173,8 @@ g1::element pippenger_low_memory(fr::field_t *scalars, g1::affine_element *point
             __builtin_prefetch(++wnaf_state.wnaf_iterator);
             g1::conditional_negate_affine(&points[j], &state.addition_temporary, wnaf_state.current_sign);
             __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
-            g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
+            g1::mixed_add(
+                state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
 
             wnaf_state.current_idx = wnaf_state.next_idx;
             wnaf_state.current_sign = wnaf_state.next_sign;
@@ -174,7 +185,8 @@ g1::element pippenger_low_memory(fr::field_t *scalars, g1::affine_element *point
             fq::__mul_beta(state.addition_temporary.x, state.addition_temporary.x);
             fq::neg(state.addition_temporary.y, state.addition_temporary.y);
             __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
-            g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
+            g1::mixed_add(
+                state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
         }
 
         if (i > 0)
@@ -206,7 +218,10 @@ g1::element pippenger_low_memory(fr::field_t *scalars, g1::affine_element *point
     return state.accumulator;
 }
 
-g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points, size_t num_initial_points, fr::field_t *endo_scalars)
+g1::element pippenger_internal(fr::field_t* scalars,
+                               g1::affine_element* points,
+                               size_t num_initial_points,
+                               fr::field_t* endo_scalars)
 {
     size_t bits_per_bucket = get_optimal_bucket_width(num_initial_points);
     multiplication_runtime_state state;
@@ -217,20 +232,29 @@ g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points,
     wnaf_state.bits_per_wnaf = bits_per_bucket + 1;
 
     // allocate space for buckets
-    state.buckets = (g1::element *)aligned_alloc(32, sizeof(g1::element) * (state.num_buckets));
+    state.buckets = (g1::element*)aligned_alloc(32, sizeof(g1::element) * (state.num_buckets));
     for (size_t i = 0; i < state.num_buckets; ++i)
     {
         g1::set_infinity(state.buckets[i]);
     }
-    // allocate space for wnaf table. We need 1 extra entry because our pointer iterator will overflow by 1 in the main loop
-    wnaf_state.wnaf_table = (uint32_t *)aligned_alloc(32, sizeof(uint32_t) * (state.num_rounds) * state.num_points + 1);
-    wnaf_state.skew_table = (bool *)aligned_alloc(32, sizeof(bool) * state.num_points + 1);
+    // allocate space for wnaf table. We need 1 extra entry because our pointer iterator will overflow by 1 in the main
+    // loop
+    wnaf_state.wnaf_table = (uint32_t*)aligned_alloc(32, sizeof(uint32_t) * (state.num_rounds) * state.num_points + 1);
+    wnaf_state.skew_table = (bool*)aligned_alloc(32, sizeof(bool) * state.num_points + 1);
 
     for (size_t i = 0; i < num_initial_points; ++i)
     {
-        fr::split_into_endomorphism_scalars(scalars[i], endo_scalars[i], *(fr::field_t *)&endo_scalars[i].data[2]);
-        wnaf::fixed_wnaf(&endo_scalars[i].data[0], &wnaf_state.wnaf_table[2 * i], wnaf_state.skew_table[2 * i], state.num_points, bits_per_bucket + 1);
-        wnaf::fixed_wnaf(&endo_scalars[i].data[2], &wnaf_state.wnaf_table[2 * i + 1], wnaf_state.skew_table[2 * i + 1], state.num_points, bits_per_bucket + 1);
+        fr::split_into_endomorphism_scalars(scalars[i], endo_scalars[i], *(fr::field_t*)&endo_scalars[i].data[2]);
+        wnaf::fixed_wnaf(&endo_scalars[i].data[0],
+                         &wnaf_state.wnaf_table[2 * i],
+                         wnaf_state.skew_table[2 * i],
+                         state.num_points,
+                         bits_per_bucket + 1);
+        wnaf::fixed_wnaf(&endo_scalars[i].data[2],
+                         &wnaf_state.wnaf_table[2 * i + 1],
+                         wnaf_state.skew_table[2 * i + 1],
+                         state.num_points,
+                         bits_per_bucket + 1);
     }
     g1::set_infinity(state.accumulator);
 
@@ -263,7 +287,8 @@ g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points,
             __builtin_prefetch(++wnaf_state.wnaf_iterator);
             g1::conditional_negate_affine(&points[j], &state.addition_temporary, wnaf_state.current_sign);
             __builtin_prefetch(&state.buckets[wnaf_state.next_idx].z);
-            g1::mixed_add(state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
+            g1::mixed_add(
+                state.buckets[wnaf_state.current_idx], state.addition_temporary, state.buckets[wnaf_state.current_idx]);
         }
 
         if (i > 0)
@@ -297,9 +322,9 @@ g1::element pippenger_internal(fr::field_t *scalars, g1::affine_element *points,
     return state.accumulator;
 }
 
-g1::element pippenger(fr::field_t *scalars, g1::affine_element *points, size_t num_initial_points)
+g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, size_t num_initial_points)
 {
-    fr::field_t *endo_scalars = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * (num_initial_points));
+    fr::field_t* endo_scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * (num_initial_points));
     for (size_t i = 0; i < num_initial_points; ++i)
     {
         fr::from_montgomery_form(scalars[i], endo_scalars[i]);
@@ -309,7 +334,7 @@ g1::element pippenger(fr::field_t *scalars, g1::affine_element *points, size_t n
     return res;
 }
 
-void batched_scalar_multiplications(multiplication_state *mul_state, size_t num_exponentiations)
+void batched_scalar_multiplications(multiplication_state* mul_state, size_t num_exponentiations)
 {
     // When performing a pippenger multi-exponentiation, the runtime is O(n / logn)
     // Therefore, when we are performing multiple multi-exponentiations, we need to
@@ -317,10 +342,12 @@ void batched_scalar_multiplications(multiplication_state *mul_state, size_t num_
 
     // We can't thread the actual pippenger algorithm - two threads writing to the same bucket requires slow mutexing.
 
-    // Splitting up each multi-exponentiation into small batches, and running pippenger on each batch on a thread, is also suboptimal.
-    // This is because we have decreased then number of points in each multi-exponentiation (i.e. optimal pippenger for small ranges requires more buckets)
+    // Splitting up each multi-exponentiation into small batches, and running pippenger on each batch on a thread, is
+    // also suboptimal. This is because we have decreased then number of points in each multi-exponentiation (i.e.
+    // optimal pippenger for small ranges requires more buckets)
 
-    // To maximize the number of points each thread is working on, we want to perform the all of the multiple multi-exponentiations in parallel
+    // To maximize the number of points each thread is working on, we want to perform the all of the multiple
+    // multi-exponentiations in parallel
 
     // E.g. consider 4 multi-exps, each with 2^{20} points, where we have 8 threads
     // If we thread each individual multi-exp, the degree of each thread will be (n / 8)
@@ -377,9 +404,11 @@ void batched_scalar_multiplications(multiplication_state *mul_state, size_t num_
         size_t range_index = 0;
         for (size_t j = 0; j < split; ++j)
         {
-            // we want the first threads to each map to a different multi-exponentiation, to deal with the 'remainder' term
+            // we want the first threads to each map to a different multi-exponentiation, to deal with the 'remainder'
+            // term
             threaded_inputs[j * num_exponentiations + i].scalars = &mul_state[i].scalars[range_index];
-            // each 'point' in the point table is actually 2 points (it's endomorphism counterpart), so double range_index
+            // each 'point' in the point table is actually 2 points (it's endomorphism counterpart), so double
+            // range_index
             threaded_inputs[j * num_exponentiations + i].points = &mul_state[i].points[range_index * 2];
             size_t remainder_term = (j == 0) ? single_remainder : 0;
             range_index += single_range + remainder_term;
@@ -393,7 +422,8 @@ void batched_scalar_multiplications(multiplication_state *mul_state, size_t num_
 #endif
     for (size_t i = 0; i < num_threads; ++i)
     {
-        threaded_inputs[i].output = pippenger(threaded_inputs[i].scalars, threaded_inputs[i].points, threaded_inputs[i].num_elements);
+        threaded_inputs[i].output =
+            pippenger(threaded_inputs[i].scalars, threaded_inputs[i].points, threaded_inputs[i].num_elements);
     }
 
     // If number of threads does not evenly divide number of exponentiations, we're going to have some spillover terms.

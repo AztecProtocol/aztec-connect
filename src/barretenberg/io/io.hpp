@@ -1,15 +1,15 @@
 #ifndef IO
 #define IO
 
+#include "memory.h"
 #include "stddef.h"
 #include "stdint.h"
-#include "memory.h"
 
+#include "../assert.hpp"
 #include "../fields/fq.hpp"
 #include "../groups/g1.hpp"
 #include "../groups/g2.hpp"
 #include "../types.hpp"
-#include "../assert.hpp"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -18,12 +18,12 @@
 #endif
 
 #include <algorithm>
-#include <stdexcept>
-#include <string>
-#include <vector>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
+#include <string>
 #include <sys/stat.h>
+#include <vector>
 
 /**
  *
@@ -51,10 +51,10 @@ constexpr size_t BLAKE2B_CHECKSUM_LENGTH = 64;
 inline bool isLittleEndian()
 {
     constexpr int num = 42;
-    return (*(char *)&num == 42);
+    return (*(char*)&num == 42);
 }
 
-inline size_t get_transcript_size(const Manifest &manifest)
+inline size_t get_transcript_size(const Manifest& manifest)
 {
     const size_t manifest_size = sizeof(Manifest);
     const size_t g1_buffer_size = sizeof(fq::field_t) * 2 * manifest.num_g1_points;
@@ -62,9 +62,9 @@ inline size_t get_transcript_size(const Manifest &manifest)
     return manifest_size + g1_buffer_size + g2_buffer_size + BLAKE2B_CHECKSUM_LENGTH;
 }
 
-inline void read_manifest(std::vector<char> &buffer, Manifest &manifest)
+inline void read_manifest(std::vector<char>& buffer, Manifest& manifest)
 {
-    auto manifest_buf = (Manifest *)&buffer[0];
+    auto manifest_buf = (Manifest*)&buffer[0];
     std::copy(manifest_buf, manifest_buf + 1, &manifest);
     manifest.transcript_number = ntohl(manifest.transcript_number);
     manifest.total_transcripts = ntohl(manifest.total_transcripts);
@@ -75,7 +75,7 @@ inline void read_manifest(std::vector<char> &buffer, Manifest &manifest)
     manifest.start_from = ntohl(manifest.start_from);
 }
 
-inline void read_g1_elements_from_buffer(g1::affine_element *elements, char *buffer, size_t buffer_size)
+inline void read_g1_elements_from_buffer(g1::affine_element* elements, char* buffer, size_t buffer_size)
 {
     constexpr size_t bytes_per_element = sizeof(g1::affine_element);
     size_t num_elements = buffer_size / bytes_per_element;
@@ -99,7 +99,7 @@ inline void read_g1_elements_from_buffer(g1::affine_element *elements, char *buf
     }
 }
 
-inline void read_g2_elements_from_buffer(g2::affine_element *elements, char *buffer, size_t buffer_size)
+inline void read_g2_elements_from_buffer(g2::affine_element* elements, char* buffer, size_t buffer_size)
 {
     constexpr size_t bytes_per_element = sizeof(g2::affine_element);
     size_t num_elements = buffer_size / bytes_per_element;
@@ -134,7 +134,7 @@ inline void read_g2_elements_from_buffer(g2::affine_element *elements, char *buf
     }
 }
 
-inline size_t get_file_size(std::string const &filename)
+inline size_t get_file_size(std::string const& filename)
 {
     struct stat st;
     if (stat(filename.c_str(), &st) != 0)
@@ -144,7 +144,7 @@ inline size_t get_file_size(std::string const &filename)
     return (size_t)st.st_size;
 }
 
-inline std::vector<char> read_file_into_buffer(std::string const &filename, size_t offset = 0, size_t size = 0)
+inline std::vector<char> read_file_into_buffer(std::string const& filename, size_t offset = 0, size_t size = 0)
 {
     size_t file_size = size ? size : get_file_size(filename);
     std::vector<char> buffer(file_size);
@@ -160,7 +160,7 @@ inline std::vector<char> read_file_into_buffer(std::string const &filename, size
     return buffer;
 }
 
-inline void read_transcript(srs::plonk_srs &srs, std::string const &path)
+inline void read_transcript(srs::plonk_srs& srs, std::string const& path)
 {
     Manifest manifest;
     auto buffer = read_file_into_buffer(path);
@@ -172,7 +172,7 @@ inline void read_transcript(srs::plonk_srs &srs, std::string const &path)
     const size_t g1_buffer_size = sizeof(fq::field_t) * 2 * (srs.degree - 1);
     const size_t g2_buffer_offset = sizeof(fq::field_t) * 2 * manifest.num_g1_points;
     const size_t g2_buffer_size = sizeof(fq2::fq2_t) * 2 * 2;
-    g2::affine_element *g2_buffer = (g2::affine_element *)(aligned_alloc(32, sizeof(g2::affine_element) * (2)));
+    g2::affine_element* g2_buffer = (g2::affine_element*)(aligned_alloc(32, sizeof(g2::affine_element) * (2)));
 
     // read g1 elements at second array position - first point is the basic generator
     g1::copy_affine(g1::affine_one(), srs.monomials[0]); // (copy generator into first point)

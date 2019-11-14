@@ -1,23 +1,23 @@
 #pragma once
 
-#include "stdint.h"
 #include "stddef.h"
+#include "stdint.h"
 #include "stdlib.h"
 
 // TODO: WARNING! getentropy is using rand()! Should probably be called dontgetentropy()!
 #ifdef _WIN32
 #define PRIx64 "llx"
 #define PRIu64 "llu"
-inline void *aligned_alloc(size_t alignment, size_t size)
+inline void* aligned_alloc(size_t alignment, size_t size)
 {
     return _aligned_malloc(size, alignment);
 }
 #define aligned_free _aligned_free
-inline int getentropy(void *buf, size_t size)
+inline int getentropy(void* buf, size_t size)
 {
     for (size_t i = 0; i < size; ++i)
     {
-        ((char *)buf)[i] = (char)rand();
+        ((char*)buf)[i] = (char)rand();
     }
     return 0;
 }
@@ -27,9 +27,9 @@ inline int getentropy(void *buf, size_t size)
 
 #ifdef __APPLE__
 #include <sys/random.h>
-inline void *aligned_alloc(size_t alignment, size_t size)
+inline void* aligned_alloc(size_t alignment, size_t size)
 {
-    void *t = 0;
+    void* t = 0;
     posix_memalign(&t, alignment, size);
     return t;
 }
@@ -153,7 +153,7 @@ namespace polynomials
 // TODO: use shared_ptr for lookup table
 class evaluation_domain
 {
-public:
+  public:
     fr::field_t root;
     fr::field_t root_inverse;
     fr::field_t generator;
@@ -167,15 +167,15 @@ public:
     size_t log2_thread_size;
     size_t log2_num_threads;
 
-    fr::field_t **round_roots;
-    fr::field_t *roots;
-    fr::field_t **inverse_round_roots;
-    fr::field_t *inverse_roots;
+    fr::field_t** round_roots;
+    fr::field_t* roots;
+    fr::field_t** inverse_round_roots;
+    fr::field_t* inverse_roots;
 
     evaluation_domain() : round_roots(nullptr), roots(nullptr), inverse_round_roots(nullptr), inverse_roots(nullptr){};
     evaluation_domain(size_t size, bool skip_roots = false);
-    evaluation_domain(const evaluation_domain &other);
-    //evaluation_domain(evaluation_domain &&other) = delete;
+    evaluation_domain(const evaluation_domain& other);
+    // evaluation_domain(evaluation_domain &&other) = delete;
     ~evaluation_domain();
 };
 
@@ -192,7 +192,7 @@ namespace srs
 {
 struct plonk_srs
 {
-    barretenberg::g1::affine_element *monomials;
+    barretenberg::g1::affine_element* monomials;
     barretenberg::g2::affine_element SRS_T2;
     size_t degree;
 };
@@ -234,37 +234,37 @@ struct circuit_state
 
     // pointers to witness vectors. Originally these are in Lagrange-base form,
     // during the course of proof construction, are replaced by their coefficient form
-    barretenberg::fr::field_t *w_l;
-    barretenberg::fr::field_t *w_r;
-    barretenberg::fr::field_t *w_o;
-    barretenberg::fr::field_t *z_1;
-    barretenberg::fr::field_t *z_2;
-    barretenberg::fr::field_t *t;
-    barretenberg::fr::field_t *linear_poly;
+    barretenberg::fr::field_t* w_l;
+    barretenberg::fr::field_t* w_r;
+    barretenberg::fr::field_t* w_o;
+    barretenberg::fr::field_t* z_1;
+    barretenberg::fr::field_t* z_2;
+    barretenberg::fr::field_t* t;
+    barretenberg::fr::field_t* linear_poly;
 
     // pointers to instance vectors. Originally in Lagrange-base form,
     // will be converted into coefficient form
-    barretenberg::fr::field_t *q_c;
-    barretenberg::fr::field_t *q_m;
-    barretenberg::fr::field_t *q_l;
-    barretenberg::fr::field_t *q_r;
-    barretenberg::fr::field_t *q_o;
-    barretenberg::fr::field_t *sigma_1;
-    barretenberg::fr::field_t *sigma_2;
-    barretenberg::fr::field_t *sigma_3;
+    barretenberg::fr::field_t* q_c;
+    barretenberg::fr::field_t* q_m;
+    barretenberg::fr::field_t* q_l;
+    barretenberg::fr::field_t* q_r;
+    barretenberg::fr::field_t* q_o;
+    barretenberg::fr::field_t* sigma_1;
+    barretenberg::fr::field_t* sigma_2;
+    barretenberg::fr::field_t* sigma_3;
 
-    barretenberg::fr::field_t *product_1;
-    barretenberg::fr::field_t *product_2;
-    barretenberg::fr::field_t *product_3;
-    barretenberg::fr::field_t *permutation_product;
+    barretenberg::fr::field_t* product_1;
+    barretenberg::fr::field_t* product_2;
+    barretenberg::fr::field_t* product_3;
+    barretenberg::fr::field_t* permutation_product;
 
-    barretenberg::fr::field_t *w_l_lagrange_base;
-    barretenberg::fr::field_t *w_r_lagrange_base;
-    barretenberg::fr::field_t *w_o_lagrange_base;
+    barretenberg::fr::field_t* w_l_lagrange_base;
+    barretenberg::fr::field_t* w_r_lagrange_base;
+    barretenberg::fr::field_t* w_o_lagrange_base;
 
-    uint32_t *sigma_1_mapping;
-    uint32_t *sigma_2_mapping;
-    uint32_t *sigma_3_mapping;
+    uint32_t* sigma_1_mapping;
+    uint32_t* sigma_2_mapping;
+    uint32_t* sigma_3_mapping;
     size_t n;
 
     barretenberg::polynomials::evaluation_domain small_domain;
@@ -272,17 +272,17 @@ struct circuit_state
     barretenberg::polynomials::evaluation_domain large_domain;
 
     circuit_state(size_t n);
-    circuit_state(const circuit_state &other);
+    circuit_state(const circuit_state& other);
 };
 
 struct witness_ffts
 {
-    barretenberg::fr::field_t *w_l_large;
-    barretenberg::fr::field_t *w_r_large;
-    barretenberg::fr::field_t *w_o_large;
-    barretenberg::fr::field_t *w_l_mid;
-    barretenberg::fr::field_t *w_r_mid;
-    barretenberg::fr::field_t *w_o_mid;
+    barretenberg::fr::field_t* w_l_large;
+    barretenberg::fr::field_t* w_r_large;
+    barretenberg::fr::field_t* w_o_large;
+    barretenberg::fr::field_t* w_l_mid;
+    barretenberg::fr::field_t* w_r_mid;
+    barretenberg::fr::field_t* w_o_mid;
 };
 
 struct plonk_proof

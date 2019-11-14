@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/waffle/preprocess.hpp>
 #include <barretenberg/waffle/permutation.hpp>
+#include <barretenberg/waffle/preprocess.hpp>
 
 #include <barretenberg/groups/g1.hpp>
 
@@ -16,7 +16,7 @@ srs::plonk_srs compute_dummy_srs(const size_t n, const fr::field_t& x, g1::affin
 
     for (size_t i = 1; i < n; ++i)
     {
-        monomials[i] = g1::group_exponentiation(monomials[i-1], x);
+        monomials[i] = g1::group_exponentiation(monomials[i - 1], x);
     }
     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, n);
     srs.monomials = monomials;
@@ -31,25 +31,19 @@ TEST(preprocess, preprocess)
 
     fr::field_t* scratch_space = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * 10 * n));
 
-    fr::field_t* polys[9] = {
-        &scratch_space[0],
-        &scratch_space[n],
-        &scratch_space[2*n],
-        &scratch_space[3*n],
-        &scratch_space[4*n],
-        &scratch_space[5*n],
-        &scratch_space[6*n],
-        &scratch_space[7*n],
-        &scratch_space[8*n]
-    };
+    fr::field_t* polys[9] = {&scratch_space[0],
+                             &scratch_space[n],
+                             &scratch_space[2 * n],
+                             &scratch_space[3 * n],
+                             &scratch_space[4 * n],
+                             &scratch_space[5 * n],
+                             &scratch_space[6 * n],
+                             &scratch_space[7 * n],
+                             &scratch_space[8 * n]};
 
     uint32_t* sigma_memory = (uint32_t*)(aligned_alloc(32, sizeof(uint32_t) * 3 * n));
 
-    uint32_t* sigma_mappings[3] = {
-        &sigma_memory[0],
-        &sigma_memory[n],
-        &sigma_memory[n + n]
-    };
+    uint32_t* sigma_mappings[3] = {&sigma_memory[0], &sigma_memory[n], &sigma_memory[n + n]};
 
     for (size_t i = 0; i < 6; ++i)
     {
@@ -91,7 +85,7 @@ TEST(preprocess, preprocess)
     fr::copy(fr::one(), roots[0]);
     for (size_t i = 1; i < state.small_domain.size; ++i)
     {
-        fr::__mul(roots[i-1], state.small_domain.root, roots[i]);
+        fr::__mul(roots[i - 1], state.small_domain.root, roots[i]);
     }
 
     waffle::compute_permutation_lagrange_base(roots, state.sigma_1, sigma_mappings[0], state.small_domain);

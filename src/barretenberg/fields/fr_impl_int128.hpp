@@ -1,8 +1,8 @@
 #ifndef FR_IMPL_INT128
 #define FR_IMPL_INT128
 #include "stdint.h"
-#include "unistd.h"
 #include "stdio.h"
+#include "unistd.h"
 
 #include "../assert.hpp"
 
@@ -17,14 +17,11 @@ namespace internal
 using uint128_t = unsigned __int128;
 constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 
-constexpr field_t twice_modulus = {.data = {
-                                       0x87c3eb27e0000002UL,
-                                       0x5067d090f372e122UL,
-                                       0x70a08b6d0302b0baUL,
-                                       0x60c89ce5c2634053UL}};
+constexpr field_t twice_modulus = {
+    .data = {0x87c3eb27e0000002UL, 0x5067d090f372e122UL, 0x70a08b6d0302b0baUL, 0x60c89ce5c2634053UL}};
 
 // compute a + b + carry, returning the carry
-inline void addc(const uint64_t a, const uint64_t b, const uint64_t carry_in, uint64_t &r, uint64_t &carry_out)
+inline void addc(const uint64_t a, const uint64_t b, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out)
 {
     uint128_t res = (uint128_t)a + (uint128_t)b + (uint128_t)carry_in;
     carry_out = (uint64_t)(res >> 64);
@@ -32,7 +29,7 @@ inline void addc(const uint64_t a, const uint64_t b, const uint64_t carry_in, ui
 }
 
 // compute a - (b + borrow), returning result and updated borrow
-inline void sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in, uint64_t &r, uint64_t &borrow_out)
+inline void sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in, uint64_t& r, uint64_t& borrow_out)
 {
     uint128_t res = (uint128_t)a - ((uint128_t)b + (uint128_t)(borrow_in >> 63));
     borrow_out = (uint64_t)(res >> 64);
@@ -40,14 +37,15 @@ inline void sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in, ui
 }
 
 // perform a + (b * c) + carry, putting result in r and returning new carry
-inline void mac(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t &r, uint64_t &carry_out)
+inline void
+mac(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out)
 {
     uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
     carry_out = (uint64_t)(res >> 64);
     r = (uint64_t)(res & lo_mask);
 }
 
-inline void subtract(const field_t &a, const field_t &b, field_t &r)
+inline void subtract(const field_t& a, const field_t& b, field_t& r)
 {
     uint64_t borrow = 0;
     uint64_t carry = 0;
@@ -63,7 +61,7 @@ inline void subtract(const field_t &a, const field_t &b, field_t &r)
     addc(r.data[3], modulus.data[3] & borrow, carry, r.data[3], carry);
 }
 
-inline void subtract_coarse(const field_t &a, const field_t &b, field_t &r)
+inline void subtract_coarse(const field_t& a, const field_t& b, field_t& r)
 {
     uint64_t borrow = 0;
     uint64_t carry = 0;
@@ -79,7 +77,7 @@ inline void subtract_coarse(const field_t &a, const field_t &b, field_t &r)
     addc(r.data[3], twice_modulus.data[3] & borrow, carry, r.data[3], carry);
 }
 
-inline void montgomery_reduce(field_wide_t &r, field_t &out)
+inline void montgomery_reduce(field_wide_t& r, field_t& out)
 {
     uint64_t carry = 0;
     uint64_t carry_2 = 0;
@@ -120,7 +118,7 @@ inline void montgomery_reduce(field_wide_t &r, field_t &out)
 }
 } // namespace internal
 
-inline void copy(const field_t &a, field_t &r)
+inline void copy(const field_t& a, field_t& r)
 {
     r.data[0] = a.data[0];
     r.data[1] = a.data[1];
@@ -128,7 +126,7 @@ inline void copy(const field_t &a, field_t &r)
     r.data[3] = a.data[3];
 }
 
-inline void zero(field_t &a)
+inline void zero(field_t& a)
 {
     a.data[0] = 0;
     a.data[1] = 0;
@@ -136,7 +134,7 @@ inline void zero(field_t &a)
     a.data[3] = 0;
 }
 
-inline void swap(field_t &src, field_t &dest)
+inline void swap(field_t& src, field_t& dest)
 {
     uint64_t t[4] = {src.data[0], src.data[1], src.data[2], src.data[3]};
     src.data[0] = dest.data[0];
@@ -149,12 +147,12 @@ inline void swap(field_t &src, field_t &dest)
     dest.data[3] = t[3];
 }
 
-inline void reduce_once(const field_t &a, field_t &r)
+inline void reduce_once(const field_t& a, field_t& r)
 {
     internal::subtract(a, modulus, r);
 }
 
-inline void __add_without_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __add_without_reduction(const field_t& a, const field_t& b, field_t& r)
 {
     uint64_t carry = 0;
     internal::addc(a.data[0], b.data[0], 0, r.data[0], carry);
@@ -163,29 +161,29 @@ inline void __add_without_reduction(const field_t &a, const field_t &b, field_t 
     internal::addc(a.data[3], b.data[3], carry, r.data[3], carry);
 }
 
-inline void __add(const field_t &a, const field_t &b, field_t &r)
+inline void __add(const field_t& a, const field_t& b, field_t& r)
 {
     __add_without_reduction(a, b, r);
     internal::subtract(r, modulus, r);
 }
 
-inline void __add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __add_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r)
 {
     __add_without_reduction(a, b, r);
     internal::subtract_coarse(r, internal::twice_modulus, r);
 }
 
-inline void __sub(const field_t &a, const field_t &b, field_t &r)
+inline void __sub(const field_t& a, const field_t& b, field_t& r)
 {
     internal::subtract(a, b, r);
 }
 
-inline void __sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r)
 {
     internal::subtract_coarse(a, b, r);
 }
 
-inline void mul_512(const field_t &a, const field_t &b, field_wide_t &r)
+inline void mul_512(const field_t& a, const field_t& b, field_wide_t& r)
 {
     uint64_t carry = 0;
     internal::mac(0, a.data[0], b.data[0], 0, r.data[0], carry);
@@ -206,27 +204,27 @@ inline void mul_512(const field_t &a, const field_t &b, field_wide_t &r)
     internal::mac(r.data[6], a.data[3], b.data[3], carry, r.data[6], r.data[7]);
 }
 
-inline void sqr_without_reduction(const field_t &a, field_t &r)
+inline void sqr_without_reduction(const field_t& a, field_t& r)
 {
     field_wide_t temp;
     mul_512(a, a, temp);
     internal::montgomery_reduce(temp, r);
 }
 
-inline void __sqr(const field_t &a, field_t &r)
+inline void __sqr(const field_t& a, field_t& r)
 {
     sqr_without_reduction(a, r);
     internal::subtract(r, modulus, r);
 }
 
-inline void __mul_without_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __mul_without_reduction(const field_t& a, const field_t& b, field_t& r)
 {
     field_wide_t temp;
     mul_512(a, b, temp);
     internal::montgomery_reduce(temp, r);
 }
 
-inline void __mul(const field_t &a, const field_t &b, field_t &r)
+inline void __mul(const field_t& a, const field_t& b, field_t& r)
 {
     __mul_without_reduction(a, b, r);
     internal::subtract(r, modulus, r);

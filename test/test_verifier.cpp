@@ -1,16 +1,16 @@
 #include <gtest/gtest.h>
 
 #include <barretenberg/io/io.hpp>
-#include <barretenberg/waffle/waffle.hpp>
 #include <barretenberg/waffle/preprocess.hpp>
 #include <barretenberg/waffle/verifier.hpp>
+#include <barretenberg/waffle/waffle.hpp>
 
 namespace
 {
 
 using namespace barretenberg;
 
-void generate_test_data(waffle::circuit_state &state, fr::field_t *data)
+void generate_test_data(waffle::circuit_state& state, fr::field_t* data)
 {
     size_t n = state.n;
     // state.small_domain = polynomials::evaluation_domain(n);
@@ -29,9 +29,9 @@ void generate_test_data(waffle::circuit_state &state, fr::field_t *data)
     state.sigma_1 = &data[10 * n + 2];
     state.sigma_2 = &data[11 * n + 2];
     state.sigma_3 = &data[12 * n + 2];
-    state.sigma_1_mapping = (uint32_t *)&data[13 * n + 2];
-    state.sigma_2_mapping = (uint32_t *)((uintptr_t)&data[13 * n + 2] + (uintptr_t)(n * sizeof(uint32_t)));
-    state.sigma_3_mapping = (uint32_t *)((uintptr_t)&data[13 * n + 2] + (uintptr_t)((2 * n) * sizeof(uint32_t)));
+    state.sigma_1_mapping = (uint32_t*)&data[13 * n + 2];
+    state.sigma_2_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (uintptr_t)(n * sizeof(uint32_t)));
+    state.sigma_3_mapping = (uint32_t*)((uintptr_t)&data[13 * n + 2] + (uintptr_t)((2 * n) * sizeof(uint32_t)));
     state.t = &data[14 * n + 2];
 
     state.w_l_lagrange_base = state.t;
@@ -111,7 +111,7 @@ void generate_test_data(waffle::circuit_state &state, fr::field_t *data)
         fr::__mul(w_l_acc, w_l_seed, w_l_acc);
         fr::__mul(w_r_acc, w_r_seed, w_r_acc);
     }
-    fr::field_t *scratch_mem = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * n / 2));
+    fr::field_t* scratch_mem = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * n / 2));
     fr::batch_invert(state.w_o, n / 2, scratch_mem);
     aligned_free(scratch_mem);
     for (size_t i = 0; i < n / 2; ++i)
@@ -185,13 +185,13 @@ TEST(verifier, verifier)
 
     state.n = n;
 
-    fr::field_t *data = (fr::field_t *)(aligned_alloc(32, sizeof(fr::field_t) * (17 * n + 2)));
+    fr::field_t* data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (17 * n + 2)));
     generate_test_data(state, data);
 
     // load structured reference string from disk
     srs::plonk_srs srs;
     srs.degree = n;
-    srs.monomials = (g1::affine_element *)(aligned_alloc(32, sizeof(g1::affine_element) * (2 * n + 2)));
+    srs.monomials = (g1::affine_element*)(aligned_alloc(32, sizeof(g1::affine_element) * (2 * n + 2)));
     io::read_transcript(srs, BARRETENBERG_SRS_PATH);
 
     scalar_multiplication::generate_pippenger_point_table(srs.monomials, srs.monomials, n);

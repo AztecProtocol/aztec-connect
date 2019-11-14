@@ -2,16 +2,16 @@
 
 #include <vector>
 
-#include <barretenberg/groups/scalar_multiplication.hpp>
-#include <barretenberg/groups/g1.hpp>
 #include <barretenberg/fields/fq.hpp>
 #include <barretenberg/fields/fr.hpp>
+#include <barretenberg/groups/g1.hpp>
+#include <barretenberg/groups/scalar_multiplication.hpp>
 
 using namespace barretenberg;
 
 namespace
 {
-void generate_points(g1::affine_element *points, size_t num_points)
+void generate_points(g1::affine_element* points, size_t num_points)
 {
     g1::element small_table[10000];
     for (size_t i = 0; i < 10000; ++i)
@@ -55,8 +55,8 @@ TEST(scalar_multiplication, endomorphism_split)
 
     fr::split_into_endomorphism_scalars(scalar, *k1_t, *k2_t);
 
-    fr::field_t k1 = { .data = { (*k1_t).data[0], (*k1_t).data[1], 0, 0 } };
-    fr::field_t k2 = { .data = { (*k2_t).data[0], (*k2_t).data[1], 0, 0 } };
+    fr::field_t k1 = {.data = {(*k1_t).data[0], (*k1_t).data[1], 0, 0}};
+    fr::field_t k2 = {.data = {(*k2_t).data[0], (*k2_t).data[1], 0, 0}};
 
     g1::element result;
     g1::element t1 = g1::group_exponentiation_inner(g1::affine_one(), k1);
@@ -65,7 +65,6 @@ TEST(scalar_multiplication, endomorphism_split)
     fq::neg(beta.y, beta.y);
     g1::element t2 = g1::group_exponentiation_inner(beta, k2);
     g1::add(t1, t2, result);
-
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
@@ -76,7 +75,8 @@ TEST(scalar_multiplication, pippenger)
 
     fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
 
-    g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
+    g1::affine_element* points =
+        (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
     for (size_t i = 0; i < num_points; ++i)
     {
@@ -136,7 +136,6 @@ TEST(scalar_multiplication, pippenger_low_memory)
     EXPECT_EQ(g1::eq(result, expected), true);
 }
 
-
 TEST(scalar_multiplication, batched_scalar_multiplication)
 {
     size_t num_points = 10000;
@@ -144,7 +143,8 @@ TEST(scalar_multiplication, batched_scalar_multiplication)
 
     fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points * 2);
 
-    g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 4 + 2);
+    g1::affine_element* points =
+        (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 4 + 2);
 
     generate_points(points, num_points);
     size_t points_per_iteration = num_points / num_exponentiations;
@@ -166,11 +166,13 @@ TEST(scalar_multiplication, batched_scalar_multiplication)
     }
 
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
-    scalar_multiplication::generate_pippenger_point_table(points + (num_points * 2), points + (num_points * 2), num_points);
+    scalar_multiplication::generate_pippenger_point_table(
+        points + (num_points * 2), points + (num_points * 2), num_points);
 
     for (size_t i = 0; i < num_exponentiations; ++i)
     {
-        inputs[i].output = scalar_multiplication::pippenger(inputs[i].scalars, inputs[i].points, inputs[i].num_elements);
+        inputs[i].output =
+            scalar_multiplication::pippenger(inputs[i].scalars, inputs[i].points, inputs[i].num_elements);
         inputs[i].output = g1::normalize(inputs[i].output);
     }
 

@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/polynomials/polynomials.hpp>
 #include <barretenberg/fields/fr.hpp>
+#include <barretenberg/polynomials/polynomials.hpp>
 
 using namespace barretenberg;
 
@@ -57,9 +57,9 @@ TEST(polynomials, fft_with_small_degree)
 TEST(polynomials, basic_fft)
 {
     size_t n = 1 << 20;
-    fr::field_t *data = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * n * 2);
-    fr::field_t *result = &data[0];
-    fr::field_t *expected = &data[n];
+    fr::field_t* data = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * n * 2);
+    fr::field_t* result = &data[0];
+    fr::field_t* expected = &data[n];
     for (size_t i = 0; i < n; ++i)
     {
         result[i] = fr::random_element();
@@ -205,7 +205,7 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
     fr::copy(scratch_memory[1], scratch_memory[2 * n + 1]);
     fr::copy(scratch_memory[2], scratch_memory[2 * n + 2]);
     fr::copy(scratch_memory[3], scratch_memory[2 * n + 3]);
-    fr::field_t *l_n_minus_one_coefficients = &scratch_memory[4];
+    fr::field_t* l_n_minus_one_coefficients = &scratch_memory[4];
     polynomials::ifft_with_coset(l_n_minus_one_coefficients, mid_domain);
 
     shifted_eval = polynomials::evaluate(l_n_minus_one_coefficients, z, small_domain.size);

@@ -20,31 +20,26 @@ constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 // N.B. Commented data is F_squared for Fr NOT Fq
 // 216D0B17F4E44A5 // 8C49833D53BB8085 // 53FE3AB1E35C59E3 // 1BB8E645AE216DA7
 
-constexpr field_t r_squared = {.data = {
-                                   0xF32CFC5B538AFA89UL,
-                                   0xB5E71911D44501FBUL,
-                                   0x47AB1EFF0A417FF6UL,
-                                   0x06D89F71CAB8351FUL}};
+constexpr field_t r_squared = {
+    .data = {0xF32CFC5B538AFA89UL, 0xB5E71911D44501FBUL, 0x47AB1EFF0A417FF6UL, 0x06D89F71CAB8351FUL}};
 
 constexpr field_t one_raw = {.data = {1, 0, 0, 0}};
 
-constexpr field_t twice_modulus = {.data = {
-                                       0x7841182db0f9fa8eUL,
-                                       0x2f02d522d0e3951aUL,
-                                       0x70a08b6d0302b0bbUL,
-                                       0x60c89ce5c2634053UL}};
+constexpr field_t twice_modulus = {
+    .data = {0x7841182db0f9fa8eUL, 0x2f02d522d0e3951aUL, 0x70a08b6d0302b0bbUL, 0x60c89ce5c2634053UL}};
 
-inline bool gt(field_t &a, field_t &b)
+inline bool gt(field_t& a, field_t& b)
 {
     bool t0 = a.data[3] > b.data[3];
     bool t1 = (a.data[3] == b.data[3]) && (a.data[2] > b.data[2]);
     bool t2 = (a.data[3] == b.data[3]) && (a.data[2] == b.data[2]) && (a.data[1] > b.data[1]);
-    bool t3 = (a.data[3] == b.data[3]) && (a.data[2] == b.data[2]) && (a.data[1] == b.data[1]) && (a.data[0] > b.data[0]);
+    bool t3 =
+        (a.data[3] == b.data[3]) && (a.data[2] == b.data[2]) && (a.data[1] == b.data[1]) && (a.data[0] > b.data[0]);
     return (t0 || t1 || t2 || t3);
 }
 
 // compute a + b + carry, returning the carry
-inline void addc(const uint64_t a, const uint64_t b, const uint64_t carry_in, uint64_t &r, uint64_t &carry_out)
+inline void addc(const uint64_t a, const uint64_t b, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out)
 {
     uint128_t res = (uint128_t)a + (uint128_t)b + (uint128_t)carry_in;
     carry_out = (uint64_t)(res >> 64);
@@ -52,7 +47,7 @@ inline void addc(const uint64_t a, const uint64_t b, const uint64_t carry_in, ui
 }
 
 // compute a - (b + borrow), returning result and updated borrow
-inline void sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in, uint64_t &r, uint64_t &borrow_out)
+inline void sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in, uint64_t& r, uint64_t& borrow_out)
 {
     uint128_t res = (uint128_t)a - ((uint128_t)b + (uint128_t)(borrow_in >> 63));
     borrow_out = (uint64_t)(res >> 64);
@@ -60,14 +55,15 @@ inline void sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in, ui
 }
 
 // perform a + (b * c) + carry, putting result in r and returning new carry
-inline void mac(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t &r, uint64_t &carry_out)
+inline void
+mac(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out)
 {
     uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
     carry_out = (uint64_t)(res >> 64);
     r = (uint64_t)(res & lo_mask);
 }
 
-inline void subtract(const field_t &a, const field_t &b, field_t &r)
+inline void subtract(const field_t& a, const field_t& b, field_t& r)
 {
     uint64_t borrow = 0;
     uint64_t carry = 0;
@@ -82,7 +78,7 @@ inline void subtract(const field_t &a, const field_t &b, field_t &r)
     addc(r.data[3], modulus.data[3] & borrow, carry, r.data[3], carry);
 }
 
-inline void subtract_coarse(const field_t &a, const field_t &b, field_t &r)
+inline void subtract_coarse(const field_t& a, const field_t& b, field_t& r)
 {
     uint64_t borrow = 0;
     uint64_t carry = 0;
@@ -97,7 +93,7 @@ inline void subtract_coarse(const field_t &a, const field_t &b, field_t &r)
     addc(r.data[3], twice_modulus.data[3] & borrow, carry, r.data[3], carry);
 }
 
-inline void montgomery_reduce(field_wide_t &r, field_t &out)
+inline void montgomery_reduce(field_wide_t& r, field_t& out)
 {
     uint64_t carry = 0;
     uint64_t carry_2 = 0;
@@ -136,7 +132,7 @@ inline void montgomery_reduce(field_wide_t &r, field_t &out)
     out.data[3] = r.data[7];
 }
 
-inline void mul_512(const field_t &a, const field_t &b, field_wide_t &r)
+inline void mul_512(const field_t& a, const field_t& b, field_wide_t& r)
 {
     uint64_t carry = 0;
     mac(0, a.data[0], b.data[0], 0, r.data[0], carry);
@@ -161,7 +157,7 @@ inline void mul_512(const field_t &a, const field_t &b, field_wide_t &r)
 }
 } // namespace internal
 
-inline void copy(const field_t &a, field_t &r)
+inline void copy(const field_t& a, field_t& r)
 {
     r.data[0] = a.data[0];
     r.data[1] = a.data[1];
@@ -169,12 +165,12 @@ inline void copy(const field_t &a, field_t &r)
     r.data[3] = a.data[3];
 }
 
-inline void reduce_once(const field_t &a, field_t &r)
+inline void reduce_once(const field_t& a, field_t& r)
 {
     internal::subtract(a, modulus, r);
 }
 
-inline void __add_without_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __add_without_reduction(const field_t& a, const field_t& b, field_t& r)
 {
     uint64_t carry = 0;
     internal::addc(a.data[0], b.data[0], 0, r.data[0], carry);
@@ -183,19 +179,19 @@ inline void __add_without_reduction(const field_t &a, const field_t &b, field_t 
     internal::addc(a.data[3], b.data[3], carry, r.data[3], carry);
 }
 
-inline void __add(const field_t &a, const field_t &b, field_t &r)
+inline void __add(const field_t& a, const field_t& b, field_t& r)
 {
     __add_without_reduction(a, b, r);
     internal::subtract(r, modulus, r);
 }
 
-inline void __add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __add_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r)
 {
     __add_without_reduction(a, b, r);
     internal::subtract_coarse(r, internal::twice_modulus, r);
 }
 
-inline void quad_with_coarse_reduction(const field_t &a, field_t &r)
+inline void quad_with_coarse_reduction(const field_t& a, field_t& r)
 {
     __add_without_reduction(a, a, r);
     internal::subtract_coarse(r, internal::twice_modulus, r);
@@ -203,7 +199,7 @@ inline void quad_with_coarse_reduction(const field_t &a, field_t &r)
     internal::subtract_coarse(r, internal::twice_modulus, r);
 }
 
-inline void oct_with_coarse_reduction(const field_t &a, field_t &r)
+inline void oct_with_coarse_reduction(const field_t& a, field_t& r)
 {
     __add_without_reduction(a, a, r);
     internal::subtract_coarse(r, internal::twice_modulus, r);
@@ -213,23 +209,23 @@ inline void oct_with_coarse_reduction(const field_t &a, field_t &r)
     internal::subtract_coarse(r, internal::twice_modulus, r);
 }
 
-inline void paralell_double_and_add_without_reduction(field_t &x_0, const field_t &y_0, const field_t &y_1, field_t &r)
+inline void paralell_double_and_add_without_reduction(field_t& x_0, const field_t& y_0, const field_t& y_1, field_t& r)
 {
     __add_without_reduction(x_0, x_0, x_0);
     __add_without_reduction(y_0, y_1, r);
 }
 
-inline void __sub(const field_t &a, const field_t &b, field_t &r)
+inline void __sub(const field_t& a, const field_t& b, field_t& r)
 {
     internal::subtract(a, b, r);
 }
 
-inline void __sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void __sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r)
 {
     internal::subtract_coarse(a, b, r);
 }
 
-inline void __mul(const field_t &lhs, const field_t &rhs, field_t &r)
+inline void __mul(const field_t& lhs, const field_t& rhs, field_t& r)
 {
     field_wide_t temp;
     internal::mul_512(lhs, rhs, temp);
@@ -237,14 +233,14 @@ inline void __mul(const field_t &lhs, const field_t &rhs, field_t &r)
     internal::subtract(r, modulus, r);
 }
 
-inline void __mul_without_reduction(const field_t &lhs, const field_t &rhs, field_t &r)
+inline void __mul_without_reduction(const field_t& lhs, const field_t& rhs, field_t& r)
 {
     field_wide_t temp;
     internal::mul_512(lhs, rhs, temp);
     internal::montgomery_reduce(temp, r);
 }
 
-inline void __sqr(const field_t &a, field_t &r)
+inline void __sqr(const field_t& a, field_t& r)
 {
     field_wide_t temp;
     internal::mul_512(a, a, temp);
@@ -252,14 +248,14 @@ inline void __sqr(const field_t &a, field_t &r)
     internal::subtract(r, modulus, r);
 }
 
-inline void __sqr_without_reduction(const field_t &a, field_t &r)
+inline void __sqr_without_reduction(const field_t& a, field_t& r)
 {
     field_wide_t temp;
     internal::mul_512(a, a, temp);
     internal::montgomery_reduce(temp, r);
 }
 
-inline void mul_then_sub(const field_t &a, const field_t &b, const field_t &c, field_t &r)
+inline void mul_then_sub(const field_t& a, const field_t& b, const field_t& c, field_t& r)
 {
     __mul(a, b, r);
     __sub(r, c, r);

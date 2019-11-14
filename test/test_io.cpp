@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <barretenberg/fields/fq12.hpp>
 #include <barretenberg/groups/g1.hpp>
 #include <barretenberg/groups/g2.hpp>
-#include <barretenberg/io/io.hpp>
-#include <barretenberg/fields/fq12.hpp>
 #include <barretenberg/groups/pairing.hpp>
+#include <barretenberg/io/io.hpp>
 #include <barretenberg/types.hpp>
 
 using namespace barretenberg;
