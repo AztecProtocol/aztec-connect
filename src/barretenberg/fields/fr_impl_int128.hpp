@@ -17,8 +17,9 @@ namespace internal
 using uint128_t = unsigned __int128;
 constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 
-constexpr field_t twice_modulus = {
-    .data = {0x87c3eb27e0000002UL, 0x5067d090f372e122UL, 0x70a08b6d0302b0baUL, 0x60c89ce5c2634053UL}};
+constexpr field_t twice_modulus{
+    { 0x87c3eb27e0000002UL, 0x5067d090f372e122UL, 0x70a08b6d0302b0baUL, 0x60c89ce5c2634053UL }
+};
 
 // compute a + b + carry, returning the carry
 inline void addc(const uint64_t a, const uint64_t b, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out)
@@ -136,7 +137,7 @@ inline void zero(field_t& a)
 
 inline void swap(field_t& src, field_t& dest)
 {
-    uint64_t t[4] = {src.data[0], src.data[1], src.data[2], src.data[3]};
+    uint64_t t[4] = { src.data[0], src.data[1], src.data[2], src.data[3] };
     src.data[0] = dest.data[0];
     src.data[1] = dest.data[1];
     src.data[2] = dest.data[2];
@@ -204,7 +205,7 @@ inline void mul_512(const field_t& a, const field_t& b, field_wide_t& r)
     internal::mac(r.data[6], a.data[3], b.data[3], carry, r.data[6], r.data[7]);
 }
 
-inline void sqr_without_reduction(const field_t& a, field_t& r)
+inline void __sqr_without_reduction(const field_t& a, field_t& r)
 {
     field_wide_t temp;
     mul_512(a, a, temp);
@@ -228,6 +229,18 @@ inline void __mul(const field_t& a, const field_t& b, field_t& r)
 {
     __mul_without_reduction(a, b, r);
     internal::subtract(r, modulus, r);
+}
+
+inline void __conditional_negate(const field_t& a, field_t& r, const bool predicate)
+{
+    if (predicate)
+    {
+        sub(modulus, a, r);
+    }
+    else
+    {
+        copy(modulus, r);
+    }
 }
 } // namespace fr
 } // namespace barretenberg

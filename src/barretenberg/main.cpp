@@ -1,143 +1,106 @@
-// #include "stdlib.h"
-// #include <valgrind/callgrind.h>
-// // #include <pthread.h>
-// #include "./types.hpp"
-// #include "fields/fq.hpp"
-// #include "polynomials/polynomials.hpp"
+#include "assert.hpp"
+#include "stdlib.h"
+//#include <valgrind/callgrind.h>
 
+#include "./waffle/composer/mimc_composer.hpp"
+#include "./waffle/composer/standard_composer.hpp"
+#include "./waffle/proof_system/preprocess.hpp"
+#include "./waffle/proof_system/prover/prover.hpp"
+#include "./waffle/proof_system/verifier/verifier.hpp"
+
+#include "./waffle/stdlib/common.hpp"
+#include "./waffle/stdlib/field/field.hpp"
+#include "./waffle/stdlib/mimc.hpp"
+
+void generate_test_plonk_circuit(waffle::StandardComposer& composer, size_t num_gates)
+{
+    plonk::stdlib::field_t a(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
+    plonk::stdlib::field_t b(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
+    plonk::stdlib::field_t c(&composer);
+    for (size_t i = 0; i < (num_gates / 4) - 4; ++i)
+    {
+        c = a + b;
+        c = a * c;
+        a = b * b;
+        b = c * c;
+    }
+}
+constexpr size_t NUM_GATES = 1 << 10;
+
+// size_t get_num_rounds(size_t bucket_size)
+// {
+//     return (127 + bucket_size) / (bucket_size + 1);
+// }
+
+// size_t get_num_bucket_adds(const size_t num_rounds, const size_t bucket_size)
+// {
+//     size_t num_buckets = 1UL << bucket_size;
+//     return (2 * num_buckets + 2) * num_rounds;
+// }
+
+// size_t get_next_bucket_size(const size_t bucket_size)
+// {
+//     size_t old_rounds = get_num_rounds(bucket_size);
+//     size_t acc = bucket_size;
+//     size_t new_rounds = old_rounds;
+//     while (old_rounds <= new_rounds)
+//     {
+//         ++acc;
+//         new_rounds = get_num_rounds(acc);
+//     }
+//     return acc;
+// }
+
+// constexpr double add_to_mixed_add_complexity = 1.36;
 int main()
 {
-    return 1;
+    // CALLGRIND_STOP_INSTRUMENTATION;
+    printf("generating witnesses\n");
+    waffle::StandardComposer composer = waffle::StandardComposer(NUM_GATES);
+    generate_test_plonk_circuit(composer, NUM_GATES);
+    waffle::Prover prover = composer.preprocess();
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    printf("constructing proof\n");
+    // CALLGRIND_START_INSTRUMENTATION;
+    waffle::plonk_proof proof = prover.construct_proof();
+    // CALLGRIND_STOP_INSTRUMENTATION;
+    // CALLGRIND_DUMP_STATS;
+
+    // printf("test\n");
+    // std::vector<size_t> buckets;
+
+    // size_t current_bucket = 1;
+    // for (size_t i = 1; i < 1 << 26; ++i)
+    // {
+    //     size_t num_points = i;
+    //     bool found_optimal_bucket = false;
+    //     while (!found_optimal_bucket)
+    //     {
+    //         size_t current_rounds = get_num_rounds(current_bucket);
+
+    //         size_t next_bucket_size = get_next_bucket_size(current_bucket);
+    //         size_t next_rounds = get_num_rounds(next_bucket_size);
+    //         size_t current_bucket_adds = get_num_bucket_adds(current_rounds, current_bucket);
+    //         size_t next_bucket_adds = get_num_bucket_adds(next_rounds, next_bucket_size);
+
+    //         size_t current_mixed_adds = num_points * current_rounds * 2;
+    //         size_t next_mixed_adds = num_points * next_rounds * 2;
+
+    //         double current_complexity = static_cast<double>(current_mixed_adds) +
+    //         (static_cast<double>(current_bucket_adds) * add_to_mixed_add_complexity); double next_complexity =
+    //         static_cast<double>(next_mixed_adds) + (static_cast<double>(next_bucket_adds) *
+    //         add_to_mixed_add_complexity);
+
+    //         if (next_complexity < current_complexity)
+    //         {
+    //             current_bucket = next_bucket_size;
+    //             printf("increased bucket size at i = %lu, to %lu\n", i, current_bucket);
+    //         }
+    //         else
+    //         {
+    //             found_optimal_bucket = true;
+    //         }
+    //     }
+    // }
 }
-// #include "groups/g1.hpp"
-// #include "groups/scalar_multiplication.hpp"
-// #include "assert.hpp"
-
-// using namespace barretenberg;
-
-// void generate_points(g1::affine_element *points, size_t num_points)
-// {
-//     g1::element small_table[10000];
-//     printf("making small table\n");
-//     g1::element one = g1::one();
-//     uint8_t number = 0;
-
-//     for (size_t i = 0; i < 10000; ++i)
-//     {
-//         int got_entropy = getentropy((void *)&number, 1);
-//         ASSERT(got_entropy == 0);
-//         g1::element pt = g1::one();
-//         for (size_t j = 0; j < number; ++j)
-//         {
-//             g1::add(one, pt, pt);
-//         }
-//         small_table[i] = pt;
-//     }
-//     g1::element current_table[10000];
-//     printf("iterating over num_points / 10000 \n");
-//     for (size_t i = 0; i < (num_points / 10000); ++i)
-//     {
-//         for (size_t j = 0; j < 10000; ++j)
-//         {
-//             g1::add(small_table[i], small_table[j], current_table[j]);
-//         }
-//         g1::batch_normalize(&current_table[0], 10000);
-//         for (size_t j = 0; j < 10000; ++j)
-//         {
-//             fq::copy(current_table[j].x, points[i * 10000 + j].x);
-//             fq::copy(current_table[j].y, points[i * 10000 + j].y);
-//         }
-//     }
-//     printf("calling batch normalize\n");
-//     g1::batch_normalize(small_table, 10000);
-//     size_t rounded = (num_points / 10000) * 10000;
-//     size_t leftovers = num_points - rounded;
-//     printf("fixing up leftovers\n");
-//     for (size_t j = 0; j < leftovers; ++j)
-//     {
-//         fq::copy(small_table[j].x, points[rounded + j].x);
-//         fq::copy(small_table[j].y, points[rounded + j].y);
-//     }
-// }
-
-// // struct pippenger_point_data
-// // {
-// //     fr::field_t *scalars;
-// //     g1::affine_element *points;
-// // };
-
-// constexpr size_t NUM_POINTS = 1 << 19;
-
-// // void *pippenger_single(void *v_args) noexcept
-// // {
-// //     pippenger_point_data *data = (pippenger_point_data *)v_args;
-// //     scalar_multiplication::pippenger(&data->scalars[0], &data->points[0], NUM_POINTS);
-// //     return NULL;
-// // }
-
-// // void pippenger_multicore() noexcept
-// // {
-// //     fr::field_t *scalars = (fr::field_t *)aligned_alloc(32, sizeof(fr::field_t) * NUM_POINTS * NUM_THREADS);
-// //     g1::affine_element *points = (g1::affine_element *)aligned_alloc(32, sizeof(g1::affine_element) * NUM_POINTS *
-// NUM_THREADS * 2);
-
-// //     pthread_t thread[NUM_THREADS];
-// //     printf("Before Thread\n");
-// //     for (size_t i = 0; i < NUM_POINTS; ++i)
-// //     {
-// //         scalars[i] = fr::random_element();
-// //     }
-
-// //     generate_points(points, NUM_POINTS * NUM_THREADS);
-
-// //     printf("generating point table\n");
-// //     scalar_multiplication::generate_pippenger_point_table(points, points, NUM_POINTS * NUM_THREADS);
-
-// //     pippenger_point_data *inputs = (pippenger_point_data *)malloc(sizeof(pippenger_point_data) * NUM_THREADS);
-// //     for (size_t i = 0; i < NUM_THREADS; ++i)
-// //     {
-// //         size_t inc = i * NUM_POINTS;
-// //         inputs[i].scalars = &scalars[inc];
-// //         inputs[i].points = &points[inc];
-// //         pthread_create(&thread[i], NULL, &pippenger_single, (void *)(&inputs[i]));
-// //     }
-// //     for (size_t j = 0; j < NUM_THREADS; ++j)
-// //     {
-// //         pthread_join(thread[j], NULL);
-// //     }
-// //     printf("After Thread\n");
-// //     aligned_free(inputs);
-// //     aligned_free(scalars);
-// //     aligned_free(points);
-// // }
-
-// // int main()
-// // {
-// //     pippenger_multicore();
-// // }
-// // // small .exe for profiling
-// int main()
-// {
-//     CALLGRIND_STOP_INSTRUMENTATION;
-//     printf("allocating memory for scalars and points\n");
-//     fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * NUM_POINTS);
-
-//     printf("generating scalars\n");
-//     for (size_t i = 0; i < NUM_POINTS; ++i)
-//     {
-//         scalars[i] = fr::random_element();
-//     }
-//     polynomials::evaluation_domain domain = polynomials::evaluation_domain(NUM_POINTS);
-//     printf("calling fft\n");
-//     CALLGRIND_START_INSTRUMENTATION;
-//     // for (size_t i = (NUM_POINTS * 2) - 1; i > 0; --i)
-//     // {
-//     //     printf("point[%lu] = :", i);
-//     //     g1::print(points[i]);
-//     //     printf("\n");
-//     // }
-//     polynomials::fft(scalars, domain);
-//     CALLGRIND_STOP_INSTRUMENTATION;
-//     CALLGRIND_DUMP_STATS;
-//     aligned_free(scalars);
-// }

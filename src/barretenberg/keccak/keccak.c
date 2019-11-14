@@ -36,7 +36,7 @@
 #endif
 
 /** Loads 64-bit integer from given memory location as little-endian number. */
-static inline uint64_t load_le(const uint8_t *data)
+static inline uint64_t load_le(const uint8_t* data)
 {
     /* memcpy is the best way of expressing the intention. Every compiler will
        optimize is to single load instruction if the target architecture
@@ -48,19 +48,18 @@ static inline uint64_t load_le(const uint8_t *data)
     return to_le64(word);
 }
 
-static inline void keccak(
-    uint64_t *out, size_t bits, const uint8_t *data, size_t size)
+static inline void keccak(uint64_t* out, size_t bits, const uint8_t* data, size_t size)
 {
     static const size_t word_size = sizeof(uint64_t);
     const size_t hash_size = bits / 8;
     const size_t block_size = (1600 - bits * 2) / 8;
 
     size_t i;
-    uint64_t *state_iter;
+    uint64_t* state_iter;
     uint64_t last_word = 0;
-    uint8_t *last_word_iter = (uint8_t *)&last_word;
+    uint8_t* last_word_iter = (uint8_t*)&last_word;
 
-    uint64_t state[25] = {0};
+    uint64_t state[25] = { 0 };
 
     while (size >= block_size)
     {
@@ -103,14 +102,14 @@ static inline void keccak(
         out[i] = to_le64(state[i]);
 }
 
-struct keccak256 ethash_keccak256(const uint8_t *data, size_t size)
+struct keccak256 ethash_keccak256(const uint8_t* data, size_t size)
 {
     struct keccak256 hash;
     keccak(hash.word64s, 256, data, size);
     return hash;
 }
 
-struct keccak256 hash_field_elements(const uint64_t *limbs, size_t num_elements)
+struct keccak256 hash_field_elements(const uint64_t* limbs, size_t num_elements)
 {
     uint8_t input_buffer[num_elements * 32];
 

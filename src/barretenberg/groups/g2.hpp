@@ -10,18 +10,20 @@ namespace barretenberg
 {
 namespace g2
 {
-constexpr fq::field_t xc0 = {.data = {0x8e83b5d102bc2026, 0xdceb1935497b0172, 0xfbb8264797811adf, 0x19573841af96503b}};
-constexpr fq::field_t xc1 = {.data = {0xafb4737da84c6140, 0x6043dd5a5802d8c4, 0x09e950fc52a02f86, 0x14fef0833aea7b6b}};
-constexpr fq::field_t yc0 = {.data = {0x619dfa9d886be9f6, 0xfe7fd297f59e9b78, 0xff9e1a62231b7dfe, 0x28fd7eebae9e4206}};
-constexpr fq::field_t yc1 = {.data = {0x64095b56c71856ee, 0xdc57f922327d3cbb, 0x55f935be33351076, 0x0da4a0e693fd6482}};
+constexpr fq::field_t xc0{ { 0x8e83b5d102bc2026, 0xdceb1935497b0172, 0xfbb8264797811adf, 0x19573841af96503b } };
+constexpr fq::field_t xc1{ { 0xafb4737da84c6140, 0x6043dd5a5802d8c4, 0x09e950fc52a02f86, 0x14fef0833aea7b6b } };
+constexpr fq::field_t yc0{ { 0x619dfa9d886be9f6, 0xfe7fd297f59e9b78, 0xff9e1a62231b7dfe, 0x28fd7eebae9e4206 } };
+constexpr fq::field_t yc1{ { 0x64095b56c71856ee, 0xdc57f922327d3cbb, 0x55f935be33351076, 0x0da4a0e693fd6482 } };
 
-constexpr fq2::fq2_t twist_mul_by_q_x = {
-    .c0 = {.data = {0xb5773b104563ab30, 0x347f91c8a9aa6454, 0x7a007127242e0991, 0x1956bcd8118214ec}},
-    .c1 = {.data = {0x6e849f1ea0aa4757, 0xaa1c7b6d89f89141, 0xb6e713cdfae0ca3a, 0x26694fbb4e82ebc3}}};
+constexpr fq2::fq2_t twist_mul_by_q_x{
+    { { 0xb5773b104563ab30, 0x347f91c8a9aa6454, 0x7a007127242e0991, 0x1956bcd8118214ec } },
+    { { 0x6e849f1ea0aa4757, 0xaa1c7b6d89f89141, 0xb6e713cdfae0ca3a, 0x26694fbb4e82ebc3 } }
+};
 
-constexpr fq2::fq2_t twist_mul_by_q_y = {
-    .c0 = {.data = {0xe4bbdd0c2936b629, 0xbb30f162e133bacb, 0x31a9d1b6f9645366, 0x253570bea500f8dd}},
-    .c1 = {.data = {0xa1d77ce45ffe77c7, 0x07affd117826d1db, 0x6d16bd27bb7edc6b, 0x2c87200285defecc}}};
+constexpr fq2::fq2_t twist_mul_by_q_y{
+    { { 0xe4bbdd0c2936b629, 0xbb30f162e133bacb, 0x31a9d1b6f9645366, 0x253570bea500f8dd } },
+    { { 0xa1d77ce45ffe77c7, 0x07affd117826d1db, 0x6d16bd27bb7edc6b, 0x2c87200285defecc } }
+};
 
 inline element one()
 {
@@ -375,11 +377,11 @@ inline void mul_by_q(const element& a, element& r)
     fq2::frobenius_map(a.z, r.z);
 }
 
-inline void neg(const element& a, element& r)
+inline void __neg(const element& a, element& r)
 {
     fq2::copy(a.x, r.x);
     fq2::copy(a.z, r.z);
-    fq2::neg(r.y, r.y);
+    fq2::__neg(r.y, r.y);
 }
 
 inline void copy(const element& a, element& r)
@@ -452,7 +454,7 @@ inline void batch_normalize(element* points, size_t num_points)
      * accumulator = accumulator * z.data[3] = 1 / z.data[0]*z.data[1]*z.data[2]
      *
      * At the second iteration, accumulator * temporaries[2] = z.data[0]*z.data[1] / z.data[0]*z.data[1]*z.data[2] = (1
-     */ z.data[2]) And so on, until we have computed every z-inverse!
+     * z.data[2]) And so on, until we have computed every z-inverse!
      *
      * We can then convert out of Jacobian form (x = X / Z^2, y = Y / Z^3) with 4 muls and 1 square.
      **/
@@ -482,8 +484,8 @@ inline bool on_curve(affine_element& pt)
     fq2::mul(pt.x, xxx, xxx);
     fq2::add(xxx, fq2::twist_coeff_b, xxx);
     fq2::sqr(pt.y, yy);
-    fq2::from_montgomery_form(xxx, xxx);
-    fq2::from_montgomery_form(yy, yy);
+    fq2::__from_montgomery_form(xxx, xxx);
+    fq2::__from_montgomery_form(yy, yy);
     return fq2::eq(xxx, yy);
 }
 
@@ -538,8 +540,8 @@ inline element group_exponentiation_inner(const affine_element& a, const fr::fie
     affine_to_jacobian(a, work_element);
     affine_to_jacobian(a, point);
     fr::field_t converted_scalar;
-    fr::from_montgomery_form(scalar, converted_scalar);
-    bool scalar_bits[256] = {0};
+    fr::__from_montgomery_form(scalar, converted_scalar);
+    bool scalar_bits[256] = { 0 };
     for (size_t i = 0; i < 64; ++i)
     {
         scalar_bits[i] = (bool)((converted_scalar.data[0] >> i) & 0x1);
@@ -649,6 +651,14 @@ inline void print(element& a)
     fq2::print(a.y);
     printf("z: \n");
     fq2::print(a.z);
+}
+
+inline void print(affine_element& a)
+{
+    printf("g2: \n x: ");
+    fq2::print(a.x);
+    printf("y: \n");
+    fq2::print(a.y);
 }
 } // namespace g2
 } // namespace barretenberg

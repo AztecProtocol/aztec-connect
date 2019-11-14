@@ -60,7 +60,7 @@ inline void random_coordinates_on_curve(fq::field_t& x, fq::field_t& y)
     fq::field_t t0;
 
     fq::field_t b_mont;
-    fq::to_montgomery_form(fq::curve_b, b_mont);
+    fq::__to_montgomery_form(fq::curve_b, b_mont);
     while (!found_one)
     {
         // generate a random x-coordinate
@@ -73,8 +73,8 @@ inline void random_coordinates_on_curve(fq::field_t& x, fq::field_t& y)
         fq::__sqrt(yy, y);
         fq::__sqr(y, t0);
         // does yy have a valid quadratic residue? is y a valid square root?
-        fq::from_montgomery_form(yy, yy);
-        fq::from_montgomery_form(t0, t0);
+        fq::__from_montgomery_form(yy, yy);
+        fq::__from_montgomery_form(t0, t0);
         found_one = fq::eq(yy, t0);
     }
 }
@@ -290,6 +290,7 @@ inline void mixed_add_inner(element& p1, const affine_element& p2, element& p3)
     fq::__sub_with_coarse_reduction(T3, T1, p3.y);
     fq::reduce_once(p3.y, p3.y);
 }
+// add: 10 mul_w_o_reduction 1 mul, 5 sqr
 
 inline void mixed_add(element& p1, const affine_element& p2, element& p3)
 {
@@ -466,7 +467,7 @@ inline element normalize(element& src)
  **/
 inline void batch_normalize(element* points, size_t num_points)
 {
-    fq::field_t* temporaries = (fq::field_t*)(aligned_alloc(32, sizeof(fq::field_t) * num_points));
+    fq::field_t* temporaries = (fq::field_t*)(aligned_alloc(32, sizeof(fq::field_t) * num_points * 2));
     fq::field_t accumulator = fq::one();
     fq::field_t z_inv;
     fq::field_t zz_inv;
@@ -501,7 +502,7 @@ inline void batch_normalize(element* points, size_t num_points)
      * accumulator = accumulator * z.data[3] = 1 / z.data[0]*z.data[1]*z.data[2]
      *
      * At the second iteration, accumulator * temporaries[2] = z.data[0]*z.data[1] / z.data[0]*z.data[1]*z.data[2] = (1
-     */ z.data[2]) And so on, until we have computed every z-inverse!
+     * z.data[2]) And so on, until we have computed every z-inverse!
      *
      * We can then convert out of Jacobian form (x = X / Z^2, y = Y / Z^3) with 4 muls and 1 square.
      **/
@@ -519,33 +520,33 @@ inline void batch_normalize(element* points, size_t num_points)
     aligned_free(temporaries);
 }
 
-inline bool on_curve(affine_element& pt)
+inline bool on_curve(const affine_element& pt)
 {
     if (is_point_at_infinity(pt))
     {
         return false;
     }
     fq::field_t b_mont;
-    fq::to_montgomery_form(fq::curve_b, b_mont);
+    fq::__to_montgomery_form(fq::curve_b, b_mont);
     fq::field_t yy;
     fq::field_t xxx;
     fq::__sqr(pt.x, xxx);
     fq::__mul(pt.x, xxx, xxx);
     fq::__add(xxx, b_mont, xxx);
     fq::__sqr(pt.y, yy);
-    fq::from_montgomery_form(xxx, xxx);
-    fq::from_montgomery_form(yy, yy);
+    fq::__from_montgomery_form(xxx, xxx);
+    fq::__from_montgomery_form(yy, yy);
     return fq::eq(xxx, yy);
 }
 
-inline bool on_curve(element& pt)
+inline bool on_curve(const element& pt)
 {
     if (is_point_at_infinity(pt))
     {
         return false;
     }
     fq::field_t b_mont;
-    fq::to_montgomery_form(fq::curve_b, b_mont);
+    fq::__to_montgomery_form(fq::curve_b, b_mont);
     fq::field_t yy;
     fq::field_t xxx;
     fq::field_t zz;
@@ -561,18 +562,18 @@ inline bool on_curve(element& pt)
     return fq::eq(xxx, yy);
 }
 
-inline void neg(const element& a, element& r)
+inline void __neg(const element& a, element& r)
 {
     fq::copy(a.x, r.x);
     fq::copy(a.y, r.y);
     fq::copy(a.z, r.z);
-    fq::neg(r.y, r.y);
+    fq::__neg(r.y, r.y);
 }
 
-inline void neg(const affine_element& a, affine_element& r)
+inline void __neg(const affine_element& a, affine_element& r)
 {
     fq::copy(a.x, r.x);
-    fq::neg(a.y, r.y);
+    fq::__neg(a.y, r.y);
 }
 
 inline void affine_to_jacobian(const affine_element& a, element& r)
@@ -599,7 +600,7 @@ inline element group_exponentiation(const element& a, const fr::field_t& scalar)
 {
     fr::field_t converted_scalar;
 
-    fr::from_montgomery_form(scalar, converted_scalar);
+    fr::__from_montgomery_form(scalar, converted_scalar);
 
     if (fr::eq(converted_scalar, fr::zero()))
     {
@@ -672,7 +673,7 @@ inline element group_exponentiation(const element& a, const fr::field_t& scalar)
             dbl(work_element, work_element);
         }
     }
-    neg(lookup_table[0], temporary);
+    __neg(lookup_table[0], temporary);
     if (skew)
     {
         mixed_add(work_element, temporary, work_element);

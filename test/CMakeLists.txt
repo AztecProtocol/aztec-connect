@@ -42,11 +42,18 @@ add_executable(
     test_scalar_multiplication.cpp
     test_pairing.cpp
     test_io.cpp
-    test_polynomials.cpp
+    test_polynomial_arithmetic.cpp
     test_preprocess.cpp
-    test_waffle.cpp
+    test_prover.cpp
     test_verifier.cpp
-#    test_composer.cpp
+    test_verifier.cpp
+    composer/test_standard_composer.cpp
+    composer/test_mimc_composer.cpp
+    composer/test_bool_composer.cpp
+    stdlib/test_stdlib_bool.cpp
+    stdlib/test_stdlib_field.cpp
+    stdlib/test_stdlib_uint32.cpp
+    stdlib/test_stdlib_mimc.cpp
 )
 
 set_target_properties(

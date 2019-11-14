@@ -4,6 +4,7 @@
 #include "inttypes.h"
 #include "stdint.h"
 #include "stdio.h"
+#include "stdlib.h"
 
 #include "../types.hpp"
 
@@ -11,8 +12,7 @@ namespace barretenberg
 {
 namespace fr
 {
-constexpr field_t modulus = {
-    .data = {0x43E1F593F0000001UL, 0x2833E84879B97091UL, 0xB85045B68181585DUL, 0x30644E72E131A029UL}};
+constexpr field_t modulus{ { 0x43E1F593F0000001UL, 0x2833E84879B97091UL, 0xB85045B68181585DUL, 0x30644E72E131A029UL } };
 namespace internal
 {
 constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
@@ -30,20 +30,22 @@ namespace barretenberg
 {
 namespace fr
 {
-constexpr field_t r_squared = {
-    .data = {0x1BB8E645AE216DA7UL, 0x53FE3AB1E35C59E3UL, 0x8C49833D53BB8085UL, 0x216D0B17F4E44A5UL}};
+constexpr field_t r_squared{
+    { 0x1BB8E645AE216DA7UL, 0x53FE3AB1E35C59E3UL, 0x8C49833D53BB8085UL, 0x216D0B17F4E44A5UL }
+};
 
 // lambda = curve root of unity modulo n, converted to montgomery form
-constexpr field_t lambda = {
-    .data = {0x93e7cede4a0329b3UL, 0x7d4fdca77a96c167UL, 0x8be4ba08b19a750aUL, 0x1cbd5653a5661c25UL}};
+constexpr field_t lambda{ { 0x93e7cede4a0329b3UL, 0x7d4fdca77a96c167UL, 0x8be4ba08b19a750aUL, 0x1cbd5653a5661c25UL } };
 
-constexpr field_t modulus_plus_one = {
-    .data = {0x43E1F593F0000002UL, 0x2833E84879B97091UL, 0xB85045B68181585DUL, 0x30644E72E131A029UL}};
+constexpr field_t modulus_plus_one{
+    { 0x43E1F593F0000002UL, 0x2833E84879B97091UL, 0xB85045B68181585DUL, 0x30644E72E131A029UL }
+};
 
-constexpr field_t one_raw = {.data = {1, 0, 0, 0}};
+constexpr field_t one_raw{ { 1, 0, 0, 0 } };
 
 constexpr field_t root_of_unity = {
-    .data = {0x636e735580d13d9c, 0xa22bf3742445ffd6, 0x56452ac01eb203d8, 0x1860ef942963f9e7}};
+    { 0x636e735580d13d9c, 0xa22bf3742445ffd6, 0x56452ac01eb203d8, 0x1860ef942963f9e7 }
+};
 
 constexpr size_t S = 28; // 2^S = maximum degree of a polynomial that's amenable to radix-2 FFT
 
@@ -55,17 +57,38 @@ inline void print(const field_t& a)
 // compute a * b mod p, put result in r
 inline void __mul(const field_t& a, const field_t& b, field_t& r);
 
+// compute a * b, put result in r. Do not perform final reduction check
+inline void __mul_without_reduction(const field_t& a, const field_t& b, const field_t& r);
+
 // compute a * b, put 512-bit result in r
 inline void mul_512(const field_t& a, const field_t& b, const field_wide_t& r);
 
 // compute a * a, put result in r
 inline void __sqr(const field_t& a, field_t& r);
 
+// compute a * a, put result in r. Do not perform final reduction check
+inline void __sqr_without_reduction(const field_t& a, const field_t& r);
+
 // compute a + b, put result in r
 inline void __add(const field_t& a, const field_t& b, field_t& r);
 
+// compute a + b, put result in r. Do not perform final reduction check
+inline void __add_without_reduction(const field_t& a, const field_t& b, field_t& r);
+
+// compute a + b, put result in r. Do not perform final reduction check
+inline void __add_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r);
+
 // compute a - b, put result in r
 inline void __sub(const field_t& a, const field_t& b, field_t& r);
+
+// compute a - b, put result in r
+inline void __sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r);
+
+inline void __conditionally_subtract_double_modulus(const field_t& a, field_t& r, const uint64_t predicate);
+
+inline void __conditional_negate(const fr::field_t& a, field_t& r, const bool predicate);
+
+inline void mul_512(const field_t& a, const field_t& b, field_wide_t& r);
 
 inline field_t add(const field_t& a, const field_t& b)
 {
@@ -115,7 +138,7 @@ inline bool gt(field_t& a, const field_t& b)
 /**
  * Convert a field element into montgomery form
  **/
-inline void to_montgomery_form(const field_t& a, field_t& r)
+inline void __to_montgomery_form(const field_t& a, field_t& r)
 {
     copy(a, r);
     while (gt(r, modulus_plus_one))
@@ -129,7 +152,7 @@ inline void to_montgomery_form(const field_t& a, field_t& r)
  * Convert a field element out of montgomery form by performing a modular
  * reduction against 1
  **/
-inline void from_montgomery_form(const field_t& a, field_t& r)
+inline void __from_montgomery_form(const field_t& a, field_t& r)
 {
     __mul(a, one_raw, r);
     // while (gt(r, modulus_plus_one))
@@ -138,6 +161,19 @@ inline void from_montgomery_form(const field_t& a, field_t& r)
     // }
 }
 
+inline field_t from_montgomery_form(const field_t& a)
+{
+    field_t r;
+    __from_montgomery_form(a, r);
+    return r;
+}
+
+inline field_t to_montgomery_form(const field_t& a)
+{
+    field_t r;
+    __to_montgomery_form(a, r);
+    return r;
+}
 /**
  * For short Weierstrass curves y^2 = x^3 + b mod r, if there exists a cube root of unity mod r,
  * we can take advantage of an enodmorphism to decompose a 254 bit scalar into 2 128 bit scalars.
@@ -165,15 +201,15 @@ inline void from_montgomery_form(const field_t& a, field_t& r)
 inline void split_into_endomorphism_scalars(field_t& k, field_t& k1, field_t& k2)
 {
     // uint64_t lambda_reduction[4] = { 0 };
-    // to_montgomery_form(lambda, lambda_reduction);
+    // __to_montgomery_form(lambda, lambda_reduction);
 
-    constexpr field_t g1 = {.data = {0x7a7bd9d4391eb18dUL, 0x4ccef014a773d2cfUL, 0x0000000000000002UL, 0}};
+    constexpr field_t g1 = { { 0x7a7bd9d4391eb18dUL, 0x4ccef014a773d2cfUL, 0x0000000000000002UL, 0 } };
 
-    constexpr field_t g2 = {.data = {0xd91d232ec7e0b3d7UL, 0x0000000000000002UL, 0, 0}};
+    constexpr field_t g2 = { { 0xd91d232ec7e0b3d7UL, 0x0000000000000002UL, 0, 0 } };
 
-    constexpr field_t minus_b1 = {.data = {0x8211bbeb7d4f1128UL, 0x6f4d8248eeb859fcUL, 0, 0}};
+    constexpr field_t minus_b1 = { { 0x8211bbeb7d4f1128UL, 0x6f4d8248eeb859fcUL, 0, 0 } };
 
-    constexpr field_t b2 = {.data = {0x89d3256894d213e3UL, 0, 0, 0}};
+    constexpr field_t b2 = { { 0x89d3256894d213e3UL, 0, 0, 0 } };
 
     field_wide_t c1;
     field_wide_t c2;
@@ -188,44 +224,44 @@ inline void split_into_endomorphism_scalars(field_t& k, field_t& k1, field_t& k2
     field_wide_t q2;
     // TODO remove data duplication
     field_t c1_hi = {
-        .data = {
-            c1.data[4], c1.data[5], c1.data[6], c1.data[7]}}; // *(field_t*)((uintptr_t)(&c1) + (4 * sizeof(uint64_t)));
+        { c1.data[4], c1.data[5], c1.data[6], c1.data[7] }
+    }; // *(field_t*)((uintptr_t)(&c1) + (4 * sizeof(uint64_t)));
     field_t c2_hi = {
-        .data = {
-            c2.data[4], c2.data[5], c2.data[6], c2.data[7]}}; // *(field_t*)((uintptr_t)(&c2) + (4 * sizeof(uint64_t)));
+        { c2.data[4], c2.data[5], c2.data[6], c2.data[7] }
+    }; // *(field_t*)((uintptr_t)(&c2) + (4 * sizeof(uint64_t)));
 
     // compute q1 = c1 * -b1
     mul_512(c1_hi, minus_b1, q1);
     // compute q2 = c2 * b2
     mul_512(c2_hi, b2, q2);
 
-    field_t t1 = {.data = {
-                      0,
-                      0,
-                      0,
-                      0,
-                  }};
-    field_t t2 = {.data = {
-                      0,
-                      0,
-                      0,
-                      0,
-                  }};
+    field_t t1 = { {
+        0,
+        0,
+        0,
+        0,
+    } };
+    field_t t2 = { {
+        0,
+        0,
+        0,
+        0,
+    } };
     // TODO: this doesn't have to be a 512-bit multiply...
     field_t q1_lo = {
-        .data = {
-            q1.data[0], q1.data[1], q1.data[2], q1.data[3]}}; // *(field_t*)((uintptr_t)(&q1) + (4 * sizeof(uint64_t)));
+        { q1.data[0], q1.data[1], q1.data[2], q1.data[3] }
+    }; // *(field_t*)((uintptr_t)(&q1) + (4 * sizeof(uint64_t)));
     field_t q2_lo = {
-        .data = {
-            q2.data[0], q2.data[1], q2.data[2], q2.data[3]}}; // *(field_t*)((uintptr_t)(&q2) + (4 * sizeof(uint64_t)));
+        { q2.data[0], q2.data[1], q2.data[2], q2.data[3] }
+    }; // *(field_t*)((uintptr_t)(&q2) + (4 * sizeof(uint64_t)));
 
     __sub(q2_lo, q1_lo, t1);
 
     // if k = k'.R
     // and t2 = t2'.R...so, k2 = t1'.R, k1 = t2'.R?
-    // to_montgomery_form(t1, t1);
+    // __to_montgomery_form(t1, t1);
     __mul(t1, lambda, t2);
-    // from_montgomery_form(t2, t2);
+    // __from_montgomery_form(t2, t2);
     __add(k, t2, t2);
 
     k2.data[0] = t1.data[0];
@@ -254,9 +290,19 @@ inline void __mul_lambda(field_t& a, field_t& r)
 /**
  * Negate field_t element `a`, mod `q`, place result in `r`
  **/
-inline void neg(const field_t& a, field_t& r)
+inline void __neg(const field_t& a, field_t& r)
 {
     __sub(modulus, a, r);
+}
+
+/**
+ * Negate field_t element `a`, mod `q`, place result in `r`
+ **/
+inline field_t neg(const field_t& a)
+{
+    field_t r;
+    __neg(a, r);
+    return r;
 }
 
 /**
@@ -267,7 +313,7 @@ inline field_t random_element()
     fr::field_t r;
     int got_entropy = getentropy((void*)r.data, 32);
     ASSERT(got_entropy == 0);
-    to_montgomery_form(r, r);
+    __to_montgomery_form(r, r);
     return r;
 }
 
@@ -302,6 +348,11 @@ inline bool get_bit(const field_t& a, size_t bit_index)
  **/
 inline void pow(const field_t& a, const field_t& b, field_t& r)
 {
+    if (eq(a, zero()))
+    {
+        copy(zero(), r);
+        return;
+    }
     field_t accumulator;
     copy(a, accumulator);
     bool found_one = false;
@@ -333,10 +384,10 @@ inline void pow(const field_t& a, const field_t& b, field_t& r)
  **/
 inline void one(field_t& r)
 {
-    to_montgomery_form(one_raw, r);
+    __to_montgomery_form(one_raw, r);
 }
 
-inline void pow_small(const field_t& a, const size_t exponent, field_t& r)
+inline void __pow_small(const field_t& a, const size_t exponent, field_t& r)
 {
     if (exponent == 0)
     {
@@ -371,18 +422,25 @@ inline void pow_small(const field_t& a, const size_t exponent, field_t& r)
     copy(accumulator, r);
 }
 
+inline field_t pow_small(const field_t& a, const size_t exponent)
+{
+    field_t result;
+    __pow_small(a, exponent, result);
+    return result;
+}
 /**
  * compute a^{q - 2} mod q, place result in r
  **/
-inline void __invert(field_t& a, field_t& r)
+inline void __invert(const field_t& a, field_t& r)
 {
     // q - 2
     constexpr field_t modulus_minus_two = {
-        0x43E1F593EFFFFFFFUL, 0x2833E84879B97091UL, 0xB85045B68181585DUL, 0x30644E72E131A029UL};
+        0x43E1F593EFFFFFFFUL, 0x2833E84879B97091UL, 0xB85045B68181585DUL, 0x30644E72E131A029UL
+    };
     pow(a, modulus_minus_two, r);
 }
 
-inline field_t invert(field_t& a)
+inline field_t invert(const field_t& a)
 {
     field_t r;
     __invert(a, r);
@@ -405,19 +463,20 @@ inline field_t neg_one()
 
 inline field_t multiplicative_generator()
 {
-    fr::field_t r = {.data = {5, 0, 0, 0}};
-    to_montgomery_form(r, r);
-    return r;
+    return to_montgomery_form({ { 5, 0, 0, 0 } });
 }
 
 inline field_t multiplicative_generator_inverse()
 {
-    fr::field_t gen = multiplicative_generator();
-    __invert(gen, gen);
-    return gen;
+    return invert(multiplicative_generator());
 }
 
-inline void get_root_of_unity(size_t degree, field_t& r)
+inline field_t alternate_multiplicative_generator()
+{
+    return to_montgomery_form({ { 7, 0, 0, 0 } });
+}
+
+inline void __get_root_of_unity(const size_t degree, field_t& r)
 {
     copy(root_of_unity, r);
     for (size_t i = S; i > degree; --i)
@@ -426,8 +485,16 @@ inline void get_root_of_unity(size_t degree, field_t& r)
     }
 }
 
-inline void batch_invert(field_t* coeffs, size_t n, field_t* temporaries)
+inline field_t get_root_of_unity(const size_t degree)
 {
+    field_t r;
+    __get_root_of_unity(degree, r);
+    return r;
+}
+
+inline void batch_invert(field_t* coeffs, size_t n)
+{
+    fr::field_t* temporaries = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * n);
     field_t accumulator;
     one(accumulator);
     for (size_t i = 0; i < n; ++i)
@@ -444,6 +511,7 @@ inline void batch_invert(field_t* coeffs, size_t n, field_t* temporaries)
         __mul(accumulator, coeffs[i], accumulator);
         copy(T0, coeffs[i]);
     }
+    aligned_free(temporaries);
 }
 
 } // namespace fr

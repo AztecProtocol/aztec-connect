@@ -1,7 +1,7 @@
 # barretenburg
 # copyright 2019 Spilsbury Holdings
 
-add_compile_options(-Werror -Wall -Wextra -Wshadow)
+add_compile_options(-Werror -Wall -Wextra -Wshadow -Wpedantic)
 add_compile_options(-Wconversion -Wsign-conversion)
 
 add_library(
@@ -29,22 +29,47 @@ add_library(
     keccak/keccakf1600.c
     keccak/keccak.c
     keccak/keccak.h
-    polynomials/polynomials.cpp
-    polynomials/polynomials.hpp
-    waffle/linearizer.hpp
-    waffle/challenge.hpp
-    waffle/permutation.hpp
-    waffle/preprocess.hpp
-    waffle/waffle.cpp
-    waffle/waffle.hpp
-    waffle/verifier.hpp
-#   waffle/widgets/base_widget.hpp
-#   waffle/widgets/arithmetic_widget.cpp
-#   waffle/widgets/arithmetic_widget.hpp
-#    waffle/composer/composer.cpp
-#    waffle/composer/composer.hpp
-#    waffle/circuits/mimc.cpp
-#    waffle/circuits/mimc.hpp
+    polynomials/evaluation_domain.cpp
+    polynomials/evaluation_domain.hpp
+    polynomials/polynomial_arithmetic.cpp
+    polynomials/polynomial_arithmetic.hpp
+    polynomials/polynomial.cpp
+    polynomials/polynomial.hpp
+    waffle/reference_string/reference_string.cpp
+    waffle/reference_string/reference_string.hpp
+    waffle/proof_system/linearizer.hpp
+    waffle/proof_system/challenge.hpp
+    waffle/proof_system/permutation.hpp
+    waffle/proof_system/preprocess.hpp
+    waffle/proof_system/widgets/base_widget.hpp
+    waffle/proof_system/widgets/arithmetic_widget.cpp
+    waffle/proof_system/widgets/arithmetic_widget.hpp
+    waffle/proof_system/widgets/bool_widget.cpp
+    waffle/proof_system/widgets/bool_widget.hpp
+    waffle/proof_system/widgets/mimc_widget.cpp
+    waffle/proof_system/widgets/mimc_widget.hpp
+    waffle/proof_system/widgets/sequential_widget.cpp
+    waffle/proof_system/widgets/sequential_widget.hpp
+    waffle/proof_system/prover/prover.cpp
+    waffle/proof_system/prover/prover.hpp
+    waffle/proof_system/verifier/verifier.cpp
+    waffle/proof_system/verifier/verifier.hpp
+    waffle/composer/composer_base.hpp
+    waffle/composer/standard_composer.cpp
+    waffle/composer/standard_composer.hpp
+    waffle/composer/bool_composer.cpp
+    waffle/composer/bool_composer.hpp
+    waffle/composer/mimc_composer.cpp
+    waffle/composer/mimc_composer.hpp
+    waffle/stdlib/common.hpp
+    waffle/stdlib/bool/bool.tcc
+    waffle/stdlib/bool/bool.hpp
+    waffle/stdlib/field/field.tcc
+    waffle/stdlib/field/field.hpp
+    waffle/stdlib/uint32/uint32.tcc
+    waffle/stdlib/uint32/uint32.hpp
+    waffle/stdlib/mimc.tcc
+    waffle/stdlib/mimc.hpp
 )
 
 set_target_properties(
@@ -84,15 +109,47 @@ add_executable(
     keccak/keccakf1600.c
     keccak/keccak.c
     keccak/keccak.h
-    polynomials/polynomials.cpp
-    polynomials/polynomials.hpp
-    waffle/linearizer.hpp
-    waffle/challenge.hpp
-    waffle/permutation.hpp
-    waffle/preprocess.hpp
-    waffle/waffle.cpp
-    waffle/waffle.hpp
-    waffle/verifier.hpp
+    polynomials/evaluation_domain.cpp
+    polynomials/evaluation_domain.hpp
+    polynomials/polynomial_arithmetic.cpp
+    polynomials/polynomial_arithmetic.hpp
+    polynomials/polynomial.cpp
+    polynomials/polynomial.hpp
+    waffle/reference_string/reference_string.cpp
+    waffle/reference_string/reference_string.hpp
+    waffle/proof_system/linearizer.hpp
+    waffle/proof_system/challenge.hpp
+    waffle/proof_system/permutation.hpp
+    waffle/proof_system/preprocess.hpp
+    waffle/proof_system/widgets/base_widget.hpp
+    waffle/proof_system/widgets/arithmetic_widget.cpp
+    waffle/proof_system/widgets/arithmetic_widget.hpp
+    waffle/proof_system/widgets/bool_widget.cpp
+    waffle/proof_system/widgets/bool_widget.hpp
+    waffle/proof_system/widgets/mimc_widget.cpp
+    waffle/proof_system/widgets/mimc_widget.hpp
+    waffle/proof_system/widgets/sequential_widget.cpp
+    waffle/proof_system/widgets/sequential_widget.hpp
+    waffle/proof_system/prover/prover.cpp
+    waffle/proof_system/prover/prover.hpp
+    waffle/proof_system/verifier/verifier.cpp
+    waffle/proof_system/verifier/verifier.hpp
+    waffle/composer/composer_base.hpp
+    waffle/composer/standard_composer.cpp
+    waffle/composer/standard_composer.hpp
+    waffle/composer/bool_composer.cpp
+    waffle/composer/bool_composer.hpp
+    waffle/composer/mimc_composer.cpp
+    waffle/composer/mimc_composer.hpp
+    waffle/stdlib/common.hpp
+    waffle/stdlib/bool/bool.tcc
+    waffle/stdlib/bool/bool.hpp
+    waffle/stdlib/field/field.tcc
+    waffle/stdlib/field/field.hpp
+    waffle/stdlib/uint32/uint32.tcc
+    waffle/stdlib/uint32/uint32.hpp
+    waffle/stdlib/mimc.tcc
+    waffle/stdlib/mimc.hpp
 )
 
 target_link_libraries(

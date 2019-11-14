@@ -320,6 +320,34 @@ inline void __mul_without_reduction(const field_t &a, const field_t &b, field_t 
         : "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
+/**
+ * Copy `a` into `r`. If `predicate == true`, subtract modulus from r
+ **/
+inline void __conditionally_subtract_double_modulus(const field_t &a, field_t &r, const uint64_t predicate)
+{
+    // TODO use literals instead of memory references
+    __asm__ (
+        CLEAR_FLAGS("%%r8")
+        LOAD_FIELD_ELEMENT("%0", "%%r8", "%%r9", "%%r10", "%%r11")
+        "movq %[modulus_0], %%r12 \n\t"
+        "movq %[modulus_1], %%r13 \n\t"
+        "movq %[modulus_2], %%r14 \n\t"
+        "movq %[modulus_3], %%r15 \n\t"
+        "subq %%r8, %%r12 \n\t"
+        "sbbq %%r9, %%r13 \n\t"
+        "sbbq %%r10, %%r14 \n\t"
+        "sbbq %%r11, %%r15 \n\t"
+        "btq $0, %1 \n\t"
+        "cmovcq %%r12, %%r8 \n\t"
+        "cmovcq %%r13, %%r9 \n\t"
+        "cmovcq %%r14, %%r10 \n\t"
+        "cmovcq %%r15, %%r11 \n\t"
+        STORE_FIELD_ELEMENT("%2", "%%r8", "%%r9", "%%r10", "%%r11")
+        :
+        : "r"(&a), "r"(predicate), "r"(&r), [modulus_0] "m"(internal::twice_modulus_0), [modulus_1] "m"(internal::twice_modulus_1), [modulus_2] "m"(internal::twice_modulus_2), [modulus_3] "m"(internal::twice_modulus_3)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
 inline void mul_512(const field_t &a, const field_t &b, field_wide_t &r)
 {
     // TODO REMOVE THIS

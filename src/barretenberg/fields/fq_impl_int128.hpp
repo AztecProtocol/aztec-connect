@@ -20,13 +20,19 @@ constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 // N.B. Commented data is F_squared for Fr NOT Fq
 // 216D0B17F4E44A5 // 8C49833D53BB8085 // 53FE3AB1E35C59E3 // 1BB8E645AE216DA7
 
-constexpr field_t r_squared = {
-    .data = {0xF32CFC5B538AFA89UL, 0xB5E71911D44501FBUL, 0x47AB1EFF0A417FF6UL, 0x06D89F71CAB8351FUL}};
+constexpr field_t r_squared{{
+    0xF32CFC5B538AFA89UL,
+    0xB5E71911D44501FBUL,
+    0x47AB1EFF0A417FF6UL,
+    0x06D89F71CAB8351FUL}};
 
-constexpr field_t one_raw = {.data = {1, 0, 0, 0}};
+constexpr field_t one_raw{{1, 0, 0, 0}};
 
-constexpr field_t twice_modulus = {
-    .data = {0x7841182db0f9fa8eUL, 0x2f02d522d0e3951aUL, 0x70a08b6d0302b0bbUL, 0x60c89ce5c2634053UL}};
+constexpr field_t twice_modulus{{
+    0x7841182db0f9fa8eUL,
+    0x2f02d522d0e3951aUL,
+    0x70a08b6d0302b0bbUL,
+    0x60c89ce5c2634053UL}};
 
 inline bool gt(field_t& a, field_t& b)
 {

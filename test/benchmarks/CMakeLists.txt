@@ -54,3 +54,28 @@ set_target_properties(
 
     RUNTIME_OUTPUT_DIRECTORY ..
 )
+
+add_executable(
+    plonk_bench
+    bench_plonk.cpp
+)
+target_link_libraries(
+    plonk_bench
+    PUBLIC
+    barretenberg
+    PRIVATE
+    benchmark
+)
+target_include_directories(
+    plonk_bench
+    PRIVATE
+        ${private_include_dir}
+        ${include_dir}
+)
+
+set_target_properties(
+    plonk_bench
+    PROPERTIES
+
+    RUNTIME_OUTPUT_DIRECTORY ..
+)
