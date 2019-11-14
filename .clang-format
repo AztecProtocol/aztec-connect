@@ -1,0 +1,6 @@
+PointerAlignment: Left
+ColumnLimit: 120
+BreakBeforeBraces: Allman
+IndentWidth: 4
+BinPackArguments: false
+BinPackParameters: false
