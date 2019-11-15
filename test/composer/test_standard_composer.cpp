@@ -2,9 +2,9 @@
 
 #include <barretenberg/waffle/composer/standard_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
-#include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
+#include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
 
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 #include <memory>
@@ -151,7 +151,7 @@ using namespace barretenberg;
 //     state.sigma_2_mapping.resize(n);
 //     state.sigma_3_mapping.resize(n);
 // }
-}
+} // namespace
 
 TEST(composer, test_add_gate_proofs)
 {
@@ -164,42 +164,42 @@ TEST(composer, test_add_gate_proofs)
     uint32_t b_idx = composer.add_variable(b);
     uint32_t c_idx = composer.add_variable(c);
     uint32_t d_idx = composer.add_variable(d);
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
 
-    composer.create_add_gate({d_idx, c_idx, a_idx, fr::one(), fr::neg_one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ d_idx, c_idx, a_idx, fr::one(), fr::neg_one(), fr::neg_one(), fr::zero() });
 
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({b_idx, a_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ b_idx, a_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
 
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -214,23 +214,11 @@ TEST(composer, test_add_gate_proofs)
 TEST(composer, test_mul_gate_proofs)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
-    fr::field_t q[7]{
-        fr::random_element(),
-        fr::random_element(),
-        fr::random_element(),
-        fr::random_element(),
-        fr::random_element(),
-        fr::random_element(),
-        fr::random_element()
-    };
+    fr::field_t q[7]{ fr::random_element(), fr::random_element(), fr::random_element(), fr::random_element(),
+                      fr::random_element(), fr::random_element(), fr::random_element() };
     fr::field_t q_inv[7]{
-        fr::invert(q[0]),
-        fr::invert(q[1]),
-        fr::invert(q[2]),
-        fr::invert(q[3]),
-        fr::invert(q[4]),
-        fr::invert(q[5]),
-        fr::invert(q[6]),
+        fr::invert(q[0]), fr::invert(q[1]), fr::invert(q[2]), fr::invert(q[3]),
+        fr::invert(q[4]), fr::invert(q[5]), fr::invert(q[6]),
     };
 
     fr::field_t a = fr::random_element();
@@ -243,30 +231,55 @@ TEST(composer, test_mul_gate_proofs)
     uint32_t c_idx = composer.add_variable(c);
     uint32_t d_idx = composer.add_variable(d);
 
-    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
+    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
 
     waffle::Prover prover = composer.preprocess();
 

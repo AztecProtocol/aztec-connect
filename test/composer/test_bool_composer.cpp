@@ -153,7 +153,7 @@ TEST(bool_composer, test_bool_gate_proofs)
 {
     waffle::BoolComposer composer = waffle::BoolComposer();
 
-    size_t n = 27;
+    size_t n = 29;
     for (size_t i = 0; i < n; ++i)
     {
         fr::field_t a = fr::one();
@@ -169,7 +169,7 @@ TEST(bool_composer, test_bool_gate_proofs)
 
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(prover.n, 32UL);
+    EXPECT_EQ(prover.n, 64UL);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
