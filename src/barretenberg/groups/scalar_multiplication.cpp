@@ -453,6 +453,12 @@ alt_pippenger(fr::field_t* scalars, g1::affine_element* points, size_t num_initi
 g1::element
 pippenger(fr::field_t* scalars, g1::affine_element* points, size_t num_initial_points, size_t forced_bucket_width)
 {
+    if (num_initial_points == 0)
+    {
+        g1::element out = g1::one();
+        g1::set_infinity(out);
+        return out;
+    }
     fr::field_t* endo_scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * (num_initial_points));
     for (size_t i = 0; i < num_initial_points; ++i)
     {
@@ -635,7 +641,7 @@ g1::element pippenger_internal(fr::field_t* scalars,
     return state.accumulator;
 }
 
-void batched_scalar_multiplications(multiplication_state* mul_state, size_t num_exponentiations)
+void batched_scalar_multiplications(multiplication_state* mul_state, const size_t num_batches)
 {
     // When performing a pippenger multi-exponentiation, the runtime is O(n / logn)
     // Therefore, when we are performing multiple multi-exponentiations, we need to
@@ -663,7 +669,7 @@ void batched_scalar_multiplications(multiplication_state* mul_state, size_t num_
     // We require that each of the multi-exponentiations contains the same number of points
     // TODO: fiddle with this algorithm to remove that requirement
     size_t num_elements = mul_state[0].num_elements;
-    for (size_t i = 1; i < num_exponentiations; ++i)
+    for (size_t i = 1; i < num_batches; ++i)
     {
         if (mul_state[i].num_elements != num_elements)
         {
@@ -678,46 +684,42 @@ void batched_scalar_multiplications(multiplication_state* mul_state, size_t num_
     size_t num_threads = 1;
 #endif
 
-    if (num_elements * 32 <= num_threads)
-    {
-        num_threads = 1;
-    }
 
     // Step 1: Figure out the optimal number of mini-exponentiations required to
     // divide up all multi-exponentiations amongst available threads
-    size_t split = num_threads / num_exponentiations;
-    if (split * num_exponentiations != num_threads)
+    size_t threads_per_batch = num_threads / num_batches;
+    if (threads_per_batch * num_batches != num_threads)
     {
-        ++split;
+        ++threads_per_batch;
     }
     // once we've allocated point ranges to threads, there is likely to be a spillover term
     // if the number of points in a multi-exp does not evenly divide the # of points in a thread
     // we need to make sure that we allocate this extra 'remainder' term to a thread
     // (when we recurse we want a constant # of exponentiations)
-    size_t single_range = num_elements / split;
-    if (single_range == 0)
-    {
-        single_range = 1;
-    }
-    size_t single_remainder = (num_elements > (single_range * split)) ? num_elements - (single_range * split) : 0;
+    size_t multiplications_per_thread = num_elements / threads_per_batch;
 
-    multiplication_state* threaded_inputs = new multiplication_state[split * num_exponentiations];
+    size_t single_remainder = (num_elements > (multiplications_per_thread * threads_per_batch))
+                                  ? num_elements - (multiplications_per_thread * threads_per_batch)
+                                  : 0;
+
+    multiplication_state* threaded_inputs = new multiplication_state[threads_per_batch * num_batches];
 
     // Compute the multi-exponentiation parameters for each thread
-    for (size_t i = 0; i < num_exponentiations; ++i)
+
+    for (size_t i = 0; i < num_batches; ++i)
     {
         size_t range_index = 0;
-        for (size_t j = 0; j < split; ++j)
+        for (size_t j = 0; j < threads_per_batch; ++j)
         {
             // we want the first threads to each map to a different multi-exponentiation, to deal with the 'remainder'
             // term
-            threaded_inputs[j * num_exponentiations + i].scalars = &mul_state[i].scalars[range_index];
+            threaded_inputs[j * num_batches + i].scalars = &mul_state[i].scalars[range_index];
             // each 'point' in the point table is actually 2 points (it's endomorphism counterpart), so double
             // range_index
-            threaded_inputs[j * num_exponentiations + i].points = &mul_state[i].points[range_index * 2];
+            threaded_inputs[j * num_batches + i].points = &mul_state[i].points[range_index * 2];
             size_t remainder_term = (j == 0) ? single_remainder : 0;
-            range_index += single_range + remainder_term;
-            threaded_inputs[j * num_exponentiations + i].num_elements = single_range + remainder_term;
+            range_index += multiplications_per_thread + remainder_term;
+            threaded_inputs[j * num_batches + i].num_elements = multiplications_per_thread + remainder_term;
         }
     }
 
@@ -733,7 +735,7 @@ void batched_scalar_multiplications(multiplication_state* mul_state, size_t num_
     // If number of threads does not evenly divide number of exponentiations, we're going to have some spillover terms.
     // (or, the number of multi-exponentiations was larger than the number of threads)
     // Call this method recursively until we've completed all multi-exponentiations
-    size_t threshold = split * num_exponentiations;
+    size_t threshold = threads_per_batch * num_batches;
     if (num_threads < threshold)
     {
         batched_scalar_multiplications(&threaded_inputs[num_threads], threshold - num_threads);
@@ -741,23 +743,23 @@ void batched_scalar_multiplications(multiplication_state* mul_state, size_t num_
 
     // great! by this point, all of our group elements should be in threaded_output.
     // all that's left is to concatenate them into the result
-    g1::element* outputs = new g1::element[num_exponentiations];
-    for (size_t i = 0; i < num_exponentiations; ++i)
+    g1::element* outputs = new g1::element[num_batches];
+    for (size_t i = 0; i < num_batches; ++i)
     {
         g1::copy(&threaded_inputs[i].output, &outputs[i]);
     }
-    for (size_t i = 0; i < num_exponentiations; ++i)
+    for (size_t i = 0; i < num_batches; ++i)
     {
-        for (size_t j = 1; j < split; ++j)
+        for (size_t j = 1; j < threads_per_batch; ++j)
         {
-            g1::add(outputs[i], threaded_inputs[j * num_exponentiations + i].output, outputs[i]);
+            g1::add(outputs[i], threaded_inputs[j * num_batches + i].output, outputs[i]);
         }
     }
 
     // TODO: change batch_normalize interface, so that we don't have to copy points into this `outputs` temp
     // TODO: multi-thread the inversion part?
-    g1::batch_normalize(outputs, num_exponentiations); // hmm...
-    for (size_t i = 0; i < num_exponentiations; ++i)
+    g1::batch_normalize(outputs, num_batches); // hmm...
+    for (size_t i = 0; i < num_batches; ++i)
     {
         g1::copy(&outputs[i], &mul_state[i].output);
     }

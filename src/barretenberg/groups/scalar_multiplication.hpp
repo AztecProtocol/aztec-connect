@@ -94,7 +94,7 @@ struct multiplication_state
     g1::element output;
 };
 
-void batched_scalar_multiplications(multiplication_state* mul_state, size_t num_exponentiations);
+void batched_scalar_multiplications(multiplication_state* mul_state, const size_t num_batches);
 } // namespace scalar_multiplication
 } // namespace barretenberg
 
