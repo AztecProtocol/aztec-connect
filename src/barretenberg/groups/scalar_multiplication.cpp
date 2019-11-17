@@ -641,7 +641,7 @@ g1::element pippenger_internal(fr::field_t* scalars,
     return state.accumulator;
 }
 
-void batched_scalar_multiplications(multiplication_state* mul_state, const size_t num_batches)
+void batched_scalar_multiplications(multiplication_state* mul_state, size_t num_batches)
 {
     // When performing a pippenger multi-exponentiation, the runtime is O(n / logn)
     // Therefore, when we are performing multiple multi-exponentiations, we need to
@@ -683,8 +683,6 @@ void batched_scalar_multiplications(multiplication_state* mul_state, const size_
 #else
     size_t num_threads = 1;
 #endif
-
-
     // Step 1: Figure out the optimal number of mini-exponentiations required to
     // divide up all multi-exponentiations amongst available threads
     size_t threads_per_batch = num_threads / num_batches;

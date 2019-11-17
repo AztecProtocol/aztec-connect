@@ -394,6 +394,16 @@ inline void __pow_small(const field_t& a, const size_t exponent, field_t& r)
         fr::one(r);
         return;
     }
+    if (exponent == 1)
+    {
+        fr::copy(a, r);
+        return;
+    }
+    if (exponent == 2)
+    {
+        fr::__sqr(a, r);
+        return;
+    }
     field_t accumulator;
     copy(a, accumulator);
 

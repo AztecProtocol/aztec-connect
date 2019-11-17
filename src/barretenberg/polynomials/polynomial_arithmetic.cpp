@@ -131,22 +131,11 @@ void fft_inner_parallel(fr::field_t* coeffs,
                         const fr::field_t&,
                         const std::vector<fr::field_t*>& root_table)
 {
-    if (domain.num_threads >= domain.size || (domain.size < 32))
-    {
-        fft_inner_serial(coeffs, domain.size, root_table);
-        for (size_t i = 0; i < domain.size; ++i)
-        {
-            fr::reduce_once(coeffs[i], coeffs[i]);
-        }
-        return;
-    }
-
     fr::field_t* scratch_space = (fr::field_t*)aligned_alloc(64, sizeof(fr::field_t) * domain.size);
 #ifndef NO_MULTITHREADING
 #pragma omp parallel
 #endif
     {
-
 // Step 1: perform bit-reverseal, so fft evaluations are 'in order'
 // TODO: remove this part! Will need a refactor of prover.hpp
 #ifndef NO_MULTITHREADING
@@ -177,6 +166,13 @@ void fft_inner_parallel(fr::field_t* coeffs,
                 fr::__sub_with_coarse_reduction(scratch_space[i], scratch_space[i + 1], scratch_space[i + 1]);
                 fr::__add_with_coarse_reduction(temp, scratch_space[i], scratch_space[i]);
             }
+        }
+
+        // hard code exception for when the domain size is tiny - we won't execute the next loop, so need to manually reduce + copy
+        if (domain.size <= 2)
+        {
+            fr::reduce_once(scratch_space[0], coeffs[0]);
+            fr::reduce_once(scratch_space[1], coeffs[1]);
         }
 
         // outer FFT loop
@@ -344,7 +340,6 @@ fr::field_t evaluate(const fr::field_t* coeffs, const fr::field_t& z, const size
 #else
     size_t num_threads = 1;
 #endif
-
     size_t range_per_thread = n / num_threads;
     size_t leftovers = n - (range_per_thread * num_threads);
     fr::field_t* evaluations = new fr::field_t[num_threads];
@@ -448,7 +443,6 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
         fr::__sub(subgroup_roots[i], fr::one(), subgroup_roots[i]);
         fr::__mul(subgroup_roots[i], src_domain.domain_inverse, subgroup_roots[i]);
     }
-
     // TODO: this is disgusting! Fix it fix it fix it fix it...
     if (subgroup_size >= target_domain.thread_size)
     {
@@ -536,25 +530,28 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
             }
         }
     }
+    else
+    {
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
-    for (size_t k = 0; k < target_domain.num_threads; ++k)
-    {
-        size_t offset = k * target_domain.thread_size;
-        fr::field_t root_shift;
-        fr::field_t work_root;
-        fr::__pow_small(target_domain.root, offset, root_shift);
-        fr::__mul(fr::multiplicative_generator(), root_shift, work_root);
-        fr::field_t T0;
-        for (size_t i = offset; i < offset + target_domain.thread_size; i += subgroup_size)
+        for (size_t k = 0; k < target_domain.num_threads; ++k)
         {
-            for (size_t j = 0; j < subgroup_size; ++j)
+            size_t offset = k * target_domain.thread_size;
+            fr::field_t root_shift;
+            fr::field_t work_root;
+            fr::__pow_small(target_domain.root, offset, root_shift);
+            fr::__mul(fr::multiplicative_generator(), root_shift, work_root);
+            fr::field_t T0;
+            for (size_t i = offset; i < offset + target_domain.thread_size; i += subgroup_size)
             {
-                fr::__mul(coeffs[i + j], subgroup_roots[j], coeffs[i + j]);
-                fr::__add(work_root, numerator_constant, T0);
-                fr::__mul(coeffs[i + j], T0, coeffs[i + j]);
-                fr::__mul_without_reduction(work_root, target_domain.root, work_root);
+                for (size_t j = 0; j < subgroup_size; ++j)
+                {
+                    fr::__mul(coeffs[i + j], subgroup_roots[j], coeffs[i + j]);
+                    fr::__add(work_root, numerator_constant, T0);
+                    fr::__mul(coeffs[i + j], T0, coeffs[i + j]);
+                    fr::__mul_without_reduction(work_root, target_domain.root, work_root);
+                }
             }
         }
     }

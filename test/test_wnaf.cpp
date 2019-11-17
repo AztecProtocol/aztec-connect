@@ -32,6 +32,22 @@ void recover_fixed_wnaf(uint32_t* wnaf, bool skew, uint64_t& hi, uint64_t& lo, s
 }
 }
 
+TEST(wnaf, wnaf_zero)
+{
+    uint64_t buffer[2]{ 0, 0 };
+    uint32_t wnaf[WNAF_SIZE(5)] = { 0 };
+    bool skew =  false;
+    wnaf::fixed_wnaf(buffer, wnaf, skew, 1, 5);
+    uint64_t recovered_hi;
+    uint64_t recovered_lo;
+    recover_fixed_wnaf(wnaf, skew, recovered_hi, recovered_lo, 5);
+    EXPECT_EQ(recovered_lo, 0UL);
+    EXPECT_EQ(recovered_hi, 0UL);
+    EXPECT_EQ(buffer[0], recovered_lo);
+    EXPECT_EQ(buffer[1], recovered_hi);
+}
+
+
 TEST(wnaf, wnaf_fixed)
 {
     uint64_t rand_buffer[2]{ 0 };

@@ -71,7 +71,7 @@ TEST(scalar_multiplication, endomorphism_split)
 
 TEST(scalar_multiplication, pippenger)
 {
-    size_t num_points = 1000;
+    size_t num_points = 10000;
 
     fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
 
@@ -101,6 +101,67 @@ TEST(scalar_multiplication, pippenger)
     aligned_free(points);
 
     EXPECT_EQ(g1::eq(result, expected), true);
+}
+
+TEST(scalar_multiplication, pippenger_one)
+{
+    size_t num_points = 1;
+
+    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * 1);
+
+    g1::affine_element* points =
+        (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
+
+    for (size_t i = 0; i < num_points; ++i)
+    {
+        scalars[i] = fr::random_element();
+        points[i] = g1::random_affine_element();
+    }
+
+    g1::element expected;
+    g1::set_infinity(expected);
+    for (size_t i = 0; i < num_points; ++i)
+    {
+        g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
+        g1::add(expected, temp, expected);
+    }
+    expected = g1::normalize(expected);
+    scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
+
+    g1::element result = scalar_multiplication::pippenger(scalars, points, num_points);
+    result = g1::normalize(result);
+
+    aligned_free(scalars);
+    aligned_free(points);
+
+    EXPECT_EQ(g1::eq(result, expected), true);
+}
+
+TEST(scalar_multiplication, pippenger_zero_points)
+{
+    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t));
+
+    g1::affine_element* points =
+        (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 2 + 1);
+
+
+    g1::element result = scalar_multiplication::pippenger(scalars, points, 0);
+    EXPECT_EQ(g1::is_point_at_infinity(result), true);
+}
+
+TEST(scalar_multiplication, pippenger_mul_by_zero)
+{
+    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t));
+
+    g1::affine_element* points =
+        (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 2 + 1);
+
+    scalars[0] = fr::zero();
+    points[0] = g1::affine_one();
+    scalar_multiplication::generate_pippenger_point_table(points, points, 1);
+
+    g1::element result = scalar_multiplication::pippenger(scalars, points, 1);
+    EXPECT_EQ(g1::is_point_at_infinity(result), true);
 }
 
 TEST(scalar_multiplication, pippenger_low_memory)
@@ -136,7 +197,7 @@ TEST(scalar_multiplication, pippenger_low_memory)
     EXPECT_EQ(g1::eq(result, expected), true);
 }
 
-TEST(scalar_multiplication_alt, pippenger_internal)
+TEST(scalar_multiplication, pippenger_internal_alt)
 {
     size_t num_points = 1000;
 

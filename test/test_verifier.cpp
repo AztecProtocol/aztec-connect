@@ -110,7 +110,7 @@ void generate_test_data(waffle::Prover& state)
 
 TEST(verifier, verify_arithmetic_proof_small)
 {
-    size_t n = 32;
+    size_t n = 4;
 
     waffle::Prover state(n);
 

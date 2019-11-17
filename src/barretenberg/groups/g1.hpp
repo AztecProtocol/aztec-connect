@@ -458,6 +458,10 @@ inline element normalize(element& src)
     fq::__mul(src.x, zz_inv, dest.x);
     fq::__mul(src.y, zzz_inv, dest.y);
     dest.z = fq::one();
+    if (is_point_at_infinity(src))
+    {
+        set_infinity(dest);
+    }
     return dest;
 }
 
@@ -478,7 +482,10 @@ inline void batch_normalize(element* points, size_t num_points)
     for (size_t i = 0; i < num_points; ++i)
     {
         fq::copy(accumulator, temporaries[i]);
-        fq::__mul(accumulator, points[i].z, accumulator);
+        if (!is_point_at_infinity(points[i]))
+        {
+            fq::__mul(accumulator, points[i].z, accumulator);
+        }
     }
     // For the rest of this method I'll refer to the product of all z-coordinates as the 'global' z-coordinate
     // Invert the global z-coordinate and store in `accumulator`
@@ -508,12 +515,15 @@ inline void batch_normalize(element* points, size_t num_points)
      **/
     for (size_t i = num_points - 1; i < num_points; --i)
     {
-        fq::__mul(accumulator, temporaries[i], z_inv);
-        fq::__sqr(z_inv, zz_inv);
-        fq::__mul(z_inv, zz_inv, zzz_inv);
-        fq::__mul(points[i].x, zz_inv, points[i].x);
-        fq::__mul(points[i].y, zzz_inv, points[i].y);
-        fq::__mul(accumulator, points[i].z, accumulator);
+        if (!is_point_at_infinity(points[i]))
+        {
+            fq::__mul(accumulator, temporaries[i], z_inv);
+            fq::__sqr(z_inv, zz_inv);
+            fq::__mul(z_inv, zz_inv, zzz_inv);
+            fq::__mul(points[i].x, zz_inv, points[i].x);
+            fq::__mul(points[i].y, zzz_inv, points[i].y);
+            fq::__mul(accumulator, points[i].z, accumulator);
+        }
         points[i].z = fq::one();
     }
 
