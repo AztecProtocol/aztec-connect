@@ -54,6 +54,7 @@ public:
     void shrink_evaluation_domain(const size_t shrink_factor);
 
 private:
+    void zero_memory(const size_t zero_size);
     const static size_t DEFAULT_SIZE_HINT = 1 << 20;
     const static size_t DEFAULT_PAGE_SPILL = 20;
     void add_coefficient_internal(const barretenberg::fr::field_t &coefficient);

@@ -39,6 +39,7 @@ polynomial::polynomial(const size_t initial_size, const size_t initial_max_size_
         coefficients = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * target_max_size));
         max_size = target_max_size;
     }
+    zero_memory(max_size);
 }
 
 polynomial::polynomial(const polynomial& other, const size_t target_max_size) :
@@ -55,11 +56,7 @@ polynomial::polynomial(const polynomial& other, const size_t target_max_size) :
     {
         memcpy(static_cast<void*>(coefficients), static_cast<void*>(other.coefficients), sizeof(fr::field_t) * size);
     }
-    size_t delta = max_size - size;
-    if (delta > 0)
-    {
-        memset(static_cast<void*>(coefficients + size), 0, delta);
-    }
+    zero_memory(max_size);
 }
 
 polynomial& polynomial::operator=(const polynomial& other)
@@ -81,6 +78,7 @@ polynomial& polynomial::operator=(const polynomial& other)
     {
         memcpy(static_cast<void*>(coefficients), static_cast<void*>(other.coefficients), sizeof(fr::field_t) * size);
     }
+    zero_memory(max_size);
     return *this;
 }
 
@@ -105,6 +103,7 @@ polynomial::polynomial(polynomial&& other, const size_t target_max_size) :
     {
         bump_memory(max_size);
     }
+    zero_memory(max_size);
 }
 
 polynomial& polynomial::operator=(polynomial&& other)
@@ -134,6 +133,7 @@ polynomial& polynomial::operator=(polynomial&& other)
         bump_memory(max_size);
     }
     other.coefficients = nullptr;
+    zero_memory(max_size);
     return *this;
 }
 
@@ -151,6 +151,15 @@ polynomial::~polynomial()
 fr::field_t polynomial::evaluate(const fr::field_t& z, const size_t target_size) const
 {
     return polynomial_arithmetic::evaluate(coefficients, z, target_size);
+}
+
+void polynomial::zero_memory(const size_t zero_size)
+{
+    size_t delta = zero_size - size;
+    if (delta > 0)
+    {
+        memset(static_cast<void*>(&coefficients[size]), 0, sizeof(fr::field_t) * delta);
+    }
 }
 
 void polynomial::bump_memory(const size_t new_size_hint)

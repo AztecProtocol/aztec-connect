@@ -64,7 +64,7 @@ TEST(stdlib_uint32, test_add)
     EXPECT_EQ(result, true);
 }
 
-TEST(stdlib_uint32s, test_add_wth_constants)
+TEST(stdlib_uint32s, test_add_with_constants)
 {
     size_t n = 32;
     std::vector<uint32_t> witnesses = get_random_ints(3 * n);
@@ -359,9 +359,9 @@ uint32_t round_values[8]{
 // ...but what about multiplicative value? Um...erm...
 TEST(stdlib_uint32, test_sha256_rounds)
 {
-    uint32_t w_alt[64];
+    uint32_t w_alt[256];
 
-    for (size_t i = 0; i < 64; ++i)
+    for (size_t i = 0; i < 256; ++i)
     {
         w_alt[i] = static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
     }
@@ -373,11 +373,11 @@ TEST(stdlib_uint32, test_sha256_rounds)
     uint32_t f_alt = round_values[5];
     uint32_t g_alt = round_values[6];
     uint32_t h_alt = round_values[7];
-    for (size_t i = 0; i < 64; ++i)
+    for (size_t i = 0; i < 256; ++i)
     {
         uint32_t S1_alt = rotate(e_alt, 7) ^ rotate(e_alt, 11) ^ rotate(e_alt, 25);
         uint32_t ch_alt = (e_alt & f_alt) ^ ((~e_alt) & g_alt);
-        uint32_t temp1_alt = h_alt + S1_alt + ch_alt + k_constants[i] + w_alt[i];
+        uint32_t temp1_alt = h_alt + S1_alt + ch_alt + k_constants[i % 64] + w_alt[i];
 
         uint32_t S0_alt = rotate(a_alt, 2) ^ rotate(a_alt, 13) ^ rotate(a_alt, 22);
         uint32_t maj_alt = (a_alt & b_alt) ^ (a_alt & c_alt) ^ (b_alt & c_alt);
@@ -396,10 +396,10 @@ TEST(stdlib_uint32, test_sha256_rounds)
 
     std::vector<uint32> w;
     std::vector<uint32> k;
-    for (size_t i = 0; i < 64; ++i)
+    for (size_t i = 0; i < 256; ++i)
     {
         w.emplace_back(uint32(witness_t(&composer, w_alt[i])));
-        k.emplace_back(uint32(&composer, k_constants[i]));
+        k.emplace_back(uint32(&composer, k_constants[i % 64]));
     }
     uint32 a = witness_t(&composer, round_values[0]);
     uint32 b = witness_t(&composer, round_values[1]);
@@ -409,7 +409,7 @@ TEST(stdlib_uint32, test_sha256_rounds)
     uint32 f = witness_t(&composer, round_values[5]);
     uint32 g = witness_t(&composer, round_values[6]);
     uint32 h = witness_t(&composer, round_values[7]);
-    for (size_t i = 0; i < 64; ++i)
+    for (size_t i = 0; i < 256; ++i)
     {
         uint32 S1 = e.ror(7U) ^ e.ror(11U) ^ e.ror(25U);
         uint32 ch = (e & f) + ((~e) & g);

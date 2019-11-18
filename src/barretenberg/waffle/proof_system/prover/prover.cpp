@@ -421,7 +421,7 @@ void Prover::compute_quotient_polynomial()
     circuit_state.w_r_fft = polynomial(w_r, 4 * n + 4);
     circuit_state.w_o_fft = polynomial(w_o, 4 * n + 4);
 
-    // // TODO REMOVE
+
     circuit_state.w_l_fft.coset_fft(circuit_state.large_domain);
     circuit_state.w_r_fft.coset_fft(circuit_state.large_domain);
     circuit_state.w_o_fft.coset_fft(circuit_state.large_domain);

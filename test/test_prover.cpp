@@ -169,7 +169,7 @@ void generate_test_data(waffle::Prover& state)
 
 TEST(prover, compute_quotient_polynomial)
 {
-    size_t n = 256;
+    size_t n = 1 << 10;
 
     waffle::Prover state(n);
     generate_test_data(state);
