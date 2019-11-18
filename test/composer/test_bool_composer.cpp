@@ -42,23 +42,6 @@ TEST(bool_composer, test_add_gate_proofs)
     composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
 
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-
     waffle::Prover prover = composer.preprocess();
 
     waffle::Verifier verifier = waffle::preprocess(prover);
@@ -114,31 +97,6 @@ TEST(bool_composer, test_mul_gate_proofs)
     composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
     composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
 
-    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
-    composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
-
     waffle::Prover prover = composer.preprocess();
 
     waffle::Verifier verifier = waffle::preprocess(prover);
@@ -153,7 +111,7 @@ TEST(bool_composer, test_bool_gate_proofs)
 {
     waffle::BoolComposer composer = waffle::BoolComposer();
 
-    size_t n = 29;
+    size_t n = 27;
     for (size_t i = 0; i < n; ++i)
     {
         fr::field_t a = fr::one();
@@ -169,7 +127,7 @@ TEST(bool_composer, test_bool_gate_proofs)
 
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(prover.n, 64UL);
+    EXPECT_EQ(prover.n, 32UL);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();

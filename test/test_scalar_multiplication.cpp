@@ -141,9 +141,7 @@ TEST(scalar_multiplication, pippenger_zero_points)
 {
     fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t));
 
-    g1::affine_element* points =
-        (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 2 + 1);
-
+    g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 2 + 1);
 
     g1::element result = scalar_multiplication::pippenger(scalars, points, 0);
     EXPECT_EQ(g1::is_point_at_infinity(result), true);
@@ -153,8 +151,7 @@ TEST(scalar_multiplication, pippenger_mul_by_zero)
 {
     fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t));
 
-    g1::affine_element* points =
-        (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 2 + 1);
+    g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 2 + 1);
 
     scalars[0] = fr::zero();
     points[0] = g1::affine_one();
@@ -225,8 +222,8 @@ TEST(scalar_multiplication, pippenger_internal_alt)
     g1::element result = scalar_multiplication::alt_pippenger(scalars, points, num_points);
     result = g1::normalize(result);
 
-    free(scalars);
-    free(points);
+    aligned_free(scalars);
+    aligned_free(points);
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
@@ -265,8 +262,8 @@ TEST(scalar_multiplication_precompute, precomputed_pippenger)
     g1::element result = scalar_multiplication::pippenger_precomputed(scalars, round_points, num_points);
     result = g1::normalize(result);
 
-    free(scalars);
-    free(points);
+    aligned_free(scalars);
+    aligned_free(points);
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }

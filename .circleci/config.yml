@@ -1,0 +1,22 @@
+version: 2.1
+jobs:
+  build_and_test:
+    resource_class: xlarge
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - checkout
+      - run:
+          name: 'Pull submodules'
+          command: git submodule init && git submodule update
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: 'Build'
+          command: docker-compose build
+          no_output_timeout: '30m'
+
+workflows:
+  build_and_push_images:
+    jobs:
+      - build_and_test
