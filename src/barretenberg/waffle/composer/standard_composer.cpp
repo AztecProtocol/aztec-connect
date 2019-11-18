@@ -36,7 +36,6 @@ namespace waffle
 
     void StandardComposer::create_mul_gate(const mul_triple &in)
     {
-        printf("bar?\n");
         gate_flags.push_back(0);
         add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_LEFT_WIRE);
         add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_RIGHT_WIRE);
