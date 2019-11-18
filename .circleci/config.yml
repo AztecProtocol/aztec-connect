@@ -15,7 +15,6 @@ jobs:
           name: 'Build'
           command: |
             docker system info
-            docker-compose build
           no_output_timeout: '30m'
 
 workflows:
