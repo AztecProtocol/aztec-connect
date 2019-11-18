@@ -436,8 +436,10 @@ g1::element alt_pippenger_internal(fr::field_t* scalars,
     return state.accumulator;
 }
 
-g1::element
-alt_pippenger(fr::field_t* scalars, g1::affine_element* points, size_t num_initial_points, size_t forced_bucket_width)
+g1::element alt_pippenger(fr::field_t* scalars,
+                          g1::affine_element* points,
+                          size_t num_initial_points,
+                          size_t forced_bucket_width)
 {
     fr::field_t* endo_scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * (num_initial_points));
     for (size_t i = 0; i < num_initial_points; ++i)
@@ -450,8 +452,10 @@ alt_pippenger(fr::field_t* scalars, g1::affine_element* points, size_t num_initi
     return res;
 }
 
-g1::element
-pippenger(fr::field_t* scalars, g1::affine_element* points, size_t num_initial_points, size_t forced_bucket_width)
+g1::element pippenger(fr::field_t* scalars,
+                      g1::affine_element* points,
+                      size_t num_initial_points,
+                      size_t forced_bucket_width)
 {
     if (num_initial_points == 0)
     {
