@@ -3,11 +3,11 @@
 
 #include "memory.h"
 
-#include "../../keccak/keccak.h"
 #include "../../assert.hpp"
+#include "../../keccak/keccak.h"
 
-#include "../composer/standard_composer.hpp"
 #include "../composer/mimc_composer.hpp"
+#include "../composer/standard_composer.hpp"
 #include "./field/field.hpp"
 
 namespace plonk
@@ -16,7 +16,7 @@ namespace stdlib
 {
 namespace
 {
-// mimc.cpp contains an implementation of the 'MiMC7' hash algorithm. 
+// mimc.cpp contains an implementation of the 'MiMC7' hash algorithm.
 // This uses the MiMC block cipher (with a permutation of x^7), and applies
 // the Miyaguchi-Preneel compression function to create a 1-way hash function.
 
@@ -34,7 +34,9 @@ constexpr size_t num_mimc_rounds = 91;
 
 barretenberg::fr::field_t mimc_round_constants[num_mimc_rounds];
 
-const auto init_var = [](){
+#pragma GCC diagnostic ignored "-Wunused-variable"
+const auto init_var = []() {
+    // clang-format off
     uint8_t inputs[32]{
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         static_cast<uint8_t>(atoi("m")),
@@ -42,29 +44,32 @@ const auto init_var = [](){
         static_cast<uint8_t>(atoi("m")),
         static_cast<uint8_t>(atoi("c"))
     };
+    // clang-format on
     for (size_t i = 0; i < num_mimc_rounds; ++i)
     {
         keccak256 keccak256_hash = ethash_keccak256(&inputs[0], 32);
         memcpy((void*)&inputs[0], (void*)&keccak256_hash.word64s[0], 32);
-        barretenberg::fr::__to_montgomery_form(*(barretenberg::fr::field_t*)&keccak256_hash.word64s[0], mimc_round_constants[i]);
+        barretenberg::fr::__to_montgomery_form(*(barretenberg::fr::field_t*)&keccak256_hash.word64s[0],
+                                               mimc_round_constants[i]);
     }
     return true;
 }();
-}
+} // namespace
 
-field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> &message, field_t<waffle::MiMCComposer> &key)
+field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer>& message,
+                                                field_t<waffle::MiMCComposer>& key)
 {
     // TODO: Hmm, this should really be a std::shared_ptr
-    waffle::MiMCComposer *context = message.context;
+    waffle::MiMCComposer* context = message.context;
     ASSERT(context != nullptr);
 
-    if (!barretenberg::fr::eq(message.additive_constant, barretenberg::fr::zero())
-        || !barretenberg::fr::eq(message.multiplicative_constant, barretenberg::fr::one()))
+    if (!barretenberg::fr::eq(message.additive_constant, barretenberg::fr::zero()) ||
+        !barretenberg::fr::eq(message.multiplicative_constant, barretenberg::fr::one()))
     {
         message = message.normalize();
     };
-    if (!barretenberg::fr::eq(key.additive_constant, barretenberg::fr::zero())
-        || !barretenberg::fr::eq(key.multiplicative_constant, barretenberg::fr::one()))
+    if (!barretenberg::fr::eq(key.additive_constant, barretenberg::fr::zero()) ||
+        !barretenberg::fr::eq(key.multiplicative_constant, barretenberg::fr::one()))
     {
         key = key.normalize();
     }
@@ -93,13 +98,7 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> &m
 
         uint32_t x_cubed_idx = context->add_variable(x_cubed);
         x_out_idx = context->add_variable(x_out);
-        context->create_mimc_gate({
-            x_in_idx,
-            x_cubed_idx,
-            k_idx,
-            x_out_idx,
-            mimc_round_constants[i]
-        });
+        context->create_mimc_gate({ x_in_idx, x_cubed_idx, k_idx, x_out_idx, mimc_round_constants[i] });
         x_in_idx = x_out_idx;
         barretenberg::fr::copy(x_out, x_in);
     }
@@ -109,7 +108,8 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> &m
     return result;
 }
 
-field_t<waffle::StandardComposer> mimc_block_cipher(field_t<waffle::StandardComposer> message, field_t<waffle::StandardComposer> key)
+field_t<waffle::StandardComposer> mimc_block_cipher(field_t<waffle::StandardComposer> message,
+                                                    field_t<waffle::StandardComposer> key)
 {
     ASSERT(message.context == key.context);
     ASSERT(message.context != nullptr);
@@ -127,15 +127,14 @@ field_t<waffle::StandardComposer> mimc_block_cipher(field_t<waffle::StandardComp
     return x_out;
 }
 
-template <typename Composer>
-field_t<Composer> mimc7(std::vector<field_t<Composer> > &inputs)
+template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Composer>>& inputs)
 {
     if (inputs.size() == 0)
     {
         field_t<Composer> out = 0;
         return out;
     }
-    Composer *context = inputs[0].context;
+    Composer* context = inputs[0].context;
 
     // begin with a key schedule of 0
     // TODO: should be constant, should be able to handle this with our custom gate :/
@@ -151,7 +150,7 @@ field_t<Composer> mimc7(std::vector<field_t<Composer> > &inputs)
     }
     return key;
 }
-}
-}
+} // namespace stdlib
+} // namespace plonk
 
 #endif

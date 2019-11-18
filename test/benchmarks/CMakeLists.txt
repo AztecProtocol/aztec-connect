@@ -59,13 +59,27 @@ add_executable(
     plonk_bench
     bench_plonk.cpp
 )
-target_link_libraries(
-    plonk_bench
-    PUBLIC
-    barretenberg
-    PRIVATE
-    benchmark
-)
+
+if (WIN32)
+    target_link_libraries(
+        plonk_bench
+        PUBLIC
+        barretenberg
+        PRIVATE
+        benchmark
+        wsock32
+        ws2_32
+    )
+else()
+    target_link_libraries(
+        plonk_bench
+        PUBLIC
+        barretenberg
+        PRIVATE
+        benchmark
+    )
+endif()
+
 target_include_directories(
     plonk_bench
     PRIVATE

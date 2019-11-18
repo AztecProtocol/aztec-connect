@@ -37,7 +37,7 @@ void copy_polynomial(fr::field_t* src, fr::field_t* dest, size_t num_src_coeffic
 void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::vector<fr::field_t*>& root_table)
 {
     fr::field_t temp;
-    size_t log2_size = (size_t)log2((double)domain_size);
+    size_t log2_size = (size_t)log2(domain_size);
     // efficiently separate odd and even indices - (An introduction to algorithms, section 30.3)
 
     for (size_t i = 0; i <= domain_size; ++i)
@@ -65,7 +65,7 @@ void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::
 
     for (size_t m = 2; m < domain_size; m *= 2)
     {
-        const size_t i = (size_t)log2((double)m);
+        const size_t i = (size_t)log2(m);
         for (size_t k = 0; k < domain_size; k += (2 * m))
         {
             for (size_t j = 0; j < m; ++j)
@@ -168,7 +168,8 @@ void fft_inner_parallel(fr::field_t* coeffs,
             }
         }
 
-        // hard code exception for when the domain size is tiny - we won't execute the next loop, so need to manually reduce + copy
+        // hard code exception for when the domain size is tiny - we won't execute the next loop, so need to manually
+        // reduce + copy
         if (domain.size <= 2)
         {
             fr::reduce_once(scratch_space[0], coeffs[0]);
@@ -558,8 +559,10 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
     delete[] subgroup_roots;
 }
 
-fr::field_t
-compute_kate_opening_coefficients(const fr::field_t* src, fr::field_t* dest, const fr::field_t& z, const size_t n)
+fr::field_t compute_kate_opening_coefficients(const fr::field_t* src,
+                                              fr::field_t* dest,
+                                              const fr::field_t& z,
+                                              const size_t n)
 {
     // if `coeffs` represents F(X), we want to compute W(X)
     // where W(X) = F(X) - F(z) / (X - z)
@@ -626,7 +629,7 @@ barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluatio
 void compress_fft(const fr::field_t* src, fr::field_t* dest, const size_t current_size, const size_t compress_factor)
 {
     // iterate from top to bottom, allows `dest` to overlap with `src`
-    size_t log2_compress_factor = (size_t)log2((double)compress_factor);
+    size_t log2_compress_factor = (size_t)log2(compress_factor);
     ASSERT(1UL << log2_compress_factor == compress_factor);
     size_t new_size = current_size >> log2_compress_factor;
     for (size_t i = 0; i < new_size; ++i)

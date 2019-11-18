@@ -604,7 +604,7 @@ void fft_bench_parallel(State& state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = (size_t)log2((double)state.range(0) / 4) - (size_t)log2((double)START);
+        size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::fft(globals.data, plonk_circuit_states[idx].circuit_state.large_domain);
     }
 }
@@ -614,7 +614,7 @@ void fft_bench_serial(State& state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = (size_t)log2((double)state.range(0) / 4) - (size_t)log2((double)START);
+        size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::fft_inner_serial(
             globals.data,
             plonk_circuit_states[idx].circuit_state.large_domain.thread_size,

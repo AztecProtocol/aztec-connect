@@ -1,14 +1,7 @@
-FROM aztecprotocol/cmake:3.15.4
+FROM ubuntu:latest
 
 ENV WINEARCH win64
-ARG MXE_TARGET_ARCH=x86_64
-ARG MXE_TARGET_THREAD=
-ARG MXE_TARGET_LINK=static
-
-ARG MXE_GIT_TAG=2ce5587c94fc355b2c826c786a3ee018479d88d1
-
-ENV CMAKE_TOOLCHAIN_FILE /usr/src/mxe/usr/${MXE_TARGET_ARCH}-w64-mingw32.${MXE_TARGET_LINK}${MXE_TARGET_THREAD}/share/cmake/mxe-conf.cmake
-
+ENV CMAKE_TOOLCHAIN_FILE /usr/src/mxe/usr/x86_64-w64-mingw32.static/share/cmake/mxe-conf.cmake
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN dpkg --add-architecture i386 && apt-get update && apt-get install -y wine64 && wine hostname
@@ -53,17 +46,18 @@ RUN apt-get install --no-install-recommends --yes \
 WORKDIR /usr/src
 RUN git clone https://github.com/mxe/mxe.git
 WORKDIR /usr/src/mxe
-RUN echo "MXE_TARGETS := ${MXE_TARGET_ARCH}-w64-mingw32.${MXE_TARGET_LINK}${MXE_TARGET_THREAD}" > settings.mk && \
-  echo "LOCAL_PKG_LIST := cc cmake"                                              >> settings.mk && \
-  echo ".DEFAULT local-pkg-list:"                                                >> settings.mk && \
-  echo "local-pkg-list: \$(LOCAL_PKG_LIST)"                                      >> settings.mk
-RUN make -j$(nproc) && rm -rf pkg log
+RUN make -j$(nproc) \
+  MXE_TARGETS=x86_64-w64-mingw32.static \
+  MXE_PLUGIN_DIRS=plugins/gcc8 \
+  cc cmake \
+  && rm -rf pkg log
+
 RUN echo 'set(CMAKE_CROSSCOMPILING_EMULATOR "/usr/bin/wine")' >> ${CMAKE_TOOLCHAIN_FILE}
 ENV PATH ${PATH}:/usr/src/mxe/usr/bin
 RUN cd /usr/src/mxe/usr/x86_64-w64-mingw32.static/lib/ && ln -s libshlwapi.a libShlwapi.a
 
 WORKDIR /usr/src/barretenberg
 COPY . .
-RUN mkdir build && cd build && /usr/src/mxe/usr/bin/x86_64-w64-mingw32.static-cmake -Dgtest_disable_pthreads=ON .. && make -j$(nproc)
+RUN mkdir build && cd build && /usr/src/mxe/usr/bin/x86_64-w64-mingw32.static-cmake -DBARRETENBERG_PROFILING=OFF -Dgtest_disable_pthreads=ON .. && make -j$(nproc)
 RUN cd build && wine ./test/barretenberg_tests.exe
 ENTRYPOINT /bin/bash

@@ -70,12 +70,15 @@ if(DISABLE_SHENANIGANS)
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wno-format -Wno-conversion")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -m64 -save-temps")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -save-temps")
+
+if(WIN32)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-float-conversion")
+endif()
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)
 set(DEPENDS_DIR ${PROJECT_SOURCE_DIR}/depends)
-
 
 add_definitions(-DBARRETENBERG_SRS_PATH=\"../srs_db/transcript.dat\")
 add_subdirectory(src)
@@ -87,3 +90,5 @@ if(BARRETENBERG_TESTING)
     enable_testing()
     add_subdirectory(test)
 endif()
+
+option(BARRETENBERG_PROFILING "Build profiling" ON)
