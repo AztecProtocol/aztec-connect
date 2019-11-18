@@ -24,7 +24,7 @@ public:
     virtual uint32_t add_variable(const barretenberg::fr::field_t &in)
     {
         pending_bool_selectors.emplace_back(false);
-        processed_bool_selectors.emplace_back(false);
+        is_bool.emplace_back(false);
         return ComposerBase::add_variable(in);
     }
 
@@ -38,8 +38,8 @@ public:
     std::vector<barretenberg::fr::field_t> q_left_bools;
     std::vector<barretenberg::fr::field_t> q_right_bools;
 
+    std::vector<bool> is_bool;
     std::vector<bool> pending_bool_selectors;
-    std::vector<bool> processed_bool_selectors;
     uint32_t zero_idx;
 };
 }

@@ -53,6 +53,22 @@ public:
         MIMC_SELECTORS = 0x08,
         ECC_SELECTORS = 0x10
     };
+    enum GateFlags
+    {
+        NONE = 0x00,
+        IS_ARITHMETIC_GATE = 0x01,
+        IS_MIMC_GATE = 0x02,
+        IS_LEFT_BOOL_GATE = 0x04,
+        IS_RIGHT_BOOL_GATE = 0x08,
+        IS_ECC_GATE = 0x10,
+        IS_FIXED_ECC_GATE = 0x20,
+        HAS_SEQUENTIAL_LEFT_WIRE = 0x40,
+        HAS_SEQUENTIAL_RIGHT_WIRE =  0x80,
+        HAS_SEQUENTIAL_OUTPUT_WIRE = 0x100,
+        FIXED_LEFT_WIRE = 0x200,
+        FIXED_RIGHT_WIRE = 0x400,
+        FIXED_OUTPUT_WIRE = 0x800,
+    };
     enum WireType
     {
         LEFT = 0U,
@@ -79,6 +95,11 @@ public:
     virtual void create_bool_gate(const uint32_t a) = 0;
     virtual void create_poly_gate(const poly_triple &in) = 0;    
     virtual size_t get_num_constant_gates() = 0;
+
+    void add_gate_flag(const size_t idx, const GateFlags new_flag)
+    {
+        gate_flags[idx] = gate_flags[idx] | static_cast<size_t>(new_flag);
+    }
 
     barretenberg::fr::field_t get_variable(const uint32_t index) const
     {
@@ -139,6 +160,7 @@ public:
     }
 
 protected:
+    std::vector<size_t> gate_flags;
     std::vector<barretenberg::fr::field_t> variables;
     std::vector<std::vector<epicycle> > wire_epicycles;
     size_t features = static_cast<size_t>(Features::SAD_TROMBONE);

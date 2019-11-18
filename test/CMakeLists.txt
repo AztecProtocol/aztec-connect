@@ -50,6 +50,7 @@ add_executable(
     composer/test_standard_composer.cpp
     composer/test_mimc_composer.cpp
     composer/test_bool_composer.cpp
+    composer/test_extended_composer.cpp
     stdlib/test_stdlib_bool.cpp
     stdlib/test_stdlib_field.cpp
     stdlib/test_stdlib_uint32.cpp

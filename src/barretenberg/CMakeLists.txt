@@ -61,6 +61,8 @@ add_library(
     waffle/composer/bool_composer.hpp
     waffle/composer/mimc_composer.cpp
     waffle/composer/mimc_composer.hpp
+    waffle/composer/extended_composer.cpp
+    waffle/composer/extended_composer.hpp
     waffle/stdlib/common.hpp
     waffle/stdlib/bool/bool.tcc
     waffle/stdlib/bool/bool.hpp
@@ -141,6 +143,8 @@ add_executable(
     waffle/composer/bool_composer.hpp
     waffle/composer/mimc_composer.cpp
     waffle/composer/mimc_composer.hpp
+    waffle/composer/extended_composer.cpp
+    waffle/composer/extended_composer.hpp
     waffle/stdlib/common.hpp
     waffle/stdlib/bool/bool.tcc
     waffle/stdlib/bool/bool.hpp

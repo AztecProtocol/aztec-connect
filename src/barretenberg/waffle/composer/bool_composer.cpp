@@ -34,7 +34,8 @@ namespace waffle
         {
             q_left_bools.emplace_back(fr::one());
             pending_bool_selectors[to_add.a] = false;
-            processed_bool_selectors[to_add.a] = true;
+            add_gate_flag(gate_flags.size() - 1, GateFlags::IS_LEFT_BOOL_GATE);
+            add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_LEFT_WIRE);
         }
         else
         {
@@ -45,7 +46,8 @@ namespace waffle
         {
             q_right_bools.emplace_back(fr::one());
             pending_bool_selectors[to_add.b] = false;
-            processed_bool_selectors[to_add.b] = true;
+            add_gate_flag(gate_flags.size() - 1, GateFlags::IS_RIGHT_BOOL_GATE);
+            add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_RIGHT_WIRE);
         }
         else
         {
@@ -56,11 +58,14 @@ namespace waffle
     void BoolComposer::create_mul_gate(const mul_triple &in)
     {
         StandardComposer::create_mul_gate(in);
+
         if (pending_bool_selectors[in.a])
         {
+            printf("bleh?\n");
             q_left_bools.emplace_back(fr::one());
+            add_gate_flag(gate_flags.size() - 1, GateFlags::IS_LEFT_BOOL_GATE);
+            add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_LEFT_WIRE);
             pending_bool_selectors[in.a] = false;
-            processed_bool_selectors[in.a] = true;
         }
         else
         {
@@ -68,9 +73,11 @@ namespace waffle
         }
         if (pending_bool_selectors[in.b])
         {
+            printf("bleh bleh?\n");
             q_right_bools.emplace_back(fr::one());
+            add_gate_flag(gate_flags.size() - 1, GateFlags::IS_RIGHT_BOOL_GATE);
+            add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_RIGHT_WIRE);
             pending_bool_selectors[in.b] = false;
-            processed_bool_selectors[in.b] = true;
         }
         else
         {
@@ -80,8 +87,9 @@ namespace waffle
 
     void BoolComposer::create_bool_gate(const uint32_t variable_index)
     {
-        if (processed_bool_selectors[variable_index] == false)
+        if (is_bool[variable_index] == false)
         {
+            is_bool[variable_index] = true;
             pending_bool_selectors[variable_index] = true;
         }
     }
@@ -93,7 +101,8 @@ namespace waffle
         {
             q_left_bools.emplace_back(fr::one());
             pending_bool_selectors[in.a] = false;
-            processed_bool_selectors[in.a] = true;
+            add_gate_flag(gate_flags.size() - 1, GateFlags::IS_LEFT_BOOL_GATE);
+            add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_LEFT_WIRE);
         }
         else
         {
@@ -103,7 +112,8 @@ namespace waffle
         {
             q_right_bools.emplace_back(fr::one());
             pending_bool_selectors[in.b] = false;
-            processed_bool_selectors[in.b] = true;
+            add_gate_flag(gate_flags.size() - 1, GateFlags::IS_RIGHT_BOOL_GATE);
+            add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_RIGHT_WIRE);
         }
         else
         {

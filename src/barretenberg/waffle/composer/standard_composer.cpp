@@ -12,6 +12,7 @@ namespace waffle
 {
     void StandardComposer::create_add_gate(const add_triple &in)
     {
+        gate_flags.push_back(0);
         w_l.emplace_back(in.a);
         w_r.emplace_back(in.b);
         w_o.emplace_back(in.c);
@@ -35,6 +36,10 @@ namespace waffle
 
     void StandardComposer::create_mul_gate(const mul_triple &in)
     {
+        printf("bar?\n");
+        gate_flags.push_back(0);
+        add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_LEFT_WIRE);
+        add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_RIGHT_WIRE);
         w_l.emplace_back(in.a);
         w_r.emplace_back(in.b);
         w_o.emplace_back(in.c);
@@ -58,6 +63,9 @@ namespace waffle
 
     void StandardComposer::create_bool_gate(const uint32_t variable_index)
     {
+        gate_flags.push_back(0);
+        add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_LEFT_WIRE);
+        add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_RIGHT_WIRE);
         w_l.emplace_back(variable_index);
         w_r.emplace_back(variable_index);
         w_o.emplace_back(variable_index);
@@ -80,6 +88,9 @@ namespace waffle
 
     void StandardComposer::create_poly_gate(const poly_triple &in)
     {
+        gate_flags.push_back(0);
+        add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_LEFT_WIRE);
+        add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_RIGHT_WIRE);
         w_l.emplace_back(in.a);
         w_r.emplace_back(in.b);
         w_o.emplace_back(in.c);
@@ -103,6 +114,7 @@ namespace waffle
 
     void StandardComposer::create_dummy_gates()
     {
+        gate_flags.push_back(0);
         // add in a dummy gate to ensure that all of our polynomials are not zero and not identical
         q_m.emplace_back(fr::to_montgomery_form({{1,0,0,0}}));
         q_l.emplace_back(fr::to_montgomery_form({{2,0,0,0}}));
