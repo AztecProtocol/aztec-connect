@@ -26,7 +26,7 @@ inline void conditional_negate_affine(affine_element* src, affine_element* dest,
     copy(src, dest);
     if (predicate)
     {
-        fq::neg(dest->y, dest->y);
+        fq::__neg(dest->y, dest->y);
     }
 }
 

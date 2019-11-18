@@ -1,7 +1,6 @@
 version: 2.1
 jobs:
   build_and_test:
-    resource_class: xlarge
     docker:
       - image: aztecprotocol/build-image
     steps:
@@ -14,7 +13,7 @@ jobs:
       - run:
           name: 'Build'
           command: |
-            docker system info
+            docker-compose build
           no_output_timeout: '30m'
 
 workflows:

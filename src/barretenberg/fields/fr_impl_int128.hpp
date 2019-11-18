@@ -14,7 +14,7 @@ namespace fr
 {
 namespace internal
 {
-using uint128_t = unsigned __int128;
+__extension__ using uint128_t = unsigned __int128;
 constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 
 constexpr field_t twice_modulus{
@@ -38,8 +38,8 @@ inline void sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in, ui
 }
 
 // perform a + (b * c) + carry, putting result in r and returning new carry
-inline void
-mac(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out)
+inline void mac(
+    const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out)
 {
     uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
     carry_out = (uint64_t)(res >> 64);
@@ -214,7 +214,7 @@ inline void __sqr_without_reduction(const field_t& a, field_t& r)
 
 inline void __sqr(const field_t& a, field_t& r)
 {
-    sqr_without_reduction(a, r);
+    __sqr_without_reduction(a, r);
     internal::subtract(r, modulus, r);
 }
 
@@ -235,11 +235,23 @@ inline void __conditional_negate(const field_t& a, field_t& r, const bool predic
 {
     if (predicate)
     {
-        sub(modulus, a, r);
+        __sub(modulus, a, r);
     }
     else
     {
         copy(modulus, r);
+    }
+}
+
+inline void __conditionally_subtract_double_modulus(const field_t& a, field_t& r, const uint64_t predicate)
+{
+    if (predicate)
+    {
+        __sub(internal::twice_modulus, a, r);
+    }
+    else
+    {
+        copy(a, r);
     }
 }
 } // namespace fr

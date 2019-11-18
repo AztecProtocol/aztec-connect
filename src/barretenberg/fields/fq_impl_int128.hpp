@@ -14,25 +14,21 @@ namespace fq
 {
 namespace internal
 {
-using uint128_t = unsigned __int128;
+__extension__ using uint128_t = unsigned __int128;
 constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 
 // N.B. Commented data is F_squared for Fr NOT Fq
 // 216D0B17F4E44A5 // 8C49833D53BB8085 // 53FE3AB1E35C59E3 // 1BB8E645AE216DA7
 
-constexpr field_t r_squared{{
-    0xF32CFC5B538AFA89UL,
-    0xB5E71911D44501FBUL,
-    0x47AB1EFF0A417FF6UL,
-    0x06D89F71CAB8351FUL}};
+constexpr field_t r_squared{
+    { 0xF32CFC5B538AFA89UL, 0xB5E71911D44501FBUL, 0x47AB1EFF0A417FF6UL, 0x06D89F71CAB8351FUL }
+};
 
-constexpr field_t one_raw{{1, 0, 0, 0}};
+constexpr field_t one_raw{ { 1, 0, 0, 0 } };
 
-constexpr field_t twice_modulus{{
-    0x7841182db0f9fa8eUL,
-    0x2f02d522d0e3951aUL,
-    0x70a08b6d0302b0bbUL,
-    0x60c89ce5c2634053UL}};
+constexpr field_t twice_modulus{
+    { 0x7841182db0f9fa8eUL, 0x2f02d522d0e3951aUL, 0x70a08b6d0302b0bbUL, 0x60c89ce5c2634053UL }
+};
 
 inline bool gt(field_t& a, field_t& b)
 {
@@ -61,8 +57,8 @@ inline void sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in, ui
 }
 
 // perform a + (b * c) + carry, putting result in r and returning new carry
-inline void
-mac(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out)
+inline void mac(
+    const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out)
 {
     uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
     carry_out = (uint64_t)(res >> 64);
