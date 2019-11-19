@@ -1,6 +1,6 @@
 version: 2.1
 jobs:
-  build_and_test:
+  cmake:
     machine:
       image: ubuntu-1604:201903-01
       docker_layer_caching: true
@@ -10,10 +10,104 @@ jobs:
       - run:
           name: 'Build'
           command: |
-            docker-compose build
+            docker-compose build cmake
+          no_output_timeout: '60m'
+
+  clang:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Build'
+          command: |
+            docker-compose build clang
+          no_output_timeout: '60m'
+
+  crosstool-ng:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Build'
+          command: |
+            docker-compose build crosstool-ng
+          no_output_timeout: '60m'
+
+  x86_64-linux-gcc:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Build'
+          command: |
+            docker-compose build x86_64-linux-gcc
+          no_output_timeout: '60m'
+
+  x86_64-linux-clang:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Build'
+          command: |
+            docker-compose build x86_64-linux-clang
+          no_output_timeout: '60m'
+
+  x86_64-win32-mingw:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Build'
+          command: |
+            docker-compose build x86_64-win32-mingw
+          no_output_timeout: '60m'
+
+  arm64-linux-gcc:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Build'
+          command: |
+            docker-compose build arm64-linux-gcc
           no_output_timeout: '60m'
 
 workflows:
-  build_and_push_images:
+  build:
     jobs:
-      - build_and_test
+      - cmake
+      - clang:
+          requires:
+            - cmake
+      - crosstool-ng:
+          requires:
+            - cmake
+      - x86_64-linux-gcc:
+          requires:
+            - cmake
+      - x86_64-linux-clang:
+          requires:
+            - clang
+      - x86_64-win32-mingw
+      - arm64-linux-gcc:
+          requires:
+            - crosstool-ng
