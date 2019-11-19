@@ -1,15 +1,12 @@
 version: 2.1
 jobs:
   build_and_test:
-    docker:
-      - image: aztecprotocol/build-image
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
     steps:
       - checkout
-      - run:
-          name: 'Pull submodules'
-          command: git submodule init && git submodule update
-      - setup_remote_docker:
-          docker_layer_caching: true
       - run:
           name: 'Build'
           command: |
