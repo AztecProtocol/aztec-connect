@@ -4,7 +4,7 @@ FROM aztecprotocol/crosstool-ng:1.24.0
 ENV CT_PREFIX /usr/xcc
 WORKDIR /usr/src/toolchain
 COPY ./crosstool/arm64-linux.config .config
-RUN CT_ALLOW_BUILD_AS_ROOT_SURE=1 ct-ng build && rm -rf /usr/src/toolchain
+RUN CT_ALLOW_BUILD_AS_ROOT_SURE=1 ct-ng build && cd / && rm -rf /usr/src/toolchain
 
 # The cross-compiling emulator.
 RUN apt-get update \
