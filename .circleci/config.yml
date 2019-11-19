@@ -9,9 +9,12 @@ jobs:
       - checkout
       - run:
           name: 'Build'
+          command: docker-compose build cmake
+      - run:
+          name: 'Push'
           command: |
-            docker-compose build cmake
-          no_output_timeout: '60m'
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/cmake:latest
 
   clang:
     machine:
@@ -22,9 +25,12 @@ jobs:
       - checkout
       - run:
           name: 'Build'
+          command: docker-compose build clang
+      - run:
+          name: 'Push'
           command: |
-            docker-compose build clang
-          no_output_timeout: '60m'
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/clang:latest
 
   crosstool-ng:
     machine:
@@ -35,9 +41,13 @@ jobs:
       - checkout
       - run:
           name: 'Build'
-          command: |
-            docker-compose build crosstool-ng
+          command: docker-compose build crosstool-ng
           no_output_timeout: '60m'
+      - run:
+          name: 'Push'
+          command: |
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/crosstool-ng:latest
 
   x86_64-linux-gcc:
     machine:
@@ -48,9 +58,7 @@ jobs:
       - checkout
       - run:
           name: 'Build'
-          command: |
-            docker-compose build x86_64-linux-gcc
-          no_output_timeout: '60m'
+          command: docker-compose build x86_64-linux-gcc
 
   x86_64-linux-clang:
     machine:
@@ -61,9 +69,7 @@ jobs:
       - checkout
       - run:
           name: 'Build'
-          command: |
-            docker-compose build x86_64-linux-clang
-          no_output_timeout: '60m'
+          command: docker-compose build x86_64-linux-clang
 
   x86_64-win32-mingw:
     machine:
@@ -74,8 +80,7 @@ jobs:
       - checkout
       - run:
           name: 'Build'
-          command: |
-            docker-compose build x86_64-win32-mingw
+          command: docker-compose build x86_64-win32-mingw
           no_output_timeout: '60m'
 
   arm64-linux-gcc:
@@ -87,9 +92,7 @@ jobs:
       - checkout
       - run:
           name: 'Build'
-          command: |
-            docker-compose build arm64-linux-gcc
-          no_output_timeout: '60m'
+          command: docker-compose build arm64-linux-gcc
 
 workflows:
   build:
