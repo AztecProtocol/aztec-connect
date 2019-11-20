@@ -168,4 +168,4 @@ workflows:
             - mingw
       - arm64-linux-gcc:
           requires:
-            - crosstool-ng
+            - crosstool-ng-arm64
