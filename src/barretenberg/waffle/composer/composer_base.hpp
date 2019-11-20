@@ -1,8 +1,8 @@
 #ifndef COMPOSER_BASE_HPP
 #define COMPOSER_BASE_HPP
 
-#include "../../types.hpp"
 #include "../../polynomials/polynomial.hpp"
+#include "../../types.hpp"
 
 #include "../proof_system/prover/prover.hpp"
 
@@ -43,7 +43,7 @@ struct poly_triple
 
 class ComposerBase
 {
-public:
+  public:
     enum Features
     {
         SAD_TROMBONE = 0x00,
@@ -63,7 +63,7 @@ public:
         IS_ECC_GATE = 0x10,
         IS_FIXED_ECC_GATE = 0x20,
         HAS_SEQUENTIAL_LEFT_WIRE = 0x40,
-        HAS_SEQUENTIAL_RIGHT_WIRE =  0x80,
+        HAS_SEQUENTIAL_RIGHT_WIRE = 0x80,
         HAS_SEQUENTIAL_OUTPUT_WIRE = 0x100,
         FIXED_LEFT_WIRE = 0x200,
         FIXED_RIGHT_WIRE = 0x400,
@@ -80,8 +80,8 @@ public:
         uint32_t gate_index;
         WireType wire_type;
     };
-    ComposerBase() {};
-    ~ComposerBase() {};
+    ComposerBase(){};
+    virtual ~ComposerBase(){};
 
     virtual Prover preprocess() = 0;
 
@@ -90,10 +90,10 @@ public:
         return ((features & static_cast<size_t>(target_feature)) != 0);
     }
 
-    virtual void create_add_gate(const add_triple &in) = 0;
-    virtual void create_mul_gate(const mul_triple &in) = 0;
+    virtual void create_add_gate(const add_triple& in) = 0;
+    virtual void create_mul_gate(const mul_triple& in) = 0;
     virtual void create_bool_gate(const uint32_t a) = 0;
-    virtual void create_poly_gate(const poly_triple &in) = 0;    
+    virtual void create_poly_gate(const poly_triple& in) = 0;
     virtual size_t get_num_constant_gates() = 0;
 
     void add_gate_flag(const size_t idx, const GateFlags new_flag)
@@ -107,7 +107,7 @@ public:
         return variables[index];
     }
 
-    virtual uint32_t add_variable(const barretenberg::fr::field_t &in)
+    virtual uint32_t add_variable(const barretenberg::fr::field_t& in)
     {
         variables.emplace_back(in);
         wire_epicycles.push_back(std::vector<epicycle>());
@@ -124,7 +124,7 @@ public:
         wire_epicycles[b_idx] = std::vector<epicycle>();
     }
 
-    void compute_sigma_permutations(Prover &output_state)
+    void compute_sigma_permutations(Prover& output_state)
     {
 
         // create basic 'identity' permutation
@@ -138,11 +138,9 @@ public:
             output_state.sigma_3_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 31U));
         }
 
-        uint32_t* sigmas[3]{
-            &output_state.sigma_1_mapping[0],
-            &output_state.sigma_2_mapping[0],
-            &output_state.sigma_3_mapping[0]
-        };
+        uint32_t* sigmas[3]{ &output_state.sigma_1_mapping[0],
+                             &output_state.sigma_2_mapping[0],
+                             &output_state.sigma_3_mapping[0] };
 
         for (size_t i = 0; i < wire_epicycles.size(); ++i)
         {
@@ -154,17 +152,19 @@ public:
                 epicycle current_epicycle = wire_epicycles[i][j];
                 size_t epicycle_index = j == wire_epicycles[i].size() - 1 ? 0 : j + 1;
                 epicycle next_epicycle = wire_epicycles[i][epicycle_index];
-                sigmas[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U][current_epicycle.gate_index] = next_epicycle.gate_index + static_cast<uint32_t>(next_epicycle.wire_type);;
+                sigmas[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U][current_epicycle.gate_index] =
+                    next_epicycle.gate_index + static_cast<uint32_t>(next_epicycle.wire_type);
+                ;
             }
         }
     }
 
-protected:
+  protected:
     std::vector<size_t> gate_flags;
     std::vector<barretenberg::fr::field_t> variables;
-    std::vector<std::vector<epicycle> > wire_epicycles;
+    std::vector<std::vector<epicycle>> wire_epicycles;
     size_t features = static_cast<size_t>(Features::SAD_TROMBONE);
 };
-}
+} // namespace waffle
 
 #endif

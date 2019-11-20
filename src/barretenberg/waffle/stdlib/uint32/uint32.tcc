@@ -105,8 +105,13 @@ uint32<ComposerContext> internal_logic_operation(uint32<ComposerContext>& left,
 
 template <typename ComposerContext>
 uint32<ComposerContext>::uint32()
-    : context(nullptr), witness(barretenberg::fr::zero()), witness_index(static_cast<uint32_t>(-1)),
-      additive_constant(0), multiplicative_constant(1), witness_status(WitnessStatus::OK), num_witness_bits(32)
+    : context(nullptr)
+    , witness(barretenberg::fr::zero())
+    , witness_index(static_cast<uint32_t>(-1))
+    , additive_constant(0)
+    , multiplicative_constant(1)
+    , witness_status(WitnessStatus::OK)
+    , num_witness_bits(32)
 {
     for (size_t i = 0; i < 32; ++i)
     {
@@ -117,8 +122,13 @@ uint32<ComposerContext>::uint32()
 
 template <typename ComposerContext>
 uint32<ComposerContext>::uint32(ComposerContext* parent_context)
-    : context(parent_context), witness(barretenberg::fr::zero()), witness_index(static_cast<uint32_t>(-1)),
-      additive_constant(0), multiplicative_constant(1), witness_status(WitnessStatus::OK), num_witness_bits(32)
+    : context(parent_context)
+    , witness(barretenberg::fr::zero())
+    , witness_index(static_cast<uint32_t>(-1))
+    , additive_constant(0)
+    , multiplicative_constant(1)
+    , witness_status(WitnessStatus::OK)
+    , num_witness_bits(32)
 {
     ASSERT(parent_context != nullptr);
     field_t<ComposerContext> zero_wire = field_t<ComposerContext>(parent_context, barretenberg::fr::zero());
@@ -131,8 +141,13 @@ uint32<ComposerContext>::uint32(ComposerContext* parent_context)
 
 template <typename ComposerContext>
 uint32<ComposerContext>::uint32(const witness_t<ComposerContext>& value)
-    : context(value.context), witness(value.witness), witness_index(value.witness_index), additive_constant(0),
-      multiplicative_constant(1), witness_status(WitnessStatus::NOT_NORMALIZED), num_witness_bits(32)
+    : context(value.context)
+    , witness(value.witness)
+    , witness_index(value.witness_index)
+    , additive_constant(0)
+    , multiplicative_constant(1)
+    , witness_status(WitnessStatus::NOT_NORMALIZED)
+    , num_witness_bits(32)
 {
     ASSERT(context != nullptr);
     decompose();
@@ -140,9 +155,13 @@ uint32<ComposerContext>::uint32(const witness_t<ComposerContext>& value)
 
 template <typename ComposerContext>
 uint32<ComposerContext>::uint32(ComposerContext* parent_context, const uint32_t value)
-    : context(parent_context), witness(barretenberg::fr::zero()), witness_index(static_cast<uint32_t>(-1)),
-      additive_constant(value), multiplicative_constant(1), witness_status(WitnessStatus::NOT_NORMALIZED),
-      num_witness_bits(32)
+    : context(parent_context)
+    , witness(barretenberg::fr::zero())
+    , witness_index(static_cast<uint32_t>(-1))
+    , additive_constant(value)
+    , multiplicative_constant(1)
+    , witness_status(WitnessStatus::NOT_NORMALIZED)
+    , num_witness_bits(32)
 {
     ASSERT(context != nullptr);
     decompose();
@@ -150,8 +169,11 @@ uint32<ComposerContext>::uint32(ComposerContext* parent_context, const uint32_t 
 
 template <typename ComposerContext>
 uint32<ComposerContext>::uint32(const field_t<ComposerContext>& other)
-    : context(other.context), witness(other.witness), witness_index(other.witness_index),
-      witness_status(WitnessStatus::NOT_NORMALIZED), num_witness_bits(32)
+    : context(other.context)
+    , witness(other.witness)
+    , witness_index(other.witness_index)
+    , witness_status(WitnessStatus::NOT_NORMALIZED)
+    , num_witness_bits(32)
 {
     ASSERT(context != nullptr);
     uint64_t additive_temp = barretenberg::fr::from_montgomery_form(other.additive_constant).data[0];
@@ -171,9 +193,13 @@ uint32<ComposerContext>::uint32(const field_t<ComposerContext>& other)
 
 template <typename ComposerContext>
 uint32<ComposerContext>::uint32(const uint32& other)
-    : context(other.context), witness(other.witness), witness_index(other.witness_index),
-      additive_constant(other.additive_constant), multiplicative_constant(other.multiplicative_constant),
-      witness_status(other.witness_status), num_witness_bits(other.num_witness_bits)
+    : context(other.context)
+    , witness(other.witness)
+    , witness_index(other.witness_index)
+    , additive_constant(other.additive_constant)
+    , multiplicative_constant(other.multiplicative_constant)
+    , witness_status(other.witness_status)
+    , num_witness_bits(other.num_witness_bits)
 {
     ASSERT(context != nullptr);
     for (size_t i = 0; i < 32; ++i)
@@ -185,9 +211,13 @@ uint32<ComposerContext>::uint32(const uint32& other)
 
 template <typename ComposerContext>
 uint32<ComposerContext>::uint32(uint32&& other)
-    : context(other.context), witness(other.witness), witness_index(other.witness_index),
-      additive_constant(other.additive_constant), multiplicative_constant(other.multiplicative_constant),
-      witness_status(other.witness_status), num_witness_bits(other.num_witness_bits)
+    : context(other.context)
+    , witness(other.witness)
+    , witness_index(other.witness_index)
+    , additive_constant(other.additive_constant)
+    , multiplicative_constant(other.multiplicative_constant)
+    , witness_status(other.witness_status)
+    , num_witness_bits(other.num_witness_bits)
 {
     ASSERT(context != nullptr);
     for (size_t i = 0; i < 32; ++i)
