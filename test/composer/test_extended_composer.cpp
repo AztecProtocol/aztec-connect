@@ -21,18 +21,16 @@ TEST(extended_composer, test_combine_linear_relations_basic_add)
     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
 
     fr::field_t wires[7]{ fr::one(), fr::one(), fr::one(), fr::one(), fr::one(), fr::one(), fr::one() };
-    uint32_t wire_indices[7]{
-        composer.add_variable(wires[0]),
-        composer.add_variable(wires[1]),
-        composer.add_variable(wires[2]),
-        composer.add_variable(wires[3]),
-        composer.add_variable(wires[4]),
-        composer.add_variable(wires[5]),
-        composer.add_variable(wires[6])
-    };
-    composer.create_add_gate({ wire_indices[0], wire_indices[1], wire_indices[2], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ wire_indices[2], wire_indices[3], wire_indices[4], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ wire_indices[4], wire_indices[5], wire_indices[6], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    uint32_t wire_indices[7]{ composer.add_variable(wires[0]), composer.add_variable(wires[1]),
+                              composer.add_variable(wires[2]), composer.add_variable(wires[3]),
+                              composer.add_variable(wires[4]), composer.add_variable(wires[5]),
+                              composer.add_variable(wires[6]) };
+    composer.create_add_gate(
+        { wire_indices[0], wire_indices[1], wire_indices[2], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { wire_indices[2], wire_indices[3], wire_indices[4], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { wire_indices[4], wire_indices[5], wire_indices[6], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
 
     composer.combine_linear_relations();
 
@@ -47,18 +45,16 @@ TEST(extended_composer, test_combine_linear_relations_basic_mul_add)
     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
 
     fr::field_t wires[7]{ fr::one(), fr::one(), fr::one(), fr::one(), fr::one(), fr::one(), fr::one() };
-    uint32_t wire_indices[7]{
-        composer.add_variable(wires[0]),
-        composer.add_variable(wires[1]),
-        composer.add_variable(wires[2]),
-        composer.add_variable(wires[3]),
-        composer.add_variable(wires[4]),
-        composer.add_variable(wires[5]),
-        composer.add_variable(wires[6])
-    };
-    composer.create_mul_gate({ wire_indices[0], wire_indices[1], wire_indices[2], fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ wire_indices[2], wire_indices[3], wire_indices[4], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ wire_indices[4], wire_indices[5], wire_indices[6], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    uint32_t wire_indices[7]{ composer.add_variable(wires[0]), composer.add_variable(wires[1]),
+                              composer.add_variable(wires[2]), composer.add_variable(wires[3]),
+                              composer.add_variable(wires[4]), composer.add_variable(wires[5]),
+                              composer.add_variable(wires[6]) };
+    composer.create_mul_gate(
+        { wire_indices[0], wire_indices[1], wire_indices[2], fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { wire_indices[2], wire_indices[3], wire_indices[4], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { wire_indices[4], wire_indices[5], wire_indices[6], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
 
     composer.combine_linear_relations();
 
