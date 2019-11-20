@@ -23,6 +23,7 @@ jobs:
             docker-compose build crosstool-ng
             docker-compose build crosstool-ng-arm64
             docker-compose build mingw
+          no_output_timeout: '60m'
       - run:
           name: 'Push'
           command: |
@@ -65,7 +66,6 @@ jobs:
       - run:
           name: 'Build'
           command: docker-compose build x86_64-win32-mingw
-          no_output_timeout: '60m'
 
   arm64-linux-gcc:
     machine:
