@@ -1,16 +1,15 @@
 ### Barretenberg, an optimized elliptic curve library for the bn128 curve, and PLONK SNARK prover
 
-**this code is highly experimental, use at your own risk!**  
-  
+**this code is highly experimental, use at your own risk!**
+
 The structured reference string contains monomials up to x^{2^20}. This SRS was generated locally and is for testing and development purposes only!
 
-
-### Getting started  
+### Getting started
 
 ```
-git clone https://github.com/AztecProtocol/barretenberg  
+git clone https://github.com/AztecProtocol/barretenberg
 
-mkdir build && cd build  
+mkdir build && cd build
 cmake ..
 cmake --build .
 ```
@@ -27,11 +26,11 @@ To run benchmarks, in the /build directory run
 test/barretenberg_bench
 ```
 
-To compile without tests and benchmarks, use `cmake .. -DBARRETENBERG_TESTING=OFF`  
+To compile without tests and benchmarks, use `cmake .. -DBARRETENBERG_TESTING=OFF`
 
-To select a test, run `./test/barretenberg_tests --gtest_filter=<test_filter>*`  
+To select a test, run `./test/barretenberg_tests --gtest_filter=<test_filter>*`
 
-To build in debug mode: 
+To build in debug mode:
 
 ```
 mkdir build && cd build
@@ -46,3 +45,4 @@ mkdir build && cd build
 cmake .. -DDISABLE_SHENANIGANS=ON
 cmake --build .
 ```
+

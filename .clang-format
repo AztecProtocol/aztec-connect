@@ -1,0 +1,11 @@
+PointerAlignment: Left
+ColumnLimit: 120
+BreakBeforeBraces: Allman
+IndentWidth: 4
+BinPackArguments: false
+BinPackParameters: false
+AllowShortFunctionsOnASingleLine: None
+Cpp11BracedListStyle: false
+AlwaysBreakAfterReturnType: None
+AlwaysBreakAfterDefinitionReturnType: None
+PenaltyReturnTypeOnItsOwnLine: 1000000

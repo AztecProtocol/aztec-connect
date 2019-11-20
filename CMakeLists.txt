@@ -3,12 +3,14 @@
 
 cmake_minimum_required(VERSION 3.14)
 
+if(APPLE)
+    set(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++")
+    set(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang")
+endif()
+
 include(GNUInstallDirs)
 include(cmake/OptimizeForArchitecture.cmake)
 include(cmake/AddCompilerFlag.cmake)
-
-# set(CMAKE_CXX_COMPILER "/usr/local/clang_9.0.0/bin/clang++")
-# set(CMAKE_C_COMPILER "/usr/local/clang_9.0.0/bin/clang")
 
 set(PROJECT_VERSION 0.1.0)
 project(Barretenberg
@@ -22,24 +24,31 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS ON)
 
 if(APPLE)
-if(CMAKE_C_COMPILER_ID MATCHES "Clang")
-    set(OpenMP_C "${CMAKE_C_COMPILER}")
-    set(OpenMP_C_FLAGS "-fopenmp=libomp -Wno-unused-command-line-argument")
-    set(OpenMP_C_LIB_NAMES "libomp" "libgomp" "libiomp5")
-    set(OpenMP_libomp_LIBRARY ${OpenMP_C_LIB_NAMES})
-    set(OpenMP_libgomp_LIBRARY ${OpenMP_C_LIB_NAMES})
-    set(OpenMP_libiomp5_LIBRARY ${OpenMP_C_LIB_NAMES})
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+        set(OpenMP_C_FLAGS "-fopenmp")
+        set(OpenMP_C_FLAGS_WORK "-fopenmp")
+        set(OpenMP_C_LIB_NAMES "libomp")
+        set(OpenMP_C_LIB_NAMES_WORK "libomp")
+        set(OpenMP_libomp_LIBRARY "/usr/local/lib/libomp.a")
+    endif()
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        set(OpenMP_CXX_FLAGS "-fopenmp")
+        set(OpenMP_CXX_FLAGS_WORK "-fopenmp")
+        set(OpenMP_CXX_LIB_NAMES "libomp")
+        set(OpenMP_CXX_LIB_NAMES_WORK "libomp")
+        set(OpenMP_libomp_LIBRARY "/usr/local/lib/libomp.a")
+    endif()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new")
 endif()
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set(OpenMP_CXX "${CMAKE_CXX_COMPILER}")
-  set(OpenMP_CXX_FLAGS "-fopenmp=libomp -Wno-unused-command-line-argument")
-  set(OpenMP_CXX_LIB_NAMES "libomp" "libgomp" "libiomp5")
-  set(OpenMP_libomp_LIBRARY ${OpenMP_CXX_LIB_NAMES})
-  set(OpenMP_libgomp_LIBRARY ${OpenMP_CXX_LIB_NAMES})
-  set(OpenMP_libiomp5_LIBRARY ${OpenMP_CXX_LIB_NAMES})
+
+option(MULTITHREADING default ON)
+
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND AND MULTITHREADING)
+    link_libraries(OpenMP::OpenMP_CXX)
+else()
+    add_definitions(-DNO_MULTITHREADING=1)
 endif()
-endif()
-# find_package(OpenMP REQUIRED)
 
 set(default_build_type "Release")
 # Set a default build type if none was specified
@@ -60,15 +69,18 @@ if(DISABLE_SHENANIGANS)
     add_definitions(-DDISABLE_SHENANIGANS=1)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native -O3 -m64 -fopenmp")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -fopenmp -save-temps")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wno-format -Wno-conversion")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -save-temps")
+
+if(WIN32)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-float-conversion")
+endif()
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)
 set(DEPENDS_DIR ${PROJECT_SOURCE_DIR}/depends)
 
-
-add_definitions(-DBARRETENBERG_SRS_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/srs_db/transcript.dat\")
+add_definitions(-DBARRETENBERG_SRS_PATH=\"../srs_db/transcript.dat\")
 add_subdirectory(src)
 
 option(BARRETENBERG_TESTING "Build tests" ON)
@@ -78,3 +90,5 @@ if(BARRETENBERG_TESTING)
     enable_testing()
     add_subdirectory(test)
 endif()
+
+option(BARRETENBERG_PROFILING "Build profiling" ON)

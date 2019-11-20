@@ -1,0 +1,6 @@
+FROM aztecprotocol/crosstool-ng-arm64:latest
+WORKDIR /usr/src/barretenberg
+COPY . .
+RUN mkdir build && cd build && cmake -DDISABLE_SHENANIGANS=ON -DRUN_HAVE_STD_REGEX=0 -DRUN_HAVE_POSIX_REGEX=0 .. && make -j$(nproc)
+RUN cd build && qemu-aarch64 ./test/barretenberg_tests
+ENTRYPOINT /bin/bash

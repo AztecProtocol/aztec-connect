@@ -1,27 +1,29 @@
 #ifndef G2
 #define G2
 
-#include "stdlib.h"
 #include "../fields/fq2.hpp"
 #include "../fields/fr.hpp"
 #include "../types.hpp"
+#include "stdlib.h"
 
 namespace barretenberg
 {
 namespace g2
 {
-constexpr fq::field_t xc0 = {.data = {0x8e83b5d102bc2026, 0xdceb1935497b0172, 0xfbb8264797811adf, 0x19573841af96503b}};
-constexpr fq::field_t xc1 = {.data = {0xafb4737da84c6140, 0x6043dd5a5802d8c4, 0x09e950fc52a02f86, 0x14fef0833aea7b6b}};
-constexpr fq::field_t yc0 = {.data = {0x619dfa9d886be9f6, 0xfe7fd297f59e9b78, 0xff9e1a62231b7dfe, 0x28fd7eebae9e4206}};
-constexpr fq::field_t yc1 = {.data = {0x64095b56c71856ee, 0xdc57f922327d3cbb, 0x55f935be33351076, 0x0da4a0e693fd6482}};
+constexpr fq::field_t xc0{ { 0x8e83b5d102bc2026, 0xdceb1935497b0172, 0xfbb8264797811adf, 0x19573841af96503b } };
+constexpr fq::field_t xc1{ { 0xafb4737da84c6140, 0x6043dd5a5802d8c4, 0x09e950fc52a02f86, 0x14fef0833aea7b6b } };
+constexpr fq::field_t yc0{ { 0x619dfa9d886be9f6, 0xfe7fd297f59e9b78, 0xff9e1a62231b7dfe, 0x28fd7eebae9e4206 } };
+constexpr fq::field_t yc1{ { 0x64095b56c71856ee, 0xdc57f922327d3cbb, 0x55f935be33351076, 0x0da4a0e693fd6482 } };
 
-constexpr fq2::fq2_t twist_mul_by_q_x = {
-    .c0 = {.data = {0xb5773b104563ab30, 0x347f91c8a9aa6454, 0x7a007127242e0991, 0x1956bcd8118214ec}},
-    .c1 = {.data = {0x6e849f1ea0aa4757, 0xaa1c7b6d89f89141, 0xb6e713cdfae0ca3a, 0x26694fbb4e82ebc3}}};
+constexpr fq2::fq2_t twist_mul_by_q_x{
+    { { 0xb5773b104563ab30, 0x347f91c8a9aa6454, 0x7a007127242e0991, 0x1956bcd8118214ec } },
+    { { 0x6e849f1ea0aa4757, 0xaa1c7b6d89f89141, 0xb6e713cdfae0ca3a, 0x26694fbb4e82ebc3 } }
+};
 
-constexpr fq2::fq2_t twist_mul_by_q_y = {
-    .c0 = {.data = {0xe4bbdd0c2936b629, 0xbb30f162e133bacb, 0x31a9d1b6f9645366, 0x253570bea500f8dd}},
-    .c1 = {.data = {0xa1d77ce45ffe77c7, 0x07affd117826d1db, 0x6d16bd27bb7edc6b, 0x2c87200285defecc}}};
+constexpr fq2::fq2_t twist_mul_by_q_y{
+    { { 0xe4bbdd0c2936b629, 0xbb30f162e133bacb, 0x31a9d1b6f9645366, 0x253570bea500f8dd } },
+    { { 0xa1d77ce45ffe77c7, 0x07affd117826d1db, 0x6d16bd27bb7edc6b, 0x2c87200285defecc } }
+};
 
 inline element one()
 {
@@ -55,17 +57,17 @@ inline bool is_point_at_infinity(const affine_element& p)
     return (bool)((p.y.c0.data[3] >> 63) & 1);
 }
 
-inline void set_infinity(element &p)
+inline void set_infinity(element& p)
 {
-    p.y.c0.data[3] |= (1UL << 63);
+    p.y.c0.data[3] |= (1ULL << 63);
 }
 
-inline void set_infinity(affine_element &p)
+inline void set_infinity(affine_element& p)
 {
-    p.y.c0.data[3] |= (1UL << 63);
+    p.y.c0.data[3] |= (1ULL << 63);
 }
 
-inline void dbl(element &p1, element &p2)
+inline void dbl(element& p1, element& p2)
 {
     if (p1.y.c0.data[3] >> 63 == 1)
     {
@@ -130,7 +132,7 @@ inline void dbl(element &p1, element &p2)
     fq2::sub(p2.y, T2, p2.y);
 }
 
-inline void mixed_add_inner(element &p1, affine_element &p2, element &p3)
+inline void mixed_add_inner(element& p1, affine_element& p2, element& p3)
 {
     fq2::fq2_t T0;
     fq2::fq2_t T1;
@@ -155,9 +157,12 @@ inline void mixed_add_inner(element &p1, affine_element &p2, element &p3)
     // T2 = T2 - y1 = y2.z1.z1.z1 - y1
     fq2::sub(T2, p1.y, T2);
 
-    if (__builtin_expect(((T1.c0.data[0] | T1.c0.data[1] | T1.c0.data[2] | T1.c0.data[3] | T1.c1.data[0] | T1.c1.data[1] | T1.c1.data[2] | T1.c1.data[3]) == 0), 0))
+    if (__builtin_expect(((T1.c0.data[0] | T1.c0.data[1] | T1.c0.data[2] | T1.c0.data[3] | T1.c1.data[0] |
+                           T1.c1.data[1] | T1.c1.data[2] | T1.c1.data[3]) == 0),
+                         0))
     {
-        if ((T2.c0.data[0] | T2.c0.data[1] | T2.c0.data[2] | T2.c0.data[3] | T2.c1.data[0] | T2.c1.data[1] | T2.c1.data[2] | T2.c1.data[3]) == 0)
+        if ((T2.c0.data[0] | T2.c0.data[1] | T2.c0.data[2] | T2.c0.data[3] | T2.c1.data[0] | T2.c1.data[1] |
+             T2.c1.data[2] | T2.c1.data[3]) == 0)
         {
             // y2 equals y1, x2 equals x1, double x1
             dbl(p1, p3);
@@ -222,7 +227,7 @@ inline void mixed_add_inner(element &p1, affine_element &p2, element &p3)
     fq2::sub(T3, T1, p3.y);
 }
 
-inline void mixed_add(element &p1, affine_element &p2, element &p3)
+inline void mixed_add(element& p1, affine_element& p2, element& p3)
 {
     // TODO: quantitavely check if __builtin_expect helps here
     // if (__builtin_expect(((p1.y.data[3] >> 63)), 0))
@@ -236,7 +241,7 @@ inline void mixed_add(element &p1, affine_element &p2, element &p3)
     mixed_add_inner(p1, p2, p3);
 }
 
-inline void mixed_add_expect_empty(element &p1, affine_element &p2, element &p3)
+inline void mixed_add_expect_empty(element& p1, affine_element& p2, element& p3)
 {
     if (__builtin_expect(int((p1.y.c0.data[3] >> 63UL)), 1))
     {
@@ -248,7 +253,7 @@ inline void mixed_add_expect_empty(element &p1, affine_element &p2, element &p3)
     mixed_add_inner(p1, p2, p3);
 }
 
-inline void add(element &p1, element &p2, element &p3)
+inline void add(element& p1, element& p2, element& p3)
 {
     bool p1_zero = (p1.y.c0.data[3] >> 63) == 1;
     bool p2_zero = (p2.y.c0.data[3] >> 63) == 1; // ((p2.z.data[0] | p2.z.data[1] | p2.z.data[2] | p2.z.data[3]) == 0);
@@ -303,9 +308,12 @@ inline void add(element &p1, element &p2, element &p3)
     // F = S2 - S1
     fq2::sub(S2, S1, F);
 
-    if (__builtin_expect(((H.c0.data[0] | H.c0.data[1] | H.c0.data[2] | H.c0.data[3] | H.c1.data[0] | H.c1.data[1] | H.c1.data[2] | H.c1.data[3]) == 0), 0))
+    if (__builtin_expect(((H.c0.data[0] | H.c0.data[1] | H.c0.data[2] | H.c0.data[3] | H.c1.data[0] | H.c1.data[1] |
+                           H.c1.data[2] | H.c1.data[3]) == 0),
+                         0))
     {
-        if ((F.c0.data[0] | F.c0.data[1] | F.c0.data[2] | F.c0.data[3] | F.c1.data[0] | F.c1.data[1] | F.c1.data[2] | F.c1.data[3]) == 0)
+        if ((F.c0.data[0] | F.c0.data[1] | F.c0.data[2] | F.c0.data[3] | F.c1.data[0] | F.c1.data[1] | F.c1.data[2] |
+             F.c1.data[3]) == 0)
         {
             // y2 equals y1, x2 equals x1, double x1
             dbl(p1, p3);
@@ -358,7 +366,7 @@ inline void add(element &p1, element &p2, element &p3)
     fq2::mul(p3.z, H, p3.z);
 }
 
-inline void mul_by_q(const element &a, element &r)
+inline void mul_by_q(const element& a, element& r)
 {
     fq2::fq2_t T0;
     fq2::fq2_t T1;
@@ -369,28 +377,27 @@ inline void mul_by_q(const element &a, element &r)
     fq2::frobenius_map(a.z, r.z);
 }
 
-inline void neg(const element &a, element &r)
+inline void __neg(const element& a, element& r)
 {
     fq2::copy(a.x, r.x);
     fq2::copy(a.z, r.z);
-    fq2::neg(r.y, r.y);
+    fq2::__neg(r.y, r.y);
 }
 
-inline void copy(const element &a, element &r)
+inline void copy(const element& a, element& r)
 {
     fq2::copy(a.x, r.x);
     fq2::copy(a.y, r.y);
     fq2::copy(a.z, r.z);
 }
 
-inline void copy_affine(const affine_element &a, affine_element &r)
+inline void copy_affine(const affine_element& a, affine_element& r)
 {
     fq2::copy(a.x, r.x);
     fq2::copy(a.y, r.y);
 }
 
-
-inline element normalize(element &src)
+inline element normalize(element& src)
 {
     element dest;
     fq2::fq2_t z_inv;
@@ -407,12 +414,12 @@ inline element normalize(element &src)
 }
 
 /**
-     * Normalize a batch of affine points via Montgomery's trick, so that their z-coordinate's are equal to unity
-     * Requires: 6 mul, 1 sqr per point, plus 1 inverse
-     **/
-inline void batch_normalize(element *points, size_t num_points)
+ * Normalize a batch of affine points via Montgomery's trick, so that their z-coordinate's are equal to unity
+ * Requires: 6 mul, 1 sqr per point, plus 1 inverse
+ **/
+inline void batch_normalize(element* points, size_t num_points)
 {
-    fq2::fq2_t *temporaries = (fq2::fq2_t *)(aligned_alloc(32, sizeof(fq2::fq2_t) * num_points));
+    fq2::fq2_t* temporaries = (fq2::fq2_t*)(aligned_alloc(32, sizeof(fq2::fq2_t) * num_points));
     fq2::fq2_t accumulator = fq2::one();
     fq2::fq2_t z_inv;
     fq2::fq2_t zz_inv;
@@ -430,28 +437,27 @@ inline void batch_normalize(element *points, size_t num_points)
     fq2::invert(accumulator, accumulator);
 
     /**
-        * We now proceed to iterate back down the array of points.
-        * At each iteration we update the accumulator to contain the z-coordinate of the currently worked-upon z-coordinate.
-        * We can then multiply this accumulator with `temporaries`, to get a scalar that is equal to
-        * the inverse of the z-coordinate of the point at the next iteration cycle
-        * e.g. Imagine we have 4 points, such that:
-        *
-        * accumulator = 1 / z.data[0]*z.data[1]*z.data[2]*z.data[3]
-        * temporaries[3] = z.data[0]*z.data[1]*z.data[2]
-        * temporaries[2] = z.data[0]*z.data[1]
-        * temporaries[1] = z.data[0]
-        * temporaries[0] = 1
-        *
-        * At the first iteration, accumulator * temporaries[3] = z.data[0]*z.data[1]*z.data[2] / z.data[0]*z.data[1]*z.data[2]*z.data[3]  = (1 / z.data[3])
-        * We then update accumulator, such that:
-        *
-        * accumulator = accumulator * z.data[3] = 1 / z.data[0]*z.data[1]*z.data[2]
-        *
-        * At the second iteration, accumulator * temporaries[2] = z.data[0]*z.data[1] / z.data[0]*z.data[1]*z.data[2] = (1 / z.data[2])
-        * And so on, until we have computed every z-inverse!
-        * 
-        * We can then convert out of Jacobian form (x = X / Z^2, y = Y / Z^3) with 4 muls and 1 square.
-        **/
+     * We now proceed to iterate back down the array of points.
+     * At each iteration we update the accumulator to contain the z-coordinate of the currently worked-upon
+     *z-coordinate. We can then multiply this accumulator with `temporaries`, to get a scalar that is equal to the
+     *inverse of the z-coordinate of the point at the next iteration cycle e.g. Imagine we have 4 points, such that:
+     *
+     * accumulator = 1 / z.data[0]*z.data[1]*z.data[2]*z.data[3]
+     * temporaries[3] = z.data[0]*z.data[1]*z.data[2]
+     * temporaries[2] = z.data[0]*z.data[1]
+     * temporaries[1] = z.data[0]
+     * temporaries[0] = 1
+     *
+     * At the first iteration, accumulator * temporaries[3] = z.data[0]*z.data[1]*z.data[2] /
+     *z.data[0]*z.data[1]*z.data[2]*z.data[3]  = (1 / z.data[3]) We then update accumulator, such that:
+     *
+     * accumulator = accumulator * z.data[3] = 1 / z.data[0]*z.data[1]*z.data[2]
+     *
+     * At the second iteration, accumulator * temporaries[2] = z.data[0]*z.data[1] / z.data[0]*z.data[1]*z.data[2] = (1
+     * z.data[2]) And so on, until we have computed every z-inverse!
+     *
+     * We can then convert out of Jacobian form (x = X / Z^2, y = Y / Z^3) with 4 muls and 1 square.
+     **/
     for (size_t i = num_points - 1; i < num_points; --i)
     {
         fq2::mul(accumulator, temporaries[i], z_inv);
@@ -463,12 +469,13 @@ inline void batch_normalize(element *points, size_t num_points)
         points[i].z = fq2::one();
     }
 
-    free(temporaries);
+    aligned_free(temporaries);
 }
 
-inline bool on_curve(affine_element &pt)
+inline bool on_curve(affine_element& pt)
 {
-    if (is_point_at_infinity(pt)) {
+    if (is_point_at_infinity(pt))
+    {
         return false;
     }
     fq2::fq2_t yy;
@@ -477,14 +484,15 @@ inline bool on_curve(affine_element &pt)
     fq2::mul(pt.x, xxx, xxx);
     fq2::add(xxx, fq2::twist_coeff_b, xxx);
     fq2::sqr(pt.y, yy);
-    fq2::from_montgomery_form(xxx, xxx);
-    fq2::from_montgomery_form(yy, yy);
+    fq2::__from_montgomery_form(xxx, xxx);
+    fq2::__from_montgomery_form(yy, yy);
     return fq2::eq(xxx, yy);
 }
 
-inline bool on_curve(element &pt)
+inline bool on_curve(element& pt)
 {
-    if (is_point_at_infinity(pt)) {
+    if (is_point_at_infinity(pt))
+    {
         return false;
     }
     fq2::fq2_t yy;
@@ -502,21 +510,21 @@ inline bool on_curve(element &pt)
     return fq2::eq(xxx, yy);
 }
 
-inline void jacobian_to_affine(element &a, affine_element &r)
+inline void jacobian_to_affine(element& a, affine_element& r)
 {
     a = normalize(a);
     fq2::copy(a.x, r.x);
     fq2::copy(a.y, r.y);
 }
 
-inline void affine_to_jacobian(const affine_element &a, element &r)
+inline void affine_to_jacobian(const affine_element& a, element& r)
 {
     fq2::copy(a.x, r.x);
     fq2::copy(a.y, r.y);
     r.z = fq2::one();
 }
 
-inline element group_exponentiation_inner(const affine_element &a, const fr::field_t &scalar)
+inline element group_exponentiation_inner(const affine_element& a, const fr::field_t& scalar)
 {
     if (fr::eq(scalar, fr::zero()))
     {
@@ -532,8 +540,8 @@ inline element group_exponentiation_inner(const affine_element &a, const fr::fie
     affine_to_jacobian(a, work_element);
     affine_to_jacobian(a, point);
     fr::field_t converted_scalar;
-    fr::from_montgomery_form(scalar, converted_scalar);
-    bool scalar_bits[256] = {0};
+    fr::__from_montgomery_form(scalar, converted_scalar);
+    bool scalar_bits[256] = { 0 };
     for (size_t i = 0; i < 64; ++i)
     {
         scalar_bits[i] = (bool)((converted_scalar.data[0] >> i) & 0x1);
@@ -635,7 +643,7 @@ inline bool eq(const affine_element& a, const affine_element& b)
     return eq(a_ele, b_ele);
 }
 
-inline void print(element &a)
+inline void print(element& a)
 {
     printf("g2: \n x: ");
     fq2::print(a.x);
@@ -643,6 +651,14 @@ inline void print(element &a)
     fq2::print(a.y);
     printf("z: \n");
     fq2::print(a.z);
+}
+
+inline void print(affine_element& a)
+{
+    printf("g2: \n x: ");
+    fq2::print(a.x);
+    printf("y: \n");
+    fq2::print(a.y);
 }
 } // namespace g2
 } // namespace barretenberg

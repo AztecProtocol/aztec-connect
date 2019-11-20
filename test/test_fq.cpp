@@ -6,12 +6,12 @@ using namespace barretenberg;
 
 TEST(fq, eq)
 {
-    fq::field_t a = { .data = { 0x01, 0x02, 0x03, 0x04 } };
-    fq::field_t b = { .data = { 0x01, 0x02, 0x03, 0x04 } };
-    fq::field_t c = { .data = { 0x01, 0x02, 0x03, 0x05 } };
-    fq::field_t d = { .data = { 0x01, 0x02, 0x04, 0x04 } };
-    fq::field_t e = { .data = { 0x01, 0x03, 0x03, 0x04 } };
-    fq::field_t f = { .data = { 0x02, 0x02, 0x03, 0x04 } };
+    fq::field_t a{{ 0x01, 0x02, 0x03, 0x04 } };
+    fq::field_t b{{ 0x01, 0x02, 0x03, 0x04 } };
+    fq::field_t c{{ 0x01, 0x02, 0x03, 0x05 } };
+    fq::field_t d{{ 0x01, 0x02, 0x04, 0x04 } };
+    fq::field_t e{{ 0x01, 0x03, 0x03, 0x04 } };
+    fq::field_t f{{ 0x02, 0x02, 0x03, 0x04 } };
     EXPECT_EQ(fq::eq(a, b), true);
     EXPECT_EQ(fq::eq(a, c), false);
     EXPECT_EQ(fq::eq(a, d), false);
@@ -51,12 +51,12 @@ TEST(fq, random_element)
 TEST(fq, mul_check_against_constants)
 {
     // test against some randomly generated test data
-    fq::field_t a = { .data = { 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf } };
-    fq::field_t a_copy = { .data = { 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf } };
-    fq::field_t b = { .data = { 0xb68aee5e4c8fc17c, 0xc5193de7f401d5e8, 0xb8777d4dde671db3, 0xe513e75c087b0bb } };
-    fq::field_t b_copy = { .data = { 0xb68aee5e4c8fc17c, 0xc5193de7f401d5e8, 0xb8777d4dde671db3, 0xe513e75c087b0bb } };
-    fq::field_t expected = { .data = { 0x7ed4174114b521c4, 0x58f5bd1d4279fdc2, 0x6a73ac09ee843d41, 0x687a76ae9b3425c } };
-    fq::field_t result = { .data = { 0,0,0,0 } };
+    fq::field_t a{{ 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf } };
+    fq::field_t a_copy = {{ 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf } };
+    fq::field_t b{{ 0xb68aee5e4c8fc17c, 0xc5193de7f401d5e8, 0xb8777d4dde671db3, 0xe513e75c087b0bb } };
+    fq::field_t b_copy = {{ 0xb68aee5e4c8fc17c, 0xc5193de7f401d5e8, 0xb8777d4dde671db3, 0xe513e75c087b0bb } };
+    fq::field_t expected{{ 0x7ed4174114b521c4, 0x58f5bd1d4279fdc2, 0x6a73ac09ee843d41, 0x687a76ae9b3425c } };
+    fq::field_t result{{ 0,0,0,0 } };
     fq::__mul(a, b, result);
 
     EXPECT_EQ(fq::eq(result, expected), true);
@@ -67,9 +67,9 @@ TEST(fq, mul_check_against_constants)
 // validate that zero-value limbs don't cause any problems
 TEST(fq, mul_short_integers)
 {
-    fq::field_t a = { .data = { 0xa, 0, 0, 0 } };
-    fq::field_t b = { .data = { 0xb, 0, 0, 0 } };
-    fq::field_t expected =  { .data = { 0x65991a6dc2f3a183, 0xe3ba1f83394a2d08, 0x8401df65a169db3f, 0x1727099643607bba } };
+    fq::field_t a{{ 0xa, 0, 0, 0 } };
+    fq::field_t b{{ 0xb, 0, 0, 0 } };
+    fq::field_t expected =  {{ 0x65991a6dc2f3a183, 0xe3ba1f83394a2d08, 0x8401df65a169db3f, 0x1727099643607bba } };
     fq::field_t result;
     fq::__mul(a, b, result);
     for (size_t i = 0; i < 4; ++i)
@@ -101,8 +101,8 @@ TEST(fq, mul_sqr_consistency)
 
 TEST(fq, sqr_check_against_constants)
 {
-    fq::field_t a = { .data = { 0x329596aa978981e8, 0x8542e6e254c2a5d0, 0xc5b687d82eadb178, 0x2d242aaf48f56b8a } };
-    fq::field_t expected = { .data = { 0xbf4fb34e120b8b12, 0xf64d70efbf848328, 0xefbb6a533f2e7d89, 0x1de50f941425e4aa } };
+    fq::field_t a{{ 0x329596aa978981e8, 0x8542e6e254c2a5d0, 0xc5b687d82eadb178, 0x2d242aaf48f56b8a } };
+    fq::field_t expected{{ 0xbf4fb34e120b8b12, 0xf64d70efbf848328, 0xefbb6a533f2e7d89, 0x1de50f941425e4aa } };
     fq::field_t result;
     fq::__sqr(a, result);
     for (size_t i = 0; i < 4; ++i)
@@ -113,9 +113,9 @@ TEST(fq, sqr_check_against_constants)
 
 TEST(fq, add_check_against_constants)
 {
-    fq::field_t a = { .data = { 0x7d2e20e82f73d3e8, 0x8e50616a7a9d419d, 0xcdc833531508914b, 0xd510253a2ce62c } };
-    fq::field_t b = { .data = { 0x2829438b071fd14e, 0xb03ef3f9ff9274e, 0x605b671f6dc7b209, 0x8701f9d971fbc9 } };
-    fq::field_t expected = { .data = { 0xa55764733693a536, 0x995450aa1a9668eb, 0x2e239a7282d04354, 0x15c121f139ee1f6 } };
+    fq::field_t a{{ 0x7d2e20e82f73d3e8, 0x8e50616a7a9d419d, 0xcdc833531508914b, 0xd510253a2ce62c } };
+    fq::field_t b{{ 0x2829438b071fd14e, 0xb03ef3f9ff9274e, 0x605b671f6dc7b209, 0x8701f9d971fbc9 } };
+    fq::field_t expected{{ 0xa55764733693a536, 0x995450aa1a9668eb, 0x2e239a7282d04354, 0x15c121f139ee1f6 } };
     fq::field_t result;
     fq::__add(a, b, result);
     EXPECT_EQ(fq::eq(result, expected), true);
@@ -124,29 +124,27 @@ TEST(fq, add_check_against_constants)
 
 TEST(fq, sub_check_against_constants)
 {
-    fq::field_t a = { .data = { 0xd68d01812313fb7c, 0x2965d7ae7c6070a5, 0x08ef9af6d6ba9a48, 0x0cb8fe2108914f53 } };
-    fq::field_t b = { .data = { 0x2cd2a2a37e9bf14a, 0xebc86ef589c530f6, 0x75124885b362b8fe, 0x1394324205c7a41d } };
-    fq::field_t expected = { .data = { 0xe5daeaf47cf50779, 0xd51ed34a5b0d0a3c, 0x4c2d9827a4d939a6, 0x29891a51e3fb4b5f } };
+    fq::field_t a{{ 0xd68d01812313fb7c, 0x2965d7ae7c6070a5, 0x08ef9af6d6ba9a48, 0x0cb8fe2108914f53 } };
+    fq::field_t b{{ 0x2cd2a2a37e9bf14a, 0xebc86ef589c530f6, 0x75124885b362b8fe, 0x1394324205c7a41d } };
+    fq::field_t expected{{ 0xe5daeaf47cf50779, 0xd51ed34a5b0d0a3c, 0x4c2d9827a4d939a6, 0x29891a51e3fb4b5f } };
     fq::field_t result;
     fq::__sub(a, b, result);
-    printf("sub result =:\n");
-    fq::print(result);
     EXPECT_EQ(fq::eq(result, expected), true);
 }
 
 TEST(fq, to_montgomery_form)
 {
-    fq::field_t result = { .data = { 0x01, 0x00, 0x00, 0x00 } };
+    fq::field_t result{{ 0x01, 0x00, 0x00, 0x00 } };
     fq::field_t expected = fq::one();
-    fq::to_montgomery_form(result, result);
+    fq::__to_montgomery_form(result, result);
     EXPECT_EQ(fq::eq(result, expected), true);
 }
 
 TEST(fq, from_montgomery_form)
 {
     fq::field_t result = fq::one();
-    fq::field_t expected = { .data = { 0x01, 0x00, 0x00, 0x00 } };
-    fq::from_montgomery_form(result, result);
+    fq::field_t expected{{ 0x01, 0x00, 0x00, 0x00 } };
+    fq::__from_montgomery_form(result, result);
     EXPECT_EQ(fq::eq(result, expected), true);
 }
 
@@ -163,29 +161,29 @@ TEST(fq, montgomery_consistency_check)
     fq::field_t result_b;
     fq::field_t result_c;
     fq::field_t result_d;
-    fq::to_montgomery_form(a, aR);
-    fq::to_montgomery_form(aR, aRR);
-    fq::to_montgomery_form(b, bR);
-    fq::to_montgomery_form(bR, bRR);
-    fq::to_montgomery_form(bRR, bRRR);
+    fq::__to_montgomery_form(a, aR);
+    fq::__to_montgomery_form(aR, aRR);
+    fq::__to_montgomery_form(b, bR);
+    fq::__to_montgomery_form(bR, bRR);
+    fq::__to_montgomery_form(bRR, bRRR);
     fq::__mul(aRR, bRR, result_a); // abRRR
     fq::__mul(aR, bRRR, result_b); // abRRR
     fq::__mul(aR, bR, result_c);   // abR
     fq::__mul(a, b, result_d);     // abR^-1
     EXPECT_EQ(fq::eq(result_a, result_b), true);
-    fq::from_montgomery_form(result_a, result_a); // abRR
-    fq::from_montgomery_form(result_a, result_a); // abR
-    fq::from_montgomery_form(result_a, result_a); // ab
-    fq::from_montgomery_form(result_c, result_c); // ab
-    fq::to_montgomery_form(result_d, result_d);   // ab
+    fq::__from_montgomery_form(result_a, result_a); // abRR
+    fq::__from_montgomery_form(result_a, result_a); // abR
+    fq::__from_montgomery_form(result_a, result_a); // ab
+    fq::__from_montgomery_form(result_c, result_c); // ab
+    fq::__to_montgomery_form(result_d, result_d);   // ab
     EXPECT_EQ(fq::eq(result_a, result_c), true);
     EXPECT_EQ(fq::eq(result_a, result_d), true);
 }
 
 TEST(fq, add_mul_consistency)
 {
-    fq::field_t multiplicand = { .data = { 0x09, 0, 0, 0 } };
-    fq::to_montgomery_form(multiplicand, multiplicand);
+    fq::field_t multiplicand = {{ 0x09, 0, 0, 0 } };
+    fq::__to_montgomery_form(multiplicand, multiplicand);
 
     fq::field_t a = fq::random_element();
     fq::field_t result;
@@ -203,8 +201,8 @@ TEST(fq, add_mul_consistency)
 
 TEST(fq, sub_mul_consistency)
 {
-    fq::field_t multiplicand = { .data = { 0x05, 0, 0, 0 } };
-    fq::to_montgomery_form(multiplicand, multiplicand);
+    fq::field_t multiplicand = {{ 0x05, 0, 0, 0 } };
+    fq::__to_montgomery_form(multiplicand, multiplicand);
 
     fq::field_t a = fq::random_element();
     fq::field_t result;
@@ -225,7 +223,7 @@ TEST(fq, beta)
 {
     fq::field_t x = fq::random_element();
 
-    fq::field_t beta_x = { .data = { x.data[0], x.data[1], x.data[2], x.data[3] } };
+    fq::field_t beta_x = {{ x.data[0], x.data[1], x.data[2], x.data[3] } };
     fq::__mul_beta(beta_x, beta_x);
 
     // compute x^3
@@ -309,7 +307,7 @@ TEST(fq, neg)
 {
     fq::field_t a = fq::random_element();
     fq::field_t b;
-    fq::neg(a, b);
+    fq::__neg(a, b);
     fq::field_t result;
     fq::__add(a, b, result);
     EXPECT_EQ(fq::eq(result, fq::zero()), true);

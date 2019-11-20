@@ -1,11 +1,59 @@
 version: '3'
 services:
-  build-env:
-    build: .
-    image: aztec/barretenberg-build
-    entrypoint: /bin/bash
+  cmake:
+    build:
+      context: .
+      dockerfile: Dockerfile.cmake
+    image: aztecprotocol/cmake:3.15.4
+
+  crosstool-ng:
+    build:
+      context: .
+      dockerfile: Dockerfile.crosstool-ng
+    image: aztecprotocol/crosstool-ng:1.24.0
+
+  crosstool-ng-arm64:
+    build:
+      context: .
+      dockerfile: Dockerfile.crosstool-ng-arm64
+    image: aztecprotocol/crosstool-ng-arm64:latest
+
+  clang:
+    build:
+      context: .
+      dockerfile: Dockerfile.clang
+    image: aztecprotocol/clang:9.0.0
+
+  mingw:
+    build:
+      context: .
+      dockerfile: Dockerfile.mingw
+    image: aztecprotocol/mingw:latest
+
+  x86_64-linux-gcc:
+    build:
+      context: .
+      dockerfile: Dockerfile.x86_64-linux-gcc
+    image: aztecprotocol/barretenberg:x86_64-linux-gcc
     tty: true
-    environment:
-      MAKEFLAGS: '-j8'
-    volumes:
-      - .:/usr/src/barretenberg
+
+  x86_64-linux-clang:
+    build:
+      context: .
+      dockerfile: Dockerfile.x86_64-linux-clang
+    image: aztecprotocol/barretenberg:x86_64-linux-clang
+    tty: true
+
+  x86_64-win32-mingw:
+    build:
+      context: .
+      dockerfile: Dockerfile.x86_64-win32-mingw
+    image: aztecprotocol/barretenberg:x86_64-win32-mingw
+    tty: true
+
+  arm64-linux-gcc:
+    build:
+      context: .
+      dockerfile: Dockerfile.arm64-linux-gcc
+    image: aztecprotocol/barretenberg:arm64-linux-gcc
+    tty: true

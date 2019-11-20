@@ -1,8 +1,40 @@
-#ifndef TYPES
-#define TYPES
+#pragma once
 
-#include "stdint.h"
 #include "stddef.h"
+#include "stdint.h"
+#include "stdlib.h"
+#include <vector>
+
+// TODO: WARNING! getentropy is using rand()! Should probably be called dontgetentropy()!
+#ifdef _WIN32
+#define PRIx64 "llx"
+#define PRIu64 "llu"
+inline void* aligned_alloc(size_t alignment, size_t size)
+{
+    return _aligned_malloc(size, alignment);
+}
+#define aligned_free _aligned_free
+inline int getentropy(void* buf, size_t size)
+{
+    for (size_t i = 0; i < size; ++i)
+    {
+        ((char*)buf)[i] = (char)rand();
+    }
+    return 0;
+}
+#else
+#define aligned_free free
+#endif
+
+#ifdef __APPLE__
+#include <sys/random.h>
+inline void* aligned_alloc(size_t alignment, size_t size)
+{
+    void* t = 0;
+    posix_memalign(&t, alignment, size);
+    return t;
+}
+#endif
 
 #ifndef BARRETENBERG_SRS_PATH
 #define BARRETENBERG_SRS_PATH ""
@@ -13,7 +45,27 @@
 #endif
 
 #if 0
-#define USE_AVX
+#define USE_AVX 1
+#endif
+
+// TODO: PUT SOMEWHERE NICE
+// Some hacky macros that allow us to parallelize iterating over a polynomial's point-evaluations
+#ifndef NO_MULTITHREADING
+#define ITERATE_OVER_DOMAIN_START(domain)                                                                              \
+    _Pragma("omp parallel for") for (size_t j = 0; j < domain.num_threads; ++j)                                        \
+    {                                                                                                                  \
+        for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i)                             \
+        {
+
+#define ITERATE_OVER_DOMAIN_END                                                                                        \
+    }                                                                                                                  \
+    }
+#else
+#define ITERATE_OVER_DOMAIN_START(domain)                                                                              \
+    for (size_t i = 0; i < domain.size; ++i)                                                                           \
+    {
+
+#define ITERATE_OVER_DOMAIN_END }
 #endif
 
 namespace barretenberg
@@ -120,9 +172,9 @@ namespace polynomials
 // TODO: move this into polynomials.hpp
 // TODO: fix move constructor
 // TODO: use shared_ptr for lookup table
-struct evaluation_domain
+class evaluation_domain
 {
-public:
+  public:
     fr::field_t root;
     fr::field_t root_inverse;
     fr::field_t generator;
@@ -141,12 +193,11 @@ public:
     fr::field_t** inverse_round_roots;
     fr::field_t* inverse_roots;
 
-    evaluation_domain() : round_roots(nullptr), roots(nullptr), inverse_round_roots(nullptr), inverse_roots(nullptr) {};
+    evaluation_domain() : round_roots(nullptr), roots(nullptr), inverse_round_roots(nullptr), inverse_roots(nullptr){};
     evaluation_domain(size_t size, bool skip_roots = false);
     evaluation_domain(const evaluation_domain& other);
-    evaluation_domain(evaluation_domain&& other) = delete;
+    // evaluation_domain(evaluation_domain &&other) = delete;
     ~evaluation_domain();
-
 };
 
 struct lagrange_evaluations
@@ -158,31 +209,11 @@ struct lagrange_evaluations
 } // namespace polynomials
 } // namespace barretenberg
 
-namespace srs
-{
-struct plonk_srs
-{
-    barretenberg::g1::affine_element *monomials;
-    barretenberg::g2::affine_element SRS_T2;
-    size_t degree;
-};
-} // namespace srs
-
 namespace waffle
 {
-struct circuit_instance
-{
-    barretenberg::g1::affine_element Q_M;
-    barretenberg::g1::affine_element Q_L;
-    barretenberg::g1::affine_element Q_R;
-    barretenberg::g1::affine_element Q_O;
-    barretenberg::g1::affine_element Q_C;
-    barretenberg::g1::affine_element SIGMA_1;
-    barretenberg::g1::affine_element SIGMA_2;
-    barretenberg::g1::affine_element SIGMA_3;
-    barretenberg::g1::affine_element S_ID;
-    size_t n;
-};
+// contains the state of a PLONK proof, including witness values, instance values
+// and Kate polynomial commitments
+// TODO: add proper constructors, copy constructors, destructor
 
 struct plonk_challenges
 {
@@ -191,68 +222,6 @@ struct plonk_challenges
     barretenberg::fr::field_t alpha;
     barretenberg::fr::field_t z;
     barretenberg::fr::field_t nu;
-};
-
-// contains the state of a PLONK proof, including witness values, instance values
-// and Kate polynomial commitments
-// TODO: add proper constructors, copy constructors, destructor
-struct circuit_state
-{
-    plonk_challenges challenges;
-    barretenberg::fr::field_t alpha_squared;
-    barretenberg::fr::field_t alpha_cubed;
-
-    // pointers to witness vectors. Originally these are in Lagrange-base form,
-    // during the course of proof construction, are replaced by their coefficient form
-    barretenberg::fr::field_t *w_l;
-    barretenberg::fr::field_t *w_r;
-    barretenberg::fr::field_t *w_o;
-    barretenberg::fr::field_t *z_1;
-    barretenberg::fr::field_t *z_2;
-    barretenberg::fr::field_t *t;
-    barretenberg::fr::field_t *linear_poly;
-
-    // pointers to instance vectors. Originally in Lagrange-base form,
-    // will be converted into coefficient form
-    barretenberg::fr::field_t *q_c;
-    barretenberg::fr::field_t *q_m;
-    barretenberg::fr::field_t *q_l;
-    barretenberg::fr::field_t *q_r;
-    barretenberg::fr::field_t *q_o;
-    barretenberg::fr::field_t *sigma_1;
-    barretenberg::fr::field_t *sigma_2;
-    barretenberg::fr::field_t *sigma_3;
-
-    barretenberg::fr::field_t *product_1;
-    barretenberg::fr::field_t *product_2;
-    barretenberg::fr::field_t *product_3;
-    barretenberg::fr::field_t *permutation_product;
-
-    barretenberg::fr::field_t *w_l_lagrange_base;
-    barretenberg::fr::field_t *w_r_lagrange_base;
-    barretenberg::fr::field_t *w_o_lagrange_base;
-
-    uint32_t *sigma_1_mapping;
-    uint32_t *sigma_2_mapping;
-    uint32_t *sigma_3_mapping;
-    size_t n;
-
-    barretenberg::polynomials::evaluation_domain small_domain;
-    barretenberg::polynomials::evaluation_domain mid_domain;
-    barretenberg::polynomials::evaluation_domain large_domain;
-
-    circuit_state(size_t n);
-    circuit_state(const circuit_state& other);
-};
-
-struct witness_ffts
-{
-    barretenberg::fr::field_t* w_l_large;
-    barretenberg::fr::field_t* w_r_large;
-    barretenberg::fr::field_t* w_o_large;
-    barretenberg::fr::field_t* w_l_mid;
-    barretenberg::fr::field_t* w_r_mid;
-    barretenberg::fr::field_t* w_o_mid;
 };
 
 struct plonk_proof
@@ -275,7 +244,12 @@ struct plonk_proof
     barretenberg::fr::field_t sigma_2_eval;
     barretenberg::fr::field_t z_1_shifted_eval;
     barretenberg::fr::field_t linear_eval;
+
+    barretenberg::fr::field_t w_l_shifted_eval;
+    barretenberg::fr::field_t w_r_shifted_eval;
+    barretenberg::fr::field_t w_o_shifted_eval;
+    barretenberg::fr::field_t q_c_eval;
+    barretenberg::fr::field_t q_mimc_coefficient_eval;
+    std::vector<barretenberg::fr::field_t> custom_gate_evaluations;
 };
 } // namespace waffle
-
-#endif

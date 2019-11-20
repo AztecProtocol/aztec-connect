@@ -1,39 +1,66 @@
 #pragma once
 
+#include "inttypes.h"
 #include "stdint.h"
 #include "stdlib.h"
 
-#include "../types.hpp"
-#include "../fields/fr.hpp"
-#include "../fields/fq.hpp"
 #include "../assert.hpp"
+#include "../fields/fq.hpp"
+#include "../fields/fr.hpp"
+#include "../types.hpp"
 #include "./wnaf.hpp"
+
+#ifdef DISABLE_SHENANIGANS
+#include "g1_impl_int128.hpp"
+#else
+#include "g1_impl_asm.hpp"
+#endif
 
 namespace barretenberg
 {
 namespace g1
 {
-inline void print(affine_element &p)
+inline void print(affine_element& p)
 {
-    printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
-    printf("p.y: [%lx, %lx, %lx, %lx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
+    printf("p.x: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
+           p.x.data[0],
+           p.x.data[1],
+           p.x.data[2],
+           p.x.data[3]);
+    printf("p.y: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
+           p.y.data[0],
+           p.y.data[1],
+           p.y.data[2],
+           p.y.data[3]);
 }
 
-inline void print(element &p)
+inline void print(element& p)
 {
-    printf("p.x: [%lx, %lx, %lx, %lx]\n", p.x.data[0], p.x.data[1], p.x.data[2], p.x.data[3]);
-    printf("p.y: [%lx, %lx, %lx, %lx]\n", p.y.data[0], p.y.data[1], p.y.data[2], p.y.data[3]);
-    printf("p.z: [%lx, %lx, %lx, %lx]\n", p.z.data[0], p.z.data[1], p.z.data[2], p.z.data[3]);
+    printf("p.x: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
+           p.x.data[0],
+           p.x.data[1],
+           p.x.data[2],
+           p.x.data[3]);
+    printf("p.y: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
+           p.y.data[0],
+           p.y.data[1],
+           p.y.data[2],
+           p.y.data[3]);
+    printf("p.z: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
+           p.z.data[0],
+           p.z.data[1],
+           p.z.data[2],
+           p.z.data[3]);
 }
 
-inline void random_coordinates_on_curve(fq::field_t &x, fq::field_t &y)
+inline void random_coordinates_on_curve(fq::field_t& x, fq::field_t& y)
 {
     bool found_one = false;
     fq::field_t yy;
     fq::field_t t0;
 
     fq::field_t b_mont;
-    fq::to_montgomery_form(fq::curve_b, b_mont);
+    fq::__to_montgomery_form(fq::curve_b, b_mont);
     while (!found_one)
     {
         // generate a random x-coordinate
@@ -46,8 +73,8 @@ inline void random_coordinates_on_curve(fq::field_t &x, fq::field_t &y)
         fq::__sqrt(yy, y);
         fq::__sqr(y, t0);
         // does yy have a valid quadratic residue? is y a valid square root?
-        fq::from_montgomery_form(yy, yy);
-        fq::from_montgomery_form(t0, t0);
+        fq::__from_montgomery_form(yy, yy);
+        fq::__from_montgomery_form(t0, t0);
         found_one = fq::eq(yy, t0);
     }
 }
@@ -92,27 +119,27 @@ inline affine_element affine_one()
     return output;
 }
 
-inline bool is_point_at_infinity(const affine_element &p)
+inline bool is_point_at_infinity(const affine_element& p)
 {
     return (bool)((p.y.data[3] >> 63) & 1);
 }
 
-inline bool is_point_at_infinity(const element &p)
+inline bool is_point_at_infinity(const element& p)
 {
     return (bool)((p.y.data[3] >> 63) & 1);
 }
 
-inline void set_infinity(element &p)
+inline void set_infinity(element& p)
 {
-    p.y.data[3] = 0 | (1UL << 63);
+    p.y.data[3] = 0 | (1ULL << 63);
 }
 
-inline void set_infinity(affine_element &p)
+inline void set_infinity(affine_element& p)
 {
-    p.y.data[3] = 0 | (1UL << 63);
+    p.y.data[3] = 0 | (1ULL << 63);
 }
 
-inline void dbl(element &p1, element &p2)
+inline void dbl(element& p1, element& p2)
 {
     if (p1.y.data[3] >> 63 == 1)
     {
@@ -178,7 +205,7 @@ inline void dbl(element &p1, element &p2)
     fq::reduce_once(p2.y, p2.y);
 }
 
-inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
+inline void mixed_add_inner(element& p1, const affine_element& p2, element& p3)
 {
     fq::field_t T0;
     fq::field_t T1;
@@ -263,8 +290,9 @@ inline void mixed_add_inner(element &p1, const affine_element &p2, element &p3)
     fq::__sub_with_coarse_reduction(T3, T1, p3.y);
     fq::reduce_once(p3.y, p3.y);
 }
+// add: 10 mul_w_o_reduction 1 mul, 5 sqr
 
-inline void mixed_add(element &p1, const affine_element &p2, element &p3)
+inline void mixed_add(element& p1, const affine_element& p2, element& p3)
 {
     // TODO: quantitavely check if __builtin_expect helps here
     // if (__builtin_expect(((p1.y.data[3] >> 63)), 0))
@@ -280,7 +308,7 @@ inline void mixed_add(element &p1, const affine_element &p2, element &p3)
     mixed_add_inner(p1, p2, p3);
 }
 
-inline void mixed_add_expect_empty(element &p1, affine_element &p2, element &p3)
+inline void mixed_add_expect_empty(element& p1, affine_element& p2, element& p3)
 {
     if (__builtin_expect((long)((p1.y.data[3] >> 63UL)), true))
     {
@@ -292,7 +320,7 @@ inline void mixed_add_expect_empty(element &p1, affine_element &p2, element &p3)
     mixed_add_inner(p1, p2, p3);
 }
 
-inline void add(element &p1, element &p2, element &p3)
+inline void add(element& p1, element& p2, element& p3)
 {
     bool p1_zero = (p1.y.data[3] >> 63) == 1;
     bool p2_zero = (p2.y.data[3] >> 63) == 1; // ((p2.z.data[0] | p2.z.data[1] | p2.z.data[2] | p2.z.data[3]) == 0);
@@ -417,123 +445,7 @@ inline void add(element &p1, element &p2, element &p3)
     fq::__mul(p3.z, H, p3.z);
 }
 
-// copies src into dest, inverting y-coordinate if 'predicate' is true
-// n.b. requires src and dest to be aligned on 32 byte boundary
-inline void conditional_negate_affine(affine_element *src, affine_element *dest, uint64_t predicate)
-{
-#if defined __AVX__ && defined USE_AVX
-    ASSERT((((uintptr_t)src & 0x1f) == 0));
-    ASSERT((((uintptr_t)dest & 0x1f) == 0));
-    __asm__ __volatile__(
-        "xorq %%r8, %%r8                              \n\t"
-        "movq 32(%0), %%r8                            \n\t"
-        "movq 40(%0), %%r9                            \n\t"
-        "movq 48(%0), %%r10                          \n\t"
-        "movq 56(%0), %%r11                          \n\t"
-        "movq $0x3c208c16d87cfd47, %%r12                  \n\t"
-        "movq $0x97816a916871ca8d, %%r13                  \n\t"
-        "movq $0xb85045b68181585d, %%r14                  \n\t"
-        "movq $0x30644e72e131a029, %%r15                  \n\t"
-        "subq %%r8, %%r12                               \n\t"
-        "sbbq %%r9, %%r13                               \n\t"
-        "sbbq %%r10, %%r14                              \n\t"
-        "sbbq %%r11, %%r15                              \n\t"
-        "btq $0, %2                                   \n\t"
-        "cmovcq %%r12, %%r8                               \n\t"
-        "cmovcq %%r13, %%r9                               \n\t"
-        "cmovcq %%r14, %%r10                              \n\t"
-        "cmovcq %%r15, %%r11                              \n\t"
-        "vmovdqa 0(%0), %%ymm0                         \n\t"
-        "vmovdqa %%ymm0, 0(%1)                      \n\t"
-        "movq %%r8, 32(%1)                             \n\t"
-        "movq %%r9, 40(%1)                             \n\t"
-        "movq %%r10, 48(%1)                           \n\t"
-        "movq %%r11, 56(%1)                           \n\t"
-        :
-        : "r"(src), "r"(dest), "r"(predicate)
-        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "%ymm0", "memory", "cc");
-#else
-    __asm__ __volatile__(
-        "xorq %%r8, %%r8                              \n\t"
-        "movq 32(%0), %%r8                            \n\t"
-        "movq 40(%0), %%r9                            \n\t"
-        "movq 48(%0), %%r10                          \n\t"
-        "movq 56(%0), %%r11                          \n\t"
-        "movq $0x3c208c16d87cfd47, %%r12                  \n\t"
-        "movq $0x97816a916871ca8d, %%r13                  \n\t"
-        "movq $0xb85045b68181585d, %%r14                  \n\t"
-        "movq $0x30644e72e131a029, %%r15                  \n\t"
-        "subq %%r8, %%r12                               \n\t"
-        "sbbq %%r9, %%r13                               \n\t"
-        "sbbq %%r10, %%r14                              \n\t"
-        "sbbq %%r11, %%r15                              \n\t"
-        "btq $0, %2                                   \n\t"
-        "cmovcq %%r12, %%r8                               \n\t"
-        "cmovcq %%r13, %%r9                               \n\t"
-        "cmovcq %%r14, %%r10                              \n\t"
-        "cmovcq %%r15, %%r11                              \n\t"
-        "movq 0(%0), %%r12                            \n\t"
-        "movq 8(%0), %%r13                            \n\t"
-        "movq 16(%0), %%r14                          \n\t"
-        "movq 24(%0), %%r15                          \n\t"
-        "movq %%r8, 32(%1)                             \n\t"
-        "movq %%r9, 40(%1)                             \n\t"
-        "movq %%r10, 48(%1)                           \n\t"
-        "movq %%r11, 56(%1)                           \n\t"
-        "movq %%r12, 0(%1)                              \n\t"
-        "movq %%r13, 8(%1)                          \n\t"
-        "movq %%r14, 16(%1)                          \n\t"
-        "movq %%r15, 24(%1)                          \n\t"
-        :
-        : "r"(src), "r"(dest), "r"(predicate)
-        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "memory", "cc");
-#endif
-}
-
-// copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-inline void copy(affine_element *src, affine_element *dest)
-{
-#if defined __AVX__ && defined USE_AVX
-    ASSERT((((uintptr_t)src & 0x1f) == 0));
-    ASSERT((((uintptr_t)dest & 0x1f) == 0));
-    __asm__ __volatile__(
-        "vmovdqa 0(%0), %%ymm0              \n\t"
-        "vmovdqa 32(%0), %%ymm1             \n\t"
-        "vmovdqa %%ymm0, 0(%1)              \n\t"
-        "vmovdqa %%ymm1, 32(%1)             \n\t"
-        :
-        : "r"(src), "r"(dest)
-        : "%ymm0", "%ymm1", "memory");
-#else
-    fq::copy(src->x, dest->x);
-    fq::copy(src->y, dest->y);
-#endif
-}
-
-// copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-inline void copy(element *src, element *dest)
-{
-#if defined __AVX__ && defined USE_AVX
-    ASSERT((((uintptr_t)src & 0x1f) == 0));
-    ASSERT((((uintptr_t)dest & 0x1f) == 0));
-    __asm__ __volatile__(
-        "vmovdqa 0(%0), %%ymm0              \n\t"
-        "vmovdqa 32(%0), %%ymm1             \n\t"
-        "vmovdqa 64(%0), %%ymm2             \n\t"
-        "vmovdqa %%ymm0, 0(%1)              \n\t"
-        "vmovdqa %%ymm1, 32(%1)             \n\t"
-        "vmovdqa %%ymm2, 64(%1)             \n\t"
-        :
-        : "r"(src), "r"(dest)
-        : "%ymm0", "%ymm1", "%ymm2", "memory");
-#else
-    fq::copy(src->x, dest->x);
-    fq::copy(src->y, dest->y);
-    fq::copy(src->z, dest->z);
-#endif
-}
-
-inline element normalize(element &src)
+inline element normalize(element& src)
 {
     element dest;
     fq::field_t z_inv;
@@ -546,16 +458,20 @@ inline element normalize(element &src)
     fq::__mul(src.x, zz_inv, dest.x);
     fq::__mul(src.y, zzz_inv, dest.y);
     dest.z = fq::one();
+    if (is_point_at_infinity(src))
+    {
+        set_infinity(dest);
+    }
     return dest;
 }
 
 /**
-     * Normalize a batch of affine points via Montgomery's trick, so that their z-coordinate's are equal to unity
-     * Requires: 6 mul, 1 sqr per point, plus 1 inverse
-     **/
-inline void batch_normalize(element *points, size_t num_points)
+ * Normalize a batch of affine points via Montgomery's trick, so that their z-coordinate's are equal to unity
+ * Requires: 6 mul, 1 sqr per point, plus 1 inverse
+ **/
+inline void batch_normalize(element* points, size_t num_points)
 {
-    fq::field_t *temporaries = (fq::field_t *)(aligned_alloc(32, sizeof(fq::field_t) * num_points));
+    fq::field_t* temporaries = (fq::field_t*)(aligned_alloc(32, sizeof(fq::field_t) * num_points * 2));
     fq::field_t accumulator = fq::one();
     fq::field_t z_inv;
     fq::field_t zz_inv;
@@ -566,76 +482,81 @@ inline void batch_normalize(element *points, size_t num_points)
     for (size_t i = 0; i < num_points; ++i)
     {
         fq::copy(accumulator, temporaries[i]);
-        fq::__mul(accumulator, points[i].z, accumulator);
+        if (!is_point_at_infinity(points[i]))
+        {
+            fq::__mul(accumulator, points[i].z, accumulator);
+        }
     }
     // For the rest of this method I'll refer to the product of all z-coordinates as the 'global' z-coordinate
     // Invert the global z-coordinate and store in `accumulator`
     fq::__invert(accumulator, accumulator);
 
     /**
-        * We now proceed to iterate back down the array of points.
-        * At each iteration we update the accumulator to contain the z-coordinate of the currently worked-upon z-coordinate.
-        * We can then multiply this accumulator with `temporaries`, to get a scalar that is equal to
-        * the inverse of the z-coordinate of the point at the next iteration cycle
-        * e.g. Imagine we have 4 points, such that:
-        *
-        * accumulator = 1 / z.data[0]*z.data[1]*z.data[2]*z.data[3]
-        * temporaries[3] = z.data[0]*z.data[1]*z.data[2]
-        * temporaries[2] = z.data[0]*z.data[1]
-        * temporaries[1] = z.data[0]
-        * temporaries[0] = 1
-        *
-        * At the first iteration, accumulator * temporaries[3] = z.data[0]*z.data[1]*z.data[2] / z.data[0]*z.data[1]*z.data[2]*z.data[3]  = (1 / z.data[3])
-        * We then update accumulator, such that:
-        *
-        * accumulator = accumulator * z.data[3] = 1 / z.data[0]*z.data[1]*z.data[2]
-        *
-        * At the second iteration, accumulator * temporaries[2] = z.data[0]*z.data[1] / z.data[0]*z.data[1]*z.data[2] = (1 / z.data[2])
-        * And so on, until we have computed every z-inverse!
-        *
-        * We can then convert out of Jacobian form (x = X / Z^2, y = Y / Z^3) with 4 muls and 1 square.
-        **/
+     * We now proceed to iterate back down the array of points.
+     * At each iteration we update the accumulator to contain the z-coordinate of the currently worked-upon
+     *z-coordinate. We can then multiply this accumulator with `temporaries`, to get a scalar that is equal to the
+     *inverse of the z-coordinate of the point at the next iteration cycle e.g. Imagine we have 4 points, such that:
+     *
+     * accumulator = 1 / z.data[0]*z.data[1]*z.data[2]*z.data[3]
+     * temporaries[3] = z.data[0]*z.data[1]*z.data[2]
+     * temporaries[2] = z.data[0]*z.data[1]
+     * temporaries[1] = z.data[0]
+     * temporaries[0] = 1
+     *
+     * At the first iteration, accumulator * temporaries[3] = z.data[0]*z.data[1]*z.data[2] /
+     *z.data[0]*z.data[1]*z.data[2]*z.data[3]  = (1 / z.data[3]) We then update accumulator, such that:
+     *
+     * accumulator = accumulator * z.data[3] = 1 / z.data[0]*z.data[1]*z.data[2]
+     *
+     * At the second iteration, accumulator * temporaries[2] = z.data[0]*z.data[1] / z.data[0]*z.data[1]*z.data[2] = (1
+     * z.data[2]) And so on, until we have computed every z-inverse!
+     *
+     * We can then convert out of Jacobian form (x = X / Z^2, y = Y / Z^3) with 4 muls and 1 square.
+     **/
     for (size_t i = num_points - 1; i < num_points; --i)
     {
-        fq::__mul(accumulator, temporaries[i], z_inv);
-        fq::__sqr(z_inv, zz_inv);
-        fq::__mul(z_inv, zz_inv, zzz_inv);
-        fq::__mul(points[i].x, zz_inv, points[i].x);
-        fq::__mul(points[i].y, zzz_inv, points[i].y);
-        fq::__mul(accumulator, points[i].z, accumulator);
+        if (!is_point_at_infinity(points[i]))
+        {
+            fq::__mul(accumulator, temporaries[i], z_inv);
+            fq::__sqr(z_inv, zz_inv);
+            fq::__mul(z_inv, zz_inv, zzz_inv);
+            fq::__mul(points[i].x, zz_inv, points[i].x);
+            fq::__mul(points[i].y, zzz_inv, points[i].y);
+            fq::__mul(accumulator, points[i].z, accumulator);
+        }
         points[i].z = fq::one();
     }
 
-    free(temporaries);
+    aligned_free(temporaries);
 }
 
-inline bool on_curve(affine_element &pt)
+inline bool on_curve(const affine_element& pt)
 {
     if (is_point_at_infinity(pt))
     {
         return false;
     }
     fq::field_t b_mont;
-    fq::to_montgomery_form(fq::curve_b, b_mont);
+    fq::__to_montgomery_form(fq::curve_b, b_mont);
     fq::field_t yy;
     fq::field_t xxx;
     fq::__sqr(pt.x, xxx);
     fq::__mul(pt.x, xxx, xxx);
     fq::__add(xxx, b_mont, xxx);
     fq::__sqr(pt.y, yy);
-    fq::from_montgomery_form(xxx, xxx);
-    fq::from_montgomery_form(yy, yy);
+    fq::__from_montgomery_form(xxx, xxx);
+    fq::__from_montgomery_form(yy, yy);
     return fq::eq(xxx, yy);
 }
 
-inline bool on_curve(element &pt)
+inline bool on_curve(const element& pt)
 {
     if (is_point_at_infinity(pt))
     {
         return false;
     }
     fq::field_t b_mont;
-    fq::to_montgomery_form(fq::curve_b, b_mont);
+    fq::__to_montgomery_form(fq::curve_b, b_mont);
     fq::field_t yy;
     fq::field_t xxx;
     fq::field_t zz;
@@ -651,45 +572,45 @@ inline bool on_curve(element &pt)
     return fq::eq(xxx, yy);
 }
 
-inline void neg(const element &a, element &r)
+inline void __neg(const element& a, element& r)
 {
     fq::copy(a.x, r.x);
     fq::copy(a.y, r.y);
     fq::copy(a.z, r.z);
-    fq::neg(r.y, r.y);
+    fq::__neg(r.y, r.y);
 }
 
-inline void neg(const affine_element &a, affine_element &r)
+inline void __neg(const affine_element& a, affine_element& r)
 {
     fq::copy(a.x, r.x);
-    fq::neg(a.y, r.y);
+    fq::__neg(a.y, r.y);
 }
 
-inline void affine_to_jacobian(const affine_element &a, element &r)
+inline void affine_to_jacobian(const affine_element& a, element& r)
 {
     fq::copy(a.x, r.x);
     fq::copy(a.y, r.y);
     r.z = fq::one();
 }
 
-inline void jacobian_to_affine(element &a, affine_element &r)
+inline void jacobian_to_affine(element& a, affine_element& r)
 {
     a = normalize(a);
     fq::copy(a.x, r.x);
     fq::copy(a.y, r.y);
 }
 
-inline void copy_affine(const affine_element &a, affine_element &r)
+inline void copy_affine(const affine_element& a, affine_element& r)
 {
     fq::copy(a.x, r.x);
     fq::copy(a.y, r.y);
 }
 
-inline element group_exponentiation(const element &a, const fr::field_t &scalar)
+inline element group_exponentiation(const element& a, const fr::field_t& scalar)
 {
     fr::field_t converted_scalar;
 
-    fr::from_montgomery_form(scalar, converted_scalar);
+    fr::__from_montgomery_form(scalar, converted_scalar);
 
     if (fr::eq(converted_scalar, fr::zero()))
     {
@@ -705,8 +626,8 @@ inline element group_exponentiation(const element &a, const fr::field_t &scalar)
     constexpr size_t lookup_size = 8;
     constexpr size_t num_rounds = 32;
     constexpr size_t num_wnaf_bits = 4;
-    element *precomp_table = (element *)(aligned_alloc(64, sizeof(element) * lookup_size));
-    affine_element *lookup_table = (affine_element *)(aligned_alloc(64, sizeof(element) * lookup_size));
+    element* precomp_table = (element*)(aligned_alloc(64, sizeof(element) * lookup_size));
+    affine_element* lookup_table = (affine_element*)(aligned_alloc(64, sizeof(element) * lookup_size));
 
     element d2;
     copy(&point, &precomp_table[0]); // 1
@@ -724,7 +645,7 @@ inline element group_exponentiation(const element &a, const fr::field_t &scalar)
 
     uint32_t wnaf_table[num_rounds * 2];
     fr::field_t endo_scalar;
-    fr::split_into_endomorphism_scalars(converted_scalar, endo_scalar, *(fr::field_t *)&endo_scalar.data[2]);
+    fr::split_into_endomorphism_scalars(converted_scalar, endo_scalar, *(fr::field_t*)&endo_scalar.data[2]);
     bool skew = false;
     bool endo_skew = false;
     wnaf::fixed_wnaf(&endo_scalar.data[0], &wnaf_table[0], skew, 2, num_wnaf_bits);
@@ -762,7 +683,7 @@ inline element group_exponentiation(const element &a, const fr::field_t &scalar)
             dbl(work_element, work_element);
         }
     }
-    neg(lookup_table[0], temporary);
+    __neg(lookup_table[0], temporary);
     if (skew)
     {
         mixed_add(work_element, temporary, work_element);
@@ -784,19 +705,19 @@ inline element group_exponentiation(const element &a, const fr::field_t &scalar)
         mixed_add(dummy_element, temporary, dummy_element);
     }
 
-    free(precomp_table);
-    free(lookup_table);
+    aligned_free(precomp_table);
+    aligned_free(lookup_table);
     return work_element;
 }
 
-inline element group_exponentiation_inner(const affine_element &a, const fr::field_t &scalar)
+inline element group_exponentiation_inner(const affine_element& a, const fr::field_t& scalar)
 {
     element point;
     affine_to_jacobian(a, point);
     return group_exponentiation(point, scalar);
 }
 
-inline affine_element group_exponentiation(const affine_element &a, const fr::field_t &scalar)
+inline affine_element group_exponentiation(const affine_element& a, const fr::field_t& scalar)
 {
     element output = group_exponentiation_inner(a, scalar);
     affine_element result;
@@ -815,7 +736,7 @@ inline affine_element group_exponentiation(const affine_element &a, const fr::fi
     return result;
 }
 
-inline bool eq(const element &a, const element &b)
+inline bool eq(const element& a, const element& b)
 {
     bool both_infinity = is_point_at_infinity(a) && is_point_at_infinity(b);
 
@@ -842,7 +763,7 @@ inline bool eq(const element &a, const element &b)
     return both_infinity || ((fq::eq(T0, T2) && fq::eq(T1, T3)));
 }
 
-inline bool eq(const affine_element &a, const affine_element &b)
+inline bool eq(const affine_element& a, const affine_element& b)
 {
     element a_ele;
     element b_ele;

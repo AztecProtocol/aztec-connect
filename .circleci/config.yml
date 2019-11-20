@@ -1,0 +1,171 @@
+version: 2.1
+jobs:
+  cmake:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Pull remote version'
+          command: docker pull aztecprotocol/cmake:3.15.4 || true
+      - run:
+          name: 'Build'
+          command: docker-compose build cmake
+      - run:
+          name: 'Push'
+          command: |
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/cmake:3.15.4
+
+  clang:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Pull remote version'
+          command: docker pull aztecprotocol/clang:9.0.0 || true
+      - run:
+          name: 'Build'
+          command: docker-compose build clang
+      - run:
+          name: 'Push'
+          command: |
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/clang:9.0.0
+
+  crosstool-ng:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Pull remote version'
+          command: docker pull aztecprotocol/crosstool-ng:1.24.0 || true
+      - run:
+          name: 'Build'
+          command: docker-compose build crosstool-ng
+          no_output_timeout: '60m'
+      - run:
+          name: 'Push'
+          command: |
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/crosstool-ng:1.24.0
+
+  crosstool-ng-arm64:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Pull remote version'
+          command: docker pull aztecprotocol/crosstool-ng-arm64:latest || true
+      - run:
+          name: 'Build'
+          command: docker-compose build crosstool-ng-arm64
+          no_output_timeout: '60m'
+      - run:
+          name: 'Push'
+          command: |
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/crosstool-ng-arm64:latest
+
+  mingw:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Pull remote version'
+          command: docker pull aztecprotocol/mingw:latest || true
+      - run:
+          name: 'Build'
+          command: docker-compose build mingw
+          no_output_timeout: '60m'
+      - run:
+          name: 'Push'
+          command: |
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/mingw:latest
+
+  x86_64-linux-gcc:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Build'
+          command: docker-compose build x86_64-linux-gcc
+
+  x86_64-linux-clang:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Build'
+          command: docker-compose build x86_64-linux-clang
+
+  x86_64-win32-mingw:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Build'
+          command: docker-compose build x86_64-win32-mingw
+          no_output_timeout: '60m'
+
+  arm64-linux-gcc:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Build'
+          command: docker-compose build arm64-linux-gcc
+
+workflows:
+  build:
+    jobs:
+      - cmake
+      - mingw
+      - clang:
+          requires:
+            - cmake
+      - crosstool-ng:
+          requires:
+            - cmake
+      - crosstool-ng-arm64:
+          requires:
+            - crosstool-ng
+      - x86_64-linux-gcc:
+          requires:
+            - cmake
+      - x86_64-linux-clang:
+          requires:
+            - clang
+      - x86_64-win32-mingw:
+          requires:
+            - mingw
+      - arm64-linux-gcc:
+          requires:
+            - crosstool-ng-arm64

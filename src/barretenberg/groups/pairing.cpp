@@ -1,16 +1,15 @@
 #include "./pairing.hpp"
 
-#include "../groups/g2.hpp"
 #include "../fields/fq12.hpp"
 #include "../groups/g1.hpp"
+#include "../groups/g2.hpp"
 
 namespace barretenberg
 {
 namespace pairing
 {
 
-
-void doubling_step_for_flipped_miller_loop(g2::element &current, pairing::ell_coeffs &ell)
+void doubling_step_for_flipped_miller_loop(g2::element& current, pairing::ell_coeffs& ell)
 {
     fq2::fq2_t a;
     fq2::fq2_t b;
@@ -60,12 +59,12 @@ void doubling_step_for_flipped_miller_loop(g2::element &current, pairing::ell_co
     fq2::mul(b, h, current.z);
 
     fq6::mul_by_non_residue(i, ell.o);
-    fq2::neg(h, ell.vw);
+    fq2::__neg(h, ell.vw);
     fq2::add(j, j, ell.vv);
     fq2::add(ell.vv, j, ell.vv);
 }
 
-void mixed_addition_step_for_flipped_miller_loop(const g2::element &base, g2::element &Q, pairing::ell_coeffs &line)
+void mixed_addition_step_for_flipped_miller_loop(const g2::element& base, g2::element& Q, pairing::ell_coeffs& line)
 {
     fq2::fq2_t d;
     fq2::fq2_t e;
@@ -102,17 +101,17 @@ void mixed_addition_step_for_flipped_miller_loop(const g2::element &base, g2::el
     fq2::mul(d, base.y, i);
     fq2::sub(h, i, h);
     fq6::mul_by_non_residue(h, line.o);
-    fq2::neg(e, line.vv);
+    fq2::__neg(e, line.vv);
     fq2::copy(d, line.vw);
 }
 
-void precompute_miller_lines(const g2::element &Q, miller_lines &lines)
+void precompute_miller_lines(const g2::element& Q, miller_lines& lines)
 {
     g2::element Q_neg;
     fq2::copy(Q.x, Q_neg.x);
-    fq2::neg(Q.y, Q_neg.y);
+    fq2::__neg(Q.y, Q_neg.y);
     Q_neg.z = fq2::one();
-    // g2::neg(Q, Q_neg);
+    // g2::__neg(Q, Q_neg);
     g2::element work_point;
     g2::element result_point;
     g2::copy(Q, work_point);
@@ -139,8 +138,8 @@ void precompute_miller_lines(const g2::element &Q, miller_lines &lines)
     g2::element Q2;
     g2::mul_by_q(Q, Q1);
     g2::mul_by_q(Q1, Q2);
-    g2::neg(Q2, Q2);
-    // fq2::neg(Q2.y, Q2.y);
+    g2::__neg(Q2, Q2);
+    // fq2::__neg(Q2.y, Q2.y);
     // fq2::copy(Q2.x, Q2.x);
     // Q2.z = fq2::one();
     mixed_addition_step_for_flipped_miller_loop(Q1, work_point, lines.lines[it]);
@@ -148,7 +147,7 @@ void precompute_miller_lines(const g2::element &Q, miller_lines &lines)
     mixed_addition_step_for_flipped_miller_loop(Q2, work_point, lines.lines[it]);
 }
 
-fq12::fq12_t miller_loop(g1::element &P, miller_lines &lines)
+fq12::fq12_t miller_loop(g1::element& P, miller_lines& lines)
 {
     fq12::fq12_t work_scalar = fq12::one();
 
@@ -188,7 +187,7 @@ fq12::fq12_t miller_loop(g1::element &P, miller_lines &lines)
     return work_scalar;
 }
 
-fq12::fq12_t miller_loop_batch(g1::element *points, miller_lines *lines, size_t num_pairs)
+fq12::fq12_t miller_loop_batch(const g1::element* points, const miller_lines* lines, size_t num_pairs)
 {
     fq12::fq12_t work_scalar = fq12::one();
 
@@ -239,20 +238,20 @@ fq12::fq12_t miller_loop_batch(g1::element *points, miller_lines *lines, size_t 
     return work_scalar;
 }
 
-void final_exponentiation_easy_part(const fq12::fq12_t &elt, fq12::fq12_t &r)
+void final_exponentiation_easy_part(const fq12::fq12_t& elt, fq12::fq12_t& r)
 {
     fq12::fq12_t a;
     fq12::fq12_t b;
 
     fq12::copy(elt, a);
-    fq6::neg(a.c1, a.c1);
+    fq6::__neg(a.c1, a.c1);
     fq12::invert(elt, b);
     fq12::mul(a, b, a);
     fq12::frobenius_map_two(a, b);
     fq12::mul(a, b, r);
 }
 
-void final_exponentiation_exp_by_neg_z(const fq12::fq12_t &elt, fq12::fq12_t &r)
+void final_exponentiation_exp_by_neg_z(const fq12::fq12_t& elt, fq12::fq12_t& r)
 {
     fq12::fq12_t scalar;
     fq12::copy(elt, scalar);
@@ -269,7 +268,7 @@ void final_exponentiation_exp_by_neg_z(const fq12::fq12_t &elt, fq12::fq12_t &r)
     fq12::unitary_inverse(r, r);
 }
 
-void final_exponentiation_tricky_part(const fq12::fq12_t &elt, fq12::fq12_t &r)
+void final_exponentiation_tricky_part(const fq12::fq12_t& elt, fq12::fq12_t& r)
 {
     fq12::fq12_t A;
     fq12::fq12_t B;
@@ -319,7 +318,7 @@ void final_exponentiation_tricky_part(const fq12::fq12_t &elt, fq12::fq12_t &r)
     fq12::mul(R, U, r);
 }
 
-fq12::fq12_t reduced_ate_pairing(const g1::affine_element &P_affine, const g2::affine_element &Q_affine)
+fq12::fq12_t reduced_ate_pairing(const g1::affine_element& P_affine, const g2::affine_element& Q_affine)
 {
     g1::element P;
     g2::element Q;
@@ -335,11 +334,27 @@ fq12::fq12_t reduced_ate_pairing(const g1::affine_element &P_affine, const g2::a
     return result;
 }
 
-fq12::fq12_t reduced_ate_pairing_batch(const g1::affine_element *P_affines, const g2::affine_element *Q_affines, size_t num_points)
+fq12::fq12_t
+reduced_ate_pairing_batch_precomputed(const g1::affine_element* P_affines, const miller_lines* lines, size_t num_points)
 {
-    g1::element P[num_points];
-    g2::element Q[num_points];
-    miller_lines lines[num_points];
+    g1::element* P = new g1::element[num_points];
+    for (size_t i = 0; i < num_points; ++i)
+    {
+        g1::affine_to_jacobian(P_affines[i], P[i]);
+    }
+    fq12::fq12_t result = miller_loop_batch(&P[0], &lines[0], num_points);
+    final_exponentiation_easy_part(result, result);
+    final_exponentiation_tricky_part(result, result);
+    delete[] P;
+    return result;
+}
+
+fq12::fq12_t
+reduced_ate_pairing_batch(const g1::affine_element* P_affines, const g2::affine_element* Q_affines, size_t num_points)
+{
+    g1::element* P = new g1::element[num_points];
+    g2::element* Q = new g2::element[num_points];
+    miller_lines* lines = new miller_lines[num_points];
     for (size_t i = 0; i < num_points; ++i)
     {
         g1::affine_to_jacobian(P_affines[i], P[i]);
@@ -351,6 +366,9 @@ fq12::fq12_t reduced_ate_pairing_batch(const g1::affine_element *P_affines, cons
     fq12::fq12_t result = miller_loop_batch(&P[0], &lines[0], num_points);
     final_exponentiation_easy_part(result, result);
     final_exponentiation_tricky_part(result, result);
+    delete[] P;
+    delete[] Q;
+    delete[] lines;
     return result;
 }
 
