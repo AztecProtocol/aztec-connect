@@ -13,7 +13,7 @@ jobs:
             docker pull aztecprotocol/cmake:3.15.4 || true
             docker pull aztecprotocol/clang:9.0.0 || true
             docker pull aztecprotocol/crosstool-ng:1.24.0 || true
-            docker pull aztecprotocol/crosstool-ng-arm:latest || true
+            docker pull aztecprotocol/crosstool-ng-arm64:latest || true
             docker pull aztecprotocol/mingw:latest || true
       - run:
           name: 'Build'
@@ -21,7 +21,7 @@ jobs:
             docker-compose build cmake
             docker-compose build clang
             docker-compose build crosstool-ng
-            docker-compose build crosstool-ng-arm
+            docker-compose build crosstool-ng-arm64
             docker-compose build mingw
       - run:
           name: 'Push'
@@ -30,7 +30,7 @@ jobs:
             docker push aztecprotocol/cmake:3.15.4
             docker push aztecprotocol/clang:9.0.0
             docker push aztecprotocol/crosstool-ng:1.24.0
-            docker push aztecprotocol/crosstool-ng-arm:latest
+            docker push aztecprotocol/crosstool-ng-arm64:latest
             docker push aztecprotocol/mingw:latest
 
   x86_64-linux-gcc:
