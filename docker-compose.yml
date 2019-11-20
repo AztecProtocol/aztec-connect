@@ -12,11 +12,23 @@ services:
       dockerfile: Dockerfile.crosstool-ng
     image: aztecprotocol/crosstool-ng:1.24.0
 
+  crosstool-ng-arm64:
+    build:
+      context: .
+      dockerfile: Dockerfile.crosstool-ng-arm64
+    image: aztecprotocol/crosstool-ng-arm64:latest
+
   clang:
     build:
       context: .
       dockerfile: Dockerfile.clang
     image: aztecprotocol/clang:9.0.0
+
+  mingw:
+    build:
+      context: .
+      dockerfile: Dockerfile.mingw
+    image: aztecprotocol/mingw:latest
 
   x86_64-linux-gcc:
     build:
