@@ -24,13 +24,13 @@ template <typename ComposerContext> class uint32
     uint32(const field_t<ComposerContext>& other);
     uint32(const uint32& other);
 
+    ~uint32(){};
+
     operator field_t<ComposerContext>();
 
     uint32& operator=(const uint32& other);
     uint32& operator=(const uint32_t value);
     uint32& operator=(const witness_t<ComposerContext>& value);
-
-    ~uint32(){};
 
     uint32 operator+(const uint32& other);
     uint32 operator-(const uint32& other);
