@@ -38,20 +38,21 @@ bool_t<ComposerContext> internal_or(bool_t<ComposerContext> left, bool_t<Compose
 {
     return left | right;
 }
+} // namespace
 
 template <typename ComposerContext>
-uint32<ComposerContext> internal_logic_operation(uint32<ComposerContext>& left,
-                                                 uint32<ComposerContext>& right,
-                                                 bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>,
-                                                                                          bool_t<ComposerContext>))
+uint32<ComposerContext> uint32<ComposerContext>::internal_logic_operation(
+    const uint32<ComposerContext>& right,
+    bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>, bool_t<ComposerContext>))
 {
+    auto left = *this;
     ASSERT(left.context == right.context || (left.context == nullptr && right.context != nullptr) ||
            (right.context == nullptr && left.context != nullptr));
-    ComposerContext* context = left.context == nullptr ? right.context : left.context;
+    ComposerContext* ctx = left.context == nullptr ? right.context : left.context;
     left.prepare_for_logic_operations();
     right.prepare_for_logic_operations();
 
-    uint32<ComposerContext> result(context);
+    uint32<ComposerContext> result(ctx);
 
     field_t<ComposerContext> field_accumulator = 0;
     field_t<ComposerContext> const_multiplier = 0;
@@ -75,7 +76,7 @@ uint32<ComposerContext> internal_logic_operation(uint32<ComposerContext>& left,
     for (size_t i = 0; i < 32; ++i)
     {
         result.field_wires[i] = wire_logic_op(left.field_wires[i], right.field_wires[i]);
-        if (context->supports_feature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
+        if (ctx->supports_feature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
         {
             if (i > 0)
             {
@@ -89,7 +90,7 @@ uint32<ComposerContext> internal_logic_operation(uint32<ComposerContext>& left,
         }
     }
     result.num_witness_bits = 32;
-    if (context->supports_feature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
+    if (ctx->supports_feature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
     {
         result.witness = result.accumulators[31].witness;
         result.witness_index = result.accumulators[31].witness_index;
@@ -101,7 +102,6 @@ uint32<ComposerContext> internal_logic_operation(uint32<ComposerContext>& left,
     }
     return result;
 }
-} // namespace
 
 template <typename ComposerContext>
 uint32<ComposerContext>::uint32()
@@ -209,43 +209,7 @@ uint32<ComposerContext>::uint32(const uint32& other)
     }
 }
 
-template <typename ComposerContext>
-uint32<ComposerContext>::uint32(uint32&& other)
-    : context(other.context)
-    , witness(other.witness)
-    , witness_index(other.witness_index)
-    , additive_constant(other.additive_constant)
-    , multiplicative_constant(other.multiplicative_constant)
-    , witness_status(other.witness_status)
-    , num_witness_bits(other.num_witness_bits)
-{
-    ASSERT(context != nullptr);
-    for (size_t i = 0; i < 32; ++i)
-    {
-        field_wires[i] = (other.field_wires[i]);
-        accumulators[i] = (other.accumulators[i]);
-    }
-}
-
 template <typename ComposerContext> uint32<ComposerContext>& uint32<ComposerContext>::operator=(const uint32& other)
-{
-    context = other.context;
-    witness = other.witness;
-    witness_index = other.witness_index;
-    additive_constant = other.additive_constant;
-    multiplicative_constant = other.multiplicative_constant;
-    witness_status = other.witness_status;
-    num_witness_bits = other.num_witness_bits;
-    ASSERT(context != nullptr);
-    for (size_t i = 0; i < 32; ++i)
-    {
-        field_wires[i] = (other.field_wires[i]);
-        accumulators[i] = (other.accumulators[i]);
-    }
-    return *this;
-}
-
-template <typename ComposerContext> uint32<ComposerContext>& uint32<ComposerContext>::operator=(uint32&& other)
 {
     context = other.context;
     witness = other.witness;
@@ -290,7 +254,7 @@ uint32<ComposerContext>& uint32<ComposerContext>::operator=(const witness_t<Comp
     return *this;
 }
 
-template <typename ComposerContext> void uint32<ComposerContext>::concatenate()
+template <typename ComposerContext> void uint32<ComposerContext>::concatenate() const
 {
     ASSERT(num_witness_bits == 32);
     ASSERT(witness_status = WitnessStatus::IN_BINARY_FORM);
@@ -315,7 +279,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::concatenate()
 // Decompose will take the top-level witness value and split it into its constituent binary wire values.
 // This allows us to defer 'decompositions' until neccessary - which in turn allows us to chain together multiple
 // additions.
-template <typename ComposerContext> void uint32<ComposerContext>::decompose()
+template <typename ComposerContext> void uint32<ComposerContext>::decompose() const
 {
     std::vector<bool_t<ComposerContext>> overhead_wires;
     field_t<ComposerContext> normalized(context);
@@ -413,7 +377,7 @@ template <typename ComposerContext> uint32<ComposerContext>::operator field_t<Co
     return accumulators[31];
 }
 
-template <typename ComposerContext> void uint32<ComposerContext>::prepare_for_arithmetic_operations()
+template <typename ComposerContext> void uint32<ComposerContext>::prepare_for_arithmetic_operations() const
 {
     if (witness_status == WitnessStatus::IN_BINARY_FORM)
     {
@@ -422,7 +386,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::prepare_for_ar
     ASSERT(witness_status == WitnessStatus::OK || witness_status == WitnessStatus::NOT_NORMALIZED);
 }
 
-template <typename ComposerContext> void uint32<ComposerContext>::prepare_for_logic_operations()
+template <typename ComposerContext> void uint32<ComposerContext>::prepare_for_logic_operations() const
 {
     if (witness_status == WitnessStatus::NOT_NORMALIZED)
     {
@@ -431,7 +395,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::prepare_for_lo
     ASSERT(witness_status == WitnessStatus::OK || witness_status == WitnessStatus::IN_BINARY_FORM);
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator+(uint32& other)
+template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator+(const uint32& other)
 {
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();
@@ -511,7 +475,7 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     return result;
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator-(uint32& other)
+template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator-(const uint32& other)
 {
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();
@@ -599,7 +563,7 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
 // (qm5.x + qm6.y + qm4.xy + qm7)
 // this creates a 96 bit result
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator*(uint32& other)
+template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator*(const uint32& other)
 {
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();
@@ -685,7 +649,7 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     return result;
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator/(uint32& other)
+template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator/(const uint32& other)
 {
     // a / b = c
     // => c * b = a
@@ -772,7 +736,7 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     return result;
 }
 
-template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::operator<(uint32& other)
+template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::operator<(const uint32& other)
 {
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();
@@ -815,7 +779,7 @@ template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerConte
     return predicate;
 }
 
-template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::operator<=(uint32& other)
+template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::operator<=(const uint32& other)
 {
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();
@@ -826,17 +790,17 @@ template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerConte
     return operator<(rhs);
 }
 
-template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::operator>(uint32& other)
+template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::operator>(const uint32& other)
 {
     return (other < *this);
 }
 
-template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::operator>=(uint32& other)
+template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::operator>=(const uint32& other)
 {
     return (other <= *this);
 }
 
-template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::operator!=(uint32& other)
+template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::operator!=(const uint32& other)
 {
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();
@@ -874,24 +838,24 @@ template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerConte
     return (static_cast<bool_t<ComposerContext>>(predicate));
 }
 
-template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::operator==(uint32& other)
+template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::operator==(const uint32& other)
 {
     return !(operator!=(other));
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator&(uint32& other)
+template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator&(const uint32& other)
 {
-    return internal_logic_operation(*this, other, &internal_and);
+    return internal_logic_operation(other, &internal_and);
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator^(uint32& other)
+template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator^(const uint32& other)
 {
-    return internal_logic_operation(*this, other, &internal_xor);
+    return internal_logic_operation(other, &internal_xor);
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator|(uint32& other)
+template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator|(const uint32& other)
 {
-    return internal_logic_operation(*this, other, &internal_or);
+    return internal_logic_operation(other, &internal_or);
 }
 
 template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator~()
