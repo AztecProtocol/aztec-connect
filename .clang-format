@@ -11,3 +11,18 @@ AlwaysBreakAfterDefinitionReturnType: None
 PenaltyReturnTypeOnItsOwnLine: 1000000
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 BreakConstructorInitializers: BeforeComma
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+AllowShortFunctionsOnASingleLine : Inline

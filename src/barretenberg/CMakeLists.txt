@@ -72,6 +72,15 @@ add_library(
     waffle/stdlib/uint32/uint32.hpp
     waffle/stdlib/mimc.tcc
     waffle/stdlib/mimc.hpp
+    noir/expression.cpp
+    noir/statement.cpp
+    noir/parse.cpp
+)
+
+target_include_directories(
+    barretenberg
+    SYSTEM PRIVATE
+        ${private_include_dir}/boost
 )
 
 set_target_properties(
@@ -155,6 +164,9 @@ if(BARRETENBERG_PROFILING)
         waffle/stdlib/uint32/uint32.hpp
         waffle/stdlib/mimc.tcc
         waffle/stdlib/mimc.hpp
+        noir/expression.cpp
+        noir/statement.cpp
+        noir/parse.cpp
     )
 
     target_link_libraries(

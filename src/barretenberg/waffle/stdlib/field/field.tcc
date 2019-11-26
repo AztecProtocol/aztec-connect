@@ -1,8 +1,8 @@
 #ifndef PLONK_FIELD_TCC
 #define PLONK_FIELD_TCC
 
-#include "../../../fields/fr.hpp"
 #include "../../../assert.hpp"
+#include "../../../fields/fr.hpp"
 #include "../../composer/composer_base.hpp"
 #include "../bool/bool.hpp"
 
@@ -11,55 +11,45 @@ namespace plonk
 namespace stdlib
 {
 template <typename ComposerContext>
-field_t<ComposerContext>::field_t() :
-    context(nullptr),
-    additive_constant(barretenberg::fr::zero()),
-    multiplicative_constant(barretenberg::fr::one()),
-    witness(barretenberg::fr::zero()),
-    witness_index(static_cast<uint32_t>(-1)) {}
-
-template <typename ComposerContext>
-field_t<ComposerContext>::field_t(ComposerContext *parent_context) :
-context(parent_context)
+field_t<ComposerContext>::field_t()
+    : context(nullptr)
+    , additive_constant(barretenberg::fr::zero())
+    , multiplicative_constant(barretenberg::fr::one())
+    , witness(barretenberg::fr::zero())
+    , witness_index(static_cast<uint32_t>(-1))
 {
-ASSERT(parent_context != nullptr);
-additive_constant = barretenberg::fr::zero();
-multiplicative_constant = barretenberg::fr::one();
-witness = barretenberg::fr::zero();
 }
 
 template <typename ComposerContext>
-field_t<ComposerContext>::field_t(const witness_t<ComposerContext> &value) :
-context(value.context)
+field_t<ComposerContext>::field_t(ComposerContext* parent_context) : context(parent_context)
 {
-ASSERT(context != nullptr);
-additive_constant = barretenberg::fr::zero();
-multiplicative_constant = barretenberg::fr::one();
-barretenberg::fr::copy(value.witness, witness);
-witness_index = value.witness_index;
+    ASSERT(parent_context != nullptr);
+    additive_constant = barretenberg::fr::zero();
+    multiplicative_constant = barretenberg::fr::one();
+    witness = barretenberg::fr::zero();
 }
 
 template <typename ComposerContext>
-field_t<ComposerContext>::field_t(ComposerContext *parent_context, const barretenberg::fr::field_t &value) :
-context(parent_context)
+field_t<ComposerContext>::field_t(const witness_t<ComposerContext>& value) : context(value.context)
 {
-ASSERT(parent_context != nullptr);
-barretenberg::fr::copy(value, additive_constant);
-multiplicative_constant = barretenberg::fr::one();
-witness = barretenberg::fr::zero();
+    ASSERT(context != nullptr);
+    additive_constant = barretenberg::fr::zero();
+    multiplicative_constant = barretenberg::fr::one();
+    barretenberg::fr::copy(value.witness, witness);
+    witness_index = value.witness_index;
 }
 
 template <typename ComposerContext>
-field_t<ComposerContext>::field_t(const field_t &other) : context(other.context)
+field_t<ComposerContext>::field_t(ComposerContext* parent_context, const barretenberg::fr::field_t& value)
+    : context(parent_context)
 {
-    barretenberg::fr::copy(other.additive_constant, additive_constant);
-    barretenberg::fr::copy(other.multiplicative_constant, multiplicative_constant);
-    barretenberg::fr::copy(other.witness, witness);
-    witness_index = other.witness_index;
+    ASSERT(parent_context != nullptr);
+    barretenberg::fr::copy(value, additive_constant);
+    multiplicative_constant = barretenberg::fr::one();
+    witness = barretenberg::fr::zero();
 }
 
-template <typename ComposerContext>
-field_t<ComposerContext>::field_t(field_t &&other) : context(other.context)
+template <typename ComposerContext> field_t<ComposerContext>::field_t(const field_t& other) : context(other.context)
 {
     barretenberg::fr::copy(other.additive_constant, additive_constant);
     barretenberg::fr::copy(other.multiplicative_constant, multiplicative_constant);
@@ -67,16 +57,25 @@ field_t<ComposerContext>::field_t(field_t &&other) : context(other.context)
     witness_index = other.witness_index;
 }
 
-template <typename ComposerContext>
-field_t<ComposerContext>::~field_t() {}
+template <typename ComposerContext> field_t<ComposerContext>::field_t(field_t&& other) : context(other.context)
+{
+    barretenberg::fr::copy(other.additive_constant, additive_constant);
+    barretenberg::fr::copy(other.multiplicative_constant, multiplicative_constant);
+    barretenberg::fr::copy(other.witness, witness);
+    witness_index = other.witness_index;
+}
 
-template <typename ComposerContext>
-field_t<ComposerContext>::field_t(const bool_t<ComposerContext> &other)
+template <typename ComposerContext> field_t<ComposerContext>::~field_t()
+{
+}
+
+template <typename ComposerContext> field_t<ComposerContext>::field_t(const bool_t<ComposerContext>& other)
 {
     context = other.context;
     if (other.witness_index == static_cast<uint32_t>(-1))
     {
-        additive_constant = (other.witness_bool ^ other.witness_inverted) ? barretenberg::fr::one() : barretenberg::fr::zero();
+        additive_constant =
+            (other.witness_bool ^ other.witness_inverted) ? barretenberg::fr::one() : barretenberg::fr::zero();
         multiplicative_constant = barretenberg::fr::one();
         witness = barretenberg::fr::zero();
         witness_index = static_cast<uint32_t>(-1);
@@ -90,18 +89,19 @@ field_t<ComposerContext>::field_t(const bool_t<ComposerContext> &other)
     }
 }
 
-template <typename ComposerContext>
-field_t<ComposerContext>::operator bool_t<ComposerContext>()
+template <typename ComposerContext> field_t<ComposerContext>::operator bool_t<ComposerContext>()
 {
     bool add_constant_check = barretenberg::fr::eq(additive_constant, barretenberg::fr::zero());
     bool mul_constant_check = barretenberg::fr::eq(multiplicative_constant, barretenberg::fr::one());
-    bool inverted_check = barretenberg::fr::eq(additive_constant, barretenberg::fr::one()) && barretenberg::fr::eq(multiplicative_constant, barretenberg::fr::neg_one());
+    bool inverted_check = barretenberg::fr::eq(additive_constant, barretenberg::fr::one()) &&
+                          barretenberg::fr::eq(multiplicative_constant, barretenberg::fr::neg_one());
     if ((!add_constant_check || !mul_constant_check) && !inverted_check)
     {
         normalize();
     }
 
-    ASSERT(barretenberg::fr::eq(witness, barretenberg::fr::zero()) || barretenberg::fr::eq(witness, barretenberg::fr::one()));
+    ASSERT(barretenberg::fr::eq(witness, barretenberg::fr::zero()) ||
+           barretenberg::fr::eq(witness, barretenberg::fr::one()));
     bool_t<ComposerContext> result(context);
     result.witness = witness;
     result.witness_bool = barretenberg::fr::eq(witness, barretenberg::fr::one());
@@ -111,8 +111,21 @@ field_t<ComposerContext>::operator bool_t<ComposerContext>()
     return result;
 }
 
-template <typename ComposerContext>
-field_t<ComposerContext>& field_t<ComposerContext>::operator=(const field_t &other)
+template <typename ComposerContext> field_t<ComposerContext>& field_t<ComposerContext>::operator=(const field_t& other)
+{
+    ASSERT(context == other.context || other.context == nullptr || context == nullptr);
+    barretenberg::fr::copy(other.additive_constant, additive_constant);
+    barretenberg::fr::copy(other.multiplicative_constant, multiplicative_constant);
+    barretenberg::fr::copy(other.witness, witness);
+    witness_index = other.witness_index;
+    if (context == nullptr && other.context != nullptr)
+    {
+        context = other.context;
+    }
+    return *this;
+}
+
+template <typename ComposerContext> field_t<ComposerContext>& field_t<ComposerContext>::operator=(field_t&& other)
 {
     ASSERT(context == other.context || other.context == nullptr || context == nullptr);
     barretenberg::fr::copy(other.additive_constant, additive_constant);
@@ -127,22 +140,7 @@ field_t<ComposerContext>& field_t<ComposerContext>::operator=(const field_t &oth
 }
 
 template <typename ComposerContext>
-field_t<ComposerContext>& field_t<ComposerContext>::operator=(field_t &&other)
-{
-    ASSERT(context == other.context || other.context == nullptr || context == nullptr);
-    barretenberg::fr::copy(other.additive_constant, additive_constant);
-    barretenberg::fr::copy(other.multiplicative_constant, multiplicative_constant);
-    barretenberg::fr::copy(other.witness, witness);
-    witness_index = other.witness_index;
-    if (context == nullptr && other.context != nullptr)
-    {
-        context = other.context;
-    }
-    return *this;
-}
-
-template <typename ComposerContext>
-field_t<ComposerContext>& field_t<ComposerContext>::operator=(const barretenberg::fr::field_t &value)
+field_t<ComposerContext>& field_t<ComposerContext>::operator=(const barretenberg::fr::field_t& value)
 {
     witness_index = static_cast<uint32_t>(-1);
     barretenberg::fr::copy(value, witness);
@@ -150,24 +148,19 @@ field_t<ComposerContext>& field_t<ComposerContext>::operator=(const barretenberg
     barretenberg::fr::copy(barretenberg::fr::one(), multiplicative_constant);
 }
 
-template <typename ComposerContext>
-field_t<ComposerContext>& field_t<ComposerContext>::operator=(const uint64_t value)
+template <typename ComposerContext> field_t<ComposerContext>& field_t<ComposerContext>::operator=(const uint64_t value)
 {
     witness_index = static_cast<uint32_t>(-1);
-    witness = barretenberg::fr::to_montgomery_form({{
-        value, 0, 0, 0
-    }});
+    witness = barretenberg::fr::to_montgomery_form({ { value, 0, 0, 0 } });
     barretenberg::fr::copy(barretenberg::fr::zero(), additive_constant);
     barretenberg::fr::copy(barretenberg::fr::one(), multiplicative_constant);
 }
 
-template <typename ComposerContext>
-field_t<ComposerContext> field_t<ComposerContext>::operator+(const field_t &other)
+template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerContext>::operator+(const field_t& other)
 {
     ASSERT(context == other.context || other.context == nullptr);
     field_t<ComposerContext> result(context);
 
-    
     if (witness_index == other.witness_index)
     {
         barretenberg::fr::__add(additive_constant, other.additive_constant, result.additive_constant);
@@ -205,22 +198,19 @@ field_t<ComposerContext> field_t<ComposerContext>::operator+(const field_t &othe
         barretenberg::fr::__add(result.witness, other.additive_constant, result.witness);
 
         result.witness_index = context->add_variable(result.witness);
-        const waffle::add_triple gate_coefficients{
-            witness_index,
-            other.witness_index,
-            result.witness_index,
-            multiplicative_constant,
-            other.multiplicative_constant,
-            barretenberg::fr::neg_one(),
-            barretenberg::fr::add(additive_constant, other.additive_constant)
-        };
+        const waffle::add_triple gate_coefficients{ witness_index,
+                                                    other.witness_index,
+                                                    result.witness_index,
+                                                    multiplicative_constant,
+                                                    other.multiplicative_constant,
+                                                    barretenberg::fr::neg_one(),
+                                                    barretenberg::fr::add(additive_constant, other.additive_constant) };
         context->create_add_gate(gate_coefficients);
     }
-    return result;    
+    return result;
 }
 
-template <typename ComposerContext>
-field_t<ComposerContext> field_t<ComposerContext>::operator-(const field_t &other)
+template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerContext>::operator-(const field_t& other)
 {
     ASSERT(context == other.context || other.context == nullptr);
     field_t<ComposerContext> rhs(other);
@@ -229,13 +219,11 @@ field_t<ComposerContext> field_t<ComposerContext>::operator-(const field_t &othe
     return operator+(rhs);
 }
 
-template <typename ComposerContext>
-field_t<ComposerContext> field_t<ComposerContext>::operator*(const field_t &other)
+template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerContext>::operator*(const field_t& other)
 {
     ASSERT(context == other.context || other.context == nullptr);
     field_t<ComposerContext> result(context);
 
-    
     if (witness_index == static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1))
     {
         // both inputs are constant - don't add a gate
@@ -280,22 +268,14 @@ field_t<ComposerContext> field_t<ComposerContext>::operator*(const field_t &othe
 
         result.witness_index = context->add_variable(result.witness);
         const waffle::poly_triple gate_coefficients{
-            witness_index,
-            other.witness_index,
-            result.witness_index,
-            q_m,
-            q_l,
-            q_r,
-            barretenberg::fr::neg_one(),
-            q_c
+            witness_index, other.witness_index, result.witness_index, q_m, q_l, q_r, barretenberg::fr::neg_one(), q_c
         };
         context->create_poly_gate(gate_coefficients);
     }
-    return result;    
+    return result;
 }
 
-template <typename ComposerContext>
-field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t &other)
+template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t& other)
 {
     ASSERT(context == other.context || other.context == nullptr);
     field_t<ComposerContext> result(context);
@@ -345,7 +325,7 @@ field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t &othe
         barretenberg::fr::field_t T1;
         barretenberg::fr::__mul(other.multiplicative_constant, other.witness, T1);
         barretenberg::fr::__add(T1, other.additive_constant, T1);
-        
+
         result.witness = barretenberg::fr::mul(T0, barretenberg::fr::invert(T1));
         result.witness_index = context->add_variable(result.witness);
 
@@ -366,22 +346,14 @@ field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t &othe
         barretenberg::fr::field_t q_c = barretenberg::fr::neg(additive_constant);
 
         const waffle::poly_triple gate_coefficients{
-            result.witness_index,
-            other.witness_index,
-            witness_index,
-            q_m,
-            q_l,
-            q_r,
-            q_o,
-            q_c
+            result.witness_index, other.witness_index, witness_index, q_m, q_l, q_r, q_o, q_c
         };
         context->create_poly_gate(gate_coefficients);
     }
-    return result;    
+    return result;
 }
 
-template <typename ComposerContext>
-field_t<ComposerContext> field_t<ComposerContext>::normalize()
+template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerContext>::normalize()
 {
     field_t<ComposerContext> result(context);
     barretenberg::fr::__mul(witness, multiplicative_constant, result.witness);
@@ -390,14 +362,8 @@ field_t<ComposerContext> field_t<ComposerContext>::normalize()
     result.witness_index = context->add_variable(result.witness);
 
     const waffle::poly_triple gate_coefficients{
-        witness_index,
-        witness_index,
-        result.witness_index,
-        {{0,0,0,0}},
-        multiplicative_constant,
-        {{0,0,0,0}},
-        barretenberg::fr::neg_one(),
-        additive_constant
+        witness_index,           witness_index,      result.witness_index,        { { 0, 0, 0, 0 } },
+        multiplicative_constant, { { 0, 0, 0, 0 } }, barretenberg::fr::neg_one(), additive_constant
     };
 
     context->create_poly_gate(gate_coefficients);
@@ -405,8 +371,7 @@ field_t<ComposerContext> field_t<ComposerContext>::normalize()
     return result;
 }
 
-template <typename ComposerContext>
-barretenberg::fr::field_t field_t<ComposerContext>::get()
+template <typename ComposerContext> barretenberg::fr::field_t field_t<ComposerContext>::get()
 {
     if (witness_index != static_cast<uint32_t>(-1))
     {
@@ -422,7 +387,7 @@ barretenberg::fr::field_t field_t<ComposerContext>::get()
 // {
 // }
 
-}
-}
+} // namespace stdlib
+} // namespace plonk
 
 #endif

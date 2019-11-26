@@ -55,6 +55,7 @@ add_executable(
     stdlib/test_stdlib_field.cpp
     stdlib/test_stdlib_uint32.cpp
     stdlib/test_stdlib_mimc.cpp
+    noir/test_noir.cpp
 )
 
 set_target_properties(
@@ -62,6 +63,12 @@ set_target_properties(
     PROPERTIES
 
     RUNTIME_OUTPUT_DIRECTORY .
+)
+
+target_include_directories(
+    barretenberg_tests
+    SYSTEM PRIVATE
+        ${private_include_dir}/boost
 )
 
 if (WIN32)
