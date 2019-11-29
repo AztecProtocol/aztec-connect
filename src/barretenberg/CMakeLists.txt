@@ -75,6 +75,8 @@ add_library(
     noir/expression.cpp
     noir/statement.cpp
     noir/parse.cpp
+    noir/printer.cpp
+    noir/compiler.cpp
 )
 
 target_include_directories(

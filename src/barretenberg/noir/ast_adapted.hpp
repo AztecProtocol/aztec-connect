@@ -8,7 +8,7 @@ BOOST_FUSION_ADAPT_STRUCT(noir::ast::operation, operator_, operand_)
 
 BOOST_FUSION_ADAPT_STRUCT(noir::ast::expression, first, rest)
 
-BOOST_FUSION_ADAPT_STRUCT(noir::ast::variable_declaration, assign)
+BOOST_FUSION_ADAPT_STRUCT(noir::ast::variable_declaration, type, assign)
 
 BOOST_FUSION_ADAPT_STRUCT(noir::ast::assignment, lhs, rhs)
 

@@ -6,6 +6,9 @@
 
 namespace noir {
 
+namespace x3 = boost::spirit::x3;
+auto const space_comment = x3::ascii::space | x3::lexeme["//" >> *(x3::char_ - x3::eol) >> x3::eol];
+
 ast::statement_list parse(std::string const& source) {
     parser::iterator_type iter(source.begin());
     parser::iterator_type end(source.end());
@@ -19,11 +22,10 @@ ast::statement_list parse(std::string const& source) {
     // we pass our error handler to the parser so we can access it later on in our on_error and on_sucess handlers.
     auto const parser = with<parser::error_handler_tag>(std::ref(error_handler))[statement()];
 
-    using boost::spirit::x3::ascii::space;
-    bool success = phrase_parse(iter, end, parser, space, ast);
+    bool success = phrase_parse(iter, end, parser, space_comment, ast);
 
-    if (!success) {
-        throw std::runtime_error("Parser failed.");
+    if (!success || iter != end) {
+        throw std::runtime_error("Parser failed here: " + std::string(iter, end));
     }
 
     return ast;

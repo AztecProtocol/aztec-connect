@@ -1,7 +1,5 @@
 #pragma once
-
 #include <boost/fusion/include/io.hpp>
-//#include <boost/optional.hpp>
 #include <boost/spirit/home/x3/support/ast/position_tagged.hpp>
 #include <boost/spirit/home/x3/support/ast/variant.hpp>
 #include <list>
@@ -15,11 +13,13 @@ struct unary;
 struct expression;
 
 struct variable : x3::position_tagged {
-    variable(std::string const& name = "") : name(name) {}
+    variable(std::string const& name = "")
+        : name(name)
+    {}
     std::string name;
 };
 
-struct operand : x3::variant<nil, unsigned int, variable, x3::forward_ast<unary>, x3::forward_ast<expression>> {
+struct operand : x3::variant<nil, unsigned int, bool, variable, x3::forward_ast<unary>, x3::forward_ast<expression>> {
     using base_type::base_type;
     using base_type::operator=;
 };
@@ -39,7 +39,11 @@ enum optoken {
     op_greater,
     op_greater_equal,
     op_and,
-    op_or
+    op_or,
+    op_bitwise_xor,
+    op_bitwise_or,
+    op_bitwise_and,
+    op_bitwise_not,
 };
 
 struct unary {
@@ -63,6 +67,7 @@ struct assignment : x3::position_tagged {
 };
 
 struct variable_declaration {
+    std::string type;
     assignment assign;
 };
 
@@ -95,12 +100,14 @@ struct while_statement {
 */
 
 // print functions for debugging
-inline std::ostream& operator<<(std::ostream& out, nil) {
+inline std::ostream& operator<<(std::ostream& out, nil)
+{
     out << "nil";
     return out;
 }
 
-inline std::ostream& operator<<(std::ostream& out, variable const& var) {
+inline std::ostream& operator<<(std::ostream& out, variable const& var)
+{
     out << var.name;
     return out;
 }

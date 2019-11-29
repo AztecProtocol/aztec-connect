@@ -9,12 +9,9 @@
 #include "../bool/bool.hpp"
 #include "../field/field.hpp"
 
-namespace plonk
-{
-namespace stdlib
-{
-template <typename ComposerContext> class uint32
-{
+namespace plonk {
+namespace stdlib {
+template <typename ComposerContext> class uint32 {
   public:
     uint32();
     uint32(ComposerContext* parent_context);
@@ -33,13 +30,13 @@ template <typename ComposerContext> class uint32
     uint32& operator=(const witness_t<ComposerContext>& value);
 
     uint32 operator+(const uint32& other);
-    uint32 operator-(const uint32& other);
-    uint32 operator*(const uint32& other);
+    uint32 operator-(const uint32& other) const;
+    uint32 operator*(const uint32& other) const;
     uint32 operator/(const uint32& other);
     uint32 operator%(const uint32& other);
-    uint32 operator&(const uint32& other);
-    uint32 operator|(const uint32& other);
-    uint32 operator^(const uint32& other);
+    uint32 operator&(const uint32& other) const;
+    uint32 operator|(const uint32& other) const;
+    uint32 operator^(const uint32& other) const;
     uint32 operator~();
 
     uint32 operator>>(const uint32_t const_shift);
@@ -48,64 +45,28 @@ template <typename ComposerContext> class uint32
     uint32 ror(const uint32_t const_rotation);
     uint32 rol(const uint32_t const_rotation);
 
-    bool_t<ComposerContext> operator>(const uint32& other);
-    bool_t<ComposerContext> operator<(const uint32& other);
-    bool_t<ComposerContext> operator>=(const uint32& other);
-    bool_t<ComposerContext> operator<=(const uint32& other);
-    bool_t<ComposerContext> operator==(const uint32& other);
-    bool_t<ComposerContext> operator!=(const uint32& other);
+    bool_t<ComposerContext> operator>(const uint32& other) const;
+    bool_t<ComposerContext> operator<(const uint32& other) const;
+    bool_t<ComposerContext> operator>=(const uint32& other) const;
+    bool_t<ComposerContext> operator<=(const uint32& other) const;
+    bool_t<ComposerContext> operator==(const uint32& other) const;
+    bool_t<ComposerContext> operator!=(const uint32& other) const;
 
-    uint32 operator++()
-    {
-        return operator+(uint32(context, barretenberg::fr::one()));
-    };
-    uint32 operator--()
-    {
-        return operator-(uint32(context, barretenberg::fr::one()));
-    };
+    uint32 operator++() { return operator+(uint32(context, barretenberg::fr::one())); };
+    uint32 operator--() { return operator-(uint32(context, barretenberg::fr::one())); };
 
-    uint32 operator+=(const uint32& other)
-    {
-        *this = operator+(other);
-    };
-    uint32 operator-=(const uint32& other)
-    {
-        *this = operator-(other);
-    };
-    uint32 operator*=(const uint32& other)
-    {
-        *this = operator*(other);
-    };
-    uint32 operator/=(const uint32& other)
-    {
-        *this = operator/(other);
-    };
-    uint32 operator%=(const uint32& other)
-    {
-        *this = operator%(other);
-    };
+    uint32 operator+=(const uint32& other) { *this = operator+(other); };
+    uint32 operator-=(const uint32& other) { *this = operator-(other); };
+    uint32 operator*=(const uint32& other) { *this = operator*(other); };
+    uint32 operator/=(const uint32& other) { *this = operator/(other); };
+    uint32 operator%=(const uint32& other) { *this = operator%(other); };
 
-    uint32 operator&=(const uint32& other)
-    {
-        *this = operator&(other);
-    };
-    uint32 operator^=(const uint32& other)
-    {
-        *this = operator^(other);
-    };
-    uint32 operator|=(const uint32& other)
-    {
-        *this = operator|(other);
-    };
+    uint32 operator&=(const uint32& other) { *this = operator&(other); };
+    uint32 operator^=(const uint32& other) { *this = operator^(other); };
+    uint32 operator|=(const uint32& other) { *this = operator|(other); };
 
-    uint32 operator>>=(const uint32& other)
-    {
-        *this = operator>>(other);
-    };
-    uint32 operator<<=(const uint32& other)
-    {
-        *this = operator<<(other);
-    };
+    uint32 operator>>=(const uint32& other) { *this = operator>>(other); };
+    uint32 operator<<=(const uint32& other) { *this = operator<<(other); };
 
     uint32_t get_witness_index()
     {
@@ -114,12 +75,7 @@ template <typename ComposerContext> class uint32
     }
 
   private:
-    enum WitnessStatus
-    {
-        OK,
-        NOT_NORMALIZED,
-        IN_BINARY_FORM
-    };
+    enum WitnessStatus { OK, NOT_NORMALIZED, IN_BINARY_FORM };
 
     void prepare_for_arithmetic_operations() const;
     void prepare_for_logic_operations() const;
@@ -131,9 +87,9 @@ template <typename ComposerContext> class uint32
     void decompose() const;
     void normalize(); // ensures uint32 both has valid binary wires and a valid witness
 
-    uint32<ComposerContext> internal_logic_operation(const uint32<ComposerContext>& right,
-                                                     bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>,
-                                                                                              bool_t<ComposerContext>));
+    uint32<ComposerContext> internal_logic_operation(
+        const uint32<ComposerContext>& right,
+        bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>, bool_t<ComposerContext>)) const;
 
     uint32 ternary_operator(const bool_t<ComposerContext>& predicate, const uint32& lhs, const uint32& rhs);
 
@@ -141,8 +97,8 @@ template <typename ComposerContext> class uint32
     mutable barretenberg::fr::field_t witness;
     mutable uint32_t witness_index;
 
-    uint32_t additive_constant;
-    uint32_t multiplicative_constant;
+    mutable uint32_t additive_constant;
+    mutable uint32_t multiplicative_constant;
 
     mutable WitnessStatus witness_status;
     mutable size_t num_witness_bits;
@@ -154,6 +110,12 @@ template <typename ComposerContext> class uint32
     const barretenberg::fr::field_t uint32_max =
         barretenberg::fr::pow_small(barretenberg::fr::add(barretenberg::fr::one(), barretenberg::fr::one()), 32);
 };
+
+template <typename T> inline std::ostream& operator<<(std::ostream& os, uint32<T> const&)
+{
+    return os << "implement me";
+}
+
 } // namespace stdlib
 } // namespace plonk
 

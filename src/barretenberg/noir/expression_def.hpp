@@ -19,12 +19,14 @@ using namespace x3::ascii;
 x3::symbols<ast::optoken> equality_op;
 x3::symbols<ast::optoken> relational_op;
 x3::symbols<ast::optoken> logical_op;
+x3::symbols<ast::optoken> bitwise_op;
 x3::symbols<ast::optoken> additive_op;
 x3::symbols<ast::optoken> multiplicative_op;
 x3::symbols<ast::optoken> unary_op;
 x3::symbols<> keywords;
 
-void add_keywords() {
+void add_keywords()
+{
     // clang-format off
     static bool once = false;
     if (once)
@@ -34,6 +36,12 @@ void add_keywords() {
     logical_op.add
         ("&&", ast::op_and)
         ("||", ast::op_or)
+        ;
+
+    bitwise_op.add
+        ("^", ast::op_bitwise_xor)
+        ("|", ast::op_bitwise_or)
+        ("&", ast::op_bitwise_and)
         ;
 
     equality_op.add
@@ -62,6 +70,7 @@ void add_keywords() {
         ("+", ast::op_positive)
         ("-", ast::op_negative)
         ("!", ast::op_not)
+        ("~", ast::op_bitwise_not)
         ;
 
     keywords.add
@@ -82,6 +91,7 @@ void add_keywords() {
 struct equality_expr_class;
 struct relational_expr_class;
 struct logical_expr_class;
+struct bitwise_expr_class;
 struct additive_expr_class;
 struct multiplicative_expr_class;
 struct unary_expr_class;
@@ -90,6 +100,7 @@ struct primary_expr_class;
 typedef x3::rule<equality_expr_class, ast::expression> equality_expr_type;
 typedef x3::rule<relational_expr_class, ast::expression> relational_expr_type;
 typedef x3::rule<logical_expr_class, ast::expression> logical_expr_type;
+typedef x3::rule<bitwise_expr_class, ast::expression> bitwise_expr_type;
 typedef x3::rule<additive_expr_class, ast::expression> additive_expr_type;
 typedef x3::rule<multiplicative_expr_class, ast::expression> multiplicative_expr_type;
 typedef x3::rule<unary_expr_class, ast::operand> unary_expr_type;
@@ -99,6 +110,7 @@ expression_type const expression = "expression";
 equality_expr_type const equality_expr = "equality_expr";
 relational_expr_type const relational_expr = "relational_expr";
 logical_expr_type const logical_expr = "logical_expr";
+bitwise_expr_type const bitwise_expr = "bitwise_expr";
 additive_expr_type const additive_expr = "additive_expr";
 multiplicative_expr_type const multiplicative_expr = "multiplicative_expr";
 unary_expr_type const unary_expr = "unary_expr";
@@ -106,8 +118,13 @@ primary_expr_type const primary_expr = "primary_expr";
 
 // clang-format off
 auto const logical_expr_def =
+        bitwise_expr
+    >> *(logical_op > bitwise_expr)
+    ;
+
+auto const bitwise_expr_def =
         equality_expr
-    >> *(logical_op > equality_expr)
+    >> *(bitwise_op > equality_expr)
     ;
 
 auto const equality_expr_def =
@@ -147,6 +164,7 @@ auto const expression_def = logical_expr;
 
 BOOST_SPIRIT_DEFINE(expression,
                     logical_expr,
+                    bitwise_expr,
                     equality_expr,
                     relational_expr,
                     additive_expr,
@@ -161,7 +179,8 @@ struct primary_expr_class : x3::annotate_on_success {};
 } // namespace noir
 
 namespace noir {
-parser::expression_type const& expression() {
+parser::expression_type const& expression()
+{
     parser::add_keywords();
     return parser::expression;
 }

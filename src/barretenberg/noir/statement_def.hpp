@@ -13,6 +13,7 @@ namespace parser {
 
 using x3::lexeme;
 using x3::raw;
+using x3::string;
 using namespace x3::ascii;
 
 struct statement_list_class;
@@ -42,7 +43,7 @@ auto const statement_list_def =
     ;
 
 auto const variable_declaration_def =
-        lexeme["var" >> !(alnum | '_')] // make sure we have whole words
+        lexeme[string("bool") | string("uint32") >> !(alnum | '_')] // make sure we have whole words
     >   assignment
     ;
 
@@ -63,10 +64,9 @@ struct statement_class : error_handler_base, x3::annotate_on_success {};
 struct assignment_class : x3::annotate_on_success {};
 struct variable_class : x3::annotate_on_success {};
 } // namespace parser
-} // namespace noir
 
-namespace noir {
-parser::statement_type const& statement() {
+parser::statement_type const& statement()
+{
     return parser::statement;
 }
 } // namespace noir
