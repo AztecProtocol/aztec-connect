@@ -33,7 +33,7 @@ public:
     void create_bool_gate(const uint32_t a);
     void create_poly_gate(const poly_triple &in);
     void create_dummy_gates();
-    virtual size_t get_num_constant_gates() { return StandardComposer::get_num_constant_gates() + 1; }
+    virtual size_t get_num_constant_gates() { return StandardComposer::get_num_constant_gates(); }
 
     std::vector<barretenberg::fr::field_t> q_left_bools;
     std::vector<barretenberg::fr::field_t> q_right_bools;

@@ -45,17 +45,16 @@ uint32<ComposerContext> uint32<ComposerContext>::internal_logic_operation(
     const uint32<ComposerContext>& right,
     bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>, bool_t<ComposerContext>))
 {
-    auto left = *this;
-    ASSERT(left.context == right.context || (left.context == nullptr && right.context != nullptr) ||
-           (right.context == nullptr && left.context != nullptr));
-    ComposerContext* ctx = left.context == nullptr ? right.context : left.context;
+    // ASSERT(left.context == right.context || (left.context == nullptr && right.context != nullptr) ||
+    //        (right.context == nullptr && left.context != nullptr));
+    ComposerContext* context = left.context == nullptr ? right.context : left.context;
     left.prepare_for_logic_operations();
     right.prepare_for_logic_operations();
 
     uint32<ComposerContext> result(ctx);
 
-    field_t<ComposerContext> field_accumulator = 0;
-    field_t<ComposerContext> const_multiplier = 0;
+    // field_t<ComposerContext> field_accumulator = 0;
+    // field_t<ComposerContext> const_multiplier = 0;
 
     // when evaluating our logical AND, also accumulate wire values into a sum.
     // When using the extended arithmetisation widget, this can be done for only +1 extra gate.
@@ -73,25 +72,52 @@ uint32<ComposerContext> uint32<ComposerContext>::internal_logic_operation(
      **/
     // TODO: We could remove the +1 extra gate if we could tap the *previous* gate in the circuit...
     // OR: start in reverse order :/
+    field_t<ComposerContext> const_mul(context, barretenberg::fr::one());
     for (size_t i = 0; i < 32; ++i)
     {
-        result.field_wires[i] = wire_logic_op(left.field_wires[i], right.field_wires[i]);
-        if (ctx->supports_feature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
+        // if (context && context->supports_feature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
+        if (ctx)
         {
-            if (i > 0)
+            // this is very hacky at the moment!
+            // We can combine a logic operation on a single bit, with an accumulation of that bit into a sum.
+            // But to get the optimizer to pick this up, we need to interleave bit accumulations between logic ops in the following pattern:
+            // (logic on bit i) (accumulate bit i) (accumulate bit i + 1) (logic on bit i + 1) (logic on bit i + 2) ... etc
+            // i.e. bit accumulations need to be back to back.
+            // TODO: We should improve the optimizer to pick up on this pattern without needing this peculiar interleaving nonsense
+            // (right now the optimizer is rather simple, and will only investigate adjacent gates to see if an addition gate can be elided out)
+            if (i == 0)
             {
-                result.accumulators[i] = result.accumulators[i - 1] + (const_multiplier * result.field_wires[i]);
+                result.field_wires[i] = wire_logic_op(left.field_wires[i], right.field_wires[i]);
+                result.accumulators[i] = field_t<ComposerContext>(result.field_wires[i]);
             }
             else
             {
-                result.accumulators[0] = field_t<ComposerContext>(result.field_wires[i]);
+                result.field_wires[i] = wire_logic_op(left.field_wires[i], right.field_wires[i]);
+                result.accumulators[i] = result.accumulators[i - 1] + (const_mul * result.field_wires[i]);
             }
-            const_multiplier = const_multiplier + const_multiplier;
+            const_mul = const_mul + const_mul;
+        }
+        else
+        {
+            result.field_wires[i] = wire_logic_op(left.field_wires[i], right.field_wires[i]);
         }
     }
     result.num_witness_bits = 32;
-    if (ctx->supports_feature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
+    // if (context && context->supports_feature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
+    if (ctx)
     {
+        if (result.accumulators[31].witness_index == static_cast<uint32_t>(-1))
+        {
+            result.additive_constant = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(result.accumulators[31].additive_constant).data[0]);
+            result.multiplicative_constant = 1;
+        }
+        else
+        {
+            result.accumulators[31] = result.accumulators[31].normalize();
+            result.additive_constant = 0;
+            result.multiplicative_constant = 1;
+        }
+
         result.witness = result.accumulators[31].witness;
         result.witness_index = result.accumulators[31].witness_index;
         result.witness_status = uint32<ComposerContext>::WitnessStatus::OK;
@@ -150,6 +176,15 @@ uint32<ComposerContext>::uint32(const witness_t<ComposerContext>& value)
     , num_witness_bits(32)
 {
     ASSERT(context != nullptr);
+    decompose();
+}
+
+template <typename ComposerContext>
+uint32<ComposerContext>::uint32(const uint32_t value)
+    : context(nullptr), witness(barretenberg::fr::zero()), witness_index(static_cast<uint32_t>(-1)),
+      additive_constant(value), multiplicative_constant(1), witness_status(WitnessStatus::NOT_NORMALIZED),
+      num_witness_bits(32)
+{
     decompose();
 }
 
@@ -271,6 +306,19 @@ template <typename ComposerContext> void uint32<ComposerContext>::concatenate() 
         const_mul = const_mul + const_mul;
     }
 
+    if (accumulators[31].witness_index == static_cast<uint32_t>(-1))
+    {
+        if (barretenberg::fr::from_montgomery_form(accumulators[31].additive_constant).data[0] > (1UL << 32UL))
+        {
+            printf("AAAAH CONSTANT IS HUGE WHAT WHAT WHAT\n");
+        }
+        additive_constant = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(accumulators[31].additive_constant).data[0]);
+    }
+    else
+    {
+        accumulators[31] = accumulators[31].normalize();
+    }
+
     witness = accumulators[31].witness;
     witness_index = accumulators[31].witness_index;
     witness_status = WitnessStatus::OK;
@@ -355,6 +403,11 @@ template <typename ComposerContext> void uint32<ComposerContext>::decompose() co
 
     witness = accumulators[31].witness;
     witness_index = accumulators[31].witness_index;
+
+    if (witness_index == static_cast<uint32_t>(-1))
+    {
+        additive_constant = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(accumulators[31].additive_constant).data[0]);
+    }
     num_witness_bits = 32;
     witness_status = WitnessStatus::OK;
 }
@@ -392,6 +445,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::prepare_for_lo
     {
         decompose();
     }
+
     ASSERT(witness_status == WitnessStatus::OK || witness_status == WitnessStatus::IN_BINARY_FORM);
 }
 
@@ -418,21 +472,31 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     else if (lhs_constant && rhs_constant)
     {
         result.additive_constant = additive_constant + other.additive_constant;
-        result.num_witness_bits = num_witness_bits + 1;
-        result.witness_status = WitnessStatus::OK;
+        result.num_witness_bits = num_witness_bits;
+        result.witness_status = WitnessStatus::NOT_NORMALIZED;
+        result.decompose();
+        
     }
     else if (!lhs_constant && rhs_constant)
     {
         result = uint32(*this);
         result.additive_constant = additive_constant + other.additive_constant;
-        result.num_witness_bits = num_witness_bits + 1;
+        result.num_witness_bits = num_witness_bits;
+        if (other.additive_constant > 0 && additive_constant == 0)
+        {
+            ++result.num_witness_bits;
+        }
         result.witness_status = WitnessStatus::NOT_NORMALIZED;
     }
     else if (lhs_constant && !rhs_constant)
     {
         result = uint32(other);
         result.additive_constant = additive_constant + other.additive_constant;
-        result.num_witness_bits = num_witness_bits + 1;
+        result.num_witness_bits = other.num_witness_bits;
+        if (additive_constant > 0 && other.additive_constant == 0)
+        {
+            ++result.num_witness_bits;
+        }
         result.witness_status = WitnessStatus::NOT_NORMALIZED;
     }
     else
@@ -948,9 +1012,9 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
         return (*this);
     }
     prepare_for_logic_operations();
-
     uint32<ComposerContext> result(context);
 
+    // TODO ADD BACK IN
     for (size_t i = 0; i < 32 - const_rotation; ++i)
     {
         result.field_wires[i] = field_wires[i + const_rotation];

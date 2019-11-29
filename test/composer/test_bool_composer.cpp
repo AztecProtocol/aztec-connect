@@ -111,15 +111,15 @@ TEST(bool_composer, test_bool_gate_proofs)
 {
     waffle::BoolComposer composer = waffle::BoolComposer();
 
+    fr::field_t a = fr::one();
+    fr::field_t b = fr::zero();
+    fr::field_t c = fr::one();
+    uint32_t a_idx = composer.add_variable(a);
+    uint32_t b_idx = composer.add_variable(b);
+    uint32_t c_idx = composer.add_variable(c);
     size_t n = 27;
     for (size_t i = 0; i < n; ++i)
     {
-        fr::field_t a = fr::one();
-        fr::field_t b = fr::zero();
-        fr::field_t c = fr::one();
-        uint32_t a_idx = composer.add_variable(a);
-        uint32_t b_idx = composer.add_variable(b);
-        uint32_t c_idx = composer.add_variable(c);
         composer.create_bool_gate(a_idx);
         composer.create_bool_gate(b_idx);
         composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });

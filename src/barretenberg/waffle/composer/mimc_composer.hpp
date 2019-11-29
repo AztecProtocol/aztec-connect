@@ -37,7 +37,7 @@ public:
     void create_mimc_gate(const mimc_quadruplet &in);
     void create_noop_gate();
     void create_dummy_gates();
-    virtual size_t get_num_constant_gates() { return StandardComposer::get_num_constant_gates() + 2; }
+    virtual size_t get_num_constant_gates() { return StandardComposer::get_num_constant_gates(); }
 
     std::vector<barretenberg::fr::field_t> q_mimc_coefficient;
     std::vector<barretenberg::fr::field_t> q_mimc_selector;

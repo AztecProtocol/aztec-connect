@@ -61,7 +61,6 @@ namespace waffle
 
         if (pending_bool_selectors[in.a])
         {
-            printf("bleh?\n");
             q_left_bools.emplace_back(fr::one());
             add_gate_flag(gate_flags.size() - 1, GateFlags::IS_LEFT_BOOL_GATE);
             add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_LEFT_WIRE);
@@ -73,7 +72,6 @@ namespace waffle
         }
         if (pending_bool_selectors[in.b])
         {
-            printf("bleh bleh?\n");
             q_right_bools.emplace_back(fr::one());
             add_gate_flag(gate_flags.size() - 1, GateFlags::IS_RIGHT_BOOL_GATE);
             add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_RIGHT_WIRE);
@@ -218,8 +216,6 @@ namespace waffle
             ++n;
         }
 
-        // add a dummy gate to ensure bool selector polynomials are non-zero
-        create_dummy_gates();
 
         size_t log2_n = static_cast<size_t>(log2(static_cast<size_t>(n + 1)));
 

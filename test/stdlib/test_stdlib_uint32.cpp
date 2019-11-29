@@ -194,6 +194,113 @@ TEST(stdlib_uint32, test_xor)
     EXPECT_EQ(result, true);
 }
 
+
+TEST(stdlib_uint32, test_xor_constants_foo)
+{
+    waffle::BoolComposer composer = waffle::BoolComposer();
+
+    uint32_t a_expected = 0xa3b10422;
+    uint32_t b_expected = 0xeac21343;
+    uint32_t c_expected = a_expected ^ b_expected;
+
+    uint32 const_a(&composer, 0xa3b10422);
+    uint32 const_b(&composer, 0xeac21343);
+    uint32 c = const_a ^ const_b;
+    c.concatenate();
+
+    EXPECT_EQ(c.additive_constant, c_expected);
+}
+
+TEST(stdlib_uint32, test_xor_constants)
+{
+    uint32_t a_expected = 0xa3b10422;
+    uint32_t b_expected = 0xeac21343;
+    uint32_t c_expected = a_expected ^ b_expected;
+    for (size_t i = 0; i < 1; ++i)
+    {
+        b_expected = a_expected;
+        a_expected = c_expected;
+        c_expected = (a_expected + b_expected) ^ (0xa3b10422 ^ 0xeac21343);
+    }
+
+    waffle::BoolComposer composer = waffle::BoolComposer();
+
+    witness_t first_input(&composer, 0xa3b10422);
+    witness_t second_input(&composer, 0xeac21343);
+
+    uint32 a = first_input;
+    uint32 b = second_input;
+    uint32 c = a ^ b;
+    for (size_t i = 0; i < 1; ++i)
+    {
+        uint32 const_a = 0xa3b10422;
+        uint32 const_b = 0xeac21343;
+        b = a;
+        a = c;
+        c = (a + b) ^ (const_a ^ const_b);
+    }
+    c.normalize();
+    uint32_t c_result =
+        static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(c.witness_index)).data[0]);
+    EXPECT_EQ(c_result, c_expected);
+    waffle::Prover prover = composer.preprocess();
+
+    printf("prover gates = %lu\n", prover.n);
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_uint32, test_and_constants)
+{
+    uint32_t a_expected = 0xa3b10422;
+    uint32_t b_expected = 0xeac21343;
+    uint32_t c_expected = a_expected & b_expected;
+    for (size_t i = 0; i < 1; ++i)
+    {
+        b_expected = a_expected;
+        a_expected = c_expected;
+        c_expected = (~a_expected & 0xa3b10422) + (b_expected & 0xeac21343);
+        // c_expected = (a_expected + b_expected) & (0xa3b10422 & 0xeac21343);
+    }
+
+    waffle::BoolComposer composer = waffle::BoolComposer();
+
+    witness_t first_input(&composer, 0xa3b10422);
+    witness_t second_input(&composer, 0xeac21343);
+
+    uint32 a = first_input;
+    uint32 b = second_input;
+    uint32 c = a & b;
+    for (size_t i = 0; i < 1; ++i)
+    {
+        uint32 const_a = 0xa3b10422;
+        uint32 const_b = 0xeac21343;
+        b = a;
+        a = c;
+        c = (~a & const_a) + (b & const_b);
+    }
+    c.normalize();
+    uint32_t c_result =
+        static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(c.witness_index)).data[0]);
+    EXPECT_EQ(c_result, c_expected);
+    waffle::Prover prover = composer.preprocess();
+
+    printf("prover gates = %lu\n", prover.n);
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+
 TEST(stdlib_uint32s, test_and)
 {
     uint32_t a_expected = 0xa3b10422;
@@ -351,7 +458,7 @@ uint32_t round_values[8]{
 // ...but only if constants are zero
 // can also do (2^{32} - B + A) + (2^{32} - B.const)
 // ...but what about multiplicative value? Um...erm...
-TEST(stdlib_uint32, test_sha256_rounds)
+TEST(stdlib_uint32, test_hash_rounds)
 {
     uint32_t w_alt[256];
 

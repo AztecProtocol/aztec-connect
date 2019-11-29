@@ -69,7 +69,7 @@ TEST(stdlib_bool, test_basic_operations)
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[5]), {{ 1, 0, 0, 0 }}), true);
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[5]), {{ 1, 0, 0, 0 }}), true);
 
-    EXPECT_EQ(prover.n, 16UL);
+    EXPECT_EQ(prover.n, 8UL);
 }
 
 
@@ -114,6 +114,43 @@ TEST(stdlib_bool, xor_constants)
             bool_t a(&composer, (bool)(i % 2));
             bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
             bool_t c = a ^ b;
+        }
+    }
+    waffle::Prover prover = composer.preprocess();
+    printf("num gates = %lu\n", prover.n);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+
+TEST(stdlib_bool, xor_twin_constants)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+    bool_t c;
+    for (size_t i = 0; i < 32; ++i)
+    {
+        bool_t a(&composer, (i % 1) == 0);
+        bool_t b(&composer, (i % 1) == 1);
+        c = c ^ a ^ b;
+    }
+    c = c ^ bool_t(witness_t(&composer, true));
+    for (size_t i = 0; i < 32; ++i)
+    {
+        if (i % 2 == 0)
+        {
+            bool_t a = witness_t(&composer, (bool)(i % 2));
+            bool_t b(&composer, (bool)(i % 3 == 1));
+            c = c ^ a ^ b;
+        }
+        else
+        {
+            bool_t a(&composer, (bool)(i % 2));
+            bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
+            c = c ^ a ^ b;
         }
     }
     waffle::Prover prover = composer.preprocess();

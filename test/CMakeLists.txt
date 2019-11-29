@@ -55,6 +55,7 @@ add_executable(
     stdlib/test_stdlib_field.cpp
     stdlib/test_stdlib_uint32.cpp
     stdlib/test_stdlib_mimc.cpp
+    stdlib/test_stdlib_sha256.cpp
 )
 
 set_target_properties(

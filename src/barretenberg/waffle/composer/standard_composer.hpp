@@ -30,13 +30,11 @@ public:
     virtual void create_bool_gate(const uint32_t a);
     virtual void create_poly_gate(const poly_triple &in);
     virtual void create_dummy_gates();
-    virtual size_t get_num_constant_gates() { return 2; }
+    virtual size_t get_num_constant_gates() { return 0; }
 
     size_t zero_idx;
     size_t n;
-    std::vector<uint32_t> w_l;
-    std::vector<uint32_t> w_r;
-    std::vector<uint32_t> w_o;
+
 
     std::vector<barretenberg::fr::field_t> q_m;
     std::vector<barretenberg::fr::field_t> q_l;

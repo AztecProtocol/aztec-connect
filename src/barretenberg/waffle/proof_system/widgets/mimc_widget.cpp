@@ -177,16 +177,16 @@ barretenberg::fr::field_t VerifierMiMCWidget::compute_batch_evaluation_contribut
 }
 
 VerifierBaseWidget::challenge_coefficients VerifierMiMCWidget::append_scalar_multiplication_inputs(
-    const challenge_coefficients &challenge,
+    const VerifierBaseWidget::challenge_coefficients &challenge,
     const waffle::plonk_proof &proof,
     std::vector<barretenberg::g1::affine_element> &points,
     std::vector<barretenberg::fr::field_t> &scalars)
 {
-    for (size_t i = 0; i < instance.size(); ++i)
+    if (g1::on_curve(instance[0]))
     {
-        points.push_back(instance[i]);
+        points.push_back(instance[0]);
+        scalars.push_back(challenge.nu_base);
     }
-    scalars.push_back(challenge.nu_base);
 
     fr::field_t mimc_T0 = fr::add(fr::add(proof.w_o_eval, proof.w_l_eval), proof.q_mimc_coefficient_eval);
     fr::field_t mimc_a = fr::sqr(mimc_T0);
@@ -195,10 +195,14 @@ VerifierBaseWidget::challenge_coefficients VerifierMiMCWidget::append_scalar_mul
     fr::field_t q_mimc_term = fr::mul(fr::sub(fr::mul(fr::sqr(proof.w_r_eval), mimc_T0), proof.w_o_shifted_eval), challenge.alpha_step);
     q_mimc_term = fr::mul(fr::add(q_mimc_term, mimc_a), challenge.alpha_base);
     q_mimc_term = fr::mul(q_mimc_term, challenge.linear_nu);
-    scalars.push_back(q_mimc_term);
 
+    if (g1::on_curve(instance[1]))
+    {
+        points.push_back(instance[1]);
+        scalars.push_back(q_mimc_term);
+    }
 
-    return challenge_coefficients{
+    return VerifierBaseWidget::challenge_coefficients{
         fr::mul(challenge.alpha_base, fr::sqr(challenge.alpha_step)),
         challenge.alpha_step,
         fr::mul(challenge.nu_base, challenge.nu_step),

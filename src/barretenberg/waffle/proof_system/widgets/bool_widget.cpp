@@ -169,18 +169,21 @@ VerifierBaseWidget::challenge_coefficients VerifierBoolWidget::append_scalar_mul
     std::vector<barretenberg::g1::affine_element> &points,
     std::vector<barretenberg::fr::field_t> &scalars)
 {
-    for (size_t i = 0; i < instance.size(); ++i)
-    {
-        points.push_back(instance[i]);
-    }
-
     fr::field_t left_bool_multiplier = fr::mul(fr::sub(fr::sqr(proof.w_l_eval), proof.w_l_eval), challenge.alpha_base);
     fr::field_t right_bool_multiplier =  fr::mul(fr::mul(fr::sub(fr::sqr(proof.w_r_eval), proof.w_r_eval), challenge.alpha_base), challenge.alpha_step);
     left_bool_multiplier = fr::mul(left_bool_multiplier, challenge.linear_nu);
     right_bool_multiplier = fr::mul(right_bool_multiplier, challenge.linear_nu);
 
-    scalars.push_back(left_bool_multiplier);
-    scalars.push_back(right_bool_multiplier);
+    if (g1::on_curve(instance[0]))
+    {
+        points.push_back(instance[0]);
+        scalars.push_back(left_bool_multiplier);
+    }
+    if (g1::on_curve(instance[1]))
+    {
+        points.push_back(instance[1]);
+        scalars.push_back(right_bool_multiplier);
+    }
 
 
     return VerifierBaseWidget::challenge_coefficients{

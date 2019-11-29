@@ -383,12 +383,17 @@ field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t &othe
 template <typename ComposerContext>
 field_t<ComposerContext> field_t<ComposerContext>::normalize()
 {
+    if (barretenberg::fr::eq(multiplicative_constant, barretenberg::fr::one()) && barretenberg::fr::eq(additive_constant, barretenberg::fr::zero()))
+    {
+        return *this;
+    }
     field_t<ComposerContext> result(context);
     barretenberg::fr::__mul(witness, multiplicative_constant, result.witness);
     barretenberg::fr::__add(result.witness, additive_constant, result.witness);
 
     result.witness_index = context->add_variable(result.witness);
-
+    result.additive_constant = barretenberg::fr::zero();
+    result.multiplicative_constant = barretenberg::fr::one();
     const waffle::poly_triple gate_coefficients{
         witness_index,
         witness_index,

@@ -73,12 +73,33 @@ class ComposerBase
     {
         LEFT = 0U,
         RIGHT = (1U << 30U),
-        OUTPUT = (1U << 31U)
+        OUTPUT = (1U << 31U),
+        NULL_WIRE
     };
     struct epicycle
     {
         uint32_t gate_index;
         WireType wire_type;
+
+        epicycle(const uint32_t a, const WireType b) : gate_index(a), wire_type(b)
+        {
+        }
+        epicycle(const epicycle& other) : gate_index(other.gate_index), wire_type(other.wire_type)
+        {
+        }
+        epicycle(epicycle&& other) : gate_index(other.gate_index), wire_type(other.wire_type)
+        {
+        }
+        epicycle& operator=(const epicycle& other)
+        {
+            gate_index = other.gate_index;
+            wire_type = other.wire_type;
+            return *this;
+        }
+        bool operator==(const epicycle& other) const
+        {
+            return ((gate_index == other.gate_index) && (wire_type == other.wire_type));
+        }
     };
     ComposerBase(){};
     virtual ~ComposerBase(){};
@@ -120,13 +141,24 @@ class ComposerBase
         for (size_t i = 0; i < wire_epicycles[b_idx].size(); ++i)
         {
             wire_epicycles[a_idx].emplace_back(wire_epicycles[b_idx][i]);
+            if (wire_epicycles[b_idx][i].wire_type == WireType::LEFT)
+            {
+                w_l[wire_epicycles[b_idx][i].gate_index] = a_idx;
+            }
+            else if (wire_epicycles[b_idx][i].wire_type == WireType::RIGHT)
+            {
+                w_r[wire_epicycles[b_idx][i].gate_index] = a_idx;
+            }
+            else
+            {
+                w_o[wire_epicycles[b_idx][i].gate_index] = a_idx;
+            }
         }
         wire_epicycles[b_idx] = std::vector<epicycle>();
     }
 
     void compute_sigma_permutations(Prover& output_state)
     {
-
         // create basic 'identity' permutation
         output_state.sigma_1_mapping.reserve(output_state.n);
         output_state.sigma_2_mapping.reserve(output_state.n);
@@ -160,6 +192,9 @@ class ComposerBase
     }
 
   protected:
+    std::vector<uint32_t> w_l;
+    std::vector<uint32_t> w_r;
+    std::vector<uint32_t> w_o;
     std::vector<size_t> gate_flags;
     std::vector<barretenberg::fr::field_t> variables;
     std::vector<std::vector<epicycle>> wire_epicycles;

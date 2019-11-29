@@ -148,7 +148,7 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator&(const bool_t &other) 
     }
     else if (witness_index != static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1))
     {
-        if (other.witness_bool && !other.witness_inverted)
+        if (other.witness_bool ^ other.witness_inverted)
         {
             result = bool_t<ComposerContext>(*this);
         }
@@ -162,7 +162,7 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator&(const bool_t &other) 
     }
     else if (witness_index == static_cast<uint32_t>(-1) && other.witness_index != static_cast<uint32_t>(-1))
     {
-        if (witness_bool && !witness_inverted)
+        if (witness_bool ^ witness_inverted)
         {
             result = bool_t<ComposerContext>(other);
         }
@@ -283,12 +283,14 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator|(const bool_t &other) 
 template <typename ComposerContext>
 bool_t<ComposerContext> bool_t<ComposerContext>::operator^(const bool_t &other) const
 {
-    ASSERT(context == other.context || (context == nullptr && other.context != nullptr) || (context != nullptr && other.context == nullptr));
+    // TODO MANAGE ASSERTS. Should be ok with both sides of xor having nullptr contexts if both are constant
+    // ASSERT(context == other.context || (context == nullptr && other.context != nullptr) || (context != nullptr && other.context == nullptr));
     bool_t<ComposerContext> result(context == nullptr ? other.context : context);
 
     result.witness_bool = (witness_bool ^ witness_inverted) ^ (other.witness_bool ^ other.witness_inverted);
     result.witness = result.witness_bool ? barretenberg::fr::one() : barretenberg::fr::zero();
     result.witness_inverted = false;
+
     if ((other.witness_index != static_cast<uint32_t>(-1))  && (witness_index != static_cast<uint32_t>(-1)))
     {
         result.witness_index = context->add_variable(result.witness);
@@ -328,13 +330,10 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator^(const bool_t &other) 
     }
     else if (witness_index != static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1))
     {
-        // witness ^ 1 = (witness = 0)
+        // witness ^ 1 = !witness
         if (other.witness_bool ^ other.witness_inverted)
         {
-            result.witness_index = static_cast<uint32_t>(-1);
-            result.witness_bool = false;
-            result.witness =barretenberg::fr::zero();
-            result.witness_inverted = false;
+            result = !bool_t<ComposerContext>(*this);
         }
         else
         {
@@ -345,10 +344,7 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator^(const bool_t &other) 
     {
         if (witness_bool ^ witness_inverted)
         {
-            result.witness_index = static_cast<uint32_t>(-1);
-            result.witness_bool = false;
-            result.witness =barretenberg::fr::zero();
-            result.witness_inverted = false;   
+            result = !bool_t<ComposerContext>(other);
         }
         else
         {

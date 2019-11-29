@@ -57,14 +57,14 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     evaluation_domain domain = evaluation_domain(n);
 
     bool inputs_valid = g1::on_curve(proof.T_LO)
-        && g1::on_curve(proof.T_MID)
-        && g1::on_curve(proof.T_HI)
-        && g1::on_curve(proof.W_L)
-        && g1::on_curve(proof.W_R)
-        && g1::on_curve(proof.W_O)
+        // && g1::on_curve(proof.T_MID)
+        // && g1::on_curve(proof.T_HI)
+        // && g1::on_curve(proof.W_L)
+        // && g1::on_curve(proof.W_R)
+        // && g1::on_curve(proof.W_O)
         && g1::on_curve(proof.Z_1)
-        && g1::on_curve(proof.PI_Z)
-        && g1::on_curve(proof.PI_Z_OMEGA);
+        && g1::on_curve(proof.PI_Z);
+        // && g1::on_curve(proof.PI_Z_OMEGA);
 
     if (!inputs_valid)
     {
@@ -92,11 +92,11 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
         return false;
     }
 
-    bool field_elements_valid = !fr::eq(proof.w_l_eval, fr::zero())
-        && !fr::eq(proof.w_r_eval, fr::zero())
-        && !fr::eq(proof.w_o_eval, fr::zero())
-        && !fr::eq(proof.z_1_shifted_eval, fr::zero())
-        && !fr::eq(proof.sigma_1_eval, fr::zero())
+    bool field_elements_valid = // !fr::eq(proof.w_l_eval, fr::zero())
+        // && !fr::eq(proof.w_r_eval, fr::zero())
+        // && !fr::eq(proof.w_o_eval, fr::zero())
+        /* && */ // !fr::eq(proof.z_1_shifted_eval, fr::zero())
+        /* && */ !fr::eq(proof.sigma_1_eval, fr::zero())
         && !fr::eq(proof.sigma_2_eval, fr::zero())
         && !fr::eq(proof.linear_eval, fr::zero());
     if (!field_elements_valid)
@@ -263,44 +263,54 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     scalars.emplace_back(linear_terms.z_1);
 
     fr::copy(nu_pow[7], nu_base);
-    elements.emplace_back(proof.W_L);
-    if (needs_w_l_shifted)
+
+    if (g1::on_curve(proof.W_L))
     {
-        fr::__mul(nu_base, u, T0);
-        fr::__add(T0, nu_pow[1], T0);
-        scalars.emplace_back(T0);
-        // scalars.emplace_back(fr::add(nu_pow[1], nu_base));
-        fr::__mul(nu_base, nu_pow[0], nu_base);
-    }
-    else
-    {
-        scalars.emplace_back(nu_pow[1]);
+        elements.emplace_back(proof.W_L);
+        if (needs_w_l_shifted)
+        {
+            fr::__mul(nu_base, u, T0);
+            fr::__add(T0, nu_pow[1], T0);
+            scalars.emplace_back(T0);
+            // scalars.emplace_back(fr::add(nu_pow[1], nu_base));
+            fr::__mul(nu_base, nu_pow[0], nu_base);
+        }
+        else
+        {
+            scalars.emplace_back(nu_pow[1]);
+        }
     }
 
-    elements.emplace_back(proof.W_R);
-    if (needs_w_r_shifted)
+    if (g1::on_curve(proof.W_R))
     {
-        fr::__mul(nu_base, u, T0);
-        fr::__add(T0, nu_pow[2], T0);
-        scalars.emplace_back(T0);
-        fr::__mul(nu_base, nu_pow[0], nu_base);
-    }
-    else
-    {
-        scalars.emplace_back(nu_pow[2]);
+        elements.emplace_back(proof.W_R);
+        if (needs_w_r_shifted)
+        {
+            fr::__mul(nu_base, u, T0);
+            fr::__add(T0, nu_pow[2], T0);
+            scalars.emplace_back(T0);
+            fr::__mul(nu_base, nu_pow[0], nu_base);
+        }
+        else
+        {
+            scalars.emplace_back(nu_pow[2]);
+        }
     }
 
-    elements.emplace_back(proof.W_O);
-    if (needs_w_o_shifted)
+    if (g1::on_curve(proof.W_O))
     {
-        fr::__mul(nu_base, u, T0);
-        fr::__add(T0, nu_pow[3], T0);
-        scalars.emplace_back(T0);
-        fr::__mul(nu_base, nu_pow[0], nu_base);
-    }
-    else
-    {
-        scalars.emplace_back(nu_pow[3]);
+        elements.emplace_back(proof.W_O);
+        if (needs_w_o_shifted)
+        {
+            fr::__mul(nu_base, u, T0);
+            fr::__add(T0, nu_pow[3], T0);
+            scalars.emplace_back(T0);
+            fr::__mul(nu_base, nu_pow[0], nu_base);
+        }
+        else
+        {
+            scalars.emplace_back(nu_pow[3]);
+        }
     }
 
     elements.emplace_back(SIGMA_1);
@@ -315,17 +325,26 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     elements.emplace_back(g1::affine_one());
     scalars.emplace_back(batch_evaluation);
 
-    elements.emplace_back(proof.PI_Z_OMEGA);
-    scalars.emplace_back(z_omega_scalar);
+    if (g1::on_curve(proof.PI_Z_OMEGA))
+    {
+        elements.emplace_back(proof.PI_Z_OMEGA);
+        scalars.emplace_back(z_omega_scalar);
+    }
 
     elements.emplace_back(proof.PI_Z);
     scalars.emplace_back(challenges.z);
 
-    elements.emplace_back(proof.T_MID);
-    scalars.emplace_back(z_pow_n);
+    if (g1::on_curve(proof.T_MID))
+    {
+        elements.emplace_back(proof.T_MID);
+        scalars.emplace_back(z_pow_n);
+    }
 
-    elements.emplace_back(proof.T_HI);
-    scalars.emplace_back(z_pow_2n);
+    if (g1::on_curve(proof.T_HI))
+    {
+        elements.emplace_back(proof.T_HI);
+        scalars.emplace_back(z_pow_2n);
+    }
 
     VerifierBaseWidget::challenge_coefficients coeffs{
         fr::sqr(fr::sqr(challenges.alpha)),

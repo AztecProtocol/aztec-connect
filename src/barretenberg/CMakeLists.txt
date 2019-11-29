@@ -72,6 +72,8 @@ add_library(
     waffle/stdlib/uint32/uint32.hpp
     waffle/stdlib/mimc.tcc
     waffle/stdlib/mimc.hpp
+    waffle/stdlib/crypto/hash/sha256.tcc
+    waffle/stdlib/crypto/hash/sha256.hpp
 )
 
 set_target_properties(
@@ -155,6 +157,8 @@ if(BARRETENBERG_PROFILING)
         waffle/stdlib/uint32/uint32.hpp
         waffle/stdlib/mimc.tcc
         waffle/stdlib/mimc.hpp
+        waffle/stdlib/crypto/hash/sha256.tcc
+        waffle/stdlib/crypto/hash/sha256.hpp
     )
 
     target_link_libraries(

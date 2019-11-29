@@ -197,8 +197,6 @@ namespace waffle
             ++n;
         }
 
-        create_dummy_gates();
-        // ###
 
         size_t log2_n = static_cast<size_t>(log2(n));
         if ((1UL << log2_n) != n)

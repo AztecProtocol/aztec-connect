@@ -17,6 +17,7 @@ template <typename ComposerContext> class uint32
 {
   public:
     uint32();
+    uint32(const uint32_t other);
     uint32(ComposerContext* parent_context);
     uint32(const witness_t<ComposerContext>& value);
     uint32(ComposerContext* parent_context, const uint32_t value);

@@ -286,8 +286,8 @@
         "adcxq %%r8, %%r14                          \n\t" /* r[1] += t[0]                                           */  \
         "adoxq %%rdi, %%r10                         \n\t" /* r[3] += t[2] + flag_o                                  */  \
         "adcxq %%r9, %%r15                          \n\t" /* r[2] += t[1] + flag_c                                  */  \
-        "adoxq %[zero_reference], %%r12                         \n\t" /* r[4] += flag_c                             */  \
-        "adcxq %[zero_reference], %%r10                         \n\t" /* r[3] += flag_o                             */  \
+        "adoxq %[zero_reference], %%r12             \n\t" /* r[4] += flag_c                             */  \
+        "adcxq %[zero_reference], %%r10             \n\t" /* r[3] += flag_o                             */  \
                                                                                                                         \
         /* reduce by r[0] * k */                                                                                        \
         "mulxq %[modulus_0], %%r8, %%r9             \n\t" /* (t[0], t[1]) <- (modulus.data[0] * k)                  */  \
@@ -302,7 +302,7 @@
         "adcxq %%rdi, %%r10                         \n\t" /* r[3] += t[2] + flag_c                                  */  \
         "adoxq %%r9, %%r10                          \n\t" /* r[3] += t[1] + flag_o                                  */  \
         "adcxq %%r11, %%r12                         \n\t" /* r[4] += t[3] + flag_c                                  */  \
-        "adoxq %[zero_reference], %%r12                         \n\t" /* r[4] += flag_i                             */  \
+        "adoxq %[zero_reference], %%r12             \n\t" /* r[4] += flag_i                             */  \
                                                                                                                         \
         /* modulus = 254 bits, so max(t[3])  = 62 bits                                                              */  \
         /* b also 254 bits, so (a[0] * b[3]) = 62 bits                                                              */  \
@@ -324,8 +324,8 @@
         "adcxq %%r8, %%r10                         \n\t" /* r[3] += t[0] + flag_c                                   */  \
         "adoxq %%rdi, %%r12                        \n\t" /* r[4] += t[2] + flag_o                                   */  \
         "adcxq %%r9, %%r12                         \n\t" /* r[4] += t[1] + flag_c                                   */  \
-        "adoxq %[zero_reference], %%r13                        \n\t" /* r[5] += flag_o                              */  \
-        "adcxq %[zero_reference], %%r13                        \n\t" /* r[5] += flag_c                              */  \
+        "adoxq %[zero_reference], %%r13            \n\t" /* r[5] += flag_o                              */  \
+        "adcxq %[zero_reference], %%r13            \n\t" /* r[5] += flag_c                              */  \
                                                                                                                         \
         /* reduce by r[1] * k */                                                                                        \
         "movq %%r14, %%rdx                         \n\t"  /* move r[1] into %rdx                                    */  \
@@ -342,7 +342,7 @@
         "adcxq %%r9, %%r12                         \n\t"  /* r[4] += t[2] + flag_c                                  */  \
         "adoxq %%rdi, %%r12                        \n\t"  /* r[4] += t[1] + flag_o                                  */  \
         "adcxq %%r11, %%r13                        \n\t"  /* r[5] += t[3] + flag_c                                  */  \
-        "adoxq %[zero_reference], %%r13                        \n\t"  /* r[5] += flag_o                             */  \
+        "adoxq %[zero_reference], %%r13            \n\t"  /* r[5] += flag_o                             */  \
                                                                                                                         \
         /* a[2] * b */                                                                                                  \
         "movq 16(" a "), %%rdx                     \n\t" /* load a[2] into %rdx                                     */  \
@@ -357,8 +357,8 @@
         "adcxq %%r8, %%r12                         \n\t" /* r[4] += t[0] + flag_c                                   */  \
         "adoxq %%r9, %%r13                         \n\t" /* r[5] += t[2] + flag_o                                   */  \
         "adcxq %%rdi, %%r13                        \n\t" /* r[5] += t[1] + flag_c                                   */  \
-        "adoxq %[zero_reference], %%r14                        \n\t" /* r[6] += flag_o                              */  \
-        "adcxq %[zero_reference], %%r14                        \n\t" /* r[6] += flag_c                              */  \
+        "adoxq %[zero_reference], %%r14            \n\t" /* r[6] += flag_o                              */  \
+        "adcxq %[zero_reference], %%r14            \n\t" /* r[6] += flag_c                              */  \
                                                                                                                         \
         /* reduce by r[2] * k */                                                                                        \
         "movq %%r15, %%rdx                         \n\t"  /* move r[2] into %rdx                                    */  \
@@ -391,8 +391,8 @@
         "adcxq %%r8, %%r13                         \n\t"  /* r[5] += t[4] + flag_c                                  */  \
         "adoxq %%r9, %%r14                         \n\t"  /* r[6] += t[6] + flag_o                                  */  \
         "adcxq %%rdi, %%r14                        \n\t"  /* r[6] += t[5] + flag_c                                  */  \
-        "adoxq %[zero_reference], %%r15                        \n\t"  /* r[7] += + flag_o                           */  \
-        "adcxq %[zero_reference], %%r15                        \n\t"  /* r[7] += flag_c                             */  \
+        "adoxq %[zero_reference], %%r15            \n\t"  /* r[7] += + flag_o                           */  \
+        "adcxq %[zero_reference], %%r15            \n\t"  /* r[7] += flag_c                             */  \
                                                                                                                         \
         /* reduce by r[3] * k */                                                                                        \
         "movq %%r10, %%rdx                         \n\t" /* move r_inv into %rdx                                    */  \
@@ -461,7 +461,6 @@
         /* a[3] * b */                                                                                                  \
         "movq 24(" a "), %%rdx                     \n\t"  /* load a[3] into %rdx                                    */  \
         "mulxq 0(" b "), %%r8, %%r9                \n\t"  /* (t[0], t[1]) <- (a[3] * b[0])                          */  \
-        "mulxq 8(" b "), %%rdi, %%rsi              \n\t"  /* (t[4], t[5]) <- (a[3] * b[1])                          */  \
         "adcxq %%r8, %%rax                         \n\t"  /* r[3] += t[0] + flag_c                                  */  \
         "movq %%r13, 0(" r ")                      \n\t"                                                                \
         "movq %%r14, 8(" r ")                      \n\t"                                                                \
