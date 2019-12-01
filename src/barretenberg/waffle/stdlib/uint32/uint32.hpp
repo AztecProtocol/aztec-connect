@@ -127,9 +127,18 @@ template <typename ComposerContext> class uint32
   private:
     enum WitnessStatus
     {
-        OK,
-        NOT_NORMALIZED,
-        IN_BINARY_FORM
+        OK,                         // has both valid binary wires, and a valid native representation
+        NOT_NORMALIZED,             // has a native representation, that needs to be normalised (is > 2^32)
+        IN_NATIVE_FORM,             // witness is a valid uint32, but has no binary wires
+        IN_BINARY_FORM,             // only has valid binary wires, but no witness that is a fully constructed uint32
+        QUEUED_LOGIC_OPERATION      // we have queued up a logic operation. We can efficiently output IN_NATIVE_FORM or IN_BINARY_FORM,
+                                    // but not both. So we queue up the logic operation until we know whether the next operation will be native or binary
+    };
+
+    struct LogicOperation
+    {
+        bool_t<ComposerContext> operand_wires[32];
+        bool_t<ComposerContext> (*method)(bool_t<ComposerContext>, bool_t<ComposerContext>) = nullptr;
     };
 
     void prepare_for_arithmetic_operations() const;
@@ -146,6 +155,15 @@ template <typename ComposerContext> class uint32
                                                      bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>,
                                                                                               bool_t<ComposerContext>));
 
+    void internal_logic_operation_binary(const bool_t<ComposerContext> operand_wires[32],
+                                                     bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>,
+                                                                                              bool_t<ComposerContext>)) const;
+
+    void internal_logic_operation_native(const bool_t<ComposerContext> operand_wires[32],
+                                                     bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>,
+                                                                                              bool_t<ComposerContext>)) const;
+
+
     uint32 ternary_operator(const bool_t<ComposerContext>& predicate, const uint32& lhs, const uint32& rhs);
 
     ComposerContext* context;
@@ -153,7 +171,7 @@ template <typename ComposerContext> class uint32
     mutable uint32_t witness_index;
 
     mutable uint32_t additive_constant;
-    uint32_t multiplicative_constant;
+    mutable uint32_t multiplicative_constant;
 
     mutable WitnessStatus witness_status;
     mutable size_t num_witness_bits;
@@ -161,7 +179,10 @@ template <typename ComposerContext> class uint32
     mutable bool_t<ComposerContext> field_wires[32];
     mutable field_t<ComposerContext> accumulators[32];
 
+    LogicOperation queued_logic_operation;
+
     static constexpr size_t MAXIMUM_BIT_LENGTH = 110UL; // (2x + 33 = 253 => 2x = 220 => x = 110)
+
     const barretenberg::fr::field_t uint32_max =
         barretenberg::fr::pow_small(barretenberg::fr::add(barretenberg::fr::one(), barretenberg::fr::one()), 32);
 };

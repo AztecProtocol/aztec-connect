@@ -92,14 +92,14 @@ namespace waffle
 
     ExtendedComposer::extended_wire_properties ExtendedComposer::get_shared_wire(const size_t i) {
 
-        // if (check_gate_flag(i, GateFlags::FIXED_LEFT_WIRE) && check_gate_flag(i + 1, GateFlags::FIXED_LEFT_WIRE))
-        // {
-        //     return { false, static_cast<uint32_t>(-1), WireType::NULL_WIRE, {} };
-        // }
-        // if (check_gate_flag(i, GateFlags::FIXED_RIGHT_WIRE) && check_gate_flag(i + 1, GateFlags::FIXED_RIGHT_WIRE))
-        // {
-        //     return { false, static_cast<uint32_t>(-1), WireType::NULL_WIRE, {} };
-        // }
+        if (check_gate_flag(i, GateFlags::FIXED_LEFT_WIRE) && check_gate_flag(i + 1, GateFlags::FIXED_LEFT_WIRE))
+        {
+            return { false, static_cast<uint32_t>(-1), WireType::NULL_WIRE, {} };
+        }
+        if (check_gate_flag(i, GateFlags::FIXED_RIGHT_WIRE) && check_gate_flag(i + 1, GateFlags::FIXED_RIGHT_WIRE))
+        {
+            return { false, static_cast<uint32_t>(-1), WireType::NULL_WIRE, {} };
+        }
 
         auto search = [this, i](const uint32_t target, const std::array<const std::pair<uint32_t, bool>, 3> &source_wires, const GateFlags flag) {
             auto has_pair = [target](auto x) {
@@ -388,7 +388,10 @@ namespace waffle
                 size_t gate_1_index = next_gate_index - 2;
                 size_t gate_2_index = next_gate_index - 1;
 
-
+                // if (fr::eq(fr::zero(), variables[lookahead_wire.index]))
+                // {
+                //     printf("zero value lookahead wire at index = %lu\n", gate_1_index);
+                // }
 //                fr::copy(fr::zero(), q_oo[gate_1_index]);
                 // for (size_t k = 0; k < lookahead_wire.selectors.size(); ++k)
                 // {
@@ -482,7 +485,7 @@ namespace waffle
 
                 if (gate_wires[0].index == static_cast<uint32_t>(-1) || gate_wires[1].index == static_cast<uint32_t>(-1) || gate_wires[2].index == static_cast<uint32_t>(-1) || gate_wires[3].index == static_cast<uint32_t>(-1))
                 {
-                    // printf("hmmm \n");
+                    printf("hmmm \n");
                     // printf("gate wires indices at end = %x, %x, %x, %x \n", gate_wires[0].index, gate_wires[1].index, gate_wires[2].index, gate_wires[3].index);
                     // printf("indices = %x, %x, %x, %x \n", potential_quads[j].wires[0].index, potential_quads[j].wires[1].index, potential_quads[j].wires[2].index, potential_quads[j].wires[3].index);
                     //  printf("types = %x, %x, %x, %x \n", potential_quads[j].wires[0].wire_type, potential_quads[j].wires[1].wire_type, potential_quads[j].wires[2].wire_type, potential_quads[j].wires[3].wire_type);
