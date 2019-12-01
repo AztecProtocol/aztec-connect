@@ -159,9 +159,9 @@ std::unique_ptr<VerifierBaseWidget> ProverBoolWidget::compute_preprocessed_commi
 
 void ProverBoolWidget::reset(const evaluation_domain& domain)
 {
-    q_bl.fft(domain.size);
-    q_br.fft(domain.size);
-    q_bo.fft(domain.size);
+    q_bl.fft(domain);
+    q_br.fft(domain);
+    q_bo.fft(domain);
 }
 
 // ###

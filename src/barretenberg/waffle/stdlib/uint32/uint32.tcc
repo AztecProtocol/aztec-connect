@@ -635,16 +635,16 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
 
     if (!lhs_constant && !rhs_constant && (witness_index == other.witness_index))
     {
-        if (lhs.additive_constant == rhs.additive_constant && lhs.multiplicative_constant == rhs.multiplicative_constant)
+        if (additive_constant == other.additive_constant && multiplicative_constant == other.multiplicative_constant)
         {
             result = uint32<ComposerContext>(result.context, 0);
             result.witness_status = WitnessStatus::NOT_NORMALIZED;
         }
         else
         {
-            result = lhs;
-            result.additive_constant = lhs.additive_constant - rhs.additive_constant;
-            result.multiplicative_constant = lhs.multiplicative_constant - rhs.multiplicative_constant;
+            result = *this;
+            result.additive_constant = additive_constant - other.additive_constant;
+            result.multiplicative_constant = multiplicative_constant - other.multiplicative_constant;
         }
     }
     else if (lhs_constant && rhs_constant)

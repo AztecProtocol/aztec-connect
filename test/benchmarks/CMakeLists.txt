@@ -93,3 +93,42 @@ set_target_properties(
 
     RUNTIME_OUTPUT_DIRECTORY ..
 )
+
+add_executable(
+    sha256_bench
+    bench_sha256.cpp
+)
+
+if (WIN32)
+    target_link_libraries(
+        sha256_bench
+        PUBLIC
+        barretenberg
+        PRIVATE
+        benchmark
+        wsock32
+        ws2_32
+    )
+else()
+    target_link_libraries(
+        sha256_bench
+        PUBLIC
+        barretenberg
+        PRIVATE
+        benchmark
+    )
+endif()
+
+target_include_directories(
+    sha256_bench
+    PRIVATE
+        ${private_include_dir}
+        ${include_dir}
+)
+
+set_target_properties(
+    sha256_bench
+    PROPERTIES
+
+    RUNTIME_OUTPUT_DIRECTORY ..
+)

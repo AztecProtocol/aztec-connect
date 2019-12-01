@@ -48,7 +48,6 @@ namespace waffle
                 }
                 else
                 {
-                    printf("modifying?\n");
                     wire_property->is_mutable = wire_property->is_mutable && (!check_gate_flag(target_gate_index, gate_flag));
                     wire_property->selectors.push_back(selector);
                 }
@@ -184,7 +183,6 @@ namespace waffle
             ++i;
         }
 
-        printf("potential quads size = %lu\n", potential_quads.size());
         deleted_gates = std::vector<bool>(w_l.size(), 0);
         //     for (size_t j = 0; j < potential_quads.size(); ++j)
         // {
@@ -771,160 +769,160 @@ namespace waffle
             fr::copy(q_oo[i], sequential_widget->q_o_next[index]);
         }
 
-        printf("arithmetic check...\n");
-        for (size_t i = 0; i < output_state.n; ++i)
-        {
-            uint32_t mask = (1 << 28) - 1;
+        // printf("arithmetic check...\n");
+        // for (size_t i = 0; i < output_state.n; ++i)
+        // {
+        //     uint32_t mask = (1 << 28) - 1;
 
-            fr::field_t left_copy; //= output_state.w_l[output_state.sigma_1_mapping[i]];
-            fr::field_t right_copy;// = output_state.w_r[output_state.sigma_2_mapping[i]];
-            fr::field_t output_copy;// = output_state.w_o[output_state.sigma_3_mapping[i]];
-            if (output_state.sigma_1_mapping[i] >> 30 == 0)
-            {
-                left_copy = output_state.w_l[output_state.sigma_1_mapping[i] & mask];
-            }
-            else if (output_state.sigma_1_mapping[i] >> 30 == 1)
-            {
-                left_copy = output_state.w_r[output_state.sigma_1_mapping[i] & mask];
-            }
-            else
-            {
-                left_copy = output_state.w_o[output_state.sigma_1_mapping[i] & mask];
-            }
-            if (output_state.sigma_2_mapping[i] >> 30 == 0)
-            {
-                right_copy = output_state.w_l[output_state.sigma_2_mapping[i] & mask];
-            }
-            else if (output_state.sigma_2_mapping[i] >> 30 == 1)
-            {
-                right_copy = output_state.w_r[output_state.sigma_2_mapping[i] & mask];
-            }
-            else
-            {
-                right_copy = output_state.w_o[output_state.sigma_2_mapping[i] & mask];
-            }
-            if (output_state.sigma_3_mapping[i] >> 30 == 0)
-            {
-                output_copy = output_state.w_l[output_state.sigma_3_mapping[i] & mask];
-            }
-            else if (output_state.sigma_3_mapping[i] >> 30 == 1)
-            {
-                output_copy = output_state.w_r[output_state.sigma_3_mapping[i] & mask];
-            }
-            else
-            {
-                output_copy = output_state.w_o[output_state.sigma_3_mapping[i] & mask];
-            }
-            if (!fr::eq(left_copy, output_state.w_l[i]))
-            {
-                printf("left copy at index %lu fails... \n", i);
-                for (size_t j = 0; j < adjusted_gate_indices.size(); ++j)
-                {
-                    if (i == adjusted_gate_indices[j])
-                    {
-                        printf("original index = %lu\n", j);
-                        break;
-                    }
-                }
-            }
-            if (!fr::eq(right_copy, output_state.w_r[i]))
-            {
-                printf("right copy at index %lu fails. mapped to gate %lu. right wire and copy wire = \n", i, output_state.sigma_2_mapping[i] & mask);
-                printf("raw value = %x \n", output_state.sigma_2_mapping[i]);
-                fr::print(fr::from_montgomery_form(output_state.w_r[i]));
-                fr::print(fr::from_montgomery_form(right_copy));
-                for (size_t j = 0; j < adjusted_gate_indices.size(); ++j)
-                {
-                    if (i == adjusted_gate_indices[j])
-                    {
-                        printf("original index = %lu\n", j);
-                        break;
-                    }
-                }
-            }
-            if (!fr::eq(output_copy, output_state.w_o[i]))
-            {
-                printf("output copy at index %lu fails. mapped to gate %lu. output wire and copy wire = \n", i, output_state.sigma_3_mapping[i] & mask);
-                printf("raw value = %x \n", output_state.sigma_3_mapping[i]);
-                fr::print(fr::from_montgomery_form(output_state.w_o[i]));
-                fr::print(fr::from_montgomery_form(output_copy));
-                for (size_t j = 0; j < adjusted_gate_indices.size(); ++j)
-                {
-                    if (i == adjusted_gate_indices[j])
-                    {
-                        printf("original index = %lu\n", j);
-                        break;
-                    }
-                }
-            }
-        }
-        for (size_t i = 0; i < output_state.n; ++i)
-        {
-            fr::field_t wlwr = fr::mul(output_state.w_l[i], output_state.w_r[i]);
-            fr::field_t t0 = fr::mul(wlwr, arithmetic_widget->q_m[i]);
-            fr::field_t t1 = fr::mul(output_state.w_l[i], arithmetic_widget->q_l[i]);
-            fr::field_t t2 = fr::mul(output_state.w_r[i], arithmetic_widget->q_r[i]);
-            fr::field_t t3 = fr::mul(output_state.w_o[i], arithmetic_widget->q_o[i]);
-            size_t shifted_idx = (i == output_state.n - 1) ? 0 : i + 1;
-            fr::field_t t4 = fr::mul(output_state.w_o[shifted_idx], sequential_widget->q_o_next[i]);
-            fr::field_t result = fr::add(t0, t1);
-            result = fr::add(result, t2);
-            result = fr::add(result, t3);
-            result = fr::add(result, t4);
-            result = fr::add(result, arithmetic_widget->q_c[i]);
-            if (!fr::eq(result, fr::zero()))
-            {
-                size_t failure_idx = i;
-                size_t original_failure_idx;
-                for (size_t j = 0; j < adjusted_gate_indices.size(); ++j)
-                {
-                    if (deleted_gates[j])
-                    {
-                        continue;
-                    }
-                    if (adjusted_gate_indices[j] == i)
-                    {
-                        original_failure_idx = j;
-                        break;
-                    }
-                }
-                printf("arithmetic gate failure at index i = %lu, original gate index = %lu \n", failure_idx, original_failure_idx);
-                printf("selectors:\n");
-                fr::print(fr::from_montgomery_form(arithmetic_widget->q_l[i]));
-                fr::print(fr::from_montgomery_form(arithmetic_widget->q_r[i]));
-                fr::print(fr::from_montgomery_form(arithmetic_widget->q_o[i]));
-                fr::print(fr::from_montgomery_form(arithmetic_widget->q_c[i]));
-                fr::print(fr::from_montgomery_form(arithmetic_widget->q_m[i]));
-                fr::print(fr::from_montgomery_form(sequential_widget->q_o_next[i]));
-                printf("witnesses: \n");
-                fr::print(fr::from_montgomery_form(output_state.w_l[i]));
-                fr::print(fr::from_montgomery_form(output_state.w_r[i]));
-                fr::print(fr::from_montgomery_form(output_state.w_o[i]));
-                fr::print(fr::from_montgomery_form(output_state.w_o[shifted_idx]));
-            }
-        }
-        printf("bool wires...\n");
-        for (size_t i = 0; i < bool_widget->q_bl.get_size(); ++i)
-        {
-            if (!fr::eq(fr::from_montgomery_form(bool_widget->q_bl[i]), fr::zero()))
-            {
-                fr::field_t t = output_state.w_l[i];
-                fr::field_t u = fr::sub(fr::sqr(t), t);
-                if (!fr::eq(u, fr::zero()))
-                {
-                    printf("bool fail? left \n");
-                }
-            }
-            if (!fr::eq(fr::from_montgomery_form(bool_widget->q_br[i]), fr::zero()))
-            {
-                fr::field_t t = output_state.w_r[i];
-                fr::field_t u = fr::sub(fr::sqr(t), t);
-                if (!fr::eq(u, fr::zero()))
-                {
-                    printf("bool fail? right \n");
-                }
-            }
-        }
+        //     fr::field_t left_copy; //= output_state.w_l[output_state.sigma_1_mapping[i]];
+        //     fr::field_t right_copy;// = output_state.w_r[output_state.sigma_2_mapping[i]];
+        //     fr::field_t output_copy;// = output_state.w_o[output_state.sigma_3_mapping[i]];
+        //     if (output_state.sigma_1_mapping[i] >> 30 == 0)
+        //     {
+        //         left_copy = output_state.w_l[output_state.sigma_1_mapping[i] & mask];
+        //     }
+        //     else if (output_state.sigma_1_mapping[i] >> 30 == 1)
+        //     {
+        //         left_copy = output_state.w_r[output_state.sigma_1_mapping[i] & mask];
+        //     }
+        //     else
+        //     {
+        //         left_copy = output_state.w_o[output_state.sigma_1_mapping[i] & mask];
+        //     }
+        //     if (output_state.sigma_2_mapping[i] >> 30 == 0)
+        //     {
+        //         right_copy = output_state.w_l[output_state.sigma_2_mapping[i] & mask];
+        //     }
+        //     else if (output_state.sigma_2_mapping[i] >> 30 == 1)
+        //     {
+        //         right_copy = output_state.w_r[output_state.sigma_2_mapping[i] & mask];
+        //     }
+        //     else
+        //     {
+        //         right_copy = output_state.w_o[output_state.sigma_2_mapping[i] & mask];
+        //     }
+        //     if (output_state.sigma_3_mapping[i] >> 30 == 0)
+        //     {
+        //         output_copy = output_state.w_l[output_state.sigma_3_mapping[i] & mask];
+        //     }
+        //     else if (output_state.sigma_3_mapping[i] >> 30 == 1)
+        //     {
+        //         output_copy = output_state.w_r[output_state.sigma_3_mapping[i] & mask];
+        //     }
+        //     else
+        //     {
+        //         output_copy = output_state.w_o[output_state.sigma_3_mapping[i] & mask];
+        //     }
+        //     if (!fr::eq(left_copy, output_state.w_l[i]))
+        //     {
+        //         printf("left copy at index %lu fails... \n", i);
+        //         for (size_t j = 0; j < adjusted_gate_indices.size(); ++j)
+        //         {
+        //             if (i == adjusted_gate_indices[j])
+        //             {
+        //                 printf("original index = %lu\n", j);
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //     if (!fr::eq(right_copy, output_state.w_r[i]))
+        //     {
+        //         printf("right copy at index %lu fails. mapped to gate %lu. right wire and copy wire = \n", i, output_state.sigma_2_mapping[i] & mask);
+        //         printf("raw value = %x \n", output_state.sigma_2_mapping[i]);
+        //         fr::print(fr::from_montgomery_form(output_state.w_r[i]));
+        //         fr::print(fr::from_montgomery_form(right_copy));
+        //         for (size_t j = 0; j < adjusted_gate_indices.size(); ++j)
+        //         {
+        //             if (i == adjusted_gate_indices[j])
+        //             {
+        //                 printf("original index = %lu\n", j);
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //     if (!fr::eq(output_copy, output_state.w_o[i]))
+        //     {
+        //         printf("output copy at index %lu fails. mapped to gate %lu. output wire and copy wire = \n", i, output_state.sigma_3_mapping[i] & mask);
+        //         printf("raw value = %x \n", output_state.sigma_3_mapping[i]);
+        //         fr::print(fr::from_montgomery_form(output_state.w_o[i]));
+        //         fr::print(fr::from_montgomery_form(output_copy));
+        //         for (size_t j = 0; j < adjusted_gate_indices.size(); ++j)
+        //         {
+        //             if (i == adjusted_gate_indices[j])
+        //             {
+        //                 printf("original index = %lu\n", j);
+        //                 break;
+        //             }
+        //         }
+        //     }
+        // }
+        // for (size_t i = 0; i < output_state.n; ++i)
+        // {
+        //     fr::field_t wlwr = fr::mul(output_state.w_l[i], output_state.w_r[i]);
+        //     fr::field_t t0 = fr::mul(wlwr, arithmetic_widget->q_m[i]);
+        //     fr::field_t t1 = fr::mul(output_state.w_l[i], arithmetic_widget->q_l[i]);
+        //     fr::field_t t2 = fr::mul(output_state.w_r[i], arithmetic_widget->q_r[i]);
+        //     fr::field_t t3 = fr::mul(output_state.w_o[i], arithmetic_widget->q_o[i]);
+        //     size_t shifted_idx = (i == output_state.n - 1) ? 0 : i + 1;
+        //     fr::field_t t4 = fr::mul(output_state.w_o[shifted_idx], sequential_widget->q_o_next[i]);
+        //     fr::field_t result = fr::add(t0, t1);
+        //     result = fr::add(result, t2);
+        //     result = fr::add(result, t3);
+        //     result = fr::add(result, t4);
+        //     result = fr::add(result, arithmetic_widget->q_c[i]);
+        //     if (!fr::eq(result, fr::zero()))
+        //     {
+        //         size_t failure_idx = i;
+        //         size_t original_failure_idx;
+        //         for (size_t j = 0; j < adjusted_gate_indices.size(); ++j)
+        //         {
+        //             if (deleted_gates[j])
+        //             {
+        //                 continue;
+        //             }
+        //             if (adjusted_gate_indices[j] == i)
+        //             {
+        //                 original_failure_idx = j;
+        //                 break;
+        //             }
+        //         }
+        //         printf("arithmetic gate failure at index i = %lu, original gate index = %lu \n", failure_idx, original_failure_idx);
+        //         printf("selectors:\n");
+        //         fr::print(fr::from_montgomery_form(arithmetic_widget->q_l[i]));
+        //         fr::print(fr::from_montgomery_form(arithmetic_widget->q_r[i]));
+        //         fr::print(fr::from_montgomery_form(arithmetic_widget->q_o[i]));
+        //         fr::print(fr::from_montgomery_form(arithmetic_widget->q_c[i]));
+        //         fr::print(fr::from_montgomery_form(arithmetic_widget->q_m[i]));
+        //         fr::print(fr::from_montgomery_form(sequential_widget->q_o_next[i]));
+        //         printf("witnesses: \n");
+        //         fr::print(fr::from_montgomery_form(output_state.w_l[i]));
+        //         fr::print(fr::from_montgomery_form(output_state.w_r[i]));
+        //         fr::print(fr::from_montgomery_form(output_state.w_o[i]));
+        //         fr::print(fr::from_montgomery_form(output_state.w_o[shifted_idx]));
+        //     }
+        // }
+        // printf("bool wires...\n");
+        // for (size_t i = 0; i < bool_widget->q_bl.get_size(); ++i)
+        // {
+        //     if (!fr::eq(fr::from_montgomery_form(bool_widget->q_bl[i]), fr::zero()))
+        //     {
+        //         fr::field_t t = output_state.w_l[i];
+        //         fr::field_t u = fr::sub(fr::sqr(t), t);
+        //         if (!fr::eq(u, fr::zero()))
+        //         {
+        //             printf("bool fail? left \n");
+        //         }
+        //     }
+        //     if (!fr::eq(fr::from_montgomery_form(bool_widget->q_br[i]), fr::zero()))
+        //     {
+        //         fr::field_t t = output_state.w_r[i];
+        //         fr::field_t u = fr::sub(fr::sqr(t), t);
+        //         if (!fr::eq(u, fr::zero()))
+        //         {
+        //             printf("bool fail? right \n");
+        //         }
+        //     }
+        // }
 
         output_state.widgets.push_back(std::move(arithmetic_widget));
 
