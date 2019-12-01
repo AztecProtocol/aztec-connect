@@ -58,10 +58,7 @@ std::array<uint32<Composer>, 8> sha256(std::array<uint32<Composer>, 16> &input)
         uint32 S0 = a.ror(2U) ^ a.ror(13U) ^ a.ror(22U);
         uint32 T0 = (b & c);
         
-        // TODO: something is fishy here, changing between these two forms cuts 3000 gates from
-        // the circuit. Need to investigate.
-        uint32 T1 = b + c - (T0 + T0);
-        // uint32 T1 = (b - T0) + (c - T0);
+        uint32 T1 = b + c - (T0 * 2);
         uint32 T2 = a & T1;
         uint32 maj = T2 + T0;
         uint32 temp2 = S0 + maj;
@@ -92,5 +89,3 @@ std::array<uint32<Composer>, 8> sha256(std::array<uint32<Composer>, 16> &input)
 } // namespace plonk
 
 #endif
-
-// 6144

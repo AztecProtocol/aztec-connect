@@ -368,3 +368,21 @@ TEST(extended_composer, small_optimized_circuit)
     EXPECT_EQ(result, true);
 
 }
+
+TEST(extended_composer, logic_operations)
+{
+    waffle::ExtendedComposer composer = waffle::ExtendedComposer();
+
+    uint32 e = witness_t(&composer, 0xabcdefU);
+    uint32 g = 0xffffffff;
+    uint32 h = ((~e) & g) + 1;
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}

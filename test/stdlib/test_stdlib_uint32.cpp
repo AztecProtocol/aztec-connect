@@ -195,7 +195,7 @@ TEST(stdlib_uint32, test_xor)
 }
 
 
-TEST(stdlib_uint32, test_xor_constants_foo)
+TEST(stdlib_uint32, test_xor_constants)
 {
     waffle::BoolComposer composer = waffle::BoolComposer();
 
@@ -211,7 +211,7 @@ TEST(stdlib_uint32, test_xor_constants_foo)
     EXPECT_EQ(c.get_additive_constant(), c_expected);
 }
 
-TEST(stdlib_uint32, test_xor_constants)
+TEST(stdlib_uint32, test_xor_more_constants)
 {
     uint32_t a_expected = 0xa3b10422;
     uint32_t b_expected = 0xeac21343;

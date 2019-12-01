@@ -75,8 +75,6 @@ TEST(stdlib_sha256, test_initialisation)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("prover gates = %lu\n", prover.n);
-    printf("composer gates = %lu\n", composer.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -130,8 +128,6 @@ TEST(stdlib_sha256, test_basic_round)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("prover gates = %lu\n", prover.n);
-    printf("composer gates = %lu\n", composer.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -140,6 +136,150 @@ TEST(stdlib_sha256, test_basic_round)
     EXPECT_EQ(result, true);
 }
 
+TEST(stdlib_sha256, test_input_parsing)
+{
+     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
+    std::array<uint32, 16> input;
+    for (size_t i = 0; i < 16; ++i)
+    {
+        input[i] = witness_t(&composer, get_random_int());
+    }
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true); 
+}
+
+TEST(stdlib_sha256, test_message_padding)
+{
+    waffle::ExtendedComposer composer = waffle::ExtendedComposer();
+    std::array<uint32, 16> input;
+    for (size_t i = 0; i < 16; ++i)
+    {
+        input[i] = witness_t(&composer, get_random_int());
+    }
+
+    std::array<uint32, 64> w;
+
+    for (size_t i = 0; i < 16; ++i)
+    {
+        w[i] = input[i];
+    }
+
+    for (size_t i = 16; i < 64; ++i)
+    {
+        uint32 s0 = w[i - 15].ror(7) ^ w[i - 15].ror(18) ^ w[i - 15].ror(3);
+        uint32 s1 = w[i - 2].ror(17) ^ w[i - 2].ror(19) ^ w[i - 2].ror(10);
+        w[i] = (s0 + w[i - 16]) + (s1 + w[i - 7]);
+    }
+
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_sha256, test_main_rounds)
+{
+    waffle::ExtendedComposer composer = waffle::ExtendedComposer();
+    std::array<uint32, 16> input;
+    for (size_t i = 0; i < 16; ++i)
+    {
+        input[i] = witness_t(&composer, get_random_int());
+    }
+
+    std::array<uint32, 64> w;
+
+    for (size_t i = 0; i < 16; ++i)
+    {
+        w[i] = input[i];
+    }
+
+    for (size_t i = 16; i < 64; ++i)
+    {
+        uint32 s0 = w[i - 15].ror(7) ^ w[i - 15].ror(18) ^ w[i - 15].ror(3);
+        uint32 s1 = w[i - 2].ror(17) ^ w[i - 2].ror(19) ^ w[i - 2].ror(10);
+        w[i] = (s0 + w[i - 16]) + (s1 + w[i - 7]);
+    }
+
+    uint32 a = init_constants[0];
+    uint32 b = init_constants[1];
+    uint32 c = init_constants[2];
+    uint32 d = init_constants[3];
+    uint32 e = init_constants[4];
+    uint32 f = init_constants[5];
+    uint32 g = init_constants[6];
+    uint32 h = init_constants[7];
+
+    for (size_t i = 0; i < 8; ++i)
+    {
+        uint32 S1 = e.ror(7U) ^ e.ror(11U) ^ e.ror(25U);
+        uint32 ch = (e & f) + ((~e) & g);
+        uint32 temp1 = h + S1 + ch + round_constants[i] + w[i];
+        uint32 S0 = a.ror(2U) ^ a.ror(13U) ^ a.ror(22U);
+        uint32 T0 = (b & c);
+        
+        uint32 T1 = (b + c) - (T0 + T0);
+        // uint32 T1 = (b - T0) + (c - T0);
+        uint32 T2 = a & T1;
+        uint32 maj = T2 + T0;
+        uint32 temp2 = S0 + maj;
+
+        h = g;
+        g = f;
+        f = e;
+        e = d + temp1;
+        d = c;
+        c = b;
+        b = a;
+        a = temp1 + temp2;
+    }
+
+    for (size_t i = 0; i < 1; ++i)
+    {
+        uint32 S1 = e.ror(7U) ^ e.ror(11U) ^ e.ror(25U);
+        uint32 ch = (e & f) + ((~e) & g);
+        // uint32 ch = ((~e) & g) + 1;
+        uint32 temp1 = h + S1 + ch + round_constants[i] + w[i];
+        uint32 S0 = a.ror(2U) ^ a.ror(13U) ^ a.ror(22U);
+        uint32 T0 = (b & c);
+        
+        uint32 T1 = (b + c) - (T0 + T0);
+        // // uint32 T1 = (b - T0) + (c - T0);
+        uint32 T2 = a & T1;
+        uint32 maj = T2 + T0;
+        // uint32 temp2 = S0 + maj;
+
+        // h = g;
+        // g = f;
+        // f = e;
+        // e = d + temp1;
+        // d = c;
+        // c = b;
+        // b = a;
+        // a = temp1 + temp2;
+    }
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+
+}
 
 TEST(stdlib_sha256, test_sha256)
 {
@@ -155,9 +295,7 @@ TEST(stdlib_sha256, test_sha256)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("prover gates = %lu\n", prover.n);
-    printf("composer gates = %lu\n", composer.n);
-    printf("composer gates adjusted = %lu\n", composer.adjusted_n);
+    printf("composer gates = %lu\n", composer.adjusted_n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
