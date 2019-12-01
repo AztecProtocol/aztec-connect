@@ -13,74 +13,12 @@ namespace waffle
 {
     void BoolComposer::create_add_gate(const add_triple &in)
     {
-        add_triple to_add(in);
-
-        if (pending_bool_selectors[to_add.c])
-        {
-            if (!pending_bool_selectors[to_add.a])
-            {
-                std::swap(to_add.a, to_add.c);
-                fr::swap(to_add.a_scaling, to_add.c_scaling);
-            }
-            else if (!pending_bool_selectors[to_add.b])
-            {
-                std::swap(to_add.b, to_add.c);
-                fr::swap(to_add.b_scaling, to_add.c_scaling);
-            }
-        }
-        StandardComposer::create_add_gate(to_add);
-
-        if (pending_bool_selectors[to_add.a])
-        {
-            q_left_bools.emplace_back(fr::one());
-            pending_bool_selectors[to_add.a] = false;
-            add_gate_flag(gate_flags.size() - 1, GateFlags::IS_LEFT_BOOL_GATE);
-            add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_LEFT_WIRE);
-        }
-        else
-        {
-            q_left_bools.emplace_back(fr::field_t({{0,0,0,0}}));
-        }
-
-        if (pending_bool_selectors[to_add.b])
-        {
-            q_right_bools.emplace_back(fr::one());
-            pending_bool_selectors[to_add.b] = false;
-            add_gate_flag(gate_flags.size() - 1, GateFlags::IS_RIGHT_BOOL_GATE);
-            add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_RIGHT_WIRE);
-        }
-        else
-        {
-            q_right_bools.emplace_back(fr::zero());
-        }
+        StandardComposer::create_add_gate(in);
     }
 
     void BoolComposer::create_mul_gate(const mul_triple &in)
     {
         StandardComposer::create_mul_gate(in);
-
-        if (pending_bool_selectors[in.a])
-        {
-            q_left_bools.emplace_back(fr::one());
-            add_gate_flag(gate_flags.size() - 1, GateFlags::IS_LEFT_BOOL_GATE);
-            add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_LEFT_WIRE);
-            pending_bool_selectors[in.a] = false;
-        }
-        else
-        {
-            q_left_bools.emplace_back(fr::field_t({{0,0,0,0}}));
-        }
-        if (pending_bool_selectors[in.b])
-        {
-            q_right_bools.emplace_back(fr::one());
-            add_gate_flag(gate_flags.size() - 1, GateFlags::IS_RIGHT_BOOL_GATE);
-            add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_RIGHT_WIRE);
-            pending_bool_selectors[in.b] = false;
-        }
-        else
-        {
-            q_right_bools.emplace_back(fr::zero());
-        }
     }
 
     void BoolComposer::create_bool_gate(const uint32_t variable_index)
@@ -88,35 +26,12 @@ namespace waffle
         if (is_bool[variable_index] == false)
         {
             is_bool[variable_index] = true;
-            pending_bool_selectors[variable_index] = true;
         }
     }
 
     void BoolComposer::create_poly_gate(const poly_triple &in)
     {
         StandardComposer::create_poly_gate(in);
-        if (pending_bool_selectors[in.a])
-        {
-            q_left_bools.emplace_back(fr::one());
-            pending_bool_selectors[in.a] = false;
-            add_gate_flag(gate_flags.size() - 1, GateFlags::IS_LEFT_BOOL_GATE);
-            add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_LEFT_WIRE);
-        }
-        else
-        {
-            q_left_bools.emplace_back(fr::field_t({{0,0,0,0}}));
-        }
-        if (pending_bool_selectors[in.b])
-        {
-            q_right_bools.emplace_back(fr::one());
-            pending_bool_selectors[in.b] = false;
-            add_gate_flag(gate_flags.size() - 1, GateFlags::IS_RIGHT_BOOL_GATE);
-            add_gate_flag(gate_flags.size() - 1, GateFlags::FIXED_RIGHT_WIRE);
-        }
-        else
-        {
-            q_right_bools.emplace_back(fr::zero());
-        }
     }
 
     void BoolComposer::create_dummy_gates()
@@ -149,10 +64,22 @@ namespace waffle
         ++n;
     }
 
+    void BoolComposer::process_bool_gates()
+    {
+        q_left_bools.reserve(n);
+        q_right_bools.reserve(n);
+        q_output_bools.reserve(n);
+        for (size_t i = 0; i < n; ++i)
+        {
+            q_left_bools.emplace_back(is_bool[w_l[i]] ? fr::one() : fr::zero());
+            q_right_bools.emplace_back(is_bool[w_r[i]] ? fr::one() : fr::zero());
+            q_output_bools.emplace_back(is_bool[w_o[i]] ? fr::one() : fr::zero());
+        }
+    }
+
     Prover BoolComposer::preprocess()
     {
         ASSERT(wire_epicycles.size() == variables.size());
-        ASSERT(pending_bool_selectors.size() == variables.size());
         ASSERT(n == q_m.size());
         ASSERT(n == q_l.size());
         ASSERT(n == q_r.size());
@@ -160,62 +87,12 @@ namespace waffle
         ASSERT(n == q_o.size());
         ASSERT(n == q_left_bools.size());
         ASSERT(n == q_right_bools.size());
+        ASSERT(n == q_output_bools.size());
         // we need to check our bool selectors to ensure that there aren't any straggleres that
         // we couldn't fit in.
         // TODO: hmm this is a lot of code duplication, should refactor once we have this working
-        uint32_t pending_pair = static_cast<uint32_t>(-1);
-        for (size_t i = 0; i < pending_bool_selectors.size(); ++i)
-        {
-            if (pending_bool_selectors[i] == true)
-            {
-                if (pending_pair == static_cast<uint32_t>(-1))
-                {
-                    pending_pair = static_cast<uint32_t>(i);
-                }
-                else
-                {
-                    q_m.emplace_back(fr::field_t({{0,0,0,0}}));
-                    q_l.emplace_back(fr::field_t({{0,0,0,0}}));
-                    q_r.emplace_back(fr::field_t({{0,0,0,0}}));
-                    q_o.emplace_back(fr::field_t({{0,0,0,0}}));
-                    q_c.emplace_back(fr::field_t({{0,0,0,0}}));
-                    q_left_bools.emplace_back(fr::one());
-                    q_right_bools.emplace_back(fr::one());
-                    w_l.emplace_back(static_cast<uint32_t>(i));
-                    w_r.emplace_back(static_cast<uint32_t>(pending_pair));
-                    w_o.emplace_back(static_cast<uint32_t>(i));
-                    epicycle left{static_cast<uint32_t>(n), WireType::LEFT};
-                    epicycle right{static_cast<uint32_t>(n), WireType::RIGHT};
-                    epicycle out{static_cast<uint32_t>(n), WireType::OUTPUT};
-                    wire_epicycles[static_cast<size_t>(i)].emplace_back(left);
-                    wire_epicycles[static_cast<size_t>(pending_pair)].emplace_back(right);
-                    wire_epicycles[static_cast<size_t>(i)].emplace_back(out);
-                    ++n;
-                    pending_pair = static_cast<uint32_t>(-1);
-                }
-            }
-        }
-        if (pending_pair != static_cast<uint32_t>(-1))
-        {
-            q_m.emplace_back(fr::field_t({{0,0,0,0}}));
-            q_l.emplace_back(fr::field_t({{0,0,0,0}}));
-            q_r.emplace_back(fr::field_t({{0,0,0,0}}));
-            q_o.emplace_back(fr::field_t({{0,0,0,0}}));
-            q_c.emplace_back(fr::field_t({{0,0,0,0}}));
-            q_left_bools.emplace_back(fr::one());
-            q_right_bools.emplace_back(fr::field_t({{0,0,0,0}}));
-            w_l.emplace_back(static_cast<uint32_t>(pending_pair));
-            w_r.emplace_back(static_cast<uint32_t>(pending_pair));
-            w_o.emplace_back(static_cast<uint32_t>(pending_pair));
-            epicycle left{static_cast<uint32_t>(n), WireType::LEFT};
-            epicycle right{static_cast<uint32_t>(n), WireType::RIGHT};
-            epicycle out{static_cast<uint32_t>(n), WireType::OUTPUT};
-            wire_epicycles[static_cast<size_t>(pending_pair)].emplace_back(left);
-            wire_epicycles[static_cast<size_t>(pending_pair)].emplace_back(right);
-            wire_epicycles[static_cast<size_t>(pending_pair)].emplace_back(out);
-            ++n;
-        }
 
+        process_bool_gates();
 
         size_t log2_n = static_cast<size_t>(log2(static_cast<size_t>(n + 1)));
 
@@ -234,6 +111,7 @@ namespace waffle
             q_c.emplace_back(fr::field_t({{0,0,0,0}}));
             q_left_bools.emplace_back(fr::field_t({{0,0,0,0}}));
             q_right_bools.emplace_back(fr::field_t({{0,0,0,0}}));
+            q_output_bools.emplace_back(fr::field_t({{0,0,0,0}}));
             w_l.emplace_back(zero_idx);
             w_r.emplace_back(zero_idx);
             w_o.emplace_back(zero_idx);
@@ -260,9 +138,11 @@ namespace waffle
             fr::copy(q_c[i], arithmetic_widget->q_c[i]);
             fr::copy(q_left_bools[i], bool_widget->q_bl[i]);
             fr::copy(q_right_bools[i], bool_widget->q_br[i]);
+            fr::copy(q_output_bools[i], bool_widget->q_bo[i]);
         }
         output_state.widgets.emplace_back(std::move(arithmetic_widget));
         output_state.widgets.emplace_back(std::move(bool_widget));
+
         return output_state;
     }
 }

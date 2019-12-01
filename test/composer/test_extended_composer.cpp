@@ -80,7 +80,7 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
 
     uint32 a = witness_t(&composer, static_cast<uint32_t>(-1));
     waffle::Prover prover = composer.preprocess();
-    /*
+
     EXPECT_EQ(composer.deleted_gates[0], false);
     EXPECT_EQ(composer.deleted_gates[1], true);
     EXPECT_EQ(composer.deleted_gates[2], false);
@@ -121,8 +121,8 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
     for (size_t i = 2; i < 30; i += 2)
     {
         uint64_t shift = static_cast<uint64_t>(i) + 1UL;
-        EXPECT_EQ(fr::from_montgomery_form(composer.q_r[i]).data[0], 1UL << shift);
-        EXPECT_EQ(fr::from_montgomery_form(composer.q_l[i]).data[0], 1UL << (shift + 1UL));
+        EXPECT_EQ(fr::from_montgomery_form(composer.q_l[i]).data[0], 1UL << shift);
+        EXPECT_EQ(fr::from_montgomery_form(composer.q_r[i]).data[0], 1UL << (shift + 1UL));
         EXPECT_EQ(fr::eq(composer.q_o[i], fr::one()), true);
         EXPECT_EQ(fr::eq(composer.q_oo[i], fr::neg_one()), true);
     }
@@ -164,13 +164,12 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
         EXPECT_EQ(fr::eq(prover.w_r[i], fr::zero()), true);
         EXPECT_EQ(fr::eq(prover.w_o[i], fr::zero()), true);
     }
-    */
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
     bool proof_valid = verifier.verify_proof(proof);
-        printf("prover adjusted n = %lu", composer.adjusted_n);
+    printf("prover adjusted n = %lu \n", composer.adjusted_n);
 
     EXPECT_EQ(composer.adjusted_n, 16UL);
     EXPECT_EQ(proof_valid, true);
@@ -267,8 +266,8 @@ TEST(extended_composer, basic_optimized_proof)
     // uint32 cc = witness_t(&composer, 44U);
     uint32 c = a * b;
     uint32 d = a * c;
-    c.decompose();
-    d.decompose();
+    c.get_witness_index();
+    d.get_witness_index();
 
     waffle::Prover prover = composer.preprocess();
 
@@ -291,7 +290,7 @@ TEST(extended_composer, test_optimized_uint32_xor)
 
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(composer.adjusted_n, 64UL);
+    EXPECT_EQ(composer.adjusted_n, 65UL);
     printf("prover gates = %lu\n", prover.n);
 
     waffle::Verifier verifier = waffle::preprocess(prover);
@@ -310,7 +309,7 @@ TEST(extended_composer, test_optimized_uint32_and)
 
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(composer.adjusted_n, 64UL);
+    EXPECT_EQ(composer.adjusted_n, 65UL);
     printf("prover gates = %lu\n", prover.n);
 
     waffle::Verifier verifier = waffle::preprocess(prover);
@@ -329,7 +328,7 @@ TEST(extended_composer, test_optimized_uint32_or)
 
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(composer.adjusted_n, 64UL);
+    EXPECT_EQ(composer.adjusted_n, 65UL);
     printf("prover gates = %lu\n", prover.n);
 
     waffle::Verifier verifier = waffle::preprocess(prover);

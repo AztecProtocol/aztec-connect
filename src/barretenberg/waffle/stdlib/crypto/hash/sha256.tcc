@@ -38,7 +38,7 @@ std::array<uint32<Composer>, 8> sha256(std::array<uint32<Composer>, 16> &input)
     {
         uint32 s0 = w[i - 15].ror(7) ^ w[i - 15].ror(18) ^ w[i - 15].ror(3);
         uint32 s1 = w[i - 2].ror(17) ^ w[i - 2].ror(19) ^ w[i - 2].ror(10);
-        w[i] = w[i - 16] + s0 + w[i - 7] + s1;
+        w[i] = w[i - 16] +  w[i - 7] + s0 + s1;
     }
 
     uint32 a = init_constants[0];
@@ -57,7 +57,7 @@ std::array<uint32<Composer>, 8> sha256(std::array<uint32<Composer>, 16> &input)
         uint32 temp1 = h + S1 + ch + round_constants[i] + w[i];
         uint32 S0 = a.ror(2U) ^ a.ror(13U) ^ a.ror(22U);
         uint32 T0 = (b & c);
-        uint32 T1 = (b - T0) + (c - T0);
+        uint32 T1 = b + c - (T0 + T0);
         uint32 T2 = a & T1;
         uint32 maj = T2 + T0;
         uint32 temp2 = S0 + maj;
@@ -88,3 +88,5 @@ std::array<uint32<Composer>, 8> sha256(std::array<uint32<Composer>, 16> &input)
 } // namespace plonk
 
 #endif
+
+// 6144

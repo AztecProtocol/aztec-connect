@@ -47,7 +47,8 @@ uint32<ComposerContext> uint32<ComposerContext>::internal_logic_operation(
 {
     // ASSERT(left.context == right.context || (left.context == nullptr && right.context != nullptr) ||
     //        (right.context == nullptr && left.context != nullptr));
-    ComposerContext* context = left.context == nullptr ? right.context : left.context;
+    auto left = *this;
+    ComposerContext* ctx = left.context == nullptr ? right.context : left.context;
     left.prepare_for_logic_operations();
     right.prepare_for_logic_operations();
 
@@ -72,7 +73,7 @@ uint32<ComposerContext> uint32<ComposerContext>::internal_logic_operation(
      **/
     // TODO: We could remove the +1 extra gate if we could tap the *previous* gate in the circuit...
     // OR: start in reverse order :/
-    field_t<ComposerContext> const_mul(context, barretenberg::fr::one());
+    field_t<ComposerContext> const_mul(ctx, barretenberg::fr::one());
     for (size_t i = 0; i < 32; ++i)
     {
         // if (context && context->supports_feature(waffle::ComposerBase::Features::EXTENDED_ARITHMETISATION))
@@ -113,9 +114,9 @@ uint32<ComposerContext> uint32<ComposerContext>::internal_logic_operation(
         }
         else
         {
-            result.accumulators[31] = result.accumulators[31].normalize();
-            result.additive_constant = 0;
-            result.multiplicative_constant = 1;
+            // result.accumulators[31] = result.accumulators[31].normalize();
+            // result.additive_constant = 0;
+            // result.multiplicative_constant = 1;
         }
 
         result.witness = result.accumulators[31].witness;

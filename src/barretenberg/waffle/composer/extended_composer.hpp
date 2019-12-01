@@ -16,6 +16,16 @@ class ExtendedComposer : public BoolComposer
         uint32_t index = static_cast<uint32_t>(-1);
         WireType wire_type = WireType::NULL_WIRE;
         std::vector<barretenberg::fr::field_t*> selectors;
+
+        extended_wire_properties& operator=(const extended_wire_properties &other)
+        {
+            is_mutable = other.is_mutable;
+            index = other.index;
+            wire_type = other.wire_type;
+            selectors = std::vector<barretenberg::fr::field_t*>();
+            std::copy(other.selectors.begin(), other.selectors.end(), std::back_inserter(selectors));
+            return *this;
+        }
     };
     struct quad
     {
@@ -34,6 +44,7 @@ class ExtendedComposer : public BoolComposer
 
     ~ExtendedComposer(){};
 
+    // virtual uint32_t add_variable(const barretenberg::fr::field_t &in) { return BoolComposer::add_variable(in); }
     bool check_gate_flag(const size_t gate_index, const GateFlags flag);
     std::array<extended_wire_properties, 4> filter(const uint32_t l1,
                                                    const uint32_t r1,

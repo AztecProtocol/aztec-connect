@@ -114,6 +114,16 @@ template <typename ComposerContext> class uint32
         return witness_index;
     }
 
+    uint32_t get_additive_constant()
+    {
+        return additive_constant;
+    }
+
+    uint32_t get_multiplicative_constant()
+    {
+        return multiplicative_constant;
+    }
+
   private:
     enum WitnessStatus
     {
@@ -142,7 +152,7 @@ template <typename ComposerContext> class uint32
     mutable barretenberg::fr::field_t witness;
     mutable uint32_t witness_index;
 
-    uint32_t additive_constant;
+    mutable uint32_t additive_constant;
     uint32_t multiplicative_constant;
 
     mutable WitnessStatus witness_status;

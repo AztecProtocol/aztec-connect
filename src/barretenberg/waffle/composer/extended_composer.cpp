@@ -92,6 +92,15 @@ namespace waffle
 
     ExtendedComposer::extended_wire_properties ExtendedComposer::get_shared_wire(const size_t i) {
 
+        // if (check_gate_flag(i, GateFlags::FIXED_LEFT_WIRE) && check_gate_flag(i + 1, GateFlags::FIXED_LEFT_WIRE))
+        // {
+        //     return { false, static_cast<uint32_t>(-1), WireType::NULL_WIRE, {} };
+        // }
+        // if (check_gate_flag(i, GateFlags::FIXED_RIGHT_WIRE) && check_gate_flag(i + 1, GateFlags::FIXED_RIGHT_WIRE))
+        // {
+        //     return { false, static_cast<uint32_t>(-1), WireType::NULL_WIRE, {} };
+        // }
+
         auto search = [this, i](const uint32_t target, const std::array<const std::pair<uint32_t, bool>, 3> &source_wires, const GateFlags flag) {
             auto has_pair = [target](auto x) {
                 return (x.second && (x.first == target));
@@ -111,19 +120,19 @@ namespace waffle
 
         const std::array<fr::field_t*, 3> selectors {{ &q_l[i + 1], &q_r[i + 1], &q_o[i + 1] }};
         size_t found = search(w_l[i], second_gate_wires, GateFlags::FIXED_LEFT_WIRE);
-        if (found != static_cast<size_t>(-1))
+        if (is_isolated(wire_epicycles[w_l[i]], i) && found != static_cast<size_t>(-1) && !is_bool[static_cast<size_t>(w_l[i])])
         {
             return { true, w_l[i], WireType::LEFT, { &q_l[i], selectors[found] } };
         }
 
         found = search(w_r[i], second_gate_wires, GateFlags::FIXED_RIGHT_WIRE);
-        if (found != static_cast<size_t>(-1))
+        if (is_isolated(wire_epicycles[w_r[i]], i) && found != static_cast<size_t>(-1) && !is_bool[static_cast<size_t>(w_r[i])])
         {
             return { true, w_r[i], WireType::RIGHT, { &q_r[i], selectors[found]} };
         }
 
         found = search(w_o[i], second_gate_wires, GateFlags::FIXED_OUTPUT_WIRE);
-        if (found != static_cast<size_t>(-1))
+        if (is_isolated(wire_epicycles[w_o[i]], i) && found != static_cast<size_t>(-1) && !is_bool[static_cast<size_t>(w_o[i])])
         {
             return { true, w_o[i], WireType::OUTPUT, { &q_o[i], selectors[found] } };
         }
@@ -133,6 +142,20 @@ namespace waffle
 
     void ExtendedComposer::combine_linear_relations()
     {
+        // printf("bool size = %lu\n", is_bool.size());
+        // printf("variable size = %lu\n", variables.size());
+        // for (size_t i = 0; i < is_bool.size(); ++i)
+        // {
+        //     // if (is_bool[i])
+        //     // {
+        //     //     printf("yes? \n");
+        //     // }
+        //     // if (!is_bool[i])
+        //     // {
+        //     //     printf("no ? \n");
+        //     // }
+        //     printf(" %d \n", static_cast<int>(is_bool[i]));
+        // }
         // for (size_t i = 0; i < n; ++i)
         // {
         //     printf("gate %lu, wire indices [%u, %u, %u]\n", i, w_l[i], w_r[i], w_o[i]);
@@ -161,11 +184,13 @@ namespace waffle
             ++i;
         }
 
+        printf("potential quads size = %lu\n", potential_quads.size());
         deleted_gates = std::vector<bool>(w_l.size(), 0);
         //     for (size_t j = 0; j < potential_quads.size(); ++j)
         // {
         //     printf("potential quad indices at gate[%lu] = [%u, %u, %u, %u] \n", potential_quads[j].gate_indices[0], potential_quads[j].wires[0].index,potential_quads[j].wires[1].index,potential_quads[j].wires[2].index,potential_quads[j].wires[3].index);
         // }
+        size_t foo_count = 0;
         for (size_t j = potential_quads.size() - 1; j < potential_quads.size(); --j)
         {
             // printf("checking quad %lu\n", j);
@@ -196,42 +221,278 @@ namespace waffle
             {
                 lookahead_wire = search(w_o[next_gate_index], potential_quads[j].wires, true);
             }
-            // if (lookahead_wire.index == static_cast<uint32_t>(-1) && (j != 0) && (potential_quads[j - 1].gate_indices[1] + 1 == potential_quads[j].gate_indices[0]))
-            // {
-            //     uint32_t lookbehind_wire = search(potential_quads[j - 1].wires[0] & mask, potential_quads[j].wires, true);
-            //     if (lookbehind_wire == static_cast<uint32_t>(-1))
-            //     {
-            //         lookbehind_wire = search(potential_quads[j - 1].wires[1] & mask, potential_quads[j].wires, true);
-            //     }
-            //     if (lookbehind_wire == static_cast<uint32_t>(-1))
-            //     {
-            //         lookbehind_wire = search(potential_quads[j - 1].wires[2] & mask, potential_quads[j].wires, true);
-            //     }
-            //     if (lookbehind_wire == static_cast<uint32_t>(-1))
-            //     {
-            //         lookbehind_wire = search(potential_quads[j - 1].wires[3] & mask, potential_quads[j].wires, true);
-            //     }
-            //     // blah.
-            //     // TODO:
-            //     // combine with the next code block to create something coherent...
-            //     // if the next quad we scan, shares a common factor with this one, we can still elide out a gate
-            //     // no bit this time, but does the quad above us share a common factor?
-            // }
-            // if (lookahead_wire.index == static_cast<uint32_t>(-1))
-            // {
-            //     size_t gate_1_index = next_gate_index - 2;
-            //     size_t gate_2_index = next_gate_index - 1;
-            //     printf("gate index = %lu, gate 1 = %lu, gate 2 = %lu, next gate = %lu\n", potential_quads[j].gate_indices[0], gate_1_index, gate_2_index, next_gate_index);
-            //     printf("quad indices = %u, %u, %u, %u \n", potential_quads[j].wires[0].index,potential_quads[j].wires[1].index,potential_quads[j].wires[2].index,potential_quads[j].wires[3].index);
-            //     printf("gate 1 indices = %u, %u, %u, %u \n", w_l[gate_1_index], w_r[gate_1_index], w_o[gate_1_index]);
-            //     printf("gate 2 indices = %u, %u, %u, %u \n", w_l[gate_2_index], w_r[gate_2_index], w_o[gate_2_index]);
-            //     printf("next gate indices = %u, %u, %u\n", w_l[next_gate_index], w_r[next_gate_index], w_o[next_gate_index]);
-            // }
+            if (lookahead_wire.index == static_cast<uint32_t>(-1) && (j != 0) && (potential_quads[j - 1].gate_indices[1] + 1 == potential_quads[j].gate_indices[0]))
+            {
+                // ok, so we haven't found an adjacent gate that we can use to elide out a gate, but we know that the next quad that we iterate over shares a wire with this quad.
+                // Which means that, if we move the shared wire onto an output wire, we can elide out a gate when examining the next quad in our loop
+
+                extended_wire_properties anchor_wire = search(potential_quads[j - 1].wires[0].index, potential_quads[j].wires, potential_quads[j - 1].wires[0].is_mutable || potential_quads[j - 1].wires[0].wire_type == WireType::OUTPUT);
+                if (anchor_wire.index == static_cast<uint32_t>(-1))
+                {
+                    anchor_wire = search(potential_quads[j - 1].wires[1].index, potential_quads[j].wires, potential_quads[j - 1].wires[1].is_mutable || potential_quads[j - 1].wires[1].wire_type == WireType::OUTPUT);
+                }
+                if (anchor_wire.index == static_cast<uint32_t>(-1))
+                {
+                    anchor_wire = search(potential_quads[j - 1].wires[2].index, potential_quads[j].wires, potential_quads[j - 1].wires[2].is_mutable || potential_quads[j - 1].wires[1].wire_type == WireType::OUTPUT);
+                }
+                if (anchor_wire.index == static_cast<uint32_t>(-1))
+                {
+                    anchor_wire = search(potential_quads[j - 1].wires[3].index, potential_quads[j].wires, potential_quads[j - 1].wires[3].is_mutable || potential_quads[j - 1].wires[1].wire_type == WireType::OUTPUT);
+                }
+                if (anchor_wire.index != static_cast<uint32_t>(-1))
+                {
+                    size_t gate_1_index = next_gate_index - 2;
+                    size_t gate_2_index = next_gate_index - 1;
+
+                    extended_wire_properties new_lookahead_wire;
+                    for (size_t k = 0; k < 4; ++k)
+                    {
+                        extended_wire_properties wire = potential_quads[j].wires[k];
+                        if (wire.index != anchor_wire.index && (wire.wire_type == WireType::OUTPUT || (wire.is_mutable == true)))
+                        {
+                            new_lookahead_wire = wire;
+                            break;
+                        }
+                    }
+
+                    if (new_lookahead_wire.index != static_cast<uint32_t>(-1))
+                    {
+                    extended_wire_properties new_w_o = anchor_wire;
+                    extended_wire_properties new_w_oo = new_lookahead_wire;
+                    extended_wire_properties new_w_l;
+                    extended_wire_properties new_w_r;
+                    for (size_t k = 0; k < 4; ++k)
+                    {
+
+                        uint32_t wire_index = potential_quads[j].wires[k].index;
+                        if (wire_index != anchor_wire.index && wire_index != new_lookahead_wire.index)
+                        {
+                            if (new_w_l.index == static_cast<uint32_t>(-1) && (potential_quads[j].wires[k].wire_type == WireType::LEFT || potential_quads[j].wires[k].is_mutable))
+                            {
+                                new_w_l = potential_quads[j].wires[k];
+                                continue;
+                            }
+                            if (new_w_r.index == static_cast<uint32_t>(-1) && (potential_quads[j].wires[k].wire_type == WireType::RIGHT || potential_quads[j].wires[k].is_mutable))
+                            {
+                                new_w_r = potential_quads[j].wires[k];
+                                continue;
+                            }
+                            continue;
+                        }
+                    }
+
+                    if (new_w_l.index != static_cast<uint32_t>(-1) && new_w_r.index != static_cast<uint32_t>(-1))
+                    {
+                        // printf("%x, %x, %x, %x \n", new_w_l.index, new_w_r.index, new_w_o.index, new_w_oo.index);
+                        auto assign = [](const fr::field_t& input) {
+                            return (fr::eq(input, fr::zero())) ? fr::one() : input;
+                        };
+                        fr::field_t left = fr::neg(assign(*potential_quads[j].removed_wire.selectors[0]));
+                        fr::field_t right = assign(*potential_quads[j].removed_wire.selectors[1]);
+
+                        barretenberg::fr::__mul(q_m[gate_1_index], right, q_m[gate_1_index]);
+                        barretenberg::fr::__mul(q_l[gate_1_index], right, q_l[gate_1_index]);
+                        barretenberg::fr::__mul(q_r[gate_1_index], right, q_r[gate_1_index]);
+                        barretenberg::fr::__mul(q_o[gate_1_index], right, q_o[gate_1_index]);
+                        barretenberg::fr::__mul(q_c[gate_1_index], right, q_c[gate_1_index]);
+
+                        barretenberg::fr::__mul(q_m[gate_2_index], left, q_m[gate_2_index]);
+                        barretenberg::fr::__mul(q_l[gate_2_index], left, q_l[gate_2_index]);
+                        barretenberg::fr::__mul(q_r[gate_2_index], left, q_r[gate_2_index]);
+                        barretenberg::fr::__mul(q_o[gate_2_index], left, q_o[gate_2_index]);
+                        barretenberg::fr::__mul(q_c[gate_2_index], left, q_c[gate_2_index]);
+
+                        fr::copy(fr::zero(), q_oo[gate_1_index]);
+                        fr::field_t new_q_l = fr::zero();
+                        fr::field_t new_q_r = fr::zero();
+                        fr::field_t new_q_o = fr::zero();
+                        fr::field_t new_q_oo = fr::zero();
+                        for (size_t k = 0; k < new_w_oo.selectors.size(); ++k)
+                        {
+                            fr::__add(new_q_oo, *new_w_oo.selectors[k], new_q_oo);
+                        }
+                        for (size_t k = 0; k < new_w_l.selectors.size(); ++k)
+                        {
+                            fr::__add(new_q_l, *new_w_l.selectors[k], new_q_l);
+                        }
+                        for (size_t k = 0; k < new_w_r.selectors.size(); ++k)
+                        {
+                            fr::__add(new_q_r, *new_w_r.selectors[k], new_q_r);
+                        }
+                        for (size_t k = 0; k < new_w_o.selectors.size(); ++k)
+                        {
+                            fr::__add(new_q_o, *new_w_o.selectors[k], new_q_o);
+                        }
+                        barretenberg::fr::copy(new_q_l, q_l[gate_1_index]);
+                        barretenberg::fr::copy(new_q_r, q_r[gate_1_index]);
+                        barretenberg::fr::copy(new_q_o, q_o[gate_1_index]);
+                        barretenberg::fr::copy(new_q_oo, q_oo[gate_1_index]);
+
+                        barretenberg::fr::__add(q_c[gate_1_index], q_c[gate_2_index], q_c[gate_1_index]);
+                        if (!fr::eq(fr::zero(), q_m[gate_2_index]))
+                        {
+                            barretenberg::fr::__add(q_m[gate_1_index], q_m[gate_2_index], q_m[gate_1_index]);
+                        }
+
+                        wire_epicycles[w_l[gate_1_index]] =
+                            remove_permutation(wire_epicycles[w_l[gate_1_index]], gate_1_index);
+                        wire_epicycles[w_r[gate_1_index]] =
+                            remove_permutation(wire_epicycles[w_r[gate_1_index]], gate_1_index);
+                        wire_epicycles[w_o[gate_1_index]] =
+                            remove_permutation(wire_epicycles[w_o[gate_1_index]], gate_1_index);
+                        wire_epicycles[w_l[gate_2_index]] =
+                            remove_permutation(wire_epicycles[w_l[gate_2_index]], gate_2_index);
+                        wire_epicycles[w_r[gate_2_index]] =
+                            remove_permutation(wire_epicycles[w_r[gate_2_index]], gate_2_index);
+                        wire_epicycles[w_o[gate_2_index]] =
+                            remove_permutation(wire_epicycles[w_o[gate_2_index]], gate_2_index);
+
+                        w_l[gate_1_index] = new_w_l.index;
+                        w_r[gate_1_index] = new_w_r.index;
+                        w_o[gate_1_index] = new_w_o.index;
+                        w_l[gate_2_index] = zero_idx;
+                        w_r[gate_2_index] = zero_idx;
+                        w_o[gate_2_index] = new_w_oo.index;
+
+                        wire_epicycles[static_cast<uint32_t>(w_l[gate_1_index])].push_back(
+                            { static_cast<uint32_t>(gate_1_index), WireType::LEFT });
+                        wire_epicycles[static_cast<uint32_t>(w_r[gate_1_index])].push_back(
+                            { static_cast<uint32_t>(gate_1_index), WireType::RIGHT });
+                        wire_epicycles[static_cast<uint32_t>(w_o[gate_1_index])].push_back(
+                            { static_cast<uint32_t>(gate_1_index), WireType::OUTPUT });
+                        wire_epicycles[static_cast<uint32_t>(w_l[gate_2_index])].push_back(
+                            { static_cast<uint32_t>(gate_2_index), WireType::LEFT });
+                        wire_epicycles[static_cast<uint32_t>(w_r[gate_2_index])].push_back(
+                            { static_cast<uint32_t>(gate_2_index), WireType::RIGHT });
+                        wire_epicycles[static_cast<uint32_t>(w_o[gate_2_index])].push_back(
+                            { static_cast<uint32_t>(gate_2_index), WireType::OUTPUT });
+
+                        fr::copy(fr::zero(), q_m[gate_2_index]);
+                        fr::copy(fr::zero(), q_l[gate_2_index]);
+                        fr::copy(fr::zero(), q_r[gate_2_index]);
+                        fr::copy(fr::zero(), q_o[gate_2_index]);
+                        fr::copy(fr::zero(), q_c[gate_2_index]);
+                    }
+                    }
+                }
+            }
+ 
             if (lookahead_wire.index != static_cast<uint32_t>(-1))
             {
+                // what do I want to do here?
+                // ... order the wires in the adjacent gate
+                // and then ...
+                // we want a generic method that can be called both to order to 'align' either with the
+                // preceeding gate or proceeding gate
                 // jackpot?
                 size_t gate_1_index = next_gate_index - 2;
                 size_t gate_2_index = next_gate_index - 1;
+
+
+//                fr::copy(fr::zero(), q_oo[gate_1_index]);
+                // for (size_t k = 0; k < lookahead_wire.selectors.size(); ++k)
+                // {
+                //     fr::__add(q_oo[gate_1_index], *lookahead_wire.selectors[k], q_oo[gate_1_index]);
+                // }
+
+                // barretenberg::fr::field_t linear_selectors[3]{ barretenberg::fr::zero(), barretenberg::fr::zero(), barretenberg::fr::zero() };            
+                // uint32_t linear_wires[3];
+                // size_t linear_index = 0;
+                // std::vector<size_t> multiplicative_wires;
+
+                // bool gate_2_multiplicative = !fr::eq(q_m[gate_2_index], fr::zero()); 
+                // if (gate_2_multiplicative)
+                // {
+                //     barretenberg::fr::__add(q_m[gate_1_index], q_m[gate_2_index], q_m[gate_2_index]);
+                // }
+
+                // barretenberg::fr::field_t new_selectors[4]{ barretenberg::fr::zero(), barretenberg::fr::zero(), barretenberg::fr::zero(), barretenberg::fr::zero() };
+
+                std::array<extended_wire_properties, 4> gate_wires;
+                // printf("gate wires indices at start = %x, %x, %x, %x \n", gate_wires[0].index, gate_wires[1].index, gate_wires[2].index, gate_wires[3].index);
+                gate_wires[3] = lookahead_wire;
+                auto is_included = [](const std::array<extended_wire_properties, 4> &wires, uint32_t index) {
+                    bool match = false;
+                    for (size_t l = 0; l < wires.size(); ++l)
+                    {
+                        match = match || (wires[l].index == index);
+                    }
+                    return match;
+                    // auto it = std::find_if(gate_wires.begin(), gate_wires.end(), [index](auto x) { return x.index == index; });
+                    // return it != gate_wires.end();
+                };
+
+                for (size_t k = 0; k < potential_quads[j].wires.size(); ++k)
+                {
+                    extended_wire_properties wire = potential_quads[j].wires[k];
+                    
+                    if (!is_included(gate_wires, wire.index))
+                    {
+                        if ((wire.wire_type == WireType::OUTPUT && !wire.is_mutable) && gate_wires[2].index == static_cast<uint32_t>(-1))
+                        {
+                            gate_wires[2] = wire;
+                            continue;
+                        }
+                        else if ((wire.wire_type == WireType::RIGHT && (!wire.is_mutable)) && gate_wires[1].index == static_cast<uint32_t>(-1))
+                        {
+                            gate_wires[1] = wire;
+                            continue;
+                        }   
+                        else if ((wire.wire_type == WireType::LEFT && (!wire.is_mutable)) && gate_wires[0].index == static_cast<uint32_t>(-1))
+                        {
+                            gate_wires[0] = wire;
+                            continue;
+                        }           
+                    }
+                }
+
+                // if (gate_wires[0].index == static_cast<uint32_t>(-1) || gate_wires[1].index == static_cast<uint32_t>(-1) || gate_wires[2].index == static_cast<uint32_t>(-1))
+                // {
+                //     printf("PART A hmmm \n");
+                //     printf("gate wires indices at end = %x, %x, %x, %x \n", gate_wires[0].index, gate_wires[1].index, gate_wires[2].index, gate_wires[3].index);
+                //     printf("indices = %x, %x, %x, %x \n", potential_quads[j].wires[0].index, potential_quads[j].wires[1].index, potential_quads[j].wires[2].index, potential_quads[j].wires[3].index);
+                //      printf("types = %x, %x, %x, %x \n", potential_quads[j].wires[0].wire_type, potential_quads[j].wires[1].wire_type, potential_quads[j].wires[2].wire_type, potential_quads[j].wires[3].wire_type);
+                //              printf("is mutable = %d, %d, %d, %d \n", potential_quads[j].wires[0].is_mutable, potential_quads[j].wires[1].is_mutable, potential_quads[j].wires[2].is_mutable, potential_quads[j].wires[3].is_mutable);
+                //         printf("is bool = %d, %d, %d, %d \n", (int)is_bool[(size_t)potential_quads[j].wires[0].index], (int)is_bool[(size_t)potential_quads[j].wires[1].index], (int)is_bool[(size_t)potential_quads[j].wires[2].index], (int)is_bool[(size_t)potential_quads[j].wires[3].index]);
+
+                // }
+                for (size_t k = 0; k < potential_quads[j].wires.size(); ++k)
+                {
+                    extended_wire_properties wire = potential_quads[j].wires[k];
+                    
+                    if (!is_included(gate_wires, wire.index))
+                    {
+                        if ((wire.wire_type == WireType::RIGHT || wire.is_mutable) && (gate_wires[1].index == static_cast<uint32_t>(-1)))
+                        {
+                            gate_wires[1] = wire;
+                            continue;
+                        }   
+                        else if ((wire.wire_type == WireType::LEFT || wire.is_mutable) && (gate_wires[0].index == static_cast<uint32_t>(-1)))
+                        {
+                            gate_wires[0] = wire;
+                            continue;
+                        }    
+                        else if ((wire.wire_type == WireType::OUTPUT || wire.is_mutable) && (gate_wires[2].index == static_cast<uint32_t>(-1)))
+                        {
+                            gate_wires[2] = wire;
+                            continue;
+                        }       
+                    }
+                }
+
+                if (gate_wires[0].index == static_cast<uint32_t>(-1) || gate_wires[1].index == static_cast<uint32_t>(-1) || gate_wires[2].index == static_cast<uint32_t>(-1) || gate_wires[3].index == static_cast<uint32_t>(-1))
+                {
+                    // printf("hmmm \n");
+                    // printf("gate wires indices at end = %x, %x, %x, %x \n", gate_wires[0].index, gate_wires[1].index, gate_wires[2].index, gate_wires[3].index);
+                    // printf("indices = %x, %x, %x, %x \n", potential_quads[j].wires[0].index, potential_quads[j].wires[1].index, potential_quads[j].wires[2].index, potential_quads[j].wires[3].index);
+                    //  printf("types = %x, %x, %x, %x \n", potential_quads[j].wires[0].wire_type, potential_quads[j].wires[1].wire_type, potential_quads[j].wires[2].wire_type, potential_quads[j].wires[3].wire_type);
+                    //          printf("is mutable = %d, %d, %d, %d \n", potential_quads[j].wires[0].is_mutable, potential_quads[j].wires[1].is_mutable, potential_quads[j].wires[2].is_mutable, potential_quads[j].wires[3].is_mutable);
+                    //     printf("is bool = %d, %d, %d, %d \n", (int)is_bool[(size_t)potential_quads[j].wires[0].index], (int)is_bool[(size_t)potential_quads[j].wires[1].index], (int)is_bool[(size_t)potential_quads[j].wires[2].index], (int)is_bool[(size_t)potential_quads[j].wires[3].index]);
+                    foo_count++;
+                }
+                else
+                {
+                   // printf("gate wires indices at end = %x, %x, %x, %x \n", gate_wires[0].index, gate_wires[1].index, gate_wires[2].index, gate_wires[3].index);
                 // printf("found a match at gate index %lu\n", gate_1_index);
                 bool left_swap = (w_l[next_gate_index] == (lookahead_wire.index)) && (!left_fixed);
                 bool right_swap = (w_r[next_gate_index] == (lookahead_wire.index)) && (!right_fixed);
@@ -264,44 +525,29 @@ namespace waffle
                 barretenberg::fr::__mul(q_o[gate_2_index], left, q_o[gate_2_index]);
                 barretenberg::fr::__mul(q_c[gate_2_index], left, q_c[gate_2_index]);
 
-                fr::copy(fr::zero(), q_oo[gate_1_index]);
-                for (size_t k = 0; k < lookahead_wire.selectors.size(); ++k)
+                auto compute_new_selector = [](const extended_wire_properties &wire)
                 {
-                    fr::__add(q_oo[gate_1_index], *lookahead_wire.selectors[k], q_oo[gate_1_index]);
-                }
-
-                barretenberg::fr::field_t linear_selectors[3]{ barretenberg::fr::zero(), barretenberg::fr::zero(), barretenberg::fr::zero() };            
-                uint32_t linear_wires[3];
-                size_t linear_index = 0;
-                std::vector<size_t> multiplicative_wires;
-
-                bool gate_2_multiplicative = !fr::eq(q_m[gate_2_index], fr::zero()); 
-                if (gate_2_multiplicative)
-                {
-                    barretenberg::fr::__add(q_m[gate_1_index], q_m[gate_2_index], q_m[gate_2_index]);
-                }
-
-                for (size_t k = 0; k < potential_quads[j].wires.size(); ++k)
-                {
-                    extended_wire_properties wire = potential_quads[j].wires[k];
-                    
-                    if (wire.index != lookahead_wire.index && (wire.index != potential_quads[j].removed_wire.index))
+                    fr::field_t temp = fr::zero();
+                    for (size_t k = 0; k < wire.selectors.size(); ++k)
                     {
-                        if (wire.wire_type != WireType::OUTPUT && !wire.is_mutable)
-                        {
-                            multiplicative_wires.push_back(linear_index);
-                        }
-                        for (size_t l = 0; l < wire.selectors.size(); ++l)
-                        {
-                            barretenberg::fr::__add(linear_selectors[linear_index], *wire.selectors[l], linear_selectors[linear_index]);
-                        }
-
-                        linear_wires[linear_index] = wire.index;
-                        linear_index++;
+                        fr::__add(temp, *wire.selectors[k], temp);
                     }
-                }
+                    return temp;
+                };
+                fr::field_t new_left = compute_new_selector(gate_wires[0]);
+                fr::field_t new_right = compute_new_selector(gate_wires[1]);
+                fr::field_t new_output = compute_new_selector(gate_wires[2]);
+                fr::field_t new_next_output = compute_new_selector(gate_wires[3]);
 
-                ASSERT(multiplicative_wires.size() == 0 || multiplicative_wires.size() == 2);
+                fr::copy(new_left, q_l[gate_1_index]);
+                fr::copy(new_right, q_r[gate_1_index]);
+                fr::copy(new_output, q_o[gate_1_index]);
+                fr::copy(new_next_output, q_oo[gate_1_index]);
+                fr::__add(q_c[gate_1_index], q_c[gate_2_index], q_c[gate_1_index]);
+                if (!fr::eq(fr::zero(), q_m[gate_2_index]))
+                {
+                    fr::__add(q_m[gate_1_index], q_m[gate_2_index], q_m[gate_1_index]);
+                }
 
                 wire_epicycles[w_l[gate_1_index]] = remove_permutation(wire_epicycles[w_l[gate_1_index]], gate_1_index);
                 wire_epicycles[w_r[gate_1_index]] = remove_permutation(wire_epicycles[w_r[gate_1_index]], gate_1_index);
@@ -310,51 +556,86 @@ namespace waffle
                 wire_epicycles[w_r[gate_2_index]] = remove_permutation(wire_epicycles[w_r[gate_2_index]], gate_2_index);
                 wire_epicycles[w_o[gate_2_index]] = remove_permutation(wire_epicycles[w_o[gate_2_index]], gate_2_index);
 
-                if (multiplicative_wires.size() == 2)
-                {
-                    // TODO RENAME TO FIXED WIRES, REFACTOR
-                    barretenberg::fr::copy(linear_selectors[multiplicative_wires[0]], q_l[gate_1_index]);
-                    barretenberg::fr::copy(linear_selectors[multiplicative_wires[1]], q_r[gate_1_index]);
-                    w_l[gate_1_index] = linear_wires[multiplicative_wires[0]];
-                    w_r[gate_1_index] = linear_wires[multiplicative_wires[1]];
-                    // size_t k = 0;
-                    auto foo = [multiplicative_wires]()
-                    {
-                        for (size_t l = 0;  l < 3; ++l)
-                        {
-                            auto it = std::find_if(multiplicative_wires.begin(), multiplicative_wires.end(), [l](auto x) { return x == l; });
-                            if (it == multiplicative_wires.end())
-                            {
-                                return l;
-                            }
-                        }
-                        return static_cast<size_t>(-1);
-                    };
-                    size_t k = foo();
-                    if (k == static_cast<size_t>(-1))
-                    {
-                        printf("invalid k!\n");
-                    }
-                    barretenberg::fr::copy(linear_selectors[k], q_o[gate_1_index]);
-                    w_o[gate_1_index] = linear_wires[k];
-                    // barretenberg::fr::copy(barretenberg::fr::zero(), q_m[gate_1_index]);// TODO REMOVE THIS
+                w_l[gate_1_index] = gate_wires[0].index;
+                w_r[gate_1_index] = gate_wires[1].index;
+                w_o[gate_1_index] = gate_wires[2].index;
 
-                }
-                else
-                {
-                   barretenberg::fr::copy(linear_selectors[0], q_l[gate_1_index]);
-                   barretenberg::fr::copy(linear_selectors[1], q_r[gate_1_index]);
-                   barretenberg::fr::copy(linear_selectors[2], q_o[gate_1_index]);
-                   barretenberg::fr::copy(barretenberg::fr::zero(), q_m[gate_1_index]);
-                   w_l[gate_1_index] = linear_wires[0];
-                   w_r[gate_1_index] = linear_wires[1];
-                   w_o[gate_1_index] = linear_wires[2];
-                }
                 wire_epicycles[static_cast<uint32_t>(w_l[gate_1_index])].push_back({ static_cast<uint32_t>(gate_1_index), WireType::LEFT });
                 wire_epicycles[static_cast<uint32_t>(w_r[gate_1_index])].push_back({ static_cast<uint32_t>(gate_1_index), WireType::RIGHT });
                 wire_epicycles[static_cast<uint32_t>(w_o[gate_1_index])].push_back({ static_cast<uint32_t>(gate_1_index), WireType::OUTPUT });
-                barretenberg::fr::__add(q_c[gate_1_index], q_c[gate_2_index], q_c[gate_1_index]);
+
                 deleted_gates[potential_quads[j].gate_indices[1]] = true;
+                }
+                //     if (wire.index != lookahead_wire.index && (wire.index != potential_quads[j].removed_wire.index))
+                //     {
+                //         if (wire.wire_type != WireType::OUTPUT && !wire.is_mutable)
+                //         {
+                //             multiplicative_wires.push_back(linear_index);
+                //         }
+                //         for (size_t l = 0; l < wire.selectors.size(); ++l)
+                //         {
+                //             barretenberg::fr::__add(linear_selectors[linear_index], *wire.selectors[l], linear_selectors[linear_index]);
+                //         }
+
+                //         linear_wires[linear_index] = wire.index;
+                //         linear_index++;
+                //     }
+                // }
+
+                // ASSERT(multiplicative_wires.size() == 0 || multiplicative_wires.size() == 2);
+
+                // wire_epicycles[w_l[gate_1_index]] = remove_permutation(wire_epicycles[w_l[gate_1_index]], gate_1_index);
+                // wire_epicycles[w_r[gate_1_index]] = remove_permutation(wire_epicycles[w_r[gate_1_index]], gate_1_index);
+                // wire_epicycles[w_o[gate_1_index]] = remove_permutation(wire_epicycles[w_o[gate_1_index]], gate_1_index);
+                // wire_epicycles[w_l[gate_2_index]] = remove_permutation(wire_epicycles[w_l[gate_2_index]], gate_2_index);
+                // wire_epicycles[w_r[gate_2_index]] = remove_permutation(wire_epicycles[w_r[gate_2_index]], gate_2_index);
+                // wire_epicycles[w_o[gate_2_index]] = remove_permutation(wire_epicycles[w_o[gate_2_index]], gate_2_index);
+
+                // if (multiplicative_wires.size() == 2)
+                // {
+                //     // TODO RENAME TO FIXED WIRES, REFACTOR
+                //     barretenberg::fr::copy(linear_selectors[multiplicative_wires[0]], q_l[gate_1_index]);
+                //     barretenberg::fr::copy(linear_selectors[multiplicative_wires[1]], q_r[gate_1_index]);
+                //     w_l[gate_1_index] = linear_wires[multiplicative_wires[0]];
+                //     w_r[gate_1_index] = linear_wires[multiplicative_wires[1]];
+                //     // size_t k = 0;
+                //     auto foo = [multiplicative_wires]()
+                //     {
+                //         for (size_t l = 0;  l < 3; ++l)
+                //         {
+                //             auto it = std::find_if(multiplicative_wires.begin(), multiplicative_wires.end(), [l](auto x) { return x == l; });
+                //             if (it == multiplicative_wires.end())
+                //             {
+                //                 return l;
+                //             }
+                //         }
+                //         return static_cast<size_t>(-1);
+                //     };
+                //     size_t k = foo();
+                //     if (k == static_cast<size_t>(-1))
+                //     {
+                //         printf("invalid k!\n");
+                //     }
+                //     barretenberg::fr::copy(linear_selectors[k], q_o[gate_1_index]);
+                //     w_o[gate_1_index] = linear_wires[k];
+                //     // barretenberg::fr::copy(barretenberg::fr::zero(), q_m[gate_1_index]);// TODO REMOVE THIS
+
+                // }
+                // else
+                // {
+                //    barretenberg::fr::copy(linear_selectors[0], q_l[gate_1_index]);
+                //    barretenberg::fr::copy(linear_selectors[1], q_r[gate_1_index]);
+                //    barretenberg::fr::copy(linear_selectors[2], q_o[gate_1_index]);
+                //    barretenberg::fr::copy(barretenberg::fr::zero(), q_m[gate_1_index]);
+                //    w_l[gate_1_index] = linear_wires[0];
+                //    w_r[gate_1_index] = linear_wires[1];
+                //    w_o[gate_1_index] = linear_wires[2];
+                // }
+                // wire_epicycles[static_cast<uint32_t>(w_l[gate_1_index])].push_back({ static_cast<uint32_t>(gate_1_index), WireType::LEFT });
+                // wire_epicycles[static_cast<uint32_t>(w_r[gate_1_index])].push_back({ static_cast<uint32_t>(gate_1_index), WireType::RIGHT });
+                // wire_epicycles[static_cast<uint32_t>(w_o[gate_1_index])].push_back({ static_cast<uint32_t>(gate_1_index), WireType::OUTPUT });
+                // barretenberg::fr::__add(q_c[gate_1_index], q_c[gate_2_index], q_c[gate_1_index]);
+                // deleted_gates[potential_quads[j].gate_indices[1]] = true;
             }
         }
 
@@ -413,8 +694,8 @@ namespace waffle
     {
         combine_linear_relations();
     
+        process_bool_gates();
         ASSERT(wire_epicycles.size() == variables.size());
-        ASSERT(pending_bool_selectors.size() == variables.size());
         ASSERT(n == q_m.size());
         ASSERT(n == q_l.size());
         ASSERT(n == q_r.size());
@@ -422,71 +703,10 @@ namespace waffle
         ASSERT(n == q_o.size());
         ASSERT(n == q_left_bools.size());
         ASSERT(n == q_right_bools.size());
+        ASSERT(n == q_output_bools.size());
         // we need to check our bool selectors to ensure that there aren't any straggleres that
         // we couldn't fit in.
         // TODO: hmm this is a lot of code duplication, should refactor once we have this working
-        uint32_t pending_pair = static_cast<uint32_t>(-1);
-        for (size_t i = 0; i < pending_bool_selectors.size(); ++i)
-        {
-            if (pending_bool_selectors[i] == true)
-            {
-                if (pending_pair == static_cast<uint32_t>(-1))
-                {
-                    pending_pair = static_cast<uint32_t>(i);
-                }
-                else
-                {
-                    q_m.emplace_back(fr::field_t({{0,0,0,0}}));
-                    q_l.emplace_back(fr::field_t({{0,0,0,0}}));
-                    q_r.emplace_back(fr::field_t({{0,0,0,0}}));
-                    q_o.emplace_back(fr::field_t({{0,0,0,0}}));
-                    q_c.emplace_back(fr::field_t({{0,0,0,0}}));
-                    q_left_bools.emplace_back(fr::one());
-                    q_right_bools.emplace_back(fr::one());
-                    q_oo.emplace_back(fr::zero());
-                    w_l.emplace_back(static_cast<uint32_t>(i));
-                    w_r.emplace_back(static_cast<uint32_t>(pending_pair));
-                    w_o.emplace_back(static_cast<uint32_t>(i));
-                    epicycle left{static_cast<uint32_t>(n), WireType::LEFT};
-                    epicycle right{static_cast<uint32_t>(n), WireType::RIGHT};
-                    epicycle out{static_cast<uint32_t>(n), WireType::OUTPUT};
-                    wire_epicycles[static_cast<size_t>(i)].emplace_back(left);
-                    wire_epicycles[static_cast<size_t>(pending_pair)].emplace_back(right);
-                    wire_epicycles[static_cast<size_t>(i)].emplace_back(out);
-                    ++n;
-                    pending_pair = static_cast<uint32_t>(-1);
-
-                    adjusted_gate_indices.push_back(static_cast<uint32_t>(adjusted_n) + 1U);
-                    deleted_gates.push_back(false);
-                    ++adjusted_n;
-                }
-            }
-        }
-        if (pending_pair != static_cast<uint32_t>(-1))
-        {
-            q_m.emplace_back(fr::field_t({{0,0,0,0}}));
-            q_l.emplace_back(fr::field_t({{0,0,0,0}}));
-            q_r.emplace_back(fr::field_t({{0,0,0,0}}));
-            q_o.emplace_back(fr::field_t({{0,0,0,0}}));
-            q_c.emplace_back(fr::field_t({{0,0,0,0}}));
-            q_left_bools.emplace_back(fr::one());
-            q_right_bools.emplace_back(fr::field_t({{0,0,0,0}}));
-            q_oo.emplace_back(fr::zero());
-            w_l.emplace_back(static_cast<uint32_t>(pending_pair));
-            w_r.emplace_back(static_cast<uint32_t>(pending_pair));
-            w_o.emplace_back(static_cast<uint32_t>(pending_pair));
-            epicycle left{static_cast<uint32_t>(n), WireType::LEFT};
-            epicycle right{static_cast<uint32_t>(n), WireType::RIGHT};
-            epicycle out{static_cast<uint32_t>(n), WireType::OUTPUT};
-            wire_epicycles[static_cast<size_t>(pending_pair)].emplace_back(left);
-            wire_epicycles[static_cast<size_t>(pending_pair)].emplace_back(right);
-            wire_epicycles[static_cast<size_t>(pending_pair)].emplace_back(out);
-            ++n;
-
-            adjusted_gate_indices.push_back(static_cast<uint32_t>(adjusted_n) + 1U);
-            deleted_gates.push_back(false);
-            ++adjusted_n;
-        }
 
         size_t log2_n = static_cast<size_t>(log2(static_cast<size_t>(adjusted_n + 1)));
 
@@ -507,6 +727,7 @@ namespace waffle
             q_c.emplace_back(fr::field_t({{0,0,0,0}}));
             q_left_bools.emplace_back(fr::field_t({{0,0,0,0}}));
             q_right_bools.emplace_back(fr::field_t({{0,0,0,0}}));
+            q_output_bools.emplace_back(fr::field_t({{0,0,0,0}}));
             q_oo.emplace_back(fr::zero());
             w_l.emplace_back(zero_idx);
             w_r.emplace_back(zero_idx);
@@ -543,6 +764,7 @@ namespace waffle
             fr::copy(q_c[i], arithmetic_widget->q_c[index]);
             fr::copy(q_left_bools[i], bool_widget->q_bl[index]);
             fr::copy(q_right_bools[i], bool_widget->q_br[index]);
+            fr::copy(q_output_bools[i], bool_widget->q_bo[index]);
             fr::copy(q_oo[i], sequential_widget->q_o_next[index]);
         }
 
@@ -653,6 +875,10 @@ namespace waffle
                 size_t original_failure_idx;
                 for (size_t j = 0; j < adjusted_gate_indices.size(); ++j)
                 {
+                    if (deleted_gates[j])
+                    {
+                        continue;
+                    }
                     if (adjusted_gate_indices[j] == i)
                     {
                         original_failure_idx = j;
