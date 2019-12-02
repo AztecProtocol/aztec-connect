@@ -45,7 +45,7 @@ class ExtendedComposer : public BoolComposer
     ~ExtendedComposer(){};
 
     // virtual uint32_t add_variable(const barretenberg::fr::field_t &in) { return BoolComposer::add_variable(in); }
-    bool check_gate_flag(const size_t gate_index, const GateFlags flag);
+    bool check_gate_flag(const size_t gate_index, const GateFlags flag) const;
     std::array<extended_wire_properties, 4> filter(const uint32_t l1,
                                                    const uint32_t r1,
                                                    const uint32_t o1,
