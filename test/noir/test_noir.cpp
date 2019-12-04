@@ -1,6 +1,7 @@
 #include <barretenberg/noir/compiler.hpp>
 #include <barretenberg/noir/parse.hpp>
 #include <barretenberg/waffle/composer/bool_composer.hpp>
+#include <fstream>
 #include <gtest/gtest.h>
 
 using namespace barretenberg;
@@ -40,6 +41,14 @@ TEST(noir, function_call)
 TEST(noir, array_variable_definition)
 {
     auto ast = noir::parse("uint32[4] my_var = [0x1, 0x12, 0x123, 0x1234];");
+    waffle::StandardComposer composer = waffle::StandardComposer();
+    auto compiler = noir::code_gen::compiler(composer);
+    auto prover = compiler.start(ast);
+}
+
+TEST(noir, array_index)
+{
+    auto ast = noir::parse("my_var = some_array[5*3][1+2];");
     waffle::StandardComposer composer = waffle::StandardComposer();
     auto compiler = noir::code_gen::compiler(composer);
     auto prover = compiler.start(ast);
@@ -89,4 +98,16 @@ TEST(noir, bool)
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[5]), { { 1, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 16UL);
+}
+
+TEST(noir, parse_sha256)
+{
+    std::ifstream file("../test/noir/sha256.noir");
+    std::string code((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+    auto ast = noir::parse(code);
+
+    waffle::StandardComposer composer = waffle::StandardComposer();
+    auto compiler = noir::code_gen::compiler(composer);
+    auto prover = compiler.start(ast);
 }

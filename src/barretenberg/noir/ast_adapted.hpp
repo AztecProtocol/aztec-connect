@@ -4,6 +4,8 @@
 
 BOOST_FUSION_ADAPT_STRUCT(noir::ast::unary, operator_, operand_)
 
+BOOST_FUSION_ADAPT_STRUCT(noir::ast::index, operator_, operand_)
+
 BOOST_FUSION_ADAPT_STRUCT(noir::ast::operation, operator_, operand_)
 
 BOOST_FUSION_ADAPT_STRUCT(noir::ast::expression, first, rest)

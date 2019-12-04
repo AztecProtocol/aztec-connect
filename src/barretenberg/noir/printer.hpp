@@ -16,6 +16,7 @@ struct printer {
     void operator()(ast::variable const& x) const;
     void operator()(ast::operation const& x) const;
     void operator()(ast::unary const& x) const;
+    void operator()(ast::index const& x) const;
     void operator()(ast::expression const& x) const;
     void operator()(ast::assignment const& x) const;
     void operator()(ast::function_declaration const& x) const;

@@ -9,7 +9,9 @@ namespace ast {
 namespace x3 = boost::spirit::x3;
 
 struct nil {};
+struct operation;
 struct unary;
+struct index;
 struct function_call;
 struct expression;
 
@@ -35,6 +37,7 @@ struct operand : x3::variant<nil,
                              array,
                              variable,
                              x3::forward_ast<unary>,
+                             x3::forward_ast<index>,
                              x3::forward_ast<function_call>,
                              x3::forward_ast<expression>> {
     using base_type::base_type;
@@ -61,11 +64,7 @@ enum optoken {
     op_bitwise_or,
     op_bitwise_and,
     op_bitwise_not,
-};
-
-struct unary {
-    optoken operator_;
-    operand operand_;
+    op_index,
 };
 
 struct operation : x3::position_tagged {
@@ -76,6 +75,16 @@ struct operation : x3::position_tagged {
 struct expression : x3::position_tagged {
     operand first;
     std::list<operation> rest;
+};
+
+struct index {
+    optoken operator_;
+    expression operand_;
+};
+
+struct unary {
+    optoken operator_;
+    operand operand_;
 };
 
 struct assignment : x3::position_tagged {
@@ -125,7 +134,7 @@ struct statement : x3::variant<function_declaration,
     using base_type::operator=;
 };
 
-struct statement_list : std::list<statement> {};
+struct statement_list : std::vector<statement> {};
 
 /*
 struct if_statement {

@@ -24,6 +24,7 @@ x3::symbols<ast::optoken> bitwise_op;
 x3::symbols<ast::optoken> additive_op;
 x3::symbols<ast::optoken> multiplicative_op;
 x3::symbols<ast::optoken> unary_op;
+x3::symbols<ast::optoken> index_op;
 x3::symbols<> keywords;
 
 void add_keywords()
@@ -74,6 +75,10 @@ void add_keywords()
         ("~", ast::op_bitwise_not)
         ;
 
+    index_op.add
+        ("[", ast::op_index)
+        ;
+
     keywords.add
         ("bool")
         ("true")
@@ -96,6 +101,7 @@ typedef x3::rule<struct bitwise_expr_class, ast::expression> bitwise_expr_type;
 typedef x3::rule<struct additive_expr_class, ast::expression> additive_expr_type;
 typedef x3::rule<struct multiplicative_expr_class, ast::expression> multiplicative_expr_type;
 typedef x3::rule<struct unary_expr_class, ast::operand> unary_expr_type;
+typedef x3::rule<struct index_expr_class, ast::expression> index_expr_type;
 typedef x3::rule<struct function_call_class, ast::function_call> function_call_type;
 typedef x3::rule<struct primary_expr_class, ast::operand> primary_expr_type;
 typedef x3::rule<struct constant_expr_class, ast::constant> constant_expr_type;
@@ -109,6 +115,7 @@ bitwise_expr_type const bitwise_expr = "bitwise_expr";
 additive_expr_type const additive_expr = "additive_expr";
 multiplicative_expr_type const multiplicative_expr = "multiplicative_expr";
 unary_expr_type const unary_expr = "unary_expr";
+index_expr_type const index_expr = "index_expr";
 function_call_type const function_call = "function_call";
 primary_expr_type const primary_expr = "primary_expr";
 constant_expr_type const constant_expr = "constant_expr";
@@ -146,8 +153,13 @@ auto const multiplicative_expr_def =
     ;
 
 auto const unary_expr_def =
+        index_expr
+    |   (unary_op > index_expr)
+    ;
+
+auto const index_expr_def =
         primary_expr
-    |   (unary_op > primary_expr)
+    >>  *(index_op > expression > "]")
     ;
 
 auto const function_call_def =
@@ -186,6 +198,7 @@ BOOST_SPIRIT_DEFINE(expression,
                     additive_expr,
                     multiplicative_expr,
                     unary_expr,
+                    index_expr,
                     function_call,
                     constant_expr,
                     array_expr,

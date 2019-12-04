@@ -177,6 +177,10 @@ var_t ExpressionVisitor::operator()(var_t lhs, ast::operation const& x)
     case ast::op_bitwise_xor:
         std::cout << "op_bitwise_xor" << std::endl;
         return boost::apply_visitor(BitwiseXorVisitor(), lhs, rhs);
+
+    case ast::op_index:
+        std::cout << "op_index" << std::endl;
+        break;
     default:
         BOOST_ASSERT(0);
     }
@@ -207,6 +211,13 @@ var_t ExpressionVisitor::operator()(ast::unary const& x)
     default:
         throw std::runtime_error("Unknown operator.");
     }
+}
+
+var_t ExpressionVisitor::operator()(ast::index const& x)
+{
+    std::cout << "index " << std::endl;
+    var_t index = (*this)(x.operand_);
+    return index;
 }
 
 var_t ExpressionVisitor::operator()(ast::expression const& x)
