@@ -83,7 +83,7 @@ field_t<ComposerContext>::field_t(const bool_t<ComposerContext> &other)
     }
     else
     {
-        witness = other.witness;
+        witness = other.witness_bool ? barretenberg::fr::one() : barretenberg::fr::zero();
         witness_index = other.witness_index;
         additive_constant = other.witness_inverted ? barretenberg::fr::one() : barretenberg::fr::zero();
         multiplicative_constant = other.witness_inverted ? barretenberg::fr::neg_one() : barretenberg::fr::one();

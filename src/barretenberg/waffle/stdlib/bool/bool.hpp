@@ -74,8 +74,12 @@ public:
         *this = operator^(other);
     }
 
+    bool get_witness_value() const
+    {
+        return witness_bool ^ witness_inverted;
+    }
+
     ComposerContext *context;
-    barretenberg::fr::field_t witness;
     bool witness_bool;
     bool witness_inverted = false;
     uint32_t witness_index = static_cast<uint32_t>(-1);    
