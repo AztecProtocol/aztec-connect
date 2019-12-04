@@ -1,6 +1,7 @@
 #ifndef STDLIB_UINT32
 #define STDLIB_UINT32
 
+#include <vector>
 #include "../common.hpp"
 
 #include "../../../assert.hpp"
@@ -21,6 +22,12 @@ template <typename ComposerContext> class uint32
     uint32(ComposerContext* parent_context);
     uint32(const witness_t<ComposerContext>& value);
     uint32(ComposerContext* parent_context, const uint32_t value);
+
+    uint32(ComposerContext* parent_context,
+        typename std::vector<bool_t<ComposerContext> >::const_iterator start,
+        typename std::vector<bool_t<ComposerContext> >::const_iterator end);
+
+    uint32(ComposerContext* parent_context, const std::array<bool_t<ComposerContext>, 32> &wires);
 
     uint32(const field_t<ComposerContext>& other);
     uint32(const uint32& other);
@@ -114,15 +121,36 @@ template <typename ComposerContext> class uint32
         return witness_index;
     }
 
-    uint32_t get_additive_constant()
+    uint32_t get_witness_value()
+    {
+        normalize();
+        if (context == nullptr)
+        {
+            return additive_constant;
+        }
+        else
+        {
+            uint32_t initial_value = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(witness).data[0]);
+            return (initial_value * multiplicative_constant + additive_constant);
+        }
+    }
+
+    uint32_t get_additive_constant() const
     {
         return additive_constant;
     }
 
-    uint32_t get_multiplicative_constant()
+    uint32_t get_multiplicative_constant() const
     {
         return multiplicative_constant;
     }
+
+    ComposerContext *get_context() const
+    {
+        return context;
+    }
+
+    bool_t<ComposerContext> at(const size_t bit_index) const;
 
   private:
     enum WitnessStatus
