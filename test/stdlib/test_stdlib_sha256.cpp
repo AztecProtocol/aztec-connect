@@ -9,14 +9,17 @@
 #include <barretenberg/waffle/stdlib/common.hpp>
 #include <barretenberg/waffle/stdlib/crypto/hash/sha256.hpp>
 #include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
+#include <barretenberg/waffle/stdlib/bitarray/bitarray.hpp>
 
 #include <memory>
+#include <iostream>
 
 using namespace barretenberg;
 using namespace plonk;
 
 typedef stdlib::field_t<waffle::ExtendedComposer> field_t;
 typedef stdlib::uint32<waffle::ExtendedComposer> uint32;
+typedef stdlib::bitarray<waffle::ExtendedComposer> bitarray;
 typedef stdlib::witness_t<waffle::ExtendedComposer> witness_t;
 
 // std::vector<uint32_t> get_random_ints(size_t n)
@@ -303,3 +306,43 @@ TEST(stdlib_sha256, test_sha256)
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }
+
+TEST(stdlib_sha256, test_sha256_full)
+{
+    waffle::ExtendedComposer composer = waffle::ExtendedComposer();
+
+    bitarray input(&composer, "abc");
+
+    bitarray output = plonk::stdlib::sha256_full(input);
+
+    std::vector<uint32> output_vector = output.to_uint32_vector();
+
+    uint32_t result[8]{
+        output_vector[0].get_witness_value(),
+        output_vector[1].get_witness_value(),
+        output_vector[2].get_witness_value(),
+        output_vector[3].get_witness_value(),
+        output_vector[4].get_witness_value(),
+        output_vector[5].get_witness_value(),
+        output_vector[6].get_witness_value(),
+        output_vector[7].get_witness_value()
+    };
+
+    printf("result = %x %x %x %x %x %x %x %x \n", result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7]);
+
+    // std::string result = output.get_witness_as_string();
+
+    // printf("result = %lu \n", result.size());
+    // std::cout << result << std::endl;
+
+    waffle::Prover prover = composer.preprocess();
+
+    printf("composer gates = %lu\n", composer.adjusted_n);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+

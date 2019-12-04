@@ -70,6 +70,8 @@ add_library(
     waffle/stdlib/field/field.hpp
     waffle/stdlib/uint32/uint32.tcc
     waffle/stdlib/uint32/uint32.hpp
+    waffle/stdlib/bitarray/bitarray.tcc
+    waffle/stdlib/bitarray/bitarray.hpp
     waffle/stdlib/mimc.tcc
     waffle/stdlib/mimc.hpp
     waffle/stdlib/crypto/hash/sha256.tcc
@@ -155,6 +157,8 @@ if(BARRETENBERG_PROFILING)
         waffle/stdlib/field/field.hpp
         waffle/stdlib/uint32/uint32.tcc
         waffle/stdlib/uint32/uint32.hpp
+        waffle/stdlib/bitarray/bitarray.tcc
+        waffle/stdlib/bitarray/bitarray.hpp
         waffle/stdlib/mimc.tcc
         waffle/stdlib/mimc.hpp
         waffle/stdlib/crypto/hash/sha256.tcc
