@@ -25,6 +25,22 @@ var_t ExpressionVisitor::operator()(bool x)
     return bool_t(&composer_, x);
 }
 
+var_t ExpressionVisitor::operator()(std::vector<unsigned int> const& x)
+{
+    std::cout << "uint32[] " << x.size() << std::endl;
+    std::vector<uint32> result(x.size());
+    std::transform(x.begin(), x.end(), result.begin(), [this](unsigned int v) { return uint32(&composer_, v); });
+    return result;
+}
+
+var_t ExpressionVisitor::operator()(std::vector<bool> const& x)
+{
+    std::cout << "bool[] " << x.size() << std::endl;
+    std::vector<bool_t> result(x.size());
+    std::transform(x.begin(), x.end(), result.begin(), [this](bool v) { return bool_t(&composer_, v); });
+    return result;
+}
+
 var_t ExpressionVisitor::operator()(ast::variable const& x)
 {
     std::cout << "id " << x.name << std::endl;
@@ -33,6 +49,10 @@ var_t ExpressionVisitor::operator()(ast::variable const& x)
 
 namespace {
 struct EqualityVisitor : boost::static_visitor<var_t> {
+    template <typename T> var_t operator()(std::vector<T> const&, std::vector<T> const&) const
+    {
+        throw std::runtime_error("No array equality.");
+    }
     template <typename T> var_t operator()(T const& lhs, T const& rhs) const { return lhs == rhs; }
     template <typename T, typename U> var_t operator()(T const&, U const&) const
     {
@@ -41,6 +61,10 @@ struct EqualityVisitor : boost::static_visitor<var_t> {
 };
 
 struct BitwiseOrVisitor : boost::static_visitor<var_t> {
+    template <typename T> var_t operator()(std::vector<T> const&, std::vector<T> const&) const
+    {
+        throw std::runtime_error("No array support.");
+    }
     template <typename T> var_t operator()(T const& lhs, T const& rhs) const { return lhs | rhs; }
     template <typename T, typename U> var_t operator()(T const&, U const&) const
     {
@@ -49,6 +73,10 @@ struct BitwiseOrVisitor : boost::static_visitor<var_t> {
 };
 
 struct BitwiseAndVisitor : boost::static_visitor<var_t> {
+    template <typename T> var_t operator()(std::vector<T> const&, std::vector<T> const&) const
+    {
+        throw std::runtime_error("No array support.");
+    }
     template <typename T> var_t operator()(T const& lhs, T const& rhs) const { return lhs & rhs; }
     template <typename T, typename U> var_t operator()(T const&, U const&) const
     {
@@ -57,6 +85,10 @@ struct BitwiseAndVisitor : boost::static_visitor<var_t> {
 };
 
 struct BitwiseXorVisitor : boost::static_visitor<var_t> {
+    template <typename T> var_t operator()(std::vector<T> const&, std::vector<T> const&) const
+    {
+        throw std::runtime_error("No array support.");
+    }
     template <typename T> var_t operator()(T const& lhs, T const& rhs) const { return lhs ^ rhs; }
     template <typename T, typename U> var_t operator()(T const&, U const&) const
     {
@@ -65,16 +97,28 @@ struct BitwiseXorVisitor : boost::static_visitor<var_t> {
 };
 
 struct NegVis : boost::static_visitor<var_t> {
+    template <typename T> var_t operator()(std::vector<T> const&) const
+    {
+        throw std::runtime_error("No array support.");
+    }
     var_t operator()(bool_t const&) const { throw std::runtime_error("Cannot neg bool."); }
     var_t operator()(uint32 const&) const { throw std::runtime_error("Cannot neg uint32."); }
 };
 
 struct NotVis : boost::static_visitor<var_t> {
+    template <typename T> var_t operator()(std::vector<T> const&) const
+    {
+        throw std::runtime_error("No array support.");
+    }
     var_t operator()(bool_t const& var) const { return !var; }
     var_t operator()(uint32 const&) const { throw std::runtime_error("Cannot NOT a uint."); }
 };
 
 struct BitwiseNotVisitor : boost::static_visitor<var_t> {
+    template <typename T> var_t operator()(std::vector<T> const&) const
+    {
+        throw std::runtime_error("No array support.");
+    }
     var_t operator()(bool_t const& var) const { return bool_t(stdlib::witness_t(var.context, var.value())); }
     var_t operator()(uint32 const&) const { throw std::runtime_error("No."); }
 };
@@ -182,6 +226,22 @@ var_t ExpressionVisitor::operator()(ast::assignment const& x)
     return var;
 }
 
+var_t ExpressionVisitor::operator()(ast::function_call const& x)
+{
+    std::cout << "function call " << x.name << std::endl;
+    return bool_t(&composer_, false);
+}
+
+var_t ExpressionVisitor::operator()(ast::constant const& x)
+{
+    return boost::apply_visitor(*this, x);
+}
+
+var_t ExpressionVisitor::operator()(ast::array const& x)
+{
+    return boost::apply_visitor(*this, x);
+}
+
 // COMPILER
 compiler::compiler(waffle::StandardComposer& composer)
     : composer_(composer)
@@ -189,14 +249,31 @@ compiler::compiler(waffle::StandardComposer& composer)
 
 void compiler::operator()(ast::variable_declaration const& x)
 {
-    std::cout << "variable declaration: " << x.type << " " << x.assign.lhs.name << std::endl;
-    if (x.type == "bool") {
-        symbol_table_.set(bool_t(&composer_), x.assign.lhs.name);
+    std::cout << "variable declaration: " << x.type.type << " " << x.assign.lhs.name << std::endl;
+    if (x.type.array_size.has_value()) {
+        if (x.type.type == "bool") {
+            symbol_table_.set(std::vector<bool_t>(x.type.array_size.value(), bool_t(&composer_)), x.assign.lhs.name);
+        } else if (x.type.type == "uint32") {
+            symbol_table_.set(std::vector<uint32>(x.type.array_size.value(), uint32(&composer_)), x.assign.lhs.name);
+        } else {
+            throw std::runtime_error("Type not implemented: " + x.type.type);
+        }
     } else {
-        throw std::runtime_error("Type not implemented: " + x.type);
+        if (x.type.type == "bool") {
+            symbol_table_.set(bool_t(&composer_), x.assign.lhs.name);
+        } else if (x.type.type == "uint32") {
+            symbol_table_.set(uint32(&composer_), x.assign.lhs.name);
+        } else {
+            throw std::runtime_error("Type not implemented: " + x.type.type);
+        }
     }
     ExpressionVisitor ev(composer_, symbol_table_);
     ev(x.assign);
+}
+
+void compiler::operator()(ast::function_declaration const& x)
+{
+    std::cout << "function declaration: " << x.return_type.type << " " << x.name << std::endl;
 }
 
 void compiler::operator()(ast::assignment const& x)

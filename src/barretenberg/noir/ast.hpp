@@ -10,6 +10,7 @@ namespace x3 = boost::spirit::x3;
 
 struct nil {};
 struct unary;
+struct function_call;
 struct expression;
 
 struct variable : x3::position_tagged {
@@ -19,7 +20,23 @@ struct variable : x3::position_tagged {
     std::string name;
 };
 
-struct operand : x3::variant<nil, unsigned int, bool, variable, x3::forward_ast<unary>, x3::forward_ast<expression>> {
+struct constant : x3::variant<unsigned int, bool> {
+    using base_type::base_type;
+    using base_type::operator=;
+};
+
+struct array : x3::variant<std::vector<bool>, std::vector<unsigned int>> {
+    using base_type::base_type;
+    using base_type::operator=;
+};
+
+struct operand : x3::variant<nil,
+                             constant,
+                             array,
+                             variable,
+                             x3::forward_ast<unary>,
+                             x3::forward_ast<function_call>,
+                             x3::forward_ast<expression>> {
     using base_type::base_type;
     using base_type::operator=;
 };
@@ -66,16 +83,40 @@ struct assignment : x3::position_tagged {
     expression rhs;
 };
 
-struct variable_declaration {
+struct function_call : x3::position_tagged {
+    std::string name;
+    std::list<expression> args;
+};
+
+struct type_id {
     std::string type;
+    std::optional<unsigned int> array_size;
+};
+
+struct variable_declaration {
+    type_id type;
     assignment assign;
+};
+
+struct statement_list;
+
+struct function_argument {
+    type_id type;
+    std::string name;
+};
+
+struct function_declaration {
+    type_id return_type;
+    std::string name;
+    std::list<function_argument> args;
+    boost::recursive_wrapper<statement_list> statements;
 };
 
 // struct if_statement;
 // struct while_statement;
-struct statement_list;
 
-struct statement : x3::variant<variable_declaration,
+struct statement : x3::variant<function_declaration,
+                               variable_declaration,
                                assignment,
                                // boost::recursive_wrapper<if_statement>,
                                // boost::recursive_wrapper<while_statement>,

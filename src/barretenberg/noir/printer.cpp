@@ -7,19 +7,23 @@
 namespace noir {
 namespace code_gen {
 
-void printer::operator()(unsigned int x) const {
+void printer::operator()(unsigned int x) const
+{
     std::cout << x << std::endl;
 }
 
-void printer::operator()(bool x) const {
+void printer::operator()(bool x) const
+{
     std::cout << x << std::endl;
 }
 
-void printer::operator()(ast::variable const& x) const {
+void printer::operator()(ast::variable const& x) const
+{
     std::cout << x.name << std::endl;
 }
 
-void printer::operator()(ast::operation const& x) const {
+void printer::operator()(ast::operation const& x) const
+{
     boost::apply_visitor(*this, x.operand_);
 
     switch (x.operator_) {
@@ -76,7 +80,8 @@ void printer::operator()(ast::operation const& x) const {
     }
 }
 
-void printer::operator()(ast::unary const& x) const {
+void printer::operator()(ast::unary const& x) const
+{
     boost::apply_visitor(*this, x.operand_);
 
     switch (x.operator_) {
@@ -93,35 +98,47 @@ void printer::operator()(ast::unary const& x) const {
     }
 }
 
-void printer::operator()(ast::expression const& x) const {
+void printer::operator()(ast::expression const& x) const
+{
     boost::apply_visitor(*this, x.first);
     for (ast::operation const& oper : x.rest) {
         (*this)(oper);
     }
 }
 
-void printer::operator()(ast::assignment const& x) const {
+void printer::operator()(ast::assignment const& x) const
+{
     (*this)(x.rhs);
     std::cout << "op_store" << std::endl;
 }
 
-void printer::operator()(ast::variable_declaration const& x) const {
-    std::cout << "variable declaration: " << x.type << " " << x.assign.lhs.name << std::endl;
+void printer::operator()(ast::variable_declaration const& x) const
+{
+    std::cout << "variable declaration: " << x.type.type << x.type.array_size.value_or(0) << " " << x.assign.lhs.name
+              << std::endl;
     (*this)(x.assign.rhs);
 }
 
-void printer::operator()(ast::statement const& x) const {
+void printer::operator()(ast::function_declaration const& x) const
+{
+    std::cout << "function declaration: " << x.return_type.type << " " << x.name << std::endl;
+}
+
+void printer::operator()(ast::statement const& x) const
+{
     std::cout << "statement" << std::endl;
     boost::apply_visitor(*this, x);
 }
 
-void printer::operator()(ast::statement_list const& x) const {
+void printer::operator()(ast::statement_list const& x) const
+{
     for (auto const& s : x) {
         (*this)(s);
     }
 }
 
-void printer::start(ast::statement_list const& x) const {
+void printer::start(ast::statement_list const& x) const
+{
     (*this)(x);
 }
 

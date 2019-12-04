@@ -1,6 +1,5 @@
 #include <barretenberg/noir/compiler.hpp>
 #include <barretenberg/noir/parse.hpp>
-#include <barretenberg/noir/printer.hpp>
 #include <barretenberg/waffle/composer/bool_composer.hpp>
 #include <gtest/gtest.h>
 
@@ -20,6 +19,30 @@ TEST(noir, parses)
 TEST(noir, parse_fails)
 {
     EXPECT_THROW(noir::parse("1 + 2; blah"), std::runtime_error);
+}
+
+TEST(noir, function_definition)
+{
+    auto ast = noir::parse("uint32 my_function(uint32 arg1, bool arg2) {}");
+    waffle::StandardComposer composer = waffle::StandardComposer();
+    auto compiler = noir::code_gen::compiler(composer);
+    auto prover = compiler.start(ast);
+}
+
+TEST(noir, function_call)
+{
+    auto ast = noir::parse("bool x = my_function(arg1, 3+5+(x));");
+    waffle::StandardComposer composer = waffle::StandardComposer();
+    auto compiler = noir::code_gen::compiler(composer);
+    auto prover = compiler.start(ast);
+}
+
+TEST(noir, array_variable_definition)
+{
+    auto ast = noir::parse("uint32[4] my_var = [0x1, 0x12, 0x123, 0x1234];");
+    waffle::StandardComposer composer = waffle::StandardComposer();
+    auto compiler = noir::code_gen::compiler(composer);
+    auto prover = compiler.start(ast);
 }
 
 TEST(noir, bool)

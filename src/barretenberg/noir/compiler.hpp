@@ -5,7 +5,7 @@
 #include "../waffle/stdlib/uint32/uint32.hpp"
 #include "ast.hpp"
 #include "error_handler.hpp"
-//#include <iostream>
+#include <iostream>
 #include <map>
 #include <vector>
 
@@ -18,9 +18,15 @@ typedef stdlib::field_t<StandardComposer> field_t;
 typedef stdlib::bool_t<StandardComposer> bool_t;
 typedef stdlib::witness_t<StandardComposer> witness_t;
 typedef stdlib::uint32<StandardComposer> uint32;
-typedef boost::variant<bool_t, uint32> var_t;
+typedef boost::variant<bool_t, uint32, std::vector<bool_t>, std::vector<uint32>> var_t;
 
 namespace {
+
+template <typename T> inline std::ostream& operator<<(std::ostream& os, std::vector<T> const&)
+{
+    return os << "implement me";
+}
+
 struct var_t_printer : boost::static_visitor<> {
     template <typename T> void operator()(T const& v, std::ostream& os) const { os << v; }
 };
@@ -37,12 +43,16 @@ class SymbolTable {
   public:
     template <typename T> void operator()(T const& var, std::string const& key)
     {
-        auto existing = variables_[key];
-        if (!boost::get<T>(&existing)) {
-            throw std::runtime_error("Cannot assign, incompatible types.");
+        if (variables_.find(key) != variables_.end()) {
+            auto existing = variables_[key];
+            if (!boost::get<T>(&existing)) {
+                throw std::runtime_error(std::string("Cannot assign, incompatible types: ") + typeid(T).name());
+            }
+            std::cout << "SYMBOL TABLE UPDATE: " << key << std::endl;
+        } else {
+            std::cout << "SYMBOL TABLE ADD: " << key << std::endl;
         }
         variables_[key] = var;
-        // std::cout << "SYMBOL TABLE: " << key << " = " << var.witness_bool << std::endl;
     }
 
     void set(var_t const& var, std::string const& key)
@@ -69,11 +79,16 @@ class ExpressionVisitor {
     }
     var_t operator()(unsigned int x);
     var_t operator()(bool x);
+    var_t operator()(std::vector<unsigned int> const& x);
+    var_t operator()(std::vector<bool> const& x);
     var_t operator()(ast::variable const& x);
+    var_t operator()(ast::function_call const& x);
     var_t operator()(var_t lhs, ast::operation const& x);
     var_t operator()(ast::unary const& x);
     var_t operator()(ast::expression const& x);
     var_t operator()(ast::assignment const& x);
+    var_t operator()(ast::constant const& x);
+    var_t operator()(ast::array const& x);
 
   private:
     waffle::StandardComposer& composer_;
@@ -86,6 +101,7 @@ struct compiler {
     compiler(StandardComposer& composer);
 
     void operator()(ast::variable_declaration const& x);
+    void operator()(ast::function_declaration const& x);
     void operator()(ast::assignment const& x);
     void operator()(ast::statement_list const& x);
     void operator()(ast::statement const& x);
