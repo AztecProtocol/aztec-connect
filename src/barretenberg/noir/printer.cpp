@@ -114,15 +114,10 @@ void printer::operator()(ast::assignment const& x) const
 
 void printer::operator()(ast::variable_declaration const& x) const
 {
-    struct VarDeclarationVisitor : boost::static_visitor<> {
-        void operator()(ast::assignment const& assign, printer const& self) const
-        {
-            std::cout << " " << assign.lhs.name << std::endl;
-            self(assign.rhs);
-        }
-        void operator()(ast::variable const& var, printer const&) const { std::cout << " " << var.name << std::endl; }
-    };
-    boost::apply_visitor(std::bind(VarDeclarationVisitor(), std::placeholders::_1, *this), x.assign);
+    std::cout << "variable declaration " << x.variable << std::endl;
+    if (x.assignment.has_value()) {
+        (*this)(x.assignment.value());
+    }
 }
 
 void printer::operator()(ast::function_declaration const& x) const

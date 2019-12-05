@@ -70,7 +70,8 @@ auto const type_id_def =
 
 auto const variable_declaration_def =
         type_id
-    >   ((variable >> ";") | assignment)
+    >   identifier > -("=" > expression)
+    >   ";"
     ;
 
 auto const function_argument_def =

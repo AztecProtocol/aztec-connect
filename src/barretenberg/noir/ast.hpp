@@ -109,7 +109,8 @@ struct type_id {
 
 struct variable_declaration {
     type_id type;
-    x3::variant<assignment, variable> assign;
+    std::string variable;
+    std::optional<expression> assignment;
 };
 
 struct statement_list;

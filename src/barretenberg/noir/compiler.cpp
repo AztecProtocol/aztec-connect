@@ -1,4 +1,5 @@
 #include "compiler.hpp"
+#include "lambda_visitor.hpp"
 #include <boost/assert.hpp>
 #include <boost/variant/apply_visitor.hpp>
 #include <iostream>
@@ -260,63 +261,28 @@ compiler::compiler(waffle::StandardComposer& composer)
     : composer_(composer)
 {}
 
-template <typename ReturnType, typename... Lambdas>
-struct lambda_visitor : public boost::static_visitor<ReturnType>, public Lambdas... {
-    lambda_visitor(Lambdas... lambdas)
-        : Lambdas(lambdas)...
-    {}
-};
-
-template <typename ReturnType, typename... Lambdas>
-lambda_visitor<ReturnType, Lambdas...> make_lambda_visitor(Lambdas... lambdas)
-{
-    return { lambdas... };
-    // you can use the following instead if your compiler doesn't
-    // support list-initialization yet
-    // return lambda_visitor<ReturnType, Lambdas...>(lambdas...);
-}
-
 void compiler::operator()(ast::variable_declaration const& x)
 {
-    auto v = make_lambda_visitor<void>(
-        [this, x](ast::assignment assign) {
-            std::cout << "variable declaration: " << x.type.type << " " << assign.lhs.name << std::endl;
+    std::cout << "variable declaration " << x.variable << std::endl;
 
-            if (x.type.array_size.has_value()) {
-                struct TypeVisitor : boost::static_visitor<> {
-                    void operator()(ast::bool_type const&) const
-                    {
-                        st.set(std::vector<bool_t>(size, bool_t(&c)), name);
-                    }
-                    void operator()(ast::int_type const&) const { st.set(std::vector<uint32>(size, uint32(&c)), name); }
-                    std::string const& name;
-                    SymbolTable& st;
-                    StandardComposer& c;
-                    unsigned int size;
-                };
+    if (x.type.array_size.has_value()) {
+        x.type.type.apply_visitor(make_lambda_visitor<void>(
+            [this, x](ast::bool_type const&) {
+                symbol_table_.set(std::vector<bool_t>(x.type.array_size.value(), bool_t(&composer_)), x.variable);
+            },
+            [this, x](ast::int_type const&) {
+                symbol_table_.set(std::vector<uint32>(x.type.array_size.value(), uint32(&composer_)), x.variable);
+            }));
+    } else {
+        x.type.type.apply_visitor(make_lambda_visitor<void>(
+            [this, x](ast::bool_type const&) { symbol_table_.set(bool_t(&composer_), x.variable); },
+            [this, x](ast::int_type const&) { symbol_table_.set(uint32(&composer_), x.variable); }));
+    }
 
-                TypeVisitor v = {
-                    .name = assign.lhs.name, .st = symbol_table_, .c = composer_, .size = x.type.array_size.value()
-                };
-                x.type.type.apply_visitor(v);
-            } else {
-                struct TypeVisitor : boost::static_visitor<> {
-                    void operator()(ast::bool_type const&) const { st.set(bool_t(&c), name); }
-                    void operator()(ast::int_type const&) const { st.set(uint32(&c), name); }
-                    std::string const& name;
-                    SymbolTable& st;
-                    StandardComposer& c;
-                };
-
-                TypeVisitor v = { .name = assign.lhs.name, .st = symbol_table_, .c = composer_ };
-                x.type.type.apply_visitor(v);
-            }
-
-            ExpressionVisitor ev(composer_, symbol_table_);
-            ev(assign);
-        },
-        [x](ast::variable id) { std::cout << "variable declaration: " << x.type.type << " " << id.name << std::endl; });
-    boost::apply_visitor(v, x.assign);
+    if (x.assignment.has_value()) {
+        ast::assignment assign = { .lhs = x.variable, .rhs = x.assignment.value() };
+        (*this)(assign);
+    }
 }
 
 void compiler::operator()(ast::function_declaration const& x)
