@@ -11,7 +11,6 @@ namespace x3 = boost::spirit::x3;
 struct nil {};
 struct operation;
 struct unary;
-struct index;
 struct function_call;
 struct expression;
 
@@ -37,7 +36,6 @@ struct operand : x3::variant<nil,
                              array,
                              variable,
                              x3::forward_ast<unary>,
-                             x3::forward_ast<index>,
                              x3::forward_ast<function_call>,
                              x3::forward_ast<expression>> {
     using base_type::base_type;
@@ -77,14 +75,9 @@ struct expression : x3::position_tagged {
     std::list<operation> rest;
 };
 
-struct index {
-    optoken operator_;
-    expression operand_;
-};
-
 struct unary {
     optoken operator_;
-    operand operand_;
+    expression operand_;
 };
 
 struct assignment : x3::position_tagged {

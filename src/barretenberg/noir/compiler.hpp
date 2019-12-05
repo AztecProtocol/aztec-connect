@@ -85,7 +85,6 @@ class ExpressionVisitor {
     var_t operator()(ast::function_call const& x);
     var_t operator()(var_t lhs, ast::operation const& x);
     var_t operator()(ast::unary const& x);
-    var_t operator()(ast::index const& x);
     var_t operator()(ast::expression const& x);
     var_t operator()(ast::assignment const& x);
     var_t operator()(ast::constant const& x);

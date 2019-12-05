@@ -54,6 +54,14 @@ TEST(noir, array_index)
     auto prover = compiler.start(ast);
 }
 
+TEST(noir, unary)
+{
+    auto ast = noir::parse("my_var = !x;");
+    waffle::StandardComposer composer = waffle::StandardComposer();
+    auto compiler = noir::code_gen::compiler(composer);
+    auto prover = compiler.start(ast);
+}
+
 TEST(noir, bool)
 {
     std::string code = "                      \n\

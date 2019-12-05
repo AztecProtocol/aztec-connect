@@ -82,7 +82,7 @@ void printer::operator()(ast::operation const& x) const
 
 void printer::operator()(ast::unary const& x) const
 {
-    boost::apply_visitor(*this, x.operand_);
+    (*this)(x.operand_);
 
     switch (x.operator_) {
     case ast::op_negative:
