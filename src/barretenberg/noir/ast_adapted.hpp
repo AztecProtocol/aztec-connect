@@ -2,6 +2,8 @@
 #include "ast.hpp"
 #include <boost/fusion/include/adapt_struct.hpp>
 
+BOOST_FUSION_ADAPT_STRUCT(noir::ast::variable, name, indexes)
+
 BOOST_FUSION_ADAPT_STRUCT(noir::ast::unary, operator_, operand_)
 
 BOOST_FUSION_ADAPT_STRUCT(noir::ast::operation, operator_, operand_)

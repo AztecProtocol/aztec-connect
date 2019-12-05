@@ -20,6 +20,7 @@ struct variable : x3::position_tagged {
         : name(name)
     {}
     std::string name;
+    std::vector<ast::expression> indexes;
 };
 
 struct constant : x3::variant<unsigned int, bool> {
@@ -108,7 +109,7 @@ struct type_id {
 
 struct variable_declaration {
     type_id type;
-    assignment assign;
+    x3::variant<assignment, variable> assign;
 };
 
 struct statement_list;

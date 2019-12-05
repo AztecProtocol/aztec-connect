@@ -70,7 +70,7 @@ auto const type_id_def =
 
 auto const variable_declaration_def =
         type_id
-    >   assignment
+    >   ((variable >> ";") | assignment)
     ;
 
 auto const function_argument_def =
@@ -85,9 +85,9 @@ auto const function_declaration_def =
 
 auto const assignment_def =
         variable
-    >   '='
+    >   ('='
     >   expression
-    >   ';'
+    >   ';')
     ;
 
 auto const for_statement_def =
@@ -102,7 +102,11 @@ auto const return_expr_def =
     >   ";"
     ;
 
-auto const variable_def = identifier;
+auto const variable_def =
+        identifier
+    >   *("[" > expression > "]")
+    ;
+
 auto const statement_def = statement_list;
 // clang-format on
 

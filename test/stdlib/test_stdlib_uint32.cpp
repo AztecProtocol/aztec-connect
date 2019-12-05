@@ -23,8 +23,7 @@ typedef stdlib::witness_t<waffle::BoolComposer> witness_t;
 std::vector<uint32_t> get_random_ints(size_t n)
 {
     std::vector<uint32_t> res;
-    for (size_t i = 0; i < n; ++i)
-    {
+    for (size_t i = 0; i < n; ++i) {
         res.push_back(static_cast<uint32_t>(barretenberg::fr::random_element().data[0]));
     }
     return res;
@@ -45,8 +44,7 @@ TEST(stdlib_uint32, test_add)
     uint32 a = first_input;
     uint32 b = second_input;
     uint32 c = a + b;
-    for (size_t i = 0; i < 32; ++i)
-    {
+    for (size_t i = 0; i < 32; ++i) {
         b = a;
         a = c;
         c = a + b;
@@ -68,8 +66,7 @@ TEST(stdlib_uint32s, test_add_with_constants)
     size_t n = 32;
     std::vector<uint32_t> witnesses = get_random_ints(3 * n);
     uint32_t expected[8];
-    for (size_t i = 0; i < n; ++i)
-    {
+    for (size_t i = 0; i < n; ++i) {
         expected[0] = witnesses[3 * i];
         expected[1] = witnesses[3 * i + 1];
         expected[2] = witnesses[3 * i + 2];
@@ -82,8 +79,7 @@ TEST(stdlib_uint32s, test_add_with_constants)
 
     waffle::BoolComposer composer = waffle::BoolComposer();
     uint32 result[8];
-    for (size_t i = 0; i < n; ++i)
-    {
+    for (size_t i = 0; i < n; ++i) {
         result[0] = uint32(&composer, witnesses[3 * i]);
         result[1] = (witness_t(&composer, witnesses[3 * i + 1]));
         result[2] = (witness_t(&composer, witnesses[3 * i + 2]));
@@ -94,8 +90,7 @@ TEST(stdlib_uint32s, test_add_with_constants)
         result[7] = result[4] + result[5];
     }
 
-    for (size_t i = 0; i < 8; ++i)
-    {
+    for (size_t i = 0; i < 8; ++i) {
         EXPECT_EQ(get_value(result[i]), expected[i]);
     }
     waffle::Prover prover = composer.preprocess();
@@ -115,8 +110,7 @@ TEST(stdlib_uint32, test_mul)
     uint32_t a_expected = 1U;
     uint32_t b_expected = 2U;
     uint32_t c_expected = a_expected + b_expected;
-    for (size_t i = 0; i < 100; ++i)
-    {
+    for (size_t i = 0; i < 100; ++i) {
         b_expected = a_expected;
         a_expected = c_expected;
         c_expected = a_expected * b_expected;
@@ -130,8 +124,7 @@ TEST(stdlib_uint32, test_mul)
     uint32 a = first_input;
     uint32 b = second_input;
     uint32 c = a + b;
-    for (size_t i = 0; i < 100; ++i)
-    {
+    for (size_t i = 0; i < 100; ++i) {
         b = a;
         a = c;
         c = a * b;
@@ -156,8 +149,7 @@ TEST(stdlib_uint32, test_xor)
     uint32_t a_expected = 0xa3b10422;
     uint32_t b_expected = 0xeac21343;
     uint32_t c_expected = a_expected ^ b_expected;
-    for (size_t i = 0; i < 32; ++i)
-    {
+    for (size_t i = 0; i < 32; ++i) {
         b_expected = a_expected;
         a_expected = c_expected;
         c_expected = a_expected + b_expected;
@@ -172,8 +164,7 @@ TEST(stdlib_uint32, test_xor)
     uint32 a = first_input;
     uint32 b = second_input;
     uint32 c = a ^ b;
-    for (size_t i = 0; i < 32; ++i)
-    {
+    for (size_t i = 0; i < 32; ++i) {
         b = a;
         a = c;
         c = a + b;
@@ -199,8 +190,7 @@ TEST(stdlib_uint32s, test_and)
     uint32_t a_expected = 0xa3b10422;
     uint32_t b_expected = 0xeac21343;
     uint32_t c_expected = a_expected + b_expected;
-    for (size_t i = 0; i < 32; ++i)
-    {
+    for (size_t i = 0; i < 32; ++i) {
         b_expected = a_expected;
         a_expected = c_expected;
         c_expected = a_expected + b_expected;
@@ -215,8 +205,7 @@ TEST(stdlib_uint32s, test_and)
     uint32 a = first_input;
     uint32 b = second_input;
     uint32 c = a + b;
-    for (size_t i = 0; i < 32; ++i)
-    {
+    for (size_t i = 0; i < 32; ++i) {
         b = a;
         a = c;
         c = a + b;
@@ -243,8 +232,7 @@ TEST(stdlib_uint32, test_or)
     uint32_t a_expected = 0xa3b10422;
     uint32_t b_expected = 0xeac21343;
     uint32_t c_expected = a_expected ^ b_expected;
-    for (size_t i = 0; i < 32; ++i)
-    {
+    for (size_t i = 0; i < 32; ++i) {
         b_expected = a_expected;
         a_expected = c_expected;
         c_expected = a_expected + b_expected;
@@ -259,8 +247,7 @@ TEST(stdlib_uint32, test_or)
     uint32 a = first_input;
     uint32 b = second_input;
     uint32 c = a ^ b;
-    for (size_t i = 0; i < 32; ++i)
-    {
+    for (size_t i = 0; i < 32; ++i) {
         b = a;
         a = c;
         c = a + b;
@@ -292,8 +279,7 @@ TEST(stdlib_uint32, test_ror)
     uint32_t a_expected = 0xa3b10422;
     uint32_t b_expected = 0xeac21343;
     uint32_t c_expected = a_expected ^ b_expected;
-    for (size_t i = 0; i < 32; ++i)
-    {
+    for (size_t i = 0; i < 32; ++i) {
         b_expected = a_expected;
         a_expected = c_expected;
         c_expected = a_expected + b_expected;
@@ -308,8 +294,7 @@ TEST(stdlib_uint32, test_ror)
     uint32 a = first_input;
     uint32 b = second_input;
     uint32 c = a ^ b;
-    for (size_t i = 0; i < 32; ++i)
-    {
+    for (size_t i = 0; i < 32; ++i) {
         b = a;
         a = c;
         c = a + b;
@@ -355,8 +340,7 @@ TEST(stdlib_uint32, test_sha256_rounds)
 {
     uint32_t w_alt[256];
 
-    for (size_t i = 0; i < 256; ++i)
-    {
+    for (size_t i = 0; i < 256; ++i) {
         w_alt[i] = static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
     }
     uint32_t a_alt = round_values[0];
@@ -367,8 +351,7 @@ TEST(stdlib_uint32, test_sha256_rounds)
     uint32_t f_alt = round_values[5];
     uint32_t g_alt = round_values[6];
     uint32_t h_alt = round_values[7];
-    for (size_t i = 0; i < 256; ++i)
-    {
+    for (size_t i = 0; i < 256; ++i) {
         uint32_t S1_alt = rotate(e_alt, 7) ^ rotate(e_alt, 11) ^ rotate(e_alt, 25);
         uint32_t ch_alt = (e_alt & f_alt) ^ ((~e_alt) & g_alt);
         uint32_t temp1_alt = h_alt + S1_alt + ch_alt + k_constants[i % 64] + w_alt[i];
@@ -390,8 +373,7 @@ TEST(stdlib_uint32, test_sha256_rounds)
 
     std::vector<uint32> w;
     std::vector<uint32> k;
-    for (size_t i = 0; i < 256; ++i)
-    {
+    for (size_t i = 0; i < 256; ++i) {
         w.emplace_back(uint32(witness_t(&composer, w_alt[i])));
         k.emplace_back(uint32(&composer, k_constants[i % 64]));
     }
@@ -403,8 +385,7 @@ TEST(stdlib_uint32, test_sha256_rounds)
     uint32 f = witness_t(&composer, round_values[5]);
     uint32 g = witness_t(&composer, round_values[6]);
     uint32 h = witness_t(&composer, round_values[7]);
-    for (size_t i = 0; i < 256; ++i)
-    {
+    for (size_t i = 0; i < 256; ++i) {
         uint32 S1 = e.ror(7U) ^ e.ror(11U) ^ e.ror(25U);
         uint32 ch = (e & f) + ((~e) & g);
         uint32 temp1 = h + S1 + ch + k[i] + w[i];
