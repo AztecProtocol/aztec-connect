@@ -27,7 +27,7 @@ struct constant : x3::variant<unsigned int, bool> {
     using base_type::operator=;
 };
 
-struct array : x3::variant<std::vector<bool>, std::vector<unsigned int>> {
+struct array : x3::variant<std::vector<bool>, std::vector<unsigned int>, std::vector<std::string>> {
     using base_type::base_type;
     using base_type::operator=;
 };
@@ -125,14 +125,17 @@ struct function_declaration {
     boost::recursive_wrapper<statement_list> statements;
 };
 
-// struct if_statement;
-// struct while_statement;
+struct for_statement;
+
+struct return_expr {
+    expression expr;
+};
 
 struct statement : x3::variant<function_declaration,
                                variable_declaration,
                                assignment,
-                               // boost::recursive_wrapper<if_statement>,
-                               // boost::recursive_wrapper<while_statement>,
+                               boost::recursive_wrapper<for_statement>,
+                               return_expr,
                                boost::recursive_wrapper<statement_list>> {
     using base_type::base_type;
     using base_type::operator=;
@@ -140,18 +143,12 @@ struct statement : x3::variant<function_declaration,
 
 struct statement_list : std::vector<statement> {};
 
-/*
-struct if_statement {
-    expression condition;
-    statement then;
-    boost::optional<statement> else_;
+struct for_statement {
+    variable counter;
+    unsigned int from;
+    unsigned int to;
+    statement_list body;
 };
-
-struct while_statement {
-    expression condition;
-    statement body;
-};
-*/
 
 // print functions for debugging
 inline std::ostream& operator<<(std::ostream& out, nil)

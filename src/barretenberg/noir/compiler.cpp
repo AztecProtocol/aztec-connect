@@ -41,6 +41,15 @@ var_t ExpressionVisitor::operator()(std::vector<bool> const& x)
     return result;
 }
 
+var_t ExpressionVisitor::operator()(std::vector<std::string> const& x)
+{
+    std::cout << "identifier[] " << x.size() << std::endl;
+    // TODO: uhhh, what's our type? :(
+    std::vector<var_t> result(x.size());
+    std::transform(x.begin(), x.end(), result.begin(), [this](std::string const& v) { return symbol_table_[v]; });
+    return bool_t();
+}
+
 var_t ExpressionVisitor::operator()(ast::variable const& x)
 {
     std::cout << "id " << x.name << std::endl;
@@ -308,6 +317,20 @@ void compiler::operator()(ast::statement_list const& x)
     for (auto const& s : x) {
         (*this)(s);
     }
+}
+
+void compiler::operator()(ast::for_statement const& x)
+{
+    for (unsigned int i = x.from; i < x.to; ++i) {
+        symbol_table_.set(uint32(&composer_, i), x.counter.name);
+        (*this)(x.body);
+    }
+}
+
+void compiler::operator()(ast::return_expr const& x)
+{
+    ExpressionVisitor ev(composer_, symbol_table_);
+    var_t result = ev(x.expr);
 }
 
 waffle::Prover compiler::start(ast::statement_list const& x)

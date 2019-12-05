@@ -92,9 +92,8 @@ void add_keywords()
         ("bool")
         ("true")
         ("false")
-        //("if")
-        //("else")
-        //("while")
+        ("for")
+        ("return")
         ;
     // clang-format on
 }
@@ -190,9 +189,14 @@ auto const constant_expr_def =
     ;
 
 auto const array_expr_def =
-        ("[" > ("0x" > hex) % ',' > "]")
-    |   ("[" > uint_ % ',' > "]")
-    |   ("[" > bool_ % ',' > "]")
+        "["
+    >   (
+            ("0x" > hex) % ','
+        |   uint_ % ','
+        |   bool_ % ','
+        |   identifier % ','
+        )
+    >  "]"
     ;
 
 auto const primary_expr_def =

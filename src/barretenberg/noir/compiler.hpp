@@ -81,6 +81,7 @@ class ExpressionVisitor {
     var_t operator()(bool x);
     var_t operator()(std::vector<unsigned int> const& x);
     var_t operator()(std::vector<bool> const& x);
+    var_t operator()(std::vector<std::string> const& x);
     var_t operator()(ast::variable const& x);
     var_t operator()(ast::function_call const& x);
     var_t operator()(var_t lhs, ast::operation const& x);
@@ -105,6 +106,8 @@ struct compiler {
     void operator()(ast::assignment const& x);
     void operator()(ast::statement_list const& x);
     void operator()(ast::statement const& x);
+    void operator()(ast::for_statement const& x);
+    void operator()(ast::return_expr const& x);
 
     waffle::Prover start(ast::statement_list const& x);
 
