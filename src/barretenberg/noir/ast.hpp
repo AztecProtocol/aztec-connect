@@ -13,6 +13,7 @@ struct operation;
 struct unary;
 struct function_call;
 struct expression;
+typedef std::string bool_type;
 
 struct variable : x3::position_tagged {
     variable(std::string const& name = "")
@@ -47,6 +48,7 @@ enum optoken {
     op_minus,
     op_times,
     op_divide,
+    op_mod,
     op_positive,
     op_negative,
     op_not,
@@ -62,6 +64,10 @@ enum optoken {
     op_bitwise_or,
     op_bitwise_and,
     op_bitwise_not,
+    op_bitwise_shl,
+    op_bitwise_shr,
+    op_bitwise_rol,
+    op_bitwise_ror,
     op_index,
 };
 
@@ -90,8 +96,13 @@ struct function_call : x3::position_tagged {
     std::list<expression> args;
 };
 
-struct type_id {
+struct int_type {
     std::string type;
+    std::optional<unsigned int> size;
+};
+
+struct type_id {
+    x3::variant<bool_type, int_type> type;
     std::optional<unsigned int> array_size;
 };
 

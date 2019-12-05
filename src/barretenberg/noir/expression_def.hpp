@@ -21,6 +21,7 @@ x3::symbols<ast::optoken> equality_op;
 x3::symbols<ast::optoken> relational_op;
 x3::symbols<ast::optoken> logical_op;
 x3::symbols<ast::optoken> bitwise_op;
+x3::symbols<ast::optoken> bitwise_shift_op;
 x3::symbols<ast::optoken> additive_op;
 x3::symbols<ast::optoken> multiplicative_op;
 x3::symbols<ast::optoken> unary_op;
@@ -46,6 +47,13 @@ void add_keywords()
         ("&", ast::op_bitwise_and)
         ;
 
+    bitwise_shift_op.add
+        (">>>", ast::op_bitwise_ror)
+        ("<<<", ast::op_bitwise_rol)
+        (">>", ast::op_bitwise_shr)
+        ("<<", ast::op_bitwise_shl)
+        ;
+
     equality_op.add
         ("==", ast::op_equal)
         ("!=", ast::op_not_equal)
@@ -66,6 +74,7 @@ void add_keywords()
     multiplicative_op.add
         ("*", ast::op_times)
         ("/", ast::op_divide)
+        ("%", ast::op_mod)
         ;
 
     unary_op.add
@@ -98,6 +107,7 @@ typedef x3::rule<struct equality_expr_class, ast::expression> equality_expr_type
 typedef x3::rule<struct relational_expr_class, ast::expression> relational_expr_type;
 typedef x3::rule<struct logical_expr_class, ast::expression> logical_expr_type;
 typedef x3::rule<struct bitwise_expr_class, ast::expression> bitwise_expr_type;
+typedef x3::rule<struct bitwise_shift_expr_class, ast::expression> bitwise_shift_expr_type;
 typedef x3::rule<struct additive_expr_class, ast::expression> additive_expr_type;
 typedef x3::rule<struct multiplicative_expr_class, ast::expression> multiplicative_expr_type;
 typedef x3::rule<struct unary_expr_class, ast::operand> unary_expr_type;
@@ -112,6 +122,7 @@ equality_expr_type const equality_expr = "equality_expr";
 relational_expr_type const relational_expr = "relational_expr";
 logical_expr_type const logical_expr = "logical_expr";
 bitwise_expr_type const bitwise_expr = "bitwise_expr";
+bitwise_shift_expr_type const bitwise_shift_expr = "bitwise_shift_expr";
 additive_expr_type const additive_expr = "additive_expr";
 multiplicative_expr_type const multiplicative_expr = "multiplicative_expr";
 unary_expr_type const unary_expr = "unary_expr";
@@ -138,8 +149,13 @@ auto const equality_expr_def =
     ;
 
 auto const relational_expr_def =
+        bitwise_shift_expr
+    >> *(relational_op > bitwise_shift_expr)
+    ;
+
+auto const bitwise_shift_expr_def =
         additive_expr
-    >> *(relational_op > additive_expr)
+    >> *(bitwise_shift_op > additive_expr)
     ;
 
 auto const additive_expr_def =
@@ -195,6 +211,7 @@ BOOST_SPIRIT_DEFINE(expression,
                     bitwise_expr,
                     equality_expr,
                     relational_expr,
+                    bitwise_shift_expr,
                     additive_expr,
                     multiplicative_expr,
                     unary_expr,

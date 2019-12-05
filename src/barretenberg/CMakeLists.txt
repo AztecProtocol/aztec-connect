@@ -2,7 +2,7 @@
 # copyright 2019 Spilsbury Holdings
 
 add_compile_options(-Werror -Wall -Wextra -Wshadow -Wpedantic)
-add_compile_options(-Wconversion -Wsign-conversion)
+add_compile_options(-Wconversion -Wsign-conversion -Wno-c99-extensions)
 
 add_library(
     barretenberg STATIC

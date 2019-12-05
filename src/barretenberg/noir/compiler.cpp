@@ -254,23 +254,34 @@ compiler::compiler(waffle::StandardComposer& composer)
 void compiler::operator()(ast::variable_declaration const& x)
 {
     std::cout << "variable declaration: " << x.type.type << " " << x.assign.lhs.name << std::endl;
+
     if (x.type.array_size.has_value()) {
-        if (x.type.type == "bool") {
-            symbol_table_.set(std::vector<bool_t>(x.type.array_size.value(), bool_t(&composer_)), x.assign.lhs.name);
-        } else if (x.type.type == "uint32") {
-            symbol_table_.set(std::vector<uint32>(x.type.array_size.value(), uint32(&composer_)), x.assign.lhs.name);
-        } else {
-            throw std::runtime_error("Type not implemented: " + x.type.type);
-        }
+        struct TypeVisitor : boost::static_visitor<> {
+            void operator()(ast::bool_type const&) const { st.set(std::vector<bool_t>(size, bool_t(&c)), name); }
+            void operator()(ast::int_type const&) const { st.set(std::vector<uint32>(size, uint32(&c)), name); }
+            std::string const& name;
+            SymbolTable& st;
+            StandardComposer& c;
+            unsigned int size;
+        };
+
+        TypeVisitor v = {
+            .name = x.assign.lhs.name, .st = symbol_table_, .c = composer_, .size = x.type.array_size.value()
+        };
+        x.type.type.apply_visitor(v);
     } else {
-        if (x.type.type == "bool") {
-            symbol_table_.set(bool_t(&composer_), x.assign.lhs.name);
-        } else if (x.type.type == "uint32") {
-            symbol_table_.set(uint32(&composer_), x.assign.lhs.name);
-        } else {
-            throw std::runtime_error("Type not implemented: " + x.type.type);
-        }
+        struct TypeVisitor : boost::static_visitor<> {
+            void operator()(ast::bool_type const&) const { st.set(bool_t(&c), name); }
+            void operator()(ast::int_type const&) const { st.set(uint32(&c), name); }
+            std::string const& name;
+            SymbolTable& st;
+            StandardComposer& c;
+        };
+
+        TypeVisitor v = { .name = x.assign.lhs.name, .st = symbol_table_, .c = composer_ };
+        x.type.type.apply_visitor(v);
     }
+
     ExpressionVisitor ev(composer_, symbol_table_);
     ev(x.assign);
 }

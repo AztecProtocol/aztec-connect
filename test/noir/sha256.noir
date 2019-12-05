@@ -22,28 +22,28 @@ uint32[8] sha256(uint32[64] input)
     uint32 f = round_values[5];
     uint32 g = round_values[6];
     uint32 h = round_values[7];
-    for (i = 0; i < 64; ++i) {
-        uint32 S1 = e >>> 7 ^ e >>> 11 ^ e >>> 25;
-        uint32 ch = (e & f) + ((~e) & g);
-        uint32 temp1 = h + S1 + ch + k[i % 64] + input[i];
+    // for (i = 0; i < 64; ++i) {
+    uint32 S1 = e >>> 7 ^ e >>> 11 ^ e >>> 25;
+    uint32 ch = (e & f) + ((~e) & g);
+    uint32 temp1 = h + S1 + ch + k[i % 64] + input[i];
 
-        uint32 S0 = a >>> 2 ^ a >>> 13 ^ a >>> 22;
-        uint32 T0 = (b & c);
-        uint32 T1 = (b - T0) + (c - T0);
-        uint32 T2 = a & T1;
-        uint32 maj = T2 + T0;
-        uint32 temp2 = S0 + maj;
+    uint32 S0 = a >>> 2 ^ a >>> 13 ^ a >>> 22;
+    uint32 T0 = (b & c);
+    uint32 T1 = (b - T0) + (c - T0);
+    uint32 T2 = a & T1;
+    uint32 maj = T2 + T0;
+    uint32 temp2 = S0 + maj;
 
-        h = g;
-        g = f;
-        f = e;
-        e = d + temp1;
-        d = c;
-        c = b;
-        b = a;
-        a = temp1 + temp2;
-    }
-    return [ a, b, c, d, e, f, g, h ];
+    h = g;
+    g = f;
+    f = e;
+    e = d + temp1;
+    d = c;
+    c = b;
+    b = a;
+    a = temp1 + temp2;
+    //}
+    // return [ a, b, c, d, e, f, g, h ];
 }
 
 // native types
