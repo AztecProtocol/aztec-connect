@@ -195,6 +195,21 @@ uint32<ComposerContext>::uint32(const uint32& other)
     }
 }
 
+template <typename ComposerContext>
+uint32<ComposerContext>::uint32(uint32&& other)
+    : context(other.context)
+    , witness(other.witness)
+    , witness_index(other.witness_index)
+    , additive_constant(other.additive_constant)
+    , multiplicative_constant(other.multiplicative_constant)
+    , witness_status(other.witness_status)
+    , num_witness_bits(other.num_witness_bits)
+    , field_wires(std::move(other.field_wires))
+    , accumulators(std::move(other.accumulators))
+{
+    ASSERT(context != nullptr);
+}
+
 template <typename ComposerContext> uint32<ComposerContext>& uint32<ComposerContext>::operator=(const uint32& other)
 {
     context = other.context;

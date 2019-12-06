@@ -1,14 +1,25 @@
-#include <barretenberg/noir/compiler.hpp>
+#include <barretenberg/noir/compiler/compiler.hpp>
 #include <barretenberg/noir/parse.hpp>
 #include <barretenberg/waffle/composer/bool_composer.hpp>
 #include <fstream>
 #include <gtest/gtest.h>
 
 using namespace barretenberg;
+using namespace plonk;
+using namespace noir::parser;
+
+typedef stdlib::field_t<waffle::StandardComposer> field_t;
+typedef stdlib::uint32<waffle::StandardComposer> uint32;
+typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
+
+uint32_t get_random_int()
+{
+    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+}
 
 TEST(noir, bool_witness)
 {
-    auto ast = noir::parse("bool a = ~true;");
+    auto ast = parse("bool a = ~true;");
 
     waffle::BoolComposer composer = waffle::BoolComposer();
     auto compiler = noir::code_gen::compiler(composer);
@@ -19,12 +30,12 @@ TEST(noir, bool_witness)
 
 TEST(noir, parse_fails)
 {
-    EXPECT_THROW(noir::parse("1 + 2; blah"), std::runtime_error);
+    EXPECT_THROW(parse("1 + 2; blah"), std::runtime_error);
 }
 
 TEST(noir, uint_sizes)
 {
-    noir::parse("               \n\
+    parse("                     \n\
         uint2 my_int2 = 0;      \n\
         uint3 my_int3 = 0;      \n\
         uint32 my_int32 = 0;    \n\
@@ -34,42 +45,43 @@ TEST(noir, uint_sizes)
 
 TEST(noir, uint1_fail)
 {
-    EXPECT_THROW(noir::parse("uint1 my_int1 = 0;"), std::runtime_error);
+    EXPECT_THROW(parse("uint1 my_int1 = 0;"), std::runtime_error);
 }
 
 TEST(noir, uint65_fail)
 {
-    EXPECT_THROW(noir::parse("uint65 my_int65 = 0;"), std::runtime_error);
+    EXPECT_THROW(parse("uint65 my_int65 = 0;"), std::runtime_error);
 }
 
 TEST(noir, function_definition)
 {
-    noir::parse("uint32 my_function(uint32 arg1, bool arg2) {}");
+    parse("uint32 my_function(uint32 arg1, bool arg2) {}");
 }
 
 TEST(noir, function_call)
 {
-    noir::parse("bool x = my_function(arg1, 3+5+(x));");
+    parse("bool x = my_function(arg1, 3+5+(x));");
 }
 
 TEST(noir, array_variable_definition)
 {
-    noir::parse("uint32[4] my_var = [0x1, 0x12, 0x123, 0x1234];");
+    parse("uint32[4] my_var = [0x1, 0x12, 0x123, 0x1234];");
 }
 
 TEST(noir, array_index)
 {
-    noir::parse("my_var = some_array[5*3][1+2];");
+    parse_function_statements("my_var = some_array[5*3][1+2];");
 }
 
 TEST(noir, unary)
 {
-    noir::parse("my_var = !x;");
+    parse_function_statements("my_var = !x;");
 }
 
 TEST(noir, bool_circuit)
 {
     std::string code = "                      \n\
+    bool main() {                             \n\
       bool a = ~true;                         \n\
       bool b = ~false;                        \n\
       a = a ^ b;         // a = 1             \n\
@@ -79,12 +91,14 @@ TEST(noir, bool_circuit)
       bool e = a | d;    // e = 1 = a         \n\
       bool f = e ^ b;    // f = 0             \n\
       d = (!f) & a;      // d = 1             \n\
+    }                                         \n\
     ";
-    auto ast = noir::parse(code);
+    auto ast = parse(code);
 
     waffle::StandardComposer composer = waffle::StandardComposer();
     auto compiler = noir::code_gen::compiler(composer);
-    auto prover = compiler.start(ast);
+    auto r = compiler.start(ast, {});
+    auto prover = std::move(r.second);
 
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[0]), { { 1, 0, 0, 0 } }), true);
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[0]), { { 1, 0, 0, 0 } }), true);
@@ -117,9 +131,27 @@ TEST(noir, sha256)
 {
     std::ifstream file("../test/noir/sha256.noir");
     std::string code((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    noir::parse(code);
+    auto ast = parse(code);
 
-    // waffle::StandardComposer composer = waffle::StandardComposer();
-    // auto compiler = noir::code_gen::compiler(composer);
-    // auto prover = compiler.start(ast);
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    std::vector<uint32> inputs(16);
+    for (size_t i = 0; i < 16; ++i) {
+        inputs[i] = uint32(witness_t(&composer, get_random_int()));
+    }
+
+    auto compiler = noir::code_gen::compiler(composer);
+    auto prover = compiler.start(ast, { inputs });
+
+    /*
+        std::array<uint32, 8> outputs = plonk::stdlib::sha256(inputs);
+
+        printf("composer gates = %lu\n", composer.adjusted_n);
+        waffle::Verifier verifier = waffle::preprocess(prover);
+
+        waffle::plonk_proof proof = prover.construct_proof();
+
+        bool result = verifier.verify_proof(proof);
+        EXPECT_EQ(result, true);
+        */
 }

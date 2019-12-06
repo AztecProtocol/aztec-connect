@@ -74,9 +74,10 @@ add_library(
     waffle/stdlib/mimc.hpp
     noir/expression.cpp
     noir/statement.cpp
-    noir/parse.cpp
     noir/printer.cpp
-    noir/compiler.cpp
+    noir/compiler/compiler.cpp
+    noir/compiler/function_statement_visitor.cpp
+    noir/compiler/expression_visitor.cpp
 )
 
 target_include_directories(

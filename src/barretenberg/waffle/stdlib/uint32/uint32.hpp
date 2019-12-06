@@ -8,6 +8,7 @@
 
 #include "../bool/bool.hpp"
 #include "../field/field.hpp"
+#include <array>
 
 namespace plonk {
 namespace stdlib {
@@ -17,9 +18,9 @@ template <typename ComposerContext> class uint32 {
     uint32(ComposerContext* parent_context);
     uint32(const witness_t<ComposerContext>& value);
     uint32(ComposerContext* parent_context, const uint32_t value);
-
     uint32(const field_t<ComposerContext>& other);
     uint32(const uint32& other);
+    uint32(uint32&& other);
 
     ~uint32(){};
 
@@ -103,8 +104,8 @@ template <typename ComposerContext> class uint32 {
     mutable WitnessStatus witness_status;
     mutable size_t num_witness_bits;
 
-    mutable bool_t<ComposerContext> field_wires[32];
-    mutable field_t<ComposerContext> accumulators[32];
+    mutable std::array<bool_t<ComposerContext>, 32> field_wires;
+    mutable std::array<field_t<ComposerContext>, 32> accumulators;
 
     static constexpr size_t MAXIMUM_BIT_LENGTH = 110UL; // (2x + 33 = 253 => 2x = 220 => x = 110)
     const barretenberg::fr::field_t uint32_max =

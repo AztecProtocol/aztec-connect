@@ -94,7 +94,7 @@ struct assignment : x3::position_tagged {
 
 struct function_call : x3::position_tagged {
     std::string name;
-    std::list<expression> args;
+    std::vector<expression> args;
 };
 
 struct int_type {
@@ -114,6 +114,7 @@ struct variable_declaration {
 };
 
 struct statement_list;
+struct function_statement_list;
 
 struct function_argument {
     type_id type;
@@ -123,8 +124,8 @@ struct function_argument {
 struct function_declaration {
     type_id return_type;
     std::string name;
-    std::list<function_argument> args;
-    boost::recursive_wrapper<statement_list> statements;
+    std::vector<function_argument> args;
+    boost::recursive_wrapper<function_statement_list> statements;
 };
 
 struct for_statement;
@@ -133,23 +134,28 @@ struct return_expr {
     expression expr;
 };
 
-struct statement : x3::variant<function_declaration,
-                               variable_declaration,
-                               assignment,
-                               boost::recursive_wrapper<for_statement>,
-                               return_expr,
-                               boost::recursive_wrapper<statement_list>> {
+struct statement : x3::variant<function_declaration, variable_declaration, boost::recursive_wrapper<statement_list>> {
     using base_type::base_type;
     using base_type::operator=;
 };
 
 struct statement_list : std::vector<statement> {};
 
+struct function_statement : x3::variant<variable_declaration,
+                                        assignment,
+                                        boost::recursive_wrapper<for_statement>,
+                                        return_expr> {
+    using base_type::base_type;
+    using base_type::operator=;
+};
+
+struct function_statement_list : std::vector<function_statement> {};
+
 struct for_statement {
     variable counter;
     unsigned int from;
     unsigned int to;
-    statement_list body;
+    function_statement_list body;
 };
 
 // print functions for debugging

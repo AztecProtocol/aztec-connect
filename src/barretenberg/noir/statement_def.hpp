@@ -23,6 +23,7 @@ typedef x3::rule<struct type_id_class, ast::type_id> type_id_type;
 typedef x3::rule<struct variable_declaration_class, ast::variable_declaration> variable_declaration_type;
 typedef x3::rule<struct function_argument_class, ast::function_argument> function_argument_type;
 typedef x3::rule<struct function_declaration_class, ast::function_declaration> function_declaration_type;
+typedef x3::rule<struct function_statement_list_class, ast::function_statement_list> function_statement_list_type;
 typedef x3::rule<struct for_statement_class, ast::for_statement> for_statement_type;
 typedef x3::rule<struct assignment_class, ast::assignment> assignment_type;
 typedef x3::rule<struct variable_class, ast::variable> variable_type;
@@ -35,6 +36,8 @@ type_id_type const type_id("type_id");
 variable_declaration_type const variable_declaration("variable_declaration");
 function_argument_type const function_argument("function_argument");
 function_declaration_type const function_declaration("function_declaration");
+function_statement_type const function_statement("function_statement");
+function_statement_list_type const function_statement_list("function_statement_list");
 for_statement_type const for_statement("for_statement");
 assignment_type const assignment("assignment");
 variable_type const variable("variable");
@@ -47,7 +50,11 @@ auto const& expression = noir::expression();
 
 // clang-format off
 auto const statement_list_def =
-        *(function_declaration | variable_declaration | for_statement | return_expr | assignment)
+        *(function_declaration | variable_declaration)
+    ;
+
+auto const function_statement_list_def =
+        *(variable_declaration | for_statement | return_expr | assignment)
     ;
 
 struct ensure_bit_range
@@ -81,7 +88,7 @@ auto const function_argument_def =
 auto const function_declaration_def =
         (type_id > identifier)
     >>  ("(" > -(function_argument % ',') > ")")
-    >>  ("{" > statement_list > "}")
+    >>  ("{" > function_statement_list > "}")
     ;
 
 auto const assignment_def =
@@ -94,7 +101,7 @@ auto const assignment_def =
 auto const for_statement_def =
         lit("for")
     >   "(" > variable > "in" > uint_ > ".." > uint_ > ")"
-    >   "{" > statement_list > "}"
+    >   "{" > function_statement_list > "}"
     ;
 
 auto const return_expr_def =
@@ -109,6 +116,7 @@ auto const variable_def =
     ;
 
 auto const statement_def = statement_list;
+auto const function_statement_def = function_statement_list;
 // clang-format on
 
 BOOST_SPIRIT_DEFINE(statement,
@@ -118,6 +126,8 @@ BOOST_SPIRIT_DEFINE(statement,
                     variable_declaration,
                     function_argument,
                     function_declaration,
+                    function_statement,
+                    function_statement_list,
                     assignment,
                     variable,
                     for_statement,
@@ -131,5 +141,10 @@ struct variable_class : x3::annotate_on_success {};
 parser::statement_type const& statement()
 {
     return parser::statement;
+}
+
+parser::function_statement_type const& function_statement()
+{
+    return parser::function_statement;
 }
 } // namespace noir
