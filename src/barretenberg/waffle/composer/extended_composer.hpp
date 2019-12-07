@@ -40,6 +40,7 @@ class ExtendedComposer : public BoolComposer
         q_oo.reserve(size_hint);
         zero_idx = add_variable(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
         features |= static_cast<size_t>(Features::EXTENDED_ARITHMETISATION);
+        zero_selector = barretenberg::fr::zero();
     };
 
     ~ExtendedComposer(){};
@@ -90,6 +91,7 @@ class ExtendedComposer : public BoolComposer
     std::vector<bool> deleted_gates;
     std::vector<uint32_t> adjusted_gate_indices;
     uint32_t zero_idx;
+    barretenberg::fr::field_t zero_selector;
     size_t adjusted_n;
 };
 } // namespace waffle

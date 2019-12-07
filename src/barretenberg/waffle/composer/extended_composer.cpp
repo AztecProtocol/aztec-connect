@@ -63,6 +63,13 @@ std::array<ExtendedComposer::extended_wire_properties, 4> ExtendedComposer::filt
     search(l2, GateFlags::FIXED_LEFT_WIRE, WireType::LEFT, gate_index + 1, result, count, &q_l[gate_index + 1]);
     search(r2, GateFlags::FIXED_RIGHT_WIRE, WireType::RIGHT, gate_index + 1, result, count, &q_r[gate_index + 1]);
     search(o2, GateFlags::FIXED_OUTPUT_WIRE, WireType::OUTPUT, gate_index + 1, result, count, &q_o[gate_index + 1]);
+
+    // If we have elided out extra variables (due to wire duplications), replace with zero variable
+    while (count < 4)
+    {
+        result[count] = { true, zero_idx, WireType::LEFT, { &zero_selector }};
+        ++count;
+    }
     ASSERT(count == 4);
     return result;
 }
@@ -368,7 +375,6 @@ void ExtendedComposer::combine_linear_relations()
             {
                 fr::__add(q_m[gate_1_index], q_m[gate_2_index], q_m[gate_1_index]);
             }
-
 
             wire_epicycles[w_l[gate_1_index]] = remove_permutation(wire_epicycles[w_l[gate_1_index]], gate_1_index);
             wire_epicycles[w_r[gate_1_index]] = remove_permutation(wire_epicycles[w_r[gate_1_index]], gate_1_index);
