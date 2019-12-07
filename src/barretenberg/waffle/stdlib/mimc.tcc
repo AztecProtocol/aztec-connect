@@ -77,9 +77,9 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer>& m
     // for now assume we have a mimc gate at our disposal
 
     // each mimc round is (x_in + k + c[i])^7
-    barretenberg::fr::field_t x_in = message.witness;
+    barretenberg::fr::field_t x_in = message.get_witness_value();
     barretenberg::fr::field_t x_out;
-    barretenberg::fr::field_t k = key.witness;
+    barretenberg::fr::field_t k = key.get_witness_value();
     uint32_t k_idx = key.witness_index;
     uint32_t x_in_idx = message.witness_index;
     uint32_t x_out_idx;
@@ -102,8 +102,7 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer>& m
         x_in_idx = x_out_idx;
         barretenberg::fr::copy(x_out, x_in);
     }
-    field_t<waffle::MiMCComposer> result(context);
-    barretenberg::fr::copy(x_out, result.witness);
+    field_t<waffle::MiMCComposer> result(context, x_out);
     result.witness_index = x_out_idx;
     return result;
 }
@@ -131,7 +130,7 @@ template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Compose
 {
     if (inputs.size() == 0)
     {
-        field_t<Composer> out = 0;
+        field_t<Composer> out = 0UL;
         return out;
     }
     Composer* context = inputs[0].context;
