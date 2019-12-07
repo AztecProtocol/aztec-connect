@@ -19,6 +19,9 @@ public:
     bitarray(ComposerContext *parent_context, const std::string &input);
     bitarray(const std::vector<uint32<ComposerContext> > &input);
 
+    template <size_t N>
+    bitarray(const std::array<uint32<ComposerContext>, N> &input);
+
     bitarray(const bitarray &other);
     bitarray(bitarray &&other);
 
@@ -28,7 +31,13 @@ public:
     bool_t<ComposerContext> &operator[](const size_t idx);
     bool_t<ComposerContext> operator[](const size_t idx) const;
 
+    template <size_t N>
+    operator std::array<uint32<ComposerContext>, N> ();
+
     std::vector<uint32<ComposerContext> > to_uint32_vector();
+
+    template <size_t N>
+    void populate_uint32_array(const size_t starting_index, std::array<uint32<ComposerContext>, N> &output);
 
     std::string get_witness_as_string() const;
 
