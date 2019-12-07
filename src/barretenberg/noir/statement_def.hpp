@@ -100,7 +100,7 @@ auto const assignment_def =
 
 auto const for_statement_def =
         lit("for")
-    >   "(" > variable > "in" > uint_ > ".." > uint_ > ")"
+    >   "(" > identifier > "in" > uint_ > ".." > uint_ > ")"
     >   "{" > function_statement_list > "}"
     ;
 

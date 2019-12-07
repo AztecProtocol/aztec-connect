@@ -11,11 +11,11 @@
 namespace noir {
 namespace code_gen {
 
-compiler::compiler(waffle::StandardComposer& composer)
+Compiler::Compiler(waffle::StandardComposer& composer)
     : ctx_(composer)
 {}
 
-void compiler::operator()(ast::variable_declaration const& x)
+void Compiler::operator()(ast::variable_declaration const& x)
 {
     std::cout << "variable declaration " << x.variable << std::endl;
 
@@ -29,26 +29,26 @@ void compiler::operator()(ast::variable_declaration const& x)
     }
 }
 
-void compiler::operator()(ast::function_declaration const& x)
+void Compiler::operator()(ast::function_declaration const& x)
 {
     std::cout << "function declaration: " << x.name << std::endl;
     ctx_.functions[x.name] = x;
 }
 
-void compiler::operator()(ast::statement const& x)
+void Compiler::operator()(ast::statement const& x)
 {
     std::cout << "statement" << std::endl;
     boost::apply_visitor(*this, x);
 }
 
-void compiler::operator()(ast::statement_list const& x)
+void Compiler::operator()(ast::statement_list const& x)
 {
     for (auto const& s : x) {
         (*this)(s);
     }
 }
 
-var_t compiler::call(std::string const& function_name, std::vector<var_t> const& args)
+var_t Compiler::call(std::string const& function_name, std::vector<var_t> const& args)
 {
     if (ctx_.functions.find(function_name) == ctx_.functions.end()) {
         throw std::runtime_error("Function not found: " + function_name);
@@ -58,15 +58,15 @@ var_t compiler::call(std::string const& function_name, std::vector<var_t> const&
 
     if (args.size() != func.args.size()) {
         throw std::runtime_error(
-            (boost::format("Function call has incorrect number of arguments. Expected %d, received %d.") %
-             func.args.size() % args.size())
+            (boost::format("Function call to %s has incorrect number of arguments. Expected %d, received %d.") %
+             function_name % func.args.size() % args.size())
                 .str());
     }
 
     ctx_.symbol_table.push();
 
     for (size_t i = 0; i < func.args.size(); ++i) {
-        ctx_.symbol_table.set(args[i], func.args[i].name);
+        ctx_.symbol_table.declare(args[i], func.args[i].name);
     }
 
     FunctionStatementVisitor fsv(ctx_);
@@ -75,18 +75,7 @@ var_t compiler::call(std::string const& function_name, std::vector<var_t> const&
     return result;
 }
 
-waffle::Prover compiler::start(ast::statement_list const& x)
-{
-    // Parse top level statements, after which we can reference "main" function.
-    (*this)(x);
-
-    auto prover = ctx_.composer.preprocess();
-    printf("prover gates = %lu\n", prover.n);
-    printf("composer gates = %lu\n", ctx_.composer.n);
-    return prover;
-}
-
-std::pair<var_t, waffle::Prover> compiler::start(ast::statement_list const& x, std::vector<var_t> const& args)
+std::pair<var_t, waffle::Prover> Compiler::start(ast::statement_list const& x, std::vector<var_t> const& args)
 {
     // Parse top level statements, after which we can reference "main" function.
     (*this)(x);

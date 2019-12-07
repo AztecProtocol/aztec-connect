@@ -25,9 +25,16 @@ inline var_t var_t_factory(ast::variable_declaration const& x, Composer& compose
 }
 
 namespace {
-template <typename T> inline std::ostream& operator<<(std::ostream& os, std::vector<T> const&)
+template <typename T> inline std::ostream& operator<<(std::ostream& os, std::vector<T> const& v)
 {
-    return os << "implement me";
+    os << "[";
+    for (auto it = v.begin(); it != v.end(); ++it) {
+        os << *it;
+        if (it != --v.end()) {
+            os << ", ";
+        }
+    }
+    return os << "]";
 }
 
 struct var_t_printer : boost::static_visitor<> {

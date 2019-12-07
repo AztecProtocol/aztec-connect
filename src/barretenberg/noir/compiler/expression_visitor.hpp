@@ -1,8 +1,8 @@
 #pragma once
+#include "../ast.hpp"
 #include "compiler_context.hpp"
 #include "symbol_table.hpp"
 #include "types.hpp"
-#include "../ast.hpp"
 
 namespace noir {
 namespace code_gen {
@@ -31,6 +31,9 @@ class ExpressionVisitor {
     var_t operator()(ast::assignment const& x);
     var_t operator()(ast::constant const& x);
     var_t operator()(ast::array const& x);
+
+  private:
+    var_t& get_symbol_table_var_ref(ast::variable const& x);
 
   private:
     CompilerContext& ctx_;

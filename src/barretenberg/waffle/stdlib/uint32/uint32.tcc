@@ -342,7 +342,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::decompose() co
     witness_status = WitnessStatus::OK;
 }
 
-template <typename ComposerContext> void uint32<ComposerContext>::normalize()
+template <typename ComposerContext> void uint32<ComposerContext>::normalize() const
 {
     if (witness_status == WitnessStatus::IN_BINARY_FORM) {
         concatenate();
@@ -785,12 +785,14 @@ bool_t<ComposerContext> uint32<ComposerContext>::operator==(const uint32& other)
     return !(operator!=(other));
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator&(const uint32& other) const
+template <typename ComposerContext>
+uint32<ComposerContext> uint32<ComposerContext>::operator&(const uint32& other) const
 {
     return internal_logic_operation(other, &internal_and);
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator^(const uint32& other) const
+template <typename ComposerContext>
+uint32<ComposerContext> uint32<ComposerContext>::operator^(const uint32& other) const
 {
     return internal_logic_operation(other, &internal_xor);
 }
@@ -801,7 +803,7 @@ uint32<ComposerContext> uint32<ComposerContext>::operator|(const uint32& other) 
     return internal_logic_operation(other, &internal_or);
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator~()
+template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator~() const
 {
     prepare_for_logic_operations();
 

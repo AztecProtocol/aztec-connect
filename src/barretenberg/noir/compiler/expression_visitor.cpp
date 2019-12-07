@@ -1,5 +1,7 @@
 #include "expression_visitor.hpp"
+#include "function_statement_visitor.hpp"
 #include "operators.hpp"
+#include <boost/format.hpp>
 #include <iostream>
 
 namespace noir {
@@ -44,12 +46,6 @@ var_t ExpressionVisitor::operator()(std::vector<std::string> const& x)
     std::vector<var_t> result(x.size());
     std::transform(x.begin(), x.end(), result.begin(), [this](std::string const& v) { return ctx_.symbol_table[v]; });
     return bool_t();
-}
-
-var_t ExpressionVisitor::operator()(ast::variable const& x)
-{
-    std::cout << "id " << x.name << std::endl;
-    return ctx_.symbol_table[x.name];
 }
 
 var_t ExpressionVisitor::operator()(var_t lhs, ast::operation const& x)
@@ -105,10 +101,25 @@ var_t ExpressionVisitor::operator()(var_t lhs, ast::operation const& x)
     case ast::op_bitwise_xor:
         std::cout << "op_bitwise_xor" << std::endl;
         return boost::apply_visitor(BitwiseXorVisitor(), lhs, rhs);
-
-    case ast::op_index:
-        std::cout << "op_index" << std::endl;
+    case ast::op_bitwise_ror:
+        std::cout << "op_bitwise_ror" << std::endl;
         break;
+    case ast::op_bitwise_rol:
+        std::cout << "op_bitwise_rol" << std::endl;
+        break;
+
+    case ast::op_index: {
+        std::cout << "op_index" << std::endl;
+
+        // Evaluate index.
+        uint32* iptr = boost::get<uint32>(&rhs);
+        if (!iptr) {
+            throw std::runtime_error("Index must be an integer.");
+        }
+        uint32_t i = (*iptr).get_value();
+
+        return boost::apply_visitor(IndexVisitor(), lhs, boost::variant<unsigned int>(i));
+    }
     default:
         BOOST_ASSERT(0);
     }
@@ -150,30 +161,59 @@ var_t ExpressionVisitor::operator()(ast::expression const& x)
     return var;
 }
 
+var_t ExpressionVisitor::operator()(ast::variable const& x)
+{
+    std::cout << "variable " << x.name << std::endl;
+    return ctx_.symbol_table[x.name];
+}
+
 var_t ExpressionVisitor::operator()(ast::assignment const& x)
 {
-    var_t var = (*this)(x.rhs);
-    std::cout << "op_store " << x.lhs.name << " " << var << std::endl;
-    ctx_.symbol_table.set(var, x.lhs.name);
-    return var;
+    std::cout << "get symbol ref for assign " << x.lhs.name << std::endl;
+    var_t rhs = (*this)(x.rhs);
+
+    var_t& lhs = ctx_.symbol_table[x.lhs.name];
+
+    // If our lhs has indexes, we need to get the ref to indexed element.
+    if (x.lhs.indexes.size()) {
+        if (x.lhs.indexes.size() > 1) {
+            throw std::runtime_error("Multidimensional arrays not yet supported.");
+        }
+
+        // Evaluate index.
+        auto ivar = (*this)(x.lhs.indexes[0]);
+        uint32* iptr = boost::get<uint32>(&ivar);
+        if (!iptr) {
+            throw std::runtime_error("Index must be an integer.");
+        }
+        uint32_t i = (*iptr).get_value();
+        std::cout << "op_store " << x.lhs.name << "[" << i << "] " << rhs << std::endl;
+
+        boost::apply_visitor(IndexedAssignVisitor(i), lhs, rhs);
+    } else {
+        std::cout << "op_store " << x.lhs.name << " " << rhs << std::endl;
+        lhs = rhs;
+    }
+    return lhs;
 }
 
 var_t ExpressionVisitor::operator()(ast::function_call const& x)
 {
     std::cout << "function call " << x.name << std::endl;
-    return uint32();
-    /*
-    auto func = functions_[x.name];
+    auto func = ctx_.functions[x.name];
     if (x.args.size() != func.args.size()) {
-        throw std::runtime_error("Function call has incorrect number or arguments.");
+        throw std::runtime_error(
+            (boost::format("Function call to %s has incorrect number of arguments. Expected %d, received %d.") %
+             x.name % func.args.size() % x.args.size())
+                .str());
     }
-    symbol_table_.push();
-    for (int i = 0; i < func.args.size(); ++i) {
-        symbol_table_.set((*this)(x.args[i]), func.args[i].name);
+    ctx_.symbol_table.push();
+    for (size_t i = 0; i < func.args.size(); ++i) {
+        ctx_.symbol_table.declare((*this)(x.args[i]), func.args[i].name);
     }
-    (*this)(func.statements.get());
-    symbol_table_.pop();
-    */
+    var_t result = FunctionStatementVisitor(ctx_)(func.statements.get());
+    ctx_.symbol_table.pop();
+    return result;
 }
 
 var_t ExpressionVisitor::operator()(ast::constant const& x)

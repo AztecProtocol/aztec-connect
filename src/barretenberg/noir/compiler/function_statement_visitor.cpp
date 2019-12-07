@@ -48,9 +48,12 @@ var_t FunctionStatementVisitor::operator()(boost::recursive_wrapper<ast::for_sta
 {
     auto x = x_.get();
     ctx_.symbol_table.push();
+    ctx_.symbol_table.declare(uint32(), x.counter);
     for (unsigned int i = x.from; i < x.to; ++i) {
-        ctx_.symbol_table.set(uint32(&ctx_.composer, i), x.counter.name);
+        ctx_.symbol_table.set(uint32(&ctx_.composer, i), x.counter);
+        ctx_.symbol_table.push();
         (*this)(x.body);
+        ctx_.symbol_table.pop();
     }
     ctx_.symbol_table.pop();
     return uint32();

@@ -5,16 +5,14 @@
 #include "stdint.h"
 #include "stdio.h"
 #include "stdlib.h"
+#include <ostream>
 
 #include "../types.hpp"
 
-namespace barretenberg
-{
-namespace fr
-{
+namespace barretenberg {
+namespace fr {
 constexpr field_t modulus{ { 0x43E1F593F0000001UL, 0x2833E84879B97091UL, 0xB85045B68181585DUL, 0x30644E72E131A029UL } };
-namespace internal
-{
+namespace internal {
 constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
 }
 } // namespace fr
@@ -26,10 +24,8 @@ constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
 #include "fr_impl_asm.hpp"
 #endif
 
-namespace barretenberg
-{
-namespace fr
-{
+namespace barretenberg {
+namespace fr {
 constexpr field_t r_squared{
     { 0x1BB8E645AE216DA7UL, 0x53FE3AB1E35C59E3UL, 0x8C49833D53BB8085UL, 0x216D0B17F4E44A5UL }
 };
@@ -52,6 +48,11 @@ constexpr size_t S = 28; // 2^S = maximum degree of a polynomial that's amenable
 inline void print(const field_t& a)
 {
     printf("fr: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const field_t& a)
+{
+    return os << "fr: [" << a.data[0] << ", " << a.data[1] << ", " << a.data[2] << ", " << a.data[3] << "]";
 }
 
 // compute a * b mod p, put result in r
@@ -141,8 +142,7 @@ inline bool gt(field_t& a, const field_t& b)
 inline void __to_montgomery_form(const field_t& a, field_t& r)
 {
     copy(a, r);
-    while (gt(r, modulus_plus_one))
-    {
+    while (gt(r, modulus_plus_one)) {
         __sub(r, modulus, r);
     }
     __mul(r, r_squared, r);
@@ -276,8 +276,7 @@ inline void normalize(field_t& a, field_t& r)
     r.data[1] = a.data[1];
     r.data[2] = a.data[2];
     r.data[3] = a.data[3];
-    while (gt(r, modulus_plus_one))
-    {
+    while (gt(r, modulus_plus_one)) {
         __sub(r, modulus, r);
     }
 }
@@ -348,8 +347,7 @@ inline bool get_bit(const field_t& a, size_t bit_index)
  **/
 inline void pow(const field_t& a, const field_t& b, field_t& r)
 {
-    if (eq(a, zero()))
-    {
+    if (eq(a, zero())) {
         copy(zero(), r);
         return;
     }
@@ -357,23 +355,19 @@ inline void pow(const field_t& a, const field_t& b, field_t& r)
     copy(a, accumulator);
     bool found_one = false;
     size_t i = 255;
-    while (!found_one)
-    {
+    while (!found_one) {
         found_one = get_bit(b, i);
         --i;
     }
     size_t sqr_count = 0;
-    for (; i < 256; --i)
-    {
+    for (; i < 256; --i) {
         sqr_count++;
         __sqr(accumulator, accumulator);
-        if (get_bit(b, i))
-        {
+        if (get_bit(b, i)) {
             __mul(accumulator, a, accumulator);
         }
     }
-    while (gt(accumulator, modulus_plus_one))
-    {
+    while (gt(accumulator, modulus_plus_one)) {
         __sub(accumulator, modulus, accumulator);
     }
     copy(accumulator, r);
@@ -389,18 +383,15 @@ inline void one(field_t& r)
 
 inline void __pow_small(const field_t& a, const size_t exponent, field_t& r)
 {
-    if (exponent == 0)
-    {
+    if (exponent == 0) {
         fr::one(r);
         return;
     }
-    if (exponent == 1)
-    {
+    if (exponent == 1) {
         fr::copy(a, r);
         return;
     }
-    if (exponent == 2)
-    {
+    if (exponent == 2) {
         fr::__sqr(a, r);
         return;
     }
@@ -409,24 +400,20 @@ inline void __pow_small(const field_t& a, const size_t exponent, field_t& r)
 
     bool found_one = false;
     size_t i = 63;
-    while (!found_one)
-    {
+    while (!found_one) {
         found_one = (exponent >> (i)) & 1;
         --i;
     }
     size_t sqr_count = 0;
-    for (; i < 64; --i)
-    {
+    for (; i < 64; --i) {
         sqr_count++;
         __sqr(accumulator, accumulator);
         bool bit = (exponent >> (i)) & 1;
-        if (bit)
-        {
+        if (bit) {
             __mul(accumulator, a, accumulator);
         }
     }
-    while (gt(accumulator, modulus_plus_one))
-    {
+    while (gt(accumulator, modulus_plus_one)) {
         __sub(accumulator, modulus, accumulator);
     }
     copy(accumulator, r);
@@ -489,8 +476,7 @@ inline field_t alternate_multiplicative_generator()
 inline void __get_root_of_unity(const size_t degree, field_t& r)
 {
     copy(root_of_unity, r);
-    for (size_t i = S; i > degree; --i)
-    {
+    for (size_t i = S; i > degree; --i) {
         __sqr(r, r);
     }
 }
@@ -507,16 +493,14 @@ inline void batch_invert(field_t* coeffs, size_t n)
     fr::field_t* temporaries = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * n);
     field_t accumulator;
     one(accumulator);
-    for (size_t i = 0; i < n; ++i)
-    {
+    for (size_t i = 0; i < n; ++i) {
         copy(accumulator, temporaries[i]);
         __mul(accumulator, coeffs[i], accumulator);
     }
     __invert(accumulator, accumulator);
 
     field_t T0;
-    for (size_t i = n - 1; i < n; --i)
-    {
+    for (size_t i = n - 1; i < n; --i) {
         __mul(accumulator, temporaries[i], T0);
         __mul(accumulator, coeffs[i], accumulator);
         copy(T0, coeffs[i]);

@@ -1,31 +1,15 @@
 #include <barretenberg/noir/compiler/compiler.hpp>
 #include <barretenberg/noir/parse.hpp>
-#include <barretenberg/waffle/composer/bool_composer.hpp>
 #include <fstream>
 #include <gtest/gtest.h>
 
 using namespace barretenberg;
-using namespace plonk;
 using namespace noir::parser;
-
-typedef stdlib::field_t<waffle::StandardComposer> field_t;
-typedef stdlib::uint32<waffle::StandardComposer> uint32;
-typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
+using namespace noir::code_gen;
 
 uint32_t get_random_int()
 {
     return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
-}
-
-TEST(noir, bool_witness)
-{
-    auto ast = parse("bool a = ~true;");
-
-    waffle::BoolComposer composer = waffle::BoolComposer();
-    auto compiler = noir::code_gen::compiler(composer);
-    auto prover = compiler.start(ast);
-
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[0]), { { 1, 0, 0, 0 } }), true);
 }
 
 TEST(noir, parse_fails)
@@ -81,9 +65,7 @@ TEST(noir, unary)
 TEST(noir, bool_circuit)
 {
     std::string code = "                      \n\
-    bool main() {                             \n\
-      bool a = ~true;                         \n\
-      bool b = ~false;                        \n\
+    bool main(bool a, bool b) {               \n\
       a = a ^ b;         // a = 1             \n\
       b = !b;            // b = 1 (witness 0) \n\
       bool c = (a == b); // c = 1             \n\
@@ -95,9 +77,10 @@ TEST(noir, bool_circuit)
     ";
     auto ast = parse(code);
 
-    waffle::StandardComposer composer = waffle::StandardComposer();
-    auto compiler = noir::code_gen::compiler(composer);
-    auto r = compiler.start(ast, {});
+    auto composer = Composer();
+    auto compiler = Compiler(composer);
+    std::vector<var_t> inputs = { bool_t(witness_t(&composer, true)), bool_t(witness_t(&composer, false)) };
+    auto r = compiler.start(ast, inputs);
     auto prover = std::move(r.second);
 
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[0]), { { 1, 0, 0, 0 } }), true);
@@ -133,14 +116,21 @@ TEST(noir, sha256)
     std::string code((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     auto ast = parse(code);
 
-    waffle::StandardComposer composer = waffle::StandardComposer();
+    auto composer = Composer();
+
+    uint32_t hex_input[] = {
+        0xa6e53dc5, 0x295acbff, 0xf63fccde, 0x378e1cbe, 0xbe9f04de, 0x8e35c7ce, 0xfd9105e7, 0x391f8e34,
+        0x56e08d13, 0x6ed204e6, 0xc7d80b22, 0xa1660521, 0xc2320131, 0xd5ab1f8e, 0x180ede60, 0x6574be20,
+    };
 
     std::vector<uint32> inputs(16);
     for (size_t i = 0; i < 16; ++i) {
-        inputs[i] = uint32(witness_t(&composer, get_random_int()));
+        inputs[i] = uint32(witness_t(&composer, hex_input[i]));
     }
 
-    auto compiler = noir::code_gen::compiler(composer);
+    std::cout << "inputs " << inputs << std::endl;
+
+    auto compiler = Compiler(composer);
     auto prover = compiler.start(ast, { inputs });
 
     /*

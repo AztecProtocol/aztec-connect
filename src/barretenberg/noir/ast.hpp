@@ -152,7 +152,7 @@ struct function_statement : x3::variant<variable_declaration,
 struct function_statement_list : std::vector<function_statement> {};
 
 struct for_statement {
-    variable counter;
+    std::string counter;
     unsigned int from;
     unsigned int to;
     function_statement_list body;

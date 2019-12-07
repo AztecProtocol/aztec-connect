@@ -7,13 +7,11 @@
 namespace noir {
 namespace code_gen {
 
-class compiler {
+class Compiler {
   public:
     typedef void result_type;
 
-    compiler(Composer& composer);
-
-    waffle::Prover start(ast::statement_list const& x);
+    Compiler(Composer& composer);
 
     std::pair<var_t, waffle::Prover> start(ast::statement_list const& x, std::vector<var_t> const& args);
 

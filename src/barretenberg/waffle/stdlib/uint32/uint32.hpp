@@ -38,7 +38,7 @@ template <typename ComposerContext> class uint32 {
     uint32 operator&(const uint32& other) const;
     uint32 operator|(const uint32& other) const;
     uint32 operator^(const uint32& other) const;
-    uint32 operator~();
+    uint32 operator~() const;
 
     uint32 operator>>(const uint32_t const_shift);
     uint32 operator<<(const uint32_t const_shift);
@@ -75,6 +75,13 @@ template <typename ComposerContext> class uint32 {
         return witness_index;
     }
 
+    uint32_t get_value() const
+    {
+        normalize();
+        uint32_t w = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(witness).data[0]);
+        return w * multiplicative_constant + additive_constant;
+    }
+
   private:
     enum WitnessStatus { OK, NOT_NORMALIZED, IN_BINARY_FORM };
 
@@ -86,7 +93,7 @@ template <typename ComposerContext> class uint32 {
     // 'decompose' will use + and bool gates to create boolean 'field wires' from a witness
     void concatenate() const;
     void decompose() const;
-    void normalize(); // ensures uint32 both has valid binary wires and a valid witness
+    void normalize() const; // ensures uint32 both has valid binary wires and a valid witness
 
     uint32<ComposerContext> internal_logic_operation(
         const uint32<ComposerContext>& right,
@@ -112,9 +119,9 @@ template <typename ComposerContext> class uint32 {
         barretenberg::fr::pow_small(barretenberg::fr::add(barretenberg::fr::one(), barretenberg::fr::one()), 32);
 };
 
-template <typename T> inline std::ostream& operator<<(std::ostream& os, uint32<T> const&)
+template <typename T> inline std::ostream& operator<<(std::ostream& os, uint32<T> const& v)
 {
-    return os << "implement me";
+    return os << v.get_value();
 }
 
 } // namespace stdlib
