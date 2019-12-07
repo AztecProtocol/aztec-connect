@@ -34,7 +34,9 @@ void generate_test_plonk_circuit(waffle::ExtendedComposer& composer, size_t num_
         {
             inputs[i] = witness_t(&composer, get_random_int());
         }
-        plonk::stdlib::sha256(inputs);
+        std::array<uint32, 8> h;
+        prepare_constants(h);
+        plonk::stdlib::sha256_block(h, inputs);
     }
 }
 

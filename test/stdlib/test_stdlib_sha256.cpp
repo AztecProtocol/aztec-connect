@@ -54,10 +54,6 @@ constexpr uint32_t round_constants[64]{
 };
 }
 
-// uint32_t get_value(uint32& input)
-// {
-//     return static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(static_cast<field_t>(input).get()).data[0]);
-// }
 
 TEST(stdlib_sha256, test_initialisation)
 {
@@ -137,25 +133,6 @@ TEST(stdlib_sha256, test_basic_round)
 
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
-}
-
-TEST(stdlib_sha256, test_input_parsing)
-{
-     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
-    std::array<uint32, 16> input;
-    for (size_t i = 0; i < 16; ++i)
-    {
-        input[i] = witness_t(&composer, get_random_int());
-    }
-
-    waffle::Prover prover = composer.preprocess();
-
-    waffle::Verifier verifier = waffle::preprocess(prover);
-
-    waffle::plonk_proof proof = prover.construct_proof();
-
-    bool result = verifier.verify_proof(proof);
-    EXPECT_EQ(result, true); 
 }
 
 TEST(stdlib_sha256, test_message_padding)
@@ -294,7 +271,9 @@ TEST(stdlib_sha256, test_sha256)
         inputs[i] = witness_t(&composer, get_random_int());
     }
 
-    std::array<uint32, 8> outputs = plonk::stdlib::sha256(inputs);
+    std::array<uint32, 8> init_constants;
+    plonk::stdlib::prepare_constants(init_constants);
+    std::array<uint32, 8> outputs = plonk::stdlib::sha256_block(init_constants, inputs);
 
     waffle::Prover prover = composer.preprocess();
 
@@ -307,33 +286,24 @@ TEST(stdlib_sha256, test_sha256)
     EXPECT_EQ(result, true);
 }
 
-TEST(stdlib_sha256, test_sha256_full)
+TEST(stdlib_sha256, test_NIST_vector_one)
 {
     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
 
     bitarray input(&composer, "abc");
 
-    bitarray output = plonk::stdlib::sha256_full(input);
+    bitarray output_bits = plonk::stdlib::sha256(input);
 
-    std::vector<uint32> output_vector = output.to_uint32_vector();
+    std::vector<uint32> output = output_bits.to_uint32_vector();
 
-    uint32_t result[8]{
-        output_vector[0].get_witness_value(),
-        output_vector[1].get_witness_value(),
-        output_vector[2].get_witness_value(),
-        output_vector[3].get_witness_value(),
-        output_vector[4].get_witness_value(),
-        output_vector[5].get_witness_value(),
-        output_vector[6].get_witness_value(),
-        output_vector[7].get_witness_value()
-    };
-
-    printf("result = %x %x %x %x %x %x %x %x \n", result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7]);
-
-    // std::string result = output.get_witness_as_string();
-
-    // printf("result = %lu \n", result.size());
-    // std::cout << result << std::endl;
+    EXPECT_EQ(output[0].get_witness_value(), 0xBA7816BFU);
+    EXPECT_EQ(output[1].get_witness_value(), 0x8F01CFEAU);
+    EXPECT_EQ(output[2].get_witness_value(), 0x414140DEU);
+    EXPECT_EQ(output[3].get_witness_value(), 0x5DAE2223U);
+    EXPECT_EQ(output[4].get_witness_value(), 0xB00361A3U);
+    EXPECT_EQ(output[5].get_witness_value(), 0x96177A9CU);
+    EXPECT_EQ(output[6].get_witness_value(), 0xB410FF61U);
+    EXPECT_EQ(output[7].get_witness_value(), 0xF20015ADU);
 
     waffle::Prover prover = composer.preprocess();
 
@@ -346,3 +316,77 @@ TEST(stdlib_sha256, test_sha256_full)
     EXPECT_EQ(proof_result, true);
 }
 
+
+TEST(stdlib_sha256, test_NIST_vector_two)
+{
+    waffle::ExtendedComposer composer = waffle::ExtendedComposer();
+
+    bitarray input(&composer, "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
+
+    bitarray output_bits = plonk::stdlib::sha256(input);
+
+    std::vector<uint32> output = output_bits.to_uint32_vector();
+
+    EXPECT_EQ(output[0].get_witness_value(), 0x248D6A61U);
+    EXPECT_EQ(output[1].get_witness_value(), 0xD20638B8U);
+    EXPECT_EQ(output[2].get_witness_value(), 0xE5C02693U);
+    EXPECT_EQ(output[3].get_witness_value(), 0x0C3E6039U);
+    EXPECT_EQ(output[4].get_witness_value(), 0xA33CE459U);
+    EXPECT_EQ(output[5].get_witness_value(), 0x64FF2167U);
+    EXPECT_EQ(output[6].get_witness_value(), 0xF6ECEDD4U);
+    EXPECT_EQ(output[7].get_witness_value(), 0x19DB06C1U);
+
+    printf("prover preproces\n");
+    waffle::Prover prover = composer.preprocess();
+
+    printf("composer gates = %lu\n", composer.adjusted_n);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
+
+
+TEST(stdlib_sha256, test_NIST_vector_three)
+{
+    waffle::ExtendedComposer composer = waffle::ExtendedComposer();
+
+    bitarray input(
+        &composer,
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAA");
+
+    bitarray output_bits = plonk::stdlib::sha256(input);
+
+    std::vector<uint32> output = output_bits.to_uint32_vector();
+
+    EXPECT_EQ(output[0].get_witness_value(), 0xc2e68682U);
+    EXPECT_EQ(output[1].get_witness_value(), 0x3489ced2U);
+    EXPECT_EQ(output[2].get_witness_value(), 0x017f6059U);
+    EXPECT_EQ(output[3].get_witness_value(), 0xb8b23931U);
+    EXPECT_EQ(output[4].get_witness_value(), 0x8b6364f6U);
+    EXPECT_EQ(output[5].get_witness_value(), 0xdcd835d0U);
+    EXPECT_EQ(output[6].get_witness_value(), 0xa519105aU);
+    EXPECT_EQ(output[7].get_witness_value(), 0x1eadd6e4U);
+
+    waffle::Prover prover = composer.preprocess();
+
+    printf("composer gates = %lu\n", composer.adjusted_n);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
