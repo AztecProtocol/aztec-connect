@@ -34,7 +34,7 @@ TEST(stdlib_mimc, composer_consistency_check)
 
     stdlib::field_t<waffle::MiMCComposer> mimc_out = mimc_block_cipher(mimc_input, mimc_k);
 
-    EXPECT_EQ(fr::eq(standard_out.witness, mimc_out.witness), true);
+    EXPECT_EQ(fr::eq(standard_out.get_witness_value(), mimc_out.get_witness_value()), true);
 
     waffle::Prover provers[2]{
         standard_composer.preprocess(),
