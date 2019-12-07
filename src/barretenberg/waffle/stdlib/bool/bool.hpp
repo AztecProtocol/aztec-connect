@@ -13,7 +13,7 @@ template <typename ComposerContext>
 class bool_t
 {
 public:
-    bool_t();
+    bool_t(const bool value = false);
     bool_t(ComposerContext *parent_context);
     bool_t(ComposerContext *parent_context, const bool value);
     bool_t(const witness_t<ComposerContext> &value);
@@ -79,8 +79,8 @@ public:
         return witness_bool ^ witness_inverted;
     }
 
-    ComposerContext *context;
-    bool witness_bool;
+    ComposerContext *context = nullptr;
+    bool witness_bool = false;
     bool witness_inverted = false;
     uint32_t witness_index = static_cast<uint32_t>(-1);    
 };

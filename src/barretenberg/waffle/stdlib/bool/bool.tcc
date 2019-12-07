@@ -9,16 +9,15 @@ namespace stdlib
 {
 
 template <typename ComposerContext>
-bool_t<ComposerContext>::bool_t() :
+bool_t<ComposerContext>::bool_t(const bool value) :
 context(nullptr),
-witness_bool(false),
+witness_bool(value),
 witness_inverted(false),
 witness_index(static_cast<uint32_t>(-1)) {}
 
 template <typename ComposerContext>
 bool_t<ComposerContext>::bool_t(ComposerContext *parent_context) : context(parent_context)
 {
-    ASSERT(parent_context != nullptr);
     witness_bool = false;
     witness_inverted = false;
     witness_index = static_cast<uint32_t>(-1);
@@ -27,7 +26,6 @@ bool_t<ComposerContext>::bool_t(ComposerContext *parent_context) : context(paren
 template <typename ComposerContext>
 bool_t<ComposerContext>::bool_t(const witness_t<ComposerContext> &value) : context(value.context)
 {
-    ASSERT(context != nullptr);
     ASSERT(barretenberg::fr::eq(value.witness, barretenberg::fr::zero()) || barretenberg::fr::eq(value.witness, barretenberg::fr::one()));
     witness_index = value.witness_index;
     context->create_bool_gate(witness_index);
@@ -38,7 +36,6 @@ bool_t<ComposerContext>::bool_t(const witness_t<ComposerContext> &value) : conte
 template <typename ComposerContext>
 bool_t<ComposerContext>::bool_t(ComposerContext *parent_context, const bool value) : context(parent_context)
 {
-    ASSERT(parent_context != nullptr);
     context = parent_context;
     witness_index = static_cast<uint32_t>(-1);
     witness_bool = value;
@@ -48,7 +45,6 @@ bool_t<ComposerContext>::bool_t(ComposerContext *parent_context, const bool valu
 template <typename ComposerContext>
 bool_t<ComposerContext>::bool_t(const bool_t<ComposerContext> &other) : context(other.context)
 {
-    ASSERT(other.context != nullptr);
     witness_index = other.witness_index;
     witness_bool = other.witness_bool;
     witness_inverted = other.witness_inverted;
@@ -57,7 +53,6 @@ bool_t<ComposerContext>::bool_t(const bool_t<ComposerContext> &other) : context(
 template <typename ComposerContext>
 bool_t<ComposerContext>::bool_t(bool_t<ComposerContext> &&other) : context(other.context)
 {
-    ASSERT(other.context != nullptr);
     witness_index = other.witness_index;
     witness_bool = other.witness_bool;
     witness_inverted = other.witness_inverted;
@@ -66,6 +61,7 @@ bool_t<ComposerContext>::bool_t(bool_t<ComposerContext> &&other) : context(other
 template <typename ComposerContext>
 bool_t<ComposerContext>& bool_t<ComposerContext>::operator=(const bool other)
 {
+    context = nullptr;
     witness_index = static_cast<uint32_t>(-1);
     witness_bool = other;
     witness_inverted = false;
@@ -75,7 +71,6 @@ bool_t<ComposerContext>& bool_t<ComposerContext>::operator=(const bool other)
 template <typename ComposerContext>
 bool_t<ComposerContext>& bool_t<ComposerContext>::operator=(const bool_t &other)
 {
-    ASSERT(other.context != nullptr);
     context = other.context;
     witness_index = other.witness_index;
     witness_bool = other.witness_bool;
@@ -86,7 +81,6 @@ bool_t<ComposerContext>& bool_t<ComposerContext>::operator=(const bool_t &other)
 template <typename ComposerContext>
 bool_t<ComposerContext>& bool_t<ComposerContext>::operator=(bool_t &&other)
 {
-    ASSERT(other.context != nullptr);
     context = other.context;
     witness_index = other.witness_index;
     witness_bool = other.witness_bool;
@@ -109,11 +103,11 @@ bool_t<ComposerContext>& bool_t<ComposerContext>::operator=(const witness_t<Comp
 template <typename ComposerContext>
 bool_t<ComposerContext> bool_t<ComposerContext>::operator&(const bool_t &other) const
 {
-    ASSERT(context == other.context || (context == nullptr && other.context != nullptr) || (context != nullptr && other.context == nullptr));
     bool_t<ComposerContext> result(context == nullptr ? other.context : context);
     bool left = witness_inverted ^ witness_bool;
     bool right = other.witness_inverted ^ other.witness_bool;
 
+    ASSERT(result.context || (witness_index == static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)));
     if (witness_index != static_cast<uint32_t>(-1) && other.witness_index != static_cast<uint32_t>(-1))
     {
         result.witness_bool = left & right;
@@ -174,8 +168,9 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator&(const bool_t &other) 
 template <typename ComposerContext>
 bool_t<ComposerContext> bool_t<ComposerContext>::operator|(const bool_t &other) const
 {
-    ASSERT(context == other.context || (context == nullptr && other.context != nullptr) || (context != nullptr && other.context == nullptr));
     bool_t<ComposerContext> result(context == nullptr ? other.context : context);
+
+    ASSERT(result.context || (witness_index == static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)));
 
     result.witness_bool = (witness_bool ^ witness_inverted) | (other.witness_bool ^ other.witness_inverted);
     barretenberg::fr::field_t value = result.witness_bool ? barretenberg::fr::one() : barretenberg::fr::zero();
@@ -268,9 +263,9 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator|(const bool_t &other) 
 template <typename ComposerContext>
 bool_t<ComposerContext> bool_t<ComposerContext>::operator^(const bool_t &other) const
 {
-    // TODO MANAGE ASSERTS. Should be ok with both sides of xor having nullptr contexts if both are constant
-    // ASSERT(context == other.context || (context == nullptr && other.context != nullptr) || (context != nullptr && other.context == nullptr));
     bool_t<ComposerContext> result(context == nullptr ? other.context : context);
+
+    ASSERT(result.context || (witness_index == static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)));
 
     result.witness_bool = (witness_bool ^ witness_inverted) ^ (other.witness_bool ^ other.witness_inverted);
     barretenberg::fr::field_t value = result.witness_bool ? barretenberg::fr::one() : barretenberg::fr::zero();
@@ -355,7 +350,7 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator!() const
 template <typename ComposerContext>
 bool_t<ComposerContext> bool_t<ComposerContext>::operator==(const bool_t &other) const
 {
-    ASSERT(context == other.context || (context == nullptr && other.context != nullptr) || (context != nullptr && other.context == nullptr));
+    ASSERT(context || other.context || (witness_index == static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)));
     if ((other.witness_index == static_cast<uint32_t>(-1))  && (witness_index == static_cast<uint32_t>(-1)))
     {
         bool_t<ComposerContext> result(context == nullptr ? other.context : context);
