@@ -64,6 +64,7 @@ add_library(
     waffle/composer/extended_composer.cpp
     waffle/composer/extended_composer.hpp
     waffle/stdlib/common.hpp
+    waffle/stdlib/int_utils.hpp
     waffle/stdlib/bool/bool.tcc
     waffle/stdlib/bool/bool.hpp
     waffle/stdlib/field/field.tcc
@@ -151,6 +152,7 @@ if(BARRETENBERG_PROFILING)
         waffle/composer/extended_composer.cpp
         waffle/composer/extended_composer.hpp
         waffle/stdlib/common.hpp
+        waffle/stdlib/int_utils.hpp
         waffle/stdlib/bool/bool.tcc
         waffle/stdlib/bool/bool.hpp
         waffle/stdlib/field/field.tcc

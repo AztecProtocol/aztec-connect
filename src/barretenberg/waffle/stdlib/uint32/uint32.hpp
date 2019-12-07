@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "../common.hpp"
+#include "../int_utils.hpp"
 
 #include "../../../assert.hpp"
 #include "../../../fields/fr.hpp"
@@ -22,11 +23,6 @@ template <typename ComposerContext> class uint32
     uint32(ComposerContext* parent_context);
     uint32(const witness_t<ComposerContext>& value);
     uint32(ComposerContext* parent_context, const uint32_t value);
-
-    uint32(ComposerContext* parent_context,
-        typename std::vector<bool_t<ComposerContext> >::const_iterator start,
-        typename std::vector<bool_t<ComposerContext> >::const_iterator end);
-
     uint32(ComposerContext* parent_context, const std::array<bool_t<ComposerContext>, 32> &wires);
 
     uint32(const field_t<ComposerContext>& other);
@@ -92,7 +88,7 @@ template <typename ComposerContext> class uint32
     {
         *this = operator%(other);
     };
-
+    
     uint32 operator&=(const uint32& other)
     {
         *this = operator&(other);
@@ -202,17 +198,25 @@ template <typename ComposerContext> class uint32
     mutable uint32_t multiplicative_constant;
 
     mutable WitnessStatus witness_status;
-    mutable size_t num_witness_bits;
 
-    mutable bool_t<ComposerContext> field_wires[32];
-    mutable field_t<ComposerContext> accumulators[32];
+    mutable std::array<bool_t<ComposerContext>, 32> field_wires;
+    mutable std::array<field_t<ComposerContext>, 32> accumulators;
 
     LogicOperation queued_logic_operation;
 
-    static constexpr size_t MAXIMUM_BIT_LENGTH = 110UL; // (2x + 33 = 253 => 2x = 220 => x = 110)
+    static constexpr size_t MAXIMUM_BIT_LENGTH = 65UL;
 
     const barretenberg::fr::field_t uint32_max =
         barretenberg::fr::pow_small(barretenberg::fr::add(barretenberg::fr::one(), barretenberg::fr::one()), 32);
+
+    // Tracks the maximum value that this uint32 can potentially represent. We want to be able to use 'lazy reduction'
+    // techniques, whereby we only constrain the value of this object to be in the range [0, 2^{32}] only when necessary.
+    // e.g. for comparisons, or logic operations.
+    // For example, consider the situation where three addition operations are chained together. Instead of performing a
+    // range check on each addition sum (via calling 'decompose'), we can perform a single range check on the result
+    // of the three additions. However, we now need to know how many 'bits' this overloaded variable can contain (33).
+    // Which is why we have a maximum value field, so that we know precisely how many bits are required to represent a given overloaded uint32
+    mutable int_utils::uint128_t maximum_value;
 };
 } // namespace stdlib
 } // namespace plonk
