@@ -195,7 +195,7 @@ template <typename ComposerContext> class uint32
     uint32 ternary_operator(const bool_t<ComposerContext>& predicate, const uint32& lhs, const uint32& rhs);
 
     ComposerContext* context;
-    mutable barretenberg::fr::field_t witness;
+
     mutable uint32_t witness_index;
 
     mutable uint32_t additive_constant;
