@@ -40,6 +40,7 @@ void generate_test_plonk_circuit(waffle::ExtendedComposer& composer, size_t num_
     }
 }
 
+waffle::ExtendedComposer composers[MAX_HASHES];
 waffle::Prover provers[MAX_HASHES];
 waffle::Verifier verifiers[MAX_HASHES];
 waffle::plonk_proof proofs[MAX_HASHES];
@@ -48,13 +49,22 @@ void construct_witnesses_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
-        waffle::ExtendedComposer composer = waffle::ExtendedComposer(static_cast<size_t>(state.range(0)));
-        generate_test_plonk_circuit(composer, static_cast<size_t>(state.range(0)));
         size_t idx = static_cast<size_t>((state.range(0))) - 1;
-        provers[idx] = composer.preprocess();
+        composers[idx] = waffle::ExtendedComposer(static_cast<size_t>(state.range(0)));
+        generate_test_plonk_circuit(composers[idx], static_cast<size_t>(state.range(0)));
     }
 }
 BENCHMARK(construct_witnesses_bench)->DenseRange(1, MAX_HASHES, 1);
+
+void preprocess_witnesses_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        size_t idx = static_cast<size_t>((state.range(0))) - 1;
+        provers[idx] = composers[idx].preprocess();
+    }
+}
+BENCHMARK(preprocess_witnesses_bench)->DenseRange(1, MAX_HASHES, 1);
 
 void construct_instances_bench(State& state) noexcept
 {

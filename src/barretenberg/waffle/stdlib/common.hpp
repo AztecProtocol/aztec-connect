@@ -9,12 +9,6 @@ namespace plonk
 namespace stdlib
 {
 
-namespace internal
-{
-    __extension__ typedef __int128 uint128_t;
-}
-
-
 inline barretenberg::fr::field_t set_bit(const barretenberg::fr::field_t &scalar, const size_t bit_position)
 {
     barretenberg::fr::field_t result = scalar;

@@ -20,9 +20,6 @@ namespace
 // This uses the MiMC block cipher (with a permutation of x^7), and applies
 // the Miyaguchi-Preneel compression function to create a 1-way hash function.
 
-// To achieve 127 bits of collision resistence, we require the security parameter
-// of the block cipher to be 254 bits.
-
 // For MiMC, number of rounds = ceil((security parameter) / log2(mimc exponent))
 // for a 254 bit security parameter, and x^7, num rounds = 91.
 

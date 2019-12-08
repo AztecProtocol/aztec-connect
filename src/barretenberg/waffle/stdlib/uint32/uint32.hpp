@@ -1,9 +1,10 @@
 #ifndef STDLIB_UINT32
 #define STDLIB_UINT32
 
-#include <vector>
 #include "../common.hpp"
 #include "../int_utils.hpp"
+#include <numeric>
+#include <vector>
 
 #include "../../../assert.hpp"
 #include "../../../fields/fr.hpp"
@@ -23,7 +24,7 @@ template <typename ComposerContext> class uint32
     uint32(ComposerContext* parent_context);
     uint32(const witness_t<ComposerContext>& value);
     uint32(ComposerContext* parent_context, const uint32_t value);
-    uint32(ComposerContext* parent_context, const std::array<bool_t<ComposerContext>, 32> &wires);
+    uint32(ComposerContext* parent_context, const std::array<bool_t<ComposerContext>, 32>& wires);
 
     uint32(const field_t<ComposerContext>& other);
     uint32(const uint32& other);
@@ -88,7 +89,7 @@ template <typename ComposerContext> class uint32
     {
         *this = operator%(other);
     };
-    
+
     uint32 operator&=(const uint32& other)
     {
         *this = operator&(other);
@@ -119,16 +120,19 @@ template <typename ComposerContext> class uint32
 
     uint32_t get_witness_value()
     {
-        normalize();
         if (context == nullptr)
         {
             return additive_constant;
         }
-        else
+        if (witness_status == IN_BINARY_FORM)
         {
-            uint32_t initial_value = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(witness).data[0]);
-            return (initial_value * multiplicative_constant + additive_constant);
+            return std::accumulate(field_wires.rbegin(), field_wires.rend(), 0U, [](auto acc, auto wire) {
+                return (acc + acc + wire.get_witness_value());
+            });
         }
+        uint32_t base =
+            static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(context->get_variable(witness_index)).data[0]);
+        return (base * multiplicative_constant + additive_constant);
     }
 
     uint32_t get_additive_constant() const
@@ -141,7 +145,7 @@ template <typename ComposerContext> class uint32
         return multiplicative_constant;
     }
 
-    ComposerContext *get_context() const
+    ComposerContext* get_context() const
     {
         return context;
     }
@@ -151,12 +155,13 @@ template <typename ComposerContext> class uint32
   private:
     enum WitnessStatus
     {
-        OK,                         // has both valid binary wires, and a valid native representation
-        NOT_NORMALIZED,             // has a native representation, that needs to be normalised (is > 2^32)
-        IN_NATIVE_FORM,             // witness is a valid uint32, but has no binary wires
-        IN_BINARY_FORM,             // only has valid binary wires, but no witness that is a fully constructed uint32
-        QUEUED_LOGIC_OPERATION      // we have queued up a logic operation. We can efficiently output IN_NATIVE_FORM or IN_BINARY_FORM,
-                                    // but not both. So we queue up the logic operation until we know whether the next operation will be native or binary
+        OK,                    // has both valid binary wires, and a valid native representation
+        NOT_NORMALIZED,        // has a native representation, that needs to be normalised (is > 2^32)
+        IN_NATIVE_FORM,        // witness is a valid uint32, but has no binary wires
+        IN_BINARY_FORM,        // only has valid binary wires, but no witness that is a fully constructed uint32
+        QUEUED_LOGIC_OPERATION // we have queued up a logic operation. We can efficiently output IN_NATIVE_FORM or
+                               // IN_BINARY_FORM, but not both. So we queue up the logic operation until we know whether
+                               // the next operation will be native or binary
     };
 
     struct LogicOperation
@@ -180,13 +185,12 @@ template <typename ComposerContext> class uint32
                                                                                               bool_t<ComposerContext>));
 
     void internal_logic_operation_binary(const bool_t<ComposerContext> operand_wires[32],
-                                                     bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>,
-                                                                                              bool_t<ComposerContext>)) const;
+                                         bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>,
+                                                                                  bool_t<ComposerContext>)) const;
 
     void internal_logic_operation_native(const bool_t<ComposerContext> operand_wires[32],
-                                                     bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>,
-                                                                                              bool_t<ComposerContext>)) const;
-
+                                         bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>,
+                                                                                  bool_t<ComposerContext>)) const;
 
     uint32 ternary_operator(const bool_t<ComposerContext>& predicate, const uint32& lhs, const uint32& rhs);
 
@@ -210,12 +214,12 @@ template <typename ComposerContext> class uint32
         barretenberg::fr::pow_small(barretenberg::fr::add(barretenberg::fr::one(), barretenberg::fr::one()), 32);
 
     // Tracks the maximum value that this uint32 can potentially represent. We want to be able to use 'lazy reduction'
-    // techniques, whereby we only constrain the value of this object to be in the range [0, 2^{32}] only when necessary.
-    // e.g. for comparisons, or logic operations.
-    // For example, consider the situation where three addition operations are chained together. Instead of performing a
-    // range check on each addition sum (via calling 'decompose'), we can perform a single range check on the result
-    // of the three additions. However, we now need to know how many 'bits' this overloaded variable can contain (33).
-    // Which is why we have a maximum value field, so that we know precisely how many bits are required to represent a given overloaded uint32
+    // techniques, whereby we only constrain the value of this object to be in the range [0, 2^{32}] only when
+    // necessary. e.g. for comparisons, or logic operations. For example, consider the situation where three addition
+    // operations are chained together. Instead of performing a range check on each addition sum (via calling
+    // 'decompose'), we can perform a single range check on the result of the three additions. However, we now need to
+    // know how many 'bits' this overloaded variable can contain (33). Which is why we have a maximum value field, so
+    // that we know precisely how many bits are required to represent a given overloaded uint32
     mutable int_utils::uint128_t maximum_value;
 };
 } // namespace stdlib
