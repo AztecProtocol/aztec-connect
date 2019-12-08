@@ -204,14 +204,10 @@ template <typename ComposerContext> class uint32
     mutable WitnessStatus witness_status;
 
     mutable std::array<bool_t<ComposerContext>, 32> field_wires;
-    mutable std::array<field_t<ComposerContext>, 32> accumulators;
 
     LogicOperation queued_logic_operation;
 
     static constexpr size_t MAXIMUM_BIT_LENGTH = 65UL;
-
-    const barretenberg::fr::field_t uint32_max =
-        barretenberg::fr::pow_small(barretenberg::fr::add(barretenberg::fr::one(), barretenberg::fr::one()), 32);
 
     // Tracks the maximum value that this uint32 can potentially represent. We want to be able to use 'lazy reduction'
     // techniques, whereby we only constrain the value of this object to be in the range [0, 2^{32}] only when
@@ -221,6 +217,9 @@ template <typename ComposerContext> class uint32
     // know how many 'bits' this overloaded variable can contain (33). Which is why we have a maximum value field, so
     // that we know precisely how many bits are required to represent a given overloaded uint32
     mutable int_utils::uint128_t maximum_value;
+
+    const barretenberg::fr::field_t uint32_max =
+        barretenberg::fr::pow_small(barretenberg::fr::add(barretenberg::fr::one(), barretenberg::fr::one()), 32);
 };
 } // namespace stdlib
 } // namespace plonk
