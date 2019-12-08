@@ -29,11 +29,6 @@ public:
     field_t& operator=(const field_t &other);
     field_t& operator=(field_t &&other);
 
-    field_t& operator=(const barretenberg::fr::field_t &value);
-    field_t& operator=(const uint64_t value);
-
-    // field_t& operator=(const barretenberg::fr::field_t &value);
-
     field_t operator+(const field_t &other) const;
     field_t operator-(const field_t &other) const;
     field_t operator*(const field_t &other) const;
@@ -47,7 +42,6 @@ public:
     mutable barretenberg::fr::field_t additive_constant;
     mutable barretenberg::fr::field_t multiplicative_constant;
     mutable uint32_t witness_index = static_cast<uint32_t>(-1);    
-    // field_t operator+(const barretenberg::fr::field_t &other);    
 };
 }
 }

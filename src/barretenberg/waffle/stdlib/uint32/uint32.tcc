@@ -303,29 +303,6 @@ template <typename ComposerContext> uint32<ComposerContext>& uint32<ComposerCont
     return *this;
 }
 
-template <typename ComposerContext> uint32<ComposerContext>& uint32<ComposerContext>::operator=(const uint32_t value)
-{
-    witness_index = static_cast<uint32_t>(-1);
-    additive_constant = value;
-    multiplicative_constant = 1;
-    witness_status = WitnessStatus::NOT_NORMALIZED;
-    maximum_value = value;
-    return *this;
-}
-
-template <typename ComposerContext>
-uint32<ComposerContext>& uint32<ComposerContext>::operator=(const witness_t<ComposerContext>& value)
-{
-    ASSERT((context == value.context) || (context == nullptr && value.context != nullptr));
-    context = value.context;
-    witness_index = value.witness_index;
-    additive_constant = 0;
-    multiplicative_constant = 1;
-    witness_status = WitnessStatus::NOT_NORMALIZED;
-    maximum_value = (1UL << 32UL) - 1UL;
-    return *this;
-}
-
 template <typename ComposerContext>
 uint32<ComposerContext>::uint32(ComposerContext *parent_context, const std::array<bool_t<ComposerContext>, 32> &wires)
 {

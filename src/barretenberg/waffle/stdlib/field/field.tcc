@@ -128,23 +128,6 @@ template <typename ComposerContext> field_t<ComposerContext>& field_t<ComposerCo
 }
 
 template <typename ComposerContext>
-field_t<ComposerContext>& field_t<ComposerContext>::operator=(const barretenberg::fr::field_t& value)
-{
-    context = nullptr;
-    witness_index = static_cast<uint32_t>(-1);
-    barretenberg::fr::copy(value, additive_constant);
-    barretenberg::fr::copy(barretenberg::fr::one(), multiplicative_constant);
-}
-
-template <typename ComposerContext> field_t<ComposerContext>& field_t<ComposerContext>::operator=(const uint64_t value)
-{
-    context = nullptr;
-    witness_index = static_cast<uint32_t>(-1);
-    barretenberg::fr::copy(barretenberg::fr::to_montgomery_form({ { value, 0, 0, 0 } }), additive_constant);
-    barretenberg::fr::copy(barretenberg::fr::one(), multiplicative_constant);
-}
-
-template <typename ComposerContext>
 field_t<ComposerContext> field_t<ComposerContext>::operator+(const field_t& other) const
 {
     ComposerContext* ctx = (context == nullptr) ? other.context : context;

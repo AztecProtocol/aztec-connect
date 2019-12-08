@@ -86,7 +86,7 @@ std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 
     for (size_t i = 0; i < 64; ++i)
     {
         uint32 S1 = e.ror(6U) ^ e.ror(11U) ^ e.ror(25U);
-        uint32 ch = (e & f) + (~e & g);
+        uint32 ch = (e & f) + (~e & g); // === (e & f) ^ (~e & g), `+` op is cheaper
         uint32 temp1 = h + S1 + ch + round_constants[i] + w[i];
         uint32 S0 = a.ror(2U) ^ a.ror(13U) ^ a.ror(22U);
         uint32 T0 = (b & c);
