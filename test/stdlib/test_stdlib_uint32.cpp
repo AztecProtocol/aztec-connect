@@ -32,7 +32,7 @@ std::vector<uint32_t> get_random_ints(size_t n)
 
 uint32_t get_value(uint32& input)
 {
-    return static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(static_cast<field_t>(input).get_witness_value()).data[0]);
+    return static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(static_cast<field_t>(input).get_value()).data[0]);
 }
 
 TEST(stdlib_uint32, test_add)

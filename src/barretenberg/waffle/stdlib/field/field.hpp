@@ -41,7 +41,7 @@ public:
 
     field_t normalize();
 
-    barretenberg::fr::field_t get_witness_value();
+    barretenberg::fr::field_t get_value();
 
     mutable ComposerContext *context = nullptr;
     mutable barretenberg::fr::field_t additive_constant;

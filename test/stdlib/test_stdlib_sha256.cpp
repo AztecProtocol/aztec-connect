@@ -296,14 +296,14 @@ TEST(stdlib_sha256, test_NIST_vector_one)
 
     std::vector<uint32> output = output_bits.to_uint32_vector();
 
-    EXPECT_EQ(output[0].get_witness_value(), 0xBA7816BFU);
-    EXPECT_EQ(output[1].get_witness_value(), 0x8F01CFEAU);
-    EXPECT_EQ(output[2].get_witness_value(), 0x414140DEU);
-    EXPECT_EQ(output[3].get_witness_value(), 0x5DAE2223U);
-    EXPECT_EQ(output[4].get_witness_value(), 0xB00361A3U);
-    EXPECT_EQ(output[5].get_witness_value(), 0x96177A9CU);
-    EXPECT_EQ(output[6].get_witness_value(), 0xB410FF61U);
-    EXPECT_EQ(output[7].get_witness_value(), 0xF20015ADU);
+    EXPECT_EQ(output[0].get_value(), 0xBA7816BFU);
+    EXPECT_EQ(output[1].get_value(), 0x8F01CFEAU);
+    EXPECT_EQ(output[2].get_value(), 0x414140DEU);
+    EXPECT_EQ(output[3].get_value(), 0x5DAE2223U);
+    EXPECT_EQ(output[4].get_value(), 0xB00361A3U);
+    EXPECT_EQ(output[5].get_value(), 0x96177A9CU);
+    EXPECT_EQ(output[6].get_value(), 0xB410FF61U);
+    EXPECT_EQ(output[7].get_value(), 0xF20015ADU);
 
     waffle::Prover prover = composer.preprocess();
 
@@ -327,14 +327,14 @@ TEST(stdlib_sha256, test_NIST_vector_two)
 
     std::vector<uint32> output = output_bits.to_uint32_vector();
 
-    EXPECT_EQ(output[0].get_witness_value(), 0x248D6A61U);
-    EXPECT_EQ(output[1].get_witness_value(), 0xD20638B8U);
-    EXPECT_EQ(output[2].get_witness_value(), 0xE5C02693U);
-    EXPECT_EQ(output[3].get_witness_value(), 0x0C3E6039U);
-    EXPECT_EQ(output[4].get_witness_value(), 0xA33CE459U);
-    EXPECT_EQ(output[5].get_witness_value(), 0x64FF2167U);
-    EXPECT_EQ(output[6].get_witness_value(), 0xF6ECEDD4U);
-    EXPECT_EQ(output[7].get_witness_value(), 0x19DB06C1U);
+    EXPECT_EQ(output[0].get_value(), 0x248D6A61U);
+    EXPECT_EQ(output[1].get_value(), 0xD20638B8U);
+    EXPECT_EQ(output[2].get_value(), 0xE5C02693U);
+    EXPECT_EQ(output[3].get_value(), 0x0C3E6039U);
+    EXPECT_EQ(output[4].get_value(), 0xA33CE459U);
+    EXPECT_EQ(output[5].get_value(), 0x64FF2167U);
+    EXPECT_EQ(output[6].get_value(), 0xF6ECEDD4U);
+    EXPECT_EQ(output[7].get_value(), 0x19DB06C1U);
 
     printf("prover preproces\n");
     waffle::Prover prover = composer.preprocess();
@@ -371,14 +371,14 @@ TEST(stdlib_sha256, test_NIST_vector_three)
 
     std::vector<uint32> output = output_bits.to_uint32_vector();
 
-    EXPECT_EQ(output[0].get_witness_value(), 0xc2e68682U);
-    EXPECT_EQ(output[1].get_witness_value(), 0x3489ced2U);
-    EXPECT_EQ(output[2].get_witness_value(), 0x017f6059U);
-    EXPECT_EQ(output[3].get_witness_value(), 0xb8b23931U);
-    EXPECT_EQ(output[4].get_witness_value(), 0x8b6364f6U);
-    EXPECT_EQ(output[5].get_witness_value(), 0xdcd835d0U);
-    EXPECT_EQ(output[6].get_witness_value(), 0xa519105aU);
-    EXPECT_EQ(output[7].get_witness_value(), 0x1eadd6e4U);
+    EXPECT_EQ(output[0].get_value(), 0xc2e68682U);
+    EXPECT_EQ(output[1].get_value(), 0x3489ced2U);
+    EXPECT_EQ(output[2].get_value(), 0x017f6059U);
+    EXPECT_EQ(output[3].get_value(), 0xb8b23931U);
+    EXPECT_EQ(output[4].get_value(), 0x8b6364f6U);
+    EXPECT_EQ(output[5].get_value(), 0xdcd835d0U);
+    EXPECT_EQ(output[6].get_value(), 0xa519105aU);
+    EXPECT_EQ(output[7].get_value(), 0x1eadd6e4U);
 
     waffle::Prover prover = composer.preprocess();
 

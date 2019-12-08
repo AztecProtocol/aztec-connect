@@ -244,7 +244,7 @@ std::string bitarray<ComposerContext>::get_witness_as_string() const
         size_t position = length - (8 * (i + 1));
         for (size_t j = 0; j < 8; ++j)
         {
-            char_bits[j] = values[position + j].get_witness_value();
+            char_bits[j] = values[position + j].get_value();
         }
         char foo = static_cast<char>(char_bits.to_ulong());
         output[i] = foo;

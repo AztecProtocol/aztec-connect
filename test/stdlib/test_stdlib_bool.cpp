@@ -25,7 +25,7 @@ typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
 
 bool get_value(bool_t &input)
 {
-    return static_cast<bool>(barretenberg::fr::from_montgomery_form(field_t(input).get_witness_value()).data[0]);
+    return static_cast<bool>(barretenberg::fr::from_montgomery_form(field_t(input).get_value()).data[0]);
 }
 
 TEST(stdlib_bool, test_basic_operations)

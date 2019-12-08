@@ -119,7 +119,7 @@ void uint32<ComposerContext>::internal_logic_operation_native(
         }
         const_mul = const_mul + const_mul;
 
-        bool maximum_bool = (field_wires[i].witness_index == static_cast<uint32_t>(-1)) ? field_wires[i].get_witness_value() : true;
+        bool maximum_bool = (field_wires[i].witness_index == static_cast<uint32_t>(-1)) ? field_wires[i].get_value() : true;
         maximum_value = maximum_value + (static_cast<int_utils::uint128_t>(maximum_bool) << i);
     }
     if (accumulator.witness_index == static_cast<uint32_t>(-1))
@@ -355,7 +355,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::concatenate() 
 
     maximum_value = std::accumulate(field_wires.rbegin(), field_wires.rend(), 0UL, [](auto acc, auto wire)
     {
-        bool maximum_bool = (wire.witness_index == static_cast<uint32_t>(-1) ? wire.get_witness_value() : 1);
+        bool maximum_bool = (wire.witness_index == static_cast<uint32_t>(-1) ? wire.get_value() : 1);
         return acc + acc + static_cast<uint64_t>(maximum_bool);
     });
 
@@ -400,7 +400,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::decompose() co
     maximum_value = std::accumulate(field_wires.rbegin(), field_wires.rend(), 0UL, [](auto acc, auto wire)
     {
         acc = acc + acc;
-        bool maximum_bool = (wire.witness_index == static_cast<uint32_t>(-1) ? wire.get_witness_value() : 1);
+        bool maximum_bool = (wire.witness_index == static_cast<uint32_t>(-1) ? wire.get_value() : 1);
         acc = acc + static_cast<uint64_t>(maximum_bool);
         return acc;
     });
@@ -881,8 +881,8 @@ template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerConte
     field_t<ComposerContext> left = get_field_element(witness_index, additive_constant, multiplicative_constant);
     field_t<ComposerContext> right = get_field_element(other.witness_index, other.additive_constant, other.multiplicative_constant);
 
-    uint32_t lhs = get_witness_value();
-    uint32_t rhs = other.get_witness_value();
+    uint32_t lhs = get_value();
+    uint32_t rhs = other.get_value();
     bool predicate_bool = lhs < rhs;
     bool_t<ComposerContext> predicate = witness_t<ComposerContext>(ctx, predicate_bool);
 

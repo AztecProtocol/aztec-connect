@@ -74,7 +74,7 @@ public:
         *this = operator^(other);
     }
 
-    bool get_witness_value() const
+    bool get_value() const
     {
         return witness_bool ^ witness_inverted;
     }

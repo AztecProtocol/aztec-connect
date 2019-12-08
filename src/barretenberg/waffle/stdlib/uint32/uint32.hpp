@@ -118,7 +118,7 @@ template <typename ComposerContext> class uint32
         return witness_index;
     }
 
-    uint32_t get_witness_value()
+    uint32_t get_value()
     {
         if (context == nullptr)
         {
@@ -127,7 +127,7 @@ template <typename ComposerContext> class uint32
         if (witness_status == IN_BINARY_FORM)
         {
             return std::accumulate(field_wires.rbegin(), field_wires.rend(), 0U, [](auto acc, auto wire) {
-                return (acc + acc + wire.get_witness_value());
+                return (acc + acc + wire.get_value());
             });
         }
         uint32_t base =

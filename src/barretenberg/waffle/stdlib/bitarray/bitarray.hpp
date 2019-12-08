@@ -53,7 +53,7 @@ public:
         {
             size_t ulong_index = i / 32;
             uint32_t shift = static_cast<uint32_t>(i - (ulong_index * 32));
-            ulong_vector[num_ulongs - 1 - ulong_index] = ulong_vector[num_ulongs - 1 - ulong_index] + (static_cast<uint32_t>(values[i].get_witness_value()) << shift);
+            ulong_vector[num_ulongs - 1 - ulong_index] = ulong_vector[num_ulongs - 1 - ulong_index] + (static_cast<uint32_t>(values[i].get_value()) << shift);
         }
         printf("[");
         for (size_t i = 0; i < num_ulongs; ++i)

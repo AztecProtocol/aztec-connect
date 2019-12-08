@@ -74,9 +74,9 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer>& m
     // for now assume we have a mimc gate at our disposal
 
     // each mimc round is (x_in + k + c[i])^7
-    barretenberg::fr::field_t x_in = message.get_witness_value();
+    barretenberg::fr::field_t x_in = message.get_value();
     barretenberg::fr::field_t x_out;
-    barretenberg::fr::field_t k = key.get_witness_value();
+    barretenberg::fr::field_t k = key.get_value();
     uint32_t k_idx = key.witness_index;
     uint32_t x_in_idx = message.witness_index;
     uint32_t x_out_idx;
