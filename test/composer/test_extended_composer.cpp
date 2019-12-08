@@ -263,8 +263,6 @@ TEST(extended_composer, basic_optimized_proof)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("prover gates = %lu\n", prover.n);
-
     waffle::Verifier verifier = waffle::preprocess(prover);
     waffle::plonk_proof proof = prover.construct_proof();
 

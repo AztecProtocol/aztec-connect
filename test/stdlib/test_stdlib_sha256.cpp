@@ -55,6 +55,37 @@ TEST(stdlib_sha256, test_sha256)
     EXPECT_EQ(result, true);
 }
 
+TEST(stdlib_sha256, test_55_bytes)
+{
+    // 55 bytes is the largest even-number of bytes that can be hashed in a single block,
+    // accounting for the single padding bit, and the 64 size bits required by the SHA-256 standard.
+    waffle::ExtendedComposer composer = waffle::ExtendedComposer();
+    bitarray input(&composer, "An 8 character password? Snow White and the 7 Dwarves..");
+
+    bitarray output_bits = plonk::stdlib::sha256(input);
+
+    std::vector<uint32> output = output_bits.to_uint32_vector();
+
+    EXPECT_EQ(output[0].get_value(), 0x51b2529fU);
+    EXPECT_EQ(output[1].get_value(), 0x872e839aU);
+    EXPECT_EQ(output[2].get_value(), 0xb686c3c2U);
+    EXPECT_EQ(output[3].get_value(), 0x483c872eU);
+    EXPECT_EQ(output[4].get_value(), 0x975bd672U);
+    EXPECT_EQ(output[5].get_value(), 0xbde22ab0U);
+    EXPECT_EQ(output[6].get_value(), 0x54a8fac7U);
+    EXPECT_EQ(output[7].get_value(), 0x93791fc7U);
+
+    waffle::Prover prover = composer.preprocess();
+
+    printf("composer gates = %lu\n", composer.get_num_gates());
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
 TEST(stdlib_sha256, test_NIST_vector_one)
 {
     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
