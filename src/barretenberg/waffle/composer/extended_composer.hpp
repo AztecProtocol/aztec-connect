@@ -81,7 +81,7 @@ class ExtendedComposer : public BoolComposer
     {
         BoolComposer::create_poly_gate(in);
     };
-    // void create_dummy_gates();
+
     virtual size_t get_num_constant_gates()
     {
         return StandardComposer::get_num_constant_gates();
