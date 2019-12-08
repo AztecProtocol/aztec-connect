@@ -57,7 +57,7 @@ TEST(stdlib_sha256, test_sha256)
 
 TEST(stdlib_sha256, test_55_bytes)
 {
-    // 55 bytes is the largest even-number of bytes that can be hashed in a single block,
+    // 55 bytes is the largest number of bytes that can be hashed in a single block,
     // accounting for the single padding bit, and the 64 size bits required by the SHA-256 standard.
     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
     bitarray input(&composer, "An 8 character password? Snow White and the 7 Dwarves..");
