@@ -56,7 +56,7 @@ uint32<ComposerContext> uint32<ComposerContext>::internal_logic_operation(
     result.context = ctx;
     for (size_t i = 0; i < 32; ++i)
     {
-        result.queued_logic_operation.operand_wires[i] = bool_t<ComposerContext>(right.field_wires[i]);
+        result.queued_logic_operation.operand_wires[i] = bool_t<ComposerContext>(right.bool_wires[i]);
     }
     result.queued_logic_operation.method = wire_logic_op;
     result.witness_status = WitnessStatus::QUEUED_LOGIC_OPERATION;
@@ -109,17 +109,17 @@ void uint32<ComposerContext>::internal_logic_operation_native(
         // addition gate can be elided out)
         if (i == 0)
         {
-            field_wires[i] = wire_logic_op(field_wires[i], operand_wires[i]);
-            accumulator = field_t<ComposerContext>(field_wires[i]);
+            bool_wires[i] = wire_logic_op(bool_wires[i], operand_wires[i]);
+            accumulator = field_t<ComposerContext>(bool_wires[i]);
         }
         else
         {
-            field_wires[i] = wire_logic_op(field_wires[i], operand_wires[i]);
-            accumulator = accumulator + (const_mul * field_wires[i]);
+            bool_wires[i] = wire_logic_op(bool_wires[i], operand_wires[i]);
+            accumulator = accumulator + (const_mul * bool_wires[i]);
         }
         const_mul = const_mul + const_mul;
 
-        bool maximum_bool = (field_wires[i].witness_index == static_cast<uint32_t>(-1)) ? field_wires[i].get_value() : true;
+        bool maximum_bool = (bool_wires[i].witness_index == static_cast<uint32_t>(-1)) ? bool_wires[i].get_value() : true;
         maximum_value = maximum_value + (static_cast<int_utils::uint128_t>(maximum_bool) << i);
     }
     if (accumulator.witness_index == static_cast<uint32_t>(-1))
@@ -164,7 +164,7 @@ void uint32<ComposerContext>::internal_logic_operation_binary(
     field_t<ComposerContext> const_mul(context, barretenberg::fr::one());
     for (size_t i = 0; i < 32; ++i)
     {
-        field_wires[i] = wire_logic_op(field_wires[i], operand_wires[i]);
+        bool_wires[i] = wire_logic_op(bool_wires[i], operand_wires[i]);
     }
     witness_index = static_cast<uint32_t>(-1);
     witness_status = uint32<ComposerContext>::WitnessStatus::IN_BINARY_FORM;
@@ -181,7 +181,7 @@ uint32<ComposerContext>::uint32()
 {
     for (size_t i = 0; i < 32; ++i)
     {
-        field_wires[i] = bool_t<ComposerContext>();
+        bool_wires[i] = bool_t<ComposerContext>();
     }
 }
 
@@ -198,7 +198,7 @@ uint32<ComposerContext>::uint32(ComposerContext* parent_context)
     field_t<ComposerContext> zero_wire = field_t<ComposerContext>(parent_context, barretenberg::fr::zero());
     for (size_t i = 0; i < 32; ++i)
     {
-        field_wires[i] = bool_t<ComposerContext>(parent_context, false);
+        bool_wires[i] = bool_t<ComposerContext>(parent_context, false);
     }
 }
 
@@ -270,7 +270,7 @@ uint32<ComposerContext>::uint32(const uint32& other)
     }
     for (size_t i = 0; i < 32; ++i)
     {
-        field_wires[i] = (other.field_wires[i]);
+        bool_wires[i] = (other.bool_wires[i]);
         if (other.queued_logic_operation.method != nullptr)
         {
             queued_logic_operation.operand_wires[i] = other.queued_logic_operation.operand_wires[i];
@@ -294,7 +294,7 @@ template <typename ComposerContext> uint32<ComposerContext>& uint32<ComposerCont
     }
     for (size_t i = 0; i < 32; ++i)
     {
-        field_wires[i] = (other.field_wires[i]);
+        bool_wires[i] = (other.bool_wires[i]);
         if (other.queued_logic_operation.method != nullptr)
         {
             queued_logic_operation.operand_wires[i] = other.queued_logic_operation.operand_wires[i];
@@ -337,7 +337,7 @@ uint32<ComposerContext>::uint32(ComposerContext *parent_context, const std::arra
     maximum_value = 0;
     for (size_t i = 0; i < 32; ++i)
     {
-        field_wires[i] = wires[i];
+        bool_wires[i] = wires[i];
     }
 }
 
@@ -353,7 +353,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::concatenate() 
     field_t<ComposerContext> constant_multiplier(context, barretenberg::fr::one());
     field_t<ComposerContext> accumulator(context, barretenberg::fr::zero());
 
-    maximum_value = std::accumulate(field_wires.rbegin(), field_wires.rend(), 0UL, [](auto acc, auto wire)
+    maximum_value = std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0UL, [](auto acc, auto wire)
     {
         bool maximum_bool = (wire.witness_index == static_cast<uint32_t>(-1) ? wire.get_value() : 1);
         return acc + acc + static_cast<uint64_t>(maximum_bool);
@@ -365,7 +365,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::concatenate() 
         constant_multiplier = constant_multiplier + constant_multiplier;
         return out;
     };
-    accumulator = std::accumulate(field_wires.begin(), field_wires.end(), accumulator, sum_wires);
+    accumulator = std::accumulate(bool_wires.begin(), bool_wires.end(), accumulator, sum_wires);
 
     additive_constant = (accumulator.witness_index == static_cast<uint32_t>(-1)) ? static_cast<uint32_t>(maximum_value) : 0;
     multiplicative_constant = 1;
@@ -394,10 +394,10 @@ template <typename ComposerContext> void uint32<ComposerContext>::decompose() co
         return result;
     };
     std::vector<bool_t> overhead_wires(static_cast<size_t>(std::max(0, static_cast<int>(num_bits) - 32)));
-    std::generate(field_wires.begin(), field_wires.end(), compute_field_wire);
+    std::generate(bool_wires.begin(), bool_wires.end(), compute_field_wire);
     std::generate(overhead_wires.begin(), overhead_wires.end(), compute_field_wire);
 
-    maximum_value = std::accumulate(field_wires.rbegin(), field_wires.rend(), 0UL, [](auto acc, auto wire)
+    maximum_value = std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0UL, [](auto acc, auto wire)
     {
         acc = acc + acc;
         bool maximum_bool = (wire.witness_index == static_cast<uint32_t>(-1) ? wire.get_value() : 1);
@@ -415,7 +415,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::decompose() co
         return out;
     };
 
-    accumulator = std::accumulate(field_wires.begin(), field_wires.end(), accumulator, sum_wires);
+    accumulator = std::accumulate(bool_wires.begin(), bool_wires.end(), accumulator, sum_wires);
     overhead_accumulator = std::accumulate(overhead_wires.begin(), overhead_wires.end(), overhead_accumulator, sum_wires);
 
     if (accumulator.witness_index != static_cast<uint32_t>(-1))
@@ -826,10 +826,10 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
         uint32_t quotient_uint = numerator_uint / denominator_uint;
         // uint32_t remainder_uint = numerator_uint - (quotient_uint * denominator_uint);
 
-        // field_t<ComposerContext> numerator = field_wires[31];
+        // field_t<ComposerContext> numerator = bool_wires[31];
         // numerator = numerator * multiplicative_constant;
         // numerator = numerator + additive_constant;
-        // field_t<ComposreContext> denominator = other.field_wires[31];
+        // field_t<ComposreContext> denominator = other.bool_wires[31];
         // denominator = denominator * multiplicative_constant;
         // denominator = denominator + additive_constant;
         result = uint32<ComposerContext>(witness_t(context, quotient_uint));
@@ -931,7 +931,7 @@ template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerConte
     uint32<ComposerContext> difference = operator-(other);
     difference.decompose();
 
-    field_t<ComposerContext> numerator = field_t<ComposerContext>(difference.field_wires[31]);
+    field_t<ComposerContext> numerator = field_t<ComposerContext>(difference.bool_wires[31]);
     // field_t<ComposerContext> numerator(context, 1);
 
     // x * xinv - 1 = 0
@@ -980,7 +980,7 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
 
     for (size_t i = 0; i < 32; ++i)
     {
-        result.field_wires[i] = ~(result.field_wires[i]);
+        result.bool_wires[i] = ~(result.bool_wires[i]);
     }
     result.witness_status = WitnessStatus::IN_BINARY_FORM;
     return result;
@@ -1002,11 +1002,11 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     uint32<ComposerContext> result(context);
     for (size_t i = 0; i < 32 - shift; ++i)
     {
-        result.field_wires[i] = field_wires[i + shift];
+        result.bool_wires[i] = bool_wires[i + shift];
     }
     for (size_t i = 32 - shift; i < 32; ++i)
     {
-        result.field_wires[i] = bool_t<ComposerContext>(context, false);
+        result.bool_wires[i] = bool_t<ComposerContext>(context, false);
     }
     result.witness_status = WitnessStatus::IN_BINARY_FORM;
     result.additive_constant = 0;
@@ -1031,11 +1031,11 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     uint32<ComposerContext> result(context);
     for (size_t i = 0; i < shift; ++i)
     {
-        result.field_wires[i] = bool_t<ComposerContext>(context, false);
+        result.bool_wires[i] = bool_t<ComposerContext>(context, false);
     }
     for (size_t i = shift; i < 32; ++i)
     {
-        result.field_wires[i] = field_wires[i - shift];
+        result.bool_wires[i] = bool_wires[i - shift];
     }
     result.witness_status = WitnessStatus::IN_BINARY_FORM;
     result.additive_constant = 0;
@@ -1056,11 +1056,11 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
 
     for (size_t i = 0; i < 32 - const_rotation; ++i)
     {
-        result.field_wires[i] = field_wires[i + const_rotation];
+        result.bool_wires[i] = bool_wires[i + const_rotation];
     }
     for (size_t i = 0; i < const_rotation; ++i)
     {
-        result.field_wires[32 - const_rotation + i] = field_wires[i];
+        result.bool_wires[32 - const_rotation + i] = bool_wires[i];
     }
     result.witness_status = WitnessStatus::IN_BINARY_FORM;
     return result;
@@ -1082,7 +1082,7 @@ bool_t<ComposerContext> uint32<ComposerContext>::at(const size_t bit_index) cons
 {
     ASSERT(bit_index < 32);
     prepare_for_logic_operations();
-    return field_wires[bit_index % 32];
+    return bool_wires[bit_index % 32];
 }
 
 } // namespace stdlib

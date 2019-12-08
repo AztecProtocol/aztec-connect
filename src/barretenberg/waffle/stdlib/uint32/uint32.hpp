@@ -126,7 +126,7 @@ template <typename ComposerContext> class uint32
         }
         if (witness_status == IN_BINARY_FORM)
         {
-            return std::accumulate(field_wires.rbegin(), field_wires.rend(), 0U, [](auto acc, auto wire) {
+            return std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0U, [](auto acc, auto wire) {
                 return (acc + acc + wire.get_value());
             });
         }
@@ -203,7 +203,7 @@ template <typename ComposerContext> class uint32
 
     mutable WitnessStatus witness_status;
 
-    mutable std::array<bool_t<ComposerContext>, 32> field_wires;
+    mutable std::array<bool_t<ComposerContext>, 32> bool_wires;
 
     LogicOperation queued_logic_operation;
 
