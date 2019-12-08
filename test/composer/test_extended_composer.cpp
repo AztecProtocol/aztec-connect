@@ -44,10 +44,10 @@ TEST(extended_composer, test_combine_linear_relations_basic_add)
 
     composer.combine_linear_relations();
 
-    EXPECT_EQ(composer.deleted_gates[0], false);
-    EXPECT_EQ(composer.deleted_gates[1], true);
-    EXPECT_EQ(composer.deleted_gates[2], false);
-    EXPECT_EQ(composer.deleted_gates.size(), 3UL);
+    EXPECT_EQ(composer.is_gate_deleted(0), false);
+    EXPECT_EQ(composer.is_gate_deleted(1), true);
+    EXPECT_EQ(composer.is_gate_deleted(2), false);
+    EXPECT_EQ(composer.get_num_gates(), 2UL);
 }
 
 TEST(extended_composer, test_combine_linear_relations_basic_mul_add)
@@ -68,10 +68,10 @@ TEST(extended_composer, test_combine_linear_relations_basic_mul_add)
 
     composer.combine_linear_relations();
 
-    EXPECT_EQ(composer.deleted_gates[0], false);
-    EXPECT_EQ(composer.deleted_gates[1], true);
-    EXPECT_EQ(composer.deleted_gates[2], false);
-    EXPECT_EQ(composer.deleted_gates.size(), 3UL);
+    EXPECT_EQ(composer.is_gate_deleted(0), false);
+    EXPECT_EQ(composer.is_gate_deleted(1), true);
+    EXPECT_EQ(composer.is_gate_deleted(2), false);
+    EXPECT_EQ(composer.get_num_gates(), 2UL);
 }
 
 TEST(extended_composer, test_combine_linear_relations_uint32)
@@ -79,50 +79,51 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
 
     uint32 a = witness_t(&composer, static_cast<uint32_t>(-1));
+    a.get_witness_index();
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(composer.deleted_gates[0], false);
-    EXPECT_EQ(composer.deleted_gates[1], true);
-    EXPECT_EQ(composer.deleted_gates[2], false);
-    EXPECT_EQ(composer.deleted_gates[3], true);
-    EXPECT_EQ(composer.deleted_gates[4], false);
-    EXPECT_EQ(composer.deleted_gates[5], true);
-    EXPECT_EQ(composer.deleted_gates[6], false);
-    EXPECT_EQ(composer.deleted_gates[7], true);
-    EXPECT_EQ(composer.deleted_gates[8], false);
-    EXPECT_EQ(composer.deleted_gates[9], true);
-    EXPECT_EQ(composer.deleted_gates[10], false);
-    EXPECT_EQ(composer.deleted_gates[11], true);
-    EXPECT_EQ(composer.deleted_gates[12], false);
-    EXPECT_EQ(composer.deleted_gates[13], true);
-    EXPECT_EQ(composer.deleted_gates[14], false);
-    EXPECT_EQ(composer.deleted_gates[15], true);
-    EXPECT_EQ(composer.deleted_gates[16], false);
-    EXPECT_EQ(composer.deleted_gates[17], true);
-    EXPECT_EQ(composer.deleted_gates[18], false);
-    EXPECT_EQ(composer.deleted_gates[19], true);
-    EXPECT_EQ(composer.deleted_gates[20], false);
-    EXPECT_EQ(composer.deleted_gates[21], true);
-    EXPECT_EQ(composer.deleted_gates[22], false);
-    EXPECT_EQ(composer.deleted_gates[23], true);
-    EXPECT_EQ(composer.deleted_gates[24], false);
-    EXPECT_EQ(composer.deleted_gates[25], true);
-    EXPECT_EQ(composer.deleted_gates[26], false);
-    EXPECT_EQ(composer.deleted_gates[27], true);
-    EXPECT_EQ(composer.deleted_gates[28], false);
-    EXPECT_EQ(composer.deleted_gates[29], true);
-    EXPECT_EQ(composer.deleted_gates[30], false);
+    EXPECT_EQ(composer.is_gate_deleted(0), false);
+    EXPECT_EQ(composer.is_gate_deleted(1), true);
+    EXPECT_EQ(composer.is_gate_deleted(2), false);
+    EXPECT_EQ(composer.is_gate_deleted(3), true);
+    EXPECT_EQ(composer.is_gate_deleted(4), false);
+    EXPECT_EQ(composer.is_gate_deleted(5), true);
+    EXPECT_EQ(composer.is_gate_deleted(6), false);
+    EXPECT_EQ(composer.is_gate_deleted(7), true);
+    EXPECT_EQ(composer.is_gate_deleted(8), false);
+    EXPECT_EQ(composer.is_gate_deleted(9), true);
+    EXPECT_EQ(composer.is_gate_deleted(10), false);
+    EXPECT_EQ(composer.is_gate_deleted(11), true);
+    EXPECT_EQ(composer.is_gate_deleted(12), false);
+    EXPECT_EQ(composer.is_gate_deleted(13), true);
+    EXPECT_EQ(composer.is_gate_deleted(14), false);
+    EXPECT_EQ(composer.is_gate_deleted(15), true);
+    EXPECT_EQ(composer.is_gate_deleted(16), false);
+    EXPECT_EQ(composer.is_gate_deleted(17), true);
+    EXPECT_EQ(composer.is_gate_deleted(18), false);
+    EXPECT_EQ(composer.is_gate_deleted(19), true);
+    EXPECT_EQ(composer.is_gate_deleted(20), false);
+    EXPECT_EQ(composer.is_gate_deleted(21), true);
+    EXPECT_EQ(composer.is_gate_deleted(22), false);
+    EXPECT_EQ(composer.is_gate_deleted(23), true);
+    EXPECT_EQ(composer.is_gate_deleted(24), false);
+    EXPECT_EQ(composer.is_gate_deleted(25), true);
+    EXPECT_EQ(composer.is_gate_deleted(26), false);
+    EXPECT_EQ(composer.is_gate_deleted(27), true);
+    EXPECT_EQ(composer.is_gate_deleted(28), false);
+    EXPECT_EQ(composer.is_gate_deleted(29), true);
+    EXPECT_EQ(composer.is_gate_deleted(30), false);
 
-    EXPECT_EQ(fr::from_montgomery_form(composer.q_l[0]).data[0], 1UL);
+    EXPECT_EQ(fr::from_montgomery_form(composer.q_l[0]).data[0], 1UL << 2UL);
     EXPECT_EQ(fr::from_montgomery_form(composer.q_r[0]).data[0], 1UL << 1UL);
-    EXPECT_EQ(fr::from_montgomery_form(composer.q_o[0]).data[0], 1UL << 2UL);
+    EXPECT_EQ(fr::from_montgomery_form(composer.q_o[0]).data[0], 1UL);
     EXPECT_EQ(fr::eq(composer.q_oo[0], fr::neg_one()), true);
 
     for (size_t i = 2; i < 30; i += 2)
     {
         uint64_t shift = static_cast<uint64_t>(i) + 1UL;
-        EXPECT_EQ(fr::from_montgomery_form(composer.q_l[i]).data[0], 1UL << shift);
-        EXPECT_EQ(fr::from_montgomery_form(composer.q_r[i]).data[0], 1UL << (shift + 1UL));
+        EXPECT_EQ(fr::from_montgomery_form(composer.q_l[i]).data[0], 1UL << (shift + 1UL));
+        EXPECT_EQ(fr::from_montgomery_form(composer.q_r[i]).data[0], 1UL << shift);
         EXPECT_EQ(fr::eq(composer.q_o[i], fr::one()), true);
         EXPECT_EQ(fr::eq(composer.q_oo[i], fr::neg_one()), true);
     }
@@ -130,8 +131,6 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
     EXPECT_EQ(fr::from_montgomery_form(composer.q_r[30]).data[0], 1UL << 31UL);
     EXPECT_EQ(fr::from_montgomery_form(composer.q_o[30]).data[0], 1UL);
     EXPECT_EQ(fr::eq(composer.q_oo[30], fr::zero()), true);
-
-    EXPECT_EQ(composer.deleted_gates.size(), 31UL);
 
     EXPECT_EQ(fr::from_montgomery_form(prover.w_l[0]).data[0], 1UL);
     EXPECT_EQ(fr::from_montgomery_form(prover.w_r[0]).data[0], 1UL);
@@ -169,9 +168,8 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
     waffle::plonk_proof proof = prover.construct_proof();
 
     bool proof_valid = verifier.verify_proof(proof);
-    printf("prover adjusted n = %lu \n", composer.adjusted_n);
 
-    EXPECT_EQ(composer.adjusted_n, 16UL);
+    EXPECT_EQ(composer.get_num_gates(), 16UL);
     EXPECT_EQ(proof_valid, true);
 }
 
@@ -233,21 +231,15 @@ TEST(extended_composer, basic_proof)
     field_t b[10];
     for (size_t i = 0; i < 10; ++i)
     {
-        a[i]  = witness_t(&composer, 100U);
+        a[i] = witness_t(&composer, 100U);
         b[i] = witness_t(&composer, 44U);
         field_t c = a[i] * b[i];
     }
 
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(composer.deleted_gates[0], false);
-    EXPECT_EQ(composer.deleted_gates[1], false);
-
-    for (size_t i = 0; i < 16; ++i)
-    {
-        EXPECT_EQ(composer.adjusted_gate_indices[i], static_cast<uint32_t>(i));
-    }
-    printf("prover gates = %lu\n", prover.n);
+    EXPECT_EQ(composer.is_gate_deleted(0), false);
+    EXPECT_EQ(composer.is_gate_deleted(1), false);
 
     waffle::Verifier verifier = waffle::preprocess(prover);
 
@@ -287,11 +279,10 @@ TEST(extended_composer, test_optimized_uint32_xor)
     uint32 a = witness_t(&composer, 100U);
     uint32 b = witness_t(&composer, 44U);
     uint32 c = a ^ b;
-
+    c = c + a;
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(composer.adjusted_n, 65UL);
-    printf("prover gates = %lu\n", prover.n);
+    EXPECT_EQ(composer.get_num_gates(), 65UL);
 
     waffle::Verifier verifier = waffle::preprocess(prover);
     waffle::plonk_proof proof = prover.construct_proof();
@@ -306,11 +297,10 @@ TEST(extended_composer, test_optimized_uint32_and)
     uint32 a = witness_t(&composer, 100U);
     uint32 b = witness_t(&composer, 44U);
     uint32 c = a & b;
-
+    c = c + a;
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(composer.adjusted_n, 65UL);
-    printf("prover gates = %lu\n", prover.n);
+    EXPECT_EQ(composer.get_num_gates(), 65UL);
 
     waffle::Verifier verifier = waffle::preprocess(prover);
     waffle::plonk_proof proof = prover.construct_proof();
@@ -325,11 +315,10 @@ TEST(extended_composer, test_optimized_uint32_or)
     uint32 a = witness_t(&composer, 100U);
     uint32 b = witness_t(&composer, 44U);
     uint32 c = a | b;
-
+    c = c + a;
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(composer.adjusted_n, 65UL);
-    printf("prover gates = %lu\n", prover.n);
+    EXPECT_EQ(composer.get_num_gates(), 65UL);
 
     waffle::Verifier verifier = waffle::preprocess(prover);
     waffle::plonk_proof proof = prover.construct_proof();
@@ -357,9 +346,6 @@ TEST(extended_composer, small_optimized_circuit)
     }
 
     waffle::Prover prover = composer.preprocess();
-    printf("n delta = %lu\n", composer.n - composer.adjusted_n);
-    printf("prover gates = %lu\n", prover.n);
-    printf("composer gates = %lu\n", composer.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();

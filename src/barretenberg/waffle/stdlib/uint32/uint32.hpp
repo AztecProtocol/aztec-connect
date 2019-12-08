@@ -66,7 +66,6 @@ template <typename ComposerContext> class uint32
     {
         return operator-(uint32(context, barretenberg::fr::one()));
     };
-
     uint32 operator+=(const uint32& other)
     {
         *this = operator+(other);

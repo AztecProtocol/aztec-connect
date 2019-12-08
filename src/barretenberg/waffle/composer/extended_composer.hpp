@@ -17,7 +17,7 @@ class ExtendedComposer : public BoolComposer
         WireType wire_type = WireType::NULL_WIRE;
         std::vector<barretenberg::fr::field_t*> selectors;
 
-        extended_wire_properties& operator=(const extended_wire_properties &other)
+        extended_wire_properties& operator=(const extended_wire_properties& other)
         {
             is_mutable = other.is_mutable;
             index = other.index;
@@ -44,6 +44,17 @@ class ExtendedComposer : public BoolComposer
     };
 
     ~ExtendedComposer(){};
+
+    size_t get_num_gates() const override
+    {
+        if (adjusted_n > 0)
+        {
+            return adjusted_n;
+        }
+        return n;
+    }
+
+    bool is_gate_deleted(const size_t index) const { return deleted_gates[index]; }
 
     // virtual uint32_t add_variable(const barretenberg::fr::field_t &in) { return BoolComposer::add_variable(in); }
     bool check_gate_flag(const size_t gate_index, const GateFlags flag) const;
@@ -86,13 +97,14 @@ class ExtendedComposer : public BoolComposer
     {
         return StandardComposer::get_num_constant_gates();
     }
-
     std::vector<barretenberg::fr::field_t> q_oo;
+
+  private:
     std::vector<bool> deleted_gates;
     std::vector<uint32_t> adjusted_gate_indices;
     uint32_t zero_idx;
     barretenberg::fr::field_t zero_selector;
-    size_t adjusted_n;
+    size_t adjusted_n = 0;
 };
 } // namespace waffle
 #endif

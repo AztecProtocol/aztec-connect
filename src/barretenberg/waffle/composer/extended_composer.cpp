@@ -164,6 +164,7 @@ void ExtendedComposer::combine_linear_relations()
         q_oo[i] = fr::zero();
     }
     std::vector<quad> potential_quads;
+    potential_quads.reserve(w_l.size());
     size_t i = 0;
 
     while (i < (w_l.size() - 1))

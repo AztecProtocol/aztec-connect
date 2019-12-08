@@ -8,7 +8,7 @@ namespace waffle
 class StandardComposer : public ComposerBase
 {
 public:
-    StandardComposer(const size_t size_hint = 0) : ComposerBase(), n(0)
+    StandardComposer(const size_t size_hint = 0) : ComposerBase()
     {
         features |= static_cast<size_t>(Features::BASIC_ARITHMETISATION);
         w_l.reserve(size_hint);
@@ -33,8 +33,6 @@ public:
     virtual size_t get_num_constant_gates() { return 0; }
 
     size_t zero_idx;
-    size_t n;
-
 
     std::vector<barretenberg::fr::field_t> q_m;
     std::vector<barretenberg::fr::field_t> q_l;

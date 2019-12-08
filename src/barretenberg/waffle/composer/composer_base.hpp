@@ -101,9 +101,10 @@ class ComposerBase
             return ((gate_index == other.gate_index) && (wire_type == other.wire_type));
         }
     };
-    ComposerBase(){};
+    ComposerBase() : n(0) {};
     virtual ~ComposerBase(){};
 
+    virtual size_t get_num_gates() const { return n; }
     virtual Prover preprocess() = 0;
 
     virtual bool supports_feature(const Features target_feature)
@@ -192,6 +193,7 @@ class ComposerBase
     }
 
   protected:
+    size_t n;
     std::vector<uint32_t> w_l;
     std::vector<uint32_t> w_r;
     std::vector<uint32_t> w_o;

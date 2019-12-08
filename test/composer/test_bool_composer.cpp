@@ -156,8 +156,8 @@ TEST(bool_composers, test_deferred_bool_gate_proofs)
     }
 
     waffle::Prover prover = composer.preprocess();
-    EXPECT_EQ(composer.n, 41UL + composer.get_num_constant_gates());
-    EXPECT_EQ(prover.n, 64UL);
+    EXPECT_EQ(composer.get_num_gates(), 27UL + composer.get_num_constant_gates());
+    EXPECT_EQ(prover.n, 32UL);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -189,8 +189,8 @@ TEST(bool_composers, test_repeated_bool_gate_proofs)
     }
 
     waffle::Prover prover = composer.preprocess();
-    EXPECT_EQ(composer.n, 41UL + composer.get_num_constant_gates());
-    EXPECT_EQ(prover.n, 64UL);
+    EXPECT_EQ(composer.get_num_gates(), 27UL + composer.get_num_constant_gates());
+    EXPECT_EQ(prover.n, 32UL);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();

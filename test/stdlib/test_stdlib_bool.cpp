@@ -83,7 +83,6 @@ TEST(stdlib_bool, xor)
         bool_t c = a ^ b;
     }
     waffle::Prover prover = composer.preprocess();
-    printf("num gates = %lu\n", prover.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -117,7 +116,6 @@ TEST(stdlib_bool, xor_constants)
         }
     }
     waffle::Prover prover = composer.preprocess();
-    printf("num gates = %lu\n", prover.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -154,7 +152,6 @@ TEST(stdlib_bool, xor_twin_constants)
         }
     }
     waffle::Prover prover = composer.preprocess();
-    printf("num gates = %lu\n", prover.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -173,7 +170,6 @@ TEST(stdlib_bool, and)
         bool_t c = a & b;
     }
     waffle::Prover prover = composer.preprocess();
-    printf("num gates = %lu\n", prover.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -207,7 +203,6 @@ TEST(stdlib_bool, and_constants)
         }
     }
     waffle::Prover prover = composer.preprocess();
-    printf("num gates = %lu\n", prover.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -226,7 +221,6 @@ TEST(stdlib_bool, or)
         bool_t c = a | b;
     }
     waffle::Prover prover = composer.preprocess();
-    printf("num gates = %lu\n", prover.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -261,7 +255,6 @@ TEST(stdlib_bool, or_constants)
         }
     }
     waffle::Prover prover = composer.preprocess();
-    printf("num gates = %lu\n", prover.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -323,7 +316,6 @@ TEST(stdlib_bool, eq)
         EXPECT_EQ(get_value(d[i]), d_alt[i]);
     }
     waffle::Prover prover = composer.preprocess();
-    printf("num gates = %lu\n", prover.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -359,7 +351,6 @@ TEST(stdlib_bool, test_simple_proof)
         f = b;
     }
     waffle::Prover prover = composer.preprocess();
-    printf("num gates = %lu\n", prover.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
