@@ -47,6 +47,7 @@ public:
 
     barretenberg::polynomial q_bl;
     barretenberg::polynomial q_br;
+    barretenberg::polynomial q_bo;
     size_t n;
 };
 

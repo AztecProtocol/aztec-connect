@@ -173,8 +173,6 @@ namespace waffle
         ASSERT(n == q_o.size());
         ASSERT(n == q_o.size());
 
-        // ensure witness / instance polynomials are non-zero
-        create_dummy_gates();
         size_t log2_n = static_cast<size_t>(log2(n + 1));
         if ((1UL << log2_n) != (n + 1))
         {

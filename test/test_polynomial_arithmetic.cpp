@@ -57,7 +57,7 @@ TEST(polynomials, fft_with_small_degree)
 
 TEST(polynomials, basic_fft)
 {
-    size_t n = 1 << 20;
+    size_t n = 1 << 14;
     fr::field_t* data = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * n * 2);
     fr::field_t* result = &data[0];
     fr::field_t* expected = &data[n];

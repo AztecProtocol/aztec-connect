@@ -28,16 +28,16 @@ public:
 
     ~MiMCComposer() {};
 
-    Prover preprocess();
+    Prover preprocess() override;
 
-    void create_add_gate(const add_triple &in);
-    void create_mul_gate(const mul_triple &in);
-    void create_bool_gate(const uint32_t a);
-    void create_poly_gate(const poly_triple &in);
+    void create_add_gate(const add_triple &in) override;
+    void create_mul_gate(const mul_triple &in) override;
+    void create_bool_gate(const uint32_t a) override;
+    void create_poly_gate(const poly_triple &in) override;
     void create_mimc_gate(const mimc_quadruplet &in);
     void create_noop_gate();
     void create_dummy_gates();
-    virtual size_t get_num_constant_gates() { return StandardComposer::get_num_constant_gates() + 2; }
+    size_t get_num_constant_gates() const override { return StandardComposer::get_num_constant_gates(); }
 
     std::vector<barretenberg::fr::field_t> q_mimc_coefficient;
     std::vector<barretenberg::fr::field_t> q_mimc_selector;

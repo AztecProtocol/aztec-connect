@@ -12,8 +12,8 @@ namespace waffle
 {
 ProverSequentialWidget::ProverSequentialWidget(const size_t n) :
     ProverBaseWidget(
-        static_cast<size_t>(WidgetVersionControl::Dependencies::NONE),
-        static_cast<size_t>(WidgetVersionControl::Features::STANDARD)
+        static_cast<size_t>(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED),
+        static_cast<size_t>(WidgetVersionControl::Features::HAS_EXTENDED_ARITHMETISATION)
     )
 {
     q_o_next.resize(n);
@@ -53,7 +53,7 @@ fr::field_t ProverSequentialWidget::compute_quotient_contribution(const barreten
     q_o_next_fft.coset_fft_with_constant(circuit_state.mid_domain, old_alpha);
 
     ITERATE_OVER_DOMAIN_START(circuit_state.mid_domain);
-        fr::__mul(circuit_state.w_o_fft.at(2 * i + 2), q_o_next_fft.at(i), q_o_next_fft.at(i)); // w_l * q_m = rdx
+        fr::__mul(circuit_state.w_o_fft.at(2 * i + 4), q_o_next_fft.at(i), q_o_next_fft.at(i)); // w_l * q_m = rdx
         fr::__add(circuit_state.quotient_mid.at(i), q_o_next_fft.at(i), circuit_state.quotient_mid.at(i));
     ITERATE_OVER_DOMAIN_END;
 
@@ -108,8 +108,8 @@ void ProverSequentialWidget::reset(const barretenberg::evaluation_domain& domain
 
 VerifierSequentialWidget::VerifierSequentialWidget(std::vector<barretenberg::g1::affine_element> &instance_commitments) :
     VerifierBaseWidget(
-        static_cast<size_t>(WidgetVersionControl::Dependencies::NONE),
-        static_cast<size_t>(WidgetVersionControl::Features::STANDARD)
+        static_cast<size_t>(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED),
+        static_cast<size_t>(WidgetVersionControl::Features::HAS_EXTENDED_ARITHMETISATION)
     )
 {
     ASSERT(instance_commitments.size() == 1);
@@ -124,17 +124,19 @@ VerifierBaseWidget::challenge_coefficients VerifierSequentialWidget::append_scal
     std::vector<barretenberg::g1::affine_element> &points,
     std::vector<barretenberg::fr::field_t> &scalars)
 {
-    for (size_t i = 0; i < instance.size(); ++i)
-    {
-        points.push_back(instance[i]);
-    }
     barretenberg::fr::field_t old_alpha = barretenberg::fr::mul(challenge.alpha_base, barretenberg::fr::invert(challenge.alpha_step));
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
     fr::field_t q_o_next_term;
     fr::__mul(proof.w_o_shifted_eval, old_alpha, q_o_next_term);
     fr::__mul(q_o_next_term, challenge.linear_nu, q_o_next_term);
-    scalars.push_back(q_o_next_term);
+
+    
+    if (g1::on_curve(instance[0]))
+    {
+        points.push_back(instance[0]);
+        scalars.push_back(q_o_next_term);
+    }
 
     return VerifierBaseWidget::challenge_coefficients{
         challenge.alpha_base,
