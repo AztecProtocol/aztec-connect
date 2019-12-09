@@ -330,7 +330,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::concatenate() 
     field_t<ComposerContext> constant_multiplier(context, barretenberg::fr::one());
     field_t<ComposerContext> accumulator(context, barretenberg::fr::zero());
 
-    maximum_value = std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0UL, [](auto acc, auto wire)
+    maximum_value = std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0ULL, [](auto acc, auto wire)
     {
         bool maximum_bool = (wire.witness_index == static_cast<uint32_t>(-1) ? wire.get_value() : 1);
         return acc + acc + static_cast<uint64_t>(maximum_bool);
@@ -374,7 +374,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::decompose() co
     std::generate(bool_wires.begin(), bool_wires.end(), compute_field_wire);
     std::generate(overhead_wires.begin(), overhead_wires.end(), compute_field_wire);
 
-    maximum_value = std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0UL, [](auto acc, auto wire)
+    maximum_value = std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0ULL, [](auto acc, auto wire)
     {
         acc = acc + acc;
         bool maximum_bool = (wire.witness_index == static_cast<uint32_t>(-1) ? wire.get_value() : 1);
