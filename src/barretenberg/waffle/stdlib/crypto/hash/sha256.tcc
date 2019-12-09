@@ -7,7 +7,7 @@ namespace plonk
 {
 namespace stdlib
 {
-namespace
+namespace internal
 {
 constexpr uint32_t init_constants[8]{ 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
                                       0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
@@ -34,14 +34,14 @@ size_t get_num_blocks(const size_t num_bits)
 template <typename Composer>
 void prepare_constants(std::array<uint32<Composer>, 8> &input)
 {
-    input[0] = init_constants[0];
-    input[1] = init_constants[1];
-    input[2] = init_constants[2];
-    input[3] = init_constants[3];
-    input[4] = init_constants[4];
-    input[5] = init_constants[5];
-    input[6] = init_constants[6];
-    input[7] = init_constants[7];
+    input[0] = internal::init_constants[0];
+    input[1] = internal::init_constants[1];
+    input[2] = internal::init_constants[2];
+    input[3] = internal::init_constants[3];
+    input[4] = internal::init_constants[4];
+    input[5] = internal::init_constants[5];
+    input[6] = internal::init_constants[6];
+    input[7] = internal::init_constants[7];
 }
 
 template <typename Composer>
@@ -87,7 +87,7 @@ std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 
     {
         uint32 S1 = e.ror(6U) ^ e.ror(11U) ^ e.ror(25U);
         uint32 ch = (e & f) + (~e & g); // === (e & f) ^ (~e & g), `+` op is cheaper
-        uint32 temp1 = h + S1 + ch + round_constants[i] + w[i];
+        uint32 temp1 = h + S1 + ch + internal::round_constants[i] + w[i];
         uint32 S0 = a.ror(2U) ^ a.ror(13U) ^ a.ror(22U);
         uint32 T0 = (b & c);
         uint32 maj = (a & (b + c - (T0 * 2))) + T0; // === (a & b) ^ (a & c) ^ (b & c)
@@ -125,7 +125,7 @@ bitarray<Composer> sha256(const bitarray<Composer> &input)
     typedef bitarray<Composer> bitarray;
 
     size_t num_bits = input.size();
-    size_t num_blocks = get_num_blocks(num_bits);
+    size_t num_blocks = internal::get_num_blocks(num_bits);
 
     bitarray message_schedule = bitarray(input.get_context(), num_blocks * 512UL);
 
