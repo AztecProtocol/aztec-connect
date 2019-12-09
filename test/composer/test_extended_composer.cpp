@@ -147,8 +147,8 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
     }
 
     EXPECT_EQ(fr::from_montgomery_form(prover.w_r[15]).data[0], 1UL);
-    EXPECT_EQ(fr::from_montgomery_form(prover.w_l[15]).data[0], (1UL << 32UL) - 1UL);
-    EXPECT_EQ(fr::from_montgomery_form(prover.w_o[15]).data[0], (1UL << 31UL) - 1UL);
+    EXPECT_EQ(fr::from_montgomery_form(prover.w_l[15]).data[0], (1ULL << 32ULL) - 1ULL);
+    EXPECT_EQ(fr::from_montgomery_form(prover.w_o[15]).data[0], (1ULL << 31ULL) - 1ULL);
 
     for (size_t i = 0; i < 32; ++i)
     {

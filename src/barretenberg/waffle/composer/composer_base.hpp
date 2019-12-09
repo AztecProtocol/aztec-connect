@@ -116,7 +116,7 @@ class ComposerBase
     virtual void create_mul_gate(const mul_triple& in) = 0;
     virtual void create_bool_gate(const uint32_t a) = 0;
     virtual void create_poly_gate(const poly_triple& in) = 0;
-    virtual size_t get_num_constant_gates() = 0;
+    virtual size_t get_num_constant_gates() const = 0;
 
     void add_gate_flag(const size_t idx, const GateFlags new_flag)
     {
@@ -158,7 +158,7 @@ class ComposerBase
         wire_epicycles[b_idx] = std::vector<epicycle>();
     }
 
-    void compute_sigma_permutations(Prover& output_state)
+    virtual void compute_sigma_permutations(Prover& output_state)
     {
         // create basic 'identity' permutation
         output_state.sigma_1_mapping.reserve(output_state.n);

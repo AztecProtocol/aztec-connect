@@ -23,14 +23,14 @@ public:
 
     ~StandardComposer() {};
 
-    virtual Prover preprocess();
+    virtual Prover preprocess() override;
 
-    virtual void create_add_gate(const add_triple &in);
-    virtual void create_mul_gate(const mul_triple &in);
-    virtual void create_bool_gate(const uint32_t a);
-    virtual void create_poly_gate(const poly_triple &in);
-    virtual void create_dummy_gates();
-    virtual size_t get_num_constant_gates() { return 0; }
+    void create_add_gate(const add_triple &in) override;
+    void create_mul_gate(const mul_triple &in) override;
+    void create_bool_gate(const uint32_t a) override;
+    void create_poly_gate(const poly_triple &in) override;
+    void create_dummy_gates();
+    size_t get_num_constant_gates() const override { return 0; }
 
     size_t zero_idx;
 

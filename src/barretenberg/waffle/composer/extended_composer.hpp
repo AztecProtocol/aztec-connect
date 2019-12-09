@@ -68,32 +68,32 @@ class ExtendedComposer : public BoolComposer
                                                    const size_t gate_index);
     extended_wire_properties get_shared_wire(const size_t i);
     void combine_linear_relations();
-    void compute_sigma_permutations(Prover& output_state);
-    Prover preprocess();
+    void compute_sigma_permutations(Prover& output_state) override;
+    Prover preprocess() override;
 
-    virtual uint32_t add_variable(const barretenberg::fr::field_t& in)
+    uint32_t add_variable(const barretenberg::fr::field_t& in) override
     {
         return BoolComposer::add_variable(in);
     }
 
-    void create_add_gate(const add_triple& in)
+    void create_add_gate(const add_triple& in) override
     {
         BoolComposer::create_add_gate(in);
     };
-    void create_mul_gate(const mul_triple& in)
+    void create_mul_gate(const mul_triple& in) override
     {
         BoolComposer::create_mul_gate(in);
     };
-    void create_bool_gate(const uint32_t a)
+    void create_bool_gate(const uint32_t a) override
     {
         BoolComposer::create_bool_gate(a);
     };
-    void create_poly_gate(const poly_triple& in)
+    void create_poly_gate(const poly_triple& in) override
     {
         BoolComposer::create_poly_gate(in);
     };
 
-    virtual size_t get_num_constant_gates()
+    virtual size_t get_num_constant_gates() const override
     {
         return StandardComposer::get_num_constant_gates();
     }

@@ -209,7 +209,7 @@ uint32<ComposerContext>::uint32(const witness_t<ComposerContext>& value)
     , additive_constant(0)
     , multiplicative_constant(1)
     , witness_status(WitnessStatus::NOT_NORMALIZED)
-    , maximum_value((1UL << 32UL) - 1UL)
+    , maximum_value((1ULL << 32ULL) - 1ULL)
 {
     ASSERT(context != nullptr);
 }
@@ -242,7 +242,7 @@ uint32<ComposerContext>::uint32(const field_t<ComposerContext>& other)
     : context(other.context)
     , witness_index(other.witness_index)
     , witness_status(WitnessStatus::NOT_NORMALIZED)
-    , maximum_value((1UL << 32UL) - 1UL)
+    , maximum_value((1ULL << 32ULL) - 1ULL)
 {
     ASSERT(context != nullptr);
     uint64_t additive_temp = barretenberg::fr::from_montgomery_form(other.additive_constant).data[0];
@@ -777,11 +777,11 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     {
         // TODO: can remove this requirement with proper bigint arithmetic
         // TODO: handle constants in decomposition!
-        if (maximum_value > (1UL << 32UL))
+        if (maximum_value > (1ULL << 32ULL))
         {
             decompose();
         }
-        if (other.maximum_value > (1UL << 32UL))
+        if (other.maximum_value > (1ULL << 32ULL))
         {
             other.decompose();
         }
@@ -823,11 +823,11 @@ template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerConte
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();
 
-    if (maximum_value >= (1UL << 32UL))
+    if (maximum_value >= (1ULL << 32ULL))
     {
         decompose();
     }
-    if (other.maximum_value >= (1UL << 32UL))
+    if (other.maximum_value >= (1ULL << 32ULL))
     {
         decompose();
     }
@@ -896,11 +896,11 @@ template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerConte
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();
 
-    if (maximum_value >= (1UL << 32UL))
+    if (maximum_value >= (1ULL << 32ULL))
     {
         decompose();
     }
-    if (other.maximum_value >= (1UL << 32UL))
+    if (other.maximum_value >= (1ULL << 32ULL))
     {
         decompose();
     }
