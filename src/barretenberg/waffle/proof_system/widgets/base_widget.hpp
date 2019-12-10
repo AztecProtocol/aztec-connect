@@ -6,6 +6,7 @@
 #include "../../../groups/g1.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
 #include "../../../polynomials/polynomial.hpp"
+#include "../../waffle_types.hpp"
 #include "../../../types.hpp"
 #include "../../reference_string/reference_string.hpp"
 

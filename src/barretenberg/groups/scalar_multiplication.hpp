@@ -7,6 +7,7 @@
 #include "../assert.hpp"
 
 #include "../types.hpp"
+#include "./g1.hpp"
 
 namespace barretenberg
 {

@@ -94,9 +94,9 @@ std::vector<g1::affine_element*> generate_pippenger_precompute_table(g1::affine_
     g1::element* temp_table = (g1::element*)aligned_alloc(32, sizeof(g1::element) * num_points);
     for (size_t j = 0; j < num_points; ++j)
     {
-        fq::copy(points[j].x, temp_table[j].x);
-        fq::copy(points[j].y, temp_table[j].y);
-        fq::copy(fq::one(), temp_table[j].z);
+        fq::__copy(points[j].x, temp_table[j].x);
+        fq::__copy(points[j].y, temp_table[j].y);
+        fq::__copy(fq::one, temp_table[j].z);
     }
     for (size_t i = 0; i < num_rounds - 1; ++i)
     {
@@ -111,8 +111,8 @@ std::vector<g1::affine_element*> generate_pippenger_precompute_table(g1::affine_
         g1::affine_element* output_ptr = &table[i * num_points];
         for (size_t j = 0; j < num_points; ++j)
         {
-            fq::copy(temp_table[j].x, output_ptr[j].x);
-            fq::copy(temp_table[j].y, output_ptr[j].y);
+            fq::__copy(temp_table[j].x, output_ptr[j].x);
+            fq::__copy(temp_table[j].y, output_ptr[j].y);
         }
     }
     std::vector<g1::affine_element*> result(num_rounds);
@@ -199,7 +199,7 @@ g1::element pippenger_low_memory(fr::field_t* scalars, g1::affine_element* point
                 {
                     // g1::neg(points[j], state.addition_temporary);
                     fq::__mul_beta(points[j].x, state.addition_temporary.x);
-                    fq::copy(points[j].y, state.addition_temporary.y);
+                    fq::__copy(points[j].y, state.addition_temporary.y);
                     g1::mixed_add(state.buckets[0], state.addition_temporary, state.buckets[0]);
                 }
             }
@@ -513,7 +513,7 @@ g1::element pippenger_internal_precomputed(fr::field_t* scalars,
                 }
                 if (wnaf_state.skew_table[j + j + 1])
                 {
-                    fq::copy(points[j].y, state.addition_temporary.y);
+                    fq::__copy(points[j].y, state.addition_temporary.y);
                     fq::__mul_beta(points[j].x, state.addition_temporary.x);
                     g1::mixed_add(state.buckets[0], state.addition_temporary, state.buckets[0]);
                 }

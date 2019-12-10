@@ -1,7 +1,7 @@
-#ifndef EVALUATION_DOMAIN_HPP
-#define EVALUATION_DOMAIN_HPP
+#pragma once
 
 #include "../types.hpp"
+#include "../fields/fr.hpp"
 #include "stdio.h"
 #include <vector>
 
@@ -59,4 +59,3 @@ private:
     barretenberg::fr::field_t* roots;
 };
 }
-#endif

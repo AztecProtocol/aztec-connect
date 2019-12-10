@@ -37,10 +37,10 @@ namespace waffle
     void BoolComposer::create_dummy_gates()
     {
         StandardComposer::create_dummy_gates();
-        q_left_bools.emplace_back(fr::zero());
-        q_right_bools.emplace_back(fr::zero());
-        q_left_bools.emplace_back(fr::zero());
-        q_right_bools.emplace_back(fr::zero());
+        q_left_bools.emplace_back(fr::zero);
+        q_right_bools.emplace_back(fr::zero);
+        q_left_bools.emplace_back(fr::zero);
+        q_right_bools.emplace_back(fr::zero);
 
         // add a dummy gate to ensure that left / right bool selectors are nonzero
         q_m.emplace_back(fr::field_t({{0,0,0,0}}));
@@ -48,8 +48,8 @@ namespace waffle
         q_r.emplace_back(fr::field_t({{0,0,0,0}}));
         q_o.emplace_back(fr::field_t({{0,0,0,0}}));
         q_c.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_left_bools.emplace_back(fr::one());
-        q_right_bools.emplace_back(fr::one());
+        q_left_bools.emplace_back(fr::one);
+        q_right_bools.emplace_back(fr::one);
         w_l.emplace_back(zero_idx);
         w_r.emplace_back(zero_idx);
         w_o.emplace_back(zero_idx);
@@ -71,9 +71,9 @@ namespace waffle
         q_output_bools.reserve(n);
         for (size_t i = 0; i < n; ++i)
         {
-            q_left_bools.emplace_back(is_bool[w_l[i]] ? fr::one() : fr::zero());
-            q_right_bools.emplace_back(is_bool[w_r[i]] ? fr::one() : fr::zero());
-            q_output_bools.emplace_back(is_bool[w_o[i]] ? fr::one() : fr::zero());
+            q_left_bools.emplace_back(is_bool[w_l[i]] ? fr::one : fr::zero);
+            q_right_bools.emplace_back(is_bool[w_r[i]] ? fr::one : fr::zero);
+            q_output_bools.emplace_back(is_bool[w_o[i]] ? fr::one : fr::zero);
         }
     }
 
@@ -128,17 +128,17 @@ namespace waffle
         output_state.w_o = polynomial(new_n);
         for (size_t i = 0; i < new_n; ++i)
         {
-            fr::copy(variables[w_l[i]], output_state.w_l[i]);
-            fr::copy(variables[w_r[i]], output_state.w_r[i]);
-            fr::copy(variables[w_o[i]], output_state.w_o[i]);
-            fr::copy(q_m[i], arithmetic_widget->q_m[i]);
-            fr::copy(q_l[i], arithmetic_widget->q_l[i]);
-            fr::copy(q_r[i], arithmetic_widget->q_r[i]);
-            fr::copy(q_o[i], arithmetic_widget->q_o[i]);
-            fr::copy(q_c[i], arithmetic_widget->q_c[i]);
-            fr::copy(q_left_bools[i], bool_widget->q_bl[i]);
-            fr::copy(q_right_bools[i], bool_widget->q_br[i]);
-            fr::copy(q_output_bools[i], bool_widget->q_bo[i]);
+            fr::__copy(variables[w_l[i]], output_state.w_l[i]);
+            fr::__copy(variables[w_r[i]], output_state.w_r[i]);
+            fr::__copy(variables[w_o[i]], output_state.w_o[i]);
+            fr::__copy(q_m[i], arithmetic_widget->q_m[i]);
+            fr::__copy(q_l[i], arithmetic_widget->q_l[i]);
+            fr::__copy(q_r[i], arithmetic_widget->q_r[i]);
+            fr::__copy(q_o[i], arithmetic_widget->q_o[i]);
+            fr::__copy(q_c[i], arithmetic_widget->q_c[i]);
+            fr::__copy(q_left_bools[i], bool_widget->q_bl[i]);
+            fr::__copy(q_right_bools[i], bool_widget->q_br[i]);
+            fr::__copy(q_output_bools[i], bool_widget->q_bo[i]);
         }
         output_state.widgets.emplace_back(std::move(arithmetic_widget));
         output_state.widgets.emplace_back(std::move(bool_widget));

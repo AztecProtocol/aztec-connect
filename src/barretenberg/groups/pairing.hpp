@@ -2,6 +2,11 @@
 #define PAIRING
 
 #include "../types.hpp"
+#include "./g1.hpp"
+#include "./g2.hpp"
+#include "../fields/fq2.hpp"
+#include "../fields/fq6.hpp"
+#include "../fields/fq12.hpp"
 
 namespace barretenberg
 {
@@ -20,12 +25,12 @@ constexpr bool neg_z_loop_bits[neg_z_loop_length]{
 
 struct miller_lines
 {
-    pairing::ell_coeffs lines[precomputed_coefficients_length];
+    fq12::ell_coeffs lines[precomputed_coefficients_length];
 };
 
-void doubling_step_for_flipped_miller_loop(g2::element &current, pairing::ell_coeffs &ell);
+void doubling_step_for_flipped_miller_loop(g2::element &current, fq12::ell_coeffs &ell);
 
-void mixed_addition_step_for_flipped_miller_loop(const g2::element &base, g2::element &Q, pairing::ell_coeffs &line);
+void mixed_addition_step_for_flipped_miller_loop(const g2::element &base, g2::element &Q, fq12::ell_coeffs &line);
 
 void precompute_miller_lines(const g2::element &Q, miller_lines &lines);
 

@@ -1,13 +1,12 @@
-#include "../fields/fq.hpp"
-#include "../types.hpp"
+#pragma once
+
+#include "stdint.h"
 
 namespace barretenberg
 {
-namespace g1
-{
-
 // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-inline void copy(affine_element* src, affine_element* dest)
+template <typename coordinate_field, typename subgroup_field>
+inline void group<coordinate_field, subgroup_field>::copy(affine_element* src, affine_element* dest)
 {
 #if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src & 0x1f) == 0));
@@ -20,13 +19,14 @@ inline void copy(affine_element* src, affine_element* dest)
                          : "r"(src), "r"(dest)
                          : "%ymm0", "%ymm1", "memory");
 #else
-    fq::__copy(src->x, dest->x);
-    fq::__copy(src->y, dest->y);
+    coordinate_field::copy(src->x, dest->x);
+    coordinate_field::copy(src->y, dest->y);
 #endif
 }
 
 // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-inline void copy(element* src, element* dest)
+template <typename coordinate_field, typename subgroup_field>
+inline void group<coordinate_field, subgroup_field>::copy(element* src, element* dest)
 {
 #if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src & 0x1f) == 0));
@@ -41,15 +41,16 @@ inline void copy(element* src, element* dest)
                          : "r"(src), "r"(dest)
                          : "%ymm0", "%ymm1", "%ymm2", "memory");
 #else
-    fq::__copy(src->x, dest->x);
-    fq::__copy(src->y, dest->y);
-    fq::__copy(src->z, dest->z);
+    coordinate_field::copy(src->x, dest->x);
+    coordinate_field::copy(src->y, dest->y);
+    coordinate_field::copy(src->z, dest->z);
 #endif
 }
 
 // copies src into dest, inverting y-coordinate if 'predicate' is true
 // n.b. requires src and dest to be aligned on 32 byte boundary
-inline void conditional_negate_affine(affine_element* src, affine_element* dest, uint64_t predicate)
+template <typename coordinate_field, typename subgroup_field>
+inline void group<coordinate_field, subgroup_field>::conditional_negate_affine(affine_element* src, affine_element* dest, uint64_t predicate)
 {
 #if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src & 0x1f) == 0));
@@ -118,5 +119,4 @@ inline void conditional_negate_affine(affine_element* src, affine_element* dest,
 #endif
 }
 
-} // namespace g1
 } // namespace barretenberg

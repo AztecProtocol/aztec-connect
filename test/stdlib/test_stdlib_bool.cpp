@@ -33,8 +33,8 @@ TEST(stdlib_bool, test_basic_operations)
     waffle::StandardComposer composer = waffle::StandardComposer();
     bool_t a(&composer);
     bool_t b(&composer);
-    a = stdlib::witness_t(&composer, barretenberg::fr::one());
-    b = stdlib::witness_t(&composer, barretenberg::fr::zero());
+    a = stdlib::witness_t(&composer, barretenberg::fr::one);
+    b = stdlib::witness_t(&composer, barretenberg::fr::zero);
     a = a ^ b; // a = 1
     b = !b;   // b = 1 (witness 0)
     bool_t c = (a == b); // c = 1
@@ -329,8 +329,8 @@ TEST(stdlib_bool, test_simple_proof)
     waffle::StandardComposer composer = waffle::StandardComposer();
     bool_t a(&composer);
     bool_t b(&composer);
-    a = stdlib::witness_t(&composer, barretenberg::fr::one());
-    b = stdlib::witness_t(&composer, barretenberg::fr::zero());
+    a = stdlib::witness_t(&composer, barretenberg::fr::one);
+    b = stdlib::witness_t(&composer, barretenberg::fr::zero);
     // bool_t c(&composer);
     a = a ^ b; // a = 1
     b = !b;   // b = 1 (witness 0)

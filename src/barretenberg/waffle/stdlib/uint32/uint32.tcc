@@ -94,8 +94,8 @@ void uint32<ComposerContext>::internal_logic_operation_native(
     // TODO: We could remove the +1 extra gate if we could tap the *previous* gate in the circuit...
     // OR: start in reverse order :/
     maximum_value = 0;
-    field_t<ComposerContext> const_mul(context, barretenberg::fr::one());
-    field_t<ComposerContext> accumulator(context, barretenberg::fr::zero());
+    field_t<ComposerContext> const_mul(context, barretenberg::fr::one);
+    field_t<ComposerContext> accumulator(context, barretenberg::fr::zero);
 
     for (size_t i = 0; i < 32; ++i)
     {
@@ -161,7 +161,7 @@ void uint32<ComposerContext>::internal_logic_operation_binary(
      **/
     // TODO: We could remove the +1 extra gate if we could tap the *previous* gate in the circuit...
     // OR: start in reverse order :/
-    field_t<ComposerContext> const_mul(context, barretenberg::fr::one());
+    field_t<ComposerContext> const_mul(context, barretenberg::fr::one);
     for (size_t i = 0; i < 32; ++i)
     {
         bool_wires[i] = wire_logic_op(bool_wires[i], operand_wires[i]);
@@ -195,7 +195,7 @@ uint32<ComposerContext>::uint32(ComposerContext* parent_context)
     , maximum_value(0)
 {
     ASSERT(parent_context != nullptr);
-    field_t<ComposerContext> zero_wire = field_t<ComposerContext>(parent_context, barretenberg::fr::zero());
+    field_t<ComposerContext> zero_wire = field_t<ComposerContext>(parent_context, barretenberg::fr::zero);
     for (size_t i = 0; i < 32; ++i)
     {
         bool_wires[i] = bool_t<ComposerContext>(parent_context, false);
@@ -318,7 +318,6 @@ uint32<ComposerContext>::uint32(ComposerContext *parent_context, const std::arra
     }
 }
 
-
 template <typename ComposerContext> void uint32<ComposerContext>::concatenate() const
 {
     typedef bool_t<ComposerContext> bool_t;
@@ -327,8 +326,8 @@ template <typename ComposerContext> void uint32<ComposerContext>::concatenate() 
     ASSERT(additive_constant == 0);
     ASSERT(multiplicative_constant == 1);
 
-    field_t<ComposerContext> constant_multiplier(context, barretenberg::fr::one());
-    field_t<ComposerContext> accumulator(context, barretenberg::fr::zero());
+    field_t<ComposerContext> constant_multiplier(context, barretenberg::fr::one);
+    field_t<ComposerContext> accumulator(context, barretenberg::fr::zero);
 
     maximum_value = std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0ULL, [](auto acc, auto wire)
     {
@@ -382,9 +381,9 @@ template <typename ComposerContext> void uint32<ComposerContext>::decompose() co
         return acc;
     });
 
-    field_t<ComposerContext> constant_multiplier(context, barretenberg::fr::one());
-    field_t<ComposerContext> accumulator(context, barretenberg::fr::zero());
-    field_t<ComposerContext> overhead_accumulator(context, barretenberg::fr::zero());
+    field_t<ComposerContext> constant_multiplier(context, barretenberg::fr::one);
+    field_t<ComposerContext> accumulator(context, barretenberg::fr::zero);
+    field_t<ComposerContext> overhead_accumulator(context, barretenberg::fr::zero);
     auto sum_wires = [&constant_multiplier](const field_t<ComposerContext> &old, const bool_t &wire)
     {
         field_t<ComposerContext> out = old + (constant_multiplier * wire);
@@ -636,7 +635,7 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
         result.multiplicative_constant = 1U;
 
         // TODO: replace all of these zero(), one() function calls with constexpr constants
-        barretenberg::fr::field_t q_c = set_bit(barretenberg::fr::zero(), left_shift);
+        barretenberg::fr::field_t q_c = set_bit(barretenberg::fr::zero, left_shift);
         q_c = barretenberg::fr::add(q_c, {{ additive_constant, 0, 0, 0 }});
         q_c = barretenberg::fr::sub(q_c, {{ other.additive_constant, 0, 0, 0 }});
         q_c = barretenberg::fr::to_montgomery_form(q_c);
@@ -914,9 +913,9 @@ template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerConte
     // x * xinv - 1 = 0
     // x * xinv - (predicate) = 0
     barretenberg::fr::field_t inverse;
-    if (barretenberg::fr::eq(numerator, barretenberg::fr::zero()))
+    if (barretenberg::fr::eq(numerator, barretenberg::fr::zero))
     {
-        inverse = barretenberg::fr::zero();
+        inverse = barretenberg::fr::zero;
     }
     else
     {

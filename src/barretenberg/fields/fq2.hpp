@@ -1,5 +1,4 @@
-#ifndef FQ2
-#define FQ2
+#pragma once
 
 #include "fq.hpp"
 
@@ -7,6 +6,11 @@ namespace barretenberg
 {
 namespace fq2
 {
+struct fq2_t
+{
+    fq::field_t c0;
+    fq::field_t c1;
+};
 constexpr fq2_t twist_coeff_b{
     {{0x3bf938e377b802a8, 0x020b1b273633535d, 0x26b7edf049755260, 0x2514c6324384a86d}},
     {{0x38e7ecccd1dcff67, 0x65f0b37d93ce0d3e, 0xd749d0dd22ac00aa, 0x0141b9ce4a688d4d}}};
@@ -105,23 +109,23 @@ inline void invert(const fq2_t &a, fq2_t &r)
 
 inline void frobenius_map(const fq2_t &a, fq2_t &r)
 {
-    fq::copy(a.c0, r.c0);
+    fq::__copy(a.c0, r.c0);
     fq::__neg(a.c1, r.c1);
 }
 
 inline fq2_t one()
 {
     fq2_t r;
-    r.c0 = fq::one();
-    r.c1 = fq::zero();
+    r.c0 = fq::one;
+    r.c1 = fq::zero;
     return r;
 }
 
 inline fq2_t zero()
 {
     fq2_t r;
-    r.c0 = fq::zero();
-    r.c1 = fq::zero();
+    r.c0 = fq::zero;
+    r.c1 = fq::zero;
     return r;
 }
 
@@ -139,8 +143,8 @@ inline void __from_montgomery_form(const fq2_t &a, fq2_t &r)
 
 inline void copy(const fq2_t &a, fq2_t &r)
 {
-    fq::copy(a.c0, r.c0);
-    fq::copy(a.c1, r.c1);
+    fq::__copy(a.c0, r.c0);
+    fq::__copy(a.c1, r.c1);
 }
 
 inline fq2_t random_element()
@@ -160,7 +164,7 @@ inline void print(const fq2_t &a)
 
 inline bool iszero(const fq2_t &a)
 {
-    return (iszero(a.c0) && iszero(a.c1));
+    return (fq::iszero(a.c0) && fq::iszero(a.c1));
 }
 
 inline bool eq(const fq2_t &a, const fq2_t &b)
@@ -169,5 +173,3 @@ inline bool eq(const fq2_t &a, const fq2_t &b)
 }
 } // namespace fq2
 }
-
-#endif

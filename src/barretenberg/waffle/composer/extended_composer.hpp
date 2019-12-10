@@ -40,7 +40,7 @@ class ExtendedComposer : public BoolComposer
         q_oo.reserve(size_hint);
         zero_idx = add_variable(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
         features |= static_cast<size_t>(Features::EXTENDED_ARITHMETISATION);
-        zero_selector = barretenberg::fr::zero();
+        zero_selector = barretenberg::fr::zero;
     };
 
     ~ExtendedComposer(){};

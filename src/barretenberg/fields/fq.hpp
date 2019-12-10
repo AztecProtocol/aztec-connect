@@ -1,272 +1,86 @@
-#ifndef FQ
-#define FQ
+#pragma once
 
-#include "inttypes.h"
 #include "stdint.h"
-#include "stdio.h"
 
-#include "../assert.hpp"
-#include "../types.hpp"
-
-// TODO: make interface consistent
-// 1: remove unneccessary forward declaration of assembly/int128 methods
-// 2: all methods that pass in a reference to the return value should be prefixed by __
-// 3: all methods that have a __ prefix, should have a partner method that returns by value
-// 4: this should be consistent with fr
+#include "./field.hpp"
 
 namespace barretenberg
 {
-namespace fq
+class FqParams
 {
-constexpr field_t modulus = {
-    { 0x3C208C16D87CFD47UL, 0x97816a916871ca8dUL, 0xb85045b68181585dUL, 0x30644e72e131a029UL }
+public:
+    static constexpr uint64_t b = 0x03UL; // hmm
+
+    static constexpr uint64_t modulus_0 = 0x3C208C16D87CFD47UL;
+    static constexpr uint64_t modulus_1 = 0x97816a916871ca8dUL;
+    static constexpr uint64_t modulus_2 = 0xb85045b68181585dUL;
+    static constexpr uint64_t modulus_3 = 0x30644e72e131a029UL;
+
+    // negative modulus, in two's complement form (inverted + 1)
+    static constexpr uint64_t not_modulus_0 = ((~0x3C208C16D87CFD47UL) + 1);
+    static constexpr uint64_t not_modulus_1 = ~0x97816a916871ca8dUL;
+    static constexpr uint64_t not_modulus_2 = ~0xb85045b68181585dUL;
+    static constexpr uint64_t not_modulus_3 = ~0x30644e72e131a029UL;
+
+    static constexpr uint64_t twice_modulus_0 = 0x7841182db0f9fa8eUL;
+    static constexpr uint64_t twice_modulus_1 = 0x2f02d522d0e3951aUL;
+    static constexpr uint64_t twice_modulus_2 = 0x70a08b6d0302b0bbUL;
+    static constexpr uint64_t twice_modulus_3 = 0x60c89ce5c2634053UL;
+
+    static constexpr uint64_t twice_not_modulus_0 = ((~0x7841182db0f9fa8eUL) + 1);
+    static constexpr uint64_t twice_not_modulus_1 = ~(0x2f02d522d0e3951aUL);
+    static constexpr uint64_t twice_not_modulus_2 = ~(0x70a08b6d0302b0bbUL);
+    static constexpr uint64_t twice_not_modulus_3 = ~(0x60c89ce5c2634053UL);
+
+    static constexpr uint64_t one_mont_0 = 0xd35d438dc58f0d9dUL;
+    static constexpr uint64_t one_mont_1 = 0x0a78eb28f5c70b3dUL;
+    static constexpr uint64_t one_mont_2 = 0x666ea36f7879462cUL;
+    static constexpr uint64_t one_mont_3 = 0x0e0a77c19a07df2fUL;
+
+    static constexpr uint64_t two_inv_0 = 0x87bee7d24f060572UL;
+    static constexpr uint64_t two_inv_1 = 0xd0fd2add2f1c6ae5UL;
+    static constexpr uint64_t two_inv_2 = 0x8f5f7492fcfd4f44UL;
+    static constexpr uint64_t two_inv_3 = 0x1f37631a3d9cbfacUL;
+
+    static constexpr uint64_t sqrt_exponent_0 = 0x4F082305B61F3F52UL;
+    static constexpr uint64_t sqrt_exponent_1 = 0x65E05AA45A1C72A3UL;
+    static constexpr uint64_t sqrt_exponent_2 = 0x6E14116DA0605617UL;
+    static constexpr uint64_t sqrt_exponent_3 = 0xC19139CB84C680AUL;
+
+    static constexpr uint64_t r_squared_0 = 0xF32CFC5B538AFA89UL;
+    static constexpr uint64_t r_squared_1 = 0xB5E71911D44501FBUL;
+    static constexpr uint64_t r_squared_2 = 0x47AB1EFF0A417FF6UL;
+    static constexpr uint64_t r_squared_3 = 0x06D89F71CAB8351FUL;
+
+    static constexpr uint64_t cube_root_0 = 0x71930c11d782e155UL;
+    static constexpr uint64_t cube_root_1 = 0xa6bb947cffbe3323UL;
+    static constexpr uint64_t cube_root_2 = 0xaa303344d4741444UL;
+    static constexpr uint64_t cube_root_3 = 0x2c3b3f0d26594943UL;
+
+    static constexpr size_t primitive_root_log_size = 0;
+    static constexpr uint64_t primitive_root_0 = 0;
+    static constexpr uint64_t primitive_root_1 = 0;
+    static constexpr uint64_t primitive_root_2 = 0;
+    static constexpr uint64_t primitive_root_3 = 0;
+
+    static constexpr uint64_t r_inv = 0x87d20782e4866389UL;
+
+    // TODO: fill these in. Currently not needed
+    static constexpr uint64_t multiplicative_generator_0 = 0x00;
+    static constexpr uint64_t multiplicative_generator_1 = 0x00;
+    static constexpr uint64_t multiplicative_generator_2 = 0x00;
+    static constexpr uint64_t multiplicative_generator_3 = 0x00;
+
+    static constexpr uint64_t multiplicative_generator_inverse_0 = 0x00;
+    static constexpr uint64_t multiplicative_generator_inverse_1 = 0x00;
+    static constexpr uint64_t multiplicative_generator_inverse_2 = 0x00;
+    static constexpr uint64_t multiplicative_generator_inverse_3 = 0x00;
+
+    static constexpr uint64_t alternate_multiplicative_generator_0 = 0x00;
+    static constexpr uint64_t alternate_multiplicative_generator_1 = 0x00;
+    static constexpr uint64_t alternate_multiplicative_generator_2 = 0x00;
+    static constexpr uint64_t alternate_multiplicative_generator_3 = 0x00;
 };
 
-namespace internal
-{
-constexpr uint64_t r_inv = 0x87d20782e4866389UL;
+typedef field<FqParams> fq;
 }
-} // namespace fq
-} // namespace barretenberg
-
-#ifdef DISABLE_SHENANIGANS
-#include "fq_impl_int128.hpp"
-#else
-#include "fq_impl_asm.hpp"
-#endif
-
-namespace barretenberg
-{
-namespace fq
-{
-constexpr field_t __zero{ { 0x00, 0x00, 0x00, 0x00 } };
-
-constexpr field_t curve_b{ { 0x3, 0x0, 0x0, 0x0 } };
-
-constexpr field_t two_inv{ { 0x87bee7d24f060572, 0xd0fd2add2f1c6ae5, 0x8f5f7492fcfd4f44, 0x1f37631a3d9cbfac } };
-
-constexpr field_t modulus_plus_one{
-    { 0x3C208C16D87CFD48UL, 0x97816a916871ca8dUL, 0xb85045b68181585dUL, 0x30644e72e131a029UL }
-};
-
-constexpr field_t r_squared{
-    { 0xF32CFC5B538AFA89UL, 0xB5E71911D44501FBUL, 0x47AB1EFF0A417FF6UL, 0x06D89F71CAB8351FUL }
-};
-
-constexpr field_t one_raw{ { 1, 0, 0, 0 } };
-
-constexpr field_t one_mont{ { 0xd35d438dc58f0d9d, 0x0a78eb28f5c70b3d, 0x666ea36f7879462c, 0x0e0a77c19a07df2f } };
-
-// cube root of unity modulo (modulus), converted into montgomery form
-constexpr field_t beta{ { 0x71930c11d782e155UL, 0xa6bb947cffbe3323UL, 0xaa303344d4741444UL, 0x2c3b3f0d26594943UL } };
-
-// compute a * b, put result in r
-inline void __mul(const field_t& a, const field_t& b, const field_t& r);
-
-// compute a * b, put result in r. Do not perform final reduction check
-inline void __mul_without_reduction(const field_t& a, const field_t& b, const field_t& r);
-
-// compute a * a, put result in r
-inline void __sqr(const field_t& a, field_t& r);
-
-// compute a * a, put result in r. Do not perform final reduction check
-inline void __sqr_without_reduction(const field_t& a, const field_t& r);
-
-// compute a + b, put result in r
-inline void __add(const field_t& a, const field_t& b, field_t& r);
-
-// compute a + b, put result in r. Do not perform final reduction check
-inline void __add_without_reduction(const field_t& a, const field_t& b, field_t& r);
-
-inline void __add_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r);
-
-// quadruple a, perform a reduction check that reduces to either (r mod p) or p + (r mod p)
-inline void quad_with_partial_reduction(const field_t& a, const field_t& r);
-
-inline void quad_with_coarse_reduction(const field_t& a, field_t& r);
-
-inline void oct_with_coarse_reduction(const field_t& a, field_t& r);
-
-inline void paralell_double_and_add_without_reduction(field_t& x_0, const field_t& y_0, const field_t& y_1, field_t& r);
-
-// compute a - b, put result in r
-inline void __sub(const field_t& a, const field_t& b, field_t& r);
-
-inline void __sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r);
-
-inline void reduce_once(const field_t& a, field_t& r);
-
-/**
- * copy src into dest. AVX implementation requires words to be aligned on 32 byte bounary
- **/
-inline void copy(const field_t& src, field_t& dest);
-
-inline bool gt(const field_t& a, const field_t& b)
-{
-    bool t0 = a.data[3] > b.data[3];
-    bool t1 = (a.data[3] == b.data[3]) && (a.data[2] > b.data[2]);
-    bool t2 = (a.data[3] == b.data[3]) && (a.data[2] == b.data[2]) && (a.data[1] > b.data[1]);
-    bool t3 =
-        (a.data[3] == b.data[3]) && (a.data[2] == b.data[2]) && (a.data[1] == b.data[1]) && (a.data[0] > b.data[0]);
-    return (t0 || t1 || t2 || t3);
-}
-
-/**
- * Multiply field_t `a` by the cube root of unity, modulo `q`. Store result in `r`
- **/
-inline void __mul_beta(const field_t& a, field_t& r)
-{
-    __mul(a, beta, r);
-}
-
-/**
- * Negate field_t element `a`, mod `q`, place result in `r`
- **/
-inline void __neg(const field_t& a, field_t& r)
-{
-    __sub(modulus, a, r);
-}
-
-/**
- * Negate field_t element `a`, mod `q`, place result in `r`
- **/
-inline field_t neg(const field_t& a)
-{
-    field_t r;
-    __neg(a, r);
-    return r;
-}
-/**
- * Convert a field element into montgomery form
- **/
-inline void __to_montgomery_form(const field_t& a, field_t& r)
-{
-    copy(a, r);
-    while (gt(r, modulus_plus_one))
-    {
-        __sub(r, modulus, r);
-    }
-    __mul(r, r_squared, r);
-}
-
-/**
- * Convert a field element out of montgomery form by performing a modular
- * reduction against 1
- **/
-inline void __from_montgomery_form(const field_t& a, field_t& r)
-{
-    __mul(a, one_raw, r);
-}
-
-/**
- * Get the value of a given bit
- **/
-inline bool get_bit(const field_t& a, size_t bit_index)
-{
-    size_t idx = bit_index / 64;
-    size_t shift = bit_index & 63;
-    return bool((a.data[idx] >> shift) & 1);
-}
-
-/**
- * compute a^b mod q, return result in r
- **/
-inline void pow(const field_t& a, const field_t& b, field_t& r)
-{
-    field_t accumulator;
-    copy(a, accumulator);
-
-    bool found_one = false;
-    size_t i = 255;
-    while (!found_one)
-    {
-        found_one = get_bit(b, i);
-        --i;
-    }
-    size_t sqr_count = 0;
-    for (; i < 256; --i)
-    {
-        sqr_count++;
-        fq::__sqr_without_reduction(accumulator, accumulator);
-        if (get_bit(b, i))
-        {
-            fq::__mul_without_reduction(accumulator, a, accumulator);
-        }
-    }
-    while (gt(accumulator, modulus_plus_one))
-    {
-        __sub(accumulator, modulus, accumulator);
-    }
-    copy(accumulator, r);
-}
-
-/**
- * compute a^{q - 2} mod q, place result in r
- **/
-inline void __invert(field_t& a, field_t& r)
-{
-    // q - 2
-    constexpr field_t modulus_minus_two = {
-        0x3C208C16D87CFD45UL, 0x97816a916871ca8dUL, 0xb85045b68181585dUL, 0x30644e72e131a029UL
-    };
-    pow(a, modulus_minus_two, r);
-}
-
-/**
- * compute a^{(q + 1) / 2}, place result in r
- **/
-inline void __sqrt(field_t& a, field_t& r)
-{
-    // (q + 1) / 2
-    constexpr field_t modulus_plus_one_div_two = {
-        0x4F082305B61F3F52UL, 0x65E05AA45A1C72A3UL, 0x6E14116DA0605617UL, 0xC19139CB84C680AUL
-    };
-    pow(a, modulus_plus_one_div_two, r);
-}
-
-/**
- * Get a random field element in montgomery form, place in `r`
- **/
-inline field_t random_element()
-{
-    fq::field_t r;
-    int got_entropy = getentropy((void*)r.data, 32);
-    ASSERT(got_entropy == 0);
-    __to_montgomery_form(r, r);
-    return r;
-}
-
-/**
- * Set `r` to equal 1, in montgomery form
- **/
-inline field_t one()
-{
-    return one_mont;
-}
-
-inline field_t zero()
-{
-    return __zero;
-}
-
-/**
- * print `r`
- **/
-inline void print(const field_t& a)
-{
-    printf("fq: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n", a.data[0], a.data[1], a.data[2], a.data[3]);
-}
-
-inline bool eq(const field_t& a, const field_t& b)
-{
-    return (a.data[0] == b.data[0]) && (a.data[1] == b.data[1]) && (a.data[2] == b.data[2]) && (a.data[3] == b.data[3]);
-}
-
-inline bool iszero(const field_t& a)
-{
-    return ((a.data[0] == 0) && (a.data[1] == 0) && (a.data[2] == 0) && (a.data[3] == 0));
-}
-} // namespace fq
-} // namespace barretenberg
-
-#endif

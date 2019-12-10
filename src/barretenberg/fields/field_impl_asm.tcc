@@ -1,55 +1,40 @@
-#ifndef FR_IMPL_ASM
-#define FR_IMPL_ASM
+#pragma once
 
 #include "stdint.h"
 #include "unistd.h"
 
 #include "../assert.hpp"
-#include "../types.hpp"
+
 #include "asm_macros.hpp"
+
 
 namespace barretenberg
 {
-namespace fr
-{
+
 namespace internal
 {
-constexpr uint64_t modulus_0 = 0x43E1F593F0000001UL;
-constexpr uint64_t modulus_1 = 0x2833E84879B97091UL;
-constexpr uint64_t modulus_2 = 0xB85045B68181585DUL;
-constexpr uint64_t modulus_3 = 0x30644E72E131A029UL;
-
-constexpr uint64_t twice_modulus_0 = 0x87c3eb27e0000002UL;
-constexpr uint64_t twice_modulus_1 = 0x5067d090f372e122UL;
-constexpr uint64_t twice_modulus_2 = 0x70a08b6d0302b0baUL;
-constexpr uint64_t twice_modulus_3 = 0x60c89ce5c2634053UL;
-
-constexpr uint64_t not_modulus_0 = (~0x43E1F593F0000001UL) + 1;
-constexpr uint64_t not_modulus_1 = ~0x2833E84879B97091UL;
-constexpr uint64_t not_modulus_2 = ~0xB85045B68181585DUL;
-constexpr uint64_t not_modulus_3 = ~0x30644E72E131A029UL;
-
-constexpr uint64_t twice_not_modulus_0 = (~0x87c3eb27e0000002UL) + 1;
-constexpr uint64_t twice_not_modulus_1 = ~0x5067d090f372e122UL;
-constexpr uint64_t twice_not_modulus_2 = ~0x70a08b6d0302b0baUL;
-constexpr uint64_t twice_not_modulus_3 = ~0x60c89ce5c2634053UL;
-
+// sometimes we don't have any free registers to store 0.
+// When adding carry flags into a limb, apparently adding relative
+// to a memory location that stores 0 is faster than changing the
+// asm code to free up a register we can zero...I think (TODO: zero register?)
 constexpr uint64_t zero_reference = 0;
 } // namespace
+
 
 /**
  * copy src into dest. AVX implementation requires words to be aligned on 32 byte bounary
  **/
-inline void copy(const field_t &src, field_t &dest)
+template <typename FieldParams>
+inline void field<FieldParams>::__copy(const field_t &src, field_t &dest)
 {
 #if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src.data & 0x1f) == 0));
     ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
     __asm__(
-        "vmovdqa 0(%0), %%ymm0                  \n\t"
-        "vmovdqa %%ymm0, 0(%1)                  \n\t"
+        "vmovdqa 0(%0), %%ymm0              \n\t"
+        "vmovdqa %%ymm0, 0(%1)              \n\t"
         :
-        : "r"(&src), "r"(&dest)
+        : "r"(src.data), "r"(dest.data)
         : "%ymm0", "memory");
 #else
     __asm__(
@@ -62,77 +47,16 @@ inline void copy(const field_t &src, field_t &dest)
         "movq %%r10, 16(%1)                     \n\t"
         "movq %%r11, 24(%1)                     \n\t"
         :
-        : "r"(&src), "r"(&dest)
-        : "%r8", "%r9", "%r10", "%r11", "memory", "cc");
-#endif
-}
-
-inline void zero(field_t &r)
-{
-#if defined __AVX__ && defined USE_AVX
-    ASSERT((((uintptr_t)r.data & 0x1f) == 0));
-    __asm__(
-        "vpxor  %%ymm0, %%ymm0, %%ymm0          \n\t"
-        "vmovdqa %%ymm0, 0(%0)                  \n\t"
-        :
-        : "r"(&r)
-        : "memory");
-#else
-    __asm__(
-        "movq $0, 0(%0)                         \n\t"
-        "movq $0, 8(%0)                         \n\t"
-        "movq $0, 16(%0)                        \n\t"
-        "movq $0, 24(%0)                        \n\t"
-        :
-        : "r"(&r)
-        : "memory");
-#endif
-}
-
-/**
- * swap src and dest. AVX implementation requires words to be aligned on 32 byte bounary
- **/
-inline void swap(const field_t &src, field_t &dest)
-{
-#if defined __AVX__ && defined USE_AVX
-    ASSERT((((uintptr_t)src.data & 0x1f) == 0));
-    ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
-    __asm__(
-        "vmovdqa 0(%0), %%ymm0                  \n\t"
-        "vmovdqa 0(%1), %%ymm1                  \n\t"
-        "vmovdqa %%ymm0, 0(%1)                  \n\t"
-        "vmovdqa %%ymm1, 0(%0)                  \n\t"
-        :
-        : "r"(&src), "r"(&dest)
-        : "%ymm0", "memory");
-#else
-    __asm__(
-        "movq 0(%0), %%r8                       \n\t"
-        "movq 8(%0), %%r9                       \n\t"
-        "movq 16(%0), %%r10                     \n\t"
-        "movq 24(%0), %%r11                     \n\t"
-        "movq 0(%1), %%r12                      \n\t"
-        "movq 8(%1), %%r13                      \n\t"
-        "movq 16(%1), %%r14                     \n\t"
-        "movq 24(%1), %%r15                     \n\t"
-        "movq %%r8, 0(%1)                       \n\t"
-        "movq %%r9, 8(%1)                       \n\t"
-        "movq %%r10, 16(%1)                     \n\t"
-        "movq %%r11, 24(%1)                     \n\t"
-        "movq %%r12, 0(%0)                      \n\t"
-        "movq %%r13, 8(%0)                      \n\t"
-        "movq %%r14, 16(%0)                     \n\t"
-        "movq %%r15, 24(%0)                     \n\t"
-        :
-        : "r"(&src), "r"(&dest)
-        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+        : "r"(src.data), "r"(dest.data)
+        : "%r8", "%r9", "%r10", "%r11", "cc", "memory");
 #endif
 }
 
 /**
  * Conditionally subtract p from field element a, store result in r
  **/
-inline void reduce_once(const field_t &a, field_t &r)
+template <typename FieldParams>
+inline void field<FieldParams>::reduce_once(const field_t &a, field_t &r)
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -140,7 +64,7 @@ inline void reduce_once(const field_t &a, field_t &r)
         REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
         STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "r"(&a), "r"(&r), [not_modulus_0] "m"(internal::not_modulus_0), [not_modulus_1] "m"(internal::not_modulus_1), [not_modulus_2] "m"(internal::not_modulus_2), [not_modulus_3] "m"(internal::not_modulus_3)
+        : "r"(&a), "r"(&r), [not_modulus_0] "m"(FieldParams::not_modulus_0), [not_modulus_1] "m"(FieldParams::not_modulus_1), [not_modulus_2] "m"(FieldParams::not_modulus_2), [not_modulus_3] "m"(FieldParams::not_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -148,7 +72,8 @@ inline void reduce_once(const field_t &a, field_t &r)
  * Add field_t elements `a` and `b` modulo `q`, store the result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
-inline void __add(const field_t &a, const field_t &b, field_t &r)
+template <typename FieldParams>
+inline void field<FieldParams>::__add(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -156,7 +81,7 @@ inline void __add(const field_t &a, const field_t &b, field_t &r)
         ADD_REDUCE("%1", "%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
         STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "%r"(&a), "%r"(&b), "r"(&r), [not_modulus_0] "m"(internal::not_modulus_0), [not_modulus_1] "m"(internal::not_modulus_1), [not_modulus_2] "m"(internal::not_modulus_2), [not_modulus_3] "m"(internal::not_modulus_3)
+        : "%r"(&a), "%r"(&b), "r"(&r), [not_modulus_0] "m"(FieldParams::not_modulus_0), [not_modulus_1] "m"(FieldParams::not_modulus_1), [not_modulus_2] "m"(FieldParams::not_modulus_2), [not_modulus_3] "m"(FieldParams::not_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -164,7 +89,8 @@ inline void __add(const field_t &a, const field_t &b, field_t &r)
  * Add field_t elements `a` and `b` modulo `2q`, store the result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
-inline void __add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+template <typename FieldParams>
+inline void field<FieldParams>::__add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -172,7 +98,7 @@ inline void __add_with_coarse_reduction(const field_t &a, const field_t &b, fiel
         ADD_REDUCE("%1", "%[twice_not_modulus_0]", "%[twice_not_modulus_1]", "%[twice_not_modulus_2]", "%[twice_not_modulus_3]")
         STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "%r"(&a), "%r"(&b), "r"(&r), [twice_not_modulus_0] "m"(internal::twice_not_modulus_0), [twice_not_modulus_1] "m"(internal::twice_not_modulus_1), [twice_not_modulus_2] "m"(internal::twice_not_modulus_2), [twice_not_modulus_3] "m"(internal::twice_not_modulus_3)
+        : "%r"(&a), "%r"(&b), "r"(&r), [twice_not_modulus_0] "m"(FieldParams::twice_not_modulus_0), [twice_not_modulus_1] "m"(FieldParams::twice_not_modulus_1), [twice_not_modulus_2] "m"(FieldParams::twice_not_modulus_2), [twice_not_modulus_3] "m"(FieldParams::twice_not_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -180,7 +106,8 @@ inline void __add_with_coarse_reduction(const field_t &a, const field_t &b, fiel
  * Add field_t elements `a` and `b`, store the result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
-inline void __add_without_reduction(const field_t &a, const field_t &b, field_t &r)
+template <typename FieldParams>
+inline void field<FieldParams>::__add_without_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -193,10 +120,73 @@ inline void __add_without_reduction(const field_t &a, const field_t &b, field_t 
 }
 
 /**
+ * Compute `4a` mod `2p` and store result in `&r`
+ * We assume all field elements are 254 bit integers, and skip the relevant carry checks on the most significant limb
+ **/
+template <typename FieldParams>
+inline void field<FieldParams>::__quad_with_coarse_reduction(const field_t &a, field_t &r)
+{
+    __asm__(
+        CLEAR_FLAGS("%%r12")
+        LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
+        DOUBLE_REDUCE("%[twice_not_modulus_0]", "%[twice_not_modulus_1]", "%[twice_not_modulus_2]", "%[twice_not_modulus_3]")
+        CLEAR_FLAGS("%%r8")
+        DOUBLE_REDUCE("%[twice_not_modulus_0]", "%[twice_not_modulus_1]", "%[twice_not_modulus_2]", "%[twice_not_modulus_3]")
+        STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
+        :
+        : "r"(&a), "r"(&r), [twice_not_modulus_0] "m"(FieldParams::twice_not_modulus_0), [twice_not_modulus_1] "m"(FieldParams::twice_not_modulus_1), [twice_not_modulus_2] "m"(FieldParams::twice_not_modulus_2), [twice_not_modulus_3] "m"(FieldParams::twice_not_modulus_3)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+/**
+ * Compute `8a` mod `2p` and store result in `&r`
+ * We assume all field elements are 254 bit integers, and skip the relevant carry checks on the most significant limb
+ **/
+template <typename FieldParams>
+inline void field<FieldParams>::__oct_with_coarse_reduction(const field_t &a, field_t &r)
+{
+    __asm__(
+        CLEAR_FLAGS("%%r12")
+        LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
+        DOUBLE_REDUCE("%[twice_not_modulus_0]", "%[twice_not_modulus_1]", "%[twice_not_modulus_2]", "%[twice_not_modulus_3]")
+        CLEAR_FLAGS("%%r8")
+        DOUBLE_REDUCE("%[twice_not_modulus_0]", "%[twice_not_modulus_1]", "%[twice_not_modulus_2]", "%[twice_not_modulus_3]")
+        CLEAR_FLAGS("%%r8")
+        DOUBLE_REDUCE("%[twice_not_modulus_0]", "%[twice_not_modulus_1]", "%[twice_not_modulus_2]", "%[twice_not_modulus_3]")
+        STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
+        :
+        : "%r"(&a), "%r"(&r), [twice_not_modulus_0] "m"(FieldParams::twice_not_modulus_0), [twice_not_modulus_1] "m"(FieldParams::twice_not_modulus_1), [twice_not_modulus_2] "m"(FieldParams::twice_not_modulus_2), [twice_not_modulus_3] "m"(FieldParams::twice_not_modulus_3)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+/**
+ * Compute `x_0 + x_0` and store result in `&x_0`
+ * Compute `y_0 + y_1` and store result if `&r`
+ * This method is for the niche situation where we need to perform a double and an add at the same time,
+ * we can use two ADCX/ADOX addition chains to perform both operations on different execution ports, at the same time
+ * We assume all field elements are 254 bit integers, and skip the relevant carry checks on the most significant limb
+ **/
+template <typename FieldParams>
+inline void field<FieldParams>::__paralell_double_and_add_without_reduction(field_t &x_0, const field_t &y_0, const field_t &y_1, field_t &r)
+{
+    __asm__(
+        CLEAR_FLAGS("%%r12")
+        LOAD_FIELD_ELEMENT("%0", "%%r8", "%%r9", "%%r10", "%%r11")
+        LOAD_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
+        PARALLEL_DOUBLE_ADD("%2")
+        STORE_FIELD_ELEMENT("%0", "%%r8", "%%r9", "%%r10", "%%r11")
+        STORE_FIELD_ELEMENT("%3", "%%r12", "%%r13", "%%r14", "%%r15")
+        :
+        : "r"(x_0.data), "%r"(y_0.data), "%r"(y_1.data), "r"(&r), [not_modulus_0] "m"(FieldParams::not_modulus_0), [not_modulus_1] "m"(FieldParams::not_modulus_1), [not_modulus_2] "m"(FieldParams::not_modulus_2), [not_modulus_3] "m"(FieldParams::not_modulus_3)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+/**
  * Subtract `b` from `a` modulo `q`, store result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
-inline void __sub(const field_t &a, const field_t &b, field_t &r)
+template <typename FieldParams>
+inline void field<FieldParams>::__sub(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -207,7 +197,7 @@ inline void __sub(const field_t &a, const field_t &b, field_t &r)
         REDUCE_FIELD_ELEMENT("%[modulus_0]", "%[modulus_1]", "%[modulus_2]", "%[modulus_3]")
         STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "r"(&a), "r"(&b), "r"(&r), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3)
+        : "r"(&a), "r"(&b), "r"(&r), [modulus_0] "m"(FieldParams::modulus_0), [modulus_1] "m"(FieldParams::modulus_1), [modulus_2] "m"(FieldParams::modulus_2), [modulus_3] "m"(FieldParams::modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -215,7 +205,8 @@ inline void __sub(const field_t &a, const field_t &b, field_t &r)
  * Subtract `b` from `a` modulo `2q`, store result in `r`
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
-inline void __sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+template <typename FieldParams>
+inline void field<FieldParams>::__sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -224,106 +215,16 @@ inline void __sub_with_coarse_reduction(const field_t &a, const field_t &b, fiel
         REDUCE_FIELD_ELEMENT("%[twice_modulus_0]", "%[twice_modulus_1]", "%[twice_modulus_2]", "%[twice_modulus_3]")
         STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "r"(&a), "r"(&b), "r"(&r), [twice_modulus_0] "m"(internal::twice_modulus_0), [twice_modulus_1] "m"(internal::twice_modulus_1), [twice_modulus_2] "m"(internal::twice_modulus_2), [twice_modulus_3] "m"(internal::twice_modulus_3)
+        : "r"(&a), "r"(&b), "r"(&r), [twice_modulus_0] "m"(FieldParams::twice_modulus_0), [twice_modulus_1] "m"(FieldParams::twice_modulus_1), [twice_modulus_2] "m"(FieldParams::twice_modulus_2), [twice_modulus_3] "m"(FieldParams::twice_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
-/**
- * Compute the square of `a`, modulo `q`. Store result in `r`
- * We assume `a` is 254 bits and do not perform carry checks on most significant limb
- **/
-inline void __sqr(const field_t &a, field_t &r)
-{
-    /**
-     * Registers: rax:rdx = multiplication accumulator
-     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
-     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
-     *            %[zero_reference]: memory location of zero value
-     *            %0: pointer to `a`
-     *            %[r_ptr]: memory location of pointer to `r`
-     **/
-    __asm__(
-        SQR("%0")
-        REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
-        STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
-        :
-        : "r"(&a), "r"(&r), [zero_reference] "m"(internal::zero_reference), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3), [r_inv] "m"(internal::r_inv), [not_modulus_0] "m"(internal::not_modulus_0), [not_modulus_1] "m"(internal::not_modulus_1), [not_modulus_2] "m"(internal::not_modulus_2), [not_modulus_3] "m"(internal::not_modulus_3)
-        : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-}
-
-/**
- * Compute the square of `a`, modulo `q`. Store result in `r`
- * We assume `a` is 254 bits and do not perform carry checks on most significant limb
- **/
-inline void __sqr_without_reduction(const field_t &a, field_t &r)
-{
-    /**
-     * Registers: rax:rdx = multiplication accumulator
-     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
-     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
-     *            %[zero_reference]: memory location of zero value
-     *            %0: pointer to `a`
-     *            %[r_ptr]: memory location of pointer to `r`
-     **/
-    __asm__(
-        SQR("%0") 
-        STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
-        :
-        : "r"(&a), "r"(&r), [zero_reference] "m"(internal::zero_reference), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3), [r_inv] "m"(internal::r_inv)
-        : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-}
-
-/**
- * Compute `a` * `b` mod `q`, store result in `r`
- * We assume `a` is 254 bits and do not perform carry checks on most significant limb
- **/
-inline void __mul(const field_t &a, const field_t &b, field_t &r)
-{
-    /**
-     * Registers: rax:rdx = multiplication accumulator
-     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
-     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
-     *            %r10: zero register
-     *            %0: pointer to `a`
-     *            %1: pointer to `b`
-     *            %2: poitner to `r`
-     **/
-    __asm__(
-        MUL("%0", "%1")
-        REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
-        STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
-        :
-        : "%r"(&a), "%r"(&b), "r"(&r), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3), [r_inv] "m"(internal::r_inv), [not_modulus_0] "m"(internal::not_modulus_0), [not_modulus_1] "m"(internal::not_modulus_1), [not_modulus_2] "m"(internal::not_modulus_2), [not_modulus_3] "m"(internal::not_modulus_3), [zero_reference] "m"(internal::zero_reference)
-        : "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-}
-
-/**
- * Compute `a` * `b` mod `q`, store result in `r`
- * We assume `a` is 254 bits and do not perform carry checks on most significant limb
- **/
-inline void __mul_without_reduction(const field_t &a, const field_t &b, field_t &r)
-{
-    /**
-     * Registers: rax:rdx = multiplication accumulator
-     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
-     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
-     *            %r10: zero register
-     *            %0: pointer to `a`
-     *            %1: pointer to `b`
-     *            %2: pointer to `r`
-     **/
-    __asm__(
-        MUL("%0", "%1")
-        STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
-        :
-        : "%r"(&a), "%r"(&b), "r"(&r), [modulus_0] "m"(internal::modulus_0), [modulus_1] "m"(internal::modulus_1), [modulus_2] "m"(internal::modulus_2), [modulus_3] "m"(internal::modulus_3), [r_inv] "m"(internal::r_inv), [zero_reference] "m"(internal::zero_reference)
-        : "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-}
 
 /**
  * Copy `a` into `r`. If `predicate == true`, subtract modulus from r
  **/
-inline void __conditionally_subtract_double_modulus(const field_t &a, field_t &r, const uint64_t predicate)
+template <typename FieldParams>
+inline void field<FieldParams>::__conditionally_subtract_double_modulus(const field_t &a, field_t &r, const uint64_t predicate)
 {
     // TODO use literals instead of memory references
     __asm__ (
@@ -344,11 +245,110 @@ inline void __conditionally_subtract_double_modulus(const field_t &a, field_t &r
         "cmovcq %%r15, %%r11 \n\t"
         STORE_FIELD_ELEMENT("%2", "%%r8", "%%r9", "%%r10", "%%r11")
         :
-        : "r"(&a), "r"(predicate), "r"(&r), [modulus_0] "m"(internal::twice_modulus_0), [modulus_1] "m"(internal::twice_modulus_1), [modulus_2] "m"(internal::twice_modulus_2), [modulus_3] "m"(internal::twice_modulus_3)
+        : "r"(&a), "r"(predicate), "r"(&r), [modulus_0] "m"(FieldParams::twice_modulus_0), [modulus_1] "m"(FieldParams::twice_modulus_1), [modulus_2] "m"(FieldParams::twice_modulus_2), [modulus_3] "m"(FieldParams::twice_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
-inline void mul_512(const field_t &a, const field_t &b, field_wide_t &r)
+/**
+ * Compute the square of `a`, modulo `q`. Store result in `r`
+ * We assume `a` is 254 bits and do not perform carry checks on most significant limb
+ **/
+template <typename FieldParams>
+inline void field<FieldParams>::__sqr(const field_t &a, field_t &r)
+{
+    /**
+     * Registers: rax:rdx = multiplication accumulator
+     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
+     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
+     *            %[zero_reference]: memory location of zero value
+     *            %0: pointer to `a`
+     *            %[r_ptr]: memory location of pointer to `r`
+     **/
+    __asm__(
+        SQR("%0")
+        // "movq %[r_ptr], %%rsi                   \n\t"
+        REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
+        STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
+        :
+        : "r"(&a), "r"(&r), [zero_reference] "m"(internal::zero_reference), [modulus_0] "m"(FieldParams::modulus_0), [modulus_1] "m"(FieldParams::modulus_1), [modulus_2] "m"(FieldParams::modulus_2), [modulus_3] "m"(FieldParams::modulus_3), [r_inv] "m"(FieldParams::r_inv), [not_modulus_0] "m"(FieldParams::not_modulus_0), [not_modulus_1] "m"(FieldParams::not_modulus_1), [not_modulus_2] "m"(FieldParams::not_modulus_2), [not_modulus_3] "m"(FieldParams::not_modulus_3)
+        : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+/**
+ * Compute the square of `a`, modulo `q`. Store result in `r`
+ * We assume `a` is 254 bits and do not perform carry checks on most significant limb
+ **/
+template <typename FieldParams>
+inline void field<FieldParams>::__sqr_without_reduction(const field_t &a, field_t &r)
+{
+    /**
+     * Registers: rax:rdx = multiplication accumulator
+     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
+     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
+     *            %[zero_reference]: memory location of zero value
+     *            %0: pointer to `a`
+     *            %[r_ptr]: memory location of pointer to `r`
+     **/
+    __asm__(
+        SQR("%0") 
+        // "movq %[r_ptr], %%rsi                   \n\t"
+        STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
+        :
+        : "r"(&a), "r"(&r), [zero_reference] "m"(internal::zero_reference), [modulus_0] "m"(FieldParams::modulus_0), [modulus_1] "m"(FieldParams::modulus_1), [modulus_2] "m"(FieldParams::modulus_2), [modulus_3] "m"(FieldParams::modulus_3), [r_inv] "m"(FieldParams::r_inv)
+        : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+/**
+ * Compute `a` * `b` mod `q`, store result in `r`
+ * We assume `a` is 254 bits and do not perform carry checks on most significant limb
+ **/
+template <typename FieldParams>
+inline void field<FieldParams>::__mul(const field_t &a, const field_t &b, field_t &r)
+{
+    /**
+     * Registers: rax:rdx = multiplication accumulator
+     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
+     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
+     *            %r10: zero register
+     *            %0: pointer to `a`
+     *            %1: pointer to `b`
+     *            %2: pointer to `r`
+     **/
+    __asm__ (
+        MUL("%0", "%1")
+        REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
+        STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
+        :
+        : "%r"(&a), "%r"(&b), "r"(&r), [modulus_0] "m"(FieldParams::modulus_0), [modulus_1] "m"(FieldParams::modulus_1), [modulus_2] "m"(FieldParams::modulus_2), [modulus_3] "m"(FieldParams::modulus_3), [r_inv] "m"(FieldParams::r_inv), [not_modulus_0] "m"(FieldParams::not_modulus_0), [not_modulus_1] "m"(FieldParams::not_modulus_1), [not_modulus_2] "m"(FieldParams::not_modulus_2), [not_modulus_3] "m"(FieldParams::not_modulus_3), [zero_reference] "m"(internal::zero_reference)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "%rdx", "%rdi", "cc", "memory");
+}
+
+/**
+ * Compute `a` * `b` mod `q`, store result in `r`
+ * We assume `a` is 254 bits and do not perform carry checks on most significant limb
+ **/
+template <typename FieldParams>
+inline void field<FieldParams>::__mul_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+{
+    /**
+     * Registers: rax:rdx = multiplication accumulator
+     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
+     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
+     *            %r10: zero register
+     *            %0: pointer to `a`
+     *            %1: pointer to `b`
+     *            %2: pointer to `r`
+     **/
+    __asm__(
+        MUL("%1", "%0")
+        STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
+        :
+        : "%r"(&b), "%r"(&a), "r"(&r), [modulus_0] "m"(FieldParams::modulus_0), [modulus_1] "m"(FieldParams::modulus_1), [modulus_2] "m"(FieldParams::modulus_2), [modulus_3] "m"(FieldParams::modulus_3), [r_inv] "m"(FieldParams::r_inv), [zero_reference] "m"(internal::zero_reference)
+        : "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+template <typename FieldParams>
+inline void field<FieldParams>::__mul_512(const field_t &a, const field_t &b, field_wide_t &r)
 {
     // TODO REMOVE THIS
     //uint64_t cache[4] = { b.data[0], b.data[1], b.data[2], b.data[3] };
@@ -511,7 +511,47 @@ inline void mul_512(const field_t &a, const field_t &b, field_wide_t &r)
         : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
-} // namespace fr
+
+/**
+ * swap src and dest. AVX implementation requires words to be aligned on 32 byte bounary
+ **/
+template <typename FieldParams>
+inline void field<FieldParams>::__swap(field_t &src, field_t &dest)
+{
+#if defined __AVX__ && defined USE_AVX
+    ASSERT((((uintptr_t)src.data & 0x1f) == 0));
+    ASSERT((((uintptr_t)dest.data & 0x1f) == 0));
+    __asm__(
+        "vmovdqa 0(%0), %%ymm0                  \n\t"
+        "vmovdqa 0(%1), %%ymm1                  \n\t"
+        "vmovdqa %%ymm0, 0(%1)                  \n\t"
+        "vmovdqa %%ymm1, 0(%0)                  \n\t"
+        :
+        : "r"(&src), "r"(&dest)
+        : "%ymm0", "memory");
+#else
+    __asm__(
+        "movq 0(%0), %%r8                       \n\t"
+        "movq 8(%0), %%r9                       \n\t"
+        "movq 16(%0), %%r10                     \n\t"
+        "movq 24(%0), %%r11                     \n\t"
+        "movq 0(%1), %%r12                      \n\t"
+        "movq 8(%1), %%r13                      \n\t"
+        "movq 16(%1), %%r14                     \n\t"
+        "movq 24(%1), %%r15                     \n\t"
+        "movq %%r8, 0(%1)                       \n\t"
+        "movq %%r9, 8(%1)                       \n\t"
+        "movq %%r10, 16(%1)                     \n\t"
+        "movq %%r11, 24(%1)                     \n\t"
+        "movq %%r12, 0(%0)                      \n\t"
+        "movq %%r13, 8(%0)                      \n\t"
+        "movq %%r14, 16(%0)                     \n\t"
+        "movq %%r15, 24(%0)                     \n\t"
+        :
+        : "r"(&src), "r"(&dest)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+#endif
+}
+
 } // namespace barretenberg
 
-#endif

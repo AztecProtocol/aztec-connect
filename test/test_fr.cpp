@@ -21,11 +21,11 @@ TEST(fr, eq)
 
 TEST(fr, iszero)
 {
-    fr::field_t a = fr::zero();
-    fr::field_t b = fr::zero();
-    fr::field_t c = fr::zero();
-    fr::field_t d = fr::zero();
-    fr::field_t e = fr::zero();
+    fr::field_t a = fr::zero;
+    fr::field_t b = fr::zero;
+    fr::field_t c = fr::zero;
+    fr::field_t d = fr::zero;
+    fr::field_t e = fr::zero;
 
     b.data[0] = 1;
     c.data[1] = 1;
@@ -90,14 +90,14 @@ TEST(fr, sub)
 TEST(fr, to_montgomery_form)
 {
     fr::field_t result{{0x01, 0x00, 0x00, 0x00}};
-    fr::field_t expected = fr::one();
+    fr::field_t expected = fr::one;
     fr::__to_montgomery_form(result, result);
     EXPECT_EQ(fr::eq(result, expected), true);
 }
 
 TEST(fr, from_montgomery_form)
 {
-    fr::field_t result = fr::one();
+    fr::field_t result = fr::one;
     fr::field_t expected{{0x01, 0x00, 0x00, 0x00}};
     fr::__from_montgomery_form(result, result);
     EXPECT_EQ(fr::eq(result, expected), true);
@@ -178,7 +178,7 @@ TEST(fr, lambda)
     fr::field_t x = fr::random_element();
 
     fr::field_t lambda_x = {{x.data[0], x.data[1], x.data[2], x.data[3]}};
-    fr::__mul_lambda(lambda_x, lambda_x);
+    fr::__mul_beta(lambda_x, lambda_x);
 
     // compute x^3
     fr::field_t x_cubed;
@@ -201,28 +201,28 @@ TEST(fr, invert)
 
     fr::__invert(input, inverse);
     fr::__mul(input, inverse, result);
-    EXPECT_EQ(fr::eq(result, fr::one()), true);
+    EXPECT_EQ(fr::eq(result, fr::one), true);
 }
 
 TEST(fr, invert_one_is_one)
 {
-    fr::field_t result = fr::one();
+    fr::field_t result = fr::one;
     fr::__invert(result, result);
-    EXPECT_EQ(fr::eq(result, fr::one()), true);
+    EXPECT_EQ(fr::eq(result, fr::one), true);
 }
 
 TEST(fr, one_and_zero)
 {
     fr::field_t result;
-    fr::__sub(fr::one(), fr::one(), result);
-    EXPECT_EQ(fr::eq(result, fr::zero()), true);
+    fr::__sub(fr::one, fr::one, result);
+    EXPECT_EQ(fr::eq(result, fr::zero), true);
 }
 
 TEST(fr, copy)
 {
     fr::field_t result = fr::random_element();
     fr::field_t expected;
-    fr::copy(result, expected);
+    fr::__copy(result, expected);
     EXPECT_EQ(fr::eq(result, expected), true);
 }
 
@@ -233,7 +233,7 @@ TEST(fr, neg)
     fr::__neg(a, b);
     fr::field_t result;
     fr::__add(a, b, result);
-    EXPECT_EQ(fr::eq(result, fr::zero()), true);
+    EXPECT_EQ(fr::eq(result, fr::zero), true);
 }
 
 TEST(fr, split_into_endomorphism_scalars)
@@ -243,7 +243,7 @@ TEST(fr, split_into_endomorphism_scalars)
     EXPECT_EQ(got_entropy, 0);
     input.data[3] &= 0x7fffffffffffffff;
 
-    while (gt(input, fr::modulus_plus_one))
+    while (fr::gt(input, fr::modulus_plus_one))
     {
         fr::__sub(input, fr::modulus, input);
     }
@@ -258,7 +258,7 @@ TEST(fr, split_into_endomorphism_scalars)
     fr::__to_montgomery_form(k1, k1);
     fr::__to_montgomery_form(k2, k2);
 
-    fr::__mul(k2, fr::lambda, result);
+    fr::__mul(k2, fr::beta, result);
     fr::__sub(k1, result, result);
 
     fr::__from_montgomery_form(result, result);
@@ -275,7 +275,7 @@ TEST(fr, split_into_endomorphism_scalars_simple)
     fr::field_t k = {{0, 0, 0, 0}};
     fr::field_t k1 = {{0, 0, 0, 0}};
     fr::field_t k2 = {{0, 0, 0, 0}};
-    fr::copy(input, k);
+    fr::__copy(input, k);
 
     fr::split_into_endomorphism_scalars(k, k1, k2);
 
@@ -283,7 +283,7 @@ TEST(fr, split_into_endomorphism_scalars_simple)
     fr::__to_montgomery_form(k1, k1);
     fr::__to_montgomery_form(k2, k2);
 
-    fr::__mul(k2, fr::lambda, result);
+    fr::__mul(k2, fr::beta, result);
     fr::__sub(k1, result, result);
 
     fr::__from_montgomery_form(result, result);
@@ -298,12 +298,11 @@ TEST(fr, batch_invert)
     size_t n = 10;
     fr::field_t coeffs[n];
     fr::field_t inverses[n];
-    fr::field_t one;
-    fr::one(one);
+    fr::field_t one = fr::one;
     for (size_t i = 0; i < n; ++i)
     {
         coeffs[i] = fr::random_element();
-        fr::copy(coeffs[i], inverses[i]);
+        fr::__copy(coeffs[i], inverses[i]);
     }
     fr::batch_invert(inverses, n);
 

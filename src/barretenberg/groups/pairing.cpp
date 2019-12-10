@@ -9,7 +9,7 @@ namespace barretenberg
 namespace pairing
 {
 
-void doubling_step_for_flipped_miller_loop(g2::element& current, pairing::ell_coeffs& ell)
+void doubling_step_for_flipped_miller_loop(g2::element& current, fq12::ell_coeffs& ell)
 {
     fq2::fq2_t a;
     fq2::fq2_t b;
@@ -64,7 +64,7 @@ void doubling_step_for_flipped_miller_loop(g2::element& current, pairing::ell_co
     fq2::add(ell.vv, j, ell.vv);
 }
 
-void mixed_addition_step_for_flipped_miller_loop(const g2::element& base, g2::element& Q, pairing::ell_coeffs& line)
+void mixed_addition_step_for_flipped_miller_loop(const g2::element& base, g2::element& Q, fq12::ell_coeffs& line)
 {
     fq2::fq2_t d;
     fq2::fq2_t e;
@@ -152,7 +152,7 @@ fq12::fq12_t miller_loop(g1::element& P, miller_lines& lines)
     fq12::fq12_t work_scalar = fq12::one();
 
     size_t it = 0;
-    pairing::ell_coeffs work_line;
+    fq12::ell_coeffs work_line;
 
     for (size_t i = 0; i < loop_length; ++i)
     {
@@ -192,7 +192,7 @@ fq12::fq12_t miller_loop_batch(const g1::element* points, const miller_lines* li
     fq12::fq12_t work_scalar = fq12::one();
 
     size_t it = 0;
-    pairing::ell_coeffs work_line;
+    fq12::ell_coeffs work_line;
 
     for (size_t i = 0; i < loop_length; ++i)
     {

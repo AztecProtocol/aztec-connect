@@ -2,6 +2,7 @@
 
 #include "math.h"
 
+
 #include <barretenberg/fields/fr.hpp>
 
 #include <barretenberg/waffle/composer/extended_composer.hpp>

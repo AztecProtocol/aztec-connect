@@ -16,7 +16,7 @@ namespace waffle
         w_l.emplace_back(in.a);
         w_r.emplace_back(in.b);
         w_o.emplace_back(in.c);
-        q_m.emplace_back(fr::zero());
+        q_m.emplace_back(fr::zero);
         q_l.emplace_back(in.a_scaling);
         q_r.emplace_back(in.b_scaling);
         q_o.emplace_back(in.c_scaling);
@@ -43,8 +43,8 @@ namespace waffle
         w_r.emplace_back(in.b);
         w_o.emplace_back(in.c);
         q_m.emplace_back(in.mul_scaling);
-        q_l.emplace_back(fr::zero());
-        q_r.emplace_back(fr::zero());
+        q_l.emplace_back(fr::zero);
+        q_r.emplace_back(fr::zero);
         q_o.emplace_back(in.c_scaling);
         q_c.emplace_back(in.const_scaling);
 
@@ -69,11 +69,11 @@ namespace waffle
         w_r.emplace_back(variable_index);
         w_o.emplace_back(variable_index);
 
-        q_m.emplace_back(fr::one());
-        q_l.emplace_back(fr::zero());
-        q_r.emplace_back(fr::zero());
+        q_m.emplace_back(fr::one);
+        q_l.emplace_back(fr::zero);
+        q_r.emplace_back(fr::zero);
         q_o.emplace_back(fr::neg_one());
-        q_c.emplace_back(fr::zero());
+        q_c.emplace_back(fr::zero);
 
         epicycle left{static_cast<uint32_t>(n), WireType::LEFT};
         epicycle right{static_cast<uint32_t>(n), WireType::RIGHT};
@@ -179,15 +179,15 @@ namespace waffle
             ++log2_n;
         }
         size_t new_n = 1UL << log2_n;
-        variables.emplace_back(fr::zero());
+        variables.emplace_back(fr::zero);
         zero_idx = variables.size() - 1;
         for (size_t i = n; i < new_n; ++i)
         {
-            q_m.emplace_back(fr::zero());
-            q_l.emplace_back(fr::zero());
-            q_r.emplace_back(fr::zero());
-            q_o.emplace_back(fr::zero());
-            q_c.emplace_back(fr::zero());
+            q_m.emplace_back(fr::zero);
+            q_l.emplace_back(fr::zero);
+            q_r.emplace_back(fr::zero);
+            q_o.emplace_back(fr::zero);
+            q_c.emplace_back(fr::zero);
             w_l.emplace_back(zero_idx);
             w_r.emplace_back(zero_idx);
             w_o.emplace_back(zero_idx);
@@ -204,15 +204,15 @@ namespace waffle
  
         for (size_t i = 0; i < new_n; ++i)
         {
-            fr::copy(variables[w_l[i]], output_state.w_l.at(i));
-            fr::copy(variables[w_r[i]], output_state.w_r.at(i));
-            fr::copy(variables[w_o[i]], output_state.w_o.at(i));
+            fr::__copy(variables[w_l[i]], output_state.w_l.at(i));
+            fr::__copy(variables[w_r[i]], output_state.w_r.at(i));
+            fr::__copy(variables[w_o[i]], output_state.w_o.at(i));
 
-            fr::copy(q_m[i], widget->q_m.at(i));
-            fr::copy(q_l[i], widget->q_l.at(i));
-            fr::copy(q_r[i], widget->q_r.at(i));
-            fr::copy(q_o[i], widget->q_o.at(i));
-            fr::copy(q_c[i], widget->q_c.at(i));
+            fr::__copy(q_m[i], widget->q_m.at(i));
+            fr::__copy(q_l[i], widget->q_l.at(i));
+            fr::__copy(q_r[i], widget->q_r.at(i));
+            fr::__copy(q_o[i], widget->q_o.at(i));
+            fr::__copy(q_c[i], widget->q_c.at(i));
         }
 
         output_state.widgets.emplace_back(std::move(widget));

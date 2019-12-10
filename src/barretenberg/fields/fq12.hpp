@@ -1,5 +1,4 @@
-#ifndef FQ12
-#define FQ12
+#pragma once
 
 #include "fq6.hpp"
 
@@ -7,6 +6,17 @@ namespace barretenberg
 {
 namespace fq12
 {
+struct ell_coeffs
+{
+    fq2::fq2_t o;
+    fq2::fq2_t vw;
+    fq2::fq2_t vv;
+};
+struct fq12_t
+{
+    fq6::fq6_t c0;
+    fq6::fq6_t c1;
+};
 constexpr fq2::fq2_t frobenius_coefficients_one{
     {{0xaf9ba69633144907, 0xca6b1d7387afb78a, 0x11bded5ef08a2087, 0x02f34d751a1f3a7c}},
     {{0xa222ae234c492d72, 0xd00f02a4565de15b, 0xdc2ff3a253dfc926, 0x10a75716b3899551}}};
@@ -90,7 +100,7 @@ inline void mul(const fq12_t &a, const fq12_t &b, fq12_t &r)
     fq6::sub(r.c1, T0, r.c1);
 }
 
-inline void sparse_mul(const fq12_t &a, const pairing::ell_coeffs &ell, fq12_t &r)
+inline void sparse_mul(const fq12_t &a, const ell_coeffs &ell, fq12_t &r)
 {
     // multiplicand is sparse fp12 element (ell.0, 0, ell.vv) + \beta(0, ell.vw, 0)
     fq2::fq2_t d0;
@@ -291,5 +301,3 @@ inline bool eq(const fq12_t &a, const fq12_t &b)
 }
 } // namespace fq12
 } // namespace barretenberg
-
-#endif

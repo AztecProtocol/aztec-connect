@@ -19,8 +19,8 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     {
         output.resize_unsafe(permutation.size());
     }
-    barretenberg::fr::field_t k1 = barretenberg::fr::multiplicative_generator();
-    barretenberg::fr::field_t k2 = barretenberg::fr::alternate_multiplicative_generator();
+    barretenberg::fr::field_t k1 = barretenberg::fr::multiplicative_generator;
+    barretenberg::fr::field_t k2 = barretenberg::fr::alternate_multiplicative_generator;
 
     // permutation encoding:
     // low 28 bits defines the location in witness polynomial

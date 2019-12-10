@@ -10,6 +10,18 @@ namespace barretenberg
 {
 namespace g2
 {
+struct affine_element
+{
+    fq2::fq2_t x;
+    fq2::fq2_t y;
+};
+
+struct element
+{
+    fq2::fq2_t x;
+    fq2::fq2_t y;
+    fq2::fq2_t z;
+};
 constexpr fq::field_t xc0{ { 0x8e83b5d102bc2026, 0xdceb1935497b0172, 0xfbb8264797811adf, 0x19573841af96503b } };
 constexpr fq::field_t xc1{ { 0xafb4737da84c6140, 0x6043dd5a5802d8c4, 0x09e950fc52a02f86, 0x14fef0833aea7b6b } };
 constexpr fq::field_t yc0{ { 0x619dfa9d886be9f6, 0xfe7fd297f59e9b78, 0xff9e1a62231b7dfe, 0x28fd7eebae9e4206 } };
@@ -32,8 +44,8 @@ inline element one()
     result.x.c1 = xc1;
     result.y.c0 = yc0;
     result.y.c1 = yc1;
-    result.z.c0 = fq::one();
-    result.z.c1 = fq::zero();
+    result.z.c0 = fq::one;
+    result.z.c1 = fq::zero;
     return result;
 }
 
@@ -526,7 +538,7 @@ inline void affine_to_jacobian(const affine_element& a, element& r)
 
 inline element group_exponentiation_inner(const affine_element& a, const fr::field_t& scalar)
 {
-    if (fr::eq(scalar, fr::zero()))
+    if (fr::eq(scalar, fr::zero))
     {
         element result;
         result.x = fq2::zero();

@@ -1,6 +1,7 @@
 #ifndef VERIFIER_HPP
 #define VERIFIER_HPP
 
+#include "../../waffle_types.hpp"
 #include "../../../types.hpp"
 #include "../widgets/base_widget.hpp"
 #include "../../../groups/scalar_multiplication.hpp"

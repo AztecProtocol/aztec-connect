@@ -3,6 +3,7 @@
 
 #include "../../fields/fr.hpp"
 
+#include "../waffle_types.hpp"
 #include "../../types.hpp"
 
 namespace waffle
@@ -34,11 +35,11 @@ namespace waffle
         barretenberg::fr::field_t T2;
 
 
-        barretenberg::fr::field_t right_shift = barretenberg::fr::multiplicative_generator();
-        barretenberg::fr::field_t output_shift = barretenberg::fr::alternate_multiplicative_generator();
+        barretenberg::fr::field_t right_shift = barretenberg::fr::multiplicative_generator;
+        barretenberg::fr::field_t output_shift = barretenberg::fr::alternate_multiplicative_generator;
 
         barretenberg::fr::field_t alpha_pow[6];
-        barretenberg::fr::copy(challenges.alpha, alpha_pow[0]);
+        barretenberg::fr::__copy(challenges.alpha, alpha_pow[0]);
         for (size_t i = 1; i < 6; ++i)
         {
             barretenberg::fr::__mul(alpha_pow[i-1], alpha_pow[0], alpha_pow[i]);

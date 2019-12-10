@@ -279,11 +279,11 @@ TEST(g2, group_exponentiation_check_against_constants)
 
 TEST(g2, group_exponentiation_zero_and_one)
 {
-    g2::affine_element result = g2::group_exponentiation(g2::affine_one(), fr::zero());
+    g2::affine_element result = g2::group_exponentiation(g2::affine_one(), fr::zero);
 
     EXPECT_EQ(g2::is_point_at_infinity(result), true);
 
-    result = g2::group_exponentiation(g2::affine_one(), fr::one());
+    result = g2::group_exponentiation(g2::affine_one(), fr::one);
     EXPECT_EQ(g2::eq(result, g2::affine_one()), true);
 }
 

@@ -92,13 +92,13 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
         return false;
     }
 
-    bool field_elements_valid = // !fr::eq(proof.w_l_eval, fr::zero())
-        // && !fr::eq(proof.w_r_eval, fr::zero())
-        // && !fr::eq(proof.w_o_eval, fr::zero())
-        /* && */ // !fr::eq(proof.z_1_shifted_eval, fr::zero())
-        /* && */ !fr::eq(proof.sigma_1_eval, fr::zero())
-        && !fr::eq(proof.sigma_2_eval, fr::zero())
-        && !fr::eq(proof.linear_eval, fr::zero());
+    bool field_elements_valid = // !fr::eq(proof.w_l_eval, fr::zero)
+        // && !fr::eq(proof.w_r_eval, fr::zero)
+        // && !fr::eq(proof.w_o_eval, fr::zero)
+        /* && */ // !fr::eq(proof.z_1_shifted_eval, fr::zero)
+        /* && */ !fr::eq(proof.sigma_1_eval, fr::zero)
+        && !fr::eq(proof.sigma_2_eval, fr::zero)
+        && !fr::eq(proof.linear_eval, fr::zero);
     if (!field_elements_valid)
     {
         printf("proof field elements not valid!\n");
@@ -125,7 +125,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::field_t T1;
     fr::field_t T2;
     fr::field_t T3;
-    fr::copy(challenges.alpha, alpha_pow[0]);
+    fr::__copy(challenges.alpha, alpha_pow[0]);
     for (size_t i = 1; i < 4; ++i)
     {
         fr::__mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
@@ -147,7 +147,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::__mul(T0, proof.z_1_shifted_eval, T0);
     fr::__mul(T0, alpha_pow[0], T0);
 
-    fr::__sub(proof.z_1_shifted_eval, fr::one(), T1);
+    fr::__sub(proof.z_1_shifted_eval, fr::one, T1);
     fr::__mul(T1, lagrange_evals.l_n_minus_1, T1);
     fr::__mul(T1, alpha_pow[1], T1);
 
@@ -169,7 +169,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     challenges.nu = compute_linearisation_challenge(proof, t_eval);
 
     fr::field_t u = compute_kate_separation_challenge(proof, t_eval);
-    fr::copy(challenges.nu, nu_pow[0]);
+    fr::__copy(challenges.nu, nu_pow[0]);
     for (size_t i = 1; i < 9; ++i)
     {
         fr::__mul(nu_pow[i - 1], nu_pow[0], nu_pow[i]);
@@ -188,7 +188,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::__add(linear_terms.z_1, T0, linear_terms.z_1);
 
     fr::field_t batch_evaluation;
-    fr::copy(t_eval, batch_evaluation);
+    fr::__copy(t_eval, batch_evaluation);
     fr::__mul(nu_pow[0], proof.linear_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
@@ -262,7 +262,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     elements.emplace_back(proof.Z_1);
     scalars.emplace_back(linear_terms.z_1);
 
-    fr::copy(nu_pow[7], nu_base);
+    fr::__copy(nu_pow[7], nu_base);
 
     if (g1::on_curve(proof.W_L))
     {
@@ -377,10 +377,10 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     g1::batch_normalize(P, 2);
 
     g1::affine_element P_affine[2];
-    fq::copy(P[0].x, P_affine[1].x);
-    fq::copy(P[0].y, P_affine[1].y);
-    fq::copy(P[1].x, P_affine[0].x);
-    fq::copy(P[1].y, P_affine[0].y);
+    fq::__copy(P[0].x, P_affine[1].x);
+    fq::__copy(P[0].y, P_affine[1].y);
+    fq::__copy(P[1].x, P_affine[0].x);
+    fq::__copy(P[1].y, P_affine[0].y);
 
     fq12::fq12_t result = pairing::reduced_ate_pairing_batch_precomputed(P_affine, reference_string.precomputed_g2_lines, 2);
 

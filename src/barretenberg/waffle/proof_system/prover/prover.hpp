@@ -2,7 +2,7 @@
 
 #include "../../../polynomials/polynomial.hpp"
 #include "../../../types.hpp"
-
+#include "../../waffle_types.hpp"
 #include "../../reference_string/reference_string.hpp"
 #include "../widgets/base_widget.hpp"
 

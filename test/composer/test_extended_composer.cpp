@@ -30,17 +30,17 @@ TEST(extended_composer, test_combine_linear_relations_basic_add)
 {
     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
 
-    fr::field_t wires[7]{ fr::one(), fr::one(), fr::one(), fr::one(), fr::one(), fr::one(), fr::one() };
+    fr::field_t wires[7]{ fr::one, fr::one, fr::one, fr::one, fr::one, fr::one, fr::one };
     uint32_t wire_indices[7]{ composer.add_variable(wires[0]), composer.add_variable(wires[1]),
                               composer.add_variable(wires[2]), composer.add_variable(wires[3]),
                               composer.add_variable(wires[4]), composer.add_variable(wires[5]),
                               composer.add_variable(wires[6]) };
     composer.create_add_gate(
-        { wire_indices[0], wire_indices[1], wire_indices[2], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+        { wire_indices[0], wire_indices[1], wire_indices[2], fr::one, fr::one, fr::neg_one(), fr::zero });
     composer.create_add_gate(
-        { wire_indices[2], wire_indices[3], wire_indices[4], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+        { wire_indices[2], wire_indices[3], wire_indices[4], fr::one, fr::one, fr::neg_one(), fr::zero });
     composer.create_add_gate(
-        { wire_indices[4], wire_indices[5], wire_indices[6], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+        { wire_indices[4], wire_indices[5], wire_indices[6], fr::one, fr::one, fr::neg_one(), fr::zero });
 
     composer.combine_linear_relations();
 
@@ -54,17 +54,17 @@ TEST(extended_composer, test_combine_linear_relations_basic_mul_add)
 {
     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
 
-    fr::field_t wires[7]{ fr::one(), fr::one(), fr::one(), fr::one(), fr::one(), fr::one(), fr::one() };
+    fr::field_t wires[7]{ fr::one, fr::one, fr::one, fr::one, fr::one, fr::one, fr::one };
     uint32_t wire_indices[7]{ composer.add_variable(wires[0]), composer.add_variable(wires[1]),
                               composer.add_variable(wires[2]), composer.add_variable(wires[3]),
                               composer.add_variable(wires[4]), composer.add_variable(wires[5]),
                               composer.add_variable(wires[6]) };
     composer.create_mul_gate(
-        { wire_indices[0], wire_indices[1], wire_indices[2], fr::one(), fr::neg_one(), fr::zero() });
+        { wire_indices[0], wire_indices[1], wire_indices[2], fr::one, fr::neg_one(), fr::zero });
     composer.create_add_gate(
-        { wire_indices[2], wire_indices[3], wire_indices[4], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+        { wire_indices[2], wire_indices[3], wire_indices[4], fr::one, fr::one, fr::neg_one(), fr::zero });
     composer.create_add_gate(
-        { wire_indices[4], wire_indices[5], wire_indices[6], fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+        { wire_indices[4], wire_indices[5], wire_indices[6], fr::one, fr::one, fr::neg_one(), fr::zero });
 
     composer.combine_linear_relations();
 
@@ -124,13 +124,13 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
         uint64_t shift = static_cast<uint64_t>(i) + 1UL;
         EXPECT_EQ(fr::from_montgomery_form(composer.q_l[i]).data[0], 1UL << (shift + 1UL));
         EXPECT_EQ(fr::from_montgomery_form(composer.q_r[i]).data[0], 1UL << shift);
-        EXPECT_EQ(fr::eq(composer.q_o[i], fr::one()), true);
+        EXPECT_EQ(fr::eq(composer.q_o[i], fr::one), true);
         EXPECT_EQ(fr::eq(composer.q_oo[i], fr::neg_one()), true);
     }
     EXPECT_EQ(fr::eq(composer.q_l[30], fr::neg_one()), true);
     EXPECT_EQ(fr::from_montgomery_form(composer.q_r[30]).data[0], 1UL << 31UL);
     EXPECT_EQ(fr::from_montgomery_form(composer.q_o[30]).data[0], 1UL);
-    EXPECT_EQ(fr::eq(composer.q_oo[30], fr::zero()), true);
+    EXPECT_EQ(fr::eq(composer.q_oo[30], fr::zero), true);
 
     EXPECT_EQ(fr::from_montgomery_form(prover.w_l[0]).data[0], 1UL);
     EXPECT_EQ(fr::from_montgomery_form(prover.w_r[0]).data[0], 1UL);
@@ -159,9 +159,9 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
 
     for (size_t i = 16; i < 32; ++i)
     {
-        EXPECT_EQ(fr::eq(prover.w_l[i], fr::zero()), true);
-        EXPECT_EQ(fr::eq(prover.w_r[i], fr::zero()), true);
-        EXPECT_EQ(fr::eq(prover.w_o[i], fr::zero()), true);
+        EXPECT_EQ(fr::eq(prover.w_l[i], fr::zero), true);
+        EXPECT_EQ(fr::eq(prover.w_r[i], fr::zero), true);
+        EXPECT_EQ(fr::eq(prover.w_o[i], fr::zero), true);
     }
     waffle::Verifier verifier = waffle::preprocess(prover);
 
@@ -204,9 +204,9 @@ TEST(extended_composer, composer_consistency)
         EXPECT_EQ(fr::eq(standard_composer.q_r[i], extended_composer.q_r[i]), true);
         EXPECT_EQ(fr::eq(standard_composer.q_o[i], extended_composer.q_o[i]), true);
         EXPECT_EQ(fr::eq(standard_composer.q_c[i], extended_composer.q_c[i]), true);
-        EXPECT_EQ(fr::eq(extended_composer.q_oo[i], fr::zero()), true);
-        EXPECT_EQ(fr::eq(extended_composer.q_left_bools[i], fr::zero()), true);
-        EXPECT_EQ(fr::eq(extended_composer.q_right_bools[i], fr::zero()), true);
+        EXPECT_EQ(fr::eq(extended_composer.q_oo[i], fr::zero), true);
+        EXPECT_EQ(fr::eq(extended_composer.q_left_bools[i], fr::zero), true);
+        EXPECT_EQ(fr::eq(extended_composer.q_right_bools[i], fr::zero), true);
         EXPECT_EQ(fr::eq(standard_prover.w_l[i], extended_prover.w_l[i]), true);
         EXPECT_EQ(fr::eq(standard_prover.w_r[i], extended_prover.w_r[i]), true);
         EXPECT_EQ(fr::eq(standard_prover.w_o[i], extended_prover.w_o[i]), true);

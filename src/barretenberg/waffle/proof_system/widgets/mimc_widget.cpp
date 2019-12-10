@@ -71,12 +71,12 @@ fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::
         fr::__add_with_coarse_reduction(circuit_state.w_o_fft[i], circuit_state.w_l_fft[i], T0); // T0 = w_o + w_l
         fr::__add_with_coarse_reduction(T0, q_mimc_coefficient_fft[i], T0);  // T0 = (w_o + w_l + q_c)
         fr::__sqr_without_reduction(T0, T1);              // T1 = (w_o + w_l + q_c)^2
-        fr::__mul_without_reduction(T1, T0, T1);          // T1 = (w_o + w_l + q_c)^3
+        fr::__mul_with_coarse_reduction(T1, T0, T1);          // T1 = (w_o + w_l + q_c)^3
         fr::__sub_with_coarse_reduction(T1, circuit_state.w_r_fft[i], T1); // T1 = (w_o + w_l + q_c)^3 - w_r
         fr::__sqr_without_reduction(circuit_state.w_r_fft[i], T2); // T2 = w_r^2
-        fr::__mul_without_reduction(T2, T0, T2);  // T2 = (w_o + w_l + q_c).w_r^2 
+        fr::__mul_with_coarse_reduction(T2, T0, T2);  // T2 = (w_o + w_l + q_c).w_r^2 
         fr::__sub_with_coarse_reduction(T2, circuit_state.w_o_fft[i + 4], T2); // T2 = (w_o + w_l + q_c).w_r^2 - w_{o.next}
-        fr::__mul_without_reduction(T2, alpha_step, T2);  // T2 = (w_o + w_l + q_c).w_r^2 - w_{o.next}).alpha
+        fr::__mul_with_coarse_reduction(T2, alpha_step, T2);  // T2 = (w_o + w_l + q_c).w_r^2 - w_{o.next}).alpha
         fr::__add_with_coarse_reduction(T1, T2, T1);  // T1 = ((w_o + w_l + q_c)^3 - w_r) + (w_o + w_l + q_c).w_r^2 - w_{o.next}).alpha
 
         fr::__mul(T1, q_mimc_selector_fft[i], T1); // T1 = (((w_o + w_l + q_c)^3 - w_r) + (w_o + w_l + q_c).w_r^2 - w_{o.next}).alpha).q_mimc

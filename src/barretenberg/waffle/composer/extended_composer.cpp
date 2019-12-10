@@ -161,7 +161,7 @@ void ExtendedComposer::combine_linear_relations()
     q_oo.resize(n);
     for (size_t i = 0; i < n; ++i)
     {
-        q_oo[i] = fr::zero();
+        q_oo[i] = fr::zero;
     }
     std::vector<quad> potential_quads;
     potential_quads.reserve(w_l.size());
@@ -336,12 +336,12 @@ void ExtendedComposer::combine_linear_relations()
                     change_permutation(wire_epicycles[lookahead_wire.index], old_cycle, new_cycle);
                     change_permutation(wire_epicycles[w_o[next_gate_index]], new_cycle, old_cycle);
                     std::swap(left ? w_l[next_gate_index] : w_r[next_gate_index], w_o[next_gate_index]);
-                    barretenberg::fr::swap(left ? q_l[next_gate_index] : q_r[next_gate_index], q_o[next_gate_index]);
+                    barretenberg::fr::__swap(left ? q_l[next_gate_index] : q_r[next_gate_index], q_o[next_gate_index]);
                 }
                 deleted_gates[potential_quads[j].gate_indices[1]] = true;
             }
 
-            const auto assign = [](const fr::field_t &input) { return (fr::eq(input, fr::zero())) ? fr::one() : input; };
+            const auto assign = [](const fr::field_t &input) { return (fr::eq(input, fr::zero)) ? fr::one : input; };
             fr::field_t left = fr::neg(assign(*potential_quads[j].removed_wire.selectors[0]));
             fr::field_t right = assign(*potential_quads[j].removed_wire.selectors[1]);
 
@@ -358,7 +358,7 @@ void ExtendedComposer::combine_linear_relations()
             barretenberg::fr::__mul(q_c[gate_2_index], left, q_c[gate_2_index]);
 
             const auto compute_new_selector = [](const auto &wire) {
-                fr::field_t temp = fr::zero();
+                fr::field_t temp = fr::zero;
                 std::for_each(wire.selectors.begin(), wire.selectors.end(), [&temp](auto x) { fr::__add(temp, *x, temp); });
                 return temp;
             };
@@ -367,12 +367,12 @@ void ExtendedComposer::combine_linear_relations()
             fr::field_t new_output = compute_new_selector(gate_wires[2]);
             fr::field_t new_next_output = compute_new_selector(gate_wires[3]);
 
-            fr::copy(new_left, q_l[gate_1_index]);
-            fr::copy(new_right, q_r[gate_1_index]);
-            fr::copy(new_output, q_o[gate_1_index]);
-            fr::copy(new_next_output, q_oo[gate_1_index]);
+            fr::__copy(new_left, q_l[gate_1_index]);
+            fr::__copy(new_right, q_r[gate_1_index]);
+            fr::__copy(new_output, q_o[gate_1_index]);
+            fr::__copy(new_next_output, q_oo[gate_1_index]);
             fr::__add(q_c[gate_1_index], q_c[gate_2_index], q_c[gate_1_index]);
-            if (!fr::eq(fr::zero(), q_m[gate_2_index]))
+            if (!fr::eq(fr::zero, q_m[gate_2_index]))
             {
                 fr::__add(q_m[gate_1_index], q_m[gate_2_index], q_m[gate_1_index]);
             }
@@ -398,11 +398,11 @@ void ExtendedComposer::combine_linear_relations()
                 w_r[gate_2_index] = zero_idx;
                 w_o[gate_2_index] = gate_wires[3].index;
 
-                q_m[gate_2_index] = fr::zero();
-                q_l[gate_2_index] = fr::zero();
-                q_r[gate_2_index] = fr::zero();
-                q_o[gate_2_index] = fr::zero();
-                q_c[gate_2_index] = fr::zero();
+                q_m[gate_2_index] = fr::zero;
+                q_l[gate_2_index] = fr::zero;
+                q_r[gate_2_index] = fr::zero;
+                q_o[gate_2_index] = fr::zero;
+                q_c[gate_2_index] = fr::zero;
                 wire_epicycles[w_l[gate_2_index]].push_back({ static_cast<uint32_t>(gate_2_index), WireType::LEFT });
                 wire_epicycles[w_r[gate_2_index]].push_back({ static_cast<uint32_t>(gate_2_index), WireType::RIGHT });
                 wire_epicycles[w_o[gate_2_index]].push_back({ static_cast<uint32_t>(gate_2_index), WireType::OUTPUT });
@@ -496,7 +496,7 @@ Prover ExtendedComposer::preprocess()
         q_left_bools.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
         q_right_bools.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
         q_output_bools.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-        q_oo.emplace_back(fr::zero());
+        q_oo.emplace_back(fr::zero);
         w_l.emplace_back(zero_idx);
         w_r.emplace_back(zero_idx);
         w_o.emplace_back(zero_idx);
@@ -522,18 +522,18 @@ Prover ExtendedComposer::preprocess()
             continue;
         }
         size_t index = adjusted_gate_indices[i];
-        fr::copy(variables[w_l[i]], output_state.w_l[index]);
-        fr::copy(variables[w_r[i]], output_state.w_r[index]);
-        fr::copy(variables[w_o[i]], output_state.w_o[index]);
-        fr::copy(q_m[i], arithmetic_widget->q_m[index]);
-        fr::copy(q_l[i], arithmetic_widget->q_l[index]);
-        fr::copy(q_r[i], arithmetic_widget->q_r[index]);
-        fr::copy(q_o[i], arithmetic_widget->q_o[index]);
-        fr::copy(q_c[i], arithmetic_widget->q_c[index]);
-        fr::copy(q_left_bools[i], bool_widget->q_bl[index]);
-        fr::copy(q_right_bools[i], bool_widget->q_br[index]);
-        fr::copy(q_output_bools[i], bool_widget->q_bo[index]);
-        fr::copy(q_oo[i], sequential_widget->q_o_next[index]);
+        fr::__copy(variables[w_l[i]], output_state.w_l[index]);
+        fr::__copy(variables[w_r[i]], output_state.w_r[index]);
+        fr::__copy(variables[w_o[i]], output_state.w_o[index]);
+        fr::__copy(q_m[i], arithmetic_widget->q_m[index]);
+        fr::__copy(q_l[i], arithmetic_widget->q_l[index]);
+        fr::__copy(q_r[i], arithmetic_widget->q_r[index]);
+        fr::__copy(q_o[i], arithmetic_widget->q_o[index]);
+        fr::__copy(q_c[i], arithmetic_widget->q_c[index]);
+        fr::__copy(q_left_bools[i], bool_widget->q_bl[index]);
+        fr::__copy(q_right_bools[i], bool_widget->q_br[index]);
+        fr::__copy(q_output_bools[i], bool_widget->q_bo[index]);
+        fr::__copy(q_oo[i], sequential_widget->q_o_next[index]);
     }
 
     // printf("arithmetic check...\n");
@@ -637,7 +637,7 @@ Prover ExtendedComposer::preprocess()
     //     result = fr::add(result, t3);
     //     result = fr::add(result, t4);
     //     result = fr::add(result, arithmetic_widget->q_c[i]);
-    //     if (!fr::eq(result, fr::zero()))
+    //     if (!fr::eq(result, fr::zero))
     //     {
     //         size_t failure_idx = i;
     //         size_t original_failure_idx;
@@ -671,20 +671,20 @@ Prover ExtendedComposer::preprocess()
     // printf("bool wires...\n");
     // for (size_t i = 0; i < bool_widget->q_bl.get_size(); ++i)
     // {
-    //     if (!fr::eq(fr::from_montgomery_form(bool_widget->q_bl[i]), fr::zero()))
+    //     if (!fr::eq(fr::from_montgomery_form(bool_widget->q_bl[i]), fr::zero))
     //     {
     //         fr::field_t t = output_state.w_l[i];
     //         fr::field_t u = fr::sub(fr::sqr(t), t);
-    //         if (!fr::eq(u, fr::zero()))
+    //         if (!fr::eq(u, fr::zero))
     //         {
     //             printf("bool fail? left \n");
     //         }
     //     }
-    //     if (!fr::eq(fr::from_montgomery_form(bool_widget->q_br[i]), fr::zero()))
+    //     if (!fr::eq(fr::from_montgomery_form(bool_widget->q_br[i]), fr::zero))
     //     {
     //         fr::field_t t = output_state.w_r[i];
     //         fr::field_t u = fr::sub(fr::sqr(t), t);
-    //         if (!fr::eq(u, fr::zero()))
+    //         if (!fr::eq(u, fr::zero))
     //         {
     //             printf("bool fail? right \n");
     //         }

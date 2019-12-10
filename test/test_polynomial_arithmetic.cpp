@@ -22,7 +22,7 @@ TEST(polynomials, domain_roots)
 
     fr::field_t result;
     fr::field_t expected;
-    fr::one(expected);
+    expected = fr::one;
     fr::__pow_small(domain.root, n, result);
 
     EXPECT_EQ(fr::eq(result, expected), true);
@@ -37,7 +37,7 @@ TEST(polynomials, fft_with_small_degree)
     for (size_t i = 0; i < n; ++i)
     {
         poly[i] = fr::random_element();
-        fr::copy(poly[i], fft_transform[i]);
+        fr::__copy(poly[i], fft_transform[i]);
     }
 
     evaluation_domain domain = evaluation_domain(n);
@@ -45,7 +45,7 @@ TEST(polynomials, fft_with_small_degree)
     polynomial_arithmetic::fft(fft_transform, domain);
 
     fr::field_t work_root;
-    fr::one(work_root);
+    work_root = fr::one;
     fr::field_t expected;
     for (size_t i = 0; i < n; ++i)
     {
@@ -64,7 +64,7 @@ TEST(polynomials, basic_fft)
     for (size_t i = 0; i < n; ++i)
     {
         result[i] = fr::random_element();
-        fr::copy(result[i], expected[i]);
+        fr::__copy(result[i], expected[i]);
     }
 
     evaluation_domain domain = evaluation_domain(n);
@@ -87,7 +87,7 @@ TEST(polynomials, fft_ifft_consistency)
     for (size_t i = 0; i < n; ++i)
     {
         result[i] = fr::random_element();
-        fr::copy(result[i], expected[i]);
+        fr::__copy(result[i], expected[i]);
     }
 
     evaluation_domain domain = evaluation_domain(n);
@@ -109,14 +109,14 @@ TEST(polynomials, fft_coset_ifft_consistency)
     for (size_t i = 0; i < n; ++i)
     {
         result[i] = fr::random_element();
-        fr::copy(result[i], expected[i]);
+        fr::__copy(result[i], expected[i]);
     }
 
     evaluation_domain domain = evaluation_domain(n);
     domain.compute_lookup_table();
     fr::field_t T0;
     fr::__mul(domain.generator, domain.generator_inverse, T0);
-    EXPECT_EQ(fr::eq(T0, fr::one()), true);
+    EXPECT_EQ(fr::eq(T0, fr::one), true);
 
     polynomial_arithmetic::coset_fft(result, domain);
     polynomial_arithmetic::coset_ifft(result, domain);
@@ -138,17 +138,17 @@ TEST(polynomials, fft_coset_ifft_cross_consistency)
     for (size_t i = 0; i < n; ++i)
     {
         poly_a[i] = fr::random_element();
-        fr::copy(poly_a[i], poly_b[i]);
-        fr::copy(poly_a[i], poly_c[i]);
+        fr::__copy(poly_a[i], poly_b[i]);
+        fr::__copy(poly_a[i], poly_c[i]);
         fr::__add(poly_a[i], poly_c[i], expected[i]);
         fr::__add(expected[i], poly_b[i], expected[i]);
     }
 
     for (size_t i = n; i < 4 * n; ++i)
     {
-        fr::zero(poly_a[i]);
-        fr::zero(poly_b[i]);
-        fr::zero(poly_c[i]);
+        poly_a[i] = fr::zero;
+        poly_b[i] = fr::zero;
+        poly_c[i] = fr::zero;
     }
     evaluation_domain small_domain = evaluation_domain(n);
     evaluation_domain mid_domain = evaluation_domain(2 * n);
@@ -185,8 +185,8 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
     fr::field_t scratch_memory[2 * n + 4];
     for (size_t i = 0; i < 2 * n; ++i)
     {
-        fr::zero(l_1_coefficients[i]);
-        fr::zero(scratch_memory[i]);
+    l_1_coefficients[i] = fr::zero;
+    scratch_memory[i] = fr::zero;
     }
     polynomial_arithmetic::compute_lagrange_polynomial_fft(l_1_coefficients, small_domain, mid_domain);
 
@@ -205,10 +205,10 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
     eval = polynomial_arithmetic::evaluate(l_1_coefficients, shifted_z, small_domain.size);
     polynomial_arithmetic::fft(l_1_coefficients, small_domain);
 
-    fr::copy(scratch_memory[0], scratch_memory[2 * n]);
-    fr::copy(scratch_memory[1], scratch_memory[2 * n + 1]);
-    fr::copy(scratch_memory[2], scratch_memory[2 * n + 2]);
-    fr::copy(scratch_memory[3], scratch_memory[2 * n + 3]);
+    fr::__copy(scratch_memory[0], scratch_memory[2 * n]);
+    fr::__copy(scratch_memory[1], scratch_memory[2 * n + 1]);
+    fr::__copy(scratch_memory[2], scratch_memory[2 * n + 2]);
+    fr::__copy(scratch_memory[3], scratch_memory[2 * n + 3]);
     fr::field_t* l_n_minus_one_coefficients = &scratch_memory[4];
     polynomial_arithmetic::coset_ifft(l_n_minus_one_coefficients, mid_domain);
 
@@ -217,14 +217,14 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
 
     polynomial_arithmetic::fft(l_n_minus_one_coefficients, small_domain);
 
-    EXPECT_EQ(fr::eq(l_1_coefficients[0], fr::one()), true);
+    EXPECT_EQ(fr::eq(l_1_coefficients[0], fr::one), true);
 
     for (size_t i = 1; i < n; ++i)
     {
-        EXPECT_EQ(fr::eq(l_1_coefficients[i], fr::zero()), true);
+        EXPECT_EQ(fr::eq(l_1_coefficients[i], fr::zero), true);
     }
 
-    EXPECT_EQ(fr::eq(l_n_minus_one_coefficients[n - 2], fr::one()), true);
+    EXPECT_EQ(fr::eq(l_n_minus_one_coefficients[n - 2], fr::one), true);
 
     for (size_t i = 0; i < n; ++i)
     {
@@ -232,7 +232,7 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
         {
             continue;
         }
-        EXPECT_EQ(fr::eq(l_n_minus_one_coefficients[i], fr::zero()), true);
+        EXPECT_EQ(fr::eq(l_n_minus_one_coefficients[i], fr::zero), true);
     }
 }
 
@@ -255,9 +255,9 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
     }
     for (size_t i = n; i < 4 * n; ++i)
     {
-        fr::zero(a[i]);
-        fr::zero(b[i]);
-        fr::zero(c[i]);
+        a[i] = fr::zero;
+        b[i] = fr::zero;
+        c[i] = fr::zero;
     }
 
     // make the final evaluation not vanish
@@ -289,7 +289,7 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
     for (size_t i = n + 1; i < mid_domain.size; ++i)
     {
 
-        EXPECT_EQ(fr::eq(result[i], fr::zero()), true);
+        EXPECT_EQ(fr::eq(result[i], fr::zero), true);
     }
 }
 
@@ -302,7 +302,7 @@ TEST(polynomials, compute_kate_opening_coefficients)
     for (size_t i = 0; i < n; ++i)
     {
         coeffs[i] = fr::random_element();
-        fr::zero(coeffs[i + n]);
+        coeffs[i + n] = fr::zero;
     }
     polynomial_arithmetic::copy_polynomial(coeffs, W, 2 * n, 2 * n);
 
@@ -316,10 +316,10 @@ TEST(polynomials, compute_kate_opening_coefficients)
     // compute (X - z) in coefficient form
     fr::field_t multiplicand[2 * n];
     fr::__neg(z, multiplicand[0]);
-    fr::one(multiplicand[1]);
+    multiplicand[1] = fr::one;
     for (size_t i = 2; i < 2 * n; ++i)
     {
-        fr::zero(multiplicand[i]);
+        multiplicand[i] = fr::zero;
     }
 
     // set F(X) = F(X) - F(z)
@@ -357,12 +357,12 @@ TEST(polynomials, get_lagrange_evaluations)
 
     for (size_t i = 0; i < n; ++i)
     {
-        fr::zero(l_1_poly[i]);
-        fr::zero(l_n_minus_1_poly[i]);
-        fr::zero(vanishing_poly[i]);
+        l_1_poly[i] = fr::zero;
+        l_n_minus_1_poly[i] = fr::zero;
+        vanishing_poly[i] = fr::zero;
     }
-    fr::one(l_1_poly[0]);
-    fr::one(l_n_minus_1_poly[n - 2]);
+    l_1_poly[0] = fr::one;
+    l_n_minus_1_poly[n - 2] = fr::one;
 
     fr::field_t n_mont{ { n, 0, 0, 0 } };
     fr::__to_montgomery_form(n_mont, n_mont);

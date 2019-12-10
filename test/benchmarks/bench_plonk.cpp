@@ -46,7 +46,7 @@ void generate_test_mimc_circuit(waffle::MiMCComposer &mimc_composer, size_t num_
 {
     plonk::stdlib::field_t<waffle::MiMCComposer> mimc_input(plonk::stdlib::witness_t(&mimc_composer,
 barretenberg::fr::random_element())); plonk::stdlib::field_t<waffle::MiMCComposer>
-mimc_k(plonk::stdlib::witness_t(&mimc_composer, barretenberg::fr::zero())); plonk::stdlib::field_t<waffle::MiMCComposer>
+mimc_k(plonk::stdlib::witness_t(&mimc_composer, barretenberg::fr::zero)); plonk::stdlib::field_t<waffle::MiMCComposer>
 mimc_output(&mimc_composer); for (size_t i = 0; i < num_hashes; ++i)
     {
         mimc_output = mimc_hash(mimc_input, mimc_k);

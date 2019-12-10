@@ -77,13 +77,8 @@ void generate_test_data(waffle::Prover& state)
     // state.widgets.emplace_back(std::make_unique<waffle::ProverArithmeticWidget>(n));
 
     // create some constraints that satisfy our arithmetic circuit relation
-    fr::field_t one;
-    fr::field_t zero;
-    fr::field_t minus_one;
-    fr::one(one);
-    fr::__neg(one, minus_one);
-    fr::zero(zero);
     fr::field_t T0;
+
     // even indices = mul gates, odd incides = add gates
 
     state.w_l.resize(n);
@@ -97,12 +92,12 @@ void generate_test_data(waffle::Prover& state)
         fr::__mul(state.w_l.at(2 * i), state.w_r.at(2 * i), state.w_o.at(2 * i));
         fr::__add(state.w_o[2 * i], state.w_l[2 * i], state.w_o[2 * i]);
         fr::__add(state.w_o[2 * i], state.w_r[2 * i], state.w_o[2 * i]);
-        fr::__add(state.w_o[2 * i], fr::one(), state.w_o[2 * i]);
-        fr::copy(one, widget->q_l.at(2 * i));
-        fr::copy(one, widget->q_r.at(2 * i));
-        fr::copy(minus_one, widget->q_o.at(2 * i));
-        fr::copy(one, widget->q_c.at(2 * i));
-        fr::copy(one, widget->q_m.at(2 * i));
+        fr::__add(state.w_o[2 * i], fr::one, state.w_o[2 * i]);
+        fr::__copy(fr::one, widget->q_l.at(2 * i));
+        fr::__copy(fr::one, widget->q_r.at(2 * i));
+        fr::__copy(fr::neg_one(), widget->q_o.at(2 * i));
+        fr::__copy(fr::one, widget->q_c.at(2 * i));
+        fr::__copy(fr::one, widget->q_m.at(2 * i));
 
         state.w_l.at(2 * i + 1) = fr::random_element();
         state.w_r.at(2 * i + 1) = fr::random_element();
@@ -111,10 +106,10 @@ void generate_test_data(waffle::Prover& state)
         fr::__add(state.w_l.at(2 * i + 1), state.w_r.at(2 * i + 1), T0);
         fr::__add(T0, state.w_o.at(2 * i + 1), widget->q_c.at(2 * i + 1));
         fr::__neg(widget->q_c.at(2 * i + 1), widget->q_c.at(2 * i + 1));
-        fr::one(widget->q_l.at(2 * i + 1));
-        fr::one(widget->q_r.at(2 * i + 1));
-        fr::one(widget->q_o.at(2 * i + 1));
-        fr::zero(widget->q_m.at(2 * i + 1));
+        widget->q_l.at(2 * i + 1) = fr::one;
+        widget->q_r.at(2 * i + 1) = fr::one;
+        widget->q_o.at(2 * i + 1) = fr::one;
+        widget->q_m.at(2 * i + 1) = fr::zero;
     }
     size_t shift = n / 2;
     polynomial_arithmetic::copy_polynomial(&state.w_l.at(0), &state.w_l.at(shift), shift, shift);
@@ -149,19 +144,19 @@ void generate_test_data(waffle::Prover& state)
     state.sigma_3_mapping[n - 1] = (uint32_t)n - 1 + (1U << 31U);
 
 
-    fr::zero(state.w_l.at(n-1));
-    fr::zero(state.w_r.at(n-1));
-    fr::zero(state.w_o.at(n-1));
-    fr::zero(widget->q_c.at(n-1));
-    fr::zero(widget->q_l.at(n - 1));
-    fr::zero(widget->q_r.at(n - 1));
-    fr::zero(widget->q_o.at(n - 1));
-    fr::zero(widget->q_m.at(n - 1));
+    state.w_l.at(n-1) = fr::zero;
+    state.w_r.at(n-1) = fr::zero;
+    state.w_o.at(n-1) = fr::zero;
+    widget->q_c.at(n-1) = fr::zero;
+    widget->q_l.at(n - 1) = fr::zero;
+    widget->q_r.at(n - 1) = fr::zero;
+    widget->q_o.at(n - 1) = fr::zero;
+    widget->q_m.at(n - 1) = fr::zero;
 
-    fr::zero(state.w_l.at(shift-1));
-    fr::zero(state.w_r.at(shift-1));
-    fr::zero(state.w_o.at(shift-1));
-    fr::zero(widget->q_c.at(shift-1));
+    state.w_l.at(shift-1) = fr::zero;
+    state.w_r.at(shift-1) = fr::zero;
+    state.w_o.at(shift-1) = fr::zero;
+    widget->q_c.at(shift-1) = fr::zero;
 
     state.widgets.emplace_back(std::move(widget));
 }
@@ -182,7 +177,7 @@ TEST(prover, compute_quotient_polynomial)
     // check that the max degree of our quotient polynomial is 3n
     for (size_t i = 3 * n; i < 4 * n; ++i)
     {
-        EXPECT_EQ(fr::eq(state.circuit_state.quotient_large.at(i), fr::zero()), true);
+        EXPECT_EQ(fr::eq(state.circuit_state.quotient_large.at(i), fr::zero), true);
     }
 }
 
@@ -205,7 +200,7 @@ TEST(prover, compute_linearisation_coefficients)
     polynomial_arithmetic::lagrange_evaluations lagrange_evals = polynomial_arithmetic::get_lagrange_evaluations(state.challenges.z, state.circuit_state.small_domain);
 
     fr::field_t alpha_pow[6];
-    fr::copy(state.challenges.alpha, alpha_pow[0]);
+    fr::__copy(state.challenges.alpha, alpha_pow[0]);
     for (size_t i = 1; i < 6; ++i)
     {
         fr::__mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
@@ -230,7 +225,7 @@ TEST(prover, compute_linearisation_coefficients)
     fr::__mul(T0, state.proof.z_1_shifted_eval, T0);
     fr::__mul(T0, alpha_pow[1], T0);
 
-    fr::__sub(state.proof.z_1_shifted_eval, fr::one(), T1);
+    fr::__sub(state.proof.z_1_shifted_eval, fr::one, T1);
     fr::__mul(T1, lagrange_evals.l_n_minus_1, T1);
     fr::__mul(T1, alpha_pow[2], T1);
 

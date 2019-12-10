@@ -6,6 +6,7 @@
 #include "../../fields/fr.hpp"
 #include "../../fields/fq.hpp"
 
+#include "../waffle_types.hpp"
 #include "../../types.hpp"
 #include "../../keccak/keccak.h"
 
@@ -64,7 +65,7 @@ inline barretenberg::fr::field_t compute_gamma(const plonk_proof &proof)
     uint64_t input_buffer[6 * 4];
     add_wire_commitments_to_buffer(proof, input_buffer);
     keccak256 hash = hash_field_elements(input_buffer, 6);
-    barretenberg::fr::copy(*(barretenberg::fr::field_t*)&hash.word64s[0], gamma);
+    barretenberg::fr::__copy(*(barretenberg::fr::field_t*)&hash.word64s[0], gamma);
     barretenberg::fr::__to_montgomery_form(gamma, gamma);
     return gamma;
 }
@@ -76,7 +77,7 @@ inline barretenberg::fr::field_t compute_beta(const plonk_proof &proof, const ba
     add_wire_commitments_to_buffer(proof, input_buffer);
     barretenberg::fr::__from_montgomery_form(alpha, *(barretenberg::fr::field_t *)&input_buffer[24]);
     keccak256 hash = hash_field_elements(input_buffer, 7);
-    barretenberg::fr::copy(*(barretenberg::fr::field_t*)&hash.word64s[0], beta);
+    barretenberg::fr::__copy(*(barretenberg::fr::field_t*)&hash.word64s[0], beta);
     barretenberg::fr::__to_montgomery_form(beta, beta);
     return beta;
 }
@@ -88,7 +89,7 @@ inline barretenberg::fr::field_t compute_alpha(const plonk_proof &proof)
     add_wire_commitments_to_buffer(proof, input_buffer);
     add_grand_product_commitments_to_buffer(proof, &input_buffer[24]);
     keccak256 hash = hash_field_elements(input_buffer, 8);
-    barretenberg::fr::copy(*(barretenberg::fr::field_t*)&hash.word64s[0], alpha);
+    barretenberg::fr::__copy(*(barretenberg::fr::field_t*)&hash.word64s[0], alpha);
     barretenberg::fr::__to_montgomery_form(alpha, alpha);
     return alpha;
 }
@@ -101,7 +102,7 @@ inline barretenberg::fr::field_t compute_evaluation_challenge(const plonk_proof 
     add_grand_product_commitments_to_buffer(proof, &input_buffer[24]);
     add_quotient_commitment_to_buffer(proof, &input_buffer[32]);
     keccak256 hash = hash_field_elements(input_buffer, 14);
-    barretenberg::fr::copy(*(barretenberg::fr::field_t*)&hash.word64s[0], z);
+    barretenberg::fr::__copy(*(barretenberg::fr::field_t*)&hash.word64s[0], z);
     barretenberg::fr::__to_montgomery_form(z, z);
     return z;
 }
@@ -115,7 +116,7 @@ inline barretenberg::fr::field_t compute_linearisation_challenge(const plonk_pro
     add_quotient_commitment_to_buffer(proof, &input_buffer[32]);
     add_polynomial_evaluations_to_buffer(proof, t_eval, &input_buffer[56]);
     keccak256 hash = hash_field_elements(input_buffer, 22);
-    barretenberg::fr::copy(*(barretenberg::fr::field_t*)&hash.word64s[0], nu);
+    barretenberg::fr::__copy(*(barretenberg::fr::field_t*)&hash.word64s[0], nu);
     barretenberg::fr::__to_montgomery_form(nu, nu);
     return nu;
 }
@@ -130,7 +131,7 @@ inline barretenberg::fr::field_t compute_kate_separation_challenge(const plonk_p
     add_polynomial_evaluations_to_buffer(proof, t_eval, &input_buffer[56]);
     add_kate_elements_to_buffer(proof, &input_buffer[88]);
     keccak256 hash = hash_field_elements(input_buffer, 26);
-    barretenberg::fr::copy(*(barretenberg::fr::field_t*)&hash.word64s[0], u);
+    barretenberg::fr::__copy(*(barretenberg::fr::field_t*)&hash.word64s[0], u);
     barretenberg::fr::__to_montgomery_form(u, u);
     return u;
 }

@@ -99,7 +99,7 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
 
 
     fr::field_t k{{ 0, 0, 0, 0 }};
-    fr::copy(*(fr::field_t*)&rand_buffer[0], k);
+    fr::__copy(*(fr::field_t*)&rand_buffer[0], k);
     // fr::__to_montgomery_form(k, k);
     fr::field_t k1{{ 0, 0, 0, 0 }};;
     fr::field_t k2{{ 0, 0, 0, 0 }};;
@@ -121,7 +121,7 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
     recover_fixed_wnaf(endo_wnaf, endo_skew, k2_recovered.data[1], k2_recovered.data[0], 5);
 
     fr::field_t result;
-    fr::__mul_lambda(k2_recovered, result);
+    fr::__mul_beta(k2_recovered, result);
     fr::__sub(k1_recovered, result, result);
 
     EXPECT_EQ(result.data[0], k.data[0]);

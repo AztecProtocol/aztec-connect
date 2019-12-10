@@ -28,8 +28,8 @@ void generate_points(g1::affine_element* points, size_t num_points)
         g1::batch_normalize(&current_table[0], 10000);
         for (size_t j = 0; j < 10000; ++j)
         {
-            fq::copy(current_table[j].x, points[i * 10000 + j].x);
-            fq::copy(current_table[j].y, points[i * 10000 + j].y);
+            fq::__copy(current_table[j].x, points[i * 10000 + j].x);
+            fq::__copy(current_table[j].y, points[i * 10000 + j].y);
         }
     }
     g1::batch_normalize(small_table, 10000);
@@ -37,8 +37,8 @@ void generate_points(g1::affine_element* points, size_t num_points)
     size_t leftovers = num_points - rounded;
     for (size_t j = 0; j < leftovers; ++j)
     {
-        fq::copy(small_table[j].x, points[rounded + j].x);
-        fq::copy(small_table[j].y, points[rounded + j].y);
+        fq::__copy(small_table[j].x, points[rounded + j].x);
+        fq::__copy(small_table[j].y, points[rounded + j].y);
     }
 }
 } // namespace
@@ -153,7 +153,7 @@ TEST(scalar_multiplication, pippenger_mul_by_zero)
 
     g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 2 + 1);
 
-    scalars[0] = fr::zero();
+    scalars[0] = fr::zero;
     points[0] = g1::affine_one();
     scalar_multiplication::generate_pippenger_point_table(points, points, 1);
 
@@ -283,7 +283,7 @@ TEST(scalar_multiplication, batched_scalar_multiplication)
     for (size_t i = 0; i < num_points; ++i)
     {
         scalars[i] = fr::random_element();
-        fr::copy(scalars[i], scalars[i + num_points]);
+        fr::__copy(scalars[i], scalars[i + num_points]);
         g1::copy(&points[i], &points[i + (num_points * 2)]);
     }
     scalar_multiplication::multiplication_state inputs[2 * num_exponentiations];

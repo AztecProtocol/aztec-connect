@@ -24,9 +24,9 @@ namespace
         {
             c = hash_field_element((uint64_t*)&c_mont);
             fr::to_montgomery_form(*(fr::field_t*)&c.word64s[0], c_mont);
-            fr::copy(c_mont, constants[i]);
+            fr::__copy(c_mont, constants[i]);
         }
-        fr::copy(fr::zero(), constants[0]);
+        fr::__copy(fr::zero, constants[0]);
         return 0;
     }();
 }
@@ -133,14 +133,14 @@ namespace mimc
 // fr::field_t mimc_round_comparison(fr::field_t& input, fr::field_t& k)
 // {
 //     fr::field_t previous;
-//     fr::copy(input, previous);
+//     fr::__copy(input, previous);
 //     for (size_t i = 0; i < NUM_ROUNDS; ++i)
 //     {
 //         fr::field_t t = fr::add(constants[i], previous);
 //         fr::field_t tt = fr::sqr(t);
 //         fr::field_t tttt = fr::sqr(tt);
 //         fr::field_t ttttt = fr::mul(t, tttt);
-//         fr::copy(ttttt, previous);
+//         fr::__copy(ttttt, previous);
 //     }
 //     return previous;
 // }
@@ -187,7 +187,7 @@ size_t mimc_round(const uint32_t input_index, const uint32_t k_index, Composer *
         // (t + c)(t + c) = t.t + 2c.t + cc = tt
         // t.t + 2c.t + cc - tt
         composer->add_basic_mul_gate(t_idx, t_idx, tt_idx);
-        // composer->add_poly_gate(fr::one(), two_c, fr::zero(), fr::neg_one(), c_squared, idx_a, idx_a, idx_b);
+        // composer->add_poly_gate(fr::one, two_c, fr::zero, fr::neg_one(), c_squared, idx_a, idx_a, idx_b);
 
         // tt.tt = tttt;
         composer->add_basic_mul_gate(tt_idx, tt_idx, tttt_idx);

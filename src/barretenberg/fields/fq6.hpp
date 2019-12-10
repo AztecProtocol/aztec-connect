@@ -1,5 +1,4 @@
-#ifndef FQ6
-#define FQ6
+#pragma once
 
 #include "fq2.hpp"
 
@@ -7,6 +6,12 @@ namespace barretenberg
 {
 namespace fq6
 {
+struct fq6_t
+{
+    fq2::fq2_t c0;
+    fq2::fq2_t c1;
+    fq2::fq2_t c2;
+};
 constexpr fq2::fq2_t frobenius_coeffs_c1_one{
     {{0xb5773b104563ab30, 0x347f91c8a9aa6454, 0x7a007127242e0991, 0x1956bcd8118214ec}},
     {{0x6e849f1ea0aa4757, 0xaa1c7b6d89f89141, 0xb6e713cdfae0ca3a, 0x26694fbb4e82ebc3}}};
@@ -54,7 +59,7 @@ inline void mul_by_non_residue(const fq2::fq2_t &a, fq2::fq2_t &r)
 
     fq::__sub(T0, a.c1, T2);   // T2 = 9a.c0 - a.c1
     fq::__add(T1, a.c0, r.c1); // r.c1 = 9a.c1 + a.c0
-    fq::copy(T2, r.c0);      // r.c0 = T2
+    fq::__copy(T2, r.c0);      // r.c0 = T2
 }
 
 inline void add(const fq6_t &a, const fq6_t &b, fq6_t &r)
@@ -397,5 +402,3 @@ inline bool eq(const fq6_t &a, const fq6_t &b)
 }
 } // namespace fq6
 } // namespace barretenberg
-
-#endif
