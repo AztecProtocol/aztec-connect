@@ -24,6 +24,10 @@ public:
         zero_idx = 0;
         features |= static_cast<size_t>(Features::MIMC_SELECTORS);
     };
+    MiMCComposer(MiMCComposer &&other) = default;
+    MiMCComposer& operator=(MiMCComposer &&other) = default;
+
+    ~MiMCComposer() {}
 
     Prover preprocess() override;
 

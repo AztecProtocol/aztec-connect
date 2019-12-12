@@ -16,6 +16,9 @@ public:
         zero_idx = add_variable(barretenberg::fr::field_t({{0,0,0,0}}));
         features |= static_cast<size_t>(Features::BOOL_SELECTORS);
     };
+    BoolComposer(BoolComposer &&other) = default;
+    BoolComposer& operator=(BoolComposer &&other) = default;
+    ~BoolComposer() {}
 
     Prover preprocess() override;
 

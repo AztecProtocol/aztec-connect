@@ -19,6 +19,9 @@ public:
         q_o.reserve(size_hint);
         q_c.reserve(size_hint);
     };
+    StandardComposer(StandardComposer &&other) = default;
+    StandardComposer& operator=(StandardComposer &&other) = default;
+    ~StandardComposer() {}
 
     virtual Prover preprocess() override;
 

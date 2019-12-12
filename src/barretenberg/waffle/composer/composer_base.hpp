@@ -102,6 +102,9 @@ class ComposerBase
         }
     };
     ComposerBase() : n(0) {};
+    ComposerBase(ComposerBase &&other) = default;
+    ComposerBase& operator=(ComposerBase &&other) = default;
+    virtual ~ComposerBase() {};
 
     virtual size_t get_num_gates() const { return n; }
     virtual Prover preprocess() = 0;

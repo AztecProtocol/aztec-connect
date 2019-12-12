@@ -40,6 +40,9 @@ class ExtendedComposer : public BoolComposer
         features |= static_cast<size_t>(Features::EXTENDED_ARITHMETISATION);
         zero_selector = barretenberg::fr::zero;
     };
+    ExtendedComposer(ExtendedComposer &&other) = default;
+    ExtendedComposer& operator=(ExtendedComposer &&other) = default;
+    ~ExtendedComposer() {}
 
     size_t get_num_gates() const override
     {
