@@ -25,7 +25,7 @@ constexpr size_t MAX_BYTES = 55 + (9 * 64);
 
 char get_random_char()
 {
-return static_cast<uint32_t>(barretenberg::fr::random_element().data[0] % 8);
+return static_cast<char>(barretenberg::fr::random_element().data[0] % 8);
 }
 
 void generate_test_plonk_circuit(waffle::ExtendedComposer& composer, size_t num_bytes)

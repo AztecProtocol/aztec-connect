@@ -37,8 +37,7 @@ TEST(stdlib_bool, test_basic_operations)
     b = stdlib::witness_t(&composer, barretenberg::fr::zero);
     a = a ^ b; // a = 1
     b = !b;   // b = 1 (witness 0)
-    (a == b); //
-    bool_t d(&composer); // d = ?
+    bool_t d = (a == b); //
     d = false;           // d = 0
     bool_t e = a | d;   // e = 1 = a
     bool_t f = e ^ b;  // f = 0
