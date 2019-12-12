@@ -127,7 +127,7 @@ template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Compose
 {
     if (inputs.size() == 0)
     {
-        field_t<Composer> out = 0ULL;
+        field_t<Composer> out(static_cast<uint64_t>(0));
         return out;
     }
     Composer* context = inputs[0].context;
