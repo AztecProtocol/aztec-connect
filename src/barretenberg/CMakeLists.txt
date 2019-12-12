@@ -13,13 +13,14 @@ add_library(
     fields/field.hpp
     fields/fr.hpp
     fields/fq.hpp
+    fields/fq2_new.hpp
     fields/fq2.hpp
     fields/fq6.hpp
     fields/fq12.hpp
     groups/wnaf.hpp
-#    groups/group_impl_asm.tcc
-#    groups/group_impl_int128.tcc
-#    groups/group.hpp
+    groups/group_impl_asm.tcc
+    groups/group_impl_int128.tcc
+    groups/group.hpp
     groups/g1.hpp
     groups/g2.hpp
     groups/scalar_multiplication.cpp
@@ -104,13 +105,14 @@ if(BARRETENBERG_PROFILING)
         fields/field.hpp
         fields/fr.hpp
         fields/fq.hpp
+        fields/fq2_new.hpp
         fields/fq2.hpp
         fields/fq6.hpp
         fields/fq12.hpp
         groups/wnaf.hpp
-#        groups/group_impl_asm.tcc
-#        groups/group_impl_int128.tcc
-#        groups/group.hpp
+        groups/group_impl_asm.tcc
+        groups/group_impl_int128.tcc
+        groups/group.hpp
         groups/g1.hpp
         groups/g2.hpp
         groups/scalar_multiplication.cpp
