@@ -62,8 +62,6 @@ Prover& Prover::operator=(Prover &&other)
     return *this;
 }
 
-Prover::~Prover() {}
-
 void Prover::compute_wire_commitments()
 {
     scalar_multiplication::multiplication_state mul_state[3]{

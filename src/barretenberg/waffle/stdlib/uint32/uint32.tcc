@@ -195,7 +195,6 @@ uint32<ComposerContext>::uint32(ComposerContext* parent_context)
     , maximum_value(0)
 {
     ASSERT(parent_context != nullptr);
-    field_t<ComposerContext> zero_wire = field_t<ComposerContext>(parent_context, barretenberg::fr::zero);
     for (size_t i = 0; i < 32; ++i)
     {
         bool_wires[i] = bool_t<ComposerContext>(parent_context, false);

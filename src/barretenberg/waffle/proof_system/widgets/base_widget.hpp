@@ -68,7 +68,6 @@ class VerifierBaseWidget
     VerifierBaseWidget(VerifierBaseWidget&& other) : version(other.version)
     {
     }
-    virtual ~VerifierBaseWidget(){};
 
     virtual barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t& batch_eval,
                                                                             barretenberg::fr::field_t& nu_base,
@@ -109,8 +108,6 @@ class ProverBaseWidget
     ProverBaseWidget(ProverBaseWidget&& other) : version(other.version)
     {
     }
-    virtual ~ProverBaseWidget(){
-    };
 
     virtual barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
                                                                     const barretenberg::fr::field_t& alpha_step,

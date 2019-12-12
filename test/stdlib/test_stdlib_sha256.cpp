@@ -42,7 +42,7 @@ TEST(stdlib_sha256, test_sha256)
 
     std::array<uint32, 8> init_constants;
     plonk::stdlib::prepare_constants(init_constants);
-    std::array<uint32, 8> outputs = plonk::stdlib::sha256_block(init_constants, inputs);
+    plonk::stdlib::sha256_block(init_constants, inputs);
 
     waffle::Prover prover = composer.preprocess();
 

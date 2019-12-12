@@ -18,8 +18,6 @@ public:
     Verifier& operator=(const Verifier &other) = delete;
     Verifier& operator=(Verifier &&other);
 
-    ~Verifier();
-
     bool verify_proof(const plonk_proof &proof);
 
     ReferenceString reference_string;

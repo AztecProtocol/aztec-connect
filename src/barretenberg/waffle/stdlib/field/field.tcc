@@ -57,10 +57,6 @@ template <typename ComposerContext> field_t<ComposerContext>::field_t(field_t&& 
     witness_index = other.witness_index;
 }
 
-template <typename ComposerContext> field_t<ComposerContext>::~field_t()
-{
-}
-
 template <typename ComposerContext> field_t<ComposerContext>::field_t(const bool_t<ComposerContext>& other)
 {
     context = (other.context == nullptr) ? nullptr : other.context;

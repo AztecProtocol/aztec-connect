@@ -21,8 +21,6 @@ public:
         q_c.reserve(size_hint);
     };
 
-    ~StandardComposer() {};
-
     virtual Prover preprocess() override;
 
     void create_add_gate(const add_triple &in) override;

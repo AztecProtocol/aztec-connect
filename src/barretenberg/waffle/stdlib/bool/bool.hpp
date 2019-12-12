@@ -19,7 +19,6 @@ public:
     bool_t(const witness_t<ComposerContext> &value);
     bool_t(const bool_t &other);
     bool_t(bool_t &&other);
-    ~bool_t() {};
 
     bool_t& operator=(const bool other);
     bool_t& operator=(const witness_t<ComposerContext> &other);

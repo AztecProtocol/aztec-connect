@@ -33,8 +33,6 @@ template <typename ComposerContext> class uint32
 
     uint32& operator=(const uint32& other);
 
-    ~uint32(){};
-
     uint32 operator+(const uint32& other);
     uint32 operator-(const uint32& other);
     uint32 operator*(const uint32& other);

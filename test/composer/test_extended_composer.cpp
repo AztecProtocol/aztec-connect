@@ -188,8 +188,8 @@ TEST(extended_composer, composer_consistency)
         b1[i] = plonk::stdlib::witness_t<waffle::StandardComposer>(&standard_composer, 44U);
         a2[i] = plonk::stdlib::witness_t<waffle::ExtendedComposer>(&extended_composer, 100U);
         b2[i] = plonk::stdlib::witness_t<waffle::ExtendedComposer>(&extended_composer, 44U);
-        plonk::stdlib::field_t<waffle::StandardComposer> c1 = a1[i] * b1[i];
-        plonk::stdlib::field_t<waffle::ExtendedComposer> c2 = a2[i] * b2[i];
+        a1[i] * b1[i];
+        a2[i] * b2[i];
     }
 
     waffle::Prover standard_prover = standard_composer.preprocess();
@@ -233,7 +233,7 @@ TEST(extended_composer, basic_proof)
     {
         a[i] = witness_t(&composer, 100U);
         b[i] = witness_t(&composer, 44U);
-        field_t c = a[i] * b[i];
+        a[i] * b[i];
     }
 
     waffle::Prover prover = composer.preprocess();
@@ -359,7 +359,7 @@ TEST(extended_composer, logic_operations)
 
     uint32 e = witness_t(&composer, 0xabcdefU);
     uint32 g = 0xffffffff;
-    uint32 h = ((~e) & g) + 1;
+    ((~e) & g) + 1;
 
     waffle::Prover prover = composer.preprocess();
 

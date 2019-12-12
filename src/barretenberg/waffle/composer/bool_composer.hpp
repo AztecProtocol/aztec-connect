@@ -18,8 +18,6 @@ public:
         features |= static_cast<size_t>(Features::BOOL_SELECTORS);
     };
 
-    ~BoolComposer() {};
-
     Prover preprocess() override;
 
     uint32_t add_variable(const barretenberg::fr::field_t &in) override

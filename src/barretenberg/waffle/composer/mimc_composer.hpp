@@ -26,8 +26,6 @@ public:
         features |= static_cast<size_t>(Features::MIMC_SELECTORS);
     };
 
-    ~MiMCComposer() {};
-
     Prover preprocess() override;
 
     void create_add_gate(const add_triple &in) override;

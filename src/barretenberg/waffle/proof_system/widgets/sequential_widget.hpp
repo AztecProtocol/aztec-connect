@@ -9,7 +9,6 @@ class VerifierSequentialWidget : public VerifierBaseWidget
 {
 public:
     VerifierSequentialWidget(std::vector<barretenberg::g1::affine_element> &instance_commitments);
-    ~VerifierSequentialWidget() {};
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
         const challenge_coefficients &challenge,
@@ -32,7 +31,6 @@ public:
     ProverSequentialWidget(ProverSequentialWidget &&other);
     ProverSequentialWidget& operator=(const ProverSequentialWidget &other);
     ProverSequentialWidget& operator=(ProverSequentialWidget &&other);
-    ~ProverSequentialWidget() {};
 
     barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t &alpha_base, const barretenberg::fr::field_t& alpha_step, CircuitFFTState& circuit_state);
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t &alpha_base, const barretenberg::fr::field_t &, const waffle::plonk_proof &proof, const barretenberg::evaluation_domain& domain, barretenberg::polynomial &r);

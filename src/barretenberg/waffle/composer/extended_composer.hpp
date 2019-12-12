@@ -43,8 +43,6 @@ class ExtendedComposer : public BoolComposer
         zero_selector = barretenberg::fr::zero;
     };
 
-    ~ExtendedComposer(){};
-
     size_t get_num_gates() const override
     {
         if (adjusted_n > 0)

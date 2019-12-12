@@ -18,8 +18,6 @@ class Prover
     Prover& operator=(const Prover& other) = delete;
     Prover& operator=(Prover&& other);
 
-    ~Prover();
-
     void compute_permutation_lagrange_base_full();
     void compute_wire_coefficients();
     void compute_z_coefficients();

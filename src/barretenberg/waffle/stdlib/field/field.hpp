@@ -21,7 +21,6 @@ public:
     field_t(const witness_t<ComposerContext> &value);
     field_t(const field_t &other);
     field_t(field_t &&other);
-    ~field_t();
 
     field_t(const bool_t<ComposerContext> &other);
     operator bool_t<ComposerContext> ();

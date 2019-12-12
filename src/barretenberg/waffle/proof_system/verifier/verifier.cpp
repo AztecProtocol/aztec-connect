@@ -50,8 +50,6 @@ Verifier& Verifier::operator=(Verifier &&other)
     return *this;
 }
 
-Verifier::~Verifier() {}
-
 bool Verifier::verify_proof(const waffle::plonk_proof &proof)
 {
     evaluation_domain domain = evaluation_domain(n);
