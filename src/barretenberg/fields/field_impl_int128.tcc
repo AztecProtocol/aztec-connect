@@ -13,7 +13,7 @@ __extension__ using uint128_t = unsigned __int128;
 constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 
 // compute a + b + carry, returning the carry
-inline void addc(const uint64_t a, const uint64_t b, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out)
+inline void addc(const uint64_t a, const uint64_t b, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out) noexcept
 {
     uint128_t res = (uint128_t)a + (uint128_t)b + (uint128_t)carry_in;
     carry_out = (uint64_t)(res >> 64);
@@ -21,7 +21,7 @@ inline void addc(const uint64_t a, const uint64_t b, const uint64_t carry_in, ui
 }
 
 // compute a - (b + borrow), returning result and updated borrow
-inline void sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in, uint64_t& r, uint64_t& borrow_out)
+inline void sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in, uint64_t& r, uint64_t& borrow_out) noexcept
 {
     uint128_t res = (uint128_t)a - ((uint128_t)b + (uint128_t)(borrow_in >> 63));
     borrow_out = (uint64_t)(res >> 64);
@@ -30,7 +30,7 @@ inline void sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in, ui
 
 // perform a + (b * c) + carry, putting result in r and returning new carry
 inline void mac(
-    const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out)
+    const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out) noexcept
 {
     uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
     carry_out = (uint64_t)(res >> 64);
@@ -38,7 +38,7 @@ inline void mac(
 }
 
 template <typename FieldParams>
-inline void subtract(const typename field<FieldParams>::field_t& a, const typename field<FieldParams>::field_t& b, typename field<FieldParams>::field_t& r)
+inline void subtract(const typename field<FieldParams>::field_t& a, const typename field<FieldParams>::field_t& b, typename field<FieldParams>::field_t& r) noexcept
 {
     uint64_t borrow = 0;
     uint64_t carry = 0;
@@ -54,7 +54,7 @@ inline void subtract(const typename field<FieldParams>::field_t& a, const typena
 }
 
 template <typename FieldParams>
-inline void subtract_coarse(const typename field<FieldParams>::field_t& a, const typename field<FieldParams>::field_t& b, typename field<FieldParams>::field_t& r)
+inline void subtract_coarse(const typename field<FieldParams>::field_t& a, const typename field<FieldParams>::field_t& b, typename field<FieldParams>::field_t& r) noexcept
 {
     uint64_t borrow = 0;
     uint64_t carry = 0;
@@ -70,7 +70,7 @@ inline void subtract_coarse(const typename field<FieldParams>::field_t& a, const
 }
 
 template <typename FieldParams>
-void montgomery_reduce(typename field<FieldParams>::field_wide_t& r, typename field<FieldParams>::field_t& out)
+void montgomery_reduce(typename field<FieldParams>::field_wide_t& r, typename field<FieldParams>::field_t& out) noexcept
 {
     uint64_t carry = 0;
     uint64_t carry_2 = 0;
@@ -112,7 +112,7 @@ void montgomery_reduce(typename field<FieldParams>::field_wide_t& r, typename fi
 } // namespace internal
 
 template <typename FieldParams>
-inline void field<FieldParams>::__mul_512(const typename field<FieldParams>::field_t& a, const typename field<FieldParams>::field_t& b, typename field<FieldParams>::field_wide_t& r)
+inline void field<FieldParams>::__mul_512(const field_t& a, const field_t& b, field_wide_t& r) noexcept
 {
     uint64_t carry = 0;
     internal::mac(0, a.data[0], b.data[0], 0, r.data[0], carry);
@@ -137,7 +137,7 @@ inline void field<FieldParams>::__mul_512(const typename field<FieldParams>::fie
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__copy(const field_t& a, field_t& r)
+inline void field<FieldParams>::__copy(const field_t& a, field_t& r) noexcept
 {
     r.data[0] = a.data[0];
     r.data[1] = a.data[1];
@@ -146,28 +146,28 @@ inline void field<FieldParams>::__copy(const field_t& a, field_t& r)
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::reduce_once(const field_t& a, field_t& r)
+inline void field<FieldParams>::reduce_once(const field_t& a, field_t& r) noexcept
 {
     internal::subtract<FieldParams>(a, modulus, r);
 }
 
 
 template <typename FieldParams>
-inline void field<FieldParams>::__add(const field_t& a, const field_t& b, field_t& r)
+inline void field<FieldParams>::__add(const field_t& a, const field_t& b, field_t& r) noexcept
 {
     __add_without_reduction(a, b, r);
     internal::subtract<FieldParams>(r, modulus, r);
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__add_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r)
+inline void field<FieldParams>::__add_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) noexcept
 {
     __add_without_reduction(a, b, r);
     internal::subtract_coarse<FieldParams>(r, twice_modulus, r);
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__add_without_reduction(const field_t& a, const field_t& b, field_t& r)
+inline void field<FieldParams>::__add_without_reduction(const field_t& a, const field_t& b, field_t& r) noexcept
 {
     uint64_t carry = 0;
     internal::addc(a.data[0], b.data[0], 0, r.data[0], carry);
@@ -177,7 +177,7 @@ inline void field<FieldParams>::__add_without_reduction(const field_t& a, const 
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__quad_with_coarse_reduction(const field_t& a, field_t& r)
+inline void field<FieldParams>::__quad_with_coarse_reduction(const field_t& a, field_t& r) noexcept
 {
     __add_without_reduction(a, a, r);
     internal::subtract_coarse<FieldParams>(r, twice_modulus, r);
@@ -186,7 +186,7 @@ inline void field<FieldParams>::__quad_with_coarse_reduction(const field_t& a, f
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__oct_with_coarse_reduction(const field_t& a, field_t& r)
+inline void field<FieldParams>::__oct_with_coarse_reduction(const field_t& a, field_t& r) noexcept
 {
     __add_without_reduction(a, a, r);
     internal::subtract_coarse<FieldParams>(r, twice_modulus, r);
@@ -197,26 +197,26 @@ inline void field<FieldParams>::__oct_with_coarse_reduction(const field_t& a, fi
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__paralell_double_and_add_without_reduction(field_t& x_0, const field_t& y_0, const field_t& y_1, field_t& r)
+inline void field<FieldParams>::__paralell_double_and_add_without_reduction(field_t& x_0, const field_t& y_0, const field_t& y_1, field_t& r) noexcept
 {
     __add_without_reduction(x_0, x_0, x_0);
     __add_without_reduction(y_0, y_1, r);
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__sub(const field_t& a, const field_t& b, field_t& r)
+inline void field<FieldParams>::__sub(const field_t& a, const field_t& b, field_t& r) noexcept
 {
     internal::subtract<FieldParams>(a, b, r);
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r)
+inline void field<FieldParams>::__sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) noexcept
 {
     internal::subtract_coarse<FieldParams>(a, b, r);
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__conditionally_subtract_double_modulus(const field_t& a, field_t& r, const uint64_t predicate)
+inline void field<FieldParams>::__conditionally_subtract_double_modulus(const field_t& a, field_t& r, const uint64_t predicate) noexcept
 {
     if (predicate)
     {
@@ -229,7 +229,7 @@ inline void field<FieldParams>::__conditionally_subtract_double_modulus(const fi
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__sqr(const field_t& a, field_t& r)
+inline void field<FieldParams>::__sqr(const field_t& a, field_t& r) noexcept
 {
     field<FieldParams>::field_wide_t temp;
     __mul_512(a, a, temp);
@@ -238,7 +238,7 @@ inline void field<FieldParams>::__sqr(const field_t& a, field_t& r)
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__sqr_with_coarse_reduction(const field_t& a, field_t& r)
+inline void field<FieldParams>::__sqr_with_coarse_reduction(const field_t& a, field_t& r) noexcept
 {
     field_wide_t temp;
     __mul_512(a, a, temp);
@@ -246,7 +246,7 @@ inline void field<FieldParams>::__sqr_with_coarse_reduction(const field_t& a, fi
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__mul(const field_t& lhs, const field_t& rhs, field_t& r)
+inline void field<FieldParams>::__mul(const field_t& lhs, const field_t& rhs, field_t& r) noexcept
 {
     field_wide_t temp;
     __mul_512(lhs, rhs, temp);
@@ -255,7 +255,7 @@ inline void field<FieldParams>::__mul(const field_t& lhs, const field_t& rhs, fi
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__mul_with_coarse_reduction(const field_t& lhs, const field_t& rhs, field_t& r)
+inline void field<FieldParams>::__mul_with_coarse_reduction(const field_t& lhs, const field_t& rhs, field_t& r) noexcept
 {
     field_wide_t temp;
     __mul_512(lhs, rhs, temp);
@@ -263,7 +263,7 @@ inline void field<FieldParams>::__mul_with_coarse_reduction(const field_t& lhs, 
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__swap(field_t& src, field_t& dest)
+inline void field<FieldParams>::__swap(field_t& src, field_t& dest) noexcept
 {
     uint64_t t[4] = { src.data[0], src.data[1], src.data[2], src.data[3] };
     src.data[0] = dest.data[0];

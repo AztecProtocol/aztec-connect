@@ -29,9 +29,10 @@ template <typename FieldParams> class field
     static constexpr field_t modulus = {
         { FieldParams::modulus_0, FieldParams::modulus_1, FieldParams::modulus_2, FieldParams::modulus_3 }
     };
-    static constexpr field_t twice_modulus = {
-        { FieldParams::twice_modulus_0, FieldParams::twice_modulus_1, FieldParams::twice_modulus_2, FieldParams::twice_modulus_3 }
-    };
+    static constexpr field_t twice_modulus = { { FieldParams::twice_modulus_0,
+                                                 FieldParams::twice_modulus_1,
+                                                 FieldParams::twice_modulus_2,
+                                                 FieldParams::twice_modulus_3 } };
     static constexpr field_t zero{ { 0x00, 0x00, 0x00, 0x00 } };
     static constexpr field_t two_inv{
         { FieldParams::two_inv_0, FieldParams::two_inv_1, FieldParams::two_inv_2, FieldParams::two_inv_3 }
@@ -75,16 +76,15 @@ template <typename FieldParams> class field
                                               FieldParams::primitive_root_2,
                                               FieldParams::primitive_root_3 } };
 
-
     /**
      * Arithmetic Methods (with return parameters)
-     * 
+     *
      * We pass in return value as a parameter, so that the input references and
      * the output references can overlap, without affecting performance.
-     * 
+     *
      * The 'without reduction' methods do not perform a conditional check on the result,
      * to determine whether the value exceeds our modulus p.
-     * 
+     *
      * The 'with coarse reduction' methods will constrain the result to be modulo 2p
      **/
     static void __mul(const field_t& a, const field_t& b, field_t& r) noexcept;
@@ -98,12 +98,14 @@ template <typename FieldParams> class field
     static void __quad_with_coarse_reduction(const field_t& a, field_t& r) noexcept;
     static void __oct_with_coarse_reduction(const field_t& a, field_t& r) noexcept;
     static void __paralell_double_and_add_without_reduction(field_t& x_0,
-                                                          const field_t& y_0,
-                                                          const field_t& y_1,
-                                                          field_t& r) noexcept;
+                                                            const field_t& y_0,
+                                                            const field_t& y_1,
+                                                            field_t& r) noexcept;
     static void __sub(const field_t& a, const field_t& b, field_t& r) noexcept;
     static void __sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) noexcept;
-    static void __conditionally_subtract_double_modulus(const field_t& a, field_t& r, const uint64_t predicate) noexcept;
+    static void __conditionally_subtract_double_modulus(const field_t& a,
+                                                        field_t& r,
+                                                        const uint64_t predicate) noexcept;
 
     // compute a * b, put 512-bit result in r (do not reduce)
     static void __mul_512(const field_t& a, const field_t& b, field_wide_t& r) noexcept;
@@ -205,7 +207,7 @@ template <typename FieldParams> class field
     static void __swap(field_t& src, field_t& dest) noexcept;
 
     // AVX implementation requires words to be aligned on 32 byte bounary
-    static void __copy(const field_t& src, field_t& dest) noexcept;
+    static void __copy(const field_t& a, field_t& r) noexcept;
 
     static field_t copy(const field_t& src) noexcept
     {
