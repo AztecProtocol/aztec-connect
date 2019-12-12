@@ -1,15 +1,15 @@
 #include "./prover.hpp"
 
-#include "../../../groups/g1.hpp"
-#include "../../../groups/g2.hpp"
-#include "../../../groups/scalar_multiplication.hpp"
+#include "../../../curves/bn254/fr.hpp"
+#include "../../../curves/bn254/g1.hpp"
+#include "../../../curves/bn254/g2.hpp"
+#include "../../../curves/bn254/scalar_multiplication.hpp"
 #include "../../../polynomials/polynomial_arithmetic.hpp"
-#include "../../../polynomials/polynomial.hpp"
-#include "../../../fields/fr.hpp"
 #include "../../../io/io.hpp"
 
-#include "../widgets/base_widget.hpp"
+#include "../../reference_string/reference_string.hpp"
 
+#include "../widgets/base_widget.hpp"
 #include "../linearizer.hpp"
 #include "../challenge.hpp"
 #include "../permutation.hpp"
@@ -62,8 +62,6 @@ Prover& Prover::operator=(Prover &&other)
     return *this;
 }
 
-Prover::~Prover() {}
-
 void Prover::compute_wire_commitments()
 {
     scalar_multiplication::multiplication_state mul_state[3]{
@@ -75,12 +73,12 @@ void Prover::compute_wire_commitments()
     scalar_multiplication::batched_scalar_multiplications(mul_state, 3);
 
     // TODO: make a method for normal-to-affine copies :/
-    fq::copy(mul_state[0].output.x, proof.W_L.x);
-    fq::copy(mul_state[1].output.x, proof.W_R.x);
-    fq::copy(mul_state[2].output.x, proof.W_O.x);
-    fq::copy(mul_state[0].output.y, proof.W_L.y);
-    fq::copy(mul_state[1].output.y, proof.W_R.y);
-    fq::copy(mul_state[2].output.y, proof.W_O.y);
+    fq::__copy(mul_state[0].output.x, proof.W_L.x);
+    fq::__copy(mul_state[1].output.x, proof.W_R.x);
+    fq::__copy(mul_state[2].output.x, proof.W_O.x);
+    fq::__copy(mul_state[0].output.y, proof.W_L.y);
+    fq::__copy(mul_state[1].output.y, proof.W_R.y);
+    fq::__copy(mul_state[2].output.y, proof.W_O.y);
 
     // compute beta, gamma
     challenges.gamma = compute_gamma(proof);
@@ -98,8 +96,8 @@ void Prover::compute_z_commitment()
     scalar_multiplication::batched_scalar_multiplications(&mul_state, 1);
 
     // TODO: make a method for normal-to-affine copies :/
-    fq::copy(mul_state.output.x, proof.Z_1.x);
-    fq::copy(mul_state.output.y, proof.Z_1.y);
+    fq::__copy(mul_state.output.x, proof.Z_1.x);
+    fq::__copy(mul_state.output.y, proof.Z_1.y);
 
     // compute alpha
     // TODO: does this really belong here?
@@ -153,8 +151,8 @@ void Prover::compute_z_coefficients()
         fr::field_t thread_root;
         fr::__pow_small(circuit_state.small_domain.root, j * circuit_state.small_domain.thread_size, thread_root);
         fr::__mul(thread_root, challenges.beta, work_root);
-        fr::field_t k1 = fr::multiplicative_generator();
-        fr::field_t k2 = fr::alternate_multiplicative_generator();
+        fr::field_t k1 = fr::multiplicative_generator;
+        fr::field_t k2 = fr::alternate_multiplicative_generator;
 
         for (size_t i = (j * circuit_state.small_domain.thread_size); i < ((j + 1) * circuit_state.small_domain.thread_size); ++i)
         {
@@ -196,7 +194,7 @@ void Prover::compute_z_coefficients()
     for (size_t i = 0; i < 6; ++i)
     {
         fr::field_t *coeffs = accumulators[i].get_coefficients();
-        fr::one(coeffs[0]);
+        coeffs[0] = fr::one;
         for (size_t j = 1; j < circuit_state.small_domain.size - 1; ++j)
         {
             fr::__mul(coeffs[j + 1], coeffs[j], coeffs[j + 1]);
@@ -303,8 +301,8 @@ void Prover::compute_permutation_grand_product_coefficients(polynomial& z_fft)
 
 void Prover::compute_identity_grand_product_coefficients(polynomial &z_fft)
 {
-    fr::field_t right_shift = fr::multiplicative_generator();
-    fr::field_t output_shift = fr::alternate_multiplicative_generator();
+    fr::field_t right_shift = fr::multiplicative_generator;
+    fr::field_t output_shift = fr::alternate_multiplicative_generator;
 
 #ifndef NO_MULTITHREADING
     #pragma omp parallel for
@@ -318,7 +316,7 @@ void Prover::compute_identity_grand_product_coefficients(polynomial &z_fft)
 
         fr::field_t work_root;
         fr::__pow_small(circuit_state.large_domain.root, j * circuit_state.large_domain.thread_size, work_root);
-        fr::__mul(work_root, fr::multiplicative_generator(), work_root);
+        fr::__mul(work_root, fr::multiplicative_generator, work_root);
         for (size_t i = (j * circuit_state.large_domain.thread_size); i < ((j + 1) * circuit_state.large_domain.thread_size); ++i)
         {
             fr::__mul(work_root, challenges.beta, beta_id);
@@ -547,7 +545,7 @@ void Prover::compute_opening_elements()
     challenges.nu = compute_linearisation_challenge(proof, t_eval);
 
     fr::field_t nu_powers[8];
-    fr::copy(challenges.nu, nu_powers[0]);
+    fr::__copy(challenges.nu, nu_powers[0]);
     for (size_t i = 1; i < 8; ++i)
     {
         fr::__mul(nu_powers[i - 1], nu_powers[0], nu_powers[i]);

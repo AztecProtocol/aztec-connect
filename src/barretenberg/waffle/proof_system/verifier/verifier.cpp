@@ -1,28 +1,30 @@
 #include "./verifier.hpp"
 
-#include "../challenge.hpp"
-#include "../../../groups/g1.hpp"
-#include "../../../groups/g2.hpp"
-#include "../../../fields/fq12.hpp"
-#include "../../../groups/pairing.hpp"
+#include "../../../curves/bn254/fq12.hpp"
+#include "../../../curves/bn254/g1.hpp"
+#include "../../../curves/bn254/g2.hpp"
+#include "../../../curves/bn254/pairing.hpp"
+#include "../../../curves/bn254/scalar_multiplication.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
 #include "../../../polynomials/polynomial_arithmetic.hpp"
 
 #include "../../../types.hpp"
-#include "../widgets/base_widget.hpp"
-#include "../../../groups/scalar_multiplication.hpp"
 
+#include "../../reference_string/reference_string.hpp"
 
+#include "../challenge.hpp"
 #include "../linearizer.hpp"
-
+#include "../widgets/base_widget.hpp"
 
 using namespace barretenberg;
 
 namespace waffle
 {
-Verifier::Verifier(const size_t subgroup_size) : n(subgroup_size) {}
+Verifier::Verifier(const size_t subgroup_size) : n(subgroup_size)
+{
+}
 
-Verifier::Verifier(Verifier &&other) : n(other.n)
+Verifier::Verifier(Verifier&& other) : n(other.n)
 {
     reference_string = std::move(other.reference_string);
     g1::copy_affine(other.SIGMA_1, SIGMA_1);
@@ -34,7 +36,7 @@ Verifier::Verifier(Verifier &&other) : n(other.n)
     }
 }
 
-Verifier& Verifier::operator=(Verifier &&other)
+Verifier& Verifier::operator=(Verifier&& other)
 {
     n = other.n;
     reference_string = std::move(other.reference_string);
@@ -50,21 +52,18 @@ Verifier& Verifier::operator=(Verifier &&other)
     return *this;
 }
 
-Verifier::~Verifier() {}
-
-bool Verifier::verify_proof(const waffle::plonk_proof &proof)
+bool Verifier::verify_proof(const waffle::plonk_proof& proof)
 {
     evaluation_domain domain = evaluation_domain(n);
 
     bool inputs_valid = g1::on_curve(proof.T_LO)
-        // && g1::on_curve(proof.T_MID)
-        // && g1::on_curve(proof.T_HI)
-        // && g1::on_curve(proof.W_L)
-        // && g1::on_curve(proof.W_R)
-        // && g1::on_curve(proof.W_O)
-        && g1::on_curve(proof.Z_1)
-        && g1::on_curve(proof.PI_Z);
-        // && g1::on_curve(proof.PI_Z_OMEGA);
+                        // && g1::on_curve(proof.T_MID)
+                        // && g1::on_curve(proof.T_HI)
+                        // && g1::on_curve(proof.W_L)
+                        // && g1::on_curve(proof.W_R)
+                        // && g1::on_curve(proof.W_O)
+                        && g1::on_curve(proof.Z_1) && g1::on_curve(proof.PI_Z);
+    // && g1::on_curve(proof.PI_Z_OMEGA);
 
     if (!inputs_valid)
     {
@@ -72,9 +71,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
         return false;
     }
 
-    bool instance_valid = g1::on_curve(SIGMA_1)
-        && g1::on_curve(SIGMA_2)
-        && g1::on_curve(SIGMA_3);
+    bool instance_valid = g1::on_curve(SIGMA_1) && g1::on_curve(SIGMA_2) && g1::on_curve(SIGMA_3);
     if (!instance_valid)
     {
         printf("instance not valid!\n");
@@ -92,13 +89,12 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
         return false;
     }
 
-    bool field_elements_valid = // !fr::eq(proof.w_l_eval, fr::zero())
-        // && !fr::eq(proof.w_r_eval, fr::zero())
-        // && !fr::eq(proof.w_o_eval, fr::zero())
-        /* && */ // !fr::eq(proof.z_1_shifted_eval, fr::zero())
-        /* && */ !fr::eq(proof.sigma_1_eval, fr::zero())
-        && !fr::eq(proof.sigma_2_eval, fr::zero())
-        && !fr::eq(proof.linear_eval, fr::zero());
+    bool field_elements_valid = // !fr::eq(proof.w_l_eval, fr::zero)
+                                // && !fr::eq(proof.w_r_eval, fr::zero)
+                                // && !fr::eq(proof.w_o_eval, fr::zero)
+        /* && */                // !fr::eq(proof.z_1_shifted_eval, fr::zero)
+        /* && */ !fr::eq(proof.sigma_1_eval, fr::zero) && !fr::eq(proof.sigma_2_eval, fr::zero) &&
+        !fr::eq(proof.linear_eval, fr::zero);
     if (!field_elements_valid)
     {
         printf("proof field elements not valid!\n");
@@ -114,7 +110,8 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     challenges.beta = compute_beta(proof, challenges.gamma);
     challenges.z = compute_evaluation_challenge(proof);
 
-    polynomial_arithmetic::lagrange_evaluations lagrange_evals = polynomial_arithmetic::get_lagrange_evaluations(challenges.z, domain);
+    polynomial_arithmetic::lagrange_evaluations lagrange_evals =
+        polynomial_arithmetic::get_lagrange_evaluations(challenges.z, domain);
 
     // compute the terms we need to derive R(X)
     plonk_linear_terms linear_terms = compute_linear_terms(proof, challenges, lagrange_evals.l_1, n);
@@ -125,12 +122,11 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::field_t T1;
     fr::field_t T2;
     fr::field_t T3;
-    fr::copy(challenges.alpha, alpha_pow[0]);
+    fr::__copy(challenges.alpha, alpha_pow[0]);
     for (size_t i = 1; i < 4; ++i)
     {
         fr::__mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
     }
-
 
     fr::__mul(proof.sigma_1_eval, challenges.beta, T0);
     fr::__add(proof.w_l_eval, challenges.gamma, T1);
@@ -147,7 +143,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::__mul(T0, proof.z_1_shifted_eval, T0);
     fr::__mul(T0, alpha_pow[0], T0);
 
-    fr::__sub(proof.z_1_shifted_eval, fr::one(), T1);
+    fr::__sub(proof.z_1_shifted_eval, fr::one, T1);
     fr::__mul(T1, lagrange_evals.l_n_minus_1, T1);
     fr::__mul(T1, alpha_pow[1], T1);
 
@@ -169,7 +165,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     challenges.nu = compute_linearisation_challenge(proof, t_eval);
 
     fr::field_t u = compute_kate_separation_challenge(proof, t_eval);
-    fr::copy(challenges.nu, nu_pow[0]);
+    fr::__copy(challenges.nu, nu_pow[0]);
     for (size_t i = 1; i < 9; ++i)
     {
         fr::__mul(nu_pow[i - 1], nu_pow[0], nu_pow[i]);
@@ -188,7 +184,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::__add(linear_terms.z_1, T0, linear_terms.z_1);
 
     fr::field_t batch_evaluation;
-    fr::copy(t_eval, batch_evaluation);
+    fr::__copy(t_eval, batch_evaluation);
     fr::__mul(nu_pow[0], proof.linear_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
@@ -207,7 +203,6 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::__mul(nu_pow[5], proof.sigma_2_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
-
     fr::__mul(nu_pow[6], u, T0);
     fr::__mul(T0, proof.z_1_shifted_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
@@ -220,9 +215,12 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     bool needs_w_o_shifted = false;
     for (size_t i = 0; i < verifier_widgets.size(); ++i)
     {
-        needs_w_l_shifted |= verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
-        needs_w_r_shifted |= verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
-        needs_w_o_shifted |= verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
+        needs_w_l_shifted |=
+            verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
+        needs_w_r_shifted |=
+            verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
+        needs_w_o_shifted |=
+            verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
     }
     if (needs_w_l_shifted)
     {
@@ -247,7 +245,8 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     }
     for (size_t i = 0; i < verifier_widgets.size(); ++i)
     {
-        nu_base = verifier_widgets[i]->compute_batch_evaluation_contribution(batch_evaluation, nu_base, nu_pow[0], proof);
+        nu_base =
+            verifier_widgets[i]->compute_batch_evaluation_contribution(batch_evaluation, nu_base, nu_pow[0], proof);
     }
 
     fr::__neg(batch_evaluation, batch_evaluation);
@@ -256,13 +255,13 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::__mul(challenges.z, domain.root, z_omega_scalar);
     fr::__mul(z_omega_scalar, u, z_omega_scalar);
 
-    std::vector<fr::field_t > scalars;
-    std::vector<g1::affine_element > elements;
+    std::vector<fr::field_t> scalars;
+    std::vector<g1::affine_element> elements;
 
     elements.emplace_back(proof.Z_1);
     scalars.emplace_back(linear_terms.z_1);
 
-    fr::copy(nu_pow[7], nu_base);
+    fr::__copy(nu_pow[7], nu_base);
 
     if (g1::on_curve(proof.W_L))
     {
@@ -347,20 +346,12 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     }
 
     VerifierBaseWidget::challenge_coefficients coeffs{
-        fr::sqr(fr::sqr(challenges.alpha)),
-        challenges.alpha,
-        nu_base,
-        challenges.nu,
-        challenges.nu
+        fr::sqr(fr::sqr(challenges.alpha)), challenges.alpha, nu_base, challenges.nu, challenges.nu
     };
 
     for (size_t i = 0; i < verifier_widgets.size(); ++i)
     {
-        coeffs = verifier_widgets[i]->append_scalar_multiplication_inputs(
-            coeffs,
-            proof,
-            elements,
-            scalars);
+        coeffs = verifier_widgets[i]->append_scalar_multiplication_inputs(coeffs, proof, elements, scalars);
     }
 
     size_t num_elements = elements.size();
@@ -377,14 +368,15 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     g1::batch_normalize(P, 2);
 
     g1::affine_element P_affine[2];
-    fq::copy(P[0].x, P_affine[1].x);
-    fq::copy(P[0].y, P_affine[1].y);
-    fq::copy(P[1].x, P_affine[0].x);
-    fq::copy(P[1].y, P_affine[0].y);
+    fq::__copy(P[0].x, P_affine[1].x);
+    fq::__copy(P[0].y, P_affine[1].y);
+    fq::__copy(P[1].x, P_affine[0].x);
+    fq::__copy(P[1].y, P_affine[0].y);
 
-    fq12::fq12_t result = pairing::reduced_ate_pairing_batch_precomputed(P_affine, reference_string.precomputed_g2_lines, 2);
+    fq12::field_t result =
+        pairing::reduced_ate_pairing_batch_precomputed(P_affine, reference_string.precomputed_g2_lines, 2);
 
-    return fq12::eq(result, fq12::one());
+    return fq12::eq(result, fq12::one);
 }
 
 } // namespace waffle

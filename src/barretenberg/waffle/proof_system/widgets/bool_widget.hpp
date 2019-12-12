@@ -1,5 +1,4 @@
-#ifndef Bool_WIDGET_HPP
-#define Bool_WIDGET_HPP
+#pragma once
 
 #include "./base_widget.hpp"
 
@@ -14,7 +13,6 @@ class VerifierBoolWidget : public VerifierBaseWidget
 {
 public:
     VerifierBoolWidget(std::vector<barretenberg::g1::affine_element> &instance_commitments);
-    ~VerifierBoolWidget() {};
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
         const VerifierBaseWidget::challenge_coefficients &challenge,
@@ -35,7 +33,6 @@ public:
     ProverBoolWidget(ProverBoolWidget &&other);
     ProverBoolWidget& operator=(const ProverBoolWidget &other);
     ProverBoolWidget& operator=(ProverBoolWidget &&other);
-    ~ProverBoolWidget() {};
 
     barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t &alpha_base, const barretenberg::fr::field_t& alpha_step, CircuitFFTState& circuit_state);
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t &alpha_base, const barretenberg::fr::field_t &, const waffle::plonk_proof &proof, const barretenberg::evaluation_domain& domain, barretenberg::polynomial &r);
@@ -50,6 +47,4 @@ public:
     barretenberg::polynomial q_bo;
     size_t n;
 };
-
 }
-#endif

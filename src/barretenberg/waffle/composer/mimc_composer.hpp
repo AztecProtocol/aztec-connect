@@ -1,5 +1,4 @@
-#ifndef MIMC_COMPOSER_HPP
-#define MIMC_COMPOSER_HPP
+#pragma once
 
 #include "./standard_composer.hpp"
 
@@ -25,8 +24,10 @@ public:
         zero_idx = 0;
         features |= static_cast<size_t>(Features::MIMC_SELECTORS);
     };
+    MiMCComposer(MiMCComposer &&other) = default;
+    MiMCComposer& operator=(MiMCComposer &&other) = default;
 
-    ~MiMCComposer() {};
+    ~MiMCComposer() {}
 
     Prover preprocess() override;
 
@@ -46,4 +47,3 @@ public:
     uint32_t zero_idx;
 };
 }
-#endif

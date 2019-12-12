@@ -20,8 +20,8 @@ inline void copy(affine_element* src, affine_element* dest)
                          : "r"(src), "r"(dest)
                          : "%ymm0", "%ymm1", "memory");
 #else
-    fq::copy(src->x, dest->x);
-    fq::copy(src->y, dest->y);
+    fq::__copy(src->x, dest->x);
+    fq::__copy(src->y, dest->y);
 #endif
 }
 
@@ -41,9 +41,9 @@ inline void copy(element* src, element* dest)
                          : "r"(src), "r"(dest)
                          : "%ymm0", "%ymm1", "%ymm2", "memory");
 #else
-    fq::copy(src->x, dest->x);
-    fq::copy(src->y, dest->y);
-    fq::copy(src->z, dest->z);
+    fq::__copy(src->x, dest->x);
+    fq::__copy(src->y, dest->y);
+    fq::__copy(src->z, dest->z);
 #endif
 }
 

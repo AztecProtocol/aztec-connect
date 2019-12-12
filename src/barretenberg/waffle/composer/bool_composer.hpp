@@ -1,5 +1,4 @@
-#ifndef BOOL_COMPOSER_HPP
-#define BOOL_COMPOSER_HPP
+#pragma once 
 
 #include "./standard_composer.hpp"
 
@@ -17,8 +16,9 @@ public:
         zero_idx = add_variable(barretenberg::fr::field_t({{0,0,0,0}}));
         features |= static_cast<size_t>(Features::BOOL_SELECTORS);
     };
-
-    ~BoolComposer() {};
+    BoolComposer(BoolComposer &&other) = default;
+    BoolComposer& operator=(BoolComposer &&other) = default;
+    ~BoolComposer() {}
 
     Prover preprocess() override;
 
@@ -45,4 +45,3 @@ public:
     uint32_t zero_idx;
 };
 }
-#endif

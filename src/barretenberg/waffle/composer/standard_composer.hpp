@@ -1,5 +1,4 @@
-#ifndef STANDARD_COMPOSER_HPP
-#define STANDARD_COMPOSER_HPP
+#pragma once
 
 #include "./composer_base.hpp"
 
@@ -20,8 +19,9 @@ public:
         q_o.reserve(size_hint);
         q_c.reserve(size_hint);
     };
-
-    ~StandardComposer() {};
+    StandardComposer(StandardComposer &&other) = default;
+    StandardComposer& operator=(StandardComposer &&other) = default;
+    ~StandardComposer() {}
 
     virtual Prover preprocess() override;
 
@@ -41,4 +41,3 @@ public:
     std::vector<barretenberg::fr::field_t> q_c;
 };
 }
-#endif

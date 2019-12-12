@@ -1,6 +1,6 @@
-#ifndef COMPOSER_BASE_HPP
-#define COMPOSER_BASE_HPP
+#pragma once
 
+#include "../../curves/bn254/fr.hpp"
 #include "../../polynomials/polynomial.hpp"
 #include "../../types.hpp"
 
@@ -102,7 +102,9 @@ class ComposerBase
         }
     };
     ComposerBase() : n(0) {};
-    virtual ~ComposerBase(){};
+    ComposerBase(ComposerBase &&other) = default;
+    ComposerBase& operator=(ComposerBase &&other) = default;
+    virtual ~ComposerBase() {};
 
     virtual size_t get_num_gates() const { return n; }
     virtual Prover preprocess() = 0;
@@ -203,5 +205,3 @@ class ComposerBase
     size_t features = static_cast<size_t>(Features::SAD_TROMBONE);
 };
 } // namespace waffle
-
-#endif

@@ -1,10 +1,10 @@
 #include "./evaluation_domain.hpp"
 
-#include "../fields/fr.hpp"
+#include "../curves/bn254/fr.hpp"
 #include "../assert.hpp"
 
-#include "math.h"
-#include "memory.h"
+#include <math.h>
+#include <memory.h>
 
 #ifndef NO_MULTITHREADING
 #include "omp.h"
@@ -45,10 +45,10 @@ void compute_lookup_table_single(const fr::field_t& input_root, const size_t siz
         const size_t m = 1UL << (i + 1);
         const fr::field_t round_root = fr::pow_small(input_root, (size / (2 * m)));
         fr::field_t* const current_round_roots = round_roots[i];
-        fr::one(current_round_roots[0]);
+        current_round_roots[0] = fr::one;
         for (size_t j = 1; j < m; ++j)
         {
-            fr::__mul_without_reduction(current_round_roots[j - 1], round_root, current_round_roots[j]);
+            fr::__mul_with_coarse_reduction(current_round_roots[j - 1], round_root, current_round_roots[j]);
         }
     }
 }
@@ -65,8 +65,8 @@ evaluation_domain::evaluation_domain(const size_t domain_size):
     root_inverse(fr::invert(root)),
     domain(fr::to_montgomery_form({{size,0,0,0}})),
     domain_inverse(fr::invert(domain)),
-    generator(fr::multiplicative_generator()),
-    generator_inverse(fr::multiplicative_generator_inverse()),
+    generator(fr::multiplicative_generator),
+    generator_inverse(fr::multiplicative_generator_inverse),
     roots(nullptr)
 {
     ASSERT((1UL << log2_size) == size || (size == 0));
@@ -85,8 +85,8 @@ evaluation_domain::evaluation_domain(const evaluation_domain& other):
     root_inverse(fr::invert(root)),
     domain(fr::to_montgomery_form({{size,0,0,0}})),
     domain_inverse(fr::invert(domain)),
-    generator(fr::multiplicative_generator()),
-    generator_inverse(fr::multiplicative_generator_inverse())
+    generator(fr::multiplicative_generator),
+    generator_inverse(fr::multiplicative_generator_inverse)
 {
     ASSERT((1UL << log2_size) == size);
     ASSERT((1UL << log2_thread_size) == thread_size);
@@ -123,8 +123,8 @@ evaluation_domain::evaluation_domain(evaluation_domain&& other):
     root_inverse(fr::invert(root)),
     domain(fr::to_montgomery_form({{size,0,0,0}})),
     domain_inverse(fr::invert(domain)),
-    generator(fr::multiplicative_generator()),
-    generator_inverse(fr::multiplicative_generator_inverse())
+    generator(fr::multiplicative_generator),
+    generator_inverse(fr::multiplicative_generator_inverse)
 {
     roots = other.roots;
     round_roots = std::move(other.round_roots);
@@ -140,12 +140,12 @@ evaluation_domain& evaluation_domain::operator=(evaluation_domain &&other)
     log2_size = static_cast<size_t>(log2(size));
     log2_thread_size = static_cast<size_t>(log2(thread_size));
     log2_num_threads = static_cast<size_t>(log2(num_threads));
-    fr::copy(other.root, root);
-    fr::copy(other.root_inverse, root_inverse);
-    fr::copy(other.domain, domain);
-    fr::copy(other.domain_inverse, domain_inverse);
-    fr::copy(other.generator, generator);
-    fr::copy(other.generator_inverse, generator_inverse);
+    fr::__copy(other.root, root);
+    fr::__copy(other.root_inverse, root_inverse);
+    fr::__copy(other.domain, domain);
+    fr::__copy(other.domain_inverse, domain_inverse);
+    fr::__copy(other.generator, generator);
+    fr::__copy(other.generator_inverse, generator_inverse);
     if (roots != nullptr)
     {
         aligned_free(roots);

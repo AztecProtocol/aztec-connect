@@ -1,8 +1,7 @@
-#ifndef EVALUATION_DOMAIN_HPP
-#define EVALUATION_DOMAIN_HPP
+#pragma once
 
 #include "../types.hpp"
-#include "stdio.h"
+#include "../curves/bn254/fr.hpp"
 #include <vector>
 
 namespace barretenberg
@@ -59,4 +58,3 @@ private:
     barretenberg::fr::field_t* roots;
 };
 }
-#endif

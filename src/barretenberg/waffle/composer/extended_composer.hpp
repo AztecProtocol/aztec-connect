@@ -1,8 +1,6 @@
-#ifndef EXTENDED_COMPOSER_HPP
-#define EXTENDED_COMPOSER_HPP
+#pragma once
 
 #include "./bool_composer.hpp"
-#include <array>
 
 namespace waffle
 {
@@ -40,10 +38,11 @@ class ExtendedComposer : public BoolComposer
         q_oo.reserve(size_hint);
         zero_idx = add_variable(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
         features |= static_cast<size_t>(Features::EXTENDED_ARITHMETISATION);
-        zero_selector = barretenberg::fr::zero();
+        zero_selector = barretenberg::fr::zero;
     };
-
-    ~ExtendedComposer(){};
+    ExtendedComposer(ExtendedComposer &&other) = default;
+    ExtendedComposer& operator=(ExtendedComposer &&other) = default;
+    ~ExtendedComposer() {}
 
     size_t get_num_gates() const override
     {
@@ -107,4 +106,3 @@ class ExtendedComposer : public BoolComposer
     size_t adjusted_n = 0;
 };
 } // namespace waffle
-#endif

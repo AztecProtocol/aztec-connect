@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../uint32/uint32.hpp"
 #include "../../bitarray/bitarray.hpp"
+#include "../../uint32/uint32.hpp"
 
 namespace plonk
 {
@@ -25,14 +25,13 @@ constexpr uint32_t round_constants[64]{
 
 size_t get_num_blocks(const size_t num_bits)
 {
-    constexpr  size_t extra_bits = 65UL;
+    constexpr size_t extra_bits = 65UL;
 
     return ((num_bits + extra_bits) / 512UL) + ((num_bits + extra_bits) % 512UL > 0);
 }
-}
+} // namespace internal
 
-template <typename Composer>
-void prepare_constants(std::array<uint32<Composer>, 8> &input)
+template <typename Composer> void prepare_constants(std::array<uint32<Composer>, 8>& input)
 {
     input[0] = internal::init_constants[0];
     input[1] = internal::init_constants[1];
@@ -45,7 +44,8 @@ void prepare_constants(std::array<uint32<Composer>, 8> &input)
 }
 
 template <typename Composer>
-std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 8> &h_init, const std::array<uint32<Composer>, 16> &input)
+std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 8>& h_init,
+                                             const std::array<uint32<Composer>, 16>& input)
 {
     typedef uint32<Composer> uint32;
     std::array<uint32, 64> w;
@@ -65,12 +65,12 @@ std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 
     {
         uint32 s0 = w[i - 15].ror(7) ^ w[i - 15].ror(18) ^ (w[i - 15] >> 3);
         uint32 s1 = w[i - 2].ror(17) ^ w[i - 2].ror(19) ^ (w[i - 2] >> 10);
-        w[i] = w[i - 16] +  w[i - 7] + s0 + s1;
+        w[i] = w[i - 16] + w[i - 7] + s0 + s1;
     }
 
     /**
      * Initialize round variables with previous block output
-     **/ 
+     **/
     uint32 a = h_init[0];
     uint32 b = h_init[1];
     uint32 c = h_init[2];
@@ -105,7 +105,7 @@ std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 
 
     /**
      * Add into previous block output and return
-     **/ 
+     **/
     std::array<uint32, 8> output;
     output[0] = a + h_init[0];
     output[1] = b + h_init[1];
@@ -118,8 +118,7 @@ std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 
     return output;
 }
 
-template <typename Composer>
-bitarray<Composer> sha256(const bitarray<Composer> &input)
+template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>& input)
 {
     typedef uint32<Composer> uint32;
     typedef bitarray<Composer> bitarray;
@@ -136,7 +135,7 @@ bitarray<Composer> sha256(const bitarray<Composer> &input)
         size_t idx = offset + i;
         message_schedule[idx] = input[i];
     }
-    message_schedule[offset - 1] =  true;
+    message_schedule[offset - 1] = true;
     for (size_t i = 0; i < 32; ++i)
     {
         message_schedule[i] = static_cast<bool>((num_bits >> i) & 1);
@@ -144,7 +143,7 @@ bitarray<Composer> sha256(const bitarray<Composer> &input)
 
     std::array<uint32, 8> rolling_hash;
     prepare_constants(rolling_hash);
-    
+
     for (size_t i = 0; i < num_blocks; ++i)
     {
         std::array<uint32, 16> hash_input;
@@ -156,4 +155,3 @@ bitarray<Composer> sha256(const bitarray<Composer> &input)
 
 } // namespace stdlib
 } // namespace plonk
-

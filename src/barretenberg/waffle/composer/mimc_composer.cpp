@@ -1,10 +1,10 @@
 #include "./mimc_composer.hpp"
 
-#include "../../assert.hpp"
-#include "../../fields/fr.hpp"
-#include "../proof_system/widgets/mimc_widget.hpp"
+#include <math.h>
 
-#include "math.h"
+#include "../../assert.hpp"
+#include "../../curves/bn254/fr.hpp"
+#include "../proof_system/widgets/mimc_widget.hpp"
 
 using namespace barretenberg;
 
@@ -75,7 +75,7 @@ namespace waffle
         q_o.emplace_back(fr::field_t({{0,0,0,0}}));
         q_c.emplace_back(fr::field_t({{0,0,0,0}}));
         q_mimc_coefficient.emplace_back(in.mimc_constant);
-        q_mimc_selector.emplace_back(fr::one());
+        q_mimc_selector.emplace_back(fr::one);
 
         epicycle left{static_cast<uint32_t>(n), WireType::LEFT};
         epicycle right{static_cast<uint32_t>(n), WireType::RIGHT};
@@ -121,10 +121,10 @@ namespace waffle
     void MiMCComposer::create_dummy_gates()
     {
         StandardComposer::create_dummy_gates();
-        q_mimc_coefficient.emplace_back(fr::zero());
-        q_mimc_selector.emplace_back(fr::zero());
-        q_mimc_coefficient.emplace_back(fr::zero());
-        q_mimc_selector.emplace_back(fr::zero());
+        q_mimc_coefficient.emplace_back(fr::zero);
+        q_mimc_selector.emplace_back(fr::zero);
+        q_mimc_coefficient.emplace_back(fr::zero);
+        q_mimc_selector.emplace_back(fr::zero);
 
 
         // add in dummy gates to ensure that all of our polynomials are not zero and not identical
@@ -135,7 +135,7 @@ namespace waffle
         q_o.emplace_back(fr::field_t({{0,0,0,0}}));
         q_c.emplace_back(fr::field_t({{0,0,0,0}}));
         q_mimc_coefficient.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_mimc_selector.emplace_back(fr::one());
+        q_mimc_selector.emplace_back(fr::one);
         w_l.emplace_back(zero_idx);
         w_r.emplace_back(zero_idx);
         w_o.emplace_back(zero_idx);
@@ -153,7 +153,7 @@ namespace waffle
         q_r.emplace_back(fr::field_t({{0,0,0,0}}));
         q_o.emplace_back(fr::field_t({{0,0,0,0}}));
         q_c.emplace_back(fr::field_t({{0,0,0,0}}));
-        q_mimc_coefficient.emplace_back(fr::one());
+        q_mimc_coefficient.emplace_back(fr::one);
         q_mimc_selector.emplace_back(fr::field_t({{0,0,0,0}}));
         w_l.emplace_back(zero_idx);
         w_r.emplace_back(zero_idx);
@@ -231,17 +231,17 @@ namespace waffle
  
         for (size_t i = 0; i < new_n; ++i)
         {
-            fr::copy(variables[w_l[i]], output_state.w_l[i]);
-            fr::copy(variables[w_r[i]], output_state.w_r[i]);
-            fr::copy(variables[w_o[i]], output_state.w_o[i]);
+            fr::__copy(variables[w_l[i]], output_state.w_l[i]);
+            fr::__copy(variables[w_r[i]], output_state.w_r[i]);
+            fr::__copy(variables[w_o[i]], output_state.w_o[i]);
 
-            fr::copy(q_m[i], arithmetic_widget->q_m[i]);
-            fr::copy(q_l[i], arithmetic_widget->q_l[i]);
-            fr::copy(q_r[i], arithmetic_widget->q_r[i]);
-            fr::copy(q_o[i], arithmetic_widget->q_o[i]);
-            fr::copy(q_c[i], arithmetic_widget->q_c[i]);
-            fr::copy(q_mimc_coefficient[i], mimc_widget->q_mimc_coefficient[i]);
-            fr::copy(q_mimc_selector[i], mimc_widget->q_mimc_selector[i]);
+            fr::__copy(q_m[i], arithmetic_widget->q_m[i]);
+            fr::__copy(q_l[i], arithmetic_widget->q_l[i]);
+            fr::__copy(q_r[i], arithmetic_widget->q_r[i]);
+            fr::__copy(q_o[i], arithmetic_widget->q_o[i]);
+            fr::__copy(q_c[i], arithmetic_widget->q_c[i]);
+            fr::__copy(q_mimc_coefficient[i], mimc_widget->q_mimc_coefficient[i]);
+            fr::__copy(q_mimc_selector[i], mimc_widget->q_mimc_selector[i]);
         }
 
         output_state.widgets.emplace_back(std::move(arithmetic_widget));

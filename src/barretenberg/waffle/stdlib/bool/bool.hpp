@@ -1,7 +1,6 @@
-#ifndef PLONK_BOOL_HPP
-#define PLONK_BOOL_HPP
+#pragma once
 
-#include "../../../fields/fr.hpp"
+#include "../../../curves/bn254/fr.hpp"
 #include "../common.hpp"
 
 namespace plonk
@@ -19,7 +18,6 @@ public:
     bool_t(const witness_t<ComposerContext> &value);
     bool_t(const bool_t &other);
     bool_t(bool_t &&other);
-    ~bool_t() {};
 
     bool_t& operator=(const bool other);
     bool_t& operator=(const witness_t<ComposerContext> &other);
@@ -88,4 +86,3 @@ public:
 }
 
 #include "./bool.tcc"
-#endif

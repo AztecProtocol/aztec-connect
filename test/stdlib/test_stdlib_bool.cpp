@@ -33,12 +33,11 @@ TEST(stdlib_bool, test_basic_operations)
     waffle::StandardComposer composer = waffle::StandardComposer();
     bool_t a(&composer);
     bool_t b(&composer);
-    a = stdlib::witness_t(&composer, barretenberg::fr::one());
-    b = stdlib::witness_t(&composer, barretenberg::fr::zero());
+    a = stdlib::witness_t(&composer, barretenberg::fr::one);
+    b = stdlib::witness_t(&composer, barretenberg::fr::zero);
     a = a ^ b; // a = 1
     b = !b;   // b = 1 (witness 0)
-    bool_t c = (a == b); // c = 1
-    bool_t d(&composer); // d = ?
+    bool_t d = (a == b); //
     d = false;           // d = 0
     bool_t e = a | d;   // e = 1 = a
     bool_t f = e ^ b;  // f = 0
@@ -80,7 +79,7 @@ TEST(stdlib_bool, xor)
     {
         bool_t a = witness_t(&composer, (bool)(i % 2));
         bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
-        bool_t c = a ^ b;
+        a ^ b;
     }
     waffle::Prover prover = composer.preprocess();
     waffle::Verifier verifier = waffle::preprocess(prover);
@@ -98,7 +97,7 @@ TEST(stdlib_bool, xor_constants)
     {
         bool_t a = witness_t(&composer, (bool)(i % 2));
         bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
-        bool_t c = a ^ b;
+        a ^ b;
     }
     for (size_t i = 0; i < 32; ++i)
     {
@@ -106,13 +105,13 @@ TEST(stdlib_bool, xor_constants)
         {
             bool_t a = witness_t(&composer, (bool)(i % 2));
             bool_t b(&composer, (bool)(i % 3 == 1));
-            bool_t c = a ^ b;
+            a ^ b;
         }
         else
         {
             bool_t a(&composer, (bool)(i % 2));
             bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
-            bool_t c = a ^ b;
+            a ^ b;
         }
     }
     waffle::Prover prover = composer.preprocess();
@@ -167,7 +166,7 @@ TEST(stdlib_bool, and)
     {
         bool_t a = witness_t(&composer, (bool)(i % 1));
         bool_t b = witness_t(&composer, (bool)(i % 2 == 1));
-        bool_t c = a & b;
+        a & b;
     }
     waffle::Prover prover = composer.preprocess();
     waffle::Verifier verifier = waffle::preprocess(prover);
@@ -185,7 +184,7 @@ TEST(stdlib_bool, and_constants)
     {
         bool_t a = witness_t(&composer, (bool)(i % 2));
         bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
-        bool_t c = a & b;
+        a & b;
     }
     for (size_t i = 0; i < 32; ++i)
     {
@@ -193,13 +192,13 @@ TEST(stdlib_bool, and_constants)
         {
             bool_t a = witness_t(&composer, (bool)(i % 2));
             bool_t b(&composer, (bool)(i % 3 == 1));
-            bool_t c = a & b;
+            a & b;
         }
         else
         {
             bool_t a(&composer, (bool)(i % 2));
             bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
-            bool_t c = a & b;
+            a & b;
         }
     }
     waffle::Prover prover = composer.preprocess();
@@ -218,7 +217,7 @@ TEST(stdlib_bool, or)
     {
         bool_t a = witness_t(&composer, (bool)(i % 2));
         bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
-        bool_t c = a | b;
+        a | b;
     }
     waffle::Prover prover = composer.preprocess();
     waffle::Verifier verifier = waffle::preprocess(prover);
@@ -237,7 +236,7 @@ TEST(stdlib_bool, or_constants)
     {
         bool_t a = witness_t(&composer, (bool)(i % 2));
         bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
-        bool_t c = a | b;
+        a | b;
     }
     for (size_t i = 0; i < 32; ++i)
     {
@@ -245,13 +244,13 @@ TEST(stdlib_bool, or_constants)
         {
             bool_t a = witness_t(&composer, (bool)(i % 2));
             bool_t b(&composer, (bool)(i % 3 == 1));
-            bool_t c = a | b;
+            a | b;
         }
         else
         {
             bool_t a(&composer, (bool)(i % 2));
             bool_t b = witness_t(&composer, (bool)(i % 3 == 1));
-            bool_t c = a | b;
+            a | b;
         }
     }
     waffle::Prover prover = composer.preprocess();
@@ -260,7 +259,7 @@ TEST(stdlib_bool, or_constants)
     waffle::plonk_proof proof = prover.construct_proof();
 
     bool result = verifier.verify_proof(proof);
-    EXPECT_EQ(result, true);
+    EXPECT_EQ(result,true);
 }
 
 TEST(stdlib_bool, eq)
@@ -329,8 +328,8 @@ TEST(stdlib_bool, test_simple_proof)
     waffle::StandardComposer composer = waffle::StandardComposer();
     bool_t a(&composer);
     bool_t b(&composer);
-    a = stdlib::witness_t(&composer, barretenberg::fr::one());
-    b = stdlib::witness_t(&composer, barretenberg::fr::zero());
+    a = stdlib::witness_t(&composer, barretenberg::fr::one);
+    b = stdlib::witness_t(&composer, barretenberg::fr::zero);
     // bool_t c(&composer);
     a = a ^ b; // a = 1
     b = !b;   // b = 1 (witness 0)

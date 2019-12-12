@@ -1,16 +1,15 @@
-#ifndef STDLIB_UINT32
-#define STDLIB_UINT32
+#pragma once
 
-#include "../common.hpp"
-#include "../int_utils.hpp"
 #include <numeric>
 #include <vector>
 
 #include "../../../assert.hpp"
-#include "../../../fields/fr.hpp"
+#include "../../../curves/bn254/fr.hpp"
 
 #include "../bool/bool.hpp"
+#include "../common.hpp"
 #include "../field/field.hpp"
+#include "../int_utils.hpp"
 
 namespace plonk
 {
@@ -32,8 +31,6 @@ template <typename ComposerContext> class uint32
     operator field_t<ComposerContext>();
 
     uint32& operator=(const uint32& other);
-
-    ~uint32(){};
 
     uint32 operator+(const uint32& other);
     uint32 operator-(const uint32& other);
@@ -60,11 +57,11 @@ template <typename ComposerContext> class uint32
 
     uint32 operator++()
     {
-        return operator+(uint32(context, barretenberg::fr::one()));
+        return operator+(uint32(context, barretenberg::fr::one));
     };
     uint32 operator--()
     {
-        return operator-(uint32(context, barretenberg::fr::one()));
+        return operator-(uint32(context, barretenberg::fr::one));
     };
     uint32 operator+=(const uint32& other)
     {
@@ -215,4 +212,3 @@ template <typename ComposerContext> class uint32
 } // namespace plonk
 
 #include "./uint32.tcc"
-#endif

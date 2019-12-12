@@ -1,11 +1,10 @@
-#ifndef PERMUTATION
-#define PERMUTATION
+#pragma once
 
-#include "math.h"
-#include "stdint.h"
-#include "stdlib.h"
+#include <math.h>
+#include <cstdint>
+#include <cstdlib>
 
-#include "../../fields/fr.hpp"
+#include "../../curves/bn254/fr.hpp"
 #include "../../polynomials/polynomial.hpp"
 #include "../../types.hpp"
 
@@ -19,8 +18,8 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     {
         output.resize_unsafe(permutation.size());
     }
-    barretenberg::fr::field_t k1 = barretenberg::fr::multiplicative_generator();
-    barretenberg::fr::field_t k2 = barretenberg::fr::alternate_multiplicative_generator();
+    barretenberg::fr::field_t k1 = barretenberg::fr::multiplicative_generator;
+    barretenberg::fr::field_t k2 = barretenberg::fr::alternate_multiplicative_generator;
 
     // permutation encoding:
     // low 28 bits defines the location in witness polynomial
@@ -88,5 +87,3 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     ITERATE_OVER_DOMAIN_END;
 }
 } // namespace waffle
-
-#endif

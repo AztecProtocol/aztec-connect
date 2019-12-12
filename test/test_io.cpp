@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/fields/fq12.hpp>
-#include <barretenberg/groups/g1.hpp>
-#include <barretenberg/groups/g2.hpp>
-#include <barretenberg/groups/pairing.hpp>
+#include <barretenberg/curves/bn254/fq12.hpp>
+#include <barretenberg/curves/bn254/g1.hpp>
+#include <barretenberg/curves/bn254/g2.hpp>
+#include <barretenberg/curves/bn254/pairing.hpp>
 #include <barretenberg/io/io.hpp>
 #include <barretenberg/types.hpp>
 
@@ -23,9 +23,9 @@ TEST(io, read_transcript_loads_well_formed_srs)
     fq::__neg(P[0].y, P[0].y);
     g2::copy_affine(g2::affine_one(), Q[0]);
     g2::copy_affine(g2_x, Q[1]);
-    fq12::fq12_t res = pairing::reduced_ate_pairing_batch(P, Q, 2);
+    fq12::field_t res = pairing::reduced_ate_pairing_batch(P, Q, 2);
 
-    EXPECT_EQ(fq12::eq(res, fq12::one()), true);
+    EXPECT_EQ(fq12::eq(res, fq12::one), true);
     for (size_t i = 0; i < degree; ++i)
     {
         EXPECT_EQ(g1::on_curve(monomials[i]), true);

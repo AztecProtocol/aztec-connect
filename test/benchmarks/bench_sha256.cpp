@@ -1,8 +1,9 @@
 #include <benchmark/benchmark.h>
 
-#include "math.h"
+#include <math.h>
 
-#include <barretenberg/fields/fr.hpp>
+
+#include <barretenberg/curves/bn254/fr.hpp>
 
 #include <barretenberg/waffle/composer/extended_composer.hpp>
 #include <barretenberg/waffle/composer/standard_composer.hpp>
@@ -17,83 +18,94 @@ using namespace benchmark;
 
 typedef plonk::stdlib::uint32<waffle::ExtendedComposer> uint32;
 typedef plonk::stdlib::witness_t<waffle::ExtendedComposer> witness_t;
+typedef plonk::stdlib::bitarray<waffle::ExtendedComposer> bitarray;
 
-constexpr size_t MAX_HASHES = 10;
+constexpr size_t NUM_HASHES = 10;
+constexpr size_t MAX_BYTES = 55 + (9 * 64);
 
-uint32_t get_random_int()
+char get_random_char()
 {
-return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+return static_cast<char>(barretenberg::fr::random_element().data[0] % 8);
 }
 
-void generate_test_plonk_circuit(waffle::ExtendedComposer& composer, size_t num_hashes)
+void generate_test_plonk_circuit(waffle::ExtendedComposer& composer, size_t num_bytes)
 {
-    for (size_t j = 0; j < num_hashes; ++j)
+    std::string in;
+    in.resize(num_bytes);
+    for (size_t i = 0; i < num_bytes; ++i)
     {
-        std::array<uint32, 16> inputs;
-        for (size_t i = 0; i < 16; ++i)
-        {
-            inputs[i] = witness_t(&composer, get_random_int());
-        }
-        std::array<uint32, 8> h;
-        prepare_constants(h);
-        plonk::stdlib::sha256_block(h, inputs);
+        in[i] = get_random_char();
     }
+    bitarray input(&composer, in);
+    plonk::stdlib::sha256(input);
+    // for (size_t j = 0; j < num_hashes; ++j)
+    // {
+    //     std::array<uint32, 16> inputs;
+    //     for (size_t i = 0; i < 16; ++i)
+    //     {
+    //         inputs[i] = witness_t(&composer, get_random_int());
+    //     }
+    //     std::array<uint32, 8> h;
+    //     prepare_constants(h);
+    //     plonk::stdlib::sha256_block(h, inputs);
+    // }
 }
 
-waffle::ExtendedComposer composers[MAX_HASHES];
-waffle::Prover provers[MAX_HASHES];
-waffle::Verifier verifiers[MAX_HASHES];
-waffle::plonk_proof proofs[MAX_HASHES];
+waffle::ExtendedComposer composers[NUM_HASHES];
+waffle::Prover provers[NUM_HASHES];
+waffle::Verifier verifiers[NUM_HASHES];
+waffle::plonk_proof proofs[NUM_HASHES];
 
 void construct_witnesses_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = static_cast<size_t>((state.range(0))) - 1;
+        size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
         composers[idx] = waffle::ExtendedComposer(static_cast<size_t>(state.range(0)));
         generate_test_plonk_circuit(composers[idx], static_cast<size_t>(state.range(0)));
     }
 }
-BENCHMARK(construct_witnesses_bench)->DenseRange(1, MAX_HASHES, 1);
+BENCHMARK(construct_witnesses_bench)->DenseRange(55, MAX_BYTES, 64);
 
 void preprocess_witnesses_bench(State &state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = static_cast<size_t>((state.range(0))) - 1;
+        size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
         provers[idx] = composers[idx].preprocess();
+        printf("num bytes = %lu, num gates = %lu \n", state.range(0), composers[idx].get_num_gates());
     }
 }
-BENCHMARK(preprocess_witnesses_bench)->DenseRange(1, MAX_HASHES, 1);
+BENCHMARK(preprocess_witnesses_bench)->DenseRange(55, MAX_BYTES, 64);
 
 void construct_instances_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = static_cast<size_t>((state.range(0))) - 1;
+        size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
         verifiers[idx] = (waffle::preprocess(provers[idx]));
     }
 }
-BENCHMARK(construct_instances_bench)->DenseRange(1, MAX_HASHES, 1);
+BENCHMARK(construct_instances_bench)->DenseRange(55, MAX_BYTES, 64);
 
 void construct_proofs_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = static_cast<size_t>((state.range(0))) - 1;
+        size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
         proofs[idx] = provers[idx].construct_proof();
         state.PauseTiming();
         provers[idx].reset();
         state.ResumeTiming();
     }
 }
-BENCHMARK(construct_proofs_bench)->DenseRange(1, MAX_HASHES, 1);
+BENCHMARK(construct_proofs_bench)->DenseRange(55, MAX_BYTES, 64);
 
 void verify_proofs_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
-        size_t idx = static_cast<size_t>((state.range(0))) - 1;
+        size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
         bool valid = verifiers[idx].verify_proof(proofs[idx]);
         state.PauseTiming();
         if (!valid)
@@ -103,6 +115,6 @@ void verify_proofs_bench(State& state) noexcept
         state.ResumeTiming();
     }
 }
-BENCHMARK(verify_proofs_bench)->DenseRange(1, MAX_HASHES, 1);
+BENCHMARK(verify_proofs_bench)->DenseRange(55, MAX_BYTES, 64);
 
 BENCHMARK_MAIN();

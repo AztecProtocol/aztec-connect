@@ -1,8 +1,8 @@
-#ifndef STDLIB_COMMON_HPP
-#define STDLIB_COMMON_HPP
+#pragma once
 
-#include "../../fields/fr.hpp"
-#include "stdint.h"
+#include <cstdint>
+
+#include "../../curves/bn254/fr.hpp"
 
 namespace plonk
 {
@@ -24,7 +24,7 @@ struct witness_t
     witness_t(ComposerContext *parent_context, const barretenberg::fr::field_t &in)
     {
         context = parent_context;
-        barretenberg::fr::copy(in, witness);
+        barretenberg::fr::__copy(in, witness);
         witness_index = context->add_variable(witness);
     }
 
@@ -33,11 +33,11 @@ struct witness_t
         context = parent_context;
         if (in)
         {
-            barretenberg::fr::copy(barretenberg::fr::one(), witness);
+            barretenberg::fr::__copy(barretenberg::fr::one, witness);
         }
         else
         {
-            barretenberg::fr::copy(barretenberg::fr::zero(), witness);
+            barretenberg::fr::__copy(barretenberg::fr::zero, witness);
         }
         witness_index = context->add_variable(witness);
     }
@@ -55,5 +55,3 @@ struct witness_t
 };   
 }
 }
-
-#endif

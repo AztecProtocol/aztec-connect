@@ -7,23 +7,27 @@ add_compile_options(-Wconversion -Wsign-conversion)
 add_library(
     barretenberg STATIC
     types.hpp
-    fields/asm_macros.hpp
-    fields/fr_impl_asm.hpp
-    fields/fr_impl_int128.hpp
-    fields/fr.hpp
-    fields/fq_impl_asm.hpp
-    fields/fq_impl_int128.hpp
-    fields/fq.hpp
-    fields/fq2.hpp
-    fields/fq6.hpp
-    fields/fq12.hpp
+    fields/field_impl_int128.tcc
+    fields/field_impl_asm.tcc
+    fields/field.hpp
+    fields/field2.hpp
+    fields/field6.hpp
+    fields/field12.hpp
     groups/wnaf.hpp
-    groups/g1.hpp
-    groups/g2.hpp
-    groups/scalar_multiplication.cpp
-    groups/scalar_multiplication.hpp
-    groups/pairing.cpp
-    groups/pairing.hpp
+    groups/group_impl_asm.tcc
+    groups/group_impl_int128.tcc
+    groups/group.hpp
+    curves/bn254/fr.hpp
+    curves/bn254/fq.hpp
+    curves/bn254/fq2.hpp
+    curves/bn254/fq6.hpp
+    curves/bn254/fq12.hpp
+    curves/bn254/g1.hpp
+    curves/bn254/g2.hpp
+    curves/bn254/scalar_multiplication.cpp
+    curves/bn254/scalar_multiplication.hpp
+    curves/bn254/pairing.cpp
+    curves/bn254/pairing.hpp
     io/io.hpp
     keccak/hash_types.h
     keccak/keccakf1600.c
@@ -35,6 +39,7 @@ add_library(
     polynomials/polynomial_arithmetic.hpp
     polynomials/polynomial.cpp
     polynomials/polynomial.hpp
+    waffle/waffle_types.hpp
     waffle/reference_string/reference_string.cpp
     waffle/reference_string/reference_string.hpp
     waffle/proof_system/linearizer.hpp
@@ -96,22 +101,27 @@ if(BARRETENBERG_PROFILING)
         main.cpp
         fields/asm_macros.hpp
         types.hpp
-        fields/fr_impl_asm.hpp
-        fields/fr_impl_int128.hpp
-        fields/fr.hpp
-        fields/fq_impl_asm.hpp
-        fields/fq_impl_int128.hpp
-        fields/fq.hpp
-        fields/fq2.hpp
-        fields/fq6.hpp
-        fields/fq12.hpp
+        fields/field_impl_int128.tcc
+        fields/field_impl_asm.tcc
+        fields/field.hpp
+        fields/field2.hpp
+        fields/field6.hpp
+        fields/field12.hpp
         groups/wnaf.hpp
-        groups/g1.hpp
-        groups/g2.hpp
-        groups/scalar_multiplication.cpp
-        groups/scalar_multiplication.hpp
-        groups/pairing.cpp
-        groups/pairing.hpp
+        groups/group_impl_asm.tcc
+        groups/group_impl_int128.tcc
+        groups/group.hpp
+        curves/bn254/fr.hpp
+        curves/bn254/fq.hpp
+        curves/bn254/fq2.hpp
+        curves/bn254/fq6.hpp
+        curves/bn254/fq12.hpp
+        curves/bn254/g1.hpp
+        curves/bn254/g2.hpp
+        curves/bn254/scalar_multiplication.cpp
+        curves/bn254/scalar_multiplication.hpp
+        curves/bn254/pairing.cpp
+        curves/bn254/pairing.hpp
         io/io.hpp
         keccak/hash_types.h
         keccak/keccakf1600.c
@@ -123,6 +133,7 @@ if(BARRETENBERG_PROFILING)
         polynomials/polynomial_arithmetic.hpp
         polynomials/polynomial.cpp
         polynomials/polynomial.hpp
+        waffle/waffle_types.hpp
         waffle/reference_string/reference_string.cpp
         waffle/reference_string/reference_string.hpp
         waffle/proof_system/linearizer.hpp

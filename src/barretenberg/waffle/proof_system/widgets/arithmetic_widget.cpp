@@ -1,9 +1,9 @@
 #include "./arithmetic_widget.hpp"
 
-#include "../../../fields/fr.hpp"
 #include "../../../types.hpp"
-#include "../../../groups/g1.hpp"
-#include "../../../groups/scalar_multiplication.hpp"
+#include "../../../curves/bn254/fr.hpp"
+#include "../../../curves/bn254/g1.hpp"
+#include "../../../curves/bn254/scalar_multiplication.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
 
 using namespace barretenberg;

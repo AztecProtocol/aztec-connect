@@ -1,9 +1,9 @@
 #include "./reference_string.hpp"
 
-#include "memory.h"
-#include "stdlib.h"
+#include <memory>
+#include <cstdlib>
 
-#include "../../groups/scalar_multiplication.hpp"
+#include "../../curves/bn254/scalar_multiplication.hpp"
 #include "../../io/io.hpp"
 #include "../../types.hpp"
 

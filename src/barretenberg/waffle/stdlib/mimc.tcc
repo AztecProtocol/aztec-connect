@@ -1,13 +1,13 @@
-#ifndef MIMC_TCC
-#define MIMC_TCC
+#pragma once
 
-#include "memory.h"
+#include <memory.h>
 
 #include "../../assert.hpp"
 #include "../../keccak/keccak.h"
 
 #include "../composer/mimc_composer.hpp"
 #include "../composer/standard_composer.hpp"
+
 #include "./field/field.hpp"
 
 namespace plonk
@@ -60,13 +60,13 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer>& m
     waffle::MiMCComposer* context = message.context;
     ASSERT(context != nullptr);
 
-    if (!barretenberg::fr::eq(message.additive_constant, barretenberg::fr::zero()) ||
-        !barretenberg::fr::eq(message.multiplicative_constant, barretenberg::fr::one()))
+    if (!barretenberg::fr::eq(message.additive_constant, barretenberg::fr::zero) ||
+        !barretenberg::fr::eq(message.multiplicative_constant, barretenberg::fr::one))
     {
         message = message.normalize();
     };
-    if (!barretenberg::fr::eq(key.additive_constant, barretenberg::fr::zero()) ||
-        !barretenberg::fr::eq(key.multiplicative_constant, barretenberg::fr::one()))
+    if (!barretenberg::fr::eq(key.additive_constant, barretenberg::fr::zero) ||
+        !barretenberg::fr::eq(key.multiplicative_constant, barretenberg::fr::one))
     {
         key = key.normalize();
     }
@@ -97,7 +97,7 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer>& m
         x_out_idx = context->add_variable(x_out);
         context->create_mimc_gate({ x_in_idx, x_cubed_idx, k_idx, x_out_idx, mimc_round_constants[i] });
         x_in_idx = x_out_idx;
-        barretenberg::fr::copy(x_out, x_in);
+        barretenberg::fr::__copy(x_out, x_in);
     }
     field_t<waffle::MiMCComposer> result(context, x_out);
     result.witness_index = x_out_idx;
@@ -127,7 +127,7 @@ template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Compose
 {
     if (inputs.size() == 0)
     {
-        field_t<Composer> out = 0UL;
+        field_t<Composer> out(static_cast<uint64_t>(0));
         return out;
     }
     Composer* context = inputs[0].context;
@@ -148,5 +148,3 @@ template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Compose
 }
 } // namespace stdlib
 } // namespace plonk
-
-#endif

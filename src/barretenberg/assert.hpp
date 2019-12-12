@@ -5,8 +5,7 @@
 
  *****************************************************************************/
 
-#ifndef ASSERT_HPP_
-#define ASSERT_HPP_
+#pragma once
 #include <cassert>
 
 
@@ -22,5 +21,3 @@
 #else
 #  define ASSERT(expression) assert((expression))
 #endif // NDEBUG
-
-#endif
