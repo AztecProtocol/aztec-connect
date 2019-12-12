@@ -1,14 +1,12 @@
 #include "./extended_composer.hpp"
 
+#include <algorithm>
+#include <math.h>
+
 #include "../../assert.hpp"
-#include "../../fields/fr.hpp"
 #include "../proof_system/widgets/arithmetic_widget.hpp"
 #include "../proof_system/widgets/bool_widget.hpp"
 #include "../proof_system/widgets/sequential_widget.hpp"
-
-#include "math.h"
-
-#include <algorithm>
 
 using namespace barretenberg;
 
@@ -33,7 +31,7 @@ std::array<ExtendedComposer::extended_wire_properties, 4> ExtendedComposer::filt
                                        size_t target_gate_index,
                                        std::array<extended_wire_properties, 4>& accumulator,
                                        size_t& next_entry,
-                                    fr::field_t* selector) {
+                                       fr::field_t* selector) {
         if (removed_wire != target_wire)
         {
             auto wire_property = std::find_if(
@@ -67,7 +65,7 @@ std::array<ExtendedComposer::extended_wire_properties, 4> ExtendedComposer::filt
     // If we have elided out extra variables (due to wire duplications), replace with zero variable
     while (count < 4)
     {
-        result[count] = { true, zero_idx, WireType::LEFT, { &zero_selector }};
+        result[count] = { true, zero_idx, WireType::LEFT, { &zero_selector } };
         ++count;
     }
     ASSERT(count == 4);
@@ -114,8 +112,8 @@ ExtendedComposer::extended_wire_properties ExtendedComposer::get_shared_wire(con
     }
 
     const auto search = [this, i](const uint32_t target,
-                            const std::array<const std::pair<uint32_t, bool>, 3>& source_wires,
-                            const GateFlags flag) {
+                                  const std::array<const std::pair<uint32_t, bool>, 3>& source_wires,
+                                  const GateFlags flag) {
         const auto has_pair = [target](const auto x) { return (x.second && (x.first == target)); };
         const auto it = std::find_if(source_wires.begin(), source_wires.end(), has_pair);
         if (!check_gate_flag(i, flag) && it != std::end(source_wires))
@@ -131,7 +129,7 @@ ExtendedComposer::extended_wire_properties ExtendedComposer::get_shared_wire(con
           { w_o[i + 1], !check_gate_flag(i + 1, GateFlags::FIXED_OUTPUT_WIRE) } }
     };
 
-    std::array<fr::field_t *, 3> selectors{ { &q_l[i + 1], &q_r[i + 1], &q_o[i + 1] } };
+    std::array<fr::field_t*, 3> selectors{ { &q_l[i + 1], &q_r[i + 1], &q_o[i + 1] } };
     size_t found = search(w_l[i], second_gate_wires, GateFlags::FIXED_LEFT_WIRE);
     if (is_isolated(wire_epicycles[w_l[i]], i) && found != static_cast<size_t>(-1) &&
         !is_bool[static_cast<size_t>(w_l[i])])
@@ -199,13 +197,12 @@ void ExtendedComposer::combine_linear_relations()
         extended_wire_properties lookahead_wire = extended_wire_properties();
         extended_wire_properties anchor_wire = extended_wire_properties();
 
-
         const auto search_for_linked_wire = [left_index = w_l[next_gate_index],
                                              right_index = w_r[next_gate_index],
                                              output_index = w_o[next_gate_index],
                                              left_fixed,
                                              right_fixed,
-                                             output_fixed](const auto &x) {
+                                             output_fixed](const auto& x) {
             if (x.wire_type != WireType::OUTPUT && !x.is_mutable)
             {
                 return false;
@@ -220,7 +217,8 @@ void ExtendedComposer::combine_linear_relations()
             }
             return output_index == x.index;
         };
-        const auto candidate_wire = std::find_if(current_quad.wires.begin(), current_quad.wires.end(), search_for_linked_wire);
+        const auto candidate_wire =
+            std::find_if(current_quad.wires.begin(), current_quad.wires.end(), search_for_linked_wire);
         if (candidate_wire != std::end(current_quad.wires))
         {
             lookahead_wire = *candidate_wire;
@@ -239,12 +237,12 @@ void ExtendedComposer::combine_linear_relations()
             // an output wire, we can elide out a gate when examining the next quad in our loop
             const auto next_quad = potential_quads[j - 1];
             const auto candidate_anchor_wire =
-                std::find_if(current_quad.wires.begin(), current_quad.wires.end(), [&next_quad](const auto &x) {
+                std::find_if(current_quad.wires.begin(), current_quad.wires.end(), [&next_quad](const auto& x) {
                     if (x.wire_type != WireType::OUTPUT && !x.is_mutable)
                     {
                         return false;
                     }
-                    const auto it = std::find_if(next_quad.wires.begin(), next_quad.wires.end(), [&x](const auto &y) {
+                    const auto it = std::find_if(next_quad.wires.begin(), next_quad.wires.end(), [&x](const auto& y) {
                         return (x.index == y.index) && (y.wire_type == WireType::OUTPUT || y.is_mutable);
                     });
                     return (it != std::end(next_quad.wires));
@@ -252,10 +250,12 @@ void ExtendedComposer::combine_linear_relations()
 
             if (candidate_anchor_wire != std::end(current_quad.wires))
             {
-                const auto new_lookahead_wire = std::find_if(current_quad.wires.begin(), current_quad.wires.end(), [target_index = candidate_anchor_wire->index](const auto &x)
-                {
-                    return (x.index != target_index && (x.wire_type == WireType::OUTPUT || (x.is_mutable)));
-                });
+                const auto new_lookahead_wire = std::find_if(
+                    current_quad.wires.begin(),
+                    current_quad.wires.end(),
+                    [target_index = candidate_anchor_wire->index](const auto& x) {
+                        return (x.index != target_index && (x.wire_type == WireType::OUTPUT || (x.is_mutable)));
+                    });
                 if (new_lookahead_wire != std::end(current_quad.wires))
                 {
                     anchor_wire = *candidate_anchor_wire;
@@ -278,11 +278,11 @@ void ExtendedComposer::combine_linear_relations()
             }
 
             const auto is_included = [](const std::array<extended_wire_properties, 4>& wires, const uint32_t index) {
-                return (std::end(wires) != std::find_if(wires.begin(), wires.end(), [index](const auto x) { return x.index == index; }));
+                return (std::end(wires) !=
+                        std::find_if(wires.begin(), wires.end(), [index](const auto x) { return x.index == index; }));
             };
 
-            const auto update_gate_wires = [&gate_wires, &is_included](const auto &wire, const auto detect_policy)
-            {
+            const auto update_gate_wires = [&gate_wires, &is_included](const auto& wire, const auto detect_policy) {
                 if (is_included(gate_wires, wire.index))
                 {
                     return;
@@ -301,21 +301,22 @@ void ExtendedComposer::combine_linear_relations()
                 }
             };
 
-            const auto find_fixed_wire = [](const WireType target_type, auto &x) {
+            const auto find_fixed_wire = [](const WireType target_type, auto& x) {
                 return (x.wire_type == target_type && !x.is_mutable);
             };
             std::for_each(
                 potential_quads[j].wires.begin(),
                 potential_quads[j].wires.end(),
-                [&update_gate_wires, &find_fixed_wire](const auto &wire) { update_gate_wires(wire, find_fixed_wire); });
+                [&update_gate_wires, &find_fixed_wire](const auto& wire) { update_gate_wires(wire, find_fixed_wire); });
 
             const auto find_mutable_wire = [](const WireType target_type, const auto x) {
                 return (x.wire_type == target_type || x.is_mutable);
             };
-            std::for_each(
-                potential_quads[j].wires.begin(),
-                potential_quads[j].wires.end(),
-                [&update_gate_wires, &find_mutable_wire](const auto &wire) { update_gate_wires(wire, find_mutable_wire); });
+            std::for_each(potential_quads[j].wires.begin(),
+                          potential_quads[j].wires.end(),
+                          [&update_gate_wires, &find_mutable_wire](const auto& wire) {
+                              update_gate_wires(wire, find_mutable_wire);
+                          });
 
             ASSERT(gate_wires[0].index != static_cast<uint32_t>(-1));
             ASSERT(gate_wires[1].index != static_cast<uint32_t>(-1));
@@ -341,7 +342,7 @@ void ExtendedComposer::combine_linear_relations()
                 deleted_gates[potential_quads[j].gate_indices[1]] = true;
             }
 
-            const auto assign = [](const fr::field_t &input) { return (fr::eq(input, fr::zero)) ? fr::one : input; };
+            const auto assign = [](const fr::field_t& input) { return (fr::eq(input, fr::zero)) ? fr::one : input; };
             fr::field_t left = fr::neg(assign(*potential_quads[j].removed_wire.selectors[0]));
             fr::field_t right = assign(*potential_quads[j].removed_wire.selectors[1]);
 
@@ -357,9 +358,10 @@ void ExtendedComposer::combine_linear_relations()
             barretenberg::fr::__mul(q_o[gate_2_index], left, q_o[gate_2_index]);
             barretenberg::fr::__mul(q_c[gate_2_index], left, q_c[gate_2_index]);
 
-            const auto compute_new_selector = [](const auto &wire) {
+            const auto compute_new_selector = [](const auto& wire) {
                 fr::field_t temp = fr::zero;
-                std::for_each(wire.selectors.begin(), wire.selectors.end(), [&temp](auto x) { fr::__add(temp, *x, temp); });
+                std::for_each(
+                    wire.selectors.begin(), wire.selectors.end(), [&temp](auto x) { fr::__add(temp, *x, temp); });
                 return temp;
             };
             fr::field_t new_left = compute_new_selector(gate_wires[0]);

@@ -1,11 +1,10 @@
-#ifndef PERMUTATION
-#define PERMUTATION
+#pragma once
 
-#include "math.h"
-#include "stdint.h"
-#include "stdlib.h"
+#include <math.h>
+#include <cstdint>
+#include <cstdlib>
 
-#include "../../fields/fr.hpp"
+#include "../../curves/bn254/fr.hpp"
 #include "../../polynomials/polynomial.hpp"
 #include "../../types.hpp"
 
@@ -88,5 +87,3 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     ITERATE_OVER_DOMAIN_END;
 }
 } // namespace waffle
-
-#endif

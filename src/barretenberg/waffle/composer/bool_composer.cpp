@@ -1,11 +1,11 @@
 #include "./bool_composer.hpp"
 
 #include "../../assert.hpp"
-#include "../../fields/fr.hpp"
+#include "../../curves/bn254/fr.hpp"
 #include "../proof_system/widgets/bool_widget.hpp"
 #include "../proof_system/widgets/arithmetic_widget.hpp"
 
-#include "math.h"
+#include <math.h>
 
 using namespace barretenberg;
 

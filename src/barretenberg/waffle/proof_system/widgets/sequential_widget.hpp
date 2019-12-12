@@ -1,5 +1,4 @@
-#ifndef SEQUENTIAL_WIDGET_HPP
-#define SEQUENTIAL_WIDGET_HPP
+#pragma once
 
 #include "./base_widget.hpp"
 
@@ -47,6 +46,3 @@ public:
     barretenberg::polynomial q_o_next;
 };
 }
-
-
-#endif

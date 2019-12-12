@@ -1,5 +1,4 @@
-#ifndef CIRCUIT_FFT_STATE
-#define CIRCUIT_FFT_STATE
+#pragma once
 
 #include "../../polynomials/polynomial.hpp"
 #include "../../polynomials/evaluation_domain.hpp"
@@ -48,4 +47,3 @@ public:
     barretenberg::evaluation_domain large_domain;
 };
 }
-#endif

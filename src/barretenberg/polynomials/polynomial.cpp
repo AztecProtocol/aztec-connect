@@ -1,12 +1,12 @@
 #include "./polynomial.hpp"
 #include "./polynomial_arithmetic.hpp"
 
-#include "../fields/fr.hpp"
+#include "../curves/bn254/fr.hpp"
 #include "../assert.hpp"
 
-#include "stdlib.h"
-#include "memory.h"
-#include "math.h"
+#include <cstdlib>
+#include <memory.h>
+#include <math.h>
 
 using namespace barretenberg;
 

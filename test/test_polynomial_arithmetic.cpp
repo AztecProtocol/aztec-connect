@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/fields/fr.hpp>
+#include <barretenberg/curves/bn254/fr.hpp>
 #include <barretenberg/polynomials/evaluation_domain.hpp>
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 

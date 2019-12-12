@@ -1,5 +1,4 @@
-#ifndef BOOL_COMPOSER_HPP
-#define BOOL_COMPOSER_HPP
+#pragma once 
 
 #include "./standard_composer.hpp"
 
@@ -43,4 +42,3 @@ public:
     uint32_t zero_idx;
 };
 }
-#endif

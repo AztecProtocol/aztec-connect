@@ -1,9 +1,9 @@
 #pragma once
 
-#include "inttypes.h"
-#include "stdint.h"
-#include "stdio.h"
-#include "unistd.h"
+#include <cinttypes>
+#include <cstdint>
+#include <cstdio>
+#include <unistd.h>
 
 #include "../assert.hpp"
 #include "../types.hpp"
@@ -33,7 +33,6 @@ template <typename FieldParams> class field
         { FieldParams::twice_modulus_0, FieldParams::twice_modulus_1, FieldParams::twice_modulus_2, FieldParams::twice_modulus_3 }
     };
     static constexpr field_t zero{ { 0x00, 0x00, 0x00, 0x00 } };
-    static constexpr field_t curve_b{ { FieldParams::b, 0x0, 0x0, 0x0 } };
     static constexpr field_t two_inv{
         { FieldParams::two_inv_0, FieldParams::two_inv_1, FieldParams::two_inv_2, FieldParams::two_inv_3 }
     };
@@ -88,33 +87,33 @@ template <typename FieldParams> class field
      * 
      * The 'with coarse reduction' methods will constrain the result to be modulo 2p
      **/
-    static void __mul(const field_t& a, const field_t& b, field_t& r);
+    static void __mul(const field_t& a, const field_t& b, field_t& r) noexcept;
 
-    static void __mul_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r);
-    static void __sqr(const field_t& a, field_t& r);
-    static void __sqr_without_reduction(const field_t& a, field_t& r);
-    static void __add(const field_t& a, const field_t& b, field_t& r);
-    static void __add_without_reduction(const field_t& a, const field_t& b, field_t& r);
-    static void __add_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r);
-    static void __quad_with_coarse_reduction(const field_t& a, field_t& r);
-    static void __oct_with_coarse_reduction(const field_t& a, field_t& r);
+    static void __mul_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) noexcept;
+    static void __sqr(const field_t& a, field_t& r) noexcept;
+    static void __sqr_with_coarse_reduction(const field_t& a, field_t& r) noexcept;
+    static void __add(const field_t& a, const field_t& b, field_t& r) noexcept;
+    static void __add_without_reduction(const field_t& a, const field_t& b, field_t& r) noexcept;
+    static void __add_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) noexcept;
+    static void __quad_with_coarse_reduction(const field_t& a, field_t& r) noexcept;
+    static void __oct_with_coarse_reduction(const field_t& a, field_t& r) noexcept;
     static void __paralell_double_and_add_without_reduction(field_t& x_0,
                                                           const field_t& y_0,
                                                           const field_t& y_1,
-                                                          field_t& r);
-    static void __sub(const field_t& a, const field_t& b, field_t& r);
-    static void __sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r);
-    static void __conditionally_subtract_double_modulus(const field_t& a, field_t& r, const uint64_t predicate);
+                                                          field_t& r) noexcept;
+    static void __sub(const field_t& a, const field_t& b, field_t& r) noexcept;
+    static void __sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) noexcept;
+    static void __conditionally_subtract_double_modulus(const field_t& a, field_t& r, const uint64_t predicate) noexcept;
 
     // compute a * b, put 512-bit result in r (do not reduce)
-    static void __mul_512(const field_t& a, const field_t& b, field_wide_t& r);
+    static void __mul_512(const field_t& a, const field_t& b, field_wide_t& r) noexcept;
 
     // Multiply field_t `a` by the cube root of unity, modulo `q`. Store result in `r`
-    static inline void __mul_beta(const field_t& a, field_t& r)
+    static inline void __mul_beta(const field_t& a, field_t& r) noexcept
     {
         __mul(a, beta, r);
     }
-    static inline void __neg(const field_t& a, field_t& r)
+    static inline void __neg(const field_t& a, field_t& r) noexcept
     {
         __sub(modulus, a, r);
     }
@@ -123,37 +122,37 @@ template <typename FieldParams> class field
      * Arithmetic Methods (return by value)
      **/
 
-    inline static field_t mul(const field_t& a, const field_t& b)
+    inline static field_t mul(const field_t& a, const field_t& b) noexcept
     {
         field_t r;
         __mul(a, b, r);
         return r;
     }
-    inline static field_t sqr(const field_t& a)
+    inline static field_t sqr(const field_t& a) noexcept
     {
         field_t r;
         __sqr(a, r);
         return r;
     }
-    inline static field_t add(const field_t& a, const field_t& b)
+    inline static field_t add(const field_t& a, const field_t& b) noexcept
     {
         field_t r;
         __add(a, b, r);
         return r;
     }
-    inline static field_t sub(const field_t& a, const field_t& b)
+    inline static field_t sub(const field_t& a, const field_t& b) noexcept
     {
         field_t r;
         __sub(a, b, r);
         return r;
     }
-    static inline field_t neg(const field_t& a)
+    static inline field_t neg(const field_t& a) noexcept
     {
         field_t r;
         __neg(a, r);
         return r;
     }
-    static inline field_t neg_one()
+    static inline field_t neg_one() noexcept
     {
         field_t r = sub(zero, one);
         return r;
@@ -162,16 +161,17 @@ template <typename FieldParams> class field
     /**
      * Comparison methods and bit operations
      **/
-    static inline bool eq(const field_t& a, const field_t& b)
+    static inline bool eq(const field_t& a, const field_t& b) noexcept
     {
         return (a.data[0] == b.data[0]) && (a.data[1] == b.data[1]) && (a.data[2] == b.data[2]) &&
                (a.data[3] == b.data[3]);
     }
-    static inline bool iszero(const field_t& a)
+    static inline bool is_zero(const field_t& a) noexcept
     {
-        return ((a.data[0] == 0) && (a.data[1] == 0) && (a.data[2] == 0) && (a.data[3] == 0));
+        return ((a.data[0] | a.data[1] | a.data[2] | a.data[3]) == 0);
     }
-    static inline bool gt(const field_t& a, const field_t& b)
+
+    static inline bool gt(const field_t& a, const field_t& b) noexcept
     {
         bool t0 = a.data[3] > b.data[3];
         bool t1 = (a.data[3] == b.data[3]) && (a.data[2] > b.data[2]);
@@ -180,22 +180,34 @@ template <typename FieldParams> class field
             (a.data[3] == b.data[3]) && (a.data[2] == b.data[2]) && (a.data[1] == b.data[1]) && (a.data[0] > b.data[0]);
         return (t0 || t1 || t2 || t3);
     }
-    static inline bool get_bit(const field_t& a, size_t bit_index)
+    static inline bool get_bit(const field_t& a, size_t bit_index) noexcept
     {
-        size_t idx = bit_index / 64;
+        size_t idx = bit_index >> 6;
         size_t shift = bit_index & 63;
         return bool((a.data[idx] >> shift) & 1);
+    }
+    static inline bool is_msb_set(const field_t& a) noexcept
+    {
+        return (a.data[3] >> 63ULL) == 1ULL;
+    }
+    static inline uint64_t is_msb_set_word(const field_t& a) noexcept
+    {
+        return a.data[3] >> 63ULL;
+    }
+    static inline void __set_msb(field_t& a) noexcept
+    {
+        a.data[3] = 0ULL | (1ULL << 63ULL);
     }
 
     /**
      * Copy methods
-     **/ 
-    static void __swap(field_t& src, field_t& dest);
+     **/
+    static void __swap(field_t& src, field_t& dest) noexcept;
 
     // AVX implementation requires words to be aligned on 32 byte bounary
-    static void __copy(const field_t& src, field_t& dest);
+    static void __copy(const field_t& src, field_t& dest) noexcept;
 
-    static field_t copy(const field_t& src)
+    static field_t copy(const field_t& src) noexcept
     {
         field_t r;
         __copy(src, r);
@@ -205,9 +217,9 @@ template <typename FieldParams> class field
     /**
      * Montgomery modular reduction methods
      **/
-    static void reduce_once(const field_t& a, field_t& r);
+    static void reduce_once(const field_t& a, field_t& r) noexcept;
 
-    static inline void __to_montgomery_form(const field_t& a, field_t& r)
+    static inline void __to_montgomery_form(const field_t& a, field_t& r) noexcept
     {
         __copy(a, r);
         while (gt(r, modulus_plus_one))
@@ -216,18 +228,18 @@ template <typename FieldParams> class field
         }
         __mul(r, r_squared, r);
     }
-    static inline void __from_montgomery_form(const field_t& a, field_t& r)
+    static inline void __from_montgomery_form(const field_t& a, field_t& r) noexcept
     {
         __mul(a, one_raw, r);
     }
 
-    static inline field_t to_montgomery_form(const field_t& a)
+    static inline field_t to_montgomery_form(const field_t& a) noexcept
     {
         field_t r;
         __to_montgomery_form(a, r);
         return r;
     }
-    static inline field_t from_montgomery_form(const field_t& a)
+    static inline field_t from_montgomery_form(const field_t& a) noexcept
     {
         field_t r;
         __from_montgomery_form(a, r);

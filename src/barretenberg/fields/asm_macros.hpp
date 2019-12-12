@@ -1,5 +1,4 @@
-#ifndef ASM_MACROS
-#define ASM_MACROS
+#pragma once
 
 /**
  * Clear all flags via xorq opcode
@@ -466,5 +465,3 @@
         "movq %%r14, 8(" r ")                      \n\t"                                                                \
         "movq %%r15, 16(" r ")                     \n\t"                                                                \
         "movq %%rax, 24(" r ")                     \n\t"
-
-#endif

@@ -1,14 +1,13 @@
-#ifndef CHALLENGE_HPP
-#define CHALLENGE_HPP
+#pragma once
 
-#include "stdint.h"
+#include <stdint.h>
 
-#include "../../fields/fr.hpp"
-#include "../../fields/fq.hpp"
+#include "../../types.hpp"
+#include "../../curves/bn254/fr.hpp"
+#include "../../curves/bn254/fq.hpp"
+#include "../../keccak/keccak.h"
 
 #include "../waffle_types.hpp"
-#include "../../types.hpp"
-#include "../../keccak/keccak.h"
 
 namespace waffle
 {
@@ -136,5 +135,3 @@ inline barretenberg::fr::field_t compute_kate_separation_challenge(const plonk_p
     return u;
 }
 }
-
-#endif

@@ -1,22 +1,19 @@
-#ifndef STDLIB_UINT32_TCC
-#define STDLIB_UINT32_TCC
+#pragma once
 
-#include "math.h"
-
-#include "../common.hpp"
-#include "../int_utils.hpp"
-
-#include "./uint32.hpp"
+#include <cmath>
+#include <numeric>
 
 #include "../../../assert.hpp"
-#include "../../../fields/fr.hpp"
+#include "../../../curves/bn254/fr.hpp"
 
 #include "../../composer/composer_base.hpp"
 
 #include "../bool/bool.hpp"
+#include "../common.hpp"
 #include "../field/field.hpp"
+#include "../int_utils.hpp"
 
-#include <numeric>
+#include "./uint32.hpp"
 
 namespace plonk
 {
@@ -119,7 +116,8 @@ void uint32<ComposerContext>::internal_logic_operation_native(
         }
         const_mul = const_mul + const_mul;
 
-        bool maximum_bool = (bool_wires[i].witness_index == static_cast<uint32_t>(-1)) ? bool_wires[i].get_value() : true;
+        bool maximum_bool =
+            (bool_wires[i].witness_index == static_cast<uint32_t>(-1)) ? bool_wires[i].get_value() : true;
         maximum_value = maximum_value + (static_cast<int_utils::uint128_t>(maximum_bool) << i);
     }
     if (accumulator.witness_index == static_cast<uint32_t>(-1))
@@ -303,7 +301,7 @@ template <typename ComposerContext> uint32<ComposerContext>& uint32<ComposerCont
 }
 
 template <typename ComposerContext>
-uint32<ComposerContext>::uint32(ComposerContext *parent_context, const std::array<bool_t<ComposerContext>, 32> &wires)
+uint32<ComposerContext>::uint32(ComposerContext* parent_context, const std::array<bool_t<ComposerContext>, 32>& wires)
 {
     context = parent_context;
     additive_constant = 0;
@@ -328,21 +326,20 @@ template <typename ComposerContext> void uint32<ComposerContext>::concatenate() 
     field_t<ComposerContext> constant_multiplier(context, barretenberg::fr::one);
     field_t<ComposerContext> accumulator(context, barretenberg::fr::zero);
 
-    maximum_value = std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0ULL, [](auto acc, auto wire)
-    {
+    maximum_value = std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0ULL, [](auto acc, auto wire) {
         bool maximum_bool = (wire.witness_index == static_cast<uint32_t>(-1) ? wire.get_value() : 1);
         return acc + acc + static_cast<uint64_t>(maximum_bool);
     });
 
-    auto sum_wires = [&constant_multiplier](const field_t<ComposerContext> &old, const bool_t &wire)
-    {
+    auto sum_wires = [&constant_multiplier](const field_t<ComposerContext>& old, const bool_t& wire) {
         field_t<ComposerContext> out = old + (constant_multiplier * wire);
         constant_multiplier = constant_multiplier + constant_multiplier;
         return out;
     };
     accumulator = std::accumulate(bool_wires.begin(), bool_wires.end(), accumulator, sum_wires);
 
-    additive_constant = (accumulator.witness_index == static_cast<uint32_t>(-1)) ? static_cast<uint32_t>(maximum_value) : 0;
+    additive_constant =
+        (accumulator.witness_index == static_cast<uint32_t>(-1)) ? static_cast<uint32_t>(maximum_value) : 0;
     multiplicative_constant = 1;
     witness_index = accumulator.witness_index;
     witness_status = WitnessStatus::OK;
@@ -358,11 +355,11 @@ template <typename ComposerContext> void uint32<ComposerContext>::decompose() co
 
     size_t num_bits = int_utils::get_msb(maximum_value) + 1;
     bool is_constant = witness_index == static_cast<uint32_t>(-1);
-    int_utils::uint128_t value = is_constant ? 0UL : barretenberg::fr::from_montgomery_form(context->get_variable(witness_index)).data[0];
+    int_utils::uint128_t value =
+        is_constant ? 0UL : barretenberg::fr::from_montgomery_form(context->get_variable(witness_index)).data[0];
     value = value * multiplicative_constant + additive_constant;
 
-    const auto compute_field_wire = [ctx = context, is_constant, &value]()
-    {
+    const auto compute_field_wire = [ctx = context, is_constant, &value]() {
         bool bit = static_cast<bool>(value & 1UL);
         value = value >> 1UL;
         bool_t result = is_constant ? bool_t(ctx, bit) : witness_t(ctx, static_cast<uint32_t>(bit));
@@ -372,8 +369,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::decompose() co
     std::generate(bool_wires.begin(), bool_wires.end(), compute_field_wire);
     std::generate(overhead_wires.begin(), overhead_wires.end(), compute_field_wire);
 
-    maximum_value = std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0ULL, [](auto acc, auto wire)
-    {
+    maximum_value = std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0ULL, [](auto acc, auto wire) {
         acc = acc + acc;
         bool maximum_bool = (wire.witness_index == static_cast<uint32_t>(-1) ? wire.get_value() : 1);
         acc = acc + static_cast<uint64_t>(maximum_bool);
@@ -383,15 +379,15 @@ template <typename ComposerContext> void uint32<ComposerContext>::decompose() co
     field_t<ComposerContext> constant_multiplier(context, barretenberg::fr::one);
     field_t<ComposerContext> accumulator(context, barretenberg::fr::zero);
     field_t<ComposerContext> overhead_accumulator(context, barretenberg::fr::zero);
-    auto sum_wires = [&constant_multiplier](const field_t<ComposerContext> &old, const bool_t &wire)
-    {
+    auto sum_wires = [&constant_multiplier](const field_t<ComposerContext>& old, const bool_t& wire) {
         field_t<ComposerContext> out = old + (constant_multiplier * wire);
         constant_multiplier = constant_multiplier + constant_multiplier;
         return out;
     };
 
     accumulator = std::accumulate(bool_wires.begin(), bool_wires.end(), accumulator, sum_wires);
-    overhead_accumulator = std::accumulate(overhead_wires.begin(), overhead_wires.end(), overhead_accumulator, sum_wires);
+    overhead_accumulator =
+        std::accumulate(overhead_wires.begin(), overhead_wires.end(), overhead_accumulator, sum_wires);
 
     if (accumulator.witness_index != static_cast<uint32_t>(-1))
     {
@@ -440,19 +436,19 @@ template <typename ComposerContext> void uint32<ComposerContext>::normalize()
 template <typename ComposerContext> uint32<ComposerContext>::operator field_t<ComposerContext>()
 {
     normalize();
-    const auto get_field_element = [ctx = context](const uint32_t w_idx, const uint32_t add_const, const uint32_t mul_const)
-    {
+    const auto get_field_element = [ctx = context](
+                                       const uint32_t w_idx, const uint32_t add_const, const uint32_t mul_const) {
         field_t<ComposerContext> target;
         if (w_idx == static_cast<uint32_t>(-1))
         {
-            target = field_t<ComposerContext>(ctx, barretenberg::fr::to_montgomery_form({{ add_const, 0, 0, 0 }}));
+            target = field_t<ComposerContext>(ctx, barretenberg::fr::to_montgomery_form({ { add_const, 0, 0, 0 } }));
         }
         else
         {
             target = witness_t<ComposerContext>(ctx, ctx->get_variable(w_idx));
             target.witness_index = w_idx;
-            target.additive_constant = barretenberg::fr::to_montgomery_form({{ add_const, 0, 0, 0 }});
-            target.multiplicative_constant = barretenberg::fr::to_montgomery_form({{ mul_const, 0, 0, 0 }});
+            target.additive_constant = barretenberg::fr::to_montgomery_form({ { add_const, 0, 0, 0 } });
+            target.multiplicative_constant = barretenberg::fr::to_montgomery_form({ { mul_const, 0, 0, 0 } });
         }
         return target;
     };
@@ -493,7 +489,7 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     other.prepare_for_arithmetic_operations();
     ASSERT(context == other.context || (context != nullptr && other.context == nullptr) ||
            (context == nullptr && other.context != nullptr));
-    ComposerContext *ctx =  (context == nullptr) ? other.context : context;
+    ComposerContext* ctx = (context == nullptr) ? other.context : context;
     uint32<ComposerContext> result = uint32<ComposerContext>(ctx);
     bool lhs_constant = witness_index == static_cast<uint32_t>(-1);
     bool rhs_constant = other.witness_index == static_cast<uint32_t>(-1);
@@ -502,7 +498,8 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
         result = *this;
         result.multiplicative_constant *= 2;
         result.additive_constant = additive_constant + other.additive_constant;
-        result.maximum_value = (maximum_value - additive_constant) + (other.maximum_value - other.additive_constant) + result.additive_constant;
+        result.maximum_value = (maximum_value - additive_constant) + (other.maximum_value - other.additive_constant) +
+                               result.additive_constant;
         result.witness_status = WitnessStatus::NOT_NORMALIZED;
     }
     else if (lhs_constant && rhs_constant)
@@ -516,14 +513,16 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     {
         result = uint32(*this);
         result.additive_constant = additive_constant + other.additive_constant;
-        result.maximum_value = (maximum_value - additive_constant) + (other.maximum_value - other.additive_constant) + result.additive_constant;
+        result.maximum_value = (maximum_value - additive_constant) + (other.maximum_value - other.additive_constant) +
+                               result.additive_constant;
         result.witness_status = WitnessStatus::NOT_NORMALIZED;
     }
     else if (lhs_constant && !rhs_constant)
     {
         result = uint32(other);
         result.additive_constant = additive_constant + other.additive_constant;
-        result.maximum_value = (maximum_value - additive_constant) + (other.maximum_value - other.additive_constant) + result.additive_constant;
+        result.maximum_value = (maximum_value - additive_constant) + (other.maximum_value - other.additive_constant) +
+                               result.additive_constant;
         result.witness_status = WitnessStatus::NOT_NORMALIZED;
     }
     else
@@ -535,7 +534,8 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
         uint32_t ql_32 = multiplicative_constant;
         uint32_t qr_32 = other.multiplicative_constant;
 
-        result.maximum_value = maximum_value + other.maximum_value - additive_constant - other.additive_constant + qc_32;
+        result.maximum_value =
+            maximum_value + other.maximum_value - additive_constant - other.additive_constant + qc_32;
 
         barretenberg::fr::field_t q_l =
             barretenberg::fr::to_montgomery_form({ { static_cast<uint64_t>(ql_32), 0, 0, 0 } });
@@ -571,14 +571,15 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     ASSERT(context == other.context || (context != nullptr && other.context == nullptr) ||
            (context == nullptr && other.context != nullptr));
 
-    ComposerContext *ctx = (context == nullptr) ? other.context : context;
+    ComposerContext* ctx = (context == nullptr) ? other.context : context;
     uint32<ComposerContext> result = uint32<ComposerContext>(ctx);
 
     bool lhs_constant = witness_index == static_cast<uint32_t>(-1);
     bool rhs_constant = other.witness_index == static_cast<uint32_t>(-1);
 
     size_t left_shift = int_utils::get_msb(other.maximum_value) + 1UL;
-    int_utils::uint128_t negation_constant = static_cast<int_utils::uint128_t>(1UL) << static_cast<int_utils::uint128_t>(left_shift);
+    int_utils::uint128_t negation_constant = static_cast<int_utils::uint128_t>(1UL)
+                                             << static_cast<int_utils::uint128_t>(left_shift);
 
     if (!lhs_constant && !rhs_constant && (witness_index == other.witness_index))
     {
@@ -614,11 +615,14 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
         field_t<ComposerContext> normalized = witness_t<ComposerContext>(ctx, ctx->get_variable(other.witness_index));
         normalized.witness_index = other.witness_index;
         normalized.additive_constant = set_bit(normalized.additive_constant, left_shift);
-        normalized.additive_constant = barretenberg::fr::add(normalized.additive_constant, {{ additive_constant, 0, 0, 0 }});
-        normalized.additive_constant = barretenberg::fr::sub(normalized.additive_constant, {{ other.additive_constant, 0, 0, 0 }});
+        normalized.additive_constant =
+            barretenberg::fr::add(normalized.additive_constant, { { additive_constant, 0, 0, 0 } });
+        normalized.additive_constant =
+            barretenberg::fr::sub(normalized.additive_constant, { { other.additive_constant, 0, 0, 0 } });
         normalized.additive_constant = barretenberg::fr::to_montgomery_form(normalized.additive_constant);
-    
-        normalized.multiplicative_constant = barretenberg::fr::to_montgomery_form({{ other.multiplicative_constant, 0, 0, 0 }});
+
+        normalized.multiplicative_constant =
+            barretenberg::fr::to_montgomery_form({ { other.multiplicative_constant, 0, 0, 0 } });
         normalized.multiplicative_constant = barretenberg::fr::neg(normalized.multiplicative_constant);
         normalized = normalized.normalize();
 
@@ -635,12 +639,13 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
 
         // TODO: replace all of these zero(), one() function calls with constexpr constants
         barretenberg::fr::field_t q_c = set_bit(barretenberg::fr::zero, left_shift);
-        q_c = barretenberg::fr::add(q_c, {{ additive_constant, 0, 0, 0 }});
-        q_c = barretenberg::fr::sub(q_c, {{ other.additive_constant, 0, 0, 0 }});
+        q_c = barretenberg::fr::add(q_c, { { additive_constant, 0, 0, 0 } });
+        q_c = barretenberg::fr::sub(q_c, { { other.additive_constant, 0, 0, 0 } });
         q_c = barretenberg::fr::to_montgomery_form(q_c);
 
-        barretenberg::fr::field_t q_l = barretenberg::fr::to_montgomery_form({{ multiplicative_constant, 0, 0, 0 }});
-        barretenberg::fr::field_t q_r = barretenberg::fr::to_montgomery_form({{ other.multiplicative_constant, 0, 0, 0 }});
+        barretenberg::fr::field_t q_l = barretenberg::fr::to_montgomery_form({ { multiplicative_constant, 0, 0, 0 } });
+        barretenberg::fr::field_t q_r =
+            barretenberg::fr::to_montgomery_form({ { other.multiplicative_constant, 0, 0, 0 } });
         q_r = barretenberg::fr::neg(q_r);
 
         barretenberg::fr::field_t T0 = barretenberg::fr::mul(q_l, ctx->get_variable(witness_index));
@@ -663,7 +668,7 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();
 
-    ComposerContext *ctx = (context == nullptr) ? other.context : context;
+    ComposerContext* ctx = (context == nullptr) ? other.context : context;
     uint32<ComposerContext> result = uint32<ComposerContext>(ctx);
 
     bool lhs_constant = witness_index == static_cast<uint32_t>(-1);
@@ -714,7 +719,7 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
 
         barretenberg::fr::field_t left = ctx->get_variable(witness_index);
         barretenberg::fr::field_t right = ctx->get_variable(other.witness_index);
-        barretenberg::fr::field_t value = barretenberg::fr::mul(left, right); 
+        barretenberg::fr::field_t value = barretenberg::fr::mul(left, right);
         barretenberg::fr::__mul(value, q_m, value);
         barretenberg::fr::__mul(left, q_l, T0);
         barretenberg::fr::__add(value, T0, value);
@@ -734,7 +739,6 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     return result;
 }
 
-
 // TODO: fix this, need to test and refactor...
 template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator/(const uint32& other)
 {
@@ -749,7 +753,7 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();
 
-    ComposerContext *ctx = (context == nullptr) ? other.context : context;
+    ComposerContext* ctx = (context == nullptr) ? other.context : context;
     uint32<ComposerContext> result(ctx);
 
     bool lhs_constant = witness_index == static_cast<uint32_t>(-1);
@@ -791,9 +795,10 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
         // output = first input
         // left = second input
         // right = new witness
-        uint32_t numerator_witness = static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(ctx->get_variable(witness_index)).data[0]);
-        uint32_t denominator_witness =
-            static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(ctx->get_variable(other.witness_index)).data[0]);
+        uint32_t numerator_witness =
+            static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(ctx->get_variable(witness_index)).data[0]);
+        uint32_t denominator_witness = static_cast<uint32_t>(
+            barretenberg::fr::from_montgomery_form(ctx->get_variable(other.witness_index)).data[0]);
 
         uint32_t numerator_uint = (numerator_witness * (multiplicative_constant)) + additive_constant;
         uint32_t denominator_uint = (denominator_witness * (other.multiplicative_constant)) + other.additive_constant;
@@ -834,27 +839,27 @@ template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerConte
         return bool_t(nullptr, additive_constant < other.additive_constant);
     }
 
-    ComposerContext *ctx = (context == nullptr) ? other.context : nullptr;
+    ComposerContext* ctx = (context == nullptr) ? other.context : nullptr;
 
-    const auto get_field_element = [ctx](const uint32_t w_idx, const uint32_t add_const, const uint32_t mul_const)
-    {
+    const auto get_field_element = [ctx](const uint32_t w_idx, const uint32_t add_const, const uint32_t mul_const) {
         field_t<ComposerContext> target;
         if (w_idx == static_cast<uint32_t>(-1))
         {
-            target = field_t<ComposerContext>(ctx, barretenberg::fr::to_montgomery_form({{ add_const, 0, 0, 0 }}));
+            target = field_t<ComposerContext>(ctx, barretenberg::fr::to_montgomery_form({ { add_const, 0, 0, 0 } }));
         }
         else
         {
             target = witness_t<ComposerContext>(ctx, ctx->get_variable(w_idx));
             target.witness_index = w_idx;
-            target.additive_constant = barretenberg::fr::to_montgomery_form({{ add_const, 0, 0, 0 }});
-            target.multiplicative_constant = barretenberg::fr::to_montgomery_form({{ mul_const, 0, 0, 0 }});
+            target.additive_constant = barretenberg::fr::to_montgomery_form({ { add_const, 0, 0, 0 } });
+            target.multiplicative_constant = barretenberg::fr::to_montgomery_form({ { mul_const, 0, 0, 0 } });
         }
         return target;
     };
 
     field_t<ComposerContext> left = get_field_element(witness_index, additive_constant, multiplicative_constant);
-    field_t<ComposerContext> right = get_field_element(other.witness_index, other.additive_constant, other.multiplicative_constant);
+    field_t<ComposerContext> right =
+        get_field_element(other.witness_index, other.additive_constant, other.multiplicative_constant);
 
     uint32_t lhs = get_value();
     uint32_t rhs = other.get_value();
@@ -1052,8 +1057,7 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     return ror(32 - const_rotation);
 }
 
-template <typename ComposerContext>
-bool_t<ComposerContext> uint32<ComposerContext>::at(const size_t bit_index) const
+template <typename ComposerContext> bool_t<ComposerContext> uint32<ComposerContext>::at(const size_t bit_index) const
 {
     ASSERT(bit_index < 32);
     prepare_for_logic_operations();
@@ -1062,4 +1066,3 @@ bool_t<ComposerContext> uint32<ComposerContext>::at(const size_t bit_index) cons
 
 } // namespace stdlib
 } // namespace plonk
-#endif

@@ -1,6 +1,6 @@
-#ifndef COMPOSER_BASE_HPP
-#define COMPOSER_BASE_HPP
+#pragma once
 
+#include "../../curves/bn254/fr.hpp"
 #include "../../polynomials/polynomial.hpp"
 #include "../../types.hpp"
 
@@ -202,5 +202,3 @@ class ComposerBase
     size_t features = static_cast<size_t>(Features::SAD_TROMBONE);
 };
 } // namespace waffle
-
-#endif

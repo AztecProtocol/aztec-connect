@@ -1,15 +1,17 @@
-#include "stddef.h"
-#include <stdlib.h>
+#include <cstddef>
+#include <cstdlib>
 
 #ifndef NO_MULTITHREADING
 #include <omp.h>
 #endif
 
-#include "../assert.hpp"
-#include "../fields/fr.hpp"
+#include "../../groups/wnaf.hpp"
+
+#include "../../assert.hpp"
+
+#include "./fr.hpp"
+#include "./g1.hpp"
 #include "./scalar_multiplication.hpp"
-#include "g1.hpp"
-#include "wnaf.hpp"
 
 namespace barretenberg
 {

@@ -1,14 +1,14 @@
-#ifndef BASE_WIDGET_HPP
-#define BASE_WIDGET_HPP
+#pragma once
 
 #include <memory>
 
-#include "../../../groups/g1.hpp"
+#include "../../../types.hpp"
+#include "../../../curves/bn254/g1.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
 #include "../../../polynomials/polynomial.hpp"
-#include "../../waffle_types.hpp"
-#include "../../../types.hpp"
+
 #include "../../reference_string/reference_string.hpp"
+#include "../../waffle_types.hpp"
 
 #include "../circuit_state.hpp"
 
@@ -139,4 +139,3 @@ class ProverBaseWidget
 };
 
 } // namespace waffle
-#endif

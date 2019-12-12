@@ -1,12 +1,10 @@
-#ifndef SCALAR_MULTIPLICATION
-#define SCALAR_MULTIPLICATION
+#pragma once
 
-#include "stddef.h"
-#include <stdlib.h>
+#include <cstddef>
+#include <cstdlib>
 
-#include "../assert.hpp"
-
-#include "../types.hpp"
+#include "../../types.hpp"
+#include "./fr.hpp"
 #include "./g1.hpp"
 
 namespace barretenberg
@@ -98,5 +96,3 @@ struct multiplication_state
 void batched_scalar_multiplications(multiplication_state* mul_state, size_t num_batches);
 } // namespace scalar_multiplication
 } // namespace barretenberg
-
-#endif

@@ -1,5 +1,5 @@
 #include "assert.hpp"
-#include "stdlib.h"
+#include <cstdlib>
 //#include <valgrind/callgrind.h>
 
 #include "./waffle/composer/mimc_composer.hpp"

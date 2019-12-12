@@ -1,10 +1,10 @@
 #include "./evaluation_domain.hpp"
 
-#include "../fields/fr.hpp"
+#include "../curves/bn254/fr.hpp"
 #include "../assert.hpp"
 
-#include "math.h"
-#include "memory.h"
+#include <math.h>
+#include <memory.h>
 
 #ifndef NO_MULTITHREADING
 #include "omp.h"

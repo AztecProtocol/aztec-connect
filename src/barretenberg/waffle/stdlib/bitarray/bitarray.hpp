@@ -1,10 +1,11 @@
 #pragma once
 
-#include "../bool/bool.hpp"
-#include "../common.hpp"
-
 #include <vector>
 #include <string>
+
+#include "../bool/bool.hpp"
+#include "../uint32/uint32.hpp"
+#include "../common.hpp"
 
 namespace plonk
 {

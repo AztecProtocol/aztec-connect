@@ -1,8 +1,6 @@
-#ifndef EXTENDED_COMPOSER_HPP
-#define EXTENDED_COMPOSER_HPP
+#pragma once
 
 #include "./bool_composer.hpp"
-#include <array>
 
 namespace waffle
 {
@@ -105,4 +103,3 @@ class ExtendedComposer : public BoolComposer
     size_t adjusted_n = 0;
 };
 } // namespace waffle
-#endif

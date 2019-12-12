@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../fields/fq.hpp"
-#include "../fields/fr.hpp"
-#include "../groups/g1.hpp"
+#include "../curves/bn254/fq.hpp"
+#include "../curves/bn254/fr.hpp"
+#include "../curves/bn254/g1.hpp"
 
 namespace waffle
 {

@@ -1,11 +1,10 @@
-#ifndef REFERENCE_STRING_HPP
-#define REFERENCE_STRING_HPP
+#pragma once
 
-#include "stddef.h"
+#include <cstddef>
 
-#include "../../groups/g1.hpp"
-#include "../../groups/g2.hpp"
-#include "../../groups/pairing.hpp"
+#include "../../curves/bn254/g1.hpp"
+#include "../../curves/bn254/g2.hpp"
+#include "../../curves/bn254/pairing.hpp"
 
 namespace waffle
 {
@@ -33,4 +32,3 @@ public:
     size_t degree;
 };
 }
-#endif

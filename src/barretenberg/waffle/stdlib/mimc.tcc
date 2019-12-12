@@ -1,13 +1,13 @@
-#ifndef MIMC_TCC
-#define MIMC_TCC
+#pragma once
 
-#include "memory.h"
+#include <memory.h>
 
 #include "../../assert.hpp"
 #include "../../keccak/keccak.h"
 
 #include "../composer/mimc_composer.hpp"
 #include "../composer/standard_composer.hpp"
+
 #include "./field/field.hpp"
 
 namespace plonk
@@ -148,5 +148,3 @@ template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Compose
 }
 } // namespace stdlib
 } // namespace plonk
-
-#endif

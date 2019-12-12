@@ -1,12 +1,11 @@
-#ifndef PAIRING
-#define PAIRING
+#pragma once
 
-#include "../types.hpp"
+#include "../../types.hpp"
 #include "./g1.hpp"
 #include "./g2.hpp"
-#include "../fields/fq2.hpp"
-#include "../fields/fq6.hpp"
-#include "../fields/fq12.hpp"
+#include "./fq2.hpp"
+#include "./fq6.hpp"
+#include "./fq12.hpp"
 
 namespace barretenberg
 {
@@ -34,23 +33,21 @@ void mixed_addition_step_for_flipped_miller_loop(const g2::element &base, g2::el
 
 void precompute_miller_lines(const g2::element &Q, miller_lines &lines);
 
-fq12::fq12_t miller_loop(const g1::element &P, const miller_lines &lines);
+fq12::field_t miller_loop(const g1::element &P, const miller_lines &lines);
 
-fq12::fq12_t miller_loop_batch(const g1::element *points, const miller_lines *lines, size_t num_pairs);
+fq12::field_t miller_loop_batch(const g1::element *points, const miller_lines *lines, size_t num_pairs);
 
-void final_exponentiation_easy_part(const fq12::fq12_t &elt, fq12::fq12_t &r);
+void final_exponentiation_easy_part(const fq12::field_t &elt, fq12::field_t &r);
 
-void final_exponentiation_exp_by_neg_z(const fq12::fq12_t &elt, fq12::fq12_t &r);
+void final_exponentiation_exp_by_neg_z(const fq12::field_t &elt, fq12::field_t &r);
 
-void final_exponentiation_tricky_part(const fq12::fq12_t &elt, fq12::fq12_t &r);
+void final_exponentiation_tricky_part(const fq12::field_t &elt, fq12::field_t &r);
 
-fq12::fq12_t reduced_ate_pairing(const g1::affine_element &P_affine, const g2::affine_element &Q_affine);
+fq12::field_t reduced_ate_pairing(const g1::affine_element &P_affine, const g2::affine_element &Q_affine);
 
-fq12::fq12_t reduced_ate_pairing_batch(const g1::affine_element *P_affines, const g2::affine_element *Q_affines, size_t num_points);
+fq12::field_t reduced_ate_pairing_batch(const g1::affine_element *P_affines, const g2::affine_element *Q_affines, size_t num_points);
 
-fq12::fq12_t reduced_ate_pairing_batch_precomputed(const g1::affine_element *P_affines, const miller_lines *lines, size_t num_points);
+fq12::field_t reduced_ate_pairing_batch_precomputed(const g1::affine_element *P_affines, const miller_lines *lines, size_t num_points);
 
 } // namespace pairing
 } // namespace barretenberg
-
-#endif

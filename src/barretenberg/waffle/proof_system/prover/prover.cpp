@@ -1,15 +1,15 @@
 #include "./prover.hpp"
 
-#include "../../../groups/g1.hpp"
-#include "../../../groups/g2.hpp"
-#include "../../../groups/scalar_multiplication.hpp"
+#include "../../../curves/bn254/fr.hpp"
+#include "../../../curves/bn254/g1.hpp"
+#include "../../../curves/bn254/g2.hpp"
+#include "../../../curves/bn254/scalar_multiplication.hpp"
 #include "../../../polynomials/polynomial_arithmetic.hpp"
-#include "../../../polynomials/polynomial.hpp"
-#include "../../../fields/fr.hpp"
 #include "../../../io/io.hpp"
 
-#include "../widgets/base_widget.hpp"
+#include "../../reference_string/reference_string.hpp"
 
+#include "../widgets/base_widget.hpp"
 #include "../linearizer.hpp"
 #include "../challenge.hpp"
 #include "../permutation.hpp"

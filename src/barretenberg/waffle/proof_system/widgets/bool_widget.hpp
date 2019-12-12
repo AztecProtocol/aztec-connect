@@ -1,5 +1,4 @@
-#ifndef Bool_WIDGET_HPP
-#define Bool_WIDGET_HPP
+#pragma once
 
 #include "./base_widget.hpp"
 
@@ -48,6 +47,4 @@ public:
     barretenberg::polynomial q_bo;
     size_t n;
 };
-
 }
-#endif

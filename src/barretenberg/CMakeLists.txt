@@ -7,26 +7,27 @@ add_compile_options(-Wconversion -Wsign-conversion)
 add_library(
     barretenberg STATIC
     types.hpp
-    fields/asm_macros.hpp
-    fields/field_impl_asm.tcc
     fields/field_impl_int128.tcc
+    fields/field_impl_asm.tcc
     fields/field.hpp
-    fields/fr.hpp
-    fields/fq.hpp
-    fields/fq2_new.hpp
-    fields/fq2.hpp
-    fields/fq6.hpp
-    fields/fq12.hpp
+    fields/field2.hpp
+    fields/field6.hpp
+    fields/field12.hpp
     groups/wnaf.hpp
     groups/group_impl_asm.tcc
     groups/group_impl_int128.tcc
     groups/group.hpp
-    groups/g1.hpp
-    groups/g2.hpp
-    groups/scalar_multiplication.cpp
-    groups/scalar_multiplication.hpp
-    groups/pairing.cpp
-    groups/pairing.hpp
+    curves/bn254/fr.hpp
+    curves/bn254/fq.hpp
+    curves/bn254/fq2.hpp
+    curves/bn254/fq6.hpp
+    curves/bn254/fq12.hpp
+    curves/bn254/g1.hpp
+    curves/bn254/g2.hpp
+    curves/bn254/scalar_multiplication.cpp
+    curves/bn254/scalar_multiplication.hpp
+    curves/bn254/pairing.cpp
+    curves/bn254/pairing.hpp
     io/io.hpp
     keccak/hash_types.h
     keccak/keccakf1600.c
@@ -103,22 +104,24 @@ if(BARRETENBERG_PROFILING)
         fields/field_impl_int128.tcc
         fields/field_impl_asm.tcc
         fields/field.hpp
-        fields/fr.hpp
-        fields/fq.hpp
-        fields/fq2_new.hpp
-        fields/fq2.hpp
-        fields/fq6.hpp
-        fields/fq12.hpp
+        fields/field2.hpp
+        fields/field6.hpp
+        fields/field12.hpp
         groups/wnaf.hpp
         groups/group_impl_asm.tcc
         groups/group_impl_int128.tcc
         groups/group.hpp
-        groups/g1.hpp
-        groups/g2.hpp
-        groups/scalar_multiplication.cpp
-        groups/scalar_multiplication.hpp
-        groups/pairing.cpp
-        groups/pairing.hpp
+        curves/bn254/fr.hpp
+        curves/bn254/fq.hpp
+        curves/bn254/fq2.hpp
+        curves/bn254/fq6.hpp
+        curves/bn254/fq12.hpp
+        curves/bn254/g1.hpp
+        curves/bn254/g2.hpp
+        curves/bn254/scalar_multiplication.cpp
+        curves/bn254/scalar_multiplication.hpp
+        curves/bn254/pairing.cpp
+        curves/bn254/pairing.hpp
         io/io.hpp
         keccak/hash_types.h
         keccak/keccakf1600.c

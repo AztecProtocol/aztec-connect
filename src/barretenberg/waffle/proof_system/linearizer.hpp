@@ -1,10 +1,9 @@
-#ifndef LINEARIZER_HPP
-#define LINEARIZER_HPP
+#pragma once
 
-#include "../../fields/fr.hpp"
+#include "../../types.hpp"
+#include "../../curves/bn254/fr.hpp"
 
 #include "../waffle_types.hpp"
-#include "../../types.hpp"
 
 namespace waffle
 {
@@ -85,5 +84,3 @@ namespace waffle
         return result;
     }
 }
-
-#endif

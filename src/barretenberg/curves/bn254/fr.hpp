@@ -1,16 +1,14 @@
 #pragma once
 
-#include "stdint.h"
+#include <cstdint>
 
-#include "./field.hpp"
+#include "../../fields/field.hpp"
 
 namespace barretenberg
 {
 class FrParams
 {
   public:
-    static constexpr uint64_t b = 0x03UL; // hmm
-
     static constexpr uint64_t modulus_0 = 0x43E1F593F0000001UL;
     static constexpr uint64_t modulus_1 = 0x2833E84879B97091UL;
     static constexpr uint64_t modulus_2 = 0xB85045B68181585DUL;

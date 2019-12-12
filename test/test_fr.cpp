@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/fields/fr.hpp>
+#include <barretenberg/curves/bn254/fr.hpp>
 
 using namespace barretenberg;
 
@@ -19,7 +19,7 @@ TEST(fr, eq)
     EXPECT_EQ(fr::eq(a, f), false);
 }
 
-TEST(fr, iszero)
+TEST(fr, is_zero)
 {
     fr::field_t a = fr::zero;
     fr::field_t b = fr::zero;
@@ -31,11 +31,11 @@ TEST(fr, iszero)
     c.data[1] = 1;
     d.data[2] = 1;
     e.data[3] = 1;
-    EXPECT_EQ(fr::iszero(a), true);
-    EXPECT_EQ(fr::iszero(b), false);
-    EXPECT_EQ(fr::iszero(c), false);
-    EXPECT_EQ(fr::iszero(d), false);
-    EXPECT_EQ(fr::iszero(e), false);
+    EXPECT_EQ(fr::is_zero(a), true);
+    EXPECT_EQ(fr::is_zero(b), false);
+    EXPECT_EQ(fr::is_zero(c), false);
+    EXPECT_EQ(fr::is_zero(d), false);
+    EXPECT_EQ(fr::is_zero(e), false);
 }
 
 TEST(fr, random_element)
@@ -44,8 +44,8 @@ TEST(fr, random_element)
     fr::field_t b = fr::random_element();
 
     EXPECT_EQ(fr::eq(a, b), false);
-    EXPECT_EQ(fr::iszero(a), false);
-    EXPECT_EQ(fr::iszero(b), false);
+    EXPECT_EQ(fr::is_zero(a), false);
+    EXPECT_EQ(fr::is_zero(b), false);
 }
 
 TEST(fr, mul)

@@ -1,8 +1,7 @@
-#ifndef PLONK_FIELD_TCC
-#define PLONK_FIELD_TCC
+#pragma once
 
 #include "../../../assert.hpp"
-#include "../../../fields/fr.hpp"
+#include "../../../curves/bn254/fr.hpp"
 #include "../../composer/composer_base.hpp"
 #include "../bool/bool.hpp"
 
@@ -370,5 +369,3 @@ template <typename ComposerContext> barretenberg::fr::field_t field_t<ComposerCo
 }
 } // namespace stdlib
 } // namespace plonk
-
-#endif

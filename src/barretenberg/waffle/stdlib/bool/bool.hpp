@@ -1,7 +1,6 @@
-#ifndef PLONK_BOOL_HPP
-#define PLONK_BOOL_HPP
+#pragma once
 
-#include "../../../fields/fr.hpp"
+#include "../../../curves/bn254/fr.hpp"
 #include "../common.hpp"
 
 namespace plonk
@@ -87,4 +86,3 @@ public:
 }
 
 #include "./bool.tcc"
-#endif

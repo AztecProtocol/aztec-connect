@@ -1,5 +1,4 @@
-#ifndef ARITHMETIC_WIDGET_HPP
-#define ARITHMETIC_WIDGET_HPP
+#pragma once
 
 #include "./base_widget.hpp"
 
@@ -50,7 +49,4 @@ public:
     barretenberg::polynomial q_o;
     barretenberg::polynomial q_c;
 };
-
-
 }
-#endif

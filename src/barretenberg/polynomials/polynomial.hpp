@@ -1,5 +1,4 @@
-#ifndef POLYNOMIAL_HPP
-#define POLYNOMIAL_HPP
+#pragma once
 
 #include "../types.hpp"
 
@@ -55,7 +54,7 @@ public:
 
 private:
     void zero_memory(const size_t zero_size);
-    const static size_t DEFAULT_SIZE_HINT = 1 << 20;
+    const static size_t DEFAULT_SIZE_HINT = 1 << 12;
     const static size_t DEFAULT_PAGE_SPILL = 20;
     void add_coefficient_internal(const barretenberg::fr::field_t &coefficient);
     void bump_memory(const size_t new_size);
@@ -68,4 +67,3 @@ private:
     size_t allocated_pages;
 };
 }
-#endif

@@ -10,11 +10,11 @@ using namespace benchmark;
 
 #include <barretenberg/types.hpp>
 
-#include <barretenberg/fields/fq.hpp>
-#include <barretenberg/fields/fr.hpp>
-#include <barretenberg/groups/g1.hpp>
-#include <barretenberg/groups/g2.hpp>
-#include <barretenberg/groups/pairing.hpp>
+#include <barretenberg/curves/bn254/fq.hpp>
+#include <barretenberg/curves/bn254/fr.hpp>
+#include <barretenberg/curves/bn254/g1.hpp>
+#include <barretenberg/curves/bn254/g2.hpp>
+#include <barretenberg/curves/bn254/pairing.hpp>
 #include <barretenberg/groups/wnaf.hpp>
 #include <barretenberg/io/io.hpp>
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>

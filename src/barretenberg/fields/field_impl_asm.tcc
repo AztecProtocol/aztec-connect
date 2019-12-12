@@ -1,7 +1,7 @@
 #pragma once
 
-#include "stdint.h"
-#include "unistd.h"
+#include <cstdint>
+#include <unistd.h>
 
 #include "../assert.hpp"
 
@@ -25,7 +25,7 @@ constexpr uint64_t zero_reference = 0;
  * copy src into dest. AVX implementation requires words to be aligned on 32 byte bounary
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__copy(const field_t &src, field_t &dest)
+inline void field<FieldParams>::__copy(const field_t &src, field_t &dest) noexcept
 {
 #if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src.data & 0x1f) == 0));
@@ -56,7 +56,7 @@ inline void field<FieldParams>::__copy(const field_t &src, field_t &dest)
  * Conditionally subtract p from field element a, store result in r
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::reduce_once(const field_t &a, field_t &r)
+inline void field<FieldParams>::reduce_once(const field_t &a, field_t &r) noexcept
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -73,7 +73,7 @@ inline void field<FieldParams>::reduce_once(const field_t &a, field_t &r)
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__add(const field_t &a, const field_t &b, field_t &r)
+inline void field<FieldParams>::__add(const field_t &a, const field_t &b, field_t &r) noexcept
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -90,7 +90,7 @@ inline void field<FieldParams>::__add(const field_t &a, const field_t &b, field_
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void field<FieldParams>::__add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r) noexcept
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -107,7 +107,7 @@ inline void field<FieldParams>::__add_with_coarse_reduction(const field_t &a, co
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__add_without_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void field<FieldParams>::__add_without_reduction(const field_t &a, const field_t &b, field_t &r) noexcept
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -124,7 +124,7 @@ inline void field<FieldParams>::__add_without_reduction(const field_t &a, const 
  * We assume all field elements are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__quad_with_coarse_reduction(const field_t &a, field_t &r)
+inline void field<FieldParams>::__quad_with_coarse_reduction(const field_t &a, field_t &r) noexcept
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -143,7 +143,7 @@ inline void field<FieldParams>::__quad_with_coarse_reduction(const field_t &a, f
  * We assume all field elements are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__oct_with_coarse_reduction(const field_t &a, field_t &r)
+inline void field<FieldParams>::__oct_with_coarse_reduction(const field_t &a, field_t &r) noexcept
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -167,7 +167,7 @@ inline void field<FieldParams>::__oct_with_coarse_reduction(const field_t &a, fi
  * We assume all field elements are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__paralell_double_and_add_without_reduction(field_t &x_0, const field_t &y_0, const field_t &y_1, field_t &r)
+inline void field<FieldParams>::__paralell_double_and_add_without_reduction(field_t &x_0, const field_t &y_0, const field_t &y_1, field_t &r) noexcept
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -186,7 +186,7 @@ inline void field<FieldParams>::__paralell_double_and_add_without_reduction(fiel
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__sub(const field_t &a, const field_t &b, field_t &r)
+inline void field<FieldParams>::__sub(const field_t &a, const field_t &b, field_t &r) noexcept
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -206,7 +206,7 @@ inline void field<FieldParams>::__sub(const field_t &a, const field_t &b, field_
  * We assume both `b` and `a` are 254 bit integers, and skip the relevant carry checks on the most significant limb
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void field<FieldParams>::__sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r) noexcept
 {
     __asm__(
         CLEAR_FLAGS("%%r12")
@@ -224,7 +224,7 @@ inline void field<FieldParams>::__sub_with_coarse_reduction(const field_t &a, co
  * Copy `a` into `r`. If `predicate == true`, subtract modulus from r
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__conditionally_subtract_double_modulus(const field_t &a, field_t &r, const uint64_t predicate)
+inline void field<FieldParams>::__conditionally_subtract_double_modulus(const field_t &a, field_t &r, const uint64_t predicate) noexcept
 {
     // TODO use literals instead of memory references
     __asm__ (
@@ -254,7 +254,7 @@ inline void field<FieldParams>::__conditionally_subtract_double_modulus(const fi
  * We assume `a` is 254 bits and do not perform carry checks on most significant limb
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__sqr(const field_t &a, field_t &r)
+inline void field<FieldParams>::__sqr(const field_t &a, field_t &r) noexcept
 {
     /**
      * Registers: rax:rdx = multiplication accumulator
@@ -279,7 +279,7 @@ inline void field<FieldParams>::__sqr(const field_t &a, field_t &r)
  * We assume `a` is 254 bits and do not perform carry checks on most significant limb
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__sqr_without_reduction(const field_t &a, field_t &r)
+inline void field<FieldParams>::__sqr_with_coarse_reduction(const field_t &a, field_t &r) noexcept
 {
     /**
      * Registers: rax:rdx = multiplication accumulator
@@ -303,7 +303,7 @@ inline void field<FieldParams>::__sqr_without_reduction(const field_t &a, field_
  * We assume `a` is 254 bits and do not perform carry checks on most significant limb
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__mul(const field_t &a, const field_t &b, field_t &r)
+inline void field<FieldParams>::__mul(const field_t &a, const field_t &b, field_t &r) noexcept
 {
     /**
      * Registers: rax:rdx = multiplication accumulator
@@ -328,7 +328,7 @@ inline void field<FieldParams>::__mul(const field_t &a, const field_t &b, field_
  * We assume `a` is 254 bits and do not perform carry checks on most significant limb
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__mul_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r)
+inline void field<FieldParams>::__mul_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r) noexcept
 {
     /**
      * Registers: rax:rdx = multiplication accumulator
@@ -348,7 +348,7 @@ inline void field<FieldParams>::__mul_with_coarse_reduction(const field_t &a, co
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__mul_512(const field_t &a, const field_t &b, field_wide_t &r)
+inline void field<FieldParams>::__mul_512(const field_t &a, const field_t &b, field_wide_t &r) noexcept
 {
     // TODO REMOVE THIS
     //uint64_t cache[4] = { b.data[0], b.data[1], b.data[2], b.data[3] };
@@ -516,7 +516,7 @@ inline void field<FieldParams>::__mul_512(const field_t &a, const field_t &b, fi
  * swap src and dest. AVX implementation requires words to be aligned on 32 byte bounary
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__swap(field_t &src, field_t &dest)
+inline void field<FieldParams>::__swap(field_t &src, field_t &dest) noexcept
 {
 #if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src.data & 0x1f) == 0));

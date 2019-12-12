@@ -1,4 +1,4 @@
-#include <barretenberg/fields/fr.hpp>
+#include <barretenberg/curves/bn254/fr.hpp>
 #include <barretenberg/groups/wnaf.hpp>
 
 #include <gtest/gtest.h>

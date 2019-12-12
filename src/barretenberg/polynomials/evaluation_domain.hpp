@@ -1,8 +1,7 @@
 #pragma once
 
 #include "../types.hpp"
-#include "../fields/fr.hpp"
-#include "stdio.h"
+#include "../curves/bn254/fr.hpp"
 #include <vector>
 
 namespace barretenberg

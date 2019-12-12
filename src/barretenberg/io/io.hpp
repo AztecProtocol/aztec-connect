@@ -1,14 +1,13 @@
-#ifndef IO
-#define IO
+#pragma once
 
-#include "memory.h"
-#include "stddef.h"
-#include "stdint.h"
+#include <memory.h>
+#include <cstddef>
+#include <cstdint>
 
 #include "../assert.hpp"
-#include "../fields/fq.hpp"
-#include "../groups/g1.hpp"
-#include "../groups/g2.hpp"
+#include "../curves/bn254/fq.hpp"
+#include "../curves/bn254/g1.hpp"
+#include "../curves/bn254/g2.hpp"
 #include "../types.hpp"
 
 #ifdef _WIN32
@@ -57,7 +56,7 @@ inline size_t get_transcript_size(const Manifest& manifest)
 {
     const size_t manifest_size = sizeof(Manifest);
     const size_t g1_buffer_size = sizeof(fq::field_t) * 2 * manifest.num_g1_points;
-    const size_t g2_buffer_size = sizeof(fq2::fq2_t) * 2 * manifest.num_g2_points;
+    const size_t g2_buffer_size = sizeof(fq2::field_t) * 2 * manifest.num_g2_points;
     return manifest_size + g1_buffer_size + g2_buffer_size + BLAKE2B_CHECKSUM_LENGTH;
 }
 
@@ -170,7 +169,7 @@ read_transcript(g1::affine_element* monomials, g2::affine_element& g2_x, size_t 
 
     const size_t g1_buffer_size = sizeof(fq::field_t) * 2 * (degree - 1);
     const size_t g2_buffer_offset = sizeof(fq::field_t) * 2 * manifest.num_g1_points;
-    const size_t g2_buffer_size = sizeof(fq2::fq2_t) * 2 * 2;
+    const size_t g2_buffer_size = sizeof(fq2::field_t) * 2 * 2;
 
     g2::affine_element* g2_buffer = (g2::affine_element*)(aligned_alloc(32, sizeof(g2::affine_element) * (2)));
 
@@ -183,5 +182,3 @@ read_transcript(g1::affine_element* monomials, g2::affine_element& g2_x, size_t 
 }
 } // namespace io
 } // namespace barretenberg
-
-#endif

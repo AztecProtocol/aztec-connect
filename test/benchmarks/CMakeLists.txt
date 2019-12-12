@@ -132,3 +132,43 @@ set_target_properties(
 
     RUNTIME_OUTPUT_DIRECTORY ..
 )
+
+
+add_executable(
+    mimc_bench
+    bench_mimc.cpp
+)
+
+if (WIN32)
+    target_link_libraries(
+        mimc_bench
+        PUBLIC
+        barretenberg
+        PRIVATE
+        benchmark
+        wsock32
+        ws2_32
+    )
+else()
+    target_link_libraries(
+        mimc_bench
+        PUBLIC
+        barretenberg
+        PRIVATE
+        benchmark
+    )
+endif()
+
+target_include_directories(
+    mimc_bench
+    PRIVATE
+        ${private_include_dir}
+        ${include_dir}
+)
+
+set_target_properties(
+    mimc_bench
+    PROPERTIES
+
+    RUNTIME_OUTPUT_DIRECTORY ..
+)

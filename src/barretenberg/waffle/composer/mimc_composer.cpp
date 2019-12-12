@@ -1,10 +1,10 @@
 #include "./mimc_composer.hpp"
 
-#include "../../assert.hpp"
-#include "../../fields/fr.hpp"
-#include "../proof_system/widgets/mimc_widget.hpp"
+#include <math.h>
 
-#include "math.h"
+#include "../../assert.hpp"
+#include "../../curves/bn254/fr.hpp"
+#include "../proof_system/widgets/mimc_widget.hpp"
 
 using namespace barretenberg;
 

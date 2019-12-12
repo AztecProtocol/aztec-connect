@@ -6,8 +6,8 @@
 #include <barretenberg/polynomials/polynomial.hpp>
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 
-#include <barretenberg/groups/g1.hpp>
-#include <barretenberg/groups/scalar_multiplication.hpp>
+#include <barretenberg/curves/bn254/g1.hpp>
+#include <barretenberg/curves/bn254/scalar_multiplication.hpp>
 
 /*
 ```

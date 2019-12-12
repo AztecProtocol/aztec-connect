@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/groups/g2.hpp>
-#include <barretenberg/fields/fr.hpp>
+#include <barretenberg/curves/bn254/g2.hpp>
+#include <barretenberg/curves/bn254/fr.hpp>
 
 using namespace barretenberg;
 
@@ -184,7 +184,7 @@ TEST(g2, mixed_add_exception_test_infinity)
 {
     g2::element lhs = g2::one();
     g2::affine_element rhs = g2::random_affine_element();
-    fq2::copy(rhs.x, lhs.x);
+    fq2::__copy(rhs.x, lhs.x);
     fq2::__neg(rhs.y, lhs.y);
 
     g2::element result;
@@ -246,14 +246,14 @@ TEST(g2, batch_normalize)
 
     for (size_t i = 0; i < num_points; ++i)
     {
-        fq2::fq2_t zz;
-        fq2::fq2_t zzz;
-        fq2::fq2_t result_x;
-        fq2::fq2_t result_y;
-        fq2::sqr(points[i].z, zz);
-        fq2::mul(points[i].z, zz, zzz);
-        fq2::mul(normalized[i].x, zz, result_x);
-        fq2::mul(normalized[i].y, zzz, result_y);
+        fq2::field_t zz;
+        fq2::field_t zzz;
+        fq2::field_t result_x;
+        fq2::field_t result_y;
+        fq2::__sqr(points[i].z, zz);
+        fq2::__mul(points[i].z, zz, zzz);
+        fq2::__mul(normalized[i].x, zz, result_x);
+        fq2::__mul(normalized[i].y, zzz, result_y);
 
         EXPECT_EQ(fq2::eq(result_x, points[i].x), true);
         EXPECT_EQ(fq2::eq(result_y, points[i].y), true);

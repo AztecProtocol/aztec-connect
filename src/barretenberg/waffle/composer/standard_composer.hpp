@@ -1,5 +1,4 @@
-#ifndef STANDARD_COMPOSER_HPP
-#define STANDARD_COMPOSER_HPP
+#pragma once
 
 #include "./composer_base.hpp"
 
@@ -39,4 +38,3 @@ public:
     std::vector<barretenberg::fr::field_t> q_c;
 };
 }
-#endif

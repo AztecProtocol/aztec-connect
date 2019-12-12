@@ -1,7 +1,7 @@
 #pragma once
 
-#include "stdint.h"
-#include "unistd.h"
+#include <cstdint>
+#include <unistd.h>
 
 #include "../assert.hpp"
 
@@ -238,7 +238,7 @@ inline void field<FieldParams>::__sqr(const field_t& a, field_t& r)
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__sqr_without_reduction(const field_t& a, field_t& r)
+inline void field<FieldParams>::__sqr_with_coarse_reduction(const field_t& a, field_t& r)
 {
     field_wide_t temp;
     __mul_512(a, a, temp);

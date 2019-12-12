@@ -1,8 +1,8 @@
 #pragma once
 
-#include "stddef.h"
-#include "stdint.h"
-#include "stdlib.h"
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
 
 // TODO: WARNING! getentropy is using rand()! Should probably be called dontgetentropy()!
 #ifdef _WIN32

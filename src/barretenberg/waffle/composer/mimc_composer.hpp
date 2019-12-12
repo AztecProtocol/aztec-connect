@@ -1,5 +1,4 @@
-#ifndef MIMC_COMPOSER_HPP
-#define MIMC_COMPOSER_HPP
+#pragma once
 
 #include "./standard_composer.hpp"
 
@@ -44,4 +43,3 @@ public:
     uint32_t zero_idx;
 };
 }
-#endif

@@ -1,8 +1,8 @@
-#ifndef STDLIB_COMMON_HPP
-#define STDLIB_COMMON_HPP
+#pragma once
 
-#include "../../fields/fr.hpp"
-#include "stdint.h"
+#include <cstdint>
+
+#include "../../curves/bn254/fr.hpp"
 
 namespace plonk
 {
@@ -55,5 +55,3 @@ struct witness_t
 };   
 }
 }
-
-#endif

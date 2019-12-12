@@ -1,16 +1,14 @@
 #pragma once
 
-#include "stdint.h"
+#include <cstdint>
 
-#include "./field.hpp"
+#include "../../fields/field.hpp"
 
 namespace barretenberg
 {
-class FqParams
+class Bn254FqParams
 {
 public:
-    static constexpr uint64_t b = 0x03UL; // hmm
-
     static constexpr uint64_t modulus_0 = 0x3C208C16D87CFD47UL;
     static constexpr uint64_t modulus_1 = 0x97816a916871ca8dUL;
     static constexpr uint64_t modulus_2 = 0xb85045b68181585dUL;
@@ -57,30 +55,30 @@ public:
     static constexpr uint64_t cube_root_2 = 0xaa303344d4741444UL;
     static constexpr uint64_t cube_root_3 = 0x2c3b3f0d26594943UL;
 
-    static constexpr size_t primitive_root_log_size = 0;
-    static constexpr uint64_t primitive_root_0 = 0;
-    static constexpr uint64_t primitive_root_1 = 0;
-    static constexpr uint64_t primitive_root_2 = 0;
-    static constexpr uint64_t primitive_root_3 = 0;
+    static constexpr size_t primitive_root_log_size = 0UL;
+    static constexpr uint64_t primitive_root_0 = 0UL;
+    static constexpr uint64_t primitive_root_1 = 0UL;
+    static constexpr uint64_t primitive_root_2 = 0UL;
+    static constexpr uint64_t primitive_root_3 = 0UL;
 
     static constexpr uint64_t r_inv = 0x87d20782e4866389UL;
 
     // TODO: fill these in. Currently not needed
-    static constexpr uint64_t multiplicative_generator_0 = 0x00;
-    static constexpr uint64_t multiplicative_generator_1 = 0x00;
-    static constexpr uint64_t multiplicative_generator_2 = 0x00;
-    static constexpr uint64_t multiplicative_generator_3 = 0x00;
+    static constexpr uint64_t multiplicative_generator_0 = 0UL;
+    static constexpr uint64_t multiplicative_generator_1 = 0UL;
+    static constexpr uint64_t multiplicative_generator_2 = 0UL;
+    static constexpr uint64_t multiplicative_generator_3 = 0UL;
 
-    static constexpr uint64_t multiplicative_generator_inverse_0 = 0x00;
-    static constexpr uint64_t multiplicative_generator_inverse_1 = 0x00;
-    static constexpr uint64_t multiplicative_generator_inverse_2 = 0x00;
-    static constexpr uint64_t multiplicative_generator_inverse_3 = 0x00;
+    static constexpr uint64_t multiplicative_generator_inverse_0 = 0UL;
+    static constexpr uint64_t multiplicative_generator_inverse_1 = 0UL;
+    static constexpr uint64_t multiplicative_generator_inverse_2 = 0UL;
+    static constexpr uint64_t multiplicative_generator_inverse_3 = 0UL;
 
-    static constexpr uint64_t alternate_multiplicative_generator_0 = 0x00;
-    static constexpr uint64_t alternate_multiplicative_generator_1 = 0x00;
-    static constexpr uint64_t alternate_multiplicative_generator_2 = 0x00;
-    static constexpr uint64_t alternate_multiplicative_generator_3 = 0x00;
+    static constexpr uint64_t alternate_multiplicative_generator_0 = 0UL;
+    static constexpr uint64_t alternate_multiplicative_generator_1 = 0UL;
+    static constexpr uint64_t alternate_multiplicative_generator_2 = 0UL;
+    static constexpr uint64_t alternate_multiplicative_generator_3 = 0UL;
 };
 
-typedef field<FqParams> fq;
+typedef field<Bn254FqParams> fq;
 }

@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/fields/fr.hpp>
-#include <barretenberg/fields/fq.hpp>
-#include <barretenberg/groups/g1.hpp>
+#include <barretenberg/curves/bn254/fr.hpp>
+#include <barretenberg/curves/bn254/fq.hpp>
+#include <barretenberg/curves/bn254/g1.hpp>
 
 using namespace barretenberg;
 

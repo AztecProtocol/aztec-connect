@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/fields/fq.hpp>
+#include <barretenberg/curves/bn254/fq.hpp>
 
 using namespace barretenberg;
 
@@ -19,7 +19,7 @@ TEST(fq, eq)
     EXPECT_EQ(fq::eq(a, f), false);
 }
 
-TEST(fq, iszero)
+TEST(fq, is_zero)
 {
     fq::field_t a = fq::zero;
     fq::field_t b = fq::zero;
@@ -31,11 +31,11 @@ TEST(fq, iszero)
     c.data[1] = 1;
     d.data[2] = 1;
     e.data[3] = 1;
-    EXPECT_EQ(fq::iszero(a), true);
-    EXPECT_EQ(fq::iszero(b), false);
-    EXPECT_EQ(fq::iszero(c), false);
-    EXPECT_EQ(fq::iszero(d), false);
-    EXPECT_EQ(fq::iszero(e), false);
+    EXPECT_EQ(fq::is_zero(a), true);
+    EXPECT_EQ(fq::is_zero(b), false);
+    EXPECT_EQ(fq::is_zero(c), false);
+    EXPECT_EQ(fq::is_zero(d), false);
+    EXPECT_EQ(fq::is_zero(e), false);
 }
 
 TEST(fq, random_element)
@@ -44,8 +44,8 @@ TEST(fq, random_element)
     fq::field_t b = fq::random_element();
 
     EXPECT_EQ(fq::eq(a, b), false);
-    EXPECT_EQ(fq::iszero(a), false);
-    EXPECT_EQ(fq::iszero(b), false);
+    EXPECT_EQ(fq::is_zero(a), false);
+    EXPECT_EQ(fq::is_zero(b), false);
 }
 
 TEST(fq, mul_check_against_constants)

@@ -1,5 +1,4 @@
-#ifndef MIMC_WIDGET_HPP
-#define MIMC_WIDGET_HPP
+#pragma once
 
 #include "./base_widget.hpp"
 #include "./arithmetic_widget.hpp"
@@ -46,7 +45,4 @@ public:
 
     size_t n;
 };
-
-
 }
-#endif

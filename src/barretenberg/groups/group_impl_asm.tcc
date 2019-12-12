@@ -1,32 +1,42 @@
 #pragma once
 
-#include "stdint.h"
+#include <cstdint>
 
 namespace barretenberg
 {
 // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-template <typename coordinate_field, typename subgroup_field>
-inline void group<coordinate_field, subgroup_field>::copy(affine_element* src, affine_element* dest)
+template <typename coordinate_field, typename subgroup_field, typename GroupParams>
+inline void group<coordinate_field, subgroup_field, GroupParams>::copy(affine_element* src, affine_element* dest)
 {
+    if constexpr (GroupParams::small_elements)
+    {
 #if defined __AVX__ && defined USE_AVX
-    ASSERT((((uintptr_t)src & 0x1f) == 0));
-    ASSERT((((uintptr_t)dest & 0x1f) == 0));
-    __asm__ __volatile__("vmovdqa 0(%0), %%ymm0              \n\t"
-                         "vmovdqa 32(%0), %%ymm1             \n\t"
-                         "vmovdqa %%ymm0, 0(%1)              \n\t"
-                         "vmovdqa %%ymm1, 32(%1)             \n\t"
-                         :
-                         : "r"(src), "r"(dest)
-                         : "%ymm0", "%ymm1", "memory");
+        ASSERT((((uintptr_t)src & 0x1f) == 0));
+        ASSERT((((uintptr_t)dest & 0x1f) == 0));
+        __asm__ __volatile__("vmovdqa 0(%0), %%ymm0              \n\t"
+                             "vmovdqa 32(%0), %%ymm1             \n\t"
+                             "vmovdqa %%ymm0, 0(%1)              \n\t"
+                             "vmovdqa %%ymm1, 32(%1)             \n\t"
+                             :
+                             : "r"(src), "r"(dest)
+                             : "%ymm0", "%ymm1", "memory");
 #else
-    coordinate_field::copy(src->x, dest->x);
-    coordinate_field::copy(src->y, dest->y);
+        coordinate_field::__copy(src->x, dest->x);
+        coordinate_field::__copy(src->y, dest->y);
 #endif
+    }
+    else
+    {
+        coordinate_field::__copy(src->x, dest->x);
+        coordinate_field::__copy(src->y, dest->y);   
+    }
 }
 
 // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-template <typename coordinate_field, typename subgroup_field>
-inline void group<coordinate_field, subgroup_field>::copy(element* src, element* dest)
+template <typename coordinate_field, typename subgroup_field, typename GroupParams>
+inline void group<coordinate_field, subgroup_field, GroupParams>::copy(element* src, element* dest)
+{
+if constexpr (GroupParams::small_elements)
 {
 #if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src & 0x1f) == 0));
@@ -41,16 +51,26 @@ inline void group<coordinate_field, subgroup_field>::copy(element* src, element*
                          : "r"(src), "r"(dest)
                          : "%ymm0", "%ymm1", "%ymm2", "memory");
 #else
-    coordinate_field::copy(src->x, dest->x);
-    coordinate_field::copy(src->y, dest->y);
-    coordinate_field::copy(src->z, dest->z);
+    coordinate_field::__copy(src->x, dest->x);
+    coordinate_field::__copy(src->y, dest->y);
+    coordinate_field::__copy(src->z, dest->z);
 #endif
+}
+else
+{
+    coordinate_field::__copy(src->x, dest->x);
+    coordinate_field::__copy(src->y, dest->y);
+    coordinate_field::__copy(src->z, dest->z);
+   
+}
 }
 
 // copies src into dest, inverting y-coordinate if 'predicate' is true
 // n.b. requires src and dest to be aligned on 32 byte boundary
-template <typename coordinate_field, typename subgroup_field>
-inline void group<coordinate_field, subgroup_field>::conditional_negate_affine(affine_element* src, affine_element* dest, uint64_t predicate)
+template <typename coordinate_field, typename subgroup_field, typename GroupParams>
+inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_negate_affine(affine_element* src, affine_element* dest, uint64_t predicate)
+{
+if constexpr (GroupParams::small_elements)
 {
 #if defined __AVX__ && defined USE_AVX
     ASSERT((((uintptr_t)src & 0x1f) == 0));
@@ -117,6 +137,19 @@ inline void group<coordinate_field, subgroup_field>::conditional_negate_affine(a
                          : "r"(src), "r"(dest), "r"(predicate)
                          : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "memory", "cc");
 #endif
+}
+else
+{
+    if (predicate)
+    {
+        coordinate_field::__copy(src->x, dest->x);
+        coordinate_field::__neg(src->y, dest->y);
+    }
+    else
+    {
+        copy_affine(*src, *dest);
+    }
+}
 }
 
 } // namespace barretenberg

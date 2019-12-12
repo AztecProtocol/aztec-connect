@@ -2,10 +2,10 @@
 
 #include <vector>
 
-#include <barretenberg/fields/fq.hpp>
-#include <barretenberg/fields/fr.hpp>
-#include <barretenberg/groups/g1.hpp>
-#include <barretenberg/groups/scalar_multiplication.hpp>
+#include <barretenberg/curves/bn254/fq.hpp>
+#include <barretenberg/curves/bn254/fr.hpp>
+#include <barretenberg/curves/bn254/g1.hpp>
+#include <barretenberg/curves/bn254/scalar_multiplication.hpp>
 
 using namespace barretenberg;
 
