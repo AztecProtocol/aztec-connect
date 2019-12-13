@@ -30,11 +30,11 @@ template <typename ComposerContext> class uint32 {
     uint32& operator=(const uint32_t value);
     uint32& operator=(const witness_t<ComposerContext>& value);
 
-    uint32 operator+(const uint32& other);
+    uint32 operator+(const uint32& other) const;
     uint32 operator-(const uint32& other) const;
     uint32 operator*(const uint32& other) const;
-    uint32 operator/(const uint32& other);
-    uint32 operator%(const uint32& other);
+    uint32 operator/(const uint32& other) const;
+    uint32 operator%(const uint32& other) const;
     uint32 operator&(const uint32& other) const;
     uint32 operator|(const uint32& other) const;
     uint32 operator^(const uint32& other) const;
@@ -43,8 +43,8 @@ template <typename ComposerContext> class uint32 {
     uint32 operator>>(const uint32_t const_shift);
     uint32 operator<<(const uint32_t const_shift);
 
-    uint32 ror(const uint32_t const_rotation);
-    uint32 rol(const uint32_t const_rotation);
+    uint32 ror(const uint32_t const_rotation) const;
+    uint32 rol(const uint32_t const_rotation) const;
 
     bool_t<ComposerContext> operator>(const uint32& other) const;
     bool_t<ComposerContext> operator<(const uint32& other) const;
@@ -68,6 +68,12 @@ template <typename ComposerContext> class uint32 {
 
     uint32 operator>>=(const uint32& other) { *this = operator>>(other); };
     uint32 operator<<=(const uint32& other) { *this = operator<<(other); };
+
+    bool is_constant() const
+    {
+        normalize();
+        return witness_index == static_cast<uint32_t>(-1);
+    }
 
     uint32_t get_witness_index()
     {

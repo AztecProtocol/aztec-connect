@@ -94,6 +94,7 @@ void add_keywords()
         ("false")
         ("for")
         ("return")
+        ("mutable")
         ;
     // clang-format on
 }
@@ -189,14 +190,7 @@ auto const constant_expr_def =
     ;
 
 auto const array_expr_def =
-        "["
-    >   (
-            ("0x" > hex) % ','
-        |   uint_ % ','
-        |   bool_ % ','
-        |   identifier % ','
-        )
-    >  "]"
+        "[" > (expression % ',') >  "]"
     ;
 
 auto const primary_expr_def =

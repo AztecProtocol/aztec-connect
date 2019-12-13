@@ -21,9 +21,6 @@ class Compiler {
     void operator()(ast::statement_list const& x);
 
   private:
-    var_t call(std::string const& function_name, std::vector<var_t> const& args);
-
-  private:
     CompilerContext ctx_;
 };
 

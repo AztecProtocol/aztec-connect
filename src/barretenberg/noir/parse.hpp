@@ -1,14 +1,10 @@
 #pragma once
 #include "ast.hpp"
 #include "config.hpp"
+#include "skipper.hpp"
 
 namespace noir {
 namespace parser {
-
-namespace {
-namespace x3 = boost::spirit::x3;
-auto const space_comment = x3::ascii::space | x3::lexeme["//" >> *(x3::char_ - x3::eol) >> x3::eol];
-} // namespace
 
 template <typename T, typename AST> AST parse(parser::iterator_type begin, parser::iterator_type end, T const& parser)
 {
@@ -24,7 +20,7 @@ template <typename T, typename AST> AST parse(parser::iterator_type begin, parse
     bool success = phrase_parse(begin, end, eparser, space_comment, ast);
 
     if (!success || begin != end) {
-        throw std::runtime_error("Parser failed.");
+        throw std::runtime_error("Parser failed at: " + std::string(begin, begin + 10));
     }
 
     return ast;

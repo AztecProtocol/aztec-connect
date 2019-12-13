@@ -78,6 +78,7 @@ add_library(
     noir/compiler/compiler.cpp
     noir/compiler/function_statement_visitor.cpp
     noir/compiler/expression_visitor.cpp
+    noir/compiler/function_call.cpp
 )
 
 target_include_directories(
@@ -169,7 +170,6 @@ if(BARRETENBERG_PROFILING)
         waffle/stdlib/mimc.hpp
         noir/expression.cpp
         noir/statement.cpp
-        noir/parse.cpp
     )
 
     target_link_libraries(

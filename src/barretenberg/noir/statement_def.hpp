@@ -7,6 +7,7 @@
 #include "statement.hpp"
 #include <boost/spirit/home/x3.hpp>
 #include <boost/spirit/home/x3/support/utility/annotate_on_success.hpp>
+#include <iostream>
 
 namespace noir {
 namespace parser {
@@ -17,8 +18,25 @@ using x3::string;
 using x3::uint_;
 using namespace x3::ascii;
 
+x3::symbols<ast::qualifier> qualifier;
+
+void add_symbols()
+{
+    qualifier.add("mutable", ast::q_mutable);
+}
+
+struct int_type_class {
+    template <typename Iterator, typename Context>
+    inline void on_success(Iterator const&, Iterator const&, ast::int_type& t, Context const&)
+    {
+        if (t.size < 2 || t.size > 64) {
+            throw std::runtime_error("Bad integer width.");
+        }
+    }
+};
+
 typedef x3::rule<struct statement_list_class, ast::statement_list> statement_list_type;
-typedef x3::rule<struct int_type_class, ast::int_type> int_type_type;
+typedef x3::rule<int_type_class, ast::int_type> int_type_type;
 typedef x3::rule<struct type_id_class, ast::type_id> type_id_type;
 typedef x3::rule<struct variable_declaration_class, ast::variable_declaration> variable_declaration_type;
 typedef x3::rule<struct function_argument_class, ast::function_argument> function_argument_type;
@@ -57,22 +75,14 @@ auto const function_statement_list_def =
         *(variable_declaration | for_statement | return_expr | assignment)
     ;
 
-struct ensure_bit_range
-{
-    template <typename Context>
-    void operator()(Context const& ctx) const
-    {
-        _pass(ctx) = !(_attr(ctx) < 2 || _attr(ctx) > 64);
-    }
-};
-
 auto const int_type_def =
-        lexeme[string("uint") > uint_[ensure_bit_range()]]
-    |   lexeme[string("int") > uint_[ensure_bit_range()]]
+        lexeme[string("uint") > uint_]
+    |   lexeme[string("int") > uint_]
     ;
 
 auto const type_id_def =
-        lexeme[(string("bool") | int_type) >> !(alnum | '_')] > -("[" > uint_ > "]")
+        -(qualifier)
+    >>  lexeme[(string("bool") | int_type) >> !(alnum | '_')] > -("[" > uint_ > "]")
     ;
 
 auto const variable_declaration_def =
@@ -140,11 +150,13 @@ struct variable_class : x3::annotate_on_success {};
 
 parser::statement_type const& statement()
 {
+    parser::add_symbols();
     return parser::statement;
 }
 
 parser::function_statement_type const& function_statement()
 {
+    parser::add_symbols();
     return parser::function_statement;
 }
 } // namespace noir

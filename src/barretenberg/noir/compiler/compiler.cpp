@@ -1,5 +1,6 @@
 #include "compiler.hpp"
 #include "expression_visitor.hpp"
+#include "function_call.hpp"
 #include "function_statement_visitor.hpp"
 #include "var_t.hpp"
 #include <boost/assert.hpp>
@@ -17,16 +18,18 @@ Compiler::Compiler(waffle::StandardComposer& composer)
 
 void Compiler::operator()(ast::variable_declaration const& x)
 {
-    std::cout << "variable declaration " << x.variable << std::endl;
+    std::cout << "global variable declaration " << type_info(x.type) << " " << x.variable << std::endl;
 
-    var_t v = var_t_factory(x, ctx_.composer);
+    var_t v = var_t_factory(x.type, ctx_.composer);
+    std::cout << v << std::endl;
     ctx_.symbol_table.declare(v, x.variable);
 
-    if (x.assignment.has_value()) {
-        ast::assignment assign = { .lhs = x.variable, .rhs = x.assignment.value() };
-        ExpressionVisitor ev(ctx_);
-        ev(assign);
+    if (!x.assignment.has_value()) {
+        throw std::runtime_error("Global variables must be defined.");
     }
+
+    ast::assignment assign = { .lhs = x.variable, .rhs = x.assignment.value() };
+    ExpressionVisitor(ctx_, v.type)(assign);
 }
 
 void Compiler::operator()(ast::function_declaration const& x)
@@ -48,39 +51,12 @@ void Compiler::operator()(ast::statement_list const& x)
     }
 }
 
-var_t Compiler::call(std::string const& function_name, std::vector<var_t> const& args)
-{
-    if (ctx_.functions.find(function_name) == ctx_.functions.end()) {
-        throw std::runtime_error("Function not found: " + function_name);
-    }
-
-    auto func = ctx_.functions[function_name];
-
-    if (args.size() != func.args.size()) {
-        throw std::runtime_error(
-            (boost::format("Function call to %s has incorrect number of arguments. Expected %d, received %d.") %
-             function_name % func.args.size() % args.size())
-                .str());
-    }
-
-    ctx_.symbol_table.push();
-
-    for (size_t i = 0; i < func.args.size(); ++i) {
-        ctx_.symbol_table.declare(args[i], func.args[i].name);
-    }
-
-    FunctionStatementVisitor fsv(ctx_);
-    var_t result = fsv(func.statements.get());
-    ctx_.symbol_table.pop();
-    return result;
-}
-
 std::pair<var_t, waffle::Prover> Compiler::start(ast::statement_list const& x, std::vector<var_t> const& args)
 {
     // Parse top level statements, after which we can reference "main" function.
     (*this)(x);
 
-    var_t result = call("main", args);
+    var_t result = function_call(ctx_, "main", args);
 
     auto prover = ctx_.composer.preprocess();
     printf("prover gates = %lu\n", prover.n);

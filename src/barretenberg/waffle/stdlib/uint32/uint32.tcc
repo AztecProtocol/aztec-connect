@@ -373,7 +373,7 @@ template <typename ComposerContext> void uint32<ComposerContext>::prepare_for_lo
     ASSERT(witness_status == WitnessStatus::OK || witness_status == WitnessStatus::IN_BINARY_FORM);
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator+(const uint32& other)
+template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator+(const uint32& other) const
 {
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();
@@ -600,7 +600,7 @@ uint32<ComposerContext> uint32<ComposerContext>::operator*(const uint32& other) 
     return result;
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator/(const uint32& other)
+template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::operator/(const uint32& other) const
 {
     // a / b = c
     // => c * b = a
@@ -876,7 +876,8 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     return result;
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::ror(const uint32_t const_rotation)
+template <typename ComposerContext>
+uint32<ComposerContext> uint32<ComposerContext>::ror(const uint32_t const_rotation) const
 {
     ASSERT(const_rotation < 32);
     if (const_rotation == 0) {
@@ -896,7 +897,8 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     return result;
 }
 
-template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerContext>::rol(const uint32_t const_rotation)
+template <typename ComposerContext>
+uint32<ComposerContext> uint32<ComposerContext>::rol(const uint32_t const_rotation) const
 {
     if (const_rotation == 0) {
         return (*this);

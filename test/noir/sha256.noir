@@ -13,14 +13,20 @@ uint32[8] init_constants = [
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
 ];
 
-uint32[8] sha256(uint32[16] input)
+uint32[8] sha256_block(uint32[8] h_init, uint32[16] input)
 {
     uint32[64] w;
 
+    /**
+     * Fill first 16 words with the message schedule
+     **/
     for (i in 0..16) {
         w[i] = input[i];
     }
 
+    /**
+     * Extend the input data into the remaining 48 words
+     **/
     for (i in 16..64)
     {
         uint32 s0 = w[i - 15] >>> 7 ^ w[i - 15] >>> 18 ^ w[i - 15] >>> 3;
@@ -28,24 +34,28 @@ uint32[8] sha256(uint32[16] input)
         w[i] = w[i - 16] +  w[i - 7] + s0 + s1;
     }
 
-    uint32 a = init_constants[0];
-    uint32 b = init_constants[1];
-    uint32 c = init_constants[2];
-    uint32 d = init_constants[3];
-    uint32 e = init_constants[4];
-    uint32 f = init_constants[5];
-    uint32 g = init_constants[6];
-    uint32 h = init_constants[7];
+    /**
+     * Initialize round variables with previous block output
+     **/
+    uint32 a = h_init[0];
+    uint32 b = h_init[1];
+    uint32 c = h_init[2];
+    uint32 d = h_init[3];
+    uint32 e = h_init[4];
+    uint32 f = h_init[5];
+    uint32 g = h_init[6];
+    uint32 h = h_init[7];
 
+    /**
+     * Apply SHA-256 compression function to the message schedule
+     **/
     for (i in 0..64) {
-        uint32 S1 = e >>> 7 ^ e >>> 11 ^ e >>> 25;
-        uint32 ch = (e & f) + ((~e) & g);
+        uint32 S1 = e >>> 6 ^ e >>> 11 ^ e >>> 25;
+        uint32 ch = (e & f) + (~e & g);
         uint32 temp1 = h + S1 + ch + round_constants[i] + w[i];
         uint32 S0 = a >>> 2 ^ a >>> 13 ^ a >>> 22;
         uint32 T0 = (b & c);
-        uint32 T1 = b + c - (T0 * 2);
-        uint32 T2 = a & T1;
-        uint32 maj = T2 + T0;
+        uint32 maj = (a & (b + c - (T0 * 2))) + T0; // === (a & b) ^ (a & c) ^ (b & c)
         uint32 temp2 = S0 + maj;
 
         h = g;
@@ -58,11 +68,68 @@ uint32[8] sha256(uint32[16] input)
         a = temp1 + temp2;
     }
 
-    return [ a, b, c, d, e, f, g, h ];
+    /**
+     * Add into previous block output and return
+     **/
+    return [
+        a + h_init[0],
+        b + h_init[1],
+        c + h_init[2],
+        d + h_init[3],
+        e + h_init[4],
+        f + h_init[5],
+        g + h_init[6],
+        h + h_init[7]
+    ];
+}
+
+uint32 get_num_blocks(uint32 num_bits)
+{
+    uint32 extra_bits = 65;
+    uint32 leftovers = (num_bits + extra_bits) % 512;
+    // No conditional support yet. 0 / 0 = 0; x / x = 1;
+    return ((num_bits + extra_bits) / 512) + (leftovers / leftovers);
+}
+
+uint8[32] sha256(uint8[] input)
+{
+    uint32 num_bytes = length(input);
+    uint32 num_bits = num_bytes * 8;
+    uint32 num_blocks = get_num_blocks(num_bits);
+    uint32 total_bits = num_blocks * 512;
+
+    bool[total_bits] data;
+    for (i in 0..num_bytes) {
+        for (j in 0..8) {
+            data[i * 8 + j] = input[i][j];
+        }
+    }
+    data[num_bits + 1] = true;
+    for (i in 0..32) {
+        data[total_bits - 32 + i] = num_bits[i];
+    }
+
+    uint32[8] rolling_hash = init_constants;
+    for (i in 0..num_blocks) {
+        uint32[16] hash_input;
+        for (j in 0..512) {
+            hash_input[j / 32][j % 32] = data[j];
+        }
+        rolling_hash = sha256_block(rolling_hash, hash_input);
+    }
+
+    uint8[32] result;
+    for (i in 0..32) {
+        for (j in 0..8) {
+            result[i][j] = rolling_hash[i * 8 / 32][(i * 8 + j) % 32];
+        }
+    }
+    return result;
 }
 
 uint32[8] main(uint32[16] input) {
-    return sha256(input);
+
+    return sha256_block(init_constants, input);
 }
 
 // native types
@@ -87,3 +154,30 @@ uint32[8] main(uint32[16] input) {
 // field foo = 883737;
 // mymap[i] = foo;
 //}
+
+
+//bitarray
+//string x = "hi";
+//uint8[2] x;
+//bool[16];
+//uint32 z = x;
+
+//Buffer my_buffer = Buffer.from("hello");
+
+//sha256("hello from zac");
+
+//merkle_buffer baz = fs.read_buffer("./local_data.dat");
+//merkle_buffer baz_2 = { 1, 2, 3, 4 };
+
+//map<uint32, 32> foo;
+//mutable storage<uint32, 2048> my_storage("/aztec/foobar.dat");
+
+//uint32 a = 5;
+//uint32 b = 10;
+//uint32 c = a + b;
+
+//uint32 a = 5;
+//uint32 b = 10;
+//a = a + b;
+
+//uint32 bar = foo[12];

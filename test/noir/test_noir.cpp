@@ -1,3 +1,4 @@
+#include <barretenberg/noir/ast.hpp>
 #include <barretenberg/noir/compiler/compiler.hpp>
 #include <barretenberg/noir/parse.hpp>
 #include <fstream>
@@ -12,6 +13,11 @@ uint32_t get_random_int()
     return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
 }
 
+TEST(noir, format_string)
+{
+    EXPECT_EQ(format("hello %s %d", "world", 123), "hello world 123");
+}
+
 TEST(noir, parse_fails)
 {
     EXPECT_THROW(parse("1 + 2; blah"), std::runtime_error);
@@ -19,12 +25,17 @@ TEST(noir, parse_fails)
 
 TEST(noir, uint_sizes)
 {
-    parse("                     \n\
+    auto ast = parse("          \n\
         uint2 my_int2 = 0;      \n\
         uint3 my_int3 = 0;      \n\
         uint32 my_int32 = 0;    \n\
         uint64 my_int64 = 0;    \n\
     ");
+
+    auto type_id = boost::get<noir::ast::variable_declaration>(ast[0]).type;
+    auto int_type = boost::get<noir::ast::int_type>(type_id.type);
+    EXPECT_EQ(int_type.size, 2UL);
+    EXPECT_EQ(type_info(type_id).type_name(), "uint2");
 }
 
 TEST(noir, uint1_fail)
@@ -52,6 +63,11 @@ TEST(noir, array_variable_definition)
     parse("uint32[4] my_var = [0x1, 0x12, 0x123, 0x1234];");
 }
 
+TEST(noir, array_expressions)
+{
+    parse_function_statements("uint32[4] my_var = [func_call(), 13, true];");
+}
+
 TEST(noir, array_index)
 {
     parse_function_statements("my_var = some_array[5*3][1+2];");
@@ -62,6 +78,27 @@ TEST(noir, unary)
     parse_function_statements("my_var = !x;");
 }
 
+/*
+TEST(noir, function_copy_by_value)
+{
+    // TODO: Include mutable keyword on b declaration.
+    std::string code = "            \n\
+        bool[2] main(bool[2] a) {   \n\
+            bool[2] b = a;          \n\
+            b[0] = true;            \n\
+            return b;               \n\
+        }                           \n\
+    ";
+    auto ast = parse(code);
+
+    auto composer = Composer();
+    auto compiler = Compiler(composer);
+    std::vector<var_t> inputs = { std::vector<var_t>(2, bool_t(witness_t(&composer, false))) };
+    auto r = compiler.start(ast, inputs);
+    EXPECT_EQ(boost::get<bool_t>(inputs[0].value).value(), false);
+}
+*/
+
 TEST(noir, bool_circuit)
 {
     std::string code = "                      \n\
@@ -69,7 +106,8 @@ TEST(noir, bool_circuit)
       a = a ^ b;         // a = 1             \n\
       b = !b;            // b = 1 (witness 0) \n\
       bool c = (a == b); // c = 1             \n\
-      bool d = false;    // d = 0             \n\
+      bool d;            // d = ?             \n\
+      d = false;         // d = 0             \n\
       bool e = a | d;    // e = 1 = a         \n\
       bool f = e ^ b;    // f = 0             \n\
       d = (!f) & a;      // d = 1             \n\
@@ -123,15 +161,21 @@ TEST(noir, sha256)
         0x56e08d13, 0x6ed204e6, 0xc7d80b22, 0xa1660521, 0xc2320131, 0xd5ab1f8e, 0x180ede60, 0x6574be20,
     };
 
-    std::vector<uint32> inputs(16);
+    // uint32_t expected[] = {
+    //     0x70f94a7c, 0xc60c3099, 0x93a27a6e, 0xa2b269a1, 0xf8db998a, 0xce7bc970, 0xeb4c360e, 0xc6042b88,
+    // };
+
+    std::vector<var_t> inputs(16, uint32());
     for (size_t i = 0; i < 16; ++i) {
         inputs[i] = uint32(witness_t(&composer, hex_input[i]));
     }
 
-    std::cout << "inputs " << inputs << std::endl;
+    std::vector<var_t> args = { var_t(inputs) };
+
+    std::cout << "circuit inputs " << inputs << std::endl;
 
     auto compiler = Compiler(composer);
-    auto prover = compiler.start(ast, { inputs });
+    auto prover = compiler.start(ast, args);
 
     /*
         std::array<uint32, 8> outputs = plonk::stdlib::sha256(inputs);

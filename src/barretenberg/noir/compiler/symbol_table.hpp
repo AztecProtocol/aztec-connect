@@ -11,24 +11,22 @@ class SymbolTable {
   public:
     SymbolTable() { push(); }
 
-    template <typename T> void operator()(T const& var, std::string const& key)
+    void set(var_t const& var, std::string const& key)
     {
         auto existing = lookup(key);
         if (existing.has_value()) {
-            var_t& v = (*existing.value()).second;
-            if (!boost::get<T>(&v)) {
-                throw std::runtime_error(std::string("Cannot assign, incompatible types: ") + typeid(T).name());
+            var_t& e = (*existing.value()).second;
+            auto e_type = e.type.type_name();
+            auto v_type = var.type.type_name();
+            if (e_type != v_type) {
+                throw std::runtime_error(
+                    format("Cannot assign value with type %s to variable %s with type %s.", v_type, key, e_type));
             }
             std::cout << "SYMBOL TABLE UPDATE: " << key << std::endl;
-            v = var;
+            e = var;
         } else {
             throw std::runtime_error("Symbol not found: " + key);
         }
-    }
-
-    void set(var_t const& var, std::string const& key)
-    {
-        boost::apply_visitor(*this, var, boost::variant<std::string const>(key));
     }
 
     void declare(var_t const& var, std::string const& key)
@@ -37,10 +35,10 @@ class SymbolTable {
             throw std::runtime_error("Symbol already defined in current scope: " + key);
         }
         std::cout << "SYMBOL TABLE ADD: " << key << std::endl;
-        variables_.back()[key] = var;
+        variables_.back().insert(std::make_pair(key, var));
     }
 
-    var_t& operator[](std::string const& key)
+    var_t const& operator[](std::string const& key)
     {
         auto it = lookup(key);
         if (it.has_value()) {

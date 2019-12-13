@@ -28,10 +28,7 @@ struct constant : x3::variant<unsigned int, bool> {
     using base_type::operator=;
 };
 
-struct array : x3::variant<std::vector<bool>, std::vector<unsigned int>, std::vector<std::string>> {
-    using base_type::base_type;
-    using base_type::operator=;
-};
+struct array : std::vector<expression> {};
 
 struct operand : x3::variant<nil,
                              constant,
@@ -72,6 +69,10 @@ enum optoken {
     op_index,
 };
 
+enum qualifier {
+    q_mutable,
+};
+
 struct operation : x3::position_tagged {
     optoken operator_;
     operand operand_;
@@ -99,10 +100,11 @@ struct function_call : x3::position_tagged {
 
 struct int_type {
     std::string type;
-    std::optional<unsigned int> size;
+    size_t size;
 };
 
 struct type_id {
+    std::optional<qualifier> qualifier;
     x3::variant<bool_type, int_type> type;
     std::optional<unsigned int> array_size;
 };
@@ -141,10 +143,8 @@ struct statement : x3::variant<function_declaration, variable_declaration, boost
 
 struct statement_list : std::vector<statement> {};
 
-struct function_statement : x3::variant<variable_declaration,
-                                        assignment,
-                                        boost::recursive_wrapper<for_statement>,
-                                        return_expr> {
+struct function_statement
+    : x3::variant<variable_declaration, assignment, boost::recursive_wrapper<for_statement>, return_expr> {
     using base_type::base_type;
     using base_type::operator=;
 };
