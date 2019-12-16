@@ -25,9 +25,9 @@ template <typename ComposerContext> class uint32 {
 
     uint32(const field_t<ComposerContext>& other);
     uint32(const uint32& other);
-    uint32(uint32&& other);
+    // uint32(uint32&& other);
 
-    ~uint32(){};
+    //~uint32(){};
 
     operator field_t<ComposerContext>();
 
@@ -46,8 +46,8 @@ template <typename ComposerContext> class uint32 {
     uint32 operator>>(const uint32_t const_shift);
     uint32 operator<<(const uint32_t const_shift);
 
-    uint32 ror(const uint32_t const_rotation) const;
-    uint32 rol(const uint32_t const_rotation) const;
+    uint32 ror(const uint32_t const_rotation);
+    uint32 rol(const uint32_t const_rotation);
 
     bool_t<ComposerContext> operator>(const uint32& other) const;
     bool_t<ComposerContext> operator<(const uint32& other) const;
@@ -92,6 +92,9 @@ template <typename ComposerContext> class uint32 {
             return std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0U, [](auto acc, auto wire) {
                 return (acc + acc + wire.get_value());
             });
+        }
+        if (is_constant()) {
+            return (multiplicative_constant * additive_constant);
         }
         uint32_t base =
             static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(context->get_variable(witness_index)).data[0]);

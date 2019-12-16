@@ -48,7 +48,7 @@ struct EqualityVisitor : boost::static_visitor<var_t> {
 };
 
 struct BitwiseOrVisitor : boost::static_visitor<var_t> {
-    template <typename T> var_t operator()(std::vector<T> &, std::vector<T> const&) const
+    template <typename T> var_t operator()(std::vector<T>&, std::vector<T> const&) const
     {
         throw std::runtime_error("No array support.");
     }
@@ -72,7 +72,7 @@ struct BitwiseAndVisitor : boost::static_visitor<var_t> {
 };
 
 struct BitwiseXorVisitor : boost::static_visitor<var_t> {
-    template <typename T> var_t operator()(std::vector<T> &, std::vector<T> const&) const
+    template <typename T> var_t operator()(std::vector<T>&, std::vector<T> const&) const
     {
         throw std::runtime_error("No array support.");
     }
@@ -84,7 +84,7 @@ struct BitwiseXorVisitor : boost::static_visitor<var_t> {
 };
 
 struct BitwiseRorVisitor : boost::static_visitor<var_t> {
-    var_t operator()(uint32 const& lhs, uint32 const& rhs) const
+    var_t operator()(uint32& lhs, uint32 const& rhs) const
     {
         if (!rhs.is_constant()) {
             throw std::runtime_error("Can only perform bitwise rotation by constants.");
@@ -98,7 +98,7 @@ struct BitwiseRorVisitor : boost::static_visitor<var_t> {
 };
 
 struct BitwiseRolVisitor : boost::static_visitor<var_t> {
-    var_t operator()(uint32 const& lhs, uint32 const& rhs) const
+    var_t operator()(uint32& lhs, uint32 const& rhs) const
     {
         if (!rhs.is_constant()) {
             throw std::runtime_error("Can only perform bitwise rotation by constants.");

@@ -9,12 +9,16 @@ namespace stdlib
 
 template <typename ComposerContext>
 bool_t<ComposerContext>::bool_t(const bool value)
-    : context(nullptr), witness_bool(value), witness_inverted(false), witness_index(static_cast<uint32_t>(-1))
+    : context(nullptr)
+    , witness_bool(value)
+    , witness_inverted(false)
+    , witness_index(static_cast<uint32_t>(-1))
 {
 }
 
 template <typename ComposerContext>
-bool_t<ComposerContext>::bool_t(ComposerContext* parent_context) : context(parent_context)
+bool_t<ComposerContext>::bool_t(ComposerContext* parent_context)
+    : context(parent_context)
 {
     witness_bool = false;
     witness_inverted = false;
@@ -22,7 +26,8 @@ bool_t<ComposerContext>::bool_t(ComposerContext* parent_context) : context(paren
 }
 
 template <typename ComposerContext>
-bool_t<ComposerContext>::bool_t(const witness_t<ComposerContext>& value) : context(value.context)
+bool_t<ComposerContext>::bool_t(const witness_t<ComposerContext>& value)
+    : context(value.context)
 {
     ASSERT(barretenberg::fr::eq(value.witness, barretenberg::fr::zero) ||
            barretenberg::fr::eq(value.witness, barretenberg::fr::one));
@@ -33,7 +38,8 @@ bool_t<ComposerContext>::bool_t(const witness_t<ComposerContext>& value) : conte
 }
 
 template <typename ComposerContext>
-bool_t<ComposerContext>::bool_t(ComposerContext* parent_context, const bool value) : context(parent_context)
+bool_t<ComposerContext>::bool_t(ComposerContext* parent_context, const bool value)
+    : context(parent_context)
 {
     context = parent_context;
     witness_index = static_cast<uint32_t>(-1);
@@ -42,7 +48,8 @@ bool_t<ComposerContext>::bool_t(ComposerContext* parent_context, const bool valu
 }
 
 template <typename ComposerContext>
-bool_t<ComposerContext>::bool_t(const bool_t<ComposerContext>& other) : context(other.context)
+bool_t<ComposerContext>::bool_t(const bool_t<ComposerContext>& other)
+    : context(other.context)
 {
     witness_index = other.witness_index;
     witness_bool = other.witness_bool;
@@ -50,7 +57,8 @@ bool_t<ComposerContext>::bool_t(const bool_t<ComposerContext>& other) : context(
 }
 
 template <typename ComposerContext>
-bool_t<ComposerContext>::bool_t(bool_t<ComposerContext>&& other) : context(other.context)
+bool_t<ComposerContext>::bool_t(bool_t<ComposerContext>&& other)
+    : context(other.context)
 {
     witness_index = other.witness_index;
     witness_bool = other.witness_bool;
