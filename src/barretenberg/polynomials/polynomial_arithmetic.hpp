@@ -1,9 +1,7 @@
-#ifndef POLYNOMIAL_ARITHMETIC_HPP
-#define POLYNOMIAL_ARITHMETIC_HPP
+#pragma once
 
 #include "./evaluation_domain.hpp"
 #include "../assert.hpp"
-#include "../types.hpp"
 
 #ifndef NO_MULTITHREADING
 #include <omp.h>
@@ -63,5 +61,3 @@ lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, const evalua
 void compress_fft(const fr::field_t *src, fr::field_t *dest, const size_t current_size, const size_t compress_factor);
 } // namespace polynomials
 } // namespace barretenberg
-
-#endif

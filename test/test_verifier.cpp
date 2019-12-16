@@ -18,13 +18,7 @@ void generate_test_data(waffle::Prover& state)
     std::unique_ptr<waffle::ProverArithmeticWidget> widget = std::make_unique<waffle::ProverArithmeticWidget>(n);
     // state.widgets.emplace_back(std::make_unique<waffle::ProverArithmeticWidget>(n));
 
-    // create some constraints that satisfy our arithmetic circuit relation
-    fr::field_t one;
-    fr::field_t zero;
-    fr::field_t minus_one;
-    fr::one(one);
-    fr::__neg(one, minus_one);
-    fr::zero(zero);
+
     fr::field_t T0;
     // even indices = mul gates, odd incides = add gates
 
@@ -39,12 +33,12 @@ void generate_test_data(waffle::Prover& state)
         fr::__mul(state.w_l.at(2 * i), state.w_r.at(2 * i), state.w_o.at(2 * i));
         fr::__add(state.w_o[2 * i], state.w_l[2 * i], state.w_o[2 * i]);
         fr::__add(state.w_o[2 * i], state.w_r[2 * i], state.w_o[2 * i]);
-        fr::__add(state.w_o[2 * i], fr::one(), state.w_o[2 * i]);
-        fr::copy(one, widget->q_l.at(2 * i));
-        fr::copy(one, widget->q_r.at(2 * i));
-        fr::copy(minus_one, widget->q_o.at(2 * i));
-        fr::copy(one, widget->q_c.at(2 * i));
-        fr::copy(one, widget->q_m.at(2 * i));
+        fr::__add(state.w_o[2 * i], fr::one, state.w_o[2 * i]);
+        fr::__copy(fr::one, widget->q_l.at(2 * i));
+        fr::__copy(fr::one, widget->q_r.at(2 * i));
+        fr::__copy(fr::neg_one(), widget->q_o.at(2 * i));
+        fr::__copy(fr::one, widget->q_c.at(2 * i));
+        fr::__copy(fr::one, widget->q_m.at(2 * i));
 
         state.w_l.at(2 * i + 1) = fr::random_element();
         state.w_r.at(2 * i + 1) = fr::random_element();
@@ -53,10 +47,10 @@ void generate_test_data(waffle::Prover& state)
         fr::__add(state.w_l.at(2 * i + 1), state.w_r.at(2 * i + 1), T0);
         fr::__add(T0, state.w_o.at(2 * i + 1), widget->q_c.at(2 * i + 1));
         fr::__neg(widget->q_c.at(2 * i + 1), widget->q_c.at(2 * i + 1));
-        fr::one(widget->q_l.at(2 * i + 1));
-        fr::one(widget->q_r.at(2 * i + 1));
-        fr::one(widget->q_o.at(2 * i + 1));
-        fr::zero(widget->q_m.at(2 * i + 1));
+        widget->q_l.at(2 * i + 1) = fr::one;
+        widget->q_r.at(2 * i + 1) = fr::one;
+        widget->q_o.at(2 * i + 1) = fr::one;
+        widget->q_m.at(2 * i + 1) = fr::zero;
     }
     size_t shift = n / 2;
     polynomial_arithmetic::copy_polynomial(&state.w_l.at(0), &state.w_l.at(shift), shift, shift);
@@ -90,19 +84,19 @@ void generate_test_data(waffle::Prover& state)
     state.sigma_2_mapping[n - 1] = (uint32_t)n - 1 + (1U << 30U);
     state.sigma_3_mapping[n - 1] = (uint32_t)n - 1 + (1U << 31U);
 
-    fr::zero(state.w_l.at(n - 1));
-    fr::zero(state.w_r.at(n - 1));
-    fr::zero(state.w_o.at(n - 1));
-    fr::zero(widget->q_c.at(n - 1));
-    fr::zero(widget->q_l.at(n - 1));
-    fr::zero(widget->q_r.at(n - 1));
-    fr::zero(widget->q_o.at(n - 1));
-    fr::zero(widget->q_m.at(n - 1));
+    state.w_l.at(n - 1) = fr::zero;
+    state.w_r.at(n - 1) = fr::zero;
+    state.w_o.at(n - 1) = fr::zero;
+    widget->q_c.at(n - 1) = fr::zero;
+    widget->q_l.at(n - 1) = fr::zero;
+    widget->q_r.at(n - 1) = fr::zero;
+    widget->q_o.at(n - 1) = fr::zero;
+    widget->q_m.at(n - 1) = fr::zero;
 
-    fr::zero(state.w_l.at(shift - 1));
-    fr::zero(state.w_r.at(shift - 1));
-    fr::zero(state.w_o.at(shift - 1));
-    fr::zero(widget->q_c.at(shift - 1));
+    state.w_l.at(shift - 1) = fr::zero;
+    state.w_r.at(shift - 1) = fr::zero;
+    state.w_o.at(shift - 1) = fr::zero;
+    widget->q_c.at(shift - 1) = fr::zero;
 
     state.widgets.emplace_back(std::move(widget));
 }

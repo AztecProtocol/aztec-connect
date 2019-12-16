@@ -1,12 +1,12 @@
 #include "./polynomial.hpp"
 #include "./polynomial_arithmetic.hpp"
 
-#include "../fields/fr.hpp"
+#include "../curves/bn254/fr.hpp"
 #include "../assert.hpp"
 
-#include "stdlib.h"
-#include "memory.h"
-#include "math.h"
+#include <cstdlib>
+#include <memory.h>
+#include <math.h>
 
 using namespace barretenberg;
 
@@ -188,7 +188,7 @@ void polynomial::add_coefficient_internal(const fr::field_t &coefficient)
     {
         bump_memory((allocated_pages + 1) * page_size);
     }
-    fr::copy(coefficient, coefficients[size]);
+    fr::__copy(coefficient, coefficients[size]);
     ++size;
 }
 
@@ -336,7 +336,7 @@ void polynomial::shrink_evaluation_domain(const size_t shrink_factor)
     fr::field_t* new_memory = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * max_size >> log2_shrink_factor));
     for (size_t i = 0; i < size; i += shrink_factor)
     {
-        fr::copy(coefficients[i], new_memory[i >> log2_shrink_factor]);
+        fr::__copy(coefficients[i], new_memory[i >> log2_shrink_factor]);
     }
     aligned_free(coefficients);
     coefficients = new_memory;

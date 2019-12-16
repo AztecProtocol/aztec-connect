@@ -8,11 +8,6 @@ using namespace barretenberg;
 using namespace noir::parser;
 using namespace noir::code_gen;
 
-uint32_t get_random_int()
-{
-    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
-}
-
 TEST(noir, format_string)
 {
     EXPECT_EQ(format("hello %s %d", "world", 123), "hello world 123");
@@ -144,7 +139,7 @@ TEST(noir, bool_circuit)
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[5]), { { 1, 0, 0, 0 } }), true);
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[5]), { { 1, 0, 0, 0 } }), true);
 
-    EXPECT_EQ(prover.n, 16UL);
+    EXPECT_EQ(prover.n, 8UL);
 }
 
 TEST(noir, sha256)
@@ -165,7 +160,7 @@ TEST(noir, sha256)
     // };
 
     std::vector<var_t> inputs(16, uint32());
-    for (size_t i = 0; i < 16; i) {
+    for (size_t i = 0; i < 16; ++i) {
         inputs[i] = uint32(witness_t(&composer, hex_input[i]));
     }
 

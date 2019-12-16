@@ -1,5 +1,5 @@
 #include "assert.hpp"
-#include "stdlib.h"
+#include <cstdlib>
 //#include <valgrind/callgrind.h>
 
 #include "./waffle/composer/mimc_composer.hpp"
@@ -11,6 +11,7 @@
 #include "./waffle/stdlib/common.hpp"
 #include "./waffle/stdlib/field/field.hpp"
 #include "./waffle/stdlib/mimc.hpp"
+#include "./waffle/waffle_types.hpp"
 
 void generate_test_plonk_circuit(waffle::StandardComposer& composer, size_t num_gates)
 {

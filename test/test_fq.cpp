@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/fields/fq.hpp>
+#include <barretenberg/curves/bn254/fq.hpp>
 
 using namespace barretenberg;
 
@@ -19,23 +19,23 @@ TEST(fq, eq)
     EXPECT_EQ(fq::eq(a, f), false);
 }
 
-TEST(fq, iszero)
+TEST(fq, is_zero)
 {
-    fq::field_t a = fq::zero();
-    fq::field_t b = fq::zero();
-    fq::field_t c = fq::zero();
-    fq::field_t d = fq::zero();
-    fq::field_t e = fq::zero();
+    fq::field_t a = fq::zero;
+    fq::field_t b = fq::zero;
+    fq::field_t c = fq::zero;
+    fq::field_t d = fq::zero;
+    fq::field_t e = fq::zero;
 
     b.data[0] = 1;
     c.data[1] = 1;
     d.data[2] = 1;
     e.data[3] = 1;
-    EXPECT_EQ(fq::iszero(a), true);
-    EXPECT_EQ(fq::iszero(b), false);
-    EXPECT_EQ(fq::iszero(c), false);
-    EXPECT_EQ(fq::iszero(d), false);
-    EXPECT_EQ(fq::iszero(e), false);
+    EXPECT_EQ(fq::is_zero(a), true);
+    EXPECT_EQ(fq::is_zero(b), false);
+    EXPECT_EQ(fq::is_zero(c), false);
+    EXPECT_EQ(fq::is_zero(d), false);
+    EXPECT_EQ(fq::is_zero(e), false);
 }
 
 TEST(fq, random_element)
@@ -44,8 +44,8 @@ TEST(fq, random_element)
     fq::field_t b = fq::random_element();
 
     EXPECT_EQ(fq::eq(a, b), false);
-    EXPECT_EQ(fq::iszero(a), false);
-    EXPECT_EQ(fq::iszero(b), false);
+    EXPECT_EQ(fq::is_zero(a), false);
+    EXPECT_EQ(fq::is_zero(b), false);
 }
 
 TEST(fq, mul_check_against_constants)
@@ -135,14 +135,14 @@ TEST(fq, sub_check_against_constants)
 TEST(fq, to_montgomery_form)
 {
     fq::field_t result{{ 0x01, 0x00, 0x00, 0x00 } };
-    fq::field_t expected = fq::one();
+    fq::field_t expected = fq::one;
     fq::__to_montgomery_form(result, result);
     EXPECT_EQ(fq::eq(result, expected), true);
 }
 
 TEST(fq, from_montgomery_form)
 {
-    fq::field_t result = fq::one();
+    fq::field_t result = fq::one;
     fq::field_t expected{{ 0x01, 0x00, 0x00, 0x00 } };
     fq::__from_montgomery_form(result, result);
     EXPECT_EQ(fq::eq(result, expected), true);
@@ -247,19 +247,19 @@ TEST(fq, invert)
 
     fq::__invert(input, inverse);
     fq::__mul(input, inverse, result);
-    EXPECT_EQ(fq::eq(result, fq::one()), true);
+    EXPECT_EQ(fq::eq(result, fq::one), true);
 }
 
 TEST(fq, invert_one_is_one)
 {
-    fq::field_t result = fq::one();
+    fq::field_t result = fq::one;
     fq::__invert(result, result);
-    EXPECT_EQ(fq::eq(result, fq::one()), true);
+    EXPECT_EQ(fq::eq(result, fq::one), true);
 }
 
 TEST(fq, sqrt)
 {
-    fq::field_t input = fq::one();
+    fq::field_t input = fq::one;
     fq::field_t root;
     fq::field_t result;
     fq::__sqrt(input, root);
@@ -291,15 +291,15 @@ TEST(fq, sqrt_random)
 TEST(fq, one_and_zero)
 {
     fq::field_t result;
-    fq::__sub(fq::one(), fq::one(), result);
-    EXPECT_EQ(fq::eq(result, fq::zero()), true);
+    fq::__sub(fq::one, fq::one, result);
+    EXPECT_EQ(fq::eq(result, fq::zero), true);
 }
 
 TEST(fq, copy)
 {
     fq::field_t result = fq::random_element();
     fq::field_t expected;
-    fq::copy(result, expected);
+    fq::__copy(result, expected);
     EXPECT_EQ(fq::eq(result, expected), true);
 }
 
@@ -310,5 +310,5 @@ TEST(fq, neg)
     fq::__neg(a, b);
     fq::field_t result;
     fq::__add(a, b, result);
-    EXPECT_EQ(fq::eq(result, fq::zero()), true);
+    EXPECT_EQ(fq::eq(result, fq::zero), true);
 }

@@ -1,10 +1,15 @@
 #pragma once
 
+#include <memory>
+
 #include "../../../polynomials/polynomial.hpp"
 #include "../../../types.hpp"
 
 #include "../../reference_string/reference_string.hpp"
+#include "../../waffle_types.hpp"
 #include "../widgets/base_widget.hpp"
+
+#include "../circuit_state.hpp"
 
 namespace waffle
 {
@@ -17,8 +22,6 @@ class Prover
     Prover(const Prover& other) = delete;
     Prover& operator=(const Prover& other) = delete;
     Prover& operator=(Prover&& other);
-
-    ~Prover();
 
     void compute_permutation_lagrange_base_full();
     void compute_wire_coefficients();

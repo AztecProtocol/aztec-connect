@@ -1,13 +1,14 @@
-#ifndef BASE_WIDGET_HPP
-#define BASE_WIDGET_HPP
+#pragma once
 
 #include <memory>
 
-#include "../../../groups/g1.hpp"
+#include "../../../types.hpp"
+#include "../../../curves/bn254/g1.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
 #include "../../../polynomials/polynomial.hpp"
-#include "../../../types.hpp"
+
 #include "../../reference_string/reference_string.hpp"
+#include "../../waffle_types.hpp"
 
 #include "../circuit_state.hpp"
 
@@ -67,7 +68,7 @@ class VerifierBaseWidget
     VerifierBaseWidget(VerifierBaseWidget&& other) : version(other.version)
     {
     }
-    virtual ~VerifierBaseWidget(){};
+    virtual ~VerifierBaseWidget() {}
 
     virtual barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t& batch_eval,
                                                                             barretenberg::fr::field_t& nu_base,
@@ -84,10 +85,12 @@ class VerifierBaseWidget
     virtual bool verify_instance_commitments()
     {
         bool valid = true;
-        for (size_t i = 0; i < instance.size(); ++i)
-        {
-            valid = valid && barretenberg::g1::on_curve(instance[i]);
-        }
+        // TODO: if instance commitments are points at infinity, this is probably ok?
+        // because selector polynomials can be all zero :/. TODO: check?
+        // for (size_t i = 0; i < instance.size(); ++i)
+        // {
+        //     valid = valid && barretenberg::g1::on_curve(instance[i]);
+        // }
         return valid;
     }
 
@@ -98,14 +101,15 @@ class VerifierBaseWidget
 class ProverBaseWidget
 {
   public:
-    ProverBaseWidget(const size_t deps = 0, const size_t feats = 0) : version(deps, feats){};
+    ProverBaseWidget(const size_t deps = 0, const size_t feats = 0) : version(deps, feats){
+    };
     ProverBaseWidget(const ProverBaseWidget& other) : version(other.version)
     {
     }
     ProverBaseWidget(ProverBaseWidget&& other) : version(other.version)
     {
     }
-    virtual ~ProverBaseWidget(){};
+    virtual ~ProverBaseWidget() {}
 
     virtual barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
                                                                     const barretenberg::fr::field_t& alpha_step,
@@ -137,4 +141,3 @@ class ProverBaseWidget
 };
 
 } // namespace waffle
-#endif

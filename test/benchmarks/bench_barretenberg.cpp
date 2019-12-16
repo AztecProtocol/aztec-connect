@@ -10,11 +10,11 @@ using namespace benchmark;
 
 #include <barretenberg/types.hpp>
 
-#include <barretenberg/fields/fq.hpp>
-#include <barretenberg/fields/fr.hpp>
-#include <barretenberg/groups/g1.hpp>
-#include <barretenberg/groups/g2.hpp>
-#include <barretenberg/groups/pairing.hpp>
+#include <barretenberg/curves/bn254/fq.hpp>
+#include <barretenberg/curves/bn254/fr.hpp>
+#include <barretenberg/curves/bn254/g1.hpp>
+#include <barretenberg/curves/bn254/g2.hpp>
+#include <barretenberg/curves/bn254/pairing.hpp>
 #include <barretenberg/groups/wnaf.hpp>
 #include <barretenberg/io/io.hpp>
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
@@ -58,24 +58,24 @@ void generate_random_plonk_circuit(waffle::Prover& state)
     fr::field_t q_c_acc;
     fr::field_t w_l_acc;
     fr::field_t w_r_acc;
-    fr::copy(q_m_seed, q_m_acc);
-    fr::copy(q_l_seed, q_l_acc);
-    fr::copy(q_r_seed, q_r_acc);
-    fr::copy(q_o_seed, q_o_acc);
-    fr::copy(q_c_seed, q_c_acc);
-    fr::copy(w_l_seed, w_l_acc);
-    fr::copy(w_r_seed, w_r_acc);
+    fr::__copy(q_m_seed, q_m_acc);
+    fr::__copy(q_l_seed, q_l_acc);
+    fr::__copy(q_r_seed, q_r_acc);
+    fr::__copy(q_o_seed, q_o_acc);
+    fr::__copy(q_c_seed, q_c_acc);
+    fr::__copy(w_l_seed, w_l_acc);
+    fr::__copy(w_r_seed, w_r_acc);
 
     for (size_t i = 0; i < n / 2; i += 2)
     {
-        fr::copy(q_m_acc, widget->q_m.at(i));
-        fr::copy(fr::zero(), widget->q_l.at(i));
-        fr::copy(fr::zero(), widget->q_r.at(i));
-        fr::copy(q_o_acc, widget->q_o.at(i));
-        fr::copy(q_c_acc, widget->q_c.at(i));
-        fr::copy(w_l_acc, state.w_l.at(i));
-        fr::copy(w_r_acc, state.w_r.at(i));
-        fr::copy(widget->q_o.at(i), state.w_o.at(i));
+        fr::__copy(q_m_acc, widget->q_m.at(i));
+        fr::__copy(fr::zero, widget->q_l.at(i));
+        fr::__copy(fr::zero, widget->q_r.at(i));
+        fr::__copy(q_o_acc, widget->q_o.at(i));
+        fr::__copy(q_c_acc, widget->q_c.at(i));
+        fr::__copy(w_l_acc, state.w_l.at(i));
+        fr::__copy(w_r_acc, state.w_r.at(i));
+        fr::__copy(widget->q_o.at(i), state.w_o.at(i));
 
         fr::__mul(q_m_acc, q_m_seed, q_m_acc);
         fr::__mul(q_l_acc, q_l_seed, q_l_acc);
@@ -85,14 +85,14 @@ void generate_random_plonk_circuit(waffle::Prover& state)
         fr::__mul(w_l_acc, w_l_seed, w_l_acc);
         fr::__mul(w_r_acc, w_r_seed, w_r_acc);
 
-        fr::copy(fr::zero(), widget->q_m.at(i + 1));
-        fr::copy(q_l_acc, widget->q_l.at(i + 1));
-        fr::copy(q_r_acc, widget->q_r.at(i + 1));
-        fr::copy(q_o_acc, widget->q_o.at(i + 1));
-        fr::copy(q_c_acc, widget->q_c.at(i + 1));
-        fr::copy(w_l_acc, state.w_l.at(i + 1));
-        fr::copy(w_r_acc, state.w_r.at(i + 1));
-        fr::copy(widget->q_o.at(i + 1), state.w_o.at(i + 1));
+        fr::__copy(fr::zero, widget->q_m.at(i + 1));
+        fr::__copy(q_l_acc, widget->q_l.at(i + 1));
+        fr::__copy(q_r_acc, widget->q_r.at(i + 1));
+        fr::__copy(q_o_acc, widget->q_o.at(i + 1));
+        fr::__copy(q_c_acc, widget->q_c.at(i + 1));
+        fr::__copy(w_l_acc, state.w_l.at(i + 1));
+        fr::__copy(w_r_acc, state.w_r.at(i + 1));
+        fr::__copy(widget->q_o.at(i + 1), state.w_o.at(i + 1));
 
         fr::__mul(q_m_acc, q_m_seed, q_m_acc);
         fr::__mul(q_l_acc, q_l_seed, q_l_acc);
@@ -140,18 +140,18 @@ void generate_random_plonk_circuit(waffle::Prover& state)
         state.sigma_3_mapping[i] = (uint32_t)(i + shift) + (1U << 31U);
     }
 
-    fr::zero(state.w_l.at(n - 1));
-    fr::zero(state.w_r.at(n - 1));
-    fr::zero(state.w_o.at(n - 1));
-    fr::zero(widget->q_c.at(n - 1));
-    fr::zero(state.w_l.at(shift - 1));
-    fr::zero(state.w_r.at(shift - 1));
-    fr::zero(state.w_o.at(shift - 1));
-    fr::zero(widget->q_c.at(shift - 1));
-    fr::zero(widget->q_m.at(shift - 1));
-    fr::zero(widget->q_l.at(shift - 1));
-    fr::zero(widget->q_r.at(shift - 1));
-    fr::zero(widget->q_o.at(shift - 1));
+    state.w_l.at(n - 1) = fr::zero;
+    state.w_r.at(n - 1) = fr::zero;
+    state.w_o.at(n - 1) = fr::zero;
+    widget->q_c.at(n - 1) = fr::zero;
+    state.w_l.at(shift - 1) = fr::zero;
+    state.w_r.at(shift - 1) = fr::zero;
+    state.w_o.at(shift - 1) = fr::zero;
+    widget->q_c.at(shift - 1) = fr::zero;
+    widget->q_m.at(shift - 1) = fr::zero;
+    widget->q_l.at(shift - 1) = fr::zero;
+    widget->q_r.at(shift - 1) = fr::zero;
+    widget->q_o.at(shift - 1) = fr::zero;
     // make last permutation the same as identity permutation
     state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
     state.sigma_2_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 30U);
@@ -160,10 +160,10 @@ void generate_random_plonk_circuit(waffle::Prover& state)
     state.sigma_2_mapping[n - 1] = (uint32_t)n - 1 + (1U << 30U);
     state.sigma_3_mapping[n - 1] = (uint32_t)n - 1 + (1U << 31U);
 
-    fr::zero(widget->q_l.at(n - 1));
-    fr::zero(widget->q_r.at(n - 1));
-    fr::zero(widget->q_o.at(n - 1));
-    fr::zero(widget->q_m.at(n - 1));
+    widget->q_l.at(n - 1) = fr::zero;
+    widget->q_r.at(n - 1) = fr::zero;
+    widget->q_o.at(n - 1) = fr::zero;
+    widget->q_m.at(n - 1) = fr::zero;
 
     state.widgets.emplace_back(std::move(widget));
 }
@@ -197,11 +197,11 @@ void generate_scalars(fr::field_t* scalars)
 {
     fr::field_t T0 = fr::random_element();
     fr::field_t acc;
-    fr::copy(T0, acc);
+    fr::__copy(T0, acc);
     for (size_t i = 0; i < MAX_GATES; ++i)
     {
         fr::__mul(acc, T0, acc);
-        fr::copy(acc, scalars[i]);
+        fr::__copy(acc, scalars[i]);
     }
 }
 

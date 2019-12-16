@@ -14,33 +14,33 @@ using namespace barretenberg;
 TEST(bool_composer, test_add_gate_proofs)
 {
     waffle::BoolComposer composer = waffle::BoolComposer();
-    fr::field_t a = fr::one();
-    fr::field_t b = fr::one();
+    fr::field_t a = fr::one;
+    fr::field_t b = fr::one;
     fr::field_t c = fr::add(a, b);
     fr::field_t d = fr::add(a, c);
     uint32_t a_idx = composer.add_variable(a);
     uint32_t b_idx = composer.add_variable(b);
     uint32_t c_idx = composer.add_variable(c);
     uint32_t d_idx = composer.add_variable(d);
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
 
-    composer.create_add_gate({ d_idx, c_idx, a_idx, fr::one(), fr::neg_one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ d_idx, c_idx, a_idx, fr::one, fr::neg_one(), fr::neg_one(), fr::zero });
 
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ b_idx, a_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ b_idx, a_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -111,18 +111,18 @@ TEST(bool_composer, test_bool_gate_proofs)
 {
     waffle::BoolComposer composer = waffle::BoolComposer();
 
+    fr::field_t a = fr::one;
+    fr::field_t b = fr::zero;
+    fr::field_t c = fr::one;
+    uint32_t a_idx = composer.add_variable(a);
+    uint32_t b_idx = composer.add_variable(b);
+    uint32_t c_idx = composer.add_variable(c);
     size_t n = 27;
     for (size_t i = 0; i < n; ++i)
     {
-        fr::field_t a = fr::one();
-        fr::field_t b = fr::zero();
-        fr::field_t c = fr::one();
-        uint32_t a_idx = composer.add_variable(a);
-        uint32_t b_idx = composer.add_variable(b);
-        uint32_t c_idx = composer.add_variable(c);
         composer.create_bool_gate(a_idx);
         composer.create_bool_gate(b_idx);
-        composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+        composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
     }
 
     waffle::Prover prover = composer.preprocess();
@@ -143,21 +143,21 @@ TEST(bool_composers, test_deferred_bool_gate_proofs)
     size_t n = 27;
     for (size_t i = 0; i < n; ++i)
     {
-        fr::field_t a = fr::one();
-        fr::field_t b = fr::zero();
-        fr::field_t c = fr::one();
+        fr::field_t a = fr::one;
+        fr::field_t b = fr::zero;
+        fr::field_t c = fr::one;
         uint32_t a_idx = composer.add_variable(a);
         uint32_t b_idx = composer.add_variable(b);
         uint32_t c_idx = composer.add_variable(c);
         composer.create_bool_gate(a_idx);
         composer.create_bool_gate(b_idx);
         composer.create_bool_gate(c_idx);
-        composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+        composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
     }
 
     waffle::Prover prover = composer.preprocess();
-    EXPECT_EQ(composer.n, 41UL + composer.get_num_constant_gates());
-    EXPECT_EQ(prover.n, 64UL);
+    EXPECT_EQ(composer.get_num_gates(), 27UL + composer.get_num_constant_gates());
+    EXPECT_EQ(prover.n, 32UL);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -173,24 +173,24 @@ TEST(bool_composers, test_repeated_bool_gate_proofs)
     size_t n = 27;
     for (size_t i = 0; i < n; ++i)
     {
-        fr::field_t a = fr::one();
-        fr::field_t b = fr::zero();
-        fr::field_t c = fr::one();
+        fr::field_t a = fr::one;
+        fr::field_t b = fr::zero;
+        fr::field_t c = fr::one;
         uint32_t a_idx = composer.add_variable(a);
         uint32_t b_idx = composer.add_variable(b);
         uint32_t c_idx = composer.add_variable(c);
         composer.create_bool_gate(a_idx);
         composer.create_bool_gate(b_idx);
         composer.create_bool_gate(c_idx);
-        composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+        composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
         composer.create_bool_gate(a_idx);
         composer.create_bool_gate(b_idx);
         composer.create_bool_gate(c_idx); // heyho
     }
 
     waffle::Prover prover = composer.preprocess();
-    EXPECT_EQ(composer.n, 41UL + composer.get_num_constant_gates());
-    EXPECT_EQ(prover.n, 64UL);
+    EXPECT_EQ(composer.get_num_gates(), 27UL + composer.get_num_constant_gates());
+    EXPECT_EQ(prover.n, 32UL);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();

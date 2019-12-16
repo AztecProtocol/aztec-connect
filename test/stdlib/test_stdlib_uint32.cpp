@@ -31,7 +31,8 @@ std::vector<uint32_t> get_random_ints(size_t n)
 
 uint32_t get_value(uint32& input)
 {
-    return static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(static_cast<field_t>(input).get()).data[0]);
+    return static_cast<uint32_t>(
+        barretenberg::fr::from_montgomery_form(static_cast<field_t>(input).get_value()).data[0]);
 }
 
 TEST(stdlib_uint32, test_add)
@@ -51,8 +52,6 @@ TEST(stdlib_uint32, test_add)
     }
     waffle::Prover prover = composer.preprocess();
 
-    printf("prover gates = %lu\n", prover.n);
-
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -63,7 +62,7 @@ TEST(stdlib_uint32, test_add)
 
 TEST(stdlib_uint32s, test_add_with_constants)
 {
-    size_t n = 32;
+    size_t n = 1;
     std::vector<uint32_t> witnesses = get_random_ints(3 * n);
     uint32_t expected[8];
     for (size_t i = 0; i < n; ++i) {
@@ -94,8 +93,6 @@ TEST(stdlib_uint32s, test_add_with_constants)
         EXPECT_EQ(get_value(result[i]), expected[i]);
     }
     waffle::Prover prover = composer.preprocess();
-
-    printf("prover gates = %lu\n", prover.n);
 
     waffle::Verifier verifier = waffle::preprocess(prover);
 
@@ -133,8 +130,6 @@ TEST(stdlib_uint32, test_mul)
         barretenberg::fr::from_montgomery_form(composer.get_variable(c.get_witness_index())).data[0]);
     EXPECT_EQ(c_result, c_expected);
     waffle::Prover prover = composer.preprocess();
-
-    printf("prover gates = %lu\n", prover.n);
 
     waffle::Verifier verifier = waffle::preprocess(prover);
 
@@ -175,7 +170,102 @@ TEST(stdlib_uint32, test_xor)
     EXPECT_EQ(a_result, a_expected);
     waffle::Prover prover = composer.preprocess();
 
-    printf("prover gates = %lu\n", prover.n);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_uint32, test_xor_constants)
+{
+    waffle::BoolComposer composer = waffle::BoolComposer();
+
+    uint32_t a_expected = 0xa3b10422;
+    uint32_t b_expected = 0xeac21343;
+    uint32_t c_expected = a_expected ^ b_expected;
+
+    uint32 const_a(&composer, 0xa3b10422);
+    uint32 const_b(&composer, 0xeac21343);
+    uint32 c = const_a ^ const_b;
+    c.get_witness_index();
+
+    EXPECT_EQ(c.get_additive_constant(), c_expected);
+}
+
+TEST(stdlib_uint32, test_xor_more_constants)
+{
+    uint32_t a_expected = 0xa3b10422;
+    uint32_t b_expected = 0xeac21343;
+    uint32_t c_expected = a_expected ^ b_expected;
+    for (size_t i = 0; i < 1; ++i) {
+        b_expected = a_expected;
+        a_expected = c_expected;
+        c_expected = (a_expected + b_expected) ^ (0xa3b10422 ^ 0xeac21343);
+    }
+
+    waffle::BoolComposer composer = waffle::BoolComposer();
+
+    witness_t first_input(&composer, 0xa3b10422);
+    witness_t second_input(&composer, 0xeac21343);
+
+    uint32 a = first_input;
+    uint32 b = second_input;
+    uint32 c = a ^ b;
+    for (size_t i = 0; i < 1; ++i) {
+        uint32 const_a = 0xa3b10422;
+        uint32 const_b = 0xeac21343;
+        b = a;
+        a = c;
+        c = (a + b) ^ (const_a ^ const_b);
+    }
+    uint32_t c_witness_index = c.get_witness_index();
+    uint32_t c_result =
+        static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(c_witness_index)).data[0]);
+    EXPECT_EQ(c_result, c_expected);
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_uint32, test_and_constants)
+{
+    uint32_t a_expected = 0xa3b10422;
+    uint32_t b_expected = 0xeac21343;
+    uint32_t c_expected = a_expected & b_expected;
+    for (size_t i = 0; i < 1; ++i) {
+        b_expected = a_expected;
+        a_expected = c_expected;
+        c_expected = (~a_expected & 0xa3b10422) + (b_expected & 0xeac21343);
+        // c_expected = (a_expected + b_expected) & (0xa3b10422 & 0xeac21343);
+    }
+
+    waffle::BoolComposer composer = waffle::BoolComposer();
+
+    witness_t first_input(&composer, 0xa3b10422);
+    witness_t second_input(&composer, 0xeac21343);
+
+    uint32 a = first_input;
+    uint32 b = second_input;
+    uint32 c = a & b;
+    for (size_t i = 0; i < 1; ++i) {
+        uint32 const_a = 0xa3b10422;
+        uint32 const_b = 0xeac21343;
+        b = a;
+        a = c;
+        c = (~a & const_a) + (b & const_b);
+    }
+    uint32_t c_witness_index = c.get_witness_index();
+    uint32_t c_result =
+        static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(c_witness_index)).data[0]);
+    EXPECT_EQ(c_result, c_expected);
+    waffle::Prover prover = composer.preprocess();
 
     waffle::Verifier verifier = waffle::preprocess(prover);
 
@@ -217,8 +307,6 @@ TEST(stdlib_uint32s, test_and)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("prover gates = %lu\n", prover.n);
-
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -258,8 +346,6 @@ TEST(stdlib_uint32, test_or)
     EXPECT_EQ(a_result, a_expected);
 
     waffle::Prover prover = composer.preprocess();
-
-    printf("prover gates = %lu\n", prover.n);
 
     waffle::Verifier verifier = waffle::preprocess(prover);
 
@@ -306,8 +392,6 @@ TEST(stdlib_uint32, test_ror)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("prover gates = %lu\n", prover.n);
-
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -336,11 +420,11 @@ uint32_t round_values[8]{
 // ...but only if constants are zero
 // can also do (2^{32} - B + A) + (2^{32} - B.const)
 // ...but what about multiplicative value? Um...erm...
-TEST(stdlib_uint32, test_sha256_rounds)
+TEST(stdlib_uint32, test_hash_rounds)
 {
-    uint32_t w_alt[256];
+    uint32_t w_alt[64];
 
-    for (size_t i = 0; i < 256; ++i) {
+    for (size_t i = 0; i < 64; ++i) {
         w_alt[i] = static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
     }
     uint32_t a_alt = round_values[0];
@@ -351,7 +435,7 @@ TEST(stdlib_uint32, test_sha256_rounds)
     uint32_t f_alt = round_values[5];
     uint32_t g_alt = round_values[6];
     uint32_t h_alt = round_values[7];
-    for (size_t i = 0; i < 256; ++i) {
+    for (size_t i = 0; i < 64; ++i) {
         uint32_t S1_alt = rotate(e_alt, 7) ^ rotate(e_alt, 11) ^ rotate(e_alt, 25);
         uint32_t ch_alt = (e_alt & f_alt) ^ ((~e_alt) & g_alt);
         uint32_t temp1_alt = h_alt + S1_alt + ch_alt + k_constants[i % 64] + w_alt[i];
@@ -373,7 +457,7 @@ TEST(stdlib_uint32, test_sha256_rounds)
 
     std::vector<uint32> w;
     std::vector<uint32> k;
-    for (size_t i = 0; i < 256; ++i) {
+    for (size_t i = 0; i < 64; ++i) {
         w.emplace_back(uint32(witness_t(&composer, w_alt[i])));
         k.emplace_back(uint32(&composer, k_constants[i % 64]));
     }
@@ -385,7 +469,7 @@ TEST(stdlib_uint32, test_sha256_rounds)
     uint32 f = witness_t(&composer, round_values[5]);
     uint32 g = witness_t(&composer, round_values[6]);
     uint32 h = witness_t(&composer, round_values[7]);
-    for (size_t i = 0; i < 256; ++i) {
+    for (size_t i = 0; i < 64; ++i) {
         uint32 S1 = e.ror(7U) ^ e.ror(11U) ^ e.ror(25U);
         uint32 ch = (e & f) + ((~e) & g);
         uint32 temp1 = h + S1 + ch + k[i] + w[i];
@@ -435,8 +519,6 @@ TEST(stdlib_uint32, test_sha256_rounds)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("prover gates = %lu\n", prover.n);
-    printf("composer gates = %lu\n", composer.n);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();

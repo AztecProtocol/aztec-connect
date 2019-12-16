@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/groups/g1.hpp>
+#include <barretenberg/curves/bn254/g1.hpp>
 #include <barretenberg/polynomials/polynomial.hpp>
 #include <barretenberg/waffle/proof_system/permutation.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>

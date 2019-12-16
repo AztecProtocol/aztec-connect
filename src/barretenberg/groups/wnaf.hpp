@@ -1,8 +1,7 @@
-#ifndef WNAF_HPP
-#define WNAF_HPP
+#pragma once
 
-#include "stdint.h"
-#include "stddef.h"
+#include <cstdint>
+#include <cstddef>
 #include <vector>
 
 namespace barretenberg
@@ -99,5 +98,3 @@ inline void process_bucket_vectors(uint32_t* wnaf, std::vector<std::vector<uint3
 // }
 } // namespace wnaf
 } // namespace barretenberg
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef CIRCUIT_FFT_STATE
-#define CIRCUIT_FFT_STATE
+#pragma once
 
 #include "../../polynomials/polynomial.hpp"
 #include "../../polynomials/evaluation_domain.hpp"
@@ -36,8 +35,6 @@ public:
         return *this;
     }
 
-    ~CircuitFFTState() {};
-
     barretenberg::polynomial w_l_fft;
     barretenberg::polynomial w_r_fft;
     barretenberg::polynomial w_o_fft;
@@ -50,4 +47,3 @@ public:
     barretenberg::evaluation_domain large_domain;
 };
 }
-#endif

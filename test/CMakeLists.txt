@@ -54,7 +54,9 @@ add_executable(
     stdlib/test_stdlib_bool.cpp
     stdlib/test_stdlib_field.cpp
     stdlib/test_stdlib_uint32.cpp
+    stdlib/test_stdlib_bitarray.cpp
     stdlib/test_stdlib_mimc.cpp
+    stdlib/test_stdlib_sha256.cpp
     noir/test_noir.cpp
 )
 

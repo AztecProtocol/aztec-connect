@@ -1,5 +1,4 @@
-#ifndef ARITHMETIC_WIDGET_HPP
-#define ARITHMETIC_WIDGET_HPP
+#pragma once
 
 #include "./base_widget.hpp"
 
@@ -9,7 +8,6 @@ class VerifierArithmeticWidget : public VerifierBaseWidget
 {
 public:
     VerifierArithmeticWidget(std::vector<barretenberg::g1::affine_element> &instance_commitments);
-    ~VerifierArithmeticWidget() {};
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
         const challenge_coefficients &challenge,
@@ -32,7 +30,6 @@ public:
     ProverArithmeticWidget(ProverArithmeticWidget &&other);
     ProverArithmeticWidget& operator=(const ProverArithmeticWidget &other);
     ProverArithmeticWidget& operator=(ProverArithmeticWidget &&other);
-    ~ProverArithmeticWidget() {};
 
     barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t &alpha_base, const barretenberg::fr::field_t& alpha_step, CircuitFFTState& circuit_state);
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t &alpha_base, const barretenberg::fr::field_t &, const waffle::plonk_proof &proof, const barretenberg::evaluation_domain& domain, barretenberg::polynomial &r);
@@ -52,7 +49,4 @@ public:
     barretenberg::polynomial q_o;
     barretenberg::polynomial q_c;
 };
-
-
 }
-#endif

@@ -19,8 +19,8 @@ typedef stdlib::field_t<waffle::StandardComposer> field_t;
 
 void fibbonaci(waffle::StandardComposer& composer)
 {
-    field_t a(stdlib::witness_t(&composer, fr::one()));
-    field_t b(stdlib::witness_t(&composer, fr::one()));
+    field_t a(stdlib::witness_t(&composer, fr::one));
+    field_t b(stdlib::witness_t(&composer, fr::one));
 
     field_t c = a + b;
 
@@ -34,13 +34,13 @@ void fibbonaci(waffle::StandardComposer& composer)
 
 uint64_t fidget(waffle::StandardComposer& composer)
 {
-    field_t a(stdlib::witness_t(&composer, fr::one())); // a is a legit wire value in our circuit
-    field_t b(&composer, (fr::one())); // b is just a constant, and should not turn up as a wire value in our circuit
+    field_t a(stdlib::witness_t(&composer, fr::one)); // a is a legit wire value in our circuit
+    field_t b(&composer, (fr::one)); // b is just a constant, and should not turn up as a wire value in our circuit
 
     // this shouldn't create a constraint - we just need to scale the addition/multiplication gates that `a` is involved
     // in c should point to the same wire value as a
     field_t c = a + b;
-    field_t d(&composer, fr::multiplicative_generator()); // like b, d is just a constant and not a wire value
+    field_t d(&composer, fr::multiplicative_generator); // like b, d is just a constant and not a wire value
 
     // by this point, we shouldn't have added any constraints in our circuit
     for (size_t i = 0; i < 17; ++i)

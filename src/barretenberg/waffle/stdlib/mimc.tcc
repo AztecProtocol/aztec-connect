@@ -1,13 +1,13 @@
-#ifndef MIMC_TCC
-#define MIMC_TCC
+#pragma once
 
-#include "memory.h"
+#include <memory.h>
 
 #include "../../assert.hpp"
 #include "../../keccak/keccak.h"
 
 #include "../composer/mimc_composer.hpp"
 #include "../composer/standard_composer.hpp"
+
 #include "./field/field.hpp"
 
 namespace plonk
@@ -19,9 +19,6 @@ namespace
 // mimc.cpp contains an implementation of the 'MiMC7' hash algorithm.
 // This uses the MiMC block cipher (with a permutation of x^7), and applies
 // the Miyaguchi-Preneel compression function to create a 1-way hash function.
-
-// To achieve 127 bits of collision resistence, we require the security parameter
-// of the block cipher to be 254 bits.
 
 // For MiMC, number of rounds = ceil((security parameter) / log2(mimc exponent))
 // for a 254 bit security parameter, and x^7, num rounds = 91.
@@ -63,13 +60,13 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer>& m
     waffle::MiMCComposer* context = message.context;
     ASSERT(context != nullptr);
 
-    if (!barretenberg::fr::eq(message.additive_constant, barretenberg::fr::zero()) ||
-        !barretenberg::fr::eq(message.multiplicative_constant, barretenberg::fr::one()))
+    if (!barretenberg::fr::eq(message.additive_constant, barretenberg::fr::zero) ||
+        !barretenberg::fr::eq(message.multiplicative_constant, barretenberg::fr::one))
     {
         message = message.normalize();
     };
-    if (!barretenberg::fr::eq(key.additive_constant, barretenberg::fr::zero()) ||
-        !barretenberg::fr::eq(key.multiplicative_constant, barretenberg::fr::one()))
+    if (!barretenberg::fr::eq(key.additive_constant, barretenberg::fr::zero) ||
+        !barretenberg::fr::eq(key.multiplicative_constant, barretenberg::fr::one))
     {
         key = key.normalize();
     }
@@ -77,9 +74,9 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer>& m
     // for now assume we have a mimc gate at our disposal
 
     // each mimc round is (x_in + k + c[i])^7
-    barretenberg::fr::field_t x_in = message.witness;
+    barretenberg::fr::field_t x_in = message.get_value();
     barretenberg::fr::field_t x_out;
-    barretenberg::fr::field_t k = key.witness;
+    barretenberg::fr::field_t k = key.get_value();
     uint32_t k_idx = key.witness_index;
     uint32_t x_in_idx = message.witness_index;
     uint32_t x_out_idx;
@@ -100,10 +97,9 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer>& m
         x_out_idx = context->add_variable(x_out);
         context->create_mimc_gate({ x_in_idx, x_cubed_idx, k_idx, x_out_idx, mimc_round_constants[i] });
         x_in_idx = x_out_idx;
-        barretenberg::fr::copy(x_out, x_in);
+        barretenberg::fr::__copy(x_out, x_in);
     }
-    field_t<waffle::MiMCComposer> result(context);
-    barretenberg::fr::copy(x_out, result.witness);
+    field_t<waffle::MiMCComposer> result(context, x_out);
     result.witness_index = x_out_idx;
     return result;
 }
@@ -131,7 +127,7 @@ template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Compose
 {
     if (inputs.size() == 0)
     {
-        field_t<Composer> out = 0;
+        field_t<Composer> out(static_cast<uint64_t>(0));
         return out;
     }
     Composer* context = inputs[0].context;
@@ -152,5 +148,3 @@ template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Compose
 }
 } // namespace stdlib
 } // namespace plonk
-
-#endif

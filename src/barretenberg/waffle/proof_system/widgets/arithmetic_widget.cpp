@@ -1,9 +1,9 @@
 #include "./arithmetic_widget.hpp"
 
-#include "../../../fields/fr.hpp"
 #include "../../../types.hpp"
-#include "../../../groups/g1.hpp"
-#include "../../../groups/scalar_multiplication.hpp"
+#include "../../../curves/bn254/fr.hpp"
+#include "../../../curves/bn254/g1.hpp"
+#include "../../../curves/bn254/scalar_multiplication.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
 
 using namespace barretenberg;
@@ -189,36 +189,52 @@ VerifierBaseWidget::challenge_coefficients VerifierArithmeticWidget::append_scal
     std::vector<barretenberg::g1::affine_element> &points,
     std::vector<barretenberg::fr::field_t> &scalars)
 {
-    for (size_t i = 0; i < instance.size(); ++i)
-    {
-        points.push_back(instance[i]);
-    }
-
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
     fr::field_t q_m_term;
     fr::__mul(proof.w_l_eval, proof.w_r_eval, q_m_term);
     fr::__mul(q_m_term, challenge.alpha_base, q_m_term);
     fr::__mul(q_m_term, challenge.linear_nu, q_m_term);
-    scalars.push_back(q_m_term);
+    if (g1::on_curve(instance[0]))
+    {
+        points.push_back(instance[0]);
+        scalars.push_back(q_m_term);
+    }
 
     fr::field_t q_l_term;
     fr::__mul(proof.w_l_eval, challenge.alpha_base, q_l_term);
     fr::__mul(q_l_term, challenge.linear_nu, q_l_term);
-    scalars.push_back(q_l_term);
+    if (g1::on_curve(instance[1]))
+    {
+        points.push_back(instance[1]);
+        scalars.push_back(q_l_term);
+    }
+
 
     fr::field_t q_r_term;
     fr::__mul(proof.w_r_eval, challenge.alpha_base, q_r_term);
     fr::__mul(q_r_term, challenge.linear_nu, q_r_term);
-    scalars.push_back(q_r_term);
+    if (g1::on_curve(instance[2]))
+    {
+        points.push_back(instance[2]);
+        scalars.push_back(q_r_term);
+    }
 
     fr::field_t q_o_term;
     fr::__mul(proof.w_o_eval, challenge.alpha_base, q_o_term);
     fr::__mul(q_o_term, challenge.linear_nu, q_o_term);
-    scalars.push_back(q_o_term);
+    if (g1::on_curve(instance[3]))
+    {
+        points.push_back(instance[3]);
+        scalars.push_back(q_o_term);
+    }
 
     fr::field_t q_c_term;
     fr::__mul(challenge.alpha_base, challenge.linear_nu, q_c_term);
-    scalars.push_back(q_c_term);
+    if (g1::on_curve(instance[4]))
+    {
+        points.push_back(instance[4]);
+        scalars.push_back(q_c_term);
+    }
 
     return VerifierBaseWidget::challenge_coefficients{
         fr::mul(challenge.alpha_base, challenge.alpha_step),
