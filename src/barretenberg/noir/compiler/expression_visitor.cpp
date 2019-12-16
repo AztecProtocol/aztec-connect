@@ -2,6 +2,7 @@
 #include "function_call.hpp"
 #include "function_statement_visitor.hpp"
 #include "operators.hpp"
+#include "type_info_from.hpp"
 #include <boost/format.hpp>
 #include <iostream>
 
@@ -209,7 +210,8 @@ var_t ExpressionVisitor::operator()(ast::function_call const& x)
 
     std::vector<var_t> args;
     for (size_t i = 0; i < x.args.size(); ++i) {
-        var_t arg = ExpressionVisitor(ctx_, func.args[i].type)(x.args[i]);
+        auto ti = type_info_from_type_id(func.args[i].type);
+        var_t arg = ExpressionVisitor(ctx_, ti)(x.args[i]);
         args.push_back(arg);
     }
 

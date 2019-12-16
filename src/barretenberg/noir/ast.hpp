@@ -106,7 +106,7 @@ struct int_type {
 struct type_id {
     std::optional<qualifier> qualifier;
     x3::variant<bool_type, int_type> type;
-    std::optional<unsigned int> array_size;
+    std::optional<expression> array_size;
 };
 
 struct variable_declaration {
@@ -118,13 +118,18 @@ struct variable_declaration {
 struct statement_list;
 struct function_statement_list;
 
+struct function_type_id {
+    x3::variant<bool_type, int_type> type;
+    std::optional<std::optional<unsigned int>> array_size;
+};
+
 struct function_argument {
-    type_id type;
+    function_type_id type;
     std::string name;
 };
 
 struct function_declaration {
-    type_id return_type;
+    function_type_id return_type;
     std::string name;
     std::vector<function_argument> args;
     boost::recursive_wrapper<function_statement_list> statements;
@@ -153,8 +158,8 @@ struct function_statement_list : std::vector<function_statement> {};
 
 struct for_statement {
     std::string counter;
-    unsigned int from;
-    unsigned int to;
+    expression from;
+    expression to;
     function_statement_list body;
 };
 

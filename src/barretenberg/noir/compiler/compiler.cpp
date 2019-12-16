@@ -2,6 +2,7 @@
 #include "expression_visitor.hpp"
 #include "function_call.hpp"
 #include "function_statement_visitor.hpp"
+#include "type_info_from.hpp"
 #include "var_t.hpp"
 #include <boost/assert.hpp>
 #include <boost/format.hpp>
@@ -18,9 +19,10 @@ Compiler::Compiler(waffle::StandardComposer& composer)
 
 void Compiler::operator()(ast::variable_declaration const& x)
 {
-    std::cout << "global variable declaration " << type_info(x.type) << " " << x.variable << std::endl;
+    auto ti = type_info_from_type_id(ctx_, x.type);
+    std::cout << "global variable declaration " << ti << " " << x.variable << std::endl;
 
-    var_t v = var_t_factory(x.type, ctx_.composer);
+    var_t v = var_t_factory(ti, ctx_.composer);
     std::cout << v << std::endl;
     ctx_.symbol_table.declare(v, x.variable);
 

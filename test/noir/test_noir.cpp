@@ -35,7 +35,6 @@ TEST(noir, uint_sizes)
     auto type_id = boost::get<noir::ast::variable_declaration>(ast[0]).type;
     auto int_type = boost::get<noir::ast::int_type>(type_id.type);
     EXPECT_EQ(int_type.size, 2UL);
-    EXPECT_EQ(type_info(type_id).type_name(), "uint2");
 }
 
 TEST(noir, uint1_fail)
@@ -166,7 +165,7 @@ TEST(noir, sha256)
     // };
 
     std::vector<var_t> inputs(16, uint32());
-    for (size_t i = 0; i < 16; ++i) {
+    for (size_t i = 0; i < 16; i) {
         inputs[i] = uint32(witness_t(&composer, hex_input[i]));
     }
 

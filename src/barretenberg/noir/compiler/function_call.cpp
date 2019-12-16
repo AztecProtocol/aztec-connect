@@ -1,5 +1,6 @@
 #include "function_call.hpp"
 #include "function_statement_visitor.hpp"
+#include "type_info_from.hpp"
 
 namespace noir {
 namespace code_gen {
@@ -35,14 +36,16 @@ var_t function_call(CompilerContext& ctx, ast::function_declaration const& func,
         var_t v = args[i];
         // Check type of function argument matches that of given variable.
         std::string const& var_type = v.type.type_name();
-        std::string const& arg_type = type_info(func.args[i].type).type_name();
+        auto ti = type_info_from_type_id(func.args[i].type);
+        std::string const& arg_type = ti.type_name();
         if (var_type != arg_type) {
             throw std::runtime_error(format("Argument %d has incorrect type %s, expected %s.", i, var_type, arg_type));
         }
         ctx.symbol_table.declare(v, func.args[i].name);
     }
 
-    var_t result = FunctionStatementVisitor(ctx, func.return_type)(func.statements.get());
+    auto return_ti = type_info_from_type_id(func.return_type);
+    var_t result = FunctionStatementVisitor(ctx, return_ti)(func.statements.get());
     ctx.symbol_table.pop();
     return result;
 }

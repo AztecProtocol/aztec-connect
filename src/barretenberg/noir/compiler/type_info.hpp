@@ -1,3 +1,4 @@
+#pragma once
 #include "../ast.hpp"
 #include <boost/algorithm/string/join.hpp>
 #include <unordered_map>
@@ -60,9 +61,16 @@ struct TypeIdNameVisitor : boost::static_visitor<std::string const> {
 };
 
 struct type_info {
-    type_info(noir_type const& t)
+    type_info(noir_type const& t, size_t array_size, bool m = false)
         : type(t)
-        , mutable_(false)
+        , mutable_(m)
+    {
+        type = array_type{ .element_type = type, .size = array_size };
+    }
+
+    type_info(noir_type const& t, bool m = false)
+        : type(t)
+        , mutable_(m)
     {}
 
     type_info(type_info const& other)
@@ -70,14 +78,25 @@ struct type_info {
         , mutable_(other.mutable_)
     {}
 
-    type_info(ast::type_id const& t)
-    {
-        type = t.type.apply_visitor(IntrinsicTypeInfoVisitor());
-        if (t.array_size.has_value()) {
-            type = array_type{ .element_type = type, .size = t.array_size.value() };
+    /*
+        type_info(ast::type_id const& t)
+        {
+            type = t.type.apply_visitor(IntrinsicTypeInfoVisitor());
+            if (t.array_size.has_value()) {
+                auto size = ExpressionVisitor() type = array_type{ .element_type = type, .size = t.array_size.value() };
+            }
+            mutable_ = t.qualifier.has_value() && t.qualifier.value() == ast::q_mutable;
         }
-        mutable_ = t.qualifier.has_value() && t.qualifier.value() == ast::q_mutable;
-    }
+
+        type_info(ast::function_type_id const& t)
+        {
+            type = t.type.apply_visitor(IntrinsicTypeInfoVisitor());
+            if (t.array_size.has_value()) {
+                type = array_type{ .element_type = type, .size = t.array_size.value().value_or(0) };
+            }
+            mutable_ = false;
+        }
+        */
 
     std::string const type_name() const { return boost::apply_visitor(TypeIdNameVisitor(), type); }
 

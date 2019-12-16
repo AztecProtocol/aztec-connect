@@ -127,9 +127,9 @@ uint8[32] sha256(uint8[] input)
     return result;
 }
 
-uint32[8] main(uint32[16] input) {
+uint8[32] main(uint8[] input) {
 
-    return sha256_block(init_constants, input);
+    return sha256(input);
 }
 
 // native types

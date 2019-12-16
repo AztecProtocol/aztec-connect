@@ -1,5 +1,6 @@
 #include "function_statement_visitor.hpp"
 #include "expression_visitor.hpp"
+#include "type_info_from.hpp"
 #include <iostream>
 
 namespace noir {
@@ -14,7 +15,8 @@ var_t FunctionStatementVisitor::operator()(ast::variable_declaration const& x)
 {
     std::cout << "function variable declaration " << x.variable << std::endl;
 
-    var_t v = var_t_factory(x.type, ctx_.composer);
+    auto ti = type_info_from_type_id(ctx_, x.type);
+    var_t v = var_t_factory(ti, ctx_.composer);
     ctx_.symbol_table.declare(v, x.variable);
 
     if (x.assignment.has_value()) {
@@ -50,9 +52,13 @@ var_t FunctionStatementVisitor::operator()(ast::function_statement_list const& x
 var_t FunctionStatementVisitor::operator()(boost::recursive_wrapper<ast::for_statement> const& x_)
 {
     auto x = x_.get();
+    auto from_var = ExpressionVisitor(ctx_, type_uint32)(x.from);
+    auto to_var = ExpressionVisitor(ctx_, type_uint32)(x.to);
+    auto from = boost::get<uint32>(from_var.value).get_value();
+    auto to = boost::get<uint32>(to_var.value).get_value();
     ctx_.symbol_table.push();
     ctx_.symbol_table.declare(uint32(), x.counter);
-    for (unsigned int i = x.from; i < x.to; ++i) {
+    for (unsigned int i = from; i < to; ++i) {
         ctx_.symbol_table.set(uint32(&ctx_.composer, i), x.counter);
         ctx_.symbol_table.push();
         (*this)(x.body);

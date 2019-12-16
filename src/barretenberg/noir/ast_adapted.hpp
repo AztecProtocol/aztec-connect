@@ -16,6 +16,8 @@ BOOST_FUSION_ADAPT_STRUCT(noir::ast::type_id, qualifier, type, array_size)
 
 BOOST_FUSION_ADAPT_STRUCT(noir::ast::variable_declaration, type, variable, assignment)
 
+BOOST_FUSION_ADAPT_STRUCT(noir::ast::function_type_id, type, array_size)
+
 BOOST_FUSION_ADAPT_STRUCT(noir::ast::function_argument, type, name)
 
 BOOST_FUSION_ADAPT_STRUCT(noir::ast::function_declaration, return_type, name, args, statements)
