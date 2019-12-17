@@ -150,23 +150,15 @@ TEST(noir, sha256)
 
     auto composer = Composer();
 
-    uint32_t hex_input[] = {
-        0xa6e53dc5, 0x295acbff, 0xf63fccde, 0x378e1cbe, 0xbe9f04de, 0x8e35c7ce, 0xfd9105e7, 0x391f8e34,
-        0x56e08d13, 0x6ed204e6, 0xc7d80b22, 0xa1660521, 0xc2320131, 0xd5ab1f8e, 0x180ede60, 0x6574be20,
-    };
+    std::vector<var_t> nist1 = { 'a', 'b', 'c' };
 
     // uint32_t expected[] = {
     //     0x70f94a7c, 0xc60c3099, 0x93a27a6e, 0xa2b269a1, 0xf8db998a, 0xce7bc970, 0xeb4c360e, 0xc6042b88,
     // };
 
-    std::vector<var_t> inputs(16, uint32());
-    for (size_t i = 0; i < 16; ++i) {
-        inputs[i] = uint32(witness_t(&composer, hex_input[i]));
-    }
+    std::vector<var_t> args = { var_t(nist1) };
 
-    std::vector<var_t> args = { var_t(inputs) };
-
-    std::cout << "circuit inputs " << inputs << std::endl;
+    std::cout << "circuit inputs " << nist1 << std::endl;
 
     auto compiler = Compiler(composer);
     auto prover = compiler.start(ast, args);

@@ -7,11 +7,18 @@ namespace noir {
 namespace code_gen {
 
 struct int_type {
+    bool operator==(int_type const& other) const {
+        return width == other.width && signed_ == other.signed_;
+    }
     size_t width;
     bool signed_;
 };
 
-struct bool_type {};
+struct bool_type {
+    bool operator==(bool_type const& ) const {
+        return true;
+    }
+};
 struct array_type;
 struct tuple_type;
 struct struct_type;
@@ -28,6 +35,10 @@ typedef boost::variant<bool_type,
 struct array_type {
     noir_type element_type;
     size_t size;
+
+    bool operator==(array_type const& other) const {
+        return element_type == other.element_type && (size == other.size || size == 0 || other.size == 0);
+    }
 };
 
 struct tuple_type {
@@ -78,27 +89,15 @@ struct type_info {
         , mutable_(other.mutable_)
     {}
 
-    /*
-        type_info(ast::type_id const& t)
-        {
-            type = t.type.apply_visitor(IntrinsicTypeInfoVisitor());
-            if (t.array_size.has_value()) {
-                auto size = ExpressionVisitor() type = array_type{ .element_type = type, .size = t.array_size.value() };
-            }
-            mutable_ = t.qualifier.has_value() && t.qualifier.value() == ast::q_mutable;
-        }
-
-        type_info(ast::function_type_id const& t)
-        {
-            type = t.type.apply_visitor(IntrinsicTypeInfoVisitor());
-            if (t.array_size.has_value()) {
-                type = array_type{ .element_type = type, .size = t.array_size.value().value_or(0) };
-            }
-            mutable_ = false;
-        }
-        */
-
     std::string const type_name() const { return boost::apply_visitor(TypeIdNameVisitor(), type); }
+
+    bool operator==(type_info const& other) const {
+        return type == other.type;
+    }
+
+    bool operator!=(type_info const& other) const {
+        return !operator==(other);
+    }
 
     noir_type type;
     bool mutable_;
@@ -110,6 +109,7 @@ inline std::ostream& operator<<(std::ostream& os, type_info const& t)
 }
 
 const auto type_uint32 = type_info(int_type{ .signed_ = false, .width = 32 });
+const auto type_uint8 = type_info(int_type{ .signed_ = false, .width = 8 });
 const auto type_bool = type_info(bool_type{});
 
 } // namespace code_gen

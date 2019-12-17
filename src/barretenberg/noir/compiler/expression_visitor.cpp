@@ -17,10 +17,11 @@ ExpressionVisitor::ExpressionVisitor(CompilerContext& ctx, type_info const& targ
 var_t ExpressionVisitor::operator()(unsigned int x)
 {
     std::cout << format("uint constant (target type %s): %d", target_type_, x) << std::endl;
-    if (!boost::get<int_type>(&target_type_.type)) {
+    auto it = boost::get<int_type>(&target_type_.type);
+    if (!it) {
         throw std::runtime_error(format("Cannot create type %s from constant %d.", target_type_.type_name(), x));
     }
-    return var_t(uint32(&ctx_.composer, x), target_type_);
+    return var_t(uint(it->width, &ctx_.composer, x), target_type_);
 }
 
 var_t ExpressionVisitor::operator()(bool x)
@@ -113,11 +114,11 @@ var_t ExpressionVisitor::operator()(var_t vlhs, ast::operation const& x)
         std::cout << "op_index" << std::endl;
 
         // Evaluate index.
-        uint32* iptr = boost::get<uint32>(&rhs);
+        uint* iptr = boost::get<uint>(&rhs);
         if (!iptr) {
             throw std::runtime_error("Index must be an integer.");
         }
-        uint32_t i = (*iptr).get_value();
+        uint32_t i = static_cast<uint32_t>((*iptr).get_value());
 
         return boost::apply_visitor(IndexVisitor(), lhs, boost::variant<unsigned int>(i));
     }
@@ -182,7 +183,7 @@ var_t ExpressionVisitor::operator()(ast::assignment const& x)
         // Evaluate index.
         auto ivar = ExpressionVisitor(ctx_, type_uint32)(x.lhs.indexes[0]);
 
-        uint32_t i = boost::get<uint32>(ivar.value).get_value();
+        auto i = boost::get<uint>(ivar.value).get_value();
 
         auto arr = boost::get<array_type>(lhs.type.type);
         if (i >= arr.size) {

@@ -16,6 +16,7 @@ using x3::lexeme;
 using x3::raw;
 using x3::string;
 using x3::uint_;
+using x3::char_;
 using namespace x3::ascii;
 
 x3::symbols<ast::qualifier> qualifier;
@@ -100,7 +101,7 @@ auto const variable_declaration_def =
     ;
 
 auto const function_type_id_def =
-        intrinsic_type > -("[" > -(uint_) > "]")
+        intrinsic_type > -(char_('[') > -(uint_) > "]")
     ;
 
 auto const function_argument_def =

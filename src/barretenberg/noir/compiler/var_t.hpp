@@ -32,16 +32,20 @@ struct var_t_printer : boost::static_visitor<std::ostream&> {
 } // namespace
 
 struct var_t {
-    // typedef boost::make_recursive_variant<bool_t, uint32, std::vector<boost::recursive_variant_>>::type value_t;
-    typedef boost::variant<bool_t, uint32, boost::recursive_wrapper<std::vector<var_t>>> value_t;
+    typedef boost::variant<bool_t, uint, boost::recursive_wrapper<std::vector<var_t>>> value_t;
 
     var_t(value_t const& value, type_info const& type)
         : value(value)
         , type(type){};
 
-    var_t(uint32 value)
+    var_t(uint value)
         : value(value)
         , type(type_uint32)
+    {}
+
+    var_t(char value)
+        : value(uint(value))
+        , type(type_uint8)
     {}
 
     var_t(bool_t value)
@@ -83,28 +87,13 @@ struct var_t {
     type_info type;
 };
 
-/*
-inline var_t var_t_factory(ast::type_id const& type, Composer& composer)
-{
-    if (type.array_size.has_value()) {
-        return type.type.apply_visitor(make_lambda_visitor<var_t>(
-            [&](ast::bool_type const&) { return std::vector<bool_t>(type.array_size.value(), bool_t(&composer)); },
-            [&](ast::int_type const&) { return std::vector<uint32>(type.array_size.value(), uint32(&composer)); }));
-    } else {
-        return type.type.apply_visitor(
-            make_lambda_visitor<var_t>([&](ast::bool_type const&) { return bool_t(&composer); },
-                                       [&](ast::int_type const&) { return uint32(&composer); }));
-    }
-}
-*/
-
 struct VarTFactoryVisitor : boost::static_visitor<var_t> {
     VarTFactoryVisitor(type_info const& type, Composer& composer)
         : composer(composer)
         , type(type){};
     result_type operator()(bool_type const&) const { return var_t(bool_t(&composer), type); }
     result_type operator()(int_type const&) const { return var_t(uint32(&composer), type); }
-    //result_type operator()(int_type const& t) const { return var_t(uint(t.width, &composer), type); }
+    // result_type operator()(int_type const& t) const { return var_t(uint(t.width, &composer), type); }
     result_type operator()(array_type const& arr) const
     {
         var_t defaultElement = boost::apply_visitor(VarTFactoryVisitor(arr.element_type, composer), arr.element_type);

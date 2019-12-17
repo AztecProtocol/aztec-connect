@@ -35,10 +35,10 @@ var_t function_call(CompilerContext& ctx, ast::function_declaration const& func,
     for (size_t i = 0; i < func.args.size(); ++i) {
         var_t v = args[i];
         // Check type of function argument matches that of given variable.
-        std::string const& var_type = v.type.type_name();
-        auto ti = type_info_from_type_id(func.args[i].type);
-        std::string const& arg_type = ti.type_name();
-        if (var_type != arg_type) {
+        auto arg_type_info = type_info_from_type_id(func.args[i].type);
+        if (v.type != arg_type_info) {
+            std::string const& var_type = v.type.type_name();
+            std::string const& arg_type = arg_type_info.type_name();
             throw std::runtime_error(format("Argument %d has incorrect type %s, expected %s.", i, var_type, arg_type));
         }
         ctx.symbol_table.declare(v, func.args[i].name);

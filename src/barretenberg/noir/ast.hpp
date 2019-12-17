@@ -120,7 +120,8 @@ struct function_statement_list;
 
 struct function_type_id {
     x3::variant<bool_type, int_type> type;
-    std::optional<std::optional<unsigned int>> array_size;
+    bool is_array;
+    std::optional<unsigned int> array_size;
 };
 
 struct function_argument {

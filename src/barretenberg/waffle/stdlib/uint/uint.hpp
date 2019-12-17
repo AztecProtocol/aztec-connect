@@ -24,6 +24,11 @@ template <typename ComposerContext> class uint {
     uint(size_t width, const field_t<ComposerContext>& other);
     uint(ComposerContext* parent_context, const std::vector<bool_t<ComposerContext>>& wires);
     uint(const uint& other);
+
+    uint(char c)
+        : uint(8, static_cast<uint64_t>(c))
+    {}
+
     // uint(uint&& other);
 
     //~uint(){};
@@ -119,7 +124,8 @@ template <typename ComposerContext> class uint {
 
     struct LogicOperation {
         LogicOperation(size_t width)
-            : operand_wires(width) {}
+            : operand_wires(width)
+        {}
         std::vector<bool_t<ComposerContext>> operand_wires;
         bool_t<ComposerContext> (*method)(bool_t<ComposerContext>, bool_t<ComposerContext>) = nullptr;
     };
