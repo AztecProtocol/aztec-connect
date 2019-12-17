@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <bitset>
 #include <string>
+#include <array>
 
 namespace plonk
 {
@@ -195,7 +196,7 @@ void bitarray<ComposerContext>::populate_uint32_array(const size_t starting_inde
                 bools[j - start] = bool_t<ComposerContext>(context, false);
             }
         }
-        
+
         output[count] = uint32<ComposerContext>(context, bools);
         ++count;
     }

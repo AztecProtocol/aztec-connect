@@ -48,6 +48,8 @@ template <typename ComposerContext> class bool_t {
 
     bool get_value() const { return witness_bool ^ witness_inverted; }
 
+    bool is_constant() const { return witness_index == static_cast<uint32_t>(-1); }
+
     ComposerContext* context = nullptr;
     bool witness_bool = false;
     bool witness_inverted = false;

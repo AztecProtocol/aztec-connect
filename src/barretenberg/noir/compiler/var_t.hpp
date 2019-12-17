@@ -52,7 +52,8 @@ struct var_t {
     template <typename T>
     var_t(std::vector<T> value)
         : value(value)
-        , type(array_type{ .size = value.size(), .element_type = value[0].type.type }) {}
+        , type(array_type{ .size = value.size(), .element_type = value[0].type.type })
+    {}
 
     var_t(var_t const& rhs)
         : value(rhs.value)
@@ -103,6 +104,7 @@ struct VarTFactoryVisitor : boost::static_visitor<var_t> {
         , type(type){};
     result_type operator()(bool_type const&) const { return var_t(bool_t(&composer), type); }
     result_type operator()(int_type const&) const { return var_t(uint32(&composer), type); }
+    //result_type operator()(int_type const& t) const { return var_t(uint(t.width, &composer), type); }
     result_type operator()(array_type const& arr) const
     {
         var_t defaultElement = boost::apply_visitor(VarTFactoryVisitor(arr.element_type, composer), arr.element_type);

@@ -60,7 +60,7 @@ TEST(stdlib_uint32, test_add)
     EXPECT_EQ(result, true);
 }
 
-TEST(stdlib_uint32s, test_add_with_constants)
+TEST(stdlib_uint32, test_add_with_constants)
 {
     size_t n = 1;
     std::vector<uint32_t> witnesses = get_random_ints(3 * n);
@@ -75,7 +75,6 @@ TEST(stdlib_uint32s, test_add_with_constants)
         expected[6] = expected[3] + expected[4];
         expected[7] = expected[4] + expected[5];
     }
-
     waffle::BoolComposer composer = waffle::BoolComposer();
     uint32 result[8];
     for (size_t i = 0; i < n; ++i) {
