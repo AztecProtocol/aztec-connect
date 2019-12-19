@@ -38,7 +38,7 @@ class SymbolTable {
         variables_.back().insert(std::make_pair(key, var));
     }
 
-    var_t const& operator[](std::string const& key)
+    var_t& operator[](std::string const& key)
     {
         auto it = lookup(key);
         if (it.has_value()) {

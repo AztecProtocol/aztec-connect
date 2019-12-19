@@ -4,6 +4,10 @@
 namespace noir {
 namespace code_gen {
 
+void load_builtins(CompilerContext& ctx);
+
+BuiltinFunction const builtin_lookup(CompilerContext& ctx, std::string const& function_name);
+
 ast::function_declaration const& function_lookup(CompilerContext& ctx,
                                                  std::string const& function_name,
                                                  size_t num_args);

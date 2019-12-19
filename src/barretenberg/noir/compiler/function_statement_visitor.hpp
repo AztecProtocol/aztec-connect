@@ -9,6 +9,7 @@ class FunctionStatementVisitor : boost::static_visitor<var_t> {
     FunctionStatementVisitor(CompilerContext& ctx, type_info const& target_type);
 
     var_t operator()(ast::variable_declaration const& x);
+    var_t operator()(ast::expression const& x);
     var_t operator()(ast::assignment const& x);
     var_t operator()(ast::function_statement_list const& x);
     var_t operator()(ast::function_statement const& x);
@@ -18,6 +19,7 @@ class FunctionStatementVisitor : boost::static_visitor<var_t> {
   private:
     CompilerContext& ctx_;
     type_info const& target_type_;
+    var_t return_;
 };
 
 } // namespace code_gen

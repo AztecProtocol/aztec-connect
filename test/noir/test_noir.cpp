@@ -42,6 +42,41 @@ TEST(noir, uint65_fail)
     EXPECT_THROW(parse("uint65 my_int65 = 0;"), std::runtime_error);
 }
 
+TEST(noir, uint_indexing)
+{
+    std::string code = "            \n\
+        uint32 main(uint32 a) {     \n\
+            a[3 + 4] = true;        \n\
+            a[30] = false;          \n\
+            return a;               \n\
+        }                           \n\
+    ";
+    auto ast = parse(code);
+
+    auto composer = Composer();
+    auto compiler = Compiler(composer);
+    std::vector<var_t> inputs = { uint32(witness_t(&composer, 7ULL)) };
+    auto r = compiler.start(ast, inputs);
+    EXPECT_EQ(boost::get<noir::code_gen::uint>(r.first.value).get_value(), 16777221ULL);
+}
+
+TEST(noir, uint_vector_bit_indexing)
+{
+    std::string code = "            \n\
+        uint32 main() {             \n\
+            uint32[1] a = [0];      \n\
+            a[0][31] = true;        \n\
+            return a[0];            \n\
+        }                           \n\
+    ";
+    auto ast = parse(code);
+
+    auto composer = Composer();
+    auto compiler = Compiler(composer);
+    auto r = compiler.start(ast, {});
+    EXPECT_EQ(boost::get<noir::code_gen::uint>(r.first.value).get_value(), 1ULL);
+}
+
 TEST(noir, function_definition)
 {
     parse("uint32 my_function(uint32 arg1, bool arg2) {}");

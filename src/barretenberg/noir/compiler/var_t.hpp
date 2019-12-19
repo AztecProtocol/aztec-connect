@@ -9,28 +9,6 @@
 namespace noir {
 namespace code_gen {
 
-namespace {
-template <typename T> inline std::ostream& operator<<(std::ostream& os, std::vector<T> const& v)
-{
-    os << "[";
-    for (auto it = v.begin(); it != v.end(); ++it) {
-        os << *it;
-        if (it != --v.end()) {
-            os << ", ";
-        }
-    }
-    return os << "]";
-}
-
-struct var_t_printer : boost::static_visitor<std::ostream&> {
-    var_t_printer(std::ostream& os)
-        : os(os)
-    {}
-    template <typename T> result_type operator()(T const& v) const { return os << v; }
-    std::ostream& os;
-};
-} // namespace
-
 struct var_t {
     typedef boost::variant<bool_t, uint, boost::recursive_wrapper<std::vector<var_t>>> value_t;
 
@@ -76,16 +54,40 @@ struct var_t {
         return *this;
     }
 
-    std::string const to_string() const
-    {
-        std::ostringstream os;
-        boost::apply_visitor(var_t_printer(os), value);
-        return os.str();
-    }
+    std::string const to_string() const;
 
     value_t value;
     type_info type;
 };
+
+struct var_t_printer : boost::static_visitor<std::ostream&> {
+    var_t_printer(std::ostream& os)
+        : os(os)
+    {}
+    result_type operator()(uint const& v) const { return os << v; }
+    result_type operator()(bool_t const& v) const { return os << v; }
+
+    result_type operator()(std::vector<var_t> const& v) const
+    {
+        os << "[";
+        for (auto it = v.begin(); it != v.end(); ++it) {
+            it->value.apply_visitor(*this);
+            if (it != --v.end()) {
+                os << ", ";
+            }
+        }
+        return os << "]";
+    }
+
+    std::ostream& os;
+};
+
+inline std::string const var_t::to_string() const
+{
+    std::ostringstream os;
+    boost::apply_visitor(var_t_printer(os), value);
+    return os.str();
+}
 
 struct VarTFactoryVisitor : boost::static_visitor<var_t> {
     VarTFactoryVisitor(type_info const& type, Composer& composer)
@@ -110,6 +112,7 @@ inline var_t var_t_factory(type_info const& type, Composer& composer)
 
 inline std::ostream& operator<<(std::ostream& os, var_t const& v)
 {
+    os << "(" << v.type << ")";
     return boost::apply_visitor(var_t_printer(os), v.value);
 }
 

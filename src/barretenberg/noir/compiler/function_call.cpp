@@ -5,6 +5,40 @@
 namespace noir {
 namespace code_gen {
 
+var_t builtin_length(std::vector<var_t> const& args)
+{
+    if (args.size() != 1) {
+        throw std::runtime_error("Incorrect number of arguments to length(arr).");
+    }
+    auto arr = boost::get<std::vector<var_t>>(args[0].value);
+    return uint(32, arr.size());
+}
+
+var_t builtin_print(std::vector<var_t> const& args)
+{
+    if (args.size() != 1) {
+        throw std::runtime_error("Incorrect number of arguments to print.");
+    }
+    auto v = boost::get<std::vector<var_t>>(args[0].value);
+    std::cout << "PRINT: " << v << std::endl;
+    return bool_t(false);
+}
+
+void load_builtins(CompilerContext& ctx)
+{
+    ctx.builtins["length"] = builtin_length;
+    ctx.builtins["print"] = builtin_print;
+}
+
+BuiltinFunction const builtin_lookup(CompilerContext& ctx, std::string const& function_name)
+{
+    auto it = ctx.builtins.find(function_name);
+    if (it == ctx.builtins.end()) {
+        return BuiltinFunction();
+    }
+    return it->second;
+}
+
 ast::function_declaration const& function_lookup(CompilerContext& ctx,
                                                  std::string const& function_name,
                                                  size_t num_args)

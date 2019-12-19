@@ -12,11 +12,11 @@
 namespace noir {
 namespace parser {
 
+using x3::char_;
 using x3::lexeme;
 using x3::raw;
 using x3::string;
 using x3::uint_;
-using x3::char_;
 using namespace x3::ascii;
 
 x3::symbols<ast::qualifier> qualifier;
@@ -77,7 +77,7 @@ auto const statement_list_def =
     ;
 
 auto const function_statement_list_def =
-        *(variable_declaration | for_statement | return_expr | assignment)
+        *(variable_declaration | for_statement | return_expr | assignment | (expression > ';'))
     ;
 
 auto const int_type_def =
@@ -116,7 +116,7 @@ auto const function_declaration_def =
 
 auto const assignment_def =
         variable
-    >   ('='
+    >>  ('='
     >   expression
     >   ';')
     ;

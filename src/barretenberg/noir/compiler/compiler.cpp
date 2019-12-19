@@ -13,9 +13,11 @@
 namespace noir {
 namespace code_gen {
 
-Compiler::Compiler(waffle::StandardComposer& composer)
+Compiler::Compiler(Composer& composer)
     : ctx_(composer)
-{}
+{
+    load_builtins(ctx_);
+}
 
 void Compiler::operator()(ast::variable_declaration const& x)
 {
@@ -60,10 +62,14 @@ std::pair<var_t, waffle::Prover> Compiler::start(ast::statement_list const& x, s
 
     var_t result = function_call(ctx_, "main", args);
 
-    auto prover = ctx_.composer.preprocess();
-    printf("prover gates = %lu\n", prover.n);
-    printf("composer gates = %lu\n", ctx_.composer.get_num_gates());
-    return std::make_pair(std::move(result), std::move(prover));
+    if (ctx_.composer.get_num_gates()) {
+        auto prover = ctx_.composer.preprocess();
+        printf("prover gates = %lu\n", prover.n);
+        printf("composer gates = %lu\n", ctx_.composer.get_num_gates());
+        return std::make_pair(std::move(result), std::move(prover));
+    } else {
+        return std::make_pair(std::move(result), waffle::Prover());
+    }
 }
 
 } // namespace code_gen

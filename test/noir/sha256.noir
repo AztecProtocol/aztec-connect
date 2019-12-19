@@ -88,7 +88,9 @@ uint32 get_num_blocks(uint32 num_bits)
     uint32 extra_bits = 65;
     uint32 leftovers = (num_bits + extra_bits) % 512;
     // No conditional support yet. 0 / 0 = 0; x / x = 1;
-    return ((num_bits + extra_bits) / 512) + (leftovers / leftovers);
+    uint32 additional = leftovers / leftovers;
+    uint32 num_blocks = ((num_bits + extra_bits) / 512) + additional;
+    return num_blocks;
 }
 
 uint8[32] sha256(uint8[] input)
@@ -104,16 +106,18 @@ uint8[32] sha256(uint8[] input)
             data[i * 8 + j] = input[i][j];
         }
     }
-    data[num_bits + 1] = true;
+    data[num_bits] = true;
     for (i in 0..32) {
-        data[total_bits - 32 + i] = num_bits[i];
+        data[total_bits - 32 + i] = num_bits[31 - i];
     }
 
     uint32[8] rolling_hash = init_constants;
     for (i in 0..num_blocks) {
         uint32[16] hash_input;
         for (j in 0..512) {
+            print(hash_input);
             hash_input[j / 32][j % 32] = data[j];
+            print(hash_input);
         }
         rolling_hash = sha256_block(rolling_hash, hash_input);
     }

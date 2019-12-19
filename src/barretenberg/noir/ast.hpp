@@ -150,7 +150,7 @@ struct statement : x3::variant<function_declaration, variable_declaration, boost
 struct statement_list : std::vector<statement> {};
 
 struct function_statement
-    : x3::variant<variable_declaration, assignment, boost::recursive_wrapper<for_statement>, return_expr> {
+    : x3::variant<variable_declaration, expression, assignment, boost::recursive_wrapper<for_statement>, return_expr> {
     using base_type::base_type;
     using base_type::operator=;
 };

@@ -4,12 +4,10 @@
 
 #include "../../curves/bn254/fr.hpp"
 
-namespace plonk
-{
-namespace stdlib
-{
+namespace plonk {
+namespace stdlib {
 
-inline barretenberg::fr::field_t set_bit(const barretenberg::fr::field_t &scalar, const size_t bit_position)
+inline barretenberg::fr::field_t set_bit(const barretenberg::fr::field_t& scalar, const size_t bit_position)
 {
     barretenberg::fr::field_t result = scalar;
     size_t limb_idx = bit_position / 64;
@@ -18,40 +16,42 @@ inline barretenberg::fr::field_t set_bit(const barretenberg::fr::field_t &scalar
     return result;
 }
 
-template <typename ComposerContext>
-struct witness_t
-{
-    witness_t(ComposerContext *parent_context, const barretenberg::fr::field_t &in)
+template <typename ComposerContext> struct witness_t {
+    witness_t(ComposerContext* parent_context, const barretenberg::fr::field_t& in)
     {
         context = parent_context;
         barretenberg::fr::__copy(in, witness);
         witness_index = context->add_variable(witness);
     }
 
-    witness_t(ComposerContext *parent_context, const bool in)
+    witness_t(ComposerContext* parent_context, const bool in)
     {
         context = parent_context;
-        if (in)
-        {
+        if (in) {
             barretenberg::fr::__copy(barretenberg::fr::one, witness);
-        }
-        else
-        {
+        } else {
             barretenberg::fr::__copy(barretenberg::fr::zero, witness);
         }
         witness_index = context->add_variable(witness);
     }
 
-    witness_t(ComposerContext *parent_context, const uint32_t in)
+    witness_t(ComposerContext* parent_context, const uint32_t in)
     {
         context = parent_context;
-        witness = barretenberg::fr::to_montgomery_form({{ static_cast<uint64_t>(in), 0, 0, 0 }});
+        witness = barretenberg::fr::to_montgomery_form({ { static_cast<uint64_t>(in), 0, 0, 0 } });
+        witness_index = context->add_variable(witness);
+    }
+
+    witness_t(ComposerContext* parent_context, const uint64_t in)
+    {
+        context = parent_context;
+        witness = barretenberg::fr::to_montgomery_form({ { in, 0, 0, 0 } });
         witness_index = context->add_variable(witness);
     }
 
     barretenberg::fr::field_t witness;
     uint32_t witness_index = static_cast<uint32_t>(-1);
-    ComposerContext *context = nullptr;
-};   
-}
-}
+    ComposerContext* context = nullptr;
+};
+} // namespace stdlib
+} // namespace plonk

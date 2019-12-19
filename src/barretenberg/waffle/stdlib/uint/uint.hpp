@@ -16,7 +16,7 @@ namespace stdlib {
 
 template <typename ComposerContext> class uint {
   public:
-    uint(size_t width);
+    explicit uint(size_t width);
     uint(size_t width, const uint64_t other);
     uint(size_t width, ComposerContext* parent_context);
     uint(size_t width, const witness_t<ComposerContext>& value);
@@ -93,6 +93,7 @@ template <typename ComposerContext> class uint {
                 return (acc + acc + wire.get_value());
             });
         }
+        normalize();
         if (is_constant()) {
             return (multiplicative_constant * additive_constant);
         }

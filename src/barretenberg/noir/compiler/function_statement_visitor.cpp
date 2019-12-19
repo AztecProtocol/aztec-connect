@@ -9,6 +9,7 @@ namespace code_gen {
 FunctionStatementVisitor::FunctionStatementVisitor(CompilerContext& ctx, type_info const& target_type)
     : ctx_(ctx)
     , target_type_(target_type)
+    , return_(bool_t(&ctx.composer, false))
 {}
 
 var_t FunctionStatementVisitor::operator()(ast::variable_declaration const& x)
@@ -17,6 +18,7 @@ var_t FunctionStatementVisitor::operator()(ast::variable_declaration const& x)
 
     auto ti = type_info_from_type_id(ctx_, x.type);
     var_t v = var_t_factory(ti, ctx_.composer);
+    std::cout << x.variable << " = " << v << std::endl;
     ctx_.symbol_table.declare(v, x.variable);
 
     if (x.assignment.has_value()) {
@@ -25,6 +27,11 @@ var_t FunctionStatementVisitor::operator()(ast::variable_declaration const& x)
     }
 
     return v;
+}
+
+var_t FunctionStatementVisitor::operator()(ast::expression const& x)
+{
+    return ExpressionVisitor(ctx_, type_uint32)(x);
 }
 
 var_t FunctionStatementVisitor::operator()(ast::assignment const& x)
@@ -42,11 +49,10 @@ var_t FunctionStatementVisitor::operator()(ast::function_statement const& x)
 
 var_t FunctionStatementVisitor::operator()(ast::function_statement_list const& x)
 {
-    var_t result = bool_t(&ctx_.composer, false);
     for (auto const& s : x) {
         (*this)(s);
     }
-    return uint32();
+    return return_;
 }
 
 var_t FunctionStatementVisitor::operator()(boost::recursive_wrapper<ast::for_statement> const& x_)
@@ -70,7 +76,9 @@ var_t FunctionStatementVisitor::operator()(boost::recursive_wrapper<ast::for_sta
 
 var_t FunctionStatementVisitor::operator()(ast::return_expr const& x)
 {
-    return ExpressionVisitor(ctx_, target_type_)(x.expr);
+    return_ = ExpressionVisitor(ctx_, target_type_)(x.expr);
+    std::cout << "return: " << return_ << std::endl;
+    return return_;
 }
 
 } // namespace code_gen

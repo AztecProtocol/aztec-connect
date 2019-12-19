@@ -28,10 +28,24 @@ struct MultiplyVisitor : boost::static_visitor<var_t> {
 };
 
 struct DivideVisitor : boost::static_visitor<var_t> {
-    // var_t operator()(uint const& lhs, uint const& rhs) const { return lhs / rhs; }
+    var_t operator()(uint& lhs, uint const& rhs) const { return lhs / rhs; }
     template <typename T, typename U> var_t operator()(T const&, U const&) const
     {
         throw std::runtime_error("Cannot perform division.");
+    }
+};
+
+struct ModVisitor : boost::static_visitor<var_t> {
+    var_t operator()(uint& lhs, uint const& rhs) const
+    {
+        if (!lhs.is_constant() || !rhs.is_constant()) {
+            throw std::runtime_error("Can only modulo constants.");
+        }
+        return uint(lhs.width(), lhs.get_value() % rhs.get_value());
+    }
+    template <typename T, typename U> var_t operator()(T const&, U const&) const
+    {
+        throw std::runtime_error("Cannot perform modulo.");
     }
 };
 
@@ -139,15 +153,26 @@ struct BitwiseNotVisitor : boost::static_visitor<var_t> {
 };
 
 struct IndexVisitor : boost::static_visitor<var_t> {
-    template <typename T> var_t operator()(std::vector<T>& lhs, unsigned int i) const
+    IndexVisitor(size_t i)
+        : i(i)
+    {}
+
+    template <typename T> var_t operator()(std::vector<T>& lhs) const
     {
-        std::cout << "indexing " << i << " " << lhs[i] << std::endl;
+        std::cout << "indexing " << i << ": " << lhs[i] << std::endl;
         return lhs[i];
     }
-    template <typename T> var_t operator()(T&, unsigned int) const
+    var_t operator()(noir::code_gen::uint& lhs) const
     {
-        throw std::runtime_error("Can only index arrays.");
+        std::cout << "indexing uint for bit " << i << ": " << lhs.at(i) << std::endl;
+        return lhs.at(i);
     }
+    template <typename T> var_t operator()(T& t) const
+    {
+        throw std::runtime_error(format("Cannot index given type: %s", typeid(t).name()));
+    }
+
+    size_t i;
 };
 
 struct AssignVisitor : boost::static_visitor<var_t> {
@@ -160,25 +185,6 @@ struct AssignVisitor : boost::static_visitor<var_t> {
     {
         throw std::runtime_error("Cannot assign differing types.");
     }
-};
-
-struct IndexedAssignVisitor : boost::static_visitor<var_t> {
-    IndexedAssignVisitor(unsigned int i)
-        : i(i)
-    {}
-
-    template <typename T> void operator()(std::vector<T>& lhs, const T& rhs) const
-    {
-        std::cout << "indexed assign " << i << " " << lhs[i] << "->" << rhs << std::endl;
-        return lhs[i] = rhs;
-    }
-
-    template <typename T, typename U> void operator()(T const&, U const&) const
-    {
-        throw std::runtime_error("Not array or differing types in indexed assign.");
-    }
-
-    unsigned int i;
 };
 
 } // namespace code_gen

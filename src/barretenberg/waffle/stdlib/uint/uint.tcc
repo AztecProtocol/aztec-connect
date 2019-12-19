@@ -356,7 +356,7 @@ template <typename ComposerContext> void uint<ComposerContext>::decompose() cons
     const auto compute_field_wire = [ctx = context, constant, &value]() {
         bool bit = static_cast<bool>(value & 1UL);
         value = value >> 1UL;
-        bool_t result = constant ? bool_t(ctx, bit) : witness_t(ctx, static_cast<uint32_t>(bit));
+        bool_t result = constant ? bool_t(ctx, bit) : witness_t(ctx, static_cast<uint64_t>(bit));
         return result;
     };
     std::vector<bool_t> overhead_wires(num_bits < width() ? 0 : num_bits - width());
@@ -695,7 +695,7 @@ template <typename ComposerContext> uint<ComposerContext> uint<ComposerContext>:
     other.prepare_for_arithmetic_operations();
 
     ComposerContext* ctx = (context == nullptr) ? other.context : context;
-    uint<ComposerContext> result(ctx);
+    uint<ComposerContext> result(width(), ctx);
 
     bool lhs_constant = is_constant();
     bool rhs_constant = other.is_constant();
@@ -746,7 +746,7 @@ template <typename ComposerContext> uint<ComposerContext> uint<ComposerContext>:
         // denominator = denominator * multiplicative_constant;
         // denominator = denominator + additive_constant;
         result = uint<ComposerContext>(width(), witness_t(context, quotient_uint));
-        uint<ComposerContext> remainder = *this - (other * result);
+        uint<ComposerContext> remainder = *this - (result * other);
         bool_t left = remainder < other;
         bool_t right(witness_t(context, true));
         context->assert_equal(left.witness_index, right.witness_index);
@@ -766,12 +766,12 @@ template <typename ComposerContext> bool_t<ComposerContext> uint<ComposerContext
         decompose();
     }
     if (is_constant() && other.is_constant()) {
-        return bool_t(nullptr, additive_constant < other.additive_constant);
+        return bool_t<ComposerContext>(nullptr, additive_constant < other.additive_constant);
     }
 
     ComposerContext* ctx = (context == nullptr) ? other.context : nullptr;
 
-    const auto get_field_element = [ctx](const uint32_t w_idx, const uint32_t add_const, const uint32_t mul_const) {
+    const auto get_field_element = [ctx](const uint32_t w_idx, const uint64_t add_const, const uint64_t mul_const) {
         field_t<ComposerContext> target;
         if (w_idx == static_cast<uint32_t>(-1)) {
             target = field_t<ComposerContext>(ctx, barretenberg::fr::to_montgomery_form({ { add_const, 0, 0, 0 } }));
@@ -794,7 +794,8 @@ template <typename ComposerContext> bool_t<ComposerContext> uint<ComposerContext
     bool_t<ComposerContext> predicate = witness_t<ComposerContext>(ctx, predicate_bool);
 
     field_t<ComposerContext> difference = left - right;
-    uint<ComposerContext> delta(field_t<ComposerContext>((field_t<ComposerContext>(predicate) * 2 - 1) * difference));
+    uint<ComposerContext> delta(width(),
+                                field_t<ComposerContext>((field_t<ComposerContext>(predicate) * 2 - 1) * difference));
     delta.decompose();
     return predicate;
 }
@@ -923,7 +924,7 @@ template <typename ComposerContext> uint<ComposerContext> uint<ComposerContext>:
 
     prepare_for_logic_operations();
 
-    uint<ComposerContext> result(context);
+    uint<ComposerContext> result(width(), context);
     for (size_t i = 0; i < shift; ++i) {
         result.bool_wires[i] = bool_t<ComposerContext>(context, false);
     }
