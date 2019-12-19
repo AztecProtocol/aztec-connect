@@ -18,7 +18,7 @@ struct var_t {
 
     var_t(uint value)
         : value(value)
-        , type(type_uint32)
+        , type(int_type{ .signed_ = false, .width = value.width() })
     {}
 
     var_t(char value)
@@ -94,7 +94,7 @@ struct VarTFactoryVisitor : boost::static_visitor<var_t> {
         : composer(composer)
         , type(type){};
     result_type operator()(bool_type const&) const { return var_t(bool_t(&composer), type); }
-    result_type operator()(int_type const&) const { return var_t(uint32(&composer), type); }
+    result_type operator()(int_type const& t) const { return var_t(uint(t.width, &composer), type); }
     // result_type operator()(int_type const& t) const { return var_t(uint(t.width, &composer), type); }
     result_type operator()(array_type const& arr) const
     {

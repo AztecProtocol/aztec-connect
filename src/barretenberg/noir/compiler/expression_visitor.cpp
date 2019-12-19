@@ -127,6 +127,12 @@ var_t ExpressionVisitor::operator()(var_t vlhs, ast::operation const& x)
     case ast::op_bitwise_rol:
         std::cout << "op_bitwise_rol" << std::endl;
         return boost::apply_visitor(BitwiseRolVisitor(), lhs, rhs);
+    case ast::op_bitwise_shl:
+        std::cout << "op_bitwise_shl" << std::endl;
+        return boost::apply_visitor(BitwiseShlVisitor(), lhs, rhs);
+    case ast::op_bitwise_shr:
+        std::cout << "op_bitwise_shr" << std::endl;
+        return boost::apply_visitor(BitwiseShrVisitor(), lhs, rhs);
 
     default:
         BOOST_ASSERT(0);
@@ -197,13 +203,13 @@ struct IndexedAssignVisitor : boost::static_visitor<var_t> {
     {
         // Evaluate rhs of assignment, should resolve to bool.
         var_t rhs = ExpressionVisitor(ctx, type_bool)(rhs_expr);
-        bool bit = boost::get<bool_t>(rhs.value).get_value();
-        uint target_bit = (uint(lhs.width(), 1ULL) << (lhs.width() - i - 1));
-        if (bit) {
-            lhs = lhs | target_bit;
-        } else {
-            lhs = lhs & ~target_bit;
+        bool_t bit = boost::get<bool_t>(rhs.value);
+        std::vector<bool_t> wires(lhs.width());
+        size_t flipped = lhs.width() - i - 1;
+        for (size_t j = 0; j < lhs.width(); ++j) {
+            wires[j] = j == flipped ? bit : lhs.at(j);
         }
+        lhs = uint(&ctx.composer, wires);
         std::cout << "indexed assign bit " << i << " to " << bit << " = " << lhs << std::endl;
         return bit;
     }
@@ -229,7 +235,11 @@ var_t ExpressionVisitor::operator()(ast::assignment const& x)
         for (size_t j = 0; j < x.lhs.indexes.size() - 1; ++j) {
             // Evaluate index.
             auto ivar = ExpressionVisitor(ctx_, type_uint32)(x.lhs.indexes[0]);
-            auto i = boost::get<uint>(ivar.value).get_value();
+            auto iv = boost::get<uint>(ivar.value);
+            if (!iv.is_constant()) {
+                throw std::runtime_error("Index must be constant.");
+            }
+            auto i = iv.get_value();
             auto arr = boost::get<array_type>(lhs->type.type);
             if (i >= arr.size) {
                 throw std::runtime_error("Index out of bounds.");
@@ -240,9 +250,12 @@ var_t ExpressionVisitor::operator()(ast::assignment const& x)
 
         // Evaluate final index.
         auto ivar = ExpressionVisitor(ctx_, type_uint32)(x.lhs.indexes.back());
-        auto i = boost::get<uint>(ivar.value).get_value();
+        uint i = boost::get<uint>(ivar.value);
+        if (!i.is_constant()) {
+            throw std::runtime_error("Index must be constant.");
+        }
 
-        return boost::apply_visitor(IndexedAssignVisitor(ctx_, i, x.rhs, lhs->type), lhs->value);
+        return boost::apply_visitor(IndexedAssignVisitor(ctx_, i.get_value(), x.rhs, lhs->type), lhs->value);
     } else {
         var_t rhs = ExpressionVisitor(ctx_, lhs->type)(x.rhs);
         std::cout << "op_store " << x.lhs.name << " " << rhs << std::endl;

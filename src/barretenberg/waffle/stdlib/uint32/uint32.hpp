@@ -8,7 +8,7 @@ namespace stdlib {
 template <typename ComposerContext> class uint32 : public uint<ComposerContext> {
   public:
     uint32()
-        : uint<ComposerContext>((size_t)32)
+        : uint<ComposerContext>(32, 0ULL)
     {}
 
     uint32(const uint32_t other)

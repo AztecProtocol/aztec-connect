@@ -154,6 +154,7 @@ void uint<ComposerContext>::internal_logic_operation_binary(
     witness_status = uint<ComposerContext>::WitnessStatus::IN_BINARY_FORM;
 }
 
+/*
 template <typename ComposerContext>
 uint<ComposerContext>::uint(size_t width)
     : context(nullptr)
@@ -165,6 +166,7 @@ uint<ComposerContext>::uint(size_t width)
     , queued_logic_operation(width)
     , maximum_value(0)
 {}
+*/
 
 template <typename ComposerContext>
 uint<ComposerContext>::uint(size_t width, ComposerContext* parent_context)
@@ -972,6 +974,14 @@ template <typename ComposerContext> bool_t<ComposerContext> uint<ComposerContext
     ASSERT(bit_index < width());
     prepare_for_logic_operations();
     return bool_wires[bit_index % width()];
+}
+
+template <typename ComposerContext>
+void uint<ComposerContext>::set_wire(bool_t<ComposerContext> const& bit, size_t bit_index)
+{
+    ASSERT(bit_index < width());
+    prepare_for_logic_operations();
+    bool_wires[bit_index] = bit;
 }
 
 } // namespace stdlib

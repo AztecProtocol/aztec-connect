@@ -19,8 +19,7 @@ var_t builtin_print(std::vector<var_t> const& args)
     if (args.size() != 1) {
         throw std::runtime_error("Incorrect number of arguments to print.");
     }
-    auto v = boost::get<std::vector<var_t>>(args[0].value);
-    std::cout << "PRINT: " << v << std::endl;
+    std::cout << "PRINT: " << args[0] << std::endl;
     return bool_t(false);
 }
 

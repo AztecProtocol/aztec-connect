@@ -16,7 +16,7 @@ namespace stdlib {
 
 template <typename ComposerContext> class uint {
   public:
-    explicit uint(size_t width);
+    // explicit uint(size_t width);
     uint(size_t width, const uint64_t other);
     uint(size_t width, ComposerContext* parent_context);
     uint(size_t width, const witness_t<ComposerContext>& value);
@@ -25,8 +25,20 @@ template <typename ComposerContext> class uint {
     uint(ComposerContext* parent_context, const std::vector<bool_t<ComposerContext>>& wires);
     uint(const uint& other);
 
-    uint(char c)
-        : uint(8, static_cast<uint64_t>(c))
+    uint(char v)
+        : uint(8, static_cast<uint64_t>(v))
+    {}
+
+    uint(uint16_t v)
+        : uint(16, static_cast<uint64_t>(v))
+    {}
+
+    uint(uint32_t v)
+        : uint(32, static_cast<uint64_t>(v))
+    {}
+
+    uint(uint64_t v)
+        : uint(64, static_cast<uint64_t>(v))
     {}
 
     // uint(uint&& other);
@@ -109,6 +121,8 @@ template <typename ComposerContext> class uint {
     ComposerContext* get_context() const { return context; }
 
     bool_t<ComposerContext> at(const size_t bit_index) const;
+
+    void set_wire(bool_t<ComposerContext> const& bit, size_t bit_index);
 
     size_t width() const { return bool_wires.size(); }
 

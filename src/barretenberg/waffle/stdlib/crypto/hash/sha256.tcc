@@ -3,12 +3,9 @@
 #include "../../bitarray/bitarray.hpp"
 #include "../../uint32/uint32.hpp"
 
-namespace plonk
-{
-namespace stdlib
-{
-namespace internal
-{
+namespace plonk {
+namespace stdlib {
+namespace internal {
 constexpr uint32_t init_constants[8]{ 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
                                       0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
 
@@ -53,16 +50,14 @@ std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 
     /**
      * Fill first 16 words with the message schedule
      **/
-    for (size_t i = 0; i < 16; ++i)
-    {
+    for (size_t i = 0; i < 16; ++i) {
         w[i] = input[i];
     }
 
     /**
      * Extend the input data into the remaining 48 words
      **/
-    for (size_t i = 16; i < 64; ++i)
-    {
+    for (size_t i = 16; i < 64; ++i) {
         uint32 s0 = w[i - 15].ror(7) ^ w[i - 15].ror(18) ^ (w[i - 15] >> 3);
         uint32 s1 = w[i - 2].ror(17) ^ w[i - 2].ror(19) ^ (w[i - 2] >> 10);
         w[i] = w[i - 16] + w[i - 7] + s0 + s1;
@@ -83,8 +78,7 @@ std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 
     /**
      * Apply SHA-256 compression function to the message schedule
      **/
-    for (size_t i = 0; i < 64; ++i)
-    {
+    for (size_t i = 0; i < 64; ++i) {
         uint32 S1 = e.ror(6U) ^ e.ror(11U) ^ e.ror(25U);
         uint32 ch = (e & f) + (~e & g); // === (e & f) ^ (~e & g), `+` op is cheaper
         uint32 temp1 = h + S1 + ch + internal::round_constants[i] + w[i];
@@ -130,22 +124,19 @@ template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>&
 
     // begin filling message schedule from most significant to least significant
     size_t offset = message_schedule.size() - input.size();
-    for (size_t i = input.size() - 1; i < input.size(); --i)
-    {
+    for (size_t i = input.size() - 1; i < input.size(); --i) {
         size_t idx = offset + i;
         message_schedule[idx] = input[i];
     }
     message_schedule[offset - 1] = true;
-    for (size_t i = 0; i < 32; ++i)
-    {
+    for (size_t i = 0; i < 32; ++i) {
         message_schedule[i] = static_cast<bool>((num_bits >> i) & 1);
     }
 
     std::array<uint32, 8> rolling_hash;
     prepare_constants(rolling_hash);
 
-    for (size_t i = 0; i < num_blocks; ++i)
-    {
+    for (size_t i = 0; i < num_blocks; ++i) {
         std::array<uint32, 16> hash_input;
         message_schedule.populate_uint32_array(i * 512, hash_input);
         rolling_hash = sha256_block(rolling_hash, hash_input);

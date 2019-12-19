@@ -125,6 +125,34 @@ struct BitwiseRolVisitor : boost::static_visitor<var_t> {
     }
 };
 
+struct BitwiseShlVisitor : boost::static_visitor<var_t> {
+    var_t operator()(uint& lhs, uint const& rhs) const
+    {
+        if (!rhs.is_constant()) {
+            throw std::runtime_error("Can only perform bitwise shift by constants.");
+        }
+        return lhs << rhs.get_value();
+    }
+    template <typename T, typename U> var_t operator()(T const&, U const&) const
+    {
+        throw std::runtime_error("Cannot shift left.");
+    }
+};
+
+struct BitwiseShrVisitor : boost::static_visitor<var_t> {
+    var_t operator()(uint& lhs, uint const& rhs) const
+    {
+        if (!rhs.is_constant()) {
+            throw std::runtime_error("Can only perform bitwise shift by constants.");
+        }
+        return lhs >> rhs.get_value();
+    }
+    template <typename T, typename U> var_t operator()(T const&, U const&) const
+    {
+        throw std::runtime_error("Cannot shift right.");
+    }
+};
+
 struct NegVis : boost::static_visitor<var_t> {
     template <typename T> var_t operator()(std::vector<T> const&) const
     {
@@ -164,8 +192,9 @@ struct IndexVisitor : boost::static_visitor<var_t> {
     }
     var_t operator()(noir::code_gen::uint& lhs) const
     {
-        std::cout << "indexing uint for bit " << i << ": " << lhs.at(i) << std::endl;
-        return lhs.at(i);
+        bool_t bit = lhs.at(lhs.width() - i - 1);
+        std::cout << "indexing uint for bit " << i << ": " << bit << " witness: " << bit.witness_index << std::endl;
+        return bit;
     }
     template <typename T> var_t operator()(T& t) const
     {
@@ -173,18 +202,6 @@ struct IndexVisitor : boost::static_visitor<var_t> {
     }
 
     size_t i;
-};
-
-struct AssignVisitor : boost::static_visitor<var_t> {
-    template <typename T> var_t operator()(std::vector<T> const&, std::vector<T> const&) const
-    {
-        throw std::runtime_error("No array assign support (yet).");
-    }
-    template <typename T> var_t operator()(T& lhs, T& rhs) const { return lhs = rhs; }
-    template <typename T, typename U> var_t operator()(T const&, U const&) const
-    {
-        throw std::runtime_error("Cannot assign differing types.");
-    }
 };
 
 } // namespace code_gen

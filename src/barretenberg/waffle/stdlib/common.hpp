@@ -35,17 +35,11 @@ template <typename ComposerContext> struct witness_t {
         witness_index = context->add_variable(witness);
     }
 
-    witness_t(ComposerContext* parent_context, const uint32_t in)
+    template <typename T>
+    witness_t(ComposerContext* parent_context, T const in)
     {
         context = parent_context;
         witness = barretenberg::fr::to_montgomery_form({ { static_cast<uint64_t>(in), 0, 0, 0 } });
-        witness_index = context->add_variable(witness);
-    }
-
-    witness_t(ComposerContext* parent_context, const uint64_t in)
-    {
-        context = parent_context;
-        witness = barretenberg::fr::to_montgomery_form({ { in, 0, 0, 0 } });
         witness_index = context->add_variable(witness);
     }
 
