@@ -1,5 +1,6 @@
 #pragma once
 #include "var_t.hpp"
+#include "log.hpp"
 #include <iostream>
 
 namespace noir {
@@ -22,7 +23,7 @@ class SymbolTable {
                 throw std::runtime_error(
                     format("Cannot assign value with type %s to variable %s with type %s.", v_type, key, e_type));
             }
-            std::cout << "SYMBOL TABLE UPDATE: " << key << std::endl;
+            debug("SYMBOL TABLE UPDATE: %1%", key);
             e = var;
         } else {
             throw std::runtime_error("Symbol not found: " + key);
@@ -34,7 +35,7 @@ class SymbolTable {
         if (variables_.back().find(key) != variables_.back().end()) {
             throw std::runtime_error("Symbol already defined in current scope: " + key);
         }
-        std::cout << "SYMBOL TABLE ADD: " << key << std::endl;
+        debug("SYMBOL TABLE ADD: %1%", key);
         variables_.back().insert(std::make_pair(key, var));
     }
 

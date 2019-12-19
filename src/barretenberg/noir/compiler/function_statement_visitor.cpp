@@ -1,5 +1,6 @@
 #include "function_statement_visitor.hpp"
 #include "expression_visitor.hpp"
+#include "log.hpp"
 #include "type_info_from.hpp"
 #include <iostream>
 
@@ -14,11 +15,12 @@ FunctionStatementVisitor::FunctionStatementVisitor(CompilerContext& ctx, type_in
 
 var_t FunctionStatementVisitor::operator()(ast::variable_declaration const& x)
 {
-    std::cout << "function variable declaration " << x.variable << std::endl;
+    debug("function variable declaration %1%", x.variable);
 
     auto ti = type_info_from_type_id(ctx_, x.type);
     var_t v = var_t_factory(ti, ctx_.composer);
-    std::cout << x.variable << " = " << v << std::endl;
+    debug("%1% initialized to: %2%", x.variable, v);
+
     ctx_.symbol_table.declare(v, x.variable);
 
     if (x.assignment.has_value()) {
@@ -36,14 +38,14 @@ var_t FunctionStatementVisitor::operator()(ast::expression const& x)
 
 var_t FunctionStatementVisitor::operator()(ast::assignment const& x)
 {
-    std::cout << "function variable assignment" << std::endl;
+    debug("function variable assignment");
     var_t const& lhs = ctx_.symbol_table[x.lhs.name];
     return ExpressionVisitor(ctx_, lhs.type)(x);
 }
 
 var_t FunctionStatementVisitor::operator()(ast::function_statement const& x)
 {
-    std::cout << "function statement" << std::endl;
+    debug("function statement");
     return boost::apply_visitor(*this, x);
 }
 
@@ -77,7 +79,7 @@ var_t FunctionStatementVisitor::operator()(boost::recursive_wrapper<ast::for_sta
 var_t FunctionStatementVisitor::operator()(ast::return_expr const& x)
 {
     return_ = ExpressionVisitor(ctx_, target_type_)(x.expr);
-    std::cout << "return: " << return_ << std::endl;
+    debug("return: %1%", return_);
     return return_;
 }
 

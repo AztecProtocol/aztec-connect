@@ -23,10 +23,20 @@ var_t builtin_print(std::vector<var_t> const& args)
     return bool_t(false);
 }
 
+var_t builtin_stats(std::vector<var_t> const& args, CompilerContext& ctx)
+{
+    if (args.size() != 0) {
+        throw std::runtime_error("Incorrect number of arguments to stats.");
+    }
+    info("STATS: (num_gates: %1%)", ctx.composer.get_num_gates());
+    return bool_t(false);
+}
+
 void load_builtins(CompilerContext& ctx)
 {
     ctx.builtins["length"] = builtin_length;
     ctx.builtins["print"] = builtin_print;
+    ctx.builtins["stats"] = std::bind(builtin_stats, std::placeholders::_1, ctx);
 }
 
 BuiltinFunction const builtin_lookup(CompilerContext& ctx, std::string const& function_name)

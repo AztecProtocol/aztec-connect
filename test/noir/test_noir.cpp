@@ -193,8 +193,6 @@ TEST(noir, sha256)
         return noir::code_gen::uint(8, witness_t(&composer, c));
     });
 
-    std::cout << "circuit inputs " << nist1 << std::endl;
-
     auto compiler = Compiler(composer);
     auto r = compiler.start(ast, { var_t(nist1) });
     auto output_vars = boost::get<std::vector<var_t>>(r.first.value);

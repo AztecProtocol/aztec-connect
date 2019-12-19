@@ -91,7 +91,7 @@ template <typename ComposerContext> class uint {
 
     uint32_t get_witness_index()
     {
-        normalize();
+        // normalize();
         return witness_index;
     }
 
@@ -105,7 +105,7 @@ template <typename ComposerContext> class uint {
                 return (acc + acc + wire.get_value());
             });
         }
-        normalize();
+        // normalize();
         if (is_constant()) {
             return (multiplicative_constant * additive_constant);
         }

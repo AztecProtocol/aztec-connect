@@ -6,6 +6,8 @@ namespace noir {
 namespace code_gen {
 
 namespace {
+inline void format_chain(boost::format&) {}
+
 template <typename T> void format_chain(boost::format& fmt, T const& first)
 {
     fmt % first;

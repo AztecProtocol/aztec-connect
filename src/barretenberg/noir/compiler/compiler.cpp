@@ -2,6 +2,7 @@
 #include "expression_visitor.hpp"
 #include "function_call.hpp"
 #include "function_statement_visitor.hpp"
+#include "log.hpp"
 #include "type_info_from.hpp"
 #include "var_t.hpp"
 #include <boost/assert.hpp>
@@ -22,10 +23,11 @@ Compiler::Compiler(Composer& composer)
 void Compiler::operator()(ast::variable_declaration const& x)
 {
     auto ti = type_info_from_type_id(ctx_, x.type);
-    std::cout << "global variable declaration " << ti << " " << x.variable << std::endl;
+    debug("global variable declaration %1% %2%", ti, x.variable);
 
     var_t v = var_t_factory(ti, ctx_.composer);
-    std::cout << v << std::endl;
+    debug("%1% initialized to: %2%", x.variable, v);
+
     ctx_.symbol_table.declare(v, x.variable);
 
     if (!x.assignment.has_value()) {
@@ -38,13 +40,13 @@ void Compiler::operator()(ast::variable_declaration const& x)
 
 void Compiler::operator()(ast::function_declaration const& x)
 {
-    std::cout << "function declaration: " << x.name << std::endl;
+    debug("function declaration: %1%", x.name);
     ctx_.functions[x.name] = x;
 }
 
 void Compiler::operator()(ast::statement const& x)
 {
-    std::cout << "statement" << std::endl;
+    debug("statement");
     boost::apply_visitor(*this, x);
 }
 

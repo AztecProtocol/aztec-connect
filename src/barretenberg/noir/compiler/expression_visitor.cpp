@@ -1,6 +1,7 @@
 #include "expression_visitor.hpp"
 #include "function_call.hpp"
 #include "function_statement_visitor.hpp"
+#include "log.hpp"
 #include "operators.hpp"
 #include "type_info_from.hpp"
 #include <boost/format.hpp>
@@ -16,7 +17,7 @@ ExpressionVisitor::ExpressionVisitor(CompilerContext& ctx, type_info const& targ
 
 var_t ExpressionVisitor::operator()(unsigned int x)
 {
-    std::cout << format("uint constant (target type %s): %d", target_type_, x) << std::endl;
+    debug("uint constant (target type %1%): %2%", target_type_, x);
     auto it = boost::get<int_type>(&target_type_.type);
     if (!it) {
         throw std::runtime_error(format("Cannot create type %s from constant %d.", target_type_.type_name(), x));
@@ -26,7 +27,7 @@ var_t ExpressionVisitor::operator()(unsigned int x)
 
 var_t ExpressionVisitor::operator()(bool x)
 {
-    std::cout << "bool " << x << std::endl;
+    debug("bool %1%", x);
     if (!boost::get<bool_type>(&target_type_.type)) {
         throw std::runtime_error(format("Cannot create type %s from constant %d.", target_type_.type_name(), x));
     }
@@ -35,7 +36,7 @@ var_t ExpressionVisitor::operator()(bool x)
 
 var_t ExpressionVisitor::operator()(ast::array const& x)
 {
-    std::cout << "defining array of size " << x.size() << std::endl;
+    debug("defining array of size %1%", x.size());
     auto arr = boost::get<array_type>(&target_type_.type);
     if (!arr) {
         throw std::runtime_error(format("Cannot create type %s from array.", target_type_.type_name()));
@@ -51,7 +52,7 @@ var_t ExpressionVisitor::operator()(ast::array const& x)
 var_t ExpressionVisitor::operator()(var_t vlhs, ast::operation const& x)
 {
     if (x.operator_ == ast::op_index) {
-        std::cout << "op_index" << std::endl;
+        debug("op_index");
 
         auto rhs = boost::apply_visitor(ExpressionVisitor(ctx_, type_uint32), x.operand_);
 
@@ -71,67 +72,67 @@ var_t ExpressionVisitor::operator()(var_t vlhs, ast::operation const& x)
 
     switch (x.operator_) {
     case ast::op_plus:
-        std::cout << "op_add" << std::endl;
+        debug("op_add");
         return boost::apply_visitor(AdditionVisitor(), lhs, rhs);
     case ast::op_minus:
-        std::cout << "op_sub" << std::endl;
+        debug("op_sub");
         return boost::apply_visitor(SubtractionVisitor(), lhs, rhs);
     case ast::op_times:
-        std::cout << "op_times" << std::endl;
+        debug("op_times");
         return boost::apply_visitor(MultiplyVisitor(), lhs, rhs);
     case ast::op_divide:
-        std::cout << "op_divide" << std::endl;
+        debug("op_divide");
         return boost::apply_visitor(DivideVisitor(), lhs, rhs);
     case ast::op_mod:
-        std::cout << "op_mod" << std::endl;
+        debug("op_mod");
         return boost::apply_visitor(ModVisitor(), lhs, rhs);
 
     case ast::op_equal:
-        std::cout << "op_equal" << std::endl;
+        debug("op_equal");
         return boost::apply_visitor(EqualityVisitor(), lhs, rhs);
     case ast::op_not_equal:
-        std::cout << "op_ne" << std::endl;
+        debug("op_ne");
         break;
     case ast::op_less:
-        std::cout << "op_lt" << std::endl;
+        debug("op_lt");
         break;
     case ast::op_less_equal:
-        std::cout << "op_lte" << std::endl;
+        debug("op_lte");
         break;
     case ast::op_greater:
-        std::cout << "op_gt" << std::endl;
+        debug("op_gt");
         break;
     case ast::op_greater_equal:
-        std::cout << "op_gte" << std::endl;
+        debug("op_gte");
         break;
 
     case ast::op_and:
-        std::cout << "op_and" << std::endl;
+        debug("op_and");
         break;
     case ast::op_or:
-        std::cout << "op_or" << std::endl;
+        debug("op_or");
         break;
 
     case ast::op_bitwise_and:
-        std::cout << "op_bitwise_and" << std::endl;
+        debug("op_bitwise_and");
         return boost::apply_visitor(BitwiseAndVisitor(), lhs, rhs);
     case ast::op_bitwise_or:
-        std::cout << "op_bitwise_or" << std::endl;
+        debug("op_bitwise_or");
         return boost::apply_visitor(BitwiseOrVisitor(), lhs, rhs);
     case ast::op_bitwise_xor:
-        std::cout << "op_bitwise_xor" << std::endl;
+        debug("op_bitwise_xor");
         return boost::apply_visitor(BitwiseXorVisitor(), lhs, rhs);
     case ast::op_bitwise_ror:
-        std::cout << "op_bitwise_ror" << std::endl;
+        debug("op_bitwise_ror");
         return boost::apply_visitor(BitwiseRorVisitor(), lhs, rhs);
     case ast::op_bitwise_rol:
-        std::cout << "op_bitwise_rol" << std::endl;
+        debug("op_bitwise_rol");
         return boost::apply_visitor(BitwiseRolVisitor(), lhs, rhs);
     case ast::op_bitwise_shl:
-        std::cout << "op_bitwise_shl" << std::endl;
+        debug("op_bitwise_shl");
         return boost::apply_visitor(BitwiseShlVisitor(), lhs, rhs);
     case ast::op_bitwise_shr:
-        std::cout << "op_bitwise_shr" << std::endl;
+        debug("op_bitwise_shr");
         return boost::apply_visitor(BitwiseShrVisitor(), lhs, rhs);
 
     default:
@@ -147,16 +148,16 @@ var_t ExpressionVisitor::operator()(ast::unary const& x)
 
     switch (x.operator_) {
     case ast::op_negative:
-        std::cout << "op_neg" << std::endl;
+        debug("op_neg");
         return boost::apply_visitor(NegVis(), var.value);
     case ast::op_not: {
+        debug("op_not ");
         auto v = boost::apply_visitor(NotVis(), var.value);
-        std::cout << "op_not " << var << "->" << v << std::endl;
         return v;
     }
     case ast::op_bitwise_not: {
+        debug("op_bitwise_not");
         auto v = boost::apply_visitor(BitwiseNotVisitor(), var.value);
-        std::cout << "op_make_witness " << std::endl;
         return v;
     }
     case ast::op_positive:
@@ -178,7 +179,7 @@ var_t ExpressionVisitor::operator()(ast::expression const& x)
 var_t ExpressionVisitor::operator()(ast::variable const& x)
 {
     auto v = ctx_.symbol_table[x.name];
-    std::cout << "variable " << x.name << ": " << v << std::endl;
+    debug("variable %1%: %2%", x.name, v);
     return v;
 }
 
@@ -195,7 +196,7 @@ struct IndexedAssignVisitor : boost::static_visitor<var_t> {
         // Evaluate rhs of assignment, should resolve to lhs element type.
         auto arr = boost::get<array_type>(ti.type);
         var_t rhs = ExpressionVisitor(ctx, arr.element_type)(rhs_expr);
-        std::cout << "indexed assign " << i << " " << lhs[i] << "->" << rhs << std::endl;
+        debug("indexed assign %1% %2%->%3%", i, lhs[i], rhs);
         return lhs[i] = rhs;
     }
 
@@ -210,7 +211,7 @@ struct IndexedAssignVisitor : boost::static_visitor<var_t> {
             wires[j] = j == flipped ? bit : lhs.at(j);
         }
         lhs = uint(&ctx.composer, wires);
-        std::cout << "indexed assign bit " << i << " to " << bit << " = " << lhs << std::endl;
+        debug("indexed assign bit %1% to %2% = %3%", i, bit, lhs);
         return bit;
     }
 
@@ -227,7 +228,7 @@ struct IndexedAssignVisitor : boost::static_visitor<var_t> {
 
 var_t ExpressionVisitor::operator()(ast::assignment const& x)
 {
-    std::cout << "get symbol ref for assign " << x.lhs.name << std::endl;
+    debug("get symbol ref for assign %1%", x.lhs.name);
     var_t* lhs = &ctx_.symbol_table[x.lhs.name];
 
     // If our lhs has indexes, we need to get the ref to indexed element.
@@ -245,7 +246,7 @@ var_t ExpressionVisitor::operator()(ast::assignment const& x)
                 throw std::runtime_error("Index out of bounds.");
             }
             lhs = &boost::get<std::vector<var_t>>(lhs->value)[i];
-            std::cout << "indexed to new lhs: " << *lhs << std::endl;
+            debug("indexed to new lhs: %1%", *lhs);
         }
 
         // Evaluate final index.
@@ -258,7 +259,7 @@ var_t ExpressionVisitor::operator()(ast::assignment const& x)
         return boost::apply_visitor(IndexedAssignVisitor(ctx_, i.get_value(), x.rhs, lhs->type), lhs->value);
     } else {
         var_t rhs = ExpressionVisitor(ctx_, lhs->type)(x.rhs);
-        std::cout << "op_store " << x.lhs.name << " " << rhs << std::endl;
+        debug("op_store %1% = %2%", x.lhs.name, rhs);
         ctx_.symbol_table.set(rhs, x.lhs.name);
         return rhs;
     }
@@ -266,7 +267,7 @@ var_t ExpressionVisitor::operator()(ast::assignment const& x)
 
 var_t ExpressionVisitor::operator()(ast::function_call const& x)
 {
-    std::cout << "function call " << x.name << std::endl;
+    debug("function call %1%", x.name);
 
     auto builtin = builtin_lookup(ctx_, x.name);
     if (builtin) {

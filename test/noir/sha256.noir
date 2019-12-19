@@ -104,6 +104,7 @@ uint8[32] sha256(uint8[] input)
     for (i in 0..num_bytes) {
         for (j in 0..8) {
             data[i * 8 + j] = input[i][j];
+    stats();
         }
     }
     data[num_bits] = true;

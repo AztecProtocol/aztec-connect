@@ -1,4 +1,5 @@
 #pragma once
+#include "log.hpp"
 
 namespace noir {
 namespace code_gen {
@@ -187,13 +188,13 @@ struct IndexVisitor : boost::static_visitor<var_t> {
 
     template <typename T> var_t operator()(std::vector<T>& lhs) const
     {
-        std::cout << "indexing " << i << ": " << lhs[i] << std::endl;
+        debug("indexing %1%: %2%", i, lhs[i]);
         return lhs[i];
     }
     var_t operator()(noir::code_gen::uint& lhs) const
     {
         bool_t bit = lhs.at(lhs.width() - i - 1);
-        std::cout << "indexing uint for bit " << i << ": " << bit << " witness: " << bit.witness_index << std::endl;
+        debug("indexing uint for bit %1%: %2%", i, bit);
         return bit;
     }
     template <typename T> var_t operator()(T& t) const
