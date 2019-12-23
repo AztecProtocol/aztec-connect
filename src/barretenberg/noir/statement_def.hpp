@@ -19,7 +19,7 @@ using x3::string;
 using x3::uint_;
 using namespace x3::ascii;
 
-x3::symbols<ast::qualifier> qualifier;
+x3::symbols<ast::qualifier_token> qualifier;
 
 void add_symbols()
 {

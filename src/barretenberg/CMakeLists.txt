@@ -1,8 +1,11 @@
 # barretenburg
 # copyright 2019 Spilsbury Holdings
 
-add_compile_options(-Werror -Wall -Wextra -Wshadow -Wpedantic)
-add_compile_options(-Wconversion -Wsign-conversion -Wno-c99-extensions)
+add_compile_options(-Werror -Wall -Wextra -Wconversion -Wsign-conversion)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new -Wno-c99-extensions")
+endif()
 
 add_library(
     barretenberg STATIC

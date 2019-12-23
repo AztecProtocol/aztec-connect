@@ -7,17 +7,17 @@ namespace noir {
 namespace code_gen {
 
 struct int_type {
-    bool operator==(int_type const& other) const {
-        return width == other.width && signed_ == other.signed_;
-    }
+    int_type(size_t w, bool s)
+        : width(w)
+        , signed_(s)
+    {}
+    bool operator==(int_type const& other) const { return width == other.width && signed_ == other.signed_; }
     size_t width;
     bool signed_;
 };
 
 struct bool_type {
-    bool operator==(bool_type const& ) const {
-        return true;
-    }
+    bool operator==(bool_type const&) const { return true; }
 };
 struct array_type;
 struct tuple_type;
@@ -33,12 +33,18 @@ typedef boost::variant<bool_type,
     noir_type;
 
 struct array_type {
-    noir_type element_type;
-    size_t size;
+    array_type(noir_type et, size_t s)
+        : element_type(et)
+        , size(s)
+    {}
 
-    bool operator==(array_type const& other) const {
+    bool operator==(array_type const& other) const
+    {
         return element_type == other.element_type && (size == other.size || size == 0 || other.size == 0);
     }
+
+    noir_type element_type;
+    size_t size;
 };
 
 struct tuple_type {
@@ -51,10 +57,7 @@ struct struct_type {
 
 struct IntrinsicTypeInfoVisitor : boost::static_visitor<intrinsic_type> {
     result_type operator()(ast::bool_type const&) const { return bool_type{}; }
-    result_type operator()(ast::int_type const& v) const
-    {
-        return int_type{ .signed_ = v.type == "int", .width = v.size };
-    }
+    result_type operator()(ast::int_type const& v) const { return int_type(v.size, v.type == "int"); }
 };
 
 struct TypeIdNameVisitor : boost::static_visitor<std::string const> {
@@ -76,7 +79,7 @@ struct type_info {
         : type(t)
         , mutable_(m)
     {
-        type = array_type{ .element_type = type, .size = array_size };
+        type = array_type(type, array_size);
     }
 
     type_info(noir_type const& t, bool m = false)
@@ -91,13 +94,9 @@ struct type_info {
 
     std::string const type_name() const { return boost::apply_visitor(TypeIdNameVisitor(), type); }
 
-    bool operator==(type_info const& other) const {
-        return type == other.type;
-    }
+    bool operator==(type_info const& other) const { return type == other.type; }
 
-    bool operator!=(type_info const& other) const {
-        return !operator==(other);
-    }
+    bool operator!=(type_info const& other) const { return !operator==(other); }
 
     noir_type type;
     bool mutable_;
@@ -108,9 +107,9 @@ inline std::ostream& operator<<(std::ostream& os, type_info const& t)
     return os << t.type_name();
 }
 
-const auto type_uint32 = type_info(int_type{ .signed_ = false, .width = 32 });
-const auto type_uint8 = type_info(int_type{ .signed_ = false, .width = 8 });
-const auto type_bool = type_info(bool_type{});
+const auto type_uint32 = type_info(int_type(32, false));
+const auto type_uint8 = type_info(int_type(8, false));
+const auto type_bool = type_info(bool_type());
 
 } // namespace code_gen
 } // namespace noir

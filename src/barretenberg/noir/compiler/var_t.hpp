@@ -5,6 +5,7 @@
 #include "type_info.hpp"
 #include "types.hpp"
 #include <boost/format.hpp>
+#include <sstream>
 
 namespace noir {
 namespace code_gen {
@@ -40,12 +41,12 @@ struct var_t {
         , value_(value){};
 
     var_t(uint value)
-        : type(int_type{ .signed_ = false, .width = value.width() })
+        : type(int_type(value.width(), false))
         , value_(value)
     {}
 
     var_t(std::string const& str, Composer& composer)
-        : type(array_type{ .size = str.length(), .element_type = type_uint8.type })
+        : type(array_type(type_uint8.type, str.length()))
     {
         std::vector<var_t> values;
         std::transform(str.begin(), str.end(), std::back_inserter(values), [&](char c) {
@@ -55,7 +56,7 @@ struct var_t {
     }
 
     var_t(std::vector<uint8_t> const& input, Composer& composer)
-        : type(array_type{ .size = input.size(), .element_type = type_uint8.type })
+        : type(array_type(type_uint8.type, input.size()))
     {
         std::vector<var_t> values;
         std::transform(input.begin(), input.end(), std::back_inserter(values), [&](uint8_t c) {

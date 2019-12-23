@@ -2,6 +2,7 @@
 #include "log.hpp"
 #include "var_t.hpp"
 #include <iostream>
+#include <map>
 
 namespace noir {
 namespace code_gen {

@@ -1,4 +1,4 @@
 .vscode
-build
+build*
 cmake/cable
 useful_commands.txt

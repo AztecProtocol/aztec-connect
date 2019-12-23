@@ -198,7 +198,7 @@ auto const primary_expr_def =
     |   array_expr
     |   function_call
     |   (!keywords >> identifier)
-    |   '(' > expression > ')'
+    |   ('(' > expression > ')')
     ;
 
 auto const expression_def = logical_expr;

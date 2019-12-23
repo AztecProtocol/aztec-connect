@@ -24,7 +24,9 @@ var_t FunctionStatementVisitor::operator()(ast::variable_declaration const& x)
     ctx_.symbol_table.declare(v, x.variable);
 
     if (x.assignment.has_value()) {
-        ast::assignment assign = { .lhs = x.variable, .rhs = x.assignment.value() };
+        ast::assignment assign;
+        assign.lhs = x.variable;
+        assign.rhs = x.assignment.value();
         (*this)(assign);
     }
 

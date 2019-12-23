@@ -26,8 +26,11 @@ set(setup_private_include_dir ${PROJECT_SOURCE_DIR}/src)
 
 add_subdirectory(benchmarks)
 
-add_compile_options(-Werror -Wall -Wextra -Wshadow)
-add_compile_options(-Wconversion -Wsign-conversion)
+add_compile_options(-Werror -Wall -Wextra -Wconversion -Wsign-conversion)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new -Wno-c99-extensions")
+endif()
 
 add_executable(
     barretenberg_tests

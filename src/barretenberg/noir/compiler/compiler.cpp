@@ -34,7 +34,9 @@ void Compiler::operator()(ast::variable_declaration const& x)
         throw std::runtime_error("Global variables must be defined.");
     }
 
-    ast::assignment assign = { .lhs = x.variable, .rhs = x.assignment.value() };
+    ast::assignment assign;
+    assign.lhs = x.variable;
+    assign.rhs = x.assignment.value();
     ExpressionVisitor(ctx_, v.type)(assign);
 }
 

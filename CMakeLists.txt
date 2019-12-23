@@ -38,7 +38,6 @@ if(APPLE)
         set(OpenMP_CXX_LIB_NAMES_WORK "libomp")
         set(OpenMP_libomp_LIBRARY "/usr/local/lib/libomp.a")
     endif()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new")
 endif()
 
 option(MULTITHREADING default ON)

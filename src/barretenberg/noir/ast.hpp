@@ -69,7 +69,7 @@ enum optoken {
     op_index,
 };
 
-enum qualifier {
+enum qualifier_token {
     q_mutable,
 };
 
@@ -104,7 +104,7 @@ struct int_type {
 };
 
 struct type_id {
-    std::optional<qualifier> qualifier;
+    std::optional<qualifier_token> qualifier;
     x3::variant<bool_type, int_type> type;
     std::optional<expression> array_size;
 };
@@ -149,11 +149,7 @@ struct statement : x3::variant<function_declaration, variable_declaration, boost
 
 struct statement_list : std::vector<statement> {};
 
-struct function_statement
-    : x3::variant<variable_declaration, expression, assignment, boost::recursive_wrapper<for_statement>, return_expr> {
-    using base_type::base_type;
-    using base_type::operator=;
-};
+typedef x3::variant<variable_declaration, expression, assignment, boost::recursive_wrapper<for_statement>, return_expr> function_statement;
 
 struct function_statement_list : std::vector<function_statement> {};
 
