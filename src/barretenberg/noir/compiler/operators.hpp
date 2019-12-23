@@ -5,7 +5,7 @@ namespace noir {
 namespace code_gen {
 
 struct AdditionVisitor : boost::static_visitor<var_t> {
-    var_t operator()(uint& lhs, uint const& rhs) const { return lhs + rhs; }
+    var_t operator()(uint const& lhs, uint const& rhs) const { return lhs + rhs; }
     template <typename T, typename U> var_t operator()(T const&, U const&) const
     {
         throw std::runtime_error("Cannot perform add.");
@@ -22,8 +22,10 @@ struct SubtractionVisitor : boost::static_visitor<var_t> {
 
 struct MultiplyVisitor : boost::static_visitor<var_t> {
     var_t operator()(uint& lhs, uint const& rhs) const { return lhs * rhs; }
-    template <typename T, typename U> var_t operator()(T const&, U const&) const
+    template <typename T, typename U> var_t operator()(T const& lhs, U const& rhs) const
     {
+        std::cout << typeid(lhs).name() << std::endl;
+        std::cout << typeid(rhs).name() << std::endl;
         throw std::runtime_error("Cannot perform multiplication.");
     }
 };
@@ -56,6 +58,7 @@ struct EqualityVisitor : boost::static_visitor<var_t> {
         throw std::runtime_error("No array equality.");
     }
     template <typename T> var_t operator()(T const& lhs, T const& rhs) const { return lhs == rhs; }
+
     template <typename T, typename U> var_t operator()(T const&, U const&) const
     {
         throw std::runtime_error("Cannot compare differing types.");
@@ -68,6 +71,7 @@ struct BitwiseOrVisitor : boost::static_visitor<var_t> {
         throw std::runtime_error("No array support.");
     }
     template <typename T> var_t operator()(T& lhs, T const& rhs) const { return lhs | rhs; }
+
     template <typename T, typename U> var_t operator()(T const&, U const&) const
     {
         throw std::runtime_error("Cannot OR differing types.");
@@ -80,6 +84,7 @@ struct BitwiseAndVisitor : boost::static_visitor<var_t> {
         throw std::runtime_error("No array support.");
     }
     template <typename T> var_t operator()(T& lhs, T const& rhs) const { return lhs & rhs; }
+
     template <typename T, typename U> var_t operator()(T const&, U const&) const
     {
         throw std::runtime_error("Cannot AND differing types.");
@@ -92,6 +97,7 @@ struct BitwiseXorVisitor : boost::static_visitor<var_t> {
         throw std::runtime_error("No array support.");
     }
     template <typename T> var_t operator()(T& lhs, T const& rhs) const { return lhs ^ rhs; }
+
     template <typename T, typename U> var_t operator()(T const&, U const&) const
     {
         throw std::runtime_error("Cannot XOR differing types.");
@@ -186,10 +192,10 @@ struct IndexVisitor : boost::static_visitor<var_t> {
         : i(i)
     {}
 
-    template <typename T> var_t operator()(std::vector<T>& lhs) const
+    var_t operator()(std::vector<var_t>& lhs) const
     {
-        debug("indexing %1%: %2%", i, lhs[i]);
-        return lhs[i];
+        debug("indexing %1%: %2% @%3%", i, lhs[i], &lhs[i].value());
+        return var_t_ref(lhs[i]);
     }
     var_t operator()(noir::code_gen::uint& lhs) const
     {

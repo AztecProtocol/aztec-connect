@@ -57,23 +57,25 @@ var_t ExpressionVisitor::operator()(var_t vlhs, ast::operation const& x)
         auto rhs = boost::apply_visitor(ExpressionVisitor(ctx_, type_uint32), x.operand_);
 
         // Evaluate index.
-        uint* iptr = boost::get<uint>(&rhs.value);
+        uint* iptr = boost::get<uint>(&rhs.value());
         if (!iptr) {
             throw std::runtime_error("Index must be an integer.");
         }
         uint32_t i = static_cast<uint32_t>((*iptr).get_value());
 
-        return boost::apply_visitor(IndexVisitor(i), vlhs.value);
+        return boost::apply_visitor(IndexVisitor(i), vlhs.value());
     }
 
     var_t vrhs = boost::apply_visitor(*this, x.operand_);
-    auto lhs = vlhs.value;
-    auto rhs = vrhs.value;
+    var_t::value_t& lhs = vlhs.value();
+    var_t::value_t& rhs = vrhs.value();
 
     switch (x.operator_) {
-    case ast::op_plus:
-        debug("op_add");
-        return boost::apply_visitor(AdditionVisitor(), lhs, rhs);
+    case ast::op_plus: {
+        auto t = boost::apply_visitor(AdditionVisitor(), lhs, rhs);
+        debug("op_add %1% + %2% = %3%", vlhs, vrhs, t);
+        return t;
+    }
     case ast::op_minus:
         debug("op_sub");
         return boost::apply_visitor(SubtractionVisitor(), lhs, rhs);
@@ -149,15 +151,15 @@ var_t ExpressionVisitor::operator()(ast::unary const& x)
     switch (x.operator_) {
     case ast::op_negative:
         debug("op_neg");
-        return boost::apply_visitor(NegVis(), var.value);
+        return boost::apply_visitor(NegVis(), var.value());
     case ast::op_not: {
         debug("op_not ");
-        auto v = boost::apply_visitor(NotVis(), var.value);
+        auto v = boost::apply_visitor(NotVis(), var.value());
         return v;
     }
     case ast::op_bitwise_not: {
         debug("op_bitwise_not");
-        auto v = boost::apply_visitor(BitwiseNotVisitor(), var.value);
+        auto v = boost::apply_visitor(BitwiseNotVisitor(), var.value());
         return v;
     }
     case ast::op_positive:
@@ -204,7 +206,7 @@ struct IndexedAssignVisitor : boost::static_visitor<var_t> {
     {
         // Evaluate rhs of assignment, should resolve to bool.
         var_t rhs = ExpressionVisitor(ctx, type_bool)(rhs_expr);
-        bool_t bit = boost::get<bool_t>(rhs.value);
+        bool_t bit = boost::get<bool_t>(rhs.value());
         std::vector<bool_t> wires(lhs.width());
         size_t flipped = lhs.width() - i - 1;
         for (size_t j = 0; j < lhs.width(); ++j) {
@@ -229,38 +231,40 @@ struct IndexedAssignVisitor : boost::static_visitor<var_t> {
 var_t ExpressionVisitor::operator()(ast::assignment const& x)
 {
     debug("get symbol ref for assign %1%", x.lhs.name);
-    var_t* lhs = &ctx_.symbol_table[x.lhs.name];
+    var_t lhs = ctx_.symbol_table[x.lhs.name];
+    var_t* lhs_ptr = &lhs;
 
     // If our lhs has indexes, we need to get the ref to indexed element.
     if (x.lhs.indexes.size()) {
         for (size_t j = 0; j < x.lhs.indexes.size() - 1; ++j) {
             // Evaluate index.
             auto ivar = ExpressionVisitor(ctx_, type_uint32)(x.lhs.indexes[0]);
-            auto iv = boost::get<uint>(ivar.value);
+            auto iv = boost::get<uint>(ivar.value());
             if (!iv.is_constant()) {
                 throw std::runtime_error("Index must be constant.");
             }
             auto i = iv.get_value();
-            auto arr = boost::get<array_type>(lhs->type.type);
+            auto arr = boost::get<array_type>(lhs_ptr->type.type);
             if (i >= arr.size) {
                 throw std::runtime_error("Index out of bounds.");
             }
-            lhs = &boost::get<std::vector<var_t>>(lhs->value)[i];
-            debug("indexed to new lhs: %1%", *lhs);
+            lhs_ptr = &boost::get<std::vector<var_t>>(lhs_ptr->value())[i];
+            debug("indexed to new lhs: %1%", *lhs_ptr);
         }
 
         // Evaluate final index.
         auto ivar = ExpressionVisitor(ctx_, type_uint32)(x.lhs.indexes.back());
-        uint i = boost::get<uint>(ivar.value);
+        uint i = boost::get<uint>(ivar.value());
         if (!i.is_constant()) {
             throw std::runtime_error("Index must be constant.");
         }
 
-        return boost::apply_visitor(IndexedAssignVisitor(ctx_, i.get_value(), x.rhs, lhs->type), lhs->value);
+        return boost::apply_visitor(IndexedAssignVisitor(ctx_, i.get_value(), x.rhs, lhs_ptr->type), lhs_ptr->value());
     } else {
-        var_t rhs = ExpressionVisitor(ctx_, lhs->type)(x.rhs);
+        var_t rhs = ExpressionVisitor(ctx_, lhs.type)(x.rhs);
         debug("op_store %1% = %2%", x.lhs.name, rhs);
-        ctx_.symbol_table.set(rhs, x.lhs.name);
+        lhs.value() = rhs.value();
+        //ctx_.symbol_table.set(rhs, x.lhs.name);
         return rhs;
     }
 }

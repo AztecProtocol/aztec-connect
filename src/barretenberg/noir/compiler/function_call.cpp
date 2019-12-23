@@ -10,7 +10,7 @@ var_t builtin_length(std::vector<var_t> const& args)
     if (args.size() != 1) {
         throw std::runtime_error("Incorrect number of arguments to length(arr).");
     }
-    auto arr = boost::get<std::vector<var_t>>(args[0].value);
+    auto arr = boost::get<std::vector<var_t>>(args[0].value());
     return uint(32, arr.size());
 }
 
@@ -28,7 +28,10 @@ var_t builtin_stats(std::vector<var_t> const& args, CompilerContext& ctx)
     if (args.size() != 0) {
         throw std::runtime_error("Incorrect number of arguments to stats.");
     }
-    info("STATS: (num_gates: %1%)", ctx.composer.get_num_gates());
+    info("STATS: (num_gates: %1%) (num_const_gates: %2%) (num_variables: %3%)",
+         ctx.composer.get_num_gates(),
+         ctx.composer.get_num_constant_gates(),
+         ctx.composer.get_num_variables());
     return bool_t(false);
 }
 

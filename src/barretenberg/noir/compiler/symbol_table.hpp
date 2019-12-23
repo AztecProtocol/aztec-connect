@@ -1,6 +1,6 @@
 #pragma once
-#include "var_t.hpp"
 #include "log.hpp"
+#include "var_t.hpp"
 #include <iostream>
 
 namespace noir {
@@ -39,11 +39,11 @@ class SymbolTable {
         variables_.back().insert(std::make_pair(key, var));
     }
 
-    var_t& operator[](std::string const& key)
+    var_t operator[](std::string const& key)
     {
         auto it = lookup(key);
         if (it.has_value()) {
-            return (*(it.value())).second;
+            return var_t_ref((*(it.value())).second);
         }
         throw std::runtime_error("Symbol not found: " + key);
     }

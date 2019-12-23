@@ -262,19 +262,19 @@ uint<ComposerContext>::uint(const uint& other)
     }
 }
 
-/*
 template <typename ComposerContext>
 uint<ComposerContext>::uint(uint&& other)
-    : context(other.context)
-    , witness_index(other.witness_index)
-    , additive_constant(other.additive_constant)
-    , multiplicative_constant(other.multiplicative_constant)
-    , witness_status(other.witness_status)
-    , maximum_value(other.maximum_value)
+    : context(std::move(other.context))
+    , witness_index(std::move(other.witness_index))
+    , additive_constant(std::move(other.additive_constant))
+    , multiplicative_constant(std::move(other.multiplicative_constant))
+    , witness_status(std::move(other.witness_status))
+    , bool_wires(std::move(other.bool_wires))
+    , queued_logic_operation(std::move(other.queued_logic_operation))
+    , maximum_value(std::move(other.maximum_value))
 {
     ASSERT(context != nullptr);
 }
-*/
 
 template <typename ComposerContext>
 uint<ComposerContext>::uint(ComposerContext* parent_context, const std::vector<bool_t<ComposerContext>>& wires)
@@ -464,7 +464,7 @@ template <typename ComposerContext> void uint<ComposerContext>::prepare_for_logi
     ASSERT(witness_status == WitnessStatus::OK || witness_status == WitnessStatus::IN_BINARY_FORM);
 }
 
-template <typename ComposerContext> uint<ComposerContext> uint<ComposerContext>::operator+(const uint& other)
+template <typename ComposerContext> uint<ComposerContext> uint<ComposerContext>::operator+(const uint& other) const
 {
     prepare_for_arithmetic_operations();
     other.prepare_for_arithmetic_operations();

@@ -41,7 +41,7 @@ template <typename ComposerContext> class uint {
         : uint(64, static_cast<uint64_t>(v))
     {}
 
-    // uint(uint&& other);
+    uint(uint&& other);
 
     //~uint(){};
 
@@ -49,7 +49,7 @@ template <typename ComposerContext> class uint {
 
     uint& operator=(const uint& other);
 
-    uint operator+(const uint& other);
+    uint operator+(const uint& other) const;
     uint operator-(const uint& other);
     uint operator*(const uint& other);
     uint operator/(const uint& other);

@@ -9,55 +9,97 @@
 namespace noir {
 namespace code_gen {
 
+struct var_t;
+
+struct var_t_ref {
+    var_t_ref(var_t& v)
+        : v(&v)
+    {}
+
+    var_t_ref(var_t_ref const& other)
+        : v(other.v)
+    {}
+
+    var_t_ref& operator=(var_t_ref const& rhs)
+    {
+        v = rhs.v;
+        return *this;
+    }
+
+    var_t* operator->() const { return v; }
+
+    var_t* v;
+};
+
 struct var_t {
     typedef boost::variant<bool_t, uint, boost::recursive_wrapper<std::vector<var_t>>> value_t;
+    typedef boost::variant<value_t, var_t_ref> internal_value_t;
 
     var_t(value_t const& value, type_info const& type)
-        : value(value)
-        , type(type){};
+        : type(type)
+        , value_(value){};
 
     var_t(uint value)
-        : value(value)
-        , type(int_type{ .signed_ = false, .width = value.width() })
+        : type(int_type{ .signed_ = false, .width = value.width() })
+        , value_(value)
     {}
 
     var_t(char value)
-        : value(uint(value))
-        , type(type_uint8)
+        : type(type_uint8)
+        , value_(uint(value))
     {}
 
     var_t(bool_t value)
-        : value(value)
-        , type(type_bool)
+        : type(type_bool)
+        , value_(value)
+    {}
+
+    var_t(var_t_ref value)
+        : type(value.v->type)
+        , value_(value)
     {}
 
     template <typename T>
     var_t(std::vector<T> value)
-        : value(value)
-        , type(array_type{ .size = value.size(), .element_type = value[0].type.type })
+        : type(array_type{ .size = value.size(), .element_type = value[0].type.type })
+        , value_(value)
     {}
 
     var_t(var_t const& rhs)
-        : value(rhs.value)
-        , type(rhs.type)
+        : type(rhs.type)
+        , value_(rhs.value_)
     {}
 
     var_t(var_t&& rhs)
-        : value(std::move(rhs.value))
-        , type(std::move(rhs.type))
+        : type(std::move(rhs.type))
+        , value_(std::move(rhs.value_))
     {}
 
     var_t& operator=(var_t const& rhs)
     {
-        value = rhs.value;
+        value_ = rhs.value_;
         type = rhs.type;
         return *this;
     }
 
     std::string const to_string() const;
 
-    value_t value;
+    value_t& value() { return boost::apply_visitor(*this, value_); }
+
+    value_t const& value() const { return boost::apply_visitor(*this, value_); }
+
+    value_t& operator()(value_t& v) { return v; }
+
+    value_t& operator()(var_t_ref& v) { return v->value(); }
+
+    value_t const& operator()(value_t const& v) const { return v; }
+
+    value_t const& operator()(var_t_ref const& v) const { return v->value(); }
+
     type_info type;
+
+  private:
+    internal_value_t value_;
 };
 
 struct var_t_printer : boost::static_visitor<std::ostream&> {
@@ -71,7 +113,7 @@ struct var_t_printer : boost::static_visitor<std::ostream&> {
     {
         os << "[";
         for (auto it = v.begin(); it != v.end(); ++it) {
-            it->value.apply_visitor(*this);
+            it->value().apply_visitor(*this);
             if (it != --v.end()) {
                 os << ", ";
             }
@@ -79,13 +121,15 @@ struct var_t_printer : boost::static_visitor<std::ostream&> {
         return os << "]";
     }
 
+    result_type operator()(var_t_ref const& v) const { return v->value().apply_visitor(*this); }
+
     std::ostream& os;
 };
 
 inline std::string const var_t::to_string() const
 {
     std::ostringstream os;
-    boost::apply_visitor(var_t_printer(os), value);
+    boost::apply_visitor(var_t_printer(os), value());
     return os.str();
 }
 
@@ -113,7 +157,7 @@ inline var_t var_t_factory(type_info const& type, Composer& composer)
 inline std::ostream& operator<<(std::ostream& os, var_t const& v)
 {
     os << "(" << v.type << ")";
-    return boost::apply_visitor(var_t_printer(os), v.value);
+    return boost::apply_visitor(var_t_printer(os), v.value());
 }
 
 } // namespace code_gen

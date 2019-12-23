@@ -58,9 +58,14 @@ std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 
      * Extend the input data into the remaining 48 words
      **/
     for (size_t i = 16; i < 64; ++i) {
+    printf("%lu\n", i);
+    printf("composer gates = %lu variables = %lu\n", input[0].get_context()->get_num_gates(), input[0].get_context()->get_num_variables());
         uint32 s0 = w[i - 15].ror(7) ^ w[i - 15].ror(18) ^ (w[i - 15] >> 3);
+    printf("composer gates = %lu variables = %lu\n", input[0].get_context()->get_num_gates(), input[0].get_context()->get_num_variables());
         uint32 s1 = w[i - 2].ror(17) ^ w[i - 2].ror(19) ^ (w[i - 2] >> 10);
+    printf("composer gates = %lu variables = %lu\n", input[0].get_context()->get_num_gates(), input[0].get_context()->get_num_variables());
         w[i] = w[i - 16] + w[i - 7] + s0 + s1;
+    printf("composer gates = %lu variables = %lu\n", input[0].get_context()->get_num_gates(), input[0].get_context()->get_num_variables());
     }
 
     /**
@@ -78,6 +83,7 @@ std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 
     /**
      * Apply SHA-256 compression function to the message schedule
      **/
+    printf("composer gates = %lu\n", input[0].get_context()->get_num_gates());
     for (size_t i = 0; i < 64; ++i) {
         uint32 S1 = e.ror(6U) ^ e.ror(11U) ^ e.ror(25U);
         uint32 ch = (e & f) + (~e & g); // === (e & f) ^ (~e & g), `+` op is cheaper
@@ -96,6 +102,7 @@ std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 
         b = a;
         a = temp1 + temp2;
     }
+    printf("composer gates = %lu\n", input[0].get_context()->get_num_gates());
 
     /**
      * Add into previous block output and return

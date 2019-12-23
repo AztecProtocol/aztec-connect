@@ -62,8 +62,8 @@ var_t FunctionStatementVisitor::operator()(boost::recursive_wrapper<ast::for_sta
     auto x = x_.get();
     auto from_var = ExpressionVisitor(ctx_, type_uint32)(x.from);
     auto to_var = ExpressionVisitor(ctx_, type_uint32)(x.to);
-    auto from = static_cast<uint32_t>(boost::get<uint>(from_var.value).get_value());
-    auto to = static_cast<uint32_t>(boost::get<uint>(to_var.value).get_value());
+    auto from = static_cast<uint32_t>(boost::get<uint>(from_var.value()).get_value());
+    auto to = static_cast<uint32_t>(boost::get<uint>(to_var.value()).get_value());
     ctx_.symbol_table.push();
     ctx_.symbol_table.declare(uint32(), x.counter);
     for (uint32_t i = from; i < to; ++i) {
@@ -79,6 +79,8 @@ var_t FunctionStatementVisitor::operator()(boost::recursive_wrapper<ast::for_sta
 var_t FunctionStatementVisitor::operator()(ast::return_expr const& x)
 {
     return_ = ExpressionVisitor(ctx_, target_type_)(x.expr);
+    // Return a copy as we could be a reference to function local symbol table.
+    return_ = var_t(return_.value(), return_.type);
     debug("return: %1%", return_);
     return return_;
 }

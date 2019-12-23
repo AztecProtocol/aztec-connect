@@ -59,7 +59,7 @@ TEST(noir, uint_indexing)
     auto compiler = Compiler(composer);
     std::vector<var_t> inputs = { uint32(witness_t(&composer, 7ULL)) };
     auto r = compiler.start(ast, inputs);
-    EXPECT_EQ(boost::get<noir::code_gen::uint>(r.first.value).get_value(), 16777221ULL);
+    EXPECT_EQ(boost::get<noir::code_gen::uint>(r.first.value()).get_value(), 16777221ULL);
 }
 
 TEST(noir, uint_vector_bit_indexing)
@@ -76,7 +76,24 @@ TEST(noir, uint_vector_bit_indexing)
     auto composer = Composer();
     auto compiler = Compiler(composer);
     auto r = compiler.start(ast, {});
-    EXPECT_EQ(boost::get<noir::code_gen::uint>(r.first.value).get_value(), 1ULL);
+    EXPECT_EQ(boost::get<noir::code_gen::uint>(r.first.value()).get_value(), 1ULL);
+}
+
+TEST(noir, symbol_constant)
+{
+    std::string code = "            \n\
+        uint32 main() {             \n\
+            uint32 a = 3;      \n\
+            a + 4;        \n\
+            return a;            \n\
+        }                           \n\
+    ";
+    auto ast = parse(code);
+
+    auto composer = Composer();
+    auto compiler = Compiler(composer);
+    auto r = compiler.start(ast, {});
+    EXPECT_EQ(boost::get<noir::code_gen::uint>(r.first.value()).get_value(), 3ULL);
 }
 
 TEST(noir, function_definition)
@@ -130,6 +147,7 @@ TEST(noir, function_copy_by_value)
 }
 */
 
+/*
 TEST(noir, bool_circuit)
 {
     std::string code = "                      \n\
@@ -178,6 +196,26 @@ TEST(noir, bool_circuit)
 
     EXPECT_EQ(prover.n, 8UL);
 }
+*/
+
+std::vector<var_t> create_bools(std::string const& input, Composer& composer)
+{
+    auto length = input.length() * 8;
+    std::vector<var_t> values(length, bool_t());
+
+    for (size_t i = 0; i < input.size(); ++i) {
+        char c = input[i];
+        std::bitset<8> char_bits = std::bitset<8>(static_cast<uint64_t>(c));
+        for (size_t j = 0; j < 8; ++j) {
+            witness_t value(&composer, char_bits[7 - j]);
+            values[i * 8 + j] = bool_t(value);
+        }
+    }
+
+    std::cout << values << std::endl;
+
+    return values;
+}
 
 TEST(noir, sha256)
 {
@@ -188,6 +226,7 @@ TEST(noir, sha256)
     auto composer = Composer();
     std::string nist1_str = "abc";
 
+    // std::vector<var_t> nist1 = create_bools(nist1_str, composer);
     std::vector<var_t> nist1;
     std::transform(nist1_str.begin(), nist1_str.end(), std::back_inserter(nist1), [&](char c) {
         return noir::code_gen::uint(8, witness_t(&composer, c));
@@ -195,10 +234,10 @@ TEST(noir, sha256)
 
     auto compiler = Compiler(composer);
     auto r = compiler.start(ast, { var_t(nist1) });
-    auto output_vars = boost::get<std::vector<var_t>>(r.first.value);
+    auto output_vars = boost::get<std::vector<var_t>>(r.first.value());
     std::vector<uint8_t> output;
     std::transform(output_vars.begin(), output_vars.end(), std::back_inserter(output), [](var_t const& v) {
-        return static_cast<uint8_t>(boost::get<noir::code_gen::uint>(v.value).get_value());
+        return static_cast<uint8_t>(boost::get<noir::code_gen::uint>(v.value()).get_value());
     });
 
     std::vector<uint8_t> expected = {
