@@ -44,6 +44,26 @@ struct var_t {
         , value_(value)
     {}
 
+    var_t(std::string const& str, Composer& composer)
+        : type(array_type{ .size = str.length(), .element_type = type_uint8.type })
+    {
+        std::vector<var_t> values;
+        std::transform(str.begin(), str.end(), std::back_inserter(values), [&](char c) {
+            return noir::code_gen::uint(8, witness_t(&composer, c));
+        });
+        value_ = values;
+    }
+
+    var_t(std::vector<uint8_t> const& input, Composer& composer)
+        : type(array_type{ .size = input.size(), .element_type = type_uint8.type })
+    {
+        std::vector<var_t> values;
+        std::transform(input.begin(), input.end(), std::back_inserter(values), [&](uint8_t c) {
+            return noir::code_gen::uint(8, witness_t(&composer, c));
+        });
+        value_ = values;
+    }
+
     var_t(char value)
         : type(type_uint8)
         , value_(uint(value))

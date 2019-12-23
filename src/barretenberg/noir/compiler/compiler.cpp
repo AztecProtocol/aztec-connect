@@ -66,8 +66,6 @@ std::pair<var_t, waffle::Prover> Compiler::start(ast::statement_list const& x, s
 
     if (ctx_.composer.get_num_gates()) {
         auto prover = ctx_.composer.preprocess();
-        printf("prover gates = %lu\n", prover.n);
-        printf("composer gates = %lu\n", ctx_.composer.get_num_gates());
         return std::make_pair(std::move(result), std::move(prover));
     } else {
         return std::make_pair(std::move(result), waffle::Prover());

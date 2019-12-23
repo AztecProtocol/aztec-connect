@@ -115,7 +115,7 @@ uint8[32] sha256(uint8[] input)
     for (i in 0..num_blocks) {
         uint32[16] hash_input;
         for (j in 0..512) {
-            hash_input[j / 32][j % 32] = data[j];
+            hash_input[j / 32][j % 32] = data[i * 512 + j];
         }
         rolling_hash = sha256_block(rolling_hash, hash_input);
     }
@@ -133,53 +133,3 @@ uint8[32] main(uint8[] input) {
 
     return sha256(input);
 }
-
-// native types
-// uint2-64 granularity 1
-// int2-64
-// bool
-// field
-// point + *
-// fixed size arrays e.g. uint2[1024];
-// map
-
-// builtins
-// mimc()
-// pederson()
-
-// containers (in dsl)
-// stack?
-
-// map<uint32> mymap;
-// for (i = 0; i = 64; ++i) {
-//}
-// field foo = 883737;
-// mymap[i] = foo;
-//}
-
-
-//bitarray
-//string x = "hi";
-//uint8[2] x;
-//bool[16];
-//uint32 z = x;
-
-//Buffer my_buffer = Buffer.from("hello");
-
-//sha256("hello from zac");
-
-//merkle_buffer baz = fs.read_buffer("./local_data.dat");
-//merkle_buffer baz_2 = { 1, 2, 3, 4 };
-
-//map<uint32, 32> foo;
-//mutable storage<uint32, 2048> my_storage("/aztec/foobar.dat");
-
-//uint32 a = 5;
-//uint32 b = 10;
-//uint32 c = a + b;
-
-//uint32 a = 5;
-//uint32 b = 10;
-//a = a + b;
-
-//uint32 bar = foo[12];
