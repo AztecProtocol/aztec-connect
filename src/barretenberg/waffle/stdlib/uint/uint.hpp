@@ -91,7 +91,7 @@ template <typename ComposerContext> class uint {
 
     uint32_t get_witness_index()
     {
-        // normalize();
+        normalize();
         return witness_index;
     }
 

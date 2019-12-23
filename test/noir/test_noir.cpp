@@ -83,9 +83,9 @@ TEST(noir, symbol_constant)
 {
     std::string code = "            \n\
         uint32 main() {             \n\
-            uint32 a = 3;      \n\
-            a + 4;        \n\
-            return a;            \n\
+            uint32 a = 3;           \n\
+            a + 4;                  \n\
+            return a;               \n\
         }                           \n\
     ";
     auto ast = parse(code);
@@ -198,25 +198,6 @@ TEST(noir, bool_circuit)
 }
 */
 
-std::vector<var_t> create_bools(std::string const& input, Composer& composer)
-{
-    auto length = input.length() * 8;
-    std::vector<var_t> values(length, bool_t());
-
-    for (size_t i = 0; i < input.size(); ++i) {
-        char c = input[i];
-        std::bitset<8> char_bits = std::bitset<8>(static_cast<uint64_t>(c));
-        for (size_t j = 0; j < 8; ++j) {
-            witness_t value(&composer, char_bits[7 - j]);
-            values[i * 8 + j] = bool_t(value);
-        }
-    }
-
-    std::cout << values << std::endl;
-
-    return values;
-}
-
 TEST(noir, sha256)
 {
     std::ifstream file("../test/noir/sha256.noir");
@@ -226,7 +207,6 @@ TEST(noir, sha256)
     auto composer = Composer();
     std::string nist1_str = "abc";
 
-    // std::vector<var_t> nist1 = create_bools(nist1_str, composer);
     std::vector<var_t> nist1;
     std::transform(nist1_str.begin(), nist1_str.end(), std::back_inserter(nist1), [&](char c) {
         return noir::code_gen::uint(8, witness_t(&composer, c));
