@@ -110,9 +110,9 @@ workflows:
       - x86_64-linux-clang:
           requires:
             - toolchains
-      - x86_64-win32-mingw:
-          requires:
-            - toolchains
+      # - x86_64-win32-mingw:
+      #     requires:
+      #       - toolchains
       - arm64-linux-gcc:
           requires:
             - toolchains

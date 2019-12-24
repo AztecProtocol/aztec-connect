@@ -9,8 +9,6 @@ namespace parser {
 typedef x3::rule<struct statement_class, ast::statement_list> statement_type;
 typedef x3::rule<struct function_statement_class, ast::function_statement_list> function_statement_type;
 
-// typedef statement_type::id statement_id;
-
 BOOST_SPIRIT_DECLARE(statement_type, function_statement_type);
 
 } // namespace parser

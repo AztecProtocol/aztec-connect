@@ -3,6 +3,8 @@
 
 add_compile_options(-Werror -Wall -Wextra -Wconversion -Wsign-conversion)
 
+add_definitions(-DBOOST_SPIRIT_X3_NO_FILESYSTEM=1)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new -Wno-c99-extensions")
 endif()
@@ -88,6 +90,7 @@ add_library(
     noir/expression.cpp
     noir/statement.cpp
     noir/printer.cpp
+    noir/parse.cpp
     noir/compiler/compiler.cpp
     noir/compiler/function_statement_visitor.cpp
     noir/compiler/expression_visitor.cpp

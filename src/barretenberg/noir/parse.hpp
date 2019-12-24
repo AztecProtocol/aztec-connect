@@ -1,41 +1,22 @@
 #pragma once
 #include "ast.hpp"
-#include "config.hpp"
-#include "skipper.hpp"
+#include "expression.hpp"
 
 namespace noir {
 namespace parser {
 
-template <typename T, typename AST> AST parse(parser::iterator_type begin, parser::iterator_type end, T const& parser)
-{
-    AST ast;
+// GCC will not initialize the globals in the library in the right order (or at all?),
+// unless the compiler can determine there is a reference to them somewhere. It all gets
+// a bit hazy and non-standard at that point, but the only portable way appears to be
+// ensuring that a compilation unit that depends on the libs globals references at least
+// one of them. The block below ensures the globals in expression.o get initialized first.
+extern boost::spirit::x3::symbols<ast::optoken> logical_op;
+namespace {
+auto forces_expr_global_init = []() { return &noir::parser::logical_op; }();
+} // namespace
 
-    using boost::spirit::x3::with;
-    using parser::error_handler_type;
-    error_handler_type error_handler(begin, end, std::cerr);
-
-    // we pass our error handler to the parser so we can access it later on in our on_error and on_sucess handlers.
-    auto const eparser = with<parser::error_handler_tag>(std::ref(error_handler))[parser];
-
-    bool success = phrase_parse(begin, end, eparser, space_comment, ast);
-
-    if (!success || begin != end) {
-        throw std::runtime_error("Parser failed at: " + std::string(begin, begin + 10));
-    }
-
-    return ast;
-}
-
-inline ast::statement_list parse(std::string const& source)
-{
-    return parse<statement_type, ast::statement_list>(source.begin(), source.end(), statement());
-}
-
-inline ast::function_statement_list parse_function_statements(std::string const& source)
-{
-    return parse<function_statement_type, ast::function_statement_list>(
-        source.begin(), source.end(), function_statement());
-}
+ast::statement_list parse(std::string const& source);
+ast::function_statement_list parse_function_statements(std::string const&);
 
 } // namespace parser
 } // namespace noir
