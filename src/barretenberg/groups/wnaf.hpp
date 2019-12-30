@@ -49,24 +49,21 @@ inline uint64_t get_wnaf_bits_const(const uint64_t *scalar) noexcept
      * get low limb and shift right by (bit_position & 63)
      * get high limb and shift left by (64 - (bit_position & 63))
      * 
-     * If low limb == high limb, we know that the high limb will be shifted left by a bit count that moves it out of the result mask
      */
     constexpr size_t lo_limb_idx = bit_position / 64;
     constexpr size_t hi_limb_idx = (bit_position + bits - 1) / 64;
     constexpr uint64_t lo_shift = bit_position & 63UL;
-    constexpr uint64_t hi_shift = 64UL - (bit_position & 63UL);
-
     constexpr uint64_t bit_mask = (1UL << static_cast<uint64_t>(bits)) - 1UL;
-    constexpr size_t hi_mask = 0UL -(~(hi_limb_idx & lo_limb_idx) & 1UL);
 
     uint64_t lo = (scalar[lo_limb_idx] >> lo_shift);
-    if constexpr (hi_shift == 64UL)
+    if constexpr (lo_limb_idx == hi_limb_idx)
     {
         return lo & bit_mask;
     }
     else
     {
-        uint64_t hi = ((scalar[hi_limb_idx] << (hi_shift)) & hi_mask);
+        constexpr uint64_t hi_shift = 64UL - (bit_position & 63UL);
+        uint64_t hi = ((scalar[hi_limb_idx] << (hi_shift)));
         return (lo | hi) & bit_mask;
     }
 }
