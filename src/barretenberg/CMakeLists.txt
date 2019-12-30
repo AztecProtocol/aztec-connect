@@ -24,10 +24,14 @@ add_library(
     curves/bn254/fq12.hpp
     curves/bn254/g1.hpp
     curves/bn254/g2.hpp
-    curves/bn254/scalar_multiplication.cpp
-    curves/bn254/scalar_multiplication.hpp
+    curves/bn254/scalar_multiplication/mmu.cpp
+    curves/bn254/scalar_multiplication/mmu.hpp
+    curves/bn254/scalar_multiplication/process_buckets.hpp
+    curves/bn254/scalar_multiplication/scalar_multiplication.tcc
+    curves/bn254/scalar_multiplication/scalar_multiplication.hpp
     curves/bn254/pairing.cpp
     curves/bn254/pairing.hpp
+    curves/grumpkin/grumpkin.hpp
     io/io.hpp
     keccak/hash_types.h
     keccak/keccakf1600.c
@@ -118,10 +122,14 @@ if(BARRETENBERG_PROFILING)
         curves/bn254/fq12.hpp
         curves/bn254/g1.hpp
         curves/bn254/g2.hpp
-        curves/bn254/scalar_multiplication.cpp
-        curves/bn254/scalar_multiplication.hpp
+        curves/bn254/scalar_multiplication/mmu.cpp
+        curves/bn254/scalar_multiplication/mmu.hpp
+        curves/bn254/scalar_multiplication/process_buckets.hpp
+        curves/bn254/scalar_multiplication/scalar_multiplication.tcc
+        curves/bn254/scalar_multiplication/scalar_multiplication.hpp
         curves/bn254/pairing.cpp
         curves/bn254/pairing.hpp
+        curves/grumpkin/grumpkin.hpp
         io/io.hpp
         keccak/hash_types.h
         keccak/keccakf1600.c

@@ -68,7 +68,7 @@ else
 // copies src into dest, inverting y-coordinate if 'predicate' is true
 // n.b. requires src and dest to be aligned on 32 byte boundary
 template <typename coordinate_field, typename subgroup_field, typename GroupParams>
-inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_negate_affine(affine_element* src, affine_element* dest, uint64_t predicate)
+inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_negate_affine(const affine_element* src, affine_element* dest, uint64_t predicate)
 {
 if constexpr (GroupParams::small_elements)
 {

@@ -1,18 +1,42 @@
 #pragma once
 
+#include "../types.hpp"
+#include <cstdlib>
 #include <cstdint>
 #include <cstddef>
 #include <vector>
+#include <memory.h>
+
+#include <cstdio>
 
 namespace barretenberg
 {
 namespace wnaf
 {
+namespace internal
+{
+    // from http://supertech.csail.mit.edu/papers/debruijn.pdf
+constexpr size_t get_msb(const uint32_t v)
+{
+    constexpr uint32_t MultiplyDeBruijnBitPosition[32] = { 0,  9,  1,  10, 13, 21, 2,  29, 11, 14, 16,
+                                                              18, 22, 25, 3,  30, 8,  12, 20, 28, 15, 17,
+                                                              24, 7,  19, 27, 23, 6,  26, 5,  4,  31 };
+
+    const uint32_t v1 = v | (v >> 1); // v |= v >> 1; // first round down to one less than a power of 2
+    const uint32_t v2 = v1 | (v1 >> 2);
+    const uint32_t v3 = v2 | (v2 >> 4);
+    const uint32_t v4 = v3 | (v3 >> 8);
+    const uint32_t v5 = v4 | (v4 >> 16);
+
+    return MultiplyDeBruijnBitPosition[static_cast<uint32_t>(v5 * static_cast<uint32_t>(0x07C4ACDD)) >> static_cast<uint32_t>(27)];
+}
+}
 constexpr size_t SCALAR_BITS = 127;
 
 #define WNAF_SIZE(x) ((wnaf::SCALAR_BITS + x - 1) / (x))
 
-inline uint32_t get_wnaf_bits(uint64_t *scalar, size_t bits, size_t bit_position)
+template <size_t bits, size_t bit_position>
+inline uint64_t get_wnaf_bits_const(const uint64_t *scalar) noexcept
 {
     /**
      *  we want to take a 128 bit scalar and shift it down by (bit_position).
@@ -27,74 +51,86 @@ inline uint32_t get_wnaf_bits(uint64_t *scalar, size_t bits, size_t bit_position
      * 
      * If low limb == high limb, we know that the high limb will be shifted left by a bit count that moves it out of the result mask
      */
-    size_t lo_idx = bit_position >> 6;
-    size_t hi_idx = (bit_position + bits - 1) >> 6;
-    uint32_t lo = (uint32_t)(scalar[lo_idx] >> (bit_position & 63UL));
-    size_t hi_mask = 0UL -(~(hi_idx & lo_idx) & 1UL);
-    uint32_t hi = (uint32_t)((scalar[hi_idx] << (64UL - (bit_position & 63UL))) & hi_mask);
-    return (lo | hi) & ((1U << (uint32_t)bits) - 1U);
+    constexpr size_t lo_limb_idx = bit_position / 64;
+    constexpr size_t hi_limb_idx = (bit_position + bits - 1) / 64;
+    constexpr uint64_t lo_shift = bit_position & 63UL;
+    constexpr uint64_t hi_shift = 64UL - (bit_position & 63UL);
+
+    constexpr uint64_t bit_mask = (1UL << static_cast<uint64_t>(bits)) - 1UL;
+    constexpr size_t hi_mask = 0UL -(~(hi_limb_idx & lo_limb_idx) & 1UL);
+
+    uint64_t lo = (scalar[lo_limb_idx] >> lo_shift);
+    if constexpr (hi_shift == 64UL)
+    {
+        return lo & bit_mask;
+    }
+    else
+    {
+        uint64_t hi = ((scalar[hi_limb_idx] << (hi_shift)) & hi_mask);
+        return (lo | hi) & bit_mask;
+    }
 }
 
-inline void fixed_wnaf(uint64_t *scalar, uint32_t *wnaf, bool &skew_map, size_t num_points, size_t wnaf_bits)
+template <size_t num_points, size_t wnaf_bits, size_t round_i>
+inline void wnaf_round(uint64_t* scalar, uint64_t* wnaf, const size_t point_index, const uint64_t previous) noexcept
 {
-    size_t wnaf_entries = (SCALAR_BITS + wnaf_bits - 1) / wnaf_bits;
+    constexpr size_t wnaf_entries = (SCALAR_BITS + wnaf_bits - 1) / wnaf_bits;
+    constexpr size_t log2_num_points = static_cast<uint64_t>(internal::get_msb(static_cast<uint32_t>(num_points)));
+
+    if constexpr (round_i  < wnaf_entries - 1)
+    {
+        uint64_t slice = get_wnaf_bits_const<wnaf_bits, round_i * wnaf_bits>(scalar);
+        uint64_t predicate = ((slice & 1UL) == 0UL);
+        wnaf[(wnaf_entries - round_i) << log2_num_points] = ((((previous - (predicate << (wnaf_bits /*+ 1*/))) ^ (0UL - predicate)) >> 1UL) | (predicate << 31UL)) | (point_index << 32UL);
+        wnaf_round<num_points, wnaf_bits, round_i + 1>(scalar, wnaf, point_index, slice + predicate);
+    }
+    else
+    {
+        constexpr size_t final_bits = SCALAR_BITS - (SCALAR_BITS / wnaf_bits) * wnaf_bits;
+        uint64_t slice = get_wnaf_bits_const<final_bits, (wnaf_entries - 1) * wnaf_bits>(scalar);
+        uint64_t predicate = ((slice & 1UL) == 0UL);
+        wnaf[num_points] = ((((previous - (predicate << (wnaf_bits /*+ 1*/))) ^ (0UL - predicate)) >> 1UL) | (predicate << 31UL)) | (point_index << 32UL);
+        wnaf[0] = ((slice + predicate) >> 1UL) | (point_index << 32UL);
+    }
+}
+
+template <size_t wnaf_bits, size_t round_i>
+inline void wnaf_round_packed(const uint64_t* scalar, uint64_t* wnaf, const size_t point_index, const uint64_t previous) noexcept
+{
+    constexpr size_t wnaf_entries = (SCALAR_BITS + wnaf_bits - 1) / wnaf_bits;
+
+    if constexpr (round_i  < wnaf_entries - 1)
+    {
+        uint64_t slice = get_wnaf_bits_const<wnaf_bits, round_i * wnaf_bits>(scalar);
+        uint64_t predicate = ((slice & 1UL) == 0UL);
+        wnaf[(wnaf_entries - round_i)] = ((((previous - (predicate << (wnaf_bits /*+ 1*/))) ^ (0UL - predicate)) >> 1UL) | (predicate << 31UL)) | (point_index);
+        wnaf_round_packed<wnaf_bits, round_i + 1>(scalar, wnaf, point_index, slice + predicate);
+    }
+    else
+    {
+        constexpr size_t final_bits = SCALAR_BITS - (SCALAR_BITS / wnaf_bits) * wnaf_bits;
+        uint64_t slice = get_wnaf_bits_const<final_bits, (wnaf_entries - 1) * wnaf_bits>(scalar);
+        uint64_t predicate = ((slice & 1UL) == 0UL);
+        wnaf[1] = ((((previous - (predicate << (wnaf_bits /*+ 1*/))) ^ (0UL - predicate)) >> 1UL) | (predicate << 31UL)) | (point_index);
+        wnaf[0] = ((slice + predicate) >> 1UL) | (point_index);
+    }
+}
+
+template <size_t num_points, size_t wnaf_bits>
+inline void fixed_wnaf(uint64_t *scalar, uint64_t *wnaf, bool &skew_map, const size_t point_index) noexcept
+{
     skew_map = ((scalar[0] & 1) == 0);
-    uint32_t previous = get_wnaf_bits(scalar, wnaf_bits, 0) + (uint32_t)skew_map;
-    for (size_t i = 1; i < wnaf_entries - 1; ++i)
-    {
-        uint32_t slice = get_wnaf_bits(scalar, wnaf_bits, i * wnaf_bits);
-        uint32_t predicate = ((slice & 1U) == 0U);
-        wnaf[(wnaf_entries - i) * num_points] = (((previous - (predicate << ((uint32_t)wnaf_bits /*+ 1*/))) ^ (0U - predicate)) >> 1U) | (predicate << 31U);
-        previous = slice + predicate;
-    }
-    size_t final_bits = SCALAR_BITS - (SCALAR_BITS / wnaf_bits) * wnaf_bits;
-    uint32_t slice = get_wnaf_bits(scalar, final_bits, (wnaf_entries - 1) * wnaf_bits);
-    uint32_t predicate = ((slice & 1U) == 0U);
-    wnaf[num_points] = (((previous - (predicate << ((uint32_t)wnaf_bits /*+ 1*/))) ^ (0U - predicate)) >> 1U) | (predicate << 31);
-    wnaf[0] = ((slice + predicate) >> 1U);
+    uint64_t previous = get_wnaf_bits_const<wnaf_bits, 0>(scalar) + (uint64_t)skew_map;
+    wnaf_round<num_points, wnaf_bits, 1UL>(scalar, wnaf, point_index, previous);
 }
 
-inline void process_bucket_vectors(uint32_t* wnaf, std::vector<std::vector<uint32_t> > &bucket_wnafs, size_t num_points)
+template <size_t wnaf_bits>
+inline void fixed_wnaf_packed(const uint64_t *scalar, uint64_t *wnaf, bool &skew_map, const size_t point_index) noexcept
 {
-    for (size_t i = 0; i < num_points; ++i)
-    {
-        uint32_t to_move = wnaf[i];
-        bucket_wnafs[(size_t)(to_move & 0x7fffffffU)].push_back((uint32_t)(i) | (to_move >> 31U << 31U));
-    }
+    skew_map = ((scalar[0] & 1) == 0);
+    uint64_t previous = get_wnaf_bits_const<wnaf_bits, 0>(scalar) + (uint64_t)skew_map;
+    wnaf_round_packed<wnaf_bits, 1UL>(scalar, wnaf, point_index, previous);
 }
 
-// inline void fixed_bucket_ordered_wnaf(uint64_t *scalar, uint32_t ***wnaf_buckets, uint32_t *bucket_sizes, bool &skew_map, size_t num_points, size_t wnaf_bits)
-// {
-//     size_t wnaf_entries = (SCALAR_BITS + wnaf_bits - 1) / wnaf_bits;
-//     skew_map = ((scalar[0] & 1) == 0);
-//     uint32_t previous = get_wnaf_bits(scalar, wnaf_bits, 0) + (uint32_t)skew_map;
-//     for (size_t i = 1; i < wnaf_entries - 1; ++i)
-//     {
-//         uint32_t slice = get_wnaf_bits(scalar, wnaf_bits, i * wnaf_bits);
-//         uint32_t predicate = ((slice & 1U) == 0U);
-//         uint32_t point_index = (wnaf_entries - i) * num_points;
-//         uint32_t wnaf_entry_without_predicate = (((previous - (predicate << ((uint32_t)wnaf_bits /*+ 1*/))) ^ (0U - predicate)) >> 1U);
-        
-//         // i = round index
-//         // for each round, we have x buckets, that contain pointers to scalars
-//         // erm...is this sane? x buckets that can theoretically contain n points each is a non starter
-
-//         // Ok, what we need, is a thread cache...
-//         // Each thread has a block of memory reserved. This block of memory contains wnaf entries, and we will have n of them
-//         // ...this seems grotesque? Bleh
-//         uint32_t bucket_size = bucket_sizes[wnaf_entry_without_predicate]++;
-//         wnaf_buckets[i][wnaf_entry_without_predicate][bucket_size] = point_index | (predicate << 31U);
-//         // 
-//         //  | (predicate << 31U);
-//         // wnaf[(wnaf_entries - i) * num_points] = (((previous - (predicate << ((uint32_t)wnaf_bits /*+ 1*/))) ^ (0U - predicate)) >> 1U) | (predicate << 31U);
-//         previous = slice + predicate;
-//     }
-//     size_t final_bits = SCALAR_BITS - (SCALAR_BITS / wnaf_bits) * wnaf_bits;
-//     uint32_t slice = get_wnaf_bits(scalar, final_bits, (wnaf_entries - 1) * wnaf_bits);
-//     uint32_t predicate = ((slice & 1U) == 0U);
-//     wnaf_buckets[0][wnaf_entry_without_predicate] = 0; // 
-//     wnaf[num_points] = (((previous - (predicate << ((uint32_t)wnaf_bits /*+ 1*/))) ^ (0U - predicate)) >> 1U) | (predicate << 31);
-//     wnaf[0] = ((slice + predicate) >> 1U);
-// }
 } // namespace wnaf
 } // namespace barretenberg

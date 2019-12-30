@@ -4,7 +4,7 @@
 #include "../../../curves/bn254/g1.hpp"
 #include "../../../curves/bn254/g2.hpp"
 #include "../../../curves/bn254/pairing.hpp"
-#include "../../../curves/bn254/scalar_multiplication.hpp"
+#include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
 #include "../../../polynomials/polynomial_arithmetic.hpp"
 

@@ -312,3 +312,61 @@ TEST(fq, neg)
     fq::__add(a, b, result);
     EXPECT_EQ(fq::eq(result, fq::zero), true);
 }
+
+
+TEST(fq, split_into_endomorphism_scalars)
+{
+    fq::field_t input = {{0, 0, 0, 0}};
+    int got_entropy = getentropy((void *)&input.data[0], 32);
+    EXPECT_EQ(got_entropy, 0);
+    input.data[3] &= 0x7fffffffffffffff;
+
+    while (fq::gt(input, fq::modulus_plus_one))
+    {
+        fq::__sub(input, fq::modulus, input);
+    }
+    fq::field_t k = {{input.data[0], input.data[1], input.data[2], input.data[3]}};
+    fq::field_t k1 = {{0, 0, 0, 0}};
+    fq::field_t k2 = {{0, 0, 0, 0}};
+
+    fq::split_into_endomorphism_scalars(k, k1, k2);
+
+    fq::field_t result{{0, 0, 0, 0}};
+
+    fq::__to_montgomery_form(k1, k1);
+    fq::__to_montgomery_form(k2, k2);
+
+    fq::__mul(k2, fq::beta, result);
+    fq::__sub(k1, result, result);
+
+    fq::__from_montgomery_form(result, result);
+    for (size_t i = 0; i < 4; ++i)
+    {
+        EXPECT_EQ(result.data[i], k.data[i]);
+    }
+}
+
+TEST(fq, split_into_endomorphism_scalars_simple)
+{
+
+    fq::field_t input = {{1, 0, 0, 0}};
+    fq::field_t k = {{0, 0, 0, 0}};
+    fq::field_t k1 = {{0, 0, 0, 0}};
+    fq::field_t k2 = {{0, 0, 0, 0}};
+    fq::__copy(input, k);
+
+    fq::split_into_endomorphism_scalars(k, k1, k2);
+
+    fq::field_t result{{0, 0, 0, 0}};
+    fq::__to_montgomery_form(k1, k1);
+    fq::__to_montgomery_form(k2, k2);
+
+    fq::__mul(k2, fq::beta, result);
+    fq::__sub(k1, result, result);
+
+    fq::__from_montgomery_form(result, result);
+    for (size_t i = 0; i < 4; ++i)
+    {
+        EXPECT_EQ(result.data[i], k.data[i]);
+    }
+}

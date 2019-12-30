@@ -150,7 +150,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         coordinate_field::__set_msb(p.y);
     }
 
-    static inline void dbl(element& p1, element& p2) noexcept
+    static inline void dbl(const element& p1, element& p2) noexcept
     {
         if (coordinate_field::is_msb_set_word(p1.y))
         {
@@ -216,7 +216,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         coordinate_field::reduce_once(p2.y, p2.y);
     }
 
-    static inline void mixed_add_inner(element& p1, const affine_element& p2, element& p3) noexcept
+    static inline void mixed_add_inner(const element& p1, const affine_element& p2, element& p3) noexcept
     {
         typename coordinate_field::field_t T0;
         typename coordinate_field::field_t T1;
@@ -303,7 +303,95 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     }
     // add: 10 mul_w_o_reduction 1 mul, 5 sqr
 
-    static inline void mixed_add(element& p1, const affine_element& p2, element& p3) noexcept
+    static inline void mixed_add_or_sub_inner(const element& p1, const affine_element& p2, element& p3, const uint64_t predicate) noexcept
+    {
+        typename coordinate_field::field_t T0;
+        typename coordinate_field::field_t T1;
+        typename coordinate_field::field_t T2;
+        typename coordinate_field::field_t T3;
+
+        // T0 = z1.z1
+        // coordinate_field::__sqr(p1.z, T0);
+        coordinate_field::__sqr_with_coarse_reduction(p1.z, T0);
+
+        // T1 = x2.t0 - x1 = x2.z1.z1 - x1
+        coordinate_field::__mul(p2.x, T0, T1);
+        coordinate_field::__sub(T1, p1.x, T1);
+
+        // T2 = T0.z1 = z1.z1.z1
+        coordinate_field::__mul_with_coarse_reduction(p1.z, T0, T2);
+
+        // // T2 = T2.y2 - y1 = y2.z1.z1.z1 - y1
+        coordinate_field::__mul(T2, p2.y, T2);
+        coordinate_field::__conditionally_negate_self(T2, predicate);
+        coordinate_field::__sub(T2, p1.y, T2);
+
+        if (__builtin_expect(coordinate_field::is_zero(T1), 0))
+        {
+            if (coordinate_field::is_zero(T2))
+            {
+                // y2 equals y1, x2 equals x1, double x1
+                dbl(p1, p3);
+                return;
+            }
+            else
+            {
+                set_infinity(p3);
+                return;
+            }
+        }
+
+        // T2 = 2T2 = 2(y2.z1.z1.z1 - y1) = R
+        // z3 = z1 + H
+        coordinate_field::__paralell_double_and_add_without_reduction(T2, p1.z, T1, p3.z);
+
+        // T3 = T1*T1 = HH
+        coordinate_field::__sqr_with_coarse_reduction(T1, T3);
+
+        // z3 = z3 - z1z1 - HH
+        coordinate_field::__add_with_coarse_reduction(T0, T3, T0);
+
+        // z3 = (z1 + H)*(z1 + H)
+        coordinate_field::__sqr_with_coarse_reduction(p3.z, p3.z);
+        coordinate_field::__sub_with_coarse_reduction(p3.z, T0, p3.z);
+        coordinate_field::reduce_once(p3.z, p3.z);
+
+        // T3 = 4HH
+        coordinate_field::__quad_with_coarse_reduction(T3, T3);
+
+        // T1 = T1*T3 = 4HHH
+        coordinate_field::__mul_with_coarse_reduction(T1, T3, T1);
+
+        // T3 = T3 * x1 = 4HH*x1
+        coordinate_field::__mul_with_coarse_reduction(T3, p1.x, T3);
+
+        // T0 = 2T3
+        coordinate_field::__add_with_coarse_reduction(T3, T3, T0);
+
+        // T0 = T0 + T1 = 2(4HH*x1) + 4HHH
+        coordinate_field::__add_with_coarse_reduction(T0, T1, T0);
+        coordinate_field::__sqr_with_coarse_reduction(T2, p3.x);
+
+        // x3 = x3 - T0 = R*R - 8HH*x1 -4HHH
+        coordinate_field::__sub_with_coarse_reduction(p3.x, T0, p3.x);
+
+        // T3 = T3 - x3 = 4HH*x1 - x3
+        coordinate_field::__sub_with_coarse_reduction(T3, p3.x, T3);
+        coordinate_field::reduce_once(p3.x, p3.x);
+
+        coordinate_field::__mul_with_coarse_reduction(T1, p1.y, T1);
+        coordinate_field::__add_with_coarse_reduction(T1, T1, T1);
+
+        // T3 = T2 * T3 = R*(4HH*x1 - x3)
+        coordinate_field::__mul_with_coarse_reduction(T3, T2, T3);
+
+        // y3 = T3 - T1
+        coordinate_field::__sub_with_coarse_reduction(T3, T1, p3.y);
+        coordinate_field::reduce_once(p3.y, p3.y);
+    }
+
+
+    static inline void mixed_add(const element& p1, const affine_element& p2, element& p3) noexcept
     {
         // TODO: quantitavely check if __builtin_expect helps here
         // if (__builtin_expect(((p1.y.data[3] >> 63)), 0))
@@ -321,7 +409,26 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         mixed_add_inner(p1, p2, p3);
     }
 
-    static inline void add(element& p1, element& p2, element& p3)
+    static inline void mixed_add_or_sub(const element& p1, const affine_element& p2, element& p3, const uint64_t predicate) noexcept
+    {
+        // TODO: quantitavely check if __builtin_expect helps here
+        // if (__builtin_expect(((p1.y.data[3] >> 63)), 0))
+
+        // N.B. we implicitly assume p2 is not a point at infinity, as it will be coming from a lookup table of
+        // constants
+        if (coordinate_field::is_msb_set_word(p1.y))
+        {
+            conditional_negate_affine(&p2, (affine_element*)&p3, predicate);
+            // coordinate_field::__copy(p2.x, p3.x);
+            // coordinate_field::__copy(p2.y, p3.y);
+            coordinate_field::__copy(coordinate_field::one, p3.z);
+            return;
+        }
+
+        mixed_add_or_sub_inner(p1, p2, p3, predicate);
+    }
+
+    static inline void add(const element& p1, const element& p2, element& p3)
     {
         bool p1_zero = coordinate_field::is_msb_set(p1.y); // (p1.y.data[3] >> 63) == 1;
         bool p2_zero = coordinate_field::is_msb_set(
@@ -447,7 +554,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         coordinate_field::__mul(p3.z, H, p3.z);
     }
 
-    static inline element normalize(element& src)
+    static inline element normalize(const element& src)
     {
         element dest;
         typename coordinate_field::field_t z_inv;
@@ -592,11 +699,20 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         r.z = coordinate_field::one;
     }
 
-    static inline void jacobian_to_affine(element& a, affine_element& r)
+    static inline element affine_to_jacobian(const affine_element& a)
     {
-        a = normalize(a);
+        element r;
         coordinate_field::__copy(a.x, r.x);
         coordinate_field::__copy(a.y, r.y);
+        r.z = coordinate_field::one;
+        return r;
+    }
+
+    static inline void jacobian_to_affine(const element& a, affine_element& r)
+    {
+        element temp = normalize(a);
+        coordinate_field::__copy(temp.x, r.x);
+        coordinate_field::__copy(temp.y, r.y);
     }
 
     static inline void copy_affine(const affine_element& a, affine_element& r)
@@ -687,23 +803,23 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             coordinate_field::__copy(precomp_table[i].y, lookup_table[i].y);
         }
 
-        uint32_t wnaf_table[num_rounds * 2];
+        uint64_t wnaf_table[num_rounds * 2];
         typename subgroup_field::field_t endo_scalar;
         subgroup_field::split_into_endomorphism_scalars(
             converted_scalar, endo_scalar, *(typename subgroup_field::field_t*)&endo_scalar.data[2]);
 
         bool skew = false;
         bool endo_skew = false;
-        wnaf::fixed_wnaf(&endo_scalar.data[0], &wnaf_table[0], skew, 2, num_wnaf_bits);
-        wnaf::fixed_wnaf(&endo_scalar.data[2], &wnaf_table[1], endo_skew, 2, num_wnaf_bits);
+        wnaf::fixed_wnaf<2, num_wnaf_bits>(&endo_scalar.data[0], &wnaf_table[0], skew, 0);
+        wnaf::fixed_wnaf<2, num_wnaf_bits>(&endo_scalar.data[2], &wnaf_table[1], endo_skew, 0);
 
         element work_element = one();
         element dummy_element = one();
         affine_element temporary;
         set_infinity(work_element);
 
-        uint32_t wnaf_entry;
-        uint32_t index;
+        uint64_t wnaf_entry;
+        uint64_t index;
         bool sign;
         for (size_t i = 0; i < num_rounds; ++i)
         {
@@ -852,7 +968,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         coordinate_field::__copy(src.z, dest.z);
     }
 
-    static void conditional_negate_affine(affine_element* src, affine_element* dest, uint64_t predicate);
+    static void conditional_negate_affine(const affine_element* src, affine_element* dest, uint64_t predicate);
 
 }; // class group
 } // namespace barretenberg

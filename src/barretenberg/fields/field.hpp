@@ -103,10 +103,10 @@ template <typename FieldParams> class field
                                                             field_t& r) noexcept;
     static void __sub(const field_t& a, const field_t& b, field_t& r) noexcept;
     static void __sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) noexcept;
-    static void __conditionally_subtract_double_modulus(const field_t& a,
+    static void __conditionally_subtract_from_double_modulus(const field_t& a,
                                                         field_t& r,
                                                         const uint64_t predicate) noexcept;
-
+    static void __conditionally_negate_self(field_t& r, const uint64_t predicate) noexcept;
     // compute a * b, put 512-bit result in r (do not reduce)
     static void __mul_512(const field_t& a, const field_t& b, field_wide_t& r) noexcept;
 
@@ -255,7 +255,7 @@ template <typename FieldParams> class field
     /**
      * compute a^b mod q, return result in r
      **/
-    static inline void pow(const field_t& a, const field_t& b, field_t& r)
+    static inline void __pow(const field_t& a, const field_t& b, field_t& r)
     {
         if (eq(a, zero))
         {
@@ -339,12 +339,13 @@ template <typename FieldParams> class field
         __pow_small(a, exponent, result);
         return result;
     }
+
     /**
      * compute a^{q - 2} mod q, place result in r
      **/
     static inline void __invert(const field_t& a, field_t& r)
     {
-        pow(a, modulus_minus_two, r);
+        __pow(a, modulus_minus_two, r);
     }
 
     static inline field_t invert(const field_t& a)
@@ -354,13 +355,67 @@ template <typename FieldParams> class field
         return r;
     }
 
+    static inline void __tonelli_shanks_sqrt(const field_t& a, field_t& r)
+    {
+        size_t v = FieldParams::s;
+        field_t z = FieldParams::nqr_to_t;
+        field_t w = __pow(a, FieldParams::t_minus_1_over_2); // (*this)^Fp_model<n,modulus>::t_minus_1_over_2;
+        field_t x = mul(a, w);                             // (*this) * w;
+        field_t b = mul(x, w);                             // b = (*this)^t
+
+        // check if square with euler's criterion
+        field_t check = b;
+        for (size_t i = 0; i < v - 1; ++i)
+        {
+            check = sqr(check);
+        }
+        if (!eq(check, one))
+        {
+            r = zero;
+            return;
+        }
+        while (!eq(b, one))
+        {
+            size_t m = 0;
+            field_t b2m = b;
+            while (!eq(b2m, one))
+            {
+                b2m = sqr(b2m);
+                m += 1;
+            }
+
+            int j = v - m - 1;
+            w = z;
+            while (j > 0)
+            {
+                w = sqr(w);
+                --j;
+            } // w = z^2^(v-m-1)
+
+            z = sqr(w);
+            b = mul(b, z);
+            x = mul(x, w);
+            v = m;
+        }
+
+        r = x;
+    }
+
     /**
-     * compute a^{(q + 1) / 2}, place result in r
+     * compute a^{(q + 1) / 4}, place result in r
      **/
     static inline void __sqrt(const field_t& a, field_t& r)
     {
-        pow(a, sqrt_exponent, r);
+        if constexpr (FieldParams::p_mod_4_eq_3)
+        {
+            __pow(a, sqrt_exponent, r);
+        }
+        else
+        {
+            __tonelli_shanks_sqrt(a, r);
+        }
     }
+
 
     /**
      * Get a random field element in montgomery form, place in `r`
@@ -417,21 +472,21 @@ template <typename FieldParams> class field
 
         // TODO: these parameters only work for the bn254 coordinate field.
         // Need to shift into FieldParams and calculate correct constants for the subgroup field
-        constexpr field_t g1 = { { 0x7a7bd9d4391eb18dUL, 0x4ccef014a773d2cfUL, 0x0000000000000002UL, 0 } };
+        constexpr field_t endo_g1 = { { FieldParams::endo_g1_lo, FieldParams::endo_g1_mid, FieldParams::endo_g1_hi, 0 } };
 
-        constexpr field_t g2 = { { 0xd91d232ec7e0b3d7UL, 0x0000000000000002UL, 0, 0 } };
+        constexpr field_t endo_g2 = { { FieldParams::endo_g2_lo, FieldParams::endo_g2_mid, 0, 0 } };
 
-        constexpr field_t minus_b1 = { { 0x8211bbeb7d4f1128UL, 0x6f4d8248eeb859fcUL, 0, 0 } };
+        constexpr field_t endo_minus_b1 = { { FieldParams::endo_minus_b1_lo, FieldParams::endo_minus_b1_mid, 0, 0 } };
 
-        constexpr field_t b2 = { { 0x89d3256894d213e3UL, 0, 0, 0 } };
+        constexpr field_t endo_b2 = { { FieldParams::endo_b2_lo, FieldParams::endo_b2_mid, 0, 0 } };
 
         field_wide_t c1;
         field_wide_t c2;
 
         // compute c1 = (g2 * k) >> 256
-        __mul_512(g2, k, c1);
+        __mul_512(endo_g2, k, c1);
         // compute c2 = (g1 * k) >> 256
-        __mul_512(g1, k, c2);
+        __mul_512(endo_g1, k, c2);
         // (the bit shifts are implicit, as we only utilize the high limbs of c1, c2
 
         field_wide_t q1;
@@ -445,9 +500,9 @@ template <typename FieldParams> class field
         }; // *(field_t*)((uintptr_t)(&c2) + (4 * sizeof(uint64_t)));
 
         // compute q1 = c1 * -b1
-        __mul_512(c1_hi, minus_b1, q1);
+        __mul_512(c1_hi, endo_minus_b1, q1);
         // compute q2 = c2 * b2
-        __mul_512(c2_hi, b2, q2);
+        __mul_512(c2_hi, endo_b2, q2);
 
         field_t t1 = { {
             0,

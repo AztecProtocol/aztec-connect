@@ -216,7 +216,7 @@ inline void field<FieldParams>::__sub_with_coarse_reduction(const field_t& a, co
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__conditionally_subtract_double_modulus(const field_t& a, field_t& r, const uint64_t predicate) noexcept
+inline void field<FieldParams>::__conditionally_subtract_from_double_modulus(const field_t& a, field_t& r, const uint64_t predicate) noexcept
 {
     if (predicate)
     {
@@ -227,7 +227,18 @@ inline void field<FieldParams>::__conditionally_subtract_double_modulus(const fi
         __copy(a, r);
     }
 }
-
+template <typename FieldParams>
+inline void field<FieldParams>::__conditionally_negate_self(field_t& r, const uint64_t predicate) noexcept
+{
+    if (predicate)
+    {
+        __sub(modulus, a, r);
+    }
+    else
+    {
+        __copy(a, r);
+    }
+}
 template <typename FieldParams>
 inline void field<FieldParams>::__sqr(const field_t& a, field_t& r) noexcept
 {

@@ -8,15 +8,15 @@ using namespace barretenberg;
 namespace
 {
 
-void recover_fixed_wnaf(uint32_t* wnaf, bool skew, uint64_t& hi, uint64_t& lo, size_t wnaf_bits)
+void recover_fixed_wnaf(uint64_t* wnaf, bool skew, uint64_t& hi, uint64_t& lo, size_t wnaf_bits)
 {
     size_t wnaf_entries = (127 + wnaf_bits - 1) / wnaf_bits;
     unsigned __int128 scalar = 0; // (unsigned __int128)(skew);
     for (int i = (int)0; i < (int)wnaf_entries; ++i)
     {
-        uint32_t entry_formatted = wnaf[(size_t)i];
+        uint64_t entry_formatted = wnaf[(size_t)i];
         bool negative = entry_formatted >> 31;
-        uint32_t entry = ((entry_formatted & 0x0fffffffU) << 1) + 1;
+        uint64_t entry = ((entry_formatted & 0x0fffffffU) << 1) + 1;
         if (negative)
         {
             scalar -= (unsigned __int128)((unsigned __int128)entry) << (unsigned __int128)(wnaf_bits * (wnaf_entries - 1 - (size_t)i)); 
@@ -35,9 +35,9 @@ void recover_fixed_wnaf(uint32_t* wnaf, bool skew, uint64_t& hi, uint64_t& lo, s
 TEST(wnaf, wnaf_zero)
 {
     uint64_t buffer[2]{ 0, 0 };
-    uint32_t wnaf[WNAF_SIZE(5)] = { 0 };
+    uint64_t wnaf[WNAF_SIZE(5)] = { 0 };
     bool skew =  false;
-    wnaf::fixed_wnaf(buffer, wnaf, skew, 1, 5);
+    wnaf::fixed_wnaf<1, 5>(buffer, wnaf, skew, 0);
     uint64_t recovered_hi;
     uint64_t recovered_lo;
     recover_fixed_wnaf(wnaf, skew, recovered_hi, recovered_lo, 5);
@@ -54,9 +54,9 @@ TEST(wnaf, wnaf_fixed)
     int got_entropy = getentropy((void*)&rand_buffer[0], 16);
     EXPECT_EQ(got_entropy, 0);
     rand_buffer[1] &= 0x7fffffffffffffffUL;
-    uint32_t wnaf[WNAF_SIZE(5)] = { 0 };
+    uint64_t wnaf[WNAF_SIZE(5)] = { 0 };
     bool skew =  false;
-    wnaf::fixed_wnaf(rand_buffer, wnaf, skew, 1, 5);
+    wnaf::fixed_wnaf<1, 5>(rand_buffer, wnaf, skew, 0);
     uint64_t recovered_hi;
     uint64_t recovered_lo;
     recover_fixed_wnaf(wnaf, skew, recovered_hi, recovered_lo, 5);
@@ -67,9 +67,9 @@ TEST(wnaf, wnaf_fixed)
 TEST(wnaf, wnaf_fixed_simple_lo)
 {
     uint64_t rand_buffer[2]{ 1, 0 };
-    uint32_t wnaf[WNAF_SIZE(5)]{ 0 };
+    uint64_t wnaf[WNAF_SIZE(5)]{ 0 };
     bool skew =  false;
-    wnaf::fixed_wnaf(rand_buffer, wnaf, skew, 1, 5);
+    wnaf::fixed_wnaf<1, 5>(rand_buffer, wnaf, skew, 0);
     uint64_t recovered_hi;
     uint64_t recovered_lo;
     recover_fixed_wnaf(wnaf, skew, recovered_hi, recovered_lo, 5);
@@ -77,12 +77,12 @@ TEST(wnaf, wnaf_fixed_simple_lo)
     EXPECT_EQ(rand_buffer[1], recovered_hi);
 }
 
-TEST(wnaf_foo, wnaf_fixed_simple_hi)
+TEST(wnaf, wnaf_fixed_simple_hi)
 {
     uint64_t rand_buffer[2] = { 0, 1 };
-    uint32_t wnaf[WNAF_SIZE(5)] = { 0 };
+    uint64_t wnaf[WNAF_SIZE(5)] = { 0 };
     bool skew =  false;
-    wnaf::fixed_wnaf(rand_buffer, wnaf, skew, 1, 5);
+    wnaf::fixed_wnaf<1, 5>(rand_buffer, wnaf, skew, 0);
     uint64_t recovered_hi;
     uint64_t recovered_lo;
     recover_fixed_wnaf(wnaf, skew, recovered_hi, recovered_lo, 5);
@@ -106,12 +106,12 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
  
 
     fr::split_into_endomorphism_scalars(k, k1, k2);
-    uint32_t wnaf[WNAF_SIZE(5)] = { 0 };
-    uint32_t endo_wnaf[WNAF_SIZE(5)] = { 0 };
+    uint64_t wnaf[WNAF_SIZE(5)] = { 0 };
+    uint64_t endo_wnaf[WNAF_SIZE(5)] = { 0 };
     bool skew = false;
     bool endo_skew = false;
-    wnaf::fixed_wnaf(&k1.data[0], wnaf, skew, 1, 5);
-    wnaf::fixed_wnaf(&k2.data[0], endo_wnaf, endo_skew, 1, 5);
+    wnaf::fixed_wnaf<1, 5>(&k1.data[0], wnaf, skew, 0);
+    wnaf::fixed_wnaf<1, 5>(&k2.data[0], endo_wnaf, endo_skew, 0);
 
     fr::field_t k1_recovered{{ 0, 0, 0, 0 }};;
     fr::field_t k2_recovered{{ 0, 0, 0, 0 }};;

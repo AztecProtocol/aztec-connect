@@ -9,6 +9,32 @@ namespace barretenberg
 {
 namespace polynomial_arithmetic
 {
+namespace
+{
+    static fr::field_t* working_memory = nullptr;
+    static size_t current_size = 0;
+
+    const auto init = []()
+    {
+        constexpr size_t max_num_elements = (1 << 20);
+        working_memory = (fr::field_t*)(aligned_alloc(64, max_num_elements * 4 * sizeof(fr::field_t)));
+        memset(working_memory, 1, max_num_elements * 4 * sizeof(fr::field_t));
+        current_size = (max_num_elements * 4);
+        return 1;
+    }();
+
+    fr::field_t* get_scratch_space(const size_t num_elements)
+    {
+        if (num_elements > current_size)
+        {
+            free(working_memory);
+            working_memory = (fr::field_t*)(aligned_alloc(64, num_elements * sizeof(fr::field_t)));
+            current_size = num_elements;
+        }
+        return working_memory;
+    }
+
+}
 // namespace
 // {
 inline uint32_t reverse_bits(uint32_t x, uint32_t bit_length)
@@ -131,7 +157,8 @@ void fft_inner_parallel(fr::field_t* coeffs,
                         const fr::field_t&,
                         const std::vector<fr::field_t*>& root_table)
 {
-    fr::field_t* scratch_space = (fr::field_t*)aligned_alloc(64, sizeof(fr::field_t) * domain.size);
+  // hmm  // fr::field_t* scratch_space = (fr::field_t*)aligned_alloc(64, sizeof(fr::field_t) * domain.size);
+    fr::field_t* scratch_space = get_scratch_space(domain.size);
 #ifndef NO_MULTITHREADING
 #pragma omp parallel
 #endif
@@ -145,6 +172,8 @@ void fft_inner_parallel(fr::field_t* coeffs,
         {
             for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i)
             {
+                uint32_t next_index = (uint32_t)reverse_bits((uint32_t)i + 1, (uint32_t)domain.log2_size);
+                __builtin_prefetch(&coeffs[next_index]);
                 // in order to parallelize this part, we want to make sure that we're writing to memory in a sequential
                 // manner so that we don't try to write the same cache line from two different threads (reading is
                 // fine). We do a straight copy instead of a swap, so that there's no inter-thread communication
@@ -260,7 +289,6 @@ void fft_inner_parallel(fr::field_t* coeffs,
             }
         }
     }
-    aligned_free(scratch_space);
 }
 
 void fft(fr::field_t* coeffs, const evaluation_domain& domain)
@@ -567,6 +595,13 @@ fr::field_t compute_kate_opening_coefficients(const fr::field_t* src,
     // if `coeffs` represents F(X), we want to compute W(X)
     // where W(X) = F(X) - F(z) / (X - z)
     // i.e. divide by the degree-1 polynomial [-z, 1]
+
+
+    fr::field_t y{{ 0x833fc48d823f272cUL, 0x2d270d45f1181294UL, 0xcf135e7506a45d63UL, 0x02UL }};
+    y = fr::to_montgomery_form(y);
+    fr::field_t b{{ 17, 0, 0, 0 }};
+    b = fr::to_montgomery_form(b);
+    b = fr::neg(b);
 
     // We assume that the commitment is well-formed and that there is no remainder term.
     // Under these conditions we can perform this polynomial division in linear time with good constants

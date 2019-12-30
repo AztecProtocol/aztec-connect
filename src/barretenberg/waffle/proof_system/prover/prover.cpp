@@ -3,7 +3,7 @@
 #include "../../../curves/bn254/fr.hpp"
 #include "../../../curves/bn254/g1.hpp"
 #include "../../../curves/bn254/g2.hpp"
-#include "../../../curves/bn254/scalar_multiplication.hpp"
+#include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../../polynomials/polynomial_arithmetic.hpp"
 #include "../../../io/io.hpp"
 
@@ -64,21 +64,14 @@ Prover& Prover::operator=(Prover &&other)
 
 void Prover::compute_wire_commitments()
 {
-    scalar_multiplication::multiplication_state mul_state[3]{
-        { reference_string.monomials, w_l.get_coefficients(), n, {} },
-        { reference_string.monomials, w_r.get_coefficients(), n, {} },
-        { reference_string.monomials, w_o.get_coefficients(), n, {} }
-    };
 
-    scalar_multiplication::batched_scalar_multiplications(mul_state, 3);
+    g1::element W_L = scalar_multiplication::pippenger(w_l.get_coefficients(), reference_string.monomials, n);
+    g1::element W_R = scalar_multiplication::pippenger(w_r.get_coefficients(), reference_string.monomials, n);
+    g1::element W_O = scalar_multiplication::pippenger(w_o.get_coefficients(), reference_string.monomials, n);
 
-    // TODO: make a method for normal-to-affine copies :/
-    fq::__copy(mul_state[0].output.x, proof.W_L.x);
-    fq::__copy(mul_state[1].output.x, proof.W_R.x);
-    fq::__copy(mul_state[2].output.x, proof.W_O.x);
-    fq::__copy(mul_state[0].output.y, proof.W_L.y);
-    fq::__copy(mul_state[1].output.y, proof.W_R.y);
-    fq::__copy(mul_state[2].output.y, proof.W_O.y);
+    g1::jacobian_to_affine(W_L, proof.W_L);
+    g1::jacobian_to_affine(W_R, proof.W_R);
+    g1::jacobian_to_affine(W_O, proof.W_O);
 
     // compute beta, gamma
     challenges.gamma = compute_gamma(proof);
@@ -87,17 +80,8 @@ void Prover::compute_wire_commitments()
 
 void Prover::compute_z_commitment()
 {
-    scalar_multiplication::multiplication_state mul_state{
-        reference_string.monomials,
-        z.get_coefficients(),
-        n,
-        g1::element()};
-
-    scalar_multiplication::batched_scalar_multiplications(&mul_state, 1);
-
-    // TODO: make a method for normal-to-affine copies :/
-    fq::__copy(mul_state.output.x, proof.Z_1.x);
-    fq::__copy(mul_state.output.y, proof.Z_1.y);
+    g1::element Z = scalar_multiplication::pippenger(z.get_coefficients(), reference_string.monomials, n);
+    g1::jacobian_to_affine(Z, proof.Z_1);
 
     // compute alpha
     // TODO: does this really belong here?
@@ -106,17 +90,13 @@ void Prover::compute_z_commitment()
 
 void Prover::compute_quotient_commitment()
 {
-    scalar_multiplication::multiplication_state mul_state[3]{
-        { reference_string.monomials, &circuit_state.quotient_large.get_coefficients()[0],   n, {} },
-        { reference_string.monomials, &circuit_state.quotient_large.get_coefficients()[n],   n, {} },
-        { reference_string.monomials, &circuit_state.quotient_large.get_coefficients()[n+n], n, {} },
-    };
+    g1::element T_LO = scalar_multiplication::pippenger(&circuit_state.quotient_large.get_coefficients()[0], reference_string.monomials, n);
+    g1::element T_MID = scalar_multiplication::pippenger(&circuit_state.quotient_large.get_coefficients()[n], reference_string.monomials, n);
+    g1::element T_HI = scalar_multiplication::pippenger(&circuit_state.quotient_large.get_coefficients()[n+n], reference_string.monomials, n);
 
-    scalar_multiplication::batched_scalar_multiplications(mul_state, 3);
-
-    g1::jacobian_to_affine(mul_state[0].output, proof.T_LO);
-    g1::jacobian_to_affine(mul_state[1].output, proof.T_MID);
-    g1::jacobian_to_affine(mul_state[2].output, proof.T_HI);
+    g1::jacobian_to_affine(T_LO, proof.T_LO);
+    g1::jacobian_to_affine(T_MID, proof.T_MID);
+    g1::jacobian_to_affine(T_HI, proof.T_HI);
 
     challenges.z = compute_evaluation_challenge(proof);
 }
@@ -646,16 +626,12 @@ void Prover::compute_opening_elements()
 
     shifted_opening_poly.compute_kate_opening_coefficients(shifted_z);
 
-    // Compute PI_Z(X) and PI_Z_OMEGA(X)
-    scalar_multiplication::multiplication_state mul_state[2]{
-        { reference_string.monomials, opening_poly.get_coefficients(), n, {}},
-        { reference_string.monomials, shifted_opening_poly.get_coefficients(), n, {}},
-    };
+    g1::element PI_Z = scalar_multiplication::pippenger(opening_poly.get_coefficients(), reference_string.monomials, n);
+    g1::element PI_Z_OMEGA = scalar_multiplication::pippenger(shifted_opening_poly.get_coefficients(), reference_string.monomials, n);
 
-    scalar_multiplication::batched_scalar_multiplications(mul_state, 2);
+    g1::jacobian_to_affine(PI_Z, proof.PI_Z);
+    g1::jacobian_to_affine(PI_Z_OMEGA, proof.PI_Z_OMEGA);
 
-    g1::jacobian_to_affine(mul_state[0].output, proof.PI_Z);
-    g1::jacobian_to_affine(mul_state[1].output, proof.PI_Z_OMEGA);
 }
 
 plonk_proof Prover::construct_proof()

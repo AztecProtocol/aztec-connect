@@ -70,10 +70,10 @@ if(DISABLE_SHENANIGANS)
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wno-format -Wno-conversion")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -save-temps")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -save-temps")
 
 if(WIN32)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-float-conversion")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-float-conversion -Wimplicit-fallthrough=0")
 endif()
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
