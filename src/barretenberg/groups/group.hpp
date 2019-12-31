@@ -4,7 +4,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-
+#include <array>
+#include "../keccak/keccak.h"
 #include "../assert.hpp"
 #include "../types.hpp"
 #include "./wnaf.hpp"
@@ -111,6 +112,68 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             jacobian_to_affine(ele, out);
             return out;
         }
+    }
+
+    static inline affine_element decompress(const typename coordinate_field::field_t &compressed)
+    {
+        uint64_t y_sign = compressed.data[3] >> 63UL;
+        affine_element result;
+
+        coordinate_field::__copy(compressed, result.x);
+        coordinate_field::__to_montgomery_form(result.x, result.x);
+        result.x.data[3] = result.x.data[3] & 0x7fffffffffffffffUL;
+
+        typename coordinate_field::field_t xxx;
+        coordinate_field::__sqr(result.x, xxx);
+        coordinate_field::__mul(xxx, result.x, xxx);
+
+        typename coordinate_field::field_t yy;
+        coordinate_field::__add(xxx, GroupParams::b, yy);
+
+        coordinate_field::__sqrt(yy, result.y);
+
+        typename coordinate_field::field_t y_test;
+        coordinate_field::__from_montgomery_form(result.y, y_test);
+        if ((y_test.data[0] & 1UL) != y_sign)
+        {
+            coordinate_field::__neg(result.y, result.y);
+        }
+        if (!on_curve(result))
+        {
+            set_infinity(result);
+        }
+
+        return result;
+    }
+
+    static inline affine_element hash_to_curve(uint64_t seed)
+    {
+        typename coordinate_field::field_t input = coordinate_field::zero;
+        input.data[0] = seed;
+        keccak256 c = hash_field_element((uint64_t*)&input.data[0]);
+        typename coordinate_field::field_t compressed;
+        coordinate_field::__copy(*(typename coordinate_field::field_t*)&c.word64s[0], compressed);
+        return decompress(compressed);
+    }
+
+    template <size_t N>
+    static inline std::array<affine_element, N> derive_generators()
+    {
+        std::array<affine_element, N> generators;
+        size_t count = 0;
+        size_t seed = 0;
+        while (count < N)
+        {
+            ++seed;
+            affine_element candidate = hash_to_curve(seed);
+            if (on_curve(candidate))
+            {
+                copy(candidate, generators[count]);
+                ++count;
+            }
+        }
+
+        return generators;
     }
 
     static inline element one()

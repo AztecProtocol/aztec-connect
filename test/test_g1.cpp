@@ -329,3 +329,27 @@ TEST(group, group_exponentiation_consistency_check)
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
+
+TEST(group, derive_generators)
+{
+    constexpr size_t num_generators = 128;
+    std::array<g1::affine_element, num_generators> result = g1::derive_generators<num_generators>();
+
+    const auto is_unique = [&result](const g1::affine_element &y, const size_t j)
+    {
+        for (size_t i = 0; i < result.size(); ++i)
+        {
+            if ((i != j) && g1::eq(result[i], y))
+            {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    for (size_t k = 0; k < num_generators; ++k)
+    {
+        EXPECT_EQ(is_unique(result[k], k), true);
+        EXPECT_EQ(g1::on_curve(result[k]), true);
+    }
+}
