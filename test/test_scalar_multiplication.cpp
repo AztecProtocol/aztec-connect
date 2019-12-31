@@ -61,7 +61,7 @@ TEST(scalar_multiplication, endomorphism_split)
 {
     fr::field_t scalar = fr::random_element();
 
-    g1::element expected = g1::group_exponentiation_inner(g1::affine_one(), scalar);
+    g1::element expected = g1::group_exponentiation_inner(g1::affine_one, scalar);
 
     // we want to test that we can split a scalar into two half-length components, using the same location in memory.
     fr::field_t* k1_t = &scalar;
@@ -73,8 +73,8 @@ TEST(scalar_multiplication, endomorphism_split)
     fr::field_t k2{ { (*k2_t).data[0], (*k2_t).data[1], 0, 0 } };
 
     g1::element result;
-    g1::element t1 = g1::group_exponentiation_inner(g1::affine_one(), k1);
-    g1::affine_element beta = g1::affine_one();
+    g1::element t1 = g1::group_exponentiation_inner(g1::affine_one, k1);
+    g1::affine_element beta = g1::affine_one;
     fq::__mul_beta(beta.x, beta.x);
     fq::__neg(beta.y, beta.y);
     g1::element t2 = g1::group_exponentiation_inner(beta, k2);
@@ -298,7 +298,7 @@ TEST(scalar_multiplication, pippenger_mul_by_zero)
     g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 2 + 1);
 
     scalars[0] = fr::zero;
-    points[0] = g1::affine_one();
+    points[0] = g1::affine_one;
     scalar_multiplication::generate_pippenger_point_table(points, points, 1);
 
     g1::element result = scalar_multiplication::pippenger(scalars, points, 1);

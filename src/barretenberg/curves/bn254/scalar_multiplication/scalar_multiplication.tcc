@@ -502,7 +502,7 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, c
 
     if (num_initial_points == 0)
     {
-        g1::element out = g1::one();
+        g1::element out = g1::one;
         g1::set_infinity(out);
         return out;
     }

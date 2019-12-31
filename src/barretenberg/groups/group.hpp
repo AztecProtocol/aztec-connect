@@ -28,6 +28,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         typename coordinate_field::field_t z;
     };
 
+    static constexpr element one{ GroupParams::one_x, GroupParams::one_y, coordinate_field::one };
+    static constexpr affine_element affine_one{ GroupParams::one_x, GroupParams::one_y };
+
     static inline void print(affine_element& p)
     {
         printf("p.x: ");
@@ -89,7 +92,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         else
         {
             typename subgroup_field::field_t scalar = subgroup_field::random_element();
-            affine_element res = affine_one();
+            affine_element res = affine_one;
             res = group_exponentiation(res, scalar);
             element result;
             affine_to_jacobian(res, result);
@@ -174,23 +177,6 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         }
 
         return generators;
-    }
-
-    static inline element one()
-    {
-        element output;
-        output.x = GroupParams::one_x;
-        output.y = GroupParams::one_y;
-        output.z = coordinate_field::one;
-        return output;
-    }
-
-    static inline affine_element affine_one()
-    {
-        affine_element output;
-        output.x = GroupParams::one_x;
-        output.y = GroupParams::one_y;
-        return output;
     }
 
     static inline bool is_point_at_infinity(const affine_element& p)
@@ -876,8 +862,8 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         wnaf::fixed_wnaf<2, num_wnaf_bits>(&endo_scalar.data[0], &wnaf_table[0], skew, 0);
         wnaf::fixed_wnaf<2, num_wnaf_bits>(&endo_scalar.data[2], &wnaf_table[1], endo_skew, 0);
 
-        element work_element = one();
-        element dummy_element = one();
+        element work_element = one;
+        element dummy_element = one;
         affine_element temporary;
         set_infinity(work_element);
 

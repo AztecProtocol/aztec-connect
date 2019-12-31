@@ -24,7 +24,7 @@ namespace waffle
 
             barretenberg::g2::element g2_x_jac;
             barretenberg::g2::affine_to_jacobian(g2_x, g2_x_jac);
-            barretenberg::pairing::precompute_miller_lines(barretenberg::g2::one(), precomputed_g2_lines[0]);
+            barretenberg::pairing::precompute_miller_lines(barretenberg::g2::one, precomputed_g2_lines[0]);
             barretenberg::pairing::precompute_miller_lines(g2_x_jac, precomputed_g2_lines[1]);
         }
         else
