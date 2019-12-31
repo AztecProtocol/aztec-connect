@@ -309,6 +309,7 @@ TEST(group, group_exponentiation_zero_and_one)
     EXPECT_EQ(g1::is_point_at_infinity(result), true);
 
     result = g1::group_exponentiation(g1::affine_one(), fr::one);
+
     EXPECT_EQ(g1::eq(result, g1::affine_one()), true);
 }
 

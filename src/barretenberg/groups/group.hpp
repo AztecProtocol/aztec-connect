@@ -419,8 +419,6 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         if (coordinate_field::is_msb_set_word(p1.y))
         {
             conditional_negate_affine(&p2, (affine_element*)&p3, predicate);
-            // coordinate_field::__copy(p2.x, p3.x);
-            // coordinate_field::__copy(p2.y, p3.y);
             coordinate_field::__copy(coordinate_field::one, p3.z);
             return;
         }
@@ -430,9 +428,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static inline void add(const element& p1, const element& p2, element& p3)
     {
-        bool p1_zero = coordinate_field::is_msb_set(p1.y); // (p1.y.data[3] >> 63) == 1;
+        bool p1_zero = coordinate_field::is_msb_set(p1.y);
         bool p2_zero = coordinate_field::is_msb_set(
-            p2.y); // (p2.y.data[3] >> 63) == 1; // ((p2.z.data[0] | p2.z.data[1] | p2.z.data[2] | p2.z.data[3]) == 0);
+            p2.y); 
         if (__builtin_expect((p1_zero || p2_zero), 0))
         {
             if (p1_zero && !p2_zero)
@@ -796,7 +794,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         {
             add(precomp_table[i - 1], d2, precomp_table[i]);
         }
+
         batch_normalize(precomp_table, lookup_size);
+
         for (size_t i = 0; i < lookup_size; ++i)
         {
             coordinate_field::__copy(precomp_table[i].x, lookup_table[i].x);
@@ -828,6 +828,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             sign = static_cast<bool>((wnaf_entry >> 31) & 1);
             copy(&lookup_table[index], &temporary);
             conditional_negate_affine(&lookup_table[index], &temporary, sign);
+        
             mixed_add(work_element, temporary, work_element);
 
             wnaf_entry = wnaf_table[2 * i + 1];
@@ -836,6 +837,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             copy(&lookup_table[index], &temporary);
             conditional_negate_affine(&lookup_table[index], &temporary, !sign);
             coordinate_field::__mul_beta(temporary.x, temporary.x);
+
             mixed_add(work_element, temporary, work_element);
 
             if (i != num_rounds - 1)

@@ -6,18 +6,29 @@
 using namespace grumpkin;
 
 
-TEST(grumpkin, generator)
-{
-    g1::element result = g1::one();
-    result.y = fq::to_montgomery_form({{ 0x833fc48d823f272c, 0x2d270d45f1181294, 0xcf135e7506a45d63, 2 }});
-    EXPECT_EQ(g1::on_curve(result), true);
+// TEST(grumpkin, generator)
+// {
+//     g1::element result = g1::one();
+//     result.y = fq::to_montgomery_form({{ 0x833fc48d823f272c, 0x2d270d45f1181294, 0xcf135e7506a45d63, 2 }});
+//     fq::print(result.y);
+//     EXPECT_EQ(g1::on_curve(result), true);
 
-    fq::field_t T0 = fq::sqr(result.y);
-    fq::field_t T2 = fq::to_montgomery_form({{ 17, 0, 0, 0 }});
-    fq::field_t T3 = fq::add(T0, T2);
-    fq::print(fq::from_montgomery_form(T3));
-    printf("foo\n");
-}
+//     fq::field_t T0 = fq::sqr(result.y);
+//     fq::field_t T2 = fq::to_montgomery_form({{ 17, 0, 0, 0 }});
+//     fq::field_t T3 = fq::add(T0, T2);
+//     fq::print(fq::from_montgomery_form(T3));
+//     fq::print(fq::neg(T2));
+
+
+//     fq::field_t xx = fq::sqr(result.x);
+//     fq::field_t xxx = fq::mul(result.x, xx);
+
+//     fq::field_t yy_sub_xxx = fq::sub(fq::sqr(result.y), xxx);
+//     printf("y^2 - x^3 = \n");
+//     fq::print(fq::from_montgomery_form(yy_sub_xxx));
+
+//     printf("foo\n");
+// }
 
 TEST(grumpkin, random_element)
 {
@@ -333,6 +344,7 @@ TEST(grumpkin, group_exponentiation_zero_and_one)
     EXPECT_EQ(g1::is_point_at_infinity(result), true);
 
     result = g1::group_exponentiation(g1::affine_one(), fr::one);
+
     EXPECT_EQ(g1::eq(result, g1::affine_one()), true);
 }
 

@@ -90,8 +90,12 @@ class FrParams
     static constexpr uint64_t alternate_multiplicative_generator_2 = 0x5c65ec9f484e3a89UL;
     static constexpr uint64_t alternate_multiplicative_generator_3 = 0x180a96573d3d9f8UL;
 
-    static constexpr bool p_mod_4_eq_3 = true; // TODO MAKE FALSE
-};
+    // smallest Q such that Q * 2^{s} = (p - 1)
+    static constexpr uint64_t Q_minus_one_over_two_0 = 0xCDCB848A1F0FAC9FUL;
+    static constexpr uint64_t Q_minus_one_over_two_1 = 0x0C0AC2E9419F4243UL;
+    static constexpr uint64_t Q_minus_one_over_two_2 = 0x098D014DC2822DB4UL;
+    static constexpr uint64_t Q_minus_one_over_two_3 = 0x183227397UL;
+    };
 
 typedef field<FrParams> fr;
 } // namespace barretenberg

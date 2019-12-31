@@ -357,48 +357,89 @@ template <typename FieldParams> class field
 
     static inline void __tonelli_shanks_sqrt(const field_t& a, field_t& r)
     {
-        size_t v = FieldParams::s;
-        field_t z = FieldParams::nqr_to_t;
-        field_t w = __pow(a, FieldParams::t_minus_1_over_2); // (*this)^Fp_model<n,modulus>::t_minus_1_over_2;
-        field_t x = mul(a, w);                             // (*this) * w;
-        field_t b = mul(x, w);                             // b = (*this)^t
+        // Tonelli-shanks algorithm begins by finding a field element Q and integer S,
+        // such that (p - 1) = Q.2^{s}
 
-        // check if square with euler's criterion
-        field_t check = b;
-        for (size_t i = 0; i < v - 1; ++i)
+        // We can compute the square root of a, by considering a^{(Q + 1) / 2} = R
+        // Once we have found such an R, we have
+        // R^{2} = a^{Q + 1} = a^{Q}a
+        // If a^{Q} = 1, we have found our square root.
+        // Otherwise, we have a^{Q} = t, where t is a 2^{s-1}'th root of unity.
+        // This is because t^{2^{s-1}} = a^{Q.2^{s-1}}.
+        // We know that (p - 1) = Q.w^{s}, therefore t^{2^{s-1}} = a^{(p - 1) / 2}
+        // From Euler's criterion, if a is a quadratic residue, a^{(p - 1) / 2} = 1
+        // i.e. t^{2^{s-1}} = 1
+
+        // To proceed with computing our square root, we want to transform t into a smaller subgroup,
+        // specifically, the (s-2)'th roots of unity.
+        // We do this by finding some value b,such that
+        // (t.b^2)^{2^{s-2}} = 1 and R' = R.b
+        // Finding such a b is trivial, because from Euler's criterion, we know that,
+        // for any quadratic non-residue z, z^{(p - 1) / 2} = -1
+        // i.e. z^{Q.2^{s-1}} = -1
+        // => z^Q is a 2^{s-1}'th root of -1
+        // => z^{Q^2} is a 2^{s-2}'th root of -1
+        // Since t^{2^{s-1}} = 1, we know that t^{2^{s - 2}} = -1
+        // => t.z^{Q^2} is a 2^{s - 2}'th root of unity.
+
+        // We can iteratively transform t into ever smaller subgroups, until t = 1.
+        // At each iteration, we need to find a new value for b, which we can obtain
+        // by repeatedly squaring z^{Q}
+        field_t Q_minus_one_over_two{ { FieldParams::Q_minus_one_over_two_0,
+                                        FieldParams::Q_minus_one_over_two_1,
+                                        FieldParams::Q_minus_one_over_two_2,
+                                        FieldParams::Q_minus_one_over_two_3 } };
+        // __to_montgomery_form(Q_minus_one_over_two, Q_minus_one_over_two);
+        field_t z = multiplicative_generator; // the generator is a non-residue
+        field_t b;
+        __pow(a, Q_minus_one_over_two, b); // compute a^{(Q - 1 )/ 2}
+        r = mul(a, b); // r = a^{(Q + 1) / 2}
+        field_t t = mul(r, b); // t = a^{(Q - 1) / 2 + (Q + 1) / 2} = a^{Q}
+
+        // check if t is a square with euler's criterion
+        // if not, we don't have a quadratic residue and a has no square root!
+        field_t check = t;
+        for (size_t i = 0; i < FieldParams::primitive_root_log_size - 1; ++i)
         {
-            check = sqr(check);
+            __sqr(check, check);
         }
         if (!eq(check, one))
         {
             r = zero;
             return;
         }
-        while (!eq(b, one))
+        field_t t1;
+        __pow(z, Q_minus_one_over_two, t1);
+        field_t t2 = mul(t1, z);
+        field_t c = mul(t2, t1); // z^Q
+    
+        size_t m = FieldParams::primitive_root_log_size;
+        while (!eq(t, one))
         {
-            size_t m = 0;
-            field_t b2m = b;
-            while (!eq(b2m, one))
+            size_t i = 0;
+            field_t t2m = t;
+            
+            // find the smallest value of m, such that t^{2^m} = 1
+            while (!eq(t2m, one))
             {
-                b2m = sqr(b2m);
-                m += 1;
+                __sqr(t2m, t2m);
+                i += 1;
             }
 
-            int j = v - m - 1;
-            w = z;
+            size_t j = m - i - 1;
+            b = c;
             while (j > 0)
             {
-                w = sqr(w);
+                __sqr(b, b);
                 --j;
-            } // w = z^2^(v-m-1)
+            } // b = z^2^(m-i-1)
 
-            z = sqr(w);
-            b = mul(b, z);
-            x = mul(x, w);
-            v = m;
+            c = sqr(b);
+            t = mul(t, c);
+            r = mul(r, b);
+            m = i;
         }
 
-        r = x;
     }
 
     /**
@@ -406,7 +447,8 @@ template <typename FieldParams> class field
      **/
     static inline void __sqrt(const field_t& a, field_t& r)
     {
-        if constexpr (FieldParams::p_mod_4_eq_3)
+        // if p = 3 mod 4, use exponentiation trick
+        if constexpr ((FieldParams::modulus_0 & 0x3UL) == 0x3UL)
         {
             __pow(a, sqrt_exponent, r);
         }

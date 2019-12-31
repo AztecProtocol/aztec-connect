@@ -227,20 +227,16 @@ TEST(fr, sqrt)
 
 TEST(fr, sqrt_random)
 {
-    bool found_a_root = false;
     size_t n = 1024;
     for (size_t i = 0; i < n; ++i)
     {
         fr::field_t input = fr::random_element();
+        fr::__sqr(input, input);
         fr::field_t root_test;
         fr::__sqrt(input, root_test);
         fr::__sqr(root_test, root_test);
-        if (fr::eq(root_test, input))
-        {
-            found_a_root = true;
-        }
+        EXPECT_EQ(fr::eq(root_test, input), true);
     }
-    EXPECT_EQ(found_a_root, true);
 }
 
 TEST(fr, one_and_zero)

@@ -279,8 +279,11 @@ inline fq::field_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
 
 void new_plonk_scalar_multiplications_bench(State& state) noexcept
 {
+    uint64_t count = 0;
+    uint64_t k = 0;
     for (auto _ : state)
     {
+        uint64_t before = rdtsc();
         g1::element a = scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES);
         g1::element b = scalar_multiplication::pippenger(&globals.scalars[1], &globals.reference_string.monomials[0], MAX_GATES);
         g1::element c = scalar_multiplication::pippenger(&globals.scalars[2], &globals.reference_string.monomials[0], MAX_GATES);
@@ -290,6 +293,9 @@ void new_plonk_scalar_multiplications_bench(State& state) noexcept
         g1::element g = scalar_multiplication::pippenger(&globals.scalars[6], &globals.reference_string.monomials[0], MAX_GATES);
         g1::element h = scalar_multiplication::pippenger(&globals.scalars[7], &globals.reference_string.monomials[0], MAX_GATES);
         g1::element i = scalar_multiplication::pippenger(&globals.scalars[8], &globals.reference_string.monomials[0], MAX_GATES);
+        uint64_t after = rdtsc();
+        count += (after - before);
+        ++k;
         g1::element out;
         g1::set_infinity(out);
         g1::add(a, out, out);
@@ -303,16 +309,30 @@ void new_plonk_scalar_multiplications_bench(State& state) noexcept
         g1::add(i, out, out);
         g1::print(out);
     }
+    uint64_t avg_cycles = count / k;
+    printf("plonk clock cycles = %" PRIu64 "\n", (avg_cycles));
+    printf("pippenger clock cycles = %" PRIu64 "\n", (avg_cycles / 9));
+    printf("pippenger clock cycles per scalar mul = %" PRIu64 "\n", (avg_cycles / (9 * MAX_GATES)));
+
 }
 BENCHMARK(new_plonk_scalar_multiplications_bench);
 
 
 void new_pippenger_one_million_batched_scalar_multiplications_bench(State& state) noexcept
 {
+    uint64_t count = 0;
+    uint64_t i = 0;
     for (auto _ : state)
     {
+        uint64_t before = rdtsc();
         scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES);
+        uint64_t after = rdtsc();
+        count += (after - before);
+        ++i;
     }
+    uint64_t avg_cycles = count / i;
+    printf("pippenger clock cycles = %" PRIu64 "\n", (avg_cycles));
+    printf("pippenger clock cycles per mul = %" PRIu64 "\n", (avg_cycles / (MAX_GATES)));
 }
 BENCHMARK(new_pippenger_one_million_batched_scalar_multiplications_bench);
 
@@ -324,6 +344,7 @@ void fft_bench_parallel(State& state) noexcept
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::fft(globals.data, plonk_circuit_states[idx].circuit_state.large_domain);
     }
+
 }
 BENCHMARK(fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
 

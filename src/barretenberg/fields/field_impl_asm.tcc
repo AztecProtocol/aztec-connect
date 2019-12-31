@@ -244,7 +244,7 @@ inline void field<FieldParams>::__conditionally_negate_self(field_t &r, const ui
         "cmovcq %%r15, %%r11 \n\t"
         STORE_FIELD_ELEMENT("%1", "%%r8", "%%r9", "%%r10", "%%r11")
         :
-        : "r"(predicate), "r"(&r), [modulus_0] "m"(FieldParams::modulus_0), [modulus_1] "m"(FieldParams::modulus_1), [modulus_2] "m"(FieldParams::modulus_2), [modulus_3] "m"(FieldParams::modulus_3)
+        : "r"(predicate), "r"(&r), [modulus_0] "i"(FieldParams::modulus_0), [modulus_1] "i"(FieldParams::modulus_1), [modulus_2] "i"(FieldParams::modulus_2), [modulus_3] "i"(FieldParams::modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -274,7 +274,7 @@ inline void field<FieldParams>::__conditionally_subtract_from_double_modulus(con
         "cmovcq %%r15, %%r11 \n\t"
         STORE_FIELD_ELEMENT("%2", "%%r8", "%%r9", "%%r10", "%%r11")
         :
-        : "r"(&a), "r"(predicate), "r"(&r), [modulus_0] "m"(FieldParams::twice_modulus_0), [modulus_1] "m"(FieldParams::twice_modulus_1), [modulus_2] "m"(FieldParams::twice_modulus_2), [modulus_3] "m"(FieldParams::twice_modulus_3)
+        : "r"(&a), "r"(predicate), "r"(&r), [modulus_0] "i"(FieldParams::twice_modulus_0), [modulus_1] "i"(FieldParams::twice_modulus_1), [modulus_2] "i"(FieldParams::twice_modulus_2), [modulus_3] "i"(FieldParams::twice_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 

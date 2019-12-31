@@ -80,10 +80,10 @@ if constexpr (GroupParams::small_elements)
                          "movq 40(%0), %%r9                            \n\t"
                          "movq 48(%0), %%r10                          \n\t"
                          "movq 56(%0), %%r11                          \n\t"
-                         "movq $0x3c208c16d87cfd47, %%r12                  \n\t"
-                         "movq $0x97816a916871ca8d, %%r13                  \n\t"
-                         "movq $0xb85045b68181585d, %%r14                  \n\t"
-                         "movq $0x30644e72e131a029, %%r15                  \n\t"
+                         "movq %[modulus_0], %%r12                  \n\t"
+                         "movq %[modulus_1], %%r13                  \n\t"
+                         "movq %[modulus_2], %%r14                  \n\t"
+                         "movq %[modulus_3], %%r15                  \n\t"
                          "subq %%r8, %%r12                               \n\t"
                          "sbbq %%r9, %%r13                               \n\t"
                          "sbbq %%r10, %%r14                              \n\t"
@@ -100,7 +100,7 @@ if constexpr (GroupParams::small_elements)
                          "movq %%r10, 48(%1)                           \n\t"
                          "movq %%r11, 56(%1)                           \n\t"
                          :
-                         : "r"(src), "r"(dest), "r"(predicate)
+                         : "r"(src), "r"(dest), "r"(predicate), [modulus_0] "i"(coordinate_field::modulus.data[0]), [modulus_1] "i"(coordinate_field::modulus.data[1]), [modulus_2] "i"(coordinate_field::modulus.data[2]), [modulus_3] "i"(coordinate_field::modulus.data[3])
                          : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "%ymm0", "memory", "cc");
 #else
     __asm__ __volatile__("xorq %%r8, %%r8                              \n\t"
@@ -108,10 +108,10 @@ if constexpr (GroupParams::small_elements)
                          "movq 40(%0), %%r9                            \n\t"
                          "movq 48(%0), %%r10                          \n\t"
                          "movq 56(%0), %%r11                          \n\t"
-                         "movq $0x3c208c16d87cfd47, %%r12                  \n\t"
-                         "movq $0x97816a916871ca8d, %%r13                  \n\t"
-                         "movq $0xb85045b68181585d, %%r14                  \n\t"
-                         "movq $0x30644e72e131a029, %%r15                  \n\t"
+                         "movq %[modulus_0], %%r12                  \n\t"
+                         "movq %[modulus_1], %%r13                  \n\t"
+                         "movq %[modulus_2], %%r14                  \n\t"
+                         "movq %[modulus_3], %%r15                  \n\t"
                          "subq %%r8, %%r12                               \n\t"
                          "sbbq %%r9, %%r13                               \n\t"
                          "sbbq %%r10, %%r14                              \n\t"
@@ -134,7 +134,7 @@ if constexpr (GroupParams::small_elements)
                          "movq %%r14, 16(%1)                          \n\t"
                          "movq %%r15, 24(%1)                          \n\t"
                          :
-                         : "r"(src), "r"(dest), "r"(predicate)
+                         : "r"(src), "r"(dest), "r"(predicate), [modulus_0] "i"(coordinate_field::modulus.data[0]), [modulus_1] "i"(coordinate_field::modulus.data[1]), [modulus_2] "i"(coordinate_field::modulus.data[2]), [modulus_3] "i"(coordinate_field::modulus.data[3])
                          : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "memory", "cc");
 #endif
 }

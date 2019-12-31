@@ -11,10 +11,11 @@ namespace grumpkin
     struct GrumpkinG1Params
     {
         static constexpr bool USE_ENDOMORPHISM = true;
-        static constexpr bool can_hash_to_curve = false;
+        static constexpr bool can_hash_to_curve = true;
         static constexpr bool small_elements = true;
-        // b = -16 in montgomery form
-        // curve formula: y^2 = x^3 - 16
+        // b = -17 in montgomery form
+        // curve formula: y^2 = x^3 - 17
+        // TODO: erm, I think this is -17 in montgomery form. Should double check this
         static constexpr barretenberg::fr::field_t b{{ 0xdd7056026000005a, 0x223fa97acb319311, 0xcc388229877910c0, 0x34394632b724eaa }};
 
         // generator point = (x, y) = (1, sqrt(-15))

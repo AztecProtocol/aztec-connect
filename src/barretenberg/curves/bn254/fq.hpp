@@ -88,8 +88,6 @@ public:
     static constexpr uint64_t alternate_multiplicative_generator_1 = 0UL;
     static constexpr uint64_t alternate_multiplicative_generator_2 = 0UL;
     static constexpr uint64_t alternate_multiplicative_generator_3 = 0UL;
-
-    static constexpr bool p_mod_4_eq_3 = true;
 };
 
 typedef field<Bn254FqParams> fq;
