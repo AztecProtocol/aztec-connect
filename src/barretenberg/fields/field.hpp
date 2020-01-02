@@ -11,18 +11,14 @@
 // 2: all methods that pass in a reference to the return value should be prefixed by __
 // 3: all methods that have a __ prefix, should have a partner method that returns by value
 
-namespace barretenberg
-{
-template <typename FieldParams> class field
-{
+namespace barretenberg {
+template <typename FieldParams> class field {
   public:
-    struct field_t
-    {
+    struct field_t {
         alignas(32) uint64_t data[4];
     };
 
-    struct field_wide_t
-    {
+    struct field_wide_t {
         alignas(64) uint64_t data[8];
     };
 
@@ -111,14 +107,8 @@ template <typename FieldParams> class field
     static void __mul_512(const field_t& a, const field_t& b, field_wide_t& r) noexcept;
 
     // Multiply field_t `a` by the cube root of unity, modulo `q`. Store result in `r`
-    static inline void __mul_beta(const field_t& a, field_t& r) noexcept
-    {
-        __mul(a, beta, r);
-    }
-    static inline void __neg(const field_t& a, field_t& r) noexcept
-    {
-        __sub(modulus, a, r);
-    }
+    static inline void __mul_beta(const field_t& a, field_t& r) noexcept { __mul(a, beta, r); }
+    static inline void __neg(const field_t& a, field_t& r) noexcept { __sub(modulus, a, r); }
 
     /**
      * Arithmetic Methods (return by value)
@@ -188,18 +178,9 @@ template <typename FieldParams> class field
         size_t shift = bit_index & 63;
         return bool((a.data[idx] >> shift) & 1);
     }
-    static inline bool is_msb_set(const field_t& a) noexcept
-    {
-        return (a.data[3] >> 63ULL) == 1ULL;
-    }
-    static inline uint64_t is_msb_set_word(const field_t& a) noexcept
-    {
-        return a.data[3] >> 63ULL;
-    }
-    static inline void __set_msb(field_t& a) noexcept
-    {
-        a.data[3] = 0ULL | (1ULL << 63ULL);
-    }
+    static inline bool is_msb_set(const field_t& a) noexcept { return (a.data[3] >> 63ULL) == 1ULL; }
+    static inline uint64_t is_msb_set_word(const field_t& a) noexcept { return a.data[3] >> 63ULL; }
+    static inline void __set_msb(field_t& a) noexcept { a.data[3] = 0ULL | (1ULL << 63ULL); }
 
     /**
      * Copy methods
@@ -224,16 +205,12 @@ template <typename FieldParams> class field
     static inline void __to_montgomery_form(const field_t& a, field_t& r) noexcept
     {
         __copy(a, r);
-        while (gt(r, modulus_plus_one))
-        {
+        while (gt(r, modulus_plus_one)) {
             __sub(r, modulus, r);
         }
         __mul(r, r_squared, r);
     }
-    static inline void __from_montgomery_form(const field_t& a, field_t& r) noexcept
-    {
-        __mul(a, one_raw, r);
-    }
+    static inline void __from_montgomery_form(const field_t& a, field_t& r) noexcept { __mul(a, one_raw, r); }
 
     static inline field_t to_montgomery_form(const field_t& a) noexcept
     {
@@ -257,8 +234,7 @@ template <typename FieldParams> class field
      **/
     static inline void pow(const field_t& a, const field_t& b, field_t& r)
     {
-        if (eq(a, zero))
-        {
+        if (eq(a, zero)) {
             __copy(zero, r);
             return;
         }
@@ -266,42 +242,35 @@ template <typename FieldParams> class field
         __copy(a, accumulator);
         bool found_one = false;
         size_t i = 255;
-        while (!found_one)
-        {
+        while (!found_one) {
             found_one = get_bit(b, i);
             --i;
         }
         size_t sqr_count = 0;
-        for (; i < 256; --i)
-        {
+        for (; i < 256; --i) {
             sqr_count++;
             __sqr(accumulator, accumulator);
-            if (get_bit(b, i))
-            {
+            if (get_bit(b, i)) {
                 __mul(accumulator, a, accumulator);
             }
         }
-        while (gt(accumulator, modulus_plus_one))
-        {
+        while (gt(accumulator, modulus_plus_one)) {
             __sub(accumulator, modulus, accumulator);
         }
         __copy(accumulator, r);
     }
 
-    static inline void __pow_small(const field_t& a, const size_t exponent, field_t& r)
+    static inline void __pow_small(const field_t& a, const uint64_t exponent, field_t& r)
     {
-        if (exponent == 0)
-        {
+        if (exponent == 0) {
             __copy(one, r);
             return;
         }
-        if (exponent == 1)
-        {
+        if (exponent == 1) {
             __copy(a, r);
             return;
         }
-        if (exponent == 2)
-        {
+        if (exponent == 2) {
             __sqr(a, r);
             return;
         }
@@ -310,24 +279,20 @@ template <typename FieldParams> class field
 
         bool found_one = false;
         size_t i = 63;
-        while (!found_one)
-        {
+        while (!found_one) {
             found_one = (exponent >> (i)) & 1;
             --i;
         }
         size_t sqr_count = 0;
-        for (; i < 64; --i)
-        {
+        for (; i < 64; --i) {
             sqr_count++;
             __sqr(accumulator, accumulator);
             bool bit = (exponent >> (i)) & 1;
-            if (bit)
-            {
+            if (bit) {
                 __mul(accumulator, a, accumulator);
             }
         }
-        while (gt(accumulator, modulus_plus_one))
-        {
+        while (gt(accumulator, modulus_plus_one)) {
             __sub(accumulator, modulus, accumulator);
         }
         __copy(accumulator, r);
@@ -342,10 +307,7 @@ template <typename FieldParams> class field
     /**
      * compute a^{q - 2} mod q, place result in r
      **/
-    static inline void __invert(const field_t& a, field_t& r)
-    {
-        pow(a, modulus_minus_two, r);
-    }
+    static inline void __invert(const field_t& a, field_t& r) { pow(a, modulus_minus_two, r); }
 
     static inline field_t invert(const field_t& a)
     {
@@ -357,10 +319,7 @@ template <typename FieldParams> class field
     /**
      * compute a^{(q + 1) / 2}, place result in r
      **/
-    static inline void __sqrt(const field_t& a, field_t& r)
-    {
-        pow(a, sqrt_exponent, r);
-    }
+    static inline void __sqrt(const field_t& a, field_t& r) { pow(a, sqrt_exponent, r); }
 
     /**
      * Get a random field element in montgomery form, place in `r`
@@ -487,8 +446,7 @@ template <typename FieldParams> class field
     static inline void __get_root_of_unity(const size_t degree, field_t& r)
     {
         __copy(root_of_unity, r);
-        for (size_t i = FieldParams::primitive_root_log_size; i > degree; --i)
-        {
+        for (size_t i = FieldParams::primitive_root_log_size; i > degree; --i) {
             __sqr(r, r);
         }
     }
@@ -504,16 +462,14 @@ template <typename FieldParams> class field
     {
         field_t* temporaries = (field_t*)aligned_alloc(32, sizeof(field_t) * n);
         field_t accumulator = one;
-        for (size_t i = 0; i < n; ++i)
-        {
+        for (size_t i = 0; i < n; ++i) {
             __copy(accumulator, temporaries[i]);
             __mul(accumulator, coeffs[i], accumulator);
         }
         __invert(accumulator, accumulator);
 
         field_t T0;
-        for (size_t i = n - 1; i < n; --i)
-        {
+        for (size_t i = n - 1; i < n; --i) {
             __mul(accumulator, temporaries[i], T0);
             __mul(accumulator, coeffs[i], accumulator);
             __copy(T0, coeffs[i]);

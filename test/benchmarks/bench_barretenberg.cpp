@@ -66,8 +66,7 @@ void generate_random_plonk_circuit(waffle::Prover& state)
     fr::__copy(w_l_seed, w_l_acc);
     fr::__copy(w_r_seed, w_r_acc);
 
-    for (size_t i = 0; i < n / 2; i += 2)
-    {
+    for (size_t i = 0; i < n / 2; i += 2) {
         fr::__copy(q_m_acc, widget->q_m.at(i));
         fr::__copy(fr::zero, widget->q_l.at(i));
         fr::__copy(fr::zero, widget->q_r.at(i));
@@ -104,8 +103,7 @@ void generate_random_plonk_circuit(waffle::Prover& state)
     }
     fr::batch_invert(state.w_o.get_coefficients(), n / 2);
 
-    for (size_t i = 0; i < n / 2; ++i)
-    {
+    for (size_t i = 0; i < n / 2; ++i) {
         fr::__mul(widget->q_l.at(i), state.w_l.at(i), T0);
         fr::__mul(widget->q_r.at(i), state.w_r.at(i), T1);
         fr::__mul(state.w_l.at(i), state.w_r.at(i), T2);
@@ -130,8 +128,7 @@ void generate_random_plonk_circuit(waffle::Prover& state)
     state.sigma_2_mapping.resize(n);
     state.sigma_3_mapping.resize(n);
     // create basic permutation - second half of witness vector is a copy of the first half
-    for (size_t i = 0; i < n / 2; ++i)
-    {
+    for (size_t i = 0; i < n / 2; ++i) {
         state.sigma_1_mapping[shift + i] = (uint32_t)i;
         state.sigma_2_mapping[shift + i] = (uint32_t)i + (1U << 30U);
         state.sigma_3_mapping[shift + i] = (uint32_t)i + (1U << 31U);
@@ -168,8 +165,7 @@ void generate_random_plonk_circuit(waffle::Prover& state)
     state.widgets.emplace_back(std::move(widget));
 }
 
-struct global_vars
-{
+struct global_vars {
     alignas(32) g1::affine_element g1_pair_points[2];
     alignas(32) g2::affine_element g2_pair_points[2];
     std::vector<waffle::Verifier> plonk_instances;
@@ -198,8 +194,7 @@ void generate_scalars(fr::field_t* scalars)
     fr::field_t T0 = fr::random_element();
     fr::field_t acc;
     fr::__copy(T0, acc);
-    for (size_t i = 0; i < MAX_GATES; ++i)
-    {
+    for (size_t i = 0; i < MAX_GATES; ++i) {
         fr::__mul(acc, T0, acc);
         fr::__copy(acc, scalars[i]);
     }
@@ -220,10 +215,9 @@ const auto init = []() {
     std::string my_file_path = std::string(BARRETENBERG_SRS_PATH);
     globals.data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (8 * 17 * MAX_GATES)));
 
-    for (size_t i = 0; i < 8; ++i)
-    {
+    for (size_t i = 0; i < 8; ++i) {
         size_t n = (MAX_GATES >> 7) << i;
-        printf("%lu\n", n);
+        printf("%" PRIx64 "\n", n);
         generate_random_plonk_circuit(plonk_circuit_states[i]);
     }
 
@@ -260,8 +254,7 @@ uint64_t rdtsc()
 constexpr size_t NUM_SQUARINGS = 10000000;
 inline fq::field_t fq_sqr_asm(fq::field_t& a, fq::field_t& r) noexcept
 {
-    for (size_t i = 0; i < NUM_SQUARINGS; ++i)
-    {
+    for (size_t i = 0; i < NUM_SQUARINGS; ++i) {
         fq::__sqr(a, r);
     }
     DoNotOptimize(r);
@@ -271,8 +264,7 @@ inline fq::field_t fq_sqr_asm(fq::field_t& a, fq::field_t& r) noexcept
 constexpr size_t NUM_MULTIPLICATIONS = 10000000;
 inline fq::field_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
 {
-    for (size_t i = 0; i < NUM_MULTIPLICATIONS; ++i)
-    {
+    for (size_t i = 0; i < NUM_MULTIPLICATIONS; ++i) {
         fq::__mul(a, r, r);
     }
     DoNotOptimize(r);
@@ -281,8 +273,7 @@ inline fq::field_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
 
 void pippenger_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES, 15));
@@ -294,8 +285,7 @@ BENCHMARK(pippenger_bench);
 
 void pippenger_precompute_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(
             scalar_multiplication::pippenger_precomputed(&globals.scalars[0], globals.point_table_pointers, MAX_GATES));
@@ -307,8 +297,7 @@ BENCHMARK(pippenger_precompute_bench);
 
 void pippenger_2_pow_16_12_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 4, 12));
@@ -320,8 +309,7 @@ BENCHMARK(pippenger_2_pow_16_12_bench);
 
 void pippenger_2_pow_16_15_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 4, 15));
@@ -369,8 +357,7 @@ BENCHMARK(pippenger_2_pow_16_15_bench);
 // 4375000000 = 2^20 from 2^17
 void pippenger_2_pow_17_12_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 3, 12));
@@ -382,8 +369,7 @@ BENCHMARK(pippenger_2_pow_17_12_bench);
 
 void pippenger_2_pow_17_15_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 3, 15));
@@ -395,8 +381,7 @@ BENCHMARK(pippenger_2_pow_17_15_bench);
 
 void pippenger_2_pow_18_12_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 1, 12));
@@ -408,8 +393,7 @@ BENCHMARK(pippenger_2_pow_18_12_bench);
 
 void pippenger_2_pow_18_15_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 1, 15));
@@ -421,8 +405,7 @@ BENCHMARK(pippenger_2_pow_18_15_bench);
 
 void pippenger_2_pow_19_12_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 1, 12));
@@ -434,8 +417,7 @@ BENCHMARK(pippenger_2_pow_19_12_bench);
 
 void pippenger_2_pow_19_15_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES >> 1, 15));
@@ -447,8 +429,7 @@ BENCHMARK(pippenger_2_pow_19_15_bench);
 
 void pippenger_one_million_12_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES, 12));
@@ -460,8 +441,7 @@ BENCHMARK(pippenger_one_million_12_bench);
 
 void pippenger_one_million_15_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES, 15));
@@ -473,8 +453,7 @@ BENCHMARK(pippenger_one_million_15_bench);
 
 void pippenger_one_million_18_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES, 18));
@@ -486,8 +465,7 @@ BENCHMARK(pippenger_one_million_18_bench);
 
 void alt_pippenger_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(scalar_multiplication::alt_pippenger(
             &globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES));
@@ -499,8 +477,7 @@ BENCHMARK(alt_pippenger_bench);
 
 void three_non_batched_scalar_multiplications_bench(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         DoNotOptimize(
             scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES));
         DoNotOptimize(
@@ -515,14 +492,12 @@ void one_batched_scalar_multiplications_bench(State& state) noexcept
 {
     size_t num_batches = 1;
     scalar_multiplication::multiplication_state mul_state[num_batches];
-    for (size_t i = 0; i < num_batches; ++i)
-    {
+    for (size_t i = 0; i < num_batches; ++i) {
         mul_state[i].num_elements = MAX_GATES;
         mul_state[i].scalars = &globals.scalars[0];
         mul_state[i].points = &globals.reference_string.monomials[0];
     }
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         (scalar_multiplication::batched_scalar_multiplications(mul_state, num_batches));
     }
 }
@@ -532,14 +507,12 @@ void two_batched_scalar_multiplications_bench(State& state) noexcept
 {
     size_t num_batches = 2;
     scalar_multiplication::multiplication_state mul_state[num_batches];
-    for (size_t i = 0; i < num_batches; ++i)
-    {
+    for (size_t i = 0; i < num_batches; ++i) {
         mul_state[i].num_elements = MAX_GATES;
         mul_state[i].scalars = &globals.scalars[0];
         mul_state[i].points = &globals.reference_string.monomials[0];
     }
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         (scalar_multiplication::batched_scalar_multiplications(mul_state, num_batches));
     }
 }
@@ -549,14 +522,12 @@ void three_batched_scalar_multiplications_bench(State& state) noexcept
 {
     size_t num_batches = 3;
     scalar_multiplication::multiplication_state mul_state[num_batches];
-    for (size_t i = 0; i < num_batches; ++i)
-    {
+    for (size_t i = 0; i < num_batches; ++i) {
         mul_state[i].num_elements = MAX_GATES;
         mul_state[i].scalars = &globals.scalars[0];
         mul_state[i].points = &globals.reference_string.monomials[0];
     }
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         (scalar_multiplication::batched_scalar_multiplications(mul_state, num_batches));
     }
 }
@@ -569,29 +540,25 @@ void plonk_scalar_multiplications_bench(State& state) noexcept
     scalar_multiplication::multiplication_state mul_state_c[3];
     scalar_multiplication::multiplication_state mul_state_d[2];
 
-    for (size_t i = 0; i < 3; ++i)
-    {
+    for (size_t i = 0; i < 3; ++i) {
         mul_state_a[i].num_elements = MAX_GATES;
         mul_state_a[i].scalars = &globals.scalars[0];
         mul_state_a[i].points = &globals.reference_string.monomials[0];
         mul_state_c[i].num_elements = MAX_GATES;
         mul_state_c[i].scalars = &globals.scalars[0];
         mul_state_c[i].points = &globals.reference_string.monomials[0];
-        if (i < 1)
-        {
+        if (i < 1) {
             mul_state_b[i].num_elements = MAX_GATES;
             mul_state_b[i].scalars = &globals.scalars[0];
             mul_state_b[i].points = &globals.reference_string.monomials[0];
         }
-        if (i < 2)
-        {
+        if (i < 2) {
             mul_state_d[i].num_elements = MAX_GATES;
             mul_state_d[i].scalars = &globals.scalars[0];
             mul_state_d[i].points = &globals.reference_string.monomials[0];
         }
     }
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         (scalar_multiplication::batched_scalar_multiplications(mul_state_a, 3));
         (scalar_multiplication::batched_scalar_multiplications(mul_state_b, 1));
         (scalar_multiplication::batched_scalar_multiplications(mul_state_c, 3));
@@ -602,8 +569,7 @@ BENCHMARK(plonk_scalar_multiplications_bench);
 
 void fft_bench_parallel(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::fft(globals.data, plonk_circuit_states[idx].circuit_state.large_domain);
     }
@@ -612,8 +578,7 @@ BENCHMARK(fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 
 
 void fft_bench_serial(State& state) noexcept
 {
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::fft_inner_serial(
             globals.data,
@@ -627,8 +592,7 @@ void pairing_bench(State& state) noexcept
 {
     uint64_t count = 0;
     uint64_t i = 0;
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(pairing::reduced_ate_pairing(globals.g1_pair_points[0], globals.g2_pair_points[0]));
         uint64_t after = rdtsc();
@@ -644,8 +608,7 @@ void pairing_twin_bench(State& state) noexcept
 {
     uint64_t count = 0;
     uint64_t i = 0;
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
         DoNotOptimize(pairing::reduced_ate_pairing_batch(&globals.g1_pair_points[0], &globals.g2_pair_points[0], 2));
         uint64_t after = rdtsc();
@@ -660,14 +623,12 @@ BENCHMARK(pairing_twin_bench);
 void batched_scalar_multiplications_bench(State& state) noexcept
 {
     scalar_multiplication::multiplication_state mul_state[NUM_THREADS];
-    for (size_t i = 0; i < NUM_THREADS; ++i)
-    {
+    for (size_t i = 0; i < NUM_THREADS; ++i) {
         mul_state[i].num_elements = MAX_GATES;
         mul_state[i].scalars = &globals.scalars[0];
         mul_state[i].points = &globals.reference_string.monomials[0];
     }
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         (scalar_multiplication::batched_scalar_multiplications(mul_state, NUM_THREADS));
     }
 }
@@ -680,11 +641,9 @@ void add_bench(State& state) noexcept
     uint64_t j = 0;
     g1::element a = g1::random_element();
     g1::element b = g1::random_element();
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
-        for (size_t i = 0; i < NUM_G1_ADDITIONS; ++i)
-        {
+        for (size_t i = 0; i < NUM_G1_ADDITIONS; ++i) {
             g1::add(a, b, a);
         }
         uint64_t after = rdtsc();
@@ -701,11 +660,9 @@ void mixed_add_bench(State& state) noexcept
     uint64_t j = 0;
     g1::element a = g1::random_element();
     g1::affine_element b = g1::random_affine_element();
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         uint64_t before = rdtsc();
-        for (size_t i = 0; i < NUM_G1_ADDITIONS; ++i)
-        {
+        for (size_t i = 0; i < NUM_G1_ADDITIONS; ++i) {
             g1::mixed_add(a, b, a);
         }
         uint64_t after = rdtsc();
@@ -723,8 +680,7 @@ void fq_sqr_asm_bench(State& state) noexcept
     uint64_t i = 0;
     fq::field_t a{ { 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
     fq::field_t r{ { 1, 0, 0, 0 } };
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         size_t before = rdtsc();
         (DoNotOptimize(fq_sqr_asm(a, r)));
         size_t after = rdtsc();
@@ -742,8 +698,7 @@ void fq_mul_asm_bench(State& state) noexcept
     uint64_t i = 0;
     fq::field_t a{ { 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
     fq::field_t r{ { 1, 0, 0, 0 } };
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         size_t before = rdtsc();
         (DoNotOptimize(fq_mul_asm(a, r)));
         size_t after = rdtsc();

@@ -65,6 +65,16 @@ struct var_t {
         value_ = values;
     }
 
+    var_t(std::vector<uint32_t> const& input, Composer& composer)
+        : type(array_type(type_uint32.type, input.size()))
+    {
+        std::vector<var_t> values;
+        std::transform(input.begin(), input.end(), std::back_inserter(values), [&](uint32_t c) {
+            return noir::code_gen::uint(32, witness_t(&composer, c));
+        });
+        value_ = values;
+    }
+
     var_t(char value)
         : type(type_uint8)
         , value_(uint(value))

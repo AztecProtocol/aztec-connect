@@ -1,2 +1,3 @@
 ./.vscode
 build*
+src/wasi-sdk-8.0

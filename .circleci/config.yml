@@ -100,6 +100,17 @@ jobs:
           name: 'Build'
           command: docker-compose build arm64-linux-gcc
 
+  wasm-linux-clang:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Build'
+          command: docker-compose build wasm-linux-clang
+
 workflows:
   build:
     jobs:
@@ -114,5 +125,8 @@ workflows:
       #     requires:
       #       - toolchains
       - arm64-linux-gcc:
+          requires:
+            - toolchains
+      - wasm-linux-clang:
           requires:
             - toolchains

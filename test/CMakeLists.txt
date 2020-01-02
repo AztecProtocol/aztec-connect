@@ -1,6 +1,11 @@
 # barretenberg
 # copyright 2019 Spilsbury Holdings
 
+add_definitions(-DGTEST_HAS_EXCEPTIONS=0)
+if(WASM)
+    add_definitions(-DGTEST_HAS_STREAM_REDIRECTION=0)
+endif()
+
 include(FetchContent)
 
 ### DEPENDENCIES
@@ -22,11 +27,7 @@ mark_as_advanced(
     gtest_disable_pthreads gtest_force_shared_crt gtest_hide_internal_symbols
 )
 
-set(setup_private_include_dir ${PROJECT_SOURCE_DIR}/src)
-
-add_subdirectory(benchmarks)
-
-add_compile_options(-Werror -Wall -Wextra -Wconversion -Wsign-conversion)
+add_compile_options(-Werror -Wall -Wextra -Wconversion -Wsign-conversion -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new -Wno-c99-extensions")
@@ -48,7 +49,6 @@ add_executable(
     test_polynomial_arithmetic.cpp
     test_preprocess.cpp
     test_prover.cpp
-    test_verifier.cpp
     test_verifier.cpp
     composer/test_standard_composer.cpp
     composer/test_mimc_composer.cpp
@@ -106,7 +106,6 @@ target_include_directories(
         ${private_include_dir}
         ${include_dir}
 )
-
 
 add_test(
     TARGET

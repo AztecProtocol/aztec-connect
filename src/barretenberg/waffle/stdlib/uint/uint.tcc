@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cmath>
 #include <numeric>
 
 #include "../../../assert.hpp"
@@ -179,7 +178,8 @@ uint<ComposerContext>::uint(size_t width, ComposerContext* parent_context)
     , queued_logic_operation(width)
     , maximum_value(0)
 {
-    ASSERT(parent_context != nullptr);
+    // TODO: Pretty sure this assert is right.
+    // ASSERT(parent_context != nullptr);
 }
 
 template <typename ComposerContext>
@@ -249,7 +249,7 @@ uint<ComposerContext>::uint(const uint& other)
     , queued_logic_operation(other.width())
     , maximum_value(other.maximum_value)
 {
-    ASSERT(context != nullptr);
+    // ASSERT(context != nullptr);
 
     if (other.queued_logic_operation.method != nullptr) {
         queued_logic_operation.method = other.queued_logic_operation.method;
@@ -273,7 +273,7 @@ uint<ComposerContext>::uint(uint&& other)
     , queued_logic_operation(std::move(other.queued_logic_operation))
     , maximum_value(std::move(other.maximum_value))
 {
-    ASSERT(context != nullptr);
+    // ASSERT(context != nullptr);
 }
 
 template <typename ComposerContext>
@@ -297,7 +297,7 @@ template <typename ComposerContext> uint<ComposerContext>& uint<ComposerContext>
     multiplicative_constant = other.multiplicative_constant;
     witness_status = other.witness_status;
     maximum_value = other.maximum_value;
-    ASSERT(context != nullptr);
+    // ASSERT(context != nullptr);
 
     if (other.queued_logic_operation.method != nullptr) {
         queued_logic_operation.method = other.queued_logic_operation.method;
@@ -890,8 +890,9 @@ template <typename ComposerContext> uint<ComposerContext> uint<ComposerContext>:
     return result;
 }
 
-template <typename ComposerContext> uint<ComposerContext> uint<ComposerContext>::operator>>(const uint64_t shift)
+template <typename ComposerContext> uint<ComposerContext> uint<ComposerContext>::operator>>(const uint64_t shift_)
 {
+    size_t shift = static_cast<size_t>(shift_);
     if (shift == 0) {
         return (*this);
     }
@@ -930,8 +931,8 @@ template <typename ComposerContext> uint<ComposerContext> uint<ComposerContext>:
     for (size_t i = 0; i < shift; ++i) {
         result.bool_wires[i] = bool_t<ComposerContext>(context, false);
     }
-    for (size_t i = shift; i < width(); ++i) {
-        result.bool_wires[i] = bool_wires[i - shift];
+    for (size_t i = static_cast<size_t>(shift); i < width(); ++i) {
+        result.bool_wires[i] = bool_wires[i - static_cast<size_t>(shift)];
     }
     result.witness_status = WitnessStatus::IN_BINARY_FORM;
     result.additive_constant = 0;
@@ -950,10 +951,10 @@ template <typename ComposerContext> uint<ComposerContext> uint<ComposerContext>:
     uint<ComposerContext> result(width(), context);
 
     for (size_t i = 0; i < width() - const_rotation; ++i) {
-        result.bool_wires[i] = bool_wires[i + const_rotation];
+        result.bool_wires[i] = bool_wires[i + static_cast<size_t>(const_rotation)];
     }
     for (size_t i = 0; i < const_rotation; ++i) {
-        result.bool_wires[width() - const_rotation + i] = bool_wires[i];
+        result.bool_wires[width() - static_cast<size_t>(const_rotation) + i] = bool_wires[i];
     }
     result.witness_status = WitnessStatus::IN_BINARY_FORM;
     return result;

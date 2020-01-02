@@ -44,7 +44,7 @@ TEST(stdlib_sha256, test_sha256)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -75,7 +75,7 @@ TEST(stdlib_sha256, test_55_bytes)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -105,7 +105,7 @@ TEST(stdlib_sha256, test_NIST_vector_one)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -135,7 +135,7 @@ TEST(stdlib_sha256, test_NIST_vector_two)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -174,7 +174,7 @@ TEST(stdlib_sha256, test_NIST_vector_three)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -207,7 +207,7 @@ TEST(stdlib_sha256, test_NIST_vector_four)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -248,7 +248,7 @@ TEST(stdlib_sha256, test_NIST_vector_five)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();

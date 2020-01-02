@@ -9,25 +9,20 @@
 
 using namespace barretenberg;
 
-namespace
-{
+namespace {
 void generate_points(g1::affine_element* points, size_t num_points)
 {
     g1::element small_table[10000];
-    for (size_t i = 0; i < 10000; ++i)
-    {
+    for (size_t i = 0; i < 10000; ++i) {
         small_table[i] = g1::random_element();
     }
     g1::element current_table[10000];
-    for (size_t i = 0; i < (num_points / 10000); ++i)
-    {
-        for (size_t j = 0; j < 10000; ++j)
-        {
+    for (size_t i = 0; i < (num_points / 10000); ++i) {
+        for (size_t j = 0; j < 10000; ++j) {
             g1::add(small_table[i], small_table[j], current_table[j]);
         }
         g1::batch_normalize(&current_table[0], 10000);
-        for (size_t j = 0; j < 10000; ++j)
-        {
+        for (size_t j = 0; j < 10000; ++j) {
             fq::__copy(current_table[j].x, points[i * 10000 + j].x);
             fq::__copy(current_table[j].y, points[i * 10000 + j].y);
         }
@@ -35,8 +30,7 @@ void generate_points(g1::affine_element* points, size_t num_points)
     g1::batch_normalize(small_table, 10000);
     size_t rounded = (num_points / 10000) * 10000;
     size_t leftovers = num_points - rounded;
-    for (size_t j = 0; j < leftovers; ++j)
-    {
+    for (size_t j = 0; j < leftovers; ++j) {
         fq::__copy(small_table[j].x, points[rounded + j].x);
         fq::__copy(small_table[j].y, points[rounded + j].y);
     }
@@ -78,16 +72,14 @@ TEST(scalar_multiplication, pippenger)
     g1::affine_element* points =
         (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         scalars[i] = fr::random_element();
         points[i] = g1::random_affine_element();
     }
 
     g1::element expected;
     g1::set_infinity(expected);
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
         g1::add(expected, temp, expected);
     }
@@ -112,16 +104,14 @@ TEST(scalar_multiplication, pippenger_one)
     g1::affine_element* points =
         (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         scalars[i] = fr::random_element();
         points[i] = g1::random_affine_element();
     }
 
     g1::element expected;
     g1::set_infinity(expected);
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
         g1::add(expected, temp, expected);
     }
@@ -169,16 +159,14 @@ TEST(scalar_multiplication, pippenger_low_memory)
 
     g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points);
 
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         scalars[i] = fr::random_element();
         points[i] = g1::random_affine_element();
     }
 
     g1::element expected;
     g1::set_infinity(expected);
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
         g1::add(expected, temp, expected);
     }
@@ -203,16 +191,14 @@ TEST(scalar_multiplication, pippenger_internal_alt)
     g1::affine_element* points =
         (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         scalars[i] = fr::random_element();
         points[i] = g1::random_affine_element();
     }
 
     g1::element expected;
     g1::set_infinity(expected);
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
         g1::add(expected, temp, expected);
     }
@@ -237,8 +223,7 @@ TEST(scalar_multiplication_precompute, precomputed_pippenger)
     g1::affine_element* points =
         (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         scalars[i] = fr::random_element();
         points[i] = g1::random_affine_element();
     }
@@ -252,8 +237,7 @@ TEST(scalar_multiplication_precompute, precomputed_pippenger)
         points, precompute_table, num_points, bits_per_bucket);
     g1::element expected;
     g1::set_infinity(expected);
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
         g1::add(expected, temp, expected);
     }
@@ -280,15 +264,13 @@ TEST(scalar_multiplication, batched_scalar_multiplication)
 
     generate_points(points, num_points);
     size_t points_per_iteration = num_points / num_exponentiations;
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         scalars[i] = fr::random_element();
         fr::__copy(scalars[i], scalars[i + num_points]);
         g1::copy(&points[i], &points[i + (num_points * 2)]);
     }
     scalar_multiplication::multiplication_state inputs[2 * num_exponentiations];
-    for (size_t i = 0; i < num_exponentiations; ++i)
-    {
+    for (size_t i = 0; i < num_exponentiations; ++i) {
         inputs[i].points = &points[i * (points_per_iteration * 2)];
         inputs[i + num_exponentiations].points = &points[i * (points_per_iteration * 2) + (num_points * 2)];
         inputs[i].scalars = &scalars[i * points_per_iteration];
@@ -301,8 +283,7 @@ TEST(scalar_multiplication, batched_scalar_multiplication)
     scalar_multiplication::generate_pippenger_point_table(
         points + (num_points * 2), points + (num_points * 2), num_points);
 
-    for (size_t i = 0; i < num_exponentiations; ++i)
-    {
+    for (size_t i = 0; i < num_exponentiations; ++i) {
         inputs[i].output =
             scalar_multiplication::pippenger(inputs[i].scalars, inputs[i].points, inputs[i].num_elements);
         inputs[i].output = g1::normalize(inputs[i].output);
@@ -312,10 +293,8 @@ TEST(scalar_multiplication, batched_scalar_multiplication)
     aligned_free(scalars);
     aligned_free(points);
 
-    for (size_t j = 0; j < num_exponentiations; ++j)
-    {
-        for (size_t i = 0; i < 4; ++i)
-        {
+    for (size_t j = 0; j < num_exponentiations; ++j) {
+        for (size_t i = 0; i < 4; ++i) {
             EXPECT_EQ(inputs[j].output.x.data[i], inputs[j + num_exponentiations].output.x.data[i]);
             EXPECT_EQ(inputs[j].output.y.data[i], inputs[j + num_exponentiations].output.y.data[i]);
             EXPECT_EQ(inputs[j].output.z.data[i], inputs[j + num_exponentiations].output.z.data[i]);

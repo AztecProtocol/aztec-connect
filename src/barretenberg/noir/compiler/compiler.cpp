@@ -31,7 +31,8 @@ void Compiler::operator()(ast::variable_declaration const& x)
     ctx_.symbol_table.declare(v, x.variable);
 
     if (!x.assignment.has_value()) {
-        throw std::runtime_error("Global variables must be defined.");
+        // throw std::runtime_error("Global variables must be defined.");
+        std::abort();
     }
 
     ast::assignment assign;

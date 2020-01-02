@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
-#include <barretenberg/waffle/proof_system/prover/prover.hpp>
-#include <barretenberg/waffle/proof_system/permutation.hpp>
 #include <barretenberg/polynomials/polynomial.hpp>
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
+#include <barretenberg/waffle/proof_system/permutation.hpp>
+#include <barretenberg/waffle/proof_system/prover/prover.hpp>
+#include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
 
 #include <barretenberg/curves/bn254/g1.hpp>
 #include <barretenberg/curves/bn254/scalar_multiplication.hpp>
@@ -13,7 +13,7 @@
 ```
 elliptic curve point addition on a short weierstrass curve.
 
-circuit has 9 gates, I've added 7 dummy gates so that the polynomial degrees are a power of 2 
+circuit has 9 gates, I've added 7 dummy gates so that the polynomial degrees are a power of 2
 
 input points: (x_1, y_1), (x_2, y_2)
 output point: (x_3, y_3)
@@ -67,8 +67,7 @@ sigma_3 = [39, 23, 4, 40, 41, 25, 33, 36, 37, 42, 43, 44, 45, 46, 47, 48]
 */
 using namespace barretenberg;
 
-namespace
-{
+namespace {
 
 void generate_test_data(waffle::Prover& state)
 {
@@ -85,8 +84,7 @@ void generate_test_data(waffle::Prover& state)
     state.w_r.resize(n);
     state.w_o.resize(n);
 
-    for (size_t i = 0; i < n / 4; ++i)
-    {
+    for (size_t i = 0; i < n / 4; ++i) {
         state.w_l.at(2 * i) = fr::random_element();
         state.w_r.at(2 * i) = fr::random_element();
         fr::__mul(state.w_l.at(2 * i), state.w_r.at(2 * i), state.w_o.at(2 * i));
@@ -126,8 +124,7 @@ void generate_test_data(waffle::Prover& state)
     state.sigma_2_mapping.resize(n);
     state.sigma_3_mapping.resize(n);
 
-    for (size_t i = 0; i < n / 2; ++i)
-    {
+    for (size_t i = 0; i < n / 2; ++i) {
         state.sigma_1_mapping[shift + i] = (uint32_t)i;
         state.sigma_2_mapping[shift + i] = (uint32_t)i + (1U << 30U);
         state.sigma_3_mapping[shift + i] = (uint32_t)i + (1U << 31U);
@@ -143,24 +140,23 @@ void generate_test_data(waffle::Prover& state)
     state.sigma_2_mapping[n - 1] = (uint32_t)n - 1 + (1U << 30U);
     state.sigma_3_mapping[n - 1] = (uint32_t)n - 1 + (1U << 31U);
 
-
-    state.w_l.at(n-1) = fr::zero;
-    state.w_r.at(n-1) = fr::zero;
-    state.w_o.at(n-1) = fr::zero;
-    widget->q_c.at(n-1) = fr::zero;
+    state.w_l.at(n - 1) = fr::zero;
+    state.w_r.at(n - 1) = fr::zero;
+    state.w_o.at(n - 1) = fr::zero;
+    widget->q_c.at(n - 1) = fr::zero;
     widget->q_l.at(n - 1) = fr::zero;
     widget->q_r.at(n - 1) = fr::zero;
     widget->q_o.at(n - 1) = fr::zero;
     widget->q_m.at(n - 1) = fr::zero;
 
-    state.w_l.at(shift-1) = fr::zero;
-    state.w_r.at(shift-1) = fr::zero;
-    state.w_o.at(shift-1) = fr::zero;
-    widget->q_c.at(shift-1) = fr::zero;
+    state.w_l.at(shift - 1) = fr::zero;
+    state.w_r.at(shift - 1) = fr::zero;
+    state.w_o.at(shift - 1) = fr::zero;
+    widget->q_c.at(shift - 1) = fr::zero;
 
     state.widgets.emplace_back(std::move(widget));
 }
-}
+} // namespace
 
 TEST(prover, compute_quotient_polynomial)
 {
@@ -169,14 +165,16 @@ TEST(prover, compute_quotient_polynomial)
     waffle::Prover state(n);
     generate_test_data(state);
 
-    waffle::compute_permutation_lagrange_base_single(state.sigma_1, state.sigma_1_mapping, state.circuit_state.small_domain);
-    waffle::compute_permutation_lagrange_base_single(state.sigma_2, state.sigma_2_mapping, state.circuit_state.small_domain);
-    waffle::compute_permutation_lagrange_base_single(state.sigma_3, state.sigma_3_mapping, state.circuit_state.small_domain);
+    waffle::compute_permutation_lagrange_base_single(
+        state.sigma_1, state.sigma_1_mapping, state.circuit_state.small_domain);
+    waffle::compute_permutation_lagrange_base_single(
+        state.sigma_2, state.sigma_2_mapping, state.circuit_state.small_domain);
+    waffle::compute_permutation_lagrange_base_single(
+        state.sigma_3, state.sigma_3_mapping, state.circuit_state.small_domain);
     state.compute_quotient_polynomial();
 
     // check that the max degree of our quotient polynomial is 3n
-    for (size_t i = 3 * n; i < 4 * n; ++i)
-    {
+    for (size_t i = 3 * n; i < 4 * n; ++i) {
         EXPECT_EQ(fr::eq(state.circuit_state.quotient_large.at(i), fr::zero), true);
     }
 }
@@ -189,15 +187,16 @@ TEST(prover, compute_linearisation_coefficients)
     waffle::plonk_circuit_state state(n);
     generate_test_data(state);
 
-    waffle::compute_permutation_lagrange_base_single(state.sigma_1, state.sigma_1_mapping, state.circuit_state.small_domain);
-    waffle::compute_permutation_lagrange_base_single(state.sigma_2, state.sigma_2_mapping, state.circuit_state.small_domain);
-    waffle::compute_permutation_lagrange_base_single(state.sigma_3, state.sigma_3_mapping, state.circuit_state.small_domain);
-    state.compute_quotient_polynomial();
-    state.compute_quotient_commitment();
+    waffle::compute_permutation_lagrange_base_single(state.sigma_1, state.sigma_1_mapping,
+state.circuit_state.small_domain); waffle::compute_permutation_lagrange_base_single(state.sigma_2,
+state.sigma_2_mapping, state.circuit_state.small_domain);
+    waffle::compute_permutation_lagrange_base_single(state.sigma_3, state.sigma_3_mapping,
+state.circuit_state.small_domain); state.compute_quotient_polynomial(); state.compute_quotient_commitment();
 
     fr::field_t t_eval = state.compute_linearisation_coefficients();
 
-    polynomial_arithmetic::lagrange_evaluations lagrange_evals = polynomial_arithmetic::get_lagrange_evaluations(state.challenges.z, state.circuit_state.small_domain);
+    polynomial_arithmetic::lagrange_evaluations lagrange_evals =
+polynomial_arithmetic::get_lagrange_evaluations(state.challenges.z, state.circuit_state.small_domain);
 
     fr::field_t alpha_pow[6];
     fr::__copy(state.challenges.alpha, alpha_pow[0]);

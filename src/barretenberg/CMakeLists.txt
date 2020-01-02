@@ -3,8 +3,6 @@
 
 add_compile_options(-Werror -Wall -Wextra -Wconversion -Wsign-conversion)
 
-add_definitions(-DBOOST_SPIRIT_X3_NO_FILESYSTEM=1)
-
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new -Wno-c99-extensions")
 endif()
@@ -95,6 +93,7 @@ add_library(
     noir/compiler/function_statement_visitor.cpp
     noir/compiler/expression_visitor.cpp
     noir/compiler/function_call.cpp
+    noir/compiler/symbol_table.cpp
 )
 
 target_include_directories(
@@ -114,7 +113,7 @@ target_link_libraries(
     barretenberg
 )
 
-if(BARRETENBERG_PROFILING)
+if(PROFILING)
     add_executable(
         barretenberg_profiling
         main.cpp
@@ -197,13 +196,12 @@ if(BARRETENBERG_PROFILING)
         waffle/stdlib/mimc.hpp
         waffle/stdlib/crypto/hash/sha256.tcc
         waffle/stdlib/crypto/hash/sha256.hpp
-        noir/expression.cpp
-        noir/statement.cpp
     )
 
     target_link_libraries(
         barretenberg_profiling
     )
+
     set_target_properties(
         barretenberg_profiling
 

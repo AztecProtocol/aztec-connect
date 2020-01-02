@@ -7,12 +7,12 @@
 namespace plonk {
 namespace stdlib {
 
-inline barretenberg::fr::field_t set_bit(const barretenberg::fr::field_t& scalar, const size_t bit_position)
+inline barretenberg::fr::field_t set_bit(const barretenberg::fr::field_t& scalar, const uint64_t bit_position)
 {
     barretenberg::fr::field_t result = scalar;
-    size_t limb_idx = bit_position / 64;
-    size_t limb_bit_position = bit_position - (limb_idx * 64);
-    result.data[limb_idx] = result.data[limb_idx] + (1UL << limb_bit_position);
+    uint64_t limb_idx = bit_position / 64;
+    uint64_t limb_bit_position = bit_position - (limb_idx * 64);
+    result.data[limb_idx] = result.data[limb_idx] + (1ULL << limb_bit_position);
     return result;
 }
 
@@ -35,8 +35,7 @@ template <typename ComposerContext> struct witness_t {
         witness_index = context->add_variable(witness);
     }
 
-    template <typename T>
-    witness_t(ComposerContext* parent_context, T const in)
+    template <typename T> witness_t(ComposerContext* parent_context, T const in)
     {
         context = parent_context;
         witness = barretenberg::fr::to_montgomery_form({ { static_cast<uint64_t>(in), 0, 0, 0 } });

@@ -31,7 +31,8 @@ struct int_type_class {
     inline void on_success(Iterator const&, Iterator const&, ast::int_type& t, Context const&)
     {
         if (t.size < 2 || t.size > 64) {
-            throw std::runtime_error("Bad integer width.");
+            std::cout << "Bad integer width." << std::endl;
+            std::abort();
         }
     }
 };

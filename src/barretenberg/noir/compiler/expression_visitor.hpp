@@ -13,8 +13,7 @@ class ExpressionVisitor : boost::static_visitor<var_t> {
 
     var_t operator()(ast::nil) const
     {
-        BOOST_ASSERT(0);
-        throw std::runtime_error("No.");
+        std::abort();
     }
     var_t operator()(unsigned int x);
     var_t operator()(bool x);

@@ -20,7 +20,7 @@ var_t ExpressionVisitor::operator()(unsigned int x)
     debug("uint constant (target type %1%): %2%", target_type_, x);
     auto it = boost::get<int_type>(&target_type_.type);
     if (!it) {
-        throw std::runtime_error(format("Cannot create type %s from constant %d.", target_type_.type_name(), x));
+        abort(format("Cannot create type %s from constant %d.", target_type_.type_name(), x));
     }
     return var_t(uint(it->width, &ctx_.composer, x), target_type_);
 }
@@ -29,7 +29,7 @@ var_t ExpressionVisitor::operator()(bool x)
 {
     debug("bool %1%", x);
     if (!boost::get<bool_type>(&target_type_.type)) {
-        throw std::runtime_error(format("Cannot create type %s from constant %d.", target_type_.type_name(), x));
+        abort(format("Cannot create type %s from constant %d.", target_type_.type_name(), x));
     }
     return var_t(bool_t(&ctx_.composer, x), target_type_);
 }
@@ -39,7 +39,7 @@ var_t ExpressionVisitor::operator()(ast::array const& x)
     debug("defining array of size %1%", x.size());
     auto arr = boost::get<array_type>(&target_type_.type);
     if (!arr) {
-        throw std::runtime_error(format("Cannot create type %s from array.", target_type_.type_name()));
+        abort(format("Cannot create type %s from array.", target_type_.type_name()));
     }
     std::vector<var_t> result;
     std::transform(x.begin(), x.end(), std::back_inserter(result), [this, arr](ast::expression const& e) {
@@ -59,7 +59,7 @@ var_t ExpressionVisitor::operator()(var_t vlhs, ast::operation const& x)
         // Evaluate index.
         uint* iptr = boost::get<uint>(&rhs.value());
         if (!iptr) {
-            throw std::runtime_error("Index must be an integer.");
+            abort("Index must be an integer.");
         }
         uint32_t i = static_cast<uint32_t>((*iptr).get_value());
 
@@ -165,7 +165,7 @@ var_t ExpressionVisitor::operator()(ast::unary const& x)
     case ast::op_positive:
         return var;
     default:
-        throw std::runtime_error("Unknown operator.");
+        abort("Unknown operator.");
     }
 }
 
@@ -219,7 +219,7 @@ struct IndexedAssignVisitor : boost::static_visitor<var_t> {
 
     template <typename T> var_t operator()(T const& t) const
     {
-        throw std::runtime_error(format("Unsupported type in indexed assign: %s", typeid(t).name()));
+        abort(format("Unsupported type in indexed assign: %s", typeid(t).name()));
     }
 
     CompilerContext& ctx;
@@ -241,12 +241,12 @@ var_t ExpressionVisitor::operator()(ast::assignment const& x)
             auto ivar = ExpressionVisitor(ctx_, type_uint32)(x.lhs.indexes[0]);
             auto iv = boost::get<uint>(ivar.value());
             if (!iv.is_constant()) {
-                throw std::runtime_error("Index must be constant.");
+                abort("Index must be constant.");
             }
-            auto i = iv.get_value();
+            size_t i = static_cast<size_t>(iv.get_value());
             auto arr = boost::get<array_type>(lhs_ptr->type.type);
             if (i >= arr.size) {
-                throw std::runtime_error("Index out of bounds.");
+                abort("Index out of bounds.");
             }
             lhs_ptr = &boost::get<std::vector<var_t>>(lhs_ptr->value())[i];
             debug("indexed to new lhs: %1%", *lhs_ptr);
@@ -254,17 +254,18 @@ var_t ExpressionVisitor::operator()(ast::assignment const& x)
 
         // Evaluate final index.
         auto ivar = ExpressionVisitor(ctx_, type_uint32)(x.lhs.indexes.back());
-        uint i = boost::get<uint>(ivar.value());
-        if (!i.is_constant()) {
-            throw std::runtime_error("Index must be constant.");
+        uint iv = boost::get<uint>(ivar.value());
+        if (!iv.is_constant()) {
+            abort("Index must be constant.");
         }
+        size_t i = static_cast<size_t>(iv.get_value());
 
-        return boost::apply_visitor(IndexedAssignVisitor(ctx_, i.get_value(), x.rhs, lhs_ptr->type), lhs_ptr->value());
+        return boost::apply_visitor(IndexedAssignVisitor(ctx_, i, x.rhs, lhs_ptr->type), lhs_ptr->value());
     } else {
         var_t rhs = ExpressionVisitor(ctx_, lhs.type)(x.rhs);
         debug("op_store %1% = %2%", x.lhs.name, rhs);
         lhs.value() = rhs.value();
-        //ctx_.symbol_table.set(rhs, x.lhs.name);
+        // ctx_.symbol_table.set(rhs, x.lhs.name);
         return rhs;
     }
 }

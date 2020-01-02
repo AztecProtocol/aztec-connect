@@ -7,7 +7,7 @@
 namespace noir {
 namespace parser {
 
-template <typename T, typename AST> AST parse(parser::iterator_type begin, parser::iterator_type end, T const& parser)
+template <typename T, typename AST> AST parse(iterator_type begin, iterator_type end, T const& parser)
 {
     AST ast;
 
@@ -16,20 +16,27 @@ template <typename T, typename AST> AST parse(parser::iterator_type begin, parse
     error_handler_type error_handler(begin, end, std::cerr);
 
     // we pass our error handler to the parser so we can access it later on in our on_error and on_sucess handlers.
-    auto const eparser = with<parser::error_handler_tag>(std::ref(error_handler))[parser];
+    auto const eparser = with<error_handler_tag>(std::ref(error_handler))[parser];
 
     bool success = phrase_parse(begin, end, eparser, space_comment, ast);
 
     if (!success || begin != end) {
-        throw std::runtime_error("Parser failed at: " + std::string(begin, begin + 10));
+        // throw std::runtime_error();
+        std::cout << "Parser failed at: " << std::string(begin, begin + 10) << std::endl;
+        std::abort();
     }
 
     return ast;
 }
 
+ast::statement_list parse(iterator_type begin, iterator_type end)
+{
+    return parse<statement_type, ast::statement_list>(begin, end, statement());
+}
+
 ast::statement_list parse(std::string const& source)
 {
-    return parse<statement_type, ast::statement_list>(source.begin(), source.end(), statement());
+    return parse(source.begin(), source.end());
 }
 
 ast::function_statement_list parse_function_statements(std::string const& source)

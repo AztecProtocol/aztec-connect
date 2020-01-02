@@ -10,15 +10,22 @@ using namespace barretenberg;
 using namespace noir::parser;
 using namespace noir::code_gen;
 
+namespace boost {
+void throw_exception(std::exception const&)
+{
+    std::abort();
+}
+} // namespace boost
+
 TEST(noir, format_string)
 {
     EXPECT_EQ(format("hello %s %d", "world", 123), "hello world 123");
 }
 
-TEST(noir, parse_fails)
-{
-    EXPECT_THROW(parse("1 + 2; blah"), std::runtime_error);
-}
+// TEST(noir, parse_fails)
+// {
+//     EXPECT_THROW(parse("1 + 2; blah"), std::runtime_error);
+// }
 
 TEST(noir, uint_sizes)
 {
@@ -34,15 +41,15 @@ TEST(noir, uint_sizes)
     EXPECT_EQ(int_type.size, 2UL);
 }
 
-TEST(noir, uint1_fail)
-{
-    EXPECT_THROW(parse("uint1 my_int1 = 0;"), std::runtime_error);
-}
+// TEST(noir, uint1_fail)
+// {
+//     EXPECT_THROW(parse("uint1 my_int1 = 0;"), std::runtime_error);
+// }
 
-TEST(noir, uint65_fail)
-{
-    EXPECT_THROW(parse("uint65 my_int65 = 0;"), std::runtime_error);
-}
+// TEST(noir, uint65_fail)
+// {
+//     EXPECT_THROW(parse("uint65 my_int65 = 0;"), std::runtime_error);
+// }
 
 TEST(noir, uint_indexing)
 {
@@ -187,7 +194,7 @@ template <typename T> void test_sha256(T const& input, std::vector<uint8_t> cons
 
     auto compiler = Compiler(composer);
     auto r = compiler.start(ast, { var_t(input, composer) });
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
 
     auto output_vars = boost::get<std::vector<var_t>>(r.first.value());
     std::vector<uint8_t> output;

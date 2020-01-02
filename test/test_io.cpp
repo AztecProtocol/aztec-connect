@@ -26,8 +26,7 @@ TEST(io, read_transcript_loads_well_formed_srs)
     fq12::field_t res = pairing::reduced_ate_pairing_batch(P, Q, 2);
 
     EXPECT_EQ(fq12::eq(res, fq12::one), true);
-    for (size_t i = 0; i < degree; ++i)
-    {
+    for (size_t i = 0; i < degree; ++i) {
         EXPECT_EQ(g1::on_curve(monomials[i]), true);
     }
     aligned_free(monomials);

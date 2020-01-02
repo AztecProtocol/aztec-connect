@@ -17,5 +17,12 @@ template <typename... Args> inline void info(std::string const& str, Args... arg
 {
     std::cout << format(str, args...) << std::endl;
 }
+
+template <typename... Args> inline void abort[[noreturn]](std::string const& str, Args... args)
+{
+    std::cout << format(str, args...) << std::endl;
+    std::abort();
+}
+
 } // namespace code_gen
 } // namespace noir

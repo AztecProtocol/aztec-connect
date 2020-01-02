@@ -18,20 +18,19 @@
 
 using namespace barretenberg;
 
-namespace waffle
-{
-Verifier::Verifier(const size_t subgroup_size) : n(subgroup_size)
-{
-}
+namespace waffle {
+Verifier::Verifier(const size_t subgroup_size)
+    : n(subgroup_size)
+{}
 
-Verifier::Verifier(Verifier&& other) : n(other.n)
+Verifier::Verifier(Verifier&& other)
+    : n(other.n)
 {
     reference_string = std::move(other.reference_string);
     g1::copy_affine(other.SIGMA_1, SIGMA_1);
     g1::copy_affine(other.SIGMA_2, SIGMA_2);
     g1::copy_affine(other.SIGMA_3, SIGMA_3);
-    for (size_t i = 0; i < other.verifier_widgets.size(); ++i)
-    {
+    for (size_t i = 0; i < other.verifier_widgets.size(); ++i) {
         verifier_widgets.emplace_back(std::move(other.verifier_widgets[i]));
     }
 }
@@ -45,8 +44,7 @@ Verifier& Verifier::operator=(Verifier&& other)
     g1::copy_affine(other.SIGMA_2, SIGMA_2);
     g1::copy_affine(other.SIGMA_3, SIGMA_3);
     verifier_widgets.resize(0);
-    for (size_t i = 0; i < other.verifier_widgets.size(); ++i)
-    {
+    for (size_t i = 0; i < other.verifier_widgets.size(); ++i) {
         verifier_widgets.emplace_back(std::move(other.verifier_widgets[i]));
     }
     return *this;
@@ -65,26 +63,22 @@ bool Verifier::verify_proof(const waffle::plonk_proof& proof)
                         && g1::on_curve(proof.Z_1) && g1::on_curve(proof.PI_Z);
     // && g1::on_curve(proof.PI_Z_OMEGA);
 
-    if (!inputs_valid)
-    {
+    if (!inputs_valid) {
         printf("inputs not valid!\n");
         return false;
     }
 
     bool instance_valid = g1::on_curve(SIGMA_1) && g1::on_curve(SIGMA_2) && g1::on_curve(SIGMA_3);
-    if (!instance_valid)
-    {
+    if (!instance_valid) {
         printf("instance not valid!\n");
         return false;
     }
 
     bool widget_instance_valid = true;
-    for (size_t i = 0; i < verifier_widgets.size(); ++i)
-    {
+    for (size_t i = 0; i < verifier_widgets.size(); ++i) {
         widget_instance_valid = widget_instance_valid && verifier_widgets[i]->verify_instance_commitments();
     }
-    if (!widget_instance_valid)
-    {
+    if (!widget_instance_valid) {
         printf("widget instance not valid!\n");
         return false;
     }
@@ -95,8 +89,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof& proof)
         /* && */                // !fr::eq(proof.z_1_shifted_eval, fr::zero)
         /* && */ !fr::eq(proof.sigma_1_eval, fr::zero) && !fr::eq(proof.sigma_2_eval, fr::zero) &&
         !fr::eq(proof.linear_eval, fr::zero);
-    if (!field_elements_valid)
-    {
+    if (!field_elements_valid) {
         printf("proof field elements not valid!\n");
         return false;
     }
@@ -123,8 +116,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof& proof)
     fr::field_t T2;
     fr::field_t T3;
     fr::__copy(challenges.alpha, alpha_pow[0]);
-    for (size_t i = 1; i < 4; ++i)
-    {
+    for (size_t i = 1; i < 4; ++i) {
         fr::__mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
     }
 
@@ -166,8 +158,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof& proof)
 
     fr::field_t u = compute_kate_separation_challenge(proof, t_eval);
     fr::__copy(challenges.nu, nu_pow[0]);
-    for (size_t i = 1; i < 9; ++i)
-    {
+    for (size_t i = 1; i < 9; ++i) {
         fr::__mul(nu_pow[i - 1], nu_pow[0], nu_pow[i]);
     }
 
@@ -213,8 +204,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof& proof)
     bool needs_w_l_shifted = false;
     bool needs_w_r_shifted = false;
     bool needs_w_o_shifted = false;
-    for (size_t i = 0; i < verifier_widgets.size(); ++i)
-    {
+    for (size_t i = 0; i < verifier_widgets.size(); ++i) {
         needs_w_l_shifted |=
             verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
         needs_w_r_shifted |=
@@ -222,29 +212,25 @@ bool Verifier::verify_proof(const waffle::plonk_proof& proof)
         needs_w_o_shifted |=
             verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
     }
-    if (needs_w_l_shifted)
-    {
+    if (needs_w_l_shifted) {
         fr::__mul(proof.w_l_shifted_eval, nu_base, T0);
         fr::__mul(T0, u, T0);
         fr::__add(batch_evaluation, T0, batch_evaluation);
         fr::__mul(nu_base, nu_pow[0], nu_base);
     }
-    if (needs_w_r_shifted)
-    {
+    if (needs_w_r_shifted) {
         fr::__mul(proof.w_r_shifted_eval, nu_base, T0);
         fr::__mul(T0, u, T0);
         fr::__add(batch_evaluation, T0, batch_evaluation);
         fr::__mul(nu_base, nu_pow[0], nu_base);
     }
-    if (needs_w_o_shifted)
-    {
+    if (needs_w_o_shifted) {
         fr::__mul(proof.w_o_shifted_eval, nu_base, T0);
         fr::__mul(T0, u, T0);
         fr::__add(batch_evaluation, T0, batch_evaluation);
         fr::__mul(nu_base, nu_pow[0], nu_base);
     }
-    for (size_t i = 0; i < verifier_widgets.size(); ++i)
-    {
+    for (size_t i = 0; i < verifier_widgets.size(); ++i) {
         nu_base =
             verifier_widgets[i]->compute_batch_evaluation_contribution(batch_evaluation, nu_base, nu_pow[0], proof);
     }
@@ -263,51 +249,39 @@ bool Verifier::verify_proof(const waffle::plonk_proof& proof)
 
     fr::__copy(nu_pow[7], nu_base);
 
-    if (g1::on_curve(proof.W_L))
-    {
+    if (g1::on_curve(proof.W_L)) {
         elements.emplace_back(proof.W_L);
-        if (needs_w_l_shifted)
-        {
+        if (needs_w_l_shifted) {
             fr::__mul(nu_base, u, T0);
             fr::__add(T0, nu_pow[1], T0);
             scalars.emplace_back(T0);
             // scalars.emplace_back(fr::add(nu_pow[1], nu_base));
             fr::__mul(nu_base, nu_pow[0], nu_base);
-        }
-        else
-        {
+        } else {
             scalars.emplace_back(nu_pow[1]);
         }
     }
 
-    if (g1::on_curve(proof.W_R))
-    {
+    if (g1::on_curve(proof.W_R)) {
         elements.emplace_back(proof.W_R);
-        if (needs_w_r_shifted)
-        {
+        if (needs_w_r_shifted) {
             fr::__mul(nu_base, u, T0);
             fr::__add(T0, nu_pow[2], T0);
             scalars.emplace_back(T0);
             fr::__mul(nu_base, nu_pow[0], nu_base);
-        }
-        else
-        {
+        } else {
             scalars.emplace_back(nu_pow[2]);
         }
     }
 
-    if (g1::on_curve(proof.W_O))
-    {
+    if (g1::on_curve(proof.W_O)) {
         elements.emplace_back(proof.W_O);
-        if (needs_w_o_shifted)
-        {
+        if (needs_w_o_shifted) {
             fr::__mul(nu_base, u, T0);
             fr::__add(T0, nu_pow[3], T0);
             scalars.emplace_back(T0);
             fr::__mul(nu_base, nu_pow[0], nu_base);
-        }
-        else
-        {
+        } else {
             scalars.emplace_back(nu_pow[3]);
         }
     }
@@ -324,8 +298,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof& proof)
     elements.emplace_back(g1::affine_one());
     scalars.emplace_back(batch_evaluation);
 
-    if (g1::on_curve(proof.PI_Z_OMEGA))
-    {
+    if (g1::on_curve(proof.PI_Z_OMEGA)) {
         elements.emplace_back(proof.PI_Z_OMEGA);
         scalars.emplace_back(z_omega_scalar);
     }
@@ -333,14 +306,12 @@ bool Verifier::verify_proof(const waffle::plonk_proof& proof)
     elements.emplace_back(proof.PI_Z);
     scalars.emplace_back(challenges.z);
 
-    if (g1::on_curve(proof.T_MID))
-    {
+    if (g1::on_curve(proof.T_MID)) {
         elements.emplace_back(proof.T_MID);
         scalars.emplace_back(z_pow_n);
     }
 
-    if (g1::on_curve(proof.T_HI))
-    {
+    if (g1::on_curve(proof.T_HI)) {
         elements.emplace_back(proof.T_HI);
         scalars.emplace_back(z_pow_2n);
     }
@@ -349,8 +320,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof& proof)
         fr::sqr(fr::sqr(challenges.alpha)), challenges.alpha, nu_base, challenges.nu, challenges.nu
     };
 
-    for (size_t i = 0; i < verifier_widgets.size(); ++i)
-    {
+    for (size_t i = 0; i < verifier_widgets.size(); ++i) {
         coeffs = verifier_widgets[i]->append_scalar_multiplication_inputs(coeffs, proof, elements, scalars);
     }
 
