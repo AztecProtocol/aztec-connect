@@ -97,21 +97,24 @@ template <typename ComposerContext> class uint {
 
     uint64_t get_value() const
     {
+        uint64_t max = static_cast<uint64_t>(std::pow(2ULL, width()));
         if (context == nullptr) {
-            return additive_constant;
+            return additive_constant % max;
         }
         if (witness_status == IN_BINARY_FORM) {
-            return std::accumulate(bool_wires.rbegin(), bool_wires.rend(), 0U, [](auto acc, auto wire) {
-                return (acc + acc + wire.get_value());
-            });
+            return std::accumulate(bool_wires.rbegin(),
+                                   bool_wires.rend(),
+                                   0U,
+                                   [](auto acc, auto wire) { return (acc + acc + wire.get_value()); }) %
+                   max;
         }
         // normalize();
         if (is_constant()) {
-            return (multiplicative_constant * additive_constant);
+            return (multiplicative_constant * additive_constant) % max;
         }
         uint64_t base =
             static_cast<uint64_t>(barretenberg::fr::from_montgomery_form(context->get_variable(witness_index)).data[0]);
-        return (base * multiplicative_constant + additive_constant);
+        return (base * multiplicative_constant + additive_constant) % max;
     }
 
     uint64_t get_additive_constant() const { return additive_constant; }

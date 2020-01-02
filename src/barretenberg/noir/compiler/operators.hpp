@@ -194,7 +194,7 @@ struct IndexVisitor : boost::static_visitor<var_t> {
 
     var_t operator()(std::vector<var_t>& lhs) const
     {
-        debug("indexing %1%: %2% @%3%", i, lhs[i], &lhs[i].value());
+        debug("indexing %1%: %2%", i, lhs[i]);
         return var_t_ref(lhs[i]);
     }
     var_t operator()(noir::code_gen::uint& lhs) const
