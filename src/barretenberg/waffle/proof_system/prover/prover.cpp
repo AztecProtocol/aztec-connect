@@ -382,10 +382,15 @@ void Prover::compute_identity_grand_product_coefficients(polynomial &z_fft)
     ITERATE_OVER_DOMAIN_END;
 }
 
-void Prover::compute_quotient_polynomial()
+void Prover::init_quotient_polynomials()
 {
     circuit_state.quotient_large.resize(4 * n);
     circuit_state.quotient_mid.resize(2 * n);
+}
+
+void Prover::compute_quotient_polynomial()
+{
+    init_quotient_polynomials();
 
     compute_wire_coefficients();
 
@@ -650,15 +655,11 @@ void Prover::reset()
     w_l.fft(circuit_state.small_domain);
     w_r.fft(circuit_state.small_domain);
     w_o.fft(circuit_state.small_domain);
-    sigma_1 = polynomial(0, 0);
-    sigma_2 = polynomial(0, 0);
-    sigma_3 = polynomial(0, 0);
     circuit_state.w_l_fft = polynomial(0, 0);
     circuit_state.w_r_fft = polynomial(0, 0);
     circuit_state.w_o_fft = polynomial(0, 0);
     circuit_state.quotient_mid = polynomial(0, 0);
     circuit_state.quotient_large = polynomial(0, 0);
-    r = polynomial(0, 0);
     for (size_t i = 0; i < widgets.size(); ++i)
     {
         widgets[i]->reset(circuit_state.small_domain);
