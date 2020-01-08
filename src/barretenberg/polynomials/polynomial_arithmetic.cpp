@@ -107,7 +107,8 @@ void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::
 void scale_by_generator(fr::field_t* coeffs,
                         const evaluation_domain& domain,
                         const fr::field_t& generator_start,
-                        const fr::field_t& generator_shift)
+                        const fr::field_t& generator_shift,
+                        const size_t generator_size)
 {
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
@@ -116,10 +117,11 @@ void scale_by_generator(fr::field_t* coeffs,
     {
         fr::field_t work_generator;
         fr::field_t thread_shift;
-        fr::__pow_small(generator_shift, j * domain.thread_size, thread_shift);
+        fr::__pow_small(generator_shift, j * (generator_size / domain.num_threads), thread_shift);
         fr::__mul_with_coarse_reduction(generator_start, thread_shift, work_generator);
-        size_t offset = j * domain.thread_size;
-        for (size_t i = offset; i < offset + domain.thread_size; ++i)
+        const size_t offset = j * (generator_size / domain.num_threads);
+        const size_t end = offset + (generator_size / domain.num_threads);
+        for (size_t i = offset; i < end; ++i)
         {
             fr::__mul(coeffs[i], work_generator, coeffs[i]);
             fr::__mul_with_coarse_reduction(work_generator, generator_shift, work_generator);
@@ -314,7 +316,7 @@ void fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, con
 
 void coset_fft(fr::field_t* coeffs, const evaluation_domain& domain)
 {
-    scale_by_generator(coeffs, domain, fr::one, fr::multiplicative_generator);
+    scale_by_generator(coeffs, domain, fr::one, fr::multiplicative_generator, domain.generator_size);
     fft(coeffs, domain);
 }
 
@@ -322,7 +324,7 @@ void coset_fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domai
 {
     fr::field_t start = fr::one;
     fr::__mul(start, constant, start);
-    scale_by_generator(coeffs, domain, start, fr::multiplicative_generator);
+    scale_by_generator(coeffs, domain, start, fr::multiplicative_generator, domain.generator_size);
     fft(coeffs, domain);
 }
 
@@ -339,7 +341,7 @@ void ifft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, co
 void coset_ifft(fr::field_t* coeffs, const evaluation_domain& domain)
 {
     ifft(coeffs, domain);
-    scale_by_generator(coeffs, domain, fr::one, fr::multiplicative_generator_inverse);
+    scale_by_generator(coeffs, domain, fr::one, fr::multiplicative_generator_inverse, domain.size);
 }
 
 void add(const fr::field_t* a_coeffs,
