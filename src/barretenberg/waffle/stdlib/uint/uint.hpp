@@ -109,7 +109,7 @@ template <typename ComposerContext> class uint {
                                    [](auto acc, auto wire) { return (acc + acc + wire.get_value()); }) %
                    max;
         }
-        normalize();
+        // normalize();
         if (is_constant()) {
             return (multiplicative_constant * additive_constant) % max;
         }
