@@ -1,14 +1,14 @@
 #pragma once
 
+#include "../assert.hpp"
+#include "../keccak/keccak.h"
+#include "../types.hpp"
+#include "./wnaf.hpp"
+#include <array>
 #include <cinttypes>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <array>
-#include "../keccak/keccak.h"
-#include "../assert.hpp"
-#include "../types.hpp"
-#include "./wnaf.hpp"
 
 namespace barretenberg
 {
@@ -117,7 +117,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         }
     }
 
-    static inline affine_element decompress(const typename coordinate_field::field_t &compressed)
+    static inline affine_element decompress(const typename coordinate_field::field_t& compressed)
     {
         uint64_t y_sign = compressed.data[3] >> 63UL;
         affine_element result;
@@ -159,8 +159,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         return decompress(compressed);
     }
 
-    template <size_t N>
-    static inline std::array<affine_element, N> derive_generators()
+    template <size_t N> static inline std::array<affine_element, N> derive_generators()
     {
         std::array<affine_element, N> generators;
         size_t count = 0;
@@ -352,7 +351,10 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     }
     // add: 10 mul_w_o_reduction 1 mul, 5 sqr
 
-    static inline void mixed_add_or_sub_inner(const element& p1, const affine_element& p2, element& p3, const uint64_t predicate) noexcept
+    static inline void mixed_add_or_sub_inner(const element& p1,
+                                              const affine_element& p2,
+                                              element& p3,
+                                              const uint64_t predicate) noexcept
     {
         typename coordinate_field::field_t T0;
         typename coordinate_field::field_t T1;
@@ -439,7 +441,6 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         coordinate_field::reduce_once(p3.y, p3.y);
     }
 
-
     static inline void mixed_add(const element& p1, const affine_element& p2, element& p3) noexcept
     {
         // TODO: quantitavely check if __builtin_expect helps here
@@ -458,7 +459,10 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         mixed_add_inner(p1, p2, p3);
     }
 
-    static inline void mixed_add_or_sub(const element& p1, const affine_element& p2, element& p3, const uint64_t predicate) noexcept
+    static inline void mixed_add_or_sub(const element& p1,
+                                        const affine_element& p2,
+                                        element& p3,
+                                        const uint64_t predicate) noexcept
     {
         // TODO: quantitavely check if __builtin_expect helps here
         // if (__builtin_expect(((p1.y.data[3] >> 63)), 0))
@@ -478,8 +482,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     static inline void add(const element& p1, const element& p2, element& p3)
     {
         bool p1_zero = coordinate_field::is_msb_set(p1.y);
-        bool p2_zero = coordinate_field::is_msb_set(
-            p2.y); 
+        bool p2_zero = coordinate_field::is_msb_set(p2.y);
         if (__builtin_expect((p1_zero || p2_zero), 0))
         {
             if (p1_zero && !p2_zero)
@@ -812,7 +815,6 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         return work_element;
     }
 
-
     static inline element group_exponentiation_endo(const element& a, const typename subgroup_field::field_t& scalar)
     {
         typename subgroup_field::field_t converted_scalar;
@@ -877,7 +879,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             sign = static_cast<bool>((wnaf_entry >> 31) & 1);
             copy(&lookup_table[index], &temporary);
             conditional_negate_affine(&lookup_table[index], &temporary, sign);
-        
+
             mixed_add(work_element, temporary, work_element);
 
             wnaf_entry = wnaf_table[2 * i + 1];
@@ -919,7 +921,6 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             // grotty attempt at making this constant-time
             mixed_add(dummy_element, temporary, dummy_element);
         }
-
 
         aligned_free(precomp_table);
         aligned_free(lookup_table);
@@ -1002,7 +1003,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     }
 
     // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-    static void copy(affine_element* src, affine_element* dest);
+    static void copy(const affine_element* src, affine_element* dest);
 
     static inline void copy(const affine_element& src, affine_element& dest)
     {
@@ -1010,7 +1011,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         coordinate_field::__copy(src.y, dest.y);
     }
     // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-    static void copy(element* src, element* dest);
+    static void copy(const element* src, element* dest);
 
     static inline void copy(const element& src, element& dest)
     {

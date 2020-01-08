@@ -232,11 +232,11 @@ inline void field<FieldParams>::__conditionally_negate_self(field_t& r, const ui
 {
     if (predicate)
     {
-        __sub(modulus, a, r);
+        __sub(modulus, r, r);
     }
     else
     {
-        __copy(a, r);
+        __copy(r, r);
     }
 }
 template <typename FieldParams>

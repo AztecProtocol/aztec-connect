@@ -11,30 +11,29 @@ namespace polynomial_arithmetic
 {
 namespace
 {
-    static fr::field_t* working_memory = nullptr;
-    static size_t current_size = 0;
+static fr::field_t* working_memory = nullptr;
+static size_t current_size = 0;
 
-    const auto init = []()
-    {
-        constexpr size_t max_num_elements = (1 << 20);
-        working_memory = (fr::field_t*)(aligned_alloc(64, max_num_elements * 4 * sizeof(fr::field_t)));
-        memset(working_memory, 1, max_num_elements * 4 * sizeof(fr::field_t));
-        current_size = (max_num_elements * 4);
-        return 1;
-    }();
+const auto init = []() {
+    constexpr size_t max_num_elements = (1 << 20);
+    working_memory = (fr::field_t*)(aligned_alloc(64, max_num_elements * 4 * sizeof(fr::field_t)));
+    memset(working_memory, 1, max_num_elements * 4 * sizeof(fr::field_t));
+    current_size = (max_num_elements * 4);
+    return 1;
+}();
 
-    fr::field_t* get_scratch_space(const size_t num_elements)
+fr::field_t* get_scratch_space(const size_t num_elements)
+{
+    if (num_elements > current_size)
     {
-        if (num_elements > current_size)
-        {
-            free(working_memory);
-            working_memory = (fr::field_t*)(aligned_alloc(64, num_elements * sizeof(fr::field_t)));
-            current_size = num_elements;
-        }
-        return working_memory;
+        free(working_memory);
+        working_memory = (fr::field_t*)(aligned_alloc(64, num_elements * sizeof(fr::field_t)));
+        current_size = num_elements;
     }
-
+    return working_memory;
 }
+
+} // namespace
 // namespace
 // {
 inline uint32_t reverse_bits(uint32_t x, uint32_t bit_length)
@@ -159,7 +158,7 @@ void fft_inner_parallel(fr::field_t* coeffs,
                         const fr::field_t&,
                         const std::vector<fr::field_t*>& root_table)
 {
-  // hmm  // fr::field_t* scratch_space = (fr::field_t*)aligned_alloc(64, sizeof(fr::field_t) * domain.size);
+    // hmm  // fr::field_t* scratch_space = (fr::field_t*)aligned_alloc(64, sizeof(fr::field_t) * domain.size);
     fr::field_t* scratch_space = get_scratch_space(domain.size);
 #ifndef NO_MULTITHREADING
 #pragma omp parallel
@@ -598,10 +597,9 @@ fr::field_t compute_kate_opening_coefficients(const fr::field_t* src,
     // where W(X) = F(X) - F(z) / (X - z)
     // i.e. divide by the degree-1 polynomial [-z, 1]
 
-
-    fr::field_t y{{ 0x833fc48d823f272cUL, 0x2d270d45f1181294UL, 0xcf135e7506a45d63UL, 0x02UL }};
+    fr::field_t y{ { 0x833fc48d823f272cUL, 0x2d270d45f1181294UL, 0xcf135e7506a45d63UL, 0x02UL } };
     y = fr::to_montgomery_form(y);
-    fr::field_t b{{ 17, 0, 0, 0 }};
+    fr::field_t b{ { 17, 0, 0, 0 } };
     b = fr::to_montgomery_form(b);
     b = fr::neg(b);
 
@@ -663,12 +661,12 @@ barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluatio
 }
 
 // Convert an fft with `current_size` point evaluations, to one with `current_size >> compress_factor` point evaluations
-void compress_fft(const fr::field_t* src, fr::field_t* dest, const size_t current_size, const size_t compress_factor)
+void compress_fft(const fr::field_t* src, fr::field_t* dest, const size_t cur_size, const size_t compress_factor)
 {
     // iterate from top to bottom, allows `dest` to overlap with `src`
     size_t log2_compress_factor = (size_t)log2(compress_factor);
     ASSERT(1UL << log2_compress_factor == compress_factor);
-    size_t new_size = current_size >> log2_compress_factor;
+    size_t new_size = cur_size >> log2_compress_factor;
     for (size_t i = 0; i < new_size; ++i)
     {
         fr::__copy(src[i << log2_compress_factor], dest[i]);
