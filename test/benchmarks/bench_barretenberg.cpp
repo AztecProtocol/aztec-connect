@@ -191,8 +191,6 @@ waffle::Prover plonk_circuit_states[8]{
     waffle::Prover(START * 16), waffle::Prover(START * 32), waffle::Prover(START * 64), waffle::Prover(START * 128),
 };
 
-constexpr size_t NUM_THREADS = 8;
-
 void generate_scalars(fr::field_t* scalars)
 {
     fr::field_t T0 = fr::random_element();
@@ -284,15 +282,24 @@ void new_plonk_scalar_multiplications_bench(State& state) noexcept
     for (auto _ : state)
     {
         uint64_t before = rdtsc();
-        g1::element a = scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES);
-        g1::element b = scalar_multiplication::pippenger(&globals.scalars[1], &globals.reference_string.monomials[0], MAX_GATES);
-        g1::element c = scalar_multiplication::pippenger(&globals.scalars[2], &globals.reference_string.monomials[0], MAX_GATES);
-        g1::element d = scalar_multiplication::pippenger(&globals.scalars[3], &globals.reference_string.monomials[0], MAX_GATES);
-        g1::element e = scalar_multiplication::pippenger(&globals.scalars[4], &globals.reference_string.monomials[0], MAX_GATES);
-        g1::element f = scalar_multiplication::pippenger(&globals.scalars[5], &globals.reference_string.monomials[0], MAX_GATES);
-        g1::element g = scalar_multiplication::pippenger(&globals.scalars[6], &globals.reference_string.monomials[0], MAX_GATES);
-        g1::element h = scalar_multiplication::pippenger(&globals.scalars[7], &globals.reference_string.monomials[0], MAX_GATES);
-        g1::element i = scalar_multiplication::pippenger(&globals.scalars[8], &globals.reference_string.monomials[0], MAX_GATES);
+        g1::element a =
+            scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES);
+        g1::element b =
+            scalar_multiplication::pippenger(&globals.scalars[1], &globals.reference_string.monomials[0], MAX_GATES);
+        g1::element c =
+            scalar_multiplication::pippenger(&globals.scalars[2], &globals.reference_string.monomials[0], MAX_GATES);
+        g1::element d =
+            scalar_multiplication::pippenger(&globals.scalars[3], &globals.reference_string.monomials[0], MAX_GATES);
+        g1::element e =
+            scalar_multiplication::pippenger(&globals.scalars[4], &globals.reference_string.monomials[0], MAX_GATES);
+        g1::element f =
+            scalar_multiplication::pippenger(&globals.scalars[5], &globals.reference_string.monomials[0], MAX_GATES);
+        g1::element g =
+            scalar_multiplication::pippenger(&globals.scalars[6], &globals.reference_string.monomials[0], MAX_GATES);
+        g1::element h =
+            scalar_multiplication::pippenger(&globals.scalars[7], &globals.reference_string.monomials[0], MAX_GATES);
+        g1::element i =
+            scalar_multiplication::pippenger(&globals.scalars[8], &globals.reference_string.monomials[0], MAX_GATES);
         uint64_t after = rdtsc();
         count += (after - before);
         ++k;
@@ -313,10 +320,8 @@ void new_plonk_scalar_multiplications_bench(State& state) noexcept
     printf("plonk clock cycles = %" PRIu64 "\n", (avg_cycles));
     printf("pippenger clock cycles = %" PRIu64 "\n", (avg_cycles / 9));
     printf("pippenger clock cycles per scalar mul = %" PRIu64 "\n", (avg_cycles / (9 * MAX_GATES)));
-
 }
 BENCHMARK(new_plonk_scalar_multiplications_bench);
-
 
 void new_pippenger_one_million_batched_scalar_multiplications_bench(State& state) noexcept
 {
@@ -336,7 +341,6 @@ void new_pippenger_one_million_batched_scalar_multiplications_bench(State& state
 }
 BENCHMARK(new_pippenger_one_million_batched_scalar_multiplications_bench);
 
-
 void fft_bench_parallel(State& state) noexcept
 {
     for (auto _ : state)
@@ -344,7 +348,6 @@ void fft_bench_parallel(State& state) noexcept
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::fft(globals.data, plonk_circuit_states[idx].circuit_state.large_domain);
     }
-
 }
 BENCHMARK(fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
 
