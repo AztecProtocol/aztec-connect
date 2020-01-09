@@ -584,6 +584,9 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, c
     case 4:
         result = pippenger_internal<1 << 4>(points, scalars);
         break;
+    case 3:
+        result = pippenger_internal<1 << 3>(points, scalars);
+        break;
     }
 
     if ((1UL << log2_initial_points) == num_initial_points)
