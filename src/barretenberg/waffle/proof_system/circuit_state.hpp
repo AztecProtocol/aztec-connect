@@ -7,9 +7,9 @@ namespace waffle {
 class CircuitFFTState {
   public:
     CircuitFFTState(const size_t n)
-        : small_domain(n)
-        , mid_domain(2 * n)
-        , large_domain(4 * n)
+        : small_domain(n, n)
+        , mid_domain(2 * n, n > min_thread_block ? n : 2 * n)
+        , large_domain(4 * n, n > min_thread_block ? n : 4 * n)
     {
         if (n != 0) {
             small_domain.compute_lookup_table();
@@ -47,5 +47,7 @@ class CircuitFFTState {
     barretenberg::evaluation_domain small_domain;
     barretenberg::evaluation_domain mid_domain;
     barretenberg::evaluation_domain large_domain;
+
+    static constexpr size_t min_thread_block = 4UL;
 };
 } // namespace waffle

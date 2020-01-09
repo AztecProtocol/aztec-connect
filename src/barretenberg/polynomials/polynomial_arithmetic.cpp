@@ -5,10 +5,31 @@
 #include <math.h>
 #include <memory.h>
 
-namespace barretenberg
+namespace barretenberg {
+namespace polynomial_arithmetic {
+namespace {
+static fr::field_t* working_memory = nullptr;
+static size_t current_size = 0;
+
+const auto init = []() {
+    constexpr size_t max_num_elements = (1 << 20);
+    working_memory = (fr::field_t*)(aligned_alloc(64, max_num_elements * 4 * sizeof(fr::field_t)));
+    memset(working_memory, 1, max_num_elements * 4 * sizeof(fr::field_t));
+    current_size = (max_num_elements * 4);
+    return 1;
+}();
+
+fr::field_t* get_scratch_space(const size_t num_elements)
 {
-namespace polynomial_arithmetic
-{
+    if (num_elements > current_size) {
+        free(working_memory);
+        working_memory = (fr::field_t*)(aligned_alloc(64, num_elements * sizeof(fr::field_t)));
+        current_size = num_elements;
+    }
+    return working_memory;
+}
+
+} // namespace
 // namespace
 // {
 inline uint32_t reverse_bits(uint32_t x, uint32_t bit_length)
@@ -25,8 +46,7 @@ void copy_polynomial(fr::field_t* src, fr::field_t* dest, size_t num_src_coeffic
     // TODO: fiddle around with avx asm to see if we can speed up
     memcpy((void*)dest, (void*)src, num_src_coefficients * sizeof(fr::field_t));
 
-    if (num_target_coefficients > num_src_coefficients)
-    {
+    if (num_target_coefficients > num_src_coefficients) {
         // fill out the polynomial coefficients with zeroes
         memset((void*)(dest + num_src_coefficients),
                0,
@@ -40,12 +60,10 @@ void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::
     size_t log2_size = (size_t)log2(domain_size);
     // efficiently separate odd and even indices - (An introduction to algorithms, section 30.3)
 
-    for (size_t i = 0; i <= domain_size; ++i)
-    {
+    for (size_t i = 0; i <= domain_size; ++i) {
         uint32_t swap_index = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)log2_size);
         // TODO: should probably use CMOV here insead of an if statement
-        if (i < swap_index)
-        {
+        if (i < swap_index) {
             fr::__swap(coeffs[i], coeffs[swap_index]);
         }
     }
@@ -56,20 +74,16 @@ void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::
     // two modular reductions from the main loop
 
     // perform first butterfly iteration explicitly: x0 = x0 + x1, x1 = x0 - x1
-    for (size_t k = 0; k < domain_size; k += 2)
-    {
+    for (size_t k = 0; k < domain_size; k += 2) {
         fr::__copy(coeffs[k + 1], temp);
         fr::__sub_with_coarse_reduction(coeffs[k], coeffs[k + 1], coeffs[k + 1]);
         fr::__add_with_coarse_reduction(temp, coeffs[k], coeffs[k]);
     }
 
-    for (size_t m = 2; m < domain_size; m *= 2)
-    {
+    for (size_t m = 2; m < domain_size; m *= 2) {
         const size_t i = (size_t)log2(m);
-        for (size_t k = 0; k < domain_size; k += (2 * m))
-        {
-            for (size_t j = 0; j < m; ++j)
-            {
+        for (size_t k = 0; k < domain_size; k += (2 * m)) {
+            for (size_t j = 0; j < m; ++j) {
                 fr::__mul_with_coarse_reduction(root_table[i - 1][j], coeffs[k + j + m], temp);
                 fr::__sub_with_coarse_reduction(coeffs[k + j], temp, coeffs[k + j + m]);
                 fr::__add_with_coarse_reduction(coeffs[k + j], temp, coeffs[k + j]);
@@ -81,20 +95,20 @@ void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::
 void scale_by_generator(fr::field_t* coeffs,
                         const evaluation_domain& domain,
                         const fr::field_t& generator_start,
-                        const fr::field_t& generator_shift)
+                        const fr::field_t& generator_shift,
+                        const size_t generator_size)
 {
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
-    for (size_t j = 0; j < domain.num_threads; ++j)
-    {
+    for (size_t j = 0; j < domain.num_threads; ++j) {
         fr::field_t work_generator;
         fr::field_t thread_shift;
-        fr::__pow_small(generator_shift, j * domain.thread_size, thread_shift);
+        fr::__pow_small(generator_shift, j * (generator_size / domain.num_threads), thread_shift);
         fr::__mul_with_coarse_reduction(generator_start, thread_shift, work_generator);
-        size_t offset = j * domain.thread_size;
-        for (size_t i = offset; i < offset + domain.thread_size; ++i)
-        {
+        const size_t offset = j * (generator_size / domain.num_threads);
+        const size_t end = offset + (generator_size / domain.num_threads);
+        for (size_t i = offset; i < end; ++i) {
             fr::__mul(coeffs[i], work_generator, coeffs[i]);
             fr::__mul_with_coarse_reduction(work_generator, generator_shift, work_generator);
         }
@@ -113,15 +127,13 @@ void compute_multiplicative_subgroup(const size_t log2_subgroup_size,
     // Step 2: compute the cofactor term g^n
     fr::field_t accumulator;
     fr::__copy(fr::multiplicative_generator, accumulator);
-    for (size_t i = 0; i < src_domain.log2_size; ++i)
-    {
+    for (size_t i = 0; i < src_domain.log2_size; ++i) {
         fr::__sqr(accumulator, accumulator);
     }
 
     // Step 3: fill array with 4 values of (g.X)^n - 1, scaled by the cofactor
     fr::__copy(accumulator, subgroup_roots[0]); // subgroup_root, accumulator, subgroup_roots[1]);
-    for (size_t i = 1; i < subgroup_size; ++i)
-    {
+    for (size_t i = 1; i < subgroup_size; ++i) {
         fr::__mul(subgroup_roots[i - 1], subgroup_root, subgroup_roots[i]);
     }
 }
@@ -131,7 +143,8 @@ void fft_inner_parallel(fr::field_t* coeffs,
                         const fr::field_t&,
                         const std::vector<fr::field_t*>& root_table)
 {
-    fr::field_t* scratch_space = (fr::field_t*)aligned_alloc(64, sizeof(fr::field_t) * domain.size);
+    // hmm  // fr::field_t* scratch_space = (fr::field_t*)aligned_alloc(64, sizeof(fr::field_t) * domain.size);
+    fr::field_t* scratch_space = get_scratch_space(domain.size);
 #ifndef NO_MULTITHREADING
 #pragma omp parallel
 #endif
@@ -141,10 +154,10 @@ void fft_inner_parallel(fr::field_t* coeffs,
 #ifndef NO_MULTITHREADING
 #pragma omp for
 #endif
-        for (size_t j = 0; j < domain.num_threads; ++j)
-        {
-            for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i)
-            {
+        for (size_t j = 0; j < domain.num_threads; ++j) {
+            for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i) {
+                uint32_t next_index = (uint32_t)reverse_bits((uint32_t)i + 1, (uint32_t)domain.log2_size);
+                __builtin_prefetch(&coeffs[next_index]);
                 // in order to parallelize this part, we want to make sure that we're writing to memory in a sequential
                 // manner so that we don't try to write the same cache line from two different threads (reading is
                 // fine). We do a straight copy instead of a swap, so that there's no inter-thread communication
@@ -157,11 +170,9 @@ void fft_inner_parallel(fr::field_t* coeffs,
 #ifndef NO_MULTITHREADING
 #pragma omp for
 #endif
-        for (size_t j = 0; j < domain.num_threads; ++j)
-        {
+        for (size_t j = 0; j < domain.num_threads; ++j) {
             fr::field_t temp;
-            for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); i += 2)
-            {
+            for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); i += 2) {
                 fr::__copy(scratch_space[i + 1], temp);
                 fr::__sub_with_coarse_reduction(scratch_space[i], scratch_space[i + 1], scratch_space[i + 1]);
                 fr::__add_with_coarse_reduction(temp, scratch_space[i], scratch_space[i]);
@@ -170,20 +181,17 @@ void fft_inner_parallel(fr::field_t* coeffs,
 
         // hard code exception for when the domain size is tiny - we won't execute the next loop, so need to manually
         // reduce + copy
-        if (domain.size <= 2)
-        {
+        if (domain.size <= 2) {
             fr::reduce_once(scratch_space[0], coeffs[0]);
             fr::reduce_once(scratch_space[1], coeffs[1]);
         }
 
         // outer FFT loop
-        for (size_t m = 2; m < (domain.size); m <<= 1)
-        {
+        for (size_t m = 2; m < (domain.size); m <<= 1) {
 #ifndef NO_MULTITHREADING
 #pragma omp for
 #endif
-            for (size_t j = 0; j < domain.num_threads; ++j)
-            {
+            for (size_t j = 0; j < domain.num_threads; ++j) {
                 fr::field_t temp;
 
                 // Ok! So, what's going on here? This is the inner loop of the FFT algorithm, and we want to break it
@@ -233,21 +241,16 @@ void fft_inner_parallel(fr::field_t* coeffs,
                 // Finally, we want to treat the final round differently from the others,
                 // so that we can reduce out of our 'coarse' reduction and store the output in `coeffs` instead of
                 // `scratch_space`
-                if (m != (domain.size >> 1))
-                {
-                    for (size_t i = start; i < end; ++i)
-                    {
+                if (m != (domain.size >> 1)) {
+                    for (size_t i = start; i < end; ++i) {
                         size_t k1 = (i & index_mask) << 1;
                         size_t j1 = i & block_mask;
                         fr::__mul_with_coarse_reduction(round_roots[j1], scratch_space[k1 + j1 + m], temp);
                         fr::__sub_with_coarse_reduction(scratch_space[k1 + j1], temp, scratch_space[k1 + j1 + m]);
                         fr::__add_with_coarse_reduction(scratch_space[k1 + j1], temp, scratch_space[k1 + j1]);
                     }
-                }
-                else
-                {
-                    for (size_t i = start; i < end; ++i)
-                    {
+                } else {
+                    for (size_t i = start; i < end; ++i) {
                         size_t k1 = (i & index_mask) << 1;
                         size_t j1 = i & block_mask;
                         fr::__mul_with_coarse_reduction(round_roots[j1], scratch_space[k1 + j1 + m], temp);
@@ -260,7 +263,6 @@ void fft_inner_parallel(fr::field_t* coeffs,
             }
         }
     }
-    aligned_free(scratch_space);
 }
 
 void fft(fr::field_t* coeffs, const evaluation_domain& domain)
@@ -286,7 +288,7 @@ void fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, con
 
 void coset_fft(fr::field_t* coeffs, const evaluation_domain& domain)
 {
-    scale_by_generator(coeffs, domain, fr::one, fr::multiplicative_generator);
+    scale_by_generator(coeffs, domain, fr::one, fr::multiplicative_generator, domain.generator_size);
     fft(coeffs, domain);
 }
 
@@ -294,7 +296,7 @@ void coset_fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domai
 {
     fr::field_t start = fr::one;
     fr::__mul(start, constant, start);
-    scale_by_generator(coeffs, domain, start, fr::multiplicative_generator);
+    scale_by_generator(coeffs, domain, start, fr::multiplicative_generator, domain.generator_size);
     fft(coeffs, domain);
 }
 
@@ -311,7 +313,7 @@ void ifft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, co
 void coset_ifft(fr::field_t* coeffs, const evaluation_domain& domain)
 {
     ifft(coeffs, domain);
-    scale_by_generator(coeffs, domain, fr::one, fr::multiplicative_generator_inverse);
+    scale_by_generator(coeffs, domain, fr::one, fr::multiplicative_generator_inverse, domain.size);
 }
 
 void add(const fr::field_t* a_coeffs,
@@ -347,16 +349,14 @@ fr::field_t evaluate(const fr::field_t* coeffs, const fr::field_t& z, const size
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
-    for (size_t j = 0; j < num_threads; ++j)
-    {
+    for (size_t j = 0; j < num_threads; ++j) {
         fr::field_t z_acc;
         fr::field_t work_var;
         fr::__pow_small(z, j * range_per_thread, z_acc);
         size_t offset = j * range_per_thread;
         evaluations[j] = fr::zero;
         size_t end = (j == num_threads - 1) ? offset + range_per_thread + leftovers : offset + range_per_thread;
-        for (size_t i = offset; i < end; ++i)
-        {
+        for (size_t i = offset; i < end; ++i) {
             fr::__mul(coeffs[i], z_acc, work_var);
             fr::__add(evaluations[j], work_var, evaluations[j]);
             fr::__mul_with_coarse_reduction(z_acc, z, z_acc);
@@ -364,8 +364,7 @@ fr::field_t evaluate(const fr::field_t* coeffs, const fr::field_t& z, const size
     }
 
     fr::field_t r = fr::zero;
-    for (size_t j = 0; j < num_threads; ++j)
-    {
+    for (size_t j = 0; j < num_threads; ++j) {
         fr::__add(r, evaluations[j], r);
     }
     delete[] evaluations;
@@ -401,15 +400,13 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
-    for (size_t j = 0; j < target_domain.num_threads; ++j)
-    {
+    for (size_t j = 0; j < target_domain.num_threads; ++j) {
         fr::field_t work_root;
         fr::field_t root_shift;
         fr::__pow_small(multiplicand, j * target_domain.thread_size, root_shift);
         fr::__mul(fr::multiplicative_generator, root_shift, work_root);
         size_t offset = j * target_domain.thread_size;
-        for (size_t i = offset; i < offset + target_domain.thread_size; ++i)
-        {
+        for (size_t i = offset; i < offset + target_domain.thread_size; ++i) {
             fr::__sub(work_root, one, l_1_coefficients[i]);
             fr::__mul_with_coarse_reduction(work_root, multiplicand, work_root);
         }
@@ -439,34 +436,25 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
 
     // Each element of `subgroup_roots[i]` contains some root wi^n
     // want to compute (1/n)(wi^n - 1)
-    for (size_t i = 0; i < subgroup_size; ++i)
-    {
+    for (size_t i = 0; i < subgroup_size; ++i) {
         fr::__sub(subgroup_roots[i], fr::one, subgroup_roots[i]);
         fr::__mul(subgroup_roots[i], src_domain.domain_inverse, subgroup_roots[i]);
     }
     // TODO: this is disgusting! Fix it fix it fix it fix it...
-    if (subgroup_size >= target_domain.thread_size)
-    {
-        for (size_t i = 0; i < target_domain.size; i += subgroup_size)
-        {
-            for (size_t j = 0; j < subgroup_size; ++j)
-            {
+    if (subgroup_size >= target_domain.thread_size) {
+        for (size_t i = 0; i < target_domain.size; i += subgroup_size) {
+            for (size_t j = 0; j < subgroup_size; ++j) {
                 fr::__mul(l_1_coefficients[i + j], subgroup_roots[j], l_1_coefficients[i + j]);
             }
         }
-    }
-    else
-    {
+    } else {
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
-        for (size_t k = 0; k < target_domain.num_threads; ++k)
-        {
+        for (size_t k = 0; k < target_domain.num_threads; ++k) {
             size_t offset = k * target_domain.thread_size;
-            for (size_t i = offset; i < offset + target_domain.thread_size; i += subgroup_size)
-            {
-                for (size_t j = 0; j < subgroup_size; ++j)
-                {
+            for (size_t i = offset; i < offset + target_domain.thread_size; i += subgroup_size) {
+                for (size_t j = 0; j < subgroup_size; ++j) {
                     fr::__mul(l_1_coefficients[i + j], subgroup_roots[j], l_1_coefficients[i + j]);
                 }
             }
@@ -498,8 +486,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
     compute_multiplicative_subgroup(log2_subgroup_size, src_domain, &subgroup_roots[0]);
 
     // Step 3: fill array with values of (g.X)^n - 1, scaled by the cofactor
-    for (size_t i = 0; i < subgroup_size; ++i)
-    {
+    for (size_t i = 0; i < subgroup_size; ++i) {
         fr::__sub(subgroup_roots[i], fr::one, subgroup_roots[i]);
     }
 
@@ -515,39 +502,31 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
     // Compute first value of g.w_i
 
     // Step 5: iterate over point evaluations, scaling each one by the inverse of the vanishing polynomial
-    if (subgroup_size >= target_domain.thread_size)
-    {
+    if (subgroup_size >= target_domain.thread_size) {
         fr::field_t work_root;
         fr::__copy(fr::multiplicative_generator, work_root);
         fr::field_t T0;
-        for (size_t i = 0; i < target_domain.size; i += subgroup_size)
-        {
-            for (size_t j = 0; j < subgroup_size; ++j)
-            {
+        for (size_t i = 0; i < target_domain.size; i += subgroup_size) {
+            for (size_t j = 0; j < subgroup_size; ++j) {
                 fr::__mul(coeffs[i + j], subgroup_roots[j], coeffs[i + j]);
                 fr::__add_without_reduction(work_root, numerator_constant, T0);
                 fr::__mul(coeffs[i + j], T0, coeffs[i + j]);
                 fr::__mul_with_coarse_reduction(work_root, target_domain.root, work_root);
             }
         }
-    }
-    else
-    {
+    } else {
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
-        for (size_t k = 0; k < target_domain.num_threads; ++k)
-        {
+        for (size_t k = 0; k < target_domain.num_threads; ++k) {
             size_t offset = k * target_domain.thread_size;
             fr::field_t root_shift;
             fr::field_t work_root;
             fr::__pow_small(target_domain.root, offset, root_shift);
             fr::__mul(fr::multiplicative_generator, root_shift, work_root);
             fr::field_t T0;
-            for (size_t i = offset; i < offset + target_domain.thread_size; i += subgroup_size)
-            {
-                for (size_t j = 0; j < subgroup_size; ++j)
-                {
+            for (size_t i = offset; i < offset + target_domain.thread_size; i += subgroup_size) {
+                for (size_t j = 0; j < subgroup_size; ++j) {
                     fr::__mul(coeffs[i + j], subgroup_roots[j], coeffs[i + j]);
                     fr::__add(work_root, numerator_constant, T0);
                     fr::__mul(coeffs[i + j], T0, coeffs[i + j]);
@@ -568,6 +547,12 @@ fr::field_t compute_kate_opening_coefficients(const fr::field_t* src,
     // where W(X) = F(X) - F(z) / (X - z)
     // i.e. divide by the degree-1 polynomial [-z, 1]
 
+    fr::field_t y{ { 0x833fc48d823f272cUL, 0x2d270d45f1181294UL, 0xcf135e7506a45d63UL, 0x02UL } };
+    y = fr::to_montgomery_form(y);
+    fr::field_t b{ { 17, 0, 0, 0 } };
+    b = fr::to_montgomery_form(b);
+    b = fr::neg(b);
+
     // We assume that the commitment is well-formed and that there is no remainder term.
     // Under these conditions we can perform this polynomial division in linear time with good constants
 
@@ -581,8 +566,7 @@ fr::field_t compute_kate_opening_coefficients(const fr::field_t* src,
     // to convert out of montgomery form. So, we can use lazy reduction techniques here without triggering overflows
     fr::__sub_with_coarse_reduction(src[0], f, dest[0]);
     fr::__mul_with_coarse_reduction(dest[0], divisor, dest[0]);
-    for (size_t i = 1; i < n; ++i)
-    {
+    for (size_t i = 1; i < n; ++i) {
         fr::__sub_with_coarse_reduction(src[i], dest[i - 1], dest[i]);
         fr::__mul_with_coarse_reduction(dest[i], divisor, dest[i]);
     }
@@ -597,8 +581,7 @@ barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluatio
     fr::field_t one = fr::one;
     fr::field_t z_pow;
     fr::__copy(z, z_pow);
-    for (size_t i = 0; i < domain.log2_size; ++i)
-    {
+    for (size_t i = 0; i < domain.log2_size; ++i) {
         fr::__sqr(z_pow, z_pow);
     }
 
@@ -626,14 +609,13 @@ barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluatio
 }
 
 // Convert an fft with `current_size` point evaluations, to one with `current_size >> compress_factor` point evaluations
-void compress_fft(const fr::field_t* src, fr::field_t* dest, const size_t current_size, const size_t compress_factor)
+void compress_fft(const fr::field_t* src, fr::field_t* dest, const size_t cur_size, const size_t compress_factor)
 {
     // iterate from top to bottom, allows `dest` to overlap with `src`
     size_t log2_compress_factor = (size_t)log2(compress_factor);
     ASSERT(1UL << log2_compress_factor == compress_factor);
-    size_t new_size = current_size >> log2_compress_factor;
-    for (size_t i = 0; i < new_size; ++i)
-    {
+    size_t new_size = cur_size >> log2_compress_factor;
+    for (size_t i = 0; i < new_size; ++i) {
         fr::__copy(src[i << log2_compress_factor], dest[i]);
     }
 }

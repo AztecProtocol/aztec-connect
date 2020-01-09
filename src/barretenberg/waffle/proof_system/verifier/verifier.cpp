@@ -4,7 +4,7 @@
 #include "../../../curves/bn254/g1.hpp"
 #include "../../../curves/bn254/g2.hpp"
 #include "../../../curves/bn254/pairing.hpp"
-#include "../../../curves/bn254/scalar_multiplication.hpp"
+#include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
 #include "../../../polynomials/polynomial_arithmetic.hpp"
 
@@ -295,7 +295,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof& proof)
     elements.emplace_back(SIGMA_3);
     scalars.emplace_back(linear_terms.sigma_3);
 
-    elements.emplace_back(g1::affine_one());
+    elements.emplace_back(g1::affine_one);
     scalars.emplace_back(batch_evaluation);
 
     if (g1::on_curve(proof.PI_Z_OMEGA)) {

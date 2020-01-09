@@ -211,6 +211,34 @@ TEST(fr, invert_one_is_one)
     EXPECT_EQ(fr::eq(result, fr::one), true);
 }
 
+
+TEST(fr, sqrt)
+{
+    fr::field_t input = fr::one;
+    fr::field_t root;
+    fr::field_t result;
+    fr::__sqrt(input, root);
+    fr::__sqr(root, result);
+    for (size_t j = 0; j < 4; ++j)
+    {
+        EXPECT_EQ(result.data[j], input.data[j]);
+    }
+}
+
+TEST(fr, sqrt_random)
+{
+    size_t n = 1024;
+    for (size_t i = 0; i < n; ++i)
+    {
+        fr::field_t input = fr::random_element();
+        fr::__sqr(input, input);
+        fr::field_t root_test;
+        fr::__sqrt(input, root_test);
+        fr::__sqr(root_test, root_test);
+        EXPECT_EQ(fr::eq(root_test, input), true);
+    }
+}
+
 TEST(fr, one_and_zero)
 {
     fr::field_t result;

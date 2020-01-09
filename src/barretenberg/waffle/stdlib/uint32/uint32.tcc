@@ -229,8 +229,8 @@ uint32<ComposerContext>::uint32(const field_t<ComposerContext>& other)
     ASSERT(context != nullptr);
     uint64_t additive_temp = barretenberg::fr::from_montgomery_form(other.additive_constant).data[0];
     uint64_t multiplicative_temp = barretenberg::fr::from_montgomery_form(other.multiplicative_constant).data[0];
-    ASSERT(additive_temp < (1 << 32));
-    ASSERT(multiplicative_temp < (1 << 32));
+    ASSERT(additive_temp < (1ULL << 32ULL));
+    ASSERT(multiplicative_temp < (1ULL << 32ULL));
     additive_constant = static_cast<uint32_t>(additive_temp);
     multiplicative_constant = static_cast<uint32_t>(multiplicative_temp);
 }

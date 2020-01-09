@@ -252,17 +252,42 @@ inline void field<FieldParams>::__sub_with_coarse_reduction(const field_t &a, co
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
+/**
+ * negate if predicate is true
+ **/
+template <typename FieldParams>
+inline void field<FieldParams>::__conditionally_negate_self(field_t &r, const uint64_t predicate) noexcept
+{
+    // TODO use literals instead of memory references
+    __asm__ (
+        CLEAR_FLAGS("%%r8")
+        LOAD_FIELD_ELEMENT("%1", "%%r8", "%%r9", "%%r10", "%%r11")
+        "movq %[modulus_0], %%r12 \n\t"
+        "movq %[modulus_1], %%r13 \n\t"
+        "movq %[modulus_2], %%r14 \n\t"
+        "movq %[modulus_3], %%r15 \n\t"
+        "subq %%r8, %%r12 \n\t"
+        "sbbq %%r9, %%r13 \n\t"
+        "sbbq %%r10, %%r14 \n\t"
+        "sbbq %%r11, %%r15 \n\t"
+        "btq $0, %0 \n\t"
+        "cmovcq %%r12, %%r8 \n\t"
+        "cmovcq %%r13, %%r9 \n\t"
+        "cmovcq %%r14, %%r10 \n\t"
+        "cmovcq %%r15, %%r11 \n\t"
+        STORE_FIELD_ELEMENT("%1", "%%r8", "%%r9", "%%r10", "%%r11")
+        :
+        : "r"(predicate), "r"(&r), [modulus_0] "i"(FieldParams::modulus_0), [modulus_1] "i"(FieldParams::modulus_1), [modulus_2] "i"(FieldParams::modulus_2), [modulus_3] "i"(FieldParams::modulus_3)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
 
 /**
  * Copy `a` into `r`. If `predicate == true`, subtract modulus from r
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__conditionally_subtract_double_modulus(const field_t &a, field_t &r, const uint64_t predicate) noexcept
+inline void field<FieldParams>::__conditionally_subtract_from_double_modulus(const field_t &a, field_t &r, const uint64_t predicate) noexcept
 {
-    constexpr uint64_t twice_modulus_3 = FieldParams::twice_modulus_3;
-    constexpr uint64_t twice_modulus_2 = FieldParams::twice_modulus_2;
-    constexpr uint64_t twice_modulus_1 = FieldParams::twice_modulus_1;
-    constexpr uint64_t twice_modulus_0 = FieldParams::twice_modulus_0;
     // TODO use literals instead of memory references
     __asm__ (
         CLEAR_FLAGS("%%r8")
@@ -282,7 +307,7 @@ inline void field<FieldParams>::__conditionally_subtract_double_modulus(const fi
         "cmovcq %%r15, %%r11 \n\t"
         STORE_FIELD_ELEMENT("%2", "%%r8", "%%r9", "%%r10", "%%r11")
         :
-        : "r"(&a), "r"(predicate), "r"(&r), [modulus_0] "m"(twice_modulus_0), [modulus_1] "m"(twice_modulus_1), [modulus_2] "m"(twice_modulus_2), [modulus_3] "m"(twice_modulus_3)
+        : "r"(&a), "r"(predicate), "r"(&r), [modulus_0] "i"(FieldParams::twice_modulus_0), [modulus_1] "i"(FieldParams::twice_modulus_1), [modulus_2] "i"(FieldParams::twice_modulus_2), [modulus_3] "i"(FieldParams::twice_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 

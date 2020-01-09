@@ -17,15 +17,15 @@ inline size_t get_msb(uint32_t v)
     v |= v >> 8;
     v |= v >> 16;
 
-    return MultiplyDeBruijnBitPosition[static_cast<uint32_t>(v * 0x07C4ACDDU) >> 27U];
+    return MultiplyDeBruijnBitPosition[static_cast<uint32_t>(v * static_cast<uint32_t>(0x07C4ACDD)) >> static_cast<uint32_t>(27)];
 }
 
 inline size_t get_msb(uint128_t v)
 {
-    uint32_t lolo = static_cast<uint32_t>(v & static_cast<uint128_t>(0xffffffffUL));
-    uint32_t lohi = static_cast<uint32_t>((v >> static_cast<uint128_t>(32UL)) & static_cast<uint128_t>(0xffffffffUL));
-    uint32_t hilo = static_cast<uint32_t>((v >> static_cast<uint128_t>(64UL)) & static_cast<uint128_t>(0xffffffffUL));
-    uint32_t hihi = static_cast<uint32_t>((v >> static_cast<uint128_t>(96UL)) & static_cast<uint128_t>(0xffffffffUL));
+    uint32_t lolo = static_cast<uint32_t>(v & static_cast<uint128_t>(0xffffffffULL));
+    uint32_t lohi = static_cast<uint32_t>((v >> static_cast<uint128_t>(32ULL)) & static_cast<uint128_t>(0xffffffffULL));
+    uint32_t hilo = static_cast<uint32_t>((v >> static_cast<uint128_t>(64ULL)) & static_cast<uint128_t>(0xffffffffULL));
+    uint32_t hihi = static_cast<uint32_t>((v >> static_cast<uint128_t>(96ULL)) & static_cast<uint128_t>(0xffffffffULL));
 
     if (hihi > 0)
     {

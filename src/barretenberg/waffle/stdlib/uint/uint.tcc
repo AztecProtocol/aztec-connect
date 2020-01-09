@@ -234,8 +234,8 @@ uint<ComposerContext>::uint(size_t width, const field_t<ComposerContext>& other)
     ASSERT(context != nullptr);
     additive_constant = barretenberg::fr::from_montgomery_form(other.additive_constant).data[0];
     multiplicative_constant = barretenberg::fr::from_montgomery_form(other.multiplicative_constant).data[0];
-    ASSERT(additive_constant < (1 << width));
-    ASSERT(multiplicative_constant < (1 << width));
+    ASSERT(additive_constant < (1ULL << width));
+    ASSERT(multiplicative_constant < (1ULL << width));
 }
 
 template <typename ComposerContext>

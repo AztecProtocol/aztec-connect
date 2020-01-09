@@ -14,7 +14,7 @@ using namespace barretenberg;
 
 namespace
 {
-// constexpr size_t MIN_THREADED_SIZE = 32;
+constexpr size_t MIN_GROUP_PER_THREAD = 4;
 
 size_t compute_num_threads(const size_t size)
 {
@@ -23,7 +23,7 @@ size_t compute_num_threads(const size_t size)
 #else
     size_t num_threads = 1;
 #endif
-    if (size <= num_threads)// || size <= MIN_THREADED_SIZE)
+    if (size <= (num_threads * MIN_GROUP_PER_THREAD))
     {
         num_threads = 1;
     }
@@ -54,13 +54,14 @@ void compute_lookup_table_single(const fr::field_t& input_root, const size_t siz
 }
 }
 
-evaluation_domain::evaluation_domain(const size_t domain_size):
+evaluation_domain::evaluation_domain(const size_t domain_size, const size_t target_generator_size):
     size(domain_size),
     num_threads(compute_num_threads(domain_size)),
     thread_size(domain_size / num_threads),
     log2_size(static_cast<size_t>(log2(size))),
     log2_thread_size(static_cast<size_t>(log2(thread_size))),
     log2_num_threads(static_cast<size_t>(log2(num_threads))),
+    generator_size(target_generator_size ? target_generator_size : domain_size),
     root(fr::get_root_of_unity(log2_size)),
     root_inverse(fr::invert(root)),
     domain(fr::to_montgomery_form({{size,0,0,0}})),
@@ -81,6 +82,7 @@ evaluation_domain::evaluation_domain(const evaluation_domain& other):
     log2_size(static_cast<size_t>(log2(size))),
     log2_thread_size(static_cast<size_t>(log2(thread_size))),
     log2_num_threads(static_cast<size_t>(log2(num_threads))),
+    generator_size(other.generator_size),
     root(fr::get_root_of_unity(log2_size)),
     root_inverse(fr::invert(root)),
     domain(fr::to_montgomery_form({{size,0,0,0}})),
@@ -93,7 +95,7 @@ evaluation_domain::evaluation_domain(const evaluation_domain& other):
     ASSERT((1UL << log2_num_threads) == num_threads);
     if (other.roots != nullptr)
     {
-        size_t mem_size = sizeof(fr::field_t) * size * 2;
+        const size_t mem_size = sizeof(fr::field_t) * size * 2;
         roots = static_cast<fr::field_t*>(aligned_alloc(32, mem_size));
         memcpy(static_cast<void*>(roots), static_cast<void*>(other.roots), mem_size);
         round_roots.resize(log2_size - 1);
@@ -119,6 +121,7 @@ evaluation_domain::evaluation_domain(evaluation_domain&& other):
     log2_size(static_cast<size_t>(log2(size))),
     log2_thread_size(static_cast<size_t>(log2(thread_size))),
     log2_num_threads(static_cast<size_t>(log2(num_threads))),
+    generator_size(other.generator_size),
     root(fr::get_root_of_unity(log2_size)),
     root_inverse(fr::invert(root)),
     domain(fr::to_montgomery_form({{size,0,0,0}})),
@@ -135,6 +138,7 @@ evaluation_domain::evaluation_domain(evaluation_domain&& other):
 evaluation_domain& evaluation_domain::operator=(evaluation_domain &&other)
 {
     size = other.size;
+    generator_size = other.generator_size;
     num_threads = compute_num_threads(other.size);
     thread_size = other.size / num_threads;
     log2_size = static_cast<size_t>(log2(size));

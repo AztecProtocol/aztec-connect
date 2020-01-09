@@ -63,6 +63,16 @@ public:
 
     static constexpr uint64_t r_inv = 0x87d20782e4866389UL;
 
+    static constexpr uint64_t endo_g1_lo = 0x7a7bd9d4391eb18d;
+    static constexpr uint64_t endo_g1_mid = 0x4ccef014a773d2cfUL;
+    static constexpr uint64_t endo_g1_hi = 0x0000000000000002UL;
+    static constexpr uint64_t endo_g2_lo = 0xd91d232ec7e0b3d2UL;
+    static constexpr uint64_t endo_g2_mid = 0x0000000000000002UL;
+    static constexpr uint64_t endo_minus_b1_lo = 0x8211bbeb7d4f1129UL;
+    static constexpr uint64_t endo_minus_b1_mid = 0x6f4d8248eeb859fcUL;
+    static constexpr uint64_t endo_b2_lo = 0x89d3256894d213e2UL;
+    static constexpr uint64_t endo_b2_mid = 0UL;
+
     // TODO: fill these in. Currently not needed
     static constexpr uint64_t multiplicative_generator_0 = 0UL;
     static constexpr uint64_t multiplicative_generator_1 = 0UL;

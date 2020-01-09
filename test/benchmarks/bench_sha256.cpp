@@ -69,7 +69,7 @@ void preprocess_witnesses_bench(State& state) noexcept
     for (auto _ : state) {
         size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
         provers[idx] = composers[idx].preprocess();
-        printf("num bytes = %" PRIx64 ", num gates = %" PRIx64 " \n", state.range(0), composers[idx].get_num_gates());
+        printf("num bytes = %" PRIx64 ", num gates = %zu\n", state.range(0), composers[idx].get_num_gates());
     }
 }
 BENCHMARK(preprocess_witnesses_bench)->DenseRange(55, MAX_BYTES, 64);

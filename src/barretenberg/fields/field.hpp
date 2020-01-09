@@ -99,10 +99,10 @@ template <typename FieldParams> class field {
                                                             field_t& r) noexcept;
     static void __sub(const field_t& a, const field_t& b, field_t& r) noexcept;
     static void __sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) noexcept;
-    static void __conditionally_subtract_double_modulus(const field_t& a,
-                                                        field_t& r,
-                                                        const uint64_t predicate) noexcept;
-
+    static void __conditionally_subtract_from_double_modulus(const field_t& a,
+                                                             field_t& r,
+                                                             const uint64_t predicate) noexcept;
+    static void __conditionally_negate_self(field_t& r, const uint64_t predicate) noexcept;
     // compute a * b, put 512-bit result in r (do not reduce)
     static void __mul_512(const field_t& a, const field_t& b, field_wide_t& r) noexcept;
 
@@ -232,7 +232,7 @@ template <typename FieldParams> class field {
     /**
      * compute a^b mod q, return result in r
      **/
-    static inline void pow(const field_t& a, const field_t& b, field_t& r)
+    static inline void __pow(const field_t& a, const field_t& b, field_t& r)
     {
         if (eq(a, zero)) {
             __copy(zero, r);
@@ -304,10 +304,11 @@ template <typename FieldParams> class field {
         __pow_small(a, exponent, result);
         return result;
     }
+
     /**
      * compute a^{q - 2} mod q, place result in r
      **/
-    static inline void __invert(const field_t& a, field_t& r) { pow(a, modulus_minus_two, r); }
+    static inline void __invert(const field_t& a, field_t& r) { __pow(a, modulus_minus_two, r); }
 
     static inline field_t invert(const field_t& a)
     {
@@ -316,10 +317,99 @@ template <typename FieldParams> class field {
         return r;
     }
 
+    static inline void __tonelli_shanks_sqrt(const field_t& a, field_t& r)
+    {
+        // Tonelli-shanks algorithm begins by finding a field element Q and integer S,
+        // such that (p - 1) = Q.2^{s}
+
+        // We can compute the square root of a, by considering a^{(Q + 1) / 2} = R
+        // Once we have found such an R, we have
+        // R^{2} = a^{Q + 1} = a^{Q}a
+        // If a^{Q} = 1, we have found our square root.
+        // Otherwise, we have a^{Q} = t, where t is a 2^{s-1}'th root of unity.
+        // This is because t^{2^{s-1}} = a^{Q.2^{s-1}}.
+        // We know that (p - 1) = Q.w^{s}, therefore t^{2^{s-1}} = a^{(p - 1) / 2}
+        // From Euler's criterion, if a is a quadratic residue, a^{(p - 1) / 2} = 1
+        // i.e. t^{2^{s-1}} = 1
+
+        // To proceed with computing our square root, we want to transform t into a smaller subgroup,
+        // specifically, the (s-2)'th roots of unity.
+        // We do this by finding some value b,such that
+        // (t.b^2)^{2^{s-2}} = 1 and R' = R.b
+        // Finding such a b is trivial, because from Euler's criterion, we know that,
+        // for any quadratic non-residue z, z^{(p - 1) / 2} = -1
+        // i.e. z^{Q.2^{s-1}} = -1
+        // => z^Q is a 2^{s-1}'th root of -1
+        // => z^{Q^2} is a 2^{s-2}'th root of -1
+        // Since t^{2^{s-1}} = 1, we know that t^{2^{s - 2}} = -1
+        // => t.z^{Q^2} is a 2^{s - 2}'th root of unity.
+
+        // We can iteratively transform t into ever smaller subgroups, until t = 1.
+        // At each iteration, we need to find a new value for b, which we can obtain
+        // by repeatedly squaring z^{Q}
+        field_t Q_minus_one_over_two{ { FieldParams::Q_minus_one_over_two_0,
+                                        FieldParams::Q_minus_one_over_two_1,
+                                        FieldParams::Q_minus_one_over_two_2,
+                                        FieldParams::Q_minus_one_over_two_3 } };
+        // __to_montgomery_form(Q_minus_one_over_two, Q_minus_one_over_two);
+        field_t z = multiplicative_generator; // the generator is a non-residue
+        field_t b;
+        __pow(a, Q_minus_one_over_two, b); // compute a^{(Q - 1 )/ 2}
+        r = mul(a, b);                     // r = a^{(Q + 1) / 2}
+        field_t t = mul(r, b);             // t = a^{(Q - 1) / 2 + (Q + 1) / 2} = a^{Q}
+
+        // check if t is a square with euler's criterion
+        // if not, we don't have a quadratic residue and a has no square root!
+        field_t check = t;
+        for (size_t i = 0; i < FieldParams::primitive_root_log_size - 1; ++i) {
+            __sqr(check, check);
+        }
+        if (!eq(check, one)) {
+            r = zero;
+            return;
+        }
+        field_t t1;
+        __pow(z, Q_minus_one_over_two, t1);
+        field_t t2 = mul(t1, z);
+        field_t c = mul(t2, t1); // z^Q
+
+        size_t m = FieldParams::primitive_root_log_size;
+        while (!eq(t, one)) {
+            size_t i = 0;
+            field_t t2m = t;
+
+            // find the smallest value of m, such that t^{2^m} = 1
+            while (!eq(t2m, one)) {
+                __sqr(t2m, t2m);
+                i += 1;
+            }
+
+            size_t j = m - i - 1;
+            b = c;
+            while (j > 0) {
+                __sqr(b, b);
+                --j;
+            } // b = z^2^(m-i-1)
+
+            c = sqr(b);
+            t = mul(t, c);
+            r = mul(r, b);
+            m = i;
+        }
+    }
+
     /**
-     * compute a^{(q + 1) / 2}, place result in r
+     * compute a^{(q + 1) / 4}, place result in r
      **/
-    static inline void __sqrt(const field_t& a, field_t& r) { pow(a, sqrt_exponent, r); }
+    static inline void __sqrt(const field_t& a, field_t& r)
+    {
+        // if p = 3 mod 4, use exponentiation trick
+        if constexpr ((FieldParams::modulus_0 & 0x3UL) == 0x3UL) {
+            __pow(a, sqrt_exponent, r);
+        } else {
+            __tonelli_shanks_sqrt(a, r);
+        }
+    }
 
     /**
      * Get a random field element in montgomery form, place in `r`
@@ -376,21 +466,23 @@ template <typename FieldParams> class field {
 
         // TODO: these parameters only work for the bn254 coordinate field.
         // Need to shift into FieldParams and calculate correct constants for the subgroup field
-        constexpr field_t g1 = { { 0x7a7bd9d4391eb18dUL, 0x4ccef014a773d2cfUL, 0x0000000000000002UL, 0 } };
+        constexpr field_t endo_g1 = {
+            { FieldParams::endo_g1_lo, FieldParams::endo_g1_mid, FieldParams::endo_g1_hi, 0 }
+        };
 
-        constexpr field_t g2 = { { 0xd91d232ec7e0b3d7UL, 0x0000000000000002UL, 0, 0 } };
+        constexpr field_t endo_g2 = { { FieldParams::endo_g2_lo, FieldParams::endo_g2_mid, 0, 0 } };
 
-        constexpr field_t minus_b1 = { { 0x8211bbeb7d4f1128UL, 0x6f4d8248eeb859fcUL, 0, 0 } };
+        constexpr field_t endo_minus_b1 = { { FieldParams::endo_minus_b1_lo, FieldParams::endo_minus_b1_mid, 0, 0 } };
 
-        constexpr field_t b2 = { { 0x89d3256894d213e3UL, 0, 0, 0 } };
+        constexpr field_t endo_b2 = { { FieldParams::endo_b2_lo, FieldParams::endo_b2_mid, 0, 0 } };
 
         field_wide_t c1;
         field_wide_t c2;
 
         // compute c1 = (g2 * k) >> 256
-        __mul_512(g2, k, c1);
+        __mul_512(endo_g2, k, c1);
         // compute c2 = (g1 * k) >> 256
-        __mul_512(g1, k, c2);
+        __mul_512(endo_g1, k, c2);
         // (the bit shifts are implicit, as we only utilize the high limbs of c1, c2
 
         field_wide_t q1;
@@ -404,9 +496,9 @@ template <typename FieldParams> class field {
         }; // *(field_t*)((uintptr_t)(&c2) + (4 * sizeof(uint64_t)));
 
         // compute q1 = c1 * -b1
-        __mul_512(c1_hi, minus_b1, q1);
+        __mul_512(c1_hi, endo_minus_b1, q1);
         // compute q2 = c2 * b2
-        __mul_512(c2_hi, b2, q2);
+        __mul_512(c2_hi, endo_b2, q2);
 
         field_t t1 = { {
             0,
