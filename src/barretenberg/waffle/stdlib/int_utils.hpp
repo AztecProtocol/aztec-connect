@@ -2,7 +2,7 @@
 
 namespace int_utils
 {
-__extension__ typedef __int128 uint128_t;
+__extension__ using uint128_t = unsigned __int128;
 
 // from http://supertech.csail.mit.edu/papers/debruijn.pdf
 inline size_t get_msb(uint32_t v)
@@ -22,10 +22,10 @@ inline size_t get_msb(uint32_t v)
 
 inline size_t get_msb(uint128_t v)
 {
-    uint32_t lolo = static_cast<uint32_t>(v & static_cast<uint128_t>(0xffffffffUL));
-    uint32_t lohi = static_cast<uint32_t>((v >> static_cast<uint128_t>(32UL)) & static_cast<uint128_t>(0xffffffffUL));
-    uint32_t hilo = static_cast<uint32_t>((v >> static_cast<uint128_t>(64UL)) & static_cast<uint128_t>(0xffffffffUL));
-    uint32_t hihi = static_cast<uint32_t>((v >> static_cast<uint128_t>(96UL)) & static_cast<uint128_t>(0xffffffffUL));
+    uint32_t lolo = static_cast<uint32_t>(v & static_cast<uint128_t>(0xffffffffULL));
+    uint32_t lohi = static_cast<uint32_t>((v >> static_cast<uint128_t>(32ULL)) & static_cast<uint128_t>(0xffffffffULL));
+    uint32_t hilo = static_cast<uint32_t>((v >> static_cast<uint128_t>(64ULL)) & static_cast<uint128_t>(0xffffffffULL));
+    uint32_t hihi = static_cast<uint32_t>((v >> static_cast<uint128_t>(96ULL)) & static_cast<uint128_t>(0xffffffffULL));
 
     if (hihi > 0)
     {
