@@ -312,3 +312,15 @@ TEST(fq, neg)
     fq::__add(a, b, result);
     EXPECT_EQ(fq::eq(result, fq::zero), true);
 }
+
+TEST(fq, coset_generator_consistency)
+{
+    size_t num_generators = 15;
+    std::vector<fq::field_t> generators(num_generators);
+    fq::compute_coset_generators(num_generators, 1 << 30, &generators[0]);
+    EXPECT_EQ(generators.size() == num_generators, true);
+    for (size_t i = 0; i < generators.size(); ++i)
+    {
+        EXPECT_EQ(fq::eq(generators[i], fq::coset_generators[i]), true);
+    }
+}

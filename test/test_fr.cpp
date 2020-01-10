@@ -320,3 +320,15 @@ TEST(fr, batch_invert)
         EXPECT_EQ(coeffs[i].data[3], 0UL);
     }
 }
+
+TEST(fr, coset_generator_consistency)
+{
+    size_t num_generators = 15;
+    std::vector<fr::field_t> generators(num_generators);
+    fr::compute_coset_generators(num_generators, 1 << 30, &generators[0]);
+    EXPECT_EQ(generators.size() == num_generators, true);
+    for (size_t i = 0; i < generators.size(); ++i)
+    {
+        EXPECT_EQ(fr::eq(generators[i], fr::coset_generators[i]), true);
+    }
+}
