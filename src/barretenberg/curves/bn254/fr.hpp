@@ -56,8 +56,6 @@ class FrParams
     static constexpr uint64_t cube_root_2 = 0x8be4ba08b19a750aUL;
     static constexpr uint64_t cube_root_3 = 0x1cbd5653a5661c25UL;
 
-    static constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
-
     static constexpr size_t primitive_root_log_size = 28;
     static constexpr uint64_t primitive_root_0 = 0x636e735580d13d9cUL;
     static constexpr uint64_t primitive_root_1 = 0xa22bf3742445ffd6UL;
@@ -90,6 +88,31 @@ class FrParams
     static constexpr uint64_t alternate_multiplicative_generator_2 = 0x5c65ec9f484e3a89UL;
     static constexpr uint64_t alternate_multiplicative_generator_3 = 0x180a96573d3d9f8UL;
 
+    static constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
+
+    static constexpr uint64_t coset_generators_0[15]{ 0x1b0d0ef99fffffe6, 0xc7a34315efffffe1, 0x3057819e4fffffdb,
+                                                      0xdcedb5ba9fffffd6, 0x8983e9d6efffffd1, 0x361a1df33fffffcc,
+                                                      0x9ece5c7b9fffffc6, 0x4b649097efffffc1, 0xf7fac4b43fffffbc,
+                                                      0x60af033c9fffffb6, 0x0d453758efffffb1, 0xb9db6b753fffffac,
+                                                      0x66719f918fffffa7, 0xcf25de19efffffa1, 0x7bbc12363fffff9c };
+
+    static constexpr uint64_t coset_generators_1[15]{ 0xeaba68a3a32a913f, 0x21b6df39428b5e68, 0x307f6d866832bb01,
+                                                      0x677be41c0793882a, 0x9e785ab1a6f45554, 0xd574d1474655227e,
+                                                      0xe43d5f946bfc7f16, 0x1b39d62a0b5d4c40, 0x52364cbfaabe1969,
+                                                      0x60fedb0cd0657602, 0x97fb51a26fc6432c, 0xcef7c8380f271055,
+                                                      0x05f43ecdae87dd7f, 0x14bccd1ad42f3a17, 0x4bb943b073900741 };
+
+    static constexpr uint64_t coset_generators_2[15]{ 0x47d8eb76d8dd0689, 0xae478ee651564cb8, 0x5c65ec9f484e3a89,
+                                                      0xc2d4900ec0c780b7, 0x2943337e3940c6e5, 0x8fb1d6edb1ba0d13,
+                                                      0x3dd034a6a8b1fae4, 0xa43ed816212b4113, 0x0aad7b8599a48741,
+                                                      0xb8cbd93e909c7512, 0x1f3a7cae0915bb40, 0x85a9201d818f016e,
+                                                      0xec17c38cfa08479d, 0x9a362145f100356e, 0x00a4c4b569797b9c };
+
+    static constexpr uint64_t coset_generators_3[15]{ 0x15d0085520f5bbc3, 0x23da8016bafd9af2, 0x0180a96573d3d9f8,
+                                                      0x0f8b21270ddbb927, 0x1d9598e8a7e39857, 0x2ba010aa41eb7786,
+                                                      0x094639f8fac1b68c, 0x1750b1ba94c995bb, 0x255b297c2ed174eb,
+                                                      0x030152cae7a7b3f0, 0x110bca8c81af9320, 0x1f16424e1bb7724f,
+                                                      0x2d20ba0fb5bf517e, 0x0ac6e35e6e959084, 0x18d15b20089d6fb4 };
     // smallest Q such that Q * 2^{s} = (p - 1)
     static constexpr uint64_t Q_minus_one_over_two_0 = 0xCDCB848A1F0FAC9FUL;
     static constexpr uint64_t Q_minus_one_over_two_1 = 0x0C0AC2E9419F4243UL;

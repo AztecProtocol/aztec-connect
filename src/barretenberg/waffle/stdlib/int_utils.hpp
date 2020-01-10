@@ -2,7 +2,7 @@
 
 namespace int_utils
 {
-__extension__ typedef __int128 uint128_t;
+__extension__ using uint128_t = unsigned __int128;
 
 // from http://supertech.csail.mit.edu/papers/debruijn.pdf
 inline size_t get_msb(uint32_t v)

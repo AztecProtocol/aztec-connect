@@ -309,7 +309,6 @@ TEST(fq, neg)
     EXPECT_EQ(fq::eq(result, fq::zero), true);
 }
 
-
 TEST(fq, split_into_endomorphism_scalars)
 {
     fq::field_t input = {{0, 0, 0, 0}};
@@ -364,5 +363,17 @@ TEST(fq, split_into_endomorphism_scalars_simple)
     for (size_t i = 0; i < 4; ++i)
     {
         EXPECT_EQ(result.data[i], k.data[i]);
+    }
+}
+
+TEST(fq, coset_generator_consistency)
+{
+    size_t num_generators = 15;
+    std::vector<fq::field_t> generators(num_generators);
+    fq::compute_coset_generators(num_generators, 1 << 30, &generators[0]);
+    EXPECT_EQ(generators.size() == num_generators, true);
+    for (size_t i = 0; i < generators.size(); ++i)
+    {
+        EXPECT_EQ(fq::eq(generators[i], fq::coset_generators[i]), true);
     }
 }

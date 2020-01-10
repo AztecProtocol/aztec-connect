@@ -72,6 +72,23 @@ template <typename FieldParams> class field {
                                               FieldParams::primitive_root_2,
                                               FieldParams::primitive_root_3 } };
 
+    static constexpr field_t coset_generators[15]{
+        {{ FieldParams::coset_generators_0[0], FieldParams::coset_generators_1[0], FieldParams::coset_generators_2[0], FieldParams::coset_generators_3[0] }},
+        {{ FieldParams::coset_generators_0[1], FieldParams::coset_generators_1[1], FieldParams::coset_generators_2[1], FieldParams::coset_generators_3[1] }},
+        {{ FieldParams::coset_generators_0[2], FieldParams::coset_generators_1[2], FieldParams::coset_generators_2[2], FieldParams::coset_generators_3[2] }},
+        {{ FieldParams::coset_generators_0[3], FieldParams::coset_generators_1[3], FieldParams::coset_generators_2[3], FieldParams::coset_generators_3[3] }},
+        {{ FieldParams::coset_generators_0[4], FieldParams::coset_generators_1[4], FieldParams::coset_generators_2[4], FieldParams::coset_generators_3[4] }},
+        {{ FieldParams::coset_generators_0[5], FieldParams::coset_generators_1[5], FieldParams::coset_generators_2[5], FieldParams::coset_generators_3[5] }},
+        {{ FieldParams::coset_generators_0[6], FieldParams::coset_generators_1[6], FieldParams::coset_generators_2[6], FieldParams::coset_generators_3[6] }},
+        {{ FieldParams::coset_generators_0[7], FieldParams::coset_generators_1[7], FieldParams::coset_generators_2[7], FieldParams::coset_generators_3[7] }},
+        {{ FieldParams::coset_generators_0[8], FieldParams::coset_generators_1[8], FieldParams::coset_generators_2[8], FieldParams::coset_generators_3[8] }},
+        {{ FieldParams::coset_generators_0[9], FieldParams::coset_generators_1[9], FieldParams::coset_generators_2[9], FieldParams::coset_generators_3[9] }},
+        {{ FieldParams::coset_generators_0[10], FieldParams::coset_generators_1[10], FieldParams::coset_generators_2[10], FieldParams::coset_generators_3[10] }},
+        {{ FieldParams::coset_generators_0[11], FieldParams::coset_generators_1[11], FieldParams::coset_generators_2[11], FieldParams::coset_generators_3[11] }},
+        {{ FieldParams::coset_generators_0[12], FieldParams::coset_generators_1[12], FieldParams::coset_generators_2[12], FieldParams::coset_generators_3[12] }},
+        {{ FieldParams::coset_generators_0[13], FieldParams::coset_generators_1[13], FieldParams::coset_generators_2[13], FieldParams::coset_generators_3[13] }},
+        {{ FieldParams::coset_generators_0[14], FieldParams::coset_generators_1[14], FieldParams::coset_generators_2[14], FieldParams::coset_generators_3[14] }},
+    };
     /**
      * Arithmetic Methods (with return parameters)
      *
@@ -298,7 +315,7 @@ template <typename FieldParams> class field {
         __copy(accumulator, r);
     }
 
-    static inline field_t pow_small(const field_t& a, const size_t exponent)
+    static inline field_t pow_small(const field_t& a, const uint64_t exponent)
     {
         field_t result;
         __pow_small(a, exponent, result);
@@ -567,6 +584,41 @@ template <typename FieldParams> class field {
             __copy(T0, coeffs[i]);
         }
         aligned_free(temporaries);
+    }
+
+
+    static inline void compute_coset_generators(const size_t n, const uint64_t subgroup_size, field_t* result)
+    {
+        if (n > 0)
+        {
+            result[0] = (multiplicative_generator);
+        }
+        field_t work_variable = add(multiplicative_generator, one);
+
+        size_t count = 1;
+        while (count < n)
+        {
+            // work_variable contains a new field element, and we need to test that, for all previous vector elements,
+            // result[i] / work_variable is not a member of our subgroup
+            field_t work_inverse = invert(work_variable);
+            bool valid = true;
+            for (size_t j = 0; j < count; ++j)
+            {
+                field_t target_element = mul(result[j], work_inverse);
+                field_t subgroup_check = pow_small(target_element, subgroup_size);
+                if (eq(subgroup_check, one))
+                {
+                    valid = false;
+                    break;
+                }
+            }
+            if (valid)
+            {
+                result[count] = (work_variable);
+                ++count;
+            }
+            __add(work_variable, one, work_variable);
+        }
     }
 }; // class field
 

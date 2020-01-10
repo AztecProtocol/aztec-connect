@@ -110,7 +110,7 @@ void uint32<ComposerContext>::internal_logic_operation_native(
 
         bool maximum_bool =
             (bool_wires[i].witness_index == static_cast<uint32_t>(-1)) ? bool_wires[i].get_value() : true;
-        maximum_value = maximum_value + (static_cast<int_utils::uint128_t>(maximum_bool) << i);
+        maximum_value = maximum_value + static_cast<int_utils::int128_t>(static_cast<int_utils::uint128_t>(maximum_bool) << static_cast<int_utils::uint128_t>(i));
     }
     if (accumulator.witness_index == static_cast<uint32_t>(-1)) {
         additive_constant =
@@ -348,13 +348,13 @@ template <typename ComposerContext> void uint32<ComposerContext>::decompose() co
     size_t num_bits = int_utils::get_msb(maximum_value) + 1;
     bool is_constant = witness_index == static_cast<uint32_t>(-1);
     int_utils::uint128_t value =
-        is_constant ? 0UL : barretenberg::fr::from_montgomery_form(context->get_variable(witness_index)).data[0];
+        is_constant ? 0ULL : barretenberg::fr::from_montgomery_form(context->get_variable(witness_index)).data[0];
     value = value * multiplicative_constant + additive_constant;
     std::cout << is_constant << " " << num_bits << std::endl;
 
     const auto compute_field_wire = [ctx = context, is_constant, &value]() {
-        bool bit = static_cast<bool>(value & 1UL);
-        value = value >> 1UL;
+        bool bit = static_cast<bool>(value & 1ULL);
+        value = value >> 1ULL;
         bool_t result = is_constant ? bool_t(ctx, bit) : witness_t(ctx, static_cast<uint32_t>(bit));
         return result;
     };
@@ -544,8 +544,8 @@ template <typename ComposerContext> uint32<ComposerContext> uint32<ComposerConte
     bool lhs_constant = witness_index == static_cast<uint32_t>(-1);
     bool rhs_constant = other.witness_index == static_cast<uint32_t>(-1);
 
-    size_t left_shift = int_utils::get_msb(other.maximum_value) + 1UL;
-    int_utils::uint128_t negation_constant = static_cast<int_utils::uint128_t>(1UL)
+    size_t left_shift = int_utils::get_msb(other.maximum_value) + 1ULL;
+    int_utils::uint128_t negation_constant = static_cast<int_utils::uint128_t>(1ULL)
                                              << static_cast<int_utils::uint128_t>(left_shift);
 
     if (!lhs_constant && !rhs_constant && (witness_index == other.witness_index)) {
