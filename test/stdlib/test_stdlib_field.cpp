@@ -16,6 +16,7 @@ using namespace barretenberg;
 using namespace plonk;
 
 typedef stdlib::field_t<waffle::StandardComposer> field_t;
+typedef stdlib::bool_t<waffle::StandardComposer> bool_t;
 
 void fibbonaci(waffle::StandardComposer& composer)
 {
@@ -24,8 +25,7 @@ void fibbonaci(waffle::StandardComposer& composer)
 
     field_t c = a + b;
 
-    for (size_t i = 0; i < 17; ++i)
-    {
+    for (size_t i = 0; i < 17; ++i) {
         b = a;
         a = c;
         c = a + b;
@@ -43,8 +43,7 @@ uint64_t fidget(waffle::StandardComposer& composer)
     field_t d(&composer, fr::multiplicative_generator); // like b, d is just a constant and not a wire value
 
     // by this point, we shouldn't have added any constraints in our circuit
-    for (size_t i = 0; i < 17; ++i)
-    {
+    for (size_t i = 0; i < 17; ++i) {
         c = c * d; // shouldn't create a constraint - just scales up c (which points to same wire value as a)
         c = c - d; // shouldn't create a constraint - just adds a constant term into c's gates
         c = c * a; // will create a constraint - both c and a are wires in our circuit (the same wire actually, so this
@@ -56,8 +55,7 @@ uint64_t fidget(waffle::StandardComposer& composer)
     uint64_t bb = 1;
     uint64_t cc = aa + bb;
     uint64_t dd = 5;
-    for (size_t i = 0; i < 17; ++i)
-    {
+    for (size_t i = 0; i < 17; ++i) {
         cc = cc * dd;
         cc = cc - dd;
         cc = cc * aa;
@@ -70,8 +68,7 @@ void generate_test_plonk_circuit(waffle::StandardComposer& composer, size_t num_
     plonk::stdlib::field_t a(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
     plonk::stdlib::field_t b(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
     plonk::stdlib::field_t c(&composer);
-    for (size_t i = 0; i < (num_gates / 4) - 4; ++i)
-    {
+    for (size_t i = 0; i < (num_gates / 4) - 4; ++i) {
         c = a + b;
         c = a * c;
         a = b * b;
@@ -108,6 +105,79 @@ TEST(stdlib_field, test_add_mul_with_constants)
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[16]), { { expected, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 32UL);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_field, test_equality)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    field_t a(stdlib::witness_t(&composer, 4));
+    field_t b(stdlib::witness_t(&composer, 4));
+    bool_t r = a == b;
+
+    EXPECT_EQ(r.get_value(), true);
+
+    waffle::Prover prover = composer.preprocess();
+
+    fr::field_t x = fr::from_montgomery_form(composer.get_variable(r.witness_index));
+    EXPECT_EQ(fr::eq(x, { { 1, 0, 0, 0 } }), true);
+
+    EXPECT_EQ(prover.n, 8UL);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_field, test_equality_false)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    field_t a(stdlib::witness_t(&composer, 4));
+    field_t b(stdlib::witness_t(&composer, 3));
+    bool_t r = a == b;
+
+    EXPECT_EQ(r.get_value(), false);
+
+    waffle::Prover prover = composer.preprocess();
+
+    fr::field_t x = fr::from_montgomery_form(composer.get_variable(r.witness_index));
+    EXPECT_EQ(fr::eq(x, { { 0, 0, 0, 0 } }), true);
+
+    EXPECT_EQ(prover.n, 8UL);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_field, test_equality_with_constants)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    field_t a(stdlib::witness_t(&composer, 4));
+    field_t b = 3;
+    field_t c = 7;
+    bool_t r = a * c == b * c + c && b + 1 == a;
+
+    EXPECT_EQ(r.get_value(), true);
+
+    waffle::Prover prover = composer.preprocess();
+
+    fr::field_t x = fr::from_montgomery_form(composer.get_variable(r.witness_index));
+    EXPECT_EQ(fr::eq(x, { { 1, 0, 0, 0 } }), true);
+
+    EXPECT_EQ(prover.n, 16UL);
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();

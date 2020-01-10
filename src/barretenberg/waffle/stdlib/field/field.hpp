@@ -27,9 +27,11 @@ template <typename ComposerContext> class field_t {
     field_t operator*(const field_t& other) const;
     field_t operator/(const field_t& other) const;
 
-    field_t normalize();
+    bool_t<ComposerContext> operator==(const field_t& other) const;
 
-    barretenberg::fr::field_t get_value();
+    field_t normalize() const;
+
+    barretenberg::fr::field_t get_value() const;
 
     bool is_constant() const { return witness_index == static_cast<uint32_t>(-1); }
 
