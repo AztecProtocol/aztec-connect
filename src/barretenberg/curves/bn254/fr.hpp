@@ -56,8 +56,6 @@ class FrParams
     static constexpr uint64_t cube_root_2 = 0x8be4ba08b19a750aUL;
     static constexpr uint64_t cube_root_3 = 0x1cbd5653a5661c25UL;
 
-    static constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
-
     static constexpr size_t primitive_root_log_size = 28;
     static constexpr uint64_t primitive_root_0 = 0x636e735580d13d9cUL;
     static constexpr uint64_t primitive_root_1 = 0xa22bf3742445ffd6UL;

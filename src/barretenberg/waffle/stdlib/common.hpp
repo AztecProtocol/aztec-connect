@@ -10,8 +10,8 @@ namespace stdlib {
 inline barretenberg::fr::field_t set_bit(const barretenberg::fr::field_t& scalar, const uint64_t bit_position)
 {
     barretenberg::fr::field_t result = scalar;
-    uint64_t limb_idx = bit_position / 64;
-    uint64_t limb_bit_position = bit_position - (limb_idx * 64);
+    uint64_t limb_idx = bit_position / 64ULL;
+    uint64_t limb_bit_position = bit_position - (limb_idx * 64ULL);
     result.data[limb_idx] = result.data[limb_idx] + (1ULL << limb_bit_position);
     return result;
 }

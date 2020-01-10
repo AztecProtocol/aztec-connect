@@ -110,7 +110,7 @@ void uint32<ComposerContext>::internal_logic_operation_native(
 
         bool maximum_bool =
             (bool_wires[i].witness_index == static_cast<uint32_t>(-1)) ? bool_wires[i].get_value() : true;
-        maximum_value = maximum_value + (static_cast<int_utils::uint128_t>(maximum_bool) << i);
+        maximum_value = maximum_value + static_cast<int_utils::int128_t>(static_cast<int_utils::uint128_t>(maximum_bool) << static_cast<int_utils::uint128_t>(i));
     }
     if (accumulator.witness_index == static_cast<uint32_t>(-1)) {
         additive_constant =
