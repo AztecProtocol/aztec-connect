@@ -1,4 +1,3 @@
-.vscode
-build
-cmake/cable
-useful_commands.txt
+./.vscode
+build*
+src/wasi-sdk-8.0

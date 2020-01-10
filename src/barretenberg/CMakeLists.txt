@@ -1,8 +1,11 @@
 # barretenburg
 # copyright 2019 Spilsbury Holdings
 
-add_compile_options(-Werror -Wall -Wextra -Wshadow -Wpedantic)
-add_compile_options(-Wconversion -Wsign-conversion)
+add_compile_options(-Werror -Wall -Wextra -Wconversion -Wsign-conversion)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new -Wno-c99-extensions")
+endif()
 
 add_library(
     barretenberg STATIC
@@ -24,10 +27,14 @@ add_library(
     curves/bn254/fq12.hpp
     curves/bn254/g1.hpp
     curves/bn254/g2.hpp
-    curves/bn254/scalar_multiplication.cpp
-    curves/bn254/scalar_multiplication.hpp
+    curves/bn254/scalar_multiplication/mmu.cpp
+    curves/bn254/scalar_multiplication/mmu.hpp
+    curves/bn254/scalar_multiplication/process_buckets.hpp
+    curves/bn254/scalar_multiplication/scalar_multiplication.tcc
+    curves/bn254/scalar_multiplication/scalar_multiplication.hpp
     curves/bn254/pairing.cpp
     curves/bn254/pairing.hpp
+    curves/grumpkin/grumpkin.hpp
     io/io.hpp
     keccak/hash_types.h
     keccak/keccakf1600.c
@@ -82,6 +89,21 @@ add_library(
     waffle/stdlib/mimc.hpp
     waffle/stdlib/crypto/hash/sha256.tcc
     waffle/stdlib/crypto/hash/sha256.hpp
+    noir/expression.cpp
+    noir/statement.cpp
+    noir/printer.cpp
+    noir/parse.cpp
+    noir/compiler/compiler.cpp
+    noir/compiler/function_statement_visitor.cpp
+    noir/compiler/expression_visitor.cpp
+    noir/compiler/function_call.cpp
+    noir/compiler/symbol_table.cpp
+)
+
+target_include_directories(
+    barretenberg
+    SYSTEM PRIVATE
+        ${private_include_dir}/boost
 )
 
 set_target_properties(
@@ -95,7 +117,7 @@ target_link_libraries(
     barretenberg
 )
 
-if(BARRETENBERG_PROFILING)
+if(PROFILING)
     add_executable(
         barretenberg_profiling
         main.cpp
@@ -118,10 +140,14 @@ if(BARRETENBERG_PROFILING)
         curves/bn254/fq12.hpp
         curves/bn254/g1.hpp
         curves/bn254/g2.hpp
-        curves/bn254/scalar_multiplication.cpp
-        curves/bn254/scalar_multiplication.hpp
+        curves/bn254/scalar_multiplication/mmu.cpp
+        curves/bn254/scalar_multiplication/mmu.hpp
+        curves/bn254/scalar_multiplication/process_buckets.hpp
+        curves/bn254/scalar_multiplication/scalar_multiplication.tcc
+        curves/bn254/scalar_multiplication/scalar_multiplication.hpp
         curves/bn254/pairing.cpp
         curves/bn254/pairing.hpp
+        curves/grumpkin/grumpkin.hpp
         io/io.hpp
         keccak/hash_types.h
         keccak/keccakf1600.c
@@ -168,6 +194,8 @@ if(BARRETENBERG_PROFILING)
         waffle/stdlib/bool/bool.hpp
         waffle/stdlib/field/field.tcc
         waffle/stdlib/field/field.hpp
+        waffle/stdlib/uint/uint.tcc
+        waffle/stdlib/uint/uint.hpp
         waffle/stdlib/uint32/uint32.tcc
         waffle/stdlib/uint32/uint32.hpp
         waffle/stdlib/bitarray/bitarray.tcc
@@ -181,6 +209,7 @@ if(BARRETENBERG_PROFILING)
     target_link_libraries(
         barretenberg_profiling
     )
+
     set_target_properties(
         barretenberg_profiling
 

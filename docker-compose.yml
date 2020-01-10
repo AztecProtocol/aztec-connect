@@ -57,3 +57,10 @@ services:
       dockerfile: dockerfiles/Dockerfile.arm64-linux-gcc
     image: aztecprotocol/barretenberg:arm64-linux-gcc
     tty: true
+
+  wasm-linux-clang:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.wasm-linux-clang
+    image: aztecprotocol/barretenberg:wasm-linux-clang
+    tty: true

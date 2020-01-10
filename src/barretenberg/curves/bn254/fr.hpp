@@ -41,10 +41,10 @@ class FrParams
     static constexpr uint64_t two_inv_2 = 0;
     static constexpr uint64_t two_inv_3 = 0;
 
-    static constexpr uint64_t sqrt_exponent_0 = 0xa1f0fac9f8000001UL;
-    static constexpr uint64_t sqrt_exponent_1 = 0x9419f4243cdcb848UL;
-    static constexpr uint64_t sqrt_exponent_2 = 0xdc2822db40c0ac2eUL;
-    static constexpr uint64_t sqrt_exponent_3 = 0x183227397098d014UL;
+    static constexpr uint64_t sqrt_exponent_0 = 0x50F87D64FC000000UL;
+    static constexpr uint64_t sqrt_exponent_1 = 0x4A0CFA121E6E5C24UL;
+    static constexpr uint64_t sqrt_exponent_2 = 0x6E14116DA0605617UL;
+    static constexpr uint64_t sqrt_exponent_3 = 0xC19139CB84C680AUL;
 
     static constexpr uint64_t r_squared_0 = 0x1BB8E645AE216DA7UL;
     static constexpr uint64_t r_squared_1 = 0x53FE3AB1E35C59E3UL;
@@ -56,11 +56,23 @@ class FrParams
     static constexpr uint64_t cube_root_2 = 0x8be4ba08b19a750aUL;
     static constexpr uint64_t cube_root_3 = 0x1cbd5653a5661c25UL;
 
+    static constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
+
     static constexpr size_t primitive_root_log_size = 28;
     static constexpr uint64_t primitive_root_0 = 0x636e735580d13d9cUL;
     static constexpr uint64_t primitive_root_1 = 0xa22bf3742445ffd6UL;
     static constexpr uint64_t primitive_root_2 = 0x56452ac01eb203d8UL;
     static constexpr uint64_t primitive_root_3 = 0x1860ef942963f9e7UL;
+
+    static constexpr uint64_t endo_g1_lo = 0x7a7bd9d4391eb18dUL;
+    static constexpr uint64_t endo_g1_mid = 0x4ccef014a773d2cfUL;
+    static constexpr uint64_t endo_g1_hi = 0x0000000000000002UL;
+    static constexpr uint64_t endo_g2_lo = 0xd91d232ec7e0b3d7UL;
+    static constexpr uint64_t endo_g2_mid = 0x0000000000000002UL;
+    static constexpr uint64_t endo_minus_b1_lo = 0x8211bbeb7d4f1128UL;
+    static constexpr uint64_t endo_minus_b1_mid = 0x6f4d8248eeb859fcUL;
+    static constexpr uint64_t endo_b2_lo = 0x89d3256894d213e3UL;
+    static constexpr uint64_t endo_b2_mid = 0UL;
 
     // 5, smallest quadratic non-residue
     static constexpr uint64_t multiplicative_generator_0 = 0x1b0d0ef99fffffe6UL;
@@ -78,8 +90,12 @@ class FrParams
     static constexpr uint64_t alternate_multiplicative_generator_2 = 0x5c65ec9f484e3a89UL;
     static constexpr uint64_t alternate_multiplicative_generator_3 = 0x180a96573d3d9f8UL;
 
-    static constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
-};
+    // smallest Q such that Q * 2^{s} = (p - 1)
+    static constexpr uint64_t Q_minus_one_over_two_0 = 0xCDCB848A1F0FAC9FUL;
+    static constexpr uint64_t Q_minus_one_over_two_1 = 0x0C0AC2E9419F4243UL;
+    static constexpr uint64_t Q_minus_one_over_two_2 = 0x098D014DC2822DB4UL;
+    static constexpr uint64_t Q_minus_one_over_two_3 = 0x183227397UL;
+    };
 
 typedef field<FrParams> fr;
 } // namespace barretenberg

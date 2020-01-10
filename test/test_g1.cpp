@@ -207,7 +207,7 @@ TEST(group, add_dbl_consistency_repeated)
 
 TEST(group, mixed_add_exception_test_infinity)
 {
-    g1::element lhs = g1::one();
+    g1::element lhs = g1::one;
     g1::affine_element rhs = g1::random_affine_element();
     fq::__copy(rhs.x, lhs.x);
     fq::__neg(rhs.y, lhs.y);
@@ -297,19 +297,20 @@ TEST(group, group_exponentiation_check_against_constants)
     fq::__to_montgomery_form(expected_x, expected.x);
     fq::__to_montgomery_form(expected_y, expected.y);
 
-    g1::affine_element result = g1::group_exponentiation(g1::affine_one(), a);
+    g1::affine_element result = g1::group_exponentiation(g1::affine_one, a);
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
 
 TEST(group, group_exponentiation_zero_and_one)
 {
-    g1::affine_element result = g1::group_exponentiation(g1::affine_one(), fr::zero);
+    g1::affine_element result = g1::group_exponentiation(g1::affine_one, fr::zero);
 
     EXPECT_EQ(g1::is_point_at_infinity(result), true);
 
-    result = g1::group_exponentiation(g1::affine_one(), fr::one);
-    EXPECT_EQ(g1::eq(result, g1::affine_one()), true);
+    result = g1::group_exponentiation(g1::affine_one, fr::one);
+
+    EXPECT_EQ(g1::eq(result, g1::affine_one), true);
 }
 
 TEST(group, group_exponentiation_consistency_check)
@@ -320,11 +321,35 @@ TEST(group, group_exponentiation_consistency_check)
     fr::field_t c;
     fr::__mul(a, b, c);
 
-    g1::affine_element input = g1::affine_one();
+    g1::affine_element input = g1::affine_one;
     g1::affine_element result = g1::group_exponentiation(input, a);
     result = g1::group_exponentiation(result, b);
 
     g1::affine_element expected = g1::group_exponentiation(input, c);
 
     EXPECT_EQ(g1::eq(result, expected), true);
+}
+
+TEST(group, derive_generators)
+{
+    constexpr size_t num_generators = 128;
+    std::array<g1::affine_element, num_generators> result = g1::derive_generators<num_generators>();
+
+    const auto is_unique = [&result](const g1::affine_element &y, const size_t j)
+    {
+        for (size_t i = 0; i < result.size(); ++i)
+        {
+            if ((i != j) && g1::eq(result[i], y))
+            {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    for (size_t k = 0; k < num_generators; ++k)
+    {
+        EXPECT_EQ(is_unique(result[k], k), true);
+        EXPECT_EQ(g1::on_curve(result[k]), true);
+    }
 }

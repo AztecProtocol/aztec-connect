@@ -107,6 +107,7 @@ class ComposerBase
     virtual ~ComposerBase() {};
 
     virtual size_t get_num_gates() const { return n; }
+    virtual size_t get_num_variables() const { return variables.size(); }
     virtual Prover preprocess() = 0;
 
     virtual bool supports_feature(const Features target_feature)

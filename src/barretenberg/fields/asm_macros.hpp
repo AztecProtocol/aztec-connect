@@ -1,8 +1,9 @@
 #pragma once
+// clang-format off
 
 /**
  * Clear all flags via xorq opcode
- **/ 
+ **/
 #define CLEAR_FLAGS(empty_reg)                                                                                           \
         "xorq " empty_reg ", " empty_reg "      \n\t"
 
@@ -30,22 +31,22 @@
 /**
  * Take a 4-limb field element, in (%r12, %r13, %r14, %r15),
  * and add 4-limb field element pointed to by a
- **/ 
+ **/
 #define ADD(b)                                                                                                           \
         "adcxq 0(" b "), %%r12                  \n\t"                                                                    \
         "adcxq 8(" b "), %%r13                  \n\t"                                                                    \
         "adcxq 16(" b "), %%r14                 \n\t"                                                                    \
-        "adcxq 24(" b "), %%r15                 \n\t"                                   
+        "adcxq 24(" b "), %%r15                 \n\t"
 
 /**
  * Take a 4-limb field element, in (%r12, %r13, %r14, %r15),
  * and subtract 4-limb field element pointed to by b
- **/ 
+ **/
 #define SUB(b)                                                                                                           \
         "subq 0(" b "), %%r12                   \n\t"                                                                    \
         "sbbq 8(" b "), %%r13                   \n\t"                                                                    \
         "sbbq 16(" b "), %%r14                  \n\t"                                                                    \
-        "sbbq 24(" b "), %%r15                  \n\t"   
+        "sbbq 24(" b "), %%r15                  \n\t"
 
 /**
  * compute r1 = a + a, r2 = b + c
@@ -105,12 +106,12 @@
         "cmovnoq %%r8, %%r12                    \n\t"                                                                    \
         "cmovnoq %%r9, %%r13                    \n\t"                                                                    \
         "cmovnoq %%r10, %%r14                   \n\t"                                                                    \
-        "cmovnoq %%r11, %%r15                   \n\t" 
+        "cmovnoq %%r11, %%r15                   \n\t"
 
 /**
  * Take a 4-limb integer, r, in (%r12, %r13, %r14, %r15)
  * and conditionally subtract modulus, if r > p.
- **/ 
+ **/
 #define REDUCE_FIELD_ELEMENT(neg_modulus_0, neg_modulus_1, neg_modulus_2, neg_modulus_3)                                 \
         /* Duplicate `r` */                                                                                              \
         "movq %%r12, %%r8                       \n\t"                                                                    \

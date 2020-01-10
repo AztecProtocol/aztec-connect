@@ -3,6 +3,32 @@
 
 cmake_minimum_required(VERSION 3.14)
 
+option(DISABLE_ASM "Disable custom assembly" OFF)
+option(MULTITHREADING "Enable multi-threading" ON)
+option(TESTING "Build tests" ON)
+option(BENCHMARKS "Build benchmarks" ON)
+option(PROFILING "Build profiling" ON)
+
+if (ARM)
+    set(DISABLE_ASM ON)
+    set(RUN_HAVE_STD_REGEX 0)
+    set(RUN_HAVE_POSIX_REGEX 0)
+    set(CMAKE_TOOLCHAIN_FILE "./cmake/toolchain-arm64-linux-gcc.cmake")
+endif()
+
+if(WASM)
+    message(STATUS "Compiling for WebAssembly.")
+    set(DISABLE_ASM ON)
+    set(MULTITHREADING OFF)
+    set(BENCHMARKS OFF)
+    set(PROFILING OFF)
+    set(CMAKE_TOOLCHAIN_FILE "./cmake/toolchain-wasm-linux-clang.cmake")
+    set(WASI_SDK_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/src/wasi-sdk-8.0")
+    add_compile_options(-fno-exceptions)
+    add_definitions(-DBOOST_NO_EXCEPTIONS=1)
+endif()
+
+# On OS X we must use llvm from brew, not the hosts default.
 if(APPLE)
     set(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++")
     set(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang")
@@ -38,57 +64,49 @@ if(APPLE)
         set(OpenMP_CXX_LIB_NAMES_WORK "libomp")
         set(OpenMP_libomp_LIBRARY "/usr/local/lib/libomp.a")
     endif()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new")
 endif()
 
-option(MULTITHREADING default ON)
-
 find_package(OpenMP)
-if(OpenMP_CXX_FOUND AND MULTITHREADING)
+if(MULTITHREADING AND OpenMP_CXX_FOUND)
+    message(STATUS "Multithreading is enabled.")
     link_libraries(OpenMP::OpenMP_CXX)
 else()
-    add_definitions(-DNO_MULTITHREADING=1)
+    message(STATUS "Multithreading is disabled.")
+    add_definitions(-DNO_MULTITHREADING=1 -DBOOST_SP_NO_ATOMIC_ACCESS=1)
 endif()
 
 set(default_build_type "Release")
-# Set a default build type if none was specified
-
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
-  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
-      STRING "Choose the type of build." FORCE)
+  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
   # Set the possible values of build type for cmake-gui
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-option(DISABLE_SHENANIGANS default OFF)
-
-if(DISABLE_SHENANIGANS)
-    message(STATUS "Using fallback non-assembly methods for field multiplications")
+if(DISABLE_ASM)
+    message(STATUS "Using fallback non-assembly methods for field multiplications.")
     add_definitions(-DDISABLE_SHENANIGANS=1)
+else()
+    message(STATUS "Using custom assembly.")
 endif()
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wno-format -Wno-conversion")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -save-temps")
 
 if(WIN32)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-float-conversion")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-float-conversion -Wimplicit-fallthrough=0")
 endif()
 
-set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_definitions(-DBOOST_SPIRIT_X3_NO_FILESYSTEM=1 -DBARRETENBERG_SRS_PATH=\"../srs_db/transcript.dat\")
+
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)
 set(DEPENDS_DIR ${PROJECT_SOURCE_DIR}/depends)
 
-add_definitions(-DBARRETENBERG_SRS_PATH=\"../srs_db/transcript.dat\")
 add_subdirectory(src)
 
-option(BARRETENBERG_TESTING "Build tests" ON)
-
-if(BARRETENBERG_TESTING)
+if(TESTING)
     message(STATUS "Configuring tests and benchmarks")
     enable_testing()
     add_subdirectory(test)
 endif()
 
-option(BARRETENBERG_PROFILING "Build profiling" ON)
+if(BENCHMARKS)
+    add_subdirectory(test/benchmarks)
+endif()

@@ -1,6 +1,11 @@
 # barretenberg
 # copyright 2019 Spilsbury Holdings
 
+add_definitions(-DGTEST_HAS_EXCEPTIONS=0)
+if(WASM)
+    add_definitions(-DGTEST_HAS_STREAM_REDIRECTION=0)
+endif()
+
 include(FetchContent)
 
 ### DEPENDENCIES
@@ -22,12 +27,11 @@ mark_as_advanced(
     gtest_disable_pthreads gtest_force_shared_crt gtest_hide_internal_symbols
 )
 
-set(setup_private_include_dir ${PROJECT_SOURCE_DIR}/src)
+add_compile_options(-Werror -Wall -Wextra -Wconversion -Wsign-conversion -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable)
 
-add_subdirectory(benchmarks)
-
-add_compile_options(-Werror -Wall -Wextra -Wshadow)
-add_compile_options(-Wconversion -Wsign-conversion)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new -Wno-c99-extensions")
+endif()
 
 add_executable(
     barretenberg_tests
@@ -41,11 +45,11 @@ add_executable(
     test_g2.cpp
     test_scalar_multiplication.cpp
     test_pairing.cpp
+    test_grumpkin.cpp
     test_io.cpp
     test_polynomial_arithmetic.cpp
     test_preprocess.cpp
     test_prover.cpp
-    test_verifier.cpp
     test_verifier.cpp
     composer/test_standard_composer.cpp
     composer/test_mimc_composer.cpp
@@ -57,6 +61,7 @@ add_executable(
     stdlib/test_stdlib_bitarray.cpp
     stdlib/test_stdlib_mimc.cpp
     stdlib/test_stdlib_sha256.cpp
+    noir/test_noir.cpp
 )
 
 set_target_properties(
@@ -64,6 +69,12 @@ set_target_properties(
     PROPERTIES
 
     RUNTIME_OUTPUT_DIRECTORY .
+)
+
+target_include_directories(
+    barretenberg_tests
+    SYSTEM PRIVATE
+        ${private_include_dir}/boost
 )
 
 if (WIN32)
@@ -96,7 +107,6 @@ target_include_directories(
         ${private_include_dir}
         ${include_dir}
 )
-
 
 add_test(
     TARGET

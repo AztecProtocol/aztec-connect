@@ -1,3 +1,4 @@
 build
 docker*
 .*
+src/wasi-sdk-8.0

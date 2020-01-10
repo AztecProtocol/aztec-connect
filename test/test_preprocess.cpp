@@ -24,7 +24,7 @@ class DummyReferenceString : public waffle::ReferenceString
     {
         ASSERT(monomials != nullptr);
 
-        monomials[0] = g1::affine_one();
+        monomials[0] = g1::affine_one;
 
         for (size_t i = 1; i < degree; ++i)
         {
@@ -117,14 +117,14 @@ TEST(preprocess, preprocess)
     fr::field_t q_o_eval = q_o->evaluate(x, n);
     fr::field_t q_c_eval = q_c->evaluate(x, n);
 
-    g1::affine_element sigma_1_expected = g1::group_exponentiation(g1::affine_one(), sigma_1_eval);
-    g1::affine_element sigma_2_expected = g1::group_exponentiation(g1::affine_one(), sigma_2_eval);
-    g1::affine_element sigma_3_expected = g1::group_exponentiation(g1::affine_one(), sigma_3_eval);
-    g1::affine_element q_m_expected = g1::group_exponentiation(g1::affine_one(), q_m_eval);
-    g1::affine_element q_l_expected = g1::group_exponentiation(g1::affine_one(), q_l_eval);
-    g1::affine_element q_r_expected = g1::group_exponentiation(g1::affine_one(), q_r_eval);
-    g1::affine_element q_o_expected = g1::group_exponentiation(g1::affine_one(), q_o_eval);
-    g1::affine_element q_c_expected = g1::group_exponentiation(g1::affine_one(), q_c_eval);
+    g1::affine_element sigma_1_expected = g1::group_exponentiation(g1::affine_one, sigma_1_eval);
+    g1::affine_element sigma_2_expected = g1::group_exponentiation(g1::affine_one, sigma_2_eval);
+    g1::affine_element sigma_3_expected = g1::group_exponentiation(g1::affine_one, sigma_3_eval);
+    g1::affine_element q_m_expected = g1::group_exponentiation(g1::affine_one, q_m_eval);
+    g1::affine_element q_l_expected = g1::group_exponentiation(g1::affine_one, q_l_eval);
+    g1::affine_element q_r_expected = g1::group_exponentiation(g1::affine_one, q_r_eval);
+    g1::affine_element q_o_expected = g1::group_exponentiation(g1::affine_one, q_o_eval);
+    g1::affine_element q_c_expected = g1::group_exponentiation(g1::affine_one, q_c_eval);
 
     EXPECT_EQ(g1::eq(verifier.SIGMA_1, sigma_1_expected), true);
     EXPECT_EQ(g1::eq(verifier.SIGMA_2, sigma_2_expected), true);

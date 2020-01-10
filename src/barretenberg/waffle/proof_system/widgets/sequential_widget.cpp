@@ -4,7 +4,7 @@
 
 #include "../../../curves/bn254/fr.hpp"
 #include "../../../curves/bn254/g1.hpp"
-#include "../../../curves/bn254/scalar_multiplication.hpp"
+#include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
 
 using namespace barretenberg;
@@ -84,17 +84,12 @@ std::unique_ptr<VerifierBaseWidget> ProverSequentialWidget::compute_preprocessed
         polys[i].ifft(domain);
     }
 
-    scalar_multiplication::multiplication_state mul_state[1]{
-        { reference_string.monomials, polys[0].get_coefficients(), domain.size, {}},
-    };
-
-    scalar_multiplication::batched_scalar_multiplications(mul_state, 1);
     std::vector<barretenberg::g1::affine_element> commitments;
     commitments.resize(1);
 
     for (size_t i = 0; i < 1; ++i)
     {
-        g1::jacobian_to_affine(mul_state[i].output, commitments[i]);
+        g1::jacobian_to_affine(scalar_multiplication::pippenger(polys[i].get_coefficients(), reference_string.monomials, domain.size), commitments[i]);
     }
     std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierSequentialWidget>(commitments);
     return result;
