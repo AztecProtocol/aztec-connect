@@ -315,7 +315,7 @@ template <typename FieldParams> class field {
         __copy(accumulator, r);
     }
 
-    static inline field_t pow_small(const field_t& a, const size_t exponent)
+    static inline field_t pow_small(const field_t& a, const uint64_t exponent)
     {
         field_t result;
         __pow_small(a, exponent, result);
