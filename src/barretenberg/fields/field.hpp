@@ -11,18 +11,14 @@
 // 2: all methods that pass in a reference to the return value should be prefixed by __
 // 3: all methods that have a __ prefix, should have a partner method that returns by value
 
-namespace barretenberg
-{
-template <typename FieldParams> class field
-{
+namespace barretenberg {
+template <typename FieldParams> class field {
   public:
-    struct field_t
-    {
+    struct field_t {
         alignas(32) uint64_t data[4];
     };
 
-    struct field_wide_t
-    {
+    struct field_wide_t {
         alignas(64) uint64_t data[8];
     };
 
@@ -120,22 +116,16 @@ template <typename FieldParams> class field
                                                             field_t& r) noexcept;
     static void __sub(const field_t& a, const field_t& b, field_t& r) noexcept;
     static void __sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) noexcept;
-    static void __conditionally_subtract_double_modulus(const field_t& a,
-                                                        field_t& r,
-                                                        const uint64_t predicate) noexcept;
-
+    static void __conditionally_subtract_from_double_modulus(const field_t& a,
+                                                             field_t& r,
+                                                             const uint64_t predicate) noexcept;
+    static void __conditionally_negate_self(field_t& r, const uint64_t predicate) noexcept;
     // compute a * b, put 512-bit result in r (do not reduce)
     static void __mul_512(const field_t& a, const field_t& b, field_wide_t& r) noexcept;
 
     // Multiply field_t `a` by the cube root of unity, modulo `q`. Store result in `r`
-    static inline void __mul_beta(const field_t& a, field_t& r) noexcept
-    {
-        __mul(a, beta, r);
-    }
-    static inline void __neg(const field_t& a, field_t& r) noexcept
-    {
-        __sub(modulus, a, r);
-    }
+    static inline void __mul_beta(const field_t& a, field_t& r) noexcept { __mul(a, beta, r); }
+    static inline void __neg(const field_t& a, field_t& r) noexcept { __sub(modulus, a, r); }
 
     /**
      * Arithmetic Methods (return by value)
@@ -205,18 +195,9 @@ template <typename FieldParams> class field
         size_t shift = bit_index & 63;
         return bool((a.data[idx] >> shift) & 1);
     }
-    static inline bool is_msb_set(const field_t& a) noexcept
-    {
-        return (a.data[3] >> 63ULL) == 1ULL;
-    }
-    static inline uint64_t is_msb_set_word(const field_t& a) noexcept
-    {
-        return a.data[3] >> 63ULL;
-    }
-    static inline void __set_msb(field_t& a) noexcept
-    {
-        a.data[3] = 0ULL | (1ULL << 63ULL);
-    }
+    static inline bool is_msb_set(const field_t& a) noexcept { return (a.data[3] >> 63ULL) == 1ULL; }
+    static inline uint64_t is_msb_set_word(const field_t& a) noexcept { return a.data[3] >> 63ULL; }
+    static inline void __set_msb(field_t& a) noexcept { a.data[3] = 0ULL | (1ULL << 63ULL); }
 
     /**
      * Copy methods
@@ -241,16 +222,12 @@ template <typename FieldParams> class field
     static inline void __to_montgomery_form(const field_t& a, field_t& r) noexcept
     {
         __copy(a, r);
-        while (gt(r, modulus_plus_one))
-        {
+        while (gt(r, modulus_plus_one)) {
             __sub(r, modulus, r);
         }
         __mul(r, r_squared, r);
     }
-    static inline void __from_montgomery_form(const field_t& a, field_t& r) noexcept
-    {
-        __mul(a, one_raw, r);
-    }
+    static inline void __from_montgomery_form(const field_t& a, field_t& r) noexcept { __mul(a, one_raw, r); }
 
     static inline field_t to_montgomery_form(const field_t& a) noexcept
     {
@@ -272,10 +249,9 @@ template <typename FieldParams> class field
     /**
      * compute a^b mod q, return result in r
      **/
-    static inline void pow(const field_t& a, const field_t& b, field_t& r)
+    static inline void __pow(const field_t& a, const field_t& b, field_t& r)
     {
-        if (eq(a, zero))
-        {
+        if (eq(a, zero)) {
             __copy(zero, r);
             return;
         }
@@ -283,42 +259,35 @@ template <typename FieldParams> class field
         __copy(a, accumulator);
         bool found_one = false;
         size_t i = 255;
-        while (!found_one)
-        {
+        while (!found_one) {
             found_one = get_bit(b, i);
             --i;
         }
         size_t sqr_count = 0;
-        for (; i < 256; --i)
-        {
+        for (; i < 256; --i) {
             sqr_count++;
             __sqr(accumulator, accumulator);
-            if (get_bit(b, i))
-            {
+            if (get_bit(b, i)) {
                 __mul(accumulator, a, accumulator);
             }
         }
-        while (gt(accumulator, modulus_plus_one))
-        {
+        while (gt(accumulator, modulus_plus_one)) {
             __sub(accumulator, modulus, accumulator);
         }
         __copy(accumulator, r);
     }
 
-    static inline void __pow_small(const field_t& a, const size_t exponent, field_t& r)
+    static inline void __pow_small(const field_t& a, const uint64_t exponent, field_t& r)
     {
-        if (exponent == 0)
-        {
+        if (exponent == 0) {
             __copy(one, r);
             return;
         }
-        if (exponent == 1)
-        {
+        if (exponent == 1) {
             __copy(a, r);
             return;
         }
-        if (exponent == 2)
-        {
+        if (exponent == 2) {
             __sqr(a, r);
             return;
         }
@@ -327,24 +296,20 @@ template <typename FieldParams> class field
 
         bool found_one = false;
         size_t i = 63;
-        while (!found_one)
-        {
+        while (!found_one) {
             found_one = (exponent >> (i)) & 1;
             --i;
         }
         size_t sqr_count = 0;
-        for (; i < 64; --i)
-        {
+        for (; i < 64; --i) {
             sqr_count++;
             __sqr(accumulator, accumulator);
             bool bit = (exponent >> (i)) & 1;
-            if (bit)
-            {
+            if (bit) {
                 __mul(accumulator, a, accumulator);
             }
         }
-        while (gt(accumulator, modulus_plus_one))
-        {
+        while (gt(accumulator, modulus_plus_one)) {
             __sub(accumulator, modulus, accumulator);
         }
         __copy(accumulator, r);
@@ -356,13 +321,11 @@ template <typename FieldParams> class field
         __pow_small(a, exponent, result);
         return result;
     }
+
     /**
      * compute a^{q - 2} mod q, place result in r
      **/
-    static inline void __invert(const field_t& a, field_t& r)
-    {
-        pow(a, modulus_minus_two, r);
-    }
+    static inline void __invert(const field_t& a, field_t& r) { __pow(a, modulus_minus_two, r); }
 
     static inline field_t invert(const field_t& a)
     {
@@ -371,12 +334,98 @@ template <typename FieldParams> class field
         return r;
     }
 
+    static inline void __tonelli_shanks_sqrt(const field_t& a, field_t& r)
+    {
+        // Tonelli-shanks algorithm begins by finding a field element Q and integer S,
+        // such that (p - 1) = Q.2^{s}
+
+        // We can compute the square root of a, by considering a^{(Q + 1) / 2} = R
+        // Once we have found such an R, we have
+        // R^{2} = a^{Q + 1} = a^{Q}a
+        // If a^{Q} = 1, we have found our square root.
+        // Otherwise, we have a^{Q} = t, where t is a 2^{s-1}'th root of unity.
+        // This is because t^{2^{s-1}} = a^{Q.2^{s-1}}.
+        // We know that (p - 1) = Q.w^{s}, therefore t^{2^{s-1}} = a^{(p - 1) / 2}
+        // From Euler's criterion, if a is a quadratic residue, a^{(p - 1) / 2} = 1
+        // i.e. t^{2^{s-1}} = 1
+
+        // To proceed with computing our square root, we want to transform t into a smaller subgroup,
+        // specifically, the (s-2)'th roots of unity.
+        // We do this by finding some value b,such that
+        // (t.b^2)^{2^{s-2}} = 1 and R' = R.b
+        // Finding such a b is trivial, because from Euler's criterion, we know that,
+        // for any quadratic non-residue z, z^{(p - 1) / 2} = -1
+        // i.e. z^{Q.2^{s-1}} = -1
+        // => z^Q is a 2^{s-1}'th root of -1
+        // => z^{Q^2} is a 2^{s-2}'th root of -1
+        // Since t^{2^{s-1}} = 1, we know that t^{2^{s - 2}} = -1
+        // => t.z^{Q^2} is a 2^{s - 2}'th root of unity.
+
+        // We can iteratively transform t into ever smaller subgroups, until t = 1.
+        // At each iteration, we need to find a new value for b, which we can obtain
+        // by repeatedly squaring z^{Q}
+        field_t Q_minus_one_over_two{ { FieldParams::Q_minus_one_over_two_0,
+                                        FieldParams::Q_minus_one_over_two_1,
+                                        FieldParams::Q_minus_one_over_two_2,
+                                        FieldParams::Q_minus_one_over_two_3 } };
+        // __to_montgomery_form(Q_minus_one_over_two, Q_minus_one_over_two);
+        field_t z = multiplicative_generator; // the generator is a non-residue
+        field_t b;
+        __pow(a, Q_minus_one_over_two, b); // compute a^{(Q - 1 )/ 2}
+        r = mul(a, b);                     // r = a^{(Q + 1) / 2}
+        field_t t = mul(r, b);             // t = a^{(Q - 1) / 2 + (Q + 1) / 2} = a^{Q}
+
+        // check if t is a square with euler's criterion
+        // if not, we don't have a quadratic residue and a has no square root!
+        field_t check = t;
+        for (size_t i = 0; i < FieldParams::primitive_root_log_size - 1; ++i) {
+            __sqr(check, check);
+        }
+        if (!eq(check, one)) {
+            r = zero;
+            return;
+        }
+        field_t t1;
+        __pow(z, Q_minus_one_over_two, t1);
+        field_t t2 = mul(t1, z);
+        field_t c = mul(t2, t1); // z^Q
+
+        size_t m = FieldParams::primitive_root_log_size;
+        while (!eq(t, one)) {
+            size_t i = 0;
+            field_t t2m = t;
+
+            // find the smallest value of m, such that t^{2^m} = 1
+            while (!eq(t2m, one)) {
+                __sqr(t2m, t2m);
+                i += 1;
+            }
+
+            size_t j = m - i - 1;
+            b = c;
+            while (j > 0) {
+                __sqr(b, b);
+                --j;
+            } // b = z^2^(m-i-1)
+
+            c = sqr(b);
+            t = mul(t, c);
+            r = mul(r, b);
+            m = i;
+        }
+    }
+
     /**
-     * compute a^{(q + 1) / 2}, place result in r
+     * compute a^{(q + 1) / 4}, place result in r
      **/
     static inline void __sqrt(const field_t& a, field_t& r)
     {
-        pow(a, sqrt_exponent, r);
+        // if p = 3 mod 4, use exponentiation trick
+        if constexpr ((FieldParams::modulus_0 & 0x3UL) == 0x3UL) {
+            __pow(a, sqrt_exponent, r);
+        } else {
+            __tonelli_shanks_sqrt(a, r);
+        }
     }
 
     /**
@@ -434,21 +483,23 @@ template <typename FieldParams> class field
 
         // TODO: these parameters only work for the bn254 coordinate field.
         // Need to shift into FieldParams and calculate correct constants for the subgroup field
-        constexpr field_t g1 = { { 0x7a7bd9d4391eb18dUL, 0x4ccef014a773d2cfUL, 0x0000000000000002UL, 0 } };
+        constexpr field_t endo_g1 = {
+            { FieldParams::endo_g1_lo, FieldParams::endo_g1_mid, FieldParams::endo_g1_hi, 0 }
+        };
 
-        constexpr field_t g2 = { { 0xd91d232ec7e0b3d7UL, 0x0000000000000002UL, 0, 0 } };
+        constexpr field_t endo_g2 = { { FieldParams::endo_g2_lo, FieldParams::endo_g2_mid, 0, 0 } };
 
-        constexpr field_t minus_b1 = { { 0x8211bbeb7d4f1128UL, 0x6f4d8248eeb859fcUL, 0, 0 } };
+        constexpr field_t endo_minus_b1 = { { FieldParams::endo_minus_b1_lo, FieldParams::endo_minus_b1_mid, 0, 0 } };
 
-        constexpr field_t b2 = { { 0x89d3256894d213e3UL, 0, 0, 0 } };
+        constexpr field_t endo_b2 = { { FieldParams::endo_b2_lo, FieldParams::endo_b2_mid, 0, 0 } };
 
         field_wide_t c1;
         field_wide_t c2;
 
         // compute c1 = (g2 * k) >> 256
-        __mul_512(g2, k, c1);
+        __mul_512(endo_g2, k, c1);
         // compute c2 = (g1 * k) >> 256
-        __mul_512(g1, k, c2);
+        __mul_512(endo_g1, k, c2);
         // (the bit shifts are implicit, as we only utilize the high limbs of c1, c2
 
         field_wide_t q1;
@@ -462,9 +513,9 @@ template <typename FieldParams> class field
         }; // *(field_t*)((uintptr_t)(&c2) + (4 * sizeof(uint64_t)));
 
         // compute q1 = c1 * -b1
-        __mul_512(c1_hi, minus_b1, q1);
+        __mul_512(c1_hi, endo_minus_b1, q1);
         // compute q2 = c2 * b2
-        __mul_512(c2_hi, b2, q2);
+        __mul_512(c2_hi, endo_b2, q2);
 
         field_t t1 = { {
             0,
@@ -504,8 +555,7 @@ template <typename FieldParams> class field
     static inline void __get_root_of_unity(const size_t degree, field_t& r)
     {
         __copy(root_of_unity, r);
-        for (size_t i = FieldParams::primitive_root_log_size; i > degree; --i)
-        {
+        for (size_t i = FieldParams::primitive_root_log_size; i > degree; --i) {
             __sqr(r, r);
         }
     }
@@ -521,16 +571,14 @@ template <typename FieldParams> class field
     {
         field_t* temporaries = (field_t*)aligned_alloc(32, sizeof(field_t) * n);
         field_t accumulator = one;
-        for (size_t i = 0; i < n; ++i)
-        {
+        for (size_t i = 0; i < n; ++i) {
             __copy(accumulator, temporaries[i]);
             __mul(accumulator, coeffs[i], accumulator);
         }
         __invert(accumulator, accumulator);
 
         field_t T0;
-        for (size_t i = n - 1; i < n; --i)
-        {
+        for (size_t i = n - 1; i < n; --i) {
             __mul(accumulator, temporaries[i], T0);
             __mul(accumulator, coeffs[i], accumulator);
             __copy(T0, coeffs[i]);

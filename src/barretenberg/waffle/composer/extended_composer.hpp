@@ -2,15 +2,13 @@
 
 #include <array>
 #include "./bool_composer.hpp"
+#include <array>
 
-namespace waffle
-{
+namespace waffle {
 
-class ExtendedComposer : public BoolComposer
-{
+class ExtendedComposer : public BoolComposer {
   public:
-    struct extended_wire_properties
-    {
+    struct extended_wire_properties {
         bool is_mutable = false;
         uint32_t index = static_cast<uint32_t>(-1);
         WireType wire_type = WireType::NULL_WIRE;
@@ -26,29 +24,28 @@ class ExtendedComposer : public BoolComposer
             return *this;
         }
     };
-    struct quad
-    {
+    struct quad {
         std::array<size_t, 2> gate_indices;
         extended_wire_properties removed_wire;
         // std::array<uint32_t, 4> wires;
         std::array<extended_wire_properties, 4> wires;
     };
 
-    ExtendedComposer(const size_t size_hint = 0) : BoolComposer()
+    ExtendedComposer(const size_t size_hint = 0)
+        : BoolComposer()
     {
         q_oo.reserve(size_hint);
         zero_idx = add_variable(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
         features |= static_cast<size_t>(Features::EXTENDED_ARITHMETISATION);
         zero_selector = barretenberg::fr::zero;
     };
-    ExtendedComposer(ExtendedComposer &&other) = default;
-    ExtendedComposer& operator=(ExtendedComposer &&other) = default;
+    ExtendedComposer(ExtendedComposer&& other) = default;
+    ExtendedComposer& operator=(ExtendedComposer&& other) = default;
     ~ExtendedComposer() {}
 
     size_t get_num_gates() const override
     {
-        if (adjusted_n > 0)
-        {
+        if (adjusted_n > 0) {
             return adjusted_n;
         }
         return n;
@@ -71,32 +68,14 @@ class ExtendedComposer : public BoolComposer
     void compute_sigma_permutations(Prover& output_state) override;
     Prover preprocess() override;
 
-    uint32_t add_variable(const barretenberg::fr::field_t& in) override
-    {
-        return BoolComposer::add_variable(in);
-    }
+    uint32_t add_variable(const barretenberg::fr::field_t& in) override { return BoolComposer::add_variable(in); }
 
-    void create_add_gate(const add_triple& in) override
-    {
-        BoolComposer::create_add_gate(in);
-    };
-    void create_mul_gate(const mul_triple& in) override
-    {
-        BoolComposer::create_mul_gate(in);
-    };
-    void create_bool_gate(const uint32_t a) override
-    {
-        BoolComposer::create_bool_gate(a);
-    };
-    void create_poly_gate(const poly_triple& in) override
-    {
-        BoolComposer::create_poly_gate(in);
-    };
+    void create_add_gate(const add_triple& in) override { BoolComposer::create_add_gate(in); };
+    void create_mul_gate(const mul_triple& in) override { BoolComposer::create_mul_gate(in); };
+    void create_bool_gate(const uint32_t a) override { BoolComposer::create_bool_gate(a); };
+    void create_poly_gate(const poly_triple& in) override { BoolComposer::create_poly_gate(in); };
 
-    virtual size_t get_num_constant_gates() const override
-    {
-        return StandardComposer::get_num_constant_gates();
-    }
+    virtual size_t get_num_constant_gates() const override { return StandardComposer::get_num_constant_gates(); }
     std::vector<barretenberg::fr::field_t> q_oo;
 
   private:

@@ -8,8 +8,7 @@
 
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 #include <memory>
-namespace
-{
+namespace {
 
 using namespace barretenberg;
 

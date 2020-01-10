@@ -18,13 +18,12 @@ typedef plonk::stdlib::field_t<waffle::ExtendedComposer> field_t;
 typedef plonk::stdlib::uint32<waffle::ExtendedComposer> uint32;
 typedef plonk::stdlib::witness_t<waffle::ExtendedComposer> witness_t;
 
-namespace
-{
+namespace {
 uint32_t get_random_int()
 {
-return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
 }
-}
+} // namespace
 
 TEST(extended_composer, test_combine_linear_relations_basic_add)
 {
@@ -59,8 +58,7 @@ TEST(extended_composer, test_combine_linear_relations_basic_mul_add)
                               composer.add_variable(wires[2]), composer.add_variable(wires[3]),
                               composer.add_variable(wires[4]), composer.add_variable(wires[5]),
                               composer.add_variable(wires[6]) };
-    composer.create_mul_gate(
-        { wire_indices[0], wire_indices[1], wire_indices[2], fr::one, fr::neg_one(), fr::zero });
+    composer.create_mul_gate({ wire_indices[0], wire_indices[1], wire_indices[2], fr::one, fr::neg_one(), fr::zero });
     composer.create_add_gate(
         { wire_indices[2], wire_indices[3], wire_indices[4], fr::one, fr::one, fr::neg_one(), fr::zero });
     composer.create_add_gate(
@@ -119,8 +117,7 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
     EXPECT_EQ(fr::from_montgomery_form(composer.q_o[0]).data[0], 1UL);
     EXPECT_EQ(fr::eq(composer.q_oo[0], fr::neg_one()), true);
 
-    for (size_t i = 2; i < 30; i += 2)
-    {
+    for (size_t i = 2; i < 30; i += 2) {
         uint64_t shift = static_cast<uint64_t>(i) + 1UL;
         EXPECT_EQ(fr::from_montgomery_form(composer.q_l[i]).data[0], 1UL << (shift + 1UL));
         EXPECT_EQ(fr::from_montgomery_form(composer.q_r[i]).data[0], 1UL << shift);
@@ -139,8 +136,7 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
     EXPECT_EQ(fr::from_montgomery_form(prover.w_o[2]).data[0], (1UL << 5UL) - 1UL);
     EXPECT_EQ(fr::from_montgomery_form(prover.w_o[3]).data[0], (1UL << 7U) - 1UL);
 
-    for (size_t i = 1; i < 15; ++i)
-    {
+    for (size_t i = 1; i < 15; ++i) {
         EXPECT_EQ(fr::from_montgomery_form(prover.w_l[i]).data[0], 1UL);
         EXPECT_EQ(fr::from_montgomery_form(prover.w_r[i]).data[0], 1UL);
         EXPECT_EQ(fr::from_montgomery_form(prover.w_o[i]).data[0], (1U << static_cast<uint32_t>(2 * i + 1)) - 1);
@@ -150,15 +146,13 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
     EXPECT_EQ(fr::from_montgomery_form(prover.w_l[15]).data[0], (1ULL << 32ULL) - 1ULL);
     EXPECT_EQ(fr::from_montgomery_form(prover.w_o[15]).data[0], (1ULL << 31ULL) - 1ULL);
 
-    for (size_t i = 0; i < 32; ++i)
-    {
+    for (size_t i = 0; i < 32; ++i) {
         EXPECT_EQ(prover.sigma_1_mapping[i], static_cast<uint32_t>(i));
         EXPECT_EQ(prover.sigma_2_mapping[i], static_cast<uint32_t>(i) + (1U << 30U));
         EXPECT_EQ(prover.sigma_3_mapping[i], static_cast<uint32_t>(i) + (1U << 31U));
     }
 
-    for (size_t i = 16; i < 32; ++i)
-    {
+    for (size_t i = 16; i < 32; ++i) {
         EXPECT_EQ(fr::eq(prover.w_l[i], fr::zero), true);
         EXPECT_EQ(fr::eq(prover.w_r[i], fr::zero), true);
         EXPECT_EQ(fr::eq(prover.w_o[i], fr::zero), true);
@@ -182,8 +176,7 @@ TEST(extended_composer, composer_consistency)
     plonk::stdlib::field_t<waffle::StandardComposer> b1[10];
     plonk::stdlib::field_t<waffle::ExtendedComposer> a2[10];
     plonk::stdlib::field_t<waffle::ExtendedComposer> b2[10];
-    for (size_t i = 0; i < 10; ++i)
-    {
+    for (size_t i = 0; i < 10; ++i) {
         a1[i] = plonk::stdlib::witness_t<waffle::StandardComposer>(&standard_composer, 100U);
         b1[i] = plonk::stdlib::witness_t<waffle::StandardComposer>(&standard_composer, 44U);
         a2[i] = plonk::stdlib::witness_t<waffle::ExtendedComposer>(&extended_composer, 100U);
@@ -197,8 +190,7 @@ TEST(extended_composer, composer_consistency)
 
     EXPECT_EQ(standard_prover.n, extended_prover.n);
 
-    for (size_t i = 0; i < standard_prover.n; ++i)
-    {
+    for (size_t i = 0; i < standard_prover.n; ++i) {
         EXPECT_EQ(fr::eq(standard_composer.q_m[i], extended_composer.q_m[i]), true);
         EXPECT_EQ(fr::eq(standard_composer.q_l[i], extended_composer.q_l[i]), true);
         EXPECT_EQ(fr::eq(standard_composer.q_r[i], extended_composer.q_r[i]), true);
@@ -229,8 +221,7 @@ TEST(extended_composer, basic_proof)
 
     field_t a[10];
     field_t b[10];
-    for (size_t i = 0; i < 10; ++i)
-    {
+    for (size_t i = 0; i < 10; ++i) {
         a[i] = witness_t(&composer, 100U);
         b[i] = witness_t(&composer, 44U);
         a[i] * b[i];
@@ -330,14 +321,12 @@ TEST(extended_composer, small_optimized_circuit)
 
     std::array<uint32_t, 64> w_ref;
     std::array<uint32, 64> w;
-    for (size_t i = 0; i < 64; ++i)
-    {
+    for (size_t i = 0; i < 64; ++i) {
         w_ref[i] = get_random_int();
         w[i] = witness_t(&composer, w_ref[i]);
     }
 
-    for (size_t i = 16; i < 64; ++i)
-    {
+    for (size_t i = 16; i < 64; ++i) {
         uint32 s0 = w[i - 15].ror(7) ^ w[i - 15].ror(18) ^ w[i - 15].ror(3);
         uint32 s1 = w[i - 2].ror(17) ^ w[i - 2].ror(19) ^ w[i - 2].ror(10);
         w[i] = w[i - 16] + s0 + w[i - 7] + s1;
@@ -350,7 +339,6 @@ TEST(extended_composer, small_optimized_circuit)
 
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
-
 }
 
 TEST(extended_composer, logic_operations)

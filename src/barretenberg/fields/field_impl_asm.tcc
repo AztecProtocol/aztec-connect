@@ -1,4 +1,5 @@
 #pragma once
+// clang-format off
 
 #include <cstdint>
 #include <unistd.h>
@@ -58,13 +59,17 @@ inline void field<FieldParams>::__copy(const field_t &src, field_t &dest) noexce
 template <typename FieldParams>
 inline void field<FieldParams>::reduce_once(const field_t &a, field_t &r) noexcept
 {
+    constexpr uint64_t not_modulus_3 = FieldParams::not_modulus_3;
+    constexpr uint64_t not_modulus_2 = FieldParams::not_modulus_2;
+    constexpr uint64_t not_modulus_1 = FieldParams::not_modulus_1;
+    constexpr uint64_t not_modulus_0 = FieldParams::not_modulus_0;
     __asm__(
         CLEAR_FLAGS("%%r12")
         LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
         REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
         STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "r"(&a), "r"(&r), [not_modulus_0] "m"(FieldParams::not_modulus_0), [not_modulus_1] "m"(FieldParams::not_modulus_1), [not_modulus_2] "m"(FieldParams::not_modulus_2), [not_modulus_3] "m"(FieldParams::not_modulus_3)
+        : "r"(&a), "r"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -75,13 +80,17 @@ inline void field<FieldParams>::reduce_once(const field_t &a, field_t &r) noexce
 template <typename FieldParams>
 inline void field<FieldParams>::__add(const field_t &a, const field_t &b, field_t &r) noexcept
 {
+    constexpr uint64_t not_modulus_3 = FieldParams::not_modulus_3;
+    constexpr uint64_t not_modulus_2 = FieldParams::not_modulus_2;
+    constexpr uint64_t not_modulus_1 = FieldParams::not_modulus_1;
+    constexpr uint64_t not_modulus_0 = FieldParams::not_modulus_0;
     __asm__(
         CLEAR_FLAGS("%%r12")
         LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
         ADD_REDUCE("%1", "%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
         STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "%r"(&a), "%r"(&b), "r"(&r), [not_modulus_0] "m"(FieldParams::not_modulus_0), [not_modulus_1] "m"(FieldParams::not_modulus_1), [not_modulus_2] "m"(FieldParams::not_modulus_2), [not_modulus_3] "m"(FieldParams::not_modulus_3)
+        : "%r"(&a), "%r"(&b), "r"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -92,13 +101,17 @@ inline void field<FieldParams>::__add(const field_t &a, const field_t &b, field_
 template <typename FieldParams>
 inline void field<FieldParams>::__add_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r) noexcept
 {
+    constexpr uint64_t twice_not_modulus_3 = FieldParams::twice_not_modulus_3;
+    constexpr uint64_t twice_not_modulus_2 = FieldParams::twice_not_modulus_2;
+    constexpr uint64_t twice_not_modulus_1 = FieldParams::twice_not_modulus_1;
+    constexpr uint64_t twice_not_modulus_0 = FieldParams::twice_not_modulus_0;
     __asm__(
         CLEAR_FLAGS("%%r12")
         LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
         ADD_REDUCE("%1", "%[twice_not_modulus_0]", "%[twice_not_modulus_1]", "%[twice_not_modulus_2]", "%[twice_not_modulus_3]")
         STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "%r"(&a), "%r"(&b), "r"(&r), [twice_not_modulus_0] "m"(FieldParams::twice_not_modulus_0), [twice_not_modulus_1] "m"(FieldParams::twice_not_modulus_1), [twice_not_modulus_2] "m"(FieldParams::twice_not_modulus_2), [twice_not_modulus_3] "m"(FieldParams::twice_not_modulus_3)
+        : "%r"(&a), "%r"(&b), "r"(&r), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -126,6 +139,10 @@ inline void field<FieldParams>::__add_without_reduction(const field_t &a, const 
 template <typename FieldParams>
 inline void field<FieldParams>::__quad_with_coarse_reduction(const field_t &a, field_t &r) noexcept
 {
+    constexpr uint64_t twice_not_modulus_3 = FieldParams::twice_not_modulus_3;
+    constexpr uint64_t twice_not_modulus_2 = FieldParams::twice_not_modulus_2;
+    constexpr uint64_t twice_not_modulus_1 = FieldParams::twice_not_modulus_1;
+    constexpr uint64_t twice_not_modulus_0 = FieldParams::twice_not_modulus_0;
     __asm__(
         CLEAR_FLAGS("%%r12")
         LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
@@ -134,7 +151,7 @@ inline void field<FieldParams>::__quad_with_coarse_reduction(const field_t &a, f
         DOUBLE_REDUCE("%[twice_not_modulus_0]", "%[twice_not_modulus_1]", "%[twice_not_modulus_2]", "%[twice_not_modulus_3]")
         STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "r"(&a), "r"(&r), [twice_not_modulus_0] "m"(FieldParams::twice_not_modulus_0), [twice_not_modulus_1] "m"(FieldParams::twice_not_modulus_1), [twice_not_modulus_2] "m"(FieldParams::twice_not_modulus_2), [twice_not_modulus_3] "m"(FieldParams::twice_not_modulus_3)
+        : "r"(&a), "r"(&r), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -145,6 +162,10 @@ inline void field<FieldParams>::__quad_with_coarse_reduction(const field_t &a, f
 template <typename FieldParams>
 inline void field<FieldParams>::__oct_with_coarse_reduction(const field_t &a, field_t &r) noexcept
 {
+    constexpr uint64_t twice_not_modulus_3 = FieldParams::twice_not_modulus_3;
+    constexpr uint64_t twice_not_modulus_2 = FieldParams::twice_not_modulus_2;
+    constexpr uint64_t twice_not_modulus_1 = FieldParams::twice_not_modulus_1;
+    constexpr uint64_t twice_not_modulus_0 = FieldParams::twice_not_modulus_0;
     __asm__(
         CLEAR_FLAGS("%%r12")
         LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
@@ -155,7 +176,7 @@ inline void field<FieldParams>::__oct_with_coarse_reduction(const field_t &a, fi
         DOUBLE_REDUCE("%[twice_not_modulus_0]", "%[twice_not_modulus_1]", "%[twice_not_modulus_2]", "%[twice_not_modulus_3]")
         STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "%r"(&a), "%r"(&r), [twice_not_modulus_0] "m"(FieldParams::twice_not_modulus_0), [twice_not_modulus_1] "m"(FieldParams::twice_not_modulus_1), [twice_not_modulus_2] "m"(FieldParams::twice_not_modulus_2), [twice_not_modulus_3] "m"(FieldParams::twice_not_modulus_3)
+        : "%r"(&a), "%r"(&r), [twice_not_modulus_0] "m"(twice_not_modulus_0), [twice_not_modulus_1] "m"(twice_not_modulus_1), [twice_not_modulus_2] "m"(twice_not_modulus_2), [twice_not_modulus_3] "m"(twice_not_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -169,6 +190,10 @@ inline void field<FieldParams>::__oct_with_coarse_reduction(const field_t &a, fi
 template <typename FieldParams>
 inline void field<FieldParams>::__paralell_double_and_add_without_reduction(field_t &x_0, const field_t &y_0, const field_t &y_1, field_t &r) noexcept
 {
+    constexpr uint64_t not_modulus_3 = FieldParams::not_modulus_3;
+    constexpr uint64_t not_modulus_2 = FieldParams::not_modulus_2;
+    constexpr uint64_t not_modulus_1 = FieldParams::not_modulus_1;
+    constexpr uint64_t not_modulus_0 = FieldParams::not_modulus_0;
     __asm__(
         CLEAR_FLAGS("%%r12")
         LOAD_FIELD_ELEMENT("%0", "%%r8", "%%r9", "%%r10", "%%r11")
@@ -177,7 +202,7 @@ inline void field<FieldParams>::__paralell_double_and_add_without_reduction(fiel
         STORE_FIELD_ELEMENT("%0", "%%r8", "%%r9", "%%r10", "%%r11")
         STORE_FIELD_ELEMENT("%3", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "r"(x_0.data), "%r"(y_0.data), "%r"(y_1.data), "r"(&r), [not_modulus_0] "m"(FieldParams::not_modulus_0), [not_modulus_1] "m"(FieldParams::not_modulus_1), [not_modulus_2] "m"(FieldParams::not_modulus_2), [not_modulus_3] "m"(FieldParams::not_modulus_3)
+        : "r"(x_0.data), "%r"(y_0.data), "%r"(y_1.data), "r"(&r), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -188,6 +213,10 @@ inline void field<FieldParams>::__paralell_double_and_add_without_reduction(fiel
 template <typename FieldParams>
 inline void field<FieldParams>::__sub(const field_t &a, const field_t &b, field_t &r) noexcept
 {
+    constexpr uint64_t modulus_3 = FieldParams::modulus_3;
+    constexpr uint64_t modulus_2 = FieldParams::modulus_2;
+    constexpr uint64_t modulus_1 = FieldParams::modulus_1;
+    constexpr uint64_t modulus_0 = FieldParams::modulus_0;
     __asm__(
         CLEAR_FLAGS("%%r12")
         LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
@@ -197,7 +226,7 @@ inline void field<FieldParams>::__sub(const field_t &a, const field_t &b, field_
         REDUCE_FIELD_ELEMENT("%[modulus_0]", "%[modulus_1]", "%[modulus_2]", "%[modulus_3]")
         STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "r"(&a), "r"(&b), "r"(&r), [modulus_0] "m"(FieldParams::modulus_0), [modulus_1] "m"(FieldParams::modulus_1), [modulus_2] "m"(FieldParams::modulus_2), [modulus_3] "m"(FieldParams::modulus_3)
+        : "r"(&a), "r"(&b), "r"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -208,6 +237,10 @@ inline void field<FieldParams>::__sub(const field_t &a, const field_t &b, field_
 template <typename FieldParams>
 inline void field<FieldParams>::__sub_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r) noexcept
 {
+    constexpr uint64_t twice_modulus_3 = FieldParams::twice_modulus_3;
+    constexpr uint64_t twice_modulus_2 = FieldParams::twice_modulus_2;
+    constexpr uint64_t twice_modulus_1 = FieldParams::twice_modulus_1;
+    constexpr uint64_t twice_modulus_0 = FieldParams::twice_modulus_0;
     __asm__(
         CLEAR_FLAGS("%%r12")
         LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
@@ -215,7 +248,36 @@ inline void field<FieldParams>::__sub_with_coarse_reduction(const field_t &a, co
         REDUCE_FIELD_ELEMENT("%[twice_modulus_0]", "%[twice_modulus_1]", "%[twice_modulus_2]", "%[twice_modulus_3]")
         STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "r"(&a), "r"(&b), "r"(&r), [twice_modulus_0] "m"(FieldParams::twice_modulus_0), [twice_modulus_1] "m"(FieldParams::twice_modulus_1), [twice_modulus_2] "m"(FieldParams::twice_modulus_2), [twice_modulus_3] "m"(FieldParams::twice_modulus_3)
+        : "r"(&a), "r"(&b), "r"(&r), [twice_modulus_0] "m"(twice_modulus_0), [twice_modulus_1] "m"(twice_modulus_1), [twice_modulus_2] "m"(twice_modulus_2), [twice_modulus_3] "m"(twice_modulus_3)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+/**
+ * negate if predicate is true
+ **/
+template <typename FieldParams>
+inline void field<FieldParams>::__conditionally_negate_self(field_t &r, const uint64_t predicate) noexcept
+{
+    // TODO use literals instead of memory references
+    __asm__ (
+        CLEAR_FLAGS("%%r8")
+        LOAD_FIELD_ELEMENT("%1", "%%r8", "%%r9", "%%r10", "%%r11")
+        "movq %[modulus_0], %%r12 \n\t"
+        "movq %[modulus_1], %%r13 \n\t"
+        "movq %[modulus_2], %%r14 \n\t"
+        "movq %[modulus_3], %%r15 \n\t"
+        "subq %%r8, %%r12 \n\t"
+        "sbbq %%r9, %%r13 \n\t"
+        "sbbq %%r10, %%r14 \n\t"
+        "sbbq %%r11, %%r15 \n\t"
+        "btq $0, %0 \n\t"
+        "cmovcq %%r12, %%r8 \n\t"
+        "cmovcq %%r13, %%r9 \n\t"
+        "cmovcq %%r14, %%r10 \n\t"
+        "cmovcq %%r15, %%r11 \n\t"
+        STORE_FIELD_ELEMENT("%1", "%%r8", "%%r9", "%%r10", "%%r11")
+        :
+        : "r"(predicate), "r"(&r), [modulus_0] "i"(FieldParams::modulus_0), [modulus_1] "i"(FieldParams::modulus_1), [modulus_2] "i"(FieldParams::modulus_2), [modulus_3] "i"(FieldParams::modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -224,7 +286,7 @@ inline void field<FieldParams>::__sub_with_coarse_reduction(const field_t &a, co
  * Copy `a` into `r`. If `predicate == true`, subtract modulus from r
  **/
 template <typename FieldParams>
-inline void field<FieldParams>::__conditionally_subtract_double_modulus(const field_t &a, field_t &r, const uint64_t predicate) noexcept
+inline void field<FieldParams>::__conditionally_subtract_from_double_modulus(const field_t &a, field_t &r, const uint64_t predicate) noexcept
 {
     // TODO use literals instead of memory references
     __asm__ (
@@ -245,7 +307,7 @@ inline void field<FieldParams>::__conditionally_subtract_double_modulus(const fi
         "cmovcq %%r15, %%r11 \n\t"
         STORE_FIELD_ELEMENT("%2", "%%r8", "%%r9", "%%r10", "%%r11")
         :
-        : "r"(&a), "r"(predicate), "r"(&r), [modulus_0] "m"(FieldParams::twice_modulus_0), [modulus_1] "m"(FieldParams::twice_modulus_1), [modulus_2] "m"(FieldParams::twice_modulus_2), [modulus_3] "m"(FieldParams::twice_modulus_3)
+        : "r"(&a), "r"(predicate), "r"(&r), [modulus_0] "i"(FieldParams::twice_modulus_0), [modulus_1] "i"(FieldParams::twice_modulus_1), [modulus_2] "i"(FieldParams::twice_modulus_2), [modulus_3] "i"(FieldParams::twice_modulus_3)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -256,6 +318,15 @@ inline void field<FieldParams>::__conditionally_subtract_double_modulus(const fi
 template <typename FieldParams>
 inline void field<FieldParams>::__sqr(const field_t &a, field_t &r) noexcept
 {
+    constexpr uint64_t not_modulus_3 = FieldParams::not_modulus_3;
+    constexpr uint64_t not_modulus_2 = FieldParams::not_modulus_2;
+    constexpr uint64_t not_modulus_1 = FieldParams::not_modulus_1;
+    constexpr uint64_t not_modulus_0 = FieldParams::not_modulus_0;
+    constexpr uint64_t r_inv = FieldParams::r_inv;
+    constexpr uint64_t modulus_3 = FieldParams::modulus_3;
+    constexpr uint64_t modulus_2 = FieldParams::modulus_2;
+    constexpr uint64_t modulus_1 = FieldParams::modulus_1;
+    constexpr uint64_t modulus_0 = FieldParams::modulus_0;
     /**
      * Registers: rax:rdx = multiplication accumulator
      *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
@@ -270,7 +341,7 @@ inline void field<FieldParams>::__sqr(const field_t &a, field_t &r) noexcept
         REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
         STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "r"(&a), "r"(&r), [zero_reference] "m"(internal::zero_reference), [modulus_0] "m"(FieldParams::modulus_0), [modulus_1] "m"(FieldParams::modulus_1), [modulus_2] "m"(FieldParams::modulus_2), [modulus_3] "m"(FieldParams::modulus_3), [r_inv] "m"(FieldParams::r_inv), [not_modulus_0] "m"(FieldParams::not_modulus_0), [not_modulus_1] "m"(FieldParams::not_modulus_1), [not_modulus_2] "m"(FieldParams::not_modulus_2), [not_modulus_3] "m"(FieldParams::not_modulus_3)
+        : "r"(&a), "r"(&r), [zero_reference] "m"(internal::zero_reference), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3)
         : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -281,6 +352,11 @@ inline void field<FieldParams>::__sqr(const field_t &a, field_t &r) noexcept
 template <typename FieldParams>
 inline void field<FieldParams>::__sqr_with_coarse_reduction(const field_t &a, field_t &r) noexcept
 {
+    constexpr uint64_t r_inv = FieldParams::r_inv;
+    constexpr uint64_t modulus_3 = FieldParams::modulus_3;
+    constexpr uint64_t modulus_2 = FieldParams::modulus_2;
+    constexpr uint64_t modulus_1 = FieldParams::modulus_1;
+    constexpr uint64_t modulus_0 = FieldParams::modulus_0;
     /**
      * Registers: rax:rdx = multiplication accumulator
      *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
@@ -290,11 +366,11 @@ inline void field<FieldParams>::__sqr_with_coarse_reduction(const field_t &a, fi
      *            %[r_ptr]: memory location of pointer to `r`
      **/
     __asm__(
-        SQR("%0") 
+        SQR("%0")
         // "movq %[r_ptr], %%rsi                   \n\t"
         STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "r"(&a), "r"(&r), [zero_reference] "m"(internal::zero_reference), [modulus_0] "m"(FieldParams::modulus_0), [modulus_1] "m"(FieldParams::modulus_1), [modulus_2] "m"(FieldParams::modulus_2), [modulus_3] "m"(FieldParams::modulus_3), [r_inv] "m"(FieldParams::r_inv)
+        : "r"(&a), "r"(&r), [zero_reference] "m"(internal::zero_reference), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv)
         : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -305,6 +381,15 @@ inline void field<FieldParams>::__sqr_with_coarse_reduction(const field_t &a, fi
 template <typename FieldParams>
 inline void field<FieldParams>::__mul(const field_t &a, const field_t &b, field_t &r) noexcept
 {
+    constexpr uint64_t not_modulus_3 = FieldParams::not_modulus_3;
+    constexpr uint64_t not_modulus_2 = FieldParams::not_modulus_2;
+    constexpr uint64_t not_modulus_1 = FieldParams::not_modulus_1;
+    constexpr uint64_t not_modulus_0 = FieldParams::not_modulus_0;
+    constexpr uint64_t r_inv = FieldParams::r_inv;
+    constexpr uint64_t modulus_3 = FieldParams::modulus_3;
+    constexpr uint64_t modulus_2 = FieldParams::modulus_2;
+    constexpr uint64_t modulus_1 = FieldParams::modulus_1;
+    constexpr uint64_t modulus_0 = FieldParams::modulus_0;
     /**
      * Registers: rax:rdx = multiplication accumulator
      *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
@@ -319,7 +404,7 @@ inline void field<FieldParams>::__mul(const field_t &a, const field_t &b, field_
         REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
         STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "%r"(&a), "%r"(&b), "r"(&r), [modulus_0] "m"(FieldParams::modulus_0), [modulus_1] "m"(FieldParams::modulus_1), [modulus_2] "m"(FieldParams::modulus_2), [modulus_3] "m"(FieldParams::modulus_3), [r_inv] "m"(FieldParams::r_inv), [not_modulus_0] "m"(FieldParams::not_modulus_0), [not_modulus_1] "m"(FieldParams::not_modulus_1), [not_modulus_2] "m"(FieldParams::not_modulus_2), [not_modulus_3] "m"(FieldParams::not_modulus_3), [zero_reference] "m"(internal::zero_reference)
+        : "%r"(&a), "%r"(&b), "r"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [not_modulus_0] "m"(not_modulus_0), [not_modulus_1] "m"(not_modulus_1), [not_modulus_2] "m"(not_modulus_2), [not_modulus_3] "m"(not_modulus_3), [zero_reference] "m"(internal::zero_reference)
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "%rdx", "%rdi", "cc", "memory");
 }
 
@@ -330,6 +415,11 @@ inline void field<FieldParams>::__mul(const field_t &a, const field_t &b, field_
 template <typename FieldParams>
 inline void field<FieldParams>::__mul_with_coarse_reduction(const field_t &a, const field_t &b, field_t &r) noexcept
 {
+    constexpr uint64_t r_inv = FieldParams::r_inv;
+    constexpr uint64_t modulus_3 = FieldParams::modulus_3;
+    constexpr uint64_t modulus_2 = FieldParams::modulus_2;
+    constexpr uint64_t modulus_1 = FieldParams::modulus_1;
+    constexpr uint64_t modulus_0 = FieldParams::modulus_0;
     /**
      * Registers: rax:rdx = multiplication accumulator
      *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
@@ -343,7 +433,7 @@ inline void field<FieldParams>::__mul_with_coarse_reduction(const field_t &a, co
         MUL("%1", "%0")
         STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
         :
-        : "%r"(&b), "%r"(&a), "r"(&r), [modulus_0] "m"(FieldParams::modulus_0), [modulus_1] "m"(FieldParams::modulus_1), [modulus_2] "m"(FieldParams::modulus_2), [modulus_3] "m"(FieldParams::modulus_3), [r_inv] "m"(FieldParams::r_inv), [zero_reference] "m"(internal::zero_reference)
+        : "%r"(&b), "%r"(&a), "r"(&r), [modulus_0] "m"(modulus_0), [modulus_1] "m"(modulus_1), [modulus_2] "m"(modulus_2), [modulus_3] "m"(modulus_3), [r_inv] "m"(r_inv), [zero_reference] "m"(internal::zero_reference)
         : "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 

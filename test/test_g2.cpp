@@ -182,7 +182,7 @@ TEST(g2, add_dbl_consistency_repeated)
 
 TEST(g2, mixed_add_exception_test_infinity)
 {
-    g2::element lhs = g2::one();
+    g2::element lhs = g2::one;
     g2::affine_element rhs = g2::random_affine_element();
     fq2::__copy(rhs.x, lhs.x);
     fq2::__neg(rhs.y, lhs.y);
@@ -279,12 +279,12 @@ TEST(g2, group_exponentiation_check_against_constants)
 
 TEST(g2, group_exponentiation_zero_and_one)
 {
-    g2::affine_element result = g2::group_exponentiation(g2::affine_one(), fr::zero);
+    g2::affine_element result = g2::group_exponentiation(g2::affine_one, fr::zero);
 
     EXPECT_EQ(g2::is_point_at_infinity(result), true);
 
-    result = g2::group_exponentiation(g2::affine_one(), fr::one);
-    EXPECT_EQ(g2::eq(result, g2::affine_one()), true);
+    result = g2::group_exponentiation(g2::affine_one, fr::one);
+    EXPECT_EQ(g2::eq(result, g2::affine_one), true);
 }
 
 TEST(g2, group_exponentiation_consistency_check)
@@ -295,7 +295,7 @@ TEST(g2, group_exponentiation_consistency_check)
     fr::field_t c;
     fr::__mul(a, b, c);
 
-    g2::affine_element input = g2::affine_one();
+    g2::affine_element input = g2::affine_one;
     g2::affine_element result = g2::group_exponentiation(input, a);
     result = g2::group_exponentiation(result, b);
 

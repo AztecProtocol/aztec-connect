@@ -1,1 +1,2 @@
 add_subdirectory(barretenberg)
+add_subdirectory(noir)

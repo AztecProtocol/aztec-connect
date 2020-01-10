@@ -6,13 +6,13 @@
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
 #include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
 
+#include <barretenberg/waffle/stdlib/bitarray/bitarray.hpp>
 #include <barretenberg/waffle/stdlib/common.hpp>
 #include <barretenberg/waffle/stdlib/crypto/hash/sha256.hpp>
 #include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
-#include <barretenberg/waffle/stdlib/bitarray/bitarray.hpp>
 
-#include <memory>
 #include <iostream>
+#include <memory>
 
 using namespace barretenberg;
 using namespace plonk;
@@ -22,21 +22,19 @@ typedef stdlib::uint32<waffle::ExtendedComposer> uint32;
 typedef stdlib::bitarray<waffle::ExtendedComposer> bitarray;
 typedef stdlib::witness_t<waffle::ExtendedComposer> witness_t;
 
-namespace
-{
+namespace {
 uint32_t get_random_int()
 {
-return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
 }
-}
+} // namespace
 
 TEST(stdlib_sha256, test_sha256)
 {
     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
 
     std::array<uint32, 16> inputs;
-    for (size_t i = 0; i < 16; ++i)
-    {
+    for (size_t i = 0; i < 16; ++i) {
         inputs[i] = witness_t(&composer, get_random_int());
     }
 
@@ -46,7 +44,7 @@ TEST(stdlib_sha256, test_sha256)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -77,7 +75,7 @@ TEST(stdlib_sha256, test_55_bytes)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -107,7 +105,7 @@ TEST(stdlib_sha256, test_NIST_vector_one)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -115,7 +113,6 @@ TEST(stdlib_sha256, test_NIST_vector_one)
     bool proof_result = verifier.verify_proof(proof);
     EXPECT_EQ(proof_result, true);
 }
-
 
 TEST(stdlib_sha256, test_NIST_vector_two)
 {
@@ -138,7 +135,7 @@ TEST(stdlib_sha256, test_NIST_vector_two)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -166,7 +163,6 @@ TEST(stdlib_sha256, test_NIST_vector_three)
 
     std::vector<uint32> output = output_bits.to_uint32_vector();
 
- 
     EXPECT_EQ(output[0].get_value(), 0x68325720U);
     EXPECT_EQ(output[1].get_value(), 0xaabd7c82U);
     EXPECT_EQ(output[2].get_value(), 0xf30f554bU);
@@ -178,7 +174,7 @@ TEST(stdlib_sha256, test_NIST_vector_three)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -211,7 +207,7 @@ TEST(stdlib_sha256, test_NIST_vector_four)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -252,7 +248,7 @@ TEST(stdlib_sha256, test_NIST_vector_five)
 
     waffle::Prover prover = composer.preprocess();
 
-    printf("composer gates = %lu\n", composer.get_num_gates());
+    printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();

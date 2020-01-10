@@ -5,40 +5,92 @@
 
 #include "../assert.hpp"
 
-namespace barretenberg
-{
-namespace internal
-{
+namespace barretenberg {
+namespace internal {
 __extension__ using uint128_t = unsigned __int128;
 constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
+
+#if defined(__SIZEOF_INT128__) && !defined(__wasm__)
+#else
+inline void mul_wide(uint64_t a, uint64_t b, uint64_t& out_lo, uint64_t& out_hi) noexcept
+{
+    const uint64_t a_lo = a & 0xffffffffULL;
+    const uint64_t a_hi = a >> 32ULL;
+    const uint64_t b_lo = b & 0xffffffffULL;
+    const uint64_t b_hi = b >> 32ULL;
+
+    const uint64_t lo_lo = a_lo * b_lo;
+    const uint64_t hi_lo = a_hi * b_lo;
+    const uint64_t lo_hi = a_lo * b_hi;
+    const uint64_t hi_hi = a_hi * b_hi;
+
+    const uint64_t cross = (lo_lo >> 32ULL) + (hi_lo & 0xffffffffULL) + lo_hi;
+
+    out_lo = (cross << 32ULL) | (lo_lo & 0xffffffffULL);
+    out_hi = (hi_lo >> 32ULL) + (cross >> 32ULL) + hi_hi;
+}
+#endif
+
+inline void mac(const uint64_t a,
+                const uint64_t b,
+                const uint64_t c,
+                const uint64_t carry_in,
+                uint64_t& r,
+                uint64_t& carry_out) noexcept
+{
+#if defined(__SIZEOF_INT128__) && !defined(__wasm__)
+    uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
+    carry_out = (uint64_t)(res >> 64);
+    r = (uint64_t)(res & lo_mask);
+#else
+    mul_wide(b, c, r, carry_out);
+    r = r + a;
+    const uint64_t overflow_c = (r < a);
+    r = r + carry_in;
+    const uint64_t overflow_carry = (r < carry_in);
+    carry_out += (overflow_c + overflow_carry);
+#endif
+}
 
 // compute a + b + carry, returning the carry
 inline void addc(const uint64_t a, const uint64_t b, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out) noexcept
 {
+#if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     uint128_t res = (uint128_t)a + (uint128_t)b + (uint128_t)carry_in;
     carry_out = (uint64_t)(res >> 64);
     r = (uint64_t)(res & lo_mask);
+#else
+    r = a + b;
+    uint64_t carry_temp = r < a;
+    r += carry_in;
+    carry_out = carry_temp + (r < carry_in);
+#endif
 }
 
 // compute a - (b + borrow), returning result and updated borrow
-inline void sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in, uint64_t& r, uint64_t& borrow_out) noexcept
+inline void sbb(
+    const uint64_t a, const uint64_t b, const uint64_t borrow_in, uint64_t& r, uint64_t& borrow_out) noexcept
 {
+#if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     uint128_t res = (uint128_t)a - ((uint128_t)b + (uint128_t)(borrow_in >> 63));
     borrow_out = (uint64_t)(res >> 64);
     r = (uint64_t)(res & lo_mask);
-}
+#else
+    uint64_t t_1 = a - (borrow_in >> 63ULL);
+    uint64_t borrow_temp_1 = t_1 > a;
+    uint64_t t_2 = t_1 - b;
+    uint64_t borrow_temp_2 = t_2 > t_1;
 
-// perform a + (b * c) + carry, putting result in r and returning new carry
-inline void mac(
-    const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t& r, uint64_t& carry_out) noexcept
-{
-    uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
-    carry_out = (uint64_t)(res >> 64);
-    r = (uint64_t)(res & lo_mask);
+    r = t_2;
+    borrow_out = 0ULL - (borrow_temp_1 | borrow_temp_2);
+    // uint64_t borrow_temp_2 = r > a;
+#endif
 }
 
 template <typename FieldParams>
-inline void subtract(const typename field<FieldParams>::field_t& a, const typename field<FieldParams>::field_t& b, typename field<FieldParams>::field_t& r) noexcept
+inline void subtract(const typename field<FieldParams>::field_t& a,
+                     const typename field<FieldParams>::field_t& b,
+                     typename field<FieldParams>::field_t& r) noexcept
 {
     uint64_t borrow = 0;
     uint64_t carry = 0;
@@ -54,7 +106,9 @@ inline void subtract(const typename field<FieldParams>::field_t& a, const typena
 }
 
 template <typename FieldParams>
-inline void subtract_coarse(const typename field<FieldParams>::field_t& a, const typename field<FieldParams>::field_t& b, typename field<FieldParams>::field_t& r) noexcept
+inline void subtract_coarse(const typename field<FieldParams>::field_t& a,
+                            const typename field<FieldParams>::field_t& b,
+                            typename field<FieldParams>::field_t& r) noexcept
 {
     uint64_t borrow = 0;
     uint64_t carry = 0;
@@ -136,8 +190,7 @@ inline void field<FieldParams>::__mul_512(const field_t& a, const field_t& b, fi
     internal::mac(r.data[6], a.data[3], b.data[3], carry, r.data[6], r.data[7]);
 }
 
-template <typename FieldParams>
-inline void field<FieldParams>::__copy(const field_t& a, field_t& r) noexcept
+template <typename FieldParams> inline void field<FieldParams>::__copy(const field_t& a, field_t& r) noexcept
 {
     r.data[0] = a.data[0];
     r.data[1] = a.data[1];
@@ -145,12 +198,10 @@ inline void field<FieldParams>::__copy(const field_t& a, field_t& r) noexcept
     r.data[3] = a.data[3];
 }
 
-template <typename FieldParams>
-inline void field<FieldParams>::reduce_once(const field_t& a, field_t& r) noexcept
+template <typename FieldParams> inline void field<FieldParams>::reduce_once(const field_t& a, field_t& r) noexcept
 {
     internal::subtract<FieldParams>(a, modulus, r);
 }
-
 
 template <typename FieldParams>
 inline void field<FieldParams>::__add(const field_t& a, const field_t& b, field_t& r) noexcept
@@ -197,7 +248,10 @@ inline void field<FieldParams>::__oct_with_coarse_reduction(const field_t& a, fi
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__paralell_double_and_add_without_reduction(field_t& x_0, const field_t& y_0, const field_t& y_1, field_t& r) noexcept
+inline void field<FieldParams>::__paralell_double_and_add_without_reduction(field_t& x_0,
+                                                                            const field_t& y_0,
+                                                                            const field_t& y_1,
+                                                                            field_t& r) noexcept
 {
     __add_without_reduction(x_0, x_0, x_0);
     __add_without_reduction(y_0, y_1, r);
@@ -216,20 +270,26 @@ inline void field<FieldParams>::__sub_with_coarse_reduction(const field_t& a, co
 }
 
 template <typename FieldParams>
-inline void field<FieldParams>::__conditionally_subtract_double_modulus(const field_t& a, field_t& r, const uint64_t predicate) noexcept
+inline void field<FieldParams>::__conditionally_subtract_from_double_modulus(const field_t& a,
+                                                                             field_t& r,
+                                                                             const uint64_t predicate) noexcept
 {
-    if (predicate)
-    {
+    if (predicate) {
         __sub(twice_modulus, a, r);
-    }
-    else
-    {
+    } else {
         __copy(a, r);
     }
 }
-
 template <typename FieldParams>
-inline void field<FieldParams>::__sqr(const field_t& a, field_t& r) noexcept
+inline void field<FieldParams>::__conditionally_negate_self(field_t& r, const uint64_t predicate) noexcept
+{
+    if (predicate) {
+        __sub(modulus, r, r);
+    } else {
+        __copy(r, r);
+    }
+}
+template <typename FieldParams> inline void field<FieldParams>::__sqr(const field_t& a, field_t& r) noexcept
 {
     field<FieldParams>::field_wide_t temp;
     __mul_512(a, a, temp);
@@ -262,8 +322,7 @@ inline void field<FieldParams>::__mul_with_coarse_reduction(const field_t& lhs, 
     internal::montgomery_reduce<FieldParams>(temp, r);
 }
 
-template <typename FieldParams>
-inline void field<FieldParams>::__swap(field_t& src, field_t& dest) noexcept
+template <typename FieldParams> inline void field<FieldParams>::__swap(field_t& src, field_t& dest) noexcept
 {
     uint64_t t[4] = { src.data[0], src.data[1], src.data[2], src.data[3] };
     src.data[0] = dest.data[0];

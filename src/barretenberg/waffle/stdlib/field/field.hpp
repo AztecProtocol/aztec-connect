@@ -1,16 +1,13 @@
 #pragma once
 
 #include "../../../curves/bn254/fr.hpp"
-#include "../common.hpp"
 #include "../bool/bool.hpp"
+#include "../common.hpp"
 
-namespace plonk
-{
-namespace stdlib
-{
+namespace plonk {
+namespace stdlib {
 
-template <typename ComposerContext> class field_t
-{
+template <typename ComposerContext> class field_t {
   public:
     field_t(ComposerContext* parent_context = nullptr);
     field_t(ComposerContext* parent_context, const barretenberg::fr::field_t& value);
@@ -33,6 +30,8 @@ template <typename ComposerContext> class field_t
     field_t normalize();
 
     barretenberg::fr::field_t get_value();
+
+    bool is_constant() const { return witness_index == static_cast<uint32_t>(-1); }
 
     mutable ComposerContext* context = nullptr;
     mutable barretenberg::fr::field_t additive_constant;

@@ -32,6 +32,7 @@ class Prover
     void compute_permutation_grand_product_coefficients(barretenberg::polynomial& z_fft);
     void compute_identity_grand_product_coefficients(barretenberg::polynomial& z_fft);
     void compute_arithmetisation_coefficients();
+    void init_quotient_polynomials();
     void compute_quotient_polynomial();
     void compute_opening_elements();
     barretenberg::fr::field_t compute_linearisation_coefficients();

@@ -17,7 +17,7 @@ inline size_t get_msb(uint32_t v)
     v |= v >> 8;
     v |= v >> 16;
 
-    return MultiplyDeBruijnBitPosition[static_cast<uint32_t>(v * 0x07C4ACDDU) >> 27U];
+    return MultiplyDeBruijnBitPosition[static_cast<uint32_t>(v * static_cast<uint32_t>(0x07C4ACDD)) >> static_cast<uint32_t>(27)];
 }
 
 inline size_t get_msb(uint128_t v)

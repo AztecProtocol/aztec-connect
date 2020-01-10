@@ -17,7 +17,7 @@ using namespace benchmark;
 
 constexpr size_t MAX_GATES = 1 << 20;
 constexpr size_t NUM_CIRCUITS = 8;
-constexpr size_t START = (1 << 20) >> (NUM_CIRCUITS - 1);
+constexpr size_t START = (MAX_GATES) >> (NUM_CIRCUITS - 1);
 // constexpr size_t NUM_HASH_CIRCUITS = 8;
 // constexpr size_t MAX_HASH_ROUNDS = 8192;
 // constexpr size_t START_HASH_ROUNDS = 64;
@@ -90,5 +90,37 @@ void verify_proofs_bench(State& state) noexcept
     }
 }
 BENCHMARK(verify_proofs_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
+
+
+void compute_wire_coefficients(State& state) noexcept
+{
+    for (auto _ : state)
+    {
+        size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
+        provers[idx].init_quotient_polynomials();
+        provers[idx].compute_wire_coefficients();
+    }
+}
+BENCHMARK(compute_wire_coefficients)->RangeMultiplier(2)->Range(START, MAX_GATES);
+
+void compute_wire_commitments(State& state) noexcept
+{
+    for (auto _ : state)
+    {
+        size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
+        provers[idx].compute_wire_commitments();
+    }
+}
+BENCHMARK(compute_wire_commitments)->RangeMultiplier(2)->Range(START, MAX_GATES);
+
+void compute_z_coefficients(State& state) noexcept
+{
+    for (auto _ : state)
+    {
+        size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
+        provers[idx].compute_z_coefficients();
+    }
+}
+BENCHMARK(compute_z_coefficients)->RangeMultiplier(2)->Range(START, MAX_GATES);
 
 BENCHMARK_MAIN();
