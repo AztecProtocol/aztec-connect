@@ -5,13 +5,13 @@
 #include "../../../curves/bn254/g1.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
 #include "../../../polynomials/polynomial.hpp"
+#include "../../../transcript/transcript.hpp"
 #include "../../../types.hpp"
 
 #include "../../reference_string/reference_string.hpp"
 #include "../../waffle_types.hpp"
 
 #include "../circuit_state.hpp"
-#include "../transcript/transcript.hpp"
 #include "../transcript_helpers.hpp"
 
 namespace waffle {
@@ -70,14 +70,14 @@ class VerifierBaseWidget {
 
     virtual challenge_coefficients append_scalar_multiplication_inputs(
         const challenge_coefficients& challenge,
-        const waffle::transcript::Transcript& transcript,
+        const transcript::Transcript& transcript,
         std::vector<barretenberg::g1::affine_element>& points,
         std::vector<barretenberg::fr::field_t>& scalars) = 0;
 
     virtual barretenberg::fr::field_t compute_batch_evaluation_contribution(
         barretenberg::fr::field_t& batch_eval,
         const barretenberg::fr::field_t& nu_base,
-        const waffle::transcript::Transcript& transcript) = 0;
+        const transcript::Transcript& transcript) = 0;
 
     virtual bool verify_instance_commitments()
     {
@@ -108,14 +108,14 @@ class ProverBaseWidget {
     virtual ~ProverBaseWidget() {}
 
     virtual barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                                    const waffle::transcript::Transcript& transcript,
+                                                                    const transcript::Transcript& transcript,
                                                                     CircuitFFTState& circuit_state) = 0;
     virtual barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                                  const waffle::transcript::Transcript& transcript,
+                                                                  const transcript::Transcript& transcript,
                                                                   const barretenberg::evaluation_domain& domain,
                                                                   barretenberg::polynomial& r) = 0;
     virtual barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
-                                                                const waffle::transcript::Transcript& transcript,
+                                                                const transcript::Transcript& transcript,
                                                                 barretenberg::fr::field_t* poly,
                                                                 const barretenberg::evaluation_domain& domain) = 0;
     virtual void compute_transcript_elements(transcript::Transcript&){};

@@ -14,13 +14,13 @@ class VerifierBoolWidget : public VerifierBaseWidget {
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
         const challenge_coefficients& challenge,
-        const waffle::transcript::Transcript& transcript,
+        const transcript::Transcript& transcript,
         std::vector<barretenberg::g1::affine_element>& points,
         std::vector<barretenberg::fr::field_t>& scalars);
 
     barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t&,
                                                                     const barretenberg::fr::field_t& nu_base,
-                                                                    const waffle::transcript::Transcript&)
+                                                                    const transcript::Transcript&)
     {
         return nu_base;
     };
@@ -35,14 +35,14 @@ class ProverBoolWidget : public ProverBaseWidget {
     ProverBoolWidget& operator=(ProverBoolWidget&& other);
 
     barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                            const waffle::transcript::Transcript& transcript,
+                                                            const transcript::Transcript& transcript,
                                                             CircuitFFTState& circuit_state);
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                          const waffle::transcript::Transcript& transcript,
+                                                          const transcript::Transcript& transcript,
                                                           const barretenberg::evaluation_domain& domain,
                                                           barretenberg::polynomial& r);
     barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
-                                                                const waffle::transcript::Transcript&,
+                                                                const transcript::Transcript&,
                                                                 barretenberg::fr::field_t*,
                                                                 const barretenberg::evaluation_domain&)
     {

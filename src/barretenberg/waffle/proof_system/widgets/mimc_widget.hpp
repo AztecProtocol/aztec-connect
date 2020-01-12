@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../transcript/transcript.hpp"
 #include "./arithmetic_widget.hpp"
 #include "./base_widget.hpp"
 namespace waffle {
@@ -11,13 +10,13 @@ class VerifierMiMCWidget : public VerifierBaseWidget {
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
         const challenge_coefficients& challenge,
-        const waffle::transcript::Transcript& transcript,
+        const transcript::Transcript& transcript,
         std::vector<barretenberg::g1::affine_element>& points,
         std::vector<barretenberg::fr::field_t>& scalars);
 
     barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t& batch_eval,
                                                                     const barretenberg::fr::field_t& nu_base,
-                                                                    const waffle::transcript::Transcript& transcript);
+                                                                    const transcript::Transcript& transcript);
 };
 
 class ProverMiMCWidget : public ProverBaseWidget {
@@ -29,14 +28,14 @@ class ProverMiMCWidget : public ProverBaseWidget {
     ProverMiMCWidget& operator=(ProverMiMCWidget&& other);
 
     barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                            const waffle::transcript::Transcript& transcript,
+                                                            const transcript::Transcript& transcript,
                                                             CircuitFFTState& circuit_state);
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                          const waffle::transcript::Transcript& transcript,
+                                                          const transcript::Transcript& transcript,
                                                           const barretenberg::evaluation_domain& domain,
                                                           barretenberg::polynomial& r);
     barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
-                                                                const waffle::transcript::Transcript& transcript,
+                                                                const transcript::Transcript& transcript,
                                                                 barretenberg::fr::field_t* poly,
                                                                 const barretenberg::evaluation_domain& domain);
     void compute_transcript_elements(transcript::Transcript& transcript);

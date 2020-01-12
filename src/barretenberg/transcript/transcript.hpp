@@ -1,36 +1,31 @@
 #pragma once
 
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
-#include "../../../keccak/keccak.h"
+#include "../assert.hpp"
+#include "../keccak/keccak.h"
+
 #include "./manifest.hpp"
 
-#include "../../../assert.hpp"
-namespace waffle
-{
-namespace transcript
-{
-class Transcript
-{
+namespace transcript {
+class Transcript {
     static constexpr size_t PRNG_OUTPUT_SIZE = 32;
 
-public:
+  public:
     Transcript(const ProgramManifest input_manifest)
         : manifest(input_manifest){};
 
-    Transcript(const std::vector<uint8_t>& input_transcript, const ProgramManifest input_manifest) : manifest(input_manifest)
+    Transcript(const std::vector<uint8_t>& input_transcript, const ProgramManifest input_manifest)
+        : manifest(input_manifest)
     {
         const size_t num_rounds = input_manifest.get_num_rounds();
         const uint8_t* buffer = &input_transcript[0];
         size_t count = 0;
-        for (size_t i = 0; i < num_rounds; ++i)
-        {
-            for (auto manifest_element : input_manifest.get_round_manifest(i).elements)
-            {
-                if (!manifest_element.derived_by_verifier)
-                {
+        for (size_t i = 0; i < num_rounds; ++i) {
+            for (auto manifest_element : input_manifest.get_round_manifest(i).elements) {
+                if (!manifest_element.derived_by_verifier) {
                     // printf("adding manifest item %s : ", manifest_element.name.c_str());
                     // for (size_t j = 0; j < manifest_element.num_bytes; ++j)
                     // {
@@ -39,7 +34,7 @@ public:
                     // printf("\n");
                     elements.insert(
                         { manifest_element.name,
-                        std::vector<uint8_t>(buffer + count, buffer + count + manifest_element.num_bytes) });
+                          std::vector<uint8_t>(buffer + count, buffer + count + manifest_element.num_bytes) });
                     count += manifest_element.num_bytes;
                 }
             }
@@ -48,10 +43,7 @@ public:
         }
     }
 
-    ProgramManifest get_manifest() const 
-    {
-        return manifest;
-    }
+    ProgramManifest get_manifest() const { return manifest; }
 
     void add_element(const std::string& element_name, const std::vector<uint8_t>& buffer)
     {
@@ -65,12 +57,10 @@ public:
         ASSERT(challenge_name == manifest.get_round_manifest(current_round).challenge);
 
         std::vector<uint8_t> buffer;
-        if (current_round > 0)
-        {
+        if (current_round > 0) {
             buffer.insert(buffer.end(), current_challenge.begin(), current_challenge.end());
         }
-        for (auto manifest_element : manifest.get_round_manifest(current_round).elements)
-        {
+        for (auto manifest_element : manifest.get_round_manifest(current_round).elements) {
             ASSERT(elements.count(manifest_element.name) == 1);
             std::vector<uint8_t>& element_data = elements[manifest_element.name];
             ASSERT(manifest_element.num_bytes == element_data.size());
@@ -79,10 +69,8 @@ public:
 
         keccak256 hash_result = ethash_keccak256(&buffer[0], buffer.size());
 
-        for (size_t i = 0; i < 4; ++i)
-        {
-            for (size_t j = 0; j < 8; ++j)
-            {
+        for (size_t i = 0; i < 4; ++i) {
+            for (size_t j = 0; j < 8; ++j) {
                 uint8_t byte = static_cast<uint8_t>(hash_result.word64s[i] >> (56 - (j * 8)));
                 current_challenge[i * 8 + j] = byte;
             }
@@ -112,15 +100,12 @@ public:
     {
         std::vector<uint8_t> buffer;
 
-        for (size_t i = 0; i < manifest.get_num_rounds(); ++i)
-        {
-            for (auto manifest_element : manifest.get_round_manifest(i).elements)
-            {
+        for (size_t i = 0; i < manifest.get_num_rounds(); ++i) {
+            for (auto manifest_element : manifest.get_round_manifest(i).elements) {
                 ASSERT(elements.count(manifest_element.name) == 1);
                 const std::vector<uint8_t>& element_data = elements.at(manifest_element.name);
                 ASSERT(manifest_element.num_bytes == element_data.size());
-                if (!manifest_element.derived_by_verifier)
-                {
+                if (!manifest_element.derived_by_verifier) {
                     // printf("writing element %s ", manifest_element.name.c_str());
                     // for (size_t j = 0; j < element_data.size(); ++j)
                     // {
@@ -144,5 +129,4 @@ public:
 
     ProgramManifest manifest;
 };
-}
-} // namespace waffle
+} // namespace transcript

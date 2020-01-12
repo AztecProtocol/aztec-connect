@@ -2,11 +2,11 @@
 
 #include "../../curves/bn254/fr.hpp"
 #include "../../polynomials/polynomial.hpp"
+#include "../../transcript/manifest.hpp"
 #include "../../types.hpp"
 
 #include "../proof_system/prover/prover.hpp"
 
-#include "../proof_system/transcript/manifest.hpp"
 
 namespace waffle
 {

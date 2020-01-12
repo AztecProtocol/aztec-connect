@@ -9,7 +9,7 @@
 #include <barretenberg/curves/bn254/g1.hpp>
 #include <barretenberg/curves/bn254/scalar_multiplication/scalar_multiplication.hpp>
 
-#include <barretenberg/waffle/proof_system/transcript/manifest.hpp>
+#include <barretenberg/transcript/manifest.hpp>
 
 /*
 ```
@@ -71,23 +71,23 @@ using namespace barretenberg;
 
 namespace {
 
-waffle::transcript::ProgramManifest create_manifest(const size_t num_public_inputs = 0)
+transcript::ProgramManifest create_manifest(const size_t num_public_inputs = 0)
 {
     constexpr size_t g1_size = 64;
     constexpr size_t fr_size = 32;
     const size_t public_input_size = fr_size * num_public_inputs;
-    static const waffle::transcript::ProgramManifest output = waffle::transcript::ProgramManifest(
-        { waffle::transcript::ProgramManifest::RoundManifest({ { "circuit_size", 4, false } }, "init"),
-          waffle::transcript::ProgramManifest::RoundManifest({ { "public_inputs", public_input_size, false },
+    static const transcript::ProgramManifest output = transcript::ProgramManifest(
+        { transcript::ProgramManifest::RoundManifest({ { "circuit_size", 4, false } }, "init"),
+          transcript::ProgramManifest::RoundManifest({ { "public_inputs", public_input_size, false },
                                                                { "W_1", g1_size, false },
                                                                { "W_2", g1_size, false },
                                                                { "W_3", g1_size, false } },
                                                              "beta"),
-          waffle::transcript::ProgramManifest::RoundManifest({ {} }, "gamma"),
-          waffle::transcript::ProgramManifest::RoundManifest({ { "Z", g1_size, false } }, "alpha"),
-          waffle::transcript::ProgramManifest::RoundManifest(
+          transcript::ProgramManifest::RoundManifest({ {} }, "gamma"),
+          transcript::ProgramManifest::RoundManifest({ { "Z", g1_size, false } }, "alpha"),
+          transcript::ProgramManifest::RoundManifest(
               { { "T_1", g1_size, false }, { "T_2", g1_size, false }, { "T_3", g1_size, false } }, "z"),
-          waffle::transcript::ProgramManifest::RoundManifest({ { "w_1", fr_size, false },
+          transcript::ProgramManifest::RoundManifest({ { "w_1", fr_size, false },
                                                                { "w_2", fr_size, false },
                                                                { "w_3", fr_size, false },
                                                                { "z_omega", fr_size, false },
@@ -96,7 +96,7 @@ waffle::transcript::ProgramManifest create_manifest(const size_t num_public_inpu
                                                                { "r", fr_size, false },
                                                                { "t", fr_size, true } },
                                                              "nu"),
-          waffle::transcript::ProgramManifest::RoundManifest(
+          transcript::ProgramManifest::RoundManifest(
               { { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } }, "separator") });
     return output;
 }

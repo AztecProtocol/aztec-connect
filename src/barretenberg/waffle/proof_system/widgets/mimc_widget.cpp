@@ -54,7 +54,7 @@ ProverMiMCWidget& ProverMiMCWidget::operator=(ProverMiMCWidget&& other)
 }
 
 fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                            const waffle::transcript::Transcript& transcript,
+                                                            const transcript::Transcript& transcript,
                                                             CircuitFFTState& circuit_state)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
@@ -127,7 +127,7 @@ fr::field_t ProverMiMCWidget::compute_linear_contribution(const fr::field_t& alp
 }
 
 fr::field_t ProverMiMCWidget::compute_opening_poly_contribution(const fr::field_t& nu_base,
-                                                                const waffle::transcript::Transcript& transcript,
+                                                                const transcript::Transcript& transcript,
                                                                 fr::field_t* poly,
                                                                 const evaluation_domain& domain)
 {
@@ -180,7 +180,7 @@ VerifierMiMCWidget::VerifierMiMCWidget(std::vector<barretenberg::g1::affine_elem
 barretenberg::fr::field_t VerifierMiMCWidget::compute_batch_evaluation_contribution(
     barretenberg::fr::field_t& batch_eval,
     const barretenberg::fr::field_t& nu_base,
-    const waffle::transcript::Transcript& transcript)
+    const transcript::Transcript& transcript)
 {
     fr::field_t q_mimc_coefficient_eval =
         fr::serialize_from_buffer(&transcript.get_element("q_mimc_coefficient")[0]);
@@ -194,7 +194,7 @@ barretenberg::fr::field_t VerifierMiMCWidget::compute_batch_evaluation_contribut
 
 VerifierBaseWidget::challenge_coefficients VerifierMiMCWidget::append_scalar_multiplication_inputs(
     const VerifierBaseWidget::challenge_coefficients& challenge,
-    const waffle::transcript::Transcript& transcript,
+    const transcript::Transcript& transcript,
     std::vector<barretenberg::g1::affine_element>& points,
     std::vector<barretenberg::fr::field_t>& scalars)
 {

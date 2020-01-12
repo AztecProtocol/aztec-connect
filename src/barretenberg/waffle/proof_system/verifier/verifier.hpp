@@ -7,8 +7,8 @@
 
 #include "../widgets/base_widget.hpp"
 
-#include "../transcript/manifest.hpp"
-#include "../transcript/transcript.hpp"
+#include "../../../transcript/manifest.hpp"
+#include "../../../transcript/transcript.hpp"
 namespace waffle
 {
 class Verifier

@@ -1,4 +1,4 @@
-#include <barretenberg/waffle/proof_system/transcript/transcript.hpp>
+#include <barretenberg/transcript/transcript.hpp>
 #include <barretenberg/waffle/composer/standard_composer.hpp>
 #include <gtest/gtest.h>
 
@@ -22,7 +22,7 @@ TEST(transcript, validate_transcript)
     {
         fr_vector[i] = 1;
     }
-    waffle::transcript::Transcript transcript = waffle::transcript::Transcript(waffle::StandardComposer::create_manifest());
+    transcript::Transcript transcript = transcript::Transcript(waffle::StandardComposer::create_manifest());
     transcript.add_element("circuit_size", { 1, 2, 3, 4});
     // transcript.add_element("Q_M", g1_vector);
     // transcript.add_element("Q_L", g1_vector);

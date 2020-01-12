@@ -63,7 +63,7 @@ ProverArithmeticWidget& ProverArithmeticWidget::operator=(ProverArithmeticWidget
 }
 
 fr::field_t ProverArithmeticWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                                  const waffle::transcript::Transcript& transcript,
+                                                                  const transcript::Transcript& transcript,
                                                                   CircuitFFTState& circuit_state)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
@@ -104,7 +104,7 @@ fr::field_t ProverArithmeticWidget::compute_quotient_contribution(const barreten
 }
 
 fr::field_t ProverArithmeticWidget::compute_linear_contribution(const fr::field_t& alpha_base,
-                                                                const waffle::transcript::Transcript& transcript,
+                                                                const transcript::Transcript& transcript,
                                                                 const evaluation_domain& domain,
                                                                 barretenberg::polynomial& r)
 {
@@ -181,7 +181,7 @@ VerifierArithmeticWidget::VerifierArithmeticWidget(std::vector<barretenberg::g1:
 
 VerifierBaseWidget::challenge_coefficients VerifierArithmeticWidget::append_scalar_multiplication_inputs(
     const challenge_coefficients& challenge,
-    const waffle::transcript::Transcript& transcript,
+    const transcript::Transcript& transcript,
     std::vector<barretenberg::g1::affine_element>& points,
     std::vector<barretenberg::fr::field_t>& scalars)
 {

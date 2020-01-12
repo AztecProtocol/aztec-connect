@@ -46,11 +46,11 @@ add_library(
     polynomials/polynomial_arithmetic.hpp
     polynomials/polynomial.cpp
     polynomials/polynomial.hpp
+    transcript/manifest.hpp
+    transcript/transcript.hpp
     waffle/waffle_types.hpp
     waffle/reference_string/reference_string.cpp
     waffle/reference_string/reference_string.hpp
-    waffle/proof_system/transcript/manifest.hpp
-    waffle/proof_system/transcript/transcript.hpp
     waffle/proof_system/linearizer.hpp
     waffle/proof_system/permutation.hpp
     waffle/proof_system/preprocess.hpp
@@ -160,11 +160,11 @@ if(PROFILING)
         polynomials/polynomial_arithmetic.hpp
         polynomials/polynomial.cpp
         polynomials/polynomial.hpp
+        transcript/manifest.hpp
+        transcript/transcript.hpp
         waffle/waffle_types.hpp
         waffle/reference_string/reference_string.cpp
         waffle/reference_string/reference_string.hpp
-        waffle/proof_system/transcript/manifest.hpp
-        waffle/proof_system/transcript/transcript.hpp
         waffle/proof_system/linearizer.hpp
         waffle/proof_system/permutation.hpp
         waffle/proof_system/preprocess.hpp

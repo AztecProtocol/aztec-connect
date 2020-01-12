@@ -10,8 +10,8 @@
 #include "../widgets/base_widget.hpp"
 
 #include "../circuit_state.hpp"
-#include "../transcript/transcript.hpp"
-#include "../transcript/manifest.hpp"
+#include "../../../transcript/transcript.hpp"
+#include "../../../transcript/manifest.hpp"
 
 namespace waffle
 {
