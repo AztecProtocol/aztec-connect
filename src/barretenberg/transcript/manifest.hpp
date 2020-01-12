@@ -5,7 +5,7 @@
 
 namespace transcript
 {
-class ProgramManifest
+class Manifest
 {
   public:
     struct ManifestEntry
@@ -34,7 +34,7 @@ class ProgramManifest
         std::vector<ManifestEntry> elements;
         std::string challenge;
     };
-    ProgramManifest(std::initializer_list<RoundManifest> _round_manifests)
+    Manifest(std::initializer_list<RoundManifest> _round_manifests)
         : round_manifests(_round_manifests), num_rounds(round_manifests.size()){};
 
     size_t get_num_rounds() const

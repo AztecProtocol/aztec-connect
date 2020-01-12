@@ -14,7 +14,7 @@ namespace waffle
 class Verifier
 {
   public:
-    Verifier(const size_t subgroup_size = 0, const transcript::ProgramManifest &manifest = transcript::ProgramManifest({}));
+    Verifier(const size_t subgroup_size = 0, const transcript::Manifest &manifest = transcript::Manifest({}));
     Verifier(Verifier&& other);
     Verifier(const Verifier& other) = delete;
     Verifier& operator=(const Verifier& other) = delete;
@@ -31,6 +31,6 @@ class Verifier
     std::vector<std::unique_ptr<VerifierBaseWidget>> verifier_widgets;
     size_t n;
 
-    transcript::ProgramManifest manifest;
+    transcript::Manifest manifest;
 };
 } // namespace waffle

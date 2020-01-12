@@ -19,7 +19,7 @@ using namespace barretenberg;
 namespace waffle
 {
 
-Prover::Prover(const size_t num_gates, const transcript::ProgramManifest& input_manifest) :
+Prover::Prover(const size_t num_gates, const transcript::Manifest& input_manifest) :
 n(num_gates),
 circuit_state(num_gates),
 reference_string(num_gates),

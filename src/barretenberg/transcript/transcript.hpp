@@ -14,10 +14,10 @@ class Transcript {
     static constexpr size_t PRNG_OUTPUT_SIZE = 32;
 
   public:
-    Transcript(const ProgramManifest input_manifest)
+    Transcript(const Manifest input_manifest)
         : manifest(input_manifest){};
 
-    Transcript(const std::vector<uint8_t>& input_transcript, const ProgramManifest input_manifest)
+    Transcript(const std::vector<uint8_t>& input_transcript, const Manifest input_manifest)
         : manifest(input_manifest)
     {
         const size_t num_rounds = input_manifest.get_num_rounds();
@@ -43,7 +43,7 @@ class Transcript {
         }
     }
 
-    ProgramManifest get_manifest() const { return manifest; }
+    Manifest get_manifest() const { return manifest; }
 
     void add_element(const std::string& element_name, const std::vector<uint8_t>& buffer)
     {
@@ -127,6 +127,6 @@ class Transcript {
 
     std::array<uint8_t, PRNG_OUTPUT_SIZE> current_challenge;
 
-    ProgramManifest manifest;
+    Manifest manifest;
 };
 } // namespace transcript

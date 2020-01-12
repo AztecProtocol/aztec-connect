@@ -20,7 +20,7 @@
 using namespace barretenberg;
 
 namespace waffle {
-Verifier::Verifier(const size_t subgroup_size, const transcript::ProgramManifest &input_manifest)
+Verifier::Verifier(const size_t subgroup_size, const transcript::Manifest &input_manifest)
     : n(subgroup_size), manifest(input_manifest)
 {}
 

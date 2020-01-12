@@ -19,7 +19,7 @@ namespace waffle
 class Prover
 {
   public:
-    Prover(const size_t n = 0, const transcript::ProgramManifest &manifest = transcript::ProgramManifest({}));
+    Prover(const size_t n = 0, const transcript::Manifest &manifest = transcript::Manifest({}));
     Prover(Prover&& other);
     Prover(const Prover& other) = delete;
     Prover& operator=(const Prover& other) = delete;
