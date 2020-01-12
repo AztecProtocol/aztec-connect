@@ -586,7 +586,6 @@ template <typename FieldParams> class field {
         aligned_free(temporaries);
     }
 
-
     static inline void compute_coset_generators(const size_t n, const uint64_t subgroup_size, field_t* result)
     {
         if (n > 0)
@@ -619,6 +618,33 @@ template <typename FieldParams> class field {
             }
             __add(work_variable, one, work_variable);
         }
+    }
+
+    static inline void serialize_to_buffer(const field_t& value, uint8_t* buffer)
+    {
+        field_t input = from_montgomery_form(value);
+        for (size_t j = 0; j < 4; ++j)
+        {
+            for (size_t i = 0; i < 8; ++i)
+            {
+                uint8_t byte = static_cast<uint8_t>(input.data[j] >> (i * 8));
+                buffer[j * 8 + i] = byte;
+            }
+        }
+    }
+    
+    static inline field_t serialize_from_buffer(uint8_t* buffer)
+    {
+        field_t result = zero;
+        for (size_t j = 0; j < 4; ++j)
+        {
+            for (size_t i = 0; i < 8; ++i)
+            {
+                uint8_t byte = buffer[j * 8 + i];
+                result.data[j] = result.data[j] | (static_cast<uint64_t>(byte) << (i * 8));
+            }
+        }
+        return to_montgomery_form(result);
     }
 }; // class field
 

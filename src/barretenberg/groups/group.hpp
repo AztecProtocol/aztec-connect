@@ -1022,6 +1022,19 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static void conditional_negate_affine(const affine_element* src, affine_element* dest, uint64_t predicate);
 
+    static inline void serialize_to_buffer(const affine_element& value, uint8_t* buffer)
+    {
+        coordinate_field::serialize_to_buffer(value.x, buffer);
+        coordinate_field::serialize_to_buffer(value.y, buffer + sizeof(typename coordinate_field::field_t));
+    }
+
+    static inline affine_element serialize_from_buffer(uint8_t* buffer)
+    {
+        affine_element result;
+        result.x = coordinate_field::serialize_from_buffer(buffer);
+        result.y = coordinate_field::serialize_from_buffer(buffer + sizeof(typename coordinate_field::field_t));
+        return result;
+    }
 }; // class group
 } // namespace barretenberg
 

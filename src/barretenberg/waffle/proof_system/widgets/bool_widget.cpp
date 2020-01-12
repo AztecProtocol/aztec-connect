@@ -59,8 +59,10 @@ ProverBoolWidget& ProverBoolWidget::operator=(ProverBoolWidget &&other)
     return *this;
 }
 
-fr::field_t ProverBoolWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base, const barretenberg::fr::field_t &alpha_step, CircuitFFTState& circuit_state)
+fr::field_t ProverBoolWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base, const waffle::transcript::Transcript& transcript, CircuitFFTState& circuit_state)
 {
+    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+
     q_bl.ifft(circuit_state.small_domain);
     q_br.ifft(circuit_state.small_domain);
     q_bo.ifft(circuit_state.small_domain);
@@ -70,8 +72,8 @@ fr::field_t ProverBoolWidget::compute_quotient_contribution(const barretenberg::
     polynomial q_bo_fft = polynomial(q_bo, circuit_state.mid_domain.size);
 
     q_bl_fft.coset_fft_with_constant(circuit_state.mid_domain, alpha_base);
-    q_br_fft.coset_fft_with_constant(circuit_state.mid_domain, fr::mul(alpha_base, alpha_step));
-    q_bo_fft.coset_fft_with_constant(circuit_state.mid_domain, fr::mul(alpha_base, fr::sqr(alpha_step)));
+    q_br_fft.coset_fft_with_constant(circuit_state.mid_domain, fr::mul(alpha_base, alpha));
+    q_bo_fft.coset_fft_with_constant(circuit_state.mid_domain, fr::mul(alpha_base, fr::sqr(alpha)));
 
     ITERATE_OVER_DOMAIN_START(circuit_state.mid_domain);
         fr::field_t T0;
@@ -96,18 +98,19 @@ fr::field_t ProverBoolWidget::compute_quotient_contribution(const barretenberg::
 
     ITERATE_OVER_DOMAIN_END;
 
-    return fr::mul(alpha_base, fr::mul(fr::sqr(alpha_step), alpha_step));
+    return fr::mul(alpha_base, fr::mul(fr::sqr(alpha), alpha));
 }
 
-void ProverBoolWidget::compute_proof_elements(plonk_proof &, const fr::field_t &)
+fr::field_t ProverBoolWidget::compute_linear_contribution(const fr::field_t &alpha_base, const waffle::transcript::Transcript &transcript, const evaluation_domain& domain, polynomial &r)
 {
-}
+    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+    fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+    fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
 
-fr::field_t ProverBoolWidget::compute_linear_contribution(const fr::field_t &alpha_base, const fr::field_t &alpha_step, const waffle::plonk_proof &proof, const evaluation_domain& domain, polynomial &r)
-{
-    fr::field_t left_bool_multiplier = fr::mul(fr::sub(fr::sqr(proof.w_l_eval), proof.w_l_eval), alpha_base);
-    fr::field_t right_bool_multiplier =  fr::mul(fr::mul(fr::sub(fr::sqr(proof.w_r_eval), proof.w_r_eval), alpha_base), alpha_step);
-    fr::field_t output_bool_multiplier =  fr::mul(fr::mul(fr::sub(fr::sqr(proof.w_o_eval), proof.w_o_eval), alpha_base), fr::sqr(alpha_step));
+    fr::field_t left_bool_multiplier = fr::mul(fr::sub(fr::sqr(w_l_eval), w_l_eval), alpha_base);
+    fr::field_t right_bool_multiplier =  fr::mul(fr::mul(fr::sub(fr::sqr(w_r_eval), w_r_eval), alpha_base), alpha);
+    fr::field_t output_bool_multiplier =  fr::mul(fr::mul(fr::sub(fr::sqr(w_o_eval), w_o_eval), alpha_base), fr::sqr(alpha));
 
     ITERATE_OVER_DOMAIN_START(domain);
         fr::field_t T0;
@@ -118,12 +121,7 @@ fr::field_t ProverBoolWidget::compute_linear_contribution(const fr::field_t &alp
         fr::__mul(output_bool_multiplier, q_bo[i], T0);
         fr::__add(r[i], T0, r[i]);
     ITERATE_OVER_DOMAIN_END;
-    return fr::mul(alpha_base, fr::mul(fr::sqr(alpha_step), alpha_step));
-}
-
-fr::field_t ProverBoolWidget::compute_opening_poly_contribution(barretenberg::fr::field_t*, const evaluation_domain&, const fr::field_t &nu_base, const fr::field_t &)
-{
-    return nu_base;
+    return fr::mul(alpha_base, fr::mul(fr::sqr(alpha), alpha));
 }
 
 std::unique_ptr<VerifierBaseWidget> ProverBoolWidget::compute_preprocessed_commitments(const evaluation_domain& domain, const ReferenceString &reference_string) const
@@ -175,20 +173,19 @@ VerifierBoolWidget::VerifierBoolWidget(std::vector<barretenberg::g1::affine_elem
     };
 }
 
-barretenberg::fr::field_t VerifierBoolWidget::compute_batch_evaluation_contribution(barretenberg::fr::field_t &, barretenberg::fr::field_t &nu_base, barretenberg::fr::field_t &, const plonk_proof &)
-{
-    return nu_base;
-}
-
 VerifierBaseWidget::challenge_coefficients VerifierBoolWidget::append_scalar_multiplication_inputs(
-    const VerifierBaseWidget::challenge_coefficients &challenge,
-    const waffle::plonk_proof &proof,
-    std::vector<barretenberg::g1::affine_element> &points,
-    std::vector<barretenberg::fr::field_t> &scalars)
+    const challenge_coefficients& challenge,
+    const waffle::transcript::Transcript& transcript,
+    std::vector<barretenberg::g1::affine_element>& points,
+    std::vector<barretenberg::fr::field_t>& scalars)
 {
-    fr::field_t left_bool_multiplier = fr::mul(fr::sub(fr::sqr(proof.w_l_eval), proof.w_l_eval), challenge.alpha_base);
-    fr::field_t right_bool_multiplier =  fr::mul(fr::mul(fr::sub(fr::sqr(proof.w_r_eval), proof.w_r_eval), challenge.alpha_base), challenge.alpha_step);
-    fr::field_t output_bool_multiplier =  fr::mul(fr::mul(fr::sub(fr::sqr(proof.w_o_eval), proof.w_o_eval), challenge.alpha_base), fr::sqr(challenge.alpha_step));
+    fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+    fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+    fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+
+    fr::field_t left_bool_multiplier = fr::mul(fr::sub(fr::sqr(w_l_eval), w_l_eval), challenge.alpha_base);
+    fr::field_t right_bool_multiplier =  fr::mul(fr::mul(fr::sub(fr::sqr(w_r_eval), w_r_eval), challenge.alpha_base), challenge.alpha_step);
+    fr::field_t output_bool_multiplier =  fr::mul(fr::mul(fr::sub(fr::sqr(w_o_eval), w_o_eval), challenge.alpha_base), fr::sqr(challenge.alpha_step));
 
     left_bool_multiplier = fr::mul(left_bool_multiplier, challenge.linear_nu);
     right_bool_multiplier = fr::mul(right_bool_multiplier, challenge.linear_nu);

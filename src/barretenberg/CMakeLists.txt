@@ -49,8 +49,9 @@ add_library(
     waffle/waffle_types.hpp
     waffle/reference_string/reference_string.cpp
     waffle/reference_string/reference_string.hpp
+    waffle/proof_system/transcript/manifest.hpp
+    waffle/proof_system/transcript/transcript.hpp
     waffle/proof_system/linearizer.hpp
-    waffle/proof_system/challenge.hpp
     waffle/proof_system/permutation.hpp
     waffle/proof_system/preprocess.hpp
     waffle/proof_system/widgets/base_widget.hpp
@@ -162,8 +163,9 @@ if(PROFILING)
         waffle/waffle_types.hpp
         waffle/reference_string/reference_string.cpp
         waffle/reference_string/reference_string.hpp
+        waffle/proof_system/transcript/manifest.hpp
+        waffle/proof_system/transcript/transcript.hpp
         waffle/proof_system/linearizer.hpp
-        waffle/proof_system/challenge.hpp
         waffle/proof_system/permutation.hpp
         waffle/proof_system/preprocess.hpp
         waffle/proof_system/widgets/base_widget.hpp

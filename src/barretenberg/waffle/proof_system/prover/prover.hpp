@@ -10,6 +10,8 @@
 #include "../widgets/base_widget.hpp"
 
 #include "../circuit_state.hpp"
+#include "../transcript/transcript.hpp"
+#include "../transcript/manifest.hpp"
 
 namespace waffle
 {
@@ -17,7 +19,7 @@ namespace waffle
 class Prover
 {
   public:
-    Prover(const size_t n = 0);
+    Prover(const size_t n = 0, const transcript::ProgramManifest &manifest = transcript::ProgramManifest({}));
     Prover(Prover&& other);
     Prover(const Prover& other) = delete;
     Prover& operator=(const Prover& other) = delete;
@@ -36,7 +38,7 @@ class Prover
     void compute_quotient_polynomial();
     void compute_opening_elements();
     barretenberg::fr::field_t compute_linearisation_coefficients();
-    plonk_proof construct_proof();
+    waffle::plonk_proof construct_proof();
     void reset();
 
     size_t n;
@@ -60,9 +62,8 @@ class Prover
 
     // Hmm, mixing runtime polymorphism and zero-knowledge proof generation. This seems fine...
     std::vector<std::unique_ptr<ProverBaseWidget>> widgets;
-    plonk_challenges challenges;
-    plonk_proof proof;
     ReferenceString reference_string;
+    transcript::Transcript transcript;
 };
 
 } // namespace waffle

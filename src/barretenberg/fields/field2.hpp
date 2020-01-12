@@ -225,5 +225,20 @@ template <typename base_field, typename Fq2Params> class field2
     {
         a.c0.data[3] = 0ULL | (1ULL << 63ULL);
     }
+
+    static inline void serialize_to_buffer(const field_t& value, uint8_t* buffer)
+    {
+        base_field::serialize_to_buffer(value.c0, buffer);
+        base_field::serialize_to_buffer(value.c1, buffer + sizeof(typename base_field::field_t));
+    }
+    
+    static inline field_t serialize_from_buffer(uint8_t* buffer)
+    {
+        field_t result = zero;
+        result.c0 = base_field::serialize_from_buffer(buffer);
+        result.c1 = base_field::serialize_from_buffer(buffer + sizeof(typename base_field::field_t));
+
+        return result;
+    }
 };
 } // namespace barretenberg

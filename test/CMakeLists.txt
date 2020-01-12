@@ -51,6 +51,7 @@ add_executable(
     test_preprocess.cpp
     test_prover.cpp
     test_verifier.cpp
+    test_transcript.cpp
     composer/test_standard_composer.cpp
     composer/test_mimc_composer.cpp
     composer/test_bool_composer.cpp

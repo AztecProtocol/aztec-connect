@@ -8,7 +8,7 @@ namespace barretenberg
 {
 class Bn254FqParams
 {
-public:
+  public:
     static constexpr uint64_t modulus_0 = 0x3C208C16D87CFD47UL;
     static constexpr uint64_t modulus_1 = 0x97816a916871ca8dUL;
     static constexpr uint64_t modulus_2 = 0xb85045b68181585dUL;
@@ -116,4 +116,4 @@ public:
 };
 
 typedef field<Bn254FqParams> fq;
-}
+} // namespace barretenberg

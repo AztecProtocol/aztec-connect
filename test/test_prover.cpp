@@ -9,6 +9,8 @@
 #include <barretenberg/curves/bn254/g1.hpp>
 #include <barretenberg/curves/bn254/scalar_multiplication/scalar_multiplication.hpp>
 
+#include <barretenberg/waffle/proof_system/transcript/manifest.hpp>
+
 /*
 ```
 elliptic curve point addition on a short weierstrass curve.
@@ -68,6 +70,36 @@ sigma_3 = [39, 23, 4, 40, 41, 25, 33, 36, 37, 42, 43, 44, 45, 46, 47, 48]
 using namespace barretenberg;
 
 namespace {
+
+waffle::transcript::ProgramManifest create_manifest(const size_t num_public_inputs = 0)
+{
+    constexpr size_t g1_size = 64;
+    constexpr size_t fr_size = 32;
+    const size_t public_input_size = fr_size * num_public_inputs;
+    static const waffle::transcript::ProgramManifest output = waffle::transcript::ProgramManifest(
+        { waffle::transcript::ProgramManifest::RoundManifest({ { "circuit_size", 4, false } }, "init"),
+          waffle::transcript::ProgramManifest::RoundManifest({ { "public_inputs", public_input_size, false },
+                                                               { "W_1", g1_size, false },
+                                                               { "W_2", g1_size, false },
+                                                               { "W_3", g1_size, false } },
+                                                             "beta"),
+          waffle::transcript::ProgramManifest::RoundManifest({ {} }, "gamma"),
+          waffle::transcript::ProgramManifest::RoundManifest({ { "Z", g1_size, false } }, "alpha"),
+          waffle::transcript::ProgramManifest::RoundManifest(
+              { { "T_1", g1_size, false }, { "T_2", g1_size, false }, { "T_3", g1_size, false } }, "z"),
+          waffle::transcript::ProgramManifest::RoundManifest({ { "w_1", fr_size, false },
+                                                               { "w_2", fr_size, false },
+                                                               { "w_3", fr_size, false },
+                                                               { "z_omega", fr_size, false },
+                                                               { "sigma_1", fr_size, false },
+                                                               { "sigma_2", fr_size, false },
+                                                               { "r", fr_size, false },
+                                                               { "t", fr_size, true } },
+                                                             "nu"),
+          waffle::transcript::ProgramManifest::RoundManifest(
+              { { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } }, "separator") });
+    return output;
+}
 
 void generate_test_data(waffle::Prover& state)
 {
@@ -162,7 +194,7 @@ TEST(prover, compute_quotient_polynomial)
 {
     size_t n = 1 << 10;
 
-    waffle::Prover state(n);
+    waffle::Prover state(n, create_manifest());
     generate_test_data(state);
 
     waffle::compute_permutation_lagrange_base_single(

@@ -303,3 +303,16 @@ TEST(g2, group_exponentiation_consistency_check)
 
     EXPECT_EQ(g2::eq(result, expected), true);
 }
+
+TEST(g2, serialize)
+{
+    g2::affine_element expected = g2::random_affine_element();
+
+    uint8_t buffer[sizeof(g2::affine_element)];
+
+    g2::serialize_to_buffer(expected, buffer);
+    
+    g2::affine_element result = g2::serialize_from_buffer(buffer);
+
+    EXPECT_EQ(g2::eq(result, expected), true);
+}

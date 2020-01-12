@@ -6,6 +6,8 @@
 
 #include "../proof_system/prover/prover.hpp"
 
+#include "../proof_system/transcript/manifest.hpp"
+
 namespace waffle
 {
 struct add_triple

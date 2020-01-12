@@ -377,3 +377,60 @@ TEST(fq, coset_generator_consistency)
         EXPECT_EQ(fq::eq(generators[i], fq::coset_generators[i]), true);
     }
 }
+
+TEST(fq, serialize_to_buffer)
+{
+    uint8_t buffer[32];
+    fq::field_t a = {{ 0x1234567876543210, 0x2345678987654321, 0x3456789a98765432, 0x006789abcba98765 }};
+    a = fq::to_montgomery_form(a);
+
+    fq::serialize_to_buffer(a, &buffer[0]);
+
+    EXPECT_EQ(buffer[0], 0x10);
+    EXPECT_EQ(buffer[1], 0x32);
+    EXPECT_EQ(buffer[2], 0x54);
+    EXPECT_EQ(buffer[3], 0x76);
+    EXPECT_EQ(buffer[4], 0x78);
+    EXPECT_EQ(buffer[5], 0x56);
+    EXPECT_EQ(buffer[6], 0x34);
+    EXPECT_EQ(buffer[7], 0x12);
+
+    EXPECT_EQ(buffer[8], 0x21);
+    EXPECT_EQ(buffer[9], 0x43);
+    EXPECT_EQ(buffer[10], 0x65);
+    EXPECT_EQ(buffer[11], 0x87);
+    EXPECT_EQ(buffer[12], 0x89);
+    EXPECT_EQ(buffer[13], 0x67);
+    EXPECT_EQ(buffer[14], 0x45);
+    EXPECT_EQ(buffer[15], 0x23);
+
+    EXPECT_EQ(buffer[16], 0x32);
+    EXPECT_EQ(buffer[17], 0x54);
+    EXPECT_EQ(buffer[18], 0x76);
+    EXPECT_EQ(buffer[19], 0x98);
+    EXPECT_EQ(buffer[20], 0x9a);
+    EXPECT_EQ(buffer[21], 0x78);
+    EXPECT_EQ(buffer[22], 0x56);
+    EXPECT_EQ(buffer[23], 0x34);
+
+    EXPECT_EQ(buffer[24], 0x65);
+    EXPECT_EQ(buffer[25], 0x87);
+    EXPECT_EQ(buffer[26], 0xa9);
+    EXPECT_EQ(buffer[27], 0xcb);
+    EXPECT_EQ(buffer[28], 0xab);
+    EXPECT_EQ(buffer[29], 0x89);
+    EXPECT_EQ(buffer[30], 0x67);
+    EXPECT_EQ(buffer[31], 0x00);
+}
+
+TEST(fq, serialize_from_buffer)
+{
+    uint8_t buffer[32];
+    fq::field_t expected = {{ 0x1234567876543210, 0x2345678987654321, 0x3456789a98765432, 0x006789abcba98765 }};
+
+    fq::serialize_to_buffer(expected, &buffer[0]);
+
+    fq::field_t result = fq::serialize_from_buffer(&buffer[0]);
+
+    EXPECT_EQ(fq::eq(result, expected), true);
+}

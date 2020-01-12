@@ -16,7 +16,7 @@ const auto init = []() {
     constexpr size_t max_buckets = 1 << 15;
     constexpr size_t thread_overspill = 1024;
     wnaf_memory = (uint64_t*)(aligned_alloc(64, max_num_points * max_num_rounds * 2 * sizeof(uint64_t)));
-    bucket_memory = (g1::element*)(aligned_alloc(64, (max_buckets + thread_overspill) * sizeof(g1::element) ));
+    bucket_memory = (g1::element*)(aligned_alloc(64, (max_buckets + thread_overspill) * sizeof(g1::element)));
     skew_memory = (bool*)(aligned_alloc(64, max_num_points * 2 * sizeof(bool)));
     memset((void*)skew_memory, 0, max_num_points * 2 * sizeof(bool));
     memset((void*)wnaf_memory, 1, max_num_points * max_num_rounds * 2 * sizeof(uint64_t));

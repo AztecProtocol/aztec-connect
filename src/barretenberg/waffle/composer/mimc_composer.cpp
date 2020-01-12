@@ -218,7 +218,7 @@ namespace waffle
             w_r.emplace_back(zero_idx);
             w_o.emplace_back(zero_idx);
         }
-        Prover output_state(new_n);
+        Prover output_state(new_n, create_manifest());
     
         compute_sigma_permutations(output_state);
     

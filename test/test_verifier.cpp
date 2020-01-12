@@ -3,12 +3,42 @@
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
+#include <barretenberg/waffle/proof_system/transcript/manifest.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
 #include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
 #include <memory>
 
-namespace
+namespace {
+
+waffle::transcript::ProgramManifest create_manifest(const size_t num_public_inputs = 0)
 {
+    constexpr size_t g1_size = 64;
+    constexpr size_t fr_size = 32;
+    const size_t public_input_size = fr_size * num_public_inputs;
+    static const waffle::transcript::ProgramManifest output = waffle::transcript::ProgramManifest(
+        { waffle::transcript::ProgramManifest::RoundManifest({ { "circuit_size", 4, false } }, "init"),
+          waffle::transcript::ProgramManifest::RoundManifest({ { "public_inputs", public_input_size, false },
+                                                               { "W_1", g1_size, false },
+                                                               { "W_2", g1_size, false },
+                                                               { "W_3", g1_size, false } },
+                                                             "beta"),
+          waffle::transcript::ProgramManifest::RoundManifest({ {} }, "gamma"),
+          waffle::transcript::ProgramManifest::RoundManifest({ { "Z", g1_size, false } }, "alpha"),
+          waffle::transcript::ProgramManifest::RoundManifest(
+              { { "T_1", g1_size, false }, { "T_2", g1_size, false }, { "T_3", g1_size, false } }, "z"),
+          waffle::transcript::ProgramManifest::RoundManifest({ { "w_1", fr_size, false },
+                                                               { "w_2", fr_size, false },
+                                                               { "w_3", fr_size, false },
+                                                               { "z_omega", fr_size, false },
+                                                               { "sigma_1", fr_size, false },
+                                                               { "sigma_2", fr_size, false },
+                                                               { "r", fr_size, false },
+                                                               { "t", fr_size, true } },
+                                                             "nu"),
+          waffle::transcript::ProgramManifest::RoundManifest(
+              { { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } }, "separator") });
+    return output;
+}
 
 using namespace barretenberg;
 
@@ -18,7 +48,6 @@ void generate_test_data(waffle::Prover& state)
     std::unique_ptr<waffle::ProverArithmeticWidget> widget = std::make_unique<waffle::ProverArithmeticWidget>(n);
     // state.widgets.emplace_back(std::make_unique<waffle::ProverArithmeticWidget>(n));
 
-
     fr::field_t T0;
     // even indices = mul gates, odd incides = add gates
 
@@ -26,8 +55,7 @@ void generate_test_data(waffle::Prover& state)
     state.w_r.resize(n);
     state.w_o.resize(n);
 
-    for (size_t i = 0; i < n / 4; ++i)
-    {
+    for (size_t i = 0; i < n / 4; ++i) {
         state.w_l.at(2 * i) = fr::random_element();
         state.w_r.at(2 * i) = fr::random_element();
         fr::__mul(state.w_l.at(2 * i), state.w_r.at(2 * i), state.w_o.at(2 * i));
@@ -67,8 +95,7 @@ void generate_test_data(waffle::Prover& state)
     state.sigma_2_mapping.resize(n);
     state.sigma_3_mapping.resize(n);
 
-    for (size_t i = 0; i < n / 2; ++i)
-    {
+    for (size_t i = 0; i < n / 2; ++i) {
         state.sigma_1_mapping[shift + i] = (uint32_t)i;
         state.sigma_2_mapping[shift + i] = (uint32_t)i + (1U << 30U);
         state.sigma_3_mapping[shift + i] = (uint32_t)i + (1U << 31U);
@@ -106,7 +133,7 @@ TEST(verifier, verify_arithmetic_proof_small)
 {
     size_t n = 4;
 
-    waffle::Prover state(n);
+    waffle::Prover state(n, create_manifest());
 
     generate_test_data(state);
 
@@ -125,7 +152,7 @@ TEST(verifier, verify_arithmetic_proof)
 {
     size_t n = 1 << 14;
 
-    waffle::Prover state(n);
+    waffle::Prover state(n, create_manifest());
 
     generate_test_data(state);
 

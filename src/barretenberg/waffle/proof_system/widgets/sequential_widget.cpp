@@ -44,9 +44,11 @@ ProverSequentialWidget& ProverSequentialWidget::operator=(ProverSequentialWidget
     return *this;
 }
 
-fr::field_t ProverSequentialWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base, const barretenberg::fr::field_t &alpha_step, CircuitFFTState& circuit_state)
+fr::field_t ProverSequentialWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base, const waffle::transcript::Transcript& transcript, CircuitFFTState& circuit_state)
 {
-    barretenberg::fr::field_t old_alpha = barretenberg::fr::mul(alpha_base, barretenberg::fr::invert(alpha_step));
+    fr::field_t alpha = fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
+
+    barretenberg::fr::field_t old_alpha = barretenberg::fr::mul(alpha_base, barretenberg::fr::invert(alpha));
     q_o_next.ifft(circuit_state.small_domain);
 
     polynomial q_o_next_fft = polynomial(q_o_next, circuit_state.mid_domain.size);
@@ -61,12 +63,15 @@ fr::field_t ProverSequentialWidget::compute_quotient_contribution(const barreten
     return alpha_base;
 }
 
-fr::field_t ProverSequentialWidget::compute_linear_contribution(const fr::field_t &alpha_base, const fr::field_t &alpha_step, const waffle::plonk_proof &proof, const evaluation_domain& domain, polynomial &r)
+fr::field_t ProverSequentialWidget::compute_linear_contribution(const fr::field_t &alpha_base, const waffle::transcript::Transcript &transcript, const evaluation_domain& domain, polynomial &r)
 {
-    barretenberg::fr::field_t old_alpha = barretenberg::fr::mul(alpha_base, barretenberg::fr::invert(alpha_step));
+    fr::field_t w_o_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
+    fr::field_t alpha = fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
+
+    barretenberg::fr::field_t old_alpha = barretenberg::fr::mul(alpha_base, barretenberg::fr::invert(alpha));
     ITERATE_OVER_DOMAIN_START(domain);
         fr::field_t T0;
-        fr::__mul(proof.w_o_shifted_eval, q_o_next.at(i), T0);
+        fr::__mul(w_o_shifted_eval, q_o_next.at(i), T0);
         fr::__mul(T0, old_alpha, T0);
         fr::__add(r.at(i), T0, r.at(i));
     ITERATE_OVER_DOMAIN_END;
@@ -115,16 +120,18 @@ VerifierSequentialWidget::VerifierSequentialWidget(std::vector<barretenberg::g1:
 }
 
 VerifierBaseWidget::challenge_coefficients VerifierSequentialWidget::append_scalar_multiplication_inputs(
-    const challenge_coefficients &challenge,
-    const waffle::plonk_proof &proof,
-    std::vector<barretenberg::g1::affine_element> &points,
-    std::vector<barretenberg::fr::field_t> &scalars)
+    const challenge_coefficients& challenge,
+    const waffle::transcript::Transcript& transcript,
+    std::vector<barretenberg::g1::affine_element>& points,
+    std::vector<barretenberg::fr::field_t>& scalars)
 {
+    fr::field_t w_o_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
+
     barretenberg::fr::field_t old_alpha = barretenberg::fr::mul(challenge.alpha_base, barretenberg::fr::invert(challenge.alpha_step));
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
     fr::field_t q_o_next_term;
-    fr::__mul(proof.w_o_shifted_eval, old_alpha, q_o_next_term);
+    fr::__mul(w_o_shifted_eval, old_alpha, q_o_next_term);
     fr::__mul(q_o_next_term, challenge.linear_nu, q_o_next_term);
 
     

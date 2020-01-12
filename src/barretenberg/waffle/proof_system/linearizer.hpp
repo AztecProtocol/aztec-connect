@@ -26,56 +26,66 @@ namespace waffle
     // polynomial evaluations can be expressed as a linear sum of polynomials. The verifier can derive the prover's commitment to this linear polynomial
     // from the original commitments - the prover can provide an evaluation of this linear polynomial, instead of the evaluations of its consitutent polynomials.
     // This shaves 6 field elements off of the proof size!
-    inline plonk_linear_terms compute_linear_terms(const plonk_proof& proof, const plonk_challenges& challenges, const barretenberg::fr::field_t& l_1, const size_t)
+    inline plonk_linear_terms compute_linear_terms(const transcript::Transcript& transcript, const barretenberg::fr::field_t& l_1)
     {
+        barretenberg::fr::field_t alpha = barretenberg::fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
+        barretenberg::fr::field_t beta = barretenberg::fr::serialize_from_buffer(&transcript.get_challenge("beta")[0]);
+        barretenberg::fr::field_t gamma = barretenberg::fr::serialize_from_buffer(&transcript.get_challenge("gamma")[0]);
+        barretenberg::fr::field_t z = barretenberg::fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
+        barretenberg::fr::field_t w_l_eval = barretenberg::fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+        barretenberg::fr::field_t w_r_eval = barretenberg::fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+        barretenberg::fr::field_t w_o_eval = barretenberg::fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+        barretenberg::fr::field_t z_1_shifted_eval = barretenberg::fr::serialize_from_buffer(&transcript.get_element("z_omega")[0]);
+        barretenberg::fr::field_t sigma_1_eval = barretenberg::fr::serialize_from_buffer(&transcript.get_element("sigma_1")[0]);
+        barretenberg::fr::field_t sigma_2_eval = barretenberg::fr::serialize_from_buffer(&transcript.get_element("sigma_2")[0]);
+
         plonk_linear_terms result;
         barretenberg::fr::field_t T0;
         barretenberg::fr::field_t T1;
         barretenberg::fr::field_t T2;
 
-
         barretenberg::fr::field_t right_shift = barretenberg::fr::multiplicative_generator;
         barretenberg::fr::field_t output_shift = barretenberg::fr::alternate_multiplicative_generator;
 
         barretenberg::fr::field_t alpha_pow[6];
-        barretenberg::fr::__copy(challenges.alpha, alpha_pow[0]);
+        barretenberg::fr::__copy(alpha, alpha_pow[0]);
         for (size_t i = 1; i < 6; ++i)
         {
             barretenberg::fr::__mul(alpha_pow[i-1], alpha_pow[0], alpha_pow[i]);
         }
 
-        barretenberg::fr::__mul(challenges.z, challenges.beta, T0);
-        barretenberg::fr::__add(T0, proof.w_l_eval, T0);
-        barretenberg::fr::__add(T0, challenges.gamma, T0);
+        barretenberg::fr::__mul(z, beta, T0);
+        barretenberg::fr::__add(T0, w_l_eval, T0);
+        barretenberg::fr::__add(T0, gamma, T0);
 
-        barretenberg::fr::__mul(challenges.z, challenges.beta, T1);
+        barretenberg::fr::__mul(z, beta, T1);
         barretenberg::fr::__mul(T1, right_shift, T1);
-        barretenberg::fr::__add(T1, proof.w_r_eval, T1);
-        barretenberg::fr::__add(T1, challenges.gamma, T1);
+        barretenberg::fr::__add(T1, w_r_eval, T1);
+        barretenberg::fr::__add(T1, gamma, T1);
 
-        barretenberg::fr::__mul(challenges.z, challenges.beta, T2);
+        barretenberg::fr::__mul(z, beta, T2);
         barretenberg::fr::__mul(T2, output_shift, T2);
-        barretenberg::fr::__add(T2, proof.w_o_eval, T2);
-        barretenberg::fr::__add(T2, challenges.gamma, T2);
+        barretenberg::fr::__add(T2, w_o_eval, T2);
+        barretenberg::fr::__add(T2, gamma, T2);
 
         barretenberg::fr::__mul(T2, T1, T1);
         barretenberg::fr::__mul(T1, T0, T0);
         barretenberg::fr::__mul(T0, alpha_pow[0], result.z_1);
 
-        barretenberg::fr::__mul(proof.sigma_1_eval, challenges.beta, T0);
-        barretenberg::fr::__add(T0, proof.w_l_eval, T0);
-        barretenberg::fr::__add(T0, challenges.gamma, T0);
+        barretenberg::fr::__mul(sigma_1_eval, beta, T0);
+        barretenberg::fr::__add(T0, w_l_eval, T0);
+        barretenberg::fr::__add(T0, gamma, T0);
 
-        barretenberg::fr::__mul(proof.sigma_2_eval, challenges.beta, T1);
-        barretenberg::fr::__add(T1, proof.w_r_eval, T1);
-        barretenberg::fr::__add(T1, challenges.gamma, T1);
+        barretenberg::fr::__mul(sigma_2_eval, beta, T1);
+        barretenberg::fr::__add(T1, w_r_eval, T1);
+        barretenberg::fr::__add(T1, gamma, T1);
 
 
         barretenberg::fr::__mul(T1, T0, T0);
-        barretenberg::fr::__mul(T0, proof.z_1_shifted_eval, T0);
+        barretenberg::fr::__mul(T0, z_1_shifted_eval, T0);
         barretenberg::fr::__mul(T0, alpha_pow[0], result.sigma_3);
         barretenberg::fr::__neg(result.sigma_3, result.sigma_3);
-        barretenberg::fr::__mul(result.sigma_3, challenges.beta, result.sigma_3);
+        barretenberg::fr::__mul(result.sigma_3, beta, result.sigma_3);
 
 
         barretenberg::fr::__mul(l_1, alpha_pow[2], T0);

@@ -39,7 +39,7 @@ inline Verifier preprocess(const Prover& prover)
 
     // barretenberg::scalar_multiplication::batched_scalar_multiplications(mul_state, 3);
 
-    Verifier verifier(prover.n);
+    Verifier verifier(prover.n, prover.transcript.get_manifest());
 
     barretenberg::g1::jacobian_to_affine(barretenberg::scalar_multiplication::pippenger(
                                              polys[0].get_coefficients(), prover.reference_string.monomials, prover.n),

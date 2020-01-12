@@ -505,7 +505,7 @@ Prover ExtendedComposer::preprocess()
         adjusted_gate_indices.push_back(static_cast<uint32_t>(i));
     }
 
-    Prover output_state(new_n);
+    Prover output_state(new_n, create_manifest());
 
     compute_sigma_permutations(output_state);
 
