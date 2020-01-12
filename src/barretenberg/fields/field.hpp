@@ -627,7 +627,7 @@ template <typename FieldParams> class field {
         {
             for (size_t i = 0; i < 8; ++i)
             {
-                uint8_t byte = static_cast<uint8_t>(input.data[j] >> (i * 8));
+                uint8_t byte = static_cast<uint8_t>(input.data[3 - j] >> (56 - (i * 8)));
                 buffer[j * 8 + i] = byte;
             }
         }
@@ -641,7 +641,7 @@ template <typename FieldParams> class field {
             for (size_t i = 0; i < 8; ++i)
             {
                 uint8_t byte = buffer[j * 8 + i];
-                result.data[j] = result.data[j] | (static_cast<uint64_t>(byte) << (i * 8));
+                result.data[3 - j] = result.data[3 - j] | (static_cast<uint64_t>(byte) << (56 - (i * 8)));
             }
         }
         return to_montgomery_form(result);

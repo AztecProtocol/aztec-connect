@@ -1024,15 +1024,23 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static inline void serialize_to_buffer(const affine_element& value, uint8_t* buffer)
     {
-        coordinate_field::serialize_to_buffer(value.x, buffer);
-        coordinate_field::serialize_to_buffer(value.y, buffer + sizeof(typename coordinate_field::field_t));
+        coordinate_field::serialize_to_buffer(value.y, buffer);
+        coordinate_field::serialize_to_buffer(value.x, buffer + sizeof(typename coordinate_field::field_t));
+        if (!on_curve(value))
+        {
+            buffer[0]  = buffer[0] | (1 << 7);
+        }
     }
 
     static inline affine_element serialize_from_buffer(uint8_t* buffer)
     {
         affine_element result;
-        result.x = coordinate_field::serialize_from_buffer(buffer);
-        result.y = coordinate_field::serialize_from_buffer(buffer + sizeof(typename coordinate_field::field_t));
+        result.y = coordinate_field::serialize_from_buffer(buffer);
+        result.x = coordinate_field::serialize_from_buffer(buffer + sizeof(typename coordinate_field::field_t));
+        if (((buffer[0] >> 7) & 1) == 1)
+        {
+            set_infinity(result);
+        }
         return result;
     }
 }; // class group

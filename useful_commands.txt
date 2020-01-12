@@ -13,3 +13,5 @@ dot -Tpng out.dot -o graph.png
 valgrind --tool=cachegrind ./test/barretenberg_profiling
 
 valgrind --tool=callgrind --dump-instr=yes --instr-atstart=no ./test/barretenberg_profiling
+
+cmake --build . --parallel --target barretenberg_tests
