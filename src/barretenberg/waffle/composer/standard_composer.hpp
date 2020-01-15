@@ -2,12 +2,11 @@
 
 #include "./composer_base.hpp"
 
-namespace waffle
-{
-class StandardComposer : public ComposerBase
-{
-public:
-    StandardComposer(const size_t size_hint = 0) : ComposerBase()
+namespace waffle {
+class StandardComposer : public ComposerBase {
+  public:
+    StandardComposer(const size_t size_hint = 0)
+        : ComposerBase()
     {
         features |= static_cast<size_t>(Features::BASIC_ARITHMETISATION);
         w_l.reserve(size_hint);
@@ -19,16 +18,18 @@ public:
         q_o.reserve(size_hint);
         q_c.reserve(size_hint);
     };
-    StandardComposer(StandardComposer &&other) = default;
-    StandardComposer& operator=(StandardComposer &&other) = default;
+    StandardComposer(StandardComposer&& other) = default;
+    StandardComposer& operator=(StandardComposer&& other) = default;
     ~StandardComposer() {}
 
     virtual Prover preprocess() override;
+    virtual void assert_equal(const uint32_t a_idx, const uint32_t b_idx) override;
+    void assert_equal_constant(const uint32_t a_idx, const barretenberg::fr::field_t b);
 
-    void create_add_gate(const add_triple &in) override;
-    void create_mul_gate(const mul_triple &in) override;
+    void create_add_gate(const add_triple& in) override;
+    void create_mul_gate(const mul_triple& in) override;
     void create_bool_gate(const uint32_t a) override;
-    void create_poly_gate(const poly_triple &in) override;
+    void create_poly_gate(const poly_triple& in) override;
     void create_dummy_gates();
     size_t get_num_constant_gates() const override { return 0; }
 
@@ -40,4 +41,4 @@ public:
     std::vector<barretenberg::fr::field_t> q_o;
     std::vector<barretenberg::fr::field_t> q_c;
 };
-}
+} // namespace waffle

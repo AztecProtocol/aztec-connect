@@ -6,10 +6,8 @@
 
 #include "../proof_system/prover/prover.hpp"
 
-namespace waffle
-{
-struct add_triple
-{
+namespace waffle {
+struct add_triple {
     uint32_t a;
     uint32_t b;
     uint32_t c;
@@ -19,8 +17,7 @@ struct add_triple
     barretenberg::fr::field_t const_scaling;
 };
 
-struct mul_triple
-{
+struct mul_triple {
     uint32_t a;
     uint32_t b;
     uint32_t c;
@@ -29,8 +26,7 @@ struct mul_triple
     barretenberg::fr::field_t const_scaling;
 };
 
-struct poly_triple
-{
+struct poly_triple {
     uint32_t a;
     uint32_t b;
     uint32_t c;
@@ -41,11 +37,9 @@ struct poly_triple
     barretenberg::fr::field_t q_c;
 };
 
-class ComposerBase
-{
+class ComposerBase {
   public:
-    enum Features
-    {
+    enum Features {
         SAD_TROMBONE = 0x00,
         BASIC_ARITHMETISATION = 0x01,
         EXTENDED_ARITHMETISATION = 0x02,
@@ -53,8 +47,7 @@ class ComposerBase
         MIMC_SELECTORS = 0x08,
         ECC_SELECTORS = 0x10
     };
-    enum GateFlags
-    {
+    enum GateFlags {
         NONE = 0x00,
         IS_ARITHMETIC_GATE = 0x01,
         IS_MIMC_GATE = 0x02,
@@ -69,27 +62,23 @@ class ComposerBase
         FIXED_RIGHT_WIRE = 0x400,
         FIXED_OUTPUT_WIRE = 0x800,
     };
-    enum WireType
-    {
-        LEFT = 0U,
-        RIGHT = (1U << 30U),
-        OUTPUT = (1U << 31U),
-        NULL_WIRE
-    };
-    struct epicycle
-    {
+    enum WireType { LEFT = 0U, RIGHT = (1U << 30U), OUTPUT = (1U << 31U), NULL_WIRE };
+    struct epicycle {
         uint32_t gate_index;
         WireType wire_type;
 
-        epicycle(const uint32_t a, const WireType b) : gate_index(a), wire_type(b)
-        {
-        }
-        epicycle(const epicycle& other) : gate_index(other.gate_index), wire_type(other.wire_type)
-        {
-        }
-        epicycle(epicycle&& other) : gate_index(other.gate_index), wire_type(other.wire_type)
-        {
-        }
+        epicycle(const uint32_t a, const WireType b)
+            : gate_index(a)
+            , wire_type(b)
+        {}
+        epicycle(const epicycle& other)
+            : gate_index(other.gate_index)
+            , wire_type(other.wire_type)
+        {}
+        epicycle(epicycle&& other)
+            : gate_index(other.gate_index)
+            , wire_type(other.wire_type)
+        {}
         epicycle& operator=(const epicycle& other)
         {
             gate_index = other.gate_index;
@@ -101,10 +90,11 @@ class ComposerBase
             return ((gate_index == other.gate_index) && (wire_type == other.wire_type));
         }
     };
-    ComposerBase() : n(0) {};
-    ComposerBase(ComposerBase &&other) = default;
-    ComposerBase& operator=(ComposerBase &&other) = default;
-    virtual ~ComposerBase() {};
+    ComposerBase()
+        : n(0){};
+    ComposerBase(ComposerBase&& other) = default;
+    ComposerBase& operator=(ComposerBase&& other) = default;
+    virtual ~ComposerBase(){};
 
     virtual size_t get_num_gates() const { return n; }
     virtual size_t get_num_variables() const { return variables.size(); }
@@ -139,27 +129,7 @@ class ComposerBase
         return static_cast<uint32_t>(variables.size()) - 1U;
     }
 
-    virtual void assert_equal(const uint32_t a_idx, const uint32_t b_idx)
-    {
-        ASSERT(barretenberg::fr::eq(variables[a_idx], variables[b_idx]));
-        for (size_t i = 0; i < wire_epicycles[b_idx].size(); ++i)
-        {
-            wire_epicycles[a_idx].emplace_back(wire_epicycles[b_idx][i]);
-            if (wire_epicycles[b_idx][i].wire_type == WireType::LEFT)
-            {
-                w_l[wire_epicycles[b_idx][i].gate_index] = a_idx;
-            }
-            else if (wire_epicycles[b_idx][i].wire_type == WireType::RIGHT)
-            {
-                w_r[wire_epicycles[b_idx][i].gate_index] = a_idx;
-            }
-            else
-            {
-                w_o[wire_epicycles[b_idx][i].gate_index] = a_idx;
-            }
-        }
-        wire_epicycles[b_idx] = std::vector<epicycle>();
-    }
+    virtual void assert_equal(const uint32_t a_idx, const uint32_t b_idx) = 0;
 
     virtual void compute_sigma_permutations(Prover& output_state)
     {
@@ -167,8 +137,7 @@ class ComposerBase
         output_state.sigma_1_mapping.reserve(output_state.n);
         output_state.sigma_2_mapping.reserve(output_state.n);
         output_state.sigma_3_mapping.reserve(output_state.n);
-        for (size_t i = 0; i < output_state.n; ++i)
-        {
+        for (size_t i = 0; i < output_state.n; ++i) {
             output_state.sigma_1_mapping.emplace_back(static_cast<uint32_t>(i));
             output_state.sigma_2_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 30U));
             output_state.sigma_3_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 31U));
@@ -178,13 +147,11 @@ class ComposerBase
                              &output_state.sigma_2_mapping[0],
                              &output_state.sigma_3_mapping[0] };
 
-        for (size_t i = 0; i < wire_epicycles.size(); ++i)
-        {
+        for (size_t i = 0; i < wire_epicycles.size(); ++i) {
             // each index in 'wire_epicycles' corresponds to a variable
             // the contents of 'wire_epicycles[i]' is a vector, that contains a list
             // of the gates that this variable is involved in
-            for (size_t j = 0; j < wire_epicycles[i].size(); ++j)
-            {
+            for (size_t j = 0; j < wire_epicycles[i].size(); ++j) {
                 epicycle current_epicycle = wire_epicycles[i][j];
                 size_t epicycle_index = j == wire_epicycles[i].size() - 1 ? 0 : j + 1;
                 epicycle next_epicycle = wire_epicycles[i][epicycle_index];

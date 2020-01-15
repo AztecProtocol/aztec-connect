@@ -332,7 +332,8 @@ template <typename ComposerContext> barretenberg::fr::field_t field_t<ComposerCo
 {
     if (witness_index != static_cast<uint32_t>(-1)) {
         ASSERT(context != nullptr);
-        return barretenberg::fr::add(barretenberg::fr::mul(multiplicative_constant, context->get_variable(witness_index)), additive_constant);
+        return barretenberg::fr::add(
+            barretenberg::fr::mul(multiplicative_constant, context->get_variable(witness_index)), additive_constant);
     } else {
         return additive_constant;
     }

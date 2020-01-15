@@ -40,11 +40,11 @@ template <typename ComposerContext> class bool_t {
     bool_t operator||(const bool_t& other) const { return operator|(other); }
 
     // self ops
-    void operator|=(const bool_t& other) const { *this = operator|(other); }
+    void operator|=(const bool_t& other) { *this = operator|(other); }
 
-    void operator&=(const bool_t& other) const { *this = operator&(other); }
+    void operator&=(const bool_t& other) { *this = operator&(other); }
 
-    void operator^=(const bool_t& other) const { *this = operator^(other); }
+    void operator^=(const bool_t& other) { *this = operator^(other); }
 
     bool get_value() const { return witness_bool ^ witness_inverted; }
 

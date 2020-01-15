@@ -40,6 +40,14 @@ template <typename ComposerContext> class field_t {
     mutable barretenberg::fr::field_t multiplicative_constant;
     mutable uint32_t witness_index = static_cast<uint32_t>(-1);
 };
+
+template <typename ComposerContext> inline std::ostream& operator<<(std::ostream& os, field_t<ComposerContext> const& v)
+{
+    barretenberg::fr::field_t a = v.get_value();
+    os << std::hex << "field: [" << a.data[0] << ", " << a.data[1] << ", " << a.data[2] << ", " << a.data[3] << "]";
+    return os;
+}
+
 } // namespace stdlib
 } // namespace plonk
 

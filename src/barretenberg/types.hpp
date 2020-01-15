@@ -4,35 +4,16 @@
 #include <cstdint>
 #include <cstdlib>
 
-// TODO: WARNING! getentropy is using rand()! Should probably be called dontgetentropy()!
 #ifdef _WIN32
-#define PRIx64 "llx"
-#define PRIu64 "llu"
-inline void* aligned_alloc(size_t alignment, size_t size)
-{
-    return _aligned_malloc(size, alignment);
-}
-#define aligned_free _aligned_free
-inline int getentropy(void* buf, size_t size)
-{
-    for (size_t i = 0; i < size; ++i)
-    {
-        ((char*)buf)[i] = (char)rand();
-    }
-    return 0;
-}
-#else
-#define aligned_free free
+#include "./portability/win32.hpp"
+#endif
+
+#ifdef __linux__
+#include "./portability/linux.hpp"
 #endif
 
 #ifdef __APPLE__
-#include <sys/random.h>
-inline void* aligned_alloc(size_t alignment, size_t size)
-{
-    void* t = 0;
-    posix_memalign(&t, alignment, size);
-    return t;
-}
+#include "./portability/apple.hpp"
 #endif
 
 #ifndef BARRETENBERG_SRS_PATH
@@ -53,16 +34,13 @@ inline void* aligned_alloc(size_t alignment, size_t size)
 #define ITERATE_OVER_DOMAIN_START(domain)                                                                              \
     _Pragma("omp parallel for") for (size_t j = 0; j < domain.num_threads; ++j)                                        \
     {                                                                                                                  \
-        for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i)                             \
-        {
+        for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i) {
 
 #define ITERATE_OVER_DOMAIN_END                                                                                        \
     }                                                                                                                  \
     }
 #else
-#define ITERATE_OVER_DOMAIN_START(domain)                                                                              \
-    for (size_t i = 0; i < domain.size; ++i)                                                                           \
-    {
+#define ITERATE_OVER_DOMAIN_START(domain) for (size_t i = 0; i < domain.size; ++i) {
 
 #define ITERATE_OVER_DOMAIN_END }
 #endif
