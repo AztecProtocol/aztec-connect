@@ -39,6 +39,7 @@ class ProverArithmeticWidget : public ProverBaseWidget {
     barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
                                                                 const transcript::Transcript&,
                                                                 barretenberg::fr::field_t*,
+                                                                barretenberg::fr::field_t*,
                                                                 const barretenberg::evaluation_domain&)
     {
         return nu_base;
@@ -46,7 +47,7 @@ class ProverArithmeticWidget : public ProverBaseWidget {
 
     std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const barretenberg::evaluation_domain& domain,
                                                                          const ReferenceString& reference_string) const;
-    void compute_proof_elements(plonk_proof&, const barretenberg::fr::field_t&){};
+
     void reset(const barretenberg::evaluation_domain& domain);
 
     barretenberg::polynomial q_m;

@@ -35,6 +35,7 @@ endif()
 
 add_executable(
     barretenberg_tests
+    test_helpers.hpp
     test_wnaf.cpp
     test_fq.cpp
     test_fq2.cpp
@@ -52,10 +53,13 @@ add_executable(
     test_prover.cpp
     test_verifier.cpp
     test_transcript.cpp
+    widgets/test_turbo_arithmetic_widget.cpp
+    widgets/test_turbo_fixed_base_widget.cpp
     composer/test_standard_composer.cpp
     composer/test_mimc_composer.cpp
     composer/test_bool_composer.cpp
     composer/test_extended_composer.cpp
+    composer/test_turbo_composer.cpp
     stdlib/test_stdlib_bool.cpp
     stdlib/test_stdlib_field.cpp
     stdlib/test_stdlib_uint32.cpp

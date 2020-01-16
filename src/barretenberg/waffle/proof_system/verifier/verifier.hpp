@@ -14,7 +14,7 @@ namespace waffle
 class Verifier
 {
   public:
-    Verifier(const size_t subgroup_size = 0, const transcript::Manifest &manifest = transcript::Manifest({}));
+    Verifier(const size_t subgroup_size = 0, const transcript::Manifest &manifest = transcript::Manifest({}), bool has_fourth_wire = false);
     Verifier(Verifier&& other);
     Verifier(const Verifier& other) = delete;
     Verifier& operator=(const Verifier& other) = delete;
@@ -32,5 +32,7 @@ class Verifier
     size_t n;
 
     transcript::Manifest manifest;
+
+    bool __DEBUG_HAS_FOURTH_WIRE;
 };
 } // namespace waffle

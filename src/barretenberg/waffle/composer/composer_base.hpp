@@ -197,11 +197,12 @@ class ComposerBase
         }
     }
 
-  protected:
+  public:
     size_t n;
     std::vector<uint32_t> w_l;
     std::vector<uint32_t> w_r;
     std::vector<uint32_t> w_o;
+    std::vector<uint32_t> w_4;
     std::vector<size_t> gate_flags;
     std::vector<barretenberg::fr::field_t> variables;
     std::vector<std::vector<epicycle>> wire_epicycles;

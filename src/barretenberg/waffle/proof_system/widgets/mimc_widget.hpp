@@ -37,8 +37,9 @@ class ProverMiMCWidget : public ProverBaseWidget {
     barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
                                                                 const transcript::Transcript& transcript,
                                                                 barretenberg::fr::field_t* poly,
+                                                                barretenberg::fr::field_t*,
                                                                 const barretenberg::evaluation_domain& domain);
-    void compute_transcript_elements(transcript::Transcript& transcript);
+    void compute_transcript_elements(transcript::Transcript& transcript, const barretenberg::evaluation_domain&);
 
     std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const barretenberg::evaluation_domain& domain,
                                                                          const ReferenceString& reference_string) const;

@@ -31,6 +31,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     static constexpr element one{ GroupParams::one_x, GroupParams::one_y, coordinate_field::one };
     static constexpr affine_element affine_one{ GroupParams::one_x, GroupParams::one_y };
 
+    static constexpr typename coordinate_field::field_t curve_b = GroupParams::b;
     static inline void print(affine_element& p)
     {
         printf("p.x: ");

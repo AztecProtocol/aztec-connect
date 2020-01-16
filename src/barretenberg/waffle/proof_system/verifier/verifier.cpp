@@ -20,12 +20,12 @@
 using namespace barretenberg;
 
 namespace waffle {
-Verifier::Verifier(const size_t subgroup_size, const transcript::Manifest &input_manifest)
-    : n(subgroup_size), manifest(input_manifest)
+Verifier::Verifier(const size_t subgroup_size, const transcript::Manifest &input_manifest, bool has_fourth_wire)
+    : n(subgroup_size), manifest(input_manifest), __DEBUG_HAS_FOURTH_WIRE(has_fourth_wire)
 {}
 
 Verifier::Verifier(Verifier&& other)
-    : n(other.n), manifest(other.manifest)
+    : n(other.n), manifest(other.manifest), __DEBUG_HAS_FOURTH_WIRE(other.__DEBUG_HAS_FOURTH_WIRE)
 {
     reference_string = std::move(other.reference_string);
     g1::copy_affine(other.SIGMA_1, SIGMA_1);
@@ -49,6 +49,8 @@ Verifier& Verifier::operator=(Verifier&& other)
     for (size_t i = 0; i < other.verifier_widgets.size(); ++i) {
         verifier_widgets.emplace_back(std::move(other.verifier_widgets[i]));
     }
+    __DEBUG_HAS_FOURTH_WIRE = other.__DEBUG_HAS_FOURTH_WIRE;
+
     return *this;
 }
 
@@ -61,11 +63,19 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     g1::affine_element T_LO = g1::serialize_from_buffer(&transcript.get_element("T_1")[0]);
     g1::affine_element T_MID = g1::serialize_from_buffer(&transcript.get_element("T_2")[0]);
     g1::affine_element T_HI = g1::serialize_from_buffer(&transcript.get_element("T_3")[0]);
-
+    g1::affine_element T_4;
+    if (__DEBUG_HAS_FOURTH_WIRE)
+    {
+        T_4 = g1::serialize_from_buffer(&transcript.get_element("T_4")[0]);
+    }
     g1::affine_element W_L = g1::serialize_from_buffer(&transcript.get_element("W_1")[0]);
     g1::affine_element W_R = g1::serialize_from_buffer(&transcript.get_element("W_2")[0]);
     g1::affine_element W_O = g1::serialize_from_buffer(&transcript.get_element("W_3")[0]);
-
+    g1::affine_element W_4;
+    if (__DEBUG_HAS_FOURTH_WIRE)
+    {
+        W_4 = g1::serialize_from_buffer(&transcript.get_element("W_4")[0]);
+    }
     g1::affine_element Z_1 = g1::serialize_from_buffer(&transcript.get_element("Z")[0]);
     g1::affine_element PI_Z = g1::serialize_from_buffer(&transcript.get_element("PI_Z")[0]);
     g1::affine_element PI_Z_OMEGA = g1::serialize_from_buffer(&transcript.get_element("PI_Z_OMEGA")[0]);
@@ -77,6 +87,11 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
     fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+    fr::field_t w_4_eval;
+    if (__DEBUG_HAS_FOURTH_WIRE)
+    {
+        w_4_eval = fr::serialize_from_buffer(&transcript.get_element("w_4")[0]);
+    }
     fr::field_t sigma_1_eval = fr::serialize_from_buffer(&transcript.get_element("sigma_1")[0]);
     fr::field_t sigma_2_eval = fr::serialize_from_buffer(&transcript.get_element("sigma_2")[0]);
     fr::field_t linear_eval = fr::serialize_from_buffer(&transcript.get_element("r")[0]);
@@ -169,19 +184,23 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::__mul(T1, alpha_pow[1], T1);
 
     fr::__mul(lagrange_evals.l_1, alpha_pow[2], T2);
-
     fr::__sub(T1, T2, T1);
     fr::__sub(T1, T0, T1);
-
     fr::__add(T1, linear_eval, t_eval);
 
+    fr::field_t alpha_base = fr::sqr(fr::sqr(alpha));
+    for (size_t i = 0; i < verifier_widgets.size(); ++i) {
+        alpha_base = verifier_widgets[i]->compute_quotient_evaluation_contribution(alpha_base, transcript, t_eval);
+    }
     fr::__invert(lagrange_evals.vanishing_poly, T0);
     fr::__mul(t_eval, T0, t_eval);
 
     fr::field_t z_pow_n;
     fr::field_t z_pow_2n;
+    fr::field_t z_pow_3n;
     fr::__pow_small(z_challenge, n, z_pow_n);
     fr::__pow_small(z_challenge, n * 2, z_pow_2n);
+    fr::__pow_small(z_challenge, n * 3, z_pow_3n);
 
     transcript.add_element("t", transcript_helpers::convert_field_element(t_eval));
 
@@ -229,12 +248,19 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::__mul(T0, z_1_shifted_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::field_t nu_base = nu_pow[7];
+    if (__DEBUG_HAS_FOURTH_WIRE)
+    {
+        fr::__mul(nu_pow[7], w_4_eval, T0);
+        fr::__add(batch_evaluation, T0, batch_evaluation);
+    }
+
+    fr::field_t nu_base = nu_pow[8];
 
     // TODO compute 'needs_blah_shifted' in constructor
     bool needs_w_l_shifted = false;
     bool needs_w_r_shifted = false;
     bool needs_w_o_shifted = false;
+    bool needs_w_4_shifted = false;
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
         needs_w_l_shifted |=
             verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
@@ -242,6 +268,8 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
             verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
         needs_w_o_shifted |=
             verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
+        needs_w_4_shifted |=
+            verifier_widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_4_SHIFTED);
     }
     if (needs_w_l_shifted) {
         fr::field_t w_l_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_1_omega")[0]);
@@ -264,6 +292,13 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
         fr::__add(batch_evaluation, T0, batch_evaluation);
         fr::__mul(nu_base, nu_pow[0], nu_base);
     }
+    if (needs_w_4_shifted) {
+        fr::field_t w_4_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
+        fr::__mul(w_4_shifted_eval, nu_base, T0);
+        fr::__mul(T0, u, T0);
+        fr::__add(batch_evaluation, T0, batch_evaluation);
+        fr::__mul(nu_base, nu_pow[0], nu_base);
+    }
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
         nu_base =
             verifier_widgets[i]->compute_batch_evaluation_contribution(batch_evaluation, nu_base, transcript);
@@ -281,7 +316,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     elements.emplace_back(Z_1);
     scalars.emplace_back(linear_terms.z_1);
 
-    fr::__copy(nu_pow[7], nu_base);
+    fr::__copy(nu_pow[8], nu_base);
 
     if (g1::on_curve(W_L)) {
         elements.emplace_back(W_L);
@@ -289,7 +324,6 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
             fr::__mul(nu_base, u, T0);
             fr::__add(T0, nu_pow[1], T0);
             scalars.emplace_back(T0);
-            // scalars.emplace_back(fr::add(nu_pow[1], nu_base));
             fr::__mul(nu_base, nu_pow[0], nu_base);
         } else {
             scalars.emplace_back(nu_pow[1]);
@@ -348,6 +382,25 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     if (g1::on_curve(T_HI)) {
         elements.emplace_back(T_HI);
         scalars.emplace_back(z_pow_2n);
+    }
+
+    if (__DEBUG_HAS_FOURTH_WIRE)
+    {
+        elements.emplace_back(W_4);
+        if (needs_w_4_shifted) {
+            fr::__mul(nu_base, u, T0);
+            fr::__add(T0, nu_pow[7], T0);
+            scalars.emplace_back(T0);
+            fr::__mul(nu_base, nu_pow[0], nu_base);
+        } else {
+            scalars.emplace_back(nu_pow[7]);
+        } 
+
+        if (g1::on_curve(T_4))
+        {
+            elements.emplace_back(T_4);
+            scalars.emplace_back(z_pow_3n);
+        }
     }
 
     VerifierBaseWidget::challenge_coefficients coeffs{

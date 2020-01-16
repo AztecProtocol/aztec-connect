@@ -21,14 +21,16 @@ class WidgetVersionControl {
         NONE = 0x0,
         REQUIRES_W_L_SHIFTED = 0x01,
         REQUIRES_W_R_SHIFTED = 0x02,
-        REQUIRES_W_O_SHIFTED = 0x04
+        REQUIRES_W_O_SHIFTED = 0x04,
+        REQUIRES_W_4_SHIFTED = 0x08
     };
     enum Features {
         STANDARD = 0x00,
         HAS_EXTENDED_ARITHMETISATION = 0x01,
         HAS_BOOL_SELECTORS = 0x02,
         HAS_MIMC_SELECTORS = 0x04,
-        HAS_ECC_SELECTORS = 0x08
+        HAS_ECC_SELECTORS = 0x08,
+        HAS_TURBO_ARITHMETISATION = 0x10
     };
     WidgetVersionControl(const size_t _dependencies, const size_t _features)
     {
@@ -45,6 +47,10 @@ class WidgetVersionControl {
         return ((static_cast<size_t>(dependencies) & static_cast<size_t>(required_dependency)) != 0);
     }
 
+    void set_dependency(Dependencies target_dependency)
+    {
+        dependencies = dependencies | static_cast<size_t>(target_dependency);
+    }
     size_t dependencies;
     size_t features;
 };
@@ -78,6 +84,11 @@ class VerifierBaseWidget {
         barretenberg::fr::field_t& batch_eval,
         const barretenberg::fr::field_t& nu_base,
         const transcript::Transcript& transcript) = 0;
+
+    virtual barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base, const transcript::Transcript&, barretenberg::fr::field_t&)
+    {
+        return alpha_base;
+    }
 
     virtual bool verify_instance_commitments()
     {
@@ -117,8 +128,9 @@ class ProverBaseWidget {
     virtual barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
                                                                 const transcript::Transcript& transcript,
                                                                 barretenberg::fr::field_t* poly,
+                                                                barretenberg::fr::field_t*,
                                                                 const barretenberg::evaluation_domain& domain) = 0;
-    virtual void compute_transcript_elements(transcript::Transcript&){};
+    virtual void compute_transcript_elements(transcript::Transcript&, const barretenberg::evaluation_domain&){};
 
     virtual std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(
         const barretenberg::evaluation_domain& domain, const ReferenceString& reference_string) const = 0;

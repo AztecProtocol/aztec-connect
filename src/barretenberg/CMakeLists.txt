@@ -63,6 +63,10 @@ add_library(
     waffle/proof_system/widgets/mimc_widget.hpp
     waffle/proof_system/widgets/sequential_widget.cpp
     waffle/proof_system/widgets/sequential_widget.hpp
+    waffle/proof_system/widgets/turbo_arithmetic_widget.cpp
+    waffle/proof_system/widgets/turbo_arithmetic_widget.hpp
+    waffle/proof_system/widgets/turbo_fixed_base_widget.cpp
+    waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
     waffle/proof_system/prover/prover.cpp
     waffle/proof_system/prover/prover.hpp
     waffle/proof_system/verifier/verifier.cpp
@@ -76,6 +80,8 @@ add_library(
     waffle/composer/mimc_composer.hpp
     waffle/composer/extended_composer.cpp
     waffle/composer/extended_composer.hpp
+    waffle/composer/turbo_composer.cpp
+    waffle/composer/turbo_composer.hpp
     waffle/stdlib/common.hpp
     waffle/stdlib/int_utils.hpp
     waffle/stdlib/bool/bool.tcc
@@ -177,6 +183,10 @@ if(PROFILING)
         waffle/proof_system/widgets/mimc_widget.hpp
         waffle/proof_system/widgets/sequential_widget.cpp
         waffle/proof_system/widgets/sequential_widget.hpp
+        waffle/proof_system/widgets/turbo_arithmetic_widget.cpp
+        waffle/proof_system/widgets/turbo_arithmetic_widget.hpp
+        waffle/proof_system/widgets/turbo_fixed_base_widget.cpp
+        waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
         waffle/proof_system/prover/prover.cpp
         waffle/proof_system/prover/prover.hpp
         waffle/proof_system/verifier/verifier.cpp
@@ -190,6 +200,8 @@ if(PROFILING)
         waffle/composer/mimc_composer.hpp
         waffle/composer/extended_composer.cpp
         waffle/composer/extended_composer.hpp
+        waffle/composer/turbo_composer.cpp
+        waffle/composer/turbo_composer.hpp
         waffle/stdlib/common.hpp
         waffle/stdlib/int_utils.hpp
         waffle/stdlib/bool/bool.tcc

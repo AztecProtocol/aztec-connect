@@ -203,7 +203,9 @@ TEST(prover, compute_quotient_polynomial)
         state.sigma_2, state.sigma_2_mapping, state.circuit_state.small_domain);
     waffle::compute_permutation_lagrange_base_single(
         state.sigma_3, state.sigma_3_mapping, state.circuit_state.small_domain);
-    state.compute_quotient_polynomial();
+    state.execute_first_round();
+    state.execute_second_round();
+    state.execute_third_round();
 
     // check that the max degree of our quotient polynomial is 3n
     for (size_t i = 3 * n; i < 4 * n; ++i) {

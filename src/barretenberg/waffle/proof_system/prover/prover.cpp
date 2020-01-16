@@ -19,11 +19,12 @@ using namespace barretenberg;
 namespace waffle
 {
 
-Prover::Prover(const size_t num_gates, const transcript::Manifest& input_manifest) :
+Prover::Prover(const size_t num_gates, const transcript::Manifest& input_manifest, bool has_fourth_wire) :
 n(num_gates),
 circuit_state(num_gates),
 reference_string(num_gates),
-transcript(input_manifest)
+transcript(input_manifest),
+__DEBUG_HAS_FOURTH_WIRE(has_fourth_wire)
 {
 }
 
@@ -32,11 +33,13 @@ n(other.n),
 w_l(std::move(other.w_l)),
 w_r(std::move(other.w_r)),
 w_o(std::move(other.w_o)),
+w_4(std::move(other.w_4)),
 circuit_state(std::move(other.circuit_state)),
 sigma_1_mapping(std::move(other.sigma_1_mapping)),
 sigma_2_mapping(std::move(other.sigma_2_mapping)),
 sigma_3_mapping(std::move(other.sigma_3_mapping)),
-transcript(other.transcript)
+transcript(other.transcript),
+__DEBUG_HAS_FOURTH_WIRE(other.__DEBUG_HAS_FOURTH_WIRE)
 {
     for (size_t i = 0; i < other.widgets.size(); ++i)
     {
@@ -51,6 +54,7 @@ Prover& Prover::operator=(Prover&& other)
     w_l = std::move(other.w_l);
     w_r = std::move(other.w_r);
     w_o = std::move(other.w_o);
+    w_4 = std::move(other.w_4);
     circuit_state = waffle::CircuitFFTState(std::move(other.circuit_state));
     sigma_1_mapping = std::move(other.sigma_1_mapping);
     sigma_2_mapping = std::move(other.sigma_2_mapping);
@@ -61,6 +65,7 @@ Prover& Prover::operator=(Prover&& other)
     }
     reference_string = std::move(other.reference_string);
     transcript = other.transcript;
+    __DEBUG_HAS_FOURTH_WIRE = other.__DEBUG_HAS_FOURTH_WIRE;
     return *this;
 }
 
@@ -71,6 +76,13 @@ void Prover::compute_wire_commitments()
     g1::element W_R = scalar_multiplication::pippenger(w_r.get_coefficients(), reference_string.monomials, n);
     g1::element W_O = scalar_multiplication::pippenger(w_o.get_coefficients(), reference_string.monomials, n);
 
+    if (__DEBUG_HAS_FOURTH_WIRE)
+    {
+        g1::element W_4  = scalar_multiplication::pippenger(w_4.get_coefficients(), reference_string.monomials, n);
+        g1::affine_element W_4_affine;
+        g1::jacobian_to_affine(W_4, W_4_affine);
+        transcript.add_element("W_4", transcript_helpers::convert_g1_element(W_4_affine));
+    }
     // TODO: batch normalize
     g1::affine_element W_L_affine;
     g1::affine_element W_R_affine;
@@ -86,9 +98,6 @@ void Prover::compute_wire_commitments()
 
     transcript.apply_fiat_shamir("beta");
     transcript.apply_fiat_shamir("gamma");
-    // compute beta, gamma
-    // challenges.gamma = fr::serialize_from_buffer(transcript.apply_fiat_shamir("gamma").begin()); // compute_gamma(proof);
-    // challenges.beta = fr::serialize_from_buffer(transcript.apply_fiat_shamir("beta").begin()); // compute_beta(proof, challenges.gamma);
 }
 
 void Prover::compute_z_commitment()
@@ -113,6 +122,13 @@ void Prover::compute_quotient_commitment()
     g1::element T_HI = scalar_multiplication::pippenger(
         &circuit_state.quotient_large.get_coefficients()[n + n], reference_string.monomials, n);
 
+    if (__DEBUG_HAS_FOURTH_WIRE) {
+        g1::element T_4 = scalar_multiplication::pippenger(
+            &circuit_state.quotient_large.get_coefficients()[n + n + n], reference_string.monomials, n);
+        g1::affine_element T_4_affine;
+        g1::jacobian_to_affine(T_4, T_4_affine);
+        transcript.add_element("T_4", transcript_helpers::convert_g1_element(T_4_affine));
+    }
     g1::affine_element T_LO_affine;
     g1::affine_element T_MID_affine;
     g1::affine_element T_HI_affine;
@@ -125,8 +141,7 @@ void Prover::compute_quotient_commitment()
     transcript.add_element("T_2", transcript_helpers::convert_g1_element(T_MID_affine));
     transcript.add_element("T_3", transcript_helpers::convert_g1_element(T_HI_affine));
 
-    transcript.apply_fiat_shamir("z");
-    // challenges.z = fr::serialize_from_buffer(transcript.apply_fiat_shamir("z").begin()); // compute_evaluation_challenge(proof);
+    transcript.apply_fiat_shamir("z"); // end of 3rd round
 }
 
 void Prover::compute_wire_coefficients()
@@ -138,6 +153,12 @@ void Prover::compute_wire_coefficients()
     w_l.ifft(circuit_state.small_domain);
     w_r.ifft(circuit_state.small_domain);
     w_o.ifft(circuit_state.small_domain);
+
+    if (__DEBUG_HAS_FOURTH_WIRE)
+    {
+        circuit_state.w_4_fft = polynomial(w_4, n);
+        w_4.ifft(circuit_state.small_domain);
+    }
 }
 
 void Prover::compute_z_coefficients()
@@ -431,22 +452,40 @@ void Prover::init_quotient_polynomials()
     circuit_state.quotient_mid.resize(2 * n);
 }
 
-void Prover::compute_quotient_polynomial()
+void Prover::execute_preamble_round()
+{
+    std::vector<uint8_t> size_bytes(4);
+
+    transcript.add_element("circuit_size",
+                           { static_cast<uint8_t>(n),
+                             static_cast<uint8_t>(n >> 8),
+                             static_cast<uint8_t>(n >> 16),
+                             static_cast<uint8_t>(n >> 24) });
+    transcript.apply_fiat_shamir("init");
+    compute_permutation_lagrange_base_single(sigma_1, sigma_1_mapping, circuit_state.small_domain);
+    compute_permutation_lagrange_base_single(sigma_2, sigma_2_mapping, circuit_state.small_domain);
+    compute_permutation_lagrange_base_single(sigma_3, sigma_3_mapping, circuit_state.small_domain);
+}
+
+void Prover::execute_first_round()
 {
     init_quotient_polynomials();
-
     compute_wire_coefficients();
-
     compute_wire_commitments();
+}
 
+void Prover::execute_second_round()
+{
     compute_z_coefficients();
-
     compute_z_commitment();
+}
 
+void Prover::execute_third_round()
+{
     circuit_state.w_l_fft = polynomial(w_l, 4 * n + 4);
     circuit_state.w_r_fft = polynomial(w_r, 4 * n + 4);
     circuit_state.w_o_fft = polynomial(w_o, 4 * n + 4);
-
+    
     circuit_state.w_l_fft.coset_fft(circuit_state.large_domain);
     circuit_state.w_r_fft.coset_fft(circuit_state.large_domain);
     circuit_state.w_o_fft.coset_fft(circuit_state.large_domain);
@@ -463,6 +502,16 @@ void Prover::compute_quotient_polynomial()
     circuit_state.w_o_fft.add_lagrange_base_coefficient(circuit_state.w_o_fft[1]);
     circuit_state.w_o_fft.add_lagrange_base_coefficient(circuit_state.w_o_fft[2]);
     circuit_state.w_o_fft.add_lagrange_base_coefficient(circuit_state.w_o_fft[3]);
+
+    if (__DEBUG_HAS_FOURTH_WIRE)
+    {
+        circuit_state.w_4_fft = polynomial(w_4, 4 * n + 4);
+        circuit_state.w_4_fft.coset_fft(circuit_state.large_domain);
+        circuit_state.w_4_fft.add_lagrange_base_coefficient(circuit_state.w_4_fft[0]);
+        circuit_state.w_4_fft.add_lagrange_base_coefficient(circuit_state.w_4_fft[1]);
+        circuit_state.w_4_fft.add_lagrange_base_coefficient(circuit_state.w_4_fft[2]);
+        circuit_state.w_4_fft.add_lagrange_base_coefficient(circuit_state.w_4_fft[3]);
+    }
     polynomial z_fft(z, 4 * n + 4);
 
     compute_permutation_grand_product_coefficients(z_fft);
@@ -488,6 +537,161 @@ void Prover::compute_quotient_polynomial()
     ITERATE_OVER_DOMAIN_START(circuit_state.mid_domain);
     fr::__add(circuit_state.quotient_large[i], circuit_state.quotient_mid[i], circuit_state.quotient_large[i]);
     ITERATE_OVER_DOMAIN_END;
+
+    compute_quotient_commitment();
+}
+
+void Prover::execute_fourth_round()
+{
+
+    compute_linearisation_coefficients();
+
+    transcript.apply_fiat_shamir("nu");
+}
+
+void Prover::execute_fifth_round()
+{
+    fr::field_t nu = fr::serialize_from_buffer(transcript.get_challenge("nu").begin());
+    fr::field_t z_challenge = fr::serialize_from_buffer(transcript.get_challenge("z").begin());
+    fr::field_t beta = fr::serialize_from_buffer(transcript.get_challenge("beta").begin());
+
+    fr::field_t nu_powers[9];
+    fr::__copy(nu, nu_powers[0]);
+    for (size_t i = 1; i < 9; ++i) {
+        fr::__mul(nu_powers[i - 1], nu_powers[0], nu_powers[i]);
+    }
+
+    fr::field_t beta_inv;
+    fr::__invert(beta, beta_inv);
+
+    // Next step: compute the two Kate polynomial commitments, and associated opening proofs
+    // We have two evaluation points: z and z.omega
+    // We need to create random linear combinations of each individual polynomial and combine them
+    polynomial opening_poly(n, n);
+    polynomial shifted_opening_poly(n, n);
+    fr::field_t z_pow_n;
+    fr::field_t z_pow_2_n;
+    fr::field_t z_pow_3_n;
+
+    fr::__pow_small(z_challenge, n, z_pow_n);
+    fr::__pow_small(z_challenge, 2 * n, z_pow_2_n);
+    fr::__pow_small(z_challenge, 3 * n, z_pow_3_n);
+
+    ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
+    fr::field_t T0;
+    fr::field_t T1;
+    fr::field_t T2;
+    fr::field_t T3;
+    fr::field_t T4;
+    fr::field_t T5;
+    fr::field_t T8;
+    fr::field_t T9;
+    fr::field_t T11;
+    fr::__mul(circuit_state.quotient_large[i + n], z_pow_n, T8);
+    fr::__mul(circuit_state.quotient_large[i + n + n], z_pow_2_n, T9);
+    fr::__mul(circuit_state.quotient_large[i + n + n + n], z_pow_3_n, T11);
+
+    fr::__mul(r[i], nu_powers[0], T0);
+    fr::__mul(w_l[i], nu_powers[1], T1);
+    fr::__mul(w_r[i], nu_powers[2], T2);
+    fr::__mul(w_o[i], nu_powers[3], T3);
+    fr::__mul(sigma_1[i], nu_powers[4], T4);
+    fr::__mul(sigma_2[i], nu_powers[5], T5);
+    fr::__mul(z[i], nu_powers[6], shifted_opening_poly[i]);
+    if (__DEBUG_HAS_FOURTH_WIRE)
+    {
+        fr::field_t T10;
+        fr::__mul(w_4[i], nu_powers[7], T10);
+        fr::__add(T0, T10, T0);
+    }
+    fr::__add(T9, T11, T9);
+    fr::__add(T8, T9, T8);
+    fr::__add(T4, T5, T4);
+    fr::__add(T3, T2, T3);
+    fr::__add(T1, T0, T1);
+    // we added a \beta multiplier to sigma_1(X), sigma_2(X), sigma_3(X), s_id(X) - need to undo that here
+    fr::__mul(T4, beta_inv, T4);
+    fr::__add(T3, T1, T3);
+    fr::__add(T4, T3, T4);
+    fr::__add(T4, T8, T4);
+    fr::__add(circuit_state.quotient_large[i], T4, opening_poly[i]);
+    ITERATE_OVER_DOMAIN_END;
+
+    fr::field_t nu_base = nu_powers[8];
+
+    // TODO compute 'needs_blah_shifted' in constructor
+    bool needs_w_l_shifted = false;
+    bool needs_w_r_shifted = false;
+    bool needs_w_o_shifted = false;
+    bool needs_w_4_shifted = false;
+
+    for (size_t i = 0; i < widgets.size(); ++i) {
+        needs_w_l_shifted |=
+            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
+        needs_w_r_shifted |=
+            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
+        needs_w_o_shifted |=
+            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
+        needs_w_4_shifted |=
+            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_4_SHIFTED);
+    }
+    if (needs_w_l_shifted) {
+        ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
+        fr::field_t T0;
+        fr::__mul(nu_base, w_l[i], T0);
+        fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
+        ITERATE_OVER_DOMAIN_END;
+        nu_base = fr::mul(nu_base, nu);
+    }
+    if (needs_w_r_shifted) {
+        ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
+        fr::field_t T0;
+        fr::__mul(nu_base, w_r[i], T0);
+        fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
+        ITERATE_OVER_DOMAIN_END;
+        nu_base = fr::mul(nu_base, nu);
+    }
+    if (needs_w_o_shifted) {
+        ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
+        fr::field_t T0;
+        fr::__mul(nu_base, w_o[i], T0);
+        fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
+        ITERATE_OVER_DOMAIN_END;
+        nu_base = fr::mul(nu_base, nu);
+    }
+    if (needs_w_4_shifted) {
+        ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
+        fr::field_t T0;
+        fr::__mul(nu_base, w_4[i], T0);
+        fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
+        ITERATE_OVER_DOMAIN_END;
+        nu_base = fr::mul(nu_base, nu);
+    }
+
+    for (size_t i = 0; i < widgets.size(); ++i) {
+        nu_base = widgets[i]->compute_opening_poly_contribution(
+            nu_base, transcript, &opening_poly[0], &shifted_opening_poly[0], circuit_state.small_domain);
+    }
+
+    fr::field_t shifted_z;
+    fr::__mul(z_challenge, circuit_state.small_domain.root, shifted_z);
+
+    opening_poly.compute_kate_opening_coefficients(z_challenge);
+
+    shifted_opening_poly.compute_kate_opening_coefficients(shifted_z);
+
+    g1::element PI_Z = scalar_multiplication::pippenger(opening_poly.get_coefficients(), reference_string.monomials, n);
+    g1::element PI_Z_OMEGA =
+        scalar_multiplication::pippenger(shifted_opening_poly.get_coefficients(), reference_string.monomials, n);
+
+    g1::affine_element PI_Z_affine;
+    g1::affine_element PI_Z_OMEGA_affine;
+
+    g1::jacobian_to_affine(PI_Z, PI_Z_affine);
+    g1::jacobian_to_affine(PI_Z_OMEGA, PI_Z_OMEGA_affine);
+
+    transcript.add_element("PI_Z", transcript_helpers::convert_g1_element(PI_Z_affine));
+    transcript.add_element("PI_Z_OMEGA", transcript_helpers::convert_g1_element(PI_Z_OMEGA_affine));
 }
 
 fr::field_t Prover::compute_linearisation_coefficients()
@@ -496,18 +700,6 @@ fr::field_t Prover::compute_linearisation_coefficients()
     fr::field_t beta = fr::serialize_from_buffer(transcript.get_challenge("beta").begin());
     fr::field_t z_challenge = fr::serialize_from_buffer(transcript.get_challenge("z").begin());
 
-/*
-prover:
-beta: field: [6524377df6bbc3da, ec23160e44ff5d97, 1655487b06ae5620, 17e9abf270d3546a]
-gamma: field: [4b0bb286ec69e4ee, 195717effb129cda, ca54f6e3d9d4860b, c191d41bcdd0248]
-alpha: field: [7d594afb4512cfe, df168493f22c064e, a39386819aa7178e, 1635788bc9f8bc]
-z eval: field: [8d39efeb3b6ac970, 4c552a0965c84529, 38f1b7870594760f, 732f30383118792]
-verifier:
-beta: field: [6524377df6bbc3da, ec23160e44ff5d97, 1655487b06ae5620, 17e9abf270d3546a]
-gamma: field: [7d594afb4512cfe, df168493f22c064e, a39386819aa7178e, 1635788bc9f8bc]
-alpha: field: [8d39efeb3b6ac970, 4c552a0965c84529, 38f1b7870594760f, 732f30383118792]
-z eval: field: [9edbce6e8f3eee3e, e89b333b4283f8a2, f07362191b073e0a, 1a587c481acc7478]
-*/
     r.resize_unsafe(n);
     // ok... now we need to evaluate polynomials. Jeepers
     fr::field_t beta_inv;
@@ -520,13 +712,19 @@ z eval: field: [9edbce6e8f3eee3e, e89b333b4283f8a2, f07362191b073e0a, 1a587c481a
     fr::field_t w_l_eval = w_l.evaluate(z_challenge, n);
     fr::field_t w_r_eval = w_r.evaluate(z_challenge, n);
     fr::field_t w_o_eval = w_o.evaluate(z_challenge, n);
-    
+
+    if (__DEBUG_HAS_FOURTH_WIRE)
+    {
+        fr::field_t w_4_eval = w_4.evaluate(z_challenge, n);
+        transcript.add_element("w_4", transcript_helpers::convert_field_element(w_4_eval));
+    }
     transcript.add_element("w_1", transcript_helpers::convert_field_element(w_l_eval));
     transcript.add_element("w_2", transcript_helpers::convert_field_element(w_r_eval));
     transcript.add_element("w_3", transcript_helpers::convert_field_element(w_o_eval));
     bool needs_w_l_shifted = false;
     bool needs_w_r_shifted = false;
     bool needs_w_o_shifted = false;
+    bool needs_w_4_shifted = false;
     for (size_t i = 0; i < widgets.size(); ++i) {
         needs_w_l_shifted |=
             widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
@@ -534,6 +732,8 @@ z eval: field: [9edbce6e8f3eee3e, e89b333b4283f8a2, f07362191b073e0a, 1a587c481a
             widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
         needs_w_o_shifted |=
             widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
+        needs_w_4_shifted |=
+            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_4_SHIFTED);    
     }
     if (needs_w_l_shifted) {
         transcript.add_element("w_1_omega", transcript_helpers::convert_field_element(w_l.evaluate(shifted_z, n)));
@@ -544,7 +744,9 @@ z eval: field: [9edbce6e8f3eee3e, e89b333b4283f8a2, f07362191b073e0a, 1a587c481a
     if (needs_w_o_shifted) {
         transcript.add_element("w_3_omega", transcript_helpers::convert_field_element(w_o.evaluate(shifted_z, n)));
     }
-
+    if (needs_w_4_shifted) {
+        transcript.add_element("w_4_omega", transcript_helpers::convert_field_element(w_4.evaluate(shifted_z, n)));
+    }
     fr::field_t sigma_1_eval = sigma_1.evaluate(z_challenge, n);
     fr::field_t sigma_2_eval = sigma_2.evaluate(z_challenge, n);
     fr::field_t z_1_shifted_eval = z.evaluate(shifted_z, n);
@@ -552,9 +754,9 @@ z eval: field: [9edbce6e8f3eee3e, e89b333b4283f8a2, f07362191b073e0a, 1a587c481a
 
     for (size_t i = 0; i < widgets.size(); ++i)
     {
-        widgets[i]->compute_transcript_elements(transcript);
+        widgets[i]->compute_transcript_elements(transcript, circuit_state.small_domain);
     }
-    fr::field_t t_eval = circuit_state.quotient_large.evaluate(z_challenge, 3 * n);
+    fr::field_t t_eval = circuit_state.quotient_large.evaluate(z_challenge, 4 * n);
     // we scaled the sigma polynomials up by beta, so scale back down
     fr::__mul(sigma_1_eval, beta_inv, sigma_1_eval);
     fr::__mul(sigma_2_eval, beta_inv, sigma_2_eval);
@@ -583,150 +785,18 @@ z eval: field: [9edbce6e8f3eee3e, e89b333b4283f8a2, f07362191b073e0a, 1a587c481a
     fr::field_t linear_eval = r.evaluate(z_challenge, n);
     transcript.add_element("r", transcript_helpers::convert_field_element(linear_eval));
     transcript.add_element("t", transcript_helpers::convert_field_element(t_eval));
+
     return t_eval;
-}
-
-void Prover::compute_opening_elements()
-{
-    fr::field_t beta = fr::serialize_from_buffer(transcript.get_challenge("beta").begin());
-    fr::field_t z_challenge = fr::serialize_from_buffer(transcript.get_challenge("z").begin());
-
-    compute_linearisation_coefficients();
-
-    // hmm what do I do here?
-    fr::field_t nu = fr::serialize_from_buffer(transcript.apply_fiat_shamir("nu").begin());
-
-    fr::field_t nu_powers[8];
-    fr::__copy(nu, nu_powers[0]);
-    for (size_t i = 1; i < 8; ++i) {
-        fr::__mul(nu_powers[i - 1], nu_powers[0], nu_powers[i]);
-    }
-
-    fr::field_t beta_inv;
-    fr::__invert(beta, beta_inv);
-
-    // Next step: compute the two Kate polynomial commitments, and associated opening proofs
-    // We have two evaluation points: z and z.omega
-    // We need to create random linear combinations of each individual polynomial and combine them
-    polynomial opening_poly(n, n);
-    polynomial shifted_opening_poly(n, n);
-    fr::field_t z_pow_n;
-    fr::field_t z_pow_2_n;
-    fr::__pow_small(z_challenge, n, z_pow_n);
-    fr::__pow_small(z_challenge, 2 * n, z_pow_2_n);
-
-    ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
-    fr::field_t T3;
-    fr::field_t T4;
-    fr::field_t T5;
-    fr::field_t T8;
-    fr::field_t T9;
-    fr::__mul(circuit_state.quotient_large[i + n], z_pow_n, T8);
-    fr::__mul(circuit_state.quotient_large[i + n + n], z_pow_2_n, T9);
-    fr::__mul(r[i], nu_powers[0], T0);
-    fr::__mul(w_l[i], nu_powers[1], T1);
-    fr::__mul(w_r[i], nu_powers[2], T2);
-    fr::__mul(w_o[i], nu_powers[3], T3);
-    fr::__mul(sigma_1[i], nu_powers[4], T4);
-    fr::__mul(sigma_2[i], nu_powers[5], T5);
-    fr::__mul(z[i], nu_powers[6], shifted_opening_poly[i]);
-    fr::__add(T8, T9, T8);
-    fr::__add(T4, T5, T4);
-    fr::__add(T3, T2, T3);
-    fr::__add(T1, T0, T1);
-    // we added a \beta multiplier to sigma_1(X), sigma_2(X), sigma_3(X), s_id(X) - need to undo that here
-    fr::__mul(T4, beta_inv, T4);
-    fr::__add(T3, T1, T3);
-    fr::__add(T4, T3, T4);
-    fr::__add(T4, T8, T4);
-    fr::__add(circuit_state.quotient_large[i], T4, opening_poly[i]);
-    ITERATE_OVER_DOMAIN_END;
-
-    fr::field_t nu_base = nu_powers[7];
-
-    // TODO compute 'needs_blah_shifted' in constructor
-    bool needs_w_l_shifted = false;
-    bool needs_w_r_shifted = false;
-    bool needs_w_o_shifted = false;
-    for (size_t i = 0; i < widgets.size(); ++i) {
-        needs_w_l_shifted |=
-            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
-        needs_w_r_shifted |=
-            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
-        needs_w_o_shifted |=
-            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
-    }
-    if (needs_w_l_shifted) {
-        ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
-        fr::field_t T0;
-        fr::__mul(nu_base, w_l[i], T0);
-        fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
-        ITERATE_OVER_DOMAIN_END;
-        nu_base = fr::mul(nu_base, nu);
-    }
-    if (needs_w_r_shifted) {
-        ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
-        fr::field_t T0;
-        fr::__mul(nu_base, w_r[i], T0);
-        fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
-        ITERATE_OVER_DOMAIN_END;
-        nu_base = fr::mul(nu_base, nu);
-    }
-    if (needs_w_o_shifted) {
-        ITERATE_OVER_DOMAIN_START(circuit_state.small_domain);
-        fr::field_t T0;
-        fr::__mul(nu_base, w_o[i], T0);
-        fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
-        ITERATE_OVER_DOMAIN_END;
-        nu_base = fr::mul(nu_base, nu);
-    }
-
-    for (size_t i = 0; i < widgets.size(); ++i) {
-        nu_base = widgets[i]->compute_opening_poly_contribution(
-            nu_base, transcript, &opening_poly[0], circuit_state.small_domain);
-    }
-
-    fr::field_t shifted_z;
-    fr::__mul(z_challenge, circuit_state.small_domain.root, shifted_z);
-
-    opening_poly.compute_kate_opening_coefficients(z_challenge);
-
-    shifted_opening_poly.compute_kate_opening_coefficients(shifted_z);
-
-    g1::element PI_Z = scalar_multiplication::pippenger(opening_poly.get_coefficients(), reference_string.monomials, n);
-    g1::element PI_Z_OMEGA =
-        scalar_multiplication::pippenger(shifted_opening_poly.get_coefficients(), reference_string.monomials, n);
-
-    g1::affine_element PI_Z_affine;
-    g1::affine_element PI_Z_OMEGA_affine;
-
-    g1::jacobian_to_affine(PI_Z, PI_Z_affine);
-    g1::jacobian_to_affine(PI_Z_OMEGA, PI_Z_OMEGA_affine);
-
-    transcript.add_element("PI_Z", transcript_helpers::convert_g1_element(PI_Z_affine));
-    transcript.add_element("PI_Z_OMEGA", transcript_helpers::convert_g1_element(PI_Z_OMEGA_affine));
-
 }
 
 waffle::plonk_proof Prover::construct_proof()
 {
-    std::vector<uint8_t> size_bytes(4);
-
-    transcript.add_element("circuit_size",
-                           { static_cast<uint8_t>(n),
-                             static_cast<uint8_t>(n >> 8),
-                             static_cast<uint8_t>(n >> 16),
-                             static_cast<uint8_t>(n >> 24) });
-    transcript.apply_fiat_shamir("init");
-    compute_permutation_lagrange_base_single(sigma_1, sigma_1_mapping, circuit_state.small_domain);
-    compute_permutation_lagrange_base_single(sigma_2, sigma_2_mapping, circuit_state.small_domain);
-    compute_permutation_lagrange_base_single(sigma_3, sigma_3_mapping, circuit_state.small_domain);
-    compute_quotient_polynomial();
-    compute_quotient_commitment();
-    compute_opening_elements();
+    execute_preamble_round();
+    execute_first_round();
+    execute_second_round();
+    execute_third_round();
+    execute_fourth_round();
+    execute_fifth_round();
 
     waffle::plonk_proof result;
     result.proof_data = transcript.export_transcript();

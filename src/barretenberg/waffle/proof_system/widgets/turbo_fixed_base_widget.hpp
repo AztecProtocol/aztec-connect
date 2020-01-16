@@ -1,11 +1,11 @@
 #pragma once
 
-#include "./base_widget.hpp"
+#include "./turbo_arithmetic_widget.hpp"
 
 namespace waffle {
-class VerifierTurboArithmeticWidget : public VerifierBaseWidget {
+class VerifierTurboFixedBaseWidget : public VerifierTurboArithmeticWidget {
   public:
-    VerifierTurboArithmeticWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
+    VerifierTurboFixedBaseWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
         const challenge_coefficients& challenge,
@@ -13,26 +13,20 @@ class VerifierTurboArithmeticWidget : public VerifierBaseWidget {
         std::vector<barretenberg::g1::affine_element>& points,
         std::vector<barretenberg::fr::field_t>& scalars);
 
-
-    barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t& batch_eval,
+    barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t&,
                                                                     const barretenberg::fr::field_t& nu_base,
-                                                                    const transcript::Transcript& transcript);
+                                                                    const transcript::Transcript&);
 
-
-    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base, const transcript::Transcript& transcript, barretenberg::fr::field_t&)
-    {
-        barretenberg::fr::field_t alpha = barretenberg::fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-        return barretenberg::fr::mul(alpha_base, alpha);
-    }
+    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t&, const transcript::Transcript& transcript, barretenberg::fr::field_t&);
 };
 
-class ProverTurboArithmeticWidget : public ProverBaseWidget {
+class ProverTurboFixedBaseWidget : public ProverTurboArithmeticWidget {
   public:
-    ProverTurboArithmeticWidget(const size_t n);
-    ProverTurboArithmeticWidget(const ProverTurboArithmeticWidget& other);
-    ProverTurboArithmeticWidget(ProverTurboArithmeticWidget&& other);
-    ProverTurboArithmeticWidget& operator=(const ProverTurboArithmeticWidget& other);
-    ProverTurboArithmeticWidget& operator=(ProverTurboArithmeticWidget&& other);
+    ProverTurboFixedBaseWidget(const size_t n);
+    ProverTurboFixedBaseWidget(const ProverTurboFixedBaseWidget& other);
+    ProverTurboFixedBaseWidget(ProverTurboFixedBaseWidget&& other);
+    ProverTurboFixedBaseWidget& operator=(const ProverTurboFixedBaseWidget& other);
+    ProverTurboFixedBaseWidget& operator=(ProverTurboFixedBaseWidget&& other);
 
     barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
                                                             const transcript::Transcript& transcript,
@@ -54,23 +48,7 @@ class ProverTurboArithmeticWidget : public ProverBaseWidget {
 
     void reset(const barretenberg::evaluation_domain& domain);
 
-    barretenberg::polynomial q_m;
-    barretenberg::polynomial q_c;
-    barretenberg::polynomial q_1;
-    barretenberg::polynomial q_2;
-    barretenberg::polynomial q_3;
-    barretenberg::polynomial q_4;
-    barretenberg::polynomial q_4_next;
+    barretenberg::polynomial q_ecc_1;
 
-    barretenberg::polynomial q_arith;
-
-    barretenberg::polynomial q_1_fft;
-    barretenberg::polynomial q_2_fft;
-    barretenberg::polynomial q_3_fft;
-    barretenberg::polynomial q_4_fft;
-    barretenberg::polynomial q_4_next_fft;
-    barretenberg::polynomial q_m_fft;
-    barretenberg::polynomial q_c_fft;
-    barretenberg::polynomial q_arith_fft;
 };
 } // namespace waffle

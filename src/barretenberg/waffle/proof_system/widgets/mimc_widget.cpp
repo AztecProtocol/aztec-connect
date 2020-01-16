@@ -92,7 +92,7 @@ fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::
     return fr::mul(alpha_base, fr::sqr(alpha));
 }
 
-void ProverMiMCWidget::compute_transcript_elements(transcript::Transcript& transcript)
+void ProverMiMCWidget::compute_transcript_elements(transcript::Transcript& transcript, const barretenberg::evaluation_domain&)
 {
     fr::field_t z = fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
     transcript.add_element("q_mimc_coefficient",
@@ -129,6 +129,7 @@ fr::field_t ProverMiMCWidget::compute_linear_contribution(const fr::field_t& alp
 fr::field_t ProverMiMCWidget::compute_opening_poly_contribution(const fr::field_t& nu_base,
                                                                 const transcript::Transcript& transcript,
                                                                 fr::field_t* poly,
+                                                                fr::field_t*,
                                                                 const evaluation_domain& domain)
 {
     fr::field_t nu = fr::serialize_from_buffer(&transcript.get_challenge("nu")[0]);

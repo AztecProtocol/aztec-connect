@@ -288,7 +288,7 @@ void fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, con
 
 void coset_fft(fr::field_t* coeffs, const evaluation_domain& domain)
 {
-    scale_by_generator(coeffs, domain, fr::one, fr::multiplicative_generator, domain.generator_size);
+    scale_by_generator(coeffs, domain, fr::one, domain.generator, domain.generator_size);
     fft(coeffs, domain);
 }
 
@@ -296,7 +296,7 @@ void coset_fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domai
 {
     fr::field_t start = fr::one;
     fr::__mul(start, constant, start);
-    scale_by_generator(coeffs, domain, start, fr::multiplicative_generator, domain.generator_size);
+    scale_by_generator(coeffs, domain, start, domain.generator, domain.generator_size);
     fft(coeffs, domain);
 }
 
@@ -313,7 +313,7 @@ void ifft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, co
 void coset_ifft(fr::field_t* coeffs, const evaluation_domain& domain)
 {
     ifft(coeffs, domain);
-    scale_by_generator(coeffs, domain, fr::one, fr::multiplicative_generator_inverse, domain.size);
+    scale_by_generator(coeffs, domain, fr::one, domain.generator_inverse, domain.size);
 }
 
 void add(const fr::field_t* a_coeffs,

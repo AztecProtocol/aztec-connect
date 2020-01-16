@@ -38,8 +38,6 @@ class Transcript {
                     count += manifest_element.num_bytes;
                 }
             }
-
-            // apply_fiat_shamir(input_manifest.get_round_manifest(i).challenge);
         }
     }
 
