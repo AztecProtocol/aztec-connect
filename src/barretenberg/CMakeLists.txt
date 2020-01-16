@@ -81,7 +81,6 @@ add_library(
     waffle/stdlib/bool/bool.hpp
     waffle/stdlib/field/field.tcc
     waffle/stdlib/field/field.hpp
-    waffle/stdlib/uint32/uint32.tcc
     waffle/stdlib/uint32/uint32.hpp
     waffle/stdlib/bitarray/bitarray.tcc
     waffle/stdlib/bitarray/bitarray.hpp
@@ -89,6 +88,8 @@ add_library(
     waffle/stdlib/mimc.hpp
     waffle/stdlib/crypto/hash/sha256.tcc
     waffle/stdlib/crypto/hash/sha256.hpp
+    waffle/stdlib/merkle_tree/merkle_tree.tcc
+    waffle/stdlib/merkle_tree/merkle_tree.hpp
     noir/expression.cpp
     noir/statement.cpp
     noir/printer.cpp
@@ -196,7 +197,6 @@ if(PROFILING)
         waffle/stdlib/field/field.hpp
         waffle/stdlib/uint/uint.tcc
         waffle/stdlib/uint/uint.hpp
-        waffle/stdlib/uint32/uint32.tcc
         waffle/stdlib/uint32/uint32.hpp
         waffle/stdlib/bitarray/bitarray.tcc
         waffle/stdlib/bitarray/bitarray.hpp
@@ -204,6 +204,8 @@ if(PROFILING)
         waffle/stdlib/mimc.hpp
         waffle/stdlib/crypto/hash/sha256.tcc
         waffle/stdlib/crypto/hash/sha256.hpp
+        waffle/stdlib/merkle_tree/merkle_tree.tcc
+        waffle/stdlib/merkle_tree/merkle_tree.hpp
     )
 
     target_link_libraries(

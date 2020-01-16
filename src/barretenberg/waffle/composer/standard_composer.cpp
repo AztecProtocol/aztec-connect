@@ -219,19 +219,21 @@ void StandardComposer::assert_equal(const uint32_t a_idx, const uint32_t b_idx)
 {
     ASSERT(barretenberg::fr::eq(variables[a_idx], variables[b_idx]));
 
-    if (wire_epicycles[a_idx].size() == 0) {
-        const add_triple gate_coefficients{
-            a_idx, a_idx, a_idx, fr::one, fr::neg_one(), fr::zero, fr::zero,
-        };
-        create_add_gate(gate_coefficients);
-    }
+    /* TODO: This is breaking tests.
+        if (wire_epicycles[a_idx].size() == 0) {
+            const add_triple gate_coefficients{
+                a_idx, a_idx, a_idx, fr::one, fr::neg_one(), fr::zero, fr::zero,
+            };
+            create_add_gate(gate_coefficients);
+        }
 
-    if (wire_epicycles[b_idx].size() == 0) {
-        const add_triple gate_coefficients{
-            b_idx, b_idx, b_idx, fr::one, fr::neg_one(), fr::zero, fr::zero,
-        };
-        create_add_gate(gate_coefficients);
-    }
+        if (wire_epicycles[b_idx].size() == 0) {
+            const add_triple gate_coefficients{
+                b_idx, b_idx, b_idx, fr::one, fr::neg_one(), fr::zero, fr::zero,
+            };
+            create_add_gate(gate_coefficients);
+        }
+    */
 
     for (size_t i = 0; i < wire_epicycles[b_idx].size(); ++i) {
         wire_epicycles[a_idx].emplace_back(wire_epicycles[b_idx][i]);

@@ -90,7 +90,7 @@ template <typename ComposerContext> class uint {
 
     bool is_constant() const { return witness_index == static_cast<uint32_t>(-1); }
 
-    uint32_t get_witness_index()
+    uint32_t get_witness_index() const
     {
         normalize();
         return witness_index;

@@ -65,3 +65,87 @@ TEST(stdlib_merkle_tree, test_assert_check_membership)
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, false);
 }
+
+TEST(stdlib_merkle_tree, test_add_member)
+{
+    Composer composer = Composer();
+    size_t size = 8;
+    std::vector<field_t> values(size);
+
+    for (size_t i = 0; i < size; ++i) {
+        values[i] = witness_t(&composer, i);
+    }
+
+    merkle_tree tree = merkle_tree(composer, 3);
+
+    // Check everything is zero.
+    for (size_t i = 0; i < size; ++i) {
+        EXPECT_EQ(tree.check_membership(values[0], values[i]).get_value(), true);
+    }
+
+    // Check everything is not one.
+    for (size_t i = 0; i < size; ++i) {
+        EXPECT_EQ(tree.check_membership(values[1], values[i]).get_value(), false);
+    }
+
+    // Add incremental values.
+    for (size_t i = 0; i < size; ++i) {
+        tree.add_member(values[i]);
+    }
+
+    // Check everything is as expected.
+    for (size_t i = 0; i < size; ++i) {
+        EXPECT_EQ(tree.check_membership(values[i], values[i]).get_value(), true);
+    }
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_merkle_tree, test_update_member)
+{
+    Composer composer = Composer();
+    size_t size = 8;
+    std::vector<field_t> values(size);
+
+    for (size_t i = 0; i < size; ++i) {
+        values[i] = witness_t(&composer, i);
+    }
+
+    merkle_tree tree = merkle_tree(composer, 3);
+
+    // Add incremental values.
+    for (size_t i = 0; i < size; ++i) {
+        tree.add_member(values[i]);
+    }
+
+    // Check everything is as expected.
+    for (size_t i = 0; i < size; ++i) {
+        EXPECT_EQ(tree.check_membership(values[i], values[i]).get_value(), true);
+    }
+
+    // Update the values (reverse them).
+    for (size_t i = 0; i < size; ++i) {
+        tree.update_member(values[i], values[size - 1 - i]);
+    }
+
+    // Check everything is as expected.
+    for (size_t i = 0; i < size; ++i) {
+        EXPECT_EQ(tree.check_membership(values[i], values[size - 1 - i]).get_value(), true);
+    }
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
