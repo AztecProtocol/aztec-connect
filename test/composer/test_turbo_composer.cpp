@@ -179,37 +179,68 @@ TEST(turbo_composer, fixed_base_scalar_multiplication_proof)
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * 128));
     grumpkin::g1::element accumulator = grumpkin::g1::one;
     // grumpkin::g1::set_infinity(accumulator);
-    for (size_t i = 0; i < 126; ++i) {
+    for (size_t i = 0; i < 127; ++i) {
         grumpkin::g1::element p1 = accumulator;
-        ladder[125 - i] = p1;
+        ladder[126 - i] = p1;
         grumpkin::g1::dbl(accumulator, accumulator);
         grumpkin::g1::add(p1, accumulator, p1);
         grumpkin::g1::dbl(accumulator, accumulator);
-        ladder3[125 - i] = p1;
+        ladder3[126 - i] = p1;
     }
     grumpkin::g1::element origin_point = accumulator;
 
-    grumpkin::g1::batch_normalize(&ladder[0], 126);
-    grumpkin::g1::batch_normalize(&ladder3[0], 126);
-    origin_point = grumpkin::g1::normalize(origin_point);
+    grumpkin::g1::element origin_point_a = accumulator;
+    grumpkin::g1::element origin_point_b;
+    grumpkin::g1::add(origin_point_a, grumpkin::g1::one, origin_point_b);
+    grumpkin::g1::batch_normalize(&ladder[0], 127);
+    grumpkin::g1::batch_normalize(&ladder3[0], 127);
+    origin_point_a = grumpkin::g1::normalize(origin_point_a);
+    origin_point_b = grumpkin::g1::normalize(origin_point_b);
+    origin_point= grumpkin::g1::normalize(origin_point);
 
     grumpkin::fr::field_t scalar_multiplier = grumpkin::fr::random_element();
     bool skew = false; // ignore skew for now
     uint64_t wnaf_entries[256] = { 0 };
-    barretenberg::wnaf::fixed_wnaf<1, 2>(&scalar_multiplier.data[0], &wnaf_entries[0], skew, 0);
-
-    if ((wnaf_entries[0] & 0xffffff) > 1) {
-        wnaf_entries[0] = 1;
+    if ((grumpkin::fr::from_montgomery_form(scalar_multiplier).data[0] & 1) == 0)
+    {
+        // hacky workaround because we add skew, instead of subtracting it
+        scalar_multiplier = grumpkin::fr::sub(scalar_multiplier, grumpkin::fr::add(grumpkin::fr::one, grumpkin::fr::one));
     }
+    scalar_multiplier = grumpkin::fr::from_montgomery_form(scalar_multiplier);
+    barretenberg::wnaf::fixed_wnaf<1, 2>(&scalar_multiplier.data[0], &wnaf_entries[1], skew, 0);
+
+    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), 254));
+    fr::field_t accumulator_a = accumulator_offset;
+    fr::field_t accumulator_b = fr::add(accumulator_offset, fr::one);
 
     grumpkin::g1::element* multiplication_transcript =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * 128));
     fr::field_t* accumulator_transcript = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 128));
-    multiplication_transcript[0] = origin_point;
-    accumulator_transcript[0] = fr::zero;
+    if ((wnaf_entries[0] & 0xffffff) >= 1)
+    {
+        wnaf_entries[0] = 1;
+        wnaf_entries[1] = 3 + (1U << 31U);
+    }
+    if ((wnaf_entries[1] & 0xffffff) == 0)
+    {
+        wnaf_entries[0] = 1;
+        wnaf_entries[1] = 1 + (1U << 31U);
+    }
+
+    if (skew)
+    {
+        multiplication_transcript[0] = origin_point_b;
+        accumulator_transcript[0] = accumulator_b;
+    }
+    else
+    {
+        multiplication_transcript[0] = origin_point_a;
+        accumulator_transcript[0] = accumulator_a;
+    }
+    
     fr::field_t one = fr::one;
     fr::field_t three = fr::add(fr::add(one, one), one);
-    for (size_t i = 1; i < 126; ++i) {
+    for (size_t i = 1; i < 128; ++i) {
         uint64_t entry = wnaf_entries[i] & 0xffffff;
         fr::field_t prev_accumulator = fr::add(accumulator_transcript[i - 1], accumulator_transcript[i - 1]);
         prev_accumulator = fr::add(prev_accumulator, prev_accumulator);
@@ -238,11 +269,15 @@ TEST(turbo_composer, fixed_base_scalar_multiplication_proof)
             grumpkin::g1::add(multiplication_transcript[i - 1], to_add, multiplication_transcript[i]);
         }
     }
-    grumpkin::g1::batch_normalize(&multiplication_transcript[0], 126);
+    grumpkin::g1::batch_normalize(&multiplication_transcript[0], 128);
 
+    q_4[0] = fr::sub(origin_point_a.x, origin_point_b.x);
+    q_4_next[0] = origin_point_a.x;
+    q_m[0] = fr::sub(origin_point_a.y, origin_point_b.y);
+    q_c[0] = origin_point_a.y;
+    w_3[0] = accumulator_offset;
     fr::field_t eight_inverse = fr::invert(fr::to_montgomery_form({ { 8, 0, 0, 0 } }));
-    w_3[0] = fr::zero;
-    for (size_t i = 0; i < 125; ++i) {
+    for (size_t i = 0; i < 126; ++i) {
         w_4[i] = accumulator_transcript[i];
         w_1[i] = multiplication_transcript[i].x;
         w_2[i] = multiplication_transcript[i].y;
@@ -279,34 +314,23 @@ TEST(turbo_composer, fixed_base_scalar_multiplication_proof)
         q_3[i] = y_alpha_1;
         q_ecc_1[i] = y_alpha_2;
 
-        q_4[i] = fr::zero;
-        q_4_next[i] = fr::zero;
-        q_m[i] = fr::zero;
-        q_c[i] = fr::zero;
+        if (i > 0)
+        {
+            q_4[i] = fr::zero;
+            q_4_next[i] = fr::zero;
+            q_m[i] = fr::zero;
+            q_c[i] = fr::zero;
+        }
         q_arith[i] = fr::zero;
     }
 
-    w_1[125] = multiplication_transcript[125].x;
-    w_2[125] = multiplication_transcript[125].y;
-    w_4[125] = accumulator_transcript[125];
+    w_1[126] = multiplication_transcript[126].x;
+    w_2[126] = multiplication_transcript[126].y;
+    w_4[126] = accumulator_transcript[126];
     // w_3[125] = fr::zero;
 
     // w_1[125] = fr::zero;
     // w_2[125] = fr::zero;
-    q_1[125] = fr::zero;
-    q_2[125] = fr::zero;
-    q_3[125] = fr::zero;
-    q_4[125] = fr::zero;
-    q_4_next[125] = fr::zero;
-    q_m[125] = fr::zero;
-    q_c[125] = fr::zero;
-    q_ecc_1[125] = fr::zero;
-    q_arith[125] = fr::zero;
-
-    w_1[126] = fr::zero;
-    w_2[126] = fr::zero;
-    w_3[126] = fr::zero;
-    w_4[126] = fr::zero;
     q_1[126] = fr::zero;
     q_2[126] = fr::zero;
     q_3[126] = fr::zero;
