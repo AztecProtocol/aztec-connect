@@ -83,6 +83,7 @@ public:
                                                             { "sigma_2", fr_size, false },
                                                             { "q_arith", fr_size, false },
                                                             { "q_ecc_1", fr_size, false },
+                                                            { "q_c", fr_size, false },
                                                             { "r", fr_size, false },
                                                             { "t", fr_size, true } },
                                                             "nu"),

@@ -9,7 +9,6 @@
 
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 #include <memory>
-namespace {
 
 using namespace barretenberg;
 
@@ -142,6 +141,8 @@ TEST(turbo_composer, test_mul_gate_proofs)
     composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
     composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
 
+    uint32_t e_idx = composer.add_variable(fr::sub(a, fr::one));
+    composer.create_add_gate({ e_idx, b_idx, c_idx, q[0], q[1], q[2], fr::add(q[3], q[0]) });
     waffle::Prover prover = composer.preprocess();
 
     waffle::Verifier verifier = waffle::preprocess(prover);
@@ -367,7 +368,11 @@ TEST(turbo_composer, fixed_base_scalar_multiplication_proof)
     composer.q_arith[127] = fr::one;
     composer.w_l[127] = composer.add_variable(fr::one);
     composer.q_1[127] = fr::one;
+    composer.q_2[127] = fr::zero;
+    composer.q_3[127] = fr::zero;
+    composer.q_m[127] = fr::zero;
     composer.q_c[127] = fr::neg_one();
+    composer.q_ecc_1[127] = fr::zero;
     composer.n = 127;
     // composer.q_ecc_1[0] = q_ecc_1[0];
 
