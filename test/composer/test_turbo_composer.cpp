@@ -155,273 +155,6 @@ TEST(turbo_composer, test_mul_gate_proofs)
     EXPECT_EQ(result, true);
 }
 
-TEST(turbo_composer, fixed_base_scalar_multiplication_proof)
-{
-    const size_t num_gates = 128;
-
-    polynomial w_1(num_gates);
-    polynomial w_2(num_gates);
-    polynomial w_3(num_gates);
-    polynomial w_4(num_gates);
-
-    polynomial q_1(num_gates);
-    polynomial q_2(num_gates);
-    polynomial q_3(num_gates);
-    polynomial q_4(num_gates);
-    polynomial q_4_next(num_gates);
-    polynomial q_m(num_gates);
-    polynomial q_c(num_gates);
-    polynomial q_ecc_1(num_gates);
-    polynomial q_arith(num_gates);
-
-    grumpkin::g1::element* ladder =
-        static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * 128));
-    grumpkin::g1::element* ladder3 =
-        static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * 128));
-    grumpkin::g1::element accumulator = grumpkin::g1::one;
-    // grumpkin::g1::set_infinity(accumulator);
-    for (size_t i = 0; i < 127; ++i) {
-        grumpkin::g1::element p1 = accumulator;
-        ladder[126 - i] = p1;
-        grumpkin::g1::dbl(accumulator, accumulator);
-        grumpkin::g1::add(p1, accumulator, p1);
-        grumpkin::g1::dbl(accumulator, accumulator);
-        ladder3[126 - i] = p1;
-    }
-    grumpkin::g1::element origin_point = accumulator;
-
-    grumpkin::g1::element origin_point_a = accumulator;
-    grumpkin::g1::element origin_point_b;
-    grumpkin::g1::add(origin_point_a, grumpkin::g1::one, origin_point_b);
-    grumpkin::g1::batch_normalize(&ladder[0], 127);
-    grumpkin::g1::batch_normalize(&ladder3[0], 127);
-    origin_point_a = grumpkin::g1::normalize(origin_point_a);
-    origin_point_b = grumpkin::g1::normalize(origin_point_b);
-    origin_point= grumpkin::g1::normalize(origin_point);
-
-    grumpkin::fr::field_t scalar_multiplier = grumpkin::fr::random_element();
-    bool skew = false; // ignore skew for now
-    uint64_t wnaf_entries[256] = { 0 };
-    if ((grumpkin::fr::from_montgomery_form(scalar_multiplier).data[0] & 1) == 0)
-    {
-        // hacky workaround because we add skew, instead of subtracting it
-        scalar_multiplier = grumpkin::fr::sub(scalar_multiplier, grumpkin::fr::add(grumpkin::fr::one, grumpkin::fr::one));
-    }
-    scalar_multiplier = grumpkin::fr::from_montgomery_form(scalar_multiplier);
-    barretenberg::wnaf::fixed_wnaf<1, 2>(&scalar_multiplier.data[0], &wnaf_entries[1], skew, 0);
-
-    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), 254));
-    fr::field_t accumulator_a = accumulator_offset;
-    fr::field_t accumulator_b = fr::add(accumulator_offset, fr::one);
-
-    grumpkin::g1::element* multiplication_transcript =
-        static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * 128));
-    fr::field_t* accumulator_transcript = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 128));
-    if ((wnaf_entries[0] & 0xffffff) >= 1)
-    {
-        wnaf_entries[0] = 1;
-        wnaf_entries[1] = 3 + (1U << 31U);
-    }
-    if ((wnaf_entries[1] & 0xffffff) == 0)
-    {
-        wnaf_entries[0] = 1;
-        wnaf_entries[1] = 1 + (1U << 31U);
-    }
-
-    if (skew)
-    {
-        multiplication_transcript[0] = origin_point_b;
-        accumulator_transcript[0] = accumulator_b;
-    }
-    else
-    {
-        multiplication_transcript[0] = origin_point_a;
-        accumulator_transcript[0] = accumulator_a;
-    }
-    
-    fr::field_t one = fr::one;
-    fr::field_t three = fr::add(fr::add(one, one), one);
-    for (size_t i = 1; i < 128; ++i) {
-        uint64_t entry = wnaf_entries[i] & 0xffffff;
-        fr::field_t prev_accumulator = fr::add(accumulator_transcript[i - 1], accumulator_transcript[i - 1]);
-        prev_accumulator = fr::add(prev_accumulator, prev_accumulator);
-        if (entry == 1) {
-            uint64_t predicate = (wnaf_entries[i] >> 31U) & 1U;
-            grumpkin::g1::element to_add;
-            if (predicate) {
-                grumpkin::g1::__neg(ladder3[i], to_add);
-                accumulator_transcript[i] = fr::sub(prev_accumulator, three);
-            } else {
-                to_add = ladder3[i];
-                accumulator_transcript[i] = fr::add(prev_accumulator, three);
-            }
-            grumpkin::g1::add(multiplication_transcript[i - 1], to_add, multiplication_transcript[i]);
-        }
-        if (entry == 0) {
-            uint64_t predicate = (wnaf_entries[i] >> 31U) & 1U;
-            grumpkin::g1::element to_add;
-            if (predicate) {
-                grumpkin::g1::__neg(ladder[i], to_add);
-                accumulator_transcript[i] = fr::sub(prev_accumulator, one);
-            } else {
-                to_add = ladder[i];
-                accumulator_transcript[i] = fr::add(prev_accumulator, one);
-            }
-            grumpkin::g1::add(multiplication_transcript[i - 1], to_add, multiplication_transcript[i]);
-        }
-    }
-    grumpkin::g1::batch_normalize(&multiplication_transcript[0], 128);
-
-    q_4[0] = fr::sub(origin_point_a.x, origin_point_b.x);
-    q_4_next[0] = origin_point_a.x;
-    q_m[0] = fr::sub(origin_point_a.y, origin_point_b.y);
-    q_c[0] = origin_point_a.y;
-    w_3[0] = accumulator_offset;
-    fr::field_t eight_inverse = fr::invert(fr::to_montgomery_form({ { 8, 0, 0, 0 } }));
-    for (size_t i = 0; i < 126; ++i) {
-        w_4[i] = accumulator_transcript[i];
-        w_1[i] = multiplication_transcript[i].x;
-        w_2[i] = multiplication_transcript[i].y;
-
-        fr::field_t x_beta = ladder[i + 1].x;
-        fr::field_t x_gamma = ladder3[i + 1].x;
-
-        fr::field_t y_beta = ladder[i + 1].y;
-        fr::field_t y_gamma = ladder3[i + 1].y;
-        fr::field_t x_beta_times_nine = fr::add(x_beta, x_beta);
-        x_beta_times_nine = fr::add(x_beta_times_nine, x_beta_times_nine);
-        x_beta_times_nine = fr::add(x_beta_times_nine, x_beta_times_nine);
-        x_beta_times_nine = fr::add(x_beta_times_nine, x_beta);
-
-        fr::field_t x_alpha_1 = fr::mul(fr::sub(x_gamma, x_beta), eight_inverse);
-        fr::field_t x_alpha_2 = fr::mul(fr::sub(x_beta_times_nine, x_gamma), eight_inverse);
-
-        fr::field_t T0 = fr::sub(x_beta, x_gamma);
-        fr::field_t y_denominator = fr::invert(fr::add(fr::add(T0, T0), T0));
-
-        fr::field_t y_alpha_1 = fr::mul(fr::sub(fr::add(fr::add(y_beta, y_beta), y_beta), y_gamma), y_denominator);
-        fr::field_t T1 = fr::mul(x_gamma, y_beta);
-        T1 = fr::add(fr::add(T1, T1), T1);
-        fr::field_t y_alpha_2 = fr::mul(fr::sub(fr::mul(x_beta, y_gamma), T1), y_denominator);
-        // printf("entry = %lu \n", wnaf_entries[i] & 0xffffffU);
-
-        if ((wnaf_entries[i + 1] & 0xffffffU) == 0) {
-            w_3[i + 1] = x_beta;
-        } else {
-            w_3[i + 1] = x_gamma;
-        }
-        q_1[i] = x_alpha_1;
-        q_2[i] = x_alpha_2;
-        q_3[i] = y_alpha_1;
-        q_ecc_1[i] = y_alpha_2;
-
-        if (i > 0)
-        {
-            q_4[i] = fr::zero;
-            q_4_next[i] = fr::zero;
-            q_m[i] = fr::zero;
-            q_c[i] = fr::zero;
-        }
-        q_arith[i] = fr::zero;
-    }
-
-    w_1[126] = multiplication_transcript[126].x;
-    w_2[126] = multiplication_transcript[126].y;
-    w_4[126] = accumulator_transcript[126];
-    // w_3[125] = fr::zero;
-
-    // w_1[125] = fr::zero;
-    // w_2[125] = fr::zero;
-    q_1[126] = fr::zero;
-    q_2[126] = fr::zero;
-    q_3[126] = fr::zero;
-    q_4[126] = fr::zero;
-    q_4_next[126] = fr::zero;
-    q_m[126] = fr::zero;
-    q_c[126] = fr::zero;
-    q_ecc_1[126] = fr::zero;
-    q_arith[126] = fr::zero;
-
-    w_1[127] = fr::zero;
-    w_2[127] = fr::zero;
-    w_3[127] = fr::zero;
-    w_4[127] = fr::zero;
-    q_1[127] = fr::zero;
-    q_2[127] = fr::zero;
-    q_3[127] = fr::zero;
-    q_4[127] = fr::zero;
-    q_4_next[127] = fr::zero;
-    q_m[127] = fr::zero;
-    q_c[127] = fr::zero;
-    q_ecc_1[127] = fr::zero;
-    q_arith[127] = fr::zero;
-
-    waffle::TurboComposer composer = waffle::TurboComposer();
-    composer.q_1.resize(num_gates);
-    composer.q_2.resize(num_gates);
-    composer.q_3.resize(num_gates);
-    composer.q_4.resize(num_gates);
-    composer.q_4_next.resize(num_gates);
-    composer.q_m.resize(num_gates);
-    composer.q_c.resize(num_gates);
-    composer.q_arith.resize(num_gates);
-    composer.q_ecc_1.resize(num_gates);
-
-    composer.w_l.resize(num_gates);
-    composer.w_r.resize(num_gates);
-    composer.w_o.resize(num_gates);
-    composer.w_4.resize(num_gates);
-
-    for (size_t i = 0; i < num_gates; ++i) {
-        composer.q_1[i] = q_1[i];
-        composer.q_2[i] = q_2[i];
-        composer.q_3[i] = q_3[i];
-        composer.q_4[i] = q_4[i];
-        composer.q_4_next[i] = q_4_next[i];
-        composer.q_m[i] = q_m[i];
-        composer.q_c[i] = q_c[i];
-        composer.q_arith[i] = q_arith[i];
-        composer.q_ecc_1[i] = q_ecc_1[i];
-
-        // composer.q_arith[i] = fr::zero;
-        // composer.q_ecc_1[i] = fr::zero;
-        composer.w_l[i] = composer.add_variable(w_1[i]);
-        composer.w_r[i] = composer.add_variable(w_2[i]);
-        composer.w_o[i] = composer.add_variable(w_3[i]);
-        composer.w_4[i] = composer.add_variable(w_4[i]);
-    }
-    composer.q_arith[127] = fr::one;
-    composer.w_l[127] = composer.add_variable(fr::one);
-    composer.q_1[127] = fr::one;
-    composer.q_2[127] = fr::zero;
-    composer.q_3[127] = fr::zero;
-    composer.q_m[127] = fr::zero;
-    composer.q_c[127] = fr::neg_one();
-    composer.q_ecc_1[127] = fr::zero;
-    composer.n = 127;
-    // composer.q_ecc_1[0] = q_ecc_1[0];
-
-    waffle::Prover prover = composer.preprocess();
-    prover.sigma_1_mapping.resize(128);
-    prover.sigma_2_mapping.resize(128);
-    prover.sigma_3_mapping.resize(128);
-    for (size_t i = 0; i < 128; ++i) {
-        prover.sigma_1_mapping[i] = (uint32_t)i;
-        prover.sigma_2_mapping[i] = (uint32_t)i + (1U << 30U);
-        prover.sigma_3_mapping[i] = (uint32_t)i + (1U << 31U);
-    }
-
-    waffle::Verifier verifier = waffle::preprocess(prover);
-
-    waffle::plonk_proof proof = prover.construct_proof();
-
-    bool result = verifier.verify_proof(proof);
-    if (result) {
-        printf("proof valid\n");
-    }
-    EXPECT_EQ(result, true);
-}
-
 
 TEST(turbo_composer, small_scalar_multipliers)
 {
@@ -429,6 +162,7 @@ TEST(turbo_composer, small_scalar_multipliers)
     constexpr size_t num_quads_base = (num_bits - 1) >> 1;
     constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
+    constexpr size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1 : num_bits;
     constexpr size_t bit_mask = (1ULL << num_bits) - 1UL;
     const plonk::stdlib::group_utils::fixed_base_ladder* ladder = plonk::stdlib::group_utils::get_ladder(0, num_bits);
     grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(0);
@@ -440,8 +174,8 @@ TEST(turbo_composer, small_scalar_multipliers)
 
     grumpkin::fr::field_t scalar_multiplier_entropy = grumpkin::fr::random_element();
     grumpkin::fr::field_t scalar_multiplier_base{{ scalar_multiplier_entropy.data[0] & bit_mask, 0, 0, 0 }};
-    scalar_multiplier_base.data[0] = scalar_multiplier_base.data[0] | (1ULL);
-
+    // scalar_multiplier_base.data[0] = scalar_multiplier_base.data[0] | (1ULL);
+    scalar_multiplier_base.data[0] = scalar_multiplier_base.data[0] & (~1ULL);
     grumpkin::fr::field_t scalar_multiplier = scalar_multiplier_base;
 
     uint64_t wnaf_entries[num_quads + 1] = { 0 };
@@ -452,7 +186,7 @@ TEST(turbo_composer, small_scalar_multipliers)
     bool skew = false;
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), 32));
+    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), initial_exponent));
     fr::field_t origin_accumulators[2]{ fr::one, fr::add(accumulator_offset, fr::one) };
 
     grumpkin::g1::element* multiplication_transcript =
@@ -546,6 +280,152 @@ TEST(turbo_composer, small_scalar_multipliers)
     uint64_t result_accumulator = fr::from_montgomery_form(accumulator_transcript[num_quads]).data[0];
     uint64_t expected_accumulator = scalar_multiplier.data[0];
     EXPECT_EQ(result_accumulator, expected_accumulator);
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+
+    if (result) {
+        printf("proof valid\n");
+    }
+    EXPECT_EQ(result, true);
+
+    free(multiplication_transcript);
+    free(accumulator_transcript);
+}
+
+
+TEST(turbo_composer, large_scalar_multipliers)
+{
+    constexpr size_t num_bits = 254;
+    constexpr size_t num_quads_base = (num_bits - 1) >> 1;
+    constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
+    constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
+
+    constexpr size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1 : num_bits;
+    const plonk::stdlib::group_utils::fixed_base_ladder* ladder = plonk::stdlib::group_utils::get_ladder(0, num_bits);
+    grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(0);
+
+    grumpkin::g1::element origin_points[2];
+    grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
+    grumpkin::g1::mixed_add(origin_points[0], generator, origin_points[1]);
+    origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
+
+    grumpkin::fr::field_t scalar_multiplier_base = grumpkin::fr::random_element();
+
+    grumpkin::fr::field_t scalar_multiplier = grumpkin::fr::from_montgomery_form(scalar_multiplier_base);
+
+    if ((scalar_multiplier.data[0] & 1) == 0)
+    {
+        grumpkin::fr::field_t two = grumpkin::fr::add(grumpkin::fr::one, grumpkin::fr::one);
+        scalar_multiplier_base = grumpkin::fr::sub(scalar_multiplier_base, two);
+    }
+    scalar_multiplier_base = grumpkin::fr::from_montgomery_form(scalar_multiplier_base);
+    uint64_t wnaf_entries[num_quads + 1] = { 0 };
+
+    bool skew = false;
+    barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
+
+    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), initial_exponent));
+    fr::field_t origin_accumulators[2]{ fr::one, fr::add(accumulator_offset, fr::one) };
+
+    grumpkin::g1::element* multiplication_transcript =
+        static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
+    fr::field_t* accumulator_transcript = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * (num_quads + 1)));
+
+    if (skew)
+    {
+        multiplication_transcript[0] = origin_points[1];
+        accumulator_transcript[0] = origin_accumulators[1];
+    }
+    else
+    {
+        multiplication_transcript[0] = origin_points[0];
+        accumulator_transcript[0] = origin_accumulators[0];
+    }
+    
+    fr::field_t one = fr::one;
+    fr::field_t three = fr::add(fr::add(one, one), one);
+    for (size_t i = 0; i < num_quads; ++i) {
+        uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
+        fr::field_t prev_accumulator = fr::add(accumulator_transcript[i], accumulator_transcript[i]);
+        prev_accumulator = fr::add(prev_accumulator, prev_accumulator);
+
+        grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
+        fr::field_t scalar_to_add = (entry == 1) ? three : one;
+        uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
+        if (predicate)
+        {
+            grumpkin::g1::__neg(point_to_add, point_to_add);
+            fr::__neg(scalar_to_add, scalar_to_add);
+        }
+        accumulator_transcript[i + 1] = fr::add(prev_accumulator, scalar_to_add);
+        grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
+    }
+    grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
+
+    waffle::fixed_group_init_quad init_quad{
+        origin_points[0].x,
+        fr::sub(origin_points[0].x, origin_points[1].x),
+        origin_points[0].y,
+        fr::sub(origin_points[0].y, origin_points[1].y)
+    };
+
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    fr::field_t x_alpha = accumulator_offset;
+    for (size_t i = 0; i < num_quads; ++i) {
+        waffle::fixed_group_add_quad round_quad;
+        round_quad.d = composer.add_variable(accumulator_transcript[i]);
+        round_quad.a = composer.add_variable(multiplication_transcript[i].x);
+        round_quad.b = composer.add_variable(multiplication_transcript[i].y);
+        round_quad.c = composer.add_variable(x_alpha);
+        if ((wnaf_entries[i + 1] & 0xffffffU) == 0) {
+            x_alpha = ladder[i+1].one.x;
+        } else {
+            x_alpha = ladder[i+1].three.x;
+        }
+        round_quad.q_x_1= ladder[i+1].q_x_1;
+        round_quad.q_x_2= ladder[i+1].q_x_2;
+        round_quad.q_y_1= ladder[i+1].q_y_1;
+        round_quad.q_y_2 = ladder[i+1].q_y_2;
+
+        if (i > 0)
+        {
+            composer.create_fixed_group_add_gate(round_quad);
+        }
+        else
+        {
+            composer.create_fixed_group_add_gate_with_init(round_quad, init_quad);
+        }
+    }
+
+    waffle::add_quad add_quad{
+        composer.add_variable(multiplication_transcript[num_quads].x),
+        composer.add_variable(multiplication_transcript[num_quads].y),
+        composer.add_variable(x_alpha),
+        composer.add_variable(accumulator_transcript[num_quads]),
+        fr::zero,
+        fr::zero,
+        fr::zero,
+        fr::zero,
+        fr::zero
+    };
+    composer.create_big_add_gate(add_quad);
+
+    grumpkin::g1::element expected_point = grumpkin::g1::normalize(grumpkin::g1::group_exponentiation_inner(generator, grumpkin::fr::to_montgomery_form(scalar_multiplier)));
+    EXPECT_EQ(fr::eq(multiplication_transcript[num_quads].x, expected_point.x), true);
+    EXPECT_EQ(fr::eq(multiplication_transcript[num_quads].y, expected_point.y), true);
+
+    fr::field_t result_accumulator = (accumulator_transcript[num_quads]);
+    fr::field_t expected_accumulator = fr::to_montgomery_form({{
+        scalar_multiplier.data[0], scalar_multiplier.data[1], scalar_multiplier.data[2], scalar_multiplier.data[3]
+    }});
+    EXPECT_EQ(fr::eq(result_accumulator, expected_accumulator), true);
 
     waffle::Prover prover = composer.preprocess();
 
