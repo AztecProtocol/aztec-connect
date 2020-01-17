@@ -181,26 +181,27 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     // We constrain a_1 to be either 0 or the value in w_o (which should be correctly initialized to (1 / 4^n) via a copy constraint)
     // We constraint (x_1, y_1) to be one of 4^n.[1] or (4^n + 1).[1]
     fr::field_t accumulator_init_identity;
-    fr::__sub(circuit_state.w_4_fft[i], circuit_state.w_o_fft[i], accumulator_init_identity);
-    fr::__sub(accumulator_init_identity, fr::one, T0);
-    fr::__mul(accumulator_init_identity, T0, accumulator_init_identity);
+    fr::__sub(circuit_state.w_4_fft[i], fr::one, T0);
+    fr::__sub(T0, circuit_state.w_o_fft[i], T1);
+    fr::__mul(T0, T1, accumulator_init_identity);
     fr::__mul(accumulator_init_identity, alpha_e, accumulator_init_identity);
 
     // // x-init consistency check
     fr::field_t x_init_identity;
-    fr::__sub(circuit_state.w_o_fft[i], circuit_state.w_4_fft[i], x_init_identity);
-    fr::__mul(x_init_identity, q_4_fft[i], x_init_identity);
-    fr::__add(x_init_identity, q_4_next_fft[i], x_init_identity);
-    fr::__sub(x_init_identity, circuit_state.w_l_fft[i], x_init_identity);
+    fr::__sub(q_4_fft[i], circuit_state.w_l_fft[i], T0);
+    fr::__mul(T0, circuit_state.w_o_fft[i], T0);
+    fr::__sub(fr::one, circuit_state.w_4_fft[i], T1);
+    fr::__mul(T1, q_4_next_fft[i], T1);
+    fr::__add(T0, T1, x_init_identity);
     fr::__mul(x_init_identity, alpha_f, x_init_identity);
 
     // // y-init consistency check
     fr::field_t y_init_identity;
-    fr::__sub(circuit_state.w_o_fft[i], circuit_state.w_4_fft[i], y_init_identity);
-    fr::__mul(y_init_identity, q_m_fft[i], y_init_identity);
-    fr::__add(y_init_identity, q_c_fft[i], y_init_identity);
-    fr::__sub(y_init_identity, circuit_state.w_r_fft[i], y_init_identity);
-
+    fr::__sub(q_m_fft[i], circuit_state.w_r_fft[i], T0);
+    fr::__mul(T0, circuit_state.w_o_fft[i], T0);
+    fr::__sub(fr::one, circuit_state.w_4_fft[i], T1);
+    fr::__mul(T1, q_c_fft[i], T1);
+    fr::__add(T0, T1, y_init_identity);
     fr::__mul(y_init_identity, alpha_g, y_init_identity);
     
     fr::field_t gate_identity;
@@ -288,18 +289,18 @@ fr::field_t ProverTurboFixedBaseWidget::compute_linear_contribution(const fr::fi
     fr::__add(T0, T1, q_3_multiplicand);
 
     fr::field_t q_4_multiplicand;
-    fr::__sub(w_o_eval, w_4_eval, q_4_multiplicand);
-    fr::__mul(q_4_multiplicand, q_ecc_1_eval, q_4_multiplicand);
+    fr::__mul(w_o_eval, q_ecc_1_eval, q_4_multiplicand);
     fr::__mul(q_4_multiplicand, q_c_eval, q_4_multiplicand);
     fr::__mul(q_4_multiplicand, alpha_f, q_4_multiplicand);
 
     fr::field_t q_4_next_multiplicand;
-    fr::__mul(q_c_eval, q_ecc_1_eval, q_4_next_multiplicand);
+    fr::__sub(fr::one, w_4_eval, q_4_next_multiplicand);
+    fr::__mul(q_4_next_multiplicand, q_ecc_1_eval, q_4_next_multiplicand);
+    fr::__mul(q_4_next_multiplicand, q_c_eval, q_4_next_multiplicand);
     fr::__mul(q_4_next_multiplicand, alpha_f, q_4_next_multiplicand);
 
     fr::field_t q_m_multiplicand;
-    fr::__sub(w_o_eval, w_4_eval, q_m_multiplicand);
-    fr::__mul(q_m_multiplicand, q_ecc_1_eval, q_m_multiplicand);
+    fr::__mul(w_o_eval, q_ecc_1_eval, q_m_multiplicand);
     fr::__mul(q_m_multiplicand, q_c_eval, q_m_multiplicand);
     fr::__mul(q_m_multiplicand, alpha_g, q_m_multiplicand);
 
@@ -488,17 +489,21 @@ barretenberg::fr::field_t VerifierTurboFixedBaseWidget::compute_quotient_evaluat
     fr::__mul(y_accumulator_identity, alpha_d, y_accumulator_identity);
 
     fr::field_t accumulator_init_identity;
-    fr::__sub(w_4_eval, w_o_eval, accumulator_init_identity);
-    fr::__sub(accumulator_init_identity, fr::one, T0);
-    fr::__mul(accumulator_init_identity, T0, accumulator_init_identity);
+    fr::__sub(w_4_eval, fr::one, T0);
+    fr::__sub(T0, w_o_eval, T1);
+    fr::__mul(T0, T1, accumulator_init_identity);
     fr::__mul(accumulator_init_identity, alpha_e, accumulator_init_identity);
 
     fr::field_t x_init_identity;
-    fr::__neg(w_l_eval, x_init_identity);
+    fr::__mul(w_l_eval, w_o_eval, x_init_identity);
+    fr::__neg(x_init_identity, x_init_identity);
     fr::__mul(x_init_identity, alpha_f, x_init_identity);
 
     fr::field_t y_init_identity;
-    fr::__sub(q_c_eval, w_r_eval, y_init_identity);
+    fr::__sub(fr::one, w_4_eval, T0);
+    fr::__mul(T0, q_c_eval, T0);
+    fr::__mul(w_r_eval, w_o_eval, T1);
+    fr::__sub(T0, T1, y_init_identity);
     fr::__mul(y_init_identity, alpha_g, y_init_identity);
 
     fr::field_t gate_identity;
@@ -637,8 +642,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     }
 
     fr::field_t q_4_term_ecc;
-    fr::__sub(w_o_eval, w_4_eval, q_4_term_ecc);
-    fr::__mul(q_4_term_ecc, q_ecc_1_eval, q_4_term_ecc);
+    fr::__mul(w_o_eval, q_ecc_1_eval, q_4_term_ecc);
     fr::__mul(q_4_term_ecc, q_c_eval, q_4_term_ecc);
     fr::__mul(q_4_term_ecc, alpha_f, q_4_term_ecc);
 
@@ -655,7 +659,9 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     }
 
     fr::field_t q_4_next_term_ecc;
-    fr::__mul(q_c_eval, q_ecc_1_eval, q_4_next_term_ecc);
+    fr::__sub(fr::one, w_4_eval, q_4_next_term_ecc);
+    fr::__mul(q_4_next_term_ecc, q_ecc_1_eval, q_4_next_term_ecc);
+    fr::__mul(q_4_next_term_ecc, q_c_eval, q_4_next_term_ecc);
     fr::__mul(q_4_next_term_ecc, alpha_f, q_4_next_term_ecc);
 
     fr::field_t q_4_next_term_arith;
@@ -672,8 +678,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
     fr::field_t q_m_term_ecc;
-    fr::__sub(w_o_eval, w_4_eval, q_m_term_ecc);
-    fr::__mul(q_m_term_ecc, q_ecc_1_eval, q_m_term_ecc);
+    fr::__mul(w_o_eval, q_ecc_1_eval, q_m_term_ecc);
     fr::__mul(q_m_term_ecc, q_c_eval, q_m_term_ecc);
     fr::__mul(q_m_term_ecc, alpha_g, q_m_term_ecc);
 

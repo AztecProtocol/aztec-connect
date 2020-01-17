@@ -83,6 +83,8 @@ add_library(
     waffle/composer/turbo_composer.cpp
     waffle/composer/turbo_composer.hpp
     waffle/stdlib/common.hpp
+    waffle/stdlib/group/group_utils.hpp
+    waffle/stdlib/group/group_utils.cpp
     waffle/stdlib/int_utils.hpp
     waffle/stdlib/bool/bool.tcc
     waffle/stdlib/bool/bool.hpp
@@ -203,6 +205,8 @@ if(PROFILING)
         waffle/composer/turbo_composer.cpp
         waffle/composer/turbo_composer.hpp
         waffle/stdlib/common.hpp
+        waffle/stdlib/group/group_utils.hpp
+        waffle/stdlib/group/group_utils.cpp
         waffle/stdlib/int_utils.hpp
         waffle/stdlib/bool/bool.tcc
         waffle/stdlib/bool/bool.hpp

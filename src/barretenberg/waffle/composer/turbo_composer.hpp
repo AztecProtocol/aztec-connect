@@ -33,9 +33,13 @@ public:
     virtual Prover preprocess() override;
 
     void create_add_gate(const add_triple &in) override;
+    void create_big_add_gate(const add_quad &in);
+
     void create_mul_gate(const mul_triple &in) override;
     void create_bool_gate(const uint32_t a) override;
     void create_poly_gate(const poly_triple &in) override;
+    void create_fixed_group_add_gate(const fixed_group_add_quad& in);
+    void create_fixed_group_add_gate_with_init(const fixed_group_add_quad& in, const fixed_group_init_quad& init);
 
     void create_dummy_gates();
     size_t get_num_constant_gates() const override { return 0; }

@@ -21,6 +21,19 @@ struct add_triple
     barretenberg::fr::field_t const_scaling;
 };
 
+struct add_quad
+{
+    uint32_t a;
+    uint32_t b;
+    uint32_t c;
+    uint32_t d;
+    barretenberg::fr::field_t a_scaling;
+    barretenberg::fr::field_t b_scaling;
+    barretenberg::fr::field_t c_scaling;
+    barretenberg::fr::field_t d_scaling;
+    barretenberg::fr::field_t const_scaling;
+};
+
 struct mul_triple
 {
     uint32_t a;
@@ -41,6 +54,26 @@ struct poly_triple
     barretenberg::fr::field_t q_r;
     barretenberg::fr::field_t q_o;
     barretenberg::fr::field_t q_c;
+};
+
+struct fixed_group_add_quad
+{
+    uint32_t a;
+    uint32_t b;
+    uint32_t c;
+    uint32_t d;
+    barretenberg::fr::field_t q_x_1;
+    barretenberg::fr::field_t q_x_2;
+    barretenberg::fr::field_t q_y_1;
+    barretenberg::fr::field_t q_y_2;
+};
+
+struct fixed_group_init_quad
+{
+    barretenberg::fr::field_t q_x_1;
+    barretenberg::fr::field_t q_x_2;
+    barretenberg::fr::field_t q_y_1;
+    barretenberg::fr::field_t q_y_2;
 };
 
 class ComposerBase

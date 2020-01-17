@@ -6,6 +6,7 @@
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
 #include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
+#include <barretenberg/waffle/stdlib/group/group_utils.hpp>
 
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 #include <memory>
@@ -419,4 +420,147 @@ TEST(turbo_composer, fixed_base_scalar_multiplication_proof)
         printf("proof valid\n");
     }
     EXPECT_EQ(result, true);
+}
+
+
+TEST(turbo_composer, small_scalar_multipliers)
+{
+    constexpr size_t num_bits = 63;
+    constexpr size_t num_quads_base = (num_bits - 1) >> 1;
+    constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
+    constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
+    constexpr size_t bit_mask = (1ULL << num_bits) - 1UL;
+    const plonk::stdlib::group_utils::fixed_base_ladder* ladder = plonk::stdlib::group_utils::get_ladder(0, num_bits);
+    grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(0);
+
+    grumpkin::g1::element origin_points[2];
+    grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
+    grumpkin::g1::mixed_add(origin_points[0], generator, origin_points[1]);
+    origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
+
+    grumpkin::fr::field_t scalar_multiplier_entropy = grumpkin::fr::random_element();
+    grumpkin::fr::field_t scalar_multiplier_base{{ scalar_multiplier_entropy.data[0] & bit_mask, 0, 0, 0 }};
+    scalar_multiplier_base.data[0] = scalar_multiplier_base.data[0] | (1ULL);
+
+    grumpkin::fr::field_t scalar_multiplier = scalar_multiplier_base;
+
+    uint64_t wnaf_entries[num_quads + 1] = { 0 };
+    if ((scalar_multiplier_base.data[0] & 1) == 0)
+    {
+        scalar_multiplier_base.data[0] -= 2;
+    }
+    bool skew = false;
+    barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
+
+    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), 32));
+    fr::field_t origin_accumulators[2]{ fr::one, fr::add(accumulator_offset, fr::one) };
+
+    grumpkin::g1::element* multiplication_transcript =
+        static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
+    fr::field_t* accumulator_transcript = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * (num_quads + 1)));
+
+    if (skew)
+    {
+        multiplication_transcript[0] = origin_points[1];
+        accumulator_transcript[0] = origin_accumulators[1];
+    }
+    else
+    {
+        multiplication_transcript[0] = origin_points[0];
+        accumulator_transcript[0] = origin_accumulators[0];
+    }
+    
+    fr::field_t one = fr::one;
+    fr::field_t three = fr::add(fr::add(one, one), one);
+    for (size_t i = 0; i < num_quads; ++i) {
+        uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
+        fr::field_t prev_accumulator = fr::add(accumulator_transcript[i], accumulator_transcript[i]);
+        prev_accumulator = fr::add(prev_accumulator, prev_accumulator);
+
+        grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
+        fr::field_t scalar_to_add = (entry == 1) ? three : one;
+        uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
+        if (predicate)
+        {
+            grumpkin::g1::__neg(point_to_add, point_to_add);
+            fr::__neg(scalar_to_add, scalar_to_add);
+        }
+        accumulator_transcript[i + 1] = fr::add(prev_accumulator, scalar_to_add);
+        grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
+    }
+    grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
+
+    waffle::fixed_group_init_quad init_quad{
+        origin_points[0].x,
+        fr::sub(origin_points[0].x, origin_points[1].x),
+        origin_points[0].y,
+        fr::sub(origin_points[0].y, origin_points[1].y)
+    };
+
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    fr::field_t x_alpha = accumulator_offset;
+    for (size_t i = 0; i < num_quads; ++i) {
+        waffle::fixed_group_add_quad round_quad;
+        round_quad.d = composer.add_variable(accumulator_transcript[i]);
+        round_quad.a = composer.add_variable(multiplication_transcript[i].x);
+        round_quad.b = composer.add_variable(multiplication_transcript[i].y);
+        round_quad.c = composer.add_variable(x_alpha);
+        if ((wnaf_entries[i + 1] & 0xffffffU) == 0) {
+            x_alpha = ladder[i+1].one.x;
+        } else {
+            x_alpha = ladder[i+1].three.x;
+        }
+        round_quad.q_x_1= ladder[i+1].q_x_1;
+        round_quad.q_x_2= ladder[i+1].q_x_2;
+        round_quad.q_y_1= ladder[i+1].q_y_1;
+        round_quad.q_y_2 = ladder[i+1].q_y_2;
+
+        if (i > 0)
+        {
+            composer.create_fixed_group_add_gate(round_quad);
+        }
+        else
+        {
+            composer.create_fixed_group_add_gate_with_init(round_quad, init_quad);
+        }
+    }
+
+    waffle::add_quad add_quad{
+        composer.add_variable(multiplication_transcript[num_quads].x),
+        composer.add_variable(multiplication_transcript[num_quads].y),
+        composer.add_variable(x_alpha),
+        composer.add_variable(accumulator_transcript[num_quads]),
+        fr::zero,
+        fr::zero,
+        fr::zero,
+        fr::zero,
+        fr::zero
+    };
+    composer.create_big_add_gate(add_quad);
+
+    grumpkin::g1::element expected_point = grumpkin::g1::normalize(grumpkin::g1::group_exponentiation_inner(generator, grumpkin::fr::to_montgomery_form(scalar_multiplier)));
+    EXPECT_EQ(fr::eq(multiplication_transcript[num_quads].x, expected_point.x), true);
+    EXPECT_EQ(fr::eq(multiplication_transcript[num_quads].y, expected_point.y), true);
+
+    uint64_t result_accumulator = fr::from_montgomery_form(accumulator_transcript[num_quads]).data[0];
+    uint64_t expected_accumulator = scalar_multiplier.data[0];
+    EXPECT_EQ(result_accumulator, expected_accumulator);
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+
+    if (result) {
+        printf("proof valid\n");
+    }
+    EXPECT_EQ(result, true);
+
+    free(multiplication_transcript);
+    free(accumulator_transcript);
+
 }
