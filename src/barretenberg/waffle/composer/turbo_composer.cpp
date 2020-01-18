@@ -163,6 +163,7 @@ void TurboComposer::create_poly_gate(const poly_triple& in)
 
 void TurboComposer::create_fixed_group_add_gate(const fixed_group_add_quad& in)
 {
+    gate_flags.push_back(0);
     w_l.emplace_back(in.a);
     w_r.emplace_back(in.b);
     w_o.emplace_back(in.c);
@@ -193,6 +194,7 @@ void TurboComposer::create_fixed_group_add_gate(const fixed_group_add_quad& in)
 
 void TurboComposer::create_fixed_group_add_gate_with_init(const fixed_group_add_quad& in, const fixed_group_init_quad& init)
 {
+    gate_flags.push_back(0);
     w_l.emplace_back(in.a);
     w_r.emplace_back(in.b);
     w_o.emplace_back(in.c);
@@ -219,6 +221,51 @@ void TurboComposer::create_fixed_group_add_gate_with_init(const fixed_group_add_
     wire_epicycles[static_cast<size_t>(in.b)].emplace_back(right);
     wire_epicycles[static_cast<size_t>(in.c)].emplace_back(out);
     ++n;  
+}
+
+void TurboComposer::fix_witness(const uint32_t witness_index, const barretenberg::fr::field_t& witness_value)
+{
+    gate_flags.push_back(0);
+
+    w_l.emplace_back(witness_index);
+    w_r.emplace_back(zero_idx);
+    w_o.emplace_back(zero_idx);
+    w_4.emplace_back(zero_idx);
+    q_m.emplace_back(fr::zero);
+    q_1.emplace_back(fr::one);
+    q_2.emplace_back(fr::zero);
+    q_3.emplace_back(fr::zero);
+    q_c.emplace_back(fr::neg(witness_value));
+    q_arith.emplace_back(fr::one);
+    q_4.emplace_back(fr::zero);
+    q_4_next.emplace_back(fr::zero);
+    q_ecc_1.emplace_back(fr::zero);
+
+    epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
+    epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
+    epicycle out{ static_cast<uint32_t>(n), WireType::OUTPUT };
+    ASSERT(wire_epicycles.size() > witness_index);
+    ASSERT(wire_epicycles.size() > zero_idx);
+    ASSERT(wire_epicycles.size() > zero_idx);
+    wire_epicycles[static_cast<size_t>(witness_index)].emplace_back(left);
+    wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(right);
+    wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(out);
+    ++n;
+}
+
+uint32_t TurboComposer::put_constant_variable(const barretenberg::fr::field_t& variable)
+{
+    if (constant_variables.count(variable) == 1)
+    {
+        return constant_variables.at(variable);
+    }
+    else
+    {
+        uint32_t variable_index = add_variable(variable);
+        fix_witness(variable_index, variable);
+        constant_variables[variable] = variable_index;
+        return variable_index;
+    }
 }
 
 Prover TurboComposer::preprocess()

@@ -16,6 +16,11 @@ template <typename FieldParams> class field {
   public:
     struct field_t {
         alignas(32) uint64_t data[4];
+
+        bool operator<(const field_t& other) const
+        {
+            return gt(other, *this);
+        }
     };
 
     struct field_wide_t {

@@ -15,12 +15,27 @@ namespace
     static constexpr size_t quad_length = bit_length / 2;
     static std::array<grumpkin::g1::affine_element, num_generators> generators;
     static std::array<std::array<fixed_base_ladder, quad_length>, num_generators> ladders;
+    static std::array<std::array<fixed_base_ladder, quad_length>, num_generators> hash_ladders;
 
     const auto init = []() {
         generators = grumpkin::g1::derive_generators<num_generators>();
+        constexpr size_t first_generator_segment = 126;
+        constexpr size_t second_generator_segment = 2;
         for (size_t i = 0; i < num_generators; ++i)
         {
             compute_fixed_base_ladder(generators[i], &ladders[i][0]);
+        }
+        for (size_t i = 0; i < num_generators / 2; ++i)
+        {
+            for (size_t j = 0; j < first_generator_segment; ++j)
+            {
+                hash_ladders[i][j] = ladders[i * 2][j + (quad_length - first_generator_segment)];
+            }
+
+            for (size_t j = 0; j < second_generator_segment; ++j)
+            {
+                hash_ladders[i][j + first_generator_segment] = ladders[i * 2 + 1][j + (quad_length - second_generator_segment)];
+            }
         }
         return 1;
     }();
@@ -30,8 +45,7 @@ void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fi
 {
     grumpkin::g1::element* ladder_temp =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (quad_length * 2)));
-    // grumpkin::g1::element* ladder_3 = static_cast<grumpkin::g1::element*>(aligned_alloc(64,
-    // sizeof(grumpkin::g1::element) * quad_length));
+
     grumpkin::g1::element accumulator;
     grumpkin::g1::affine_to_jacobian(generator, accumulator);
     for (size_t i = 0; i < quad_length; ++i) {
@@ -104,6 +118,26 @@ const fixed_base_ladder* get_ladder(const size_t generator_index, const size_t n
         }
     }
     const fixed_base_ladder* result = &ladders[generator_index][quad_length - n - 1];
+    return result;
+}
+
+const fixed_base_ladder* get_hash_ladder(const size_t generator_index, const size_t num_bits)
+{
+    // find n, such that 2n + 1 >= num_bits
+    size_t n;
+    if (num_bits == 0)
+    {
+        n = 0;
+    }
+    else
+    {
+        n = (num_bits - 1) >> 1;
+        if (((n << 1) + 1)< num_bits)
+        {
+            ++n;
+        }
+    }
+    const fixed_base_ladder* result = &hash_ladders[generator_index][quad_length - n - 1];
     return result;
 }
 

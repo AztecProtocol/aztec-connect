@@ -328,7 +328,7 @@ template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerCon
     return result;
 }
 
-template <typename ComposerContext> barretenberg::fr::field_t field_t<ComposerContext>::get_value()
+template <typename ComposerContext> barretenberg::fr::field_t field_t<ComposerContext>::get_value() const
 {
     if (witness_index != static_cast<uint32_t>(-1)) {
         ASSERT(context != nullptr);

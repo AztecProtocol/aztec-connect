@@ -98,6 +98,8 @@ add_library(
     waffle/stdlib/mimc.hpp
     waffle/stdlib/crypto/hash/sha256.tcc
     waffle/stdlib/crypto/hash/sha256.hpp
+    waffle/stdlib/crypto/hash/pedersen.cpp
+    waffle/stdlib/crypto/hash/pedersen.hpp
     noir/expression.cpp
     noir/statement.cpp
     noir/printer.cpp
@@ -222,6 +224,8 @@ if(PROFILING)
         waffle/stdlib/mimc.hpp
         waffle/stdlib/crypto/hash/sha256.tcc
         waffle/stdlib/crypto/hash/sha256.hpp
+        waffle/stdlib/crypto/hash/pedersen.cpp
+        waffle/stdlib/crypto/hash/pedersen.hpp
     )
 
     target_link_libraries(

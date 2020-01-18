@@ -1,12 +1,11 @@
-// #pragma once
+#pragma once
 
-// #include "../../bitarray/bitarray.hpp"
-
-// namespace plonk
-// {
-// namespace stdlib
-// {
-
-// template <typename Composer> field_t<Composer> pedersen_compression_function()
-// }
-// }
+#include "../../../composer/turbo_composer.hpp"
+#include "../../field/field.hpp"
+namespace plonk {
+namespace stdlib {
+namespace pedersen {
+field_t<waffle::TurboComposer> compress(const field_t<waffle::TurboComposer>& left, const field_t<waffle::TurboComposer>& right);
+}
+} // namespace stdlib
+} // namespace plonk

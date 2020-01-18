@@ -1,6 +1,7 @@
 #pragma once
 
 #include "./composer_base.hpp"
+#include <map>
 
 namespace waffle
 {
@@ -40,11 +41,16 @@ public:
     void create_poly_gate(const poly_triple &in) override;
     void create_fixed_group_add_gate(const fixed_group_add_quad& in);
     void create_fixed_group_add_gate_with_init(const fixed_group_add_quad& in, const fixed_group_init_quad& init);
-
+    void fix_witness(const uint32_t witness_index, const barretenberg::fr::field_t& witness_value);
+    uint32_t put_constant_variable(const barretenberg::fr::field_t& variable);
+ 
     void create_dummy_gates();
     size_t get_num_constant_gates() const override { return 0; }
 
     size_t zero_idx;
+
+    // these are variables that we have used a gate on, to enforce that they are equal to a defined value
+    std::map<barretenberg::fr::field_t, uint32_t> constant_variables;
 
     std::vector<barretenberg::fr::field_t> q_m;
     std::vector<barretenberg::fr::field_t> q_c;
