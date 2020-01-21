@@ -7,6 +7,7 @@
 #include "../curves/bn254/g1.hpp"
 #include "../polynomials/evaluation_domain.hpp"
 #include "../polynomials/polynomial.hpp"
+#include "../polynomials/polynomial_arithmetic.hpp"
 #include "./reference_string/reference_string.hpp"
 
 namespace waffle
@@ -28,6 +29,39 @@ struct proving_key
             mid_domain.compute_lookup_table();
             large_domain.compute_lookup_table();
         }
+
+        barretenberg::polynomial w_1_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
+        barretenberg::polynomial w_2_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
+        barretenberg::polynomial w_3_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
+        barretenberg::polynomial w_4_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
+        z = barretenberg::polynomial(n, n);
+        z_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
+
+        memset((void*)&w_1_fft[0], 0x00, sizeof(barretenberg::fr::field_t) * (4 * n + 4));
+        memset((void*)&w_2_fft[0], 0x00, sizeof(barretenberg::fr::field_t) * (4 * n + 4));
+        memset((void*)&w_3_fft[0], 0x00, sizeof(barretenberg::fr::field_t) * (4 * n + 4));
+        memset((void*)&w_4_fft[0], 0x00, sizeof(barretenberg::fr::field_t) * (4 * n + 4));
+        memset((void*)&z[0], 0x00, sizeof(barretenberg::fr::field_t) * n);
+        memset((void*)&z_fft[0], 0x00, sizeof(barretenberg::fr::field_t) * (4 * n + 4));
+
+        wire_ffts.insert({ "w_1_fft", std::move(w_1_fft) });
+        wire_ffts.insert({ "w_2_fft", std::move(w_2_fft) });
+        wire_ffts.insert({ "w_3_fft", std::move(w_3_fft) });
+        wire_ffts.insert({ "w_4_fft", std::move(w_4_fft) });
+
+        lagrange_1 = barretenberg::polynomial(n + n, n + n + 4);
+        barretenberg::polynomial_arithmetic::compute_lagrange_polynomial_fft(lagrange_1.get_coefficients(), small_domain, mid_domain);
+        lagrange_1.add_lagrange_base_coefficient(lagrange_1[0]);
+        lagrange_1.add_lagrange_base_coefficient(lagrange_1.at(1));
+        lagrange_1.add_lagrange_base_coefficient(lagrange_1.at(2));
+        lagrange_1.add_lagrange_base_coefficient(lagrange_1.at(3));
+
+        opening_poly = barretenberg::polynomial(n, n);
+        shifted_opening_poly = barretenberg::polynomial(n, n);
+        linear_poly = barretenberg::polynomial(n, n);
+        memset((void*)&opening_poly[0], 0x00, sizeof(barretenberg::fr::field_t) * n);
+        memset((void*)&shifted_opening_poly[0], 0x00, sizeof(barretenberg::fr::field_t) * n);
+        memset((void*)&linear_poly[0], 0x00, sizeof(barretenberg::fr::field_t) * n);
     }
 
     proving_key(const proving_key& other)
@@ -37,10 +71,17 @@ struct proving_key
         , permutation_selectors(other.permutation_selectors)
         , permutation_selectors_lagrange_base(other.permutation_selectors_lagrange_base)
         , permutation_selector_ffts(other.permutation_selector_ffts)
+        , wire_ffts(other.wire_ffts)
         , small_domain(other.small_domain)
         , mid_domain(other.mid_domain)
         , large_domain(other.large_domain)
         , reference_string(other.reference_string)
+        , z(other.z)
+        , z_fft(other.z_fft)
+        , lagrange_1(other.lagrange_1)
+        , opening_poly(other.opening_poly)
+        , shifted_opening_poly(other.shifted_opening_poly)
+        , linear_poly(other.linear_poly)
     {}
 
     proving_key(proving_key&& other)
@@ -50,10 +91,17 @@ struct proving_key
         , permutation_selectors(other.permutation_selectors)
         , permutation_selectors_lagrange_base(other.permutation_selectors_lagrange_base)
         , permutation_selector_ffts(other.permutation_selector_ffts)
+        , wire_ffts(other.wire_ffts)
         , small_domain(std::move(other.small_domain))
         , mid_domain(std::move(other.mid_domain))
         , large_domain(std::move(other.large_domain))
         , reference_string(std::move(other.reference_string))
+        , z(std::move(other.z))
+        , z_fft(std::move(other.z_fft))
+        , lagrange_1(std::move(other.lagrange_1))
+        , opening_poly(std::move(other.opening_poly))
+        , shifted_opening_poly(std::move(other.shifted_opening_poly))
+        , linear_poly(std::move(other.linear_poly))
     {}
 
     proving_key& operator=(proving_key&& other)
@@ -64,11 +112,17 @@ struct proving_key
         permutation_selectors = std::move(other.permutation_selectors);
         permutation_selectors_lagrange_base = std::move(other.permutation_selectors_lagrange_base);
         permutation_selector_ffts = std::move(other.permutation_selector_ffts);
-
+        wire_ffts = std::move(other.wire_ffts);
         small_domain = std::move(other.small_domain);
         mid_domain = std::move(other.mid_domain);
         large_domain = std::move(other.large_domain);
         reference_string = std::move(other.reference_string);
+        z = std::move(other.z);
+        z_fft = std::move(other.z_fft);
+        lagrange_1 = std::move(other.lagrange_1);
+        opening_poly = std::move(other.opening_poly);
+        shifted_opening_poly = std::move(other.shifted_opening_poly);
+        linear_poly = std::move(other.linear_poly);
         return *this;   
     }
 
@@ -81,19 +135,26 @@ struct proving_key
     std::map<std::string, barretenberg::polynomial> permutation_selectors_lagrange_base;
     std::map<std::string, barretenberg::polynomial> permutation_selector_ffts;
 
+    std::map<std::string, barretenberg::polynomial> wire_ffts;
+
     barretenberg::evaluation_domain small_domain;
     barretenberg::evaluation_domain mid_domain;
     barretenberg::evaluation_domain large_domain;
 
     ReferenceString reference_string;
 
+    barretenberg::polynomial z;
+    barretenberg::polynomial z_fft;
+    barretenberg::polynomial lagrange_1;
+    barretenberg::polynomial opening_poly;
+    barretenberg::polynomial shifted_opening_poly;
+    barretenberg::polynomial linear_poly;
     static constexpr size_t min_thread_block = 4UL;
 };
 
 struct program_witness
 {
     std::map<std::string, barretenberg::polynomial> wires;
-    std::map<std::string, barretenberg::polynomial> wire_ffts;
 };
 
 struct verification_key

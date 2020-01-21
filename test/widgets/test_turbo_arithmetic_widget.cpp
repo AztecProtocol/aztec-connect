@@ -70,10 +70,15 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
 
     }
 
-    polynomial w_1_fft = polynomial(w_1, 4 * num_gates + 4);
-    polynomial w_2_fft = polynomial(w_2, 4 * num_gates + 4);
-    polynomial w_3_fft = polynomial(w_3, 4 * num_gates + 4);
-    polynomial w_4_fft = polynomial(w_4, 4 * num_gates + 4);
+    polynomial& w_1_fft = key->wire_ffts.at("w_1_fft");
+    polynomial& w_2_fft = key->wire_ffts.at("w_2_fft");
+    polynomial& w_3_fft = key->wire_ffts.at("w_3_fft");
+    polynomial& w_4_fft = key->wire_ffts.at("w_4_fft");
+
+    w_1_fft = polynomial(w_1, 4 * num_gates + 4);
+    w_2_fft = polynomial(w_2, 4 * num_gates + 4);
+    w_3_fft = polynomial(w_3, 4 * num_gates + 4);
+    w_4_fft = polynomial(w_4, 4 * num_gates + 4);
 
     w_1_fft.ifft(key->small_domain);
     w_2_fft.ifft(key->small_domain);
@@ -107,10 +112,6 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
     witness->wires.insert({ "w_3", std::move(w_3) });
     witness->wires.insert({ "w_4", std::move(w_4) });
 
-    witness->wire_ffts.insert({ "w_1_fft", std::move(w_1_fft) });
-    witness->wire_ffts.insert({ "w_2_fft", std::move(w_2_fft) });
-    witness->wire_ffts.insert({ "w_3_fft", std::move(w_3_fft) });
-    witness->wire_ffts.insert({ "w_4_fft", std::move(w_4_fft) });
 
     polynomial q_1_fft(q_1, 4 * num_gates);
     polynomial q_2_fft(q_2, 4 * num_gates);

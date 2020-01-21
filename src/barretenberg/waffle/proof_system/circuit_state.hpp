@@ -16,6 +16,8 @@ class CircuitFFTState {
             mid_domain.compute_lookup_table();
             large_domain.compute_lookup_table();
         }
+        quotient_large.resize(4 * n);
+        quotient_mid.resize(2 * n);
     }
     CircuitFFTState(const CircuitFFTState& other)
         : small_domain(other.small_domain)
@@ -27,6 +29,8 @@ class CircuitFFTState {
         : small_domain(std::move(other.small_domain))
         , mid_domain(std::move(other.mid_domain))
         , large_domain(std::move(other.large_domain))
+        , quotient_mid(std::move(other.quotient_mid))
+        , quotient_large(std::move(other.quotient_large))
     {}
 
     CircuitFFTState& operator=(CircuitFFTState&& other)
@@ -34,6 +38,8 @@ class CircuitFFTState {
         small_domain = std::move(other.small_domain);
         mid_domain = std::move(other.mid_domain);
         large_domain = std::move(other.large_domain);
+        quotient_mid = std::move(other.quotient_mid);
+        quotient_large = std::move(other.quotient_large);
         return *this;
     }
 
@@ -42,12 +48,12 @@ class CircuitFFTState {
     barretenberg::polynomial w_o_fft;
     barretenberg::polynomial w_4_fft;
 
-    barretenberg::polynomial quotient_mid;
-    barretenberg::polynomial quotient_large;
-
     barretenberg::evaluation_domain small_domain;
     barretenberg::evaluation_domain mid_domain;
     barretenberg::evaluation_domain large_domain;
+
+    barretenberg::polynomial quotient_mid;
+    barretenberg::polynomial quotient_large;
 
     static constexpr size_t min_thread_block = 4UL;
 };

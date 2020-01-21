@@ -63,7 +63,7 @@ fr::field_t ProverSequentialWidget::compute_quotient_contribution(const barreten
     fr::field_t alpha = fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
 
     barretenberg::fr::field_t old_alpha = barretenberg::fr::mul(alpha_base, barretenberg::fr::invert(alpha));
-    polynomial& w_3_fft = witness->wire_ffts.at("w_3_fft");
+    polynomial& w_3_fft = key->wire_ffts.at("w_3_fft");
 
     ITERATE_OVER_DOMAIN_START(key->mid_domain);
     fr::field_t T0;

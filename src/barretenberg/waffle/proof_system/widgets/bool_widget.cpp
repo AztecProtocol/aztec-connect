@@ -79,9 +79,9 @@ fr::field_t ProverBoolWidget::compute_quotient_contribution(const barretenberg::
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
-    polynomial& w_1_fft = witness->wire_ffts.at("w_1_fft");
-    polynomial& w_2_fft = witness->wire_ffts.at("w_2_fft");
-    polynomial& w_3_fft = witness->wire_ffts.at("w_3_fft");
+    polynomial& w_1_fft = key->wire_ffts.at("w_1_fft");
+    polynomial& w_2_fft = key->wire_ffts.at("w_2_fft");
+    polynomial& w_3_fft = key->wire_ffts.at("w_3_fft");
 
     fr::field_t alpha_a = fr::mul(alpha_base, alpha);
     fr::field_t alpha_b = fr::mul(alpha_base, fr::sqr(alpha));

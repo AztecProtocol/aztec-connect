@@ -41,8 +41,8 @@ class Prover
     void compute_wire_commitments();
     void compute_z_commitment();
     void compute_quotient_commitment();
-    void compute_permutation_grand_product_coefficients(barretenberg::polynomial& z_fft);
-    void compute_identity_grand_product_coefficients(barretenberg::polynomial& z_fft);
+    void compute_permutation_grand_product_coefficients();
+    void compute_identity_grand_product_coefficients();
     void compute_arithmetisation_coefficients();
     void init_quotient_polynomials();
     void compute_opening_elements();
@@ -51,9 +51,6 @@ class Prover
     void reset();
 
     size_t n;
-
-    barretenberg::polynomial z;
-    barretenberg::polynomial r;
 
     // TODO change to fft_state;
     waffle::CircuitFFTState circuit_state;

@@ -257,7 +257,6 @@ waffle::Prover generate_test_data(const size_t n)
     polynomial q_m_fft(q_m, n * 2);
     polynomial q_c_fft(q_c, n * 2);
 
-
     q_1_fft.coset_fft(key->mid_domain);
     q_2_fft.coset_fft(key->mid_domain);
     q_3_fft.coset_fft(key->mid_domain);

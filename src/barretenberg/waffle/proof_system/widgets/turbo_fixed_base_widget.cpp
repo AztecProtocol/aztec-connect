@@ -73,10 +73,10 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     fr::field_t alpha_f = fr::mul(alpha_e, alpha);
     fr::field_t alpha_g = fr::mul(alpha_f, alpha);
 
-    polynomial& w_1_fft = witness->wire_ffts.at("w_1_fft");
-    polynomial& w_2_fft = witness->wire_ffts.at("w_2_fft");
-    polynomial& w_3_fft = witness->wire_ffts.at("w_3_fft");
-    polynomial& w_4_fft = witness->wire_ffts.at("w_4_fft");
+    polynomial& w_1_fft = key->wire_ffts.at("w_1_fft");
+    polynomial& w_2_fft = key->wire_ffts.at("w_2_fft");
+    polynomial& w_3_fft = key->wire_ffts.at("w_3_fft");
+    polynomial& w_4_fft = key->wire_ffts.at("w_4_fft");
     // selector renaming:
     // q_1 = q_x_1
     // q_2 = q_x_2

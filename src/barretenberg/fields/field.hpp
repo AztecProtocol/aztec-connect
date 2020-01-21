@@ -572,9 +572,9 @@ template <typename FieldParams> class field {
         return r;
     }
 
-    static inline void batch_invert(field_t* coeffs, size_t n)
+    static inline void batch_invert(field_t* coeffs, size_t n, field_t* scratch_space = nullptr)
     {
-        field_t* temporaries = (field_t*)aligned_alloc(32, sizeof(field_t) * n);
+        field_t* temporaries = scratch_space ? scratch_space : (field_t*)aligned_alloc(32, sizeof(field_t) * n);
         field_t accumulator = one;
         for (size_t i = 0; i < n; ++i) {
             __copy(accumulator, temporaries[i]);
@@ -588,7 +588,10 @@ template <typename FieldParams> class field {
             __mul(accumulator, coeffs[i], accumulator);
             __copy(T0, coeffs[i]);
         }
-        aligned_free(temporaries);
+        if (scratch_space == nullptr)
+        {
+            aligned_free(temporaries);
+        }
     }
 
     static inline void compute_coset_generators(const size_t n, const uint64_t subgroup_size, field_t* result)

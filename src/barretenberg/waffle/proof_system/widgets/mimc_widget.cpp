@@ -69,9 +69,9 @@ fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
-    polynomial& w_1_fft = witness->wire_ffts.at("w_1_fft");
-    polynomial& w_2_fft = witness->wire_ffts.at("w_2_fft");
-    polynomial& w_3_fft = witness->wire_ffts.at("w_3_fft");
+    polynomial& w_1_fft = key->wire_ffts.at("w_1_fft");
+    polynomial& w_2_fft = key->wire_ffts.at("w_2_fft");
+    polynomial& w_3_fft = key->wire_ffts.at("w_3_fft");
 
     ITERATE_OVER_DOMAIN_START(key->large_domain);
     fr::field_t T0;
