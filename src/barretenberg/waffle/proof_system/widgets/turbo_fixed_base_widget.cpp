@@ -11,33 +11,37 @@
 using namespace barretenberg;
 
 namespace waffle {
-ProverTurboFixedBaseWidget::ProverTurboFixedBaseWidget(const size_t n)
-    : ProverTurboArithmeticWidget(n)
+ProverTurboFixedBaseWidget::ProverTurboFixedBaseWidget(proving_key* input_key, program_witness* input_witness)
+    : ProverTurboArithmeticWidget(input_key, input_witness)
+    , q_ecc_1(key->constraint_selectors.at("q_ecc_1"))
+    , q_ecc_1_fft(key->constraint_selector_ffts.at("q_ecc_1_fft"))
 {
     version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
     version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
     version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
-    q_ecc_1.resize(n);
 }
 
 ProverTurboFixedBaseWidget::ProverTurboFixedBaseWidget(const ProverTurboFixedBaseWidget& other)
     : ProverTurboArithmeticWidget(other)
+    , q_ecc_1(key->constraint_selectors.at("q_ecc_1"))
+    , q_ecc_1_fft(key->constraint_selector_ffts.at("q_ecc_1_fft"))
 {
-    q_ecc_1 = polynomial(other.q_ecc_1);
     version = WidgetVersionControl(other.version);
 }
 
 ProverTurboFixedBaseWidget::ProverTurboFixedBaseWidget(ProverTurboFixedBaseWidget&& other)
     : ProverTurboArithmeticWidget(other)
+    , q_ecc_1(key->constraint_selectors.at("q_ecc_1"))
+    , q_ecc_1_fft(key->constraint_selector_ffts.at("q_ecc_1_fft"))
 {
-    q_ecc_1 = polynomial(other.q_ecc_1);
     version = WidgetVersionControl(other.version);
 }
 
 ProverTurboFixedBaseWidget& ProverTurboFixedBaseWidget::operator=(const ProverTurboFixedBaseWidget& other)
 {
     ProverTurboArithmeticWidget::operator=(other);
-    q_ecc_1 = polynomial(other.q_ecc_1);
+    q_ecc_1 = key->constraint_selectors.at("q_ecc_1");
+    q_ecc_1_fft = key->constraint_selector_ffts.at("q_ecc_1_fft");
     version = WidgetVersionControl(other.version);
     return *this;
 }
@@ -45,7 +49,8 @@ ProverTurboFixedBaseWidget& ProverTurboFixedBaseWidget::operator=(const ProverTu
 ProverTurboFixedBaseWidget& ProverTurboFixedBaseWidget::operator=(ProverTurboFixedBaseWidget&& other)
 {
     ProverTurboArithmeticWidget::operator=(other);
-    q_ecc_1 = polynomial(other.q_ecc_1);
+    q_ecc_1 = key->constraint_selectors.at("q_ecc_1");
+    q_ecc_1_fft = key->constraint_selector_ffts.at("q_ecc_1_fft");
     version = WidgetVersionControl(other.version);
     return *this;
 }
@@ -60,12 +65,6 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
 
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
-    q_ecc_1.ifft(circuit_state.small_domain);
-
-    polynomial q_ecc_1_fft = polynomial(q_ecc_1, circuit_state.large_domain.size);
-
-    q_ecc_1_fft.coset_fft(circuit_state.large_domain);
-
     fr::field_t alpha_a = new_alpha_base;
     fr::field_t alpha_b = fr::mul(alpha_a, alpha);
     fr::field_t alpha_c = fr::mul(alpha_b, alpha);
@@ -74,6 +73,10 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     fr::field_t alpha_f = fr::mul(alpha_e, alpha);
     fr::field_t alpha_g = fr::mul(alpha_f, alpha);
 
+    polynomial& w_1_fft = witness->wire_ffts.at("w_1_fft");
+    polynomial& w_2_fft = witness->wire_ffts.at("w_2_fft");
+    polynomial& w_3_fft = witness->wire_ffts.at("w_3_fft");
+    polynomial& w_4_fft = witness->wire_ffts.at("w_4_fft");
     // selector renaming:
     // q_1 = q_x_1
     // q_2 = q_x_2
@@ -83,15 +86,15 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     // q_4_next = q_x_init_2
     // q_m = q_y_init_1
     // q_c = q_y_init_2
-    ITERATE_OVER_DOMAIN_START(circuit_state.large_domain);
+    ITERATE_OVER_DOMAIN_START(key->large_domain);
 
     // accumulator_delta = d(Xw) - 4d(X)
     // accumulator_delta tracks the current round's scalar multiplier
     // which should be one of {-3, -1, 1, 3}
     fr::field_t accumulator_delta;
-    fr::__add(circuit_state.w_4_fft[i], circuit_state.w_4_fft[i], accumulator_delta);
+    fr::__add(w_4_fft[i], w_4_fft[i], accumulator_delta);
     fr::__add(accumulator_delta, accumulator_delta, accumulator_delta);
-    fr::__sub(circuit_state.w_4_fft[i + 4], accumulator_delta, accumulator_delta);
+    fr::__sub(w_4_fft[i + 4], accumulator_delta, accumulator_delta);
 
     fr::field_t accumulator_delta_squared;
     fr::__sqr(accumulator_delta, accumulator_delta_squared);
@@ -103,11 +106,12 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     // (we derive x_alpha from y_alpha, with `delta` conditionally flipping the sign of the output)
     // q_3 and q_ecc_1 are not directly equal to the 2 potential y-coordintes.
     // let's use `x_beta`, `x_gamma`, `y_beta`, `y_gamma` to refer to the two points in our lookup table
-    // y_alpha = [(x_alpha - x_gamma) / (x_beta - x_gamma)].y_beta.delta + [(x_alpha - x_beta) / 3.(x_gamma - x_beta)].y_gamma.delta
+    // y_alpha = [(x_alpha - x_gamma) / (x_beta - x_gamma)].y_beta.delta + [(x_alpha - x_beta) / 3.(x_gamma -
+    // x_beta)].y_gamma.delta
     // => q_3 = (3.y_beta - y_gamma) / 3.(x_beta - x_gamma)
     // => q_ecc_1 = (3.x_beta.y_gamma - x_gammay_beta) / 3.(x_beta - x_gammma)
     fr::field_t y_alpha;
-    fr::__mul(circuit_state.w_o_fft[i + 4], q_3_fft[i], y_alpha);
+    fr::__mul(w_3_fft[i + 4], q_3_fft[i], y_alpha);
     fr::__add(y_alpha, q_ecc_1_fft[i], y_alpha);
     fr::__mul(y_alpha, accumulator_delta, y_alpha);
 
@@ -138,72 +142,72 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     fr::field_t x_alpha_identity;
     fr::__mul(accumulator_delta_squared, q_1_fft[i], x_alpha_identity);
     fr::__add(x_alpha_identity, q_2_fft[i], x_alpha_identity);
-    fr::__sub(x_alpha_identity, circuit_state.w_o_fft[i + 4], x_alpha_identity);
+    fr::__sub(x_alpha_identity, w_3_fft[i + 4], x_alpha_identity);
     fr::__mul(x_alpha_identity, alpha_b, x_alpha_identity);
 
     // x-accumulator consistency check
     // ((x_2 + x_1 + x_alpha)(x_alpha - x_1)^2 - (y_alpha - y_1)^2).q_ecc = 0 mod Z_H
     // we use the fact that y_alpha^2 = x_alpha^3 + grumpkin::g1::curve_b
     fr::field_t x_accumulator_identity;
-    fr::__mul(y_alpha, circuit_state.w_r_fft[i], T0);
+    fr::__mul(y_alpha, w_2_fft[i], T0);
     fr::__add(T0, T0, T0);
-    fr::__sub(circuit_state.w_o_fft[i + 4], circuit_state.w_l_fft[i], T1);
+    fr::__sub(w_3_fft[i + 4], w_1_fft[i], T1);
     fr::__sqr(T1, T1); // T1 = (x_alpha - x_1)^2
-    fr::__add(circuit_state.w_l_fft[i + 4], circuit_state.w_l_fft[i], T2);
-    fr::__add(T2, circuit_state.w_o_fft[i + 4], T2); // T2 = (x_2 + x_1 + x_alpha)
+    fr::__add(w_1_fft[i + 4], w_1_fft[i], T2);
+    fr::__add(T2, w_3_fft[i + 4], T2); // T2 = (x_2 + x_1 + x_alpha)
     fr::__mul(T1, T2, T1);
-    fr::__sqr(circuit_state.w_r_fft[i], T2); // T2 = y_1^2
+    fr::__sqr(w_2_fft[i], T2); // T2 = y_1^2
     fr::__add(T2, grumpkin_curve_b, T2);
     fr::__add(T0, T1, x_accumulator_identity);
     fr::__sub(x_accumulator_identity, T2, x_accumulator_identity);
-    fr::__sqr(circuit_state.w_o_fft[i + 4], T0); // y_alpha^2 = x_alpha^3 + b
-    fr::__mul(T0, circuit_state.w_o_fft[i + 4], T0);
+    fr::__sqr(w_3_fft[i + 4], T0); // y_alpha^2 = x_alpha^3 + b
+    fr::__mul(T0, w_3_fft[i + 4], T0);
     fr::__sub(x_accumulator_identity, T0, x_accumulator_identity);
     fr::__mul(x_accumulator_identity, alpha_c, x_accumulator_identity);
 
     // y-accumulator consistency check
     // ((y_2 + y_1)(x_alpha - x_1) - (y_alpha - y_1)(x_1 - x_2)).q_ecc = 0 mod Z_H
     fr::field_t y_accumulator_identity;
-    fr::__add(circuit_state.w_r_fft[i], circuit_state.w_r_fft[i + 4], T0);
-    fr::__sub(circuit_state.w_o_fft[i + 4], circuit_state.w_l_fft[i], T1);
+    fr::__add(w_2_fft[i], w_2_fft[i + 4], T0);
+    fr::__sub(w_3_fft[i + 4], w_1_fft[i], T1);
     fr::__mul(T0, T1, T0);
 
-    fr::__sub(y_alpha, circuit_state.w_r_fft[i], T1);
+    fr::__sub(y_alpha, w_2_fft[i], T1);
 
-    fr::__sub(circuit_state.w_l_fft[i], circuit_state.w_l_fft[i + 4], T2);
+    fr::__sub(w_1_fft[i], w_1_fft[i + 4], T2);
     fr::__mul(T1, T2, T1);
     fr::__sub(T0, T1, y_accumulator_identity);
     fr::__mul(y_accumulator_identity, alpha_d, y_accumulator_identity);
 
     // accumlulator-init consistency check
-    // at the start of our scalar multiplication ladder, we want to validate that 
+    // at the start of our scalar multiplication ladder, we want to validate that
     // the initial values of (x_1, y_1) and scalar accumulator a_1 are correctly set
-    // We constrain a_1 to be either 0 or the value in w_o (which should be correctly initialized to (1 / 4^n) via a copy constraint)
-    // We constraint (x_1, y_1) to be one of 4^n.[1] or (4^n + 1).[1]
+    // We constrain a_1 to be either 0 or the value in w_o (which should be correctly initialized to (1 / 4^n) via a
+    // copy constraint) We constraint (x_1, y_1) to be one of 4^n.[1] or (4^n + 1).[1]
     fr::field_t accumulator_init_identity;
-    fr::__sub(circuit_state.w_4_fft[i], fr::one, T0);
-    fr::__sub(T0, circuit_state.w_o_fft[i], T1);
+    fr::__sub(w_4_fft[i], fr::one, T0);
+    fr::__sub(T0, w_3_fft[i], T1);
     fr::__mul(T0, T1, accumulator_init_identity);
     fr::__mul(accumulator_init_identity, alpha_e, accumulator_init_identity);
 
     // // x-init consistency check
     fr::field_t x_init_identity;
-    fr::__sub(q_4_fft[i], circuit_state.w_l_fft[i], T0);
-    fr::__mul(T0, circuit_state.w_o_fft[i], T0);
-    fr::__sub(fr::one, circuit_state.w_4_fft[i], T1);
+    fr::__sub(q_4_fft[i], w_1_fft[i], T0);
+    fr::__mul(T0, w_3_fft[i], T0);
+    fr::__sub(fr::one, w_4_fft[i], T1);
     fr::__mul(T1, q_4_next_fft[i], T1);
     fr::__add(T0, T1, x_init_identity);
     fr::__mul(x_init_identity, alpha_f, x_init_identity);
 
     // // y-init consistency check
     fr::field_t y_init_identity;
-    fr::__sub(q_m_fft[i], circuit_state.w_r_fft[i], T0);
-    fr::__mul(T0, circuit_state.w_o_fft[i], T0);
-    fr::__sub(fr::one, circuit_state.w_4_fft[i], T1);
+    fr::__sub(q_m_fft[i], w_2_fft[i], T0);
+    fr::__mul(T0, w_3_fft[i], T0);
+    fr::__sub(fr::one, w_4_fft[i], T1);
     fr::__mul(T1, q_c_fft[i], T1);
     fr::__add(T0, T1, y_init_identity);
     fr::__mul(y_init_identity, alpha_g, y_init_identity);
-    
+
     fr::field_t gate_identity;
     fr::__add(accumulator_init_identity, x_init_identity, gate_identity);
     fr::__add(gate_identity, y_init_identity, gate_identity);
@@ -220,22 +224,21 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     return fr::mul(alpha_g, alpha);
 }
 
-void ProverTurboFixedBaseWidget::compute_transcript_elements(transcript::Transcript& transcript,
-                                                             const evaluation_domain& domain)
+void ProverTurboFixedBaseWidget::compute_transcript_elements(transcript::Transcript& transcript)
 {
-    ProverTurboArithmeticWidget::compute_transcript_elements(transcript, domain);
+    ProverTurboArithmeticWidget::compute_transcript_elements(transcript);
     fr::field_t z = fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
-    transcript.add_element("q_ecc_1", transcript_helpers::convert_field_element(q_ecc_1.evaluate(z, domain.size)));
-    transcript.add_element("q_c", transcript_helpers::convert_field_element(q_c.evaluate(z, domain.size)));
+    transcript.add_element("q_ecc_1",
+                           transcript_helpers::convert_field_element(q_ecc_1.evaluate(z, key->small_domain.size)));
+    transcript.add_element("q_c", transcript_helpers::convert_field_element(q_c.evaluate(z, key->small_domain.size)));
 }
 
 fr::field_t ProverTurboFixedBaseWidget::compute_linear_contribution(const fr::field_t& alpha_base,
                                                                     const transcript::Transcript& transcript,
-                                                                    const evaluation_domain& domain,
                                                                     barretenberg::polynomial& r)
 {
     fr::field_t new_alpha_base =
-        ProverTurboArithmeticWidget::compute_linear_contribution(alpha_base, transcript, domain, r);
+        ProverTurboArithmeticWidget::compute_linear_contribution(alpha_base, transcript, r);
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
     fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
@@ -304,7 +307,7 @@ fr::field_t ProverTurboFixedBaseWidget::compute_linear_contribution(const fr::fi
     fr::__mul(q_m_multiplicand, q_c_eval, q_m_multiplicand);
     fr::__mul(q_m_multiplicand, alpha_g, q_m_multiplicand);
 
-    ITERATE_OVER_DOMAIN_START(domain);
+    ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T2;
     fr::field_t T3;
     fr::field_t T4;
@@ -330,14 +333,13 @@ fr::field_t ProverTurboFixedBaseWidget::compute_linear_contribution(const fr::fi
 fr::field_t ProverTurboFixedBaseWidget::compute_opening_poly_contribution(const fr::field_t& nu_base,
                                                                           const transcript::Transcript& transcript,
                                                                           fr::field_t* poly,
-                                                                          fr::field_t* shifted_poly,
-                                                                          const evaluation_domain& domain)
+                                                                          fr::field_t* shifted_poly)
 {
     fr::field_t nu = fr::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
     fr::field_t new_nu_base =
-        ProverTurboArithmeticWidget::compute_opening_poly_contribution(nu_base, transcript, poly, shifted_poly, domain);
+        ProverTurboArithmeticWidget::compute_opening_poly_contribution(nu_base, transcript, poly, shifted_poly);
     fr::field_t nu_b = fr::mul(new_nu_base, nu);
-    ITERATE_OVER_DOMAIN_START(domain);
+    ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0;
     fr::field_t T1;
     fr::__mul(q_ecc_1[i], new_nu_base, T0);
@@ -348,35 +350,30 @@ fr::field_t ProverTurboFixedBaseWidget::compute_opening_poly_contribution(const 
     return fr::mul(nu_b, nu);
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverTurboFixedBaseWidget::compute_preprocessed_commitments(
-    const evaluation_domain& domain, const ReferenceString& reference_string) const
+std::unique_ptr<VerifierBaseWidget> ProverTurboFixedBaseWidget::compute_preprocessed_commitments(const ReferenceString& reference_string) const
 {
-    polynomial polys[9]{ polynomial(q_1, domain.size),      polynomial(q_2, domain.size),
-                         polynomial(q_3, domain.size),      polynomial(q_4, domain.size),
-                         polynomial(q_4_next, domain.size), polynomial(q_m, domain.size),
-                         polynomial(q_c, domain.size),      polynomial(q_arith, domain.size),
-                         polynomial(q_ecc_1, domain.size) };
+    polynomial polys[9]{ polynomial(q_1, key->small_domain.size),      polynomial(q_2, key->small_domain.size),
+                         polynomial(q_3, key->small_domain.size),      polynomial(q_4, key->small_domain.size),
+                         polynomial(q_4_next, key->small_domain.size), polynomial(q_m, key->small_domain.size),
+                         polynomial(q_c, key->small_domain.size),      polynomial(q_arith, key->small_domain.size),
+                         polynomial(q_ecc_1, key->small_domain.size) };
 
-    for (size_t i = 0; i < 9; ++i) {
-        polys[i].ifft(domain);
-    }
 
     std::vector<barretenberg::g1::affine_element> commitments;
     commitments.resize(9);
 
     for (size_t i = 0; i < 9; ++i) {
         g1::jacobian_to_affine(
-            scalar_multiplication::pippenger(polys[i].get_coefficients(), reference_string.monomials, domain.size),
+            scalar_multiplication::pippenger(polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
             commitments[i]);
     }
     std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierTurboFixedBaseWidget>(commitments);
     return result;
 }
 
-void ProverTurboFixedBaseWidget::reset(const barretenberg::evaluation_domain& domain)
+void ProverTurboFixedBaseWidget::reset()
 {
-    ProverTurboArithmeticWidget::reset(domain);
-    q_ecc_1.fft(domain);
+    ProverTurboArithmeticWidget::reset();
 }
 
 // ###
@@ -717,7 +714,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
 
     return VerifierBaseWidget::challenge_coefficients{ fr::mul(alpha_d, challenge.alpha_step),
                                                        challenge.alpha_step,
-                                                       fr::mul(challenge.nu_base, fr::mul(fr::sqr(challenge.nu_step), challenge.nu_step)),
+                                                       fr::mul(challenge.nu_base,
+                                                               fr::mul(fr::sqr(challenge.nu_step), challenge.nu_step)),
                                                        challenge.nu_step,
                                                        challenge.linear_nu };
 }

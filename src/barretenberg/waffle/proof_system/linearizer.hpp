@@ -87,7 +87,6 @@ namespace waffle
         barretenberg::fr::__neg(result.sigma_3, result.sigma_3);
         barretenberg::fr::__mul(result.sigma_3, beta, result.sigma_3);
 
-
         barretenberg::fr::__mul(l_1, alpha_pow[2], T0);
         barretenberg::fr::__add(result.z_1, T0, result.z_1);
 

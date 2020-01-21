@@ -23,7 +23,7 @@ class VerifierArithmeticWidget : public VerifierBaseWidget {
 
 class ProverArithmeticWidget : public ProverBaseWidget {
   public:
-    ProverArithmeticWidget(const size_t n);
+    ProverArithmeticWidget(proving_key*, program_witness*);
     ProverArithmeticWidget(const ProverArithmeticWidget& other);
     ProverArithmeticWidget(ProverArithmeticWidget&& other);
     ProverArithmeticWidget& operator=(const ProverArithmeticWidget& other);
@@ -34,26 +34,29 @@ class ProverArithmeticWidget : public ProverBaseWidget {
                                                             CircuitFFTState& circuit_state);
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base,
                                                           const transcript::Transcript& transcript,
-                                                          const barretenberg::evaluation_domain& domain,
                                                           barretenberg::polynomial& r);
     barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
                                                                 const transcript::Transcript&,
                                                                 barretenberg::fr::field_t*,
-                                                                barretenberg::fr::field_t*,
-                                                                const barretenberg::evaluation_domain&)
+                                                                barretenberg::fr::field_t*)
     {
         return nu_base;
     }
 
-    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const barretenberg::evaluation_domain& domain,
-                                                                         const ReferenceString& reference_string) const;
+    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const ReferenceString& reference_string) const;
 
-    void reset(const barretenberg::evaluation_domain& domain);
+    void reset();
 
-    barretenberg::polynomial q_m;
-    barretenberg::polynomial q_l;
-    barretenberg::polynomial q_r;
-    barretenberg::polynomial q_o;
-    barretenberg::polynomial q_c;
+    barretenberg::polynomial& q_1;
+    barretenberg::polynomial& q_2;
+    barretenberg::polynomial& q_3;
+    barretenberg::polynomial& q_m;
+    barretenberg::polynomial& q_c;
+
+    barretenberg::polynomial& q_1_fft;
+    barretenberg::polynomial& q_2_fft;
+    barretenberg::polynomial& q_3_fft;
+    barretenberg::polynomial& q_m_fft;
+    barretenberg::polynomial& q_c_fft;
 };
 } // namespace waffle

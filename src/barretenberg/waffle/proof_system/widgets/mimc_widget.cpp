@@ -10,46 +10,56 @@
 using namespace barretenberg;
 
 namespace waffle {
-ProverMiMCWidget::ProverMiMCWidget(const size_t _n)
-    : ProverBaseWidget(static_cast<size_t>(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED),
+ProverMiMCWidget::ProverMiMCWidget(proving_key* input_key, program_witness* input_witness)
+    : ProverBaseWidget(input_key, input_witness, static_cast<size_t>(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED),
                        static_cast<size_t>(WidgetVersionControl::Features::HAS_MIMC_SELECTORS))
-    , n(_n)
+    , q_mimc_selector(key->constraint_selectors.at("q_mimc_selector"))
+    , q_mimc_coefficient(key->constraint_selectors.at("q_mimc_coefficient"))
+    , q_mimc_selector_fft(key->constraint_selector_ffts.at("q_mimc_selector_fft"))
+    , q_mimc_coefficient_fft(key->constraint_selector_ffts.at("q_mimc_coefficient_fft"))
 {
-    q_mimc_selector.resize(_n);
-    q_mimc_coefficient.resize(_n);
 }
 
 ProverMiMCWidget::ProverMiMCWidget(const ProverMiMCWidget& other)
     : ProverBaseWidget(other)
-    , n(other.n)
+    , q_mimc_selector(key->constraint_selectors.at("q_mimc_selector"))
+    , q_mimc_coefficient(key->constraint_selectors.at("q_mimc_coefficient"))
+    , q_mimc_selector_fft(key->constraint_selector_ffts.at("q_mimc_selector_fft"))
+    , q_mimc_coefficient_fft(key->constraint_selector_ffts.at("q_mimc_coefficient_fft"))
 {
-    q_mimc_selector = polynomial(other.q_mimc_selector);
-    q_mimc_coefficient = polynomial(other.q_mimc_coefficient);
 }
 
 ProverMiMCWidget::ProverMiMCWidget(ProverMiMCWidget&& other)
     : ProverBaseWidget(other)
-    , n(other.n)
+    , q_mimc_selector(key->constraint_selectors.at("q_mimc_selector"))
+    , q_mimc_coefficient(key->constraint_selectors.at("q_mimc_coefficient"))
+    , q_mimc_selector_fft(key->constraint_selector_ffts.at("q_mimc_selector_fft"))
+    , q_mimc_coefficient_fft(key->constraint_selector_ffts.at("q_mimc_coefficient_fft"))
 {
-    q_mimc_selector = polynomial(other.q_mimc_selector);
-    q_mimc_coefficient = polynomial(other.q_mimc_coefficient);
 }
 
 ProverMiMCWidget& ProverMiMCWidget::operator=(const ProverMiMCWidget& other)
 {
-    q_mimc_selector = polynomial(other.q_mimc_selector);
-    q_mimc_coefficient = polynomial(other.q_mimc_coefficient);
-    n = other.n;
+    ProverBaseWidget::operator=(other);
+
+    q_mimc_selector = key->constraint_selectors.at("q_mimc_selector");
+    q_mimc_coefficient = key->constraint_selectors.at("q_mimc_coefficient");
+
+    q_mimc_selector_fft = key->constraint_selector_ffts.at("q_mimc_selector_fft");
+    q_mimc_coefficient_fft = key->constraint_selector_ffts.at("q_mimc_coefficient_fft");
     version = WidgetVersionControl(other.version);
     return *this;
 }
 
 ProverMiMCWidget& ProverMiMCWidget::operator=(ProverMiMCWidget&& other)
 {
-    q_mimc_selector = polynomial(other.q_mimc_selector);
-    q_mimc_coefficient = polynomial(other.q_mimc_coefficient);
-    n = other.n;
-    version = WidgetVersionControl(other.version);
+    ProverBaseWidget::operator=(other);
+
+    q_mimc_selector = key->constraint_selectors.at("q_mimc_selector");
+    q_mimc_coefficient = key->constraint_selectors.at("q_mimc_coefficient");
+
+    q_mimc_selector_fft = key->constraint_selector_ffts.at("q_mimc_selector_fft");
+    q_mimc_coefficient_fft = key->constraint_selector_ffts.at("q_mimc_coefficient_fft");
     return *this;
 }
 
@@ -59,26 +69,22 @@ fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
-    q_mimc_selector.ifft(circuit_state.small_domain);
-    q_mimc_coefficient.ifft(circuit_state.small_domain);
+    polynomial& w_1_fft = witness->wire_ffts.at("w_1_fft");
+    polynomial& w_2_fft = witness->wire_ffts.at("w_2_fft");
+    polynomial& w_3_fft = witness->wire_ffts.at("w_3_fft");
 
-    polynomial q_mimc_selector_fft = polynomial(q_mimc_selector, circuit_state.large_domain.size);
-    polynomial q_mimc_coefficient_fft = polynomial(q_mimc_coefficient, circuit_state.large_domain.size);
-
-    q_mimc_selector_fft.coset_fft_with_constant(circuit_state.large_domain, alpha_base);
-    q_mimc_coefficient_fft.coset_fft(circuit_state.large_domain);
-    ITERATE_OVER_DOMAIN_START(circuit_state.large_domain);
+    ITERATE_OVER_DOMAIN_START(key->large_domain);
     fr::field_t T0;
     fr::field_t T1;
     fr::field_t T2;
-    fr::__add_with_coarse_reduction(circuit_state.w_o_fft[i], circuit_state.w_l_fft[i], T0); // T0 = w_o + w_l
+    fr::__add_with_coarse_reduction(w_3_fft[i], w_1_fft[i], T0); // T0 = w_o + w_l
     fr::__add_with_coarse_reduction(T0, q_mimc_coefficient_fft[i], T0);                      // T0 = (w_o + w_l + q_c)
     fr::__sqr_with_coarse_reduction(T0, T1);                                                 // T1 = (w_o + w_l + q_c)^2
     fr::__mul_with_coarse_reduction(T1, T0, T1);                                             // T1 = (w_o + w_l + q_c)^3
-    fr::__sub_with_coarse_reduction(T1, circuit_state.w_r_fft[i], T1);     // T1 = (w_o + w_l + q_c)^3 - w_r
-    fr::__sqr_with_coarse_reduction(circuit_state.w_r_fft[i], T2);         // T2 = w_r^2
+    fr::__sub_with_coarse_reduction(T1, w_2_fft[i], T1);     // T1 = (w_o + w_l + q_c)^3 - w_r
+    fr::__sqr_with_coarse_reduction(w_2_fft[i], T2);         // T2 = w_r^2
     fr::__mul_with_coarse_reduction(T2, T0, T2);                           // T2 = (w_o + w_l + q_c).w_r^2
-    fr::__sub_with_coarse_reduction(T2, circuit_state.w_o_fft[i + 4], T2); // T2 = (w_o + w_l + q_c).w_r^2 - w_{o.next}
+    fr::__sub_with_coarse_reduction(T2, w_3_fft[i + 4], T2); // T2 = (w_o + w_l + q_c).w_r^2 - w_{o.next}
     fr::__mul_with_coarse_reduction(T2, alpha, T2); // T2 = (w_o + w_l + q_c).w_r^2 - w_{o.next}).alpha
     fr::__add_with_coarse_reduction(
         T1, T2, T1); // T1 = ((w_o + w_l + q_c)^3 - w_r) + (w_o + w_l + q_c).w_r^2 - w_{o.next}).alpha
@@ -86,22 +92,22 @@ fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::
     fr::__mul(T1,
               q_mimc_selector_fft[i],
               T1); // T1 = (((w_o + w_l + q_c)^3 - w_r) + (w_o + w_l + q_c).w_r^2 - w_{o.next}).alpha).q_mimc
+    fr::__mul(T1, alpha_base, T1);
     fr::__add(circuit_state.quotient_large[i], T1, circuit_state.quotient_large[i]);
     ITERATE_OVER_DOMAIN_END;
 
     return fr::mul(alpha_base, fr::sqr(alpha));
 }
 
-void ProverMiMCWidget::compute_transcript_elements(transcript::Transcript& transcript, const barretenberg::evaluation_domain&)
+void ProverMiMCWidget::compute_transcript_elements(transcript::Transcript& transcript)
 {
     fr::field_t z = fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
     transcript.add_element("q_mimc_coefficient",
-                           transcript_helpers::convert_field_element(q_mimc_coefficient.evaluate(z, n)));
+                           transcript_helpers::convert_field_element(q_mimc_coefficient.evaluate(z, key->small_domain.size)));
 }
 
 fr::field_t ProverMiMCWidget::compute_linear_contribution(const fr::field_t& alpha_base,
                                                           const transcript::Transcript& transcript,
-                                                          const evaluation_domain& domain,
                                                           polynomial& r)
 {
     fr::field_t alpha = fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
@@ -118,7 +124,7 @@ fr::field_t ProverMiMCWidget::compute_linear_contribution(const fr::field_t& alp
     fr::field_t mimc_term = fr::mul(fr::sub(fr::mul(fr::sqr(w_r_eval), mimc_T0), w_o_shifted_eval), alpha);
     mimc_term = fr::mul(fr::add(mimc_term, mimc_a), alpha_base);
 
-    ITERATE_OVER_DOMAIN_START(domain);
+    ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0;
     fr::__mul(mimc_term, q_mimc_selector[i], T0);
     fr::__add(r[i], T0, r[i]);
@@ -129,11 +135,10 @@ fr::field_t ProverMiMCWidget::compute_linear_contribution(const fr::field_t& alp
 fr::field_t ProverMiMCWidget::compute_opening_poly_contribution(const fr::field_t& nu_base,
                                                                 const transcript::Transcript& transcript,
                                                                 fr::field_t* poly,
-                                                                fr::field_t*,
-                                                                const evaluation_domain& domain)
+                                                                fr::field_t*)
 {
     fr::field_t nu = fr::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
-    ITERATE_OVER_DOMAIN_START(domain);
+    ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0;
     fr::__mul(q_mimc_coefficient[i], nu_base, T0);
     fr::__add(poly[i], T0, poly[i]);
@@ -142,30 +147,25 @@ fr::field_t ProverMiMCWidget::compute_opening_poly_contribution(const fr::field_
 }
 
 std::unique_ptr<VerifierBaseWidget> ProverMiMCWidget::compute_preprocessed_commitments(
-    const evaluation_domain& domain, const ReferenceString& reference_string) const
+    const ReferenceString& reference_string) const
 {
-    polynomial polys[2]{ polynomial(q_mimc_coefficient, domain.size), polynomial(q_mimc_selector, domain.size) };
+    polynomial polys[2]{ polynomial(q_mimc_coefficient, key->small_domain.size), polynomial(q_mimc_selector, key->small_domain.size) };
 
-    for (size_t i = 0; i < 2; ++i) {
-        polys[i].ifft(domain);
-    }
 
     std::vector<barretenberg::g1::affine_element> commitments;
     commitments.resize(2);
 
     for (size_t i = 0; i < 2; ++i) {
         g1::jacobian_to_affine(
-            scalar_multiplication::pippenger(polys[i].get_coefficients(), reference_string.monomials, domain.size),
+            scalar_multiplication::pippenger(polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
             commitments[i]);
     }
     std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierMiMCWidget>(commitments);
     return result;
 }
 
-void ProverMiMCWidget::reset(const evaluation_domain& domain)
+void ProverMiMCWidget::reset()
 {
-    q_mimc_coefficient.fft(domain);
-    q_mimc_selector.fft(domain);
 }
 
 // ###

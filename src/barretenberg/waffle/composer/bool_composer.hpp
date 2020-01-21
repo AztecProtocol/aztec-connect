@@ -13,13 +13,16 @@ public:
         q_left_bools.reserve(size_hint);
         q_right_bools.reserve(size_hint);
         q_output_bools.reserve(size_hint);
-        zero_idx = add_variable(barretenberg::fr::field_t({{0,0,0,0}}));
         features |= static_cast<size_t>(Features::BOOL_SELECTORS);
+        is_bool.push_back(false);
     };
     BoolComposer(BoolComposer &&other) = default;
     BoolComposer& operator=(BoolComposer &&other) = default;
     ~BoolComposer() {}
 
+    virtual std::shared_ptr<proving_key> compute_proving_key() override;
+    virtual std::shared_ptr<verification_key> compute_verification_key() override;
+    virtual std::shared_ptr<program_witness> compute_witness() override;
     Prover preprocess() override;
 
     uint32_t add_variable(const barretenberg::fr::field_t &in) override
@@ -42,7 +45,6 @@ public:
     std::vector<barretenberg::fr::field_t> q_output_bools;
 
     std::vector<bool> is_bool;
-    uint32_t zero_idx;
 
     static transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
     {

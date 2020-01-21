@@ -22,7 +22,7 @@ class VerifierTurboFixedBaseWidget : public VerifierTurboArithmeticWidget {
 
 class ProverTurboFixedBaseWidget : public ProverTurboArithmeticWidget {
   public:
-    ProverTurboFixedBaseWidget(const size_t n);
+    ProverTurboFixedBaseWidget(proving_key* input_key, program_witness* input_witness);
     ProverTurboFixedBaseWidget(const ProverTurboFixedBaseWidget& other);
     ProverTurboFixedBaseWidget(ProverTurboFixedBaseWidget&& other);
     ProverTurboFixedBaseWidget& operator=(const ProverTurboFixedBaseWidget& other);
@@ -33,22 +33,20 @@ class ProverTurboFixedBaseWidget : public ProverTurboArithmeticWidget {
                                                             CircuitFFTState& circuit_state);
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base,
                                                           const transcript::Transcript& transcript,
-                                                          const barretenberg::evaluation_domain& domain,
                                                           barretenberg::polynomial& r);
     barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
                                                                 const transcript::Transcript&,
                                                                 barretenberg::fr::field_t*,
-                                                                barretenberg::fr::field_t*,
-                                                                const barretenberg::evaluation_domain&);
+                                                                barretenberg::fr::field_t*);
 
-    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const barretenberg::evaluation_domain& domain,
-                                                                         const ReferenceString& reference_string) const;
+    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const ReferenceString& reference_string) const;
 
-    void compute_transcript_elements(transcript::Transcript& transcript, const barretenberg::evaluation_domain&);
+    void compute_transcript_elements(transcript::Transcript& transcript);
 
-    void reset(const barretenberg::evaluation_domain& domain);
+    void reset();
 
-    barretenberg::polynomial q_ecc_1;
+    barretenberg::polynomial& q_ecc_1;
+    barretenberg::polynomial& q_ecc_1_fft;
 
 };
 } // namespace waffle

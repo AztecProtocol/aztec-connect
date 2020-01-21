@@ -19,7 +19,10 @@ namespace waffle
 class Prover
 {
   public:
-    Prover(const size_t n = 0, const transcript::Manifest &manifest = transcript::Manifest({}), bool has_fourth_wire = false);
+    Prover(std::shared_ptr<proving_key> input_key = nullptr,
+           std::shared_ptr<program_witness> input_witness = nullptr,
+           const transcript::Manifest& manifest = transcript::Manifest({}),
+           bool has_fourth_wire = false);
     Prover(Prover&& other);
     Prover(const Prover& other) = delete;
     Prover& operator=(const Prover& other) = delete;
@@ -49,15 +52,7 @@ class Prover
 
     size_t n;
 
-    barretenberg::polynomial w_l;
-    barretenberg::polynomial w_r;
-    barretenberg::polynomial w_o;
-    barretenberg::polynomial w_4; // temporary
-    barretenberg::polynomial sigma_1;
-    barretenberg::polynomial sigma_2;
-    barretenberg::polynomial sigma_3;
     barretenberg::polynomial z;
-
     barretenberg::polynomial r;
 
     // TODO change to fft_state;
@@ -73,6 +68,9 @@ class Prover
     transcript::Transcript transcript;
 
     bool __DEBUG_HAS_FOURTH_WIRE = false;
+
+    std::shared_ptr<proving_key> key;
+    std::shared_ptr<program_witness> witness;
 };
 
 } // namespace waffle

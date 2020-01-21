@@ -29,6 +29,7 @@ void fft(fr::field_t *coeffs, const evaluation_domain &domain);
 void fft_with_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &value);
 
 void coset_fft(fr::field_t *coeffs, const evaluation_domain &domain);
+void coset_fft(fr::field_t *coeffs, const evaluation_domain& small_domain, const evaluation_domain& large_domain, const size_t domain_extension);
 
 void coset_fft_with_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &constant);
 

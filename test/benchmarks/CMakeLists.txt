@@ -176,3 +176,43 @@ set_target_properties(
 
     RUNTIME_OUTPUT_DIRECTORY ..
 )
+
+
+add_executable(
+    pedersen_bench
+    bench_pedersen.cpp
+)
+
+if (WIN32)
+    target_link_libraries(
+        pedersen_bench
+        PUBLIC
+        barretenberg
+        PRIVATE
+        benchmark
+        wsock32
+        ws2_32
+    )
+else()
+    target_link_libraries(
+        pedersen_bench
+        PUBLIC
+        barretenberg
+        PRIVATE
+        benchmark
+    )
+endif()
+
+target_include_directories(
+    pedersen_bench
+    PRIVATE
+        ${private_include_dir}
+        ${include_dir}
+)
+
+set_target_properties(
+    pedersen_bench
+    PROPERTIES
+
+    RUNTIME_OUTPUT_DIRECTORY ..
+)

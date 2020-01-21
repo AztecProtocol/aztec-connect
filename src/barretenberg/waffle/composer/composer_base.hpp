@@ -1,12 +1,14 @@
 #pragma once
 
 #include "../../curves/bn254/fr.hpp"
+#include "../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../polynomials/polynomial.hpp"
 #include "../../transcript/manifest.hpp"
 #include "../../types.hpp"
-
+#include "../proof_system/permutation.hpp"
 #include "../proof_system/prover/prover.hpp"
-
+#include <memory>
+#include <vector>
 
 namespace waffle
 {
@@ -143,6 +145,9 @@ class ComposerBase
 
     virtual size_t get_num_gates() const { return n; }
     virtual size_t get_num_variables() const { return variables.size(); }
+    virtual std::shared_ptr<proving_key> compute_proving_key() = 0;
+    virtual std::shared_ptr<verification_key> compute_verification_key() = 0;
+    virtual std::shared_ptr<program_witness> compute_witness() = 0;
     virtual Prover preprocess() = 0;
 
     virtual bool supports_feature(const Features target_feature)
@@ -196,22 +201,23 @@ class ComposerBase
         wire_epicycles[b_idx] = std::vector<epicycle>();
     }
 
-    virtual void compute_sigma_permutations(Prover& output_state)
+    virtual void compute_sigma_permutations(proving_key* key, const size_t width)
     {
-        // create basic 'identity' permutation
-        output_state.sigma_1_mapping.reserve(output_state.n);
-        output_state.sigma_2_mapping.reserve(output_state.n);
-        output_state.sigma_3_mapping.reserve(output_state.n);
-        for (size_t i = 0; i < output_state.n; ++i)
+        std::vector<uint32_t> sigma_1_mapping;
+        std::vector<uint32_t> sigma_2_mapping;
+        std::vector<uint32_t> sigma_3_mapping;
+        sigma_1_mapping.reserve(key->n);
+        sigma_2_mapping.reserve(key->n);
+        sigma_3_mapping.reserve(key->n);
+        for (size_t i = 0; i < key->n; ++i)
         {
-            output_state.sigma_1_mapping.emplace_back(static_cast<uint32_t>(i));
-            output_state.sigma_2_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 30U));
-            output_state.sigma_3_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 31U));
+            sigma_1_mapping.emplace_back(static_cast<uint32_t>(i));
+            sigma_2_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 30U));
+            sigma_3_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 31U));
         }
-
-        uint32_t* sigmas[3]{ &output_state.sigma_1_mapping[0],
-                             &output_state.sigma_2_mapping[0],
-                             &output_state.sigma_3_mapping[0] };
+        uint32_t* sigmas[3]{ &sigma_1_mapping[0],
+                             &sigma_2_mapping[0],
+                             &sigma_3_mapping[0] };
 
         for (size_t i = 0; i < wire_epicycles.size(); ++i)
         {
@@ -225,9 +231,44 @@ class ComposerBase
                 epicycle next_epicycle = wire_epicycles[i][epicycle_index];
                 sigmas[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U][current_epicycle.gate_index] =
                     next_epicycle.gate_index + static_cast<uint32_t>(next_epicycle.wire_type);
-                ;
             }
         }
+    
+        barretenberg::polynomial sigma_1(key->n);
+        barretenberg::polynomial sigma_2(key->n);
+        barretenberg::polynomial sigma_3(key->n);
+
+        compute_permutation_lagrange_base_single(sigma_1, sigma_1_mapping, key->small_domain);
+        compute_permutation_lagrange_base_single(sigma_2, sigma_2_mapping, key->small_domain);
+        compute_permutation_lagrange_base_single(sigma_3, sigma_3_mapping, key->small_domain);
+
+        barretenberg::polynomial sigma_1_lagrange_base(sigma_1, key->n);
+        barretenberg::polynomial sigma_2_lagrange_base(sigma_2, key->n);
+        barretenberg::polynomial sigma_3_lagrange_base(sigma_3, key->n);
+
+        key->permutation_selectors_lagrange_base.insert({ "sigma_1", std::move(sigma_1_lagrange_base) });
+        key->permutation_selectors_lagrange_base.insert({ "sigma_2", std::move(sigma_2_lagrange_base) });
+        key->permutation_selectors_lagrange_base.insert({ "sigma_3", std::move(sigma_3_lagrange_base) });
+
+        sigma_1.ifft(key->small_domain);
+        sigma_2.ifft(key->small_domain);
+        sigma_3.ifft(key->small_domain);
+
+        barretenberg::polynomial sigma_1_fft(sigma_1, key->n * width);
+        barretenberg::polynomial sigma_2_fft(sigma_2, key->n * width);
+        barretenberg::polynomial sigma_3_fft(sigma_3, key->n * width);
+
+        sigma_1_fft.coset_fft(key->large_domain);
+        sigma_2_fft.coset_fft(key->large_domain);
+        sigma_3_fft.coset_fft(key->large_domain);
+
+        key->permutation_selectors.insert({ "sigma_1", std::move(sigma_1) });
+        key->permutation_selectors.insert({ "sigma_2", std::move(sigma_2) });
+        key->permutation_selectors.insert({ "sigma_3", std::move(sigma_3) });
+
+        key->permutation_selector_ffts.insert({ "sigma_1_fft", std::move(sigma_1_fft) });
+        key->permutation_selector_ffts.insert({ "sigma_2_fft", std::move(sigma_2_fft) });
+        key->permutation_selector_ffts.insert({ "sigma_3_fft", std::move(sigma_3_fft) });
     }
 
   public:
@@ -240,5 +281,14 @@ class ComposerBase
     std::vector<barretenberg::fr::field_t> variables;
     std::vector<std::vector<epicycle>> wire_epicycles;
     size_t features = static_cast<size_t>(Features::SAD_TROMBONE);
+
+    bool computed_proving_key = false;
+    std::shared_ptr<proving_key> circuit_proving_key;
+
+    bool computed_verification_key = false;
+    std::shared_ptr<verification_key> circuit_verification_key;
+
+    bool computed_witness = false;
+    std::shared_ptr<program_witness> witness;
 };
 } // namespace waffle

@@ -33,140 +33,6 @@ constexpr size_t START = (1 << 20) >> 7;
 #define CIRCUIT_STATE_SIZE(x) ((x * 17 * sizeof(fr::field_t)) + (x * 3 * sizeof(uint32_t)))
 #define FFT_SIZE(x) (x * 22 * sizeof(fr::field_t))
 
-void generate_random_plonk_circuit(waffle::Prover& state)
-{
-    size_t n = state.n;
-    std::unique_ptr<waffle::ProverArithmeticWidget> widget = std::make_unique<waffle::ProverArithmeticWidget>(n);
-    state.w_l.resize(n);
-    state.w_r.resize(n);
-    state.w_o.resize(n);
-
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
-    // even indices = mul gates, odd incides = add gates
-    // make selector polynomial_arithmetic / wire values randomly distributed (subject to gate constraints)
-    fr::field_t q_m_seed = fr::random_element();
-    fr::field_t q_l_seed = fr::random_element();
-    fr::field_t q_r_seed = fr::random_element();
-    fr::field_t q_o_seed = fr::random_element();
-    fr::field_t q_c_seed = fr::random_element();
-    fr::field_t w_l_seed = fr::random_element();
-    fr::field_t w_r_seed = fr::random_element();
-    fr::field_t q_m_acc;
-    fr::field_t q_l_acc;
-    fr::field_t q_r_acc;
-    fr::field_t q_o_acc;
-    fr::field_t q_c_acc;
-    fr::field_t w_l_acc;
-    fr::field_t w_r_acc;
-    fr::__copy(q_m_seed, q_m_acc);
-    fr::__copy(q_l_seed, q_l_acc);
-    fr::__copy(q_r_seed, q_r_acc);
-    fr::__copy(q_o_seed, q_o_acc);
-    fr::__copy(q_c_seed, q_c_acc);
-    fr::__copy(w_l_seed, w_l_acc);
-    fr::__copy(w_r_seed, w_r_acc);
-
-    for (size_t i = 0; i < n / 2; i += 2) {
-        fr::__copy(q_m_acc, widget->q_m.at(i));
-        fr::__copy(fr::zero, widget->q_l.at(i));
-        fr::__copy(fr::zero, widget->q_r.at(i));
-        fr::__copy(q_o_acc, widget->q_o.at(i));
-        fr::__copy(q_c_acc, widget->q_c.at(i));
-        fr::__copy(w_l_acc, state.w_l.at(i));
-        fr::__copy(w_r_acc, state.w_r.at(i));
-        fr::__copy(widget->q_o.at(i), state.w_o.at(i));
-
-        fr::__mul(q_m_acc, q_m_seed, q_m_acc);
-        fr::__mul(q_l_acc, q_l_seed, q_l_acc);
-        fr::__mul(q_r_acc, q_r_seed, q_r_acc);
-        fr::__mul(q_o_acc, q_o_seed, q_o_acc);
-        fr::__mul(q_c_acc, q_c_seed, q_c_acc);
-        fr::__mul(w_l_acc, w_l_seed, w_l_acc);
-        fr::__mul(w_r_acc, w_r_seed, w_r_acc);
-
-        fr::__copy(fr::zero, widget->q_m.at(i + 1));
-        fr::__copy(q_l_acc, widget->q_l.at(i + 1));
-        fr::__copy(q_r_acc, widget->q_r.at(i + 1));
-        fr::__copy(q_o_acc, widget->q_o.at(i + 1));
-        fr::__copy(q_c_acc, widget->q_c.at(i + 1));
-        fr::__copy(w_l_acc, state.w_l.at(i + 1));
-        fr::__copy(w_r_acc, state.w_r.at(i + 1));
-        fr::__copy(widget->q_o.at(i + 1), state.w_o.at(i + 1));
-
-        fr::__mul(q_m_acc, q_m_seed, q_m_acc);
-        fr::__mul(q_l_acc, q_l_seed, q_l_acc);
-        fr::__mul(q_r_acc, q_r_seed, q_r_acc);
-        fr::__mul(q_o_acc, q_o_seed, q_o_acc);
-        fr::__mul(q_c_acc, q_c_seed, q_c_acc);
-        fr::__mul(w_l_acc, w_l_seed, w_l_acc);
-        fr::__mul(w_r_acc, w_r_seed, w_r_acc);
-    }
-    fr::batch_invert(state.w_o.get_coefficients(), n / 2);
-
-    for (size_t i = 0; i < n / 2; ++i) {
-        fr::__mul(widget->q_l.at(i), state.w_l.at(i), T0);
-        fr::__mul(widget->q_r.at(i), state.w_r.at(i), T1);
-        fr::__mul(state.w_l.at(i), state.w_r.at(i), T2);
-        fr::__mul(T2, widget->q_m.at(i), T2);
-        fr::__add(T0, T1, T0);
-        fr::__add(T0, T2, T0);
-        fr::__add(T0, widget->q_c.at(i), T0);
-        fr::__neg(T0, T0);
-        fr::__mul(state.w_o.at(i), T0, state.w_o.at(i));
-    }
-    size_t shift = n / 2;
-    polynomial_arithmetic::copy_polynomial(&state.w_l.at(0), &state.w_l.at(shift), shift, shift);
-    polynomial_arithmetic::copy_polynomial(&state.w_r.at(0), &state.w_r.at(shift), shift, shift);
-    polynomial_arithmetic::copy_polynomial(&state.w_o.at(0), &state.w_o.at(shift), shift, shift);
-    polynomial_arithmetic::copy_polynomial(&widget->q_m.at(0), &widget->q_m.at(shift), shift, shift);
-    polynomial_arithmetic::copy_polynomial(&widget->q_l.at(0), &widget->q_l.at(shift), shift, shift);
-    polynomial_arithmetic::copy_polynomial(&widget->q_r.at(0), &widget->q_r.at(shift), shift, shift);
-    polynomial_arithmetic::copy_polynomial(&widget->q_o.at(0), &widget->q_o.at(shift), shift, shift);
-    polynomial_arithmetic::copy_polynomial(&widget->q_c.at(0), &widget->q_c.at(shift), shift, shift);
-
-    state.sigma_1_mapping.resize(n);
-    state.sigma_2_mapping.resize(n);
-    state.sigma_3_mapping.resize(n);
-    // create basic permutation - second half of witness vector is a copy of the first half
-    for (size_t i = 0; i < n / 2; ++i) {
-        state.sigma_1_mapping[shift + i] = (uint32_t)i;
-        state.sigma_2_mapping[shift + i] = (uint32_t)i + (1U << 30U);
-        state.sigma_3_mapping[shift + i] = (uint32_t)i + (1U << 31U);
-        state.sigma_1_mapping[i] = (uint32_t)(i + shift);
-        state.sigma_2_mapping[i] = (uint32_t)(i + shift) + (1U << 30U);
-        state.sigma_3_mapping[i] = (uint32_t)(i + shift) + (1U << 31U);
-    }
-
-    state.w_l.at(n - 1) = fr::zero;
-    state.w_r.at(n - 1) = fr::zero;
-    state.w_o.at(n - 1) = fr::zero;
-    widget->q_c.at(n - 1) = fr::zero;
-    state.w_l.at(shift - 1) = fr::zero;
-    state.w_r.at(shift - 1) = fr::zero;
-    state.w_o.at(shift - 1) = fr::zero;
-    widget->q_c.at(shift - 1) = fr::zero;
-    widget->q_m.at(shift - 1) = fr::zero;
-    widget->q_l.at(shift - 1) = fr::zero;
-    widget->q_r.at(shift - 1) = fr::zero;
-    widget->q_o.at(shift - 1) = fr::zero;
-    // make last permutation the same as identity permutation
-    state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
-    state.sigma_2_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 30U);
-    state.sigma_3_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 31U);
-    state.sigma_1_mapping[n - 1] = (uint32_t)n - 1;
-    state.sigma_2_mapping[n - 1] = (uint32_t)n - 1 + (1U << 30U);
-    state.sigma_3_mapping[n - 1] = (uint32_t)n - 1 + (1U << 31U);
-
-    widget->q_l.at(n - 1) = fr::zero;
-    widget->q_r.at(n - 1) = fr::zero;
-    widget->q_o.at(n - 1) = fr::zero;
-    widget->q_m.at(n - 1) = fr::zero;
-
-    state.widgets.emplace_back(std::move(widget));
-}
-
 struct global_vars {
     alignas(32) g1::affine_element g1_pair_points[2];
     alignas(32) g2::affine_element g2_pair_points[2];
@@ -182,9 +48,9 @@ struct global_vars {
 
 global_vars globals;
 
-waffle::Prover plonk_circuit_states[8]{
-    waffle::Prover(START),      waffle::Prover(START * 2),  waffle::Prover(START * 4),  waffle::Prover(START * 8),
-    waffle::Prover(START * 16), waffle::Prover(START * 32), waffle::Prover(START * 64), waffle::Prover(START * 128),
+waffle::CircuitFFTState plonk_circuit_states[8]{
+    waffle::CircuitFFTState(START),      waffle::CircuitFFTState(START * 2),  waffle::CircuitFFTState(START * 4),  waffle::CircuitFFTState(START * 8),
+    waffle::CircuitFFTState(START * 16), waffle::CircuitFFTState(START * 32), waffle::CircuitFFTState(START * 64), waffle::CircuitFFTState(START * 128),
 };
 
 void generate_scalars(fr::field_t* scalars)
@@ -213,12 +79,6 @@ const auto init = []() {
     globals.scalars = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * MAX_GATES * MAX_ROUNDS));
     std::string my_file_path = std::string(BARRETENBERG_SRS_PATH);
     globals.data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (8 * 17 * MAX_GATES)));
-
-    for (size_t i = 0; i < 8; ++i) {
-        size_t n = (MAX_GATES >> 7) << i;
-        printf("%zu\n", n);
-        generate_random_plonk_circuit(plonk_circuit_states[i]);
-    }
 
     generate_pairing_points(&globals.g1_pair_points[0], &globals.g2_pair_points[0]);
     for (size_t i = 0; i < MAX_ROUNDS; ++i) {
@@ -330,11 +190,29 @@ void new_pippenger_one_million_batched_scalar_multiplications_bench(State& state
 }
 BENCHMARK(new_pippenger_one_million_batched_scalar_multiplications_bench);
 
+void coset_fft_bench_parallel(State& state) noexcept
+{
+    for (auto _ : state) {
+        size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
+        barretenberg::polynomial_arithmetic::coset_fft(globals.data, plonk_circuit_states[idx].large_domain);
+    }
+}
+BENCHMARK(coset_fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
+
+void alternate_coset_fft_bench_parallel(State& state) noexcept
+{
+    for (auto _ : state) {
+        size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
+        barretenberg::polynomial_arithmetic::coset_fft(globals.data, plonk_circuit_states[idx].small_domain, plonk_circuit_states[idx].small_domain, 4);
+    }
+}
+BENCHMARK(alternate_coset_fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
+
 void fft_bench_parallel(State& state) noexcept
 {
     for (auto _ : state) {
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
-        barretenberg::polynomial_arithmetic::fft(globals.data, plonk_circuit_states[idx].circuit_state.large_domain);
+        barretenberg::polynomial_arithmetic::fft(globals.data, plonk_circuit_states[idx].large_domain);
     }
 }
 BENCHMARK(fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
@@ -345,8 +223,8 @@ void fft_bench_serial(State& state) noexcept
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::fft_inner_serial(
             globals.data,
-            plonk_circuit_states[idx].circuit_state.large_domain.thread_size,
-            plonk_circuit_states[idx].circuit_state.large_domain.get_round_roots());
+            plonk_circuit_states[idx].large_domain.thread_size,
+            plonk_circuit_states[idx].large_domain.get_round_roots());
     }
 }
 BENCHMARK(fft_bench_serial)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);

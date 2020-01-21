@@ -108,14 +108,38 @@ class VerifierBaseWidget {
 
 class ProverBaseWidget {
   public:
-    ProverBaseWidget(const size_t deps = 0, const size_t feats = 0)
-        : version(deps, feats){};
+    ProverBaseWidget(waffle::proving_key* input_key,
+                     waffle::program_witness* input_witness,
+                     const size_t deps = 0,
+                     const size_t feats = 0)
+        : key(input_key)
+        , witness(input_witness)
+        , version(deps, feats){};
     ProverBaseWidget(const ProverBaseWidget& other)
-        : version(other.version)
+        : key(other.key)
+        , witness(other.witness)
+        , version(other.version)
     {}
     ProverBaseWidget(ProverBaseWidget&& other)
-        : version(other.version)
+        : key(other.key), witness(other.witness), version(other.version)
     {}
+
+    ProverBaseWidget& operator=(const ProverBaseWidget& other)
+    {
+        key = other.key;
+        witness = other.witness;
+        version = other.version;
+        return *this;
+    }
+
+    ProverBaseWidget& operator=(ProverBaseWidget&& other)
+    {
+        key = other.key;
+        witness = other.witness;
+        version = other.version;
+        return *this;
+    }
+    
     virtual ~ProverBaseWidget() {}
 
     virtual barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
@@ -123,20 +147,20 @@ class ProverBaseWidget {
                                                                     CircuitFFTState& circuit_state) = 0;
     virtual barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base,
                                                                   const transcript::Transcript& transcript,
-                                                                  const barretenberg::evaluation_domain& domain,
                                                                   barretenberg::polynomial& r) = 0;
     virtual barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
                                                                 const transcript::Transcript& transcript,
                                                                 barretenberg::fr::field_t* poly,
-                                                                barretenberg::fr::field_t*,
-                                                                const barretenberg::evaluation_domain& domain) = 0;
-    virtual void compute_transcript_elements(transcript::Transcript&, const barretenberg::evaluation_domain&){};
+                                                                barretenberg::fr::field_t*) = 0;
+    virtual void compute_transcript_elements(transcript::Transcript&){};
 
     virtual std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(
-        const barretenberg::evaluation_domain& domain, const ReferenceString& reference_string) const = 0;
+        const ReferenceString& reference_string) const = 0;
 
-    virtual void reset(const barretenberg::evaluation_domain& domain) = 0;
+    virtual void reset() = 0;
 
+    proving_key* key;
+    program_witness* witness;
     WidgetVersionControl version;
 };
 

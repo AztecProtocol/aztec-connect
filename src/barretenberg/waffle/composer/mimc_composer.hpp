@@ -18,8 +18,6 @@ class MiMCComposer : public StandardComposer {
     {
         q_mimc_coefficient.reserve(size_hint);
         q_mimc_selector.reserve(size_hint);
-        add_variable(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
-        zero_idx = 0;
         features |= static_cast<size_t>(Features::MIMC_SELECTORS);
     };
     MiMCComposer(MiMCComposer&& other) = default;
@@ -27,6 +25,9 @@ class MiMCComposer : public StandardComposer {
 
     ~MiMCComposer() {}
 
+    std::shared_ptr<proving_key> compute_proving_key() override;
+    std::shared_ptr<verification_key> compute_verification_key() override;
+    std::shared_ptr<program_witness> compute_witness() override;
     Prover preprocess() override;
 
     void create_add_gate(const add_triple& in) override;
@@ -42,7 +43,6 @@ class MiMCComposer : public StandardComposer {
     std::vector<barretenberg::fr::field_t> q_mimc_selector;
 
     uint32_t current_output_wire = static_cast<uint32_t>(-1);
-    uint32_t zero_idx;
 
     static transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
     {

@@ -37,6 +37,8 @@ public:
 
     void fft(const evaluation_domain &domain);
     void coset_fft(const evaluation_domain &domain);
+    void coset_fft(const evaluation_domain &domain, const evaluation_domain& large_domain, const size_t domain_extension);
+
     void coset_fft_with_constant(const evaluation_domain &domain, const barretenberg::fr::field_t &costant);
     void ifft(const evaluation_domain &domain);
     void ifft_with_constant(const evaluation_domain &domain, const barretenberg::fr::field_t &constant);

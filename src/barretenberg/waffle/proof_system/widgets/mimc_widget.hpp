@@ -21,7 +21,7 @@ class VerifierMiMCWidget : public VerifierBaseWidget {
 
 class ProverMiMCWidget : public ProverBaseWidget {
   public:
-    ProverMiMCWidget(const size_t n);
+    ProverMiMCWidget(proving_key* key, program_witness* witness);
     ProverMiMCWidget(const ProverMiMCWidget& other);
     ProverMiMCWidget(ProverMiMCWidget&& other);
     ProverMiMCWidget& operator=(const ProverMiMCWidget& other);
@@ -32,22 +32,21 @@ class ProverMiMCWidget : public ProverBaseWidget {
                                                             CircuitFFTState& circuit_state);
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base,
                                                           const transcript::Transcript& transcript,
-                                                          const barretenberg::evaluation_domain& domain,
                                                           barretenberg::polynomial& r);
     barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
                                                                 const transcript::Transcript& transcript,
                                                                 barretenberg::fr::field_t* poly,
-                                                                barretenberg::fr::field_t*,
-                                                                const barretenberg::evaluation_domain& domain);
-    void compute_transcript_elements(transcript::Transcript& transcript, const barretenberg::evaluation_domain&);
+                                                                barretenberg::fr::field_t*);
+    void compute_transcript_elements(transcript::Transcript& transcript);
 
-    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const barretenberg::evaluation_domain& domain,
+    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(
                                                                          const ReferenceString& reference_string) const;
-    void reset(const barretenberg::evaluation_domain& domain);
+    void reset();
 
-    barretenberg::polynomial q_mimc_selector;
-    barretenberg::polynomial q_mimc_coefficient;
+    barretenberg::polynomial& q_mimc_selector;
+    barretenberg::polynomial& q_mimc_coefficient;
 
-    size_t n;
+    barretenberg::polynomial& q_mimc_selector_fft;
+    barretenberg::polynomial& q_mimc_coefficient_fft;
 };
 } // namespace waffle

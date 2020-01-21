@@ -14,15 +14,19 @@ public:
         w_r.reserve(size_hint);
         w_o.reserve(size_hint);
         q_m.reserve(size_hint);
-        q_l.reserve(size_hint);
-        q_r.reserve(size_hint);
-        q_o.reserve(size_hint);
+        q_1.reserve(size_hint);
+        q_2.reserve(size_hint);
+        q_3.reserve(size_hint);
         q_c.reserve(size_hint);
+        zero_idx = add_variable(barretenberg::fr::field_t({{0,0,0,0}}));
     };
     StandardComposer(StandardComposer &&other) = default;
     StandardComposer& operator=(StandardComposer &&other) = default;
     ~StandardComposer() {}
 
+    virtual std::shared_ptr<proving_key> compute_proving_key() override;
+    virtual std::shared_ptr<verification_key> compute_verification_key() override;
+    virtual std::shared_ptr<program_witness> compute_witness() override;
     virtual Prover preprocess() override;
 
     void create_add_gate(const add_triple &in) override;
@@ -32,12 +36,12 @@ public:
     void create_dummy_gates();
     size_t get_num_constant_gates() const override { return 0; }
 
-    size_t zero_idx;
+    uint32_t zero_idx;
 
     std::vector<barretenberg::fr::field_t> q_m;
-    std::vector<barretenberg::fr::field_t> q_l;
-    std::vector<barretenberg::fr::field_t> q_r;
-    std::vector<barretenberg::fr::field_t> q_o;
+    std::vector<barretenberg::fr::field_t> q_1;
+    std::vector<barretenberg::fr::field_t> q_2;
+    std::vector<barretenberg::fr::field_t> q_3;
     std::vector<barretenberg::fr::field_t> q_c;
 
     static transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
