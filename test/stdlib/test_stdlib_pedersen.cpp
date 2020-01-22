@@ -68,8 +68,11 @@ TEST(stdlib_pedersen, test_pedersen)
         fr::field_t two = fr::add(fr::one, fr::one);
         right_in = fr::sub(right_in, two);
     }
-    uint64_t* left_scalar = &(fr::from_montgomery_form(left_in).data[0]);
-    uint64_t* right_scalar = &(fr::from_montgomery_form(right_in).data[0]);
+    fr::field_t converted_left = fr::from_montgomery_form(left_in);
+    fr::field_t converted_right = fr::from_montgomery_form(right_in);
+
+    uint64_t* left_scalar = &(converted_left.data[0]);
+    uint64_t* right_scalar = &(converted_right.data[0]);
 
     barretenberg::wnaf::fixed_wnaf<255, 1, 2>(left_scalar, &left_wnafs[0], left_skew, 0);
     barretenberg::wnaf::fixed_wnaf<255, 1, 2>(right_scalar, &right_wnafs[0], right_skew, 0);
