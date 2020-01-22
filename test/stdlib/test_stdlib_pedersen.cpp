@@ -68,8 +68,11 @@ TEST(stdlib_pedersen, test_pedersen)
         fr::field_t two = fr::add(fr::one, fr::one);
         right_in = fr::sub(right_in, two);
     }
-    barretenberg::wnaf::fixed_wnaf<255, 1, 2>(&fr::from_montgomery_form(left_in).data[0], &left_wnafs[0], left_skew, 0);
-    barretenberg::wnaf::fixed_wnaf<255, 1, 2>(&fr::from_montgomery_form(right_in).data[0], &right_wnafs[0], right_skew, 0);
+    uint64_t* left_scalar = &(fr::from_montgomery_form(left_in).data[0]);
+    uint64_t* right_scalar = &(fr::from_montgomery_form(right_in).data[0]);
+
+    barretenberg::wnaf::fixed_wnaf<255, 1, 2>(left_scalar, &left_wnafs[0], left_skew, 0);
+    barretenberg::wnaf::fixed_wnaf<255, 1, 2>(right_scalar, &right_wnafs[0], right_skew, 0);
 
     const auto compute_split_scalar = [](uint64_t* wnafs, const size_t range) {
         grumpkin::fr::field_t result = grumpkin::fr::zero;

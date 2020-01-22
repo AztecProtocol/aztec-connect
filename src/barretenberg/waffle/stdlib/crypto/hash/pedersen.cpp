@@ -51,6 +51,7 @@ point hash_single(const field_t& in, const size_t hash_index)
     uint64_t wnaf_entries[num_quads + 1] = { 0 };
 
     bool skew = false;
+
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
     fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), initial_exponent));
