@@ -2,6 +2,7 @@
 
 #include "../../../curves/bn254/fr.hpp"
 #include "../common.hpp"
+#include <ostream>
 
 namespace plonk {
 namespace stdlib {

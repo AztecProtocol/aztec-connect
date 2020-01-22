@@ -1,6 +1,20 @@
 # barretenburg
 # copyright 2019 Spilsbury Holdings
 
+include(FetchContent)
+
+FetchContent_Declare(
+    leveldb
+    GIT_REPOSITORY https://github.com/google/leveldb.git
+    GIT_TAG 1.22
+)
+
+FetchContent_GetProperties(leveldb)
+if(NOT leveldb_POPULATED)
+    FetchContent_Populate(leveldb)
+    add_subdirectory(${leveldb_SOURCE_DIR} ${leveldb_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
 add_compile_options(-Werror -Wall -Wextra -Wconversion -Wsign-conversion)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -88,8 +102,13 @@ add_library(
     waffle/stdlib/mimc.hpp
     waffle/stdlib/crypto/hash/sha256.tcc
     waffle/stdlib/crypto/hash/sha256.hpp
+    waffle/stdlib/merkle_tree/hash.hpp
     waffle/stdlib/merkle_tree/merkle_tree.tcc
     waffle/stdlib/merkle_tree/merkle_tree.hpp
+    waffle/stdlib/merkle_tree/memory_store.hpp
+    waffle/stdlib/merkle_tree/memory_store.cpp
+    waffle/stdlib/merkle_tree/leveldb_store.hpp
+    waffle/stdlib/merkle_tree/leveldb_store.cpp
     noir/expression.cpp
     noir/statement.cpp
     noir/printer.cpp
@@ -105,6 +124,7 @@ target_include_directories(
     barretenberg
     SYSTEM PRIVATE
         ${private_include_dir}/boost
+        ${leveldb_SOURCE_DIR}/include
 )
 
 set_target_properties(
@@ -116,6 +136,8 @@ set_target_properties(
 
 target_link_libraries(
     barretenberg
+    PRIVATE
+    leveldb
 )
 
 if(PROFILING)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "./bool.hpp"
+#include "../../composer/composer_base.hpp"
 
 namespace plonk
 {

@@ -20,7 +20,7 @@ using namespace plonk;
 typedef waffle::StandardComposer Composer;
 typedef stdlib::field_t<Composer> field_t;
 typedef stdlib::bool_t<Composer> bool_t;
-typedef stdlib::merkle_tree<Composer> merkle_tree;
+typedef stdlib::merkle_tree::merkle_tree<Composer> merkle_tree;
 typedef stdlib::witness_t<Composer> witness_t;
 
 TEST(stdlib_merkle_tree, test_check_membership)
