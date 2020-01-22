@@ -408,21 +408,22 @@ void Prover::compute_identity_grand_product_coefficients()
         }
     }
 
-    // // We can shrink the evaluation domain by 2 for the wire polynomials and Z(X), to save on memory
-    // circuit_state.w_l_fft.shrink_evaluation_domain(2);
-    // circuit_state.w_r_fft.shrink_evaluation_domain(2);
-    // circuit_state.w_o_fft.shrink_evaluation_domain(2);
-    // z_fft.shrink_evaluation_domain(2);
+// // We can shrink the evaluation domain by 2 for the wire polynomials and Z(X), to save on memory
+// circuit_state.w_l_fft.shrink_evaluation_domain(2);
+// circuit_state.w_r_fft.shrink_evaluation_domain(2);
+// circuit_state.w_o_fft.shrink_evaluation_domain(2);
+// z_fft.shrink_evaluation_domain(2);
 
-    // size = 2n, max size = 2n + 4 (appending 4 coefficients after poly arithmetic call)
+// size = 2n, max size = 2n + 4 (appending 4 coefficients after poly arithmetic call)
+#ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-
+#endif
     polynomial& l_1 = key->lagrange_1; //  (n + n, n + n + 4);
-
+#ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute lagrange polynomial fft: " << diff.count() << "ms" << std::endl;
-
+#endif
     // accumulate degree-2n terms into gate_poly_mid
     fr::field_t alpha_squared = fr::sqr(alpha);
 
@@ -455,17 +456,17 @@ void Prover::compute_identity_grand_product_coefficients()
     // at the (2n)'th roots of unity
     // => to get Z(X.w) instead of Z(X), index element (i+2) instead of i
     fr::__sub(z_fft[i + 4], alpha, T6); // T6 = (Z(X.w) - 1).(\alpha^2)
-    fr::__mul(T6, alpha, T6);               // T6 = (Z(X.w) - 1).(\alpha^3)
-    fr::__mul(T6, l_1[i + 8], T6);          // T6 = (Z(X.w) - 1).(\alpha^3).L{n-1}(X)
+    fr::__mul(T6, alpha, T6);           // T6 = (Z(X.w) - 1).(\alpha^3)
+    fr::__mul(T6, l_1[i + 8], T6);      // T6 = (Z(X.w) - 1).(\alpha^3).L{n-1}(X)
 
     // Step 2: Compute (Z(X) - 1).(\alpha^4).L1(X)
     // We need to verify that Z(X) equals `1` when evaluated at the first element of our subgroup H
     // i.e. Z(X) starts at 1 and ends at 1
     // The `alpha^4` term is so that we can add this as a linearly independent term in our quotient polynomial
 
-    fr::__sub(z_fft[i], alpha, T4); // T4 = (Z(X) - 1).(\alpha^2)
-    fr::__mul(T4, alpha_squared, T4);   // T4 = (Z(X) - 1).(\alpha^4)
-    fr::__mul(T4, l_1[i], T4);          // T4 = (Z(X) - 1).(\alpha^2).L1(X)
+    fr::__sub(z_fft[i], alpha, T4);   // T4 = (Z(X) - 1).(\alpha^2)
+    fr::__mul(T4, alpha_squared, T4); // T4 = (Z(X) - 1).(\alpha^4)
+    fr::__mul(T4, l_1[i], T4);        // T4 = (Z(X) - 1).(\alpha^2).L1(X)
 
     // Add T4 and T6 into the degree 2n component of the quotient polynomial
     fr::__add(T4, T6, T4);
@@ -492,52 +493,62 @@ void Prover::execute_preamble_round()
 
 void Prover::execute_first_round()
 {
+#ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-
+#endif
     init_quotient_polynomials();
-
+#ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "init quotient polys: " << diff.count() << "ms" << std::endl;
-
+#endif
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
+#endif
     compute_wire_coefficients();
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute wire coefficients: " << diff.count() << "ms" << std::endl;
-
+#endif
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
+#endif
     compute_wire_commitments();
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute wire commitments: " << diff.count() << "ms" << std::endl;
+#endif
 }
 
 void Prover::execute_second_round()
 {
+#ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-
+#endif
     compute_z_coefficients();
+#ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute z coefficients: " << diff.count() << "ms" << std::endl;
-
+#endif
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
+#endif
     compute_z_commitment();
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute z commitment: " << diff.count() << "ms" << std::endl;
+#endif
 }
 
 void Prover::execute_third_round()
 {
+#ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-
+#endif
     polynomial& w_l_fft = key->wire_ffts.at("w_1_fft"); // polynomial(witness->wires.at("w_1"), 4 * n + 4);
     polynomial& w_r_fft = key->wire_ffts.at("w_2_fft"); // polynomial(witness->wires.at("w_2"), 4 * n + 4);
     polynomial& w_o_fft = key->wire_ffts.at("w_3_fft"); // polynomial(witness->wires.at("w_3"), 4 * n + 4);
@@ -549,21 +560,23 @@ void Prover::execute_third_round()
     polynomial_arithmetic::copy_polynomial(&w_l[0], &w_l_fft[0], n, 4 * n + 4);
     polynomial_arithmetic::copy_polynomial(&w_r[0], &w_r_fft[0], n, 4 * n + 4);
     polynomial_arithmetic::copy_polynomial(&w_o[0], &w_o_fft[0], n, 4 * n + 4);
-
+#ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "wire copy into fft poly time: " << diff.count() << "ms" << std::endl;
+#endif
 
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
+#endif
     w_l_fft.coset_fft(key->large_domain);
     w_r_fft.coset_fft(key->large_domain);
     w_o_fft.coset_fft(key->large_domain);
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "3 wire ffts: " << diff.count() << "ms" << std::endl;
-
+#endif
     w_l_fft.add_lagrange_base_coefficient(w_l_fft[0]);
     w_l_fft.add_lagrange_base_coefficient(w_l_fft[1]);
     w_l_fft.add_lagrange_base_coefficient(w_l_fft[2]);
@@ -576,9 +589,9 @@ void Prover::execute_third_round()
     w_o_fft.add_lagrange_base_coefficient(w_o_fft[1]);
     w_o_fft.add_lagrange_base_coefficient(w_o_fft[2]);
     w_o_fft.add_lagrange_base_coefficient(w_o_fft[3]);
-
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
+#endif
     if (__DEBUG_HAS_FOURTH_WIRE) {
         polynomial& w_4_fft = key->wire_ffts.at("w_4_fft"); // polynomial(witness->wires.at("w_1"), 4 * n + 4);
         polynomial& w_4 = witness->wires.at("w_4");
@@ -590,109 +603,117 @@ void Prover::execute_third_round()
         w_4_fft.add_lagrange_base_coefficient(w_4_fft[2]);
         w_4_fft.add_lagrange_base_coefficient(w_4_fft[3]);
     }
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute fourth wire computation: " << diff.count() << "ms" << std::endl;
+#endif
 
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
+#endif
     polynomial& z = key->z;
     polynomial& z_fft = key->z_fft;
     polynomial_arithmetic::copy_polynomial(&z[0], &z_fft[0], n, 4 * n + 4);
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "copy z: " << diff.count() << "ms" << std::endl;
-
+#endif
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
+#endif
     compute_permutation_grand_product_coefficients();
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute permutation grand product coeffs: " << diff.count() << "ms" << std::endl;
-
+#endif
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
+#endif
     compute_identity_grand_product_coefficients();
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute identity grand product coeffs: " << diff.count() << "ms" << std::endl;
-
+#endif
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
     fr::field_t alpha_base = fr::sqr(fr::sqr(alpha));
     fr::mul(alpha, alpha_base);
     for (size_t i = 0; i < widgets.size(); ++i) {
+#ifdef DEBUG_TIMING
         std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-
+#endif
         alpha_base = widgets[i]->compute_quotient_contribution(alpha_base, transcript, circuit_state);
+#ifdef DEBUG_TIMING
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         std::cout << "widget " << i << " quotient compute time: " << diff.count() << "ms" << std::endl;
+#endif
     }
-
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
-    if (uses_quotient_mid)
-    {
+#endif
+    if (uses_quotient_mid) {
         polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(
-        circuit_state.quotient_mid.get_coefficients(), key->small_domain, key->mid_domain);
+            circuit_state.quotient_mid.get_coefficients(), key->small_domain, key->mid_domain);
     }
     polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(
         circuit_state.quotient_large.get_coefficients(), key->small_domain, key->large_domain);
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "divide by vanishing polynomial: " << diff.count() << "ms" << std::endl;
-
+#endif
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
-    if (uses_quotient_mid)
-    {
+#endif
+    if (uses_quotient_mid) {
         circuit_state.quotient_mid.coset_ifft(key->mid_domain);
     }
     circuit_state.quotient_large.coset_ifft(key->large_domain);
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "final inverse fourier transforms: " << diff.count() << "ms" << std::endl;
-
-    if (uses_quotient_mid)
-    {
+#endif
+    if (uses_quotient_mid) {
         ITERATE_OVER_DOMAIN_START(key->mid_domain);
         fr::__add(circuit_state.quotient_large[i], circuit_state.quotient_mid[i], circuit_state.quotient_large[i]);
         ITERATE_OVER_DOMAIN_END;
     }
-
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
+#endif
     compute_quotient_commitment();
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute quotient commitment: " << diff.count() << "ms" << std::endl;
+#endif
 }
 
 void Prover::execute_fourth_round()
 {
+#ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-
+#endif
     compute_linearisation_coefficients();
-
+#ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute linearisation coefficients: " << diff.count() << "ms" << std::endl;
-
+#endif
     transcript.apply_fiat_shamir("nu");
 }
 
 void Prover::execute_fifth_round()
 {
+#ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-    
+#endif
     fr::field_t nu = fr::serialize_from_buffer(transcript.get_challenge("nu").begin());
     fr::field_t z_challenge = fr::serialize_from_buffer(transcript.get_challenge("z").begin());
     // fr::field_t beta = fr::serialize_from_buffer(transcript.get_challenge("beta").begin());
@@ -719,7 +740,7 @@ void Prover::execute_fifth_round()
     // Next step: compute the two Kate polynomial commitments, and associated opening proofs
     // We have two evaluation points: z and z.omega
     // We need to create random linear combinations of each individual polynomial and combine them
-    
+
     polynomial& opening_poly = key->opening_poly;
     polynomial& shifted_opening_poly = key->shifted_opening_poly;
     fr::field_t z_pow_n;
@@ -817,37 +838,39 @@ void Prover::execute_fifth_round()
         ITERATE_OVER_DOMAIN_END;
         nu_base = fr::mul(nu_base, nu);
     }
-
+#ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute base opening poly contribution: " << diff.count() << "ms" << std::endl;
-
+#endif
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
+#endif
     for (size_t i = 0; i < widgets.size(); ++i) {
         nu_base = widgets[i]->compute_opening_poly_contribution(
             nu_base, transcript, &opening_poly[0], &shifted_opening_poly[0]);
     }
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute widget opening poly contributions: " << diff.count() << "ms" << std::endl;
-
+#endif
     fr::field_t shifted_z;
     fr::__mul(z_challenge, key->small_domain.root, shifted_z);
-
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
+#endif
     opening_poly.compute_kate_opening_coefficients(z_challenge);
 
     shifted_opening_poly.compute_kate_opening_coefficients(shifted_z);
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute kate opening poly coefficients: " << diff.count() << "ms" << std::endl;
-
+#endif
+#ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
-
+#endif
     g1::element PI_Z =
         scalar_multiplication::pippenger(opening_poly.get_coefficients(), key->reference_string.monomials, n);
 
@@ -859,11 +882,11 @@ void Prover::execute_fifth_round()
 
     g1::jacobian_to_affine(PI_Z, PI_Z_affine);
     g1::jacobian_to_affine(PI_Z_OMEGA, PI_Z_OMEGA_affine);
-
+#ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute opening commitment: " << diff.count() << "ms" << std::endl;
-
+#endif
     transcript.add_element("PI_Z", transcript_helpers::convert_g1_element(PI_Z_affine));
     transcript.add_element("PI_Z_OMEGA", transcript_helpers::convert_g1_element(PI_Z_OMEGA_affine));
 }
