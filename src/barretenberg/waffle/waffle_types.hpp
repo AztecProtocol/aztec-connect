@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <string>
 
 #include "../curves/bn254/fq.hpp"
 #include "../curves/bn254/fr.hpp"

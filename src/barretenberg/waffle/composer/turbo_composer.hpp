@@ -2,6 +2,7 @@
 
 #include "./composer_base.hpp"
 #include <map>
+#include <string>
 
 namespace waffle
 {
