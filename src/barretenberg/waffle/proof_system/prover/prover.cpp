@@ -24,13 +24,15 @@ namespace waffle {
 Prover::Prover(std::shared_ptr<proving_key> input_key,
                std::shared_ptr<program_witness> input_witness,
                const transcript::Manifest& input_manifest,
-               bool has_fourth_wire)
+               bool has_fourth_wire,
+               bool use_quotient_mid)
     : n(input_key == nullptr ? 0 : input_key->n)
     , circuit_state(n)
     , transcript(input_manifest)
     , __DEBUG_HAS_FOURTH_WIRE(has_fourth_wire)
     , key(input_key)
     , witness(input_witness)
+    , uses_quotient_mid(use_quotient_mid)
 {
     // if (input_key.get() != nullptr)
     // {
@@ -54,6 +56,7 @@ Prover::Prover(Prover&& other)
     , __DEBUG_HAS_FOURTH_WIRE(other.__DEBUG_HAS_FOURTH_WIRE)
     , key(std::move(other.key))
     , witness(std::move(other.witness))
+    , uses_quotient_mid(other.uses_quotient_mid)
 {
     for (size_t i = 0; i < other.widgets.size(); ++i) {
         widgets.emplace_back(std::move(other.widgets[i]));
@@ -74,7 +77,7 @@ Prover& Prover::operator=(Prover&& other)
     __DEBUG_HAS_FOURTH_WIRE = other.__DEBUG_HAS_FOURTH_WIRE;
     key = std::move(other.key);
     witness = std::move(other.witness);
-
+    uses_quotient_mid = other.uses_quotient_mid;
     return *this;
 }
 
@@ -423,7 +426,7 @@ void Prover::compute_identity_grand_product_coefficients()
     // accumulate degree-2n terms into gate_poly_mid
     fr::field_t alpha_squared = fr::sqr(alpha);
 
-    ITERATE_OVER_DOMAIN_START(key->mid_domain);
+    ITERATE_OVER_DOMAIN_START(key->large_domain);
     fr::field_t T4;
     fr::field_t T6;
 
@@ -451,21 +454,22 @@ void Prover::compute_identity_grand_product_coefficients()
     // z_fft already contains evaluations of Z(X).(\alpha^2)
     // at the (2n)'th roots of unity
     // => to get Z(X.w) instead of Z(X), index element (i+2) instead of i
-    fr::__sub(z_fft[2 * i + 4], alpha, T6); // T6 = (Z(X.w) - 1).(\alpha^2)
+    fr::__sub(z_fft[i + 4], alpha, T6); // T6 = (Z(X.w) - 1).(\alpha^2)
     fr::__mul(T6, alpha, T6);               // T6 = (Z(X.w) - 1).(\alpha^3)
-    fr::__mul(T6, l_1[i + 4], T6);          // T6 = (Z(X.w) - 1).(\alpha^3).L{n-1}(X)
+    fr::__mul(T6, l_1[i + 8], T6);          // T6 = (Z(X.w) - 1).(\alpha^3).L{n-1}(X)
 
     // Step 2: Compute (Z(X) - 1).(\alpha^4).L1(X)
     // We need to verify that Z(X) equals `1` when evaluated at the first element of our subgroup H
     // i.e. Z(X) starts at 1 and ends at 1
     // The `alpha^4` term is so that we can add this as a linearly independent term in our quotient polynomial
 
-    fr::__sub(z_fft[2 * i], alpha, T4); // T4 = (Z(X) - 1).(\alpha^2)
+    fr::__sub(z_fft[i], alpha, T4); // T4 = (Z(X) - 1).(\alpha^2)
     fr::__mul(T4, alpha_squared, T4);   // T4 = (Z(X) - 1).(\alpha^4)
     fr::__mul(T4, l_1[i], T4);          // T4 = (Z(X) - 1).(\alpha^2).L1(X)
 
     // Add T4 and T6 into the degree 2n component of the quotient polynomial
-    fr::__add(T4, T6, circuit_state.quotient_mid[i]);
+    fr::__add(T4, T6, T4);
+    fr::__add(circuit_state.quotient_large[i], T4, circuit_state.quotient_large[i]);
     ITERATE_OVER_DOMAIN_END;
 }
 
@@ -632,8 +636,11 @@ void Prover::execute_third_round()
 
     start = std::chrono::steady_clock::now();
 
-    polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(
+    if (uses_quotient_mid)
+    {
+        polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(
         circuit_state.quotient_mid.get_coefficients(), key->small_domain, key->mid_domain);
+    }
     polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(
         circuit_state.quotient_large.get_coefficients(), key->small_domain, key->large_domain);
 
@@ -643,16 +650,22 @@ void Prover::execute_third_round()
 
     start = std::chrono::steady_clock::now();
 
-    circuit_state.quotient_mid.coset_ifft(key->mid_domain);
+    if (uses_quotient_mid)
+    {
+        circuit_state.quotient_mid.coset_ifft(key->mid_domain);
+    }
     circuit_state.quotient_large.coset_ifft(key->large_domain);
 
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "final inverse fourier transforms: " << diff.count() << "ms" << std::endl;
 
-    ITERATE_OVER_DOMAIN_START(key->mid_domain);
-    fr::__add(circuit_state.quotient_large[i], circuit_state.quotient_mid[i], circuit_state.quotient_large[i]);
-    ITERATE_OVER_DOMAIN_END;
+    if (uses_quotient_mid)
+    {
+        ITERATE_OVER_DOMAIN_START(key->mid_domain);
+        fr::__add(circuit_state.quotient_large[i], circuit_state.quotient_mid[i], circuit_state.quotient_large[i]);
+        ITERATE_OVER_DOMAIN_END;
+    }
 
     start = std::chrono::steady_clock::now();
 

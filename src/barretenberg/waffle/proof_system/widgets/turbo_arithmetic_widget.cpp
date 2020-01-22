@@ -127,10 +127,10 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
 
-    polynomial& w_1_fft = key->wire_ffts.at("w_1_fft");
-    polynomial& w_2_fft = key->wire_ffts.at("w_2_fft");
-    polynomial& w_3_fft = key->wire_ffts.at("w_3_fft");
-    polynomial& w_4_fft = key->wire_ffts.at("w_4_fft");
+    fr::field_t* w_1_fft = &key->wire_ffts.at("w_1_fft")[0];
+    fr::field_t* w_2_fft = &key->wire_ffts.at("w_2_fft")[0];
+    fr::field_t* w_3_fft = &key->wire_ffts.at("w_3_fft")[0];
+    fr::field_t* w_4_fft = &key->wire_ffts.at("w_4_fft")[0];
 
     ITERATE_OVER_DOMAIN_START(key->large_domain);
     fr::field_t T0;
@@ -140,25 +140,25 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
     fr::field_t T4;
     fr::field_t T5;
 
-    fr::__mul(w_1_fft.at(i), q_m_fft.at(i), T0); // w_l * q_m = rdx
-    fr::__mul(T0, w_2_fft.at(i), T0);            // w_l * w_r * q_m = rdx
-    fr::__mul(w_1_fft.at(i), q_1_fft.at(i), T1); // w_l * q_l = rdi
-    fr::__mul(w_2_fft.at(i), q_2_fft.at(i), T2); // w_r * q_r = rsi
-    fr::__mul(w_3_fft.at(i), q_3_fft.at(i), T3); // w_o * q_o = r8
-    fr::__mul(w_4_fft.at(i), q_4_fft.at(i), T4);
-    fr::__mul(w_4_fft.at(i + 4), q_4_next_fft.at(i), T5);
+    fr::__mul_with_coarse_reduction(w_1_fft[i], q_m_fft[i], T0); // w_l * q_m = rdx
+    fr::__mul_with_coarse_reduction(T0, w_2_fft[i], T0);            // w_l * w_r * q_m = rdx
+    fr::__mul_with_coarse_reduction(w_1_fft[i], q_1_fft[i], T1); // w_l * q_l = rdi
+    fr::__mul_with_coarse_reduction(w_2_fft[i], q_2_fft[i], T2); // w_r * q_r = rsi
+    fr::__mul_with_coarse_reduction(w_3_fft[i], q_3_fft[i], T3); // w_o * q_o = r8
+    fr::__mul_with_coarse_reduction(w_4_fft[i], q_4_fft[i], T4);
+    fr::__mul_with_coarse_reduction(w_4_fft[i + 4], q_4_next_fft[i], T5);
 
-    fr::__add(T0, T1, T0); // q_m * w_l * w_r + w_l * q_l = rdx
-    fr::__add(T2, T3, T2); // q_r * w_r + q_o * w_o = rsi
-    fr::__add(T4, T5, T4); // q_m * w_l * w_r + w_l * q_l + q_r * w_r + q_o * w_o = rdx
-    fr::__add(T0, T2, T0);
-    fr::__add(T0, T4, T0);
+    fr::__add_with_coarse_reduction(T0, T1, T0); // q_m * w_l * w_r + w_l * q_l = rdx
+    fr::__add_with_coarse_reduction(T2, T3, T2); // q_r * w_r + q_o * w_o = rsi
+    fr::__add_with_coarse_reduction(T4, T5, T4); // q_m * w_l * w_r + w_l * q_l + q_r * w_r + q_o * w_o = rdx
+    fr::__add_with_coarse_reduction(T0, T2, T0);
+    fr::__add_with_coarse_reduction(T0, T4, T0);
 
     // q_m * w_l * w_r + w_l * q_l + q_r * w_r + q_o * w_o + q_c = rdx
-    fr::__add(T0, q_c_fft.at(i), T0);
-    fr::__mul(T0, q_arith_fft.at(i), T0);
+    fr::__add_with_coarse_reduction(T0, q_c_fft[i], T0);
+    fr::__mul_with_coarse_reduction(T0, q_arith_fft[i], T0);
     fr::__mul(T0, alpha_base, T0);
-    fr::__add(circuit_state.quotient_large.at(i), T0, circuit_state.quotient_large.at(i));
+    fr::__add(circuit_state.quotient_large[i], T0, circuit_state.quotient_large[i]);
     ITERATE_OVER_DOMAIN_END;
 
     return fr::mul(alpha_base, alpha);
@@ -193,21 +193,21 @@ fr::field_t ProverTurboArithmeticWidget::compute_linear_contribution(const fr::f
     fr::field_t T3;
     fr::field_t T4;
     fr::field_t T5;
-    fr::__mul(w_lr, q_m.at(i), T0);
-    fr::__mul(w_l_eval, q_1.at(i), T1);
-    fr::__mul(w_r_eval, q_2.at(i), T2);
-    fr::__mul(w_o_eval, q_3.at(i), T3);
-    fr::__mul(w_4_eval, q_4.at(i), T4);
-    fr::__mul(w_4_shifted_eval, q_4_next.at(i), T5);
+    fr::__mul(w_lr, q_m[i], T0);
+    fr::__mul(w_l_eval, q_1[i], T1);
+    fr::__mul(w_r_eval, q_2[i], T2);
+    fr::__mul(w_o_eval, q_3[i], T3);
+    fr::__mul(w_4_eval, q_4[i], T4);
+    fr::__mul(w_4_shifted_eval, q_4_next[i], T5);
     fr::__add(T0, T1, T0);
     fr::__add(T2, T3, T2);
     fr::__add(T4, T5, T4);
     fr::__add(T0, T2, T0);
     fr::__add(T0, T4, T0);
-    fr::__add(T0, q_c.at(i), T0);
+    fr::__add(T0, q_c[i], T0);
     fr::__mul(T0, q_arith_eval, T0);
     fr::__mul(T0, alpha_base, T0);
-    fr::__add(r.at(i), T0, r.at(i));
+    fr::__add(r[i], T0, r[i]);
     ITERATE_OVER_DOMAIN_END;
     return fr::mul(alpha_base, alpha);
 }

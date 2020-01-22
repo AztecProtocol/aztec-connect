@@ -484,7 +484,7 @@ Prover TurboComposer::preprocess()
     compute_proving_key();
     compute_witness();
 
-    Prover output_state(circuit_proving_key, witness, create_manifest(), true);
+    Prover output_state(circuit_proving_key, witness, create_manifest(), true, false);
 
 
     std::unique_ptr<ProverTurboFixedBaseWidget> widget = std::make_unique<ProverTurboFixedBaseWidget>(circuit_proving_key.get(), witness.get());

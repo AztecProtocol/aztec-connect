@@ -73,10 +73,10 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     fr::field_t alpha_f = fr::mul(alpha_e, alpha);
     fr::field_t alpha_g = fr::mul(alpha_f, alpha);
 
-    polynomial& w_1_fft = key->wire_ffts.at("w_1_fft");
-    polynomial& w_2_fft = key->wire_ffts.at("w_2_fft");
-    polynomial& w_3_fft = key->wire_ffts.at("w_3_fft");
-    polynomial& w_4_fft = key->wire_ffts.at("w_4_fft");
+    fr::field_t* w_1_fft = &key->wire_ffts.at("w_1_fft")[0];
+    fr::field_t* w_2_fft = &key->wire_ffts.at("w_2_fft")[0];
+    fr::field_t* w_3_fft = &key->wire_ffts.at("w_3_fft")[0];
+    fr::field_t* w_4_fft = &key->wire_ffts.at("w_4_fft")[0];
     // selector renaming:
     // q_1 = q_x_1
     // q_2 = q_x_2
@@ -86,6 +86,12 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     // q_4_next = q_x_init_2
     // q_m = q_y_init_1
     // q_c = q_y_init_2
+    fr::field_t three;
+    fr::__add(fr::one, fr::one, three);
+    fr::__add(three, fr::one, three);
+    fr::field_t nine;
+    fr::__add(three, three, nine);
+    fr::__add(nine, three, nine);
     ITERATE_OVER_DOMAIN_START(key->large_domain);
 
     // accumulator_delta = d(Xw) - 4d(X)
@@ -97,7 +103,7 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     fr::__sub(w_4_fft[i + 4], accumulator_delta, accumulator_delta);
 
     fr::field_t accumulator_delta_squared;
-    fr::__sqr(accumulator_delta, accumulator_delta_squared);
+    fr::__sqr_with_coarse_reduction(accumulator_delta, accumulator_delta_squared);
 
     // y_alpha represents the point that we're adding into our accumulator point at the current round
     // q_3 and q_ecc_1 are selector polynomials that describe two different y-coordinates
@@ -111,111 +117,104 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     // => q_3 = (3.y_beta - y_gamma) / 3.(x_beta - x_gamma)
     // => q_ecc_1 = (3.x_beta.y_gamma - x_gammay_beta) / 3.(x_beta - x_gammma)
     fr::field_t y_alpha;
-    fr::__mul(w_3_fft[i + 4], q_3_fft[i], y_alpha);
-    fr::__add(y_alpha, q_ecc_1_fft[i], y_alpha);
-    fr::__mul(y_alpha, accumulator_delta, y_alpha);
+    fr::__mul_with_coarse_reduction(w_3_fft[i + 4], q_3_fft[i], y_alpha);
+    fr::__add_with_coarse_reduction(y_alpha, q_ecc_1_fft[i], y_alpha);
+    fr::__mul_with_coarse_reduction(y_alpha, accumulator_delta, y_alpha);
 
     fr::field_t T0;
     fr::field_t T1;
     fr::field_t T2;
-    fr::field_t T3;
 
     // scalar accumulator consistency check
     // (delta - 1)(delta - 3)(delta + 1)(delta + 3).q_ecc_1 = 0 mod Z_H
     fr::field_t scalar_accumulator_identity;
-    fr::field_t three;
-    fr::__add(fr::one, fr::one, three);
-    fr::__add(three, fr::one, three);
-    fr::__sub(accumulator_delta, fr::one, T0);
-    fr::__sub(accumulator_delta, three, T1);
-    fr::__add(accumulator_delta, fr::one, T2);
-    fr::__add(accumulator_delta, three, T3);
-    fr::__mul(T0, T1, T0);
-    fr::__mul(T2, T3, T2);
-    fr::__mul(T0, T2, scalar_accumulator_identity);
-    fr::__mul(scalar_accumulator_identity, alpha_a, scalar_accumulator_identity);
+    fr::__sub_with_coarse_reduction(accumulator_delta_squared, fr::one, T0);
+    fr::__sub_with_coarse_reduction(accumulator_delta_squared, nine, T1);
+    fr::__mul_with_coarse_reduction(T0, T1, scalar_accumulator_identity);
+    fr::__mul_with_coarse_reduction(scalar_accumulator_identity, alpha_a, scalar_accumulator_identity);
 
     // x_alpha consistency check
     // (delta^2.q_1 + q_2 - x_alpha).q_ecc = 0 mod Z_H
     // x_alpha is the x-coordinate of the point we're adding into our accumulator point.
     // We use a w_o(X) to track x_alpha, to reduce the number of required selector polynomials
     fr::field_t x_alpha_identity;
-    fr::__mul(accumulator_delta_squared, q_1_fft[i], x_alpha_identity);
-    fr::__add(x_alpha_identity, q_2_fft[i], x_alpha_identity);
-    fr::__sub(x_alpha_identity, w_3_fft[i + 4], x_alpha_identity);
-    fr::__mul(x_alpha_identity, alpha_b, x_alpha_identity);
+    fr::__mul_with_coarse_reduction(accumulator_delta_squared, q_1_fft[i], x_alpha_identity);
+    fr::__add_with_coarse_reduction(x_alpha_identity, q_2_fft[i], x_alpha_identity);
+    fr::__sub_with_coarse_reduction(x_alpha_identity, w_3_fft[i + 4], x_alpha_identity);
+    fr::__mul_with_coarse_reduction(x_alpha_identity, alpha_b, x_alpha_identity);
 
     // x-accumulator consistency check
     // ((x_2 + x_1 + x_alpha)(x_alpha - x_1)^2 - (y_alpha - y_1)^2).q_ecc = 0 mod Z_H
     // we use the fact that y_alpha^2 = x_alpha^3 + grumpkin::g1::curve_b
+    fr::field_t x_alpha_minus_x_1;
+    fr::__sub(w_3_fft[i + 4], w_1_fft[i], x_alpha_minus_x_1);
+
     fr::field_t x_accumulator_identity;
-    fr::__mul(y_alpha, w_2_fft[i], T0);
-    fr::__add(T0, T0, T0);
-    fr::__sub(w_3_fft[i + 4], w_1_fft[i], T1);
-    fr::__sqr(T1, T1); // T1 = (x_alpha - x_1)^2
-    fr::__add(w_1_fft[i + 4], w_1_fft[i], T2);
-    fr::__add(T2, w_3_fft[i + 4], T2); // T2 = (x_2 + x_1 + x_alpha)
-    fr::__mul(T1, T2, T1);
-    fr::__sqr(w_2_fft[i], T2); // T2 = y_1^2
-    fr::__add(T2, grumpkin_curve_b, T2);
-    fr::__add(T0, T1, x_accumulator_identity);
-    fr::__sub(x_accumulator_identity, T2, x_accumulator_identity);
-    fr::__sqr(w_3_fft[i + 4], T0); // y_alpha^2 = x_alpha^3 + b
-    fr::__mul(T0, w_3_fft[i + 4], T0);
-    fr::__sub(x_accumulator_identity, T0, x_accumulator_identity);
-    fr::__mul(x_accumulator_identity, alpha_c, x_accumulator_identity);
+    fr::__mul_with_coarse_reduction(y_alpha, w_2_fft[i], T0);
+    fr::__add_with_coarse_reduction(T0, T0, T0);
+    // fr::__sub(w_3_fft[i + 4], w_1_fft[i], T1);
+    fr::__sqr_with_coarse_reduction(x_alpha_minus_x_1, T1); // T1 = (x_alpha - x_1)^2
+    fr::__add_without_reduction(w_1_fft[i + 4], w_1_fft[i], T2);
+    fr::__add_with_coarse_reduction(T2, w_3_fft[i + 4], T2); // T2 = (x_2 + x_1 + x_alpha)
+    fr::__mul_with_coarse_reduction(T1, T2, T1);
+    fr::__sqr_with_coarse_reduction(w_2_fft[i], T2); // T2 = y_1^2
+    fr::__add_with_coarse_reduction(T2, grumpkin_curve_b, T2);
+    fr::__add_with_coarse_reduction(T0, T1, x_accumulator_identity);
+    fr::__sub_with_coarse_reduction(x_accumulator_identity, T2, x_accumulator_identity);
+    fr::__sqr_with_coarse_reduction(w_3_fft[i + 4], T0); // y_alpha^2 = x_alpha^3 + b
+    fr::__mul_with_coarse_reduction(T0, w_3_fft[i + 4], T0);
+    fr::__sub_with_coarse_reduction(x_accumulator_identity, T0, x_accumulator_identity);
+    fr::__mul_with_coarse_reduction(x_accumulator_identity, alpha_c, x_accumulator_identity);
 
     // y-accumulator consistency check
     // ((y_2 + y_1)(x_alpha - x_1) - (y_alpha - y_1)(x_1 - x_2)).q_ecc = 0 mod Z_H
     fr::field_t y_accumulator_identity;
     fr::__add(w_2_fft[i], w_2_fft[i + 4], T0);
-    fr::__sub(w_3_fft[i + 4], w_1_fft[i], T1);
-    fr::__mul(T0, T1, T0);
+    fr::__mul_with_coarse_reduction(T0, x_alpha_minus_x_1, T0);
 
     fr::__sub(y_alpha, w_2_fft[i], T1);
 
     fr::__sub(w_1_fft[i], w_1_fft[i + 4], T2);
-    fr::__mul(T1, T2, T1);
-    fr::__sub(T0, T1, y_accumulator_identity);
-    fr::__mul(y_accumulator_identity, alpha_d, y_accumulator_identity);
+    fr::__mul_with_coarse_reduction(T1, T2, T1);
+    fr::__sub_with_coarse_reduction(T0, T1, y_accumulator_identity);
+    fr::__mul_with_coarse_reduction(y_accumulator_identity, alpha_d, y_accumulator_identity);
 
     // accumlulator-init consistency check
     // at the start of our scalar multiplication ladder, we want to validate that
     // the initial values of (x_1, y_1) and scalar accumulator a_1 are correctly set
     // We constrain a_1 to be either 0 or the value in w_o (which should be correctly initialized to (1 / 4^n) via a
     // copy constraint) We constraint (x_1, y_1) to be one of 4^n.[1] or (4^n + 1).[1]
+    fr::field_t w_4_minus_one;
+    fr::__sub(w_4_fft[i], fr::one, w_4_minus_one);
     fr::field_t accumulator_init_identity;
-    fr::__sub(w_4_fft[i], fr::one, T0);
-    fr::__sub(T0, w_3_fft[i], T1);
-    fr::__mul(T0, T1, accumulator_init_identity);
-    fr::__mul(accumulator_init_identity, alpha_e, accumulator_init_identity);
+    fr::__sub(w_4_minus_one, w_3_fft[i], T1);
+    fr::__mul_with_coarse_reduction(w_4_minus_one, T1, accumulator_init_identity);
+    fr::__mul_with_coarse_reduction(accumulator_init_identity, alpha_e, accumulator_init_identity);
 
     // // x-init consistency check
     fr::field_t x_init_identity;
     fr::__sub(q_4_fft[i], w_1_fft[i], T0);
-    fr::__mul(T0, w_3_fft[i], T0);
-    fr::__sub(fr::one, w_4_fft[i], T1);
-    fr::__mul(T1, q_4_next_fft[i], T1);
-    fr::__add(T0, T1, x_init_identity);
-    fr::__mul(x_init_identity, alpha_f, x_init_identity);
+    fr::__mul_with_coarse_reduction(T0, w_3_fft[i], T0);
+    fr::__mul_with_coarse_reduction(w_4_minus_one, q_4_next_fft[i], T1);
+    fr::__sub_with_coarse_reduction(T0, T1, x_init_identity);
+    fr::__mul_with_coarse_reduction(x_init_identity, alpha_f, x_init_identity);
 
     // // y-init consistency check
     fr::field_t y_init_identity;
     fr::__sub(q_m_fft[i], w_2_fft[i], T0);
-    fr::__mul(T0, w_3_fft[i], T0);
-    fr::__sub(fr::one, w_4_fft[i], T1);
-    fr::__mul(T1, q_c_fft[i], T1);
-    fr::__add(T0, T1, y_init_identity);
-    fr::__mul(y_init_identity, alpha_g, y_init_identity);
+    fr::__mul_with_coarse_reduction(T0, w_3_fft[i], T0);
+    fr::__mul_with_coarse_reduction(w_4_minus_one, q_c_fft[i], T1);
+    fr::__sub_with_coarse_reduction(T0, T1, y_init_identity);
+    fr::__mul_with_coarse_reduction(y_init_identity, alpha_g, y_init_identity);
 
     fr::field_t gate_identity;
-    fr::__add(accumulator_init_identity, x_init_identity, gate_identity);
-    fr::__add(gate_identity, y_init_identity, gate_identity);
-    fr::__mul(gate_identity, q_c_fft[i], gate_identity);
-    fr::__add(gate_identity, scalar_accumulator_identity, gate_identity);
-    fr::__add(gate_identity, x_alpha_identity, gate_identity);
-    fr::__add(gate_identity, x_accumulator_identity, gate_identity);
-    fr::__add(gate_identity, y_accumulator_identity, gate_identity);
+    fr::__add_with_coarse_reduction(accumulator_init_identity, x_init_identity, gate_identity);
+    fr::__add_with_coarse_reduction(gate_identity, y_init_identity, gate_identity);
+    fr::__mul_with_coarse_reduction(gate_identity, q_c_fft[i], gate_identity);
+    fr::__add_with_coarse_reduction(gate_identity, scalar_accumulator_identity, gate_identity);
+    fr::__add_with_coarse_reduction(gate_identity, x_alpha_identity, gate_identity);
+    fr::__add_with_coarse_reduction(gate_identity, x_accumulator_identity, gate_identity);
+    fr::__add_with_coarse_reduction(gate_identity, y_accumulator_identity, gate_identity);
     fr::__mul(gate_identity, q_ecc_1_fft[i], gate_identity);
     fr::__add(circuit_state.quotient_large[i], gate_identity, circuit_state.quotient_large[i]);
 

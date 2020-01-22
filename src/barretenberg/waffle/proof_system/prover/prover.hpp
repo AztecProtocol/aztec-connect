@@ -22,7 +22,8 @@ class Prover
     Prover(std::shared_ptr<proving_key> input_key = nullptr,
            std::shared_ptr<program_witness> input_witness = nullptr,
            const transcript::Manifest& manifest = transcript::Manifest({}),
-           bool has_fourth_wire = false);
+           bool has_fourth_wire = false,
+           bool uses_quotient_mid = true);
     Prover(Prover&& other);
     Prover(const Prover& other) = delete;
     Prover& operator=(const Prover& other) = delete;
@@ -65,9 +66,10 @@ class Prover
     transcript::Transcript transcript;
 
     bool __DEBUG_HAS_FOURTH_WIRE = false;
-
     std::shared_ptr<proving_key> key;
     std::shared_ptr<program_witness> witness;
+
+    bool uses_quotient_mid;
 };
 
 } // namespace waffle

@@ -49,12 +49,16 @@ struct proving_key
         wire_ffts.insert({ "w_3_fft", std::move(w_3_fft) });
         wire_ffts.insert({ "w_4_fft", std::move(w_4_fft) });
 
-        lagrange_1 = barretenberg::polynomial(n + n, n + n + 4);
-        barretenberg::polynomial_arithmetic::compute_lagrange_polynomial_fft(lagrange_1.get_coefficients(), small_domain, mid_domain);
+        lagrange_1 = barretenberg::polynomial(4 * n, 4 * n + 8);
+        barretenberg::polynomial_arithmetic::compute_lagrange_polynomial_fft(lagrange_1.get_coefficients(), small_domain, large_domain);
         lagrange_1.add_lagrange_base_coefficient(lagrange_1[0]);
-        lagrange_1.add_lagrange_base_coefficient(lagrange_1.at(1));
-        lagrange_1.add_lagrange_base_coefficient(lagrange_1.at(2));
-        lagrange_1.add_lagrange_base_coefficient(lagrange_1.at(3));
+        lagrange_1.add_lagrange_base_coefficient(lagrange_1[1]);
+        lagrange_1.add_lagrange_base_coefficient(lagrange_1[2]);
+        lagrange_1.add_lagrange_base_coefficient(lagrange_1[3]);
+        lagrange_1.add_lagrange_base_coefficient(lagrange_1[4]);
+        lagrange_1.add_lagrange_base_coefficient(lagrange_1[5]);
+        lagrange_1.add_lagrange_base_coefficient(lagrange_1[6]);
+        lagrange_1.add_lagrange_base_coefficient(lagrange_1[7]);
 
         opening_poly = barretenberg::polynomial(n, n);
         shifted_opening_poly = barretenberg::polynomial(n, n);
