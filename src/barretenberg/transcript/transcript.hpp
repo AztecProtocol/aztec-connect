@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <array>
 
 #include "../assert.hpp"
 #include "../keccak/keccak.h"
