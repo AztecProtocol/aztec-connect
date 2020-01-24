@@ -4,16 +4,10 @@ namespace plonk {
 namespace stdlib {
 namespace merkle_tree {
 
-std::ostream& operator<<(std::ostream& os, typename barretenberg::fr::field_t const& a)
-{
-    os << std::hex << "field: [" << a.data[0] << ", " << a.data[1] << ", " << a.data[2] << ", " << a.data[3] << "]";
-    return os;
-}
-
 template <typename ComposerContext>
 merkle_tree<ComposerContext>::merkle_tree(ComposerContext& ctx, size_t depth)
     : ctx_(ctx)
-    , store_(depth)
+    , store_("/tmp/merkle_tree_hardcoded", depth)
     , depth_(depth)
     , size_(0)
 {
@@ -107,7 +101,7 @@ template <typename ComposerContext> void merkle_tree<ComposerContext>::add_membe
     update_membership(
         new_root, create_witness_hash_path(new_hashes), input, root_, create_witness_hash_path(old_hashes), index);
 
-    store_.update_hash_path(size_, new_hashes);
+    store_.update_element(size_, input.get_value());
     root_ = new_root;
     size_ += 1;
 }
@@ -131,7 +125,7 @@ void merkle_tree<ComposerContext>::update_member(field_t const& value, uint32 co
     update_membership(
         new_root, create_witness_hash_path(new_hashes), value, root_, create_witness_hash_path(old_hashes), index);
 
-    store_.update_hash_path(idx, new_hashes);
+    store_.update_element(idx, value.get_value());
     root_ = new_root;
 }
 

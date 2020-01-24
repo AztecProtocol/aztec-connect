@@ -1,6 +1,7 @@
 #pragma once
 #include "../field/field.hpp"
 #include <leveldb/db.h>
+#include <leveldb/write_batch.h>
 
 namespace plonk {
 namespace stdlib {
@@ -22,12 +23,17 @@ class LevelDbStore {
 
     // void update_hash_path(size_t index, fr_hash_path path);
 
-    void update_element(size_t index, fr::field_t value);
+    void update_element(size_t index, fr::field_t const& value);
+
+    fr::field_t get_element(size_t index);
 
     fr::field_t root() const;
 
   private:
-    fr::field_t update_element(fr::field_t const& root, fr::field_t const& value, size_t index, size_t height);
+    fr::field_t update_element(
+        fr::field_t const& root, fr::field_t const& value, size_t index, size_t height, leveldb::WriteBatch& batch);
+
+    fr::field_t get_element(fr::field_t const& root, size_t index, size_t height);
 
   private:
     std::unique_ptr<leveldb::DB> db_;

@@ -78,29 +78,17 @@ target_include_directories(
         ${private_include_dir}/boost
 )
 
-if (WIN32)
-    target_link_libraries(
-        barretenberg_tests
-        PUBLIC
-        barretenberg
-        PRIVATE
-        gtest
-        gmock
-        gtest_main
-        wsock32
-        ws2_32
-    )
-else()
-    target_link_libraries(
-        barretenberg_tests
-        PUBLIC
-        barretenberg
-        PRIVATE
-        gtest
-        gmock
-        gtest_main
-    )
-endif()
+target_link_libraries(
+    barretenberg_tests
+    PUBLIC
+    barretenberg
+    PRIVATE
+    gtest
+    gmock
+    gtest_main
+    leveldb
+    ${private_os_libs}
+)
 
 target_include_directories(
     barretenberg_tests

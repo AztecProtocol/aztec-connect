@@ -1,5 +1,6 @@
 #include "leveldb_store.hpp"
 #include "hash.hpp"
+#include <iostream>
 #include <sstream>
 
 namespace plonk {
@@ -10,7 +11,7 @@ namespace {
 barretenberg::fr::field_t from_string(std::string const& data, size_t offset = 0)
 {
     barretenberg::fr::field_t result;
-    std::copy(data.data() + offset, data.data() + offset + sizeof(barretenberg::fr::field_t), result.data);
+    std::copy(data.data() + offset, data.data() + offset + sizeof(barretenberg::fr::field_t), (char*)result.data);
     return result;
 }
 template <typename T> T from_slice(leveldb::Slice& slice)
@@ -44,14 +45,16 @@ LevelDbStore::LevelDbStore(std::string const& db_path, size_t depth)
     leveldb::DB* db;
     leveldb::Options options;
     options.create_if_missing = true;
+    options.compression = leveldb::kNoCompression;
     leveldb::Status status = leveldb::DB::Open(options, db_path, &db);
     assert(status.ok());
     db_.reset(db);
 
     // Compute the zero values at each layer.
-    auto current = hash({ barretenberg::fr::zero });
+    auto current = barretenberg::fr::zero;
     for (size_t i = 0; i < depth; ++i) {
         zero_hashes_[i] = current;
+        // std::cout << "zero hash level " << i << ": " << current << std::endl;
         current = hash({ current, current });
     }
 
@@ -114,13 +117,44 @@ fr_hash_path LevelDbStore::get_hash_path(size_t index)
     return path;
 }
 
-void LevelDbStore::update_element(size_t index, fr::field_t value)
+fr::field_t LevelDbStore::get_element(size_t index)
 {
-    update_element(root_, value, index, depth_);
+    return get_element(root_, index, depth_);
 }
 
-fr::field_t LevelDbStore::update_element(fr::field_t const& root, fr::field_t const& value, size_t index, size_t height)
+fr::field_t LevelDbStore::get_element(fr::field_t const& root, size_t index, size_t height)
 {
+    if (height == 0) {
+        return root;
+    }
+
+    std::string data;
+    auto status = db_->Get(leveldb::ReadOptions(), leveldb::Slice((char*)&root, 32), &data);
+
+    if (!status.ok()) {
+        return zero_hashes_[0];
+    }
+
+    bool is_right = (index >> (height - 1)) & 0x1;
+    fr::field_t subtree_root = from_string(data, is_right * 32);
+    size_t subtree_index = index & ~(1ULL << height);
+    return get_element(subtree_root, subtree_index, height - 1);
+}
+
+void LevelDbStore::update_element(size_t index, fr::field_t const& value)
+{
+    // std::cout << "PRE UPDATE ROOT: " << root_ << std::endl;
+    leveldb::WriteBatch batch;
+    root_ = update_element(root_, value, index, depth_, batch);
+    db_->Write(leveldb::WriteOptions(), &batch);
+    // std::cout << "POST UPDATE ROOT: " << root_ << std::endl;
+}
+
+fr::field_t LevelDbStore::update_element(
+    fr::field_t const& root, fr::field_t const& value, size_t index, size_t height, leveldb::WriteBatch& batch)
+{
+    // std::cout << "update_element root:" << root << " value:" << value << " index:" << index << " height:" << height
+    // << std::endl;
     if (height == 0) {
         return value;
     }
@@ -130,31 +164,41 @@ fr::field_t LevelDbStore::update_element(fr::field_t const& root, fr::field_t co
 
     if (!status.ok()) {
         // Add the entire missing branch.
+        // std::cout << "Add missing branch." << std::endl;
         fr::field_t current = value;
         for (size_t i = 0; i < height; ++i) {
             bool is_right = (index >> i) & 0x1;
-            std::ostringstream os;
+            fr::field_t left, right;
             if (is_right) {
-                os.write((char*)&zero_hashes_[i], 32);
-                os.write((char*)current.data, 32);
+                left = zero_hashes_[i];
+                right = current;
             } else {
-                os.write((char*)current.data, 32);
-                os.write((char*)&zero_hashes_[i], 32);
+                right = zero_hashes_[i];
+                left = current;
             }
-            current = hash({ is_right ? zero_hashes_[i] : current, is_right ? current : zero_hashes_[i] });
-            db_->Put(leveldb::WriteOptions(), leveldb::Slice((char*)current.data, 32), os.str());
+            std::ostringstream os;
+            os.write((char*)left.data, 32);
+            os.write((char*)right.data, 32);
+            auto key = hash({ is_right ? zero_hashes_[i] : current, is_right ? current : zero_hashes_[i] });
+            batch.Put(leveldb::Slice((char*)key.data, 32), os.str());
+            // std::cout << "BRANCH PUT key:" << key << " left:" << left << " right:" << right << std::endl;
+            current = key;
         }
         return current;
     }
 
-    bool is_right = (index >> height) & 0x1;
+    bool is_right = (index >> (height - 1)) & 0x1;
+    // std::cout << "is_right:" << is_right << std::endl;
     fr::field_t subtree_root = from_string(data, is_right * 32);
     size_t subtree_index = index & ~(1ULL << height);
-    auto current = update_element(subtree_root, value, subtree_index, height - 1);
+    auto current = update_element(subtree_root, value, subtree_index, height - 1, batch);
     data.replace(is_right * 32, 32, (char*)&current, 32);
-    auto key = hash({ from_string(data, 0), from_string(data, 32) });
+    auto left = from_string(data, 0);
+    auto right = from_string(data, 32);
+    auto key = hash({ left, right });
     // TODO: Perhaps delete old node?
-    db_->Put(leveldb::WriteOptions(), leveldb::Slice((char*)key.data, 32), data);
+    batch.Put(leveldb::Slice((char*)key.data, 32), data);
+    // std::cout << "UPDATE PUT key:" << key << " left:" << left << " right:" << right << std::endl;
     return key;
     /*
         if (!status.ok()) {

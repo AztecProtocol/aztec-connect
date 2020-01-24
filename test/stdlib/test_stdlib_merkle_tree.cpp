@@ -23,6 +23,29 @@ typedef stdlib::bool_t<Composer> bool_t;
 typedef stdlib::merkle_tree::merkle_tree<Composer> merkle_tree;
 typedef stdlib::witness_t<Composer> witness_t;
 
+TEST(stdlib_merkle_tree, test_leveldb_update_member)
+{
+    leveldb::DestroyDB("/tmp/test_leveldb_update_member", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/test_leveldb_update_member", 3);
+
+    for (size_t i = 0; i < 8; ++i) {
+    }
+    EXPECT_TRUE(fr::eq(db.get_element(0), { { 0, 0, 0, 0 } }));
+    EXPECT_TRUE(fr::eq(db.get_element(1), { { 0, 0, 0, 0 } }));
+    EXPECT_TRUE(fr::eq(db.get_element(2), { { 0, 0, 0, 0 } }));
+
+    db.update_element(0, { { 0, 0, 0, 123 } });
+    db.update_element(1, { { 0, 0, 0, 456 } });
+    db.update_element(2, { { 0, 0, 0, 789 } });
+
+    EXPECT_TRUE(fr::eq(db.get_element(0), { { 0, 0, 0, 123 } }));
+    EXPECT_TRUE(fr::eq(db.get_element(1), { { 0, 0, 0, 456 } }));
+    EXPECT_TRUE(fr::eq(db.get_element(2), { { 0, 0, 0, 789 } }));
+
+    EXPECT_TRUE(
+        fr::eq(db.root(), { { 0x93293aa570a48e82, 0x1f5cfeac4c9845f9, 0x3cdc2a192204d473, 0x0e3c1631c1346211 } }));
+}
+
 TEST(stdlib_merkle_tree, test_check_membership)
 {
     Composer composer = Composer();

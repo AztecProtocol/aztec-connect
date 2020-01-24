@@ -1,13 +1,13 @@
 #pragma once
 
 #include <cstdint>
+#include <iomanip>
+#include <ostream>
 
 #include "../../fields/field.hpp"
 
-namespace barretenberg
-{
-class FrParams
-{
+namespace barretenberg {
+class FrParams {
   public:
     static constexpr uint64_t modulus_0 = 0x43E1F593F0000001UL;
     static constexpr uint64_t modulus_1 = 0x2833E84879B97091UL;
@@ -95,7 +95,17 @@ class FrParams
     static constexpr uint64_t Q_minus_one_over_two_1 = 0x0C0AC2E9419F4243UL;
     static constexpr uint64_t Q_minus_one_over_two_2 = 0x098D014DC2822DB4UL;
     static constexpr uint64_t Q_minus_one_over_two_3 = 0x183227397UL;
-    };
+};
 
 typedef field<FrParams> fr;
+
+inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fr::field_t const& a)
+{
+    std::ios_base::fmtflags f(os.flags());
+    os << std::hex << "0x" << std::setfill('0') << std::setw(16) << a.data[0] << std::setw(16) << a.data[1]
+       << std::setw(16) << a.data[2] << std::setw(16) << a.data[3];
+    os.flags(f);
+    return os;
+}
+
 } // namespace barretenberg
