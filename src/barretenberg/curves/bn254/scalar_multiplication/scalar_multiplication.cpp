@@ -43,13 +43,44 @@ void add_affine_points(g1::affine_element* points, const size_t num_points, fq::
     // std::chrono::steady_clock::time_point time_start = std::chrono::steady_clock::now();
 
     fq::field_t batch_inversion_accumulator = fq::one;
-    for (size_t i = 0; i < num_points; i += 2) {
+    // size_t i = 0;
+    // for (; i < num_points; i += 8) {
+    //     fq::__add_without_reduction(points[i + 1].x, points[i].x, scratch_space[i >> 1]); // x2 + x1
+    //     fq::__sub(points[i + 1].x, points[i].x, points[i + 1].x); // x2 - x1
+    //     fq::__sub(points[i + 1].y, points[i].y, points[i + 1].y); // y2 - y1
+    //     fq::__mul_with_coarse_reduction(
+    //         points[i + 1].y, batch_inversion_accumulator, points[i + 1].y); // (y2 - y1)*accumulator_old
+    //     fq::__mul_with_coarse_reduction(batch_inversion_accumulator, points[i + 1].x, batch_inversion_accumulator);
+
+    //     fq::__add_without_reduction(points[i + 3].x, points[i + 2].x, scratch_space[(i + 2) >> 1]); // x2 + x1
+    //     fq::__sub(points[i + 3].x, points[i + 2].x, points[i + 3].x); // x2 - x1
+    //     fq::__sub(points[i + 3].y, points[i + 2].y, points[i + 3].y); // y2 - y1
+    //     fq::__mul_with_coarse_reduction(
+    //         points[i + 3].y, batch_inversion_accumulator, points[i + 3].y); // (y2 - y1)*accumulator_old
+    //     fq::__mul_with_coarse_reduction(batch_inversion_accumulator, points[i + 3].x, batch_inversion_accumulator);
+
+    //     fq::__add_without_reduction(points[i + 5].x, points[i + 4].x, scratch_space[(i + 4) >> 1]); // x2 + x1
+    //     fq::__sub(points[i + 5].x, points[i + 4].x, points[i + 5].x); // x2 - x1
+    //     fq::__sub(points[i + 5].y, points[i + 4].y, points[i + 5].y); // y2 - y1
+    //     fq::__mul_with_coarse_reduction(
+    //         points[i + 5].y, batch_inversion_accumulator, points[i + 5].y); // (y2 - y1)*accumulator_old
+    //     fq::__mul_with_coarse_reduction(batch_inversion_accumulator, points[i + 5].x, batch_inversion_accumulator);
+
+    //     fq::__add_without_reduction(points[i + 7].x, points[i + 6].x, scratch_space[(i + 6) >> 1]); // x2 + x1
+    //     fq::__sub(points[i + 7].x, points[i + 6].x, points[i + 7].x); // x2 - x1
+    //     fq::__sub(points[i + 7].y, points[i + 6].y, points[i + 7].y); // y2 - y1
+    //     fq::__mul_with_coarse_reduction(
+    //         points[i + 7].y, batch_inversion_accumulator, points[i + 7].y); // (y2 - y1)*accumulator_old
+    //     fq::__mul_with_coarse_reduction(batch_inversion_accumulator, points[i + 7].x, batch_inversion_accumulator);
+    // }
+    for (size_t i = 0; i < num_points; i += 2)
+    {
         fq::__add_without_reduction(points[i + 1].x, points[i].x, scratch_space[i >> 1]); // x2 + x1
         fq::__sub(points[i + 1].x, points[i].x, points[i + 1].x); // x2 - x1
         fq::__sub(points[i + 1].y, points[i].y, points[i + 1].y); // y2 - y1
         fq::__mul_with_coarse_reduction(
             points[i + 1].y, batch_inversion_accumulator, points[i + 1].y); // (y2 - y1)*accumulator_old
-        fq::__mul_with_coarse_reduction(batch_inversion_accumulator, points[i + 1].x, batch_inversion_accumulator);
+        fq::__mul_with_coarse_reduction(batch_inversion_accumulator, points[i + 1].x, batch_inversion_accumulator);   
     }
     // std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
     // std::chrono::microseconds diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
@@ -64,7 +95,7 @@ void add_affine_points(g1::affine_element* points, const size_t num_points, fq::
 
     for (size_t i = (num_points)-2; i < num_points; i -= 2) {
         __builtin_prefetch(points + i - 2);
-        __builtin_prefetch(points + 1 - 1);
+        __builtin_prefetch(points + i - 1);
         __builtin_prefetch(points + ((i + num_points - 2) >> 1));
         __builtin_prefetch(scratch_space + ((i - 2) >> 1));
 
