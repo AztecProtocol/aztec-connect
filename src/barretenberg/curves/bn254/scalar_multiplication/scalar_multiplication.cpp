@@ -6,6 +6,82 @@
 namespace barretenberg {
 namespace scalar_multiplication {
 
+#define BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK                                                                        \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 16] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 17] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 18] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 19] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 20] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 21] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 22] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 23] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 24] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 25] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 26] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 27] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 28] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 29] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 30] >> 32ULL));                              \
+    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 31] >> 32ULL));                              \
+                                                                                                                       \
+    uint64_t schedule_a = state.point_schedule[schedule_it];                                                           \
+    uint64_t schedule_b = state.point_schedule[schedule_it + 1];                                                       \
+    uint64_t schedule_c = state.point_schedule[schedule_it + 2];                                                       \
+    uint64_t schedule_d = state.point_schedule[schedule_it + 3];                                                       \
+    uint64_t schedule_e = state.point_schedule[schedule_it + 4];                                                       \
+    uint64_t schedule_f = state.point_schedule[schedule_it + 5];                                                       \
+    uint64_t schedule_g = state.point_schedule[schedule_it + 6];                                                       \
+    uint64_t schedule_h = state.point_schedule[schedule_it + 7];                                                       \
+    uint64_t schedule_i = state.point_schedule[schedule_it + 8];                                                       \
+    uint64_t schedule_j = state.point_schedule[schedule_it + 9];                                                       \
+    uint64_t schedule_k = state.point_schedule[schedule_it + 10];                                                      \
+    uint64_t schedule_l = state.point_schedule[schedule_it + 11];                                                      \
+    uint64_t schedule_m = state.point_schedule[schedule_it + 12];                                                      \
+    uint64_t schedule_n = state.point_schedule[schedule_it + 13];                                                      \
+    uint64_t schedule_o = state.point_schedule[schedule_it + 14];                                                      \
+    uint64_t schedule_p = state.point_schedule[schedule_it + 15];                                                      \
+                                                                                                                       \
+    g1::conditional_negate_affine(                                                                                     \
+        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);     \
+    g1::conditional_negate_affine(                                                                                     \
+        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL); \
+    g1::conditional_negate_affine(                                                                                     \
+        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL); \
+    g1::conditional_negate_affine(                                                                                     \
+        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL); \
+    g1::conditional_negate_affine(                                                                                     \
+        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL); \
+    g1::conditional_negate_affine(                                                                                     \
+        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL); \
+    g1::conditional_negate_affine(                                                                                     \
+        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL); \
+    g1::conditional_negate_affine(                                                                                     \
+        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL); \
+    g1::conditional_negate_affine(                                                                                     \
+        state.points + (schedule_i >> 32ULL), state.point_pairs_1 + current_offset + 8, (schedule_i >> 31ULL) & 1ULL); \
+    g1::conditional_negate_affine(                                                                                     \
+        state.points + (schedule_j >> 32ULL), state.point_pairs_1 + current_offset + 9, (schedule_j >> 31ULL) & 1ULL); \
+    g1::conditional_negate_affine(state.points + (schedule_k >> 32ULL),                                                \
+                                  state.point_pairs_1 + current_offset + 10,                                           \
+                                  (schedule_k >> 31ULL) & 1ULL);                                                       \
+    g1::conditional_negate_affine(state.points + (schedule_l >> 32ULL),                                                \
+                                  state.point_pairs_1 + current_offset + 11,                                           \
+                                  (schedule_l >> 31ULL) & 1ULL);                                                       \
+    g1::conditional_negate_affine(state.points + (schedule_m >> 32ULL),                                                \
+                                  state.point_pairs_1 + current_offset + 12,                                           \
+                                  (schedule_m >> 31ULL) & 1ULL);                                                       \
+    g1::conditional_negate_affine(state.points + (schedule_n >> 32ULL),                                                \
+                                  state.point_pairs_1 + current_offset + 13,                                           \
+                                  (schedule_n >> 31ULL) & 1ULL);                                                       \
+    g1::conditional_negate_affine(state.points + (schedule_o >> 32ULL),                                                \
+                                  state.point_pairs_1 + current_offset + 14,                                           \
+                                  (schedule_o >> 31ULL) & 1ULL);                                                       \
+    g1::conditional_negate_affine(state.points + (schedule_p >> 32ULL),                                                \
+                                  state.point_pairs_1 + current_offset + 15,                                           \
+                                  (schedule_p >> 31ULL) & 1ULL);                                                       \
+                                                                                                                       \
+    current_offset += 16;                                                                                              \
+    schedule_it += 16;
 
 /**
  * adds a bunch of points together using affine addition formulae.
@@ -400,1152 +476,73 @@ uint32_t construct_addition_chains(affine_product_runtime_state& state, bool emp
             {
                 case 128 :
                 {
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    uint64_t schedule_a = state.point_schedule[schedule_it];
-                    uint64_t schedule_b = state.point_schedule[schedule_it + 1];
-                    uint64_t schedule_c = state.point_schedule[schedule_it + 2];
-                    uint64_t schedule_d = state.point_schedule[schedule_it + 3];
-                    uint64_t schedule_e = state.point_schedule[schedule_it + 4];
-                    uint64_t schedule_f = state.point_schedule[schedule_it + 5];
-                    uint64_t schedule_g = state.point_schedule[schedule_it + 6];
-                    uint64_t schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
-
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
-
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
-
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
-
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
-
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
-
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
-
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
-
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
                     break;
                 }
                 case 64 :
                 {
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    uint64_t schedule_a = state.point_schedule[schedule_it];
-                    uint64_t schedule_b = state.point_schedule[schedule_it + 1];
-                    uint64_t schedule_c = state.point_schedule[schedule_it + 2];
-                    uint64_t schedule_d = state.point_schedule[schedule_it + 3];
-                    uint64_t schedule_e = state.point_schedule[schedule_it + 4];
-                    uint64_t schedule_f = state.point_schedule[schedule_it + 5];
-                    uint64_t schedule_g = state.point_schedule[schedule_it + 6];
-                    uint64_t schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
-
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
-
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
-
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
                     break;
                 }
                 case 32 :
                 {
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    uint64_t schedule_a = state.point_schedule[schedule_it];
-                    uint64_t schedule_b = state.point_schedule[schedule_it + 1];
-                    uint64_t schedule_c = state.point_schedule[schedule_it + 2];
-                    uint64_t schedule_d = state.point_schedule[schedule_it + 3];
-                    uint64_t schedule_e = state.point_schedule[schedule_it + 4];
-                    uint64_t schedule_f = state.point_schedule[schedule_it + 5];
-                    uint64_t schedule_g = state.point_schedule[schedule_it + 6];
-                    uint64_t schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
-
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
+                    {
+                        BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
+                    }
                     break;
                 }
                 case 16 :
                 {
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    uint64_t schedule_a = state.point_schedule[schedule_it];
-                    uint64_t schedule_b = state.point_schedule[schedule_it + 1];
-                    uint64_t schedule_c = state.point_schedule[schedule_it + 2];
-                    uint64_t schedule_d = state.point_schedule[schedule_it + 3];
-                    uint64_t schedule_e = state.point_schedule[schedule_it + 4];
-                    uint64_t schedule_f = state.point_schedule[schedule_it + 5];
-                    uint64_t schedule_g = state.point_schedule[schedule_it + 6];
-                    uint64_t schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
-
-                    schedule_a = state.point_schedule[schedule_it];
-                    schedule_b = state.point_schedule[schedule_it + 1];
-                    schedule_c = state.point_schedule[schedule_it + 2];
-                    schedule_d = state.point_schedule[schedule_it + 3];
-                    schedule_e = state.point_schedule[schedule_it + 4];
-                    schedule_f = state.point_schedule[schedule_it + 5];
-                    schedule_g = state.point_schedule[schedule_it + 6];
-                    schedule_h = state.point_schedule[schedule_it + 7];
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL);
-                    g1::conditional_negate_affine(
-                        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL);
-
-                    current_offset += 8;
-                    schedule_it += 8;   
+                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
                     break;           
                 }
                 case 8 :
                 {
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));  
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));   
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));   
                     __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));  
                     __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));   
                     __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));   
                     __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));   
+                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 12] >> 32ULL));  
+                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 13] >> 32ULL));   
+                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 14] >> 32ULL));   
+                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 15] >> 32ULL));   
 
                     const uint64_t schedule_a = state.point_schedule[schedule_it];
                     const uint64_t schedule_b = state.point_schedule[schedule_it + 1];
