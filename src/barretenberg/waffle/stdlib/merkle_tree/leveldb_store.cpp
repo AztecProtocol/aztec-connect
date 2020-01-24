@@ -6,21 +6,18 @@ namespace plonk {
 namespace stdlib {
 namespace merkle_tree {
 
-using namespace barretenberg;
-
 namespace {
 barretenberg::fr::field_t from_string(std::string const& data, size_t offset = 0)
 {
     barretenberg::fr::field_t result;
-    std::copy(data.begin() + offset, data.begin() + offset + sizeof(barretenberg::fr::field_t), result.data);
+    std::copy(data.data() + offset, data.data() + offset + sizeof(barretenberg::fr::field_t), result.data);
     return result;
 }
 template <typename T> T from_slice(leveldb::Slice& slice)
 {
     T result;
-    std::copy(slice.data, slice.data + sizeof(T), &result);
-    slice.data += sizeof(T);
-    slice.size -= sizeof(T);
+    std::copy(slice.data(), slice.data() + sizeof(T), (char*)&result);
+    slice = leveldb::Slice(slice.data() + sizeof(T), slice.size() - sizeof(T));
     return result;
 }
 
@@ -58,16 +55,18 @@ LevelDbStore::LevelDbStore(std::string const& db_path, size_t depth)
         current = hash({ current, current });
     }
 
-    status = db->Get(leveldb::ReadOptions(), "root", &root_);
+    std::string root;
+    status = db->Get(leveldb::ReadOptions(), "root", &root);
     if (!status.ok()) {
-        root_.reserve(32);
-        std::copy(current.data, current.data + 4, reinterpret_cast<uint64_t*>(root_.data()));
+        root_ = current;
+    } else {
+        root_ = from_string(root);
     };
 }
 
 barretenberg::fr::field_t LevelDbStore::root() const
 {
-    return from_string(root_);
+    return root_;
 }
 
 fr_hash_path LevelDbStore::get_hash_path(size_t index)
@@ -75,7 +74,7 @@ fr_hash_path LevelDbStore::get_hash_path(size_t index)
     fr_hash_path path(depth_);
 
     std::string current;
-    auto status = db_->Get(leveldb::ReadOptions(), root_, &current);
+    auto status = db_->Get(leveldb::ReadOptions(), leveldb::Slice((char*)&root_, 32), &current);
 
     for (size_t i = depth_ - 1; i >= 0; --i) {
         if (!status.ok()) {
@@ -117,7 +116,7 @@ fr_hash_path LevelDbStore::get_hash_path(size_t index)
 
 void LevelDbStore::update_element(size_t index, fr::field_t value)
 {
-    update_element(root_, std::string((char*)&value, 32), index, depth_);
+    update_element(root_, value, index, depth_);
 }
 
 fr::field_t LevelDbStore::update_element(fr::field_t const& root, fr::field_t const& value, size_t index, size_t height)
@@ -191,6 +190,7 @@ fr::field_t LevelDbStore::update_element(fr::field_t const& root, fr::field_t co
         */
 }
 
+/*
 void LevelDbStore::update_hash_path(size_t index, fr_hash_path path)
 {
     std::string current;
@@ -211,8 +211,8 @@ void LevelDbStore::update_hash_path(size_t index, fr_hash_path path)
         os.write()
     }
 }
+*/
 } // namespace merkle_tree
 
 } // namespace stdlib
-} // namespace plonk
 } // namespace plonk

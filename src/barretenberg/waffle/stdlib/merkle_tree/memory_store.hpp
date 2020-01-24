@@ -13,9 +13,7 @@ class MerkleTreeMemoryStore {
 
     fr_hash_path get_hash_path(size_t index);
 
-    fr_hash_path get_new_hash_path(size_t index, barretenberg::fr::field_t value);
-
-    void update_hash_path(size_t index, fr_hash_path path);
+    // void update_hash_path(size_t index, fr_hash_path path);
 
     barretenberg::fr::field_t root() const { return root_; }
 

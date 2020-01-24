@@ -40,24 +40,7 @@ typename MerkleTreeMemoryStore::fr_hash_path MerkleTreeMemoryStore::get_hash_pat
     return path;
 }
 
-typename MerkleTreeMemoryStore::fr_hash_path MerkleTreeMemoryStore::get_new_hash_path(size_t index,
-                                                                                      barretenberg::fr::field_t value)
-{
-    fr_hash_path path = get_hash_path(index);
-    barretenberg::fr::field_t current = value;
-    for (size_t i = 0; i < depth_; ++i) {
-        bool path_bit = index & 0x1;
-        if (path_bit) {
-            path[i].second = current;
-        } else {
-            path[i].first = current;
-        }
-        current = hash({ path[i].first, path[i].second });
-        index /= 2;
-    }
-    return path;
-}
-
+/*
 void MerkleTreeMemoryStore::update_hash_path(size_t index, typename MerkleTreeMemoryStore::fr_hash_path path)
 {
     size_t offset = 0;
@@ -71,6 +54,7 @@ void MerkleTreeMemoryStore::update_hash_path(size_t index, typename MerkleTreeMe
         index /= 2;
     }
 }
+*/
 
 } // namespace merkle_tree
 } // namespace stdlib

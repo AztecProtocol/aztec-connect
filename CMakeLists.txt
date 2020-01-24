@@ -98,6 +98,10 @@ add_definitions(-DBOOST_SPIRIT_X3_NO_FILESYSTEM=1 -DBARRETENBERG_SRS_PATH=\"../s
 
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)
 
+if (WIN32)
+    set(private_os_libs "wsock32 ws2_32")
+endif()
+
 add_subdirectory(src)
 
 if(TESTING)

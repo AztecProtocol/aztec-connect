@@ -124,7 +124,6 @@ target_include_directories(
     barretenberg
     SYSTEM PRIVATE
         ${private_include_dir}/boost
-        ${leveldb_SOURCE_DIR}/include
 )
 
 set_target_properties(
