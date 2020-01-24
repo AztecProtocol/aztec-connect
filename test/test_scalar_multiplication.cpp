@@ -551,6 +551,7 @@ TEST(scalar_multiplication, construct_addition_chains)
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "scalar mul: " << diff.count() << "ms" << std::endl;
 
+    aligned_free(bucket_empty_status);
     aligned_free(scalars);
     aligned_free(monomials);
     aligned_free(bucket_counts);
@@ -790,7 +791,7 @@ TEST(scalar_multiplication, undersized_inputs)
 
 TEST(scalar_multiplication, pippenger)
 {
-    constexpr size_t num_points = 10000;
+    constexpr size_t num_points = 8192;
 
     fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
 
@@ -811,7 +812,7 @@ TEST(scalar_multiplication, pippenger)
     expected = g1::normalize(expected);
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
 
-    g1::element result = scalar_multiplication::pippenger_unsafe_internal<num_points>(points, scalars);
+    g1::element result = scalar_multiplication::pippenger_unsafe(scalars, points, num_points);
     result = g1::normalize(result);
 
     aligned_free(scalars);
