@@ -508,7 +508,6 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
     g1::element* thread_accumulators = static_cast<g1::element*>(aligned_alloc(64, num_threads * sizeof(g1::element)));
 
 
-    std::vector<affine_product_runtime_state> thread_states = mmu::get_affine_product_runtime_states(num_threads);
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
