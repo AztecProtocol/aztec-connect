@@ -9,6 +9,12 @@ namespace
 static bool* skew_memory = nullptr;
 static uint64_t* wnaf_memory = nullptr;
 static g1::element* bucket_memory = nullptr;
+static g1::affine_element* point_pairs_1 = nullptr;
+static g1::affine_element* point_pairs_2 = nullptr;
+static fq::field_t* scratch_space = nullptr;
+static uint32_t* bucket_count_memory = nullptr;
+static uint32_t* bit_count_memory = nullptr;
+static bool* bucket_empty_status = nullptr;
 
 const auto init = []() {
     constexpr size_t max_num_points = (1 << 20);
@@ -17,10 +23,28 @@ const auto init = []() {
     constexpr size_t thread_overspill = 1024;
     wnaf_memory = (uint64_t*)(aligned_alloc(64, max_num_points * max_num_rounds * 2 * sizeof(uint64_t)));
     bucket_memory = (g1::element*)(aligned_alloc(64, (max_buckets + thread_overspill) * sizeof(g1::element)));
+
+    // TODO: we're allocating too much memory here, trim this down
+    point_pairs_1 = (g1::affine_element*)(aligned_alloc(64, (max_num_points * 2) * sizeof(g1::affine_element)));
+    point_pairs_2 = (g1::affine_element*)(aligned_alloc(64, (max_num_points * 2) * sizeof(g1::affine_element)));
+    scratch_space = (fq::field_t*)(aligned_alloc(64, (max_num_points ) * sizeof(fq::field_t)));
+
+    bucket_count_memory = (uint32_t*)(aligned_alloc(64, max_num_points * 2 * sizeof(uint32_t)));
+    bit_count_memory = (uint32_t*)(aligned_alloc(64, max_num_points * 2 * sizeof(uint32_t)));
+    bucket_empty_status = (bool*)(aligned_alloc(64, max_num_points * 2 * sizeof(bool)));
+
     skew_memory = (bool*)(aligned_alloc(64, max_num_points * 2 * sizeof(bool)));
     memset((void*)skew_memory, 0, max_num_points * 2 * sizeof(bool));
     memset((void*)wnaf_memory, 1, max_num_points * max_num_rounds * 2 * sizeof(uint64_t));
     memset((g1::element*)bucket_memory, 0xff, (max_buckets + thread_overspill) * sizeof(g1::element));
+    memset((g1::affine_element*)point_pairs_1, 0xff, (max_num_points * 2) * sizeof(g1::affine_element));
+    memset((g1::affine_element*)point_pairs_2, 0xff, (max_num_points * 2) * sizeof(g1::affine_element));
+    memset((fq::field_t*)scratch_space, 0xff, (max_num_points) * sizeof(fq::field_t));
+
+    memset((void*)bucket_count_memory, 0x00, max_num_points * 2 * sizeof(uint32_t));
+    memset((void*)bit_count_memory, 0x00, max_num_points * 2 * sizeof(uint32_t));
+    memset((void*)bucket_empty_status, 0x00, max_num_points * 2 * sizeof(bool));
+
     return 1;
 }();
 } // namespace
@@ -38,6 +62,27 @@ uint64_t* get_wnaf_pointer()
 g1::element* get_bucket_pointer()
 {
     return bucket_memory;
+}
+
+std::vector<scalar_multiplication::affine_product_runtime_state> get_affine_product_runtime_states(const size_t num_threads)
+{
+    std::vector<scalar_multiplication::affine_product_runtime_state> result;
+    result.resize(num_threads);
+    constexpr size_t max_num_points = (2 << 20);
+    // constexpr size_t max_buckets = (1 << 20);
+    // constexpr size_t thread_overspill = 1024;
+    const size_t points_per_thread = max_num_points / num_threads;
+    for (size_t i = 0; i < num_threads; ++i)
+    {
+        scalar_multiplication::affine_product_runtime_state& product_state = result[i];
+        product_state.point_pairs_1 = point_pairs_1 + (i * points_per_thread);
+        product_state.point_pairs_2 = point_pairs_2 + (i * points_per_thread);
+        product_state.scratch_space = scratch_space + (i * (points_per_thread / 2));
+        product_state.bucket_counts = bucket_count_memory + (i * (points_per_thread));
+        product_state.bit_offsets = bit_count_memory + (i * (points_per_thread));
+        product_state.bucket_empty_status = bucket_empty_status + (i * (points_per_thread));
+    }
+    return result;
 }
 }
 }

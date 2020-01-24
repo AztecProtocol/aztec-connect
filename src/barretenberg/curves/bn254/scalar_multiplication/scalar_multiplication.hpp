@@ -5,6 +5,7 @@
 #include "../g1.hpp"
 #include <stddef.h>
 #include <stdint.h>
+#include "./mmu.hpp"
 
 namespace barretenberg
 {
@@ -101,6 +102,34 @@ inline g1::element scalar_multiplication_internal(multiplication_runtime_state& 
 
 inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, const size_t num_points);
 
+template <size_t count>
+inline void count_bits(uint32_t* bucket_counts, uint32_t* bit_offsets, const uint32_t num_buckets);
+
+// TODO: figure out why this is slower than the derp loop verison
+template <size_t num_iterations, size_t i>
+inline void copy_pairwise_points(uint64_t* point_schedule, g1::affine_element* points, g1::affine_element* point_pairs)
+{
+    uint64_t schedule = *(point_schedule + i);
+    g1::conditional_negate_affine(points + (schedule >> 32ULL), point_pairs + i, (schedule >> 31ULL) & 1ULL);
+    if constexpr ((i + 1) < num_iterations)
+    {
+        copy_pairwise_points<num_iterations, i + 1>(point_schedule, points, point_pairs);
+    }
+}
+
+template <size_t num_iterations>
+inline void copy_pairwise_points(uint64_t* point_schedule, g1::affine_element* points, g1::affine_element* point_pairs)
+{
+    copy_pairwise_points<num_iterations, 0>(point_schedule, points, point_pairs);
+}
+
+uint32_t construct_addition_chains(affine_product_runtime_state& state, bool empty_bucket_counts = true);
+
+void add_affine_points(g1::affine_element* points, const size_t num_points, fq::field_t* scratch_space);
+
+void evaluate_addition_chains(affine_product_runtime_state& state, const size_t max_bucket_bits);
+
+g1::affine_element* reduce_buckets(affine_product_runtime_state& state, bool first_round = true);
 } // namespace scalar_multiplication
 } // namespace barretenberg
 

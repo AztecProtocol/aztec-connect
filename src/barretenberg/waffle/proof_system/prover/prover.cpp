@@ -84,15 +84,15 @@ Prover& Prover::operator=(Prover&& other)
 void Prover::compute_wire_commitments()
 {
 
-    g1::element W_L = scalar_multiplication::pippenger(
+    g1::element W_L = scalar_multiplication::pippenger_unsafe(
         witness->wires.at("w_1").get_coefficients(), key->reference_string.monomials, n);
-    g1::element W_R = scalar_multiplication::pippenger(
+    g1::element W_R = scalar_multiplication::pippenger_unsafe(
         witness->wires.at("w_2").get_coefficients(), key->reference_string.monomials, n);
-    g1::element W_O = scalar_multiplication::pippenger(
+    g1::element W_O = scalar_multiplication::pippenger_unsafe(
         witness->wires.at("w_3").get_coefficients(), key->reference_string.monomials, n);
 
     if (__DEBUG_HAS_FOURTH_WIRE) {
-        g1::element W_4 = scalar_multiplication::pippenger(
+        g1::element W_4 = scalar_multiplication::pippenger_unsafe(
             witness->wires.at("w_4").get_coefficients(), key->reference_string.monomials, n);
         g1::affine_element W_4_affine;
         g1::jacobian_to_affine(W_4, W_4_affine);
@@ -117,7 +117,7 @@ void Prover::compute_wire_commitments()
 
 void Prover::compute_z_commitment()
 {
-    g1::element Z = scalar_multiplication::pippenger(key->z.get_coefficients(), key->reference_string.monomials, n);
+    g1::element Z = scalar_multiplication::pippenger_unsafe(key->z.get_coefficients(), key->reference_string.monomials, n);
     g1::affine_element Z_affine;
     g1::jacobian_to_affine(Z, Z_affine);
 
@@ -127,15 +127,15 @@ void Prover::compute_z_commitment()
 
 void Prover::compute_quotient_commitment()
 {
-    g1::element T_LO = scalar_multiplication::pippenger(
+    g1::element T_LO = scalar_multiplication::pippenger_unsafe(
         &circuit_state.quotient_large.get_coefficients()[0], key->reference_string.monomials, n);
-    g1::element T_MID = scalar_multiplication::pippenger(
+    g1::element T_MID = scalar_multiplication::pippenger_unsafe(
         &circuit_state.quotient_large.get_coefficients()[n], key->reference_string.monomials, n);
-    g1::element T_HI = scalar_multiplication::pippenger(
+    g1::element T_HI = scalar_multiplication::pippenger_unsafe(
         &circuit_state.quotient_large.get_coefficients()[n + n], key->reference_string.monomials, n);
 
     if (__DEBUG_HAS_FOURTH_WIRE) {
-        g1::element T_4 = scalar_multiplication::pippenger(
+        g1::element T_4 = scalar_multiplication::pippenger_unsafe(
             &circuit_state.quotient_large.get_coefficients()[n + n + n], key->reference_string.monomials, n);
         g1::affine_element T_4_affine;
         g1::jacobian_to_affine(T_4, T_4_affine);
@@ -872,10 +872,10 @@ void Prover::execute_fifth_round()
     start = std::chrono::steady_clock::now();
 #endif
     g1::element PI_Z =
-        scalar_multiplication::pippenger(opening_poly.get_coefficients(), key->reference_string.monomials, n);
+        scalar_multiplication::pippenger_unsafe(opening_poly.get_coefficients(), key->reference_string.monomials, n);
 
     g1::element PI_Z_OMEGA =
-        scalar_multiplication::pippenger(shifted_opening_poly.get_coefficients(), key->reference_string.monomials, n);
+        scalar_multiplication::pippenger_unsafe(shifted_opening_poly.get_coefficients(), key->reference_string.monomials, n);
 
     g1::affine_element PI_Z_affine;
     g1::affine_element PI_Z_OMEGA_affine;

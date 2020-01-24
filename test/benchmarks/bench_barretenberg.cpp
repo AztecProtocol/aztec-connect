@@ -126,6 +126,41 @@ inline fq::field_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
     return r;
 }
 
+void new_pippenger_one_million_batched_scalar_multiplications_bench(State& state) noexcept
+{
+    uint64_t count = 0;
+    uint64_t i = 0;
+    for (auto _ : state) {
+        uint64_t before = rdtsc();
+        scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES);
+        uint64_t after = rdtsc();
+        count += (after - before);
+        ++i;
+    }
+    uint64_t avg_cycles = count / i;
+    printf("pippenger clock cycles = %" PRIu64 "\n", (avg_cycles));
+    printf("pippenger clock cycles per mul = %" PRIu64 "\n", (avg_cycles / (MAX_GATES)));
+}
+BENCHMARK(new_pippenger_one_million_batched_scalar_multiplications_bench);
+
+void unsafe_pippenger_one_million_batched_scalar_multiplications_bench(State& state) noexcept
+{
+    uint64_t count = 0;
+    uint64_t i = 0;
+    for (auto _ : state) {
+        uint64_t before = rdtsc();
+        scalar_multiplication::pippenger_unsafe(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES);
+        uint64_t after = rdtsc();
+        count += (after - before);
+        ++i;
+    }
+    uint64_t avg_cycles = count / i;
+    printf("pippenger clock cycles = %" PRIu64 "\n", (avg_cycles));
+    printf("pippenger clock cycles per mul = %" PRIu64 "\n", (avg_cycles / (MAX_GATES)));
+}
+BENCHMARK(unsafe_pippenger_one_million_batched_scalar_multiplications_bench);
+
+
 void new_plonk_scalar_multiplications_bench(State& state) noexcept
 {
     uint64_t count = 0;
@@ -172,23 +207,6 @@ void new_plonk_scalar_multiplications_bench(State& state) noexcept
     printf("pippenger clock cycles per scalar mul = %" PRIu64 "\n", (avg_cycles / (9 * MAX_GATES)));
 }
 BENCHMARK(new_plonk_scalar_multiplications_bench);
-
-void new_pippenger_one_million_batched_scalar_multiplications_bench(State& state) noexcept
-{
-    uint64_t count = 0;
-    uint64_t i = 0;
-    for (auto _ : state) {
-        uint64_t before = rdtsc();
-        scalar_multiplication::pippenger(&globals.scalars[0], &globals.reference_string.monomials[0], MAX_GATES);
-        uint64_t after = rdtsc();
-        count += (after - before);
-        ++i;
-    }
-    uint64_t avg_cycles = count / i;
-    printf("pippenger clock cycles = %" PRIu64 "\n", (avg_cycles));
-    printf("pippenger clock cycles per mul = %" PRIu64 "\n", (avg_cycles / (MAX_GATES)));
-}
-BENCHMARK(new_pippenger_one_million_batched_scalar_multiplications_bench);
 
 void coset_fft_bench_parallel(State& state) noexcept
 {
