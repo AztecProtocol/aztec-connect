@@ -52,6 +52,8 @@ void add_affine_points(g1::affine_element* points, const size_t num_points, fq::
     fq::__invert(batch_inversion_accumulator, batch_inversion_accumulator);
 
     for (size_t i = (num_points)-2; i < num_points; i -= 2) {
+        __builtin_prefetch(points + i - 2);
+        __builtin_prefetch(points + 1 - 1);
         fq::__mul_with_coarse_reduction(batch_inversion_accumulator, points[i + 1].y, points[i + 1].y);
         fq::__mul_with_coarse_reduction(
             batch_inversion_accumulator, points[i + 1].x, batch_inversion_accumulator); // update accumulator
@@ -311,8 +313,7 @@ uint32_t construct_addition_chains(affine_product_runtime_state& state, bool emp
     // in a pairwise order, so that we can compute large sequences of additions using the affine trick
     size_t schedule_it = 0;
     uint32_t* bucket_count_it = state.bucket_counts;
-    uint64_t schedule;
-    uint64_t next_schedule = state.point_schedule[0];
+
     for (size_t i = 0; i < state.num_buckets; ++i) {
         uint32_t count = *bucket_count_it;
         ++bucket_count_it;
@@ -322,16 +323,15 @@ uint32_t construct_addition_chains(affine_product_runtime_state& state, bool emp
             const size_t k_end = count & (1UL << j);
 
             for (size_t k = 0; k < k_end; ++k) {
-                schedule = next_schedule;
-                ++schedule_it;
-                next_schedule = state.point_schedule[schedule_it];
-                __builtin_prefetch(state.points + (next_schedule >> 32ULL));
+                uint64_t schedule = state.point_schedule[schedule_it];
+                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 1] >> 32ULL));
 
                 const uint64_t predicate = (schedule >> 31UL) & 1UL;
 
                 g1::conditional_negate_affine(
                     state.points + (schedule >> 32ULL), state.point_pairs_1 + current_offset, predicate);
                 ++current_offset;
+                ++schedule_it;
             }
         }
     }
