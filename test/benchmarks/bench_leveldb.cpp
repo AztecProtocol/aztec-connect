@@ -17,7 +17,7 @@ void hash(State& state) noexcept
         hash({ { { 0, 0, 0, 0 } }, { { 1, 1, 1, 1 } } });
     }
 }
-BENCHMARK(hash)->Unit(benchmark::kMillisecond);
+BENCHMARK(hash);
 
 void update_first_element(State& state) noexcept
 {

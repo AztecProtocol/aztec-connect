@@ -25,7 +25,7 @@ inline barretenberg::fr::field_t hash(std::vector<barretenberg::fr::field_t> con
 
 inline barretenberg::fr::field_t hash(std::vector<barretenberg::fr::field_t> const& input)
 {
-    auto k = hash_field_elements((uint64_t*)&input[0], 4 * input.size());
+    auto k = hash_field_elements((uint64_t*)&input[0], input.size());
     barretenberg::fr::field_t result;
     memcpy(&result, &k, sizeof(k));
     return result;

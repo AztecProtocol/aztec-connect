@@ -7,12 +7,13 @@ namespace plonk {
 namespace stdlib {
 namespace merkle_tree {
 
+typedef std::vector<std::pair<fr::field_t, fr::field_t>> fr_hash_path;
+
 template <typename ComposerContext> class merkle_tree {
   public:
     typedef stdlib::field_t<ComposerContext> field_t;
     typedef stdlib::bool_t<ComposerContext> bool_t;
     typedef stdlib::uint32<ComposerContext> uint32;
-    typedef std::vector<std::pair<barretenberg::fr::field_t, barretenberg::fr::field_t>> fr_hash_path;
     typedef std::vector<std::pair<field_t, field_t>> hash_path;
 
     merkle_tree(ComposerContext& ctx, size_t depth);
@@ -52,11 +53,10 @@ template <typename ComposerContext> class merkle_tree {
     size_t size_;
 };
 
-std::ostream& operator<<(std::ostream& os,
-                         std::vector<std::pair<barretenberg::fr::field_t, barretenberg::fr::field_t>> const& path);
-
 } // namespace merkle_tree
 } // namespace stdlib
 } // namespace plonk
+
+std::ostream& operator<<(std::ostream& os, plonk::stdlib::merkle_tree::fr_hash_path const& path);
 
 #include "merkle_tree.tcc"

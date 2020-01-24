@@ -155,8 +155,7 @@ void merkle_tree<ComposerContext>::update_membership(field_t const& new_root,
 }
 
 template <typename ComposerContext>
-typename merkle_tree<ComposerContext>::fr_hash_path merkle_tree<ComposerContext>::get_new_hash_path(
-    size_t index, barretenberg::fr::field_t value)
+fr_hash_path merkle_tree<ComposerContext>::get_new_hash_path(size_t index, barretenberg::fr::field_t value)
 {
     fr_hash_path path = store_.get_hash_path(index);
     barretenberg::fr::field_t current = value;
@@ -173,8 +172,11 @@ typename merkle_tree<ComposerContext>::fr_hash_path merkle_tree<ComposerContext>
     return path;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         std::vector<std::pair<barretenberg::fr::field_t, barretenberg::fr::field_t>> const& path)
+} // namespace merkle_tree
+} // namespace stdlib
+} // namespace plonk
+
+std::ostream& operator<<(std::ostream& os, plonk::stdlib::merkle_tree::fr_hash_path const& path)
 {
     os << "[\n";
     for (size_t i = 0; i < path.size(); ++i) {
@@ -183,7 +185,3 @@ std::ostream& operator<<(std::ostream& os,
     os << "]";
     return os;
 }
-
-} // namespace merkle_tree
-} // namespace stdlib
-} // namespace plonk

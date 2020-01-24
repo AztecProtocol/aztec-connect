@@ -79,13 +79,21 @@ fr_hash_path LevelDbStore::get_hash_path(size_t index)
     std::string current;
     auto status = db_->Get(leveldb::ReadOptions(), leveldb::Slice((char*)&root_, 32), &current);
 
-    for (size_t i = depth_ - 1; i >= 0; --i) {
+    for (size_t i = depth_ - 1; i < depth_; --i) {
         if (!status.ok()) {
             // This is an empty subtree. Fill in zero value.
             path[i] = std::make_pair(zero_hashes_[i], zero_hashes_[i]);
             continue;
         }
 
+        leveldb::Slice slice(current);
+        auto left = from_slice<fr::field_t>(slice);
+        auto right = from_slice<fr::field_t>(slice);
+        path[i] = std::make_pair(left, right);
+        bool is_right = (index >> i) & 0x1;
+        status = db_->Get(leveldb::ReadOptions(), current.substr(is_right * 32, 32), &current);
+
+        /*
         leveldb::Slice slice(current);
         uint8_t type = from_slice<uint8_t>(slice);
 
@@ -112,6 +120,7 @@ fr_hash_path LevelDbStore::get_hash_path(size_t index)
             }
             break;
         }
+        */
     }
 
     return path;
