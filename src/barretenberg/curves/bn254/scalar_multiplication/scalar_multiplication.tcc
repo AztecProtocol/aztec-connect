@@ -725,7 +725,7 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, c
  * See `scalar_multiplication.cpp` for a more detailed description.
  * 
  * It's...unsafe, because we assume that the incomplete addition formula exceptions are not triggered.
- * We don't bother to check for this, because pipeline stalls are really bloody annoying when you're chewing through 12 bytes of code per CPU cycle.
+ * We don't bother to check for this to avoid conditional branches in a critical section of our code.
  * This is fine for situations where your bases are linearly independent (i.e. KZG10 polynomial commitments),
  * because triggering the incomplete addition exceptions is about as hard as solving the disrete log problem.
  * 

@@ -253,16 +253,6 @@ TEST(scalar_multiplication, reduce_buckets_simple)
         EXPECT_EQ(fq::eq(output[i].y, expected[i].y), true);
 
     }
-    // for (size_t i = 0; i < num_points; ++i)
-    // {
-    //     printf("monomials[%lu] memory address = %lx \n", i, (size_t)(&monomials[i]));
-    // }
-       //  expected[0] = g1::normalize(expected[0]);
-        //expected[2] = g1::normalize(expected[2]);
-
-       // EXPECT_EQ(fq::eq(output[0].x, expected[0].x), true);
-      //   EXPECT_EQ(fq::eq(output[1].y, expected[2].y), true);
-    // EXPECT_EQ(product_state.bucket_empty_status[1], true);    
 }
 
 TEST(scalar_multiplication, reduce_buckets)
