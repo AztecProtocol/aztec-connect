@@ -107,6 +107,8 @@ void evaluate_addition_chains(affine_product_runtime_state& state, const size_t 
  **/ 
 g1::affine_element* reduce_buckets(affine_product_runtime_state& state, bool first_round)
 {
+
+    std::chrono::steady_clock::time_point time_start = std::chrono::steady_clock::now();
     // This method sorts our points into our required base-2 sequences.
     // `max_bucket_bits` is log2(maximum bucket count).
     // This sets the upper limit on how many iterations we need to perform in `evaluate_addition_chains`.
@@ -115,6 +117,13 @@ g1::affine_element* reduce_buckets(affine_product_runtime_state& state, bool fir
     // (e.g. add 4 pairs together to get 2 pairs, add those pairs together to get a single pair, which we add to reduce to our final point)
     const size_t max_bucket_bits = construct_addition_chains(
         state, first_round);
+    std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
+    std::chrono::microseconds diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
+    if (first_round)
+    {
+        std::cout << "construct addition chains time: " << diff.count() << "us" << std::endl;
+    }
+     time_start = std::chrono::steady_clock::now();
 
     // if max_bucket_bits is 0, we're done! we can return
     if (max_bucket_bits == 0) {
@@ -123,12 +132,19 @@ g1::affine_element* reduce_buckets(affine_product_runtime_state& state, bool fir
 
     // compute our required additions using the affine trick
     evaluate_addition_chains(state, max_bucket_bits);
+     time_end = std::chrono::steady_clock::now();
+     diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
+    if (first_round)
+    {
+        std::cout << "evaluate addition chains time: " << diff.count() << "us" << std::endl;
+    }
 
     // this next step is a processing step, that computes a new point schedule for our reduced points.
     // In the pippenger algorithm, we use a 64-bit uint to categorize each point.
     // The high 32 bits describes the position of the point in a point array.
     // The low 31 bits describes the bucket index that the point maps to
     // The 32nd bit defines whether the point is actually a negation of our stored point.
+    time_start = std::chrono::steady_clock::now();
 
     // We want to compute these 'point schedule' uints for our reduced points, so that we can recurse back into `reduce_buckets`
     uint32_t start = 0;
@@ -172,7 +188,12 @@ g1::affine_element* reduce_buckets(affine_product_runtime_state& state, bool fir
     state.points = state.point_pairs_1;
     state.point_pairs_1 = state.point_pairs_2;
     state.point_pairs_2 = temp;
-
+    time_end = std::chrono::steady_clock::now();
+    diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
+    if (first_round)
+    {
+        std::cout << "update point schedule time: " << diff.count() << "s" << std::endl;
+    }
     // We could probably speed this up by unroling the recursion.
     // But each extra call to `reduce_buckets` has an input size that is ~log(previous input size)
     // so the extra run-time is meh
