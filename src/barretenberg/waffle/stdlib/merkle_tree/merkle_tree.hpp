@@ -12,7 +12,7 @@ template <typename ComposerContext> class merkle_tree {
     typedef stdlib::field_t<ComposerContext> field_t;
     typedef stdlib::bool_t<ComposerContext> bool_t;
     typedef stdlib::uint32<ComposerContext> uint32;
-    typedef LevelDbStore::fr_hash_path fr_hash_path;
+    typedef std::vector<std::pair<barretenberg::fr::field_t, barretenberg::fr::field_t>> fr_hash_path;
     typedef std::vector<std::pair<field_t, field_t>> hash_path;
 
     merkle_tree(ComposerContext& ctx, size_t depth);
@@ -40,6 +40,8 @@ template <typename ComposerContext> class merkle_tree {
                            field_t const& old_root,
                            hash_path const& old_hashes,
                            uint32 const& index);
+
+    fr_hash_path get_new_hash_path(size_t index, barretenberg::fr::field_t value);
 
   private:
     ComposerContext& ctx_;

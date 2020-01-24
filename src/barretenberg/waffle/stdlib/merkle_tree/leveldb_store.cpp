@@ -1,87 +1,218 @@
 #include "leveldb_store.hpp"
 #include "hash.hpp"
-#include <leveldb/db.h>
+#include <sstream>
 
 namespace plonk {
 namespace stdlib {
 namespace merkle_tree {
 
-LevelDbStore::LevelDbStore(size_t depth)
+using namespace barretenberg;
+
+namespace {
+barretenberg::fr::field_t from_string(std::string const& data, size_t offset = 0)
+{
+    barretenberg::fr::field_t result;
+    std::copy(data.begin() + offset, data.begin() + offset + sizeof(barretenberg::fr::field_t), result.data);
+    return result;
+}
+template <typename T> T from_slice(leveldb::Slice& slice)
+{
+    T result;
+    std::copy(slice.data, slice.data + sizeof(T), &result);
+    slice.data += sizeof(T);
+    slice.size -= sizeof(T);
+    return result;
+}
+
+/*
+inline std::string hash(std::vector<std::string> const& input)
+{
+    std::vector<barretenberg::fr::field_t> inputs;
+    std::transform(
+        input.begin(), input.end(), std::back_inserter(inputs), [](std::string const& s) { return from_string(s, 0); });
+    auto result = hash(inputs);
+    return std::string((char*)&result, (char*)&result + sizeof(result));
+}
+*/
+
+} // namespace
+
+LevelDbStore::LevelDbStore(std::string const& db_path, size_t depth)
     : depth_(depth)
 {
     ASSERT(depth_ >= 1 && depth <= 256);
     total_size_ = 1ULL << depth_;
-    hashes_.resize(total_size_ * 2 - 2);
-
-    // Build the entire tree.
-    auto current = hash({ barretenberg::fr::zero });
-    size_t layer_size = total_size_;
-    for (size_t offset = 0; offset < hashes_.size(); offset += layer_size, layer_size /= 2) {
-        for (size_t i = 0; i < layer_size; ++i) {
-            hashes_[offset + i] = current;
-        }
-        current = hash({ current, current });
-    }
-
-    root_ = current;
+    zero_hashes_.resize(depth);
 
     leveldb::DB* db;
     leveldb::Options options;
     options.create_if_missing = true;
-    leveldb::Status status = leveldb::DB::Open(options, "/tmp/testdb", &db);
+    leveldb::Status status = leveldb::DB::Open(options, db_path, &db);
     assert(status.ok());
+    db_.reset(db);
+
+    // Compute the zero values at each layer.
+    auto current = hash({ barretenberg::fr::zero });
+    for (size_t i = 0; i < depth; ++i) {
+        zero_hashes_[i] = current;
+        current = hash({ current, current });
+    }
+
+    status = db->Get(leveldb::ReadOptions(), "root", &root_);
+    if (!status.ok()) {
+        root_.reserve(32);
+        std::copy(current.data, current.data + 4, reinterpret_cast<uint64_t*>(root_.data()));
+    };
 }
 
-typename LevelDbStore::fr_hash_path LevelDbStore::get_hash_path(size_t index)
+barretenberg::fr::field_t LevelDbStore::root() const
+{
+    return from_string(root_);
+}
+
+fr_hash_path LevelDbStore::get_hash_path(size_t index)
 {
     fr_hash_path path(depth_);
-    size_t offset = 0;
-    size_t layer_size = total_size_;
-    for (size_t i = 0; i < depth_; ++i) {
-        index &= 0xFE;
-        path[i] = std::make_pair(hashes_[offset + index], hashes_[offset + index + 1]);
-        offset += layer_size;
-        layer_size /= 2;
-        index /= 2;
-    }
-    return path;
-}
 
-typename LevelDbStore::fr_hash_path LevelDbStore::get_new_hash_path(size_t index, barretenberg::fr::field_t value)
-{
-    fr_hash_path path = get_hash_path(index);
-    size_t offset = 0;
-    size_t layer_size = total_size_;
-    barretenberg::fr::field_t current = value;
-    for (size_t i = 0; i < depth_; ++i) {
-        bool path_bit = index & 0x1;
-        if (path_bit) {
-            path[i].second = current;
-        } else {
-            path[i].first = current;
+    std::string current;
+    auto status = db_->Get(leveldb::ReadOptions(), root_, &current);
+
+    for (size_t i = depth_ - 1; i >= 0; --i) {
+        if (!status.ok()) {
+            // This is an empty subtree. Fill in zero value.
+            path[i] = std::make_pair(zero_hashes_[i], zero_hashes_[i]);
+            continue;
         }
-        current = hash({ path[i].first, path[i].second });
-        offset += layer_size;
-        layer_size /= 2;
-        index /= 2;
+
+        leveldb::Slice slice(current);
+        uint8_t type = from_slice<uint8_t>(slice);
+
+        if (type == 0) {
+            // This is a regular node with left and right trees. Descend according to index path.
+            auto left = from_slice<fr::field_t>(slice);
+            auto right = from_slice<fr::field_t>(slice);
+            path[i] = std::make_pair(left, right);
+            bool is_right = (index >> i) & 0x1;
+            status = db_->Get(leveldb::ReadOptions(), current.substr(1 + is_right * 32, 32), &current);
+        } else if (type == 1) {
+            // This is a subtree with a single element. The hash path can be fully restored from this node.
+            uint64_t element_index = from_slice<uint64_t>(slice);
+            uint8_t tree_depth = from_slice<uint8_t>(slice);
+            fr::field_t current = from_slice<fr::field_t>(slice);
+            for (size_t j = 0; j < tree_depth; ++j) {
+                bool is_right = (element_index >> j) & 0x1;
+                if (is_right) {
+                    path[j] = std::make_pair(zero_hashes_[j], current);
+                } else {
+                    path[j] = std::make_pair(current, zero_hashes_[j]);
+                }
+                current = hash({ path[j].first, path[j].second });
+            }
+            break;
+        }
     }
+
     return path;
 }
 
-void LevelDbStore::update_hash_path(size_t index, typename LevelDbStore::fr_hash_path path)
+void LevelDbStore::update_element(size_t index, fr::field_t value)
 {
-    size_t offset = 0;
-    size_t layer_size = total_size_;
-    for (size_t i = 0; i < depth_; ++i) {
-        index &= 0xFE;
-        hashes_[offset + index] = path[i].first;
-        hashes_[offset + index + 1] = path[i].second;
-        offset += layer_size;
-        layer_size /= 2;
-        index /= 2;
-    }
+    update_element(root_, std::string((char*)&value, 32), index, depth_);
 }
 
+fr::field_t LevelDbStore::update_element(fr::field_t const& root, fr::field_t const& value, size_t index, size_t height)
+{
+    if (height == 0) {
+        return value;
+    }
+
+    std::string data;
+    auto status = db_->Get(leveldb::ReadOptions(), leveldb::Slice((char*)&root, 32), &data);
+
+    if (!status.ok()) {
+        // Add the entire missing branch.
+        fr::field_t current = value;
+        for (size_t i = 0; i < height; ++i) {
+            bool is_right = (index >> i) & 0x1;
+            std::ostringstream os;
+            if (is_right) {
+                os.write((char*)&zero_hashes_[i], 32);
+                os.write((char*)current.data, 32);
+            } else {
+                os.write((char*)current.data, 32);
+                os.write((char*)&zero_hashes_[i], 32);
+            }
+            current = hash({ is_right ? zero_hashes_[i] : current, is_right ? current : zero_hashes_[i] });
+            db_->Put(leveldb::WriteOptions(), leveldb::Slice((char*)current.data, 32), os.str());
+        }
+        return current;
+    }
+
+    bool is_right = (index >> height) & 0x1;
+    fr::field_t subtree_root = from_string(data, is_right * 32);
+    size_t subtree_index = index & ~(1ULL << height);
+    auto current = update_element(subtree_root, value, subtree_index, height - 1);
+    data.replace(is_right * 32, 32, (char*)&current, 32);
+    auto key = hash({ from_string(data, 0), from_string(data, 32) });
+    // TODO: Perhaps delete old node?
+    db_->Put(leveldb::WriteOptions(), leveldb::Slice((char*)key.data, 32), data);
+    return key;
+    /*
+        if (!status.ok()) {
+            std::ostringstream os;
+            if (height) {
+                // Insert a single node
+                uint8_t type = 1;
+                uint64_t element_index = index;
+                uint8_t tree_depth = height;
+                os.write((char*)&type, sizeof(type));
+                os.write((char*)&element_index, sizeof(element_index));
+                os.write((char*)&tree_depth, sizeof(tree_depth));
+            } else {
+                uint8_t type = 0;
+                os.write((char*)&type, sizeof(type));
+                if (index) {
+                    os.write((char*)&zero_hashes_[height], 32);
+                    os.write(value.data(), 32);
+                } else {
+                    os.write(value.data(), 32);
+                    os.write((char*)&zero_hashes_[height], 32);
+                }
+            }
+            db_->Put(leveldb::WriteOptions(), key, os.str());
+            return;
+        }
+
+        // We have an existing node. Recurse downwards.
+        auto left = data.substr()
+        auto right = from_slice<fr::field_t>(slice);
+        path[i] = std::make_pair(left, right);
+        bool is_right = (index >> i) & 0x1;
+        */
+}
+
+void LevelDbStore::update_hash_path(size_t index, fr_hash_path path)
+{
+    std::string current;
+    auto status = db_->Get(leveldb::ReadOptions(), root_, &current);
+    leveldb::Slice slice(current);
+
+    for (size_t i = depth_ - 1; i >= 0; --i) {
+        if (!status.ok()) {
+            // Insert a single node
+            break;
+        }
+
+        leveldb::Slice slice(current);
+        uint8_t type = from_slice<uint8_t>(slice);
+
+        if (type == 0)
+            uint8_t = std::ostringstream os;
+        os.write()
+    }
+}
 } // namespace merkle_tree
+
 } // namespace stdlib
+} // namespace plonk
 } // namespace plonk

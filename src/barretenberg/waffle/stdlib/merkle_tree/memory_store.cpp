@@ -44,8 +44,6 @@ typename MerkleTreeMemoryStore::fr_hash_path MerkleTreeMemoryStore::get_new_hash
                                                                                       barretenberg::fr::field_t value)
 {
     fr_hash_path path = get_hash_path(index);
-    size_t offset = 0;
-    size_t layer_size = total_size_;
     barretenberg::fr::field_t current = value;
     for (size_t i = 0; i < depth_; ++i) {
         bool path_bit = index & 0x1;
@@ -55,8 +53,6 @@ typename MerkleTreeMemoryStore::fr_hash_path MerkleTreeMemoryStore::get_new_hash
             path[i].first = current;
         }
         current = hash({ path[i].first, path[i].second });
-        offset += layer_size;
-        layer_size /= 2;
         index /= 2;
     }
     return path;

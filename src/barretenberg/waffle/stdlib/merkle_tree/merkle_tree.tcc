@@ -95,7 +95,7 @@ template <typename ComposerContext> void merkle_tree<ComposerContext>::add_membe
 {
     ASSERT(size_ < total_size_);
     fr_hash_path old_hashes = store_.get_hash_path(size_);
-    fr_hash_path new_hashes = store_.get_new_hash_path(size_, hash({ input.get_value() }));
+    fr_hash_path new_hashes = get_new_hash_path(size_, hash({ input.get_value() }));
     field_t new_root = field_t(&ctx_, hash({ new_hashes[depth_ - 1].first, new_hashes[depth_ - 1].second }));
     uint32 index = uint32(witness_t(&ctx_, size_));
     field_t zero(&ctx_, barretenberg::fr::zero);
@@ -125,7 +125,7 @@ void merkle_tree<ComposerContext>::update_member(field_t const& value, uint32 co
     // ctx_.assert_equal_constant((index < size).witness_index, barretenberg::fr::one);
 
     fr_hash_path old_hashes = store_.get_hash_path(idx);
-    fr_hash_path new_hashes = store_.get_new_hash_path(idx, hash({ value.get_value() }));
+    fr_hash_path new_hashes = get_new_hash_path(idx, hash({ value.get_value() }));
     field_t new_root = field_t(&ctx_, hash({ new_hashes[depth_ - 1].first, new_hashes[depth_ - 1].second }));
 
     update_membership(
@@ -158,6 +158,25 @@ void merkle_tree<ComposerContext>::update_membership(field_t const& new_root,
         bool_t share_right = (old_hashes[i].second == new_hashes[i].second) & !path_bit;
         ctx_.assert_equal_constant((share_left ^ share_right).witness_index, barretenberg::fr::one);
     }
+}
+
+template <typename ComposerContext>
+typename merkle_tree<ComposerContext>::fr_hash_path merkle_tree<ComposerContext>::get_new_hash_path(
+    size_t index, barretenberg::fr::field_t value)
+{
+    fr_hash_path path = store_.get_hash_path(index);
+    barretenberg::fr::field_t current = value;
+    for (size_t i = 0; i < depth_; ++i) {
+        bool path_bit = index & 0x1;
+        if (path_bit) {
+            path[i].second = current;
+        } else {
+            path[i].first = current;
+        }
+        current = hash({ path[i].first, path[i].second });
+        index /= 2;
+    }
+    return path;
 }
 
 std::ostream& operator<<(std::ostream& os,
