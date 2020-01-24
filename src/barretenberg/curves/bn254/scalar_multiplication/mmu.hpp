@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../g1.hpp"
-#include <vector>
+
 namespace barretenberg
 {
 // simple helper functions to retrieve pointers to pre-allocated memory for the scalar multiplication algorithm.
@@ -15,10 +15,11 @@ struct affine_product_runtime_state {
     uint32_t* bucket_counts;
     uint32_t* bit_offsets;
     uint64_t* point_schedule;
-    size_t num_points;
+    uint32_t num_points;
     uint32_t num_buckets;
     bool* bucket_empty_status;
 };
+
 } // namespace scalar_multiplication
 namespace mmu
 {
@@ -28,6 +29,7 @@ namespace mmu
 
     g1::element* get_bucket_pointer();
 
-    std::vector<scalar_multiplication::affine_product_runtime_state> get_affine_product_runtime_states(const size_t num_threads);
+
+    scalar_multiplication::affine_product_runtime_state get_affine_product_runtime_state(const size_t num_threads, const size_t thread_index);
 }
 }

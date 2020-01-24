@@ -515,23 +515,17 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
     for (size_t j = 0; j < num_threads; ++j) {
         g1::set_infinity(thread_accumulators[j]);
 
-        affine_product_runtime_state product_state = thread_states[j];
-
-        // TODO: don't think we need these
-        g1::affine_element* pair_a = product_state.point_pairs_1;
-        g1::affine_element* pair_b = product_state.point_pairs_2;
-
         for (size_t i = 0; i < num_rounds; ++i) {
             uint64_t* thread_point_schedule = &state.wnaf_table[(i * num_points) + j * num_points_per_thread];
             const size_t first_bucket = thread_point_schedule[0] & 0x7fffffffU;
             const size_t last_bucket = thread_point_schedule[(num_points_per_thread - 1)] & 0x7fffffffU;
             const size_t num_thread_buckets = (last_bucket - first_bucket) + 1;
 
-            product_state.num_points = num_points_per_thread;
+            affine_product_runtime_state product_state = mmu::get_affine_product_runtime_state(num_threads, j);
+            product_state.num_points = static_cast<uint32_t>(num_points_per_thread);
             product_state.points = points;
             product_state.point_schedule = thread_point_schedule;
-            product_state.point_pairs_1 = pair_a;
-            product_state.point_pairs_2 = pair_b;
+            product_state.num_buckets = static_cast<uint32_t>(num_thread_buckets);
 
             g1::affine_element* output_buckets = reduce_buckets(product_state, true);
 
@@ -544,7 +538,7 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
             // algorithm can use mixed addition formulae, instead of full addition formulae
             size_t output_it = product_state.num_points - 1;
             for (size_t k = num_thread_buckets - 1; k > 0; --k) {
-                if (!product_state.bucket_empty_status[k]) {
+                if (__builtin_expect(!product_state.bucket_empty_status[k], 1)) {
                     g1::mixed_add(running_sum, (output_buckets[output_it]), running_sum);
                     --output_it;
                 }

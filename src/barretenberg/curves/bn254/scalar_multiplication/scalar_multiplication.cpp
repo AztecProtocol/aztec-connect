@@ -105,15 +105,6 @@ void evaluate_addition_chains(affine_product_runtime_state& state, const size_t 
  **/ 
 g1::affine_element* reduce_buckets(affine_product_runtime_state& state, bool first_round)
 {
-    // If this is the first iteration, we need to compute how many buckets we're dealing with
-    if (first_round)
-    {
-        const uint32_t first_bucket = static_cast<uint32_t>(state.point_schedule[0] & 0x7fffffffUL);
-        const uint32_t last_bucket = static_cast<uint32_t>(state.point_schedule[state.num_points - 1] & 0x7fffffffUL);
-        const uint32_t num_buckets = 1 + last_bucket - first_bucket;
-        state.num_buckets = num_buckets;
-    }
-
     // This method sorts our points into our required base-2 sequences.
     // `max_bucket_bits` is log2(maximum bucket count).
     // This sets the upper limit on how many iterations we need to perform in `evaluate_addition_chains`.

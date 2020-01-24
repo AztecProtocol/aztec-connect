@@ -271,9 +271,9 @@ template <typename FieldParams> class field {
         size_t sqr_count = 0;
         for (; i < 256; --i) {
             sqr_count++;
-            __sqr(accumulator, accumulator);
+            __sqr_with_coarse_reduction(accumulator, accumulator);
             if (get_bit(b, i)) {
-                __mul(accumulator, a, accumulator);
+                __mul_with_coarse_reduction(accumulator, a, accumulator);
             }
         }
         while (gt(accumulator, modulus_plus_one)) {
