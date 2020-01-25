@@ -978,7 +978,8 @@ waffle::plonk_proof Prover::construct_proof()
 
 void Prover::reset()
 {
-    transcript = transcript::Transcript(transcript.get_manifest());
+    transcript::Manifest manifest = transcript.get_manifest();
+    transcript = transcript::Transcript(manifest);
     for (size_t i = 0; i < widgets.size(); ++i) {
         widgets[i]->reset();
     }
