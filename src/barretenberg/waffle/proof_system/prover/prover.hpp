@@ -9,7 +9,6 @@
 #include "../../waffle_types.hpp"
 #include "../widgets/base_widget.hpp"
 
-#include "../circuit_state.hpp"
 #include "../../../transcript/transcript.hpp"
 #include "../../../transcript/manifest.hpp"
 
@@ -43,7 +42,6 @@ class Prover
     void compute_z_commitment();
     void compute_quotient_commitment();
     void compute_permutation_grand_product_coefficients();
-    void compute_identity_grand_product_coefficients();
     void compute_arithmetisation_coefficients();
     void init_quotient_polynomials();
     void compute_opening_elements();
@@ -52,9 +50,6 @@ class Prover
     void reset();
 
     size_t n;
-
-    // TODO change to fft_state;
-    waffle::CircuitFFTState circuit_state;
 
     std::vector<uint32_t> sigma_1_mapping;
     std::vector<uint32_t> sigma_2_mapping;

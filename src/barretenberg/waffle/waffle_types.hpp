@@ -35,7 +35,7 @@ struct proving_key
         barretenberg::polynomial w_2_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
         barretenberg::polynomial w_3_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
         barretenberg::polynomial w_4_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
-        z = barretenberg::polynomial(n, n);
+        z = barretenberg::polynomial(n, n + 1);
         z_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
 
         memset((void*)&w_1_fft[0], 0x00, sizeof(barretenberg::fr::field_t) * (4 * n + 4));
@@ -64,9 +64,34 @@ struct proving_key
         opening_poly = barretenberg::polynomial(n, n);
         shifted_opening_poly = barretenberg::polynomial(n, n);
         linear_poly = barretenberg::polynomial(n, n);
+
+        quotient_mid = barretenberg::polynomial(2 * n, 2 * n);
+        quotient_large = barretenberg::polynomial(4 * n, 4 * n);
+
         memset((void*)&opening_poly[0], 0x00, sizeof(barretenberg::fr::field_t) * n);
         memset((void*)&shifted_opening_poly[0], 0x00, sizeof(barretenberg::fr::field_t) * n);
         memset((void*)&linear_poly[0], 0x00, sizeof(barretenberg::fr::field_t) * n);
+        memset((void*)&quotient_mid[0], 0x00, sizeof(barretenberg::fr::field_t) * 2 * n);
+        memset((void*)&quotient_large[0], 0x00, sizeof(barretenberg::fr::field_t) * 4 * n);
+
+        size_t memory = opening_poly.get_max_size() * 32;
+        memory += (linear_poly.get_max_size() * 32);
+        memory += (shifted_opening_poly.get_max_size() * 32);
+        memory += (opening_poly.get_max_size() * 32);
+        memory += (lagrange_1.get_max_size() * 32);
+        memory += (w_1_fft.get_max_size() * 32);
+        memory += (w_2_fft.get_max_size() * 32);
+        memory += (w_3_fft.get_max_size() * 32);
+        memory += (w_4_fft.get_max_size() * 32);
+        memory += (z_fft.get_max_size() * 32);
+        memory += (z.get_max_size() * 32);
+        memory += (small_domain.size * 2 * 32);
+        memory += (mid_domain.size * 2 * 32);
+        memory += (large_domain.size * 2 * 32);
+        memory += (quotient_mid.get_max_size() * 32);
+        memory += (quotient_large.get_max_size() * 32);
+
+        printf("proving key allocated memory = %lu \n", memory / (1024UL * 1024UL));
     }
 
     proving_key(const proving_key& other)
@@ -154,6 +179,9 @@ struct proving_key
     barretenberg::polynomial opening_poly;
     barretenberg::polynomial shifted_opening_poly;
     barretenberg::polynomial linear_poly;
+
+    barretenberg::polynomial quotient_mid;
+    barretenberg::polynomial quotient_large;
     static constexpr size_t min_thread_block = 4UL;
 };
 

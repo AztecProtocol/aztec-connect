@@ -11,7 +11,6 @@
 #include "../../reference_string/reference_string.hpp"
 #include "../../waffle_types.hpp"
 
-#include "../circuit_state.hpp"
 #include "../transcript_helpers.hpp"
 
 namespace waffle {
@@ -143,8 +142,7 @@ class ProverBaseWidget {
     virtual ~ProverBaseWidget() {}
 
     virtual barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                                    const transcript::Transcript& transcript,
-                                                                    CircuitFFTState& circuit_state) = 0;
+                                                                    const transcript::Transcript& transcript) = 0;
     virtual barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base,
                                                                   const transcript::Transcript& transcript,
                                                                   barretenberg::polynomial& r) = 0;

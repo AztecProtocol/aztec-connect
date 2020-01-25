@@ -35,8 +35,7 @@ class ProverTurboArithmeticWidget : public ProverBaseWidget {
     ProverTurboArithmeticWidget& operator=(ProverTurboArithmeticWidget&& other);
 
     barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                            const transcript::Transcript& transcript,
-                                                            CircuitFFTState& circuit_state);
+                                                            const transcript::Transcript& transcript);
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base,
                                                           const transcript::Transcript& transcript,
                                                           barretenberg::polynomial& r);

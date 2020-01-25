@@ -48,9 +48,9 @@ struct global_vars {
 
 global_vars globals;
 
-waffle::CircuitFFTState plonk_circuit_states[8]{
-    waffle::CircuitFFTState(START),      waffle::CircuitFFTState(START * 2),  waffle::CircuitFFTState(START * 4),  waffle::CircuitFFTState(START * 8),
-    waffle::CircuitFFTState(START * 16), waffle::CircuitFFTState(START * 32), waffle::CircuitFFTState(START * 64), waffle::CircuitFFTState(START * 128),
+barretenberg::evaluation_domain evaluation_domains[8]{
+    barretenberg::evaluation_domain(START),      barretenberg::evaluation_domain(START * 2),  barretenberg::evaluation_domain(START * 4),  barretenberg::evaluation_domain(START * 8),
+    barretenberg::evaluation_domain(START * 16), barretenberg::evaluation_domain(START * 32), barretenberg::evaluation_domain(START * 64), barretenberg::evaluation_domain(START * 128),
 };
 
 void generate_scalars(fr::field_t* scalars)
@@ -86,7 +86,10 @@ const auto init = []() {
     }
     globals.plonk_instances.resize(8);
     globals.plonk_proofs.resize(8);
-
+    for (size_t i = 0; i < 8; ++i)
+    {
+        evaluation_domains[i].compute_lookup_table();
+    }
     printf("finished generating test data\n");
     return true;
 }();
@@ -155,8 +158,8 @@ void unsafe_pippenger_one_million_batched_scalar_multiplications_bench(State& st
         ++i;
     }
     uint64_t avg_cycles = count / i;
-    printf("pippenger clock cycles = %" PRIu64 "\n", (avg_cycles));
-    printf("pippenger clock cycles per mul = %" PRIu64 "\n", (avg_cycles / (MAX_GATES)));
+    printf("unsafe pippenger clock cycles = %" PRIu64 "\n", (avg_cycles));
+    printf("unsafe pippenger clock cycles per mul = %" PRIu64 "\n", (avg_cycles / (MAX_GATES)));
 }
 BENCHMARK(unsafe_pippenger_one_million_batched_scalar_multiplications_bench);
 
@@ -212,7 +215,7 @@ void coset_fft_bench_parallel(State& state) noexcept
 {
     for (auto _ : state) {
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
-        barretenberg::polynomial_arithmetic::coset_fft(globals.data, plonk_circuit_states[idx].large_domain);
+        barretenberg::polynomial_arithmetic::coset_fft(globals.data, evaluation_domains[idx]);
     }
 }
 BENCHMARK(coset_fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
@@ -221,7 +224,7 @@ void alternate_coset_fft_bench_parallel(State& state) noexcept
 {
     for (auto _ : state) {
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
-        barretenberg::polynomial_arithmetic::coset_fft(globals.data, plonk_circuit_states[idx].small_domain, plonk_circuit_states[idx].small_domain, 4);
+        barretenberg::polynomial_arithmetic::coset_fft(globals.data, evaluation_domains[idx], evaluation_domains[idx], 4);
     }
 }
 BENCHMARK(alternate_coset_fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
@@ -230,7 +233,7 @@ void fft_bench_parallel(State& state) noexcept
 {
     for (auto _ : state) {
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
-        barretenberg::polynomial_arithmetic::fft(globals.data, plonk_circuit_states[idx].large_domain);
+        barretenberg::polynomial_arithmetic::fft(globals.data, evaluation_domains[idx]);
     }
 }
 BENCHMARK(fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
@@ -241,8 +244,8 @@ void fft_bench_serial(State& state) noexcept
         size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::fft_inner_serial(
             globals.data,
-            plonk_circuit_states[idx].large_domain.thread_size,
-            plonk_circuit_states[idx].large_domain.get_round_roots());
+            evaluation_domains[idx].thread_size,
+            evaluation_domains[idx].get_round_roots());
     }
 }
 BENCHMARK(fft_bench_serial)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);

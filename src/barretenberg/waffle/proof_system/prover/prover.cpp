@@ -27,31 +27,16 @@ Prover::Prover(std::shared_ptr<proving_key> input_key,
                bool has_fourth_wire,
                bool use_quotient_mid)
     : n(input_key == nullptr ? 0 : input_key->n)
-    , circuit_state(n)
     , transcript(input_manifest)
     , __DEBUG_HAS_FOURTH_WIRE(has_fourth_wire)
     , key(input_key)
     , witness(input_witness)
     , uses_quotient_mid(use_quotient_mid)
 {
-    // if (input_key.get() != nullptr)
-    // {
-    // sigma_1 = key->permutation_selectors_lagrange_base.at("sigma_1");
-    // sigma_2 = key->permutation_selectors_lagrange_base.at("sigma_2");
-    // sigma_3 = key->permutation_selectors_lagrange_base.at("sigma_3");
-    // }
-    // w_l = program_witness->wires.at("w_1");
-    // w_r = program_witness->wires.at("w_2");
-    // w_o = program_witness->wires.at("w_3");
-    // if (__DEBUG_HAS_FOURTH_WIRE)
-    // {
-    //     w_4 = program_witness->wires.at("w_4");
-    // }
 }
 
 Prover::Prover(Prover&& other)
     : n(other.n)
-    , circuit_state(std::move(other.circuit_state))
     , transcript(other.transcript)
     , __DEBUG_HAS_FOURTH_WIRE(other.__DEBUG_HAS_FOURTH_WIRE)
     , key(std::move(other.key))
@@ -66,7 +51,6 @@ Prover::Prover(Prover&& other)
 Prover& Prover::operator=(Prover&& other)
 {
     n = other.n;
-    circuit_state = waffle::CircuitFFTState(std::move(other.circuit_state));
 
     widgets.resize(0);
     for (size_t i = 0; i < other.widgets.size(); ++i) {
@@ -128,15 +112,15 @@ void Prover::compute_z_commitment()
 void Prover::compute_quotient_commitment()
 {
     g1::element T_LO = scalar_multiplication::pippenger_unsafe(
-        &circuit_state.quotient_large.get_coefficients()[0], key->reference_string.monomials, n);
+        &key->quotient_large.get_coefficients()[0], key->reference_string.monomials, n);
     g1::element T_MID = scalar_multiplication::pippenger_unsafe(
-        &circuit_state.quotient_large.get_coefficients()[n], key->reference_string.monomials, n);
+        &key->quotient_large.get_coefficients()[n], key->reference_string.monomials, n);
     g1::element T_HI = scalar_multiplication::pippenger_unsafe(
-        &circuit_state.quotient_large.get_coefficients()[n + n], key->reference_string.monomials, n);
+        &key->quotient_large.get_coefficients()[n + n], key->reference_string.monomials, n);
 
     if (__DEBUG_HAS_FOURTH_WIRE) {
         g1::element T_4 = scalar_multiplication::pippenger_unsafe(
-            &circuit_state.quotient_large.get_coefficients()[n + n + n], key->reference_string.monomials, n);
+            &key->quotient_large.get_coefficients()[n + n + n], key->reference_string.monomials, n);
         g1::affine_element T_4_affine;
         g1::jacobian_to_affine(T_4, T_4_affine);
         transcript.add_element("T_4", transcript_helpers::convert_g1_element(T_4_affine));
@@ -176,7 +160,7 @@ void Prover::compute_wire_coefficients()
 
     if (__DEBUG_HAS_FOURTH_WIRE) {
         barretenberg::polynomial& w_4 = witness->wires.at("w_4");
-        polynomial w_4_fft = key->wire_ffts.at("w_4_fft"); // polynomial(w_4, n);
+        polynomial w_4_fft = key->wire_ffts.at("w_4_fft");
         polynomial_arithmetic::copy_polynomial(&w_4[0], &w_4_fft[0], n, n);
 
         w_4.ifft(key->small_domain);
@@ -185,22 +169,23 @@ void Prover::compute_wire_coefficients()
 
 void Prover::compute_z_coefficients()
 {
-    polynomial& scratch_space = key->z_fft;
-    fr::field_t* accumulators[2]{ &scratch_space[0], &scratch_space[n + 1] };
+    polynomial& z = key->z;
 
-    // polynomial accumulators[6]{ polynomial(n + 1, n + 1), polynomial(n + 1, n + 1), polynomial(n + 1, n + 1),
-    //                             polynomial(n + 1, n + 1), polynomial(n + 1, n + 1), polynomial(n + 1, n + 1) };
+    polynomial& scratch_space = key->z_fft;
+    fr::field_t* accumulators[6]{ &z[1],         &scratch_space[n],     &scratch_space[n + n],
+                                  &scratch_space[n + n + n], &key->opening_poly[0], &key->shifted_opening_poly[0] };
 
     fr::field_t beta = fr::serialize_from_buffer(transcript.get_challenge("beta").begin());
     fr::field_t gamma = fr::serialize_from_buffer(transcript.get_challenge("gamma").begin());
 
-    polynomial& w_l_lagrange_base = key->wire_ffts.at("w_1_fft");
-    polynomial& w_r_lagrange_base = key->wire_ffts.at("w_2_fft");
-    polynomial& w_o_lagrange_base = key->wire_ffts.at("w_3_fft");
+    fr::field_t* w_l_lagrange_base = &key->wire_ffts.at("w_1_fft")[0];
+    fr::field_t* w_r_lagrange_base = &key->wire_ffts.at("w_2_fft")[0];
+    fr::field_t* w_o_lagrange_base = &key->wire_ffts.at("w_3_fft")[0];
 
-    polynomial& sigma_1_lagrange_base = key->permutation_selectors_lagrange_base.at("sigma_1");
-    polynomial& sigma_2_lagrange_base = key->permutation_selectors_lagrange_base.at("sigma_2");
-    polynomial& sigma_3_lagrange_base = key->permutation_selectors_lagrange_base.at("sigma_3");
+    fr::field_t* sigma_1_lagrange_base = &key->permutation_selectors_lagrange_base.at("sigma_1")[0];
+    fr::field_t* sigma_2_lagrange_base = &key->permutation_selectors_lagrange_base.at("sigma_2")[0];
+    fr::field_t* sigma_3_lagrange_base = &key->permutation_selectors_lagrange_base.at("sigma_3")[0];
+
 
 #ifndef NO_MULTITHREADING
 #pragma omp parallel
@@ -222,69 +207,89 @@ void Prover::compute_z_coefficients()
             size_t start = j * key->small_domain.thread_size;
             size_t end = (j + 1) * key->small_domain.thread_size;
             for (size_t i = start; i < end; ++i) {
-                fr::__add(work_root, gamma, T0);
-                fr::__add(T0, w_l_lagrange_base[i], accumulators[0][i + 1]);
+                fr::__add_without_reduction(work_root, gamma, T0);
+                fr::__add_with_coarse_reduction(T0, w_l_lagrange_base[i], accumulators[0][i]);
 
-                fr::__mul(work_root, k1, T1);
-                fr::__add(T1, gamma, T1);
-                fr::__add(T1, w_r_lagrange_base[i], T1);
-                fr::__mul(accumulators[0][i + 1], T1, accumulators[0][i + 1]);
+                fr::__mul_with_coarse_reduction(work_root, k1, T1);
+                fr::__add_without_reduction(T1, gamma, T1);
+                fr::__add_with_coarse_reduction(T1, w_r_lagrange_base[i], accumulators[1][i]);
 
-                fr::__mul(work_root, k2, T2);
-                fr::__add(T2, gamma, T2);
-                fr::__add(T2, w_o_lagrange_base[i], T2);
-                fr::__mul(accumulators[0][i + 1], T2, accumulators[0][i + 1]);
+                fr::__mul_with_coarse_reduction(work_root, k2, T2);
+                fr::__add_without_reduction(T2, gamma, T2);
+                fr::__add_with_coarse_reduction(T2, w_o_lagrange_base[i], accumulators[2][i]);
 
-                fr::__mul(sigma_1_lagrange_base[i], beta, T0);
-                fr::__add(T0, gamma, T0);
-                fr::__add(T0, w_l_lagrange_base[i], accumulators[1][i + 1]);
+                fr::__mul_with_coarse_reduction(sigma_1_lagrange_base[i], beta, T0);
+                fr::__add_without_reduction(T0, gamma, T0);
+                fr::__add_with_coarse_reduction(T0, w_l_lagrange_base[i], accumulators[3][i]);
 
-                fr::__mul(sigma_2_lagrange_base[i], beta, T1);
-                fr::__add(T1, gamma, T1);
-                fr::__add(T1, w_r_lagrange_base[i], T1);
-                fr::__mul(accumulators[1][i + 1], T1, accumulators[1][i + 1]);
+                fr::__mul_with_coarse_reduction(sigma_2_lagrange_base[i], beta, T1);
+                fr::__add_without_reduction(T1, gamma, T1);
+                fr::__add_with_coarse_reduction(T1, w_r_lagrange_base[i], accumulators[4][i]);
 
-                fr::__mul(sigma_3_lagrange_base[i], beta, T2);
-                fr::__add(T2, gamma, T2);
-                fr::__add(T2, w_o_lagrange_base[i], T2);
-                fr::__mul(accumulators[1][i + 1], T2, accumulators[1][i + 1]);
+                fr::__mul_with_coarse_reduction(sigma_3_lagrange_base[i], beta, T2);
+                fr::__add_without_reduction(T2, gamma, T2);
+                fr::__add_with_coarse_reduction(T2, w_o_lagrange_base[i], accumulators[5][i]);
 
-                fr::__mul(work_root, key->small_domain.root, work_root);
+                fr::__mul_with_coarse_reduction(work_root, key->small_domain.root, work_root);
             }
         }
 
-        // step 2: compute the constituent components of Z1(X), Z2(X). This is a small bottleneck, as we have
+        // step 2: compute the constituent components of Z(X). This is a small multithreading bottleneck, as we have
         // 6 non-parallelizable processes
 #ifndef NO_MULTITHREADING
 #pragma omp for
 #endif
-        for (size_t i = 0; i < 2; ++i) {
+        for (size_t i = 0; i < 6; ++i) {
             fr::field_t* coeffs = &accumulators[i][0];
-            coeffs[0] = fr::one;
-            for (size_t j = 1; j < key->small_domain.size - 1; ++j) {
-                fr::__mul(coeffs[j + 1], coeffs[j], coeffs[j + 1]);
+            for (size_t j = 0; j < key->small_domain.size - 1; ++j) {
+                fr::__mul_with_coarse_reduction(coeffs[j + 1], coeffs[j], coeffs[j + 1]);
             }
         }
+    
+    // step 3: concatenate together the accumulator elements into Z(X)
+#ifndef NO_MULTITHREADING
+#pragma omp for
+#endif
+    for (size_t j = 0; j < key->small_domain.num_threads; ++j)
+    {
+        const size_t start = j * key->small_domain.thread_size;
+        const size_t end = ((j + 1) * key->small_domain.thread_size) - ((j == key->small_domain.num_threads - 1) ? 1 : 0);
+        fr::field_t inversion_accumulator = fr::one;
+        for (size_t i = start; i < end; ++i)
+        {
+            fr::__mul_with_coarse_reduction(accumulators[0][i], accumulators[1][i], accumulators[0][i]);
+            fr::__mul_with_coarse_reduction(accumulators[0][i], accumulators[2][i], accumulators[0][i]);
+            fr::__mul_with_coarse_reduction(accumulators[3][i], accumulators[4][i], accumulators[3][i]);
+            fr::__mul_with_coarse_reduction(accumulators[3][i], accumulators[5][i], accumulators[3][i]);
+            fr::__mul_with_coarse_reduction(accumulators[0][i], inversion_accumulator, accumulators[1][i]);
+            fr::__mul_with_coarse_reduction(inversion_accumulator, accumulators[3][i], inversion_accumulator);
+        }
+        fr::__invert(inversion_accumulator, inversion_accumulator);
+        for (size_t i = end - 1; i != start - 1; --i)
+        {
+            // N.B. accumulators[0][i] = z[i + 1]
+            // We can not fully reduce z[i + 1] as the inverse fft will take care of that for us
+            fr::__mul_with_coarse_reduction(inversion_accumulator, accumulators[1][i], accumulators[0][i]);
+            fr::__mul_with_coarse_reduction(inversion_accumulator, accumulators[3][i], inversion_accumulator);
+        }
     }
-    polynomial& z = key->z;
-
-    // step 3: concatenate together the accumulator elements into Z1(X), Z2(X)
-    fr::batch_invert(&accumulators[1][0], key->small_domain.size, &scratch_space[2 * n + 2]);
-
-    ITERATE_OVER_DOMAIN_START(key->small_domain);
-    fr::__mul(accumulators[0][i], accumulators[1][i], z[i]);
-    ITERATE_OVER_DOMAIN_END;
-
+    }
+    z[0] = fr::one;
     z.ifft(key->small_domain);
 }
 
 void Prover::compute_permutation_grand_product_coefficients()
 {
     polynomial& z_fft = key->z_fft;
-    // polynomial& z = key->z;
+
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr::field_t neg_alpha = fr::neg(alpha);
+    fr::field_t alpha_squared = fr::sqr(alpha);
     fr::field_t beta = fr::serialize_from_buffer(transcript.get_challenge("beta").begin());
     fr::field_t gamma = fr::serialize_from_buffer(transcript.get_challenge("gamma").begin());
+
+    fr::field_t right_shift = fr::multiplicative_generator;
+    fr::field_t output_shift = fr::alternate_multiplicative_generator;
 
     // Our permutation check boils down to two 'grand product' arguments,
     // that we represent with a single polynomial Z(X).
@@ -326,152 +331,117 @@ void Prover::compute_permutation_grand_product_coefficients()
     const polynomial& sigma_2_fft = key->permutation_selector_ffts.at("sigma_2_fft");
     const polynomial& sigma_3_fft = key->permutation_selector_ffts.at("sigma_3_fft");
 
+    const polynomial& l_1 = key->lagrange_1;
+
+    polynomial& quotient_large = key->quotient_large;
     // Step 4: Set the quotient polynomial to be equal to
     // (w_l(X) + \beta.sigma1(X) + \gamma).(w_r(X) + \beta.sigma2(X) + \gamma).(w_o(X) + \beta.sigma3(X) +
     // \gamma).Z(X).alpha
-    ITERATE_OVER_DOMAIN_START(key->large_domain);
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
-    fr::__mul(sigma_1_fft[i], beta, T0);
-    fr::__add(T0, w_l_fft[i], T0);
-    fr::__add(T0, gamma, T0);
-
-    fr::__mul(sigma_2_fft[i], beta, T1);
-    fr::__add(T1, w_r_fft[i], T1);
-    fr::__add(T1, gamma, T1);
-
-    fr::__mul(sigma_3_fft[i], beta, T2);
-    fr::__add(T2, w_o_fft[i], T2);
-    fr::__add(T2, gamma, T2);
-
-    fr::__mul(T0, T1,
-              T0);         // sigma1_fft = (w_l(X) + B.sigma_1(X) + \gamma).(w_r(X) + B.sigma_2(X) + \gamma)
-    fr::__mul(T0, T2, T0); // sigma1_fft = (w_l(X) + B.sigma_1(X) + \gamma).(w_r(X) +
-                           // B.sigma_2(X) + \gamma).(w_o(X) + B.sigma_3(X) + \gamma)
-    fr::__mul(T0,
-              z_fft[i + 4],
-              T0); // sigma1_fft = (w_l(X) + B.sigma_1(X) + \gamma).(w_r(X) + B.sigma_2(X) + \gamma).(w_o(X)
-                   // + B.sigma_3(X) + \gamma).Z(X.omega)
-    fr::__neg(T0,
-              circuit_state.quotient_large[i]); // Q(X) -= (w_l(X) + B.sigma_1(X) + \gamma).(w_r(X) + B.sigma_2(X) +
-                                                // \gamma).(w_o(X) + B.sigma_3(X) + \gamma).Z(X.omega)
-    ITERATE_OVER_DOMAIN_END;
-}
-
-void Prover::compute_identity_grand_product_coefficients()
-{
-    polynomial& z_fft = key->z_fft;
-
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-    fr::field_t beta = fr::serialize_from_buffer(transcript.get_challenge("beta").begin());
-    fr::field_t gamma = fr::serialize_from_buffer(transcript.get_challenge("gamma").begin());
-
-    fr::field_t right_shift = fr::multiplicative_generator;
-    fr::field_t output_shift = fr::alternate_multiplicative_generator;
-
-    const polynomial& w_l_fft = key->wire_ffts.at("w_1_fft");
-    const polynomial& w_r_fft = key->wire_ffts.at("w_2_fft");
-    const polynomial& w_o_fft = key->wire_ffts.at("w_3_fft");
-
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
     for (size_t j = 0; j < key->large_domain.num_threads; ++j) {
-        fr::field_t T0;
-        fr::field_t T1;
-        fr::field_t T2;
-        fr::field_t beta_id;
+        const size_t start = j * key->large_domain.thread_size;
+        const size_t end = (j + 1) * key->large_domain.thread_size;
+
+        fr::field_t w_l_plus_gamma;
+        fr::field_t w_r_plus_gamma;
+        fr::field_t w_o_plus_gamma;
 
         fr::field_t work_root;
         fr::__pow_small(key->large_domain.root, j * key->large_domain.thread_size, work_root);
         fr::__mul(work_root, fr::multiplicative_generator, work_root);
-        for (size_t i = (j * key->large_domain.thread_size); i < ((j + 1) * key->large_domain.thread_size); ++i) {
-            fr::__mul(work_root, beta, beta_id);
-            fr::__add(beta_id, gamma, T0);
-            fr::__add(T0, w_l_fft[i], T0);
+        fr::__mul(work_root, beta, work_root);
 
-            fr::__mul(beta_id, right_shift, T1);
-            fr::__add(T1, gamma, T1);
-            fr::__add(T1, w_r_fft[i], T1);
+        fr::field_t T0;
+        fr::field_t T1;
+        fr::field_t denominator;
+        fr::field_t numerator;
+        for (size_t i = start; i < end; ++i) {
 
-            fr::__mul(beta_id, output_shift, T2);
-            fr::__add(T2, gamma, T2);
-            fr::__add(T2, w_o_fft[i], T2);
+            fr::__add_without_reduction(w_l_fft[i], gamma, w_l_plus_gamma);
+            fr::__add_without_reduction(w_r_fft[i], gamma, w_r_plus_gamma);
+            fr::__add_without_reduction(w_o_fft[i], gamma, w_o_plus_gamma);
 
-            // combine three identity product terms, with z_1_poly evaluation
-            fr::__mul(T0, T1, T0);
-            fr::__mul(T0, T2, T0);
-            fr::__mul(T0, z_fft[i], T0);
-            fr::__add(circuit_state.quotient_large[i], T0, circuit_state.quotient_large[i]);
-            fr::__mul(work_root, key->large_domain.root, work_root);
+            // Numerator computation
+            // (w_l + b + gamma)(w_r + b.k1 + gamma)(w_o + b.k2 + gamma)Z(X)
+            fr::__add_with_coarse_reduction(work_root, w_l_plus_gamma, numerator);
+            fr::__mul_with_coarse_reduction(work_root, right_shift, T0);
+            fr::__add_with_coarse_reduction(T0, w_r_plus_gamma, T0);
+            fr::__mul_with_coarse_reduction(numerator, T0, numerator);
+            fr::__mul_with_coarse_reduction(work_root, output_shift, T0);
+            fr::__add_with_coarse_reduction(T0, w_o_plus_gamma, T0);
+            fr::__mul_with_coarse_reduction(numerator, T0, numerator);
+            fr::__mul_with_coarse_reduction(numerator, z_fft[i], numerator);
+
+            // Denominator computation
+            // (w_l + b.sig1 + gamma)(w_r + b.sig2 + gamma)(w_l + b.sig3 + gamma)Z(X.w)
+            fr::__mul_with_coarse_reduction(sigma_1_fft[i], beta, denominator);
+            fr::__add_with_coarse_reduction(denominator, w_l_plus_gamma, denominator);
+
+            // (w_l + B.sigma_1 + \gamma).(w_r + B.sigma_2 + \gamma)
+            fr::__mul_with_coarse_reduction(sigma_2_fft[i], beta, T0);
+            fr::__add_with_coarse_reduction(T0, w_r_plus_gamma, T0);
+            fr::__mul_with_coarse_reduction(denominator, T0, denominator);
+
+            // (w_l + B.sigma_1 + \gamma).(w_r + B.sigma_2 + \gamma).(w_o + B.sigma_3 + \gamma)
+            fr::__mul_with_coarse_reduction(sigma_3_fft[i], beta, T0);
+            fr::__add_with_coarse_reduction(T0, w_o_plus_gamma, T0);
+            fr::__mul_with_coarse_reduction(denominator, T0, denominator);
+
+            fr::__mul_with_coarse_reduction(denominator, z_fft[i + 4], denominator);
+
+            /**
+             * Permutation bounds check
+             * (Z(X.w) - 1).(\alpha^3).L{n-1}(X) = T(X)Z_H(X)
+             **/
+            // The \alpha^3 term is so that we can subsume this polynomial into the quotient polynomial,
+            // whilst ensuring the term is linearly independent form the other terms in the quotient polynomial
+
+            // We want to verify that Z(X) equals `1` when evaluated at `w_n`, the 'last' element of our multiplicative
+            // subgroup H. But PLONK's 'vanishing polynomial', Z*_H(X), isn't the true vanishing polynomial of subgroup
+            // H. We need to cut a root of unity out of Z*_H(X), specifically `w_n`, for our grand product argument.
+            // When evaluating Z(X) has been constructed correctly, we verify that Z(X.w).(identity permutation product)
+            // = Z(X).(sigma permutation product), for all X \in H. But this relationship breaks down for X = w_n,
+            // because Z(X.w) will evaluate to the *first* element of our grand product argument. The last element of
+            // Z(X) has a dependency on the first element, so the first element cannot have a dependency on the last
+            // element.
+
+            // TODO: With the reduction from 2 Z polynomials to a single Z(X), the above no longer applies
+            // TODO: Fix this to remove the (Z(X.w) - 1).L_{n-1}(X) check
+
+            // To summarise, we can't verify claims about Z(X) when evaluated at `w_n`.
+            // But we can verify claims about Z(X.w) when evaluated at `w_{n-1}`, which is the same thing
+
+            // To summarise the summary: If Z(w_n) = 1, then (Z(X.w) - 1).L_{n-1}(X) will be divisible by Z_H*(X)
+            // => add linearly independent term (Z(X.w) - 1).(\alpha^3).L{n-1}(X) into the quotient polynomial to check
+            // this
+
+            // z_fft already contains evaluations of Z(X).(\alpha^2)
+            // at the (2n)'th roots of unity
+            // => to get Z(X.w) instead of Z(X), index element (i+2) instead of i
+            fr::__add_without_reduction(z_fft[i + 4], neg_alpha, T0); // T0 = (Z(X.w) - 1).(\alpha^2)
+            fr::__mul_with_coarse_reduction(T0, alpha, T0);           // T0 = (Z(X.w) - 1).(\alpha^3)
+            fr::__mul_with_coarse_reduction(T0, l_1[i + 8], T0);      // T0 = (Z(X.w) - 1).(\alpha^3).L{n-1}(X)
+
+            // Step 2: Compute (Z(X) - 1).(\alpha^4).L1(X)
+            // We need to verify that Z(X) equals `1` when evaluated at the first element of our subgroup H
+            // i.e. Z(X) starts at 1 and ends at 1
+            // The `alpha^4` term is so that we can add this as a linearly independent term in our quotient polynomial
+            fr::__add_without_reduction(z_fft[i], neg_alpha, T1);   // T1 = (Z(X) - 1).(\alpha^2)
+            fr::__mul_with_coarse_reduction(T1, alpha_squared, T1); // T1 = (Z(X) - 1).(\alpha^4)
+            fr::__mul_with_coarse_reduction(T1, l_1[i], T1);        // T1 = (Z(X) - 1).(\alpha^2).L1(X)
+
+            // Combine into quotient polynomial
+            fr::__add_with_coarse_reduction(T0, T1, T0);
+            fr::__add_with_coarse_reduction(T0, numerator, T0);
+            fr::__sub_with_coarse_reduction(T0, denominator, T0);
+            fr::reduce_once(T0, quotient_large[i]);
+
+            // Update our working root of unity
+            fr::__mul_with_coarse_reduction(work_root, key->large_domain.root, work_root);
         }
     }
-
-// // We can shrink the evaluation domain by 2 for the wire polynomials and Z(X), to save on memory
-// circuit_state.w_l_fft.shrink_evaluation_domain(2);
-// circuit_state.w_r_fft.shrink_evaluation_domain(2);
-// circuit_state.w_o_fft.shrink_evaluation_domain(2);
-// z_fft.shrink_evaluation_domain(2);
-
-// size = 2n, max size = 2n + 4 (appending 4 coefficients after poly arithmetic call)
-#ifdef DEBUG_TIMING
-    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-#endif
-    polynomial& l_1 = key->lagrange_1; //  (n + n, n + n + 4);
-#ifdef DEBUG_TIMING
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "compute lagrange polynomial fft: " << diff.count() << "ms" << std::endl;
-#endif
-    // accumulate degree-2n terms into gate_poly_mid
-    fr::field_t alpha_squared = fr::sqr(alpha);
-
-    ITERATE_OVER_DOMAIN_START(key->large_domain);
-    fr::field_t T4;
-    fr::field_t T6;
-
-    // Step 1: Compute (Z(X.w) - 1).(\alpha^3).L{n-1}(X)
-    // The \alpha^3 term is so that we can subsume this polynomial into the quotient polynomial,
-    // whilst ensuring the term is linearly independent form the other terms in the quotient polynomial
-
-    // We want to verify that Z(X) equals `1` when evaluated at `w_n`, the 'last' element of our multiplicative subgroup
-    // H. But PLONK's 'vanishing polynomial', Z*_H(X), isn't the true vanishing polynomial of subgroup H. We need to cut
-    // a root of unity out of Z*_H(X), specifically `w_n`, for our grand product argument. When evaluating Z(X) has been
-    // constructed correctly, we verify that Z(X.w).(identity permutation product) = Z(X).(sigma permutation product),
-    // for all X \in H. But this relationship breaks down for X = w_n, because Z(X.w) will evaluate to the *first*
-    // element of our grand product argument. The last element of Z(X) has a dependency on the first element, so the
-    // first element cannot have a dependency on the last element.
-
-    // TODO: With the reduction from 2 Z polynomials to a single Z(X), the above no longer applies
-    // TODO: Fix this to remove the (Z(X.w) - 1).L_{n-1}(X) check
-
-    // To summarise, we can't verify claims about Z(X) when evaluated at `w_n`.
-    // But we can verify claims about Z(X.w) when evaluated at `w_{n-1}`, which is the same thing
-
-    // To summarise the summary: If Z(w_n) = 1, then (Z(X.w) - 1).L_{n-1}(X) will be divisible by Z_H*(X)
-    // => add linearly independent term (Z(X.w) - 1).(\alpha^3).L{n-1}(X) into the quotient polynomial to check this
-
-    // z_fft already contains evaluations of Z(X).(\alpha^2)
-    // at the (2n)'th roots of unity
-    // => to get Z(X.w) instead of Z(X), index element (i+2) instead of i
-    fr::__sub(z_fft[i + 4], alpha, T6); // T6 = (Z(X.w) - 1).(\alpha^2)
-    fr::__mul(T6, alpha, T6);           // T6 = (Z(X.w) - 1).(\alpha^3)
-    fr::__mul(T6, l_1[i + 8], T6);      // T6 = (Z(X.w) - 1).(\alpha^3).L{n-1}(X)
-
-    // Step 2: Compute (Z(X) - 1).(\alpha^4).L1(X)
-    // We need to verify that Z(X) equals `1` when evaluated at the first element of our subgroup H
-    // i.e. Z(X) starts at 1 and ends at 1
-    // The `alpha^4` term is so that we can add this as a linearly independent term in our quotient polynomial
-
-    fr::__sub(z_fft[i], alpha, T4);   // T4 = (Z(X) - 1).(\alpha^2)
-    fr::__mul(T4, alpha_squared, T4); // T4 = (Z(X) - 1).(\alpha^4)
-    fr::__mul(T4, l_1[i], T4);        // T4 = (Z(X) - 1).(\alpha^2).L1(X)
-
-    // Add T4 and T6 into the degree 2n component of the quotient polynomial
-    fr::__add(T4, T6, T4);
-    fr::__add(circuit_state.quotient_large[i], T4, circuit_state.quotient_large[i]);
-    ITERATE_OVER_DOMAIN_END;
 }
 
 void Prover::init_quotient_polynomials()
@@ -549,9 +519,9 @@ void Prover::execute_third_round()
 #ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 #endif
-    polynomial& w_l_fft = key->wire_ffts.at("w_1_fft"); // polynomial(witness->wires.at("w_1"), 4 * n + 4);
-    polynomial& w_r_fft = key->wire_ffts.at("w_2_fft"); // polynomial(witness->wires.at("w_2"), 4 * n + 4);
-    polynomial& w_o_fft = key->wire_ffts.at("w_3_fft"); // polynomial(witness->wires.at("w_3"), 4 * n + 4);
+    polynomial& w_l_fft = key->wire_ffts.at("w_1_fft");
+    polynomial& w_r_fft = key->wire_ffts.at("w_2_fft");
+    polynomial& w_o_fft = key->wire_ffts.at("w_3_fft");
 
     polynomial& w_l = witness->wires.at("w_1");
     polynomial& w_r = witness->wires.at("w_2");
@@ -593,7 +563,7 @@ void Prover::execute_third_round()
     start = std::chrono::steady_clock::now();
 #endif
     if (__DEBUG_HAS_FOURTH_WIRE) {
-        polynomial& w_4_fft = key->wire_ffts.at("w_4_fft"); // polynomial(witness->wires.at("w_1"), 4 * n + 4);
+        polynomial& w_4_fft = key->wire_ffts.at("w_4_fft");
         polynomial& w_4 = witness->wires.at("w_4");
         polynomial_arithmetic::copy_polynomial(&w_4[0], &w_4_fft[0], n, 4 * n + 4);
 
@@ -629,15 +599,15 @@ void Prover::execute_third_round()
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute permutation grand product coeffs: " << diff.count() << "ms" << std::endl;
 #endif
-#ifdef DEBUG_TIMING
-    start = std::chrono::steady_clock::now();
-#endif
-    compute_identity_grand_product_coefficients();
-#ifdef DEBUG_TIMING
-    end = std::chrono::steady_clock::now();
-    diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "compute identity grand product coeffs: " << diff.count() << "ms" << std::endl;
-#endif
+// #ifdef DEBUG_TIMING
+//     start = std::chrono::steady_clock::now();
+// #endif
+//     compute_identity_grand_product_coefficients();
+// #ifdef DEBUG_TIMING
+//     end = std::chrono::steady_clock::now();
+//     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+//     std::cout << "compute identity grand product coeffs: " << diff.count() << "ms" << std::endl;
+// #endif
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
     fr::field_t alpha_base = fr::sqr(fr::sqr(alpha));
@@ -646,7 +616,7 @@ void Prover::execute_third_round()
 #ifdef DEBUG_TIMING
         std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 #endif
-        alpha_base = widgets[i]->compute_quotient_contribution(alpha_base, transcript, circuit_state);
+        alpha_base = widgets[i]->compute_quotient_contribution(alpha_base, transcript);
 #ifdef DEBUG_TIMING
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -658,10 +628,10 @@ void Prover::execute_third_round()
 #endif
     if (uses_quotient_mid) {
         polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(
-            circuit_state.quotient_mid.get_coefficients(), key->small_domain, key->mid_domain);
+            key->quotient_mid.get_coefficients(), key->small_domain, key->mid_domain);
     }
     polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(
-        circuit_state.quotient_large.get_coefficients(), key->small_domain, key->large_domain);
+        key->quotient_large.get_coefficients(), key->small_domain, key->large_domain);
 #ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -671,17 +641,19 @@ void Prover::execute_third_round()
     start = std::chrono::steady_clock::now();
 #endif
     if (uses_quotient_mid) {
-        circuit_state.quotient_mid.coset_ifft(key->mid_domain);
+        key->quotient_mid.coset_ifft(key->mid_domain);
     }
-    circuit_state.quotient_large.coset_ifft(key->large_domain);
+    key->quotient_large.coset_ifft(key->large_domain);
 #ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "final inverse fourier transforms: " << diff.count() << "ms" << std::endl;
 #endif
     if (uses_quotient_mid) {
+        fr::field_t* q_mid = &key->quotient_mid[0];
+        fr::field_t* q_large = &key->quotient_large[0];
         ITERATE_OVER_DOMAIN_START(key->mid_domain);
-        fr::__add(circuit_state.quotient_large[i], circuit_state.quotient_mid[i], circuit_state.quotient_large[i]);
+        fr::__add(q_large[i], q_mid[i], q_large[i]);
         ITERATE_OVER_DOMAIN_END;
     }
 #ifdef DEBUG_TIMING
@@ -751,6 +723,8 @@ void Prover::execute_fifth_round()
     fr::__pow_small(z_challenge, 2 * n, z_pow_2_n);
     fr::__pow_small(z_challenge, 3 * n, z_pow_3_n);
 
+    polynomial& quotient_large = key->quotient_large;
+
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0;
     fr::field_t T1;
@@ -761,31 +735,32 @@ void Prover::execute_fifth_round()
     fr::field_t T8;
     fr::field_t T9;
     fr::field_t T11;
-    fr::__mul(circuit_state.quotient_large[i + n], z_pow_n, T8);
-    fr::__mul(circuit_state.quotient_large[i + n + n], z_pow_2_n, T9);
-    fr::__mul(circuit_state.quotient_large[i + n + n + n], z_pow_3_n, T11);
+    fr::__mul_with_coarse_reduction(quotient_large[i + n], z_pow_n, T8);
+    fr::__mul_with_coarse_reduction(quotient_large[i + n + n], z_pow_2_n, T9);
+    fr::__mul_with_coarse_reduction(quotient_large[i + n + n + n], z_pow_3_n, T11);
 
-    fr::__mul(r[i], nu_powers[0], T0);
-    fr::__mul(w_l[i], nu_powers[1], T1);
-    fr::__mul(w_r[i], nu_powers[2], T2);
-    fr::__mul(w_o[i], nu_powers[3], T3);
-    fr::__mul(sigma_1[i], nu_powers[4], T4);
-    fr::__mul(sigma_2[i], nu_powers[5], T5);
+    fr::__mul_with_coarse_reduction(r[i], nu_powers[0], T0);
+    fr::__mul_with_coarse_reduction(w_l[i], nu_powers[1], T1);
+    fr::__mul_with_coarse_reduction(w_r[i], nu_powers[2], T2);
+    fr::__mul_with_coarse_reduction(w_o[i], nu_powers[3], T3);
+    fr::__mul_with_coarse_reduction(sigma_1[i], nu_powers[4], T4);
+    fr::__mul_with_coarse_reduction(sigma_2[i], nu_powers[5], T5);
     fr::__mul(z[i], nu_powers[6], shifted_opening_poly[i]);
     if (__DEBUG_HAS_FOURTH_WIRE) {
         fr::field_t T10;
-        fr::__mul(w_4[i], nu_powers[7], T10);
+        fr::__mul_with_coarse_reduction(w_4[i], nu_powers[7], T10);
         fr::__add(T0, T10, T0);
     }
-    fr::__add(T9, T11, T9);
-    fr::__add(T8, T9, T8);
-    fr::__add(T4, T5, T4);
-    fr::__add(T3, T2, T3);
-    fr::__add(T1, T0, T1);
-    fr::__add(T3, T1, T3);
-    fr::__add(T4, T3, T4);
-    fr::__add(T4, T8, T4);
-    fr::__add(circuit_state.quotient_large[i], T4, opening_poly[i]);
+    fr::__add_with_coarse_reduction(T9, T11, T9);
+    fr::__add_with_coarse_reduction(T8, T9, T8);
+    fr::__add_with_coarse_reduction(T4, T5, T4);
+    fr::__add_with_coarse_reduction(T3, T2, T3);
+    fr::__add_with_coarse_reduction(T1, T0, T1);
+    fr::__add_with_coarse_reduction(T3, T1, T3);
+    fr::__add_with_coarse_reduction(T4, T3, T4);
+    fr::__add_with_coarse_reduction(T4, T8, T4);
+    fr::reduce_once(T4, T4);
+    fr::__add(quotient_large[i], T4, opening_poly[i]);
     ITERATE_OVER_DOMAIN_END;
 
     fr::field_t nu_base = nu_powers[8];
@@ -958,7 +933,7 @@ fr::field_t Prover::compute_linearisation_coefficients()
     for (size_t i = 0; i < widgets.size(); ++i) {
         widgets[i]->compute_transcript_elements(transcript);
     }
-    fr::field_t t_eval = circuit_state.quotient_large.evaluate(z_challenge, 4 * n);
+    fr::field_t t_eval = key->quotient_large.evaluate(z_challenge, 4 * n);
     transcript.add_element("sigma_1", transcript_helpers::convert_field_element(sigma_1_eval));
     transcript.add_element("sigma_2", transcript_helpers::convert_field_element(sigma_2_eval));
 
@@ -969,9 +944,10 @@ fr::field_t Prover::compute_linearisation_coefficients()
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0;
     fr::field_t T1;
-    fr::__mul(z[i], linear_terms.z_1, T0);
-    fr::__mul(sigma_3[i], linear_terms.sigma_3, T1);
-    fr::__add(T0, T1, r[i]);
+    fr::__mul_with_coarse_reduction(z[i], linear_terms.z_1, T0);
+    fr::__mul_with_coarse_reduction(sigma_3[i], linear_terms.sigma_3, T1);
+    fr::__add_with_coarse_reduction(T0, T1, T0);
+    fr::reduce_once(T0, r[i]);
     ITERATE_OVER_DOMAIN_END;
 
     fr::field_t alpha_base = fr::sqr(fr::sqr(alpha));

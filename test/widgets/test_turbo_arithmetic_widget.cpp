@@ -14,7 +14,6 @@ using namespace waffle;
 TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
 {
     const size_t num_gates = 4;
-    waffle::CircuitFFTState circuit_state(num_gates);
 
     std::shared_ptr<program_witness> witness = std::make_shared<program_witness>();
     std::shared_ptr<proving_key> key = std::make_shared<proving_key>(num_gates);
@@ -164,17 +163,17 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
 
     transcript::Transcript transcript = test_helpers::create_dummy_standard_transcript();
 
-    circuit_state.quotient_large = polynomial(num_gates * 4);
+    key->quotient_large = polynomial(num_gates * 4);
     for (size_t i = 0; i < num_gates * 4; ++i)
     {
-        circuit_state.quotient_large[i] = fr::zero;
+        key->quotient_large[i] = fr::zero;
     }
-    widget.compute_quotient_contribution(fr::one, transcript, circuit_state);
+    widget.compute_quotient_contribution(fr::one, transcript);
 
-    circuit_state.quotient_large.coset_ifft(key->large_domain);
-    circuit_state.quotient_large.fft(key->large_domain);
+    key->quotient_large.coset_ifft(key->large_domain);
+    key->quotient_large.fft(key->large_domain);
     for (size_t i = 0; i < num_gates; ++i)
     {
-        EXPECT_EQ(fr::eq(circuit_state.quotient_large[i * 4], fr::zero), true);
+        EXPECT_EQ(fr::eq(key->quotient_large[i * 4], fr::zero), true);
     }
 }

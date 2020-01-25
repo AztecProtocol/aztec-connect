@@ -121,8 +121,7 @@ ProverTurboArithmeticWidget& ProverTurboArithmeticWidget::operator=(ProverTurboA
 }
 
 fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                                       const transcript::Transcript& transcript,
-                                                                       CircuitFFTState& circuit_state)
+                                                                       const transcript::Transcript& transcript)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
@@ -131,6 +130,8 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
     fr::field_t* w_2_fft = &key->wire_ffts.at("w_2_fft")[0];
     fr::field_t* w_3_fft = &key->wire_ffts.at("w_3_fft")[0];
     fr::field_t* w_4_fft = &key->wire_ffts.at("w_4_fft")[0];
+
+    fr::field_t* quotient_large = &key->quotient_large[0];
 
     ITERATE_OVER_DOMAIN_START(key->large_domain);
     fr::field_t T0;
@@ -158,7 +159,7 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
     fr::__add_with_coarse_reduction(T0, q_c_fft[i], T0);
     fr::__mul_with_coarse_reduction(T0, q_arith_fft[i], T0);
     fr::__mul(T0, alpha_base, T0);
-    fr::__add(circuit_state.quotient_large[i], T0, circuit_state.quotient_large[i]);
+    fr::__add(quotient_large[i], T0, quotient_large[i]);
     ITERATE_OVER_DOMAIN_END;
 
     return fr::mul(alpha_base, alpha);

@@ -16,7 +16,7 @@
 using namespace benchmark;
 
 constexpr size_t MAX_GATES = 1 << 20;
-constexpr size_t NUM_CIRCUITS = 8;
+constexpr size_t NUM_CIRCUITS = 1;
 constexpr size_t START = (MAX_GATES) >> (NUM_CIRCUITS - 1);
 // constexpr size_t NUM_HASH_CIRCUITS = 8;
 // constexpr size_t MAX_HASH_ROUNDS = 8192;
@@ -47,10 +47,29 @@ void construct_witnesses_bench(State& state) noexcept
         waffle::StandardComposer composer = waffle::StandardComposer(static_cast<size_t>(state.range(0)));
         generate_test_plonk_circuit(composer, static_cast<size_t>(state.range(0)));
         size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
-        provers[idx] = composer.preprocess();
+        composer.compute_witness();
     }
 }
 BENCHMARK(construct_witnesses_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
+
+void construct_proving_keys_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        waffle::StandardComposer composer = waffle::StandardComposer(static_cast<size_t>(state.range(0)));
+        printf("generating test circuit \n");
+        generate_test_plonk_circuit(composer, static_cast<size_t>(state.range(0)));
+        size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
+        printf("creating proving key \n");
+        composer.compute_proving_key();
+        state.PauseTiming();
+        printf("calling preprocess \n");
+        provers[idx] = composer.preprocess();
+        printf("called preprocess \n");
+        state.ResumeTiming();
+    }
+}
+BENCHMARK(construct_proving_keys_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
 
 void construct_instances_bench(State& state) noexcept
 {
