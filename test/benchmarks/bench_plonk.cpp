@@ -128,6 +128,7 @@ void compute_wire_commitments(State& state) noexcept
     {
         size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
         provers[idx].compute_wire_commitments();
+        provers[idx].reset();
     }
 }
 BENCHMARK(compute_wire_commitments)->RangeMultiplier(2)->Range(START, MAX_GATES);
