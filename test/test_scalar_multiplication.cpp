@@ -325,8 +325,6 @@ TEST(scalar_multiplication, reduce_buckets)
                                                                        &state.wnaf_table[num_points], num_points, static_cast<uint32_t>(num_buckets), bucket_empty_status };
 
     start = std::chrono::steady_clock::now();
-    printf("a\n");
-    printf("b\n");
     // scalar_multiplication::scalar_multiplication_internal<num_points>(state, monomials);
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
