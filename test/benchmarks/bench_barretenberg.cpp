@@ -48,9 +48,10 @@ struct global_vars {
 
 global_vars globals;
 
-barretenberg::evaluation_domain evaluation_domains[8]{
+barretenberg::evaluation_domain evaluation_domains[10]{
     barretenberg::evaluation_domain(START),      barretenberg::evaluation_domain(START * 2),  barretenberg::evaluation_domain(START * 4),  barretenberg::evaluation_domain(START * 8),
     barretenberg::evaluation_domain(START * 16), barretenberg::evaluation_domain(START * 32), barretenberg::evaluation_domain(START * 64), barretenberg::evaluation_domain(START * 128),
+    barretenberg::evaluation_domain(START * 256), barretenberg::evaluation_domain(START * 512)
 };
 
 void generate_scalars(fr::field_t* scalars)
@@ -86,7 +87,7 @@ const auto init = []() {
     }
     globals.plonk_instances.resize(8);
     globals.plonk_proofs.resize(8);
-    for (size_t i = 0; i < 8; ++i)
+    for (size_t i = 0; i < 10; ++i)
     {
         evaluation_domains[i].compute_lookup_table();
     }
@@ -216,7 +217,7 @@ BENCHMARK(new_plonk_scalar_multiplications_bench);
 void coset_fft_bench_parallel(State& state) noexcept
 {
     for (auto _ : state) {
-        size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
+        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::coset_fft(globals.data, evaluation_domains[idx]);
     }
 }
@@ -225,8 +226,8 @@ BENCHMARK(coset_fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GA
 void alternate_coset_fft_bench_parallel(State& state) noexcept
 {
     for (auto _ : state) {
-        size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
-        barretenberg::polynomial_arithmetic::coset_fft(globals.data, evaluation_domains[idx], evaluation_domains[idx], 4);
+        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
+        barretenberg::polynomial_arithmetic::coset_fft(globals.data, evaluation_domains[idx - 2], evaluation_domains[idx - 2], 4);
     }
 }
 BENCHMARK(alternate_coset_fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
@@ -234,7 +235,7 @@ BENCHMARK(alternate_coset_fft_bench_parallel)->RangeMultiplier(2)->Range(START *
 void fft_bench_parallel(State& state) noexcept
 {
     for (auto _ : state) {
-        size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
+        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::fft(globals.data, evaluation_domains[idx]);
     }
 }
@@ -243,7 +244,7 @@ BENCHMARK(fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 
 void fft_bench_serial(State& state) noexcept
 {
     for (auto _ : state) {
-        size_t idx = (size_t)log2(state.range(0) / 4) - (size_t)log2(START);
+        size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::fft_inner_serial(
             globals.data,
             evaluation_domains[idx].thread_size,
