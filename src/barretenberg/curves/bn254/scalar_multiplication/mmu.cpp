@@ -20,16 +20,17 @@ const auto init = []() {
     constexpr size_t max_buckets = 1 << 15;
     constexpr size_t thread_overspill = 1024;
 
-    size_t memory = max_num_points * max_num_rounds * 2 * sizeof(uint64_t);
-    memory += (max_buckets + thread_overspill) * sizeof(g1::element);
-    memory += (max_num_points * 2) * sizeof(g1::affine_element);
-    memory += (max_num_points * 2) * sizeof(g1::affine_element);
-    memory += (max_num_points) * sizeof(fq::field_t);
-    memory += max_num_points * 2 * sizeof(uint32_t);
-    memory += max_num_points * 2 * sizeof(uint32_t);
-    memory += max_num_points * 2 * sizeof(bool);
-    memory += max_num_points * 2 * sizeof(bool);
-    printf("total memory allocated in mmu = %lu mb \n", memory / (1024UL * 1024UL));
+    // size_t memory = max_num_points * max_num_rounds * 2 * sizeof(uint64_t);
+    // memory += (max_buckets + thread_overspill) * sizeof(g1::element);
+    // memory += (max_num_points * 2) * sizeof(g1::affine_element);
+    // memory += (max_num_points * 2) * sizeof(g1::affine_element);
+    // memory += (max_num_points) * sizeof(fq::field_t);
+    // memory += max_num_points * 2 * sizeof(uint32_t);
+    // memory += max_num_points * 2 * sizeof(uint32_t);
+    // memory += max_num_points * 2 * sizeof(bool);
+    // memory += max_num_points * 2 * sizeof(bool);
+    // printf("total memory allocated in mmu = %lu mb \n", memory / (1024UL * 1024UL));
+
     wnaf_memory = (uint64_t*)(aligned_alloc(64, max_num_points * max_num_rounds * 2 * sizeof(uint64_t)));
     bucket_memory = (g1::element*)(aligned_alloc(64, (max_buckets + thread_overspill) * sizeof(g1::element)));
 

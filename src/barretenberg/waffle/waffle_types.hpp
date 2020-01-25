@@ -74,24 +74,24 @@ struct proving_key
         memset((void*)&quotient_mid[0], 0x00, sizeof(barretenberg::fr::field_t) * 2 * n);
         memset((void*)&quotient_large[0], 0x00, sizeof(barretenberg::fr::field_t) * 4 * n);
 
-        size_t memory = opening_poly.get_max_size() * 32;
-        memory += (linear_poly.get_max_size() * 32);
-        memory += (shifted_opening_poly.get_max_size() * 32);
-        memory += (opening_poly.get_max_size() * 32);
-        memory += (lagrange_1.get_max_size() * 32);
-        memory += (w_1_fft.get_max_size() * 32);
-        memory += (w_2_fft.get_max_size() * 32);
-        memory += (w_3_fft.get_max_size() * 32);
-        memory += (w_4_fft.get_max_size() * 32);
-        memory += (z_fft.get_max_size() * 32);
-        memory += (z.get_max_size() * 32);
-        memory += (small_domain.size * 2 * 32);
-        memory += (mid_domain.size * 2 * 32);
-        memory += (large_domain.size * 2 * 32);
-        memory += (quotient_mid.get_max_size() * 32);
-        memory += (quotient_large.get_max_size() * 32);
+        // size_t memory = opening_poly.get_max_size() * 32;
+        // memory += (linear_poly.get_max_size() * 32);
+        // memory += (shifted_opening_poly.get_max_size() * 32);
+        // memory += (opening_poly.get_max_size() * 32);
+        // memory += (lagrange_1.get_max_size() * 32);
+        // memory += (w_1_fft.get_max_size() * 32);
+        // memory += (w_2_fft.get_max_size() * 32);
+        // memory += (w_3_fft.get_max_size() * 32);
+        // memory += (w_4_fft.get_max_size() * 32);
+        // memory += (z_fft.get_max_size() * 32);
+        // memory += (z.get_max_size() * 32);
+        // memory += (small_domain.size * 2 * 32);
+        // memory += (mid_domain.size * 2 * 32);
+        // memory += (large_domain.size * 2 * 32);
+        // memory += (quotient_mid.get_max_size() * 32);
+        // memory += (quotient_large.get_max_size() * 32);
 
-        printf("proving key allocated memory = %lu \n", memory / (1024UL * 1024UL));
+        // printf("proving key allocated memory = %lu \n", memory / (1024UL * 1024UL));
     }
 
     proving_key(const proving_key& other)
