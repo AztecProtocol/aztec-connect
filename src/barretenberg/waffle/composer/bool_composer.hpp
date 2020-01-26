@@ -23,7 +23,7 @@ public:
     virtual std::shared_ptr<proving_key> compute_proving_key() override;
     virtual std::shared_ptr<verification_key> compute_verification_key() override;
     virtual std::shared_ptr<program_witness> compute_witness() override;
-    Prover preprocess() override;
+    Prover preprocess();
 
     uint32_t add_variable(const barretenberg::fr::field_t &in) override
     {

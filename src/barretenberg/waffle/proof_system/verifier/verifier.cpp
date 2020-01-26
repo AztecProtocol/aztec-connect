@@ -221,7 +221,7 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::__mul(linear_terms.z_1, nu_pow[0], linear_terms.z_1);
     fr::__mul(linear_terms.sigma_3, nu_pow[0], linear_terms.sigma_3);
 
-    fr::__mul(nu_pow[6], u, T0);
+    fr::__mul(nu_pow[7], u, T0);
     fr::__add(linear_terms.z_1, T0, linear_terms.z_1);
 
     fr::field_t batch_evaluation;
@@ -238,19 +238,19 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     fr::__mul(nu_pow[3], w_o_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::__mul(nu_pow[4], sigma_1_eval, T0);
+    fr::__mul(nu_pow[5], sigma_1_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::__mul(nu_pow[5], sigma_2_eval, T0);
+    fr::__mul(nu_pow[6], sigma_2_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    fr::__mul(nu_pow[6], u, T0);
+    fr::__mul(nu_pow[7], u, T0);
     fr::__mul(T0, z_1_shifted_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
     if (__DEBUG_HAS_FOURTH_WIRE)
     {
-        fr::__mul(nu_pow[7], w_4_eval, T0);
+        fr::__mul(nu_pow[4], w_4_eval, T0);
         fr::__add(batch_evaluation, T0, batch_evaluation);
     }
 
@@ -355,10 +355,10 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
     }
 
     elements.emplace_back(SIGMA_1);
-    scalars.emplace_back(nu_pow[4]);
+    scalars.emplace_back(nu_pow[5]);
 
     elements.emplace_back(SIGMA_2);
-    scalars.emplace_back(nu_pow[5]);
+    scalars.emplace_back(nu_pow[6]);
 
     elements.emplace_back(SIGMA_3);
     scalars.emplace_back(linear_terms.sigma_3);
@@ -389,11 +389,11 @@ bool Verifier::verify_proof(const waffle::plonk_proof &proof)
         elements.emplace_back(W_4);
         if (needs_w_4_shifted) {
             fr::__mul(nu_base, u, T0);
-            fr::__add(T0, nu_pow[7], T0);
+            fr::__add(T0, nu_pow[4], T0);
             scalars.emplace_back(T0);
             fr::__mul(nu_base, nu_pow[0], nu_base);
         } else {
-            scalars.emplace_back(nu_pow[7]);
+            scalars.emplace_back(nu_pow[4]);
         } 
 
         if (g1::on_curve(T_4))

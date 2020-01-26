@@ -44,8 +44,8 @@ namespace waffle
         barretenberg::fr::field_t T1;
         barretenberg::fr::field_t T2;
 
-        barretenberg::fr::field_t right_shift = barretenberg::fr::multiplicative_generator;
-        barretenberg::fr::field_t output_shift = barretenberg::fr::alternate_multiplicative_generator;
+        barretenberg::fr::field_t right_shift = barretenberg::fr::coset_generators[0];
+        barretenberg::fr::field_t output_shift = barretenberg::fr::coset_generators[1];
 
         barretenberg::fr::field_t alpha_pow[6];
         barretenberg::fr::__copy(alpha, alpha_pow[0]);

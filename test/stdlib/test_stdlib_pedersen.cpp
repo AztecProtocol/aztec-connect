@@ -44,7 +44,7 @@ TEST(stdlib_pedersen, test_pedersen)
 
     field_t out = plonk::stdlib::pedersen::compress(left, right);
 
-    waffle::Prover prover = composer.preprocess();
+    waffle::TurboProver prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::Verifier verifier = waffle::preprocess(prover);

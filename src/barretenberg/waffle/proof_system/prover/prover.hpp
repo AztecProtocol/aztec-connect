@@ -15,18 +15,19 @@
 namespace waffle
 {
 
-class Prover
+template <size_t program_width>
+class ProverBase
 {
   public:
-    Prover(std::shared_ptr<proving_key> input_key = nullptr,
+    ProverBase(std::shared_ptr<proving_key> input_key = nullptr,
            std::shared_ptr<program_witness> input_witness = nullptr,
            const transcript::Manifest& manifest = transcript::Manifest({}),
            bool has_fourth_wire = false,
            bool uses_quotient_mid = true);
-    Prover(Prover&& other);
-    Prover(const Prover& other) = delete;
-    Prover& operator=(const Prover& other) = delete;
-    Prover& operator=(Prover&& other);
+    ProverBase(ProverBase&& other);
+    ProverBase(const ProverBase& other) = delete;
+    ProverBase& operator=(const ProverBase& other) = delete;
+    ProverBase& operator=(ProverBase&& other);
 
     void execute_preamble_round();
     void execute_first_round();
@@ -56,6 +57,7 @@ class Prover
     std::vector<uint32_t> sigma_3_mapping;
 
     // Hmm, mixing runtime polymorphism and zero-knowledge proof generation. This seems fine...
+    // TODO: note from future self: totally not fine. Replace with template parameters
     std::vector<std::unique_ptr<ProverBaseWidget>> widgets;
     ReferenceString reference_string;
     transcript::Transcript transcript;
@@ -67,4 +69,9 @@ class Prover
     bool uses_quotient_mid;
 };
 
+typedef ProverBase<3> Prover;
+typedef ProverBase<4> TurboProver;
+
 } // namespace waffle
+
+#include "./prover.tcc"

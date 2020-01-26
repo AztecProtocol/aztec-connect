@@ -68,7 +68,7 @@ class ExtendedComposer : public BoolComposer {
     std::shared_ptr<proving_key> compute_proving_key() override;
     std::shared_ptr<verification_key> compute_verification_key() override;
     std::shared_ptr<program_witness> compute_witness() override;
-    Prover preprocess() override;
+    Prover preprocess();
 
     uint32_t add_variable(const barretenberg::fr::field_t& in) override { return BoolComposer::add_variable(in); }
 

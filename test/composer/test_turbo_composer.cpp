@@ -62,7 +62,7 @@ TEST(turbo_composer, test_add_gate_proofs)
     composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
     composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
 
-    waffle::Prover prover = composer.preprocess();
+    waffle::TurboProver prover = composer.preprocess();
 
     waffle::Verifier verifier = waffle::preprocess(prover);
 
@@ -144,7 +144,7 @@ TEST(turbo_composer, test_mul_gate_proofs)
 
     uint32_t e_idx = composer.add_variable(fr::sub(a, fr::one));
     composer.create_add_gate({ e_idx, b_idx, c_idx, q[0], q[1], q[2], fr::add(q[3], q[0]) });
-    waffle::Prover prover = composer.preprocess();
+    waffle::TurboProver prover = composer.preprocess();
 
     waffle::Verifier verifier = waffle::preprocess(prover);
 
@@ -281,7 +281,7 @@ TEST(turbo_composer, small_scalar_multipliers)
     uint64_t expected_accumulator = scalar_multiplier.data[0];
     EXPECT_EQ(result_accumulator, expected_accumulator);
 
-    waffle::Prover prover = composer.preprocess();
+    waffle::TurboProver prover = composer.preprocess();
 
     waffle::Verifier verifier = waffle::preprocess(prover);
 
@@ -427,7 +427,7 @@ TEST(turbo_composer, large_scalar_multipliers)
     }});
     EXPECT_EQ(fr::eq(result_accumulator, expected_accumulator), true);
 
-    waffle::Prover prover = composer.preprocess();
+    waffle::TurboProver prover = composer.preprocess();
 
     waffle::Verifier verifier = waffle::preprocess(prover);
 

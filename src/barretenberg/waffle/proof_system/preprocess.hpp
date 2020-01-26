@@ -13,7 +13,8 @@
 
 namespace waffle
 {
-inline Verifier preprocess(const Prover& prover)
+template <size_t program_width>
+inline Verifier preprocess(const ProverBase<program_width>& prover)
 {
     barretenberg::polynomial polys[3]{
         barretenberg::polynomial(prover.key->permutation_selectors.at("sigma_1"), prover.n),

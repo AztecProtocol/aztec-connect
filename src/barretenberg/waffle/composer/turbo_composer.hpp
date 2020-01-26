@@ -36,7 +36,7 @@ public:
     std::shared_ptr<verification_key> compute_verification_key() override;
     std::shared_ptr<program_witness> compute_witness() override;
 
-    virtual Prover preprocess() override;
+    TurboProver preprocess();
 
     void create_add_gate(const add_triple &in) override;
     void create_big_add_gate(const add_quad &in);

@@ -148,7 +148,6 @@ class ComposerBase
     virtual std::shared_ptr<proving_key> compute_proving_key() = 0;
     virtual std::shared_ptr<verification_key> compute_verification_key() = 0;
     virtual std::shared_ptr<program_witness> compute_witness() = 0;
-    virtual Prover preprocess() = 0;
 
     virtual bool supports_feature(const Features target_feature)
     {

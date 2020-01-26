@@ -40,7 +40,7 @@ uint64_t fidget(waffle::StandardComposer& composer)
     // this shouldn't create a constraint - we just need to scale the addition/multiplication gates that `a` is involved
     // in c should point to the same wire value as a
     field_t c = a + b;
-    field_t d(&composer, fr::multiplicative_generator); // like b, d is just a constant and not a wire value
+    field_t d(&composer, fr::coset_generators[0]); // like b, d is just a constant and not a wire value
 
     // by this point, we shouldn't have added any constraints in our circuit
     for (size_t i = 0; i < 17; ++i)

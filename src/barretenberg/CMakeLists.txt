@@ -68,7 +68,7 @@ add_library(
     waffle/proof_system/widgets/turbo_arithmetic_widget.hpp
     waffle/proof_system/widgets/turbo_fixed_base_widget.cpp
     waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
-    waffle/proof_system/prover/prover.cpp
+    waffle/proof_system/prover/prover.tcc
     waffle/proof_system/prover/prover.hpp
     waffle/proof_system/verifier/verifier.cpp
     waffle/proof_system/verifier/verifier.hpp
@@ -193,7 +193,7 @@ if(PROFILING)
         waffle/proof_system/widgets/turbo_arithmetic_widget.hpp
         waffle/proof_system/widgets/turbo_fixed_base_widget.cpp
         waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
-        waffle/proof_system/prover/prover.cpp
+        waffle/proof_system/prover/prover.tcc
         waffle/proof_system/prover/prover.hpp
         waffle/proof_system/verifier/verifier.cpp
         waffle/proof_system/verifier/verifier.hpp

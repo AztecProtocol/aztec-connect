@@ -33,7 +33,7 @@ void generate_test_pedersen_circuit(waffle::TurboComposer& turbo_composer, size_
     }
 }
 
-waffle::Prover pedersen_provers[NUM_CIRCUITS];
+waffle::TurboProver pedersen_provers[NUM_CIRCUITS];
 waffle::Verifier pedersen_verifiers[NUM_CIRCUITS];
 waffle::plonk_proof pedersen_proofs[NUM_CIRCUITS];
 

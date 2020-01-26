@@ -67,9 +67,9 @@ add_executable(
     stdlib/test_stdlib_mimc.cpp
     stdlib/test_stdlib_sha256.cpp
     stdlib/test_stdlib_pedersen.cpp
-    noir/test_noir.cpp
 )
-
+#     noir/test_noir.cpp
+# TODO ADD BACK IN
 set_target_properties(
     barretenberg_tests
     PROPERTIES
