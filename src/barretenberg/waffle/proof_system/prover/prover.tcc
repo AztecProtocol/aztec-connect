@@ -242,8 +242,6 @@ template <size_t program_width> void ProverBase<program_width>::compute_z_coeffi
             fr::field_t inversion_accumulator = fr::one;
             constexpr size_t inversion_index = (temp_width == 1) ? 2 : temp_width * 2 - 1;
             fr::field_t* inversion_coefficients = &accumulators[inversion_index][0];
-            fr::field_t numerator;
-            fr::field_t denominator;
             for (size_t i = start; i < end; ++i) {
 
                 for (size_t k = 1; k < temp_width; ++k) {
