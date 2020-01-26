@@ -49,22 +49,21 @@ namespace waffle
 
         barretenberg::fr::field_t alpha_pow[6];
         barretenberg::fr::__copy(alpha, alpha_pow[0]);
+
+        barretenberg::fr::field_t z_beta = barretenberg::fr::mul(z, beta);
         for (size_t i = 1; i < 6; ++i)
         {
             barretenberg::fr::__mul(alpha_pow[i-1], alpha_pow[0], alpha_pow[i]);
         }
 
-        barretenberg::fr::__mul(z, beta, T0);
-        barretenberg::fr::__add(T0, w_l_eval, T0);
+        barretenberg::fr::__add(z_beta, w_l_eval, T0);
         barretenberg::fr::__add(T0, gamma, T0);
 
-        barretenberg::fr::__mul(z, beta, T1);
-        barretenberg::fr::__mul(T1, right_shift, T1);
+        barretenberg::fr::__mul(z_beta, right_shift, T1);
         barretenberg::fr::__add(T1, w_r_eval, T1);
         barretenberg::fr::__add(T1, gamma, T1);
 
-        barretenberg::fr::__mul(z, beta, T2);
-        barretenberg::fr::__mul(T2, output_shift, T2);
+        barretenberg::fr::__mul(z_beta, output_shift, T2);
         barretenberg::fr::__add(T2, w_o_eval, T2);
         barretenberg::fr::__add(T2, gamma, T2);
 

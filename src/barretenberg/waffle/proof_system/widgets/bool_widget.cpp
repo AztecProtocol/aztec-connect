@@ -74,8 +74,7 @@ ProverBoolWidget& ProverBoolWidget::operator=(ProverBoolWidget&& other)
 }
 
 fr::field_t ProverBoolWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                            const transcript::Transcript& transcript,
-                                                            CircuitFFTState& circuit_state)
+                                                            const transcript::Transcript& transcript)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
@@ -83,9 +82,11 @@ fr::field_t ProverBoolWidget::compute_quotient_contribution(const barretenberg::
     polynomial& w_2_fft = key->wire_ffts.at("w_2_fft");
     polynomial& w_3_fft = key->wire_ffts.at("w_3_fft");
 
+    polynomial& quotient_mid = key->quotient_mid;
+
     fr::field_t alpha_a = fr::mul(alpha_base, alpha);
     fr::field_t alpha_b = fr::mul(alpha_base, fr::sqr(alpha));
-    ITERATE_OVER_DOMAIN_START(circuit_state.mid_domain);
+    ITERATE_OVER_DOMAIN_START(key->mid_domain);
     fr::field_t T0;
     fr::field_t T1;
     fr::field_t T2;
@@ -104,9 +105,9 @@ fr::field_t ProverBoolWidget::compute_quotient_contribution(const barretenberg::
     fr::__mul(T2, q_bo_fft[i], T2);
     fr::__mul(T2, alpha_b, T2);
 
-    fr::__add(circuit_state.quotient_mid[i], T0, circuit_state.quotient_mid[i]);
-    fr::__add(circuit_state.quotient_mid[i], T1, circuit_state.quotient_mid[i]);
-    fr::__add(circuit_state.quotient_mid[i], T2, circuit_state.quotient_mid[i]);
+    fr::__add(quotient_mid[i], T0, quotient_mid[i]);
+    fr::__add(quotient_mid[i], T1, quotient_mid[i]);
+    fr::__add(quotient_mid[i], T2, quotient_mid[i]);
 
     ITERATE_OVER_DOMAIN_END;
 

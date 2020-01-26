@@ -64,14 +64,15 @@ ProverMiMCWidget& ProverMiMCWidget::operator=(ProverMiMCWidget&& other)
 }
 
 fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                            const transcript::Transcript& transcript,
-                                                            CircuitFFTState& circuit_state)
+                                                            const transcript::Transcript& transcript)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
     polynomial& w_1_fft = key->wire_ffts.at("w_1_fft");
     polynomial& w_2_fft = key->wire_ffts.at("w_2_fft");
     polynomial& w_3_fft = key->wire_ffts.at("w_3_fft");
+
+    polynomial& quotient_large = key->quotient_large;
 
     ITERATE_OVER_DOMAIN_START(key->large_domain);
     fr::field_t T0;
@@ -93,7 +94,7 @@ fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::
               q_mimc_selector_fft[i],
               T1); // T1 = (((w_o + w_l + q_c)^3 - w_r) + (w_o + w_l + q_c).w_r^2 - w_{o.next}).alpha).q_mimc
     fr::__mul(T1, alpha_base, T1);
-    fr::__add(circuit_state.quotient_large[i], T1, circuit_state.quotient_large[i]);
+    fr::__add(quotient_large[i], T1, quotient_large[i]);
     ITERATE_OVER_DOMAIN_END;
 
     return fr::mul(alpha_base, fr::sqr(alpha));

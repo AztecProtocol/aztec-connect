@@ -245,7 +245,7 @@ class ComposerBase
         barretenberg::polynomial sigma_1_lagrange_base(sigma_1, key->n);
         barretenberg::polynomial sigma_2_lagrange_base(sigma_2, key->n);
         barretenberg::polynomial sigma_3_lagrange_base(sigma_3, key->n);
-
+        
         key->permutation_selectors_lagrange_base.insert({ "sigma_1", std::move(sigma_1_lagrange_base) });
         key->permutation_selectors_lagrange_base.insert({ "sigma_2", std::move(sigma_2_lagrange_base) });
         key->permutation_selectors_lagrange_base.insert({ "sigma_3", std::move(sigma_3_lagrange_base) });
@@ -262,6 +262,9 @@ class ComposerBase
         sigma_2_fft.coset_fft(key->large_domain);
         sigma_3_fft.coset_fft(key->large_domain);
 
+        // memory += sigma_1.get_max_size() * 32 * 6;
+        // memory += sigma_1_fft.get_max_size() * 32 * 3;
+        // printf("permutation fft memory = %lu \n", memory / (1024UL * 1024UL));
         key->permutation_selectors.insert({ "sigma_1", std::move(sigma_1) });
         key->permutation_selectors.insert({ "sigma_2", std::move(sigma_2) });
         key->permutation_selectors.insert({ "sigma_3", std::move(sigma_3) });

@@ -38,7 +38,22 @@ constexpr size_t get_msb(const uint32_t v)
     return MultiplyDeBruijnBitPosition[static_cast<uint32_t>(v5 * static_cast<uint32_t>(0x07C4ACDD)) >>
                                        static_cast<uint32_t>(27)];
 }
+constexpr uint32_t get_msb_32(const uint32_t v)
+{
+    constexpr uint32_t MultiplyDeBruijnBitPosition[32] = {
+        0, 9,  1,  10, 13, 21, 2,  29, 11, 14, 16, 18, 22, 25, 3, 30,
+        8, 12, 20, 28, 15, 17, 24, 7,  19, 27, 23, 6,  26, 5,  4, 31
+    };
 
+    const uint32_t v1 = v | (v >> 1); // v |= v >> 1; // first round down to one less than a power of 2
+    const uint32_t v2 = v1 | (v1 >> 2);
+    const uint32_t v3 = v2 | (v2 >> 4);
+    const uint32_t v4 = v3 | (v3 >> 8);
+    const uint32_t v5 = v4 | (v4 >> 16);
+
+    return MultiplyDeBruijnBitPosition[static_cast<uint32_t>(v5 * static_cast<uint32_t>(0x07C4ACDD)) >>
+                                       static_cast<uint32_t>(27)];
+}
 } // namespace internal
 
 constexpr size_t get_optimal_bucket_width(const size_t num_points)
@@ -301,6 +316,24 @@ template <size_t num_points> inline void organize_buckets(multiplication_runtime
     }
 }
 
+template <size_t num_bits>
+inline void count_bits(uint32_t* bucket_counts, uint32_t* bit_offsets, const uint32_t num_buckets)
+{
+    for (size_t i = 0; i < num_buckets; ++i)
+    {
+        const uint32_t count = bucket_counts[i];
+        for (uint32_t j = 0; j < num_bits; ++j)
+        {
+            bit_offsets[j + 1] += (count & (1U << j));//((count >> j) & 0x01U);
+        }
+    }
+    bit_offsets[0] = 0;
+    for (size_t i = 2; i < num_bits + 1; ++i)
+    {
+        bit_offsets[i] += bit_offsets[i - 1];
+    }
+}
+
 inline void scalar_multiplication_round_inner(multiplication_thread_state& state,
                                               const size_t num_points,
                                               const uint64_t bucket_offset,
@@ -458,6 +491,127 @@ inline g1::element pippenger_internal(g1::affine_element* points, fr::field_t* s
     return result;
 }
 
+
+// TODO: this is a lot of code duplication, need to fix that once the method has stabilized
+template <size_t num_points>
+inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_state& state, g1::affine_element* points)
+{
+    constexpr size_t num_rounds = get_num_rounds(num_points);
+#ifndef NO_MULTITHREADING
+    const size_t num_threads = static_cast<size_t>(omp_get_max_threads());
+#else
+    const size_t num_threads = 1;
+#endif
+    constexpr size_t bits_per_bucket = get_optimal_bucket_width(num_points / 2);
+    const size_t num_points_per_thread = num_points / num_threads; // assume a power of 2
+
+    g1::element* thread_accumulators = static_cast<g1::element*>(aligned_alloc(64, num_threads * sizeof(g1::element)));
+
+
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+    for (size_t j = 0; j < num_threads; ++j) {
+        g1::set_infinity(thread_accumulators[j]);
+
+        for (size_t i = 0; i < num_rounds; ++i) {
+            uint64_t* thread_point_schedule = &state.wnaf_table[(i * num_points) + j * num_points_per_thread];
+            const size_t first_bucket = thread_point_schedule[0] & 0x7fffffffU;
+            const size_t last_bucket = thread_point_schedule[(num_points_per_thread - 1)] & 0x7fffffffU;
+            const size_t num_thread_buckets = (last_bucket - first_bucket) + 1;
+
+            affine_product_runtime_state product_state = mmu::get_affine_product_runtime_state(num_threads, j);
+            product_state.num_points = static_cast<uint32_t>(num_points_per_thread);
+            product_state.points = points;
+            product_state.point_schedule = thread_point_schedule;
+            product_state.num_buckets = static_cast<uint32_t>(num_thread_buckets);
+
+            g1::affine_element* output_buckets = reduce_buckets(product_state, true);
+
+            g1::element running_sum;
+            g1::element accumulator;
+            g1::set_infinity(running_sum);
+            g1::set_infinity(accumulator);
+
+            // one nice side-effect of the affine trick, is that half of the bucket concatenation
+            // algorithm can use mixed addition formulae, instead of full addition formulae
+            size_t output_it = product_state.num_points - 1;
+            for (size_t k = num_thread_buckets - 1; k > 0; --k) {
+                if (__builtin_expect(!product_state.bucket_empty_status[k], 1)) {
+                    g1::mixed_add(running_sum, (output_buckets[output_it]), running_sum);
+                    --output_it;
+                }
+                g1::add(accumulator, running_sum, accumulator);
+            }
+            g1::mixed_add(running_sum, output_buckets[0], running_sum);
+            g1::dbl(accumulator, accumulator);
+            g1::add(accumulator, running_sum, accumulator);
+
+            // we now need to scale up 'running sum' up to the value of the first bucket.
+            // e.g. if first bucket is 0, no scaling
+            // if first bucket is 1, we need to add (2 * running_sum)
+            if (first_bucket > 0) {
+                uint32_t multiplier = static_cast<uint32_t>(first_bucket << 1UL);
+                size_t shift = internal::get_msb(multiplier);
+                g1::element rolling_accumulator;
+                g1::set_infinity(rolling_accumulator);
+                bool init = false;
+                while (shift != static_cast<size_t>(-1)) {
+                    if (init) {
+                        g1::dbl(rolling_accumulator, rolling_accumulator);
+                        if (((multiplier >> shift) & 1)) {
+                            g1::add(rolling_accumulator, running_sum, rolling_accumulator);
+                        }
+                    } else {
+                        g1::add(rolling_accumulator, running_sum, rolling_accumulator);
+                    }
+                    init = true;
+                    shift -= 1;
+                }
+                g1::add(accumulator, rolling_accumulator, accumulator);
+            }
+
+            if (i == (num_rounds - 1)) {
+                bool* skew_table = &state.skew_table[j * num_points_per_thread];
+                g1::affine_element* point_table = &points[j * num_points_per_thread];
+                g1::affine_element addition_temporary;
+                for (size_t k = 0; k < num_points_per_thread; ++k) {
+                    if (skew_table[k]) {
+                        g1::__neg(point_table[k], addition_temporary);
+                        g1::mixed_add(accumulator, addition_temporary, accumulator);
+                    }
+                }
+            }
+
+            if (i > 0) {
+                for (size_t k = 0; k < bits_per_bucket + 1; ++k) {
+                    g1::dbl(thread_accumulators[j], thread_accumulators[j]);
+                }
+            }
+            g1::add(thread_accumulators[j], accumulator, thread_accumulators[j]);
+        }
+    }
+
+    g1::element result;
+    g1::set_infinity(result);
+    for (size_t i = 0; i < num_threads; ++i) {
+        g1::add(result, thread_accumulators[i], result);
+    }
+    free(thread_accumulators);
+    return result;
+}
+
+
+template <size_t num_initial_points>
+inline g1::element pippenger_unsafe_internal(g1::affine_element* points, fr::field_t* scalars)
+{
+    multiplication_runtime_state state;
+    compute_wnaf_states<num_initial_points>(state, scalars);
+    organize_buckets<num_initial_points * 2>(state);
+    g1::element result = unsafe_scalar_multiplication_internal<num_initial_points * 2>(state, points);
+    return result;
+}
+
 inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, const size_t num_initial_points)
 {
     // our windowed non-adjacent form algorthm requires that each thread can work on at least 8 points.
@@ -550,6 +704,128 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, c
         break;
     case 3:
         result = pippenger_internal<1 << 3>(points, scalars);
+        break;
+    }
+
+    if ((1UL << log2_initial_points) == num_initial_points) {
+        return result;
+    } else {
+        g1::add(result,
+                pippenger(scalars + (1UL << log2_initial_points),
+                          points + (1UL << (log2_initial_points + 1)),
+                          num_initial_points - (1UL << log2_initial_points)),
+                result);
+        return result;
+    }
+}
+
+/**
+ * It's pippenger! But this one has go-faster stripes and a prediliction for questionable life choices.
+ * We use affine-addition formula in this method, which paradoxically is ~45% faster than the mixed addition formulae.
+ * See `scalar_multiplication.cpp` for a more detailed description.
+ * 
+ * It's...unsafe, because we assume that the incomplete addition formula exceptions are not triggered.
+ * We don't bother to check for this to avoid conditional branches in a critical section of our code.
+ * This is fine for situations where your bases are linearly independent (i.e. KZG10 polynomial commitments),
+ * because triggering the incomplete addition exceptions is about as hard as solving the disrete log problem.
+ * 
+ * This is ok for the prover, but GIANT RED CLAXON WARNINGS FOR THE VERIFIER
+ * Don't use this in a verification algorithm! That would be a really bad idea.
+ * Unless you're a malicious adversary, then it would be a great idea! 
+ * 
+ **/ 
+inline g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, const size_t num_initial_points)
+{
+    // our windowed non-adjacent form algorthm requires that each thread can work on at least 8 points.
+    // If we fall below this theshold, fall back to the traditional scalar multiplication algorithm.
+    // For 8 threads, this neatly coincides with the threshold where Strauss scalar multiplication outperforms Pippenger
+#ifndef NO_MULTITHREADING
+    const size_t threshold = std::max(static_cast<size_t>(omp_get_max_threads() * 8), 8UL);
+#else
+    const size_t threshold = 8UL;
+#endif
+
+    if (num_initial_points == 0) {
+        g1::element out = g1::one;
+        g1::set_infinity(out);
+        return out;
+    }
+
+    if (num_initial_points <= threshold) {
+        std::vector<g1::element> exponentiation_results(num_initial_points);
+        // might as well multithread this...
+        // TODO: implement Strauss algorithm for small numbers of points.
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+        for (size_t i = 0; i < num_initial_points; ++i) {
+            exponentiation_results[i] = g1::group_exponentiation_inner((points[i * 2]), scalars[i]);
+        }
+
+        for (size_t i = num_initial_points - 1; i > 0; --i) {
+            g1::add(exponentiation_results[i - 1], exponentiation_results[i], exponentiation_results[i - 1]);
+        }
+        return exponentiation_results[0];
+    }
+
+    const size_t log2_initial_points =
+        std::min(static_cast<size_t>(internal::get_msb(static_cast<uint32_t>(num_initial_points))), 20UL);
+    g1::element result;
+
+    switch (log2_initial_points) {
+    case 20:
+        result = pippenger_unsafe_internal<1 << 20>(points, scalars);
+        break;
+    case 19:
+        result = pippenger_unsafe_internal<1 << 19>(points, scalars);
+        break;
+    case 18:
+        result = pippenger_unsafe_internal<1 << 18>(points, scalars);
+        break;
+    case 17:
+        result = pippenger_unsafe_internal<1 << 17>(points, scalars);
+        break;
+    case 16:
+        result = pippenger_unsafe_internal<1 << 16>(points, scalars);
+        break;
+    case 15:
+        result = pippenger_unsafe_internal<1 << 15>(points, scalars);
+        break;
+    case 14:
+        result = pippenger_unsafe_internal<1 << 14>(points, scalars);
+        break;
+    case 13:
+        result = pippenger_unsafe_internal<1 << 13>(points, scalars);
+        break;
+    case 12:
+        result = pippenger_unsafe_internal<1 << 12>(points, scalars);
+        break;
+    case 11:
+        result = pippenger_unsafe_internal<1 << 11>(points, scalars);
+        break;
+    case 10:
+        result = pippenger_unsafe_internal<1 << 10>(points, scalars);
+        break;
+    case 9:
+        result = pippenger_unsafe_internal<1 << 9>(points, scalars);
+        break;
+    case 8:
+        result = pippenger_unsafe_internal<1 << 8>(points, scalars);
+        break;
+    case 7:
+        result = pippenger_unsafe_internal<1 << 7>(points, scalars);
+        break;
+    case 6:
+        result = pippenger_unsafe_internal<1 << 6>(points, scalars);
+        break;
+    case 5:
+        result = pippenger_unsafe_internal<1 << 5>(points, scalars);
+        break;
+    case 4:
+        result = pippenger_unsafe_internal<1 << 4>(points, scalars);
+        break;
+    case 3:
+        result = pippenger_unsafe_internal<1 << 3>(points, scalars);
         break;
     }
 

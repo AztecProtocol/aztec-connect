@@ -295,7 +295,7 @@ TEST(prover, compute_quotient_polynomial)
 
     // check that the max degree of our quotient polynomial is 3n
     for (size_t i = 3 * n; i < 4 * n; ++i) {
-        EXPECT_EQ(fr::eq(state.circuit_state.quotient_large.at(i), fr::zero), true);
+        EXPECT_EQ(fr::eq(state.key->quotient_large.at(i), fr::zero), true);
     }
 }
 

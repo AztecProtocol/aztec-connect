@@ -30,6 +30,7 @@ add_library(
     curves/bn254/scalar_multiplication/mmu.cpp
     curves/bn254/scalar_multiplication/mmu.hpp
     curves/bn254/scalar_multiplication/process_buckets.hpp
+    curves/bn254/scalar_multiplication/scalar_multiplication.cpp
     curves/bn254/scalar_multiplication/scalar_multiplication.tcc
     curves/bn254/scalar_multiplication/scalar_multiplication.hpp
     curves/bn254/pairing.cpp
@@ -154,6 +155,7 @@ if(PROFILING)
         curves/bn254/scalar_multiplication/mmu.cpp
         curves/bn254/scalar_multiplication/mmu.hpp
         curves/bn254/scalar_multiplication/process_buckets.hpp
+        curves/bn254/scalar_multiplication/scalar_multiplication.cpp
         curves/bn254/scalar_multiplication/scalar_multiplication.tcc
         curves/bn254/scalar_multiplication/scalar_multiplication.hpp
         curves/bn254/pairing.cpp

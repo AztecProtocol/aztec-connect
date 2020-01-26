@@ -56,12 +56,11 @@ ProverTurboFixedBaseWidget& ProverTurboFixedBaseWidget::operator=(ProverTurboFix
 }
 
 fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                                      const transcript::Transcript& transcript,
-                                                                      CircuitFFTState& circuit_state)
+                                                                      const transcript::Transcript& transcript)
 {
     fr::field_t grumpkin_curve_b = grumpkin::g1::curve_b;
     fr::field_t new_alpha_base =
-        ProverTurboArithmeticWidget::compute_quotient_contribution(alpha_base, transcript, circuit_state);
+        ProverTurboArithmeticWidget::compute_quotient_contribution(alpha_base, transcript);
 
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
@@ -77,6 +76,8 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     fr::field_t* w_2_fft = &key->wire_ffts.at("w_2_fft")[0];
     fr::field_t* w_3_fft = &key->wire_ffts.at("w_3_fft")[0];
     fr::field_t* w_4_fft = &key->wire_ffts.at("w_4_fft")[0];
+
+    fr::field_t* quotient_large = &key->quotient_large[0];
     // selector renaming:
     // q_1 = q_x_1
     // q_2 = q_x_2
@@ -216,7 +217,7 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     fr::__add_with_coarse_reduction(gate_identity, x_accumulator_identity, gate_identity);
     fr::__add_with_coarse_reduction(gate_identity, y_accumulator_identity, gate_identity);
     fr::__mul(gate_identity, q_ecc_1_fft[i], gate_identity);
-    fr::__add(circuit_state.quotient_large[i], gate_identity, circuit_state.quotient_large[i]);
+    fr::__add(quotient_large[i], gate_identity, quotient_large[i]);
 
     ITERATE_OVER_DOMAIN_END;
 
@@ -341,10 +342,11 @@ fr::field_t ProverTurboFixedBaseWidget::compute_opening_poly_contribution(const 
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0;
     fr::field_t T1;
-    fr::__mul(q_ecc_1[i], new_nu_base, T0);
-    fr::__mul(q_c[i], nu_b, T1);
+    fr::__mul_with_coarse_reduction(q_ecc_1[i], new_nu_base, T0);
+    fr::__mul_with_coarse_reduction(q_c[i], nu_b, T1);
+    fr::__add_with_coarse_reduction(T0, T1, T0);
+    fr::reduce_once(T0, T0);
     fr::__add(poly[i], T0, poly[i]);
-    fr::__add(poly[i], T1, poly[i]);
     ITERATE_OVER_DOMAIN_END;
     return fr::mul(nu_b, nu);
 }

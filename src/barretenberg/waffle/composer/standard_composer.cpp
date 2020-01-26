@@ -181,7 +181,6 @@ std::shared_ptr<proving_key> StandardComposer::compute_proving_key()
         ++log2_n;
     }
     size_t new_n = 1UL << log2_n;
-
     for (size_t i = n; i < new_n; ++i) {
         q_m.emplace_back(fr::zero);
         q_1.emplace_back(fr::zero);
@@ -227,6 +226,10 @@ std::shared_ptr<proving_key> StandardComposer::compute_proving_key()
     poly_q_3_fft.coset_fft(circuit_proving_key->mid_domain);
     poly_q_m_fft.coset_fft(circuit_proving_key->mid_domain);
     poly_q_c_fft.coset_fft(circuit_proving_key->mid_domain);
+
+    // size_t memory = poly_q_m.get_max_size() * 5 * 32;
+    // memory += poly_q_m_fft.get_max_size() * 5 * 32;
+    // printf("constraint selector memory = %lu \n", memory / (1024UL * 1024UL));
 
     circuit_proving_key->constraint_selectors.insert({ "q_m", std::move(poly_q_m )});
     circuit_proving_key->constraint_selectors.insert({ "q_c", std::move(poly_q_c )});
