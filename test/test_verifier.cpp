@@ -136,9 +136,9 @@ waffle::Prover generate_test_data(const size_t n)
     polynomial sigma_2(key->n);
     polynomial sigma_3(key->n);
 
-    waffle::compute_permutation_lagrange_base_single(sigma_1, sigma_1_mapping, key->small_domain);
-    waffle::compute_permutation_lagrange_base_single(sigma_2, sigma_2_mapping, key->small_domain);
-    waffle::compute_permutation_lagrange_base_single(sigma_3, sigma_3_mapping, key->small_domain);
+    waffle::compute_permutation_lagrange_base_single<standard_settings>(sigma_1, sigma_1_mapping, key->small_domain);
+    waffle::compute_permutation_lagrange_base_single<standard_settings>(sigma_2, sigma_2_mapping, key->small_domain);
+    waffle::compute_permutation_lagrange_base_single<standard_settings>(sigma_3, sigma_3_mapping, key->small_domain);
 
     polynomial sigma_1_lagrange_base(sigma_1, key->n);
     polynomial sigma_2_lagrange_base(sigma_2, key->n);

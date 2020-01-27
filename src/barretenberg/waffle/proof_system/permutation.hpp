@@ -9,6 +9,7 @@
 #include "../../types.hpp"
 
 namespace waffle {
+template <typename program_settings>
 inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& output,
                                                      const std::vector<uint32_t>& permutation,
                                                      const barretenberg::evaluation_domain& small_domain)
@@ -16,16 +17,12 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     if (output.get_size() < permutation.size()) {
         output.resize_unsafe(permutation.size());
     }
-    barretenberg::fr::field_t k1 = barretenberg::fr::coset_generators[0];
-    barretenberg::fr::field_t k2 = barretenberg::fr::coset_generators[1];
-
     // permutation encoding:
     // low 28 bits defines the location in witness polynomial
     // upper 2 bits defines the witness polynomial:
     // 0 = left
     // 1 = right
     // 2 = output
-    const uint32_t mask = (1U << 29U) - 1U;
     const barretenberg::fr::field_t* roots = small_domain.get_round_roots()[small_domain.log2_size - 2];
     const size_t root_size = small_domain.size >> 1UL;
     const size_t log2_root_size = static_cast<size_t>(log2(root_size));
@@ -40,7 +37,7 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     // unity
 
     // Step 1: mask the high bits and get the permutation index
-    const size_t raw_idx = static_cast<size_t>(permutation[i] & mask);
+    const size_t raw_idx = static_cast<size_t>(permutation[i] & ~program_settings::permutation_mask);
 
     // Step 2: is `raw_idx` >= (n / 2)? if so, we will need to index `-roots[raw_idx - subgroup_size / 2]` instead of
     // `roots[raw_idx]`
@@ -65,21 +62,10 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     // wire permutations) (ditto for right wire and output wire mappings)
 
     // isolate the highest 2 bits of `permutation[i]` and shunt them down into the 2 least significant bits
-    switch ((permutation[i] >> 30U) & 0x3U) {
-    case 2U: // output wire - multiply by 2nd quadratic nonresidue
+    const uint32_t column_index = ((permutation[i] & program_settings::permutation_mask) >> program_settings::permutation_shift);
+    if (column_index > 0)
     {
-        barretenberg::fr::__mul(output.at(i), k2, output.at(i));
-        break;
-    }
-    case 1U: // right wire - multiply by 1st quadratic nonresidue
-    {
-        barretenberg::fr::__mul(output.at(i), k1, output.at(i));
-        break;
-    }
-    default: // left wire - do nothing
-    {
-        break;
-    }
+        barretenberg::fr::__mul(output[i], barretenberg::fr::coset_generators[column_index - 1], output[i]);
     }
     ITERATE_OVER_DOMAIN_END;
 }

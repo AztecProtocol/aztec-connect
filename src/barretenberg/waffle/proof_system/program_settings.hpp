@@ -16,6 +16,8 @@ class standard_settings : public settings_base {
     static constexpr size_t program_width = 3;
     static constexpr uint64_t wire_shift_settings = 0b0000;
     static constexpr bool uses_quotient_mid = true;
+    static constexpr uint32_t permutation_shift = 30;
+    static constexpr uint32_t permutation_mask = 0xC0000000;
 };
 
 class extended_settings : public settings_base {
@@ -23,6 +25,8 @@ class extended_settings : public settings_base {
     static constexpr size_t program_width = 3;
     static constexpr uint64_t wire_shift_settings = 0b0100;
     static constexpr bool uses_quotient_mid = true;
+    static constexpr uint32_t permutation_shift = 30;
+    static constexpr uint32_t permutation_mask = 0xC0000000;
 };
 
 class turbo_settings : public settings_base {
@@ -30,5 +34,7 @@ class turbo_settings : public settings_base {
     static constexpr size_t program_width = 4;
     static constexpr uint64_t wire_shift_settings = 0b1111;
     static constexpr bool uses_quotient_mid = false;
+    static constexpr uint32_t permutation_shift = 30;
+    static constexpr uint32_t permutation_mask = 0xC0000000;
 };
 } // namespace waffle

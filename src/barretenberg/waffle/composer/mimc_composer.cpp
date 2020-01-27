@@ -262,7 +262,7 @@ std::shared_ptr<proving_key> MiMCComposer::compute_proving_key()
     circuit_proving_key->constraint_selector_ffts.insert({ "q_2_fft", std::move(poly_q_2_fft) });
     circuit_proving_key->constraint_selector_ffts.insert({ "q_3_fft", std::move(poly_q_3_fft) });
 
-    compute_sigma_permutations(circuit_proving_key.get(), 4);
+    compute_sigma_permutations<3>(circuit_proving_key.get());
     computed_proving_key = true;
     return circuit_proving_key;
 }

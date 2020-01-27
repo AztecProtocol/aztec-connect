@@ -63,7 +63,7 @@ class ExtendedComposer : public BoolComposer {
                                                    const size_t gate_index);
     extended_wire_properties get_shared_wire(const size_t i);
     void combine_linear_relations();
-    void compute_sigma_permutations(proving_key* key, const size_t width) override;
+    void compute_sigma_permutations(proving_key* key, const size_t width);
 
     std::shared_ptr<proving_key> compute_proving_key() override;
     std::shared_ptr<verification_key> compute_verification_key() override;

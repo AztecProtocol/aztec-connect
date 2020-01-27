@@ -424,9 +424,9 @@ void ExtendedComposer::compute_sigma_permutations(proving_key* key, const size_t
     barretenberg::polynomial sigma_2(key->n);
     barretenberg::polynomial sigma_3(key->n);
 
-    compute_permutation_lagrange_base_single(sigma_1, sigma_1_mapping, key->small_domain);
-    compute_permutation_lagrange_base_single(sigma_2, sigma_2_mapping, key->small_domain);
-    compute_permutation_lagrange_base_single(sigma_3, sigma_3_mapping, key->small_domain);
+    compute_permutation_lagrange_base_single<extended_settings>(sigma_1, sigma_1_mapping, key->small_domain);
+    compute_permutation_lagrange_base_single<extended_settings>(sigma_2, sigma_2_mapping, key->small_domain);
+    compute_permutation_lagrange_base_single<extended_settings>(sigma_3, sigma_3_mapping, key->small_domain);
 
     barretenberg::polynomial sigma_1_lagrange_base(sigma_1, key->n);
     barretenberg::polynomial sigma_2_lagrange_base(sigma_2, key->n);

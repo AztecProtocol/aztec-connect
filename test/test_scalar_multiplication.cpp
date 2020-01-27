@@ -26,9 +26,9 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     // 16 buckets, each bucket has one point
     std::array<uint64_t, num_points> transcript;
     std::array<uint64_t, num_points> transcript_points;
-    transcript_points[0] = 0x0; // bucket 0
-    transcript_points[1] = 0x2; //bucket 0
-    transcript_points[2] = 0x4; // bucket 1
+    transcript_points[0] = 0x0;
+    transcript_points[1] = 0x2;
+    transcript_points[2] = 0x4;
     transcript_points[3] = 0x6;
     transcript_points[4] = 0xb;
     transcript_points[5] = 0xc;
@@ -42,9 +42,9 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     transcript_points[13] = 0x18;
     transcript_points[14] = 0x20;
     transcript_points[15] = 0x21;
-    transcript_points[16] = 0x22; // bucket 0
-    transcript_points[17] = 0x27; //bucket 0
-    transcript_points[18] = 0x29; // bucket 1
+    transcript_points[16] = 0x22;
+    transcript_points[17] = 0x27;
+    transcript_points[18] = 0x29;
     transcript_points[19] = 0x2b;
     transcript_points[20] = 0x2c;
     transcript_points[21] = 0x2d;
@@ -58,10 +58,9 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     transcript_points[29] = 0x4f;
     transcript_points[30] = 0x50;
     transcript_points[31] = 0x51;
-    
-    transcript_points[32] = 0x41; // bucket 0
-    transcript_points[33] = 0x52; //bucket 0
-    transcript_points[34] = 0x53; // bucket 1
+    transcript_points[32] = 0x41;
+    transcript_points[33] = 0x52;
+    transcript_points[34] = 0x53;
     transcript_points[35] = 0x54;
     transcript_points[36] = 0x43;
     transcript_points[37] = 0x57;
@@ -75,9 +74,9 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     transcript_points[45] = 0x4d;
     transcript_points[46] = 0x6b;
     transcript_points[47] = 0x65;
-    transcript_points[48] = 0x6d; // bucket 0
-    transcript_points[49] = 0x67; //bucket 0
-    transcript_points[50] = 0x6f; // bucket 1
+    transcript_points[48] = 0x6d;
+    transcript_points[49] = 0x67;
+    transcript_points[50] = 0x6f;
     transcript_points[51] = 0x68;
     transcript_points[52] = 0x69;
     transcript_points[53] = 0x6a;
@@ -92,9 +91,9 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     transcript_points[61] = 0x7e;
     transcript_points[63] = 0x7f;
     
-    transcript_points[64] = 0x1; // bucket 0
-    transcript_points[65] = 0x3; //bucket 0
-    transcript_points[66] = 0x5; // bucket 1
+    transcript_points[64] = 0x1;
+    transcript_points[65] = 0x3;
+    transcript_points[66] = 0x5;
     transcript_points[67] = 0x7;
     transcript_points[68] = 0x8;
     transcript_points[69] = 0x9;
@@ -108,9 +107,9 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     transcript_points[77] = 0x1b;
     transcript_points[78] = 0x1c;
     transcript_points[79] = 0x1d;
-    transcript_points[80] = 0x1e; // bucket 0
-    transcript_points[81] = 0x1f; //bucket 0
-    transcript_points[82] = 0x23; // bucket 1
+    transcript_points[80] = 0x1e;
+    transcript_points[81] = 0x1f;
+    transcript_points[82] = 0x23;
     transcript_points[83] = 0x24;
     transcript_points[84] = 0x25;
     transcript_points[85] = 0x26;
@@ -124,10 +123,9 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     transcript_points[93] = 0x34;
     transcript_points[94] = 0x35;
     transcript_points[95] = 0x39;
-
-    transcript_points[96] = 0x3a; // bucket 0
-    transcript_points[97] = 0x3b; //bucket 0
-    transcript_points[98] = 0x3c; // bucket 1
+    transcript_points[96] = 0x3a;
+    transcript_points[97] = 0x3b;
+    transcript_points[98] = 0x3c;
     transcript_points[99] = 0x3d;
     transcript_points[100] = 0x48;
     transcript_points[101] = 0x49;
@@ -141,9 +139,9 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     transcript_points[109] = 0x5a;
     transcript_points[110] = 0x5c;
     transcript_points[111] = 0x5d;
-    transcript_points[112] = 0x5f; // bucket 0
-    transcript_points[113] = 0x60; //bucket 0
-    transcript_points[114] = 0x61; // bucket 1
+    transcript_points[112] = 0x5f;
+    transcript_points[113] = 0x60;
+    transcript_points[114] = 0x61;
     transcript_points[115] = 0x62;
     transcript_points[116] = 0x63;
     transcript_points[117] = 0x4c;
@@ -165,8 +163,6 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     }
     for (size_t i = 0; i < num_points; ++i)
     {
-        // point_schedule[i] = (static_cast<uint64_t>(i) << 32ULL) + transcript[i];
-
         point_schedule[i] = (static_cast<uint64_t>(transcript_points[i]) << 32ULL) + transcript[i];
     }
     std::array<g1::element, num_points> expected;
@@ -174,65 +170,15 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     {
         g1::set_infinity(expected[i]);
     }
-    // printf("monomials 5 to 9:");
-    // g1::print(monomials[5]);
-    // g1::print(monomials[6]);
-    // g1::print(monomials[7]);
-    // g1::print(monomials[8]);
-    // g1::print(monomials[9]);
-    // g1::element debug_a;
-    // g1::element debug_b;
-    // g1::element debug_c;
-    // debug_a.x = monomials[5].x;
-    // debug_a.y = monomials[5].y;
-    // debug_a.z = fq::one;
-    // g1::set_infinity(debug_b);
-    // g1::set_infinity(debug_c);
-    // g1::mixed_add(debug_b, monomials[6], debug_b);
-    // g1::mixed_add(debug_b, monomials[7], debug_b);
-    // g1::mixed_add(debug_c, monomials[8], debug_c);
-    // g1::mixed_add(debug_c, monomials[9], debug_c);
-    // debug_b = g1::normalize(debug_b);
-    // debug_c = g1::normalize(debug_c);
 
-    // g1::element debug_d;
-    // g1::add(debug_b, debug_c, debug_d);
-    // debug_d = g1::normalize(debug_d);
-
-    // printf("one add = \n");
-    // g1::print(debug_a);
-    // printf("FIRST two adds = \n");
-    // g1::print(debug_b);
-    // printf("SECOND two adds = \n");
-    // g1::print(debug_c);
-
-    // printf("NEXT ROUND PRODUCT =  \n");
-    // g1::print(debug_d);
-
-    // g1::add(debug_d, debug_a, debug_d);
-    //  debug_d = g1::normalize(debug_d);
-    //  printf("FINAL ROUND PRODUCT =  \n");
-    //  g1::print(debug_d);
     for (size_t i = 0; i < num_points; ++i)
     {
         uint64_t schedule = transcript[i] & 0x7fffffffU;
-        // if (transcript[i] > 10000)
-        // {
-        //     //printf("blah blah blah\n");
-        // g1::mixed_add_or_sub(expected[schedule], monomials[i], expected[schedule], 1);
-
-        // }
-        // else
         {
-         //   printf("schedule = %lu \n", schedule);
-        g1::mixed_add(expected[schedule], monomials[transcript_points[i]], expected[schedule]);
-        // g1::mixed_add(expected[schedule], monomials[i], expected[schedule]);
-
+            g1::mixed_add(expected[schedule], monomials[transcript_points[i]], expected[schedule]);
         }
     }
-    // printf("expected[2] = ");
-    // g1::element foo = g1::normalize(expected[2]);
-    // g1::print(foo);
+
     std::array<g1::affine_element, num_points> point_pairs;
     std::array<g1::affine_element, num_points> output_buckets;
     std::array<fq::field_t, num_points> scratch_space;
@@ -245,13 +191,12 @@ TEST(scalar_multiplication, reduce_buckets_simple)
                                                                        &point_schedule[0],   num_points, 2, &bucket_empty_status[0] };
 
     g1::affine_element* output = scalar_multiplication::reduce_buckets(product_state, true);
-    printf("num buckets = %u \n", product_state.num_buckets);
+
     for (size_t i = 0; i < product_state.num_buckets; ++i)
     {
         expected[i] = g1::normalize(expected[i]);
         EXPECT_EQ(fq::eq(output[i].x, expected[i].x), true);
         EXPECT_EQ(fq::eq(output[i].y, expected[i].y), true);
-
     }
 }
 

@@ -14,6 +14,9 @@ namespace waffle
 template <typename program_settings>
 class VerifierBase
 {
+    typedef barretenberg::fr fr;
+    typedef barretenberg::g1 g1;
+
   public:
     VerifierBase(const size_t subgroup_size = 0, const transcript::Manifest &manifest = transcript::Manifest({}), bool has_fourth_wire = false);
     VerifierBase(VerifierBase&& other);
@@ -25,7 +28,7 @@ class VerifierBase
 
     ReferenceString reference_string;
 
-    std::array<barretenberg::g1::affine_element, 3 /*TODO REPLACE*/> SIGMA;
+    std::array<barretenberg::g1::affine_element, program_settings::program_width> SIGMA;
 
     std::vector<std::unique_ptr<VerifierBaseWidget>> verifier_widgets;
     size_t n;

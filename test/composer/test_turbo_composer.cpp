@@ -64,8 +64,7 @@ TEST(turbo_composer, test_add_gate_proofs)
 
     // TODO: proof fails if one wire contains all zeros. Should we support this?
     uint32_t zero_idx = composer.add_variable(fr::zero);
-    uint32_t one_idx = composer.add_variable(fr::one);
-    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, a_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
 
     waffle::TurboProver prover = composer.preprocess();
 

@@ -111,6 +111,7 @@ class ComposerBase
         LEFT = 0U,
         RIGHT = (1U << 30U),
         OUTPUT = (1U << 31U),
+        FOURTH = 0xc0000000,
         NULL_WIRE
     };
     struct epicycle
@@ -200,77 +201,48 @@ class ComposerBase
         wire_epicycles[b_idx] = std::vector<epicycle>();
     }
 
-    virtual void compute_sigma_permutations(proving_key* key, const size_t width)
+    template <size_t program_width>
+    void compute_sigma_permutations(proving_key* key)
     {
-        std::vector<uint32_t> sigma_1_mapping;
-        std::vector<uint32_t> sigma_2_mapping;
-        std::vector<uint32_t> sigma_3_mapping;
-        sigma_1_mapping.reserve(key->n);
-        sigma_2_mapping.reserve(key->n);
-        sigma_3_mapping.reserve(key->n);
-        for (size_t i = 0; i < key->n; ++i)
-        {
-            sigma_1_mapping.emplace_back(static_cast<uint32_t>(i));
-            sigma_2_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 30U));
-            sigma_3_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 31U));
-        }
-        uint32_t* sigmas[3]{ &sigma_1_mapping[0],
-                             &sigma_2_mapping[0],
-                             &sigma_3_mapping[0] };
+        std::array<std::vector<uint32_t>, program_width> sigma_mappings;
+        std::array<uint32_t, 4> wire_offsets{ 0U, 0x40000000, 0x80000000, 0xc0000000 };
 
+        for (size_t i = 0; i < program_width; ++i)
+        {
+            sigma_mappings[i].reserve(key->n);
+        }
+        for (size_t i = 0; i < program_width; ++i)
+        {
+            for (size_t j = 0; j < key->n; ++j)
+            {
+                sigma_mappings[i].emplace_back(j + wire_offsets[i]);
+            }
+        }
         for (size_t i = 0; i < wire_epicycles.size(); ++i)
         {
-            // each index in 'wire_epicycles' corresponds to a variable
-            // the contents of 'wire_epicycles[i]' is a vector, that contains a list
-            // of the gates that this variable is involved in
             for (size_t j = 0; j < wire_epicycles[i].size(); ++j)
             {
                 epicycle current_epicycle = wire_epicycles[i][j];
                 size_t epicycle_index = j == wire_epicycles[i].size() - 1 ? 0 : j + 1;
                 epicycle next_epicycle = wire_epicycles[i][epicycle_index];
-                sigmas[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U][current_epicycle.gate_index] =
-                    next_epicycle.gate_index + static_cast<uint32_t>(next_epicycle.wire_type);
+                sigma_mappings[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U][current_epicycle.gate_index] =
+                    next_epicycle.gate_index + static_cast<uint32_t>(next_epicycle.wire_type);   
             }
         }
     
-        barretenberg::polynomial sigma_1(key->n);
-        barretenberg::polynomial sigma_2(key->n);
-        barretenberg::polynomial sigma_3(key->n);
-
-        compute_permutation_lagrange_base_single(sigma_1, sigma_1_mapping, key->small_domain);
-        compute_permutation_lagrange_base_single(sigma_2, sigma_2_mapping, key->small_domain);
-        compute_permutation_lagrange_base_single(sigma_3, sigma_3_mapping, key->small_domain);
-
-        barretenberg::polynomial sigma_1_lagrange_base(sigma_1, key->n);
-        barretenberg::polynomial sigma_2_lagrange_base(sigma_2, key->n);
-        barretenberg::polynomial sigma_3_lagrange_base(sigma_3, key->n);
-        
-        key->permutation_selectors_lagrange_base.insert({ "sigma_1", std::move(sigma_1_lagrange_base) });
-        key->permutation_selectors_lagrange_base.insert({ "sigma_2", std::move(sigma_2_lagrange_base) });
-        key->permutation_selectors_lagrange_base.insert({ "sigma_3", std::move(sigma_3_lagrange_base) });
-
-        sigma_1.ifft(key->small_domain);
-        sigma_2.ifft(key->small_domain);
-        sigma_3.ifft(key->small_domain);
-
-        barretenberg::polynomial sigma_1_fft(sigma_1, key->n * width);
-        barretenberg::polynomial sigma_2_fft(sigma_2, key->n * width);
-        barretenberg::polynomial sigma_3_fft(sigma_3, key->n * width);
-
-        sigma_1_fft.coset_fft(key->large_domain);
-        sigma_2_fft.coset_fft(key->large_domain);
-        sigma_3_fft.coset_fft(key->large_domain);
-
-        // memory += sigma_1.get_max_size() * 32 * 6;
-        // memory += sigma_1_fft.get_max_size() * 32 * 3;
-        // printf("permutation fft memory = %lu \n", memory / (1024UL * 1024UL));
-        key->permutation_selectors.insert({ "sigma_1", std::move(sigma_1) });
-        key->permutation_selectors.insert({ "sigma_2", std::move(sigma_2) });
-        key->permutation_selectors.insert({ "sigma_3", std::move(sigma_3) });
-
-        key->permutation_selector_ffts.insert({ "sigma_1_fft", std::move(sigma_1_fft) });
-        key->permutation_selector_ffts.insert({ "sigma_2_fft", std::move(sigma_2_fft) });
-        key->permutation_selector_ffts.insert({ "sigma_3_fft", std::move(sigma_3_fft) });
+        for (size_t i = 0; i < program_width; ++i)
+        {
+            std::string index = std::to_string(i + 1);
+            barretenberg::polynomial sigma_polynomial(key->n);
+            compute_permutation_lagrange_base_single<standard_settings>(sigma_polynomial, sigma_mappings[i], key->small_domain);
+            barretenberg::polynomial sigma_polynomial_lagrange_base(sigma_polynomial);
+            key->permutation_selectors_lagrange_base.insert({ "sigma_" + index, std::move(sigma_polynomial_lagrange_base) });
+            sigma_polynomial.ifft(key->small_domain);
+            barretenberg::polynomial sigma_fft(sigma_polynomial, key->large_domain.size);
+            sigma_fft.coset_fft(key->large_domain);
+            key->permutation_selectors.insert({ "sigma_" + index, std::move(sigma_polynomial) });
+            key->permutation_selector_ffts.insert({ "sigma_" + index + "_fft", std::move(sigma_fft) });
+        }
     }
 
   public:

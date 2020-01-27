@@ -96,6 +96,7 @@ public:
                                                             { "z_omega", fr_size, false },
                                                             { "sigma_1", fr_size, false },
                                                             { "sigma_2", fr_size, false },
+                                                            { "sigma_3", fr_size, false },
                                                             { "q_arith", fr_size, false },
                                                             { "q_ecc_1", fr_size, false },
                                                             { "q_c", fr_size, false },
