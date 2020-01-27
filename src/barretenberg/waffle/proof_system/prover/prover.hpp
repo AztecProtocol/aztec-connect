@@ -8,22 +8,19 @@
 #include "../../reference_string/reference_string.hpp"
 #include "../../waffle_types.hpp"
 #include "../widgets/base_widget.hpp"
+#include "../program_settings.hpp"
 
 #include "../../../transcript/transcript.hpp"
 #include "../../../transcript/manifest.hpp"
-
 namespace waffle
 {
-
-template <size_t program_width>
+template <typename settings>
 class ProverBase
 {
   public:
     ProverBase(std::shared_ptr<proving_key> input_key = nullptr,
            std::shared_ptr<program_witness> input_witness = nullptr,
-           const transcript::Manifest& manifest = transcript::Manifest({}),
-           bool has_fourth_wire = false,
-           bool uses_quotient_mid = true);
+           const transcript::Manifest& manifest = transcript::Manifest({}));
     ProverBase(ProverBase&& other);
     ProverBase(const ProverBase& other) = delete;
     ProverBase& operator=(const ProverBase& other) = delete;
@@ -62,15 +59,15 @@ class ProverBase
     ReferenceString reference_string;
     transcript::Transcript transcript;
 
-    bool __DEBUG_HAS_FOURTH_WIRE = false;
     std::shared_ptr<proving_key> key;
     std::shared_ptr<program_witness> witness;
 
     bool uses_quotient_mid;
 };
 
-typedef ProverBase<3> Prover;
-typedef ProverBase<4> TurboProver;
+typedef ProverBase<standard_settings> Prover;
+typedef ProverBase<extended_settings> ExtendedProver;
+typedef ProverBase<turbo_settings> TurboProver;
 
 } // namespace waffle
 

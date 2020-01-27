@@ -368,11 +368,11 @@ std::shared_ptr<program_witness> MiMCComposer::compute_witness()
     return witness;
 }
 
-Prover MiMCComposer::preprocess()
+ExtendedProver MiMCComposer::preprocess()
 {
     compute_proving_key();
     compute_witness();
-    Prover output_state(circuit_proving_key, witness, create_manifest());
+    ExtendedProver output_state(circuit_proving_key, witness, create_manifest());
 
     std::unique_ptr<ProverMiMCWidget> mimc_widget =
         std::make_unique<ProverMiMCWidget>(circuit_proving_key.get(), witness.get());

@@ -698,6 +698,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::__mul(q_c_term, q_arith_eval, q_c_term);
     if (g1::on_curve(instance[6])) {
         points.push_back(instance[6]);
+
         fr::field_t blah_nu = fr::mul(challenge.nu_base, fr::sqr(challenge.nu_step));
         fr::__add(q_c_term, blah_nu, q_c_term);
         scalars.push_back(q_c_term);

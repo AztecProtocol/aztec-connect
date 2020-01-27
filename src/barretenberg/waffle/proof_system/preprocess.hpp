@@ -13,8 +13,8 @@
 
 namespace waffle
 {
-template <size_t program_width>
-inline Verifier preprocess(const ProverBase<program_width>& prover)
+template <typename settings>
+inline VerifierBase<settings> preprocess(const ProverBase<settings>& prover)
 {
     barretenberg::polynomial polys[3]{
         barretenberg::polynomial(prover.key->permutation_selectors.at("sigma_1"), prover.n),
@@ -22,18 +22,18 @@ inline Verifier preprocess(const ProverBase<program_width>& prover)
         barretenberg::polynomial(prover.key->permutation_selectors.at("sigma_3"), prover.n),
     };
 
-
-    Verifier verifier(prover.n, prover.transcript.get_manifest(), prover.__DEBUG_HAS_FOURTH_WIRE);
+    
+    VerifierBase<settings> verifier(prover.n, prover.transcript.get_manifest(), settings::program_width > 3);
 
     barretenberg::g1::jacobian_to_affine(barretenberg::scalar_multiplication::pippenger(
                                              polys[0].get_coefficients(), prover.key->reference_string.monomials, prover.n),
-                                         verifier.SIGMA_1);
+                                         verifier.SIGMA[0]);
     barretenberg::g1::jacobian_to_affine(barretenberg::scalar_multiplication::pippenger(
                                              polys[1].get_coefficients(), prover.key->reference_string.monomials, prover.n),
-                                         verifier.SIGMA_2);
+                                         verifier.SIGMA[1]);
     barretenberg::g1::jacobian_to_affine(barretenberg::scalar_multiplication::pippenger(
                                              polys[2].get_coefficients(), prover.key->reference_string.monomials, prover.n),
-                                         verifier.SIGMA_3);
+                                         verifier.SIGMA[2]);
 
     verifier.reference_string = prover.key->reference_string.get_verifier_reference_string();
     // TODO: this whole method should be part of the class that owns prover.widgets

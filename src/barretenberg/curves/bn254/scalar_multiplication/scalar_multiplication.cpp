@@ -118,6 +118,7 @@ namespace scalar_multiplication {
 void add_affine_points(g1::affine_element* points, const size_t num_points, fq::field_t* scratch_space)
 {
     fq::field_t batch_inversion_accumulator = fq::one;
+    // std::chrono::steady_clock::time_point time_start = std::chrono::steady_clock::now();
 
     for (size_t i = 0; i < num_points; i += 2) {
         fq::__add_without_reduction(points[i + 1].x, points[i].x, scratch_space[i >> 1]); // x2 + x1
@@ -127,8 +128,21 @@ void add_affine_points(g1::affine_element* points, const size_t num_points, fq::
             points[i + 1].y, batch_inversion_accumulator, points[i + 1].y); // (y2 - y1)*accumulator_old
         fq::__mul_with_coarse_reduction(batch_inversion_accumulator, points[i + 1].x, batch_inversion_accumulator);
     }
-
+    // std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
+    // std::chrono::microseconds diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
+    //     if (num_points > 100000)
+    // {
+    // std::cout << "forward run time: " << diff.count() << "us" << std::endl;
+    // }
+    // time_start = std::chrono::steady_clock::now();
     fq::__invert(batch_inversion_accumulator, batch_inversion_accumulator);
+    // time_end = std::chrono::steady_clock::now();
+    //  diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
+    // if (num_points > 100000)
+    // {
+    // std::cout << "invert time: " << diff.count() << "us" << std::endl;
+    // }
+    // time_start = std::chrono::steady_clock::now();
 
     for (size_t i = (num_points)-2; i < num_points; i -= 2) {
         // Memory bandwidth is a bit of a bottleneck here.
@@ -149,6 +163,12 @@ void add_affine_points(g1::affine_element* points, const size_t num_points, fq::
         fq::__sub(points[i].x, points[i].y, points[(i + num_points) >> 1].y);
         fq::reduce_once(points[(i + num_points) >> 1].x, points[(i + num_points) >> 1].x);
     }
+//     time_end = std::chrono::steady_clock::now();
+//      diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
+//        if (num_points > 100000)
+//     {
+//    std::cout << "reverse run time: " << diff.count() << "us" << std::endl;
+//     }
 }
 
 /**

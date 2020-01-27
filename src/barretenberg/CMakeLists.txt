@@ -53,6 +53,7 @@ add_library(
     waffle/reference_string/reference_string.cpp
     waffle/reference_string/reference_string.hpp
     waffle/proof_system/linearizer.hpp
+    waffle/proof_system/program_settings.hpp
     waffle/proof_system/permutation.hpp
     waffle/proof_system/preprocess.hpp
     waffle/proof_system/widgets/base_widget.hpp
@@ -70,7 +71,7 @@ add_library(
     waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
     waffle/proof_system/prover/prover.tcc
     waffle/proof_system/prover/prover.hpp
-    waffle/proof_system/verifier/verifier.cpp
+    waffle/proof_system/verifier/verifier.tcc
     waffle/proof_system/verifier/verifier.hpp
     waffle/composer/composer_base.hpp
     waffle/composer/standard_composer.cpp
@@ -178,6 +179,7 @@ if(PROFILING)
         waffle/reference_string/reference_string.cpp
         waffle/reference_string/reference_string.hpp
         waffle/proof_system/linearizer.hpp
+        waffle/proof_system/program_settings.hpp
         waffle/proof_system/permutation.hpp
         waffle/proof_system/preprocess.hpp
         waffle/proof_system/widgets/base_widget.hpp
@@ -195,7 +197,7 @@ if(PROFILING)
         waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
         waffle/proof_system/prover/prover.tcc
         waffle/proof_system/prover/prover.hpp
-        waffle/proof_system/verifier/verifier.cpp
+        waffle/proof_system/verifier/verifier.tcc
         waffle/proof_system/verifier/verifier.hpp
         waffle/composer/composer_base.hpp
         waffle/composer/standard_composer.cpp

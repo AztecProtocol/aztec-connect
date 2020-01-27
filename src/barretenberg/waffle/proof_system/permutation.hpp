@@ -1,21 +1,19 @@
 #pragma once
 
-#include <math.h>
 #include <cstdint>
 #include <cstdlib>
+#include <math.h>
 
 #include "../../curves/bn254/fr.hpp"
 #include "../../polynomials/polynomial.hpp"
 #include "../../types.hpp"
 
-namespace waffle
-{
+namespace waffle {
 inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& output,
                                                      const std::vector<uint32_t>& permutation,
                                                      const barretenberg::evaluation_domain& small_domain)
 {
-    if (output.get_size() < permutation.size())
-    {
+    if (output.get_size() < permutation.size()) {
         output.resize_unsafe(permutation.size());
     }
     barretenberg::fr::field_t k1 = barretenberg::fr::coset_generators[0];
@@ -67,8 +65,7 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     // wire permutations) (ditto for right wire and output wire mappings)
 
     // isolate the highest 2 bits of `permutation[i]` and shunt them down into the 2 least significant bits
-    switch ((permutation[i] >> 30U) & 0x3U)
-    {
+    switch ((permutation[i] >> 30U) & 0x3U) {
     case 2U: // output wire - multiply by 2nd quadratic nonresidue
     {
         barretenberg::fr::__mul(output.at(i), k2, output.at(i));

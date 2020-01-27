@@ -680,12 +680,12 @@ std::shared_ptr<program_witness> ExtendedComposer::compute_witness()
     return witness;
 }
 
-Prover ExtendedComposer::preprocess()
+ExtendedProver ExtendedComposer::preprocess()
 {
     compute_proving_key();
     compute_witness();
 
-    Prover output_state(circuit_proving_key, witness, create_manifest());
+    ExtendedProver output_state(circuit_proving_key, witness, create_manifest());
 
     std::unique_ptr<ProverBoolWidget> bool_widget =
         std::make_unique<ProverBoolWidget>(circuit_proving_key.get(), witness.get());

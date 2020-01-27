@@ -151,20 +151,21 @@ BENCHMARK(pippenger_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
 
 void unsafe_pippenger_bench(State& state) noexcept
 {
-    // uint64_t count = 0;
+    uint64_t count = 0;
     const uint64_t num_points = static_cast<uint64_t>(state.range(0));
-
+    uint64_t i = 0;
     for (auto _ : state) {
-        // uint64_t before = rdtsc();
+        uint64_t before = rdtsc();
         scalar_multiplication::pippenger_unsafe(&globals.scalars[0], &globals.reference_string.monomials[0], num_points);
-        // uint64_t after = rdtsc();
-        // count += (after - before);
+        uint64_t after = rdtsc();
+        count += (after - before);
+        ++i;
     }
-    // uint64_t avg_cycles = count / i;
-    // printf("unsafe pippenger. %" PRIu64 " points. clock cycles = %" PRIu64 "\n", (num_points), (avg_cycles));
-    // printf("unsafe pippenger clock cycles per mul = %" PRIu64 "\n", (avg_cycles / (MAX_GATES)));
+    uint64_t avg_cycles = count / i;
+    printf("unsafe pippenger. %" PRIu64 " points. clock cycles = %" PRIu64 "\n", (num_points), (avg_cycles));
+    printf("unsafe pippenger clock cycles per mul = %" PRIu64 "\n", (avg_cycles / (MAX_GATES)));
 }
-BENCHMARK(unsafe_pippenger_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
+BENCHMARK(unsafe_pippenger_bench)->RangeMultiplier(2)->Range(1 << 20, 1 << 20);
 
 
 void new_plonk_scalar_multiplications_bench(State& state) noexcept

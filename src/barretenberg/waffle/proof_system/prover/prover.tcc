@@ -1,4 +1,4 @@
-#include "./prover.hpp"
+#pragma once
 
 #include "../../../curves/bn254/fr.hpp"
 #include "../../../curves/bn254/g1.hpp"
@@ -21,36 +21,29 @@ using namespace barretenberg;
 
 namespace waffle {
 
-template <size_t program_width>
-ProverBase<program_width>::ProverBase(std::shared_ptr<proving_key> input_key,
-                                      std::shared_ptr<program_witness> input_witness,
-                                      const transcript::Manifest& input_manifest,
-                                      bool has_fourth_wire,
-                                      bool use_quotient_mid)
+template <typename settings>
+ProverBase<settings>::ProverBase(std::shared_ptr<proving_key> input_key,
+                                 std::shared_ptr<program_witness> input_witness,
+                                 const transcript::Manifest& input_manifest)
     : n(input_key == nullptr ? 0 : input_key->n)
     , transcript(input_manifest)
-    , __DEBUG_HAS_FOURTH_WIRE(has_fourth_wire)
     , key(input_key)
     , witness(input_witness)
-    , uses_quotient_mid(use_quotient_mid)
 {}
 
-template <size_t program_width>
-ProverBase<program_width>::ProverBase(ProverBase<program_width>&& other)
+template <typename settings>
+ProverBase<settings>::ProverBase(ProverBase<settings>&& other)
     : n(other.n)
     , transcript(other.transcript)
-    , __DEBUG_HAS_FOURTH_WIRE(other.__DEBUG_HAS_FOURTH_WIRE)
     , key(std::move(other.key))
     , witness(std::move(other.witness))
-    , uses_quotient_mid(other.uses_quotient_mid)
 {
     for (size_t i = 0; i < other.widgets.size(); ++i) {
         widgets.emplace_back(std::move(other.widgets[i]));
     }
 }
 
-template <size_t program_width>
-ProverBase<program_width>& ProverBase<program_width>::operator=(ProverBase<program_width>&& other)
+template <typename settings> ProverBase<settings>& ProverBase<settings>::operator=(ProverBase<settings>&& other)
 {
     n = other.n;
 
@@ -60,27 +53,23 @@ ProverBase<program_width>& ProverBase<program_width>::operator=(ProverBase<progr
     }
 
     transcript = other.transcript;
-    __DEBUG_HAS_FOURTH_WIRE = other.__DEBUG_HAS_FOURTH_WIRE;
     key = std::move(other.key);
     witness = std::move(other.witness);
-    uses_quotient_mid = other.uses_quotient_mid;
     return *this;
 }
 
-template <size_t program_width> void ProverBase<program_width>::compute_wire_commitments()
+template <typename settings> void ProverBase<settings>::compute_wire_commitments()
 {
-    std::array<g1::element, program_width> W;
-    for (size_t i = 0; i < program_width; ++i)
-    {
+    std::array<g1::element, settings::program_width> W;
+    for (size_t i = 0; i < settings::program_width; ++i) {
         std::string wire_tag = "w_" + std::to_string(i + 1);
         W[i] = scalar_multiplication::pippenger_unsafe(
             witness->wires.at(wire_tag).get_coefficients(), key->reference_string.monomials, n);
     }
 
-    g1::batch_normalize(&W[0], program_width);
+    g1::batch_normalize(&W[0], settings::program_width);
 
-    for (size_t i = 0; i < program_width; ++i)
-    {
+    for (size_t i = 0; i < settings::program_width; ++i) {
         g1::affine_element W_affine;
         W_affine.x = W[i].x;
         W_affine.y = W[i].y;
@@ -92,7 +81,7 @@ template <size_t program_width> void ProverBase<program_width>::compute_wire_com
     transcript.apply_fiat_shamir("gamma");
 }
 
-template <size_t program_width> void ProverBase<program_width>::compute_z_commitment()
+template <typename settings> void ProverBase<settings>::compute_z_commitment()
 {
     g1::element Z =
         scalar_multiplication::pippenger_unsafe(key->z.get_coefficients(), key->reference_string.monomials, n);
@@ -103,18 +92,18 @@ template <size_t program_width> void ProverBase<program_width>::compute_z_commit
     transcript.apply_fiat_shamir("alpha");
 }
 
-template <size_t program_width> void ProverBase<program_width>::compute_quotient_commitment()
+template <typename settings> void ProverBase<settings>::compute_quotient_commitment()
 {
-    std::array<g1::element, program_width> T;
-    for (size_t i = 0; i < program_width; ++i) {
+    std::array<g1::element, settings::program_width> T;
+    for (size_t i = 0; i < settings::program_width; ++i) {
         const size_t offset = n * i;
         T[i] = scalar_multiplication::pippenger_unsafe(
             &key->quotient_large.get_coefficients()[offset], key->reference_string.monomials, n);
     }
 
-    g1::batch_normalize(&T[0], program_width);
+    g1::batch_normalize(&T[0], settings::program_width);
 
-    for (size_t i = 0; i < program_width; ++i) {
+    for (size_t i = 0; i < settings::program_width; ++i) {
         g1::affine_element T_affine;
         T_affine.x = T[i].x;
         T_affine.y = T[i].y;
@@ -125,9 +114,9 @@ template <size_t program_width> void ProverBase<program_width>::compute_quotient
     transcript.apply_fiat_shamir("z"); // end of 3rd round
 }
 
-template <size_t program_width> void ProverBase<program_width>::compute_wire_coefficients()
+template <typename settings> void ProverBase<settings>::compute_wire_coefficients()
 {
-    for (size_t i = 0; i < program_width; ++i) {
+    for (size_t i = 0; i < settings::program_width; ++i) {
         std::string wire_tag = "w_" + std::to_string(i + 1);
         barretenberg::polynomial& wire = witness->wires.at(wire_tag);
         barretenberg::polynomial& wire_fft = key->wire_ffts.at(wire_tag + "_fft");
@@ -136,7 +125,7 @@ template <size_t program_width> void ProverBase<program_width>::compute_wire_coe
     }
 }
 
-template <size_t program_width> void ProverBase<program_width>::compute_z_coefficients()
+template <typename settings> void ProverBase<settings>::compute_z_coefficients()
 {
     constexpr size_t temp_width = 3;
     polynomial& z = key->z;
@@ -220,7 +209,7 @@ template <size_t program_width> void ProverBase<program_width>::compute_z_coeffi
         }
 
         // step 2: compute the constituent components of Z(X). This is a small multithreading bottleneck, as we have
-        // program_width * 2 non-parallelizable processes
+        // settings::program_width * 2 non-parallelizable processes
 #ifndef NO_MULTITHREADING
 #pragma omp for
 #endif
@@ -273,7 +262,7 @@ template <size_t program_width> void ProverBase<program_width>::compute_z_coeffi
     }
 }
 
-template <size_t program_width> void ProverBase<program_width>::compute_permutation_grand_product_coefficients()
+template <typename settings> void ProverBase<settings>::compute_permutation_grand_product_coefficients()
 {
     constexpr size_t temp_width = 3;
     polynomial& z_fft = key->z_fft;
@@ -306,8 +295,8 @@ template <size_t program_width> void ProverBase<program_width>::compute_permutat
     // multiplicative generator
     z_fft.coset_fft_with_constant(key->large_domain, alpha);
 
-    // We actually want Z(X.w) as well as Z(X)! But that's easy to get. z_fft contains Z(X) evaluated at the 4n'th roots of
-    // unity. So z_fft(i) = Z(w^{i/4}) i.e. z_fft(i + 4) = Z(w^{i/4}.w)
+    // We actually want Z(X.w) as well as Z(X)! But that's easy to get. z_fft contains Z(X) evaluated at the 4n'th roots
+    // of unity. So z_fft(i) = Z(w^{i/4}) i.e. z_fft(i + 4) = Z(w^{i/4}.w)
     // => if virtual term 'foo' contains a 4n fft of Z(X.w), then z_fft(i + 4) = foo(i)
     // So all we need to do, to get Z(X.w) is to offset indexes to z_fft by 4.
     // If `i >= 4n  4`, we need to wrap around to the start - so just append the 4 starting elements to the end of z_fft
@@ -319,8 +308,7 @@ template <size_t program_width> void ProverBase<program_width>::compute_permutat
     std::array<fr::field_t*, temp_width> wire_ffts;
     std::array<fr::field_t*, temp_width> sigma_ffts;
 
-    for (size_t i = 0; i < temp_width; ++i)
-    {
+    for (size_t i = 0; i < temp_width; ++i) {
         wire_ffts[i] = &key->wire_ffts.at("w_" + std::to_string(i + 1) + "_fft")[0];
         sigma_ffts[i] = &key->permutation_selector_ffts.at("sigma_" + std::to_string(i + 1) + "_fft")[0];
     }
@@ -433,12 +421,12 @@ template <size_t program_width> void ProverBase<program_width>::compute_permutat
     }
 }
 
-template <size_t program_width> void ProverBase<program_width>::init_quotient_polynomials()
+template <typename settings> void ProverBase<settings>::init_quotient_polynomials()
 {
     n = key->n;
 }
 
-template <size_t program_width> void ProverBase<program_width>::execute_preamble_round()
+template <typename settings> void ProverBase<settings>::execute_preamble_round()
 {
     std::vector<uint8_t> size_bytes(4);
 
@@ -450,7 +438,7 @@ template <size_t program_width> void ProverBase<program_width>::execute_preamble
     transcript.apply_fiat_shamir("init");
 }
 
-template <size_t program_width> void ProverBase<program_width>::execute_first_round()
+template <typename settings> void ProverBase<settings>::execute_first_round()
 {
 #ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
@@ -481,7 +469,7 @@ template <size_t program_width> void ProverBase<program_width>::execute_first_ro
 #endif
 }
 
-template <size_t program_width> void ProverBase<program_width>::execute_second_round()
+template <typename settings> void ProverBase<settings>::execute_second_round()
 {
 #ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
@@ -503,13 +491,12 @@ template <size_t program_width> void ProverBase<program_width>::execute_second_r
 #endif
 }
 
-template <size_t program_width> void ProverBase<program_width>::execute_third_round()
+template <typename settings> void ProverBase<settings>::execute_third_round()
 {
 #ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 #endif
-    for (size_t i = 0; i < program_width; ++i)
-    {
+    for (size_t i = 0; i < settings::program_width; ++i) {
         std::string wire_tag = "w_" + std::to_string(i + 1);
         barretenberg::polynomial& wire = witness->wires.at(wire_tag);
         barretenberg::polynomial& wire_fft = key->wire_ffts.at(wire_tag + "_fft");
@@ -565,7 +552,7 @@ template <size_t program_width> void ProverBase<program_width>::execute_third_ro
 #ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
 #endif
-    if (uses_quotient_mid) {
+    if (settings::uses_quotient_mid) {
         polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(
             key->quotient_mid.get_coefficients(), key->small_domain, key->mid_domain);
     }
@@ -579,7 +566,7 @@ template <size_t program_width> void ProverBase<program_width>::execute_third_ro
 #ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
 #endif
-    if (uses_quotient_mid) {
+    if (settings::uses_quotient_mid) {
         key->quotient_mid.coset_ifft(key->mid_domain);
     }
     key->quotient_large.coset_ifft(key->large_domain);
@@ -588,7 +575,7 @@ template <size_t program_width> void ProverBase<program_width>::execute_third_ro
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "final inverse fourier transforms: " << diff.count() << "ms" << std::endl;
 #endif
-    if (uses_quotient_mid) {
+    if (settings::uses_quotient_mid) {
         fr::field_t* q_mid = &key->quotient_mid[0];
         fr::field_t* q_large = &key->quotient_large[0];
         ITERATE_OVER_DOMAIN_START(key->mid_domain);
@@ -606,7 +593,7 @@ template <size_t program_width> void ProverBase<program_width>::execute_third_ro
 #endif
 }
 
-template <size_t program_width> void ProverBase<program_width>::execute_fourth_round()
+template <typename settings> void ProverBase<settings>::execute_fourth_round()
 {
 #ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
@@ -620,7 +607,7 @@ template <size_t program_width> void ProverBase<program_width>::execute_fourth_r
     transcript.apply_fiat_shamir("nu");
 }
 
-template <size_t program_width> void ProverBase<program_width>::execute_fifth_round()
+template <typename settings> void ProverBase<settings>::execute_fifth_round()
 {
     constexpr size_t temp_width = 3;
 #ifdef DEBUG_TIMING
@@ -630,21 +617,19 @@ template <size_t program_width> void ProverBase<program_width>::execute_fifth_ro
     fr::field_t z_challenge = fr::serialize_from_buffer(transcript.get_challenge("z").begin());
     fr::field_t* r = key->linear_poly.get_coefficients();
 
-    std::array<fr::field_t*, program_width> wires;
-    for (size_t i = 0; i < program_width; ++i)
-    {
+    std::array<fr::field_t*, settings::program_width> wires;
+    for (size_t i = 0; i < settings::program_width; ++i) {
         wires[i] = &witness->wires.at("w_" + std::to_string(i + 1))[0];
     }
 
     std::array<fr::field_t*, temp_width - 1> sigmas;
-    for (size_t i = 0; i < temp_width - 1; ++i)
-    {
+    for (size_t i = 0; i < temp_width - 1; ++i) {
         sigmas[i] = &key->permutation_selectors.at("sigma_" + std::to_string(i + 1))[0];
     }
 
-    fr::field_t nu_powers[9];
+    fr::field_t nu_powers[9 + settings::program_width];
     fr::__copy(nu, nu_powers[0]);
-    for (size_t i = 1; i < 9; ++i) {
+    for (size_t i = 1; i < 9 + settings::program_width; ++i) {
         fr::__mul(nu_powers[i - 1], nu_powers[0], nu_powers[i]);
     }
 
@@ -656,35 +641,31 @@ template <size_t program_width> void ProverBase<program_width>::execute_fifth_ro
     polynomial& opening_poly = key->opening_poly;
     polynomial& shifted_opening_poly = key->shifted_opening_poly;
 
-    std::array<fr::field_t, program_width> z_powers;
+    std::array<fr::field_t, settings::program_width> z_powers;
     z_powers[0] = z_challenge;
-    for (size_t i = 1; i < program_width; ++i)
-    {
+    for (size_t i = 1; i < settings::program_width; ++i) {
         fr::__pow_small(z_challenge, n * i, z_powers[i]);
     }
 
     polynomial& quotient_large = key->quotient_large;
-    
+
     ITERATE_OVER_DOMAIN_START(key->small_domain);
 
     fr::field_t T0;
     fr::field_t quotient_temp;
     fr::__mul_with_coarse_reduction(r[i], nu_powers[0], quotient_temp);
 
-    for (size_t k = 1; k < program_width; ++k)
-    {
+    for (size_t k = 1; k < settings::program_width; ++k) {
         fr::__mul_with_coarse_reduction(quotient_large[i + (k * n)], z_powers[k], T0);
         fr::__add_with_coarse_reduction(quotient_temp, T0, quotient_temp);
     }
 
-    for (size_t k = 0; k < temp_width - 1; ++k)
-    {
+    for (size_t k = 0; k < temp_width - 1; ++k) {
         fr::__mul_with_coarse_reduction(sigmas[k][i], nu_powers[k + 5], T0);
         fr::__add_with_coarse_reduction(quotient_temp, T0, quotient_temp);
     }
 
-    for (size_t k = 0; k < program_width; ++k)
-    {
+    for (size_t k = 0; k < settings::program_width; ++k) {
         fr::__mul_with_coarse_reduction(wires[k][i], nu_powers[k + 1], T0);
         fr::__add_with_coarse_reduction(quotient_temp, T0, quotient_temp);
     }
@@ -698,54 +679,46 @@ template <size_t program_width> void ProverBase<program_width>::execute_fifth_ro
 
     fr::field_t nu_base = nu_powers[8];
 
-    // TODO compute 'needs_blah_shifted' in constructor
-    bool needs_w_l_shifted = false;
-    bool needs_w_r_shifted = false;
-    bool needs_w_o_shifted = false;
-    bool needs_w_4_shifted = false;
+    if constexpr (settings::wire_shift_settings) {
+        std::array<fr::field_t, settings::program_width> shift_nu_powers;
+        for (size_t i = 0; i < settings::program_width; ++i) {
+            if (settings::requires_shifted_wire(settings::wire_shift_settings, i)) {
+                shift_nu_powers[i] = nu_base;
+                nu_base = fr::mul(nu_base, nu);
+            }
+        }
+        ITERATE_OVER_DOMAIN_START(key->small_domain);
 
-    for (size_t i = 0; i < widgets.size(); ++i) {
-        needs_w_l_shifted |=
-            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
-        needs_w_r_shifted |=
-            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
-        needs_w_o_shifted |=
-            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
-        needs_w_4_shifted |=
-            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_4_SHIFTED);
+        if constexpr (settings::requires_shifted_wire(settings::wire_shift_settings, 0)) {
+            fr::field_t T0;
+            fr::__mul(shift_nu_powers[0], wires[0][i], T0);
+            fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
+        }
+        if constexpr (settings::requires_shifted_wire(settings::wire_shift_settings, 1)) {
+            fr::field_t T0;
+            fr::__mul(shift_nu_powers[1], wires[1][i], T0);
+            fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
+        }
+        if constexpr (settings::requires_shifted_wire(settings::wire_shift_settings, 2)) {
+            fr::field_t T0;
+            fr::__mul(shift_nu_powers[2], wires[2][i], T0);
+            fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
+        }
+        if constexpr (settings::requires_shifted_wire(settings::wire_shift_settings, 3)) {
+            fr::field_t T0;
+            fr::__mul(shift_nu_powers[3], wires[3][i], T0);
+            fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
+        }
+        for (size_t k = 4; k < settings::program_width; ++k) {
+            if (settings::requires_shifted_wire(settings::wire_shift_settings, k)) {
+                fr::field_t T0;
+                fr::__mul(shift_nu_powers[k], wires[k][i], T0);
+                fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
+            }
+        }
+        ITERATE_OVER_DOMAIN_END(key->small_domain);
     }
-    if (needs_w_l_shifted) {
-        ITERATE_OVER_DOMAIN_START(key->small_domain);
-        fr::field_t T0;
-        fr::__mul(nu_base, wires[0][i], T0);
-        fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
-        ITERATE_OVER_DOMAIN_END;
-        nu_base = fr::mul(nu_base, nu);
-    }
-    if (needs_w_r_shifted) {
-        ITERATE_OVER_DOMAIN_START(key->small_domain);
-        fr::field_t T0;
-        fr::__mul(nu_base, wires[1][i], T0);
-        fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
-        ITERATE_OVER_DOMAIN_END;
-        nu_base = fr::mul(nu_base, nu);
-    }
-    if (needs_w_o_shifted) {
-        ITERATE_OVER_DOMAIN_START(key->small_domain);
-        fr::field_t T0;
-        fr::__mul(nu_base, wires[2][i], T0);
-        fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
-        ITERATE_OVER_DOMAIN_END;
-        nu_base = fr::mul(nu_base, nu);
-    }
-    if (needs_w_4_shifted) {
-        ITERATE_OVER_DOMAIN_START(key->small_domain);
-        fr::field_t T0;
-        fr::__mul(nu_base, wires[3][i], T0);
-        fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
-        ITERATE_OVER_DOMAIN_END;
-        nu_base = fr::mul(nu_base, nu);
-    }
+
 #ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -799,86 +772,61 @@ template <size_t program_width> void ProverBase<program_width>::execute_fifth_ro
     transcript.add_element("PI_Z_OMEGA", transcript_helpers::convert_g1_element(PI_Z_OMEGA_affine));
 }
 
-template <size_t program_width> fr::field_t ProverBase<program_width>::compute_linearisation_coefficients()
+template <typename settings> fr::field_t ProverBase<settings>::compute_linearisation_coefficients()
 {
+    constexpr size_t temp_width = 3;
+
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
     fr::field_t z_challenge = fr::serialize_from_buffer(transcript.get_challenge("z").begin());
+    fr::field_t shifted_z;
+    fr::__mul(z_challenge, key->small_domain.root, shifted_z);
 
     polynomial& r = key->linear_poly;
     polynomial& z = key->z;
     // ok... now we need to evaluate polynomials. Jeepers
-    fr::field_t shifted_z;
-    fr::__mul(z_challenge, key->small_domain.root, shifted_z);
 
-    barretenberg::polynomial& sigma_1 = key->permutation_selectors.at("sigma_1");
-    barretenberg::polynomial& sigma_2 = key->permutation_selectors.at("sigma_2");
-    barretenberg::polynomial& sigma_3 = key->permutation_selectors.at("sigma_3");
-
-    barretenberg::polynomial& w_l = witness->wires.at("w_1");
-    barretenberg::polynomial& w_r = witness->wires.at("w_2");
-    barretenberg::polynomial& w_o = witness->wires.at("w_3");
-
-    barretenberg::polynomial* w_4 = __DEBUG_HAS_FOURTH_WIRE ? &witness->wires.at("w_4") : nullptr;
     // evaluate the prover and instance polynomials.
     // (we don't need to evaluate the quotient polynomial, that can be derived by the verifier)
-    fr::field_t w_l_eval = w_l.evaluate(z_challenge, n);
-    fr::field_t w_r_eval = w_r.evaluate(z_challenge, n);
-    fr::field_t w_o_eval = w_o.evaluate(z_challenge, n);
+    for (size_t i = 0; i < settings::program_width; ++i) {
+        std::string wire_key = "w_" + std::to_string(i + 1);
+        const polynomial& wire = witness->wires.at(wire_key);
+        fr::field_t wire_eval = wire.evaluate(z_challenge, n);
+        transcript.add_element(wire_key, transcript_helpers::convert_field_element(wire_eval));
 
-    if (__DEBUG_HAS_FOURTH_WIRE) {
-        fr::field_t w_4_eval = w_4->evaluate(z_challenge, n);
-        transcript.add_element("w_4", transcript_helpers::convert_field_element(w_4_eval));
+        if (settings::requires_shifted_wire(settings::wire_shift_settings, i)) {
+            fr::field_t shifted_wire_eval = wire.evaluate(shifted_z, n);
+            transcript.add_element(wire_key + "_omega", transcript_helpers::convert_field_element(shifted_wire_eval));
+        }
     }
-    transcript.add_element("w_1", transcript_helpers::convert_field_element(w_l_eval));
-    transcript.add_element("w_2", transcript_helpers::convert_field_element(w_r_eval));
-    transcript.add_element("w_3", transcript_helpers::convert_field_element(w_o_eval));
-    bool needs_w_l_shifted = false;
-    bool needs_w_r_shifted = false;
-    bool needs_w_o_shifted = false;
-    bool needs_w_4_shifted = false;
-    for (size_t i = 0; i < widgets.size(); ++i) {
-        needs_w_l_shifted |=
-            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
-        needs_w_r_shifted |=
-            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
-        needs_w_o_shifted |=
-            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
-        needs_w_4_shifted |=
-            widgets[i]->version.has_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_4_SHIFTED);
+
+    // iterate over permutations, skipping the last one as we use the linearisation trick to avoid including it in the
+    // transcript
+    for (size_t i = 0; i < temp_width - 1; ++i) {
+        std::string permutation_key = "sigma_" + std::to_string(i + 1);
+        const polynomial& sigma = key->permutation_selectors.at(permutation_key);
+        fr::field_t permutation_eval = sigma.evaluate(z_challenge, n);
+        transcript.add_element(permutation_key, transcript_helpers::convert_field_element(permutation_eval));
     }
-    if (needs_w_l_shifted) {
-        transcript.add_element("w_1_omega", transcript_helpers::convert_field_element(w_l.evaluate(shifted_z, n)));
-    }
-    if (needs_w_r_shifted) {
-        transcript.add_element("w_2_omega", transcript_helpers::convert_field_element(w_r.evaluate(shifted_z, n)));
-    }
-    if (needs_w_o_shifted) {
-        transcript.add_element("w_3_omega", transcript_helpers::convert_field_element(w_o.evaluate(shifted_z, n)));
-    }
-    if (needs_w_4_shifted) {
-        transcript.add_element("w_4_omega", transcript_helpers::convert_field_element(w_4->evaluate(shifted_z, n)));
-    }
-    fr::field_t sigma_1_eval = sigma_1.evaluate(z_challenge, n);
-    fr::field_t sigma_2_eval = sigma_2.evaluate(z_challenge, n);
-    fr::field_t z_1_shifted_eval = z.evaluate(shifted_z, n);
-    transcript.add_element("z_omega", transcript_helpers::convert_field_element(z_1_shifted_eval));
+
+    fr::field_t z_shifted_eval = z.evaluate(shifted_z, n);
+    transcript.add_element("z_omega", transcript_helpers::convert_field_element(z_shifted_eval));
 
     for (size_t i = 0; i < widgets.size(); ++i) {
         widgets[i]->compute_transcript_elements(transcript);
     }
+    
     fr::field_t t_eval = key->quotient_large.evaluate(z_challenge, 4 * n);
-    transcript.add_element("sigma_1", transcript_helpers::convert_field_element(sigma_1_eval));
-    transcript.add_element("sigma_2", transcript_helpers::convert_field_element(sigma_2_eval));
 
     polynomial_arithmetic::lagrange_evaluations lagrange_evals =
         polynomial_arithmetic::get_lagrange_evaluations(z_challenge, key->small_domain);
     plonk_linear_terms linear_terms = compute_linear_terms(transcript, lagrange_evals.l_1);
 
+    const polynomial& sigma_last = key->permutation_selectors.at("sigma_" + std::to_string(temp_width));
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0;
     fr::field_t T1;
     fr::__mul_with_coarse_reduction(z[i], linear_terms.z_1, T0);
-    fr::__mul_with_coarse_reduction(sigma_3[i], linear_terms.sigma_3, T1);
+    fr::__mul_with_coarse_reduction(sigma_last[i], linear_terms.sigma_3, T1);
     fr::__add_with_coarse_reduction(T0, T1, T0);
     fr::reduce_once(T0, r[i]);
     ITERATE_OVER_DOMAIN_END;
@@ -895,7 +843,7 @@ template <size_t program_width> fr::field_t ProverBase<program_width>::compute_l
     return t_eval;
 }
 
-template <size_t program_width> waffle::plonk_proof ProverBase<program_width>::construct_proof()
+template <typename settings> waffle::plonk_proof ProverBase<settings>::construct_proof()
 {
     execute_preamble_round();
     execute_first_round();
@@ -909,7 +857,7 @@ template <size_t program_width> waffle::plonk_proof ProverBase<program_width>::c
     return result;
 }
 
-template <size_t program_width> void ProverBase<program_width>::reset()
+template <typename settings> void ProverBase<settings>::reset()
 {
     transcript::Manifest manifest = transcript.get_manifest();
     transcript = transcript::Transcript(manifest);

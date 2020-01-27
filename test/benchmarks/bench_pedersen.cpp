@@ -66,7 +66,7 @@ void generate_test_pedersen_circuit(waffle::TurboComposer& turbo_composer, size_
 }
 
 waffle::TurboProver pedersen_provers[NUM_CIRCUITS];
-waffle::Verifier pedersen_verifiers[NUM_CIRCUITS];
+waffle::TurboVerifier pedersen_verifiers[NUM_CIRCUITS];
 waffle::plonk_proof pedersen_proofs[NUM_CIRCUITS];
 
 void construct_pedersen_witnesses_bench(State &state) noexcept

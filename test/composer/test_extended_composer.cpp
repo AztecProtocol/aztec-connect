@@ -78,7 +78,7 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
 
     uint32 a = witness_t(&composer, static_cast<uint32_t>(-1));
     a.get_witness_index();
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
     EXPECT_EQ(composer.is_gate_deleted(0), false);
     EXPECT_EQ(composer.is_gate_deleted(1), true);
@@ -151,7 +151,7 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
         EXPECT_EQ(fr::eq(prover.witness->wires.at("w_2")[i], fr::zero), true);
         EXPECT_EQ(fr::eq(prover.witness->wires.at("w_3")[i], fr::zero), true);
     }
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -165,7 +165,7 @@ TEST(extended_composer, composer_consistency)
 {
     waffle::StandardComposer standard_composer = waffle::StandardComposer();
     waffle::ExtendedComposer extended_composer = waffle::ExtendedComposer();
-    printf("d1\n");
+
     plonk::stdlib::field_t<waffle::StandardComposer> a1[10];
     plonk::stdlib::field_t<waffle::StandardComposer> b1[10];
     plonk::stdlib::field_t<waffle::ExtendedComposer> a2[10];
@@ -178,15 +178,14 @@ TEST(extended_composer, composer_consistency)
         a1[i] * b1[i];
         a2[i] * b2[i];
     }
-    printf("d2\n");
+
     waffle::Prover standard_prover = standard_composer.preprocess();
-    printf("d3\n");
-    waffle::Prover extended_prover = extended_composer.preprocess();
-    printf("d4\n");
+
+    waffle::ExtendedProver extended_prover = extended_composer.preprocess();
+
     EXPECT_EQ(standard_prover.n, extended_prover.n);
-    printf("d5\n");
+
     for (size_t i = 0; i < standard_prover.n; ++i) {
-        printf("i = %lu\n", i);
         EXPECT_EQ(fr::eq(standard_composer.q_m[i], extended_composer.q_m[i]), true);
         EXPECT_EQ(fr::eq(standard_composer.q_1[i], extended_composer.q_1[i]), true);
         EXPECT_EQ(fr::eq(standard_composer.q_2[i], extended_composer.q_2[i]), true);
@@ -202,13 +201,13 @@ TEST(extended_composer, composer_consistency)
         // EXPECT_EQ(standard_prover.sigma_2_mapping[i], extended_prover.sigma_2_mapping[i]);
         // EXPECT_EQ(standard_prover.sigma_3_mapping[i], extended_prover.sigma_3_mapping[i]);
     }
-    printf("d6\n");
+
     waffle::Verifier verifier = waffle::preprocess(standard_prover);
-    printf("d7\n");
+
     waffle::plonk_proof proof = standard_prover.construct_proof();
-    printf("d8\n");
+
     bool proof_valid = verifier.verify_proof(proof);
-    printf("d9\n");
+
     EXPECT_EQ(proof_valid, true);
 }
 
@@ -224,12 +223,12 @@ TEST(extended_composer, basic_proof)
         a[i] * b[i];
     }
 
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
     EXPECT_EQ(composer.is_gate_deleted(0), false);
     EXPECT_EQ(composer.is_gate_deleted(1), false);
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -249,9 +248,9 @@ TEST(extended_composer, basic_optimized_proof)
     c.get_witness_index();
     d.get_witness_index();
 
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
     waffle::plonk_proof proof = prover.construct_proof();
 
     bool proof_valid = verifier.verify_proof(proof);
@@ -266,11 +265,11 @@ TEST(extended_composer, test_optimized_uint32_xor)
     uint32 b = witness_t(&composer, 44U);
     uint32 c = a ^ b;
     c = c + a;
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
     EXPECT_EQ(composer.get_num_gates(), 65UL);
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_valid = verifier.verify_proof(proof);
     EXPECT_EQ(proof_valid, true);
@@ -284,11 +283,11 @@ TEST(extended_composer, test_optimized_uint32_and)
     uint32 b = witness_t(&composer, 44U);
     uint32 c = a & b;
     c = c + a;
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
     EXPECT_EQ(composer.get_num_gates(), 65UL);
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_valid = verifier.verify_proof(proof);
     EXPECT_EQ(proof_valid, true);
@@ -302,11 +301,11 @@ TEST(extended_composer, test_optimized_uint32_or)
     uint32 b = witness_t(&composer, 44U);
     uint32 c = a | b;
     c = c + a;
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
     EXPECT_EQ(composer.get_num_gates(), 65UL);
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_valid = verifier.verify_proof(proof);
     EXPECT_EQ(proof_valid, true);
@@ -329,8 +328,8 @@ TEST(extended_composer, small_optimized_circuit)
         w[i] = w[i - 16] + s0 + w[i - 7] + s1;
     }
 
-    waffle::Prover prover = composer.preprocess();
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedProver prover = composer.preprocess();
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -346,9 +345,9 @@ TEST(extended_composer, logic_operations)
     uint32 g = 0xffffffff;
     ((~e) & g) + 1;
 
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 

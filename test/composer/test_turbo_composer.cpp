@@ -62,9 +62,14 @@ TEST(turbo_composer, test_add_gate_proofs)
     composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
     composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
 
+    // TODO: proof fails if one wire contains all zeros. Should we support this?
+    uint32_t zero_idx = composer.add_variable(fr::zero);
+    uint32_t one_idx = composer.add_variable(fr::one);
+    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+
     waffle::TurboProver prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -142,11 +147,15 @@ TEST(turbo_composer, test_mul_gate_proofs)
     composer.create_add_gate({ a_idx, b_idx, c_idx, q[0], q[1], q[2], q[3] });
     composer.create_mul_gate({ a_idx, b_idx, d_idx, q[4], q[5], q[6] });
 
+    uint32_t zero_idx = composer.add_variable(fr::zero);
+    uint32_t one_idx = composer.add_variable(fr::one);
+    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+
     uint32_t e_idx = composer.add_variable(fr::sub(a, fr::one));
     composer.create_add_gate({ e_idx, b_idx, c_idx, q[0], q[1], q[2], fr::add(q[3], q[0]) });
     waffle::TurboProver prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -283,7 +292,7 @@ TEST(turbo_composer, small_scalar_multipliers)
 
     waffle::TurboProver prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -429,7 +438,7 @@ TEST(turbo_composer, large_scalar_multipliers)
 
     waffle::TurboProver prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
