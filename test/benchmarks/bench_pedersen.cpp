@@ -16,12 +16,7 @@
 
 using namespace benchmark;
 
-constexpr size_t MAX_REPETITIONS = 4000; // 1791;
-
-constexpr size_t STARTING_NUM_HASHES = 4000; // 1791; // 1535;// 255;
-constexpr size_t NUM_HASHES_PER_REPETITION = 256;
 constexpr size_t NUM_CIRCUITS = 10;
-
 
 constexpr size_t get_circuit_size(const size_t target_count_base)
 {

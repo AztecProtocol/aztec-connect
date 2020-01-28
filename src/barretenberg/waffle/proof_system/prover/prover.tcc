@@ -667,7 +667,7 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
 
     fr::field_t nu_base = nu_powers[8];
 
-    if constexpr (settings::wire_shift_settings) {
+    if constexpr (settings::wire_shift_settings > 0) {
         std::array<fr::field_t, settings::program_width> shift_nu_powers;
         for (size_t i = 0; i < settings::program_width; ++i) {
             if (settings::requires_shifted_wire(settings::wire_shift_settings, i)) {
@@ -704,7 +704,7 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
                 fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
             }
         }
-        ITERATE_OVER_DOMAIN_END();
+        ITERATE_OVER_DOMAIN_END;
     }
 
 #ifdef DEBUG_TIMING
