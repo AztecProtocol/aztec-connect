@@ -22,6 +22,7 @@ namespace group_utils
     const fixed_base_ladder* get_hash_ladder(const size_t generator_index, const size_t num_bits);
     grumpkin::g1::affine_element get_generator(const size_t generator_index);
 
+    grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left, const grumpkin::fq::field_t& right);
 }
 }
 }

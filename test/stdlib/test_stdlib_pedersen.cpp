@@ -139,4 +139,7 @@ TEST(stdlib_pedersen, test_pedersen)
     hash_output = grumpkin::g1::normalize(hash_output);
 
     EXPECT_EQ(fr::eq(out.get_value(), hash_output.x), true);
+
+    fr::field_t compress_native = plonk::stdlib::group_utils::compress_native(left_in, right_in);
+    EXPECT_EQ(fr::eq(out.get_value(), compress_native), true);
 }
