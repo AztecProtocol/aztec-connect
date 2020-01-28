@@ -78,7 +78,7 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
 
     uint32 a = witness_t(&composer, static_cast<uint32_t>(-1));
     a.get_witness_index();
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
     EXPECT_EQ(composer.is_gate_deleted(0), false);
     EXPECT_EQ(composer.is_gate_deleted(1), true);
@@ -112,52 +112,46 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
     EXPECT_EQ(composer.is_gate_deleted(29), true);
     EXPECT_EQ(composer.is_gate_deleted(30), false);
 
-    EXPECT_EQ(fr::from_montgomery_form(composer.q_l[0]).data[0], 1UL << 2UL);
-    EXPECT_EQ(fr::from_montgomery_form(composer.q_r[0]).data[0], 1UL << 1UL);
-    EXPECT_EQ(fr::from_montgomery_form(composer.q_o[0]).data[0], 1UL);
-    EXPECT_EQ(fr::eq(composer.q_oo[0], fr::neg_one()), true);
+    EXPECT_EQ(fr::from_montgomery_form(composer.q_1[0]).data[0], 1UL << 2UL);
+    EXPECT_EQ(fr::from_montgomery_form(composer.q_2[0]).data[0], 1UL << 1UL);
+    EXPECT_EQ(fr::from_montgomery_form(composer.q_3[0]).data[0], 1UL);
+    EXPECT_EQ(fr::eq(composer.q_3_next[0], fr::neg_one()), true);
 
     for (size_t i = 2; i < 30; i += 2) {
         uint64_t shift = static_cast<uint64_t>(i) + 1UL;
-        EXPECT_EQ(fr::from_montgomery_form(composer.q_l[i]).data[0], 1UL << (shift + 1UL));
-        EXPECT_EQ(fr::from_montgomery_form(composer.q_r[i]).data[0], 1UL << shift);
-        EXPECT_EQ(fr::eq(composer.q_o[i], fr::one), true);
-        EXPECT_EQ(fr::eq(composer.q_oo[i], fr::neg_one()), true);
+        EXPECT_EQ(fr::from_montgomery_form(composer.q_1[i]).data[0], 1UL << (shift + 1UL));
+        EXPECT_EQ(fr::from_montgomery_form(composer.q_2[i]).data[0], 1UL << shift);
+        EXPECT_EQ(fr::eq(composer.q_3[i], fr::one), true);
+        EXPECT_EQ(fr::eq(composer.q_3_next[i], fr::neg_one()), true);
     }
-    EXPECT_EQ(fr::eq(composer.q_l[30], fr::neg_one()), true);
-    EXPECT_EQ(fr::from_montgomery_form(composer.q_r[30]).data[0], 1UL << 31UL);
-    EXPECT_EQ(fr::from_montgomery_form(composer.q_o[30]).data[0], 1UL);
-    EXPECT_EQ(fr::eq(composer.q_oo[30], fr::zero), true);
+    EXPECT_EQ(fr::eq(composer.q_1[30], fr::neg_one()), true);
+    EXPECT_EQ(fr::from_montgomery_form(composer.q_2[30]).data[0], 1UL << 31UL);
+    EXPECT_EQ(fr::from_montgomery_form(composer.q_3[30]).data[0], 1UL);
+    EXPECT_EQ(fr::eq(composer.q_3_next[30], fr::zero), true);
 
-    EXPECT_EQ(fr::from_montgomery_form(prover.w_l[0]).data[0], 1UL);
-    EXPECT_EQ(fr::from_montgomery_form(prover.w_r[0]).data[0], 1UL);
-    EXPECT_EQ(fr::from_montgomery_form(prover.w_o[0]).data[0], 1UL);
-    EXPECT_EQ(fr::from_montgomery_form(prover.w_o[1]).data[0], (1UL << 3UL) - 1UL); // 7U);
-    EXPECT_EQ(fr::from_montgomery_form(prover.w_o[2]).data[0], (1UL << 5UL) - 1UL);
-    EXPECT_EQ(fr::from_montgomery_form(prover.w_o[3]).data[0], (1UL << 7U) - 1UL);
+    EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_1")[0]).data[0], 1UL);
+    EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_2")[0]).data[0], 1UL);
+    EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_3")[0]).data[0], 1UL);
+    EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_3")[1]).data[0], (1UL << 3UL) - 1UL); // 7U);
+    EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_3")[2]).data[0], (1UL << 5UL) - 1UL);
+    EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_3")[3]).data[0], (1UL << 7U) - 1UL);
 
     for (size_t i = 1; i < 15; ++i) {
-        EXPECT_EQ(fr::from_montgomery_form(prover.w_l[i]).data[0], 1UL);
-        EXPECT_EQ(fr::from_montgomery_form(prover.w_r[i]).data[0], 1UL);
-        EXPECT_EQ(fr::from_montgomery_form(prover.w_o[i]).data[0], (1U << static_cast<uint32_t>(2 * i + 1)) - 1);
+        EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_1")[i]).data[0], 1UL);
+        EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_2")[i]).data[0], 1UL);
+        EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_3")[i]).data[0], (1U << static_cast<uint32_t>(2 * i + 1)) - 1);
     }
 
-    EXPECT_EQ(fr::from_montgomery_form(prover.w_r[15]).data[0], 1UL);
-    EXPECT_EQ(fr::from_montgomery_form(prover.w_l[15]).data[0], (1ULL << 32ULL) - 1ULL);
-    EXPECT_EQ(fr::from_montgomery_form(prover.w_o[15]).data[0], (1ULL << 31ULL) - 1ULL);
-
-    for (size_t i = 0; i < 32; ++i) {
-        EXPECT_EQ(prover.sigma_1_mapping[i], static_cast<uint32_t>(i));
-        EXPECT_EQ(prover.sigma_2_mapping[i], static_cast<uint32_t>(i) + (1U << 30U));
-        EXPECT_EQ(prover.sigma_3_mapping[i], static_cast<uint32_t>(i) + (1U << 31U));
-    }
+    EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_2")[15]).data[0], 1UL);
+    EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_1")[15]).data[0], (1ULL << 32ULL) - 1ULL);
+    EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_3")[15]).data[0], (1ULL << 31ULL) - 1ULL);
 
     for (size_t i = 16; i < 32; ++i) {
-        EXPECT_EQ(fr::eq(prover.w_l[i], fr::zero), true);
-        EXPECT_EQ(fr::eq(prover.w_r[i], fr::zero), true);
-        EXPECT_EQ(fr::eq(prover.w_o[i], fr::zero), true);
+        EXPECT_EQ(fr::eq(prover.witness->wires.at("w_1")[i], fr::zero), true);
+        EXPECT_EQ(fr::eq(prover.witness->wires.at("w_2")[i], fr::zero), true);
+        EXPECT_EQ(fr::eq(prover.witness->wires.at("w_3")[i], fr::zero), true);
     }
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -186,25 +180,26 @@ TEST(extended_composer, composer_consistency)
     }
 
     waffle::Prover standard_prover = standard_composer.preprocess();
-    waffle::Prover extended_prover = extended_composer.preprocess();
+
+    waffle::ExtendedProver extended_prover = extended_composer.preprocess();
 
     EXPECT_EQ(standard_prover.n, extended_prover.n);
 
     for (size_t i = 0; i < standard_prover.n; ++i) {
         EXPECT_EQ(fr::eq(standard_composer.q_m[i], extended_composer.q_m[i]), true);
-        EXPECT_EQ(fr::eq(standard_composer.q_l[i], extended_composer.q_l[i]), true);
-        EXPECT_EQ(fr::eq(standard_composer.q_r[i], extended_composer.q_r[i]), true);
-        EXPECT_EQ(fr::eq(standard_composer.q_o[i], extended_composer.q_o[i]), true);
+        EXPECT_EQ(fr::eq(standard_composer.q_1[i], extended_composer.q_1[i]), true);
+        EXPECT_EQ(fr::eq(standard_composer.q_2[i], extended_composer.q_2[i]), true);
+        EXPECT_EQ(fr::eq(standard_composer.q_3[i], extended_composer.q_3[i]), true);
         EXPECT_EQ(fr::eq(standard_composer.q_c[i], extended_composer.q_c[i]), true);
-        EXPECT_EQ(fr::eq(extended_composer.q_oo[i], fr::zero), true);
+        EXPECT_EQ(fr::eq(extended_composer.q_3_next[i], fr::zero), true);
         EXPECT_EQ(fr::eq(extended_composer.q_left_bools[i], fr::zero), true);
         EXPECT_EQ(fr::eq(extended_composer.q_right_bools[i], fr::zero), true);
-        EXPECT_EQ(fr::eq(standard_prover.w_l[i], extended_prover.w_l[i]), true);
-        EXPECT_EQ(fr::eq(standard_prover.w_r[i], extended_prover.w_r[i]), true);
-        EXPECT_EQ(fr::eq(standard_prover.w_o[i], extended_prover.w_o[i]), true);
-        EXPECT_EQ(standard_prover.sigma_1_mapping[i], extended_prover.sigma_1_mapping[i]);
-        EXPECT_EQ(standard_prover.sigma_2_mapping[i], extended_prover.sigma_2_mapping[i]);
-        EXPECT_EQ(standard_prover.sigma_3_mapping[i], extended_prover.sigma_3_mapping[i]);
+        EXPECT_EQ(fr::eq(standard_prover.witness->wires.at("w_1")[i], extended_prover.witness->wires.at("w_1")[i]), true);
+        EXPECT_EQ(fr::eq(standard_prover.witness->wires.at("w_2")[i], extended_prover.witness->wires.at("w_2")[i]), true);
+        EXPECT_EQ(fr::eq(standard_prover.witness->wires.at("w_3")[i], extended_prover.witness->wires.at("w_3")[i]), true);
+        // EXPECT_EQ(standard_prover.sigma_1_mapping[i], extended_prover.sigma_1_mapping[i]);
+        // EXPECT_EQ(standard_prover.sigma_2_mapping[i], extended_prover.sigma_2_mapping[i]);
+        // EXPECT_EQ(standard_prover.sigma_3_mapping[i], extended_prover.sigma_3_mapping[i]);
     }
 
     waffle::Verifier verifier = waffle::preprocess(standard_prover);
@@ -212,6 +207,7 @@ TEST(extended_composer, composer_consistency)
     waffle::plonk_proof proof = standard_prover.construct_proof();
 
     bool proof_valid = verifier.verify_proof(proof);
+
     EXPECT_EQ(proof_valid, true);
 }
 
@@ -227,12 +223,12 @@ TEST(extended_composer, basic_proof)
         a[i] * b[i];
     }
 
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
     EXPECT_EQ(composer.is_gate_deleted(0), false);
     EXPECT_EQ(composer.is_gate_deleted(1), false);
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -252,9 +248,9 @@ TEST(extended_composer, basic_optimized_proof)
     c.get_witness_index();
     d.get_witness_index();
 
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
     waffle::plonk_proof proof = prover.construct_proof();
 
     bool proof_valid = verifier.verify_proof(proof);
@@ -269,11 +265,11 @@ TEST(extended_composer, test_optimized_uint32_xor)
     uint32 b = witness_t(&composer, 44U);
     uint32 c = a ^ b;
     c = c + a;
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
     EXPECT_EQ(composer.get_num_gates(), 65UL);
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_valid = verifier.verify_proof(proof);
     EXPECT_EQ(proof_valid, true);
@@ -287,11 +283,11 @@ TEST(extended_composer, test_optimized_uint32_and)
     uint32 b = witness_t(&composer, 44U);
     uint32 c = a & b;
     c = c + a;
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
     EXPECT_EQ(composer.get_num_gates(), 65UL);
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_valid = verifier.verify_proof(proof);
     EXPECT_EQ(proof_valid, true);
@@ -305,11 +301,11 @@ TEST(extended_composer, test_optimized_uint32_or)
     uint32 b = witness_t(&composer, 44U);
     uint32 c = a | b;
     c = c + a;
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
     EXPECT_EQ(composer.get_num_gates(), 65UL);
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_valid = verifier.verify_proof(proof);
     EXPECT_EQ(proof_valid, true);
@@ -332,8 +328,8 @@ TEST(extended_composer, small_optimized_circuit)
         w[i] = w[i - 16] + s0 + w[i - 7] + s1;
     }
 
-    waffle::Prover prover = composer.preprocess();
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedProver prover = composer.preprocess();
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -349,9 +345,9 @@ TEST(extended_composer, logic_operations)
     uint32 g = 0xffffffff;
     ((~e) & g) + 1;
 
-    waffle::Prover prover = composer.preprocess();
+    waffle::ExtendedProver prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 

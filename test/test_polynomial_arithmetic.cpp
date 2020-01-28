@@ -277,8 +277,8 @@ TEST(polynomials, compute_kate_opening_coefficients)
 {
     // generate random polynomial F(X) = coeffs
     size_t n = 256;
-    fr::field_t coeffs[2 * n];
-    fr::field_t W[2 * n];
+    fr::field_t* coeffs = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
+    fr::field_t* W = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
     for (size_t i = 0; i < n; ++i) {
         coeffs[i] = fr::random_element();
         coeffs[i + n] = fr::zero;
@@ -293,7 +293,7 @@ TEST(polynomials, compute_kate_opening_coefficients)
 
     // validate that W(X)(X - z) = F(X) - F(z)
     // compute (X - z) in coefficient form
-    fr::field_t multiplicand[2 * n];
+    fr::field_t* multiplicand = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
     fr::__neg(z, multiplicand[0]);
     multiplicand[1] = fr::one;
     for (size_t i = 2; i < 2 * n; ++i) {
@@ -316,6 +316,10 @@ TEST(polynomials, compute_kate_opening_coefficients)
         fr::__mul(W[i], multiplicand[i], result);
         EXPECT_EQ(fr::eq(result, coeffs[i]), true);
     }
+
+    aligned_free(coeffs);
+    aligned_free(W);
+    aligned_free(multiplicand);
 }
 
 TEST(polynomials, get_lagrange_evaluations)

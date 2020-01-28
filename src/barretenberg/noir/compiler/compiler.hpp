@@ -13,7 +13,7 @@ class Compiler {
 
     Compiler(Composer& composer);
 
-    std::pair<var_t, waffle::Prover> start(ast::statement_list const& x, std::vector<var_t> const& args);
+    std::pair<var_t, waffle::ExtendedProver> start(ast::statement_list const& x, std::vector<var_t> const& args);
 
     void operator()(ast::variable_declaration const& x);
     void operator()(ast::function_declaration const& x);

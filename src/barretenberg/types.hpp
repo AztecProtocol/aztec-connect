@@ -34,7 +34,9 @@
 #define ITERATE_OVER_DOMAIN_START(domain)                                                                              \
     _Pragma("omp parallel for") for (size_t j = 0; j < domain.num_threads; ++j)                                        \
     {                                                                                                                  \
-        for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); ++i) {
+        const size_t internal_bound_start = j * domain.thread_size;                                                    \
+        const size_t internal_bound_end = (j + 1) * domain.thread_size;                                                \
+        for (size_t i = internal_bound_start; i < internal_bound_end; ++i) {
 
 #define ITERATE_OVER_DOMAIN_END                                                                                        \
     }                                                                                                                  \

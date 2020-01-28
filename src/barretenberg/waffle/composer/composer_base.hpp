@@ -1,10 +1,14 @@
 #pragma once
 
 #include "../../curves/bn254/fr.hpp"
+#include "../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../polynomials/polynomial.hpp"
+#include "../../transcript/manifest.hpp"
 #include "../../types.hpp"
-
+#include "../proof_system/permutation.hpp"
 #include "../proof_system/prover/prover.hpp"
+#include <memory>
+#include <vector>
 
 namespace waffle {
 struct add_triple {
@@ -14,6 +18,18 @@ struct add_triple {
     barretenberg::fr::field_t a_scaling;
     barretenberg::fr::field_t b_scaling;
     barretenberg::fr::field_t c_scaling;
+    barretenberg::fr::field_t const_scaling;
+};
+
+struct add_quad {
+    uint32_t a;
+    uint32_t b;
+    uint32_t c;
+    uint32_t d;
+    barretenberg::fr::field_t a_scaling;
+    barretenberg::fr::field_t b_scaling;
+    barretenberg::fr::field_t c_scaling;
+    barretenberg::fr::field_t d_scaling;
     barretenberg::fr::field_t const_scaling;
 };
 
@@ -35,6 +51,24 @@ struct poly_triple {
     barretenberg::fr::field_t q_r;
     barretenberg::fr::field_t q_o;
     barretenberg::fr::field_t q_c;
+};
+
+struct fixed_group_add_quad {
+    uint32_t a;
+    uint32_t b;
+    uint32_t c;
+    uint32_t d;
+    barretenberg::fr::field_t q_x_1;
+    barretenberg::fr::field_t q_x_2;
+    barretenberg::fr::field_t q_y_1;
+    barretenberg::fr::field_t q_y_2;
+};
+
+struct fixed_group_init_quad {
+    barretenberg::fr::field_t q_x_1;
+    barretenberg::fr::field_t q_x_2;
+    barretenberg::fr::field_t q_y_1;
+    barretenberg::fr::field_t q_y_2;
 };
 
 class ComposerBase {
@@ -62,7 +96,7 @@ class ComposerBase {
         FIXED_RIGHT_WIRE = 0x400,
         FIXED_OUTPUT_WIRE = 0x800,
     };
-    enum WireType { LEFT = 0U, RIGHT = (1U << 30U), OUTPUT = (1U << 31U), NULL_WIRE };
+    enum WireType { LEFT = 0U, RIGHT = (1U << 30U), OUTPUT = (1U << 31U), FOURTH = 0xc0000000, NULL_WIRE };
     struct epicycle {
         uint32_t gate_index;
         WireType wire_type;
@@ -98,7 +132,9 @@ class ComposerBase {
 
     virtual size_t get_num_gates() const { return n; }
     virtual size_t get_num_variables() const { return variables.size(); }
-    virtual Prover preprocess() = 0;
+    virtual std::shared_ptr<proving_key> compute_proving_key() = 0;
+    virtual std::shared_ptr<verification_key> compute_verification_key() = 0;
+    virtual std::shared_ptr<program_witness> compute_witness() = 0;
 
     virtual bool supports_feature(const Features target_feature)
     {
@@ -129,47 +165,80 @@ class ComposerBase {
         return static_cast<uint32_t>(variables.size()) - 1U;
     }
 
-    virtual void assert_equal(const uint32_t a_idx, const uint32_t b_idx) = 0;
-
-    virtual void compute_sigma_permutations(Prover& output_state)
+    void assert_equal(const uint32_t a_idx, const uint32_t b_idx)
     {
-        // create basic 'identity' permutation
-        output_state.sigma_1_mapping.reserve(output_state.n);
-        output_state.sigma_2_mapping.reserve(output_state.n);
-        output_state.sigma_3_mapping.reserve(output_state.n);
-        for (size_t i = 0; i < output_state.n; ++i) {
-            output_state.sigma_1_mapping.emplace_back(static_cast<uint32_t>(i));
-            output_state.sigma_2_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 30U));
-            output_state.sigma_3_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 31U));
+        ASSERT(barretenberg::fr::eq(variables[a_idx], variables[b_idx]));
+
+        for (size_t i = 0; i < wire_epicycles[b_idx].size(); ++i) {
+            wire_epicycles[a_idx].emplace_back(wire_epicycles[b_idx][i]);
+            if (wire_epicycles[b_idx][i].wire_type == WireType::LEFT) {
+                w_l[wire_epicycles[b_idx][i].gate_index] = a_idx;
+            } else if (wire_epicycles[b_idx][i].wire_type == WireType::RIGHT) {
+                w_r[wire_epicycles[b_idx][i].gate_index] = a_idx;
+            } else {
+                w_o[wire_epicycles[b_idx][i].gate_index] = a_idx;
+            }
         }
+        wire_epicycles[b_idx] = std::vector<epicycle>();
+    }
 
-        uint32_t* sigmas[3]{ &output_state.sigma_1_mapping[0],
-                             &output_state.sigma_2_mapping[0],
-                             &output_state.sigma_3_mapping[0] };
+    template <size_t program_width> void compute_sigma_permutations(proving_key* key)
+    {
+        std::array<std::vector<uint32_t>, program_width> sigma_mappings;
+        std::array<uint32_t, 4> wire_offsets{ 0U, 0x40000000, 0x80000000, 0xc0000000 };
 
+        for (size_t i = 0; i < program_width; ++i) {
+            sigma_mappings[i].reserve(key->n);
+        }
+        for (size_t i = 0; i < program_width; ++i) {
+            for (size_t j = 0; j < key->n; ++j) {
+                sigma_mappings[i].emplace_back(j + wire_offsets[i]);
+            }
+        }
         for (size_t i = 0; i < wire_epicycles.size(); ++i) {
-            // each index in 'wire_epicycles' corresponds to a variable
-            // the contents of 'wire_epicycles[i]' is a vector, that contains a list
-            // of the gates that this variable is involved in
             for (size_t j = 0; j < wire_epicycles[i].size(); ++j) {
                 epicycle current_epicycle = wire_epicycles[i][j];
                 size_t epicycle_index = j == wire_epicycles[i].size() - 1 ? 0 : j + 1;
                 epicycle next_epicycle = wire_epicycles[i][epicycle_index];
-                sigmas[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U][current_epicycle.gate_index] =
+                sigma_mappings[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U][current_epicycle.gate_index] =
                     next_epicycle.gate_index + static_cast<uint32_t>(next_epicycle.wire_type);
-                ;
             }
+        }
+
+        for (size_t i = 0; i < program_width; ++i) {
+            std::string index = std::to_string(i + 1);
+            barretenberg::polynomial sigma_polynomial(key->n);
+            compute_permutation_lagrange_base_single<standard_settings>(
+                sigma_polynomial, sigma_mappings[i], key->small_domain);
+            barretenberg::polynomial sigma_polynomial_lagrange_base(sigma_polynomial);
+            key->permutation_selectors_lagrange_base.insert(
+                { "sigma_" + index, std::move(sigma_polynomial_lagrange_base) });
+            sigma_polynomial.ifft(key->small_domain);
+            barretenberg::polynomial sigma_fft(sigma_polynomial, key->large_domain.size);
+            sigma_fft.coset_fft(key->large_domain);
+            key->permutation_selectors.insert({ "sigma_" + index, std::move(sigma_polynomial) });
+            key->permutation_selector_ffts.insert({ "sigma_" + index + "_fft", std::move(sigma_fft) });
         }
     }
 
-  protected:
+  public:
     size_t n;
     std::vector<uint32_t> w_l;
     std::vector<uint32_t> w_r;
     std::vector<uint32_t> w_o;
+    std::vector<uint32_t> w_4;
     std::vector<size_t> gate_flags;
     std::vector<barretenberg::fr::field_t> variables;
     std::vector<std::vector<epicycle>> wire_epicycles;
     size_t features = static_cast<size_t>(Features::SAD_TROMBONE);
+
+    bool computed_proving_key = false;
+    std::shared_ptr<proving_key> circuit_proving_key;
+
+    bool computed_verification_key = false;
+    std::shared_ptr<verification_key> circuit_verification_key;
+
+    bool computed_witness = false;
+    std::shared_ptr<program_witness> witness;
 };
 } // namespace waffle

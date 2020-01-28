@@ -13,56 +13,30 @@
 
 namespace waffle
 {
-inline Verifier preprocess(const Prover& prover)
+template <typename settings>
+inline VerifierBase<settings> preprocess(const ProverBase<settings>& prover)
 {
-    barretenberg::polynomial polys[3]{
-        barretenberg::polynomial(prover.n, prover.n),
-        barretenberg::polynomial(prover.n, prover.n),
-        barretenberg::polynomial(prover.n, prover.n),
-    };
-
-    // copy polynomials so that we don't mutate inputs
-    compute_permutation_lagrange_base_single(polys[0], prover.sigma_1_mapping, prover.circuit_state.small_domain);
-    compute_permutation_lagrange_base_single(polys[1], prover.sigma_2_mapping, prover.circuit_state.small_domain);
-    compute_permutation_lagrange_base_single(polys[2], prover.sigma_3_mapping, prover.circuit_state.small_domain);
-
-    for (size_t i = 0; i < 3; ++i)
+    std::array<barretenberg::polynomial, settings::program_width> polys;
+    for (size_t i = 0; i < settings::program_width; ++i)
     {
-        polys[i].ifft(prover.circuit_state.small_domain);
+        polys[i] = barretenberg::polynomial(prover.key->permutation_selectors.at("sigma_" + std::to_string(i + 1)), prover.n);
     }
 
-    // barretenberg::scalar_multiplication::multiplication_state mul_state[3]{
-    //     { prover.reference_string.monomials, polys[0].get_coefficients(), prover.n, {} },
-    //     { prover.reference_string.monomials, polys[1].get_coefficients(), prover.n, {} },
-    //     { prover.reference_string.monomials, polys[2].get_coefficients(), prover.n, {} }
-    // };
+    VerifierBase<settings> verifier(prover.n, prover.transcript.get_manifest(), settings::program_width > 3);
 
-    // barretenberg::scalar_multiplication::batched_scalar_multiplications(mul_state, 3);
+    for (size_t i = 0; i < settings::program_width; ++i) {
+        barretenberg::g1::jacobian_to_affine(
+            barretenberg::scalar_multiplication::pippenger(
+                polys[i].get_coefficients(), prover.key->reference_string.monomials, prover.n),
+            verifier.SIGMA[i]);
+    }
 
-    Verifier verifier(prover.n);
-
-    barretenberg::g1::jacobian_to_affine(barretenberg::scalar_multiplication::pippenger(
-                                             polys[0].get_coefficients(), prover.reference_string.monomials, prover.n),
-                                         verifier.SIGMA_1);
-    barretenberg::g1::jacobian_to_affine(barretenberg::scalar_multiplication::pippenger(
-                                             polys[1].get_coefficients(), prover.reference_string.monomials, prover.n),
-                                         verifier.SIGMA_2);
-    barretenberg::g1::jacobian_to_affine(barretenberg::scalar_multiplication::pippenger(
-                                             polys[2].get_coefficients(), prover.reference_string.monomials, prover.n),
-                                         verifier.SIGMA_3);
-    // barretenberg::g1::jacobian_to_affine(mul_state[1].output, verifier.SIGMA_2);
-    // barretenberg::g1::jacobian_to_affine(mul_state[2].output, verifier.SIGMA_3);
-
-    // barretenberg::g1::jacobian_to_affine(mul_state[0].output, verifier.SIGMA_1);
-    // barretenberg::g1::jacobian_to_affine(mul_state[1].output, verifier.SIGMA_2);
-    // barretenberg::g1::jacobian_to_affine(mul_state[2].output, verifier.SIGMA_3);
-
-    verifier.reference_string = prover.reference_string.get_verifier_reference_string();
+    verifier.reference_string = prover.key->reference_string.get_verifier_reference_string();
     // TODO: this whole method should be part of the class that owns prover.widgets
     for (size_t i = 0; i < prover.widgets.size(); ++i)
     {
         verifier.verifier_widgets.emplace_back(prover.widgets[i]->compute_preprocessed_commitments(
-            prover.circuit_state.small_domain, prover.reference_string));
+            prover.key->reference_string));
     }
     return verifier;
 }

@@ -7,25 +7,41 @@
 
 #include "../widgets/base_widget.hpp"
 
+#include "../../../transcript/manifest.hpp"
+#include "../../../transcript/transcript.hpp"
 namespace waffle
 {
-class Verifier
+template <typename program_settings>
+class VerifierBase
 {
-  public:
-    Verifier(const size_t subgroup_size = 0);
-    Verifier(Verifier&& other);
-    Verifier(const Verifier& other) = delete;
-    Verifier& operator=(const Verifier& other) = delete;
-    Verifier& operator=(Verifier&& other);
+    typedef barretenberg::fr fr;
+    typedef barretenberg::g1 g1;
 
-    bool verify_proof(const plonk_proof& proof);
+  public:
+    VerifierBase(const size_t subgroup_size = 0, const transcript::Manifest &manifest = transcript::Manifest({}), bool has_fourth_wire = false);
+    VerifierBase(VerifierBase&& other);
+    VerifierBase(const VerifierBase& other) = delete;
+    VerifierBase& operator=(const VerifierBase& other) = delete;
+    VerifierBase& operator=(VerifierBase&& other);
+
+    bool verify_proof(const waffle::plonk_proof& proof);
 
     ReferenceString reference_string;
 
-    barretenberg::g1::affine_element SIGMA_1;
-    barretenberg::g1::affine_element SIGMA_2;
-    barretenberg::g1::affine_element SIGMA_3;
+    std::array<barretenberg::g1::affine_element, program_settings::program_width> SIGMA;
+
     std::vector<std::unique_ptr<VerifierBaseWidget>> verifier_widgets;
     size_t n;
+
+    transcript::Manifest manifest;
+
+    bool __DEBUG_HAS_FOURTH_WIRE;
 };
+
+typedef VerifierBase<standard_settings> Verifier;
+typedef VerifierBase<extended_settings> ExtendedVerifier;
+typedef VerifierBase<turbo_settings> TurboVerifier;
+
 } // namespace waffle
+
+#include "./verifier.tcc"

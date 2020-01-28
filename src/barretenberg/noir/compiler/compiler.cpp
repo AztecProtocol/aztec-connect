@@ -60,7 +60,7 @@ void Compiler::operator()(ast::statement_list const& x)
     }
 }
 
-std::pair<var_t, waffle::Prover> Compiler::start(ast::statement_list const& x, std::vector<var_t> const& args)
+std::pair<var_t, waffle::ExtendedProver> Compiler::start(ast::statement_list const& x, std::vector<var_t> const& args)
 {
     // Parse top level statements, after which we can reference "main" function.
     (*this)(x);
@@ -71,7 +71,7 @@ std::pair<var_t, waffle::Prover> Compiler::start(ast::statement_list const& x, s
         auto prover = ctx_.composer.preprocess();
         return std::make_pair(std::move(result), std::move(prover));
     } else {
-        return std::make_pair(std::move(result), waffle::Prover());
+        return std::make_pair(std::move(result), waffle::ExtendedProver());
     }
 }
 

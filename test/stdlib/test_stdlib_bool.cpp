@@ -42,29 +42,29 @@ TEST(stdlib_bool, test_basic_operations)
     d = (!f) & a;        // d = 1
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[0]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[0]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[0]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[0]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[0]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[0]), { { 1, 0, 0, 0 } }), true);
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[1]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[1]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[1]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[1]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[1]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[1]), { { 0, 0, 0, 0 } }), true);
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[2]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[2]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[2]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[2]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[2]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[2]), { { 1, 0, 0, 0 } }), true);
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[3]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[3]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[3]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[3]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[3]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[3]), { { 1, 0, 0, 0 } }), true);
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[4]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[4]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[4]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[4]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[4]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[4]), { { 0, 0, 0, 0 } }), true);
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[5]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[5]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[5]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[5]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[5]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[5]), { { 1, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 8UL);
 }

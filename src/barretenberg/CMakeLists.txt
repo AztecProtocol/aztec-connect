@@ -44,6 +44,7 @@ add_library(
     curves/bn254/scalar_multiplication/mmu.cpp
     curves/bn254/scalar_multiplication/mmu.hpp
     curves/bn254/scalar_multiplication/process_buckets.hpp
+    curves/bn254/scalar_multiplication/scalar_multiplication.cpp
     curves/bn254/scalar_multiplication/scalar_multiplication.tcc
     curves/bn254/scalar_multiplication/scalar_multiplication.hpp
     curves/bn254/pairing.cpp
@@ -60,11 +61,13 @@ add_library(
     polynomials/polynomial_arithmetic.hpp
     polynomials/polynomial.cpp
     polynomials/polynomial.hpp
+    transcript/manifest.hpp
+    transcript/transcript.hpp
     waffle/waffle_types.hpp
     waffle/reference_string/reference_string.cpp
     waffle/reference_string/reference_string.hpp
     waffle/proof_system/linearizer.hpp
-    waffle/proof_system/challenge.hpp
+    waffle/proof_system/program_settings.hpp
     waffle/proof_system/permutation.hpp
     waffle/proof_system/preprocess.hpp
     waffle/proof_system/widgets/base_widget.hpp
@@ -76,9 +79,13 @@ add_library(
     waffle/proof_system/widgets/mimc_widget.hpp
     waffle/proof_system/widgets/sequential_widget.cpp
     waffle/proof_system/widgets/sequential_widget.hpp
-    waffle/proof_system/prover/prover.cpp
+    waffle/proof_system/widgets/turbo_arithmetic_widget.cpp
+    waffle/proof_system/widgets/turbo_arithmetic_widget.hpp
+    waffle/proof_system/widgets/turbo_fixed_base_widget.cpp
+    waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
+    waffle/proof_system/prover/prover.tcc
     waffle/proof_system/prover/prover.hpp
-    waffle/proof_system/verifier/verifier.cpp
+    waffle/proof_system/verifier/verifier.tcc
     waffle/proof_system/verifier/verifier.hpp
     waffle/composer/composer_base.hpp
     waffle/composer/standard_composer.cpp
@@ -89,7 +96,11 @@ add_library(
     waffle/composer/mimc_composer.hpp
     waffle/composer/extended_composer.cpp
     waffle/composer/extended_composer.hpp
+    waffle/composer/turbo_composer.cpp
+    waffle/composer/turbo_composer.hpp
     waffle/stdlib/common.hpp
+    waffle/stdlib/group/group_utils.hpp
+    waffle/stdlib/group/group_utils.cpp
     waffle/stdlib/int_utils.hpp
     waffle/stdlib/bool/bool.tcc
     waffle/stdlib/bool/bool.hpp
@@ -109,6 +120,8 @@ add_library(
     waffle/stdlib/merkle_tree/memory_store.cpp
     waffle/stdlib/merkle_tree/leveldb_store.hpp
     waffle/stdlib/merkle_tree/leveldb_store.cpp
+    waffle/stdlib/crypto/hash/pedersen.cpp
+    waffle/stdlib/crypto/hash/pedersen.hpp
     noir/expression.cpp
     noir/statement.cpp
     noir/printer.cpp
@@ -165,6 +178,7 @@ if(PROFILING)
         curves/bn254/scalar_multiplication/mmu.cpp
         curves/bn254/scalar_multiplication/mmu.hpp
         curves/bn254/scalar_multiplication/process_buckets.hpp
+        curves/bn254/scalar_multiplication/scalar_multiplication.cpp
         curves/bn254/scalar_multiplication/scalar_multiplication.tcc
         curves/bn254/scalar_multiplication/scalar_multiplication.hpp
         curves/bn254/pairing.cpp
@@ -181,11 +195,13 @@ if(PROFILING)
         polynomials/polynomial_arithmetic.hpp
         polynomials/polynomial.cpp
         polynomials/polynomial.hpp
+        transcript/manifest.hpp
+        transcript/transcript.hpp
         waffle/waffle_types.hpp
         waffle/reference_string/reference_string.cpp
         waffle/reference_string/reference_string.hpp
         waffle/proof_system/linearizer.hpp
-        waffle/proof_system/challenge.hpp
+        waffle/proof_system/program_settings.hpp
         waffle/proof_system/permutation.hpp
         waffle/proof_system/preprocess.hpp
         waffle/proof_system/widgets/base_widget.hpp
@@ -197,9 +213,13 @@ if(PROFILING)
         waffle/proof_system/widgets/mimc_widget.hpp
         waffle/proof_system/widgets/sequential_widget.cpp
         waffle/proof_system/widgets/sequential_widget.hpp
-        waffle/proof_system/prover/prover.cpp
+        waffle/proof_system/widgets/turbo_arithmetic_widget.cpp
+        waffle/proof_system/widgets/turbo_arithmetic_widget.hpp
+        waffle/proof_system/widgets/turbo_fixed_base_widget.cpp
+        waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
+        waffle/proof_system/prover/prover.tcc
         waffle/proof_system/prover/prover.hpp
-        waffle/proof_system/verifier/verifier.cpp
+        waffle/proof_system/verifier/verifier.tcc
         waffle/proof_system/verifier/verifier.hpp
         waffle/composer/composer_base.hpp
         waffle/composer/standard_composer.cpp
@@ -210,7 +230,11 @@ if(PROFILING)
         waffle/composer/mimc_composer.hpp
         waffle/composer/extended_composer.cpp
         waffle/composer/extended_composer.hpp
+        waffle/composer/turbo_composer.cpp
+        waffle/composer/turbo_composer.hpp
         waffle/stdlib/common.hpp
+        waffle/stdlib/group/group_utils.hpp
+        waffle/stdlib/group/group_utils.cpp
         waffle/stdlib/int_utils.hpp
         waffle/stdlib/bool/bool.tcc
         waffle/stdlib/bool/bool.hpp
@@ -227,6 +251,8 @@ if(PROFILING)
         waffle/stdlib/crypto/hash/sha256.hpp
         waffle/stdlib/merkle_tree/merkle_tree.tcc
         waffle/stdlib/merkle_tree/merkle_tree.hpp
+        waffle/stdlib/crypto/hash/pedersen.cpp
+        waffle/stdlib/crypto/hash/pedersen.hpp
     )
 
     target_link_libraries(

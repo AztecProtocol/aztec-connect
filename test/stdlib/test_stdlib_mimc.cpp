@@ -36,21 +36,20 @@ TEST(stdlib_mimc, composer_consistency_check)
 
     EXPECT_EQ(fr::eq(standard_out.get_value(), mimc_out.get_value()), true);
 
-    waffle::Prover provers[2]{
-        standard_composer.preprocess(),
-        mimc_composer.preprocess()
-    };
-    waffle::Verifier verifiers[2]{
-         waffle::preprocess(provers[0]),
-         waffle::preprocess(provers[1])
-    };
+    waffle::Prover standard_prover = standard_composer.preprocess();
+    waffle::ExtendedProver mimc_prover = mimc_composer.preprocess();
+
+    waffle::Verifier standard_verifier = waffle::preprocess(standard_prover);
+    waffle::ExtendedVerifier mimc_verifier = waffle::preprocess(mimc_prover);
+
+
     waffle::plonk_proof proofs[2]{
-        provers[0].construct_proof(),
-        provers[1].construct_proof()
+        standard_prover.construct_proof(),
+        mimc_prover.construct_proof()
     };
     bool results[2]{
-        verifiers[0].verify_proof(proofs[0]),
-        verifiers[1].verify_proof(proofs[1])
+        standard_verifier.verify_proof(proofs[0]),
+        mimc_verifier.verify_proof(proofs[1])
     };
     EXPECT_EQ(results[0], true);
     EXPECT_EQ(results[1], true);
@@ -69,9 +68,9 @@ TEST(stdlib_mimc, repeated_hashing)
     }
 
     stdlib::mimc7(inputs);
-    waffle::Prover prover = mimc_composer.preprocess();
+    waffle::ExtendedProver prover = mimc_composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
 
