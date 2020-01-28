@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include <barretenberg/curves/bn254/fr.hpp>
+#include <barretenberg/curves/grumpkin/grumpkin.hpp>
 
 #include <barretenberg/waffle/composer/turbo_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
@@ -11,6 +12,7 @@
 
 #include <barretenberg/waffle/stdlib/field/field.hpp>
 #include <barretenberg/waffle/stdlib/crypto/hash/pedersen.hpp>
+#include <barretenberg/waffle/stdlib/group/group_utils.hpp>
 
 using namespace benchmark;
 
@@ -68,6 +70,23 @@ void generate_test_pedersen_circuit(waffle::TurboComposer& turbo_composer, size_
 waffle::TurboProver pedersen_provers[NUM_CIRCUITS];
 waffle::TurboVerifier pedersen_verifiers[NUM_CIRCUITS];
 waffle::plonk_proof pedersen_proofs[NUM_CIRCUITS];
+
+void native_pedersen_hash_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        state.PauseTiming();
+        const size_t count = get_index(static_cast<size_t>(state.range(0)));
+        grumpkin::fq::field_t left = grumpkin::fq::random_element();
+        grumpkin::fq::field_t out = grumpkin::fq::random_element();
+        state.ResumeTiming();
+        for (size_t i = 0; i < count; ++i)
+        {
+            out = plonk::stdlib::group_utils::compress_native(left, out);
+        }
+    }
+}
+BENCHMARK(native_pedersen_hash_bench)->Arg(num_hashes[0])->Arg(num_hashes[1])->Arg(num_hashes[2])->Arg(num_hashes[3])->Arg(num_hashes[4])->Arg(num_hashes[5])->Arg(num_hashes[6])->Arg(num_hashes[7])->Arg(num_hashes[8])->Arg(num_hashes[9]);
 
 void construct_pedersen_witnesses_bench(State &state) noexcept
 {
