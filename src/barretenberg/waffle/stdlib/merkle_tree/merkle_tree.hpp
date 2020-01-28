@@ -2,6 +2,7 @@
 #include "../field/field.hpp"
 #include "../uint32/uint32.hpp"
 #include "leveldb_store.hpp"
+#include "memory_store.hpp"
 
 namespace plonk {
 namespace stdlib {
@@ -46,7 +47,7 @@ template <typename ComposerContext> class merkle_tree {
 
   private:
     ComposerContext& ctx_;
-    LevelDbStore store_;
+    MemoryStore store_;
     field_t root_;
     size_t total_size_;
     size_t depth_;

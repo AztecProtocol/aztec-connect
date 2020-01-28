@@ -5,17 +5,21 @@ namespace plonk {
 namespace stdlib {
 namespace merkle_tree {
 
-class MerkleTreeMemoryStore {
+using namespace barretenberg;
+
+class MemoryStore {
   public:
     typedef std::vector<std::pair<barretenberg::fr::field_t, barretenberg::fr::field_t>> fr_hash_path;
 
-    MerkleTreeMemoryStore(size_t depth);
+    MemoryStore(size_t depth);
 
     fr_hash_path get_hash_path(size_t index);
 
-    // void update_hash_path(size_t index, fr_hash_path path);
+    void update_element(size_t index, fr::field_t const& value);
 
-    barretenberg::fr::field_t root() const { return root_; }
+    fr::field_t get_element(size_t index);
+
+    fr::field_t root() const { return root_; }
 
   private:
     size_t depth_;

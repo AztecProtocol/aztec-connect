@@ -23,8 +23,48 @@ typedef stdlib::bool_t<Composer> bool_t;
 typedef stdlib::merkle_tree::merkle_tree<Composer> merkle_tree;
 typedef stdlib::witness_t<Composer> witness_t;
 
+TEST(stdlib_merkle_tree, test_memory_store)
+{
+    fr::field_t e00 = { { 0, 0, 0, 1 } };
+    fr::field_t e01 = { { 0, 0, 0, 2 } };
+    fr::field_t e02 = { { 0, 0, 0, 3 } };
+    fr::field_t e03 = { { 0, 0, 0, 4 } };
+    fr::field_t e10 = stdlib::merkle_tree::hash({ e00, e01 });
+    fr::field_t e11 = stdlib::merkle_tree::hash({ e02, e03 });
+    fr::field_t root = stdlib::merkle_tree::hash({ e10, e11 });
+
+    stdlib::merkle_tree::MemoryStore db(2);
+
+    for (size_t i = 0; i < 4; ++i) {
+        db.update_element(i, { { 0, 0, 0, i + 1 } });
+    }
+
+    for (size_t i = 0; i < 4; ++i) {
+        EXPECT_TRUE(fr::eq(db.get_element(i), { { 0, 0, 0, i + 1 } }));
+    }
+
+    stdlib::merkle_tree::fr_hash_path expected = {
+        std::make_pair(e00, e01),
+        std::make_pair(e10, e11),
+    };
+
+    EXPECT_EQ(db.get_hash_path(0), expected);
+    EXPECT_EQ(db.get_hash_path(1), expected);
+
+    expected = {
+        std::make_pair(e02, e03),
+        std::make_pair(e10, e11),
+    };
+
+    EXPECT_EQ(db.get_hash_path(2), expected);
+    EXPECT_EQ(db.get_hash_path(3), expected);
+    EXPECT_EQ(db.root(), root);
+}
+
 TEST(stdlib_merkle_tree, test_leveldb_update_member)
 {
+    stdlib::merkle_tree::MemoryStore memdb(3);
+
     leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
     stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
 
@@ -32,54 +72,31 @@ TEST(stdlib_merkle_tree, test_leveldb_update_member)
         EXPECT_TRUE(fr::eq(db.get_element(i), { { 0, 0, 0, 0 } }));
     }
     for (size_t i = 0; i < 8; ++i) {
+        memdb.update_element(i, { { 0, 0, 0, i } });
         db.update_element(i, { { 0, 0, 0, i } });
     }
     for (size_t i = 0; i < 8; ++i) {
         EXPECT_TRUE(fr::eq(db.get_element(i), { { 0, 0, 0, i } }));
     }
 
-    EXPECT_TRUE(
-        fr::eq(db.root(), { { 0x75f56594b1aae0e9, 0xa84b6452228fd63b, 0x3002f084002e5d1c, 0x68324932099e5111 } }));
+    EXPECT_TRUE(fr::eq(db.root(), memdb.root()));
 }
 
 TEST(stdlib_merkle_tree, test_leveldb_get_hash_path)
 {
+    stdlib::merkle_tree::MemoryStore memdb(3);
+
     leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
     stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
 
-    auto zero_path = db.get_hash_path(2);
+    EXPECT_EQ(memdb.get_hash_path(2), db.get_hash_path(2));
 
-    stdlib::merkle_tree::fr_hash_path expected_zero = {
-        std::make_pair(fr::zero, fr::zero),
-        std::make_pair<fr::field_t, fr::field_t>(
-            { { 0xcdd3f776b62832ad, 0x96f1173f44a58442, 0xb2400ab391e4362b, 0xb55fba97e5495840 } },
-            { { 0xcdd3f776b62832ad, 0x96f1173f44a58442, 0xb2400ab391e4362b, 0xb55fba97e5495840 } }),
-        std::make_pair<fr::field_t, fr::field_t>(
-            { { 0x7c99d71190c2a3f9, 0x37940856d6a0ea5b, 0xd52d0dd66c7cd231, 0x0979e8915a6f0114 } },
-            { { 0x7c99d71190c2a3f9, 0x37940856d6a0ea5b, 0xd52d0dd66c7cd231, 0x0979e8915a6f0114 } }),
-    };
+    for (size_t i = 0; i < 3; ++i) {
+        memdb.update_element(i, { { 0, 0, 0, i } });
+        db.update_element(i, { { 0, 0, 0, i } });
+    }
 
-    EXPECT_EQ(zero_path, expected_zero);
-
-    db.update_element(0, { { 0, 0, 0, 123 } });
-    db.update_element(1, { { 0, 0, 0, 456 } });
-    db.update_element(2, { { 0, 0, 0, 789 } });
-
-    auto path = db.get_hash_path(2);
-
-    stdlib::merkle_tree::fr_hash_path expected = {
-        std::make_pair<fr::field_t, fr::field_t>(
-            { { 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000315 } },
-            { { 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000 } }),
-        std::make_pair<fr::field_t, fr::field_t>(
-            { { 0xfc5051a692aa5072, 0xd9091aea5258cacc, 0x8fea0544a849f777, 0x15f5c47e72c6fbcb } },
-            { { 0x88c3c504da66e3ac, 0xcb72647cf04131d6, 0xdab1a12d5fca8659, 0x2dd5f9ba4642ddc1 } }),
-        std::make_pair<fr::field_t, fr::field_t>(
-            { { 0x1f2d0c61a3e736e7, 0x2e8f38f1d153e81b, 0x9ff9c1d10f465e36, 0x562bfc13f505833e } },
-            { { 0x7c99d71190c2a3f9, 0x37940856d6a0ea5b, 0xd52d0dd66c7cd231, 0x0979e8915a6f0114 } }),
-    };
-
-    EXPECT_EQ(path, expected);
+    EXPECT_EQ(db.get_hash_path(2), memdb.get_hash_path(2));
 }
 
 TEST(stdlib_merkle_tree, test_check_membership)

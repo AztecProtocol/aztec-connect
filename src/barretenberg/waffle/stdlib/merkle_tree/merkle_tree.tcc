@@ -7,7 +7,8 @@ namespace merkle_tree {
 template <typename ComposerContext>
 merkle_tree<ComposerContext>::merkle_tree(ComposerContext& ctx, size_t depth)
     : ctx_(ctx)
-    , store_("/tmp/merkle_tree_hardcoded", depth)
+    //, store_("/tmp/merkle_tree_hardcoded", depth)
+    , store_(depth)
     , depth_(depth)
     , size_(0)
 {
