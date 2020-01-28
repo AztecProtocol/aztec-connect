@@ -704,7 +704,7 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
                 fr::__add(shifted_opening_poly[i], T0, shifted_opening_poly[i]);
             }
         }
-        ITERATE_OVER_DOMAIN_END(key->small_domain);
+        ITERATE_OVER_DOMAIN_END();
     }
 
 #ifdef DEBUG_TIMING
