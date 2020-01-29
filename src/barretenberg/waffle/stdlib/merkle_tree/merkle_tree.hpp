@@ -1,4 +1,5 @@
 #pragma once
+#include "../bitarray/bitarray.hpp"
 #include "../field/field.hpp"
 #include "../uint32/uint32.hpp"
 #include "leveldb_store.hpp"
@@ -15,6 +16,8 @@ template <typename ComposerContext> class merkle_tree {
     typedef stdlib::field_t<ComposerContext> field_t;
     typedef stdlib::bool_t<ComposerContext> bool_t;
     typedef stdlib::uint32<ComposerContext> uint32;
+    typedef stdlib::uint<ComposerContext> uint;
+    typedef stdlib::bitarray<ComposerContext> bitarray;
     typedef std::vector<std::pair<field_t, field_t>> hash_path;
 
     merkle_tree(ComposerContext& ctx, size_t depth);
@@ -45,6 +48,8 @@ template <typename ComposerContext> class merkle_tree {
 
     fr_hash_path get_new_hash_path(size_t index, barretenberg::fr::field_t value);
 
+    field_t sha256field(field_t const& input);
+
   private:
     ComposerContext& ctx_;
     MemoryStore store_;
@@ -54,10 +59,10 @@ template <typename ComposerContext> class merkle_tree {
     size_t size_;
 };
 
+std::ostream& operator<<(std::ostream& os, fr_hash_path const& path);
+
 } // namespace merkle_tree
 } // namespace stdlib
 } // namespace plonk
-
-std::ostream& operator<<(std::ostream& os, plonk::stdlib::merkle_tree::fr_hash_path const& path);
 
 #include "merkle_tree.tcc"

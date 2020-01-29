@@ -32,10 +32,10 @@ LevelDbStore::LevelDbStore(std::string const& db_path, size_t depth)
     db_.reset(db);
 
     // Compute the zero values at each layer.
-    auto current = barretenberg::fr::zero;
+    auto current = sha256({ barretenberg::fr::zero });
     for (size_t i = 0; i < depth; ++i) {
         zero_hashes_[i] = current;
-        std::cout << "zero hash level " << i << ": " << current << std::endl;
+        // std::cout << "zero hash level " << i << ": " << current << std::endl;
         current = hash({ current, current });
     }
 
@@ -96,7 +96,10 @@ fr_hash_path LevelDbStore::get_hash_path(size_t index)
 
 fr::field_t LevelDbStore::get_element(size_t index)
 {
-    return get_element(root_, index, depth_);
+    fr::field_t leaf = get_element(root_, index, depth_);
+    std::string data;
+    auto status = db_->Get(leveldb::ReadOptions(), leveldb::Slice((char*)&leaf, 32), &data);
+    return status.ok() ? from_string(data) : fr::zero;
 }
 
 fr::field_t LevelDbStore::get_element(fr::field_t const& root, size_t index, size_t height)
@@ -122,7 +125,9 @@ void LevelDbStore::update_element(size_t index, fr::field_t const& value)
 {
     // std::cout << "PRE UPDATE ROOT: " << root_ << std::endl;
     leveldb::WriteBatch batch;
-    root_ = update_element(root_, value, index, depth_, batch);
+    fr::field_t sha_leaf = sha256({ value });
+    batch.Put(leveldb::Slice((char*)&sha_leaf, 32), leveldb::Slice((char*)&value, 32));
+    root_ = update_element(root_, sha_leaf, index, depth_, batch);
     db_->Write(leveldb::WriteOptions(), &batch);
     // std::cout << "POST UPDATE ROOT: " << root_ << std::endl;
 }
@@ -135,8 +140,8 @@ fr::field_t LevelDbStore::binary_put(
     auto right = a_is_right ? a : b;
     auto key = hash({ left, right });
     put(key, left, right, batch);
-    std::cout << "BINARY PUT height: " << height << " key:" << key << " left:" << left << " right:" << right
-              << std::endl;
+    // std::cout << "BINARY PUT height: " << height << " key:" << key << " left:" << left << " right:" << right
+    //<< std::endl;
     return key;
 }
 
@@ -150,10 +155,10 @@ fr::field_t LevelDbStore::fork_stump(fr::field_t const& value1,
 {
     if (height == stump_height) {
         if (height == 1) {
-            std::cout << "Stump forked into leaves." << std::endl;
+            // std::cout << "Stump forked into leaves." << std::endl;
             return binary_put(index1, value1, value2, height, batch);
         } else {
-            std::cout << "Stump forked into two at height " << height << std::endl;
+            // std::cout << "Stump forked into two at height " << height << std::endl;
             fr::field_t stump1_hash = compute_zero_path_hash(height, index1, value1);
             fr::field_t stump2_hash = compute_zero_path_hash(height, index2, value2);
             put_stump(stump1_hash, index1, value1, batch);
@@ -171,8 +176,8 @@ fr::field_t LevelDbStore::fork_stump(fr::field_t const& value1,
 fr::field_t LevelDbStore::update_element(
     fr::field_t const& root, fr::field_t const& value, size_t index, size_t height, leveldb::WriteBatch& batch)
 {
-    std::cout << "update_element root:" << root << " value:" << value << " index:" << index << " height:" << height
-              << std::endl;
+    // std::cout << "update_element root:" << root << " value:" << value << " index:" << index << " height:" << height
+    //           << std::endl;
     if (height == 0) {
         return value;
     }
@@ -181,20 +186,20 @@ fr::field_t LevelDbStore::update_element(
     auto status = db_->Get(leveldb::ReadOptions(), leveldb::Slice((char*)&root, 32), &data);
 
     if (!status.ok()) {
-        std::cout << "Adding new stump at height " << height << std::endl;
+        // std::cout << "Adding new stump at height " << height << std::endl;
         fr::field_t key = compute_zero_path_hash(height, index, value);
         put_stump(key, index, value, batch);
         return key;
     }
 
-    std::cout << "got data of size " << data.size() << std::endl;
+    // std::cout << "got data of size " << data.size() << std::endl;
     if (data.size() > 64) {
         // We've come across a stump.
         size_t existing_index = *(size_t*)(data.data() + 32 + 24);
 
         if (existing_index == index) {
             // We are updating the stumps element. Easy update.
-            std::cout << "Updating existing stump element at index " << index << std::endl;
+            // std::cout << "Updating existing stump element at index " << index << std::endl;
             fr::field_t new_hash = compute_zero_path_hash(height, index, value);
             put_stump(new_hash, existing_index, value, batch);
             return new_hash;
@@ -204,8 +209,8 @@ fr::field_t LevelDbStore::update_element(
         size_t common_bits = (size_t)__builtin_clzl(existing_index ^ index);
         size_t ignored_bits = sizeof(size_t) * 8 - height;
         size_t common_height = height - (common_bits - ignored_bits);
-        std::cout << height << " " << common_bits << " " << existing_index << " " << index << " " << common_height
-                  << std::endl;
+        // std::cout << height << " " << common_bits << " " << existing_index << " " << index << " " << common_height
+        //           << std::endl;
 
         return fork_stump(existing_value, existing_index, value, index, height, common_height, batch);
     } else {
@@ -264,7 +269,7 @@ void LevelDbStore::put_stump(fr::field_t key, size_t index, fr::field_t value, l
     // Add an additional byte to signal we're a stump.
     os.write("\0", 1);
     batch.Put(leveldb::Slice((char*)key.data, 32), os.str());
-    std::cout << "PUT STUMP key:" << key << " index:" << index << " value:" << value << std::endl;
+    // std::cout << "PUT STUMP key:" << key << " index:" << index << " value:" << value << std::endl;
 }
 
 } // namespace merkle_tree

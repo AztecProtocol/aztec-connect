@@ -43,9 +43,7 @@ template <typename ComposerContext> class field_t {
 
 template <typename ComposerContext> inline std::ostream& operator<<(std::ostream& os, field_t<ComposerContext> const& v)
 {
-    barretenberg::fr::field_t a = v.get_value();
-    os << std::hex << "field: [" << a.data[0] << ", " << a.data[1] << ", " << a.data[2] << ", " << a.data[3] << "]";
-    return os;
+    return os << v.get_value();
 }
 
 } // namespace stdlib

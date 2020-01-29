@@ -26,6 +26,7 @@ class MemoryStore {
     size_t total_size_;
     barretenberg::fr::field_t root_;
     std::vector<barretenberg::fr::field_t> hashes_;
+    std::vector<barretenberg::fr::field_t> preimages_;
 };
 
 } // namespace merkle_tree

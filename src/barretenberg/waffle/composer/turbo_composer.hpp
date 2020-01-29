@@ -4,12 +4,11 @@
 #include <map>
 #include <string>
 
-namespace waffle
-{
-class TurboComposer : public ComposerBase
-{
-public:
-    TurboComposer(const size_t size_hint = 0) : ComposerBase()
+namespace waffle {
+class TurboComposer : public ComposerBase {
+  public:
+    TurboComposer(const size_t size_hint = 0)
+        : ComposerBase()
     {
         features |= static_cast<size_t>(Features::BASIC_ARITHMETISATION);
         w_l.reserve(size_hint);
@@ -28,8 +27,8 @@ public:
 
         zero_idx = add_variable(barretenberg::fr::zero);
     };
-    TurboComposer(TurboComposer &&other) = default;
-    TurboComposer& operator=(TurboComposer &&other) = default;
+    TurboComposer(TurboComposer&& other) = default;
+    TurboComposer& operator=(TurboComposer&& other) = default;
     ~TurboComposer() {}
 
     std::shared_ptr<proving_key> compute_proving_key() override;
@@ -38,19 +37,33 @@ public:
 
     TurboProver preprocess();
 
-    void create_add_gate(const add_triple &in) override;
-    void create_big_add_gate(const add_quad &in);
+    void create_add_gate(const add_triple& in) override;
+    void create_big_add_gate(const add_quad& in);
 
-    void create_mul_gate(const mul_triple &in) override;
+    void create_mul_gate(const mul_triple& in) override;
     void create_bool_gate(const uint32_t a) override;
-    void create_poly_gate(const poly_triple &in) override;
+    void create_poly_gate(const poly_triple& in) override;
     void create_fixed_group_add_gate(const fixed_group_add_quad& in);
     void create_fixed_group_add_gate_with_init(const fixed_group_add_quad& in, const fixed_group_init_quad& init);
     void fix_witness(const uint32_t witness_index, const barretenberg::fr::field_t& witness_value);
     uint32_t put_constant_variable(const barretenberg::fr::field_t& variable);
- 
+
     void create_dummy_gates();
     size_t get_num_constant_gates() const override { return 0; }
+
+    void assert_equal_constant(const uint32_t a_idx, const barretenberg::fr::field_t b)
+    {
+        const add_triple gate_coefficients{
+            a_idx,
+            a_idx,
+            a_idx,
+            barretenberg::fr::one,
+            barretenberg::fr::zero,
+            barretenberg::fr::zero,
+            barretenberg::fr::neg(b),
+        };
+        create_add_gate(gate_coefficients);
+    }
 
     size_t zero_idx;
 
@@ -73,39 +86,42 @@ public:
         constexpr size_t g1_size = 64;
         constexpr size_t fr_size = 32;
         const size_t public_input_size = fr_size * num_public_inputs;
-        static const transcript::Manifest output =
-            transcript::Manifest({ transcript::Manifest::RoundManifest({ { "circuit_size", 4, false } }, "init"),
-                            transcript::Manifest::RoundManifest({ { "public_inputs", public_input_size, false },
-                                                            { "W_1", g1_size, false },
-                                                            { "W_2", g1_size, false },
-                                                            { "W_3", g1_size, false },
-                                                            { "W_4", g1_size, false } },
-                                                            "beta"),
-                            transcript::Manifest::RoundManifest({ {} }, "gamma"),
-                            transcript::Manifest::RoundManifest({ { "Z", g1_size, false } }, "alpha"),
-                            transcript::Manifest::RoundManifest(
-                                { { "T_1", g1_size, false }, { "T_2", g1_size, false }, { "T_3", g1_size, false }, { "T_4", g1_size, false } }, "z"),
-                            transcript::Manifest::RoundManifest({ { "w_1", fr_size, false },
-                                                            { "w_2", fr_size, false },
-                                                            { "w_3", fr_size, false },
-                                                            { "w_4", fr_size, false },
-                                                            { "w_1_omega", fr_size, false },
-                                                            { "w_2_omega", fr_size, false },
-                                                            { "w_3_omega", fr_size, false },
-                                                            { "w_4_omega", fr_size, false },
-                                                            { "z_omega", fr_size, false },
-                                                            { "sigma_1", fr_size, false },
-                                                            { "sigma_2", fr_size, false },
-                                                            { "sigma_3", fr_size, false },
-                                                            { "q_arith", fr_size, false },
-                                                            { "q_ecc_1", fr_size, false },
-                                                            { "q_c", fr_size, false },
-                                                            { "r", fr_size, false },
-                                                            { "t", fr_size, true } },
-                                                            "nu"),
-                            transcript::Manifest::RoundManifest(
-                                { { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } }, "separator") });
+        static const transcript::Manifest output = transcript::Manifest(
+            { transcript::Manifest::RoundManifest({ { "circuit_size", 4, false } }, "init"),
+              transcript::Manifest::RoundManifest({ { "public_inputs", public_input_size, false },
+                                                    { "W_1", g1_size, false },
+                                                    { "W_2", g1_size, false },
+                                                    { "W_3", g1_size, false },
+                                                    { "W_4", g1_size, false } },
+                                                  "beta"),
+              transcript::Manifest::RoundManifest({ {} }, "gamma"),
+              transcript::Manifest::RoundManifest({ { "Z", g1_size, false } }, "alpha"),
+              transcript::Manifest::RoundManifest({ { "T_1", g1_size, false },
+                                                    { "T_2", g1_size, false },
+                                                    { "T_3", g1_size, false },
+                                                    { "T_4", g1_size, false } },
+                                                  "z"),
+              transcript::Manifest::RoundManifest({ { "w_1", fr_size, false },
+                                                    { "w_2", fr_size, false },
+                                                    { "w_3", fr_size, false },
+                                                    { "w_4", fr_size, false },
+                                                    { "w_1_omega", fr_size, false },
+                                                    { "w_2_omega", fr_size, false },
+                                                    { "w_3_omega", fr_size, false },
+                                                    { "w_4_omega", fr_size, false },
+                                                    { "z_omega", fr_size, false },
+                                                    { "sigma_1", fr_size, false },
+                                                    { "sigma_2", fr_size, false },
+                                                    { "sigma_3", fr_size, false },
+                                                    { "q_arith", fr_size, false },
+                                                    { "q_ecc_1", fr_size, false },
+                                                    { "q_c", fr_size, false },
+                                                    { "r", fr_size, false },
+                                                    { "t", fr_size, true } },
+                                                  "nu"),
+              transcript::Manifest::RoundManifest({ { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } },
+                                                  "separator") });
         return output;
     }
 };
-}
+} // namespace waffle

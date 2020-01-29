@@ -1,35 +1,33 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <bitset>
 #include <string>
-#include <array>
 
-namespace plonk
-{
-namespace stdlib
-{
+namespace plonk {
+namespace stdlib {
 
 template <typename ComposerContext>
 bitarray<ComposerContext>::bitarray(ComposerContext* parent_context, const size_t n)
-    : context(parent_context), length(n), values(std::vector<bool_t<ComposerContext>>(n))
-{
-}
+    : context(parent_context)
+    , length(n)
+    , values(std::vector<bool_t<ComposerContext>>(n))
+{}
 
 template <typename ComposerContext>
-bitarray<ComposerContext>::bitarray(ComposerContext* parent_context, const std::string& input) : context(parent_context)
+bitarray<ComposerContext>::bitarray(ComposerContext* parent_context, const std::string& input)
+    : context(parent_context)
 {
     length = input.length() * 8;
     values.resize(length);
 
-    for (size_t i = 0; i < input.size(); ++i)
-    {
+    for (size_t i = 0; i < input.size(); ++i) {
         char c = input[i];
         std::bitset<8> char_bits = std::bitset<8>(static_cast<unsigned long long>(c));
         // order chars in our buffer, so that 1st char = most significant
         size_t position = length - (8 * (i + 1));
-        for (size_t j = 0; j < 8; ++j)
-        {
+        for (size_t j = 0; j < 8; ++j) {
             // printf("bit [%lu][%lu] = %u\n", i, j, char_bits[j] == true ? 1 : 0);
             witness_t<ComposerContext> value(context, char_bits[j]);
             values[position + j] = value;
@@ -37,16 +35,26 @@ bitarray<ComposerContext>::bitarray(ComposerContext* parent_context, const std::
     }
 }
 
+template <typename ComposerContext> bitarray<ComposerContext>::bitarray(uint<ComposerContext> const& input)
+{
+    context = input.get_context();
+    size_t num_bits = input.width();
+    values.resize(num_bits);
+
+    for (size_t i = 0; i < num_bits; ++i) {
+        values[i] = input.at(i);
+    }
+
+    length = num_bits;
+}
+
 template <typename ComposerContext>
-bitarray<ComposerContext>::bitarray(const std::vector<uint32<ComposerContext> > &input)
+bitarray<ComposerContext>::bitarray(const std::vector<uint32<ComposerContext>>& input)
 {
     auto it = std::find_if(input.begin(), input.end(), [](const auto x) { return x.get_context() != nullptr; });
-    if (it != std::end(input))
-    {
+    if (it != std::end(input)) {
         context = it->get_context();
-    }
-    else
-    {
+    } else {
         context = nullptr; // hmm
     }
 
@@ -54,11 +62,9 @@ bitarray<ComposerContext>::bitarray(const std::vector<uint32<ComposerContext> > 
     size_t num_bits = num_words * 32;
 
     values.resize(num_bits);
-    for (size_t i = 0; i < num_words; ++i)
-    {
+    for (size_t i = 0; i < num_words; ++i) {
         size_t input_index = num_words - 1 - i;
-        for (size_t j = 0; j < 32; ++j)
-        {
+        for (size_t j = 0; j < 32; ++j) {
             values[i * 32 + j] = input[input_index].at(j);
         }
     }
@@ -67,41 +73,34 @@ bitarray<ComposerContext>::bitarray(const std::vector<uint32<ComposerContext> > 
 
 template <typename ComposerContext>
 template <size_t N>
-bitarray<ComposerContext>::bitarray(const std::array<uint32<ComposerContext>, N> &input)
+bitarray<ComposerContext>::bitarray(const std::array<uint32<ComposerContext>, N>& input)
 {
-    auto it = std::find_if(input.begin(), input.end(), [](const auto &x) { return x.get_context() != nullptr; });
-    if (it != std::end(input))
-    {
+    auto it = std::find_if(input.begin(), input.end(), [](const auto& x) { return x.get_context() != nullptr; });
+    if (it != std::end(input)) {
         context = it->get_context();
-    }
-    else
-    {
+    } else {
         context = nullptr;
     }
 
     size_t num_words = static_cast<size_t>(N);
     values.resize(num_words * 32);
-    for (size_t i = 0; i < num_words; ++i)
-    {
+    for (size_t i = 0; i < num_words; ++i) {
         size_t input_index = num_words - 1 - i;
-        for (size_t j = 0; j < 32; ++j)
-        {
+        for (size_t j = 0; j < 32; ++j) {
             values[i * 32 + j] = input[input_index].at(j);
         }
     }
     length = num_words * 32;
 }
 
-template <typename ComposerContext>
-bitarray<ComposerContext>::bitarray(const bitarray &other)
+template <typename ComposerContext> bitarray<ComposerContext>::bitarray(const bitarray& other)
 {
     context = other.context;
     std::copy(other.values.begin(), other.values.end(), std::back_inserter(values));
     length = values.size();
 }
 
-template <typename ComposerContext>
-bitarray<ComposerContext>::bitarray(bitarray &&other)
+template <typename ComposerContext> bitarray<ComposerContext>::bitarray(bitarray&& other)
 {
     context = other.context;
     length = other.length;
@@ -109,17 +108,16 @@ bitarray<ComposerContext>::bitarray(bitarray &&other)
 }
 
 template <typename ComposerContext>
-bitarray<ComposerContext> &bitarray<ComposerContext>::operator=(const bitarray &other)
+bitarray<ComposerContext>& bitarray<ComposerContext>::operator=(const bitarray& other)
 {
     length = other.length;
     context = other.context;
-    values = std::vector<bool_t<ComposerContext> >();
+    values = std::vector<bool_t<ComposerContext>>();
     std::copy(other.values.begin(), other.values.end(), std::back_inserter(values));
     return *this;
 }
 
-template <typename ComposerContext>
-bitarray<ComposerContext> &bitarray<ComposerContext>::operator=(bitarray &&other)
+template <typename ComposerContext> bitarray<ComposerContext>& bitarray<ComposerContext>::operator=(bitarray&& other)
 {
     length = other.length;
     context = other.context;
@@ -127,8 +125,7 @@ bitarray<ComposerContext> &bitarray<ComposerContext>::operator=(bitarray &&other
     return *this;
 }
 
-template <typename ComposerContext>
-bool_t<ComposerContext> &bitarray<ComposerContext>::operator[](const size_t idx)
+template <typename ComposerContext> bool_t<ComposerContext>& bitarray<ComposerContext>::operator[](const size_t idx)
 {
     return values[idx];
 }
@@ -145,21 +142,17 @@ bitarray<ComposerContext>::operator std::array<uint32<ComposerContext>, N>()
 {
     ASSERT(N * 32 == length);
     std::array<uint32<ComposerContext>, N> output;
-    for (size_t i = 0; i < N; ++i)
-    {
-        std::array<bool_t<ComposerContext>, 32 > bools;
+    for (size_t i = 0; i < N; ++i) {
+        std::array<bool_t<ComposerContext>, 32> bools;
         size_t end;
         size_t start;
         start = ((N - i) * 32) - 32;
         end = start + 32 > length ? length : start + 32;
-        for (size_t j = start; j < end; ++j)
-        {
+        for (size_t j = start; j < end; ++j) {
             bools[j - start] = values[j];
         }
-        if (start + 32 > length)
-        {
-            for (size_t j = end; j < start + 32; ++j)
-            {
+        if (start + 32 > length) {
+            for (size_t j = end; j < start + 32; ++j) {
                 bools[j - start] = bool_t<ComposerContext>(context, false);
             }
         }
@@ -170,7 +163,8 @@ bitarray<ComposerContext>::operator std::array<uint32<ComposerContext>, N>()
 
 template <typename ComposerContext>
 template <size_t N>
-void bitarray<ComposerContext>::populate_uint32_array(const size_t starting_index, std::array<uint32<ComposerContext>, N> &output)
+void bitarray<ComposerContext>::populate_uint32_array(const size_t starting_index,
+                                                      std::array<uint32<ComposerContext>, N>& output)
 {
     ASSERT(N * 32 == (length - starting_index));
 
@@ -178,21 +172,17 @@ void bitarray<ComposerContext>::populate_uint32_array(const size_t starting_inde
     size_t num_selected_uint32s = N;
 
     size_t count = 0;
-    for (size_t i = (0); i < num_selected_uint32s; ++i)
-    {
-        std::array<bool_t<ComposerContext>, 32 > bools;
+    for (size_t i = (0); i < num_selected_uint32s; ++i) {
+        std::array<bool_t<ComposerContext>, 32> bools;
         size_t end;
         size_t start;
         start = ((num_uint32s - i) * 32) - 32;
         end = start + 32 > length ? length : start + 32;
-        for (size_t j = start; j < end; ++j)
-        {
+        for (size_t j = start; j < end; ++j) {
             bools[j - start] = values[j - starting_index];
         }
-        if (start + 32 > length)
-        {
-            for (size_t j = end; j < start + 32; ++j)
-            {
+        if (start + 32 > length) {
+            for (size_t j = end; j < start + 32; ++j) {
                 bools[j - start] = bool_t<ComposerContext>(context, false);
             }
         }
@@ -202,27 +192,22 @@ void bitarray<ComposerContext>::populate_uint32_array(const size_t starting_inde
     }
 }
 
-template <typename ComposerContext>
-std::vector<uint32<ComposerContext> > bitarray<ComposerContext>::to_uint32_vector()
+template <typename ComposerContext> std::vector<uint32<ComposerContext>> bitarray<ComposerContext>::to_uint32_vector()
 {
     size_t num_uint32s = (length / 32) + (length % 32 != 0);
-    std::vector<uint32<ComposerContext> > output;
+    std::vector<uint32<ComposerContext>> output;
 
-    for (size_t i = 0; i < num_uint32s; ++i)
-    {
-        std::array<bool_t<ComposerContext>, 32 > bools;
+    for (size_t i = 0; i < num_uint32s; ++i) {
+        std::array<bool_t<ComposerContext>, 32> bools;
         size_t end;
         size_t start;
         start = ((num_uint32s - i) * 32) - 32;
         end = start + 32 > length ? length : start + 32;
-        for (size_t j = start; j < end; ++j)
-        {
+        for (size_t j = start; j < end; ++j) {
             bools[j - start] = values[j];
         }
-        if (start + 32 > length)
-        {
-            for (size_t j = end; j < start + 32; ++j)
-            {
+        if (start + 32 > length) {
+            for (size_t j = end; j < start + 32; ++j) {
                 bools[j - start] = bool_t<ComposerContext>(context, false);
             }
         }
@@ -231,20 +216,17 @@ std::vector<uint32<ComposerContext> > bitarray<ComposerContext>::to_uint32_vecto
     return output;
 }
 
-template <typename ComposerContext>
-std::string bitarray<ComposerContext>::get_witness_as_string() const
+template <typename ComposerContext> std::string bitarray<ComposerContext>::get_witness_as_string() const
 {
     size_t num_chars = length / 8;
     ASSERT(num_chars * 8 == length);
 
     std::string output;
     output.resize(num_chars);
-    for (size_t i = 0; i < num_chars; ++i)
-    {
+    for (size_t i = 0; i < num_chars; ++i) {
         std::bitset<8> char_bits;
         size_t position = length - (8 * (i + 1));
-        for (size_t j = 0; j < 8; ++j)
-        {
+        for (size_t j = 0; j < 8; ++j) {
             char_bits[j] = values[position + j].get_value();
         }
         char foo = static_cast<char>(char_bits.to_ulong());
@@ -252,5 +234,5 @@ std::string bitarray<ComposerContext>::get_witness_as_string() const
     }
     return output;
 }
-}
-}
+} // namespace stdlib
+} // namespace plonk

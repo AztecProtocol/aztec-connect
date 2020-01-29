@@ -1,3 +1,5 @@
+#include "../crypto/hash/pedersen.hpp"
+#include "../crypto/hash/sha256.hpp"
 #include "hash.hpp"
 
 namespace plonk {
@@ -32,7 +34,31 @@ template <typename ComposerContext>
 bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(field_t const& input, uint32 const& index)
 {
     fr_hash_path hashes = store_.get_hash_path(index.get_value());
-    return check_membership(root_, create_witness_hash_path(hashes), input, index);
+    auto witness_hashes = create_witness_hash_path(hashes);
+    auto value = sha256field(input);
+
+    std::cout << hashes << std::endl;
+    std::cout << sha256({ input.get_value() }) << std::endl;
+    std::cout << value << std::endl;
+    return check_membership(root_, witness_hashes, value, index);
+}
+
+template <typename ComposerContext>
+field_t<ComposerContext> merkle_tree<ComposerContext>::sha256field(field_t const& input)
+{
+    uint a(256, input);
+    bitarray arr(a);
+    bitarray output = stdlib::sha256(arr);
+    field_t result(nullptr, barretenberg::fr::zero);
+    fr::field_t two = barretenberg::fr::to_montgomery_form({ { 2, 0, 0, 0 } });
+    for (size_t i = 0; i < output.size(); ++i) {
+        field_t temp(output[i].context);
+        temp.witness_index = output[i].witness_index;
+        fr::field_t scaling_factor_value = barretenberg::fr::pow_small(two, i);
+        field_t scaling_factor(output[i].context, scaling_factor_value);
+        result = result + (scaling_factor * temp);
+    }
+    return result;
 }
 
 template <typename ComposerContext>
@@ -49,7 +75,7 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::check_hash_path(field_t co
                                                                       uint32 const& index)
 {
     field_t one = witness_t(&ctx_, 1);
-    field_t current = mimc7<ComposerContext>({ hashes[0].first, hashes[0].second });
+    field_t current = pedersen::compress(hashes[0].first, hashes[0].second);
     bool_t is_member = witness_t(&ctx_, true);
 
     for (size_t i = 1; i < depth_; ++i) {
@@ -57,7 +83,7 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::check_hash_path(field_t co
         bool_t is_left = (current == hashes[i].first) & !path_bit;
         bool_t is_right = (current == hashes[i].second) & path_bit;
         is_member &= is_left ^ is_right;
-        current = mimc7<ComposerContext>({ hashes[i].first, hashes[i].second });
+        current = pedersen::compress(hashes[i].first, hashes[i].second);
     }
 
     is_member &= current == root;
@@ -71,16 +97,21 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(field_t c
                                                                        uint32 const& index)
 {
     field_t one = witness_t(&ctx_, 1);
-    field_t current = stdlib::mimc7<ComposerContext>({ value });
+    field_t current = value;
     bool_t is_member = witness_t(&ctx_, true);
 
     for (size_t i = 0; i < depth_; ++i) {
         bool_t path_bit = index.at(i);
         bool_t is_left = (current == hashes[i].first) & !path_bit;
         bool_t is_right = (current == hashes[i].second) & path_bit;
+         std::cout << is_left.get_value() << std::endl;
+         std::cout << is_right.get_value() << std::endl;
         is_member &= is_left ^ is_right;
-        current = mimc7<ComposerContext>({ hashes[i].first, hashes[i].second });
+        current = pedersen::compress(hashes[i].first, hashes[i].second);
+         std::cout << current << " = compress(" << hashes[i].first << ", " << hashes[i].second << ")" << std::endl;
     }
+
+    // std::cout << "root " << root << std::endl;
 
     is_member &= current == root;
     return is_member;
@@ -173,11 +204,7 @@ fr_hash_path merkle_tree<ComposerContext>::get_new_hash_path(size_t index, barre
     return path;
 }
 
-} // namespace merkle_tree
-} // namespace stdlib
-} // namespace plonk
-
-std::ostream& operator<<(std::ostream& os, plonk::stdlib::merkle_tree::fr_hash_path const& path)
+std::ostream& operator<<(std::ostream& os, fr_hash_path const& path)
 {
     os << "[\n";
     for (size_t i = 0; i < path.size(); ++i) {
@@ -186,3 +213,7 @@ std::ostream& operator<<(std::ostream& os, plonk::stdlib::merkle_tree::fr_hash_p
     os << "]";
     return os;
 }
+
+} // namespace merkle_tree
+} // namespace stdlib
+} // namespace plonk

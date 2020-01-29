@@ -1,7 +1,8 @@
 #pragma once
-#include "../../../keccak/keccak.h"
 #include "../../composer/standard_composer.hpp"
+#include "../crypto/hash/picosha2.hpp"
 #include "../field/field.hpp"
+#include "../group/group_utils.hpp"
 #include "../mimc.hpp"
 #include <vector>
 
@@ -21,14 +22,38 @@ inline barretenberg::fr::field_t hash(std::vector<barretenberg::fr::field_t> con
     });
     return stdlib::mimc7<waffle::StandardComposer>(inputs).get_value();
 }
+
 */
+
+inline bool isLittleEndian()
+{
+    constexpr int num = 42;
+    return (*(char*)&num == 42);
+}
+
+inline barretenberg::fr::field_t sha256(std::vector<barretenberg::fr::field_t> const& input)
+{
+    std::vector<unsigned char> src((unsigned char*)&input[0], (unsigned char*)(&input[0] + input.size()));
+    std::vector<unsigned char> output(picosha2::k_digest_size);
+    picosha2::hash256(src.begin(), src.end(), output.begin(), output.end());
+    barretenberg::fr::field_t result = barretenberg::fr::zero;
+    if (isLittleEndian()) {
+        result.data[0] = __builtin_bswap64(*(uint64_t*)&output[24]);
+        result.data[1] = __builtin_bswap64(*(uint64_t*)&output[16]);
+        result.data[2] = __builtin_bswap64(*(uint64_t*)&output[8]);
+        result.data[3] = __builtin_bswap64(*(uint64_t*)&output[0]);
+    } else {
+        result.data[0] = *(uint64_t*)&output[24];
+        result.data[1] = *(uint64_t*)&output[16];
+        result.data[2] = *(uint64_t*)&output[8];
+        result.data[3] = *(uint64_t*)&output[0];
+    }
+    return barretenberg::fr::to_montgomery_form(result);
+}
 
 inline barretenberg::fr::field_t hash(std::vector<barretenberg::fr::field_t> const& input)
 {
-    auto k = hash_field_elements((uint64_t*)&input[0], input.size());
-    barretenberg::fr::field_t result;
-    memcpy(&result, &k, sizeof(k));
-    return result;
+    return group_utils::compress_native(input[0], input[1]);
 }
 
 } // namespace merkle_tree
