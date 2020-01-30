@@ -20,13 +20,13 @@
 
 namespace waffle {
 template <typename program_settings>
-VerifierBase<program_settings>::VerifierBase(const size_t subgroup_size, const transcript::Manifest &input_manifest, bool has_fourth_wire)
-    : n(subgroup_size), manifest(input_manifest), __DEBUG_HAS_FOURTH_WIRE(has_fourth_wire)
+VerifierBase<program_settings>::VerifierBase(const size_t subgroup_size, const size_t public_inputs, const transcript::Manifest &input_manifest, bool has_fourth_wire)
+    : n(subgroup_size), num_public_inputs(public_inputs), manifest(input_manifest), __DEBUG_HAS_FOURTH_WIRE(has_fourth_wire)
 {}
 
 template <typename program_settings>
 VerifierBase<program_settings>::VerifierBase(VerifierBase&& other)
-    : n(other.n), manifest(other.manifest), __DEBUG_HAS_FOURTH_WIRE(other.__DEBUG_HAS_FOURTH_WIRE)
+    : n(other.n), num_public_inputs(other.num_public_inputs), manifest(other.manifest), __DEBUG_HAS_FOURTH_WIRE(other.__DEBUG_HAS_FOURTH_WIRE)
 {
     reference_string = std::move(other.reference_string);
     for (size_t i = 0; i < SIGMA.size(); ++i)
@@ -42,6 +42,7 @@ template <typename program_settings>
 VerifierBase<program_settings>& VerifierBase<program_settings>::operator=(VerifierBase&& other)
 {
     n = other.n;
+    num_public_inputs = other.num_public_inputs;
     manifest = other.manifest;
     reference_string = std::move(other.reference_string);
     for (size_t i = 0; i < SIGMA.size(); ++i)
@@ -94,6 +95,9 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
 
     if (!inputs_valid) {
         printf("inputs not valid!\n");
+        printf("T[0] on curve: %u \n", g1::on_curve(T[0]) ? 1 : 0);
+        printf("Z_1 on curve: %u \n", g1::on_curve(Z_1) ? 1 : 0);
+        printf("PI_Z on curve: %u \n", g1::on_curve(PI_Z) ? 1 : 0);
         return false;
     }
 
@@ -132,6 +136,16 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     fr::field_t alpha_pow[4];
     fr::field_t nu_pow[11];
 
+    transcript.add_element("circuit_size",
+                           { static_cast<uint8_t>(n),
+                             static_cast<uint8_t>(n >> 8),
+                             static_cast<uint8_t>(n >> 16),
+                             static_cast<uint8_t>(n >> 24) });
+    transcript.add_element("public_input_size",
+                           { static_cast<uint8_t>(num_public_inputs),
+                             static_cast<uint8_t>(num_public_inputs >> 8),
+                             static_cast<uint8_t>(num_public_inputs >> 16),
+                             static_cast<uint8_t>(num_public_inputs >> 24) });
     transcript.apply_fiat_shamir("init");
     fr::field_t beta = fr::serialize_from_buffer(transcript.apply_fiat_shamir("beta").begin());
     fr::field_t gamma = fr::serialize_from_buffer(transcript.apply_fiat_shamir("gamma").begin());
@@ -180,7 +194,7 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
 
     fr::field_t alpha_base = fr::sqr(fr::sqr(alpha));
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
-        alpha_base = verifier_widgets[i]->compute_quotient_evaluation_contribution(alpha_base, transcript, t_eval);
+        alpha_base = verifier_widgets[i]->compute_quotient_evaluation_contribution(alpha_base, transcript, t_eval, domain);
     }
     fr::__invert(lagrange_evals.vanishing_poly, T0);
     fr::__mul(t_eval, T0, t_eval);

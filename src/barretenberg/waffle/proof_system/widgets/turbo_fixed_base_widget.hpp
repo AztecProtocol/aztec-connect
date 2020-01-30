@@ -17,7 +17,7 @@ class VerifierTurboFixedBaseWidget : public VerifierTurboArithmeticWidget {
                                                                     const barretenberg::fr::field_t& nu_base,
                                                                     const transcript::Transcript&);
 
-    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t&, const transcript::Transcript& transcript, barretenberg::fr::field_t&);
+    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t&, const transcript::Transcript& transcript, barretenberg::fr::field_t&, const barretenberg::evaluation_domain& );
 };
 
 class ProverTurboFixedBaseWidget : public ProverTurboArithmeticWidget {

@@ -146,84 +146,51 @@ grumpkin::g1::affine_element get_generator(const size_t generator_index)
     return generators[generator_index];
 }
 
+grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const size_t hash_index)
+{
+    barretenberg::fr::field_t scalar_multiplier = barretenberg::fr::from_montgomery_form(in);
+
+    constexpr size_t num_bits = 254;
+    constexpr size_t num_quads_base = (num_bits - 1) >> 1;
+    constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
+    constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
+
+    const plonk::stdlib::group_utils::fixed_base_ladder* ladder =
+        plonk::stdlib::group_utils::get_hash_ladder(hash_index, num_bits);
+
+    barretenberg::fr::field_t scalar_multiplier_base = barretenberg::fr::to_montgomery_form(scalar_multiplier);
+    if ((scalar_multiplier.data[0] & 1) == 0) {
+        barretenberg::fr::field_t two = barretenberg::fr::add(barretenberg::fr::one, barretenberg::fr::one);
+        scalar_multiplier_base = barretenberg::fr::sub(scalar_multiplier_base, two);
+    }
+    scalar_multiplier_base = barretenberg::fr::from_montgomery_form(scalar_multiplier_base);
+    uint64_t wnaf_entries[num_quads + 2] = { 0 };
+    bool skew = false;
+    barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
+    
+    grumpkin::g1::element accumulator;
+    grumpkin::g1::affine_to_jacobian(ladder[0].one, accumulator);
+    if (skew)
+    {
+        grumpkin::g1::mixed_add(accumulator, plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1), accumulator);
+    }
+
+    for (size_t i = 0; i < num_quads; ++i) {
+        uint64_t entry = wnaf_entries[i + 1];;
+        const grumpkin::g1::affine_element& point_to_add = ((entry & 0xffffff) == 1) ? ladder[i + 1].three : ladder[i + 1].one;
+        uint64_t predicate = (entry >> 31U) & 1U;
+        grumpkin::g1::mixed_add_or_sub(accumulator, point_to_add, accumulator, predicate);
+    }
+    return accumulator;
+}
+
 grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left, const grumpkin::fq::field_t& right)
 {
-    bool left_skew = false;
-    bool right_skew = false;
-
-    uint64_t left_wnafs[255] = { 0 };
-    uint64_t right_wnafs[255] = { 0 };
-
-    grumpkin::fq::field_t converted_left = grumpkin::fq::from_montgomery_form(left);
-    grumpkin::fq::field_t converted_right = grumpkin::fq::from_montgomery_form(right);
-
-    uint64_t* left_scalar = &(converted_left.data[0]);
-    uint64_t* right_scalar = &(converted_right.data[0]);
-
-    barretenberg::wnaf::fixed_wnaf<255, 1, 2>(left_scalar, &left_wnafs[0], left_skew, 0);
-    barretenberg::wnaf::fixed_wnaf<255, 1, 2>(right_scalar, &right_wnafs[0], right_skew, 0);
-
-    const auto compute_split_scalar = [](uint64_t* wnafs, const size_t range) {
-        grumpkin::fr::field_t result = grumpkin::fr::zero;
-        grumpkin::fr::field_t three = grumpkin::fr::to_montgomery_form({ { 3, 0, 0, 0 } });
-        for (size_t i = 0; i < range; ++i) {
-            uint64_t entry = wnafs[i];
-            grumpkin::fr::field_t prev = grumpkin::fr::add(result, result);
-            prev = grumpkin::fr::add(prev, prev);
-            if ((entry & 0xffffff) == 0) {
-                if (((entry >> 31UL) & 1UL) == 1UL) {
-                    result = grumpkin::fr::sub(prev, grumpkin::fr::one);
-                } else {
-                    result = grumpkin::fr::add(prev, grumpkin::fr::one);
-                }
-            } else {
-                if (((entry >> 31UL) & 1UL) == 1UL) {
-                    result = grumpkin::fr::sub(prev, three);
-                } else {
-                    result = grumpkin::fr::add(prev, three);
-                }
-            }
-        }
-        return result;
-    };
-
-    grumpkin::fr::field_t grumpkin_scalars[4]{ compute_split_scalar(&left_wnafs[0], 126),
-                                        compute_split_scalar(&left_wnafs[126], 2),
-                                        compute_split_scalar(&right_wnafs[0], 126),
-                                        compute_split_scalar(&right_wnafs[126], 2) };
-    if (left_skew)
-    {
-        grumpkin::fr::__add(grumpkin_scalars[1], grumpkin::fr::one, grumpkin_scalars[1]);
-    }
-    if (right_skew)
-    {
-        grumpkin::fr::__add(grumpkin_scalars[3], grumpkin::fr::one, grumpkin_scalars[3]);
-    }
-
-    grumpkin::g1::affine_element grumpkin_points[4]{
-        plonk::stdlib::group_utils::get_generator(0),
-        plonk::stdlib::group_utils::get_generator(1),
-        plonk::stdlib::group_utils::get_generator(2),
-        plonk::stdlib::group_utils::get_generator(3),
-    };
-
-    grumpkin::g1::element result_points[4]{
-        grumpkin::g1::group_exponentiation_inner(grumpkin_points[0], grumpkin_scalars[0]),
-        grumpkin::g1::group_exponentiation_inner(grumpkin_points[1], grumpkin_scalars[1]),
-        grumpkin::g1::group_exponentiation_inner(grumpkin_points[2], grumpkin_scalars[2]),
-        grumpkin::g1::group_exponentiation_inner(grumpkin_points[3], grumpkin_scalars[3]),
-    };
-
-    grumpkin::g1::element hash_output_left;
-    grumpkin::g1::element hash_output_right;
-
-    grumpkin::g1::add(result_points[0], result_points[1], hash_output_left);
-    grumpkin::g1::add(result_points[2], result_points[3], hash_output_right);
-
-    grumpkin::g1::element hash_output;
-    grumpkin::g1::add(hash_output_left, hash_output_right, hash_output);
-    hash_output = grumpkin::g1::normalize(hash_output);
-    return hash_output.x;
+    grumpkin::g1::element first = hash_single(left, 0);
+    grumpkin::g1::element second = hash_single(right, 1);
+    grumpkin::g1::add(first, second, first);
+    first = grumpkin::g1::normalize(first);
+    return first.x;
 }
 }
 }

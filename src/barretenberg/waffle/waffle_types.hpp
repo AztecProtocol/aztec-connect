@@ -17,8 +17,9 @@ namespace waffle
 struct proving_key
 {
     public:
-    proving_key(const size_t num_gates)
+    proving_key(const size_t num_gates, const size_t num_inputs = 0)
         : n(num_gates)
+        , num_public_inputs(num_inputs)
         , small_domain(n, n)
         , mid_domain(2 * n, n > min_thread_block ? n : 2 * n)
         , large_domain(4 * n, n > min_thread_block ? n : 4 * n)
@@ -96,6 +97,7 @@ struct proving_key
 
     proving_key(const proving_key& other)
         : n(other.n)
+        , num_public_inputs(other.num_public_inputs)
         , constraint_selectors(other.constraint_selectors)
         , constraint_selector_ffts(other.constraint_selector_ffts)
         , permutation_selectors(other.permutation_selectors)
@@ -116,6 +118,7 @@ struct proving_key
 
     proving_key(proving_key&& other)
         : n(other.n)
+        , num_public_inputs(other.num_public_inputs)
         , constraint_selectors(other.constraint_selectors)
         , constraint_selector_ffts(other.constraint_selector_ffts)
         , permutation_selectors(other.permutation_selectors)
@@ -137,6 +140,7 @@ struct proving_key
     proving_key& operator=(proving_key&& other)
     {
         n = other.n;
+        num_public_inputs = other.num_public_inputs;
         constraint_selectors = std::move(other.constraint_selectors);
         constraint_selector_ffts = std::move(other.constraint_selector_ffts);
         permutation_selectors = std::move(other.permutation_selectors);
@@ -157,6 +161,7 @@ struct proving_key
     }
 
     size_t n;
+    size_t num_public_inputs;
 
     std::map<std::string, barretenberg::polynomial> constraint_selectors;
     std::map<std::string, barretenberg::polynomial> constraint_selector_ffts;

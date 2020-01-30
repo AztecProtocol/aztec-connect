@@ -53,11 +53,13 @@ void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, const evalua
 
 void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, const evaluation_domain &src_domain, const evaluation_domain &target_domain);
 
+// void populate_with_vanishing_polynomial(fr::field_t* coeffs, const size_t num_non_zero_entries, const evaluation_domain& src_domain, const evaluation_domain& target_domain);
+
 fr::field_t compute_kate_opening_coefficients(const fr::field_t *src, fr::field_t *dest, const fr::field_t &z, const size_t n);
 
 // compute Z_H*(z), l_1(z), l_{n-1}(z)
 lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, const evaluation_domain &domain);
-
+fr::field_t compute_barycentric_evaluation(fr::field_t *coeffs,const size_t num_coeffs, const fr::field_t &z,  const evaluation_domain &domain);
 // Convert an fft with `current_size` point evaluations, to one with `current_size >> compress_factor` point evaluations
 void compress_fft(const fr::field_t *src, fr::field_t *dest, const size_t current_size, const size_t compress_factor);
 } // namespace polynomials

@@ -329,13 +329,15 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     ASSERT(n == q_arith.size());
     ASSERT(n == q_ecc_1.size());
 
-    size_t log2_n = static_cast<size_t>(log2(n + 1));
-    if ((1UL << log2_n) != (n + 1)) {
+    const size_t total_num_gates = n + public_inputs.size();
+
+    size_t log2_n = static_cast<size_t>(log2(total_num_gates + 1));
+    if ((1UL << log2_n) != (total_num_gates + 1)) {
         ++log2_n;
     }
     size_t new_n = 1UL << log2_n;
 
-    for (size_t i = n; i < new_n; ++i) {
+    for (size_t i = total_num_gates; i < new_n; ++i) {
         q_m.emplace_back(fr::zero);
         q_1.emplace_back(fr::zero);
         q_2.emplace_back(fr::zero);
@@ -347,7 +349,19 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
         q_ecc_1.emplace_back(fr::zero);
     }
 
-    circuit_proving_key = std::make_shared<proving_key>(new_n);
+    for (size_t i = 0; i < public_inputs.size(); ++i)
+    {
+        epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
+        epicycle right{ static_cast<uint32_t>(i - public_inputs.size()), WireType::RIGHT };
+        epicycle out{ static_cast<uint32_t>(i - public_inputs.size()), WireType::OUTPUT };
+        epicycle fourth{ static_cast<uint32_t>(i - public_inputs.size()), WireType::FOURTH };
+
+        wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
+        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(right);
+        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(out);
+
+    }
+    circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size());
     
     polynomial poly_q_m(new_n);
     polynomial poly_q_c(new_n);
@@ -359,17 +373,31 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     polynomial poly_q_arith(new_n);
     polynomial poly_q_ecc_1(new_n);
 
-    for (size_t i = 0; i < new_n; ++i)
+
+    for (size_t i = 0; i < public_inputs.size(); ++i)
     {
-        poly_q_m[i] = q_m[i];
-        poly_q_1[i] = q_1[i];
-        poly_q_2[i] = q_2[i];
-        poly_q_3[i] = q_3[i];
-        poly_q_c[i] = q_c[i];
-        poly_q_4[i] = q_4[i];
-        poly_q_4_next[i] = q_4_next[i];
-        poly_q_arith[i] = q_arith[i];
-        poly_q_ecc_1[i] = q_ecc_1[i];
+        poly_q_m[i] = fr::zero;
+        poly_q_1[i] = fr::neg_one();
+        poly_q_2[i] = fr::zero;
+        poly_q_3[i] = fr::zero;
+        poly_q_4[i] = fr::zero;
+        poly_q_4_next[i] = fr::zero;
+        poly_q_arith[i] = fr::zero;
+        poly_q_ecc_1[i] = fr::zero;
+        poly_q_c[i] = fr::zero;
+    }
+
+    for (size_t i = public_inputs.size(); i < new_n; ++i)
+    {
+        poly_q_m[i] = q_m[i - public_inputs.size()];
+        poly_q_1[i] = q_1[i - public_inputs.size()];
+        poly_q_2[i] = q_2[i - public_inputs.size()];
+        poly_q_3[i] = q_3[i - public_inputs.size()];
+        poly_q_c[i] = q_c[i - public_inputs.size()];
+        poly_q_4[i] = q_4[i - public_inputs.size()];
+        poly_q_4_next[i] = q_4_next[i - public_inputs.size()];
+        poly_q_arith[i] = q_arith[i - public_inputs.size()];
+        poly_q_ecc_1[i] = q_ecc_1[i - public_inputs.size()];
     }
 
     poly_q_1.ifft(circuit_proving_key->small_domain);
@@ -487,14 +515,14 @@ std::shared_ptr<program_witness> TurboComposer::compute_witness()
     {
         return witness;
     }
-    size_t log2_n = static_cast<size_t>(log2(n + 1));
-    if ((1UL << log2_n) != (n + 1)) {
+    const size_t total_num_gates = n + public_inputs.size();
+    size_t log2_n = static_cast<size_t>(log2(total_num_gates + 1));
+    if ((1UL << log2_n) != (total_num_gates + 1)) {
         ++log2_n;
     }
     size_t new_n = 1UL << log2_n;
 
-
-    for (size_t i = n; i < new_n; ++i) {
+    for (size_t i = total_num_gates; i < new_n; ++i) {
         w_l.emplace_back(zero_idx);
         w_r.emplace_back(zero_idx);
         w_o.emplace_back(zero_idx);
@@ -506,11 +534,18 @@ std::shared_ptr<program_witness> TurboComposer::compute_witness()
     polynomial poly_w_3(new_n);
     polynomial poly_w_4(new_n);
 
-    for (size_t i = 0; i < new_n; ++i) {
-        fr::__copy(variables[w_l[i]], poly_w_1.at(i));
-        fr::__copy(variables[w_r[i]], poly_w_2.at(i));
-        fr::__copy(variables[w_o[i]], poly_w_3.at(i));
-        fr::__copy(variables[w_4[i]], poly_w_4.at(i));
+    for (size_t i = 0; i < public_inputs.size(); ++i)
+    {
+        fr::__copy(variables[public_inputs[i]], poly_w_1[i]);
+        fr::__copy(fr::zero, poly_w_2[i]);
+        fr::__copy(fr::zero, poly_w_3[i]);
+        fr::__copy(fr::zero, poly_w_4[i]);
+    }
+    for (size_t i = public_inputs.size(); i < new_n; ++i) {
+        fr::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1.at(i));
+        fr::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2.at(i));
+        fr::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3.at(i));
+        fr::__copy(variables[w_4[i - public_inputs.size()]], poly_w_4.at(i));
     }
 
     witness = std::make_shared<program_witness>();
@@ -528,7 +563,7 @@ TurboProver TurboComposer::preprocess()
     compute_proving_key();
     compute_witness();
 
-    TurboProver output_state(circuit_proving_key, witness, create_manifest());
+    TurboProver output_state(circuit_proving_key, witness, create_manifest(public_inputs.size()));
 
 
     std::unique_ptr<ProverTurboFixedBaseWidget> widget = std::make_unique<ProverTurboFixedBaseWidget>(circuit_proving_key.get(), witness.get());

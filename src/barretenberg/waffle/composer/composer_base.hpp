@@ -179,6 +179,15 @@ class ComposerBase
         return static_cast<uint32_t>(variables.size()) - 1U;
     }
 
+    virtual uint32_t add_public_variable(const barretenberg::fr::field_t& in)
+    {
+        variables.emplace_back(in);
+        wire_epicycles.push_back(std::vector<epicycle>());
+        const uint32_t index = static_cast<uint32_t>(variables.size()) - 1U;
+        public_inputs.emplace_back(index);
+        return index;
+    }
+
     virtual void assert_equal(const uint32_t a_idx, const uint32_t b_idx)
     {
         ASSERT(barretenberg::fr::eq(variables[a_idx], variables[b_idx]));
@@ -206,7 +215,7 @@ class ComposerBase
     {
         std::array<std::vector<uint32_t>, program_width> sigma_mappings;
         std::array<uint32_t, 4> wire_offsets{ 0U, 0x40000000, 0x80000000, 0xc0000000 };
-
+        const uint32_t num_public_inputs = static_cast<uint32_t>(public_inputs.size());
         for (size_t i = 0; i < program_width; ++i)
         {
             sigma_mappings[i].reserve(key->n);
@@ -225,8 +234,8 @@ class ComposerBase
                 epicycle current_epicycle = wire_epicycles[i][j];
                 size_t epicycle_index = j == wire_epicycles[i].size() - 1 ? 0 : j + 1;
                 epicycle next_epicycle = wire_epicycles[i][epicycle_index];
-                sigma_mappings[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U][current_epicycle.gate_index] =
-                    next_epicycle.gate_index + static_cast<uint32_t>(next_epicycle.wire_type);   
+                sigma_mappings[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U][current_epicycle.gate_index + num_public_inputs] =
+                    next_epicycle.gate_index + static_cast<uint32_t>(next_epicycle.wire_type) + num_public_inputs;   
             }
         }
     
@@ -252,6 +261,7 @@ class ComposerBase
     std::vector<uint32_t> w_o;
     std::vector<uint32_t> w_4;
     std::vector<size_t> gate_flags;
+    std::vector<uint32_t> public_inputs;
     std::vector<barretenberg::fr::field_t> variables;
     std::vector<std::vector<epicycle>> wire_epicycles;
     size_t features = static_cast<size_t>(Features::SAD_TROMBONE);

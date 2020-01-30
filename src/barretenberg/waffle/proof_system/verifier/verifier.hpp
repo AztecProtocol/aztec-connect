@@ -18,7 +18,7 @@ class VerifierBase
     typedef barretenberg::g1 g1;
 
   public:
-    VerifierBase(const size_t subgroup_size = 0, const transcript::Manifest &manifest = transcript::Manifest({}), bool has_fourth_wire = false);
+    VerifierBase(const size_t subgroup_size = 0, const size_t num_public_inputs = 0, const transcript::Manifest &manifest = transcript::Manifest({}), bool has_fourth_wire = false);
     VerifierBase(VerifierBase&& other);
     VerifierBase(const VerifierBase& other) = delete;
     VerifierBase& operator=(const VerifierBase& other) = delete;
@@ -32,6 +32,7 @@ class VerifierBase
 
     std::vector<std::unique_ptr<VerifierBaseWidget>> verifier_widgets;
     size_t n;
+    size_t num_public_inputs;
 
     transcript::Manifest manifest;
 

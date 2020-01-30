@@ -188,6 +188,22 @@ VerifierArithmeticWidget::VerifierArithmeticWidget(std::vector<barretenberg::g1:
     };
 }
 
+fr::field_t VerifierArithmeticWidget::compute_quotient_evaluation_contribution(const fr::field_t& alpha_base,
+                                                                               const transcript::Transcript& transcript,
+                                                                               fr::field_t& t_eval,
+                                                                               const evaluation_domain& domain)
+{
+    fr::field_t z_challenge = fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
+    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    std::vector<barretenberg::fr::field_t> public_inputs =
+        transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
+    fr::field_t public_input_evaluation = barretenberg::polynomial_arithmetic::compute_barycentric_evaluation(
+        &public_inputs[0], public_inputs.size(), z_challenge, domain);
+    fr::__mul(public_input_evaluation, alpha_base, public_input_evaluation);
+    fr::__add(t_eval, public_input_evaluation, t_eval);
+    return fr::mul(alpha, alpha_base);
+}
+
 VerifierBaseWidget::challenge_coefficients VerifierArithmeticWidget::append_scalar_multiplication_inputs(
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,

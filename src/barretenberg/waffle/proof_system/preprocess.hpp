@@ -21,8 +21,7 @@ inline VerifierBase<settings> preprocess(const ProverBase<settings>& prover)
     {
         polys[i] = barretenberg::polynomial(prover.key->permutation_selectors.at("sigma_" + std::to_string(i + 1)), prover.n);
     }
-
-    VerifierBase<settings> verifier(prover.n, prover.transcript.get_manifest(), settings::program_width > 3);
+    VerifierBase<settings> verifier(prover.n, prover.key->num_public_inputs, prover.transcript.get_manifest(), settings::program_width > 3);
 
     for (size_t i = 0; i < settings::program_width; ++i) {
         barretenberg::g1::jacobian_to_affine(

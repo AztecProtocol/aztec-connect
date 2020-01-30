@@ -675,7 +675,7 @@ template <typename FieldParams> class field {
         }
     }
 
-    static inline field_t serialize_from_buffer(uint8_t* buffer)
+    static inline field_t serialize_from_buffer(const uint8_t* buffer)
     {
         field_t result = zero;
         for (size_t j = 0; j < 4; ++j) {

@@ -784,6 +784,46 @@ barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluatio
     return result;
 }
 
+// computes r = \sum_{i=0}^{num_coeffs}(L_i(z).f_i)
+// start with L_1(z) = ((z^n - 1)/n).(1 / z - 1)
+// L_i(z) = L_1(z.w^{1-i}) = ((z^n - 1) / n).(1 / z.w^{1-i} - 1)
+fr::field_t compute_barycentric_evaluation(fr::field_t *coeffs,const size_t num_coeffs, const fr::field_t &z,  const evaluation_domain &domain)
+{
+    fr::field_t* denominators = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * num_coeffs));
+
+    fr::field_t numerator = z;
+    for (size_t i = 0; i < domain.log2_size; ++i) {
+        fr::__sqr(numerator, numerator);
+    }
+    fr::__sub(numerator, fr::one, numerator);
+    fr::__mul(numerator, domain.domain_inverse, numerator);
+
+    fr::__sub(z, fr::one, denominators[0]);
+    fr::field_t work_root = (domain.root_inverse);
+    for (size_t i = 1; i < num_coeffs; ++i)
+    {
+        fr::__mul(work_root, z, denominators[i]);
+        fr::__sub(denominators[i], fr::one, denominators[i]);
+        fr::__mul(work_root, domain.root_inverse, work_root);
+    }
+
+    fr::batch_invert(denominators, num_coeffs);
+    
+    fr::field_t result = fr::zero;
+
+    for (size_t i = 0; i < num_coeffs; ++i)
+    {
+        fr::field_t temp;
+        fr::__mul(coeffs[i], denominators[i], temp);
+        fr::__add(result, temp, result);
+    }
+
+    fr::__mul(result, numerator, result);
+    aligned_free(denominators);
+
+    return result;
+}
+
 // Convert an fft with `current_size` point evaluations, to one with `current_size >> compress_factor` point evaluations
 void compress_fft(const fr::field_t* src, fr::field_t* dest, const size_t cur_size, const size_t compress_factor)
 {

@@ -76,6 +76,14 @@ template <typename settings> void ProverBase<settings>::compute_wire_commitments
         transcript.add_element(tag, transcript_helpers::convert_g1_element(W_affine));
     }
 
+    // add public inputs
+    const polynomial& public_wires_source = key->wire_ffts.at("w_1_fft");
+    std::vector<fr::field_t> public_wires;
+    for (size_t i = 0; i < key->num_public_inputs; ++i)
+    {
+        public_wires.emplace_back(public_wires_source[0]);
+    }
+    transcript.add_element("public_inputs", transcript_helpers::convert_field_elements(public_wires));
     transcript.apply_fiat_shamir("beta");
     transcript.apply_fiat_shamir("gamma");
 }
@@ -252,6 +260,7 @@ template <typename settings> void ProverBase<settings>::compute_z_coefficients()
         }
     }
     z[0] = fr::one;
+    barretenberg::fr::print(barretenberg::fr::from_montgomery_form(z[key->small_domain.size - 1]));
     z.ifft(key->small_domain);
     for (size_t k = 7; k < settings::program_width; ++k) {
         aligned_free(accumulators[(k - 1) * 2]);
@@ -417,13 +426,16 @@ template <typename settings> void ProverBase<settings>::init_quotient_polynomial
 
 template <typename settings> void ProverBase<settings>::execute_preamble_round()
 {
-    std::vector<uint8_t> size_bytes(4);
-
     transcript.add_element("circuit_size",
                            { static_cast<uint8_t>(n),
                              static_cast<uint8_t>(n >> 8),
                              static_cast<uint8_t>(n >> 16),
                              static_cast<uint8_t>(n >> 24) });
+    transcript.add_element("public_input_size",
+                           { static_cast<uint8_t>(key->num_public_inputs),
+                             static_cast<uint8_t>(key->num_public_inputs >> 8),
+                             static_cast<uint8_t>(key->num_public_inputs >> 16),
+                             static_cast<uint8_t>(key->num_public_inputs >> 24) });
     transcript.apply_fiat_shamir("init");
 }
 
@@ -524,9 +536,8 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
     std::cout << "compute permutation grand product coeffs: " << diff.count() << "ms" << std::endl;
 #endif
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-
     fr::field_t alpha_base = fr::sqr(fr::sqr(alpha));
-    fr::mul(alpha, alpha_base);
+
     for (size_t i = 0; i < widgets.size(); ++i) {
 #ifdef DEBUG_TIMING
         std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
@@ -538,6 +549,41 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
         std::cout << "widget " << i << " quotient compute time: " << diff.count() << "ms" << std::endl;
 #endif
     }
+
+    std::vector<barretenberg::fr::field_t> public_inputs =
+        transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
+
+    barretenberg::polynomial& l_1 = key->lagrange_1;
+    fr::field_t public_alpha = fr::sqr(fr::sqr(alpha));
+    const size_t domain_mask = key->large_domain.size - 1;
+    fr::field_t* q_mid = &key->quotient_mid[0];
+    fr::field_t* q_large = &key->quotient_large[0];
+
+    if constexpr (settings::uses_quotient_mid == true) {
+        ITERATE_OVER_DOMAIN_START(key->mid_domain)
+        fr::field_t T0;
+        fr::field_t T1 = fr::zero;
+        for (size_t k = 0; k < public_inputs.size(); ++k) {
+            fr::__mul(public_inputs[k], l_1[((i - k) * 2) & domain_mask], T0);
+            fr::__add(T1, T0, T1);
+        }
+        fr::__mul(T1, public_alpha, T1);
+        fr::__add(q_mid[i], T1, q_mid[i]);
+        ITERATE_OVER_DOMAIN_END;
+    }
+    if constexpr (settings::uses_quotient_mid == false) {
+        ITERATE_OVER_DOMAIN_START(key->large_domain)
+        fr::field_t T0;
+        fr::field_t T1 = fr::zero;
+        for (size_t k = 0; k < public_inputs.size(); ++k) {
+            fr::__mul(public_inputs[k], l_1[((i - k)) & domain_mask], T0);
+            fr::__add(T1, T0, T1);
+        }
+        fr::__mul(T1, public_alpha, T1);
+        fr::__add(q_large[i], T1, q_large[i]);
+        ITERATE_OVER_DOMAIN_END;
+    }
+
 #ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
 #endif
@@ -565,8 +611,6 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
     std::cout << "final inverse fourier transforms: " << diff.count() << "ms" << std::endl;
 #endif
     if (settings::uses_quotient_mid) {
-        fr::field_t* q_mid = &key->quotient_mid[0];
-        fr::field_t* q_large = &key->quotient_large[0];
         ITERATE_OVER_DOMAIN_START(key->mid_domain);
         fr::__add(q_large[i], q_mid[i], q_large[i]);
         ITERATE_OVER_DOMAIN_END;

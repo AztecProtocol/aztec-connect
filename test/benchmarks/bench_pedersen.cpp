@@ -66,19 +66,23 @@ waffle::TurboProver pedersen_provers[NUM_CIRCUITS];
 waffle::TurboVerifier pedersen_verifiers[NUM_CIRCUITS];
 waffle::plonk_proof pedersen_proofs[NUM_CIRCUITS];
 
+grumpkin::fq::field_t pedersen_function(const size_t count)
+{
+    grumpkin::fq::field_t left = grumpkin::fq::random_element();
+    grumpkin::fq::field_t out = grumpkin::fq::random_element();
+    for (size_t i = 0; i < count; ++i)
+    {
+        out = plonk::stdlib::group_utils::compress_native(left, out);
+    }
+    return out;
+}
 void native_pedersen_hash_bench(State &state) noexcept
 {
     for (auto _ : state)
     {
-        state.PauseTiming();
-        const size_t count = get_index(static_cast<size_t>(state.range(0)));
-        grumpkin::fq::field_t left = grumpkin::fq::random_element();
-        grumpkin::fq::field_t out = grumpkin::fq::random_element();
-        state.ResumeTiming();
-        for (size_t i = 0; i < count; ++i)
-        {
-            out = plonk::stdlib::group_utils::compress_native(left, out);
-        }
+        const size_t count = (static_cast<size_t>(state.range(0)));
+        (pedersen_function(count));
+
     }
 }
 BENCHMARK(native_pedersen_hash_bench)->Arg(num_hashes[0])->Arg(num_hashes[1])->Arg(num_hashes[2])->Arg(num_hashes[3])->Arg(num_hashes[4])->Arg(num_hashes[5])->Arg(num_hashes[6])->Arg(num_hashes[7])->Arg(num_hashes[8])->Arg(num_hashes[9]);

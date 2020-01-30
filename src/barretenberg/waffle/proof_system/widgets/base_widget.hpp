@@ -84,7 +84,7 @@ class VerifierBaseWidget {
         const barretenberg::fr::field_t& nu_base,
         const transcript::Transcript& transcript) = 0;
 
-    virtual barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base, const transcript::Transcript&, barretenberg::fr::field_t&)
+    virtual barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base, const transcript::Transcript&, barretenberg::fr::field_t&,const barretenberg::evaluation_domain& )
     {
         return alpha_base;
     }

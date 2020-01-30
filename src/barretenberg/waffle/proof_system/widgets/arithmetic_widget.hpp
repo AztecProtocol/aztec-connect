@@ -7,6 +7,11 @@ class VerifierArithmeticWidget : public VerifierBaseWidget {
   public:
     VerifierArithmeticWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
 
+    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base,
+                                                                       const transcript::Transcript& transcript,
+                                                                       barretenberg::fr::field_t& t_eval,
+                                                                       const barretenberg::evaluation_domain& domain);
+
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
         const challenge_coefficients& challenge,
         const transcript::Transcript& transcript,
@@ -17,7 +22,7 @@ class VerifierArithmeticWidget : public VerifierBaseWidget {
                                                                     const barretenberg::fr::field_t& nu_base,
                                                                     const transcript::Transcript&)
     {
-        return nu_base;
+            return nu_base;
     };
 };
 

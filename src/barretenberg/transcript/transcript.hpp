@@ -47,6 +47,12 @@ class Transcript {
     void add_element(const std::string& element_name, const std::vector<uint8_t>& buffer)
     {
         ASSERT(manifest.get_round_manifest(current_round).includes_element(element_name));
+        // printf("adding element %s . size = %lu \n [", element_name.c_str(), buffer.size());
+        // for (size_t i = 0;i < buffer.size(); ++i)
+        // {
+        //     printf("%x", buffer[i]);
+        // }
+        // printf("]\n");
         elements.insert({ element_name, buffer });
     }
 

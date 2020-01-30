@@ -34,7 +34,7 @@ void fibbonaci(waffle::StandardComposer& composer)
 
 uint64_t fidget(waffle::StandardComposer& composer)
 {
-    field_t a(stdlib::witness_t(&composer, fr::one)); // a is a legit wire value in our circuit
+    field_t a(stdlib::public_witness_t(&composer, fr::one)); // a is a legit wire value in our circuit
     field_t b(&composer, (fr::one)); // b is just a constant, and should not turn up as a wire value in our circuit
 
     // this shouldn't create a constraint - we just need to scale the addition/multiplication gates that `a` is involved
@@ -102,16 +102,12 @@ TEST(stdlib_field, test_add_mul_with_constants)
     waffle::StandardComposer composer = waffle::StandardComposer();
 
     uint64_t expected = fidget(composer);
-
     waffle::Prover prover = composer.preprocess();
-
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[16]), { { expected, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[17]), { { expected, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 32UL);
     waffle::Verifier verifier = waffle::preprocess(prover);
-
     waffle::plonk_proof proof = prover.construct_proof();
-
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }

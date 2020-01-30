@@ -394,10 +394,10 @@ VerifierTurboFixedBaseWidget::VerifierTurboFixedBaseWidget(
 }
 
 barretenberg::fr::field_t VerifierTurboFixedBaseWidget::compute_quotient_evaluation_contribution(
-    const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t& t_eval)
+    const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t& t_eval, const evaluation_domain& domain)
 {
     fr::field_t new_alpha_base =
-        VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribution(alpha_base, transcript, t_eval);
+        VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribution(alpha_base, transcript, t_eval, domain);
     fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
     fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);

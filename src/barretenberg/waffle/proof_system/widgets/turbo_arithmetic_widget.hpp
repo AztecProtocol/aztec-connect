@@ -19,11 +19,7 @@ class VerifierTurboArithmeticWidget : public VerifierBaseWidget {
                                                                     const transcript::Transcript& transcript);
 
 
-    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base, const transcript::Transcript& transcript, barretenberg::fr::field_t&)
-    {
-        barretenberg::fr::field_t alpha = barretenberg::fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-        return barretenberg::fr::mul(alpha_base, alpha);
-    }
+    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base, const transcript::Transcript& transcript, barretenberg::fr::field_t&, const barretenberg::evaluation_domain&);
 };
 
 class ProverTurboArithmeticWidget : public ProverBaseWidget {

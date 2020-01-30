@@ -324,7 +324,7 @@ TEST(polynomials, compute_kate_opening_coefficients)
 
 TEST(polynomials, get_lagrange_evaluations)
 {
-    size_t n = 16;
+    constexpr size_t n = 16;
 
     evaluation_domain domain = evaluation_domain(n);
     domain.compute_lookup_table();
@@ -361,4 +361,36 @@ TEST(polynomials, get_lagrange_evaluations)
     EXPECT_EQ(fr::eq(evals.l_1, l_1_expected), true);
     EXPECT_EQ(fr::eq(evals.l_n_minus_1, l_n_minus_1_expected), true);
     EXPECT_EQ(fr::eq(evals.vanishing_poly, vanishing_poly_expected), true);
+}
+
+TEST(polynomials, barycentric_weight_evaluations)
+{
+    constexpr size_t n = 16;
+
+    evaluation_domain domain(n);
+
+    std::vector<fr::field_t> poly(n);
+    std::vector<fr::field_t> barycentric_poly(n);
+
+    for (size_t i = 0; i < n / 2; ++i)
+    {
+        poly[i] = fr::random_element();
+        barycentric_poly[i] = poly[i];
+    }
+    for (size_t i = n / 2; i < n; ++i)
+    {
+        poly[i] = fr::zero;
+        barycentric_poly[i] = poly[i];
+    }
+    fr::field_t evaluation_point = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
+
+    fr::field_t result = polynomial_arithmetic::compute_barycentric_evaluation(&barycentric_poly[0], n / 2, evaluation_point, domain);
+
+    domain.compute_lookup_table();
+
+    polynomial_arithmetic::ifft(&poly[0], domain);
+
+    fr::field_t expected = polynomial_arithmetic::evaluate(&poly[0], evaluation_point, n);
+
+    EXPECT_EQ(fr::eq(result, expected), true);
 }
