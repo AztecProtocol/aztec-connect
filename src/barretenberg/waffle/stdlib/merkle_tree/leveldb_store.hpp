@@ -1,5 +1,6 @@
 #pragma once
 #include "../field/field.hpp"
+#include "hash_path.hpp"
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
 
@@ -12,8 +13,6 @@ using namespace barretenberg;
 typedef struct {
     uint64_t data[8];
 } value_t;
-
-typedef std::vector<std::pair<fr::field_t, fr::field_t>> fr_hash_path;
 
 class LevelDbStore {
   public:

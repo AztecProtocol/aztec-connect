@@ -1,10 +1,24 @@
 #pragma once
+#include "../../../keccak/keccak.h"
 #include "../../composer/standard_composer.hpp"
 #include "../crypto/hash/picosha2.hpp"
 #include "../field/field.hpp"
 #include "../group/group_utils.hpp"
 #include "../mimc.hpp"
+#include <iomanip>
+#include <iostream>
 #include <vector>
+
+namespace std {
+inline std::ostream& operator<<(std::ostream& os, std::vector<unsigned char> const& t)
+{
+    os << "0x";
+    for (auto e : t) {
+        os << std::setfill('0') << std::hex << std::setw(2) << (int)e;
+    }
+    return os;
+}
+} // namespace std
 
 namespace plonk {
 namespace stdlib {
@@ -33,7 +47,24 @@ inline bool isLittleEndian()
 
 inline barretenberg::fr::field_t sha256(std::vector<barretenberg::fr::field_t> const& input)
 {
-    std::vector<unsigned char> src((unsigned char*)&input[0], (unsigned char*)(&input[0] + input.size()));
+    // std::vector<unsigned char> src((unsigned char*)&input[0], (unsigned char*)(&input[0] + input.size()));
+    // if (isLittleEndian()) {
+    //     std::reverse(src.begin(), src.end());
+    // }
+    std::vector<unsigned char> src(input.size() * 32);
+    auto src_ptr = (barretenberg::fr::field_t*)&src[0];
+    for (size_t i = 0; i < input.size(); ++i) {
+        src_ptr[i] = barretenberg::fr::from_montgomery_form(input[i]);
+        if (isLittleEndian()) {
+            barretenberg::fr::field_t be;
+            be.data[0] = __builtin_bswap64(src_ptr[i].data[3]);
+            be.data[1] = __builtin_bswap64(src_ptr[i].data[2]);
+            be.data[2] = __builtin_bswap64(src_ptr[i].data[1]);
+            be.data[3] = __builtin_bswap64(src_ptr[i].data[0]);
+            src_ptr[i] = be;
+        }
+        // TODO: Reverse machine words on BE?
+    }
     std::vector<unsigned char> output(picosha2::k_digest_size);
     picosha2::hash256(src.begin(), src.end(), output.begin(), output.end());
     barretenberg::fr::field_t result = barretenberg::fr::zero;
@@ -55,6 +86,14 @@ inline barretenberg::fr::field_t hash(std::vector<barretenberg::fr::field_t> con
 {
     return group_utils::compress_native(input[0], input[1]);
 }
+
+// inline barretenberg::fr::field_t hash(std::vector<barretenberg::fr::field_t> const& input)
+// {
+//     auto k = hash_field_elements((uint64_t*)&input[0], 4 * input.size());
+//     barretenberg::fr::field_t result;
+//     memcpy(&result, &k, sizeof(k));
+//     return result;
+// }
 
 } // namespace merkle_tree
 } // namespace stdlib

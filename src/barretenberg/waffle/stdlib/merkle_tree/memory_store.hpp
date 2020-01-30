@@ -1,5 +1,6 @@
 #pragma once
 #include "../field/field.hpp"
+#include "hash_path.hpp"
 
 namespace plonk {
 namespace stdlib {
@@ -9,8 +10,6 @@ using namespace barretenberg;
 
 class MemoryStore {
   public:
-    typedef std::vector<std::pair<barretenberg::fr::field_t, barretenberg::fr::field_t>> fr_hash_path;
-
     MemoryStore(size_t depth);
 
     fr_hash_path get_hash_path(size_t index);

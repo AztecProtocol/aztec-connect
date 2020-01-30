@@ -17,24 +17,24 @@ MemoryStore::MemoryStore(size_t depth)
     auto current = sha256({ barretenberg::fr::zero });
     size_t layer_size = total_size_;
     for (size_t offset = 0; offset < hashes_.size(); offset += layer_size, layer_size /= 2) {
-        std::cout << "zero: " << current << std::endl;
+        // std::cout << "zero: " << current << std::endl;
         for (size_t i = 0; i < layer_size; ++i) {
             hashes_[offset + i] = current;
         }
         current = hash({ current, current });
     }
 
-    std::cout << "root: " << current << std::endl;
+    // std::cout << "root: " << current << std::endl;
     root_ = current;
 }
 
-typename MemoryStore::fr_hash_path MemoryStore::get_hash_path(size_t index)
+fr_hash_path MemoryStore::get_hash_path(size_t index)
 {
     fr_hash_path path(depth_);
     size_t offset = 0;
     size_t layer_size = total_size_;
     for (size_t i = 0; i < depth_; ++i) {
-        index &= 0xFE;
+        index &= (~0ULL) - 1;
         path[i] = std::make_pair(hashes_[offset + index], hashes_[offset + index + 1]);
         offset += layer_size;
         layer_size /= 2;
@@ -52,7 +52,7 @@ void MemoryStore::update_element(size_t index, fr::field_t const& value)
     fr::field_t current = sha256({ value });
     for (size_t i = 0; i < depth_; ++i) {
         hashes_[offset + index] = current;
-        index &= 0xFE;
+        index &= (~0ULL) - 1;
         current = hash({ hashes_[offset + index], hashes_[offset + index + 1] });
         offset += layer_size;
         layer_size /= 2;

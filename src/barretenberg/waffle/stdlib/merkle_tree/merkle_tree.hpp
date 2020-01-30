@@ -9,8 +9,6 @@ namespace plonk {
 namespace stdlib {
 namespace merkle_tree {
 
-typedef std::vector<std::pair<fr::field_t, fr::field_t>> fr_hash_path;
-
 template <typename ComposerContext> class merkle_tree {
   public:
     typedef stdlib::field_t<ComposerContext> field_t;
@@ -58,8 +56,6 @@ template <typename ComposerContext> class merkle_tree {
     size_t depth_;
     size_t size_;
 };
-
-std::ostream& operator<<(std::ostream& os, fr_hash_path const& path);
 
 } // namespace merkle_tree
 } // namespace stdlib
