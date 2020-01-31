@@ -28,12 +28,10 @@ TEST(stdlib_pedersen, test_pedersen)
     fr::field_t left_in = fr::random_element();
     fr::field_t right_in = fr::random_element();
     // ensure left has skew 1, right has skew 0
-    if ((fr::from_montgomery_form(left_in).data[0] & 1) == 1)
-    {
+    if ((fr::from_montgomery_form(left_in).data[0] & 1) == 1) {
         fr::__add(left_in, fr::one, left_in);
     }
-    if ((fr::from_montgomery_form(right_in).data[0] & 1) == 0)
-    {
+    if ((fr::from_montgomery_form(right_in).data[0] & 1) == 0) {
         fr::__add(right_in, fr::one, right_in);
     }
     field_t left = witness_t(&composer, left_in);
@@ -102,15 +100,13 @@ TEST(stdlib_pedersen, test_pedersen)
     };
 
     grumpkin::fr::field_t grumpkin_scalars[4]{ compute_split_scalar(&left_wnafs[0], 126),
-                                        compute_split_scalar(&left_wnafs[126], 2),
-                                        compute_split_scalar(&right_wnafs[0], 126),
-                                        compute_split_scalar(&right_wnafs[126], 2) };
-    if (left_skew)
-    {
+                                               compute_split_scalar(&left_wnafs[126], 2),
+                                               compute_split_scalar(&right_wnafs[0], 126),
+                                               compute_split_scalar(&right_wnafs[126], 2) };
+    if (left_skew) {
         grumpkin::fr::__add(grumpkin_scalars[1], grumpkin::fr::one, grumpkin_scalars[1]);
     }
-    if (right_skew)
-    {
+    if (right_skew) {
         grumpkin::fr::__add(grumpkin_scalars[3], grumpkin::fr::one, grumpkin_scalars[3]);
     }
 
@@ -140,6 +136,6 @@ TEST(stdlib_pedersen, test_pedersen)
 
     EXPECT_EQ(fr::eq(out.get_value(), hash_output.x), true);
 
-    fr::field_t compress_native = plonk::stdlib::group_utils::compress_native(left_in, right_in);
+    fr::field_t compress_native = plonk::stdlib::group_utils::compress_native(left.get_value(), right.get_value());
     EXPECT_EQ(fr::eq(out.get_value(), compress_native), true);
 }

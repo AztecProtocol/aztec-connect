@@ -46,11 +46,11 @@ template <typename ComposerContext> class merkle_tree {
 
     fr_hash_path get_new_hash_path(size_t index, barretenberg::fr::field_t value);
 
-    field_t sha256field(field_t const& input);
+    field_t compress(field_t const& left, field_t const& right);
 
   private:
     ComposerContext& ctx_;
-    MemoryStore store_;
+    LevelDbStore store_;
     field_t root_;
     size_t total_size_;
     size_t depth_;

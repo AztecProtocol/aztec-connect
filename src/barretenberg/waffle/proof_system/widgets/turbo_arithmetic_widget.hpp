@@ -5,6 +5,11 @@
 namespace waffle {
 class VerifierTurboArithmeticWidget : public VerifierBaseWidget {
   public:
+    VerifierTurboArithmeticWidget()
+        : VerifierBaseWidget(static_cast<size_t>(WidgetVersionControl::Dependencies::REQUIRES_W_4_SHIFTED),
+                             static_cast<size_t>(WidgetVersionControl::Features::HAS_TURBO_ARITHMETISATION))
+    {}
+
     VerifierTurboArithmeticWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
@@ -13,15 +18,16 @@ class VerifierTurboArithmeticWidget : public VerifierBaseWidget {
         std::vector<barretenberg::g1::affine_element>& points,
         std::vector<barretenberg::fr::field_t>& scalars);
 
-
     barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t& batch_eval,
                                                                     const barretenberg::fr::field_t& nu_base,
                                                                     const transcript::Transcript& transcript);
 
-
-    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base, const transcript::Transcript& transcript, barretenberg::fr::field_t&)
+    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base,
+                                                                       const transcript::Transcript& transcript,
+                                                                       barretenberg::fr::field_t&)
     {
-        barretenberg::fr::field_t alpha = barretenberg::fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+        barretenberg::fr::field_t alpha =
+            barretenberg::fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
         return barretenberg::fr::mul(alpha_base, alpha);
     }
 };

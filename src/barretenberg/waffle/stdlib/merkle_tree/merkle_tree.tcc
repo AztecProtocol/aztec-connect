@@ -10,8 +10,8 @@ namespace merkle_tree {
 template <typename ComposerContext>
 merkle_tree<ComposerContext>::merkle_tree(ComposerContext& ctx, size_t depth)
     : ctx_(ctx)
-    //, store_("/tmp/merkle_tree_hardcoded", depth)
-    , store_(depth)
+    , store_("/tmp/leveldb_test", depth)
+    //, store_(depth)
     , depth_(depth)
     , size_(0)
 {
@@ -53,12 +53,18 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::assert_check_membership(fi
 }
 
 template <typename ComposerContext>
+field_t<ComposerContext> merkle_tree<ComposerContext>::compress(field_t const& left, field_t const& right)
+{
+    return pedersen::compress(left, right);
+}
+
+template <typename ComposerContext>
 bool_t<ComposerContext> merkle_tree<ComposerContext>::check_hash_path(field_t const& root,
                                                                       hash_path const& hashes,
                                                                       uint32 const& index)
 {
     field_t one = witness_t(&ctx_, 1);
-    field_t current = pedersen::compress(hashes[0].first, hashes[0].second);
+    field_t current = compress(hashes[0].first, hashes[0].second);
     bool_t is_member = witness_t(&ctx_, true);
 
     for (size_t i = 1; i < depth_; ++i) {
@@ -66,7 +72,7 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::check_hash_path(field_t co
         bool_t is_left = (current == hashes[i].first) & !path_bit;
         bool_t is_right = (current == hashes[i].second) & path_bit;
         is_member &= is_left ^ is_right;
-        current = pedersen::compress(hashes[i].first, hashes[i].second);
+        current = compress(hashes[i].first, hashes[i].second);
     }
 
     is_member &= current == root;
@@ -90,7 +96,7 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(field_t c
         // std::cout << is_left.get_value() << std::endl;
         // std::cout << is_right.get_value() << std::endl;
         is_member &= is_left ^ is_right;
-        current = pedersen::compress(hashes[i].first, hashes[i].second);
+        current = compress(hashes[i].first, hashes[i].second);
         // std::cout << current << " = compress(" << hashes[i].first << ", " << hashes[i].second << ")" << std::endl;
     }
 

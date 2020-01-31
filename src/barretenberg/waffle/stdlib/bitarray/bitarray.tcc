@@ -166,7 +166,7 @@ template <size_t N>
 void bitarray<ComposerContext>::populate_uint32_array(const size_t starting_index,
                                                       std::array<uint32<ComposerContext>, N>& output)
 {
-    ASSERT(N * 32 == (length - starting_index));
+    ASSERT(N * 32 <= (length - starting_index));
 
     size_t num_uint32s = (length / 32) + (length % 32 != 0);
     size_t num_selected_uint32s = N;

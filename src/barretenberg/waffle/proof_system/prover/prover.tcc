@@ -17,7 +17,6 @@
 #include <chrono>
 #include <iostream>
 
-
 namespace waffle {
 
 template <typename settings>
@@ -82,8 +81,8 @@ template <typename settings> void ProverBase<settings>::compute_wire_commitments
 
 template <typename settings> void ProverBase<settings>::compute_z_commitment()
 {
-    g1::element Z =
-        barretenberg::scalar_multiplication::pippenger_unsafe(key->z.get_coefficients(), key->reference_string.monomials, n);
+    g1::element Z = barretenberg::scalar_multiplication::pippenger_unsafe(
+        key->z.get_coefficients(), key->reference_string.monomials, n);
     g1::affine_element Z_affine;
     g1::jacobian_to_affine(Z, Z_affine);
 
@@ -233,8 +232,9 @@ template <typename settings> void ProverBase<settings>::compute_z_coefficients()
 
                 for (size_t k = 1; k < settings::program_width; ++k) {
                     fr::__mul_with_coarse_reduction(accumulators[0][i], accumulators[k][i], accumulators[0][i]);
-                    fr::__mul_with_coarse_reduction(
-                        accumulators[settings::program_width][i], accumulators[settings::program_width + k][i], accumulators[settings::program_width][i]);
+                    fr::__mul_with_coarse_reduction(accumulators[settings::program_width][i],
+                                                    accumulators[settings::program_width + k][i],
+                                                    accumulators[settings::program_width][i]);
                 }
                 fr::__mul_with_coarse_reduction(accumulators[0][i], inversion_accumulator, inversion_coefficients[i]);
                 fr::__mul_with_coarse_reduction(
@@ -740,8 +740,8 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
 #ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
 #endif
-    g1::element PI_Z =
-        barretenberg::scalar_multiplication::pippenger_unsafe(opening_poly.get_coefficients(), key->reference_string.monomials, n);
+    g1::element PI_Z = barretenberg::scalar_multiplication::pippenger_unsafe(
+        opening_poly.get_coefficients(), key->reference_string.monomials, n);
 
     g1::element PI_Z_OMEGA = barretenberg::scalar_multiplication::pippenger_unsafe(
         shifted_opening_poly.get_coefficients(), key->reference_string.monomials, n);
@@ -801,7 +801,7 @@ template <typename settings> barretenberg::fr::field_t ProverBase<settings>::com
     for (size_t i = 0; i < widgets.size(); ++i) {
         widgets[i]->compute_transcript_elements(transcript);
     }
-    
+
     fr::field_t t_eval = key->quotient_large.evaluate(z_challenge, 4 * n);
 
     barretenberg::polynomial_arithmetic::lagrange_evaluations lagrange_evals =

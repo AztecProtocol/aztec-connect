@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
-#include <barretenberg/waffle/composer/standard_composer.hpp>
 #include <barretenberg/waffle/composer/turbo_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
@@ -185,9 +184,10 @@ TEST(stdlib_merkle_tree, test_assert_check_membership_fail)
 
 TEST(stdlib_merkle_tree, test_add_members)
 {
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+
     Composer composer = Composer();
-    // TODO: Why crash if I increase this to 5? :(
-    size_t size = 4;
+    size_t size = 8;
     std::vector<field_t> values(size);
 
     for (size_t i = 0; i < size; ++i) {
@@ -195,16 +195,6 @@ TEST(stdlib_merkle_tree, test_add_members)
     }
 
     merkle_tree tree = merkle_tree(composer, 3);
-
-    // Check everything is zero.
-    for (size_t i = 0; i < size; ++i) {
-        EXPECT_EQ(tree.check_membership(values[0], values[i]).get_value(), true);
-    }
-
-    // Check everything is not one.
-    for (size_t i = 0; i < size; ++i) {
-        EXPECT_EQ(tree.check_membership(values[1], values[i]).get_value(), false);
-    }
 
     // Add incremental values.
     for (size_t i = 0; i < size; ++i) {
@@ -218,6 +208,7 @@ TEST(stdlib_merkle_tree, test_add_members)
 
     auto prover = composer.preprocess();
 
+    printf("composer gates = %zu\n", composer.get_num_gates());
     auto verifier = waffle::preprocess(prover);
 
     waffle::plonk_proof proof = prover.construct_proof();
@@ -251,9 +242,10 @@ TEST(stdlib_merkle_tree, test_update_member)
 
 TEST(stdlib_merkle_tree, test_update_members)
 {
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+
     Composer composer = Composer();
-    // TODO: Why crash when above 5? :(
-    size_t size = 5;
+    size_t size = 8;
     std::vector<field_t> values(size);
 
     for (size_t i = 0; i < size; ++i) {

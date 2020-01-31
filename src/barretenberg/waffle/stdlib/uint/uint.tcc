@@ -61,7 +61,8 @@ void uint<ComposerContext>::internal_logic_operation_native(
     std::vector<bool_t<ComposerContext>> const& operand_wires,
     bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>, bool_t<ComposerContext>)) const
 {
-    ASSERT(witness_status == WitnessStatus::IN_BINARY_FORM || witness_status == WitnessStatus::OK);
+    ASSERT(witness_status == WitnessStatus::QUEUED_LOGIC_OPERATION || WitnessStatus::IN_BINARY_FORM ||
+           witness_status == WitnessStatus::OK);
     // TODO: shouldn't need these?
     // prepare_for_logic_operations();
     // right.prepare_for_logic_operations();
@@ -128,7 +129,8 @@ void uint<ComposerContext>::internal_logic_operation_binary(
     std::vector<bool_t<ComposerContext>> const& operand_wires,
     bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>, bool_t<ComposerContext>)) const
 {
-    ASSERT(witness_status == WitnessStatus::IN_BINARY_FORM || witness_status == WitnessStatus::OK);
+    ASSERT(witness_status == WitnessStatus::QUEUED_LOGIC_OPERATION || WitnessStatus::IN_BINARY_FORM ||
+           witness_status == WitnessStatus::OK);
     // when evaluating our logical AND, also accumulate wire values into a sum.
     // When using the extended arithmetisation widget, this can be done for only +1 extra gate.
     // i.e. vector of left, right, output wires are structured as:
@@ -316,8 +318,8 @@ template <typename ComposerContext> void uint<ComposerContext>::concatenate() co
     typedef bool_t<ComposerContext> bool_t;
 
     ASSERT(witness_status = WitnessStatus::IN_BINARY_FORM);
-    ASSERT(additive_constant == 0);
-    ASSERT(multiplicative_constant == 1);
+    ASSERT(additive_constant == 0 || is_constant());
+    ASSERT(multiplicative_constant == 1 || is_constant());
 
     field_t<ComposerContext> constant_multiplier(context, barretenberg::fr::one);
     field_t<ComposerContext> accumulator(context, barretenberg::fr::zero);
@@ -413,8 +415,7 @@ template <typename ComposerContext> void uint<ComposerContext>::normalize() cons
     if (witness_status == WitnessStatus::QUEUED_LOGIC_OPERATION) {
         internal_logic_operation_binary(queued_logic_operation.operand_wires, queued_logic_operation.method);
         concatenate();
-    }
-    if (witness_status == WitnessStatus::IN_BINARY_FORM) {
+    } else if (witness_status == WitnessStatus::IN_BINARY_FORM) {
         concatenate();
     } else if (witness_status == WitnessStatus::NOT_NORMALIZED || witness_status == WitnessStatus::IN_NATIVE_FORM) {
         decompose();

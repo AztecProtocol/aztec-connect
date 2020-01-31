@@ -163,12 +163,12 @@ void add_affine_points(g1::affine_element* points, const size_t num_points, fq::
         fq::__sub(points[i].x, points[i].y, points[(i + num_points) >> 1].y);
         fq::reduce_once(points[(i + num_points) >> 1].x, points[(i + num_points) >> 1].x);
     }
-//     time_end = std::chrono::steady_clock::now();
-//      diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
-//        if (num_points > 100000)
-//     {
-//    std::cout << "reverse run time: " << diff.count() << "us" << std::endl;
-//     }
+    //     time_end = std::chrono::steady_clock::now();
+    //      diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
+    //        if (num_points > 100000)
+    //     {
+    //    std::cout << "reverse run time: " << diff.count() << "us" << std::endl;
+    //     }
 }
 
 /**
@@ -429,7 +429,7 @@ uint32_t construct_addition_chains(affine_product_runtime_state& state, bool emp
             // This section is a bottleneck - to populate our point array, we need
             // to read from memory locations that are effectively uniformly randomly distributed!
             // (assuming our scalar multipliers are uniformly random...)
-            // In the absence of a more elegant solution, we use ugly macro hacks to try and 
+            // In the absence of a more elegant solution, we use ugly macro hacks to try and
             // unroll loops, and prefetch memory a few cycles before we need it
             switch (k_end) {
             case 128: {

@@ -59,8 +59,7 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
                                                                       const transcript::Transcript& transcript)
 {
     fr::field_t grumpkin_curve_b = grumpkin::g1::curve_b;
-    fr::field_t new_alpha_base =
-        ProverTurboArithmeticWidget::compute_quotient_contribution(alpha_base, transcript);
+    fr::field_t new_alpha_base = ProverTurboArithmeticWidget::compute_quotient_contribution(alpha_base, transcript);
 
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
@@ -237,8 +236,7 @@ fr::field_t ProverTurboFixedBaseWidget::compute_linear_contribution(const fr::fi
                                                                     const transcript::Transcript& transcript,
                                                                     barretenberg::polynomial& r)
 {
-    fr::field_t new_alpha_base =
-        ProverTurboArithmeticWidget::compute_linear_contribution(alpha_base, transcript, r);
+    fr::field_t new_alpha_base = ProverTurboArithmeticWidget::compute_linear_contribution(alpha_base, transcript, r);
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
     fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
@@ -351,7 +349,8 @@ fr::field_t ProverTurboFixedBaseWidget::compute_opening_poly_contribution(const 
     return fr::mul(nu_b, nu);
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverTurboFixedBaseWidget::compute_preprocessed_commitments(const ReferenceString& reference_string) const
+std::unique_ptr<VerifierBaseWidget> ProverTurboFixedBaseWidget::compute_preprocessed_commitments(
+    const ReferenceString& reference_string) const
 {
     polynomial polys[9]{ polynomial(q_1, key->small_domain.size),      polynomial(q_2, key->small_domain.size),
                          polynomial(q_3, key->small_domain.size),      polynomial(q_4, key->small_domain.size),
@@ -359,14 +358,13 @@ std::unique_ptr<VerifierBaseWidget> ProverTurboFixedBaseWidget::compute_preproce
                          polynomial(q_c, key->small_domain.size),      polynomial(q_arith, key->small_domain.size),
                          polynomial(q_ecc_1, key->small_domain.size) };
 
-
     std::vector<barretenberg::g1::affine_element> commitments;
     commitments.resize(9);
 
     for (size_t i = 0; i < 9; ++i) {
-        g1::jacobian_to_affine(
-            scalar_multiplication::pippenger(polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
-            commitments[i]);
+        g1::jacobian_to_affine(scalar_multiplication::pippenger(
+                                   polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
+                               commitments[i]);
     }
     std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierTurboFixedBaseWidget>(commitments);
     return result;
@@ -381,7 +379,6 @@ void ProverTurboFixedBaseWidget::reset()
 
 VerifierTurboFixedBaseWidget::VerifierTurboFixedBaseWidget(
     std::vector<barretenberg::g1::affine_element>& instance_commitments)
-    : VerifierTurboArithmeticWidget(instance_commitments)
 {
     version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
     version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
