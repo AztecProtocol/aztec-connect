@@ -19,6 +19,7 @@ using namespace plonk;
 
 typedef stdlib::field_t<waffle::TurboComposer> field_t;
 typedef stdlib::witness_t<waffle::TurboComposer> witness_t;
+typedef stdlib::witness_t<waffle::TurboComposer> public_witness_t;
 
 TEST(stdlib_pedersen, test_pedersen)
 {
@@ -36,8 +37,8 @@ TEST(stdlib_pedersen, test_pedersen)
     {
         fr::__add(right_in, fr::one, right_in);
     }
-    field_t left = witness_t(&composer, left_in);
-    field_t right = witness_t(&composer, right_in);
+    field_t left = public_witness_t(&composer, left_in);
+    field_t right = public_witness_t(&composer, right_in);
 
     composer.fix_witness(left.witness_index, left.get_value());
     composer.fix_witness(right.witness_index, right.get_value());
@@ -142,4 +143,40 @@ TEST(stdlib_pedersen, test_pedersen)
 
     fr::field_t compress_native = plonk::stdlib::group_utils::compress_native(left.get_value(), right.get_value());
     EXPECT_EQ(fr::eq(out.get_value(), compress_native), true);
+}
+
+
+TEST(stdlib_pedersen, test_pedersen_large)
+{
+
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    fr::field_t left_in = fr::random_element();
+    fr::field_t right_in = fr::random_element();
+    // ensure left has skew 1, right has skew 0
+    if ((fr::from_montgomery_form(left_in).data[0] & 1) == 1)
+    {
+        fr::__add(left_in, fr::one, left_in);
+    }
+    if ((fr::from_montgomery_form(right_in).data[0] & 1) == 0)
+    {
+        fr::__add(right_in, fr::one, right_in);
+    }
+    field_t left = public_witness_t(&composer, left_in);
+    field_t right = public_witness_t(&composer, right_in);
+
+    for (size_t i = 0; i < 256; ++i)
+    {
+        left = plonk::stdlib::pedersen::compress(left, right);
+    }
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
 }

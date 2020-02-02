@@ -80,8 +80,8 @@ template <typename settings> void ProverBase<settings>::compute_wire_commitments
     const polynomial& public_wires_source = key->wire_ffts.at("w_1_fft");
     std::vector<fr::field_t> public_wires;
     for (size_t i = 0; i < key->num_public_inputs; ++i)
-    {
-        public_wires.emplace_back(public_wires_source[0]);
+    {   
+        public_wires.push_back(public_wires_source[i]);
     }
     transcript.add_element("public_inputs", transcript_helpers::convert_field_elements(public_wires));
     transcript.apply_fiat_shamir("beta");
@@ -260,7 +260,6 @@ template <typename settings> void ProverBase<settings>::compute_z_coefficients()
         }
     }
     z[0] = fr::one;
-    barretenberg::fr::print(barretenberg::fr::from_montgomery_form(z[key->small_domain.size - 1]));
     z.ifft(key->small_domain);
     for (size_t k = 7; k < settings::program_width; ++k) {
         aligned_free(accumulators[(k - 1) * 2]);
@@ -564,7 +563,7 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
         fr::field_t T0;
         fr::field_t T1 = fr::zero;
         for (size_t k = 0; k < public_inputs.size(); ++k) {
-            fr::__mul(public_inputs[k], l_1[((i - k) * 2) & domain_mask], T0);
+            fr::__mul(public_inputs[k], l_1[((i - (2 * k)) * 2) & domain_mask], T0);
             fr::__add(T1, T0, T1);
         }
         fr::__mul(T1, public_alpha, T1);
@@ -576,7 +575,7 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
         fr::field_t T0;
         fr::field_t T1 = fr::zero;
         for (size_t k = 0; k < public_inputs.size(); ++k) {
-            fr::__mul(public_inputs[k], l_1[((i - k)) & domain_mask], T0);
+            fr::__mul(public_inputs[k], l_1[((i - (4 * k))) & domain_mask], T0);
             fr::__add(T1, T0, T1);
         }
         fr::__mul(T1, public_alpha, T1);

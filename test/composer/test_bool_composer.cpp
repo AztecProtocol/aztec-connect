@@ -18,8 +18,8 @@ TEST(bool_composer, test_add_gate_proofs)
     fr::field_t b = fr::one;
     fr::field_t c = fr::add(a, b);
     fr::field_t d = fr::add(a, c);
-    uint32_t a_idx = composer.add_variable(a);
-    uint32_t b_idx = composer.add_variable(b);
+    uint32_t a_idx = composer.add_public_variable(a);
+    uint32_t b_idx = composer.add_public_variable(b);
     uint32_t c_idx = composer.add_variable(c);
     uint32_t d_idx = composer.add_variable(d);
     composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });

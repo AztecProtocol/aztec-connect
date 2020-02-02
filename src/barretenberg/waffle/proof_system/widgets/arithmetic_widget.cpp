@@ -197,10 +197,13 @@ fr::field_t VerifierArithmeticWidget::compute_quotient_evaluation_contribution(c
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
     std::vector<barretenberg::fr::field_t> public_inputs =
         transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
-    fr::field_t public_input_evaluation = barretenberg::polynomial_arithmetic::compute_barycentric_evaluation(
-        &public_inputs[0], public_inputs.size(), z_challenge, domain);
-    fr::__mul(public_input_evaluation, alpha_base, public_input_evaluation);
-    fr::__add(t_eval, public_input_evaluation, t_eval);
+
+    if (public_inputs.size() > 0) {
+        fr::field_t public_input_evaluation = barretenberg::polynomial_arithmetic::compute_barycentric_evaluation(
+            &public_inputs[0], public_inputs.size(), z_challenge, domain);
+        fr::__mul(public_input_evaluation, alpha_base, public_input_evaluation);
+        fr::__add(t_eval, public_input_evaluation, t_eval);
+    }
     return fr::mul(alpha, alpha_base);
 }
 

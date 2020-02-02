@@ -27,7 +27,6 @@ class Transcript {
         for (size_t i = 0; i < num_rounds; ++i) {
             for (auto manifest_element : input_manifest.get_round_manifest(i).elements) {
                 if (!manifest_element.derived_by_verifier) {
-                    // printf("adding manifest item %s : ", manifest_element.name.c_str());
                     // for (size_t j = 0; j < manifest_element.num_bytes; ++j)
                     // {
                     //     printf("%x", buffer[count + j]);
@@ -40,6 +39,7 @@ class Transcript {
                 }
             }
         }
+        // printf("input buffer size = %lu \n", count);
     }
 
     Manifest get_manifest() const { return manifest; }
@@ -121,6 +121,7 @@ class Transcript {
                 }
             }
         }
+        // printf("output buffer size = %lu \n", buffer.size());
         return buffer;
     }
 

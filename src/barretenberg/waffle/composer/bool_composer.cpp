@@ -91,13 +91,13 @@ std::shared_ptr<proving_key> BoolComposer::compute_proving_key()
     ASSERT(n == q_right_bools.size());
     ASSERT(n == q_output_bools.size());
 
-    size_t log2_n = static_cast<size_t>(log2(n + 1));
-    if ((1UL << log2_n) != (n + 1)) {
+    const size_t total_num_gates = n + public_inputs.size();
+    size_t log2_n = static_cast<size_t>(log2(total_num_gates + 1));
+    if ((1UL << log2_n) != (total_num_gates + 1)) {
         ++log2_n;
     }
     size_t new_n = 1UL << log2_n;
-
-    for (size_t i = n; i < new_n; ++i) {
+    for (size_t i = total_num_gates; i < new_n; ++i) {
         q_1.emplace_back(fr::zero);
         q_2.emplace_back(fr::zero);
         q_3.emplace_back(fr::zero);
@@ -107,8 +107,17 @@ std::shared_ptr<proving_key> BoolComposer::compute_proving_key()
         q_right_bools.emplace_back(fr::zero);
         q_output_bools.emplace_back(fr::zero);
     }
+    for (size_t i = 0; i < public_inputs.size(); ++i)
+    {
+        epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
+        epicycle right{ static_cast<uint32_t>(i - public_inputs.size()), WireType::RIGHT };
+        epicycle out{ static_cast<uint32_t>(i - public_inputs.size()), WireType::OUTPUT };
+        wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
+        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(right);
+        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(out);
+    }
 
-    circuit_proving_key = std::make_shared<proving_key>(new_n);
+    circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size());
 
     polynomial poly_q_m(new_n);
     polynomial poly_q_c(new_n);
@@ -119,15 +128,25 @@ std::shared_ptr<proving_key> BoolComposer::compute_proving_key()
     polynomial poly_q_br(new_n);
     polynomial poly_q_bo(new_n);
 
-    for (size_t i = 0; i < new_n; ++i) {
-        poly_q_1[i] = q_1[i];
-        poly_q_2[i] = q_2[i];
-        poly_q_3[i] = q_3[i];
-        poly_q_m[i] = q_m[i];
-        poly_q_c[i] = q_c[i];
-        poly_q_bl[i] = q_left_bools[i];
-        poly_q_br[i] = q_right_bools[i];
-        poly_q_bo[i] = q_output_bools[i];
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
+        poly_q_m[i] = fr::zero;
+        poly_q_1[i] = fr::neg_one();
+        poly_q_2[i] = fr::zero;
+        poly_q_3[i] = fr::zero;
+        poly_q_c[i] = fr::zero;
+        poly_q_bl[i] = fr::zero;
+        poly_q_br[i] = fr::zero;
+        poly_q_bo[i] = fr::zero;
+    }
+    for (size_t i = public_inputs.size(); i < new_n; ++i) {
+        poly_q_1[i] = q_1[i - public_inputs.size()];
+        poly_q_2[i] = q_2[i - public_inputs.size()];
+        poly_q_3[i] = q_3[i - public_inputs.size()];
+        poly_q_m[i] = q_m[i - public_inputs.size()];
+        poly_q_c[i] = q_c[i - public_inputs.size()];
+        poly_q_bl[i] = q_left_bools[i - public_inputs.size()];
+        poly_q_br[i] = q_right_bools[i - public_inputs.size()];
+        poly_q_bo[i] = q_output_bools[i - public_inputs.size()];
     }
 
     poly_q_1.ifft(circuit_proving_key->small_domain);
@@ -239,13 +258,13 @@ std::shared_ptr<program_witness> BoolComposer::compute_witness()
     }
     witness = std::make_shared<program_witness>();
 
-    size_t log2_n = static_cast<size_t>(log2(n + 1));
-    if ((1UL << log2_n) != (n + 1)) {
+    const size_t total_num_gates = n + public_inputs.size();
+    size_t log2_n = static_cast<size_t>(log2(total_num_gates + 1));
+    if ((1UL << log2_n) != (total_num_gates + 1)) {
         ++log2_n;
     }
     size_t new_n = 1UL << log2_n;
-
-    for (size_t i = n; i < new_n; ++i) {
+    for (size_t i = total_num_gates; i < new_n; ++i) {
         w_l.emplace_back(zero_idx);
         w_r.emplace_back(zero_idx);
         w_o.emplace_back(zero_idx);
@@ -255,10 +274,16 @@ std::shared_ptr<program_witness> BoolComposer::compute_witness()
     polynomial poly_w_2(new_n);
     polynomial poly_w_3(new_n);
 
-    for (size_t i = 0; i < new_n; ++i) {
-        fr::__copy(variables[w_l[i]], poly_w_1.at(i));
-        fr::__copy(variables[w_r[i]], poly_w_2.at(i));
-        fr::__copy(variables[w_o[i]], poly_w_3.at(i));
+    for (size_t i = 0; i < public_inputs.size(); ++i)
+    {
+        fr::__copy(variables[public_inputs[i]], poly_w_1[i]);
+        fr::__copy(fr::zero, poly_w_2[i]);
+        fr::__copy(fr::zero, poly_w_3[i]);
+    }
+    for (size_t i = public_inputs.size(); i < new_n; ++i) {
+        fr::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1.at(i));
+        fr::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2.at(i));
+        fr::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3.at(i));
     }
 
     witness->wires.insert({ "w_1", std::move(poly_w_1) });
@@ -270,11 +295,10 @@ std::shared_ptr<program_witness> BoolComposer::compute_witness()
 
 Prover BoolComposer::preprocess()
 {
-    printf("proving key = %u , witness key = %u \n", computed_proving_key ? 1 : 0, computed_witness ? 1 : 0);
     compute_proving_key();
     compute_witness();
 
-    Prover output_state(circuit_proving_key, witness, create_manifest());
+    Prover output_state(circuit_proving_key, witness, create_manifest(public_inputs.size()));
 
     std::unique_ptr<ProverBoolWidget> bool_widget = std::make_unique<ProverBoolWidget>(circuit_proving_key.get(), witness.get());
     std::unique_ptr<ProverArithmeticWidget> arithmetic_widget = std::make_unique<ProverArithmeticWidget>(circuit_proving_key.get(), witness.get());

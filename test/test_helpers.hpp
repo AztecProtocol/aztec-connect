@@ -21,7 +21,7 @@ inline transcript::Transcript create_dummy_standard_transcript()
         fr_vector[i] = 1;
     }
 
-    transcript::Transcript transcript = transcript::Transcript(waffle::StandardComposer::create_manifest());
+    transcript::Transcript transcript = transcript::Transcript(waffle::StandardComposer::create_manifest(0));
     transcript.add_element("circuit_size", { 1, 2, 3, 4});
     transcript.apply_fiat_shamir("init");
 

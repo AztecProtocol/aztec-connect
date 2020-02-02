@@ -35,8 +35,8 @@ const auto init = []() {
     bucket_memory = (g1::element*)(aligned_alloc(64, (max_buckets + thread_overspill) * sizeof(g1::element)));
 
     // TODO: we're allocating too much memory here, trim this down
-    point_pairs_1 = (g1::affine_element*)(aligned_alloc(64, (max_num_points * 2) * sizeof(g1::affine_element)));
-    point_pairs_2 = (g1::affine_element*)(aligned_alloc(64, (max_num_points * 2) * sizeof(g1::affine_element)));
+    point_pairs_1 = (g1::affine_element*)(aligned_alloc(64, (max_num_points * 2 + 256) * sizeof(g1::affine_element)));
+    point_pairs_2 = (g1::affine_element*)(aligned_alloc(64, (max_num_points * 2 + 256) * sizeof(g1::affine_element)));
     scratch_space = (fq::field_t*)(aligned_alloc(64, (max_num_points) * sizeof(fq::field_t)));
 
     bucket_count_memory = (uint32_t*)(aligned_alloc(64, max_num_points * 2 * sizeof(uint32_t)));

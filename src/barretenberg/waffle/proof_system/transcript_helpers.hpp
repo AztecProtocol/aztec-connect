@@ -14,7 +14,7 @@ inline std::vector<uint8_t> convert_field_element(const barretenberg::fr::field_
 
 inline std::vector<uint8_t> convert_field_elements(const std::vector<barretenberg::fr::field_t>& ele)
 {
-    std::vector<uint8_t> buffer(sizeof(barretenberg::fr::field_t) * ele.size());
+    std::vector<uint8_t> buffer(sizeof(barretenberg::fr::field_t) * ele.size());  
     for (size_t i = 0; i < ele.size(); ++i)
     {
         barretenberg::fr::serialize_to_buffer(ele[i], &buffer[i * sizeof(barretenberg::fr::field_t)]);
@@ -35,7 +35,7 @@ inline std::vector<barretenberg::fr::field_t> read_field_elements(const std::vec
     std::vector<barretenberg::fr::field_t> elements;
     for (size_t i = 0; i < num_elements; ++i)
     {
-        elements.emplace_back(barretenberg::fr::serialize_from_buffer(&buffer[i * num_elements]));
+        elements.push_back(barretenberg::fr::serialize_from_buffer(&buffer[i * sizeof(barretenberg::fr::field_t)]));
     }
     return elements;
 }

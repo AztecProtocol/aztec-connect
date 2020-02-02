@@ -177,7 +177,6 @@ std::shared_ptr<proving_key> StandardComposer::compute_proving_key()
     ASSERT(n == q_3.size());
 
     const size_t total_num_gates = n + public_inputs.size();
-
     size_t log2_n = static_cast<size_t>(log2(total_num_gates + 1));
     if ((1UL << log2_n) != (total_num_gates + 1)) {
         ++log2_n;
@@ -194,11 +193,7 @@ std::shared_ptr<proving_key> StandardComposer::compute_proving_key()
     for (size_t i = 0; i < public_inputs.size(); ++i)
     {
         epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
-        epicycle right{ static_cast<uint32_t>(i - public_inputs.size()), WireType::RIGHT };
-        epicycle out{ static_cast<uint32_t>(i - public_inputs.size()), WireType::OUTPUT };
         wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
-        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(right);
-        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(out);
     }
     circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size());
     polynomial poly_q_m(new_n);
@@ -241,10 +236,6 @@ std::shared_ptr<proving_key> StandardComposer::compute_proving_key()
     poly_q_3_fft.coset_fft(circuit_proving_key->mid_domain);
     poly_q_m_fft.coset_fft(circuit_proving_key->mid_domain);
     poly_q_c_fft.coset_fft(circuit_proving_key->mid_domain);
-
-    // size_t memory = poly_q_m.get_max_size() * 5 * 32;
-    // memory += poly_q_m_fft.get_max_size() * 5 * 32;
-    // printf("constraint selector memory = %lu \n", memory / (1024UL * 1024UL));
 
     circuit_proving_key->constraint_selectors.insert({ "q_m", std::move(poly_q_m )});
     circuit_proving_key->constraint_selectors.insert({ "q_c", std::move(poly_q_c )});

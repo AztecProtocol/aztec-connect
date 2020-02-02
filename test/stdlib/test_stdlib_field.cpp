@@ -16,6 +16,8 @@ using namespace barretenberg;
 using namespace plonk;
 
 typedef stdlib::field_t<waffle::StandardComposer> field_t;
+typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
+typedef stdlib::public_witness_t<waffle::StandardComposer> public_witness_t;
 
 void fibbonaci(waffle::StandardComposer& composer)
 {
@@ -31,7 +33,6 @@ void fibbonaci(waffle::StandardComposer& composer)
         c = a + b;
     }
 }
-
 uint64_t fidget(waffle::StandardComposer& composer)
 {
     field_t a(stdlib::public_witness_t(&composer, fr::one)); // a is a legit wire value in our circuit
@@ -67,9 +68,10 @@ uint64_t fidget(waffle::StandardComposer& composer)
 
 void generate_test_plonk_circuit(waffle::StandardComposer& composer, size_t num_gates)
 {
-    plonk::stdlib::field_t a(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
-    plonk::stdlib::field_t b(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
-    plonk::stdlib::field_t c(&composer);
+    field_t a(public_witness_t(&composer, barretenberg::fr::random_element()));
+    field_t b(public_witness_t(&composer, barretenberg::fr::random_element()));
+
+    field_t c(&composer);
     for (size_t i = 0; i < (num_gates / 4) - 4; ++i)
     {
         c = a + b;
@@ -77,6 +79,21 @@ void generate_test_plonk_circuit(waffle::StandardComposer& composer, size_t num_
         a = b * b;
         b = c * c;
     }
+}
+
+TEST(stdlib_field, test_add_mul_with_constants)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    uint64_t expected = fidget(composer);
+    waffle::Prover prover = composer.preprocess();
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[17]), { { expected, 0, 0, 0 } }), true);
+
+    EXPECT_EQ(prover.n, 32UL);
+    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::plonk_proof proof = prover.construct_proof();
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
 }
 
 TEST(stdlib_field, test_field_fibbonaci)
@@ -97,28 +114,28 @@ TEST(stdlib_field, test_field_fibbonaci)
     EXPECT_EQ(result, true);
 }
 
-TEST(stdlib_field, test_add_mul_with_constants)
-{
-    waffle::StandardComposer composer = waffle::StandardComposer();
+// TEST(stdlib_field, test_add_mul_with_constants)
+// {
+//     waffle::StandardComposer composer = waffle::StandardComposer();
 
-    uint64_t expected = fidget(composer);
-    waffle::Prover prover = composer.preprocess();
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[17]), { { expected, 0, 0, 0 } }), true);
+//     uint64_t expected = fidget(composer);
+//     waffle::Prover prover = composer.preprocess();
+//     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[17]), { { expected, 0, 0, 0 } }), true);
 
-    EXPECT_EQ(prover.n, 32UL);
-    waffle::Verifier verifier = waffle::preprocess(prover);
-    waffle::plonk_proof proof = prover.construct_proof();
-    bool result = verifier.verify_proof(proof);
-    EXPECT_EQ(result, true);
-}
+//     EXPECT_EQ(prover.n, 32UL);
+//     waffle::Verifier verifier = waffle::preprocess(prover);
+//     waffle::plonk_proof proof = prover.construct_proof();
+//     bool result = verifier.verify_proof(proof);
+//     EXPECT_EQ(result, true);
+// }
 
 TEST(stdlib_field, test_larger_circuit)
 {
     size_t n = 16384;
     waffle::StandardComposer composer = waffle::StandardComposer(n);
-    waffle::StandardComposer composer_b = waffle::StandardComposer(n);
+
     generate_test_plonk_circuit(composer, n);
-    generate_test_plonk_circuit(composer_b, n);
+
     waffle::Prover prover = composer.preprocess();
 
     waffle::Verifier verifier = waffle::preprocess(prover);

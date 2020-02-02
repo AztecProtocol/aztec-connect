@@ -77,7 +77,7 @@ transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
     constexpr size_t g1_size = 64;
     constexpr size_t fr_size = 32;
     const size_t public_input_size = fr_size * num_public_inputs;
-    static const transcript::Manifest output = transcript::Manifest(
+    const transcript::Manifest output = transcript::Manifest(
         { transcript::Manifest::RoundManifest({ { "circuit_size", 4, false } }, "init"),
           transcript::Manifest::RoundManifest({ { "public_inputs", public_input_size, false },
                                                                { "W_1", g1_size, false },
