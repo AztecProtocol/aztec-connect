@@ -9,7 +9,7 @@
 using namespace benchmark;
 using namespace plonk::stdlib::merkle_tree;
 
-constexpr size_t DEPTH = 256;
+constexpr size_t DEPTH = 64;
 
 void hash(State& state) noexcept
 {
@@ -17,7 +17,7 @@ void hash(State& state) noexcept
         hash({ { { 0, 0, 0, 0 } }, { { 1, 1, 1, 1 } } });
     }
 }
-BENCHMARK(hash);
+BENCHMARK(hash)->MinTime(5);
 
 void update_first_element(State& state) noexcept
 {

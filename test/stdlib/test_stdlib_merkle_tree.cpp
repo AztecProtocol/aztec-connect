@@ -83,6 +83,79 @@ TEST(stdlib_merkle_tree, test_leveldb_update_member)
     EXPECT_TRUE(fr::eq(db.root(), memdb.root()));
 }
 
+TEST(stdlib_merkle_tree, test_leveldb_deep)
+{
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 64);
+
+    for (size_t i = 0; i < 1024; ++i) {
+        EXPECT_TRUE(fr::eq(db.get_element(i), { { 0, 0, 0, 0 } }));
+    }
+    for (size_t i = 0; i < 1024; ++i) {
+        db.update_element(i, { { 0, 0, 0, i } });
+    }
+    for (size_t i = 0; i < 1024; ++i) {
+        EXPECT_TRUE(fr::eq(db.get_element(i), { { 0, 0, 0, i } }));
+    }
+}
+
+TEST(stdlib_merkle_tree, test_leveldb_forks)
+{
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
+
+    db.update_element(0, { { 0, 0, 0, 0 } });
+    db.update_element(4, { { 4, 0, 0, 0 } });
+    db.update_element(3, { { 3, 0, 0, 0 } });
+    db.update_element(6, { { 6, 0, 0, 0 } });
+    db.update_element(2, { { 2, 0, 0, 0 } });
+    db.update_element(7, { { 7, 0, 0, 0 } });
+    db.update_element(1, { { 1, 0, 0, 0 } });
+    db.update_element(5, { { 5, 0, 0, 0 } });
+
+    for (size_t i = 0; i < 8; ++i) {
+        EXPECT_TRUE(fr::eq(db.get_element(i), { { i, 0, 0, 0 } }));
+    }
+}
+
+TEST(stdlib_merkle_tree, test_leveldb_deep_forks)
+{
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 64);
+
+    db.update_element(15956002367106947048ULL, { { 1, 0, 0, 0 } });
+    db.update_element(13261513317649820665ULL, { { 2, 0, 0, 0 } });
+    db.update_element(11344316348679559144ULL, { { 3, 0, 0, 0 } });
+    db.update_element(1485930635714443825ULL, { { 4, 0, 0, 0 } });
+    db.update_element(18347723794972374003ULL, { { 5, 0, 0, 0 } });
+
+    EXPECT_TRUE(fr::eq(db.get_element(15956002367106947048ULL), { { 1, 0, 0, 0 } }));
+    EXPECT_TRUE(fr::eq(db.get_element(13261513317649820665ULL), { { 2, 0, 0, 0 } }));
+    EXPECT_TRUE(fr::eq(db.get_element(11344316348679559144ULL), { { 3, 0, 0, 0 } }));
+    EXPECT_TRUE(fr::eq(db.get_element(1485930635714443825ULL), { { 4, 0, 0, 0 } }));
+    EXPECT_TRUE(fr::eq(db.get_element(18347723794972374003ULL), { { 5, 0, 0, 0 } }));
+    EXPECT_TRUE(fr::eq(db.get_element(18347723794972374002ULL), fr::zero));
+}
+
+TEST(stdlib_merkle_tree, test_leveldb_update_1024_random)
+{
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 64);
+    std::vector<std::pair<size_t, fr::field_t>> entries;
+
+    for (size_t i = 0; i < 1024; i++) {
+        size_t index;
+        getentropy((void*)&index, sizeof(index));
+        fr::field_t value = { { index, 0, 0, 0 } };
+        db.update_element(index, value);
+        entries.push_back(std::make_pair(index, value));
+    }
+
+    for (auto e : entries) {
+        EXPECT_TRUE(fr::eq(db.get_element(e.first), e.second));
+    }
+}
+
 TEST(stdlib_merkle_tree, test_leveldb_get_hash_path)
 {
     stdlib::merkle_tree::MemoryStore memdb(10);

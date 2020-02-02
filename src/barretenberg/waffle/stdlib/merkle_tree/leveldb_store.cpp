@@ -102,6 +102,10 @@ fr::field_t LevelDbStore::get_element(size_t index)
     return status.ok() ? from_string(data) : fr::zero;
 }
 
+inline size_t keep_n_lsb(size_t input, size_t num_bits) {
+    return num_bits >= sizeof(input) * 8 ? input : input & ((1ULL << num_bits) - 1);
+}
+
 fr::field_t LevelDbStore::get_element(fr::field_t const& root, size_t index, size_t height)
 {
     if (height == 0) {
@@ -115,10 +119,15 @@ fr::field_t LevelDbStore::get_element(fr::field_t const& root, size_t index, siz
         return zero_hashes_[0];
     }
 
-    bool is_right = (index >> (height - 1)) & 0x1;
-    fr::field_t subtree_root = from_string(data, is_right * 32);
-    size_t subtree_index = index & ~(1ULL << height);
-    return get_element(subtree_root, subtree_index, height - 1);
+    if (data.size() > 64) {
+        size_t existing_index = *(size_t*)(data.data() + 32 + 24);
+        fr::field_t existing_value = from_string(data, 0);
+        return (existing_index == index) ? existing_value : zero_hashes_[0];
+    } else {
+        bool is_right = (index >> (height - 1)) & 0x1;
+        fr::field_t subtree_root = from_string(data, is_right * 32);
+        return get_element(subtree_root, index, height - 1);
+    }
 }
 
 void LevelDbStore::update_element(size_t index, fr::field_t const& value)
@@ -130,6 +139,7 @@ void LevelDbStore::update_element(size_t index, fr::field_t const& value)
     root_ = update_element(root_, sha_leaf, index, depth_, batch);
     db_->Write(leveldb::WriteOptions(), &batch);
     // std::cout << "POST UPDATE ROOT: " << root_ << std::endl;
+    //std::cout << std::endl;
 }
 
 fr::field_t LevelDbStore::binary_put(
@@ -150,23 +160,25 @@ fr::field_t LevelDbStore::fork_stump(fr::field_t const& value1,
                                      fr::field_t const& value2,
                                      size_t index2,
                                      size_t height,
-                                     size_t stump_height,
+                                     size_t common_height,
                                      leveldb::WriteBatch& batch)
 {
-    if (height == stump_height) {
+    if (height == common_height) {
         if (height == 1) {
             // std::cout << "Stump forked into leaves." << std::endl;
             return binary_put(index1, value1, value2, height, batch);
         } else {
-            // std::cout << "Stump forked into two at height " << height << std::endl;
-            fr::field_t stump1_hash = compute_zero_path_hash(height, index1, value1);
-            fr::field_t stump2_hash = compute_zero_path_hash(height, index2, value2);
+            size_t stump_height = height - 1;
+            // std::cout << "Stump forked into two at height " << stump_height << " index1 " << subtree_index1 << " index2 "
+            //           << subtree_index2 << std::endl;
+            fr::field_t stump1_hash = compute_zero_path_hash(stump_height, index1, value1);
+            fr::field_t stump2_hash = compute_zero_path_hash(stump_height, index2, value2);
             put_stump(stump1_hash, index1, value1, batch);
             put_stump(stump2_hash, index2, value2, batch);
             return binary_put(index1, stump1_hash, stump2_hash, height, batch);
         }
     } else {
-        auto new_root = fork_stump(value1, index1, value2, index2, height - 1, stump_height, batch);
+        auto new_root = fork_stump(value1, index1, value2, index2, height - 1, common_height, batch);
         // std::cout << "Stump branch hash at " << height << " " << new_root << " " << zero_hashes_[height] <<
         // std::endl;
         return binary_put(index1, new_root, zero_hashes_[height - 1], height, batch);
@@ -206,19 +218,18 @@ fr::field_t LevelDbStore::update_element(
         }
 
         fr::field_t existing_value = from_string(data, 0);
-        size_t common_bits = (size_t)__builtin_clzl(existing_index ^ index);
+        size_t common_bits = (size_t)__builtin_clzl(keep_n_lsb(existing_index, height) ^ keep_n_lsb(index, height));
         size_t ignored_bits = sizeof(size_t) * 8 - height;
         size_t common_height = height - (common_bits - ignored_bits);
-        // std::cout << height << " " << common_bits << " " << existing_index << " " << index << " " << common_height
-        //           << std::endl;
+        // std::cout << height << " " << common_bits << " " << ignored_bits << " " << existing_index << " " << index << " "
+        //           << common_height << std::endl;
 
         return fork_stump(existing_value, existing_index, value, index, height, common_height, batch);
     } else {
         bool is_right = (index >> (height - 1)) & 0x1;
         // std::cout << "is_right:" << is_right << std::endl;
         fr::field_t subtree_root = from_string(data, is_right * 32);
-        size_t subtree_index = index & ~(1ULL << height);
-        subtree_root = update_element(subtree_root, value, subtree_index, height - 1, batch);
+        subtree_root = update_element(subtree_root, value, index, height - 1, batch);
         auto left = from_string(data, 0);
         auto right = from_string(data, 32);
         if (is_right) {

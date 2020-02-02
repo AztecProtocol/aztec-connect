@@ -15,7 +15,7 @@ merkle_tree<ComposerContext>::merkle_tree(ComposerContext& ctx, size_t depth)
     , depth_(depth)
     , size_(0)
 {
-    ASSERT(depth_ >= 1 && depth <= 256);
+    ASSERT(depth_ >= 1 && depth <= 128);
     total_size_ = 1ULL << depth_;
     root_ = field_t(witness_t(&ctx_, store_.root()));
 }
