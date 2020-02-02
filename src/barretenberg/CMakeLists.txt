@@ -36,6 +36,8 @@ add_library(
     curves/bn254/pairing.cpp
     curves/bn254/pairing.hpp
     curves/grumpkin/grumpkin.hpp
+    misc_crypto/schnorr/schnorr.tcc
+    misc_crypto/schnorr/schnorr.hpp
     io/io.hpp
     keccak/hash_types.h
     keccak/keccakf1600.c
@@ -162,6 +164,8 @@ if(PROFILING)
         curves/bn254/pairing.cpp
         curves/bn254/pairing.hpp
         curves/grumpkin/grumpkin.hpp
+        misc_crypto/schnorr/schnorr.tcc
+        misc_crypto/schnorr/schnorr.hpp
         io/io.hpp
         keccak/hash_types.h
         keccak/keccakf1600.c
