@@ -121,7 +121,7 @@ TEST(stdlib_merkle_tree, test_leveldb_forks)
 TEST(stdlib_merkle_tree, test_leveldb_deep_forks)
 {
     leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
-    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 64);
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 128);
 
     db.update_element(15956002367106947048ULL, { { 1, 0, 0, 0 } });
     db.update_element(13261513317649820665ULL, { { 2, 0, 0, 0 } });
@@ -140,7 +140,7 @@ TEST(stdlib_merkle_tree, test_leveldb_deep_forks)
 TEST(stdlib_merkle_tree, test_leveldb_update_1024_random)
 {
     leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
-    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 64);
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 128);
     std::vector<std::pair<size_t, fr::field_t>> entries;
 
     for (size_t i = 0; i < 1024; i++) {

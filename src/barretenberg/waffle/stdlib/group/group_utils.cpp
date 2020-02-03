@@ -185,7 +185,7 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
     size_t quads_per_thread = 128 / num_threads;
 
 #ifndef NO_MULTITHREADING
-#pragma omp parallel for reduction(CustomSum : accumulator) num_threads(2) firstprivate(quads_per_thread)
+#pragma omp parallel for reduction(CustomSum : accumulator) num_threads(num_threads) firstprivate(quads_per_thread)
 #endif
     for (size_t j = 0; j < num_threads; ++j) {
         size_t offset = j * quads_per_thread;

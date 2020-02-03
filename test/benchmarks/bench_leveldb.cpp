@@ -9,7 +9,7 @@
 using namespace benchmark;
 using namespace plonk::stdlib::merkle_tree;
 
-constexpr size_t DEPTH = 64;
+constexpr size_t DEPTH = 128;
 
 void hash(State& state) noexcept
 {
