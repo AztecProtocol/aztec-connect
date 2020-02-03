@@ -53,7 +53,8 @@ add_executable(
     test_prover.cpp
     test_verifier.cpp
     test_transcript.cpp
-    test_schnorr.cpp
+    misc_crypto/test_schnorr.cpp
+    misc_crypto/test_sha256.cpp
     widgets/test_turbo_arithmetic_widget.cpp
     widgets/test_turbo_fixed_base_widget.cpp
     composer/test_standard_composer.cpp

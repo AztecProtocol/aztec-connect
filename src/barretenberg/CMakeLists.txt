@@ -36,6 +36,8 @@ add_library(
     curves/bn254/pairing.cpp
     curves/bn254/pairing.hpp
     curves/grumpkin/grumpkin.hpp
+    misc_crypto/sha256/sha256.cpp
+    misc_crypto/sha256/sha256.hpp
     misc_crypto/schnorr/schnorr.tcc
     misc_crypto/schnorr/schnorr.hpp
     io/io.hpp
@@ -164,6 +166,8 @@ if(PROFILING)
         curves/bn254/pairing.cpp
         curves/bn254/pairing.hpp
         curves/grumpkin/grumpkin.hpp
+        misc_crypto/sha256/sha256.cpp
+        misc_crypto/sha256/sha256.hpp
         misc_crypto/schnorr/schnorr.tcc
         misc_crypto/schnorr/schnorr.hpp
         io/io.hpp

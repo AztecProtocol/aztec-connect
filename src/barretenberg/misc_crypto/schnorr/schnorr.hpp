@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../keccak/keccak.h"
+#include "../sha256/sha256.hpp"
 
 struct KeccakHasher
 {
@@ -14,6 +15,14 @@ struct KeccakHasher
         memcpy((void*)&output[0], (void*)&hash_result.word64s[0], 32);
         return output;
     }
+};
+
+struct Sha256Hasher
+{
+    static std::vector<uint8_t> hash(const std::vector<uint8_t>& message)
+    {
+        return sha256::sha256(message);
+    } 
 };
 
 namespace schnorr
