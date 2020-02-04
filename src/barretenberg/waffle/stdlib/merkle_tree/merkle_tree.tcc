@@ -1,7 +1,7 @@
 #include "../crypto/hash/pedersen.hpp"
 #include "../crypto/hash/sha256.hpp"
 #include "hash.hpp"
-#include "sha256_field.hpp"
+#include "sha256_value.hpp"
 
 namespace plonk {
 namespace stdlib {
@@ -32,22 +32,23 @@ typename merkle_tree<ComposerContext>::hash_path merkle_tree<ComposerContext>::c
 }
 
 template <typename ComposerContext>
-bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(field_t const& input, uint32 const& index)
+bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(value_t const& value, index_t const& index)
 {
     fr_hash_path hashes = store_.get_hash_path(index.get_value());
     auto witness_hashes = create_witness_hash_path(hashes);
-    auto value = sha256_field(input);
+    auto sha_value = sha256_value(value);
 
     // std::cout << hashes << std::endl;
     // std::cout << sha256({ input.get_value() }) << std::endl;
     // std::cout << value << std::endl;
-    return check_membership(root_, witness_hashes, value, index);
+    return check_membership(root_, witness_hashes, sha_value, index);
 }
 
 template <typename ComposerContext>
-bool_t<ComposerContext> merkle_tree<ComposerContext>::assert_check_membership(field_t const& input, uint32 const& index)
+bool_t<ComposerContext> merkle_tree<ComposerContext>::assert_check_membership(value_t const& value,
+                                                                              index_t const& index)
 {
-    bool_t is_member = check_membership(input, index);
+    bool_t is_member = check_membership(value, index);
     ctx_.assert_equal_constant(is_member.witness_index, barretenberg::fr::one);
     return is_member;
 }
@@ -61,7 +62,7 @@ field_t<ComposerContext> merkle_tree<ComposerContext>::compress(field_t const& l
 template <typename ComposerContext>
 bool_t<ComposerContext> merkle_tree<ComposerContext>::check_hash_path(field_t const& root,
                                                                       hash_path const& hashes,
-                                                                      uint32 const& index)
+                                                                      index_t const& index)
 {
     field_t one = witness_t(&ctx_, 1);
     field_t current = compress(hashes[0].first, hashes[0].second);
@@ -82,8 +83,8 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::check_hash_path(field_t co
 template <typename ComposerContext>
 bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(field_t const& root,
                                                                        hash_path const& hashes,
-                                                                       field_t const& value,
-                                                                       uint32 const& index)
+                                                                       value_t const& value,
+                                                                       index_t const& index)
 {
     field_t one = witness_t(&ctx_, 1);
     field_t current = value;
@@ -106,11 +107,11 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(field_t c
     return is_member;
 }
 
-template <typename ComposerContext> void merkle_tree<ComposerContext>::add_member(field_t const& input)
+template <typename ComposerContext> void merkle_tree<ComposerContext>::add_member(value_t const& value)
 {
     ASSERT(size_ < total_size_);
     fr_hash_path old_hashes = store_.get_hash_path(size_);
-    fr_hash_path new_hashes = get_new_hash_path(size_, input.get_value());
+    fr_hash_path new_hashes = get_new_hash_path(old_hashes, size_, value.get_value());
     field_t new_root = field_t(&ctx_, hash({ new_hashes[depth_ - 1].first, new_hashes[depth_ - 1].second }));
     uint32 index = uint32(witness_t(&ctx_, size_));
 
@@ -119,15 +120,15 @@ template <typename ComposerContext> void merkle_tree<ComposerContext>::add_membe
                                barretenberg::fr::to_montgomery_form({ { size_, 0UL, 0UL, 0UL } }));
 
     update_membership(
-        new_root, create_witness_hash_path(new_hashes), input, root_, create_witness_hash_path(old_hashes), index);
+        new_root, create_witness_hash_path(new_hashes), value, root_, create_witness_hash_path(old_hashes), index);
 
-    store_.update_element(size_, input.get_value());
+    store_.update_element(size_, value.get_value());
     root_ = new_root;
     size_ += 1;
 }
 
 template <typename ComposerContext>
-void merkle_tree<ComposerContext>::update_member(field_t const& value, uint32 const& index)
+void merkle_tree<ComposerContext>::update_member(value_t const& value, index_t const& index)
 {
     uint32_t idx = index.get_value();
 
@@ -142,7 +143,7 @@ void merkle_tree<ComposerContext>::update_member(field_t const& value, uint32 co
     // ctx_.assert_equal_constant((index < size).witness_index, barretenberg::fr::one);
 
     fr_hash_path old_hashes = store_.get_hash_path(idx);
-    fr_hash_path new_hashes = get_new_hash_path(idx, value.get_value());
+    fr_hash_path new_hashes = get_new_hash_path(old_hashes, idx, value.get_value());
     // std::cout << "value " << value << std::endl;
     // std::cout << "sha value " << sha256({ value.get_value() }) << std::endl;
     // std::cout << "old hashes " << old_hashes << std::endl;
@@ -162,13 +163,13 @@ void merkle_tree<ComposerContext>::update_membership(field_t const& new_root,
                                                      field_t const& new_value,
                                                      field_t const& old_root,
                                                      hash_path const& old_hashes,
-                                                     uint32 const& index)
+                                                     index_t const& index)
 {
     // Check old path hashes lead to the old root. They're used when validating the new path hashes.
     bool_t old_hashes_valid = check_hash_path(old_root, old_hashes, index);
     ctx_.assert_equal_constant(old_hashes_valid.witness_index, barretenberg::fr::one);
 
-    field_t sha_value = sha256_field(new_value);
+    field_t sha_value = sha256_value(new_value);
 
     // Check the new path hashes lead from the new value to the new root.
     bool_t new_hashes_valid = check_membership(new_root, new_hashes, sha_value, index);
@@ -181,24 +182,6 @@ void merkle_tree<ComposerContext>::update_membership(field_t const& new_root,
         bool_t share_right = (old_hashes[i].second == new_hashes[i].second) & !path_bit;
         ctx_.assert_equal_constant((share_left ^ share_right).witness_index, barretenberg::fr::one);
     }
-}
-
-template <typename ComposerContext>
-fr_hash_path merkle_tree<ComposerContext>::get_new_hash_path(size_t index, barretenberg::fr::field_t value)
-{
-    fr_hash_path path = store_.get_hash_path(index);
-    barretenberg::fr::field_t current = sha256({ value });
-    for (size_t i = 0; i < depth_; ++i) {
-        bool path_bit = index & 0x1;
-        if (path_bit) {
-            path[i].second = current;
-        } else {
-            path[i].first = current;
-        }
-        current = hash({ path[i].first, path[i].second });
-        index /= 2;
-    }
-    return path;
 }
 
 } // namespace merkle_tree

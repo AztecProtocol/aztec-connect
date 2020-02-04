@@ -5,7 +5,7 @@ namespace plonk {
 namespace stdlib {
 namespace merkle_tree {
 
-template <typename ComposerContext> field_t<ComposerContext> sha256_field(field_t<ComposerContext> const& input)
+template <typename ComposerContext> field_t<ComposerContext> sha256_value(field_t<ComposerContext> const& input)
 {
     ASSERT(input.context != nullptr);
     auto ctx = input.context;

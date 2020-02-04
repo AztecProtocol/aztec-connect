@@ -165,6 +165,11 @@ TEST(stdlib_merkle_tree, test_leveldb_get_hash_path)
 
     EXPECT_EQ(memdb.get_hash_path(512), db.get_hash_path(512));
 
+    memdb.update_element(512, { { 0, 0, 0, 512 } });
+    db.update_element(512, { { 0, 0, 0, 512 } });
+
+    EXPECT_EQ(db.get_hash_path(512), memdb.get_hash_path(512));
+
     for (size_t i = 0; i < 1024; ++i) {
         memdb.update_element(i, { { 0, 0, 0, i } });
         db.update_element(i, { { 0, 0, 0, i } });
@@ -189,7 +194,7 @@ TEST(stdlib_merkle_tree, sha256_native_vs_circuit)
     fr::field_t x = fr::one;
     Composer composer = Composer();
     field_t y = witness_t(&composer, x);
-    auto z = plonk::stdlib::merkle_tree::sha256_field(y);
+    auto z = plonk::stdlib::merkle_tree::sha256_value(y);
     auto zz = plonk::stdlib::merkle_tree::sha256({ x });
     EXPECT_TRUE(fr::eq(z.get_value(), zz));
 }
