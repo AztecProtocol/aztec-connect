@@ -141,12 +141,12 @@ TEST(stdlib_merkle_tree, test_leveldb_update_1024_random)
 {
     leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
     stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 128);
-    std::vector<std::pair<size_t, fr::field_t>> entries;
+    std::vector<std::pair<stdlib::merkle_tree::index_t, fr::field_t>> entries;
 
     for (size_t i = 0; i < 1024; i++) {
-        size_t index;
+        stdlib::merkle_tree::index_t index;
         getentropy((void*)&index, sizeof(index));
-        fr::field_t value = { { index, 0, 0, 0 } };
+        fr::field_t value = { { i, 0, 0, 0 } };
         db.update_element(index, value);
         entries.push_back(std::make_pair(index, value));
     }

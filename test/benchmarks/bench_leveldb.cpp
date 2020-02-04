@@ -24,7 +24,7 @@ void update_first_element(State& state) noexcept
     leveldb::DestroyDB("/tmp/leveldb_bench", leveldb::Options());
     LevelDbStore db("/tmp/leveldb_bench", DEPTH);
     for (auto _ : state) {
-        db.update_element(0, { { 0, 0, 0, 1 } });
+        db.update_element(0, { { 1, 0, 0, 0 } });
     }
 }
 BENCHMARK(update_first_element)->Unit(benchmark::kMillisecond);
@@ -37,7 +37,7 @@ void update_elements(State& state) noexcept
         LevelDbStore db("/tmp/leveldb_bench", DEPTH);
         state.ResumeTiming();
         for (size_t i = 0; i < (size_t)state.range(0); ++i) {
-            db.update_element(i, { { 0, 0, 0, i } });
+            db.update_element(i, { { i, 0, 0, 0 } });
         }
     }
 }
@@ -51,10 +51,10 @@ void update_1024_random_elements(State& state) noexcept
         LevelDbStore db("/tmp/leveldb_bench", DEPTH);
         for (size_t i = 0; i < 1024; i++) {
             state.PauseTiming();
-            size_t index;
+            index_t index;
             getentropy((void*)&index, sizeof(index));
             state.ResumeTiming();
-            db.update_element(index, { { 0, 0, 0, index } });
+            db.update_element(index, { { i, 0, 0, 0 } });
         }
     }
 }
