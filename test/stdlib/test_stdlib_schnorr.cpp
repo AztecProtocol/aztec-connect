@@ -1,0 +1,105 @@
+#include <gtest/gtest.h>
+
+#include <barretenberg/waffle/composer/turbo_composer.hpp>
+#include <barretenberg/waffle/proof_system/preprocess.hpp>
+#include <barretenberg/waffle/proof_system/prover/prover.hpp>
+#include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
+#include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
+
+#include <barretenberg/waffle/stdlib/bitarray/bitarray.hpp>
+#include <barretenberg/waffle/stdlib/common.hpp>
+#include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
+#include <barretenberg/waffle/stdlib/crypto/schnorr/schnorr.hpp>
+
+#include <barretenberg/curves/grumpkin/grumpkin.hpp>
+#include <barretenberg/misc_crypto/schnorr/schnorr.hpp>
+
+#include <iostream>
+#include <memory>
+
+using namespace barretenberg;
+using namespace plonk;
+
+typedef stdlib::bool_t<waffle::TurboComposer> bool_t;
+typedef stdlib::field_t<waffle::TurboComposer> field_t;
+typedef stdlib::uint32<waffle::TurboComposer> uint32;
+typedef stdlib::bitarray<waffle::TurboComposer> bitarray;
+typedef stdlib::witness_t<waffle::TurboComposer> witness_t;
+typedef stdlib::public_witness_t<waffle::TurboComposer> public_witness_t;
+
+namespace {
+uint32_t get_random_int()
+{
+    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+}
+} // namespace
+
+
+TEST(stdlib_schnorr, test_scalar_mul)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    grumpkin::fr::field_t scalar_mont = grumpkin::fr::random_element();
+    grumpkin::fr::field_t scalar = grumpkin::fr::from_montgomery_form(scalar_mont);
+
+    bitarray scalar_bits(&composer, 256);
+    for (size_t i = 0; i < 256; ++i)
+    {
+        scalar_bits[255 - i] = bool_t(&composer, grumpkin::fr::get_bit(scalar, i));
+    }
+
+    grumpkin::g1::element expected = grumpkin::g1::group_exponentiation_no_endo(grumpkin::g1::one, scalar_mont);
+    expected = grumpkin::g1::normalize(expected);
+    plonk::stdlib::point input{ witness_t(&composer, grumpkin::g1::affine_one.x), witness_t(&composer, grumpkin::g1::affine_one.y) };
+
+    plonk::stdlib::point output = plonk::stdlib::schnorr::variable_base_mul(input, scalar_bits);
+
+    EXPECT_EQ(fr::eq(output.x.get_value(), expected.x), true);
+    EXPECT_EQ(fr::eq(output.y.get_value(), expected.y), true);
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+
+TEST(stdlib_schnorr, verify_signature)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    // erm...what do we do now?
+    std::string message_string = "Instructions unclear, ask again later.";
+
+    crypto::schnorr::key_pair<grumpkin::fr, grumpkin::g1> account;
+    account.private_key = grumpkin::fr::random_element();
+    account.public_key = grumpkin::g1::group_exponentiation(grumpkin::g1::affine_one, account.private_key);
+
+    crypto::schnorr::signature signature = crypto::schnorr::construct_signature<Sha256Hasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(message_string, account);
+
+    bool first_result = crypto::schnorr::verify_signature<Sha256Hasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(message_string, account.public_key, signature);
+    EXPECT_EQ(first_result, true);
+
+    stdlib::point pub_key{ witness_t(&composer, account.public_key.x), witness_t(&composer, account.public_key.y )};
+    stdlib::schnorr::signature_bits sig = stdlib::schnorr::convert_signature(&composer, signature);
+    stdlib::bitarray<waffle::TurboComposer> message = stdlib::schnorr::convert_message(&composer, message_string);
+    bool signature_result = stdlib::schnorr::verify_signature(message, pub_key, sig);
+
+    EXPECT_EQ(signature_result, true);
+
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}

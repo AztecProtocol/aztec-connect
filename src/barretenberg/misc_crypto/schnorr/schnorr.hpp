@@ -25,6 +25,8 @@ struct Sha256Hasher
     } 
 };
 
+namespace crypto
+{
 namespace schnorr
 {
     template <typename Fr, typename G1>
@@ -46,5 +48,5 @@ namespace schnorr
     template <typename Hash, typename Fq, typename Fr, typename G1>
     signature construct_signature(const std::string& message, const key_pair<Fr, G1>& account);
 }
-
+}
 #include "./schnorr.tcc"

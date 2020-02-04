@@ -1,5 +1,7 @@
 #pragma once
 
+namespace crypto
+{
 namespace schnorr
 {
     template <typename Hash, typename Fq, typename Fr, typename G1>
@@ -13,7 +15,7 @@ namespace schnorr
         Fq::serialize_to_buffer(R.x, &r[0]);
 
         std::vector<uint8_t> message_buffer;
-        // message_buffer.resize(r.size() + message.size());
+
         std::copy(r.begin(), r.end(), std::back_inserter(message_buffer));
         std::copy(message.begin(), message.end(), std::back_inserter(message_buffer));
 
@@ -44,7 +46,6 @@ namespace schnorr
         typename G1::element R;
         G1::mixed_add(R2_ele, R1, R);
         R = G1::normalize(R);
-
         std::vector<uint8_t> r(sizeof(typename Fq::field_t));
         Fq::serialize_to_buffer(R.x, &r[0]);
 
@@ -56,4 +57,5 @@ namespace schnorr
 
         return Fr::eq(source_e, target_e);
     }
+}
 }

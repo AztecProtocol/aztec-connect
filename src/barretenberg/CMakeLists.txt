@@ -106,6 +106,8 @@ add_library(
     waffle/stdlib/crypto/hash/sha256.hpp
     waffle/stdlib/crypto/hash/pedersen.cpp
     waffle/stdlib/crypto/hash/pedersen.hpp
+    waffle/stdlib/crypto/schnorr/schnorr.tcc
+    waffle/stdlib/crypto/schnorr/schnorr.hpp
     noir/expression.cpp
     noir/statement.cpp
     noir/printer.cpp

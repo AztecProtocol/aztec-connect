@@ -69,6 +69,7 @@ add_executable(
     stdlib/test_stdlib_mimc.cpp
     stdlib/test_stdlib_sha256.cpp
     stdlib/test_stdlib_pedersen.cpp
+    stdlib/test_stdlib_schnorr.cpp
     noir/test_noir.cpp
 )
 

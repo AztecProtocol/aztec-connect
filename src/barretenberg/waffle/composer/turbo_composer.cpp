@@ -10,6 +10,28 @@
 using namespace barretenberg;
 
 namespace waffle {
+
+void TurboComposer::create_dummy_gate()
+{
+    gate_flags.push_back(0);
+    uint32_t idx = add_variable(fr::to_montgomery_form({{ 0x1111111111111111, 0x1111111111111111, 0x1111111111111111, 0x1111111111111111 }}));
+    w_l.emplace_back(idx);
+    w_r.emplace_back(idx);
+    w_o.emplace_back(idx);
+    w_4.emplace_back(idx);
+    q_arith.emplace_back(fr::zero);
+    q_4.emplace_back(fr::zero);
+    q_4_next.emplace_back(fr::zero);
+    q_ecc_1.emplace_back(fr::zero);
+
+    q_m.emplace_back(fr::zero);
+    q_1.emplace_back(fr::zero);
+    q_2.emplace_back(fr::zero);
+    q_3.emplace_back(fr::zero);
+    q_c.emplace_back(fr::zero);
+    ++n;
+}
+
 void TurboComposer::create_add_gate(const add_triple& in)
 {
     gate_flags.push_back(0);
@@ -318,6 +340,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     {
         return circuit_proving_key;
     }
+    create_dummy_gate();
     ASSERT(wire_epicycles.size() == variables.size());
     ASSERT(n == q_m.size());
     ASSERT(n == q_1.size());

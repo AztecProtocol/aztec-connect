@@ -128,10 +128,8 @@ std::vector<uint8_t> sha256(const std::vector<uint8_t>& input)
         uint8_t byte = static_cast<uint8_t>(l >> (uint64_t)(56 - (i * 8)));
         message_schedule.push_back(byte);
     }
-
     std::array<uint32_t, 8> rolling_hash;
     prepare_constants(rolling_hash);
-
     const size_t num_blocks = message_schedule.size() / 64;
     for (size_t i = 0; i < num_blocks; ++i) {
         std::array<uint32_t, 16> hash_input;
@@ -146,7 +144,6 @@ std::vector<uint8_t> sha256(const std::vector<uint8_t>& input)
         rolling_hash = sha256_block(rolling_hash, hash_input);
     }
 
-
     std::vector<uint8_t> output(32);
     memcpy((void*)&output[0], (void*)&rolling_hash[0], 32);
     if (internal::isLittleEndian())
@@ -157,47 +154,7 @@ std::vector<uint8_t> sha256(const std::vector<uint8_t>& input)
             output_uint32[j] = __builtin_bswap32(output_uint32[j]);
         }
     }
+
     return output;
 }
 }
-
-/*
-# Lagrange-base SRS  
-
-Our current reference string is in monomial form, having one in lagrange-base form would singificantly improve prover times. 
-
-In Barretenberg, our current reference string is interacted with via the `io` class.  
-
-The SRS is contained in `srs_db/transcript.dat`. It is stored in a raw binary format, with group elements packed into adjacent 64 byte chunks.  
-
-The transcript.dat file contains a 'manifest' object at the start of the file, which contains basic details like the SRS size.  
-
-The first task would be to use this SRS to produce one in Lagrange-base form, using our polynomial arithmetic and elliptic curve arithmetic libraries.  
-
-The first milestone would be to generate a small in-memory Lagrange-base SRS from a monomial SRS, and to validate this via a unit test. 
-
-Once the core algorithm is working, the second task would be to create a function that will take a `transcript.dat` file, produce a lagrange-base form,  
-and write it out as `transcript_lagrange_base.dat` or similar.  
-
-The second milsestone would be to write passing tests that validate the correctness of this new file.  
-
-Once we have `transcript_lagrange_base.dat`, we can integrate it into our prover algorithm. We have a helper class, `ReferenceString`, in `waffle/reference_string.hpp`,  
-that we use to pre-fetch our SRS and perform some precomputations on it for our Pippenger algorithm.  
-
-It currently has a container, `monomials`, that stores our monomial-form SRS. We would need a second container, 
-`lagrange_base`, that contains the lagrange-base variant.  
-
-Note that, until we also have produced a variant of the SRS in coset lagrange base form, we cannot remove the monomial basis SRS.  
-
-In the constructor of `ReferenceString`, we need a method that loads up the lagrange-base SRS and writes it into the newly created `lagrange_base` container.  
-
-The third milestone would be to validate the correctness of this via passing unit tests.  
-
-The final task would be to use the lagrange-base SRS in `prover.tcc`, when computing all of our commitments except the quotient polynomial.  
-
-### coset-lagrange-base  
-
-TODO. This seems non-trivial due to the fact that we split T(X) up into 4 sub-commitments. This is easy to do in monomial form,  
-but seems harder to do if our SRS is in coset-lagrange-base form.
-
-*/
