@@ -15,8 +15,8 @@
 
 using namespace benchmark;
 
-constexpr size_t MAX_GATES = 1 << 10;
-constexpr size_t NUM_CIRCUITS = 2;
+constexpr size_t MAX_GATES = 1 << 20;
+constexpr size_t NUM_CIRCUITS = 10;
 constexpr size_t START = (MAX_GATES) >> (NUM_CIRCUITS - 1);
 // constexpr size_t NUM_HASH_CIRCUITS = 8;
 // constexpr size_t MAX_HASH_ROUNDS = 8192;

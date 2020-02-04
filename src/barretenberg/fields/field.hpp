@@ -475,6 +475,13 @@ template <typename FieldParams> class field {
         }
     }
 
+    static inline bool is_quadratic_residue(const field_t& a)
+    {
+        field_t target_sqrt;
+        __sqrt(a, target_sqrt);
+        return eq(sqr(target_sqrt), a);
+    }
+
     /**
      * Get a random field element in montgomery form, place in `r`
      **/
