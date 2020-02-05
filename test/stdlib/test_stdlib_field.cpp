@@ -9,12 +9,14 @@
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 
 #include <barretenberg/waffle/stdlib/field/field.hpp>
+#include <barretenberg/waffle/stdlib/bool/bool.hpp>
 
 #include <memory>
 
 using namespace barretenberg;
 using namespace plonk;
 
+typedef stdlib::bool_t<waffle::StandardComposer> bool_t;
 typedef stdlib::field_t<waffle::StandardComposer> field_t;
 typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
 typedef stdlib::public_witness_t<waffle::StandardComposer> public_witness_t;
@@ -135,6 +137,50 @@ TEST(stdlib_field, test_larger_circuit)
     waffle::StandardComposer composer = waffle::StandardComposer(n);
 
     generate_test_plonk_circuit(composer, n);
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_field, is_zero)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    // yuck
+    field_t a = witness_t(public_witness_t(&composer, fr::random_element()));
+    field_t b = witness_t(public_witness_t(&composer, fr::neg_one()));
+    field_t c_1(&composer,  barretenberg::fr::to_montgomery_form({{ 0x1122334455667788, 0x8877665544332211, 0xaabbccddeeff9933, 0x1122112211221122 }}));
+    field_t c_2(&composer,  barretenberg::fr::to_montgomery_form({{ 0xaabbccddeeff9933, 0x8877665544332211, 0x1122334455667788, 0x1122112211221122 }}));
+    field_t c_3(&composer,  barretenberg::fr::one);
+
+    field_t c_4 = c_1 + c_2;
+    a = a * c_4 + c_4; // add some constant terms in to validate our normalization check works
+    b = b * c_4 + c_4;
+    b = (b - c_1 - c_2) / c_4;
+    b = b + c_3;
+
+    field_t d(&composer, fr::zero);
+    field_t e(&composer, fr::one);
+
+    const size_t old_n = composer.get_num_gates();
+    bool_t d_zero = d.is_zero();
+    bool_t e_zero = e.is_zero();
+    const size_t new_n = composer.get_num_gates();
+    EXPECT_EQ(old_n, new_n);
+
+    bool_t a_zero = a.is_zero();
+    bool_t b_zero = b.is_zero();
+
+    EXPECT_EQ(a_zero.get_value(), false);
+    EXPECT_EQ(b_zero.get_value(), true);
+    EXPECT_EQ(d_zero.get_value(), true);
+    EXPECT_EQ(e_zero.get_value(), false);
 
     waffle::Prover prover = composer.preprocess();
 

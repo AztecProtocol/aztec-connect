@@ -70,6 +70,7 @@ add_executable(
     stdlib/test_stdlib_sha256.cpp
     stdlib/test_stdlib_pedersen.cpp
     stdlib/test_stdlib_schnorr.cpp
+    stdlib/test_stdlib_pedersen_note.cpp
     noir/test_noir.cpp
 )
 

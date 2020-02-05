@@ -146,6 +146,7 @@ grumpkin::g1::affine_element get_generator(const size_t generator_index)
     return generators[generator_index];
 }
 
+
 grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const size_t hash_index)
 {
     barretenberg::fr::field_t scalar_multiplier = barretenberg::fr::from_montgomery_form(in);

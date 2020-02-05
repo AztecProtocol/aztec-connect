@@ -181,7 +181,6 @@ class ComposerBase
 
     virtual uint32_t add_public_variable(const barretenberg::fr::field_t& in)
     {
-        printf("adding public variable, current variable count = %lu \n", variables.size());
         variables.emplace_back(in);
         wire_epicycles.push_back(std::vector<epicycle>());
         const uint32_t index = static_cast<uint32_t>(variables.size()) - 1U;

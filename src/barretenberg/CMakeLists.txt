@@ -102,12 +102,15 @@ add_library(
     waffle/stdlib/bitarray/bitarray.hpp
     waffle/stdlib/mimc.tcc
     waffle/stdlib/mimc.hpp
+    waffle/stdlib/crypto/crypto.hpp
     waffle/stdlib/crypto/hash/sha256.tcc
     waffle/stdlib/crypto/hash/sha256.hpp
     waffle/stdlib/crypto/hash/pedersen.cpp
     waffle/stdlib/crypto/hash/pedersen.hpp
     waffle/stdlib/crypto/schnorr/schnorr.tcc
     waffle/stdlib/crypto/schnorr/schnorr.hpp
+    waffle/stdlib/crypto/commitment/pedersen_note.cpp
+    waffle/stdlib/crypto/commitment/pedersen_note.hpp
     noir/expression.cpp
     noir/statement.cpp
     noir/printer.cpp
@@ -236,10 +239,15 @@ if(PROFILING)
         waffle/stdlib/bitarray/bitarray.hpp
         waffle/stdlib/mimc.tcc
         waffle/stdlib/mimc.hpp
+        waffle/stdlib/crypto/crypto.hpp
         waffle/stdlib/crypto/hash/sha256.tcc
         waffle/stdlib/crypto/hash/sha256.hpp
         waffle/stdlib/crypto/hash/pedersen.cpp
         waffle/stdlib/crypto/hash/pedersen.hpp
+        waffle/stdlib/crypto/schnorr/schnorr.tcc
+        waffle/stdlib/crypto/schnorr/schnorr.hpp
+        waffle/stdlib/crypto/commitment/pedersen_note.cpp
+        waffle/stdlib/crypto/commitment/pedersen_note.hpp
     )
 
     target_link_libraries(

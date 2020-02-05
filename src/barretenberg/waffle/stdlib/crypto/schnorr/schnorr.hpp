@@ -4,14 +4,10 @@
 #include "../../field/field.hpp"
 #include "../../bitarray/bitarray.hpp"
 #include "../../../../misc_crypto/schnorr/schnorr.hpp"
+#include "../crypto.hpp"
 
 namespace plonk {
 namespace stdlib {
-struct point
-{
-    field_t<waffle::TurboComposer> x;
-    field_t<waffle::TurboComposer> y;
-};
 
 namespace schnorr {
 

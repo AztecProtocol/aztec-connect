@@ -27,6 +27,8 @@ template <typename ComposerContext> class field_t {
     field_t operator*(const field_t& other) const;
     field_t operator/(const field_t& other) const;
 
+    bool_t<ComposerContext> is_zero();
+
     field_t normalize();
 
     barretenberg::fr::field_t get_value() const;

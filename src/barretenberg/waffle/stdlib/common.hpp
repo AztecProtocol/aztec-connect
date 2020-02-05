@@ -69,7 +69,6 @@ template <typename ComposerContext> struct witness_t {
 
     witness_t(const public_witness_t<ComposerContext>& input)
     {
-        printf("cast\n");
         witness = input.witness;
         witness_index = input.witness_index;
         context = input.context;
