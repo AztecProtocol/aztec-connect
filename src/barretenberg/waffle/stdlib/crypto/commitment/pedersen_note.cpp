@@ -46,8 +46,6 @@ note compute_commitment(const field_t<waffle::TurboComposer>& view_key, const ui
 
     note result{{ x_4, y_4 }};
     return result;
-    // context->assert_equal(x_4.witness_index, note.ciphertext.x.witness_index);
-    // context->assert_equal(y_4.witness_index, note.ciphertext.y.witness_index);
 }
     
 }
