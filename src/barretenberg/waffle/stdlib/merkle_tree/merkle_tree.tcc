@@ -160,7 +160,7 @@ void merkle_tree<ComposerContext>::update_member(value_t const& value, index_t c
 template <typename ComposerContext>
 void merkle_tree<ComposerContext>::update_membership(field_t const& new_root,
                                                      hash_path const& new_hashes,
-                                                     field_t const& new_value,
+                                                     value_t const& new_value,
                                                      field_t const& old_root,
                                                      hash_path const& old_hashes,
                                                      index_t const& index)

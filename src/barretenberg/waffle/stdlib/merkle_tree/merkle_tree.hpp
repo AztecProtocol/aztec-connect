@@ -1,7 +1,7 @@
 #pragma once
 #include "../bitarray/bitarray.hpp"
+#include "../byte_array/byte_array.hpp"
 #include "../field/field.hpp"
-#include "../uint32/uint32.hpp"
 #include "leveldb_store.hpp"
 #include "memory_store.hpp"
 
@@ -15,7 +15,7 @@ template <typename ComposerContext> class merkle_tree {
     typedef stdlib::bool_t<ComposerContext> bool_t;
     typedef stdlib::uint32<ComposerContext> index_t;
     typedef stdlib::field_t<ComposerContext> value_t;
-    typedef stdlib::uint<ComposerContext> uint;
+    typedef stdlib::uint32<ComposerContext> uint32;
     typedef stdlib::bitarray<ComposerContext> bitarray;
     typedef std::vector<std::pair<field_t, field_t>> hash_path;
 

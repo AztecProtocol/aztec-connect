@@ -8,6 +8,7 @@
 #include "../../../curves/bn254/fr.hpp"
 
 #include "../bool/bool.hpp"
+#include "../byte_array/byte_array.hpp"
 #include "../common.hpp"
 #include "../field/field.hpp"
 #include "../int_utils.hpp"
@@ -25,6 +26,7 @@ template <typename ComposerContext> class uint {
     uint(size_t width, const field_t<ComposerContext>& other);
     uint(ComposerContext* parent_context, const std::vector<bool_t<ComposerContext>>& wires);
     uint(const uint& other);
+    uint(const byte_array<ComposerContext>& other);
 
     uint(char v)
         : uint(8, static_cast<uint64_t>(v))
@@ -45,6 +47,8 @@ template <typename ComposerContext> class uint {
     uint(uint&& other);
 
     //~uint(){};
+
+    operator byte_array<ComposerContext>();
 
     operator field_t<ComposerContext>();
 

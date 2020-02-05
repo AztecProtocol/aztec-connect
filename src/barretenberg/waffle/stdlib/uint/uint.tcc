@@ -290,6 +290,18 @@ uint<ComposerContext>::uint(ComposerContext* parent_context, const std::vector<b
     , maximum_value(0)
 {}
 
+template <typename ComposerContext>
+uint<ComposerContext>::uint(const byte_array<ComposerContext>& other)
+    : context(other.get_context())
+    , witness_index(static_cast<uint32_t>(-1))
+    , additive_constant(0)
+    , multiplicative_constant(1)
+    , witness_status(WitnessStatus::IN_BINARY_FORM)
+    , bool_wires(other.bits())
+    , queued_logic_operation(bool_wires.size())
+    , maximum_value(0)
+{}
+
 template <typename ComposerContext> uint<ComposerContext>& uint<ComposerContext>::operator=(const uint& other)
 {
     ASSERT(other.width() == width());
@@ -439,6 +451,12 @@ template <typename ComposerContext> uint<ComposerContext>::operator field_t<Comp
         return target;
     };
     return get_field_element(witness_index, additive_constant, multiplicative_constant);
+}
+
+template <typename ComposerContext> uint<ComposerContext>::operator byte_array<ComposerContext>()
+{
+    normalize();
+    return byte_array<ComposerContext>(context, bool_wires);
 }
 
 template <typename ComposerContext> void uint<ComposerContext>::prepare_for_arithmetic_operations() const
