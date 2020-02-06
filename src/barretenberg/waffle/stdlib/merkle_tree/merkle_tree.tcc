@@ -8,14 +8,13 @@ namespace stdlib {
 namespace merkle_tree {
 
 template <typename ComposerContext>
-merkle_tree<ComposerContext>::merkle_tree(ComposerContext& ctx, size_t depth)
+merkle_tree<ComposerContext>::merkle_tree(ComposerContext& ctx, LevelDbStore& store)
     : ctx_(ctx)
-    , store_("/tmp/leveldb_test", depth)
-    //, store_(depth)
-    , depth_(depth)
+    , store_(store)
+    , depth_(store.depth())
     , size_(0)
 {
-    ASSERT(depth_ >= 1 && depth <= 128);
+    ASSERT(depth_ >= 1 && depth_ <= 128);
     total_size_ = 1ULL << depth_;
     root_ = field_t(witness_t(&ctx_, store_.root()));
 }

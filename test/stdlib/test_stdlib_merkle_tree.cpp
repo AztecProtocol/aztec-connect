@@ -201,12 +201,15 @@ TEST(stdlib_merkle_tree, sha256_native_vs_circuit)
 
 TEST(stdlib_merkle_tree, test_check_membership)
 {
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
+
     Composer composer = Composer();
 
     witness_t zero = witness_t(&composer, fr::zero);
     witness_t one = witness_t(&composer, fr::one);
 
-    merkle_tree tree = merkle_tree(composer, 3);
+    merkle_tree tree = merkle_tree(composer, db);
     bool_t is_member = tree.check_membership(zero, zero);
     EXPECT_EQ(is_member.get_value(), true);
 
@@ -223,11 +226,14 @@ TEST(stdlib_merkle_tree, test_check_membership)
 
 TEST(stdlib_merkle_tree, test_assert_check_membership)
 {
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
+
     Composer composer = Composer();
 
     witness_t zero = witness_t(&composer, 0);
 
-    merkle_tree tree = merkle_tree(composer, 3);
+    merkle_tree tree = merkle_tree(composer, db);
     bool_t is_member = tree.assert_check_membership(zero, zero);
     EXPECT_EQ(is_member.get_value(), true);
 
@@ -241,12 +247,15 @@ TEST(stdlib_merkle_tree, test_assert_check_membership)
 
 TEST(stdlib_merkle_tree, test_assert_check_membership_fail)
 {
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
+
     Composer composer = Composer();
 
     witness_t zero = witness_t(&composer, 0);
     witness_t one = witness_t(&composer, 1);
 
-    merkle_tree tree = merkle_tree(composer, 3);
+    merkle_tree tree = merkle_tree(composer, db);
     bool_t is_member = tree.assert_check_membership(one, zero);
     EXPECT_EQ(is_member.get_value(), false);
 
@@ -263,6 +272,7 @@ TEST(stdlib_merkle_tree, test_assert_check_membership_fail)
 TEST(stdlib_merkle_tree, test_add_members)
 {
     leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
 
     Composer composer = Composer();
     size_t size = 8;
@@ -272,7 +282,7 @@ TEST(stdlib_merkle_tree, test_add_members)
         values[i] = witness_t(&composer, i);
     }
 
-    merkle_tree tree = merkle_tree(composer, 3);
+    merkle_tree tree = merkle_tree(composer, db);
 
     // Add incremental values.
     for (size_t i = 0; i < size; ++i) {
@@ -297,10 +307,13 @@ TEST(stdlib_merkle_tree, test_add_members)
 
 TEST(stdlib_merkle_tree, test_update_member)
 {
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
+
     Composer composer = Composer();
     witness_t zero = witness_t(&composer, 0);
     witness_t one = witness_t(&composer, 1);
-    merkle_tree tree = merkle_tree(composer, 3);
+    merkle_tree tree = merkle_tree(composer, db);
 
     EXPECT_EQ(tree.check_membership(one, zero).get_value(), false);
 
@@ -321,6 +334,7 @@ TEST(stdlib_merkle_tree, test_update_member)
 TEST(stdlib_merkle_tree, test_update_members)
 {
     leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
 
     Composer composer = Composer();
     size_t size = 8;
@@ -330,7 +344,7 @@ TEST(stdlib_merkle_tree, test_update_members)
         values[i] = witness_t(&composer, i);
     }
 
-    merkle_tree tree = merkle_tree(composer, 3);
+    merkle_tree tree = merkle_tree(composer, db);
 
     // Update the values.
     for (size_t i = 0; i < size; ++i) {

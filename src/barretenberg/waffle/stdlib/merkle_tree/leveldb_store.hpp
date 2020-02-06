@@ -11,7 +11,6 @@ namespace merkle_tree {
 using namespace barretenberg;
 
 __extension__ using index_t = unsigned __int128;
-// typedef size_t index_t;
 
 typedef struct {
     uint64_t data[8];
@@ -28,6 +27,8 @@ class LevelDbStore {
     fr::field_t get_element(index_t index);
 
     fr::field_t root() const;
+
+    size_t depth() const { return depth_; }
 
   private:
     fr::field_t update_element(

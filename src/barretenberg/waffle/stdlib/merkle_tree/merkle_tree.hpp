@@ -23,7 +23,7 @@ template <typename ComposerContext> class merkle_tree {
     typedef stdlib::byte_array<ComposerContext> byte_array;
     typedef std::vector<std::pair<field_t, field_t>> hash_path;
 
-    merkle_tree(ComposerContext& ctx, size_t depth);
+    merkle_tree(ComposerContext& ctx, LevelDbStore& store);
 
     bool_t check_membership(value_t const& value, index_t const& index);
 
@@ -53,7 +53,7 @@ template <typename ComposerContext> class merkle_tree {
 
   private:
     ComposerContext& ctx_;
-    LevelDbStore store_;
+    LevelDbStore& store_;
     field_t root_;
     uint128_t total_size_;
     size_t depth_;
