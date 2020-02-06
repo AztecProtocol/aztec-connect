@@ -1,11 +1,14 @@
 #include "leveldb_store.hpp"
 #include "hash.hpp"
+#include "../int_utils.hpp"
 #include <iostream>
 #include <sstream>
 
 namespace plonk {
 namespace stdlib {
 namespace merkle_tree {
+
+using namespace int_utils;
 
 namespace {
 barretenberg::fr::field_t from_string(std::string const& data, size_t offset = 0)
@@ -100,29 +103,6 @@ fr::field_t LevelDbStore::get_element(index_t index)
     std::string data;
     auto status = db_->Get(leveldb::ReadOptions(), leveldb::Slice((char*)&leaf, 32), &data);
     return status.ok() ? from_string(data) : fr::zero;
-}
-
-template <typename T> inline size_t count_leading_zeros(T u);
-
-template <> inline size_t count_leading_zeros<size_t>(size_t u)
-{
-    return (size_t)__builtin_clzl(u);
-}
-
-template <> inline size_t count_leading_zeros<unsigned __int128>(unsigned __int128 u)
-{
-    uint64_t hi = u >> 64;
-    if (hi) {
-        return (size_t)__builtin_clzl(hi);
-    } else {
-        uint64_t lo = static_cast<uint64_t>(u);
-        return (size_t)__builtin_clzl(lo) + 64;
-    }
-}
-
-inline index_t keep_n_lsb(index_t input, size_t num_bits)
-{
-    return num_bits >= sizeof(input) * 8 ? input : input & (((index_t)1 << num_bits) - 1);
 }
 
 fr::field_t LevelDbStore::get_element(fr::field_t const& root, index_t index, size_t height)

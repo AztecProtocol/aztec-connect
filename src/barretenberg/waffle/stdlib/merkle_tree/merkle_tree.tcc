@@ -31,10 +31,23 @@ typename merkle_tree<ComposerContext>::hash_path merkle_tree<ComposerContext>::c
     return result;
 }
 
+inline uint128_t field_to_uint128(fr::field_t input)
+{
+    input = fr::from_montgomery_form(input);
+    uint128_t lo = input.data[0];
+    uint128_t hi = input.data[1];
+    return (hi << 64) | lo;
+}
+
+inline fr::field_t uint128_to_field(uint128_t input)
+{
+    return { { (uint64_t)input, (uint64_t)(input >> 64), 0, 0 } };
+}
+
 template <typename ComposerContext>
 bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(value_t const& value, index_t const& index)
 {
-    fr_hash_path hashes = store_.get_hash_path(index.get_value());
+    fr_hash_path hashes = store_.get_hash_path(field_to_uint128(index.get_value()));
     auto witness_hashes = create_witness_hash_path(hashes);
     auto sha_value = sha256_value(value);
 
@@ -62,14 +75,14 @@ field_t<ComposerContext> merkle_tree<ComposerContext>::compress(field_t const& l
 template <typename ComposerContext>
 bool_t<ComposerContext> merkle_tree<ComposerContext>::check_hash_path(field_t const& root,
                                                                       hash_path const& hashes,
-                                                                      index_t const& index)
+                                                                      byte_array const& index)
 {
     field_t one = witness_t(&ctx_, 1);
     field_t current = compress(hashes[0].first, hashes[0].second);
     bool_t is_member = witness_t(&ctx_, true);
 
     for (size_t i = 1; i < depth_; ++i) {
-        bool_t path_bit = index.at(i);
+        bool_t path_bit = index.get_bit(i);
         bool_t is_left = (current == hashes[i].first) & !path_bit;
         bool_t is_right = (current == hashes[i].second) & path_bit;
         is_member &= is_left ^ is_right;
@@ -84,14 +97,14 @@ template <typename ComposerContext>
 bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(field_t const& root,
                                                                        hash_path const& hashes,
                                                                        value_t const& value,
-                                                                       index_t const& index)
+                                                                       byte_array const& index)
 {
     field_t one = witness_t(&ctx_, 1);
     field_t current = value;
     bool_t is_member = witness_t(&ctx_, true);
 
     for (size_t i = 0; i < depth_; ++i) {
-        bool_t path_bit = index.at(i);
+        bool_t path_bit = index.get_bit(i);
         bool_t is_left = (current == hashes[i].first) & !path_bit;
         bool_t is_right = (current == hashes[i].second) & path_bit;
         // std::cout << is_left.get_value() << std::endl;
@@ -113,11 +126,10 @@ template <typename ComposerContext> void merkle_tree<ComposerContext>::add_membe
     fr_hash_path old_hashes = store_.get_hash_path(size_);
     fr_hash_path new_hashes = get_new_hash_path(old_hashes, size_, value.get_value());
     field_t new_root = field_t(&ctx_, hash({ new_hashes[depth_ - 1].first, new_hashes[depth_ - 1].second }));
-    uint32 index = uint32(witness_t(&ctx_, size_));
+    field_t index = witness_t(&ctx_, size_);
 
     // Check we are setting the next available element. Given index should be equal to the public size input.
-    ctx_.assert_equal_constant(index.get_witness_index(),
-                               barretenberg::fr::to_montgomery_form({ { size_, 0UL, 0UL, 0UL } }));
+    ctx_.assert_equal_constant(index.witness_index, barretenberg::fr::to_montgomery_form(uint128_to_field(size_)));
 
     update_membership(
         new_root, create_witness_hash_path(new_hashes), value, root_, create_witness_hash_path(old_hashes), index);
@@ -130,7 +142,7 @@ template <typename ComposerContext> void merkle_tree<ComposerContext>::add_membe
 template <typename ComposerContext>
 void merkle_tree<ComposerContext>::update_member(value_t const& value, index_t const& index)
 {
-    uint32_t idx = index.get_value();
+    uint128_t idx = field_to_uint128(index.get_value());
 
     // TODO: Size should be private. Sparse trees should be initialzed with a max starting size so we can update
     // anywhere.
@@ -163,7 +175,7 @@ void merkle_tree<ComposerContext>::update_membership(field_t const& new_root,
                                                      value_t const& new_value,
                                                      field_t const& old_root,
                                                      hash_path const& old_hashes,
-                                                     index_t const& index)
+                                                     byte_array const& index)
 {
     // Check old path hashes lead to the old root. They're used when validating the new path hashes.
     bool_t old_hashes_valid = check_hash_path(old_root, old_hashes, index);
@@ -177,7 +189,7 @@ void merkle_tree<ComposerContext>::update_membership(field_t const& new_root,
 
     // Check that only the appropriate left or right hash was updated in the new hash path.
     for (size_t i = 0; i < depth_; ++i) {
-        bool_t path_bit = index.at(i);
+        bool_t path_bit = index.get_bit(i);
         bool_t share_left = (old_hashes[i].first == new_hashes[i].first) & path_bit;
         bool_t share_right = (old_hashes[i].second == new_hashes[i].second) & !path_bit;
         ctx_.assert_equal_constant((share_left ^ share_right).witness_index, barretenberg::fr::one);

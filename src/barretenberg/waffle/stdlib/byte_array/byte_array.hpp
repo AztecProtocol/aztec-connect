@@ -5,7 +5,6 @@
 
 #include "../bool/bool.hpp"
 #include "../common.hpp"
-#include "../uint32/uint32.hpp"
 
 namespace plonk {
 namespace stdlib {
@@ -35,7 +34,26 @@ template <typename ComposerContext> class byte_array {
 
     bits_t const& bits() const { return values; }
 
+    bool_t<ComposerContext> const& get_bit(size_t index) const { return values[values.size() - index - 1]; }
+
     ComposerContext* get_context() const { return context; }
+
+    void print() const
+    {
+        size_t length = values.size();
+        size_t num = (length / 8) + (length % 8 != 0);
+        std::vector<uint8_t> bytes(num, 0);
+        for (size_t i = 0; i < length; ++i) {
+            size_t index = i / 8;
+            uint8_t shift = static_cast<uint8_t>(7 - (i - index * 8));
+            bytes[index] |= (uint8_t)values[i].get_value() << shift;
+        }
+        printf("[");
+        for (size_t i = 0; i < num; ++i) {
+            printf(" %02x", bytes[i]);
+        }
+        printf(" ]\n");
+    }
 
   private:
     ComposerContext* context;

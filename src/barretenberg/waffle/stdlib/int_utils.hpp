@@ -1,7 +1,6 @@
 #pragma once
 
-namespace int_utils
-{
+namespace int_utils {
 __extension__ using uint128_t = unsigned __int128;
 
 // from http://supertech.csail.mit.edu/papers/debruijn.pdf
@@ -17,7 +16,8 @@ inline size_t get_msb(uint32_t v)
     v |= v >> 8;
     v |= v >> 16;
 
-    return MultiplyDeBruijnBitPosition[static_cast<uint32_t>(v * static_cast<uint32_t>(0x07C4ACDD)) >> static_cast<uint32_t>(27)];
+    return MultiplyDeBruijnBitPosition[static_cast<uint32_t>(v * static_cast<uint32_t>(0x07C4ACDD)) >>
+                                       static_cast<uint32_t>(27)];
 }
 
 inline size_t get_msb(uint128_t v)
@@ -27,19 +27,39 @@ inline size_t get_msb(uint128_t v)
     uint32_t hilo = static_cast<uint32_t>((v >> static_cast<uint128_t>(64ULL)) & static_cast<uint128_t>(0xffffffffULL));
     uint32_t hihi = static_cast<uint32_t>((v >> static_cast<uint128_t>(96ULL)) & static_cast<uint128_t>(0xffffffffULL));
 
-    if (hihi > 0)
-    {
+    if (hihi > 0) {
         return (get_msb(hihi) + 96);
     }
-    if (hilo > 0)
-    {
+    if (hilo > 0) {
         return (get_msb(hilo) + 64);
     }
-    if (lohi > 0)
-    {
+    if (lohi > 0) {
         return (get_msb(lohi) + 32);
     }
     return get_msb(lolo);
+}
+
+template <typename T> inline size_t count_leading_zeros(T u);
+
+template <> inline size_t count_leading_zeros<size_t>(size_t u)
+{
+    return (size_t)__builtin_clzl(u);
+}
+
+template <> inline size_t count_leading_zeros<uint128_t>(uint128_t u)
+{
+    uint64_t hi = u >> 64;
+    if (hi) {
+        return (size_t)__builtin_clzl(hi);
+    } else {
+        uint64_t lo = static_cast<uint64_t>(u);
+        return (size_t)__builtin_clzl(lo) + 64;
+    }
+}
+
+template <typename T> inline T keep_n_lsb(T input, size_t num_bits)
+{
+    return num_bits >= sizeof(T) * 8 ? input : input & (((T)1 << num_bits) - 1);
 }
 
 // inline bool get_bit(uint128_t v, size_t index)

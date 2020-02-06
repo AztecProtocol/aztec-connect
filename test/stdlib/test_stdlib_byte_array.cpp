@@ -54,3 +54,27 @@ TEST(stdlib_byte_array, test_uint32_input_output_consistency)
     EXPECT_EQ(a_result.get_value(), a_expected);
     EXPECT_EQ(b_result.get_value(), b_expected);
 }
+
+TEST(stdlib_byte_array, test_field_t_input_output_consistency)
+{
+    waffle::BoolComposer composer = waffle::BoolComposer();
+
+    fr::field_t a_expected = fr::random_element();
+    fr::field_t b_expected = fr::random_element();
+
+    field_t a = witness_t(&composer, a_expected);
+    field_t b = witness_t(&composer, b_expected);
+
+    byte_array arr(&composer);
+
+    arr.write(a);
+    arr.write(b);
+
+    EXPECT_EQ(arr.size(), 64UL);
+
+    field_t a_result(arr.slice(0, 32));
+    field_t b_result(arr.slice(32));
+
+    EXPECT_EQ(a_result.get_value(), a_expected);
+    EXPECT_EQ(b_result.get_value(), b_expected);
+}

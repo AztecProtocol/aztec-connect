@@ -1,5 +1,6 @@
 #pragma once
 #include "../field/field.hpp"
+#include "../int_utils.hpp"
 #include "hash.hpp"
 #include <vector>
 
@@ -8,9 +9,10 @@ namespace stdlib {
 namespace merkle_tree {
 
 using namespace barretenberg;
+using namespace int_utils;
 typedef std::vector<std::pair<fr::field_t, fr::field_t>> fr_hash_path;
 
-inline fr_hash_path get_new_hash_path(fr_hash_path const& old_path, size_t index, barretenberg::fr::field_t value)
+inline fr_hash_path get_new_hash_path(fr_hash_path const& old_path, uint128_t index, barretenberg::fr::field_t value)
 {
     fr_hash_path path = old_path;
     barretenberg::fr::field_t current = sha256({ value });
@@ -43,4 +45,4 @@ inline std::ostream& operator<<(std::ostream& os, plonk::stdlib::merkle_tree::fr
     os << "]";
     return os;
 }
-}
+} // namespace std

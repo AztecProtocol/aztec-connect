@@ -2,6 +2,7 @@
 
 #include "../../../curves/bn254/fr.hpp"
 #include "../bool/bool.hpp"
+#include "../byte_array/byte_array.hpp"
 #include "../common.hpp"
 
 namespace plonk {
@@ -15,9 +16,11 @@ template <typename ComposerContext> class field_t {
     field_t(const witness_t<ComposerContext>& value);
     field_t(const field_t& other);
     field_t(field_t&& other);
+    field_t(byte_array<ComposerContext> const& other);
 
     field_t(const bool_t<ComposerContext>& other);
     operator bool_t<ComposerContext>();
+    operator byte_array<ComposerContext>() const;
 
     field_t& operator=(const field_t& other);
     field_t& operator=(field_t&& other);
