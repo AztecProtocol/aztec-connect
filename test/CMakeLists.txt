@@ -57,6 +57,7 @@ add_executable(
     misc_crypto/test_sha256.cpp
     widgets/test_turbo_arithmetic_widget.cpp
     widgets/test_turbo_fixed_base_widget.cpp
+    widgets/test_turbo_range_widget.cpp
     composer/test_standard_composer.cpp
     composer/test_mimc_composer.cpp
     composer/test_bool_composer.cpp

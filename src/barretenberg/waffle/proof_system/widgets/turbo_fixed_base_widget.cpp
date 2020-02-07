@@ -714,7 +714,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
         scalars.push_back(fr::mul(challenge.nu_base, challenge.nu_step));
     }
 
-    return VerifierBaseWidget::challenge_coefficients{ fr::mul(alpha_d, challenge.alpha_step),
+    return VerifierBaseWidget::challenge_coefficients{ fr::mul(alpha_g, challenge.alpha_step),
                                                        challenge.alpha_step,
                                                        fr::mul(challenge.nu_base,
                                                                fr::mul(fr::sqr(challenge.nu_step), challenge.nu_step)),
