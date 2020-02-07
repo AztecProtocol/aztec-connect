@@ -11,10 +11,11 @@ MemoryStore::MemoryStore(size_t depth)
     ASSERT(depth_ >= 1 && depth <= 256);
     total_size_ = 1ULL << depth_;
     hashes_.resize(total_size_ * 2 - 2);
-    preimages_.resize(total_size_, barretenberg::fr::zero);
+    std::string zero_element(64, 0);
+    preimages_.resize(total_size_, zero_element);
 
     // Build the entire tree.
-    auto current = sha256({ barretenberg::fr::zero });
+    auto current = sha256(zero_element);
     size_t layer_size = total_size_;
     for (size_t offset = 0; offset < hashes_.size(); offset += layer_size, layer_size /= 2) {
         // std::cout << "zero: " << current << std::endl;
@@ -43,13 +44,13 @@ fr_hash_path MemoryStore::get_hash_path(size_t index)
     return path;
 }
 
-void MemoryStore::update_element(size_t index, fr::field_t const& value)
+void MemoryStore::update_element(size_t index, std::string const& value)
 {
     preimages_[index] = value;
 
     size_t offset = 0;
     size_t layer_size = total_size_;
-    fr::field_t current = sha256({ value });
+    fr::field_t current = sha256(value);
     for (size_t i = 0; i < depth_; ++i) {
         hashes_[offset + index] = current;
         index &= (~0ULL) - 1;
@@ -61,7 +62,7 @@ void MemoryStore::update_element(size_t index, fr::field_t const& value)
     root_ = current;
 }
 
-fr::field_t MemoryStore::get_element(size_t index)
+std::string const& MemoryStore::get_element(size_t index)
 {
     return preimages_[index];
 }

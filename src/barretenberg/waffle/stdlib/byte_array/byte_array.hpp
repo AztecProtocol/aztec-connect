@@ -38,27 +38,36 @@ template <typename ComposerContext> class byte_array {
 
     ComposerContext* get_context() const { return context; }
 
-    void print() const
+    std::string get_value() const
     {
         size_t length = values.size();
         size_t num = (length / 8) + (length % 8 != 0);
-        std::vector<uint8_t> bytes(num, 0);
+        std::string bytes(num, 0);
         for (size_t i = 0; i < length; ++i) {
             size_t index = i / 8;
             uint8_t shift = static_cast<uint8_t>(7 - (i - index * 8));
             bytes[index] |= (uint8_t)values[i].get_value() << shift;
         }
-        printf("[");
-        for (size_t i = 0; i < num; ++i) {
-            printf(" %02x", bytes[i]);
-        }
-        printf(" ]\n");
+        return bytes;
     }
 
   private:
     ComposerContext* context;
     bits_t values;
 };
+
+template <typename ComposerContext>
+inline std::ostream& operator<<(std::ostream& os, byte_array<ComposerContext> const& arr)
+{
+    std::ios_base::fmtflags f(os.flags());
+    os << "[" << std::hex << std::setfill('0');
+    for (auto byte : arr.get_value()) {
+        os << ' ' << std::setw(2) << +(unsigned char)byte;
+    }
+    os << " ]";
+    os.flags(f);
+    return os;
+}
 
 } // namespace stdlib
 } // namespace plonk

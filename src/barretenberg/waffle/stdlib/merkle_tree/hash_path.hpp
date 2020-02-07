@@ -12,10 +12,10 @@ using namespace barretenberg;
 using namespace int_utils;
 typedef std::vector<std::pair<fr::field_t, fr::field_t>> fr_hash_path;
 
-inline fr_hash_path get_new_hash_path(fr_hash_path const& old_path, uint128_t index, barretenberg::fr::field_t value)
+inline fr_hash_path get_new_hash_path(fr_hash_path const& old_path, uint128_t index, std::string const& value)
 {
     fr_hash_path path = old_path;
-    barretenberg::fr::field_t current = sha256({ value });
+    barretenberg::fr::field_t current = sha256(value);
     for (size_t i = 0; i < old_path.size(); ++i) {
         bool path_bit = index & 0x1;
         if (path_bit) {

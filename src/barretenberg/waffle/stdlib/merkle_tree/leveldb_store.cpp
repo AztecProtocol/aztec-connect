@@ -1,6 +1,6 @@
 #include "leveldb_store.hpp"
-#include "hash.hpp"
 #include "../int_utils.hpp"
+#include "hash.hpp"
 #include <iostream>
 #include <sstream>
 
@@ -35,7 +35,7 @@ LevelDbStore::LevelDbStore(std::string const& db_path, size_t depth)
     db_.reset(db);
 
     // Compute the zero values at each layer.
-    auto current = sha256({ barretenberg::fr::zero });
+    auto current = sha256(std::string(LEAF_BYTES, 0));
     for (size_t i = 0; i < depth; ++i) {
         zero_hashes_[i] = current;
         // std::cout << "zero hash level " << i << ": " << current << std::endl;
@@ -97,12 +97,12 @@ fr_hash_path LevelDbStore::get_hash_path(index_t index)
     return path;
 }
 
-fr::field_t LevelDbStore::get_element(index_t index)
+LevelDbStore::value_t LevelDbStore::get_element(index_t index)
 {
     fr::field_t leaf = get_element(root_, index, depth_);
     std::string data;
     auto status = db_->Get(leveldb::ReadOptions(), leveldb::Slice((char*)&leaf, 32), &data);
-    return status.ok() ? from_string(data) : fr::zero;
+    return status.ok() ? data : std::string(64, 0);
 }
 
 fr::field_t LevelDbStore::get_element(fr::field_t const& root, index_t index, size_t height)
@@ -129,12 +129,12 @@ fr::field_t LevelDbStore::get_element(fr::field_t const& root, index_t index, si
     }
 }
 
-void LevelDbStore::update_element(index_t index, fr::field_t const& value)
+void LevelDbStore::update_element(index_t index, value_t const& value)
 {
     // std::cout << "PRE UPDATE ROOT: " << root_ << std::endl;
     leveldb::WriteBatch batch;
-    fr::field_t sha_leaf = sha256({ value });
-    batch.Put(leveldb::Slice((char*)&sha_leaf, 32), leveldb::Slice((char*)&value, 32));
+    fr::field_t sha_leaf = sha256(value);
+    batch.Put(leveldb::Slice((char*)&sha_leaf, 32), value);
     root_ = update_element(root_, sha_leaf, index, depth_, batch);
     db_->Write(leveldb::WriteOptions(), &batch);
     // std::cout << "POST UPDATE ROOT: " << root_ << std::endl;

@@ -4,18 +4,29 @@
 #include <vector>
 
 #include "../bool/bool.hpp"
+#include "../byte_array/byte_array.hpp"
 #include "../common.hpp"
 #include "../uint32/uint32.hpp"
 
 namespace plonk {
 namespace stdlib {
 
+// Leaving in for now, but now we have byte_array should consider removing.
+// Added ctor and conversion operator for byte_array for interoperability.
+// Internally, bitarray is a just a reversed byte_array.
 template <typename ComposerContext> class bitarray {
   public:
     bitarray(ComposerContext* parent_context, const size_t n);
     bitarray(ComposerContext* parent_context, const std::string& input);
     bitarray(uint<ComposerContext> const& input);
     bitarray(const std::vector<uint32<ComposerContext>>& input);
+    bitarray(byte_array<ComposerContext> const& input)
+        : context(input.get_context())
+        , length(input.size() * 8)
+        , values(input.bits())
+    {
+        std::reverse(values.begin(), values.end());
+    }
 
     template <size_t N> bitarray(const std::array<uint32<ComposerContext>, N>& input);
 
@@ -29,6 +40,12 @@ template <typename ComposerContext> class bitarray {
     bool_t<ComposerContext> operator[](const size_t idx) const;
 
     template <size_t N> operator std::array<uint32<ComposerContext>, N>();
+    operator byte_array<ComposerContext>()
+    {
+        typename byte_array<ComposerContext>::bits_t bits(values);
+        std::reverse(bits.begin(), bits.end());
+        return byte_array(context, bits);
+    };
 
     std::vector<uint32<ComposerContext>> to_uint32_vector();
 

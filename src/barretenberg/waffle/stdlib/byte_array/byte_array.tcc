@@ -22,15 +22,14 @@ byte_array<ComposerContext>::byte_array(ComposerContext* parent_context, const s
 template <typename ComposerContext>
 byte_array<ComposerContext>::byte_array(ComposerContext* parent_context, const std::string& input)
     : context(parent_context)
+    , values(input.size() * 8)
 {
-    values.resize(input.size() * 8);
-
     for (size_t i = 0; i < input.size(); ++i) {
         char c = input[i];
         std::bitset<8> char_bits = std::bitset<8>(static_cast<unsigned long long>(c));
         for (size_t j = 0; j < 8; ++j) {
-            witness_t<ComposerContext> value(context, char_bits[7 - j]);
-            values[i + j] = value;
+            bool_t<ComposerContext> value(context, char_bits[7 - j]);
+            values[(i * 8) + j] = value;
         }
     }
 }

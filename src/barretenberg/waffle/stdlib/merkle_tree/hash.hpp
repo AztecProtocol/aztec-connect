@@ -29,8 +29,9 @@ inline bool isLittleEndian()
     return (*(char*)&num == 42);
 }
 
-inline barretenberg::fr::field_t sha256(std::vector<barretenberg::fr::field_t> const& input)
+inline barretenberg::fr::field_t sha256(std::string const& input)
 {
+    /*
     std::vector<unsigned char> src(input.size() * 32);
     auto src_ptr = (barretenberg::fr::field_t*)&src[0];
     for (size_t i = 0; i < input.size(); ++i) {
@@ -45,8 +46,9 @@ inline barretenberg::fr::field_t sha256(std::vector<barretenberg::fr::field_t> c
         }
         // TODO: Reverse machine words on BE?
     }
-    std::vector<unsigned char> output(picosha2::k_digest_size);
-    picosha2::hash256(src.begin(), src.end(), output.begin(), output.end());
+    */
+    std::vector<uint8_t> output(picosha2::k_digest_size);
+    picosha2::hash256(input.begin(), input.end(), output.begin(), output.end());
     barretenberg::fr::field_t result = barretenberg::fr::zero;
     if (isLittleEndian()) {
         result.data[0] = __builtin_bswap64(*(uint64_t*)&output[24]);

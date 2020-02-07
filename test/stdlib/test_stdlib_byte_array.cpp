@@ -78,3 +78,21 @@ TEST(stdlib_byte_array, test_field_t_input_output_consistency)
     EXPECT_EQ(a_result.get_value(), a_expected);
     EXPECT_EQ(b_result.get_value(), b_expected);
 }
+
+TEST(stdlib_byte_array, test_string_constructor)
+{
+    waffle::BoolComposer composer = waffle::BoolComposer();
+    std::string a = "ascii";
+    byte_array arr(&composer, a);
+    EXPECT_EQ(arr.get_value(), a);
+}
+
+TEST(stdlib_byte_array, test_ostream_operator)
+{
+    waffle::BoolComposer composer = waffle::BoolComposer();
+    std::string a = "\1\2\3a";
+    byte_array arr(&composer, a);
+    std::ostringstream os;
+    os << arr;
+    EXPECT_EQ(os.str(), "[ 01 02 03 61 ]");
+}

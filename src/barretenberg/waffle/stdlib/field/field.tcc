@@ -89,7 +89,11 @@ field_t<ComposerContext>::field_t(byte_array<ComposerContext> const& other)
 
     for (size_t i = 0; i < bits.size(); ++i) {
         field_t<ComposerContext> temp(bits[i].context);
-        temp.witness_index = bits[i].witness_index;
+        if (bits[i].is_constant()) {
+            temp.additive_constant = bits[i].get_value() ? barretenberg::fr::one : barretenberg::fr::zero;
+        } else {
+            temp.witness_index = bits[i].witness_index;
+        }
         barretenberg::fr::field_t scaling_factor_value = barretenberg::fr::pow_small(two, 255 - i);
         field_t<ComposerContext> scaling_factor(bits[i].context, scaling_factor_value);
         *this = *this + (scaling_factor * temp);

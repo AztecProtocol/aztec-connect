@@ -10,21 +10,18 @@ namespace merkle_tree {
 
 using namespace barretenberg;
 
-__extension__ using index_t = unsigned __int128;
-
-typedef struct {
-    uint64_t data[8];
-} value_t;
-
 class LevelDbStore {
   public:
+    typedef uint128_t index_t;
+    typedef std::string value_t;
+
     LevelDbStore(std::string const& path, size_t depth);
 
     fr_hash_path get_hash_path(index_t index);
 
-    void update_element(index_t index, fr::field_t const& value);
+    void update_element(index_t index, value_t const& value);
 
-    fr::field_t get_element(index_t index);
+    value_t get_element(index_t index);
 
     fr::field_t root() const;
 
@@ -54,6 +51,7 @@ class LevelDbStore {
     void put_stump(fr::field_t key, index_t index, fr::field_t value, leveldb::WriteBatch& batch);
 
   private:
+    static constexpr size_t LEAF_BYTES = 64;
     std::unique_ptr<leveldb::DB> db_;
     std::vector<fr::field_t> zero_hashes_;
     size_t depth_;
