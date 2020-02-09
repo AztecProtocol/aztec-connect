@@ -218,7 +218,7 @@ std::shared_ptr<proving_key> MiMCComposer::compute_proving_key()
     for (size_t i = 0; i < public_inputs.size(); ++i)
     {
         poly_q_m[i] = fr::zero;
-        poly_q_1[i] = fr::neg_one();
+        poly_q_1[i] = fr::zero;
         poly_q_2[i] = fr::zero;
         poly_q_3[i] = fr::zero;
         poly_q_c[i] = fr::zero;

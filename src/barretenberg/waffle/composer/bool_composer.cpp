@@ -110,11 +110,7 @@ std::shared_ptr<proving_key> BoolComposer::compute_proving_key()
     for (size_t i = 0; i < public_inputs.size(); ++i)
     {
         epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
-        epicycle right{ static_cast<uint32_t>(i - public_inputs.size()), WireType::RIGHT };
-        epicycle out{ static_cast<uint32_t>(i - public_inputs.size()), WireType::OUTPUT };
         wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
-        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(right);
-        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(out);
     }
 
     circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size());
@@ -130,7 +126,7 @@ std::shared_ptr<proving_key> BoolComposer::compute_proving_key()
 
     for (size_t i = 0; i < public_inputs.size(); ++i) {
         poly_q_m[i] = fr::zero;
-        poly_q_1[i] = fr::neg_one();
+        poly_q_1[i] = fr::zero;
         poly_q_2[i] = fr::zero;
         poly_q_3[i] = fr::zero;
         poly_q_c[i] = fr::zero;

@@ -47,6 +47,8 @@ class ProverBase
     void compute_arithmetisation_coefficients();
     void init_quotient_polynomials();
     void compute_opening_elements();
+    void compute_public_input_contribution(const barretenberg::fr::field_t& public_alpha);
+
     barretenberg::fr::field_t compute_linearisation_coefficients();
     waffle::plonk_proof construct_proof();
     void reset();
@@ -69,10 +71,12 @@ class ProverBase
     bool uses_quotient_mid;
 };
 
+extern template class ProverBase<standard_settings>;
+extern template class ProverBase<extended_settings>;
+extern template class ProverBase<turbo_settings>;
+
 typedef ProverBase<standard_settings> Prover;
 typedef ProverBase<extended_settings> ExtendedProver;
 typedef ProverBase<turbo_settings> TurboProver;
 
 } // namespace waffle
-
-#include "./prover.tcc"

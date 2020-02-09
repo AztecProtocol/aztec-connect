@@ -7,10 +7,11 @@ class VerifierArithmeticWidget : public VerifierBaseWidget {
   public:
     VerifierArithmeticWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
 
-    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                                       const transcript::Transcript& transcript,
-                                                                       barretenberg::fr::field_t& t_eval,
-                                                                       const barretenberg::evaluation_domain& domain);
+    barretenberg::fr::field_t compute_quotient_evaluation_contribution(
+        const barretenberg::fr::field_t& alpha_base,
+        const transcript::Transcript& transcript,
+        barretenberg::fr::field_t& t_eval,
+        const barretenberg::evaluation_domain& domain);
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
         const challenge_coefficients& challenge,
@@ -20,10 +21,7 @@ class VerifierArithmeticWidget : public VerifierBaseWidget {
 
     barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t&,
                                                                     const barretenberg::fr::field_t& nu_base,
-                                                                    const transcript::Transcript&)
-    {
-            return nu_base;
-    };
+                                                                    const transcript::Transcript&);
 };
 
 class ProverArithmeticWidget : public ProverBaseWidget {
@@ -42,14 +40,9 @@ class ProverArithmeticWidget : public ProverBaseWidget {
     barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
                                                                 const transcript::Transcript&,
                                                                 barretenberg::fr::field_t*,
-                                                                barretenberg::fr::field_t*)
-    {
-        return nu_base;
-    }
+                                                                barretenberg::fr::field_t*);
 
     std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const ReferenceString& reference_string) const;
-
-    void reset();
 
     barretenberg::polynomial& q_1;
     barretenberg::polynomial& q_2;

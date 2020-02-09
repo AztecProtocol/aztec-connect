@@ -38,9 +38,7 @@ class ProverMiMCWidget : public ProverBaseWidget {
                                                                 barretenberg::fr::field_t*);
     void compute_transcript_elements(transcript::Transcript& transcript);
 
-    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(
-                                                                         const ReferenceString& reference_string) const;
-    void reset();
+    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const ReferenceString& reference_string) const;
 
     barretenberg::polynomial& q_mimc_selector;
     barretenberg::polynomial& q_mimc_coefficient;

@@ -30,14 +30,14 @@ TurboComposer::TurboComposer(const size_t size_hint)
     q_ecc_1.reserve(size_hint);
     q_range.reserve(size_hint);
 
-    zero_idx = put_constant_variable(fr::zero);
+     zero_idx = put_constant_variable(fr::zero);
     // zero_idx = add_variable(barretenberg::fr::zero);
 };
 
 void TurboComposer::create_dummy_gate()
 {
     gate_flags.push_back(0);
-    uint32_t idx = add_variable(fr::to_montgomery_form({{ 0x1111111111111111, 0x1111111111111111, 0x1111111111111111, 0x1111111111111111 }}));
+    uint32_t idx = add_variable(fr::to_montgomery_form({{ 1, 0, 0, 0 }}));
     w_l.emplace_back(idx);
     w_r.emplace_back(idx);
     w_o.emplace_back(idx);
@@ -46,13 +46,11 @@ void TurboComposer::create_dummy_gate()
     q_4.emplace_back(fr::zero);
     q_4_next.emplace_back(fr::zero);
     q_ecc_1.emplace_back(fr::zero);
-
     q_m.emplace_back(fr::zero);
     q_1.emplace_back(fr::zero);
     q_2.emplace_back(fr::zero);
     q_3.emplace_back(fr::zero);
     q_c.emplace_back(fr::zero);
-    
     q_range.emplace_back(fr::zero);
     ++n;
 }
@@ -152,7 +150,6 @@ void TurboComposer::create_mul_gate(const mul_triple& in)
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
     epicycle out{ static_cast<uint32_t>(n), WireType::OUTPUT };
-    epicycle fourth{ static_cast<uint32_t>(n), WireType::FOURTH };
 
     ASSERT(wire_epicycles.size() > in.a);
     ASSERT(wire_epicycles.size() > in.b);
@@ -162,7 +159,6 @@ void TurboComposer::create_mul_gate(const mul_triple& in)
     wire_epicycles[static_cast<size_t>(in.a)].emplace_back(left);
     wire_epicycles[static_cast<size_t>(in.b)].emplace_back(right);
     wire_epicycles[static_cast<size_t>(in.c)].emplace_back(out);
-    wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(fourth);
 
     ++n;
 }
@@ -191,13 +187,11 @@ void TurboComposer::create_bool_gate(const uint32_t variable_index)
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
     epicycle out{ static_cast<uint32_t>(n), WireType::OUTPUT };
-    epicycle fourth{ static_cast<uint32_t>(n), WireType::FOURTH };
 
     ASSERT(wire_epicycles.size() > variable_index);
     wire_epicycles[static_cast<size_t>(variable_index)].emplace_back(left);
     wire_epicycles[static_cast<size_t>(variable_index)].emplace_back(right);
     wire_epicycles[static_cast<size_t>(variable_index)].emplace_back(out);
-    wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(fourth);
 
     ++n;
 }
@@ -226,7 +220,6 @@ void TurboComposer::create_poly_gate(const poly_triple& in)
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
     epicycle out{ static_cast<uint32_t>(n), WireType::OUTPUT };
-    epicycle fourth{ static_cast<uint32_t>(n), WireType::FOURTH };
 
     ASSERT(wire_epicycles.size() > in.a);
     ASSERT(wire_epicycles.size() > in.b);
@@ -236,7 +229,6 @@ void TurboComposer::create_poly_gate(const poly_triple& in)
     wire_epicycles[static_cast<size_t>(in.a)].emplace_back(left);
     wire_epicycles[static_cast<size_t>(in.b)].emplace_back(right);
     wire_epicycles[static_cast<size_t>(in.c)].emplace_back(out);
-    wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(fourth);
 
     ++n;
 }
@@ -337,17 +329,11 @@ void TurboComposer::fix_witness(const uint32_t witness_index, const barretenberg
     q_range.emplace_back(fr::zero);
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
-    epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
-    epicycle out{ static_cast<uint32_t>(n), WireType::OUTPUT };
-    epicycle fourth{ static_cast<uint32_t>(n), WireType::FOURTH };
 
     ASSERT(wire_epicycles.size() > witness_index);
     ASSERT(wire_epicycles.size() > zero_idx);
     ASSERT(wire_epicycles.size() > zero_idx);
     wire_epicycles[static_cast<size_t>(witness_index)].emplace_back(left);
-    wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(right);
-    wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(out);
-    wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(fourth);
 
     ++n;
 }
@@ -393,29 +379,27 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
      * +-----+-----+-----+-----+
      * |  A  |  B  |  C  |  D  |
      * +-----+-----+-----+-----+
-     * | 0   | 0   | 0   | 0   |
-     * | a0  | a1  | a2  | a3  |
-     * | a4  | a5  | a6  | a7  |
-     * | a8  | a9  | a10 | a11 |
-     * | a12 | a13 | a14 | a15 |
+     * | a3  | a2  | a1  | 0   |
+     * | a7  | a6  | a5  | a4  |
+     * | a11 | a10 | a9  | a8  |
+     * | a15 | a14 | a13 | a12 |
+     * | --- | --- | --- | a16 |
      * +-----+-----+-----+-----+
      *
-     * We require an initial row of zeroes, because our range transition constraint on row 'i'
+     * Our range transition constraint on row 'i'
      * performs our base-4 range check on the follwing pairs:
      * 
-     * (D_{i}, A_{i+1}), (A_{i+1}, B_{i+1}), (B_{i+1}, C_{i+1}), (C_{i+1}, D_{i+1})
+     * (D_{i}, C_{i}), (C_{i}, B_{i}), (B_{i}, A_{i}), (A_{i}, D_{i+1})
      * 
-     * We need to start our raster scan at zero, so we simplify matters and just force the first row
+     * We need to start our raster scan at zero, so we simplify matters and just force the first value
      * to be zero.
      * 
-     * TODO: if we change our scan to start at (A_i, B_i) we might be able to squeeze out a gate in most circumstances
+     * The output will be in the 4th column of an otherwise unused row. Assuming this row can
+     * be used for a width-3 standard gate, the total number of gates for an n-bit range constraint
+     * is (n / 8) gates
      *
      **/
  
-    // we need an 'initialization' gate, that fixes the value of w_4 to zero
-    const add_quad init{ zero_idx, zero_idx, zero_idx, zero_idx, fr::zero, fr::zero, fr::zero, fr::one, fr::zero };
-    create_big_add_gate(init);
-
     const fr::field_t witness_value = fr::from_montgomery_form(variables[witness_index]);
 
     // one gate accmulates 4 quads, or 8 bits.
@@ -425,17 +409,17 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
     num_quad_gates = (num_quad_gates << 3 == num_bits) ? num_quad_gates : num_quad_gates + 1;
 
     // hmm
-    std::vector<uint32_t>* wires[4]{ &w_l, &w_r, &w_o, &w_4 };
+    std::vector<uint32_t>* wires[4]{ &w_4, &w_o, &w_r, &w_l };
 
     // hmmm
-    WireType wire_types[4]{ WireType::LEFT, WireType::RIGHT, WireType::OUTPUT, WireType::FOURTH };
+    WireType wire_types[4]{ WireType::FOURTH, WireType::OUTPUT, WireType::RIGHT, WireType::LEFT };
 
-    const size_t num_quads = (num_quad_gates >> 2);
-    const size_t forced_zero_threshold = (num_quads << 1) - num_bits;
+    const size_t num_quads = (num_quad_gates << 2);
+    const size_t forced_zero_threshold = 1 + (((num_quads << 1) - num_bits) >> 1);
     std::vector<uint32_t> accumulators;
     fr::field_t accumulator = fr::zero;
 
-    for (size_t i = 0; i < num_quads; ++i)
+    for (size_t i = 0; i < num_quads + 1; ++i)
     {
         const size_t gate_index = n + (i / 4);
         uint32_t accumulator_index;
@@ -445,23 +429,56 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
         }
         else
         {
-            const size_t bit_index = (num_quads - 1 - i) << 1;
+            const size_t bit_index = (num_quads - i) << 1;
             const uint64_t quad = static_cast<uint64_t>(fr::get_bit(witness_value, bit_index)) + 2ULL * static_cast<uint64_t>(fr::get_bit(witness_value, bit_index + 1));
             const fr::field_t quad_element = fr::to_montgomery_form({ quad, 0, 0, 0 });
             fr::__add(accumulator, accumulator, accumulator);
             fr::__add(accumulator, accumulator, accumulator);
             fr::__add(accumulator, quad_element, accumulator);
 
-
             accumulator_index = add_variable(accumulator);
             accumulators.emplace_back(accumulator_index);
         }
 
         // hmmmm
+        (*(wires + (i & 3)))->emplace_back(accumulator_index);
         const size_t wire_index = i & 3;
-        wires[wire_index]->emplace_back(accumulator_index);
+
         wire_epicycles[accumulator_index].emplace_back(epicycle(static_cast<uint32_t>(gate_index), wire_types[wire_index]));
     }
+    size_t used_gates = (num_quads + 1) / 4;
+
+    // TODO: handle partially used gates. For now just set them to be zero
+    if (used_gates * 4 != (num_quads + 1))
+    {
+        ++used_gates;
+    }
+
+    for (size_t i = 0; i < used_gates; ++i)
+    {
+        q_m.emplace_back(fr::zero);
+        q_1.emplace_back(fr::zero);
+        q_2.emplace_back(fr::zero);
+        q_3.emplace_back(fr::zero);
+        q_c.emplace_back(fr::zero);
+        q_arith.emplace_back(fr::zero);
+        q_4.emplace_back(fr::zero);
+        q_4_next.emplace_back(fr::zero);
+        q_ecc_1.emplace_back(fr::zero);
+
+        q_range.emplace_back(fr::one);
+    }
+
+    q_range[q_range.size() - 1] = fr::zero;
+
+    w_l.emplace_back(zero_idx);
+    w_r.emplace_back(zero_idx);
+    w_o.emplace_back(zero_idx);
+
+    assert_equal(accumulators[accumulators.size() - 1], witness_index);
+    accumulators[accumulators.size() - 1] = witness_index;
+
+    n += used_gates;
     return accumulators;
 }
 
@@ -523,14 +540,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     for (size_t i = 0; i < public_inputs.size(); ++i)
     {
         epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
-        epicycle right{ static_cast<uint32_t>(i - public_inputs.size()), WireType::RIGHT };
-        epicycle out{ static_cast<uint32_t>(i - public_inputs.size()), WireType::OUTPUT };
-        epicycle fourth{ static_cast<uint32_t>(i - public_inputs.size()), WireType::FOURTH };
-
         wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
-        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(right);
-        wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(out);
-
     }
     circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size());
     
@@ -549,7 +559,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     for (size_t i = 0; i < public_inputs.size(); ++i)
     {
         poly_q_m[i] = fr::zero;
-        poly_q_1[i] = fr::neg_one();
+        poly_q_1[i] = fr::zero;
         poly_q_2[i] = fr::zero;
         poly_q_3[i] = fr::zero;
         poly_q_4[i] = fr::zero;

@@ -3,9 +3,9 @@
 #include "./base_widget.hpp"
 
 namespace waffle {
-class VerifierSequentialWidget : public VerifierBaseWidget {
+class VerifierTurboXorWidget : public VerifierBaseWidget {
   public:
-    VerifierSequentialWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
+    VerifierTurboXorWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
         const challenge_coefficients& challenge,
@@ -15,39 +15,35 @@ class VerifierSequentialWidget : public VerifierBaseWidget {
 
     barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t&,
                                                                     const barretenberg::fr::field_t& nu_base,
-                                                                    const transcript::Transcript&)
-    {
-        return nu_base;
-    };
+                                                                    const transcript::Transcript&);
+
+    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t&, const transcript::Transcript& transcript, barretenberg::fr::field_t&, const barretenberg::evaluation_domain& );
 };
 
-class ProverSequentialWidget : public ProverBaseWidget {
+class ProverTurboXorWidget : public ProverBaseWidget {
   public:
-    ProverSequentialWidget(proving_key* input_key, program_witness* input_witness);
-    ProverSequentialWidget(const ProverSequentialWidget& other);
-    ProverSequentialWidget(ProverSequentialWidget&& other);
-    ProverSequentialWidget& operator=(const ProverSequentialWidget& other);
-    ProverSequentialWidget& operator=(ProverSequentialWidget&& other);
+    ProverTurboXorWidget(proving_key* input_key, program_witness* input_witness);
+    ProverTurboXorWidget(const ProverTurboXorWidget& other);
+    ProverTurboXorWidget(ProverTurboXorWidget&& other);
+    ProverTurboXorWidget& operator=(const ProverTurboXorWidget& other);
+    ProverTurboXorWidget& operator=(ProverTurboXorWidget&& other);
 
     barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
                                                             const transcript::Transcript& transcript);
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base,
                                                           const transcript::Transcript& transcript,
                                                           barretenberg::polynomial& r);
-
     barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
                                                                 const transcript::Transcript&,
                                                                 barretenberg::fr::field_t*,
-                                                                barretenberg::fr::field_t*)
-    {
-        return nu_base;
-    }
+                                                                barretenberg::fr::field_t*);
 
     std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const ReferenceString& reference_string) const;
 
-    barretenberg::polynomial& q_3_next;
+    void compute_transcript_elements(transcript::Transcript& transcript);
 
-    barretenberg::polynomial& q_3_next_fft;
+    barretenberg::polynomial& q_xor;
+    barretenberg::polynomial& q_xor_fft;
 
 };
 } // namespace waffle

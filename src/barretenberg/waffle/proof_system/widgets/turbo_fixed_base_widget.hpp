@@ -42,8 +42,6 @@ class ProverTurboFixedBaseWidget : public ProverTurboArithmeticWidget {
 
     void compute_transcript_elements(transcript::Transcript& transcript);
 
-    void reset();
-
     barretenberg::polynomial& q_ecc_1;
     barretenberg::polynomial& q_ecc_1_fft;
 

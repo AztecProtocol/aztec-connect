@@ -188,6 +188,19 @@ class ComposerBase
         return index;
     }
 
+    void set_public_input(const uint32_t witness_index)
+    {
+        bool does_not_exist = true;
+        for (size_t i = 0; i < public_inputs.size(); ++i)
+        {
+            does_not_exist = does_not_exist && (public_inputs[i] != witness_index);
+        }
+        if (does_not_exist)
+        {
+            public_inputs.emplace_back(witness_index);
+        }
+    }
+
     virtual void assert_equal(const uint32_t a_idx, const uint32_t b_idx)
     {
         ASSERT(barretenberg::fr::eq(variables[a_idx], variables[b_idx]));
@@ -216,6 +229,7 @@ class ComposerBase
         std::array<std::vector<uint32_t>, program_width> sigma_mappings;
         std::array<uint32_t, 4> wire_offsets{ 0U, 0x40000000, 0x80000000, 0xc0000000 };
         const uint32_t num_public_inputs = static_cast<uint32_t>(public_inputs.size());
+
         for (size_t i = 0; i < program_width; ++i)
         {
             sigma_mappings[i].reserve(key->n);
@@ -227,6 +241,7 @@ class ComposerBase
                 sigma_mappings[i].emplace_back(j + wire_offsets[i]);
             }
         }
+
         for (size_t i = 0; i < wire_epicycles.size(); ++i)
         {
             for (size_t j = 0; j < wire_epicycles[i].size(); ++j)
@@ -238,7 +253,7 @@ class ComposerBase
                     next_epicycle.gate_index + static_cast<uint32_t>(next_epicycle.wire_type) + num_public_inputs;   
             }
         }
-    
+
         for (size_t i = 0; i < program_width; ++i)
         {
             std::string index = std::to_string(i + 1);

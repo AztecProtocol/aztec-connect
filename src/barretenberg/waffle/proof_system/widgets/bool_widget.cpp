@@ -9,10 +9,7 @@ using namespace barretenberg;
 
 namespace waffle {
 ProverBoolWidget::ProverBoolWidget(proving_key* input_key, program_witness* input_witness)
-    : ProverBaseWidget(input_key,
-                       input_witness,
-                       static_cast<size_t>(WidgetVersionControl::Dependencies::NONE),
-                       static_cast<size_t>(WidgetVersionControl::Features::HAS_BOOL_SELECTORS))
+    : ProverBaseWidget(input_key, input_witness)
     , q_bl(key->constraint_selectors.at("q_bl"))
     , q_br(key->constraint_selectors.at("q_br"))
     , q_bo(key->constraint_selectors.at("q_bo"))
@@ -52,8 +49,6 @@ ProverBoolWidget& ProverBoolWidget::operator=(const ProverBoolWidget& other)
     q_bl_fft = key->constraint_selectors.at("q_bl_fft");
     q_br_fft = key->constraint_selectors.at("q_br_fft");
     q_bo_fft = key->constraint_selectors.at("q_bo_fft");
-
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
@@ -68,12 +63,10 @@ ProverBoolWidget& ProverBoolWidget::operator=(ProverBoolWidget&& other)
     q_bl_fft = key->constraint_selectors.at("q_bl_fft");
     q_br_fft = key->constraint_selectors.at("q_br_fft");
     q_bo_fft = key->constraint_selectors.at("q_bo_fft");
-
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
-fr::field_t ProverBoolWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
+fr::field_t ProverBoolWidget::compute_quotient_contribution(const fr::field_t& alpha_base,
                                                             const transcript::Transcript& transcript)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
@@ -140,6 +133,14 @@ fr::field_t ProverBoolWidget::compute_linear_contribution(const fr::field_t& alp
     return fr::mul(alpha_base, fr::mul(fr::sqr(alpha), alpha));
 }
 
+fr::field_t ProverBoolWidget::compute_opening_poly_contribution(const fr::field_t& nu_base,
+                                                                const transcript::Transcript&,
+                                                                fr::field_t*,
+                                                                fr::field_t*)
+{
+    return nu_base;
+}
+
 std::unique_ptr<VerifierBaseWidget> ProverBoolWidget::compute_preprocessed_commitments(
     const ReferenceString& reference_string) const
 {
@@ -147,9 +148,7 @@ std::unique_ptr<VerifierBaseWidget> ProverBoolWidget::compute_preprocessed_commi
                          polynomial(q_br, key->small_domain.size),
                          polynomial(q_bo, key->small_domain.size) };
 
-
-
-    std::vector<barretenberg::g1::affine_element> commitments;
+    std::vector<g1::affine_element> commitments;
     commitments.resize(3);
 
     for (size_t i = 0; i < 3; ++i) {
@@ -161,24 +160,38 @@ std::unique_ptr<VerifierBaseWidget> ProverBoolWidget::compute_preprocessed_commi
     return result;
 }
 
-void ProverBoolWidget::reset() {}
-
 // ###
 
-VerifierBoolWidget::VerifierBoolWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments)
-    : VerifierBaseWidget(static_cast<size_t>(WidgetVersionControl::Dependencies::NONE),
-                         static_cast<size_t>(WidgetVersionControl::Features::HAS_BOOL_SELECTORS))
+VerifierBoolWidget::VerifierBoolWidget(std::vector<g1::affine_element>& instance_commitments)
+    : VerifierBaseWidget()
 {
     ASSERT(instance_commitments.size() == 3);
     instance =
         std::vector<g1::affine_element>{ instance_commitments[0], instance_commitments[1], instance_commitments[2] };
 }
 
+fr::field_t VerifierBoolWidget::compute_quotient_evaluation_contribution(
+    const fr::field_t& alpha_base,
+    const transcript::Transcript& transcript,
+    fr::field_t&,
+    const evaluation_domain&)
+{
+    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    return fr::mul(alpha_base, fr::mul(fr::sqr(alpha), alpha));
+}
+
+fr::field_t VerifierBoolWidget::compute_batch_evaluation_contribution(fr::field_t&,
+                                                                const fr::field_t& nu_base,
+                                                                const transcript::Transcript&)
+{
+    return nu_base;
+};
+
 VerifierBaseWidget::challenge_coefficients VerifierBoolWidget::append_scalar_multiplication_inputs(
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
-    std::vector<barretenberg::g1::affine_element>& points,
-    std::vector<barretenberg::fr::field_t>& scalars)
+    std::vector<g1::affine_element>& points,
+    std::vector<fr::field_t>& scalars)
 {
     fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);

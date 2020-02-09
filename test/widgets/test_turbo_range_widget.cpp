@@ -35,20 +35,19 @@ namespace
         fr::add(fr::add(fr::one, fr::one), fr::one)
     };
 
-    w_1[0] = fr::zero;
-    w_2[0] = fr::zero;
-    w_3[0] = fr::zero;
     w_4[0] = fr::zero;
-
-    for (size_t i = 1; i < num_gates; ++i)
+    for (size_t i = 0; i < num_gates - 1; ++i)
     {
-        w_1[i] = fr::add(fr::mul(w_4[i - 1], four), values[i & 3]);
-        w_2[i] = fr::add(fr::mul(w_1[i], four), values[(i + 1) & 3]);
-        w_3[i] = fr::add(fr::mul(w_2[i], four), values[(i + 2) & 3]);
-        w_4[i] = fr::add(fr::mul(w_3[i], four), values[(i + 3) & 3]);
+        w_3[i] = fr::add(fr::mul(w_4[i], four), values[i & 3]);
+        w_2[i] = fr::add(fr::mul(w_3[i], four), values[(i + 1) & 3]);
+        w_1[i] = fr::add(fr::mul(w_2[i], four), values[(i + 2) & 3]);
+        w_4[i + 1] = fr::add(fr::mul(w_1[i], four), values[(i + 3) & 3]);
 
-        q_range[i - 1] = fr::one;
+        q_range[i] = fr::one;
     }
+    w_1[num_gates - 1] = fr::zero;
+    w_2[num_gates - 1] = fr::zero;
+    w_3[num_gates - 1] = fr::zero;
     q_range[num_gates - 1] = fr::zero;
 
     polynomial& w_1_fft = key->wire_ffts.at("w_1_fft");

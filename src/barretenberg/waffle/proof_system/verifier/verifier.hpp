@@ -9,6 +9,8 @@
 
 #include "../../../transcript/manifest.hpp"
 #include "../../../transcript/transcript.hpp"
+#include "../program_settings.hpp"
+
 namespace waffle
 {
 template <typename program_settings>
@@ -39,10 +41,12 @@ class VerifierBase
     bool __DEBUG_HAS_FOURTH_WIRE;
 };
 
+extern template class VerifierBase<standard_settings>;
+extern template class VerifierBase<extended_settings>;
+extern template class VerifierBase<turbo_settings>;
+
 typedef VerifierBase<standard_settings> Verifier;
 typedef VerifierBase<extended_settings> ExtendedVerifier;
 typedef VerifierBase<turbo_settings> TurboVerifier;
 
 } // namespace waffle
-
-#include "./verifier.tcc"

@@ -4,7 +4,7 @@
 
 namespace waffle {
 /**
- * ProverBoolWidget : gate that constrains left and right wire values to be booleans
+ * ProverBoolWidget : constraint that constrains left and right wire values to be booleans
  *
  **/
 
@@ -12,18 +12,22 @@ class VerifierBoolWidget : public VerifierBaseWidget {
   public:
     VerifierBoolWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
 
+    barretenberg::fr::field_t compute_quotient_evaluation_contribution(
+        const barretenberg::fr::field_t&,
+        const transcript::Transcript&,
+        barretenberg::fr::field_t&,
+        const barretenberg::evaluation_domain&);
+
+    barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t&,
+                                                                    const barretenberg::fr::field_t& nu_base,
+                                                                    const transcript::Transcript&);
+
+    
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
         const challenge_coefficients& challenge,
         const transcript::Transcript& transcript,
         std::vector<barretenberg::g1::affine_element>& points,
         std::vector<barretenberg::fr::field_t>& scalars);
-
-    barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t&,
-                                                                    const barretenberg::fr::field_t& nu_base,
-                                                                    const transcript::Transcript&)
-    {
-        return nu_base;
-    };
 };
 
 class ProverBoolWidget : public ProverBaseWidget {
@@ -39,18 +43,13 @@ class ProverBoolWidget : public ProverBaseWidget {
     barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base,
                                                           const transcript::Transcript& transcript,
                                                           barretenberg::polynomial& r);
+
     barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
                                                                 const transcript::Transcript&,
                                                                 barretenberg::fr::field_t*,
-                                                                barretenberg::fr::field_t*)
-    {
-        return nu_base;
-    }
+                                                                barretenberg::fr::field_t*);
 
-    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(
-                                                                         const ReferenceString& reference_string) const;
-
-    void reset();
+    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const ReferenceString& reference_string) const;
 
     barretenberg::polynomial& q_bl;
     barretenberg::polynomial& q_br;

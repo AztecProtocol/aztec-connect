@@ -13,6 +13,30 @@
 
 using namespace barretenberg;
 
+namespace
+{
+uint32_t get_random_int()
+{
+    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+}
+}
+
+TEST(turbo_composer, base_case)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+    fr::field_t a = fr::one;
+    composer.add_public_variable(a);
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof); // instance, prover.reference_string.SRS_T2);
+    EXPECT_EQ(result, true);
+
+}
 
 TEST(turbo_composer, test_add_gate_proofs)
 {
@@ -86,12 +110,12 @@ TEST(turbo_composer, test_mul_gate_proofs)
         fr::invert(q[4]), fr::invert(q[5]), fr::invert(q[6]),
     };
 
-    fr::field_t a = fr::random_element();
+    fr::field_t a = fr::one;
     fr::field_t b = fr::random_element();
     fr::field_t c = fr::neg(fr::mul(fr::add(fr::add(fr::mul(q[0], a), fr::mul(q[1], b)), q[3]), q_inv[2]));
     fr::field_t d = fr::neg(fr::mul(fr::add(fr::mul(q[4], fr::mul(a, b)), q[6]), q_inv[5]));
 
-    uint32_t a_idx = composer.add_variable(a);
+    uint32_t a_idx = composer.add_public_variable(a);
     uint32_t b_idx = composer.add_variable(b);
     uint32_t c_idx = composer.add_variable(c);
     uint32_t d_idx = composer.add_variable(d);
@@ -450,5 +474,52 @@ TEST(turbo_composer, large_scalar_multipliers)
 
     free(multiplication_transcript);
     free(accumulator_transcript);
+
+}
+
+
+TEST(turbo_composer, range_constraint)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    for (size_t i = 0; i < 10; ++i)
+    {
+        uint32_t value = get_random_int();
+        fr::field_t witness_value = fr::to_montgomery_form({{ value, 0, 0, 0 }});
+        uint32_t witness_index = composer.add_variable(witness_value);
+
+        // include non-nice numbers of bits, that will bleed over gate boundaries
+        size_t extra_bits = 2 * (i % 4);
+    
+        std::vector<uint32_t> accumulators = composer.create_range_constraint(witness_index, 32 + extra_bits);
+
+        for (uint32_t j = 0; j < 16; ++j)
+        {
+            uint32_t result = (value >> (30U - (2* j)));
+            fr::field_t source = fr::from_montgomery_form(composer.get_variable(accumulators[j + (extra_bits >> 1)]));
+            uint32_t expected = static_cast<uint32_t>(source.data[0]);
+            EXPECT_EQ(result, expected);
+        }
+        for (uint32_t j = 1; j < 16; ++j)
+        {
+            uint32_t left = (value >> (30U - (2* j)));
+            uint32_t right = (value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+        }
+    }
+
+    uint32_t zero_idx = composer.add_variable(fr::zero);
+    uint32_t one_idx = composer.add_variable(fr::one);
+    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+
+    EXPECT_EQ(result, true);
 
 }

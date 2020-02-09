@@ -12,9 +12,7 @@ using namespace barretenberg;
 namespace waffle {
 ProverSequentialWidget::ProverSequentialWidget(proving_key* input_key, program_witness* input_witness)
     : ProverBaseWidget(input_key,
-                       input_witness,
-                       static_cast<size_t>(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED),
-                       static_cast<size_t>(WidgetVersionControl::Features::HAS_EXTENDED_ARITHMETISATION))
+                       input_witness)
     , q_3_next(key->constraint_selectors.at("q_3_next"))
     , q_3_next_fft(key->constraint_selector_ffts.at("q_3_next_fft"))
 {}
@@ -38,9 +36,6 @@ ProverSequentialWidget& ProverSequentialWidget::operator=(const ProverSequential
     q_3_next = key->constraint_selectors.at("q_3_next");
 
     q_3_next_fft = key->constraint_selector_ffts.at("q_3_next_fft");
-
-    // TODO remove this copy
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
@@ -51,8 +46,6 @@ ProverSequentialWidget& ProverSequentialWidget::operator=(ProverSequentialWidget
     q_3_next = key->constraint_selectors.at("q_3_next");
 
     q_3_next_fft = key->constraint_selector_ffts.at("q_3_next_fft");
-
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
@@ -111,13 +104,10 @@ std::unique_ptr<VerifierBaseWidget> ProverSequentialWidget::compute_preprocessed
     return result;
 }
 
-void ProverSequentialWidget::reset() {}
-
 // ###
 
 VerifierSequentialWidget::VerifierSequentialWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments)
-    : VerifierBaseWidget(static_cast<size_t>(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED),
-                         static_cast<size_t>(WidgetVersionControl::Features::HAS_EXTENDED_ARITHMETISATION))
+    : VerifierBaseWidget()
 {
     ASSERT(instance_commitments.size() == 1);
     instance = std::vector<g1::affine_element>{

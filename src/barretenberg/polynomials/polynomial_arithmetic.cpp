@@ -127,7 +127,7 @@ void compute_multiplicative_subgroup(const size_t log2_subgroup_size,
 
     // Step 2: compute the cofactor term g^n
     fr::field_t accumulator;
-    fr::__copy(fr::coset_generators[0], accumulator);
+    fr::__copy(src_domain.generator, accumulator);
     for (size_t i = 0; i < src_domain.log2_size; ++i) {
         fr::__sqr(accumulator, accumulator);
     }
@@ -580,7 +580,8 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
         fr::field_t work_root;
         fr::field_t root_shift;
         fr::__pow_small(multiplicand, j * target_domain.thread_size, root_shift);
-        fr::__mul(fr::coset_generators[0], root_shift, work_root);
+
+        fr::__mul(src_domain.generator, root_shift, work_root);
         size_t offset = j * target_domain.thread_size;
         for (size_t i = offset; i < offset + target_domain.thread_size; ++i) {
             fr::__sub(work_root, one, l_1_coefficients[i]);
@@ -675,12 +676,12 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
 
     // Compute w^{n-1}
     fr::__neg(src_domain.root_inverse, numerator_constant);
+
     // Compute first value of g.w_i
 
     // Step 5: iterate over point evaluations, scaling each one by the inverse of the vanishing polynomial
     if (subgroup_size >= target_domain.thread_size) {
-        fr::field_t work_root;
-        fr::__copy(fr::coset_generators[0], work_root);
+        fr::field_t work_root = src_domain.generator;
         fr::field_t T0;
         for (size_t i = 0; i < target_domain.size; i += subgroup_size) {
             for (size_t j = 0; j < subgroup_size; ++j) {
@@ -699,7 +700,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
             fr::field_t root_shift;
             fr::field_t work_root;
             fr::__pow_small(target_domain.root, offset, root_shift);
-            fr::__mul(fr::coset_generators[0], root_shift, work_root);
+            fr::__mul(src_domain.generator, root_shift, work_root);
             fr::field_t T0;
             for (size_t i = offset; i < offset + target_domain.thread_size; i += subgroup_size) {
                 for (size_t j = 0; j < subgroup_size; ++j) {

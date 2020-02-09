@@ -11,55 +11,63 @@
 using namespace barretenberg;
 
 namespace waffle {
-ProverTurboRangeWidget::ProverTurboRangeWidget(proving_key* input_key, program_witness* input_witness)
-    : ProverBaseWidget(input_key, input_witness)
-    , q_range(key->constraint_selectors.at("q_range"))
-    , q_range_fft(key->constraint_selector_ffts.at("q_range_fft"))
-{}
-
-ProverTurboRangeWidget::ProverTurboRangeWidget(const ProverTurboRangeWidget& other)
-    : ProverBaseWidget(other)
-    , q_range(key->constraint_selectors.at("q_range"))
-    , q_range_fft(key->constraint_selector_ffts.at("q_range_fft"))
-{}
-
-ProverTurboRangeWidget::ProverTurboRangeWidget(ProverTurboRangeWidget&& other)
-    : ProverBaseWidget(other)
-    , q_range(key->constraint_selectors.at("q_range"))
-    , q_range_fft(key->constraint_selector_ffts.at("q_range_fft"))
-{}
-
-ProverTurboRangeWidget& ProverTurboRangeWidget::operator=(const ProverTurboRangeWidget& other)
+ProverTurboXorWidget::ProverTurboXorWidget(proving_key* input_key, program_witness* input_witness)
+    : ProverBaseWidget(input_key,
+                       input_witness)
+    , q_xor(key->constraint_selectors.at("q_xor"))
+    , q_xor_fft(key->constraint_selector_ffts.at("q_xor_fft"))
 {
-    ProverBaseWidget::operator=(other);
-    q_range = key->constraint_selectors.at("q_range");
-    q_range_fft = key->constraint_selector_ffts.at("q_range_fft");
+}
+
+ProverTurboXorWidget::ProverTurboXorWidget(const ProverTurboXorWidget& other)
+    : ProverBaseWidget(other)
+    , q_xor(key->constraint_selectors.at("q_xor"))
+    , q_xor_fft(key->constraint_selector_ffts.at("q_xor_fft"))
+{
+}
+
+ProverTurboXorWidget::ProverTurboXorWidget(ProverTurboXorWidget&& other)
+    : ProverBaseWidget(other)
+    , q_xor(key->constraint_selectors.at("q_xor"))
+    , q_xor_fft(key->constraint_selector_ffts.at("q_xor_fft"))
+{
+}
+
+ProverTurboXorWidget& ProverTurboXorWidget::operator=(const ProverTurboXorWidget& other)
+{
+    q_xor = key->constraint_selectors.at("q_xor");
+    q_xor_fft = key->constraint_selector_ffts.at("q_xor_fft");
     return *this;
 }
 
-ProverTurboRangeWidget& ProverTurboRangeWidget::operator=(ProverTurboRangeWidget&& other)
+ProverTurboXorWidget& ProverTurboXorWidget::operator=(ProverTurboXorWidget&& other)
 {
-    ProverBaseWidget::operator=(other);
-    q_range = key->constraint_selectors.at("q_range");
-    q_range_fft = key->constraint_selector_ffts.at("q_range_fft");
+    q_xor = key->constraint_selectors.at("q_xor");
+    q_xor_fft = key->constraint_selector_ffts.at("q_xor_fft");
     return *this;
 }
 
 /*
- * The range constraint accumulates base 4 values into a sum.
- * We do this by evaluating a kind of 'raster scan', where we compare adjacent elements
- * and validate that their differences map to a base for value  *
- * Let's say that we want to perform a 32-bit range constraint in 'x'.
- * We can represent x via 16 constituent base-4 'quads' {q_0, ..., q_15}:
+ * Hoo boy, XOR polynomials!
+ * This transition constraint evaluates a XOR relationship between the accumulating sums of three base-4 variables...
+ * 
+ * Ok, so we want to evaluate a ^ b = c 
+ * 
+ * We also want the output memory cell to represent the actual result of the XOR operation,
+ * instead of a collection of bits / quads that need to be summed together. Who has time for that?
+ * 
+ * We use 3 columns of program memory to represent accumulating sums of a, b, c.
+ * 
+ * For example, we can represent a 32-bit 'a' via its quads
  *
  *      15
  *      ===
  *      \          i
- * x =  /    q  . 4
+ * a =  /    q  . 4
  *      ===   i
  *     i = 0
  *
- * In program memory, we place an accumulating base-4 sum of x {a_0, ..., a_15}, where
+ * In program memory, we place an accumulating base-4 sum of a {a_0, ..., a_15}, where
  *
  *         i
  *        ===
@@ -69,39 +77,53 @@ ProverTurboRangeWidget& ProverTurboRangeWidget::operator=(ProverTurboRangeWidget
  *       j = 0
  *
  *
- * From this, we can use our range transition constraint to validate that
+ * From this, we can extract a quad by validating that
  *
  *
  *  a      - 4 . a  ϵ [0, 1, 2, 3]
  *   i + 1        i
  *
- *
- * We place our accumulating sums in program memory in the following sequence:
+ * Once we have validated the above, we can then extract an accumulator's implicit quad via:
+ * 
+ *  q  =  a      - 4 . a  ϵ [0, 1, 2, 3]
+ *   i     i + 1        i
+ * 
+ * 
+ * But of course it's not so simple! A XOR polynomial identity with two input quads (plus selector) has a degree of 7.
+ * To constrain the degree of our quotient polynomial T(X) we want our identity to have a degree of 5
+ * 
+ * We also have a spare column to work with, which we can use to store the low-order bit of one accumulators quad.
+ * 
+ * For the identity, we use the following notation:
+ * 
+ *  (1) 'q' is the current round quad attributed to 'a'
+ *  (2) 'b0' is the low-order bit of the current round quad attributed to 'b'
+ *  (3) 'b1' is the high-order bit of the current round quad attributed to 'b'
+ *  (4) 'qc' is the current round quad attributed to output 'c'
+ * 
+ * 
+ * 
+ *                                             3
+ *                      2                   4 q  (b1 - b0) + q (14 b1 - 20 b0)
+ *  qc = b0 + 2 b1 + 6 q  (b0 - b1) + 3 q + ----------------------------------
+ *                                                           3
+ * 
+ * Clear as mud, right?
+ * 
+ * We place our accumulating sums (A, B, C) in program memory in the following sequence:
  *
  * +-----+-----+-----+-----+
  * |  A  |  B  |  C  |  D  |
  * +-----+-----+-----+-----+
- * | a3  | a2  | a1  | 0   |
- * | a7  | a6  | a5  | a4  |
- * | a11 | a10 | a9  | a8  |
- * | a15 | a14 | a13 | a12 |
- * | --- | --- | --- | a16 |
+ * | 0   | 0   | b1  | 0   |
+ * | A1  | B1  | b2  | C1  |
+ * | A2  | B2  | b3  | C2  |
+ * | ... | ... | ... | ... |
+ * | An  | Bn  | --- | Cn  |
  * +-----+-----+-----+-----+
  *
- * Our range transition constraint on row 'i'
- * performs our base-4 range check on the follwing pairs:
- *
- * (D_{i}, C_{i}), (C_{i}, B_{i}), (B_{i}, A_{i}), (A_{i}, D_{i+1})
- *
- * We need to start our raster scan at zero, so we simplify matters and just force the first value
- * to be zero.
- *
- * The output will be in the 4th column of an otherwise unused row. Assuming this row can
- * be used for a width-3 standard gate, the total number of gates for an n-bit range constraint
- * is (n / 8) gates
- *
  **/
-fr::field_t ProverTurboRangeWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
+fr::field_t ProverTurboXorWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
                                                                   const transcript::Transcript& transcript)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
@@ -125,8 +147,33 @@ fr::field_t ProverTurboRangeWidget::compute_quotient_contribution(const barreten
     fr::__neg(minus_two, minus_two);
     fr::__neg(minus_three, minus_three);
 
+    fr::field_t one_third = fr::to_montgomery_form({{ 3, 0, 0, 0 }});
+    fr::__invert(one_third, one_third);
+
     ITERATE_OVER_DOMAIN_START(key->large_domain);
 
+
+    fr::field_t delta_c;
+    fr::field_t delta_b;
+    fr::field_t delta_c;
+
+    fr::__add(w_1_fft[i], w_1_fft[i], delta_a);
+    fr::__add(delta_a, delta_a, delta_a);
+    fr::__sub(w_1_fft[i + 4], delta_a, delta_a);
+
+    fr::__add(w_2_fft[i], w_2_fft[i], delta_b);
+    fr::__add(delta_b, delta_b, delta_b);
+    fr::__sub(w_2_fft[i + 4], delta_b, delta_b);
+
+    fr::__add(w_4_fft[i], w_4_fft[i], delta_c);
+    fr::__add(delta_c, delta_c, delta_c);
+    fr::__sub(w_4_fft[i + 4], delta_c, delta_c);
+
+    fr::field_t b0 = w_3_fft[i];
+    fr::field_t b1 = fr::sub(delta_b, b0);
+
+    fr::field_t 
+    fr::field_t xor_identity;
     fr::field_t delta_1;
     fr::field_t delta_2;
     fr::field_t delta_3;
@@ -187,16 +234,16 @@ fr::field_t ProverTurboRangeWidget::compute_quotient_contribution(const barreten
     fr::__mul_with_coarse_reduction(T0, alpha_d, T0);      // D(D - 1)(D - 2)(D - 3)alpha
     fr::__add(range_accumulator, T0, range_accumulator);
 
-    fr::__mul(range_accumulator, q_range_fft[i], range_accumulator);
+    fr::__mul(range_accumulator, q_xor_fft[i], range_accumulator);
     fr::__add(quotient_large[i], range_accumulator, quotient_large[i]);
     ITERATE_OVER_DOMAIN_END;
 
     return fr::mul(alpha_d, alpha);
 }
 
-void ProverTurboRangeWidget::compute_transcript_elements(transcript::Transcript&) {}
+void ProverTurboXorWidget::compute_transcript_elements(transcript::Transcript&) {}
 
-fr::field_t ProverTurboRangeWidget::compute_linear_contribution(const fr::field_t& alpha_base,
+fr::field_t ProverTurboXorWidget::compute_linear_contribution(const fr::field_t& alpha_base,
                                                                 const transcript::Transcript& transcript,
                                                                 barretenberg::polynomial& r)
 {
@@ -277,13 +324,13 @@ fr::field_t ProverTurboRangeWidget::compute_linear_contribution(const fr::field_
 
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T3;
-    fr::__mul(range_multiplicand, q_range[i], T3);
+    fr::__mul(range_multiplicand, q_xor[i], T3);
     fr::__add(r[i], T3, r[i]);
     ITERATE_OVER_DOMAIN_END;
     return fr::mul(alpha_d, alpha);
 }
 
-fr::field_t ProverTurboRangeWidget::compute_opening_poly_contribution(const fr::field_t& nu_base,
+fr::field_t ProverTurboXorWidget::compute_opening_poly_contribution(const fr::field_t& nu_base,
                                                                       const transcript::Transcript&,
                                                                       fr::field_t*,
                                                                       fr::field_t*)
@@ -291,10 +338,10 @@ fr::field_t ProverTurboRangeWidget::compute_opening_poly_contribution(const fr::
     return nu_base;
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverTurboRangeWidget::compute_preprocessed_commitments(
+std::unique_ptr<VerifierBaseWidget> ProverTurboXorWidget::compute_preprocessed_commitments(
     const ReferenceString& reference_string) const
 {
-    polynomial polys[1]{ polynomial(q_range, key->small_domain.size) };
+    polynomial polys[1]{ polynomial(q_xor, key->small_domain.size) };
 
     std::vector<barretenberg::g1::affine_element> commitments;
     commitments.resize(1);
@@ -304,35 +351,32 @@ std::unique_ptr<VerifierBaseWidget> ProverTurboRangeWidget::compute_preprocessed
                                    polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
                                commitments[i]);
     }
-    std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierTurboRangeWidget>(commitments);
+    std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierTurboXorWidget>(commitments);
     return result;
 }
 
 // ###
 
-VerifierTurboRangeWidget::VerifierTurboRangeWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments)
+VerifierTurboXorWidget::VerifierTurboXorWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments)
     : VerifierBaseWidget()
 {
     ASSERT(instance_commitments.size() == 1);
     instance = std::vector<g1::affine_element>{ instance_commitments[0] };
 }
 
-barretenberg::fr::field_t VerifierTurboRangeWidget::compute_quotient_evaluation_contribution(
-    const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t&, const evaluation_domain&)
+barretenberg::fr::field_t VerifierTurboXorWidget::compute_quotient_evaluation_contribution(
+    const fr::field_t& alpha_base, const transcript::Transcript&, fr::field_t&, const evaluation_domain&)
 {
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-
-    fr::field_t alpha_quad = fr::sqr(fr::sqr(alpha));
-    return fr::mul(alpha_base, alpha_quad);
+    return alpha_base;
 }
 
-barretenberg::fr::field_t VerifierTurboRangeWidget::compute_batch_evaluation_contribution(
+barretenberg::fr::field_t VerifierTurboXorWidget::compute_batch_evaluation_contribution(
     barretenberg::fr::field_t&, const barretenberg::fr::field_t& nu_base, const transcript::Transcript&)
 {
     return nu_base;
 }
 
-VerifierBaseWidget::challenge_coefficients VerifierTurboRangeWidget::append_scalar_multiplication_inputs(
+VerifierBaseWidget::challenge_coefficients VerifierTurboXorWidget::append_scalar_multiplication_inputs(
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
     std::vector<barretenberg::g1::affine_element>& points,

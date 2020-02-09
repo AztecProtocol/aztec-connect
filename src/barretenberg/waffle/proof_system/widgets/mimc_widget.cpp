@@ -6,19 +6,16 @@
 #include "../../../curves/bn254/g1.hpp"
 #include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 
-
 using namespace barretenberg;
 
 namespace waffle {
 ProverMiMCWidget::ProverMiMCWidget(proving_key* input_key, program_witness* input_witness)
-    : ProverBaseWidget(input_key, input_witness, static_cast<size_t>(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED),
-                       static_cast<size_t>(WidgetVersionControl::Features::HAS_MIMC_SELECTORS))
+    : ProverBaseWidget(input_key, input_witness)
     , q_mimc_selector(key->constraint_selectors.at("q_mimc_selector"))
     , q_mimc_coefficient(key->constraint_selectors.at("q_mimc_coefficient"))
     , q_mimc_selector_fft(key->constraint_selector_ffts.at("q_mimc_selector_fft"))
     , q_mimc_coefficient_fft(key->constraint_selector_ffts.at("q_mimc_coefficient_fft"))
-{
-}
+{}
 
 ProverMiMCWidget::ProverMiMCWidget(const ProverMiMCWidget& other)
     : ProverBaseWidget(other)
@@ -26,8 +23,7 @@ ProverMiMCWidget::ProverMiMCWidget(const ProverMiMCWidget& other)
     , q_mimc_coefficient(key->constraint_selectors.at("q_mimc_coefficient"))
     , q_mimc_selector_fft(key->constraint_selector_ffts.at("q_mimc_selector_fft"))
     , q_mimc_coefficient_fft(key->constraint_selector_ffts.at("q_mimc_coefficient_fft"))
-{
-}
+{}
 
 ProverMiMCWidget::ProverMiMCWidget(ProverMiMCWidget&& other)
     : ProverBaseWidget(other)
@@ -35,8 +31,7 @@ ProverMiMCWidget::ProverMiMCWidget(ProverMiMCWidget&& other)
     , q_mimc_coefficient(key->constraint_selectors.at("q_mimc_coefficient"))
     , q_mimc_selector_fft(key->constraint_selector_ffts.at("q_mimc_selector_fft"))
     , q_mimc_coefficient_fft(key->constraint_selector_ffts.at("q_mimc_coefficient_fft"))
-{
-}
+{}
 
 ProverMiMCWidget& ProverMiMCWidget::operator=(const ProverMiMCWidget& other)
 {
@@ -47,7 +42,6 @@ ProverMiMCWidget& ProverMiMCWidget::operator=(const ProverMiMCWidget& other)
 
     q_mimc_selector_fft = key->constraint_selector_ffts.at("q_mimc_selector_fft");
     q_mimc_coefficient_fft = key->constraint_selector_ffts.at("q_mimc_coefficient_fft");
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
@@ -78,14 +72,14 @@ fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::
     fr::field_t T0;
     fr::field_t T1;
     fr::field_t T2;
-    fr::__add_with_coarse_reduction(w_3_fft[i], w_1_fft[i], T0); // T0 = w_o + w_l
-    fr::__add_with_coarse_reduction(T0, q_mimc_coefficient_fft[i], T0);                      // T0 = (w_o + w_l + q_c)
-    fr::__sqr_with_coarse_reduction(T0, T1);                                                 // T1 = (w_o + w_l + q_c)^2
-    fr::__mul_with_coarse_reduction(T1, T0, T1);                                             // T1 = (w_o + w_l + q_c)^3
-    fr::__sub_with_coarse_reduction(T1, w_2_fft[i], T1);     // T1 = (w_o + w_l + q_c)^3 - w_r
-    fr::__sqr_with_coarse_reduction(w_2_fft[i], T2);         // T2 = w_r^2
-    fr::__mul_with_coarse_reduction(T2, T0, T2);                           // T2 = (w_o + w_l + q_c).w_r^2
-    fr::__sub_with_coarse_reduction(T2, w_3_fft[i + 4], T2); // T2 = (w_o + w_l + q_c).w_r^2 - w_{o.next}
+    fr::__add_with_coarse_reduction(w_3_fft[i], w_1_fft[i], T0);        // T0 = w_o + w_l
+    fr::__add_with_coarse_reduction(T0, q_mimc_coefficient_fft[i], T0); // T0 = (w_o + w_l + q_c)
+    fr::__sqr_with_coarse_reduction(T0, T1);                            // T1 = (w_o + w_l + q_c)^2
+    fr::__mul_with_coarse_reduction(T1, T0, T1);                        // T1 = (w_o + w_l + q_c)^3
+    fr::__sub_with_coarse_reduction(T1, w_2_fft[i], T1);                // T1 = (w_o + w_l + q_c)^3 - w_r
+    fr::__sqr_with_coarse_reduction(w_2_fft[i], T2);                    // T2 = w_r^2
+    fr::__mul_with_coarse_reduction(T2, T0, T2);                        // T2 = (w_o + w_l + q_c).w_r^2
+    fr::__sub_with_coarse_reduction(T2, w_3_fft[i + 4], T2);            // T2 = (w_o + w_l + q_c).w_r^2 - w_{o.next}
     fr::__mul_with_coarse_reduction(T2, alpha, T2); // T2 = (w_o + w_l + q_c).w_r^2 - w_{o.next}).alpha
     fr::__add_with_coarse_reduction(
         T1, T2, T1); // T1 = ((w_o + w_l + q_c)^3 - w_r) + (w_o + w_l + q_c).w_r^2 - w_{o.next}).alpha
@@ -103,8 +97,9 @@ fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::
 void ProverMiMCWidget::compute_transcript_elements(transcript::Transcript& transcript)
 {
     fr::field_t z = fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
-    transcript.add_element("q_mimc_coefficient",
-                           transcript_helpers::convert_field_element(q_mimc_coefficient.evaluate(z, key->small_domain.size)));
+    transcript.add_element(
+        "q_mimc_coefficient",
+        transcript_helpers::convert_field_element(q_mimc_coefficient.evaluate(z, key->small_domain.size)));
 }
 
 fr::field_t ProverMiMCWidget::compute_linear_contribution(const fr::field_t& alpha_base,
@@ -150,30 +145,25 @@ fr::field_t ProverMiMCWidget::compute_opening_poly_contribution(const fr::field_
 std::unique_ptr<VerifierBaseWidget> ProverMiMCWidget::compute_preprocessed_commitments(
     const ReferenceString& reference_string) const
 {
-    polynomial polys[2]{ polynomial(q_mimc_coefficient, key->small_domain.size), polynomial(q_mimc_selector, key->small_domain.size) };
-
+    polynomial polys[2]{ polynomial(q_mimc_coefficient, key->small_domain.size),
+                         polynomial(q_mimc_selector, key->small_domain.size) };
 
     std::vector<barretenberg::g1::affine_element> commitments;
     commitments.resize(2);
 
     for (size_t i = 0; i < 2; ++i) {
-        g1::jacobian_to_affine(
-            scalar_multiplication::pippenger(polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
-            commitments[i]);
+        g1::jacobian_to_affine(scalar_multiplication::pippenger(
+                                   polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
+                               commitments[i]);
     }
     std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierMiMCWidget>(commitments);
     return result;
 }
 
-void ProverMiMCWidget::reset()
-{
-}
-
 // ###
 
 VerifierMiMCWidget::VerifierMiMCWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments)
-    : VerifierBaseWidget(static_cast<size_t>(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED),
-                         static_cast<size_t>(WidgetVersionControl::Features::HAS_MIMC_SELECTORS))
+    : VerifierBaseWidget()
 {
     ASSERT(instance_commitments.size() == 2);
     instance = std::vector<g1::affine_element>{ instance_commitments[0], instance_commitments[1] };
@@ -184,8 +174,7 @@ barretenberg::fr::field_t VerifierMiMCWidget::compute_batch_evaluation_contribut
     const barretenberg::fr::field_t& nu_base,
     const transcript::Transcript& transcript)
 {
-    fr::field_t q_mimc_coefficient_eval =
-        fr::serialize_from_buffer(&transcript.get_element("q_mimc_coefficient")[0]);
+    fr::field_t q_mimc_coefficient_eval = fr::serialize_from_buffer(&transcript.get_element("q_mimc_coefficient")[0]);
     fr::field_t nu = fr::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
 
     fr::field_t T0;
@@ -208,8 +197,7 @@ VerifierBaseWidget::challenge_coefficients VerifierMiMCWidget::append_scalar_mul
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
     fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
     fr::field_t w_o_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
-    fr::field_t q_mimc_coefficient_eval =
-        fr::serialize_from_buffer(&transcript.get_element("q_mimc_coefficient")[0]);
+    fr::field_t q_mimc_coefficient_eval = fr::serialize_from_buffer(&transcript.get_element("q_mimc_coefficient")[0]);
 
     fr::field_t mimc_T0 = fr::add(fr::add(w_o_eval, w_l_eval), q_mimc_coefficient_eval);
     fr::field_t mimc_a = fr::sqr(mimc_T0);

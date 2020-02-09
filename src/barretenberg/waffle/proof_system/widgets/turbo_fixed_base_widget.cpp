@@ -1,4 +1,4 @@
-#include "./turbo_fixed_base_widget.hpp"
+    #include "./turbo_fixed_base_widget.hpp"
 
 #include "../../../curves/bn254/fr.hpp"
 #include "../../../curves/bn254/g1.hpp"
@@ -16,9 +16,6 @@ ProverTurboFixedBaseWidget::ProverTurboFixedBaseWidget(proving_key* input_key, p
     , q_ecc_1(key->constraint_selectors.at("q_ecc_1"))
     , q_ecc_1_fft(key->constraint_selector_ffts.at("q_ecc_1_fft"))
 {
-    version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
-    version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
-    version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
 }
 
 ProverTurboFixedBaseWidget::ProverTurboFixedBaseWidget(const ProverTurboFixedBaseWidget& other)
@@ -26,7 +23,6 @@ ProverTurboFixedBaseWidget::ProverTurboFixedBaseWidget(const ProverTurboFixedBas
     , q_ecc_1(key->constraint_selectors.at("q_ecc_1"))
     , q_ecc_1_fft(key->constraint_selector_ffts.at("q_ecc_1_fft"))
 {
-    version = WidgetVersionControl(other.version);
 }
 
 ProverTurboFixedBaseWidget::ProverTurboFixedBaseWidget(ProverTurboFixedBaseWidget&& other)
@@ -34,7 +30,6 @@ ProverTurboFixedBaseWidget::ProverTurboFixedBaseWidget(ProverTurboFixedBaseWidge
     , q_ecc_1(key->constraint_selectors.at("q_ecc_1"))
     , q_ecc_1_fft(key->constraint_selector_ffts.at("q_ecc_1_fft"))
 {
-    version = WidgetVersionControl(other.version);
 }
 
 ProverTurboFixedBaseWidget& ProverTurboFixedBaseWidget::operator=(const ProverTurboFixedBaseWidget& other)
@@ -42,7 +37,6 @@ ProverTurboFixedBaseWidget& ProverTurboFixedBaseWidget::operator=(const ProverTu
     ProverTurboArithmeticWidget::operator=(other);
     q_ecc_1 = key->constraint_selectors.at("q_ecc_1");
     q_ecc_1_fft = key->constraint_selector_ffts.at("q_ecc_1_fft");
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
@@ -51,7 +45,6 @@ ProverTurboFixedBaseWidget& ProverTurboFixedBaseWidget::operator=(ProverTurboFix
     ProverTurboArithmeticWidget::operator=(other);
     q_ecc_1 = key->constraint_selectors.at("q_ecc_1");
     q_ecc_1_fft = key->constraint_selector_ffts.at("q_ecc_1_fft");
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
@@ -372,20 +365,12 @@ std::unique_ptr<VerifierBaseWidget> ProverTurboFixedBaseWidget::compute_preproce
     return result;
 }
 
-void ProverTurboFixedBaseWidget::reset()
-{
-    ProverTurboArithmeticWidget::reset();
-}
-
 // ###
 
 VerifierTurboFixedBaseWidget::VerifierTurboFixedBaseWidget(
     std::vector<barretenberg::g1::affine_element>& instance_commitments)
     : VerifierTurboArithmeticWidget(instance_commitments)
 {
-    version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
-    version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
-    version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
     ASSERT(instance_commitments.size() == 9);
     instance =
         std::vector<g1::affine_element>{ instance_commitments[0], instance_commitments[1], instance_commitments[2],

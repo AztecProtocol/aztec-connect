@@ -19,7 +19,7 @@ using namespace plonk;
 
 typedef stdlib::field_t<waffle::TurboComposer> field_t;
 typedef stdlib::witness_t<waffle::TurboComposer> witness_t;
-typedef stdlib::witness_t<waffle::TurboComposer> public_witness_t;
+typedef stdlib::public_witness_t<waffle::TurboComposer> public_witness_t;
 
 TEST(stdlib_pedersen, test_pedersen)
 {
@@ -37,8 +37,8 @@ TEST(stdlib_pedersen, test_pedersen)
     {
         fr::__add(right_in, fr::one, right_in);
     }
-    field_t left = public_witness_t(&composer, left_in);
-    field_t right = public_witness_t(&composer, right_in);
+    field_t left = witness_t(public_witness_t(&composer, left_in));
+    field_t right = witness_t(&composer, right_in);
 
     composer.fix_witness(left.witness_index, left.get_value());
     composer.fix_witness(right.witness_index, right.get_value());
@@ -138,7 +138,7 @@ TEST(stdlib_pedersen, test_pedersen)
     grumpkin::g1::element hash_output;
     grumpkin::g1::add(hash_output_left, hash_output_right, hash_output);
     hash_output = grumpkin::g1::normalize(hash_output);
-
+    
     EXPECT_EQ(fr::eq(out.get_value(), hash_output.x), true);
 
     fr::field_t compress_native = plonk::stdlib::group_utils::compress_native(left.get_value(), right.get_value());
@@ -162,13 +162,22 @@ TEST(stdlib_pedersen, test_pedersen_large)
     {
         fr::__add(right_in, fr::one, right_in);
     }
-    field_t left = public_witness_t(&composer, left_in);
-    field_t right = public_witness_t(&composer, right_in);
+    field_t left = witness_t(&composer, left_in);
+    field_t right = witness_t(&composer, right_in);
 
     for (size_t i = 0; i < 256; ++i)
     {
         left = plonk::stdlib::pedersen::compress(left, right);
     }
+
+    left = plonk::stdlib::pedersen::compress(left, right);
+    field_t foo = witness_t(&composer, fr::one);
+    uint32_t cache = foo.witness_index;
+
+    field_t bar = witness_t(public_witness_t(&composer, fr::one));
+
+    bar = foo + bar - foo;
+    composer.set_public_input(cache);
 
     waffle::TurboProver prover = composer.preprocess();
 

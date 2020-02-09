@@ -54,7 +54,7 @@ public:
     std::vector<barretenberg::fr::field_t> q_4_next;
     std::vector<barretenberg::fr::field_t> q_range;
 
-    static transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
+    static transcript::Manifest create_manifest(const size_t num_public_inputs)
     {
         // add public inputs....
         constexpr size_t g1_size = 64;

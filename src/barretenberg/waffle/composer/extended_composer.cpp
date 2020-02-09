@@ -419,16 +419,6 @@ void ExtendedComposer::compute_sigma_permutations(proving_key* key, const size_t
             epicycle next_epicycle = wire_epicycles[i][epicycle_index];
             uint32_t current_gate_index = adjusted_gate_indices[current_epicycle.gate_index + num_public_inputs];
             uint32_t next_gate_index = adjusted_gate_indices[next_epicycle.gate_index + num_public_inputs];
-            if ((current_epicycle.gate_index < 0xffffffff) && deleted_gates[current_epicycle.gate_index])
-            {
-                printf("current is deleted\n");
-                continue;
-            }
-            if ((next_epicycle.gate_index < 0xffffffff) && deleted_gates[next_epicycle.gate_index])
-            {
-                printf("next is deleted \n");
-                continue;
-            }
 
             sigmas[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U][static_cast<uint32_t>(current_gate_index + num_public_inputs)] =
                 next_gate_index + static_cast<uint32_t>(next_epicycle.wire_type) + num_public_inputs;
@@ -510,27 +500,11 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
         // ++bar;
     }
 
-    bool test = true;
-    test = test && (q_1.size() == q_1.size());
-    test = test && (q_2.size() == q_1.size());
-    test = test && (q_3.size() == q_1.size());
-    test = test && (q_3_next.size() == q_1.size());
-    test = test && (q_m.size() == q_1.size());
-    test = test && (q_c.size() == q_1.size());
-    test = test && (q_left_bools.size() == q_1.size());
-    test = test && (q_right_bools.size() == q_1.size());
-    test = test && (q_output_bools.size() == q_1.size());
-    
+
     for (size_t i = 0; i < public_inputs.size(); ++i)
     {
         epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
-        // epicycle right{ static_cast<uint32_t>(i - public_inputs.size()), WireType::RIGHT };
-        // epicycle out{ static_cast<uint32_t>(i - public_inputs.size()), WireType::OUTPUT };
-
         wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
-        // wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(right);
-        // wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(out);
-
     }
     
     circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size());
@@ -560,7 +534,7 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
     for (size_t i = 0; i < public_inputs.size(); ++i)
     {
         poly_q_m[i] = fr::zero;
-        poly_q_1[i] = fr::neg_one();
+        poly_q_1[i] = fr::zero;
         poly_q_2[i] = fr::zero;
         poly_q_3[i] = fr::zero;
         poly_q_c[i] = fr::zero;  
@@ -641,7 +615,9 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
     circuit_proving_key->constraint_selector_ffts.insert({ "q_bl_fft", std::move(poly_q_bl_fft) });
     circuit_proving_key->constraint_selector_ffts.insert({ "q_br_fft", std::move(poly_q_br_fft) });
     circuit_proving_key->constraint_selector_ffts.insert({ "q_bo_fft", std::move(poly_q_bo_fft) });
+
     compute_sigma_permutations(circuit_proving_key.get(), 4);
+
     computed_proving_key = true;
     return circuit_proving_key;
 }
@@ -755,6 +731,7 @@ ExtendedProver ExtendedComposer::preprocess()
 {
     compute_proving_key();
     compute_witness();
+
     ExtendedProver output_state(circuit_proving_key, witness, create_manifest(public_inputs.size()));
 
     std::unique_ptr<ProverBoolWidget> bool_widget =

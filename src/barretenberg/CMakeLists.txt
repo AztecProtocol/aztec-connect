@@ -52,6 +52,7 @@ add_library(
     polynomials/polynomial.cpp
     polynomials/polynomial.hpp
     transcript/manifest.hpp
+    transcript/transcript.cpp
     transcript/transcript.hpp
     waffle/waffle_types.hpp
     waffle/reference_string/reference_string.cpp
@@ -75,9 +76,9 @@ add_library(
     waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
     waffle/proof_system/widgets/turbo_range_widget.cpp
     waffle/proof_system/widgets/turbo_range_widget.hpp
-    waffle/proof_system/prover/prover.tcc
+    waffle/proof_system/prover/prover.cpp
     waffle/proof_system/prover/prover.hpp
-    waffle/proof_system/verifier/verifier.tcc
+    waffle/proof_system/verifier/verifier.cpp
     waffle/proof_system/verifier/verifier.hpp
     waffle/composer/composer_base.hpp
     waffle/composer/standard_composer.cpp
@@ -189,6 +190,7 @@ if(PROFILING)
         polynomials/polynomial.cpp
         polynomials/polynomial.hpp
         transcript/manifest.hpp
+        transcript/transcript.cpp
         transcript/transcript.hpp
         waffle/waffle_types.hpp
         waffle/reference_string/reference_string.cpp
@@ -212,9 +214,9 @@ if(PROFILING)
         waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
         waffle/proof_system/widgets/turbo_range_widget.cpp
         waffle/proof_system/widgets/turbo_range_widget.hpp
-        waffle/proof_system/prover/prover.tcc
+        waffle/proof_system/prover/prover.cpp
         waffle/proof_system/prover/prover.hpp
-        waffle/proof_system/verifier/verifier.tcc
+        waffle/proof_system/verifier/verifier.cpp
         waffle/proof_system/verifier/verifier.hpp
         waffle/composer/composer_base.hpp
         waffle/composer/standard_composer.cpp

@@ -42,8 +42,6 @@ class ProverTurboRangeWidget : public ProverBaseWidget {
 
     void compute_transcript_elements(transcript::Transcript& transcript);
 
-    void reset();
-
     barretenberg::polynomial& q_range;
     barretenberg::polynomial& q_range_fft;
 
