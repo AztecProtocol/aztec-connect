@@ -57,7 +57,7 @@ class VerifierBaseWidget {
         return alpha_base;
     }
 
-    virtual bool verify_instance_commitments()
+    bool verify_instance_commitments()
     {
         bool valid = true;
         // TODO: if instance commitments are points at infinity, this is probably ok?

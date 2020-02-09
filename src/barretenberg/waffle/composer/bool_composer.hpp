@@ -33,6 +33,30 @@ public:
         return ComposerBase::add_variable(in);
     }
 
+    uint32_t add_public_variable(const barretenberg::fr::field_t& in)
+    {
+        variables.emplace_back(in);
+        is_bool.push_back(false);
+        wire_epicycles.push_back(std::vector<epicycle>());
+        const uint32_t index = static_cast<uint32_t>(variables.size()) - 1U;
+        public_inputs.emplace_back(index);
+        return index;
+    }
+
+    void set_public_input(const uint32_t witness_index)
+    {
+        bool does_not_exist = true;
+        for (size_t i = 0; i < public_inputs.size(); ++i)
+        {
+            does_not_exist = does_not_exist && (public_inputs[i] != witness_index);
+        }
+        if (does_not_exist)
+        {
+            public_inputs.emplace_back(witness_index);
+            is_bool.push_back(false);
+        }
+    }
+
     void create_add_gate(const add_triple &in) override;
     void create_mul_gate(const mul_triple &in) override;
     void create_bool_gate(const uint32_t a) override;
