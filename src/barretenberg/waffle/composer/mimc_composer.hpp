@@ -2,6 +2,8 @@
 
 #include "./standard_composer.hpp"
 
+#include "../../transcript/manifest.hpp"
+
 namespace waffle {
 struct mimc_quadruplet {
     uint32_t x_in_idx;

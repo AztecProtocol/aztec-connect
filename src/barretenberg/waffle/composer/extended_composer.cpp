@@ -3,7 +3,12 @@
 #include <algorithm>
 #include <math.h>
 
+#include "../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
+
 #include "../../assert.hpp"
+#include "../proof_system/permutation.hpp"
+#include "../proof_system/proving_key/proving_key.hpp"
+#include "../proof_system/verification_key/verification_key.hpp"
 #include "../proof_system/widgets/arithmetic_widget.hpp"
 #include "../proof_system/widgets/bool_widget.hpp"
 #include "../proof_system/widgets/sequential_widget.hpp"
@@ -406,9 +411,9 @@ void ExtendedComposer::compute_sigma_permutations(proving_key* key, const size_t
         sigma_2_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 30U));
         sigma_3_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 31U));
     }
-    
+
     uint32_t* sigmas[3]{ &sigma_1_mapping[0], &sigma_2_mapping[0], &sigma_3_mapping[0] };
-    
+
     for (size_t i = 0; i < wire_epicycles.size(); ++i) {
         // each index in 'wire_epicycles' corresponds to a variable
         // the contents of 'wire_epicycles[i]' is a vector, that contains a list
@@ -420,11 +425,12 @@ void ExtendedComposer::compute_sigma_permutations(proving_key* key, const size_t
             uint32_t current_gate_index = adjusted_gate_indices[current_epicycle.gate_index + num_public_inputs];
             uint32_t next_gate_index = adjusted_gate_indices[next_epicycle.gate_index + num_public_inputs];
 
-            sigmas[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U][static_cast<uint32_t>(current_gate_index + num_public_inputs)] =
-                next_gate_index + static_cast<uint32_t>(next_epicycle.wire_type) + num_public_inputs;
+            sigmas[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U]
+                  [static_cast<uint32_t>(current_gate_index + num_public_inputs)] =
+                      next_gate_index + static_cast<uint32_t>(next_epicycle.wire_type) + num_public_inputs;
         }
     }
-    
+
     barretenberg::polynomial sigma_1(key->n);
     barretenberg::polynomial sigma_2(key->n);
     barretenberg::polynomial sigma_3(key->n);
@@ -500,13 +506,11 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
         // ++bar;
     }
 
-
-    for (size_t i = 0; i < public_inputs.size(); ++i)
-    {
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
         epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
         wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
     }
-    
+
     circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size());
 
     polynomial poly_q_m(new_n);
@@ -519,25 +523,23 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
     polynomial poly_q_br(new_n);
     polynomial poly_q_bo(new_n);
 
-    for (size_t i = 0; i < new_n; ++i)
-    {
+    for (size_t i = 0; i < new_n; ++i) {
         poly_q_m[i] = fr::zero;
         poly_q_1[i] = fr::zero;
         poly_q_2[i] = fr::zero;
         poly_q_3[i] = fr::zero;
-        poly_q_c[i] = fr::zero;  
+        poly_q_c[i] = fr::zero;
         poly_q_bl[i] = fr::zero;
         poly_q_br[i] = fr::zero;
         poly_q_bo[i] = fr::zero;
-        poly_q_3_next[i] = fr::zero;        
+        poly_q_3_next[i] = fr::zero;
     }
-    for (size_t i = 0; i < public_inputs.size(); ++i)
-    {
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
         poly_q_m[i] = fr::zero;
         poly_q_1[i] = fr::zero;
         poly_q_2[i] = fr::zero;
         poly_q_3[i] = fr::zero;
-        poly_q_c[i] = fr::zero;  
+        poly_q_c[i] = fr::zero;
         poly_q_bl[i] = fr::zero;
         poly_q_br[i] = fr::zero;
         poly_q_bo[i] = fr::zero;
@@ -545,11 +547,9 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
     }
     std::vector<bool> fill_tags(new_n, false);
 
-    const size_t n_delta = new_n - (adjusted_n) - public_inputs.size();
-    for (size_t i = public_inputs.size(); i < n + n_delta + public_inputs.size(); ++i)
-    {
-        if ((i <= n + public_inputs.size()) && deleted_gates[i - public_inputs.size()] == true)
-        {
+    const size_t n_delta = new_n - (adjusted_n)-public_inputs.size();
+    for (size_t i = public_inputs.size(); i < n + n_delta + public_inputs.size(); ++i) {
+        if ((i <= n + public_inputs.size()) && deleted_gates[i - public_inputs.size()] == true) {
             continue;
         }
 
@@ -702,16 +702,14 @@ std::shared_ptr<program_witness> ExtendedComposer::compute_witness()
         poly_w_2[i] = (fr::zero);
         poly_w_3[i] = (fr::zero);
     }
-    const size_t n_delta = new_n - (adjusted_n) - public_inputs.size();
-    for (size_t i = 0; i < public_inputs.size(); ++i)
-    {
+    const size_t n_delta = new_n - (adjusted_n)-public_inputs.size();
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
         fr::__copy(variables[public_inputs[i]], poly_w_1[i]);
         fr::__copy(fr::zero, poly_w_2[i]);
         fr::__copy(fr::zero, poly_w_3[i]);
     }
     for (size_t i = public_inputs.size(); i < n + n_delta + public_inputs.size(); ++i) {
-        if ((i <= n + public_inputs.size()) && deleted_gates[i - public_inputs.size()] == true)
-        {
+        if ((i <= n + public_inputs.size()) && deleted_gates[i - public_inputs.size()] == true) {
             continue;
         }
         size_t index = adjusted_gate_indices[i] + public_inputs.size();

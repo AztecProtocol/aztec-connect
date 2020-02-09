@@ -1,17 +1,19 @@
 #include "./turbo_arithmetic_widget.hpp"
 
-#include "../../../curves/bn254/fr.hpp"
-#include "../../../curves/bn254/g1.hpp"
 #include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
+#include "../../../transcript/transcript.hpp"
 #include "../../../types.hpp"
+
+#include "../transcript_helpers.hpp"
+
+#include "../proving_key/proving_key.hpp"
 
 using namespace barretenberg;
 
 namespace waffle {
 ProverTurboArithmeticWidget::ProverTurboArithmeticWidget(proving_key* input_key, program_witness* input_witness)
-    : ProverBaseWidget(input_key,
-                       input_witness)
+    : ProverBaseWidget(input_key, input_witness)
     , q_1(key->constraint_selectors.at("q_1"))
     , q_2(key->constraint_selectors.at("q_2"))
     , q_3(key->constraint_selectors.at("q_3"))
@@ -121,7 +123,6 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
-
     fr::field_t* w_1_fft = &key->wire_ffts.at("w_1_fft")[0];
     fr::field_t* w_2_fft = &key->wire_ffts.at("w_2_fft")[0];
     fr::field_t* w_3_fft = &key->wire_ffts.at("w_3_fft")[0];
@@ -138,7 +139,7 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
     fr::field_t T5;
 
     fr::__mul_with_coarse_reduction(w_1_fft[i], q_m_fft[i], T0); // w_l * q_m = rdx
-    fr::__mul_with_coarse_reduction(T0, w_2_fft[i], T0);            // w_l * w_r * q_m = rdx
+    fr::__mul_with_coarse_reduction(T0, w_2_fft[i], T0);         // w_l * w_r * q_m = rdx
     fr::__mul_with_coarse_reduction(w_1_fft[i], q_1_fft[i], T1); // w_l * q_l = rdi
     fr::__mul_with_coarse_reduction(w_2_fft[i], q_2_fft[i], T2); // w_r * q_r = rsi
     fr::__mul_with_coarse_reduction(w_3_fft[i], q_3_fft[i], T3); // w_o * q_o = r8
@@ -227,18 +228,18 @@ fr::field_t ProverTurboArithmeticWidget::compute_opening_poly_contribution(const
 std::unique_ptr<VerifierBaseWidget> ProverTurboArithmeticWidget::compute_preprocessed_commitments(
     const ReferenceString& reference_string) const
 {
-    polynomial polys[8]{ polynomial(q_1, key->small_domain.size), polynomial(q_2, key->small_domain.size),      polynomial(q_3, key->small_domain.size),
-                         polynomial(q_4, key->small_domain.size), polynomial(q_4_next, key->small_domain.size), polynomial(q_m, key->small_domain.size),
-                         polynomial(q_c, key->small_domain.size), polynomial(q_arith, key->small_domain.size) };
-
+    polynomial polys[8]{ polynomial(q_1, key->small_domain.size),      polynomial(q_2, key->small_domain.size),
+                         polynomial(q_3, key->small_domain.size),      polynomial(q_4, key->small_domain.size),
+                         polynomial(q_4_next, key->small_domain.size), polynomial(q_m, key->small_domain.size),
+                         polynomial(q_c, key->small_domain.size),      polynomial(q_arith, key->small_domain.size) };
 
     std::vector<barretenberg::g1::affine_element> commitments;
     commitments.resize(8);
 
     for (size_t i = 0; i < 8; ++i) {
-        g1::jacobian_to_affine(
-            scalar_multiplication::pippenger(polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
-            commitments[i]);
+        g1::jacobian_to_affine(scalar_multiplication::pippenger(
+                                   polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
+                               commitments[i]);
     }
     std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierTurboArithmeticWidget>(commitments);
     return result;
@@ -258,10 +259,7 @@ VerifierTurboArithmeticWidget::VerifierTurboArithmeticWidget(
 }
 
 fr::field_t VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribution(
-    const fr::field_t& alpha_base,
-    const transcript::Transcript& transcript,
-    fr::field_t&,
-    const evaluation_domain&)
+    const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t&, const evaluation_domain&)
 {
     // fr::field_t z_challenge = fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
     // printf("z challenge = ");

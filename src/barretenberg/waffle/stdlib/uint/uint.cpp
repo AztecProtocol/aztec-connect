@@ -1,5 +1,6 @@
 #include "./uint.hpp"
 
+#include <cmath>
 #include <algorithm>
 #include <numeric>
 

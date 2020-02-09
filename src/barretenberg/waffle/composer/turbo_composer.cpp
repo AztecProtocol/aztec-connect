@@ -2,11 +2,15 @@
 
 #include <math.h>
 
+#include "../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
+
 #include "../../assert.hpp"
 #include "../../curves/bn254/fr.hpp"
 #include "../proof_system/widgets/turbo_fixed_base_widget.hpp"
 #include "../proof_system/widgets/turbo_arithmetic_widget.hpp"
 #include "../proof_system/widgets/turbo_range_widget.hpp"
+#include "../proof_system/proving_key/proving_key.hpp"
+#include "../proof_system/verification_key/verification_key.hpp"
 
 using namespace barretenberg;
 

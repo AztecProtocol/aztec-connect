@@ -57,6 +57,10 @@ add_library(
     waffle/waffle_types.hpp
     waffle/reference_string/reference_string.cpp
     waffle/reference_string/reference_string.hpp
+    waffle/proof_system/proving_key/proving_key.cpp
+    waffle/proof_system/proving_key/proving_key.hpp
+    waffle/proof_system/verification_key/verification_key.cpp
+    waffle/proof_system/verification_key/verification_key.hpp
     waffle/proof_system/linearizer.hpp
     waffle/proof_system/program_settings.hpp
     waffle/proof_system/permutation.hpp
@@ -80,6 +84,7 @@ add_library(
     waffle/proof_system/prover/prover.hpp
     waffle/proof_system/verifier/verifier.cpp
     waffle/proof_system/verifier/verifier.hpp
+    waffle/composer/composer_base.cpp
     waffle/composer/composer_base.hpp
     waffle/composer/standard_composer.cpp
     waffle/composer/standard_composer.hpp
@@ -196,6 +201,10 @@ if(PROFILING)
         waffle/waffle_types.hpp
         waffle/reference_string/reference_string.cpp
         waffle/reference_string/reference_string.hpp
+        waffle/proof_system/proving_key/proving_key.cpp
+        waffle/proof_system/proving_key/proving_key.hpp
+        waffle/proof_system/verification_key/verification_key.cpp
+        waffle/proof_system/verification_key/verification_key.hpp
         waffle/proof_system/linearizer.hpp
         waffle/proof_system/program_settings.hpp
         waffle/proof_system/permutation.hpp
@@ -219,6 +228,7 @@ if(PROFILING)
         waffle/proof_system/prover/prover.hpp
         waffle/proof_system/verifier/verifier.cpp
         waffle/proof_system/verifier/verifier.hpp
+        waffle/composer/composer_base.cpp
         waffle/composer/composer_base.hpp
         waffle/composer/standard_composer.cpp
         waffle/composer/standard_composer.hpp

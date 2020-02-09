@@ -1,9 +1,13 @@
 #include "./bool_composer.hpp"
 
+#include "../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
+
 #include "../../assert.hpp"
 #include "../../curves/bn254/fr.hpp"
 #include "../proof_system/widgets/arithmetic_widget.hpp"
 #include "../proof_system/widgets/bool_widget.hpp"
+#include "../proof_system/proving_key/proving_key.hpp"
+#include "../proof_system/verification_key/verification_key.hpp"
 
 #include <math.h>
 

@@ -2,9 +2,13 @@
 
 #include <math.h>
 
+#include "../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
+
 #include "../../assert.hpp"
 #include "../../curves/bn254/fr.hpp"
 #include "../proof_system/widgets/mimc_widget.hpp"
+#include "../proof_system/proving_key/proving_key.hpp"
+#include "../proof_system/verification_key/verification_key.hpp"
 
 using namespace barretenberg;
 

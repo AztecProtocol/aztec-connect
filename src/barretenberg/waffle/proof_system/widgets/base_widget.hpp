@@ -1,19 +1,22 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
+#include "../../../curves/bn254/fr.hpp"
 #include "../../../curves/bn254/g1.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
-#include "../../../polynomials/polynomial.hpp"
-#include "../../../transcript/transcript.hpp"
-#include "../../../types.hpp"
 
-#include "../../reference_string/reference_string.hpp"
 #include "../../waffle_types.hpp"
 
-#include "../transcript_helpers.hpp"
+namespace transcript {
+    class Transcript;
+}
 
 namespace waffle {
+
+struct proving_key;
+class ReferenceString;
 
 class VerifierBaseWidget {
   public:
@@ -67,7 +70,7 @@ class VerifierBaseWidget {
 
 class ProverBaseWidget {
   public:
-    ProverBaseWidget(waffle::proving_key* input_key, waffle::program_witness* input_witness)
+    ProverBaseWidget(proving_key* input_key, program_witness* input_witness)
         : key(input_key)
         , witness(input_witness)
     {}

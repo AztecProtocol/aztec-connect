@@ -12,8 +12,11 @@
 
 #include "../../../transcript/transcript.hpp"
 #include "../../../transcript/manifest.hpp"
+#include "../proving_key/proving_key.hpp"
+
 namespace waffle
 {
+
 template <typename settings>
 class ProverBase
 {

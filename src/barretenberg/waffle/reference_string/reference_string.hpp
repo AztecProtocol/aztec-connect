@@ -4,7 +4,14 @@
 
 #include "../../curves/bn254/g1.hpp"
 #include "../../curves/bn254/g2.hpp"
-#include "../../curves/bn254/pairing.hpp"
+
+namespace barretenberg
+{
+namespace pairing
+{
+struct miller_lines;
+}
+}
 
 namespace waffle
 {

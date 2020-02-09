@@ -1,8 +1,10 @@
 #pragma once
 
 #include "./composer_base.hpp"
+
+#include "../../transcript/manifest.hpp"
+
 #include <map>
-#include <string>
 
 namespace waffle
 {

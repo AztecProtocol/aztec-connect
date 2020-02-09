@@ -1,12 +1,15 @@
 #include "./turbo_range_widget.hpp"
 
-#include "../../../curves/bn254/fr.hpp"
-#include "../../../curves/bn254/g1.hpp"
 #include "../../../curves/grumpkin/grumpkin.hpp"
 
 #include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
+#include "../../../transcript/transcript.hpp"
 #include "../../../types.hpp"
+
+#include "../transcript_helpers.hpp"
+
+#include "../proving_key/proving_key.hpp"
 
 using namespace barretenberg;
 

@@ -1,10 +1,12 @@
 #include "./mimc_widget.hpp"
 
 #include "../../../types.hpp"
-
-#include "../../../curves/bn254/fr.hpp"
-#include "../../../curves/bn254/g1.hpp"
 #include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
+#include "../../../transcript/transcript.hpp"
+
+#include "../transcript_helpers.hpp"
+
+#include "../proving_key/proving_key.hpp"
 
 using namespace barretenberg;
 

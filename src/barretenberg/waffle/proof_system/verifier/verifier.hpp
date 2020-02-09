@@ -1,26 +1,25 @@
 #pragma once
 
+#include "../../../transcript/manifest.hpp"
+#include "../../../transcript/transcript.hpp"
 #include "../../../types.hpp"
 
 #include "../../reference_string/reference_string.hpp"
 #include "../../waffle_types.hpp"
 
+#include "../program_settings.hpp"
 #include "../widgets/base_widget.hpp"
 
-#include "../../../transcript/manifest.hpp"
-#include "../../../transcript/transcript.hpp"
-#include "../program_settings.hpp"
-
-namespace waffle
-{
-template <typename program_settings>
-class VerifierBase
-{
+namespace waffle {
+template <typename program_settings> class VerifierBase {
     typedef barretenberg::fr fr;
     typedef barretenberg::g1 g1;
 
   public:
-    VerifierBase(const size_t subgroup_size = 0, const size_t num_public_inputs = 0, const transcript::Manifest &manifest = transcript::Manifest({}), bool has_fourth_wire = false);
+    VerifierBase(const size_t subgroup_size = 0,
+                 const size_t num_public_inputs = 0,
+                 const transcript::Manifest& manifest = transcript::Manifest({}),
+                 bool has_fourth_wire = false);
     VerifierBase(VerifierBase&& other);
     VerifierBase(const VerifierBase& other) = delete;
     VerifierBase& operator=(const VerifierBase& other) = delete;

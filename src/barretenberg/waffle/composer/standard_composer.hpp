@@ -2,6 +2,8 @@
 
 #include "./composer_base.hpp"
 
+#include "../../transcript/manifest.hpp"
+
 namespace waffle
 {
 class StandardComposer : public ComposerBase

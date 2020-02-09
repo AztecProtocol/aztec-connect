@@ -3,6 +3,7 @@
 #include <memory>
 #include <cstdlib>
 
+#include "../../curves/bn254/pairing.hpp"
 #include "../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../io/io.hpp"
 #include "../../types.hpp"

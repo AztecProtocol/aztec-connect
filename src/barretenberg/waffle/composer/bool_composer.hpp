@@ -2,9 +2,10 @@
 
 #include "./standard_composer.hpp"
 
+#include "../../transcript/manifest.hpp"
+
 namespace waffle
 {
-
 class BoolComposer : public StandardComposer
 {
 public:

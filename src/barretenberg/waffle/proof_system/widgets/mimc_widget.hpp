@@ -2,6 +2,7 @@
 
 #include "./arithmetic_widget.hpp"
 #include "./base_widget.hpp"
+
 namespace waffle {
 
 class VerifierMiMCWidget : public VerifierBaseWidget {

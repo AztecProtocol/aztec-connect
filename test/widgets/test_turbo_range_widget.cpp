@@ -2,9 +2,12 @@
 
 #include <barretenberg/waffle/proof_system/widgets/turbo_range_widget.hpp>
 #include <barretenberg/waffle/composer/standard_composer.hpp>
+#include <barretenberg/waffle/proof_system/transcript_helpers.hpp>
+#include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 
 #include <iostream>
 #include <memory>
+
 
 #include "../test_helpers.hpp"
 

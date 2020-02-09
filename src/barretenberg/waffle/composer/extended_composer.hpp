@@ -1,7 +1,10 @@
 #pragma once
 
-#include "./bool_composer.hpp"
 #include <array>
+
+#include "./bool_composer.hpp"
+
+#include "../../transcript/manifest.hpp"
 
 namespace waffle {
 
@@ -39,7 +42,7 @@ class ExtendedComposer : public BoolComposer {
     };
     ExtendedComposer(ExtendedComposer&& other) = default;
     ExtendedComposer& operator=(ExtendedComposer&& other) = default;
-    ~ExtendedComposer() {}
+    ~ExtendedComposer() = default;
 
     size_t get_num_gates() const override
     {

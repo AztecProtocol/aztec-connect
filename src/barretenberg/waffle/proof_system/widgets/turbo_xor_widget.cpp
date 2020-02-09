@@ -1,37 +1,36 @@
 #include "./turbo_range_widget.hpp"
 
-#include "../../../curves/bn254/fr.hpp"
-#include "../../../curves/bn254/g1.hpp"
 #include "../../../curves/grumpkin/grumpkin.hpp"
 
 #include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
+#include "../../../transcript/transcript.hpp"
 #include "../../../types.hpp"
+
+#include "../transcript_helpers.hpp"
+
+#include "../proving_key/proving_key.hpp"
 
 using namespace barretenberg;
 
 namespace waffle {
 ProverTurboXorWidget::ProverTurboXorWidget(proving_key* input_key, program_witness* input_witness)
-    : ProverBaseWidget(input_key,
-                       input_witness)
+    : ProverBaseWidget(input_key, input_witness)
     , q_xor(key->constraint_selectors.at("q_xor"))
     , q_xor_fft(key->constraint_selector_ffts.at("q_xor_fft"))
-{
-}
+{}
 
 ProverTurboXorWidget::ProverTurboXorWidget(const ProverTurboXorWidget& other)
     : ProverBaseWidget(other)
     , q_xor(key->constraint_selectors.at("q_xor"))
     , q_xor_fft(key->constraint_selector_ffts.at("q_xor_fft"))
-{
-}
+{}
 
 ProverTurboXorWidget::ProverTurboXorWidget(ProverTurboXorWidget&& other)
     : ProverBaseWidget(other)
     , q_xor(key->constraint_selectors.at("q_xor"))
     , q_xor_fft(key->constraint_selector_ffts.at("q_xor_fft"))
-{
-}
+{}
 
 ProverTurboXorWidget& ProverTurboXorWidget::operator=(const ProverTurboXorWidget& other)
 {
@@ -50,14 +49,14 @@ ProverTurboXorWidget& ProverTurboXorWidget::operator=(ProverTurboXorWidget&& oth
 /*
  * Hoo boy, XOR polynomials!
  * This transition constraint evaluates a XOR relationship between the accumulating sums of three base-4 variables...
- * 
- * Ok, so we want to evaluate a ^ b = c 
- * 
+ *
+ * Ok, so we want to evaluate a ^ b = c
+ *
  * We also want the output memory cell to represent the actual result of the XOR operation,
  * instead of a collection of bits / quads that need to be summed together. Who has time for that?
- * 
+ *
  * We use 3 columns of program memory to represent accumulating sums of a, b, c.
- * 
+ *
  * For example, we can represent a 32-bit 'a' via its quads
  *
  *      15
@@ -84,32 +83,32 @@ ProverTurboXorWidget& ProverTurboXorWidget::operator=(ProverTurboXorWidget&& oth
  *   i + 1        i
  *
  * Once we have validated the above, we can then extract an accumulator's implicit quad via:
- * 
+ *
  *  q  =  a      - 4 . a  ϵ [0, 1, 2, 3]
  *   i     i + 1        i
- * 
- * 
+ *
+ *
  * But of course it's not so simple! A XOR polynomial identity with two input quads (plus selector) has a degree of 7.
  * To constrain the degree of our quotient polynomial T(X) we want our identity to have a degree of 5
- * 
+ *
  * We also have a spare column to work with, which we can use to store the low-order bit of one accumulators quad.
- * 
+ *
  * For the identity, we use the following notation:
- * 
+ *
  *  (1) 'q' is the current round quad attributed to 'a'
  *  (2) 'b0' is the low-order bit of the current round quad attributed to 'b'
  *  (3) 'b1' is the high-order bit of the current round quad attributed to 'b'
  *  (4) 'qc' is the current round quad attributed to output 'c'
- * 
- * 
- * 
+ *
+ *
+ *
  *                                             3
  *                      2                   4 q  (b1 - b0) + q (14 b1 - 20 b0)
  *  qc = b0 + 2 b1 + 6 q  (b0 - b1) + 3 q + ----------------------------------
  *                                                           3
- * 
+ *
  * Clear as mud, right?
- * 
+ *
  * We place our accumulating sums (A, B, C) in program memory in the following sequence:
  *
  * +-----+-----+-----+-----+
@@ -124,7 +123,7 @@ ProverTurboXorWidget& ProverTurboXorWidget::operator=(ProverTurboXorWidget&& oth
  *
  **/
 fr::field_t ProverTurboXorWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
-                                                                  const transcript::Transcript& transcript)
+                                                                const transcript::Transcript& transcript)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
@@ -147,11 +146,10 @@ fr::field_t ProverTurboXorWidget::compute_quotient_contribution(const barretenbe
     fr::__neg(minus_two, minus_two);
     fr::__neg(minus_three, minus_three);
 
-    fr::field_t one_third = fr::to_montgomery_form({{ 3, 0, 0, 0 }});
+    fr::field_t one_third = fr::to_montgomery_form({ { 3, 0, 0, 0 } });
     fr::__invert(one_third, one_third);
 
     ITERATE_OVER_DOMAIN_START(key->large_domain);
-
 
     fr::field_t delta_c;
     fr::field_t delta_b;
@@ -172,8 +170,7 @@ fr::field_t ProverTurboXorWidget::compute_quotient_contribution(const barretenbe
     fr::field_t b0 = w_3_fft[i];
     fr::field_t b1 = fr::sub(delta_b, b0);
 
-    fr::field_t 
-    fr::field_t xor_identity;
+    fr::field_t fr::field_t xor_identity;
     fr::field_t delta_1;
     fr::field_t delta_2;
     fr::field_t delta_3;
@@ -244,8 +241,8 @@ fr::field_t ProverTurboXorWidget::compute_quotient_contribution(const barretenbe
 void ProverTurboXorWidget::compute_transcript_elements(transcript::Transcript&) {}
 
 fr::field_t ProverTurboXorWidget::compute_linear_contribution(const fr::field_t& alpha_base,
-                                                                const transcript::Transcript& transcript,
-                                                                barretenberg::polynomial& r)
+                                                              const transcript::Transcript& transcript,
+                                                              barretenberg::polynomial& r)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
@@ -331,9 +328,9 @@ fr::field_t ProverTurboXorWidget::compute_linear_contribution(const fr::field_t&
 }
 
 fr::field_t ProverTurboXorWidget::compute_opening_poly_contribution(const fr::field_t& nu_base,
-                                                                      const transcript::Transcript&,
-                                                                      fr::field_t*,
-                                                                      fr::field_t*)
+                                                                    const transcript::Transcript&,
+                                                                    fr::field_t*,
+                                                                    fr::field_t*)
 {
     return nu_base;
 }
