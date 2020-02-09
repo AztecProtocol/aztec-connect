@@ -179,7 +179,7 @@ class ComposerBase {
         return index;
     }
 
-    void set_public_input(const uint32_t witness_index)
+    virtual void set_public_input(const uint32_t witness_index)
     {
         bool does_not_exist = true;
         for (size_t i = 0; i < public_inputs.size(); ++i) {
