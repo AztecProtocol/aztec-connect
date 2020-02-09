@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <thread>
+
 // TODO: WARNING! getentropy is using rand()! Should probably be called dontgetentropy()!
 #ifdef _WIN32
 #define PRIx64 "llx"
@@ -68,6 +68,7 @@ inline void* aligned_alloc(size_t alignment, size_t size)
 //     }
 // }
 #if 0
+#include <thread>
 #define ITERATE_OVER_DOMAIN_START(domain)                                                                              \
     {                                                                                                                  \
         const size_t __num_threads = domain.num_threads;                                                               \

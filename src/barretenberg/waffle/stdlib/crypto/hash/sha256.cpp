@@ -1,4 +1,4 @@
-#pragma once
+#include "./sha256.hpp"
 
 #include "../../bitarray/bitarray.hpp"
 #include "../../uint32/uint32.hpp"
@@ -144,6 +144,12 @@ template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>&
     }
     return bitarray(rolling_hash);
 }
+
+template bitarray<waffle::StandardComposer> sha256(const bitarray<waffle::StandardComposer>& input);
+template bitarray<waffle::BoolComposer> sha256(const bitarray<waffle::BoolComposer>& input);
+template bitarray<waffle::MiMCComposer> sha256(const bitarray<waffle::MiMCComposer>& input);
+template bitarray<waffle::ExtendedComposer> sha256(const bitarray<waffle::ExtendedComposer>& input);
+template bitarray<waffle::TurboComposer> sha256(const bitarray<waffle::TurboComposer>& input);
 
 } // namespace stdlib
 } // namespace plonk

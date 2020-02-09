@@ -4,14 +4,12 @@
 
 #include <barretenberg/curves/bn254/fr.hpp>
 
-#include <barretenberg/waffle/composer/mimc_composer.hpp>
 #include <barretenberg/waffle/composer/standard_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
 
 #include <barretenberg/waffle/stdlib/field/field.hpp>
-#include <barretenberg/waffle/stdlib/mimc.hpp>
 
 using namespace benchmark;
 
@@ -46,7 +44,6 @@ void construct_witnesses_bench(State& state) noexcept
     {
         waffle::StandardComposer composer = waffle::StandardComposer(static_cast<size_t>(state.range(0)));
         generate_test_plonk_circuit(composer, static_cast<size_t>(state.range(0)));
-        size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
         composer.compute_witness();
     }
 }
@@ -96,7 +93,7 @@ void verify_proofs_bench(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
-        bool result = verifiers[idx].verify_proof(proofs[idx]);
+        verifiers[idx].verify_proof(proofs[idx]);
         state.PauseTiming();
         // if (!result)
         // {

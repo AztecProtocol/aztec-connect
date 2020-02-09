@@ -30,8 +30,8 @@ add_library(
     curves/bn254/scalar_multiplication/mmu.cpp
     curves/bn254/scalar_multiplication/mmu.hpp
     curves/bn254/scalar_multiplication/process_buckets.hpp
+    curves/bn254/scalar_multiplication/scalar_multiplication_unsafe.cpp
     curves/bn254/scalar_multiplication/scalar_multiplication.cpp
-    curves/bn254/scalar_multiplication/scalar_multiplication.tcc
     curves/bn254/scalar_multiplication/scalar_multiplication.hpp
     curves/bn254/pairing.cpp
     curves/bn254/pairing.hpp
@@ -95,22 +95,23 @@ add_library(
     waffle/stdlib/group/group_utils.hpp
     waffle/stdlib/group/group_utils.cpp
     waffle/stdlib/int_utils.hpp
-    waffle/stdlib/bool/bool.tcc
+    waffle/stdlib/bool/bool.cpp
     waffle/stdlib/bool/bool.hpp
-    waffle/stdlib/field/field.tcc
+    waffle/stdlib/field/field.cpp
     waffle/stdlib/field/field.hpp
-    waffle/stdlib/uint32/uint32.tcc
+    waffle/stdlib/uint/uint.cpp
+    waffle/stdlib/uint/uint.hpp
     waffle/stdlib/uint32/uint32.hpp
-    waffle/stdlib/bitarray/bitarray.tcc
+    waffle/stdlib/bitarray/bitarray.cpp
     waffle/stdlib/bitarray/bitarray.hpp
-    waffle/stdlib/mimc.tcc
+    waffle/stdlib/mimc.cpp
     waffle/stdlib/mimc.hpp
     waffle/stdlib/crypto/crypto.hpp
-    waffle/stdlib/crypto/hash/sha256.tcc
+    waffle/stdlib/crypto/hash/sha256.cpp
     waffle/stdlib/crypto/hash/sha256.hpp
     waffle/stdlib/crypto/hash/pedersen.cpp
     waffle/stdlib/crypto/hash/pedersen.hpp
-    waffle/stdlib/crypto/schnorr/schnorr.tcc
+    waffle/stdlib/crypto/schnorr/schnorr.cpp
     waffle/stdlib/crypto/schnorr/schnorr.hpp
     waffle/stdlib/crypto/commitment/pedersen_note.cpp
     waffle/stdlib/crypto/commitment/pedersen_note.hpp
@@ -168,8 +169,8 @@ if(PROFILING)
         curves/bn254/scalar_multiplication/mmu.cpp
         curves/bn254/scalar_multiplication/mmu.hpp
         curves/bn254/scalar_multiplication/process_buckets.hpp
+        curves/bn254/scalar_multiplication/scalar_multiplication_unsafe.cpp
         curves/bn254/scalar_multiplication/scalar_multiplication.cpp
-        curves/bn254/scalar_multiplication/scalar_multiplication.tcc
         curves/bn254/scalar_multiplication/scalar_multiplication.hpp
         curves/bn254/pairing.cpp
         curves/bn254/pairing.hpp
@@ -233,24 +234,23 @@ if(PROFILING)
         waffle/stdlib/group/group_utils.hpp
         waffle/stdlib/group/group_utils.cpp
         waffle/stdlib/int_utils.hpp
-        waffle/stdlib/bool/bool.tcc
+        waffle/stdlib/bool/bool.cpp
         waffle/stdlib/bool/bool.hpp
-        waffle/stdlib/field/field.tcc
+        waffle/stdlib/field/field.cpp
         waffle/stdlib/field/field.hpp
-        waffle/stdlib/uint/uint.tcc
+        waffle/stdlib/uint/uint.cpp
         waffle/stdlib/uint/uint.hpp
-        waffle/stdlib/uint32/uint32.tcc
         waffle/stdlib/uint32/uint32.hpp
-        waffle/stdlib/bitarray/bitarray.tcc
+        waffle/stdlib/bitarray/bitarray.cpp
         waffle/stdlib/bitarray/bitarray.hpp
-        waffle/stdlib/mimc.tcc
+        waffle/stdlib/mimc.cpp
         waffle/stdlib/mimc.hpp
         waffle/stdlib/crypto/crypto.hpp
-        waffle/stdlib/crypto/hash/sha256.tcc
+        waffle/stdlib/crypto/hash/sha256.cpp
         waffle/stdlib/crypto/hash/sha256.hpp
         waffle/stdlib/crypto/hash/pedersen.cpp
         waffle/stdlib/crypto/hash/pedersen.hpp
-        waffle/stdlib/crypto/schnorr/schnorr.tcc
+        waffle/stdlib/crypto/schnorr/schnorr.cpp
         waffle/stdlib/crypto/schnorr/schnorr.hpp
         waffle/stdlib/crypto/commitment/pedersen_note.cpp
         waffle/stdlib/crypto/commitment/pedersen_note.hpp

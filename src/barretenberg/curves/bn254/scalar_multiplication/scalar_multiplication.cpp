@@ -1,618 +1,792 @@
 #include "./scalar_multiplication.hpp"
 
-#include <chrono>
-#include <iostream>
+#include "../../../groups/wnaf.hpp"
+#include "../fq.hpp"
+#include "../fr.hpp"
+#include "../g1.hpp"
+#include "./mmu.hpp"
+#include "./process_buckets.hpp"
+#include "./scalar_multiplication.hpp"
+#include <algorithm>
+#include <array>
+#include <cstdlib>
+#include <math.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#ifndef NO_MULTITHREADING
+#include <omp.h>
+#endif
 
 namespace barretenberg {
 namespace scalar_multiplication {
 
-#define BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK                                                                        \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 16] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 17] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 18] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 19] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 20] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 21] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 22] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 23] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 24] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 25] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 26] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 27] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 28] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 29] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 30] >> 32ULL));                              \
-    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 31] >> 32ULL));                              \
-                                                                                                                       \
-    uint64_t schedule_a = state.point_schedule[schedule_it];                                                           \
-    uint64_t schedule_b = state.point_schedule[schedule_it + 1];                                                       \
-    uint64_t schedule_c = state.point_schedule[schedule_it + 2];                                                       \
-    uint64_t schedule_d = state.point_schedule[schedule_it + 3];                                                       \
-    uint64_t schedule_e = state.point_schedule[schedule_it + 4];                                                       \
-    uint64_t schedule_f = state.point_schedule[schedule_it + 5];                                                       \
-    uint64_t schedule_g = state.point_schedule[schedule_it + 6];                                                       \
-    uint64_t schedule_h = state.point_schedule[schedule_it + 7];                                                       \
-    uint64_t schedule_i = state.point_schedule[schedule_it + 8];                                                       \
-    uint64_t schedule_j = state.point_schedule[schedule_it + 9];                                                       \
-    uint64_t schedule_k = state.point_schedule[schedule_it + 10];                                                      \
-    uint64_t schedule_l = state.point_schedule[schedule_it + 11];                                                      \
-    uint64_t schedule_m = state.point_schedule[schedule_it + 12];                                                      \
-    uint64_t schedule_n = state.point_schedule[schedule_it + 13];                                                      \
-    uint64_t schedule_o = state.point_schedule[schedule_it + 14];                                                      \
-    uint64_t schedule_p = state.point_schedule[schedule_it + 15];                                                      \
-                                                                                                                       \
-    g1::conditional_negate_affine(                                                                                     \
-        state.points + (schedule_a >> 32ULL), state.point_pairs_1 + current_offset, (schedule_a >> 31ULL) & 1ULL);     \
-    g1::conditional_negate_affine(                                                                                     \
-        state.points + (schedule_b >> 32ULL), state.point_pairs_1 + current_offset + 1, (schedule_b >> 31ULL) & 1ULL); \
-    g1::conditional_negate_affine(                                                                                     \
-        state.points + (schedule_c >> 32ULL), state.point_pairs_1 + current_offset + 2, (schedule_c >> 31ULL) & 1ULL); \
-    g1::conditional_negate_affine(                                                                                     \
-        state.points + (schedule_d >> 32ULL), state.point_pairs_1 + current_offset + 3, (schedule_d >> 31ULL) & 1ULL); \
-    g1::conditional_negate_affine(                                                                                     \
-        state.points + (schedule_e >> 32ULL), state.point_pairs_1 + current_offset + 4, (schedule_e >> 31ULL) & 1ULL); \
-    g1::conditional_negate_affine(                                                                                     \
-        state.points + (schedule_f >> 32ULL), state.point_pairs_1 + current_offset + 5, (schedule_f >> 31ULL) & 1ULL); \
-    g1::conditional_negate_affine(                                                                                     \
-        state.points + (schedule_g >> 32ULL), state.point_pairs_1 + current_offset + 6, (schedule_g >> 31ULL) & 1ULL); \
-    g1::conditional_negate_affine(                                                                                     \
-        state.points + (schedule_h >> 32ULL), state.point_pairs_1 + current_offset + 7, (schedule_h >> 31ULL) & 1ULL); \
-    g1::conditional_negate_affine(                                                                                     \
-        state.points + (schedule_i >> 32ULL), state.point_pairs_1 + current_offset + 8, (schedule_i >> 31ULL) & 1ULL); \
-    g1::conditional_negate_affine(                                                                                     \
-        state.points + (schedule_j >> 32ULL), state.point_pairs_1 + current_offset + 9, (schedule_j >> 31ULL) & 1ULL); \
-    g1::conditional_negate_affine(state.points + (schedule_k >> 32ULL),                                                \
-                                  state.point_pairs_1 + current_offset + 10,                                           \
-                                  (schedule_k >> 31ULL) & 1ULL);                                                       \
-    g1::conditional_negate_affine(state.points + (schedule_l >> 32ULL),                                                \
-                                  state.point_pairs_1 + current_offset + 11,                                           \
-                                  (schedule_l >> 31ULL) & 1ULL);                                                       \
-    g1::conditional_negate_affine(state.points + (schedule_m >> 32ULL),                                                \
-                                  state.point_pairs_1 + current_offset + 12,                                           \
-                                  (schedule_m >> 31ULL) & 1ULL);                                                       \
-    g1::conditional_negate_affine(state.points + (schedule_n >> 32ULL),                                                \
-                                  state.point_pairs_1 + current_offset + 13,                                           \
-                                  (schedule_n >> 31ULL) & 1ULL);                                                       \
-    g1::conditional_negate_affine(state.points + (schedule_o >> 32ULL),                                                \
-                                  state.point_pairs_1 + current_offset + 14,                                           \
-                                  (schedule_o >> 31ULL) & 1ULL);                                                       \
-    g1::conditional_negate_affine(state.points + (schedule_p >> 32ULL),                                                \
-                                  state.point_pairs_1 + current_offset + 15,                                           \
-                                  (schedule_p >> 31ULL) & 1ULL);                                                       \
-                                                                                                                       \
-    current_offset += 16;                                                                                              \
-    schedule_it += 16;
 
-/**
- * adds a bunch of points together using affine addition formulae.
- * Paradoxically, the affine formula is crazy efficient if you have a lot of independent point additiosn to perform.
- * Affine formula:
- *
- * \lambda = (y_2 - y_1) / (x_2 - x_1)
- * x_3 = \lambda^2 - (x_2 + x_1)
- * y_3 = \lambda*(x_1 - x_3) - y_1
- *
- * Traditionally, we avoid affine formulae like the plague, because computing lambda requires a modular inverse,
- * which is outrageously expensive.
- *
- * However! We can use Montgomery's batch inversion technique to amortise the cost of the inversion to ~0.
- *
- * The way batch inversion works is as follows. Let's say you want to compute \{ 1/x_1, 1/x_2, ..., 1/x_n \}
- * The trick is to compute the product x_1x_2...x_n , whilst storing all of the temporary products.
- * i.e. we have an array A = [x_1, x_1x_2, ..., x_1x_2...x_n]
- * We then compute a single inverse: I = 1 / x_1x_2...x_n
- * Finally, we can use our accumulated products, to quotient out individual inverses.
- * We can get an individual inverse at index i, by computing I.A_{i-1}.(x_nx_n-1...x_i+1)
- * The last product term we can compute on-the-fly, as it grows by one element for each additional inverse that we
- * require.
- *
- * TLDR: amortized cost of a modular inverse is 3 field multiplications per inverse.
- * Which means we can compute a point addition with SIX field multiplications in total.
- * The traditional Jacobian-coordinate formula requires 11.
- *
- * There is a catch though - we need large sequences of independent point additions!
- * i.e. the output from one point addition in the sequence is NOT an input to any other point addition in the sequence.
- *
- * We can re-arrange the Pippenger algorithm to get this property, but it's...complicated
- **/
-void add_affine_points(g1::affine_element* points, const size_t num_points, fq::field_t* scratch_space)
+void generate_pippenger_point_table(g1::affine_element* points, g1::affine_element* table, size_t num_points)
 {
-    fq::field_t batch_inversion_accumulator = fq::one;
-    // std::chrono::steady_clock::time_point time_start = std::chrono::steady_clock::now();
-
-    for (size_t i = 0; i < num_points; i += 2) {
-        fq::__add_without_reduction(points[i + 1].x, points[i].x, scratch_space[i >> 1]); // x2 + x1
-        fq::__sub(points[i + 1].x, points[i].x, points[i + 1].x);                         // x2 - x1
-        fq::__sub(points[i + 1].y, points[i].y, points[i + 1].y);                         // y2 - y1
-        fq::__mul_with_coarse_reduction(
-            points[i + 1].y, batch_inversion_accumulator, points[i + 1].y); // (y2 - y1)*accumulator_old
-        fq::__mul_with_coarse_reduction(batch_inversion_accumulator, points[i + 1].x, batch_inversion_accumulator);
-    }
-    // std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
-    // std::chrono::microseconds diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
-    //     if (num_points > 100000)
-    // {
-    // std::cout << "forward run time: " << diff.count() << "us" << std::endl;
-    // }
-    // time_start = std::chrono::steady_clock::now();
-    fq::__invert(batch_inversion_accumulator, batch_inversion_accumulator);
-    // time_end = std::chrono::steady_clock::now();
-    //  diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
-    // if (num_points > 100000)
-    // {
-    // std::cout << "invert time: " << diff.count() << "us" << std::endl;
-    // }
-    // time_start = std::chrono::steady_clock::now();
-
-    for (size_t i = (num_points)-2; i < num_points; i -= 2) {
-        // Memory bandwidth is a bit of a bottleneck here.
-        // There's probably a more elegant way of structuring our data so we don't need to do all of this prefetching
-        __builtin_prefetch(points + i - 2);
-        __builtin_prefetch(points + i - 1);
-        __builtin_prefetch(points + ((i + num_points - 2) >> 1));
-        __builtin_prefetch(scratch_space + ((i - 2) >> 1));
-
-        fq::__mul_with_coarse_reduction(batch_inversion_accumulator, points[i + 1].y, points[i + 1].y);
-        fq::__mul_with_coarse_reduction(
-            batch_inversion_accumulator, points[i + 1].x, batch_inversion_accumulator); // update accumulator
-        fq::__sqr_with_coarse_reduction(points[i + 1].y, points[i + 1].x);
-        fq::__sub_with_coarse_reduction(
-            points[i + 1].x, scratch_space[i >> 1], points[(i + num_points) >> 1].x); // x3 = lambda_squared - x2 - x1
-        fq::__sub_with_coarse_reduction(points[i].x, points[(i + num_points) >> 1].x, points[i].x);
-        fq::__mul(points[i].x, points[i + 1].y, points[i].x);
-        fq::__sub(points[i].x, points[i].y, points[(i + num_points) >> 1].y);
-        fq::reduce_once(points[(i + num_points) >> 1].x, points[(i + num_points) >> 1].x);
-    }
-//     time_end = std::chrono::steady_clock::now();
-//      diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
-//        if (num_points > 100000)
-//     {
-//    std::cout << "reverse run time: " << diff.count() << "us" << std::endl;
-//     }
-}
-
-/**
- * evaluate a chain of pairwise additions.
- * The additions are sequenced into base-2 segments
- * i.e. pairs, pairs of pairs, pairs of pairs of pairs etc
- * `max_bucket_bits` indicates the largest set of nested pairs in the array,
- * which defines the iteration depth
- **/
-void evaluate_addition_chains(affine_product_runtime_state& state, const size_t max_bucket_bits)
-{
-    size_t end = state.num_points;
-    size_t start = 0;
-    for (size_t i = 0; i < max_bucket_bits; ++i) {
-        const size_t points_in_round = (state.num_points - state.bit_offsets[i + 1]) >> (i);
-        start = end - points_in_round;
-        add_affine_points(state.point_pairs_1 + start, points_in_round, state.scratch_space);
+    // iterate backwards, so that `points` and `table` can point to the same memory location
+    for (size_t i = num_points - 1; i < num_points; --i) {
+        g1::copy(&points[i], &table[i * 2]);
+        fq::__mul_beta(points[i].x, table[i * 2 + 1].x);
+        fq::__neg(points[i].y, table[i * 2 + 1].y);
     }
 }
 
 /**
- * This is the entry point for our 'find a way of evaluating a giant multi-product using affine coordinates' algorithm
- * By this point, we have already sorted our pippenger buckets. So we have the following situation:
+ * Compute the windowed-non-adjacent-form versions of our scalar multipliers.
  *
- * 1. We have a defined number of buckets points
- * 2. We have a defined number of points, that need to be added into these bucket points
- * 3. number of points >> number of buckets
+ * We start by splitting our 254 bit scalars into 2 127-bit scalars, using the short weierstrass curve endomorphism
+ * (for a point P \in \G === (x, y) \in \Fq, then (\beta x, y) = (\lambda) * P , where \beta = 1^{1/3} mod Fq and
+ *\lambda = 1^{1/3} mod Fr) (which means we can represent a scalar multiplication (k * P) as (k1 * P + k2 * \lambda *
+ *P), where k1, k2 have 127 bits) (see field::split_into_endomorphism_scalars for more details)
  *
- * The algorithm begins by counting the number of points assigned to each bucket.
- * For each bucket, we then take this count and split it into its base-2 components.
- * e.g. if bucket[3] has 14 points, we split that into a sequence of (8, 4, 2)
- * This base-2 splitting is useful, because we can take the bucket's associated points, and
- * sort them into pairs, quads, octs etc. These mini-addition sequences are independent from one another,
- * which means that we can use the affine trick to evaluate them.
- * Once we're done, we have effectively reduced the number of points in the bucket to a logarithmic factor of the input.
- * e.g. in the above example, once we've evaluated our pairwise addition of 8, 4 and 2 elements,
- *      we're left with 3 points.
- * The next step is to 'play it again Sam', and recurse back into `reduce_buckets`, with our reduced number of points.
- * We repeat this process until every bucket only has one point assigned to it.
+ * Once we have our 127-bit scalar multipliers, we determine the optimal number of pippenger rounds, given the number of
+ *points we're multiplying. Once we have the number of rounds, `m`, we need to split our scalar into `m` bit-slices.
+ *Each pippenger round will work on one bit-slice.
+ *
+ * Pippenger's algorithm works by, for each round, iterating over the points we're multplying. For each point, we
+ *examing the point's scalar multiplier and extract the bit-slice associated with the current pippenger round (we start
+ *with the most significant slice). We then use the bit-slice to index a 'bucket', which we add the point into. For
+ *example, if the bit slice is 01101, we add the corresponding point into bucket[13].
+ *
+ * At the end of each pippenger round we concatenate the buckets together. E.g. if we have 8 buckets, we compute:
+ * sum = bucket[0] + 2 * bucket[1] + 3 * bucket[2] + 4 * bucket[3] + 5 * bucket[4] + 6 * bucket[5] + 7 * bucket[6] + 8 *
+ *bucket[7].
+ *
+ * At the end of each pippenger round, the bucket sum will contain the scalar multiplication result for one bit slice.
+ * For example, say we have 16 rounds, where each bit slice contains 8 bits (8 * 16 = 128, enough to represent our 127
+ *bit scalars). At the end of the first round, we will have taken the 8 most significant bits from every scalar
+ *multiplier. Our bucket sum will be the result of a mini-scalar-multiplication, where we have multiplied every point by
+ *the 8 most significant bits of each point's scalar multiplier.
+ *
+ * We repeat this process for every pippenger round. In our example, this gives us 16 bucket sums.
+ * We need to multiply the most significant bucket sum by 2^{120}, the second most significant bucket sum by 2^{112}
+ *etc. Once this is done we can add the bucket sums together, to evaluate our scalar multiplication result.
+ *
+ * Pippenger has complexity O(n / logn), because of two factors at play: the number of buckets we need to concatenate
+ *per round, and the number of points we need to add into buckets per round.
+ *
+ * To minimize the number of point additions per round, we want fewer rounds. But fewer rounds increases the number of
+ *bucket concatenations. The more points we have, the greater the time saving when reducing the number of rounds, which
+ *means we can afford to have more buckets per round.
+ *
+ * For a concrete example, with 2^20 points, the sweet spot is 2^15 buckets - with 2^15 buckets we can evaluate our 127
+ *bit scalar multipliers in 8 rounds (we can represent b-bit windows with 2^{b-1} buckets, more on that below).
+ *
+ * This means that, for each round, we add 2^21 points into buckets (we've split our scalar multpliers into two
+ *half-width multipliers, so each round has twice the number of points. This is the reason why the endormorphism is
+ *useful here; without the endomorphism, we would need twice the number of buckets for each round).
+ *
+ * We also concatenate 2^15 buckets for each round. This requires 2^16 point additions.
+ *
+ * Meaning that the total number of point additions is (8 * 2^21) + (8 * 2^16) = 33 * 2^19 ~ 2^24 point additions.
+ * If we were to use a simple Montgomery double-and-add ladder to exponentiate each point, we would need 2^27 point
+ *additions (each scalar multiplier has ~2^7 non-zero bits, and there are 2^20 points).
+ *
+ * This makes pippenger 8 times faster than the naive O(n) equivalent. Given that a circuit with 1 million gates will
+ *require 9 multiple-scalar-multiplications with 2^20 points, efficiently using Pippenger's algorithm is essential for
+ *fast provers
+ *
+ * One additional efficiency gain is the use of 2^{b-1} buckets to represent b bits. To do this we represent our
+ *bit-slices in non-adjacent form. Non-adjacent form represents values using a base, where each 'bit' can take the
+ *values (-1, 0, 1). This is considerably more efficient than binary form for scalar multiplication, as inverting a
+ *point can be done by negating the y-coordinate.
+ *
+ * We actually use a slightly different representation than simple non-adjacent form. To represent b bits, a bit slice
+ *contains values from (-2^{b} - 1, ..., -1, 1, ..., 2^{b} - 1). i.e. we only have odd values. We do this to eliminate
+ *0-valued windows, as having a conditional branch in our hot loop to check if an entry is 0 is somethin we want to
+ *avoid.
+ *
+ * The above representation can be used to represent any binary number as long as we add a 'skew' factor. Each scalar
+ *multiplier's `skew` tracks if the scalar multiplier is even or odd. If it's even, `skew = true`, and we add `1` to our
+ *multiplier to make it odd.
+ *
+ * We then, at the end of the Pippenger algorithm, subtract a point from the total result, if that point's skew is
+ *`true`.
+ *
+ * At the end of `compute_wnaf_states`, `state.wnaf_table` will contain our wnaf entries, but unsorted.
  **/
-g1::affine_element* reduce_buckets(affine_product_runtime_state& state, bool first_round)
+template <size_t num_initial_points>
+inline void compute_wnaf_states(multiplication_runtime_state& state, fr::field_t* scalars)
 {
+    constexpr size_t num_points = num_initial_points * 2;
+    constexpr size_t num_rounds = get_num_rounds(num_points);
+    constexpr size_t bits_per_bucket = get_optimal_bucket_width(num_initial_points);
+    constexpr size_t log2_num_points = static_cast<uint64_t>(internal::get_msb(static_cast<uint32_t>(num_points)));
 
-    // std::chrono::steady_clock::time_point time_start = std::chrono::steady_clock::now();
-    // This method sorts our points into our required base-2 sequences.
-    // `max_bucket_bits` is log2(maximum bucket count).
-    // This sets the upper limit on how many iterations we need to perform in `evaluate_addition_chains`.
-    // e.g. if `max_bucket_bits == 3`, then we have at least one bucket with >= 8 points in it.
-    // which means we need to repeat our pairwise addition algorithm 3 times
-    // (e.g. add 4 pairs together to get 2 pairs, add those pairs together to get a single pair, which we add to reduce
-    // to our final point)
-    const size_t max_bucket_bits = construct_addition_chains(state, first_round);
+    // fetch our wnaf table and skew table pointers from pre-allocated memory. This eliminates soft page faults when
+    // writing to newly allocated memory. The page faults were adding up to 200 milliseconds onto the runtime of our
+    // algorithm!
+    state.wnaf_table = mmu::get_wnaf_pointer();
+    state.skew_table = mmu::get_skew_pointer();
 
-    // if max_bucket_bits is 0, we're done! we can return
-    if (max_bucket_bits == 0) {
-        return state.point_pairs_1;
-    }
+#ifndef NO_MULTITHREADING
+    const size_t num_threads = static_cast<size_t>(omp_get_max_threads());
+#else
+    const size_t num_threads = 1;
+#endif
+    const size_t num_initial_points_per_thread = num_initial_points / num_threads;
+    const size_t num_points_per_thread = num_points / num_threads;
 
-    // compute our required additions using the affine trick
-    evaluate_addition_chains(state, max_bucket_bits);
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+    for (size_t i = 0; i < num_threads; ++i) {
+        std::array<uint64_t, num_rounds * 8> wnaf_entries{};
+        fr::field_t T0;
+        fr::field_t T1;
+        fr::field_t T2;
+        fr::field_t T3;
+        uint64_t* wnaf_table = &state.wnaf_table[(2 * i) * num_initial_points_per_thread];
+        fr::field_t* thread_scalars = &scalars[i * num_initial_points_per_thread];
+        bool* skew_table = &state.skew_table[(2 * i) * num_initial_points_per_thread];
+        uint64_t offset = i * num_points_per_thread;
 
-    // this next step is a processing step, that computes a new point schedule for our reduced points.
-    // In the pippenger algorithm, we use a 64-bit uint to categorize each point.
-    // The high 32 bits describes the position of the point in a point array.
-    // The low 31 bits describes the bucket index that the point maps to
-    // The 32nd bit defines whether the point is actually a negation of our stored point.
+        // have our main loop work on 8 wnaf entries at a time. This ensures that, for
+        // each iteration of the loop, each round's wnaf entries fit into a cache line.
+        // This seems to improve performance, because we write our wnaf entries into memory
+        // in a slightly unsequenced order (a given scalar will have `num_rounds` wnaf entries,
+        // but these entries are not densely packed in memory - they are stored `num_points` apart from each other).
+        // If we collect 8 wnaf entries together, we ensure that multiple iterations will not require the same cache
+        // lines (wnaf entry = 8 bytes => 8 entries = 64 bytes)
+        for (uint64_t j = 0; j < num_initial_points_per_thread; j += 4) {
+            fr::__from_montgomery_form(thread_scalars[j], T0);
+            fr::split_into_endomorphism_scalars(T0, T0, *(fr::field_t*)&T0.data[2]);
+            fr::__from_montgomery_form(thread_scalars[j + 1], T1);
+            fr::split_into_endomorphism_scalars(T1, T1, *(fr::field_t*)&T1.data[2]);
+            fr::__from_montgomery_form(thread_scalars[j + 2], T2);
+            fr::split_into_endomorphism_scalars(T2, T2, *(fr::field_t*)&T2.data[2]);
+            fr::__from_montgomery_form(thread_scalars[j + 3], T3);
+            fr::split_into_endomorphism_scalars(T3, T3, *(fr::field_t*)&T3.data[2]);
 
-    // We want to compute these 'point schedule' uints for our reduced points, so that we can recurse back into
-    // `reduce_buckets`
-    uint32_t start = 0;
-    const uint32_t end = static_cast<uint32_t>(state.num_points);
-    // The output of `evaluate_addition_chains` has a bit of an odd structure, should probably refactor.
-    // Effectively, we used to have one big 1d array, and the act of computing these pair-wise point additions
-    // has chopped it up into sequences of smaller 1d arrays, with gaps in between
-    for (size_t i = 0; i < max_bucket_bits; ++i) {
-        const uint32_t points_in_round =
-            (static_cast<uint32_t>(state.num_points) - state.bit_offsets[i + 1]) >> static_cast<uint32_t>(i);
-        const uint32_t points_removed = points_in_round / 2;
+            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(
+                &T0.data[0], &wnaf_entries[0], skew_table[j << 1ULL], ((j << 1ULL) + offset) << 32ULL);
+            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(
+                &T0.data[2], &wnaf_entries[num_rounds], skew_table[(j << 1UL) + 1], ((j << 1UL) + offset + 1) << 32UL);
+            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(&T1.data[0],
+                                                         &wnaf_entries[num_rounds * 2],
+                                                         skew_table[(j << 1UL) + 2],
+                                                         ((j << 1UL) + offset + 2) << 32ULL);
+            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(&T1.data[2],
+                                                         &wnaf_entries[num_rounds * 3],
+                                                         skew_table[(j << 1UL) + 3],
+                                                         ((j << 1UL) + offset + 3) << 32ULL);
+            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(&T2.data[0],
+                                                         &wnaf_entries[num_rounds * 4],
+                                                         skew_table[(j << 1UL) + 4],
+                                                         ((j << 1UL) + offset + 4) << 32ULL);
+            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(&T2.data[2],
+                                                         &wnaf_entries[num_rounds * 5],
+                                                         skew_table[(j << 1UL) + 5],
+                                                         ((j << 1UL) + offset + 5) << 32ULL);
+            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(&T3.data[0],
+                                                         &wnaf_entries[num_rounds * 6],
+                                                         skew_table[(j << 1UL) + 6],
+                                                         ((j << 1UL) + offset + 6) << 32ULL);
+            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(&T3.data[2],
+                                                         &wnaf_entries[num_rounds * 7],
+                                                         skew_table[(j << 1UL) + 7],
+                                                         ((j << 1UL) + offset + 7) << 32ULL);
 
-        start = end - points_in_round;
-        const uint32_t modified_start = start + points_removed;
-        state.bit_offsets[i + 1] = modified_start;
-    }
-
-    // iterate over each bucket. Identify how many remaining points there are, and compute their point scheduels
-    uint32_t new_num_points = 0;
-    for (size_t i = 0; i < state.num_buckets; ++i) {
-        uint32_t& count = state.bucket_counts[i];
-        uint32_t num_bits = internal::get_msb_32(count) + 1;
-        uint32_t new_bucket_count = 0;
-        for (size_t j = 0; j < num_bits; ++j) {
-            uint32_t& current_offset = state.bit_offsets[j];
-            const bool has_entry = ((count >> j) & 1) == 1;
-            if (has_entry) {
-                uint64_t schedule = (static_cast<uint64_t>(current_offset) << 32ULL) + i;
-                state.point_schedule[new_num_points++] = schedule;
-                ++new_bucket_count;
-                ++current_offset;
+            for (size_t k = 0; k < num_rounds; ++k) {
+                wnaf_table[(k << log2_num_points) + (j << 1UL)] = wnaf_entries[k];
+                wnaf_table[(k << log2_num_points) + (j << 1UL) + 1] = wnaf_entries[k + num_rounds];
+                wnaf_table[(k << log2_num_points) + (j << 1UL) + 2] = wnaf_entries[k + (2 * num_rounds)];
+                wnaf_table[(k << log2_num_points) + (j << 1UL) + 3] = wnaf_entries[k + (3 * num_rounds)];
+                wnaf_table[(k << log2_num_points) + (j << 1UL) + 4] = wnaf_entries[k + (4 * num_rounds)];
+                wnaf_table[(k << log2_num_points) + (j << 1UL) + 5] = wnaf_entries[k + (5 * num_rounds)];
+                wnaf_table[(k << log2_num_points) + (j << 1UL) + 6] = wnaf_entries[k + (6 * num_rounds)];
+                wnaf_table[(k << log2_num_points) + (j << 1UL) + 7] = wnaf_entries[k + (7 * num_rounds)];
             }
         }
-        count = new_bucket_count;
     }
-
-    // modify `num_points` to reflect the new number of reduced points.
-    // also swap around the `point_pairs` pointer; what used to be our temporary array
-    // has now become our input point array
-    g1::affine_element* temp = state.point_pairs_1;
-    state.num_points = new_num_points;
-    state.points = state.point_pairs_1;
-    state.point_pairs_1 = state.point_pairs_2;
-    state.point_pairs_2 = temp;
-
-    // We could probably speed this up by unroling the recursion.
-    // But each extra call to `reduce_buckets` has an input size that is ~log(previous input size)
-    // so the extra run-time is meh
-    return reduce_buckets(state, false);
 }
 
-uint32_t construct_addition_chains(affine_product_runtime_state& state, bool empty_bucket_counts)
+/**
+ *  Sorts our wnaf entries in increasing bucket order (per round).
+ *  We currently don't multi-thread the inner sorting algorithm, and just split our threads over the number of rounds.
+ *  A multi-threaded sorting algorithm could be more efficient, but the total runtime of `organize_buckets` is <5% of
+ *  pippenger's runtime, so not a priority.
+ **/
+template <size_t num_points> void organize_buckets(multiplication_runtime_state& state)
 {
-    // if this is the first call to `construct_addition_chains`, we need to count up our buckets
-    if (empty_bucket_counts) {
-        memset((void*)state.bucket_counts, 0x00, sizeof(uint32_t) * state.num_buckets);
-        const uint32_t first_bucket = static_cast<uint32_t>(state.point_schedule[0] & 0x7fffffffUL);
-        for (size_t i = 0; i < state.num_points; ++i) {
-            size_t bucket_index = static_cast<size_t>(state.point_schedule[i] & 0x7fffffffUL);
-            ++state.bucket_counts[bucket_index - first_bucket];
-        }
-        for (size_t i = 0; i < state.num_buckets; ++i) {
-            state.bucket_empty_status[i] = (state.bucket_counts[i] == 0);
-        }
+    constexpr size_t num_rounds = get_num_rounds(num_points);
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+    for (size_t i = 0; i < num_rounds; ++i) {
+        scalar_multiplication::process_buckets<num_points, get_optimal_bucket_width(num_points / 2)>(
+            &state.wnaf_table[i * num_points]);
     }
-
-    uint32_t max_count = 0;
-    for (size_t i = 0; i < state.num_buckets; ++i) {
-        max_count = state.bucket_counts[i] > max_count ? state.bucket_counts[i] : max_count;
-    }
-
-    const uint32_t max_bucket_bits = internal::get_msb_32(max_count);
-
-    for (size_t i = 0; i < max_bucket_bits + 1; ++i) {
-        state.bit_offsets[i] = 0;
-    }
-
-    // TODO: measure whether this is useful. `count_bits` has a nasty nested loop that,
-    // theoretically, can be unrolled using templated methods.
-    // However, explicitly unrolling the loop by using recursive template calls was slower!
-    // Inner loop is currently bounded by a constexpr variable, need to see what the compiler does with that...
-    switch (max_bucket_bits) {
-    case 21: {
-        count_bits<21>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 20: {
-        count_bits<20>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 19: {
-        count_bits<19>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 18: {
-        count_bits<18>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 17: {
-        count_bits<17>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 16: {
-        count_bits<16>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 15: {
-        count_bits<15>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 14: {
-        count_bits<14>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 13: {
-        count_bits<13>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 12: {
-        count_bits<12>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 11: {
-        count_bits<11>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 10: {
-        count_bits<10>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 9: {
-        count_bits<9>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 8: {
-        count_bits<8>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 7: {
-        count_bits<7>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 6: {
-        count_bits<6>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 5: {
-        count_bits<5>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 4: {
-        count_bits<4>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 3: {
-        count_bits<3>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 2: {
-        count_bits<2>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    case 1: {
-        count_bits<1>(state.bucket_counts, &state.bit_offsets[0], state.num_buckets);
-        break;
-    }
-    default: {
-        break;
-    };
-    }
-
-    // we need to update `bit_offsets` to compute our point shuffle,
-    // but we need the original array later on, so make a copy.
-    std::array<uint32_t, 22> bit_offsets_copy = { 0 };
-    for (size_t i = 0; i < max_bucket_bits + 1; ++i) {
-        bit_offsets_copy[i] = state.bit_offsets[i];
-    }
-
-    // this is where we take each bucket's associated points, and arrange them
-    // in a pairwise order, so that we can compute large sequences of additions using the affine trick
-    size_t schedule_it = 0;
-    uint32_t* bucket_count_it = state.bucket_counts;
-
-    for (size_t i = 0; i < state.num_buckets; ++i) {
-        uint32_t count = *bucket_count_it;
-        ++bucket_count_it;
-        uint32_t num_bits = internal::get_msb_32(count) + 1;
-        for (size_t j = 0; j < num_bits; ++j) {
-            uint32_t& current_offset = bit_offsets_copy[j];
-            const size_t k_end = count & (1UL << j);
-            // This section is a bottleneck - to populate our point array, we need
-            // to read from memory locations that are effectively uniformly randomly distributed!
-            // (assuming our scalar multipliers are uniformly random...)
-            // In the absence of a more elegant solution, we use ugly macro hacks to try and 
-            // unroll loops, and prefetch memory a few cycles before we need it
-            switch (k_end) {
-            case 128: {
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                break;
-            }
-            case 64: {
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                break;
-            }
-            case 32: {
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                break;
-            }
-            case 16: {
-                BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                break;
-            }
-            case 8: {
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 8] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 9] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 10] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 11] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 12] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 13] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 14] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 15] >> 32ULL));
-
-                const uint64_t schedule_a = state.point_schedule[schedule_it];
-                const uint64_t schedule_b = state.point_schedule[schedule_it + 1];
-                const uint64_t schedule_c = state.point_schedule[schedule_it + 2];
-                const uint64_t schedule_d = state.point_schedule[schedule_it + 3];
-                const uint64_t schedule_e = state.point_schedule[schedule_it + 4];
-                const uint64_t schedule_f = state.point_schedule[schedule_it + 5];
-                const uint64_t schedule_g = state.point_schedule[schedule_it + 6];
-                const uint64_t schedule_h = state.point_schedule[schedule_it + 7];
-
-                g1::conditional_negate_affine(state.points + (schedule_a >> 32ULL),
-                                              state.point_pairs_1 + current_offset,
-                                              (schedule_a >> 31ULL) & 1ULL);
-                g1::conditional_negate_affine(state.points + (schedule_b >> 32ULL),
-                                              state.point_pairs_1 + current_offset + 1,
-                                              (schedule_b >> 31ULL) & 1ULL);
-                g1::conditional_negate_affine(state.points + (schedule_c >> 32ULL),
-                                              state.point_pairs_1 + current_offset + 2,
-                                              (schedule_c >> 31ULL) & 1ULL);
-                g1::conditional_negate_affine(state.points + (schedule_d >> 32ULL),
-                                              state.point_pairs_1 + current_offset + 3,
-                                              (schedule_d >> 31ULL) & 1ULL);
-                g1::conditional_negate_affine(state.points + (schedule_e >> 32ULL),
-                                              state.point_pairs_1 + current_offset + 4,
-                                              (schedule_e >> 31ULL) & 1ULL);
-                g1::conditional_negate_affine(state.points + (schedule_f >> 32ULL),
-                                              state.point_pairs_1 + current_offset + 5,
-                                              (schedule_f >> 31ULL) & 1ULL);
-                g1::conditional_negate_affine(state.points + (schedule_g >> 32ULL),
-                                              state.point_pairs_1 + current_offset + 6,
-                                              (schedule_g >> 31ULL) & 1ULL);
-                g1::conditional_negate_affine(state.points + (schedule_h >> 32ULL),
-                                              state.point_pairs_1 + current_offset + 7,
-                                              (schedule_h >> 31ULL) & 1ULL);
-
-                current_offset += 8;
-                schedule_it += 8;
-                break;
-            }
-            case 4: {
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));
-                const uint64_t schedule_a = state.point_schedule[schedule_it];
-                const uint64_t schedule_b = state.point_schedule[schedule_it + 1];
-                const uint64_t schedule_c = state.point_schedule[schedule_it + 2];
-                const uint64_t schedule_d = state.point_schedule[schedule_it + 3];
-
-                g1::conditional_negate_affine(state.points + (schedule_a >> 32ULL),
-                                              state.point_pairs_1 + current_offset,
-                                              (schedule_a >> 31ULL) & 1ULL);
-                g1::conditional_negate_affine(state.points + (schedule_b >> 32ULL),
-                                              state.point_pairs_1 + current_offset + 1,
-                                              (schedule_b >> 31ULL) & 1ULL);
-                g1::conditional_negate_affine(state.points + (schedule_c >> 32ULL),
-                                              state.point_pairs_1 + current_offset + 2,
-                                              (schedule_c >> 31ULL) & 1ULL);
-                g1::conditional_negate_affine(state.points + (schedule_d >> 32ULL),
-                                              state.point_pairs_1 + current_offset + 3,
-                                              (schedule_d >> 31ULL) & 1ULL);
-                current_offset += 4;
-                schedule_it += 4;
-                break;
-            }
-            case 2: {
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));
-                const uint64_t schedule_a = state.point_schedule[schedule_it];
-                const uint64_t schedule_b = state.point_schedule[schedule_it + 1];
-
-                g1::conditional_negate_affine(state.points + (schedule_a >> 32ULL),
-                                              state.point_pairs_1 + current_offset,
-                                              (schedule_a >> 31ULL) & 1ULL);
-                g1::conditional_negate_affine(state.points + (schedule_b >> 32ULL),
-                                              state.point_pairs_1 + current_offset + 1,
-                                              (schedule_b >> 31ULL) & 1ULL);
-                current_offset += 2;
-                schedule_it += 2;
-                break;
-            }
-            case 1: {
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 4] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 5] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 6] >> 32ULL));
-                __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 7] >> 32ULL));
-                const uint64_t schedule_a = state.point_schedule[schedule_it];
-
-                g1::conditional_negate_affine(state.points + (schedule_a >> 32ULL),
-                                              state.point_pairs_1 + current_offset,
-                                              (schedule_a >> 31ULL) & 1ULL);
-                ++current_offset;
-                ++schedule_it;
-                break;
-            }
-            case 0: {
-                break;
-            }
-            default: {
-                for (size_t k = 0; k < k_end; ++k) {
-                    uint64_t schedule = state.point_schedule[schedule_it];
-                    __builtin_prefetch(state.points + (state.point_schedule[schedule_it + 1] >> 32ULL));
-
-                    const uint64_t predicate = (schedule >> 31UL) & 1UL;
-
-                    g1::conditional_negate_affine(
-                        state.points + (schedule >> 32ULL), state.point_pairs_1 + current_offset, predicate);
-                    ++current_offset;
-                    ++schedule_it;
-                }
-            }
-            }
-        }
-    }
-    return max_bucket_bits;
 }
+
+inline void scalar_multiplication_round_inner(multiplication_thread_state& state,
+                                              const size_t num_points,
+                                              const uint64_t bucket_offset,
+                                              g1::affine_element* points)
+{
+    g1::affine_element* current_point;
+    g1::element* current_bucket;
+    g1::affine_element* next_point = points + ((state.point_schedule[0]) >> 32UL);
+    g1::element* next_bucket = state.buckets + (state.point_schedule[0] & 0x7fffffffUL) - bucket_offset;
+    uint64_t current_negative;
+    uint64_t next_negative = ((state.point_schedule[0] >> 31UL) & 1UL);
+
+    for (size_t i = 1; i < num_points; ++i) {
+        current_point = next_point;
+        current_bucket = next_bucket;
+        current_negative = next_negative;
+
+        next_point = points + ((state.point_schedule[i]) >> 32UL);
+        next_bucket = state.buckets + (state.point_schedule[i] & 0x7fffffffUL) - bucket_offset;
+        next_negative = ((state.point_schedule[i] >> 31UL) & 1UL);
+
+        __builtin_prefetch(next_point);
+
+        g1::mixed_add_or_sub(*current_bucket, *current_point, *current_bucket, current_negative);
+    }
+
+    g1::mixed_add_or_sub(*next_bucket, *next_point, *next_bucket, next_negative);
+}
+
+template <size_t num_points>
+inline g1::element scalar_multiplication_internal(multiplication_runtime_state& state, g1::affine_element* points)
+{
+    constexpr size_t num_rounds = get_num_rounds(num_points);
+#ifndef NO_MULTITHREADING
+    const size_t num_threads = static_cast<size_t>(omp_get_max_threads());
+#else
+    const size_t num_threads = 1;
+#endif
+    constexpr size_t bits_per_bucket = get_optimal_bucket_width(num_points / 2);
+    const size_t num_points_per_thread = num_points / num_threads; // assume a power of 2
+
+    g1::element* thread_accumulators = static_cast<g1::element*>(aligned_alloc(64, num_threads * sizeof(g1::element)));
+
+    std::vector<uint64_t> bucket_offsets(num_threads);
+    for (size_t j = 0; j < num_threads; ++j) {
+        uint64_t max_buckets = 0;
+        for (size_t i = 0; i < num_rounds; ++i) {
+            const uint64_t* thread_point_schedule = &state.wnaf_table[(i * num_points) + j * num_points_per_thread];
+            const uint64_t first_bucket = thread_point_schedule[0] & 0x7fffffffU;
+            const uint64_t last_bucket = thread_point_schedule[(num_points_per_thread - 1)] & 0x7fffffffU;
+            const uint64_t num_thread_buckets = (last_bucket - first_bucket) + 1;
+            if (num_thread_buckets > max_buckets) {
+                max_buckets = num_thread_buckets;
+            }
+        }
+        bucket_offsets[j] = max_buckets;
+    }
+    for (size_t j = 1; j < num_threads; ++j) {
+        bucket_offsets[j] += bucket_offsets[j - 1];
+    }
+    g1::element* buckets = mmu::get_bucket_pointer();
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+    for (size_t j = 0; j < num_threads; ++j) {
+        g1::set_infinity(thread_accumulators[j]);
+
+        g1::element* thread_buckets = buckets + (j == 0 ? 0 : bucket_offsets[j - 1]);
+        for (size_t i = 0; i < num_rounds; ++i) {
+            const uint64_t* thread_point_schedule = &state.wnaf_table[(i * num_points) + j * num_points_per_thread];
+            const size_t first_bucket = thread_point_schedule[0] & 0x7fffffffU;
+            const size_t last_bucket = thread_point_schedule[(num_points_per_thread - 1)] & 0x7fffffffU;
+            const size_t num_thread_buckets = (last_bucket - first_bucket) + 1;
+
+            for (size_t k = 0; k < num_thread_buckets; ++k) {
+                g1::set_infinity(thread_buckets[k]);
+            }
+            multiplication_thread_state thread_state{ thread_buckets, thread_point_schedule };
+
+            scalar_multiplication_round_inner(thread_state, num_points_per_thread, first_bucket, points);
+
+            g1::element running_sum;
+            g1::element accumulator;
+            g1::set_infinity(running_sum);
+            g1::set_infinity(accumulator);
+            for (size_t k = num_thread_buckets - 1; k > 0; --k) {
+                g1::add(running_sum, thread_buckets[k], running_sum);
+                g1::add(accumulator, running_sum, accumulator);
+            }
+            g1::add(running_sum, thread_buckets[0], running_sum);
+            g1::dbl(accumulator, accumulator);
+            g1::add(accumulator, running_sum, accumulator);
+
+            // we now need to scale up 'running sum' up to the value of the first bucket.
+            // e.g. if first bucket is 0, no scaling
+            // if first bucket is 1, we need to add (2 * running_sum)
+            if (first_bucket > 0) {
+                uint32_t multiplier = static_cast<uint32_t>(first_bucket << 1UL);
+                size_t shift = internal::get_msb(multiplier);
+                g1::element rolling_accumulator;
+                g1::set_infinity(rolling_accumulator);
+                bool init = false;
+                while (shift != static_cast<size_t>(-1)) {
+                    if (init) {
+                        g1::dbl(rolling_accumulator, rolling_accumulator);
+                        if (((multiplier >> shift) & 1)) {
+                            g1::add(rolling_accumulator, running_sum, rolling_accumulator);
+                        }
+                    } else {
+                        g1::add(rolling_accumulator, running_sum, rolling_accumulator);
+                    }
+                    init = true;
+                    shift -= 1;
+                }
+                g1::add(accumulator, rolling_accumulator, accumulator);
+            }
+
+            if (i == (num_rounds - 1)) {
+                bool* skew_table = &state.skew_table[j * num_points_per_thread];
+                g1::affine_element* point_table = &points[j * num_points_per_thread];
+                g1::affine_element addition_temporary;
+                for (size_t k = 0; k < num_points_per_thread; ++k) {
+                    if (skew_table[k]) {
+                        g1::__neg(point_table[k], addition_temporary);
+                        g1::mixed_add(accumulator, addition_temporary, accumulator);
+                    }
+                }
+            }
+
+            if (i > 0) {
+                for (size_t k = 0; k < bits_per_bucket + 1; ++k) {
+                    g1::dbl(thread_accumulators[j], thread_accumulators[j]);
+                }
+            }
+            g1::add(thread_accumulators[j], accumulator, thread_accumulators[j]);
+        }
+    }
+
+    g1::element result;
+    g1::set_infinity(result);
+    for (size_t i = 0; i < num_threads; ++i) {
+        g1::add(result, thread_accumulators[i], result);
+    }
+    free(thread_accumulators);
+    return result;
+}
+
+template <size_t num_initial_points>
+inline g1::element pippenger_internal(g1::affine_element* points, fr::field_t* scalars)
+{
+    multiplication_runtime_state state;
+    compute_wnaf_states<num_initial_points>(state, scalars);
+    organize_buckets<num_initial_points * 2>(state);
+    g1::element result = scalar_multiplication_internal<num_initial_points * 2>(state, points);
+    return result;
+}
+
+
+// TODO: this is a lot of code duplication, need to fix that once the method has stabilized
+template <size_t num_points>
+inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_state& state, g1::affine_element* points)
+{
+    constexpr size_t num_rounds = get_num_rounds(num_points);
+#ifndef NO_MULTITHREADING
+    const size_t num_threads = static_cast<size_t>(omp_get_max_threads());
+#else
+    const size_t num_threads = 1;
+#endif
+    constexpr size_t bits_per_bucket = get_optimal_bucket_width(num_points / 2);
+    const size_t num_points_per_thread = num_points / num_threads; // assume a power of 2
+
+    g1::element* thread_accumulators = static_cast<g1::element*>(aligned_alloc(64, num_threads * sizeof(g1::element)));
+
+
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+    for (size_t j = 0; j < num_threads; ++j) {
+        g1::set_infinity(thread_accumulators[j]);
+
+        for (size_t i = 0; i < num_rounds; ++i) {
+            uint64_t* thread_point_schedule = &state.wnaf_table[(i * num_points) + j * num_points_per_thread];
+            const size_t first_bucket = thread_point_schedule[0] & 0x7fffffffU;
+            const size_t last_bucket = thread_point_schedule[(num_points_per_thread - 1)] & 0x7fffffffU;
+            const size_t num_thread_buckets = (last_bucket - first_bucket) + 1;
+
+            affine_product_runtime_state product_state = mmu::get_affine_product_runtime_state(num_threads, j);
+            product_state.num_points = static_cast<uint32_t>(num_points_per_thread);
+            product_state.points = points;
+            product_state.point_schedule = thread_point_schedule;
+            product_state.num_buckets = static_cast<uint32_t>(num_thread_buckets);
+
+            g1::affine_element* output_buckets = reduce_buckets(product_state, true);
+
+            g1::element running_sum;
+            g1::element accumulator;
+            g1::set_infinity(running_sum);
+            g1::set_infinity(accumulator);
+
+            // one nice side-effect of the affine trick, is that half of the bucket concatenation
+            // algorithm can use mixed addition formulae, instead of full addition formulae
+            size_t output_it = product_state.num_points - 1;
+            for (size_t k = num_thread_buckets - 1; k > 0; --k) {
+                if (__builtin_expect(!product_state.bucket_empty_status[k], 1)) {
+                    g1::mixed_add(running_sum, (output_buckets[output_it]), running_sum);
+                    --output_it;
+                }
+                g1::add(accumulator, running_sum, accumulator);
+            }
+            g1::mixed_add(running_sum, output_buckets[0], running_sum);
+            g1::dbl(accumulator, accumulator);
+            g1::add(accumulator, running_sum, accumulator);
+
+            // we now need to scale up 'running sum' up to the value of the first bucket.
+            // e.g. if first bucket is 0, no scaling
+            // if first bucket is 1, we need to add (2 * running_sum)
+            if (first_bucket > 0) {
+                uint32_t multiplier = static_cast<uint32_t>(first_bucket << 1UL);
+                size_t shift = internal::get_msb(multiplier);
+                g1::element rolling_accumulator;
+                g1::set_infinity(rolling_accumulator);
+                bool init = false;
+                while (shift != static_cast<size_t>(-1)) {
+                    if (init) {
+                        g1::dbl(rolling_accumulator, rolling_accumulator);
+                        if (((multiplier >> shift) & 1)) {
+                            g1::add(rolling_accumulator, running_sum, rolling_accumulator);
+                        }
+                    } else {
+                        g1::add(rolling_accumulator, running_sum, rolling_accumulator);
+                    }
+                    init = true;
+                    shift -= 1;
+                }
+                g1::add(accumulator, rolling_accumulator, accumulator);
+            }
+
+            if (i == (num_rounds - 1)) {
+                bool* skew_table = &state.skew_table[j * num_points_per_thread];
+                g1::affine_element* point_table = &points[j * num_points_per_thread];
+                g1::affine_element addition_temporary;
+                for (size_t k = 0; k < num_points_per_thread; ++k) {
+                    if (skew_table[k]) {
+                        g1::__neg(point_table[k], addition_temporary);
+                        g1::mixed_add(accumulator, addition_temporary, accumulator);
+                    }
+                }
+            }
+
+            if (i > 0) {
+                for (size_t k = 0; k < bits_per_bucket + 1; ++k) {
+                    g1::dbl(thread_accumulators[j], thread_accumulators[j]);
+                }
+            }
+            g1::add(thread_accumulators[j], accumulator, thread_accumulators[j]);
+        }
+    }
+
+    g1::element result;
+    g1::set_infinity(result);
+    for (size_t i = 0; i < num_threads; ++i) {
+        g1::add(result, thread_accumulators[i], result);
+    }
+    free(thread_accumulators);
+    return result;
+}
+
+
+template <size_t num_initial_points>
+inline g1::element pippenger_unsafe_internal(g1::affine_element* points, fr::field_t* scalars)
+{
+    multiplication_runtime_state state;
+    compute_wnaf_states<num_initial_points>(state, scalars);
+    organize_buckets<num_initial_points * 2>(state);
+    g1::element result = unsafe_scalar_multiplication_internal<num_initial_points * 2>(state, points);
+    return result;
+}
+
+inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, const size_t num_initial_points)
+{
+    // our windowed non-adjacent form algorthm requires that each thread can work on at least 8 points.
+    // If we fall below this theshold, fall back to the traditional scalar multiplication algorithm.
+    // For 8 threads, this neatly coincides with the threshold where Strauss scalar multiplication outperforms Pippenger
+#ifndef NO_MULTITHREADING
+    const size_t threshold = std::max(static_cast<size_t>(omp_get_max_threads() * 8), 8UL);
+#else
+    const size_t threshold = 8UL;
+#endif
+
+    if (num_initial_points == 0) {
+        g1::element out = g1::one;
+        g1::set_infinity(out);
+        return out;
+    }
+
+    if (num_initial_points <= threshold) {
+        std::vector<g1::element> exponentiation_results(num_initial_points);
+        // might as well multithread this...
+        // TODO: implement Strauss algorithm for small numbers of points.
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+        for (size_t i = 0; i < num_initial_points; ++i) {
+            exponentiation_results[i] = g1::group_exponentiation_inner((points[i * 2]), scalars[i]);
+        }
+
+        for (size_t i = num_initial_points - 1; i > 0; --i) {
+            g1::add(exponentiation_results[i - 1], exponentiation_results[i], exponentiation_results[i - 1]);
+        }
+        return exponentiation_results[0];
+    }
+
+    const size_t log2_initial_points =
+        std::min(static_cast<size_t>(internal::get_msb(static_cast<uint32_t>(num_initial_points))), 20UL);
+    g1::element result;
+
+    switch (log2_initial_points) {
+    case 20:
+        result = pippenger_internal<1 << 20>(points, scalars);
+        break;
+    case 19:
+        result = pippenger_internal<1 << 19>(points, scalars);
+        break;
+    case 18:
+        result = pippenger_internal<1 << 18>(points, scalars);
+        break;
+    case 17:
+        result = pippenger_internal<1 << 17>(points, scalars);
+        break;
+    case 16:
+        result = pippenger_internal<1 << 16>(points, scalars);
+        break;
+    case 15:
+        result = pippenger_internal<1 << 15>(points, scalars);
+        break;
+    case 14:
+        result = pippenger_internal<1 << 14>(points, scalars);
+        break;
+    case 13:
+        result = pippenger_internal<1 << 13>(points, scalars);
+        break;
+    case 12:
+        result = pippenger_internal<1 << 12>(points, scalars);
+        break;
+    case 11:
+        result = pippenger_internal<1 << 11>(points, scalars);
+        break;
+    case 10:
+        result = pippenger_internal<1 << 10>(points, scalars);
+        break;
+    case 9:
+        result = pippenger_internal<1 << 9>(points, scalars);
+        break;
+    case 8:
+        result = pippenger_internal<1 << 8>(points, scalars);
+        break;
+    case 7:
+        result = pippenger_internal<1 << 7>(points, scalars);
+        break;
+    case 6:
+        result = pippenger_internal<1 << 6>(points, scalars);
+        break;
+    case 5:
+        result = pippenger_internal<1 << 5>(points, scalars);
+        break;
+    case 4:
+        result = pippenger_internal<1 << 4>(points, scalars);
+        break;
+    case 3:
+        result = pippenger_internal<1 << 3>(points, scalars);
+        break;
+    }
+
+    if ((1UL << log2_initial_points) == num_initial_points) {
+        return result;
+    } else {
+        g1::add(result,
+                pippenger(scalars + (1UL << log2_initial_points),
+                          points + (1UL << (log2_initial_points + 1)),
+                          num_initial_points - (1UL << log2_initial_points)),
+                result);
+        return result;
+    }
+}
+
+/**
+ * It's pippenger! But this one has go-faster stripes and a prediliction for questionable life choices.
+ * We use affine-addition formula in this method, which paradoxically is ~45% faster than the mixed addition formulae.
+ * See `scalar_multiplication.cpp` for a more detailed description.
+ * 
+ * It's...unsafe, because we assume that the incomplete addition formula exceptions are not triggered.
+ * We don't bother to check for this to avoid conditional branches in a critical section of our code.
+ * This is fine for situations where your bases are linearly independent (i.e. KZG10 polynomial commitments),
+ * because triggering the incomplete addition exceptions is about as hard as solving the disrete log problem.
+ * 
+ * This is ok for the prover, but GIANT RED CLAXON WARNINGS FOR THE VERIFIER
+ * Don't use this in a verification algorithm! That would be a really bad idea.
+ * Unless you're a malicious adversary, then it would be a great idea! 
+ * 
+ **/ 
+g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, const size_t num_initial_points)
+{
+    // our windowed non-adjacent form algorthm requires that each thread can work on at least 8 points.
+    // If we fall below this theshold, fall back to the traditional scalar multiplication algorithm.
+    // For 8 threads, this neatly coincides with the threshold where Strauss scalar multiplication outperforms Pippenger
+#ifndef NO_MULTITHREADING
+    const size_t threshold = std::max(static_cast<size_t>(omp_get_max_threads() * 8), 8UL);
+#else
+    const size_t threshold = 8UL;
+#endif
+
+    if (num_initial_points == 0) {
+        g1::element out = g1::one;
+        g1::set_infinity(out);
+        return out;
+    }
+
+    if (num_initial_points <= threshold) {
+        std::vector<g1::element> exponentiation_results(num_initial_points);
+        // might as well multithread this...
+        // TODO: implement Strauss algorithm for small numbers of points.
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+        for (size_t i = 0; i < num_initial_points; ++i) {
+            exponentiation_results[i] = g1::group_exponentiation_inner((points[i * 2]), scalars[i]);
+        }
+
+        for (size_t i = num_initial_points - 1; i > 0; --i) {
+            g1::add(exponentiation_results[i - 1], exponentiation_results[i], exponentiation_results[i - 1]);
+        }
+        return exponentiation_results[0];
+    }
+
+    const size_t log2_initial_points =
+        std::min(static_cast<size_t>(internal::get_msb(static_cast<uint32_t>(num_initial_points))), 20UL);
+    g1::element result;
+
+    switch (log2_initial_points) {
+    case 20:
+        result = pippenger_unsafe_internal<1 << 20>(points, scalars);
+        break;
+    case 19:
+        result = pippenger_unsafe_internal<1 << 19>(points, scalars);
+        break;
+    case 18:
+        result = pippenger_unsafe_internal<1 << 18>(points, scalars);
+        break;
+    case 17:
+        result = pippenger_unsafe_internal<1 << 17>(points, scalars);
+        break;
+    case 16:
+        result = pippenger_unsafe_internal<1 << 16>(points, scalars);
+        break;
+    case 15:
+        result = pippenger_unsafe_internal<1 << 15>(points, scalars);
+        break;
+    case 14:
+        result = pippenger_unsafe_internal<1 << 14>(points, scalars);
+        break;
+    case 13:
+        result = pippenger_unsafe_internal<1 << 13>(points, scalars);
+        break;
+    case 12:
+        result = pippenger_unsafe_internal<1 << 12>(points, scalars);
+        break;
+    case 11:
+        result = pippenger_unsafe_internal<1 << 11>(points, scalars);
+        break;
+    case 10:
+        result = pippenger_unsafe_internal<1 << 10>(points, scalars);
+        break;
+    case 9:
+        result = pippenger_unsafe_internal<1 << 9>(points, scalars);
+        break;
+    case 8:
+        result = pippenger_unsafe_internal<1 << 8>(points, scalars);
+        break;
+    case 7:
+        result = pippenger_unsafe_internal<1 << 7>(points, scalars);
+        break;
+    case 6:
+        result = pippenger_unsafe_internal<1 << 6>(points, scalars);
+        break;
+    case 5:
+        result = pippenger_unsafe_internal<1 << 5>(points, scalars);
+        break;
+    case 4:
+        result = pippenger_unsafe_internal<1 << 4>(points, scalars);
+        break;
+    case 3:
+        result = pippenger_unsafe_internal<1 << 3>(points, scalars);
+        break;
+    }
+
+    if ((1UL << log2_initial_points) == num_initial_points) {
+        return result;
+    } else {
+        g1::add(result,
+                pippenger(scalars + (1UL << log2_initial_points),
+                          points + (1UL << (log2_initial_points + 1)),
+                          num_initial_points - (1UL << log2_initial_points)),
+                result);
+        return result;
+    }
+}
+
+template g1::element scalar_multiplication_internal<1 << 2>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 3>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 4>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 5>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 6>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 7>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 8>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 9>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 10>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 11>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 12>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 13>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 14>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 15>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 16>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 17>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 18>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 19>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 20>(multiplication_runtime_state& state, g1::affine_element* points);
+
+template void compute_wnaf_states<1 << 2>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 3>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 4>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 5>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 6>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 7>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 8>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 9>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 10>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 11>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 12>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 13>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 14>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 15>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 16>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 17>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 18>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 19>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 20>(multiplication_runtime_state& state, fr::field_t* scalars);
+
+template void organize_buckets<1 << 2>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 3>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 4>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 5>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 6>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 7>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 8>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 9>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 10>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 11>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 12>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 13>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 14>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 15>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 16>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 17>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 18>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 19>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 20>(multiplication_runtime_state& state);
+template void organize_buckets<1 << 21>(multiplication_runtime_state& state);
+
 } // namespace scalar_multiplication
 } // namespace barretenberg

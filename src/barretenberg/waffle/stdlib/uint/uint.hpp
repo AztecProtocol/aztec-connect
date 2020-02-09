@@ -54,7 +54,7 @@ template <typename ComposerContext> class uint {
     uint operator-(const uint& other);
     uint operator*(const uint& other);
     uint operator/(const uint& other);
-    uint operator%(const uint& other);
+    // uint operator%(const uint& other);
     uint operator&(const uint& other);
     uint operator|(const uint& other);
     uint operator^(const uint& other);
@@ -73,20 +73,20 @@ template <typename ComposerContext> class uint {
     bool_t<ComposerContext> operator==(const uint& other) const;
     bool_t<ComposerContext> operator!=(const uint& other) const;
 
-    uint operator++() { return operator+(uint(context, barretenberg::fr::one)); };
-    uint operator--() { return operator-(uint(context, barretenberg::fr::one)); };
-    uint operator+=(const uint& other) { *this = operator+(other); };
-    uint operator-=(const uint& other) { *this = operator-(other); };
-    uint operator*=(const uint& other) { *this = operator*(other); };
-    uint operator/=(const uint& other) { *this = operator/(other); };
-    uint operator%=(const uint& other) { *this = operator%(other); };
+    uint operator++() { return operator+(uint(width(), context, 1)); };
+    uint operator--() { return operator-(uint(width(), context, 1)); };
+    uint operator+=(const uint& other) { *this = operator+(other); return *this; };
+    uint operator-=(const uint& other) { *this = operator-(other); return *this; };
+    uint operator*=(const uint& other) { *this = operator*(other); return *this; };
+    uint operator/=(const uint& other) { *this = operator/(other); return *this; };
+    // uint operator%=(const uint& other) { *this = operator%(other); return *this; };
 
-    uint operator&=(const uint& other) { *this = operator&(other); };
-    uint operator^=(const uint& other) { *this = operator^(other); };
-    uint operator|=(const uint& other) { *this = operator|(other); };
+    uint operator&=(const uint& other) { *this = operator&(other); return *this; };
+    uint operator^=(const uint& other) { *this = operator^(other); return *this; };
+    uint operator|=(const uint& other) { *this = operator|(other); return *this; };
 
-    uint operator>>=(const uint& other) { *this = operator>>(other); };
-    uint operator<<=(const uint& other) { *this = operator<<(other); };
+    uint operator>>=(const uint64_t const_shift) { *this = operator>>(const_shift); return *this; };
+    uint operator<<=(const uint64_t const_shift) { *this = operator<<(const_shift); return *this; };
 
     bool is_constant() const { return witness_index == static_cast<uint32_t>(-1); }
 
@@ -129,8 +129,9 @@ template <typename ComposerContext> class uint {
     void set_wire(bool_t<ComposerContext> const& bit, size_t bit_index);
 
     size_t width() const { return bool_wires.size(); }
+  protected:
+     ComposerContext* context;
 
-  private:
     enum WitnessStatus {
         OK,                    // has both valid binary wires, and a valid native representation
         NOT_NORMALIZED,        // has a native representation, that needs to be normalised (is > 2^32)
@@ -173,8 +174,6 @@ template <typename ComposerContext> class uint {
 
     uint ternary_operator(const bool_t<ComposerContext>& predicate, const uint& lhs, const uint& rhs);
 
-    ComposerContext* context;
-
     mutable uint32_t witness_index;
     mutable uint64_t additive_constant;
     mutable uint64_t multiplicative_constant;
@@ -199,7 +198,11 @@ template <typename T> inline std::ostream& operator<<(std::ostream& os, uint<T> 
     return os << v.get_value();
 }
 
+extern template class uint<waffle::StandardComposer>;
+extern template class uint<waffle::BoolComposer>;
+extern template class uint<waffle::MiMCComposer>;
+extern template class uint<waffle::ExtendedComposer>;
+extern template class uint<waffle::TurboComposer>;
+
 } // namespace stdlib
 } // namespace plonk
-
-#include "./uint.tcc"

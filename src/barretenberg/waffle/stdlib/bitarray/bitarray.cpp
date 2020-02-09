@@ -1,4 +1,4 @@
-#pragma once
+#include "./bitarray.hpp"
 
 #include <algorithm>
 #include <bitset>
@@ -66,33 +66,6 @@ bitarray<ComposerContext>::bitarray(const std::vector<uint32<ComposerContext> > 
 }
 
 template <typename ComposerContext>
-template <size_t N>
-bitarray<ComposerContext>::bitarray(const std::array<uint32<ComposerContext>, N> &input)
-{
-    auto it = std::find_if(input.begin(), input.end(), [](const auto &x) { return x.get_context() != nullptr; });
-    if (it != std::end(input))
-    {
-        context = it->get_context();
-    }
-    else
-    {
-        context = nullptr;
-    }
-
-    size_t num_words = static_cast<size_t>(N);
-    values.resize(num_words * 32);
-    for (size_t i = 0; i < num_words; ++i)
-    {
-        size_t input_index = num_words - 1 - i;
-        for (size_t j = 0; j < 32; ++j)
-        {
-            values[i * 32 + j] = input[input_index].at(j);
-        }
-    }
-    length = num_words * 32;
-}
-
-template <typename ComposerContext>
 bitarray<ComposerContext>::bitarray(const bitarray &other)
 {
     context = other.context;
@@ -137,69 +110,6 @@ template <typename ComposerContext>
 bool_t<ComposerContext> bitarray<ComposerContext>::operator[](const size_t idx) const
 {
     return values[idx];
-}
-
-template <typename ComposerContext>
-template <size_t N>
-bitarray<ComposerContext>::operator std::array<uint32<ComposerContext>, N>()
-{
-    ASSERT(N * 32 == length);
-    std::array<uint32<ComposerContext>, N> output;
-    for (size_t i = 0; i < N; ++i)
-    {
-        std::array<bool_t<ComposerContext>, 32 > bools;
-        size_t end;
-        size_t start;
-        start = ((N - i) * 32) - 32;
-        end = start + 32 > length ? length : start + 32;
-        for (size_t j = start; j < end; ++j)
-        {
-            bools[j - start] = values[j];
-        }
-        if (start + 32 > length)
-        {
-            for (size_t j = end; j < start + 32; ++j)
-            {
-                bools[j - start] = bool_t<ComposerContext>(context, false);
-            }
-        }
-        output[i] = uint32<ComposerContext>(context, bools);
-    }
-    return output;
-}
-
-template <typename ComposerContext>
-template <size_t N>
-void bitarray<ComposerContext>::populate_uint32_array(const size_t starting_index, std::array<uint32<ComposerContext>, N> &output)
-{
-    ASSERT(N * 32 == (length - starting_index));
-
-    size_t num_uint32s = (length / 32) + (length % 32 != 0);
-    size_t num_selected_uint32s = N;
-
-    size_t count = 0;
-    for (size_t i = (0); i < num_selected_uint32s; ++i)
-    {
-        std::array<bool_t<ComposerContext>, 32 > bools;
-        size_t end;
-        size_t start;
-        start = ((num_uint32s - i) * 32) - 32;
-        end = start + 32 > length ? length : start + 32;
-        for (size_t j = start; j < end; ++j)
-        {
-            bools[j - start] = values[j - starting_index];
-        }
-        if (start + 32 > length)
-        {
-            for (size_t j = end; j < start + 32; ++j)
-            {
-                bools[j - start] = bool_t<ComposerContext>(context, false);
-            }
-        }
-
-        output[count] = uint32<ComposerContext>(context, bools);
-        ++count;
-    }
 }
 
 template <typename ComposerContext>
@@ -252,5 +162,12 @@ std::string bitarray<ComposerContext>::get_witness_as_string() const
     }
     return output;
 }
+
+template class bitarray<waffle::StandardComposer>;
+template class bitarray<waffle::BoolComposer>;
+template class bitarray<waffle::MiMCComposer>;
+template class bitarray<waffle::ExtendedComposer>;
+template class bitarray<waffle::TurboComposer>;
+
 }
 }

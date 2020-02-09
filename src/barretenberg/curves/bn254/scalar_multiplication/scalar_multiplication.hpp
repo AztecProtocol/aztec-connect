@@ -11,7 +11,104 @@ namespace barretenberg
 {
 namespace scalar_multiplication
 {
+namespace internal
+{
+// from http://supertech.csail.mit.edu/papers/debruijn.pdf
+constexpr size_t get_msb(const uint32_t v)
+{
+    constexpr uint32_t MultiplyDeBruijnBitPosition[32] = {
+        0, 9,  1,  10, 13, 21, 2,  29, 11, 14, 16, 18, 22, 25, 3, 30,
+        8, 12, 20, 28, 15, 17, 24, 7,  19, 27, 23, 6,  26, 5,  4, 31
+    };
 
+    const uint32_t v1 = v | (v >> 1); // v |= v >> 1; // first round down to one less than a power of 2
+    const uint32_t v2 = v1 | (v1 >> 2);
+    const uint32_t v3 = v2 | (v2 >> 4);
+    const uint32_t v4 = v3 | (v3 >> 8);
+    const uint32_t v5 = v4 | (v4 >> 16);
+
+    return MultiplyDeBruijnBitPosition[static_cast<uint32_t>(v5 * static_cast<uint32_t>(0x07C4ACDD)) >>
+                                       static_cast<uint32_t>(27)];
+}
+constexpr uint32_t get_msb_32(const uint32_t v)
+{
+    constexpr uint32_t MultiplyDeBruijnBitPosition[32] = {
+        0, 9,  1,  10, 13, 21, 2,  29, 11, 14, 16, 18, 22, 25, 3, 30,
+        8, 12, 20, 28, 15, 17, 24, 7,  19, 27, 23, 6,  26, 5,  4, 31
+    };
+
+    const uint32_t v1 = v | (v >> 1); // v |= v >> 1; // first round down to one less than a power of 2
+    const uint32_t v2 = v1 | (v1 >> 2);
+    const uint32_t v3 = v2 | (v2 >> 4);
+    const uint32_t v4 = v3 | (v3 >> 8);
+    const uint32_t v5 = v4 | (v4 >> 16);
+
+    return MultiplyDeBruijnBitPosition[static_cast<uint32_t>(v5 * static_cast<uint32_t>(0x07C4ACDD)) >>
+                                       static_cast<uint32_t>(27)];
+}
+} // namespace internal
+
+constexpr size_t get_optimal_bucket_width(const size_t num_points)
+{
+    if (num_points >= 14617149) {
+        return 21;
+    }
+    if (num_points >= 2139094) {
+        return 18;
+    }
+    // if (num_points >= 100000)
+    if (num_points >= 155975) {
+        return 15;
+    }
+    if (num_points >= 144834)
+    // if (num_points >= 100000)
+    {
+        return 14;
+    }
+    if (num_points >= 25067) {
+        return 12;
+    }
+    if (num_points >= 13926) {
+        return 11;
+    }
+    if (num_points >= 7659) {
+        return 10;
+    }
+    if (num_points >= 2436) {
+        return 9;
+    }
+    if (num_points >= 376) {
+        return 7;
+    }
+    if (num_points >= 231) {
+        return 6;
+    }
+    if (num_points >= 97) {
+        return 5;
+    }
+    if (num_points >= 35) {
+        return 4;
+    }
+    if (num_points >= 10) {
+        return 3;
+    }
+    if (num_points >= 2) {
+        return 2;
+    }
+    return 1;
+}
+
+constexpr size_t get_num_buckets(const size_t num_points)
+{
+    const size_t bits_per_bucket = get_optimal_bucket_width(num_points / 2);
+    return 1UL << bits_per_bucket;
+}
+
+constexpr size_t get_num_rounds(const size_t num_points)
+{
+    const size_t bits_per_bucket = get_optimal_bucket_width(num_points / 2);
+    return WNAF_SIZE(bits_per_bucket + 1);
+}
 /**
  * pointers that describe how to add points into buckets, for the pippenger algorithm.
  * `wnaf_table` is an unrolled two-dimensional array, with each inner array being of size `n`,
@@ -84,43 +181,43 @@ struct multiplication_thread_state
 
 
 template <size_t num_initial_points>
-inline void compute_wnaf_states(multiplication_runtime_state& state, fr::field_t* scalars);
+void compute_wnaf_states(multiplication_runtime_state& state, fr::field_t* scalars);
 
-inline void generate_pippenger_point_table(g1::affine_element* points, g1::affine_element* table, size_t num_points);
+void generate_pippenger_point_table(g1::affine_element* points, g1::affine_element* table, size_t num_points);
 
 
-template <size_t num_points> inline void organize_buckets(multiplication_runtime_state& state);
-inline void scalar_multiplication_round_inner(multiplication_thread_state& state,
+template <size_t num_points> void organize_buckets(multiplication_runtime_state& state);
+
+void scalar_multiplication_round_inner(multiplication_thread_state& state,
                                                  const size_t num_points,
                                                  const uint64_t bucket_offset,
                                                  g1::affine_element* points);
 
 
 template <size_t num_points>
-inline g1::element scalar_multiplication_internal(multiplication_runtime_state& state,
+g1::element scalar_multiplication_internal(multiplication_runtime_state& state,
                                                      g1::affine_element* points);
 
-inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, const size_t num_points);
+g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, const size_t num_points);
 
-template <size_t count>
-inline void count_bits(uint32_t* bucket_counts, uint32_t* bit_offsets, const uint32_t num_buckets);
+g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, const size_t num_initial_points);
 
-// TODO: figure out why this is slower than the derp loop verison
-template <size_t num_iterations, size_t i>
-inline void copy_pairwise_points(uint64_t* point_schedule, g1::affine_element* points, g1::affine_element* point_pairs)
+template <size_t num_bits>
+inline void count_bits(uint32_t* bucket_counts, uint32_t* bit_offsets, const uint32_t num_buckets)
 {
-    uint64_t schedule = *(point_schedule + i);
-    g1::conditional_negate_affine(points + (schedule >> 32ULL), point_pairs + i, (schedule >> 31ULL) & 1ULL);
-    if constexpr ((i + 1) < num_iterations)
+    for (size_t i = 0; i < num_buckets; ++i)
     {
-        copy_pairwise_points<num_iterations, i + 1>(point_schedule, points, point_pairs);
+        const uint32_t count = bucket_counts[i];
+        for (uint32_t j = 0; j < num_bits; ++j)
+        {
+            bit_offsets[j + 1] += (count & (1U << j));//((count >> j) & 0x01U);
+        }
     }
-}
-
-template <size_t num_iterations>
-inline void copy_pairwise_points(uint64_t* point_schedule, g1::affine_element* points, g1::affine_element* point_pairs)
-{
-    copy_pairwise_points<num_iterations, 0>(point_schedule, points, point_pairs);
+    bit_offsets[0] = 0;
+    for (size_t i = 2; i < num_bits + 1; ++i)
+    {
+        bit_offsets[i] += bit_offsets[i - 1];
+    }
 }
 
 uint32_t construct_addition_chains(affine_product_runtime_state& state, bool empty_bucket_counts = true);
@@ -130,7 +227,68 @@ void add_affine_points(g1::affine_element* points, const size_t num_points, fq::
 void evaluate_addition_chains(affine_product_runtime_state& state, const size_t max_bucket_bits);
 
 g1::affine_element* reduce_buckets(affine_product_runtime_state& state, bool first_round = true);
+
+extern template g1::element scalar_multiplication_internal<1 << 2>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 3>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 4>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 5>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 6>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 7>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 8>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 9>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 10>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 11>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 12>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 13>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 14>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 15>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 16>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 17>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 18>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 19>(multiplication_runtime_state& state, g1::affine_element* points);
+extern template g1::element scalar_multiplication_internal<1 << 20>(multiplication_runtime_state& state, g1::affine_element* points);
+
+extern template void compute_wnaf_states<1 << 2>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 3>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 4>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 5>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 6>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 7>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 8>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 9>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 10>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 11>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 12>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 13>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 14>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 15>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 16>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 17>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 18>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 19>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 20>(multiplication_runtime_state& state, fr::field_t* scalars);
+
+extern template void organize_buckets<1 << 2>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 3>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 4>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 5>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 6>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 7>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 8>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 9>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 10>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 11>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 12>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 13>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 14>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 15>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 16>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 17>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 18>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 19>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 20>(multiplication_runtime_state& state);
+extern template void organize_buckets<1 << 21>(multiplication_runtime_state& state);
+
 } // namespace scalar_multiplication
 } // namespace barretenberg
 
-#include "./scalar_multiplication.tcc"

@@ -1,4 +1,4 @@
-#pragma once
+#include "./schnorr.hpp"
 
 #include "../../../composer/turbo_composer.hpp"
 #include "../../bitarray/bitarray.hpp"

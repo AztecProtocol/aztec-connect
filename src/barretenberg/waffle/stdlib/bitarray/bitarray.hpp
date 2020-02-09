@@ -1,7 +1,14 @@
 #pragma once
 
+#include <algorithm>
 #include <vector>
 #include <string>
+
+#include "../../composer/standard_composer.hpp"
+#include "../../composer/bool_composer.hpp"
+#include "../../composer/mimc_composer.hpp"
+#include "../../composer/extended_composer.hpp"
+#include "../../composer/turbo_composer.hpp"
 
 #include "../bool/bool.hpp"
 #include "../uint32/uint32.hpp"
@@ -20,8 +27,25 @@ public:
     bitarray(ComposerContext *parent_context, const std::string &input);
     bitarray(const std::vector<uint32<ComposerContext> > &input);
 
-    template <size_t N>
-    bitarray(const std::array<uint32<ComposerContext>, N> &input);
+    template <size_t N> bitarray(const std::array<uint32<ComposerContext>, N>& input)
+    {
+        auto it = std::find_if(input.begin(), input.end(), [](const auto& x) { return x.get_context() != nullptr; });
+        if (it != std::end(input)) {
+            context = it->get_context();
+        } else {
+            context = nullptr;
+        }
+
+        size_t num_words = static_cast<size_t>(N);
+        values.resize(num_words * 32);
+        for (size_t i = 0; i < num_words; ++i) {
+            size_t input_index = num_words - 1 - i;
+            for (size_t j = 0; j < 32; ++j) {
+                values[i * 32 + j] = input[input_index].at(j);
+            }
+        }
+        length = num_words * 32;
+    }
 
     bitarray(const bitarray &other);
     bitarray(bitarray &&other);
@@ -32,13 +56,59 @@ public:
     bool_t<ComposerContext> &operator[](const size_t idx);
     bool_t<ComposerContext> operator[](const size_t idx) const;
 
-    template <size_t N>
-    operator std::array<uint32<ComposerContext>, N> ();
+    template <size_t N> operator std::array<uint32<ComposerContext>, N>()
+    {
+        ASSERT(N * 32 == length);
+        std::array<uint32<ComposerContext>, N> output;
+        for (size_t i = 0; i < N; ++i) {
+            std::array<bool_t<ComposerContext>, 32> bools;
+            size_t end;
+            size_t start;
+            start = ((N - i) * 32) - 32;
+            end = start + 32 > length ? length : start + 32;
+            for (size_t j = start; j < end; ++j) {
+                bools[j - start] = values[j];
+            }
+            if (start + 32 > length) {
+                for (size_t j = end; j < start + 32; ++j) {
+                    bools[j - start] = bool_t<ComposerContext>(context, false);
+                }
+            }
+            output[i] = uint32<ComposerContext>(context, bools);
+        }
+        return output;
+    }
 
     std::vector<uint32<ComposerContext> > to_uint32_vector();
 
     template <size_t N>
-    void populate_uint32_array(const size_t starting_index, std::array<uint32<ComposerContext>, N> &output);
+    void populate_uint32_array(const size_t starting_index, std::array<uint32<ComposerContext>, N>& output)
+    {
+        ASSERT(N * 32 == (length - starting_index));
+
+        size_t num_uint32s = (length / 32) + (length % 32 != 0);
+        size_t num_selected_uint32s = N;
+
+        size_t count = 0;
+        for (size_t i = (0); i < num_selected_uint32s; ++i) {
+            std::array<bool_t<ComposerContext>, 32> bools;
+            size_t end;
+            size_t start;
+            start = ((num_uint32s - i) * 32) - 32;
+            end = start + 32 > length ? length : start + 32;
+            for (size_t j = start; j < end; ++j) {
+                bools[j - start] = values[j - starting_index];
+            }
+            if (start + 32 > length) {
+                for (size_t j = end; j < start + 32; ++j) {
+                    bools[j - start] = bool_t<ComposerContext>(context, false);
+                }
+            }
+
+            output[count] = uint32<ComposerContext>(context, bools);
+            ++count;
+        }
+    }
 
     std::string get_witness_as_string() const;
 
@@ -68,7 +138,12 @@ private:
     size_t length;
     std::vector<bool_t<ComposerContext> > values;
 };
-}
-}
 
-#include "./bitarray.tcc"
+extern template class bitarray<waffle::StandardComposer>;
+extern template class bitarray<waffle::BoolComposer>;
+extern template class bitarray<waffle::MiMCComposer>;
+extern template class bitarray<waffle::ExtendedComposer>;
+extern template class bitarray<waffle::TurboComposer>;
+
+}
+}

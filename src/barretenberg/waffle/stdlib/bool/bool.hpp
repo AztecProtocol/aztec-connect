@@ -1,7 +1,15 @@
 #pragma once
 
-#include "../../../curves/bn254/fr.hpp"
 #include "../common.hpp"
+
+namespace waffle
+{
+    class StandardComposer;
+    class BoolComposer;
+    class MiMCComposer;
+    class ExtendedComposer;
+    class TurboComposer;
+}
 
 namespace plonk {
 namespace stdlib {
@@ -30,65 +38,28 @@ template <typename ComposerContext> class bool_t {
     // equality checks
     bool_t operator==(const bool_t& other) const;
 
-    bool_t operator!=(const bool_t& other) const { return operator^(other); }
+    bool_t operator!=(const bool_t& other) const;
 
     // misc bool ops
     bool_t operator~() const { return operator!(); }
 
-    bool_t operator&&(const bool_t& other) const { return operator&(other); }
+    bool_t operator&&(const bool_t& other) const;
 
-    bool_t operator||(const bool_t& other) const { return operator|(other); }
+    bool_t operator||(const bool_t& other) const;
 
     // self ops
-    void operator|=(const bool_t& other) const { *this = operator|(other); }
+    void operator|=(const bool_t& other) { *this = operator|(other); }
 
-    void operator&=(const bool_t& other) const { *this = operator&(other); }
+    void operator&=(const bool_t& other) { *this = operator&(other); }
 
-    void operator^=(const bool_t& other) const { *this = operator^(other); }
+    void operator^=(const bool_t& other) { *this = operator^(other); }
 
     bool get_value() const { return witness_bool ^ witness_inverted; }
 
     bool is_constant() const { return witness_index == static_cast<uint32_t>(-1); }
 
-    bool_t normalize() const
-    {
-        bool is_constant = (witness_index == static_cast<uint32_t>(-1));
-        barretenberg::fr::field_t value = witness_bool ^ witness_inverted ? barretenberg::fr::one : barretenberg::fr::zero;
-        bool_t result;
-        result.context = context;
-        result.witness_index = context->add_variable(value);
-        result.witness_bool = witness_bool ^ witness_inverted;
-        result.witness_inverted = false;
-        barretenberg::fr::field_t q_l;
-        barretenberg::fr::field_t q_c;
-        if (!is_constant)
-        {
-            q_l = witness_inverted ? barretenberg::fr::neg_one() : barretenberg::fr::one;
-            q_c = barretenberg::fr::zero;
-        }
-        else
-        {
-            q_l = barretenberg::fr::zero;
-            q_c = witness_inverted ? barretenberg::fr::neg_one() : barretenberg::fr::one;
-        }
-        barretenberg::fr::field_t q_o = barretenberg::fr::neg_one();
-        barretenberg::fr::field_t q_m = barretenberg::fr::zero;
-        barretenberg::fr::field_t q_r = barretenberg::fr::zero;
+    bool_t normalize() const;
 
-
-        const waffle::poly_triple gate_coefficients{
-            witness_index,
-            witness_index,
-            result.witness_index,
-            q_m,
-            q_l,
-            q_r,
-            q_o,
-            q_c
-        };
-        context->create_poly_gate(gate_coefficients);
-        return result;
-    }
     ComposerContext* context = nullptr;
     bool witness_bool = false;
     bool witness_inverted = false;
@@ -100,7 +71,11 @@ template <typename T> inline std::ostream& operator<<(std::ostream& os, bool_t<T
     return os << v.get_value();
 }
 
+extern template class bool_t<waffle::StandardComposer>;
+extern template class bool_t<waffle::BoolComposer>;
+extern template class bool_t<waffle::MiMCComposer>;
+extern template class bool_t<waffle::ExtendedComposer>;
+extern template class bool_t<waffle::TurboComposer>;
+
 } // namespace stdlib
 } // namespace plonk
-
-#include "./bool.tcc"

@@ -28,5 +28,3 @@ bitarray<waffle::TurboComposer> convert_message(waffle::TurboComposer* context, 
 }
 }
 }
-
-#include "./schnorr.tcc"
