@@ -1,19 +1,16 @@
 #include "./arithmetic_widget.hpp"
 
-#include "../../../curves/bn254/fr.hpp"
-#include "../../../curves/bn254/g1.hpp"
 #include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
-#include "../../../polynomials/evaluation_domain.hpp"
+#include "../../../transcript/transcript.hpp"
 #include "../../../types.hpp"
+
+#include "../proving_key/proving_key.hpp"
 
 using namespace barretenberg;
 
 namespace waffle {
 ProverArithmeticWidget::ProverArithmeticWidget(proving_key* input_key, program_witness* input_witness)
-    : ProverBaseWidget(input_key,
-                       input_witness,
-                       static_cast<size_t>(WidgetVersionControl::Dependencies::NONE),
-                       static_cast<size_t>(WidgetVersionControl::Features::STANDARD))
+    : ProverBaseWidget(input_key, input_witness)
     , q_1(key->constraint_selectors.at("q_1"))
     , q_2(key->constraint_selectors.at("q_2"))
     , q_3(key->constraint_selectors.at("q_3"))
@@ -68,7 +65,6 @@ ProverArithmeticWidget& ProverArithmeticWidget::operator=(const ProverArithmetic
     q_3_fft = key->constraint_selectors.at("q_3_fft");
     q_m_fft = key->constraint_selectors.at("q_m_fft");
     q_c_fft = key->constraint_selectors.at("q_c_fft");
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
@@ -88,11 +84,10 @@ ProverArithmeticWidget& ProverArithmeticWidget::operator=(ProverArithmeticWidget
     q_m_fft = key->constraint_selectors.at("q_m_fft");
     q_c_fft = key->constraint_selectors.at("q_c_fft");
 
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
-fr::field_t ProverArithmeticWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
+fr::field_t ProverArithmeticWidget::compute_quotient_contribution(const fr::field_t& alpha_base,
                                                                   const transcript::Transcript& transcript)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
@@ -126,7 +121,7 @@ fr::field_t ProverArithmeticWidget::compute_quotient_contribution(const barreten
 
 fr::field_t ProverArithmeticWidget::compute_linear_contribution(const fr::field_t& alpha_base,
                                                                 const transcript::Transcript& transcript,
-                                                                barretenberg::polynomial& r)
+                                                                polynomial& r)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
     fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
@@ -152,34 +147,40 @@ fr::field_t ProverArithmeticWidget::compute_linear_contribution(const fr::field_
     return fr::mul(alpha_base, alpha);
 }
 
+fr::field_t ProverArithmeticWidget::compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
+                                                                      const transcript::Transcript&,
+                                                                      barretenberg::fr::field_t*,
+                                                                      barretenberg::fr::field_t*)
+{
+    return nu_base;
+}
+
 std::unique_ptr<VerifierBaseWidget> ProverArithmeticWidget::compute_preprocessed_commitments(
     const ReferenceString& reference_string) const
 {
     polynomial polys[5]{
-        polynomial(q_m, key->small_domain.size), polynomial(q_1, key->small_domain.size), polynomial(q_2, key->small_domain.size),
-        polynomial(q_3, key->small_domain.size), polynomial(q_c, key->small_domain.size),
+        polynomial(q_m, key->small_domain.size), polynomial(q_1, key->small_domain.size),
+        polynomial(q_2, key->small_domain.size), polynomial(q_3, key->small_domain.size),
+        polynomial(q_c, key->small_domain.size),
     };
 
-
-    std::vector<barretenberg::g1::affine_element> commitments;
+    std::vector<g1::affine_element> commitments;
     commitments.resize(5);
 
     for (size_t i = 0; i < 5; ++i) {
-        g1::jacobian_to_affine(
-            scalar_multiplication::pippenger(polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
-            commitments[i]);
+        g1::jacobian_to_affine(scalar_multiplication::pippenger(
+                                   polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
+                               commitments[i]);
     }
     std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierArithmeticWidget>(commitments);
     return result;
 }
 
-void ProverArithmeticWidget::reset() {}
 
 // ###
 
-VerifierArithmeticWidget::VerifierArithmeticWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments)
-    : VerifierBaseWidget(static_cast<size_t>(WidgetVersionControl::Dependencies::NONE),
-                         static_cast<size_t>(WidgetVersionControl::Features::STANDARD))
+VerifierArithmeticWidget::VerifierArithmeticWidget(std::vector<g1::affine_element>& instance_commitments)
+    : VerifierBaseWidget()
 {
     ASSERT(instance_commitments.size() == 5);
     instance = std::vector<g1::affine_element>{
@@ -188,11 +189,26 @@ VerifierArithmeticWidget::VerifierArithmeticWidget(std::vector<barretenberg::g1:
     };
 }
 
+fr::field_t VerifierArithmeticWidget::compute_quotient_evaluation_contribution(const fr::field_t& alpha_base,
+                                                                               const transcript::Transcript& transcript,
+                                                                               fr::field_t&,
+                                                                               const evaluation_domain&)
+{
+    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    return fr::mul(alpha, alpha_base);
+}
+
+fr::field_t VerifierArithmeticWidget::compute_batch_evaluation_contribution(
+    fr::field_t&, const fr::field_t& nu_base, const transcript::Transcript&)
+{
+    return nu_base;
+};
+
 VerifierBaseWidget::challenge_coefficients VerifierArithmeticWidget::append_scalar_multiplication_inputs(
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
-    std::vector<barretenberg::g1::affine_element>& points,
-    std::vector<barretenberg::fr::field_t>& scalars)
+    std::vector<g1::affine_element>& points,
+    std::vector<fr::field_t>& scalars)
 {
     fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);

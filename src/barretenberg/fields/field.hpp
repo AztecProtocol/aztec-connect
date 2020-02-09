@@ -475,6 +475,13 @@ template <typename FieldParams> class field {
         }
     }
 
+    static inline bool is_quadratic_residue(const field_t& a)
+    {
+        field_t target_sqrt;
+        __sqrt(a, target_sqrt);
+        return eq(sqr(target_sqrt), a);
+    }
+
     /**
      * Get a random field element in montgomery form, place in `r`
      **/
@@ -675,7 +682,7 @@ template <typename FieldParams> class field {
         }
     }
 
-    static inline field_t serialize_from_buffer(uint8_t* buffer)
+    static inline field_t serialize_from_buffer(const uint8_t* buffer)
     {
         field_t result = zero;
         for (size_t j = 0; j < 4; ++j) {

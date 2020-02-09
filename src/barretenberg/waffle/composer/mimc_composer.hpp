@@ -2,6 +2,8 @@
 
 #include "./standard_composer.hpp"
 
+#include "../../transcript/manifest.hpp"
+
 namespace waffle {
 struct mimc_quadruplet {
     uint32_t x_in_idx;
@@ -50,8 +52,8 @@ class MiMCComposer : public StandardComposer {
         constexpr size_t g1_size = 64;
         constexpr size_t fr_size = 32;
         const size_t public_input_size = fr_size * num_public_inputs;
-        static const transcript::Manifest output = transcript::Manifest(
-            { transcript::Manifest::RoundManifest({ { "circuit_size", 4, false } }, "init"),
+        const transcript::Manifest output = transcript::Manifest(
+            { transcript::Manifest::RoundManifest({ { "circuit_size", 4, true }, { "public_input_size", 4, true } }, "init"),
               transcript::Manifest::RoundManifest({ { "public_inputs", public_input_size, false },
                                                            { "W_1", g1_size, false },
                                                            { "W_2", g1_size, false },

@@ -23,11 +23,11 @@ TEST(stdlib_mimc, composer_consistency_check)
     fr::field_t input = fr::random_element();
     fr::field_t k_in = fr::zero;
 
-    stdlib::field_t<waffle::StandardComposer> standard_input(stdlib::witness_t<waffle::StandardComposer>(&standard_composer, input));
-    stdlib::field_t<waffle::StandardComposer> standard_k(stdlib::witness_t<waffle::StandardComposer>(&standard_composer, k_in));
+    stdlib::field_t<waffle::StandardComposer> standard_input(stdlib::public_witness_t<waffle::StandardComposer>(&standard_composer, input));
+    stdlib::field_t<waffle::StandardComposer> standard_k(stdlib::public_witness_t<waffle::StandardComposer>(&standard_composer, k_in));
 
-    stdlib::field_t<waffle::MiMCComposer> mimc_input(stdlib::witness_t<waffle::MiMCComposer>(&mimc_composer, input));
-    stdlib::field_t<waffle::MiMCComposer> mimc_k(stdlib::witness_t<waffle::MiMCComposer>(&mimc_composer, k_in));
+    stdlib::field_t<waffle::MiMCComposer> mimc_input(stdlib::public_witness_t<waffle::MiMCComposer>(&mimc_composer, input));
+    stdlib::field_t<waffle::MiMCComposer> mimc_k(stdlib::public_witness_t<waffle::MiMCComposer>(&mimc_composer, k_in));
 
     stdlib::field_t<waffle::StandardComposer> standard_out = mimc_block_cipher(standard_input, standard_k);
     standard_out = standard_out.normalize();

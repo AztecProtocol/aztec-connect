@@ -21,6 +21,7 @@ typedef stdlib::field_t<waffle::ExtendedComposer> field_t;
 typedef stdlib::uint32<waffle::ExtendedComposer> uint32;
 typedef stdlib::bitarray<waffle::ExtendedComposer> bitarray;
 typedef stdlib::witness_t<waffle::ExtendedComposer> witness_t;
+typedef stdlib::public_witness_t<waffle::ExtendedComposer> public_witness_t;
 
 namespace {
 uint32_t get_random_int()
@@ -29,13 +30,13 @@ uint32_t get_random_int()
 }
 } // namespace
 
+
 TEST(stdlib_sha256, test_sha256)
 {
     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
-
     std::array<uint32, 16> inputs;
     for (size_t i = 0; i < 16; ++i) {
-        inputs[i] = witness_t(&composer, get_random_int());
+        inputs[i] = uint32(public_witness_t(&composer, get_random_int()));
     }
 
     std::array<uint32, 8> init_constants;

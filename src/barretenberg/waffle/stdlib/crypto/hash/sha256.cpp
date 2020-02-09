@@ -1,4 +1,4 @@
-#pragma once
+#include "./sha256.hpp"
 
 #include "../../bitarray/bitarray.hpp"
 #include "../../uint32/uint32.hpp"
@@ -20,7 +20,7 @@ constexpr uint32_t round_constants[64]{
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-inline size_t get_num_blocks(const size_t num_bits)
+constexpr size_t get_num_blocks(const size_t num_bits)
 {
     constexpr size_t extra_bits = 65UL;
 
@@ -124,6 +124,7 @@ template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>&
 
     // begin filling message schedule from most significant to least significant
     size_t offset = message_schedule.size() - input.size();
+
     for (size_t i = input.size() - 1; i < input.size(); --i) {
         size_t idx = offset + i;
         message_schedule[idx] = input[i];
@@ -135,7 +136,6 @@ template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>&
 
     std::array<uint32, 8> rolling_hash;
     prepare_constants(rolling_hash);
-
     for (size_t i = 0; i < num_blocks; ++i) {
         std::array<uint32, 16> hash_input;
         message_schedule.populate_uint32_array(i * 512, hash_input);
@@ -143,6 +143,12 @@ template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>&
     }
     return bitarray(rolling_hash);
 }
+
+template bitarray<waffle::StandardComposer> sha256(const bitarray<waffle::StandardComposer>& input);
+template bitarray<waffle::BoolComposer> sha256(const bitarray<waffle::BoolComposer>& input);
+template bitarray<waffle::MiMCComposer> sha256(const bitarray<waffle::MiMCComposer>& input);
+template bitarray<waffle::ExtendedComposer> sha256(const bitarray<waffle::ExtendedComposer>& input);
+template bitarray<waffle::TurboComposer> sha256(const bitarray<waffle::TurboComposer>& input);
 
 } // namespace stdlib
 } // namespace plonk

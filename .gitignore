@@ -3,3 +3,4 @@ build*
 src/wasi-sdk-8.0
 .vscode/*
 .vscode/settings/json
+.viscode

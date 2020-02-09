@@ -5,9 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "../assert.hpp"
-#include "../keccak/keccak.h"
-
 #include "./manifest.hpp"
 
 namespace transcript {
@@ -18,106 +15,18 @@ class Transcript {
     Transcript(const Manifest input_manifest)
         : manifest(input_manifest){};
 
-    Transcript(const std::vector<uint8_t>& input_transcript, const Manifest input_manifest)
-        : manifest(input_manifest)
-    {
-        const size_t num_rounds = input_manifest.get_num_rounds();
-        const uint8_t* buffer = &input_transcript[0];
-        size_t count = 0;
-        for (size_t i = 0; i < num_rounds; ++i) {
-            for (auto manifest_element : input_manifest.get_round_manifest(i).elements) {
-                if (!manifest_element.derived_by_verifier) {
-                    // printf("adding manifest item %s : ", manifest_element.name.c_str());
-                    // for (size_t j = 0; j < manifest_element.num_bytes; ++j)
-                    // {
-                    //     printf("%x", buffer[count + j]);
-                    // }
-                    // printf("\n");
-                    elements.insert(
-                        { manifest_element.name,
-                          std::vector<uint8_t>(buffer + count, buffer + count + manifest_element.num_bytes) });
-                    count += manifest_element.num_bytes;
-                }
-            }
-        }
-    }
-
+    Transcript(const std::vector<uint8_t>& input_transcript, const Manifest input_manifest);
     Manifest get_manifest() const { return manifest; }
 
-    void add_element(const std::string& element_name, const std::vector<uint8_t>& buffer)
-    {
-        ASSERT(manifest.get_round_manifest(current_round).includes_element(element_name));
-        elements.insert({ element_name, buffer });
-    }
+    void add_element(const std::string& element_name, const std::vector<uint8_t>& buffer);
 
-    std::array<uint8_t, PRNG_OUTPUT_SIZE> apply_fiat_shamir(const std::string& challenge_name)
-    {
-        ASSERT(current_round <= manifest.get_num_rounds());
-        ASSERT(challenge_name == manifest.get_round_manifest(current_round).challenge);
+    std::array<uint8_t, PRNG_OUTPUT_SIZE> apply_fiat_shamir(const std::string& challenge_name);
 
-        std::vector<uint8_t> buffer;
-        if (current_round > 0) {
-            buffer.insert(buffer.end(), current_challenge.begin(), current_challenge.end());
-        }
-        for (auto manifest_element : manifest.get_round_manifest(current_round).elements) {
-            // TODO: Commenting out to make tests pass :/ Is there a bug?
-            // ASSERT(elements.count(manifest_element.name) == 1);
-            std::vector<uint8_t>& element_data = elements[manifest_element.name];
-            ASSERT(manifest_element.num_bytes == element_data.size());
-            buffer.insert(buffer.end(), element_data.begin(), element_data.end());
-        }
+    std::array<uint8_t, PRNG_OUTPUT_SIZE> get_challenge(const std::string& challenge_name) const;
 
-        keccak256 hash_result = ethash_keccak256(&buffer[0], buffer.size());
+    std::vector<uint8_t> get_element(const std::string& element_name) const;
 
-        for (size_t i = 0; i < 4; ++i) {
-            for (size_t j = 0; j < 8; ++j) {
-                uint8_t byte = static_cast<uint8_t>(hash_result.word64s[i] >> (56 - (j * 8)));
-                current_challenge[i * 8 + j] = byte;
-            }
-        }
-
-        challenges.insert({ challenge_name, current_challenge });
-        ++current_round;
-        return current_challenge;
-    }
-
-    std::array<uint8_t, PRNG_OUTPUT_SIZE> get_challenge(const std::string& challenge_name) const
-    {
-        // printf("getting challenge %s \n", challenge_name.c_str());
-        ASSERT(challenges.count(challenge_name) == 1);
-        return challenges.at(challenge_name);
-    }
-
-    std::vector<uint8_t> get_element(const std::string& element_name) const
-    {
-        // printf("getting element %s \n", element_name.c_str());
-
-        ASSERT(elements.count(element_name) == 1);
-        return elements.at(element_name);
-    }
-
-    std::vector<uint8_t> export_transcript() const
-    {
-        std::vector<uint8_t> buffer;
-
-        for (size_t i = 0; i < manifest.get_num_rounds(); ++i) {
-            for (auto manifest_element : manifest.get_round_manifest(i).elements) {
-                ASSERT(elements.count(manifest_element.name) == 1);
-                const std::vector<uint8_t>& element_data = elements.at(manifest_element.name);
-                ASSERT(manifest_element.num_bytes == element_data.size());
-                if (!manifest_element.derived_by_verifier) {
-                    // printf("writing element %s ", manifest_element.name.c_str());
-                    // for (size_t j = 0; j < element_data.size(); ++j)
-                    // {
-                    //     printf("%x", element_data[j]);
-                    // }
-                    // printf("\n");
-                    buffer.insert(buffer.end(), element_data.begin(), element_data.end());
-                }
-            }
-        }
-        return buffer;
-    }
+    std::vector<uint8_t> export_transcript() const;
 
   private:
     size_t current_round = 0;

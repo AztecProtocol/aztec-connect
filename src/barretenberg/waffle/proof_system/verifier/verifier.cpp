@@ -1,4 +1,4 @@
-#pragma once
+#include "./verifier.hpp"
 
 #include "../../../curves/bn254/fq12.hpp"
 #include "../../../curves/bn254/g1.hpp"
@@ -18,15 +18,17 @@
 #include "../transcript_helpers.hpp"
 
 
+using namespace barretenberg;
+
 namespace waffle {
 template <typename program_settings>
-VerifierBase<program_settings>::VerifierBase(const size_t subgroup_size, const transcript::Manifest &input_manifest, bool has_fourth_wire)
-    : n(subgroup_size), manifest(input_manifest), __DEBUG_HAS_FOURTH_WIRE(has_fourth_wire)
+VerifierBase<program_settings>::VerifierBase(const size_t subgroup_size, const size_t public_inputs, const transcript::Manifest &input_manifest, bool has_fourth_wire)
+    : n(subgroup_size), num_public_inputs(public_inputs), manifest(input_manifest), __DEBUG_HAS_FOURTH_WIRE(has_fourth_wire)
 {}
 
 template <typename program_settings>
 VerifierBase<program_settings>::VerifierBase(VerifierBase&& other)
-    : n(other.n), manifest(other.manifest), __DEBUG_HAS_FOURTH_WIRE(other.__DEBUG_HAS_FOURTH_WIRE)
+    : n(other.n), num_public_inputs(other.num_public_inputs), manifest(other.manifest), __DEBUG_HAS_FOURTH_WIRE(other.__DEBUG_HAS_FOURTH_WIRE)
 {
     reference_string = std::move(other.reference_string);
     for (size_t i = 0; i < SIGMA.size(); ++i)
@@ -42,6 +44,7 @@ template <typename program_settings>
 VerifierBase<program_settings>& VerifierBase<program_settings>::operator=(VerifierBase&& other)
 {
     n = other.n;
+    num_public_inputs = other.num_public_inputs;
     manifest = other.manifest;
     reference_string = std::move(other.reference_string);
     for (size_t i = 0; i < SIGMA.size(); ++i)
@@ -94,6 +97,9 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
 
     if (!inputs_valid) {
         printf("inputs not valid!\n");
+        printf("T[0] on curve: %u \n", g1::on_curve(T[0]) ? 1 : 0);
+        printf("Z_1 on curve: %u \n", g1::on_curve(Z_1) ? 1 : 0);
+        printf("PI_Z on curve: %u \n", g1::on_curve(PI_Z) ? 1 : 0);
         return false;
     }
 
@@ -132,11 +138,23 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     fr::field_t alpha_pow[4];
     fr::field_t nu_pow[11];
 
+    transcript.add_element("circuit_size",
+                           { static_cast<uint8_t>(n),
+                             static_cast<uint8_t>(n >> 8),
+                             static_cast<uint8_t>(n >> 16),
+                             static_cast<uint8_t>(n >> 24) });
+    transcript.add_element("public_input_size",
+                           { static_cast<uint8_t>(num_public_inputs),
+                             static_cast<uint8_t>(num_public_inputs >> 8),
+                             static_cast<uint8_t>(num_public_inputs >> 16),
+                             static_cast<uint8_t>(num_public_inputs >> 24) });
     transcript.apply_fiat_shamir("init");
     fr::field_t beta = fr::serialize_from_buffer(transcript.apply_fiat_shamir("beta").begin());
     fr::field_t gamma = fr::serialize_from_buffer(transcript.apply_fiat_shamir("gamma").begin());
     fr::field_t alpha = fr::serialize_from_buffer(transcript.apply_fiat_shamir("alpha").begin());
     fr::field_t z_challenge = fr::serialize_from_buffer(transcript.apply_fiat_shamir("z").begin());
+
+    fr::field_t t_eval = fr::zero;
 
     barretenberg::polynomial_arithmetic::lagrange_evaluations lagrange_evals =
         barretenberg::polynomial_arithmetic::get_lagrange_evaluations(z_challenge, domain);
@@ -145,7 +163,6 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     plonk_linear_terms linear_terms = compute_linear_terms<program_settings>(transcript, lagrange_evals.l_1);
 
     // reconstruct evaluation of quotient polynomial from prover messages
-    fr::field_t t_eval;
     fr::field_t T0;
     fr::field_t T1;
     fr::field_t T2;
@@ -168,7 +185,6 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     fr::__mul(sigma_contribution, z_1_shifted_eval, sigma_contribution);
     fr::__mul(sigma_contribution, alpha_pow[0], sigma_contribution);
 
-    // fr::__mul(z_1_shifted_eval, alpha_pow[0], T0);
     fr::__sub(z_1_shifted_eval, fr::one, T1);
     fr::__mul(T1, lagrange_evals.l_n_minus_1, T1);
     fr::__mul(T1, alpha_pow[1], T1);
@@ -176,11 +192,34 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     fr::__mul(lagrange_evals.l_1, alpha_pow[2], T2);
     fr::__sub(T1, T2, T1);
     fr::__sub(T1, sigma_contribution, T1);
-    fr::__add(T1, linear_eval, t_eval);
+    fr::__add(T1, linear_eval, T1);
+    fr::__add(t_eval, T1, t_eval);
 
     fr::field_t alpha_base = fr::sqr(fr::sqr(alpha));
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
-        alpha_base = verifier_widgets[i]->compute_quotient_evaluation_contribution(alpha_base, transcript, t_eval);
+        alpha_base = verifier_widgets[i]->compute_quotient_evaluation_contribution(alpha_base, transcript, t_eval, domain);
+    }
+
+
+    std::vector<barretenberg::fr::field_t> public_inputs =
+    transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
+    if (public_inputs.size() > 0) {
+        fr::field_t public_input_evaluation = fr::zero;
+        public_input_evaluation = barretenberg::polynomial_arithmetic::compute_barycentric_evaluation(
+            &public_inputs[0], public_inputs.size(), z_challenge, domain);
+    
+    
+        public_input_evaluation = fr::sub(wire_evaluations[0], public_input_evaluation);
+
+        std::vector<fr::field_t> public_eval_vector;
+        for (size_t i = 0; i < public_inputs.size(); ++i)
+        {
+            public_eval_vector.push_back(public_input_evaluation);
+        }
+        public_input_evaluation = barretenberg::polynomial_arithmetic::compute_barycentric_evaluation(
+            &public_eval_vector[0], public_eval_vector.size(), z_challenge, domain);
+        public_input_evaluation = fr::mul(public_input_evaluation, alpha_base);
+        t_eval = fr::add(t_eval, public_input_evaluation);
     }
     fr::__invert(lagrange_evals.vanishing_poly, T0);
     fr::__mul(t_eval, T0, t_eval);
@@ -330,5 +369,9 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
 
     return barretenberg::fq12::eq(result, barretenberg::fq12::one);
 }
+
+template class VerifierBase<standard_settings>;
+template class VerifierBase<extended_settings>;
+template class VerifierBase<turbo_settings>;
 
 } // namespace waffle

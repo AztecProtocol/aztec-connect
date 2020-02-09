@@ -6,8 +6,7 @@ namespace waffle {
 class VerifierTurboArithmeticWidget : public VerifierBaseWidget {
   public:
     VerifierTurboArithmeticWidget()
-        : VerifierBaseWidget(static_cast<size_t>(WidgetVersionControl::Dependencies::REQUIRES_W_4_SHIFTED),
-                             static_cast<size_t>(WidgetVersionControl::Features::HAS_TURBO_ARITHMETISATION))
+        : VerifierBaseWidget()
     {}
 
     VerifierTurboArithmeticWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
@@ -24,12 +23,8 @@ class VerifierTurboArithmeticWidget : public VerifierBaseWidget {
 
     barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base,
                                                                        const transcript::Transcript& transcript,
-                                                                       barretenberg::fr::field_t&)
-    {
-        barretenberg::fr::field_t alpha =
-            barretenberg::fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-        return barretenberg::fr::mul(alpha_base, alpha);
-    }
+                                                                       barretenberg::fr::field_t&,
+                                                                       const barretenberg::evaluation_domain&);
 };
 
 class ProverTurboArithmeticWidget : public ProverBaseWidget {
@@ -53,8 +48,6 @@ class ProverTurboArithmeticWidget : public ProverBaseWidget {
     std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const ReferenceString& reference_string) const;
 
     void compute_transcript_elements(transcript::Transcript& transcript);
-
-    void reset();
 
     barretenberg::polynomial& q_1;
     barretenberg::polynomial& q_2;

@@ -1,12 +1,15 @@
 #include "./turbo_fixed_base_widget.hpp"
 
-#include "../../../curves/bn254/fr.hpp"
-#include "../../../curves/bn254/g1.hpp"
 #include "../../../curves/grumpkin/grumpkin.hpp"
 
 #include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
+#include "../../../transcript/transcript.hpp"
 #include "../../../types.hpp"
+
+#include "../transcript_helpers.hpp"
+
+#include "../proving_key/proving_key.hpp"
 
 using namespace barretenberg;
 
@@ -15,34 +18,25 @@ ProverTurboFixedBaseWidget::ProverTurboFixedBaseWidget(proving_key* input_key, p
     : ProverTurboArithmeticWidget(input_key, input_witness)
     , q_ecc_1(key->constraint_selectors.at("q_ecc_1"))
     , q_ecc_1_fft(key->constraint_selector_ffts.at("q_ecc_1_fft"))
-{
-    version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
-    version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
-    version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
-}
+{}
 
 ProverTurboFixedBaseWidget::ProverTurboFixedBaseWidget(const ProverTurboFixedBaseWidget& other)
     : ProverTurboArithmeticWidget(other)
     , q_ecc_1(key->constraint_selectors.at("q_ecc_1"))
     , q_ecc_1_fft(key->constraint_selector_ffts.at("q_ecc_1_fft"))
-{
-    version = WidgetVersionControl(other.version);
-}
+{}
 
 ProverTurboFixedBaseWidget::ProverTurboFixedBaseWidget(ProverTurboFixedBaseWidget&& other)
     : ProverTurboArithmeticWidget(other)
     , q_ecc_1(key->constraint_selectors.at("q_ecc_1"))
     , q_ecc_1_fft(key->constraint_selector_ffts.at("q_ecc_1_fft"))
-{
-    version = WidgetVersionControl(other.version);
-}
+{}
 
 ProverTurboFixedBaseWidget& ProverTurboFixedBaseWidget::operator=(const ProverTurboFixedBaseWidget& other)
 {
     ProverTurboArithmeticWidget::operator=(other);
     q_ecc_1 = key->constraint_selectors.at("q_ecc_1");
     q_ecc_1_fft = key->constraint_selector_ffts.at("q_ecc_1_fft");
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
@@ -51,7 +45,6 @@ ProverTurboFixedBaseWidget& ProverTurboFixedBaseWidget::operator=(ProverTurboFix
     ProverTurboArithmeticWidget::operator=(other);
     q_ecc_1 = key->constraint_selectors.at("q_ecc_1");
     q_ecc_1_fft = key->constraint_selector_ffts.at("q_ecc_1_fft");
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
@@ -370,19 +363,11 @@ std::unique_ptr<VerifierBaseWidget> ProverTurboFixedBaseWidget::compute_preproce
     return result;
 }
 
-void ProverTurboFixedBaseWidget::reset()
-{
-    ProverTurboArithmeticWidget::reset();
-}
-
 // ###
 
 VerifierTurboFixedBaseWidget::VerifierTurboFixedBaseWidget(
     std::vector<barretenberg::g1::affine_element>& instance_commitments)
 {
-    version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_L_SHIFTED);
-    version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_R_SHIFTED);
-    version.set_dependency(WidgetVersionControl::Dependencies::REQUIRES_W_O_SHIFTED);
     ASSERT(instance_commitments.size() == 9);
     instance =
         std::vector<g1::affine_element>{ instance_commitments[0], instance_commitments[1], instance_commitments[2],
@@ -391,10 +376,13 @@ VerifierTurboFixedBaseWidget::VerifierTurboFixedBaseWidget(
 }
 
 barretenberg::fr::field_t VerifierTurboFixedBaseWidget::compute_quotient_evaluation_contribution(
-    const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t& t_eval)
+    const fr::field_t& alpha_base,
+    const transcript::Transcript& transcript,
+    fr::field_t& t_eval,
+    const evaluation_domain& domain)
 {
     fr::field_t new_alpha_base =
-        VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribution(alpha_base, transcript, t_eval);
+        VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribution(alpha_base, transcript, t_eval, domain);
     fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
     fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
@@ -711,7 +699,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
         scalars.push_back(fr::mul(challenge.nu_base, challenge.nu_step));
     }
 
-    return VerifierBaseWidget::challenge_coefficients{ fr::mul(alpha_d, challenge.alpha_step),
+    return VerifierBaseWidget::challenge_coefficients{ fr::mul(alpha_g, challenge.alpha_step),
                                                        challenge.alpha_step,
                                                        fr::mul(challenge.nu_base,
                                                                fr::mul(fr::sqr(challenge.nu_step), challenge.nu_step)),

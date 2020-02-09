@@ -1,4 +1,4 @@
-#pragma once
+#include "./mimc.hpp"
 
 #include <memory.h>
 
@@ -49,8 +49,8 @@ const auto init_var = []() {
 }();
 } // namespace
 
-inline field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> message,
-                                                       field_t<waffle::MiMCComposer> key)
+field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> message,
+                                                field_t<waffle::MiMCComposer> key)
 {
     // TODO: Hmm, this should really be a std::shared_ptr
     waffle::MiMCComposer* context = message.context;
@@ -97,8 +97,8 @@ inline field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCCompo
     return result;
 }
 
-inline field_t<waffle::StandardComposer> mimc_block_cipher(field_t<waffle::StandardComposer> message,
-                                                           field_t<waffle::StandardComposer> key)
+field_t<waffle::StandardComposer> mimc_block_cipher(field_t<waffle::StandardComposer> message,
+                                                    field_t<waffle::StandardComposer> key)
 {
     ASSERT(message.context == key.context);
     ASSERT(message.context != nullptr);
@@ -136,5 +136,9 @@ template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Compose
     }
     return key;
 }
+
+template field_t<waffle::StandardComposer> mimc7(std::vector<field_t<waffle::StandardComposer>> const& inputs);
+template field_t<waffle::MiMCComposer> mimc7(std::vector<field_t<waffle::MiMCComposer>> const& inputs);
+
 } // namespace stdlib
 } // namespace plonk

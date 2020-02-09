@@ -1,18 +1,19 @@
-#pragma once
+#include "./uint.hpp"
 
+#include <cmath>
+#include <algorithm>
 #include <numeric>
 
-#include "../../../assert.hpp"
 #include "../../../curves/bn254/fr.hpp"
+#include "../../../assert.hpp"
 
-#include "../../composer/composer_base.hpp"
+#include "../../composer/standard_composer.hpp"
+#include "../../composer/bool_composer.hpp"
+#include "../../composer/mimc_composer.hpp"
+#include "../../composer/extended_composer.hpp"
+#include "../../composer/turbo_composer.hpp"
 
-#include "../bool/bool.hpp"
-#include "../common.hpp"
 #include "../field/field.hpp"
-#include "../int_utils.hpp"
-
-#include "./uint.hpp"
 
 namespace plonk {
 namespace stdlib {
@@ -828,7 +829,7 @@ template <typename ComposerContext> bool_t<ComposerContext> uint<ComposerContext
 
     // this <= other === this < (other + 1)
     uint<ComposerContext> rhs = (other);
-    rhs = rhs + uint<ComposerContext>(context, 1U);
+    rhs = rhs + uint<ComposerContext>(width(), context, 1U);
     return operator<(rhs);
 }
 
@@ -989,6 +990,28 @@ template <typename ComposerContext> uint<ComposerContext> uint<ComposerContext>:
     return ror(width() - const_rotation);
 }
 
+template <typename ComposerContext> uint64_t uint<ComposerContext>::get_value() const
+{
+    uint64_t max = static_cast<uint64_t>(std::pow(2ULL, width()));
+    if (context == nullptr) {
+        return additive_constant % max;
+    }
+    if (witness_status == IN_BINARY_FORM) {
+        return std::accumulate(bool_wires.rbegin(),
+                               bool_wires.rend(),
+                               0U,
+                               [](auto acc, auto wire) { return (acc + acc + wire.get_value()); }) %
+               max;
+    }
+    // normalize();
+    if (is_constant()) {
+        return (multiplicative_constant * additive_constant) % max;
+    }
+    uint64_t base =
+        static_cast<uint64_t>(barretenberg::fr::from_montgomery_form(context->get_variable(witness_index)).data[0]);
+    return (base * multiplicative_constant + additive_constant) % max;
+}
+
 template <typename ComposerContext> bool_t<ComposerContext> uint<ComposerContext>::at(const size_t bit_index) const
 {
     ASSERT(bit_index < width());
@@ -1003,6 +1026,12 @@ void uint<ComposerContext>::set_wire(bool_t<ComposerContext> const& bit, size_t 
     prepare_for_logic_operations();
     bool_wires[bit_index] = bit;
 }
+
+template class uint<waffle::StandardComposer>;
+template class uint<waffle::BoolComposer>;
+template class uint<waffle::MiMCComposer>;
+template class uint<waffle::ExtendedComposer>;
+template class uint<waffle::TurboComposer>;
 
 } // namespace stdlib
 } // namespace plonk

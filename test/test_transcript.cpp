@@ -17,7 +17,7 @@ TEST(transcript, validate_transcript)
     for (size_t i = 0; i < fr_vector.size(); ++i) {
         fr_vector[i] = 1;
     }
-    transcript::Transcript transcript = transcript::Transcript(waffle::StandardComposer::create_manifest());
+    transcript::Transcript transcript = transcript::Transcript(waffle::StandardComposer::create_manifest(0));
     transcript.add_element("circuit_size", { 1, 2, 3, 4 });
     // transcript.add_element("Q_M", g1_vector);
     // transcript.add_element("Q_L", g1_vector);

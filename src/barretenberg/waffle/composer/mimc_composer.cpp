@@ -2,9 +2,13 @@
 
 #include <math.h>
 
+#include "../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
+
 #include "../../assert.hpp"
 #include "../../curves/bn254/fr.hpp"
 #include "../proof_system/widgets/mimc_widget.hpp"
+#include "../proof_system/proving_key/proving_key.hpp"
+#include "../proof_system/verification_key/verification_key.hpp"
 
 using namespace barretenberg;
 
@@ -184,13 +188,13 @@ std::shared_ptr<proving_key> MiMCComposer::compute_proving_key()
         ++offset;
     }
 
-    size_t log2_n = static_cast<size_t>(log2(n + 1 + offset));
-    if ((1UL << log2_n) != (n + 1)) {
+    const size_t total_num_gates = n + offset + public_inputs.size();
+    size_t log2_n = static_cast<size_t>(log2(total_num_gates + 1));
+    if ((1UL << log2_n) != (total_num_gates + 1)) {
         ++log2_n;
     }
     size_t new_n = 1UL << log2_n;
-
-    for (size_t i = n; i < new_n; ++i) {
+    for (size_t i = total_num_gates; i < new_n; ++i) {
         q_m.emplace_back(fr::zero);
         q_1.emplace_back(fr::zero);
         q_2.emplace_back(fr::zero);
@@ -200,7 +204,7 @@ std::shared_ptr<proving_key> MiMCComposer::compute_proving_key()
         q_mimc_selector.emplace_back(fr::zero);
     }
 
-    circuit_proving_key = std::make_shared<proving_key>(new_n);
+    circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size());
 
     polynomial poly_q_m(new_n);
     polynomial poly_q_c(new_n);
@@ -210,14 +214,29 @@ std::shared_ptr<proving_key> MiMCComposer::compute_proving_key()
     polynomial poly_q_mimc_coefficient(new_n);
     polynomial poly_q_mimc_selector(new_n);
 
-    for (size_t i = 0; i < new_n; ++i) {
-        poly_q_m[i] = q_m[i];
-        poly_q_1[i] = q_1[i];
-        poly_q_2[i] = q_2[i];
-        poly_q_3[i] = q_3[i];
-        poly_q_c[i] = q_c[i];
-        poly_q_mimc_coefficient[i] = q_mimc_coefficient[i];
-        poly_q_mimc_selector[i] = q_mimc_selector[i];
+    for (size_t i = 0; i < public_inputs.size(); ++i)
+    {
+        epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
+        wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
+    }
+    for (size_t i = 0; i < public_inputs.size(); ++i)
+    {
+        poly_q_m[i] = fr::zero;
+        poly_q_1[i] = fr::zero;
+        poly_q_2[i] = fr::zero;
+        poly_q_3[i] = fr::zero;
+        poly_q_c[i] = fr::zero;
+        poly_q_mimc_coefficient[i] = fr::zero;
+        poly_q_mimc_selector[i] = fr::zero;
+    }
+    for (size_t i = public_inputs.size(); i < new_n; ++i) {
+        poly_q_m[i] = q_m[i - public_inputs.size()];
+        poly_q_1[i] = q_1[i - public_inputs.size()];
+        poly_q_2[i] = q_2[i - public_inputs.size()];
+        poly_q_3[i] = q_3[i - public_inputs.size()];
+        poly_q_c[i] = q_c[i - public_inputs.size()];
+        poly_q_mimc_coefficient[i] = q_mimc_coefficient[i - public_inputs.size()];
+        poly_q_mimc_selector[i] = q_mimc_selector[i - public_inputs.size()];
     }
 
     poly_q_1.ifft(circuit_proving_key->small_domain);
@@ -334,36 +353,34 @@ std::shared_ptr<program_witness> MiMCComposer::compute_witness()
 
     witness = std::make_shared<program_witness>();
 
-    size_t log2_n = static_cast<size_t>(log2(n + 1 + offset));
-    if ((1UL << log2_n) != (n + 1)) {
+    const size_t total_num_gates = n + public_inputs.size() + offset;
+    size_t log2_n = static_cast<size_t>(log2(total_num_gates + 1));
+    if ((1UL << log2_n) != (total_num_gates + 1)) {
         ++log2_n;
     }
     size_t new_n = 1UL << log2_n;
-
-
-    for (size_t i = n; i < new_n; ++i) {
+    for (size_t i = (n + public_inputs.size()); i < new_n; ++i) {
         w_l.emplace_back(zero_idx);
         w_r.emplace_back(zero_idx);
         w_o.emplace_back(zero_idx);
-        // epicycle out{static_cast<uint32_t>(n), WireType::OUTPUT};
-        // wire_epicycles[static_cast<size_t>(current_output_wire)].emplace_back(out);
-
     }
-
     polynomial poly_w_1(new_n);
     polynomial poly_w_2(new_n);
     polynomial poly_w_3(new_n);
-
-    for (size_t i = 0; i < new_n; ++i) {
-        fr::__copy(variables[w_l[i]], poly_w_1.at(i));
-        fr::__copy(variables[w_r[i]], poly_w_2.at(i));
-        fr::__copy(variables[w_o[i]], poly_w_3.at(i));
+    for (size_t i = 0; i < public_inputs.size(); ++i)
+    {
+        fr::__copy(variables[public_inputs[i]], poly_w_1[i]);
+        fr::__copy(fr::zero, poly_w_2[i]);
+        fr::__copy(fr::zero, poly_w_3[i]);
     }
-
+    for (size_t i = public_inputs.size(); i < new_n; ++i) {
+        fr::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1.at(i));
+        fr::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2.at(i));
+        fr::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3.at(i));
+    }
     witness->wires.insert({ "w_1", std::move(poly_w_1) });
     witness->wires.insert({ "w_2", std::move(poly_w_2) });
     witness->wires.insert({ "w_3", std::move(poly_w_3) });
-
     computed_witness = true;
     return witness;
 }
@@ -372,7 +389,7 @@ ExtendedProver MiMCComposer::preprocess()
 {
     compute_proving_key();
     compute_witness();
-    ExtendedProver output_state(circuit_proving_key, witness, create_manifest());
+    ExtendedProver output_state(circuit_proving_key, witness, create_manifest(public_inputs.size()));
 
     std::unique_ptr<ProverMiMCWidget> mimc_widget =
         std::make_unique<ProverMiMCWidget>(circuit_proving_key.get(), witness.get());

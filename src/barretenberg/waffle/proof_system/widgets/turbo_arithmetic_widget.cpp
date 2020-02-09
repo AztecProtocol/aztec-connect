@@ -1,19 +1,19 @@
 #include "./turbo_arithmetic_widget.hpp"
 
-#include "../../../curves/bn254/fr.hpp"
-#include "../../../curves/bn254/g1.hpp"
 #include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
+#include "../../../transcript/transcript.hpp"
 #include "../../../types.hpp"
+
+#include "../transcript_helpers.hpp"
+
+#include "../proving_key/proving_key.hpp"
 
 using namespace barretenberg;
 
 namespace waffle {
 ProverTurboArithmeticWidget::ProverTurboArithmeticWidget(proving_key* input_key, program_witness* input_witness)
-    : ProverBaseWidget(input_key,
-                       input_witness,
-                       static_cast<size_t>(WidgetVersionControl::Dependencies::REQUIRES_W_4_SHIFTED),
-                       static_cast<size_t>(WidgetVersionControl::Features::HAS_TURBO_ARITHMETISATION))
+    : ProverBaseWidget(input_key, input_witness)
     , q_1(key->constraint_selectors.at("q_1"))
     , q_2(key->constraint_selectors.at("q_2"))
     , q_3(key->constraint_selectors.at("q_3"))
@@ -92,7 +92,6 @@ ProverTurboArithmeticWidget& ProverTurboArithmeticWidget::operator=(const Prover
     q_m_fft = key->constraint_selectors.at("q_m_fft");
     q_c_fft = key->constraint_selectors.at("q_c_fft");
     q_arith_fft = key->constraint_selectors.at("q_arith_fft");
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
@@ -116,7 +115,6 @@ ProverTurboArithmeticWidget& ProverTurboArithmeticWidget::operator=(ProverTurboA
     q_m_fft = key->constraint_selectors.at("q_m_fft");
     q_c_fft = key->constraint_selectors.at("q_c_fft");
     q_arith_fft = key->constraint_selectors.at("q_arith_fft");
-    version = WidgetVersionControl(other.version);
     return *this;
 }
 
@@ -247,20 +245,49 @@ std::unique_ptr<VerifierBaseWidget> ProverTurboArithmeticWidget::compute_preproc
     return result;
 }
 
-void ProverTurboArithmeticWidget::reset() {}
-
 // ###
 
 VerifierTurboArithmeticWidget::VerifierTurboArithmeticWidget(
     std::vector<barretenberg::g1::affine_element>& instance_commitments)
-    : VerifierBaseWidget(static_cast<size_t>(WidgetVersionControl::Dependencies::REQUIRES_W_4_SHIFTED),
-                         static_cast<size_t>(WidgetVersionControl::Features::HAS_TURBO_ARITHMETISATION))
+    : VerifierBaseWidget()
 {
     ASSERT(instance_commitments.size() == 8);
     instance =
         std::vector<g1::affine_element>{ instance_commitments[0], instance_commitments[1], instance_commitments[2],
                                          instance_commitments[3], instance_commitments[4], instance_commitments[5],
                                          instance_commitments[6], instance_commitments[7] };
+}
+
+fr::field_t VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribution(
+    const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t&, const evaluation_domain&)
+{
+    // fr::field_t z_challenge = fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
+    // printf("z challenge = ");
+    // fr::print(fr::from_montgomery_form(z_challenge));
+    // printf(" domain size = %lu \n", domain.size);
+    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    // std::vector<barretenberg::fr::field_t> public_inputs =
+    //     transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
+    // if (public_inputs.size() > 0) {
+    // //     printf("in v widget, pub inputs = %lu \n", public_inputs.size());
+    // //     printf("verifier public alpha = ");
+    // //     printf("loaded public input = ");
+    // //     fr::print(fr::from_montgomery_form(public_inputs[0]));
+    // //     fr::print(alpha_base);
+    // // barretenberg::polynomial_arithmetic::lagrange_evaluations lagrange_evals =
+    // //     barretenberg::polynomial_arithmetic::get_lagrange_evaluations(z_challenge, domain);
+
+    // //     fr::field_t t0 = fr::mul(public_inputs[0], lagrange_evals.l_1);
+    // //     fr::__mul(t0, alpha_base, t0);
+    // //     fr::__add(t_eval, t0, t_eval);
+    //     fr::field_t public_input_evaluation = barretenberg::polynomial_arithmetic::compute_barycentric_evaluation(
+    //         &public_inputs[0], public_inputs.size(), z_challenge, domain);
+    //         printf("public input evaluation = ");
+    //     fr::print(fr::from_montgomery_form(public_input_evaluation));
+    //     fr::__mul(public_input_evaluation, alpha_base, public_input_evaluation);
+    //     fr::__sub(t_eval, public_input_evaluation, t_eval);
+    // }
+    return fr::mul(alpha, alpha_base);
 }
 
 barretenberg::fr::field_t VerifierTurboArithmeticWidget::compute_batch_evaluation_contribution(

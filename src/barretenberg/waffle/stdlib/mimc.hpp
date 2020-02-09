@@ -1,22 +1,27 @@
 #pragma once
 
-#include "../../assert.hpp"
-#include "../composer/mimc_composer.hpp"
-#include "../composer/standard_composer.hpp"
-#include "./field/field.hpp"
+#include <vector>
+
+namespace waffle {
+class StandardComposer;
+class MiMCComposer;
+} // namespace waffle
 
 namespace plonk {
 namespace stdlib {
 
-inline field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> input,
-                                                       field_t<waffle::MiMCComposer> k_in);
+template <typename ComposerContext> class field_t;
 
-inline field_t<waffle::StandardComposer> mimc_block_cipher(field_t<waffle::StandardComposer> input,
-                                                           field_t<waffle::StandardComposer> k_in);
+field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> input,
+                                                field_t<waffle::MiMCComposer> k_in);
+
+field_t<waffle::StandardComposer> mimc_block_cipher(field_t<waffle::StandardComposer> input,
+                                                    field_t<waffle::StandardComposer> k_in);
 
 template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Composer>> const& inputs);
 
+extern template field_t<waffle::StandardComposer> mimc7(std::vector<field_t<waffle::StandardComposer>> const& inputs);
+extern template field_t<waffle::MiMCComposer> mimc7(std::vector<field_t<waffle::MiMCComposer>> const& inputs);
+
 } // namespace stdlib
 } // namespace plonk
-
-#include "./mimc.tcc"

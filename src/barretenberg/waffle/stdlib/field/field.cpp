@@ -1,8 +1,14 @@
-#pragma once
+#include "./field.hpp"
 
 #include "../../../assert.hpp"
 #include "../../../curves/bn254/fr.hpp"
-#include "../../composer/composer_base.hpp"
+
+#include "../../composer/bool_composer.hpp"
+#include "../../composer/extended_composer.hpp"
+#include "../../composer/mimc_composer.hpp"
+#include "../../composer/standard_composer.hpp"
+#include "../../composer/turbo_composer.hpp"
+
 #include "../bool/bool.hpp"
 
 namespace plonk {
@@ -379,6 +385,57 @@ template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerCon
     return result;
 }
 
+template <typename ComposerContext> bool_t<ComposerContext> field_t<ComposerContext>::is_zero()
+{
+    if (witness_index == static_cast<uint32_t>(-1)) {
+        return bool_t(context, barretenberg::fr::eq(get_value(), barretenberg::fr::zero));
+    }
+
+    // To check whether a field element, k, is zero, we use the fact that, if k > 0,
+    // there exists a modular inverse k', such that k * k' = 1
+
+    // To verify whether k = 0, we must do 2 checks
+    // First is that (k * k') - 1 + is_zero = 0
+
+    // If is_zero = false, then k' must be the modular inverse of k, therefore k is not 0
+
+    // If is_zero = true, then either k or k' is zero (or both)
+    // To ensure that it is k that is zero, and not k', we must apply
+    // an additional check: that if is_zero = true, k' = 1
+    // This way, if (k * k') = 0, we know that k = 0.
+    // The second check is: (is_zero * k') - is_zero = 0
+    field_t k = normalize();
+    bool_t is_zero = witness_t(context, barretenberg::fr::eq(k.get_value(), barretenberg::fr::zero));
+    field_t k_inverse;
+    if (is_zero.get_value()) {
+        k_inverse = witness_t(context, barretenberg::fr::one);
+    } else {
+        barretenberg::fr::field_t k_inverse_value;
+        barretenberg::fr::__invert(k.get_value(), k_inverse_value);
+        k_inverse = witness_t(context, k_inverse_value);
+    }
+
+    // k * k_inverse + is_zero - 1 = 0
+    barretenberg::fr::field_t q_m = barretenberg::fr::one;
+    barretenberg::fr::field_t q_l = barretenberg::fr::zero;
+    barretenberg::fr::field_t q_r = barretenberg::fr::zero;
+    barretenberg::fr::field_t q_o = barretenberg::fr::one;
+    barretenberg::fr::field_t q_c = barretenberg::fr::neg_one();
+    const waffle::poly_triple gate_coefficients_a{
+        k.witness_index, k_inverse.witness_index, is_zero.witness_index, q_m, q_l, q_r, q_o, q_c
+    };
+    context->create_poly_gate(gate_coefficients_a);
+
+    // is_zero * k_inverse - is_zero = 0
+    q_o = barretenberg::fr::neg_one();
+    q_c = barretenberg::fr::zero;
+    const waffle::poly_triple gate_coefficients_b{
+        is_zero.witness_index, k_inverse.witness_index, is_zero.witness_index, q_m, q_l, q_r, q_o, q_c
+    };
+    context->create_poly_gate(gate_coefficients_b);
+    return is_zero;
+}
+
 template <typename ComposerContext> barretenberg::fr::field_t field_t<ComposerContext>::get_value() const
 {
     if (witness_index != static_cast<uint32_t>(-1)) {
@@ -429,6 +486,12 @@ bool_t<ComposerContext> field_t<ComposerContext>::operator==(const field_t& othe
 
     return result;
 }
+
+template class field_t<waffle::StandardComposer>;
+template class field_t<waffle::BoolComposer>;
+template class field_t<waffle::MiMCComposer>;
+template class field_t<waffle::ExtendedComposer>;
+template class field_t<waffle::TurboComposer>;
 
 } // namespace stdlib
 } // namespace plonk

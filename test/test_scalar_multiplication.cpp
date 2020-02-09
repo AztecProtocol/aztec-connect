@@ -498,48 +498,6 @@ TEST(scalar_multiplication, construct_addition_chains)
     aligned_free(bucket_counts);
 }
 
-TEST(scalar_multiplication, unsafe_pippenger_timing)
-{
-    constexpr size_t num_initial_points = 1 << 6;
-    constexpr size_t num_points = num_initial_points * 2;
-    g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points)));
-    g2::affine_element g2_x;
-    io::read_transcript(monomials, g2_x, num_initial_points, BARRETENBERG_SRS_PATH);
-
-
-    fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * num_initial_points));
-
-    fr::field_t source_scalar = fr::random_element();
-    for (size_t i = 0; i < num_initial_points; ++i) {
-        fr::__sqr(source_scalar, source_scalar);
-        fr::__copy(source_scalar, scalars[i]);
-    }
-
-    // g1::element expected;
-    // g1::set_infinity(expected);
-    // for (size_t i = 0; i < num_initial_points; ++i) {
-    //     g1::element temp = g1::group_exponentiation_inner(monomials[i], scalars[i]);
-    //     g1::add(expected, temp, expected);
-    // }
-    scalar_multiplication::generate_pippenger_point_table(monomials, monomials, num_initial_points);
-
-    // scalar_multiplication::generate_pippenger_point_table(monomials, monomials, num_initial_points);
-
-    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-    g1::element result = scalar_multiplication::pippenger_unsafe_internal<num_initial_points>(monomials, scalars);
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "pippenger time: " << diff.count() << "ms" << std::endl;
-
-    g1::element expected = scalar_multiplication::pippenger_internal<num_initial_points>(monomials, scalars);
-
-    result = g1::normalize(result);
-    expected = g1::normalize(expected);
-    EXPECT_EQ(g1::eq(result, expected), true);
-    aligned_free(scalars);
-    aligned_free(monomials);
-}
-
 TEST(scalar_multiplication, pippenger_timing)
 {
     constexpr size_t num_initial_points = 1 << 20;

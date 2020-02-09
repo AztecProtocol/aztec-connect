@@ -1,58 +1,22 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
+#include "../../../curves/bn254/fr.hpp"
 #include "../../../curves/bn254/g1.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
-#include "../../../polynomials/polynomial.hpp"
-#include "../../../transcript/transcript.hpp"
-#include "../../../types.hpp"
 
-#include "../../reference_string/reference_string.hpp"
 #include "../../waffle_types.hpp"
 
-#include "../transcript_helpers.hpp"
+namespace transcript {
+    class Transcript;
+}
 
 namespace waffle {
-class WidgetVersionControl {
-  public:
-    enum Dependencies {
-        NONE = 0x0,
-        REQUIRES_W_L_SHIFTED = 0x01,
-        REQUIRES_W_R_SHIFTED = 0x02,
-        REQUIRES_W_O_SHIFTED = 0x04,
-        REQUIRES_W_4_SHIFTED = 0x08
-    };
-    enum Features {
-        STANDARD = 0x00,
-        HAS_EXTENDED_ARITHMETISATION = 0x01,
-        HAS_BOOL_SELECTORS = 0x02,
-        HAS_MIMC_SELECTORS = 0x04,
-        HAS_ECC_SELECTORS = 0x08,
-        HAS_TURBO_ARITHMETISATION = 0x10
-    };
-    WidgetVersionControl(const size_t _dependencies, const size_t _features)
-    {
-        dependencies = _dependencies;
-        features = _features;
-    }
-    WidgetVersionControl(const WidgetVersionControl& other)
-        : dependencies(other.dependencies)
-        , features(other.features)
-    {}
 
-    bool has_dependency(Dependencies required_dependency)
-    {
-        return ((static_cast<size_t>(dependencies) & static_cast<size_t>(required_dependency)) != 0);
-    }
-
-    void set_dependency(Dependencies target_dependency)
-    {
-        dependencies = dependencies | static_cast<size_t>(target_dependency);
-    }
-    size_t dependencies;
-    size_t features;
-};
+struct proving_key;
+class ReferenceString;
 
 class VerifierBaseWidget {
   public:
@@ -63,15 +27,11 @@ class VerifierBaseWidget {
         barretenberg::fr::field_t nu_step;
         barretenberg::fr::field_t linear_nu;
     };
-    VerifierBaseWidget(const size_t deps, const size_t feats)
-        : version(deps, feats){};
-    VerifierBaseWidget(const VerifierBaseWidget& other)
-        : version(other.version)
-    {}
-    VerifierBaseWidget(VerifierBaseWidget&& other)
-        : version(other.version)
-    {}
-    virtual ~VerifierBaseWidget() {}
+    VerifierBaseWidget() = default;
+    VerifierBaseWidget(const VerifierBaseWidget& other) = default;
+
+    VerifierBaseWidget(VerifierBaseWidget&& other) = default;
+    virtual ~VerifierBaseWidget() = default;
 
     virtual challenge_coefficients append_scalar_multiplication_inputs(
         const challenge_coefficients& challenge,
@@ -84,7 +44,11 @@ class VerifierBaseWidget {
         const barretenberg::fr::field_t& nu_base,
         const transcript::Transcript& transcript) = 0;
 
-    virtual barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base, const transcript::Transcript&, barretenberg::fr::field_t&)
+    virtual barretenberg::fr::field_t compute_quotient_evaluation_contribution(
+        const barretenberg::fr::field_t& alpha_base,
+        const transcript::Transcript&,
+        barretenberg::fr::field_t&,
+        const barretenberg::evaluation_domain&)
     {
         return alpha_base;
     }
@@ -102,32 +66,27 @@ class VerifierBaseWidget {
     }
 
     std::vector<barretenberg::g1::affine_element> instance;
-    WidgetVersionControl version;
 };
 
 class ProverBaseWidget {
   public:
-    ProverBaseWidget(waffle::proving_key* input_key,
-                     waffle::program_witness* input_witness,
-                     const size_t deps = 0,
-                     const size_t feats = 0)
+    ProverBaseWidget(proving_key* input_key, program_witness* input_witness)
         : key(input_key)
         , witness(input_witness)
-        , version(deps, feats){};
+    {}
     ProverBaseWidget(const ProverBaseWidget& other)
         : key(other.key)
         , witness(other.witness)
-        , version(other.version)
     {}
     ProverBaseWidget(ProverBaseWidget&& other)
-        : key(other.key), witness(other.witness), version(other.version)
+        : key(other.key)
+        , witness(other.witness)
     {}
 
     ProverBaseWidget& operator=(const ProverBaseWidget& other)
     {
         key = other.key;
         witness = other.witness;
-        version = other.version;
         return *this;
     }
 
@@ -135,10 +94,9 @@ class ProverBaseWidget {
     {
         key = other.key;
         witness = other.witness;
-        version = other.version;
         return *this;
     }
-    
+
     virtual ~ProverBaseWidget() {}
 
     virtual barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
@@ -147,19 +105,16 @@ class ProverBaseWidget {
                                                                   const transcript::Transcript& transcript,
                                                                   barretenberg::polynomial& r) = 0;
     virtual barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
-                                                                const transcript::Transcript& transcript,
-                                                                barretenberg::fr::field_t* poly,
-                                                                barretenberg::fr::field_t*) = 0;
+                                                                        const transcript::Transcript& transcript,
+                                                                        barretenberg::fr::field_t* poly,
+                                                                        barretenberg::fr::field_t*) = 0;
     virtual void compute_transcript_elements(transcript::Transcript&){};
 
     virtual std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(
         const ReferenceString& reference_string) const = 0;
 
-    virtual void reset() = 0;
-
     proving_key* key;
     program_witness* witness;
-    WidgetVersionControl version;
 };
 
 } // namespace waffle

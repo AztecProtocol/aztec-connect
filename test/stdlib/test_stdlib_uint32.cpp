@@ -10,6 +10,7 @@
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 
 #include <barretenberg/waffle/stdlib/common.hpp>
+#include <barretenberg/waffle/stdlib/bool/bool.hpp>
 #include <barretenberg/waffle/stdlib/field/field.hpp>
 #include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
 

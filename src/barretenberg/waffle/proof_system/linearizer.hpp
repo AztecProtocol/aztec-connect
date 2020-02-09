@@ -4,6 +4,7 @@
 #include "../../curves/bn254/fr.hpp"
 
 #include "../waffle_types.hpp"
+#include "../../transcript/transcript.hpp"
 
 namespace waffle
 {

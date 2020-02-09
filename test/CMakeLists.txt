@@ -53,8 +53,11 @@ add_executable(
     test_prover.cpp
     test_verifier.cpp
     test_transcript.cpp
+    misc_crypto/test_schnorr.cpp
+    misc_crypto/test_sha256.cpp
     widgets/test_turbo_arithmetic_widget.cpp
     widgets/test_turbo_fixed_base_widget.cpp
+    widgets/test_turbo_range_widget.cpp
     composer/test_standard_composer.cpp
     composer/test_mimc_composer.cpp
     composer/test_bool_composer.cpp
@@ -69,6 +72,8 @@ add_executable(
     stdlib/test_stdlib_sha256.cpp
     stdlib/test_stdlib_merkle_tree.cpp
     stdlib/test_stdlib_pedersen.cpp
+    stdlib/test_stdlib_schnorr.cpp
+    stdlib/test_stdlib_pedersen_note.cpp
     noir/test_noir.cpp
 )
 

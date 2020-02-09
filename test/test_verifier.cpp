@@ -15,8 +15,8 @@ transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
     constexpr size_t g1_size = 64;
     constexpr size_t fr_size = 32;
     const size_t public_input_size = fr_size * num_public_inputs;
-    static const transcript::Manifest output = transcript::Manifest(
-        { transcript::Manifest::RoundManifest({ { "circuit_size", 4, false } }, "init"),
+    const transcript::Manifest output = transcript::Manifest(
+        { transcript::Manifest::RoundManifest({ { "circuit_size", 4, true }, { "public_input_size", 4, true } }, "init"),
           transcript::Manifest::RoundManifest({ { "public_inputs", public_input_size, false },
                                                                { "W_1", g1_size, false },
                                                                { "W_2", g1_size, false },
@@ -52,7 +52,7 @@ waffle::Prover generate_test_data(const size_t n)
 
     // even indices = mul gates, odd incides = add gates
 
-    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(n);
+    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(n, 0);
     std::shared_ptr<program_witness> witness = std::make_shared<program_witness>();
 
     polynomial w_l;
@@ -217,7 +217,7 @@ waffle::Prover generate_test_data(const size_t n)
     key->constraint_selector_ffts.insert({ "q_c_fft", std::move(q_c_fft) });
     std::unique_ptr<waffle::ProverArithmeticWidget> widget = std::make_unique<waffle::ProverArithmeticWidget>(key.get(), witness.get());
 
-    waffle::Prover state = waffle::Prover(key, witness, create_manifest());
+    waffle::Prover state = waffle::Prover(std::move(key), std::move(witness), create_manifest());
     state.widgets.emplace_back(std::move(widget));
     return state;
 }

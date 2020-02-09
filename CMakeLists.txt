@@ -73,6 +73,7 @@ if(APPLE)
 endif()
 
 if(FORCE_CLANG)
+message(STATUS "Forcing use of clang compiler")
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
         set(OpenMP_C_FLAGS "-fopenmp")
         set(OpenMP_C_FLAGS_WORK "-fopenmp")

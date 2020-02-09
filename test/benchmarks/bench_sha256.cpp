@@ -10,6 +10,7 @@
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
 
+#include <barretenberg/waffle/stdlib/bitarray/bitarray.hpp>
 #include <barretenberg/waffle/stdlib/crypto/hash/sha256.hpp>
 #include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
 

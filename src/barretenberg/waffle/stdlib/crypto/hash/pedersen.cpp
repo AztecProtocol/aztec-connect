@@ -1,8 +1,11 @@
 #include "./pedersen.hpp"
 
+#include "../../../composer/turbo_composer.hpp"
+
 #include "../../field/field.hpp"
 #include "../../group/group_utils.hpp"
-#include "../../../composer/turbo_composer.hpp"
+
+#include "../crypto.hpp"
 
 namespace plonk {
 namespace stdlib {
@@ -10,11 +13,6 @@ namespace pedersen {
 typedef field_t<waffle::TurboComposer> field_t;
 using namespace barretenberg;
 
-struct point
-{
-    field_t x;
-    field_t y;
-};
 
 point hash_single(const field_t& in, const size_t hash_index)
 {
@@ -49,7 +47,6 @@ point hash_single(const field_t& in, const size_t hash_index)
     }
     scalar_multiplier_base = fr::from_montgomery_form(scalar_multiplier_base);
     uint64_t wnaf_entries[num_quads + 1] = { 0 };
-
     bool skew = false;
 
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
@@ -70,16 +67,17 @@ point hash_single(const field_t& in, const size_t hash_index)
         multiplication_transcript[0] = origin_points[0];
         accumulator_transcript[0] = origin_accumulators[0];
     }
-
     fr::field_t one = fr::one;
     fr::field_t three = fr::add(fr::add(one, one), one);
-
+    
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
+
         fr::field_t prev_accumulator = fr::add(accumulator_transcript[i], accumulator_transcript[i]);
         prev_accumulator = fr::add(prev_accumulator, prev_accumulator);
 
         grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
+
         fr::field_t scalar_to_add = (entry == 1) ? three : one;
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
         if (predicate) {
@@ -89,6 +87,7 @@ point hash_single(const field_t& in, const size_t hash_index)
         accumulator_transcript[i + 1] = fr::add(prev_accumulator, scalar_to_add);
         grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
     }
+
     grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
 
     waffle::fixed_group_init_quad init_quad{ origin_points[0].x,

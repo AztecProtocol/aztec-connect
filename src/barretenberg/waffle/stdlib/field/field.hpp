@@ -5,8 +5,18 @@
 #include "../byte_array/byte_array.hpp"
 #include "../common.hpp"
 
+namespace waffle {
+class StandardComposer;
+class BoolComposer;
+class MiMCComposer;
+class ExtendedComposer;
+class TurboComposer;
+} // namespace waffle
+
 namespace plonk {
 namespace stdlib {
+
+template <typename ComposerContext> class bool_t;
 
 template <typename ComposerContext> class field_t {
   public:
@@ -36,6 +46,7 @@ template <typename ComposerContext> class field_t {
 
     barretenberg::fr::field_t get_value() const;
 
+    bool_t<ComposerContext> is_zero();
     bool is_constant() const { return witness_index == static_cast<uint32_t>(-1); }
 
     mutable ComposerContext* context = nullptr;
@@ -49,7 +60,11 @@ template <typename ComposerContext> inline std::ostream& operator<<(std::ostream
     return os << v.get_value();
 }
 
+extern template class field_t<waffle::StandardComposer>;
+extern template class field_t<waffle::BoolComposer>;
+extern template class field_t<waffle::MiMCComposer>;
+extern template class field_t<waffle::ExtendedComposer>;
+extern template class field_t<waffle::TurboComposer>;
+
 } // namespace stdlib
 } // namespace plonk
-
-#include "./field.tcc"

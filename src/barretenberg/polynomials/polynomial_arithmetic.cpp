@@ -127,7 +127,7 @@ void compute_multiplicative_subgroup(const size_t log2_subgroup_size,
 
     // Step 2: compute the cofactor term g^n
     fr::field_t accumulator;
-    fr::__copy(fr::coset_generators[0], accumulator);
+    fr::__copy(src_domain.generator, accumulator);
     for (size_t i = 0; i < src_domain.log2_size; ++i) {
         fr::__sqr(accumulator, accumulator);
     }
@@ -580,7 +580,8 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
         fr::field_t work_root;
         fr::field_t root_shift;
         fr::__pow_small(multiplicand, j * target_domain.thread_size, root_shift);
-        fr::__mul(fr::coset_generators[0], root_shift, work_root);
+
+        fr::__mul(src_domain.generator, root_shift, work_root);
         size_t offset = j * target_domain.thread_size;
         for (size_t i = offset; i < offset + target_domain.thread_size; ++i) {
             fr::__sub(work_root, one, l_1_coefficients[i]);
@@ -675,12 +676,12 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
 
     // Compute w^{n-1}
     fr::__neg(src_domain.root_inverse, numerator_constant);
+
     // Compute first value of g.w_i
 
     // Step 5: iterate over point evaluations, scaling each one by the inverse of the vanishing polynomial
     if (subgroup_size >= target_domain.thread_size) {
-        fr::field_t work_root;
-        fr::__copy(fr::coset_generators[0], work_root);
+        fr::field_t work_root = src_domain.generator;
         fr::field_t T0;
         for (size_t i = 0; i < target_domain.size; i += subgroup_size) {
             for (size_t j = 0; j < subgroup_size; ++j) {
@@ -699,7 +700,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
             fr::field_t root_shift;
             fr::field_t work_root;
             fr::__pow_small(target_domain.root, offset, root_shift);
-            fr::__mul(fr::coset_generators[0], root_shift, work_root);
+            fr::__mul(src_domain.generator, root_shift, work_root);
             fr::field_t T0;
             for (size_t i = offset; i < offset + target_domain.thread_size; i += subgroup_size) {
                 for (size_t j = 0; j < subgroup_size; ++j) {
@@ -781,6 +782,46 @@ barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluatio
     fr::__mul(numerator, domain.domain_inverse, numerator);
     fr::__mul(numerator, denominators[1], result.l_1);
     fr::__mul(numerator, denominators[2], result.l_n_minus_1);
+    return result;
+}
+
+// computes r = \sum_{i=0}^{num_coeffs}(L_i(z).f_i)
+// start with L_1(z) = ((z^n - 1)/n).(1 / z - 1)
+// L_i(z) = L_1(z.w^{1-i}) = ((z^n - 1) / n).(1 / z.w^{1-i} - 1)
+fr::field_t compute_barycentric_evaluation(fr::field_t *coeffs,const size_t num_coeffs, const fr::field_t &z,  const evaluation_domain &domain)
+{
+    fr::field_t* denominators = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * num_coeffs));
+
+    fr::field_t numerator = z;
+    for (size_t i = 0; i < domain.log2_size; ++i) {
+        fr::__sqr(numerator, numerator);
+    }
+    fr::__sub(numerator, fr::one, numerator);
+    fr::__mul(numerator, domain.domain_inverse, numerator);
+
+    fr::__sub(z, fr::one, denominators[0]);
+    fr::field_t work_root = (domain.root_inverse);
+    for (size_t i = 1; i < num_coeffs; ++i)
+    {
+        fr::__mul(work_root, z, denominators[i]);
+        fr::__sub(denominators[i], fr::one, denominators[i]);
+        fr::__mul(work_root, domain.root_inverse, work_root);
+    }
+
+    fr::batch_invert(denominators, num_coeffs);
+    
+    fr::field_t result = fr::zero;
+
+    for (size_t i = 0; i < num_coeffs; ++i)
+    {
+        fr::field_t temp;
+        fr::__mul(coeffs[i], denominators[i], temp);
+        fr::__add(result, temp, result);
+    }
+
+    fr::__mul(result, numerator, result);
+    aligned_free(denominators);
+
     return result;
 }
 

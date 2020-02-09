@@ -1,5 +1,5 @@
-
 #include "./group_utils.hpp"
+
 #include "../../../curves/grumpkin/grumpkin.hpp"
 
 #ifndef NO_MULTITHREADING
@@ -137,17 +137,6 @@ grumpkin::g1::affine_element get_generator(const size_t generator_index)
     return generators[generator_index];
 }
 
-using namespace grumpkin;
-
-g1::element& operator+=(g1::element& lhs, g1::element& rhs)
-{
-    // g1::print(lhs);
-    g1::add(lhs, rhs, lhs);
-    return lhs;
-}
-
-#pragma omp declare reduction(CustomSum : g1::element : omp_out += omp_in) initializer(g1::set_infinity(omp_priv))
-
 grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const size_t hash_index)
 {
     barretenberg::fr::field_t scalar_multiplier = barretenberg::fr::from_montgomery_form(in);
@@ -159,10 +148,6 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
 
     const plonk::stdlib::group_utils::fixed_base_ladder* ladder =
         plonk::stdlib::group_utils::get_hash_ladder(hash_index, num_bits);
-    grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1);
-    grumpkin::g1::element origin_points[2];
-    grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
-    grumpkin::g1::mixed_add(origin_points[0], generator, origin_points[1]);
 
     barretenberg::fr::field_t scalar_multiplier_base = barretenberg::fr::to_montgomery_form(scalar_multiplier);
     if ((scalar_multiplier.data[0] & 1) == 0) {
@@ -174,39 +159,21 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
     bool skew = false;
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-#ifndef NO_MULTITHREADING
-    // const size_t num_threads = static_cast<size_t>(omp_get_max_threads());
-    const size_t num_threads = 2;
-#else
-    const size_t num_threads = 1;
-#endif
-    g1::element accumulator;
-    g1::set_infinity(accumulator);
-    size_t quads_per_thread = 128 / num_threads;
-
-#ifndef NO_MULTITHREADING
-#pragma omp parallel for reduction(CustomSum : accumulator) num_threads(num_threads) firstprivate(quads_per_thread)
-#endif
-    for (size_t j = 0; j < num_threads; ++j) {
-        size_t offset = j * quads_per_thread;
-        if (j == num_threads - 1) {
-            quads_per_thread -= 1;
-        }
-        g1::element inner_acc;
-        g1::set_infinity(inner_acc);
-        for (size_t i = offset; i < offset + quads_per_thread; ++i) {
-            uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
-            grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
-            uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
-            if (predicate) {
-                grumpkin::g1::__neg(point_to_add, point_to_add);
-            }
-            grumpkin::g1::mixed_add(inner_acc, point_to_add, inner_acc);
-        }
-        accumulator += inner_acc;
+    grumpkin::g1::element accumulator;
+    grumpkin::g1::affine_to_jacobian(ladder[0].one, accumulator);
+    if (skew) {
+        grumpkin::g1::mixed_add(
+            accumulator, plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1), accumulator);
     }
 
-    g1::add(accumulator, (skew == true) ? origin_points[1] : origin_points[0], accumulator);
+    for (size_t i = 0; i < num_quads; ++i) {
+        uint64_t entry = wnaf_entries[i + 1];
+        ;
+        const grumpkin::g1::affine_element& point_to_add =
+            ((entry & 0xffffff) == 1) ? ladder[i + 1].three : ladder[i + 1].one;
+        uint64_t predicate = (entry >> 31U) & 1U;
+        grumpkin::g1::mixed_add_or_sub(accumulator, point_to_add, accumulator, predicate);
+    }
     return accumulator;
 }
 

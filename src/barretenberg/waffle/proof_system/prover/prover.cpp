@@ -1,4 +1,3 @@
-#pragma once
 
 #include "../../../curves/bn254/fr.hpp"
 #include "../../../curves/bn254/g1.hpp"
@@ -13,6 +12,8 @@
 #include "../permutation.hpp"
 #include "../transcript_helpers.hpp"
 #include "../widgets/base_widget.hpp"
+
+#include "./prover.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -56,6 +57,17 @@ template <typename settings> ProverBase<settings>& ProverBase<settings>::operato
     return *this;
 }
 
+template <typename settings> void ProverBase<settings>::compute_wire_coefficients()
+{
+    for (size_t i = 0; i < settings::program_width; ++i) {
+        std::string wire_tag = "w_" + std::to_string(i + 1);
+        barretenberg::polynomial& wire = witness->wires.at(wire_tag);
+        barretenberg::polynomial& wire_fft = key->wire_ffts.at(wire_tag + "_fft");
+        barretenberg::polynomial_arithmetic::copy_polynomial(&wire[0], &wire_fft[0], n, n);
+        wire.ifft(key->small_domain);
+    }
+}
+
 template <typename settings> void ProverBase<settings>::compute_wire_commitments()
 {
     std::array<g1::element, settings::program_width> W;
@@ -74,6 +86,15 @@ template <typename settings> void ProverBase<settings>::compute_wire_commitments
         std::string tag = "W_" + std::to_string(i + 1);
         transcript.add_element(tag, transcript_helpers::convert_g1_element(W_affine));
     }
+
+    // add public inputs
+    const polynomial& public_wires_source = key->wire_ffts.at("w_1_fft");
+    std::vector<fr::field_t> public_wires;
+    for (size_t i = 0; i < key->num_public_inputs; ++i)
+    {   
+        public_wires.push_back(public_wires_source[i]);
+    }
+    transcript.add_element("public_inputs", transcript_helpers::convert_field_elements(public_wires));
 
     transcript.apply_fiat_shamir("beta");
     transcript.apply_fiat_shamir("gamma");
@@ -110,17 +131,6 @@ template <typename settings> void ProverBase<settings>::compute_quotient_commitm
     }
 
     transcript.apply_fiat_shamir("z"); // end of 3rd round
-}
-
-template <typename settings> void ProverBase<settings>::compute_wire_coefficients()
-{
-    for (size_t i = 0; i < settings::program_width; ++i) {
-        std::string wire_tag = "w_" + std::to_string(i + 1);
-        barretenberg::polynomial& wire = witness->wires.at(wire_tag);
-        barretenberg::polynomial& wire_fft = key->wire_ffts.at(wire_tag + "_fft");
-        barretenberg::polynomial_arithmetic::copy_polynomial(&wire[0], &wire_fft[0], n, n);
-        wire.ifft(key->small_domain);
-    }
 }
 
 template <typename settings> void ProverBase<settings>::compute_z_coefficients()
@@ -311,6 +321,13 @@ template <typename settings> void ProverBase<settings>::compute_permutation_gran
 
     const polynomial& l_1 = key->lagrange_1;
 
+    // printf("L_1(X) prior to permutation use:\n");
+    // for (size_t i = 0; i < key->large_domain.size; ++i)
+    // {
+    //     printf("[%lu] = ", i);
+    //     fr::print(fr::from_montgomery_form(l_1[i]));
+    // }
+    // printf("===\n");
     polynomial& quotient_large = key->quotient_large;
     // Step 4: Set the quotient polynomial to be equal to
     // (w_l(X) + \beta.sigma1(X) + \gamma).(w_r(X) + \beta.sigma2(X) + \gamma).(w_o(X) + \beta.sigma3(X) +
@@ -324,7 +341,8 @@ template <typename settings> void ProverBase<settings>::compute_permutation_gran
 
         fr::field_t work_root;
         fr::__pow_small(key->large_domain.root, j * key->large_domain.thread_size, work_root);
-        fr::__mul(work_root, fr::coset_generators[0], work_root);
+        fr::__mul(work_root, key->small_domain.generator, work_root);
+        // fr::__mul(work_root, fr::coset_generators[0], work_root);
         fr::__mul(work_root, beta, work_root);
 
         fr::field_t wire_plus_gamma;
@@ -417,14 +435,54 @@ template <typename settings> void ProverBase<settings>::init_quotient_polynomial
 
 template <typename settings> void ProverBase<settings>::execute_preamble_round()
 {
-    std::vector<uint8_t> size_bytes(4);
-
     transcript.add_element("circuit_size",
                            { static_cast<uint8_t>(n),
                              static_cast<uint8_t>(n >> 8),
                              static_cast<uint8_t>(n >> 16),
                              static_cast<uint8_t>(n >> 24) });
+    transcript.add_element("public_input_size",
+                           { static_cast<uint8_t>(key->num_public_inputs),
+                             static_cast<uint8_t>(key->num_public_inputs >> 8),
+                             static_cast<uint8_t>(key->num_public_inputs >> 16),
+                             static_cast<uint8_t>(key->num_public_inputs >> 24) });
     transcript.apply_fiat_shamir("init");
+}
+
+template <typename settings> void ProverBase<settings>::compute_public_input_contribution(const fr::field_t& public_alpha)
+{
+    fr::field_t* wire_1_fft = &key->wire_ffts.at("w_1_fft")[0];
+
+    std::vector<barretenberg::fr::field_t> public_inputs =
+        transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
+
+    polynomial public_selector(key->large_domain.size, key->large_domain.size);
+    polynomial public_witness(key->large_domain.size, key->large_domain.size);
+    for (size_t i = 0; i < key->num_public_inputs; ++i)
+    {
+        public_selector[i] = fr::one;
+        public_witness[i] = public_inputs[i];
+    }
+    for (size_t i = key->num_public_inputs; i < key->large_domain.size; ++i)
+    {
+        public_selector[i] = fr::zero;
+        public_witness[i] = fr::zero;
+    }
+
+    public_selector.ifft(key->small_domain);
+
+
+    public_selector.coset_fft(key->large_domain);
+
+    public_witness.ifft(key->small_domain);
+    public_witness.coset_fft(key->large_domain);
+
+    ITERATE_OVER_DOMAIN_START(key->large_domain);
+        fr::field_t T0;
+        fr::__sub(wire_1_fft[i], public_witness[i], T0);
+        fr::__mul(T0, public_selector[i], T0);
+        fr::__mul(T0, public_alpha, T0);
+        fr::__add(key->quotient_large[i], T0, key->quotient_large[i]);
+    ITERATE_OVER_DOMAIN_END;
 }
 
 template <typename settings> void ProverBase<settings>::execute_first_round()
@@ -487,9 +545,8 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
 #endif
     for (size_t i = 0; i < settings::program_width; ++i) {
         std::string wire_tag = "w_" + std::to_string(i + 1);
-        barretenberg::polynomial& wire = witness->wires.at(wire_tag);
         barretenberg::polynomial& wire_fft = key->wire_ffts.at(wire_tag + "_fft");
-
+        barretenberg::polynomial& wire = witness->wires.at(wire_tag);
         barretenberg::polynomial_arithmetic::copy_polynomial(&wire[0], &wire_fft[0], n, 4 * n + 4);
         wire_fft.coset_fft(key->large_domain);
         wire_fft.add_lagrange_base_coefficient(wire_fft[0]);
@@ -524,9 +581,8 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
     std::cout << "compute permutation grand product coeffs: " << diff.count() << "ms" << std::endl;
 #endif
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-
     fr::field_t alpha_base = fr::sqr(fr::sqr(alpha));
-    fr::mul(alpha, alpha_base);
+
     for (size_t i = 0; i < widgets.size(); ++i) {
 #ifdef DEBUG_TIMING
         std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
@@ -538,6 +594,12 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
         std::cout << "widget " << i << " quotient compute time: " << diff.count() << "ms" << std::endl;
 #endif
     }
+
+    compute_public_input_contribution(alpha_base);
+    
+    fr::field_t* q_mid = &key->quotient_mid[0];
+    fr::field_t* q_large = &key->quotient_large[0];
+
 #ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
 #endif
@@ -565,8 +627,6 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
     std::cout << "final inverse fourier transforms: " << diff.count() << "ms" << std::endl;
 #endif
     if (settings::uses_quotient_mid) {
-        fr::field_t* q_mid = &key->quotient_mid[0];
-        fr::field_t* q_large = &key->quotient_large[0];
         ITERATE_OVER_DOMAIN_START(key->mid_domain);
         fr::__add(q_large[i], q_mid[i], q_large[i]);
         ITERATE_OVER_DOMAIN_END;
@@ -675,6 +735,7 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
                 nu_base = fr::mul(nu_base, nu);
             }
         }
+
         ITERATE_OVER_DOMAIN_START(key->small_domain);
 
         if constexpr (settings::requires_shifted_wire(settings::wire_shift_settings, 0)) {
@@ -777,11 +838,13 @@ template <typename settings> barretenberg::fr::field_t ProverBase<settings>::com
     for (size_t i = 0; i < settings::program_width; ++i) {
         std::string wire_key = "w_" + std::to_string(i + 1);
         const polynomial& wire = witness->wires.at(wire_key);
-        fr::field_t wire_eval = wire.evaluate(z_challenge, n);
+        fr::field_t wire_eval;
+        wire_eval = wire.evaluate(z_challenge, n);
         transcript.add_element(wire_key, transcript_helpers::convert_field_element(wire_eval));
 
         if (settings::requires_shifted_wire(settings::wire_shift_settings, i)) {
-            fr::field_t shifted_wire_eval = wire.evaluate(shifted_z, n);
+            fr::field_t shifted_wire_eval;
+            shifted_wire_eval = wire.evaluate(shifted_z, n);
             transcript.add_element(wire_key + "_omega", transcript_helpers::convert_field_element(shifted_wire_eval));
         }
     }
@@ -826,6 +889,7 @@ template <typename settings> barretenberg::fr::field_t ProverBase<settings>::com
     fr::field_t linear_eval = r.evaluate(z_challenge, n);
     transcript.add_element("r", transcript_helpers::convert_field_element(linear_eval));
     transcript.add_element("t", transcript_helpers::convert_field_element(t_eval));
+
     return t_eval;
 }
 
@@ -847,8 +911,10 @@ template <typename settings> void ProverBase<settings>::reset()
 {
     transcript::Manifest manifest = transcript.get_manifest();
     transcript = transcript::Transcript(manifest);
-    for (size_t i = 0; i < widgets.size(); ++i) {
-        widgets[i]->reset();
-    }
 }
+
+template class ProverBase<standard_settings>;
+template class ProverBase<extended_settings>;
+template class ProverBase<turbo_settings>;
+
 } // namespace waffle

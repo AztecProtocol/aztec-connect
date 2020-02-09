@@ -3,7 +3,12 @@
 #include <algorithm>
 #include <math.h>
 
+#include "../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
+
 #include "../../assert.hpp"
+#include "../proof_system/permutation.hpp"
+#include "../proof_system/proving_key/proving_key.hpp"
+#include "../proof_system/verification_key/verification_key.hpp"
 #include "../proof_system/widgets/arithmetic_widget.hpp"
 #include "../proof_system/widgets/bool_widget.hpp"
 #include "../proof_system/widgets/sequential_widget.hpp"
@@ -376,10 +381,13 @@ void ExtendedComposer::combine_linear_relations()
         }
     }
 
-    adjusted_gate_indices = std::vector<uint32_t>(n);
+    adjusted_gate_indices = std::vector<uint32_t>(n + public_inputs.size(), 0);
     uint32_t delete_count = 0U;
+    for (size_t j = 0; j < public_inputs.size(); ++j) {
+        adjusted_gate_indices[j] = static_cast<uint32_t>(j) - static_cast<uint32_t>(public_inputs.size());
+    }
     for (size_t j = 0; j < n; ++j) {
-        adjusted_gate_indices[j] = static_cast<uint32_t>(j) - delete_count;
+        adjusted_gate_indices[j + public_inputs.size()] = static_cast<uint32_t>(j) - delete_count;
         if (deleted_gates[j] == true) {
             ++delete_count;
         }
@@ -390,14 +398,15 @@ void ExtendedComposer::combine_linear_relations()
 void ExtendedComposer::compute_sigma_permutations(proving_key* key, const size_t width)
 {
     // create basic 'identity' permutation
-    const size_t n = key->n;
+    // const size_t n = key->n;
+    const uint32_t num_public_inputs = static_cast<uint32_t>(public_inputs.size());
     std::vector<uint32_t> sigma_1_mapping;
     std::vector<uint32_t> sigma_2_mapping;
     std::vector<uint32_t> sigma_3_mapping;
-    sigma_1_mapping.reserve(n);
-    sigma_2_mapping.reserve(n);
-    sigma_3_mapping.reserve(n);
-    for (size_t i = 0; i < n; ++i) {
+    sigma_1_mapping.reserve(key->n);
+    sigma_2_mapping.reserve(key->n);
+    sigma_3_mapping.reserve(key->n);
+    for (size_t i = 0; i < key->n; ++i) {
         sigma_1_mapping.emplace_back(static_cast<uint32_t>(i));
         sigma_2_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 30U));
         sigma_3_mapping.emplace_back(static_cast<uint32_t>(i) + (1U << 31U));
@@ -413,13 +422,15 @@ void ExtendedComposer::compute_sigma_permutations(proving_key* key, const size_t
             epicycle current_epicycle = wire_epicycles[i][j];
             size_t epicycle_index = j == wire_epicycles[i].size() - 1 ? 0 : j + 1;
             epicycle next_epicycle = wire_epicycles[i][epicycle_index];
-            uint32_t current_gate_index = adjusted_gate_indices[current_epicycle.gate_index];
-            uint32_t next_gate_index = adjusted_gate_indices[next_epicycle.gate_index];
+            uint32_t current_gate_index = adjusted_gate_indices[current_epicycle.gate_index + num_public_inputs];
+            uint32_t next_gate_index = adjusted_gate_indices[next_epicycle.gate_index + num_public_inputs];
 
-            sigmas[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U][current_gate_index] =
-                next_gate_index + static_cast<uint32_t>(next_epicycle.wire_type);
+            sigmas[static_cast<uint32_t>(current_epicycle.wire_type) >> 30U]
+                  [static_cast<uint32_t>(current_gate_index + num_public_inputs)] =
+                      next_gate_index + static_cast<uint32_t>(next_epicycle.wire_type) + num_public_inputs;
         }
     }
+
     barretenberg::polynomial sigma_1(key->n);
     barretenberg::polynomial sigma_2(key->n);
     barretenberg::polynomial sigma_3(key->n);
@@ -475,13 +486,12 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
     ASSERT(n == q_left_bools.size());
     ASSERT(n == q_right_bools.size());
     ASSERT(n == q_output_bools.size());
-
-    size_t log2_n = static_cast<size_t>(log2(adjusted_n + 1));
-    if ((1UL << log2_n) != (adjusted_n + 1)) {
+    const size_t total_num_gates = adjusted_n + public_inputs.size();
+    size_t log2_n = static_cast<size_t>(log2(total_num_gates + 1));
+    if ((1UL << log2_n) != (total_num_gates + 1)) {
         ++log2_n;
     }
     size_t new_n = 1UL << log2_n;
-
     for (size_t i = adjusted_n; i < new_n; ++i) {
         q_1.emplace_back(fr::zero);
         q_2.emplace_back(fr::zero);
@@ -493,9 +503,15 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
         q_right_bools.emplace_back(fr::zero);
         q_output_bools.emplace_back(fr::zero);
         adjusted_gate_indices.push_back(static_cast<uint32_t>(i));
+        // ++bar;
     }
 
-    circuit_proving_key = std::make_shared<proving_key>(new_n);
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
+        epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
+        wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
+    }
+
+    circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size());
 
     polynomial poly_q_m(new_n);
     polynomial poly_q_c(new_n);
@@ -507,25 +523,47 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
     polynomial poly_q_br(new_n);
     polynomial poly_q_bo(new_n);
 
+    for (size_t i = 0; i < new_n; ++i) {
+        poly_q_m[i] = fr::zero;
+        poly_q_1[i] = fr::zero;
+        poly_q_2[i] = fr::zero;
+        poly_q_3[i] = fr::zero;
+        poly_q_c[i] = fr::zero;
+        poly_q_bl[i] = fr::zero;
+        poly_q_br[i] = fr::zero;
+        poly_q_bo[i] = fr::zero;
+        poly_q_3_next[i] = fr::zero;
+    }
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
+        poly_q_m[i] = fr::zero;
+        poly_q_1[i] = fr::zero;
+        poly_q_2[i] = fr::zero;
+        poly_q_3[i] = fr::zero;
+        poly_q_c[i] = fr::zero;
+        poly_q_bl[i] = fr::zero;
+        poly_q_br[i] = fr::zero;
+        poly_q_bo[i] = fr::zero;
+        poly_q_3_next[i] = fr::zero;
+    }
+    std::vector<bool> fill_tags(new_n, false);
 
-    size_t n_delta = new_n - adjusted_n;
-
-    for (size_t i = 0; i < n + n_delta; ++i)
-    {
-        if ((i < n) && deleted_gates[i] == true)
-        {
+    const size_t n_delta = new_n - (adjusted_n)-public_inputs.size();
+    for (size_t i = public_inputs.size(); i < n + n_delta + public_inputs.size(); ++i) {
+        if ((i <= n + public_inputs.size()) && deleted_gates[i - public_inputs.size()] == true) {
             continue;
         }
-        size_t index = adjusted_gate_indices[i];
-        fr::__copy(q_m[i], poly_q_m[index]);
-        fr::__copy(q_1[i], poly_q_1[index]);
-        fr::__copy(q_2[i], poly_q_2[index]);
-        fr::__copy(q_3[i], poly_q_3[index]);
-        fr::__copy(q_c[i], poly_q_c[index]);
-        fr::__copy(q_left_bools[i], poly_q_bl[index]);
-        fr::__copy(q_right_bools[i], poly_q_br[index]);
-        fr::__copy(q_output_bools[i], poly_q_bo[index]);
-        fr::__copy(q_3_next[i], poly_q_3_next[index]);
+
+        size_t index = adjusted_gate_indices[i] + public_inputs.size();
+        fr::__copy(q_m[i - public_inputs.size()], poly_q_m[index]);
+        fr::__copy(q_1[i - public_inputs.size()], poly_q_1[index]);
+        fr::__copy(q_2[i - public_inputs.size()], poly_q_2[index]);
+        fr::__copy(q_3[i - public_inputs.size()], poly_q_3[index]);
+        fr::__copy(q_c[i - public_inputs.size()], poly_q_c[index]);
+        fr::__copy(q_left_bools[i - public_inputs.size()], poly_q_bl[index]);
+        fr::__copy(q_right_bools[i - public_inputs.size()], poly_q_br[index]);
+        fr::__copy(q_output_bools[i - public_inputs.size()], poly_q_bo[index]);
+        fr::__copy(q_3_next[i - public_inputs.size()], poly_q_3_next[index]);
+        fill_tags[index] = true;
     }
 
     poly_q_1.ifft(circuit_proving_key->small_domain);
@@ -579,6 +617,7 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
     circuit_proving_key->constraint_selector_ffts.insert({ "q_bo_fft", std::move(poly_q_bo_fft) });
 
     compute_sigma_permutations(circuit_proving_key.get(), 4);
+
     computed_proving_key = true;
     return circuit_proving_key;
 }
@@ -643,35 +682,41 @@ std::shared_ptr<program_witness> ExtendedComposer::compute_witness()
     }
     witness = std::make_shared<program_witness>();
 
-    size_t log2_n = static_cast<size_t>(log2(adjusted_n + 1));
-    if ((1UL << log2_n) != (adjusted_n + 1)) {
+    const size_t total_num_gates = adjusted_n + public_inputs.size();
+    size_t log2_n = static_cast<size_t>(log2(total_num_gates + 1));
+    if ((1UL << log2_n) != (total_num_gates + 1)) {
         ++log2_n;
     }
     size_t new_n = 1UL << log2_n;
-    size_t n_delta = new_n - adjusted_n;
 
     for (size_t i = adjusted_n; i < new_n; ++i) {
         w_l.emplace_back(zero_idx);
         w_r.emplace_back(zero_idx);
         w_o.emplace_back(zero_idx);
     }
-
     polynomial poly_w_1(new_n);
     polynomial poly_w_2(new_n);
     polynomial poly_w_3(new_n);
-
-    for (size_t i = 0; i < n + n_delta; ++i) {
-        if ((i < n) && deleted_gates[i] == true)
-        {
+    for (size_t i = 0; i < new_n; ++i) {
+        poly_w_1[i] = (fr::zero);
+        poly_w_2[i] = (fr::zero);
+        poly_w_3[i] = (fr::zero);
+    }
+    const size_t n_delta = new_n - (adjusted_n)-public_inputs.size();
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
+        fr::__copy(variables[public_inputs[i]], poly_w_1[i]);
+        fr::__copy(fr::zero, poly_w_2[i]);
+        fr::__copy(fr::zero, poly_w_3[i]);
+    }
+    for (size_t i = public_inputs.size(); i < n + n_delta + public_inputs.size(); ++i) {
+        if ((i <= n + public_inputs.size()) && deleted_gates[i - public_inputs.size()] == true) {
             continue;
         }
-        size_t index = adjusted_gate_indices[i];
-
-        fr::__copy(variables[w_l[i]], poly_w_1[index]);
-        fr::__copy(variables[w_r[i]], poly_w_2[index]);
-        fr::__copy(variables[w_o[i]], poly_w_3[index]);
+        size_t index = adjusted_gate_indices[i] + public_inputs.size();
+        fr::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1[index]);
+        fr::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2[index]);
+        fr::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3[index]);
     }
-
     witness->wires.insert({ "w_1", std::move(poly_w_1) });
     witness->wires.insert({ "w_2", std::move(poly_w_2) });
     witness->wires.insert({ "w_3", std::move(poly_w_3) });
@@ -685,7 +730,7 @@ ExtendedProver ExtendedComposer::preprocess()
     compute_proving_key();
     compute_witness();
 
-    ExtendedProver output_state(circuit_proving_key, witness, create_manifest());
+    ExtendedProver output_state(circuit_proving_key, witness, create_manifest(public_inputs.size()));
 
     std::unique_ptr<ProverBoolWidget> bool_widget =
         std::make_unique<ProverBoolWidget>(circuit_proving_key.get(), witness.get());
@@ -697,7 +742,6 @@ ExtendedProver ExtendedComposer::preprocess()
     output_state.widgets.push_back(std::move(arithmetic_widget));
     output_state.widgets.push_back(std::move(sequential_widget));
     output_state.widgets.push_back(std::move(bool_widget));
-
     return output_state;
 
     // // printf("arithmetic check...\n");

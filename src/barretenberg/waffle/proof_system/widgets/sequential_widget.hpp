@@ -45,8 +45,6 @@ class ProverSequentialWidget : public ProverBaseWidget {
 
     std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const ReferenceString& reference_string) const;
 
-    void reset();
-
     barretenberg::polynomial& q_3_next;
 
     barretenberg::polynomial& q_3_next_fft;
