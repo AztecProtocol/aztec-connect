@@ -117,8 +117,13 @@ void construct_pedersen_instances_bench(State &state) noexcept
 {
     for (auto _ : state)
     {
+        state.PauseTiming();
+        waffle::TurboComposer composer = waffle::TurboComposer(static_cast<size_t>(state.range(0)));
+        generate_test_pedersen_circuit(composer, static_cast<size_t>(state.range(0)));
         size_t idx = get_index(static_cast<size_t>(state.range(0)));
-        pedersen_verifiers[idx] = (waffle::preprocess(pedersen_provers[idx]));
+        composer.preprocess();
+        state.ResumeTiming();
+        pedersen_verifiers[idx] = composer.create_verifier();
     }
 }
 BENCHMARK(construct_pedersen_instances_bench)->Arg(num_hashes[0])->Arg(num_hashes[1])->Arg(num_hashes[2])->Arg(num_hashes[3])->Arg(num_hashes[4])->Arg(num_hashes[5])->Arg(num_hashes[6])->Arg(num_hashes[7])->Arg(num_hashes[8])->Arg(num_hashes[9]);

@@ -50,7 +50,7 @@ TEST(stdlib_pedersen, test_pedersen)
     waffle::TurboProver prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -177,7 +177,7 @@ TEST(stdlib_pedersen, test_pedersen_large)
     waffle::TurboProver prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 

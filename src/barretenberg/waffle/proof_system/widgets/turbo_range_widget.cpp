@@ -10,6 +10,7 @@
 #include "../transcript_helpers.hpp"
 
 #include "../proving_key/proving_key.hpp"
+#include "../verification_key/verification_key.hpp"
 
 using namespace barretenberg;
 
@@ -294,34 +295,16 @@ fr::field_t ProverTurboRangeWidget::compute_opening_poly_contribution(const fr::
     return nu_base;
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverTurboRangeWidget::compute_preprocessed_commitments(
-    const ReferenceString& reference_string) const
-{
-    polynomial polys[1]{ polynomial(q_range, key->small_domain.size) };
-
-    std::vector<barretenberg::g1::affine_element> commitments;
-    commitments.resize(1);
-
-    for (size_t i = 0; i < 1; ++i) {
-        g1::jacobian_to_affine(scalar_multiplication::pippenger(
-                                   polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
-                               commitments[i]);
-    }
-    std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierTurboRangeWidget>(commitments);
-    return result;
-}
 
 // ###
 
-VerifierTurboRangeWidget::VerifierTurboRangeWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments)
+VerifierTurboRangeWidget::VerifierTurboRangeWidget()
     : VerifierBaseWidget()
 {
-    ASSERT(instance_commitments.size() == 1);
-    instance = std::vector<g1::affine_element>{ instance_commitments[0] };
 }
 
 barretenberg::fr::field_t VerifierTurboRangeWidget::compute_quotient_evaluation_contribution(
-    const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t&, const evaluation_domain&)
+    verification_key*, const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t&)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
@@ -330,12 +313,13 @@ barretenberg::fr::field_t VerifierTurboRangeWidget::compute_quotient_evaluation_
 }
 
 barretenberg::fr::field_t VerifierTurboRangeWidget::compute_batch_evaluation_contribution(
-    barretenberg::fr::field_t&, const barretenberg::fr::field_t& nu_base, const transcript::Transcript&)
+    verification_key*, barretenberg::fr::field_t&, const barretenberg::fr::field_t& nu_base, const transcript::Transcript&)
 {
     return nu_base;
 }
 
 VerifierBaseWidget::challenge_coefficients VerifierTurboRangeWidget::append_scalar_multiplication_inputs(
+    verification_key* key,
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
     std::vector<barretenberg::g1::affine_element>& points,
@@ -415,8 +399,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboRangeWidget::append_scal
     fr::__add(range_multiplicand, delta_4, range_multiplicand);
     fr::__mul(range_multiplicand, challenge.linear_nu, range_multiplicand);
 
-    if (g1::on_curve(instance[0])) {
-        points.push_back(instance[0]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_RANGE_SELECTOR"))) {
+        points.push_back(key->constraint_selectors.at("Q_RANGE_SELECTOR"));
         scalars.push_back(range_multiplicand);
     }
 

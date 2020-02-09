@@ -79,7 +79,7 @@ void construct_instances_bench(State& state) noexcept
 {
     for (auto _ : state) {
         size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
-        verifiers[idx] = (waffle::preprocess(provers[idx]));
+        verifiers[idx] = composers[idx].create_verifier();
     }
 }
 BENCHMARK(construct_instances_bench)->DenseRange(55, MAX_BYTES, 64);

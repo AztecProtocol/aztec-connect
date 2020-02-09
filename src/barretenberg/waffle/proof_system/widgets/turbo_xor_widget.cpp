@@ -10,6 +10,7 @@
 #include "../transcript_helpers.hpp"
 
 #include "../proving_key/proving_key.hpp"
+#include "../verification_key/verification_key.hpp"
 
 using namespace barretenberg;
 
@@ -334,46 +335,27 @@ fr::field_t ProverTurboXorWidget::compute_opening_poly_contribution(const fr::fi
 {
     return nu_base;
 }
-
-std::unique_ptr<VerifierBaseWidget> ProverTurboXorWidget::compute_preprocessed_commitments(
-    const ReferenceString& reference_string) const
-{
-    polynomial polys[1]{ polynomial(q_xor, key->small_domain.size) };
-
-    std::vector<barretenberg::g1::affine_element> commitments;
-    commitments.resize(1);
-
-    for (size_t i = 0; i < 1; ++i) {
-        g1::jacobian_to_affine(scalar_multiplication::pippenger(
-                                   polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
-                               commitments[i]);
-    }
-    std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierTurboXorWidget>(commitments);
-    return result;
-}
-
 // ###
 
-VerifierTurboXorWidget::VerifierTurboXorWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments)
+VerifierTurboXorWidget::VerifierTurboXorWidget()
     : VerifierBaseWidget()
 {
-    ASSERT(instance_commitments.size() == 1);
-    instance = std::vector<g1::affine_element>{ instance_commitments[0] };
 }
 
 barretenberg::fr::field_t VerifierTurboXorWidget::compute_quotient_evaluation_contribution(
-    const fr::field_t& alpha_base, const transcript::Transcript&, fr::field_t&, const evaluation_domain&)
+    verification_key*, const fr::field_t& alpha_base, const transcript::Transcript&, fr::field_t&)
 {
     return alpha_base;
 }
 
 barretenberg::fr::field_t VerifierTurboXorWidget::compute_batch_evaluation_contribution(
-    barretenberg::fr::field_t&, const barretenberg::fr::field_t& nu_base, const transcript::Transcript&)
+    verification_key*, barretenberg::fr::field_t&, const barretenberg::fr::field_t& nu_base, const transcript::Transcript&)
 {
     return nu_base;
 }
 
 VerifierBaseWidget::challenge_coefficients VerifierTurboXorWidget::append_scalar_multiplication_inputs(
+    verification_key* key,
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
     std::vector<barretenberg::g1::affine_element>& points,
@@ -453,8 +435,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboXorWidget::append_scalar
     fr::__add(range_multiplicand, delta_4, range_multiplicand);
     fr::__mul(range_multiplicand, challenge.linear_nu, range_multiplicand);
 
-    if (g1::on_curve(instance[0])) {
-        points.push_back(instance[0]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_XOR_SELECTOR"))) {
+        points.push_back(key->constraint_selectors.at("Q_XOR_SELECTOR"));
         scalars.push_back(range_multiplicand);
     }
 

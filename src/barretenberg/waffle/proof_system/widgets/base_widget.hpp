@@ -8,6 +8,7 @@
 #include "../../../polynomials/evaluation_domain.hpp"
 
 #include "../../waffle_types.hpp"
+#include "../verification_key/verification_key.hpp"
 
 namespace transcript {
     class Transcript;
@@ -16,6 +17,7 @@ namespace transcript {
 namespace waffle {
 
 struct proving_key;
+
 class ReferenceString;
 
 class VerifierBaseWidget {
@@ -31,24 +33,26 @@ class VerifierBaseWidget {
     VerifierBaseWidget(const VerifierBaseWidget& other) = default;
 
     VerifierBaseWidget(VerifierBaseWidget&& other) = default;
-    virtual ~VerifierBaseWidget() = default;
+    ~VerifierBaseWidget() = default;
 
     virtual challenge_coefficients append_scalar_multiplication_inputs(
+        verification_key*,
         const challenge_coefficients& challenge,
         const transcript::Transcript& transcript,
         std::vector<barretenberg::g1::affine_element>& points,
         std::vector<barretenberg::fr::field_t>& scalars) = 0;
 
     virtual barretenberg::fr::field_t compute_batch_evaluation_contribution(
+        verification_key*,
         barretenberg::fr::field_t& batch_eval,
         const barretenberg::fr::field_t& nu_base,
         const transcript::Transcript& transcript) = 0;
 
     virtual barretenberg::fr::field_t compute_quotient_evaluation_contribution(
+        verification_key*,
         const barretenberg::fr::field_t& alpha_base,
         const transcript::Transcript&,
-        barretenberg::fr::field_t&,
-        const barretenberg::evaluation_domain&)
+        barretenberg::fr::field_t&)
     {
         return alpha_base;
     }
@@ -64,8 +68,6 @@ class VerifierBaseWidget {
         // }
         return valid;
     }
-
-    std::vector<barretenberg::g1::affine_element> instance;
 };
 
 class ProverBaseWidget {
@@ -109,9 +111,6 @@ class ProverBaseWidget {
                                                                         barretenberg::fr::field_t* poly,
                                                                         barretenberg::fr::field_t*) = 0;
     virtual void compute_transcript_elements(transcript::Transcript&){};
-
-    virtual std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(
-        const ReferenceString& reference_string) const = 0;
 
     proving_key* key;
     program_witness* witness;

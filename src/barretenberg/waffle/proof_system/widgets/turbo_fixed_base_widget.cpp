@@ -10,6 +10,7 @@
 #include "../transcript_helpers.hpp"
 
 #include "../proving_key/proving_key.hpp"
+#include "../verification_key/verification_key.hpp"
 
 using namespace barretenberg;
 
@@ -342,48 +343,21 @@ fr::field_t ProverTurboFixedBaseWidget::compute_opening_poly_contribution(const 
     return fr::mul(nu_b, nu);
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverTurboFixedBaseWidget::compute_preprocessed_commitments(
-    const ReferenceString& reference_string) const
-{
-    polynomial polys[9]{ polynomial(q_1, key->small_domain.size),      polynomial(q_2, key->small_domain.size),
-                         polynomial(q_3, key->small_domain.size),      polynomial(q_4, key->small_domain.size),
-                         polynomial(q_4_next, key->small_domain.size), polynomial(q_m, key->small_domain.size),
-                         polynomial(q_c, key->small_domain.size),      polynomial(q_arith, key->small_domain.size),
-                         polynomial(q_ecc_1, key->small_domain.size) };
-
-    std::vector<barretenberg::g1::affine_element> commitments;
-    commitments.resize(9);
-
-    for (size_t i = 0; i < 9; ++i) {
-        g1::jacobian_to_affine(scalar_multiplication::pippenger(
-                                   polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
-                               commitments[i]);
-    }
-    std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierTurboFixedBaseWidget>(commitments);
-    return result;
-}
-
 // ###
 
-VerifierTurboFixedBaseWidget::VerifierTurboFixedBaseWidget(
-    std::vector<barretenberg::g1::affine_element>& instance_commitments)
-    : VerifierTurboArithmeticWidget(instance_commitments)
+VerifierTurboFixedBaseWidget::VerifierTurboFixedBaseWidget()
+    : VerifierTurboArithmeticWidget()
 {
-    ASSERT(instance_commitments.size() == 9);
-    instance =
-        std::vector<g1::affine_element>{ instance_commitments[0], instance_commitments[1], instance_commitments[2],
-                                         instance_commitments[3], instance_commitments[4], instance_commitments[5],
-                                         instance_commitments[6], instance_commitments[7], instance_commitments[8] };
 }
 
 barretenberg::fr::field_t VerifierTurboFixedBaseWidget::compute_quotient_evaluation_contribution(
+    verification_key* key,
     const fr::field_t& alpha_base,
     const transcript::Transcript& transcript,
-    fr::field_t& t_eval,
-    const evaluation_domain& domain)
+    fr::field_t& t_eval)
 {
     fr::field_t new_alpha_base =
-        VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribution(alpha_base, transcript, t_eval, domain);
+        VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribution(key, alpha_base, transcript, t_eval);
     fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
     fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
@@ -504,6 +478,7 @@ barretenberg::fr::field_t VerifierTurboFixedBaseWidget::compute_quotient_evaluat
 }
 
 barretenberg::fr::field_t VerifierTurboFixedBaseWidget::compute_batch_evaluation_contribution(
+    verification_key*,
     barretenberg::fr::field_t& batch_eval,
     const barretenberg::fr::field_t& nu_base,
     const transcript::Transcript& transcript)
@@ -532,6 +507,7 @@ barretenberg::fr::field_t VerifierTurboFixedBaseWidget::compute_batch_evaluation
 }
 
 VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_scalar_multiplication_inputs(
+    verification_key* key,
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
     std::vector<barretenberg::g1::affine_element>& points,
@@ -577,8 +553,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::__add(q_l_term_ecc, q_l_term_arith, q_l_term);
     fr::__mul(q_l_term, challenge.linear_nu, q_l_term);
 
-    if (g1::on_curve(instance[0])) {
-        points.push_back(instance[0]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_1"))) {
+        points.push_back(key->constraint_selectors.at("Q_1"));
         scalars.push_back(q_l_term);
     }
 
@@ -592,8 +568,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::field_t q_r_term;
     fr::__add(q_r_term_ecc, q_r_term_arith, q_r_term);
     fr::__mul(q_r_term, challenge.linear_nu, q_r_term);
-    if (g1::on_curve(instance[1])) {
-        points.push_back(instance[1]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_2"))) {
+        points.push_back(key->constraint_selectors.at("Q_2"));
         scalars.push_back(q_r_term);
     }
 
@@ -620,8 +596,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::field_t q_o_term;
     fr::__add(q_o_term_ecc, q_o_term_arith, q_o_term);
     fr::__mul(q_o_term, challenge.linear_nu, q_o_term);
-    if (g1::on_curve(instance[2])) {
-        points.push_back(instance[2]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_3"))) {
+        points.push_back(key->constraint_selectors.at("Q_3"));
         scalars.push_back(q_o_term);
     }
 
@@ -637,8 +613,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::field_t q_4_term;
     fr::__add(q_4_term_ecc, q_4_term_arith, q_4_term);
     fr::__mul(q_4_term, challenge.linear_nu, q_4_term);
-    if (g1::on_curve(instance[3])) {
-        points.push_back(instance[3]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_4"))) {
+        points.push_back(key->constraint_selectors.at("Q_4"));
         scalars.push_back(q_4_term);
     }
 
@@ -655,8 +631,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::field_t q_4_next_term;
     fr::__add(q_4_next_term_ecc, q_4_next_term_arith, q_4_next_term);
     fr::__mul(q_4_next_term, challenge.linear_nu, q_4_next_term);
-    if (g1::on_curve(instance[4])) {
-        points.push_back(instance[4]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_4_NEXT"))) {
+        points.push_back(key->constraint_selectors.at("Q_4_NEXT"));
         scalars.push_back(q_4_next_term);
     }
 
@@ -674,29 +650,29 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::field_t q_m_term;
     fr::__add(q_m_term_ecc, q_m_term_arith, q_m_term);
     fr::__mul(q_m_term, challenge.linear_nu, q_m_term);
-    if (g1::on_curve(instance[5])) {
-        points.push_back(instance[5]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_M"))) {
+        points.push_back(key->constraint_selectors.at("Q_M"));
         scalars.push_back(q_m_term);
     }
 
     fr::field_t q_c_term;
     fr::__mul(challenge.alpha_base, challenge.linear_nu, q_c_term);
     fr::__mul(q_c_term, q_arith_eval, q_c_term);
-    if (g1::on_curve(instance[6])) {
-        points.push_back(instance[6]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_C"))) {
+        points.push_back(key->constraint_selectors.at("Q_C"));
 
         fr::field_t blah_nu = fr::mul(challenge.nu_base, fr::sqr(challenge.nu_step));
         fr::__add(q_c_term, blah_nu, q_c_term);
         scalars.push_back(q_c_term);
     }
 
-    if (g1::on_curve(instance[7])) {
-        points.push_back(instance[7]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_ARITHMETIC_SELECTOR"))) {
+        points.push_back(key->constraint_selectors.at("Q_ARITHMETIC_SELECTOR"));
         scalars.push_back(challenge.nu_base);
     }
 
-    if (g1::on_curve(instance[8])) {
-        points.push_back(instance[8]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_FIXED_BASE_SELECTOR"))) {
+        points.push_back(key->constraint_selectors.at("Q_FIXED_BASE_SELECTOR"));
         scalars.push_back(fr::mul(challenge.nu_base, challenge.nu_step));
     }
 

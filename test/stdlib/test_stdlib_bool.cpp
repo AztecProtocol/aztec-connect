@@ -82,7 +82,7 @@ TEST(stdlib_bool, xor)
         a ^ b;
     }
     waffle::Prover prover = composer.preprocess();
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -115,7 +115,7 @@ TEST(stdlib_bool, xor_constants)
         }
     }
     waffle::Prover prover = composer.preprocess();
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -151,7 +151,7 @@ TEST(stdlib_bool, xor_twin_constants)
         }
     }
     waffle::Prover prover = composer.preprocess();
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -169,7 +169,7 @@ TEST(stdlib_bool, and)
         a & b;
     }
     waffle::Prover prover = composer.preprocess();
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -202,7 +202,7 @@ TEST(stdlib_bool, and_constants)
         }
     }
     waffle::Prover prover = composer.preprocess();
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -220,7 +220,7 @@ TEST(stdlib_bool, or)
         a | b;
     }
     waffle::Prover prover = composer.preprocess();
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -254,7 +254,7 @@ TEST(stdlib_bool, or_constants)
         }
     }
     waffle::Prover prover = composer.preprocess();
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -315,7 +315,7 @@ TEST(stdlib_bool, eq)
         EXPECT_EQ(get_value(d[i]), d_alt[i]);
     }
     waffle::Prover prover = composer.preprocess();
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -350,7 +350,7 @@ TEST(stdlib_bool, test_simple_proof)
         f = b;
     }
     waffle::Prover prover = composer.preprocess();
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 

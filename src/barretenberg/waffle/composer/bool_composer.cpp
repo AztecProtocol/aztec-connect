@@ -231,7 +231,7 @@ std::shared_ptr<verification_key> BoolComposer::compute_verification_key()
                                commitments[i]);
     }
 
-    circuit_verification_key = std::make_shared<verification_key>(circuit_proving_key->n);
+    circuit_verification_key = std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs);
 
     circuit_verification_key->constraint_selectors.insert({ "Q_1", commitments[0] });
     circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });
@@ -291,6 +291,20 @@ std::shared_ptr<program_witness> BoolComposer::compute_witness()
     witness->wires.insert({ "w_3", std::move(poly_w_3) });
     computed_witness = true;
     return witness;
+}
+
+Verifier BoolComposer::create_verifier()
+{
+    compute_verification_key();
+    Verifier output_state(circuit_verification_key, create_manifest(public_inputs.size()));
+
+    std::unique_ptr<VerifierArithmeticWidget> arithmetic_widget = std::make_unique<VerifierArithmeticWidget>();
+    std::unique_ptr<VerifierBoolWidget> bool_widget = std::make_unique<VerifierBoolWidget>();
+
+    output_state.verifier_widgets.emplace_back(std::move(arithmetic_widget));
+    output_state.verifier_widgets.emplace_back(std::move(bool_widget));
+
+    return output_state;
 }
 
 Prover BoolComposer::preprocess()

@@ -54,8 +54,10 @@ void construct_mimc_instances_bench(State &state) noexcept
 {
     for (auto _ : state)
     {
+        waffle::MiMCComposer composer = waffle::MiMCComposer(static_cast<size_t>(state.range(0)));
+        generate_test_mimc_circuit(composer, static_cast<size_t>(state.range(0)));
         size_t idx = ((static_cast<size_t>((state.range(0))) - static_cast<size_t>(200)) / 200);
-        mimc_verifiers[idx] = (waffle::preprocess(mimc_provers[idx]));
+        mimc_verifiers[idx] = composer.create_verifier();
     }
 }
 BENCHMARK(construct_mimc_instances_bench)->DenseRange(200, MAX_REPETITIONS, 200);

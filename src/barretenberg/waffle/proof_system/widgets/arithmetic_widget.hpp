@@ -5,23 +5,24 @@
 namespace waffle {
 class VerifierArithmeticWidget : public VerifierBaseWidget {
   public:
-    VerifierArithmeticWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
+    VerifierArithmeticWidget();
 
-    barretenberg::fr::field_t compute_quotient_evaluation_contribution(
-        const barretenberg::fr::field_t& alpha_base,
-        const transcript::Transcript& transcript,
-        barretenberg::fr::field_t& t_eval,
-        const barretenberg::evaluation_domain& domain);
+    barretenberg::fr::field_t compute_quotient_evaluation_contribution(verification_key*,
+                                                                       const barretenberg::fr::field_t& alpha_base,
+                                                                       const transcript::Transcript& transcript,
+                                                                       barretenberg::fr::field_t& t_eval) override;
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
+        verification_key*,
         const challenge_coefficients& challenge,
         const transcript::Transcript& transcript,
         std::vector<barretenberg::g1::affine_element>& points,
-        std::vector<barretenberg::fr::field_t>& scalars);
+        std::vector<barretenberg::fr::field_t>& scalars) override;
 
-    barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t&,
+    barretenberg::fr::field_t compute_batch_evaluation_contribution(verification_key*,
+                                                                    barretenberg::fr::field_t&,
                                                                     const barretenberg::fr::field_t& nu_base,
-                                                                    const transcript::Transcript&);
+                                                                    const transcript::Transcript&) override;
 };
 
 class ProverArithmeticWidget : public ProverBaseWidget {
@@ -41,8 +42,6 @@ class ProverArithmeticWidget : public ProverBaseWidget {
                                                                 const transcript::Transcript&,
                                                                 barretenberg::fr::field_t*,
                                                                 barretenberg::fr::field_t*);
-
-    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const ReferenceString& reference_string) const;
 
     barretenberg::polynomial& q_1;
     barretenberg::polynomial& q_2;

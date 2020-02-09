@@ -7,6 +7,7 @@
 #include "../transcript_helpers.hpp"
 
 #include "../proving_key/proving_key.hpp"
+#include "../verification_key/verification_key.hpp"
 
 using namespace barretenberg;
 
@@ -144,34 +145,15 @@ fr::field_t ProverMiMCWidget::compute_opening_poly_contribution(const fr::field_
     return fr::mul(nu_base, nu);
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverMiMCWidget::compute_preprocessed_commitments(
-    const ReferenceString& reference_string) const
-{
-    polynomial polys[2]{ polynomial(q_mimc_coefficient, key->small_domain.size),
-                         polynomial(q_mimc_selector, key->small_domain.size) };
-
-    std::vector<barretenberg::g1::affine_element> commitments;
-    commitments.resize(2);
-
-    for (size_t i = 0; i < 2; ++i) {
-        g1::jacobian_to_affine(scalar_multiplication::pippenger(
-                                   polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
-                               commitments[i]);
-    }
-    std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierMiMCWidget>(commitments);
-    return result;
-}
-
 // ###
 
-VerifierMiMCWidget::VerifierMiMCWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments)
+VerifierMiMCWidget::VerifierMiMCWidget()
     : VerifierBaseWidget()
 {
-    ASSERT(instance_commitments.size() == 2);
-    instance = std::vector<g1::affine_element>{ instance_commitments[0], instance_commitments[1] };
 }
 
 barretenberg::fr::field_t VerifierMiMCWidget::compute_batch_evaluation_contribution(
+    verification_key*,
     barretenberg::fr::field_t& batch_eval,
     const barretenberg::fr::field_t& nu_base,
     const transcript::Transcript& transcript)
@@ -186,13 +168,14 @@ barretenberg::fr::field_t VerifierMiMCWidget::compute_batch_evaluation_contribut
 }
 
 VerifierBaseWidget::challenge_coefficients VerifierMiMCWidget::append_scalar_multiplication_inputs(
+    verification_key* key,
     const VerifierBaseWidget::challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
     std::vector<barretenberg::g1::affine_element>& points,
     std::vector<barretenberg::fr::field_t>& scalars)
 {
-    if (g1::on_curve(instance[0])) {
-        points.push_back(instance[0]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_MIMC_COEFFICIENT"))) {
+        points.push_back(key->constraint_selectors.at("Q_MIMC_COEFFICIENT"));
         scalars.push_back(challenge.nu_base);
     }
     fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
@@ -210,8 +193,8 @@ VerifierBaseWidget::challenge_coefficients VerifierMiMCWidget::append_scalar_mul
     q_mimc_term = fr::mul(fr::add(q_mimc_term, mimc_a), challenge.alpha_base);
     q_mimc_term = fr::mul(q_mimc_term, challenge.linear_nu);
 
-    if (g1::on_curve(instance[1])) {
-        points.push_back(instance[1]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_MIMC_SELECTOR"))) {
+        points.push_back(key->constraint_selectors.at("Q_MIMC_SELECTOR"));
         scalars.push_back(q_mimc_term);
     }
 

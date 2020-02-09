@@ -318,7 +318,7 @@ std::shared_ptr<verification_key> MiMCComposer::compute_verification_key()
                                commitments[i]);
     }
 
-    circuit_verification_key = std::make_shared<verification_key>(circuit_proving_key->n);
+    circuit_verification_key = std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs);
 
     circuit_verification_key->constraint_selectors.insert({ "Q_1", commitments[0] });
     circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });
@@ -398,6 +398,22 @@ ExtendedProver MiMCComposer::preprocess()
 
     output_state.widgets.emplace_back(std::move(arithmetic_widget));
     output_state.widgets.emplace_back(std::move(mimc_widget));
+    return output_state;
+}
+
+ExtendedVerifier MiMCComposer::create_verifier()
+{
+    compute_verification_key();
+
+    ExtendedVerifier output_state(circuit_verification_key, create_manifest(public_inputs.size()));
+
+    std::unique_ptr<VerifierArithmeticWidget> arithmetic_widget =
+        std::make_unique<VerifierArithmeticWidget>();
+    std::unique_ptr<VerifierMiMCWidget> mimc_widget =
+        std::make_unique<VerifierMiMCWidget>();
+
+    output_state.verifier_widgets.push_back(std::move(arithmetic_widget));
+    output_state.verifier_widgets.push_back(std::move(mimc_widget));
     return output_state;
 }
 } // namespace waffle

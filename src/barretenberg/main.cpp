@@ -60,7 +60,7 @@ int main()
     waffle::StandardComposer composer = waffle::StandardComposer(NUM_GATES);
     generate_test_plonk_circuit(composer, NUM_GATES);
     waffle::Prover prover = composer.preprocess();
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     printf("constructing proof\n");
     // CALLGRIND_START_INSTRUMENTATION;

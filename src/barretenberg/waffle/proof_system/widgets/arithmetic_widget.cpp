@@ -5,6 +5,7 @@
 #include "../../../types.hpp"
 
 #include "../proving_key/proving_key.hpp"
+#include "../verification_key/verification_key.hpp"
 
 using namespace barretenberg;
 
@@ -155,56 +156,31 @@ fr::field_t ProverArithmeticWidget::compute_opening_poly_contribution(const barr
     return nu_base;
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverArithmeticWidget::compute_preprocessed_commitments(
-    const ReferenceString& reference_string) const
-{
-    polynomial polys[5]{
-        polynomial(q_m, key->small_domain.size), polynomial(q_1, key->small_domain.size),
-        polynomial(q_2, key->small_domain.size), polynomial(q_3, key->small_domain.size),
-        polynomial(q_c, key->small_domain.size),
-    };
-
-    std::vector<g1::affine_element> commitments;
-    commitments.resize(5);
-
-    for (size_t i = 0; i < 5; ++i) {
-        g1::jacobian_to_affine(scalar_multiplication::pippenger(
-                                   polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
-                               commitments[i]);
-    }
-    std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierArithmeticWidget>(commitments);
-    return result;
-}
-
-
 // ###
 
-VerifierArithmeticWidget::VerifierArithmeticWidget(std::vector<g1::affine_element>& instance_commitments)
+VerifierArithmeticWidget::VerifierArithmeticWidget()
     : VerifierBaseWidget()
-{
-    ASSERT(instance_commitments.size() == 5);
-    instance = std::vector<g1::affine_element>{
-        instance_commitments[0], instance_commitments[1], instance_commitments[2],
-        instance_commitments[3], instance_commitments[4],
-    };
-}
+{}
 
-fr::field_t VerifierArithmeticWidget::compute_quotient_evaluation_contribution(const fr::field_t& alpha_base,
+fr::field_t VerifierArithmeticWidget::compute_quotient_evaluation_contribution(verification_key*,
+                                                                               const fr::field_t& alpha_base,
                                                                                const transcript::Transcript& transcript,
-                                                                               fr::field_t&,
-                                                                               const evaluation_domain&)
+                                                                               fr::field_t&)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
     return fr::mul(alpha, alpha_base);
 }
 
-fr::field_t VerifierArithmeticWidget::compute_batch_evaluation_contribution(
-    fr::field_t&, const fr::field_t& nu_base, const transcript::Transcript&)
+fr::field_t VerifierArithmeticWidget::compute_batch_evaluation_contribution(verification_key*,
+                                                                            fr::field_t&,
+                                                                            const fr::field_t& nu_base,
+                                                                            const transcript::Transcript&)
 {
     return nu_base;
 };
 
 VerifierBaseWidget::challenge_coefficients VerifierArithmeticWidget::append_scalar_multiplication_inputs(
+    verification_key* key,
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
     std::vector<g1::affine_element>& points,
@@ -219,39 +195,40 @@ VerifierBaseWidget::challenge_coefficients VerifierArithmeticWidget::append_scal
     fr::__mul(w_l_eval, w_r_eval, q_m_term);
     fr::__mul(q_m_term, challenge.alpha_base, q_m_term);
     fr::__mul(q_m_term, challenge.linear_nu, q_m_term);
-    if (g1::on_curve(instance[0])) {
-        points.push_back(instance[0]);
+
+    if (g1::on_curve(key->constraint_selectors.at("Q_M"))) {
+        points.push_back(key->constraint_selectors.at("Q_M"));
         scalars.push_back(q_m_term);
     }
 
     fr::field_t q_l_term;
     fr::__mul(w_l_eval, challenge.alpha_base, q_l_term);
     fr::__mul(q_l_term, challenge.linear_nu, q_l_term);
-    if (g1::on_curve(instance[1])) {
-        points.push_back(instance[1]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_1"))) {
+        points.push_back(key->constraint_selectors.at("Q_1"));
         scalars.push_back(q_l_term);
     }
 
     fr::field_t q_r_term;
     fr::__mul(w_r_eval, challenge.alpha_base, q_r_term);
     fr::__mul(q_r_term, challenge.linear_nu, q_r_term);
-    if (g1::on_curve(instance[2])) {
-        points.push_back(instance[2]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_2"))) {
+        points.push_back(key->constraint_selectors.at("Q_2"));
         scalars.push_back(q_r_term);
     }
 
     fr::field_t q_o_term;
     fr::__mul(w_o_eval, challenge.alpha_base, q_o_term);
     fr::__mul(q_o_term, challenge.linear_nu, q_o_term);
-    if (g1::on_curve(instance[3])) {
-        points.push_back(instance[3]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_3"))) {
+        points.push_back(key->constraint_selectors.at("Q_3"));
         scalars.push_back(q_o_term);
     }
 
     fr::field_t q_c_term;
     fr::__mul(challenge.alpha_base, challenge.linear_nu, q_c_term);
-    if (g1::on_curve(instance[4])) {
-        points.push_back(instance[4]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_C"))) {
+        points.push_back(key->constraint_selectors.at("Q_C"));
         scalars.push_back(q_c_term);
     }
 

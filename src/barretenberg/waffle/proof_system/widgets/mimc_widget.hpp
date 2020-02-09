@@ -7,17 +7,19 @@ namespace waffle {
 
 class VerifierMiMCWidget : public VerifierBaseWidget {
   public:
-    VerifierMiMCWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
+    VerifierMiMCWidget();
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
+        verification_key*,
         const challenge_coefficients& challenge,
         const transcript::Transcript& transcript,
         std::vector<barretenberg::g1::affine_element>& points,
-        std::vector<barretenberg::fr::field_t>& scalars);
+        std::vector<barretenberg::fr::field_t>& scalars) override;
 
-    barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t& batch_eval,
+    barretenberg::fr::field_t compute_batch_evaluation_contribution(verification_key*,
+                                                                    barretenberg::fr::field_t& batch_eval,
                                                                     const barretenberg::fr::field_t& nu_base,
-                                                                    const transcript::Transcript& transcript);
+                                                                    const transcript::Transcript& transcript) override;
 };
 
 class ProverMiMCWidget : public ProverBaseWidget {
@@ -38,8 +40,6 @@ class ProverMiMCWidget : public ProverBaseWidget {
                                                                 barretenberg::fr::field_t* poly,
                                                                 barretenberg::fr::field_t*);
     void compute_transcript_elements(transcript::Transcript& transcript);
-
-    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const ReferenceString& reference_string) const;
 
     barretenberg::polynomial& q_mimc_selector;
     barretenberg::polynomial& q_mimc_coefficient;

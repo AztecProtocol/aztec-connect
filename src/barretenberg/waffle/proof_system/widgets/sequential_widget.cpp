@@ -7,6 +7,7 @@
 #include "../../../transcript/transcript.hpp"
 
 #include "../proving_key/proving_key.hpp"
+#include "../verification_key/verification_key.hpp"
 
 using namespace barretenberg;
 
@@ -84,37 +85,15 @@ fr::field_t ProverSequentialWidget::compute_linear_contribution(const fr::field_
     return alpha_base;
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverSequentialWidget::compute_preprocessed_commitments(
-    const ReferenceString& reference_string) const
-{
-    polynomial polys[1]{
-        polynomial(q_3_next, key->small_domain.size),
-    };
-
-    std::vector<barretenberg::g1::affine_element> commitments;
-    commitments.resize(1);
-
-    for (size_t i = 0; i < 1; ++i) {
-        g1::jacobian_to_affine(scalar_multiplication::pippenger(
-                                   polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
-                               commitments[i]);
-    }
-    std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierSequentialWidget>(commitments);
-    return result;
-}
-
 // ###
 
-VerifierSequentialWidget::VerifierSequentialWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments)
+VerifierSequentialWidget::VerifierSequentialWidget()
     : VerifierBaseWidget()
 {
-    ASSERT(instance_commitments.size() == 1);
-    instance = std::vector<g1::affine_element>{
-        instance_commitments[0],
-    };
 }
 
 VerifierBaseWidget::challenge_coefficients VerifierSequentialWidget::append_scalar_multiplication_inputs(
+    verification_key* key,
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
     std::vector<barretenberg::g1::affine_element>& points,
@@ -130,8 +109,8 @@ VerifierBaseWidget::challenge_coefficients VerifierSequentialWidget::append_scal
     fr::__mul(w_o_shifted_eval, old_alpha, q_o_next_term);
     fr::__mul(q_o_next_term, challenge.linear_nu, q_o_next_term);
 
-    if (g1::on_curve(instance[0])) {
-        points.push_back(instance[0]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_3_NEXT"))) {
+        points.push_back(key->constraint_selectors.at("Q_3_NEXT"));
         scalars.push_back(q_o_next_term);
     }
 

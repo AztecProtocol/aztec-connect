@@ -92,7 +92,7 @@ TEST(stdlib_field, test_add_mul_with_constants)
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[17]), { { expected, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 32UL);
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
@@ -108,7 +108,7 @@ TEST(stdlib_field, test_field_fibbonaci)
 
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[16]), { { 4181, 0, 0, 0 } }), true);
     EXPECT_EQ(prover.n, 32UL);
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -125,7 +125,7 @@ TEST(stdlib_field, test_field_fibbonaci)
 //     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[17]), { { expected, 0, 0, 0 } }), true);
 
 //     EXPECT_EQ(prover.n, 32UL);
-//     waffle::Verifier verifier = waffle::preprocess(prover);
+//     waffle::Verifier verifier = composer.create_verifier();
 //     waffle::plonk_proof proof = prover.construct_proof();
 //     bool result = verifier.verify_proof(proof);
 //     EXPECT_EQ(result, true);
@@ -140,7 +140,7 @@ TEST(stdlib_field, test_larger_circuit)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -184,7 +184,7 @@ TEST(stdlib_field, is_zero)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
