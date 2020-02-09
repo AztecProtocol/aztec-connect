@@ -172,14 +172,7 @@ TEST(stdlib_pedersen, test_pedersen_large)
         left = plonk::stdlib::pedersen::compress(left, right);
     }
 
-    left = plonk::stdlib::pedersen::compress(left, right);
-    field_t foo = witness_t(&composer, fr::one);
-    uint32_t cache = foo.witness_index;
-
-    field_t bar = public_witness_t(&composer, fr::one);
-
-    bar = foo + bar - foo;
-    composer.set_public_input(cache);
+    composer.set_public_input(left.witness_index);
 
     waffle::TurboProver prover = composer.preprocess();
 
