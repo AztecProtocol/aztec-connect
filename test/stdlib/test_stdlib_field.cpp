@@ -37,7 +37,7 @@ void fibbonaci(waffle::StandardComposer& composer)
 }
 uint64_t fidget(waffle::StandardComposer& composer)
 {
-    field_t a(stdlib::public_witness_t(&composer, fr::one)); // a is a legit wire value in our circuit
+    field_t a(public_witness_t(&composer, fr::one)); // a is a legit wire value in our circuit
     field_t b(&composer, (fr::one)); // b is just a constant, and should not turn up as a wire value in our circuit
 
     // this shouldn't create a constraint - we just need to scale the addition/multiplication gates that `a` is involved
@@ -153,8 +153,8 @@ TEST(stdlib_field, is_zero)
     waffle::StandardComposer composer = waffle::StandardComposer();
 
     // yuck
-    field_t a = witness_t(public_witness_t(&composer, fr::random_element()));
-    field_t b = witness_t(public_witness_t(&composer, fr::neg_one()));
+    field_t a = (public_witness_t(&composer, fr::random_element()));
+    field_t b = (public_witness_t(&composer, fr::neg_one()));
     field_t c_1(&composer,  barretenberg::fr::to_montgomery_form({{ 0x1122334455667788, 0x8877665544332211, 0xaabbccddeeff9933, 0x1122112211221122 }}));
     field_t c_2(&composer,  barretenberg::fr::to_montgomery_form({{ 0xaabbccddeeff9933, 0x8877665544332211, 0x1122334455667788, 0x1122112211221122 }}));
     field_t c_3(&composer,  barretenberg::fr::one);

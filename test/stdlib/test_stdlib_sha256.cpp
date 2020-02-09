@@ -36,7 +36,7 @@ TEST(stdlib_sha256, test_sha256)
     waffle::ExtendedComposer composer = waffle::ExtendedComposer();
     std::array<uint32, 16> inputs;
     for (size_t i = 0; i < 16; ++i) {
-        inputs[i] = uint32(witness_t(public_witness_t(&composer, get_random_int())));
+        inputs[i] = uint32(public_witness_t(&composer, get_random_int()));
     }
 
     std::array<uint32, 8> init_constants;

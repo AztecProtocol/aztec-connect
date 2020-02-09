@@ -37,7 +37,7 @@ TEST(stdlib_pedersen, test_pedersen)
     {
         fr::__add(right_in, fr::one, right_in);
     }
-    field_t left = witness_t(public_witness_t(&composer, left_in));
+    field_t left = public_witness_t(&composer, left_in);
     field_t right = witness_t(&composer, right_in);
 
     composer.fix_witness(left.witness_index, left.get_value());
@@ -174,7 +174,7 @@ TEST(stdlib_pedersen, test_pedersen_large)
     field_t foo = witness_t(&composer, fr::one);
     uint32_t cache = foo.witness_index;
 
-    field_t bar = witness_t(public_witness_t(&composer, fr::one));
+    field_t bar = public_witness_t(&composer, fr::one);
 
     bar = foo + bar - foo;
     composer.set_public_input(cache);

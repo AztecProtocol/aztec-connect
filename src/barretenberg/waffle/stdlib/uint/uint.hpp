@@ -3,6 +3,7 @@
 #include <cmath>
 #include <numeric>
 #include <vector>
+#include <iostream>
 
 #include "../../../assert.hpp"
 #include "../../../curves/bn254/fr.hpp"
