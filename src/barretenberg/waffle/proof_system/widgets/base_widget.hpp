@@ -11,7 +11,7 @@
 #include "../verification_key/verification_key.hpp"
 
 namespace transcript {
-    class Transcript;
+class Transcript;
 }
 
 namespace waffle {
@@ -33,7 +33,7 @@ class VerifierBaseWidget {
     VerifierBaseWidget(const VerifierBaseWidget& other) = default;
 
     VerifierBaseWidget(VerifierBaseWidget&& other) = default;
-    ~VerifierBaseWidget() = default;
+    virtual ~VerifierBaseWidget() = default;
 
     virtual challenge_coefficients append_scalar_multiplication_inputs(
         verification_key*,

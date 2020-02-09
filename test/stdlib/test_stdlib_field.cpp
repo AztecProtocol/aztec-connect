@@ -128,7 +128,7 @@ TEST(stdlib_field, test_equality)
     EXPECT_EQ(fr::eq(x, { { 1, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 8UL);
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -152,7 +152,7 @@ TEST(stdlib_field, test_equality_false)
     EXPECT_EQ(fr::eq(x, { { 0, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 8UL);
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -177,7 +177,7 @@ TEST(stdlib_field, test_equality_with_constants)
     EXPECT_EQ(fr::eq(x, { { 1, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 16UL);
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 

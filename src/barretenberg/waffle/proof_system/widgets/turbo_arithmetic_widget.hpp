@@ -5,10 +5,6 @@
 namespace waffle {
 class VerifierTurboArithmeticWidget : public VerifierBaseWidget {
   public:
-    VerifierTurboArithmeticWidget()
-        : VerifierBaseWidget()
-    {}
-
     VerifierTurboArithmeticWidget();
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
