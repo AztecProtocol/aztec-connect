@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../../../curves/bn254/fr.hpp"
-#include "../bool/bool.hpp"
 #include "../common.hpp"
 
 namespace waffle
@@ -15,6 +14,8 @@ namespace waffle
 
 namespace plonk {
 namespace stdlib {
+
+template <typename ComposerContext> class bool_t;
 
 template <typename ComposerContext> class field_t {
   public:

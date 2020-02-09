@@ -5,6 +5,11 @@
 #include "../../assert.hpp"
 #include "../../keccak/keccak.h"
 
+#include "../composer/mimc_composer.hpp"
+#include "../composer/standard_composer.hpp"
+
+#include "./field/field.hpp"
+
 namespace plonk
 {
 namespace stdlib

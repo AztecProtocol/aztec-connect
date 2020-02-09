@@ -1,18 +1,21 @@
 #pragma once
 
-#include <algorithm>
 #include <vector>
 #include <string>
-
-#include "../../composer/standard_composer.hpp"
-#include "../../composer/bool_composer.hpp"
-#include "../../composer/mimc_composer.hpp"
-#include "../../composer/extended_composer.hpp"
-#include "../../composer/turbo_composer.hpp"
+#include <array>
 
 #include "../bool/bool.hpp"
 #include "../uint32/uint32.hpp"
 #include "../common.hpp"
+
+namespace waffle
+{
+    class StandardComposer;
+    class BoolComposer;
+    class MiMCComposer;
+    class ExtendedComposer;
+    class TurboComposer;
+}
 
 namespace plonk
 {
@@ -29,11 +32,14 @@ public:
 
     template <size_t N> bitarray(const std::array<uint32<ComposerContext>, N>& input)
     {
-        auto it = std::find_if(input.begin(), input.end(), [](const auto& x) { return x.get_context() != nullptr; });
-        if (it != std::end(input)) {
-            context = it->get_context();
-        } else {
-            context = nullptr;
+        context = nullptr;
+        for (const auto& x : input)
+        {
+            if (x.get_context() != nullptr)
+            {
+                context = x.get_context();
+                break;
+            }
         }
 
         size_t num_words = static_cast<size_t>(N);

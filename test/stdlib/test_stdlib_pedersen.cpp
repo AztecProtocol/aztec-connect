@@ -9,6 +9,8 @@
 
 #include <barretenberg/waffle/stdlib/bitarray/bitarray.hpp>
 #include <barretenberg/waffle/stdlib/common.hpp>
+#include <barretenberg/waffle/stdlib/field/field.hpp>
+
 #include <barretenberg/waffle/stdlib/crypto/hash/pedersen.hpp>
 #include <barretenberg/waffle/stdlib/group/group_utils.hpp>
 #include <iostream>

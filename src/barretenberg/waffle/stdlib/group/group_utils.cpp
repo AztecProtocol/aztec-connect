@@ -1,6 +1,6 @@
+#include "./group_utils.hpp"
 
 #include "../../../curves/grumpkin/grumpkin.hpp"
-#include "./group_utils.hpp"
 
 namespace plonk
 {

@@ -1,12 +1,22 @@
 #pragma once
 
-#include "../../bitarray/bitarray.hpp"
-#include "../../uint32/uint32.hpp"
+#include <array>
+
+namespace waffle
+{
+    class StandardComposer;
+    class BoolComposer;
+    class MiMCComposer;
+    class ExtendedComposer;
+    class TurboComposer;
+}
 
 namespace plonk
 {
 namespace stdlib
 {
+template <typename Composer> class uint32;
+template <typename Composer> class bitarray;
 
 template <typename Composer> void prepare_constants(std::array<uint32<Composer>, 8>& input);
 

@@ -3,21 +3,16 @@
 #include <algorithm>
 #include <numeric>
 
-#include "../../../assert.hpp"
 #include "../../../curves/bn254/fr.hpp"
-
-
-#include "../bool/bool.hpp"
-#include "../common.hpp"
-#include "../field/field.hpp"
-#include "../int_utils.hpp"
-
+#include "../../../assert.hpp"
 
 #include "../../composer/standard_composer.hpp"
 #include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
 #include "../../composer/extended_composer.hpp"
 #include "../../composer/turbo_composer.hpp"
+
+#include "../field/field.hpp"
 
 namespace plonk {
 namespace stdlib {
@@ -973,6 +968,28 @@ template <typename ComposerContext> uint<ComposerContext> uint<ComposerContext>:
     ASSERT(const_rotation < width());
 
     return ror(width() - const_rotation);
+}
+
+template <typename ComposerContext> uint64_t uint<ComposerContext>::get_value() const
+{
+    uint64_t max = static_cast<uint64_t>(std::pow(2ULL, width()));
+    if (context == nullptr) {
+        return additive_constant % max;
+    }
+    if (witness_status == IN_BINARY_FORM) {
+        return std::accumulate(bool_wires.rbegin(),
+                               bool_wires.rend(),
+                               0U,
+                               [](auto acc, auto wire) { return (acc + acc + wire.get_value()); }) %
+               max;
+    }
+    // normalize();
+    if (is_constant()) {
+        return (multiplicative_constant * additive_constant) % max;
+    }
+    uint64_t base =
+        static_cast<uint64_t>(barretenberg::fr::from_montgomery_form(context->get_variable(witness_index)).data[0]);
+    return (base * multiplicative_constant + additive_constant) % max;
 }
 
 template <typename ComposerContext> bool_t<ComposerContext> uint<ComposerContext>::at(const size_t bit_index) const

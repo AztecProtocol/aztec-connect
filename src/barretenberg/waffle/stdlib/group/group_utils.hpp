@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../../curves/grumpkin/grumpkin.hpp"
+
 namespace plonk {
 namespace stdlib {
 namespace group_utils {

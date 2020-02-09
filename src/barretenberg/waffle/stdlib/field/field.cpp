@@ -2,13 +2,14 @@
 
 #include "../../../assert.hpp"
 #include "../../../curves/bn254/fr.hpp"
-#include "../bool/bool.hpp"
 
 #include "../../composer/standard_composer.hpp"
 #include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
 #include "../../composer/extended_composer.hpp"
 #include "../../composer/turbo_composer.hpp"
+
+#include "../bool/bool.hpp"
 
 namespace plonk {
 namespace stdlib {

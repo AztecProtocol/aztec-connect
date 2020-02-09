@@ -1,7 +1,10 @@
 #pragma once
 
-#include "../../composer/turbo_composer.hpp"
 #include "../field/field.hpp"
+
+namespace waffle {
+class TurboComposer;
+}
 
 namespace plonk {
 namespace stdlib {

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory.h>
+#include <string>
+
 #include "../../keccak/keccak.h"
 #include "../sha256/sha256.hpp"
 

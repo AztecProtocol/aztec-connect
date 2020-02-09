@@ -1,13 +1,19 @@
 #pragma once
 
-#include "../composer/mimc_composer.hpp"
-#include "../composer/standard_composer.hpp"
-#include "./field/field.hpp"
+#include <vector>
+
+namespace waffle
+{
+    class StandardComposer;
+    class MiMCComposer;
+}
 
 namespace plonk
 {
 namespace stdlib
 {
+
+template <typename ComposerContext> class field_t;
 
 field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer>& input,
                                                 field_t<waffle::MiMCComposer>& k_in);

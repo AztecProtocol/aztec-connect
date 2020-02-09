@@ -1,8 +1,10 @@
 #include "./pedersen.hpp"
 
+#include "../../../composer/turbo_composer.hpp"
+
 #include "../../field/field.hpp"
 #include "../../group/group_utils.hpp"
-#include "../../../composer/turbo_composer.hpp"
+
 #include "../crypto.hpp"
 
 namespace plonk {

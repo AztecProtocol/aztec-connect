@@ -5,6 +5,12 @@
 #include <string>
 #include <array>
 
+#include "../../composer/standard_composer.hpp"
+#include "../../composer/bool_composer.hpp"
+#include "../../composer/mimc_composer.hpp"
+#include "../../composer/extended_composer.hpp"
+#include "../../composer/turbo_composer.hpp"
+
 namespace plonk
 {
 namespace stdlib
