@@ -15,6 +15,27 @@ struct miller_lines;
 
 namespace waffle
 {
+class VerifierReferenceString
+{
+public:
+
+    VerifierReferenceString();
+    VerifierReferenceString(const size_t num_points);
+    VerifierReferenceString(const VerifierReferenceString &other);
+    VerifierReferenceString(VerifierReferenceString &&other);
+
+    VerifierReferenceString & operator=(const VerifierReferenceString& other);
+    VerifierReferenceString & operator=(VerifierReferenceString &&other);
+
+    ~VerifierReferenceString();
+
+    barretenberg::g2::affine_element g2_x;
+
+    barretenberg::pairing::miller_lines *precomputed_g2_lines;
+
+    size_t degree;
+};
+
 class ReferenceString
 {
 public:

@@ -10,6 +10,96 @@
 
 namespace waffle
 {
+    VerifierReferenceString::VerifierReferenceString() : precomputed_g2_lines(nullptr), degree(0) {}
+
+    VerifierReferenceString::VerifierReferenceString(const size_t num_points)
+    {
+        degree = num_points;
+        if (num_points > 0)
+        {
+            precomputed_g2_lines = (barretenberg::pairing::miller_lines*)(aligned_alloc(64, sizeof(barretenberg::pairing::miller_lines) * 2));
+            barretenberg::io::read_transcript_g2(g2_x, degree, BARRETENBERG_SRS_PATH);
+
+            barretenberg::g2::element g2_x_jac;
+            barretenberg::g2::affine_to_jacobian(g2_x, g2_x_jac);
+            barretenberg::pairing::precompute_miller_lines(barretenberg::g2::one, precomputed_g2_lines[0]);
+            barretenberg::pairing::precompute_miller_lines(g2_x_jac, precomputed_g2_lines[1]);
+        }
+        else
+        {
+            precomputed_g2_lines = nullptr;
+        }
+    }
+
+    VerifierReferenceString::VerifierReferenceString(const VerifierReferenceString& other)
+    : degree(other.degree)
+    {
+        precomputed_g2_lines = (barretenberg::pairing::miller_lines*)(aligned_alloc(64, sizeof(barretenberg::pairing::miller_lines) * 2));
+
+        memcpy(static_cast<void*>(precomputed_g2_lines), static_cast<void*>(other.precomputed_g2_lines), sizeof(barretenberg::pairing::miller_lines) * 2);
+
+        barretenberg::g2::copy_affine(other.g2_x, g2_x);
+    }
+    
+
+    VerifierReferenceString::VerifierReferenceString(VerifierReferenceString &&other) : precomputed_g2_lines(nullptr), degree(other.degree)
+    {
+        if (other.precomputed_g2_lines != nullptr)
+        {
+            precomputed_g2_lines = other.precomputed_g2_lines;
+            other.precomputed_g2_lines = nullptr;
+        }
+
+        barretenberg::g2::copy_affine(other.g2_x, g2_x);
+    }
+
+    VerifierReferenceString &VerifierReferenceString::operator=(const VerifierReferenceString &other)
+    {
+        if (precomputed_g2_lines != nullptr)
+        {
+            aligned_free(precomputed_g2_lines);
+            precomputed_g2_lines = nullptr;
+        }
+
+        degree = other.degree;
+
+        precomputed_g2_lines = (barretenberg::pairing::miller_lines *)(aligned_alloc(64, sizeof(barretenberg::pairing::miller_lines) * 2));
+
+        memcpy(static_cast<void *>(precomputed_g2_lines), static_cast<void *>(other.precomputed_g2_lines), sizeof(barretenberg::pairing::miller_lines) * 2);
+
+        barretenberg::g2::copy_affine(other.g2_x, g2_x);
+        return *this;
+    }
+
+    VerifierReferenceString &VerifierReferenceString::operator=(VerifierReferenceString &&other)
+    {
+        if (precomputed_g2_lines != nullptr)
+        {
+            aligned_free(precomputed_g2_lines);
+            precomputed_g2_lines = nullptr;
+        }
+
+        degree = other.degree;
+
+        if (other.precomputed_g2_lines != nullptr)
+        {
+            precomputed_g2_lines = other.precomputed_g2_lines;
+            other.precomputed_g2_lines = nullptr;
+        }
+
+        barretenberg::g2::copy_affine(other.g2_x, g2_x);
+
+        return *this;
+    }
+
+    VerifierReferenceString::~VerifierReferenceString()
+    {
+        if (precomputed_g2_lines != nullptr)
+        {
+            aligned_free(precomputed_g2_lines);
+        }
+    }
+
     ReferenceString::ReferenceString() : monomials(nullptr), precomputed_g2_lines(nullptr), degree(0) {}
 
 

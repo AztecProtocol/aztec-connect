@@ -5,19 +5,24 @@
 namespace waffle {
 class VerifierTurboRangeWidget : public VerifierBaseWidget {
   public:
-    VerifierTurboRangeWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
+    VerifierTurboRangeWidget();
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
+        verification_key*,
         const challenge_coefficients& challenge,
         const transcript::Transcript& transcript,
         std::vector<barretenberg::g1::affine_element>& points,
-        std::vector<barretenberg::fr::field_t>& scalars);
+        std::vector<barretenberg::fr::field_t>& scalars) override;
 
-    barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t&,
+    barretenberg::fr::field_t compute_batch_evaluation_contribution(verification_key*,
+                                                                    barretenberg::fr::field_t&,
                                                                     const barretenberg::fr::field_t& nu_base,
-                                                                    const transcript::Transcript&);
+                                                                    const transcript::Transcript&) override;
 
-    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t&, const transcript::Transcript& transcript, barretenberg::fr::field_t&, const barretenberg::evaluation_domain& );
+    barretenberg::fr::field_t compute_quotient_evaluation_contribution(verification_key*,
+                                                                       const barretenberg::fr::field_t&,
+                                                                       const transcript::Transcript& transcript,
+                                                                       barretenberg::fr::field_t&) override;
 };
 
 class ProverTurboRangeWidget : public ProverBaseWidget {
@@ -38,12 +43,9 @@ class ProverTurboRangeWidget : public ProverBaseWidget {
                                                                 barretenberg::fr::field_t*,
                                                                 barretenberg::fr::field_t*);
 
-    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const ReferenceString& reference_string) const;
-
     void compute_transcript_elements(transcript::Transcript& transcript);
 
     barretenberg::polynomial& q_range;
     barretenberg::polynomial& q_range_fft;
-
 };
 } // namespace waffle

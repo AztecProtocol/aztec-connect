@@ -9,6 +9,7 @@
 
 #include "../program_settings.hpp"
 #include "../widgets/base_widget.hpp"
+#include "../verification_key/verification_key.hpp"
 
 namespace waffle {
 template <typename program_settings> class VerifierBase {
@@ -16,10 +17,8 @@ template <typename program_settings> class VerifierBase {
     typedef barretenberg::g1 g1;
 
   public:
-    VerifierBase(const size_t subgroup_size = 0,
-                 const size_t num_public_inputs = 0,
-                 const transcript::Manifest& manifest = transcript::Manifest({}),
-                 bool has_fourth_wire = false);
+    VerifierBase(std::shared_ptr<verification_key> verifier_key = nullptr,
+                 const transcript::Manifest& manifest = transcript::Manifest({}));
     VerifierBase(VerifierBase&& other);
     VerifierBase(const VerifierBase& other) = delete;
     VerifierBase& operator=(const VerifierBase& other) = delete;
@@ -27,17 +26,11 @@ template <typename program_settings> class VerifierBase {
 
     bool verify_proof(const waffle::plonk_proof& proof);
 
-    ReferenceString reference_string;
-
-    std::array<barretenberg::g1::affine_element, program_settings::program_width> SIGMA;
-
     std::vector<std::unique_ptr<VerifierBaseWidget>> verifier_widgets;
-    size_t n;
-    size_t num_public_inputs;
 
     transcript::Manifest manifest;
 
-    bool __DEBUG_HAS_FOURTH_WIRE;
+    std::shared_ptr<verification_key> key;
 };
 
 extern template class VerifierBase<standard_settings>;

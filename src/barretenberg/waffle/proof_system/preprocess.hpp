@@ -11,6 +11,8 @@
 #include "./verifier/verifier.hpp"
 #include "./widgets/base_widget.hpp"
 
+#include "./verification_key/verification_key.hpp"
+
 namespace waffle
 {
 template <typename settings>
@@ -21,16 +23,20 @@ inline VerifierBase<settings> preprocess(const ProverBase<settings>& prover)
     {
         polys[i] = barretenberg::polynomial(prover.key->permutation_selectors.at("sigma_" + std::to_string(i + 1)), prover.n);
     }
-    VerifierBase<settings> verifier(prover.n, prover.key->num_public_inputs, prover.transcript.get_manifest(), settings::program_width > 3);
 
+    std::shared_ptr<verification_key> key = std::make_shared<verification_key>(prover.n, prover.key->num_public_inputs);
+    
     for (size_t i = 0; i < settings::program_width; ++i) {
+        barretenberg::g1::affine_element sigma_commitment;
         barretenberg::g1::jacobian_to_affine(
             barretenberg::scalar_multiplication::pippenger(
                 polys[i].get_coefficients(), prover.key->reference_string.monomials, prover.n),
-            verifier.SIGMA[i]);
+            sigma_commitment);
+        key->permutation_selectors.insert({ "SIGMA_" + std::to_string(i + 1), sigma_commitment });
     }
 
-    verifier.reference_string = prover.key->reference_string.get_verifier_reference_string();
+    VerifierBase<settings> verifier(key, prover.transcript.get_manifest());
+
     // TODO: this whole method should be part of the class that owns prover.widgets
     for (size_t i = 0; i < prover.widgets.size(); ++i)
     {

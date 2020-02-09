@@ -5,6 +5,7 @@
 #include "../../../types.hpp"
 
 #include "../proving_key/proving_key.hpp"
+#include "../verification_key/verification_key.hpp"
 
 using namespace barretenberg;
 
@@ -142,46 +143,24 @@ fr::field_t ProverBoolWidget::compute_opening_poly_contribution(const fr::field_
     return nu_base;
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverBoolWidget::compute_preprocessed_commitments(
-    const ReferenceString& reference_string) const
-{
-    polynomial polys[3]{ polynomial(q_bl, key->small_domain.size),
-                         polynomial(q_br, key->small_domain.size),
-                         polynomial(q_bo, key->small_domain.size) };
-
-    std::vector<g1::affine_element> commitments;
-    commitments.resize(3);
-
-    for (size_t i = 0; i < 3; ++i) {
-        g1::jacobian_to_affine(scalar_multiplication::pippenger(
-                                   polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
-                               commitments[i]);
-    }
-    std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierBoolWidget>(commitments);
-    return result;
-}
-
 // ###
 
-VerifierBoolWidget::VerifierBoolWidget(std::vector<g1::affine_element>& instance_commitments)
+VerifierBoolWidget::VerifierBoolWidget()
     : VerifierBaseWidget()
 {
-    ASSERT(instance_commitments.size() == 3);
-    instance =
-        std::vector<g1::affine_element>{ instance_commitments[0], instance_commitments[1], instance_commitments[2] };
 }
 
 fr::field_t VerifierBoolWidget::compute_quotient_evaluation_contribution(
+    verification_key*,
     const fr::field_t& alpha_base,
     const transcript::Transcript& transcript,
-    fr::field_t&,
-    const evaluation_domain&)
+    fr::field_t&)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
     return fr::mul(alpha_base, fr::mul(fr::sqr(alpha), alpha));
 }
 
-fr::field_t VerifierBoolWidget::compute_batch_evaluation_contribution(fr::field_t&,
+fr::field_t VerifierBoolWidget::compute_batch_evaluation_contribution(verification_key*,fr::field_t&,
                                                                 const fr::field_t& nu_base,
                                                                 const transcript::Transcript&)
 {
@@ -189,6 +168,7 @@ fr::field_t VerifierBoolWidget::compute_batch_evaluation_contribution(fr::field_
 };
 
 VerifierBaseWidget::challenge_coefficients VerifierBoolWidget::append_scalar_multiplication_inputs(
+    verification_key* key,
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
     std::vector<g1::affine_element>& points,
@@ -208,16 +188,16 @@ VerifierBaseWidget::challenge_coefficients VerifierBoolWidget::append_scalar_mul
     right_bool_multiplier = fr::mul(right_bool_multiplier, challenge.linear_nu);
     output_bool_multiplier = fr::mul(output_bool_multiplier, challenge.linear_nu);
 
-    if (g1::on_curve(instance[0])) {
-        points.push_back(instance[0]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_BL"))) {
+        points.push_back(key->constraint_selectors.at("Q_BL"));
         scalars.push_back(left_bool_multiplier);
     }
-    if (g1::on_curve(instance[1])) {
-        points.push_back(instance[1]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_BR"))) {
+        points.push_back(key->constraint_selectors.at("Q_BR"));
         scalars.push_back(right_bool_multiplier);
     }
-    if (g1::on_curve(instance[2])) {
-        points.push_back(instance[2]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_BO"))) {
+        points.push_back(key->constraint_selectors.at("Q_BO"));
         scalars.push_back(output_bool_multiplier);
     }
 

@@ -659,7 +659,7 @@ std::shared_ptr<verification_key> TurboComposer::compute_verification_key()
         compute_proving_key();
     }
 
-    std::array<fr::field_t*, 13> poly_coefficients;
+    std::array<fr::field_t*, 14> poly_coefficients;
     poly_coefficients[0] = circuit_proving_key->constraint_selectors.at("q_1").get_coefficients();
     poly_coefficients[1] = circuit_proving_key->constraint_selectors.at("q_2").get_coefficients();
     poly_coefficients[2] = circuit_proving_key->constraint_selectors.at("q_3").get_coefficients();
@@ -674,17 +674,18 @@ std::shared_ptr<verification_key> TurboComposer::compute_verification_key()
     poly_coefficients[10] = circuit_proving_key->permutation_selectors.at("sigma_1").get_coefficients();
     poly_coefficients[11] = circuit_proving_key->permutation_selectors.at("sigma_2").get_coefficients();
     poly_coefficients[12] = circuit_proving_key->permutation_selectors.at("sigma_3").get_coefficients();
+    poly_coefficients[13] = circuit_proving_key->permutation_selectors.at("sigma_4").get_coefficients();
 
     std::vector<barretenberg::g1::affine_element> commitments;
-    commitments.resize(13);
+    commitments.resize(14);
 
-    for (size_t i = 0; i < 13; ++i) {
+    for (size_t i = 0; i < 14; ++i) {
         g1::jacobian_to_affine(
             scalar_multiplication::pippenger(poly_coefficients[i], circuit_proving_key->reference_string.monomials, circuit_proving_key->n),
             commitments[i]);
     }
 
-    circuit_verification_key = std::make_shared<verification_key>(circuit_proving_key->n);
+    circuit_verification_key = std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs);
 
     circuit_verification_key->constraint_selectors.insert({ "Q_1", commitments[0] });
     circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });
@@ -693,13 +694,14 @@ std::shared_ptr<verification_key> TurboComposer::compute_verification_key()
     circuit_verification_key->constraint_selectors.insert({ "Q_4_NEXT", commitments[4] });
     circuit_verification_key->constraint_selectors.insert({ "Q_M", commitments[5] });
     circuit_verification_key->constraint_selectors.insert({ "Q_C", commitments[6] });
-    circuit_verification_key->constraint_selectors.insert({ "Q_ARITH", commitments[7] });
-    circuit_verification_key->constraint_selectors.insert({ "Q_ECC_1", commitments[8] });
-    circuit_verification_key->constraint_selectors.insert({ "Q_RANGE", commitments[9] });
+    circuit_verification_key->constraint_selectors.insert({ "Q_ARITHMETIC_SELECTOR", commitments[7] });
+    circuit_verification_key->constraint_selectors.insert({ "Q_FIXED_BASE_SELECTOR", commitments[8] });
+    circuit_verification_key->constraint_selectors.insert({ "Q_RANGE_SELECTOR", commitments[9] });
 
     circuit_verification_key->permutation_selectors.insert({ "SIGMA_1", commitments[10] });
     circuit_verification_key->permutation_selectors.insert({ "SIGMA_2", commitments[11] });
     circuit_verification_key->permutation_selectors.insert({ "SIGMA_3", commitments[12] });
+    circuit_verification_key->permutation_selectors.insert({ "SIGMA_4", commitments[13] });
 
     computed_verification_key = true;
     return circuit_verification_key;
@@ -766,6 +768,21 @@ TurboProver TurboComposer::preprocess()
 
     output_state.widgets.emplace_back(std::move(fixed_base_widget));
     output_state.widgets.emplace_back(std::move(range_widget));
+
+    return output_state;
+}
+
+TurboVerifier TurboComposer::create_verifier()
+{
+    compute_verification_key();
+
+    TurboVerifier output_state(circuit_verification_key, create_manifest(public_inputs.size()));
+
+    std::unique_ptr<VerifierTurboFixedBaseWidget> fixed_base_widget = std::make_unique<VerifierTurboFixedBaseWidget>();
+    std::unique_ptr<VerifierTurboRangeWidget> range_widget = std::make_unique<VerifierTurboRangeWidget>();
+
+    output_state.verifier_widgets.emplace_back(std::move(fixed_base_widget));
+    output_state.verifier_widgets.emplace_back(std::move(range_widget));
 
     return output_state;
 }

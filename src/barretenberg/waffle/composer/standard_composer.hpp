@@ -30,6 +30,7 @@ class StandardComposer : public ComposerBase {
     virtual std::shared_ptr<proving_key> compute_proving_key() override;
     virtual std::shared_ptr<verification_key> compute_verification_key() override;
     virtual std::shared_ptr<program_witness> compute_witness() override;
+    Verifier create_verifier();
     Prover preprocess();
 
     void create_add_gate(const add_triple& in) override;

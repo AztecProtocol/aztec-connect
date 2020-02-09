@@ -29,7 +29,7 @@ TEST(turbo_composer, base_case)
 
     waffle::TurboProver prover = composer.preprocess();
 
-    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -92,7 +92,7 @@ TEST(turbo_composer, test_add_gate_proofs)
 
     waffle::TurboProver prover = composer.preprocess();
 
-    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -178,7 +178,7 @@ TEST(turbo_composer, test_mul_gate_proofs)
     composer.create_add_gate({ e_idx, b_idx, c_idx, q[0], q[1], q[2], fr::add(q[3], q[0]) });
     waffle::TurboProver prover = composer.preprocess();
 
-    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -315,7 +315,7 @@ TEST(turbo_composer, small_scalar_multipliers)
 
     waffle::TurboProver prover = composer.preprocess();
 
-    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -461,7 +461,7 @@ TEST(turbo_composer, large_scalar_multipliers)
 
     waffle::TurboProver prover = composer.preprocess();
 
-    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -514,7 +514,7 @@ TEST(turbo_composer, range_constraint)
 
     waffle::TurboProver prover = composer.preprocess();
 
-    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 

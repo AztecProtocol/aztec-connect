@@ -204,7 +204,7 @@ template <typename T> void test_sha256(T const& input, std::vector<uint8_t> cons
 
     EXPECT_EQ(output, expected);
 
-    waffle::ExtendedVerifier verifier = waffle::preprocess(r.second);
+    waffle::ExtendedVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = r.second.construct_proof();
 
     bool result = verifier.verify_proof(proof);

@@ -19,6 +19,7 @@ class TurboComposer : public ComposerBase {
     std::shared_ptr<program_witness> compute_witness() override;
 
     TurboProver preprocess();
+    TurboVerifier create_verifier();
 
     void create_dummy_gate();
     void create_add_gate(const add_triple& in) override;

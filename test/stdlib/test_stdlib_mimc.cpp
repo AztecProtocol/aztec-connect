@@ -39,8 +39,8 @@ TEST(stdlib_mimc, composer_consistency_check)
     waffle::Prover standard_prover = standard_composer.preprocess();
     waffle::ExtendedProver mimc_prover = mimc_composer.preprocess();
 
-    waffle::Verifier standard_verifier = waffle::preprocess(standard_prover);
-    waffle::ExtendedVerifier mimc_verifier = waffle::preprocess(mimc_prover);
+    waffle::Verifier standard_verifier = standard_composer.create_verifier();
+    waffle::ExtendedVerifier mimc_verifier = mimc_composer.create_verifier();
 
 
     waffle::plonk_proof proofs[2]{
@@ -70,7 +70,7 @@ TEST(stdlib_mimc, repeated_hashing)
     stdlib::mimc7(inputs);
     waffle::ExtendedProver prover = mimc_composer.preprocess();
 
-    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = mimc_composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 

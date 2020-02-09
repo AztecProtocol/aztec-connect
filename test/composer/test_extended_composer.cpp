@@ -152,7 +152,7 @@ TEST(extended_composer, test_combine_linear_relations_uint32)
         EXPECT_EQ(fr::eq(prover.witness->wires.at("w_2")[i], fr::zero), true);
         EXPECT_EQ(fr::eq(prover.witness->wires.at("w_3")[i], fr::zero), true);
     }
-    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -203,7 +203,7 @@ TEST(extended_composer, composer_consistency)
         // EXPECT_EQ(standard_prover.sigma_3_mapping[i], extended_prover.sigma_3_mapping[i]);
     }
 
-    waffle::Verifier verifier = waffle::preprocess(standard_prover);
+    waffle::Verifier verifier = standard_composer.create_verifier();
 
     waffle::plonk_proof proof = standard_prover.construct_proof();
 
@@ -229,7 +229,7 @@ TEST(extended_composer, basic_proof)
     EXPECT_EQ(composer.is_gate_deleted(0), false);
     EXPECT_EQ(composer.is_gate_deleted(1), false);
 
-    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -251,7 +251,7 @@ TEST(extended_composer, basic_optimized_proof)
 
     waffle::ExtendedProver prover = composer.preprocess();
 
-    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
 
     bool proof_valid = verifier.verify_proof(proof);
@@ -270,7 +270,7 @@ TEST(extended_composer, test_optimized_uint32_xor)
 
     EXPECT_EQ(composer.get_num_gates(), 65UL);
 
-    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_valid = verifier.verify_proof(proof);
     EXPECT_EQ(proof_valid, true);
@@ -288,7 +288,7 @@ TEST(extended_composer, test_optimized_uint32_and)
 
     EXPECT_EQ(composer.get_num_gates(), 65UL);
 
-    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_valid = verifier.verify_proof(proof);
     EXPECT_EQ(proof_valid, true);
@@ -306,7 +306,7 @@ TEST(extended_composer, test_optimized_uint32_or)
 
     EXPECT_EQ(composer.get_num_gates(), 65UL);
 
-    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_valid = verifier.verify_proof(proof);
     EXPECT_EQ(proof_valid, true);
@@ -330,7 +330,7 @@ TEST(extended_composer, small_optimized_circuit)
     }
 
     waffle::ExtendedProver prover = composer.preprocess();
-    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -348,7 +348,7 @@ TEST(extended_composer, logic_operations)
 
     waffle::ExtendedProver prover = composer.preprocess();
 
-    waffle::ExtendedVerifier verifier = waffle::preprocess(prover);
+    waffle::ExtendedVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 

@@ -68,8 +68,13 @@ void construct_instances_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
+        state.PauseTiming();
+        waffle::StandardComposer composer = waffle::StandardComposer(static_cast<size_t>(state.range(0)));
+        generate_test_plonk_circuit(composer, static_cast<size_t>(state.range(0)));
         size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
-        verifiers[idx] = (waffle::preprocess(provers[idx]));
+        composer.preprocess();
+        state.ResumeTiming();
+        verifiers[idx] = composer.create_verifier();
     }
 }
 BENCHMARK(construct_instances_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);

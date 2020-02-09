@@ -8,6 +8,7 @@
 #include "../transcript_helpers.hpp"
 
 #include "../proving_key/proving_key.hpp"
+#include "../verification_key/verification_key.hpp"
 
 using namespace barretenberg;
 
@@ -225,41 +226,15 @@ fr::field_t ProverTurboArithmeticWidget::compute_opening_poly_contribution(const
     return fr::mul(nu_base, nu);
 }
 
-std::unique_ptr<VerifierBaseWidget> ProverTurboArithmeticWidget::compute_preprocessed_commitments(
-    const ReferenceString& reference_string) const
-{
-    polynomial polys[8]{ polynomial(q_1, key->small_domain.size),      polynomial(q_2, key->small_domain.size),
-                         polynomial(q_3, key->small_domain.size),      polynomial(q_4, key->small_domain.size),
-                         polynomial(q_4_next, key->small_domain.size), polynomial(q_m, key->small_domain.size),
-                         polynomial(q_c, key->small_domain.size),      polynomial(q_arith, key->small_domain.size) };
-
-    std::vector<barretenberg::g1::affine_element> commitments;
-    commitments.resize(8);
-
-    for (size_t i = 0; i < 8; ++i) {
-        g1::jacobian_to_affine(scalar_multiplication::pippenger(
-                                   polys[i].get_coefficients(), reference_string.monomials, key->small_domain.size),
-                               commitments[i]);
-    }
-    std::unique_ptr<VerifierBaseWidget> result = std::make_unique<VerifierTurboArithmeticWidget>(commitments);
-    return result;
-}
-
 // ###
 
-VerifierTurboArithmeticWidget::VerifierTurboArithmeticWidget(
-    std::vector<barretenberg::g1::affine_element>& instance_commitments)
+VerifierTurboArithmeticWidget::VerifierTurboArithmeticWidget()
     : VerifierBaseWidget()
 {
-    ASSERT(instance_commitments.size() == 8);
-    instance =
-        std::vector<g1::affine_element>{ instance_commitments[0], instance_commitments[1], instance_commitments[2],
-                                         instance_commitments[3], instance_commitments[4], instance_commitments[5],
-                                         instance_commitments[6], instance_commitments[7] };
 }
 
 fr::field_t VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribution(
-    const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t&, const evaluation_domain&)
+    verification_key*, const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t&)
 {
     // fr::field_t z_challenge = fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
     // printf("z challenge = ");
@@ -291,6 +266,7 @@ fr::field_t VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribut
 }
 
 barretenberg::fr::field_t VerifierTurboArithmeticWidget::compute_batch_evaluation_contribution(
+    verification_key*,
     barretenberg::fr::field_t& batch_eval,
     const barretenberg::fr::field_t& nu_base,
     const transcript::Transcript& transcript)
@@ -306,6 +282,7 @@ barretenberg::fr::field_t VerifierTurboArithmeticWidget::compute_batch_evaluatio
 }
 
 VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append_scalar_multiplication_inputs(
+    verification_key* key,
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
     std::vector<barretenberg::g1::affine_element>& points,
@@ -323,8 +300,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
     fr::__mul(w_l_eval, challenge.alpha_base, q_l_term);
     fr::__mul(q_l_term, challenge.linear_nu, q_l_term);
     fr::__mul(q_l_term, q_arith_eval, q_l_term);
-    if (g1::on_curve(instance[0])) {
-        points.push_back(instance[0]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_1"))) {
+        points.push_back(key->constraint_selectors.at("Q_1"));
         scalars.push_back(q_l_term);
     }
 
@@ -332,8 +309,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
     fr::__mul(w_r_eval, challenge.alpha_base, q_r_term);
     fr::__mul(q_r_term, challenge.linear_nu, q_r_term);
     fr::__mul(q_r_term, q_arith_eval, q_r_term);
-    if (g1::on_curve(instance[1])) {
-        points.push_back(instance[1]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_2"))) {
+        points.push_back(key->constraint_selectors.at("Q_2"));
         scalars.push_back(q_r_term);
     }
 
@@ -341,8 +318,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
     fr::__mul(w_o_eval, challenge.alpha_base, q_o_term);
     fr::__mul(q_o_term, challenge.linear_nu, q_o_term);
     fr::__mul(q_o_term, q_arith_eval, q_o_term);
-    if (g1::on_curve(instance[2])) {
-        points.push_back(instance[2]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_3"))) {
+        points.push_back(key->constraint_selectors.at("Q_3"));
         scalars.push_back(q_o_term);
     }
 
@@ -350,8 +327,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
     fr::__mul(w_4_eval, challenge.alpha_base, q_4_term);
     fr::__mul(q_4_term, challenge.linear_nu, q_4_term);
     fr::__mul(q_4_term, q_arith_eval, q_4_term);
-    if (g1::on_curve(instance[3])) {
-        points.push_back(instance[3]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_4"))) {
+        points.push_back(key->constraint_selectors.at("Q_4"));
         scalars.push_back(q_4_term);
     }
 
@@ -359,8 +336,8 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
     fr::__mul(w_4_next_eval, challenge.alpha_base, q_4_next_term);
     fr::__mul(q_4_next_term, challenge.linear_nu, q_4_next_term);
     fr::__mul(q_4_next_term, q_arith_eval, q_4_next_term);
-    if (g1::on_curve(instance[4])) {
-        points.push_back(instance[4]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_4_NEXT"))) {
+        points.push_back(key->constraint_selectors.at("Q_4_NEXT"));
         scalars.push_back(q_4_next_term);
     }
 
@@ -370,21 +347,21 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
     fr::__mul(q_m_term, challenge.alpha_base, q_m_term);
     fr::__mul(q_m_term, q_arith_eval, q_m_term);
     fr::__mul(q_m_term, challenge.linear_nu, q_m_term);
-    if (g1::on_curve(instance[5])) {
-        points.push_back(instance[5]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_M"))) {
+        points.push_back(key->constraint_selectors.at("Q_M"));
         scalars.push_back(q_m_term);
     }
 
     fr::field_t q_c_term;
     fr::__mul(challenge.alpha_base, challenge.linear_nu, q_c_term);
     fr::__mul(q_c_term, q_arith_eval, q_c_term);
-    if (g1::on_curve(instance[6])) {
-        points.push_back(instance[6]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_C"))) {
+        points.push_back(key->constraint_selectors.at("Q_C"));
         scalars.push_back(q_c_term);
     }
 
-    if (g1::on_curve(instance[7])) {
-        points.push_back(instance[7]);
+    if (g1::on_curve(key->constraint_selectors.at("Q_ARITHMETIC_SELECTOR"))) {
+        points.push_back(key->constraint_selectors.at("Q_ARITHMETIC_SELECTOR"));
         scalars.push_back(challenge.nu_base);
     }
 

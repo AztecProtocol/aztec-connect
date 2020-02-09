@@ -202,7 +202,7 @@ TEST(standard_composer, test_add_gate_proofs)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -282,7 +282,7 @@ TEST(standard_composer, test_mul_gate_proofs)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 

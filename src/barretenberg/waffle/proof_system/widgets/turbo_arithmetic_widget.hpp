@@ -9,22 +9,24 @@ class VerifierTurboArithmeticWidget : public VerifierBaseWidget {
         : VerifierBaseWidget()
     {}
 
-    VerifierTurboArithmeticWidget(std::vector<barretenberg::g1::affine_element>& instance_commitments);
+    VerifierTurboArithmeticWidget();
 
     VerifierBaseWidget::challenge_coefficients append_scalar_multiplication_inputs(
+        verification_key* key,
         const challenge_coefficients& challenge,
         const transcript::Transcript& transcript,
         std::vector<barretenberg::g1::affine_element>& points,
-        std::vector<barretenberg::fr::field_t>& scalars);
+        std::vector<barretenberg::fr::field_t>& scalars) override;
 
-    barretenberg::fr::field_t compute_batch_evaluation_contribution(barretenberg::fr::field_t& batch_eval,
+    barretenberg::fr::field_t compute_batch_evaluation_contribution(verification_key*,
+                                                                    barretenberg::fr::field_t& batch_eval,
                                                                     const barretenberg::fr::field_t& nu_base,
-                                                                    const transcript::Transcript& transcript);
+                                                                    const transcript::Transcript& transcript) override;
 
-    barretenberg::fr::field_t compute_quotient_evaluation_contribution(const barretenberg::fr::field_t& alpha_base,
+    barretenberg::fr::field_t compute_quotient_evaluation_contribution(verification_key*,
+                                                                       const barretenberg::fr::field_t& alpha_base,
                                                                        const transcript::Transcript& transcript,
-                                                                       barretenberg::fr::field_t&,
-                                                                       const barretenberg::evaluation_domain&);
+                                                                       barretenberg::fr::field_t&) override;
 };
 
 class ProverTurboArithmeticWidget : public ProverBaseWidget {
@@ -44,8 +46,6 @@ class ProverTurboArithmeticWidget : public ProverBaseWidget {
                                                                 const transcript::Transcript&,
                                                                 barretenberg::fr::field_t*,
                                                                 barretenberg::fr::field_t*);
-
-    std::unique_ptr<VerifierBaseWidget> compute_preprocessed_commitments(const ReferenceString& reference_string) const;
 
     void compute_transcript_elements(transcript::Transcript& transcript);
 

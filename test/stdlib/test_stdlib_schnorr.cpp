@@ -60,7 +60,7 @@ TEST(stdlib_schnorr, test_scalar_mul)
     waffle::TurboProver prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -96,7 +96,7 @@ TEST(stdlib_schnorr, verify_signature)
     waffle::TurboProver prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = waffle::preprocess(prover);
+    waffle::TurboVerifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
