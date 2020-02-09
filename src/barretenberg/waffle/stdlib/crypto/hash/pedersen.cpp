@@ -151,10 +151,10 @@ point hash_single(const field_t& in, const size_t hash_index)
     return result;
 }
 
-field_t compress(const field_t& in_left, const field_t& in_right)
+field_t compress(const field_t& in_left, const field_t& in_right, const size_t hash_index)
 {
-    point first = hash_single(in_left, 0);
-    point second = hash_single(in_right, 1);
+    point first = hash_single(in_left, hash_index);
+    point second = hash_single(in_right, hash_index + 1);
 
     // combine hash limbs
     // TODO: replace this addition with a variable-base custom gate
@@ -163,6 +163,19 @@ field_t compress(const field_t& in_left, const field_t& in_right)
     return x_3;
 }
 
+
+point compress_to_point(const field_t& in_left, const field_t& in_right, const size_t hash_index)
+{
+    point first = hash_single(in_left, hash_index);
+    point second = hash_single(in_right, hash_index + 1);
+
+    // combine hash limbs
+    // TODO: replace this addition with a variable-base custom gate
+    field_t lambda = (second.y - first.y) / (second.x - first.x);
+    field_t x_3 = lambda * lambda - second.x - first.x;
+    field_t y_3 = lambda * (first.x - x_3) - first.y;
+    return { x_3, y_3 };
+}
 } // namespace pedersen
 } // namespace stdlib
 } // namespace plonk
