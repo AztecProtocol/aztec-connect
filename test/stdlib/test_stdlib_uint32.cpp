@@ -10,6 +10,7 @@
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 
 #include <barretenberg/waffle/stdlib/common.hpp>
+#include <barretenberg/waffle/stdlib/bool/bool.hpp>
 #include <barretenberg/waffle/stdlib/field/field.hpp>
 #include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
 
@@ -52,7 +53,7 @@ TEST(stdlib_uint32, test_add)
     }
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -93,7 +94,7 @@ TEST(stdlib_uint32, test_add_with_constants)
     }
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -130,7 +131,7 @@ TEST(stdlib_uint32, test_mul)
     EXPECT_EQ(c_result, c_expected);
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -169,7 +170,7 @@ TEST(stdlib_uint32, test_xor)
     EXPECT_EQ(a_result, a_expected);
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -225,7 +226,7 @@ TEST(stdlib_uint32, test_xor_more_constants)
     EXPECT_EQ(c_result, c_expected);
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -266,7 +267,7 @@ TEST(stdlib_uint32, test_and_constants)
     EXPECT_EQ(c_result, c_expected);
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -306,7 +307,7 @@ TEST(stdlib_uint32s, test_and)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -346,7 +347,7 @@ TEST(stdlib_uint32, test_or)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -391,7 +392,7 @@ TEST(stdlib_uint32, test_ror)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -518,7 +519,7 @@ TEST(stdlib_uint32, test_hash_rounds)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 

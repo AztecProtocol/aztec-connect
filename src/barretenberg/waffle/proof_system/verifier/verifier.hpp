@@ -1,31 +1,44 @@
 #pragma once
 
+#include "../../../transcript/manifest.hpp"
+#include "../../../transcript/transcript.hpp"
 #include "../../../types.hpp"
 
 #include "../../reference_string/reference_string.hpp"
 #include "../../waffle_types.hpp"
 
+#include "../program_settings.hpp"
 #include "../widgets/base_widget.hpp"
+#include "../verification_key/verification_key.hpp"
 
-namespace waffle
-{
-class Verifier
-{
+namespace waffle {
+template <typename program_settings> class VerifierBase {
+    typedef barretenberg::fr fr;
+    typedef barretenberg::g1 g1;
+
   public:
-    Verifier(const size_t subgroup_size = 0);
-    Verifier(Verifier&& other);
-    Verifier(const Verifier& other) = delete;
-    Verifier& operator=(const Verifier& other) = delete;
-    Verifier& operator=(Verifier&& other);
+    VerifierBase(std::shared_ptr<verification_key> verifier_key = nullptr,
+                 const transcript::Manifest& manifest = transcript::Manifest({}));
+    VerifierBase(VerifierBase&& other);
+    VerifierBase(const VerifierBase& other) = delete;
+    VerifierBase& operator=(const VerifierBase& other) = delete;
+    VerifierBase& operator=(VerifierBase&& other);
 
-    bool verify_proof(const plonk_proof& proof);
+    bool verify_proof(const waffle::plonk_proof& proof);
 
-    ReferenceString reference_string;
-
-    barretenberg::g1::affine_element SIGMA_1;
-    barretenberg::g1::affine_element SIGMA_2;
-    barretenberg::g1::affine_element SIGMA_3;
     std::vector<std::unique_ptr<VerifierBaseWidget>> verifier_widgets;
-    size_t n;
+
+    transcript::Manifest manifest;
+
+    std::shared_ptr<verification_key> key;
 };
+
+extern template class VerifierBase<standard_settings>;
+extern template class VerifierBase<extended_settings>;
+extern template class VerifierBase<turbo_settings>;
+
+typedef VerifierBase<standard_settings> Verifier;
+typedef VerifierBase<extended_settings> ExtendedVerifier;
+typedef VerifierBase<turbo_settings> TurboVerifier;
+
 } // namespace waffle

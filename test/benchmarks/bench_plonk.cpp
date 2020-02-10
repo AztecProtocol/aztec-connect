@@ -4,19 +4,17 @@
 
 #include <barretenberg/curves/bn254/fr.hpp>
 
-#include <barretenberg/waffle/composer/mimc_composer.hpp>
 #include <barretenberg/waffle/composer/standard_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
 
 #include <barretenberg/waffle/stdlib/field/field.hpp>
-#include <barretenberg/waffle/stdlib/mimc.hpp>
 
 using namespace benchmark;
 
 constexpr size_t MAX_GATES = 1 << 20;
-constexpr size_t NUM_CIRCUITS = 8;
+constexpr size_t NUM_CIRCUITS = 10;
 constexpr size_t START = (MAX_GATES) >> (NUM_CIRCUITS - 1);
 // constexpr size_t NUM_HASH_CIRCUITS = 8;
 // constexpr size_t MAX_HASH_ROUNDS = 8192;
@@ -46,18 +44,37 @@ void construct_witnesses_bench(State& state) noexcept
     {
         waffle::StandardComposer composer = waffle::StandardComposer(static_cast<size_t>(state.range(0)));
         generate_test_plonk_circuit(composer, static_cast<size_t>(state.range(0)));
-        size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
-        provers[idx] = composer.preprocess();
+        composer.compute_witness();
     }
 }
 BENCHMARK(construct_witnesses_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
+
+void construct_proving_keys_bench(State &state) noexcept
+{
+    for (auto _ : state)
+    {
+        waffle::StandardComposer composer = waffle::StandardComposer(static_cast<size_t>(state.range(0)));
+        generate_test_plonk_circuit(composer, static_cast<size_t>(state.range(0)));
+        size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
+        composer.compute_proving_key();
+        state.PauseTiming();
+        provers[idx] = composer.preprocess();
+        state.ResumeTiming();
+    }
+}
+BENCHMARK(construct_proving_keys_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
 
 void construct_instances_bench(State& state) noexcept
 {
     for (auto _ : state)
     {
+        state.PauseTiming();
+        waffle::StandardComposer composer = waffle::StandardComposer(static_cast<size_t>(state.range(0)));
+        generate_test_plonk_circuit(composer, static_cast<size_t>(state.range(0)));
         size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
-        verifiers[idx] = (waffle::preprocess(provers[idx]));
+        composer.preprocess();
+        state.ResumeTiming();
+        verifiers[idx] = composer.create_verifier();
     }
 }
 BENCHMARK(construct_instances_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
@@ -67,6 +84,7 @@ void construct_proofs_bench(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
+        // provers[idx].reset();
         proofs[idx] = provers[idx].construct_proof();
         state.PauseTiming();
         provers[idx].reset();
@@ -80,12 +98,12 @@ void verify_proofs_bench(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
-        bool result = verifiers[idx].verify_proof(proofs[idx]);
+        verifiers[idx].verify_proof(proofs[idx]);
         state.PauseTiming();
-        if (!result)
-        {
-            printf("hey! proof isn't valid!\n");
-        }
+        // if (!result)
+        // {
+        //     printf("hey! proof isn't valid!\n");
+        // }
         state.ResumeTiming();
     }
 }
@@ -97,6 +115,7 @@ void compute_wire_coefficients(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
+        provers[idx].reset();
         provers[idx].init_quotient_polynomials();
         provers[idx].compute_wire_coefficients();
     }
@@ -108,6 +127,7 @@ void compute_wire_commitments(State& state) noexcept
     for (auto _ : state)
     {
         size_t idx = static_cast<size_t>(log2(state.range(0))) - static_cast<size_t>(log2(START));
+        provers[idx].reset();
         provers[idx].compute_wire_commitments();
     }
 }

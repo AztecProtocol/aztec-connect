@@ -1,7 +1,18 @@
 #pragma once
 
-#include "../../../curves/bn254/fr.hpp"
+#include <iostream>
+
 #include "../common.hpp"
+#include <ostream>
+
+namespace waffle
+{
+    class StandardComposer;
+    class BoolComposer;
+    class MiMCComposer;
+    class ExtendedComposer;
+    class TurboComposer;
+}
 
 namespace plonk {
 namespace stdlib {
@@ -30,25 +41,27 @@ template <typename ComposerContext> class bool_t {
     // equality checks
     bool_t operator==(const bool_t& other) const;
 
-    bool_t operator!=(const bool_t& other) const { return operator^(other); }
+    bool_t operator!=(const bool_t& other) const;
 
     // misc bool ops
     bool_t operator~() const { return operator!(); }
 
-    bool_t operator&&(const bool_t& other) const { return operator&(other); }
+    bool_t operator&&(const bool_t& other) const;
 
-    bool_t operator||(const bool_t& other) const { return operator|(other); }
+    bool_t operator||(const bool_t& other) const;
 
     // self ops
-    void operator|=(const bool_t& other) const { *this = operator|(other); }
+    void operator|=(const bool_t& other) { *this = operator|(other); }
 
-    void operator&=(const bool_t& other) const { *this = operator&(other); }
+    void operator&=(const bool_t& other) { *this = operator&(other); }
 
-    void operator^=(const bool_t& other) const { *this = operator^(other); }
+    void operator^=(const bool_t& other) { *this = operator^(other); }
 
     bool get_value() const { return witness_bool ^ witness_inverted; }
 
     bool is_constant() const { return witness_index == static_cast<uint32_t>(-1); }
+
+    bool_t normalize() const;
 
     ComposerContext* context = nullptr;
     bool witness_bool = false;
@@ -61,7 +74,11 @@ template <typename T> inline std::ostream& operator<<(std::ostream& os, bool_t<T
     return os << v.get_value();
 }
 
+extern template class bool_t<waffle::StandardComposer>;
+extern template class bool_t<waffle::BoolComposer>;
+extern template class bool_t<waffle::MiMCComposer>;
+extern template class bool_t<waffle::ExtendedComposer>;
+extern template class bool_t<waffle::TurboComposer>;
+
 } // namespace stdlib
 } // namespace plonk
-
-#include "./bool.tcc"

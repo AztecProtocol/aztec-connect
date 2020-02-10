@@ -66,7 +66,7 @@ evaluation_domain::evaluation_domain(const size_t domain_size, const size_t targ
     root_inverse(fr::invert(root)),
     domain(fr::to_montgomery_form({{size,0,0,0}})),
     domain_inverse(fr::invert(domain)),
-    generator(fr::multiplicative_generator),
+    generator(fr::coset_generators[0]),
     generator_inverse(fr::multiplicative_generator_inverse),
     roots(nullptr)
 {
@@ -87,8 +87,8 @@ evaluation_domain::evaluation_domain(const evaluation_domain& other):
     root_inverse(fr::invert(root)),
     domain(fr::to_montgomery_form({{size,0,0,0}})),
     domain_inverse(fr::invert(domain)),
-    generator(fr::multiplicative_generator),
-    generator_inverse(fr::multiplicative_generator_inverse)
+    generator(other.generator),
+    generator_inverse(other.generator_inverse)
 {
     ASSERT((1UL << log2_size) == size);
     ASSERT((1UL << log2_thread_size) == thread_size);
@@ -126,8 +126,8 @@ evaluation_domain::evaluation_domain(evaluation_domain&& other):
     root_inverse(fr::invert(root)),
     domain(fr::to_montgomery_form({{size,0,0,0}})),
     domain_inverse(fr::invert(domain)),
-    generator(fr::multiplicative_generator),
-    generator_inverse(fr::multiplicative_generator_inverse)
+    generator(other.generator),
+    generator_inverse(other.generator_inverse)
 {
     roots = other.roots;
     round_roots = std::move(other.round_roots);

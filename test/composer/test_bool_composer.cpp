@@ -18,8 +18,8 @@ TEST(bool_composer, test_add_gate_proofs)
     fr::field_t b = fr::one;
     fr::field_t c = fr::add(a, b);
     fr::field_t d = fr::add(a, c);
-    uint32_t a_idx = composer.add_variable(a);
-    uint32_t b_idx = composer.add_variable(b);
+    uint32_t a_idx = composer.add_public_variable(a);
+    uint32_t b_idx = composer.add_public_variable(b);
     uint32_t c_idx = composer.add_variable(c);
     uint32_t d_idx = composer.add_variable(d);
     composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
@@ -44,7 +44,7 @@ TEST(bool_composer, test_add_gate_proofs)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -99,7 +99,7 @@ TEST(bool_composer, test_mul_gate_proofs)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -128,7 +128,7 @@ TEST(bool_composer, test_bool_gate_proofs)
     waffle::Prover prover = composer.preprocess();
 
     EXPECT_EQ(prover.n, 32UL);
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -158,7 +158,7 @@ TEST(bool_composers, test_deferred_bool_gate_proofs)
     waffle::Prover prover = composer.preprocess();
     EXPECT_EQ(composer.get_num_gates(), 27UL + composer.get_num_constant_gates());
     EXPECT_EQ(prover.n, 32UL);
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -191,7 +191,7 @@ TEST(bool_composers, test_repeated_bool_gate_proofs)
     waffle::Prover prover = composer.preprocess();
     EXPECT_EQ(composer.get_num_gates(), 27UL + composer.get_num_constant_gates());
     EXPECT_EQ(prover.n, 32UL);
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 

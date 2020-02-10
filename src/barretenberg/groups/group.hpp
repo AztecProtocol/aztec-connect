@@ -31,7 +31,8 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     static constexpr element one{ GroupParams::one_x, GroupParams::one_y, coordinate_field::one };
     static constexpr affine_element affine_one{ GroupParams::one_x, GroupParams::one_y };
 
-    static inline void print(affine_element& p)
+    static constexpr typename coordinate_field::field_t curve_b = GroupParams::b;
+    static inline void print(const affine_element& p)
     {
         printf("p.x: ");
         coordinate_field::print(p.x);
@@ -39,7 +40,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         coordinate_field::print(p.y);
     }
 
-    static inline void print(element& p)
+    static inline void print(const element& p)
     {
         printf("p.x: ");
         coordinate_field::print(p.x);
@@ -1022,6 +1023,27 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static void conditional_negate_affine(const affine_element* src, affine_element* dest, uint64_t predicate);
 
+    static inline void serialize_to_buffer(const affine_element& value, uint8_t* buffer)
+    {
+        coordinate_field::serialize_to_buffer(value.y, buffer);
+        coordinate_field::serialize_to_buffer(value.x, buffer + sizeof(typename coordinate_field::field_t));
+        if (!on_curve(value))
+        {
+            buffer[0]  = buffer[0] | (1 << 7);
+        }
+    }
+
+    static inline affine_element serialize_from_buffer(uint8_t* buffer)
+    {
+        affine_element result;
+        result.y = coordinate_field::serialize_from_buffer(buffer);
+        result.x = coordinate_field::serialize_from_buffer(buffer + sizeof(typename coordinate_field::field_t));
+        if (((buffer[0] >> 7) & 1) == 1)
+        {
+            set_infinity(result);
+        }
+        return result;
+    }
 }; // class group
 } // namespace barretenberg
 

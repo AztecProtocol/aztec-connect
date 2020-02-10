@@ -1,8 +1,14 @@
-#pragma once
+#include "./field.hpp"
 
 #include "../../../assert.hpp"
 #include "../../../curves/bn254/fr.hpp"
-#include "../../composer/composer_base.hpp"
+
+#include "../../composer/bool_composer.hpp"
+#include "../../composer/extended_composer.hpp"
+#include "../../composer/mimc_composer.hpp"
+#include "../../composer/standard_composer.hpp"
+#include "../../composer/turbo_composer.hpp"
+
 #include "../bool/bool.hpp"
 
 namespace plonk {
@@ -76,6 +82,30 @@ template <typename ComposerContext> field_t<ComposerContext>::field_t(const bool
     }
 }
 
+template <typename ComposerContext>
+field_t<ComposerContext>::field_t(byte_array<ComposerContext> const& other)
+    : context(other.get_context())
+    , additive_constant(barretenberg::fr::zero)
+    , multiplicative_constant(barretenberg::fr::one)
+    , witness_index(static_cast<uint32_t>(-1))
+{
+    auto bits = other.bits();
+
+    barretenberg::fr::field_t two = barretenberg::fr::to_montgomery_form({ { 2, 0, 0, 0 } });
+
+    for (size_t i = 0; i < bits.size(); ++i) {
+        field_t<ComposerContext> temp(bits[i].context);
+        if (bits[i].is_constant()) {
+            temp.additive_constant = bits[i].get_value() ? barretenberg::fr::one : barretenberg::fr::zero;
+        } else {
+            temp.witness_index = bits[i].witness_index;
+        }
+        barretenberg::fr::field_t scaling_factor_value = barretenberg::fr::pow_small(two, 255 - i);
+        field_t<ComposerContext> scaling_factor(bits[i].context, scaling_factor_value);
+        *this = *this + (scaling_factor * temp);
+    }
+}
+
 template <typename ComposerContext> field_t<ComposerContext>::operator bool_t<ComposerContext>()
 {
     if (witness_index == static_cast<uint32_t>(-1)) {
@@ -102,6 +132,33 @@ template <typename ComposerContext> field_t<ComposerContext>::operator bool_t<Co
     result.witness_index = witness_index;
     context->create_bool_gate(witness_index);
     return result;
+}
+
+template <typename ComposerContext> field_t<ComposerContext>::operator byte_array<ComposerContext>() const
+{
+    barretenberg::fr::field_t value = barretenberg::fr::from_montgomery_form(get_value());
+    typename byte_array<ComposerContext>::bits_t bits(256, bool_t(context));
+
+    if (is_constant()) {
+        for (size_t i = 0; i < 256; ++i) {
+            bits[i] = barretenberg::fr::get_bit(value, 255 - i);
+        }
+    } else {
+        barretenberg::fr::field_t two = barretenberg::fr::to_montgomery_form({ { 2, 0, 0, 0 } });
+        field_t<ComposerContext> validator(context, barretenberg::fr::zero);
+
+        for (size_t i = 0; i < 256; ++i) {
+            bool_t bit = witness_t(context, barretenberg::fr::get_bit(value, 255 - i));
+            bits[i] = bit;
+            barretenberg::fr::field_t scaling_factor_value = barretenberg::fr::pow_small(two, 255 - i);
+            field_t<ComposerContext> scaling_factor(context, scaling_factor_value);
+            validator = validator + (scaling_factor * bit);
+        }
+
+        context->assert_equal(validator.witness_index, witness_index);
+    }
+
+    return byte_array<ComposerContext>(context, bits);
 }
 
 template <typename ComposerContext> field_t<ComposerContext>& field_t<ComposerContext>::operator=(const field_t& other)
@@ -302,7 +359,7 @@ field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t& othe
     return result;
 }
 
-template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerContext>::normalize()
+template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerContext>::normalize() const
 {
     if (witness_index == static_cast<uint32_t>(-1) ||
         (barretenberg::fr::eq(multiplicative_constant, barretenberg::fr::one) &&
@@ -328,15 +385,113 @@ template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerCon
     return result;
 }
 
-template <typename ComposerContext> barretenberg::fr::field_t field_t<ComposerContext>::get_value()
+template <typename ComposerContext> bool_t<ComposerContext> field_t<ComposerContext>::is_zero()
+{
+    if (witness_index == static_cast<uint32_t>(-1)) {
+        return bool_t(context, barretenberg::fr::eq(get_value(), barretenberg::fr::zero));
+    }
+
+    // To check whether a field element, k, is zero, we use the fact that, if k > 0,
+    // there exists a modular inverse k', such that k * k' = 1
+
+    // To verify whether k = 0, we must do 2 checks
+    // First is that (k * k') - 1 + is_zero = 0
+
+    // If is_zero = false, then k' must be the modular inverse of k, therefore k is not 0
+
+    // If is_zero = true, then either k or k' is zero (or both)
+    // To ensure that it is k that is zero, and not k', we must apply
+    // an additional check: that if is_zero = true, k' = 1
+    // This way, if (k * k') = 0, we know that k = 0.
+    // The second check is: (is_zero * k') - is_zero = 0
+    field_t k = normalize();
+    bool_t is_zero = witness_t(context, barretenberg::fr::eq(k.get_value(), barretenberg::fr::zero));
+    field_t k_inverse;
+    if (is_zero.get_value()) {
+        k_inverse = witness_t(context, barretenberg::fr::one);
+    } else {
+        barretenberg::fr::field_t k_inverse_value;
+        barretenberg::fr::__invert(k.get_value(), k_inverse_value);
+        k_inverse = witness_t(context, k_inverse_value);
+    }
+
+    // k * k_inverse + is_zero - 1 = 0
+    barretenberg::fr::field_t q_m = barretenberg::fr::one;
+    barretenberg::fr::field_t q_l = barretenberg::fr::zero;
+    barretenberg::fr::field_t q_r = barretenberg::fr::zero;
+    barretenberg::fr::field_t q_o = barretenberg::fr::one;
+    barretenberg::fr::field_t q_c = barretenberg::fr::neg_one();
+    const waffle::poly_triple gate_coefficients_a{
+        k.witness_index, k_inverse.witness_index, is_zero.witness_index, q_m, q_l, q_r, q_o, q_c
+    };
+    context->create_poly_gate(gate_coefficients_a);
+
+    // is_zero * k_inverse - is_zero = 0
+    q_o = barretenberg::fr::neg_one();
+    q_c = barretenberg::fr::zero;
+    const waffle::poly_triple gate_coefficients_b{
+        is_zero.witness_index, k_inverse.witness_index, is_zero.witness_index, q_m, q_l, q_r, q_o, q_c
+    };
+    context->create_poly_gate(gate_coefficients_b);
+    return is_zero;
+}
+
+template <typename ComposerContext> barretenberg::fr::field_t field_t<ComposerContext>::get_value() const
 {
     if (witness_index != static_cast<uint32_t>(-1)) {
         ASSERT(context != nullptr);
-        return context->get_variable(witness_index);
+        return barretenberg::fr::add(
+            barretenberg::fr::mul(multiplicative_constant, context->get_variable(witness_index)), additive_constant);
     } else {
         return additive_constant;
     }
 }
+
+template <typename ComposerContext>
+bool_t<ComposerContext> field_t<ComposerContext>::operator==(const field_t& other) const
+{
+    ComposerContext* ctx = (context == nullptr) ? other.context : context;
+
+    if (is_constant() && other.is_constant()) {
+        return barretenberg::fr::eq(get_value(), other.get_value());
+    }
+
+    barretenberg::fr::field_t fa = get_value();
+    barretenberg::fr::field_t fb = other.get_value();
+    barretenberg::fr::field_t fd = barretenberg::fr::sub(fa, fb);
+    bool is_equal = barretenberg::fr::eq(fa, fb);
+    barretenberg::fr::field_t fc = is_equal ? barretenberg::fr::one : barretenberg::fr::invert(fd);
+
+    bool_t result(witness_t(ctx, is_equal));
+    field_t c(witness_t(ctx, fc));
+    field_t d = *this - other;
+    field_t test_lhs = d * c;
+    field_t test_rhs = (field_t(ctx, barretenberg::fr::one) - result);
+    test_rhs = test_rhs.normalize();
+    ctx->assert_equal(test_lhs.witness_index, test_rhs.witness_index);
+
+    barretenberg::fr::field_t fe = is_equal ? barretenberg::fr::one : fd;
+    field_t e(witness_t(ctx, fe));
+
+    // Ensures c is never 0.
+    barretenberg::fr::field_t q_m = barretenberg::fr::one;
+    barretenberg::fr::field_t q_l = barretenberg::fr::zero;
+    barretenberg::fr::field_t q_r = barretenberg::fr::zero;
+    barretenberg::fr::field_t q_c = barretenberg::fr::neg_one();
+    barretenberg::fr::field_t q_o = barretenberg::fr::zero;
+    const waffle::poly_triple gate_coefficients{
+        c.witness_index, e.witness_index, c.witness_index, q_m, q_l, q_r, q_o, q_c
+    };
+    ctx->create_poly_gate(gate_coefficients);
+
+    return result;
+}
+
+template class field_t<waffle::StandardComposer>;
+template class field_t<waffle::BoolComposer>;
+template class field_t<waffle::MiMCComposer>;
+template class field_t<waffle::ExtendedComposer>;
+template class field_t<waffle::TurboComposer>;
 
 } // namespace stdlib
 } // namespace plonk

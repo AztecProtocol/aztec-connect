@@ -35,6 +35,7 @@ endif()
 
 add_executable(
     barretenberg_tests
+    test_helpers.hpp
     test_wnaf.cpp
     test_fq.cpp
     test_fq2.cpp
@@ -51,16 +52,28 @@ add_executable(
     test_preprocess.cpp
     test_prover.cpp
     test_verifier.cpp
+    test_transcript.cpp
+    misc_crypto/test_schnorr.cpp
+    misc_crypto/test_sha256.cpp
+    widgets/test_turbo_arithmetic_widget.cpp
+    widgets/test_turbo_fixed_base_widget.cpp
+    widgets/test_turbo_range_widget.cpp
     composer/test_standard_composer.cpp
     composer/test_mimc_composer.cpp
     composer/test_bool_composer.cpp
     composer/test_extended_composer.cpp
+    composer/test_turbo_composer.cpp
     stdlib/test_stdlib_bool.cpp
     stdlib/test_stdlib_field.cpp
     stdlib/test_stdlib_uint32.cpp
     stdlib/test_stdlib_bitarray.cpp
+    stdlib/test_stdlib_byte_array.cpp
     stdlib/test_stdlib_mimc.cpp
     stdlib/test_stdlib_sha256.cpp
+    stdlib/test_stdlib_merkle_tree.cpp
+    stdlib/test_stdlib_pedersen.cpp
+    stdlib/test_stdlib_schnorr.cpp
+    stdlib/test_stdlib_pedersen_note.cpp
     noir/test_noir.cpp
 )
 
@@ -77,29 +90,17 @@ target_include_directories(
         ${private_include_dir}/boost
 )
 
-if (WIN32)
-    target_link_libraries(
-        barretenberg_tests
-        PUBLIC
-        barretenberg
-        PRIVATE
-        gtest
-        gmock
-        gtest_main
-        wsock32
-        ws2_32
-    )
-else()
-    target_link_libraries(
-        barretenberg_tests
-        PUBLIC
-        barretenberg
-        PRIVATE
-        gtest
-        gmock
-        gtest_main
-    )
-endif()
+target_link_libraries(
+    barretenberg_tests
+    PUBLIC
+    barretenberg
+    PRIVATE
+    gtest
+    gmock
+    gtest_main
+    leveldb
+    ${private_os_libs}
+)
 
 target_include_directories(
     barretenberg_tests

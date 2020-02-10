@@ -1,6 +1,20 @@
 # barretenburg
 # copyright 2019 Spilsbury Holdings
 
+include(FetchContent)
+
+FetchContent_Declare(
+    leveldb
+    GIT_REPOSITORY https://github.com/google/leveldb.git
+    GIT_TAG 1.22
+)
+
+FetchContent_GetProperties(leveldb)
+if(NOT leveldb_POPULATED)
+    FetchContent_Populate(leveldb)
+    add_subdirectory(${leveldb_SOURCE_DIR} ${leveldb_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
 add_compile_options(-Werror -Wall -Wextra -Wconversion -Wsign-conversion)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -30,11 +44,16 @@ add_library(
     curves/bn254/scalar_multiplication/mmu.cpp
     curves/bn254/scalar_multiplication/mmu.hpp
     curves/bn254/scalar_multiplication/process_buckets.hpp
-    curves/bn254/scalar_multiplication/scalar_multiplication.tcc
+    curves/bn254/scalar_multiplication/scalar_multiplication_unsafe.cpp
+    curves/bn254/scalar_multiplication/scalar_multiplication.cpp
     curves/bn254/scalar_multiplication/scalar_multiplication.hpp
     curves/bn254/pairing.cpp
     curves/bn254/pairing.hpp
     curves/grumpkin/grumpkin.hpp
+    misc_crypto/sha256/sha256.cpp
+    misc_crypto/sha256/sha256.hpp
+    misc_crypto/schnorr/schnorr.tcc
+    misc_crypto/schnorr/schnorr.hpp
     io/io.hpp
     keccak/hash_types.h
     keccak/keccakf1600.c
@@ -46,11 +65,18 @@ add_library(
     polynomials/polynomial_arithmetic.hpp
     polynomials/polynomial.cpp
     polynomials/polynomial.hpp
+    transcript/manifest.hpp
+    transcript/transcript.cpp
+    transcript/transcript.hpp
     waffle/waffle_types.hpp
     waffle/reference_string/reference_string.cpp
     waffle/reference_string/reference_string.hpp
+    waffle/proof_system/proving_key/proving_key.cpp
+    waffle/proof_system/proving_key/proving_key.hpp
+    waffle/proof_system/verification_key/verification_key.cpp
+    waffle/proof_system/verification_key/verification_key.hpp
     waffle/proof_system/linearizer.hpp
-    waffle/proof_system/challenge.hpp
+    waffle/proof_system/program_settings.hpp
     waffle/proof_system/permutation.hpp
     waffle/proof_system/preprocess.hpp
     waffle/proof_system/widgets/base_widget.hpp
@@ -62,10 +88,17 @@ add_library(
     waffle/proof_system/widgets/mimc_widget.hpp
     waffle/proof_system/widgets/sequential_widget.cpp
     waffle/proof_system/widgets/sequential_widget.hpp
+    waffle/proof_system/widgets/turbo_arithmetic_widget.cpp
+    waffle/proof_system/widgets/turbo_arithmetic_widget.hpp
+    waffle/proof_system/widgets/turbo_fixed_base_widget.cpp
+    waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
+    waffle/proof_system/widgets/turbo_range_widget.cpp
+    waffle/proof_system/widgets/turbo_range_widget.hpp
     waffle/proof_system/prover/prover.cpp
     waffle/proof_system/prover/prover.hpp
     waffle/proof_system/verifier/verifier.cpp
     waffle/proof_system/verifier/verifier.hpp
+    waffle/composer/composer_base.cpp
     waffle/composer/composer_base.hpp
     waffle/composer/standard_composer.cpp
     waffle/composer/standard_composer.hpp
@@ -75,20 +108,41 @@ add_library(
     waffle/composer/mimc_composer.hpp
     waffle/composer/extended_composer.cpp
     waffle/composer/extended_composer.hpp
+    waffle/composer/turbo_composer.cpp
+    waffle/composer/turbo_composer.hpp
     waffle/stdlib/common.hpp
+    waffle/stdlib/group/group_utils.hpp
+    waffle/stdlib/group/group_utils.cpp
     waffle/stdlib/int_utils.hpp
-    waffle/stdlib/bool/bool.tcc
+    waffle/stdlib/bool/bool.cpp
     waffle/stdlib/bool/bool.hpp
-    waffle/stdlib/field/field.tcc
+    waffle/stdlib/field/field.cpp
     waffle/stdlib/field/field.hpp
-    waffle/stdlib/uint32/uint32.tcc
+    waffle/stdlib/uint/uint.cpp
+    waffle/stdlib/uint/uint.hpp
     waffle/stdlib/uint32/uint32.hpp
-    waffle/stdlib/bitarray/bitarray.tcc
+    waffle/stdlib/bitarray/bitarray.cpp
     waffle/stdlib/bitarray/bitarray.hpp
-    waffle/stdlib/mimc.tcc
+    waffle/stdlib/byte_array/byte_array.cpp
+    waffle/stdlib/byte_array/byte_array.hpp
+    waffle/stdlib/mimc.cpp
     waffle/stdlib/mimc.hpp
-    waffle/stdlib/crypto/hash/sha256.tcc
+    waffle/stdlib/crypto/crypto.hpp
+    waffle/stdlib/crypto/hash/sha256.cpp
     waffle/stdlib/crypto/hash/sha256.hpp
+    waffle/stdlib/merkle_tree/hash.hpp
+    waffle/stdlib/merkle_tree/merkle_tree.cpp
+    waffle/stdlib/merkle_tree/merkle_tree.hpp
+    waffle/stdlib/merkle_tree/memory_store.hpp
+    waffle/stdlib/merkle_tree/memory_store.cpp
+    waffle/stdlib/merkle_tree/leveldb_store.hpp
+    waffle/stdlib/merkle_tree/leveldb_store.cpp
+    waffle/stdlib/crypto/hash/pedersen.cpp
+    waffle/stdlib/crypto/hash/pedersen.hpp
+    waffle/stdlib/crypto/schnorr/schnorr.cpp
+    waffle/stdlib/crypto/schnorr/schnorr.hpp
+    waffle/stdlib/crypto/commitment/pedersen_note.cpp
+    waffle/stdlib/crypto/commitment/pedersen_note.hpp
     noir/expression.cpp
     noir/statement.cpp
     noir/printer.cpp
@@ -115,6 +169,8 @@ set_target_properties(
 
 target_link_libraries(
     barretenberg
+    PRIVATE
+    leveldb
 )
 
 if(PROFILING)
@@ -143,11 +199,16 @@ if(PROFILING)
         curves/bn254/scalar_multiplication/mmu.cpp
         curves/bn254/scalar_multiplication/mmu.hpp
         curves/bn254/scalar_multiplication/process_buckets.hpp
-        curves/bn254/scalar_multiplication/scalar_multiplication.tcc
+        curves/bn254/scalar_multiplication/scalar_multiplication_unsafe.cpp
+        curves/bn254/scalar_multiplication/scalar_multiplication.cpp
         curves/bn254/scalar_multiplication/scalar_multiplication.hpp
         curves/bn254/pairing.cpp
         curves/bn254/pairing.hpp
         curves/grumpkin/grumpkin.hpp
+        misc_crypto/sha256/sha256.cpp
+        misc_crypto/sha256/sha256.hpp
+        misc_crypto/schnorr/schnorr.tcc
+        misc_crypto/schnorr/schnorr.hpp
         io/io.hpp
         keccak/hash_types.h
         keccak/keccakf1600.c
@@ -159,11 +220,18 @@ if(PROFILING)
         polynomials/polynomial_arithmetic.hpp
         polynomials/polynomial.cpp
         polynomials/polynomial.hpp
+        transcript/manifest.hpp
+        transcript/transcript.cpp
+        transcript/transcript.hpp
         waffle/waffle_types.hpp
         waffle/reference_string/reference_string.cpp
         waffle/reference_string/reference_string.hpp
+        waffle/proof_system/proving_key/proving_key.cpp
+        waffle/proof_system/proving_key/proving_key.hpp
+        waffle/proof_system/verification_key/verification_key.cpp
+        waffle/proof_system/verification_key/verification_key.hpp
         waffle/proof_system/linearizer.hpp
-        waffle/proof_system/challenge.hpp
+        waffle/proof_system/program_settings.hpp
         waffle/proof_system/permutation.hpp
         waffle/proof_system/preprocess.hpp
         waffle/proof_system/widgets/base_widget.hpp
@@ -175,10 +243,17 @@ if(PROFILING)
         waffle/proof_system/widgets/mimc_widget.hpp
         waffle/proof_system/widgets/sequential_widget.cpp
         waffle/proof_system/widgets/sequential_widget.hpp
+        waffle/proof_system/widgets/turbo_arithmetic_widget.cpp
+        waffle/proof_system/widgets/turbo_arithmetic_widget.hpp
+        waffle/proof_system/widgets/turbo_fixed_base_widget.cpp
+        waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
+        waffle/proof_system/widgets/turbo_range_widget.cpp
+        waffle/proof_system/widgets/turbo_range_widget.hpp
         waffle/proof_system/prover/prover.cpp
         waffle/proof_system/prover/prover.hpp
         waffle/proof_system/verifier/verifier.cpp
         waffle/proof_system/verifier/verifier.hpp
+        waffle/composer/composer_base.cpp
         waffle/composer/composer_base.hpp
         waffle/composer/standard_composer.cpp
         waffle/composer/standard_composer.hpp
@@ -188,26 +263,46 @@ if(PROFILING)
         waffle/composer/mimc_composer.hpp
         waffle/composer/extended_composer.cpp
         waffle/composer/extended_composer.hpp
+        waffle/composer/turbo_composer.cpp
+        waffle/composer/turbo_composer.hpp
         waffle/stdlib/common.hpp
+        waffle/stdlib/group/group_utils.hpp
+        waffle/stdlib/group/group_utils.cpp
         waffle/stdlib/int_utils.hpp
-        waffle/stdlib/bool/bool.tcc
+        waffle/stdlib/bool/bool.cpp
         waffle/stdlib/bool/bool.hpp
-        waffle/stdlib/field/field.tcc
+        waffle/stdlib/field/field.cpp
         waffle/stdlib/field/field.hpp
-        waffle/stdlib/uint/uint.tcc
+        waffle/stdlib/uint/uint.cpp
         waffle/stdlib/uint/uint.hpp
-        waffle/stdlib/uint32/uint32.tcc
         waffle/stdlib/uint32/uint32.hpp
-        waffle/stdlib/bitarray/bitarray.tcc
+        waffle/stdlib/bitarray/bitarray.cpp
         waffle/stdlib/bitarray/bitarray.hpp
-        waffle/stdlib/mimc.tcc
+        waffle/stdlib/byte_array/byte_array.cpp
+        waffle/stdlib/byte_array/byte_array.hpp
+        waffle/stdlib/mimc.cpp
         waffle/stdlib/mimc.hpp
-        waffle/stdlib/crypto/hash/sha256.tcc
+        waffle/stdlib/crypto/crypto.hpp
+        waffle/stdlib/crypto/hash/sha256.cpp
         waffle/stdlib/crypto/hash/sha256.hpp
+        waffle/stdlib/merkle_tree/merkle_tree.cpp
+        waffle/stdlib/merkle_tree/merkle_tree.hpp
+        waffle/stdlib/merkle_tree/memory_store.hpp
+        waffle/stdlib/merkle_tree/memory_store.cpp
+        waffle/stdlib/merkle_tree/leveldb_store.hpp
+        waffle/stdlib/merkle_tree/leveldb_store.cpp
+        waffle/stdlib/crypto/hash/pedersen.cpp
+        waffle/stdlib/crypto/hash/pedersen.hpp
+        waffle/stdlib/crypto/schnorr/schnorr.cpp
+        waffle/stdlib/crypto/schnorr/schnorr.hpp
+        waffle/stdlib/crypto/commitment/pedersen_note.cpp
+        waffle/stdlib/crypto/commitment/pedersen_note.hpp
     )
 
     target_link_libraries(
         barretenberg_profiling
+        PRIVATE
+        leveldb
     )
 
     set_target_properties(

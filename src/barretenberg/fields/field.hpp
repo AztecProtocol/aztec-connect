@@ -16,6 +16,8 @@ template <typename FieldParams> class field {
   public:
     struct field_t {
         alignas(32) uint64_t data[4];
+
+        bool operator<(const field_t& other) const { return gt(other, *this); }
     };
 
     struct field_wide_t {
@@ -73,21 +75,66 @@ template <typename FieldParams> class field {
                                               FieldParams::primitive_root_3 } };
 
     static constexpr field_t coset_generators[15]{
-        {{ FieldParams::coset_generators_0[0], FieldParams::coset_generators_1[0], FieldParams::coset_generators_2[0], FieldParams::coset_generators_3[0] }},
-        {{ FieldParams::coset_generators_0[1], FieldParams::coset_generators_1[1], FieldParams::coset_generators_2[1], FieldParams::coset_generators_3[1] }},
-        {{ FieldParams::coset_generators_0[2], FieldParams::coset_generators_1[2], FieldParams::coset_generators_2[2], FieldParams::coset_generators_3[2] }},
-        {{ FieldParams::coset_generators_0[3], FieldParams::coset_generators_1[3], FieldParams::coset_generators_2[3], FieldParams::coset_generators_3[3] }},
-        {{ FieldParams::coset_generators_0[4], FieldParams::coset_generators_1[4], FieldParams::coset_generators_2[4], FieldParams::coset_generators_3[4] }},
-        {{ FieldParams::coset_generators_0[5], FieldParams::coset_generators_1[5], FieldParams::coset_generators_2[5], FieldParams::coset_generators_3[5] }},
-        {{ FieldParams::coset_generators_0[6], FieldParams::coset_generators_1[6], FieldParams::coset_generators_2[6], FieldParams::coset_generators_3[6] }},
-        {{ FieldParams::coset_generators_0[7], FieldParams::coset_generators_1[7], FieldParams::coset_generators_2[7], FieldParams::coset_generators_3[7] }},
-        {{ FieldParams::coset_generators_0[8], FieldParams::coset_generators_1[8], FieldParams::coset_generators_2[8], FieldParams::coset_generators_3[8] }},
-        {{ FieldParams::coset_generators_0[9], FieldParams::coset_generators_1[9], FieldParams::coset_generators_2[9], FieldParams::coset_generators_3[9] }},
-        {{ FieldParams::coset_generators_0[10], FieldParams::coset_generators_1[10], FieldParams::coset_generators_2[10], FieldParams::coset_generators_3[10] }},
-        {{ FieldParams::coset_generators_0[11], FieldParams::coset_generators_1[11], FieldParams::coset_generators_2[11], FieldParams::coset_generators_3[11] }},
-        {{ FieldParams::coset_generators_0[12], FieldParams::coset_generators_1[12], FieldParams::coset_generators_2[12], FieldParams::coset_generators_3[12] }},
-        {{ FieldParams::coset_generators_0[13], FieldParams::coset_generators_1[13], FieldParams::coset_generators_2[13], FieldParams::coset_generators_3[13] }},
-        {{ FieldParams::coset_generators_0[14], FieldParams::coset_generators_1[14], FieldParams::coset_generators_2[14], FieldParams::coset_generators_3[14] }},
+        { { FieldParams::coset_generators_0[0],
+            FieldParams::coset_generators_1[0],
+            FieldParams::coset_generators_2[0],
+            FieldParams::coset_generators_3[0] } },
+        { { FieldParams::coset_generators_0[1],
+            FieldParams::coset_generators_1[1],
+            FieldParams::coset_generators_2[1],
+            FieldParams::coset_generators_3[1] } },
+        { { FieldParams::coset_generators_0[2],
+            FieldParams::coset_generators_1[2],
+            FieldParams::coset_generators_2[2],
+            FieldParams::coset_generators_3[2] } },
+        { { FieldParams::coset_generators_0[3],
+            FieldParams::coset_generators_1[3],
+            FieldParams::coset_generators_2[3],
+            FieldParams::coset_generators_3[3] } },
+        { { FieldParams::coset_generators_0[4],
+            FieldParams::coset_generators_1[4],
+            FieldParams::coset_generators_2[4],
+            FieldParams::coset_generators_3[4] } },
+        { { FieldParams::coset_generators_0[5],
+            FieldParams::coset_generators_1[5],
+            FieldParams::coset_generators_2[5],
+            FieldParams::coset_generators_3[5] } },
+        { { FieldParams::coset_generators_0[6],
+            FieldParams::coset_generators_1[6],
+            FieldParams::coset_generators_2[6],
+            FieldParams::coset_generators_3[6] } },
+        { { FieldParams::coset_generators_0[7],
+            FieldParams::coset_generators_1[7],
+            FieldParams::coset_generators_2[7],
+            FieldParams::coset_generators_3[7] } },
+        { { FieldParams::coset_generators_0[8],
+            FieldParams::coset_generators_1[8],
+            FieldParams::coset_generators_2[8],
+            FieldParams::coset_generators_3[8] } },
+        { { FieldParams::coset_generators_0[9],
+            FieldParams::coset_generators_1[9],
+            FieldParams::coset_generators_2[9],
+            FieldParams::coset_generators_3[9] } },
+        { { FieldParams::coset_generators_0[10],
+            FieldParams::coset_generators_1[10],
+            FieldParams::coset_generators_2[10],
+            FieldParams::coset_generators_3[10] } },
+        { { FieldParams::coset_generators_0[11],
+            FieldParams::coset_generators_1[11],
+            FieldParams::coset_generators_2[11],
+            FieldParams::coset_generators_3[11] } },
+        { { FieldParams::coset_generators_0[12],
+            FieldParams::coset_generators_1[12],
+            FieldParams::coset_generators_2[12],
+            FieldParams::coset_generators_3[12] } },
+        { { FieldParams::coset_generators_0[13],
+            FieldParams::coset_generators_1[13],
+            FieldParams::coset_generators_2[13],
+            FieldParams::coset_generators_3[13] } },
+        { { FieldParams::coset_generators_0[14],
+            FieldParams::coset_generators_1[14],
+            FieldParams::coset_generators_2[14],
+            FieldParams::coset_generators_3[14] } },
     };
     /**
      * Arithmetic Methods (with return parameters)
@@ -266,9 +313,9 @@ template <typename FieldParams> class field {
         size_t sqr_count = 0;
         for (; i < 256; --i) {
             sqr_count++;
-            __sqr(accumulator, accumulator);
+            __sqr_with_coarse_reduction(accumulator, accumulator);
             if (get_bit(b, i)) {
-                __mul(accumulator, a, accumulator);
+                __mul_with_coarse_reduction(accumulator, a, accumulator);
             }
         }
         while (gt(accumulator, modulus_plus_one)) {
@@ -428,6 +475,13 @@ template <typename FieldParams> class field {
         }
     }
 
+    static inline bool is_quadratic_residue(const field_t& a)
+    {
+        field_t target_sqrt;
+        __sqrt(a, target_sqrt);
+        return eq(sqr(target_sqrt), a);
+    }
+
     /**
      * Get a random field element in montgomery form, place in `r`
      **/
@@ -567,9 +621,9 @@ template <typename FieldParams> class field {
         return r;
     }
 
-    static inline void batch_invert(field_t* coeffs, size_t n)
+    static inline void batch_invert(field_t* coeffs, size_t n, field_t* scratch_space = nullptr)
     {
-        field_t* temporaries = (field_t*)aligned_alloc(32, sizeof(field_t) * n);
+        field_t* temporaries = scratch_space ? scratch_space : (field_t*)aligned_alloc(32, sizeof(field_t) * n);
         field_t accumulator = one;
         for (size_t i = 0; i < n; ++i) {
             __copy(accumulator, temporaries[i]);
@@ -583,42 +637,61 @@ template <typename FieldParams> class field {
             __mul(accumulator, coeffs[i], accumulator);
             __copy(T0, coeffs[i]);
         }
-        aligned_free(temporaries);
+        if (scratch_space == nullptr) {
+            aligned_free(temporaries);
+        }
     }
-
 
     static inline void compute_coset_generators(const size_t n, const uint64_t subgroup_size, field_t* result)
     {
-        if (n > 0)
-        {
+        if (n > 0) {
             result[0] = (multiplicative_generator);
         }
         field_t work_variable = add(multiplicative_generator, one);
 
         size_t count = 1;
-        while (count < n)
-        {
+        while (count < n) {
             // work_variable contains a new field element, and we need to test that, for all previous vector elements,
             // result[i] / work_variable is not a member of our subgroup
             field_t work_inverse = invert(work_variable);
             bool valid = true;
-            for (size_t j = 0; j < count; ++j)
-            {
+            for (size_t j = 0; j < count; ++j) {
                 field_t target_element = mul(result[j], work_inverse);
                 field_t subgroup_check = pow_small(target_element, subgroup_size);
-                if (eq(subgroup_check, one))
-                {
+                if (eq(subgroup_check, one)) {
                     valid = false;
                     break;
                 }
             }
-            if (valid)
-            {
+            if (valid) {
                 result[count] = (work_variable);
                 ++count;
             }
             __add(work_variable, one, work_variable);
         }
+    }
+
+    static inline void serialize_to_buffer(const field_t& value, uint8_t* buffer)
+    {
+        field_t input = from_montgomery_form(value);
+        for (size_t j = 0; j < 4; ++j) {
+            for (size_t i = 0; i < 8; ++i) {
+                uint8_t byte = static_cast<uint8_t>(input.data[3 - j] >> (56 - (i * 8)));
+                buffer[j * 8 + i] = byte;
+            }
+        }
+    }
+
+    static inline field_t serialize_from_buffer(const uint8_t* buffer)
+    {
+        field_t result = zero;
+        for (size_t j = 0; j < 4; ++j) {
+            for (size_t i = 0; i < 8; ++i) {
+                uint8_t byte = buffer[j * 8 + i];
+                result.data[3 - j] = result.data[3 - j] | (static_cast<uint64_t>(byte) << (56 - (i * 8)));
+            }
+        }
+        return to_montgomery_form(result);
     }
 }; // class field
 

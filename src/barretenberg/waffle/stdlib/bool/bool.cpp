@@ -1,11 +1,16 @@
-#pragma once
-
 #include "./bool.hpp"
+#include "../../composer/composer_base.hpp"
 
-namespace plonk
-{
-namespace stdlib
-{
+#include "../../../curves/bn254/fr.hpp"
+
+#include "../../composer/standard_composer.hpp"
+#include "../../composer/bool_composer.hpp"
+#include "../../composer/mimc_composer.hpp"
+#include "../../composer/extended_composer.hpp"
+#include "../../composer/turbo_composer.hpp"
+
+namespace plonk {
+namespace stdlib {
 
 template <typename ComposerContext>
 bool_t<ComposerContext>::bool_t(const bool value)
@@ -13,8 +18,7 @@ bool_t<ComposerContext>::bool_t(const bool value)
     , witness_bool(value)
     , witness_inverted(false)
     , witness_index(static_cast<uint32_t>(-1))
-{
-}
+{}
 
 template <typename ComposerContext>
 bool_t<ComposerContext>::bool_t(ComposerContext* parent_context)
@@ -114,8 +118,7 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator&(const bool_t& other) 
 
     ASSERT(result.context ||
            (witness_index == static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)));
-    if (witness_index != static_cast<uint32_t>(-1) && other.witness_index != static_cast<uint32_t>(-1))
-    {
+    if (witness_index != static_cast<uint32_t>(-1) && other.witness_index != static_cast<uint32_t>(-1)) {
         result.witness_bool = left & right;
         barretenberg::fr::field_t value = result.witness_bool ? barretenberg::fr::one : barretenberg::fr::zero;
         result.witness_index = context->add_variable(value);
@@ -135,35 +138,23 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator&(const bool_t& other) 
             (witness_inverted & other.witness_inverted) ? barretenberg::fr::one : barretenberg::fr::zero
         };
         context->create_poly_gate(gate_coefficients);
-    }
-    else if (witness_index != static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1))
-    {
-        if (other.witness_bool ^ other.witness_inverted)
-        {
+    } else if (witness_index != static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)) {
+        if (other.witness_bool ^ other.witness_inverted) {
             result = bool_t<ComposerContext>(*this);
-        }
-        else
-        {
+        } else {
             result.witness_bool = false;
             result.witness_inverted = false;
             result.witness_index = static_cast<uint32_t>(-1);
         }
-    }
-    else if (witness_index == static_cast<uint32_t>(-1) && other.witness_index != static_cast<uint32_t>(-1))
-    {
-        if (witness_bool ^ witness_inverted)
-        {
+    } else if (witness_index == static_cast<uint32_t>(-1) && other.witness_index != static_cast<uint32_t>(-1)) {
+        if (witness_bool ^ witness_inverted) {
             result = bool_t<ComposerContext>(other);
-        }
-        else
-        {
+        } else {
             result.witness_bool = false;
             result.witness_inverted = false;
             result.witness_index = static_cast<uint32_t>(-1);
         }
-    }
-    else
-    {
+    } else {
         result.witness_bool = left & right;
         result.witness_index = static_cast<uint32_t>(-1);
         result.witness_inverted = false;
@@ -182,8 +173,7 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator|(const bool_t& other) 
     result.witness_bool = (witness_bool ^ witness_inverted) | (other.witness_bool ^ other.witness_inverted);
     barretenberg::fr::field_t value = result.witness_bool ? barretenberg::fr::one : barretenberg::fr::zero;
     result.witness_inverted = false;
-    if ((other.witness_index != static_cast<uint32_t>(-1)) && (witness_index != static_cast<uint32_t>(-1)))
-    {
+    if ((other.witness_index != static_cast<uint32_t>(-1)) && (witness_index != static_cast<uint32_t>(-1))) {
         result.witness_index = context->add_variable(value);
         // result = a + b - ab
         // (1 - a) + (1 - b) - (1 - a)(1 - b) = 2 - a - b - ab - 1 + a + b = 1 - ab
@@ -193,29 +183,22 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator|(const bool_t& other) 
         barretenberg::fr::field_t left_coefficient;
         barretenberg::fr::field_t right_coefficient;
         barretenberg::fr::field_t constant_coefficient;
-        if (witness_inverted && !other.witness_inverted)
-        {
+        if (witness_inverted && !other.witness_inverted) {
             multiplicative_coefficient = barretenberg::fr::one;
             left_coefficient = barretenberg::fr::neg_one();
             right_coefficient = barretenberg::fr::zero;
             constant_coefficient = barretenberg::fr::one;
-        }
-        else if (!witness_inverted && other.witness_inverted)
-        {
+        } else if (!witness_inverted && other.witness_inverted) {
             multiplicative_coefficient = barretenberg::fr::one;
             left_coefficient = barretenberg::fr::zero;
             right_coefficient = barretenberg::fr::neg_one();
             constant_coefficient = barretenberg::fr::one;
-        }
-        else if (witness_inverted && other.witness_inverted)
-        {
+        } else if (witness_inverted && other.witness_inverted) {
             multiplicative_coefficient = barretenberg::fr::neg_one();
             left_coefficient = barretenberg::fr::zero;
             right_coefficient = barretenberg::fr::zero;
             constant_coefficient = barretenberg::fr::one;
-        }
-        else
-        {
+        } else {
             multiplicative_coefficient = barretenberg::fr::neg_one();
             left_coefficient = barretenberg::fr::one;
             right_coefficient = barretenberg::fr::one;
@@ -226,35 +209,23 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator|(const bool_t& other) 
             left_coefficient, right_coefficient,   barretenberg::fr::neg_one(), constant_coefficient
         };
         context->create_poly_gate(gate_coefficients);
-    }
-    else if (witness_index != static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1))
-    {
-        if (other.witness_bool ^ other.witness_inverted)
-        {
+    } else if (witness_index != static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)) {
+        if (other.witness_bool ^ other.witness_inverted) {
             result.witness_index = static_cast<uint32_t>(-1);
             result.witness_bool = true;
             result.witness_inverted = false;
-        }
-        else
-        {
+        } else {
             result = bool_t<ComposerContext>(*this);
         }
-    }
-    else if (witness_index == static_cast<uint32_t>(-1) && other.witness_index != static_cast<uint32_t>(-1))
-    {
-        if (witness_bool ^ witness_inverted)
-        {
+    } else if (witness_index == static_cast<uint32_t>(-1) && other.witness_index != static_cast<uint32_t>(-1)) {
+        if (witness_bool ^ witness_inverted) {
             result.witness_index = static_cast<uint32_t>(-1);
             result.witness_bool = true;
             result.witness_inverted = false;
-        }
-        else
-        {
+        } else {
             result = bool_t<ComposerContext>(other);
         }
-    }
-    else
-    {
+    } else {
         result.witness_inverted = false;
         result.witness_index = static_cast<uint32_t>(-1);
     }
@@ -273,8 +244,7 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator^(const bool_t& other) 
     barretenberg::fr::field_t value = result.witness_bool ? barretenberg::fr::one : barretenberg::fr::zero;
     result.witness_inverted = false;
 
-    if ((other.witness_index != static_cast<uint32_t>(-1)) && (witness_index != static_cast<uint32_t>(-1)))
-    {
+    if ((other.witness_index != static_cast<uint32_t>(-1)) && (witness_index != static_cast<uint32_t>(-1))) {
         result.witness_index = context->add_variable(value);
         // norm a, norm b: a + b - 2ab
         // inv  a, norm b: (1 - a) + b - 2(1 - a)b = 1 - a - b + 2ab
@@ -284,16 +254,13 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator^(const bool_t& other) 
         barretenberg::fr::field_t left_coefficient;
         barretenberg::fr::field_t right_coefficient;
         barretenberg::fr::field_t constant_coefficient;
-        if ((witness_inverted && other.witness_inverted) || (!witness_inverted && !other.witness_inverted))
-        {
+        if ((witness_inverted && other.witness_inverted) || (!witness_inverted && !other.witness_inverted)) {
             multiplicative_coefficient =
                 barretenberg::fr::add(barretenberg::fr::neg_one(), barretenberg::fr::neg_one());
             left_coefficient = barretenberg::fr::one;
             right_coefficient = barretenberg::fr::one;
             constant_coefficient = barretenberg::fr::zero;
-        }
-        else
-        {
+        } else {
             multiplicative_coefficient = barretenberg::fr::add(barretenberg::fr::one, barretenberg::fr::one);
             left_coefficient = barretenberg::fr::neg_one();
             right_coefficient = barretenberg::fr::neg_one();
@@ -304,32 +271,20 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator^(const bool_t& other) 
             left_coefficient, right_coefficient,   barretenberg::fr::neg_one(), constant_coefficient
         };
         context->create_poly_gate(gate_coefficients);
-    }
-    else if (witness_index != static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1))
-    {
+    } else if (witness_index != static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)) {
         // witness ^ 1 = !witness
-        if (other.witness_bool ^ other.witness_inverted)
-        {
+        if (other.witness_bool ^ other.witness_inverted) {
             result = !bool_t<ComposerContext>(*this);
-        }
-        else
-        {
+        } else {
             result = bool_t<ComposerContext>(*this);
         }
-    }
-    else if (witness_index == static_cast<uint32_t>(-1) && other.witness_index != static_cast<uint32_t>(-1))
-    {
-        if (witness_bool ^ witness_inverted)
-        {
+    } else if (witness_index == static_cast<uint32_t>(-1) && other.witness_index != static_cast<uint32_t>(-1)) {
+        if (witness_bool ^ witness_inverted) {
             result = !bool_t<ComposerContext>(other);
-        }
-        else
-        {
+        } else {
             result = bool_t<ComposerContext>(other);
         }
-    }
-    else
-    {
+    } else {
         result.witness_inverted = false;
         result.witness_index = static_cast<uint32_t>(-1);
     }
@@ -348,37 +303,24 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator==(const bool_t& other)
 {
     ASSERT(context || other.context ||
            (witness_index == static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)));
-    if ((other.witness_index == static_cast<uint32_t>(-1)) && (witness_index == static_cast<uint32_t>(-1)))
-    {
+    if ((other.witness_index == static_cast<uint32_t>(-1)) && (witness_index == static_cast<uint32_t>(-1))) {
         bool_t<ComposerContext> result(context == nullptr ? other.context : context);
         result.witness_bool = (witness_bool ^ witness_inverted) == (other.witness_bool ^ other.witness_inverted);
         result.witness_index = static_cast<uint32_t>(-1);
         return result;
-    }
-    else if ((witness_index != static_cast<uint32_t>(-1)) && (other.witness_index == static_cast<uint32_t>(-1)))
-    {
-        if (other.witness_bool ^ other.witness_inverted)
-        {
+    } else if ((witness_index != static_cast<uint32_t>(-1)) && (other.witness_index == static_cast<uint32_t>(-1))) {
+        if (other.witness_bool ^ other.witness_inverted) {
             return (*this);
-        }
-        else
-        {
+        } else {
             return !(*this);
         }
-    }
-    else if ((witness_index == static_cast<uint32_t>(-1)) && (other.witness_index != static_cast<uint32_t>(-1)))
-    {
-        if (witness_bool ^ witness_inverted)
-        {
+    } else if ((witness_index == static_cast<uint32_t>(-1)) && (other.witness_index != static_cast<uint32_t>(-1))) {
+        if (witness_bool ^ witness_inverted) {
             return other;
-        }
-        else
-        {
+        } else {
             return !(other);
         }
-    }
-    else
-    {
+    } else {
         bool_t<ComposerContext> result(context == nullptr ? other.context : context);
         result.witness_bool = (witness_bool ^ witness_inverted) == (other.witness_bool ^ other.witness_inverted);
         barretenberg::fr::field_t value = result.witness_bool ? barretenberg::fr::one : barretenberg::fr::zero;
@@ -389,15 +331,12 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator==(const bool_t& other)
         barretenberg::fr::field_t left_coefficient;
         barretenberg::fr::field_t right_coefficient;
         barretenberg::fr::field_t constant_coefficient;
-        if ((witness_inverted && other.witness_inverted) || (!witness_inverted && !other.witness_inverted))
-        {
+        if ((witness_inverted && other.witness_inverted) || (!witness_inverted && !other.witness_inverted)) {
             multiplicative_coefficient = barretenberg::fr::add(barretenberg::fr::one, barretenberg::fr::one);
             left_coefficient = barretenberg::fr::neg_one();
             right_coefficient = barretenberg::fr::neg_one();
             constant_coefficient = barretenberg::fr::one;
-        }
-        else
-        {
+        } else {
             multiplicative_coefficient =
                 barretenberg::fr::add(barretenberg::fr::neg_one(), barretenberg::fr::neg_one());
             left_coefficient = barretenberg::fr::one;
@@ -412,5 +351,57 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator==(const bool_t& other)
         return result;
     }
 }
+
+template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerContext>::operator!=(const bool_t<ComposerContext>& other) const
+{
+    return operator^(other);
+}
+
+template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerContext>::operator&&(const bool_t<ComposerContext>& other) const
+{
+    return operator&(other);
+}
+
+template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerContext>::operator||(const bool_t<ComposerContext>& other) const
+{
+    return operator|(other);
+}
+
+
+template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerContext>::normalize() const
+{
+    bool is_constant = (witness_index == static_cast<uint32_t>(-1));
+    barretenberg::fr::field_t value = witness_bool ^ witness_inverted ? barretenberg::fr::one : barretenberg::fr::zero;
+    bool_t result;
+    result.context = context;
+    result.witness_index = context->add_variable(value);
+    result.witness_bool = witness_bool ^ witness_inverted;
+    result.witness_inverted = false;
+    barretenberg::fr::field_t q_l;
+    barretenberg::fr::field_t q_c;
+    if (!is_constant) {
+        q_l = witness_inverted ? barretenberg::fr::neg_one() : barretenberg::fr::one;
+        q_c = barretenberg::fr::zero;
+    } else {
+        q_l = barretenberg::fr::zero;
+        q_c = witness_inverted ? barretenberg::fr::neg_one() : barretenberg::fr::one;
+    }
+    barretenberg::fr::field_t q_o = barretenberg::fr::neg_one();
+    barretenberg::fr::field_t q_m = barretenberg::fr::zero;
+    barretenberg::fr::field_t q_r = barretenberg::fr::zero;
+
+    const waffle::poly_triple gate_coefficients{
+        witness_index, witness_index, result.witness_index, q_m, q_l, q_r, q_o, q_c
+    };
+    context->create_poly_gate(gate_coefficients);
+    return result;
+}
+
+template class bool_t<waffle::StandardComposer>;
+template class bool_t<waffle::BoolComposer>;
+template class bool_t<waffle::MiMCComposer>;
+template class bool_t<waffle::ExtendedComposer>;
+template class bool_t<waffle::TurboComposer>;
+
 } // namespace stdlib
 } // namespace plonk

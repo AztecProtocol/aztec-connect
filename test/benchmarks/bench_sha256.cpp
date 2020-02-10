@@ -10,6 +10,7 @@
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
 
+#include <barretenberg/waffle/stdlib/bitarray/bitarray.hpp>
 #include <barretenberg/waffle/stdlib/crypto/hash/sha256.hpp>
 #include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
 
@@ -50,8 +51,8 @@ void generate_test_plonk_circuit(waffle::ExtendedComposer& composer, size_t num_
 }
 
 waffle::ExtendedComposer composers[NUM_HASHES];
-waffle::Prover provers[NUM_HASHES];
-waffle::Verifier verifiers[NUM_HASHES];
+waffle::ExtendedProver provers[NUM_HASHES];
+waffle::ExtendedVerifier verifiers[NUM_HASHES];
 waffle::plonk_proof proofs[NUM_HASHES];
 
 void construct_witnesses_bench(State& state) noexcept
@@ -78,7 +79,7 @@ void construct_instances_bench(State& state) noexcept
 {
     for (auto _ : state) {
         size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
-        verifiers[idx] = (waffle::preprocess(provers[idx]));
+        verifiers[idx] = composers[idx].create_verifier();
     }
 }
 BENCHMARK(construct_instances_bench)->DenseRange(55, MAX_BYTES, 64);

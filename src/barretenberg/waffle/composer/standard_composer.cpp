@@ -2,8 +2,12 @@
 
 #include <math.h>
 
+#include "../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
+
 #include "../../assert.hpp"
 #include "../../curves/bn254/fr.hpp"
+#include "../proof_system/proving_key/proving_key.hpp"
+#include "../proof_system/verification_key/verification_key.hpp"
 #include "../proof_system/widgets/arithmetic_widget.hpp"
 
 using namespace barretenberg;
@@ -16,9 +20,9 @@ void StandardComposer::create_add_gate(const add_triple& in)
     w_r.emplace_back(in.b);
     w_o.emplace_back(in.c);
     q_m.emplace_back(fr::zero);
-    q_l.emplace_back(in.a_scaling);
-    q_r.emplace_back(in.b_scaling);
-    q_o.emplace_back(in.c_scaling);
+    q_1.emplace_back(in.a_scaling);
+    q_2.emplace_back(in.b_scaling);
+    q_3.emplace_back(in.c_scaling);
     q_c.emplace_back(in.const_scaling);
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
@@ -42,9 +46,9 @@ void StandardComposer::create_mul_gate(const mul_triple& in)
     w_r.emplace_back(in.b);
     w_o.emplace_back(in.c);
     q_m.emplace_back(in.mul_scaling);
-    q_l.emplace_back(fr::zero);
-    q_r.emplace_back(fr::zero);
-    q_o.emplace_back(in.c_scaling);
+    q_1.emplace_back(fr::zero);
+    q_2.emplace_back(fr::zero);
+    q_3.emplace_back(in.c_scaling);
     q_c.emplace_back(in.const_scaling);
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
@@ -69,9 +73,9 @@ void StandardComposer::create_bool_gate(const uint32_t variable_index)
     w_o.emplace_back(variable_index);
 
     q_m.emplace_back(fr::one);
-    q_l.emplace_back(fr::zero);
-    q_r.emplace_back(fr::zero);
-    q_o.emplace_back(fr::neg_one());
+    q_1.emplace_back(fr::zero);
+    q_2.emplace_back(fr::zero);
+    q_3.emplace_back(fr::neg_one());
     q_c.emplace_back(fr::zero);
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
@@ -93,9 +97,9 @@ void StandardComposer::create_poly_gate(const poly_triple& in)
     w_r.emplace_back(in.b);
     w_o.emplace_back(in.c);
     q_m.emplace_back(in.q_m);
-    q_l.emplace_back(in.q_l);
-    q_r.emplace_back(in.q_r);
-    q_o.emplace_back(in.q_o);
+    q_1.emplace_back(in.q_l);
+    q_2.emplace_back(in.q_r);
+    q_3.emplace_back(in.q_o);
     q_c.emplace_back(in.q_c);
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
@@ -115,9 +119,9 @@ void StandardComposer::create_dummy_gates()
     gate_flags.push_back(0);
     // add in a dummy gate to ensure that all of our polynomials are not zero and not identical
     q_m.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
-    q_l.emplace_back(fr::to_montgomery_form({ { 2, 0, 0, 0 } }));
-    q_r.emplace_back(fr::to_montgomery_form({ { 3, 0, 0, 0 } }));
-    q_o.emplace_back(fr::to_montgomery_form({ { 4, 0, 0, 0 } }));
+    q_1.emplace_back(fr::to_montgomery_form({ { 2, 0, 0, 0 } }));
+    q_2.emplace_back(fr::to_montgomery_form({ { 3, 0, 0, 0 } }));
+    q_3.emplace_back(fr::to_montgomery_form({ { 4, 0, 0, 0 } }));
     q_c.emplace_back(fr::to_montgomery_form({ { 5, 0, 0, 0 } }));
 
     uint32_t a_idx = add_variable(fr::to_montgomery_form({ { 6, 0, 0, 0 } }));
@@ -142,9 +146,9 @@ void StandardComposer::create_dummy_gates()
     // add a second dummy gate the ensure our permutation polynomials are also
     // distinct from the identity permutation
     q_m.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
-    q_l.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
-    q_r.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
-    q_o.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
+    q_1.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
+    q_2.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
+    q_3.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
     q_c.emplace_back((fr::to_montgomery_form({ { 127, 0, 0, 0 } })));
 
     w_l.emplace_back(c_idx);
@@ -163,55 +167,208 @@ void StandardComposer::create_dummy_gates()
     ++n;
 }
 
-Prover StandardComposer::preprocess()
+std::shared_ptr<proving_key> StandardComposer::compute_proving_key()
 {
+    if (computed_proving_key) {
+        return circuit_proving_key;
+    }
     ASSERT(wire_epicycles.size() == variables.size());
     ASSERT(n == q_m.size());
-    ASSERT(n == q_l.size());
-    ASSERT(n == q_r.size());
-    ASSERT(n == q_o.size());
-    ASSERT(n == q_o.size());
+    ASSERT(n == q_1.size());
+    ASSERT(n == q_2.size());
+    ASSERT(n == q_3.size());
 
-    size_t log2_n = static_cast<size_t>(log2(n + 1));
-    if ((1UL << log2_n) != (n + 1)) {
+    const size_t total_num_gates = n + public_inputs.size();
+    size_t log2_n = static_cast<size_t>(log2(total_num_gates + 1));
+    if ((1UL << log2_n) != (total_num_gates + 1)) {
         ++log2_n;
     }
     size_t new_n = 1UL << log2_n;
-    variables.emplace_back(fr::zero);
-    zero_idx = variables.size() - 1;
-    for (size_t i = n; i < new_n; ++i) {
+    for (size_t i = total_num_gates; i < new_n; ++i) {
         q_m.emplace_back(fr::zero);
-        q_l.emplace_back(fr::zero);
-        q_r.emplace_back(fr::zero);
-        q_o.emplace_back(fr::zero);
+        q_1.emplace_back(fr::zero);
+        q_2.emplace_back(fr::zero);
+        q_3.emplace_back(fr::zero);
         q_c.emplace_back(fr::zero);
+    }
+
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
+        epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
+        wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
+    }
+    circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size());
+    polynomial poly_q_m(new_n);
+    polynomial poly_q_c(new_n);
+    polynomial poly_q_1(new_n);
+    polynomial poly_q_2(new_n);
+    polynomial poly_q_3(new_n);
+
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
+        poly_q_m[i] = fr::zero;
+        poly_q_1[i] = fr::zero;
+        poly_q_2[i] = fr::zero;
+        poly_q_3[i] = fr::zero;
+        poly_q_c[i] = fr::zero;
+    }
+    for (size_t i = public_inputs.size(); i < new_n; ++i) {
+        poly_q_m[i] = q_m[i - public_inputs.size()];
+        poly_q_1[i] = q_1[i - public_inputs.size()];
+        poly_q_2[i] = q_2[i - public_inputs.size()];
+        poly_q_3[i] = q_3[i - public_inputs.size()];
+        poly_q_c[i] = q_c[i - public_inputs.size()];
+    }
+
+    poly_q_1.ifft(circuit_proving_key->small_domain);
+    poly_q_2.ifft(circuit_proving_key->small_domain);
+    poly_q_3.ifft(circuit_proving_key->small_domain);
+    poly_q_m.ifft(circuit_proving_key->small_domain);
+    poly_q_c.ifft(circuit_proving_key->small_domain);
+
+    polynomial poly_q_1_fft(poly_q_1, new_n * 2);
+    polynomial poly_q_2_fft(poly_q_2, new_n * 2);
+    polynomial poly_q_3_fft(poly_q_3, new_n * 2);
+    polynomial poly_q_m_fft(poly_q_m, new_n * 2);
+    polynomial poly_q_c_fft(poly_q_c, new_n * 2);
+
+    poly_q_1_fft.coset_fft(circuit_proving_key->mid_domain);
+    poly_q_2_fft.coset_fft(circuit_proving_key->mid_domain);
+    poly_q_3_fft.coset_fft(circuit_proving_key->mid_domain);
+    poly_q_m_fft.coset_fft(circuit_proving_key->mid_domain);
+    poly_q_c_fft.coset_fft(circuit_proving_key->mid_domain);
+
+    circuit_proving_key->constraint_selectors.insert({ "q_m", std::move(poly_q_m) });
+    circuit_proving_key->constraint_selectors.insert({ "q_c", std::move(poly_q_c) });
+    circuit_proving_key->constraint_selectors.insert({ "q_1", std::move(poly_q_1) });
+    circuit_proving_key->constraint_selectors.insert({ "q_2", std::move(poly_q_2) });
+    circuit_proving_key->constraint_selectors.insert({ "q_3", std::move(poly_q_3) });
+
+    circuit_proving_key->constraint_selector_ffts.insert({ "q_m_fft", std::move(poly_q_m_fft) });
+    circuit_proving_key->constraint_selector_ffts.insert({ "q_c_fft", std::move(poly_q_c_fft) });
+    circuit_proving_key->constraint_selector_ffts.insert({ "q_1_fft", std::move(poly_q_1_fft) });
+    circuit_proving_key->constraint_selector_ffts.insert({ "q_2_fft", std::move(poly_q_2_fft) });
+    circuit_proving_key->constraint_selector_ffts.insert({ "q_3_fft", std::move(poly_q_3_fft) });
+
+    compute_sigma_permutations<3>(circuit_proving_key.get());
+    computed_proving_key = true;
+    return circuit_proving_key;
+}
+
+std::shared_ptr<verification_key> StandardComposer::compute_verification_key()
+{
+    if (computed_verification_key) {
+        return circuit_verification_key;
+    }
+    if (!computed_proving_key) {
+        compute_proving_key();
+    }
+
+    std::array<fr::field_t*, 8> poly_coefficients;
+    poly_coefficients[0] = circuit_proving_key->constraint_selectors.at("q_1").get_coefficients();
+    poly_coefficients[1] = circuit_proving_key->constraint_selectors.at("q_2").get_coefficients();
+    poly_coefficients[2] = circuit_proving_key->constraint_selectors.at("q_3").get_coefficients();
+    poly_coefficients[3] = circuit_proving_key->constraint_selectors.at("q_m").get_coefficients();
+    poly_coefficients[4] = circuit_proving_key->constraint_selectors.at("q_c").get_coefficients();
+    poly_coefficients[5] = circuit_proving_key->permutation_selectors.at("sigma_1").get_coefficients();
+    poly_coefficients[6] = circuit_proving_key->permutation_selectors.at("sigma_2").get_coefficients();
+    poly_coefficients[7] = circuit_proving_key->permutation_selectors.at("sigma_3").get_coefficients();
+
+    std::vector<barretenberg::g1::affine_element> commitments;
+    commitments.resize(8);
+
+    for (size_t i = 0; i < 8; ++i) {
+        g1::jacobian_to_affine(scalar_multiplication::pippenger(poly_coefficients[i],
+                                                                circuit_proving_key->reference_string.monomials,
+                                                                circuit_proving_key->n),
+                               commitments[i]);
+    }
+
+    circuit_verification_key =
+        std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs);
+
+    circuit_verification_key->constraint_selectors.insert({ "Q_1", commitments[0] });
+    circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });
+    circuit_verification_key->constraint_selectors.insert({ "Q_3", commitments[2] });
+    circuit_verification_key->constraint_selectors.insert({ "Q_M", commitments[3] });
+    circuit_verification_key->constraint_selectors.insert({ "Q_C", commitments[4] });
+
+    circuit_verification_key->permutation_selectors.insert({ "SIGMA_1", commitments[5] });
+    circuit_verification_key->permutation_selectors.insert({ "SIGMA_2", commitments[6] });
+    circuit_verification_key->permutation_selectors.insert({ "SIGMA_3", commitments[7] });
+
+    computed_verification_key = true;
+    return circuit_verification_key;
+}
+
+std::shared_ptr<program_witness> StandardComposer::compute_witness()
+{
+    if (computed_witness) {
+        return witness;
+    }
+    witness = std::make_shared<program_witness>();
+
+    const size_t total_num_gates = n + public_inputs.size();
+    size_t log2_n = static_cast<size_t>(log2(total_num_gates + 1));
+    if ((1UL << log2_n) != (total_num_gates + 1)) {
+        ++log2_n;
+    }
+    size_t new_n = 1UL << log2_n;
+    for (size_t i = total_num_gates; i < new_n; ++i) {
         w_l.emplace_back(zero_idx);
         w_r.emplace_back(zero_idx);
         w_o.emplace_back(zero_idx);
     }
-    Prover output_state(new_n);
-
-    compute_sigma_permutations(output_state);
-
-    std::unique_ptr<ProverArithmeticWidget> widget = std::make_unique<ProverArithmeticWidget>(new_n);
-
-    output_state.w_l = polynomial(new_n);
-    output_state.w_r = polynomial(new_n);
-    output_state.w_o = polynomial(new_n);
-
-    for (size_t i = 0; i < new_n; ++i) {
-        fr::__copy(variables[w_l[i]], output_state.w_l.at(i));
-        fr::__copy(variables[w_r[i]], output_state.w_r.at(i));
-        fr::__copy(variables[w_o[i]], output_state.w_o.at(i));
-
-        fr::__copy(q_m[i], widget->q_m.at(i));
-        fr::__copy(q_l[i], widget->q_l.at(i));
-        fr::__copy(q_r[i], widget->q_r.at(i));
-        fr::__copy(q_o[i], widget->q_o.at(i));
-        fr::__copy(q_c[i], widget->q_c.at(i));
+    polynomial poly_w_1 = polynomial(new_n);
+    polynomial poly_w_2 = polynomial(new_n);
+    polynomial poly_w_3 = polynomial(new_n);
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
+        fr::__copy(variables[public_inputs[i]], poly_w_1[i]);
+        fr::__copy(fr::zero, poly_w_2[i]);
+        fr::__copy(fr::zero, poly_w_3[i]);
     }
+    for (size_t i = public_inputs.size(); i < new_n; ++i) {
+        fr::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1.at(i));
+        fr::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2.at(i));
+        fr::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3.at(i));
+    }
+    witness->wires.insert({ "w_1", std::move(poly_w_1) });
+    witness->wires.insert({ "w_2", std::move(poly_w_2) });
+    witness->wires.insert({ "w_3", std::move(poly_w_3) });
+    computed_witness = true;
+    return witness;
+}
 
-    output_state.widgets.emplace_back(std::move(widget));
+Verifier StandardComposer::create_verifier()
+{
+    compute_verification_key();
+    Verifier output_state(circuit_verification_key, create_manifest(public_inputs.size()));
+
+    std::unique_ptr<VerifierArithmeticWidget> widget = std::make_unique<VerifierArithmeticWidget>();
+
+    output_state.verifier_widgets.emplace_back(std::move(widget));
+
     return output_state;
 }
+
+Prover StandardComposer::preprocess()
+{
+    compute_proving_key();
+    compute_witness();
+    Prover output_state(circuit_proving_key, witness, create_manifest(public_inputs.size()));
+
+    std::unique_ptr<ProverArithmeticWidget> widget =
+        std::make_unique<ProverArithmeticWidget>(circuit_proving_key.get(), witness.get());
+
+    output_state.widgets.emplace_back(std::move(widget));
+
+    return output_state;
+}
+
+void StandardComposer::assert_equal_constant(uint32_t const a_idx, fr::field_t const& b)
+{
+    const add_triple gate_coefficients{
+        a_idx, a_idx, a_idx, fr::one, fr::zero, fr::zero, fr::neg(b),
+    };
+    create_add_gate(gate_coefficients);
+}
+
 } // namespace waffle

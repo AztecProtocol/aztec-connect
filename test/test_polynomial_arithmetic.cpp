@@ -277,8 +277,8 @@ TEST(polynomials, compute_kate_opening_coefficients)
 {
     // generate random polynomial F(X) = coeffs
     size_t n = 256;
-    fr::field_t coeffs[2 * n];
-    fr::field_t W[2 * n];
+    fr::field_t* coeffs = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
+    fr::field_t* W = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
     for (size_t i = 0; i < n; ++i) {
         coeffs[i] = fr::random_element();
         coeffs[i + n] = fr::zero;
@@ -293,7 +293,7 @@ TEST(polynomials, compute_kate_opening_coefficients)
 
     // validate that W(X)(X - z) = F(X) - F(z)
     // compute (X - z) in coefficient form
-    fr::field_t multiplicand[2 * n];
+    fr::field_t* multiplicand = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
     fr::__neg(z, multiplicand[0]);
     multiplicand[1] = fr::one;
     for (size_t i = 2; i < 2 * n; ++i) {
@@ -316,11 +316,15 @@ TEST(polynomials, compute_kate_opening_coefficients)
         fr::__mul(W[i], multiplicand[i], result);
         EXPECT_EQ(fr::eq(result, coeffs[i]), true);
     }
+
+    aligned_free(coeffs);
+    aligned_free(W);
+    aligned_free(multiplicand);
 }
 
 TEST(polynomials, get_lagrange_evaluations)
 {
-    size_t n = 16;
+    constexpr size_t n = 16;
 
     evaluation_domain domain = evaluation_domain(n);
     domain.compute_lookup_table();
@@ -358,3 +362,79 @@ TEST(polynomials, get_lagrange_evaluations)
     EXPECT_EQ(fr::eq(evals.l_n_minus_1, l_n_minus_1_expected), true);
     EXPECT_EQ(fr::eq(evals.vanishing_poly, vanishing_poly_expected), true);
 }
+
+TEST(polynomials, barycentric_weight_evaluations)
+{
+    constexpr size_t n = 16;
+
+    evaluation_domain domain(n);
+
+    std::vector<fr::field_t> poly(n);
+    std::vector<fr::field_t> barycentric_poly(n);
+
+    for (size_t i = 0; i < n / 2; ++i)
+    {
+        poly[i] = fr::random_element();
+        barycentric_poly[i] = poly[i];
+    }
+    for (size_t i = n / 2; i < n; ++i)
+    {
+        poly[i] = fr::zero;
+        barycentric_poly[i] = poly[i];
+    }
+    fr::field_t evaluation_point = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
+
+    fr::field_t result = polynomial_arithmetic::compute_barycentric_evaluation(&barycentric_poly[0], n / 2, evaluation_point, domain);
+
+    domain.compute_lookup_table();
+
+    polynomial_arithmetic::ifft(&poly[0], domain);
+
+    fr::field_t expected = polynomial_arithmetic::evaluate(&poly[0], evaluation_point, n);
+
+    EXPECT_EQ(fr::eq(result, expected), true);
+}
+
+// TEST(polynomials, fft_experiments)
+// {
+//     const size_t domain_size = 4;
+//     evaluation_domain small_domain(domain_size);
+//     evaluation_domain mid_domain(domain_size * 2);
+//     small_domain.compute_lookup_table();
+//     mid_domain.compute_lookup_table();
+
+//     std::vector<fr::field_t> poly_a(2 * domain_size);
+//     // std::vector<fr::field_t> poly_b;
+//     poly_a[0] = fr::one;
+//     poly_a[1] = fr::zero;
+//     poly_a[2] = fr::zero;
+//     poly_a[3] = fr::zero;
+//     // std::copy(poly_a.begin(), poly_a.end(), std::back_inserter(poly_b));
+//     polynomial_arithmetic::ifft(&poly_a[0], small_domain);
+//     printf("coeffs \n");
+//     for (size_t i = 0; i < small_domain.size; ++i)
+//     {
+//         fr::print(fr::from_montgomery_form(fr::mul(small_domain.domain, poly_a[i])));
+//     }
+//     printf("#\n");
+//     poly_a[4] = fr::zero;
+//     poly_a[5] = fr::zero;
+//     poly_a[6] = fr::zero;
+//     poly_a[7] = fr::zero;
+//     polynomial_arithmetic::fft(&poly_a[0], mid_domain);
+//     fr::field_t root = mid_domain.root;
+//     for (size_t i = 0; i < domain_size * 2; ++i)
+//     {
+//         fr::print(fr::from_montgomery_form(poly_a[i]));
+//     }
+//     printf("roots \n");
+//     // fr::field_t two_inv = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
+//     // fr::__invert(two_inv, two_inv);
+//     for (size_t i = 0; i < domain_size * 2; ++i)
+//     {
+
+//        fr::print(fr::from_montgomery_form((root)));
+//        // fr::print(fr::from_montgomery_form(fr::mul(root, two_inv)));
+//         root = fr::mul(root, mid_domain.root);
+//     }
+// }

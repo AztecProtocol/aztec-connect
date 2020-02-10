@@ -353,3 +353,16 @@ TEST(group, derive_generators)
         EXPECT_EQ(g1::on_curve(result[k]), true);
     }
 }
+
+TEST(group, serialize)
+{
+    g1::affine_element expected = g1::random_affine_element();
+
+    uint8_t buffer[sizeof(g1::affine_element)];
+
+    g1::serialize_to_buffer(expected, buffer);
+    
+    g1::affine_element result = g1::serialize_from_buffer(buffer);
+
+    EXPECT_EQ(g1::eq(result, expected), true);
+}

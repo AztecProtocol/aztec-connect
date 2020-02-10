@@ -1,0 +1,17 @@
+objdump -drwCS -Mintel ./barretenberg.a > some_file_name.txt
+
+# valgrind/callgrind
+valgrind --tool=callgrind ./test/barretengerg_test
+
+# create .dot file from callgrind output 
+gprof2dot --format=callgrind --output=out.dot ./callgrind.out.23668(replace with .out filename)
+
+# create .png from .dot file
+dot -Tpng out.dot -o graph.png
+
+# profile cache misses
+valgrind --tool=cachegrind ./test/barretenberg_profiling
+
+valgrind --tool=callgrind --dump-instr=yes --instr-atstart=no ./test/barretenberg_profiling
+
+cmake --build . --parallel --target barretenberg_tests

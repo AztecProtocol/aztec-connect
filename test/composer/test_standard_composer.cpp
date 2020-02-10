@@ -152,7 +152,7 @@ using namespace barretenberg;
 // }
 } // namespace
 
-TEST(composer, test_add_gate_proofs)
+TEST(standard_composer, test_add_gate_proofs)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
     fr::field_t a = fr::one;
@@ -202,7 +202,7 @@ TEST(composer, test_add_gate_proofs)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -210,7 +210,7 @@ TEST(composer, test_add_gate_proofs)
     EXPECT_EQ(result, true);
 }
 
-TEST(composer, test_mul_gate_proofs)
+TEST(standard_composer, test_mul_gate_proofs)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
     fr::field_t q[7]{ fr::random_element(), fr::random_element(), fr::random_element(), fr::random_element(),
@@ -282,7 +282,7 @@ TEST(composer, test_mul_gate_proofs)
 
     waffle::Prover prover = composer.preprocess();
 
-    waffle::Verifier verifier = waffle::preprocess(prover);
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
