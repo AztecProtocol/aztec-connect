@@ -27,21 +27,13 @@ target_include_directories(
         ${private_include_dir}/boost
 )
 
-if (WIN32)
-    target_link_libraries(
-        noir
-        PUBLIC
-        barretenberg
-        wsock32
-        ws2_32
-    )
-else()
-    target_link_libraries(
-        noir
-        PUBLIC
-        barretenberg
-    )
-endif()
+target_link_libraries(
+    noir
+    PUBLIC
+    barretenberg
+    PRIVATE
+    ${private_os_libs}
+)
 
 target_include_directories(
     noir

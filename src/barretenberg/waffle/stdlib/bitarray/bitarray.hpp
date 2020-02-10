@@ -3,6 +3,7 @@
 #include <array>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include "../bool/bool.hpp"
 #include "../byte_array/byte_array.hpp"

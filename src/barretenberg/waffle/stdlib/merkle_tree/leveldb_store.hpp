@@ -46,9 +46,9 @@ class LevelDbStore {
                            size_t stump_height,
                            leveldb::WriteBatch& batch);
 
-    void put(fr::field_t key, fr::field_t left, fr::field_t right, leveldb::WriteBatch& batch);
+    void put(fr::field_t const& key, fr::field_t const& left, fr::field_t const& right, leveldb::WriteBatch& batch);
 
-    void put_stump(fr::field_t key, index_t index, fr::field_t value, leveldb::WriteBatch& batch);
+    void put_stump(fr::field_t const& key, index_t index, fr::field_t const& value, leveldb::WriteBatch& batch);
 
   private:
     static constexpr size_t LEAF_BYTES = 64;

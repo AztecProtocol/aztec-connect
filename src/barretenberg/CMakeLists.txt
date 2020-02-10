@@ -123,13 +123,15 @@ add_library(
     waffle/stdlib/uint32/uint32.hpp
     waffle/stdlib/bitarray/bitarray.cpp
     waffle/stdlib/bitarray/bitarray.hpp
+    waffle/stdlib/byte_array/byte_array.cpp
+    waffle/stdlib/byte_array/byte_array.hpp
     waffle/stdlib/mimc.cpp
     waffle/stdlib/mimc.hpp
     waffle/stdlib/crypto/crypto.hpp
     waffle/stdlib/crypto/hash/sha256.cpp
     waffle/stdlib/crypto/hash/sha256.hpp
     waffle/stdlib/merkle_tree/hash.hpp
-    waffle/stdlib/merkle_tree/merkle_tree.tcc
+    waffle/stdlib/merkle_tree/merkle_tree.cpp
     waffle/stdlib/merkle_tree/merkle_tree.hpp
     waffle/stdlib/merkle_tree/memory_store.hpp
     waffle/stdlib/merkle_tree/memory_store.cpp
@@ -276,13 +278,19 @@ if(PROFILING)
         waffle/stdlib/uint32/uint32.hpp
         waffle/stdlib/bitarray/bitarray.cpp
         waffle/stdlib/bitarray/bitarray.hpp
+        waffle/stdlib/byte_array/byte_array.cpp
+        waffle/stdlib/byte_array/byte_array.hpp
         waffle/stdlib/mimc.cpp
         waffle/stdlib/mimc.hpp
         waffle/stdlib/crypto/crypto.hpp
         waffle/stdlib/crypto/hash/sha256.cpp
         waffle/stdlib/crypto/hash/sha256.hpp
-        waffle/stdlib/merkle_tree/merkle_tree.tcc
+        waffle/stdlib/merkle_tree/merkle_tree.cpp
         waffle/stdlib/merkle_tree/merkle_tree.hpp
+        waffle/stdlib/merkle_tree/memory_store.hpp
+        waffle/stdlib/merkle_tree/memory_store.cpp
+        waffle/stdlib/merkle_tree/leveldb_store.hpp
+        waffle/stdlib/merkle_tree/leveldb_store.cpp
         waffle/stdlib/crypto/hash/pedersen.cpp
         waffle/stdlib/crypto/hash/pedersen.hpp
         waffle/stdlib/crypto/schnorr/schnorr.cpp
@@ -293,6 +301,8 @@ if(PROFILING)
 
     target_link_libraries(
         barretenberg_profiling
+        PRIVATE
+        leveldb
     )
 
     set_target_properties(

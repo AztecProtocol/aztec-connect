@@ -1,9 +1,14 @@
-#pragma once
-
 #include <algorithm>
 #include <array>
 #include <bitset>
 #include <string>
+
+#include "../../composer/bool_composer.hpp"
+#include "../../composer/extended_composer.hpp"
+#include "../../composer/mimc_composer.hpp"
+#include "../../composer/standard_composer.hpp"
+#include "../../composer/turbo_composer.hpp"
+#include "byte_array.hpp"
 
 namespace plonk {
 namespace stdlib {
@@ -95,6 +100,26 @@ byte_array<ComposerContext> byte_array<ComposerContext>::slice(size_t offset, si
     auto end = values.begin() + (long)((offset + length) * 8);
     return byte_array(context, bits_t(start, end));
 }
+
+template <typename ComposerContext> std::string byte_array<ComposerContext>::get_value() const
+{
+    size_t length = values.size();
+    size_t num = (length / 8) + (length % 8 != 0);
+    std::string bytes(num, 0);
+    for (size_t i = 0; i < length; ++i) {
+        size_t index = i / 8;
+        char shift = static_cast<char>(7 - (i - index * 8));
+        char value = static_cast<char>(values[i].get_value() << shift);
+        bytes[index] |= value;
+    }
+    return bytes;
+}
+
+template class byte_array<waffle::StandardComposer>;
+template class byte_array<waffle::BoolComposer>;
+template class byte_array<waffle::MiMCComposer>;
+template class byte_array<waffle::ExtendedComposer>;
+template class byte_array<waffle::TurboComposer>;
 
 } // namespace stdlib
 } // namespace plonk

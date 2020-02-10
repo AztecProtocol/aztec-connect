@@ -6,6 +6,14 @@
 #include "../bool/bool.hpp"
 #include "../common.hpp"
 
+namespace waffle {
+class StandardComposer;
+class BoolComposer;
+class MiMCComposer;
+class ExtendedComposer;
+class TurboComposer;
+} // namespace waffle
+
 namespace plonk {
 namespace stdlib {
 
@@ -38,18 +46,7 @@ template <typename ComposerContext> class byte_array {
 
     ComposerContext* get_context() const { return context; }
 
-    std::string get_value() const
-    {
-        size_t length = values.size();
-        size_t num = (length / 8) + (length % 8 != 0);
-        std::string bytes(num, 0);
-        for (size_t i = 0; i < length; ++i) {
-            size_t index = i / 8;
-            uint8_t shift = static_cast<uint8_t>(7 - (i - index * 8));
-            bytes[index] |= (uint8_t)values[i].get_value() << shift;
-        }
-        return bytes;
-    }
+    std::string get_value() const;
 
   private:
     ComposerContext* context;
@@ -69,7 +66,11 @@ inline std::ostream& operator<<(std::ostream& os, byte_array<ComposerContext> co
     return os;
 }
 
+extern template class byte_array<waffle::StandardComposer>;
+extern template class byte_array<waffle::BoolComposer>;
+extern template class byte_array<waffle::MiMCComposer>;
+extern template class byte_array<waffle::ExtendedComposer>;
+extern template class byte_array<waffle::TurboComposer>;
+
 } // namespace stdlib
 } // namespace plonk
-
-#include "./byte_array.tcc"

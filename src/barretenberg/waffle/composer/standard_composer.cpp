@@ -282,7 +282,8 @@ std::shared_ptr<verification_key> StandardComposer::compute_verification_key()
                                commitments[i]);
     }
 
-    circuit_verification_key = std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs);
+    circuit_verification_key =
+        std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs);
 
     circuit_verification_key->constraint_selectors.insert({ "Q_1", commitments[0] });
     circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });
@@ -362,7 +363,7 @@ Prover StandardComposer::preprocess()
     return output_state;
 }
 
-void StandardComposer::assert_equal_constant(const uint32_t a_idx, const fr::field_t b)
+void StandardComposer::assert_equal_constant(uint32_t const a_idx, fr::field_t const& b)
 {
     const add_triple gate_coefficients{
         a_idx, a_idx, a_idx, fr::one, fr::zero, fr::zero, fr::neg(b),

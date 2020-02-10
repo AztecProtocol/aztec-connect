@@ -48,7 +48,7 @@ template <> inline size_t count_leading_zeros<size_t>(size_t u)
 
 template <> inline size_t count_leading_zeros<uint128_t>(uint128_t u)
 {
-    uint64_t hi = u >> 64;
+    uint64_t hi = static_cast<uint64_t>(u >> 64);
     if (hi) {
         return (size_t)__builtin_clzl(hi);
     } else {

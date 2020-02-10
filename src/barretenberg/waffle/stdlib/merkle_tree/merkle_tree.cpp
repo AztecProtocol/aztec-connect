@@ -1,3 +1,5 @@
+#include "merkle_tree.hpp"
+#include "../../composer/turbo_composer.hpp"
 #include "../crypto/hash/pedersen.hpp"
 #include "../crypto/hash/sha256.hpp"
 #include "hash.hpp"
@@ -76,7 +78,6 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::check_hash_path(field_t co
                                                                       hash_path const& hashes,
                                                                       byte_array const& index)
 {
-    field_t one = witness_t(&ctx_, 1);
     field_t current = compress(hashes[0].first, hashes[0].second);
     bool_t is_member = witness_t(&ctx_, true);
 
@@ -98,7 +99,6 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(field_t c
                                                                        value_t const& value,
                                                                        byte_array const& index)
 {
-    field_t one = witness_t(&ctx_, 1);
     field_t current = value;
     bool_t is_member = witness_t(&ctx_, true);
 
@@ -194,6 +194,8 @@ void merkle_tree<ComposerContext>::update_membership(field_t const& new_root,
         ctx_.assert_equal_constant((share_left ^ share_right).witness_index, barretenberg::fr::one);
     }
 }
+
+template class merkle_tree<waffle::TurboComposer>;
 
 } // namespace merkle_tree
 } // namespace stdlib

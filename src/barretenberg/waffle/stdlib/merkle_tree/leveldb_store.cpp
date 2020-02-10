@@ -76,7 +76,7 @@ fr_hash_path LevelDbStore::get_hash_path(index_t index)
             auto right = from_string(data, 32);
             path[i] = std::make_pair(left, right);
             bool is_right = (index >> i) & 0x1;
-            status = db_->Get(leveldb::ReadOptions(), data.substr(is_right * 32, 32), &data);
+            status = db_->Get(leveldb::ReadOptions(), data.substr(is_right ? 32 : 0, 32), &data);
         } else {
             // This is a stump. The hash path can be fully restored from this node.
             index_t element_index = *(index_t*)(data.data() + 32);
@@ -124,7 +124,7 @@ fr::field_t LevelDbStore::get_element(fr::field_t const& root, index_t index, si
         return (existing_index == index) ? existing_value : zero_hashes_[0];
     } else {
         bool is_right = (index >> (height - 1)) & 0x1;
-        fr::field_t subtree_root = from_string(data, is_right * 32);
+        fr::field_t subtree_root = from_string(data, is_right ? 32 : 0);
         return get_element(subtree_root, index, height - 1);
     }
 }
@@ -227,7 +227,7 @@ fr::field_t LevelDbStore::update_element(
     } else {
         bool is_right = (index >> (height - 1)) & 0x1;
         // std::cout << "is_right:" << is_right << std::endl;
-        fr::field_t subtree_root = from_string(data, is_right * 32);
+        fr::field_t subtree_root = from_string(data, is_right ? 32 : 0);
         subtree_root = update_element(subtree_root, value, index, height - 1, batch);
         auto left = from_string(data, 0);
         auto right = from_string(data, 32);
@@ -261,7 +261,10 @@ fr::field_t LevelDbStore::compute_zero_path_hash(size_t height, index_t index, f
     return current;
 }
 
-void LevelDbStore::put(fr::field_t key, fr::field_t left, fr::field_t right, leveldb::WriteBatch& batch)
+void LevelDbStore::put(fr::field_t const& key,
+                       fr::field_t const& left,
+                       fr::field_t const& right,
+                       leveldb::WriteBatch& batch)
 {
     std::ostringstream os;
     os.write((char*)left.data, 32);
@@ -270,7 +273,10 @@ void LevelDbStore::put(fr::field_t key, fr::field_t left, fr::field_t right, lev
     // std::cout << "PUT key:" << key << " left:" << left << " right:" << right << std::endl;
 }
 
-void LevelDbStore::put_stump(fr::field_t key, index_t index, fr::field_t value, leveldb::WriteBatch& batch)
+void LevelDbStore::put_stump(fr::field_t const& key,
+                             index_t index,
+                             fr::field_t const& value,
+                             leveldb::WriteBatch& batch)
 {
     std::ostringstream os;
     os.write((char*)value.data, 32);

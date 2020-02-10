@@ -1,8 +1,8 @@
 #pragma once
 #include "../../composer/standard_composer.hpp"
-#include "../crypto/hash/picosha2.hpp"
 #include "../field/field.hpp"
 #include "../group/group_utils.hpp"
+#include "../../../misc_crypto/sha256/sha256.hpp"
 #include "../mimc.hpp"
 #include <iomanip>
 #include <iostream>
@@ -47,8 +47,8 @@ inline barretenberg::fr::field_t sha256(std::string const& input)
         // TODO: Reverse machine words on BE?
     }
     */
-    std::vector<uint8_t> output(picosha2::k_digest_size);
-    picosha2::hash256(input.begin(), input.end(), output.begin(), output.end());
+    std::vector<uint8_t> inputv(input.begin(), input.end());
+    std::vector<uint8_t> output = sha256::sha256(inputv);
     barretenberg::fr::field_t result = barretenberg::fr::zero;
     if (isLittleEndian()) {
         result.data[0] = __builtin_bswap64(*(uint64_t*)&output[24]);

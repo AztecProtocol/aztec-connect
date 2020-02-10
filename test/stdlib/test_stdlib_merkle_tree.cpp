@@ -12,6 +12,7 @@
 #include <barretenberg/waffle/stdlib/field/field.hpp>
 #include <barretenberg/waffle/stdlib/merkle_tree/hash.hpp>
 #include <barretenberg/waffle/stdlib/merkle_tree/merkle_tree.hpp>
+#include <barretenberg/waffle/stdlib/merkle_tree/sha256_value.hpp>
 
 #include <memory>
 
@@ -24,7 +25,6 @@ typedef stdlib::bool_t<Composer> bool_t;
 typedef stdlib::byte_array<Composer> byte_array;
 typedef stdlib::merkle_tree::merkle_tree<Composer> merkle_tree;
 typedef stdlib::witness_t<Composer> witness_t;
-using stdlib::merkle_tree::sha256;
 
 static std::vector<std::string> VALUES = []() {
     std::vector<std::string> values(1024);
@@ -46,10 +46,10 @@ TEST(stdlib_merkle_tree, test_sha256_native)
 
 TEST(stdlib_merkle_tree, test_memory_store)
 {
-    fr::field_t e00 = sha256(VALUES[1]);
-    fr::field_t e01 = sha256(VALUES[2]);
-    fr::field_t e02 = sha256(VALUES[3]);
-    fr::field_t e03 = sha256(VALUES[4]);
+    fr::field_t e00 = plonk::stdlib::merkle_tree::sha256(VALUES[1]);
+    fr::field_t e01 = plonk::stdlib::merkle_tree::sha256(VALUES[2]);
+    fr::field_t e02 = plonk::stdlib::merkle_tree::sha256(VALUES[3]);
+    fr::field_t e03 = plonk::stdlib::merkle_tree::sha256(VALUES[4]);
     fr::field_t e10 = stdlib::merkle_tree::hash({ e00, e01 });
     fr::field_t e11 = stdlib::merkle_tree::hash({ e02, e03 });
     fr::field_t root = stdlib::merkle_tree::hash({ e10, e11 });
@@ -165,7 +165,8 @@ TEST(stdlib_merkle_tree, test_leveldb_update_1024_random)
 
     for (size_t i = 0; i < 1024; i++) {
         stdlib::merkle_tree::LevelDbStore::index_t index;
-        getentropy((void*)&index, sizeof(index));
+        int got_entropy = getentropy((void*)&index, sizeof(index));
+        ASSERT(got_entropy == 0);
         db.update_element(index, VALUES[i]);
         entries.push_back(std::make_pair(index, VALUES[i]));
     }
@@ -227,7 +228,6 @@ TEST(stdlib_merkle_tree, test_check_membership)
 
     byte_array zero_value(&composer, VALUES[0]);
     field_t zero = witness_t(&composer, fr::zero);
-    field_t one = witness_t(&composer, fr::one);
 
     merkle_tree tree = merkle_tree(composer, db);
     bool_t is_member = tree.check_membership(zero_value, zero);
@@ -296,7 +296,7 @@ TEST(stdlib_merkle_tree, test_add_members)
     stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
 
     Composer composer = Composer();
-    size_t size = 8;
+    size_t size = 3;
     std::vector<field_t> values(size);
 
     for (size_t i = 0; i < size; ++i) {
@@ -326,39 +326,13 @@ TEST(stdlib_merkle_tree, test_add_members)
     EXPECT_EQ(result, true);
 }
 
-TEST(stdlib_merkle_tree, test_update_member)
-{
-    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
-    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
-
-    Composer composer = Composer();
-    field_t zero = witness_t(&composer, 0);
-    field_t one = witness_t(&composer, 1);
-    merkle_tree tree = merkle_tree(composer, db);
-
-    EXPECT_EQ(tree.check_membership(one, zero).get_value(), false);
-
-    tree.update_member(one, zero);
-
-    EXPECT_EQ(tree.check_membership(one, zero).get_value(), true);
-
-    auto prover = composer.preprocess();
-
-    auto verifier = composer.create_verifier();
-
-    waffle::plonk_proof proof = prover.construct_proof();
-
-    bool result = verifier.verify_proof(proof);
-    EXPECT_EQ(result, true);
-}
-
 TEST(stdlib_merkle_tree, test_update_members)
 {
     leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
     stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
 
     Composer composer = Composer();
-    size_t size = 8;
+    size_t size = 3;
     std::vector<field_t> values(size);
 
     for (size_t i = 0; i < size; ++i) {

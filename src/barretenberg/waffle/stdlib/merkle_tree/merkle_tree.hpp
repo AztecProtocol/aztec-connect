@@ -6,6 +6,10 @@
 #include "leveldb_store.hpp"
 #include "memory_store.hpp"
 
+namespace waffle {
+class TurboComposer;
+} // namespace waffle
+
 namespace plonk {
 namespace stdlib {
 namespace merkle_tree {
@@ -61,8 +65,8 @@ template <typename ComposerContext> class merkle_tree {
     uint128_t size_;
 };
 
+extern template class merkle_tree<waffle::TurboComposer>;
+
 } // namespace merkle_tree
 } // namespace stdlib
 } // namespace plonk
-
-#include "merkle_tree.tcc"

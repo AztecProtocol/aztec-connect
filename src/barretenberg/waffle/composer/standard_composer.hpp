@@ -25,7 +25,7 @@ class StandardComposer : public ComposerBase {
     StandardComposer& operator=(StandardComposer&& other) = default;
     ~StandardComposer() {}
 
-    void assert_equal_constant(const uint32_t a_idx, const barretenberg::fr::field_t b);
+    void assert_equal_constant(uint32_t const a_idx, barretenberg::fr::field_t const& b);
 
     virtual std::shared_ptr<proving_key> compute_proving_key() override;
     virtual std::shared_ptr<verification_key> compute_verification_key() override;

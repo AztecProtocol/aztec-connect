@@ -1,16 +1,16 @@
 #include "./uint.hpp"
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <numeric>
 
-#include "../../../curves/bn254/fr.hpp"
 #include "../../../assert.hpp"
+#include "../../../curves/bn254/fr.hpp"
 
-#include "../../composer/standard_composer.hpp"
 #include "../../composer/bool_composer.hpp"
-#include "../../composer/mimc_composer.hpp"
 #include "../../composer/extended_composer.hpp"
+#include "../../composer/mimc_composer.hpp"
+#include "../../composer/standard_composer.hpp"
 #include "../../composer/turbo_composer.hpp"
 
 #include "../field/field.hpp"
@@ -62,7 +62,7 @@ void uint<ComposerContext>::internal_logic_operation_native(
     std::vector<bool_t<ComposerContext>> const& operand_wires,
     bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>, bool_t<ComposerContext>)) const
 {
-    ASSERT(witness_status == WitnessStatus::QUEUED_LOGIC_OPERATION || WitnessStatus::IN_BINARY_FORM ||
+    ASSERT(witness_status == WitnessStatus::QUEUED_LOGIC_OPERATION || witness_status == WitnessStatus::IN_BINARY_FORM ||
            witness_status == WitnessStatus::OK);
     // TODO: shouldn't need these?
     // prepare_for_logic_operations();
@@ -130,7 +130,7 @@ void uint<ComposerContext>::internal_logic_operation_binary(
     std::vector<bool_t<ComposerContext>> const& operand_wires,
     bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>, bool_t<ComposerContext>)) const
 {
-    ASSERT(witness_status == WitnessStatus::QUEUED_LOGIC_OPERATION || WitnessStatus::IN_BINARY_FORM ||
+    ASSERT(witness_status == WitnessStatus::QUEUED_LOGIC_OPERATION || witness_status == WitnessStatus::IN_BINARY_FORM ||
            witness_status == WitnessStatus::OK);
     // when evaluating our logical AND, also accumulate wire values into a sum.
     // When using the extended arithmetisation widget, this can be done for only +1 extra gate.
