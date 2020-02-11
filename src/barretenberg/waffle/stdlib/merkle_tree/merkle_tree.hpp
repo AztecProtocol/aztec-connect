@@ -37,7 +37,7 @@ template <typename ComposerContext> class merkle_tree {
 
     void update_member(value_t const& value, index_t const& index);
 
-  private:
+    // private:
     hash_path create_witness_hash_path(fr_hash_path const& input);
 
     bool_t check_membership(field_t const& root,
@@ -52,6 +52,7 @@ template <typename ComposerContext> class merkle_tree {
                            value_t const& new_value,
                            field_t const& old_root,
                            hash_path const& old_hashes,
+                           value_t const& old_value,
                            byte_array const& index);
 
     field_t compress(field_t const& left, field_t const& right);

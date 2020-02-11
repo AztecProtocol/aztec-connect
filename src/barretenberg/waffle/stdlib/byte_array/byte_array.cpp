@@ -80,9 +80,11 @@ byte_array<ComposerContext>& byte_array<ComposerContext>::operator=(byte_array&&
     return *this;
 }
 
-template <typename ComposerContext> void byte_array<ComposerContext>::write(byte_array const& other)
+template <typename ComposerContext>
+byte_array<ComposerContext>& byte_array<ComposerContext>::write(byte_array const& other)
 {
     values.insert(values.end(), other.bits().begin(), other.bits().end());
+    return *this;
 }
 
 template <typename ComposerContext> byte_array<ComposerContext> byte_array<ComposerContext>::slice(size_t offset) const

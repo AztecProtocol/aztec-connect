@@ -46,6 +46,13 @@ inline fr::field_t uint128_to_field(uint128_t input)
 }
 
 template <typename ComposerContext>
+field_t<ComposerContext> merkle_tree<ComposerContext>::compress(field_t const& left, field_t const& right)
+{
+    return pedersen::compress(left, right);
+}
+
+/*
+template <typename ComposerContext>
 bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(value_t const& value, index_t const& index)
 {
     fr_hash_path hashes = store_.get_hash_path(field_to_uint128(index.get_value()));
@@ -68,12 +75,6 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::assert_check_membership(va
 }
 
 template <typename ComposerContext>
-field_t<ComposerContext> merkle_tree<ComposerContext>::compress(field_t const& left, field_t const& right)
-{
-    return pedersen::compress(left, right);
-}
-
-template <typename ComposerContext>
 bool_t<ComposerContext> merkle_tree<ComposerContext>::check_hash_path(field_t const& root,
                                                                       hash_path const& hashes,
                                                                       byte_array const& index)
@@ -88,32 +89,6 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::check_hash_path(field_t co
         is_member &= is_left ^ is_right;
         current = compress(hashes[i].first, hashes[i].second);
     }
-
-    is_member &= current == root;
-    return is_member;
-}
-
-template <typename ComposerContext>
-bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(field_t const& root,
-                                                                       hash_path const& hashes,
-                                                                       value_t const& value,
-                                                                       byte_array const& index)
-{
-    field_t current = value;
-    bool_t is_member = witness_t(&ctx_, true);
-
-    for (size_t i = 0; i < depth_; ++i) {
-        bool_t path_bit = index.get_bit(i);
-        bool_t is_left = (current == hashes[i].first) & !path_bit;
-        bool_t is_right = (current == hashes[i].second) & path_bit;
-        // std::cout << is_left.get_value() << std::endl;
-        // std::cout << is_right.get_value() << std::endl;
-        is_member &= is_left ^ is_right;
-        current = compress(hashes[i].first, hashes[i].second);
-        // std::cout << current << " = compress(" << hashes[i].first << ", " << hashes[i].second << ")" << std::endl;
-    }
-
-    // std::cout << "root " << root << std::endl;
 
     is_member &= current == root;
     return is_member;
@@ -167,6 +142,36 @@ void merkle_tree<ComposerContext>::update_member(value_t const& value, index_t c
     store_.update_element(idx, value.get_value());
     root_ = new_root;
 }
+*/
+
+template <typename ComposerContext>
+bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(field_t const& root,
+                                                                       hash_path const& hashes,
+                                                                       value_t const& value,
+                                                                       byte_array const& index)
+{
+    field_t current = sha256_value(value);
+    bool_t is_member = witness_t(&ctx_, true);
+
+    for (size_t i = 0; i < depth_; ++i) {
+        bool_t path_bit = index.get_bit(i);
+
+        bool_t is_left = (current == hashes[i].first) & !path_bit;
+        bool_t is_right = (current == hashes[i].second) & path_bit;
+        // std::cout << is_left.get_value() << std::endl;
+        // std::cout << is_right.get_value() << std::endl;
+        is_member &= is_left ^ is_right;
+        current = compress(hashes[i].first, hashes[i].second);
+        // std::cout << current << " = compress(" << hashes[i].first << ", " << hashes[i].second << ")" << std::endl;
+    }
+
+    // std::cout << "root " << root << std::endl;
+
+    is_member &= current == root;
+    return is_member;
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 
 template <typename ComposerContext>
 void merkle_tree<ComposerContext>::update_membership(field_t const& new_root,
@@ -174,16 +179,15 @@ void merkle_tree<ComposerContext>::update_membership(field_t const& new_root,
                                                      value_t const& new_value,
                                                      field_t const& old_root,
                                                      hash_path const& old_hashes,
+                                                     value_t const& old_value,
                                                      byte_array const& index)
 {
     // Check old path hashes lead to the old root. They're used when validating the new path hashes.
-    bool_t old_hashes_valid = check_hash_path(old_root, old_hashes, index);
+    bool_t old_hashes_valid = check_membership(old_root, old_hashes, old_value, index);
     ctx_.assert_equal_constant(old_hashes_valid.witness_index, barretenberg::fr::one);
 
-    field_t sha_value = sha256_value(new_value);
-
     // Check the new path hashes lead from the new value to the new root.
-    bool_t new_hashes_valid = check_membership(new_root, new_hashes, sha_value, index);
+    bool_t new_hashes_valid = check_membership(new_root, new_hashes, new_value, index);
     ctx_.assert_equal_constant(new_hashes_valid.witness_index, barretenberg::fr::one);
 
     // Check that only the appropriate left or right hash was updated in the new hash path.

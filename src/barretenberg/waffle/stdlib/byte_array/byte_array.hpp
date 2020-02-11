@@ -33,7 +33,7 @@ template <typename ComposerContext> class byte_array {
     byte_array& operator=(const byte_array& other);
     byte_array& operator=(byte_array&& other);
 
-    void write(byte_array const& other);
+    byte_array& write(byte_array const& other);
 
     byte_array slice(size_t offset) const;
     byte_array slice(size_t offset, size_t length) const;

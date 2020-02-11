@@ -1,5 +1,6 @@
 #include "../bitarray/bitarray.hpp"
 #include "../byte_array/byte_array.hpp"
+#include "../crypto/hash/sha256.hpp"
 #include "../field/field.hpp"
 
 namespace plonk {
