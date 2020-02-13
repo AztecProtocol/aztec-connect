@@ -10,7 +10,9 @@ namespace merkle_tree {
 
 using namespace barretenberg;
 using namespace int_utils;
+
 typedef std::vector<std::pair<fr::field_t, fr::field_t>> fr_hash_path;
+template <typename Ctx> using hash_path = std::vector<std::pair<field_t<Ctx>, field_t<Ctx>>>;
 
 inline fr_hash_path get_new_hash_path(fr_hash_path const& old_path, uint128_t index, std::string const& value)
 {
@@ -27,6 +29,20 @@ inline fr_hash_path get_new_hash_path(fr_hash_path const& old_path, uint128_t in
         index /= 2;
     }
     return path;
+}
+
+template <typename Ctx> inline hash_path<Ctx> create_witness_hash_path(Ctx& ctx, fr_hash_path const& input)
+{
+    hash_path<Ctx> result;
+    std::transform(input.begin(), input.end(), std::back_inserter(result), [&](auto const& v) {
+        return std::make_pair(field_t(witness_t(&ctx, v.first)), field_t(witness_t(&ctx, v.second)));
+    });
+    return result;
+}
+
+inline fr::field_t get_hash_path_root(fr_hash_path const& input)
+{
+    return hash({ input[input.size() - 1].first, input[input.size() - 1].second });
 }
 
 } // namespace merkle_tree

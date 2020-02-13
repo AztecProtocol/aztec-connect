@@ -131,7 +131,6 @@ add_library(
     waffle/stdlib/crypto/hash/sha256.cpp
     waffle/stdlib/crypto/hash/sha256.hpp
     waffle/stdlib/merkle_tree/hash.hpp
-    waffle/stdlib/merkle_tree/merkle_tree.cpp
     waffle/stdlib/merkle_tree/merkle_tree.hpp
     waffle/stdlib/merkle_tree/memory_store.hpp
     waffle/stdlib/merkle_tree/memory_store.cpp
@@ -285,7 +284,6 @@ if(PROFILING)
         waffle/stdlib/crypto/crypto.hpp
         waffle/stdlib/crypto/hash/sha256.cpp
         waffle/stdlib/crypto/hash/sha256.hpp
-        waffle/stdlib/merkle_tree/merkle_tree.cpp
         waffle/stdlib/merkle_tree/merkle_tree.hpp
         waffle/stdlib/merkle_tree/memory_store.hpp
         waffle/stdlib/merkle_tree/memory_store.cpp

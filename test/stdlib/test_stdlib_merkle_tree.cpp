@@ -21,6 +21,7 @@
 
 using namespace barretenberg;
 using namespace plonk;
+using namespace plonk::stdlib::merkle_tree;
 
 typedef waffle::TurboComposer Composer;
 typedef stdlib::field_t<Composer> field_t;
@@ -321,12 +322,11 @@ TEST(stdlib_merkle_tree, sha256_native_vs_circuit)
     std::string x = VALUES[1];
     Composer composer = Composer();
     byte_array y(&composer, x);
-    std::cout << y << std::endl;
     auto z = plonk::stdlib::merkle_tree::sha256_value(y);
     auto zz = plonk::stdlib::merkle_tree::sha256(x);
     EXPECT_TRUE(fr::eq(z.get_value(), zz));
 }
-/*
+
 TEST(stdlib_merkle_tree, test_check_membership)
 {
     leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
@@ -334,11 +334,13 @@ TEST(stdlib_merkle_tree, test_check_membership)
 
     Composer composer = Composer();
 
-    byte_array zero_value(&composer, VALUES[0]);
-    field_t zero = witness_t(&composer, fr::zero);
+    byte_array zero = field_t(witness_t(&composer, fr::zero));
+    byte_array value = zero;
+    value.write(zero);
+    field_t root = witness_t(&composer, db.root());
 
-    merkle_tree tree = merkle_tree(composer, db);
-    bool_t is_member = tree.check_membership(zero_value, zero);
+    bool_t is_member =
+        check_membership(composer, root, create_witness_hash_path(composer, db.get_hash_path(0)), value, zero);
     EXPECT_EQ(is_member.get_value(), true);
 
     auto prover = composer.preprocess();
@@ -359,15 +361,18 @@ TEST(stdlib_merkle_tree, test_assert_check_membership)
 
     Composer composer = Composer();
 
-    byte_array zero_value(&composer, VALUES[0]);
-    field_t zero = witness_t(&composer, 0);
+    byte_array zero = field_t(witness_t(&composer, fr::zero));
+    byte_array value = zero;
+    value.write(zero);
+    field_t root = witness_t(&composer, db.root());
 
-    merkle_tree tree = merkle_tree(composer, db);
-    bool_t is_member = tree.assert_check_membership(zero_value, zero);
-    EXPECT_EQ(is_member.get_value(), true);
+    assert_check_membership(composer, root, create_witness_hash_path(composer, db.get_hash_path(0)), value, zero);
 
     auto prover = composer.preprocess();
+    printf("composer gates = %zu\n", composer.get_num_gates());
+
     auto verifier = composer.create_verifier();
+
     waffle::plonk_proof proof = prover.construct_proof();
 
     bool result = verifier.verify_proof(proof);
@@ -381,14 +386,14 @@ TEST(stdlib_merkle_tree, test_assert_check_membership_fail)
 
     Composer composer = Composer();
 
-    field_t zero = witness_t(&composer, 0);
-    field_t one = witness_t(&composer, 1);
+    byte_array zero = field_t(witness_t(&composer, fr::zero));
+    byte_array value = field_t(witness_t(&composer, fr::one));
+    field_t root = witness_t(&composer, db.root());
 
-    merkle_tree tree = merkle_tree(composer, db);
-    bool_t is_member = tree.assert_check_membership(one, zero);
-    EXPECT_EQ(is_member.get_value(), false);
+    assert_check_membership(composer, root, create_witness_hash_path(composer, db.get_hash_path(0)), value, zero);
 
     auto prover = composer.preprocess();
+    printf("composer gates = %zu\n", composer.get_num_gates());
 
     auto verifier = composer.create_verifier();
 
@@ -398,66 +403,26 @@ TEST(stdlib_merkle_tree, test_assert_check_membership_fail)
     EXPECT_EQ(result, false);
 }
 
-TEST(stdlib_merkle_tree, test_add_members)
-{
-    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
-    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
-
-    Composer composer = Composer();
-    size_t size = 3;
-    std::vector<field_t> values(size);
-
-    for (size_t i = 0; i < size; ++i) {
-        values[i] = witness_t(&composer, i);
-    }
-
-    merkle_tree tree = merkle_tree(composer, db);
-
-    // Add incremental values.
-    for (size_t i = 0; i < size; ++i) {
-        tree.add_member(values[i]);
-    }
-
-    // Check everything is as expected.
-    for (size_t i = 0; i < size; ++i) {
-        EXPECT_EQ(tree.check_membership(values[i], values[i]).get_value(), true);
-    }
-
-    auto prover = composer.preprocess();
-
-    printf("composer gates = %zu\n", composer.get_num_gates());
-    auto verifier = composer.create_verifier();
-
-    waffle::plonk_proof proof = prover.construct_proof();
-
-    bool result = verifier.verify_proof(proof);
-    EXPECT_EQ(result, true);
-}
-
 TEST(stdlib_merkle_tree, test_update_members)
 {
     leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
     stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
 
     Composer composer = Composer();
-    size_t size = 3;
-    std::vector<field_t> values(size);
 
-    for (size_t i = 0; i < size; ++i) {
-        values[i] = witness_t(&composer, i);
-    }
+    byte_array zero = field_t(witness_t(&composer, fr::zero));
 
-    merkle_tree tree = merkle_tree(composer, db);
+    byte_array old_value = zero;
+    old_value.write(zero);
+    hash_path<Composer> old_path = create_witness_hash_path(composer, db.get_hash_path(0));
+    field_t old_root = witness_t(&composer, db.root());
 
-    // Update the values.
-    for (size_t i = 0; i < size; ++i) {
-        tree.update_member(values[i], values[i]);
-    }
+    byte_array new_value = field_t(witness_t(&composer, fr::one));
+    auto new_path_fr = get_new_hash_path(db.get_hash_path(0), 0, new_value.get_value());
+    hash_path<Composer> new_path = create_witness_hash_path(composer, new_path_fr);
+    field_t new_root = witness_t(&composer, get_hash_path_root(new_path_fr));
 
-    // Check everything is as expected.
-    for (size_t i = 0; i < size; ++i) {
-        EXPECT_EQ(tree.check_membership(values[i], values[i]).get_value(), true);
-    }
+    update_membership(composer, new_root, new_path, new_value, old_root, old_path, old_value, zero);
 
     auto prover = composer.preprocess();
 
@@ -469,4 +434,3 @@ TEST(stdlib_merkle_tree, test_update_members)
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }
-*/
