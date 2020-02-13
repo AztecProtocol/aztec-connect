@@ -27,6 +27,8 @@ class LevelDbStore {
 
     size_t depth() const { return depth_; }
 
+    size_t size() const;
+
   private:
     fr::field_t update_element(
         fr::field_t const& root, fr::field_t const& value, index_t index, size_t height, leveldb::WriteBatch& batch);
@@ -55,7 +57,7 @@ class LevelDbStore {
     std::unique_ptr<leveldb::DB> db_;
     std::vector<fr::field_t> zero_hashes_;
     size_t depth_;
-    size_t total_size_;
+    size_t size_;
     fr::field_t root_;
 };
 

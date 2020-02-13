@@ -8,7 +8,7 @@
 namespace plonk {
 namespace stdlib {
 namespace merkle_tree {
-
+/*
 template <typename ComposerContext>
 merkle_tree<ComposerContext>::merkle_tree(ComposerContext& ctx, LevelDbStore& store)
     : ctx_(ctx)
@@ -32,26 +32,12 @@ typename merkle_tree<ComposerContext>::hash_path merkle_tree<ComposerContext>::c
     return result;
 }
 
-inline uint128_t field_to_uint128(fr::field_t input)
-{
-    input = fr::from_montgomery_form(input);
-    uint128_t lo = input.data[0];
-    uint128_t hi = input.data[1];
-    return (hi << 64) | lo;
-}
-
-inline fr::field_t uint128_to_field(uint128_t input)
-{
-    return { { (uint64_t)input, (uint64_t)(input >> 64), 0, 0 } };
-}
-
 template <typename ComposerContext>
 field_t<ComposerContext> merkle_tree<ComposerContext>::compress(field_t const& left, field_t const& right)
 {
     return pedersen::compress(left, right);
 }
 
-/*
 template <typename ComposerContext>
 bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(value_t const& value, index_t const& index)
 {
@@ -142,7 +128,6 @@ void merkle_tree<ComposerContext>::update_member(value_t const& value, index_t c
     store_.update_element(idx, value.get_value());
     root_ = new_root;
 }
-*/
 
 template <typename ComposerContext>
 bool_t<ComposerContext> merkle_tree<ComposerContext>::check_membership(field_t const& root,
@@ -200,6 +185,7 @@ void merkle_tree<ComposerContext>::update_membership(field_t const& new_root,
 }
 
 template class merkle_tree<waffle::TurboComposer>;
+*/
 
 } // namespace merkle_tree
 } // namespace stdlib

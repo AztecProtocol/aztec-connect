@@ -1,4 +1,5 @@
 #pragma once
+#include "../../curves/bn254/fr.hpp"
 
 namespace int_utils {
 __extension__ using uint128_t = unsigned __int128;
@@ -60,6 +61,19 @@ template <> inline size_t count_leading_zeros<uint128_t>(uint128_t u)
 template <typename T> inline T keep_n_lsb(T input, size_t num_bits)
 {
     return num_bits >= sizeof(T) * 8 ? input : input & (((T)1 << num_bits) - 1);
+}
+
+inline uint128_t field_to_uint128(barretenberg::fr::field_t input)
+{
+    input = barretenberg::fr::from_montgomery_form(input);
+    uint128_t lo = input.data[0];
+    uint128_t hi = input.data[1];
+    return (hi << 64) | lo;
+}
+
+inline barretenberg::fr::field_t uint128_to_field(uint128_t input)
+{
+    return { { (uint64_t)input, (uint64_t)(input >> 64), 0, 0 } };
 }
 
 // inline bool get_bit(uint128_t v, size_t index)

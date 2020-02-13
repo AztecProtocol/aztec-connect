@@ -14,7 +14,10 @@
 #include <barretenberg/waffle/stdlib/merkle_tree/merkle_tree.hpp>
 #include <barretenberg/waffle/stdlib/merkle_tree/sha256_value.hpp>
 
+#include <algorithm>
 #include <memory>
+#include <numeric>
+#include <random>
 
 using namespace barretenberg;
 using namespace plonk;
@@ -23,7 +26,6 @@ typedef waffle::TurboComposer Composer;
 typedef stdlib::field_t<Composer> field_t;
 typedef stdlib::bool_t<Composer> bool_t;
 typedef stdlib::byte_array<Composer> byte_array;
-typedef stdlib::merkle_tree::merkle_tree<Composer> merkle_tree;
 typedef stdlib::witness_t<Composer> witness_t;
 
 static std::vector<std::string> VALUES = []() {
@@ -82,7 +84,32 @@ TEST(stdlib_merkle_tree, test_memory_store)
     EXPECT_EQ(db.root(), root);
 }
 
-TEST(stdlib_merkle_tree, test_leveldb_update_member)
+TEST(stdlib_merkle_tree, test_leveldb_vs_memory_consistency)
+{
+    constexpr size_t depth = 10;
+    stdlib::merkle_tree::MemoryStore memdb(depth);
+
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", depth);
+
+    std::vector<size_t> indicies(1 << depth);
+    std::iota(indicies.begin(), indicies.end(), 0);
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(indicies.begin(), indicies.end(), g);
+
+    for (size_t i = 0; i < indicies.size(); ++i) {
+        size_t idx = indicies[i];
+        memdb.update_element(idx, VALUES[idx]);
+        db.update_element(idx, VALUES[idx]);
+        EXPECT_EQ(db.get_element(idx), memdb.get_element(idx));
+        EXPECT_EQ(db.get_hash_path(idx), memdb.get_hash_path(idx));
+    }
+
+    EXPECT_TRUE(fr::eq(db.root(), memdb.root()));
+}
+
+TEST(stdlib_merkle_tree, test_leveldb_update_members)
 {
     stdlib::merkle_tree::MemoryStore memdb(10);
 
@@ -157,6 +184,57 @@ TEST(stdlib_merkle_tree, test_leveldb_deep_forks)
     EXPECT_EQ(db.get_element(18347723794972374002ULL), VALUES[0]);
 }
 
+TEST(stdlib_merkle_tree, test_leveldb_size)
+{
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+    stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 128);
+
+    EXPECT_EQ(db.size(), 0ULL);
+
+    // Add first.
+    db.update_element(0, VALUES[1]);
+    EXPECT_EQ(db.size(), 1ULL);
+
+    // Add second.
+    db.update_element(1, VALUES[2]);
+    EXPECT_EQ(db.size(), 2ULL);
+
+    // Set second to same value.
+    db.update_element(1, VALUES[2]);
+    EXPECT_EQ(db.size(), 2ULL);
+
+    // Set second to new value.
+    db.update_element(1, VALUES[3]);
+    EXPECT_EQ(db.size(), 2ULL);
+
+    // Set third to new value.
+    db.update_element(2, VALUES[4]);
+    EXPECT_EQ(db.size(), 3ULL);
+}
+
+TEST(stdlib_merkle_tree, test_leveldb_persistence)
+{
+    leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+
+    fr::field_t root;
+    {
+        stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 128);
+        db.update_element(0, VALUES[1]);
+        db.update_element(1, VALUES[2]);
+        db.update_element(2, VALUES[3]);
+        root = db.root();
+    }
+    {
+        stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 128);
+
+        EXPECT_TRUE(fr::eq(db.root(), root));
+        EXPECT_EQ(db.size(), 3ULL);
+        EXPECT_EQ(db.get_element(0), VALUES[1]);
+        EXPECT_EQ(db.get_element(1), VALUES[2]);
+        EXPECT_EQ(db.get_element(2), VALUES[3]);
+    }
+}
+
 TEST(stdlib_merkle_tree, test_leveldb_update_1024_random)
 {
     leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
@@ -196,6 +274,35 @@ TEST(stdlib_merkle_tree, test_leveldb_get_hash_path)
     }
 
     EXPECT_EQ(db.get_hash_path(512), memdb.get_hash_path(512));
+}
+
+TEST(stdlib_merkle_tree, test_leveldb_get_hash_path_layers)
+{
+    {
+        leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+        stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
+
+        auto before = db.get_hash_path(1);
+        db.update_element(0, VALUES[1]);
+        auto after = db.get_hash_path(1);
+
+        EXPECT_NE(before[0], after[0]);
+        EXPECT_NE(before[1], after[1]);
+        EXPECT_NE(before[2], after[2]);
+    }
+
+    {
+        leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
+        stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 3);
+
+        auto before = db.get_hash_path(7);
+        db.update_element(0x0, VALUES[1]);
+        auto after = db.get_hash_path(7);
+
+        EXPECT_EQ(before[0], after[0]);
+        EXPECT_EQ(before[1], after[1]);
+        EXPECT_NE(before[2], after[2]);
+    }
 }
 
 TEST(stdlib_merkle_tree, pedersen_native_vs_circuit)

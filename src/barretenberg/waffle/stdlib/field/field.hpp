@@ -57,7 +57,7 @@ template <typename ComposerContext> class field_t {
 
 template <typename ComposerContext> inline std::ostream& operator<<(std::ostream& os, field_t<ComposerContext> const& v)
 {
-    return os << v.get_value();
+    return os << barretenberg::fr::from_montgomery_form(v.get_value());
 }
 
 extern template class field_t<waffle::StandardComposer>;

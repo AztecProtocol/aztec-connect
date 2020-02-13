@@ -187,7 +187,7 @@ grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left,
 #pragma omp parallel num_threads(2)
     {
         size_t i = (size_t)omp_get_thread_num();
-        out[i] = hash_single(in[i], i);
+        out[i] = hash_single(in[i], hash_index + i);
     }
     grumpkin::g1::element r;
     grumpkin::g1::add(out[0], out[1], r);
@@ -195,8 +195,8 @@ grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left,
     return r.x;
 #else
     grumpkin::g1::element r;
-    grumpkin::g1::element first = hash_single(left, 0);
-    grumpkin::g1::element second = hash_single(right, 1);
+    grumpkin::g1::element first = hash_single(left, hash_index);
+    grumpkin::g1::element second = hash_single(right, hash_index + 1);
     grumpkin::g1::add(first, second, r);
     r = grumpkin::g1::normalize(r);
     return r.x;
