@@ -24,6 +24,7 @@ endif()
 add_library(
     barretenberg STATIC
     types.hpp
+    uint256/uint256.hpp
     fields/field_impl_int128.tcc
     fields/field_impl_asm.tcc
     fields/field.hpp
@@ -94,6 +95,8 @@ add_library(
     waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
     waffle/proof_system/widgets/turbo_range_widget.cpp
     waffle/proof_system/widgets/turbo_range_widget.hpp
+    waffle/proof_system/widgets/turbo_logic_widget.cpp
+    waffle/proof_system/widgets/turbo_logic_widget.hpp
     waffle/proof_system/prover/prover.cpp
     waffle/proof_system/prover/prover.hpp
     waffle/proof_system/verifier/verifier.cpp
@@ -179,6 +182,7 @@ if(PROFILING)
         main.cpp
         fields/asm_macros.hpp
         types.hpp
+        uint256/uint256.hpp
         fields/field_impl_int128.tcc
         fields/field_impl_asm.tcc
         fields/field.hpp
@@ -249,6 +253,8 @@ if(PROFILING)
         waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
         waffle/proof_system/widgets/turbo_range_widget.cpp
         waffle/proof_system/widgets/turbo_range_widget.hpp
+        waffle/proof_system/widgets/turbo_logic_widget.cpp
+        waffle/proof_system/widgets/turbo_logic_widget.hpp
         waffle/proof_system/prover/prover.cpp
         waffle/proof_system/prover/prover.hpp
         waffle/proof_system/verifier/verifier.cpp

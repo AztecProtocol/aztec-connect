@@ -11,6 +11,8 @@
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 #include <memory>
 
+#include <stdio.h>
+
 using namespace barretenberg;
 
 namespace
@@ -477,7 +479,6 @@ TEST(turbo_composer, large_scalar_multipliers)
 
 }
 
-
 TEST(turbo_composer, range_constraint)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
@@ -521,5 +522,147 @@ TEST(turbo_composer, range_constraint)
     bool result = verifier.verify_proof(proof);
 
     EXPECT_EQ(result, true);
+}
 
+TEST(turbo_composer, and_constraint)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    for (size_t i = 0; i < /*10*/1; ++i)
+    {
+        uint32_t left_value = get_random_int();
+
+        fr::field_t left_witness_value = fr::to_montgomery_form({{ left_value, 0, 0, 0 }});
+        uint32_t left_witness_index = composer.add_variable(left_witness_value);
+
+        uint32_t right_value = get_random_int();
+        fr::field_t right_witness_value = fr::to_montgomery_form({{ right_value, 0, 0, 0 }});
+        uint32_t right_witness_index = composer.add_variable(right_witness_value);
+
+        uint32_t out_value = left_value & right_value;
+        // include non-nice numbers of bits, that will bleed over gate boundaries
+        size_t extra_bits = 2 * (i % 4);
+    
+        waffle::TurboComposer::accumulator_triple accumulators = composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
+        // composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
+
+        for (uint32_t j = 0; j < 16; ++j)
+        {
+            uint32_t left_expected = (left_value >> (30U - (2* j)));
+            uint32_t right_expected = (right_value >> (30U - (2* j)));
+            uint32_t out_expected = left_expected & right_expected;
+
+            fr::field_t left_source = fr::from_montgomery_form(composer.get_variable(accumulators.left[j + (extra_bits >> 1)]));
+            uint32_t left_result = static_cast<uint32_t>(left_source.data[0]);
+
+            fr::field_t right_source = fr::from_montgomery_form(composer.get_variable(accumulators.right[j + (extra_bits >> 1)]));
+            uint32_t right_result = static_cast<uint32_t>(right_source.data[0]);
+
+            fr::field_t out_source = fr::from_montgomery_form(composer.get_variable(accumulators.out[j + (extra_bits >> 1)]));
+            uint32_t out_result = static_cast<uint32_t>(out_source.data[0]);
+
+            EXPECT_EQ(left_result, left_expected);
+            EXPECT_EQ(right_result, right_expected);
+            EXPECT_EQ(out_result, out_expected);
+        }
+        for (uint32_t j = 1; j < 16; ++j)
+        {
+            uint32_t left = (left_value >> (30U - (2* j)));
+            uint32_t right = (left_value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+
+            left = (right_value >> (30U - (2* j)));
+            right = (right_value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+
+            left = (out_value >> (30U - (2* j)));
+            right = (out_value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+        }
+    }
+
+    uint32_t zero_idx = composer.add_variable(fr::zero);
+    uint32_t one_idx = composer.add_variable(fr::one);
+    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+
+    EXPECT_EQ(result, true);
+}
+
+TEST(turbo_composer, xor_constraint)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    for (size_t i = 0; i < /*10*/1; ++i)
+    {
+        uint32_t left_value = get_random_int();
+
+        fr::field_t left_witness_value = fr::to_montgomery_form({{ left_value, 0, 0, 0 }});
+        uint32_t left_witness_index = composer.add_variable(left_witness_value);
+
+        uint32_t right_value = get_random_int();
+        fr::field_t right_witness_value = fr::to_montgomery_form({{ right_value, 0, 0, 0 }});
+        uint32_t right_witness_index = composer.add_variable(right_witness_value);
+
+        uint32_t out_value = left_value ^ right_value;
+        // include non-nice numbers of bits, that will bleed over gate boundaries
+        size_t extra_bits = 2 * (i % 4);
+    
+        waffle::TurboComposer::accumulator_triple accumulators = composer.create_xor_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
+
+        for (uint32_t j = 0; j < 16; ++j)
+        {
+            uint32_t left_expected = (left_value >> (30U - (2* j)));
+            uint32_t right_expected = (right_value >> (30U - (2* j)));
+            uint32_t out_expected = left_expected ^ right_expected;
+
+            fr::field_t left_source = fr::from_montgomery_form(composer.get_variable(accumulators.left[j + (extra_bits >> 1)]));
+            uint32_t left_result = static_cast<uint32_t>(left_source.data[0]);
+
+            fr::field_t right_source = fr::from_montgomery_form(composer.get_variable(accumulators.right[j + (extra_bits >> 1)]));
+            uint32_t right_result = static_cast<uint32_t>(right_source.data[0]);
+
+            fr::field_t out_source = fr::from_montgomery_form(composer.get_variable(accumulators.out[j + (extra_bits >> 1)]));
+            uint32_t out_result = static_cast<uint32_t>(out_source.data[0]);
+
+            EXPECT_EQ(left_result, left_expected);
+            EXPECT_EQ(right_result, right_expected);
+            EXPECT_EQ(out_result, out_expected);
+        }
+        for (uint32_t j = 1; j < 16; ++j)
+        {
+            uint32_t left = (left_value >> (30U - (2* j)));
+            uint32_t right = (left_value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+
+            left = (right_value >> (30U - (2* j)));
+            right = (right_value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+
+            left = (out_value >> (30U - (2* j)));
+            right = (out_value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+        }
+    }
+
+    uint32_t zero_idx = composer.add_variable(fr::zero);
+    uint32_t one_idx = composer.add_variable(fr::one);
+    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+
+    EXPECT_EQ(result, true);
 }

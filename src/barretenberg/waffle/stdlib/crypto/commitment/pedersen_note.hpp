@@ -28,6 +28,7 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
 
 note compute_commitment(const field_t<waffle::TurboComposer>& view_key, const uint<waffle::TurboComposer>& value);
 
+
 extern template note_triple fixed_base_scalar_mul<32>(const field_t<waffle::TurboComposer>& in, const size_t generator_index);
 extern template note_triple fixed_base_scalar_mul<250>(const field_t<waffle::TurboComposer>& in, const size_t generator_index);
 

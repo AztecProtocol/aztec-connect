@@ -53,11 +53,14 @@ add_executable(
     test_prover.cpp
     test_verifier.cpp
     test_transcript.cpp
+    test_logic_identities.cpp
+    uint256/test_uint256.cpp
     misc_crypto/test_schnorr.cpp
     misc_crypto/test_sha256.cpp
     widgets/test_turbo_arithmetic_widget.cpp
     widgets/test_turbo_fixed_base_widget.cpp
     widgets/test_turbo_range_widget.cpp
+    widgets/test_turbo_logic_widget.cpp
     composer/test_standard_composer.cpp
     composer/test_mimc_composer.cpp
     composer/test_bool_composer.cpp
