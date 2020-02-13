@@ -5,9 +5,9 @@ struct uint64_pair {
     uint64_t data[2];
 };
 
-struct uint64_oct {
-    uint64_t data[8];
-};
+// struct uint64_oct {
+//     uint64_t data[8];
+// };
 
 struct divmod_output {
     uint256_t quotient;
@@ -63,7 +63,8 @@ constexpr uint64_pair mac(const uint64_t a, const uint64_t b, const uint64_t c, 
     return result;
 }
 
-constexpr uint64_oct mul_512(const uint256_t& a, const uint256_t& b) noexcept
+/*
+constexpr uint64_oct mul_512(const uint256_t& a, const uint256_t& b)
 {
     uint64_pair T0 = mac(0, a.data[0], b.data[0], 0);
     uint64_pair T1 = mac(0, a.data[0], b.data[1], T0.data[1]);
@@ -107,6 +108,7 @@ constexpr uint64_oct mul_512(const uint256_t& a, const uint256_t& b) noexcept
 
     return r;
 }
+*/
 
 constexpr divmod_output divmod(const uint256_t& a, const uint256_t& b)
 {
@@ -208,8 +210,32 @@ constexpr uint256_t uint256_t::operator-(const uint256_t& other) const
 
 constexpr uint256_t uint256_t::operator*(const uint256_t& other) const
 {
-    const uint256_internal::uint64_oct r = uint256_internal::mul_512(*this, other);
-    return { r.data[0], r.data[1], r.data[2], r.data[3] };
+    uint256_internal::uint64_pair T0 = uint256_internal::mac(0, data[0], other.data[0], 0);
+    uint256_internal::uint64_pair T1 = uint256_internal::mac(0, data[0], other.data[1], T0.data[1]);
+    uint256_internal::uint64_pair T2 = uint256_internal::mac(0, data[0], other.data[2], T1.data[1]);
+    uint256_internal::uint64_pair T3 = uint256_internal::mac(0, data[0], other.data[3], T2.data[1]);
+
+    uint256_t r{ T0.data[0], T1.data[0], T2.data[0], T3.data[0] };
+
+    T0 = uint256_internal::mac(r.data[1], data[1], other.data[0], 0);
+    T1 = uint256_internal::mac(r.data[2], data[1], other.data[1], T0.data[1]);
+    T2 = uint256_internal::mac(r.data[3], data[1], other.data[2], T1.data[1]);
+
+    r.data[1] = T0.data[0];
+    r.data[2] = T1.data[0];
+    r.data[3] = T2.data[0];
+
+    T0 = uint256_internal::mac(r.data[2], data[2], other.data[0], 0);
+    T1 = uint256_internal::mac(r.data[3], data[2], other.data[1], T0.data[1]);
+
+    r.data[2] = T0.data[0];
+    r.data[3] = T1.data[0];
+
+    T0 = uint256_internal::mac(r.data[3], data[3], other.data[0], 0);
+
+    r.data[3] = T0.data[0];
+
+    return r;
 }
 
 constexpr uint256_t uint256_t::operator/(const uint256_t& other) const
