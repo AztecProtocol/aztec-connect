@@ -133,9 +133,8 @@ constexpr divmod_output divmod(const uint256_t& a, const uint256_t& b)
     // if the divisor is bigger than the remainder, a and b have the same bit length
     if (divisor > remainder) {
         // TODO: what is faster, adding or shifting?
-        // probably shifting...
-        divisor >>= 1;
-        scale_factor >>= 1;
+        divisor += divisor;
+        scale_factor += scale_factor;
     }
 
     // while the remainder is bigger than our original divisor, we can subtract multiples of b from the remainder,
