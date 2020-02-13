@@ -14,7 +14,7 @@ struct divmod_output {
     uint256_t remainder;
 };
 
-constexpr uint64_pair mul_wide(uint64_t a, uint64_t b)
+constexpr uint64_pair mul_wide(const uint64_t a, const uint64_t b)
 {
     const uint64_t a_lo = a & 0xffffffffULL;
     const uint64_t a_hi = a >> 32ULL;
