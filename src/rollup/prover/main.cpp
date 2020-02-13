@@ -20,6 +20,7 @@ typedef stdlib::merkle_tree::hash_path<Composer> hash_path;
 typedef stdlib::merkle_tree::LevelDbStore LevelDbStore;
 typedef stdlib::witness_t<Composer> witness_t;
 typedef stdlib::public_witness_t<Composer> public_witness_t;
+typedef std::pair<stdlib::pedersen_note::private_note, stdlib::pedersen_note::public_note> note_pair;
 
 barretenberg::fr::field_t note_secret;
 grumpkin::fr::field_t owner_secret;
@@ -32,10 +33,9 @@ const auto init = []() {
     return true;
 }();
 
-std::pair<plonk::stdlib::pedersen_note::private_note, plonk::stdlib::pedersen_note::public_note> create_note(
-    Composer* composer, const uint32_t value)
+note_pair create_note_pair(Composer* composer, const uint32_t value)
 {
-    std::pair<plonk::stdlib::pedersen_note::private_note, plonk::stdlib::pedersen_note::public_note> result;
+    note_pair result;
 
     field_t view_key = witness_t(composer, note_secret);
     field_t note_owner_x = witness_t(composer, owner_pub_key.x);
@@ -46,11 +46,10 @@ std::pair<plonk::stdlib::pedersen_note::private_note, plonk::stdlib::pedersen_no
     return result;
 }
 
-byte_array create_note_leaf(Composer& composer, const uint32_t value)
+byte_array create_note_leaf(Composer& composer, stdlib::pedersen_note::public_note const& public_note_data)
 {
-    auto note_data = create_note(&composer, value);
-    field_t new_note_x = note_data.second.ciphertext.x;
-    field_t new_note_y = note_data.second.ciphertext.y;
+    field_t new_note_x = public_note_data.ciphertext.x;
+    field_t new_note_y = public_note_data.ciphertext.y;
     composer.set_public_input(new_note_x.witness_index);
     composer.set_public_input(new_note_y.witness_index);
 
@@ -67,14 +66,13 @@ byte_array create_at_index(stdlib::merkle_tree::LevelDbStore& db,
     field_t old_note_x(&composer, fr::zero);
     field_t old_note_y(&composer, fr::zero);
 
-    auto note_data = create_note(&composer, value);
+    note_pair note_data = create_note_pair(&composer, value);
     field_t new_note_x = note_data.second.ciphertext.x;
     field_t new_note_y = note_data.second.ciphertext.y;
     composer.set_public_input(new_note_x.witness_index);
     composer.set_public_input(new_note_y.witness_index);
 
     stdlib::merkle_tree::fr_hash_path old_path = db.get_hash_path(index_to_create);
-    std::cout << old_path << std::endl;
     fr::field_t old_root = db.root();
 
     // TODO: Compress point. Add index.
@@ -117,7 +115,8 @@ void destroy_at_index(stdlib::merkle_tree::LevelDbStore& db,
                       uint32_t const value)
 {
     field_t index_to_destroy_field = witness_t(&composer, index_to_destroy);
-    byte_array value_byte_array = create_note_leaf(composer, value);
+    note_pair note_data = create_note_pair(&composer, value);
+    byte_array value_byte_array = create_note_leaf(composer, note_data.second);
     field_t data_root_field = public_witness_t(&composer, db.root());
     hash_path path = stdlib::merkle_tree::create_witness_hash_path(composer, db.get_hash_path(index_to_destroy));
 
@@ -131,19 +130,15 @@ void destroy_at_index(stdlib::merkle_tree::LevelDbStore& db,
     byte_array new_value_byte_array(&composer);
     new_value_byte_array.write(field_t(1ULL)).write(field_t(0ULL));
 
-    // We need the index as part of the value we hash into the tree, so notes of the same value have unique entries.
-    value_byte_array.write(index_to_destroy_field);
+    // We mix in the index and notes secret as part of the value we hash into the tree to ensure notes will always have
+    // unique entries.
+    value_byte_array.write(index_to_destroy_field).write(note_data.first.secret);
 
     field_t note_hash = stdlib::merkle_tree::sha256_value(value_byte_array);
-    std::cout << "note_hash: " << note_hash << std::endl;
     uint128_t nullifier_index = field_to_uint128(note_hash.get_value());
-    std::cout << "nullifier_index: " << std::hex << (uint64_t)(nullifier_index >> 64) << (uint64_t)(nullifier_index)
-              << std::endl;
     byte_array nullifier_index_byte_array = note_hash;
-    std::cout << "nullifier_index_byte_array: " << nullifier_index_byte_array << std::endl;
     field_t nullifier_old_root_field = public_witness_t(&composer, nullifier_db.root());
     fr_hash_path nullifier_old_path = nullifier_db.get_hash_path(nullifier_index);
-    std::cout << nullifier_old_path << std::endl;
     hash_path nullifier_old_path_field = stdlib::merkle_tree::create_witness_hash_path(composer, nullifier_old_path);
     fr_hash_path nullifier_new_path =
         stdlib::merkle_tree::get_new_hash_path(nullifier_old_path, nullifier_index, new_value_byte_array.get_value());
@@ -196,7 +191,11 @@ void destroy(
     std::cout << "Verified: " << verified << std::endl;
 
     if (verified) {
-        std::string element = create_note_leaf(composer, value).write(field_t(index)).get_value();
+        note_pair note_data = create_note_pair(&composer, value);
+        std::string element = create_note_leaf(composer, note_data.second)
+                                  .write(field_t(index))
+                                  .write(note_data.first.secret)
+                                  .get_value();
         auto note_hash = stdlib::merkle_tree::sha256(element);
         std::cout << "post note_hash " << note_hash << std::endl;
         auto index = field_to_uint128(note_hash);
