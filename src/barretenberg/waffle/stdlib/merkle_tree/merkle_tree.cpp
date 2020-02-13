@@ -32,11 +32,11 @@ typename merkle_tree<ComposerContext>::hash_path merkle_tree<ComposerContext>::c
     return result;
 }
 
-inline uint128_t field_to_uint128(fr::field_t input)
+inline uint128_t field_to_uint128(const fr::field_t& input)
 {
-    input = fr::from_montgomery_form(input);
-    uint128_t lo = input.data[0];
-    uint128_t hi = input.data[1];
+    fr::field_t raw = fr::from_montgomery_form(input);
+    uint128_t lo = raw.data[0];
+    uint128_t hi = raw.data[1];
     return (hi << 64) | lo;
 }
 

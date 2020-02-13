@@ -51,7 +51,7 @@ public:
     void create_dummy_gates();
     size_t get_num_constant_gates() const override { return 0; }
 
-    void assert_equal_constant(const uint32_t a_idx, const barretenberg::fr::field_t b)
+    void assert_equal_constant(const uint32_t a_idx, const barretenberg::fr::field_t& b)
     {
         const add_triple gate_coefficients{
             a_idx,

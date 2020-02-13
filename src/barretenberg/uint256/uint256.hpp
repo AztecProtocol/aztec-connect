@@ -1,10 +1,10 @@
 /**
- * uint256_t.hpp
+ * uint256_t
  * Copyright Aztec 2020
  *
  * An unsigned 256 bit integer type.
  *
- * Constructor and all methods are constexpr. Ideally, this should be able to be treated like any other literal type.
+ * Constructor and all methods are constexpr. Ideally, uint256_t should be able to be treated like any other literal type.
  *
  * Not optimized for performance, this code doesn't touch any of our hot paths when constructing PLONK proofs
  **/
