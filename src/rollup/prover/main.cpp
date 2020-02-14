@@ -33,15 +33,14 @@ const auto init = []() {
     return true;
 }();
 
-note_pair create_note_pair(Composer* composer, const uint32_t value)
+note_pair create_note_pair(Composer* composer, uint32 const& value)
 {
     note_pair result;
 
     field_t view_key = witness_t(composer, note_secret);
     field_t note_owner_x = witness_t(composer, owner_pub_key.x);
     field_t note_owner_y = witness_t(composer, owner_pub_key.y);
-    uint32 value_witness = witness_t(composer, value);
-    result.first = { { note_owner_x, note_owner_y }, value_witness, view_key };
+    result.first = { { note_owner_x, note_owner_y }, value, view_key };
     result.second = plonk::stdlib::pedersen_note::encrypt_note(result.first);
     return result;
 }
@@ -58,11 +57,12 @@ byte_array create_note_leaf(Composer& composer, stdlib::pedersen_note::public_no
     return value_byte_array;
 }
 
-byte_array create_at_index(stdlib::merkle_tree::LevelDbStore& db,
-                           Composer& composer,
-                           uint32_t index_to_create,
-                           uint32_t const value)
+void create_at_index(stdlib::merkle_tree::LevelDbStore& db,
+                     Composer& composer,
+                     field_t const& index_field,
+                     uint32 const& value)
 {
+    uint128_t index_to_create = field_to_uint128(index_field.get_value());
     field_t old_note_x(&composer, fr::zero);
     field_t old_note_y(&composer, fr::zero);
 
@@ -75,7 +75,7 @@ byte_array create_at_index(stdlib::merkle_tree::LevelDbStore& db,
     stdlib::merkle_tree::fr_hash_path old_path = db.get_hash_path(index_to_create);
     fr::field_t old_root = db.root();
 
-    // TODO: Compress point. Add index.
+    // TODO: Compress point.
     std::string new_element = std::string(64, 0);
     fr::serialize_to_buffer(new_note_x.get_value(), (uint8_t*)(&new_element[0]));
     fr::serialize_to_buffer(new_note_y.get_value(), (uint8_t*)(&new_element[32]));
@@ -93,7 +93,6 @@ byte_array create_at_index(stdlib::merkle_tree::LevelDbStore& db,
     hash_path new_path_field = stdlib::merkle_tree::create_witness_hash_path(composer, new_path);
     field_t new_root_field = public_witness_t(&composer, new_root);
     field_t old_root_field = public_witness_t(&composer, old_root);
-    field_t index_field = public_witness_t(&composer, index_to_create);
     byte_array index_byte_array = index_field;
 
     stdlib::merkle_tree::update_membership(composer,
@@ -105,16 +104,16 @@ byte_array create_at_index(stdlib::merkle_tree::LevelDbStore& db,
                                            old_value_byte_array,
                                            index_byte_array);
 
-    return new_value_byte_array;
+    db.update_element(db.size(), new_value_byte_array.get_value());
 }
 
 void destroy_at_index(stdlib::merkle_tree::LevelDbStore& db,
                       stdlib::merkle_tree::LevelDbStore& nullifier_db,
                       Composer& composer,
-                      uint32_t const index_to_destroy,
-                      uint32_t const value)
+                      field_t const index_to_destroy_field,
+                      uint32 const& value)
 {
-    field_t index_to_destroy_field = witness_t(&composer, index_to_destroy);
+    uint128_t index_to_destroy = field_to_uint128(index_to_destroy_field.get_value());
     note_pair note_data = create_note_pair(&composer, value);
     byte_array value_byte_array = create_note_leaf(composer, note_data.second);
     field_t data_root_field = public_witness_t(&composer, db.root());
@@ -155,12 +154,17 @@ void destroy_at_index(stdlib::merkle_tree::LevelDbStore& db,
                                            nullifier_old_path_field,
                                            old_value_byte_array,
                                            nullifier_index_byte_array);
+
+    nullifier_db.update_element(nullifier_index, new_value_byte_array.get_value());
 }
 
 void create(LevelDbStore& db, Composer& composer, uint32_t const value)
 {
-    uint32_t index_to_create = (uint32_t)db.size();
-    byte_array new_note = create_at_index(db, composer, index_to_create, value);
+    field_t data_size_field = public_witness_t(&composer, db.size());
+    // field_t data_root_field = public_witness_t(&composer, db.root());
+    uint32 value_uint = witness_t(&composer, value);
+
+    create_at_index(db, composer, data_size_field, value_uint);
 
     auto prover = composer.preprocess();
     printf("composer gates = %zu\n", composer.get_num_gates());
@@ -172,14 +176,20 @@ void create(LevelDbStore& db, Composer& composer, uint32_t const value)
     std::cout << "Verified: " << verified << std::endl;
 
     if (verified) {
-        db.update_element(index_to_create, new_note.get_value());
+        db.commit();
     }
 }
 
 void destroy(
     LevelDbStore& db, LevelDbStore& nullifier_db, Composer& composer, uint32_t const index, uint32_t const value)
 {
-    destroy_at_index(db, nullifier_db, composer, index, value);
+    // field_t data_size_field = public_witness_t(&composer, db.size());
+    // field_t data_root_field = public_witness_t(&composer, db.root());
+    // field_t nullifier_root_field = public_witness_t(&composer, nullifier_db.root());
+    field_t index_to_destroy_field = witness_t(&composer, index);
+    uint32 value_uint = witness_t(&composer, value);
+
+    destroy_at_index(db, nullifier_db, composer, index_to_destroy_field, value_uint);
 
     auto prover = composer.preprocess();
     printf("composer gates = %zu\n", composer.get_num_gates());
@@ -191,37 +201,32 @@ void destroy(
     std::cout << "Verified: " << verified << std::endl;
 
     if (verified) {
-        note_pair note_data = create_note_pair(&composer, value);
-        std::string element = create_note_leaf(composer, note_data.second)
-                                  .write(field_t(index))
-                                  .write(note_data.first.secret)
-                                  .get_value();
-        auto note_hash = stdlib::merkle_tree::sha256(element);
-        std::cout << "post note_hash " << note_hash << std::endl;
-        auto index = field_to_uint128(note_hash);
-        byte_array new_value_byte_array(&composer);
-        new_value_byte_array.write(field_t(1ULL)).write(field_t(0ULL));
-        nullifier_db.update_element(index, new_value_byte_array.get_value());
+        nullifier_db.commit();
     }
 }
 
-/*
 void split(stdlib::merkle_tree::LevelDbStore& db,
            stdlib::merkle_tree::LevelDbStore& nullifier_db,
            Composer& composer,
            uint32_t in_index,
-           uint32_t in_value,
            uint32_t out_value1,
            uint32_t out_value2)
 {
-    std::string spend_element = db.get_element(in_index);
+    // field_t data_root_field = public_witness_t(&composer, db.root());
+    // field_t nullifier_root_field = public_witness_t(&composer, nullifier_db.root());
+    field_t data_size_field = public_witness_t(&composer, db.size());
+    field_t in_index_field = public_witness_t(&composer, in_index);
+    uint32 out_value1_uint = witness_t(&composer, out_value1);
+    uint32 out_value2_uint = witness_t(&composer, out_value2);
+    uint32 in_value_uint = out_value1_uint + out_value2_uint;
 
-    auto new_note1_idx = db.size();
+    auto new_note1_idx = data_size_field;
     auto new_note2_idx = new_note1_idx + 1;
-    auto new_note1 = create_at_index(db, composer, new_note1_idx, out_value1);
-    auto new_note2 = create_at_index(db, composer, new_note2_idx, out_value2);
+    new_note2_idx = new_note2_idx.normalize();
+    create_at_index(db, composer, new_note1_idx, out_value1_uint);
+    create_at_index(db, composer, new_note2_idx, out_value2_uint);
 
-    // Insert into nullifier.
+    destroy_at_index(db, nullifier_db, composer, in_index_field, in_value_uint);
 
     auto prover = composer.preprocess();
     printf("composer gates = %zu\n", composer.get_num_gates());
@@ -233,11 +238,10 @@ void split(stdlib::merkle_tree::LevelDbStore& db,
     std::cout << "Verified: " << verified << std::endl;
 
     if (verified) {
-        db.update_element(new_note1_idx, new_note1.get_value());
-        db.update_element(new_note2_idx, new_note2.get_value());
+        db.commit();
+        nullifier_db.commit();
     }
 }
-*/
 
 int main(int argc, char** argv)
 {
@@ -276,13 +280,15 @@ int main(int argc, char** argv)
         uint32_t value = (uint32_t)atoi(argv[3]);
         destroy(db, nullifier_db, composer, index, value);
     } else if (cmd == "split") {
-        if (argc != 4) {
-            std::cout
-                << "usage: " << argv[0]
-                << " split <note index to spend> <note value to spend> <first new note value> <second new note value>"
-                << std::endl;
+        if (argc != 5) {
+            std::cout << "usage: " << argv[0]
+                      << " split <note index to spend> <first new note value> <second new note value>" << std::endl;
             return -1;
         }
+        uint32_t index = (uint32_t)atoi(argv[2]);
+        uint32_t value1 = (uint32_t)atoi(argv[3]);
+        uint32_t value2 = (uint32_t)atoi(argv[4]);
+        split(db, nullifier_db, composer, index, value1, value2);
     }
 
     return 0;

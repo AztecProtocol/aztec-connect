@@ -1,6 +1,7 @@
 #pragma once
 #include "../field/field.hpp"
 #include "hash_path.hpp"
+#include "leveldb_tx.hpp"
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
 
@@ -29,32 +30,34 @@ class LevelDbStore {
 
     size_t size() const;
 
+    void commit();
+
+    void rollback();
+
   private:
-    fr::field_t update_element(
-        fr::field_t const& root, fr::field_t const& value, index_t index, size_t height, leveldb::WriteBatch& batch);
+    fr::field_t update_element(fr::field_t const& root, fr::field_t const& value, index_t index, size_t height);
 
     fr::field_t get_element(fr::field_t const& root, index_t index, size_t height);
 
     fr::field_t compute_zero_path_hash(size_t height, index_t index, fr::field_t const& value);
 
-    fr::field_t binary_put(
-        index_t a_index, fr::field_t const& a, fr::field_t const& b, size_t height, leveldb::WriteBatch& batch);
+    fr::field_t binary_put(index_t a_index, fr::field_t const& a, fr::field_t const& b, size_t height);
 
     fr::field_t fork_stump(fr::field_t const& value1,
                            index_t index1,
                            fr::field_t const& value2,
                            index_t index2,
                            size_t height,
-                           size_t stump_height,
-                           leveldb::WriteBatch& batch);
+                           size_t stump_height);
 
-    void put(fr::field_t const& key, fr::field_t const& left, fr::field_t const& right, leveldb::WriteBatch& batch);
+    void put(fr::field_t const& key, fr::field_t const& left, fr::field_t const& right);
 
-    void put_stump(fr::field_t const& key, index_t index, fr::field_t const& value, leveldb::WriteBatch& batch);
+    void put_stump(fr::field_t const& key, index_t index, fr::field_t const& value);
 
   private:
     static constexpr size_t LEAF_BYTES = 64;
     std::unique_ptr<leveldb::DB> db_;
+    std::unique_ptr<leveldb_tx> tx_;
     std::vector<fr::field_t> zero_hashes_;
     size_t depth_;
     size_t size_;
