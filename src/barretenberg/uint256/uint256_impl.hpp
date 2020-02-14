@@ -209,28 +209,27 @@ constexpr uint256_t uint256_t::operator-(const uint256_t& other) const
 
 constexpr uint256_t uint256_t::operator*(const uint256_t& other) const
 {
+    uint256_t r;
+
     uint256_internal::uint64_pair T0 = uint256_internal::mac(0, data[0], other.data[0], 0);
     uint256_internal::uint64_pair T1 = uint256_internal::mac(0, data[0], other.data[1], T0.data[1]);
     uint256_internal::uint64_pair T2 = uint256_internal::mac(0, data[0], other.data[2], T1.data[1]);
     uint256_internal::uint64_pair T3 = uint256_internal::mac(0, data[0], other.data[3], T2.data[1]);
 
-    uint256_t r{ T0.data[0], T1.data[0], T2.data[0], T3.data[0] };
+    r.data[0] = T0.data[0];
 
-    T0 = uint256_internal::mac(r.data[1], data[1], other.data[0], 0);
-    T1 = uint256_internal::mac(r.data[2], data[1], other.data[1], T0.data[1]);
-    T2 = uint256_internal::mac(r.data[3], data[1], other.data[2], T1.data[1]);
+    T0 = uint256_internal::mac(T1.data[0], data[1], other.data[0], 0);
+    T1 = uint256_internal::mac(T2.data[0], data[1], other.data[1], T0.data[1]);
+    T2 = uint256_internal::mac(T3.data[0], data[1], other.data[2], T1.data[1]);
 
     r.data[1] = T0.data[0];
-    r.data[2] = T1.data[0];
-    r.data[3] = T2.data[0];
 
-    T0 = uint256_internal::mac(r.data[2], data[2], other.data[0], 0);
-    T1 = uint256_internal::mac(r.data[3], data[2], other.data[1], T0.data[1]);
+    T0 = uint256_internal::mac(T1.data[0], data[2], other.data[0], 0);
+    T1 = uint256_internal::mac(T2.data[0], data[2], other.data[1], T0.data[1]);
 
     r.data[2] = T0.data[0];
-    r.data[3] = T1.data[0];
 
-    T0 = uint256_internal::mac(r.data[3], data[3], other.data[0], 0);
+    T0 = uint256_internal::mac(T1.data[0], data[3], other.data[0], 0);
 
     r.data[3] = T0.data[0];
 

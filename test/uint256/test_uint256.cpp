@@ -4,6 +4,8 @@
 
 #include <random>
 
+namespace
+{
 std::mt19937 engine;
 std::uniform_int_distribution<uint64_t> dist{ 0ULL, UINT64_MAX };
 
@@ -17,6 +19,7 @@ const auto init = []() {
 uint256_t get_pseudorandom_uint256()
 {
     return { dist(engine), dist(engine), dist(engine), dist(engine) };
+}
 }
 
 TEST(uint256, get_bit)
