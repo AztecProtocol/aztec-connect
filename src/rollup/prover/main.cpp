@@ -215,7 +215,7 @@ void split(stdlib::merkle_tree::LevelDbStore& db,
     // field_t data_root_field = public_witness_t(&composer, db.root());
     // field_t nullifier_root_field = public_witness_t(&composer, nullifier_db.root());
     field_t data_size_field = public_witness_t(&composer, db.size());
-    field_t in_index_field = public_witness_t(&composer, in_index);
+    field_t in_index_field = witness_t(&composer, in_index);
     uint32 out_value1_uint = witness_t(&composer, out_value1);
     uint32 out_value2_uint = witness_t(&composer, out_value2);
     uint32 in_value_uint = out_value1_uint + out_value2_uint;
@@ -227,6 +227,42 @@ void split(stdlib::merkle_tree::LevelDbStore& db,
     create_at_index(db, composer, new_note2_idx, out_value2_uint);
 
     destroy_at_index(db, nullifier_db, composer, in_index_field, in_value_uint);
+
+    auto prover = composer.preprocess();
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    auto verifier = composer.create_verifier();
+    bool verified = verifier.verify_proof(proof);
+
+    std::cout << "Verified: " << verified << std::endl;
+
+    if (verified) {
+        db.commit();
+        nullifier_db.commit();
+    }
+}
+
+void join(stdlib::merkle_tree::LevelDbStore& db,
+          stdlib::merkle_tree::LevelDbStore& nullifier_db,
+          Composer& composer,
+          uint32_t in_index1,
+          uint32_t in_index2,
+          uint32_t in_value1,
+          uint32_t in_value2)
+{
+    // field_t data_root_field = public_witness_t(&composer, db.root());
+    // field_t nullifier_root_field = public_witness_t(&composer, nullifier_db.root());
+    field_t data_size_field = public_witness_t(&composer, db.size());
+    field_t in_index1_field = witness_t(&composer, in_index1);
+    field_t in_index2_field = witness_t(&composer, in_index2);
+    uint32 in_value1_uint = witness_t(&composer, in_value1);
+    uint32 in_value2_uint = witness_t(&composer, in_value2);
+    uint32 out_value_uint = in_value1_uint + in_value2_uint;
+
+    create_at_index(db, composer, data_size_field, out_value_uint);
+    destroy_at_index(db, nullifier_db, composer, in_index1_field, in_value1_uint);
+    destroy_at_index(db, nullifier_db, composer, in_index2_field, in_value2_uint);
 
     auto prover = composer.preprocess();
     printf("composer gates = %zu\n", composer.get_num_gates());
@@ -289,6 +325,19 @@ int main(int argc, char** argv)
         uint32_t value1 = (uint32_t)atoi(argv[3]);
         uint32_t value2 = (uint32_t)atoi(argv[4]);
         split(db, nullifier_db, composer, index, value1, value2);
+    } else if (cmd == "join") {
+        if (argc != 6) {
+            std::cout
+                << "usage: " << argv[0]
+                << " join <first note index to join> <second note index to join> <first note value> <second note value>"
+                << std::endl;
+            return -1;
+        }
+        uint32_t index1 = (uint32_t)atoi(argv[2]);
+        uint32_t index2 = (uint32_t)atoi(argv[3]);
+        uint32_t value1 = (uint32_t)atoi(argv[4]);
+        uint32_t value2 = (uint32_t)atoi(argv[5]);
+        join(db, nullifier_db, composer, index1, index2, value1, value2);
     }
 
     return 0;
