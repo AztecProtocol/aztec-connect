@@ -614,15 +614,19 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
         scalars.push_back(q_4_term);
     }
 
-    fr::field_t q_5_term_ecc;
+    fr::field_t q_5_term_ecc;    
     fr::__sub(fr::one, w_4_eval, q_5_term_ecc);
     fr::__mul(q_5_term_ecc, q_ecc_1_eval, q_5_term_ecc);
     fr::__mul(q_5_term_ecc, q_c_eval, q_5_term_ecc);
     fr::__mul(q_5_term_ecc, alpha_f, q_5_term_ecc);
 
     fr::field_t q_5_term_arith;
+    fr::field_t q_5_temp;
+    fr::field_t two = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
     fr::__sqr(w_4_eval, q_5_term_arith);
     fr::__sub(q_5_term_arith, w_4_eval, q_5_term_arith);
+    fr::__sub(w_4_eval, two, q_5_temp);
+    fr::__mul(q_5_term_arith, q_5_temp, q_5_term_arith);
     fr::__mul(q_5_term_arith, challenge.alpha_base, q_5_term_arith);
     fr::__mul(q_5_term_arith, q_arith_eval, q_5_term_arith);
 

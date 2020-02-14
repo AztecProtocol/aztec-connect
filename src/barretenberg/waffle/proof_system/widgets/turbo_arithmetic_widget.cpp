@@ -131,6 +131,8 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
 
     fr::field_t* quotient_large = &key->quotient_large[0];
 
+    fr::field_t two = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
+
     ITERATE_OVER_DOMAIN_START(key->large_domain);
     fr::field_t T0;
     fr::field_t T1;
@@ -138,6 +140,7 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
     fr::field_t T3;
     fr::field_t T4;
     fr::field_t T5;
+    fr::field_t T6;
 
     fr::__mul_with_coarse_reduction(w_1_fft[i], q_m_fft[i], T0); // w_l * q_m = rdx
     fr::__mul_with_coarse_reduction(T0, w_2_fft[i], T0);         // w_l * w_r * q_m = rdx
@@ -148,6 +151,8 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
 
     fr::__sqr_with_coarse_reduction(w_4_fft[i], T5);
     fr::__sub_with_coarse_reduction(T5, w_4_fft[i], T5);
+    fr::__sub_with_coarse_reduction(w_4_fft[i], two, T6);
+    fr::__mul_with_coarse_reduction(T5, T6, T5);
     fr::__mul_with_coarse_reduction(T5, q_5_fft[i], T5);
 
     fr::__add_with_coarse_reduction(T0, T1, T0); // q_m * w_l * w_r + w_l * q_l = rdx
@@ -186,8 +191,9 @@ fr::field_t ProverTurboArithmeticWidget::compute_linear_contribution(const fr::f
     fr::field_t w_4_eval = fr::serialize_from_buffer(&transcript.get_element("w_4")[0]);
     fr::field_t q_arith_eval = fr::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
 
+    fr::field_t two = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
     fr::field_t w_lr = fr::mul(w_l_eval, w_r_eval);
-    fr::field_t is_w_4_bool = fr::sub(fr::sqr(w_4_eval), w_4_eval);
+    fr::field_t is_w_4_bool = fr::mul(fr::sub(fr::sqr(w_4_eval), w_4_eval), fr::sub(w_4_eval, two));
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0;
     fr::field_t T1;
@@ -335,8 +341,12 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
     }
 
     fr::field_t q_5_term;
+    fr::field_t q_5_temp;
+    fr::field_t two = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
     fr::__sqr(w_4_eval, q_5_term);
     fr::__sub(q_5_term, w_4_eval, q_5_term);
+    fr::__sub(w_4_eval, two, q_5_temp);
+    fr::__mul(q_5_term, q_5_temp, q_5_term);
     fr::__mul(q_5_term, challenge.alpha_base, q_5_term);
     fr::__mul(q_5_term, challenge.linear_nu, q_5_term);
     fr::__mul(q_5_term, q_arith_eval, q_5_term);

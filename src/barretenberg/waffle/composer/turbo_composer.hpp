@@ -33,6 +33,7 @@ public:
     void create_dummy_gate();
     void create_add_gate(const add_triple& in) override;
     void create_big_add_gate(const add_quad& in);
+    void create_big_mul_gate(const mul_quad& in);
     void create_balanced_add_gate(const add_quad& in);
 
     void create_mul_gate(const mul_triple& in) override;

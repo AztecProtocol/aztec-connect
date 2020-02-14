@@ -314,3 +314,14 @@ TEST(uint256, greater_than_or_equal)
     b = uint256_t{ UINT64_MAX - 1, UINT64_MAX , UINT64_MAX, UINT64_MAX };
     EXPECT_EQ(a >= b, false);
 }
+
+TEST(uint256, field_conversions)
+{
+    uint256_t a{ 0x1111, 0x2222, 0x3333, 0x4444 };
+
+    barretenberg::fr::field_t b;
+    b = a.operator barretenberg::fr::field_t();
+    uint256_t c = b;
+
+    EXPECT_EQ(a, c);
+}

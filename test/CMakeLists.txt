@@ -69,6 +69,7 @@ add_executable(
     stdlib/test_stdlib_bool.cpp
     stdlib/test_stdlib_field.cpp
     stdlib/test_stdlib_uint32.cpp
+    stdlib/test_stdlib_turbo_uint.cpp
     stdlib/test_stdlib_bitarray.cpp
     stdlib/test_stdlib_byte_array.cpp
     stdlib/test_stdlib_mimc.cpp

@@ -37,6 +37,18 @@ struct add_quad {
     barretenberg::fr::field_t const_scaling;
 };
 
+struct mul_quad {
+    uint32_t a;
+    uint32_t b;
+    uint32_t c;
+    uint32_t d;
+    barretenberg::fr::field_t a_scaling;
+    barretenberg::fr::field_t b_scaling;
+    barretenberg::fr::field_t c_scaling;
+    barretenberg::fr::field_t d_scaling;
+    barretenberg::fr::field_t const_scaling;
+};
+
 struct mul_triple {
     uint32_t a;
     uint32_t b;

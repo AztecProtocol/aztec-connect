@@ -6,11 +6,14 @@
  *
  * Constructor and all methods are constexpr. Ideally, uint256_t should be able to be treated like any other literal type.
  *
- * Not optimized for performance, this code doesn't touch any of our hot paths when constructing PLONK proofs
+ * Not optimized for performance, this code doesn"t touch any of our hot paths when constructing PLONK proofs
  **/
 #pragma once
 
 #include <cstdint>
+#include <iostream>
+
+#include "../curves/bn254/fr.hpp"
 
 class uint256_t {
   public:
@@ -32,11 +35,27 @@ class uint256_t {
         data[3] = other.data[3];
     }
 
-    constexpr bool to_bool() const { return static_cast<bool>(data[0]); };
-    constexpr uint8_t to_uint8_t() const { return static_cast<uint8_t>(data[0]); };
-    constexpr uint16_t to_uint16_t() const { return static_cast<uint16_t>(data[0]); };
-    constexpr uint32_t to_uint32_t() const { return static_cast<uint32_t>(data[0]); };
-    constexpr uint64_t to_uint64_t() const { return static_cast<uint64_t>(data[0]); };
+    uint256_t(const barretenberg::fr::field_t& input)
+    {
+        barretenberg::fr::field_t val = barretenberg::fr::from_montgomery_form(input);
+        data[0] = val.data[0];
+        data[1] = val.data[1];
+        data[2] = val.data[2];
+        data[3] = val.data[3];
+    }
+
+    operator barretenberg::fr::field_t() const
+    {
+        barretenberg::fr::field_t val = barretenberg::fr::to_montgomery_form({{ data[0], data[1], data[2], data[3] }});
+        return val;
+    }
+
+
+    explicit constexpr operator bool() const { return static_cast<bool>(data[0]); };
+    explicit constexpr operator uint8_t() const { return static_cast<uint8_t>(data[0]); };
+    explicit constexpr operator uint16_t() const { return static_cast<uint16_t>(data[0]); };
+    explicit constexpr operator uint32_t() const { return static_cast<uint32_t>(data[0]); };
+    explicit constexpr operator uint64_t() const { return static_cast<uint64_t>(data[0]); };
 
     constexpr bool get_bit(const uint64_t bit_index) const;
     constexpr uint64_t get_msb() const;
@@ -118,7 +137,15 @@ class uint256_t {
         return *this;
     };
 
+    friend std::ostream& operator<<(std::ostream& os, const uint256_t& val);
+
     uint64_t data[4];
 };
 
 #include "./uint256_impl.hpp"
+
+inline std::ostream& operator<<(std::ostream& os, const uint256_t& val)
+{
+    os << "[" << val.data[0] << ", " << val.data[1] << ", " << val.data[2] << ", " << val.data[3] << "]";
+    return os;
+}

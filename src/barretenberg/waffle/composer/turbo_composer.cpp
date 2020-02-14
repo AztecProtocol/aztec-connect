@@ -136,6 +136,44 @@ void TurboComposer::create_big_add_gate(const add_quad& in)
     ++n;
 }
 
+
+void TurboComposer::create_big_mul_gate(const mul_quad& in)
+{
+    gate_flags.push_back(0);
+    w_l.emplace_back(in.a);
+    w_r.emplace_back(in.b);
+    w_o.emplace_back(in.c);
+    w_4.emplace_back(in.d);
+    q_m.emplace_back(fr::one);
+    q_1.emplace_back(in.a_scaling);
+    q_2.emplace_back(in.b_scaling);
+    q_3.emplace_back(in.c_scaling);
+    q_c.emplace_back(in.const_scaling);
+    q_arith.emplace_back(fr::one);
+    q_4.emplace_back(in.d_scaling);
+    q_5.emplace_back(fr::zero);
+    q_ecc_1.emplace_back(fr::zero);
+    q_range.emplace_back(fr::zero);
+    q_logic.emplace_back(fr::zero);
+
+    epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
+    epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
+    epicycle out{ static_cast<uint32_t>(n), WireType::OUTPUT };
+    epicycle fourth{ static_cast<uint32_t>(n), WireType::FOURTH };
+
+    ASSERT(wire_epicycles.size() > in.a);
+    ASSERT(wire_epicycles.size() > in.b);
+    ASSERT(wire_epicycles.size() > in.c);
+    ASSERT(wire_epicycles.size() > in.d);
+
+    wire_epicycles[static_cast<size_t>(in.a)].emplace_back(left);
+    wire_epicycles[static_cast<size_t>(in.b)].emplace_back(right);
+    wire_epicycles[static_cast<size_t>(in.c)].emplace_back(out);
+    wire_epicycles[static_cast<size_t>(in.d)].emplace_back(fourth);
+
+    ++n;
+}
+
 // Creates a width-4 addition gate, where the fourth witness must be a boolean.
 // Can be used to normalize a 32-bit addition
 void TurboComposer::create_balanced_add_gate(const add_quad& in)

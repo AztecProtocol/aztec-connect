@@ -128,13 +128,13 @@ constexpr divmod_output divmod(const uint256_t& a, const uint256_t& b)
     uint64_t bit_difference = a.get_msb() - b.get_msb();
 
     uint256_t divisor = b << bit_difference;
-    uint256_t scale_factor = uint256_t(1) << bit_difference;
+    uint256_t CIRCUIT_UINT_MAX_PLUS_ONE = uint256_t(1) << bit_difference;
 
     // if the divisor is bigger than the remainder, a and b have the same bit length
     if (divisor > remainder) {
         // TODO: what is faster, adding or shifting?
         divisor += divisor;
-        scale_factor += scale_factor;
+        CIRCUIT_UINT_MAX_PLUS_ONE += CIRCUIT_UINT_MAX_PLUS_ONE;
     }
 
     // while the remainder is bigger than our original divisor, we can subtract multiples of b from the remainder,
@@ -146,11 +146,11 @@ constexpr divmod_output divmod(const uint256_t& a, const uint256_t& b)
         if (remainder >= divisor) {
             remainder -= divisor;
             // we can use OR here instead of +, as
-            // scale_factor is always a nice power of two
-            quotient |= scale_factor;
+            // CIRCUIT_UINT_MAX_PLUS_ONE is always a nice power of two
+            quotient |= CIRCUIT_UINT_MAX_PLUS_ONE;
         }
         divisor >>= 1;
-        scale_factor >>= 1;
+        CIRCUIT_UINT_MAX_PLUS_ONE >>= 1;
     }
 
     return { quotient, remainder };
