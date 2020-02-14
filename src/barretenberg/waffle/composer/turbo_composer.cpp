@@ -31,7 +31,7 @@ TurboComposer::TurboComposer(const size_t size_hint)
     q_4.reserve(size_hint);
     q_arith.reserve(size_hint);
     q_c.reserve(size_hint);
-    q_4_next.reserve(size_hint);
+    q_5.reserve(size_hint);
     q_ecc_1.reserve(size_hint);
     q_range.reserve(size_hint);
     q_logic.reserve(size_hint);
@@ -50,7 +50,7 @@ void TurboComposer::create_dummy_gate()
     w_4.emplace_back(idx);
     q_arith.emplace_back(fr::zero);
     q_4.emplace_back(fr::zero);
-    q_4_next.emplace_back(fr::zero);
+    q_5.emplace_back(fr::zero);
     q_ecc_1.emplace_back(fr::zero);
     q_m.emplace_back(fr::zero);
     q_1.emplace_back(fr::zero);
@@ -76,7 +76,7 @@ void TurboComposer::create_add_gate(const add_triple& in)
     q_c.emplace_back(in.const_scaling);
     q_arith.emplace_back(fr::one);
     q_4.emplace_back(fr::zero);
-    q_4_next.emplace_back(fr::zero);
+    q_5.emplace_back(fr::zero);
     q_ecc_1.emplace_back(fr::zero);
     q_range.emplace_back(fr::zero);
     q_logic.emplace_back(fr::zero);
@@ -113,7 +113,46 @@ void TurboComposer::create_big_add_gate(const add_quad& in)
     q_c.emplace_back(in.const_scaling);
     q_arith.emplace_back(fr::one);
     q_4.emplace_back(in.d_scaling);
-    q_4_next.emplace_back(fr::zero);
+    q_5.emplace_back(fr::zero);
+    q_ecc_1.emplace_back(fr::zero);
+    q_range.emplace_back(fr::zero);
+    q_logic.emplace_back(fr::zero);
+
+    epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
+    epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
+    epicycle out{ static_cast<uint32_t>(n), WireType::OUTPUT };
+    epicycle fourth{ static_cast<uint32_t>(n), WireType::FOURTH };
+
+    ASSERT(wire_epicycles.size() > in.a);
+    ASSERT(wire_epicycles.size() > in.b);
+    ASSERT(wire_epicycles.size() > in.c);
+    ASSERT(wire_epicycles.size() > in.d);
+
+    wire_epicycles[static_cast<size_t>(in.a)].emplace_back(left);
+    wire_epicycles[static_cast<size_t>(in.b)].emplace_back(right);
+    wire_epicycles[static_cast<size_t>(in.c)].emplace_back(out);
+    wire_epicycles[static_cast<size_t>(in.d)].emplace_back(fourth);
+
+    ++n;
+}
+
+// Creates a width-4 addition gate, where the fourth witness must be a boolean.
+// Can be used to normalize a 32-bit addition
+void TurboComposer::create_balanced_add_gate(const add_quad& in)
+{
+    gate_flags.push_back(0);
+    w_l.emplace_back(in.a);
+    w_r.emplace_back(in.b);
+    w_o.emplace_back(in.c);
+    w_4.emplace_back(in.d);
+    q_m.emplace_back(fr::zero);
+    q_1.emplace_back(in.a_scaling);
+    q_2.emplace_back(in.b_scaling);
+    q_3.emplace_back(in.c_scaling);
+    q_c.emplace_back(in.const_scaling);
+    q_arith.emplace_back(fr::one);
+    q_4.emplace_back(in.d_scaling);
+    q_5.emplace_back(fr::one);
     q_ecc_1.emplace_back(fr::zero);
     q_range.emplace_back(fr::zero);
     q_logic.emplace_back(fr::zero);
@@ -152,7 +191,7 @@ void TurboComposer::create_mul_gate(const mul_triple& in)
     q_c.emplace_back(in.const_scaling);
     q_arith.emplace_back(fr::one);
     q_4.emplace_back(fr::zero);
-    q_4_next.emplace_back(fr::zero);
+    q_5.emplace_back(fr::zero);
     q_ecc_1.emplace_back(fr::zero);
     q_range.emplace_back(fr::zero);
     q_logic.emplace_back(fr::zero);
@@ -184,7 +223,7 @@ void TurboComposer::create_bool_gate(const uint32_t variable_index)
     w_4.emplace_back(zero_idx);
     q_arith.emplace_back(fr::one);
     q_4.emplace_back(fr::zero);
-    q_4_next.emplace_back(fr::zero);
+    q_5.emplace_back(fr::zero);
     q_ecc_1.emplace_back(fr::zero);
     q_range.emplace_back(fr::zero);
 
@@ -226,7 +265,7 @@ void TurboComposer::create_poly_gate(const poly_triple& in)
 
     q_arith.emplace_back(fr::one);
     q_4.emplace_back(fr::zero);
-    q_4_next.emplace_back(fr::zero);
+    q_5.emplace_back(fr::zero);
     q_ecc_1.emplace_back(fr::zero);
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
@@ -255,7 +294,7 @@ void TurboComposer::create_fixed_group_add_gate(const fixed_group_add_quad& in)
 
     q_arith.emplace_back(fr::zero);
     q_4.emplace_back(fr::zero);
-    q_4_next.emplace_back(fr::zero);
+    q_5.emplace_back(fr::zero);
     q_m.emplace_back(fr::zero);
     q_c.emplace_back(fr::zero);
     q_range.emplace_back(fr::zero);
@@ -295,7 +334,7 @@ void TurboComposer::create_fixed_group_add_gate_with_init(const fixed_group_add_
 
     q_arith.emplace_back(fr::zero);
     q_4.emplace_back(init.q_x_1);
-    q_4_next.emplace_back(init.q_x_2);
+    q_5.emplace_back(init.q_x_2);
     q_m.emplace_back(init.q_y_1);
     q_c.emplace_back(init.q_y_2);
     q_range.emplace_back(fr::zero);
@@ -339,7 +378,7 @@ void TurboComposer::fix_witness(const uint32_t witness_index, const barretenberg
     q_c.emplace_back(fr::neg(witness_value));
     q_arith.emplace_back(fr::one);
     q_4.emplace_back(fr::zero);
-    q_4_next.emplace_back(fr::zero);
+    q_5.emplace_back(fr::zero);
     q_ecc_1.emplace_back(fr::zero);
     q_range.emplace_back(fr::zero);
     q_logic.emplace_back(fr::zero);
@@ -475,7 +514,7 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
         q_c.emplace_back(fr::zero);
         q_arith.emplace_back(fr::zero);
         q_4.emplace_back(fr::zero);
-        q_4_next.emplace_back(fr::zero);
+        q_5.emplace_back(fr::zero);
         q_ecc_1.emplace_back(fr::zero);
         q_logic.emplace_back(fr::zero);
         q_range.emplace_back(fr::one);
@@ -664,7 +703,7 @@ TurboComposer::accumulator_triple TurboComposer::create_logic_constraint(const u
         q_3.emplace_back(fr::zero);
         q_arith.emplace_back(fr::zero);
         q_4.emplace_back(fr::zero);
-        q_4_next.emplace_back(fr::zero);
+        q_5.emplace_back(fr::zero);
         q_ecc_1.emplace_back(fr::zero);
         q_range.emplace_back(fr::zero);
         if (is_xor_gate)
@@ -730,7 +769,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     ASSERT(n == q_3.size());
     ASSERT(n == q_3.size());
     ASSERT(n == q_4.size());
-    ASSERT(n == q_4_next.size());
+    ASSERT(n == q_5.size());
     ASSERT(n == q_arith.size());
     ASSERT(n == q_ecc_1.size());
     ASSERT(n == q_range.size());
@@ -751,7 +790,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
         q_3.emplace_back(fr::zero);
         q_c.emplace_back(fr::zero);
         q_4.emplace_back(fr::zero);
-        q_4_next.emplace_back(fr::zero);
+        q_5.emplace_back(fr::zero);
         q_arith.emplace_back(fr::zero);
         q_ecc_1.emplace_back(fr::zero);
         q_range.emplace_back(fr::zero);
@@ -770,7 +809,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     polynomial poly_q_2(new_n);
     polynomial poly_q_3(new_n);
     polynomial poly_q_4(new_n);
-    polynomial poly_q_4_next(new_n);
+    polynomial poly_q_5(new_n);
     polynomial poly_q_arith(new_n);
     polynomial poly_q_ecc_1(new_n);
     polynomial poly_q_range(new_n);
@@ -782,7 +821,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
         poly_q_2[i] = fr::zero;
         poly_q_3[i] = fr::zero;
         poly_q_4[i] = fr::zero;
-        poly_q_4_next[i] = fr::zero;
+        poly_q_5[i] = fr::zero;
         poly_q_arith[i] = fr::zero;
         poly_q_ecc_1[i] = fr::zero;
         poly_q_c[i] = fr::zero;
@@ -797,7 +836,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
         poly_q_3[i] = q_3[i - public_inputs.size()];
         poly_q_c[i] = q_c[i - public_inputs.size()];
         poly_q_4[i] = q_4[i - public_inputs.size()];
-        poly_q_4_next[i] = q_4_next[i - public_inputs.size()];
+        poly_q_5[i] = q_5[i - public_inputs.size()];
         poly_q_arith[i] = q_arith[i - public_inputs.size()];
         poly_q_ecc_1[i] = q_ecc_1[i - public_inputs.size()];
         poly_q_range[i] = q_range[i - public_inputs.size()];
@@ -808,7 +847,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     poly_q_2.ifft(circuit_proving_key->small_domain);
     poly_q_3.ifft(circuit_proving_key->small_domain);
     poly_q_4.ifft(circuit_proving_key->small_domain);
-    poly_q_4_next.ifft(circuit_proving_key->small_domain);
+    poly_q_5.ifft(circuit_proving_key->small_domain);
     poly_q_m.ifft(circuit_proving_key->small_domain);
     poly_q_c.ifft(circuit_proving_key->small_domain);
     poly_q_arith.ifft(circuit_proving_key->small_domain);
@@ -820,7 +859,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     polynomial poly_q_2_fft(poly_q_2, new_n * 4);
     polynomial poly_q_3_fft(poly_q_3, new_n * 4);
     polynomial poly_q_4_fft(poly_q_4, new_n * 4);
-    polynomial poly_q_4_next_fft(poly_q_4_next, new_n * 4);
+    polynomial poly_q_5_fft(poly_q_5, new_n * 4);
     polynomial poly_q_m_fft(poly_q_m, new_n * 4);
     polynomial poly_q_c_fft(poly_q_c, new_n * 4);
     polynomial poly_q_arith_fft(poly_q_arith, new_n * 4);
@@ -832,7 +871,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     poly_q_2_fft.coset_fft(circuit_proving_key->large_domain);
     poly_q_3_fft.coset_fft(circuit_proving_key->large_domain);
     poly_q_4_fft.coset_fft(circuit_proving_key->large_domain);
-    poly_q_4_next_fft.coset_fft(circuit_proving_key->large_domain);
+    poly_q_5_fft.coset_fft(circuit_proving_key->large_domain);
     poly_q_m_fft.coset_fft(circuit_proving_key->large_domain);
     poly_q_c_fft.coset_fft(circuit_proving_key->large_domain);
     poly_q_arith_fft.coset_fft(circuit_proving_key->large_domain);
@@ -848,7 +887,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     circuit_proving_key->constraint_selectors.insert({ "q_2", std::move(poly_q_2) });
     circuit_proving_key->constraint_selectors.insert({ "q_3", std::move(poly_q_3) });
     circuit_proving_key->constraint_selectors.insert({ "q_4", std::move(poly_q_4) });
-    circuit_proving_key->constraint_selectors.insert({ "q_4_next", std::move(poly_q_4_next) });
+    circuit_proving_key->constraint_selectors.insert({ "q_5", std::move(poly_q_5) });
     circuit_proving_key->constraint_selectors.insert({ "q_range", std::move(poly_q_range) });
     circuit_proving_key->constraint_selectors.insert({ "q_logic", std::move(poly_q_logic) });
 
@@ -860,7 +899,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     circuit_proving_key->constraint_selector_ffts.insert({ "q_2_fft", std::move(poly_q_2_fft) });
     circuit_proving_key->constraint_selector_ffts.insert({ "q_3_fft", std::move(poly_q_3_fft) });
     circuit_proving_key->constraint_selector_ffts.insert({ "q_4_fft", std::move(poly_q_4_fft) });
-    circuit_proving_key->constraint_selector_ffts.insert({ "q_4_next_fft", std::move(poly_q_4_next_fft) });
+    circuit_proving_key->constraint_selector_ffts.insert({ "q_5_fft", std::move(poly_q_5_fft) });
     circuit_proving_key->constraint_selector_ffts.insert({ "q_range_fft", std::move(poly_q_range_fft) });
     circuit_proving_key->constraint_selector_ffts.insert({ "q_logic_fft", std::move(poly_q_logic_fft) });
 
@@ -883,7 +922,7 @@ std::shared_ptr<verification_key> TurboComposer::compute_verification_key()
     poly_coefficients[1] = circuit_proving_key->constraint_selectors.at("q_2").get_coefficients();
     poly_coefficients[2] = circuit_proving_key->constraint_selectors.at("q_3").get_coefficients();
     poly_coefficients[3] = circuit_proving_key->constraint_selectors.at("q_4").get_coefficients();
-    poly_coefficients[4] = circuit_proving_key->constraint_selectors.at("q_4_next").get_coefficients();
+    poly_coefficients[4] = circuit_proving_key->constraint_selectors.at("q_5").get_coefficients();
     poly_coefficients[5] = circuit_proving_key->constraint_selectors.at("q_m").get_coefficients();
     poly_coefficients[6] = circuit_proving_key->constraint_selectors.at("q_c").get_coefficients();
     poly_coefficients[7] = circuit_proving_key->constraint_selectors.at("q_arith").get_coefficients();
@@ -913,7 +952,7 @@ std::shared_ptr<verification_key> TurboComposer::compute_verification_key()
     circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });
     circuit_verification_key->constraint_selectors.insert({ "Q_3", commitments[2] });
     circuit_verification_key->constraint_selectors.insert({ "Q_4", commitments[3] });
-    circuit_verification_key->constraint_selectors.insert({ "Q_4_NEXT", commitments[4] });
+    circuit_verification_key->constraint_selectors.insert({ "Q_5", commitments[4] });
     circuit_verification_key->constraint_selectors.insert({ "Q_M", commitments[5] });
     circuit_verification_key->constraint_selectors.insert({ "Q_C", commitments[6] });
     circuit_verification_key->constraint_selectors.insert({ "Q_ARITHMETIC_SELECTOR", commitments[7] });

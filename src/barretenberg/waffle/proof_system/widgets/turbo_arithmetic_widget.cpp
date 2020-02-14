@@ -19,7 +19,7 @@ ProverTurboArithmeticWidget::ProverTurboArithmeticWidget(proving_key* input_key,
     , q_2(key->constraint_selectors.at("q_2"))
     , q_3(key->constraint_selectors.at("q_3"))
     , q_4(key->constraint_selectors.at("q_4"))
-    , q_4_next(key->constraint_selectors.at("q_4_next"))
+    , q_5(key->constraint_selectors.at("q_5"))
     , q_m(key->constraint_selectors.at("q_m"))
     , q_c(key->constraint_selectors.at("q_c"))
     , q_arith(key->constraint_selectors.at("q_arith"))
@@ -27,7 +27,7 @@ ProverTurboArithmeticWidget::ProverTurboArithmeticWidget(proving_key* input_key,
     , q_2_fft(key->constraint_selector_ffts.at("q_2_fft"))
     , q_3_fft(key->constraint_selector_ffts.at("q_3_fft"))
     , q_4_fft(key->constraint_selector_ffts.at("q_4_fft"))
-    , q_4_next_fft(key->constraint_selector_ffts.at("q_4_next_fft"))
+    , q_5_fft(key->constraint_selector_ffts.at("q_5_fft"))
     , q_m_fft(key->constraint_selector_ffts.at("q_m_fft"))
     , q_c_fft(key->constraint_selector_ffts.at("q_c_fft"))
     , q_arith_fft(key->constraint_selector_ffts.at("q_arith_fft"))
@@ -39,7 +39,7 @@ ProverTurboArithmeticWidget::ProverTurboArithmeticWidget(const ProverTurboArithm
     , q_2(key->constraint_selectors.at("q_2"))
     , q_3(key->constraint_selectors.at("q_3"))
     , q_4(key->constraint_selectors.at("q_4"))
-    , q_4_next(key->constraint_selectors.at("q_4_next"))
+    , q_5(key->constraint_selectors.at("q_5"))
     , q_m(key->constraint_selectors.at("q_m"))
     , q_c(key->constraint_selectors.at("q_c"))
     , q_arith(key->constraint_selectors.at("q_arith"))
@@ -47,7 +47,7 @@ ProverTurboArithmeticWidget::ProverTurboArithmeticWidget(const ProverTurboArithm
     , q_2_fft(key->constraint_selector_ffts.at("q_2_fft"))
     , q_3_fft(key->constraint_selector_ffts.at("q_3_fft"))
     , q_4_fft(key->constraint_selector_ffts.at("q_4_fft"))
-    , q_4_next_fft(key->constraint_selector_ffts.at("q_4_next_fft"))
+    , q_5_fft(key->constraint_selector_ffts.at("q_5_fft"))
     , q_m_fft(key->constraint_selector_ffts.at("q_m_fft"))
     , q_c_fft(key->constraint_selector_ffts.at("q_c_fft"))
     , q_arith_fft(key->constraint_selector_ffts.at("q_arith_fft"))
@@ -59,7 +59,7 @@ ProverTurboArithmeticWidget::ProverTurboArithmeticWidget(ProverTurboArithmeticWi
     , q_2(key->constraint_selectors.at("q_2"))
     , q_3(key->constraint_selectors.at("q_3"))
     , q_4(key->constraint_selectors.at("q_4"))
-    , q_4_next(key->constraint_selectors.at("q_4_next"))
+    , q_5(key->constraint_selectors.at("q_5"))
     , q_m(key->constraint_selectors.at("q_m"))
     , q_c(key->constraint_selectors.at("q_c"))
     , q_arith(key->constraint_selectors.at("q_arith"))
@@ -67,7 +67,7 @@ ProverTurboArithmeticWidget::ProverTurboArithmeticWidget(ProverTurboArithmeticWi
     , q_2_fft(key->constraint_selector_ffts.at("q_2_fft"))
     , q_3_fft(key->constraint_selector_ffts.at("q_3_fft"))
     , q_4_fft(key->constraint_selector_ffts.at("q_4_fft"))
-    , q_4_next_fft(key->constraint_selector_ffts.at("q_4_next_fft"))
+    , q_5_fft(key->constraint_selector_ffts.at("q_5_fft"))
     , q_m_fft(key->constraint_selector_ffts.at("q_m_fft"))
     , q_c_fft(key->constraint_selector_ffts.at("q_c_fft"))
     , q_arith_fft(key->constraint_selector_ffts.at("q_arith_fft"))
@@ -80,7 +80,7 @@ ProverTurboArithmeticWidget& ProverTurboArithmeticWidget::operator=(const Prover
     q_2 = key->constraint_selectors.at("q_2");
     q_3 = key->constraint_selectors.at("q_3");
     q_4 = key->constraint_selectors.at("q_4");
-    q_4_next = key->constraint_selectors.at("q_4_next");
+    q_5 = key->constraint_selectors.at("q_5");
     q_m = key->constraint_selectors.at("q_m");
     q_c = key->constraint_selectors.at("q_c");
     q_arith = key->constraint_selectors.at("q_arith");
@@ -89,7 +89,7 @@ ProverTurboArithmeticWidget& ProverTurboArithmeticWidget::operator=(const Prover
     q_2_fft = key->constraint_selectors.at("q_2_fft");
     q_3_fft = key->constraint_selectors.at("q_3_fft");
     q_4_fft = key->constraint_selectors.at("q_4_fft");
-    q_4_next_fft = key->constraint_selectors.at("q_4_next_fft");
+    q_5_fft = key->constraint_selectors.at("q_5_fft");
     q_m_fft = key->constraint_selectors.at("q_m_fft");
     q_c_fft = key->constraint_selectors.at("q_c_fft");
     q_arith_fft = key->constraint_selectors.at("q_arith_fft");
@@ -103,7 +103,7 @@ ProverTurboArithmeticWidget& ProverTurboArithmeticWidget::operator=(ProverTurboA
     q_2 = key->constraint_selectors.at("q_2");
     q_3 = key->constraint_selectors.at("q_3");
     q_4 = key->constraint_selectors.at("q_4");
-    q_4_next = key->constraint_selectors.at("q_4_next");
+    q_5 = key->constraint_selectors.at("q_5");
     q_m = key->constraint_selectors.at("q_m");
     q_c = key->constraint_selectors.at("q_c");
     q_arith = key->constraint_selectors.at("q_arith");
@@ -112,7 +112,7 @@ ProverTurboArithmeticWidget& ProverTurboArithmeticWidget::operator=(ProverTurboA
     q_2_fft = key->constraint_selectors.at("q_2_fft");
     q_3_fft = key->constraint_selectors.at("q_3_fft");
     q_4_fft = key->constraint_selectors.at("q_4_fft");
-    q_4_next_fft = key->constraint_selectors.at("q_4_next_fft");
+    q_5_fft = key->constraint_selectors.at("q_5_fft");
     q_m_fft = key->constraint_selectors.at("q_m_fft");
     q_c_fft = key->constraint_selectors.at("q_c_fft");
     q_arith_fft = key->constraint_selectors.at("q_arith_fft");
@@ -145,7 +145,10 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
     fr::__mul_with_coarse_reduction(w_2_fft[i], q_2_fft[i], T2); // w_r * q_r = rsi
     fr::__mul_with_coarse_reduction(w_3_fft[i], q_3_fft[i], T3); // w_o * q_o = r8
     fr::__mul_with_coarse_reduction(w_4_fft[i], q_4_fft[i], T4);
-    fr::__mul_with_coarse_reduction(w_4_fft[i + 4], q_4_next_fft[i], T5);
+
+    fr::__sqr_with_coarse_reduction(w_4_fft[i], T5);
+    fr::__sub_with_coarse_reduction(T5, w_4_fft[i], T5);
+    fr::__mul_with_coarse_reduction(T5, q_5_fft[i], T5);
 
     fr::__add_with_coarse_reduction(T0, T1, T0); // q_m * w_l * w_r + w_l * q_l = rdx
     fr::__add_with_coarse_reduction(T2, T3, T2); // q_r * w_r + q_o * w_o = rsi
@@ -181,10 +184,10 @@ fr::field_t ProverTurboArithmeticWidget::compute_linear_contribution(const fr::f
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
     fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
     fr::field_t w_4_eval = fr::serialize_from_buffer(&transcript.get_element("w_4")[0]);
-    fr::field_t w_4_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
     fr::field_t q_arith_eval = fr::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
 
     fr::field_t w_lr = fr::mul(w_l_eval, w_r_eval);
+    fr::field_t is_w_4_bool = fr::sub(fr::sqr(w_4_eval), w_4_eval);
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0;
     fr::field_t T1;
@@ -197,7 +200,7 @@ fr::field_t ProverTurboArithmeticWidget::compute_linear_contribution(const fr::f
     fr::__mul(w_r_eval, q_2[i], T2);
     fr::__mul(w_o_eval, q_3[i], T3);
     fr::__mul(w_4_eval, q_4[i], T4);
-    fr::__mul(w_4_shifted_eval, q_4_next[i], T5);
+    fr::__mul(is_w_4_bool, q_5[i], T5);
     fr::__add(T0, T1, T0);
     fr::__add(T2, T3, T2);
     fr::__add(T4, T5, T4);
@@ -292,7 +295,6 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
     fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
     fr::field_t w_4_eval = fr::serialize_from_buffer(&transcript.get_element("w_4")[0]);
-    fr::field_t w_4_next_eval = fr::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
 
     fr::field_t q_arith_eval = fr::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
 
@@ -332,13 +334,15 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
         scalars.push_back(q_4_term);
     }
 
-    fr::field_t q_4_next_term;
-    fr::__mul(w_4_next_eval, challenge.alpha_base, q_4_next_term);
-    fr::__mul(q_4_next_term, challenge.linear_nu, q_4_next_term);
-    fr::__mul(q_4_next_term, q_arith_eval, q_4_next_term);
-    if (g1::on_curve(key->constraint_selectors.at("Q_4_NEXT"))) {
-        points.push_back(key->constraint_selectors.at("Q_4_NEXT"));
-        scalars.push_back(q_4_next_term);
+    fr::field_t q_5_term;
+    fr::__sqr(w_4_eval, q_5_term);
+    fr::__sub(q_5_term, w_4_eval, q_5_term);
+    fr::__mul(q_5_term, challenge.alpha_base, q_5_term);
+    fr::__mul(q_5_term, challenge.linear_nu, q_5_term);
+    fr::__mul(q_5_term, q_arith_eval, q_5_term);
+    if (g1::on_curve(key->constraint_selectors.at("Q_5"))) {
+        points.push_back(key->constraint_selectors.at("Q_5"));
+        scalars.push_back(q_5_term);
     }
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu

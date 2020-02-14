@@ -33,6 +33,7 @@ public:
     void create_dummy_gate();
     void create_add_gate(const add_triple& in) override;
     void create_big_add_gate(const add_quad& in);
+    void create_balanced_add_gate(const add_quad& in);
 
     void create_mul_gate(const mul_triple& in) override;
     void create_bool_gate(const uint32_t a) override;
@@ -76,9 +77,9 @@ public:
     std::vector<barretenberg::fr::field_t> q_2;
     std::vector<barretenberg::fr::field_t> q_3;
     std::vector<barretenberg::fr::field_t> q_4;
+    std::vector<barretenberg::fr::field_t> q_5;
     std::vector<barretenberg::fr::field_t> q_arith;
     std::vector<barretenberg::fr::field_t> q_ecc_1;
-    std::vector<barretenberg::fr::field_t> q_4_next;
     std::vector<barretenberg::fr::field_t> q_range;
     std::vector<barretenberg::fr::field_t> q_logic;
 
