@@ -4,7 +4,6 @@
 
 #include "../../../uint256/uint256.hpp"
 
-#include "../bool/bool.hpp"
 #include "../common.hpp"
 
 namespace waffle
@@ -15,11 +14,16 @@ namespace waffle
 namespace plonk {
 namespace stdlib {
 
+template <typename ComposerContext> class bool_t;
+template <typename ComposerContext> class field_t;
+
 template <typename Composer, size_t width> class uint {
     public:
 
     uint(const witness_t<Composer>& other);
     uint(Composer* composer, const uint256_t& value = 0);
+
+    operator field_t<Composer>() const;
 
     uint operator+(const uint& other) const;
     uint operator-(const uint& other) const;
@@ -28,6 +32,11 @@ template <typename Composer, size_t width> class uint {
     uint operator%(const uint& other) const;
 
     bool_t<Composer> operator>(const uint& other) const;
+    bool_t<Composer> operator<(const uint& other) const;
+    bool_t<Composer> operator>=(const uint& other) const;
+    bool_t<Composer> operator<=(const uint& other) const;
+    bool_t<Composer> operator==(const uint& other) const;
+    bool_t<Composer> operator!=(const uint& other) const;
     // std::pair<uint, uint> divmod(const uint& other) const;
 
     uint weak_normalize() const;

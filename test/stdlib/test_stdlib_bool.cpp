@@ -319,3 +319,34 @@ TEST(stdlib_bool, test_simple_proof)
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }
+
+TEST(stdlib_bool, normalize)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    auto generate_constraints = [&composer](bool value, bool is_constant, bool is_inverted)
+    {
+        bool_t a = is_constant ? bool_t(&composer, value) : witness_t(&composer, value);
+        bool_t b = is_inverted ? !a : a;
+        bool_t c = b.normalize();
+        EXPECT_EQ(c.get_value(), value ^ is_inverted);
+    };
+
+    generate_constraints(false, false, false);
+    generate_constraints(false, false, true);
+    generate_constraints(false, true , false);
+    generate_constraints(false, true , true);
+    generate_constraints(true , false, false);
+    generate_constraints(true , false, true);
+    generate_constraints(true , true , false);
+    generate_constraints(true , true , true);
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}

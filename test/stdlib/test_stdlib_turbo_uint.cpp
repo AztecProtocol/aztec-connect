@@ -229,3 +229,310 @@ TEST(stdlib_turbo_uint32, test_gt)
     bool proof_result = verifier.verify_proof(proof);
     EXPECT_EQ(proof_result, true);
 }
+
+
+
+TEST(stdlib_turbo_uint32, test_lt)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto compare_integers = [&composer](bool force_equal = false, bool force_gt = false, bool force_lt = false)
+    {
+        uint32_t const_a = get_random_int();
+        uint32_t const_b = get_random_int();
+        uint32_t a_val = get_random_int();
+        uint32_t b_val;
+        if (force_equal)
+        {
+            b_val = a_val + const_a - const_b;
+        }
+        else if (force_lt)
+        {
+            b_val = (a_val + const_a - const_b) ? a_val + const_a - const_b - 1 : const_a - const_b + (a_val++);
+        }
+        else if (force_gt)
+        {
+            b_val = (a_val + const_a - const_b) == UINT32_MAX ? const_a - const_b + (a_val--) : a_val - const_b + const_a + 1;
+        }
+        else
+        {
+            b_val = get_random_int();
+        }
+        bool expected = (b_val + const_b) < (a_val + const_a); 
+        uint32 a = witness_t(&composer, a_val);
+        uint32 b = witness_t(&composer, b_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 b_shift = uint32(&composer, const_b);
+        uint32 c = a + a_shift;
+        uint32 d = b + b_shift;
+        bool_t e = d < c;
+        bool result = bool(e.get_value());
+
+        EXPECT_EQ(result, expected);
+    };
+
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, true);
+    compare_integers(false, true, false);
+    compare_integers(true, false, false);
+    compare_integers(false, false, true);
+    compare_integers(false, true, false);
+    compare_integers(true, false, false);
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
+TEST(stdlib_turbo_uint32, test_gte)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto compare_integers = [&composer](bool force_equal = false, bool force_gt = false, bool force_lt = false)
+    {
+        uint32_t const_a = get_random_int();
+        uint32_t const_b = get_random_int();
+        uint32_t a_val = get_random_int();
+        uint32_t b_val;
+        if (force_equal)
+        {
+            b_val = a_val + const_a - const_b;
+        }
+        else if (force_lt)
+        {
+            b_val = (a_val + const_a - const_b) ? a_val + const_a - const_b - 1 : const_a - const_b + (a_val++);
+        }
+        else if (force_gt)
+        {
+            b_val = (a_val + const_a - const_b) == UINT32_MAX ? const_a - const_b + (a_val--) : a_val - const_b + const_a + 1;
+        }
+        else
+        {
+            b_val = get_random_int();
+        }
+        bool expected = (b_val + const_b) >= (a_val + const_a); 
+        uint32 a = witness_t(&composer, a_val);
+        uint32 b = witness_t(&composer, b_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 b_shift = uint32(&composer, const_b);
+        uint32 c = a + a_shift;
+        uint32 d = b + b_shift;
+        bool_t e = d >= c;
+        bool result = bool(e.get_value());
+        EXPECT_EQ(result, expected);
+    };
+
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, true);
+    compare_integers(false, true, false);
+    compare_integers(true, false, false);
+    compare_integers(false, false, true);
+    compare_integers(false, true, false);
+    compare_integers(true, false, false);
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
+TEST(stdlib_turbo_uint32, test_lte)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto compare_integers = [&composer](bool force_equal = false, bool force_gt = false, bool force_lt = false)
+    {
+        uint32_t const_a = get_random_int();
+        uint32_t const_b = get_random_int();
+        uint32_t a_val = get_random_int();
+        uint32_t b_val;
+        if (force_equal)
+        {
+            b_val = a_val + const_a - const_b;
+        }
+        else if (force_lt)
+        {
+            b_val = (a_val + const_a - const_b) ? a_val + const_a - const_b - 1 : const_a - const_b + (a_val++);
+        }
+        else if (force_gt)
+        {
+            b_val = (a_val + const_a - const_b) == UINT32_MAX ? const_a - const_b + (a_val--) : a_val - const_b + const_a + 1;
+        }
+        else
+        {
+            b_val = get_random_int();
+        }
+        bool expected = (b_val + const_b) <= (a_val + const_a); 
+        uint32 a = witness_t(&composer, a_val);
+        uint32 b = witness_t(&composer, b_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 b_shift = uint32(&composer, const_b);
+        uint32 c = a + a_shift;
+        uint32 d = b + b_shift;
+        bool_t e = d <= c;
+        bool result = bool(e.get_value());
+
+        EXPECT_EQ(result, expected);
+    };
+
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, true);
+    compare_integers(false, true, false);
+    compare_integers(true, false, false);
+    compare_integers(false, false, true);
+    compare_integers(false, true, false);
+    compare_integers(true, false, false);
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
+TEST(stdlib_turbo_uint32, test_equality_operator)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto compare_integers = [&composer](bool force_equal = false, bool force_gt = false, bool force_lt = false)
+    {
+        uint32_t const_a = get_random_int();
+        uint32_t const_b = get_random_int();
+        uint32_t a_val = get_random_int();
+        uint32_t b_val;
+        if (force_equal)
+        {
+            b_val = a_val + const_a - const_b;
+        }
+        else if (force_lt)
+        {
+            b_val = (a_val + const_a - const_b) ? a_val + const_a - const_b - 1 : const_a - const_b + (a_val++);
+        }
+        else if (force_gt)
+        {
+            b_val = (a_val + const_a - const_b) == UINT32_MAX ? const_a - const_b + (a_val--) : a_val - const_b + const_a + 1;
+        }
+        else
+        {
+            b_val = get_random_int();
+        }
+        bool expected = (b_val + const_b) == (a_val + const_a); 
+        uint32 a = witness_t(&composer, a_val);
+        uint32 b = witness_t(&composer, b_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 b_shift = uint32(&composer, const_b);
+        uint32 c = a + a_shift;
+        uint32 d = b + b_shift;
+        bool_t e = d == c;
+        bool result = bool(e.get_value());
+
+        EXPECT_EQ(result, expected);
+    };
+
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, true);
+    compare_integers(false, true, false);
+    compare_integers(true, false, false);
+    compare_integers(false, false, true);
+    compare_integers(false, true, false);
+    compare_integers(true, false, false);
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
+
+TEST(stdlib_turbo_uint32, test_not_equality_operator)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto compare_integers = [&composer](bool force_equal = false, bool force_gt = false, bool force_lt = false)
+    {
+        uint32_t const_a = get_random_int();
+        uint32_t const_b = get_random_int();
+        uint32_t a_val = get_random_int();
+        uint32_t b_val;
+        if (force_equal)
+        {
+            b_val = a_val + const_a - const_b;
+        }
+        else if (force_lt)
+        {
+            b_val = (a_val + const_a - const_b) ? a_val + const_a - const_b - 1 : const_a - const_b + (a_val++);
+        }
+        else if (force_gt)
+        {
+            b_val = (a_val + const_a - const_b) == UINT32_MAX ? const_a - const_b + (a_val--) : a_val - const_b + const_a + 1;
+        }
+        else
+        {
+            b_val = get_random_int();
+        }
+        bool expected = (b_val + const_b) != (a_val + const_a); 
+        uint32 a = witness_t(&composer, a_val);
+        uint32 b = witness_t(&composer, b_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 b_shift = uint32(&composer, const_b);
+        uint32 c = a + a_shift;
+        uint32 d = b + b_shift;
+        bool_t e = d != c;
+        bool result = bool(e.get_value());
+
+        EXPECT_EQ(result, expected);
+    };
+
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, false);
+    compare_integers(false, false, true);
+    compare_integers(false, true, false);
+    compare_integers(true, false, false);
+    compare_integers(false, false, true);
+    compare_integers(false, true, false);
+    compare_integers(true, false, false);
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
