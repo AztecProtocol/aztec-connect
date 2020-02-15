@@ -9,11 +9,10 @@ namespace stdlib {
 namespace merkle_tree {
 
 template <typename ComposerContext>
-inline field_t<ComposerContext> sha256_value(byte_array<ComposerContext> const& input)
+inline byte_array<ComposerContext> sha256_value(byte_array<ComposerContext> const& input)
 {
     ASSERT(input.get_context() != nullptr);
-    byte_array<ComposerContext> output = stdlib::sha256(bitarray<ComposerContext>(input));
-    return output;
+    return stdlib::sha256(bitarray<ComposerContext>(input));
 }
 
 } // namespace merkle_tree

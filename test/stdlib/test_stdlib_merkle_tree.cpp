@@ -323,8 +323,8 @@ TEST(stdlib_merkle_tree, sha256_native_vs_circuit)
     std::string x = VALUES[1];
     Composer composer = Composer();
     byte_array y(&composer, x);
-    auto z = plonk::stdlib::merkle_tree::sha256_value(y);
-    auto zz = plonk::stdlib::merkle_tree::sha256(x);
+    field_t z = plonk::stdlib::merkle_tree::sha256_value(y);
+    fr::field_t zz = plonk::stdlib::merkle_tree::sha256(x);
     EXPECT_TRUE(fr::eq(z.get_value(), zz));
 }
 

@@ -21,7 +21,7 @@ byte_array<ComposerContext>::byte_array(ComposerContext* parent_context)
 template <typename ComposerContext>
 byte_array<ComposerContext>::byte_array(ComposerContext* parent_context, const size_t n)
     : context(parent_context)
-    , values(std::vector<bool_t<ComposerContext>>(n))
+    , values(std::vector<bool_t<ComposerContext>>(n * 8))
 {}
 
 template <typename ComposerContext>
