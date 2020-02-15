@@ -9,6 +9,8 @@
 #include "../../composer/extended_composer.hpp"
 #include "../../composer/turbo_composer.hpp"
 
+using namespace barretenberg;
+
 namespace plonk {
 namespace stdlib {
 
@@ -371,30 +373,36 @@ template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerConte
 template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerContext>::normalize() const
 {
     bool is_constant = (witness_index == static_cast<uint32_t>(-1));
+    if (is_constant)
+    {
+        return *this;
+    }
+
     barretenberg::fr::field_t value = witness_bool ^ witness_inverted ? barretenberg::fr::one : barretenberg::fr::zero;
-    bool_t result;
-    result.context = context;
-    result.witness_index = context->add_variable(value);
-    result.witness_bool = witness_bool ^ witness_inverted;
-    result.witness_inverted = false;
+
+    uint32_t new_witness = context->add_variable(value);
+    uint32_t new_value = witness_bool ^ witness_inverted;
+
     barretenberg::fr::field_t q_l;
     barretenberg::fr::field_t q_c;
-    if (!is_constant) {
-        q_l = witness_inverted ? barretenberg::fr::neg_one() : barretenberg::fr::one;
-        q_c = barretenberg::fr::zero;
-    } else {
-        q_l = barretenberg::fr::zero;
-        q_c = witness_inverted ? barretenberg::fr::neg_one() : barretenberg::fr::one;
-    }
+
+    q_l = witness_inverted ? barretenberg::fr::neg_one() : barretenberg::fr::one;
+    q_c = witness_inverted ? barretenberg::fr::one : barretenberg::fr::zero;
+
     barretenberg::fr::field_t q_o = barretenberg::fr::neg_one();
     barretenberg::fr::field_t q_m = barretenberg::fr::zero;
     barretenberg::fr::field_t q_r = barretenberg::fr::zero;
 
     const waffle::poly_triple gate_coefficients{
-        witness_index, witness_index, result.witness_index, q_m, q_l, q_r, q_o, q_c
+        witness_index, witness_index, new_witness, q_m, q_l, q_r, q_o, q_c
     };
+
     context->create_poly_gate(gate_coefficients);
-    return result;
+
+    witness_index = new_witness;
+    witness_bool = new_value;
+    witness_inverted = false;
+    return *this;
 }
 
 template class bool_t<waffle::StandardComposer>;

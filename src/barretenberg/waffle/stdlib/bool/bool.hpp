@@ -63,10 +63,10 @@ template <typename ComposerContext> class bool_t {
 
     bool_t normalize() const;
 
-    ComposerContext* context = nullptr;
-    bool witness_bool = false;
-    bool witness_inverted = false;
-    uint32_t witness_index = static_cast<uint32_t>(-1);
+    mutable ComposerContext* context = nullptr;
+    mutable bool witness_bool = false;
+    mutable bool witness_inverted = false;
+    mutable uint32_t witness_index = static_cast<uint32_t>(-1);
 };
 
 template <typename T> inline std::ostream& operator<<(std::ostream& os, bool_t<T> const& v)
