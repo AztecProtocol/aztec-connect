@@ -44,7 +44,7 @@ uint<Composer, width> uint<Composer, width>::operator+(const uint& other) const
     }
     if (!lhs_constant && rhs_constant) {
         uint<Composer, width> result(*this);
-        result.additive_constant += other.additive_constant;
+        result.additive_constant = (additive_constant + other.additive_constant) & MASK;
         result.witness_status = WitnessStatus::NOT_NORMALIZED;
         return result;
     }
