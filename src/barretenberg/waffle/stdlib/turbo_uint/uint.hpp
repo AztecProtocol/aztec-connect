@@ -37,7 +37,8 @@ template <typename Composer, size_t width> class uint {
     bool_t<Composer> operator<=(const uint& other) const;
     bool_t<Composer> operator==(const uint& other) const;
     bool_t<Composer> operator!=(const uint& other) const;
-    // std::pair<uint, uint> divmod(const uint& other) const;
+
+    std::pair<uint, uint> divmod(const uint& other) const;
 
     uint weak_normalize() const;
     uint normalize() const;
@@ -62,6 +63,8 @@ protected:
 
     static constexpr uint256_t CIRCUIT_UINT_MAX_PLUS_ONE = (uint256_t(1) << width);
     static constexpr uint256_t MASK = CIRCUIT_UINT_MAX_PLUS_ONE - 1;
+private:
+    uint256_t get_unbounded_value() const;
 };
 
 extern template class uint<waffle::TurboComposer, 8UL>;

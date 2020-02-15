@@ -7,10 +7,6 @@
 namespace waffle {
 void ComposerBase::assert_equal(const uint32_t a_idx, const uint32_t b_idx)
 {
-    if (!barretenberg::fr::eq(variables[a_idx], variables[b_idx]))
-    {
-        printf("hey! not equal!\n");
-    }
     ASSERT(barretenberg::fr::eq(variables[a_idx], variables[b_idx]));
     for (size_t i = 0; i < wire_epicycles[b_idx].size(); ++i) {
         wire_epicycles[a_idx].emplace_back(wire_epicycles[b_idx][i]);

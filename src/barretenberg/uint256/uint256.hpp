@@ -140,6 +140,24 @@ class uint256_t {
     friend std::ostream& operator<<(std::ostream& os, const uint256_t& val);
 
     uint64_t data[4];
+
+private:
+    struct uint64_pair {
+        uint64_t data[2];
+    };
+    struct uint64_quad {
+        uint64_t data[4];
+    };
+    struct divmod_output {
+        uint64_quad quotient;
+        uint64_quad remainder;
+    };
+
+    constexpr uint64_pair mul_wide(const uint64_t a, const uint64_t b) const;
+    constexpr uint64_pair addc(const uint64_t a, const uint64_t b, const uint64_t carry_in) const;
+    constexpr uint64_pair sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in) const;
+    constexpr uint64_pair mac(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in) const;
+    constexpr divmod_output divmod(const uint256_t& a, const uint256_t& b) const;
 };
 
 #include "./uint256_impl.hpp"

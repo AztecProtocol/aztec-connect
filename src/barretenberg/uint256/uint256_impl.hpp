@@ -1,20 +1,6 @@
 #pragma once
 
-namespace uint256_internal {
-struct uint64_pair {
-    uint64_t data[2];
-};
-
-// struct uint64_oct {
-//     uint64_t data[8];
-// };
-
-struct divmod_output {
-    uint256_t quotient;
-    uint256_t remainder;
-};
-
-constexpr uint64_pair mul_wide(const uint64_t a, const uint64_t b)
+constexpr uint256_t::uint64_pair uint256_t::mul_wide(const uint64_t a, const uint64_t b) const
 {
     const uint64_t a_lo = a & 0xffffffffULL;
     const uint64_t a_hi = a >> 32ULL;
@@ -32,7 +18,7 @@ constexpr uint64_pair mul_wide(const uint64_t a, const uint64_t b)
 }
 
 // compute a + b + carry, returning the carry
-constexpr uint64_pair addc(const uint64_t a, const uint64_t b, const uint64_t carry_in)
+constexpr uint256_t::uint64_pair uint256_t::addc(const uint64_t a, const uint64_t b, const uint64_t carry_in) const
 {
     const uint64_t sum = a + b;
     const uint64_t carry_temp = sum < a;
@@ -41,7 +27,7 @@ constexpr uint64_pair addc(const uint64_t a, const uint64_t b, const uint64_t ca
     return { r, carry_out };
 }
 
-constexpr uint64_pair sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in)
+constexpr uint256_t::uint64_pair uint256_t::sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in) const
 {
     uint64_t t_1 = a - (borrow_in >> 63ULL);
     uint64_t borrow_temp_1 = t_1 > a;
@@ -52,7 +38,7 @@ constexpr uint64_pair sbb(const uint64_t a, const uint64_t b, const uint64_t bor
 }
 
 // {r, carry_out} = a + carry_in + b * c
-constexpr uint64_pair mac(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in)
+constexpr uint256_t::uint64_pair uint256_t::mac(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in) const
 {
     uint64_pair result = mul_wide(b, c);
     result.data[0] += a;
@@ -63,63 +49,16 @@ constexpr uint64_pair mac(const uint64_t a, const uint64_t b, const uint64_t c, 
     return result;
 }
 
-/*
-constexpr uint64_oct mul_512(const uint256_t& a, const uint256_t& b)
-{
-    uint64_pair T0 = mac(0, a.data[0], b.data[0], 0);
-    uint64_pair T1 = mac(0, a.data[0], b.data[1], T0.data[1]);
-    uint64_pair T2 = mac(0, a.data[0], b.data[2], T1.data[1]);
-    uint64_pair T3 = mac(0, a.data[0], b.data[3], T2.data[1]);
-
-    uint64_oct r{ T0.data[0], T1.data[0], T2.data[0], T3.data[0], T3.data[1], 0, 0, 0 };
-
-    T0 = mac(r.data[1], a.data[1], b.data[0], 0);
-    T1 = mac(r.data[2], a.data[1], b.data[1], T0.data[1]);
-    T2 = mac(r.data[3], a.data[1], b.data[2], T1.data[1]);
-    T3 = mac(r.data[4], a.data[1], b.data[3], T2.data[1]);
-
-    r.data[1] = T0.data[0];
-    r.data[2] = T1.data[0];
-    r.data[3] = T2.data[0];
-    r.data[4] = T3.data[0];
-    r.data[5] = T3.data[1];
-
-    T0 = mac(r.data[2], a.data[2], b.data[0], 0);
-    T1 = mac(r.data[3], a.data[2], b.data[1], T0.data[1]);
-    T2 = mac(r.data[4], a.data[2], b.data[2], T1.data[1]);
-    T3 = mac(r.data[5], a.data[2], b.data[3], T2.data[1]);
-
-    r.data[2] = T0.data[0];
-    r.data[3] = T1.data[0];
-    r.data[4] = T2.data[0];
-    r.data[5] = T3.data[0];
-    r.data[6] = T3.data[1];
-
-    T0 = mac(r.data[3], a.data[3], b.data[0], 0);
-    T1 = mac(r.data[4], a.data[3], b.data[1], T0.data[1]);
-    T2 = mac(r.data[5], a.data[3], b.data[2], T1.data[1]);
-    T3 = mac(r.data[6], a.data[3], b.data[3], T2.data[1]);
-
-    r.data[3] = T0.data[0];
-    r.data[4] = T1.data[0];
-    r.data[5] = T2.data[0];
-    r.data[6] = T3.data[0];
-    r.data[7] = T3.data[1];
-
-    return r;
-}
-*/
-
-constexpr divmod_output divmod(const uint256_t& a, const uint256_t& b)
+constexpr uint256_t::divmod_output uint256_t::divmod(const uint256_t& a, const uint256_t& b) const
 {
     if (a == 0 || b == 0) {
-        return { uint256_t(0), uint256_t(0) };
+        return { {{0}}, {{0}} };
     } else if (b == 1) {
-        return { a, uint256_t(0) };
+        return { {{ a.data[0], a.data[1], a.data[2], a.data[3] }}, {{0}} };
     } else if (a == b) {
-        return { uint256_t(1), uint256_t(0) };
+        return { {{ 1, 0, 0, 0 }}, {{0}} };
     } else if (b > a) {
-        return { uint256_t(0), a };
+        return { {{0}}, {{ a.data[0], a.data[1], a.data[2], a.data[3] }} };
     }
 
     uint256_t quotient = 0;
@@ -153,10 +92,8 @@ constexpr divmod_output divmod(const uint256_t& a, const uint256_t& b)
         CIRCUIT_UINT_MAX_PLUS_ONE >>= 1;
     }
 
-    return { quotient, remainder };
+    return { { quotient.data[0], quotient.data[1], quotient.data[2], quotient.data[3] }, { remainder.data[0], remainder.data[1], remainder.data[2], remainder.data[3] }};
 }
-
-} // namespace uint256_internal
 
 constexpr bool uint256_t::get_bit(const uint64_t bit_index) const
 {
@@ -191,19 +128,19 @@ constexpr uint64_t uint256_t::get_msb() const
 
 constexpr uint256_t uint256_t::operator+(const uint256_t& other) const
 {
-    const uint256_internal::uint64_pair T0 = uint256_internal::addc(data[0], other.data[0], 0);
-    const uint256_internal::uint64_pair T1 = uint256_internal::addc(data[1], other.data[1], T0.data[1]);
-    const uint256_internal::uint64_pair T2 = uint256_internal::addc(data[2], other.data[2], T1.data[1]);
-    const uint256_internal::uint64_pair T3 = uint256_internal::addc(data[3], other.data[3], T2.data[1]);
+    const uint64_pair T0 = addc(data[0], other.data[0], 0);
+    const uint64_pair T1 = addc(data[1], other.data[1], T0.data[1]);
+    const uint64_pair T2 = addc(data[2], other.data[2], T1.data[1]);
+    const uint64_pair T3 = addc(data[3], other.data[3], T2.data[1]);
     return { T0.data[0], T1.data[0], T2.data[0], T3.data[0] };
 };
 
 constexpr uint256_t uint256_t::operator-(const uint256_t& other) const
 {
-    const uint256_internal::uint64_pair T0 = uint256_internal::sbb(data[0], other.data[0], 0);
-    const uint256_internal::uint64_pair T1 = uint256_internal::sbb(data[1], other.data[1], T0.data[1]);
-    const uint256_internal::uint64_pair T2 = uint256_internal::sbb(data[2], other.data[2], T1.data[1]);
-    const uint256_internal::uint64_pair T3 = uint256_internal::sbb(data[3], other.data[3], T2.data[1]);
+    const uint64_pair T0 = sbb(data[0], other.data[0], 0);
+    const uint64_pair T1 = sbb(data[1], other.data[1], T0.data[1]);
+    const uint64_pair T2 = sbb(data[2], other.data[2], T1.data[1]);
+    const uint64_pair T3 = sbb(data[3], other.data[3], T2.data[1]);
     return { T0.data[0], T1.data[0], T2.data[0], T3.data[0] };
 }
 
@@ -211,25 +148,25 @@ constexpr uint256_t uint256_t::operator*(const uint256_t& other) const
 {
     uint256_t r;
 
-    uint256_internal::uint64_pair T0 = uint256_internal::mac(0, data[0], other.data[0], 0);
-    uint256_internal::uint64_pair T1 = uint256_internal::mac(0, data[0], other.data[1], T0.data[1]);
-    uint256_internal::uint64_pair T2 = uint256_internal::mac(0, data[0], other.data[2], T1.data[1]);
-    uint256_internal::uint64_pair T3 = uint256_internal::mac(0, data[0], other.data[3], T2.data[1]);
+    uint64_pair T0 = mac(0, data[0], other.data[0], 0);
+    uint64_pair T1 = mac(0, data[0], other.data[1], T0.data[1]);
+    uint64_pair T2 = mac(0, data[0], other.data[2], T1.data[1]);
+    uint64_pair T3 = mac(0, data[0], other.data[3], T2.data[1]);
 
     r.data[0] = T0.data[0];
 
-    T0 = uint256_internal::mac(T1.data[0], data[1], other.data[0], 0);
-    T1 = uint256_internal::mac(T2.data[0], data[1], other.data[1], T0.data[1]);
-    T2 = uint256_internal::mac(T3.data[0], data[1], other.data[2], T1.data[1]);
+    T0 = mac(T1.data[0], data[1], other.data[0], 0);
+    T1 = mac(T2.data[0], data[1], other.data[1], T0.data[1]);
+    T2 = mac(T3.data[0], data[1], other.data[2], T1.data[1]);
 
     r.data[1] = T0.data[0];
 
-    T0 = uint256_internal::mac(T1.data[0], data[2], other.data[0], 0);
-    T1 = uint256_internal::mac(T2.data[0], data[2], other.data[1], T0.data[1]);
+    T0 = mac(T1.data[0], data[2], other.data[0], 0);
+    T1 = mac(T2.data[0], data[2], other.data[1], T0.data[1]);
 
     r.data[2] = T0.data[0];
 
-    T0 = uint256_internal::mac(T1.data[0], data[3], other.data[0], 0);
+    T0 = mac(T1.data[0], data[3], other.data[0], 0);
 
     r.data[3] = T0.data[0];
 
@@ -238,12 +175,14 @@ constexpr uint256_t uint256_t::operator*(const uint256_t& other) const
 
 constexpr uint256_t uint256_t::operator/(const uint256_t& other) const
 {
-    return uint256_internal::divmod(*this, other).quotient;
+    uint64_quad res =  divmod(*this, other).quotient;
+    return uint256_t(res.data[0], res.data[1], res.data[2], res.data[3]);
 }
 
 constexpr uint256_t uint256_t::operator%(const uint256_t& other) const
 {
-    return uint256_internal::divmod(*this, other).remainder;
+    uint64_quad res =  divmod(*this, other).remainder;
+    return uint256_t(res.data[0], res.data[1], res.data[2], res.data[3]);
 }
 
 constexpr uint256_t uint256_t::operator&(const uint256_t& other) const

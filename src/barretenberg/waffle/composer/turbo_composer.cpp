@@ -84,17 +84,14 @@ void TurboComposer::create_add_gate(const add_triple& in)
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
     epicycle out{ static_cast<uint32_t>(n), WireType::OUTPUT };
-    epicycle fourth{ static_cast<uint32_t>(n), WireType::FOURTH };
 
     ASSERT(wire_epicycles.size() > in.a);
     ASSERT(wire_epicycles.size() > in.b);
     ASSERT(wire_epicycles.size() > in.c);
-    ASSERT(wire_epicycles.size() > zero_idx);
 
     wire_epicycles[static_cast<size_t>(in.a)].emplace_back(left);
     wire_epicycles[static_cast<size_t>(in.b)].emplace_back(right);
     wire_epicycles[static_cast<size_t>(in.c)].emplace_back(out);
-    wire_epicycles[static_cast<size_t>(zero_idx)].emplace_back(fourth);
 
     ++n;
 }
