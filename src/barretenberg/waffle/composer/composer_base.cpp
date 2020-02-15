@@ -7,6 +7,10 @@
 namespace waffle {
 void ComposerBase::assert_equal(const uint32_t a_idx, const uint32_t b_idx)
 {
+    if (!barretenberg::fr::eq(variables[a_idx], variables[b_idx]))
+    {
+        printf("hey! not equal!\n");
+    }
     ASSERT(barretenberg::fr::eq(variables[a_idx], variables[b_idx]));
     for (size_t i = 0; i < wire_epicycles[b_idx].size(); ++i) {
         wire_epicycles[a_idx].emplace_back(wire_epicycles[b_idx][i]);
@@ -14,8 +18,10 @@ void ComposerBase::assert_equal(const uint32_t a_idx, const uint32_t b_idx)
             w_l[wire_epicycles[b_idx][i].gate_index] = a_idx;
         } else if (wire_epicycles[b_idx][i].wire_type == WireType::RIGHT) {
             w_r[wire_epicycles[b_idx][i].gate_index] = a_idx;
-        } else {
+        } else if (wire_epicycles[b_idx][i].wire_type == WireType::OUTPUT) {
             w_o[wire_epicycles[b_idx][i].gate_index] = a_idx;
+        } else if (wire_epicycles[b_idx][i].wire_type == WireType::FOURTH) {
+            w_4[wire_epicycles[b_idx][i].gate_index] = a_idx;
         }
     }
     wire_epicycles[b_idx] = std::vector<epicycle>();
