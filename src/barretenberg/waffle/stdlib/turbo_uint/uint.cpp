@@ -36,18 +36,16 @@ uint<Composer, width> uint<Composer, width>::operator+(const uint& other) const
     bool lhs_constant = is_constant();
     bool rhs_constant = other.is_constant();
 
-    if (lhs_constant && rhs_constant)
-    {
+    if (lhs_constant && rhs_constant) {
         return uint<Composer, width>(context, (additive_constant + other.additive_constant) & MASK);
     }
-    if (lhs_constant && !rhs_constant)
-    {
+    if (lhs_constant && !rhs_constant) {
         return other + *this;
     }
-    if (!lhs_constant && rhs_constant)
-    {
+    if (!lhs_constant && rhs_constant) {
         uint<Composer, width> result(*this);
         result.additive_constant += other.additive_constant;
+        result.witness_status = WitnessStatus::NOT_NORMALIZED;
         return result;
     }
 
@@ -78,7 +76,8 @@ uint<Composer, width> uint<Composer, width>::operator+(const uint& other) const
     return result;
 }
 
-template <typename Composer, size_t width> uint<Composer, width> uint<Composer, width>::operator-(const uint& other) const
+template <typename Composer, size_t width>
+uint<Composer, width> uint<Composer, width>::operator-(const uint& other) const
 {
     ASSERT(context == other.context || (context != nullptr && other.context == nullptr) ||
            (context == nullptr && other.context != nullptr));
@@ -88,13 +87,11 @@ template <typename Composer, size_t width> uint<Composer, width> uint<Composer, 
     bool lhs_constant = is_constant();
     bool rhs_constant = other.is_constant();
 
-    if (lhs_constant && rhs_constant)
-    {
+    if (lhs_constant && rhs_constant) {
         return uint<Composer, width>(context, (additive_constant - other.additive_constant) & MASK);
     }
 
-    if (!rhs_constant && other.witness_status == WitnessStatus::NOT_NORMALIZED)
-    {
+    if (!rhs_constant && other.witness_status == WitnessStatus::NOT_NORMALIZED) {
         other.weak_normalize();
     }
 
@@ -130,20 +127,65 @@ template <typename Composer, size_t width> uint<Composer, width> uint<Composer, 
     return result;
 }
 
-
 template <typename Composer, size_t width>
-uint<Composer, width> uint<Composer, width>::weak_normalize() const
+uint<Composer, width> uint<Composer, width>::operator*(const uint& other) const
 {
-    if (!context || is_constant())
-    {
+    Composer* ctx = (context == nullptr) ? other.context : context;
+
+    bool lhs_constant = is_constant();
+    bool rhs_constant = other.is_constant();
+
+    if (lhs_constant && rhs_constant) {
+        return uint<Composer, width>(context, (additive_constant * other.additive_constant) & MASK);
+    }
+    if (lhs_constant && !rhs_constant) {
+        return other * (*this);
+    }
+
+    uint32_t rhs_idx = other.is_constant() ? ctx->add_variable(fr::zero) : other.witness_index;
+
+    uint256_t lhs = ctx->variables[witness_index];
+    uint256_t rhs = ctx->variables[rhs_idx];
+
+    uint256_t constant_term = (additive_constant * other.additive_constant) & MASK;
+    uint256_t product = (lhs * rhs) + (lhs * other.additive_constant) + (rhs * additive_constant) + constant_term;
+    uint256_t overflow = product >> width;
+    uint256_t remainder = product & MASK;
+
+    waffle::mul_quad gate{
+        witness_index,
+        rhs_idx,
+        ctx->add_variable(remainder),
+        ctx->add_variable(overflow),
+        fr::one,
+        other.additive_constant,
+        additive_constant,
+        fr::neg_one(),
+        fr::neg(CIRCUIT_UINT_MAX_PLUS_ONE),
+        constant_term,
+    };
+
+    ctx->create_big_mul_gate(gate);
+
+    ctx->create_range_constraint(gate.d, width + 4);
+
+    uint<Composer, width> result(ctx);
+    result.witness_index = gate.c;
+    result.accumulators = ctx->create_range_constraint(result.witness_index, width);
+    result.witness_status = WitnessStatus::OK;
+
+    return result;
+}
+
+template <typename Composer, size_t width> uint<Composer, width> uint<Composer, width>::weak_normalize() const
+{
+    if (!context || is_constant()) {
         return *this;
     }
-    if (witness_status == WitnessStatus::WEAK_NORMALIZED)
-    {
+    if (witness_status == WitnessStatus::WEAK_NORMALIZED) {
         return *this;
     }
-    if (witness_status == WitnessStatus::NOT_NORMALIZED)
-    {
+    if (witness_status == WitnessStatus::NOT_NORMALIZED) {
         uint256_t value = get_value();
         uint256_t overflow = value >> width;
         uint256_t remainder = value & MASK;
@@ -153,46 +195,196 @@ uint<Composer, width> uint<Composer, width>::weak_normalize() const
             context->add_variable(remainder),
             context->zero_idx,
             fr::one,
-            fr::neg_one(),
+            fr::neg(CIRCUIT_UINT_MAX_PLUS_ONE),
             fr::neg_one(),
             fr::zero,
-            CIRCUIT_UINT_MAX_PLUS_ONE + ((additive_constant) & MASK),
+            (additive_constant & MASK),
         };
 
         context->create_big_add_gate(gate);
 
         witness_index = gate.c;
         witness_status = WitnessStatus::WEAK_NORMALIZED;
+        additive_constant = 0;
     }
     return *this;
 }
 
-
-template <typename Composer, size_t width>
-uint<Composer, width> uint<Composer, width>::normalize() const
+template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator>(const uint& other) const
 {
-    if (!context || is_constant())
+    Composer* ctx = (context == nullptr) ? other.context : context;
+
+    if (!is_constant() && witness_status != WitnessStatus::OK)
     {
+        normalize();
+    }
+    if (!other.is_constant() && other.witness_status != WitnessStatus::OK)
+    {
+        other.normalize();
+    }
+
+    uint256_t lhs = get_value();
+    uint256_t rhs = other.get_value();
+
+    if (is_constant() && other.is_constant()) {
+        return bool_t<Composer>(ctx, lhs > rhs);
+    }
+
+    fr::field_t a = lhs;
+    fr::field_t b = rhs;
+    fr::field_t diff = fr::sub(a, b);
+
+    uint32_t lhs_idx = is_constant() ? ctx->add_variable(fr::zero) : witness_index;
+    uint32_t rhs_idx = other.is_constant() ? ctx->add_variable(fr::zero) : other.witness_index;
+    uint32_t diff_idx = ctx->add_variable(diff);
+
+    waffle::add_triple gate_a{ lhs_idx,
+                               rhs_idx,
+                               diff_idx,
+                               fr::one,
+                               fr::neg_one(),
+                               fr::neg_one(),
+                               fr::sub(additive_constant, other.additive_constant) };
+
+    ctx->create_add_gate(gate_a);
+
+    uint256_t delta = lhs > rhs ? lhs - rhs - 1 : rhs - lhs;
+
+    bool_t<Composer> result = witness_t(ctx, lhs > rhs);
+
+    waffle::mul_quad gate_b{ diff_idx,
+                             result.witness_index,
+                             ctx->add_variable(delta),
+                             ctx->add_variable(fr::zero),
+                             fr::neg(uint256_t(2)),
+                             fr::one,
+                             fr::one,
+                             fr::one,
+                             fr::zero,
+                             fr::zero };
+    ctx->create_big_mul_gate(gate_b);
+
+    return result;
+}
+
+// template <typename Composer> std::pair<uint<Composer>, uint<Composer>> uint<Composer>::divmod(const uint& other)
+// {
+//     Composer* ctx = (context == nullptr) ? other.context : context;
+//     uint<Composer> result(width(), ctx);
+
+//     bool lhs_constant = is_constant();
+//     bool rhs_constant = other.is_constant();
+
+//     if (lhs_constant && rhs_constant)
+//     {
+//         uint<Composer, width> remainder(context, additive_constant % other.additive_constant);
+//         uint<Composer, width> quotient(context, additive_constant / other.additive_constant);
+//         return std::make_pair<uint<Composer, width>, uint<Composer, width>>(quotient, remainder);
+//     }
+//     if (!lhs_constant && !rhs_constant && (witness_index == other.witness_index)) {
+//         uint<Composer, width> remainder(context, 0);
+//         uint<Composer, width> quotient(context, 1);
+//         return std::make_pair<uint<Composer, width>, uint<Composer, width>>(quotient, remainder);
+//     }
+
+//     uint32_t lhs_idx = is_constant() ? ctx->zero_idx : witness_index;
+//     uint32_t rhs_idx = other.is_constant() ? ctx->zero_idx : other.witness_index;
+
+//     if (!is_constant() && witness_status == WitnessStatus::NOT_NORMALIZED)
+//     {
+//         *this = weak_normalize();
+//     }
+//     if (is_constant())
+//     {
+//         *this = force_witness(ctx);
+//     }
+//     if (!other.is_constant() && witness_status == WitnessStatus::NOT_NORMALIZED)
+//     {
+//         other = other.weak_normalize();
+//     }
+//     if (other.is_constant())
+//     {
+//         other = other.force_witness(ctx);
+//     }
+
+//     /**
+//      *  (a / b) = q.b + r
+//      * 
+//      * => a = q.b^2 + r.b
+//      * 
+//      * => b(q.b + r) - a = 0
+//      **/
+
+//     uint256_t dividend = is_constant() ? 0 : get_value();
+//     uint256_t divisor = other.is_constant() ? 0 : other.get_value();
+
+//     uint256_t quotient = dividend / divisor;
+//     uint256_t remainder = dividend % divisor;
+
+//     uint256_t q_b_plus_r = quotient * divisor + remainder;
+
+//     uint32_t quotient_index = ctx->add_variable(quotient);
+//     uint32_t remainder_index = ctx->add_variable(remainder);
+//     uint32_t product_index = ctx->add_variable(q_b_plus_r);
+
+//     ComposerBase::mul_quad inner_gate{
+//         quotient_index,
+//         other.witness_index,
+//         remainder.witness_index,
+//         product_index,
+//         fr::zero,
+//         fr::zero,
+//         fr::one,
+//         fr::neg_one(),
+//         fr::zero,
+//     };
+
+//     ctx->create_big_mul_gate(inner_gate);
+
+//     ComposerBase::mul_triple outer_gate{
+//         product_index,
+//         other.witness_index,
+//         witness_index,
+//         fr::one,
+//         fr::neg_one(),
+//         fr::zero
+//     };
+
+//     ctx->create_mul_gate(outer_gate);
+
+//     uint<Composer, width> quotient(ctx);
+//     quotient.witness_index = quotient_index;
+//     quotient.accumulators =  ctx->create_range_constraint(quotient.witness_index, width);
+//     quotient.witness_status = WitnessStatus::OK;
+
+//     uint<Composer, width> remainder(ctx);
+//     remainder.witness_index = remainder_index;
+//     remainder.accumulators = ctx->create_range_constraint(remainder.witness_index, width);
+//     remainder.witness_status = WitnessStatus::OK;
+
+//     return std::make_pair<uint<Composer, width>, uint<Composer, width>>(quotient, remainder);
+// }
+
+template <typename Composer, size_t width> uint<Composer, width> uint<Composer, width>::normalize() const
+{
+    if (!context || is_constant()) {
         return *this;
     }
-    if (witness_status == WitnessStatus::WEAK_NORMALIZED)
-    {
+    if (witness_status == WitnessStatus::WEAK_NORMALIZED) {
         accumulators = context->create_range_constraint(witness_index, width);
         witness_status = WitnessStatus::OK;
     }
-    if (witness_status == WitnessStatus::NOT_NORMALIZED)
-    {
+    if (witness_status == WitnessStatus::NOT_NORMALIZED) {
+        weak_normalize();
         accumulators = context->create_range_constraint(witness_index, width + 2);
         witness_status = WitnessStatus::OK;
     }
     return *this;
 }
 
-template <typename Composer, size_t width>
-uint256_t uint<Composer, width>::get_value() const
+template <typename Composer, size_t width> uint256_t uint<Composer, width>::get_value() const
 {
-    if (!context || is_constant())
-    {
+    if (!context || is_constant()) {
         return additive_constant & MASK;
     }
     return (uint256_t(context->get_variable(witness_index)) + additive_constant);
@@ -203,5 +395,5 @@ template class uint<waffle::TurboComposer, 16UL>;
 template class uint<waffle::TurboComposer, 32UL>;
 template class uint<waffle::TurboComposer, 64UL>;
 
-}
+} // namespace stdlib
 } // namespace plonk

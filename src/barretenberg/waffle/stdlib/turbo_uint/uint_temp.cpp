@@ -345,6 +345,7 @@ template <typename ComposerContext, size_t width> uint<ComposerContext, width> u
         rhs_idx,
         composer->add_variable(fr::from_uint256(remainder)),
         composer->add_variable(fr::from_uint256(overflow)),
+        fr::one,
         fr::from_uint256(other.additive_constant),
         additive_constant,
         fr::neg_one(),

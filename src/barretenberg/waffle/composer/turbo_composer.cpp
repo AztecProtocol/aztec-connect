@@ -144,7 +144,7 @@ void TurboComposer::create_big_mul_gate(const mul_quad& in)
     w_r.emplace_back(in.b);
     w_o.emplace_back(in.c);
     w_4.emplace_back(in.d);
-    q_m.emplace_back(fr::one);
+    q_m.emplace_back(in.mul_scaling);
     q_1.emplace_back(in.a_scaling);
     q_2.emplace_back(in.b_scaling);
     q_3.emplace_back(in.c_scaling);

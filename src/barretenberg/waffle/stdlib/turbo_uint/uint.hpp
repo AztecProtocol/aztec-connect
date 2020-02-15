@@ -3,6 +3,8 @@
 #include <vector>
 
 #include "../../../uint256/uint256.hpp"
+
+#include "../bool/bool.hpp"
 #include "../common.hpp"
 
 namespace waffle
@@ -21,6 +23,12 @@ template <typename Composer, size_t width> class uint {
 
     uint operator+(const uint& other) const;
     uint operator-(const uint& other) const;
+    uint operator*(const uint& other) const;
+    uint operator/(const uint& other) const;
+    uint operator%(const uint& other) const;
+
+    bool_t<Composer> operator>(const uint& other) const;
+    // std::pair<uint, uint> divmod(const uint& other) const;
 
     uint weak_normalize() const;
     uint normalize() const;
