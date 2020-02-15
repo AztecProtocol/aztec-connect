@@ -191,17 +191,17 @@ template <typename Composer, size_t width> uint<Composer, width> uint<Composer, 
         uint256_t remainder = value & MASK;
         waffle::add_quad gate{
             witness_index,
-            context->add_variable(overflow),
-            context->add_variable(remainder),
             context->zero_idx,
+            context->add_variable(remainder),
+            context->add_variable(overflow),
             fr::one,
-            fr::neg(CIRCUIT_UINT_MAX_PLUS_ONE),
-            fr::neg_one(),
             fr::zero,
+            fr::neg_one(),
+            fr::neg(CIRCUIT_UINT_MAX_PLUS_ONE),
             (additive_constant & MASK),
         };
 
-        context->create_big_add_gate(gate);
+        context->create_balanced_add_gate(gate);
 
         witness_index = gate.c;
         witness_status = WitnessStatus::WEAK_NORMALIZED;
