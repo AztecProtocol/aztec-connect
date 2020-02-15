@@ -543,7 +543,7 @@ TEST(turbo_composer, and_constraint)
         // include non-nice numbers of bits, that will bleed over gate boundaries
         size_t extra_bits = 2 * (i % 4);
     
-        waffle::TurboComposer::accumulator_triple accumulators = composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
+        waffle::accumulator_triple accumulators = composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
         // composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
 
         for (uint32_t j = 0; j < 16; ++j)
@@ -615,7 +615,7 @@ TEST(turbo_composer, xor_constraint)
         // include non-nice numbers of bits, that will bleed over gate boundaries
         size_t extra_bits = 2 * (i % 4);
     
-        waffle::TurboComposer::accumulator_triple accumulators = composer.create_xor_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
+        waffle::accumulator_triple accumulators = composer.create_xor_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
 
         for (uint32_t j = 0; j < 16; ++j)
         {

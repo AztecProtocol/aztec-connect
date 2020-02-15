@@ -88,6 +88,12 @@ struct fixed_group_init_quad {
     barretenberg::fr::field_t q_y_2;
 };
 
+struct accumulator_triple {
+    std::vector<uint32_t> left;
+    std::vector<uint32_t> right;
+    std::vector<uint32_t> out;
+};
+
 class ComposerBase {
   public:
     enum Features {

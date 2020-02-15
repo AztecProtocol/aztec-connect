@@ -6,18 +6,9 @@
 
 #include <map>
 
-namespace waffle
-{
-class TurboComposer : public ComposerBase
-{
-public:
-    struct accumulator_triple
-    {
-        std::vector<uint32_t> left;
-        std::vector<uint32_t> right;
-        std::vector<uint32_t> out;
-    };
-
+namespace waffle {
+class TurboComposer : public ComposerBase {
+  public:
     TurboComposer(const size_t size_hint = 0);
     TurboComposer(TurboComposer&& other) = default;
     TurboComposer& operator=(TurboComposer&& other) = default;
@@ -44,7 +35,10 @@ public:
     void fix_witness(const uint32_t witness_index, const barretenberg::fr::field_t& witness_value);
 
     std::vector<uint32_t> create_range_constraint(const uint32_t witness_index, const size_t num_bits);
-    accumulator_triple create_logic_constraint(const uint32_t a, const uint32_t b, const size_t num_bits, bool is_xor_gate);
+    accumulator_triple create_logic_constraint(const uint32_t a,
+                                               const uint32_t b,
+                                               const size_t num_bits,
+                                               bool is_xor_gate);
     accumulator_triple create_and_constraint(const uint32_t a, const uint32_t b, const size_t num_bits);
     accumulator_triple create_xor_constraint(const uint32_t a, const uint32_t b, const size_t num_bits);
 

@@ -294,6 +294,171 @@ TEST(stdlib_turbo_uint32, test_divide_by_zero_fails)
     divide_integers(true , true , false, false, true);
 }
 
+TEST(stdlib_turbo_uint32, test_and)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto and_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false)
+    {
+        uint32_t a_val = get_pseudorandom_uint32();
+        uint32_t b_val = get_pseudorandom_uint32();
+        uint32_t const_a = get_pseudorandom_uint32();
+        uint32_t const_b = get_pseudorandom_uint32();
+        uint32_t expected = (a_val + const_a) & (b_val + const_b);
+        uint32 a = lhs_constant ? uint32(&composer, a_val) : witness_t(&composer, a_val);
+        uint32 b = rhs_constant ? uint32(&composer, b_val) : witness_t(&composer, b_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 b_shift = uint32(&composer, const_b);
+        uint32 c = a + a_shift;
+        uint32 d = b + b_shift;
+        uint32 e = c & d;
+        e = e.normalize();
+
+        uint32_t result = uint32_t(e.get_value());
+
+        EXPECT_EQ(result, expected);
+    };
+        
+    and_integers(false, false);
+    and_integers(false, true);
+    and_integers(true, false);
+    and_integers(true, true);
+
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
+TEST(stdlib_turbo_uint32, test_xor)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto xor_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false)
+    {
+        uint32_t a_val = get_pseudorandom_uint32();
+        uint32_t b_val = get_pseudorandom_uint32();
+        uint32_t const_a = get_pseudorandom_uint32();
+        uint32_t const_b = get_pseudorandom_uint32();
+        uint32_t expected = (a_val + const_a) ^ (b_val + const_b);
+        uint32 a = lhs_constant ? uint32(&composer, a_val) : witness_t(&composer, a_val);
+        uint32 b = rhs_constant ? uint32(&composer, b_val) : witness_t(&composer, b_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 b_shift = uint32(&composer, const_b);
+        uint32 c = a + a_shift;
+        uint32 d = b + b_shift;
+        uint32 e = c ^ d;
+        e = e.normalize();
+
+        uint32_t result = uint32_t(e.get_value());
+
+        EXPECT_EQ(result, expected);
+    };
+        
+    xor_integers(false, false);
+    xor_integers(false, true);
+    xor_integers(true, false);
+    xor_integers(true, true);
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
+TEST(stdlib_turbo_uint32, test_or)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto or_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false)
+    {
+        uint32_t a_val = get_pseudorandom_uint32();
+        uint32_t b_val = get_pseudorandom_uint32();
+        uint32_t const_a = get_pseudorandom_uint32();
+        uint32_t const_b = get_pseudorandom_uint32();
+        uint32_t expected = (a_val + const_a) | (b_val + const_b);
+        uint32 a = lhs_constant ? uint32(&composer, a_val) : witness_t(&composer, a_val);
+        uint32 b = rhs_constant ? uint32(&composer, b_val) : witness_t(&composer, b_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 b_shift = uint32(&composer, const_b);
+        uint32 c = a + a_shift;
+        uint32 d = b + b_shift;
+        uint32 e = c | d;
+        e = e.normalize();
+
+        uint32_t result = uint32_t(e.get_value());
+
+        EXPECT_EQ(result, expected);
+    };
+        
+    or_integers(false, false);
+    or_integers(false, false);
+    or_integers(false, false);
+    or_integers(false, false);
+    or_integers(false, false);
+    or_integers(false, true);
+    or_integers(true, false);
+    or_integers(true, true);
+
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
+TEST(stdlib_turbo_uint32, test_not)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto not_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false)
+    {
+        uint32_t a_val = get_pseudorandom_uint32();
+        uint32_t const_a = get_pseudorandom_uint32();
+        uint32_t expected = ~(a_val + const_a);
+        uint32 a = lhs_constant ? uint32(&composer, a_val) : witness_t(&composer, a_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 c = a + a_shift;
+        uint32 e = ~c;
+        e = e.normalize();
+
+        uint32_t result = uint32_t(e.get_value());
+
+        EXPECT_EQ(result, expected);
+    };
+        
+    not_integers(false, false);
+    not_integers(false, true);
+    not_integers(true, false);
+    not_integers(true, true);
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
 TEST(stdlib_turbo_uint32, test_gt)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
@@ -650,6 +815,41 @@ TEST(stdlib_turbo_uint32, test_not_equality_operator)
     compare_integers(false, false, true);
     compare_integers(false, true, false);
     compare_integers(true, false, false);
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
+
+TEST(stdlib_turbo_uint32, test_logical_not)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto not_integer = [&composer](bool force_zero)
+    {
+        uint32_t const_a = get_pseudorandom_uint32();
+        uint32_t a_val = force_zero ? 0 - const_a : get_pseudorandom_uint32();
+        bool expected = !(const_a + a_val);
+        uint32 a = witness_t(&composer, a_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 c = a + a_shift;
+        bool_t e = !c;
+        bool result = bool(e.get_value());
+
+        EXPECT_EQ(result, expected);
+    };
+
+    not_integer(true);
+    not_integer(true);
+    not_integer(false);
+    not_integer(false);
 
     waffle::TurboProver prover = composer.preprocess();
 

@@ -52,7 +52,10 @@ uint<Composer, width> uint<Composer, width>::operator+(const uint& other) const
         return uint<Composer, width>(context, (additive_constant + other.additive_constant) & MASK);
     }
     if (lhs_constant && !rhs_constant) {
-        return other + *this;
+        uint<Composer, width> result(other);
+        result.additive_constant = (additive_constant + other.additive_constant) & MASK;
+        result.witness_status = WitnessStatus::NOT_NORMALIZED;
+        return result;
     }
     if (!lhs_constant && rhs_constant) {
         uint<Composer, width> result(*this);
@@ -84,6 +87,7 @@ uint<Composer, width> uint<Composer, width>::operator+(const uint& other) const
     uint<Composer, width> result(ctx);
     result.witness_index = gate.c;
     result.witness_status = WitnessStatus::WEAK_NORMALIZED;
+
     return result;
 }
 
@@ -102,6 +106,10 @@ uint<Composer, width> uint<Composer, width>::operator-(const uint& other) const
         return uint<Composer, width>(context, (additive_constant - other.additive_constant) & MASK);
     }
 
+    if (!lhs_constant && witness_status == WitnessStatus::NOT_NORMALIZED)
+    {
+        weak_normalize();
+    }
     if (!rhs_constant && other.witness_status == WitnessStatus::NOT_NORMALIZED) {
         other.weak_normalize();
     }
@@ -200,6 +208,29 @@ uint<Composer, width> uint<Composer, width>::operator%(const uint& other) const
     return divmod(other).second;
 }
 
+template <typename Composer, size_t width> uint<Composer, width> uint<Composer, width>::operator&(const uint& other) const
+{
+    return logic_operator(other, LogicOp::AND);
+}
+
+template <typename Composer, size_t width> uint<Composer, width> uint<Composer, width>::operator^(const uint& other) const
+{
+    return logic_operator(other, LogicOp::XOR);
+}
+
+template <typename Composer, size_t width> uint<Composer, width> uint<Composer, width>::operator|(const uint& other) const
+{
+    return (*this + other) - (*this & other);
+}
+
+template <typename Composer, size_t width> uint<Composer, width> uint<Composer, width>::operator~() const
+{
+    if (!is_constant() && witness_status != WitnessStatus::NOT_NORMALIZED) {
+        weak_normalize();
+    }
+    return uint(context, MASK) - *this;
+}
+
 template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator>(const uint& other) const
 {
     Composer* ctx = (context == nullptr) ? other.context : context;
@@ -290,6 +321,90 @@ template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width
 template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator!=(const uint& other) const
 {
     return (!(*this == other)).normalize();
+}
+
+template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator!() const
+{
+    return (!field_t<Composer>(*this).is_zero()).normalize();
+}
+
+template <typename Composer, size_t width> uint<Composer, width> uint<Composer, width>::logic_operator(const uint& other, const LogicOp op_type) const
+{
+    Composer* ctx = (context == nullptr) ? other.context : context;
+
+    // we need to ensure that we can decompose our integers into (width / 2) quads
+    // we don't need to completely normalize, however, as our quaternary decomposition will do that by default
+    if (!is_constant() && witness_status == WitnessStatus::NOT_NORMALIZED) {
+        weak_normalize();
+    }
+    if (!other.is_constant() && other.witness_status == WitnessStatus::NOT_NORMALIZED) {
+        other.weak_normalize();
+    }
+
+    const uint256_t lhs = get_value();
+    const uint256_t rhs = other.get_value();
+    uint256_t out = 0;
+
+    switch (op_type) {
+    case AND: {
+        out = lhs & rhs;
+        break;
+    }
+    case XOR: {
+        out = lhs ^ rhs;
+        break;
+    }
+    default: {}
+    }
+
+    if (is_constant() && other.is_constant()) {
+        return uint<Composer, width>(ctx, out);
+    }
+
+    uint32_t lhs_idx = is_constant() ? ctx->add_variable(lhs) : witness_index;
+    uint32_t rhs_idx = other.is_constant() ? ctx->add_variable(rhs) : other.witness_index;
+
+    waffle::accumulator_triple logic_accumulators;
+    
+    switch (op_type) {
+    case AND: {
+        logic_accumulators = ctx->create_and_constraint(lhs_idx, rhs_idx, width);
+        break;
+    }
+    case XOR: {
+        logic_accumulators = ctx->create_xor_constraint(lhs_idx, rhs_idx, width);
+        break;
+    }
+    default: {}
+    }
+
+    uint32_t out_idx = logic_accumulators.out[logic_accumulators.out.size() - 1];
+
+    if (is_constant()) {
+        uint32_t constant_idx = ctx->put_constant_variable(additive_constant);
+        ctx->assert_equal(lhs_idx, constant_idx);
+    }
+    else
+    {
+        accumulators = logic_accumulators.left;
+        witness_status = WitnessStatus::OK;
+    }
+
+    if (other.is_constant()) {
+        uint32_t constant_idx = ctx->put_constant_variable(other.additive_constant);
+        ctx->assert_equal(rhs_idx, constant_idx);
+    }
+    else
+    {
+        other.accumulators = logic_accumulators.right;
+        witness_status = WitnessStatus::OK;
+    }
+
+    uint<Composer, width> result(ctx);
+    result.witness_index = out_idx;
+    result.accumulators = logic_accumulators.out;
+    result.witness_status = WitnessStatus::OK;
+    return result;
 }
 
 template <typename Composer, size_t width>

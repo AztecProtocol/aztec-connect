@@ -133,7 +133,6 @@ void TurboComposer::create_big_add_gate(const add_quad& in)
     ++n;
 }
 
-
 void TurboComposer::create_big_mul_gate(const mul_quad& in)
 {
     gate_flags.push_back(0);
@@ -568,10 +567,10 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
     return accumulators;
 }
 
-TurboComposer::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t a,
-                                                                       const uint32_t b,
-                                                                       const size_t num_bits,
-                                                                       const bool is_xor_gate)
+waffle::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t a,
+                                                                         const uint32_t b,
+                                                                         const size_t num_bits,
+                                                                         const bool is_xor_gate)
 {
     ASSERT(static_cast<uint32_t>(variables.size()) > a);
     ASSERT(static_cast<uint32_t>(variables.size()) > b);
@@ -650,7 +649,7 @@ TurboComposer::accumulator_triple TurboComposer::create_logic_constraint(const u
     // # gates = (bits / 2)
     const size_t num_quads = (num_bits >> 1);
 
-    accumulator_triple accumulators;
+    waffle::accumulator_triple accumulators;
     fr::field_t left_accumulator = fr::zero;
     fr::field_t right_accumulator = fr::zero;
     fr::field_t out_accumulator = fr::zero;
@@ -681,12 +680,9 @@ TurboComposer::accumulator_triple TurboComposer::create_logic_constraint(const u
         const fr::field_t left_quad_element = fr::to_montgomery_form({ left_quad, 0, 0, 0 });
         const fr::field_t right_quad_element = fr::to_montgomery_form({ right_quad, 0, 0, 0 });
         fr::field_t out_quad_element;
-        if (is_xor_gate)
-        {
+        if (is_xor_gate) {
             out_quad_element = fr::to_montgomery_form({ left_quad ^ right_quad, 0, 0, 0 });
-        }
-        else
-        {
+        } else {
             out_quad_element = fr::to_montgomery_form({ left_quad & right_quad, 0, 0, 0 });
         }
 
@@ -741,18 +737,15 @@ TurboComposer::accumulator_triple TurboComposer::create_logic_constraint(const u
         q_5.emplace_back(fr::zero);
         q_ecc_1.emplace_back(fr::zero);
         q_range.emplace_back(fr::zero);
-        if (is_xor_gate)
-        {
+        if (is_xor_gate) {
             q_c.emplace_back(fr::neg_one());
             q_logic.emplace_back(fr::neg_one());
-        }
-        else
-        {
+        } else {
             q_c.emplace_back(fr::one);
             q_logic.emplace_back(fr::one);
         }
     }
-    q_c[q_c.size() - 1] = fr::zero; // last gate is a noop
+    q_c[q_c.size() - 1] = fr::zero;         // last gate is a noop
     q_logic[q_logic.size() - 1] = fr::zero; // last gate is a noop
 
     assert_equal(accumulators.left[accumulators.left.size() - 1], a);
@@ -765,14 +758,14 @@ TurboComposer::accumulator_triple TurboComposer::create_logic_constraint(const u
     return accumulators;
 }
 
-TurboComposer::accumulator_triple TurboComposer::create_and_constraint(const uint32_t a,
+waffle::accumulator_triple TurboComposer::create_and_constraint(const uint32_t a,
                                                                        const uint32_t b,
                                                                        const size_t num_bits)
 {
     return create_logic_constraint(a, b, num_bits, false);
 }
 
-TurboComposer::accumulator_triple TurboComposer::create_xor_constraint(const uint32_t a,
+waffle::accumulator_triple TurboComposer::create_xor_constraint(const uint32_t a,
                                                                        const uint32_t b,
                                                                        const size_t num_bits)
 {
