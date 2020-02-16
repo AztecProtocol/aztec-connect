@@ -71,14 +71,10 @@ void update_membership(Ctx& ctx,
                        byte_array<Ctx> const& index)
 {
     // Check old path hashes lead to the old root. They're used when validating the new path hashes.
-    bool_t old_hashes_valid = check_membership(ctx, old_root, old_hashes, old_value, index);
-    // std::cout << "old valid " << old_hashes_valid.get_value() << std::endl;
-    ctx.assert_equal_constant(old_hashes_valid.witness_index, barretenberg::fr::one);
+    assert_check_membership(ctx, old_root, old_hashes, old_value, index);
 
     // Check the new path hashes lead from the new value to the new root.
-    bool_t new_hashes_valid = check_membership(ctx, new_root, new_hashes, new_value, index);
-    // std::cout << "new valid " << new_hashes_valid.get_value() << std::endl;
-    ctx.assert_equal_constant(new_hashes_valid.witness_index, barretenberg::fr::one);
+    assert_check_membership(ctx, new_root, new_hashes, new_value, index);
 
     // Check that only the appropriate left or right hash was updated in the new hash path.
     for (size_t i = 0; i < new_hashes.size(); ++i) {

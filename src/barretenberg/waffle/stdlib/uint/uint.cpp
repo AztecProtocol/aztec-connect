@@ -298,7 +298,7 @@ uint<ComposerContext>::uint(const byte_array<ComposerContext>& other)
     , additive_constant(0)
     , multiplicative_constant(1)
     , witness_status(WitnessStatus::IN_BINARY_FORM)
-    , bool_wires(other.bits())
+    , bool_wires(other.bits().rbegin(), other.bits().rend())
     , queued_logic_operation(bool_wires.size())
     , maximum_value(0)
 {}
@@ -457,7 +457,7 @@ template <typename ComposerContext> uint<ComposerContext>::operator field_t<Comp
 template <typename ComposerContext> uint<ComposerContext>::operator byte_array<ComposerContext>()
 {
     normalize();
-    return byte_array<ComposerContext>(context, bool_wires);
+    return byte_array<ComposerContext>(context, bool_wires.rbegin(), bool_wires.rend());
 }
 
 template <typename ComposerContext> void uint<ComposerContext>::prepare_for_arithmetic_operations() const

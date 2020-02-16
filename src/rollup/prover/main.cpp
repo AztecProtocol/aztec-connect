@@ -185,8 +185,8 @@ destroy_note_context create_destroy_note_context(rollup_context& ctx, field_t co
     byte_array note_hash_data = byte_array(data_value).write(index_field).write(note_data.first.secret);
 
     // We have to convert the byte_array into a field_t to get the montgomery form. Can we avoid this?
-    field_t nullifier_index = stdlib::merkle_tree::sha256_value(note_hash_data);
-    uint128_t nullifier_index_raw = field_to_uint128(stdlib::merkle_tree::sha256(note_hash_data.get_value()));
+    field_t nullifier_index = stdlib::merkle_tree::sha256_index(note_hash_data);
+    uint128_t nullifier_index_raw = field_to_uint128(stdlib::merkle_tree::hash_to_index(note_hash_data.get_value()));
 
     byte_array nullifier_value(&ctx.composer);
     nullifier_value.write(field_t(1ULL)).write(field_t(0ULL));

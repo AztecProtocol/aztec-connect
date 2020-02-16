@@ -31,6 +31,18 @@ inline uint32_t get_random_int()
 }
 } // namespace
 
+TEST(stdlib_byte_array, test_uint32)
+{
+    waffle::BoolComposer composer = waffle::BoolComposer();
+    uint32 a = witness_t(&composer, 1UL);
+    std::string expected = { 0x00, 0x00, 0x00, 0x01 };
+    byte_array arr(&composer);
+    arr.write(a);
+
+    EXPECT_EQ(arr.size(), 4UL);
+    EXPECT_EQ(arr.get_value(), expected);
+}
+
 TEST(stdlib_byte_array, test_uint32_input_output_consistency)
 {
     waffle::BoolComposer composer = waffle::BoolComposer();

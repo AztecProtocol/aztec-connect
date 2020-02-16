@@ -27,6 +27,12 @@ template <typename ComposerContext> class byte_array {
     byte_array(ComposerContext* parent_context, bits_t const& input);
     byte_array(ComposerContext* parent_context, bits_t&& input);
 
+    template <typename ItBegin, typename ItEnd>
+    byte_array(ComposerContext* parent_context, ItBegin const& begin, ItEnd const& end)
+        : context(parent_context)
+        , values(begin, end)
+    {}
+
     byte_array(const byte_array& other);
     byte_array(byte_array&& other);
 

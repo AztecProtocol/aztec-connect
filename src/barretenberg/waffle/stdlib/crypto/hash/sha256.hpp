@@ -1,7 +1,7 @@
 #pragma once
 
-#include <array>
 #include "../../uint32/uint32.hpp"
+#include <array>
 
 namespace waffle {
 class StandardComposer;
@@ -21,7 +21,11 @@ template <typename Composer>
 std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 8>& h_init,
                                              const std::array<uint32<Composer>, 16>& input);
 
+template <typename Composer> byte_array<Composer> sha256_block(const byte_array<Composer>& input);
+
 template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>& input);
+
+extern template byte_array<waffle::TurboComposer> sha256_block(const byte_array<waffle::TurboComposer>& input);
 
 extern template bitarray<waffle::StandardComposer> sha256(const bitarray<waffle::StandardComposer>& input);
 extern template bitarray<waffle::BoolComposer> sha256(const bitarray<waffle::BoolComposer>& input);

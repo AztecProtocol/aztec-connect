@@ -1,9 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 #include "../bool/bool.hpp"
 #include "../byte_array/byte_array.hpp"
@@ -100,7 +100,7 @@ template <typename ComposerContext> class bitarray {
     template <size_t N>
     void populate_uint32_array(const size_t starting_index, std::array<uint32<ComposerContext>, N>& output)
     {
-        ASSERT(N * 32 == (length - starting_index));
+        // ASSERT(N * 32 == (length - starting_index));
 
         size_t num_uint32s = (length / 32) + (length % 32 != 0);
         size_t num_selected_uint32s = N;

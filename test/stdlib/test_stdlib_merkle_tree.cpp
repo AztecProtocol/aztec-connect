@@ -43,7 +43,7 @@ TEST(stdlib_merkle_tree, test_sha256_native)
 {
     std::string x = VALUES[0];
     auto y = plonk::stdlib::merkle_tree::sha256(x);
-    fr::field_t expected = { { 0x6c5a56b8fc3993a5, 0x6779c81c73019227, 0xc41c137a5c7ff2ca, 0x16bdc392b31aad9a } };
+    fr::field_t expected = { { 0x69ce1bfc9035b583, 0x0ff9f4b92510ec47, 0x24b332637da39f71, 0x150cfc08f8d67437 } };
     EXPECT_EQ(y, expected);
 }
 
@@ -389,6 +389,7 @@ TEST(stdlib_merkle_tree, test_assert_check_membership_fail)
 
     byte_array zero = field_t(witness_t(&composer, fr::zero));
     byte_array value = field_t(witness_t(&composer, fr::one));
+    value.write(zero);
     field_t root = witness_t(&composer, db.root());
 
     assert_check_membership(composer, root, create_witness_hash_path(composer, db.get_hash_path(0)), value, zero);
@@ -419,6 +420,7 @@ TEST(stdlib_merkle_tree, test_update_members)
     field_t old_root = witness_t(&composer, db.root());
 
     byte_array new_value = field_t(witness_t(&composer, fr::one));
+    new_value.write(zero);
     auto new_path_fr = get_new_hash_path(db.get_hash_path(0), 0, new_value.get_value());
     hash_path<Composer> new_path = create_witness_hash_path(composer, new_path_fr);
     field_t new_root = witness_t(&composer, get_hash_path_root(new_path_fr));
