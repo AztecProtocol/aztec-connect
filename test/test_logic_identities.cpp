@@ -38,10 +38,15 @@ bool quaternary_ror(const std::vector<uint64_t>& accumulators, uint64_t ror, uin
 
 
         uint64_t left = accumulators[pivot];
-        uint64_t right = accumulators[n - 1] - accumulators[pivot] * (1ULL << (x * 2));
+        uint64_t right = accumulators[n - 1];
+        uint64_t t0 = (1ULL << (x * 2));
+        uint64_t t1 = (1ULL << (n - x) * 2);
+        uint64_t t2 = t0 * t1;
 
-        uint64_t out = left + right * (1ULL << (n - x) * 2);
+        uint64_t left_shift_factor = 1 - t2;
+        uint64_t right_shift_factor = t1;
 
+        uint64_t out = left * left_shift_factor + right * right_shift_factor;
         return (out == target);
     }
 

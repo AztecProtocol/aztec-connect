@@ -121,6 +121,9 @@ add_library(
     waffle/stdlib/bool/bool.hpp
     waffle/stdlib/field/field.cpp
     waffle/stdlib/field/field.hpp
+    waffle/stdlib/turbo_uint/arithmetic.cpp
+    waffle/stdlib/turbo_uint/logic.cpp
+    waffle/stdlib/turbo_uint/comparison.cpp
     waffle/stdlib/turbo_uint/uint.cpp
     waffle/stdlib/turbo_uint/uint.hpp
     waffle/stdlib/uint/uint.cpp
@@ -284,6 +287,9 @@ if(PROFILING)
         waffle/stdlib/uint/uint.cpp
         waffle/stdlib/uint/uint.hpp
         waffle/stdlib/uint32/uint32.hpp
+        waffle/stdlib/turbo_uint/arithmetic.cpp
+        waffle/stdlib/turbo_uint/logic.cpp
+        waffle/stdlib/turbo_uint/comparison.cpp
         waffle/stdlib/turbo_uint/uint.cpp
         waffle/stdlib/turbo_uint/uint.hpp
         waffle/stdlib/bitarray/bitarray.cpp

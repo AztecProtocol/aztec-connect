@@ -909,20 +909,90 @@ TEST(stdlib_turbo_uint32, test_left_shift)
         uint32 a = is_constant ? uint32(&composer, a_val) : witness_t(&composer, a_val);
         uint32 a_shift = uint32(&composer, const_a);
         uint32 c = a + a_shift;
-        if (!is_constant)
-        {
         uint32 d = c << shift;
         uint32_t result = uint32_t(d.get_value());
 
         EXPECT_EQ(result, expected);
-        }
-
     };
 
     for (uint32_t i = 0; i < 32; ++i)
     {
         shift_integer(true, i);
         shift_integer(false, i);
+    }
+
+    printf("calling preprocess\n");
+    waffle::TurboProver prover = composer.preprocess();
+    
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
+TEST(stdlib_turbo_uint32, test_ror)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto ror_integer = [&composer](const bool is_constant, const uint32_t rotation) {
+        const auto ror = [](const uint32_t in, const uint32_t rval) { return rval ? (in >> rval) | (in << (32 - rval)) : in; };
+
+        uint32_t const_a = get_pseudorandom_uint32();
+        uint32_t a_val = get_pseudorandom_uint32();
+        uint32_t expected = ror(const_a + a_val, rotation);
+        uint32 a = is_constant ? uint32(&composer, a_val) : witness_t(&composer, a_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 c = a + a_shift;
+        uint32 d = c.ror(rotation);
+        uint32_t result = uint32_t(d.get_value());
+
+        EXPECT_EQ(result, expected);
+    };
+
+    for (uint32_t i = 0; i < 32; ++i)
+    {
+        ror_integer(true, i);
+        ror_integer(false, i);
+    }
+
+    printf("calling preprocess\n");
+    waffle::TurboProver prover = composer.preprocess();
+    
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
+TEST(stdlib_turbo_uint32, test_rol)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto rol_integer = [&composer](const bool is_constant, const uint32_t rotation) {
+        const auto rol = [](const uint32_t in, const uint32_t rval) { return rval ? (in << rval) | (in >> (32 - rval)) : in; };
+
+        uint32_t const_a = get_pseudorandom_uint32();
+        uint32_t a_val = get_pseudorandom_uint32();
+        uint32_t expected = rol(const_a + a_val, rotation);
+        uint32 a = is_constant ? uint32(&composer, a_val) : witness_t(&composer, a_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 c = a + a_shift;
+        uint32 d = c.rol(rotation);
+        uint32_t result = uint32_t(d.get_value());
+
+        EXPECT_EQ(result, expected);
+    };
+
+    for (uint32_t i = 0; i < 32; ++i)
+    {
+        rol_integer(true, i);
+        rol_integer(false, i);
     }
 
     printf("calling preprocess\n");

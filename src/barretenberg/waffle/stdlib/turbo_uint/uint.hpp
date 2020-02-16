@@ -39,6 +39,9 @@ template <typename Composer, size_t width> class uint {
     uint operator>>(const uint64_t shift) const;
     uint operator<<(const uint64_t shift) const;
 
+    uint ror(const uint64_t target_rotation) const;
+    uint rol(const uint64_t target_rotation) const;
+
     bool_t<Composer> operator>(const uint& other) const;
     bool_t<Composer> operator<(const uint& other) const;
     bool_t<Composer> operator>=(const uint& other) const;
