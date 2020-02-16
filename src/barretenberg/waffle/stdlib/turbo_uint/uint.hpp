@@ -50,6 +50,19 @@ template <typename Composer, size_t width> class uint {
     bool_t<Composer> operator!=(const uint& other) const;
     bool_t<Composer> operator!() const;
 
+    uint operator+=(const uint& other) const { *this = operator+(other); return *this }
+    uint operator-=(const uint& other) const { *this = operator-(other); return *this }
+    uint operator*=(const uint& other) const { *this = operator*(other); return *this }
+    uint operator/=(const uint& other) const { *this = operator/(other); return *this }
+    uint operator%=(const uint& other) const { *this = operator%(other); return *this }
+
+    uint operator&=(const uint& other) const { *this = operator&(other); return *this }
+    uint operator^=(const uint& other) const { *this = operator^(other); return *this }
+    uint operator|=(const uint& other) const { *this = operator|(other); return *this }
+
+    uint operator>>=(const uint& other) const { *this = operator>>(other); return *this }
+    uint operator<<=(const uint& other) const { *this = operator<<(other); return *this }
+
     uint normalize() const;
 
     uint256_t get_value() const;
@@ -84,6 +97,11 @@ private:
 
     uint256_t get_unbounded_value() const;
 };
+
+template <typename T, size_t w> inline std::ostream& operator<<(std::ostream& os, uint<T, w> const& v)
+{
+    return os << v.get_value();
+}
 
 extern template class uint<waffle::TurboComposer, 8UL>;
 extern template class uint<waffle::TurboComposer, 16UL>;
