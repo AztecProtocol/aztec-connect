@@ -9,6 +9,7 @@
 
 namespace waffle
 {
+    class StandardComposer;
     class TurboComposer;
 }
 
@@ -111,5 +112,9 @@ extern template class uint<waffle::TurboComposer, 16UL>;
 extern template class uint<waffle::TurboComposer, 32UL>;
 extern template class uint<waffle::TurboComposer, 64UL>;
 
+extern template class uint<waffle::StandardComposer, 8UL>;
+extern template class uint<waffle::StandardComposer, 16UL>;
+extern template class uint<waffle::StandardComposer, 32UL>;
+extern template class uint<waffle::StandardComposer, 64UL>;
 }
 }

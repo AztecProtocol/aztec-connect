@@ -1,6 +1,7 @@
 #include "./uint.hpp"
 
 #include "../../composer/turbo_composer.hpp"
+#include "../../composer/standard_composer.hpp"
 
 using namespace barretenberg;
 
@@ -413,6 +414,11 @@ template class uint<waffle::TurboComposer, 8UL>;
 template class uint<waffle::TurboComposer, 16UL>;
 template class uint<waffle::TurboComposer, 32UL>;
 template class uint<waffle::TurboComposer, 64UL>;
+
+template class uint<waffle::StandardComposer, 8UL>;
+template class uint<waffle::StandardComposer, 16UL>;
+template class uint<waffle::StandardComposer, 32UL>;
+template class uint<waffle::StandardComposer, 64UL>;
 
 } // namespace stdlib
 } // namespace plonk

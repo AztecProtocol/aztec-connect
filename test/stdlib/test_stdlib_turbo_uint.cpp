@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <barretenberg/waffle/composer/standard_composer.hpp>
 #include <barretenberg/waffle/composer/turbo_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
@@ -15,9 +16,9 @@
 using namespace barretenberg;
 using namespace plonk;
 
-typedef stdlib::bool_t<waffle::TurboComposer> bool_t;
-typedef stdlib::uint<waffle::TurboComposer, 32> uint32;
-typedef stdlib::witness_t<waffle::TurboComposer> witness_t;
+typedef stdlib::bool_t<waffle::StandardComposer> bool_t;
+typedef stdlib::uint<waffle::StandardComposer, 32> uint32;
+typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
 
 
 #include <random>
@@ -42,7 +43,7 @@ uint32_t get_pseudorandom_uint32()
 
 TEST(stdlib_turbo_uint32, test_add)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto add_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false)
     {
@@ -65,10 +66,10 @@ TEST(stdlib_turbo_uint32, test_add)
     add_integers(true, true);
 
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -79,7 +80,7 @@ TEST(stdlib_turbo_uint32, test_add)
 
 TEST(stdlib_turbo_uint32, test_sub)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto sub_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false)
     {
@@ -105,10 +106,10 @@ TEST(stdlib_turbo_uint32, test_sub)
     sub_integers(true, true);
 
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -118,7 +119,7 @@ TEST(stdlib_turbo_uint32, test_sub)
 
 TEST(stdlib_turbo_uint32, test_mul)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto mul_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false)
     {
@@ -147,10 +148,10 @@ TEST(stdlib_turbo_uint32, test_mul)
     mul_integers(true, true);
 
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -160,7 +161,7 @@ TEST(stdlib_turbo_uint32, test_mul)
 
 TEST(stdlib_turbo_uint32, test_divide)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto divide_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false, bool dividend_is_divisor = false, bool dividend_zero = false, bool divisor_zero = false)
     {
@@ -198,10 +199,10 @@ TEST(stdlib_turbo_uint32, test_divide)
     divide_integers(true , false, false, true, false);
     divide_integers(true , true , false, true, false);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -211,7 +212,7 @@ TEST(stdlib_turbo_uint32, test_divide)
 
 TEST(stdlib_turbo_uint32, test_modulo)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto mod_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false, bool dividend_is_divisor = false, bool dividend_zero = false, bool divisor_zero = false)
     {
@@ -249,10 +250,10 @@ TEST(stdlib_turbo_uint32, test_modulo)
     mod_integers(true , false, false, true, false);
     mod_integers(true , true , false, true, false);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -265,7 +266,7 @@ TEST(stdlib_turbo_uint32, test_divide_by_zero_fails)
 
     const auto divide_integers = [](bool lhs_constant = false, bool rhs_constant = false, bool dividend_is_divisor = false, bool dividend_zero = false, bool divisor_zero = false)
     {
-        waffle::TurboComposer composer = waffle::TurboComposer();
+        waffle::StandardComposer composer = waffle::StandardComposer();
 
         uint32_t a_val = get_pseudorandom_uint32();
         uint32_t b_val = dividend_is_divisor ? a_val : get_pseudorandom_uint32();
@@ -280,9 +281,9 @@ TEST(stdlib_turbo_uint32, test_divide_by_zero_fails)
         uint32 e = c / d;
         e = e.normalize();
 
-        waffle::TurboProver prover = composer.preprocess();
+        waffle::Prover prover = composer.preprocess();
 
-        waffle::TurboVerifier verifier = composer.create_verifier();
+        waffle::Verifier verifier = composer.create_verifier();
 
         waffle::plonk_proof proof = prover.construct_proof();
 
@@ -296,7 +297,7 @@ TEST(stdlib_turbo_uint32, test_divide_by_zero_fails)
 
 TEST(stdlib_turbo_uint32, test_and)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto and_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false)
     {
@@ -325,10 +326,10 @@ TEST(stdlib_turbo_uint32, test_and)
     and_integers(true, true);
 
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -338,7 +339,7 @@ TEST(stdlib_turbo_uint32, test_and)
 
 TEST(stdlib_turbo_uint32, test_xor)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto xor_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false)
     {
@@ -366,10 +367,10 @@ TEST(stdlib_turbo_uint32, test_xor)
     xor_integers(true, false);
     xor_integers(true, true);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -379,7 +380,7 @@ TEST(stdlib_turbo_uint32, test_xor)
 
 TEST(stdlib_turbo_uint32, test_or)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto or_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false)
     {
@@ -412,10 +413,10 @@ TEST(stdlib_turbo_uint32, test_or)
     or_integers(true, true);
 
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -425,7 +426,7 @@ TEST(stdlib_turbo_uint32, test_or)
 
 TEST(stdlib_turbo_uint32, test_not)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto not_integers = [&composer](bool lhs_constant = false, bool rhs_constant = false)
     {
@@ -448,10 +449,10 @@ TEST(stdlib_turbo_uint32, test_not)
     not_integers(true, false);
     not_integers(true, true);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -461,7 +462,7 @@ TEST(stdlib_turbo_uint32, test_not)
 
 TEST(stdlib_turbo_uint32, test_gt)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto compare_integers = [&composer](bool force_equal = false, bool force_gt = false, bool force_lt = false)
     {
@@ -509,10 +510,10 @@ TEST(stdlib_turbo_uint32, test_gt)
     compare_integers(false, true, false);
     compare_integers(true, false, false);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -524,7 +525,7 @@ TEST(stdlib_turbo_uint32, test_gt)
 
 TEST(stdlib_turbo_uint32, test_lt)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto compare_integers = [&composer](bool force_equal = false, bool force_gt = false, bool force_lt = false)
     {
@@ -572,10 +573,10 @@ TEST(stdlib_turbo_uint32, test_lt)
     compare_integers(false, true, false);
     compare_integers(true, false, false);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -585,7 +586,7 @@ TEST(stdlib_turbo_uint32, test_lt)
 
 TEST(stdlib_turbo_uint32, test_gte)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto compare_integers = [&composer](bool force_equal = false, bool force_gt = false, bool force_lt = false)
     {
@@ -632,10 +633,10 @@ TEST(stdlib_turbo_uint32, test_gte)
     compare_integers(false, true, false);
     compare_integers(true, false, false);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -645,7 +646,7 @@ TEST(stdlib_turbo_uint32, test_gte)
 
 TEST(stdlib_turbo_uint32, test_lte)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto compare_integers = [&composer](bool force_equal = false, bool force_gt = false, bool force_lt = false)
     {
@@ -693,10 +694,10 @@ TEST(stdlib_turbo_uint32, test_lte)
     compare_integers(false, true, false);
     compare_integers(true, false, false);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -706,7 +707,7 @@ TEST(stdlib_turbo_uint32, test_lte)
 
 TEST(stdlib_turbo_uint32, test_equality_operator)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto compare_integers = [&composer](bool force_equal = false, bool force_gt = false, bool force_lt = false)
     {
@@ -754,10 +755,10 @@ TEST(stdlib_turbo_uint32, test_equality_operator)
     compare_integers(false, true, false);
     compare_integers(true, false, false);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -768,7 +769,7 @@ TEST(stdlib_turbo_uint32, test_equality_operator)
 
 TEST(stdlib_turbo_uint32, test_not_equality_operator)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto compare_integers = [&composer](bool force_equal = false, bool force_gt = false, bool force_lt = false)
     {
@@ -816,10 +817,10 @@ TEST(stdlib_turbo_uint32, test_not_equality_operator)
     compare_integers(false, true, false);
     compare_integers(true, false, false);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -830,7 +831,7 @@ TEST(stdlib_turbo_uint32, test_not_equality_operator)
 
 TEST(stdlib_turbo_uint32, test_logical_not)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto not_integer = [&composer](bool force_zero)
     {
@@ -851,10 +852,10 @@ TEST(stdlib_turbo_uint32, test_logical_not)
     not_integer(false);
     not_integer(false);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -864,7 +865,7 @@ TEST(stdlib_turbo_uint32, test_logical_not)
 
 TEST(stdlib_turbo_uint32, test_right_shift)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto shift_integer = [&composer](const bool is_constant, const uint32_t shift)
     {
@@ -886,10 +887,10 @@ TEST(stdlib_turbo_uint32, test_right_shift)
         shift_integer(true, i);
     }
     printf("calling preprocess\n");
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
     
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -899,7 +900,7 @@ TEST(stdlib_turbo_uint32, test_right_shift)
 
 TEST(stdlib_turbo_uint32, test_left_shift)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto shift_integer = [&composer](const bool is_constant, const uint32_t shift)
     {
@@ -922,10 +923,10 @@ TEST(stdlib_turbo_uint32, test_left_shift)
     }
 
     printf("calling preprocess\n");
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
     
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -935,7 +936,7 @@ TEST(stdlib_turbo_uint32, test_left_shift)
 
 TEST(stdlib_turbo_uint32, test_ror)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto ror_integer = [&composer](const bool is_constant, const uint32_t rotation) {
         const auto ror = [](const uint32_t in, const uint32_t rval) { return rval ? (in >> rval) | (in << (32 - rval)) : in; };
@@ -959,10 +960,10 @@ TEST(stdlib_turbo_uint32, test_ror)
     }
 
     printf("calling preprocess\n");
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
     
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
@@ -972,7 +973,7 @@ TEST(stdlib_turbo_uint32, test_ror)
 
 TEST(stdlib_turbo_uint32, test_rol)
 {
-    waffle::TurboComposer composer = waffle::TurboComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     const auto rol_integer = [&composer](const bool is_constant, const uint32_t rotation) {
         const auto rol = [](const uint32_t in, const uint32_t rval) { return rval ? (in << rval) | (in >> (32 - rval)) : in; };
@@ -996,10 +997,10 @@ TEST(stdlib_turbo_uint32, test_rol)
     }
 
     printf("calling preprocess\n");
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::Prover prover = composer.preprocess();
     
     printf("composer gates = %zu\n", composer.get_num_gates());
-    waffle::TurboVerifier verifier = composer.create_verifier();
+    waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
 
