@@ -29,6 +29,92 @@ uint<Composer, width>::uint(Composer* composer, const uint256_t& value)
     , witness_index(UINT32_MAX)
 {}
 
+template <typename Composer, size_t width>
+uint<Composer, width>::uint(const byte_array<Composer>& other)
+    : context(other.get_context())
+    , additive_constant(0)
+    , witness_status(WitnessStatus::WEAK_NORMALIZED)
+    , accumulators()
+    , witness_index(UINT32_MAX)
+{
+    field_t<Composer> accumulator(context, fr::zero);
+    field_t<Composer> scaling_factor(context, fr::one);
+    for (size_t i = other.bits().size() - 1; i < other.bits().size(); --i)
+    {
+        accumulator = accumulator + scaling_factor * other.get_bit(i);
+        scaling_factor = scaling_factor + scaling_factor;
+    }
+    if (accumulator.witness_index == UINT32_MAX)
+    {
+        additive_constant = uint256_t(accumulator.additive_constant);
+    }
+    else
+    {
+        witness_index = accumulator.witness_index;
+    }
+}
+
+template <typename Context, size_t width> uint<Context, width>::operator byte_array<Context>() const
+{
+    if (is_constant())
+    {
+        std::vector<bool_t<Context> > bits;
+        bits.reserve(width);
+        for (size_t i = width - 1; i < width; --i)
+        {
+            bool_t<Context> bit(context, additive_constant.get_bit(i));
+            bits.emplace_back(bit);
+        }
+        return byte_array(context, bits);
+    }
+
+    if (witness_status == WitnessStatus::NOT_NORMALIZED)
+    {
+        weak_normalize();
+    }
+    // TODO: we should create a native type that works with packed data or quads, to 
+    // take advantage of our range constraint
+
+    std::vector<bool_t<Context> > bits;
+    bits.resize(width);
+    uint256_t target = get_value();
+    uint256_t accumulator = 0;
+    uint256_t scale_factor = 1;
+    uint32_t accumulator_idx = context->zero_idx;
+    for (size_t i = 0; i < width; i += 2)
+    {
+        bool lo_val = target.get_bit(i);
+        bool hi_val = target.get_bit(i + 1);
+        bool_t lo = witness_t(context, lo_val);
+        bool_t hi = witness_t(context, hi_val);
+
+        uint256_t next_accumulator = accumulator + (lo_val ? scale_factor : 0) + (hi_val ? scale_factor + scale_factor : 0 );
+        waffle::add_quad gate{
+            lo.witness_index,
+            hi.witness_index,
+            accumulator_idx,
+            context->add_variable(next_accumulator),
+            scale_factor,
+            scale_factor + scale_factor,
+            fr::one,
+            fr::neg_one(),
+            fr::zero
+        };
+
+        context->create_big_add_gate(gate);
+
+        accumulator = next_accumulator;
+        accumulator_idx = gate.d;
+        scale_factor = scale_factor + scale_factor;
+        scale_factor = scale_factor + scale_factor;
+
+        bits[width - 1 - i] = hi;
+        bits[width - 2 - i] = lo;
+    }
+    
+    return byte_array(context, bits);
+}
+
 template <typename Context, size_t width> uint<Context, width>::operator field_t<Context>() const
 {
     normalize();

@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "../byte_array/byte_array.hpp"
 #include "../../../uint256/uint256.hpp"
 
 #include "../common.hpp"
@@ -14,15 +15,17 @@ namespace waffle
 namespace plonk {
 namespace stdlib {
 
-template <typename ComposerContext> class bool_t;
-template <typename ComposerContext> class field_t;
+template <typename Composer> class bool_t;
+template <typename Composer> class field_t;
 
 template <typename Composer, size_t width> class uint {
     public:
 
     uint(const witness_t<Composer>& other);
     uint(Composer* composer, const uint256_t& value = 0);
+    uint(const byte_array<Composer>& other);
 
+    operator byte_array<Composer>() const;
     operator field_t<Composer>() const;
 
     uint operator+(const uint& other) const;
@@ -50,18 +53,18 @@ template <typename Composer, size_t width> class uint {
     bool_t<Composer> operator!=(const uint& other) const;
     bool_t<Composer> operator!() const;
 
-    uint operator+=(const uint& other) const { *this = operator+(other); return *this }
-    uint operator-=(const uint& other) const { *this = operator-(other); return *this }
-    uint operator*=(const uint& other) const { *this = operator*(other); return *this }
-    uint operator/=(const uint& other) const { *this = operator/(other); return *this }
-    uint operator%=(const uint& other) const { *this = operator%(other); return *this }
+    uint operator+=(const uint& other) { *this = operator+(other); return *this; }
+    uint operator-=(const uint& other) { *this = operator-(other); return *this; }
+    uint operator*=(const uint& other) { *this = operator*(other); return *this; }
+    uint operator/=(const uint& other) { *this = operator/(other); return *this; }
+    uint operator%=(const uint& other) { *this = operator%(other); return *this; }
 
-    uint operator&=(const uint& other) const { *this = operator&(other); return *this }
-    uint operator^=(const uint& other) const { *this = operator^(other); return *this }
-    uint operator|=(const uint& other) const { *this = operator|(other); return *this }
+    uint operator&=(const uint& other) { *this = operator&(other); return *this; }
+    uint operator^=(const uint& other) { *this = operator^(other); return *this; }
+    uint operator|=(const uint& other) { *this = operator|(other); return *this; }
 
-    uint operator>>=(const uint& other) const { *this = operator>>(other); return *this }
-    uint operator<<=(const uint& other) const { *this = operator<<(other); return *this }
+    uint operator>>=(const uint64_t shift) { *this = operator>>(shift); return *this; }
+    uint operator<<=(const uint64_t shift) { *this = operator<<(shift); return *this; }
 
     uint normalize() const;
 
