@@ -15,13 +15,6 @@ inline byte_array<ComposerContext> sha256_value(byte_array<ComposerContext> cons
     return stdlib::sha256_block(input);
 }
 
-template <typename ComposerContext>
-inline byte_array<ComposerContext> sha256_index(byte_array<ComposerContext> const& input)
-{
-    ASSERT(input.get_context() != nullptr);
-    return stdlib::sha256(bitarray<ComposerContext>(input));
-}
-
 } // namespace merkle_tree
 } // namespace stdlib
 } // namespace plonk

@@ -133,7 +133,7 @@ void create_note(rollup_context& ctx, new_note_context const& note_ctx)
     ctx.data_root = note_ctx.new_root;
 }
 
-void create(rollup_context& ctx, uint32_t const value)
+bool create(rollup_context& ctx, uint32_t const value)
 {
     uint32 value_uint = witness_t(&ctx.composer, value);
     new_note_context note_ctx = create_new_note_context(ctx, ctx.data_size, value_uint);
@@ -155,6 +155,8 @@ void create(rollup_context& ctx, uint32_t const value)
     if (verified) {
         ctx.data_db.commit();
     }
+
+    return verified;
 }
 
 struct destroy_note_context {
@@ -163,8 +165,7 @@ struct destroy_note_context {
     field_t data_root;
     hash_path data_path;
     byte_array data_value;
-    byte_array nullifier_index;
-    uint128_t nullifier_index_raw;
+    field_t nullifier_index;
     hash_path nullifier_old_path;
     hash_path nullifier_new_path;
     field_t nullifier_old_root;
@@ -182,11 +183,14 @@ destroy_note_context create_destroy_note_context(rollup_context& ctx, field_t co
 
     // We mix in the index and notes secret as part of the value we hash into the tree to ensure notes will always have
     // unique entries.
-    byte_array note_hash_data = byte_array(data_value).write(index_field).write(note_data.first.secret);
+    byte_array note_hash_data = byte_array(&ctx.composer);
+    note_hash_data.write(note_data.second.ciphertext.x)
+        .write(byte_array(index_field).slice(28, 4))
+        .write(byte_array(note_data.first.secret).slice(4, 28));
 
     // We have to convert the byte_array into a field_t to get the montgomery form. Can we avoid this?
-    field_t nullifier_index = stdlib::merkle_tree::sha256_index(note_hash_data);
-    uint128_t nullifier_index_raw = field_to_uint128(stdlib::merkle_tree::hash_to_index(note_hash_data.get_value()));
+    field_t nullifier_index = stdlib::merkle_tree::sha256_value(note_hash_data);
+    uint128_t nullifier_index_raw = field_to_uint128(nullifier_index.get_value());
 
     byte_array nullifier_value(&ctx.composer);
     nullifier_value.write(field_t(1ULL)).write(field_t(0ULL));
@@ -205,7 +209,6 @@ destroy_note_context create_destroy_note_context(rollup_context& ctx, field_t co
         stdlib::merkle_tree::create_witness_hash_path(ctx.composer, data_path),
         data_value,
         nullifier_index,
-        nullifier_index_raw,
         stdlib::merkle_tree::create_witness_hash_path(ctx.composer, nullifier_old_path),
         stdlib::merkle_tree::create_witness_hash_path(ctx.composer, nullifier_new_path),
         nullifier_old_root,
@@ -219,6 +222,7 @@ destroy_note_context create_destroy_note_context(rollup_context& ctx, field_t co
 void destroy_note(rollup_context& ctx, destroy_note_context const& destroy_ctx)
 {
     // Check that the note we want to destroy exists.
+    std::cout << "before assert " << ctx.composer.get_num_gates() << std::endl;
     stdlib::merkle_tree::assert_check_membership(
         ctx.composer, destroy_ctx.data_root, destroy_ctx.data_path, destroy_ctx.data_value, destroy_ctx.data_index);
 
@@ -229,14 +233,15 @@ void destroy_note(rollup_context& ctx, destroy_note_context const& destroy_ctx)
                                            destroy_ctx.nullifier_old_root,
                                            destroy_ctx.nullifier_old_path,
                                            byte_array(&ctx.composer, 64),
-                                           destroy_ctx.nullifier_index);
+                                           static_cast<byte_array>(destroy_ctx.nullifier_index));
 
-    ctx.nullifier_db.update_element(destroy_ctx.nullifier_index_raw, destroy_ctx.nullifier_value.get_value());
+    ctx.nullifier_db.update_element(field_to_uint128(destroy_ctx.nullifier_index.get_value()),
+                                    destroy_ctx.nullifier_value.get_value());
 
     ctx.nullifier_root = destroy_ctx.nullifier_new_root;
 }
 
-void destroy(rollup_context& ctx, uint32_t const index, uint32_t const value)
+bool destroy(rollup_context& ctx, uint32_t const index, uint32_t const value)
 {
     field_t index_to_destroy_field = witness_t(&ctx.composer, index);
     uint32 value_uint = witness_t(&ctx.composer, value);
@@ -259,9 +264,11 @@ void destroy(rollup_context& ctx, uint32_t const index, uint32_t const value)
     if (verified) {
         ctx.nullifier_db.commit();
     }
+
+    return verified;
 }
 
-void split(rollup_context& ctx, uint32_t in_index, uint32_t out_value1, uint32_t out_value2)
+bool split(rollup_context& ctx, uint32_t in_index, uint32_t out_value1, uint32_t out_value2)
 {
     uint32 out_value1_uint = witness_t(&ctx.composer, out_value1);
     uint32 out_value2_uint = witness_t(&ctx.composer, out_value2);
@@ -295,9 +302,11 @@ void split(rollup_context& ctx, uint32_t in_index, uint32_t out_value1, uint32_t
         ctx.data_db.commit();
         ctx.nullifier_db.commit();
     }
+
+    return verified;
 }
 
-void join(rollup_context& ctx, uint32_t in_index1, uint32_t in_index2, uint32_t in_value1, uint32_t in_value2)
+bool join(rollup_context& ctx, uint32_t in_index1, uint32_t in_index2, uint32_t in_value1, uint32_t in_value2)
 {
     field_t in_index1_field = witness_t(&ctx.composer, in_index1);
     field_t in_index2_field = witness_t(&ctx.composer, in_index2);
@@ -332,6 +341,8 @@ void join(rollup_context& ctx, uint32_t in_index1, uint32_t in_index2, uint32_t 
         ctx.data_db.commit();
         ctx.nullifier_db.commit();
     }
+
+    return verified;
 }
 
 int main(int argc, char** argv)
@@ -364,13 +375,15 @@ int main(int argc, char** argv)
         public_witness_t(&composer, nullifier_db.root()),
     };
 
+    bool success = false;
+
     if (cmd == "create") {
         if (argc != 3) {
             std::cout << "usage: " << argv[0] << " create <value>" << std::endl;
             return -1;
         }
         uint32_t value = (uint32_t)atoi(argv[2]);
-        create(ctx, value);
+        success = create(ctx, value);
     } else if (cmd == "destroy") {
         if (argc != 4) {
             std::cout << "usage: " << argv[0] << " destroy <index> <value>" << std::endl;
@@ -378,7 +391,7 @@ int main(int argc, char** argv)
         }
         uint32_t index = (uint32_t)atoi(argv[2]);
         uint32_t value = (uint32_t)atoi(argv[3]);
-        destroy(ctx, index, value);
+        success = destroy(ctx, index, value);
     } else if (cmd == "split") {
         if (argc != 5) {
             std::cout << "usage: " << argv[0]
@@ -388,7 +401,7 @@ int main(int argc, char** argv)
         uint32_t index = (uint32_t)atoi(argv[2]);
         uint32_t value1 = (uint32_t)atoi(argv[3]);
         uint32_t value2 = (uint32_t)atoi(argv[4]);
-        split(ctx, index, value1, value2);
+        success = split(ctx, index, value1, value2);
     } else if (cmd == "join") {
         if (argc != 6) {
             std::cout << "usage: " << argv[0]
@@ -401,8 +414,8 @@ int main(int argc, char** argv)
         uint32_t index2 = (uint32_t)atoi(argv[3]);
         uint32_t value1 = (uint32_t)atoi(argv[4]);
         uint32_t value2 = (uint32_t)atoi(argv[5]);
-        join(ctx, index1, index2, value1, value2);
+        success = join(ctx, index1, index2, value1, value2);
     }
 
-    return 0;
+    return success ? 0 : 1;
 }
