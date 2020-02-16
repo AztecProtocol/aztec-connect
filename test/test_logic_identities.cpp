@@ -428,30 +428,30 @@ TEST(test_logic_identities, and_xor)
 
     for (size_t k = 0; k < 2; ++k)
     {
-    for (size_t i = 0; i < 4; ++i)
-    {
-        for (size_t j = 0; j < 4; ++j)
+        for (size_t i = 0; i < 4; ++i)
         {
-            uint64_t a_val = i;
-            uint64_t b_val = j;
-            uint64_t c_val = k == 0 ? i & j : i ^ j;
+            for (size_t j = 0; j < 4; ++j)
+            {
+                uint64_t a_val = i;
+                uint64_t b_val = j;
+                uint64_t c_val = k == 0 ? i & j : i ^ j;
 
-            uint64_t a_x = base_a;
-            uint64_t a_x_omega = (4 * base_a) + a_val;
+                uint64_t a_x = base_a;
+                uint64_t a_x_omega = (4 * base_a) + a_val;
 
-            uint64_t b_x = base_b;
-            uint64_t b_x_omega = (4 * base_b) + b_val;
+                uint64_t b_x = base_b;
+                uint64_t b_x_omega = (4 * base_b) + b_val;
 
-            uint64_t c_x = base_c;
-            uint64_t c_x_omega = (4 * base_c) + c_val;
+                uint64_t c_x = base_c;
+                uint64_t c_x_omega = (4 * base_c) + c_val;
 
-            uint64_t w = a_val * b_val;
+                uint64_t w = a_val * b_val;
 
-            uint64_t selector = (k == 0) ? 1 : (uint64_t(-1));
-            bool valid = and_xor_identity(a_x, a_x_omega, b_x, b_x_omega, w, c_x, c_x_omega, selector, i, j);
+                uint64_t selector = (k == 0) ? 1 : (uint64_t(-1));
+                bool valid = and_xor_identity(a_x, a_x_omega, b_x, b_x_omega, w, c_x, c_x_omega, selector, i, j);
 
-            EXPECT_EQ(valid, true);
+                EXPECT_EQ(valid, true);
+            }
         }
-    }
     }
 }

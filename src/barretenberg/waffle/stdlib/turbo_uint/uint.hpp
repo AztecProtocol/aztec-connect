@@ -36,6 +36,9 @@ template <typename Composer, size_t width> class uint {
     uint operator|(const uint& other) const;
     uint operator~() const;
 
+    uint operator>>(const uint64_t shift) const;
+    uint operator<<(const uint64_t shift) const;
+
     bool_t<Composer> operator>(const uint& other) const;
     bool_t<Composer> operator<(const uint& other) const;
     bool_t<Composer> operator>=(const uint& other) const;
@@ -59,10 +62,10 @@ protected:
         WEAK_NORMALIZED
     };
 
-    mutable uint32_t witness_index;
     mutable uint256_t additive_constant;
     mutable WitnessStatus witness_status;
     mutable std::vector<uint32_t> accumulators;
+    mutable uint32_t witness_index;
 
     static constexpr uint256_t CIRCUIT_UINT_MAX_PLUS_ONE = (uint256_t(1) << width);
     static constexpr uint256_t MASK = CIRCUIT_UINT_MAX_PLUS_ONE - 1;

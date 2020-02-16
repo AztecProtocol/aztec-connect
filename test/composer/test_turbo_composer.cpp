@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <barretenberg/uint256/uint256.hpp>
 #include <barretenberg/curves/grumpkin/grumpkin.hpp>
 #include <barretenberg/waffle/composer/turbo_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
@@ -12,6 +13,7 @@
 #include <memory>
 
 #include <stdio.h>
+#include <random>
 
 using namespace barretenberg;
 
@@ -20,6 +22,24 @@ namespace
 uint32_t get_random_int()
 {
     return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+}
+}
+
+namespace
+{
+std::mt19937 engine;
+std::uniform_int_distribution<uint32_t> dist{ 0ULL, UINT32_MAX };
+
+const auto init = []() {
+    // std::random_device rd{};
+    std::seed_seq seed2{ 1, 2, 3, 4, 5, 6, 7, 8 };
+    engine = std::mt19937(seed2);
+    return 1;
+}();
+
+uint32_t get_pseudorandom_uint32()
+{
+    return dist(engine);
 }
 }
 
@@ -655,6 +675,52 @@ TEST(turbo_composer, xor_constraint)
     uint32_t zero_idx = composer.add_variable(fr::zero);
     uint32_t one_idx = composer.add_variable(fr::one);
     composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+
+    waffle::TurboProver prover = composer.preprocess();
+
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+
+    EXPECT_EQ(result, true);
+}
+
+TEST(turbo_composer, big_add_gate_with_bit_extract)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+
+    const auto generate_constraints = [&composer](uint32_t quad_value) {
+        uint32_t quad_accumulator_left = (get_pseudorandom_uint32() & 0x3fffffff) - quad_value; // make sure this won't overflow
+        uint32_t quad_accumulator_right = (4 * quad_accumulator_left) + quad_value;
+
+        uint32_t left_idx = composer.add_variable(uint256_t(quad_accumulator_left));
+        uint32_t right_idx = composer.add_variable(uint256_t(quad_accumulator_right));
+
+        uint32_t input = get_pseudorandom_uint32();
+        uint32_t output = input + (quad_value > 1 ? 1 : 0);
+
+        waffle::add_quad gate{
+            composer.add_variable(uint256_t(input)),
+            composer.add_variable(uint256_t(output)),
+            right_idx,
+            left_idx,
+            fr::to_montgomery_form({{ 6, 0, 0, 0 }}),
+            fr::neg(fr::to_montgomery_form({{ 6, 0, 0, 0 }})),
+            fr::zero,
+            fr::zero,
+            fr::zero
+        };
+
+        composer.create_big_add_gate_with_bit_extraction(gate);
+    };
+
+    generate_constraints(0);
+    generate_constraints(1);
+    generate_constraints(2);
+    generate_constraints(3);
 
     waffle::TurboProver prover = composer.preprocess();
 

@@ -861,3 +861,78 @@ TEST(stdlib_turbo_uint32, test_logical_not)
     bool proof_result = verifier.verify_proof(proof);
     EXPECT_EQ(proof_result, true);
 }
+
+TEST(stdlib_turbo_uint32, test_right_shift)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto shift_integer = [&composer](const bool is_constant, const uint32_t shift)
+    {
+        uint32_t const_a = get_pseudorandom_uint32();
+        uint32_t a_val = get_pseudorandom_uint32();
+        uint32_t expected = (a_val + const_a) >> shift;
+        uint32 a = is_constant ? uint32(&composer, a_val) : witness_t(&composer, a_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 c = a + a_shift;
+        uint32 d = c >> shift;
+        uint32_t result = uint32_t(d.get_value());
+
+        EXPECT_EQ(result, expected);
+    };
+
+    for (uint32_t i = 0; i < 32; ++i)
+    {
+        shift_integer(false, i);
+        shift_integer(true, i);
+    }
+    printf("calling preprocess\n");
+    waffle::TurboProver prover = composer.preprocess();
+    
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
+
+TEST(stdlib_turbo_uint32, test_left_shift)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+
+    const auto shift_integer = [&composer](const bool is_constant, const uint32_t shift)
+    {
+        uint32_t const_a = get_pseudorandom_uint32();
+        uint32_t a_val = get_pseudorandom_uint32();
+        uint32_t expected = (a_val + const_a) << shift;
+        uint32 a = is_constant ? uint32(&composer, a_val) : witness_t(&composer, a_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 c = a + a_shift;
+        if (!is_constant)
+        {
+        uint32 d = c << shift;
+        uint32_t result = uint32_t(d.get_value());
+
+        EXPECT_EQ(result, expected);
+        }
+
+    };
+
+    for (uint32_t i = 0; i < 32; ++i)
+    {
+        shift_integer(true, i);
+        shift_integer(false, i);
+    }
+
+    printf("calling preprocess\n");
+    waffle::TurboProver prover = composer.preprocess();
+    
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::TurboVerifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}

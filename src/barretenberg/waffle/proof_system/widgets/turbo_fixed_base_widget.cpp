@@ -521,7 +521,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::field_t q_ecc_1_eval = fr::serialize_from_buffer(&transcript.get_element("q_ecc_1")[0]);
     fr::field_t q_c_eval = fr::serialize_from_buffer(&transcript.get_element("q_c")[0]);
 
-    fr::field_t alpha_a = fr::mul(challenge.alpha_base, challenge.alpha_step);
+    fr::field_t alpha_a = fr::mul(challenge.alpha_base, fr::sqr(challenge.alpha_step));
     fr::field_t alpha_b = fr::mul(alpha_a, challenge.alpha_step);
     fr::field_t alpha_c = fr::mul(alpha_b, challenge.alpha_step);
     fr::field_t alpha_d = fr::mul(alpha_c, challenge.alpha_step);
@@ -627,6 +627,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::__sub(q_5_term_arith, w_4_eval, q_5_term_arith);
     fr::__sub(w_4_eval, two, q_5_temp);
     fr::__mul(q_5_term_arith, q_5_temp, q_5_term_arith);
+    fr::__mul(q_5_term_arith, challenge.alpha_step, q_5_term_arith);
     fr::__mul(q_5_term_arith, challenge.alpha_base, q_5_term_arith);
     fr::__mul(q_5_term_arith, q_arith_eval, q_5_term_arith);
 

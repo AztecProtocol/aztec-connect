@@ -14,19 +14,19 @@ namespace stdlib {
 template <typename Composer, size_t width>
 uint<Composer, width>::uint(const witness_t<Composer>& witness)
     : context(witness.context)
-    , witness_index(witness.witness_index)
     , additive_constant(0)
     , witness_status(WitnessStatus::OK)
-    , accumulators(context->create_range_constraint(witness_index, width))
+    , accumulators(context->create_range_constraint(witness.witness_index, width))
+    , witness_index(accumulators[(width >> 1) - 1])
 {}
 
 template <typename Composer, size_t width>
 uint<Composer, width>::uint(Composer* composer, const uint256_t& value)
     : context(composer)
-    , witness_index(UINT32_MAX)
     , additive_constant(value)
     , witness_status(WitnessStatus::OK)
     , accumulators()
+    , witness_index(UINT32_MAX)
 {}
 
 template <typename Context, size_t width> uint<Context, width>::operator field_t<Context>() const
@@ -186,11 +186,12 @@ uint<Composer, width> uint<Composer, width>::operator*(const uint& other) const
 
     ctx->create_big_mul_gate(gate);
 
+    // discard the high bits
     ctx->create_range_constraint(gate.d, width + 4);
 
     uint<Composer, width> result(ctx);
-    result.witness_index = gate.c;
-    result.accumulators = ctx->create_range_constraint(result.witness_index, width);
+    result.accumulators = ctx->create_range_constraint(gate.c, width);
+    result.witness_index = result.accumulators[(width >> 1) - 1];
     result.witness_status = WitnessStatus::OK;
 
     return result;
@@ -229,6 +230,233 @@ template <typename Composer, size_t width> uint<Composer, width> uint<Composer, 
         weak_normalize();
     }
     return uint(context, MASK) - *this;
+}
+
+template <typename Composer, size_t width> uint<Composer, width> uint<Composer, width>::operator>>(const uint64_t shift) const
+{
+    if (shift >= width)
+    {
+        return uint(context, 0);
+    }
+    if (is_constant())
+    {
+        return uint(context, additive_constant >> shift);
+    }
+
+    if (witness_status != WitnessStatus::OK)
+    {
+        normalize();
+    }
+
+    if (shift == 0)
+    {
+        return *this;
+    }
+
+   /**
+    * bit shifts...
+    * 
+    * We represent uints using a set of accumulating base-4 sums,
+    * which adds complexity to bit shifting.
+    * 
+    * Right shifts by even values are trivial - for a shift of 'x',
+    * we return accumulator[(x - width - 1) / 2]
+    * 
+    * Shifts by odd values are harder as we only have quads to work with.
+    * 
+    * To recap accumulators. Our uint A can be described via a sum of its quads (a_0, ..., a_{width - 1})
+    * (we use w as shorthand for 'width)
+    *
+    *      w - 1
+    *      ===
+    *      \          i
+    * A =  /    a  . 4
+    *      ===   i
+    *     i = 0
+    *
+    * Our range constraint will represent A via its accumulating sums (A_0, ..., A_{w-1}), where
+    *
+    *         i
+    *        ===
+    *        \                             j
+    * A   =  /    a                     . 4
+    *  i     ===   ((w - 2/ 2) - i + j)
+    *       j = 0
+    *
+    * 
+    * To compute (A >> x), we want the following value:
+    * 
+    *    (w - x - 2) / 2
+    *      ===
+    *      \                 j
+    * R =  /    a         . 4
+    *      ===   (x + j)
+    *     j = 0
+    *
+    * 
+    * From this, we can see that if x is even, R = A
+    *                                               w - x - 1
+    * 
+    * If x is odd, then we want to obtain the following:
+    * 
+    *           (w - x - 2) / 2
+    *             ===
+    *             \                 j
+    * R = b   2 . /    a         . 4
+    *      x      ===   (x + j)
+    *           j = 0
+    *
+    * Where b   is the most significant bit of A            - 4. A
+    *        x                                  (x + 2) / 2       (x / 2)
+    * 
+    * We have a special selector configuration in our arithmetic widget,
+    * that will extract 6.b  from two accumulators for us.
+    *                      x
+    * The factor of 6 is for efficiency reasons,
+    * we need to scale our other gate coefficients by 6 to accomodate this
+     **/ 
+
+    if ((shift & 1) == 0)
+    {
+        uint result(context);
+        result.witness_index = accumulators[((width >> 1) - 1 - (shift >> 1))];
+        result.witness_status = WitnessStatus::WEAK_NORMALIZED;
+        return result;
+    }
+
+    uint256_t output = get_value() >> shift;
+
+    // get accumulator index
+    uint64_t x = ((width >> 1) - 1 - (shift >> 1));
+
+    // this >> shift = 2 * a[x - 1] + high bit of (a[x] - 4 * a[x - 1])
+    // our add-with-bit-extract gate will pull out the high bit of ^^
+    // if we place a[x] in column 3 and a[x - 1] in column 4
+    // (but it actually extracts 6 * high_bit for efficiency reasons)
+    // so we need to scale everything else accordingly
+    uint32_t right_index = accumulators[x];
+    uint32_t left_index = shift == 31 ? context->zero_idx : accumulators[x - 1];
+
+    const waffle::add_quad gate{
+        context->zero_idx,
+        context->add_variable(output),
+        right_index,
+        left_index,
+        fr::zero,
+        fr::neg(fr::to_montgomery_form({{ 6, 0, 0, 0 }})),
+        fr::zero,
+        fr::to_montgomery_form({{ 12, 0, 0, 0 }}),
+        fr::zero,
+    };
+
+    context->create_big_add_gate_with_bit_extraction(gate);
+
+    uint result(context);
+    result.witness_index = gate.b;
+    result.witness_status = WitnessStatus::WEAK_NORMALIZED;
+
+    return result;
+}
+
+
+template <typename Composer, size_t width> uint<Composer, width> uint<Composer, width>::operator<<(const uint64_t shift) const
+{
+    if (shift >= width)
+    {
+        return uint(context, 0);
+    }
+
+    if (is_constant())
+    {
+        return uint(context, (additive_constant << shift) & MASK);
+    }
+
+    if (witness_status != WitnessStatus::OK)
+    {
+        normalize();
+    }
+
+    if (shift == 0)
+    {
+        return *this;
+    }
+
+    if ((shift & 1) == 0)
+    {
+        uint64_t x = (shift >> 1);
+        uint32_t right_idx = accumulators[x - 1];
+        uint32_t base_idx = witness_index;
+
+        uint256_t base_shift_factor = uint256_t(1) << (x * 2);
+        uint256_t right_shift_factor = uint256_t(1) << (width);
+
+        uint256_t output = (get_value() << shift) & MASK;
+
+        waffle::add_triple gate{
+            base_idx,
+            right_idx,
+            context->add_variable(output),
+            base_shift_factor,
+            fr::neg(right_shift_factor),
+            fr::neg_one(),
+            fr::zero
+        };
+
+        context->create_add_gate(gate);
+    
+        uint result(context);
+        result.witness_index = gate.c;
+        result.witness_status = WitnessStatus::WEAK_NORMALIZED;
+        return result;
+    }
+
+    uint256_t output = (get_value() << shift) & MASK;
+
+    // get accumulator index
+    uint64_t x = (shift >> 1);
+
+    uint32_t right_index = shift == 1 ? context->zero_idx : accumulators[x - 1];
+    uint32_t left_index = accumulators[x];
+    uint32_t base_index = witness_index;
+
+    uint256_t base_shift_factor = ((uint256_t(1) << (x * 2 + 1)));
+    uint256_t b_hi_shift_factor = CIRCUIT_UINT_MAX_PLUS_ONE;
+    uint256_t right_shift_factor = b_hi_shift_factor + b_hi_shift_factor;
+
+    base_shift_factor *= 6;
+    right_shift_factor *= 6;
+
+    fr::field_t q_1 = uint256_t(6);
+    fr::field_t q_2 = base_shift_factor;
+    fr::field_t q_3 = right_shift_factor;
+
+    fr::field_t denominator = b_hi_shift_factor;
+    fr::__neg(denominator, denominator);
+    fr::__invert(denominator, denominator);
+
+    fr::__mul(q_1, denominator, q_1);
+    fr::__mul(q_2, denominator, q_2);
+    fr::__mul(q_3, denominator, q_3);
+
+    const waffle::add_quad gate{
+        context->add_variable(output),
+        base_index,
+        left_index,
+        right_index,
+        fr::neg(q_1),
+        q_2,
+        fr::zero,
+        fr::neg(q_3),
+        fr::zero,
+    };
+
+    context->create_big_add_gate_with_bit_extraction(gate);
+
+    uint result(context);
+    result.witness_index = gate.a;
+    result.witness_status = WitnessStatus::WEAK_NORMALIZED;
+
+    return result;
 }
 
 template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator>(const uint& other) const
@@ -312,6 +540,7 @@ template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width
 
 template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator==(const uint& other) const
 {
+    // casting to a field type will ensure that lhs / rhs are both normalized
     field_t<Composer> lhs = *this;
     field_t<Composer> rhs = other;
 
@@ -325,7 +554,7 @@ template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width
 
 template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator!() const
 {
-    return (!field_t<Composer>(*this).is_zero()).normalize();
+    return (field_t<Composer>(*this).is_zero()).normalize();
 }
 
 template <typename Composer, size_t width> uint<Composer, width> uint<Composer, width>::logic_operator(const uint& other, const LogicOp op_type) const
@@ -378,8 +607,6 @@ template <typename Composer, size_t width> uint<Composer, width> uint<Composer, 
     default: {}
     }
 
-    uint32_t out_idx = logic_accumulators.out[logic_accumulators.out.size() - 1];
-
     if (is_constant()) {
         uint32_t constant_idx = ctx->put_constant_variable(additive_constant);
         ctx->assert_equal(lhs_idx, constant_idx);
@@ -387,6 +614,7 @@ template <typename Composer, size_t width> uint<Composer, width> uint<Composer, 
     else
     {
         accumulators = logic_accumulators.left;
+        witness_index = accumulators[(width >> 1) - 1];
         witness_status = WitnessStatus::OK;
     }
 
@@ -397,12 +625,13 @@ template <typename Composer, size_t width> uint<Composer, width> uint<Composer, 
     else
     {
         other.accumulators = logic_accumulators.right;
+        other.witness_index = other.accumulators[(width >> 1) - 1];
         witness_status = WitnessStatus::OK;
     }
 
     uint<Composer, width> result(ctx);
-    result.witness_index = out_idx;
     result.accumulators = logic_accumulators.out;
+    result.witness_index = result.accumulators[(width >> 1) - 1];
     result.witness_status = WitnessStatus::OK;
     return result;
 }
@@ -505,13 +734,13 @@ std::pair<uint<Composer, width>, uint<Composer, width>> uint<Composer, width>::d
     ctx->create_range_constraint(delta_idx, width);
 
     uint<Composer, width> quotient(ctx);
-    quotient.witness_index = quotient_idx;
-    quotient.accumulators = ctx->create_range_constraint(quotient.witness_index, width);
+    quotient.accumulators = ctx->create_range_constraint(quotient_idx, width);
+    quotient.witness_index = quotient.accumulators[(width >> 1) - 1];
     quotient.witness_status = WitnessStatus::OK;
 
     uint<Composer, width> remainder(ctx);
-    remainder.witness_index = remainder_idx;
-    remainder.accumulators = ctx->create_range_constraint(remainder.witness_index, width);
+    remainder.accumulators = ctx->create_range_constraint(remainder_idx, width);
+    remainder.witness_index = remainder.accumulators[(width >> 1) - 1];
     remainder.witness_status = WitnessStatus::OK;
 
     return std::make_pair(quotient, remainder);
@@ -558,11 +787,13 @@ template <typename Composer, size_t width> uint<Composer, width> uint<Composer, 
 
     if (witness_status == WitnessStatus::WEAK_NORMALIZED) {
         accumulators = context->create_range_constraint(witness_index, width);
+        witness_index = accumulators[(width >> 1) - 1];
         witness_status = WitnessStatus::OK;
     }
     if (witness_status == WitnessStatus::NOT_NORMALIZED) {
         weak_normalize();
         accumulators = context->create_range_constraint(witness_index, width);
+        witness_index = accumulators[(width >> 1) - 1];
         witness_status = WitnessStatus::OK;
     }
     return *this;
