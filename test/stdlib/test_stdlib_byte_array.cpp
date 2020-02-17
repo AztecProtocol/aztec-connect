@@ -43,6 +43,17 @@ TEST(stdlib_byte_array, test_uint32)
     EXPECT_EQ(arr.get_value(), expected);
 }
 
+TEST(stdlib_byte_array, test_reverse)
+{
+    waffle::BoolComposer composer = waffle::BoolComposer();
+    uint32 a = witness_t(&composer, 1UL);
+    std::string expected = { 0x04, 0x03, 0x02, 0x01 };
+    byte_array arr(&composer, std::vector<uint8_t>{ 0x01, 0x02, 0x03, 0x04 });
+
+    EXPECT_EQ(arr.size(), 4UL);
+    EXPECT_EQ(arr.reverse().get_value(), expected);
+}
+
 TEST(stdlib_byte_array, test_uint32_input_output_consistency)
 {
     waffle::BoolComposer composer = waffle::BoolComposer();

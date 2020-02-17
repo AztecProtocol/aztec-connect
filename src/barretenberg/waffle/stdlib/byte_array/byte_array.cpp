@@ -26,14 +26,19 @@ byte_array<ComposerContext>::byte_array(ComposerContext* parent_context, const s
 
 template <typename ComposerContext>
 byte_array<ComposerContext>::byte_array(ComposerContext* parent_context, const std::string& input)
+    : byte_array(parent_context, std::vector<uint8_t>(input.begin(), input.end()))
+{}
+
+template <typename ComposerContext>
+byte_array<ComposerContext>::byte_array(ComposerContext* parent_context, std::vector<uint8_t> const& input)
     : context(parent_context)
     , values(input.size() * 8)
 {
     for (size_t i = 0; i < input.size(); ++i) {
-        char c = input[i];
+        uint8_t c = input[i];
         std::bitset<8> char_bits = std::bitset<8>(static_cast<unsigned long long>(c));
         for (size_t j = 0; j < 8; ++j) {
-            bool_t<ComposerContext> value(context, char_bits[7 - j]);
+            bool_t<ComposerContext> value(witness_t(context, char_bits[7 - j]));
             values[(i * 8) + j] = value;
         }
     }
@@ -101,6 +106,18 @@ byte_array<ComposerContext> byte_array<ComposerContext>::slice(size_t offset, si
     auto start = values.begin() + (long)(offset * 8);
     auto end = values.begin() + (long)((offset + length) * 8);
     return byte_array(context, bits_t(start, end));
+}
+
+template <typename ComposerContext> byte_array<ComposerContext> byte_array<ComposerContext>::reverse() const
+{
+    bits_t bits(values.size());
+    size_t offset = bits.size() - 8;
+    for (size_t i = 0; i < bits.size(); i += 8, offset -= 8) {
+        for (size_t j = 0; j < 8; ++j) {
+            bits[offset + j] = values[i + j];
+        }
+    }
+    return byte_array(context, bits);
 }
 
 template <typename ComposerContext> std::string byte_array<ComposerContext>::get_value() const

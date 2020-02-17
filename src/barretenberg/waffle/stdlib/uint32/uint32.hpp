@@ -67,18 +67,18 @@ template <typename ComposerContext, typename Native> class uintW : public uint<C
     /*
         uint32 operator++();
         uint32 operator--();
-        uint32 operator+=(const uint32& other) { *this = operator+(other); };
-        uint32 operator-=(const uint32& other) { *this = operator-(other); };
-        uint32 operator*=(const uint32& other) { *this = operator*(other); };
-        uint32 operator/=(const uint32& other) { *this = operator/(other); };
-        uint32 operator%=(const uint32& other) { *this = operator%(other); };
+        uintW operator+=(const uintW& other) { *this = operator+(other); };
+        uintW operator-=(const uintW& other) { *this = operator-(other); };
+        uintW operator*=(const uintW& other) { *this = operator*(other); };
+        uintW operator/=(const uintW& other) { *this = operator/(other); };
+        uintW operator%=(const uintW& other) { *this = operator%(other); };
 
-        uint32 operator&=(const uint32& other) { *this = operator&(other); };
-        uint32 operator^=(const uint32& other) { *this = operator^(other); };
-        uint32 operator|=(const uint32& other) { *this = operator|(other); };
+        uintW operator&=(const uintW& other) { *this = operator&(other); };
+        uintW operator^=(const uintW& other) { *this = operator^(other); };
+        uintW operator|=(const uintW& other) { *this = operator|(other); };
 
-        uint32 operator>>=(const uint32& other) { *this = operator>>(other); };
-        uint32 operator<<=(const uint32& other) { *this = operator<<(other); };
+        uintW operator>>=(const uintW& other) { *this = operator>>(other); };
+        uintW operator<<=(const uintW& other) { *this = operator<<(other); };
     */
     Native get_value() const { return static_cast<Native>(uint<ComposerContext>::get_value()); }
 };

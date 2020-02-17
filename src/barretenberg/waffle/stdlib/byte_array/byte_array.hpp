@@ -24,6 +24,7 @@ template <typename ComposerContext> class byte_array {
     byte_array(ComposerContext* parent_context);
     byte_array(ComposerContext* parent_context, size_t const n);
     byte_array(ComposerContext* parent_context, std::string const& input);
+    byte_array(ComposerContext* parent_context, std::vector<uint8_t> const& input);
     byte_array(ComposerContext* parent_context, bits_t const& input);
     byte_array(ComposerContext* parent_context, bits_t&& input);
 
@@ -43,6 +44,7 @@ template <typename ComposerContext> class byte_array {
 
     byte_array slice(size_t offset) const;
     byte_array slice(size_t offset, size_t length) const;
+    byte_array reverse() const;
 
     size_t size() const { return values.size() / 8; }
 
