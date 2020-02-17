@@ -6,7 +6,6 @@
 #include "../../composer/standard_composer.hpp"
 #include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
-#include "../../composer/extended_composer.hpp"
 #include "../../composer/turbo_composer.hpp"
 
 using namespace barretenberg;
@@ -408,7 +407,6 @@ template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerConte
 template class bool_t<waffle::StandardComposer>;
 template class bool_t<waffle::BoolComposer>;
 template class bool_t<waffle::MiMCComposer>;
-template class bool_t<waffle::ExtendedComposer>;
 template class bool_t<waffle::TurboComposer>;
 
 } // namespace stdlib

@@ -4,7 +4,6 @@
 #include "../../../curves/bn254/fr.hpp"
 
 #include "../../composer/bool_composer.hpp"
-#include "../../composer/extended_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
 #include "../../composer/standard_composer.hpp"
 #include "../../composer/turbo_composer.hpp"
@@ -490,7 +489,6 @@ bool_t<ComposerContext> field_t<ComposerContext>::operator==(const field_t& othe
 template class field_t<waffle::StandardComposer>;
 template class field_t<waffle::BoolComposer>;
 template class field_t<waffle::MiMCComposer>;
-template class field_t<waffle::ExtendedComposer>;
 template class field_t<waffle::TurboComposer>;
 
 } // namespace stdlib

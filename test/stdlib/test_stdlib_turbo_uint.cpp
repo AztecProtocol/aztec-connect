@@ -7,7 +7,7 @@
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
 
 #include <barretenberg/waffle/stdlib/common.hpp>
-#include <barretenberg/waffle/stdlib/turbo_uint/uint.hpp>
+#include <barretenberg/waffle/stdlib/uint/uint.hpp>
 #include <barretenberg/waffle/stdlib/bool/bool.hpp>
 
 #include <iostream>
@@ -17,7 +17,7 @@ using namespace barretenberg;
 using namespace plonk;
 
 typedef stdlib::bool_t<waffle::StandardComposer> bool_t;
-typedef stdlib::uint<waffle::StandardComposer, 32> uint32;
+typedef stdlib::uint<waffle::StandardComposer, uint32_t> uint32;
 typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
 
 

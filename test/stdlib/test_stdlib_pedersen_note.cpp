@@ -43,7 +43,7 @@ TEST(stdlib_pedersen_note, test_pedersen_note)
     field_t ciphertext_y = public_witness_t(&composer, expected.y);
 
     plonk::stdlib::pedersen_note::note note{{ ciphertext_x, ciphertext_y }};
-    plonk::stdlib::uint<waffle::TurboComposer> value(32, note_value_field);
+    plonk::stdlib::uint<waffle::TurboComposer, uint32_t> value(note_value_field);
 
     plonk::stdlib::pedersen_note::note result = plonk::stdlib::pedersen_note::compute_commitment(view_key, value);
     composer.assert_equal(result.ciphertext.x.witness_index, note.ciphertext.x.witness_index);
@@ -80,7 +80,7 @@ TEST(stdlib_pedersen_note, test_pedersen_note_zero)
     field_t ciphertext_y = public_witness_t(&composer, expected.y);
 
     plonk::stdlib::pedersen_note::note note{{ ciphertext_x, ciphertext_y }};
-    plonk::stdlib::uint<waffle::TurboComposer> value(32, note_value_field);
+    plonk::stdlib::uint<waffle::TurboComposer, uint32_t> value(note_value_field);
 
     plonk::stdlib::pedersen_note::note result = plonk::stdlib::pedersen_note::compute_commitment(view_key, value);
     composer.assert_equal(result.ciphertext.x.witness_index, note.ciphertext.x.witness_index);

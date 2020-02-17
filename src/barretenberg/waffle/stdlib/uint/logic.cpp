@@ -2,31 +2,33 @@
 
 #include "../../composer/turbo_composer.hpp"
 #include "../../composer/standard_composer.hpp"
+#include "../../composer/bool_composer.hpp"
+#include "../../composer/mimc_composer.hpp"
 
 using namespace barretenberg;
 
 namespace plonk {
 namespace stdlib {
 
-template <typename Composer, size_t width>
-uint<Composer, width> uint<Composer, width>::operator&(const uint& other) const
+template <typename Composer, typename Native>
+uint<Composer, Native> uint<Composer, Native>::operator&(const uint& other) const
 {
     return logic_operator(other, LogicOp::AND);
 }
 
-template <typename Composer, size_t width>
-uint<Composer, width> uint<Composer, width>::operator^(const uint& other) const
+template <typename Composer, typename Native>
+uint<Composer, Native> uint<Composer, Native>::operator^(const uint& other) const
 {
     return logic_operator(other, LogicOp::XOR);
 }
 
-template <typename Composer, size_t width>
-uint<Composer, width> uint<Composer, width>::operator|(const uint& other) const
+template <typename Composer, typename Native>
+uint<Composer, Native> uint<Composer, Native>::operator|(const uint& other) const
 {
     return (*this + other) - (*this & other);
 }
 
-template <typename Composer, size_t width> uint<Composer, width> uint<Composer, width>::operator~() const
+template <typename Composer, typename Native> uint<Composer, Native> uint<Composer, Native>::operator~() const
 {
     if (!is_constant() && witness_status != WitnessStatus::NOT_NORMALIZED) {
         weak_normalize();
@@ -34,8 +36,8 @@ template <typename Composer, size_t width> uint<Composer, width> uint<Composer, 
     return uint(context, MASK) - *this;
 }
 
-template <typename Composer, size_t width>
-uint<Composer, width> uint<Composer, width>::operator>>(const uint64_t shift) const
+template <typename Composer, typename Native>
+uint<Composer, Native> uint<Composer, Native>::operator>>(const uint64_t shift) const
 {
     if (shift >= width) {
         return uint(context, 0);
@@ -152,8 +154,8 @@ uint<Composer, width> uint<Composer, width>::operator>>(const uint64_t shift) co
     return result;
 }
 
-template <typename Composer, size_t width>
-uint<Composer, width> uint<Composer, width>::operator<<(const uint64_t shift) const
+template <typename Composer, typename Native>
+uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) const
 {
     if (shift >= width) {
         return uint(context, 0);
@@ -240,8 +242,8 @@ uint<Composer, width> uint<Composer, width>::operator<<(const uint64_t shift) co
     return result;
 }
 
-template <typename Composer, size_t width>
-uint<Composer, width> uint<Composer, width>::ror(const uint64_t target_rotation) const
+template <typename Composer, typename Native>
+uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotation) const
 {
     const uint64_t rotation = target_rotation & (static_cast<uint64_t>(width) - 1ULL);
 
@@ -327,15 +329,15 @@ uint<Composer, width> uint<Composer, width>::ror(const uint64_t target_rotation)
     return result;
 }
 
-template <typename Composer, size_t width>
-uint<Composer, width> uint<Composer, width>::rol(const uint64_t target_rotation) const
+template <typename Composer, typename Native>
+uint<Composer, Native> uint<Composer, Native>::rol(const uint64_t target_rotation) const
 {
     const uint64_t max = static_cast<uint64_t>(width);
     return ror(max - (target_rotation & (max - 1)));
 }
 
-template <typename Composer, size_t width>
-uint<Composer, width> uint<Composer, width>::logic_operator(const uint& other, const LogicOp op_type) const
+template <typename Composer, typename Native>
+uint<Composer, Native> uint<Composer, Native>::logic_operator(const uint& other, const LogicOp op_type) const
 {
     Composer* ctx = (context == nullptr) ? other.context : context;
 
@@ -365,7 +367,7 @@ uint<Composer, width> uint<Composer, width>::logic_operator(const uint& other, c
     }
 
     if (is_constant() && other.is_constant()) {
-        return uint<Composer, width>(ctx, out);
+        return uint<Composer, Native>(ctx, out);
     }
 
     const uint32_t lhs_idx = is_constant() ? ctx->add_variable(lhs) : witness_index;
@@ -403,22 +405,31 @@ uint<Composer, width> uint<Composer, width>::logic_operator(const uint& other, c
         witness_status = WitnessStatus::OK;
     }
 
-    uint<Composer, width> result(ctx);
+    uint<Composer, Native> result(ctx);
     result.accumulators = logic_accumulators.out;
     result.witness_index = result.accumulators[(width >> 1) - 1];
     result.witness_status = WitnessStatus::OK;
     return result;
 }
 
-template class uint<waffle::TurboComposer, 8UL>;
-template class uint<waffle::TurboComposer, 16UL>;
-template class uint<waffle::TurboComposer, 32UL>;
-template class uint<waffle::TurboComposer, 64UL>;
+template class uint<waffle::TurboComposer, uint8_t>;
+template class uint<waffle::TurboComposer, uint16_t>;
+template class uint<waffle::TurboComposer, uint32_t>;
+template class uint<waffle::TurboComposer, uint64_t>;
 
-template class uint<waffle::StandardComposer, 8UL>;
-template class uint<waffle::StandardComposer, 16UL>;
-template class uint<waffle::StandardComposer, 32UL>;
-template class uint<waffle::StandardComposer, 64UL>;
+template class uint<waffle::StandardComposer, uint8_t>;
+template class uint<waffle::StandardComposer, uint16_t>;
+template class uint<waffle::StandardComposer, uint32_t>;
+template class uint<waffle::StandardComposer, uint64_t>;
 
+template class uint<waffle::BoolComposer, uint8_t>;
+template class uint<waffle::BoolComposer, uint16_t>;
+template class uint<waffle::BoolComposer, uint32_t>;
+template class uint<waffle::BoolComposer, uint64_t>;
+
+template class uint<waffle::MiMCComposer, uint8_t>;
+template class uint<waffle::MiMCComposer, uint16_t>;
+template class uint<waffle::MiMCComposer, uint32_t>;
+template class uint<waffle::MiMCComposer, uint64_t>;
 } // namespace stdlib
 } // namespace plonk

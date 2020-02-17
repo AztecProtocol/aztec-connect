@@ -43,7 +43,7 @@ TurboComposer::TurboComposer(const size_t size_hint)
 void TurboComposer::create_dummy_gate()
 {
     gate_flags.push_back(0);
-    uint32_t idx = add_variable(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
+    uint32_t idx = add_variable(fr::to_montgomery_form({ { 1, 1, 1, 1 } }));
     w_l.emplace_back(idx);
     w_r.emplace_back(idx);
     w_o.emplace_back(idx);
@@ -59,6 +59,17 @@ void TurboComposer::create_dummy_gate()
     q_c.emplace_back(fr::zero);
     q_range.emplace_back(fr::zero);
     q_logic.emplace_back(fr::zero);
+
+    epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
+    epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
+    epicycle out{ static_cast<uint32_t>(n), WireType::OUTPUT };
+    epicycle fourth{ static_cast<uint32_t>(n), WireType::FOURTH };
+
+    wire_epicycles[static_cast<size_t>(idx)].emplace_back(left);
+    wire_epicycles[static_cast<size_t>(idx)].emplace_back(right);
+    wire_epicycles[static_cast<size_t>(idx)].emplace_back(out);
+    wire_epicycles[static_cast<size_t>(idx)].emplace_back(fourth);
+
     ++n;
 }
 

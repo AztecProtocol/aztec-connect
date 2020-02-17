@@ -4,7 +4,7 @@
 
 #include <barretenberg/curves/bn254/fr.hpp>
 
-#include <barretenberg/waffle/composer/extended_composer.hpp>
+#include <barretenberg/waffle/composer/turbo_composer.hpp>
 #include <barretenberg/waffle/composer/standard_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
@@ -16,9 +16,9 @@
 
 using namespace benchmark;
 
-typedef plonk::stdlib::uint32<waffle::ExtendedComposer> uint32;
-typedef plonk::stdlib::witness_t<waffle::ExtendedComposer> witness_t;
-typedef plonk::stdlib::bitarray<waffle::ExtendedComposer> bitarray;
+typedef plonk::stdlib::uint32<waffle::TurboComposer> uint32;
+typedef plonk::stdlib::witness_t<waffle::TurboComposer> witness_t;
+typedef plonk::stdlib::bitarray<waffle::TurboComposer> bitarray;
 
 constexpr size_t NUM_HASHES = 10;
 constexpr size_t MAX_BYTES = 55 + (9 * 64);
@@ -28,7 +28,7 @@ char get_random_char()
     return static_cast<char>(barretenberg::fr::random_element().data[0] % 8);
 }
 
-void generate_test_plonk_circuit(waffle::ExtendedComposer& composer, size_t num_bytes)
+void generate_test_plonk_circuit(waffle::TurboComposer& composer, size_t num_bytes)
 {
     std::string in;
     in.resize(num_bytes);
@@ -50,16 +50,16 @@ void generate_test_plonk_circuit(waffle::ExtendedComposer& composer, size_t num_
     // }
 }
 
-waffle::ExtendedComposer composers[NUM_HASHES];
-waffle::ExtendedProver provers[NUM_HASHES];
-waffle::ExtendedVerifier verifiers[NUM_HASHES];
+waffle::TurboComposer composers[NUM_HASHES];
+waffle::TurboProver provers[NUM_HASHES];
+waffle::TurboVerifier verifiers[NUM_HASHES];
 waffle::plonk_proof proofs[NUM_HASHES];
 
 void construct_witnesses_bench(State& state) noexcept
 {
     for (auto _ : state) {
         size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
-        composers[idx] = waffle::ExtendedComposer(static_cast<size_t>(state.range(0)));
+        composers[idx] = waffle::TurboComposer(static_cast<size_t>(state.range(0)));
         generate_test_plonk_circuit(composers[idx], static_cast<size_t>(state.range(0)));
     }
 }

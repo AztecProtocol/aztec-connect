@@ -3,6 +3,8 @@
 #include "../../../curves/bn254/fr.hpp"
 #include "../../composer/turbo_composer.hpp"
 #include "../../composer/standard_composer.hpp"
+#include "../../composer/bool_composer.hpp"
+#include "../../composer/mimc_composer.hpp"
 
 #include "../bool/bool.hpp"
 #include "../field/field.hpp"
@@ -12,7 +14,7 @@ using namespace barretenberg;
 namespace plonk {
 namespace stdlib {
 
-template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator>(const uint& other) const
+template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator>(const uint& other) const
 {
     Composer* ctx = (context == nullptr) ? other.context : context;
 
@@ -76,22 +78,22 @@ template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width
     return result;
 }
 
-template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator<(const uint& other) const
+template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator<(const uint& other) const
 {
     return other > *this;
 }
 
-template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator>=(const uint& other) const
+template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator>=(const uint& other) const
 {
     return (!(other > *this)).normalize();
 }
 
-template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator<=(const uint& other) const
+template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator<=(const uint& other) const
 {
     return (!(*this > other)).normalize();
 }
 
-template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator==(const uint& other) const
+template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator==(const uint& other) const
 {
     // casting to a field type will ensure that lhs / rhs are both normalized
     const field_t<Composer> lhs = *this;
@@ -100,25 +102,34 @@ template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width
     return (lhs == rhs).normalize();
 }
 
-template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator!=(const uint& other) const
+template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator!=(const uint& other) const
 {
     return (!(*this == other)).normalize();
 }
 
-template <typename Composer, size_t width> bool_t<Composer> uint<Composer, width>::operator!() const
+template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator!() const
 {
     return (field_t<Composer>(*this).is_zero()).normalize();
 }
 
-template class uint<waffle::TurboComposer, 8UL>;
-template class uint<waffle::TurboComposer, 16UL>;
-template class uint<waffle::TurboComposer, 32UL>;
-template class uint<waffle::TurboComposer, 64UL>;
+template class uint<waffle::TurboComposer, uint8_t>;
+template class uint<waffle::TurboComposer, uint16_t>;
+template class uint<waffle::TurboComposer, uint32_t>;
+template class uint<waffle::TurboComposer, uint64_t>;
 
-template class uint<waffle::StandardComposer, 8UL>;
-template class uint<waffle::StandardComposer, 16UL>;
-template class uint<waffle::StandardComposer, 32UL>;
-template class uint<waffle::StandardComposer, 64UL>;
+template class uint<waffle::StandardComposer, uint8_t>;
+template class uint<waffle::StandardComposer, uint16_t>;
+template class uint<waffle::StandardComposer, uint32_t>;
+template class uint<waffle::StandardComposer, uint64_t>;
 
+template class uint<waffle::BoolComposer, uint8_t>;
+template class uint<waffle::BoolComposer, uint16_t>;
+template class uint<waffle::BoolComposer, uint32_t>;
+template class uint<waffle::BoolComposer, uint64_t>;
+
+template class uint<waffle::MiMCComposer, uint8_t>;
+template class uint<waffle::MiMCComposer, uint16_t>;
+template class uint<waffle::MiMCComposer, uint32_t>;
+template class uint<waffle::MiMCComposer, uint64_t>;
 } // namespace stdlib
 } // namespace plonk

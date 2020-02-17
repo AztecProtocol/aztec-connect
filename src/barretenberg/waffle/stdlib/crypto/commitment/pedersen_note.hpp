@@ -26,7 +26,7 @@ struct note_triple
 template <size_t num_bits>
 note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, const size_t generator_index);
 
-note compute_commitment(const field_t<waffle::TurboComposer>& view_key, const uint<waffle::TurboComposer>& value);
+note compute_commitment(const field_t<waffle::TurboComposer>& view_key, const uint<waffle::TurboComposer, uint32_t>& value);
 
 
 extern template note_triple fixed_base_scalar_mul<32>(const field_t<waffle::TurboComposer>& in, const size_t generator_index);

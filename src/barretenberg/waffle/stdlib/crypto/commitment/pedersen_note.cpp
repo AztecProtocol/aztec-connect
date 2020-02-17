@@ -150,13 +150,13 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
     return result;
 }
 
-note compute_commitment(const field_t<waffle::TurboComposer>& view_key, const uint<waffle::TurboComposer>& value)
+note compute_commitment(const field_t<waffle::TurboComposer>& view_key, const uint<waffle::TurboComposer, uint32_t>& value)
 {
     typedef field_t<waffle::TurboComposer> field_t;
 
     waffle::TurboComposer* context = value.get_context();
 
-    field_t k = static_cast<uint<waffle::TurboComposer>>(value);
+    field_t k = static_cast<uint<waffle::TurboComposer, uint32_t>>(value);
     
     note_triple p_1 = fixed_base_scalar_mul<32>(k, 0);
     note_triple p_2 = fixed_base_scalar_mul<250>(view_key, 1);
