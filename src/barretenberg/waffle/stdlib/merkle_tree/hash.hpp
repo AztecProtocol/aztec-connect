@@ -1,6 +1,8 @@
 #pragma once
+#include "../../../misc_crypto/blake2s/blake2s.hpp"
 #include "../../../misc_crypto/sha256/sha256.hpp"
 #include "../byte_array/byte_array.hpp"
+#include "../crypto/hash/blake2s.hpp"
 #include "../crypto/hash/sha256.hpp"
 #include "../group/group_utils.hpp"
 #include <iomanip>
@@ -28,10 +30,16 @@ inline bool isLittleEndian()
     return (*(char*)&num == 42);
 }
 
+template <typename ComposerContext> inline field_t<ComposerContext> hash_value(byte_array<ComposerContext> const& input)
+{
+    ASSERT(input.get_context() != nullptr);
+    return stdlib::blake2s(input);
+}
+
 inline barretenberg::fr::field_t hash_value_native(std::string const& input)
 {
     std::vector<uint8_t> inputv(input.begin(), input.end());
-    std::vector<uint8_t> output = sha256::sha256_block(inputv);
+    std::vector<uint8_t> output = blake2::blake2s(inputv);
     barretenberg::fr::field_t result = barretenberg::fr::zero;
     if (isLittleEndian()) {
         result.data[0] = __builtin_bswap64(*(uint64_t*)&output[24]);
@@ -50,13 +58,6 @@ inline barretenberg::fr::field_t hash_value_native(std::string const& input)
 inline barretenberg::fr::field_t compress_native(std::vector<barretenberg::fr::field_t> const& input)
 {
     return group_utils::compress_native(input[0], input[1]);
-}
-
-template <typename ComposerContext>
-inline byte_array<ComposerContext> hash_value(byte_array<ComposerContext> const& input)
-{
-    ASSERT(input.get_context() != nullptr);
-    return stdlib::sha256_block(input);
 }
 
 } // namespace merkle_tree

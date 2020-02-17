@@ -38,15 +38,7 @@ static std::vector<std::string> VALUES = []() {
     return values;
 }();
 
-TEST(stdlib_merkle_tree, test_sha256_native)
-{
-    std::string x = VALUES[0];
-    auto y = plonk::stdlib::merkle_tree::hash_value_native(x);
-    fr::field_t expected = { { 0x69ce1bfc9035b583, 0x0ff9f4b92510ec47, 0x24b332637da39f71, 0x150cfc08f8d67437 } };
-    EXPECT_EQ(y, expected);
-}
-
-TEST(stdlib_merkle_tree, pedersen_native_vs_circuit)
+TEST(stdlib_merkle_tree, compress_native_vs_circuit)
 {
     fr::field_t x =
         fr::to_montgomery_form({ { 0x5ec473eb273a8011, 0x50160109385471ca, 0x2f3095267e02607d, 0x02586f4a39e69b86 } });
@@ -57,7 +49,7 @@ TEST(stdlib_merkle_tree, pedersen_native_vs_circuit)
     EXPECT_TRUE(fr::eq(z.get_value(), zz));
 }
 
-TEST(stdlib_merkle_tree, sha256_native_vs_circuit)
+TEST(stdlib_merkle_tree, hash_value_native_vs_circuit)
 {
     std::string x = VALUES[1];
     Composer composer = Composer();

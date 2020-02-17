@@ -4,7 +4,6 @@
 #include <barretenberg/waffle/composer/turbo_composer.hpp>
 #include <barretenberg/waffle/stdlib/crypto/commitment/pedersen_note.hpp>
 #include <barretenberg/waffle/stdlib/merkle_tree/merkle_tree.hpp>
-#include <barretenberg/waffle/stdlib/merkle_tree/sha256_value.hpp>
 
 using namespace barretenberg;
 using namespace plonk;
@@ -189,7 +188,7 @@ destroy_note_context create_destroy_note_context(rollup_context& ctx, field_t co
         .write(byte_array(note_data.first.secret).slice(4, 28));
 
     // We have to convert the byte_array into a field_t to get the montgomery form. Can we avoid this?
-    field_t nullifier_index = stdlib::merkle_tree::sha256_value(note_hash_data);
+    field_t nullifier_index = stdlib::merkle_tree::hash_value(note_hash_data);
     uint128_t nullifier_index_raw = field_to_uint128(nullifier_index.get_value());
 
     byte_array nullifier_value(&ctx.composer);
@@ -222,7 +221,6 @@ destroy_note_context create_destroy_note_context(rollup_context& ctx, field_t co
 void destroy_note(rollup_context& ctx, destroy_note_context const& destroy_ctx)
 {
     // Check that the note we want to destroy exists.
-    std::cout << "before assert " << ctx.composer.get_num_gates() << std::endl;
     stdlib::merkle_tree::assert_check_membership(
         ctx.composer, destroy_ctx.data_root, destroy_ctx.data_path, destroy_ctx.data_value, destroy_ctx.data_index);
 
