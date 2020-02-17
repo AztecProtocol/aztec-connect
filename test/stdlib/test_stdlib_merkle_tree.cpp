@@ -12,7 +12,6 @@
 #include <barretenberg/waffle/stdlib/field/field.hpp>
 #include <barretenberg/waffle/stdlib/merkle_tree/hash.hpp>
 #include <barretenberg/waffle/stdlib/merkle_tree/merkle_tree.hpp>
-#include <barretenberg/waffle/stdlib/merkle_tree/sha256_value.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -42,20 +41,41 @@ static std::vector<std::string> VALUES = []() {
 TEST(stdlib_merkle_tree, test_sha256_native)
 {
     std::string x = VALUES[0];
-    auto y = plonk::stdlib::merkle_tree::sha256(x);
+    auto y = plonk::stdlib::merkle_tree::hash_value_native(x);
     fr::field_t expected = { { 0x69ce1bfc9035b583, 0x0ff9f4b92510ec47, 0x24b332637da39f71, 0x150cfc08f8d67437 } };
     EXPECT_EQ(y, expected);
 }
 
+TEST(stdlib_merkle_tree, pedersen_native_vs_circuit)
+{
+    fr::field_t x =
+        fr::to_montgomery_form({ { 0x5ec473eb273a8011, 0x50160109385471ca, 0x2f3095267e02607d, 0x02586f4a39e69b86 } });
+    Composer composer = Composer();
+    witness_t y = witness_t(&composer, x);
+    auto z = plonk::stdlib::pedersen::compress(y, y);
+    auto zz = stdlib::group_utils::compress_native(x, x);
+    EXPECT_TRUE(fr::eq(z.get_value(), zz));
+}
+
+TEST(stdlib_merkle_tree, sha256_native_vs_circuit)
+{
+    std::string x = VALUES[1];
+    Composer composer = Composer();
+    byte_array y(&composer, x);
+    field_t z = plonk::stdlib::merkle_tree::hash_value(y);
+    fr::field_t zz = plonk::stdlib::merkle_tree::hash_value_native(x);
+    EXPECT_TRUE(fr::eq(z.get_value(), zz));
+}
+
 TEST(stdlib_merkle_tree, test_memory_store)
 {
-    fr::field_t e00 = plonk::stdlib::merkle_tree::sha256(VALUES[1]);
-    fr::field_t e01 = plonk::stdlib::merkle_tree::sha256(VALUES[2]);
-    fr::field_t e02 = plonk::stdlib::merkle_tree::sha256(VALUES[3]);
-    fr::field_t e03 = plonk::stdlib::merkle_tree::sha256(VALUES[4]);
-    fr::field_t e10 = stdlib::merkle_tree::hash({ e00, e01 });
-    fr::field_t e11 = stdlib::merkle_tree::hash({ e02, e03 });
-    fr::field_t root = stdlib::merkle_tree::hash({ e10, e11 });
+    fr::field_t e00 = plonk::stdlib::merkle_tree::hash_value_native(VALUES[1]);
+    fr::field_t e01 = plonk::stdlib::merkle_tree::hash_value_native(VALUES[2]);
+    fr::field_t e02 = plonk::stdlib::merkle_tree::hash_value_native(VALUES[3]);
+    fr::field_t e03 = plonk::stdlib::merkle_tree::hash_value_native(VALUES[4]);
+    fr::field_t e10 = stdlib::merkle_tree::compress_native({ e00, e01 });
+    fr::field_t e11 = stdlib::merkle_tree::compress_native({ e02, e03 });
+    fr::field_t root = stdlib::merkle_tree::compress_native({ e10, e11 });
 
     stdlib::merkle_tree::MemoryStore db(2);
 
@@ -305,27 +325,6 @@ TEST(stdlib_merkle_tree, test_leveldb_get_hash_path_layers)
         EXPECT_EQ(before[1], after[1]);
         EXPECT_NE(before[2], after[2]);
     }
-}
-
-TEST(stdlib_merkle_tree, pedersen_native_vs_circuit)
-{
-    fr::field_t x =
-        fr::to_montgomery_form({ { 0x5ec473eb273a8011, 0x50160109385471ca, 0x2f3095267e02607d, 0x02586f4a39e69b86 } });
-    Composer composer = Composer();
-    witness_t y = witness_t(&composer, x);
-    auto z = plonk::stdlib::pedersen::compress(y, y);
-    auto zz = stdlib::group_utils::compress_native(x, x);
-    EXPECT_TRUE(fr::eq(z.get_value(), zz));
-}
-
-TEST(stdlib_merkle_tree, sha256_native_vs_circuit)
-{
-    std::string x = VALUES[1];
-    Composer composer = Composer();
-    byte_array y(&composer, x);
-    field_t z = plonk::stdlib::merkle_tree::sha256_value(y);
-    fr::field_t zz = plonk::stdlib::merkle_tree::sha256(x);
-    EXPECT_TRUE(fr::eq(z.get_value(), zz));
 }
 
 TEST(stdlib_merkle_tree, test_check_membership)

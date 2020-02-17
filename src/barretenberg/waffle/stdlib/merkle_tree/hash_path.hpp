@@ -17,7 +17,7 @@ template <typename Ctx> using hash_path = std::vector<std::pair<field_t<Ctx>, fi
 inline fr_hash_path get_new_hash_path(fr_hash_path const& old_path, uint128_t index, std::string const& value)
 {
     fr_hash_path path = old_path;
-    barretenberg::fr::field_t current = sha256(value);
+    barretenberg::fr::field_t current = hash_value_native(value);
     for (size_t i = 0; i < old_path.size(); ++i) {
         bool path_bit = index & 0x1;
         if (path_bit) {
@@ -25,7 +25,7 @@ inline fr_hash_path get_new_hash_path(fr_hash_path const& old_path, uint128_t in
         } else {
             path[i].first = current;
         }
-        current = hash({ path[i].first, path[i].second });
+        current = compress_native({ path[i].first, path[i].second });
         index /= 2;
     }
     return path;
@@ -42,7 +42,7 @@ template <typename Ctx> inline hash_path<Ctx> create_witness_hash_path(Ctx& ctx,
 
 inline fr::field_t get_hash_path_root(fr_hash_path const& input)
 {
-    return hash({ input[input.size() - 1].first, input[input.size() - 1].second });
+    return compress_native({ input[input.size() - 1].first, input[input.size() - 1].second });
 }
 
 } // namespace merkle_tree

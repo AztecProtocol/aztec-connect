@@ -3,6 +3,7 @@
 #include "leveldb_store.hpp"
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
+#include <map>
 #include <set>
 
 namespace plonk {

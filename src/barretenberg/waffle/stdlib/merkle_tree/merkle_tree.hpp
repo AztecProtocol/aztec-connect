@@ -6,7 +6,6 @@
 #include "../int_utils.hpp"
 #include "leveldb_store.hpp"
 #include "memory_store.hpp"
-#include "sha256_value.hpp"
 
 namespace waffle {
 class TurboComposer;
@@ -25,7 +24,7 @@ bool_t<Ctx> check_membership(Ctx& ctx,
                              byte_array<Ctx> const& value,
                              byte_array<Ctx> const& index)
 {
-    field_t current = sha256_value(value);
+    field_t current = hash_value(value);
     bool_t is_member = witness_t(&ctx, true);
 
     for (size_t i = 0; i < hashes.size(); ++i) {

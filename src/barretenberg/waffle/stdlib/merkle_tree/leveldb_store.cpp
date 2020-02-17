@@ -35,11 +35,11 @@ LevelDbStore::LevelDbStore(std::string const& db_path, size_t depth)
     tx_.reset(new leveldb_tx(*db_));
 
     // Compute the zero values at each layer.
-    auto current = sha256(std::string(LEAF_BYTES, 0));
+    auto current = hash_value_native(std::string(LEAF_BYTES, 0));
     for (size_t i = 0; i < depth; ++i) {
         zero_hashes_[i] = current;
         // std::cout << "zero hash level " << i << ": " << current << std::endl;
-        current = hash({ current, current });
+        current = compress_native({ current, current });
     }
 
     std::string root;
@@ -99,7 +99,7 @@ fr_hash_path LevelDbStore::get_hash_path(index_t index)
                     } else {
                         path[j] = std::make_pair(current, zero_hashes_[j]);
                     }
-                    current = hash({ path[j].first, path[j].second });
+                    current = compress_native({ path[j].first, path[j].second });
                 }
             } else {
                 size_t common_bits = count_leading_zeros(diff);
@@ -119,7 +119,7 @@ fr_hash_path LevelDbStore::get_hash_path(index_t index)
                     } else {
                         path[j] = std::make_pair(current, zero_hashes_[j]);
                     }
-                    current = hash({ path[j].first, path[j].second });
+                    current = compress_native({ path[j].first, path[j].second });
                 }
             }
             break;
@@ -167,7 +167,7 @@ fr::field_t LevelDbStore::get_element(fr::field_t const& root, index_t index, si
 
 void LevelDbStore::update_element(index_t index, value_t const& value)
 {
-    fr::field_t sha_leaf = sha256(value);
+    fr::field_t sha_leaf = hash_value_native(value);
 
     auto new_root = update_element(root_, sha_leaf, index, depth_);
 
@@ -192,7 +192,7 @@ void LevelDbStore::rollback()
 
     std::string root;
     leveldb::Status status = db_->Get(leveldb::ReadOptions(), "root", &root);
-    root_ = status.ok() ? from_string(root) : hash({ zero_hashes_.back(), zero_hashes_.back() });
+    root_ = status.ok() ? from_string(root) : compress_native({ zero_hashes_.back(), zero_hashes_.back() });
 
     std::string size;
     status = db_->Get(leveldb::ReadOptions(), "size", &size);
@@ -204,7 +204,7 @@ fr::field_t LevelDbStore::binary_put(index_t a_index, fr::field_t const& a, fr::
     bool a_is_right = (a_index >> (height - 1)) & 0x1;
     auto left = a_is_right ? b : a;
     auto right = a_is_right ? a : b;
-    auto key = hash({ left, right });
+    auto key = compress_native({ left, right });
     put(key, left, right);
     // std::cout << "BINARY PUT height: " << height << " key:" << key << " left:" << left << " right:" << right
     //<< std::endl;
@@ -301,7 +301,7 @@ fr::field_t LevelDbStore::update_element(fr::field_t const& root,
         } else {
             left = subtree_root;
         }
-        auto new_root = hash({ left, right });
+        auto new_root = compress_native({ left, right });
         put(new_root, left, right);
         // TODO: Perhaps delete old node?
         return new_root;
@@ -321,7 +321,7 @@ fr::field_t LevelDbStore::compute_zero_path_hash(size_t height, index_t index, f
             right = zero_hashes_[i];
             left = current;
         }
-        current = hash({ is_right ? zero_hashes_[i] : current, is_right ? current : zero_hashes_[i] });
+        current = compress_native({ is_right ? zero_hashes_[i] : current, is_right ? current : zero_hashes_[i] });
     }
     return current;
 }
