@@ -1,6 +1,20 @@
 # barretenburg
 # copyright 2019 Spilsbury Holdings
 
+include(FetchContent)
+
+FetchContent_Declare(
+    leveldb
+    GIT_REPOSITORY https://github.com/google/leveldb.git
+    GIT_TAG 1.22
+)
+
+FetchContent_GetProperties(leveldb)
+if(NOT leveldb_POPULATED)
+    FetchContent_Populate(leveldb)
+    add_subdirectory(${leveldb_SOURCE_DIR} ${leveldb_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
 add_compile_options(-Werror -Wall -Wextra -Wconversion -Wsign-conversion)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -10,6 +24,7 @@ endif()
 add_library(
     barretenberg STATIC
     types.hpp
+    uint256/uint256.hpp
     fields/field_impl_int128.tcc
     fields/field_impl_asm.tcc
     fields/field.hpp
@@ -80,6 +95,8 @@ add_library(
     waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
     waffle/proof_system/widgets/turbo_range_widget.cpp
     waffle/proof_system/widgets/turbo_range_widget.hpp
+    waffle/proof_system/widgets/turbo_logic_widget.cpp
+    waffle/proof_system/widgets/turbo_logic_widget.hpp
     waffle/proof_system/prover/prover.cpp
     waffle/proof_system/prover/prover.hpp
     waffle/proof_system/verifier/verifier.cpp
@@ -104,16 +121,29 @@ add_library(
     waffle/stdlib/bool/bool.hpp
     waffle/stdlib/field/field.cpp
     waffle/stdlib/field/field.hpp
+    waffle/stdlib/uint/arithmetic.cpp
+    waffle/stdlib/uint/logic.cpp
+    waffle/stdlib/uint/comparison.cpp
     waffle/stdlib/uint/uint.cpp
     waffle/stdlib/uint/uint.hpp
+    waffle/stdlib/uint/noir_uint.hpp
     waffle/stdlib/uint32/uint32.hpp
     waffle/stdlib/bitarray/bitarray.cpp
     waffle/stdlib/bitarray/bitarray.hpp
+    waffle/stdlib/byte_array/byte_array.cpp
+    waffle/stdlib/byte_array/byte_array.hpp
     waffle/stdlib/mimc.cpp
     waffle/stdlib/mimc.hpp
     waffle/stdlib/crypto/crypto.hpp
     waffle/stdlib/crypto/hash/sha256.cpp
     waffle/stdlib/crypto/hash/sha256.hpp
+    waffle/stdlib/merkle_tree/hash.hpp
+    waffle/stdlib/merkle_tree/merkle_tree.cpp
+    waffle/stdlib/merkle_tree/merkle_tree.hpp
+    waffle/stdlib/merkle_tree/memory_store.hpp
+    waffle/stdlib/merkle_tree/memory_store.cpp
+    waffle/stdlib/merkle_tree/leveldb_store.hpp
+    waffle/stdlib/merkle_tree/leveldb_store.cpp
     waffle/stdlib/crypto/hash/pedersen.cpp
     waffle/stdlib/crypto/hash/pedersen.hpp
     waffle/stdlib/crypto/schnorr/schnorr.cpp
@@ -146,6 +176,8 @@ set_target_properties(
 
 target_link_libraries(
     barretenberg
+    PRIVATE
+    leveldb
 )
 
 if(PROFILING)
@@ -154,6 +186,7 @@ if(PROFILING)
         main.cpp
         fields/asm_macros.hpp
         types.hpp
+        uint256/uint256.hpp
         fields/field_impl_int128.tcc
         fields/field_impl_asm.tcc
         fields/field.hpp
@@ -224,6 +257,8 @@ if(PROFILING)
         waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
         waffle/proof_system/widgets/turbo_range_widget.cpp
         waffle/proof_system/widgets/turbo_range_widget.hpp
+        waffle/proof_system/widgets/turbo_logic_widget.cpp
+        waffle/proof_system/widgets/turbo_logic_widget.hpp
         waffle/proof_system/prover/prover.cpp
         waffle/proof_system/prover/prover.hpp
         waffle/proof_system/verifier/verifier.cpp
@@ -248,16 +283,28 @@ if(PROFILING)
         waffle/stdlib/bool/bool.hpp
         waffle/stdlib/field/field.cpp
         waffle/stdlib/field/field.hpp
+        waffle/stdlib/uint32/uint32.hpp
+        waffle/stdlib/uint/arithmetic.cpp
+        waffle/stdlib/uint/logic.cpp
+        waffle/stdlib/uint/comparison.cpp
         waffle/stdlib/uint/uint.cpp
         waffle/stdlib/uint/uint.hpp
-        waffle/stdlib/uint32/uint32.hpp
+        waffle/stdlib/uint/noir_uint.hpp
         waffle/stdlib/bitarray/bitarray.cpp
         waffle/stdlib/bitarray/bitarray.hpp
+        waffle/stdlib/byte_array/byte_array.cpp
+        waffle/stdlib/byte_array/byte_array.hpp
         waffle/stdlib/mimc.cpp
         waffle/stdlib/mimc.hpp
         waffle/stdlib/crypto/crypto.hpp
         waffle/stdlib/crypto/hash/sha256.cpp
         waffle/stdlib/crypto/hash/sha256.hpp
+        waffle/stdlib/merkle_tree/merkle_tree.cpp
+        waffle/stdlib/merkle_tree/merkle_tree.hpp
+        waffle/stdlib/merkle_tree/memory_store.hpp
+        waffle/stdlib/merkle_tree/memory_store.cpp
+        waffle/stdlib/merkle_tree/leveldb_store.hpp
+        waffle/stdlib/merkle_tree/leveldb_store.cpp
         waffle/stdlib/crypto/hash/pedersen.cpp
         waffle/stdlib/crypto/hash/pedersen.hpp
         waffle/stdlib/crypto/schnorr/schnorr.cpp
@@ -268,6 +315,8 @@ if(PROFILING)
 
     target_link_libraries(
         barretenberg_profiling
+        PRIVATE
+        leveldb
     )
 
     set_target_properties(

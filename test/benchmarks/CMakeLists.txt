@@ -25,25 +25,14 @@ add_executable(
     bench_barretenberg.cpp
 )
 
-if (WIN32)
-    target_link_libraries(
-        barretenberg_bench
-        PUBLIC
-        barretenberg
-        PRIVATE
-        benchmark
-        wsock32
-        ws2_32
-    )
-else()
-    target_link_libraries(
-        barretenberg_bench
-        PUBLIC
-        barretenberg
-        PRIVATE
-        benchmark
-    )
-endif()
+target_link_libraries(
+    barretenberg_bench
+    PUBLIC
+    barretenberg
+    PRIVATE
+    benchmark
+    ${private_os_libs}
+)
 
 target_include_directories(
     barretenberg_bench
@@ -55,7 +44,6 @@ target_include_directories(
 set_target_properties(
     barretenberg_bench
     PROPERTIES
-
     RUNTIME_OUTPUT_DIRECTORY ..
 )
 
@@ -64,25 +52,14 @@ add_executable(
     bench_plonk.cpp
 )
 
-if (WIN32)
-    target_link_libraries(
-        plonk_bench
-        PUBLIC
-        barretenberg
-        PRIVATE
-        benchmark
-        wsock32
-        ws2_32
-    )
-else()
-    target_link_libraries(
-        plonk_bench
-        PUBLIC
-        barretenberg
-        PRIVATE
-        benchmark
-    )
-endif()
+target_link_libraries(
+    plonk_bench
+    PUBLIC
+    barretenberg
+    PRIVATE
+    benchmark
+    ${private_os_libs}
+)
 
 target_include_directories(
     plonk_bench
@@ -94,7 +71,6 @@ target_include_directories(
 set_target_properties(
     plonk_bench
     PROPERTIES
-
     RUNTIME_OUTPUT_DIRECTORY ..
 )
 
@@ -103,25 +79,14 @@ add_executable(
     bench_sha256.cpp
 )
 
-if (WIN32)
-    target_link_libraries(
-        sha256_bench
-        PUBLIC
-        barretenberg
-        PRIVATE
-        benchmark
-        wsock32
-        ws2_32
-    )
-else()
-    target_link_libraries(
-        sha256_bench
-        PUBLIC
-        barretenberg
-        PRIVATE
-        benchmark
-    )
-endif()
+target_link_libraries(
+    sha256_bench
+    PUBLIC
+    barretenberg
+    PRIVATE
+    benchmark
+    ${private_os_libs}
+)
 
 target_include_directories(
     sha256_bench
@@ -133,7 +98,6 @@ target_include_directories(
 set_target_properties(
     sha256_bench
     PROPERTIES
-
     RUNTIME_OUTPUT_DIRECTORY ..
 )
 
@@ -143,25 +107,14 @@ add_executable(
     bench_mimc.cpp
 )
 
-if (WIN32)
-    target_link_libraries(
-        mimc_bench
-        PUBLIC
-        barretenberg
-        PRIVATE
-        benchmark
-        wsock32
-        ws2_32
-    )
-else()
-    target_link_libraries(
-        mimc_bench
-        PUBLIC
-        barretenberg
-        PRIVATE
-        benchmark
-    )
-endif()
+target_link_libraries(
+    mimc_bench
+    PUBLIC
+    barretenberg
+    PRIVATE
+    benchmark
+    ${private_os_libs}
+)
 
 target_include_directories(
     mimc_bench
@@ -173,7 +126,35 @@ target_include_directories(
 set_target_properties(
     mimc_bench
     PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ..
+)
 
+
+add_executable(
+    leveldb_bench
+    bench_leveldb.cpp
+)
+
+target_link_libraries(
+    leveldb_bench
+    PUBLIC
+    barretenberg
+    PRIVATE
+    benchmark
+    leveldb
+    ${private_os_libs}
+)
+
+target_include_directories(
+    leveldb_bench
+    PRIVATE
+        ${private_include_dir}
+        ${include_dir}
+)
+
+set_target_properties(
+    leveldb_bench
+    PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ..
 )
 

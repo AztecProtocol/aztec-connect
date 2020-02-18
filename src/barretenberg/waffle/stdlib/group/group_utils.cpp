@@ -2,44 +2,42 @@
 
 #include "../../../curves/grumpkin/grumpkin.hpp"
 
-namespace plonk
-{
-namespace stdlib
-{
-namespace group_utils
-{
-namespace
-{
-    static constexpr size_t num_generators = 128;
-    static constexpr size_t bit_length = 256;
-    static constexpr size_t quad_length = bit_length / 2;
-    static std::array<grumpkin::g1::affine_element, num_generators> generators;
-    static std::array<std::array<fixed_base_ladder, quad_length>, num_generators> ladders;
-    static std::array<std::array<fixed_base_ladder, quad_length>, num_generators> hash_ladders;
+#ifndef NO_MULTITHREADING
+#include <omp.h>
+#endif
 
-    const auto init = []() {
-        generators = grumpkin::g1::derive_generators<num_generators>();
-        constexpr size_t first_generator_segment = 126;
-        constexpr size_t second_generator_segment = 2;
-        for (size_t i = 0; i < num_generators; ++i)
-        {
-            compute_fixed_base_ladder(generators[i], &ladders[i][0]);
-        }
-        for (size_t i = 0; i < num_generators / 2; ++i)
-        {
-            for (size_t j = 0; j < first_generator_segment; ++j)
-            {
-                hash_ladders[i][j] = ladders[i * 2][j + (quad_length - first_generator_segment)];
-            }
+namespace plonk {
+namespace stdlib {
+namespace group_utils {
+namespace {
 
-            for (size_t j = 0; j < second_generator_segment; ++j)
-            {
-                hash_ladders[i][j + first_generator_segment] = ladders[i * 2 + 1][j + (quad_length - second_generator_segment)];
-            }
+static constexpr size_t num_generators = 128;
+static constexpr size_t bit_length = 256;
+static constexpr size_t quad_length = bit_length / 2;
+static std::array<grumpkin::g1::affine_element, num_generators> generators;
+static std::array<std::array<fixed_base_ladder, quad_length>, num_generators> ladders;
+static std::array<std::array<fixed_base_ladder, quad_length>, num_generators> hash_ladders;
+
+const auto init = []() {
+    generators = grumpkin::g1::derive_generators<num_generators>();
+    constexpr size_t first_generator_segment = 126;
+    constexpr size_t second_generator_segment = 2;
+    for (size_t i = 0; i < num_generators; ++i) {
+        compute_fixed_base_ladder(generators[i], &ladders[i][0]);
+    }
+    for (size_t i = 0; i < num_generators / 2; ++i) {
+        for (size_t j = 0; j < first_generator_segment; ++j) {
+            hash_ladders[i][j] = ladders[i * 2][j + (quad_length - first_generator_segment)];
         }
-        return 1;
-    }();
-}
+
+        for (size_t j = 0; j < second_generator_segment; ++j) {
+            hash_ladders[i][j + first_generator_segment] =
+                ladders[i * 2 + 1][j + (quad_length - second_generator_segment)];
+        }
+    }
+    return 1;
+}();
+} // namespace
 
 void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fixed_base_ladder* ladder)
 {
@@ -77,12 +75,14 @@ void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fi
         x_beta_times_nine = grumpkin::fq::add(x_beta_times_nine, x_beta);
 
         grumpkin::fq::field_t x_alpha_1 = grumpkin::fq::mul(grumpkin::fq::sub(x_gamma, x_beta), eight_inverse);
-        grumpkin::fq::field_t x_alpha_2 = grumpkin::fq::mul(grumpkin::fq::sub(x_beta_times_nine, x_gamma), eight_inverse);
+        grumpkin::fq::field_t x_alpha_2 =
+            grumpkin::fq::mul(grumpkin::fq::sub(x_beta_times_nine, x_gamma), eight_inverse);
 
         grumpkin::fq::field_t T0 = grumpkin::fq::sub(x_beta, x_gamma);
         y_denominators[i] = (grumpkin::fq::add(grumpkin::fq::add(T0, T0), T0));
 
-        grumpkin::fq::field_t y_alpha_1 = grumpkin::fq::sub(grumpkin::fq::add(grumpkin::fq::add(y_beta, y_beta), y_beta), y_gamma);
+        grumpkin::fq::field_t y_alpha_1 =
+            grumpkin::fq::sub(grumpkin::fq::add(grumpkin::fq::add(y_beta, y_beta), y_beta), y_gamma);
         grumpkin::fq::field_t T1 = grumpkin::fq::mul(x_gamma, y_beta);
         T1 = grumpkin::fq::add(grumpkin::fq::add(T1, T1), T1);
         grumpkin::fq::field_t y_alpha_2 = grumpkin::fq::sub(grumpkin::fq::mul(x_beta, y_gamma), T1);
@@ -93,8 +93,7 @@ void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fi
         ladder[i].q_y_2 = y_alpha_2;
     }
     grumpkin::fq::batch_invert(&y_denominators[0], quad_length);
-    for (size_t i = 0; i < quad_length; ++i)
-    {
+    for (size_t i = 0; i < quad_length; ++i) {
         grumpkin::fq::__mul(ladder[i].q_y_1, y_denominators[i], ladder[i].q_y_1);
         grumpkin::fq::__mul(ladder[i].q_y_2, y_denominators[i], ladder[i].q_y_2);
     }
@@ -105,15 +104,11 @@ const fixed_base_ladder* get_ladder(const size_t generator_index, const size_t n
 {
     // find n, such that 2n + 1 >= num_bits
     size_t n;
-    if (num_bits == 0)
-    {
+    if (num_bits == 0) {
         n = 0;
-    }
-    else
-    {
+    } else {
         n = (num_bits - 1) >> 1;
-        if (((n << 1) + 1)< num_bits)
-        {
+        if (((n << 1) + 1) < num_bits) {
             ++n;
         }
     }
@@ -125,15 +120,11 @@ const fixed_base_ladder* get_hash_ladder(const size_t generator_index, const siz
 {
     // find n, such that 2n + 1 >= num_bits
     size_t n;
-    if (num_bits == 0)
-    {
+    if (num_bits == 0) {
         n = 0;
-    }
-    else
-    {
+    } else {
         n = (num_bits - 1) >> 1;
-        if (((n << 1) + 1)< num_bits)
-        {
+        if (((n << 1) + 1) < num_bits) {
             ++n;
         }
     }
@@ -145,7 +136,6 @@ grumpkin::g1::affine_element get_generator(const size_t generator_index)
 {
     return generators[generator_index];
 }
-
 
 grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const size_t hash_index)
 {
@@ -168,17 +158,19 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
     uint64_t wnaf_entries[num_quads + 2] = { 0 };
     bool skew = false;
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
-    
+
     grumpkin::g1::element accumulator;
     grumpkin::g1::affine_to_jacobian(ladder[0].one, accumulator);
-    if (skew)
-    {
-        grumpkin::g1::mixed_add(accumulator, plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1), accumulator);
+    if (skew) {
+        grumpkin::g1::mixed_add(
+            accumulator, plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1), accumulator);
     }
 
     for (size_t i = 0; i < num_quads; ++i) {
-        uint64_t entry = wnaf_entries[i + 1];;
-        const grumpkin::g1::affine_element& point_to_add = ((entry & 0xffffff) == 1) ? ladder[i + 1].three : ladder[i + 1].one;
+        uint64_t entry = wnaf_entries[i + 1];
+        ;
+        const grumpkin::g1::affine_element& point_to_add =
+            ((entry & 0xffffff) == 1) ? ladder[i + 1].three : ladder[i + 1].one;
         uint64_t predicate = (entry >> 31U) & 1U;
         grumpkin::g1::mixed_add_or_sub(accumulator, point_to_add, accumulator, predicate);
     }
@@ -187,11 +179,26 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
 
 grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left, const grumpkin::fq::field_t& right, const size_t hash_index)
 {
-    grumpkin::g1::element first = hash_single(left, hash_index);
-    grumpkin::g1::element second = hash_single(right, hash_index + 1);
-    grumpkin::g1::add(first, second, first);
-    first = grumpkin::g1::normalize(first);
-    return first.x;
+#ifndef NO_MULTITHREADING
+    grumpkin::fq::field_t in[2] = { left, right };
+    grumpkin::g1::element out[2];
+#pragma omp parallel num_threads(2)
+    {
+        size_t i = (size_t)omp_get_thread_num();
+        out[i] = hash_single(in[i], i);
+    }
+    grumpkin::g1::element r;
+    grumpkin::g1::add(out[0], out[1], r);
+    r = grumpkin::g1::normalize(r);
+    return r.x;
+#else
+    grumpkin::g1::element r;
+    grumpkin::g1::element first = hash_single(left, 0);
+    grumpkin::g1::element second = hash_single(right, 1);
+    grumpkin::g1::add(first, second, r);
+    r = grumpkin::g1::normalize(r);
+    return r.x;
+#endif
 }
 
 

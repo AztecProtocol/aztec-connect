@@ -21,7 +21,6 @@
 namespace barretenberg {
 namespace scalar_multiplication {
 
-
 void generate_pippenger_point_table(g1::affine_element* points, g1::affine_element* table, size_t num_points)
 {
     // iterate backwards, so that `points` and `table` can point to the same memory location
@@ -377,10 +376,10 @@ inline g1::element pippenger_internal(g1::affine_element* points, fr::field_t* s
     return result;
 }
 
-
 // TODO: this is a lot of code duplication, need to fix that once the method has stabilized
 template <size_t num_points>
-inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_state& state, g1::affine_element* points)
+inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_state& state,
+                                                         g1::affine_element* points)
 {
     constexpr size_t num_rounds = get_num_rounds(num_points);
 #ifndef NO_MULTITHREADING
@@ -392,7 +391,6 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
     const size_t num_points_per_thread = num_points / num_threads; // assume a power of 2
 
     g1::element* thread_accumulators = static_cast<g1::element*>(aligned_alloc(64, num_threads * sizeof(g1::element)));
-
 
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
@@ -486,7 +484,6 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
     free(thread_accumulators);
     return result;
 }
-
 
 template <size_t num_initial_points>
 inline g1::element pippenger_unsafe_internal(g1::affine_element* points, fr::field_t* scalars)
@@ -609,17 +606,17 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, c
  * It's pippenger! But this one has go-faster stripes and a prediliction for questionable life choices.
  * We use affine-addition formula in this method, which paradoxically is ~45% faster than the mixed addition formulae.
  * See `scalar_multiplication.cpp` for a more detailed description.
- * 
+ *
  * It's...unsafe, because we assume that the incomplete addition formula exceptions are not triggered.
  * We don't bother to check for this to avoid conditional branches in a critical section of our code.
  * This is fine for situations where your bases are linearly independent (i.e. KZG10 polynomial commitments),
  * because triggering the incomplete addition exceptions is about as hard as solving the disrete log problem.
- * 
+ *
  * This is ok for the prover, but GIANT RED CLAXON WARNINGS FOR THE VERIFIER
  * Don't use this in a verification algorithm! That would be a really bad idea.
- * Unless you're a malicious adversary, then it would be a great idea! 
- * 
- **/ 
+ * Unless you're a malicious adversary, then it would be a great idea!
+ *
+ **/
 g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, const size_t num_initial_points)
 {
     // our windowed non-adjacent form algorthm requires that each thread can work on at least 8 points.
@@ -727,25 +724,44 @@ g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, c
     }
 }
 
-template g1::element scalar_multiplication_internal<1 << 2>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 3>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 4>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 5>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 6>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 7>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 8>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 9>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 10>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 11>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 12>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 13>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 14>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 15>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 16>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 17>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 18>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 19>(multiplication_runtime_state& state, g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 20>(multiplication_runtime_state& state, g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 2>(multiplication_runtime_state& state,
+                                                            g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 3>(multiplication_runtime_state& state,
+                                                            g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 4>(multiplication_runtime_state& state,
+                                                            g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 5>(multiplication_runtime_state& state,
+                                                            g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 6>(multiplication_runtime_state& state,
+                                                            g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 7>(multiplication_runtime_state& state,
+                                                            g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 8>(multiplication_runtime_state& state,
+                                                            g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 9>(multiplication_runtime_state& state,
+                                                            g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 10>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 11>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 12>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 13>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 14>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 15>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 16>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 17>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 18>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 19>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template g1::element scalar_multiplication_internal<1 << 20>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
 
 template void compute_wnaf_states<1 << 2>(multiplication_runtime_state& state, fr::field_t* scalars);
 template void compute_wnaf_states<1 << 3>(multiplication_runtime_state& state, fr::field_t* scalars);

@@ -1,7 +1,7 @@
 #include "./sha256.hpp"
 
 #include "../../bitarray/bitarray.hpp"
-#include "../../uint32/uint32.hpp"
+// #include "../../uint32/uint32.hpp"
 
 namespace plonk {
 namespace stdlib {
@@ -84,7 +84,7 @@ std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 
         uint32 temp1 = h + S1 + ch + internal::round_constants[i] + w[i];
         uint32 S0 = a.ror(2U) ^ a.ror(13U) ^ a.ror(22U);
         uint32 T0 = (b & c);
-        uint32 maj = (a & (b + c - (T0 * 2))) + T0; // === (a & b) ^ (a & c) ^ (b & c)
+        uint32 maj = (a & (b + c - (T0 + T0))) + T0; // === (a & b) ^ (a & c) ^ (b & c)
         uint32 temp2 = S0 + maj;
 
         h = g;
@@ -134,7 +134,6 @@ template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>&
         message_schedule[i] = static_cast<bool>((num_bits >> i) & 1);
     }
 
-
     std::array<uint32, 8> rolling_hash;
     prepare_constants(rolling_hash);
     for (size_t i = 0; i < num_blocks; ++i) {
@@ -148,7 +147,6 @@ template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>&
 template bitarray<waffle::StandardComposer> sha256(const bitarray<waffle::StandardComposer>& input);
 template bitarray<waffle::BoolComposer> sha256(const bitarray<waffle::BoolComposer>& input);
 template bitarray<waffle::MiMCComposer> sha256(const bitarray<waffle::MiMCComposer>& input);
-template bitarray<waffle::ExtendedComposer> sha256(const bitarray<waffle::ExtendedComposer>& input);
 template bitarray<waffle::TurboComposer> sha256(const bitarray<waffle::TurboComposer>& input);
 
 } // namespace stdlib

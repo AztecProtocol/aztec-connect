@@ -49,7 +49,7 @@ class ProverTurboArithmeticWidget : public ProverBaseWidget {
     barretenberg::polynomial& q_2;
     barretenberg::polynomial& q_3;
     barretenberg::polynomial& q_4;
-    barretenberg::polynomial& q_4_next;
+    barretenberg::polynomial& q_5;
     barretenberg::polynomial& q_m;
     barretenberg::polynomial& q_c;
     barretenberg::polynomial& q_arith;
@@ -58,7 +58,7 @@ class ProverTurboArithmeticWidget : public ProverBaseWidget {
     barretenberg::polynomial& q_2_fft;
     barretenberg::polynomial& q_3_fft;
     barretenberg::polynomial& q_4_fft;
-    barretenberg::polynomial& q_4_next_fft;
+    barretenberg::polynomial& q_5_fft;
     barretenberg::polynomial& q_m_fft;
     barretenberg::polynomial& q_c_fft;
     barretenberg::polynomial& q_arith_fft;

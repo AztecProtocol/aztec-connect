@@ -31,7 +31,7 @@ const auto init = []() {
     // memory += max_num_points * 2 * sizeof(bool);
     // printf("total memory allocated in mmu = %lu mb \n", memory / (1024UL * 1024UL));
 
-    wnaf_memory = (uint64_t*)(aligned_alloc(64, max_num_points * max_num_rounds * 2 * sizeof(uint64_t)));
+    wnaf_memory = (uint64_t*)(aligned_alloc(64, (max_num_points * max_num_rounds * 2 + 256) * sizeof(uint64_t)));
     bucket_memory = (g1::element*)(aligned_alloc(64, (max_buckets + thread_overspill) * sizeof(g1::element)));
 
     // TODO: we're allocating too much memory here, trim this down
@@ -48,7 +48,7 @@ const auto init = []() {
     memset((void*)wnaf_memory, 1, max_num_points * max_num_rounds * 2 * sizeof(uint64_t));
     memset((g1::element*)bucket_memory, 0xff, (max_buckets + thread_overspill) * sizeof(g1::element));
     memset((g1::affine_element*)point_pairs_1, 0xff, (max_num_points * 2) * sizeof(g1::affine_element));
-    memset((g1::affine_element*)point_pairs_2, 0xff, (max_buckets + thread_overspill * 4) * sizeof(g1::affine_element));
+    memset((g1::affine_element*)point_pairs_2, 0xff, (max_num_points * 2) * sizeof(g1::affine_element));
     memset((fq::field_t*)scratch_space, 0xff, (max_num_points) * sizeof(fq::field_t));
 
     memset((void*)bucket_count_memory, 0x00, max_num_points * 2 * sizeof(uint32_t));
@@ -74,7 +74,8 @@ g1::element* get_bucket_pointer()
     return bucket_memory;
 }
 
-scalar_multiplication::affine_product_runtime_state get_affine_product_runtime_state(const size_t num_threads, const size_t thread_index)
+scalar_multiplication::affine_product_runtime_state get_affine_product_runtime_state(const size_t num_threads,
+                                                                                     const size_t thread_index)
 {
     constexpr size_t max_num_points = (2 << 20);
     const size_t points_per_thread = max_num_points / num_threads;

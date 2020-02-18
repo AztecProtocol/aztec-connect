@@ -152,14 +152,13 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
     return result;
 }
 
-
 public_note encrypt_note(const private_note& plaintext)
 {
     typedef field_t<waffle::TurboComposer> field_t;
 
     waffle::TurboComposer* context = plaintext.value.get_context();
 
-    field_t k = static_cast<uint<waffle::TurboComposer>>(plaintext.value);
+    field_t k = static_cast<uint<waffle::TurboComposer, uint32_t>>(plaintext.value);
     
     note_triple p_1 = fixed_base_scalar_mul<32>(k, 0);
     note_triple p_2 = fixed_base_scalar_mul<250>(plaintext.secret, 1);

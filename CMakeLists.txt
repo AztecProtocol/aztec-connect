@@ -119,7 +119,10 @@ endif()
 add_definitions(-DBOOST_SPIRIT_X3_NO_FILESYSTEM=1 -DBARRETENBERG_SRS_PATH=\"../srs_db/transcript.dat\")
 
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)
-set(DEPENDS_DIR ${PROJECT_SOURCE_DIR}/depends)
+
+if (WIN32)
+    set(private_os_libs "wsock32 ws2_32")
+endif()
 
 add_subdirectory(src)
 

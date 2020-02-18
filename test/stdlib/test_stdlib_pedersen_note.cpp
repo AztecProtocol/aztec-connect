@@ -52,7 +52,8 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note)
     field_t ciphertext_y = public_witness_t(&composer, expected.y);
 
     plonk::stdlib::pedersen_note::public_note target_encryption{{ ciphertext_x, ciphertext_y }};
-    plonk::stdlib::uint<waffle::TurboComposer> value(32, note_value_field);
+    plonk::stdlib::uint<waffle::TurboComposer, uint32_t> value(32, note_value_field);
+
 
     plonk::stdlib::pedersen_note::private_note plaintext{ { note_owner_x, note_owner_y}, value, view_key };
 
@@ -99,7 +100,7 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note_zero)
     field_t ciphertext_y = public_witness_t(&composer, expected.y);
 
     plonk::stdlib::pedersen_note::public_note target_encryption{{ ciphertext_x, ciphertext_y }};
-    plonk::stdlib::uint<waffle::TurboComposer> value(32, note_value_field);
+    plonk::stdlib::uint<waffle::TurboComposer, uint32_t> value(32, note_value_field);
 
     plonk::stdlib::pedersen_note::private_note plaintext{ { note_owner_x, note_owner_y}, value, view_key };
 

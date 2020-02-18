@@ -10,12 +10,9 @@
 
 #include "./field/field.hpp"
 
-namespace plonk
-{
-namespace stdlib
-{
-namespace
-{
+namespace plonk {
+namespace stdlib {
+namespace {
 // mimc.cpp contains an implementation of the 'MiMC7' hash algorithm.
 // This uses the MiMC block cipher (with a permutation of x^7), and applies
 // the Miyaguchi-Preneel compression function to create a 1-way hash function.
@@ -42,8 +39,7 @@ const auto init_var = []() {
         static_cast<uint8_t>(atoi("c"))
     };
     // clang-format on
-    for (size_t i = 0; i < num_mimc_rounds; ++i)
-    {
+    for (size_t i = 0; i < num_mimc_rounds; ++i) {
         keccak256 keccak256_hash = ethash_keccak256(&inputs[0], 32);
         memcpy((void*)&inputs[0], (void*)&keccak256_hash.word64s[0], 32);
         barretenberg::fr::__to_montgomery_form(*(barretenberg::fr::field_t*)&keccak256_hash.word64s[0],
@@ -53,21 +49,19 @@ const auto init_var = []() {
 }();
 } // namespace
 
-field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer>& message,
-                                                field_t<waffle::MiMCComposer>& key)
+field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> message,
+                                                field_t<waffle::MiMCComposer> key)
 {
     // TODO: Hmm, this should really be a std::shared_ptr
     waffle::MiMCComposer* context = message.context;
     ASSERT(context != nullptr);
 
     if (!barretenberg::fr::eq(message.additive_constant, barretenberg::fr::zero) ||
-        !barretenberg::fr::eq(message.multiplicative_constant, barretenberg::fr::one))
-    {
+        !barretenberg::fr::eq(message.multiplicative_constant, barretenberg::fr::one)) {
         message = message.normalize();
     };
     if (!barretenberg::fr::eq(key.additive_constant, barretenberg::fr::zero) ||
-        !barretenberg::fr::eq(key.multiplicative_constant, barretenberg::fr::one))
-    {
+        !barretenberg::fr::eq(key.multiplicative_constant, barretenberg::fr::one)) {
         key = key.normalize();
     }
 
@@ -82,8 +76,7 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer>& m
     uint32_t x_out_idx;
     ASSERT(k_idx != static_cast<uint32_t>(-1));
     ASSERT(message.witness_index != static_cast<uint32_t>(-1));
-    for (size_t i = 0; i < num_mimc_rounds; ++i)
-    {
+    for (size_t i = 0; i < num_mimc_rounds; ++i) {
         barretenberg::fr::field_t T0;
         barretenberg::fr::field_t x_cubed;
         barretenberg::fr::__add(x_in, k, T0);
@@ -112,8 +105,7 @@ field_t<waffle::StandardComposer> mimc_block_cipher(field_t<waffle::StandardComp
 
     field_t<waffle::StandardComposer> x_in = message;
     field_t<waffle::StandardComposer> x_out(message.context);
-    for (size_t i = 0; i < num_mimc_rounds; ++i)
-    {
+    for (size_t i = 0; i < num_mimc_rounds; ++i) {
         x_out = x_in + key + field_t<waffle::StandardComposer>(message.context, mimc_round_constants[i]);
         field_t<waffle::StandardComposer> x_squared = x_out * x_out;
         field_t<waffle::StandardComposer> x_pow_four = x_squared * x_squared;
@@ -123,10 +115,9 @@ field_t<waffle::StandardComposer> mimc_block_cipher(field_t<waffle::StandardComp
     return x_out;
 }
 
-template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Composer>>& inputs)
+template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Composer>> const& inputs)
 {
-    if (inputs.size() == 0)
-    {
+    if (inputs.size() == 0) {
         field_t<Composer> out(static_cast<uint64_t>(0));
         return out;
     }
@@ -137,8 +128,7 @@ template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Compose
     field_t<Composer> key(witness_t<Composer>(context, 0U));
     field_t<Composer> x_in;
     field_t<Composer> x_out;
-    for (size_t i = 0; i < inputs.size(); ++i)
-    {
+    for (size_t i = 0; i < inputs.size(); ++i) {
         field_t<Composer> message = inputs[i];
         x_out = mimc_block_cipher(message, key);
         // combine key with the cipher output and the message
@@ -147,8 +137,8 @@ template <typename Composer> field_t<Composer> mimc7(std::vector<field_t<Compose
     return key;
 }
 
-template field_t<waffle::StandardComposer> mimc7(std::vector<field_t<waffle::StandardComposer>>& inputs);
-template field_t<waffle::MiMCComposer> mimc7(std::vector<field_t<waffle::MiMCComposer>>& inputs);
+template field_t<waffle::StandardComposer> mimc7(std::vector<field_t<waffle::StandardComposer>> const& inputs);
+template field_t<waffle::MiMCComposer> mimc7(std::vector<field_t<waffle::MiMCComposer>> const& inputs);
 
 } // namespace stdlib
 } // namespace plonk

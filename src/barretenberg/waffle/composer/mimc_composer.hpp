@@ -21,6 +21,8 @@ class MiMCComposer : public StandardComposer {
         q_mimc_coefficient.reserve(size_hint);
         q_mimc_selector.reserve(size_hint);
         features |= static_cast<size_t>(Features::MIMC_SELECTORS);
+        q_mimc_coefficient.push_back(barretenberg::fr::zero);
+        q_mimc_selector.push_back(barretenberg::fr::zero);
     };
     MiMCComposer(MiMCComposer&& other) = default;
     MiMCComposer& operator=(MiMCComposer&& other) = default;
@@ -41,6 +43,135 @@ class MiMCComposer : public StandardComposer {
     void create_noop_gate();
     void create_dummy_gates();
     size_t get_num_constant_gates() const override { return StandardComposer::get_num_constant_gates(); }
+
+    std::vector<uint32_t> create_range_constraint(const uint32_t witness_index, const size_t num_bits)
+    {
+        if (current_output_wire != static_cast<uint32_t>(-1)) {
+            create_noop_gate();
+        }
+        const size_t old_n = n;
+        std::vector<uint32_t> out = StandardComposer::create_range_constraint(witness_index, num_bits);
+        const size_t new_n = n;
+        const size_t diff = new_n - old_n;
+        for (size_t i = 0; i < diff; ++i)
+        {
+            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+        }
+        current_output_wire = static_cast<uint32_t>(-1);
+        return out;
+    };
+
+    accumulator_triple create_logic_constraint(const uint32_t a,
+                                               const uint32_t b,
+                                               const size_t num_bits,
+                                               bool is_xor_gate)
+    {
+        if (current_output_wire != static_cast<uint32_t>(-1)) {
+            create_noop_gate();
+        }
+        const size_t old_n = n;
+        accumulator_triple out = StandardComposer::create_logic_constraint(a, b, num_bits, is_xor_gate);
+        const size_t new_n = n;
+        const size_t diff = new_n - old_n;
+        for (size_t i = 0; i < diff; ++i)
+        {
+            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+        }
+        current_output_wire = static_cast<uint32_t>(-1);
+        return out;
+    };
+
+    void create_big_add_gate(const add_quad& in)
+    {
+        if (current_output_wire != static_cast<uint32_t>(-1)) {
+            create_noop_gate();
+        }
+        const size_t old_n = n;
+        StandardComposer::create_big_add_gate(in);
+        const size_t new_n = n;
+        const size_t diff = new_n - old_n;
+        for (size_t i = 0; i < diff; ++i)
+        {
+            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+        }
+        current_output_wire = static_cast<uint32_t>(-1);
+    }
+    void create_big_add_gate_with_bit_extraction(const add_quad& in)
+    {
+        if (current_output_wire != static_cast<uint32_t>(-1)) {
+            create_noop_gate();
+        }
+        const size_t old_n = n;
+        StandardComposer::create_big_add_gate_with_bit_extraction(in);
+        const size_t new_n = n;
+        const size_t diff = new_n - old_n;
+        for (size_t i = 0; i < diff; ++i)
+        {
+            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+        }
+        current_output_wire = static_cast<uint32_t>(-1);
+    }
+    void create_big_mul_gate(const mul_quad& in)
+    {
+        if (current_output_wire != static_cast<uint32_t>(-1)) {
+            create_noop_gate();
+        }
+        const size_t old_n = n;
+        StandardComposer::create_big_mul_gate(in);
+        const size_t new_n = n;
+        const size_t diff = new_n - old_n;
+        for (size_t i = 0; i < diff; ++i)
+        {
+            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+        }
+        current_output_wire = static_cast<uint32_t>(-1);
+    }
+    void create_balanced_add_gate(const add_quad& in)
+    {
+        if (current_output_wire != static_cast<uint32_t>(-1)) {
+            create_noop_gate();
+        }
+        const size_t old_n = n;
+        StandardComposer::create_balanced_add_gate(in);
+        const size_t new_n = n;
+        const size_t diff = new_n - old_n;
+        for (size_t i = 0; i < diff; ++i)
+        {
+            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+        }
+        current_output_wire = static_cast<uint32_t>(-1);
+    }
+
+    void fix_witness(const uint32_t witness_index, const barretenberg::fr::field_t& witness_value)
+    {
+        if (current_output_wire != static_cast<uint32_t>(-1)) {
+            create_noop_gate();
+        }
+        const size_t old_n = n;
+        StandardComposer::fix_witness(witness_index, witness_value);
+        const size_t new_n = n;
+        const size_t diff = new_n - old_n;
+        for (size_t i = 0; i < diff; ++i)
+        {
+            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+        }
+        current_output_wire = static_cast<uint32_t>(-1);
+    }
+
+    void assert_equal_constant(uint32_t const a_idx, barretenberg::fr::field_t const& b)
+    {
+        const add_triple gate_coefficients{
+            a_idx, a_idx, a_idx, barretenberg::fr::one, barretenberg::fr::zero, barretenberg::fr::zero, barretenberg::fr::neg(b),
+        };
+        create_add_gate(gate_coefficients);
+    }
 
     std::vector<barretenberg::fr::field_t> q_mimc_coefficient;
     std::vector<barretenberg::fr::field_t> q_mimc_selector;

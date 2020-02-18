@@ -9,15 +9,13 @@
 #include <memory>
 #include <vector>
 
-namespace waffle
-{
+namespace waffle {
 
 struct proving_key;
 struct verification_key;
 struct program_witness;
 
-struct add_triple
-{
+struct add_triple {
     uint32_t a;
     uint32_t b;
     uint32_t c;
@@ -27,8 +25,7 @@ struct add_triple
     barretenberg::fr::field_t const_scaling;
 };
 
-struct add_quad
-{
+struct add_quad {
     uint32_t a;
     uint32_t b;
     uint32_t c;
@@ -40,8 +37,20 @@ struct add_quad
     barretenberg::fr::field_t const_scaling;
 };
 
-struct mul_triple
-{
+struct mul_quad {
+    uint32_t a;
+    uint32_t b;
+    uint32_t c;
+    uint32_t d;
+    barretenberg::fr::field_t mul_scaling;
+    barretenberg::fr::field_t a_scaling;
+    barretenberg::fr::field_t b_scaling;
+    barretenberg::fr::field_t c_scaling;
+    barretenberg::fr::field_t d_scaling;
+    barretenberg::fr::field_t const_scaling;
+};
+
+struct mul_triple {
     uint32_t a;
     uint32_t b;
     uint32_t c;
@@ -50,8 +59,7 @@ struct mul_triple
     barretenberg::fr::field_t const_scaling;
 };
 
-struct poly_triple
-{
+struct poly_triple {
     uint32_t a;
     uint32_t b;
     uint32_t c;
@@ -62,8 +70,7 @@ struct poly_triple
     barretenberg::fr::field_t q_c;
 };
 
-struct fixed_group_add_quad
-{
+struct fixed_group_add_quad {
     uint32_t a;
     uint32_t b;
     uint32_t c;
@@ -74,19 +81,22 @@ struct fixed_group_add_quad
     barretenberg::fr::field_t q_y_2;
 };
 
-struct fixed_group_init_quad
-{
+struct fixed_group_init_quad {
     barretenberg::fr::field_t q_x_1;
     barretenberg::fr::field_t q_x_2;
     barretenberg::fr::field_t q_y_1;
     barretenberg::fr::field_t q_y_2;
 };
 
-class ComposerBase
-{
+struct accumulator_triple {
+    std::vector<uint32_t> left;
+    std::vector<uint32_t> right;
+    std::vector<uint32_t> out;
+};
+
+class ComposerBase {
   public:
-    enum Features
-    {
+    enum Features {
         SAD_TROMBONE = 0x00,
         BASIC_ARITHMETISATION = 0x01,
         EXTENDED_ARITHMETISATION = 0x02,
@@ -94,8 +104,7 @@ class ComposerBase
         MIMC_SELECTORS = 0x08,
         ECC_SELECTORS = 0x10
     };
-    enum GateFlags
-    {
+    enum GateFlags {
         NONE = 0x00,
         IS_ARITHMETIC_GATE = 0x01,
         IS_MIMC_GATE = 0x02,
@@ -110,28 +119,23 @@ class ComposerBase
         FIXED_RIGHT_WIRE = 0x400,
         FIXED_OUTPUT_WIRE = 0x800,
     };
-    enum WireType
-    {
-        LEFT = 0U,
-        RIGHT = (1U << 30U),
-        OUTPUT = (1U << 31U),
-        FOURTH = 0xc0000000,
-        NULL_WIRE
-    };
-    struct epicycle
-    {
+    enum WireType { LEFT = 0U, RIGHT = (1U << 30U), OUTPUT = (1U << 31U), FOURTH = 0xc0000000, NULL_WIRE };
+    struct epicycle {
         uint32_t gate_index;
         WireType wire_type;
 
-        epicycle(const uint32_t a, const WireType b) : gate_index(a), wire_type(b)
-        {
-        }
-        epicycle(const epicycle& other) : gate_index(other.gate_index), wire_type(other.wire_type)
-        {
-        }
-        epicycle(epicycle&& other) : gate_index(other.gate_index), wire_type(other.wire_type)
-        {
-        }
+        epicycle(const uint32_t a, const WireType b)
+            : gate_index(a)
+            , wire_type(b)
+        {}
+        epicycle(const epicycle& other)
+            : gate_index(other.gate_index)
+            , wire_type(other.wire_type)
+        {}
+        epicycle(epicycle&& other)
+            : gate_index(other.gate_index)
+            , wire_type(other.wire_type)
+        {}
         epicycle& operator=(const epicycle& other)
         {
             gate_index = other.gate_index;
@@ -144,10 +148,11 @@ class ComposerBase
         }
     };
 
-    ComposerBase() : n(0) {};
-    ComposerBase(ComposerBase &&other) = default;
-    ComposerBase& operator=(ComposerBase &&other) = default;
-    virtual ~ComposerBase() {};
+    ComposerBase()
+        : n(0){};
+    ComposerBase(ComposerBase&& other) = default;
+    ComposerBase& operator=(ComposerBase&& other) = default;
+    virtual ~ComposerBase(){};
 
     virtual size_t get_num_gates() const { return n; }
     virtual size_t get_num_variables() const { return variables.size(); }
@@ -196,20 +201,17 @@ class ComposerBase
     virtual void set_public_input(const uint32_t witness_index)
     {
         bool does_not_exist = true;
-        for (size_t i = 0; i < public_inputs.size(); ++i)
-        {
+        for (size_t i = 0; i < public_inputs.size(); ++i) {
             does_not_exist = does_not_exist && (public_inputs[i] != witness_index);
         }
-        if (does_not_exist)
-        {
+        if (does_not_exist) {
             public_inputs.emplace_back(witness_index);
         }
     }
 
     virtual void assert_equal(const uint32_t a_idx, const uint32_t b_idx);
 
-    template <size_t program_width>
-    void compute_sigma_permutations(proving_key* key);
+    template <size_t program_width> void compute_sigma_permutations(proving_key* key);
 
   public:
     size_t n;

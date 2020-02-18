@@ -67,15 +67,15 @@ var_t FunctionStatementVisitor::operator()(boost::recursive_wrapper<ast::for_sta
     auto from = static_cast<uint32_t>(boost::get<uint>(from_var.value()).get_value());
     auto to = static_cast<uint32_t>(boost::get<uint>(to_var.value()).get_value());
     ctx_.symbol_table.push();
-    ctx_.symbol_table.declare(uint32(), x.counter);
+    ctx_.symbol_table.declare(uint(32, nullptr, 0), x.counter);
     for (uint32_t i = from; i < to; ++i) {
-        ctx_.symbol_table.set(uint32(&ctx_.composer, i), x.counter);
+        ctx_.symbol_table.set(uint(32, &ctx_.composer, i), x.counter);
         ctx_.symbol_table.push();
         (*this)(x.body);
         ctx_.symbol_table.pop();
     }
     ctx_.symbol_table.pop();
-    return uint32();
+    return uint(32, nullptr, 0);
 }
 
 var_t FunctionStatementVisitor::operator()(ast::return_expr const& x)
