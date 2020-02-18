@@ -72,7 +72,7 @@ template <typename Composer> void blake2s_compress(blake2s_state<Composer>& S, b
     uint32<Composer> v[16];
 
     for (size_t i = 0; i < 16; ++i) {
-        m[i] = uint32<Composer>(in.slice(i * 4).reverse());
+        m[i] = uint32<Composer>(in.slice(i * 4, 4).reverse());
     }
 
     for (size_t i = 0; i < 8; ++i) {

@@ -39,6 +39,7 @@ template <typename ComposerContext> inline field_t<ComposerContext> hash_value(b
 inline barretenberg::fr::field_t hash_value_native(std::string const& input)
 {
     std::vector<uint8_t> inputv(input.begin(), input.end());
+    // std::vector<uint8_t> output = blake2::blake2s(inputv);
     std::vector<uint8_t> output = blake2::blake2s(inputv);
     barretenberg::fr::field_t result = barretenberg::fr::zero;
     if (isLittleEndian()) {

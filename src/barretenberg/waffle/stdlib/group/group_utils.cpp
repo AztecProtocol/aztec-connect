@@ -213,7 +213,6 @@ grumpkin::g1::affine_element compress_to_point_native(const grumpkin::fq::field_
     first = grumpkin::g1::normalize(first);
     return { first.x, first.y };
 }
-
 } // namespace group_utils
 } // namespace stdlib
 } // namespace plonk

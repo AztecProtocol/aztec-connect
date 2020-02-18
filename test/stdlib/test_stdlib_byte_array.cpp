@@ -34,8 +34,8 @@ inline uint32_t get_random_int()
 TEST(stdlib_byte_array, test_uint32_byte_array_conversion)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
-    uint32 a = witness_t(&composer, 2UL);
-    std::string expected = { 0x00, 0x00, 0x00, 0x02 };
+    uint32 a = witness_t(&composer, 0x10000002);
+    std::string expected = { 0x10, 0x00, 0x00, 0x02 };
     byte_array arr(&composer);
     arr.write(a);
 
@@ -45,7 +45,7 @@ TEST(stdlib_byte_array, test_uint32_byte_array_conversion)
 
 TEST(stdlib_byte_array, test_reverse)
 {
-    waffle::BoolComposer composer = waffle::BoolComposer();
+    waffle::TurboComposer composer = waffle::TurboComposer();
     uint32 a = witness_t(&composer, 1UL);
     std::string expected = { 0x04, 0x03, 0x02, 0x01 };
     byte_array arr(&composer, std::vector<uint8_t>{ 0x01, 0x02, 0x03, 0x04 });
