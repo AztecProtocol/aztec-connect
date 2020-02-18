@@ -177,7 +177,7 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
     return accumulator;
 }
 
-grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left, const grumpkin::fq::field_t& right)
+grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left, const grumpkin::fq::field_t& right, const size_t hash_index)
 {
 #ifndef NO_MULTITHREADING
     grumpkin::fq::field_t in[2] = { left, right };
@@ -201,6 +201,15 @@ grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left, const g
 #endif
 }
 
-} // namespace group_utils
-} // namespace stdlib
-} // namespace plonk
+
+grumpkin::g1::affine_element compress_to_point_native(const grumpkin::fq::field_t& left, const grumpkin::fq::field_t& right, const size_t hash_index)
+{
+    grumpkin::g1::element first = hash_single(left, hash_index);
+    grumpkin::g1::element second = hash_single(right, hash_index + 1);
+    grumpkin::g1::add(first, second, first);
+    first = grumpkin::g1::normalize(first);
+    return { first.x, first.y };
+}
+}
+}
+}
