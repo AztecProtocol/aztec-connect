@@ -31,29 +31,43 @@ inline uint32_t get_random_int()
 }
 } // namespace
 
-// TEST(stdlib_byte_array, test_uint32_input_output_consistency)
-// {
-//     waffle::TurboComposer composer = waffle::TurboComposer();
+TEST(stdlib_byte_array, test_uint32_byte_array_conversion)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
+    uint32 a = witness_t(&composer, 2UL);
+    std::string expected = { 0x00, 0x00, 0x00, 0x02 };
+    byte_array arr(&composer);
+    arr.write(a);
 
-//     uint32_t a_expected = get_random_int();
-//     uint32_t b_expected = get_random_int();
+    EXPECT_EQ(arr.size(), 4UL);
+    EXPECT_EQ(arr.get_value(), expected);
+}
 
-//     uint32 a = witness_t(&composer, a_expected);
-//     uint32 b = witness_t(&composer, b_expected);
+TEST(stdlib_byte_array, test_uint32_input_output_consistency)
+{
+    waffle::TurboComposer composer = waffle::TurboComposer();
 
-//     byte_array arr(&composer);
+    for (size_t i = 1; i < 1024; i *= 2) {
+        uint32_t a_expected = (uint32_t)i;
+        uint32_t b_expected = (uint32_t)i;
 
-//     arr.write(a);
-//     arr.write(b);
+        uint32 a = witness_t(&composer, a_expected);
+        uint32 b = witness_t(&composer, b_expected);
 
-//     EXPECT_EQ(arr.size(), 8UL);
+        byte_array arr(&composer);
 
-//     uint32 a_result(arr.slice(0, 4));
-//     uint32 b_result(arr.slice(4));
+        arr.write(a);
+        arr.write(b);
 
-//     EXPECT_EQ(a_result.get_value(), a_expected);
-//     EXPECT_EQ(b_result.get_value(), b_expected);
-// }
+        EXPECT_EQ(arr.size(), 8UL);
+
+        uint32 a_result(arr.slice(0, 4));
+        uint32 b_result(arr.slice(4));
+
+        EXPECT_EQ(a_result.get_value(), a_expected);
+        EXPECT_EQ(b_result.get_value(), b_expected);
+    }
+}
 
 TEST(stdlib_byte_array, test_field_t_input_output_consistency)
 {

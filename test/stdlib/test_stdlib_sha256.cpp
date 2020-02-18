@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/waffle/composer/Turbo_composer.hpp>
+#include <barretenberg/waffle/composer/turbo_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
@@ -29,7 +29,6 @@ uint32_t get_random_int()
     return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
 }
 } // namespace
-
 
 // TEST(stdlib_sha256, test_sha256)
 // {

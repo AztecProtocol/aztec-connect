@@ -68,7 +68,7 @@ uint<Composer, Native>::uint(const byte_array<Composer>& other)
 {
     field_t<Composer> accumulator(context, fr::zero);
     field_t<Composer> scaling_factor(context, fr::one);
-    for (size_t i = other.bits().size() - 1; i < other.bits().size(); --i) {
+    for (size_t i = 0; i < other.bits().size(); ++i) {
         accumulator = accumulator + scaling_factor * other.get_bit(i);
         scaling_factor = scaling_factor + scaling_factor;
     }
@@ -184,8 +184,8 @@ template <typename Context, typename Native> uint<Context, Native>::operator byt
         scale_factor = scale_factor + scale_factor;
         scale_factor = scale_factor + scale_factor;
 
-        bits[width - 1 - i] = hi;
-        bits[width - 2 - i] = lo;
+        bits[width - 1 - i] = lo;
+        bits[width - 2 - i] = hi;
     }
 
     return byte_array(context, bits);

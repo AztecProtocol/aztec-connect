@@ -4,8 +4,7 @@
 
 #include <random>
 
-namespace
-{
+namespace {
 std::mt19937 engine;
 std::uniform_int_distribution<uint64_t> dist{ 0ULL, UINT64_MAX };
 
@@ -20,27 +19,21 @@ uint256_t get_pseudorandom_uint256()
 {
     return { dist(engine), dist(engine), dist(engine), dist(engine) };
 }
-}
+} // namespace
 
 TEST(uint256, get_bit)
 {
-    constexpr uint256_t a{
-        0b0110011001110010011001100111001001100110011100100110011001110011,
-        0b1001011101101010101010100100101101101001001010010101110101010111,
-        0b0101010010010101111100001011011010101010110101110110110111010101,
-        0b0101011010101010100010001000101011010101010101010010000100000000};
+    constexpr uint256_t a{ 0b0110011001110010011001100111001001100110011100100110011001110011,
+                           0b1001011101101010101010100100101101101001001010010101110101010111,
+                           0b0101010010010101111100001011011010101010110101110110110111010101,
+                           0b0101011010101010100010001000101011010101010101010010000100000000 };
 
-    // mmmm, delicious constexpr...
-    constexpr uint256_t b = [a]() {
-        uint256_t res;
-        for (size_t i = 0; i < 256; ++i)
-        {
-            res += a.get_bit(i) ? (uint256_t(1) << i) : 0;
-        }
-        return res;
-    }();
+    uint256_t res;
+    for (size_t i = 0; i < 256; ++i) {
+        res += a.get_bit(i) ? (uint256_t(1) << i) : 0;
+    }
 
-    EXPECT_EQ(a, b);
+    EXPECT_EQ(a, res);
 }
 
 TEST(uint256, add)
@@ -59,7 +52,6 @@ TEST(uint256, add)
     EXPECT_EQ(d.data[1], 8ULL);
     EXPECT_EQ(d.data[2], 10ULL);
     EXPECT_EQ(d.data[3], 12ULL);
-
 }
 
 TEST(uint256, mul)
@@ -77,8 +69,7 @@ TEST(uint256, mul)
 
 TEST(uint256, div_and_mod)
 {
-    for (size_t i = 0; i < 4; ++i)
-    {
+    for (size_t i = 0; i < 4; ++i) {
         uint256_t a = get_pseudorandom_uint256();
         uint256_t b = get_pseudorandom_uint256();
 
@@ -112,7 +103,6 @@ TEST(uint256, div_and_mod)
     EXPECT_EQ(r, uint256_t(0));
 }
 
-
 TEST(uint256, sub)
 {
     uint256_t a = get_pseudorandom_uint256();
@@ -137,7 +127,7 @@ TEST(uint256, sub)
 
 TEST(uint256, right_shift)
 {
-    constexpr uint256_t a{0xaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbb, 0xcccccccccccccccc, 0xdddddddddddddddd};
+    constexpr uint256_t a{ 0xaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbb, 0xcccccccccccccccc, 0xdddddddddddddddd };
 
     constexpr uint256_t b = a >> 256;
     EXPECT_EQ(b, uint256_t(0));
@@ -147,15 +137,15 @@ TEST(uint256, right_shift)
 
     constexpr uint256_t d = a >> 64;
     EXPECT_EQ(d, uint256_t(0xbbbbbbbbbbbbbbbb, 0xcccccccccccccccc, 0xdddddddddddddddd, 0));
-    
+
     constexpr uint256_t e = a >> 123;
     constexpr uint256_t f = e * (uint256_t{ 0, 1ULL << 59ULL, 0, 0 });
-    EXPECT_EQ(f, uint256_t(0, 0xb800000000000000, 0xcccccccccccccccc, 0xdddddddddddddddd ));
+    EXPECT_EQ(f, uint256_t(0, 0xb800000000000000, 0xcccccccccccccccc, 0xdddddddddddddddd));
 }
 
 TEST(uint256, left_shift)
 {
-    uint256_t a{0xaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbb, 0xcccccccccccccccc, 0xdddddddddddddddd};
+    uint256_t a{ 0xaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbb, 0xcccccccccccccccc, 0xdddddddddddddddd };
 
     uint256_t b = a << 256;
     EXPECT_EQ(b, uint256_t(0));
@@ -165,10 +155,10 @@ TEST(uint256, left_shift)
 
     uint256_t d = a << 64;
     EXPECT_EQ(d, uint256_t(0, 0xaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbb, 0xcccccccccccccccc));
-    
+
     uint256_t e = a << 123;
     e = e >> 123;
-    EXPECT_EQ(e, uint256_t(0xaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbb, 0xc, 0 ));
+    EXPECT_EQ(e, uint256_t(0xaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbb, 0xc, 0));
 }
 
 TEST(uint256, and)
@@ -255,7 +245,6 @@ TEST(uint256, equality)
     EXPECT_EQ(a == b, false);
 }
 
-
 TEST(uint256, not_equal)
 {
     uint256_t a{ 1, 0, 0, 0 };
@@ -291,7 +280,7 @@ TEST(uint256, greater_than)
     constexpr uint256_t e = uint256_t{ UINT64_MAX, UINT64_MAX - 1, UINT64_MAX, UINT64_MAX };
     EXPECT_EQ(a > e, true);
 
-    constexpr uint256_t f = uint256_t{ UINT64_MAX - 1, UINT64_MAX , UINT64_MAX, UINT64_MAX };
+    constexpr uint256_t f = uint256_t{ UINT64_MAX - 1, UINT64_MAX, UINT64_MAX, UINT64_MAX };
     EXPECT_EQ(a > f, true);
 }
 
@@ -311,7 +300,7 @@ TEST(uint256, greater_than_or_equal)
     a = uint256_t{ UINT64_MAX, UINT64_MAX - 1, UINT64_MAX - 1, UINT64_MAX };
     EXPECT_EQ(a >= b, false);
 
-    b = uint256_t{ UINT64_MAX - 1, UINT64_MAX , UINT64_MAX, UINT64_MAX };
+    b = uint256_t{ UINT64_MAX - 1, UINT64_MAX, UINT64_MAX, UINT64_MAX };
     EXPECT_EQ(a >= b, false);
 }
 
