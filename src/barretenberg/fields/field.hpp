@@ -4,9 +4,12 @@
 #include <cstdint>
 #include <cstdio>
 #include <unistd.h>
+#include <array>
 
 #include "../assert.hpp"
 #include "../types.hpp"
+
+// #include "../uint256/uint256.hpp"
 
 // 2: all methods that pass in a reference to the return value should be prefixed by __
 // 3: all methods that have a __ prefix, should have a partner method that returns by value
@@ -17,12 +20,28 @@ template <typename FieldParams> class field {
     struct field_t {
         alignas(32) uint64_t data[4];
 
+        // constexpr field_t() : data() {}
+        // constexpr field_t(const std::array<uint64_t, 4>& in) : data{ in[0], in[1], in[2], in[3] } {}
+        // constexpr field_t(const uint64_t* in) : data{ in[0], in[1], in[2], in[3] } {}
+        // constexpr field_t(uint64_t a, uint64_t b, uint64_t c, uint64_t d) : data{ a, b, c, d } {}
+
+        // field_t(const uint256_t &input)
+        // {
+        //     *this = field<FieldParams>::to_montgomery_form({{ input.data[0], input.data[1], input.data[2], input.data[3] }});
+        // }
+
+        // operator uint256_t() {
+        //     field_t converted = field<FieldParams>::from_montgomery_form({{ data[0], data[1], data[2], data[3] }});
+        //     return uint256_t(converted.data[0], converted.data[1], converted.data[2], converted.data[3]);
+        // }
+
         bool operator<(const field_t& other) const { return gt(other, *this); }
     };
 
     struct field_wide_t {
         alignas(64) uint64_t data[8];
     };
+
 
     static constexpr field_t modulus = {
         { FieldParams::modulus_0, FieldParams::modulus_1, FieldParams::modulus_2, FieldParams::modulus_3 }
@@ -177,6 +196,11 @@ template <typename FieldParams> class field {
     /**
      * Arithmetic Methods (return by value)
      **/
+    // inline static field_t from_uint256(const uint256_t& input) noexcept
+    // {
+    //     field_t out{ input.data[0], input.data[1], input.data[2], input.data[3] };
+    //     return to_montgomery_form(out);
+    // }
 
     inline static field_t mul(const field_t& a, const field_t& b) noexcept
     {

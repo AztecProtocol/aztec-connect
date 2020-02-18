@@ -37,6 +37,162 @@ void StandardComposer::create_add_gate(const add_triple& in)
     ++n;
 }
 
+void StandardComposer::create_big_add_gate(const add_quad& in)
+{
+
+    // (a terms + b terms = temp)
+    // (c terms + d  terms + temp = 0 )
+    fr::field_t t0 = fr::mul(variables[in.a], in.a_scaling);
+    fr::field_t t1 = fr::mul(variables[in.b], in.b_scaling);
+    fr::field_t temp = fr::add(t0, t1);
+    uint32_t temp_idx = add_variable(temp);
+
+    create_add_gate(add_triple{ in.a, in.b, temp_idx, in.a_scaling, in.b_scaling, fr::neg_one(), fr::zero });
+
+    create_add_gate(add_triple{ in.c, in.d, temp_idx, in.c_scaling, in.d_scaling, fr::one, in.const_scaling });
+}
+
+void StandardComposer::create_balanced_add_gate(const add_quad& in)
+{
+
+    // (a terms + b terms = temp)
+    // (c terms + d  terms + temp = 0 )
+    fr::field_t t0 = fr::mul(variables[in.a], in.a_scaling);
+    fr::field_t t1 = fr::mul(variables[in.b], in.b_scaling);
+    fr::field_t temp = fr::add(t0, t1);
+    uint32_t temp_idx = add_variable(temp);
+
+    w_l.emplace_back(in.a);
+    w_r.emplace_back(in.b);
+    w_o.emplace_back(temp_idx);
+    q_m.emplace_back(fr::zero);
+    q_1.emplace_back(in.a_scaling);
+    q_2.emplace_back(in.b_scaling);
+    q_3.emplace_back(fr::neg_one());
+    q_c.emplace_back(fr::zero);
+
+    epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
+    epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
+    epicycle out{ static_cast<uint32_t>(n), WireType::OUTPUT };
+    wire_epicycles[static_cast<size_t>(in.a)].emplace_back(left);
+    wire_epicycles[static_cast<size_t>(in.b)].emplace_back(right);
+    wire_epicycles[static_cast<size_t>(temp_idx)].emplace_back(out);
+
+    ++n;
+
+    w_l.emplace_back(temp_idx);
+    w_r.emplace_back(in.c);
+    w_o.emplace_back(in.d);
+    q_m.emplace_back(fr::zero);
+    q_1.emplace_back(fr::one);
+    q_2.emplace_back(in.c_scaling);
+    q_3.emplace_back(in.d_scaling);
+    q_c.emplace_back(in.const_scaling);
+
+    left = { static_cast<uint32_t>(n), WireType::LEFT };
+    right = { static_cast<uint32_t>(n), WireType::RIGHT };
+    out = { static_cast<uint32_t>(n), WireType::OUTPUT };
+    wire_epicycles[static_cast<size_t>(temp_idx)].emplace_back(left);
+    wire_epicycles[static_cast<size_t>(in.c)].emplace_back(right);
+    wire_epicycles[static_cast<size_t>(in.d)].emplace_back(out);
+
+    ++n;
+
+    // in.d must be between 0 and 3
+    // i.e. in.d * (in.d - 1) * (in.d - 2) = 0
+    fr::field_t temp_2 = fr::sub(fr::sqr(variables[in.d]), variables[in.d]);
+    uint32_t temp_2_idx = add_variable(temp_2);
+    w_l.emplace_back(in.d);
+    w_r.emplace_back(in.d);
+    w_o.emplace_back(temp_2_idx);
+    q_m.emplace_back(fr::one);
+    q_1.emplace_back(fr::neg_one());
+    q_2.emplace_back(fr::zero);
+    q_3.emplace_back(fr::neg_one());
+    q_c.emplace_back(fr::zero);
+
+    left = { static_cast<uint32_t>(n), WireType::LEFT };
+    right = { static_cast<uint32_t>(n), WireType::RIGHT };
+    out = { static_cast<uint32_t>(n), WireType::OUTPUT };
+    wire_epicycles[static_cast<size_t>(in.d)].emplace_back(left);
+    wire_epicycles[static_cast<size_t>(in.d)].emplace_back(right);
+    wire_epicycles[static_cast<size_t>(temp_2_idx)].emplace_back(out);
+
+    ++n;
+
+    w_l.emplace_back(temp_2_idx);
+    w_r.emplace_back(in.d);
+    w_o.emplace_back(zero_idx);
+    q_m.emplace_back(fr::one);
+    q_1.emplace_back(fr::neg(fr::to_montgomery_form({ { 2, 0, 0, 0 } })));
+    q_2.emplace_back(fr::zero);
+    q_3.emplace_back(fr::zero);
+    q_c.emplace_back(fr::zero);
+
+    left = { static_cast<uint32_t>(n), WireType::LEFT };
+    right = { static_cast<uint32_t>(n), WireType::RIGHT };
+    wire_epicycles[static_cast<size_t>(temp_2_idx)].emplace_back(left);
+    wire_epicycles[static_cast<size_t>(in.d)].emplace_back(right);
+
+    ++n;
+}
+
+void StandardComposer::create_big_add_gate_with_bit_extraction(const add_quad& in)
+{
+    // blah.
+    // delta = (c - 4d)
+    // delta^2 = c^2 + 16d^2 - 8dc
+    // r = (-2*delta*delta + 9*delta - 7)*delta
+    // r =
+
+    fr::field_t delta = variables[in.d];
+    fr::__add(delta, delta, delta);
+    fr::__add(delta, delta, delta);
+    fr::__sub(variables[in.c], delta, delta);
+
+    uint32_t delta_idx = add_variable(delta);
+    fr::field_t neg_four = fr::neg(fr::to_montgomery_form({ { 4, 0, 0, 0 } }));
+    create_add_gate(add_triple{ in.c, in.d, delta_idx, fr::one, neg_four, fr::neg_one(), fr::zero });
+
+    fr::field_t two = fr::to_montgomery_form({ { 2, 0, 0, 0 } });
+    fr::field_t seven = fr::to_montgomery_form({ { 7, 0, 0, 0 } });
+    fr::field_t nine = fr::to_montgomery_form({ { 9, 0, 0, 0 } });
+    fr::field_t r_0 = fr::sub(fr::mul(delta, nine), fr::add(fr::mul(fr::sqr(delta), two), seven));
+    uint32_t r_0_idx = add_variable(r_0);
+    create_poly_gate(
+        poly_triple{ delta_idx, delta_idx, r_0_idx, fr::neg(two), nine, fr::zero, fr::neg_one(), fr::neg(seven) });
+
+    fr::field_t r_1 = fr::mul(r_0, delta);
+    uint32_t r_1_idx = add_variable(r_1);
+    create_mul_gate(mul_triple{
+        r_0_idx,
+        delta_idx,
+        r_1_idx,
+        fr::one,
+        fr::neg_one(),
+        fr::zero,
+    });
+
+    // ain.a1 + bin.b2 + cin.c3 + din.c4 + r_1 = 0
+
+    fr::field_t r_2 = fr::add(r_1, fr::mul(variables[in.d], in.d_scaling));
+    uint32_t r_2_idx = add_variable(r_2);
+    create_add_gate(add_triple{ in.d, r_1_idx, r_2_idx, in.d_scaling, fr::one, fr::neg_one(), fr::zero });
+
+    create_big_add_gate(
+        add_quad{ in.a, in.b, in.c, r_2_idx, in.a_scaling, in.b_scaling, in.c_scaling, fr::one, in.const_scaling });
+}
+
+void StandardComposer::create_big_mul_gate(const mul_quad& in)
+{
+    fr::field_t temp = fr::add(fr::mul(variables[in.c], in.c_scaling), fr::mul(variables[in.d], in.d_scaling));
+    uint32_t temp_idx = add_variable(temp);
+    create_add_gate(add_triple{ in.c, in.d, temp_idx, in.c_scaling, in.d_scaling, fr::neg_one(), fr::zero });
+
+    create_poly_gate(
+        poly_triple{ in.a, in.b, temp_idx, in.mul_scaling, in.a_scaling, in.b_scaling, fr::one, in.const_scaling });
+}
+
 void StandardComposer::create_mul_gate(const mul_triple& in)
 {
     gate_flags.push_back(0);
@@ -113,6 +269,256 @@ void StandardComposer::create_poly_gate(const poly_triple& in)
     wire_epicycles[static_cast<size_t>(in.c)].emplace_back(out);
     ++n;
 }
+
+std::vector<uint32_t> StandardComposer::create_range_constraint(const uint32_t witness_index, const size_t num_bits)
+{
+    fr::field_t target = fr::from_montgomery_form(variables[witness_index]);
+
+    std::vector<uint32_t> accumulators;
+
+    fr::field_t four = fr::to_montgomery_form({ 4, 0, 0, 0 });
+    fr::field_t accumulator = fr::zero;
+    uint32_t accumulator_idx = 0;
+    for (size_t i = num_bits - 1; i < num_bits; i -= 2) {
+        bool hi = fr::get_bit(target, i);
+        bool lo = fr::get_bit(target, i - 1);
+
+        uint32_t hi_idx = add_variable(hi ? fr::one : fr::zero);
+        uint32_t lo_idx = add_variable(lo ? fr::one : fr::zero);
+        create_bool_gate(hi_idx);
+        create_bool_gate(lo_idx);
+
+        uint64_t quad = (lo ? 1U : 0U) + (hi ? 2U : 0U);
+        uint32_t quad_idx = add_variable(fr::to_montgomery_form({ quad, 0, 0, 0 }));
+
+        create_add_gate(add_triple{
+            lo_idx,
+            hi_idx,
+            quad_idx,
+            fr::one,
+            fr::add(fr::one, fr::one),
+            fr::neg_one(),
+            fr::zero
+        });
+
+        if (i == num_bits - 1)
+        {
+            accumulators.push_back(quad_idx);
+            accumulator = variables[quad_idx];
+            accumulator_idx = quad_idx;
+        }
+        else
+        {
+            fr::field_t new_accumulator = fr::add(accumulator, accumulator);
+            new_accumulator = fr::add(new_accumulator, new_accumulator);
+            new_accumulator = fr::add(new_accumulator, variables[quad_idx]);
+            uint32_t new_accumulator_idx = add_variable(new_accumulator);
+            create_add_gate(add_triple{
+                accumulator_idx,
+                quad_idx,
+                new_accumulator_idx,
+                four,
+                fr::one,
+                fr::neg_one(),
+                fr::zero
+            });
+            accumulators.push_back(new_accumulator_idx);
+            accumulator = new_accumulator;
+            accumulator_idx = new_accumulator_idx;
+        }
+    }
+    return accumulators;
+}
+
+waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint32_t a,
+                                                                         const uint32_t b,
+                                                                         const size_t num_bits,
+                                                                         const bool is_xor_gate)
+{
+    waffle::accumulator_triple accumulators;
+
+    const fr::field_t left_witness_value = fr::from_montgomery_form(variables[a]);
+    const fr::field_t right_witness_value = fr::from_montgomery_form(variables[b]);
+
+    fr::field_t left_accumulator = fr::zero;
+    fr::field_t right_accumulator = fr::zero;
+    fr::field_t out_accumulator = fr::zero;
+
+    uint32_t left_accumulator_idx = zero_idx;
+    uint32_t right_accumulator_idx = zero_idx;
+    uint32_t out_accumulator_idx = zero_idx;
+    fr::field_t four = fr::to_montgomery_form({{ 4, 0, 0, 0 }});
+    fr::field_t neg_two = fr::neg(fr::to_montgomery_form({{ 2, 0, 0, 0 }}));
+    for (size_t i = num_bits - 1; i < num_bits; i -= 2)
+    {
+        bool left_hi_val = fr::get_bit(left_witness_value, i);
+        bool left_lo_val = fr::get_bit(left_witness_value, (i - 1));
+        bool right_hi_val = fr::get_bit(right_witness_value, (i));
+        bool right_lo_val = fr::get_bit(right_witness_value, (i - 1));
+
+        uint32_t left_hi_idx = add_variable(left_hi_val ? fr::one : fr::zero);
+        uint32_t left_lo_idx = add_variable(left_lo_val ? fr::one : fr::zero);
+        uint32_t right_hi_idx = add_variable(right_hi_val ? fr::one : fr::zero);
+        uint32_t right_lo_idx = add_variable(right_lo_val ? fr::one : fr::zero);
+
+        bool out_hi_val = is_xor_gate ? left_hi_val ^ right_hi_val : left_hi_val & right_hi_val;
+        bool out_lo_val = is_xor_gate ? left_lo_val ^ right_lo_val : left_lo_val & right_lo_val;
+
+        uint32_t out_hi_idx = add_variable(out_hi_val ? fr::one : fr::zero);
+        uint32_t out_lo_idx = add_variable(out_lo_val ? fr::one : fr::zero);
+
+        create_bool_gate(left_hi_idx);
+        create_bool_gate(right_hi_idx);
+        create_bool_gate(out_hi_idx);
+
+        create_bool_gate(left_lo_idx);
+        create_bool_gate(right_lo_idx);
+        create_bool_gate(out_lo_idx);
+
+        // a & b = ab
+        // a ^ b = a + b - ab
+        create_poly_gate(poly_triple{
+            left_hi_idx,
+            right_hi_idx,
+            out_hi_idx,
+            is_xor_gate ? neg_two : fr::one,
+            is_xor_gate ? fr::one : fr::zero,
+            is_xor_gate ? fr::one : fr::zero,
+            fr::neg_one(),
+            fr::zero
+        });
+
+        create_poly_gate(poly_triple{
+            left_lo_idx,
+            right_lo_idx,
+            out_lo_idx,
+            is_xor_gate ? neg_two: fr::one,
+            is_xor_gate ? fr::one : fr::zero,
+            is_xor_gate ? fr::one : fr::zero,
+            fr::neg_one(),
+            fr::zero
+        });
+
+        fr::field_t left_quad = fr::add(fr::add(variables[left_lo_idx], variables[left_hi_idx]), variables[left_hi_idx]);
+        fr::field_t right_quad = fr::add(fr::add(variables[right_lo_idx], variables[right_hi_idx]), variables[right_hi_idx]);
+        fr::field_t out_quad = fr::add(fr::add(variables[out_lo_idx], variables[out_hi_idx]), variables[out_hi_idx]);
+
+        uint32_t left_quad_idx = add_variable(left_quad);
+        uint32_t right_quad_idx = add_variable(right_quad);
+        uint32_t out_quad_idx = add_variable(out_quad);
+
+        fr::field_t new_left_accumulator = fr::add(left_accumulator, left_accumulator);
+        new_left_accumulator = fr::add(new_left_accumulator, new_left_accumulator);
+        new_left_accumulator = fr::add(new_left_accumulator, left_quad);
+        uint32_t new_left_accumulator_idx = add_variable(new_left_accumulator);
+
+        create_add_gate(add_triple{
+            left_accumulator_idx,
+            left_quad_idx,
+            new_left_accumulator_idx,
+            four,
+            fr::one,
+            fr::neg_one(),
+            fr::zero
+        });
+    
+        fr::field_t new_right_accumulator = fr::add(right_accumulator, right_accumulator);
+        new_right_accumulator = fr::add(new_right_accumulator, new_right_accumulator);
+        new_right_accumulator = fr::add(new_right_accumulator, right_quad);
+        uint32_t new_right_accumulator_idx = add_variable(new_right_accumulator);
+
+        create_add_gate(add_triple{
+            right_accumulator_idx,
+            right_quad_idx,
+            new_right_accumulator_idx,
+            four,
+            fr::one,
+            fr::neg_one(),
+            fr::zero
+        });
+
+        fr::field_t new_out_accumulator = fr::add(out_accumulator, out_accumulator);
+        new_out_accumulator = fr::add(new_out_accumulator, new_out_accumulator);
+        new_out_accumulator = fr::add(new_out_accumulator, out_quad);
+        uint32_t new_out_accumulator_idx = add_variable(new_out_accumulator);
+
+        create_add_gate(add_triple{
+            out_accumulator_idx,
+            out_quad_idx,
+            new_out_accumulator_idx,
+            four,
+            fr::one,
+            fr::neg_one(),
+            fr::zero
+        });
+
+        accumulators.left.emplace_back(new_left_accumulator_idx);
+        accumulators.right.emplace_back(new_right_accumulator_idx);
+        accumulators.out.emplace_back(new_out_accumulator_idx);
+
+        left_accumulator = new_left_accumulator;
+        left_accumulator_idx = new_left_accumulator_idx;
+
+        right_accumulator = new_right_accumulator;
+        right_accumulator_idx = new_right_accumulator_idx;
+
+        out_accumulator = new_out_accumulator;
+        out_accumulator_idx = new_out_accumulator_idx;
+    }
+    return accumulators;
+}
+
+void StandardComposer::fix_witness(const uint32_t witness_index, const barretenberg::fr::field_t& witness_value)
+{
+    gate_flags.push_back(0);
+
+    w_l.emplace_back(witness_index);
+    w_r.emplace_back(zero_idx);
+    w_o.emplace_back(zero_idx);
+    q_m.emplace_back(fr::zero);
+    q_1.emplace_back(fr::one);
+    q_2.emplace_back(fr::zero);
+    q_3.emplace_back(fr::zero);
+    q_c.emplace_back(fr::neg(witness_value));
+
+    epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
+
+    ASSERT(wire_epicycles.size() > witness_index);
+    ASSERT(wire_epicycles.size() > zero_idx);
+    ASSERT(wire_epicycles.size() > zero_idx);
+    wire_epicycles[static_cast<size_t>(witness_index)].emplace_back(left);
+
+    ++n;
+}
+
+
+uint32_t StandardComposer::put_constant_variable(const barretenberg::fr::field_t& variable)
+{
+    if (constant_variables.count(variable) == 1) {
+        return constant_variables.at(variable);
+    } else {
+        uint32_t variable_index = add_variable(variable);
+        fix_witness(variable_index, variable);
+        constant_variables.insert({ variable, variable_index });
+        return variable_index;
+    }
+}
+
+
+waffle::accumulator_triple StandardComposer::create_and_constraint(const uint32_t a,
+                                                                       const uint32_t b,
+                                                                       const size_t num_bits)
+{
+    return create_logic_constraint(a, b, num_bits, false);
+}
+
+waffle::accumulator_triple StandardComposer::create_xor_constraint(const uint32_t a,
+                                                                       const uint32_t b,
+                                                                       const size_t num_bits)
+{
+    return create_logic_constraint(a, b, num_bits, true);
+}
+
 
 void StandardComposer::create_dummy_gates()
 {

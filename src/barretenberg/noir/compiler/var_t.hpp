@@ -77,7 +77,7 @@ struct var_t {
 
     var_t(char value)
         : type(type_uint8)
-        , value_(uint(value))
+        , value_(uint(8, (uint8_t)value))
     {}
 
     var_t(bool_t value)

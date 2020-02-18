@@ -27,7 +27,7 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
     polynomial q_2(num_gates);
     polynomial q_3(num_gates);
     polynomial q_4(num_gates);
-    polynomial q_4_next(num_gates);
+    polynomial q_5(num_gates);
     polynomial q_m(num_gates);
     polynomial q_c(num_gates);
     polynomial q_arith(num_gates);
@@ -44,7 +44,7 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
         q_3[i] = (fr::random_element());
         q_4[i] = (fr::random_element());
         q_m[i] = (fr::random_element());
-        q_4_next[i] = (fr::zero);
+        q_5[i] = (fr::zero);
 
         fr::field_t T0;
         fr::field_t T1;
@@ -116,7 +116,7 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
     polynomial q_2_fft(q_2, 4 * num_gates);
     polynomial q_3_fft(q_3, 4 * num_gates);
     polynomial q_4_fft(q_4, 4 * num_gates);
-    polynomial q_4_next_fft(q_4_next, 4 * num_gates);
+    polynomial q_5_fft(q_5, 4 * num_gates);
     polynomial q_m_fft(q_m, 4 * num_gates);
     polynomial q_c_fft(q_c, 4 * num_gates);
     polynomial q_arith_fft(q_arith, 4 * num_gates);
@@ -125,7 +125,7 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
     q_2_fft.ifft(key->small_domain);
     q_3_fft.ifft(key->small_domain);
     q_4_fft.ifft(key->small_domain);
-    q_4_next_fft.ifft(key->small_domain);
+    q_5_fft.ifft(key->small_domain);
     q_m_fft.ifft(key->small_domain);
     q_c_fft.ifft(key->small_domain);
     q_arith_fft.ifft(key->small_domain);
@@ -134,7 +134,7 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
     q_2_fft.coset_fft(key->large_domain);
     q_3_fft.coset_fft(key->large_domain);
     q_4_fft.coset_fft(key->large_domain);
-    q_4_next_fft.coset_fft(key->large_domain);
+    q_5_fft.coset_fft(key->large_domain);
     q_m_fft.coset_fft(key->large_domain);
     q_c_fft.coset_fft(key->large_domain);
     q_arith_fft.coset_fft(key->large_domain);
@@ -143,7 +143,7 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
     key->constraint_selectors.insert({ "q_2", std::move(q_2) });
     key->constraint_selectors.insert({ "q_3", std::move(q_3) });
     key->constraint_selectors.insert({ "q_4", std::move(q_4) });
-    key->constraint_selectors.insert({ "q_4_next", std::move(q_4_next) });
+    key->constraint_selectors.insert({ "q_5", std::move(q_5) });
     key->constraint_selectors.insert({ "q_m", std::move(q_m) });
     key->constraint_selectors.insert({ "q_c", std::move(q_c) });
     key->constraint_selectors.insert({ "q_arith", std::move(q_arith) });
@@ -152,7 +152,7 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
     key->constraint_selector_ffts.insert({ "q_2_fft", std::move(q_2_fft) });
     key->constraint_selector_ffts.insert({ "q_3_fft", std::move(q_3_fft) });
     key->constraint_selector_ffts.insert({ "q_4_fft", std::move(q_4_fft) });
-    key->constraint_selector_ffts.insert({ "q_4_next_fft", std::move(q_4_next_fft) });
+    key->constraint_selector_ffts.insert({ "q_5_fft", std::move(q_5_fft) });
     key->constraint_selector_ffts.insert({ "q_m_fft", std::move(q_m_fft) });
     key->constraint_selector_ffts.insert({ "q_c_fft", std::move(q_c_fft) });
     key->constraint_selector_ffts.insert({ "q_arith_fft", std::move(q_arith_fft) });

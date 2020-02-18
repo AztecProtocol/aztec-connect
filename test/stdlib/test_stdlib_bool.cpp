@@ -42,17 +42,13 @@ TEST(stdlib_bool, test_basic_operations)
     d = (!f) & a;        // d = 1
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[0]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[0]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[0]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[1]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[1]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[1]), { { 1, 0, 0, 0 } }), true);
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[1]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[1]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[1]), { { 0, 0, 0, 0 } }), true);
-
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[2]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[2]), { { 0, 0, 0, 0 } }), true);
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[2]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[2]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[2]), { { 0, 0, 0, 0 } }), true);
 
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[3]), { { 1, 0, 0, 0 } }), true);
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[3]), { { 0, 0, 0, 0 } }), true);
@@ -60,11 +56,15 @@ TEST(stdlib_bool, test_basic_operations)
 
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[4]), { { 1, 0, 0, 0 } }), true);
     EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[4]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[4]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[4]), { { 1, 0, 0, 0 } }), true);
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[5]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[5]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[5]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[5]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[5]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[5]), { { 0, 0, 0, 0 } }), true);
+
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[6]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[6]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[6]), { { 1, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 8UL);
 }
@@ -312,6 +312,37 @@ TEST(stdlib_bool, test_simple_proof)
         f = b;
     }
     waffle::Prover prover = composer.preprocess();
+    waffle::Verifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+TEST(stdlib_bool, normalize)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    auto generate_constraints = [&composer](bool value, bool is_constant, bool is_inverted)
+    {
+        bool_t a = is_constant ? bool_t(&composer, value) : witness_t(&composer, value);
+        bool_t b = is_inverted ? !a : a;
+        bool_t c = b.normalize();
+        EXPECT_EQ(c.get_value(), value ^ is_inverted);
+    };
+
+    generate_constraints(false, false, false);
+    generate_constraints(false, false, true);
+    generate_constraints(false, true , false);
+    generate_constraints(false, true , true);
+    generate_constraints(true , false, false);
+    generate_constraints(true , false, true);
+    generate_constraints(true , true , false);
+    generate_constraints(true , true , true);
+
+    waffle::Prover prover = composer.preprocess();
+
     waffle::Verifier verifier = composer.create_verifier();
 
     waffle::plonk_proof proof = prover.construct_proof();
