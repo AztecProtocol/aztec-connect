@@ -1007,3 +1007,39 @@ TEST(stdlib_turbo_uint32, test_rol)
     bool proof_result = verifier.verify_proof(proof);
     EXPECT_EQ(proof_result, true);
 }
+
+
+TEST(stdlib_turbo_uint32, test_at)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    const auto bit_test = [&composer](const bool is_constant) {
+        uint32_t const_a = get_pseudorandom_uint32();
+        uint32_t a_val = get_pseudorandom_uint32();
+        uint32_t c_val = const_a + a_val;
+        uint32 a = is_constant ? uint32(&composer, a_val) : witness_t(&composer, a_val);
+        uint32 a_shift = uint32(&composer, const_a);
+        uint32 c = a + a_shift;
+        for (size_t i = 0; i < 32; ++i)
+        {
+            bool_t result = c.at(i);
+            bool expected = (((c_val >> i) & 1UL) == 1UL) ? true : false;
+            EXPECT_EQ(result.get_value(), expected);
+        }
+    };
+
+    
+    bit_test(false);
+    bit_test(true);
+
+    printf("calling preprocess\n");
+    waffle::Prover prover = composer.preprocess();
+    
+    printf("composer gates = %zu\n", composer.get_num_gates());
+    waffle::Verifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool proof_result = verifier.verify_proof(proof);
+    EXPECT_EQ(proof_result, true);
+}
