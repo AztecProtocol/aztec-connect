@@ -24,6 +24,7 @@ endif()
 add_library(
     barretenberg STATIC
     types.hpp
+    uint256/uint256.hpp
     fields/field_impl_int128.tcc
     fields/field_impl_asm.tcc
     fields/field.hpp
@@ -94,6 +95,8 @@ add_library(
     waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
     waffle/proof_system/widgets/turbo_range_widget.cpp
     waffle/proof_system/widgets/turbo_range_widget.hpp
+    waffle/proof_system/widgets/turbo_logic_widget.cpp
+    waffle/proof_system/widgets/turbo_logic_widget.hpp
     waffle/proof_system/prover/prover.cpp
     waffle/proof_system/prover/prover.hpp
     waffle/proof_system/verifier/verifier.cpp
@@ -118,8 +121,12 @@ add_library(
     waffle/stdlib/bool/bool.hpp
     waffle/stdlib/field/field.cpp
     waffle/stdlib/field/field.hpp
+    waffle/stdlib/uint/arithmetic.cpp
+    waffle/stdlib/uint/logic.cpp
+    waffle/stdlib/uint/comparison.cpp
     waffle/stdlib/uint/uint.cpp
     waffle/stdlib/uint/uint.hpp
+    waffle/stdlib/uint/noir_uint.hpp
     waffle/stdlib/uint32/uint32.hpp
     waffle/stdlib/bitarray/bitarray.cpp
     waffle/stdlib/bitarray/bitarray.hpp
@@ -179,6 +186,7 @@ if(PROFILING)
         main.cpp
         fields/asm_macros.hpp
         types.hpp
+        uint256/uint256.hpp
         fields/field_impl_int128.tcc
         fields/field_impl_asm.tcc
         fields/field.hpp
@@ -249,6 +257,8 @@ if(PROFILING)
         waffle/proof_system/widgets/turbo_fixed_base_widget.hpp
         waffle/proof_system/widgets/turbo_range_widget.cpp
         waffle/proof_system/widgets/turbo_range_widget.hpp
+        waffle/proof_system/widgets/turbo_logic_widget.cpp
+        waffle/proof_system/widgets/turbo_logic_widget.hpp
         waffle/proof_system/prover/prover.cpp
         waffle/proof_system/prover/prover.hpp
         waffle/proof_system/verifier/verifier.cpp
@@ -273,9 +283,13 @@ if(PROFILING)
         waffle/stdlib/bool/bool.hpp
         waffle/stdlib/field/field.cpp
         waffle/stdlib/field/field.hpp
+        waffle/stdlib/uint32/uint32.hpp
+        waffle/stdlib/uint/arithmetic.cpp
+        waffle/stdlib/uint/logic.cpp
+        waffle/stdlib/uint/comparison.cpp
         waffle/stdlib/uint/uint.cpp
         waffle/stdlib/uint/uint.hpp
-        waffle/stdlib/uint32/uint32.hpp
+        waffle/stdlib/uint/noir_uint.hpp
         waffle/stdlib/bitarray/bitarray.cpp
         waffle/stdlib/bitarray/bitarray.hpp
         waffle/stdlib/byte_array/byte_array.cpp

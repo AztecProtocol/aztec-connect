@@ -6,7 +6,6 @@
 #include <string>
 
 #include "../../composer/bool_composer.hpp"
-#include "../../composer/extended_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
 #include "../../composer/standard_composer.hpp"
 #include "../../composer/turbo_composer.hpp"
@@ -41,10 +40,10 @@ bitarray<ComposerContext>::bitarray(ComposerContext* parent_context, const std::
     }
 }
 
-template <typename ComposerContext> bitarray<ComposerContext>::bitarray(uint<ComposerContext> const& input)
+template <typename ComposerContext> bitarray<ComposerContext>::bitarray(uint32<ComposerContext> const& input)
 {
     context = input.get_context();
-    size_t num_bits = input.width();
+    size_t num_bits = input.get_width();
     values.resize(num_bits);
 
     for (size_t i = 0; i < num_bits; ++i) {
@@ -166,7 +165,6 @@ template <typename ComposerContext> std::string bitarray<ComposerContext>::get_w
 template class bitarray<waffle::StandardComposer>;
 template class bitarray<waffle::BoolComposer>;
 template class bitarray<waffle::MiMCComposer>;
-template class bitarray<waffle::ExtendedComposer>;
 template class bitarray<waffle::TurboComposer>;
 } // namespace stdlib
 } // namespace plonk

@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <barretenberg/uint256/uint256.hpp>
 #include <barretenberg/waffle/composer/standard_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
@@ -8,149 +9,28 @@
 
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 #include <memory>
-namespace {
+#include <random>
 
 using namespace barretenberg;
 
-// void generate_test_data(waffle::Prover& state, waffle::plonk_circuit_state &old_state)
-// {
-//     size_t n = state.n;
-//     std::unique_ptr<waffle::ProverArithmeticWidget> widget = std::make_unique<waffle::ProverArithmeticWidget>(n);
-//     // state.widgets.emplace_back(std::make_unique<waffle::ProverArithmeticWidget>(n));
+namespace
+{
+std::mt19937 engine;
+std::uniform_int_distribution<uint32_t> dist{ 0ULL, UINT32_MAX };
 
-//     // create some constraints that satisfy our arithmetic circuit relation
-//     fr::field_t one;
-//     fr::field_t zero;
-//     fr::field_t minus_one;
-//     fr::one(one);
-//     fr::__neg(one, minus_one);
-//     fr::zero(zero);
-//     fr::field_t T0;
-//     // even indices = mul gates, odd incides = add gates
+const auto init = []() {
+    // std::random_device rd{};
+    std::seed_seq seed2{ 1, 2, 3, 4, 5, 6, 7, 8 };
+    engine = std::mt19937(seed2);
+    return 1;
+}();
 
-//     state.w_l.resize(n);
-//     state.w_r.resize(n);
-//     state.w_o.resize(n);
+uint32_t get_pseudorandom_uint32()
+{
+    return dist(engine);
+}
+}
 
-//     for (size_t i = 0; i < n / 4; ++i)
-//     {
-//         state.w_l.at(2 * i) = fr::random_element();
-//         state.w_r.at(2 * i) = fr::random_element();
-//         fr::__mul(state.w_l.at(2 * i), state.w_r.at(2 * i), state.w_o.at(2 * i));
-//         fr::__copy(zero, widget->q_l.at(2 * i));
-//         fr::__copy(zero, widget->q_r.at(2 * i));
-//         fr::__copy(minus_one, widget->q_o.at(2 * i));
-//         fr::__copy(zero, widget->q_c.at(2 * i));
-//         fr::__copy(one, widget->q_m.at(2 * i));
-
-//         state.w_l.at(2 * i + 1) = fr::random_element();
-//         state.w_r.at(2 * i + 1) = fr::random_element();
-//         state.w_o.at(2 * i + 1) = fr::random_element();
-
-//         fr::__add(state.w_l.at(2 * i + 1), state.w_r.at(2 * i + 1), T0);
-//         fr::__add(T0, state.w_o.at(2 * i + 1), widget->q_c.at(2 * i + 1));
-//         fr::__neg(widget->q_c.at(2 * i + 1), widget->q_c.at(2 * i + 1));
-//         fr::one(widget->q_l.at(2 * i + 1));
-//         fr::one(widget->q_r.at(2 * i + 1));
-//         fr::one(widget->q_o.at(2 * i + 1));
-//         fr::zero(widget->q_m.at(2 * i + 1));
-//     }
-//     size_t shift = n / 2;
-//     polynomial_arithmetic::copy_polynomial(&state.w_l.at(0), &state.w_l.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&state.w_r.at(0), &state.w_r.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&state.w_o.at(0), &state.w_o.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&widget->q_m.at(0), &widget->q_m.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&widget->q_l.at(0), &widget->q_l.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&widget->q_r.at(0), &widget->q_r.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&widget->q_o.at(0), &widget->q_o.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&widget->q_c.at(0), &widget->q_c.at(shift), shift, shift);
-
-//     // create basic permutation - second half of witness vector is a copy of the first half
-//     state.sigma_1_mapping.resize(n);
-//     state.sigma_2_mapping.resize(n);
-//     state.sigma_3_mapping.resize(n);
-
-//     // TODO REMOVE
-//     // for (size_t i = 0; i < n; ++i)
-//     // {
-//     //     state.sigma_1_mapping[i] = (uint32_t)(i);
-//     //     state.sigma_2_mapping[i] = (uint32_t)(i) + (1U << 30U);
-//     //     state.sigma_3_mapping[i] = (uint32_t)(i) + (1U << 31U);
-//     // }
-//     for (size_t i = 0; i < n / 2; ++i)
-//     {
-//         state.sigma_1_mapping[shift + i] = (uint32_t)i;
-//         state.sigma_2_mapping[shift + i] = (uint32_t)i + (1U << 30U);
-//         state.sigma_3_mapping[shift + i] = (uint32_t)i + (1U << 31U);
-//         state.sigma_1_mapping[i] = (uint32_t)(i + shift);
-//         state.sigma_2_mapping[i] = (uint32_t)(i + shift) + (1U << 30U);
-//         state.sigma_3_mapping[i] = (uint32_t)(i + shift) + (1U << 31U);
-//     }
-//     // make last permutation the same as identity permutation
-//     state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
-//     state.sigma_2_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 30U);
-//     state.sigma_3_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 31U);
-//     state.sigma_1_mapping[n - 1] = (uint32_t)n - 1;
-//     state.sigma_2_mapping[n - 1] = (uint32_t)n - 1 + (1U << 30U);
-//     state.sigma_3_mapping[n - 1] = (uint32_t)n - 1 + (1U << 31U);
-
-//     fr::zero(state.w_l.at(n-1));
-//     fr::zero(state.w_r.at(n-1));
-//     fr::zero(state.w_o.at(n-1));
-//     fr::zero(widget->q_c.at(n-1));
-//     fr::zero(widget->q_l.at(n - 1));
-//     fr::zero(widget->q_r.at(n - 1));
-//     fr::zero(widget->q_o.at(n - 1));
-//     fr::zero(widget->q_m.at(n - 1));
-
-//     fr::zero(state.w_l.at(shift-1));
-//     fr::zero(state.w_r.at(shift-1));
-//     fr::zero(state.w_o.at(shift-1));
-//     fr::zero(widget->q_c.at(shift-1));
-
-//     old_state.w_l = polynomial(state.w_l);
-//     old_state.w_r = polynomial(state.w_r);
-//     old_state.w_o = polynomial(state.w_o);
-//     old_state.q_m = polynomial(widget->q_m);
-//     old_state.q_l = polynomial(widget->q_l);
-//     old_state.q_r = polynomial(widget->q_r);
-//     old_state.q_o = polynomial(widget->q_o);
-//     old_state.q_c = polynomial(widget->q_c);
-
-//     for (size_t i = 0; i < state.sigma_1_mapping.size(); ++i)
-//     {
-//         old_state.sigma_1_mapping.emplace_back(state.sigma_1_mapping[i]);
-//         old_state.sigma_2_mapping.emplace_back(state.sigma_2_mapping[i]);
-//         old_state.sigma_3_mapping.emplace_back(state.sigma_3_mapping[i]);
-//     }
-
-//     state.widgets.emplace_back(std::move(widget));
-// }
-// void comparison_proof(waffle::Prover& state)
-// {
-//     EXPECT_EQ(state.n, 16);
-//     std::unique_ptr<waffle::ProverArithmeticWidget> widget = std::make_unique<waffle::ProverArithmeticWidget>(n);
-
-//     state.w_l.resize(n);
-//     widget->w_r.resize(n);
-//     widget->w_o.resize(n);
-
-//     for (size_t i = 0; i < n; ++i)
-//     {
-//         fr::__copy(fr::zero, state.q_m[i]);
-//         fr::__copy(fr::zero, state.q_c[i]);
-//         fr::__copy(fr::one, state.q_l[i]);
-//         fr::__copy(fr::one, state.q_r[i]);
-//         fr::__copy(fr::neg_one(), state.q_o[i]);
-//         fr::__copy(fr::one, widget->w_l[i]);
-//         fr::__copy(fr::one, widget->w_r[i]);
-//         fr::add(fr::one, fr::one, widget->w_o[i]);
-//     }
-//     state.sigma_1_mapping.resize(n);
-//     state.sigma_2_mapping.resize(n);
-//     state.sigma_3_mapping.resize(n);
-// }
-} // namespace
 
 TEST(standard_composer, test_add_gate_proofs)
 {
@@ -287,5 +167,241 @@ TEST(standard_composer, test_mul_gate_proofs)
     waffle::plonk_proof proof = prover.construct_proof();
 
     bool result = verifier.verify_proof(proof);
+    EXPECT_EQ(result, true);
+}
+
+
+TEST(standard_composer, range_constraint)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    for (size_t i = 0; i < 10; ++i)
+    {
+        uint32_t value = get_pseudorandom_uint32();
+        fr::field_t witness_value = fr::to_montgomery_form({{ value, 0, 0, 0 }});
+        uint32_t witness_index = composer.add_variable(witness_value);
+
+        // include non-nice numbers of bits, that will bleed over gate boundaries
+        size_t extra_bits = 2 * (i % 4);
+    
+        std::vector<uint32_t> accumulators = composer.create_range_constraint(witness_index, 32 + extra_bits);
+
+        for (uint32_t j = 0; j < 16; ++j)
+        {
+            uint32_t result = (value >> (30U - (2* j)));
+            fr::field_t source = fr::from_montgomery_form(composer.get_variable(accumulators[j + (extra_bits >> 1)]));
+            uint32_t expected = static_cast<uint32_t>(source.data[0]);
+            EXPECT_EQ(result, expected);
+        }
+        for (uint32_t j = 1; j < 16; ++j)
+        {
+            uint32_t left = (value >> (30U - (2* j)));
+            uint32_t right = (value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+        }
+    }
+
+    uint32_t zero_idx = composer.add_variable(fr::zero);
+    uint32_t one_idx = composer.add_variable(fr::one);
+    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+
+    EXPECT_EQ(result, true);
+}
+
+
+TEST(standard_composer, and_constraint)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    for (size_t i = 0; i < /*10*/1; ++i)
+    {
+        uint32_t left_value = get_pseudorandom_uint32();
+
+        fr::field_t left_witness_value = fr::to_montgomery_form({{ left_value, 0, 0, 0 }});
+        uint32_t left_witness_index = composer.add_variable(left_witness_value);
+
+        uint32_t right_value = get_pseudorandom_uint32();
+        fr::field_t right_witness_value = fr::to_montgomery_form({{ right_value, 0, 0, 0 }});
+        uint32_t right_witness_index = composer.add_variable(right_witness_value);
+
+        uint32_t out_value = left_value & right_value;
+        // include non-nice numbers of bits, that will bleed over gate boundaries
+        size_t extra_bits = 2 * (i % 4);
+    
+        waffle::accumulator_triple accumulators = composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
+        // composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
+
+        for (uint32_t j = 0; j < 16; ++j)
+        {
+            uint32_t left_expected = (left_value >> (30U - (2* j)));
+            uint32_t right_expected = (right_value >> (30U - (2* j)));
+            uint32_t out_expected = left_expected & right_expected;
+
+            fr::field_t left_source = fr::from_montgomery_form(composer.get_variable(accumulators.left[j + (extra_bits >> 1)]));
+            uint32_t left_result = static_cast<uint32_t>(left_source.data[0]);
+
+            fr::field_t right_source = fr::from_montgomery_form(composer.get_variable(accumulators.right[j + (extra_bits >> 1)]));
+            uint32_t right_result = static_cast<uint32_t>(right_source.data[0]);
+
+            fr::field_t out_source = fr::from_montgomery_form(composer.get_variable(accumulators.out[j + (extra_bits >> 1)]));
+            uint32_t out_result = static_cast<uint32_t>(out_source.data[0]);
+
+            EXPECT_EQ(left_result, left_expected);
+            EXPECT_EQ(right_result, right_expected);
+            EXPECT_EQ(out_result, out_expected);
+        }
+        for (uint32_t j = 1; j < 16; ++j)
+        {
+            uint32_t left = (left_value >> (30U - (2* j)));
+            uint32_t right = (left_value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+
+            left = (right_value >> (30U - (2* j)));
+            right = (right_value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+
+            left = (out_value >> (30U - (2* j)));
+            right = (out_value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+        }
+    }
+
+    uint32_t zero_idx = composer.add_variable(fr::zero);
+    uint32_t one_idx = composer.add_variable(fr::one);
+    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+
+    EXPECT_EQ(result, true);
+}
+
+TEST(standard_composer, xor_constraint)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+    for (size_t i = 0; i < /*10*/1; ++i)
+    {
+        uint32_t left_value = get_pseudorandom_uint32();
+
+        fr::field_t left_witness_value = fr::to_montgomery_form({{ left_value, 0, 0, 0 }});
+        uint32_t left_witness_index = composer.add_variable(left_witness_value);
+
+        uint32_t right_value = get_pseudorandom_uint32();
+        fr::field_t right_witness_value = fr::to_montgomery_form({{ right_value, 0, 0, 0 }});
+        uint32_t right_witness_index = composer.add_variable(right_witness_value);
+
+        uint32_t out_value = left_value ^ right_value;
+        // include non-nice numbers of bits, that will bleed over gate boundaries
+        size_t extra_bits = 2 * (i % 4);
+    
+        waffle::accumulator_triple accumulators = composer.create_xor_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
+
+        for (uint32_t j = 0; j < 16; ++j)
+        {
+            uint32_t left_expected = (left_value >> (30U - (2* j)));
+            uint32_t right_expected = (right_value >> (30U - (2* j)));
+            uint32_t out_expected = left_expected ^ right_expected;
+
+            fr::field_t left_source = fr::from_montgomery_form(composer.get_variable(accumulators.left[j + (extra_bits >> 1)]));
+            uint32_t left_result = static_cast<uint32_t>(left_source.data[0]);
+
+            fr::field_t right_source = fr::from_montgomery_form(composer.get_variable(accumulators.right[j + (extra_bits >> 1)]));
+            uint32_t right_result = static_cast<uint32_t>(right_source.data[0]);
+
+            fr::field_t out_source = fr::from_montgomery_form(composer.get_variable(accumulators.out[j + (extra_bits >> 1)]));
+            uint32_t out_result = static_cast<uint32_t>(out_source.data[0]);
+
+            EXPECT_EQ(left_result, left_expected);
+            EXPECT_EQ(right_result, right_expected);
+            EXPECT_EQ(out_result, out_expected);
+        }
+        for (uint32_t j = 1; j < 16; ++j)
+        {
+            uint32_t left = (left_value >> (30U - (2* j)));
+            uint32_t right = (left_value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+
+            left = (right_value >> (30U - (2* j)));
+            right = (right_value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+
+            left = (out_value >> (30U - (2* j)));
+            right = (out_value >> (30U - (2* (j - 1))));
+            EXPECT_EQ(left - 4 * right < 4, true);
+        }
+    }
+
+    uint32_t zero_idx = composer.add_variable(fr::zero);
+    uint32_t one_idx = composer.add_variable(fr::one);
+    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+
+    EXPECT_EQ(result, true);
+}
+
+TEST(standard_composer, big_add_gate_with_bit_extract)
+{
+    waffle::StandardComposer composer = waffle::StandardComposer();
+
+
+    const auto generate_constraints = [&composer](uint32_t quad_value) {
+        uint32_t quad_accumulator_left = (get_pseudorandom_uint32() & 0x3fffffff) - quad_value; // make sure this won't overflow
+        uint32_t quad_accumulator_right = (4 * quad_accumulator_left) + quad_value;
+
+        uint32_t left_idx = composer.add_variable(uint256_t(quad_accumulator_left));
+        uint32_t right_idx = composer.add_variable(uint256_t(quad_accumulator_right));
+
+        uint32_t input = get_pseudorandom_uint32();
+        uint32_t output = input + (quad_value > 1 ? 1 : 0);
+
+        waffle::add_quad gate{
+            composer.add_variable(uint256_t(input)),
+            composer.add_variable(uint256_t(output)),
+            right_idx,
+            left_idx,
+            fr::to_montgomery_form({{ 6, 0, 0, 0 }}),
+            fr::neg(fr::to_montgomery_form({{ 6, 0, 0, 0 }})),
+            fr::zero,
+            fr::zero,
+            fr::zero
+        };
+
+        composer.create_big_add_gate_with_bit_extraction(gate);
+    };
+
+    generate_constraints(0);
+    generate_constraints(1);
+    generate_constraints(2);
+    generate_constraints(3);
+
+    waffle::Prover prover = composer.preprocess();
+
+    waffle::Verifier verifier = composer.create_verifier();
+
+    waffle::plonk_proof proof = prover.construct_proof();
+
+    bool result = verifier.verify_proof(proof);
+
     EXPECT_EQ(result, true);
 }

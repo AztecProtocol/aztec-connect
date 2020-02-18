@@ -37,6 +37,19 @@ struct add_quad {
     barretenberg::fr::field_t const_scaling;
 };
 
+struct mul_quad {
+    uint32_t a;
+    uint32_t b;
+    uint32_t c;
+    uint32_t d;
+    barretenberg::fr::field_t mul_scaling;
+    barretenberg::fr::field_t a_scaling;
+    barretenberg::fr::field_t b_scaling;
+    barretenberg::fr::field_t c_scaling;
+    barretenberg::fr::field_t d_scaling;
+    barretenberg::fr::field_t const_scaling;
+};
+
 struct mul_triple {
     uint32_t a;
     uint32_t b;
@@ -73,6 +86,12 @@ struct fixed_group_init_quad {
     barretenberg::fr::field_t q_x_2;
     barretenberg::fr::field_t q_y_1;
     barretenberg::fr::field_t q_y_2;
+};
+
+struct accumulator_triple {
+    std::vector<uint32_t> left;
+    std::vector<uint32_t> right;
+    std::vector<uint32_t> out;
 };
 
 class ComposerBase {

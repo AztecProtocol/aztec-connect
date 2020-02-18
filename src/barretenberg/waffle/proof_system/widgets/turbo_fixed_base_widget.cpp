@@ -77,7 +77,7 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     // q_3 = q_y_1
     // q_ecc_1 = q_y_2
     // q_4 = q_x_init_1
-    // q_4_next = q_x_init_2
+    // q_5 = q_x_init_2
     // q_m = q_y_init_1
     // q_c = q_y_init_2
     fr::field_t three;
@@ -189,7 +189,7 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     fr::field_t x_init_identity;
     fr::__sub(q_4_fft[i], w_1_fft[i], T0);
     fr::__mul_with_coarse_reduction(T0, w_3_fft[i], T0);
-    fr::__mul_with_coarse_reduction(w_4_minus_one, q_4_next_fft[i], T1);
+    fr::__mul_with_coarse_reduction(w_4_minus_one, q_5_fft[i], T1);
     fr::__sub_with_coarse_reduction(T0, T1, x_init_identity);
     fr::__mul_with_coarse_reduction(x_init_identity, alpha_f, x_init_identity);
 
@@ -288,11 +288,11 @@ fr::field_t ProverTurboFixedBaseWidget::compute_linear_contribution(const fr::fi
     fr::__mul(q_4_multiplicand, q_c_eval, q_4_multiplicand);
     fr::__mul(q_4_multiplicand, alpha_f, q_4_multiplicand);
 
-    fr::field_t q_4_next_multiplicand;
-    fr::__sub(fr::one, w_4_eval, q_4_next_multiplicand);
-    fr::__mul(q_4_next_multiplicand, q_ecc_1_eval, q_4_next_multiplicand);
-    fr::__mul(q_4_next_multiplicand, q_c_eval, q_4_next_multiplicand);
-    fr::__mul(q_4_next_multiplicand, alpha_f, q_4_next_multiplicand);
+    fr::field_t q_5_multiplicand;
+    fr::__sub(fr::one, w_4_eval, q_5_multiplicand);
+    fr::__mul(q_5_multiplicand, q_ecc_1_eval, q_5_multiplicand);
+    fr::__mul(q_5_multiplicand, q_c_eval, q_5_multiplicand);
+    fr::__mul(q_5_multiplicand, alpha_f, q_5_multiplicand);
 
     fr::field_t q_m_multiplicand;
     fr::__mul(w_o_eval, q_ecc_1_eval, q_m_multiplicand);
@@ -310,7 +310,7 @@ fr::field_t ProverTurboFixedBaseWidget::compute_linear_contribution(const fr::fi
     fr::__mul(q_2_multiplicand, q_2[i], T3);
     fr::__mul(q_3_multiplicand, q_3[i], T4);
     fr::__mul(q_4_multiplicand, q_4[i], T5);
-    fr::__mul(q_4_next_multiplicand, q_4_next[i], T6);
+    fr::__mul(q_5_multiplicand, q_5[i], T6);
     fr::__mul(q_m_multiplicand, q_m[i], T7);
     fr::__add(r[i], T2, r[i]);
     fr::__add(r[i], T3, r[i]);
@@ -521,7 +521,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::field_t q_ecc_1_eval = fr::serialize_from_buffer(&transcript.get_element("q_ecc_1")[0]);
     fr::field_t q_c_eval = fr::serialize_from_buffer(&transcript.get_element("q_c")[0]);
 
-    fr::field_t alpha_a = fr::mul(challenge.alpha_base, challenge.alpha_step);
+    fr::field_t alpha_a = fr::mul(challenge.alpha_base, fr::sqr(challenge.alpha_step));
     fr::field_t alpha_b = fr::mul(alpha_a, challenge.alpha_step);
     fr::field_t alpha_c = fr::mul(alpha_b, challenge.alpha_step);
     fr::field_t alpha_d = fr::mul(alpha_c, challenge.alpha_step);
@@ -614,22 +614,29 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
         scalars.push_back(q_4_term);
     }
 
-    fr::field_t q_4_next_term_ecc;
-    fr::__sub(fr::one, w_4_eval, q_4_next_term_ecc);
-    fr::__mul(q_4_next_term_ecc, q_ecc_1_eval, q_4_next_term_ecc);
-    fr::__mul(q_4_next_term_ecc, q_c_eval, q_4_next_term_ecc);
-    fr::__mul(q_4_next_term_ecc, alpha_f, q_4_next_term_ecc);
+    fr::field_t q_5_term_ecc;    
+    fr::__sub(fr::one, w_4_eval, q_5_term_ecc);
+    fr::__mul(q_5_term_ecc, q_ecc_1_eval, q_5_term_ecc);
+    fr::__mul(q_5_term_ecc, q_c_eval, q_5_term_ecc);
+    fr::__mul(q_5_term_ecc, alpha_f, q_5_term_ecc);
 
-    fr::field_t q_4_next_term_arith;
-    fr::__mul(w_4_omega_eval, challenge.alpha_base, q_4_next_term_arith);
-    fr::__mul(q_4_next_term_arith, q_arith_eval, q_4_next_term_arith);
+    fr::field_t q_5_term_arith;
+    fr::field_t q_5_temp;
+    fr::field_t two = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
+    fr::__sqr(w_4_eval, q_5_term_arith);
+    fr::__sub(q_5_term_arith, w_4_eval, q_5_term_arith);
+    fr::__sub(w_4_eval, two, q_5_temp);
+    fr::__mul(q_5_term_arith, q_5_temp, q_5_term_arith);
+    fr::__mul(q_5_term_arith, challenge.alpha_step, q_5_term_arith);
+    fr::__mul(q_5_term_arith, challenge.alpha_base, q_5_term_arith);
+    fr::__mul(q_5_term_arith, q_arith_eval, q_5_term_arith);
 
-    fr::field_t q_4_next_term;
-    fr::__add(q_4_next_term_ecc, q_4_next_term_arith, q_4_next_term);
-    fr::__mul(q_4_next_term, challenge.linear_nu, q_4_next_term);
-    if (g1::on_curve(key->constraint_selectors.at("Q_4_NEXT"))) {
-        points.push_back(key->constraint_selectors.at("Q_4_NEXT"));
-        scalars.push_back(q_4_next_term);
+    fr::field_t q_5_term;
+    fr::__add(q_5_term_ecc, q_5_term_arith, q_5_term);
+    fr::__mul(q_5_term, challenge.linear_nu, q_5_term);
+    if (g1::on_curve(key->constraint_selectors.at("Q_5"))) {
+        points.push_back(key->constraint_selectors.at("Q_5"));
+        scalars.push_back(q_5_term);
     }
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu

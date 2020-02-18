@@ -33,7 +33,7 @@
 //     polynomial q_2(num_gates);
 //     polynomial q_3(num_gates);
 //     polynomial q_4(num_gates);
-//     polynomial q_4_next(num_gates);
+//     polynomial q_5(num_gates);
 //     polynomial q_m(num_gates);
 //     polynomial q_c(num_gates);
 //     polynomial q_ecc_1(num_gates);
@@ -116,7 +116,7 @@
 //         q_m[i] = fr::zero;
 //         q_c[i] = fr::zero;
 //         q_4[i] = fr::zero;
-//         q_4_next[i] = fr::zero;
+//         q_5[i] = fr::zero;
 //     }
 
 //     circuit_state.w_l_fft = polynomial(w_1, 4 * num_gates + 4);
@@ -156,7 +156,7 @@
 //     widget.q_2 = polynomial(q_2);
 //     widget.q_3 = polynomial(q_3);
 //     widget.q_4 = polynomial(q_4);
-//     widget.q_4_next = polynomial(q_4_next);
+//     widget.q_5 = polynomial(q_5);
 //     widget.q_m = polynomial(q_m);
 //     widget.q_c = polynomial(q_c);
 //     widget.q_arith = polynomial(q_arith);
@@ -200,7 +200,7 @@
 //     polynomial q_2(num_gates);
 //     polynomial q_3(num_gates);
 //     polynomial q_4(num_gates);
-//     polynomial q_4_next(num_gates);
+//     polynomial q_5(num_gates);
 //     polynomial q_m(num_gates);
 //     polynomial q_c(num_gates);
 //     polynomial q_ecc_1(num_gates);
@@ -311,7 +311,7 @@
 //         q_ecc_1[i] = y_alpha_2;
 
 //         q_4[i] = fr::zero;
-//         q_4_next[i] = fr::zero;
+//         q_5[i] = fr::zero;
 //         q_m[i] = fr::zero;
 //         q_c[i] = fr::zero;
 //         q_arith[i] = fr::zero;
@@ -327,7 +327,7 @@
 //     q_2[125] = fr::zero;
 //     q_3[125] = fr::zero;
 //     q_4[125] = fr::zero;
-//     q_4_next[125] = fr::zero;
+//     q_5[125] = fr::zero;
 //     q_m[125] = fr::zero;
 //     q_c[125] = fr::zero;
 //     q_ecc_1[125] = fr::zero;
@@ -341,7 +341,7 @@
 //     q_2[126] = fr::zero;
 //     q_3[126] = fr::zero;
 //     q_4[126] = fr::zero;
-//     q_4_next[126] = fr::zero;
+//     q_5[126] = fr::zero;
 //     q_m[126] = fr::zero;
 //     q_c[126] = fr::zero;
 //     q_ecc_1[126] = fr::zero;
@@ -355,7 +355,7 @@
 //     q_2[127] = fr::zero;
 //     q_3[127] = fr::zero;
 //     q_4[127] = fr::zero;
-//     q_4_next[127] = fr::zero;
+//     q_5[127] = fr::zero;
 //     q_m[127] = fr::zero;
 //     q_c[127] = fr::zero;
 //     q_ecc_1[127] = fr::zero;
@@ -398,7 +398,7 @@
 //     widget.q_2 = polynomial(q_2, num_gates);
 //     widget.q_3 = polynomial(q_3, num_gates);
 //     widget.q_4 = polynomial(q_4, num_gates);
-//     widget.q_4_next = polynomial(q_4_next, num_gates);
+//     widget.q_5 = polynomial(q_5, num_gates);
 //     widget.q_m = polynomial(q_m, num_gates);
 //     widget.q_c = polynomial(q_c, num_gates);
 //     widget.q_arith = polynomial(q_arith, num_gates);

@@ -1,198 +1,169 @@
 #pragma once
 
 #include <vector>
-#include <iostream>
 
-#include "../bool/bool.hpp"
 #include "../byte_array/byte_array.hpp"
+#include "../../../uint256/uint256.hpp"
+
 #include "../common.hpp"
-#include "../int_utils.hpp"
 
 namespace waffle
 {
     class StandardComposer;
+    class TurboComposer;
     class BoolComposer;
     class MiMCComposer;
-    class ExtendedComposer;
     class TurboComposer;
 }
 
 namespace plonk {
 namespace stdlib {
 
-template <typename ComposerContext> class field_t;
+template <typename Composer> class bool_t;
+template <typename Composer> class field_t;
 
-template <typename ComposerContext> class uint {
-  public:
-    // explicit uint(size_t width);
-    uint(size_t width, const uint64_t other);
-    uint(size_t width, ComposerContext* parent_context);
-    uint(size_t width, const witness_t<ComposerContext>& value);
-    uint(size_t width, ComposerContext* parent_context, const uint64_t value);
-    uint(size_t width, const field_t<ComposerContext>& other);
-    uint(ComposerContext* parent_context, const std::vector<bool_t<ComposerContext>>& wires);
+template <typename Composer, typename Native> class uint {
+    public:
+    static constexpr size_t width = sizeof(Native) * 8;
+
+    uint(const witness_t<Composer>& other);
+    uint(const field_t<Composer>& other);
+    uint(const uint256_t& value = 0);
+    uint(Composer* composer, const uint256_t& value = 0);
+    uint(const byte_array<Composer>& other);
+    uint(Composer* parent_context, const std::vector<bool_t<Composer>>& wires);
+    uint(Composer* parent_context, const std::array<bool_t<Composer>, width>& wires)
+        : uint<Composer, Native>(parent_context, std::vector<bool_t<Composer>>(wires.begin(), wires.end()))
+    {}
+
+    uint(const Native v)
+        : uint(static_cast<uint256_t>(v))
+    {}
+
+    // uint(const char v)
+    //     : uint(uint256_t((uint8_t)v))
+    // {}
+    // uint(uint64_t v)
+    //     : uint(static_cast<uint256_t>(v))
+    // {}
+
     uint(const uint& other);
-    uint(const byte_array<ComposerContext>& other);
-
-    uint(char v)
-        : uint(8, static_cast<uint64_t>(v))
-    {}
-
-    uint(uint16_t v)
-        : uint(16, static_cast<uint64_t>(v))
-    {}
-
-    uint(uint32_t v)
-        : uint(32, static_cast<uint64_t>(v))
-    {}
-
-    uint(uint64_t v)
-        : uint(64, static_cast<uint64_t>(v))
-    {}
-
     uint(uint&& other);
 
-    //~uint(){};
-
-    operator byte_array<ComposerContext>();
-
-    operator field_t<ComposerContext>();
-
     uint& operator=(const uint& other);
+    uint& operator=(uint&& other);
+
+    operator byte_array<Composer>() const;
+    operator field_t<Composer>() const;
 
     uint operator+(const uint& other) const;
-    uint operator-(const uint& other);
-    uint operator*(const uint& other);
-    uint operator/(const uint& other);
-    // uint operator%(const uint& other);
-    uint operator&(const uint& other);
-    uint operator|(const uint& other);
-    uint operator^(const uint& other);
-    uint operator~();
+    uint operator-(const uint& other) const;
+    uint operator*(const uint& other) const;
+    uint operator/(const uint& other) const;
+    uint operator%(const uint& other) const;
 
-    uint operator>>(const uint64_t const_shift);
-    uint operator<<(const uint64_t const_shift);
+    uint operator&(const uint& other) const;
+    uint operator^(const uint& other) const;
+    uint operator|(const uint& other) const;
+    uint operator~() const;
 
-    uint ror(const uint64_t const_rotation);
-    uint rol(const uint64_t const_rotation);
+    uint operator>>(const uint64_t shift) const;
+    uint operator<<(const uint64_t shift) const;
 
-    bool_t<ComposerContext> operator>(const uint& other) const;
-    bool_t<ComposerContext> operator<(const uint& other) const;
-    bool_t<ComposerContext> operator>=(const uint& other) const;
-    bool_t<ComposerContext> operator<=(const uint& other) const;
-    bool_t<ComposerContext> operator==(const uint& other) const;
-    bool_t<ComposerContext> operator!=(const uint& other) const;
+    uint ror(const uint64_t target_rotation) const;
+    uint rol(const uint64_t target_rotation) const;
+    uint ror(const uint256_t target_rotation) const { return ror(target_rotation.data[0]); }
+    uint rol(const uint256_t target_rotation) const { return rol(target_rotation.data[0]); }
 
-    uint operator++() { return operator+(uint(width(), context, 1)); };
-    uint operator--() { return operator-(uint(width(), context, 1)); };
-    uint operator+=(const uint& other) { *this = operator+(other); return *this; };
-    uint operator-=(const uint& other) { *this = operator-(other); return *this; };
-    uint operator*=(const uint& other) { *this = operator*(other); return *this; };
-    uint operator/=(const uint& other) { *this = operator/(other); return *this; };
-    // uint operator%=(const uint& other) { *this = operator%(other); return *this; };
+    bool_t<Composer> operator>(const uint& other) const;
+    bool_t<Composer> operator<(const uint& other) const;
+    bool_t<Composer> operator>=(const uint& other) const;
+    bool_t<Composer> operator<=(const uint& other) const;
+    bool_t<Composer> operator==(const uint& other) const;
+    bool_t<Composer> operator!=(const uint& other) const;
+    bool_t<Composer> operator!() const;
 
-    uint operator&=(const uint& other) { *this = operator&(other); return *this; };
-    uint operator^=(const uint& other) { *this = operator^(other); return *this; };
-    uint operator|=(const uint& other) { *this = operator|(other); return *this; };
+    uint operator+=(const uint& other) { *this = operator+(other); return *this; }
+    uint operator-=(const uint& other) { *this = operator-(other); return *this; }
+    uint operator*=(const uint& other) { *this = operator*(other); return *this; }
+    uint operator/=(const uint& other) { *this = operator/(other); return *this; }
+    uint operator%=(const uint& other) { *this = operator%(other); return *this; }
 
-    uint operator>>=(const uint64_t const_shift) { *this = operator>>(const_shift); return *this; };
-    uint operator<<=(const uint64_t const_shift) { *this = operator<<(const_shift); return *this; };
+    uint operator&=(const uint& other) { *this = operator&(other); return *this; }
+    uint operator^=(const uint& other) { *this = operator^(other); return *this; }
+    uint operator|=(const uint& other) { *this = operator|(other); return *this; }
 
-    bool is_constant() const { return witness_index == static_cast<uint32_t>(-1); }
+    uint operator>>=(const uint64_t shift) { *this = operator>>(shift); return *this; }
+    uint operator<<=(const uint64_t shift) { *this = operator<<(shift); return *this; }
 
-    uint32_t get_witness_index() const
-    {
-        normalize();
-        return witness_index;
-    }
+    uint normalize() const;
 
-    uint64_t get_value() const;
+    uint256_t get_value() const;
 
-    uint64_t get_additive_constant() const { return additive_constant; }
+    bool is_constant() const { return witness_index == UINT32_MAX; }
+    Composer* get_context() const { return context; }
 
-    uint64_t get_multiplicative_constant() const { return multiplicative_constant; }
+    bool_t<Composer> at(const size_t bit_index) const;
 
-    ComposerContext* get_context() const { return context; }
+    size_t get_width() const { return width; }
 
-    bool_t<ComposerContext> at(const size_t bit_index) const;
+    uint32_t get_witness_index() const { return witness_index; }
 
-    void set_wire(bool_t<ComposerContext> const& bit, size_t bit_index);
+    uint256_t get_additive_constant() const { return additive_constant; }
 
-    size_t width() const { return bool_wires.size(); }
-  protected:
-     ComposerContext* context;
+protected:
+    Composer* context;
 
     enum WitnessStatus {
-        OK,                    // has both valid binary wires, and a valid native representation
-        NOT_NORMALIZED,        // has a native representation, that needs to be normalised (is > 2^32)
-        IN_NATIVE_FORM,        // witness is a valid uint, but has no binary wires
-        IN_BINARY_FORM,        // only has valid binary wires, but no witness that is a fully constructed uint
-        QUEUED_LOGIC_OPERATION // we have queued up a logic operation. We can efficiently output IN_NATIVE_FORM or
-                               // IN_BINARY_FORM, but not both. So we queue up the logic operation until we know whether
-                               // the next operation will be native or binary
+        OK,
+        NOT_NORMALIZED,
+        WEAK_NORMALIZED
     };
 
-    struct LogicOperation {
-        LogicOperation(size_t width)
-            : operand_wires(width)
-        {}
-        std::vector<bool_t<ComposerContext>> operand_wires;
-        bool_t<ComposerContext> (*method)(bool_t<ComposerContext>, bool_t<ComposerContext>) = nullptr;
-    };
-
-    void prepare_for_arithmetic_operations() const;
-    void prepare_for_logic_operations() const;
-
-    // TODO: change the naming scheme for this
-    // 'concatenate' will use + gates to create a witness out of boolean 'field wires'
-    // 'decompose' will use + and bool gates to create boolean 'field wires' from a witness
-    void concatenate() const;
-    void decompose() const;
-    void normalize() const; // ensures uint both has valid binary wires and a valid witness
-
-    uint<ComposerContext> internal_logic_operation(
-        const uint<ComposerContext>& right,
-        bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>, bool_t<ComposerContext>)) const;
-
-    void internal_logic_operation_binary(std::vector<bool_t<ComposerContext>> const& operand_wires,
-                                         bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>,
-                                                                                  bool_t<ComposerContext>)) const;
-
-    void internal_logic_operation_native(std::vector<bool_t<ComposerContext>> const& operand_wires,
-                                         bool_t<ComposerContext> (*wire_logic_op)(bool_t<ComposerContext>,
-                                                                                  bool_t<ComposerContext>)) const;
-
-    uint ternary_operator(const bool_t<ComposerContext>& predicate, const uint& lhs, const uint& rhs);
-
-    mutable uint32_t witness_index;
-    mutable uint64_t additive_constant;
-    mutable uint64_t multiplicative_constant;
+    mutable uint256_t additive_constant;
     mutable WitnessStatus witness_status;
-    mutable std::vector<bool_t<ComposerContext>> bool_wires;
-    LogicOperation queued_logic_operation;
+    mutable std::vector<uint32_t> accumulators;
+    mutable uint32_t witness_index;
 
-    // Tracks the maximum value that this uint can potentially represent. We want to be able to use 'lazy reduction'
-    // techniques, whereby we only constrain the value of this object to be in the range [0, 2^{32}] only when
-    // necessary. e.g. for comparisons, or logic operations. For example, consider the situation where three addition
-    // operations are chained together. Instead of performing a range check on each addition sum (via calling
-    // 'decompose'), we can perform a single range check on the result of the three additions. However, we now need to
-    // know how many 'bits' this overloaded variable can contain (33). Which is why we have a maximum value field, so
-    // that we know precisely how many bits are required to represent a given overloaded uint
-    mutable int_utils::uint128_t maximum_value;
+    static constexpr uint256_t CIRCUIT_UINT_MAX_PLUS_ONE = (uint256_t(1) << width);
+    static constexpr uint256_t MASK = CIRCUIT_UINT_MAX_PLUS_ONE - 1;
+private:
+    enum LogicOp{
+        AND,
+        XOR,
+    };
+    
+    std::pair<uint, uint> divmod(const uint& other) const;
+    uint logic_operator(const uint& other, const LogicOp op_type) const;
+    uint weak_normalize() const;
 
-    static constexpr size_t MAXIMUM_BIT_LENGTH = 65UL;
+    uint256_t get_unbounded_value() const;
 };
 
-template <typename T> inline std::ostream& operator<<(std::ostream& os, uint<T> const& v)
+template <typename T, typename w> inline std::ostream& operator<<(std::ostream& os, uint<T, w> const& v)
 {
     return os << v.get_value();
 }
 
-extern template class uint<waffle::StandardComposer>;
-extern template class uint<waffle::BoolComposer>;
-extern template class uint<waffle::MiMCComposer>;
-extern template class uint<waffle::ExtendedComposer>;
-extern template class uint<waffle::TurboComposer>;
+extern template class uint<waffle::TurboComposer, uint8_t>;
+extern template class uint<waffle::TurboComposer, uint16_t>;
+extern template class uint<waffle::TurboComposer, uint32_t>;
+extern template class uint<waffle::TurboComposer, uint64_t>;
 
-} // namespace stdlib
-} // namespace plonk
+extern template class uint<waffle::StandardComposer, uint8_t>;
+extern template class uint<waffle::StandardComposer, uint16_t>;
+extern template class uint<waffle::StandardComposer, uint32_t>;
+extern template class uint<waffle::StandardComposer, uint64_t>;
+
+extern template class uint<waffle::BoolComposer, uint8_t>;
+extern template class uint<waffle::BoolComposer, uint16_t>;
+extern template class uint<waffle::BoolComposer, uint32_t>;
+extern template class uint<waffle::BoolComposer, uint64_t>;
+
+extern template class uint<waffle::MiMCComposer, uint8_t>;
+extern template class uint<waffle::MiMCComposer, uint16_t>;
+extern template class uint<waffle::MiMCComposer, uint32_t>;
+extern template class uint<waffle::MiMCComposer, uint64_t>;
+
+}
+}

@@ -49,7 +49,7 @@ template <typename T> void test_sha256(T const& input, std::vector<uint8_t> cons
         std::cout << "Received result: " << output << std::endl;
     }
 
-    waffle::ExtendedVerifier verifier = composer.create_verifier();
+    waffle::TurboVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = r.second.construct_proof();
 
     bool result = verifier.verify_proof(proof);

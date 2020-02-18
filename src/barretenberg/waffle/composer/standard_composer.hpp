@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include "./composer_base.hpp"
 
 #include "../../transcript/manifest.hpp"
@@ -19,7 +21,7 @@ class StandardComposer : public ComposerBase {
         q_2.reserve(size_hint);
         q_3.reserve(size_hint);
         q_c.reserve(size_hint);
-        zero_idx = add_variable(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+        zero_idx = put_constant_variable(barretenberg::fr::zero);
     };
     StandardComposer(StandardComposer&& other) = default;
     StandardComposer& operator=(StandardComposer&& other) = default;
@@ -37,10 +39,31 @@ class StandardComposer : public ComposerBase {
     void create_mul_gate(const mul_triple& in) override;
     void create_bool_gate(const uint32_t a) override;
     void create_poly_gate(const poly_triple& in) override;
+
+    void create_big_add_gate(const add_quad& in);
+    void create_big_add_gate_with_bit_extraction(const add_quad& in);
+    void create_big_mul_gate(const mul_quad& in);
+    void create_balanced_add_gate(const add_quad& in);
+    void fix_witness(const uint32_t witness_index, const barretenberg::fr::field_t& witness_value);
+
+
+    std::vector<uint32_t> create_range_constraint(const uint32_t witness_index, const size_t num_bits);
+    accumulator_triple create_logic_constraint(const uint32_t a,
+                                               const uint32_t b,
+                                               const size_t num_bits,
+                                               bool is_xor_gate);
+    accumulator_triple create_and_constraint(const uint32_t a, const uint32_t b, const size_t num_bits);
+    accumulator_triple create_xor_constraint(const uint32_t a, const uint32_t b, const size_t num_bits);
+
+    uint32_t put_constant_variable(const barretenberg::fr::field_t& variable);
+
     void create_dummy_gates();
     size_t get_num_constant_gates() const override { return 0; }
 
-    uint32_t zero_idx;
+    uint32_t zero_idx = 0;
+
+    // these are variables that we have used a gate on, to enforce that they are equal to a defined value
+    std::map<barretenberg::fr::field_t, uint32_t> constant_variables;
 
     std::vector<barretenberg::fr::field_t> q_m;
     std::vector<barretenberg::fr::field_t> q_1;
