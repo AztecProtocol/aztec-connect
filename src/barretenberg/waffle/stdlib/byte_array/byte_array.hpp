@@ -24,8 +24,15 @@ template <typename ComposerContext> class byte_array {
     byte_array(ComposerContext* parent_context);
     byte_array(ComposerContext* parent_context, size_t const n);
     byte_array(ComposerContext* parent_context, std::string const& input);
+    byte_array(ComposerContext* parent_context, std::vector<uint8_t> const& input);
     byte_array(ComposerContext* parent_context, bits_t const& input);
     byte_array(ComposerContext* parent_context, bits_t&& input);
+
+    template <typename ItBegin, typename ItEnd>
+    byte_array(ComposerContext* parent_context, ItBegin const& begin, ItEnd const& end)
+        : context(parent_context)
+        , values(begin, end)
+    {}
 
     byte_array(const byte_array& other);
     byte_array(byte_array&& other);
@@ -33,10 +40,11 @@ template <typename ComposerContext> class byte_array {
     byte_array& operator=(const byte_array& other);
     byte_array& operator=(byte_array&& other);
 
-    void write(byte_array const& other);
+    byte_array& write(byte_array const& other);
 
     byte_array slice(size_t offset) const;
     byte_array slice(size_t offset, size_t length) const;
+    byte_array reverse() const;
 
     size_t size() const { return values.size() / 8; }
 

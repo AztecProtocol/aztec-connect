@@ -177,7 +177,9 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
     return accumulator;
 }
 
-grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left, const grumpkin::fq::field_t& right, const size_t hash_index)
+grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left,
+                                      const grumpkin::fq::field_t& right,
+                                      const size_t hash_index)
 {
 #ifndef NO_MULTITHREADING
     grumpkin::fq::field_t in[2] = { left, right };
@@ -185,7 +187,7 @@ grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left, const g
 #pragma omp parallel num_threads(2)
     {
         size_t i = (size_t)omp_get_thread_num();
-        out[i] = hash_single(in[i], i);
+        out[i] = hash_single(in[i], hash_index + i);
     }
     grumpkin::g1::element r;
     grumpkin::g1::add(out[0], out[1], r);
@@ -193,16 +195,17 @@ grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left, const g
     return r.x;
 #else
     grumpkin::g1::element r;
-    grumpkin::g1::element first = hash_single(left, 0);
-    grumpkin::g1::element second = hash_single(right, 1);
+    grumpkin::g1::element first = hash_single(left, hash_index);
+    grumpkin::g1::element second = hash_single(right, hash_index + 1);
     grumpkin::g1::add(first, second, r);
     r = grumpkin::g1::normalize(r);
     return r.x;
 #endif
 }
 
-
-grumpkin::g1::affine_element compress_to_point_native(const grumpkin::fq::field_t& left, const grumpkin::fq::field_t& right, const size_t hash_index)
+grumpkin::g1::affine_element compress_to_point_native(const grumpkin::fq::field_t& left,
+                                                      const grumpkin::fq::field_t& right,
+                                                      const size_t hash_index)
 {
     grumpkin::g1::element first = hash_single(left, hash_index);
     grumpkin::g1::element second = hash_single(right, hash_index + 1);
@@ -210,6 +213,6 @@ grumpkin::g1::affine_element compress_to_point_native(const grumpkin::fq::field_
     first = grumpkin::g1::normalize(first);
     return { first.x, first.y };
 }
-}
-}
-}
+} // namespace group_utils
+} // namespace stdlib
+} // namespace plonk

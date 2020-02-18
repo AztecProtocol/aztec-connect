@@ -1,4 +1,5 @@
 #include "./sha256.hpp"
+#include "../../assert.hpp"
 
 #include <array>
 #include <memory.h>
@@ -19,7 +20,6 @@ constexpr uint32_t round_constants[64]{
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-
 bool isLittleEndian()
 {
     constexpr int num = 42;
@@ -39,8 +39,7 @@ void prepare_constants(std::array<uint32_t, 8>& input)
     input[7] = internal::init_constants[7];
 }
 
-std::array<uint32_t, 8> sha256_block(const std::array<uint32_t, 8>& h_init,
-                                             const std::array<uint32_t, 16>& input)
+std::array<uint32_t, 8> sha256_block(const std::array<uint32_t, 8>& h_init, const std::array<uint32_t, 16>& input)
 {
     std::array<uint32_t, 64> w;
 
@@ -108,6 +107,31 @@ std::array<uint32_t, 8> sha256_block(const std::array<uint32_t, 8>& h_init,
     return output;
 }
 
+std::vector<uint8_t> sha256_block(const std::vector<uint8_t>& input)
+{
+    ASSERT(input.size() == 64);
+    std::array<uint32_t, 8> hash;
+    prepare_constants(hash);
+    std::array<uint32_t, 16> hash_input;
+    memcpy((void*)&hash_input[0], (void*)&input[0], 64);
+    if (internal::isLittleEndian()) {
+        for (size_t j = 0; j < hash_input.size(); ++j) {
+            hash_input[j] = __builtin_bswap32(hash_input[j]);
+        }
+    }
+    hash = sha256_block(hash, hash_input);
+
+    std::vector<uint8_t> output(32);
+    memcpy((void*)&output[0], (void*)&hash[0], 32);
+    if (internal::isLittleEndian()) {
+        uint32_t* output_uint32 = (uint32_t*)&output[0];
+        for (size_t j = 0; j < 8; ++j) {
+            output_uint32[j] = __builtin_bswap32(output_uint32[j]);
+        }
+    }
+
+    return output;
+}
 
 std::vector<uint8_t> sha256(const std::vector<uint8_t>& input)
 {
@@ -119,12 +143,10 @@ std::vector<uint8_t> sha256(const std::vector<uint8_t>& input)
 
     uint32_t num_zero_bytes = ((448U - (message_schedule.size() << 3U)) & 511U) >> 3U;
 
-    for (size_t i = 0; i < num_zero_bytes; ++i)
-    {
+    for (size_t i = 0; i < num_zero_bytes; ++i) {
         message_schedule.push_back(0x00);
     }
-    for (size_t i = 0; i < 8; ++i)
-    {
+    for (size_t i = 0; i < 8; ++i) {
         uint8_t byte = static_cast<uint8_t>(l >> (uint64_t)(56 - (i * 8)));
         message_schedule.push_back(byte);
     }
@@ -134,10 +156,8 @@ std::vector<uint8_t> sha256(const std::vector<uint8_t>& input)
     for (size_t i = 0; i < num_blocks; ++i) {
         std::array<uint32_t, 16> hash_input;
         memcpy((void*)&hash_input[0], (void*)&message_schedule[i * 64], 64);
-        if (internal::isLittleEndian())
-        {
-            for (size_t j = 0; j < hash_input.size(); ++j)
-            {
+        if (internal::isLittleEndian()) {
+            for (size_t j = 0; j < hash_input.size(); ++j) {
                 hash_input[j] = __builtin_bswap32(hash_input[j]);
             }
         }
@@ -146,15 +166,13 @@ std::vector<uint8_t> sha256(const std::vector<uint8_t>& input)
 
     std::vector<uint8_t> output(32);
     memcpy((void*)&output[0], (void*)&rolling_hash[0], 32);
-    if (internal::isLittleEndian())
-    {
+    if (internal::isLittleEndian()) {
         uint32_t* output_uint32 = (uint32_t*)&output[0];
-        for (size_t j = 0; j < 8; ++j)
-        {
+        for (size_t j = 0; j < 8; ++j) {
             output_uint32[j] = __builtin_bswap32(output_uint32[j]);
         }
     }
 
     return output;
 }
-}
+} // namespace sha256

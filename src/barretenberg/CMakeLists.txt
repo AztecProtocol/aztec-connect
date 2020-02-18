@@ -51,6 +51,9 @@ add_library(
     curves/bn254/pairing.cpp
     curves/bn254/pairing.hpp
     curves/grumpkin/grumpkin.hpp
+    misc_crypto/blake2s/blake2s.cpp
+    misc_crypto/blake2s/blake2s.hpp
+    misc_crypto/blake2s/blake2-impl.hpp
     misc_crypto/sha256/sha256.cpp
     misc_crypto/sha256/sha256.hpp
     misc_crypto/schnorr/schnorr.tcc
@@ -135,10 +138,11 @@ add_library(
     waffle/stdlib/mimc.cpp
     waffle/stdlib/mimc.hpp
     waffle/stdlib/crypto/crypto.hpp
+    waffle/stdlib/crypto/hash/blake2s.cpp
+    waffle/stdlib/crypto/hash/blake2s.hpp
     waffle/stdlib/crypto/hash/sha256.cpp
     waffle/stdlib/crypto/hash/sha256.hpp
     waffle/stdlib/merkle_tree/hash.hpp
-    waffle/stdlib/merkle_tree/merkle_tree.cpp
     waffle/stdlib/merkle_tree/merkle_tree.hpp
     waffle/stdlib/merkle_tree/memory_store.hpp
     waffle/stdlib/merkle_tree/memory_store.cpp
@@ -213,6 +217,9 @@ if(PROFILING)
         curves/bn254/pairing.cpp
         curves/bn254/pairing.hpp
         curves/grumpkin/grumpkin.hpp
+        misc_crypto/blake2s/blake2s.cpp
+        misc_crypto/blake2s/blake2s.hpp
+        misc_crypto/blake2s/blake2-impl.hpp
         misc_crypto/sha256/sha256.cpp
         misc_crypto/sha256/sha256.hpp
         misc_crypto/schnorr/schnorr.tcc
@@ -297,9 +304,10 @@ if(PROFILING)
         waffle/stdlib/mimc.cpp
         waffle/stdlib/mimc.hpp
         waffle/stdlib/crypto/crypto.hpp
+        waffle/stdlib/crypto/hash/blake2s.cpp
+        waffle/stdlib/crypto/hash/blake2s.hpp
         waffle/stdlib/crypto/hash/sha256.cpp
         waffle/stdlib/crypto/hash/sha256.hpp
-        waffle/stdlib/merkle_tree/merkle_tree.cpp
         waffle/stdlib/merkle_tree/merkle_tree.hpp
         waffle/stdlib/merkle_tree/memory_store.hpp
         waffle/stdlib/merkle_tree/memory_store.cpp

@@ -31,15 +31,16 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note)
     view_key_value.data[3] = view_key_value.data[3] & 0x3FFFFFFFFFFFFFFFULL;
     view_key_value = fr::to_montgomery_form(view_key_value);
 
-    fr::field_t note_value = fr::to_montgomery_form({{ 9999, 0, 0, 0 }});
+    fr::field_t note_value = fr::to_montgomery_form({ { 9999, 0, 0, 0 } });
 
     grumpkin::g1::element left = plonk::stdlib::group_utils::fixed_base_scalar_mul<32>(note_value, 0);
     grumpkin::g1::element right = plonk::stdlib::group_utils::fixed_base_scalar_mul<250>(view_key_value, 1);
     grumpkin::g1::element expected;
     grumpkin::g1::add(left, right, expected);
 
-    grumpkin::g1::affine_element hashed_pub_key = plonk::stdlib::group_utils::compress_to_point_native(note_owner_pub_key.x, note_owner_pub_key.y);
-    
+    grumpkin::g1::affine_element hashed_pub_key =
+        plonk::stdlib::group_utils::compress_to_point_native(note_owner_pub_key.x, note_owner_pub_key.y);
+
     grumpkin::g1::mixed_add(expected, hashed_pub_key, expected);
     expected = grumpkin::g1::normalize(expected);
 
@@ -50,12 +51,11 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note)
 
     field_t ciphertext_x = public_witness_t(&composer, expected.x);
     field_t ciphertext_y = public_witness_t(&composer, expected.y);
+    plonk::stdlib::pedersen_note::public_note target_encryption{ { ciphertext_x, ciphertext_y } };
 
-    plonk::stdlib::pedersen_note::public_note target_encryption{{ ciphertext_x, ciphertext_y }};
-    plonk::stdlib::uint<waffle::TurboComposer, uint32_t> value(32, note_value_field);
+    plonk::stdlib::uint<waffle::TurboComposer, uint32_t> value(note_value_field);
 
-
-    plonk::stdlib::pedersen_note::private_note plaintext{ { note_owner_x, note_owner_y}, value, view_key };
+    plonk::stdlib::pedersen_note::private_note plaintext{ { note_owner_x, note_owner_y }, value, view_key };
 
     plonk::stdlib::pedersen_note::public_note result = plonk::stdlib::pedersen_note::encrypt_note(plaintext);
     composer.assert_equal(result.ciphertext.x.witness_index, target_encryption.ciphertext.x.witness_index);
@@ -82,12 +82,13 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note_zero)
     view_key_value.data[3] = view_key_value.data[3] & 0x3FFFFFFFFFFFFFFFULL;
     view_key_value = fr::to_montgomery_form(view_key_value);
 
-    fr::field_t note_value = fr::to_montgomery_form({{ 0, 0, 0, 0 }});
+    fr::field_t note_value = fr::to_montgomery_form({ { 0, 0, 0, 0 } });
 
     grumpkin::g1::element expected = plonk::stdlib::group_utils::fixed_base_scalar_mul<32>(note_value, 0);
 
-    grumpkin::g1::affine_element hashed_pub_key = plonk::stdlib::group_utils::compress_to_point_native(note_owner_pub_key.x, note_owner_pub_key.y);
-    
+    grumpkin::g1::affine_element hashed_pub_key =
+        plonk::stdlib::group_utils::compress_to_point_native(note_owner_pub_key.x, note_owner_pub_key.y);
+
     grumpkin::g1::mixed_add(expected, hashed_pub_key, expected);
     expected = grumpkin::g1::normalize(expected);
 
@@ -99,10 +100,10 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note_zero)
     field_t ciphertext_x = public_witness_t(&composer, expected.x);
     field_t ciphertext_y = public_witness_t(&composer, expected.y);
 
-    plonk::stdlib::pedersen_note::public_note target_encryption{{ ciphertext_x, ciphertext_y }};
-    plonk::stdlib::uint<waffle::TurboComposer, uint32_t> value(32, note_value_field);
+    plonk::stdlib::pedersen_note::public_note target_encryption{ { ciphertext_x, ciphertext_y } };
+    plonk::stdlib::uint<waffle::TurboComposer, uint32_t> value(note_value_field);
 
-    plonk::stdlib::pedersen_note::private_note plaintext{ { note_owner_x, note_owner_y}, value, view_key };
+    plonk::stdlib::pedersen_note::private_note plaintext{ { note_owner_x, note_owner_y }, value, view_key };
 
     plonk::stdlib::pedersen_note::public_note result = plonk::stdlib::pedersen_note::encrypt_note(plaintext);
     composer.assert_equal(result.ciphertext.x.witness_index, target_encryption.ciphertext.x.witness_index);
