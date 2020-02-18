@@ -1,4 +1,5 @@
 #include "./sha256.hpp"
+#include "../../assert.hpp"
 
 #include <array>
 #include <memory.h>
@@ -108,7 +109,7 @@ std::array<uint32_t, 8> sha256_block(const std::array<uint32_t, 8>& h_init, cons
 
 std::vector<uint8_t> sha256_block(const std::vector<uint8_t>& input)
 {
-    assert(input.size() == 64);
+    ASSERT(input.size() == 64);
     std::array<uint32_t, 8> hash;
     prepare_constants(hash);
     std::array<uint32_t, 16> hash_input;

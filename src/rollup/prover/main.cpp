@@ -192,7 +192,7 @@ destroy_note_context create_destroy_note_context(rollup_context& ctx, field_t co
     uint128_t nullifier_index_raw = field_to_uint128(nullifier_index.get_value());
 
     byte_array nullifier_value(&ctx.composer);
-    nullifier_value.write(field_t(1ULL)).write(field_t(0ULL));
+    nullifier_value.write(field_t(1ULL)).write(field_t(uint64_t(0)));
 
     fr_hash_path nullifier_old_path = ctx.nullifier_db.get_hash_path(nullifier_index_raw);
     fr_hash_path nullifier_new_path =
