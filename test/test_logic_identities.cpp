@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
-
+#include <inttypes.h>
 #include <random>
 
 namespace {
@@ -232,7 +232,7 @@ bool xor_identity(uint64_t a_x,
 
     uint64_t poly_test = (delta_c * 3) - poly_c;
     if (poly_test != 0) {
-        printf("invalid at index %lu : %lu , value = %llu \n", i, j, poly_c);
+        printf("invalid at index %" PRIu64 " : %" PRIu64 "  value = %" PRIu64 " \n", i, j, poly_c);
     }
     return !(delta_a_test || delta_b_test || delta_c_test || w_test || poly_test);
 }
@@ -263,7 +263,7 @@ bool and_identity(uint64_t a_x,
 
     uint64_t poly_test = (delta_c * 6) - poly_c;
     if (poly_test != 0) {
-        printf("invalid at index %lu : %lu , value = %llu \n", i, j, poly_c);
+        printf("invalid at index %" PRIu64 " : %" PRIu64 " , value = %" PRIu64 " \n", i, j, poly_c);
     }
     return !(delta_a_test || delta_b_test || delta_c_test || w_test || poly_test);
 }
@@ -286,7 +286,7 @@ TEST(test_logic_identities, quaternary_rol)
         uint64_t target = rol == 0 ? input : ((input << (rol)) & 0xffffffff) | (input >> (32 - rol));
 
         if (!quaternary_rol(accumulators, rol, target)) {
-            printf("ror failed. target = %llx, ror = %llu \n", target, rol);
+            printf("ror failed. target = %" PRIu64 ", ror = %" PRIu64 " \n", target, rol);
         }
         EXPECT_EQ(quaternary_rol(accumulators, rol, target), true);
     }
@@ -310,7 +310,7 @@ TEST(test_logic_identities, quaternary_ror)
         uint64_t target = ror == 0 ? input : ((input << (32 - ror)) & 0xffffffff) | (input >> ror);
 
         if (!quaternary_ror(accumulators, ror, target)) {
-            printf("ror failed. target = %llx, ror = %llu \n", target, ror);
+            printf("ror failed. target = %" PRIu64 ", ror = %" PRIu64 " \n", target, ror);
         }
         EXPECT_EQ(quaternary_ror(accumulators, ror, target), true);
     }
@@ -334,7 +334,7 @@ TEST(test_logic_identities, quaternary_left_shift)
         uint64_t target = (input << shift) & 0xffffffff;
 
         if (!quaternary_left_shift(accumulators, shift, target)) {
-            printf("left shift failed. target = %llx, shift = %llu \n", target, shift);
+            printf("left shift failed. target = %" PRIu64 ", shift = %" PRIu64 " \n", target, shift);
         }
         EXPECT_EQ(quaternary_left_shift(accumulators, shift, target), true);
     }
@@ -358,7 +358,7 @@ TEST(test_logic_identities, quaternary_right_shift)
         uint64_t target = input >> shift;
 
         if (!quaternary_right_shift(accumulators, shift, target)) {
-            printf("right shift failed. target = %llx, shift = %llu \n", target, shift);
+            printf("right shift failed. target = %" PRIu64 ", shift = %" PRIu64 " \n", target, shift);
         }
         EXPECT_EQ(quaternary_right_shift(accumulators, shift, target), true);
     }
