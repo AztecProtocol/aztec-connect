@@ -616,9 +616,9 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
 }
 
 waffle::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t a,
-                                                                         const uint32_t b,
-                                                                         const size_t num_bits,
-                                                                         const bool is_xor_gate)
+                                                                  const uint32_t b,
+                                                                  const size_t num_bits,
+                                                                  const bool is_xor_gate)
 {
     ASSERT(static_cast<uint32_t>(variables.size()) > a);
     ASSERT(static_cast<uint32_t>(variables.size()) > b);
@@ -807,15 +807,15 @@ waffle::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t
 }
 
 waffle::accumulator_triple TurboComposer::create_and_constraint(const uint32_t a,
-                                                                       const uint32_t b,
-                                                                       const size_t num_bits)
+                                                                const uint32_t b,
+                                                                const size_t num_bits)
 {
     return create_logic_constraint(a, b, num_bits, false);
 }
 
 waffle::accumulator_triple TurboComposer::create_xor_constraint(const uint32_t a,
-                                                                       const uint32_t b,
-                                                                       const size_t num_bits)
+                                                                const uint32_t b,
+                                                                const size_t num_bits)
 {
     return create_logic_constraint(a, b, num_bits, true);
 }
@@ -875,8 +875,20 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
 
     for (size_t i = 0; i < public_inputs.size(); ++i) {
         epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
-        wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
+        epicycle right{ static_cast<uint32_t>(i - public_inputs.size()), WireType::RIGHT };
+
+        std::vector<epicycle>& old_epicycles = wire_epicycles[static_cast<size_t>(public_inputs[i])];
+
+        std::vector<epicycle> new_epicycles;
+
+        new_epicycles.emplace_back(left);
+        new_epicycles.emplace_back(right);
+        for (size_t i = 0; i < old_epicycles.size(); ++i) {
+            new_epicycles.emplace_back(old_epicycles[i]);
+        }
+        old_epicycles = new_epicycles;
     }
+
     circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size());
 
     polynomial poly_q_m(new_n);
@@ -893,7 +905,7 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
 
     for (size_t i = 0; i < public_inputs.size(); ++i) {
         poly_q_m[i] = fr::zero;
-        poly_q_1[i] = fr::zero;
+        poly_q_1[i] = fr::one;
         poly_q_2[i] = fr::zero;
         poly_q_3[i] = fr::zero;
         poly_q_4[i] = fr::zero;
@@ -1070,8 +1082,8 @@ std::shared_ptr<program_witness> TurboComposer::compute_witness()
     polynomial poly_w_4(new_n);
 
     for (size_t i = 0; i < public_inputs.size(); ++i) {
-        fr::__copy(variables[public_inputs[i]], poly_w_1[i]);
-        fr::__copy(fr::zero, poly_w_2[i]);
+        fr::__copy(fr::zero, poly_w_1[i]);
+        fr::__copy(variables[public_inputs[i]], poly_w_2[i]);
         fr::__copy(fr::zero, poly_w_3[i]);
         fr::__copy(fr::zero, poly_w_4[i]);
     }

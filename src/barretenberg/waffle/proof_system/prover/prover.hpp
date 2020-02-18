@@ -7,27 +7,24 @@
 
 #include "../../reference_string/reference_string.hpp"
 #include "../../waffle_types.hpp"
-#include "../widgets/base_widget.hpp"
 #include "../program_settings.hpp"
+#include "../widgets/base_widget.hpp"
 
-#include "../../../transcript/transcript.hpp"
 #include "../../../transcript/manifest.hpp"
+#include "../../../transcript/transcript.hpp"
 #include "../proving_key/proving_key.hpp"
 
-namespace waffle
-{
+namespace waffle {
 
-template <typename settings>
-class ProverBase
-{
+template <typename settings> class ProverBase {
     typedef barretenberg::fr fr;
     typedef barretenberg::g1 g1;
     typedef barretenberg::polynomial polynomial;
 
   public:
     ProverBase(std::shared_ptr<proving_key> input_key = nullptr,
-           std::shared_ptr<program_witness> input_witness = nullptr,
-           const transcript::Manifest& manifest = transcript::Manifest({}));
+               std::shared_ptr<program_witness> input_witness = nullptr,
+               const transcript::Manifest& manifest = transcript::Manifest({}));
     ProverBase(ProverBase&& other);
     ProverBase(const ProverBase& other) = delete;
     ProverBase& operator=(const ProverBase& other) = delete;
@@ -50,7 +47,6 @@ class ProverBase
     void compute_arithmetisation_coefficients();
     void init_quotient_polynomials();
     void compute_opening_elements();
-    void compute_public_input_contribution(const barretenberg::fr::field_t& public_alpha);
 
     barretenberg::fr::field_t compute_linearisation_coefficients();
     waffle::plonk_proof construct_proof();

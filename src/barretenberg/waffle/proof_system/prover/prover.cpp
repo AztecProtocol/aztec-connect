@@ -5,6 +5,7 @@
 #include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../../io/io.hpp"
 #include "../../../polynomials/polynomial_arithmetic.hpp"
+#include "../public_inputs/public_inputs.hpp"
 
 #include "../../reference_string/reference_string.hpp"
 
@@ -88,10 +89,9 @@ template <typename settings> void ProverBase<settings>::compute_wire_commitments
     }
 
     // add public inputs
-    const polynomial& public_wires_source = key->wire_ffts.at("w_1_fft");
+    const polynomial& public_wires_source = key->wire_ffts.at("w_2_fft");
     std::vector<fr::field_t> public_wires;
-    for (size_t i = 0; i < key->num_public_inputs; ++i)
-    {   
+    for (size_t i = 0; i < key->num_public_inputs; ++i) {
         public_wires.push_back(public_wires_source[i]);
     }
     transcript.add_element("public_inputs", transcript_helpers::convert_field_elements(public_wires));
@@ -321,13 +321,13 @@ template <typename settings> void ProverBase<settings>::compute_permutation_gran
 
     const polynomial& l_1 = key->lagrange_1;
 
-    // printf("L_1(X) prior to permutation use:\n");
-    // for (size_t i = 0; i < key->large_domain.size; ++i)
-    // {
-    //     printf("[%lu] = ", i);
-    //     fr::print(fr::from_montgomery_form(l_1[i]));
-    // }
-    // printf("===\n");
+    // compute our public input component
+    std::vector<barretenberg::fr::field_t> public_inputs =
+        transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
+
+    fr::field_t public_input_delta = compute_public_input_delta(public_inputs, beta, gamma, key->small_domain.root);
+    fr::__mul(public_input_delta, alpha, public_input_delta);
+
     polynomial& quotient_large = key->quotient_large;
     // Step 4: Set the quotient polynomial to be equal to
     // (w_l(X) + \beta.sigma1(X) + \gamma).(w_r(X) + \beta.sigma2(X) + \gamma).(w_o(X) + \beta.sigma3(X) +
@@ -404,9 +404,9 @@ template <typename settings> void ProverBase<settings>::compute_permutation_gran
             // z_fft already contains evaluations of Z(X).(\alpha^2)
             // at the (2n)'th roots of unity
             // => to get Z(X.w) instead of Z(X), index element (i+2) instead of i
-            fr::__add_without_reduction(z_fft[i + 4], neg_alpha, T0); // T0 = (Z(X.w) - 1).(\alpha^2)
-            fr::__mul_with_coarse_reduction(T0, alpha, T0);           // T0 = (Z(X.w) - 1).(\alpha^3)
-            fr::__mul_with_coarse_reduction(T0, l_1[i + 8], T0);      // T0 = (Z(X.w) - 1).(\alpha^3).L{n-1}(X)
+            fr::__sub_with_coarse_reduction(z_fft[i + 4], public_input_delta, T0); // T0 = (Z(X.w) - (delta)).(\alpha^2)
+            fr::__mul_with_coarse_reduction(T0, alpha, T0);                        // T0 = (Z(X.w) - (delta)).(\alpha^3)
+            fr::__mul_with_coarse_reduction(T0, l_1[i + 8], T0); // T0 = (Z(X.w)-delta).(\alpha^3).L{n-1}
             fr::__add_with_coarse_reduction(numerator, T0, numerator);
 
             // Step 2: Compute (Z(X) - 1).(\alpha^4).L1(X)
@@ -446,43 +446,6 @@ template <typename settings> void ProverBase<settings>::execute_preamble_round()
                              static_cast<uint8_t>(key->num_public_inputs >> 16),
                              static_cast<uint8_t>(key->num_public_inputs >> 24) });
     transcript.apply_fiat_shamir("init");
-}
-
-template <typename settings> void ProverBase<settings>::compute_public_input_contribution(const fr::field_t& public_alpha)
-{
-    fr::field_t* wire_1_fft = &key->wire_ffts.at("w_1_fft")[0];
-
-    std::vector<barretenberg::fr::field_t> public_inputs =
-        transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
-
-    polynomial public_selector(key->large_domain.size, key->large_domain.size);
-    polynomial public_witness(key->large_domain.size, key->large_domain.size);
-    for (size_t i = 0; i < key->num_public_inputs; ++i)
-    {
-        public_selector[i] = fr::one;
-        public_witness[i] = public_inputs[i];
-    }
-    for (size_t i = key->num_public_inputs; i < key->large_domain.size; ++i)
-    {
-        public_selector[i] = fr::zero;
-        public_witness[i] = fr::zero;
-    }
-
-    public_selector.ifft(key->small_domain);
-
-
-    public_selector.coset_fft(key->large_domain);
-
-    public_witness.ifft(key->small_domain);
-    public_witness.coset_fft(key->large_domain);
-
-    ITERATE_OVER_DOMAIN_START(key->large_domain);
-        fr::field_t T0;
-        fr::__sub(wire_1_fft[i], public_witness[i], T0);
-        fr::__mul(T0, public_selector[i], T0);
-        fr::__mul(T0, public_alpha, T0);
-        fr::__add(key->quotient_large[i], T0, key->quotient_large[i]);
-    ITERATE_OVER_DOMAIN_END;
 }
 
 template <typename settings> void ProverBase<settings>::execute_first_round()
@@ -595,8 +558,6 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
 #endif
     }
 
-    compute_public_input_contribution(alpha_base);
-    
     fr::field_t* q_mid = &key->quotient_mid[0];
     fr::field_t* q_large = &key->quotient_large[0];
 
