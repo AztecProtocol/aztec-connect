@@ -55,7 +55,7 @@ fr::field_t ProverSequentialWidget::compute_quotient_contribution(const barreten
 {
     fr::field_t alpha = fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
 
-    barretenberg::fr::field_t old_alpha = barretenberg::fr::mul(alpha_base, barretenberg::fr::invert(alpha));
+    barretenberg::fr::field_t old_alpha = barretenberg::fr::mul(alpha_base, alpha.invert());
     polynomial& w_3_fft = key->wire_ffts.at("w_3_fft");
     polynomial& quotient_mid = key->quotient_mid;
     ITERATE_OVER_DOMAIN_START(key->mid_domain);
@@ -75,7 +75,7 @@ fr::field_t ProverSequentialWidget::compute_linear_contribution(const fr::field_
     fr::field_t w_o_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
     fr::field_t alpha = fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
 
-    barretenberg::fr::field_t old_alpha = barretenberg::fr::mul(alpha_base, barretenberg::fr::invert(alpha));
+    barretenberg::fr::field_t old_alpha = alpha_base * alpha.invert();
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0;
     fr::__mul(w_o_shifted_eval, q_3_next[i], T0);

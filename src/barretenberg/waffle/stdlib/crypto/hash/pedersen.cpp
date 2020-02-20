@@ -10,7 +10,8 @@
 namespace plonk {
 namespace stdlib {
 namespace pedersen {
-typedef field_t<waffle::TurboComposer> field_t;
+
+typedef plonk::stdlib::field_t<waffle::TurboComposer> field_t;
 using namespace barretenberg;
 
 point hash_single(const field_t& in, const size_t hash_index)

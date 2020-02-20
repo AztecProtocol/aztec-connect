@@ -114,13 +114,11 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         typename coordinate_field::field_t yy = xxx + GroupParams::b;
 
-        coordinate_field::__sqrt(yy, result.y);
+        result.y = yy.sqrt();
 
         typename coordinate_field::field_t y_test = result.y.from_montgomery_form();
-        // coordinate_field::__from_montgomery_form(result.y, y_test);
         if ((y_test.data[0] & 1UL) != y_sign) {
             result.y.self_neg();
-            // coordinate_field::__neg(result.y, result.y);
         }
         if (!on_curve(result)) {
             set_infinity(result);
@@ -134,8 +132,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         typename coordinate_field::field_t input = coordinate_field::zero;
         input.data[0] = seed;
         keccak256 c = hash_field_element((uint64_t*)&input.data[0]);
-        typename coordinate_field::field_t compressed;
-        coordinate_field::__copy(*(typename coordinate_field::field_t*)&c.word64s[0], compressed);
+        typename coordinate_field::field_t compressed{ c.word64s[0], c.word64s[1], c.word64s[2], c.word64s[3] };
         return decompress(compressed);
     }
 
@@ -160,97 +157,71 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static inline bool is_point_at_infinity(const element& p) { return coordinate_field::is_msb_set(p.y); }
 
-    static inline void set_infinity(element& p) { coordinate_field::__set_msb(p.y); }
+    static inline void set_infinity(element& p) { p.y.self_set_msb(); }
 
-    static inline void set_infinity(affine_element& p) { coordinate_field::__set_msb(p.y); }
+    static inline void set_infinity(affine_element& p) { p.y.self_set_msb(); }
 
     static inline void dbl(const element& p1, element& p2) noexcept
     {
-        if (coordinate_field::is_msb_set_word(p1.y)) {
+        if (p1.y.is_msb_set_word()) {
             set_infinity(p2);
             return;
         }
-        // typename coordinate_field::field_t T0;
-        // typename coordinate_field::field_t T1;
-        // typename coordinate_field::field_t T2;
-        // typename coordinate_field::field_t T3;
-
         // z2 = 2*y*z
         p2.z = p1.z.add_without_reduction(p1.z);
         p2.z.self_mul_with_coarse_reduction(p1.y);
         p2.z.self_reduce_once();
-        // coordinate_field::__add_without_reduction(p1.z, p1.z, p2.z);
-        // coordinate_field::__mul_with_coarse_reduction(p2.z, p1.y, p2.z);
-        // coordinate_field::reduce_once(p2.z, p2.z);
 
         // T0 = x*x
         typename coordinate_field::field_t T0 = p1.x.sqr_with_coarse_reduction();
-        // coordinate_field::__sqr_with_coarse_reduction(p1.x, T0);
 
         // T1 = y*y
         typename coordinate_field::field_t T1 = p1.y.sqr_with_coarse_reduction();
-        // coordinate_field::__sqr_with_coarse_reduction(p1.y, T1);
 
         // T2 = T2*T1 = y*y*y*y
         typename coordinate_field::field_t T2 = T1.sqr_with_coarse_reduction();
-        // coordinate_field::__sqr_with_coarse_reduction(T1, T2);
 
         // T1 = T1 + x = x + y*y
         T1.self_add_with_coarse_reduction(p1.x);
-        // coordinate_field::__add_with_coarse_reduction(T1, p1.x, T1);
 
         // T1 = T1 * T1
         T1.self_sqr_with_coarse_reduction();
-        // coordinate_field::__sqr_with_coarse_reduction(T1, T1);
 
         // T3 = T0 + T2 = xx + y*y*y*y
         typename coordinate_field::field_t T3 = T0.add_with_coarse_reduction(T2);
-        // coordinate_field::__add_with_coarse_reduction(T0, T2, T3);
 
         // T1 = T1 - T3 = x*x + y*y*y*y + 2*x*x*y*y*y*y - x*x - y*y*y*y = 2*x*x*y*y*y*y = 2*S
         T1.self_sub_with_coarse_reduction(T3);
-        // coordinate_field::__sub_with_coarse_reduction(T1, T3, T1);
 
         // T1 = 2T1 = 4*S
         T1.self_add_with_coarse_reduction(T1);
-        // coordinate_field::__add_with_coarse_reduction(T1, T1, T1);
 
         // T3 = 3T0
         T3 = T0.add_with_coarse_reduction(T0);
         T3.self_add_with_coarse_reduction(T0);
-        // coordinate_field::__add_with_coarse_reduction(T0, T0, T3);
-        // coordinate_field::__add_with_coarse_reduction(T3, T0, T3);
 
         // T0 = 2T1
         T0 = T1.add_with_coarse_reduction(T1);
-        // coordinate_field::__add_with_coarse_reduction(T1, T1, T0);
 
         // x2 = T3*T3
         p2.x = T3.sqr_with_coarse_reduction();
-        // coordinate_field::__sqr_with_coarse_reduction(T3, p2.x);
+
         // x2 = x2 - 2T1
         p2.x.self_sub_with_coarse_reduction(T0);
         p2.x.self_reduce_once();
-        // coordinate_field::__sub_with_coarse_reduction(p2.x, T0, p2.x);
-        // coordinate_field::reduce_once(p2.x, p2.x);
 
         // T2 = 8T2
         T2.self_add_with_coarse_reduction(T2);
         T2.self_add_with_coarse_reduction(T2);
         T2.self_add_with_coarse_reduction(T2);
-        // coordinate_field::__oct_with_coarse_reduction(T2, T2);
 
         // y2 = T1 - x2
         p2.y = T1.sub_with_coarse_reduction(p2.x);
-        // coordinate_field::__sub_with_coarse_reduction(T1, p2.x, p2.y);
 
         // y2 = y2 * T3 - T2
         p2.y.self_mul_with_coarse_reduction(T3);
         p2.y.self_sub_with_coarse_reduction(T2);
         p2.y.self_reduce_once();
-        // coordinate_field::__mul_with_coarse_reduction(p2.y, T3, p2.y);
-        // coordinate_field::__sub_with_coarse_reduction(p2.y, T2, p2.y);
-        // coordinate_field::reduce_once(p2.y, p2.y);
     }
 
     static inline void mixed_add_inner(const element& p1, const affine_element& p2, element& p3) noexcept
@@ -286,7 +257,6 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         // T3 = T1*T1 = HH
         typename coordinate_field::field_t T3 = T1.sqr_with_coarse_reduction();
-        // coordinate_field::__sqr_with_coarse_reduction(T1, T3);
 
         // z3 = z3 - z1z1 - HH
         T0.self_add_with_coarse_reduction(T3);
@@ -299,19 +269,15 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         // T3 = 4HH
         T3.self_add_with_coarse_reduction(T3);
         T3.self_add_with_coarse_reduction(T3);
-        // coordinate_field::__quad_with_coarse_reduction(T3, T3);
 
         // T1 = T1*T3 = 4HHH
         T1.self_mul_with_coarse_reduction(T3);
-        // coordinate_field::__mul_with_coarse_reduction(T1, T3, T1);
 
         // T3 = T3 * x1 = 4HH*x1
         T3.self_mul_with_coarse_reduction(p1.x);
-        // coordinate_field::__mul_with_coarse_reduction(T3, p1.x, T3);
 
         // T0 = 2T3
         T0 = T3.add_with_coarse_reduction(T3);
-        // coordinate_field::__add_with_coarse_reduction(T3, T3, T0);
 
         // T0 = T0 + T1 = 2(4HH*x1) + 4HHH
         T0.self_add_with_coarse_reduction(T1);
@@ -319,7 +285,6 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         // x3 = x3 - T0 = R*R - 8HH*x1 -4HHH
         p3.x.self_sub_with_coarse_reduction(T0);
-        // coordinate_field::__sub_with_coarse_reduction(p3.x, T0, p3.x);
 
         // T3 = T3 - x3 = 4HH*x1 - x3
         T3.self_sub_with_coarse_reduction(p3.x);
@@ -327,19 +292,13 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         T1.self_mul_with_coarse_reduction(p1.y);
         T1.self_add_with_coarse_reduction(T1);
-        // coordinate_field::__mul_with_coarse_reduction(T1, p1.y, T1);
-        // coordinate_field::__add_with_coarse_reduction(T1, T1, T1);
 
         // T3 = T2 * T3 = R*(4HH*x1 - x3)
         T3.self_mul_with_coarse_reduction(T2);
-        // coordinate_field::__mul_with_coarse_reduction(T3, T2, T3);
 
         // y3 = T3 - T1
         p3.y = T3.sub_with_coarse_reduction(T1);
         p3.y.self_reduce_once();
-
-        // coordinate_field::__sub_with_coarse_reduction(T3, T1, p3.y);
-        // coordinate_field::reduce_once(p3.y, p3.y);
     }
     // add: 10 mul_w_o_reduction 1 mul, 5 sqr
 
@@ -381,7 +340,6 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         // T3 = T1*T1 = HH
         typename coordinate_field::field_t T3 = T1.sqr_with_coarse_reduction();
-        // coordinate_field::__sqr_with_coarse_reduction(T1, T3);
 
         // z3 = z3 - z1z1 - HH
         T0.self_add_with_coarse_reduction(T3);
@@ -394,19 +352,15 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         // T3 = 4HH
         T3.self_add_with_coarse_reduction(T3);
         T3.self_add_with_coarse_reduction(T3);
-        // coordinate_field::__quad_with_coarse_reduction(T3, T3);
 
         // T1 = T1*T3 = 4HHH
         T1.self_mul_with_coarse_reduction(T3);
-        // coordinate_field::__mul_with_coarse_reduction(T1, T3, T1);
 
         // T3 = T3 * x1 = 4HH*x1
         T3.self_mul_with_coarse_reduction(p1.x);
-        // coordinate_field::__mul_with_coarse_reduction(T3, p1.x, T3);
 
         // T0 = 2T3
         T0 = T3.add_with_coarse_reduction(T3);
-        // coordinate_field::__add_with_coarse_reduction(T3, T3, T0);
 
         // T0 = T0 + T1 = 2(4HH*x1) + 4HHH
         T0.self_add_with_coarse_reduction(T1);
@@ -414,7 +368,6 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         // x3 = x3 - T0 = R*R - 8HH*x1 -4HHH
         p3.x.self_sub_with_coarse_reduction(T0);
-        // coordinate_field::__sub_with_coarse_reduction(p3.x, T0, p3.x);
 
         // T3 = T3 - x3 = 4HH*x1 - x3
         T3.self_sub_with_coarse_reduction(p3.x);
@@ -422,12 +375,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         T1.self_mul_with_coarse_reduction(p1.y);
         T1.self_add_with_coarse_reduction(T1);
-        // coordinate_field::__mul_with_coarse_reduction(T1, p1.y, T1);
-        // coordinate_field::__add_with_coarse_reduction(T1, T1, T1);
 
         // T3 = T2 * T3 = R*(4HH*x1 - x3)
         T3.self_mul_with_coarse_reduction(T2);
-        // coordinate_field::__mul_with_coarse_reduction(T3, T2, T3);
 
         // y3 = T3 - T1
         p3.y = T3.sub_with_coarse_reduction(T1);
@@ -441,7 +391,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         // N.B. we implicitly assume p2 is not a point at infinity, as it will be coming from a lookup table of
         // constants
-        if (coordinate_field::is_msb_set_word(p1.y)) {
+        if (p1.y.is_msb_set_word()) {
             p3.x = p2.x;
             p3.y = p2.y;
             p3.z = coordinate_field::one;
@@ -461,10 +411,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         // N.B. we implicitly assume p2 is not a point at infinity, as it will be coming from a lookup table of
         // constants
-        if (coordinate_field::is_msb_set_word(p1.y)) {
+        if (p1.y.is_msb_set_word()) {
             conditional_negate_affine(&p2, (affine_element*)&p3, predicate);
             p3.z = coordinate_field::one;
-            // coordinate_field::__copy(coordinate_field::one, p3.z);
             return;
         }
 
@@ -506,8 +455,8 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         typename coordinate_field::field_t H(U2.sub_with_coarse_reduction(U1));
         H.self_reduce_once();
 
-        if (__builtin_expect(coordinate_field::is_zero(H), 0)) {
-            if (coordinate_field::is_zero(F)) {
+        if (__builtin_expect(H.is_zero(), 0)) {
+            if (F.is_zero()) {
                 // y2 equals y1, x2 equals x1, double x1
                 dbl(p1, p3);
                 return;
@@ -587,12 +536,12 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         for (size_t i = 0; i < num_points; ++i) {
             coordinate_field::__copy(accumulator, temporaries[i]);
             if (!is_point_at_infinity(points[i])) {
-                coordinate_field::__mul(accumulator, points[i].z, accumulator);
+                accumulator.self_mul(points[i].z);
             }
         }
         // For the rest of this method I'll refer to the product of all z-coordinates as the 'global' z-coordinate
         // Invert the global z-coordinate and store in `accumulator`
-        coordinate_field::__invert(accumulator, accumulator);
+        accumulator = accumulator.invert();
 
         /**
          * We now proceed to iterate back down the array of points.
@@ -618,12 +567,12 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
          **/
         for (size_t i = num_points - 1; i < num_points; --i) {
             if (!is_point_at_infinity(points[i])) {
-                coordinate_field::__mul(accumulator, temporaries[i], z_inv);
-                coordinate_field::__sqr(z_inv, zz_inv);
-                coordinate_field::__mul(z_inv, zz_inv, zzz_inv);
-                coordinate_field::__mul(points[i].x, zz_inv, points[i].x);
-                coordinate_field::__mul(points[i].y, zzz_inv, points[i].y);
-                coordinate_field::__mul(accumulator, points[i].z, accumulator);
+                z_inv = accumulator * temporaries[i];
+                zz_inv = z_inv.sqr();
+                zzz_inv = zz_inv * z_inv;
+                points[i].x.self_mul(zz_inv);
+                points[i].y.self_mul(zzz_inv);
+                accumulator.self_mul(points[i].z);
             }
             points[i].z = coordinate_field::one;
         }
@@ -636,15 +585,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         if (is_point_at_infinity(pt)) {
             return false;
         }
-        typename coordinate_field::field_t yy;
-        typename coordinate_field::field_t xxx;
-        coordinate_field::__sqr(pt.x, xxx);
-        coordinate_field::__mul(pt.x, xxx, xxx);
-        coordinate_field::__add(xxx, GroupParams::b, xxx);
-        coordinate_field::__sqr(pt.y, yy);
-        coordinate_field::__from_montgomery_form(xxx, xxx);
-        coordinate_field::__from_montgomery_form(yy, yy);
-        return coordinate_field::eq(xxx, yy);
+        typename coordinate_field::field_t xxx = pt.x.sqr() * pt.x + GroupParams::b;
+        typename coordinate_field::field_t yy = pt.y.sqr();
+        return (xxx == yy);
     }
 
     static inline bool on_curve(const element& pt)
@@ -652,19 +595,11 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         if (is_point_at_infinity(pt)) {
             return false;
         }
-        typename coordinate_field::field_t yy;
-        typename coordinate_field::field_t xxx;
-        typename coordinate_field::field_t zz;
-        typename coordinate_field::field_t bz_6;
-        coordinate_field::__sqr(pt.z, zz);
-        coordinate_field::__sqr(zz, bz_6);
-        coordinate_field::__mul(zz, bz_6, bz_6);
-        coordinate_field::__mul(bz_6, GroupParams::b, bz_6);
-        coordinate_field::__sqr(pt.x, xxx);
-        coordinate_field::__mul(pt.x, xxx, xxx);
-        coordinate_field::__add(xxx, bz_6, xxx);
-        coordinate_field::__sqr(pt.y, yy);
-        return coordinate_field::eq(xxx, yy);
+        typename coordinate_field::field_t zz = pt.z.sqr();
+        typename coordinate_field::field_t bz_6 = zz.sqr() * zz * GroupParams::b;
+        typename coordinate_field::field_t xxx = pt.x.sqr() * pt.x + bz_6;
+        typename coordinate_field::field_t yy = pt.y.sqr();
+        return (xxx == yy);
     }
 
     static inline void __neg(const element& a, element& r)
@@ -712,7 +647,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static inline element group_exponentiation_no_endo(const element& a, const typename subgroup_field::field_t& scalar)
     {
-        if (subgroup_field::eq(scalar, subgroup_field::zero)) {
+        if (scalar == subgroup_field::zero) {
             element result;
             result.x = coordinate_field::zero;
             result.y = coordinate_field::zero;
@@ -721,29 +656,14 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             return result;
         }
         element work_element = a;
-        element point = a;
 
-        typename subgroup_field::field_t converted_scalar;
-        subgroup_field::__from_montgomery_form(scalar, converted_scalar);
-        bool scalar_bits[256] = { 0 };
-        for (size_t i = 0; i < 64; ++i) {
-            scalar_bits[i] = (bool)((converted_scalar.data[0] >> i) & 0x1);
-            scalar_bits[64 + i] = (bool)((converted_scalar.data[1] >> i) & 0x1);
-            scalar_bits[128 + i] = (bool)((converted_scalar.data[2] >> i) & 0x1);
-            scalar_bits[192 + i] = (bool)((converted_scalar.data[3] >> i) & 0x1);
-        }
+        typename subgroup_field::field_t converted_scalar = scalar.from_montgomery_form();
 
-        bool found = false;
-        size_t i = 255;
-        while (!found) {
-            found = scalar_bits[i] == true;
-            --i;
-        }
-
-        for (; i < (size_t)(-1); --i) {
+        const uint64_t maximum_set_bit = converted_scalar.get_msb();
+        for (uint64_t i = maximum_set_bit - 1; i < maximum_set_bit; --i) {
             dbl(work_element, work_element);
-            if (scalar_bits[i] == true) {
-                add(work_element, point, work_element);
+            if (converted_scalar.get_bit(i)) {
+                add(work_element, a, work_element);
             }
         }
         return work_element;
@@ -751,11 +671,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static inline element group_exponentiation_endo(const element& a, const typename subgroup_field::field_t& scalar)
     {
-        typename subgroup_field::field_t converted_scalar;
+        typename subgroup_field::field_t converted_scalar = scalar.from_montgomery_form();
 
-        subgroup_field::__from_montgomery_form(scalar, converted_scalar);
-
-        if (subgroup_field::eq(converted_scalar, subgroup_field::zero)) {
+        if (converted_scalar == subgroup_field::zero) {
             element result;
             result.x = coordinate_field::zero;
             result.y = coordinate_field::zero;
@@ -817,7 +735,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             sign = static_cast<bool>((wnaf_entry >> 31) & 1);
             copy(&lookup_table[index], &temporary);
             conditional_negate_affine(&lookup_table[index], &temporary, !sign);
-            coordinate_field::__mul_beta(temporary.x, temporary.x);
+            temporary.x.self_mul(coordinate_field::beta);
 
             mixed_add(work_element, temporary, work_element);
 
@@ -837,7 +755,8 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         }
 
         copy(&lookup_table[0], &temporary);
-        coordinate_field::__mul_beta(temporary.x, temporary.x);
+        temporary.x.self_mul(coordinate_field::beta);
+
         if (endo_skew) {
             mixed_add(work_element, temporary, work_element);
         } else {
@@ -887,27 +806,17 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     {
         bool both_infinity = is_point_at_infinity(a) && is_point_at_infinity(b);
 
-        typename coordinate_field::field_t a_zz;
-        typename coordinate_field::field_t a_zzz;
-        typename coordinate_field::field_t b_zz;
-        typename coordinate_field::field_t b_zzz;
+        typename coordinate_field::field_t a_zz = a.z.sqr();
+        typename coordinate_field::field_t a_zzz = a_zz * a.z;
+        typename coordinate_field::field_t b_zz = b.z.sqr();
+        typename coordinate_field::field_t b_zzz = b_zz * b.z;
 
-        coordinate_field::__sqr(a.z, a_zz);
-        coordinate_field::__mul(a.z, a_zz, a_zzz);
+        typename coordinate_field::field_t T0 = a.x * b_zz;
+        typename coordinate_field::field_t T1 = a.y * b_zzz;
+        typename coordinate_field::field_t T2 = b.x * a_zz;
+        typename coordinate_field::field_t T3 = b.y * a_zzz;
 
-        coordinate_field::__sqr(b.z, b_zz);
-        coordinate_field::__mul(b.z, b_zz, b_zzz);
-
-        typename coordinate_field::field_t T0;
-        typename coordinate_field::field_t T1;
-        typename coordinate_field::field_t T2;
-        typename coordinate_field::field_t T3;
-        coordinate_field::__mul(a.x, b_zz, T0);
-        coordinate_field::__mul(a.y, b_zzz, T1);
-        coordinate_field::__mul(b.x, a_zz, T2);
-        coordinate_field::__mul(b.y, a_zzz, T3);
-
-        return both_infinity || ((coordinate_field::eq(T0, T2) && coordinate_field::eq(T1, T3)));
+        return both_infinity || ((T0 == T2) && (T1 == T3));
     }
 
     static inline bool eq(const affine_element& a, const affine_element& b)

@@ -156,7 +156,7 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
         if (predicate)
         {
             coordinate_field::__copy(src->x, dest->x);
-            coordinate_field::__neg(src->y, dest->y);
+            dest->y = src->y.neg();
         }
         else
         {

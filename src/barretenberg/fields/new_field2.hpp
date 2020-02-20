@@ -52,6 +52,10 @@ template <class base_field, class Params> struct field2 {
     constexpr field2 reduce_once() const noexcept;
     constexpr void self_reduce_once() noexcept;
 
+    constexpr void self_set_msb() noexcept;
+    constexpr bool is_msb_set() const noexcept;
+    constexpr uint64_t is_msb_set_word() const noexcept;
+
     constexpr bool is_zero() const noexcept;
 
     constexpr field2 frobenius_map() const noexcept;

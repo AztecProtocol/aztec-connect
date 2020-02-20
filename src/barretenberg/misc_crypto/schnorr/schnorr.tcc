@@ -38,8 +38,8 @@ signature_b construct_signature_b(const std::string& message, const key_pair<Fr,
     Fq::serialize_to_buffer(R.x, &sig.r[0]);
 
     typename Fq::field_t yy = Fq::add(Fq::mul(Fq::sqr(R.x), R.x), G1::curve_b);
-    typename Fq::field_t y_candidate;
-    Fq::__sqrt(yy, y_candidate);
+    typename Fq::field_t y_candidate = yy.sqrt();
+
     // if the signer / verifier sqrt algorithm is consistent, this *should* work...
     bool flip_sign = !Fq::eq(R.y, y_candidate);
 
@@ -73,8 +73,7 @@ typename G1::affine_element ecrecover(const std::string& message, const signatur
     r[0] = r[0] & 127U;
     typename Fq::field_t r_x = Fq::serialize_from_buffer(&r[0]);
     typename Fq::field_t r_yy = Fq::add(Fq::mul(Fq::sqr(r_x), r_x), G1::curve_b);
-    typename Fq::field_t r_y;
-    Fq::__sqrt(r_yy, r_y);
+    typename Fq::field_t r_y = r_yy.sqrt();
 
     if ((flip_sign)) {
         r_y = Fq::neg(r_y);

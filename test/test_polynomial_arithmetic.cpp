@@ -28,6 +28,21 @@ TEST(polynomials, domain_roots)
     EXPECT_EQ(fr::eq(result, expected), true);
 }
 
+TEST(polynomials, evaluation_domain_roots)
+{
+    constexpr size_t n = 16;
+    evaluation_domain domain(n);
+    domain.compute_lookup_table();
+    std::vector<fr::field_t*> root_table = domain.get_round_roots();
+    std::vector<fr::field_t*> inverse_root_table = domain.get_inverse_round_roots();
+    fr::field_t* roots = root_table[root_table.size() - 1];
+    fr::field_t* inverse_roots = inverse_root_table[inverse_root_table.size() - 1];
+    for (size_t i = 0; i < (n - 1) / 2; ++i) {
+        EXPECT_EQ(roots[i] * domain.root, roots[i + 1]);
+        EXPECT_EQ(inverse_roots[i] * domain.root_inverse, inverse_roots[i + 1]);
+        EXPECT_EQ(roots[i] * inverse_roots[i], fr::one);
+    }
+}
 TEST(polynomials, fft_with_small_degree)
 {
     size_t n = 16;
@@ -372,19 +387,18 @@ TEST(polynomials, barycentric_weight_evaluations)
     std::vector<fr::field_t> poly(n);
     std::vector<fr::field_t> barycentric_poly(n);
 
-    for (size_t i = 0; i < n / 2; ++i)
-    {
+    for (size_t i = 0; i < n / 2; ++i) {
         poly[i] = fr::random_element();
         barycentric_poly[i] = poly[i];
     }
-    for (size_t i = n / 2; i < n; ++i)
-    {
+    for (size_t i = n / 2; i < n; ++i) {
         poly[i] = fr::zero;
         barycentric_poly[i] = poly[i];
     }
-    fr::field_t evaluation_point = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
+    fr::field_t evaluation_point = fr::to_montgomery_form({ { 2, 0, 0, 0 } });
 
-    fr::field_t result = polynomial_arithmetic::compute_barycentric_evaluation(&barycentric_poly[0], n / 2, evaluation_point, domain);
+    fr::field_t result =
+        polynomial_arithmetic::compute_barycentric_evaluation(&barycentric_poly[0], n / 2, evaluation_point, domain);
 
     domain.compute_lookup_table();
 

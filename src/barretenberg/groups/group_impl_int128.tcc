@@ -30,7 +30,7 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
     copy(src, dest);
     if (predicate)
     {
-        coordinate_field::__neg(dest->y, dest->y);
+        dest->y.self_neg();
     }
 }
 } // namespace barretenberg

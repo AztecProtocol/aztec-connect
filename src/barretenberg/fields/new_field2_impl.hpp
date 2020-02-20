@@ -186,6 +186,21 @@ constexpr void field2<base, T>::self_conditional_negate(const uint64_t predicate
     *this = predicate ? neg() : *this;
 }
 
+template <class base, class T> constexpr void field2<base, T>::self_set_msb() noexcept
+{
+    c0.data[3] = 0ULL | (1ULL << 63ULL);
+}
+
+template <class base, class T> constexpr bool field2<base, T>::is_msb_set() const noexcept
+{
+    return (c0.data[3] >> 63ULL) == 1ULL;
+}
+
+template <class base, class T> constexpr uint64_t field2<base, T>::is_msb_set_word() const noexcept
+{
+    return (c0.data[3] >> 63ULL);
+}
+
 template <class base, class T> constexpr bool field2<base, T>::is_zero() const noexcept
 {
     return (c0.is_zero() && c1.is_zero());

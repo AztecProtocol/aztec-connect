@@ -378,25 +378,18 @@ TEST(fq, invert_one_is_one)
 TEST(fq, sqrt)
 {
     fq::field_t input = fq::one;
-    fq::field_t root;
-    fq::field_t result;
-    fq::__sqrt(input, root);
-    fq::__sqr(root, result);
-    for (size_t j = 0; j < 4; ++j) {
-        EXPECT_EQ(result.data[j], input.data[j]);
-    }
+    fq::field_t root = input.sqrt();
+    fq::field_t result = root.sqr();
+    EXPECT_EQ(result, input);
 }
 
 TEST(fq, sqrt_random)
 {
     size_t n = 1024;
     for (size_t i = 0; i < n; ++i) {
-        fq::field_t input = fq::random_element();
-        fq::__sqr(input, input);
-        fq::field_t root_test;
-        fq::__sqrt(input, root_test);
-        fq::__sqr(root_test, root_test);
-        EXPECT_EQ(fq::eq(root_test, input), true);
+        fq::field_t input = fq::random_element().sqr();
+        fq::field_t root_test = input.sqrt().sqr();
+        EXPECT_EQ(root_test, input);
     }
 }
 

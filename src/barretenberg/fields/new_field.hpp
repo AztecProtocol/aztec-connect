@@ -166,6 +166,7 @@ template <class Params> struct field {
     BBERG_INLINE constexpr field sqr() const noexcept;
     BBERG_INLINE constexpr field neg() const noexcept;
     BBERG_INLINE constexpr field pow(const field& exponent) const noexcept;
+    BBERG_INLINE constexpr field pow(const uint64_t exponent) const noexcept;
     constexpr field invert() const noexcept;
     constexpr field sqrt() const noexcept;
 
@@ -198,9 +199,15 @@ template <class Params> struct field {
     BBERG_INLINE constexpr void self_reduce_once() noexcept;
 
     BBERG_INLINE constexpr uint64_t get_msb() const noexcept;
+    BBERG_INLINE constexpr void self_set_msb() noexcept;
+    BBERG_INLINE constexpr bool is_msb_set() const noexcept;
+    BBERG_INLINE constexpr uint64_t is_msb_set_word() const noexcept;
     BBERG_INLINE constexpr bool get_bit(const uint64_t bit_index) const noexcept;
 
     BBERG_INLINE constexpr bool is_zero() const noexcept;
+
+    static constexpr field get_root_of_unity(const size_t degree) noexcept;
+
     // constexpr void __invert() noexcept;
     // constexpr void __neg() noexcept;
     // constexpr void __to_montgomery_form() noexcept;

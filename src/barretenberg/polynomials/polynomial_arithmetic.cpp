@@ -76,17 +76,17 @@ void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::
     // perform first butterfly iteration explicitly: x0 = x0 + x1, x1 = x0 - x1
     for (size_t k = 0; k < domain_size; k += 2) {
         fr::__copy(coeffs[k + 1], temp);
-        fr::__sub_with_coarse_reduction(coeffs[k], coeffs[k + 1], coeffs[k + 1]);
-        fr::__add_with_coarse_reduction(temp, coeffs[k], coeffs[k]);
+        coeffs[k + 1] = coeffs[k].sub_with_coarse_reduction(coeffs[k + 1]);
+        coeffs[k].self_add_with_coarse_reduction(temp);
     }
 
     for (size_t m = 2; m < domain_size; m *= 2) {
         const size_t i = (size_t)log2(m);
         for (size_t k = 0; k < domain_size; k += (2 * m)) {
             for (size_t j = 0; j < m; ++j) {
-                fr::__mul_with_coarse_reduction(root_table[i - 1][j], coeffs[k + j + m], temp);
-                fr::__sub_with_coarse_reduction(coeffs[k + j], temp, coeffs[k + j + m]);
-                fr::__add_with_coarse_reduction(coeffs[k + j], temp, coeffs[k + j]);
+                temp = root_table[i - 1][j].mul_with_coarse_reduction(coeffs[k + j + m]);
+                coeffs[k + j + m] = coeffs[k + j].sub_with_coarse_reduction(temp);
+                coeffs[k + j].self_add_with_coarse_reduction(temp);
             }
         }
     }
@@ -103,15 +103,14 @@ void scale_by_generator(fr::field_t* coeffs,
 #pragma omp parallel for
 #endif
     for (size_t j = 0; j < domain.num_threads; ++j) {
-        fr::field_t work_generator;
-        fr::field_t thread_shift;
-        fr::__pow_small(generator_shift, j * (generator_size / domain.num_threads), thread_shift);
-        fr::__mul_with_coarse_reduction(generator_start, thread_shift, work_generator);
+        fr::field_t thread_shift =
+            generator_shift.pow(static_cast<uint64_t>(j * (generator_size / domain.num_threads)));
+        fr::field_t work_generator = generator_start.mul_with_coarse_reduction(thread_shift);
         const size_t offset = j * (generator_size / domain.num_threads);
         const size_t end = offset + (generator_size / domain.num_threads);
         for (size_t i = offset; i < end; ++i) {
-            fr::__mul(coeffs[i], work_generator, target[i]);
-            fr::__mul_with_coarse_reduction(work_generator, generator_shift, work_generator);
+            target[i] = coeffs[i] * work_generator;
+            work_generator.self_mul_with_coarse_reduction(generator_shift);
         }
     }
 }
@@ -122,20 +121,18 @@ void compute_multiplicative_subgroup(const size_t log2_subgroup_size,
 {
     size_t subgroup_size = 1UL << log2_subgroup_size;
     // Step 1: get primitive 4th root of unity
-    fr::field_t subgroup_root;
-    fr::__get_root_of_unity(log2_subgroup_size, subgroup_root);
+    fr::field_t subgroup_root = fr::field_t::get_root_of_unity(log2_subgroup_size);
 
     // Step 2: compute the cofactor term g^n
-    fr::field_t accumulator;
-    fr::__copy(src_domain.generator, accumulator);
+    fr::field_t accumulator = src_domain.generator;
     for (size_t i = 0; i < src_domain.log2_size; ++i) {
-        fr::__sqr(accumulator, accumulator);
+        accumulator.self_sqr();
     }
 
     // Step 3: fill array with 4 values of (g.X)^n - 1, scaled by the cofactor
-    fr::__copy(accumulator, subgroup_roots[0]); // subgroup_root, accumulator, subgroup_roots[1]);
+    subgroup_roots[0] = accumulator;
     for (size_t i = 1; i < subgroup_size; ++i) {
-        fr::__mul(subgroup_roots[i - 1], subgroup_root, subgroup_roots[i]);
+        subgroup_roots[i] = subgroup_roots[i - 1] * subgroup_root;
     }
 }
 
@@ -169,16 +166,16 @@ void fft_inner_parallel(fr::field_t* coeffs,
 
                 fr::__copy(coeffs[swap_index_1], temp_1);
                 fr::__copy(coeffs[swap_index_2], temp_2);
-                fr::__sub_with_coarse_reduction(temp_1, temp_2, scratch_space[i + 1]);
-                fr::__add_with_coarse_reduction(temp_1, temp_2, scratch_space[i]);
+                scratch_space[i + 1] = temp_1.sub_with_coarse_reduction(temp_2);
+                scratch_space[i] = temp_1.add_with_coarse_reduction(temp_2);
             }
         }
 
         // hard code exception for when the domain size is tiny - we won't execute the next loop, so need to manually
         // reduce + copy
         if (domain.size <= 2) {
-            fr::reduce_once(scratch_space[0], coeffs[0]);
-            fr::reduce_once(scratch_space[1], coeffs[1]);
+            coeffs[0] = scratch_space[0].reduce_once();
+            coeffs[1] = scratch_space[1].reduce_once();
         }
 
         // outer FFT loop
@@ -240,19 +237,19 @@ void fft_inner_parallel(fr::field_t* coeffs,
                     for (size_t i = start; i < end; ++i) {
                         size_t k1 = (i & index_mask) << 1;
                         size_t j1 = i & block_mask;
-                        fr::__mul_with_coarse_reduction(round_roots[j1], scratch_space[k1 + j1 + m], temp);
-                        fr::__sub_with_coarse_reduction(scratch_space[k1 + j1], temp, scratch_space[k1 + j1 + m]);
-                        fr::__add_with_coarse_reduction(scratch_space[k1 + j1], temp, scratch_space[k1 + j1]);
+                        temp = round_roots[j1].mul_with_coarse_reduction(scratch_space[k1 + j1 + m]);
+                        scratch_space[k1 + j1 + m] = scratch_space[k1 + j1].sub_with_coarse_reduction(temp);
+                        scratch_space[k1 + j1].self_add_with_coarse_reduction(temp);
                     }
                 } else {
                     for (size_t i = start; i < end; ++i) {
                         size_t k1 = (i & index_mask) << 1;
                         size_t j1 = i & block_mask;
-                        fr::__mul_with_coarse_reduction(round_roots[j1], scratch_space[k1 + j1 + m], temp);
-                        fr::__sub_with_coarse_reduction(scratch_space[k1 + j1], temp, scratch_space[k1 + j1 + m]);
-                        fr::reduce_once(scratch_space[k1 + j1 + m], coeffs[k1 + j1 + m]);
-                        fr::__add_with_coarse_reduction(scratch_space[k1 + j1], temp, scratch_space[k1 + j1]);
-                        fr::reduce_once(scratch_space[k1 + j1], coeffs[k1 + j1]);
+                        temp = round_roots[j1].mul_with_coarse_reduction(scratch_space[k1 + j1 + m]);
+                        scratch_space[k1 + j1 + m] = scratch_space[k1 + j1].sub_with_coarse_reduction(temp);
+                        coeffs[k1 + j1 + m] = scratch_space[k1 + j1 + m].reduce_once();
+                        scratch_space[k1 + j1] = scratch_space[k1 + j1].add_with_coarse_reduction(temp);
+                        coeffs[k1 + j1] = scratch_space[k1 + j1].reduce_once();
                     }
                 }
             }
@@ -290,8 +287,8 @@ void fft_inner_parallel(fr::field_t* coeffs,
 
                 fr::__copy(coeffs[swap_index_1], temp_1);
                 fr::__copy(coeffs[swap_index_2], temp_2);
-                fr::__sub_with_coarse_reduction(temp_1, temp_2, target[i + 1]);
-                fr::__add_with_coarse_reduction(temp_1, temp_2, target[i]);
+                target[i + 1] = temp_1.sub_with_coarse_reduction(temp_2);
+                target[i] = temp_1.add_with_coarse_reduction(temp_2);
             }
         }
 
@@ -361,19 +358,17 @@ void fft_inner_parallel(fr::field_t* coeffs,
                     for (size_t i = start; i < end; ++i) {
                         size_t k1 = (i & index_mask) << 1;
                         size_t j1 = i & block_mask;
-                        fr::__mul_with_coarse_reduction(round_roots[j1], target[k1 + j1 + m], temp);
-                        fr::__sub_with_coarse_reduction(target[k1 + j1], temp, target[k1 + j1 + m]);
-                        fr::__add_with_coarse_reduction(target[k1 + j1], temp, target[k1 + j1]);
+                        temp = round_roots[j1].mul_with_coarse_reduction(target[k1 + j1 + m]);
+                        target[k1 + j1 + m] = target[k1 + j1].sub_with_coarse_reduction(temp);
+                        target[k1 + j1].self_add_with_coarse_reduction(temp);
                     }
                 } else {
                     for (size_t i = start; i < end; ++i) {
                         size_t k1 = (i & index_mask) << 1;
                         size_t j1 = i & block_mask;
-                        fr::__mul_with_coarse_reduction(round_roots[j1], target[k1 + j1 + m], temp);
-                        fr::__sub_with_coarse_reduction(target[k1 + j1], temp, target[k1 + j1 + m]);
-                        fr::reduce_once(target[k1 + j1 + m], target[k1 + j1 + m]);
-                        fr::__add_with_coarse_reduction(target[k1 + j1], temp, target[k1 + j1]);
-                        fr::reduce_once(target[k1 + j1], target[k1 + j1]);
+                        temp = round_roots[j1].mul_with_coarse_reduction(target[k1 + j1 + m]);
+                        target[k1 + j1 + m] = target[k1 + j1].sub_with_coarse_reduction(temp).reduce_once();
+                        target[k1 + j1] = target[k1 + j1].add_with_coarse_reduction(temp).reduce_once();
                     }
                 }
             }
@@ -390,7 +385,7 @@ void ifft(fr::field_t* coeffs, const evaluation_domain& domain)
 {
     fft_inner_parallel(coeffs, domain, domain.root_inverse, domain.get_inverse_round_roots());
     ITERATE_OVER_DOMAIN_START(domain);
-    fr::__mul(coeffs[i], domain.domain_inverse, coeffs[i]);
+    coeffs[i].self_mul(domain.domain_inverse);
     ITERATE_OVER_DOMAIN_END;
 }
 
@@ -398,7 +393,7 @@ void fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, con
 {
     fft_inner_parallel(coeffs, domain, domain.root, domain.get_round_roots());
     ITERATE_OVER_DOMAIN_START(domain);
-    fr::__mul(coeffs[i], value, coeffs[i]);
+    coeffs[i].self_mul(value);
     ITERATE_OVER_DOMAIN_END;
 }
 
@@ -414,7 +409,7 @@ void coset_fft(fr::field_t* coeffs,
                const size_t domain_extension)
 {
     const size_t log2_domain_extension = static_cast<size_t>(log2(domain_extension));
-    fr::field_t primitive_root = fr::get_root_of_unity(domain.log2_size + log2_domain_extension);
+    fr::field_t primitive_root = fr::field_t::get_root_of_unity(domain.log2_size + log2_domain_extension);
 
     // fr::field_t work_root = fr::sqr(domain.generator);
     // work_root = fr::sqr(domain.generator);
@@ -426,7 +421,7 @@ void coset_fft(fr::field_t* coeffs,
     std::vector<fr::field_t> coset_generators(domain_extension);
     coset_generators[0] = domain.generator;
     for (size_t i = 1; i < domain_extension; ++i) {
-        fr::__mul(coset_generators[i - 1], primitive_root, coset_generators[i]);
+        coset_generators[i] = coset_generators[i - 1] * primitive_root;
     }
     for (size_t i = domain_extension - 1; i < domain_extension; --i) {
         scale_by_generator(coeffs, coeffs + (i * domain.size), domain, fr::one, coset_generators[i], domain.size);
@@ -470,8 +465,7 @@ void coset_fft(fr::field_t* coeffs,
 
 void coset_fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, const fr::field_t& constant)
 {
-    fr::field_t start = fr::one;
-    fr::__mul(start, constant, start);
+    fr::field_t start = constant;
     scale_by_generator(coeffs, coeffs, domain, start, domain.generator, domain.generator_size);
     fft(coeffs, domain);
 }
@@ -479,10 +473,9 @@ void coset_fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domai
 void ifft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, const fr::field_t& value)
 {
     fft_inner_parallel(coeffs, domain, domain.root_inverse, domain.get_inverse_round_roots());
-    fr::field_t T0;
-    fr::__mul(domain.domain_inverse, value, T0);
+    fr::field_t T0 = domain.domain_inverse * value;
     ITERATE_OVER_DOMAIN_START(domain);
-    fr::__mul(coeffs[i], T0, coeffs[i]);
+    coeffs[i].self_mul(T0);
     ITERATE_OVER_DOMAIN_END;
 }
 
@@ -498,7 +491,7 @@ void add(const fr::field_t* a_coeffs,
          const evaluation_domain& domain)
 {
     ITERATE_OVER_DOMAIN_START(domain);
-    fr::__add(a_coeffs[i], b_coeffs[i], r_coeffs[i]);
+    r_coeffs[i] = a_coeffs[i] + b_coeffs[i];
     ITERATE_OVER_DOMAIN_END;
 }
 
@@ -508,7 +501,7 @@ void mul(const fr::field_t* a_coeffs,
          const evaluation_domain& domain)
 {
     ITERATE_OVER_DOMAIN_START(domain);
-    fr::__mul(a_coeffs[i], b_coeffs[i], r_coeffs[i]);
+    r_coeffs[i] = a_coeffs[i] * b_coeffs[i];
     ITERATE_OVER_DOMAIN_END;
 }
 
@@ -526,22 +519,20 @@ fr::field_t evaluate(const fr::field_t* coeffs, const fr::field_t& z, const size
 #pragma omp parallel for
 #endif
     for (size_t j = 0; j < num_threads; ++j) {
-        fr::field_t z_acc;
-        fr::field_t work_var;
-        fr::__pow_small(z, j * range_per_thread, z_acc);
+        fr::field_t z_acc = z.pow(static_cast<uint64_t>(j * range_per_thread));
         size_t offset = j * range_per_thread;
         evaluations[j] = fr::zero;
         size_t end = (j == num_threads - 1) ? offset + range_per_thread + leftovers : offset + range_per_thread;
         for (size_t i = offset; i < end; ++i) {
-            fr::__mul(coeffs[i], z_acc, work_var);
-            fr::__add(evaluations[j], work_var, evaluations[j]);
-            fr::__mul_with_coarse_reduction(z_acc, z, z_acc);
+            fr::field_t work_var = z_acc * coeffs[i];
+            evaluations[j].self_add(work_var);
+            z_acc.self_mul_with_coarse_reduction(z);
         }
     }
 
     fr::field_t r = fr::zero;
     for (size_t j = 0; j < num_threads; ++j) {
-        fr::__add(r, evaluations[j], r);
+        r.self_add(evaluations[j]);
     }
     delete[] evaluations;
     return r;
@@ -569,23 +560,18 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
 
     // Step 1: compute the denominator for each evaluation: 1 / (X.g - 1)
     // fr::field_t work_root;
-    fr::field_t one = fr::one;
-    fr::field_t multiplicand;
-    fr::__copy(target_domain.root, multiplicand);
+    fr::field_t multiplicand = target_domain.root;
 
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
     for (size_t j = 0; j < target_domain.num_threads; ++j) {
-        fr::field_t work_root;
-        fr::field_t root_shift;
-        fr::__pow_small(multiplicand, j * target_domain.thread_size, root_shift);
-
-        fr::__mul(src_domain.generator, root_shift, work_root);
+        const fr::field_t root_shift = multiplicand.pow(static_cast<uint64_t>(j * target_domain.thread_size));
+        fr::field_t work_root = src_domain.generator * root_shift;
         size_t offset = j * target_domain.thread_size;
         for (size_t i = offset; i < offset + target_domain.thread_size; ++i) {
-            fr::__sub(work_root, one, l_1_coefficients[i]);
-            fr::__mul_with_coarse_reduction(work_root, multiplicand, work_root);
+            l_1_coefficients[i] = work_root - fr::one;
+            work_root.self_mul_with_coarse_reduction(multiplicand);
         }
     }
 
@@ -614,14 +600,14 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
     // Each element of `subgroup_roots[i]` contains some root wi^n
     // want to compute (1/n)(wi^n - 1)
     for (size_t i = 0; i < subgroup_size; ++i) {
-        fr::__sub(subgroup_roots[i], fr::one, subgroup_roots[i]);
-        fr::__mul(subgroup_roots[i], src_domain.domain_inverse, subgroup_roots[i]);
+        subgroup_roots[i].self_sub(fr::one);
+        subgroup_roots[i].self_mul(src_domain.domain_inverse);
     }
     // TODO: this is disgusting! Fix it fix it fix it fix it...
     if (subgroup_size >= target_domain.thread_size) {
         for (size_t i = 0; i < target_domain.size; i += subgroup_size) {
             for (size_t j = 0; j < subgroup_size; ++j) {
-                fr::__mul(l_1_coefficients[i + j], subgroup_roots[j], l_1_coefficients[i + j]);
+                l_1_coefficients[i + j].self_mul(subgroup_roots[j]);
             }
         }
     } else {
@@ -632,7 +618,7 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
             size_t offset = k * target_domain.thread_size;
             for (size_t i = offset; i < offset + target_domain.thread_size; i += subgroup_size) {
                 for (size_t j = 0; j < subgroup_size; ++j) {
-                    fr::__mul(l_1_coefficients[i + j], subgroup_roots[j], l_1_coefficients[i + j]);
+                    l_1_coefficients[i + j].self_mul(subgroup_roots[j]);
                 }
             }
         }
@@ -664,7 +650,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
 
     // Step 3: fill array with values of (g.X)^n - 1, scaled by the cofactor
     for (size_t i = 0; i < subgroup_size; ++i) {
-        fr::__sub(subgroup_roots[i], fr::one, subgroup_roots[i]);
+        subgroup_roots[i].self_sub(fr::one);
     }
 
     // Step 4: invert array entries to compute denominator term of 1/Z_H*(X)
@@ -672,23 +658,20 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
 
     // The numerator term of Z_H*(X) is the polynomial (X - w^{n-1})
     // => (g.w_i - w^{n-1})
-    fr::field_t numerator_constant;
-
     // Compute w^{n-1}
-    fr::__neg(src_domain.root_inverse, numerator_constant);
+    fr::field_t numerator_constant = src_domain.root_inverse.neg();
 
     // Compute first value of g.w_i
 
     // Step 5: iterate over point evaluations, scaling each one by the inverse of the vanishing polynomial
     if (subgroup_size >= target_domain.thread_size) {
         fr::field_t work_root = src_domain.generator;
-        fr::field_t T0;
         for (size_t i = 0; i < target_domain.size; i += subgroup_size) {
             for (size_t j = 0; j < subgroup_size; ++j) {
-                fr::__mul(coeffs[i + j], subgroup_roots[j], coeffs[i + j]);
-                fr::__add_without_reduction(work_root, numerator_constant, T0);
-                fr::__mul(coeffs[i + j], T0, coeffs[i + j]);
-                fr::__mul_with_coarse_reduction(work_root, target_domain.root, work_root);
+                coeffs[i + j].self_mul(subgroup_roots[j]);
+                fr::field_t T0 = work_root.add_without_reduction(numerator_constant);
+                coeffs[i + j].self_mul(T0);
+                work_root.self_mul_with_coarse_reduction(target_domain.root);
             }
         }
     } else {
@@ -697,17 +680,14 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
 #endif
         for (size_t k = 0; k < target_domain.num_threads; ++k) {
             size_t offset = k * target_domain.thread_size;
-            fr::field_t root_shift;
-            fr::field_t work_root;
-            fr::__pow_small(target_domain.root, offset, root_shift);
-            fr::__mul(src_domain.generator, root_shift, work_root);
-            fr::field_t T0;
+            const fr::field_t root_shift = target_domain.root.pow(static_cast<uint64_t>(offset));
+            fr::field_t work_root = src_domain.generator * root_shift;
             for (size_t i = offset; i < offset + target_domain.thread_size; i += subgroup_size) {
                 for (size_t j = 0; j < subgroup_size; ++j) {
-                    fr::__mul(coeffs[i + j], subgroup_roots[j], coeffs[i + j]);
-                    fr::__add(work_root, numerator_constant, T0);
-                    fr::__mul(coeffs[i + j], T0, coeffs[i + j]);
-                    fr::__mul_with_coarse_reduction(work_root, target_domain.root, work_root);
+                    coeffs[i + j].self_mul(subgroup_roots[j]);
+                    fr::field_t T0 = work_root.add_without_reduction(numerator_constant);
+                    coeffs[i + j].self_mul(T0);
+                    work_root.self_mul_with_coarse_reduction(target_domain.root);
                 }
             }
         }
@@ -724,28 +704,20 @@ fr::field_t compute_kate_opening_coefficients(const fr::field_t* src,
     // where W(X) = F(X) - F(z) / (X - z)
     // i.e. divide by the degree-1 polynomial [-z, 1]
 
-    fr::field_t y{ { 0x833fc48d823f272cUL, 0x2d270d45f1181294UL, 0xcf135e7506a45d63UL, 0x02UL } };
-    y = fr::to_montgomery_form(y);
-    fr::field_t b{ { 17, 0, 0, 0 } };
-    b = fr::to_montgomery_form(b);
-    b = fr::neg(b);
-
     // We assume that the commitment is well-formed and that there is no remainder term.
     // Under these conditions we can perform this polynomial division in linear time with good constants
 
     fr::field_t f = evaluate(src, z, n);
     // compute (1 / -z)
-    fr::field_t divisor;
-    fr::__neg(z, divisor);
-    fr::__invert(divisor, divisor);
+    fr::field_t divisor = z.neg().invert();
 
     // we're about to shove these coefficients into a pippenger multi-exponentiation routine, where we need
     // to convert out of montgomery form. So, we can use lazy reduction techniques here without triggering overflows
-    fr::__sub_with_coarse_reduction(src[0], f, dest[0]);
-    fr::__mul_with_coarse_reduction(dest[0], divisor, dest[0]);
+    dest[0] = src[0].sub_with_coarse_reduction(f);
+    dest[0].self_mul_with_coarse_reduction(divisor);
     for (size_t i = 1; i < n; ++i) {
-        fr::__sub_with_coarse_reduction(src[i], dest[i - 1], dest[i]);
-        fr::__mul_with_coarse_reduction(dest[i], divisor, dest[i]);
+        dest[i] = src[i].sub_with_coarse_reduction(dest[i - 1]);
+        dest[i].self_mul_with_coarse_reduction(divisor);
     }
 
     return f;
@@ -755,71 +727,63 @@ fr::field_t compute_kate_opening_coefficients(const fr::field_t* src,
 barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluations(const fr::field_t& z,
                                                                                    const evaluation_domain& domain)
 {
-    fr::field_t one = fr::one;
-    fr::field_t z_pow;
-    fr::__copy(z, z_pow);
+    fr::field_t z_pow = z;
     for (size_t i = 0; i < domain.log2_size; ++i) {
-        fr::__sqr(z_pow, z_pow);
+        z_pow.self_sqr();
     }
 
-    fr::field_t numerator;
-    fr::__sub(z_pow, one, numerator);
+    fr::field_t numerator = z_pow - fr::one;
 
     fr::field_t denominators[3];
-    fr::__sub(z, one, denominators[1]);
-
-    fr::__mul(z, domain.root, denominators[2]);
-    fr::__mul(denominators[2], domain.root, denominators[2]);
-    fr::__sub(denominators[2], one, denominators[2]);
-
-    fr::__sub(z, domain.root_inverse, denominators[0]);
-
+    denominators[0] = z - domain.root_inverse;
+    denominators[1] = z - fr::one;
+    denominators[2] = (z * domain.root.sqr()) - fr::one;
     fr::batch_invert(denominators, 3);
 
     barretenberg::polynomial_arithmetic::lagrange_evaluations result;
-    fr::__mul(numerator, denominators[0], result.vanishing_poly);
-
-    fr::__mul(numerator, domain.domain_inverse, numerator);
-    fr::__mul(numerator, denominators[1], result.l_1);
-    fr::__mul(numerator, denominators[2], result.l_n_minus_1);
+    result.vanishing_poly = numerator * denominators[0];
+    numerator = numerator * domain.domain_inverse;
+    result.l_1 = numerator * denominators[1];
+    result.l_n_minus_1 = numerator * denominators[2];
     return result;
 }
 
 // computes r = \sum_{i=0}^{num_coeffs}(L_i(z).f_i)
 // start with L_1(z) = ((z^n - 1)/n).(1 / z - 1)
 // L_i(z) = L_1(z.w^{1-i}) = ((z^n - 1) / n).(1 / z.w^{1-i} - 1)
-fr::field_t compute_barycentric_evaluation(fr::field_t *coeffs,const size_t num_coeffs, const fr::field_t &z,  const evaluation_domain &domain)
+fr::field_t compute_barycentric_evaluation(fr::field_t* coeffs,
+                                           const size_t num_coeffs,
+                                           const fr::field_t& z,
+                                           const evaluation_domain& domain)
 {
     fr::field_t* denominators = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * num_coeffs));
 
     fr::field_t numerator = z;
     for (size_t i = 0; i < domain.log2_size; ++i) {
-        fr::__sqr(numerator, numerator);
+        numerator.self_sqr();
     }
-    fr::__sub(numerator, fr::one, numerator);
-    fr::__mul(numerator, domain.domain_inverse, numerator);
+    numerator.self_sub(fr::one);
+    numerator.self_mul(domain.domain_inverse);
 
-    fr::__sub(z, fr::one, denominators[0]);
-    fr::field_t work_root = (domain.root_inverse);
-    for (size_t i = 1; i < num_coeffs; ++i)
-    {
-        fr::__mul(work_root, z, denominators[i]);
-        fr::__sub(denominators[i], fr::one, denominators[i]);
-        fr::__mul(work_root, domain.root_inverse, work_root);
+    denominators[0] = z - fr::one;
+    fr::field_t work_root = domain.root_inverse;
+    for (size_t i = 1; i < num_coeffs; ++i) {
+        denominators[i] = work_root * z;
+        denominators[i].self_sub(fr::one);
+        work_root.self_mul(domain.root_inverse);
     }
 
     fr::batch_invert(denominators, num_coeffs);
-    
+
     fr::field_t result = fr::zero;
 
-    for (size_t i = 0; i < num_coeffs; ++i)
-    {
-        fr::field_t temp;
-        fr::__mul(coeffs[i], denominators[i], temp);
-        fr::__add(result, temp, result);
+    for (size_t i = 0; i < num_coeffs; ++i) {
+        fr::field_t temp = coeffs[i] * denominators[i];
+        result = result + temp;
     }
 
-    fr::__mul(result, numerator, result);
+    result = result * numerator;
+
     aligned_free(denominators);
 
     return result;

@@ -1,28 +1,27 @@
 #pragma once
 
-#include "../types.hpp"
 #include "../curves/bn254/fr.hpp"
+#include "../types.hpp"
 #include <vector>
 
-namespace barretenberg
-{
-class evaluation_domain
-{
-public:
-    evaluation_domain() : size(0),
-                          num_threads(0),
-                          thread_size(0),
-                          log2_size(0),
-                          log2_thread_size(0),
-                          log2_num_threads(0),
-                          generator_size(0),
-                          root({0,0,0,0}),
-                          root_inverse({0,0,0,0}),
-                          domain({0,0,0,0}),
-                          domain_inverse({0,0,0,0}),
-                          generator({0,0,0,0}),
-                          generator_inverse({0,0,0,0}),
-                          roots(nullptr) {};
+namespace barretenberg {
+class evaluation_domain {
+  public:
+    evaluation_domain()
+        : size(0)
+        , num_threads(0)
+        , thread_size(0)
+        , log2_size(0)
+        , log2_thread_size(0)
+        , log2_num_threads(0)
+        , generator_size(0)
+        , root(fr::zero)
+        , root_inverse(fr::zero)
+        , domain(fr::zero)
+        , domain_inverse(fr::zero)
+        , generator(fr::zero)
+        , generator_inverse(fr::zero)
+        , roots(nullptr){};
 
     evaluation_domain(const size_t domain_size, const size_t target_generator_size = 0);
     evaluation_domain(const evaluation_domain& other);
@@ -54,10 +53,10 @@ public:
     barretenberg::fr::field_t generator;
     barretenberg::fr::field_t generator_inverse;
 
-private:
+  private:
     std::vector<barretenberg::fr::field_t*> round_roots;
     std::vector<barretenberg::fr::field_t*> inverse_round_roots;
 
     barretenberg::fr::field_t* roots;
 };
-}
+} // namespace barretenberg
