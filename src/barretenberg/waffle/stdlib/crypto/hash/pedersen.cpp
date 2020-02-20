@@ -13,7 +13,6 @@ namespace pedersen {
 typedef field_t<waffle::TurboComposer> field_t;
 using namespace barretenberg;
 
-
 point hash_single(const field_t& in, const size_t hash_index)
 {
     field_t scalar = in;
@@ -29,7 +28,7 @@ point hash_single(const field_t& in, const size_t hash_index)
     constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
 
-    constexpr size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1: num_bits;
+    constexpr size_t initial_exponent = num_bits; // ((num_bits & 1) == 1) ? num_bits - 1: num_bits;
     const plonk::stdlib::group_utils::fixed_base_ladder* ladder =
         plonk::stdlib::group_utils::get_hash_ladder(hash_index, num_bits);
     grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1);
@@ -52,7 +51,7 @@ point hash_single(const field_t& in, const size_t hash_index)
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
     fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), initial_exponent));
-    
+
     fr::field_t origin_accumulators[2]{ fr::one, fr::add(accumulator_offset, fr::one) };
 
     grumpkin::g1::element* multiplication_transcript =
@@ -69,7 +68,7 @@ point hash_single(const field_t& in, const size_t hash_index)
     }
     fr::field_t one = fr::one;
     fr::field_t three = fr::add(fr::add(one, one), one);
-    
+
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
 
@@ -102,15 +101,12 @@ point hash_single(const field_t& in, const size_t hash_index)
         round_quad.a = ctx->add_variable(multiplication_transcript[i].x);
         round_quad.b = ctx->add_variable(multiplication_transcript[i].y);
 
-        if (i == 0)
-        {
+        if (i == 0) {
             // we need to ensure that the first value of x_alpha is a defined constant.
             // However, repeated applications of the pedersen hash will use the same constant value.
             // `put_constant_variable` will create a gate that fixes the value of x_alpha, but only once
             round_quad.c = ctx->put_constant_variable(x_alpha);
-        }
-        else
-        {
+        } else {
             round_quad.c = ctx->add_variable(x_alpha);
         }
         if ((wnaf_entries[i + 1] & 0xffffffU) == 0) {

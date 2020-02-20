@@ -20,7 +20,6 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     io::read_transcript(&monomials[0], g2_x, num_points / 2, BARRETENBERG_SRS_PATH);
     scalar_multiplication::generate_pippenger_point_table(&monomials[0], &monomials[0], num_points / 2);
 
-
     std::array<uint64_t, num_points> point_schedule;
     std::array<bool, num_points> bucket_empty_status;
     // 16 buckets, each bucket has one point
@@ -90,7 +89,7 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     transcript_points[62] = 0x7c;
     transcript_points[61] = 0x7e;
     transcript_points[63] = 0x7f;
-    
+
     transcript_points[64] = 0x1;
     transcript_points[65] = 0x3;
     transcript_points[66] = 0x5;
@@ -156,23 +155,19 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     transcript_points[126] = 0x7b;
     transcript_points[127] = 0x7d;
 
-    for (size_t i = 0; i < 64; ++i)
-    {
+    for (size_t i = 0; i < 64; ++i) {
         transcript[i] = 0;
         transcript[i + 64] = 1;
     }
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         point_schedule[i] = (static_cast<uint64_t>(transcript_points[i]) << 32ULL) + transcript[i];
     }
     std::array<g1::element, num_points> expected;
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         g1::set_infinity(expected[i]);
     }
 
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         uint64_t schedule = transcript[i] & 0x7fffffffU;
         {
             g1::mixed_add(expected[schedule], monomials[transcript_points[i]], expected[schedule]);
@@ -185,15 +180,16 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     std::array<uint32_t, num_points> bucket_counts;
     std::array<uint32_t, num_points> bit_offsets = { 0 };
 
-    scalar_multiplication::affine_product_runtime_state product_state{ &monomials[0],          &point_pairs[0],
-                                                                       &output_buckets[0], &scratch_space[0],
-                                                                       &bucket_counts[0],  &bit_offsets[0],
-                                                                       &point_schedule[0],   num_points, 2, &bucket_empty_status[0] };
+    scalar_multiplication::affine_product_runtime_state product_state{
+        &monomials[0],          &point_pairs[0],   &output_buckets[0],
+        &scratch_space[0],      &bucket_counts[0], &bit_offsets[0],
+        &point_schedule[0],     num_points,        2,
+        &bucket_empty_status[0]
+    };
 
     g1::affine_element* output = scalar_multiplication::reduce_buckets(product_state, true);
 
-    for (size_t i = 0; i < product_state.num_buckets; ++i)
-    {
+    for (size_t i = 0; i < product_state.num_buckets; ++i) {
         expected[i] = g1::normalize(expected[i]);
         EXPECT_EQ(fq::eq(output[i].x, expected[i].x), true);
         EXPECT_EQ(fq::eq(output[i].y, expected[i].y), true);
@@ -204,9 +200,12 @@ TEST(scalar_multiplication, reduce_buckets)
 {
     constexpr size_t num_initial_points = 1 << 12;
     constexpr size_t num_points = num_initial_points * 2;
-    g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points * 2)));
-    g1::affine_element* scratch_points = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points * 2)));
-    g1::affine_element* point_pairs = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points * 2)));
+    g1::affine_element* monomials =
+        (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points * 2)));
+    g1::affine_element* scratch_points =
+        (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points * 2)));
+    g1::affine_element* point_pairs =
+        (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points * 2)));
     g1::element* expected_buckets = (g1::element*)(aligned_alloc(64, sizeof(g1::element) * (num_points * 2)));
     bool* bucket_empty_status = (bool*)(aligned_alloc(64, sizeof(bool) * (num_points * 2)));
 
@@ -254,8 +253,7 @@ TEST(scalar_multiplication, reduce_buckets)
     std::array<uint32_t, 22> bit_offsets = { 0 };
 
     uint64_t* point_schedule_copy = static_cast<uint64_t*>(aligned_alloc(64, sizeof(uint64_t) * num_points * 2));
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         state.wnaf_table[i + num_points] = state.wnaf_table[i + num_points] & 0xffffffff7fffffffUL;
         // printf("state.wnaf_table[%lu] = %lx \n", i, state.wnaf_table[i]);
         point_schedule_copy[i] = state.wnaf_table[i + num_points];
@@ -264,10 +262,16 @@ TEST(scalar_multiplication, reduce_buckets)
     const size_t last_bucket = point_schedule_copy[num_points - 1] & 0x7fffffffULL;
     const size_t num_buckets = last_bucket - first_bucket + 1;
 
-
-    scalar_multiplication::affine_product_runtime_state product_state{ monomials,        point_pairs,   scratch_points,
-                                                                       scratch_field,    bucket_counts, &bit_offsets[0],
-                                                                       &state.wnaf_table[num_points], num_points, static_cast<uint32_t>(num_buckets), bucket_empty_status };
+    scalar_multiplication::affine_product_runtime_state product_state{ monomials,
+                                                                       point_pairs,
+                                                                       scratch_points,
+                                                                       scratch_field,
+                                                                       bucket_counts,
+                                                                       &bit_offsets[0],
+                                                                       &state.wnaf_table[num_points],
+                                                                       num_points,
+                                                                       static_cast<uint32_t>(num_buckets),
+                                                                       bucket_empty_status };
 
     start = std::chrono::steady_clock::now();
     // scalar_multiplication::scalar_multiplication_internal<num_points>(state, monomials);
@@ -275,12 +279,10 @@ TEST(scalar_multiplication, reduce_buckets)
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "scalar mul: " << diff.count() << "ms" << std::endl;
 
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         g1::set_infinity(expected_buckets[i]);
     }
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         uint64_t schedule = point_schedule_copy[i];
         uint64_t bucket_index = schedule & 0x7fffffffU;
         uint64_t point_index = schedule >> 32ULL;
@@ -292,27 +294,21 @@ TEST(scalar_multiplication, reduce_buckets)
     }
 
     size_t it = 0;
-    for (size_t i = 0; i < num_buckets; ++i)
-    {
-        if (g1::is_point_at_infinity(expected_buckets[i]))
-        {
+    for (size_t i = 0; i < num_buckets; ++i) {
+        if (g1::is_point_at_infinity(expected_buckets[i])) {
             printf("OUTPUT[%lu] IS POINT AT INFINITY!", i);
         }
     }
     g1::affine_element* result_buckets = scalar_multiplication::reduce_buckets(product_state, true);
 
     printf("num buckets = %lu \n", num_buckets);
-    for (size_t i = 0; i < num_buckets; ++i)
-    {
-        if (!bucket_empty_status[i])
-        {
+    for (size_t i = 0; i < num_buckets; ++i) {
+        if (!bucket_empty_status[i]) {
             g1::element expected = g1::normalize(expected_buckets[i]);
             EXPECT_EQ(fq::eq(expected.x, result_buckets[it].x), true);
             EXPECT_EQ(fq::eq(expected.y, result_buckets[it].y), true);
             ++it;
-        }
-        else
-        {
+        } else {
             printf("recorded empty bucket???\n");
         }
     }
@@ -332,12 +328,13 @@ TEST(scalar_multiplication, reduce_buckets_basic)
     constexpr size_t num_initial_points = 1 << 20;
     constexpr size_t num_points = num_initial_points * 2;
     g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points)));
-    g1::affine_element* scratch_points = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points)));
-    g1::affine_element* point_pairs = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points)));
+    g1::affine_element* scratch_points =
+        (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points)));
+    g1::affine_element* point_pairs =
+        (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points)));
     bool* bucket_empty_status = (bool*)(aligned_alloc(64, sizeof(bool) * (num_points)));
 
     fq::field_t* scratch_field = (fq::field_t*)(aligned_alloc(64, sizeof(fq::field_t) * (num_points)));
-
 
     memset((void*)scratch_points, 0x00, num_points * sizeof(g1::affine_element));
     memset((void*)point_pairs, 0x00, num_points * sizeof(g1::affine_element));
@@ -381,7 +378,10 @@ TEST(scalar_multiplication, reduce_buckets_basic)
     const size_t num_buckets = last_bucket - first_bucket + 1;
 
     scalar_multiplication::affine_product_runtime_state product_state{
-        monomials, point_pairs, scratch_points, scratch_field, bucket_counts, &bit_offsets[0], state.wnaf_table, num_points, static_cast<uint32_t>(num_buckets), bucket_empty_status
+        monomials,          point_pairs,   scratch_points,
+        scratch_field,      bucket_counts, &bit_offsets[0],
+        state.wnaf_table,   num_points,    static_cast<uint32_t>(num_buckets),
+        bucket_empty_status
     };
 
     start = std::chrono::steady_clock::now();
@@ -408,8 +408,7 @@ TEST(scalar_multiplication, add_affine_points)
     fq::field_t* lambda = (fq::field_t*)(aligned_alloc(64, sizeof(fq::field_t) * (num_points * 2)));
 
     g1::element* points_copy = (g1::element*)(aligned_alloc(64, sizeof(g1::element) * (num_points)));
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         points[i] = g1::random_affine_element();
         points_copy[i].x = points[i].x;
         points_copy[i].y = points[i].y;
@@ -421,15 +420,13 @@ TEST(scalar_multiplication, add_affine_points)
     // }
 
     size_t count = num_points - 1;
-    for (size_t i = num_points - 2; i < num_points; i -= 2)
-    {
+    for (size_t i = num_points - 2; i < num_points; i -= 2) {
         g1::add(points_copy[i], points_copy[i + 1], points_copy[count--]);
         points_copy[count + 1] = g1::normalize(points_copy[count + 1]);
     }
 
     scalar_multiplication::add_affine_points(points, num_points, scratch_space);
-    for (size_t i = num_points - 1; i > num_points - 1 - (num_points / 2); --i)
-    {
+    for (size_t i = num_points - 1; i > num_points - 1 - (num_points / 2); --i) {
         EXPECT_EQ(fq::eq(points[i].x, points_copy[i].x), true);
         EXPECT_EQ(fq::eq(points[i].y, points_copy[i].y), true);
     }
@@ -481,9 +478,16 @@ TEST(scalar_multiplication, construct_addition_chains)
     const size_t last_bucket = state.wnaf_table[num_points - 1] & 0x7fffffffULL;
     const size_t num_buckets = last_bucket - first_bucket + 1;
 
-    scalar_multiplication::affine_product_runtime_state product_state{
-        monomials, monomials, monomials, nullptr, bucket_counts, &bit_offsets[0], state.wnaf_table, num_points, static_cast<uint32_t>(num_buckets), bucket_empty_status
-    };
+    scalar_multiplication::affine_product_runtime_state product_state{ monomials,
+                                                                       monomials,
+                                                                       monomials,
+                                                                       nullptr,
+                                                                       bucket_counts,
+                                                                       &bit_offsets[0],
+                                                                       state.wnaf_table,
+                                                                       num_points,
+                                                                       static_cast<uint32_t>(num_buckets),
+                                                                       bucket_empty_status };
 
     start = std::chrono::steady_clock::now();
     scalar_multiplication::construct_addition_chains(product_state, true);
@@ -498,48 +502,48 @@ TEST(scalar_multiplication, construct_addition_chains)
     aligned_free(bucket_counts);
 }
 
-TEST(scalar_multiplication, pippenger_timing)
-{
-    constexpr size_t num_initial_points = 1 << 20;
-    constexpr size_t num_points = num_initial_points * 2;
-    g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points)));
-    g2::affine_element g2_x;
-    io::read_transcript(monomials, g2_x, num_initial_points, BARRETENBERG_SRS_PATH);
+// TEST(scalar_multiplication, pippenger_timing)
+// {
+//     constexpr size_t num_initial_points = 1 << 20;
+//     constexpr size_t num_points = num_initial_points * 2;
+//     g1::affine_element* monomials = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) *
+//     (num_points))); g2::affine_element g2_x; io::read_transcript(monomials, g2_x, num_initial_points,
+//     BARRETENBERG_SRS_PATH);
 
-    scalar_multiplication::generate_pippenger_point_table(monomials, monomials, num_initial_points);
+//     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, num_initial_points);
 
-    fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * num_initial_points));
+//     fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * num_initial_points));
 
-    fr::field_t source_scalar = fr::random_element();
-    for (size_t i = 0; i < num_initial_points; ++i) {
-        fr::__sqr(source_scalar, source_scalar);
-        fr::__copy(source_scalar, scalars[i]);
-    }
+//     fr::field_t source_scalar = fr::random_element();
+//     for (size_t i = 0; i < num_initial_points; ++i) {
+//         fr::__sqr(source_scalar, source_scalar);
+//         fr::__copy(source_scalar, scalars[i]);
+//     }
 
-    scalar_multiplication::multiplication_runtime_state state;
-    scalar_multiplication::generate_pippenger_point_table(monomials, monomials, num_initial_points);
+//     scalar_multiplication::multiplication_runtime_state state;
+//     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, num_initial_points);
 
-    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-    scalar_multiplication::compute_wnaf_states<num_initial_points>(state, scalars);
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "wnaf time: " << diff.count() << "ms" << std::endl;
+//     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+//     scalar_multiplication::compute_wnaf_states<num_initial_points>(state, scalars);
+//     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+//     std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+//     std::cout << "wnaf time: " << diff.count() << "ms" << std::endl;
 
-    start = std::chrono::steady_clock::now();
-    scalar_multiplication::organize_buckets<num_points>(state);
-    end = std::chrono::steady_clock::now();
-    diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "organize bucket time: " << diff.count() << "ms" << std::endl;
+//     start = std::chrono::steady_clock::now();
+//     scalar_multiplication::organize_buckets<num_points>(state);
+//     end = std::chrono::steady_clock::now();
+//     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+//     std::cout << "organize bucket time: " << diff.count() << "ms" << std::endl;
 
-    start = std::chrono::steady_clock::now();
-    scalar_multiplication::scalar_multiplication_internal<num_points>(state, monomials);
-    end = std::chrono::steady_clock::now();
-    diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "scalar mul: " << diff.count() << "ms" << std::endl;
+//     start = std::chrono::steady_clock::now();
+//     scalar_multiplication::scalar_multiplication_internal<num_points>(state, monomials);
+//     end = std::chrono::steady_clock::now();
+//     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+//     std::cout << "scalar mul: " << diff.count() << "ms" << std::endl;
 
-    aligned_free(scalars);
-    aligned_free(monomials);
-}
+//     aligned_free(scalars);
+//     aligned_free(monomials);
+// }
 
 TEST(scalar_multiplication, endomorphism_split)
 {

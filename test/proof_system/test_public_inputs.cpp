@@ -30,7 +30,7 @@ const auto init = []() {
 
 fr::field_t get_pseudorandom_element()
 {
-    return uint256_t({ dist(engine), dist(engine), dist(engine), dist(engine) });
+    return uint256_t(dist(engine), dist(engine), dist(engine), dist(engine));
 }
 } // namespace
 

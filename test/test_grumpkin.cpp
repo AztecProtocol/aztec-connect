@@ -2,9 +2,7 @@
 
 #include <barretenberg/curves/grumpkin/grumpkin.hpp>
 
-
 using namespace grumpkin;
-
 
 // TEST(grumpkin, generator)
 // {
@@ -18,7 +16,6 @@ using namespace grumpkin;
 //     fq::field_t T3 = fq::add(T0, T2);
 //     fq::print(fq::from_montgomery_form(T3));
 //     fq::print(fq::neg(T2));
-
 
 //     fq::field_t xx = fq::sqr(result.x);
 //     fq::field_t xxx = fq::mul(result.x, xx);
@@ -65,8 +62,11 @@ TEST(grumpkin, eq)
 TEST(grumpkin, check_group_modulus)
 {
     // g1::affine_element expected = g1::affine_one;
-    fr::field_t exponent = fr::to_montgomery_form({{ fr::modulus.data[0] - 1, fr::modulus.data[1], fr::modulus.data[2], fr::modulus.data[3] }});
+    fr::field_t exponent = fr::to_montgomery_form(
+        { { fr::modulus.data[0] - 1, fr::modulus.data[1], fr::modulus.data[2], fr::modulus.data[3] } });
+    printf("a\n");
     g1::element result = g1::group_exponentiation_no_endo(g1::one, exponent);
+    printf("b\n");
     g1::add(result, g1::one, result);
     g1::add(result, g1::one, result);
     EXPECT_EQ(g1::on_curve(result), true);
@@ -290,13 +290,21 @@ TEST(grumpkin, add_mixed_add_consistency_check)
     EXPECT_EQ(g1::eq(add_result, mixed_add_result), true);
 }
 
+TEST(grumpkin, on_curve)
+{
+    for (size_t i = 0; i < 100; ++i) {
+        g1::element test = g1::random_element();
+        EXPECT_EQ(g1::on_curve(test), true);
+        g1::affine_element affine_test = g1::random_affine_element();
+        EXPECT_EQ(g1::on_curve(affine_test), true);
+    }
+}
 TEST(grumpkin, batch_normalize)
 {
     size_t num_points = 2;
     g1::element points[num_points];
     g1::element normalized[num_points];
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         g1::element a = g1::random_element();
         g1::element b = g1::random_element();
         g1::add(a, b, points[i]);
@@ -304,8 +312,7 @@ TEST(grumpkin, batch_normalize)
     }
     g1::batch_normalize(normalized, num_points);
 
-    for (size_t i = 0; i < num_points; ++i)
-    {
+    for (size_t i = 0; i < num_points; ++i) {
         fq::field_t zz;
         fq::field_t zzz;
         fq::field_t result_x;
@@ -370,20 +377,16 @@ TEST(grumpkin, derive_generators)
     constexpr size_t num_generators = 128;
     std::array<g1::affine_element, num_generators> result = g1::derive_generators<num_generators>();
 
-    const auto is_unique = [&result](const g1::affine_element &y, const size_t j)
-    {
-        for (size_t i = 0; i < result.size(); ++i)
-        {
-            if ((i != j) && g1::eq(result[i], y))
-            {
+    const auto is_unique = [&result](const g1::affine_element& y, const size_t j) {
+        for (size_t i = 0; i < result.size(); ++i) {
+            if ((i != j) && g1::eq(result[i], y)) {
                 return false;
             }
         }
         return true;
     };
 
-    for (size_t k = 0; k < num_generators; ++k)
-    {
+    for (size_t k = 0; k < num_generators; ++k) {
         EXPECT_EQ(is_unique(result[k], k), true);
         EXPECT_EQ(g1::on_curve(result[k]), true);
     }

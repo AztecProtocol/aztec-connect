@@ -33,8 +33,11 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new -Wno-c99-extensions")
 endif()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-class-memaccess -Wno-error=deprecated-copy")
+
 add_executable(
     barretenberg_tests
+    test_new_field.cpp
     test_helpers.hpp
     test_wnaf.cpp
     test_fq.cpp

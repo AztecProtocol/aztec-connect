@@ -4,7 +4,8 @@
  *
  * An unsigned 256 bit integer type.
  *
- * Constructor and all methods are constexpr. Ideally, uint256_t should be able to be treated like any other literal type.
+ * Constructor and all methods are constexpr. Ideally, uint256_t should be able to be treated like any other literal
+ *type.
  *
  * Not optimized for performance, this code doesn"t touch any of our hot paths when constructing PLONK proofs
  **/
@@ -44,12 +45,14 @@ class uint256_t {
         data[3] = val.data[3];
     }
 
+    constexpr uint256_t& operator=(const uint256_t& other) = default;
+
     operator barretenberg::fr::field_t() const
     {
-        barretenberg::fr::field_t val = barretenberg::fr::to_montgomery_form({{ data[0], data[1], data[2], data[3] }});
+        barretenberg::fr::field_t val =
+            barretenberg::fr::to_montgomery_form({ { data[0], data[1], data[2], data[3] } });
         return val;
     }
-
 
     explicit constexpr operator bool() const { return static_cast<bool>(data[0]); };
     explicit constexpr operator uint8_t() const { return static_cast<uint8_t>(data[0]); };
@@ -141,7 +144,7 @@ class uint256_t {
 
     uint64_t data[4];
 
-private:
+  private:
     struct uint64_pair {
         uint64_t data[2];
     };
@@ -153,10 +156,20 @@ private:
         uint64_quad remainder;
     };
 
-    constexpr uint64_pair mul_wide(const uint64_t a, const uint64_t b) const;
-    constexpr uint64_pair addc(const uint64_t a, const uint64_t b, const uint64_t carry_in) const;
-    constexpr uint64_pair sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in) const;
-    constexpr uint64_pair mac(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in) const;
+    constexpr std::pair<uint64_t, uint64_t> mul_wide(const uint64_t a, const uint64_t b) const;
+    constexpr std::pair<uint64_t, uint64_t> addc(const uint64_t a, const uint64_t b, const uint64_t carry_in) const;
+    constexpr uint64_t addc_discard_hi(const uint64_t a, const uint64_t b, const uint64_t carry_in) const;
+    constexpr uint64_t sbb_discard_hi(const uint64_t a, const uint64_t b, const uint64_t borrow_in) const;
+
+    constexpr std::pair<uint64_t, uint64_t> sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in) const;
+    constexpr uint64_t mac_discard_hi(const uint64_t a,
+                                      const uint64_t b,
+                                      const uint64_t c,
+                                      const uint64_t carry_in) const;
+    constexpr std::pair<uint64_t, uint64_t> mac(const uint64_t a,
+                                                const uint64_t b,
+                                                const uint64_t c,
+                                                const uint64_t carry_in) const;
     constexpr divmod_output divmod(const uint256_t& a, const uint256_t& b) const;
 };
 

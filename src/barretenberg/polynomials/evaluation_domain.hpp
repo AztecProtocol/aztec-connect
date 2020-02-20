@@ -16,12 +16,12 @@ public:
                           log2_thread_size(0),
                           log2_num_threads(0),
                           generator_size(0),
-                          root({{0,0,0,0}}),
-                          root_inverse({{0,0,0,0}}),
-                          domain({{0,0,0,0}}),
-                          domain_inverse({{0,0,0,0}}),
-                          generator({{0,0,0,0}}),
-                          generator_inverse({{0,0,0,0}}),
+                          root({0,0,0,0}),
+                          root_inverse({0,0,0,0}),
+                          domain({0,0,0,0}),
+                          domain_inverse({0,0,0,0}),
+                          generator({0,0,0,0}),
+                          generator_inverse({0,0,0,0}),
                           roots(nullptr) {};
 
     evaluation_domain(const size_t domain_size, const size_t target_generator_size = 0);

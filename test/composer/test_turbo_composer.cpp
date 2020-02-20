@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/uint256/uint256.hpp>
 #include <barretenberg/curves/grumpkin/grumpkin.hpp>
+#include <barretenberg/uint256/uint256.hpp>
 #include <barretenberg/waffle/composer/turbo_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
@@ -12,21 +12,19 @@
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 #include <memory>
 
-#include <stdio.h>
 #include <random>
+#include <stdio.h>
 
 using namespace barretenberg;
 
-namespace
-{
+namespace {
 uint32_t get_random_int()
 {
     return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
 }
-}
+} // namespace
 
-namespace
-{
+namespace {
 std::mt19937 engine;
 std::uniform_int_distribution<uint32_t> dist{ 0ULL, UINT32_MAX };
 
@@ -41,7 +39,7 @@ uint32_t get_pseudorandom_uint32()
 {
     return dist(engine);
 }
-}
+} // namespace
 
 TEST(turbo_composer, base_case)
 {
@@ -57,7 +55,6 @@ TEST(turbo_composer, base_case)
 
     bool result = verifier.verify_proof(proof); // instance, prover.reference_string.SRS_T2);
     EXPECT_EQ(result, true);
-
 }
 
 TEST(turbo_composer, test_add_gate_proofs)
@@ -110,7 +107,8 @@ TEST(turbo_composer, test_add_gate_proofs)
     // TODO: proof fails if one wire contains all zeros. Should we support this?
     uint32_t zero_idx = composer.add_variable(fr::zero);
 
-    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, a_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+    composer.create_big_add_gate(
+        { zero_idx, zero_idx, zero_idx, a_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
 
     waffle::TurboProver prover = composer.preprocess();
 
@@ -194,7 +192,8 @@ TEST(turbo_composer, test_mul_gate_proofs)
 
     uint32_t zero_idx = composer.add_variable(fr::zero);
     uint32_t one_idx = composer.add_variable(fr::one);
-    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+    composer.create_big_add_gate(
+        { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
 
     uint32_t e_idx = composer.add_variable(fr::sub(a, fr::one));
     composer.create_add_gate({ e_idx, b_idx, c_idx, q[0], q[1], q[2], fr::add(q[3], q[0]) });
@@ -208,7 +207,6 @@ TEST(turbo_composer, test_mul_gate_proofs)
 
     EXPECT_EQ(result, true);
 }
-
 
 TEST(turbo_composer, small_scalar_multipliers)
 {
@@ -227,14 +225,13 @@ TEST(turbo_composer, small_scalar_multipliers)
     origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
 
     grumpkin::fr::field_t scalar_multiplier_entropy = grumpkin::fr::random_element();
-    grumpkin::fr::field_t scalar_multiplier_base{{ scalar_multiplier_entropy.data[0] & bit_mask, 0, 0, 0 }};
+    grumpkin::fr::field_t scalar_multiplier_base{ { scalar_multiplier_entropy.data[0] & bit_mask, 0, 0, 0 } };
     // scalar_multiplier_base.data[0] = scalar_multiplier_base.data[0] | (1ULL);
     scalar_multiplier_base.data[0] = scalar_multiplier_base.data[0] & (~1ULL);
     grumpkin::fr::field_t scalar_multiplier = scalar_multiplier_base;
 
     uint64_t wnaf_entries[num_quads + 1] = { 0 };
-    if ((scalar_multiplier_base.data[0] & 1) == 0)
-    {
+    if ((scalar_multiplier_base.data[0] & 1) == 0) {
         scalar_multiplier_base.data[0] -= 2;
     }
     bool skew = false;
@@ -245,19 +242,17 @@ TEST(turbo_composer, small_scalar_multipliers)
 
     grumpkin::g1::element* multiplication_transcript =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
-    fr::field_t* accumulator_transcript = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * (num_quads + 1)));
+    fr::field_t* accumulator_transcript =
+        static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * (num_quads + 1)));
 
-    if (skew)
-    {
+    if (skew) {
         multiplication_transcript[0] = origin_points[1];
         accumulator_transcript[0] = origin_accumulators[1];
-    }
-    else
-    {
+    } else {
         multiplication_transcript[0] = origin_points[0];
         accumulator_transcript[0] = origin_accumulators[0];
     }
-    
+
     fr::field_t one = fr::one;
     fr::field_t three = fr::add(fr::add(one, one), one);
     for (size_t i = 0; i < num_quads; ++i) {
@@ -268,8 +263,7 @@ TEST(turbo_composer, small_scalar_multipliers)
         grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
         fr::field_t scalar_to_add = (entry == 1) ? three : one;
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
-        if (predicate)
-        {
+        if (predicate) {
             grumpkin::g1::__neg(point_to_add, point_to_add);
             fr::__neg(scalar_to_add, scalar_to_add);
         }
@@ -278,12 +272,10 @@ TEST(turbo_composer, small_scalar_multipliers)
     }
     grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
 
-    waffle::fixed_group_init_quad init_quad{
-        origin_points[0].x,
-        fr::sub(origin_points[0].x, origin_points[1].x),
-        origin_points[0].y,
-        fr::sub(origin_points[0].y, origin_points[1].y)
-    };
+    waffle::fixed_group_init_quad init_quad{ origin_points[0].x,
+                                             fr::sub(origin_points[0].x, origin_points[1].x),
+                                             origin_points[0].y,
+                                             fr::sub(origin_points[0].y, origin_points[1].y) };
 
     waffle::TurboComposer composer = waffle::TurboComposer();
 
@@ -295,39 +287,35 @@ TEST(turbo_composer, small_scalar_multipliers)
         round_quad.b = composer.add_variable(multiplication_transcript[i].y);
         round_quad.c = composer.add_variable(x_alpha);
         if ((wnaf_entries[i + 1] & 0xffffffU) == 0) {
-            x_alpha = ladder[i+1].one.x;
+            x_alpha = ladder[i + 1].one.x;
         } else {
-            x_alpha = ladder[i+1].three.x;
+            x_alpha = ladder[i + 1].three.x;
         }
-        round_quad.q_x_1= ladder[i+1].q_x_1;
-        round_quad.q_x_2= ladder[i+1].q_x_2;
-        round_quad.q_y_1= ladder[i+1].q_y_1;
-        round_quad.q_y_2 = ladder[i+1].q_y_2;
+        round_quad.q_x_1 = ladder[i + 1].q_x_1;
+        round_quad.q_x_2 = ladder[i + 1].q_x_2;
+        round_quad.q_y_1 = ladder[i + 1].q_y_1;
+        round_quad.q_y_2 = ladder[i + 1].q_y_2;
 
-        if (i > 0)
-        {
+        if (i > 0) {
             composer.create_fixed_group_add_gate(round_quad);
-        }
-        else
-        {
+        } else {
             composer.create_fixed_group_add_gate_with_init(round_quad, init_quad);
         }
     }
 
-    waffle::add_quad add_quad{
-        composer.add_variable(multiplication_transcript[num_quads].x),
-        composer.add_variable(multiplication_transcript[num_quads].y),
-        composer.add_variable(x_alpha),
-        composer.add_variable(accumulator_transcript[num_quads]),
-        fr::zero,
-        fr::zero,
-        fr::zero,
-        fr::zero,
-        fr::zero
-    };
+    waffle::add_quad add_quad{ composer.add_variable(multiplication_transcript[num_quads].x),
+                               composer.add_variable(multiplication_transcript[num_quads].y),
+                               composer.add_variable(x_alpha),
+                               composer.add_variable(accumulator_transcript[num_quads]),
+                               fr::zero,
+                               fr::zero,
+                               fr::zero,
+                               fr::zero,
+                               fr::zero };
     composer.create_big_add_gate(add_quad);
 
-    grumpkin::g1::element expected_point = grumpkin::g1::normalize(grumpkin::g1::group_exponentiation_inner(generator, grumpkin::fr::to_montgomery_form(scalar_multiplier)));
+    grumpkin::g1::element expected_point = grumpkin::g1::normalize(
+        grumpkin::g1::group_exponentiation_inner(generator, grumpkin::fr::to_montgomery_form(scalar_multiplier)));
     EXPECT_EQ(fr::eq(multiplication_transcript[num_quads].x, expected_point.x), true);
     EXPECT_EQ(fr::eq(multiplication_transcript[num_quads].y, expected_point.y), true);
 
@@ -352,7 +340,6 @@ TEST(turbo_composer, small_scalar_multipliers)
     free(accumulator_transcript);
 }
 
-
 TEST(turbo_composer, large_scalar_multipliers)
 {
     constexpr size_t num_bits = 254;
@@ -360,7 +347,7 @@ TEST(turbo_composer, large_scalar_multipliers)
     constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
 
-    constexpr size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1 : num_bits;
+    constexpr size_t initial_exponent = num_bits; // ((num_bits & 1) == 1) ? num_bits - 1 : num_bits;
     const plonk::stdlib::group_utils::fixed_base_ladder* ladder = plonk::stdlib::group_utils::get_ladder(0, num_bits);
     grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(0);
 
@@ -373,8 +360,7 @@ TEST(turbo_composer, large_scalar_multipliers)
 
     grumpkin::fr::field_t scalar_multiplier = grumpkin::fr::from_montgomery_form(scalar_multiplier_base);
 
-    if ((scalar_multiplier.data[0] & 1) == 0)
-    {
+    if ((scalar_multiplier.data[0] & 1) == 0) {
         grumpkin::fr::field_t two = grumpkin::fr::add(grumpkin::fr::one, grumpkin::fr::one);
         scalar_multiplier_base = grumpkin::fr::sub(scalar_multiplier_base, two);
     }
@@ -389,19 +375,17 @@ TEST(turbo_composer, large_scalar_multipliers)
 
     grumpkin::g1::element* multiplication_transcript =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
-    fr::field_t* accumulator_transcript = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * (num_quads + 1)));
+    fr::field_t* accumulator_transcript =
+        static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * (num_quads + 1)));
 
-    if (skew)
-    {
+    if (skew) {
         multiplication_transcript[0] = origin_points[1];
         accumulator_transcript[0] = origin_accumulators[1];
-    }
-    else
-    {
+    } else {
         multiplication_transcript[0] = origin_points[0];
         accumulator_transcript[0] = origin_accumulators[0];
     }
-    
+
     fr::field_t one = fr::one;
     fr::field_t three = fr::add(fr::add(one, one), one);
     for (size_t i = 0; i < num_quads; ++i) {
@@ -412,8 +396,7 @@ TEST(turbo_composer, large_scalar_multipliers)
         grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
         fr::field_t scalar_to_add = (entry == 1) ? three : one;
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
-        if (predicate)
-        {
+        if (predicate) {
             grumpkin::g1::__neg(point_to_add, point_to_add);
             fr::__neg(scalar_to_add, scalar_to_add);
         }
@@ -422,12 +405,10 @@ TEST(turbo_composer, large_scalar_multipliers)
     }
     grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
 
-    waffle::fixed_group_init_quad init_quad{
-        origin_points[0].x,
-        fr::sub(origin_points[0].x, origin_points[1].x),
-        origin_points[0].y,
-        fr::sub(origin_points[0].y, origin_points[1].y)
-    };
+    waffle::fixed_group_init_quad init_quad{ origin_points[0].x,
+                                             fr::sub(origin_points[0].x, origin_points[1].x),
+                                             origin_points[0].y,
+                                             fr::sub(origin_points[0].y, origin_points[1].y) };
 
     waffle::TurboComposer composer = waffle::TurboComposer();
 
@@ -439,46 +420,43 @@ TEST(turbo_composer, large_scalar_multipliers)
         round_quad.b = composer.add_variable(multiplication_transcript[i].y);
         round_quad.c = composer.add_variable(x_alpha);
         if ((wnaf_entries[i + 1] & 0xffffffU) == 0) {
-            x_alpha = ladder[i+1].one.x;
+            x_alpha = ladder[i + 1].one.x;
         } else {
-            x_alpha = ladder[i+1].three.x;
+            x_alpha = ladder[i + 1].three.x;
         }
-        round_quad.q_x_1= ladder[i+1].q_x_1;
-        round_quad.q_x_2= ladder[i+1].q_x_2;
-        round_quad.q_y_1= ladder[i+1].q_y_1;
-        round_quad.q_y_2 = ladder[i+1].q_y_2;
+        round_quad.q_x_1 = ladder[i + 1].q_x_1;
+        round_quad.q_x_2 = ladder[i + 1].q_x_2;
+        round_quad.q_y_1 = ladder[i + 1].q_y_1;
+        round_quad.q_y_2 = ladder[i + 1].q_y_2;
 
-        if (i > 0)
-        {
+        if (i > 0) {
             composer.create_fixed_group_add_gate(round_quad);
-        }
-        else
-        {
+        } else {
             composer.create_fixed_group_add_gate_with_init(round_quad, init_quad);
         }
     }
 
-    waffle::add_quad add_quad{
-        composer.add_variable(multiplication_transcript[num_quads].x),
-        composer.add_variable(multiplication_transcript[num_quads].y),
-        composer.add_variable(x_alpha),
-        composer.add_variable(accumulator_transcript[num_quads]),
-        fr::zero,
-        fr::zero,
-        fr::zero,
-        fr::zero,
-        fr::zero
-    };
+    waffle::add_quad add_quad{ composer.add_variable(multiplication_transcript[num_quads].x),
+                               composer.add_variable(multiplication_transcript[num_quads].y),
+                               composer.add_variable(x_alpha),
+                               composer.add_variable(accumulator_transcript[num_quads]),
+                               fr::zero,
+                               fr::zero,
+                               fr::zero,
+                               fr::zero,
+                               fr::zero };
     composer.create_big_add_gate(add_quad);
 
-    grumpkin::g1::element expected_point = grumpkin::g1::normalize(grumpkin::g1::group_exponentiation_inner(generator, grumpkin::fr::to_montgomery_form(scalar_multiplier)));
+    grumpkin::g1::element expected_point = grumpkin::g1::normalize(
+        grumpkin::g1::group_exponentiation_inner(generator, grumpkin::fr::to_montgomery_form(scalar_multiplier)));
     EXPECT_EQ(fr::eq(multiplication_transcript[num_quads].x, expected_point.x), true);
     EXPECT_EQ(fr::eq(multiplication_transcript[num_quads].y, expected_point.y), true);
 
     fr::field_t result_accumulator = (accumulator_transcript[num_quads]);
-    fr::field_t expected_accumulator = fr::to_montgomery_form({{
-        scalar_multiplier.data[0], scalar_multiplier.data[1], scalar_multiplier.data[2], scalar_multiplier.data[3]
-    }});
+    fr::field_t expected_accumulator = fr::to_montgomery_form({ { scalar_multiplier.data[0],
+                                                                  scalar_multiplier.data[1],
+                                                                  scalar_multiplier.data[2],
+                                                                  scalar_multiplier.data[3] } });
     EXPECT_EQ(fr::eq(result_accumulator, expected_accumulator), true);
 
     waffle::TurboProver prover = composer.preprocess();
@@ -496,42 +474,39 @@ TEST(turbo_composer, large_scalar_multipliers)
 
     free(multiplication_transcript);
     free(accumulator_transcript);
-
 }
 
 TEST(turbo_composer, range_constraint)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    for (size_t i = 0; i < 10; ++i)
-    {
+    for (size_t i = 0; i < 10; ++i) {
         uint32_t value = get_random_int();
-        fr::field_t witness_value = fr::to_montgomery_form({{ value, 0, 0, 0 }});
+        fr::field_t witness_value = fr::to_montgomery_form({ { value, 0, 0, 0 } });
         uint32_t witness_index = composer.add_variable(witness_value);
 
         // include non-nice numbers of bits, that will bleed over gate boundaries
         size_t extra_bits = 2 * (i % 4);
-    
+
         std::vector<uint32_t> accumulators = composer.create_range_constraint(witness_index, 32 + extra_bits);
 
-        for (uint32_t j = 0; j < 16; ++j)
-        {
-            uint32_t result = (value >> (30U - (2* j)));
+        for (uint32_t j = 0; j < 16; ++j) {
+            uint32_t result = (value >> (30U - (2 * j)));
             fr::field_t source = fr::from_montgomery_form(composer.get_variable(accumulators[j + (extra_bits >> 1)]));
             uint32_t expected = static_cast<uint32_t>(source.data[0]);
             EXPECT_EQ(result, expected);
         }
-        for (uint32_t j = 1; j < 16; ++j)
-        {
-            uint32_t left = (value >> (30U - (2* j)));
-            uint32_t right = (value >> (30U - (2* (j - 1))));
+        for (uint32_t j = 1; j < 16; ++j) {
+            uint32_t left = (value >> (30U - (2 * j)));
+            uint32_t right = (value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
         }
     }
 
     uint32_t zero_idx = composer.add_variable(fr::zero);
     uint32_t one_idx = composer.add_variable(fr::one);
-    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+    composer.create_big_add_gate(
+        { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
 
     waffle::TurboProver prover = composer.preprocess();
 
@@ -548,62 +523,64 @@ TEST(turbo_composer, and_constraint)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    for (size_t i = 0; i < /*10*/1; ++i)
-    {
+    for (size_t i = 0; i < /*10*/ 1; ++i) {
         uint32_t left_value = get_random_int();
 
-        fr::field_t left_witness_value = fr::to_montgomery_form({{ left_value, 0, 0, 0 }});
+        fr::field_t left_witness_value = fr::to_montgomery_form({ { left_value, 0, 0, 0 } });
         uint32_t left_witness_index = composer.add_variable(left_witness_value);
 
         uint32_t right_value = get_random_int();
-        fr::field_t right_witness_value = fr::to_montgomery_form({{ right_value, 0, 0, 0 }});
+        fr::field_t right_witness_value = fr::to_montgomery_form({ { right_value, 0, 0, 0 } });
         uint32_t right_witness_index = composer.add_variable(right_witness_value);
 
         uint32_t out_value = left_value & right_value;
         // include non-nice numbers of bits, that will bleed over gate boundaries
         size_t extra_bits = 2 * (i % 4);
-    
-        waffle::accumulator_triple accumulators = composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
+
+        waffle::accumulator_triple accumulators =
+            composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
         // composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
 
-        for (uint32_t j = 0; j < 16; ++j)
-        {
-            uint32_t left_expected = (left_value >> (30U - (2* j)));
-            uint32_t right_expected = (right_value >> (30U - (2* j)));
+        for (uint32_t j = 0; j < 16; ++j) {
+            uint32_t left_expected = (left_value >> (30U - (2 * j)));
+            uint32_t right_expected = (right_value >> (30U - (2 * j)));
             uint32_t out_expected = left_expected & right_expected;
 
-            fr::field_t left_source = fr::from_montgomery_form(composer.get_variable(accumulators.left[j + (extra_bits >> 1)]));
+            fr::field_t left_source =
+                fr::from_montgomery_form(composer.get_variable(accumulators.left[j + (extra_bits >> 1)]));
             uint32_t left_result = static_cast<uint32_t>(left_source.data[0]);
 
-            fr::field_t right_source = fr::from_montgomery_form(composer.get_variable(accumulators.right[j + (extra_bits >> 1)]));
+            fr::field_t right_source =
+                fr::from_montgomery_form(composer.get_variable(accumulators.right[j + (extra_bits >> 1)]));
             uint32_t right_result = static_cast<uint32_t>(right_source.data[0]);
 
-            fr::field_t out_source = fr::from_montgomery_form(composer.get_variable(accumulators.out[j + (extra_bits >> 1)]));
+            fr::field_t out_source =
+                fr::from_montgomery_form(composer.get_variable(accumulators.out[j + (extra_bits >> 1)]));
             uint32_t out_result = static_cast<uint32_t>(out_source.data[0]);
 
             EXPECT_EQ(left_result, left_expected);
             EXPECT_EQ(right_result, right_expected);
             EXPECT_EQ(out_result, out_expected);
         }
-        for (uint32_t j = 1; j < 16; ++j)
-        {
-            uint32_t left = (left_value >> (30U - (2* j)));
-            uint32_t right = (left_value >> (30U - (2* (j - 1))));
+        for (uint32_t j = 1; j < 16; ++j) {
+            uint32_t left = (left_value >> (30U - (2 * j)));
+            uint32_t right = (left_value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
 
-            left = (right_value >> (30U - (2* j)));
-            right = (right_value >> (30U - (2* (j - 1))));
+            left = (right_value >> (30U - (2 * j)));
+            right = (right_value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
 
-            left = (out_value >> (30U - (2* j)));
-            right = (out_value >> (30U - (2* (j - 1))));
+            left = (out_value >> (30U - (2 * j)));
+            right = (out_value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
         }
     }
 
     uint32_t zero_idx = composer.add_variable(fr::zero);
     uint32_t one_idx = composer.add_variable(fr::one);
-    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+    composer.create_big_add_gate(
+        { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
 
     waffle::TurboProver prover = composer.preprocess();
 
@@ -620,61 +597,63 @@ TEST(turbo_composer, xor_constraint)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    for (size_t i = 0; i < /*10*/1; ++i)
-    {
+    for (size_t i = 0; i < /*10*/ 1; ++i) {
         uint32_t left_value = get_random_int();
 
-        fr::field_t left_witness_value = fr::to_montgomery_form({{ left_value, 0, 0, 0 }});
+        fr::field_t left_witness_value = fr::to_montgomery_form({ { left_value, 0, 0, 0 } });
         uint32_t left_witness_index = composer.add_variable(left_witness_value);
 
         uint32_t right_value = get_random_int();
-        fr::field_t right_witness_value = fr::to_montgomery_form({{ right_value, 0, 0, 0 }});
+        fr::field_t right_witness_value = fr::to_montgomery_form({ { right_value, 0, 0, 0 } });
         uint32_t right_witness_index = composer.add_variable(right_witness_value);
 
         uint32_t out_value = left_value ^ right_value;
         // include non-nice numbers of bits, that will bleed over gate boundaries
         size_t extra_bits = 2 * (i % 4);
-    
-        waffle::accumulator_triple accumulators = composer.create_xor_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
 
-        for (uint32_t j = 0; j < 16; ++j)
-        {
-            uint32_t left_expected = (left_value >> (30U - (2* j)));
-            uint32_t right_expected = (right_value >> (30U - (2* j)));
+        waffle::accumulator_triple accumulators =
+            composer.create_xor_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
+
+        for (uint32_t j = 0; j < 16; ++j) {
+            uint32_t left_expected = (left_value >> (30U - (2 * j)));
+            uint32_t right_expected = (right_value >> (30U - (2 * j)));
             uint32_t out_expected = left_expected ^ right_expected;
 
-            fr::field_t left_source = fr::from_montgomery_form(composer.get_variable(accumulators.left[j + (extra_bits >> 1)]));
+            fr::field_t left_source =
+                fr::from_montgomery_form(composer.get_variable(accumulators.left[j + (extra_bits >> 1)]));
             uint32_t left_result = static_cast<uint32_t>(left_source.data[0]);
 
-            fr::field_t right_source = fr::from_montgomery_form(composer.get_variable(accumulators.right[j + (extra_bits >> 1)]));
+            fr::field_t right_source =
+                fr::from_montgomery_form(composer.get_variable(accumulators.right[j + (extra_bits >> 1)]));
             uint32_t right_result = static_cast<uint32_t>(right_source.data[0]);
 
-            fr::field_t out_source = fr::from_montgomery_form(composer.get_variable(accumulators.out[j + (extra_bits >> 1)]));
+            fr::field_t out_source =
+                fr::from_montgomery_form(composer.get_variable(accumulators.out[j + (extra_bits >> 1)]));
             uint32_t out_result = static_cast<uint32_t>(out_source.data[0]);
 
             EXPECT_EQ(left_result, left_expected);
             EXPECT_EQ(right_result, right_expected);
             EXPECT_EQ(out_result, out_expected);
         }
-        for (uint32_t j = 1; j < 16; ++j)
-        {
-            uint32_t left = (left_value >> (30U - (2* j)));
-            uint32_t right = (left_value >> (30U - (2* (j - 1))));
+        for (uint32_t j = 1; j < 16; ++j) {
+            uint32_t left = (left_value >> (30U - (2 * j)));
+            uint32_t right = (left_value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
 
-            left = (right_value >> (30U - (2* j)));
-            right = (right_value >> (30U - (2* (j - 1))));
+            left = (right_value >> (30U - (2 * j)));
+            right = (right_value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
 
-            left = (out_value >> (30U - (2* j)));
-            right = (out_value >> (30U - (2* (j - 1))));
+            left = (out_value >> (30U - (2 * j)));
+            right = (out_value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
         }
     }
 
     uint32_t zero_idx = composer.add_variable(fr::zero);
     uint32_t one_idx = composer.add_variable(fr::one);
-    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+    composer.create_big_add_gate(
+        { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
 
     waffle::TurboProver prover = composer.preprocess();
 
@@ -691,9 +670,9 @@ TEST(turbo_composer, big_add_gate_with_bit_extract)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-
     const auto generate_constraints = [&composer](uint32_t quad_value) {
-        uint32_t quad_accumulator_left = (get_pseudorandom_uint32() & 0x3fffffff) - quad_value; // make sure this won't overflow
+        uint32_t quad_accumulator_left =
+            (get_pseudorandom_uint32() & 0x3fffffff) - quad_value; // make sure this won't overflow
         uint32_t quad_accumulator_right = (4 * quad_accumulator_left) + quad_value;
 
         uint32_t left_idx = composer.add_variable(uint256_t(quad_accumulator_left));
@@ -702,17 +681,15 @@ TEST(turbo_composer, big_add_gate_with_bit_extract)
         uint32_t input = get_pseudorandom_uint32();
         uint32_t output = input + (quad_value > 1 ? 1 : 0);
 
-        waffle::add_quad gate{
-            composer.add_variable(uint256_t(input)),
-            composer.add_variable(uint256_t(output)),
-            right_idx,
-            left_idx,
-            fr::to_montgomery_form({{ 6, 0, 0, 0 }}),
-            fr::neg(fr::to_montgomery_form({{ 6, 0, 0, 0 }})),
-            fr::zero,
-            fr::zero,
-            fr::zero
-        };
+        waffle::add_quad gate{ composer.add_variable(uint256_t(input)),
+                               composer.add_variable(uint256_t(output)),
+                               right_idx,
+                               left_idx,
+                               fr::to_montgomery_form({ { 6, 0, 0, 0 } }),
+                               fr::neg(fr::to_montgomery_form({ { 6, 0, 0, 0 } })),
+                               fr::zero,
+                               fr::zero,
+                               fr::zero };
 
         composer.create_big_add_gate_with_bit_extraction(gate);
     };

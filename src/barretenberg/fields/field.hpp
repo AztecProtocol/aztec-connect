@@ -1,13 +1,15 @@
 #pragma once
 
+#include <array>
 #include <cinttypes>
 #include <cstdint>
 #include <cstdio>
 #include <unistd.h>
-#include <array>
 
 #include "../assert.hpp"
 #include "../types.hpp"
+
+#include "./new_field.hpp"
 
 // #include "../uint256/uint256.hpp"
 
@@ -17,31 +19,35 @@
 namespace barretenberg {
 template <typename FieldParams> class field {
   public:
-    struct field_t {
-        alignas(32) uint64_t data[4];
+    typedef test::field<FieldParams> field_t;
+    // struct field_t : public test::field<FieldParams> {
+    //     bool operator<(const field_t& other) const { return gt(other, *this); }
+    // };
+    // struct field_t {
+    //     alignas(32) uint64_t data[4];
 
-        // constexpr field_t() : data() {}
-        // constexpr field_t(const std::array<uint64_t, 4>& in) : data{ in[0], in[1], in[2], in[3] } {}
-        // constexpr field_t(const uint64_t* in) : data{ in[0], in[1], in[2], in[3] } {}
-        // constexpr field_t(uint64_t a, uint64_t b, uint64_t c, uint64_t d) : data{ a, b, c, d } {}
+    //     // constexpr field_t()
+    //     //     : data()
+    //     // {}
+    //     // constexpr field_t(uint64_t a, uint64_t b, uint64_t c, uint64_t d)
+    //     //     : data{ a, b, c, d }
+    //     // {}
+    //     // constexpr field_t(const std::array<uint64_t, 4>& in)
+    //     //     : data{ in[0], in[1], in[2], in[3] }
+    //     // {}
 
-        // field_t(const uint256_t &input)
-        // {
-        //     *this = field<FieldParams>::to_montgomery_form({{ input.data[0], input.data[1], input.data[2], input.data[3] }});
-        // }
+    //     // constexpr field_t(const field_t& other) = default;
 
-        // operator uint256_t() {
-        //     field_t converted = field<FieldParams>::from_montgomery_form({{ data[0], data[1], data[2], data[3] }});
-        //     return uint256_t(converted.data[0], converted.data[1], converted.data[2], converted.data[3]);
-        // }
+    //     // constexpr field_t& operator=(const field_t& other) = default;
 
-        bool operator<(const field_t& other) const { return gt(other, *this); }
-    };
+    //     // constexpr field_t& operator=(field_t&& other) = default;
+
+    //     // bool operator<(const field_t& other) const { return gt(other, *this); }
+    // };
 
     struct field_wide_t {
         alignas(64) uint64_t data[8];
     };
-
 
     static constexpr field_t modulus = {
         { FieldParams::modulus_0, FieldParams::modulus_1, FieldParams::modulus_2, FieldParams::modulus_3 }
@@ -190,49 +196,55 @@ template <typename FieldParams> class field {
     static void __mul_512(const field_t& a, const field_t& b, field_wide_t& r) noexcept;
 
     // Multiply field_t `a` by the cube root of unity, modulo `q`. Store result in `r`
-    static inline void __mul_beta(const field_t& a, field_t& r) noexcept { __mul(a, beta, r); }
-    static inline void __neg(const field_t& a, field_t& r) noexcept { __sub(modulus, a, r); }
+    __attribute__((always_inline)) inline static void __mul_beta(const field_t& a, field_t& r) noexcept
+    {
+        __mul(a, beta, r);
+    }
+    __attribute__((always_inline)) inline static void __neg(const field_t& a, field_t& r) noexcept
+    {
+        __sub(modulus, a, r);
+    }
 
     /**
      * Arithmetic Methods (return by value)
      **/
-    // inline static field_t from_uint256(const uint256_t& input) noexcept
+    // __attribute__((always_inline)) inline static field_t from_uint256(const uint256_t& input) noexcept
     // {
     //     field_t out{ input.data[0], input.data[1], input.data[2], input.data[3] };
     //     return to_montgomery_form(out);
     // }
 
-    inline static field_t mul(const field_t& a, const field_t& b) noexcept
+    __attribute__((always_inline)) inline static field_t mul(const field_t& a, const field_t& b) noexcept
     {
         field_t r;
         __mul(a, b, r);
         return r;
     }
-    inline static field_t sqr(const field_t& a) noexcept
+    __attribute__((always_inline)) inline static field_t sqr(const field_t& a) noexcept
     {
         field_t r;
         __sqr(a, r);
         return r;
     }
-    inline static field_t add(const field_t& a, const field_t& b) noexcept
+    __attribute__((always_inline)) inline static field_t add(const field_t& a, const field_t& b) noexcept
     {
         field_t r;
         __add(a, b, r);
         return r;
     }
-    inline static field_t sub(const field_t& a, const field_t& b) noexcept
+    __attribute__((always_inline)) inline static field_t sub(const field_t& a, const field_t& b) noexcept
     {
         field_t r;
         __sub(a, b, r);
         return r;
     }
-    static inline field_t neg(const field_t& a) noexcept
+    __attribute__((always_inline)) inline static field_t neg(const field_t& a) noexcept
     {
         field_t r;
         __neg(a, r);
         return r;
     }
-    static inline field_t neg_one() noexcept
+    __attribute__((always_inline)) inline static field_t neg_one() noexcept
     {
         field_t r = sub(zero, one);
         return r;
@@ -241,17 +253,17 @@ template <typename FieldParams> class field {
     /**
      * Comparison methods and bit operations
      **/
-    static inline bool eq(const field_t& a, const field_t& b) noexcept
+    __attribute__((always_inline)) inline static bool eq(const field_t& a, const field_t& b) noexcept
     {
         return (a.data[0] == b.data[0]) && (a.data[1] == b.data[1]) && (a.data[2] == b.data[2]) &&
                (a.data[3] == b.data[3]);
     }
-    static inline bool is_zero(const field_t& a) noexcept
+    __attribute__((always_inline)) inline static bool is_zero(const field_t& a) noexcept
     {
         return ((a.data[0] | a.data[1] | a.data[2] | a.data[3]) == 0);
     }
 
-    static inline bool gt(const field_t& a, const field_t& b) noexcept
+    __attribute__((always_inline)) inline static bool gt(const field_t& a, const field_t& b) noexcept
     {
         bool t0 = a.data[3] > b.data[3];
         bool t1 = (a.data[3] == b.data[3]) && (a.data[2] > b.data[2]);
@@ -260,15 +272,24 @@ template <typename FieldParams> class field {
             (a.data[3] == b.data[3]) && (a.data[2] == b.data[2]) && (a.data[1] == b.data[1]) && (a.data[0] > b.data[0]);
         return (t0 || t1 || t2 || t3);
     }
-    static inline bool get_bit(const field_t& a, size_t bit_index) noexcept
+    __attribute__((always_inline)) inline static bool get_bit(const field_t& a, size_t bit_index) noexcept
     {
         size_t idx = bit_index >> 6;
         size_t shift = bit_index & 63;
         return bool((a.data[idx] >> shift) & 1);
     }
-    static inline bool is_msb_set(const field_t& a) noexcept { return (a.data[3] >> 63ULL) == 1ULL; }
-    static inline uint64_t is_msb_set_word(const field_t& a) noexcept { return a.data[3] >> 63ULL; }
-    static inline void __set_msb(field_t& a) noexcept { a.data[3] = 0ULL | (1ULL << 63ULL); }
+    __attribute__((always_inline)) inline static bool is_msb_set(const field_t& a) noexcept
+    {
+        return (a.data[3] >> 63ULL) == 1ULL;
+    }
+    __attribute__((always_inline)) inline static uint64_t is_msb_set_word(const field_t& a) noexcept
+    {
+        return a.data[3] >> 63ULL;
+    }
+    __attribute__((always_inline)) inline static void __set_msb(field_t& a) noexcept
+    {
+        a.data[3] = 0ULL | (1ULL << 63ULL);
+    }
 
     /**
      * Copy methods
@@ -290,7 +311,7 @@ template <typename FieldParams> class field {
      **/
     static void reduce_once(const field_t& a, field_t& r) noexcept;
 
-    static inline void __to_montgomery_form(const field_t& a, field_t& r) noexcept
+    __attribute__((always_inline)) inline static void __to_montgomery_form(const field_t& a, field_t& r) noexcept
     {
         __copy(a, r);
         while (gt(r, modulus_plus_one)) {
@@ -298,15 +319,18 @@ template <typename FieldParams> class field {
         }
         __mul(r, r_squared, r);
     }
-    static inline void __from_montgomery_form(const field_t& a, field_t& r) noexcept { __mul(a, one_raw, r); }
+    __attribute__((always_inline)) inline static void __from_montgomery_form(const field_t& a, field_t& r) noexcept
+    {
+        __mul(a, one_raw, r);
+    }
 
-    static inline field_t to_montgomery_form(const field_t& a) noexcept
+    __attribute__((always_inline)) inline static field_t to_montgomery_form(const field_t& a) noexcept
     {
         field_t r;
         __to_montgomery_form(a, r);
         return r;
     }
-    static inline field_t from_montgomery_form(const field_t& a) noexcept
+    __attribute__((always_inline)) inline static field_t from_montgomery_form(const field_t& a) noexcept
     {
         field_t r;
         __from_montgomery_form(a, r);
@@ -320,7 +344,7 @@ template <typename FieldParams> class field {
     /**
      * compute a^b mod q, return result in r
      **/
-    static inline void __pow(const field_t& a, const field_t& b, field_t& r)
+    __attribute__((always_inline)) inline static void __pow(const field_t& a, const field_t& b, field_t& r)
     {
         if (eq(a, zero)) {
             __copy(zero, r);
@@ -348,7 +372,7 @@ template <typename FieldParams> class field {
         __copy(accumulator, r);
     }
 
-    static inline void __pow_small(const field_t& a, const uint64_t exponent, field_t& r)
+    __attribute__((always_inline)) inline static void __pow_small(const field_t& a, const uint64_t exponent, field_t& r)
     {
         if (exponent == 0) {
             __copy(one, r);
@@ -386,7 +410,7 @@ template <typename FieldParams> class field {
         __copy(accumulator, r);
     }
 
-    static inline field_t pow_small(const field_t& a, const uint64_t exponent)
+    __attribute__((always_inline)) inline static field_t pow_small(const field_t& a, const uint64_t exponent)
     {
         field_t result;
         __pow_small(a, exponent, result);
@@ -396,16 +420,19 @@ template <typename FieldParams> class field {
     /**
      * compute a^{q - 2} mod q, place result in r
      **/
-    static inline void __invert(const field_t& a, field_t& r) { __pow(a, modulus_minus_two, r); }
+    __attribute__((always_inline)) inline static void __invert(const field_t& a, field_t& r)
+    {
+        __pow(a, modulus_minus_two, r);
+    }
 
-    static inline field_t invert(const field_t& a)
+    __attribute__((always_inline)) inline static field_t invert(const field_t& a)
     {
         field_t r;
         __invert(a, r);
         return r;
     }
 
-    static inline void __tonelli_shanks_sqrt(const field_t& a, field_t& r)
+    __attribute__((always_inline)) inline static void __tonelli_shanks_sqrt(const field_t& a, field_t& r)
     {
         // Tonelli-shanks algorithm begins by finding a field element Q and integer S,
         // such that (p - 1) = Q.2^{s}
@@ -489,7 +516,7 @@ template <typename FieldParams> class field {
     /**
      * compute a^{(q + 1) / 4}, place result in r
      **/
-    static inline void __sqrt(const field_t& a, field_t& r)
+    __attribute__((always_inline)) inline static void __sqrt(const field_t& a, field_t& r)
     {
         // if p = 3 mod 4, use exponentiation trick
         if constexpr ((FieldParams::modulus_0 & 0x3UL) == 0x3UL) {
@@ -499,7 +526,7 @@ template <typename FieldParams> class field {
         }
     }
 
-    static inline bool is_quadratic_residue(const field_t& a)
+    __attribute__((always_inline)) inline static bool is_quadratic_residue(const field_t& a)
     {
         field_t target_sqrt;
         __sqrt(a, target_sqrt);
@@ -509,7 +536,7 @@ template <typename FieldParams> class field {
     /**
      * Get a random field element in montgomery form, place in `r`
      **/
-    static inline field_t random_element()
+    __attribute__((always_inline)) inline static field_t random_element()
     {
         field_t r;
         int got_entropy = getentropy((void*)r.data, 32);
@@ -521,7 +548,7 @@ template <typename FieldParams> class field {
     /**
      * print `r`
      **/
-    static inline void print(const field_t& a)
+    __attribute__((always_inline)) inline static void print(const field_t& a)
     {
         printf("field: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
                a.data[0],
@@ -554,7 +581,9 @@ template <typename FieldParams> class field {
      * We pre-compute scalars g1 = (2^256 * b1) / n, g2 = (2^256 * b2) / n, to avoid having to perform long division
      * on 512-bit scalars
      **/
-    static inline void split_into_endomorphism_scalars(field_t& k, field_t& k1, field_t& k2)
+    __attribute__((always_inline)) inline static void split_into_endomorphism_scalars(field_t& k,
+                                                                                      field_t& k1,
+                                                                                      field_t& k2)
     {
         // uint64_t lambda_reduction[4] = { 0 };
         // __to_montgomery_form(lambda, lambda_reduction);
@@ -630,7 +659,7 @@ template <typename FieldParams> class field {
         k1.data[1] = t2.data[1];
     }
 
-    static inline void __get_root_of_unity(const size_t degree, field_t& r)
+    __attribute__((always_inline)) inline static void __get_root_of_unity(const size_t degree, field_t& r)
     {
         __copy(root_of_unity, r);
         for (size_t i = FieldParams::primitive_root_log_size; i > degree; --i) {
@@ -638,14 +667,16 @@ template <typename FieldParams> class field {
         }
     }
 
-    static inline field_t get_root_of_unity(const size_t degree)
+    __attribute__((always_inline)) inline static field_t get_root_of_unity(const size_t degree)
     {
         field_t r;
         __get_root_of_unity(degree, r);
         return r;
     }
 
-    static inline void batch_invert(field_t* coeffs, size_t n, field_t* scratch_space = nullptr)
+    __attribute__((always_inline)) inline static void batch_invert(field_t* coeffs,
+                                                                   size_t n,
+                                                                   field_t* scratch_space = nullptr)
     {
         field_t* temporaries = scratch_space ? scratch_space : (field_t*)aligned_alloc(32, sizeof(field_t) * n);
         field_t accumulator = one;
@@ -666,7 +697,9 @@ template <typename FieldParams> class field {
         }
     }
 
-    static inline void compute_coset_generators(const size_t n, const uint64_t subgroup_size, field_t* result)
+    __attribute__((always_inline)) inline static void compute_coset_generators(const size_t n,
+                                                                               const uint64_t subgroup_size,
+                                                                               field_t* result)
     {
         if (n > 0) {
             result[0] = (multiplicative_generator);
@@ -688,6 +721,10 @@ template <typename FieldParams> class field {
                 }
             }
             if (valid) {
+                printf("adding ");
+                print(work_variable);
+                printf("at index %lu . \n expected = ", count);
+                print(coset_generators[count]);
                 result[count] = (work_variable);
                 ++count;
             }
@@ -695,7 +732,7 @@ template <typename FieldParams> class field {
         }
     }
 
-    static inline void serialize_to_buffer(const field_t& value, uint8_t* buffer)
+    __attribute__((always_inline)) inline static void serialize_to_buffer(const field_t& value, uint8_t* buffer)
     {
         field_t input = from_montgomery_form(value);
         for (size_t j = 0; j < 4; ++j) {
@@ -706,7 +743,7 @@ template <typename FieldParams> class field {
         }
     }
 
-    static inline field_t serialize_from_buffer(const uint8_t* buffer)
+    __attribute__((always_inline)) inline static field_t serialize_from_buffer(const uint8_t* buffer)
     {
         field_t result = zero;
         for (size_t j = 0; j < 4; ++j) {

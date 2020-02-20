@@ -92,6 +92,8 @@ struct type_info {
         , mutable_(other.mutable_)
     {}
 
+    type_info& operator=(const type_info& other) = default;
+
     std::string const type_name() const { return boost::apply_visitor(TypeIdNameVisitor(), type); }
 
     bool operator==(type_info const& other) const { return type == other.type; }

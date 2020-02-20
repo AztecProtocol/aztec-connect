@@ -1,5 +1,6 @@
 #pragma once
 
+#include "new_field2.hpp"
 // #include "fq.hpp"
 
 namespace barretenberg
@@ -7,11 +8,12 @@ namespace barretenberg
 template <typename base_field, typename Fq2Params> class field2
 {
   public:
-    struct field_t
-    {
-        typename base_field::field_t c0;
-        typename base_field::field_t c1;
-    };
+    typedef test::field2<base_field, Fq2Params> field_t;
+    // struct field_t
+    // {
+    //     typename base_field::field_t c0;
+    //     typename base_field::field_t c1;
+    // };
 
     static constexpr field_t zero{ base_field::zero, base_field::zero };
     static constexpr field_t one{ base_field::one, base_field::zero };

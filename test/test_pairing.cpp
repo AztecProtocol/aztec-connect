@@ -14,9 +14,9 @@ TEST(pairing, reduced_ate_pairing_check_against_constants)
                              .y = {
                                  { 0x564099dc0ef0a96, 0xa97eca7453f67dd2, 0x850e976b207e8c18, 0x20187f89a1d789cd } } };
     g2::affine_element Q = {
-        .x = { .c0 = { .data = { 0x3b25f1ad9a7f9cd2, 0xddb8b066d21ce86, 0xf8a4e318abd3cff7, 0x1272ee5f2e7e9dc1 } },
+        .x = { .c0 = { { 0x3b25f1ad9a7f9cd2, 0xddb8b066d21ce86, 0xf8a4e318abd3cff7, 0x1272ee5f2e7e9dc1 } },
                .c1 = { { 0xc7b14ea54dc1436f, 0x1f9384eb12b6941a, 0x3afe17a00720e8e3, 0x2a171f424ab98d8 } } },
-        .y = { .c0 = { .data = { 0x890d5a50c1d88e96, 0x6ae79a7a2b439172, 0x4c120a629ced363c, 0x295bd556fe685dd } },
+        .y = { .c0 = { { 0x890d5a50c1d88e96, 0x6ae79a7a2b439172, 0x4c120a629ced363c, 0x295bd556fe685dd } },
                .c1 = { { 0xa3189c7f120d4738, 0x4416da0df17c8ee, 0x4cc514acc1c2ac45, 0xb17d8f998e4ebe6 } } }
     };
     fq12::field_t expected = {

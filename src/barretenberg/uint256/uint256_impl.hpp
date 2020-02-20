@@ -1,6 +1,6 @@
 #pragma once
 
-constexpr uint256_t::uint64_pair uint256_t::mul_wide(const uint64_t a, const uint64_t b) const
+constexpr std::pair<uint64_t, uint64_t> uint256_t::mul_wide(const uint64_t a, const uint64_t b) const
 {
     const uint64_t a_lo = a & 0xffffffffULL;
     const uint64_t a_hi = a >> 32ULL;
@@ -18,7 +18,9 @@ constexpr uint256_t::uint64_pair uint256_t::mul_wide(const uint64_t a, const uin
 }
 
 // compute a + b + carry, returning the carry
-constexpr uint256_t::uint64_pair uint256_t::addc(const uint64_t a, const uint64_t b, const uint64_t carry_in) const
+constexpr std::pair<uint64_t, uint64_t> uint256_t::addc(const uint64_t a,
+                                                        const uint64_t b,
+                                                        const uint64_t carry_in) const
 {
     const uint64_t sum = a + b;
     const uint64_t carry_temp = sum < a;
@@ -27,38 +29,61 @@ constexpr uint256_t::uint64_pair uint256_t::addc(const uint64_t a, const uint64_
     return { r, carry_out };
 }
 
-constexpr uint256_t::uint64_pair uint256_t::sbb(const uint64_t a, const uint64_t b, const uint64_t borrow_in) const
+constexpr uint64_t uint256_t::addc_discard_hi(const uint64_t a, const uint64_t b, const uint64_t carry_in) const
 {
-    uint64_t t_1 = a - (borrow_in >> 63ULL);
-    uint64_t borrow_temp_1 = t_1 > a;
-    uint64_t t_2 = t_1 - b;
-    uint64_t borrow_temp_2 = t_2 > t_1;
+    return a + b + carry_in;
+}
+
+constexpr std::pair<uint64_t, uint64_t> uint256_t::sbb(const uint64_t a,
+                                                       const uint64_t b,
+                                                       const uint64_t borrow_in) const
+{
+    const uint64_t t_1 = a - (borrow_in >> 63ULL);
+    const uint64_t borrow_temp_1 = t_1 > a;
+    const uint64_t t_2 = t_1 - b;
+    const uint64_t borrow_temp_2 = t_2 > t_1;
 
     return { t_2, 0ULL - (borrow_temp_1 | borrow_temp_2) };
 }
 
-// {r, carry_out} = a + carry_in + b * c
-constexpr uint256_t::uint64_pair uint256_t::mac(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in) const
+constexpr uint64_t uint256_t::sbb_discard_hi(const uint64_t a, const uint64_t b, const uint64_t borrow_in) const
 {
-    uint64_pair result = mul_wide(b, c);
-    result.data[0] += a;
-    const uint64_t overflow_c = (result.data[0] < a);
-    result.data[0] += carry_in;
-    const uint64_t overflow_carry = (result.data[0] < carry_in);
-    result.data[1] += (overflow_c + overflow_carry);
+    return a - b - (borrow_in >> 63ULL);
+}
+
+// {r, carry_out} = a + carry_in + b * c
+constexpr std::pair<uint64_t, uint64_t> uint256_t::mac(const uint64_t a,
+                                                       const uint64_t b,
+                                                       const uint64_t c,
+                                                       const uint64_t carry_in) const
+{
+    std::pair<uint64_t, uint64_t> result = mul_wide(b, c);
+    result.first += a;
+    const uint64_t overflow_c = (result.first < a);
+    result.first += carry_in;
+    const uint64_t overflow_carry = (result.first < carry_in);
+    result.second += (overflow_c + overflow_carry);
     return result;
+}
+
+constexpr uint64_t uint256_t::mac_discard_hi(const uint64_t a,
+                                             const uint64_t b,
+                                             const uint64_t c,
+                                             const uint64_t carry_in) const
+{
+    return (b * c + a + carry_in);
 }
 
 constexpr uint256_t::divmod_output uint256_t::divmod(const uint256_t& a, const uint256_t& b) const
 {
     if (a == 0 || b == 0) {
-        return { {{0}}, {{0}} };
+        return { { { 0 } }, { { 0 } } };
     } else if (b == 1) {
-        return { {{ a.data[0], a.data[1], a.data[2], a.data[3] }}, {{0}} };
+        return { { { a.data[0], a.data[1], a.data[2], a.data[3] } }, { { 0 } } };
     } else if (a == b) {
-        return { {{ 1, 0, 0, 0 }}, {{0}} };
+        return { { { 1, 0, 0, 0 } }, { { 0 } } };
     } else if (b > a) {
-        return { {{0}}, {{ a.data[0], a.data[1], a.data[2], a.data[3] }} };
+        return { { { 0 } }, { { a.data[0], a.data[1], a.data[2], a.data[3] } } };
     }
 
     uint256_t quotient = 0;
@@ -92,7 +117,8 @@ constexpr uint256_t::divmod_output uint256_t::divmod(const uint256_t& a, const u
         CIRCUIT_UINT_MAX_PLUS_ONE >>= 1;
     }
 
-    return { { quotient.data[0], quotient.data[1], quotient.data[2], quotient.data[3] }, { remainder.data[0], remainder.data[1], remainder.data[2], remainder.data[3] }};
+    return { { quotient.data[0], quotient.data[1], quotient.data[2], quotient.data[3] },
+             { remainder.data[0], remainder.data[1], remainder.data[2], remainder.data[3] } };
 }
 
 constexpr bool uint256_t::get_bit(const uint64_t bit_index) const
@@ -128,60 +154,51 @@ constexpr uint64_t uint256_t::get_msb() const
 
 constexpr uint256_t uint256_t::operator+(const uint256_t& other) const
 {
-    const uint64_pair T0 = addc(data[0], other.data[0], 0);
-    const uint64_pair T1 = addc(data[1], other.data[1], T0.data[1]);
-    const uint64_pair T2 = addc(data[2], other.data[2], T1.data[1]);
-    const uint64_pair T3 = addc(data[3], other.data[3], T2.data[1]);
-    return { T0.data[0], T1.data[0], T2.data[0], T3.data[0] };
+    const auto [r0, t0] = addc(data[0], other.data[0], 0);
+    const auto [r1, t1] = addc(data[1], other.data[1], t0);
+    const auto [r2, t2] = addc(data[2], other.data[2], t1);
+    const auto r3 = addc_discard_hi(data[3], other.data[3], t2);
+    return { r0, r1, r2, r3 };
 };
 
 constexpr uint256_t uint256_t::operator-(const uint256_t& other) const
 {
-    const uint64_pair T0 = sbb(data[0], other.data[0], 0);
-    const uint64_pair T1 = sbb(data[1], other.data[1], T0.data[1]);
-    const uint64_pair T2 = sbb(data[2], other.data[2], T1.data[1]);
-    const uint64_pair T3 = sbb(data[3], other.data[3], T2.data[1]);
-    return { T0.data[0], T1.data[0], T2.data[0], T3.data[0] };
+
+    const auto [r0, t0] = sbb(data[0], other.data[0], 0);
+    const auto [r1, t1] = sbb(data[1], other.data[1], t0);
+    const auto [r2, t2] = sbb(data[2], other.data[2], t1);
+    const auto r3 = sbb_discard_hi(data[3], other.data[3], t2);
+    return { r0, r1, r2, r3 };
 }
 
 constexpr uint256_t uint256_t::operator*(const uint256_t& other) const
 {
-    uint256_t r;
+    const auto [r0, t0] = mac(0, data[0], other.data[0], 0ULL);
+    const auto [q0, t1] = mac(0, data[0], other.data[1], t0);
+    const auto [q1, t2] = mac(0, data[0], other.data[2], t1);
+    const auto q2 = mac_discard_hi(0, data[0], other.data[3], t2);
 
-    uint64_pair T0 = mac(0, data[0], other.data[0], 0);
-    uint64_pair T1 = mac(0, data[0], other.data[1], T0.data[1]);
-    uint64_pair T2 = mac(0, data[0], other.data[2], T1.data[1]);
-    uint64_pair T3 = mac(0, data[0], other.data[3], T2.data[1]);
+    const auto [r1, t3] = mac(q0, data[1], other.data[0], 0ULL);
+    const auto [q3, t4] = mac(q1, data[1], other.data[1], t3);
+    const auto q4 = mac_discard_hi(q2, data[1], other.data[2], t4);
 
-    r.data[0] = T0.data[0];
+    const auto [r2, t5] = mac(q3, data[2], other.data[0], 0ULL);
+    const auto q5 = mac_discard_hi(q4, data[2], other.data[1], t5);
 
-    T0 = mac(T1.data[0], data[1], other.data[0], 0);
-    T1 = mac(T2.data[0], data[1], other.data[1], T0.data[1]);
-    T2 = mac(T3.data[0], data[1], other.data[2], T1.data[1]);
+    const auto r3 = mac_discard_hi(q5, data[3], other.data[0], 0ULL);
 
-    r.data[1] = T0.data[0];
-
-    T0 = mac(T1.data[0], data[2], other.data[0], 0);
-    T1 = mac(T2.data[0], data[2], other.data[1], T0.data[1]);
-
-    r.data[2] = T0.data[0];
-
-    T0 = mac(T1.data[0], data[3], other.data[0], 0);
-
-    r.data[3] = T0.data[0];
-
-    return r;
+    return { r0, r1, r2, r3 };
 }
 
 constexpr uint256_t uint256_t::operator/(const uint256_t& other) const
 {
-    uint64_quad res =  divmod(*this, other).quotient;
+    uint64_quad res = divmod(*this, other).quotient;
     return uint256_t(res.data[0], res.data[1], res.data[2], res.data[3]);
 }
 
 constexpr uint256_t uint256_t::operator%(const uint256_t& other) const
 {
-    uint64_quad res =  divmod(*this, other).remainder;
+    uint64_quad res = divmod(*this, other).remainder;
     return uint256_t(res.data[0], res.data[1], res.data[2], res.data[3]);
 }
 

@@ -25,6 +25,10 @@ add_library(
     barretenberg STATIC
     types.hpp
     uint256/uint256.hpp
+    fields/new_field.hpp
+    fields/new_field_impl.hpp
+    fields/new_field2.hpp
+    fields/new_field2_impl.hpp
     fields/field_impl_int128.tcc
     fields/field_impl_asm.tcc
     fields/field.hpp
@@ -189,6 +193,10 @@ if(PROFILING)
         fields/asm_macros.hpp
         types.hpp
         uint256/uint256.hpp
+        fields/new_field.hpp
+        fields/new_field_impl.hpp
+        fields/new_field2.hpp
+        fields/new_field2_impl.hpp
         fields/field_impl_int128.tcc
         fields/field_impl_asm.tcc
         fields/field.hpp

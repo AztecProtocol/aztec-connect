@@ -16,15 +16,15 @@ class ExtendedComposer : public BoolComposer {
         WireType wire_type = WireType::NULL_WIRE;
         std::vector<barretenberg::fr::field_t*> selectors;
 
-        extended_wire_properties& operator=(const extended_wire_properties& other)
-        {
-            is_mutable = other.is_mutable;
-            index = other.index;
-            wire_type = other.wire_type;
-            selectors = std::vector<barretenberg::fr::field_t*>();
-            std::copy(other.selectors.begin(), other.selectors.end(), std::back_inserter(selectors));
-            return *this;
-        }
+        // extended_wire_properties& operator=(const extended_wire_properties& other) = default;
+        // {
+        //     is_mutable = other.is_mutable;
+        //     index = other.index;
+        //     wire_type = other.wire_type;
+        //     selectors = std::vector<barretenberg::fr::field_t*>();
+        //     std::copy(other.selectors.begin(), other.selectors.end(), std::back_inserter(selectors));
+        //     return *this;
+        // }
     };
     struct quad {
         std::array<size_t, 2> gate_indices;
