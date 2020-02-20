@@ -21,7 +21,7 @@ signature construct_signature(const std::string& message, const key_pair<Fr, G1>
 
     typename Fr::field_t e = Fr::serialize_from_buffer(&sig.e[0]);
 
-    typename Fr::field_t s = Fr::sub(k, Fr::mul(account.private_key, e));
+    typename Fr::field_t s = k - (account.private_key * e);
 
     sig.s.resize(32);
     Fr::serialize_to_buffer(s, &sig.s[0]);
@@ -37,7 +37,7 @@ signature_b construct_signature_b(const std::string& message, const key_pair<Fr,
     sig.r.resize(32);
     Fq::serialize_to_buffer(R.x, &sig.r[0]);
 
-    typename Fq::field_t yy = Fq::add(Fq::mul(Fq::sqr(R.x), R.x), G1::curve_b);
+    typename Fq::field_t yy = R.x.sqr() * R.x + G1::curve_b;
     typename Fq::field_t y_candidate = yy.sqrt();
 
     // if the signer / verifier sqrt algorithm is consistent, this *should* work...
@@ -50,7 +50,7 @@ signature_b construct_signature_b(const std::string& message, const key_pair<Fr,
     std::vector<uint8_t> e_vec = Hash::hash(message_buffer);
 
     typename Fr::field_t e = Fr::serialize_from_buffer(&e_vec[0]);
-    typename Fr::field_t s = Fr::sub(account.private_key, Fr::mul(k, e));
+    typename Fr::field_t s = account.private_key - (k * e);
 
     sig.s.resize(32);
     Fr::serialize_to_buffer(s, &sig.s[0]);
@@ -68,15 +68,15 @@ typename G1::affine_element ecrecover(const std::string& message, const signatur
 
     std::vector<uint8_t> r;
     std::copy(sig.r.begin(), sig.r.end(), std::back_inserter(r));
-    
+
     bool flip_sign = (r[0] & 128U) == 128U;
     r[0] = r[0] & 127U;
     typename Fq::field_t r_x = Fq::serialize_from_buffer(&r[0]);
-    typename Fq::field_t r_yy = Fq::add(Fq::mul(Fq::sqr(r_x), r_x), G1::curve_b);
+    typename Fq::field_t r_yy = r_x.sqr() * r_x + G1::curve_b;
     typename Fq::field_t r_y = r_yy.sqrt();
 
     if ((flip_sign)) {
-        r_y = Fq::neg(r_y);
+        r_y.self_neg();
     }
     typename G1::affine_element R{ r_x, r_y };
     typename Fr::field_t s = Fr::serialize_from_buffer(&sig.s[0]);
@@ -116,7 +116,7 @@ bool verify_signature(const std::string& message, const typename G1::affine_elem
     std::vector e_vec = Hash::hash(message_buffer);
     typename Fr::field_t target_e = Fr::serialize_from_buffer(&e_vec[0]);
 
-    return Fr::eq(source_e, target_e);
+    return source_e == target_e;
 }
 } // namespace schnorr
 } // namespace crypto

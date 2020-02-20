@@ -208,10 +208,29 @@ template <class Params> struct field {
 
     static constexpr field get_root_of_unity(const size_t degree) noexcept;
 
-    // constexpr void __invert() noexcept;
-    // constexpr void __neg() noexcept;
-    // constexpr void __to_montgomery_form() noexcept;
-    // constexpr void __from_montgomery_form() noexcept;
+    static void serialize_to_buffer(const field& value, uint8_t* buffer)
+    {
+        const field input = value.from_montgomery_form();
+        for (size_t j = 0; j < 4; ++j) {
+            for (size_t i = 0; i < 8; ++i) {
+                uint8_t byte = static_cast<uint8_t>(input.data[3 - j] >> (56 - (i * 8)));
+                buffer[j * 8 + i] = byte;
+            }
+        }
+    }
+
+    static field serialize_from_buffer(const uint8_t* buffer)
+    {
+        field result = zero;
+        for (size_t j = 0; j < 4; ++j) {
+            for (size_t i = 0; i < 8; ++i) {
+                uint8_t byte = buffer[j * 8 + i];
+                result.data[3 - j] = result.data[3 - j] | (static_cast<uint64_t>(byte) << (56 - (i * 8)));
+            }
+        }
+        return result.to_montgomery_form();
+    }
+
     struct wide_array {
         uint64_t data[8];
     };

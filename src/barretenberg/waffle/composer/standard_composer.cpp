@@ -42,9 +42,9 @@ void StandardComposer::create_big_add_gate(const add_quad& in)
 
     // (a terms + b terms = temp)
     // (c terms + d  terms + temp = 0 )
-    fr::field_t t0 = fr::mul(variables[in.a], in.a_scaling);
-    fr::field_t t1 = fr::mul(variables[in.b], in.b_scaling);
-    fr::field_t temp = fr::add(t0, t1);
+    fr::field_t t0 = variables[in.a] * in.a_scaling;
+    fr::field_t t1 = variables[in.b] * in.b_scaling;
+    fr::field_t temp = t0 + t1;
     uint32_t temp_idx = add_variable(temp);
 
     create_add_gate(add_triple{ in.a, in.b, temp_idx, in.a_scaling, in.b_scaling, fr::neg_one(), fr::zero });
@@ -57,9 +57,9 @@ void StandardComposer::create_balanced_add_gate(const add_quad& in)
 
     // (a terms + b terms = temp)
     // (c terms + d  terms + temp = 0 )
-    fr::field_t t0 = fr::mul(variables[in.a], in.a_scaling);
-    fr::field_t t1 = fr::mul(variables[in.b], in.b_scaling);
-    fr::field_t temp = fr::add(t0, t1);
+    fr::field_t t0 = variables[in.a] * in.a_scaling;
+    fr::field_t t1 = variables[in.b] * in.b_scaling;
+    fr::field_t temp = t0 + t1;
     uint32_t temp_idx = add_variable(temp);
 
     w_l.emplace_back(in.a);
@@ -100,7 +100,7 @@ void StandardComposer::create_balanced_add_gate(const add_quad& in)
 
     // in.d must be between 0 and 3
     // i.e. in.d * (in.d - 1) * (in.d - 2) = 0
-    fr::field_t temp_2 = fr::sub(fr::sqr(variables[in.d]), variables[in.d]);
+    fr::field_t temp_2 = variables[in.d].sqr() - variables[in.d];
     uint32_t temp_2_idx = add_variable(temp_2);
     w_l.emplace_back(in.d);
     w_r.emplace_back(in.d);
@@ -120,11 +120,12 @@ void StandardComposer::create_balanced_add_gate(const add_quad& in)
 
     ++n;
 
+    constexpr fr::field_t neg_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
     w_l.emplace_back(temp_2_idx);
     w_r.emplace_back(in.d);
     w_o.emplace_back(zero_idx);
     q_m.emplace_back(fr::one);
-    q_1.emplace_back(fr::neg(fr::to_montgomery_form({ { 2, 0, 0, 0 } })));
+    q_1.emplace_back(neg_two);
     q_2.emplace_back(fr::zero);
     q_3.emplace_back(fr::zero);
     q_c.emplace_back(fr::zero);

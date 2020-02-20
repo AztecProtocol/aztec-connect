@@ -100,24 +100,14 @@ fr::field_t ProverArithmeticWidget::compute_quotient_contribution(const fr::fiel
     polynomial& quotient_mid = key->quotient_mid;
 
     ITERATE_OVER_DOMAIN_START(key->mid_domain);
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
-    fr::field_t T3;
-    fr::__mul(w_1_fft.at(2 * i), q_m_fft.at(i), T0); // w_l * q_m = rdx
-    fr::__mul(T0, w_2_fft.at(2 * i), T0);            // w_l * w_r * q_m = rdx
-    fr::__mul(w_1_fft.at(2 * i), q_1_fft.at(i), T1); // w_l * q_l = rdi
-    fr::__mul(w_2_fft.at(2 * i), q_2_fft.at(i), T2); // w_r * q_r = rsi
-    fr::__mul(w_3_fft.at(2 * i), q_3_fft.at(i), T3); // w_o * q_o = r8
-    fr::__add(T0, T1, T0);                           // q_m * w_l * w_r + w_l * q_l = rdx
-    fr::__add(T2, T3, T2);                           // q_r * w_r + q_o * w_o = rsi
-    fr::__add(T0, T2, T0);                           // q_m * w_l * w_r + w_l * q_l + q_r * w_r + q_o * w_o = rdx
-    fr::__add(T0, q_c_fft.at(i), T0);                // q_m * w_l * w_r + w_l * q_l + q_r * w_r + q_o * w_o + q_c = rdx
-    fr::__mul(T0, alpha_base, T0);
-    fr::__add(quotient_mid.at(i), T0, quotient_mid.at(i));
+    fr::field_t T0 = w_1_fft[2 * i] * w_2_fft[2 * i] * q_m_fft[i];
+    fr::field_t T1 = w_1_fft[2 * i] * q_1_fft[i];
+    fr::field_t T2 = w_2_fft[2 * i] * q_2_fft[i];
+    fr::field_t T3 = w_3_fft[2 * i] * q_3_fft[i];
+    quotient_mid[i].self_add((T0 + T1 + T2 + T3 + q_c_fft[i]) * alpha_base);
     ITERATE_OVER_DOMAIN_END;
 
-    return fr::mul(alpha_base, alpha);
+    return alpha_base * alpha;
 }
 
 fr::field_t ProverArithmeticWidget::compute_linear_contribution(const fr::field_t& alpha_base,
@@ -130,22 +120,14 @@ fr::field_t ProverArithmeticWidget::compute_linear_contribution(const fr::field_
     fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
     fr::field_t w_lr = fr::mul(w_l_eval, w_r_eval);
     ITERATE_OVER_DOMAIN_START(key->small_domain);
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
-    fr::field_t T3;
-    fr::__mul(w_lr, q_m.at(i), T0);
-    fr::__mul(w_l_eval, q_1.at(i), T1);
-    fr::__mul(w_r_eval, q_2.at(i), T2);
-    fr::__mul(w_o_eval, q_3.at(i), T3);
-    fr::__add(T0, T1, T0);
-    fr::__add(T2, T3, T2);
-    fr::__add(T0, T2, T0);
-    fr::__add(T0, q_c.at(i), T0);
-    fr::__mul(T0, alpha_base, T0);
-    fr::__add(r.at(i), T0, r.at(i));
+    fr::field_t T0 = w_lr * q_m[i];
+    fr::field_t T1 = w_l_eval * q_1[i];
+    fr::field_t T2 = w_r_eval * q_2[i];
+    fr::field_t T3 = w_o_eval * q_3[i];
+    r[i].self_add((T0 + T1 + T2 + T3 + q_c[i]) * alpha_base);
     ITERATE_OVER_DOMAIN_END;
-    return fr::mul(alpha_base, alpha);
+
+    return alpha_base * alpha;
 }
 
 fr::field_t ProverArithmeticWidget::compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
@@ -167,8 +149,7 @@ fr::field_t VerifierArithmeticWidget::compute_quotient_evaluation_contribution(v
                                                                                const transcript::Transcript& transcript,
                                                                                fr::field_t&)
 {
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-    return fr::mul(alpha, alpha_base);
+    return alpha_base * fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 }
 
 fr::field_t VerifierArithmeticWidget::compute_batch_evaluation_contribution(verification_key*,
@@ -191,48 +172,37 @@ VerifierBaseWidget::challenge_coefficients VerifierArithmeticWidget::append_scal
     fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
-    fr::field_t q_m_term;
-    fr::__mul(w_l_eval, w_r_eval, q_m_term);
-    fr::__mul(q_m_term, challenge.alpha_base, q_m_term);
-    fr::__mul(q_m_term, challenge.linear_nu, q_m_term);
-
+    fr::field_t q_m_term = w_l_eval * w_r_eval * challenge.alpha_base * challenge.linear_nu;
     if (g1::on_curve(key->constraint_selectors.at("Q_M"))) {
         points.push_back(key->constraint_selectors.at("Q_M"));
         scalars.push_back(q_m_term);
     }
 
-    fr::field_t q_l_term;
-    fr::__mul(w_l_eval, challenge.alpha_base, q_l_term);
-    fr::__mul(q_l_term, challenge.linear_nu, q_l_term);
+    fr::field_t q_l_term = w_l_eval * challenge.alpha_base * challenge.linear_nu;
     if (g1::on_curve(key->constraint_selectors.at("Q_1"))) {
         points.push_back(key->constraint_selectors.at("Q_1"));
         scalars.push_back(q_l_term);
     }
 
-    fr::field_t q_r_term;
-    fr::__mul(w_r_eval, challenge.alpha_base, q_r_term);
-    fr::__mul(q_r_term, challenge.linear_nu, q_r_term);
+    fr::field_t q_r_term = w_r_eval * challenge.alpha_base * challenge.linear_nu;
     if (g1::on_curve(key->constraint_selectors.at("Q_2"))) {
         points.push_back(key->constraint_selectors.at("Q_2"));
         scalars.push_back(q_r_term);
     }
 
-    fr::field_t q_o_term;
-    fr::__mul(w_o_eval, challenge.alpha_base, q_o_term);
-    fr::__mul(q_o_term, challenge.linear_nu, q_o_term);
+    fr::field_t q_o_term = w_o_eval * challenge.alpha_base * challenge.linear_nu;
     if (g1::on_curve(key->constraint_selectors.at("Q_3"))) {
         points.push_back(key->constraint_selectors.at("Q_3"));
         scalars.push_back(q_o_term);
     }
 
-    fr::field_t q_c_term;
-    fr::__mul(challenge.alpha_base, challenge.linear_nu, q_c_term);
+    fr::field_t q_c_term = challenge.alpha_base * challenge.linear_nu;
     if (g1::on_curve(key->constraint_selectors.at("Q_C"))) {
         points.push_back(key->constraint_selectors.at("Q_C"));
         scalars.push_back(q_c_term);
     }
 
-    return VerifierBaseWidget::challenge_coefficients{ fr::mul(challenge.alpha_base, challenge.alpha_step),
+    return VerifierBaseWidget::challenge_coefficients{ challenge.alpha_base * challenge.alpha_step,
                                                        challenge.alpha_step,
                                                        challenge.nu_base,
                                                        challenge.nu_step,

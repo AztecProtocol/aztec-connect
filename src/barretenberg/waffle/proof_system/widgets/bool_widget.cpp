@@ -79,34 +79,17 @@ fr::field_t ProverBoolWidget::compute_quotient_contribution(const fr::field_t& a
 
     polynomial& quotient_mid = key->quotient_mid;
 
-    fr::field_t alpha_a = fr::mul(alpha_base, alpha);
-    fr::field_t alpha_b = fr::mul(alpha_base, fr::sqr(alpha));
+    fr::field_t alpha_a = alpha_base * alpha;
+    fr::field_t alpha_b = alpha_a * alpha;
     ITERATE_OVER_DOMAIN_START(key->mid_domain);
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
-    fr::__sqr(w_1_fft[i * 2], T0);
-    fr::__sub(T0, w_1_fft[i * 2], T0);
-    fr::__mul(T0, q_bl_fft[i], T0);
-    fr::__mul(T0, alpha_base, T0);
+    fr::field_t T0 = (w_1_fft[i * 2].sqr() - w_1_fft[i * 2]) * q_bl_fft[i] * alpha_base;
+    fr::field_t T1 = (w_2_fft[i * 2].sqr() - w_2_fft[i * 2]) * q_br_fft[i] * alpha_a;
+    fr::field_t T2 = (w_3_fft[i * 3].sqr() - w_3_fft[i * 2]) * q_bo_fft[i] * alpha_b;
 
-    fr::__sqr(w_2_fft[i * 2], T1);
-    fr::__sub(T1, w_2_fft[i * 2], T1);
-    fr::__mul(T1, q_br_fft[i], T1);
-    fr::__mul(T1, alpha_a, T1);
-
-    fr::__sqr(w_3_fft[i * 2], T2);
-    fr::__sub(T2, w_3_fft[i * 2], T2);
-    fr::__mul(T2, q_bo_fft[i], T2);
-    fr::__mul(T2, alpha_b, T2);
-
-    fr::__add(quotient_mid[i], T0, quotient_mid[i]);
-    fr::__add(quotient_mid[i], T1, quotient_mid[i]);
-    fr::__add(quotient_mid[i], T2, quotient_mid[i]);
-
+    quotient_mid[i].self_add(T0 + T1 + T2);
     ITERATE_OVER_DOMAIN_END;
 
-    return fr::mul(alpha_base, fr::mul(fr::sqr(alpha), alpha));
+    return alpha_base * alpha_b * alpha;
 }
 
 fr::field_t ProverBoolWidget::compute_linear_contribution(const fr::field_t& alpha_base,
@@ -118,21 +101,15 @@ fr::field_t ProverBoolWidget::compute_linear_contribution(const fr::field_t& alp
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
     fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
 
-    fr::field_t left_bool_multiplier = fr::mul(fr::sub(fr::sqr(w_l_eval), w_l_eval), alpha_base);
-    fr::field_t right_bool_multiplier = fr::mul(fr::mul(fr::sub(fr::sqr(w_r_eval), w_r_eval), alpha_base), alpha);
-    fr::field_t output_bool_multiplier =
-        fr::mul(fr::mul(fr::sub(fr::sqr(w_o_eval), w_o_eval), alpha_base), fr::sqr(alpha));
+    fr::field_t left = (w_l_eval.sqr() - w_l_eval) * alpha_base;
+    fr::field_t right = (w_r_eval.sqr() - w_r_eval) * alpha_base * alpha;
+    fr::field_t out = (w_o_eval.sqr() - w_o_eval) * alpha_base * alpha.sqr();
 
     ITERATE_OVER_DOMAIN_START(key->small_domain);
-    fr::field_t T0;
-    fr::__mul(left_bool_multiplier, q_bl[i], T0);
-    fr::__add(r[i], T0, r[i]);
-    fr::__mul(right_bool_multiplier, q_br[i], T0);
-    fr::__add(r[i], T0, r[i]);
-    fr::__mul(output_bool_multiplier, q_bo[i], T0);
-    fr::__add(r[i], T0, r[i]);
+    r[i].self_add((left * q_bl[i]) + (right * q_br[i]) + (out * q_bo[i]));
     ITERATE_OVER_DOMAIN_END;
-    return fr::mul(alpha_base, fr::mul(fr::sqr(alpha), alpha));
+
+    return alpha_base * alpha.sqr() * alpha;
 }
 
 fr::field_t ProverBoolWidget::compute_opening_poly_contribution(const fr::field_t& nu_base,
@@ -147,22 +124,20 @@ fr::field_t ProverBoolWidget::compute_opening_poly_contribution(const fr::field_
 
 VerifierBoolWidget::VerifierBoolWidget()
     : VerifierBaseWidget()
+{}
+
+fr::field_t VerifierBoolWidget::compute_quotient_evaluation_contribution(verification_key*,
+                                                                         const fr::field_t& alpha_base,
+                                                                         const transcript::Transcript& transcript,
+                                                                         fr::field_t&)
 {
+    return alpha_base * fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 }
 
-fr::field_t VerifierBoolWidget::compute_quotient_evaluation_contribution(
-    verification_key*,
-    const fr::field_t& alpha_base,
-    const transcript::Transcript& transcript,
-    fr::field_t&)
-{
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-    return fr::mul(alpha_base, fr::mul(fr::sqr(alpha), alpha));
-}
-
-fr::field_t VerifierBoolWidget::compute_batch_evaluation_contribution(verification_key*,fr::field_t&,
-                                                                const fr::field_t& nu_base,
-                                                                const transcript::Transcript&)
+fr::field_t VerifierBoolWidget::compute_batch_evaluation_contribution(verification_key*,
+                                                                      fr::field_t&,
+                                                                      const fr::field_t& nu_base,
+                                                                      const transcript::Transcript&)
 {
     return nu_base;
 };
@@ -178,15 +153,11 @@ VerifierBaseWidget::challenge_coefficients VerifierBoolWidget::append_scalar_mul
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
     fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
 
-    fr::field_t left_bool_multiplier = fr::mul(fr::sub(fr::sqr(w_l_eval), w_l_eval), challenge.alpha_base);
+    fr::field_t left_bool_multiplier = (w_l_eval.sqr() - w_l_eval) * challenge.alpha_base * challenge.linear_nu;
     fr::field_t right_bool_multiplier =
-        fr::mul(fr::mul(fr::sub(fr::sqr(w_r_eval), w_r_eval), challenge.alpha_base), challenge.alpha_step);
+        (w_r_eval.sqr() - w_r_eval) * challenge.alpha_base * challenge.alpha_step * challenge.linear_nu;
     fr::field_t output_bool_multiplier =
-        fr::mul(fr::mul(fr::sub(fr::sqr(w_o_eval), w_o_eval), challenge.alpha_base), fr::sqr(challenge.alpha_step));
-
-    left_bool_multiplier = fr::mul(left_bool_multiplier, challenge.linear_nu);
-    right_bool_multiplier = fr::mul(right_bool_multiplier, challenge.linear_nu);
-    output_bool_multiplier = fr::mul(output_bool_multiplier, challenge.linear_nu);
+        (w_o_eval.sqr() - w_o_eval) * challenge.alpha_base * challenge.alpha_step.sqr() * challenge.linear_nu;
 
     if (g1::on_curve(key->constraint_selectors.at("Q_BL"))) {
         points.push_back(key->constraint_selectors.at("Q_BL"));
@@ -201,12 +172,11 @@ VerifierBaseWidget::challenge_coefficients VerifierBoolWidget::append_scalar_mul
         scalars.push_back(output_bool_multiplier);
     }
 
-    return VerifierBaseWidget::challenge_coefficients{
-        fr::mul(challenge.alpha_base, fr::mul(fr::sqr(challenge.alpha_step), challenge.alpha_step)),
-        challenge.alpha_step,
-        challenge.nu_base,
-        challenge.nu_step,
-        challenge.linear_nu
-    };
+    return VerifierBaseWidget::challenge_coefficients{ challenge.alpha_base * challenge.alpha_step.sqr() *
+                                                           challenge.alpha_step,
+                                                       challenge.alpha_step,
+                                                       challenge.nu_base,
+                                                       challenge.nu_step,
+                                                       challenge.linear_nu };
 }
 } // namespace waffle
