@@ -52,6 +52,8 @@ template <typename ComposerContext> class byte_array {
 
     bool_t<ComposerContext> const& get_bit(size_t index) const { return values[values.size() - index - 1]; }
 
+    void set_bit(size_t index, bool_t<ComposerContext> const& value) { values[index] = value; }
+
     ComposerContext* get_context() const { return context; }
 
     std::string get_value() const;

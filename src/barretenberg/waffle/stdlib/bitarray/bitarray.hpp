@@ -25,6 +25,7 @@ template <typename ComposerContext> class bitarray {
   public:
     bitarray(ComposerContext* parent_context, const size_t n);
     bitarray(ComposerContext* parent_context, const std::string& input);
+    bitarray(ComposerContext* parent_context, const std::vector<uint8_t>& input);
     bitarray(const std::vector<uint32<ComposerContext>>& input);
     bitarray(uint32<ComposerContext> const& input);
     bitarray(byte_array<ComposerContext> const& input)
