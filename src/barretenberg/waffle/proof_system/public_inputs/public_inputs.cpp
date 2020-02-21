@@ -137,7 +137,7 @@ fr::field_t compute_public_input_delta(const std::vector<barretenberg::fr::field
         denominator.self_mul(T1);
         work_root.self_mul(subgroup_generator);
     }
-    fr::__invert(denominator, denominator);
+    denominator = denominator.invert();
     T0 = denominator * numerator;
     return T0;
 }

@@ -416,7 +416,7 @@ TEST(scalar_multiplication, add_affine_points)
     }
     // for (size_t i = 0; i < num_points; i += 2)
     // {
-    //     points[i].y = fq::neg(points[i].y);
+    //     points[i].y = points[i].y.neg();
     // }
 
     size_t count = num_points - 1;
@@ -564,7 +564,7 @@ TEST(scalar_multiplication, endomorphism_split)
     g1::element t1 = g1::group_exponentiation_inner(g1::affine_one, k1);
     g1::affine_element beta = g1::affine_one;
     fq::__mul_beta(beta.x, beta.x);
-    fq::__neg(beta.y, beta.y);
+    beta.y.self_neg();
     g1::element t2 = g1::group_exponentiation_inner(beta, k2);
     g1::add(t1, t2, result);
 
@@ -643,7 +643,7 @@ TEST(scalar_multiplication, oversized_inputs)
     first = g1::normalize(first);
 
     for (size_t i = 0; i < target_degree; ++i) {
-        fr::__neg(scalars[i], scalars[i]);
+        scalars[i].self_neg();
     }
 
     g1::element second = scalar_multiplication::pippenger(scalars, monomials, target_degree);
@@ -652,7 +652,7 @@ TEST(scalar_multiplication, oversized_inputs)
     EXPECT_EQ((first.z == second.z), true);
     EXPECT_EQ((first.z == fq::one), true);
     EXPECT_EQ((first.x == second.x), true);
-    EXPECT_EQ((first.y == fq::neg(second.y)), true);
+    EXPECT_EQ((first.y == second.y.neg()), true);
 
     aligned_free(monomials);
     aligned_free(scalars);

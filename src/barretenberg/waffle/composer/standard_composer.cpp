@@ -158,10 +158,10 @@ void StandardComposer::create_big_add_gate_with_bit_extraction(const add_quad& i
     fr::field_t two = fr::to_montgomery_form({ { 2, 0, 0, 0 } });
     fr::field_t seven = fr::to_montgomery_form({ { 7, 0, 0, 0 } });
     fr::field_t nine = fr::to_montgomery_form({ { 9, 0, 0, 0 } });
-    fr::field_t r_0 = fr::sub(fr::mul(delta, nine), fr::add(fr::mul(fr::sqr(delta), two), seven));
+    fr::field_t r_0 = fr::sub((delta * nine), fr::add(delta.sqr() * two, seven));
     uint32_t r_0_idx = add_variable(r_0);
     create_poly_gate(
-        poly_triple{ delta_idx, delta_idx, r_0_idx, fr::neg(two), nine, fr::zero, fr::neg_one(), fr::neg(seven) });
+        poly_triple{ delta_idx, delta_idx, r_0_idx, two.neg(), nine, fr::zero, fr::neg_one(), seven.neg() });
 
     fr::field_t r_1 = r_0 * delta;
     uint32_t r_1_idx = add_variable(r_1);
@@ -293,7 +293,7 @@ std::vector<uint32_t> StandardComposer::create_range_constraint(const uint32_t w
         uint32_t quad_idx = add_variable(fr::to_montgomery_form({ quad, 0, 0, 0 }));
 
         create_add_gate(
-            add_triple{ lo_idx, hi_idx, quad_idx, fr::one, fr::add(fr::one, fr::one), fr::neg_one(), fr::zero });
+            add_triple{ lo_idx, hi_idx, quad_idx, fr::one, fr::one + fr::one, fr::neg_one(), fr::zero });
 
         if (i == num_bits - 1) {
             accumulators.push_back(quad_idx);
@@ -740,7 +740,7 @@ Prover StandardComposer::preprocess()
 void StandardComposer::assert_equal_constant(uint32_t const a_idx, fr::field_t const& b)
 {
     const add_triple gate_coefficients{
-        a_idx, a_idx, a_idx, fr::one, fr::zero, fr::zero, fr::neg(b),
+        a_idx, a_idx, a_idx, fr::one, fr::zero, fr::zero, b.neg(),
     };
     create_add_gate(gate_coefficients);
 }

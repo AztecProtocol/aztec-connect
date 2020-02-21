@@ -49,9 +49,9 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
 
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    barretenberg::fr::field_t accumulator_offset = barretenberg::fr::invert(barretenberg::fr::pow_small(barretenberg::fr::add(barretenberg::fr::one, barretenberg::fr::one), initial_exponent));
+    barretenberg::fr::field_t accumulator_offset = barretenberg::fr::invert(barretenberg::fr::pow_small(barretenberg::fr::one + barretenberg::fr::one, initial_exponent));
     
-    barretenberg::fr::field_t origin_accumulators[2]{ barretenberg::fr::one, barretenberg::fr::add(accumulator_offset, barretenberg::fr::one) };
+    barretenberg::fr::field_t origin_accumulators[2]{ barretenberg::fr::one, accumulator_offset + barretenberg::fr::one };
 
     grumpkin::g1::element* multiplication_transcript =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
@@ -66,7 +66,7 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
         accumulator_transcript[0] = origin_accumulators[0];
     }
     barretenberg::fr::field_t one = barretenberg::fr::one;
-    barretenberg::fr::field_t three = barretenberg::fr::add(barretenberg::fr::add(one, one), one);
+    barretenberg::fr::field_t three = barretenberg::fr::add((one + one), one);
     
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
@@ -80,7 +80,7 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
         if (predicate) {
             grumpkin::g1::__neg(point_to_add, point_to_add);
-            barretenberg::fr::__neg(scalar_to_add, scalar_to_add);
+            scalar_to_add.self_neg();
         }
         accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
         grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);

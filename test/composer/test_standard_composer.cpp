@@ -96,14 +96,14 @@ TEST(standard_composer, test_mul_gate_proofs)
     fr::field_t q[7]{ fr::random_element(), fr::random_element(), fr::random_element(), fr::random_element(),
                       fr::random_element(), fr::random_element(), fr::random_element() };
     fr::field_t q_inv[7]{
-        fr::invert(q[0]), fr::invert(q[1]), fr::invert(q[2]), fr::invert(q[3]),
-        fr::invert(q[4]), fr::invert(q[5]), fr::invert(q[6]),
+        q[0].invert(), q[1].invert(), q[2].invert(), q[3].invert(),
+        q[4].invert(), q[5].invert(), q[6].invert(),
     };
 
     fr::field_t a = fr::random_element();
     fr::field_t b = fr::random_element();
-    fr::field_t c = fr::neg(fr::mul(fr::add(fr::add(fr::mul(q[0], a), fr::mul(q[1], b)), q[3]), q_inv[2]));
-    fr::field_t d = fr::neg(fr::mul(fr::add(fr::mul(q[4], fr::mul(a, b)), q[6]), q_inv[5]));
+    fr::field_t c = fr::neg(fr::mul(fr::add(fr::add((q[0] * a), (q[1] * b)), q[3]), q_inv[2]));
+    fr::field_t d = fr::neg(fr::mul(fr::add(fr::mul(q[4], (a * b)), q[6]), q_inv[5]));
 
     uint32_t a_idx = composer.add_variable(a);
     uint32_t b_idx = composer.add_variable(b);

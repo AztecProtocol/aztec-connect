@@ -20,7 +20,7 @@ TEST(io, read_transcript_loads_well_formed_srs)
     g2::affine_element Q[2];
     g1::copy_affine(monomials[1], P[0]);
     g1::copy_affine(g1::affine_one, P[1]);
-    fq::__neg(P[0].y, P[0].y);
+    P[0].y.self_neg();
     g2::copy_affine(g2::affine_one, Q[0]);
     g2::copy_affine(g2_x, Q[1]);
     fq12::field_t res = pairing::reduced_ate_pairing_batch(P, Q, 2);

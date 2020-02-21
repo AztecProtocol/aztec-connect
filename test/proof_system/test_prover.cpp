@@ -151,7 +151,7 @@ waffle::Prover generate_test_data(const size_t n)
 
         fr::__add(w_l.at(2 * i + 1), w_r.at(2 * i + 1), T0);
         fr::__add(T0, w_o.at(2 * i + 1), q_c.at(2 * i + 1));
-        fr::__neg(q_c.at(2 * i + 1), q_c.at(2 * i + 1));
+        q_c.at(2 * i + 1).self_neg();
         q_l.at(2 * i + 1) = fr::one;
         q_r.at(2 * i + 1) = fr::one;
         q_o.at(2 * i + 1) = fr::one;
@@ -355,7 +355,7 @@ polynomial_arithmetic::get_lagrange_evaluations(state.challenges.z, state.circui
 
     fr::field_t rhs;
     rhs = T1 + state.proof.linear_eval;
-    fr::__invert(lagrange_evals.vanishing_poly, T0);
+    T0 = lagrange_evals.vanishing_poly.invert();
     rhs.self_mul(T0);
 
     EXPECT_EQ((t_eval == rhs), true);

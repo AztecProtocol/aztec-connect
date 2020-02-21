@@ -411,8 +411,8 @@ void coset_fft(fr::field_t* coeffs,
     const size_t log2_domain_extension = static_cast<size_t>(log2(domain_extension));
     fr::field_t primitive_root = fr::field_t::get_root_of_unity(domain.log2_size + log2_domain_extension);
 
-    // fr::field_t work_root = fr::sqr(domain.generator);
-    // work_root = fr::sqr(domain.generator);
+    // fr::field_t work_root = domain.generator.sqr();
+    // work_root = domain.generator.sqr();
     fr::field_t* scratch_space = get_scratch_space(domain.size * domain_extension);
 
     // fr::field_t* temp_memory = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * domain.size *

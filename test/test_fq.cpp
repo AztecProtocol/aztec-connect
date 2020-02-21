@@ -371,7 +371,7 @@ TEST(fq, invert)
 TEST(fq, invert_one_is_one)
 {
     fq::field_t result = fq::one;
-    fq::__invert(result, result);
+    result = result.invert();
     EXPECT_EQ((result == fq::one), true);
 }
 
@@ -412,7 +412,7 @@ TEST(fq, neg)
 {
     fq::field_t a = fq::random_element();
     fq::field_t b;
-    fq::__neg(a, b);
+    b = a.neg();
     fq::field_t result;
     result = a + b;
     EXPECT_EQ((result == fq::zero), true);

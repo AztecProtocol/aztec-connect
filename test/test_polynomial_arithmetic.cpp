@@ -225,7 +225,7 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
         EXPECT_EQ((l_1_coefficients[i] == fr::zero), true);
     }
 
-    EXPECT_EQ(fr::eq(l_n_minus_one_coefficients[n - 2], fr::one), true);
+    EXPECT_EQ(l_n_minus_one_coefficients[n - 2] == fr::one, true);
 
     for (size_t i = 0; i < n; ++i) {
         if (i == (n - 2)) {
@@ -247,7 +247,7 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
         a[i] = fr::random_element();
         b[i] = fr::random_element();
         c[i] = a[i] * b[i];
-        fr::__neg(c[i], c[i]);
+        c[i].self_neg();
         T0 = a[i] * b[i];
         T0.self_add(c[i]);
     }
@@ -258,7 +258,7 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
     }
 
     // make the final evaluation not vanish
-    // fr::one(c[n-1]);
+    // c[n-1].one();
     evaluation_domain small_domain = evaluation_domain(n);
     evaluation_domain mid_domain = evaluation_domain(4 * n);
     small_domain.compute_lookup_table();
@@ -309,7 +309,7 @@ TEST(polynomials, compute_kate_opening_coefficients)
     // validate that W(X)(X - z) = F(X) - F(z)
     // compute (X - z) in coefficient form
     fr::field_t* multiplicand = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
-    fr::__neg(z, multiplicand[0]);
+    multiplicand[0] = z.neg();
     multiplicand[1] = fr::one;
     for (size_t i = 2; i < 2 * n; ++i) {
         multiplicand[i] = fr::zero;
@@ -443,7 +443,7 @@ TEST(polynomials, barycentric_weight_evaluations)
 //     }
 //     printf("roots \n");
 //     // fr::field_t two_inv = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
-//     // fr::__invert(two_inv, two_inv);
+//     // two_inv = two_inv.invert();
 //     for (size_t i = 0; i < domain_size * 2; ++i)
 //     {
 

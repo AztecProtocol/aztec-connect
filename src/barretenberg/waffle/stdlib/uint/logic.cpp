@@ -214,8 +214,8 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
     fr::field_t q_3 = right_shift_factor;
 
     fr::field_t denominator = b_hi_shift_factor;
-    fr::__neg(denominator, denominator);
-    fr::__invert(denominator, denominator);
+    denominator.self_neg();
+    denominator = denominator.invert();
 
     q_1.self_mul(denominator);
     q_2.self_mul(denominator);
@@ -310,7 +310,7 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
     fr::field_t q_3 = fr::sub(fr::to_montgomery_form({ { 12, 0, 0, 0 } }), pivot_scale_factor);
 
     fr::field_t denominator = fr::one - b_hi_scale_factor;
-    fr::__invert(denominator, denominator);
+    denominator = denominator.invert();
 
     q_1.self_mul(denominator);
     q_2.self_mul(denominator);

@@ -132,7 +132,7 @@ waffle::Prover generate_test_data(const size_t n)
 
         fr::__add(w_l.at(2 * i + 1), w_r.at(2 * i + 1), T0);
         fr::__add(T0, w_o.at(2 * i + 1), q_c.at(2 * i + 1));
-        fr::__neg(q_c.at(2 * i + 1), q_c.at(2 * i + 1));
+        q_c.at(2 * i + 1).self_neg();
         q_l.at(2 * i + 1) = fr::one;
         q_r.at(2 * i + 1) = fr::one;
         q_o.at(2 * i + 1) = fr::one;
@@ -295,7 +295,7 @@ waffle::Prover generate_test_data(const size_t n)
 
 //         fr::__add(state.w_l.at(2 * i + 1), state.w_r.at(2 * i + 1), T0);
 //         fr::__add(T0, state.w_o.at(2 * i + 1), widget->q_c.at(2 * i + 1));
-//         fr::__neg(widget->q_c.at(2 * i + 1), widget->q_c.at(2 * i + 1));
+//         widget->q_c.at(2 * i + 1).self_neg();
 //         widget->q_l.at(2 * i + 1) = fr::one;
 //         widget->q_r.at(2 * i + 1) = fr::one;
 //         widget->q_o.at(2 * i + 1) = fr::one;

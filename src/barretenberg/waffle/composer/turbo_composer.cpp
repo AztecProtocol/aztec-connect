@@ -156,7 +156,7 @@ void TurboComposer::create_big_add_gate_with_bit_extraction(const add_quad& in)
     q_2.emplace_back(in.b_scaling);
     q_3.emplace_back(in.c_scaling);
     q_c.emplace_back(in.const_scaling);
-    q_arith.emplace_back(fr::add(fr::one, fr::one));
+    q_arith.emplace_back(fr::one + fr::one);
     q_4.emplace_back(in.d_scaling);
     q_5.emplace_back(fr::zero);
     q_ecc_1.emplace_back(fr::zero);

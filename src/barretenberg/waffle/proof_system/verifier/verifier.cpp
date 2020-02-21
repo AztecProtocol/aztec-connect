@@ -181,13 +181,13 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     T1.self_add(linear_eval);
     t_eval.self_add(T1);
 
-    fr::field_t alpha_base = fr::sqr(fr::sqr(alpha));
+    fr::field_t alpha_base = fr::sqr(alpha.sqr());
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
         alpha_base =
             verifier_widgets[i]->compute_quotient_evaluation_contribution(key.get(), alpha_base, transcript, t_eval);
     }
 
-    fr::__invert(lagrange_evals.vanishing_poly, T0);
+    T0 = lagrange_evals.vanishing_poly.invert();
     t_eval.self_mul(T0);
 
     transcript.add_element("t", transcript_helpers::convert_field_element(t_eval));
@@ -244,7 +244,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
             key.get(), batch_evaluation, nu_base, transcript);
     }
 
-    fr::__neg(batch_evaluation, batch_evaluation);
+    batch_evaluation.self_neg();
 
     fr::field_t z_omega_scalar;
     z_omega_scalar = z_challenge * key->domain.root;
@@ -299,7 +299,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
         }
     }
 
-    VerifierBaseWidget::challenge_coefficients coeffs{ fr::sqr(fr::sqr(alpha)), alpha, nu_base, nu, nu };
+    VerifierBaseWidget::challenge_coefficients coeffs{ fr::sqr(alpha.sqr()), alpha, nu_base, nu, nu };
 
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
         coeffs =

@@ -63,7 +63,7 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
         T1 = w_4[i] * q_4[i];
         T0.self_add(T1);
 
-        fr::__neg(T0, T0);
+        T0.self_neg();
         q_c[i] = (T0);
         q_arith[i] = fr::one;
 
@@ -174,6 +174,6 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
     key->quotient_large.fft(key->large_domain);
     for (size_t i = 0; i < num_gates; ++i)
     {
-        EXPECT_EQ(fr::eq(key->quotient_large[i * 4], fr::zero), true);
+        EXPECT_EQ(key->quotient_large[i * 4] == fr::zero, true);
     }
 }

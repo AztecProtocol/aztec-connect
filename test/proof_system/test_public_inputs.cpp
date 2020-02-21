@@ -174,7 +174,7 @@ namespace {
 
 //         fr::__add(w_l.at(2 * i + 1), w_r.at(2 * i + 1), T0);
 //         fr::__add(T0, w_o.at(2 * i + 1), q_c.at(2 * i + 1));
-//         fr::__neg(q_c.at(2 * i + 1), q_c.at(2 * i + 1));
+//         q_c.at(2 * i + 1).self_neg();
 //         q_l.at(2 * i + 1) = fr::one;
 //         q_r.at(2 * i + 1) = fr::one;
 //         q_o.at(2 * i + 1) = fr::one;
@@ -342,7 +342,7 @@ namespace {
 //     fr::field_t T1;
 //     fr::field_t T2;
 
-//     fr::__invert(target_delta, target_delta);
+//     target_delta = target_delta.invert();
 //     fr::__mul(target_delta, state.key->z[circuit_size - 1], T0);
 //     fr::print(fr::from_montgomery_form(T0));
 //     // check that the max degree of our quotient polynomial is 3n
@@ -394,14 +394,14 @@ TEST(test_public_inputs, compute_delta)
 
             numerator = numerator * T6;
 
-            fr::field_t T7 = fr::add(T0, fr::mul(sigma_1[i], beta));
-            fr::field_t T8 = fr::add(T1, fr::mul(sigma_2[i], beta));
+            fr::field_t T7 = fr::add(T0, sigma_1[i] * beta);
+            fr::field_t T8 = fr::add(T1, sigma_2[i] * beta);
             fr::field_t T9 = T7 * T8;
             denominator = denominator * T9;
             work_root = work_root * root;
         }
 
-        fr::__invert(denominator, denominator);
+        denominator = denominator.invert();
 
         fr::field_t product = numerator * denominator;
         return product;

@@ -23,7 +23,7 @@ namespace waffle
     inline plonk_linear_terms compute_linear_terms(const transcript::Transcript& transcript, const barretenberg::fr::field_t& l_1)
     {
         barretenberg::fr::field_t alpha = barretenberg::fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
-        barretenberg::fr::field_t alpha_cubed = barretenberg::fr::sqr(alpha) * alpha;
+        barretenberg::fr::field_t alpha_cubed = alpha.sqr() * alpha;
         barretenberg::fr::field_t beta = barretenberg::fr::serialize_from_buffer(&transcript.get_challenge("beta")[0]);
         barretenberg::fr::field_t gamma = barretenberg::fr::serialize_from_buffer(&transcript.get_challenge("gamma")[0]);
         barretenberg::fr::field_t z = barretenberg::fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
@@ -64,7 +64,7 @@ namespace waffle
         }
         sigma_contribution.self_mul(z_1_shifted_eval);
         result.sigma_last = sigma_contribution * alpha;
-        barretenberg::fr::__neg(result.sigma_last, result.sigma_last);
+        result.sigma_last.self_neg();
         result.sigma_last.self_mul(beta);
 
         return result;

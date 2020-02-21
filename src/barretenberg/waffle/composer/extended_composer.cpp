@@ -882,7 +882,7 @@ ExtendedProver ExtendedComposer::preprocess()
     // //     if (!(fr::from_montgomery_form(bool_widget->q_bl[i]) == fr::zero))
     // //     {
     // //         fr::field_t t = output_state.w_l[i];
-    // //         fr::field_t u = fr::sqr(t) - t;
+    // //         fr::field_t u = t.sqr() - t;
     // //         if (!(u == fr::zero))
     // //         {
     // //             printf("bool fail? left \n");
@@ -891,7 +891,7 @@ ExtendedProver ExtendedComposer::preprocess()
     // //     if (!(fr::from_montgomery_form(bool_widget->q_br[i]) == fr::zero))
     // //     {
     // //         fr::field_t t = output_state.w_r[i];
-    // //         fr::field_t u = fr::sqr(t) - t;
+    // //         fr::field_t u = t.sqr() - t;
     // //         if (!(u == fr::zero))
     // //         {
     // //             printf("bool fail? right \n");

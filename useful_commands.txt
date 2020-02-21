@@ -71,5 +71,28 @@ $1 = $5.$4();
 (barretenberg::|grumpkin::)?f(q|r)::get_bit\([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)\)
 $3.get_bit($4)
 
-(barretenberg::|grumpkin::)?f(q|r)::([^_:\(\)]*)\([\s]*([^_:\(\)\s]*)[\s]*,[\s]*([^_:\(\)\s]*)\)
-$4.$3($5)
+(barretenberg::|grumpkin::)?f(q|r)::([^_:\(\)]*)\([\s]*([^\(\)]*)(\(\))?[\s]*,[\s]*([^_\(\)\s]*)(\(\))?\)
+$4.$3($6)
+
+(barretenberg::|grumpkin::)?f(q|r)::([^_:\(\)]*)\([\s]*([^_:\(\)\s]*)[\s]*\)
+$4.$3()
+
+([^_:\(\)\s]*)\.add\(([^_\s][^\s]*)\)
+$1 + $2
+
+([^_:\(\)\s]*)\.mul\(([^_\s][^\s]*)\)
+$1 * $2
+
+([^_:\(\)\s]*)\.sub\(([^_\s][^\s]*)\)
+$1 - $2
+
+f(q|r)::__invert\((.*), (.*)\)
+$3 = $2.invert()
+
+(barretenberg::|grumpkin::)?f(q|r)::__neg\((.*), \3\)
+$3.neg_self()
+
+(barretenberg::|grumpkin::)?f(q|r)::__neg\((.*), (.*)\)
+$4 = $3.neg()
+
+(barretenberg::|grumpkin::)?f(q|r)::add\((.*), (.*)\)

@@ -135,7 +135,7 @@ void add_affine_points(g1::affine_element* points, const size_t num_points, fq::
     // std::cout << "forward run time: " << diff.count() << "us" << std::endl;
     // }
     // time_start = std::chrono::steady_clock::now();
-    fq::__invert(batch_inversion_accumulator, batch_inversion_accumulator);
+    batch_inversion_accumulator = batch_inversion_accumulator.invert();
     // time_end = std::chrono::steady_clock::now();
     //  diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
     // if (num_points > 100000)

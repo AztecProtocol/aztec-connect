@@ -8,19 +8,19 @@ using namespace grumpkin;
 // {
 //     g1::element result = g1::one;
 //     result.y = fq::to_montgomery_form({{ 0x833fc48d823f272c, 0x2d270d45f1181294, 0xcf135e7506a45d63, 2 }});
-//     fq::print(result.y);
+//     result.y.print();
 //     EXPECT_EQ(g1::on_curve(result), true);
 
-//     fq::field_t T0 = fq::sqr(result.y);
+//     fq::field_t T0 = result.y.sqr();
 //     fq::field_t T2 = fq::to_montgomery_form({{ 17, 0, 0, 0 }});
 //     fq::field_t T3 = T0 + T2;
 //     fq::print(fq::from_montgomery_form(T3));
-//     fq::print(fq::neg(T2));
+//     fq::print(T2.neg());
 
-//     fq::field_t xx = fq::sqr(result.x);
+//     fq::field_t xx = result.x.sqr();
 //     fq::field_t xxx = result.x * xx;
 
-//     fq::field_t yy_sub_xxx = fq::sqr(result.y) - xxx;
+//     fq::field_t yy_sub_xxx = result.y.sqr() - xxx;
 //     printf("y^2 - x^3 = \n");
 //     fq::print(fq::from_montgomery_form(yy_sub_xxx));
 
@@ -245,7 +245,7 @@ TEST(grumpkin, mixed_add_exception_test_infinity)
     g1::element lhs = g1::one;
     g1::affine_element rhs = g1::random_affine_element();
     fq::__copy(rhs.x, lhs.x);
-    fq::__neg(rhs.y, lhs.y);
+    lhs.y = rhs.y.neg();
 
     g1::element result;
     g1::mixed_add(lhs, rhs, result);

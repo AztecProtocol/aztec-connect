@@ -210,7 +210,7 @@ TEST(g1, mixed_add_exception_test_infinity)
     g1::element lhs = g1::one;
     g1::affine_element rhs = g1::random_affine_element();
     fq::__copy(rhs.x, lhs.x);
-    fq::__neg(rhs.y, lhs.y);
+    lhs.y = rhs.y.neg();
 
     g1::element result;
     g1::mixed_add(lhs, rhs, result);

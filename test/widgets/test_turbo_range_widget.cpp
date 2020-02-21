@@ -29,22 +29,22 @@ namespace
 
     polynomial q_range(num_gates);
 
-    fr::field_t four = fr::add(fr::add(fr::one, fr::one), fr::add(fr::one, fr::one));
+    fr::field_t four = fr::add(fr::one + fr::one, fr::one + fr::one);
 
     std::array<fr::field_t, 4> values{
         fr::zero,
         fr::one,
-        fr::add(fr::one, fr::one),
-        fr::add(fr::add(fr::one, fr::one), fr::one)
+        fr::one + fr::one,
+        fr::add(fr::one + fr::one, fr::one)
     };
 
     w_4[0] = fr::zero;
     for (size_t i = 0; i < num_gates - 1; ++i)
     {
-        w_3[i] = fr::add(fr::mul(w_4[i], four), values[i & 3]);
-        w_2[i] = fr::add(fr::mul(w_3[i], four), values[(i + 1) & 3]);
-        w_1[i] = fr::add(fr::mul(w_2[i], four), values[(i + 2) & 3]);
-        w_4[i + 1] = fr::add(fr::mul(w_1[i], four), values[(i + 3) & 3]);
+        w_3[i] = fr::add(w_4[i] * four, values[i & 3]);
+        w_2[i] = fr::add(w_3[i] * four, values[(i + 1) & 3]);
+        w_1[i] = fr::add(w_2[i] * four, values[(i + 2) & 3]);
+        w_4[i + 1] = fr::add(w_1[i] * four, values[(i + 3) & 3]);
 
         q_range[i] = fr::one;
     }

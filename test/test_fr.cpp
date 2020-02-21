@@ -205,7 +205,7 @@ TEST(fr, invert)
 TEST(fr, invert_one_is_one)
 {
     fr::field_t result = fr::one;
-    fr::__invert(result, result);
+    result = result.invert();
     EXPECT_EQ((result == fr::one), true);
 }
 
@@ -246,7 +246,7 @@ TEST(fr, neg)
 {
     fr::field_t a = fr::random_element();
     fr::field_t b;
-    fr::__neg(a, b);
+    b = a.neg();
     fr::field_t result;
     result = a + b;
     EXPECT_EQ((result == fr::zero), true);

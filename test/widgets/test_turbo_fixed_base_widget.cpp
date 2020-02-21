@@ -40,7 +40,7 @@
 //     polynomial q_arith(num_gates);
 
 //     w_1[0] = grumpkin::g1::one.x;
-//     w_2[0] = grumpkin::g1::one.y; // fr::add(fr::one, fr::one); // (1, 2) = starting point
+//     w_2[0] = grumpkin::g1::one.y; // fr::one + fr::one; // (1, 2) = starting point
 //     w_4[0] = fr::zero;
 //     w_3[0] = fr::zero;
 //     grumpkin::g1::affine_element beta = grumpkin::g1::random_affine_element();
@@ -62,18 +62,18 @@
 //     fr::field_t x_alpha_2 = fr::mul(fr::sub(x_beta_times_nine, x_gamma), eight_inverse);
 
 //     fr::field_t T0 = x_beta - x_gamma;
-//     fr::field_t y_denominator = fr::invert(fr::add(fr::add(T0, T0), T0));
+//     fr::field_t y_denominator = fr::invert(fr::add((T0 + T0), T0));
 
 //     fr::field_t y_alpha_1 = fr::mul(fr::sub(fr::add(fr::add(y_beta, y_beta), y_beta), y_gamma), y_denominator);
 //     fr::field_t T1 = x_gamma * y_beta;
-//     T1 = fr::add(fr::add(T1, T1), T1);
+//     T1 = fr::add((T1 + T1), T1);
 //     fr::field_t y_alpha_2 = fr::mul(fr::sub(fr::mul(x_beta, y_gamma), T1), y_denominator);
 
 //     w_4[1] = fr::to_montgomery_form({ 3, 0, 0, 0 }); // first point = 3P
 //     w_3[1] = x_gamma;
 
 //     fr::field_t lambda = fr::mul(fr::sub(y_gamma, w_2[0]), fr::invert(fr::sub(x_gamma, w_1[0])));
-//     fr::field_t x_2 = fr::sub(fr::sqr(lambda), fr::add(w_1[0], x_gamma));
+//     fr::field_t x_2 = fr::sub(lambda.sqr(), fr::add(w_1[0], x_gamma));
 //     fr::field_t y_2 = fr::sub(fr::mul(lambda, fr::sub(w_1[0], x_2)), w_2[0]);
 //     w_1[1] = x_2;
 //     w_2[1] = y_2;
@@ -87,7 +87,7 @@
 //     w_3[1+1] = x_beta;
 
 //     lambda = fr::mul(fr::sub(y_beta, w_2[1]), fr::invert(fr::sub(x_beta, w_1[1])));
-//     fr::field_t x_3 = fr::sub(fr::sqr(lambda), fr::add(w_1[1], x_beta));
+//     fr::field_t x_3 = fr::sub(lambda.sqr(), fr::add(w_1[1], x_beta));
 //     fr::field_t y_3 = fr::sub(fr::mul(lambda, fr::sub(w_1[1], x_3)), w_2[1]);
 
 //     w_1[2] = x_3;
@@ -173,7 +173,7 @@
 //     // circuit_state.quotient_large.ifft(circuit_state.large_domain);
 //     // circuit_state.quotient_large.fft(circuit_state.large_domain);
 //     for (size_t i = 0; i < num_gates; ++i) {
-//         EXPECT_EQ(fr::eq(circuit_state.quotient_large[i * 4], fr::zero), true);
+//         EXPECT_EQ(circuit_state.quotient_large[i * 4] == fr::zero, true);
 //     }
 // }
 
@@ -206,8 +206,9 @@
 //     polynomial q_ecc_1(num_gates);
 //     polynomial q_arith(num_gates);
 
-//     grumpkin::g1::element* ladder = static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * 128));
-//     grumpkin::g1::element* ladder3 =  static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * 128));
+//     grumpkin::g1::element* ladder = static_cast<grumpkin::g1::element*>(aligned_alloc(64,
+//     sizeof(grumpkin::g1::element) * 128)); grumpkin::g1::element* ladder3 =
+//     static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * 128));
 //     grumpkin::g1::element accumulator = grumpkin::g1::one;
 //     // grumpkin::g1::set_infinity(accumulator);
 //     for (size_t i = 0; i < 126; ++i) {
@@ -233,13 +234,11 @@
 //         wnaf_entries[0] = 1;
 //     }
 
-//     grumpkin::g1::element* multiplication_transcript = static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * 128));
-//     fr::field_t* accumulator_transcript =  static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 128));
-//     multiplication_transcript[0] = origin_point;
-//     accumulator_transcript[0] = fr::zero;
-//     fr::field_t one = fr::one;
-//     fr::field_t three = fr::add(fr::add(one, one), one);
-//     for (size_t i = 1; i < 126; ++i) {
+//     grumpkin::g1::element* multiplication_transcript = static_cast<grumpkin::g1::element*>(aligned_alloc(64,
+//     sizeof(grumpkin::g1::element) * 128)); fr::field_t* accumulator_transcript =
+//     static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 128)); multiplication_transcript[0] =
+//     origin_point; accumulator_transcript[0] = fr::zero; fr::field_t one = fr::one; fr::field_t three = fr::add((one +
+//     one), one); for (size_t i = 1; i < 126; ++i) {
 //         uint64_t entry = wnaf_entries[i] & 0xffffff;
 //         fr::field_t prev_accumulator = fr::add(accumulator_transcript[i - 1], accumulator_transcript[i - 1]);
 //         prev_accumulator = prev_accumulator + prev_accumulator;
@@ -292,11 +291,11 @@
 //         fr::field_t x_alpha_2 = fr::mul(fr::sub(x_beta_times_nine, x_gamma), eight_inverse);
 
 //         fr::field_t T0 = x_beta - x_gamma;
-//         fr::field_t y_denominator = fr::invert(fr::add(fr::add(T0, T0), T0));
+//         fr::field_t y_denominator = fr::invert(fr::add((T0 + T0), T0));
 
 //         fr::field_t y_alpha_1 = fr::mul(fr::sub(fr::add(fr::add(y_beta, y_beta), y_beta), y_gamma), y_denominator);
 //         fr::field_t T1 = x_gamma * y_beta;
-//         T1 = fr::add(fr::add(T1, T1), T1);
+//         T1 = fr::add((T1 + T1), T1);
 //         fr::field_t y_alpha_2 = fr::mul(fr::sub(fr::mul(x_beta, y_gamma), T1), y_denominator);
 //         // printf("entry = %lu \n", wnaf_entries[i] & 0xffffffU);
 
@@ -413,7 +412,7 @@
 //     widget.compute_quotient_contribution(fr::one, transcript, circuit_state);
 
 //     for (size_t i = 0; i < num_gates; ++i) {
-//         EXPECT_EQ(fr::eq(circuit_state.quotient_large[i * 4], fr::zero), true);
+//         EXPECT_EQ(circuit_state.quotient_large[i * 4] == fr::zero, true);
 //     }
 //     aligned_free(ladder);
 //     aligned_free(ladder3);

@@ -137,8 +137,8 @@ namespace mimc
 //     for (size_t i = 0; i < NUM_ROUNDS; ++i)
 //     {
 //         fr::field_t t = constants[i] + previous;
-//         fr::field_t tt = fr::sqr(t);
-//         fr::field_t tttt = fr::sqr(tt);
+//         fr::field_t tt = t.sqr();
+//         fr::field_t tttt = tt.sqr();
 //         fr::field_t ttttt = t * tttt;
 //         fr::__copy(ttttt, previous);
 //     }
@@ -174,8 +174,8 @@ size_t mimc_round(const uint32_t input_index, const uint32_t k_index, Composer *
         }
         // idx_a = composer->add_variable(t);
         
-        fr::field_t tt = fr::sqr(t);
-        fr::field_t tttt = fr::sqr(tt);
+        fr::field_t tt = t.sqr();
+        fr::field_t tttt = tt.sqr();
         fr::field_t ttttt = t * tttt;
         size_t tt_idx = composer->add_variable(tt);
         size_t tttt_idx = composer->add_variable(tttt);
@@ -183,7 +183,7 @@ size_t mimc_round(const uint32_t input_index, const uint32_t k_index, Composer *
 
         // idx_a = composer->add_add_basic_gate(k_idx, input_idx, idx_a);
         // fr::field_t two_c = constants[i] + constants[i]; // 2c
-        // fr::field_t c_squared = fr::sqr(constants[i]);              // -c^2
+        // fr::field_t c_squared = constants[i].sqr();              // -c^2
         // (t + c)(t + c) = t.t + 2c.t + cc = tt
         // t.t + 2c.t + cc - tt
         composer->add_basic_mul_gate(t_idx, t_idx, tt_idx);

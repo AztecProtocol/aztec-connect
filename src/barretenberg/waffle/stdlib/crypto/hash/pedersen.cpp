@@ -51,9 +51,9 @@ point hash_single(const field_t& in, const size_t hash_index)
 
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), initial_exponent));
+    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::one + fr::one, initial_exponent));
 
-    fr::field_t origin_accumulators[2]{ fr::one, fr::add(accumulator_offset, fr::one) };
+    fr::field_t origin_accumulators[2]{ fr::one, accumulator_offset + fr::one };
 
     grumpkin::g1::element* multiplication_transcript =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
@@ -68,7 +68,7 @@ point hash_single(const field_t& in, const size_t hash_index)
         accumulator_transcript[0] = origin_accumulators[0];
     }
     fr::field_t one = fr::one;
-    fr::field_t three = fr::add(fr::add(one, one), one);
+    fr::field_t three = fr::add((one + one), one);
 
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
@@ -82,7 +82,7 @@ point hash_single(const field_t& in, const size_t hash_index)
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
         if (predicate) {
             grumpkin::g1::__neg(point_to_add, point_to_add);
-            fr::__neg(scalar_to_add, scalar_to_add);
+            scalar_to_add.self_neg();
         }
         accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
         grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);

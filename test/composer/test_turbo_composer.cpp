@@ -126,14 +126,14 @@ TEST(turbo_composer, test_mul_gate_proofs)
     fr::field_t q[7]{ fr::random_element(), fr::random_element(), fr::random_element(), fr::random_element(),
                       fr::random_element(), fr::random_element(), fr::random_element() };
     fr::field_t q_inv[7]{
-        fr::invert(q[0]), fr::invert(q[1]), fr::invert(q[2]), fr::invert(q[3]),
-        fr::invert(q[4]), fr::invert(q[5]), fr::invert(q[6]),
+        q[0].invert(), q[1].invert(), q[2].invert(), q[3].invert(),
+        q[4].invert(), q[5].invert(), q[6].invert(),
     };
 
     fr::field_t a = fr::one;
     fr::field_t b = fr::random_element();
-    fr::field_t c = fr::neg(fr::mul(fr::add(fr::add(fr::mul(q[0], a), fr::mul(q[1], b)), q[3]), q_inv[2]));
-    fr::field_t d = fr::neg(fr::mul(fr::add(fr::mul(q[4], fr::mul(a, b)), q[6]), q_inv[5]));
+    fr::field_t c = fr::neg(fr::mul(fr::add(fr::add((q[0] * a), (q[1] * b)), q[3]), q_inv[2]));
+    fr::field_t d = fr::neg(fr::mul(fr::add(fr::mul(q[4], (a * b)), q[6]), q_inv[5]));
 
     uint32_t a_idx = composer.add_public_variable(a);
     uint32_t b_idx = composer.add_variable(b);
@@ -195,8 +195,8 @@ TEST(turbo_composer, test_mul_gate_proofs)
     composer.create_big_add_gate(
         { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
 
-    uint32_t e_idx = composer.add_variable(fr::sub(a, fr::one));
-    composer.create_add_gate({ e_idx, b_idx, c_idx, q[0], q[1], q[2], fr::add(q[3], q[0]) });
+    uint32_t e_idx = composer.add_variable(a - fr::one);
+    composer.create_add_gate({ e_idx, b_idx, c_idx, q[0], q[1], q[2], (q[3] + q[0]) });
     waffle::TurboProver prover = composer.preprocess();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
@@ -237,8 +237,8 @@ TEST(turbo_composer, small_scalar_multipliers)
     bool skew = false;
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), initial_exponent));
-    fr::field_t origin_accumulators[2]{ fr::one, fr::add(accumulator_offset, fr::one) };
+    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::one + fr::one, initial_exponent));
+    fr::field_t origin_accumulators[2]{ fr::one, accumulator_offset + fr::one };
 
     grumpkin::g1::element* multiplication_transcript =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
@@ -254,7 +254,7 @@ TEST(turbo_composer, small_scalar_multipliers)
     }
 
     fr::field_t one = fr::one;
-    fr::field_t three = fr::add(fr::add(one, one), one);
+    fr::field_t three = fr::add((one + one), one);
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
         fr::field_t prev_accumulator = accumulator_transcript[i] + accumulator_transcript[i];
@@ -265,7 +265,7 @@ TEST(turbo_composer, small_scalar_multipliers)
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
         if (predicate) {
             grumpkin::g1::__neg(point_to_add, point_to_add);
-            fr::__neg(scalar_to_add, scalar_to_add);
+            scalar_to_add.self_neg();
         }
         accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
         grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
@@ -370,8 +370,8 @@ TEST(turbo_composer, large_scalar_multipliers)
     bool skew = false;
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), initial_exponent));
-    fr::field_t origin_accumulators[2]{ fr::one, fr::add(accumulator_offset, fr::one) };
+    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::one + fr::one, initial_exponent));
+    fr::field_t origin_accumulators[2]{ fr::one, accumulator_offset + fr::one };
 
     grumpkin::g1::element* multiplication_transcript =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
@@ -387,7 +387,7 @@ TEST(turbo_composer, large_scalar_multipliers)
     }
 
     fr::field_t one = fr::one;
-    fr::field_t three = fr::add(fr::add(one, one), one);
+    fr::field_t three = fr::add((one + one), one);
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
         fr::field_t prev_accumulator = accumulator_transcript[i] + accumulator_transcript[i];
@@ -398,7 +398,7 @@ TEST(turbo_composer, large_scalar_multipliers)
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
         if (predicate) {
             grumpkin::g1::__neg(point_to_add, point_to_add);
-            fr::__neg(scalar_to_add, scalar_to_add);
+            scalar_to_add.self_neg();
         }
         accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
         grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
