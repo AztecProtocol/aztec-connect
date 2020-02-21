@@ -1,10 +1,10 @@
 #include "./schnorr.hpp"
 
+#include "../../../../curves/grumpkin/grumpkin.hpp"
 #include "../../../composer/turbo_composer.hpp"
 #include "../../bitarray/bitarray.hpp"
 #include "../../field/field.hpp"
 #include "../hash/sha256.hpp"
-#include "../../../../curves/grumpkin/grumpkin.hpp"
 
 namespace plonk {
 namespace stdlib {
@@ -14,10 +14,8 @@ signature_bits convert_signature(waffle::TurboComposer* context, const crypto::s
 {
     signature_bits sig{ bitarray(context, 256), bitarray(context, 256) };
 
-    for (size_t i = 0; i < 32; ++i)
-    {
-        for (size_t j = 7; j < 8; --j)
-        {
+    for (size_t i = 0; i < 32; ++i) {
+        for (size_t j = 7; j < 8; --j) {
             uint8_t s_shift = static_cast<uint8_t>(signature.s[i] >> j);
             uint8_t e_shift = static_cast<uint8_t>(signature.e[i] >> j);
             bool s_bit = (s_shift & 1U) == 1U;
@@ -32,13 +30,11 @@ signature_bits convert_signature(waffle::TurboComposer* context, const crypto::s
 bitarray<waffle::TurboComposer> convert_message(waffle::TurboComposer* context, const std::string& message_string)
 {
     bitarray<waffle::TurboComposer> message(context, message_string.size() * 8);
-     for (size_t i = 0; i < message_string.size(); ++i)
-    {
+    for (size_t i = 0; i < message_string.size(); ++i) {
         uint8_t msg_byte = static_cast<uint8_t>(message_string[i]);
-        for (size_t j = 7; j < 8; --j)
-        {
+        for (size_t j = 7; j < 8; --j) {
             uint8_t msg_shift = static_cast<uint8_t>(msg_byte >> j);
-            bool msg_bit =  (msg_shift & 1U) == 1U;
+            bool msg_bit = (msg_shift & 1U) == 1U;
             message[i * 8 + (7 - j)] = witness_t(context, msg_bit);
         }
     }
@@ -50,8 +46,9 @@ point variable_base_mul(const point& pub_key, const bitarray<waffle::TurboCompos
     point accumulator{ pub_key.x, pub_key.y };
     bool_t<waffle::TurboComposer> initialized(pub_key.x.context, false);
     field_t<waffle::TurboComposer> one(pub_key.x.context, barretenberg::fr::one);
-    field_t<waffle::TurboComposer> two(pub_key.x.context, barretenberg::fr::to_montgomery_form({ { 2, 0, 0, 0 } }));
-    field_t<waffle::TurboComposer> three(pub_key.x.context, barretenberg::fr::to_montgomery_form({ { 3, 0, 0, 0 } }));
+    field_t<waffle::TurboComposer> two(pub_key.x.context, barretenberg::fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form());
+    field_t<waffle::TurboComposer> three(pub_key.x.context,
+                                         barretenberg::fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form());
     for (size_t i = 0; i < 256; ++i) {
         field_t dbl_lambda = (accumulator.x * accumulator.x * three) / (accumulator.y * two);
         field_t x_dbl = (dbl_lambda * dbl_lambda) - (accumulator.x * two);

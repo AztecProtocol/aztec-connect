@@ -43,7 +43,7 @@ template <typename ComposerContext>
 field_t<ComposerContext>::field_t(const uint64_t value)
     : context(nullptr)
 {
-    additive_constant = barretenberg::fr::to_montgomery_form({ { value, 0UL, 0UL, 0UL } });
+    additive_constant = barretenberg::fr::field_t{ value, 0UL, 0UL, 0UL }.to_montgomery_form();
     multiplicative_constant = barretenberg::fr::zero;
     witness_index = static_cast<uint32_t>(-1);
 }
@@ -90,7 +90,7 @@ field_t<ComposerContext>::field_t(byte_array<ComposerContext> const& other)
 {
     auto bits = other.bits();
 
-    barretenberg::fr::field_t two = barretenberg::fr::to_montgomery_form({ { 2, 0, 0, 0 } });
+    barretenberg::fr::field_t two = barretenberg::fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form();
 
     for (size_t i = 0; i < bits.size(); ++i) {
         field_t<ComposerContext> temp(bits[i].context);
@@ -142,7 +142,7 @@ template <typename ComposerContext> field_t<ComposerContext>::operator byte_arra
             bits[i] = barretenberg::fr::get_bit(value, 255 - i);
         }
     } else {
-        barretenberg::fr::field_t two = barretenberg::fr::to_montgomery_form({ { 2, 0, 0, 0 } });
+        barretenberg::fr::field_t two = barretenberg::fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form();
         field_t<ComposerContext> validator(context, barretenberg::fr::zero);
 
         for (size_t i = 0; i < 256; ++i) {
@@ -218,7 +218,7 @@ field_t<ComposerContext> field_t<ComposerContext>::operator+(const field_t& othe
                                                     multiplicative_constant,
                                                     other.multiplicative_constant,
                                                     barretenberg::fr::neg_one(),
-                                                    barretenberg::fr::add(additive_constant, other.additive_constant) };
+                                                    (additive_constant + other.additive_constant) };
         ctx->create_add_gate(gate_coefficients);
     }
     return result;
@@ -436,8 +436,7 @@ template <typename ComposerContext> barretenberg::fr::field_t field_t<ComposerCo
 {
     if (witness_index != static_cast<uint32_t>(-1)) {
         ASSERT(context != nullptr);
-        return barretenberg::fr::add(
-            barretenberg::fr::mul(multiplicative_constant, context->get_variable(witness_index)), additive_constant);
+        return (multiplicative_constant * context->get_variable(witness_index)) + additive_constant;
     } else {
         return additive_constant;
     }

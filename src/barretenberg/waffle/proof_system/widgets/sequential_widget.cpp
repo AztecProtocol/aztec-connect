@@ -89,8 +89,7 @@ fr::field_t ProverSequentialWidget::compute_linear_contribution(const fr::field_
 
 VerifierSequentialWidget::VerifierSequentialWidget()
     : VerifierBaseWidget()
-{
-}
+{}
 
 VerifierBaseWidget::challenge_coefficients VerifierSequentialWidget::append_scalar_multiplication_inputs(
     verification_key* key,
@@ -101,8 +100,7 @@ VerifierBaseWidget::challenge_coefficients VerifierSequentialWidget::append_scal
 {
     fr::field_t w_o_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
 
-    barretenberg::fr::field_t old_alpha =
-        barretenberg::fr::mul(challenge.alpha_base, barretenberg::fr::invert(challenge.alpha_step));
+    barretenberg::fr::field_t old_alpha = (challenge.alpha_base * (challenge.alpha_step.invert()));
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
     fr::field_t q_o_next_term;

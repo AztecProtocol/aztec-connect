@@ -113,39 +113,39 @@
 //     EXPECT_EQ(composer.is_gate_deleted(29), true);
 //     EXPECT_EQ(composer.is_gate_deleted(30), false);
 
-//     EXPECT_EQ(fr::from_montgomery_form(composer.q_1[0]).data[0], 1UL << 2UL);
-//     EXPECT_EQ(fr::from_montgomery_form(composer.q_2[0]).data[0], 1UL << 1UL);
-//     EXPECT_EQ(fr::from_montgomery_form(composer.q_3[0]).data[0], 1UL);
+//     EXPECT_EQ(composer.q_1[0]).data[0], 1UL << 2UL.from_montgomery_form();
+//     EXPECT_EQ(composer.q_2[0]).data[0], 1UL << 1UL.from_montgomery_form();
+//     EXPECT_EQ(composer.q_3[0]).data[0], 1UL.from_montgomery_form();
 //     EXPECT_EQ((composer.q_3_next[0] == fr::neg_one()), true);
 
 //     for (size_t i = 2; i < 30; i += 2) {
 //         uint64_t shift = static_cast<uint64_t>(i) + 1UL;
-//         EXPECT_EQ(fr::from_montgomery_form(composer.q_1[i]).data[0], 1UL << (shift + 1UL));
-//         EXPECT_EQ(fr::from_montgomery_form(composer.q_2[i]).data[0], 1UL << shift);
+//         EXPECT_EQ(composer.q_1[i]).data[0], 1UL << (shift + 1UL).from_montgomery_form();
+//         EXPECT_EQ(composer.q_2[i]).data[0], 1UL << shift.from_montgomery_form();
 //         EXPECT_EQ((composer.q_3[i] == fr::one), true);
 //         EXPECT_EQ((composer.q_3_next[i] == fr::neg_one()), true);
 //     }
 //     EXPECT_EQ((composer.q_1[30] == fr::neg_one()), true);
-//     EXPECT_EQ(fr::from_montgomery_form(composer.q_2[30]).data[0], 1UL << 31UL);
-//     EXPECT_EQ(fr::from_montgomery_form(composer.q_3[30]).data[0], 1UL);
+//     EXPECT_EQ(composer.q_2[30]).data[0], 1UL << 31UL.from_montgomery_form();
+//     EXPECT_EQ(composer.q_3[30]).data[0], 1UL.from_montgomery_form();
 //     EXPECT_EQ((composer.q_3_next[30] == fr::zero), true);
 
-//     EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_1")[0]).data[0], 1UL);
-//     EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_2")[0]).data[0], 1UL);
-//     EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_3")[0]).data[0], 1UL);
-//     EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_3")[1]).data[0], (1UL << 3UL) - 1UL); // 7U);
-//     EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_3")[2]).data[0], (1UL << 5UL) - 1UL);
-//     EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_3")[3]).data[0], (1UL << 7U) - 1UL);
+//     EXPECT_EQ(prover.witness->wires.at("w_1")[0]).data[0], 1UL.from_montgomery_form();
+//     EXPECT_EQ(prover.witness->wires.at("w_2")[0]).data[0], 1UL.from_montgomery_form();
+//     EXPECT_EQ(prover.witness->wires.at("w_3")[0]).data[0], 1UL.from_montgomery_form();
+//     EXPECT_EQ(prover.witness->wires.at("w_3")[1]).data[0], (1UL << 3UL) - 1UL); // 7U.from_montgomery_form();
+//     EXPECT_EQ(prover.witness->wires.at("w_3")[2]).data[0], (1UL << 5UL) - 1UL.from_montgomery_form();
+//     EXPECT_EQ(prover.witness->wires.at("w_3")[3]).data[0], (1UL << 7U) - 1UL.from_montgomery_form();
 
 //     for (size_t i = 1; i < 15; ++i) {
-//         EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_1")[i]).data[0], 1UL);
-//         EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_2")[i]).data[0], 1UL);
-//         EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_3")[i]).data[0], (1U << static_cast<uint32_t>(2 * i + 1)) - 1);
+//         EXPECT_EQ(prover.witness->wires.at("w_1")[i]).data[0], 1UL.from_montgomery_form();
+//         EXPECT_EQ(prover.witness->wires.at("w_2")[i]).data[0], 1UL.from_montgomery_form();
+//         EXPECT_EQ(prover.witness->wires.at("w_3")[i]).data[0], (1U << static_cast<uint32_t>(2 * i + 1)) - 1.from_montgomery_form();
 //     }
 
-//     EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_2")[15]).data[0], 1UL);
-//     EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_1")[15]).data[0], (1ULL << 32ULL) - 1ULL);
-//     EXPECT_EQ(fr::from_montgomery_form(prover.witness->wires.at("w_3")[15]).data[0], (1ULL << 31ULL) - 1ULL);
+//     EXPECT_EQ(prover.witness->wires.at("w_2")[15]).data[0], 1UL.from_montgomery_form();
+//     EXPECT_EQ(prover.witness->wires.at("w_1")[15]).data[0], (1ULL << 32ULL) - 1ULL.from_montgomery_form();
+//     EXPECT_EQ(prover.witness->wires.at("w_3")[15]).data[0], (1ULL << 31ULL) - 1ULL.from_montgomery_form();
 
 //     for (size_t i = 16; i < 32; ++i) {
 //         EXPECT_EQ((prover.witness->wires.at("w_1")[i] == fr::zero), true);

@@ -66,7 +66,7 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
         accumulator_transcript[0] = origin_accumulators[0];
     }
     barretenberg::fr::field_t one = barretenberg::fr::one;
-    barretenberg::fr::field_t three = barretenberg::fr::add((one + one), one);
+    barretenberg::fr::field_t three = ((one + one) + one);
     
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
@@ -89,9 +89,9 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
     grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
 
     waffle::fixed_group_init_quad init_quad{ origin_points[0].x,
-                                             barretenberg::fr::sub(origin_points[0].x, origin_points[1].x),
+                                             (origin_points[0].x - origin_points[1].x),
                                              origin_points[0].y,
-                                             barretenberg::fr::sub(origin_points[0].y, origin_points[1].y) };
+                                             (origin_points[0].y - origin_points[1].y) };
 
     barretenberg::fr::field_t x_alpha = accumulator_offset;
     for (size_t i = 0; i < num_quads; ++i) {

@@ -128,7 +128,7 @@ template <typename ComposerContext> void merkle_tree<ComposerContext>::add_membe
     field_t index = witness_t(&ctx_, size_);
 
     // Check we are setting the next available element. Given index should be equal to the public size input.
-    ctx_.assert_equal_constant(index.witness_index, barretenberg::fr::to_montgomery_form(uint128_to_field(size_)));
+    ctx_.assert_equal_constant(index.witness_index, uint128_to_field(size_).to_montgomery_form());
 
     update_membership(
         new_root, create_witness_hash_path(new_hashes), value, root_, create_witness_hash_path(old_hashes), index);

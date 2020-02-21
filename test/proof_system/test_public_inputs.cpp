@@ -344,7 +344,7 @@ namespace {
 
 //     target_delta = target_delta.invert();
 //     fr::__mul(target_delta, state.key->z[circuit_size - 1], T0);
-//     fr::print(fr::from_montgomery_form(T0));
+//     fr::print(T0).from_montgomery_form();
 //     // check that the max degree of our quotient polynomial is 3n
 //     EXPECT_EQ(fr::eq(target_delta, state.key->z[circuit_size - 1]), true);
 // }
@@ -366,7 +366,7 @@ TEST(test_public_inputs, compute_delta)
         fr::field_t temp = get_pseudorandom_element();
         left.push_back(temp);
         right.push_back(temp);
-        sigma_1.push_back(fr::mul(fr::coset_generators[0], work_root));
+        sigma_1.push_back((fr::coset_generators[0] * work_root));
         sigma_2.push_back(work_root);
         work_root = work_root * domain.root;
     }
@@ -394,8 +394,8 @@ TEST(test_public_inputs, compute_delta)
 
             numerator = numerator * T6;
 
-            fr::field_t T7 = fr::add(T0, sigma_1[i] * beta);
-            fr::field_t T8 = fr::add(T1, sigma_2[i] * beta);
+            fr::field_t T7 = (T0 + sigma_1[i] * beta);
+            fr::field_t T8 = (T1 + sigma_2[i] * beta);
             fr::field_t T9 = T7 * T8;
             denominator = denominator * T9;
             work_root = work_root * root;

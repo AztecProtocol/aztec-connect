@@ -9,8 +9,8 @@
 
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 
-#include <barretenberg/waffle/stdlib/common.hpp>
 #include <barretenberg/waffle/stdlib/bool/bool.hpp>
+#include <barretenberg/waffle/stdlib/common.hpp>
 #include <barretenberg/waffle/stdlib/field/field.hpp>
 #include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
 
@@ -23,8 +23,7 @@ typedef stdlib::field_t<waffle::TurboComposer> field_t;
 typedef stdlib::uint32<waffle::TurboComposer> uint32;
 typedef stdlib::witness_t<waffle::TurboComposer> witness_t;
 
-namespace
-{
+namespace {
 std::mt19937 engine;
 std::uniform_int_distribution<uint32_t> dist{ 0ULL, UINT32_MAX };
 
@@ -43,18 +42,16 @@ uint32_t get_random_int()
 std::vector<uint32_t> get_random_ints(size_t num)
 {
     std::vector<uint32_t> result;
-    for (size_t i = 0; i < num; ++i)
-    {
+    for (size_t i = 0; i < num; ++i) {
         result.emplace_back(get_random_int());
     }
     return result;
 }
-}
+} // namespace
 
 uint32_t get_value(uint32& input)
 {
-    return static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(static_cast<field_t>(input).get_value()).data[0]);
+    return static_cast<uint32_t>(static_cast<field_t>(input).get_value().from_montgomery_form().data[0]);
 }
 
 TEST(stdlib_uint32, test_add)
@@ -147,8 +144,8 @@ TEST(stdlib_uint32, test_mul)
         a = c;
         c = a * b;
     }
-    uint32_t c_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(c.get_witness_index())).data[0]);
+    uint32_t c_result =
+        static_cast<uint32_t>(composer.get_variable(c.get_witness_index()).from_montgomery_form().data[0]);
     EXPECT_EQ(c_result, c_expected);
     waffle::TurboProver prover = composer.preprocess();
 
@@ -186,8 +183,8 @@ TEST(stdlib_uint32, test_xor)
         c = a + b;
         a = c ^ a;
     }
-    uint32_t a_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(a.get_witness_index())).data[0]);
+    uint32_t a_result =
+        static_cast<uint32_t>(composer.get_variable(a.get_witness_index()).from_montgomery_form().data[0]);
     EXPECT_EQ(a_result, a_expected);
     waffle::TurboProver prover = composer.preprocess();
 
@@ -242,8 +239,7 @@ TEST(stdlib_uint32, test_xor_more_constants)
         c = (a + b) ^ (const_a ^ const_b);
     }
     uint32_t c_witness_index = c.get_witness_index();
-    uint32_t c_result =
-        static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(c_witness_index)).data[0]);
+    uint32_t c_result = static_cast<uint32_t>(composer.get_variable(c_witness_index).from_montgomery_form().data[0]);
     EXPECT_EQ(c_result, c_expected);
     waffle::TurboProver prover = composer.preprocess();
 
@@ -283,8 +279,7 @@ TEST(stdlib_uint32, test_and_constants)
         c = (~a & const_a) + (b & const_b);
     }
     uint32_t c_witness_index = c.get_witness_index();
-    uint32_t c_result =
-        static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(c_witness_index)).data[0]);
+    uint32_t c_result = static_cast<uint32_t>(composer.get_variable(c_witness_index).from_montgomery_form().data[0]);
     EXPECT_EQ(c_result, c_expected);
     waffle::TurboProver prover = composer.preprocess();
 
@@ -322,8 +317,8 @@ TEST(stdlib_uint32s, test_and)
         c = a + b;
         a = c & a;
     }
-    uint32_t a_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(a.get_witness_index())).data[0]);
+    uint32_t a_result =
+        static_cast<uint32_t>(composer.get_variable(a.get_witness_index()).from_montgomery_form().data[0]);
     EXPECT_EQ(a_result, a_expected);
 
     waffle::TurboProver prover = composer.preprocess();
@@ -362,8 +357,8 @@ TEST(stdlib_uint32, test_or)
         c = a + b;
         a = c | a;
     }
-    uint32_t a_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(a.get_witness_index())).data[0]);
+    uint32_t a_result =
+        static_cast<uint32_t>(composer.get_variable(a.get_witness_index()).from_montgomery_form().data[0]);
     EXPECT_EQ(a_result, a_expected);
 
     waffle::TurboProver prover = composer.preprocess();
@@ -407,8 +402,8 @@ TEST(stdlib_uint32, test_ror)
         c = a + b;
         a = c.ror(static_cast<uint32_t>(i % 31)) + a.ror(static_cast<uint32_t>((i + 1) % 31));
     }
-    uint32_t a_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(a.get_witness_index())).data[0]);
+    uint32_t a_result =
+        static_cast<uint32_t>(composer.get_variable(a.get_witness_index()).from_montgomery_form().data[0]);
     EXPECT_EQ(a_result, a_expected);
 
     waffle::TurboProver prover = composer.preprocess();
@@ -512,22 +507,22 @@ TEST(stdlib_uint32, test_hash_rounds)
         a = temp1 + temp2;
     }
 
-    uint32_t a_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(a.get_witness_index())).data[0]);
-    uint32_t b_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(b.get_witness_index())).data[0]);
-    uint32_t c_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(c.get_witness_index())).data[0]);
-    uint32_t d_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(d.get_witness_index())).data[0]);
-    uint32_t e_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(e.get_witness_index())).data[0]);
-    uint32_t f_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(f.get_witness_index())).data[0]);
-    uint32_t g_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(g.get_witness_index())).data[0]);
-    uint32_t h_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(h.get_witness_index())).data[0]);
+    uint32_t a_result =
+        static_cast<uint32_t>(composer.get_variable(a.get_witness_index()).from_montgomery_form().data[0]);
+    uint32_t b_result =
+        static_cast<uint32_t>(composer.get_variable(b.get_witness_index()).from_montgomery_form().data[0]);
+    uint32_t c_result =
+        static_cast<uint32_t>(composer.get_variable(c.get_witness_index()).from_montgomery_form().data[0]);
+    uint32_t d_result =
+        static_cast<uint32_t>(composer.get_variable(d.get_witness_index()).from_montgomery_form().data[0]);
+    uint32_t e_result =
+        static_cast<uint32_t>(composer.get_variable(e.get_witness_index()).from_montgomery_form().data[0]);
+    uint32_t f_result =
+        static_cast<uint32_t>(composer.get_variable(f.get_witness_index()).from_montgomery_form().data[0]);
+    uint32_t g_result =
+        static_cast<uint32_t>(composer.get_variable(g.get_witness_index()).from_montgomery_form().data[0]);
+    uint32_t h_result =
+        static_cast<uint32_t>(composer.get_variable(h.get_witness_index()).from_montgomery_form().data[0]);
 
     EXPECT_EQ(a_result, a_alt);
     EXPECT_EQ(b_result, b_alt);

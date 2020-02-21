@@ -152,13 +152,13 @@ void StandardComposer::create_big_add_gate_with_bit_extraction(const add_quad& i
     delta = variables[in.c] - delta;
 
     uint32_t delta_idx = add_variable(delta);
-    fr::field_t neg_four = fr::neg(fr::to_montgomery_form({ { 4, 0, 0, 0 } }));
+    constexpr fr::field_t neg_four = fr::field_t{ 4, 0, 0, 0 }.to_montgomery_form().neg();
     create_add_gate(add_triple{ in.c, in.d, delta_idx, fr::one, neg_four, fr::neg_one(), fr::zero });
 
-    fr::field_t two = fr::to_montgomery_form({ { 2, 0, 0, 0 } });
-    fr::field_t seven = fr::to_montgomery_form({ { 7, 0, 0, 0 } });
-    fr::field_t nine = fr::to_montgomery_form({ { 9, 0, 0, 0 } });
-    fr::field_t r_0 = fr::sub((delta * nine), fr::add(delta.sqr() * two, seven));
+    constexpr fr::field_t two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form();
+    constexpr fr::field_t seven = fr::field_t{ 7, 0, 0, 0 }.to_montgomery_form();
+    constexpr fr::field_t nine = fr::field_t{ 9, 0, 0, 0 }.to_montgomery_form();
+    const fr::field_t r_0 = (delta * nine) - ((delta.sqr() * two) + seven);
     uint32_t r_0_idx = add_variable(r_0);
     create_poly_gate(
         poly_triple{ delta_idx, delta_idx, r_0_idx, two.neg(), nine, fr::zero, fr::neg_one(), seven.neg() });
@@ -176,7 +176,7 @@ void StandardComposer::create_big_add_gate_with_bit_extraction(const add_quad& i
 
     // ain.a1 + bin.b2 + cin.c3 + din.c4 + r_1 = 0
 
-    fr::field_t r_2 = fr::add(r_1, fr::mul(variables[in.d], in.d_scaling));
+    fr::field_t r_2 = (r_1 + (variables[in.d] * in.d_scaling));
     uint32_t r_2_idx = add_variable(r_2);
     create_add_gate(add_triple{ in.d, r_1_idx, r_2_idx, in.d_scaling, fr::one, fr::neg_one(), fr::zero });
 
@@ -186,7 +186,7 @@ void StandardComposer::create_big_add_gate_with_bit_extraction(const add_quad& i
 
 void StandardComposer::create_big_mul_gate(const mul_quad& in)
 {
-    fr::field_t temp = fr::add(fr::mul(variables[in.c], in.c_scaling), fr::mul(variables[in.d], in.d_scaling));
+    fr::field_t temp = ((variables[in.c] * in.c_scaling) + (variables[in.d] * in.d_scaling));
     uint32_t temp_idx = add_variable(temp);
     create_add_gate(add_triple{ in.c, in.d, temp_idx, in.c_scaling, in.d_scaling, fr::neg_one(), fr::zero });
 
@@ -277,7 +277,7 @@ std::vector<uint32_t> StandardComposer::create_range_constraint(const uint32_t w
 
     std::vector<uint32_t> accumulators;
 
-    fr::field_t four = fr::to_montgomery_form({ 4, 0, 0, 0 });
+    constexpr fr::field_t four = fr::field_t{ 4, 0, 0, 0 }.to_montgomery_form();
     fr::field_t accumulator = fr::zero;
     uint32_t accumulator_idx = 0;
     for (size_t i = num_bits - 1; i < num_bits; i -= 2) {
@@ -290,10 +290,9 @@ std::vector<uint32_t> StandardComposer::create_range_constraint(const uint32_t w
         create_bool_gate(lo_idx);
 
         uint64_t quad = (lo ? 1U : 0U) + (hi ? 2U : 0U);
-        uint32_t quad_idx = add_variable(fr::to_montgomery_form({ quad, 0, 0, 0 }));
+        uint32_t quad_idx = add_variable(fr::field_t{ quad, 0, 0, 0 }.to_montgomery_form());
 
-        create_add_gate(
-            add_triple{ lo_idx, hi_idx, quad_idx, fr::one, fr::one + fr::one, fr::neg_one(), fr::zero });
+        create_add_gate(add_triple{ lo_idx, hi_idx, quad_idx, fr::one, fr::one + fr::one, fr::neg_one(), fr::zero });
 
         if (i == num_bits - 1) {
             accumulators.push_back(quad_idx);
@@ -331,8 +330,8 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
     uint32_t left_accumulator_idx = zero_idx;
     uint32_t right_accumulator_idx = zero_idx;
     uint32_t out_accumulator_idx = zero_idx;
-    fr::field_t four = fr::to_montgomery_form({ { 4, 0, 0, 0 } });
-    fr::field_t neg_two = fr::neg(fr::to_montgomery_form({ { 2, 0, 0, 0 } }));
+    constexpr fr::field_t four = fr::field_t{ 4, 0, 0, 0 }.to_montgomery_form();
+    constexpr fr::field_t neg_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
     for (size_t i = num_bits - 1; i < num_bits; i -= 2) {
         bool left_hi_val = left_witness_value.get_bit(i);
         bool left_lo_val = fr::get_bit(left_witness_value, (i - 1));
@@ -378,11 +377,9 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
                                       fr::neg_one(),
                                       fr::zero });
 
-        fr::field_t left_quad =
-            fr::add(fr::add(variables[left_lo_idx], variables[left_hi_idx]), variables[left_hi_idx]);
-        fr::field_t right_quad =
-            fr::add(fr::add(variables[right_lo_idx], variables[right_hi_idx]), variables[right_hi_idx]);
-        fr::field_t out_quad = fr::add(fr::add(variables[out_lo_idx], variables[out_hi_idx]), variables[out_hi_idx]);
+        fr::field_t left_quad = variables[left_lo_idx] + variables[left_hi_idx] + variables[left_hi_idx];
+        fr::field_t right_quad = variables[right_lo_idx] + variables[right_hi_idx] + variables[right_hi_idx];
+        fr::field_t out_quad = variables[out_lo_idx] + variables[out_hi_idx] + variables[out_hi_idx];
 
         uint32_t left_quad_idx = add_variable(left_quad);
         uint32_t right_quad_idx = add_variable(right_quad);
@@ -481,15 +478,24 @@ void StandardComposer::create_dummy_gates()
 {
     gate_flags.push_back(0);
     // add in a dummy gate to ensure that all of our polynomials are not zero and not identical
-    q_m.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
-    q_1.emplace_back(fr::to_montgomery_form({ { 2, 0, 0, 0 } }));
-    q_2.emplace_back(fr::to_montgomery_form({ { 3, 0, 0, 0 } }));
-    q_3.emplace_back(fr::to_montgomery_form({ { 4, 0, 0, 0 } }));
-    q_c.emplace_back(fr::to_montgomery_form({ { 5, 0, 0, 0 } }));
+    constexpr fr::field_t one = fr::field_t{ 1, 0, 0, 0 }.to_montgomery_form();
+    constexpr fr::field_t two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form();
+    constexpr fr::field_t three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form();
+    constexpr fr::field_t four = fr::field_t{ 4, 0, 0, 0 }.to_montgomery_form();
+    constexpr fr::field_t five = fr::field_t{ 5, 0, 0, 0 }.to_montgomery_form();
+    constexpr fr::field_t six = fr::field_t{ 6, 0, 0, 0 }.to_montgomery_form();
+    constexpr fr::field_t seven = fr::field_t{ 7, 0, 0, 0 }.to_montgomery_form();
+    constexpr fr::field_t minus_twenty = fr::field_t{ 20, 0, 0, 0 }.to_montgomery_form().neg();
 
-    uint32_t a_idx = add_variable(fr::to_montgomery_form({ { 6, 0, 0, 0 } }));
-    uint32_t b_idx = add_variable(fr::to_montgomery_form({ { 7, 0, 0, 0 } }));
-    uint32_t c_idx = add_variable(fr::neg(fr::to_montgomery_form({ { 20, 0, 0, 0 } })));
+    q_m.emplace_back(one);
+    q_1.emplace_back(two);
+    q_2.emplace_back(three);
+    q_3.emplace_back(four);
+    q_c.emplace_back(five);
+
+    uint32_t a_idx = add_variable(six);
+    uint32_t b_idx = add_variable(seven);
+    uint32_t c_idx = add_variable(minus_twenty);
 
     w_l.emplace_back(a_idx);
     w_r.emplace_back(b_idx);
@@ -508,11 +514,11 @@ void StandardComposer::create_dummy_gates()
 
     // add a second dummy gate the ensure our permutation polynomials are also
     // distinct from the identity permutation
-    q_m.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
-    q_1.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
-    q_2.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
-    q_3.emplace_back(fr::to_montgomery_form({ { 1, 0, 0, 0 } }));
-    q_c.emplace_back((fr::to_montgomery_form({ { 127, 0, 0, 0 } })));
+    q_m.emplace_back(one);
+    q_1.emplace_back(one);
+    q_2.emplace_back(one);
+    q_3.emplace_back(one);
+    q_c.emplace_back(fr::field_t{ 127, 0, 0, 0 }.to_montgomery_form());
 
     w_l.emplace_back(c_idx);
     w_r.emplace_back(a_idx);

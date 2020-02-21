@@ -514,7 +514,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
 
     if (g1::on_curve(key->constraint_selectors.at("Q_FIXED_BASE_SELECTOR"))) {
         points.push_back(key->constraint_selectors.at("Q_FIXED_BASE_SELECTOR"));
-        scalars.push_back(fr::mul(challenge.nu_base, challenge.nu_step));
+        scalars.push_back((challenge.nu_base * challenge.nu_step));
     }
 
     return VerifierBaseWidget::challenge_coefficients{ alpha_g * challenge.alpha_step,

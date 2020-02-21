@@ -43,7 +43,7 @@ TurboComposer::TurboComposer(const size_t size_hint)
 void TurboComposer::create_dummy_gate()
 {
     gate_flags.push_back(0);
-    uint32_t idx = add_variable(fr::to_montgomery_form({ { 1, 1, 1, 1 } }));
+    uint32_t idx = add_variable(fr::field_t{ 1, 1, 1, 1 }.to_montgomery_form());
     w_l.emplace_back(idx);
     w_r.emplace_back(idx);
     w_o.emplace_back(idx);
@@ -565,7 +565,7 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
             const size_t bit_index = (num_quads - i) << 1;
             const uint64_t quad = static_cast<uint64_t>(witness_value.get_bit(bit_index)) +
                                   2ULL * static_cast<uint64_t>(fr::get_bit(witness_value, bit_index + 1));
-            const fr::field_t quad_element = fr::to_montgomery_form({ quad, 0, 0, 0 });
+            const fr::field_t quad_element = fr::field_t{ quad, 0, 0, 0 }.to_montgomery_form();
             accumulator.self_add(accumulator);
             accumulator.self_add(accumulator);
             accumulator.self_add(quad_element);
@@ -725,16 +725,16 @@ waffle::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t
 
         const uint64_t right_quad = static_cast<uint64_t>(right_witness_value.get_bit(bit_index)) +
                                     2ULL * static_cast<uint64_t>(fr::get_bit(right_witness_value, bit_index + 1));
-        const fr::field_t left_quad_element = fr::to_montgomery_form({ left_quad, 0, 0, 0 });
-        const fr::field_t right_quad_element = fr::to_montgomery_form({ right_quad, 0, 0, 0 });
+        const fr::field_t left_quad_element = fr::field_t{ left_quad, 0, 0, 0 }.to_montgomery_form();
+        const fr::field_t right_quad_element = fr::field_t{ right_quad, 0, 0, 0 }.to_montgomery_form();
         fr::field_t out_quad_element;
         if (is_xor_gate) {
-            out_quad_element = fr::to_montgomery_form({ left_quad ^ right_quad, 0, 0, 0 });
+            out_quad_element = fr::field_t{ left_quad ^ right_quad, 0, 0, 0 }.to_montgomery_form();
         } else {
-            out_quad_element = fr::to_montgomery_form({ left_quad & right_quad, 0, 0, 0 });
+            out_quad_element = fr::field_t{ left_quad & right_quad, 0, 0, 0 }.to_montgomery_form();
         }
 
-        const fr::field_t product_quad_element = fr::to_montgomery_form({ { left_quad * right_quad, 0, 0, 0 } });
+        const fr::field_t product_quad_element = fr::field_t{ left_quad * right_quad, 0, 0, 0 }.to_montgomery_form();
 
         left_accumulator.self_add(left_accumulator);
         left_accumulator.self_add(left_accumulator);

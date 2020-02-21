@@ -181,7 +181,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     T1.self_add(linear_eval);
     t_eval.self_add(T1);
 
-    fr::field_t alpha_base = fr::sqr(alpha.sqr());
+    fr::field_t alpha_base = alpha.sqr().sqr();
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
         alpha_base =
             verifier_widgets[i]->compute_quotient_evaluation_contribution(key.get(), alpha_base, transcript, t_eval);
@@ -299,7 +299,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
         }
     }
 
-    VerifierBaseWidget::challenge_coefficients coeffs{ fr::sqr(alpha.sqr()), alpha, nu_base, nu, nu };
+    VerifierBaseWidget::challenge_coefficients coeffs{ alpha.sqr().sqr(), alpha, nu_base, nu, nu };
 
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
         coeffs =

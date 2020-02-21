@@ -804,8 +804,8 @@ ExtendedProver ExtendedComposer::preprocess()
     // //     {
     // //         printf("right copy at index %lu fails. mapped to gate %lu. right wire and copy wire = \n", i,
     // //         output_state.sigma_2_mapping[i] & mask); printf("raw value = %x \n", output_state.sigma_2_mapping[i]);
-    // //         fr::print(fr::from_montgomery_form(output_state.w_r[i]));
-    // //         fr::print(fr::from_montgomery_form(right_copy));
+    // //         fr::print(output_state.w_r[i]).from_montgomery_form();
+    // //         fr::print(right_copy).from_montgomery_form();
     // //         for (size_t j = 0; j < adjusted_gate_indices.size(); ++j)
     // //         {
     // //             if (i == adjusted_gate_indices[j])
@@ -819,8 +819,8 @@ ExtendedProver ExtendedComposer::preprocess()
     // //     {
     // //         printf("output copy at index %lu fails. mapped to gate %lu. output wire and copy wire = \n", i,
     // //         output_state.sigma_3_mapping[i] & mask); printf("raw value = %x \n", output_state.sigma_3_mapping[i]);
-    // //         fr::print(fr::from_montgomery_form(output_state.w_o[i]));
-    // //         fr::print(fr::from_montgomery_form(output_copy));
+    // //         fr::print(output_state.w_o[i]).from_montgomery_form();
+    // //         fr::print(output_copy).from_montgomery_form();
     // //         for (size_t j = 0; j < adjusted_gate_indices.size(); ++j)
     // //         {
     // //             if (i == adjusted_gate_indices[j])
@@ -863,23 +863,23 @@ ExtendedProver ExtendedComposer::preprocess()
     // //         }
     // //         printf("arithmetic gate failure at index i = %lu, original gate index = %lu \n", failure_idx,
     // //         original_failure_idx); printf("selectors:\n");
-    // //         fr::print(fr::from_montgomery_form(arithmetic_widget->q_l[i]));
-    // //         fr::print(fr::from_montgomery_form(arithmetic_widget->q_r[i]));
-    // //         fr::print(fr::from_montgomery_form(arithmetic_widget->q_o[i]));
-    // //         fr::print(fr::from_montgomery_form(arithmetic_widget->q_c[i]));
-    // //         fr::print(fr::from_montgomery_form(arithmetic_widget->q_m[i]));
-    // //         fr::print(fr::from_montgomery_form(sequential_widget->q_o_next[i]));
+    // //         fr::print(arithmetic_widget->q_l[i]).from_montgomery_form();
+    // //         fr::print(arithmetic_widget->q_r[i]).from_montgomery_form();
+    // //         fr::print(arithmetic_widget->q_o[i]).from_montgomery_form();
+    // //         fr::print(arithmetic_widget->q_c[i]).from_montgomery_form();
+    // //         fr::print(arithmetic_widget->q_m[i]).from_montgomery_form();
+    // //         fr::print(sequential_widget->q_o_next[i]).from_montgomery_form();
     // //         printf("witnesses: \n");
-    // //         fr::print(fr::from_montgomery_form(output_state.w_l[i]));
-    // //         fr::print(fr::from_montgomery_form(output_state.w_r[i]));
-    // //         fr::print(fr::from_montgomery_form(output_state.w_o[i]));
-    // //         fr::print(fr::from_montgomery_form(output_state.w_o[shifted_idx]));
+    // //         fr::print(output_state.w_l[i]).from_montgomery_form();
+    // //         fr::print(output_state.w_r[i]).from_montgomery_form();
+    // //         fr::print(output_state.w_o[i]).from_montgomery_form();
+    // //         fr::print(output_state.w_o[shifted_idx]).from_montgomery_form();
     // //     }
     // // }
     // // printf("bool wires...\n");
     // // for (size_t i = 0; i < bool_widget->q_bl.get_size(); ++i)
     // // {
-    // //     if (!(fr::from_montgomery_form(bool_widget->q_bl[i]) == fr::zero))
+    // //     if (!(bool_widget->q_bl[i]) == fr::zero).from_montgomery_form()
     // //     {
     // //         fr::field_t t = output_state.w_l[i];
     // //         fr::field_t u = t.sqr() - t;
@@ -888,7 +888,7 @@ ExtendedProver ExtendedComposer::preprocess()
     // //             printf("bool fail? left \n");
     // //         }
     // //     }
-    // //     if (!(fr::from_montgomery_form(bool_widget->q_br[i]) == fr::zero))
+    // //     if (!(bool_widget->q_br[i]) == fr::zero).from_montgomery_form()
     // //     {
     // //         fr::field_t t = output_state.w_r[i];
     // //         fr::field_t u = t.sqr() - t;

@@ -6,12 +6,6 @@
 
 #include <type_traits>
 
-#ifdef DISABLE_SHENANIGANS
-#define NO_ASM 1
-#else
-#define NO_ASM std::is_constant_evaluated()
-#endif
-
 namespace test {
 namespace internal {
 constexpr uint64_t zero_reference = 0;
@@ -19,6 +13,10 @@ constexpr uint64_t zero_reference = 0;
 template <class T>
 constexpr std::pair<uint64_t, uint64_t> field<T>::mul_wide(const uint64_t a, const uint64_t b) const noexcept
 {
+#if defined(__SIZEOF_INT128__) && !defined(__wasm__)
+    const uint128_t res = ((uint128_t)a * (uint128_t)b);
+    return { (uint64_t)(res & lo_mask), (uint64_t)(res >> 64) };
+#else
     const uint64_t a_lo = a & 0xffffffffULL;
     const uint64_t a_hi = a >> 32ULL;
     const uint64_t b_lo = b & 0xffffffffULL;
@@ -32,6 +30,7 @@ constexpr std::pair<uint64_t, uint64_t> field<T>::mul_wide(const uint64_t a, con
     const uint64_t cross = (lo_lo >> 32ULL) + (hi_lo & 0xffffffffULL) + lo_hi;
 
     return { (cross << 32ULL) | (lo_lo & 0xffffffffULL), (hi_lo >> 32ULL) + (cross >> 32ULL) + hi_hi };
+#endif
 }
 
 template <class T>
@@ -50,6 +49,22 @@ constexpr std::pair<uint64_t, uint64_t> field<T>::mac(const uint64_t a,
     result.first += carry_in;
     const uint64_t overflow_carry = (result.first < carry_in);
     result.second += (overflow_c + overflow_carry);
+    return result;
+#endif
+}
+
+template <class T>
+constexpr std::pair<uint64_t, uint64_t> field<T>::mac_mini(const uint64_t a, const uint64_t b, const uint64_t c) const
+    noexcept
+{
+#if defined(__SIZEOF_INT128__) && !defined(__wasm__)
+    const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c);
+    return { (uint64_t)(res & lo_mask), (uint64_t)(res >> 64) };
+#else
+    auto result = mul_wide(b, c, r, carry_out);
+    result.first += a;
+    const uint64_t overflow_c = (result.first < a);
+    result.second += (overflow_c);
     return result;
 #endif
 }
@@ -97,6 +112,18 @@ constexpr std::pair<uint64_t, uint64_t> field<T>::addc(const uint64_t a,
     r += carry_in;
     const uint64_t carry_out = carry_temp + (r < carry_in);
     return { r, carry_out };
+#endif
+}
+
+template <class T>
+constexpr std::pair<uint64_t, uint64_t> field<T>::addc_mini(const uint64_t a, const uint64_t b) const noexcept
+{
+#if defined(__SIZEOF_INT128__) && !defined(__wasm__)
+    uint128_t res = (uint128_t)a + (uint128_t)b;
+    return { (uint64_t)(res & lo_mask), (uint64_t)(res >> 64) };
+#else
+    uint64_t r = a + b;
+    return { r, uint64_t(r < a) };
 #endif
 }
 
@@ -198,26 +225,59 @@ template <class T> constexpr field<T> field<T>::montgomery_reduce(const wide_arr
 }
 
 template <class T> constexpr class field<T>::wide_array field<T>::mul_512(const field& other) const noexcept {
-    const auto [r0, t0] = mac(0, data[0], other.data[0], 0ULL);
-    const auto [q0, t1] = mac(0, data[0], other.data[1], t0);
-    const auto [q1, t2] = mac(0, data[0], other.data[2], t1);
-    const auto [q2, z0] = mac(0, data[0], other.data[3], t2);
+    const auto [r0, t0] = mul_wide(data[0], other.data[0]);
+    const auto [q0, t1] = mac_mini(t0, data[0], other.data[1]);
+    const auto [q1, t2] = mac_mini(t1, data[0], other.data[2]);
+    const auto [q2, z0] = mac_mini(t2, data[0], other.data[3]);
 
-    const auto [r1, t3] = mac(q0, data[1], other.data[0], 0ULL);
+    const auto [r1, t3] = mac_mini(q0, data[1], other.data[0]);
     const auto [q3, t4] = mac(q1, data[1], other.data[1], t3);
     const auto [q4, t5] = mac(q2, data[1], other.data[2], t4);
     const auto [q5, z1] = mac(z0, data[1], other.data[3], t5);
 
-    const auto [r2, t6] = mac(q3, data[2], other.data[0], 0ULL);
+    const auto [r2, t6] = mac_mini(q3, data[2], other.data[0]);
     const auto [q6, t7] = mac(q4, data[2], other.data[1], t6);
     const auto [q7, t8] = mac(q5, data[2], other.data[2], t7);
     const auto [q8, z2] = mac(z1, data[2], other.data[3], t8);
 
-    const auto [r3, t9] = mac(q6, data[3], other.data[0], 0ULL);
+    const auto [r3, t9] = mac_mini(q6, data[3], other.data[0]);
     const auto [r4, t10] = mac(q7, data[3], other.data[1], t9);
     const auto [r5, t11] = mac(q8, data[3], other.data[2], t10);
     const auto [r6, r7] = mac(z2, data[3], other.data[3], t11);
 
+    return { r0, r1, r2, r3, r4, r5, r6, r7 };
+}
+
+template <class T>
+constexpr class field<T>::wide_array field<T>::sqr_512() const noexcept {
+    const auto [r0, aa1] = mul_wide(data[0], data[0]);
+    const auto [ab0, ab1] = mul_wide(data[0], data[1]);
+
+    const auto [r1, c0] = addc(ab0, ab0, aa1);
+
+    const auto [ac0, ac1] = mul_wide(data[0], data[2]);
+    const auto [bb0, bb1] = mac(ac0, data[1], data[1], ac0);
+    const auto [t0, c1a] = addc(ab1, ab1, c0);
+    const auto [r2, c1b] = addc_mini(t0, bb0);
+
+    const auto [ad0, ad1] = mac_mini(ac1, data[0], data[3]);
+    const auto [bc0, bc1] = mul_wide(data[1], data[2]);
+    const auto [t1, c3a] = addc(bb1, c1a + c1b, ad0);
+    const auto [t2, c3b] = addc(t1, ad0, bc0);
+    const auto [r3, c3c] = addc_mini(t2, bc0);
+
+    const auto [bd0, bd1] = mac(bc1, data[1], data[3], ad1);
+    const auto [cc0, cc1] = mul_wide(data[2], data[2]);
+    const auto [t3, c4a] = addc(bd0, bd0, c3a + c3b + c3c);
+    const auto [r4, c4b] = addc_mini(cc0, t3);
+
+    const auto [cd0, cd1] = mac_mini(bd1, data[2], data[3]);
+    const auto [t4, c5a] = addc(cd0, cd0, cc1);
+    const auto [r5, c5b] = addc_mini(t4, c4a + c4b);
+
+    const auto [dd0, dd1] = mac_mini(cd1, data[3], data[3]);
+    const auto [r6, t5] = addc(dd0, c5a + c5b, cd1);
+    const auto r7 = addc_discard_hi(t5, dd1, 0ULL);
     return { r0, r1, r2, r3, r4, r5, r6, r7 };
 }
 
@@ -774,38 +834,54 @@ template <class T> void field<T>::asm_self_reduce_once(const field& a) noexcept
  **/
 template <class T> constexpr field<T> field<T>::operator*(const field& other) const noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    return montgomery_reduce(mul_512(other)).subtract(modulus);
+#else
+    if (std::is_constant_evaluated()) {
         return montgomery_reduce(mul_512(other)).subtract(modulus);
     } else {
         return asm_mul(*this, other);
     }
+#endif
 }
 
 template <class T> constexpr field<T> field<T>::mul_with_coarse_reduction(const field& other) const noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    return montgomery_reduce(mul_512(other));
+#else
+    if (std::is_constant_evaluated()) {
         return montgomery_reduce(mul_512(other));
     } else {
         return asm_mul_with_coarse_reduction(*this, other);
     }
+#endif
 }
 
 template <class T> constexpr void field<T>::self_mul(const field& other) noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    *this = operator*(other);
+#else
+    if (std::is_constant_evaluated()) {
         *this = operator*(other);
     } else {
         asm_self_mul(*this, other);
     }
+#endif
 }
 
 template <class T> constexpr void field<T>::self_mul_with_coarse_reduction(const field& other) noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    *this = montgomery_reduce(mul_512(other));
+#else
+    if (std::is_constant_evaluated()) {
         *this = montgomery_reduce(mul_512(other));
     } else {
         asm_self_mul_with_coarse_reduction(*this, other);
     }
+#endif
 }
 
 /**
@@ -815,38 +891,54 @@ template <class T> constexpr void field<T>::self_mul_with_coarse_reduction(const
  **/
 template <class T> constexpr field<T> field<T>::sqr() const noexcept
 {
-    if (NO_ASM) {
-        return operator*(*this);
+#ifdef DISABLE_SHENANIGANS
+    return montgomery_reduce(sqr_512()).subtract(modulus);
+#else
+    if (std::is_constant_evaluated()) {
+        return montgomery_reduce(sqr_512()).subtract(modulus);
     } else {
         return asm_sqr(*this);
     }
+#endif
 }
 
 template <class T> constexpr field<T> field<T>::sqr_with_coarse_reduction() const noexcept
 {
-    if (NO_ASM) {
-        return montgomery_reduce(mul_512(*this));
+#ifdef DISABLE_SHENANIGANS
+    return montgomery_reduce(sqr_512());
+#else
+    if (std::is_constant_evaluated()) {
+        return montgomery_reduce(sqr_512());
     } else {
         return asm_sqr_with_coarse_reduction(*this);
     }
+#endif
 }
 
 template <class T> constexpr void field<T>::self_sqr() noexcept
 {
-    if (NO_ASM) {
-        *this = sqr();
+#ifdef DISABLE_SHENANIGANS
+    *this = montgomery_reduce(sqr_512()).subtract(modulus);
+#else
+    if (std::is_constant_evaluated()) {
+        *this = montgomery_reduce(sqr_512()).subtract(modulus);
     } else {
         asm_self_sqr(*this);
     }
+#endif
 }
 
 template <class T> constexpr void field<T>::self_sqr_with_coarse_reduction() noexcept
 {
-    if (NO_ASM) {
-        *this = montgomery_reduce(mul_512(*this));
+#ifdef DISABLE_SHENANIGANS
+    *this = montgomery_reduce(sqr_512());
+#else
+    if (std::is_constant_evaluated()) {
+        *this = montgomery_reduce(sqr_512());
     } else {
         asm_self_sqr_with_coarse_reduction(*this);
     }
+#endif
 }
 
 /**
@@ -857,7 +949,14 @@ template <class T> constexpr void field<T>::self_sqr_with_coarse_reduction() noe
 
 template <class T> constexpr field<T> field<T>::add_without_reduction(const field& other) const noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    const auto [r0, c0] = addc(data[0], other.data[0], 0);
+    const auto [r1, c1] = addc(data[1], other.data[1], c0);
+    const auto [r2, c2] = addc(data[2], other.data[2], c1);
+    const auto r3 = addc_discard_hi(data[3], other.data[3], c2);
+    return field{ r0, r1, r2, r3 };
+#else
+    if (std::is_constant_evaluated()) {
         const auto [r0, c0] = addc(data[0], other.data[0], 0);
         const auto [r1, c1] = addc(data[1], other.data[1], c0);
         const auto [r2, c2] = addc(data[2], other.data[2], c1);
@@ -866,51 +965,72 @@ template <class T> constexpr field<T> field<T>::add_without_reduction(const fiel
     } else {
         return asm_add_without_reduction(*this, other);
     }
+#endif
 }
 
 template <class T> constexpr field<T> field<T>::operator+(const field& other) const noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    return add_without_reduction(other).subtract(modulus);
+#else
+    if (std::is_constant_evaluated()) {
         return add_without_reduction(other).subtract(modulus);
     } else {
         return asm_add(*this, other);
     }
+#endif
 }
 
 template <class T> constexpr field<T> field<T>::add_with_coarse_reduction(const field& other) const noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    return add_without_reduction(other).subtract_coarse(twice_modulus);
+#else
+    if (std::is_constant_evaluated()) {
         return add_without_reduction(other).subtract_coarse(twice_modulus);
     } else {
         return asm_add_with_coarse_reduction(*this, other);
     }
+#endif
 }
 
 template <class T> constexpr void field<T>::self_add_without_reduction(const field& other) noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    *this = add_without_reduction(other);
+#else
+    if (std::is_constant_evaluated()) {
         *this = add_without_reduction(other);
     } else {
         asm_self_add_without_reduction(*this, other);
     }
+#endif
 }
 
 template <class T> constexpr void field<T>::self_add(const field& other) noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    (*this) = operator+(other);
+#else
+    if (std::is_constant_evaluated()) {
         (*this) = operator+(other);
     } else {
         asm_self_add(*this, other);
     }
+#endif
 }
 
 template <class T> constexpr void field<T>::self_add_with_coarse_reduction(const field& other) noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    *this = add_without_reduction(other).subtract_coarse(twice_modulus);
+#else
+    if (std::is_constant_evaluated()) {
         *this = add_without_reduction(other).subtract_coarse(twice_modulus);
     } else {
         asm_self_add_with_coarse_reduction(*this, other);
     }
+#endif
 }
 
 /**
@@ -920,38 +1040,54 @@ template <class T> constexpr void field<T>::self_add_with_coarse_reduction(const
  **/
 template <class T> constexpr field<T> field<T>::operator-(const field& other) const noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    return subtract(other);
+#else
+    if (std::is_constant_evaluated()) {
         return subtract(other);
     } else {
         return asm_sub(*this, other);
     }
+#endif
 }
 
 template <class T> constexpr field<T> field<T>::sub_with_coarse_reduction(const field& other) const noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    return subtract_coarse(other);
+#else
+    if (std::is_constant_evaluated()) {
         return subtract_coarse(other);
     } else {
         return asm_sub_with_coarse_reduction(*this, other);
     }
+#endif
 }
 
 template <class T> constexpr void field<T>::self_sub(const field& other) noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    *this = subtract(other);
+#else
+    if (std::is_constant_evaluated()) {
         *this = subtract(other);
     } else {
         asm_self_sub(*this, other);
     }
+#endif
 }
 
 template <class T> constexpr void field<T>::self_sub_with_coarse_reduction(const field& other) noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    *this = subtract_coarse(other);
+#else
+    if (std::is_constant_evaluated()) {
         *this = subtract_coarse(other);
     } else {
         asm_self_sub_with_coarse_reduction(*this, other);
     }
+#endif
 }
 
 template <class T> constexpr bool field<T>::operator>(const field& other) const noexcept
@@ -1009,20 +1145,28 @@ template <class T> constexpr void field<T>::self_from_montgomery_form() noexcept
 
 template <class T> constexpr field<T> field<T>::reduce_once() const noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    return subtract(modulus);
+#else
+    if (std::is_constant_evaluated()) {
         return subtract(modulus);
     } else {
         return asm_reduce_once(*this);
     }
+#endif
 }
 
 template <class T> constexpr void field<T>::self_reduce_once() noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    *this = subtract(modulus);
+#else
+    if (std::is_constant_evaluated()) {
         *this = subtract(modulus);
     } else {
         asm_self_reduce_once(*this);
     }
+#endif
 }
 
 template <class T> field<T> constexpr field<T>::neg() const noexcept
@@ -1037,11 +1181,15 @@ template <class T> constexpr void field<T>::self_neg() noexcept
 
 template <class T> constexpr void field<T>::self_conditional_negate(const uint64_t predicate) noexcept
 {
-    if (NO_ASM) {
+#ifdef DISABLE_SHENANIGANS
+    *this = predicate ? neg() : *this;
+#else
+    if (std::is_constant_evaluated()) {
         *this = predicate ? neg() : *this;
     } else {
         asm_conditional_negate(*this, predicate);
     }
+#endif
 }
 
 template <class T> constexpr field<T> field<T>::pow(const field& exponent) const noexcept
@@ -1136,6 +1284,7 @@ template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noex
     field c = t2 * t1; // z^Q
 
     size_t m = T::primitive_root_log_size;
+
     while (t != one) {
         size_t i = 0;
         field t2m = t;

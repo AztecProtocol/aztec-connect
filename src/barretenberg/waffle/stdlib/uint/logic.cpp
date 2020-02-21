@@ -1,9 +1,9 @@
 #include "./uint.hpp"
 
-#include "../../composer/turbo_composer.hpp"
-#include "../../composer/standard_composer.hpp"
 #include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
+#include "../../composer/standard_composer.hpp"
+#include "../../composer/turbo_composer.hpp"
 
 using namespace barretenberg;
 
@@ -140,8 +140,8 @@ uint<Composer, Native> uint<Composer, Native>::operator>>(const uint64_t shift) 
     const waffle::add_quad gate{
         context->zero_idx, context->add_variable(output),
         right_index,       left_index,
-        fr::zero,          fr::neg(fr::to_montgomery_form({ { 6, 0, 0, 0 } })),
-        fr::zero,          fr::to_montgomery_form({ { 12, 0, 0, 0 } }),
+        fr::zero,          fr::field_t{ 6, 0, 0, 0 }.to_montgomery_form().neg(),
+        fr::zero,          fr::field_t{ 12, 0, 0, 0 }.to_montgomery_form(),
         fr::zero,
     };
 
@@ -281,8 +281,8 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
         const fr::field_t base_shift_factor = t1;
 
         const waffle::add_triple gate{ base_idx,          left_idx,          context->add_variable(output),
-                                 base_shift_factor, left_shift_factor, fr::neg_one(),
-                                 fr::zero };
+                                       base_shift_factor, left_shift_factor, fr::neg_one(),
+                                       fr::zero };
 
         context->create_add_gate(gate);
 
@@ -307,7 +307,8 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
 
     fr::field_t q_1 = fr::neg(out_scale_factor);
     fr::field_t q_2 = base_scale_factor;
-    fr::field_t q_3 = fr::sub(fr::to_montgomery_form({ { 12, 0, 0, 0 } }), pivot_scale_factor);
+    constexpr fr::field_t twelve = fr::field_t{ 12, 0, 0, 0 }.to_montgomery_form();
+    fr::field_t q_3 = twelve - pivot_scale_factor;
 
     fr::field_t denominator = fr::one - b_hi_scale_factor;
     denominator = denominator.invert();

@@ -3,9 +3,9 @@
 
 #include "../../../curves/bn254/fr.hpp"
 
-#include "../../composer/standard_composer.hpp"
 #include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
+#include "../../composer/standard_composer.hpp"
 #include "../../composer/turbo_composer.hpp"
 
 using namespace barretenberg;
@@ -34,8 +34,7 @@ template <typename ComposerContext>
 bool_t<ComposerContext>::bool_t(const witness_t<ComposerContext>& value)
     : context(value.context)
 {
-    ASSERT((value.witness == barretenberg::fr::zero) ||
-           (value.witness == barretenberg::fr::one));
+    ASSERT((value.witness == barretenberg::fr::zero) || (value.witness == barretenberg::fr::one));
     witness_index = value.witness_index;
     context->create_bool_gate(witness_index);
     witness_bool = (value.witness == barretenberg::fr::one);
@@ -100,8 +99,7 @@ template <typename ComposerContext> bool_t<ComposerContext>& bool_t<ComposerCont
 template <typename ComposerContext>
 bool_t<ComposerContext>& bool_t<ComposerContext>::operator=(const witness_t<ComposerContext>& other)
 {
-    ASSERT((other.witness == barretenberg::fr::one) ||
-           (other.witness == barretenberg::fr::zero));
+    ASSERT((other.witness == barretenberg::fr::one) || (other.witness == barretenberg::fr::zero));
     context = other.context;
     witness_bool = (other.witness == barretenberg::fr::zero) ? false : true;
     witness_index = other.witness_index;
@@ -256,8 +254,7 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator^(const bool_t& other) 
         barretenberg::fr::field_t right_coefficient;
         barretenberg::fr::field_t constant_coefficient;
         if ((witness_inverted && other.witness_inverted) || (!witness_inverted && !other.witness_inverted)) {
-            multiplicative_coefficient =
-                barretenberg::fr::add(barretenberg::fr::neg_one(), barretenberg::fr::neg_one());
+            multiplicative_coefficient = (barretenberg::fr::neg_one() + barretenberg::fr::neg_one());
             left_coefficient = barretenberg::fr::one;
             right_coefficient = barretenberg::fr::one;
             constant_coefficient = barretenberg::fr::zero;
@@ -338,8 +335,7 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator==(const bool_t& other)
             right_coefficient = barretenberg::fr::neg_one();
             constant_coefficient = barretenberg::fr::one;
         } else {
-            multiplicative_coefficient =
-                barretenberg::fr::add(barretenberg::fr::neg_one(), barretenberg::fr::neg_one());
+            multiplicative_coefficient = (barretenberg::fr::neg_one() + barretenberg::fr::neg_one());
             left_coefficient = barretenberg::fr::one;
             right_coefficient = barretenberg::fr::one;
             constant_coefficient = barretenberg::fr::zero;
@@ -353,27 +349,28 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator==(const bool_t& other)
     }
 }
 
-template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerContext>::operator!=(const bool_t<ComposerContext>& other) const
+template <typename ComposerContext>
+bool_t<ComposerContext> bool_t<ComposerContext>::operator!=(const bool_t<ComposerContext>& other) const
 {
     return operator^(other);
 }
 
-template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerContext>::operator&&(const bool_t<ComposerContext>& other) const
+template <typename ComposerContext>
+bool_t<ComposerContext> bool_t<ComposerContext>::operator&&(const bool_t<ComposerContext>& other) const
 {
     return operator&(other);
 }
 
-template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerContext>::operator||(const bool_t<ComposerContext>& other) const
+template <typename ComposerContext>
+bool_t<ComposerContext> bool_t<ComposerContext>::operator||(const bool_t<ComposerContext>& other) const
 {
     return operator|(other);
 }
 
-
 template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerContext>::normalize() const
 {
     bool is_constant = (witness_index == static_cast<uint32_t>(-1));
-    if (is_constant)
-    {
+    if (is_constant) {
         return *this;
     }
 
@@ -392,9 +389,7 @@ template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerConte
     barretenberg::fr::field_t q_m = barretenberg::fr::zero;
     barretenberg::fr::field_t q_r = barretenberg::fr::zero;
 
-    const waffle::poly_triple gate_coefficients{
-        witness_index, witness_index, new_witness, q_m, q_l, q_r, q_o, q_c
-    };
+    const waffle::poly_triple gate_coefficients{ witness_index, witness_index, new_witness, q_m, q_l, q_r, q_o, q_c };
 
     context->create_poly_gate(gate_coefficients);
 

@@ -200,8 +200,8 @@ TEST(stdlib_merkle_tree, test_leveldb_get_hash_path)
 
 TEST(stdlib_merkle_tree, pedersen_native_vs_circuit)
 {
-    fr::field_t x =
-        fr::to_montgomery_form({ { 0x5ec473eb273a8011, 0x50160109385471ca, 0x2f3095267e02607d, 0x02586f4a39e69b86 } });
+    fr::field_t x = fr::field_t{ 0x5ec473eb273a8011, 0x50160109385471ca, 0x2f3095267e02607d, 0x02586f4a39e69b86 }
+                        .to_montgomery_form();
     Composer composer = Composer();
     witness_t y = witness_t(&composer, x);
     auto z = plonk::stdlib::pedersen::compress(y, y);

@@ -18,13 +18,10 @@ namespace
         };
         keccak256 c = hash_field_element((uint64_t*)&input[0]);
         fr::field_t c_mont = *(fr::field_t*)&c.word64s[0];
-        // fr::to_montgomery_form(*(fr::field_t*)&c.word64s[0], c_mont);
-        // fr::field_t constants[NUM_ROUNDS];
         for (size_t i = 1; i < NUM_ROUNDS; ++i)
         {
             c = hash_field_element((uint64_t*)&c_mont);
-            fr::to_montgomery_form(*(fr::field_t*)&c.word64s[0], c_mont);
-            fr::__copy(c_mont, constants[i]);
+            constants[i] = fr::field_t{ c.word64s[0], c.word64s[1], c.word64s[2], c.word64s[3] }.to_montgomery_form();
         }
         fr::__copy(fr::zero, constants[0]);
         return 0;

@@ -395,7 +395,7 @@ TEST(polynomials, barycentric_weight_evaluations)
         poly[i] = fr::zero;
         barycentric_poly[i] = poly[i];
     }
-    fr::field_t evaluation_point = fr::to_montgomery_form({ { 2, 0, 0, 0 } });
+    fr::field_t evaluation_point = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form();
 
     fr::field_t result =
         polynomial_arithmetic::compute_barycentric_evaluation(&barycentric_poly[0], n / 2, evaluation_point, domain);
@@ -428,7 +428,7 @@ TEST(polynomials, barycentric_weight_evaluations)
 //     printf("coeffs \n");
 //     for (size_t i = 0; i < small_domain.size; ++i)
 //     {
-//         fr::print(fr::from_montgomery_form(fr::mul(small_domain.domain, poly_a[i])));
+//         fr::print(fr::mul(small_domain.domain, poly_a[i])).from_montgomery_form();
 //     }
 //     printf("#\n");
 //     poly_a[4] = fr::zero;
@@ -439,7 +439,7 @@ TEST(polynomials, barycentric_weight_evaluations)
 //     fr::field_t root = mid_domain.root;
 //     for (size_t i = 0; i < domain_size * 2; ++i)
 //     {
-//         fr::print(fr::from_montgomery_form(poly_a[i]));
+//         fr::print(poly_a[i]).from_montgomery_form();
 //     }
 //     printf("roots \n");
 //     // fr::field_t two_inv = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
@@ -447,8 +447,8 @@ TEST(polynomials, barycentric_weight_evaluations)
 //     for (size_t i = 0; i < domain_size * 2; ++i)
 //     {
 
-//        fr::print(fr::from_montgomery_form((root)));
-//        // fr::print(fr::from_montgomery_form(fr::mul(root, two_inv)));
+//        fr::print((root)).from_montgomery_form();
+//        // fr::print(fr::mul(root, two_inv)).from_montgomery_form();
 //         root = root * mid_domain.root;
 //     }
 // }

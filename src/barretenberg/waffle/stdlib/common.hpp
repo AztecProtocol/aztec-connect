@@ -41,7 +41,7 @@ template <typename ComposerContext> class witness_t {
     template <typename T> witness_t(ComposerContext* parent_context, T const in)
     {
         context = parent_context;
-        witness = barretenberg::fr::to_montgomery_form({ { static_cast<uint64_t>(in), 0, 0, 0 } });
+        witness = barretenberg::fr::field_t{ static_cast<uint64_t>(in), 0, 0, 0 }.to_montgomery_form();
         witness_index = context->add_variable(witness);
     }
     barretenberg::fr::field_t witness;
@@ -77,7 +77,7 @@ template <typename ComposerContext> class public_witness_t : public witness_t<Co
     template <typename T> public_witness_t(ComposerContext* parent_context, T const in)
     {
         context = parent_context;
-        witness = barretenberg::fr::to_montgomery_form({ { static_cast<uint64_t>(in), 0, 0, 0 } });
+        witness = barretenberg::fr::field_t{ static_cast<uint64_t>(in), 0, 0, 0 }.to_montgomery_form();
         witness_index = context->add_public_variable(witness);
     }
 };

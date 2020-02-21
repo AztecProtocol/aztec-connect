@@ -67,8 +67,8 @@ point hash_single(const field_t& in, const size_t hash_index)
         multiplication_transcript[0] = origin_points[0];
         accumulator_transcript[0] = origin_accumulators[0];
     }
-    fr::field_t one = fr::one;
-    fr::field_t three = fr::add((one + one), one);
+    constexpr fr::field_t one = fr::one;
+    constexpr fr::field_t three = ((one + one) + one);
 
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
@@ -91,9 +91,9 @@ point hash_single(const field_t& in, const size_t hash_index)
     grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
 
     waffle::fixed_group_init_quad init_quad{ origin_points[0].x,
-                                             fr::sub(origin_points[0].x, origin_points[1].x),
+                                             (origin_points[0].x - origin_points[1].x),
                                              origin_points[0].y,
-                                             fr::sub(origin_points[0].y, origin_points[1].y) };
+                                             (origin_points[0].y - origin_points[1].y) };
 
     fr::field_t x_alpha = accumulator_offset;
     for (size_t i = 0; i < num_quads; ++i) {

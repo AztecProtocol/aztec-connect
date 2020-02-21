@@ -14,7 +14,7 @@ using namespace grumpkin;
 //     fq::field_t T0 = result.y.sqr();
 //     fq::field_t T2 = fq::to_montgomery_form({{ 17, 0, 0, 0 }});
 //     fq::field_t T3 = T0 + T2;
-//     fq::print(fq::from_montgomery_form(T3));
+//     fq::print(T3).from_montgomery_form();
 //     fq::print(T2.neg());
 
 //     fq::field_t xx = result.x.sqr();
@@ -22,7 +22,7 @@ using namespace grumpkin;
 
 //     fq::field_t yy_sub_xxx = result.y.sqr() - xxx;
 //     printf("y^2 - x^3 = \n");
-//     fq::print(fq::from_montgomery_form(yy_sub_xxx));
+//     fq::print(yy_sub_xxx).from_montgomery_form();
 
 //     printf("foo\n");
 // }
@@ -62,8 +62,9 @@ TEST(grumpkin, eq)
 TEST(grumpkin, check_group_modulus)
 {
     // g1::affine_element expected = g1::affine_one;
-    fr::field_t exponent = fr::to_montgomery_form(
-        { { fr::modulus.data[0] - 1, fr::modulus.data[1], fr::modulus.data[2], fr::modulus.data[3] } });
+    fr::field_t exponent =
+        fr::field_t{ fr::modulus.data[0] - 1, fr::modulus.data[1], fr::modulus.data[2], fr::modulus.data[3] }
+            .to_montgomery_form();
     printf("a\n");
     g1::element result = g1::group_exponentiation_no_endo(g1::one, exponent);
     printf("b\n");

@@ -157,29 +157,29 @@ TEST(noir, bool_circuit)
     auto r = compiler.start(ast, inputs);
     auto prover = std::move(r.second);
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[0]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[0]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[0]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(prover.w_l[0]), { { 1, 0, 0, 0 } }), true.from_montgomery_form();
+    EXPECT_EQ(fr::eq(prover.w_r[0]), { { 1, 0, 0, 0 } }), true.from_montgomery_form();
+    EXPECT_EQ(fr::eq(prover.w_o[0]), { { 1, 0, 0, 0 } }), true.from_montgomery_form();
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[1]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[1]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[1]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(prover.w_l[1]), { { 0, 0, 0, 0 } }), true.from_montgomery_form();
+    EXPECT_EQ(fr::eq(prover.w_r[1]), { { 0, 0, 0, 0 } }), true.from_montgomery_form();
+    EXPECT_EQ(fr::eq(prover.w_o[1]), { { 0, 0, 0, 0 } }), true.from_montgomery_form();
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[2]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[2]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[2]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(prover.w_l[2]), { { 1, 0, 0, 0 } }), true.from_montgomery_form();
+    EXPECT_EQ(fr::eq(prover.w_r[2]), { { 0, 0, 0, 0 } }), true.from_montgomery_form();
+    EXPECT_EQ(fr::eq(prover.w_o[2]), { { 1, 0, 0, 0 } }), true.from_montgomery_form();
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[3]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[3]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[3]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(prover.w_l[3]), { { 1, 0, 0, 0 } }), true.from_montgomery_form();
+    EXPECT_EQ(fr::eq(prover.w_r[3]), { { 0, 0, 0, 0 } }), true.from_montgomery_form();
+    EXPECT_EQ(fr::eq(prover.w_o[3]), { { 1, 0, 0, 0 } }), true.from_montgomery_form();
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[4]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[4]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[4]), { { 0, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(prover.w_l[4]), { { 1, 0, 0, 0 } }), true.from_montgomery_form();
+    EXPECT_EQ(fr::eq(prover.w_r[4]), { { 0, 0, 0, 0 } }), true.from_montgomery_form();
+    EXPECT_EQ(fr::eq(prover.w_o[4]), { { 0, 0, 0, 0 } }), true.from_montgomery_form();
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_l[5]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_r[5]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.w_o[5]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(prover.w_l[5]), { { 0, 0, 0, 0 } }), true.from_montgomery_form();
+    EXPECT_EQ(fr::eq(prover.w_r[5]), { { 1, 0, 0, 0 } }), true.from_montgomery_form();
+    EXPECT_EQ(fr::eq(prover.w_o[5]), { { 1, 0, 0, 0 } }), true.from_montgomery_form();
 
     EXPECT_EQ(prover.n, 8UL);
 }

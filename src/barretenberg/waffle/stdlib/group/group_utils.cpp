@@ -60,7 +60,7 @@ void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fi
         grumpkin::fq::__copy(ladder_temp[quad_length + i].y, ladder[quad_length - 1 - i].three.y);
     }
 
-    grumpkin::fq::field_t eight_inverse = grumpkin::fq::invert(grumpkin::fq::to_montgomery_form({ { 8, 0, 0, 0 } }));
+    constexpr grumpkin::fq::field_t eight_inverse = grumpkin::fq::field_t{ 8, 0, 0, 0 }.to_montgomery_form().invert();
     std::array<grumpkin::fq::field_t, quad_length> y_denominators;
     for (size_t i = 0; i < quad_length; ++i) {
 
@@ -74,18 +74,16 @@ void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fi
         x_beta_times_nine = x_beta_times_nine + x_beta_times_nine;
         x_beta_times_nine = x_beta_times_nine + x_beta;
 
-        grumpkin::fq::field_t x_alpha_1 = grumpkin::fq::mul(grumpkin::fq::sub(x_gamma, x_beta), eight_inverse);
-        grumpkin::fq::field_t x_alpha_2 =
-            grumpkin::fq::mul(grumpkin::fq::sub(x_beta_times_nine, x_gamma), eight_inverse);
+        grumpkin::fq::field_t x_alpha_1 = ((x_gamma - x_beta) * eight_inverse);
+        grumpkin::fq::field_t x_alpha_2 = ((x_beta_times_nine - x_gamma) * eight_inverse);
 
         grumpkin::fq::field_t T0 = x_beta - x_gamma;
-        y_denominators[i] = (grumpkin::fq::add((T0 + T0), T0));
+        y_denominators[i] = (((T0 + T0) + T0));
 
-        grumpkin::fq::field_t y_alpha_1 =
-            grumpkin::fq::sub(grumpkin::fq::add(grumpkin::fq::add(y_beta, y_beta), y_beta), y_gamma);
+        grumpkin::fq::field_t y_alpha_1 = ((y_beta + y_beta) + y_beta) - y_gamma;
         grumpkin::fq::field_t T1 = x_gamma * y_beta;
-        T1 = grumpkin::fq::add((T1 + T1), T1);
-        grumpkin::fq::field_t y_alpha_2 = grumpkin::fq::sub(grumpkin::fq::mul(x_beta, y_gamma), T1);
+        T1 = ((T1 + T1) + T1);
+        grumpkin::fq::field_t y_alpha_2 = ((x_beta * y_gamma) - T1);
 
         ladder[i].q_x_1 = x_alpha_1;
         ladder[i].q_x_2 = x_alpha_2;

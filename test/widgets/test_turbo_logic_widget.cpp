@@ -29,10 +29,10 @@ waffle::ProverTurboLogicWidget create_test_widget_circuit(const size_t num_gates
     polynomial q_logic(num_gates);
     polynomial q_c(num_gates);
 
-    fr::field_t four = fr::add(fr::one + fr::one, fr::one + fr::one);
+    fr::field_t four = (fr::one + fr::one + fr::one + fr::one);
 
     std::array<fr::field_t, 4> values{
-        fr::zero, fr::one, fr::one + fr::one, fr::add(fr::one + fr::one, fr::one)
+        fr::zero, fr::one, fr::one + fr::one, (fr::one + fr::one + fr::one)
     };
 
     w_4[0] = fr::zero;
@@ -64,9 +64,9 @@ waffle::ProverTurboLogicWidget create_test_widget_circuit(const size_t num_gates
             q_c[i - 1] = fr::one;
             q_logic[i - 1] = fr::one;
         }
-        w_1[i] = fr::add(w_1[i - 1] * four, values[left]);
-        w_2[i] = fr::add(w_2[i - 1] * four, values[right]);
-        w_4[i] = fr::add(w_4[i - 1] * four, values[out]);
+        w_1[i] = (w_1[i - 1] * four + values[left]);
+        w_2[i] = (w_2[i - 1] * four + values[right]);
+        w_4[i] = (w_4[i - 1] * four + values[out]);
         w_3[i - 1] = values[left] * values[right];
     }
     w_3[num_gates - 1] = fr::zero;

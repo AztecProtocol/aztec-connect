@@ -544,7 +544,7 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
     std::cout << "compute permutation grand product coeffs: " << diff.count() << "ms" << std::endl;
 #endif
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-    fr::field_t alpha_base = fr::sqr(alpha.sqr());
+    fr::field_t alpha_base = alpha.sqr().sqr();
 
     for (size_t i = 0; i < widgets.size(); ++i) {
 #ifdef DEBUG_TIMING
@@ -842,7 +842,7 @@ template <typename settings> barretenberg::fr::field_t ProverBase<settings>::com
     fr::reduce_once(T0, r[i]);
     ITERATE_OVER_DOMAIN_END;
 
-    fr::field_t alpha_base = fr::sqr(alpha.sqr());
+    fr::field_t alpha_base = alpha.sqr().sqr();
     for (size_t i = 0; i < widgets.size(); ++i) {
         alpha_base = widgets[i]->compute_linear_contribution(alpha_base, transcript, r);
     }

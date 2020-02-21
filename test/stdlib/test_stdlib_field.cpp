@@ -85,7 +85,7 @@ TEST(stdlib_field, test_add_mul_with_constants)
 
     uint64_t expected = fidget(composer);
     waffle::Prover prover = composer.preprocess();
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[18]), { { expected, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(prover.witness->wires.at("w_3")[18].from_montgomery_form(), { { expected, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 32UL);
     waffle::Verifier verifier = composer.create_verifier();
@@ -102,7 +102,7 @@ TEST(stdlib_field, test_field_fibbonaci)
 
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[17]), { { 4181, 0, 0, 0 } }), true);
+    EXPECT_EQ(fr::eq(prover.witness->wires.at("w_3")[17].from_montgomery_form(), { { 4181, 0, 0, 0 } }), true);
     EXPECT_EQ(prover.n, 32UL);
     waffle::Verifier verifier = composer.create_verifier();
 
@@ -209,12 +209,14 @@ TEST(stdlib_field, is_zero)
     // yuck
     field_t a = (public_witness_t(&composer, fr::random_element()));
     field_t b = (public_witness_t(&composer, fr::neg_one()));
-    field_t c_1(&composer,
-                barretenberg::fr::to_montgomery_form(
-                    { { 0x1122334455667788, 0x8877665544332211, 0xaabbccddeeff9933, 0x1122112211221122 } }));
-    field_t c_2(&composer,
-                barretenberg::fr::to_montgomery_form(
-                    { { 0xaabbccddeeff9933, 0x8877665544332211, 0x1122334455667788, 0x1122112211221122 } }));
+    field_t c_1(
+        &composer,
+        barretenberg::fr::field_t{ 0x1122334455667788, 0x8877665544332211, 0xaabbccddeeff9933, 0x1122112211221122 }
+            .to_montgomery_form());
+    field_t c_2(
+        &composer,
+        barretenberg::fr::field_t{ 0xaabbccddeeff9933, 0x8877665544332211, 0x1122334455667788, 0x1122112211221122 }
+            .to_montgomery_form());
     field_t c_3(&composer, barretenberg::fr::one);
 
     field_t c_4 = c_1 + c_2;

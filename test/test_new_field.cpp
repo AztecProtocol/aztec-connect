@@ -66,7 +66,7 @@ TEST(test_new_field, mul_512)
 
 TEST(test_new_field, to_montgomery_form)
 {
-    barretenberg::fr::field_t result = barretenberg::fr::to_montgomery_form({ { 1, 2, 3, 4 } });
+    barretenberg::fr::field_t result = fr::field_t{ 1, 2, 3, 4 }.to_montgomery_form();
     testField expected{ 1, 2, 3, 4 };
     expected = expected.to_montgomery_form();
     EXPECT_EQ(result.data[0], expected.data[0]);

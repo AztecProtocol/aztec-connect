@@ -1,8 +1,8 @@
 #pragma once
+#include "../../../misc_crypto/sha256/sha256.hpp"
 #include "../../composer/standard_composer.hpp"
 #include "../field/field.hpp"
 #include "../group/group_utils.hpp"
-#include "../../../misc_crypto/sha256/sha256.hpp"
 #include "../mimc.hpp"
 #include <iomanip>
 #include <iostream>
@@ -61,7 +61,7 @@ inline barretenberg::fr::field_t sha256(std::string const& input)
         result.data[2] = *(uint64_t*)&output[8];
         result.data[3] = *(uint64_t*)&output[0];
     }
-    return barretenberg::fr::to_montgomery_form(result);
+    return result.to_montgomery_form();
 }
 
 inline barretenberg::fr::field_t hash(std::vector<barretenberg::fr::field_t> const& input)

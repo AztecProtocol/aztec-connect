@@ -49,9 +49,7 @@ class uint256_t {
 
     operator barretenberg::fr::field_t() const
     {
-        barretenberg::fr::field_t val =
-            barretenberg::fr::to_montgomery_form({ { data[0], data[1], data[2], data[3] } });
-        return val;
+        return barretenberg::fr::field_t{ data[0], data[1], data[2], data[3] }.to_montgomery_form();
     }
 
     explicit constexpr operator bool() const { return static_cast<bool>(data[0]); };

@@ -9,10 +9,10 @@
 
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 
+#include <barretenberg/waffle/stdlib/bitarray/bitarray.hpp>
 #include <barretenberg/waffle/stdlib/common.hpp>
 #include <barretenberg/waffle/stdlib/field/field.hpp>
 #include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
-#include <barretenberg/waffle/stdlib/bitarray/bitarray.hpp>
 
 using namespace barretenberg;
 using namespace plonk;
@@ -25,9 +25,8 @@ typedef stdlib::bitarray<waffle::BoolComposer> bitarray;
 
 uint32_t get_random_int()
 {
-return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
 }
-
 
 TEST(stdlib_bitarray, test_uint32_input_output_consistency)
 {
@@ -46,10 +45,10 @@ TEST(stdlib_bitarray, test_uint32_input_output_consistency)
 
     EXPECT_EQ(result.size(), 2UL);
 
-    uint32_t a_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(result[0].get_witness_index())).data[0]);
-    uint32_t b_result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(result[1].get_witness_index())).data[0]);
+    uint32_t a_result =
+        static_cast<uint32_t>(composer.get_variable(result[0].get_witness_index()).from_montgomery_form().data[0]);
+    uint32_t b_result =
+        static_cast<uint32_t>(composer.get_variable(result[1].get_witness_index()).from_montgomery_form().data[0]);
 
     EXPECT_EQ(a_result, a_expected);
     EXPECT_EQ(b_result, b_expected);
@@ -71,8 +70,8 @@ TEST(stdlib_bitarray, test_binary_input_output_consistency)
 
     EXPECT_EQ(uint32_vec.size(), 1UL);
 
-    uint32_t result = static_cast<uint32_t>(
-        barretenberg::fr::from_montgomery_form(composer.get_variable(uint32_vec[0].get_witness_index())).data[0]);
+    uint32_t result =
+        static_cast<uint32_t>(composer.get_variable(uint32_vec[0].get_witness_index()).from_montgomery_form().data[0]);
 
     uint32_t expected = 0b01101;
     EXPECT_EQ(result, expected);

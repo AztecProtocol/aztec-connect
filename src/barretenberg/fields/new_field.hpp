@@ -235,6 +235,7 @@ template <class Params> struct field {
         uint64_t data[8];
     };
     BBERG_INLINE constexpr wide_array mul_512(const field& other) const noexcept;
+    BBERG_INLINE constexpr wide_array sqr_512() const noexcept;
 
   private:
     BBERG_INLINE constexpr std::pair<uint64_t, uint64_t> mul_wide(const uint64_t a, const uint64_t b) const noexcept;
@@ -242,6 +243,9 @@ template <class Params> struct field {
                                                              const uint64_t b,
                                                              const uint64_t c,
                                                              const uint64_t carry_in) const noexcept;
+    BBERG_INLINE constexpr std::pair<uint64_t, uint64_t> mac_mini(const uint64_t a,
+                                                                  const uint64_t b,
+                                                                  const uint64_t c) const noexcept;
     BBERG_INLINE constexpr uint64_t mac_discard_lo(const uint64_t a,
                                                    const uint64_t b,
                                                    const uint64_t c,
@@ -254,6 +258,9 @@ template <class Params> struct field {
     BBERG_INLINE constexpr std::pair<uint64_t, uint64_t> addc(const uint64_t a,
                                                               const uint64_t b,
                                                               const uint64_t carry_in) const noexcept;
+
+    BBERG_INLINE constexpr std::pair<uint64_t, uint64_t> addc_mini(const uint64_t a, const uint64_t b) const noexcept;
+
     BBERG_INLINE constexpr uint64_t addc_discard_hi(const uint64_t a, const uint64_t b, const uint64_t carry_in) const
         noexcept;
 
@@ -292,8 +299,8 @@ template <class Params> struct field {
     BBERG_INLINE static field asm_reduce_once(const field& a) noexcept;
     BBERG_INLINE static void asm_self_reduce_once(const field& a) noexcept;
 
-    constexpr field tonelli_shanks_sqrt() const noexcept;
 #endif
+    constexpr field tonelli_shanks_sqrt() const noexcept;
     static constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 };
 } // namespace test

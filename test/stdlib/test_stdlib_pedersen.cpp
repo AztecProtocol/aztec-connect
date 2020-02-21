@@ -31,10 +31,10 @@ TEST(stdlib_pedersen, test_pedersen)
     fr::field_t left_in = fr::random_element();
     fr::field_t right_in = fr::random_element();
     // ensure left has skew 1, right has skew 0
-    if ((fr::from_montgomery_form(left_in).data[0] & 1) == 1) {
+    if ((left_in.from_montgomery_form().data[0] & 1) == 1) {
         left_in.self_add(fr::one);
     }
-    if ((fr::from_montgomery_form(right_in).data[0] & 1) == 0) {
+    if ((right_in.from_montgomery_form().data[0] & 1) == 0) {
         right_in.self_add(fr::one);
     }
     field_t left = public_witness_t(&composer, left_in);
@@ -61,14 +61,18 @@ TEST(stdlib_pedersen, test_pedersen)
     uint64_t left_wnafs[255] = { 0 };
     uint64_t right_wnafs[255] = { 0 };
 
-    if ((fr::from_montgomery_form(left_in).data[0] & 1) == 0) {
-        fr::field_t two = fr::one + fr::one;
-        left_in = left_in - two;
-    }
-    if ((fr::from_montgomery_form(right_in).data[0] & 1) == 0) {
-        fr::field_t two = fr::one + fr::one;
-        right_in = right_in - two;
-    }
+    if ((left_in.from_montgomery_form().data[0] & 1)
+        == 0)
+        {
+            fr::field_t two = fr::one + fr::one;
+            left_in = left_in - two;
+        }
+    if ((right_in.from_montgomery_form().data[0] & 1)
+        == 0)
+        {
+            fr::field_t two = fr::one + fr::one;
+            right_in = right_in - two;
+        }
     fr::field_t converted_left = left_in.from_montgomery_form();
     fr::field_t converted_right = right_in.from_montgomery_form();
 
@@ -80,7 +84,7 @@ TEST(stdlib_pedersen, test_pedersen)
 
     const auto compute_split_scalar = [](uint64_t* wnafs, const size_t range) {
         grumpkin::fr::field_t result = grumpkin::fr::zero;
-        grumpkin::fr::field_t three = grumpkin::fr::to_montgomery_form({ { 3, 0, 0, 0 } });
+        grumpkin::fr::field_t three = grumpkin::fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form();
         for (size_t i = 0; i < range; ++i) {
             uint64_t entry = wnafs[i];
             grumpkin::fr::field_t prev = result + result;
@@ -151,12 +155,10 @@ TEST(stdlib_pedersen, test_pedersen_large)
     fr::field_t left_in = fr::random_element();
     fr::field_t right_in = fr::random_element();
     // ensure left has skew 1, right has skew 0
-    if ((fr::from_montgomery_form(left_in).data[0] & 1) == 1) {
-        left_in.self_add(fr::one);
-    }
-    if ((fr::from_montgomery_form(right_in).data[0] & 1) == 0) {
-        right_in.self_add(fr::one);
-    }
+    if ((left_in.from_montgomery_form().data[0] & 1)
+        == 1) { left_in.self_add(fr::one); }
+    if ((right_in.from_montgomery_form().data[0] & 1)
+        == 0) { right_in.self_add(fr::one); }
     field_t left = witness_t(&composer, left_in);
     field_t right = witness_t(&composer, right_in);
 

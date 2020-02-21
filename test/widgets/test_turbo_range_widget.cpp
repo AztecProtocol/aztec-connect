@@ -1,27 +1,24 @@
 #include <gtest/gtest.h>
 
-#include <barretenberg/waffle/proof_system/widgets/turbo_range_widget.hpp>
+#include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 #include <barretenberg/waffle/composer/standard_composer.hpp>
 #include <barretenberg/waffle/proof_system/transcript_helpers.hpp>
-#include <barretenberg/polynomials/polynomial_arithmetic.hpp>
+#include <barretenberg/waffle/proof_system/widgets/turbo_range_widget.hpp>
 
 #include <iostream>
 #include <memory>
-
 
 #include "../test_helpers.hpp"
 
 using namespace barretenberg;
 using namespace waffle;
 
-namespace
+namespace {
+waffle::ProverTurboRangeWidget create_test_widget_circuit(const size_t num_gates,
+                                                          std::shared_ptr<program_witness> witness,
+                                                          std::shared_ptr<proving_key> key,
+                                                          bool use_coset_fft = false)
 {
-    waffle::ProverTurboRangeWidget create_test_widget_circuit(
-        const size_t num_gates,
-        std::shared_ptr<program_witness> witness,
-        std::shared_ptr<proving_key> key,
-        bool use_coset_fft = false)
-    {
     polynomial w_1(num_gates);
     polynomial w_2(num_gates);
     polynomial w_3(num_gates);
@@ -29,22 +26,16 @@ namespace
 
     polynomial q_range(num_gates);
 
-    fr::field_t four = fr::add(fr::one + fr::one, fr::one + fr::one);
+    fr::field_t four = (fr::one + fr::one + fr::one + fr::one);
 
-    std::array<fr::field_t, 4> values{
-        fr::zero,
-        fr::one,
-        fr::one + fr::one,
-        fr::add(fr::one + fr::one, fr::one)
-    };
+    std::array<fr::field_t, 4> values{ fr::zero, fr::one, fr::one + fr::one, (fr::one + fr::one + fr::one) };
 
     w_4[0] = fr::zero;
-    for (size_t i = 0; i < num_gates - 1; ++i)
-    {
-        w_3[i] = fr::add(w_4[i] * four, values[i & 3]);
-        w_2[i] = fr::add(w_3[i] * four, values[(i + 1) & 3]);
-        w_1[i] = fr::add(w_2[i] * four, values[(i + 2) & 3]);
-        w_4[i + 1] = fr::add(w_1[i] * four, values[(i + 3) & 3]);
+    for (size_t i = 0; i < num_gates - 1; ++i) {
+        w_3[i] = w_4[i] * four + values[i & 3];
+        w_2[i] = w_3[i] * four + values[(i + 1) & 3];
+        w_1[i] = w_2[i] * four + values[(i + 2) & 3];
+        w_4[i + 1] = w_1[i] * four + values[(i + 3) & 3];
 
         q_range[i] = fr::one;
     }
@@ -112,26 +103,22 @@ namespace
     q_range_fft.ifft(key->small_domain);
     q_range.ifft(key->small_domain);
 
-    if (use_coset_fft)
-    {
+    if (use_coset_fft) {
         q_range_fft.coset_fft(key->large_domain);
-    }
-    else
-    {
+    } else {
         q_range_fft.fft(key->large_domain);
     }
     key->constraint_selectors.insert({ "q_range", std::move(q_range) });
     key->constraint_selector_ffts.insert({ "q_range_fft", std::move(q_range_fft) });
 
     key->quotient_large = polynomial(num_gates * 4);
-    for (size_t i = 0; i < num_gates * 4; ++i)
-    {
+    for (size_t i = 0; i < num_gates * 4; ++i) {
         key->quotient_large[i] = fr::zero;
     }
     waffle::ProverTurboRangeWidget widget(key.get(), witness.get());
     return widget;
-    }
 }
+} // namespace
 
 TEST(turbo_range_widget, quotient_polynomial_satisfiability)
 {
@@ -145,8 +132,7 @@ TEST(turbo_range_widget, quotient_polynomial_satisfiability)
 
     widget.compute_quotient_contribution(fr::one, transcript);
 
-    for (size_t i = 0; i < num_gates * 4; i += 4)
-    {
+    for (size_t i = 0; i < num_gates * 4; i += 4) {
         EXPECT_EQ((key->quotient_large[i] == fr::zero), true);
     }
 }
@@ -168,7 +154,6 @@ TEST(turbo_range_widget, compute_linear_contribution)
 
     key->quotient_large.coset_ifft(key->large_domain);
 
-
     fr::field_t z_challenge = fr::random_element();
     fr::field_t shifted_z = key->small_domain.root * z_challenge;
 
@@ -181,8 +166,7 @@ TEST(turbo_range_widget, compute_linear_contribution)
         transcript.add_element(wire_key + "_omega", transcript_helpers::convert_field_element(shifted_wire_eval));
     }
 
-    for (size_t i = 0; i < num_gates; ++i)
-    {
+    for (size_t i = 0; i < num_gates; ++i) {
         key->linear_poly[i] = fr::zero;
     }
     widget.compute_linear_contribution(fr::one, transcript, key->linear_poly);
