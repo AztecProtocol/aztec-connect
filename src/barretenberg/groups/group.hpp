@@ -153,9 +153,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         return generators;
     }
 
-    static inline bool is_point_at_infinity(const affine_element& p) { return coordinate_field::is_msb_set(p.y); }
+    static inline bool is_point_at_infinity(const affine_element& p) { return (p.y.is_msb_set()); }
 
-    static inline bool is_point_at_infinity(const element& p) { return coordinate_field::is_msb_set(p.y); }
+    static inline bool is_point_at_infinity(const element& p) { return (p.y.is_msb_set()); }
 
     static inline void set_infinity(element& p) { p.y.self_set_msb(); }
 
@@ -422,8 +422,8 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static inline void add(const element& p1, const element& p2, element& p3)
     {
-        bool p1_zero = coordinate_field::is_msb_set(p1.y);
-        bool p2_zero = coordinate_field::is_msb_set(p2.y);
+        bool p1_zero = p1.y.is_msb_set();
+        bool p2_zero = p2.y.is_msb_set();
         if (__builtin_expect((p1_zero || p2_zero), 0)) {
             if (p1_zero && !p2_zero) {
                 coordinate_field::__copy(p2.x, p3.x);
@@ -607,13 +607,13 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         coordinate_field::__copy(a.x, r.x);
         coordinate_field::__copy(a.y, r.y);
         coordinate_field::__copy(a.z, r.z);
-        coordinate_field::__neg(r.y, r.y);
+        r.y.self_neg();
     }
 
     static inline void __neg(const affine_element& a, affine_element& r)
     {
         coordinate_field::__copy(a.x, r.x);
-        coordinate_field::__neg(a.y, r.y);
+        r.y = a.y.neg();
     }
 
     static inline void affine_to_jacobian(const affine_element& a, element& r)
@@ -705,7 +705,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         uint64_t wnaf_table[num_rounds * 2];
         typename subgroup_field::field_t endo_scalar;
-        subgroup_field::split_into_endomorphism_scalars(
+        subgroup_field::field_t::split_into_endomorphism_scalars(
             converted_scalar, endo_scalar, *(typename subgroup_field::field_t*)&endo_scalar.data[2]);
 
         bool skew = false;

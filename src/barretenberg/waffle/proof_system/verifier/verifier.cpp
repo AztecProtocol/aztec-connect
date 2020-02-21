@@ -292,7 +292,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     scalars.emplace_back(z_challenge);
 
     for (size_t i = 1; i < program_settings::program_width; ++i) {
-        fr::field_t z_power = fr::pow_small(z_challenge, key->n * i);
+        fr::field_t z_power = z_challenge.pow(static_cast<uint64_t>(key->n * i));
         if (g1::on_curve(T[i])) {
             elements.emplace_back(T[i]);
             scalars.emplace_back(z_power);

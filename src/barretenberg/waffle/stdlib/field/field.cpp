@@ -99,7 +99,7 @@ field_t<ComposerContext>::field_t(byte_array<ComposerContext> const& other)
         } else {
             temp.witness_index = bits[i].witness_index;
         }
-        barretenberg::fr::field_t scaling_factor_value = barretenberg::fr::pow_small(two, 255 - i);
+        barretenberg::fr::field_t scaling_factor_value = two.pow(static_cast<uint64_t>(255 - i));
         field_t<ComposerContext> scaling_factor(bits[i].context, scaling_factor_value);
         *this = *this + (scaling_factor * temp);
     }
@@ -139,16 +139,16 @@ template <typename ComposerContext> field_t<ComposerContext>::operator byte_arra
 
     if (is_constant()) {
         for (size_t i = 0; i < 256; ++i) {
-            bits[i] = barretenberg::fr::get_bit(value, 255 - i);
+            bits[i] = value.get_bit(255 - i);
         }
     } else {
         barretenberg::fr::field_t two = barretenberg::fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form();
         field_t<ComposerContext> validator(context, barretenberg::fr::zero);
 
         for (size_t i = 0; i < 256; ++i) {
-            bool_t bit = witness_t(context, barretenberg::fr::get_bit(value, 255 - i));
+            bool_t bit = witness_t(context, value.get_bit(255 - i));
             bits[i] = bit;
-            barretenberg::fr::field_t scaling_factor_value = barretenberg::fr::pow_small(two, 255 - i);
+            barretenberg::fr::field_t scaling_factor_value = two.pow(static_cast<uint64_t>(255 - i));
             field_t<ComposerContext> scaling_factor(context, scaling_factor_value);
             validator = validator + (scaling_factor * bit);
         }
@@ -297,20 +297,20 @@ field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t& othe
     if (witness_index == static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)) {
         // both inputs are constant - don't add a gate
         if (!(other.additive_constant == barretenberg::fr::zero)) {
-            additive_multiplier = barretenberg::fr::invert(other.additive_constant);
+            additive_multiplier = other.additive_constant.invert();
         }
         result.additive_constant = additive_constant * additive_multiplier;
     } else if (witness_index != static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)) {
         // one input is constant - don't add a gate, but update scaling factors
         if (!(other.additive_constant == barretenberg::fr::zero)) {
-            additive_multiplier = barretenberg::fr::invert(other.additive_constant);
+            additive_multiplier = other.additive_constant.invert();
         }
         result.additive_constant = additive_constant * additive_multiplier;
         result.multiplicative_constant = multiplicative_constant * additive_multiplier;
         result.witness_index = witness_index;
     } else if (witness_index == static_cast<uint32_t>(-1) && other.witness_index != static_cast<uint32_t>(-1)) {
         if (!(other.additive_constant == barretenberg::fr::zero)) {
-            additive_multiplier = barretenberg::fr::invert(other.additive_constant);
+            additive_multiplier = other.additive_constant.invert();
         }
         result.additive_constant = additive_constant * other.additive_constant;
         result.multiplicative_constant = other.multiplicative_constant * additive_constant;
@@ -346,8 +346,8 @@ field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t& othe
         barretenberg::fr::field_t q_m = other.multiplicative_constant;
         barretenberg::fr::field_t q_l = other.additive_constant;
         barretenberg::fr::field_t q_r = barretenberg::fr::zero;
-        barretenberg::fr::field_t q_o = barretenberg::fr::neg(multiplicative_constant);
-        barretenberg::fr::field_t q_c = barretenberg::fr::neg(additive_constant);
+        barretenberg::fr::field_t q_o = multiplicative_constant.neg();
+        barretenberg::fr::field_t q_c = additive_constant.neg();
 
         const waffle::poly_triple gate_coefficients{
             result.witness_index, other.witness_index, witness_index, q_m, q_l, q_r, q_o, q_c

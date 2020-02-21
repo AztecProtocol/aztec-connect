@@ -220,7 +220,7 @@ template <typename Composer, typename Native> uint<Composer, Native> uint<Compos
             fr::one,
             fr::zero,
             fr::neg_one(),
-            fr::neg(CIRCUIT_UINT_MAX_PLUS_ONE),
+            fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE).neg(),
             (additive_constant & MASK),
         };
 
@@ -295,7 +295,7 @@ template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Na
             left_idx,                      // small accumulator
             uint256_t(3),                  // 3 * lo_bit + 6 * hi_bit = 3 * a[pivot] - 12 * a[pivot - 1]
             fr::zero,                      // 0
-            fr::neg(uint256_t(3)),         // -3 * a[pivot]
+            fr::field_t(uint256_t(3)).neg(),         // -3 * a[pivot]
             uint256_t(12),                 // 12 * a[pivot - 1]
             fr::zero                       // 0
         };
@@ -315,7 +315,7 @@ template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Na
         right_idx,                     // large accumlator
         left_idx,                      // small accumulator
         fr::zero,                      // 0
-        fr::neg(uint256_t(6)),         // extracted bit is scaled by 6, so apply -6 to our high bit
+        fr::field_t(uint256_t(6)).neg(),         // extracted bit is scaled by 6, so apply -6 to our high bit
         fr::zero,                      // 0
         fr::zero,                      // 0
         fr::zero                       // 0

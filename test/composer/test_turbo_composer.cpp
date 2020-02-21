@@ -131,8 +131,8 @@ TEST(turbo_composer, test_mul_gate_proofs)
 
     fr::field_t a = fr::random_element();
     fr::field_t b = fr::random_element();
-    fr::field_t c = fr::neg((((q[0] * a) + (q[1] * b)) + q[3]) * q_inv[2]);
-    fr::field_t d = fr::neg((((q[4] * (a * b)) + q[6]) * q_inv[5]));
+    fr::field_t c = ((((q[0] * a) + (q[1] * b)) + q[3]) * q_inv[2]).neg();
+    fr::field_t d = ((((q[4] * (a * b)) + q[6]) * q_inv[5])).neg();
 
     uint32_t a_idx = composer.add_public_variable(a);
     uint32_t b_idx = composer.add_variable(b);
@@ -236,7 +236,7 @@ TEST(turbo_composer, small_scalar_multipliers)
     bool skew = false;
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::one + fr::one, initial_exponent));
+    fr::field_t accumulator_offset = (fr::one + fr::one).pow(static_cast<uint64_t>(initial_exponent)).invert();
     fr::field_t origin_accumulators[2]{ fr::one, accumulator_offset + fr::one };
 
     grumpkin::g1::element* multiplication_transcript =
@@ -369,7 +369,7 @@ TEST(turbo_composer, large_scalar_multipliers)
     bool skew = false;
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::one + fr::one, initial_exponent));
+    fr::field_t accumulator_offset = (fr::one + fr::one).pow(static_cast<uint64_t>(initial_exponent)).invert();
     fr::field_t origin_accumulators[2]{ fr::one, accumulator_offset + fr::one };
 
     grumpkin::g1::element* multiplication_transcript =

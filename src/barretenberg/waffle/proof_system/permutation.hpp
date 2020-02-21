@@ -53,8 +53,7 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     // Our roots of unity table is partially 'overloaded' - we either store the root `w`, or `modulus + w`
     // So to ensure we correctly compute `modulus - w`, we need to compute `2 * modulus - w`
     // The output will similarly be overloaded (containing either 2 * modulus - w, or modulus - w)
-    barretenberg::fr::__conditionally_subtract_from_double_modulus(
-        roots[idx], output.at(i), static_cast<uint64_t>(negative_idx));
+    output[i] = roots[idx].conditionally_subtract_from_double_modulus(static_cast<uint64_t>(negative_idx));
 
     // finally, if our permutation maps to an index in either the right wire vector, or the output wire vector, we need
     // to multiply our result by one of two quadratic non-residues.

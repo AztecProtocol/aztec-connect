@@ -41,7 +41,7 @@ signature_b construct_signature_b(const std::string& message, const key_pair<Fr,
     typename Fq::field_t y_candidate = yy.sqrt();
 
     // if the signer / verifier sqrt algorithm is consistent, this *should* work...
-    bool flip_sign = !Fq::eq(R.y, y_candidate);
+    bool flip_sign = R.y != y_candidate;
 
     sig.r[0] = sig.r[0] | static_cast<uint8_t>(flip_sign ? 128U : 0U);
     std::vector<uint8_t> message_buffer;

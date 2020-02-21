@@ -282,7 +282,7 @@ std::vector<uint32_t> StandardComposer::create_range_constraint(const uint32_t w
     uint32_t accumulator_idx = 0;
     for (size_t i = num_bits - 1; i < num_bits; i -= 2) {
         bool hi = target.get_bit(i);
-        bool lo = fr::get_bit(target, i - 1);
+        bool lo = target.get_bit(i - 1);
 
         uint32_t hi_idx = add_variable(hi ? fr::one : fr::zero);
         uint32_t lo_idx = add_variable(lo ? fr::one : fr::zero);
@@ -334,9 +334,9 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
     constexpr fr::field_t neg_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
     for (size_t i = num_bits - 1; i < num_bits; i -= 2) {
         bool left_hi_val = left_witness_value.get_bit(i);
-        bool left_lo_val = fr::get_bit(left_witness_value, (i - 1));
+        bool left_lo_val = left_witness_value.get_bit(i - 1);
         bool right_hi_val = right_witness_value.get_bit((i));
-        bool right_lo_val = fr::get_bit(right_witness_value, (i - 1));
+        bool right_lo_val = right_witness_value.get_bit(i - 1);
 
         uint32_t left_hi_idx = add_variable(left_hi_val ? fr::one : fr::zero);
         uint32_t left_lo_idx = add_variable(left_lo_val ? fr::one : fr::zero);
@@ -436,7 +436,7 @@ void StandardComposer::fix_witness(const uint32_t witness_index, const barretenb
     q_1.emplace_back(fr::one);
     q_2.emplace_back(fr::zero);
     q_3.emplace_back(fr::zero);
-    q_c.emplace_back(fr::neg(witness_value));
+    q_c.emplace_back(witness_value.neg());
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
 

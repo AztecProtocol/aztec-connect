@@ -183,10 +183,13 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
 
         const uint256_t output = (get_value() << shift) & MASK;
 
-        const waffle::add_triple gate{
-            base_idx,      right_idx, context->add_variable(output), base_shift_factor, fr::neg(right_shift_factor),
-            fr::neg_one(), fr::zero
-        };
+        const waffle::add_triple gate{ base_idx,
+                                       right_idx,
+                                       context->add_variable(output),
+                                       base_shift_factor,
+                                       fr::field_t(right_shift_factor).neg(),
+                                       fr::neg_one(),
+                                       fr::zero };
 
         context->create_add_gate(gate);
 
@@ -226,10 +229,10 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
         base_index,
         left_index,
         right_index,
-        fr::neg(q_1),
+        q_1.neg(),
         q_2,
         fr::zero,
-        fr::neg(q_3),
+        q_3.neg(),
         fr::zero,
     };
 
@@ -305,7 +308,7 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
     const uint256_t pivot_scale_factor = (uint256_t(1) << (uint256_t(width) + uint256_t(1))) * uint256_t(6);
     const uint256_t b_hi_scale_factor = (uint256_t(1) << uint256_t(width));
 
-    fr::field_t q_1 = fr::neg(out_scale_factor);
+    fr::field_t q_1 = fr::field_t(out_scale_factor).neg();
     fr::field_t q_2 = base_scale_factor;
     constexpr fr::field_t twelve = fr::field_t{ 12, 0, 0, 0 }.to_montgomery_form();
     fr::field_t q_3 = twelve - pivot_scale_factor;

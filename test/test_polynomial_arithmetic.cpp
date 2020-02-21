@@ -23,7 +23,7 @@ TEST(polynomials, domain_roots)
     fr::field_t result;
     fr::field_t expected;
     expected = fr::one;
-    fr::__pow_small(domain.root, n, result);
+    result = domain.root.pow(static_cast<uint64_t>(n));
 
     EXPECT_EQ((result == expected), true);
 }

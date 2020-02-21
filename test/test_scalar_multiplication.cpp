@@ -555,7 +555,7 @@ TEST(scalar_multiplication, endomorphism_split)
     fr::field_t* k1_t = &scalar;
     fr::field_t* k2_t = (fr::field_t*)&scalar.data[2];
 
-    fr::split_into_endomorphism_scalars(scalar, *k1_t, *k2_t);
+    fr::field_t::split_into_endomorphism_scalars(scalar, *k1_t, *k2_t);
 
     fr::field_t k1{ { (*k1_t).data[0], (*k1_t).data[1], 0, 0 } };
     fr::field_t k2{ { (*k2_t).data[0], (*k2_t).data[1], 0, 0 } };

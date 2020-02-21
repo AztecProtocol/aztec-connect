@@ -149,14 +149,14 @@ inline void compute_wnaf_states(multiplication_runtime_state& state, fr::field_t
         // If we collect 8 wnaf entries together, we ensure that multiple iterations will not require the same cache
         // lines (wnaf entry = 8 bytes => 8 entries = 64 bytes)
         for (uint64_t j = 0; j < num_initial_points_per_thread; j += 4) {
-            fr::__from_montgomery_form(thread_scalars[j], T0);
-            fr::split_into_endomorphism_scalars(T0, T0, *(fr::field_t*)&T0.data[2]);
-            fr::__from_montgomery_form(thread_scalars[j + 1], T1);
-            fr::split_into_endomorphism_scalars(T1, T1, *(fr::field_t*)&T1.data[2]);
-            fr::__from_montgomery_form(thread_scalars[j + 2], T2);
-            fr::split_into_endomorphism_scalars(T2, T2, *(fr::field_t*)&T2.data[2]);
-            fr::__from_montgomery_form(thread_scalars[j + 3], T3);
-            fr::split_into_endomorphism_scalars(T3, T3, *(fr::field_t*)&T3.data[2]);
+            T0 = thread_scalars[j].from_montgomery_form();
+            fr::field_t::split_into_endomorphism_scalars(T0, T0, *(fr::field_t*)&T0.data[2]);
+            T1 = thread_scalars[j + 1].from_montgomery_form();
+            fr::field_t::split_into_endomorphism_scalars(T1, T1, *(fr::field_t*)&T1.data[2]);
+            T2 = thread_scalars[j + 2].from_montgomery_form();
+            fr::field_t::split_into_endomorphism_scalars(T2, T2, *(fr::field_t*)&T2.data[2]);
+            T3 = thread_scalars[j + 3].from_montgomery_form();
+            fr::field_t::split_into_endomorphism_scalars(T3, T3, *(fr::field_t*)&T3.data[2]);
 
             wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(
                 &T0.data[0], &wnaf_entries[0], skew_table[j << 1ULL], ((j << 1ULL) + offset) << 32ULL);

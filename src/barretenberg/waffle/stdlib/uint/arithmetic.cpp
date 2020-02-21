@@ -1,10 +1,10 @@
 #include "./uint.hpp"
 
 #include "../../../curves/bn254/fr.hpp"
-#include "../../composer/turbo_composer.hpp"
-#include "../../composer/standard_composer.hpp"
 #include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
+#include "../../composer/standard_composer.hpp"
+#include "../../composer/turbo_composer.hpp"
 
 #include "../bool/bool.hpp"
 #include "../field/field.hpp"
@@ -37,7 +37,7 @@ uint<Composer, Native> uint<Composer, Native>::operator+(const uint& other) cons
         return result;
     }
 
-    const uint256_t lhs = ctx->get_variable(witness_index); // get_unbounded_value();
+    const uint256_t lhs = ctx->get_variable(witness_index);       // get_unbounded_value();
     const uint256_t rhs = ctx->get_variable(other.witness_index); // other.get_unbounded_value();
     const uint256_t constants = (additive_constant + other.additive_constant) & MASK;
     const uint256_t sum = lhs + rhs + constants;
@@ -52,7 +52,7 @@ uint<Composer, Native> uint<Composer, Native>::operator+(const uint& other) cons
         fr::one,
         fr::one,
         fr::neg_one(),
-        fr::neg(CIRCUIT_UINT_MAX_PLUS_ONE),
+        fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE).neg(),
         constants,
     };
 
@@ -103,7 +103,7 @@ uint<Composer, Native> uint<Composer, Native>::operator-(const uint& other) cons
         fr::one,
         fr::neg_one(),
         fr::neg_one(),
-        fr::neg(CIRCUIT_UINT_MAX_PLUS_ONE),
+        fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE).neg(),
         CIRCUIT_UINT_MAX_PLUS_ONE + constant_term,
     };
 
@@ -148,7 +148,7 @@ uint<Composer, Native> uint<Composer, Native>::operator*(const uint& other) cons
         other.additive_constant,
         additive_constant,
         fr::neg_one(),
-        fr::neg(CIRCUIT_UINT_MAX_PLUS_ONE),
+        fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE).neg(),
         constant_term,
     };
 
@@ -243,16 +243,16 @@ std::pair<uint<Composer, Native>, uint<Composer, Native>> uint<Composer, Native>
     const uint32_t remainder_idx = ctx->add_variable(r);
 
     const waffle::mul_quad division_gate{
-        quotient_idx,              // q
-        divisor_idx,               // b
-        dividend_idx,              // a
-        remainder_idx,             // r
-        fr::one,                   // q_m.w_1.w_2 = q.b
-        other.additive_constant,   // q_l.w_1 = q.b if b const
-        fr::zero,                  // q_2.w_2 = 0
-        fr::neg_one(),             // q_3.w_3 = -a
-        fr::one,                   // q_4.w_4 = r
-        fr::neg(additive_constant) // q_c = -a if a const
+        quotient_idx,                        // q
+        divisor_idx,                         // b
+        dividend_idx,                        // a
+        remainder_idx,                       // r
+        fr::one,                             // q_m.w_1.w_2 = q.b
+        other.additive_constant,             // q_l.w_1 = q.b if b const
+        fr::zero,                            // q_2.w_2 = 0
+        fr::neg_one(),                       // q_3.w_3 = -a
+        fr::one,                             // q_4.w_4 = r
+        fr::field_t(additive_constant).neg() // q_c = -a if a const
     };
     ctx->create_big_mul_gate(division_gate);
 

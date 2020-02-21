@@ -281,11 +281,11 @@ TEST(fq, montgomery_consistency_check)
     fq::field_t result_b;
     fq::field_t result_c;
     fq::field_t result_d;
-    fq::__to_montgomery_form(a, aR);
-    fq::__to_montgomery_form(aR, aRR);
-    fq::__to_montgomery_form(b, bR);
-    fq::__to_montgomery_form(bR, bRR);
-    fq::__to_montgomery_form(bRR, bRRR);
+    aR   = a.to_montgomery_form();
+    aRR  = aR.to_montgomery_form();
+    bR   = b.to_montgomery_form();
+    bRR  = bR.to_montgomery_form();
+    bRRR = bRR.to_montgomery_form();
     result_a = aRR * bRR; // abRRR
     result_b = aR * bRRR; // abRRR
     result_c = aR * bR;   // abR
@@ -425,14 +425,14 @@ TEST(fq, split_into_endomorphism_scalars)
     EXPECT_EQ(got_entropy, 0);
     input.data[3] &= 0x7fffffffffffffff;
 
-    while (fq::gt(input, fq::modulus_plus_one)) {
+    while (input > fq::modulus_plus_one) {
         input.self_sub(fq::modulus);
     }
     fq::field_t k = { { input.data[0], input.data[1], input.data[2], input.data[3] } };
     fq::field_t k1 = { { 0, 0, 0, 0 } };
     fq::field_t k2 = { { 0, 0, 0, 0 } };
 
-    fq::split_into_endomorphism_scalars(k, k1, k2);
+    fq::field_t::split_into_endomorphism_scalars(k, k1, k2);
 
     fq::field_t result{ { 0, 0, 0, 0 } };
 
@@ -457,7 +457,7 @@ TEST(fq, split_into_endomorphism_scalars_simple)
     fq::field_t k2 = { { 0, 0, 0, 0 } };
     fq::__copy(input, k);
 
-    fq::split_into_endomorphism_scalars(k, k1, k2);
+    fq::field_t::split_into_endomorphism_scalars(k, k1, k2);
 
     fq::field_t result{ { 0, 0, 0, 0 } };
     k1.self_to_montgomery_form();

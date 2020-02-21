@@ -67,7 +67,7 @@ template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Na
                                    result.witness_index,
                                    ctx->add_variable(delta),
                                    ctx->zero_idx,
-                                   fr::neg(uint256_t(2)),
+                                   fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg(),
                                    fr::one,
                                    fr::one,
                                    fr::one,

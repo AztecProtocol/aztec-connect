@@ -457,7 +457,7 @@ void TurboComposer::fix_witness(const uint32_t witness_index, const barretenberg
     q_1.emplace_back(fr::one);
     q_2.emplace_back(fr::zero);
     q_3.emplace_back(fr::zero);
-    q_c.emplace_back(fr::neg(witness_value));
+    q_c.emplace_back(witness_value.neg());
     q_arith.emplace_back(fr::one);
     q_4.emplace_back(fr::zero);
     q_5.emplace_back(fr::zero);
@@ -564,7 +564,7 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
         } else {
             const size_t bit_index = (num_quads - i) << 1;
             const uint64_t quad = static_cast<uint64_t>(witness_value.get_bit(bit_index)) +
-                                  2ULL * static_cast<uint64_t>(fr::get_bit(witness_value, bit_index + 1));
+                                  2ULL * static_cast<uint64_t>(witness_value.get_bit(bit_index + 1));
             const fr::field_t quad_element = fr::field_t{ quad, 0, 0, 0 }.to_montgomery_form();
             accumulator.self_add(accumulator);
             accumulator.self_add(accumulator);
@@ -721,10 +721,10 @@ waffle::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t
 
         const size_t bit_index = (num_quads - 1 - i) << 1;
         const uint64_t left_quad = static_cast<uint64_t>(left_witness_value.get_bit(bit_index)) +
-                                   2ULL * static_cast<uint64_t>(fr::get_bit(left_witness_value, bit_index + 1));
+                                   2ULL * static_cast<uint64_t>(left_witness_value.get_bit(bit_index + 1));
 
         const uint64_t right_quad = static_cast<uint64_t>(right_witness_value.get_bit(bit_index)) +
-                                    2ULL * static_cast<uint64_t>(fr::get_bit(right_witness_value, bit_index + 1));
+                                    2ULL * static_cast<uint64_t>(right_witness_value.get_bit(bit_index + 1));
         const fr::field_t left_quad_element = fr::field_t{ left_quad, 0, 0, 0 }.to_montgomery_form();
         const fr::field_t right_quad_element = fr::field_t{ right_quad, 0, 0, 0 }.to_montgomery_form();
         fr::field_t out_quad_element;

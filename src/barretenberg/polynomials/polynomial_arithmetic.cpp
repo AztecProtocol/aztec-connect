@@ -295,8 +295,8 @@ void fft_inner_parallel(fr::field_t* coeffs,
         // hard code exception for when the domain size is tiny - we won't execute the next loop, so need to manually
         // reduce + copy
         if (domain.size <= 2) {
-            fr::reduce_once(target[0], coeffs[0]);
-            fr::reduce_once(target[1], coeffs[1]);
+            coeffs[0] = target[0].reduce_once();
+            coeffs[1] = target[1].reduce_once();
         }
 
         // outer FFT loop

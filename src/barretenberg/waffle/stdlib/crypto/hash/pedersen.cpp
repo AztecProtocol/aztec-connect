@@ -51,7 +51,7 @@ point hash_single(const field_t& in, const size_t hash_index)
 
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::one + fr::one, initial_exponent));
+    fr::field_t accumulator_offset = (fr::one + fr::one).pow(static_cast<uint64_t>(initial_exponent)).invert();
 
     fr::field_t origin_accumulators[2]{ fr::one, accumulator_offset + fr::one };
 

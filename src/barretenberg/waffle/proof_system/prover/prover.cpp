@@ -412,7 +412,7 @@ template <typename settings> void ProverBase<settings>::compute_permutation_gran
 
             // Combine into quotient polynomial
             T0 = numerator.sub_with_coarse_reduction(denominator);
-            fr::reduce_once(T0, quotient_large[i]);
+            quotient_large[i] = T0.reduce_once();
 
             // Update our working root of unity
             work_root.self_mul_with_coarse_reduction(key->large_domain.root);
@@ -831,7 +831,7 @@ template <typename settings> barretenberg::fr::field_t ProverBase<settings>::com
     T0 = z[i].mul_with_coarse_reduction(linear_terms.z_1);
     T1 = sigma_last[i].mul_with_coarse_reduction(linear_terms.sigma_last);
     T0.self_add_with_coarse_reduction(T1);
-    fr::reduce_once(T0, r[i]);
+    r[i] = T0.reduce_once();
     ITERATE_OVER_DOMAIN_END;
 
     fr::field_t alpha_base = alpha.sqr().sqr();

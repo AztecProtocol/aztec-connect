@@ -314,7 +314,7 @@ void ExtendedComposer::combine_linear_relations()
             }
 
             const auto assign = [](const fr::field_t& input) { return ((input == fr::zero)) ? fr::one : input; };
-            fr::field_t left = fr::neg(assign(*potential_quads[j].removed_wire.selectors[0]));
+            fr::field_t left = (assign(*potential_quads[j].removed_wire.selectors[0])).neg();
             fr::field_t right = assign(*potential_quads[j].removed_wire.selectors[1]);
 
             q_m[gate_1_index].self_mul(right);
@@ -331,8 +331,7 @@ void ExtendedComposer::combine_linear_relations()
 
             const auto compute_new_selector = [](const auto& wire) {
                 fr::field_t temp = fr::zero;
-                std::for_each(
-                    wire.selectors.begin(), wire.selectors.end(), [&temp](auto x) { temp.self_add(*x); });
+                std::for_each(wire.selectors.begin(), wire.selectors.end(), [&temp](auto x) { temp.self_add(*x); });
                 return temp;
             };
             fr::field_t new_left = compute_new_selector(gate_wires[0]);
@@ -655,7 +654,8 @@ std::shared_ptr<verification_key> ExtendedComposer::compute_verification_key()
                                commitments[i]);
     }
 
-    circuit_verification_key = std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs);
+    circuit_verification_key =
+        std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs);
 
     circuit_verification_key->constraint_selectors.insert({ "Q_1", commitments[0] });
     circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });
@@ -914,12 +914,9 @@ ExtendedVerifier ExtendedComposer::create_verifier()
 
     ExtendedVerifier output_state(circuit_verification_key, create_manifest(public_inputs.size()));
 
-    std::unique_ptr<VerifierBoolWidget> bool_widget =
-        std::make_unique<VerifierBoolWidget>();
-    std::unique_ptr<VerifierArithmeticWidget> arithmetic_widget =
-        std::make_unique<VerifierArithmeticWidget>();
-    std::unique_ptr<VerifierSequentialWidget> sequential_widget =
-        std::make_unique<VerifierSequentialWidget>();
+    std::unique_ptr<VerifierBoolWidget> bool_widget = std::make_unique<VerifierBoolWidget>();
+    std::unique_ptr<VerifierArithmeticWidget> arithmetic_widget = std::make_unique<VerifierArithmeticWidget>();
+    std::unique_ptr<VerifierSequentialWidget> sequential_widget = std::make_unique<VerifierSequentialWidget>();
 
     output_state.verifier_widgets.push_back(std::move(arithmetic_widget));
     output_state.verifier_widgets.push_back(std::move(sequential_widget));

@@ -31,11 +31,11 @@ TEST(fr, is_zero)
     c.data[1] = 1;
     d.data[2] = 1;
     e.data[3] = 1;
-    EXPECT_EQ(fr::is_zero(a), true);
-    EXPECT_EQ(fr::is_zero(b), false);
-    EXPECT_EQ(fr::is_zero(c), false);
-    EXPECT_EQ(fr::is_zero(d), false);
-    EXPECT_EQ(fr::is_zero(e), false);
+    EXPECT_EQ(a.is_zero(), true);
+    EXPECT_EQ(b.is_zero(), false);
+    EXPECT_EQ(c.is_zero(), false);
+    EXPECT_EQ(d.is_zero(), false);
+    EXPECT_EQ(e.is_zero(), false);
 }
 
 TEST(fr, random_element)
@@ -44,8 +44,8 @@ TEST(fr, random_element)
     fr::field_t b = fr::random_element();
 
     EXPECT_EQ((a == b), false);
-    EXPECT_EQ(fr::is_zero(a), false);
-    EXPECT_EQ(fr::is_zero(b), false);
+    EXPECT_EQ(a.is_zero(), false);
+    EXPECT_EQ(b.is_zero(), false);
 }
 
 TEST(fr, mul)
@@ -116,11 +116,11 @@ TEST(fr, montgomery_consistency_check)
     fr::field_t result_b;
     fr::field_t result_c;
     fr::field_t result_d;
-    fr::__to_montgomery_form(a, aR);
-    fr::__to_montgomery_form(aR, aRR);
-    fr::__to_montgomery_form(b, bR);
-    fr::__to_montgomery_form(bR, bRR);
-    fr::__to_montgomery_form(bRR, bRRR);
+    aR = a.to_montgomery_form();
+    aRR = aR.to_montgomery_form();
+    bR = b.to_montgomery_form();
+    bRR = bR.to_montgomery_form();
+    bRRR = bRR.to_montgomery_form();
     result_a = aRR * bRR; // abRRR
     result_b = aR * bRRR; // abRRR
     result_c = aR * bR;   // abR
@@ -259,14 +259,14 @@ TEST(fr, split_into_endomorphism_scalars)
     EXPECT_EQ(got_entropy, 0);
     input.data[3] &= 0x7fffffffffffffff;
 
-    while (fr::gt(input, fr::modulus_plus_one)) {
+    while (input > fr::modulus_plus_one) {
         input.self_sub(fr::modulus);
     }
     fr::field_t k = { { input.data[0], input.data[1], input.data[2], input.data[3] } };
     fr::field_t k1 = { { 0, 0, 0, 0 } };
     fr::field_t k2 = { { 0, 0, 0, 0 } };
 
-    fr::split_into_endomorphism_scalars(k, k1, k2);
+    fr::field_t::split_into_endomorphism_scalars(k, k1, k2);
 
     fr::field_t result{ { 0, 0, 0, 0 } };
 
@@ -291,7 +291,7 @@ TEST(fr, split_into_endomorphism_scalars_simple)
     fr::field_t k2 = { { 0, 0, 0, 0 } };
     fr::__copy(input, k);
 
-    fr::split_into_endomorphism_scalars(k, k1, k2);
+    fr::field_t::split_into_endomorphism_scalars(k, k1, k2);
 
     fr::field_t result{ { 0, 0, 0, 0 } };
     k1.self_to_montgomery_form();

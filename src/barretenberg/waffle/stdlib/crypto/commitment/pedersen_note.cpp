@@ -5,12 +5,9 @@
 
 #include "../../../composer/turbo_composer.hpp"
 
-namespace plonk
-{
-namespace stdlib
-{
-namespace pedersen_note
-{
+namespace plonk {
+namespace stdlib {
+namespace pedersen_note {
 template <size_t num_bits>
 note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, const size_t generator_index)
 {
@@ -27,7 +24,7 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
     constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
 
-    size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1: num_bits;
+    size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1 : num_bits;
     const plonk::stdlib::group_utils::fixed_base_ladder* ladder =
         plonk::stdlib::group_utils::get_ladder(generator_index, num_bits);
     grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(generator_index);
@@ -49,9 +46,11 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
 
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    barretenberg::fr::field_t accumulator_offset = barretenberg::fr::invert(barretenberg::fr::pow_small(barretenberg::fr::one + barretenberg::fr::one, initial_exponent));
-    
-    barretenberg::fr::field_t origin_accumulators[2]{ barretenberg::fr::one, accumulator_offset + barretenberg::fr::one };
+    barretenberg::fr::field_t accumulator_offset =
+        (barretenberg::fr::one + barretenberg::fr::one).pow(static_cast<uint64_t>(initial_exponent)).invert();
+
+    barretenberg::fr::field_t origin_accumulators[2]{ barretenberg::fr::one,
+                                                      accumulator_offset + barretenberg::fr::one };
 
     grumpkin::g1::element* multiplication_transcript =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
@@ -67,7 +66,7 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
     }
     barretenberg::fr::field_t one = barretenberg::fr::one;
     barretenberg::fr::field_t three = ((one + one) + one);
-    
+
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
 
@@ -100,15 +99,12 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
         round_quad.a = ctx->add_variable(multiplication_transcript[i].x);
         round_quad.b = ctx->add_variable(multiplication_transcript[i].y);
 
-        if (i == 0)
-        {
+        if (i == 0) {
             // we need to ensure that the first value of x_alpha is a defined constant.
             // However, repeated applications of the pedersen hash will use the same constant value.
             // `put_constant_variable` will create a gate that fixes the value of x_alpha, but only once
             round_quad.c = ctx->put_constant_variable(x_alpha);
-        }
-        else
-        {
+        } else {
             round_quad.c = ctx->add_variable(x_alpha);
         }
         if ((wnaf_entries[i + 1] & 0xffffffU) == 0) {
@@ -150,14 +146,15 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
     return result;
 }
 
-note compute_commitment(const field_t<waffle::TurboComposer>& view_key, const uint<waffle::TurboComposer, uint32_t>& value)
+note compute_commitment(const field_t<waffle::TurboComposer>& view_key,
+                        const uint<waffle::TurboComposer, uint32_t>& value)
 {
     typedef field_t<waffle::TurboComposer> field_t;
 
     waffle::TurboComposer* context = value.get_context();
 
     field_t k = static_cast<uint<waffle::TurboComposer, uint32_t>>(value);
-    
+
     note_triple p_1 = fixed_base_scalar_mul<32>(k, 0);
     note_triple p_2 = fixed_base_scalar_mul<250>(view_key, 1);
 
@@ -187,13 +184,13 @@ note compute_commitment(const field_t<waffle::TurboComposer>& view_key, const ui
     x_4 = x_4.normalize();
     y_4 = y_4.normalize();
 
-    note result{{ x_4, y_4 }};
+    note result{ { x_4, y_4 } };
     return result;
 }
 
 template note_triple fixed_base_scalar_mul<32>(const field_t<waffle::TurboComposer>& in, const size_t generator_index);
 template note_triple fixed_base_scalar_mul<250>(const field_t<waffle::TurboComposer>& in, const size_t generator_index);
 
-}
-}
-}
+} // namespace pedersen_note
+} // namespace stdlib
+} // namespace plonk

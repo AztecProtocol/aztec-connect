@@ -101,7 +101,7 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
     fr::field_t k2{ { 0, 0, 0, 0 } };
     ;
 
-    fr::split_into_endomorphism_scalars(k, k1, k2);
+    fr::field_t::split_into_endomorphism_scalars(k, k1, k2);
     uint64_t wnaf[WNAF_SIZE(5)] = { 0 };
     uint64_t endo_wnaf[WNAF_SIZE(5)] = { 0 };
     bool skew = false;

@@ -72,12 +72,14 @@ void old_field_mixed_add(const fr::field_t& x1,
     T2 = z1.mul_with_coarse_reduction(T0);
     T2.self_mul(y2);
     T2.self_sub(y1);
-    fr::__paralell_double_and_add_without_reduction(T2, z1, T1, z3);
+    z3 = z1.add_without_reduction(T1);
+    T2.self_add_without_reduction(T2);
     T3 = T1.sqr();
     T0.self_add_with_coarse_reduction(T3);
     z3.self_sqr_with_coarse_reduction();
     z3.self_sub_with_coarse_reduction(T0);
-    fr::__quad_with_coarse_reduction(T3, T3);
+    T3.self_add_with_coarse_reduction(T3);
+    T3.self_add_with_coarse_reduction(T3);
     T1.self_mul_with_coarse_reduction(T3);
     T3.self_mul_with_coarse_reduction(x1);
     T0 = T3.add_with_coarse_reduction(T3);
