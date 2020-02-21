@@ -139,7 +139,7 @@ grumpkin::g1::affine_element get_generator(const size_t generator_index)
 
 grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const size_t hash_index)
 {
-    barretenberg::fr::field_t scalar_multiplier = barretenberg::fr::from_montgomery_form(in);
+    barretenberg::fr::field_t scalar_multiplier = in.from_montgomery_form();
 
     constexpr size_t num_bits = 254;
     constexpr size_t num_quads_base = (num_bits - 1) >> 1;
@@ -149,12 +149,12 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
     const plonk::stdlib::group_utils::fixed_base_ladder* ladder =
         plonk::stdlib::group_utils::get_hash_ladder(hash_index, num_bits);
 
-    barretenberg::fr::field_t scalar_multiplier_base = barretenberg::fr::to_montgomery_form(scalar_multiplier);
+    barretenberg::fr::field_t scalar_multiplier_base = scalar_multiplier.to_montgomery_form();
     if ((scalar_multiplier.data[0] & 1) == 0) {
         barretenberg::fr::field_t two = barretenberg::fr::one + barretenberg::fr::one;
         scalar_multiplier_base = scalar_multiplier_base - two;
     }
-    scalar_multiplier_base = barretenberg::fr::from_montgomery_form(scalar_multiplier_base);
+    scalar_multiplier_base = scalar_multiplier_base.from_montgomery_form();
     uint64_t wnaf_entries[num_quads + 2] = { 0 };
     bool skew = false;
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);

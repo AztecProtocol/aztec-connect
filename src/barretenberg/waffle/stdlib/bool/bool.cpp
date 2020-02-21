@@ -34,11 +34,11 @@ template <typename ComposerContext>
 bool_t<ComposerContext>::bool_t(const witness_t<ComposerContext>& value)
     : context(value.context)
 {
-    ASSERT(barretenberg::fr::eq(value.witness, barretenberg::fr::zero) ||
-           barretenberg::fr::eq(value.witness, barretenberg::fr::one));
+    ASSERT((value.witness == barretenberg::fr::zero) ||
+           (value.witness == barretenberg::fr::one));
     witness_index = value.witness_index;
     context->create_bool_gate(witness_index);
-    witness_bool = barretenberg::fr::eq(value.witness, barretenberg::fr::one);
+    witness_bool = (value.witness == barretenberg::fr::one);
     witness_inverted = false;
 }
 
@@ -100,10 +100,10 @@ template <typename ComposerContext> bool_t<ComposerContext>& bool_t<ComposerCont
 template <typename ComposerContext>
 bool_t<ComposerContext>& bool_t<ComposerContext>::operator=(const witness_t<ComposerContext>& other)
 {
-    ASSERT(barretenberg::fr::eq(other.witness, barretenberg::fr::one) ||
-           barretenberg::fr::eq(other.witness, barretenberg::fr::zero));
+    ASSERT((other.witness == barretenberg::fr::one) ||
+           (other.witness == barretenberg::fr::zero));
     context = other.context;
-    witness_bool = barretenberg::fr::eq(other.witness, barretenberg::fr::zero) ? false : true;
+    witness_bool = (other.witness == barretenberg::fr::zero) ? false : true;
     witness_index = other.witness_index;
     witness_inverted = false;
     context->create_bool_gate(witness_index);

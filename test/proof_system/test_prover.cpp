@@ -295,7 +295,7 @@ TEST(prover, compute_quotient_polynomial)
 
     // check that the max degree of our quotient polynomial is 3n
     for (size_t i = 3 * n; i < 4 * n; ++i) {
-        EXPECT_EQ(fr::eq(state.key->quotient_large.at(i), fr::zero), true);
+        EXPECT_EQ((state.key->quotient_large.at(i) == fr::zero), true);
     }
 }
 
@@ -358,6 +358,6 @@ polynomial_arithmetic::get_lagrange_evaluations(state.challenges.z, state.circui
     fr::__invert(lagrange_evals.vanishing_poly, T0);
     rhs.self_mul(T0);
 
-    EXPECT_EQ(fr::eq(t_eval, rhs), true);
+    EXPECT_EQ((t_eval == rhs), true);
 }
 */

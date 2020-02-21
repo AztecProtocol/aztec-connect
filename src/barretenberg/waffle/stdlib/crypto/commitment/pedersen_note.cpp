@@ -15,12 +15,12 @@ template <size_t num_bits>
 note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, const size_t generator_index)
 {
     field_t<waffle::TurboComposer> scalar = in;
-    if (!barretenberg::fr::eq(in.additive_constant, barretenberg::fr::zero) || !barretenberg::fr::eq(in.multiplicative_constant, barretenberg::fr::one)) {
+    if (!(in.additive_constant == barretenberg::fr::zero) || !(in.multiplicative_constant == barretenberg::fr::one)) {
         scalar = scalar.normalize();
     }
     waffle::TurboComposer* ctx = in.context;
     ASSERT(ctx != nullptr);
-    barretenberg::fr::field_t scalar_multiplier = barretenberg::fr::from_montgomery_form(scalar.get_value());
+    barretenberg::fr::field_t scalar_multiplier = scalar.get_value().from_montgomery_form();
 
     // constexpr size_t num_bits = 250;
     constexpr size_t num_quads_base = (num_bits - 1) >> 1;
@@ -37,13 +37,13 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
     grumpkin::g1::mixed_add(origin_points[0], generator, origin_points[1]);
     origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
 
-    barretenberg::fr::field_t scalar_multiplier_base = barretenberg::fr::to_montgomery_form(scalar_multiplier);
+    barretenberg::fr::field_t scalar_multiplier_base = scalar_multiplier.to_montgomery_form();
 
     if ((scalar_multiplier.data[0] & 1) == 0) {
         barretenberg::fr::field_t two = barretenberg::fr::one + barretenberg::fr::one;
         scalar_multiplier_base = scalar_multiplier_base - two;
     }
-    scalar_multiplier_base = barretenberg::fr::from_montgomery_form(scalar_multiplier_base);
+    scalar_multiplier_base = scalar_multiplier_base.from_montgomery_form();
     uint64_t wnaf_entries[num_quads + 1] = { 0 };
     bool skew = false;
 

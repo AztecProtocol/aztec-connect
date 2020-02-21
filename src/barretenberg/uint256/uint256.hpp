@@ -38,7 +38,7 @@ class uint256_t {
 
     uint256_t(const barretenberg::fr::field_t& input)
     {
-        barretenberg::fr::field_t val = barretenberg::fr::from_montgomery_form(input);
+        barretenberg::fr::field_t val = input.from_montgomery_form();
         data[0] = val.data[0];
         data[1] = val.data[1];
         data[2] = val.data[2];

@@ -69,8 +69,8 @@ TEST(stdlib_pedersen, test_pedersen)
         fr::field_t two = fr::one + fr::one;
         right_in = right_in - two;
     }
-    fr::field_t converted_left = fr::from_montgomery_form(left_in);
-    fr::field_t converted_right = fr::from_montgomery_form(right_in);
+    fr::field_t converted_left = left_in.from_montgomery_form();
+    fr::field_t converted_right = right_in.from_montgomery_form();
 
     uint64_t* left_scalar = &(converted_left.data[0]);
     uint64_t* right_scalar = &(converted_right.data[0]);
@@ -137,10 +137,10 @@ TEST(stdlib_pedersen, test_pedersen)
     grumpkin::g1::add(hash_output_left, hash_output_right, hash_output);
     hash_output = grumpkin::g1::normalize(hash_output);
 
-    EXPECT_EQ(fr::eq(out.get_value(), hash_output.x), true);
+    EXPECT_EQ((out.get_value() == hash_output.x), true);
 
     fr::field_t compress_native = plonk::stdlib::group_utils::compress_native(left.get_value(), right.get_value());
-    EXPECT_EQ(fr::eq(out.get_value(), compress_native), true);
+    EXPECT_EQ((out.get_value() == compress_native), true);
 }
 
 TEST(stdlib_pedersen, test_pedersen_large)

@@ -813,7 +813,7 @@ void compress_fft(const fr::field_t* src, fr::field_t* dest, const size_t cur_si
           fft_inner_serial(coeffs, domain.size, root_table);
           for (size_t i = 0; i < domain.size; ++i)
           {
-              fr::reduce_once(coeffs[i], coeffs[i]);
+              coeffs[i].self_reduce_once();
           }
           return;
       }

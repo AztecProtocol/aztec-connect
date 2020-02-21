@@ -25,7 +25,7 @@ TEST(polynomials, domain_roots)
     expected = fr::one;
     fr::__pow_small(domain.root, n, result);
 
-    EXPECT_EQ(fr::eq(result, expected), true);
+    EXPECT_EQ((result == expected), true);
 }
 
 TEST(polynomials, evaluation_domain_roots)
@@ -63,7 +63,7 @@ TEST(polynomials, fft_with_small_degree)
     fr::field_t expected;
     for (size_t i = 0; i < n; ++i) {
         expected = polynomial_arithmetic::evaluate(poly, work_root, n);
-        EXPECT_EQ(fr::eq(fft_transform[i], expected), true);
+        EXPECT_EQ((fft_transform[i] == expected), true);
         work_root.self_mul(domain.root);
     }
 }
@@ -85,7 +85,7 @@ TEST(polynomials, basic_fft)
     polynomial_arithmetic::ifft(result, domain);
 
     for (size_t i = 0; i < n; ++i) {
-        EXPECT_EQ(fr::eq(result[i], expected[i]), true);
+        EXPECT_EQ((result[i] == expected[i]), true);
     }
     aligned_free(data);
 }
@@ -106,7 +106,7 @@ TEST(polynomials, fft_ifft_consistency)
     polynomial_arithmetic::ifft(result, domain);
 
     for (size_t i = 0; i < n; ++i) {
-        EXPECT_EQ(fr::eq(result[i], expected[i]), true);
+        EXPECT_EQ((result[i] == expected[i]), true);
     }
 }
 
@@ -124,13 +124,13 @@ TEST(polynomials, fft_coset_ifft_consistency)
     domain.compute_lookup_table();
     fr::field_t T0;
     T0 = domain.generator * domain.generator_inverse;
-    EXPECT_EQ(fr::eq(T0, fr::one), true);
+    EXPECT_EQ((T0 == fr::one), true);
 
     polynomial_arithmetic::coset_fft(result, domain);
     polynomial_arithmetic::coset_ifft(result, domain);
 
     for (size_t i = 0; i < n; ++i) {
-        EXPECT_EQ(fr::eq(result[i], expected[i]), true);
+        EXPECT_EQ((result[i] == expected[i]), true);
     }
 }
 
@@ -173,7 +173,7 @@ TEST(polynomials, fft_coset_ifft_cross_consistency)
     polynomial_arithmetic::coset_ifft(poly_a, small_domain);
 
     for (size_t i = 0; i < n; ++i) {
-        EXPECT_EQ(fr::eq(poly_a[i], expected[i]), true);
+        EXPECT_EQ((poly_a[i] == expected[i]), true);
     }
 }
 
@@ -215,14 +215,14 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
     polynomial_arithmetic::coset_ifft(l_n_minus_one_coefficients, mid_domain);
 
     shifted_eval = polynomial_arithmetic::evaluate(l_n_minus_one_coefficients, z, small_domain.size);
-    EXPECT_EQ(fr::eq(eval, shifted_eval), true);
+    EXPECT_EQ((eval == shifted_eval), true);
 
     polynomial_arithmetic::fft(l_n_minus_one_coefficients, small_domain);
 
-    EXPECT_EQ(fr::eq(l_1_coefficients[0], fr::one), true);
+    EXPECT_EQ((l_1_coefficients[0] == fr::one), true);
 
     for (size_t i = 1; i < n; ++i) {
-        EXPECT_EQ(fr::eq(l_1_coefficients[i], fr::zero), true);
+        EXPECT_EQ((l_1_coefficients[i] == fr::zero), true);
     }
 
     EXPECT_EQ(fr::eq(l_n_minus_one_coefficients[n - 2], fr::one), true);
@@ -231,7 +231,7 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
         if (i == (n - 2)) {
             continue;
         }
-        EXPECT_EQ(fr::eq(l_n_minus_one_coefficients[i], fr::zero), true);
+        EXPECT_EQ((l_n_minus_one_coefficients[i] == fr::zero), true);
     }
 }
 
@@ -284,7 +284,7 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
 
     for (size_t i = n + 1; i < mid_domain.size; ++i) {
 
-        EXPECT_EQ(fr::eq(result[i], fr::zero), true);
+        EXPECT_EQ((result[i] == fr::zero), true);
     }
 }
 
@@ -329,7 +329,7 @@ TEST(polynomials, compute_kate_opening_coefficients)
     fr::field_t result;
     for (size_t i = 0; i < domain.size; ++i) {
         result = W[i] * multiplicand[i];
-        EXPECT_EQ(fr::eq(result, coeffs[i]), true);
+        EXPECT_EQ((result == coeffs[i]), true);
     }
 
     aligned_free(coeffs);
@@ -360,7 +360,7 @@ TEST(polynomials, get_lagrange_evaluations)
     l_n_minus_1_poly[n - 2] = fr::one;
 
     fr::field_t n_mont{ { n, 0, 0, 0 } };
-    fr::__to_montgomery_form(n_mont, n_mont);
+    n_mont.self_to_montgomery_form();
     fr::__mul(n_mont, domain.root, vanishing_poly[n - 1]);
 
     polynomial_arithmetic::ifft(l_1_poly, domain);
@@ -373,9 +373,9 @@ TEST(polynomials, get_lagrange_evaluations)
     l_1_expected = polynomial_arithmetic::evaluate(l_1_poly, z, n);
     l_n_minus_1_expected = polynomial_arithmetic::evaluate(l_n_minus_1_poly, z, n);
     vanishing_poly_expected = polynomial_arithmetic::evaluate(vanishing_poly, z, n);
-    EXPECT_EQ(fr::eq(evals.l_1, l_1_expected), true);
-    EXPECT_EQ(fr::eq(evals.l_n_minus_1, l_n_minus_1_expected), true);
-    EXPECT_EQ(fr::eq(evals.vanishing_poly, vanishing_poly_expected), true);
+    EXPECT_EQ((evals.l_1 == l_1_expected), true);
+    EXPECT_EQ((evals.l_n_minus_1 == l_n_minus_1_expected), true);
+    EXPECT_EQ((evals.vanishing_poly == vanishing_poly_expected), true);
 }
 
 TEST(polynomials, barycentric_weight_evaluations)
@@ -406,7 +406,7 @@ TEST(polynomials, barycentric_weight_evaluations)
 
     fr::field_t expected = polynomial_arithmetic::evaluate(&poly[0], evaluation_point, n);
 
-    EXPECT_EQ(fr::eq(result, expected), true);
+    EXPECT_EQ((result == expected), true);
 }
 
 // TEST(polynomials, fft_experiments)

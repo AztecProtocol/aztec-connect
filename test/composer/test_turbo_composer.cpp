@@ -316,8 +316,8 @@ TEST(turbo_composer, small_scalar_multipliers)
 
     grumpkin::g1::element expected_point = grumpkin::g1::normalize(
         grumpkin::g1::group_exponentiation_inner(generator, grumpkin::fr::to_montgomery_form(scalar_multiplier)));
-    EXPECT_EQ(fr::eq(multiplication_transcript[num_quads].x, expected_point.x), true);
-    EXPECT_EQ(fr::eq(multiplication_transcript[num_quads].y, expected_point.y), true);
+    EXPECT_EQ((multiplication_transcript[num_quads].x == expected_point.x), true);
+    EXPECT_EQ((multiplication_transcript[num_quads].y == expected_point.y), true);
 
     uint64_t result_accumulator = fr::from_montgomery_form(accumulator_transcript[num_quads]).data[0];
     uint64_t expected_accumulator = scalar_multiplier.data[0];
@@ -358,13 +358,13 @@ TEST(turbo_composer, large_scalar_multipliers)
 
     grumpkin::fr::field_t scalar_multiplier_base = grumpkin::fr::random_element();
 
-    grumpkin::fr::field_t scalar_multiplier = grumpkin::fr::from_montgomery_form(scalar_multiplier_base);
+    grumpkin::fr::field_t scalar_multiplier = scalar_multiplier_base.from_montgomery_form();
 
     if ((scalar_multiplier.data[0] & 1) == 0) {
         grumpkin::fr::field_t two = grumpkin::fr::one + grumpkin::fr::one;
         scalar_multiplier_base = scalar_multiplier_base - two;
     }
-    scalar_multiplier_base = grumpkin::fr::from_montgomery_form(scalar_multiplier_base);
+    scalar_multiplier_base = scalar_multiplier_base.from_montgomery_form();
     uint64_t wnaf_entries[num_quads + 1] = { 0 };
 
     bool skew = false;
@@ -449,15 +449,15 @@ TEST(turbo_composer, large_scalar_multipliers)
 
     grumpkin::g1::element expected_point = grumpkin::g1::normalize(
         grumpkin::g1::group_exponentiation_inner(generator, grumpkin::fr::to_montgomery_form(scalar_multiplier)));
-    EXPECT_EQ(fr::eq(multiplication_transcript[num_quads].x, expected_point.x), true);
-    EXPECT_EQ(fr::eq(multiplication_transcript[num_quads].y, expected_point.y), true);
+    EXPECT_EQ((multiplication_transcript[num_quads].x == expected_point.x), true);
+    EXPECT_EQ((multiplication_transcript[num_quads].y == expected_point.y), true);
 
     fr::field_t result_accumulator = (accumulator_transcript[num_quads]);
     fr::field_t expected_accumulator = fr::to_montgomery_form({ { scalar_multiplier.data[0],
                                                                   scalar_multiplier.data[1],
                                                                   scalar_multiplier.data[2],
                                                                   scalar_multiplier.data[3] } });
-    EXPECT_EQ(fr::eq(result_accumulator, expected_accumulator), true);
+    EXPECT_EQ((result_accumulator == expected_accumulator), true);
 
     waffle::TurboProver prover = composer.preprocess();
 

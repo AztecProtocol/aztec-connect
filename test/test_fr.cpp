@@ -12,11 +12,11 @@ TEST(fr, eq)
     fr::field_t d{ { 0x01, 0x02, 0x04, 0x04 } };
     fr::field_t e{ { 0x01, 0x03, 0x03, 0x04 } };
     fr::field_t f{ { 0x02, 0x02, 0x03, 0x04 } };
-    EXPECT_EQ(fr::eq(a, b), true);
-    EXPECT_EQ(fr::eq(a, c), false);
-    EXPECT_EQ(fr::eq(a, d), false);
-    EXPECT_EQ(fr::eq(a, e), false);
-    EXPECT_EQ(fr::eq(a, f), false);
+    EXPECT_EQ((a == b), true);
+    EXPECT_EQ((a == c), false);
+    EXPECT_EQ((a == d), false);
+    EXPECT_EQ((a == e), false);
+    EXPECT_EQ((a == f), false);
 }
 
 TEST(fr, is_zero)
@@ -43,7 +43,7 @@ TEST(fr, random_element)
     fr::field_t a = fr::random_element();
     fr::field_t b = fr::random_element();
 
-    EXPECT_EQ(fr::eq(a, b), false);
+    EXPECT_EQ((a == b), false);
     EXPECT_EQ(fr::is_zero(a), false);
     EXPECT_EQ(fr::is_zero(b), false);
 }
@@ -55,7 +55,7 @@ TEST(fr, mul)
     fr::field_t expected{ { 0xab961ef46b4756b6, 0xbc6b636fc29678c8, 0xd247391ed6b5bd16, 0x12e8538b3bde6784 } };
     fr::field_t result;
     result = a * b;
-    EXPECT_EQ(fr::eq(result, expected), true);
+    EXPECT_EQ((result == expected), true);
 }
 
 TEST(fr, sqr)
@@ -64,7 +64,7 @@ TEST(fr, sqr)
     fr::field_t expected{ { 0xc787f7d9e2c72714, 0xcf21cf53d8f65f67, 0x8db109903dac0008, 0x26ab4dd65f46be5f } };
     fr::field_t result;
     result = a.sqr();
-    EXPECT_EQ(fr::eq(result, expected), true);
+    EXPECT_EQ((result == expected), true);
 }
 
 TEST(fr, add)
@@ -74,7 +74,7 @@ TEST(fr, add)
     fr::field_t expected{ { 0x7de76c654ce1394f, 0xc7fb821e66f26999, 0x4882d6a6d6fa59b0, 0x6b717a8ed0c5c6db } };
     fr::field_t result;
     result = a + b;
-    EXPECT_EQ(fr::eq(result, expected), true);
+    EXPECT_EQ((result == expected), true);
 }
 
 TEST(fr, sub)
@@ -84,23 +84,23 @@ TEST(fr, sub)
     fr::field_t expected{ { 0xbcff176a92b5a5c9, 0x5eedbaa04fe79da0, 0x9995bf24e48db1c5, 0x3029017012d32b11 } };
     fr::field_t result;
     result = a - b;
-    EXPECT_EQ(fr::eq(result, expected), true);
+    EXPECT_EQ((result == expected), true);
 }
 
 TEST(fr, to_montgomery_form)
 {
     fr::field_t result{ { 0x01, 0x00, 0x00, 0x00 } };
     fr::field_t expected = fr::one;
-    fr::__to_montgomery_form(result, result);
-    EXPECT_EQ(fr::eq(result, expected), true);
+    result.self_to_montgomery_form();
+    EXPECT_EQ((result == expected), true);
 }
 
 TEST(fr, from_montgomery_form)
 {
     fr::field_t result = fr::one;
     fr::field_t expected{ { 0x01, 0x00, 0x00, 0x00 } };
-    fr::__from_montgomery_form(result, result);
-    EXPECT_EQ(fr::eq(result, expected), true);
+    result.self_from_montgomery_form();
+    EXPECT_EQ((result == expected), true);
 }
 
 TEST(fr, montgomery_consistency_check)
@@ -125,20 +125,20 @@ TEST(fr, montgomery_consistency_check)
     result_b = aR * bRRR; // abRRR
     result_c = aR * bR;   // abR
     result_d = a * b;     // abR^-1
-    EXPECT_EQ(fr::eq(result_a, result_b), true);
-    fr::__from_montgomery_form(result_a, result_a); // abRR
-    fr::__from_montgomery_form(result_a, result_a); // abR
-    fr::__from_montgomery_form(result_a, result_a); // ab
-    fr::__from_montgomery_form(result_c, result_c); // ab
-    fr::__to_montgomery_form(result_d, result_d);   // ab
-    EXPECT_EQ(fr::eq(result_a, result_c), true);
-    EXPECT_EQ(fr::eq(result_a, result_d), true);
+    EXPECT_EQ((result_a == result_b), true);
+    result_a.self_from_montgomery_form(); // abRR
+    result_a.self_from_montgomery_form(); // abR
+    result_a.self_from_montgomery_form(); // ab
+    result_c.self_from_montgomery_form(); // ab
+    result_d.self_to_montgomery_form();   // ab
+    EXPECT_EQ((result_a == result_c), true);
+    EXPECT_EQ((result_a == result_d), true);
 }
 
 TEST(fr, add_mul_consistency)
 {
     fr::field_t multiplicand = { { 0x09, 0, 0, 0 } };
-    fr::__to_montgomery_form(multiplicand, multiplicand);
+    multiplicand.self_to_montgomery_form();
 
     fr::field_t a = fr::random_element();
     fr::field_t result;
@@ -150,13 +150,13 @@ TEST(fr, add_mul_consistency)
     fr::field_t expected;
     expected = a * multiplicand;
 
-    EXPECT_EQ(fr::eq(result, expected), true);
+    EXPECT_EQ((result == expected), true);
 }
 
 TEST(fr, sub_mul_consistency)
 {
     fr::field_t multiplicand = { { 0x05, 0, 0, 0 } };
-    fr::__to_montgomery_form(multiplicand, multiplicand);
+    multiplicand.self_to_montgomery_form();
 
     fr::field_t a = fr::random_element();
     fr::field_t result;
@@ -170,7 +170,7 @@ TEST(fr, sub_mul_consistency)
     fr::field_t expected;
     expected = a * multiplicand;
 
-    EXPECT_EQ(fr::eq(result, expected), true);
+    EXPECT_EQ((result == expected), true);
 }
 
 TEST(fr, lambda)
@@ -190,7 +190,7 @@ TEST(fr, lambda)
     lambda_x_cubed = lambda_x * lambda_x;
     lambda_x_cubed.self_mul(lambda_x);
 
-    EXPECT_EQ(fr::eq(x_cubed, lambda_x_cubed), true);
+    EXPECT_EQ((x_cubed == lambda_x_cubed), true);
 }
 
 TEST(fr, invert)
@@ -199,14 +199,14 @@ TEST(fr, invert)
     fr::field_t inverse = input.invert();
     fr::field_t result = input * inverse;
 
-    EXPECT_EQ(fr::eq(result, fr::one), true);
+    EXPECT_EQ((result == fr::one), true);
 }
 
 TEST(fr, invert_one_is_one)
 {
     fr::field_t result = fr::one;
     fr::__invert(result, result);
-    EXPECT_EQ(fr::eq(result, fr::one), true);
+    EXPECT_EQ((result == fr::one), true);
 }
 
 TEST(fr, sqrt)
@@ -231,7 +231,7 @@ TEST(fr, one_and_zero)
 {
     fr::field_t result;
     result = fr::one - fr::one;
-    EXPECT_EQ(fr::eq(result, fr::zero), true);
+    EXPECT_EQ((result == fr::zero), true);
 }
 
 TEST(fr, copy)
@@ -239,7 +239,7 @@ TEST(fr, copy)
     fr::field_t result = fr::random_element();
     fr::field_t expected;
     fr::__copy(result, expected);
-    EXPECT_EQ(fr::eq(result, expected), true);
+    EXPECT_EQ((result == expected), true);
 }
 
 TEST(fr, neg)
@@ -249,7 +249,7 @@ TEST(fr, neg)
     fr::__neg(a, b);
     fr::field_t result;
     result = a + b;
-    EXPECT_EQ(fr::eq(result, fr::zero), true);
+    EXPECT_EQ((result == fr::zero), true);
 }
 
 TEST(fr, split_into_endomorphism_scalars)
@@ -270,13 +270,13 @@ TEST(fr, split_into_endomorphism_scalars)
 
     fr::field_t result{ { 0, 0, 0, 0 } };
 
-    fr::__to_montgomery_form(k1, k1);
-    fr::__to_montgomery_form(k2, k2);
+    k1.self_to_montgomery_form();
+    k2.self_to_montgomery_form();
 
     result = k2 * fr::beta;
     result = k1 - result;
 
-    fr::__from_montgomery_form(result, result);
+    result.self_from_montgomery_form();
     for (size_t i = 0; i < 4; ++i) {
         EXPECT_EQ(result.data[i], k.data[i]);
     }
@@ -294,13 +294,13 @@ TEST(fr, split_into_endomorphism_scalars_simple)
     fr::split_into_endomorphism_scalars(k, k1, k2);
 
     fr::field_t result{ { 0, 0, 0, 0 } };
-    fr::__to_montgomery_form(k1, k1);
-    fr::__to_montgomery_form(k2, k2);
+    k1.self_to_montgomery_form();
+    k2.self_to_montgomery_form();
 
     result = k2 * fr::beta;
     result = k1 - result;
 
-    fr::__from_montgomery_form(result, result);
+    result.self_from_montgomery_form();
     for (size_t i = 0; i < 4; ++i) {
         EXPECT_EQ(result.data[i], k.data[i]);
     }
@@ -338,6 +338,6 @@ TEST(fr, coset_generator_consistency)
     fr::compute_coset_generators(num_generators, 1 << 30, &generators[0]);
     EXPECT_EQ(generators.size() == num_generators, true);
     for (size_t i = 0; i < generators.size(); ++i) {
-        EXPECT_EQ(fr::eq(generators[i], fr::coset_generators[i]), true);
+        EXPECT_EQ((generators[i] == fr::coset_generators[i]), true);
     }
 }

@@ -34,7 +34,7 @@ typename merkle_tree<ComposerContext>::hash_path merkle_tree<ComposerContext>::c
 
 inline uint128_t field_to_uint128(const fr::field_t& input)
 {
-    fr::field_t raw = fr::from_montgomery_form(input);
+    fr::field_t raw = input.from_montgomery_form();
     uint128_t lo = raw.data[0];
     uint128_t hi = raw.data[1];
     return (hi << 64) | lo;

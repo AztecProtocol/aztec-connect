@@ -54,60 +54,22 @@ $1 = $4 + $5;
 ([^\s]*) = (barretenberg::|grumpkin::)?f(q|r)::sub\([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)[\s]*\);
 $1 = $4 - $5;
 
+fr::__to_montgomery_form(foo, foo);
 
+(barretenberg::|grumpkin::)?f(q|r)::__(to_montgomery_form|from_montgomery_form|reduce_once)?\([\s]*([^\s]*)[\s]*,[\s]*\4[\s]*\);
+$4.self_$3();
 
-f(q|r)::__sqr_with_coarse_reduction\((.*), \2\);
-$2.self_sqr_with_coarse_reduction();
+(barretenberg::|grumpkin::)?f(q|r)::(reduce_once)\([\s]*([^\s]*)[\s]*,[\s]*\4[\s]*\);
+$4.self_reduce_once();
 
-f(q|r)::__sqr\((.*), \2\);
-$2.self_sqr($2);
+([^\s]*) = (barretenberg::|grumpkin::)?f(q|r)::(to_montgomery_form|from_montgomery_form)?\([\s]*([^\s]*)[\s]*\);
+$1 = $5.$4();
 
-f(q|r)::__mul_with_coarse_reduction\((.*), (.*), \1\);
-$2.self_mul_with_coarse_reduction($3);
+(barretenberg::|grumpkin::)?f(q|r)::eq\([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)\)
+($3 == $4)
 
-f(q|r)::__mul\((.*), (.*), \1\);
-$2.self_mul($3);
+(barretenberg::|grumpkin::)?f(q|r)::get_bit\([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)\)
+$3.get_bit($4)
 
-f(q|r)::__add_with_coarse_reduction\((.*), (.*), \1\);
-$2.self_add_with_coarse_reduction($3);
-
-f(q|r)::__add_without_reduction\((.*), (.*), \1\);
-$2.self_add_without_reduction($3);
-
-f(q|r)::__add\((.*), (.*), \1\);
-$2.self_add($3);
-
-f(q|r)::__sub_with_coarse_reduction\((.*), (.*), \1\);
-$2.self_sub_with_coarse_reduction($3);
-
-f(q|r)::__sub\((.*), (.*), \1\);
-$2.self_sub($3);
-
-
-f(q|r)::__mul_with_coarse_reduction\((.*), (.*), (.*)\);
-$4 = $2.mul_with_coarse_reduction($3);
-
-f(q|r)::__mul\((.*), (.*), (.*)\);
-$4 = $2 * $3;
-
-f(q|r)::__sqr_with_coarse_reduction\((.*), (.*)\);
-$3 = $2.sqr_with_coarse_reduction();
-
-f(q|r)::__sqr\((.*), (.*)\);
-$3 = $2.sqr();
-
-
-f(q|r)::__add_with_coarse_reduction\((.*), (.*), (.*)\);
-$4 = $2.add_with_coarse_reduction($3);
-
-f(q|r)::__add_without_reduction\((.*), (.*), (.*)\);
-$4 = $2.add_without_reduction($3);
-
-f(q|r)::__add\((.*), (.*), (.*)\);
-$4 = $2 + $3;
-
-f(q|r)::__sub_with_coarse_reduction\((.*), (.*), (.*)\);
-$4 = $2.sub_with_coarse_reduction($3);
-
-f(q|r)::__sub\((.*), (.*), (.*)\);
-$4 = $2 - $3;
+(barretenberg::|grumpkin::)?f(q|r)::([^_:\(\)]*)\([\s]*([^_:\(\)\s]*)[\s]*,[\s]*([^_:\(\)\s]*)\)
+$4.$3($5)

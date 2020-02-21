@@ -95,7 +95,7 @@ TEST(test_new_field, multiply)
     expected = alt_a * alt_b;
     expected.self_add(expected);
 
-    EXPECT_EQ(fr::eq(t0, expected), true);
+    EXPECT_EQ((t0 == expected), true);
     // testField result = a * b;
 
     // EXPECT_EQ(result.data[0], expected.data[0]);

@@ -313,7 +313,7 @@ void ExtendedComposer::combine_linear_relations()
                 deleted_gates[potential_quads[j].gate_indices[1]] = true;
             }
 
-            const auto assign = [](const fr::field_t& input) { return (fr::eq(input, fr::zero)) ? fr::one : input; };
+            const auto assign = [](const fr::field_t& input) { return ((input == fr::zero)) ? fr::one : input; };
             fr::field_t left = fr::neg(assign(*potential_quads[j].removed_wire.selectors[0]));
             fr::field_t right = assign(*potential_quads[j].removed_wire.selectors[1]);
 
@@ -345,7 +345,7 @@ void ExtendedComposer::combine_linear_relations()
             fr::__copy(new_output, q_3[gate_1_index]);
             fr::__copy(new_next_output, q_3_next[gate_1_index]);
             q_c[gate_1_index].self_add(q_c[gate_2_index]);
-            if (!fr::eq(fr::zero, q_m[gate_2_index])) {
+            if (!(fr::zero == q_m[gate_2_index])) {
                 q_m[gate_1_index].self_add(q_m[gate_2_index]);
             }
 
@@ -788,7 +788,7 @@ ExtendedProver ExtendedComposer::preprocess()
     // //     {
     // //         output_copy = output_state.w_o[output_state.sigma_3_mapping[i] & mask];
     // //     }
-    // //     if (!fr::eq(left_copy, output_state.w_l[i]))
+    // //     if (!(left_copy == output_state.w_l[i]))
     // //     {
     // //         printf("left copy at index %lu fails... \n", i);
     // //         for (size_t j = 0; j < adjusted_gate_indices.size(); ++j)
@@ -800,7 +800,7 @@ ExtendedProver ExtendedComposer::preprocess()
     // //             }
     // //         }
     // //     }
-    // //     if (!fr::eq(right_copy, output_state.w_r[i]))
+    // //     if (!(right_copy == output_state.w_r[i]))
     // //     {
     // //         printf("right copy at index %lu fails. mapped to gate %lu. right wire and copy wire = \n", i,
     // //         output_state.sigma_2_mapping[i] & mask); printf("raw value = %x \n", output_state.sigma_2_mapping[i]);
@@ -815,7 +815,7 @@ ExtendedProver ExtendedComposer::preprocess()
     // //             }
     // //         }
     // //     }
-    // //     if (!fr::eq(output_copy, output_state.w_o[i]))
+    // //     if (!(output_copy == output_state.w_o[i]))
     // //     {
     // //         printf("output copy at index %lu fails. mapped to gate %lu. output wire and copy wire = \n", i,
     // //         output_state.sigma_3_mapping[i] & mask); printf("raw value = %x \n", output_state.sigma_3_mapping[i]);
@@ -845,7 +845,7 @@ ExtendedProver ExtendedComposer::preprocess()
     // //     result = result + t3;
     // //     result = result + t4;
     // //     result = result + arithmetic_widget->q_c[i];
-    // //     if (!fr::eq(result, fr::zero))
+    // //     if (!(result == fr::zero))
     // //     {
     // //         size_t failure_idx = i;
     // //         size_t original_failure_idx;
@@ -879,20 +879,20 @@ ExtendedProver ExtendedComposer::preprocess()
     // // printf("bool wires...\n");
     // // for (size_t i = 0; i < bool_widget->q_bl.get_size(); ++i)
     // // {
-    // //     if (!fr::eq(fr::from_montgomery_form(bool_widget->q_bl[i]), fr::zero))
+    // //     if (!(fr::from_montgomery_form(bool_widget->q_bl[i]) == fr::zero))
     // //     {
     // //         fr::field_t t = output_state.w_l[i];
     // //         fr::field_t u = fr::sqr(t) - t;
-    // //         if (!fr::eq(u, fr::zero))
+    // //         if (!(u == fr::zero))
     // //         {
     // //             printf("bool fail? left \n");
     // //         }
     // //     }
-    // //     if (!fr::eq(fr::from_montgomery_form(bool_widget->q_br[i]), fr::zero))
+    // //     if (!(fr::from_montgomery_form(bool_widget->q_br[i]) == fr::zero))
     // //     {
     // //         fr::field_t t = output_state.w_r[i];
     // //         fr::field_t u = fr::sqr(t) - t;
-    // //         if (!fr::eq(u, fr::zero))
+    // //         if (!(u == fr::zero))
     // //         {
     // //             printf("bool fail? right \n");
     // //         }

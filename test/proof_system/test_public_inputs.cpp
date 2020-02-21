@@ -409,7 +409,7 @@ TEST(test_public_inputs, compute_delta)
 
     fr::field_t init_result = compute_grand_product(left, right, sigma_1, sigma_2);
 
-    EXPECT_EQ(fr::eq(init_result, fr::one), true);
+    EXPECT_EQ((init_result == fr::one), true);
 
     work_root = fr::one;
     for (size_t i = 0; i < num_public_inputs; ++i) {
@@ -425,6 +425,6 @@ TEST(test_public_inputs, compute_delta)
     }
     fr::field_t target_delta = waffle::compute_public_input_delta(public_inputs, beta, gamma, domain.root);
 
-    EXPECT_EQ(fr::eq(modified_result, target_delta), true);
+    EXPECT_EQ((modified_result == target_delta), true);
 }
 } // namespace

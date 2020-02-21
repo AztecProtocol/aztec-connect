@@ -91,8 +91,8 @@ inline void read_g1_elements_from_buffer(g1::affine_element* elements, char* buf
             elements[i].y.data[1] = __builtin_bswap64(elements[i].y.data[1]);
             elements[i].y.data[2] = __builtin_bswap64(elements[i].y.data[2]);
             elements[i].y.data[3] = __builtin_bswap64(elements[i].y.data[3]);
-            fq::__to_montgomery_form(elements[i].x, elements[i].x);
-            fq::__to_montgomery_form(elements[i].y, elements[i].y);
+            elements[i].x.self_to_montgomery_form();
+            elements[i].y.self_to_montgomery_form();
         }
     }
 }
@@ -124,10 +124,10 @@ inline void read_g2_elements_from_buffer(g2::affine_element* elements, char* buf
             elements[i].y.c1.data[1] = __builtin_bswap64(elements[i].y.c1.data[1]);
             elements[i].y.c1.data[2] = __builtin_bswap64(elements[i].y.c1.data[2]);
             elements[i].y.c1.data[3] = __builtin_bswap64(elements[i].y.c1.data[3]);
-            fq::__to_montgomery_form(elements[i].x.c0, elements[i].x.c0);
-            fq::__to_montgomery_form(elements[i].x.c1, elements[i].x.c1);
-            fq::__to_montgomery_form(elements[i].y.c0, elements[i].y.c0);
-            fq::__to_montgomery_form(elements[i].y.c1, elements[i].y.c1);
+            elements[i].x.c0.self_to_montgomery_form();
+            elements[i].x.c1.self_to_montgomery_form();
+            elements[i].y.c0.self_to_montgomery_form();
+            elements[i].y.c1.self_to_montgomery_form();
         }
     }
 }

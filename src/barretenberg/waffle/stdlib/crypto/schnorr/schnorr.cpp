@@ -95,14 +95,14 @@ bool verify_signature(const bitarray<waffle::TurboComposer>& message, const poin
     bitarray hash_input(context, 256 + message.size());
 
     barretenberg::fr::field_t r_x = x_3.get_value();
-    r_x = barretenberg::fr::from_montgomery_form(r_x);
+    r_x = r_x.from_montgomery_form();
 
     field_t sum(context, barretenberg::fr::one);
     field_t accumulator(context, barretenberg::fr::zero);
     size_t input_length = 256 + message.size();
 
     for (size_t i = 0; i < 256; ++i) {
-        bool_t temp = witness_t(context, barretenberg::fr::get_bit(r_x, i));
+        bool_t temp = witness_t(context, r_x.get_bit(i));
         accumulator = accumulator + (sum * temp);
         sum = sum + sum;
         temp = temp.normalize();

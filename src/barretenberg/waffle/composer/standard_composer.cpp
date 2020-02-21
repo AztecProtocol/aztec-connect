@@ -273,7 +273,7 @@ void StandardComposer::create_poly_gate(const poly_triple& in)
 
 std::vector<uint32_t> StandardComposer::create_range_constraint(const uint32_t witness_index, const size_t num_bits)
 {
-    fr::field_t target = fr::from_montgomery_form(variables[witness_index]);
+    fr::field_t target = variables[witness_index].from_montgomery_form();
 
     std::vector<uint32_t> accumulators;
 
@@ -281,7 +281,7 @@ std::vector<uint32_t> StandardComposer::create_range_constraint(const uint32_t w
     fr::field_t accumulator = fr::zero;
     uint32_t accumulator_idx = 0;
     for (size_t i = num_bits - 1; i < num_bits; i -= 2) {
-        bool hi = fr::get_bit(target, i);
+        bool hi = target.get_bit(i);
         bool lo = fr::get_bit(target, i - 1);
 
         uint32_t hi_idx = add_variable(hi ? fr::one : fr::zero);
@@ -321,8 +321,8 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
 {
     waffle::accumulator_triple accumulators;
 
-    const fr::field_t left_witness_value = fr::from_montgomery_form(variables[a]);
-    const fr::field_t right_witness_value = fr::from_montgomery_form(variables[b]);
+    const fr::field_t left_witness_value = variables[a].from_montgomery_form();
+    const fr::field_t right_witness_value = variables[b].from_montgomery_form();
 
     fr::field_t left_accumulator = fr::zero;
     fr::field_t right_accumulator = fr::zero;
@@ -334,9 +334,9 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
     fr::field_t four = fr::to_montgomery_form({ { 4, 0, 0, 0 } });
     fr::field_t neg_two = fr::neg(fr::to_montgomery_form({ { 2, 0, 0, 0 } }));
     for (size_t i = num_bits - 1; i < num_bits; i -= 2) {
-        bool left_hi_val = fr::get_bit(left_witness_value, i);
+        bool left_hi_val = left_witness_value.get_bit(i);
         bool left_lo_val = fr::get_bit(left_witness_value, (i - 1));
-        bool right_hi_val = fr::get_bit(right_witness_value, (i));
+        bool right_hi_val = right_witness_value.get_bit((i));
         bool right_lo_val = fr::get_bit(right_witness_value, (i - 1));
 
         uint32_t left_hi_idx = add_variable(left_hi_val ? fr::one : fr::zero);

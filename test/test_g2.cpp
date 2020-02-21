@@ -266,7 +266,7 @@ TEST(g2, group_exponentiation_check_against_constants)
     g2::affine_element lhs = {.x = {.c0 = {{0x46debd5cd992f6ed, 0x674322d4f75edadd, 0x426a00665e5c4479, 0x1800deef121f1e76}}, .c1 = {{0x97e485b7aef312c2, 0xf1aa493335a9e712, 0x7260bfb731fb5d25, 0x198e9393920d483a}}}, .y = {.c0 = {{0x4ce6cc0166fa7daa, 0xe3d1e7690c43d37b, 0x4aab71808dcb408f, 0x12c85ea5db8c6deb}}, .c1 = {{0x55acdadcd122975b, 0xbc4b313370b38ef3, 0xec9e99ad690c3395, 0x90689d0585ff075}}}};
     g2::affine_element expected = {.x = {.c0 = {{0x3363a6e8193817c0, 0x5edb295efcf8a8f0, 0xe33df179b9821b84, 0xaa0f7e7c00600d3}}, .c1 = {{0x91b09f192f2b3eb2, 0x3a27767998031cd5, 0xa44abe0ef5ba1c0f, 0x10bbc579ca6f412f}}}, .y = {.c0 = {{0xa8850d9c027ba4db, 0xae6147163c4068a6, 0x5f73bedc2cd52fab, 0x159dfbb82478b51b}}, .c1 = {{0x33cccf11dd7d7fb2, 0xcbb3c7c098cbb079, 0x2e83153ab90a931d, 0x26d19735b36c2d08}}}};
 
-    fr::__to_montgomery_form(scalar, scalar);
+    scalar.self_to_montgomery_form();
     fq2::__to_montgomery_form(lhs.x, lhs.x);
     fq2::__to_montgomery_form(lhs.y, lhs.y);
     fq2::__to_montgomery_form(expected.x, expected.x);

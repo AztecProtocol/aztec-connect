@@ -109,24 +109,24 @@ template <typename ComposerContext> field_t<ComposerContext>::operator bool_t<Co
 {
     if (witness_index == static_cast<uint32_t>(-1)) {
         bool_t<ComposerContext> result(context);
-        result.witness_bool = barretenberg::fr::eq(additive_constant, barretenberg::fr::one);
+        result.witness_bool = (additive_constant == barretenberg::fr::one);
         result.witness_inverted = false;
         result.witness_index = static_cast<uint32_t>(-1);
         return result;
     }
-    bool add_constant_check = barretenberg::fr::eq(additive_constant, barretenberg::fr::zero);
-    bool mul_constant_check = barretenberg::fr::eq(multiplicative_constant, barretenberg::fr::one);
-    bool inverted_check = barretenberg::fr::eq(additive_constant, barretenberg::fr::one) &&
-                          barretenberg::fr::eq(multiplicative_constant, barretenberg::fr::neg_one());
+    bool add_constant_check = (additive_constant == barretenberg::fr::zero);
+    bool mul_constant_check = (multiplicative_constant == barretenberg::fr::one);
+    bool inverted_check = (additive_constant == barretenberg::fr::one) &&
+                          (multiplicative_constant == barretenberg::fr::neg_one());
     if ((!add_constant_check || !mul_constant_check) && !inverted_check) {
         normalize();
     }
 
     barretenberg::fr::field_t witness = context->get_variable(witness_index);
-    ASSERT(barretenberg::fr::eq(witness, barretenberg::fr::zero) ||
-           barretenberg::fr::eq(witness, barretenberg::fr::one));
+    ASSERT((witness == barretenberg::fr::zero) ||
+           (witness == barretenberg::fr::one));
     bool_t<ComposerContext> result(context);
-    result.witness_bool = barretenberg::fr::eq(witness, barretenberg::fr::one);
+    result.witness_bool = (witness == barretenberg::fr::one);
     result.witness_inverted = inverted_check;
     result.witness_index = witness_index;
     context->create_bool_gate(witness_index);
@@ -135,7 +135,7 @@ template <typename ComposerContext> field_t<ComposerContext>::operator bool_t<Co
 
 template <typename ComposerContext> field_t<ComposerContext>::operator byte_array<ComposerContext>() const
 {
-    barretenberg::fr::field_t value = barretenberg::fr::from_montgomery_form(get_value());
+    barretenberg::fr::field_t value = get_value().from_montgomery_form();
     typename byte_array<ComposerContext>::bits_t bits(256, bool_t(context));
 
     if (is_constant()) {
@@ -297,20 +297,20 @@ field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t& othe
 
     if (witness_index == static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)) {
         // both inputs are constant - don't add a gate
-        if (!barretenberg::fr::eq(other.additive_constant, barretenberg::fr::zero)) {
+        if (!(other.additive_constant == barretenberg::fr::zero)) {
             additive_multiplier = barretenberg::fr::invert(other.additive_constant);
         }
         result.additive_constant = additive_constant * additive_multiplier;
     } else if (witness_index != static_cast<uint32_t>(-1) && other.witness_index == static_cast<uint32_t>(-1)) {
         // one input is constant - don't add a gate, but update scaling factors
-        if (!barretenberg::fr::eq(other.additive_constant, barretenberg::fr::zero)) {
+        if (!(other.additive_constant == barretenberg::fr::zero)) {
             additive_multiplier = barretenberg::fr::invert(other.additive_constant);
         }
         result.additive_constant = additive_constant * additive_multiplier;
         result.multiplicative_constant = multiplicative_constant * additive_multiplier;
         result.witness_index = witness_index;
     } else if (witness_index == static_cast<uint32_t>(-1) && other.witness_index != static_cast<uint32_t>(-1)) {
-        if (!barretenberg::fr::eq(other.additive_constant, barretenberg::fr::zero)) {
+        if (!(other.additive_constant == barretenberg::fr::zero)) {
             additive_multiplier = barretenberg::fr::invert(other.additive_constant);
         }
         result.additive_constant = additive_constant * other.additive_constant;
@@ -361,8 +361,8 @@ field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t& othe
 template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerContext>::normalize() const
 {
     if (witness_index == static_cast<uint32_t>(-1) ||
-        (barretenberg::fr::eq(multiplicative_constant, barretenberg::fr::one) &&
-         barretenberg::fr::eq(additive_constant, barretenberg::fr::zero))) {
+        ((multiplicative_constant == barretenberg::fr::one) &&
+         (additive_constant == barretenberg::fr::zero))) {
         return *this;
     }
 
@@ -387,7 +387,7 @@ template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerCon
 template <typename ComposerContext> bool_t<ComposerContext> field_t<ComposerContext>::is_zero()
 {
     if (witness_index == static_cast<uint32_t>(-1)) {
-        return bool_t(context, barretenberg::fr::eq(get_value(), barretenberg::fr::zero));
+        return bool_t(context, (get_value() == barretenberg::fr::zero));
     }
 
     // To check whether a field element, k, is zero, we use the fact that, if k > 0,
@@ -404,7 +404,7 @@ template <typename ComposerContext> bool_t<ComposerContext> field_t<ComposerCont
     // This way, if (k * k') = 0, we know that k = 0.
     // The second check is: (is_zero * k') - is_zero = 0
     field_t k = normalize();
-    bool_t is_zero = witness_t(context, barretenberg::fr::eq(k.get_value(), barretenberg::fr::zero));
+    bool_t is_zero = witness_t(context, (k.get_value() == barretenberg::fr::zero));
     field_t k_inverse;
     if (is_zero.get_value()) {
         k_inverse = witness_t(context, barretenberg::fr::one);
@@ -452,13 +452,13 @@ bool_t<ComposerContext> field_t<ComposerContext>::operator==(const field_t& othe
     ComposerContext* ctx = (context == nullptr) ? other.context : context;
 
     if (is_constant() && other.is_constant()) {
-        return barretenberg::fr::eq(get_value(), other.get_value());
+        return (get_value() == other.get_value());
     }
 
     barretenberg::fr::field_t fa = get_value();
     barretenberg::fr::field_t fb = other.get_value();
     barretenberg::fr::field_t fd = fa - fb;
-    bool is_equal = barretenberg::fr::eq(fa, fb);
+    bool is_equal = (fa == fb);
     barretenberg::fr::field_t fc = is_equal ? barretenberg::fr::one : barretenberg::fr::invert(fd);
 
     bool_t result(witness_t(ctx, is_equal));

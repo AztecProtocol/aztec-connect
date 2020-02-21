@@ -35,7 +35,7 @@ inline barretenberg::fr::field_t sha256(std::string const& input)
     std::vector<unsigned char> src(input.size() * 32);
     auto src_ptr = (barretenberg::fr::field_t*)&src[0];
     for (size_t i = 0; i < input.size(); ++i) {
-        src_ptr[i] = barretenberg::fr::from_montgomery_form(input[i]);
+        src_ptr[i] = input[i].from_montgomery_form();
         if (isLittleEndian()) {
             barretenberg::fr::field_t be;
             be.data[0] = __builtin_bswap64(src_ptr[i].data[3]);

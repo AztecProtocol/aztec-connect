@@ -37,8 +37,8 @@ TEST(pairing, reduced_ate_pairing_check_against_constants)
                         .c1 = { { 0x31d7525fa8914a4c, 0xe1ed738718e2e8b8, 0x18305c749a9d97a2, 0x20534d878e1e9db0 } } } }
     };
 
-    fq::__to_montgomery_form(P.x, P.x);
-    fq::__to_montgomery_form(P.y, P.y);
+    P.x.self_to_montgomery_form();
+    P.y.self_to_montgomery_form();
     fq2::__to_montgomery_form(Q.x, Q.x);
     fq2::__to_montgomery_form(Q.y, Q.y);
     fq12::__to_montgomery_form(expected, expected);

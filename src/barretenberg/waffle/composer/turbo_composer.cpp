@@ -537,7 +537,7 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
      *
      **/
 
-    const fr::field_t witness_value = fr::from_montgomery_form(variables[witness_index]);
+    const fr::field_t witness_value = variables[witness_index].from_montgomery_form();
 
     // one gate accmulates 4 quads, or 8 bits.
     // # gates = (bits / 8)
@@ -563,7 +563,7 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
             accumulator_index = zero_idx;
         } else {
             const size_t bit_index = (num_quads - i) << 1;
-            const uint64_t quad = static_cast<uint64_t>(fr::get_bit(witness_value, bit_index)) +
+            const uint64_t quad = static_cast<uint64_t>(witness_value.get_bit(bit_index)) +
                                   2ULL * static_cast<uint64_t>(fr::get_bit(witness_value, bit_index + 1));
             const fr::field_t quad_element = fr::to_montgomery_form({ quad, 0, 0, 0 });
             accumulator.self_add(accumulator);
@@ -690,8 +690,8 @@ waffle::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t
      *
      **/
 
-    const fr::field_t left_witness_value = fr::from_montgomery_form(variables[a]);
-    const fr::field_t right_witness_value = fr::from_montgomery_form(variables[b]);
+    const fr::field_t left_witness_value = variables[a].from_montgomery_form();
+    const fr::field_t right_witness_value = variables[b].from_montgomery_form();
 
     // one gate accmulates 1 quads, or 2 bits.
     // # gates = (bits / 2)
@@ -720,10 +720,10 @@ waffle::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t
         uint32_t product_index;
 
         const size_t bit_index = (num_quads - 1 - i) << 1;
-        const uint64_t left_quad = static_cast<uint64_t>(fr::get_bit(left_witness_value, bit_index)) +
+        const uint64_t left_quad = static_cast<uint64_t>(left_witness_value.get_bit(bit_index)) +
                                    2ULL * static_cast<uint64_t>(fr::get_bit(left_witness_value, bit_index + 1));
 
-        const uint64_t right_quad = static_cast<uint64_t>(fr::get_bit(right_witness_value, bit_index)) +
+        const uint64_t right_quad = static_cast<uint64_t>(right_witness_value.get_bit(bit_index)) +
                                     2ULL * static_cast<uint64_t>(fr::get_bit(right_witness_value, bit_index + 1));
         const fr::field_t left_quad_element = fr::to_montgomery_form({ left_quad, 0, 0, 0 });
         const fr::field_t right_quad_element = fr::to_montgomery_form({ right_quad, 0, 0, 0 });

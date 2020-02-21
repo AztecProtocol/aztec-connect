@@ -191,8 +191,8 @@ TEST(scalar_multiplication, reduce_buckets_simple)
 
     for (size_t i = 0; i < product_state.num_buckets; ++i) {
         expected[i] = g1::normalize(expected[i]);
-        EXPECT_EQ(fq::eq(output[i].x, expected[i].x), true);
-        EXPECT_EQ(fq::eq(output[i].y, expected[i].y), true);
+        EXPECT_EQ((output[i].x == expected[i].x), true);
+        EXPECT_EQ((output[i].y == expected[i].y), true);
     }
 }
 
@@ -305,8 +305,8 @@ TEST(scalar_multiplication, reduce_buckets)
     for (size_t i = 0; i < num_buckets; ++i) {
         if (!bucket_empty_status[i]) {
             g1::element expected = g1::normalize(expected_buckets[i]);
-            EXPECT_EQ(fq::eq(expected.x, result_buckets[it].x), true);
-            EXPECT_EQ(fq::eq(expected.y, result_buckets[it].y), true);
+            EXPECT_EQ((expected.x == result_buckets[it].x), true);
+            EXPECT_EQ((expected.y == result_buckets[it].y), true);
             ++it;
         } else {
             printf("recorded empty bucket???\n");
@@ -427,8 +427,8 @@ TEST(scalar_multiplication, add_affine_points)
 
     scalar_multiplication::add_affine_points(points, num_points, scratch_space);
     for (size_t i = num_points - 1; i > num_points - 1 - (num_points / 2); --i) {
-        EXPECT_EQ(fq::eq(points[i].x, points_copy[i].x), true);
-        EXPECT_EQ(fq::eq(points[i].y, points_copy[i].y), true);
+        EXPECT_EQ((points[i].x == points_copy[i].x), true);
+        EXPECT_EQ((points[i].y == points_copy[i].y), true);
     }
     aligned_free(lambda);
     aligned_free(points);
@@ -649,10 +649,10 @@ TEST(scalar_multiplication, oversized_inputs)
     g1::element second = scalar_multiplication::pippenger(scalars, monomials, target_degree);
     second = g1::normalize(second);
 
-    EXPECT_EQ(fq::eq(first.z, second.z), true);
-    EXPECT_EQ(fq::eq(first.z, fq::one), true);
-    EXPECT_EQ(fq::eq(first.x, second.x), true);
-    EXPECT_EQ(fq::eq(first.y, fq::neg(second.y)), true);
+    EXPECT_EQ((first.z == second.z), true);
+    EXPECT_EQ((first.z == fq::one), true);
+    EXPECT_EQ((first.x == second.x), true);
+    EXPECT_EQ((first.y == fq::neg(second.y)), true);
 
     aligned_free(monomials);
     aligned_free(scalars);

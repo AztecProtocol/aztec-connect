@@ -124,7 +124,7 @@ TEST(stdlib_field, test_equality)
 
     waffle::Prover prover = composer.preprocess();
 
-    fr::field_t x = fr::from_montgomery_form(composer.get_variable(r.witness_index));
+    fr::field_t x = composer.get_variable(r.witness_index).from_montgomery_form();
     EXPECT_EQ(fr::eq(x, { { 1, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 8UL);
@@ -148,7 +148,7 @@ TEST(stdlib_field, test_equality_false)
 
     waffle::Prover prover = composer.preprocess();
 
-    fr::field_t x = fr::from_montgomery_form(composer.get_variable(r.witness_index));
+    fr::field_t x = composer.get_variable(r.witness_index).from_montgomery_form();
     EXPECT_EQ(fr::eq(x, { { 0, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 8UL);
@@ -173,7 +173,7 @@ TEST(stdlib_field, test_equality_with_constants)
 
     waffle::Prover prover = composer.preprocess();
 
-    fr::field_t x = fr::from_montgomery_form(composer.get_variable(r.witness_index));
+    fr::field_t x = composer.get_variable(r.witness_index).from_montgomery_form();
     EXPECT_EQ(fr::eq(x, { { 1, 0, 0, 0 } }), true);
 
     EXPECT_EQ(prover.n, 16UL);

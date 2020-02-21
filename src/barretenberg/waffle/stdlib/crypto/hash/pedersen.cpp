@@ -17,12 +17,12 @@ using namespace barretenberg;
 point hash_single(const field_t& in, const size_t hash_index)
 {
     field_t scalar = in;
-    if (!fr::eq(in.additive_constant, fr::zero) || !fr::eq(in.multiplicative_constant, fr::one)) {
+    if (!(in.additive_constant == fr::zero) || !(in.multiplicative_constant == fr::one)) {
         scalar = scalar.normalize();
     }
     waffle::TurboComposer* ctx = in.context;
     ASSERT(ctx != nullptr);
-    fr::field_t scalar_multiplier = fr::from_montgomery_form(scalar.get_value());
+    fr::field_t scalar_multiplier = scalar.get_value().from_montgomery_form();
 
     constexpr size_t num_bits = 254;
     constexpr size_t num_quads_base = (num_bits - 1) >> 1;
@@ -39,13 +39,13 @@ point hash_single(const field_t& in, const size_t hash_index)
     grumpkin::g1::mixed_add(origin_points[0], generator, origin_points[1]);
     origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
 
-    fr::field_t scalar_multiplier_base = fr::to_montgomery_form(scalar_multiplier);
+    fr::field_t scalar_multiplier_base = scalar_multiplier.to_montgomery_form();
 
     if ((scalar_multiplier.data[0] & 1) == 0) {
         fr::field_t two = fr::one + fr::one;
         scalar_multiplier_base = scalar_multiplier_base - two;
     }
-    scalar_multiplier_base = fr::from_montgomery_form(scalar_multiplier_base);
+    scalar_multiplier_base = scalar_multiplier_base.from_montgomery_form();
     uint64_t wnaf_entries[num_quads + 1] = { 0 };
     bool skew = false;
 

@@ -56,12 +56,12 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> me
     waffle::MiMCComposer* context = message.context;
     ASSERT(context != nullptr);
 
-    if (!barretenberg::fr::eq(message.additive_constant, barretenberg::fr::zero) ||
-        !barretenberg::fr::eq(message.multiplicative_constant, barretenberg::fr::one)) {
+    if (!(message.additive_constant == barretenberg::fr::zero) ||
+        !(message.multiplicative_constant == barretenberg::fr::one)) {
         message = message.normalize();
     };
-    if (!barretenberg::fr::eq(key.additive_constant, barretenberg::fr::zero) ||
-        !barretenberg::fr::eq(key.multiplicative_constant, barretenberg::fr::one)) {
+    if (!(key.additive_constant == barretenberg::fr::zero) ||
+        !(key.multiplicative_constant == barretenberg::fr::one)) {
         key = key.normalize();
     }
 

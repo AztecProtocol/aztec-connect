@@ -681,7 +681,7 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
 
     shifted_opening_poly[i] = z[i] * nu_powers[7];
 
-    fr::reduce_once(quotient_temp, quotient_temp);
+    quotient_temp.self_reduce_once();
     opening_poly[i] = quotient_large[i] + quotient_temp;
 
     ITERATE_OVER_DOMAIN_END;

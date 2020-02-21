@@ -147,7 +147,7 @@ TEST(turbo_range_widget, quotient_polynomial_satisfiability)
 
     for (size_t i = 0; i < num_gates * 4; i += 4)
     {
-        EXPECT_EQ(fr::eq(key->quotient_large[i], fr::zero), true);
+        EXPECT_EQ((key->quotient_large[i] == fr::zero), true);
     }
 }
 
@@ -195,5 +195,5 @@ TEST(turbo_range_widget, compute_linear_contribution)
 
     fr::field_t expected = quotient_eval * lagrange_evals.vanishing_poly;
 
-    EXPECT_EQ(fr::eq(result, expected), true);
+    EXPECT_EQ((result == expected), true);
 }

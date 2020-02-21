@@ -100,7 +100,7 @@ TEST(stdlib_merkle_tree, test_leveldb_update_member)
         EXPECT_EQ(db.get_element(i), memdb.get_element(i));
     }
 
-    EXPECT_TRUE(fr::eq(db.root(), memdb.root()));
+    EXPECT_TRUE((db.root() == memdb.root()));
 }
 
 TEST(stdlib_merkle_tree, test_leveldb_deep)
@@ -206,7 +206,7 @@ TEST(stdlib_merkle_tree, pedersen_native_vs_circuit)
     witness_t y = witness_t(&composer, x);
     auto z = plonk::stdlib::pedersen::compress(y, y);
     auto zz = stdlib::group_utils::compress_native(x, x);
-    EXPECT_TRUE(fr::eq(z.get_value(), zz));
+    EXPECT_TRUE((z.get_value() == zz));
 }
 
 TEST(stdlib_merkle_tree, sha256_native_vs_circuit)
@@ -216,7 +216,7 @@ TEST(stdlib_merkle_tree, sha256_native_vs_circuit)
     byte_array y(&composer, x);
     auto z = plonk::stdlib::merkle_tree::sha256_value(y);
     auto zz = plonk::stdlib::merkle_tree::sha256(x);
-    EXPECT_TRUE(fr::eq(z.get_value(), zz));
+    EXPECT_TRUE((z.get_value() == zz));
 }
 
 TEST(stdlib_merkle_tree, test_check_membership)

@@ -108,9 +108,9 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
     bool field_elements_valid = true;
     for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
-        field_elements_valid = field_elements_valid && !fr::eq(sigma_evaluations[i], fr::zero);
+        field_elements_valid = field_elements_valid && !(sigma_evaluations[i] == fr::zero);
     }
-    field_elements_valid = field_elements_valid && !fr::eq(linear_eval, fr::zero);
+    field_elements_valid = field_elements_valid && !(linear_eval == fr::zero);
 
     if (!field_elements_valid) {
         printf("proof field elements not valid!\n");

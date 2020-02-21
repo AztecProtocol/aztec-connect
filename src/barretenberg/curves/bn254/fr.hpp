@@ -133,7 +133,7 @@ inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fr::fie
 
 // inline bool operator==(fr::field_t const& lhs, fr::field_t const& rhs)
 // {
-//     return fr::eq(lhs, rhs);
+//     return (lhs == rhs);
 // }
 
 } // namespace barretenberg

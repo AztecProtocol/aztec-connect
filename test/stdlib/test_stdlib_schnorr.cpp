@@ -40,12 +40,12 @@ TEST(stdlib_schnorr, test_scalar_mul)
     waffle::TurboComposer composer = waffle::TurboComposer();
 
     grumpkin::fr::field_t scalar_mont = grumpkin::fr::random_element();
-    grumpkin::fr::field_t scalar = grumpkin::fr::from_montgomery_form(scalar_mont);
+    grumpkin::fr::field_t scalar = scalar_mont.from_montgomery_form();
 
     bitarray scalar_bits(&composer, 256);
     for (size_t i = 0; i < 256; ++i)
     {
-        scalar_bits[255 - i] = bool_t(&composer, grumpkin::fr::get_bit(scalar, i));
+        scalar_bits[255 - i] = bool_t(&composer, scalar.get_bit(i));
     }
 
     grumpkin::g1::element expected = grumpkin::g1::group_exponentiation_no_endo(grumpkin::g1::one, scalar_mont);
@@ -54,8 +54,8 @@ TEST(stdlib_schnorr, test_scalar_mul)
 
     plonk::stdlib::point output = plonk::stdlib::schnorr::variable_base_mul(input, scalar_bits);
 
-    EXPECT_EQ(fr::eq(output.x.get_value(), expected.x), true);
-    EXPECT_EQ(fr::eq(output.y.get_value(), expected.y), true);
+    EXPECT_EQ((output.x.get_value() == expected.x), true);
+    EXPECT_EQ((output.y.get_value() == expected.y), true);
 
     waffle::TurboProver prover = composer.preprocess();
 

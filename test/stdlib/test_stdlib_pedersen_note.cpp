@@ -27,7 +27,7 @@ TEST(stdlib_pedersen_note, test_pedersen_note)
 
     fr::field_t view_key_value = fr::random_element();
     view_key_value.data[3] = view_key_value.data[3] & 0x3FFFFFFFFFFFFFFFULL;
-    view_key_value = fr::to_montgomery_form(view_key_value);
+    view_key_value = view_key_value.to_montgomery_form();
 
     fr::field_t note_value = fr::to_montgomery_form({{ 9999, 0, 0, 0 }});
 
@@ -67,7 +67,7 @@ TEST(stdlib_pedersen_note, test_pedersen_note_zero)
 
     fr::field_t view_key_value = fr::random_element();
     view_key_value.data[3] = view_key_value.data[3] & 0x3FFFFFFFFFFFFFFFULL;
-    view_key_value = fr::to_montgomery_form(view_key_value);
+    view_key_value = view_key_value.to_montgomery_form();
 
     fr::field_t note_value = fr::to_montgomery_form({{ 0, 0, 0, 0 }});
 
