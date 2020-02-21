@@ -43,7 +43,7 @@ template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Na
 
     const fr::field_t a = lhs;
     const fr::field_t b = rhs;
-    const fr::field_t diff = fr::sub(a, b);
+    const fr::field_t diff = a - b;
 
     const uint32_t lhs_idx = is_constant() ? ctx->zero_idx : witness_index;
     const uint32_t rhs_idx = other.is_constant() ? ctx->zero_idx : other.witness_index;

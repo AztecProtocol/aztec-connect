@@ -37,8 +37,8 @@ TEST(standard_composer, test_add_gate_proofs)
     waffle::StandardComposer composer = waffle::StandardComposer();
     fr::field_t a = fr::one;
     fr::field_t b = fr::one;
-    fr::field_t c = fr::add(a, b);
-    fr::field_t d = fr::add(a, c);
+    fr::field_t c = a + b;
+    fr::field_t d = a + c;
     uint32_t a_idx = composer.add_variable(a);
     uint32_t b_idx = composer.add_variable(b);
     uint32_t c_idx = composer.add_variable(c);

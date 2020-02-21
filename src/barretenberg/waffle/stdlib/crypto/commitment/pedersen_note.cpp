@@ -40,8 +40,8 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
     barretenberg::fr::field_t scalar_multiplier_base = barretenberg::fr::to_montgomery_form(scalar_multiplier);
 
     if ((scalar_multiplier.data[0] & 1) == 0) {
-        barretenberg::fr::field_t two = barretenberg::fr::add(barretenberg::fr::one, barretenberg::fr::one);
-        scalar_multiplier_base = barretenberg::fr::sub(scalar_multiplier_base, two);
+        barretenberg::fr::field_t two = barretenberg::fr::one + barretenberg::fr::one;
+        scalar_multiplier_base = scalar_multiplier_base - two;
     }
     scalar_multiplier_base = barretenberg::fr::from_montgomery_form(scalar_multiplier_base);
     uint64_t wnaf_entries[num_quads + 1] = { 0 };
@@ -71,8 +71,8 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
 
-        barretenberg::fr::field_t prev_accumulator = barretenberg::fr::add(accumulator_transcript[i], accumulator_transcript[i]);
-        prev_accumulator = barretenberg::fr::add(prev_accumulator, prev_accumulator);
+        barretenberg::fr::field_t prev_accumulator = accumulator_transcript[i] + accumulator_transcript[i];
+        prev_accumulator = prev_accumulator + prev_accumulator;
 
         grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
 
@@ -82,7 +82,7 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
             grumpkin::g1::__neg(point_to_add, point_to_add);
             barretenberg::fr::__neg(scalar_to_add, scalar_to_add);
         }
-        accumulator_transcript[i + 1] = barretenberg::fr::add(prev_accumulator, scalar_to_add);
+        accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
         grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
     }
 

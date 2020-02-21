@@ -840,11 +840,11 @@ ExtendedProver ExtendedComposer::preprocess()
     // //     fr::field_t t3 = output_state.w_o[i] * arithmetic_widget->q_o[i];
     // //     size_t shifted_idx = (i == output_state.n - 1) ? 0 : i + 1;
     // //     fr::field_t t4 = output_state.w_o[shifted_idx] * sequential_widget->q_o_next[i];
-    // //     fr::field_t result = fr::add(t0, t1);
-    // //     result = fr::add(result, t2);
-    // //     result = fr::add(result, t3);
-    // //     result = fr::add(result, t4);
-    // //     result = fr::add(result, arithmetic_widget->q_c[i]);
+    // //     fr::field_t result = t0 + t1;
+    // //     result = result + t2;
+    // //     result = result + t3;
+    // //     result = result + t4;
+    // //     result = result + arithmetic_widget->q_c[i];
     // //     if (!fr::eq(result, fr::zero))
     // //     {
     // //         size_t failure_idx = i;
@@ -882,7 +882,7 @@ ExtendedProver ExtendedComposer::preprocess()
     // //     if (!fr::eq(fr::from_montgomery_form(bool_widget->q_bl[i]), fr::zero))
     // //     {
     // //         fr::field_t t = output_state.w_l[i];
-    // //         fr::field_t u = fr::sub(fr::sqr(t), t);
+    // //         fr::field_t u = fr::sqr(t) - t;
     // //         if (!fr::eq(u, fr::zero))
     // //         {
     // //             printf("bool fail? left \n");
@@ -891,7 +891,7 @@ ExtendedProver ExtendedComposer::preprocess()
     // //     if (!fr::eq(fr::from_montgomery_form(bool_widget->q_br[i]), fr::zero))
     // //     {
     // //         fr::field_t t = output_state.w_r[i];
-    // //         fr::field_t u = fr::sub(fr::sqr(t), t);
+    // //         fr::field_t u = fr::sqr(t) - t;
     // //         if (!fr::eq(u, fr::zero))
     // //         {
     // //             printf("bool fail? right \n");

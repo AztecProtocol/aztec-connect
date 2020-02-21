@@ -277,7 +277,7 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
         const uint256_t t1 = (1ULL << ((width >> 1) - x) * 2);
         const uint256_t t2 = t0 * t1;
 
-        const fr::field_t left_shift_factor = fr::sub(fr::one, t2);
+        const fr::field_t left_shift_factor = fr::one - t2;
         const fr::field_t base_shift_factor = t1;
 
         const waffle::add_triple gate{ base_idx,          left_idx,          context->add_variable(output),
@@ -309,7 +309,7 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
     fr::field_t q_2 = base_scale_factor;
     fr::field_t q_3 = fr::sub(fr::to_montgomery_form({ { 12, 0, 0, 0 } }), pivot_scale_factor);
 
-    fr::field_t denominator = fr::sub(fr::one, b_hi_scale_factor);
+    fr::field_t denominator = fr::one - b_hi_scale_factor;
     fr::__invert(denominator, denominator);
 
     q_1.self_mul(denominator);

@@ -16,8 +16,8 @@
 //     waffle::BoolComposer composer = waffle::BoolComposer();
 //     fr::field_t a = fr::one;
 //     fr::field_t b = fr::one;
-//     fr::field_t c = fr::add(a, b);
-//     fr::field_t d = fr::add(a, c);
+//     fr::field_t c = a + b;
+//     fr::field_t d = a + c;
 //     uint32_t a_idx = composer.add_public_variable(a);
 //     uint32_t b_idx = composer.add_public_variable(b);
 //     uint32_t c_idx = composer.add_variable(c);

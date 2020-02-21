@@ -457,7 +457,7 @@ bool_t<ComposerContext> field_t<ComposerContext>::operator==(const field_t& othe
 
     barretenberg::fr::field_t fa = get_value();
     barretenberg::fr::field_t fb = other.get_value();
-    barretenberg::fr::field_t fd = barretenberg::fr::sub(fa, fb);
+    barretenberg::fr::field_t fd = fa - fb;
     bool is_equal = barretenberg::fr::eq(fa, fb);
     barretenberg::fr::field_t fc = is_equal ? barretenberg::fr::one : barretenberg::fr::invert(fd);
 

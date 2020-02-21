@@ -53,15 +53,15 @@
 
 //     fr::field_t eight_inverse = fr::invert(fr::to_montgomery_form({ { 8, 0, 0, 0 } }));
 
-//     fr::field_t x_beta_times_nine = fr::add(x_beta, x_beta);
-//     x_beta_times_nine = fr::add(x_beta_times_nine, x_beta_times_nine);
-//     x_beta_times_nine = fr::add(x_beta_times_nine, x_beta_times_nine);
-//     x_beta_times_nine = fr::add(x_beta_times_nine, x_beta);
+//     fr::field_t x_beta_times_nine = x_beta + x_beta;
+//     x_beta_times_nine = x_beta_times_nine + x_beta_times_nine;
+//     x_beta_times_nine = x_beta_times_nine + x_beta_times_nine;
+//     x_beta_times_nine = x_beta_times_nine + x_beta;
 
 //     fr::field_t x_alpha_1 = fr::mul(fr::sub(x_gamma, x_beta), eight_inverse);
 //     fr::field_t x_alpha_2 = fr::mul(fr::sub(x_beta_times_nine, x_gamma), eight_inverse);
 
-//     fr::field_t T0 = fr::sub(x_beta, x_gamma);
+//     fr::field_t T0 = x_beta - x_gamma;
 //     fr::field_t y_denominator = fr::invert(fr::add(fr::add(T0, T0), T0));
 
 //     fr::field_t y_alpha_1 = fr::mul(fr::sub(fr::add(fr::add(y_beta, y_beta), y_beta), y_gamma), y_denominator);
@@ -242,16 +242,16 @@
 //     for (size_t i = 1; i < 126; ++i) {
 //         uint64_t entry = wnaf_entries[i] & 0xffffff;
 //         fr::field_t prev_accumulator = fr::add(accumulator_transcript[i - 1], accumulator_transcript[i - 1]);
-//         prev_accumulator = fr::add(prev_accumulator, prev_accumulator);
+//         prev_accumulator = prev_accumulator + prev_accumulator;
 //         if (entry == 1) {
 //             uint64_t predicate = (wnaf_entries[i] >> 31U) & 1U;
 //             grumpkin::g1::element to_add;
 //             if (predicate) {
 //                 grumpkin::g1::__neg(ladder3[i], to_add);
-//                 accumulator_transcript[i] = fr::sub(prev_accumulator, three);
+//                 accumulator_transcript[i] = prev_accumulator - three;
 //             } else {
 //                 to_add = ladder3[i];
-//                 accumulator_transcript[i] = fr::add(prev_accumulator, three);
+//                 accumulator_transcript[i] = prev_accumulator + three;
 //             }
 //             grumpkin::g1::add(multiplication_transcript[i - 1], to_add, multiplication_transcript[i]);
 //         }
@@ -260,10 +260,10 @@
 //             grumpkin::g1::element to_add;
 //             if (predicate) {
 //                 grumpkin::g1::__neg(ladder[i], to_add);
-//                 accumulator_transcript[i] = fr::sub(prev_accumulator, one);
+//                 accumulator_transcript[i] = prev_accumulator - one;
 //             } else {
 //                 to_add = ladder[i];
-//                 accumulator_transcript[i] = fr::add(prev_accumulator, one);
+//                 accumulator_transcript[i] = prev_accumulator + one;
 //             }
 //             grumpkin::g1::add(multiplication_transcript[i - 1], to_add, multiplication_transcript[i]);
 //         }
@@ -283,15 +283,15 @@
 
 //         fr::field_t y_beta = ladder[i + 1].y;
 //         fr::field_t y_gamma = ladder3[i + 1].y;
-//         fr::field_t x_beta_times_nine = fr::add(x_beta, x_beta);
-//         x_beta_times_nine = fr::add(x_beta_times_nine, x_beta_times_nine);
-//         x_beta_times_nine = fr::add(x_beta_times_nine, x_beta_times_nine);
-//         x_beta_times_nine = fr::add(x_beta_times_nine, x_beta);
+//         fr::field_t x_beta_times_nine = x_beta + x_beta;
+//         x_beta_times_nine = x_beta_times_nine + x_beta_times_nine;
+//         x_beta_times_nine = x_beta_times_nine + x_beta_times_nine;
+//         x_beta_times_nine = x_beta_times_nine + x_beta;
 
 //         fr::field_t x_alpha_1 = fr::mul(fr::sub(x_gamma, x_beta), eight_inverse);
 //         fr::field_t x_alpha_2 = fr::mul(fr::sub(x_beta_times_nine, x_gamma), eight_inverse);
 
-//         fr::field_t T0 = fr::sub(x_beta, x_gamma);
+//         fr::field_t T0 = x_beta - x_gamma;
 //         fr::field_t y_denominator = fr::invert(fr::add(fr::add(T0, T0), T0));
 
 //         fr::field_t y_alpha_1 = fr::mul(fr::sub(fr::add(fr::add(y_beta, y_beta), y_beta), y_gamma), y_denominator);

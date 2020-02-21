@@ -262,7 +262,7 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator^(const bool_t& other) 
             right_coefficient = barretenberg::fr::one;
             constant_coefficient = barretenberg::fr::zero;
         } else {
-            multiplicative_coefficient = barretenberg::fr::add(barretenberg::fr::one, barretenberg::fr::one);
+            multiplicative_coefficient = barretenberg::fr::one + barretenberg::fr::one;
             left_coefficient = barretenberg::fr::neg_one();
             right_coefficient = barretenberg::fr::neg_one();
             constant_coefficient = barretenberg::fr::one;
@@ -333,7 +333,7 @@ bool_t<ComposerContext> bool_t<ComposerContext>::operator==(const bool_t& other)
         barretenberg::fr::field_t right_coefficient;
         barretenberg::fr::field_t constant_coefficient;
         if ((witness_inverted && other.witness_inverted) || (!witness_inverted && !other.witness_inverted)) {
-            multiplicative_coefficient = barretenberg::fr::add(barretenberg::fr::one, barretenberg::fr::one);
+            multiplicative_coefficient = barretenberg::fr::one + barretenberg::fr::one;
             left_coefficient = barretenberg::fr::neg_one();
             right_coefficient = barretenberg::fr::neg_one();
             constant_coefficient = barretenberg::fr::one;

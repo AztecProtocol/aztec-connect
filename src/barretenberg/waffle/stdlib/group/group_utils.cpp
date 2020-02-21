@@ -69,16 +69,16 @@ void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fi
 
         grumpkin::fq::field_t y_beta = ladder[i].one.y;
         grumpkin::fq::field_t y_gamma = ladder[i].three.y;
-        grumpkin::fq::field_t x_beta_times_nine = grumpkin::fq::add(x_beta, x_beta);
-        x_beta_times_nine = grumpkin::fq::add(x_beta_times_nine, x_beta_times_nine);
-        x_beta_times_nine = grumpkin::fq::add(x_beta_times_nine, x_beta_times_nine);
-        x_beta_times_nine = grumpkin::fq::add(x_beta_times_nine, x_beta);
+        grumpkin::fq::field_t x_beta_times_nine = x_beta + x_beta;
+        x_beta_times_nine = x_beta_times_nine + x_beta_times_nine;
+        x_beta_times_nine = x_beta_times_nine + x_beta_times_nine;
+        x_beta_times_nine = x_beta_times_nine + x_beta;
 
         grumpkin::fq::field_t x_alpha_1 = grumpkin::fq::mul(grumpkin::fq::sub(x_gamma, x_beta), eight_inverse);
         grumpkin::fq::field_t x_alpha_2 =
             grumpkin::fq::mul(grumpkin::fq::sub(x_beta_times_nine, x_gamma), eight_inverse);
 
-        grumpkin::fq::field_t T0 = grumpkin::fq::sub(x_beta, x_gamma);
+        grumpkin::fq::field_t T0 = x_beta - x_gamma;
         y_denominators[i] = (grumpkin::fq::add(grumpkin::fq::add(T0, T0), T0));
 
         grumpkin::fq::field_t y_alpha_1 =
@@ -151,8 +151,8 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
 
     barretenberg::fr::field_t scalar_multiplier_base = barretenberg::fr::to_montgomery_form(scalar_multiplier);
     if ((scalar_multiplier.data[0] & 1) == 0) {
-        barretenberg::fr::field_t two = barretenberg::fr::add(barretenberg::fr::one, barretenberg::fr::one);
-        scalar_multiplier_base = barretenberg::fr::sub(scalar_multiplier_base, two);
+        barretenberg::fr::field_t two = barretenberg::fr::one + barretenberg::fr::one;
+        scalar_multiplier_base = scalar_multiplier_base - two;
     }
     scalar_multiplier_base = barretenberg::fr::from_montgomery_form(scalar_multiplier_base);
     uint64_t wnaf_entries[num_quads + 2] = { 0 };

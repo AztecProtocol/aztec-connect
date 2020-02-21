@@ -62,8 +62,8 @@ TEST(turbo_composer, test_add_gate_proofs)
     waffle::TurboComposer composer = waffle::TurboComposer();
     fr::field_t a = fr::one;
     fr::field_t b = fr::one;
-    fr::field_t c = fr::add(a, b);
-    fr::field_t d = fr::add(a, c);
+    fr::field_t c = a + b;
+    fr::field_t d = a + c;
     uint32_t a_idx = composer.add_variable(a);
     uint32_t b_idx = composer.add_variable(b);
     uint32_t c_idx = composer.add_variable(c);
@@ -257,8 +257,8 @@ TEST(turbo_composer, small_scalar_multipliers)
     fr::field_t three = fr::add(fr::add(one, one), one);
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
-        fr::field_t prev_accumulator = fr::add(accumulator_transcript[i], accumulator_transcript[i]);
-        prev_accumulator = fr::add(prev_accumulator, prev_accumulator);
+        fr::field_t prev_accumulator = accumulator_transcript[i] + accumulator_transcript[i];
+        prev_accumulator = prev_accumulator + prev_accumulator;
 
         grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
         fr::field_t scalar_to_add = (entry == 1) ? three : one;
@@ -267,7 +267,7 @@ TEST(turbo_composer, small_scalar_multipliers)
             grumpkin::g1::__neg(point_to_add, point_to_add);
             fr::__neg(scalar_to_add, scalar_to_add);
         }
-        accumulator_transcript[i + 1] = fr::add(prev_accumulator, scalar_to_add);
+        accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
         grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
     }
     grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
@@ -361,8 +361,8 @@ TEST(turbo_composer, large_scalar_multipliers)
     grumpkin::fr::field_t scalar_multiplier = grumpkin::fr::from_montgomery_form(scalar_multiplier_base);
 
     if ((scalar_multiplier.data[0] & 1) == 0) {
-        grumpkin::fr::field_t two = grumpkin::fr::add(grumpkin::fr::one, grumpkin::fr::one);
-        scalar_multiplier_base = grumpkin::fr::sub(scalar_multiplier_base, two);
+        grumpkin::fr::field_t two = grumpkin::fr::one + grumpkin::fr::one;
+        scalar_multiplier_base = scalar_multiplier_base - two;
     }
     scalar_multiplier_base = grumpkin::fr::from_montgomery_form(scalar_multiplier_base);
     uint64_t wnaf_entries[num_quads + 1] = { 0 };
@@ -390,8 +390,8 @@ TEST(turbo_composer, large_scalar_multipliers)
     fr::field_t three = fr::add(fr::add(one, one), one);
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
-        fr::field_t prev_accumulator = fr::add(accumulator_transcript[i], accumulator_transcript[i]);
-        prev_accumulator = fr::add(prev_accumulator, prev_accumulator);
+        fr::field_t prev_accumulator = accumulator_transcript[i] + accumulator_transcript[i];
+        prev_accumulator = prev_accumulator + prev_accumulator;
 
         grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
         fr::field_t scalar_to_add = (entry == 1) ? three : one;
@@ -400,7 +400,7 @@ TEST(turbo_composer, large_scalar_multipliers)
             grumpkin::g1::__neg(point_to_add, point_to_add);
             fr::__neg(scalar_to_add, scalar_to_add);
         }
-        accumulator_transcript[i + 1] = fr::add(prev_accumulator, scalar_to_add);
+        accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
         grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
     }
     grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);

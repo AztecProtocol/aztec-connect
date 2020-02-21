@@ -35,7 +35,7 @@ TEST(test_new_field, subtract)
 {
     barretenberg::fr::field_t fb{ 10, 20, 30, 40 };
     barretenberg::fr::field_t fa{ 1, 2, 3, 4 };
-    barretenberg::fr::field_t result = barretenberg::fr::sub(fa, fb);
+    barretenberg::fr::field_t result = fa - fb;
     testField expected = testField{ 1, 2, 3, 4 } - testField{ 10, 20, 30, 40 };
     EXPECT_EQ(result.data[0], expected.data[0]);
     EXPECT_EQ(result.data[1], expected.data[1]);

@@ -136,7 +136,7 @@ namespace mimc
 //     fr::__copy(input, previous);
 //     for (size_t i = 0; i < NUM_ROUNDS; ++i)
 //     {
-//         fr::field_t t = fr::add(constants[i], previous);
+//         fr::field_t t = constants[i] + previous;
 //         fr::field_t tt = fr::sqr(t);
 //         fr::field_t tttt = fr::sqr(tt);
 //         fr::field_t ttttt = t * tttt;
@@ -154,21 +154,21 @@ size_t mimc_round(const uint32_t input_index, const uint32_t k_index, Composer *
     for (size_t i = 0; i < NUM_ROUNDS; ++i)
     {
         fr::field_t t = composer->get_variable(idx_a);
-        // t = fr::add(constants[i], t);
+        // t = constants[i] + t;
         
         // if i == 0, t = t + k
         // else, t_out = t + k + c[i]
         size_t t_idx;
         if (i == 0)
         {
-            t = fr::add(t, k);
+            t = t + k;
             t_idx = composer->add_variable(t);
             composer->add_basic_add_gate(idx_a, k_index, t_idx);
         }
         else
         {
-            t = fr::add(t, k);
-            t = fr::add(t, constants[i]);
+            t = t + k;
+            t = t + constants[i];
             t_idx = composer->add_variable(t);
             composer->add_basic_add_gate(idx_a, k_index, t_idx, constants[i]); 
         }
@@ -182,7 +182,7 @@ size_t mimc_round(const uint32_t input_index, const uint32_t k_index, Composer *
         size_t ttttt_idx = composer->add_variable(ttttt);
 
         // idx_a = composer->add_add_basic_gate(k_idx, input_idx, idx_a);
-        // fr::field_t two_c = fr::add(constants[i], constants[i]); // 2c
+        // fr::field_t two_c = constants[i] + constants[i]; // 2c
         // fr::field_t c_squared = fr::sqr(constants[i]);              // -c^2
         // (t + c)(t + c) = t.t + 2c.t + cc = tt
         // t.t + 2c.t + cc - tt
@@ -197,7 +197,7 @@ size_t mimc_round(const uint32_t input_index, const uint32_t k_index, Composer *
 
         idx_a = ttttt_idx;
         // out = ttttt + k
-        // fr::field_t out = fr::add(ttttt, k);
+        // fr::field_t out = ttttt + k;
         // size_t out_idx = composer->add_variable(out);
         // composer->add_basic_add_gate(idx_d, k_index, out_idx);
         // idx_a = out_idx;

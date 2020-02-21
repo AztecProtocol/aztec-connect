@@ -13,14 +13,14 @@ using namespace grumpkin;
 
 //     fq::field_t T0 = fq::sqr(result.y);
 //     fq::field_t T2 = fq::to_montgomery_form({{ 17, 0, 0, 0 }});
-//     fq::field_t T3 = fq::add(T0, T2);
+//     fq::field_t T3 = T0 + T2;
 //     fq::print(fq::from_montgomery_form(T3));
 //     fq::print(fq::neg(T2));
 
 //     fq::field_t xx = fq::sqr(result.x);
 //     fq::field_t xxx = result.x * xx;
 
-//     fq::field_t yy_sub_xxx = fq::sub(fq::sqr(result.y), xxx);
+//     fq::field_t yy_sub_xxx = fq::sqr(result.y) - xxx;
 //     printf("y^2 - x^3 = \n");
 //     fq::print(fq::from_montgomery_form(yy_sub_xxx));
 

@@ -62,12 +62,12 @@ TEST(stdlib_pedersen, test_pedersen)
     uint64_t right_wnafs[255] = { 0 };
 
     if ((fr::from_montgomery_form(left_in).data[0] & 1) == 0) {
-        fr::field_t two = fr::add(fr::one, fr::one);
-        left_in = fr::sub(left_in, two);
+        fr::field_t two = fr::one + fr::one;
+        left_in = left_in - two;
     }
     if ((fr::from_montgomery_form(right_in).data[0] & 1) == 0) {
-        fr::field_t two = fr::add(fr::one, fr::one);
-        right_in = fr::sub(right_in, two);
+        fr::field_t two = fr::one + fr::one;
+        right_in = right_in - two;
     }
     fr::field_t converted_left = fr::from_montgomery_form(left_in);
     fr::field_t converted_right = fr::from_montgomery_form(right_in);
@@ -83,19 +83,19 @@ TEST(stdlib_pedersen, test_pedersen)
         grumpkin::fr::field_t three = grumpkin::fr::to_montgomery_form({ { 3, 0, 0, 0 } });
         for (size_t i = 0; i < range; ++i) {
             uint64_t entry = wnafs[i];
-            grumpkin::fr::field_t prev = grumpkin::fr::add(result, result);
-            prev = grumpkin::fr::add(prev, prev);
+            grumpkin::fr::field_t prev = result + result;
+            prev = prev + prev;
             if ((entry & 0xffffff) == 0) {
                 if (((entry >> 31UL) & 1UL) == 1UL) {
-                    result = grumpkin::fr::sub(prev, grumpkin::fr::one);
+                    result = prev - grumpkin::fr::one;
                 } else {
-                    result = grumpkin::fr::add(prev, grumpkin::fr::one);
+                    result = prev + grumpkin::fr::one;
                 }
             } else {
                 if (((entry >> 31UL) & 1UL) == 1UL) {
-                    result = grumpkin::fr::sub(prev, three);
+                    result = prev - three;
                 } else {
-                    result = grumpkin::fr::add(prev, three);
+                    result = prev + three;
                 }
             }
         }

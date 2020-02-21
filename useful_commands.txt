@@ -24,6 +24,9 @@ fq::__mul_with_coarse_reduction(q1, q2,   q1);
 (barretenberg::|grumpkin::)?f(q|r)::__(mul|add|sub)(_with_coarse_reduction|without_reduction)?\([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)[\s]*,[\s]*\5[\s]*\);
 $5.self_$3$4($6);
 
+(barretenberg::|grumpkin::)?f(q|r)::__sqr(_with_coarse_reduction|without_reduction)?\([\s]*([^\s]*)[\s]*,[\s]*\5[\s]*\);
+$4.self_sqr$3();
+
 (barretenberg::|grumpkin::)?f(q|r)::__(mul|add|sub)(_with_coarse_reduction|without_reduction)\([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)[\s]*,[\s]*([^\s]*)[\s]*\);
 $7 = $5.$3$4($6);
 
@@ -44,6 +47,7 @@ $1 = $4 + $5;
 
 ([^\s]*) = (barretenberg::|grumpkin::)?f(q|r)::sub\([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)[\s]*\);
 $1 = $4 - $5;
+
 
 f(q|r)::__sqr_with_coarse_reduction\((.*), \2\);
 $2.self_sqr_with_coarse_reduction();

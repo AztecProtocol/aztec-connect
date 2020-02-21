@@ -382,14 +382,14 @@ TEST(test_public_inputs, compute_delta)
         fr::field_t denominator = fr::one;
         fr::field_t work_root = fr::one;
         for (size_t i = 0; i < circuit_size; ++i) {
-            fr::field_t T0 = fr::add(left[i], gamma);
-            fr::field_t T1 = fr::add(right[i], gamma);
+            fr::field_t T0 = left[i] + gamma;
+            fr::field_t T1 = right[i] + gamma;
 
             fr::field_t T2 = work_root * beta;
             fr::field_t T3 = fr::coset_generators[0] * T2;
 
-            fr::field_t T4 = fr::add(T0, T2);
-            fr::field_t T5 = fr::add(T1, T3);
+            fr::field_t T4 = T0 + T2;
+            fr::field_t T5 = T1 + T3;
             fr::field_t T6 = T4 * T5;
 
             numerator = numerator * T6;

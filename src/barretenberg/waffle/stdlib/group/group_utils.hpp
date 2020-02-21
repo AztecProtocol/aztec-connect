@@ -35,8 +35,8 @@ grumpkin::g1::element fixed_base_scalar_mul(const barretenberg::fr::field_t& in,
 
     barretenberg::fr::field_t scalar_multiplier_base = barretenberg::fr::to_montgomery_form(scalar_multiplier);
     if ((scalar_multiplier.data[0] & 1) == 0) {
-        barretenberg::fr::field_t two = barretenberg::fr::add(barretenberg::fr::one, barretenberg::fr::one);
-        scalar_multiplier_base = barretenberg::fr::sub(scalar_multiplier_base, two);
+        barretenberg::fr::field_t two = barretenberg::fr::one + barretenberg::fr::one;
+        scalar_multiplier_base = scalar_multiplier_base - two;
     }
     scalar_multiplier_base = barretenberg::fr::from_montgomery_form(scalar_multiplier_base);
     uint64_t wnaf_entries[num_quads + 2] = { 0 };

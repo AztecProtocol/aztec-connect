@@ -42,8 +42,8 @@ point hash_single(const field_t& in, const size_t hash_index)
     fr::field_t scalar_multiplier_base = fr::to_montgomery_form(scalar_multiplier);
 
     if ((scalar_multiplier.data[0] & 1) == 0) {
-        fr::field_t two = fr::add(fr::one, fr::one);
-        scalar_multiplier_base = fr::sub(scalar_multiplier_base, two);
+        fr::field_t two = fr::one + fr::one;
+        scalar_multiplier_base = scalar_multiplier_base - two;
     }
     scalar_multiplier_base = fr::from_montgomery_form(scalar_multiplier_base);
     uint64_t wnaf_entries[num_quads + 1] = { 0 };
@@ -73,8 +73,8 @@ point hash_single(const field_t& in, const size_t hash_index)
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
 
-        fr::field_t prev_accumulator = fr::add(accumulator_transcript[i], accumulator_transcript[i]);
-        prev_accumulator = fr::add(prev_accumulator, prev_accumulator);
+        fr::field_t prev_accumulator = accumulator_transcript[i] + accumulator_transcript[i];
+        prev_accumulator = prev_accumulator + prev_accumulator;
 
         grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
 
@@ -84,7 +84,7 @@ point hash_single(const field_t& in, const size_t hash_index)
             grumpkin::g1::__neg(point_to_add, point_to_add);
             fr::__neg(scalar_to_add, scalar_to_add);
         }
-        accumulator_transcript[i + 1] = fr::add(prev_accumulator, scalar_to_add);
+        accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
         grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
     }
 

@@ -300,9 +300,9 @@ std::vector<uint32_t> StandardComposer::create_range_constraint(const uint32_t w
             accumulator = variables[quad_idx];
             accumulator_idx = quad_idx;
         } else {
-            fr::field_t new_accumulator = fr::add(accumulator, accumulator);
-            new_accumulator = fr::add(new_accumulator, new_accumulator);
-            new_accumulator = fr::add(new_accumulator, variables[quad_idx]);
+            fr::field_t new_accumulator = accumulator + accumulator;
+            new_accumulator = new_accumulator + new_accumulator;
+            new_accumulator = new_accumulator + variables[quad_idx];
             uint32_t new_accumulator_idx = add_variable(new_accumulator);
             create_add_gate(
                 add_triple{ accumulator_idx, quad_idx, new_accumulator_idx, four, fr::one, fr::neg_one(), fr::zero });
@@ -388,25 +388,25 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
         uint32_t right_quad_idx = add_variable(right_quad);
         uint32_t out_quad_idx = add_variable(out_quad);
 
-        fr::field_t new_left_accumulator = fr::add(left_accumulator, left_accumulator);
-        new_left_accumulator = fr::add(new_left_accumulator, new_left_accumulator);
-        new_left_accumulator = fr::add(new_left_accumulator, left_quad);
+        fr::field_t new_left_accumulator = left_accumulator + left_accumulator;
+        new_left_accumulator = new_left_accumulator + new_left_accumulator;
+        new_left_accumulator = new_left_accumulator + left_quad;
         uint32_t new_left_accumulator_idx = add_variable(new_left_accumulator);
 
         create_add_gate(add_triple{
             left_accumulator_idx, left_quad_idx, new_left_accumulator_idx, four, fr::one, fr::neg_one(), fr::zero });
 
-        fr::field_t new_right_accumulator = fr::add(right_accumulator, right_accumulator);
-        new_right_accumulator = fr::add(new_right_accumulator, new_right_accumulator);
-        new_right_accumulator = fr::add(new_right_accumulator, right_quad);
+        fr::field_t new_right_accumulator = right_accumulator + right_accumulator;
+        new_right_accumulator = new_right_accumulator + new_right_accumulator;
+        new_right_accumulator = new_right_accumulator + right_quad;
         uint32_t new_right_accumulator_idx = add_variable(new_right_accumulator);
 
         create_add_gate(add_triple{
             right_accumulator_idx, right_quad_idx, new_right_accumulator_idx, four, fr::one, fr::neg_one(), fr::zero });
 
-        fr::field_t new_out_accumulator = fr::add(out_accumulator, out_accumulator);
-        new_out_accumulator = fr::add(new_out_accumulator, new_out_accumulator);
-        new_out_accumulator = fr::add(new_out_accumulator, out_quad);
+        fr::field_t new_out_accumulator = out_accumulator + out_accumulator;
+        new_out_accumulator = new_out_accumulator + new_out_accumulator;
+        new_out_accumulator = new_out_accumulator + out_quad;
         uint32_t new_out_accumulator_idx = add_variable(new_out_accumulator);
 
         create_add_gate(add_triple{
