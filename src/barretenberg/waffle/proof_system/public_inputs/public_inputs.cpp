@@ -128,9 +128,9 @@ fr::field_t compute_public_input_delta(const std::vector<barretenberg::fr::field
     fr::field_t T1;
     fr::field_t T2;
     for (const auto& witness : inputs) {
-        fr::__add(witness, gamma, T0);
-        fr::__mul(work_root, beta, T1);
-        fr::__mul(T1, fr::coset_generators[0], T2);
+        T0 = witness + gamma;
+        T1 = work_root * beta;
+        T2 = T1 * fr::coset_generators[0];
         T1.self_add(T0);
         T2.self_add(T0);
         numerator.self_mul(T2);
@@ -138,7 +138,7 @@ fr::field_t compute_public_input_delta(const std::vector<barretenberg::fr::field
         work_root.self_mul(subgroup_generator);
     }
     fr::__invert(denominator, denominator);
-    fr::__mul(denominator, numerator, T0);
+    T0 = denominator * numerator;
     return T0;
 }
 } // namespace waffle

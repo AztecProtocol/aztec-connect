@@ -156,8 +156,8 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
     fr::field_t sigma_contribution = fr::one;
     for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
-        fr::__mul(sigma_evaluations[i], beta, T0);
-        fr::__add(wire_evaluations[i], gamma, T1);
+        T0 = sigma_evaluations[i] * beta;
+        T1 = wire_evaluations[i] + gamma;
         T0.self_add(T1);
         sigma_contribution.self_mul(T0);
     }
@@ -171,11 +171,11 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     sigma_contribution.self_mul(z_1_shifted_eval);
     sigma_contribution.self_mul(alpha_pow[0]);
 
-    fr::__sub(z_1_shifted_eval, public_input_delta, T1);
+    T1 = z_1_shifted_eval - public_input_delta;
     T1.self_mul(lagrange_evals.l_n_minus_1);
     T1.self_mul(alpha_pow[1]);
 
-    fr::__mul(lagrange_evals.l_1, alpha_pow[2], T2);
+    T2 = lagrange_evals.l_1 * alpha_pow[2];
     T1.self_sub(T2);
     T1.self_sub(sigma_contribution);
     T1.self_add(linear_eval);
@@ -204,12 +204,12 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     linear_terms.z_1.self_mul(nu_pow[0]);
     linear_terms.sigma_last.self_mul(nu_pow[0]);
 
-    fr::__mul(nu_pow[7], u, T0);
+    T0 = nu_pow[7] * u;
     linear_terms.z_1.self_add(T0);
 
     fr::field_t batch_evaluation;
     fr::__copy(t_eval, batch_evaluation);
-    fr::__mul(nu_pow[0], linear_eval, T0);
+    T0 = nu_pow[0] * linear_eval;
     batch_evaluation.self_add(T0);
 
     for (size_t i = 0; i < program_settings::program_width; ++i) {
@@ -222,7 +222,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
         batch_evaluation.self_add(T0);
     }
 
-    fr::__mul(nu_pow[7], u, T0);
+    T0 = nu_pow[7] * u;
     T0.self_mul(z_1_shifted_eval);
     batch_evaluation.self_add(T0);
 
@@ -232,7 +232,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
         if (program_settings::requires_shifted_wire(program_settings::wire_shift_settings, i)) {
             fr::field_t wire_shifted_eval =
                 fr::serialize_from_buffer(&transcript.get_element("w_" + std::to_string(i + 1) + "_omega")[0]);
-            fr::__mul(wire_shifted_eval, nu_base, T0);
+            T0 = wire_shifted_eval * nu_base;
             T0.self_mul(u);
             batch_evaluation.self_add(T0);
             nu_base.self_mul(nu_pow[0]);
@@ -247,7 +247,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     fr::__neg(batch_evaluation, batch_evaluation);
 
     fr::field_t z_omega_scalar;
-    fr::__mul(z_challenge, key->domain.root, z_omega_scalar);
+    z_omega_scalar = z_challenge * key->domain.root;
     z_omega_scalar.self_mul(u);
 
     std::vector<fr::field_t> scalars;
@@ -262,7 +262,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
         if (g1::on_curve(W[i])) {
             elements.emplace_back(W[i]);
             if (program_settings::requires_shifted_wire(program_settings::wire_shift_settings, i)) {
-                fr::__mul(nu_base, u, T0);
+                T0 = nu_base * u;
                 fr::__add(T0, nu_pow[1 + i], T0);
                 scalars.emplace_back(T0);
                 nu_base.self_mul(nu_pow[0]);

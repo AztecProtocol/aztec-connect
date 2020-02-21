@@ -122,7 +122,7 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
 
     fr::field_t result;
     fr::__mul_beta(k2_recovered, result);
-    fr::__sub(k1_recovered, result, result);
+    result = k1_recovered - result;
 
     EXPECT_EQ(result.data[0], k.data[0]);
     EXPECT_EQ(result.data[1], k.data[1]);

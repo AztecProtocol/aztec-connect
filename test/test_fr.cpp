@@ -54,7 +54,7 @@ TEST(fr, mul)
     fr::field_t b{ { 0x7aade4892631231c, 0x8e7515681fe70144, 0x98edb76e689b6fd8, 0x5d0886b15fc835fa } };
     fr::field_t expected{ { 0xab961ef46b4756b6, 0xbc6b636fc29678c8, 0xd247391ed6b5bd16, 0x12e8538b3bde6784 } };
     fr::field_t result;
-    fr::__mul(a, b, result);
+    result = a * b;
     EXPECT_EQ(fr::eq(result, expected), true);
 }
 
@@ -73,7 +73,7 @@ TEST(fr, add)
     fr::field_t b{ { 0xa17307a2108adeea, 0x74629976c14c5e2b, 0x9ce6f072ab1740ee, 0x398c753702b2bef0 } };
     fr::field_t expected{ { 0x7de76c654ce1394f, 0xc7fb821e66f26999, 0x4882d6a6d6fa59b0, 0x6b717a8ed0c5c6db } };
     fr::field_t result;
-    fr::__add(a, b, result);
+    result = a + b;
     EXPECT_EQ(fr::eq(result, expected), true);
 }
 
@@ -83,7 +83,7 @@ TEST(fr, sub)
     fr::field_t b{ { 0x569fdb1db5198770, 0x446ddccef8347d52, 0xef215227182d22a, 0x8281b4fb109306 } };
     fr::field_t expected{ { 0xbcff176a92b5a5c9, 0x5eedbaa04fe79da0, 0x9995bf24e48db1c5, 0x3029017012d32b11 } };
     fr::field_t result;
-    fr::__sub(a, b, result);
+    result = a - b;
     EXPECT_EQ(fr::eq(result, expected), true);
 }
 
@@ -121,10 +121,10 @@ TEST(fr, montgomery_consistency_check)
     fr::__to_montgomery_form(b, bR);
     fr::__to_montgomery_form(bR, bRR);
     fr::__to_montgomery_form(bRR, bRRR);
-    fr::__mul(aRR, bRR, result_a); // abRRR
-    fr::__mul(aR, bRRR, result_b); // abRRR
-    fr::__mul(aR, bR, result_c);   // abR
-    fr::__mul(a, b, result_d);     // abR^-1
+    result_a = aRR * bRR; // abRRR
+    result_b = aR * bRRR; // abRRR
+    result_c = aR * bR;   // abR
+    result_d = a * b;     // abR^-1
     EXPECT_EQ(fr::eq(result_a, result_b), true);
     fr::__from_montgomery_form(result_a, result_a); // abRR
     fr::__from_montgomery_form(result_a, result_a); // abR
@@ -142,13 +142,13 @@ TEST(fr, add_mul_consistency)
 
     fr::field_t a = fr::random_element();
     fr::field_t result;
-    fr::__add(a, a, result);           // 2
+    result = a + a;           // 2
     result.self_add(result); // 4
     result.self_add(result); // 8
     result.self_add(a);      // 9
 
     fr::field_t expected;
-    fr::__mul(a, multiplicand, expected);
+    expected = a * multiplicand;
 
     EXPECT_EQ(fr::eq(result, expected), true);
 }
@@ -160,7 +160,7 @@ TEST(fr, sub_mul_consistency)
 
     fr::field_t a = fr::random_element();
     fr::field_t result;
-    fr::__add(a, a, result);           // 2
+    result = a + a;           // 2
     result.self_add(result); // 4
     result.self_add(result); // 8
     result.self_sub(a);      // 7
@@ -168,7 +168,7 @@ TEST(fr, sub_mul_consistency)
     result.self_sub(a);      // 5
 
     fr::field_t expected;
-    fr::__mul(a, multiplicand, expected);
+    expected = a * multiplicand;
 
     EXPECT_EQ(fr::eq(result, expected), true);
 }
@@ -182,12 +182,12 @@ TEST(fr, lambda)
 
     // compute x^3
     fr::field_t x_cubed;
-    fr::__mul(x, x, x_cubed);
+    x_cubed = x * x;
     x_cubed.self_mul(x);
 
     // compute lambda_x^3
     fr::field_t lambda_x_cubed;
-    fr::__mul(lambda_x, lambda_x, lambda_x_cubed);
+    lambda_x_cubed = lambda_x * lambda_x;
     lambda_x_cubed.self_mul(lambda_x);
 
     EXPECT_EQ(fr::eq(x_cubed, lambda_x_cubed), true);
@@ -230,7 +230,7 @@ TEST(fr, sqrt_random)
 TEST(fr, one_and_zero)
 {
     fr::field_t result;
-    fr::__sub(fr::one, fr::one, result);
+    result = fr::one - fr::one;
     EXPECT_EQ(fr::eq(result, fr::zero), true);
 }
 
@@ -248,7 +248,7 @@ TEST(fr, neg)
     fr::field_t b;
     fr::__neg(a, b);
     fr::field_t result;
-    fr::__add(a, b, result);
+    result = a + b;
     EXPECT_EQ(fr::eq(result, fr::zero), true);
 }
 
@@ -273,8 +273,8 @@ TEST(fr, split_into_endomorphism_scalars)
     fr::__to_montgomery_form(k1, k1);
     fr::__to_montgomery_form(k2, k2);
 
-    fr::__mul(k2, fr::beta, result);
-    fr::__sub(k1, result, result);
+    result = k2 * fr::beta;
+    result = k1 - result;
 
     fr::__from_montgomery_form(result, result);
     for (size_t i = 0; i < 4; ++i) {
@@ -297,8 +297,8 @@ TEST(fr, split_into_endomorphism_scalars_simple)
     fr::__to_montgomery_form(k1, k1);
     fr::__to_montgomery_form(k2, k2);
 
-    fr::__mul(k2, fr::beta, result);
-    fr::__sub(k1, result, result);
+    result = k2 * fr::beta;
+    result = k1 - result;
 
     fr::__from_montgomery_form(result, result);
     for (size_t i = 0; i < 4; ++i) {

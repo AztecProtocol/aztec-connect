@@ -454,7 +454,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     T1 = T1 * alpha_c;
 
     fr::field_t q_o_term_ecc = (T0 + T1) * q_ecc_1_eval;
-    fr::__sub(w_l_omega_eval, w_l_eval, T0);
+    T0 = w_l_omega_eval - w_l_eval;
 
     fr::field_t q_o_term_arith = w_o_eval * challenge.alpha_base * q_arith_eval;
 

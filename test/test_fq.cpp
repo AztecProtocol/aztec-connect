@@ -286,10 +286,10 @@ TEST(fq, montgomery_consistency_check)
     fq::__to_montgomery_form(b, bR);
     fq::__to_montgomery_form(bR, bRR);
     fq::__to_montgomery_form(bRR, bRRR);
-    fq::__mul(aRR, bRR, result_a); // abRRR
-    fq::__mul(aR, bRRR, result_b); // abRRR
-    fq::__mul(aR, bR, result_c);   // abR
-    fq::__mul(a, b, result_d);     // abR^-1
+    result_a = aRR * bRR; // abRRR
+    result_b = aR * bRRR; // abRRR
+    result_c = aR * bR;   // abR
+    result_d = a * b;     // abR^-1
     EXPECT_EQ(fq::eq(result_a, result_b), true);
     fq::__from_montgomery_form(result_a, result_a); // abRR
     fq::__from_montgomery_form(result_a, result_a); // abR
@@ -307,13 +307,13 @@ TEST(fq, add_mul_consistency)
 
     fq::field_t a = fq::random_element();
     fq::field_t result;
-    fq::__add(a, a, result);           // 2
+    result = a + a;           // 2
     result.self_add(result); // 4
     result.self_add(result); // 8
     result.self_add(a);      // 9
 
     fq::field_t expected;
-    fq::__mul(a, multiplicand, expected);
+    expected = a * multiplicand;
 
     EXPECT_EQ(fq::eq(result, expected), true);
 }
@@ -325,7 +325,7 @@ TEST(fq, sub_mul_consistency)
 
     fq::field_t a = fq::random_element();
     fq::field_t result;
-    fq::__add(a, a, result);           // 2
+    result = a + a;           // 2
     result.self_add(result); // 4
     result.self_add(result); // 8
     result.self_sub(a);      // 7
@@ -333,7 +333,7 @@ TEST(fq, sub_mul_consistency)
     result.self_sub(a);      // 5
 
     fq::field_t expected;
-    fq::__mul(a, multiplicand, expected);
+    expected = a * multiplicand;
 
     EXPECT_EQ(fq::eq(result, expected), true);
 }
@@ -347,12 +347,12 @@ TEST(fq, beta)
 
     // compute x^3
     fq::field_t x_cubed;
-    fq::__mul(x, x, x_cubed);
+    x_cubed = x * x;
     x_cubed.self_mul(x);
 
     // compute beta_x^3
     fq::field_t beta_x_cubed;
-    fq::__mul(beta_x, beta_x, beta_x_cubed);
+    beta_x_cubed = beta_x * beta_x;
     beta_x_cubed.self_mul(beta_x);
 
     EXPECT_EQ(fq::eq(x_cubed, beta_x_cubed), true);
@@ -396,7 +396,7 @@ TEST(fq, sqrt_random)
 TEST(fq, one_and_zero)
 {
     fq::field_t result;
-    fq::__sub(fq::one, fq::one, result);
+    result = fq::one - fq::one;
     EXPECT_EQ(fq::eq(result, fq::zero), true);
 }
 
@@ -414,7 +414,7 @@ TEST(fq, neg)
     fq::field_t b;
     fq::__neg(a, b);
     fq::field_t result;
-    fq::__add(a, b, result);
+    result = a + b;
     EXPECT_EQ(fq::eq(result, fq::zero), true);
 }
 
@@ -439,8 +439,8 @@ TEST(fq, split_into_endomorphism_scalars)
     fq::__to_montgomery_form(k1, k1);
     fq::__to_montgomery_form(k2, k2);
 
-    fq::__mul(k2, fq::beta, result);
-    fq::__sub(k1, result, result);
+    result = k2 * fq::beta;
+    result = k1 - result;
 
     fq::__from_montgomery_form(result, result);
     for (size_t i = 0; i < 4; ++i) {
@@ -463,8 +463,8 @@ TEST(fq, split_into_endomorphism_scalars_simple)
     fq::__to_montgomery_form(k1, k1);
     fq::__to_montgomery_form(k2, k2);
 
-    fq::__mul(k2, fq::beta, result);
-    fq::__sub(k1, result, result);
+    result = k2 * fq::beta;
+    result = k1 - result;
 
     fq::__from_montgomery_form(result, result);
     for (size_t i = 0; i < 4; ++i) {

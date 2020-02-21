@@ -78,7 +78,7 @@ fr::field_t ProverSequentialWidget::compute_linear_contribution(const fr::field_
     barretenberg::fr::field_t old_alpha = alpha_base * alpha.invert();
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0;
-    fr::__mul(w_o_shifted_eval, q_3_next[i], T0);
+    T0 = w_o_shifted_eval * q_3_next[i];
     T0.self_mul(old_alpha);
     r[i].self_add(T0);
     ITERATE_OVER_DOMAIN_END;
@@ -106,7 +106,7 @@ VerifierBaseWidget::challenge_coefficients VerifierSequentialWidget::append_scal
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
     fr::field_t q_o_next_term;
-    fr::__mul(w_o_shifted_eval, old_alpha, q_o_next_term);
+    q_o_next_term = w_o_shifted_eval * old_alpha;
     q_o_next_term.self_mul(challenge.linear_nu);
 
     if (g1::on_curve(key->constraint_selectors.at("Q_3_NEXT"))) {

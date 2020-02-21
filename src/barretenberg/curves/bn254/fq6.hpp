@@ -49,18 +49,18 @@ struct Bn254Fq6Params
         fq::field_t T1;
         fq::field_t T2;
 
-        fq::__add(a.c0, a.c0, T0); // T0 = 2a.c0
+        T0 = a.c0 + a.c0; // T0 = 2a.c0
         T0.self_add(T0);     // T0 = 4a.c0
         T0.self_add(T0);     // T0 = 8a.c0
         T0.self_add(a.c0);   // T0 = 9a.c0
 
-        fq::__add(a.c1, a.c1, T1); // T1 = 2a.c1
+        T1 = a.c1 + a.c1; // T1 = 2a.c1
         T1.self_add(T1);     // T1 = 4a.c1
         T1.self_add(T1);     // T1 = 8a.c1
         T1.self_add(a.c1);   // T1 = 9a.c1
 
-        fq::__sub(T0, a.c1, T2);   // T2 = 9a.c0 - a.c1
-        fq::__add(T1, a.c0, r.c1); // r.c1 = 9a.c1 + a.c0
+        T2 = T0 - a.c1;   // T2 = 9a.c0 - a.c1
+        r.c1 = T1 + a.c0; // r.c1 = 9a.c1 + a.c0
         fq::__copy(T2, r.c0);        // r.c0 = T2
     }
 };

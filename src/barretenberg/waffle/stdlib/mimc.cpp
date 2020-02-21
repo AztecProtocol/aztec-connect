@@ -79,7 +79,7 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> me
     for (size_t i = 0; i < num_mimc_rounds; ++i) {
         barretenberg::fr::field_t T0;
         barretenberg::fr::field_t x_cubed;
-        barretenberg::fr::__add(x_in, k, T0);
+        T0 = x_in + k;
         T0.self_add(mimc_round_constants[i]);
         barretenberg::fr::__sqr(T0, x_cubed);
         x_cubed.self_mul(T0);

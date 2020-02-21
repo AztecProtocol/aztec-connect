@@ -123,7 +123,7 @@ TEST(polynomials, fft_coset_ifft_consistency)
     evaluation_domain domain = evaluation_domain(n);
     domain.compute_lookup_table();
     fr::field_t T0;
-    fr::__mul(domain.generator, domain.generator_inverse, T0);
+    T0 = domain.generator * domain.generator_inverse;
     EXPECT_EQ(fr::eq(T0, fr::one), true);
 
     polynomial_arithmetic::coset_fft(result, domain);
@@ -146,7 +146,7 @@ TEST(polynomials, fft_coset_ifft_cross_consistency)
         poly_a[i] = fr::random_element();
         fr::__copy(poly_a[i], poly_b[i]);
         fr::__copy(poly_a[i], poly_c[i]);
-        fr::__add(poly_a[i], poly_c[i], expected[i]);
+        expected[i] = poly_a[i] + poly_c[i];
         expected[i].self_add(poly_b[i]);
     }
 
@@ -198,7 +198,7 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
 
     fr::field_t z = fr::random_element();
     fr::field_t shifted_z;
-    fr::__mul(z, small_domain.root, shifted_z);
+    shifted_z = z * small_domain.root;
     shifted_z.self_mul(small_domain.root);
 
     fr::field_t eval;
@@ -246,9 +246,9 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
     for (size_t i = 0; i < n; ++i) {
         a[i] = fr::random_element();
         b[i] = fr::random_element();
-        fr::__mul(a[i], b[i], c[i]);
+        c[i] = a[i] * b[i];
         fr::__neg(c[i], c[i]);
-        fr::__mul(a[i], b[i], T0);
+        T0 = a[i] * b[i];
         T0.self_add(c[i]);
     }
     for (size_t i = n; i < 4 * n; ++i) {
@@ -274,7 +274,7 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
 
     fr::field_t result[mid_domain.size];
     for (size_t i = 0; i < mid_domain.size; ++i) {
-        fr::__mul(a[i], b[i], result[i]);
+        result[i] = a[i] * b[i];
         result[i].self_add(c[i]);
     }
 
@@ -328,7 +328,7 @@ TEST(polynomials, compute_kate_opening_coefficients)
     // validate that, at each evaluation, W(X)(X - z) = F(X) - F(z)
     fr::field_t result;
     for (size_t i = 0; i < domain.size; ++i) {
-        fr::__mul(W[i], multiplicand[i], result);
+        result = W[i] * multiplicand[i];
         EXPECT_EQ(fr::eq(result, coeffs[i]), true);
     }
 

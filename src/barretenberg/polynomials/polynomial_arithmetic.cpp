@@ -843,7 +843,7 @@ void compress_fft(const fr::field_t* src, fr::field_t* dest, const size_t cur_si
           {
               fr::__copy(scratch_space[i + 1], temp);
               fr::__sub_with_coarse_reduction(scratch_space[i], scratch_space[i + 1], scratch_space[i + 1]);
-              fr::__add_with_coarse_reduction(temp, scratch_space[i], scratch_space[i]);
+              scratch_space[i] = temp.add_with_coarse_reduction(scratch_space[i]);
           }
       }
   

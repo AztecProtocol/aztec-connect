@@ -329,32 +329,32 @@ polynomial_arithmetic::get_lagrange_evaluations(state.challenges.z, state.circui
     fr::field_t T1;
     fr::field_t T2;
     fr::field_t T3;
-    fr::__mul(state.proof.sigma_1_eval, state.challenges.beta, T0);
-    fr::__add(state.proof.w_l_eval, state.challenges.gamma, T1);
+    T0 = state.proof.sigma_1_eval * state.challenges.beta;
+    T1 = state.proof.w_l_eval + state.challenges.gamma;
     T0.self_add(T1);
 
-    fr::__mul(state.proof.sigma_2_eval, state.challenges.beta, T2);
-    fr::__add(state.proof.w_r_eval, state.challenges.gamma, T1);
+    T2 = state.proof.sigma_2_eval * state.challenges.beta;
+    T1 = state.proof.w_r_eval + state.challenges.gamma;
     T2.self_add(T1);
 
-    fr::__add(state.proof.w_o_eval, state.challenges.gamma, T3);
+    T3 = state.proof.w_o_eval + state.challenges.gamma;
 
     T0.self_mul(T2);
     T0.self_mul(T3);
     T0.self_mul(state.proof.z_1_shifted_eval);
     T0.self_mul(alpha_pow[1]);
 
-    fr::__sub(state.proof.z_1_shifted_eval, fr::one, T1);
+    T1 = state.proof.z_1_shifted_eval - fr::one;
     T1.self_mul(lagrange_evals.l_n_minus_1);
     T1.self_mul(alpha_pow[2]);
 
-    fr::__mul(lagrange_evals.l_1, alpha_pow[3], T2);
+    T2 = lagrange_evals.l_1 * alpha_pow[3];
 
     T1.self_sub(T2);
     T1.self_sub(T0);
 
     fr::field_t rhs;
-    fr::__add(T1, state.proof.linear_eval, rhs);
+    rhs = T1 + state.proof.linear_eval;
     fr::__invert(lagrange_evals.vanishing_poly, T0);
     rhs.self_mul(T0);
 

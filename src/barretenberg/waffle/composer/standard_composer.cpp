@@ -149,7 +149,7 @@ void StandardComposer::create_big_add_gate_with_bit_extraction(const add_quad& i
     fr::field_t delta = variables[in.d];
     delta.self_add(delta);
     delta.self_add(delta);
-    fr::__sub(variables[in.c], delta, delta);
+    delta = variables[in.c] - delta;
 
     uint32_t delta_idx = add_variable(delta);
     fr::field_t neg_four = fr::neg(fr::to_montgomery_form({ { 4, 0, 0, 0 } }));

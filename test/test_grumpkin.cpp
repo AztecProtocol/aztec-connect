@@ -318,9 +318,9 @@ TEST(grumpkin, batch_normalize)
         fq::field_t result_x;
         fq::field_t result_y;
         fq::__sqr(points[i].z, zz);
-        fq::__mul(points[i].z, zz, zzz);
-        fq::__mul(normalized[i].x, zz, result_x);
-        fq::__mul(normalized[i].y, zzz, result_y);
+        zzz = points[i].z * zz;
+        result_x = normalized[i].x * zz;
+        result_y = normalized[i].y * zzz;
 
         EXPECT_EQ(fq::eq(result_x, points[i].x), true);
         EXPECT_EQ(fq::eq(result_y, points[i].y), true);
@@ -361,7 +361,7 @@ TEST(grumpkin, group_exponentiation_consistency_check)
     fr::field_t b = fr::random_element();
 
     fr::field_t c;
-    fr::__mul(a, b, c);
+    c = a * b;
 
     g1::affine_element input = g1::affine_one;
     g1::affine_element result = g1::group_exponentiation(input, a);

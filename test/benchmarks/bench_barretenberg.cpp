@@ -124,7 +124,7 @@ constexpr size_t NUM_MULTIPLICATIONS = 10000000;
 inline fq::field_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
 {
     for (size_t i = 0; i < NUM_MULTIPLICATIONS; ++i) {
-        fq::__mul(a, r, r);
+        r = a * r;
     }
     DoNotOptimize(r);
     return r;
