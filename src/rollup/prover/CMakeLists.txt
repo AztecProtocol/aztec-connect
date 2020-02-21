@@ -9,7 +9,13 @@ endif()
 
 add_executable(
     rollup_proof
+    create.cpp
+    destroy.cpp
+    join_split.cpp
+    join.cpp
     main.cpp
+    note.cpp
+    split.cpp
 )
 
 set_target_properties(

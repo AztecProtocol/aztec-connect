@@ -56,6 +56,10 @@ add_library(
     misc_crypto/blake2s/blake2-impl.hpp
     misc_crypto/sha256/sha256.cpp
     misc_crypto/sha256/sha256.hpp
+    misc_crypto/pedersen/pedersen.cpp
+    misc_crypto/pedersen/pedersen.hpp
+    misc_crypto/commitment/pedersen_note.cpp
+    misc_crypto/commitment/pedersen_note.hpp
     misc_crypto/schnorr/schnorr.tcc
     misc_crypto/schnorr/schnorr.hpp
     io/io.hpp
@@ -117,8 +121,6 @@ add_library(
     waffle/composer/turbo_composer.cpp
     waffle/composer/turbo_composer.hpp
     waffle/stdlib/common.hpp
-    waffle/stdlib/group/group_utils.hpp
-    waffle/stdlib/group/group_utils.cpp
     waffle/stdlib/int_utils.hpp
     waffle/stdlib/bool/bool.cpp
     waffle/stdlib/bool/bool.hpp
@@ -224,6 +226,10 @@ if(PROFILING)
         misc_crypto/sha256/sha256.hpp
         misc_crypto/schnorr/schnorr.tcc
         misc_crypto/schnorr/schnorr.hpp
+        misc_crypto/pedersen/pedersen.cpp
+        misc_crypto/pedersen/pedersen.hpp
+        misc_crypto/commitment/pedersen_note.cpp
+        misc_crypto/commitment/pedersen_note.hpp
         io/io.hpp
         keccak/hash_types.h
         keccak/keccakf1600.c
@@ -283,8 +289,6 @@ if(PROFILING)
         waffle/composer/turbo_composer.cpp
         waffle/composer/turbo_composer.hpp
         waffle/stdlib/common.hpp
-        waffle/stdlib/group/group_utils.hpp
-        waffle/stdlib/group/group_utils.cpp
         waffle/stdlib/int_utils.hpp
         waffle/stdlib/bool/bool.cpp
         waffle/stdlib/bool/bool.hpp

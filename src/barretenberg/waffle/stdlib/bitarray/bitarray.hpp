@@ -68,9 +68,7 @@ template <typename ComposerContext> class bitarray {
 
     operator byte_array<ComposerContext>()
     {
-        typename byte_array<ComposerContext>::bits_t bits(values);
-        std::reverse(bits.begin(), bits.end());
-        return byte_array(context, bits);
+        return byte_array(context, values.rbegin(), values.rend());
     };
 
     template <size_t N> operator std::array<uint32<ComposerContext>, N>()

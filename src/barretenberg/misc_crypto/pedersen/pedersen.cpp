@@ -1,14 +1,14 @@
-#include "./group_utils.hpp"
+#include "./pedersen.hpp"
 
-#include "../../../curves/grumpkin/grumpkin.hpp"
+#include "../../curves/grumpkin/grumpkin.hpp"
+#include <iostream>
 
 #ifndef NO_MULTITHREADING
 #include <omp.h>
 #endif
 
-namespace plonk {
-namespace stdlib {
-namespace group_utils {
+namespace crypto {
+namespace pedersen {
 namespace {
 
 static constexpr size_t num_generators = 128;
@@ -146,8 +146,7 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
     constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
 
-    const plonk::stdlib::group_utils::fixed_base_ladder* ladder =
-        plonk::stdlib::group_utils::get_hash_ladder(hash_index, num_bits);
+    const crypto::pedersen::fixed_base_ladder* ladder = crypto::pedersen::get_hash_ladder(hash_index, num_bits);
 
     barretenberg::fr::field_t scalar_multiplier_base = barretenberg::fr::to_montgomery_form(scalar_multiplier);
     if ((scalar_multiplier.data[0] & 1) == 0) {
@@ -162,8 +161,7 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
     grumpkin::g1::element accumulator;
     grumpkin::g1::affine_to_jacobian(ladder[0].one, accumulator);
     if (skew) {
-        grumpkin::g1::mixed_add(
-            accumulator, plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1), accumulator);
+        grumpkin::g1::mixed_add(accumulator, crypto::pedersen::get_generator(hash_index * 2 + 1), accumulator);
     }
 
     for (size_t i = 0; i < num_quads; ++i) {
@@ -175,6 +173,25 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
         grumpkin::g1::mixed_add_or_sub(accumulator, point_to_add, accumulator, predicate);
     }
     return accumulator;
+}
+
+grumpkin::fq::field_t compress_eight_native(const std::array<grumpkin::fq::field_t, 8>& inputs)
+{
+    grumpkin::g1::element out[8];
+
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for
+#endif
+    for (size_t i = 0; i < 8; ++i) {
+        out[i] = hash_single(inputs[i], 16 + i);
+    }
+
+    grumpkin::g1::element r = out[0];
+    for (size_t i = 1; i < 8; ++i) {
+        grumpkin::g1::add(r, out[i], r);
+    }
+    r = grumpkin::g1::normalize(r);
+    return r.x;
 }
 
 grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left,
@@ -213,6 +230,5 @@ grumpkin::g1::affine_element compress_to_point_native(const grumpkin::fq::field_
     first = grumpkin::g1::normalize(first);
     return { first.x, first.y };
 }
-} // namespace group_utils
-} // namespace stdlib
-} // namespace plonk
+} // namespace pedersen
+} // namespace crypto

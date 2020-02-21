@@ -8,8 +8,8 @@
 
 #include <barretenberg/waffle/stdlib/bitarray/bitarray.hpp>
 #include <barretenberg/waffle/stdlib/common.hpp>
-#include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
 #include <barretenberg/waffle/stdlib/crypto/schnorr/schnorr.hpp>
+#include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
 
 #include <barretenberg/curves/grumpkin/grumpkin.hpp>
 #include <barretenberg/misc_crypto/schnorr/schnorr.hpp>
@@ -34,7 +34,6 @@ uint32_t get_random_int()
 }
 } // namespace
 
-
 TEST(stdlib_schnorr, test_scalar_mul)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
@@ -43,14 +42,14 @@ TEST(stdlib_schnorr, test_scalar_mul)
     grumpkin::fr::field_t scalar = grumpkin::fr::from_montgomery_form(scalar_mont);
 
     bitarray scalar_bits(&composer, 256);
-    for (size_t i = 0; i < 256; ++i)
-    {
+    for (size_t i = 0; i < 256; ++i) {
         scalar_bits[255 - i] = bool_t(&composer, grumpkin::fr::get_bit(scalar, i));
     }
 
     grumpkin::g1::element expected = grumpkin::g1::group_exponentiation_no_endo(grumpkin::g1::one, scalar_mont);
     expected = grumpkin::g1::normalize(expected);
-    plonk::stdlib::point input{ witness_t(&composer, grumpkin::g1::affine_one.x), witness_t(&composer, grumpkin::g1::affine_one.y) };
+    plonk::stdlib::point input{ witness_t(&composer, grumpkin::g1::affine_one.x),
+                                witness_t(&composer, grumpkin::g1::affine_one.y) };
 
     plonk::stdlib::point output = plonk::stdlib::schnorr::variable_base_mul(input, scalar_bits);
 
@@ -68,7 +67,6 @@ TEST(stdlib_schnorr, test_scalar_mul)
     EXPECT_EQ(result, true);
 }
 
-
 TEST(stdlib_schnorr, verify_signature)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
@@ -80,18 +78,20 @@ TEST(stdlib_schnorr, verify_signature)
     account.private_key = grumpkin::fr::random_element();
     account.public_key = grumpkin::g1::group_exponentiation(grumpkin::g1::affine_one, account.private_key);
 
-    crypto::schnorr::signature signature = crypto::schnorr::construct_signature<Sha256Hasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(message_string, account);
+    crypto::schnorr::signature signature =
+        crypto::schnorr::construct_signature<Blake2sHasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(message_string,
+                                                                                                     account);
 
-    bool first_result = crypto::schnorr::verify_signature<Sha256Hasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(message_string, account.public_key, signature);
+    bool first_result = crypto::schnorr::verify_signature<Blake2sHasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(
+        message_string, account.public_key, signature);
     EXPECT_EQ(first_result, true);
 
-    stdlib::point pub_key{ witness_t(&composer, account.public_key.x), witness_t(&composer, account.public_key.y )};
+    stdlib::point pub_key{ witness_t(&composer, account.public_key.x), witness_t(&composer, account.public_key.y) };
     stdlib::schnorr::signature_bits sig = stdlib::schnorr::convert_signature(&composer, signature);
     stdlib::bitarray<waffle::TurboComposer> message = stdlib::schnorr::convert_message(&composer, message_string);
     bool signature_result = stdlib::schnorr::verify_signature(message, pub_key, sig);
 
     EXPECT_EQ(signature_result, true);
-
 
     waffle::TurboProver prover = composer.preprocess();
 

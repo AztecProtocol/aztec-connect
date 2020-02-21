@@ -17,6 +17,8 @@ class LevelDbStore {
     typedef std::string value_t;
 
     LevelDbStore(std::string const& path, size_t depth);
+    LevelDbStore(LevelDbStore const& other) = delete;
+    LevelDbStore(LevelDbStore&& other) = default;
 
     fr_hash_path get_hash_path(index_t index);
 

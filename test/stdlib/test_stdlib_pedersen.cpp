@@ -12,7 +12,7 @@
 #include <barretenberg/waffle/stdlib/field/field.hpp>
 
 #include <barretenberg/waffle/stdlib/crypto/hash/pedersen.hpp>
-#include <barretenberg/waffle/stdlib/group/group_utils.hpp>
+#include <barretenberg/misc_crypto/pedersen/pedersen.hpp>
 #include <iostream>
 #include <memory>
 
@@ -114,10 +114,10 @@ TEST(stdlib_pedersen, test_pedersen)
     }
 
     grumpkin::g1::affine_element grumpkin_points[4]{
-        plonk::stdlib::group_utils::get_generator(0),
-        plonk::stdlib::group_utils::get_generator(1),
-        plonk::stdlib::group_utils::get_generator(2),
-        plonk::stdlib::group_utils::get_generator(3),
+        crypto::pedersen::get_generator(0),
+        crypto::pedersen::get_generator(1),
+        crypto::pedersen::get_generator(2),
+        crypto::pedersen::get_generator(3),
     };
 
     grumpkin::g1::element result_points[4]{
@@ -139,7 +139,7 @@ TEST(stdlib_pedersen, test_pedersen)
 
     EXPECT_EQ(fr::eq(out.get_value(), hash_output.x), true);
 
-    fr::field_t compress_native = plonk::stdlib::group_utils::compress_native(left.get_value(), right.get_value());
+    fr::field_t compress_native = crypto::pedersen::compress_native(left.get_value(), right.get_value());
     EXPECT_EQ(fr::eq(out.get_value(), compress_native), true);
 }
 

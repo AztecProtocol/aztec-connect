@@ -45,7 +45,7 @@ TEST(stdlib_merkle_tree, compress_native_vs_circuit)
     Composer composer = Composer();
     witness_t y = witness_t(&composer, x);
     auto z = plonk::stdlib::pedersen::compress(y, y);
-    auto zz = stdlib::group_utils::compress_native(x, x);
+    auto zz = crypto::pedersen::compress_native(x, x);
     EXPECT_TRUE(fr::eq(z.get_value(), zz));
 }
 

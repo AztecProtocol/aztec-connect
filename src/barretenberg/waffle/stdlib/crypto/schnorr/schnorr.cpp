@@ -3,7 +3,7 @@
 #include "../../../composer/turbo_composer.hpp"
 #include "../../bitarray/bitarray.hpp"
 #include "../../field/field.hpp"
-#include "../hash/sha256.hpp"
+#include "../hash/blake2s.hpp"
 #include "../../../../curves/grumpkin/grumpkin.hpp"
 
 namespace plonk {
@@ -80,6 +80,7 @@ bool verify_signature(const bitarray<waffle::TurboComposer>& message, const poin
     typedef bool_t<waffle::TurboComposer> bool_t;
     typedef field_t<waffle::TurboComposer> field_t;
     typedef bitarray<waffle::TurboComposer> bitarray;
+    typedef byte_array<waffle::TurboComposer> byte_array;
 
     waffle::TurboComposer* context = pub_key.x.context;
 
@@ -115,7 +116,7 @@ bool verify_signature(const bitarray<waffle::TurboComposer>& message, const poin
         hash_input[input_length - 1 - (256 + i)] = message[i];
     }
 
-    bitarray output = sha256(hash_input);
+    bitarray output = blake2s(byte_array(hash_input));
 
     bool valid = true;
     for (size_t i = 0; i < 256; ++i) {

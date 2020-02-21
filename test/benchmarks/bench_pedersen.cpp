@@ -72,7 +72,7 @@ grumpkin::fq::field_t pedersen_function(const size_t count)
     grumpkin::fq::field_t out = grumpkin::fq::random_element();
     for (size_t i = 0; i < count; ++i)
     {
-        out = plonk::stdlib::group_utils::compress_native(left, out);
+        out = crypto::pedersen::compress_native(left, out);
     }
     return out;
 }

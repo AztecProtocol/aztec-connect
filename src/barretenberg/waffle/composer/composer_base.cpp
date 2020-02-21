@@ -7,9 +7,11 @@
 namespace waffle {
 void ComposerBase::assert_equal(const uint32_t a_idx, const uint32_t b_idx)
 {
-    if (!barretenberg::fr::eq(variables[a_idx], variables[b_idx]))
-    {
+    if (!barretenberg::fr::eq(variables[a_idx], variables[b_idx])) {
         printf("assert equal check failed! indices %u, %u \n", a_idx, b_idx);
+        printf("left witness epicycle count = %lu, right witness epicycle count = %lu \n",
+               wire_epicycles[a_idx].size(),
+               wire_epicycles[b_idx].size());
     }
     ASSERT(barretenberg::fr::eq(variables[a_idx], variables[b_idx]));
     for (size_t i = 0; i < wire_epicycles[b_idx].size(); ++i) {
