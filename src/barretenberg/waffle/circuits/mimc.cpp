@@ -139,7 +139,7 @@ namespace mimc
 //         fr::field_t t = fr::add(constants[i], previous);
 //         fr::field_t tt = fr::sqr(t);
 //         fr::field_t tttt = fr::sqr(tt);
-//         fr::field_t ttttt = fr::mul(t, tttt);
+//         fr::field_t ttttt = t * tttt;
 //         fr::__copy(ttttt, previous);
 //     }
 //     return previous;
@@ -176,7 +176,7 @@ size_t mimc_round(const uint32_t input_index, const uint32_t k_index, Composer *
         
         fr::field_t tt = fr::sqr(t);
         fr::field_t tttt = fr::sqr(tt);
-        fr::field_t ttttt = fr::mul(t, tttt);
+        fr::field_t ttttt = t * tttt;
         size_t tt_idx = composer->add_variable(tt);
         size_t tttt_idx = composer->add_variable(tttt);
         size_t ttttt_idx = composer->add_variable(ttttt);

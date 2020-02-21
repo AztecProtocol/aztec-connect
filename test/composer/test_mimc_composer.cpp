@@ -31,10 +31,10 @@ TEST(mimc_composer, test_mimc_gate_proof)
     {
         fr::field_t T0 = fr::add(fr::add(x, k), c[i]);
         fr::field_t x_cubed = fr::sqr(T0);
-        x_cubed = fr::mul(x_cubed, T0);
+        x_cubed = x_cubed * T0;
         x_cubed_idx = composer.add_variable(x_cubed);
         fr::field_t x_out = fr::sqr(x_cubed);
-        x_out = fr::mul(x_out, T0);
+        x_out = x_out * T0;
         x_out_idx = composer.add_variable(x_out);
         composer.create_mimc_gate({x_in_idx, x_cubed_idx, k_idx, x_out_idx, c[i] });
         x_in_idx = x_out_idx;

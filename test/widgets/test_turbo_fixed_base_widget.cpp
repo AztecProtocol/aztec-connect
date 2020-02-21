@@ -65,7 +65,7 @@
 //     fr::field_t y_denominator = fr::invert(fr::add(fr::add(T0, T0), T0));
 
 //     fr::field_t y_alpha_1 = fr::mul(fr::sub(fr::add(fr::add(y_beta, y_beta), y_beta), y_gamma), y_denominator);
-//     fr::field_t T1 = fr::mul(x_gamma, y_beta);
+//     fr::field_t T1 = x_gamma * y_beta;
 //     T1 = fr::add(fr::add(T1, T1), T1);
 //     fr::field_t y_alpha_2 = fr::mul(fr::sub(fr::mul(x_beta, y_gamma), T1), y_denominator);
 
@@ -295,7 +295,7 @@
 //         fr::field_t y_denominator = fr::invert(fr::add(fr::add(T0, T0), T0));
 
 //         fr::field_t y_alpha_1 = fr::mul(fr::sub(fr::add(fr::add(y_beta, y_beta), y_beta), y_gamma), y_denominator);
-//         fr::field_t T1 = fr::mul(x_gamma, y_beta);
+//         fr::field_t T1 = x_gamma * y_beta;
 //         T1 = fr::add(fr::add(T1, T1), T1);
 //         fr::field_t y_alpha_2 = fr::mul(fr::sub(fr::mul(x_beta, y_gamma), T1), y_denominator);
 //         // printf("entry = %lu \n", wnaf_entries[i] & 0xffffffU);

@@ -83,7 +83,7 @@ void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fi
 
         grumpkin::fq::field_t y_alpha_1 =
             grumpkin::fq::sub(grumpkin::fq::add(grumpkin::fq::add(y_beta, y_beta), y_beta), y_gamma);
-        grumpkin::fq::field_t T1 = grumpkin::fq::mul(x_gamma, y_beta);
+        grumpkin::fq::field_t T1 = x_gamma * y_beta;
         T1 = grumpkin::fq::add(grumpkin::fq::add(T1, T1), T1);
         grumpkin::fq::field_t y_alpha_2 = grumpkin::fq::sub(grumpkin::fq::mul(x_beta, y_gamma), T1);
 

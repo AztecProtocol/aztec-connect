@@ -170,7 +170,7 @@ TEST(turbo_range_widget, compute_linear_contribution)
 
 
     fr::field_t z_challenge = fr::random_element();
-    fr::field_t shifted_z = fr::mul(key->small_domain.root, z_challenge);
+    fr::field_t shifted_z = key->small_domain.root * z_challenge;
 
     for (size_t i = 0; i < 4; ++i) {
         std::string wire_key = "w_" + std::to_string(i + 1);
@@ -193,7 +193,7 @@ TEST(turbo_range_widget, compute_linear_contribution)
     barretenberg::polynomial_arithmetic::lagrange_evaluations lagrange_evals =
         barretenberg::polynomial_arithmetic::get_lagrange_evaluations(z_challenge, key->small_domain);
 
-    fr::field_t expected = fr::mul(quotient_eval, lagrange_evals.vanishing_poly);
+    fr::field_t expected = quotient_eval * lagrange_evals.vanishing_poly;
 
     EXPECT_EQ(fr::eq(result, expected), true);
 }

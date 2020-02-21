@@ -449,6 +449,6 @@ TEST(polynomials, barycentric_weight_evaluations)
 
 //        fr::print(fr::from_montgomery_form((root)));
 //        // fr::print(fr::from_montgomery_form(fr::mul(root, two_inv)));
-//         root = fr::mul(root, mid_domain.root);
+//         root = root * mid_domain.root;
 //     }
 // }

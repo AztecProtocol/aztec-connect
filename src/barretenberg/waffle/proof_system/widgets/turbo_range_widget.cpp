@@ -204,9 +204,9 @@ fr::field_t ProverTurboRangeWidget::compute_linear_contribution(const fr::field_
     constexpr fr::field_t minus_three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form().neg();
 
     fr::field_t alpha_a = alpha_base;
-    fr::field_t alpha_b = fr::mul(alpha_a, alpha);
-    fr::field_t alpha_c = fr::mul(alpha_b, alpha);
-    fr::field_t alpha_d = fr::mul(alpha_c, alpha);
+    fr::field_t alpha_b = alpha_a * alpha;
+    fr::field_t alpha_c = alpha_b * alpha;
+    fr::field_t alpha_d = alpha_c * alpha;
 
     fr::field_t delta_1 = w_4_eval.add_without_reduction(w_4_eval);
     delta_1.self_add_with_coarse_reduction(delta_1);
@@ -315,9 +315,9 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboRangeWidget::append_scal
     constexpr fr::field_t minus_three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form().neg();
 
     fr::field_t alpha_a = challenge.alpha_base; // fr::mul(challenge.alpha_base, challenge.alpha_step);
-    fr::field_t alpha_b = fr::mul(alpha_a, challenge.alpha_step);
-    fr::field_t alpha_c = fr::mul(alpha_b, challenge.alpha_step);
-    fr::field_t alpha_d = fr::mul(alpha_c, challenge.alpha_step);
+    fr::field_t alpha_b = alpha_a * challenge.alpha_step;
+    fr::field_t alpha_c = alpha_b * challenge.alpha_step;
+    fr::field_t alpha_d = alpha_c * challenge.alpha_step;
 
     fr::field_t delta_1 = w_4_eval.add_without_reduction(w_4_eval);
     delta_1.self_add_with_coarse_reduction(delta_1);

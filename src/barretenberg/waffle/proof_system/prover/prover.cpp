@@ -693,7 +693,7 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
         for (size_t i = 0; i < settings::program_width; ++i) {
             if (settings::requires_shifted_wire(settings::wire_shift_settings, i)) {
                 shift_nu_powers[i] = nu_base;
-                nu_base = fr::mul(nu_base, nu);
+                nu_base = nu_base * nu;
             }
         }
 

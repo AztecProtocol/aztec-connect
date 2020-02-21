@@ -226,12 +226,12 @@ fr::field_t ProverTurboFixedBaseWidget::compute_linear_contribution(const fr::fi
     fr::field_t q_ecc_1_eval = fr::serialize_from_buffer(&transcript.get_element("q_ecc_1")[0]);
     fr::field_t q_c_eval = fr::serialize_from_buffer(&transcript.get_element("q_c")[0]);
 
-    fr::field_t alpha_b = fr::mul(new_alpha_base, (alpha));
-    fr::field_t alpha_c = fr::mul(alpha_b, alpha);
-    fr::field_t alpha_d = fr::mul(alpha_c, alpha);
-    fr::field_t alpha_e = fr::mul(alpha_d, alpha);
-    fr::field_t alpha_f = fr::mul(alpha_e, alpha);
-    fr::field_t alpha_g = fr::mul(alpha_f, alpha);
+    fr::field_t alpha_b = new_alpha_base * (alpha);
+    fr::field_t alpha_c = alpha_b * alpha;
+    fr::field_t alpha_d = alpha_c * alpha;
+    fr::field_t alpha_e = alpha_d * alpha;
+    fr::field_t alpha_f = alpha_e * alpha;
+    fr::field_t alpha_g = alpha_f * alpha;
 
     fr::field_t delta = w_4_omega_eval - (w_4_eval + w_4_eval + w_4_eval + w_4_eval);
 
@@ -272,7 +272,7 @@ fr::field_t ProverTurboFixedBaseWidget::compute_opening_poly_contribution(const 
     fr::field_t nu = fr::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
     fr::field_t new_nu_base =
         ProverTurboArithmeticWidget::compute_opening_poly_contribution(nu_base, transcript, poly, shifted_poly);
-    fr::field_t nu_b = fr::mul(new_nu_base, nu);
+    fr::field_t nu_b = new_nu_base * nu;
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0 = q_ecc_1[i].mul_with_coarse_reduction(new_nu_base);
     fr::field_t T1 = q_c[i].mul_with_coarse_reduction(nu_b);

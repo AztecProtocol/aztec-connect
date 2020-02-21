@@ -331,7 +331,7 @@ field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t& othe
         T1 = other.multiplicative_constant * right;
         T1.self_add(other.additive_constant);
 
-        out = barretenberg::fr::mul(T0, barretenberg::fr::invert(T1));
+        out = T0 * barretenberg::fr::invert(T1);
         result.witness_index = ctx->add_variable(out);
 
         // m2.x2.x3 + a2.x3 = m1.x1 + a1

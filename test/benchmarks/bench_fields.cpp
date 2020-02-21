@@ -118,9 +118,9 @@ const auto init = []() {
         newy.emplace_back(new_field{ accy.data[0], accy.data[1], accy.data[2], accy.data[3] });
         // newz.emplace_back({ accz.data[0], accz.data[1], accz.data[2], accz.data[3] });
 
-        accx = fr::mul(accx, seed_x);
-        accy = fr::mul(accy, seed_y);
-        accz = fr::mul(accz, seed_z);
+        accx = accx * seed_x;
+        accy = accy * seed_y;
+        accz = accz * seed_z;
     }
     return 1;
 }();

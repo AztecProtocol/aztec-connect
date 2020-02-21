@@ -833,13 +833,13 @@ ExtendedProver ExtendedComposer::preprocess()
     // // }
     // // for (size_t i = 0; i < output_state.n; ++i)
     // // {
-    // //     fr::field_t wlwr = fr::mul(output_state.w_l[i], output_state.w_r[i]);
-    // //     fr::field_t t0 = fr::mul(wlwr, arithmetic_widget->q_m[i]);
-    // //     fr::field_t t1 = fr::mul(output_state.w_l[i], arithmetic_widget->q_l[i]);
-    // //     fr::field_t t2 = fr::mul(output_state.w_r[i], arithmetic_widget->q_r[i]);
-    // //     fr::field_t t3 = fr::mul(output_state.w_o[i], arithmetic_widget->q_o[i]);
+    // //     fr::field_t wlwr = output_state.w_l[i] * output_state.w_r[i];
+    // //     fr::field_t t0 = wlwr * arithmetic_widget->q_m[i];
+    // //     fr::field_t t1 = output_state.w_l[i] * arithmetic_widget->q_l[i];
+    // //     fr::field_t t2 = output_state.w_r[i] * arithmetic_widget->q_r[i];
+    // //     fr::field_t t3 = output_state.w_o[i] * arithmetic_widget->q_o[i];
     // //     size_t shifted_idx = (i == output_state.n - 1) ? 0 : i + 1;
-    // //     fr::field_t t4 = fr::mul(output_state.w_o[shifted_idx], sequential_widget->q_o_next[i]);
+    // //     fr::field_t t4 = output_state.w_o[shifted_idx] * sequential_widget->q_o_next[i];
     // //     fr::field_t result = fr::add(t0, t1);
     // //     result = fr::add(result, t2);
     // //     result = fr::add(result, t3);

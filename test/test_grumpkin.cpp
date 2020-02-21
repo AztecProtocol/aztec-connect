@@ -18,7 +18,7 @@ using namespace grumpkin;
 //     fq::print(fq::neg(T2));
 
 //     fq::field_t xx = fq::sqr(result.x);
-//     fq::field_t xxx = fq::mul(result.x, xx);
+//     fq::field_t xxx = result.x * xx;
 
 //     fq::field_t yy_sub_xxx = fq::sub(fq::sqr(result.y), xxx);
 //     printf("y^2 - x^3 = \n");

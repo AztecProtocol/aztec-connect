@@ -36,8 +36,14 @@ $5 = $3 + $4;
 (barretenberg::|grumpkin::)?f(q|r)::__sub\([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)[\s]*,[\s]*([^\s]*)[\s]*\);
 $5 = $3 - $4;
 
-([^\s]*) = (barretenberg::|grumpkin::)?f(q|r)::mul([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)[\s]*\);
+([^\s]*) = (barretenberg::|grumpkin::)?f(q|r)::mul\([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)[\s]*\);
 $1 = $4 * $5;
+
+([^\s]*) = (barretenberg::|grumpkin::)?f(q|r)::add\([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)[\s]*\);
+$1 = $4 + $5;
+
+([^\s]*) = (barretenberg::|grumpkin::)?f(q|r)::sub\([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)[\s]*\);
+$1 = $4 - $5;
 
 f(q|r)::__sqr_with_coarse_reduction\((.*), \2\);
 $2.self_sqr_with_coarse_reduction();

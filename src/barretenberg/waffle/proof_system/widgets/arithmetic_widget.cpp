@@ -118,7 +118,7 @@ fr::field_t ProverArithmeticWidget::compute_linear_contribution(const fr::field_
     fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
     fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
     fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
-    fr::field_t w_lr = fr::mul(w_l_eval, w_r_eval);
+    fr::field_t w_lr = w_l_eval * w_r_eval;
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0 = w_lr * q_m[i];
     fr::field_t T1 = w_l_eval * q_1[i];

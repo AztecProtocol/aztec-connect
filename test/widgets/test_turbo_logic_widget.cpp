@@ -67,7 +67,7 @@ waffle::ProverTurboLogicWidget create_test_widget_circuit(const size_t num_gates
         w_1[i] = fr::add(fr::mul(w_1[i - 1], four), values[left]);
         w_2[i] = fr::add(fr::mul(w_2[i - 1], four), values[right]);
         w_4[i] = fr::add(fr::mul(w_4[i - 1], four), values[out]);
-        w_3[i - 1] = fr::mul(values[left], values[right]);
+        w_3[i - 1] = values[left] * values[right];
     }
     w_3[num_gates - 1] = fr::zero;
     q_c[num_gates - 1] = fr::zero;
@@ -230,7 +230,7 @@ TEST(turbo_logic_widget, xor_compute_linear_contribution)
     key->quotient_large.coset_ifft(key->large_domain);
 
     fr::field_t z_challenge = fr::random_element();
-    fr::field_t shifted_z = fr::mul(key->small_domain.root, z_challenge);
+    fr::field_t shifted_z = key->small_domain.root * z_challenge;
 
     for (size_t i = 0; i < 4; ++i) {
         std::string wire_key = "w_" + std::to_string(i + 1);
@@ -257,7 +257,7 @@ TEST(turbo_logic_widget, xor_compute_linear_contribution)
     barretenberg::polynomial_arithmetic::lagrange_evaluations lagrange_evals =
         barretenberg::polynomial_arithmetic::get_lagrange_evaluations(z_challenge, key->small_domain);
 
-    fr::field_t expected = fr::mul(quotient_eval, lagrange_evals.vanishing_poly);
+    fr::field_t expected = quotient_eval * lagrange_evals.vanishing_poly;
 
     EXPECT_EQ(fr::eq(result, expected), true);
 }

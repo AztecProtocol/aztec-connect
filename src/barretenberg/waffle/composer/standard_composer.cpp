@@ -163,7 +163,7 @@ void StandardComposer::create_big_add_gate_with_bit_extraction(const add_quad& i
     create_poly_gate(
         poly_triple{ delta_idx, delta_idx, r_0_idx, fr::neg(two), nine, fr::zero, fr::neg_one(), fr::neg(seven) });
 
-    fr::field_t r_1 = fr::mul(r_0, delta);
+    fr::field_t r_1 = r_0 * delta;
     uint32_t r_1_idx = add_variable(r_1);
     create_mul_gate(mul_triple{
         r_0_idx,

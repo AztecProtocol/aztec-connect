@@ -368,7 +368,7 @@ TEST(test_public_inputs, compute_delta)
         right.push_back(temp);
         sigma_1.push_back(fr::mul(fr::coset_generators[0], work_root));
         sigma_2.push_back(work_root);
-        work_root = fr::mul(work_root, domain.root);
+        work_root = work_root * domain.root;
     }
 
     fr::field_t beta = get_pseudorandom_element();
@@ -385,25 +385,25 @@ TEST(test_public_inputs, compute_delta)
             fr::field_t T0 = fr::add(left[i], gamma);
             fr::field_t T1 = fr::add(right[i], gamma);
 
-            fr::field_t T2 = fr::mul(work_root, beta);
-            fr::field_t T3 = fr::mul(fr::coset_generators[0], T2);
+            fr::field_t T2 = work_root * beta;
+            fr::field_t T3 = fr::coset_generators[0] * T2;
 
             fr::field_t T4 = fr::add(T0, T2);
             fr::field_t T5 = fr::add(T1, T3);
-            fr::field_t T6 = fr::mul(T4, T5);
+            fr::field_t T6 = T4 * T5;
 
-            numerator = fr::mul(numerator, T6);
+            numerator = numerator * T6;
 
             fr::field_t T7 = fr::add(T0, fr::mul(sigma_1[i], beta));
             fr::field_t T8 = fr::add(T1, fr::mul(sigma_2[i], beta));
-            fr::field_t T9 = fr::mul(T7, T8);
-            denominator = fr::mul(denominator, T9);
-            work_root = fr::mul(work_root, root);
+            fr::field_t T9 = T7 * T8;
+            denominator = denominator * T9;
+            work_root = work_root * root;
         }
 
         fr::__invert(denominator, denominator);
 
-        fr::field_t product = fr::mul(numerator, denominator);
+        fr::field_t product = numerator * denominator;
         return product;
     };
 
@@ -414,7 +414,7 @@ TEST(test_public_inputs, compute_delta)
     work_root = fr::one;
     for (size_t i = 0; i < num_public_inputs; ++i) {
         sigma_1[i] = work_root;
-        work_root = fr::mul(work_root, domain.root);
+        work_root = work_root * domain.root;
     }
 
     fr::field_t modified_result = compute_grand_product(left, right, sigma_1, sigma_2);
