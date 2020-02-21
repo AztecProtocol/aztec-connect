@@ -151,7 +151,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     fr::field_t T2;
     fr::__copy(alpha, alpha_pow[0]);
     for (size_t i = 1; i < 4; ++i) {
-        fr::__mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
+        alpha_pow[i] = alpha_pow[i - 1] * alpha_pow[0];
     }
 
     fr::field_t sigma_contribution = fr::one;
@@ -166,7 +166,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
         transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
 
     fr::field_t public_input_delta = compute_public_input_delta(public_inputs, beta, gamma, key->domain.root);
-    fr::__add(wire_evaluations[program_settings::program_width - 1], gamma, T0);
+    T0 = wire_evaluations[program_settings::program_width - 1] + gamma;
     sigma_contribution.self_mul(T0);
     sigma_contribution.self_mul(z_1_shifted_eval);
     sigma_contribution.self_mul(alpha_pow[0]);
@@ -197,7 +197,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     fr::field_t u = fr::serialize_from_buffer(transcript.apply_fiat_shamir("separator").begin());
     fr::__copy(nu, nu_pow[0]);
     for (size_t i = 1; i < 10; ++i) {
-        fr::__mul(nu_pow[i - 1], nu_pow[0], nu_pow[i]);
+        nu_pow[i] = nu_pow[i - 1] * nu_pow[0];
     }
 
     // reconstruct Kate opening commitments from committed values
@@ -213,12 +213,12 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     batch_evaluation.self_add(T0);
 
     for (size_t i = 0; i < program_settings::program_width; ++i) {
-        fr::__mul(nu_pow[i + 1], wire_evaluations[i], T0);
+        T0 = nu_pow[i + 1] * wire_evaluations[i];
         batch_evaluation.self_add(T0);
     }
 
     for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
-        fr::__mul(nu_pow[5 + i], sigma_evaluations[i], T0);
+        T0 = nu_pow[5 + i] * sigma_evaluations[i];
         batch_evaluation.self_add(T0);
     }
 
@@ -263,7 +263,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
             elements.emplace_back(W[i]);
             if (program_settings::requires_shifted_wire(program_settings::wire_shift_settings, i)) {
                 T0 = nu_base * u;
-                fr::__add(T0, nu_pow[1 + i], T0);
+                T0.self_add(nu_pow[1 + i]);
                 scalars.emplace_back(T0);
                 nu_base.self_mul(nu_pow[0]);
             } else {

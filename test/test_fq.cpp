@@ -343,7 +343,7 @@ TEST(fq, beta)
     fq::field_t x = fq::random_element();
 
     fq::field_t beta_x = { { x.data[0], x.data[1], x.data[2], x.data[3] } };
-    fq::__mul_beta(beta_x, beta_x);
+    beta_x = beta_x * fq::beta;
 
     // compute x^3
     fq::field_t x_cubed;

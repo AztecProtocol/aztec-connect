@@ -26,7 +26,7 @@ void generate_pippenger_point_table(g1::affine_element* points, g1::affine_eleme
     // iterate backwards, so that `points` and `table` can point to the same memory location
     for (size_t i = num_points - 1; i < num_points; --i) {
         g1::copy(&points[i], &table[i * 2]);
-        fq::__mul_beta(points[i].x, table[i * 2 + 1].x);
+        table[i * 2 + 1].x = fq::beta * points[i].x;
         table[i * 2 + 1].y = points[i].y.neg();
     }
 }

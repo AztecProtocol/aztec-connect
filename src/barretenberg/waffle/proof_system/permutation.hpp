@@ -65,7 +65,7 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     const uint32_t column_index = ((permutation[i] & program_settings::permutation_mask) >> program_settings::permutation_shift);
     if (column_index > 0)
     {
-        barretenberg::fr::__mul(output[i], barretenberg::fr::coset_generators[column_index - 1], output[i]);
+        output[i].self_mul(barretenberg::fr::coset_generators[column_index - 1]);
     }
     ITERATE_OVER_DOMAIN_END;
 }

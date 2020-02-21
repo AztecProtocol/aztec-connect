@@ -85,7 +85,7 @@ TEST(stdlib_field, test_add_mul_with_constants)
 
     uint64_t expected = fidget(composer);
     waffle::Prover prover = composer.preprocess();
-    EXPECT_EQ(fr::eq(prover.witness->wires.at("w_3")[18].from_montgomery_form(), { { expected, 0, 0, 0 } }), true);
+    EXPECT_EQ(prover.witness->wires.at("w_3")[18].from_montgomery_form(), fr::field_t({ expected, 0, 0, 0 }));
 
     EXPECT_EQ(prover.n, 32UL);
     waffle::Verifier verifier = composer.create_verifier();
@@ -102,7 +102,7 @@ TEST(stdlib_field, test_field_fibbonaci)
 
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(fr::eq(prover.witness->wires.at("w_3")[17].from_montgomery_form(), { { 4181, 0, 0, 0 } }), true);
+    EXPECT_EQ(prover.witness->wires.at("w_3")[17].from_montgomery_form(), fr::field_t({ 4181, 0, 0, 0 }));
     EXPECT_EQ(prover.n, 32UL);
     waffle::Verifier verifier = composer.create_verifier();
 

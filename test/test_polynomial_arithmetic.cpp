@@ -166,8 +166,8 @@ TEST(polynomials, fft_coset_ifft_cross_consistency)
     polynomial_arithmetic::coset_fft(poly_c, large_domain);
 
     for (size_t i = 0; i < n; ++i) {
-        fr::__add(poly_a[i], poly_c[4 * i], poly_a[i]);
-        fr::__add(poly_a[i], poly_b[2 * i], poly_a[i]);
+        poly_a[i] = poly_a[i] + poly_c[4 * i];
+        poly_a[i] = poly_a[i] + poly_b[2 * i];
     }
 
     polynomial_arithmetic::coset_ifft(poly_a, small_domain);
@@ -361,7 +361,7 @@ TEST(polynomials, get_lagrange_evaluations)
 
     fr::field_t n_mont{ { n, 0, 0, 0 } };
     n_mont.self_to_montgomery_form();
-    fr::__mul(n_mont, domain.root, vanishing_poly[n - 1]);
+    vanishing_poly[n - 1] = n_mont * domain.root;
 
     polynomial_arithmetic::ifft(l_1_poly, domain);
     polynomial_arithmetic::ifft(l_n_minus_1_poly, domain);
@@ -408,47 +408,3 @@ TEST(polynomials, barycentric_weight_evaluations)
 
     EXPECT_EQ((result == expected), true);
 }
-
-// TEST(polynomials, fft_experiments)
-// {
-//     const size_t domain_size = 4;
-//     evaluation_domain small_domain(domain_size);
-//     evaluation_domain mid_domain(domain_size * 2);
-//     small_domain.compute_lookup_table();
-//     mid_domain.compute_lookup_table();
-
-//     std::vector<fr::field_t> poly_a(2 * domain_size);
-//     // std::vector<fr::field_t> poly_b;
-//     poly_a[0] = fr::one;
-//     poly_a[1] = fr::zero;
-//     poly_a[2] = fr::zero;
-//     poly_a[3] = fr::zero;
-//     // std::copy(poly_a.begin(), poly_a.end(), std::back_inserter(poly_b));
-//     polynomial_arithmetic::ifft(&poly_a[0], small_domain);
-//     printf("coeffs \n");
-//     for (size_t i = 0; i < small_domain.size; ++i)
-//     {
-//         fr::print(fr::mul(small_domain.domain, poly_a[i])).from_montgomery_form();
-//     }
-//     printf("#\n");
-//     poly_a[4] = fr::zero;
-//     poly_a[5] = fr::zero;
-//     poly_a[6] = fr::zero;
-//     poly_a[7] = fr::zero;
-//     polynomial_arithmetic::fft(&poly_a[0], mid_domain);
-//     fr::field_t root = mid_domain.root;
-//     for (size_t i = 0; i < domain_size * 2; ++i)
-//     {
-//         fr::print(poly_a[i]).from_montgomery_form();
-//     }
-//     printf("roots \n");
-//     // fr::field_t two_inv = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
-//     // two_inv = two_inv.invert();
-//     for (size_t i = 0; i < domain_size * 2; ++i)
-//     {
-
-//        fr::print((root)).from_montgomery_form();
-//        // fr::print(fr::mul(root, two_inv)).from_montgomery_form();
-//         root = root * mid_domain.root;
-//     }
-// }

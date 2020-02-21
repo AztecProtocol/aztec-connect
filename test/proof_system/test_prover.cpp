@@ -80,25 +80,25 @@ transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
     const transcript::Manifest output = transcript::Manifest(
         { transcript::Manifest::RoundManifest({ { "circuit_size", 4, false } }, "init"),
           transcript::Manifest::RoundManifest({ { "public_inputs", public_input_size, false },
-                                                               { "W_1", g1_size, false },
-                                                               { "W_2", g1_size, false },
-                                                               { "W_3", g1_size, false } },
-                                                             "beta"),
+                                                { "W_1", g1_size, false },
+                                                { "W_2", g1_size, false },
+                                                { "W_3", g1_size, false } },
+                                              "beta"),
           transcript::Manifest::RoundManifest({ {} }, "gamma"),
           transcript::Manifest::RoundManifest({ { "Z", g1_size, false } }, "alpha"),
           transcript::Manifest::RoundManifest(
               { { "T_1", g1_size, false }, { "T_2", g1_size, false }, { "T_3", g1_size, false } }, "z"),
           transcript::Manifest::RoundManifest({ { "w_1", fr_size, false },
-                                                               { "w_2", fr_size, false },
-                                                               { "w_3", fr_size, false },
-                                                               { "z_omega", fr_size, false },
-                                                               { "sigma_1", fr_size, false },
-                                                               { "sigma_2", fr_size, false },
-                                                               { "r", fr_size, false },
-                                                               { "t", fr_size, true } },
-                                                             "nu"),
-          transcript::Manifest::RoundManifest(
-              { { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } }, "separator") });
+                                                { "w_2", fr_size, false },
+                                                { "w_3", fr_size, false },
+                                                { "z_omega", fr_size, false },
+                                                { "sigma_1", fr_size, false },
+                                                { "sigma_2", fr_size, false },
+                                                { "r", fr_size, false },
+                                                { "t", fr_size, true } },
+                                              "nu"),
+          transcript::Manifest::RoundManifest({ { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } },
+                                              "separator") });
     return output;
 }
 
@@ -135,10 +135,10 @@ waffle::Prover generate_test_data(const size_t n)
     for (size_t i = 0; i < n / 4; ++i) {
         w_l.at(2 * i) = fr::random_element();
         w_r.at(2 * i) = fr::random_element();
-        fr::__mul(w_l.at(2 * i), w_r.at(2 * i), w_o.at(2 * i));
-        fr::__add(w_o[2 * i], w_l[2 * i], w_o[2 * i]);
-        fr::__add(w_o[2 * i], w_r[2 * i], w_o[2 * i]);
-        fr::__add(w_o[2 * i], fr::one, w_o[2 * i]);
+        w_o.at(2 * i) = w_l.at(2 * i) * w_r.at(2 * i);
+        w_o[2 * i] = w_o[2 * i] + w_l[2 * i];
+        w_o[2 * i] = w_o[2 * i] + w_r[2 * i];
+        w_o[2 * i] = fr::one + w_o[2 * i];
         fr::__copy(fr::one, q_l.at(2 * i));
         fr::__copy(fr::one, q_r.at(2 * i));
         fr::__copy(fr::neg_one(), q_o.at(2 * i));
@@ -149,8 +149,8 @@ waffle::Prover generate_test_data(const size_t n)
         w_r.at(2 * i + 1) = fr::random_element();
         w_o.at(2 * i + 1) = fr::random_element();
 
-        fr::__add(w_l.at(2 * i + 1), w_r.at(2 * i + 1), T0);
-        fr::__add(T0, w_o.at(2 * i + 1), q_c.at(2 * i + 1));
+        T0 = w_l.at(2 * i + 1) + w_r.at(2 * i + 1);
+        q_c.at(2 * i + 1) = T0 + w_o.at(2 * i + 1);
         q_c.at(2 * i + 1).self_neg();
         q_l.at(2 * i + 1) = fr::one;
         q_r.at(2 * i + 1) = fr::one;
@@ -241,9 +241,9 @@ waffle::Prover generate_test_data(const size_t n)
     w_o.at(shift - 1) = fr::zero;
     q_c.at(shift - 1) = fr::zero;
 
-    witness->wires.insert({ "w_1" , std::move(w_l) });
-    witness->wires.insert({ "w_2" , std::move(w_r) });
-    witness->wires.insert({ "w_3" , std::move(w_o) });
+    witness->wires.insert({ "w_1", std::move(w_l) });
+    witness->wires.insert({ "w_2", std::move(w_r) });
+    witness->wires.insert({ "w_3", std::move(w_o) });
 
     q_l.ifft(key->small_domain);
     q_r.ifft(key->small_domain);
@@ -274,7 +274,8 @@ waffle::Prover generate_test_data(const size_t n)
     key->constraint_selector_ffts.insert({ "q_3_fft", std::move(q_3_fft) });
     key->constraint_selector_ffts.insert({ "q_m_fft", std::move(q_m_fft) });
     key->constraint_selector_ffts.insert({ "q_c_fft", std::move(q_c_fft) });
-    std::unique_ptr<waffle::ProverArithmeticWidget> widget = std::make_unique<waffle::ProverArithmeticWidget>(key.get(), witness.get());
+    std::unique_ptr<waffle::ProverArithmeticWidget> widget =
+        std::make_unique<waffle::ProverArithmeticWidget>(key.get(), witness.get());
 
     waffle::Prover state = waffle::Prover(key, witness, create_manifest());
     state.widgets.emplace_back(std::move(widget));
@@ -298,66 +299,3 @@ TEST(prover, compute_quotient_polynomial)
         EXPECT_EQ((state.key->quotient_large.at(i) == fr::zero), true);
     }
 }
-
-/*
-TEST(prover, compute_linearisation_coefficients)
-{
-    size_t n = 256;
-
-    waffle::plonk_circuit_state state(n);
-    generate_test_data(state);
-
-    waffle::compute_permutation_lagrange_base_single(state.sigma_1, state.sigma_1_mapping,
-state.circuit_state.small_domain); waffle::compute_permutation_lagrange_base_single(state.sigma_2,
-state.sigma_2_mapping, state.circuit_state.small_domain);
-    waffle::compute_permutation_lagrange_base_single(state.sigma_3, state.sigma_3_mapping,
-state.circuit_state.small_domain); state.compute_quotient_polynomial(); state.compute_quotient_commitment();
-
-    fr::field_t t_eval = state.compute_linearisation_coefficients();
-
-    polynomial_arithmetic::lagrange_evaluations lagrange_evals =
-polynomial_arithmetic::get_lagrange_evaluations(state.challenges.z, state.circuit_state.small_domain);
-
-    fr::field_t alpha_pow[6];
-    fr::__copy(state.challenges.alpha, alpha_pow[0]);
-    for (size_t i = 1; i < 6; ++i)
-    {
-        fr::__mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
-    }
-
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
-    fr::field_t T3;
-    T0 = state.proof.sigma_1_eval * state.challenges.beta;
-    T1 = state.proof.w_l_eval + state.challenges.gamma;
-    T0.self_add(T1);
-
-    T2 = state.proof.sigma_2_eval * state.challenges.beta;
-    T1 = state.proof.w_r_eval + state.challenges.gamma;
-    T2.self_add(T1);
-
-    T3 = state.proof.w_o_eval + state.challenges.gamma;
-
-    T0.self_mul(T2);
-    T0.self_mul(T3);
-    T0.self_mul(state.proof.z_1_shifted_eval);
-    T0.self_mul(alpha_pow[1]);
-
-    T1 = state.proof.z_1_shifted_eval - fr::one;
-    T1.self_mul(lagrange_evals.l_n_minus_1);
-    T1.self_mul(alpha_pow[2]);
-
-    T2 = lagrange_evals.l_1 * alpha_pow[3];
-
-    T1.self_sub(T2);
-    T1.self_sub(T0);
-
-    fr::field_t rhs;
-    rhs = T1 + state.proof.linear_eval;
-    T0 = lagrange_evals.vanishing_poly.invert();
-    rhs.self_mul(T0);
-
-    EXPECT_EQ((t_eval == rhs), true);
-}
-*/

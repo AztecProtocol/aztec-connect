@@ -133,7 +133,6 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     T0 = y_alpha.mul_with_coarse_reduction(w_2_fft[i]);
     T0.self_add_with_coarse_reduction(T0);
 
-    // fr::__sub(w_3_fft[i + 4], w_1_fft[i], T1);
     T1 = x_alpha_minus_x_1.sqr_with_coarse_reduction();
     fr::field_t T2 = w_1_fft[i + 4].add_without_reduction(w_1_fft[i]); // T1 = (x_alpha - x_1)^2
     T2.self_add_with_coarse_reduction(w_3_fft[i + 4]);                 // T2 = (x_2 + x_1 + x_alpha)

@@ -43,27 +43,6 @@ TEST(test_new_field, subtract)
     EXPECT_EQ(result.data[3], expected.data[3]);
 }
 
-TEST(test_new_field, mul_512)
-{
-    barretenberg::fr::field_t a{ 0xaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbb, 0xcccccccccccccccc, 0xdddddddddddddddd };
-    barretenberg::fr::field_t b{ 0xeeeeeeeeeeeeeeee, 0xffffffffffffffff, 0x9999999999999999, 0x8888888888888888 };
-    barretenberg::fr::field_wide_t expected;
-    barretenberg::fr::__mul_512(a, b, expected);
-
-    testField fa{ 0xaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbb, 0xcccccccccccccccc, 0xdddddddddddddddd };
-    testField fb{ 0xeeeeeeeeeeeeeeee, 0xffffffffffffffff, 0x9999999999999999, 0x8888888888888888 };
-    test::field<barretenberg::FrParams>::wide_array result = fa.mul_512(fb);
-
-    EXPECT_EQ(result.data[0], expected.data[0]);
-    EXPECT_EQ(result.data[1], expected.data[1]);
-    EXPECT_EQ(result.data[2], expected.data[2]);
-    EXPECT_EQ(result.data[3], expected.data[3]);
-    EXPECT_EQ(result.data[4], expected.data[4]);
-    EXPECT_EQ(result.data[5], expected.data[5]);
-    EXPECT_EQ(result.data[6], expected.data[6]);
-    EXPECT_EQ(result.data[7], expected.data[7]);
-}
-
 TEST(test_new_field, to_montgomery_form)
 {
     barretenberg::fr::field_t result = fr::field_t{ 1, 2, 3, 4 }.to_montgomery_form();

@@ -142,7 +142,7 @@ TEST(fr, add_mul_consistency)
 
     fr::field_t a = fr::random_element();
     fr::field_t result;
-    result = a + a;           // 2
+    result = a + a;          // 2
     result.self_add(result); // 4
     result.self_add(result); // 8
     result.self_add(a);      // 9
@@ -160,7 +160,7 @@ TEST(fr, sub_mul_consistency)
 
     fr::field_t a = fr::random_element();
     fr::field_t result;
-    result = a + a;           // 2
+    result = a + a;          // 2
     result.self_add(result); // 4
     result.self_add(result); // 8
     result.self_sub(a);      // 7
@@ -178,7 +178,7 @@ TEST(fr, lambda)
     fr::field_t x = fr::random_element();
 
     fr::field_t lambda_x = { { x.data[0], x.data[1], x.data[2], x.data[3] } };
-    fr::__mul_beta(lambda_x, lambda_x);
+    lambda_x = lambda_x * fr::beta;
 
     // compute x^3
     fr::field_t x_cubed;

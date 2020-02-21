@@ -60,7 +60,7 @@ fr::field_t ProverSequentialWidget::compute_quotient_contribution(const barreten
     polynomial& quotient_mid = key->quotient_mid;
     ITERATE_OVER_DOMAIN_START(key->mid_domain);
     fr::field_t T0;
-    fr::__mul(w_3_fft.at(2 * i + 4), q_3_next_fft[i], T0); // w_l * q_m = rdx
+    T0 = w_3_fft.at(2 * i + 4) * q_3_next_fft[i]; // w_l * q_m = rdx
     T0.self_mul(old_alpha);
     quotient_mid[i].self_add(T0);
     ITERATE_OVER_DOMAIN_END;

@@ -314,7 +314,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboRangeWidget::append_scal
     constexpr fr::field_t minus_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
     constexpr fr::field_t minus_three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form().neg();
 
-    fr::field_t alpha_a = challenge.alpha_base; // fr::mul(challenge.alpha_base, challenge.alpha_step);
+    fr::field_t alpha_a = challenge.alpha_base;
     fr::field_t alpha_b = alpha_a * challenge.alpha_step;
     fr::field_t alpha_c = alpha_b * challenge.alpha_step;
     fr::field_t alpha_d = alpha_c * challenge.alpha_step;
