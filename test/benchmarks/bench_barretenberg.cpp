@@ -114,7 +114,7 @@ constexpr size_t NUM_SQUARINGS = 10000000;
 inline fq::field_t fq_sqr_asm(fq::field_t& a, fq::field_t& r) noexcept
 {
     for (size_t i = 0; i < NUM_SQUARINGS; ++i) {
-        fq::__sqr(a, r);
+        r = a.sqr();
     }
     DoNotOptimize(r);
     return r;

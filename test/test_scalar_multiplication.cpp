@@ -227,7 +227,7 @@ TEST(scalar_multiplication, reduce_buckets)
 
     fr::field_t source_scalar = fr::random_element();
     for (size_t i = 0; i < num_initial_points; ++i) {
-        // fr::__sqr(source_scalar, source_scalar);
+        // source_scalar.self_sqr();
         source_scalar = fr::random_element();
         fr::__copy(source_scalar, scalars[i]);
     }
@@ -350,7 +350,7 @@ TEST(scalar_multiplication, reduce_buckets_basic)
 
     fr::field_t source_scalar = fr::random_element();
     for (size_t i = 0; i < num_initial_points; ++i) {
-        fr::__sqr(source_scalar, source_scalar);
+        source_scalar.self_sqr();
         fr::__copy(source_scalar, scalars[i]);
     }
 
@@ -451,7 +451,7 @@ TEST(scalar_multiplication, construct_addition_chains)
 
     fr::field_t source_scalar = fr::random_element();
     for (size_t i = 0; i < num_initial_points; ++i) {
-        fr::__sqr(source_scalar, source_scalar);
+        source_scalar.self_sqr();
         fr::__copy(source_scalar, scalars[i]);
     }
 
@@ -516,7 +516,7 @@ TEST(scalar_multiplication, construct_addition_chains)
 
 //     fr::field_t source_scalar = fr::random_element();
 //     for (size_t i = 0; i < num_initial_points; ++i) {
-//         fr::__sqr(source_scalar, source_scalar);
+//         source_scalar.self_sqr();
 //         fr::__copy(source_scalar, scalars[i]);
 //     }
 
@@ -580,7 +580,7 @@ TEST(scalar_multiplication, radix_sort)
 
     fr::field_t source_scalar = fr::random_element();
     for (size_t i = 0; i < target_degree; ++i) {
-        fr::__sqr(source_scalar, source_scalar);
+        source_scalar.self_sqr();
         fr::__copy(source_scalar, scalars[i]);
     }
 
@@ -635,7 +635,7 @@ TEST(scalar_multiplication, oversized_inputs)
 
     fr::field_t source_scalar = fr::random_element();
     for (size_t i = 0; i < target_degree; ++i) {
-        fr::__sqr(source_scalar, source_scalar);
+        source_scalar.self_sqr();
         fr::__copy(source_scalar, scalars[i]);
     }
 

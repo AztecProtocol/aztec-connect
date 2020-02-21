@@ -317,7 +317,7 @@ TEST(grumpkin, batch_normalize)
         fq::field_t zzz;
         fq::field_t result_x;
         fq::field_t result_y;
-        fq::__sqr(points[i].z, zz);
+        zz = points[i].z.sqr();
         zzz = points[i].z * zz;
         result_x = normalized[i].x * zz;
         result_y = normalized[i].y * zzz;

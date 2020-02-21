@@ -63,7 +63,7 @@ TEST(fr, sqr)
     fr::field_t a{ { 0x95f946723a1fc34f, 0x641ec0482fc40bb9, 0xb8d645bc49dd513d, 0x1c1bffd317599dbc } };
     fr::field_t expected{ { 0xc787f7d9e2c72714, 0xcf21cf53d8f65f67, 0x8db109903dac0008, 0x26ab4dd65f46be5f } };
     fr::field_t result;
-    fr::__sqr(a, result);
+    result = a.sqr();
     EXPECT_EQ(fr::eq(result, expected), true);
 }
 

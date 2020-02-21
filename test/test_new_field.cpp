@@ -86,10 +86,10 @@ TEST(test_new_field, multiply)
     fr::field_t t0;
     fr::field_t t1;
     t0 = alt_a + alt_b;
-    fr::__sqr(t0, t0);
-    fr::__sqr(alt_a, t1);
+    t0.self_sqr();
+    t1 = alt_a.sqr();
     t0.self_sub(t1);
-    fr::__sqr(alt_b, t1);
+    t1 = alt_b.sqr();
     t0.self_sub(t1);
     fr::field_t expected;
     expected = alt_a * alt_b;
