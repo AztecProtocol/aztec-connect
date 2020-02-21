@@ -111,9 +111,9 @@ fr::field_t ProverTurboRangeWidget::compute_quotient_contribution(const barreten
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
     fr::field_t alpha_a = alpha_base;
-    fr::field_t alpha_b = fr::mul(alpha_a, alpha);
-    fr::field_t alpha_c = fr::mul(alpha_b, alpha);
-    fr::field_t alpha_d = fr::mul(alpha_c, alpha);
+    fr::field_t alpha_b = alpha_a * alpha;
+    fr::field_t alpha_c = alpha_b * alpha;
+    fr::field_t alpha_d = alpha_c * alpha;
 
     fr::field_t* w_1_fft = &key->wire_ffts.at("w_1_fft")[0];
     fr::field_t* w_2_fft = &key->wire_ffts.at("w_2_fft")[0];
@@ -122,80 +122,68 @@ fr::field_t ProverTurboRangeWidget::compute_quotient_contribution(const barreten
 
     fr::field_t* quotient_large = &key->quotient_large[0];
 
-    fr::field_t minus_two;
-    fr::field_t minus_three;
-    fr::__add(fr::one, fr::one, minus_two);
-    fr::__add(minus_two, fr::one, minus_three);
-    fr::__neg(minus_two, minus_two);
-    fr::__neg(minus_three, minus_three);
+    constexpr fr::field_t minus_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t minus_three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form().neg();
 
     ITERATE_OVER_DOMAIN_START(key->large_domain);
 
-    fr::field_t delta_1;
-    fr::field_t delta_2;
-    fr::field_t delta_3;
-    fr::field_t delta_4;
+    fr::field_t delta_1 = w_4_fft[i].add_without_reduction(w_4_fft[i]);
+    delta_1.self_add_with_coarse_reduction(delta_1);
+    delta_1 = w_3_fft[i].sub_with_coarse_reduction(delta_1);
 
-    fr::__add(w_4_fft[i], w_4_fft[i], delta_1);
-    fr::__add(delta_1, delta_1, delta_1);
-    fr::__sub(w_3_fft[i], delta_1, delta_1);
+    fr::field_t delta_2 = w_3_fft[i].add_without_reduction(w_3_fft[i]);
+    delta_2.self_add_with_coarse_reduction(delta_2);
+    delta_2 = w_2_fft[i].sub_with_coarse_reduction(delta_2);
 
-    fr::__add(w_3_fft[i], w_3_fft[i], delta_2);
-    fr::__add(delta_2, delta_2, delta_2);
-    fr::__sub(w_2_fft[i], delta_2, delta_2);
+    fr::field_t delta_3 = w_2_fft[i].add_without_reduction(w_2_fft[i]);
+    delta_3.self_add_with_coarse_reduction(delta_3);
+    delta_3 = w_1_fft[i].sub_with_coarse_reduction(delta_3);
 
-    fr::__add(w_2_fft[i], w_2_fft[i], delta_3);
-    fr::__add(delta_3, delta_3, delta_3);
-    fr::__sub(w_1_fft[i], delta_3, delta_3);
+    fr::field_t delta_4 = w_1_fft[i].add_without_reduction(w_1_fft[i]);
+    delta_4.self_add_with_coarse_reduction(delta_4);
+    delta_4 = w_4_fft[i + 4].sub_with_coarse_reduction(delta_4);
 
-    fr::__add(w_1_fft[i], w_1_fft[i], delta_4);
-    fr::__add(delta_4, delta_4, delta_4);
-    fr::__sub(w_4_fft[i + 4], delta_4, delta_4);
+    // D(D - 1)(D - 2)(D - 3).alpha
+    fr::field_t T0 = delta_1.sqr_with_coarse_reduction();
+    T0.self_sub_with_coarse_reduction(delta_1);
+    fr::field_t T1 = delta_1.add_with_coarse_reduction(minus_two);
+    T0.self_mul_with_coarse_reduction(T1);
+    T1 = delta_1.add_with_coarse_reduction(minus_three);
+    T0.self_mul_with_coarse_reduction(T1);
+    fr::field_t range_accumulator = T0.mul_with_coarse_reduction(alpha_a);
 
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t range_accumulator = fr::zero;
-    fr::__sqr_with_coarse_reduction(delta_1, T0);
-    fr::__sub_with_coarse_reduction(T0, delta_1, T0);      // D(D - 1)
-    fr::__add_without_reduction(delta_1, minus_two, T1);   // (D - 2)
-    fr::__mul_with_coarse_reduction(T0, T1, T0);           // D(D - 1)(D - 2)
-    fr::__add_without_reduction(delta_1, minus_three, T1); // (D - 3)
-    fr::__mul_with_coarse_reduction(T0, T1, T0);           // D(D - 1)(D - 2)(D - 3)
-    fr::__mul_with_coarse_reduction(T0, alpha_a, T0);      // D(D - 1)(D - 2)(D - 3)alpha
-    fr::__add(range_accumulator, T0, range_accumulator);
+    T0 = delta_2.sqr_with_coarse_reduction();
+    T0.self_sub_with_coarse_reduction(delta_2);
+    T1 = delta_2.add_with_coarse_reduction(minus_two);
+    T0.self_mul_with_coarse_reduction(T1);
+    T1 = delta_2.add_with_coarse_reduction(minus_three);
+    T0.self_mul_with_coarse_reduction(T1);
+    T0.self_mul_with_coarse_reduction(alpha_b);
+    range_accumulator.self_add_with_coarse_reduction(T0);
 
-    fr::__sqr_with_coarse_reduction(delta_2, T0);
-    fr::__sub_with_coarse_reduction(T0, delta_2, T0);      // D(D - 1)
-    fr::__add_without_reduction(delta_2, minus_two, T1);   // (D - 2)
-    fr::__mul_with_coarse_reduction(T0, T1, T0);           // D(D - 1)(D - 2)
-    fr::__add_without_reduction(delta_2, minus_three, T1); // (D - 3)
-    fr::__mul_with_coarse_reduction(T0, T1, T0);           // D(D - 1)(D - 2)(D - 3)
-    fr::__mul_with_coarse_reduction(T0, alpha_b, T0);      // D(D - 1)(D - 2)(D - 3)alpha
-    fr::__add(range_accumulator, T0, range_accumulator);
+    T0 = delta_3.sqr_with_coarse_reduction();
+    T0.self_sub_with_coarse_reduction(delta_3);
+    T1 = delta_3.add_with_coarse_reduction(minus_two);
+    T0.self_mul_with_coarse_reduction(T1);
+    T1 = delta_3.add_with_coarse_reduction(minus_three);
+    T0.self_mul_with_coarse_reduction(T1);
+    T0.self_mul_with_coarse_reduction(alpha_c);
+    range_accumulator.self_add_with_coarse_reduction(T0);
 
-    fr::__sqr_with_coarse_reduction(delta_3, T0);
-    fr::__sub_with_coarse_reduction(T0, delta_3, T0);      // D(D - 1)
-    fr::__add_without_reduction(delta_3, minus_two, T1);   // (D - 2)
-    fr::__mul_with_coarse_reduction(T0, T1, T0);           // D(D - 1)(D - 2)
-    fr::__add_without_reduction(delta_3, minus_three, T1); // (D - 3)
-    fr::__mul_with_coarse_reduction(T0, T1, T0);           // D(D - 1)(D - 2)(D - 3)
-    fr::__mul_with_coarse_reduction(T0, alpha_c, T0);      // D(D - 1)(D - 2)(D - 3)alpha
-    fr::__add(range_accumulator, T0, range_accumulator);
+    T0 = delta_4.sqr_with_coarse_reduction();
+    T0.self_sub_with_coarse_reduction(delta_4);
+    T1 = delta_4.add_with_coarse_reduction(minus_two);
+    T0.self_mul_with_coarse_reduction(T1);
+    T1 = delta_4.add_with_coarse_reduction(minus_three);
+    T0.self_mul_with_coarse_reduction(T1);
+    T0.self_mul_with_coarse_reduction(alpha_d);
+    range_accumulator.self_add_with_coarse_reduction(T0);
 
-    fr::__sqr_with_coarse_reduction(delta_4, T0);
-    fr::__sub_with_coarse_reduction(T0, delta_4, T0);      // D(D - 1)
-    fr::__add_without_reduction(delta_4, minus_two, T1);   // (D - 2)
-    fr::__mul_with_coarse_reduction(T0, T1, T0);           // D(D - 1)(D - 2)
-    fr::__add_without_reduction(delta_4, minus_three, T1); // (D - 3)
-    fr::__mul_with_coarse_reduction(T0, T1, T0);           // D(D - 1)(D - 2)(D - 3)
-    fr::__mul_with_coarse_reduction(T0, alpha_d, T0);      // D(D - 1)(D - 2)(D - 3)alpha
-    fr::__add(range_accumulator, T0, range_accumulator);
-
-    fr::__mul(range_accumulator, q_range_fft[i], range_accumulator);
-    fr::__add(quotient_large[i], range_accumulator, quotient_large[i]);
+    range_accumulator.self_mul(q_range_fft[i]);
+    quotient_large[i].self_add(range_accumulator);
     ITERATE_OVER_DOMAIN_END;
 
-    return fr::mul(alpha_d, alpha);
+    return alpha_d * alpha;
 }
 
 void ProverTurboRangeWidget::compute_transcript_elements(transcript::Transcript&) {}
@@ -212,79 +200,71 @@ fr::field_t ProverTurboRangeWidget::compute_linear_contribution(const fr::field_
     fr::field_t w_3_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
     fr::field_t w_4_omega_eval = fr::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
 
+    constexpr fr::field_t minus_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t minus_three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form().neg();
+
     fr::field_t alpha_a = alpha_base;
     fr::field_t alpha_b = fr::mul(alpha_a, alpha);
     fr::field_t alpha_c = fr::mul(alpha_b, alpha);
     fr::field_t alpha_d = fr::mul(alpha_c, alpha);
 
-    fr::field_t delta_1;
-    fr::field_t delta_2;
-    fr::field_t delta_3;
-    fr::field_t delta_4;
+    fr::field_t delta_1 = w_4_eval.add_without_reduction(w_4_eval);
+    delta_1.self_add_with_coarse_reduction(delta_1);
+    delta_1 = w_3_eval.sub_with_coarse_reduction(delta_1);
 
-    fr::__add(w_4_eval, w_4_eval, delta_1);
-    fr::__add(delta_1, delta_1, delta_1);
-    fr::__sub(w_3_eval, delta_1, delta_1);
+    fr::field_t delta_2 = w_3_eval.add_without_reduction(w_3_eval);
+    delta_2.self_add_with_coarse_reduction(delta_2);
+    delta_2 = w_2_eval.sub_with_coarse_reduction(delta_2);
 
-    fr::__add(w_3_eval, w_3_eval, delta_2);
-    fr::__add(delta_2, delta_2, delta_2);
-    fr::__sub(w_2_eval, delta_2, delta_2);
+    fr::field_t delta_3 = w_2_eval.add_without_reduction(w_2_eval);
+    delta_3.self_add_with_coarse_reduction(delta_3);
+    delta_3 = w_1_eval.sub_with_coarse_reduction(delta_3);
 
-    fr::__add(w_2_eval, w_2_eval, delta_3);
-    fr::__add(delta_3, delta_3, delta_3);
-    fr::__sub(w_1_eval, delta_3, delta_3);
+    fr::field_t delta_4 = w_1_eval.add_without_reduction(w_1_eval);
+    delta_4.self_add_with_coarse_reduction(delta_4);
+    delta_4 = w_4_omega_eval.sub_with_coarse_reduction(delta_4);
 
-    fr::__add(w_1_eval, w_1_eval, delta_4);
-    fr::__add(delta_4, delta_4, delta_4);
-    fr::__sub(w_4_omega_eval, delta_4, delta_4);
+    // D(D - 1)(D - 2)(D - 3).alpha
+    fr::field_t T0 = delta_1.sqr_with_coarse_reduction();
+    T0.self_sub_with_coarse_reduction(delta_1);
+    fr::field_t T1 = delta_1.add_with_coarse_reduction(minus_two);
+    T0.self_mul_with_coarse_reduction(T1);
+    T1 = delta_1.add_with_coarse_reduction(minus_three);
+    T0.self_mul_with_coarse_reduction(T1);
+    fr::field_t range_accumulator = T0.mul_with_coarse_reduction(alpha_a);
 
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
+    T0 = delta_2.sqr_with_coarse_reduction();
+    T0.self_sub_with_coarse_reduction(delta_2);
+    T1 = delta_2.add_with_coarse_reduction(minus_two);
+    T0.self_mul_with_coarse_reduction(T1);
+    T1 = delta_2.add_with_coarse_reduction(minus_three);
+    T0.self_mul_with_coarse_reduction(T1);
+    T0.self_mul_with_coarse_reduction(alpha_b);
+    range_accumulator.self_add_with_coarse_reduction(T0);
 
-    fr::__sub(delta_1, fr::one, T0);
-    fr::__sub(T0, fr::one, T1);
-    fr::__sub(T1, fr::one, T2);
-    fr::__mul(T0, delta_1, T0);
-    fr::__mul(T0, T1, T0);
-    fr::__mul(T0, T2, T0);
-    fr::__mul(T0, alpha_a, delta_1);
+    T0 = delta_3.sqr_with_coarse_reduction();
+    T0.self_sub_with_coarse_reduction(delta_3);
+    T1 = delta_3.add_with_coarse_reduction(minus_two);
+    T0.self_mul_with_coarse_reduction(T1);
+    T1 = delta_3.add_with_coarse_reduction(minus_three);
+    T0.self_mul_with_coarse_reduction(T1);
+    T0.self_mul_with_coarse_reduction(alpha_c);
+    range_accumulator.self_add_with_coarse_reduction(T0);
 
-    fr::__sub(delta_2, fr::one, T0);
-    fr::__sub(T0, fr::one, T1);
-    fr::__sub(T1, fr::one, T2);
-    fr::__mul(T0, delta_2, T0);
-    fr::__mul(T0, T1, T0);
-    fr::__mul(T0, T2, T0);
-    fr::__mul(T0, alpha_b, delta_2);
-
-    fr::__sub(delta_3, fr::one, T0);
-    fr::__sub(T0, fr::one, T1);
-    fr::__sub(T1, fr::one, T2);
-    fr::__mul(T0, delta_3, T0);
-    fr::__mul(T0, T1, T0);
-    fr::__mul(T0, T2, T0);
-    fr::__mul(T0, alpha_c, delta_3);
-
-    fr::__sub(delta_4, fr::one, T0);
-    fr::__sub(T0, fr::one, T1);
-    fr::__sub(T1, fr::one, T2);
-    fr::__mul(T0, delta_4, T0);
-    fr::__mul(T0, T1, T0);
-    fr::__mul(T0, T2, T0);
-    fr::__mul(T0, alpha_d, delta_4);
-
-    fr::field_t range_multiplicand;
-    fr::__add(delta_1, delta_2, range_multiplicand);
-    fr::__add(range_multiplicand, delta_3, range_multiplicand);
-    fr::__add(range_multiplicand, delta_4, range_multiplicand);
+    T0 = delta_4.sqr_with_coarse_reduction();
+    T0.self_sub_with_coarse_reduction(delta_4);
+    T1 = delta_4.add_with_coarse_reduction(minus_two);
+    T0.self_mul_with_coarse_reduction(T1);
+    T1 = delta_4.add_with_coarse_reduction(minus_three);
+    T0.self_mul_with_coarse_reduction(T1);
+    T0.self_mul_with_coarse_reduction(alpha_d);
+    range_accumulator.self_add_with_coarse_reduction(T0);
 
     ITERATE_OVER_DOMAIN_START(key->small_domain);
-    fr::field_t T3;
-    fr::__mul(range_multiplicand, q_range[i], T3);
-    fr::__add(r[i], T3, r[i]);
+    r[i].self_add(range_accumulator * q_range[i]);
     ITERATE_OVER_DOMAIN_END;
-    return fr::mul(alpha_d, alpha);
+
+    return alpha_d * alpha;
 }
 
 fr::field_t ProverTurboRangeWidget::compute_opening_poly_contribution(const fr::field_t& nu_base,
@@ -295,25 +275,25 @@ fr::field_t ProverTurboRangeWidget::compute_opening_poly_contribution(const fr::
     return nu_base;
 }
 
-
 // ###
 
 VerifierTurboRangeWidget::VerifierTurboRangeWidget()
     : VerifierBaseWidget()
-{
-}
+{}
 
 barretenberg::fr::field_t VerifierTurboRangeWidget::compute_quotient_evaluation_contribution(
     verification_key*, const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t&)
 {
     fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
-    fr::field_t alpha_quad = fr::sqr(fr::sqr(alpha));
-    return fr::mul(alpha_base, alpha_quad);
+    return alpha_base * alpha.sqr().sqr();
 }
 
 barretenberg::fr::field_t VerifierTurboRangeWidget::compute_batch_evaluation_contribution(
-    verification_key*, barretenberg::fr::field_t&, const barretenberg::fr::field_t& nu_base, const transcript::Transcript&)
+    verification_key*,
+    barretenberg::fr::field_t&,
+    const barretenberg::fr::field_t& nu_base,
+    const transcript::Transcript&)
 {
     return nu_base;
 }
@@ -331,83 +311,75 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboRangeWidget::append_scal
     fr::field_t w_3_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
     fr::field_t w_4_omega_eval = fr::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
 
+    constexpr fr::field_t minus_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t minus_three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form().neg();
+
     fr::field_t alpha_a = challenge.alpha_base; // fr::mul(challenge.alpha_base, challenge.alpha_step);
     fr::field_t alpha_b = fr::mul(alpha_a, challenge.alpha_step);
     fr::field_t alpha_c = fr::mul(alpha_b, challenge.alpha_step);
     fr::field_t alpha_d = fr::mul(alpha_c, challenge.alpha_step);
 
-    fr::field_t delta_1;
-    fr::field_t delta_2;
-    fr::field_t delta_3;
-    fr::field_t delta_4;
+    fr::field_t delta_1 = w_4_eval.add_without_reduction(w_4_eval);
+    delta_1.self_add_with_coarse_reduction(delta_1);
+    delta_1 = w_3_eval.sub_with_coarse_reduction(delta_1);
 
-    fr::__add(w_4_eval, w_4_eval, delta_1);
-    fr::__add(delta_1, delta_1, delta_1);
-    fr::__sub(w_3_eval, delta_1, delta_1);
+    fr::field_t delta_2 = w_3_eval.add_without_reduction(w_3_eval);
+    delta_2.self_add_with_coarse_reduction(delta_2);
+    delta_2 = w_2_eval.sub_with_coarse_reduction(delta_2);
 
-    fr::__add(w_3_eval, w_3_eval, delta_2);
-    fr::__add(delta_2, delta_2, delta_2);
-    fr::__sub(w_2_eval, delta_2, delta_2);
+    fr::field_t delta_3 = w_2_eval.add_without_reduction(w_2_eval);
+    delta_3.self_add_with_coarse_reduction(delta_3);
+    delta_3 = w_1_eval.sub_with_coarse_reduction(delta_3);
 
-    fr::__add(w_2_eval, w_2_eval, delta_3);
-    fr::__add(delta_3, delta_3, delta_3);
-    fr::__sub(w_1_eval, delta_3, delta_3);
+    fr::field_t delta_4 = w_1_eval.add_without_reduction(w_1_eval);
+    delta_4.self_add_with_coarse_reduction(delta_4);
+    delta_4 = w_4_omega_eval.sub_with_coarse_reduction(delta_4);
 
-    fr::__add(w_1_eval, w_1_eval, delta_4);
-    fr::__add(delta_4, delta_4, delta_4);
-    fr::__sub(w_4_omega_eval, delta_4, delta_4);
+    // D(D - 1)(D - 2)(D - 3).alpha
+    fr::field_t T0 = delta_1.sqr_with_coarse_reduction();
+    T0.self_sub_with_coarse_reduction(delta_1);
+    fr::field_t T1 = delta_1.add_with_coarse_reduction(minus_two);
+    T0.self_mul_with_coarse_reduction(T1);
+    T1 = delta_1.add_with_coarse_reduction(minus_three);
+    T0.self_mul_with_coarse_reduction(T1);
+    fr::field_t range_accumulator = T0.mul_with_coarse_reduction(alpha_a);
 
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
+    T0 = delta_2.sqr_with_coarse_reduction();
+    T0.self_sub_with_coarse_reduction(delta_2);
+    T1 = delta_2.add_with_coarse_reduction(minus_two);
+    T0.self_mul_with_coarse_reduction(T1);
+    T1 = delta_2.add_with_coarse_reduction(minus_three);
+    T0.self_mul_with_coarse_reduction(T1);
+    T0.self_mul_with_coarse_reduction(alpha_b);
+    range_accumulator.self_add_with_coarse_reduction(T0);
 
-    fr::__sub(delta_1, fr::one, T0);
-    fr::__sub(T0, fr::one, T1);
-    fr::__sub(T1, fr::one, T2);
-    fr::__mul(T0, delta_1, T0);
-    fr::__mul(T0, T1, T0);
-    fr::__mul(T0, T2, T0);
-    fr::__mul(T0, alpha_a, delta_1);
+    T0 = delta_3.sqr_with_coarse_reduction();
+    T0.self_sub_with_coarse_reduction(delta_3);
+    T1 = delta_3.add_with_coarse_reduction(minus_two);
+    T0.self_mul_with_coarse_reduction(T1);
+    T1 = delta_3.add_with_coarse_reduction(minus_three);
+    T0.self_mul_with_coarse_reduction(T1);
+    T0.self_mul_with_coarse_reduction(alpha_c);
+    range_accumulator.self_add_with_coarse_reduction(T0);
 
-    fr::__sub(delta_2, fr::one, T0);
-    fr::__sub(T0, fr::one, T1);
-    fr::__sub(T1, fr::one, T2);
-    fr::__mul(T0, delta_2, T0);
-    fr::__mul(T0, T1, T0);
-    fr::__mul(T0, T2, T0);
-    fr::__mul(T0, alpha_b, delta_2);
+    T0 = delta_4.sqr_with_coarse_reduction();
+    T0.self_sub_with_coarse_reduction(delta_4);
+    T1 = delta_4.add_with_coarse_reduction(minus_two);
+    T0.self_mul_with_coarse_reduction(T1);
+    T1 = delta_4.add_with_coarse_reduction(minus_three);
+    T0.self_mul_with_coarse_reduction(T1);
+    T0.self_mul_with_coarse_reduction(alpha_d);
+    range_accumulator.self_add_with_coarse_reduction(T0);
 
-    fr::__sub(delta_3, fr::one, T0);
-    fr::__sub(T0, fr::one, T1);
-    fr::__sub(T1, fr::one, T2);
-    fr::__mul(T0, delta_3, T0);
-    fr::__mul(T0, T1, T0);
-    fr::__mul(T0, T2, T0);
-    fr::__mul(T0, alpha_c, delta_3);
-
-    fr::__sub(delta_4, fr::one, T0);
-    fr::__sub(T0, fr::one, T1);
-    fr::__sub(T1, fr::one, T2);
-    fr::__mul(T0, delta_4, T0);
-    fr::__mul(T0, T1, T0);
-    fr::__mul(T0, T2, T0);
-    fr::__mul(T0, alpha_d, delta_4);
-
-    fr::field_t range_multiplicand;
-    fr::__add(delta_1, delta_2, range_multiplicand);
-    fr::__add(range_multiplicand, delta_3, range_multiplicand);
-    fr::__add(range_multiplicand, delta_4, range_multiplicand);
-    fr::__mul(range_multiplicand, challenge.linear_nu, range_multiplicand);
+    fr::__mul(range_accumulator, challenge.linear_nu, range_accumulator);
 
     if (g1::on_curve(key->constraint_selectors.at("Q_RANGE_SELECTOR"))) {
         points.push_back(key->constraint_selectors.at("Q_RANGE_SELECTOR"));
-        scalars.push_back(range_multiplicand);
+        scalars.push_back(range_accumulator);
     }
 
-    return VerifierBaseWidget::challenge_coefficients{ fr::mul(alpha_d, challenge.alpha_step),
-                                                       challenge.alpha_step,
-                                                       challenge.nu_base,
-                                                       challenge.nu_step,
-                                                       challenge.linear_nu };
+    return VerifierBaseWidget::challenge_coefficients{
+        alpha_d * challenge.alpha_step, challenge.alpha_step, challenge.nu_base, challenge.nu_step, challenge.linear_nu
+    };
 }
 } // namespace waffle
