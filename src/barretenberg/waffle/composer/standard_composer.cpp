@@ -147,8 +147,8 @@ void StandardComposer::create_big_add_gate_with_bit_extraction(const add_quad& i
     // r =
 
     fr::field_t delta = variables[in.d];
-    fr::__add(delta, delta, delta);
-    fr::__add(delta, delta, delta);
+    delta.self_add(delta);
+    delta.self_add(delta);
     fr::__sub(variables[in.c], delta, delta);
 
     uint32_t delta_idx = add_variable(delta);

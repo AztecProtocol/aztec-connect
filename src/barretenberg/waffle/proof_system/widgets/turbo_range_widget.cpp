@@ -371,7 +371,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboRangeWidget::append_scal
     T0.self_mul_with_coarse_reduction(alpha_d);
     range_accumulator.self_add_with_coarse_reduction(T0);
 
-    fr::__mul(range_accumulator, challenge.linear_nu, range_accumulator);
+    range_accumulator.self_mul(challenge.linear_nu);
 
     if (g1::on_curve(key->constraint_selectors.at("Q_RANGE_SELECTOR"))) {
         points.push_back(key->constraint_selectors.at("Q_RANGE_SELECTOR"));

@@ -143,9 +143,9 @@ TEST(fr, add_mul_consistency)
     fr::field_t a = fr::random_element();
     fr::field_t result;
     fr::__add(a, a, result);           // 2
-    fr::__add(result, result, result); // 4
-    fr::__add(result, result, result); // 8
-    fr::__add(result, a, result);      // 9
+    result.self_add(result); // 4
+    result.self_add(result); // 8
+    result.self_add(a);      // 9
 
     fr::field_t expected;
     fr::__mul(a, multiplicand, expected);
@@ -161,11 +161,11 @@ TEST(fr, sub_mul_consistency)
     fr::field_t a = fr::random_element();
     fr::field_t result;
     fr::__add(a, a, result);           // 2
-    fr::__add(result, result, result); // 4
-    fr::__add(result, result, result); // 8
-    fr::__sub(result, a, result);      // 7
-    fr::__sub(result, a, result);      // 6
-    fr::__sub(result, a, result);      // 5
+    result.self_add(result); // 4
+    result.self_add(result); // 8
+    result.self_sub(a);      // 7
+    result.self_sub(a);      // 6
+    result.self_sub(a);      // 5
 
     fr::field_t expected;
     fr::__mul(a, multiplicand, expected);
@@ -183,12 +183,12 @@ TEST(fr, lambda)
     // compute x^3
     fr::field_t x_cubed;
     fr::__mul(x, x, x_cubed);
-    fr::__mul(x_cubed, x, x_cubed);
+    x_cubed.self_mul(x);
 
     // compute lambda_x^3
     fr::field_t lambda_x_cubed;
     fr::__mul(lambda_x, lambda_x, lambda_x_cubed);
-    fr::__mul(lambda_x_cubed, lambda_x, lambda_x_cubed);
+    lambda_x_cubed.self_mul(lambda_x);
 
     EXPECT_EQ(fr::eq(x_cubed, lambda_x_cubed), true);
 }
@@ -260,7 +260,7 @@ TEST(fr, split_into_endomorphism_scalars)
     input.data[3] &= 0x7fffffffffffffff;
 
     while (fr::gt(input, fr::modulus_plus_one)) {
-        fr::__sub(input, fr::modulus, input);
+        input.self_sub(fr::modulus);
     }
     fr::field_t k = { { input.data[0], input.data[1], input.data[2], input.data[3] } };
     fr::field_t k1 = { { 0, 0, 0, 0 } };
@@ -319,8 +319,8 @@ TEST(fr, batch_invert)
     fr::batch_invert(inverses, n);
 
     for (size_t i = 0; i < n; ++i) {
-        fr::__mul(coeffs[i], inverses[i], coeffs[i]);
-        fr::__sub(coeffs[i], one, coeffs[i]);
+        coeffs[i].self_mul(inverses[i]);
+        coeffs[i].self_sub(one);
     }
 
     for (size_t i = 0; i < n; ++i) {

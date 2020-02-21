@@ -217,9 +217,9 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
     fr::__neg(denominator, denominator);
     fr::__invert(denominator, denominator);
 
-    fr::__mul(q_1, denominator, q_1);
-    fr::__mul(q_2, denominator, q_2);
-    fr::__mul(q_3, denominator, q_3);
+    q_1.self_mul(denominator);
+    q_2.self_mul(denominator);
+    q_3.self_mul(denominator);
 
     const waffle::add_quad gate{
         context->add_variable(output),
@@ -312,9 +312,9 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
     fr::field_t denominator = fr::sub(fr::one, b_hi_scale_factor);
     fr::__invert(denominator, denominator);
 
-    fr::__mul(q_1, denominator, q_1);
-    fr::__mul(q_2, denominator, q_2);
-    fr::__mul(q_3, denominator, q_3);
+    q_1.self_mul(denominator);
+    q_2.self_mul(denominator);
+    q_3.self_mul(denominator);
 
     const waffle::add_quad gate{
         context->add_variable(output), base_idx, next_pivot_idx, pivot_idx, q_1, q_2, fr::zero, q_3, fr::zero,

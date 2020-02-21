@@ -323,7 +323,7 @@ namespace {
 //     fr::field_t work_root = fr::one;
 //     for (size_t i = 0; i < num_public_inputs; ++i) {
 //         sigma_1[i] = work_root;
-//         fr::__mul(work_root, state.key->small_domain.root, work_root);
+//         work_root.self_mul(state.key->small_domain.root);
 //         public_inputs.push_back(wires[i]);
 //     }
 

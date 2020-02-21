@@ -45,27 +45,27 @@ namespace waffle
         {
             barretenberg::fr::field_t coset_generator = (i == 0) ? barretenberg::fr::one : barretenberg::fr::coset_generators[i - 1];
             barretenberg::fr::__mul(z_beta, coset_generator, T0);
-            barretenberg::fr::__add(T0, wire_evaluations[i], T0);
-            barretenberg::fr::__add(T0, gamma, T0);
-            barretenberg::fr::__mul(z_contribution, T0, z_contribution);
+            T0.self_add(wire_evaluations[i]);
+            T0.self_add(gamma);
+            z_contribution.self_mul(T0);
         }
         barretenberg::fr::__mul(z_contribution, alpha, result.z_1);
         barretenberg::fr::__mul(l_1, alpha_cubed, T0);
-        barretenberg::fr::__add(result.z_1, T0, result.z_1);
+        result.z_1.self_add(T0);
 
         barretenberg::fr::field_t sigma_contribution = barretenberg::fr::one;
         for (size_t i = 0; i < program_settings::program_width - 1; ++i)
         {
             barretenberg::fr::field_t permutation_evaluation = barretenberg::fr::serialize_from_buffer(&transcript.get_element("sigma_" + std::to_string(i + 1))[0]);
             barretenberg::fr::__mul(permutation_evaluation, beta, T0);
-            barretenberg::fr::__add(T0, wire_evaluations[i], T0);
-            barretenberg::fr::__add(T0, gamma, T0);
-            barretenberg::fr::__mul(sigma_contribution, T0, sigma_contribution);
+            T0.self_add(wire_evaluations[i]);
+            T0.self_add(gamma);
+            sigma_contribution.self_mul(T0);
         }
-        barretenberg::fr::__mul(sigma_contribution, z_1_shifted_eval, sigma_contribution);
+        sigma_contribution.self_mul(z_1_shifted_eval);
         barretenberg::fr::__mul(sigma_contribution, alpha, result.sigma_last);
         barretenberg::fr::__neg(result.sigma_last, result.sigma_last);
-        barretenberg::fr::__mul(result.sigma_last, beta, result.sigma_last);
+        result.sigma_last.self_mul(beta);
 
         return result;
     }

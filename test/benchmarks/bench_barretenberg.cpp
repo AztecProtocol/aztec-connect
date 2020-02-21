@@ -60,7 +60,7 @@ void generate_scalars(fr::field_t* scalars)
     fr::field_t acc;
     fr::__copy(T0, acc);
     for (size_t i = 0; i < MAX_GATES; ++i) {
-        fr::__mul(acc, T0, acc);
+        acc.self_mul(T0);
         fr::__copy(acc, scalars[i]);
     }
 }

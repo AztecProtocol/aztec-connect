@@ -131,11 +131,11 @@ fr::field_t compute_public_input_delta(const std::vector<barretenberg::fr::field
         fr::__add(witness, gamma, T0);
         fr::__mul(work_root, beta, T1);
         fr::__mul(T1, fr::coset_generators[0], T2);
-        fr::__add(T1, T0, T1);
-        fr::__add(T2, T0, T2);
-        fr::__mul(numerator, T2, numerator);
-        fr::__mul(denominator, T1, denominator);
-        fr::__mul(work_root, subgroup_generator, work_root);
+        T1.self_add(T0);
+        T2.self_add(T0);
+        numerator.self_mul(T2);
+        denominator.self_mul(T1);
+        work_root.self_mul(subgroup_generator);
     }
     fr::__invert(denominator, denominator);
     fr::__mul(denominator, numerator, T0);

@@ -208,9 +208,9 @@ field_t<ComposerContext> field_t<ComposerContext>::operator+(const field_t& othe
         barretenberg::fr::field_t out;
         barretenberg::fr::__mul(left, multiplicative_constant, out);
         barretenberg::fr::__mul(right, other.multiplicative_constant, T0);
-        barretenberg::fr::__add(out, T0, out);
-        barretenberg::fr::__add(out, additive_constant, out);
-        barretenberg::fr::__add(out, other.additive_constant, out);
+        out.self_add(T0);
+        out.self_add(additive_constant);
+        out.self_add(other.additive_constant);
         result.witness_index = ctx->add_variable(out);
 
         const waffle::add_triple gate_coefficients{ witness_index,
@@ -271,12 +271,12 @@ field_t<ComposerContext> field_t<ComposerContext>::operator*(const field_t& othe
         barretenberg::fr::field_t out;
 
         barretenberg::fr::__mul(left, right, out);
-        barretenberg::fr::__mul(out, q_m, out);
+        out.self_mul(q_m);
         barretenberg::fr::__mul(left, q_l, T0);
-        barretenberg::fr::__add(out, T0, out);
+        out.self_add(T0);
         barretenberg::fr::__mul(right, q_r, T0);
-        barretenberg::fr::__add(out, T0, out);
-        barretenberg::fr::__add(out, q_c, out);
+        out.self_add(T0);
+        out.self_add(q_c);
         result.witness_index = ctx->add_variable(out);
         const waffle::poly_triple gate_coefficients{
             witness_index, other.witness_index, result.witness_index, q_m, q_l, q_r, barretenberg::fr::neg_one(), q_c
@@ -326,10 +326,10 @@ field_t<ComposerContext> field_t<ComposerContext>::operator/(const field_t& othe
         // m1.x1 + a1 / (m2.x2 + a2) = x3
         barretenberg::fr::field_t T0;
         barretenberg::fr::__mul(multiplicative_constant, left, T0);
-        barretenberg::fr::__add(T0, additive_constant, T0);
+        T0.self_add(additive_constant);
         barretenberg::fr::field_t T1;
         barretenberg::fr::__mul(other.multiplicative_constant, right, T1);
-        barretenberg::fr::__add(T1, other.additive_constant, T1);
+        T1.self_add(other.additive_constant);
 
         out = barretenberg::fr::mul(T0, barretenberg::fr::invert(T1));
         result.witness_index = ctx->add_variable(out);
@@ -370,7 +370,7 @@ template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerCon
     barretenberg::fr::field_t value = context->get_variable(witness_index);
     barretenberg::fr::field_t out;
     barretenberg::fr::__mul(value, multiplicative_constant, out);
-    barretenberg::fr::__add(out, additive_constant, out);
+    out.self_add(additive_constant);
 
     result.witness_index = context->add_variable(out);
     result.additive_constant = barretenberg::fr::zero;

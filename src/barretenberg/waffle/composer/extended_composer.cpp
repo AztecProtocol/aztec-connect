@@ -317,22 +317,22 @@ void ExtendedComposer::combine_linear_relations()
             fr::field_t left = fr::neg(assign(*potential_quads[j].removed_wire.selectors[0]));
             fr::field_t right = assign(*potential_quads[j].removed_wire.selectors[1]);
 
-            barretenberg::fr::__mul(q_m[gate_1_index], right, q_m[gate_1_index]);
-            barretenberg::fr::__mul(q_1[gate_1_index], right, q_1[gate_1_index]);
-            barretenberg::fr::__mul(q_2[gate_1_index], right, q_2[gate_1_index]);
-            barretenberg::fr::__mul(q_3[gate_1_index], right, q_3[gate_1_index]);
-            barretenberg::fr::__mul(q_c[gate_1_index], right, q_c[gate_1_index]);
+            q_m[gate_1_index].self_mul(right);
+            q_1[gate_1_index].self_mul(right);
+            q_2[gate_1_index].self_mul(right);
+            q_3[gate_1_index].self_mul(right);
+            q_c[gate_1_index].self_mul(right);
 
-            barretenberg::fr::__mul(q_m[gate_2_index], left, q_m[gate_2_index]);
-            barretenberg::fr::__mul(q_1[gate_2_index], left, q_1[gate_2_index]);
-            barretenberg::fr::__mul(q_2[gate_2_index], left, q_2[gate_2_index]);
-            barretenberg::fr::__mul(q_3[gate_2_index], left, q_3[gate_2_index]);
-            barretenberg::fr::__mul(q_c[gate_2_index], left, q_c[gate_2_index]);
+            q_m[gate_2_index].self_mul(left);
+            q_1[gate_2_index].self_mul(left);
+            q_2[gate_2_index].self_mul(left);
+            q_3[gate_2_index].self_mul(left);
+            q_c[gate_2_index].self_mul(left);
 
             const auto compute_new_selector = [](const auto& wire) {
                 fr::field_t temp = fr::zero;
                 std::for_each(
-                    wire.selectors.begin(), wire.selectors.end(), [&temp](auto x) { fr::__add(temp, *x, temp); });
+                    wire.selectors.begin(), wire.selectors.end(), [&temp](auto x) { temp.self_add(*x); });
                 return temp;
             };
             fr::field_t new_left = compute_new_selector(gate_wires[0]);
@@ -344,9 +344,9 @@ void ExtendedComposer::combine_linear_relations()
             fr::__copy(new_right, q_2[gate_1_index]);
             fr::__copy(new_output, q_3[gate_1_index]);
             fr::__copy(new_next_output, q_3_next[gate_1_index]);
-            fr::__add(q_c[gate_1_index], q_c[gate_2_index], q_c[gate_1_index]);
+            q_c[gate_1_index].self_add(q_c[gate_2_index]);
             if (!fr::eq(fr::zero, q_m[gate_2_index])) {
-                fr::__add(q_m[gate_1_index], q_m[gate_2_index], q_m[gate_1_index]);
+                q_m[gate_1_index].self_add(q_m[gate_2_index]);
             }
 
             wire_epicycles[w_l[gate_1_index]] = remove_permutation(wire_epicycles[w_l[gate_1_index]], gate_1_index);

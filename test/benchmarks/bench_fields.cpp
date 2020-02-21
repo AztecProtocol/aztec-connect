@@ -68,26 +68,26 @@ void old_field_mixed_add(const fr::field_t& x1,
 
     fr::__sqr_with_coarse_reduction(z1, T0);
     fr::__mul(x2, T0, T1);
-    fr::__sub(T1, x1, T1);
+    T1.self_sub(x1);
     fr::__mul_with_coarse_reduction(z1, T0, T2);
-    fr::__mul(T2, y2, T2);
-    fr::__sub(T2, y1, T2);
+    T2.self_mul(y2);
+    T2.self_sub(y1);
     fr::__paralell_double_and_add_without_reduction(T2, z1, T1, z3);
     fr::__sqr_with_coarse_reduction(T1, T3);
-    fr::__add_with_coarse_reduction(T0, T3, T0);
+    T0.self_add_with_coarse_reduction(T3);
     fr::__sqr_with_coarse_reduction(z3, z3);
-    fr::__sub_with_coarse_reduction(z3, T0, z3);
+    z3.self_sub_with_coarse_reduction(T0);
     fr::__quad_with_coarse_reduction(T3, T3);
-    fr::__mul_with_coarse_reduction(T1, T3, T1);
-    fr::__mul_with_coarse_reduction(T3, x1, T3);
+    T1.self_mul_with_coarse_reduction(T3);
+    T3.self_mul_with_coarse_reduction(x1);
     fr::__add_with_coarse_reduction(T3, T3, T0);
-    fr::__add_with_coarse_reduction(T0, T1, T0);
+    T0.self_add_with_coarse_reduction(T1);
     fr::__sqr_with_coarse_reduction(T2, x3);
-    fr::__sub_with_coarse_reduction(x3, T0, x3);
-    fr::__sub_with_coarse_reduction(T3, x3, T3);
-    fr::__mul_with_coarse_reduction(T1, y1, T1);
-    fr::__add_with_coarse_reduction(T1, T1, T1);
-    fr::__mul_with_coarse_reduction(T3, T2, T3);
+    x3.self_sub_with_coarse_reduction(T0);
+    T3.self_sub_with_coarse_reduction(x3);
+    T1.self_mul_with_coarse_reduction(y1);
+    T1.self_add_with_coarse_reduction(T1);
+    T3.self_mul_with_coarse_reduction(T2);
     fr::__sub_with_coarse_reduction(T3, T1, y3);
 }
 

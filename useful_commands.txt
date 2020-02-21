@@ -15,3 +15,67 @@ valgrind --tool=cachegrind ./test/barretenberg_profiling
 valgrind --tool=callgrind --dump-instr=yes --instr-atstart=no ./test/barretenberg_profiling
 
 cmake --build . --parallel --target barretenberg_tests
+
+regex scrapboook
+
+barretenberg::fq::__mul(q1,q2, q1);
+fq::__mul_with_coarse_reduction(q1, q2,   q1);
+
+(barretenberg::|grumpkin::)?f(q|r)::__(mul|add|sub)(_with_coarse_reduction|without_reduction)?\([\s]*([^\s]*)[\s]*,[\s]*([^\s]*)[\s]*,[\s]*\5[\s]*\);
+$5.self_$3$4($6);
+
+f(q|r)::__sqr_with_coarse_reduction\((.*), \2\);
+$2.self_sqr_with_coarse_reduction();
+
+f(q|r)::__sqr\((.*), \2\);
+$2.self_sqr($2);
+
+f(q|r)::__mul_with_coarse_reduction\((.*), (.*), \1\);
+$2.self_mul_with_coarse_reduction($3);
+
+f(q|r)::__mul\((.*), (.*), \1\);
+$2.self_mul($3);
+
+f(q|r)::__add_with_coarse_reduction\((.*), (.*), \1\);
+$2.self_add_with_coarse_reduction($3);
+
+f(q|r)::__add_without_reduction\((.*), (.*), \1\);
+$2.self_add_without_reduction($3);
+
+f(q|r)::__add\((.*), (.*), \1\);
+$2.self_add($3);
+
+f(q|r)::__sub_with_coarse_reduction\((.*), (.*), \1\);
+$2.self_sub_with_coarse_reduction($3);
+
+f(q|r)::__sub\((.*), (.*), \1\);
+$2.self_sub($3);
+
+
+f(q|r)::__mul_with_coarse_reduction\((.*), (.*), (.*)\);
+$4 = $2.mul_with_coarse_reduction($3);
+
+f(q|r)::__mul\((.*), (.*), (.*)\);
+$4 = $2 * $3;
+
+f(q|r)::__sqr_with_coarse_reduction\((.*), (.*)\);
+$3 = $2.sqr_with_coarse_reduction();
+
+f(q|r)::__sqr\((.*), (.*)\);
+$3 = $2.sqr();
+
+
+f(q|r)::__add_with_coarse_reduction\((.*), (.*), (.*)\);
+$4 = $2.add_with_coarse_reduction($3);
+
+f(q|r)::__add_without_reduction\((.*), (.*), (.*)\);
+$4 = $2.add_without_reduction($3);
+
+f(q|r)::__add\((.*), (.*), (.*)\);
+$4 = $2 + $3;
+
+f(q|r)::__sub_with_coarse_reduction\((.*), (.*), (.*)\);
+$4 = $2.sub_with_coarse_reduction($3);
+
+f(q|r)::__sub\((.*), (.*), (.*)\);
+$4 = $2 - $3;

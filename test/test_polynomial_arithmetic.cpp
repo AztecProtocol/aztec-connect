@@ -64,7 +64,7 @@ TEST(polynomials, fft_with_small_degree)
     for (size_t i = 0; i < n; ++i) {
         expected = polynomial_arithmetic::evaluate(poly, work_root, n);
         EXPECT_EQ(fr::eq(fft_transform[i], expected), true);
-        fr::__mul(work_root, domain.root, work_root);
+        work_root.self_mul(domain.root);
     }
 }
 
@@ -147,7 +147,7 @@ TEST(polynomials, fft_coset_ifft_cross_consistency)
         fr::__copy(poly_a[i], poly_b[i]);
         fr::__copy(poly_a[i], poly_c[i]);
         fr::__add(poly_a[i], poly_c[i], expected[i]);
-        fr::__add(expected[i], poly_b[i], expected[i]);
+        expected[i].self_add(poly_b[i]);
     }
 
     for (size_t i = n; i < 4 * n; ++i) {
@@ -199,7 +199,7 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
     fr::field_t z = fr::random_element();
     fr::field_t shifted_z;
     fr::__mul(z, small_domain.root, shifted_z);
-    fr::__mul(shifted_z, small_domain.root, shifted_z);
+    shifted_z.self_mul(small_domain.root);
 
     fr::field_t eval;
     fr::field_t shifted_eval;
@@ -249,7 +249,7 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
         fr::__mul(a[i], b[i], c[i]);
         fr::__neg(c[i], c[i]);
         fr::__mul(a[i], b[i], T0);
-        fr::__add(T0, c[i], T0);
+        T0.self_add(c[i]);
     }
     for (size_t i = n; i < 4 * n; ++i) {
         a[i] = fr::zero;
@@ -275,7 +275,7 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
     fr::field_t result[mid_domain.size];
     for (size_t i = 0; i < mid_domain.size; ++i) {
         fr::__mul(a[i], b[i], result[i]);
-        fr::__add(result[i], c[i], result[i]);
+        result[i].self_add(c[i]);
     }
 
     polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(&result[0], small_domain, mid_domain);
@@ -316,7 +316,7 @@ TEST(polynomials, compute_kate_opening_coefficients)
     }
 
     // set F(X) = F(X) - F(z)
-    fr::__sub(coeffs[0], f, coeffs[0]);
+    coeffs[0].self_sub(f);
 
     // compute fft of polynomials
     evaluation_domain domain = evaluation_domain(2 * n);

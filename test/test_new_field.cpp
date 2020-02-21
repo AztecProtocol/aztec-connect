@@ -88,12 +88,12 @@ TEST(test_new_field, multiply)
     fr::__add(alt_a, alt_b, t0);
     fr::__sqr(t0, t0);
     fr::__sqr(alt_a, t1);
-    fr::__sub(t0, t1, t0);
+    t0.self_sub(t1);
     fr::__sqr(alt_b, t1);
-    fr::__sub(t0, t1, t0);
+    t0.self_sub(t1);
     fr::field_t expected;
     fr::__mul(alt_a, alt_b, expected);
-    fr::__add(expected, expected, expected);
+    expected.self_add(expected);
 
     EXPECT_EQ(fr::eq(t0, expected), true);
     // testField result = a * b;

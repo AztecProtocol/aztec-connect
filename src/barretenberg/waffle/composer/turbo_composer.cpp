@@ -566,9 +566,9 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
             const uint64_t quad = static_cast<uint64_t>(fr::get_bit(witness_value, bit_index)) +
                                   2ULL * static_cast<uint64_t>(fr::get_bit(witness_value, bit_index + 1));
             const fr::field_t quad_element = fr::to_montgomery_form({ quad, 0, 0, 0 });
-            fr::__add(accumulator, accumulator, accumulator);
-            fr::__add(accumulator, accumulator, accumulator);
-            fr::__add(accumulator, quad_element, accumulator);
+            accumulator.self_add(accumulator);
+            accumulator.self_add(accumulator);
+            accumulator.self_add(quad_element);
 
             accumulator_index = add_variable(accumulator);
             accumulators.emplace_back(accumulator_index);
@@ -736,17 +736,17 @@ waffle::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t
 
         const fr::field_t product_quad_element = fr::to_montgomery_form({ { left_quad * right_quad, 0, 0, 0 } });
 
-        fr::__add(left_accumulator, left_accumulator, left_accumulator);
-        fr::__add(left_accumulator, left_accumulator, left_accumulator);
-        fr::__add(left_accumulator, left_quad_element, left_accumulator);
+        left_accumulator.self_add(left_accumulator);
+        left_accumulator.self_add(left_accumulator);
+        left_accumulator.self_add(left_quad_element);
 
-        fr::__add(right_accumulator, right_accumulator, right_accumulator);
-        fr::__add(right_accumulator, right_accumulator, right_accumulator);
-        fr::__add(right_accumulator, right_quad_element, right_accumulator);
+        right_accumulator.self_add(right_accumulator);
+        right_accumulator.self_add(right_accumulator);
+        right_accumulator.self_add(right_quad_element);
 
-        fr::__add(out_accumulator, out_accumulator, out_accumulator);
-        fr::__add(out_accumulator, out_accumulator, out_accumulator);
-        fr::__add(out_accumulator, out_quad_element, out_accumulator);
+        out_accumulator.self_add(out_accumulator);
+        out_accumulator.self_add(out_accumulator);
+        out_accumulator.self_add(out_quad_element);
 
         left_accumulator_index = add_variable(left_accumulator);
         accumulators.left.emplace_back(left_accumulator_index);

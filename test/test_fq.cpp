@@ -308,9 +308,9 @@ TEST(fq, add_mul_consistency)
     fq::field_t a = fq::random_element();
     fq::field_t result;
     fq::__add(a, a, result);           // 2
-    fq::__add(result, result, result); // 4
-    fq::__add(result, result, result); // 8
-    fq::__add(result, a, result);      // 9
+    result.self_add(result); // 4
+    result.self_add(result); // 8
+    result.self_add(a);      // 9
 
     fq::field_t expected;
     fq::__mul(a, multiplicand, expected);
@@ -326,11 +326,11 @@ TEST(fq, sub_mul_consistency)
     fq::field_t a = fq::random_element();
     fq::field_t result;
     fq::__add(a, a, result);           // 2
-    fq::__add(result, result, result); // 4
-    fq::__add(result, result, result); // 8
-    fq::__sub(result, a, result);      // 7
-    fq::__sub(result, a, result);      // 6
-    fq::__sub(result, a, result);      // 5
+    result.self_add(result); // 4
+    result.self_add(result); // 8
+    result.self_sub(a);      // 7
+    result.self_sub(a);      // 6
+    result.self_sub(a);      // 5
 
     fq::field_t expected;
     fq::__mul(a, multiplicand, expected);
@@ -348,12 +348,12 @@ TEST(fq, beta)
     // compute x^3
     fq::field_t x_cubed;
     fq::__mul(x, x, x_cubed);
-    fq::__mul(x_cubed, x, x_cubed);
+    x_cubed.self_mul(x);
 
     // compute beta_x^3
     fq::field_t beta_x_cubed;
     fq::__mul(beta_x, beta_x, beta_x_cubed);
-    fq::__mul(beta_x_cubed, beta_x, beta_x_cubed);
+    beta_x_cubed.self_mul(beta_x);
 
     EXPECT_EQ(fq::eq(x_cubed, beta_x_cubed), true);
 }
@@ -426,7 +426,7 @@ TEST(fq, split_into_endomorphism_scalars)
     input.data[3] &= 0x7fffffffffffffff;
 
     while (fq::gt(input, fq::modulus_plus_one)) {
-        fq::__sub(input, fq::modulus, input);
+        input.self_sub(fq::modulus);
     }
     fq::field_t k = { { input.data[0], input.data[1], input.data[2], input.data[3] } };
     fq::field_t k1 = { { 0, 0, 0, 0 } };
