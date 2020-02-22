@@ -7,6 +7,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unguarded-availability-new -Wno-c99-extensions")
 endif()
 
+add_definitions(-DBARRETENBERG_SRS_PATH=\"../srs_db/ignition\")
+
 add_executable(
     rollup_proof
     create.cpp

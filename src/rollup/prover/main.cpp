@@ -55,8 +55,8 @@ rollup_context create_rollup_context(Composer& composer)
 
 bool create(std::vector<std::string> const& args, rollup_context& ctx, user_context const& user)
 {
-    uint32_t value = (uint32_t)atoi(args[2].c_str());
-    tx_note note = { { user.public_key.x, user.public_key.y }, value, user.note_secret };
+    uint32_t value = (uint32_t)atoi(args[0].c_str());
+    tx_note note = create_note(user, value);
     return create(ctx, note);
 }
 
@@ -91,24 +91,7 @@ bool join(std::vector<std::string> const& args, rollup_context& ctx, user_contex
     return join(ctx, index1, index2, in_note1, in_note2, out_note);
 }
 
-bool join_split(std::vector<std::string> const& args, rollup_context& ctx, user_context const& user)
-{
-    uint32_t index1 = (uint32_t)atoi(args[2].c_str());
-    uint32_t index2 = (uint32_t)atoi(args[3].c_str());
-    uint32_t in_value1 = (uint32_t)atoi(args[4].c_str());
-    uint32_t in_value2 = (uint32_t)atoi(args[5].c_str());
-    uint32_t out_value1 = (uint32_t)atoi(args[6].c_str());
-    uint32_t out_value2 = (uint32_t)atoi(args[7].c_str());
-    uint32_t public_input = args.size() > 8 ? (uint32_t)atoi(args[8].c_str()) : 0;
-    uint32_t public_output = args.size() > 9 ? (uint32_t)atoi(args[9].c_str()) : 0;
-    uint32_t num_input_notes = (args[4][0] != '-') + (args[5][0] != '-');
-
-    tx_note in_note1 = num_input_notes < 1 ? create_gibberish_note(user, in_value1) : create_note(user, in_value1);
-    tx_note in_note2 = num_input_notes < 2 ? create_gibberish_note(user, in_value2) : create_note(user, in_value2);
-    tx_note out_note1 = create_note(user, out_value1);
-    tx_note out_note2 = create_note(user, out_value2);
-
-    tx_note notes[4] = { in_note1, in_note2, out_note1, out_note2 };
+crypto::schnorr::signature sign_notes(std::array<tx_note, 4> notes, user_context const& user) {
     std::array<grumpkin::fq::field_t, 8> to_compress;
     for (size_t i = 0; i < 4; ++i) {
         auto encrypted = crypto::pedersen_note::encrypt_note(notes[i]);
@@ -121,23 +104,32 @@ bool join_split(std::vector<std::string> const& args, rollup_context& ctx, user_
     crypto::schnorr::signature signature =
         crypto::schnorr::construct_signature<Blake2sHasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(
             std::string(message.begin(), message.end()), { user.private_key, user.public_key });
+    return signature;
+}
 
-    join_split_tx tx = {
+join_split_tx create_join_split_tx(std::vector<std::string> const& args, user_context const& user){
+    uint32_t index1 = (uint32_t)atoi(args[0].c_str());
+    uint32_t index2 = (uint32_t)atoi(args[1].c_str());
+    uint32_t in_value1 = (uint32_t)atoi(args[2].c_str());
+    uint32_t in_value2 = (uint32_t)atoi(args[3].c_str());
+    uint32_t out_value1 = (uint32_t)atoi(args[4].c_str());
+    uint32_t out_value2 = (uint32_t)atoi(args[5].c_str());
+    uint32_t public_input = args.size() > 6 ? (uint32_t)atoi(args[6].c_str()) : 0;
+    uint32_t public_output = args.size() > 7 ? (uint32_t)atoi(args[7].c_str()) : 0;
+    uint32_t num_input_notes = (args[2][0] != '-') + (args[3][0] != '-');
+
+    tx_note in_note1 = num_input_notes < 1 ? create_gibberish_note(user, in_value1) : create_note(user, in_value1);
+    tx_note in_note2 = num_input_notes < 2 ? create_gibberish_note(user, in_value2) : create_note(user, in_value2);
+    tx_note out_note1 = create_note(user, out_value1);
+    tx_note out_note2 = create_note(user, out_value2);
+
+    auto signature = sign_notes({ in_note1, in_note2, out_note1, out_note2 }, user);
+
+    return {
         public_input,       public_output,          num_input_notes,
         { index1, index2 }, { in_note1, in_note2 }, { out_note1, out_note2 },
         signature,          user.public_key,
     };
-
-    std::cout << "public_input: " << public_input << "\n"
-              << "public_output: " << public_output << "\n"
-              << "in_value1: " << in_value1 << "\n"
-              << "in_value2: " << in_value2 << "\n"
-              << "out_value1: " << out_value1 << "\n"
-              << "out_value2: " << out_value2 << "\n"
-              << "num_input_notes: " << num_input_notes << "\n"
-              << std::endl;
-
-    return join_split(ctx, tx);
 }
 
 void usage(std::vector<std::string> const& args)
@@ -157,9 +149,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    std::string cmd = argv[1];
-
-    if (cmd == "reset") {
+    if (args[1] == "reset") {
         leveldb::DestroyDB(DATA_DB_PATH, leveldb::Options());
         leveldb::DestroyDB(NULLIFIER_DB_PATH, leveldb::Options());
         return 0;
@@ -169,28 +159,29 @@ int main(int argc, char** argv)
     Composer composer = Composer();
     rollup_context ctx = create_rollup_context(composer);
     user_context user = create_user_context();
+    std::vector<std::string> tx_args(args.begin() + 2, args.end());
     bool success = false;
 
-    if (cmd == "create") {
+    if (args[1] == "create") {
         if (args.size() != 3) {
             std::cout << "usage: " << argv[0] << " create <value>" << std::endl;
             return -1;
         }
-        success = create(args, ctx, user);
-    } else if (cmd == "destroy") {
+        success = create(tx_args, ctx, user);
+    } else if (args[1] == "destroy") {
         if (args.size() != 4) {
             std::cout << "usage: " << argv[0] << " destroy <index> <value>" << std::endl;
             return -1;
         }
         success = destroy(args, ctx, user);
-    } else if (cmd == "split") {
+    } else if (args[1] == "split") {
         if (args.size() != 5) {
             std::cout << "usage: " << argv[0]
                       << " split <note index to spend> <first new note value> <second new note value>" << std::endl;
             return -1;
         }
         success = split(args, ctx, user);
-    } else if (cmd == "join") {
+    } else if (args[1] == "join") {
         if (args.size() != 6) {
             std::cout << "usage: " << argv[0]
                       << " join <first note index to join> <second note index to join> <first note value> "
@@ -199,16 +190,34 @@ int main(int argc, char** argv)
             return -1;
         }
         success = join(args, ctx, user);
-    } else if (cmd == "join-split") {
+    } else if (args[1] == "join-split") {
         if (args.size() < 8) {
             std::cout << "usage: " << argv[0]
-                      << " join <first note index to join> <second note index to join> <first input note value>"
+                      << " join-split <first note index to join> <second note index to join> <first input note value>"
                          " <second input note value> <first output note value> <second output note value>"
                          " [public input] [public output]"
                       << std::endl;
             return -1;
         }
-        success = join_split(args, ctx, user);
+
+        auto tx = create_join_split_tx({args.begin() + 2, args.end()}, user);
+        std::cout << tx << std::flush;
+        success = join_split(ctx, tx);
+    } else if (args[1] == "join-split-auto") {
+        if (args.size() != 2) {
+            std::cout << "usage: " << argv[0] << " join-split-auto" << std::endl;
+            return -1;
+        }
+
+        join_split(ctx, create_join_split_tx({ "0", "0", "-", "-", "50", "50", "100", "0" }, user));
+
+        for (size_t i=0; i<3; ++i) {
+            auto index1 = std::to_string(i * 2);
+            auto index2 = std::to_string(i * 2 + 1);
+            join_split(ctx, create_join_split_tx({ index1, index2, "50", "50", "50", "50", "0", "0" }, user));
+        }
+
+        success = true;
     } else {
         usage(args);
         return -1;

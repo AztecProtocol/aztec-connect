@@ -17,4 +17,15 @@ struct join_split_tx {
 
 bool join_split(rollup_context& ctx, join_split_tx const& tx);
 
+inline std::ostream& operator<<(std::ostream& os, join_split_tx const& tx)
+{
+    return os << "public_input: " << tx.public_input << "\n"
+              << "public_output: " << tx.public_output << "\n"
+              << "in_value1: " << tx.input_note[0].value << "\n"
+              << "in_value2: " << tx.input_note[1].value << "\n"
+              << "out_value1: " << tx.output_note[0].value << "\n"
+              << "out_value2: " << tx.output_note[1].value << "\n"
+              << "num_input_notes: " << tx.num_input_notes << "\n";
 }
+
+} // namespace rollup

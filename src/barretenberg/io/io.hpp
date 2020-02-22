@@ -1,8 +1,8 @@
 #pragma once
 
-#include <memory.h>
 #include <cstddef>
 #include <cstdint>
+#include <memory.h>
 
 #include "../assert.hpp"
 #include "../curves/bn254/fq.hpp"
@@ -29,12 +29,9 @@
  *
  **/
 
-namespace barretenberg
-{
-namespace io
-{
-struct Manifest
-{
+namespace barretenberg {
+namespace io {
+struct Manifest {
     uint32_t transcript_number;
     uint32_t total_transcripts;
     uint32_t total_g1_points;
@@ -79,10 +76,8 @@ inline void read_g1_elements_from_buffer(g1::affine_element* elements, char* buf
     size_t num_elements = buffer_size / bytes_per_element;
 
     memcpy(elements, buffer, buffer_size);
-    if (isLittleEndian())
-    {
-        for (size_t i = 0; i < num_elements; ++i)
-        {
+    if (isLittleEndian()) {
+        for (size_t i = 0; i < num_elements; ++i) {
             elements[i].x.data[0] = __builtin_bswap64(elements[i].x.data[0]);
             elements[i].x.data[1] = __builtin_bswap64(elements[i].x.data[1]);
             elements[i].x.data[2] = __builtin_bswap64(elements[i].x.data[2]);
@@ -104,10 +99,8 @@ inline void read_g2_elements_from_buffer(g2::affine_element* elements, char* buf
 
     memcpy(elements, buffer, buffer_size);
 
-    if (isLittleEndian())
-    {
-        for (size_t i = 0; i < num_elements; ++i)
-        {
+    if (isLittleEndian()) {
+        for (size_t i = 0; i < num_elements; ++i) {
             elements[i].x.c0.data[0] = __builtin_bswap64(elements[i].x.c0.data[0]);
             elements[i].x.c0.data[1] = __builtin_bswap64(elements[i].x.c0.data[1]);
             elements[i].x.c0.data[2] = __builtin_bswap64(elements[i].x.c0.data[2]);
@@ -135,8 +128,7 @@ inline void read_g2_elements_from_buffer(g2::affine_element* elements, char* buf
 inline size_t get_file_size(std::string const& filename)
 {
     struct stat st;
-    if (stat(filename.c_str(), &st) != 0)
-    {
+    if (stat(filename.c_str(), &st) != 0) {
         return 0;
     }
     return (size_t)st.st_size;
@@ -154,9 +146,75 @@ inline std::vector<char> read_file_into_buffer(std::string const& filename, size
     return buffer;
 }
 
-inline void
-read_transcript(g1::affine_element* monomials, g2::affine_element& g2_x, size_t degree, std::string const& path)
+inline std::string get_transcript_path(std::string const& dir, size_t num)
 {
+    return dir + "/transcript" + (num < 10 ? "0" : "") + std::to_string(num) + ".dat";
+};
+
+inline bool is_file_exist(std::string const& fileName)
+{
+    std::ifstream infile(fileName);
+    return infile.good();
+}
+
+inline void read_transcript_g1(g1::affine_element* monomials, size_t degree, std::string const& dir)
+{
+    // read g1 elements at second array position - first point is the basic generator
+    g1::copy_affine(g1::affine_one, monomials[0]); // (copy generator into first point)
+
+    size_t num = 0;
+    size_t num_read = 1;
+    std::string path = get_transcript_path(dir, num);
+
+    while (is_file_exist(path) && num_read < degree) {
+        Manifest manifest;
+
+        auto buffer = read_file_into_buffer(path);
+
+        read_manifest(buffer, manifest);
+
+        const size_t num_to_read = std::min((size_t)manifest.num_g1_points, degree - num_read);
+        const size_t manifest_size = sizeof(Manifest);
+        const size_t g1_buffer_size = sizeof(fq::field_t) * 2 * num_to_read;
+
+        read_g1_elements_from_buffer(&monomials[num_read], &buffer[manifest_size], g1_buffer_size);
+
+        num_read += num_to_read;
+        path = get_transcript_path(dir, ++num);
+    }
+
+    if (num == 0) {
+        throw std::runtime_error("No input files found.");
+    }
+}
+
+inline void read_transcript_g2(g2::affine_element& g2_x, std::string const& dir)
+{
+    Manifest manifest;
+
+    std::string path = get_transcript_path(dir, 0);
+    auto buffer = read_file_into_buffer(path);
+
+    read_manifest(buffer, manifest);
+
+    const size_t manifest_size = sizeof(Manifest);
+
+    const size_t g2_buffer_offset = sizeof(fq::field_t) * 2 * manifest.num_g1_points;
+    const size_t g2_buffer_size = sizeof(fq2::field_t) * 2 * 2;
+
+    g2::affine_element* g2_buffer = (g2::affine_element*)(aligned_alloc(32, sizeof(g2::affine_element) * (2)));
+
+    read_g2_elements_from_buffer(g2_buffer, &buffer[manifest_size + g2_buffer_offset], g2_buffer_size);
+    g2::copy_affine(g2_buffer[0], g2_x);
+    aligned_free(g2_buffer);
+}
+
+inline void read_transcript(g1::affine_element* monomials,
+                            g2::affine_element& g2_x,
+                            size_t degree,
+                            std::string const& path)
+{
+    /*
     Manifest manifest;
 
     auto buffer = read_file_into_buffer(path);
@@ -179,31 +237,10 @@ read_transcript(g1::affine_element* monomials, g2::affine_element& g2_x, size_t 
     read_g2_elements_from_buffer(g2_buffer, &buffer[manifest_size + g2_buffer_offset], g2_buffer_size);
     g2::copy_affine(g2_buffer[1], g2_x);
     aligned_free(g2_buffer);
+    */
+   read_transcript_g1(monomials, degree, path);
+   read_transcript_g2(g2_x, path);
 }
 
-
-inline void
-read_transcript_g2(g2::affine_element& g2_x, size_t degree, std::string const& path)
-{
-    Manifest manifest;
-
-    auto buffer = read_file_into_buffer(path);
-
-    read_manifest(buffer, manifest);
-
-    const size_t manifest_size = sizeof(Manifest);
-
-    ASSERT(manifest.num_g1_points >= (degree - 1));
-
-    const size_t g2_buffer_offset = sizeof(fq::field_t) * 2 * manifest.num_g1_points;
-    const size_t g2_buffer_size = sizeof(fq2::field_t) * 2 * 2;
-
-    g2::affine_element* g2_buffer = (g2::affine_element*)(aligned_alloc(32, sizeof(g2::affine_element) * (2)));
-
-    // read g1 elements at second array position - first point is the basic generator
-    read_g2_elements_from_buffer(g2_buffer, &buffer[manifest_size + g2_buffer_offset], g2_buffer_size);
-    g2::copy_affine(g2_buffer[1], g2_x);
-    aligned_free(g2_buffer);
-}
 } // namespace io
 } // namespace barretenberg
