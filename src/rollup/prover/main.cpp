@@ -3,6 +3,7 @@
 #include "join.hpp"
 #include "join_split.hpp"
 #include "split.hpp"
+#include "timer.hpp"
 #include <barretenberg/waffle/stdlib/merkle_tree/leveldb_store.hpp>
 
 char const* DATA_DB_PATH = "/tmp/rollup_prover";
@@ -116,7 +117,7 @@ join_split_tx create_join_split_tx(std::vector<std::string> const& args, user_co
     uint32_t out_value2 = (uint32_t)atoi(args[5].c_str());
     uint32_t public_input = args.size() > 6 ? (uint32_t)atoi(args[6].c_str()) : 0;
     uint32_t public_output = args.size() > 7 ? (uint32_t)atoi(args[7].c_str()) : 0;
-    uint32_t num_input_notes = (args[2][0] != '-') + (args[3][0] != '-');
+    uint32_t num_input_notes = (uint32_t)(args[2][0] != '-') + (uint32_t)(args[3][0] != '-');
 
     tx_note in_note1 = num_input_notes < 1 ? create_gibberish_note(user, in_value1) : create_note(user, in_value1);
     tx_note in_note2 = num_input_notes < 2 ? create_gibberish_note(user, in_value2) : create_note(user, in_value2);
@@ -161,6 +162,7 @@ int main(int argc, char** argv)
     user_context user = create_user_context();
     std::vector<std::string> tx_args(args.begin() + 2, args.end());
     bool success = false;
+    Timer circuit_timer;
 
     if (args[1] == "create") {
         if (args.size() != 3) {
@@ -211,7 +213,7 @@ int main(int argc, char** argv)
 
         join_split(ctx, create_join_split_tx({ "0", "0", "-", "-", "50", "50", "100", "0" }, user));
 
-        for (size_t i=0; i<3; ++i) {
+        for (size_t i=0; i<4; ++i) {
             auto index1 = std::to_string(i * 2);
             auto index2 = std::to_string(i * 2 + 1);
             join_split(ctx, create_join_split_tx({ index1, index2, "50", "50", "50", "50", "0", "0" }, user));
@@ -228,13 +230,26 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    auto prover = ctx.composer.preprocess();
+    std::cout << "Time taken to create circuit: " << circuit_timer.toString() << std::endl;
     printf("composer gates = %zu\n", ctx.composer.get_num_gates());
+
+    std::cout << "Computing witness..." << std::endl;
+    Timer witness_timer;
+    ctx.composer.compute_witness();
+    std::cout << "Time taken to compute witness: " << witness_timer.toString() << std::endl;
+
+    std::cout << "Creating prover..." << std::endl;
+    Timer prover_timer;
+    auto prover = ctx.composer.create_prover();
+    std::cout << "Time taken to create prover: " << prover_timer.toString() << std::endl;
+
+    std::cout << "Constructing proof..." << std::endl;
+    Timer proof_timer;
     waffle::plonk_proof proof = prover.construct_proof();
+    std::cout << "Time taken to construct proof: " << proof_timer.toString() << std::endl;
 
     auto verifier = ctx.composer.create_verifier();
     bool verified = verifier.verify_proof(proof);
-
     std::cout << "Verified: " << verified << std::endl;
 
     if (verified) {

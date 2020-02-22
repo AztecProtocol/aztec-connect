@@ -1092,7 +1092,7 @@ std::shared_ptr<program_witness> TurboComposer::compute_witness()
     return witness;
 }
 
-TurboProver TurboComposer::preprocess()
+TurboProver TurboComposer::create_prover()
 {
     compute_proving_key();
     compute_witness();
