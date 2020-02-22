@@ -332,3 +332,21 @@ TEST(uint512, invmod)
     uint512_t expected = uint256_t(fr::field_t(target_lo).invert());
     EXPECT_EQ(inverse, expected);
 }
+
+TEST(uint512, r_squared)
+{
+    uint256_t prime_256(fr::modulus.data[0], fr::modulus.data[1], fr::modulus.data[2], fr::modulus.data[3]);
+    uint256_t R = -prime_256;
+    uint256_t R_mod_p = R % prime_256;
+
+    uint512_t R_512(R_mod_p);
+
+    uint512_t R_squared = R_512 * R_512;
+
+    uint512_t R_squared_mod_p = R_squared % uint512_t(prime_256);
+
+    std::cout << "computed R squared " << std::endl;
+    std::cout << std::hex << R_squared_mod_p << std::endl;
+    std::cout << "vs..." << std::endl;
+    fr::print(fr::r_squared);
+}
