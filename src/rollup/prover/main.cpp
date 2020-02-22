@@ -92,7 +92,7 @@ bool join(std::vector<std::string> const& args, rollup_context& ctx, user_contex
     return join(ctx, index1, index2, in_note1, in_note2, out_note);
 }
 
-crypto::schnorr::signature sign_notes(std::array<tx_note, 4> notes, user_context const& user) {
+crypto::schnorr::signature sign_notes(std::array<tx_note, 4> const& notes, user_context const& user) {
     std::array<grumpkin::fq::field_t, 8> to_compress;
     for (size_t i = 0; i < 4; ++i) {
         auto encrypted = crypto::pedersen_note::encrypt_note(notes[i]);

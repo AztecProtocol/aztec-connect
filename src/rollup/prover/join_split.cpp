@@ -7,8 +7,8 @@
 namespace rollup {
 
 void verify_signature(rollup_context& ctx,
-                      std::array<stdlib::pedersen_note::public_note, 4> notes,
-                      grumpkin::g1::affine_element pub_key,
+                      std::array<stdlib::pedersen_note::public_note, 4> const& notes,
+                      grumpkin::g1::affine_element const& pub_key,
                       crypto::schnorr::signature const& sig)
 {
     stdlib::point owner_pub_key = { witness_t(&ctx.composer, pub_key.x), witness_t(&ctx.composer, pub_key.y) };
