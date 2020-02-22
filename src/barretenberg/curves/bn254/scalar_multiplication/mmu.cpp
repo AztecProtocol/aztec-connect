@@ -14,10 +14,12 @@ static uint32_t* bit_count_memory = nullptr;
 static bool* bucket_empty_status = nullptr;
 
 const auto init = []() {
-    printf("init...\n");
-    constexpr size_t max_num_points = (1 << 20);
+    printf("init. pippenger block size = %d\n", PIPPENGER_BLOCK_SIZE);
+    static_assert(PIPPENGER_BLOCK_SIZE < 27);
+    constexpr size_t max_num_points = (1 << PIPPENGER_BLOCK_SIZE);
     constexpr size_t max_num_rounds = 8;
-    constexpr size_t max_buckets = 1 << 15;
+    constexpr size_t max_buckets =
+        1 << barretenberg::scalar_multiplication::get_optimal_bucket_width(1 << PIPPENGER_BLOCK_SIZE);
     constexpr size_t thread_overspill = 1024;
 
     // size_t memory = max_num_points * max_num_rounds * 2 * sizeof(uint64_t);
@@ -77,7 +79,7 @@ g1::element* get_bucket_pointer()
 scalar_multiplication::affine_product_runtime_state get_affine_product_runtime_state(const size_t num_threads,
                                                                                      const size_t thread_index)
 {
-    constexpr size_t max_num_points = (2 << 20);
+    constexpr size_t max_num_points = (2 << PIPPENGER_BLOCK_SIZE);
     const size_t points_per_thread = max_num_points / num_threads;
 
     scalar_multiplication::affine_product_runtime_state product_state;

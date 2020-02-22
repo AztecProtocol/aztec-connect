@@ -1,6 +1,8 @@
 # barretenberg
 # copyright 2019 Spilsbury Holdings
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-copy")
+
 add_definitions(-DGTEST_HAS_EXCEPTIONS=0)
 if(WASM)
     add_definitions(-DGTEST_HAS_STREAM_REDIRECTION=0)

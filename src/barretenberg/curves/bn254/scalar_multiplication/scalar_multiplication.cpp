@@ -619,6 +619,7 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, c
  **/
 g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, const size_t num_initial_points)
 {
+    static_assert(PIPPENGER_BLOCK_SIZE <= 26);
     // our windowed non-adjacent form algorthm requires that each thread can work on at least 8 points.
     // If we fall below this theshold, fall back to the traditional scalar multiplication algorithm.
     // For 8 threads, this neatly coincides with the threshold where Strauss scalar multiplication outperforms Pippenger
@@ -652,10 +653,41 @@ g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, c
     }
 
     const size_t log2_initial_points =
-        std::min(static_cast<size_t>(internal::get_msb(static_cast<uint32_t>(num_initial_points))), 20UL);
+        std::min(static_cast<size_t>(internal::get_msb(static_cast<uint32_t>(num_initial_points))),
+                 static_cast<size_t>(PIPPENGER_BLOCK_SIZE));
     g1::element result;
 
     switch (log2_initial_points) {
+#if PIPPENGER_BLOCK_SIZE > 25
+    case 26:
+        result = pippenger_unsafe_internal<1 << 26>(points, scalars);
+        break;
+#endif
+#if PIPPENGER_BLOCK_SIZE > 24
+    case 25:
+        result = pippenger_unsafe_internal<1 << 25>(points, scalars);
+        break;
+#endif
+#if PIPPENGER_BLOCK_SIZE > 23
+    case 24:
+        result = pippenger_unsafe_internal<1 << 24>(points, scalars);
+        break;
+#endif
+#if PIPPENGER_BLOCK_SIZE > 22
+    case 23:
+        result = pippenger_unsafe_internal<1 << 23>(points, scalars);
+        break;
+#endif
+#if PIPPENGER_BLOCK_SIZE > 21
+    case 22:
+        result = pippenger_unsafe_internal<1 << 22>(points, scalars);
+        break;
+#endif
+#if PIPPENGER_BLOCK_SIZE > 20
+    case 21:
+        result = pippenger_unsafe_internal<1 << 21>(points, scalars);
+        break;
+#endif
     case 20:
         result = pippenger_unsafe_internal<1 << 20>(points, scalars);
         break;
@@ -762,6 +794,43 @@ template g1::element scalar_multiplication_internal<1 << 19>(multiplication_runt
                                                              g1::affine_element* points);
 template g1::element scalar_multiplication_internal<1 << 20>(multiplication_runtime_state& state,
                                                              g1::affine_element* points);
+
+#if PIPPENGER_BLOCK_SIZE > 25
+template g1::element scalar_multiplication_internal<1 << 26>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template void compute_wnaf_states<1 << 26>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void organize_buckets<1 << 27>(multiplication_runtime_state& state);
+#endif
+#if PIPPENGER_BLOCK_SIZE > 24
+template g1::element scalar_multiplication_internal<1 << 25>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template void compute_wnaf_states<1 << 25>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void organize_buckets<1 << 26>(multiplication_runtime_state& state);
+#endif
+#if PIPPENGER_BLOCK_SIZE > 23
+template g1::element scalar_multiplication_internal<1 << 24>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template void compute_wnaf_states<1 << 24>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void organize_buckets<1 << 25>(multiplication_runtime_state& state);
+#endif
+#if PIPPENGER_BLOCK_SIZE > 22
+template g1::element scalar_multiplication_internal<1 << 23>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template void compute_wnaf_states<1 << 23>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void organize_buckets<1 << 24>(multiplication_runtime_state& state);
+#endif
+#if PIPPENGER_BLOCK_SIZE > 21
+template g1::element scalar_multiplication_internal<1 << 22>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template void compute_wnaf_states<1 << 22>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void organize_buckets<1 << 23>(multiplication_runtime_state& state);
+#endif
+#if PIPPENGER_BLOCK_SIZE > 20
+template g1::element scalar_multiplication_internal<1 << 21>(multiplication_runtime_state& state,
+                                                             g1::affine_element* points);
+template void compute_wnaf_states<1 << 21>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void organize_buckets<1 << 22>(multiplication_runtime_state& state);
+#endif
 
 template void compute_wnaf_states<1 << 2>(multiplication_runtime_state& state, fr::field_t* scalars);
 template void compute_wnaf_states<1 << 3>(multiplication_runtime_state& state, fr::field_t* scalars);
