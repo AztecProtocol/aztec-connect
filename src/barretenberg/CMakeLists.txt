@@ -87,6 +87,8 @@ add_library(
     waffle/proof_system/program_settings.hpp
     waffle/proof_system/permutation.hpp
     waffle/proof_system/preprocess.hpp
+    waffle/proof_system/public_inputs/public_inputs.cpp
+    waffle/proof_system/public_inputs/public_inputs.hpp
     waffle/proof_system/widgets/base_widget.hpp
     waffle/proof_system/widgets/arithmetic_widget.cpp
     waffle/proof_system/widgets/arithmetic_widget.hpp
@@ -255,6 +257,8 @@ if(PROFILING)
         waffle/proof_system/program_settings.hpp
         waffle/proof_system/permutation.hpp
         waffle/proof_system/preprocess.hpp
+        waffle/proof_system/public_inputs/public_inputs.cpp
+        waffle/proof_system/public_inputs/public_inputs.hpp
         waffle/proof_system/widgets/base_widget.hpp
         waffle/proof_system/widgets/arithmetic_widget.cpp
         waffle/proof_system/widgets/arithmetic_widget.hpp

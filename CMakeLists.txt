@@ -10,7 +10,7 @@ option(BENCHMARKS "Build benchmarks" ON)
 option(PROFILING "Build profiling" ON)
 option(FORCE_CLANG "force build with clang" OFF) # OFF is the default
 
-if (ARM)
+if(ARM)
     set(DISABLE_ASM ON)
     set(RUN_HAVE_STD_REGEX 0)
     set(RUN_HAVE_POSIX_REGEX 0)
@@ -35,8 +35,8 @@ if(APPLE)
     set(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang")
 endif()
 if(FORCE_CLANG)
-SET (CMAKE_C_COMPILER "/usr/local/clang_9.0.0/bin/clang-9")
-SET (CMAKE_CXX_COMPILER "/usr/local/clang_9.0.0/bin/clang++")
+    set(CMAKE_C_COMPILER "/usr/local/clang_9.0.0/bin/clang-9")
+    set(CMAKE_CXX_COMPILER "/usr/local/clang_9.0.0/bin/clang++")
 endif()
 
 include(GNUInstallDirs)
@@ -53,7 +53,6 @@ set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS ON)
-
 
 if(APPLE)
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
@@ -73,7 +72,7 @@ if(APPLE)
 endif()
 
 if(FORCE_CLANG)
-message(STATUS "Forcing use of clang compiler")
+    message(STATUS "Forcing use of clang compiler")
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
         set(OpenMP_C_FLAGS "-fopenmp")
         set(OpenMP_C_FLAGS_WORK "-fopenmp")
@@ -116,11 +115,21 @@ if(WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-float-conversion -Wimplicit-fallthrough=0")
 endif()
 
-add_definitions(-DBOOST_SPIRIT_X3_NO_FILESYSTEM=1)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-copy -Wno-tautological-compare")
+endif()
+
+if(NOT DEFINED PIPPENGER_BLOCK_SIZE)
+    set(PIPPENGER_BLOCK_SIZE "20" CACHE STRING "maximum multi-exponentiation size")
+endif()
+message(STATUS "Setting pippenger block size to " ${PIPPENGER_BLOCK_SIZE})
+add_definitions(-DPIPPENGER_BLOCK_SIZE=${PIPPENGER_BLOCK_SIZE})
+
+add_definitions(-DBOOST_SPIRIT_X3_NO_FILESYSTEM=1")
 
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)
 
-if (WIN32)
+if(WIN32)
     set(private_os_libs "wsock32 ws2_32")
 endif()
 

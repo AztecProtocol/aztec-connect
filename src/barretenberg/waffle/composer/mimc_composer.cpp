@@ -6,9 +6,9 @@
 
 #include "../../assert.hpp"
 #include "../../curves/bn254/fr.hpp"
-#include "../proof_system/widgets/mimc_widget.hpp"
 #include "../proof_system/proving_key/proving_key.hpp"
 #include "../proof_system/verification_key/verification_key.hpp"
+#include "../proof_system/widgets/mimc_widget.hpp"
 
 using namespace barretenberg;
 
@@ -214,15 +214,24 @@ std::shared_ptr<proving_key> MiMCComposer::compute_proving_key()
     polynomial poly_q_mimc_coefficient(new_n);
     polynomial poly_q_mimc_selector(new_n);
 
-    for (size_t i = 0; i < public_inputs.size(); ++i)
-    {
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
         epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
-        wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
+        epicycle right{ static_cast<uint32_t>(i - public_inputs.size()), WireType::RIGHT };
+
+        std::vector<epicycle>& old_epicycles = wire_epicycles[static_cast<size_t>(public_inputs[i])];
+
+        std::vector<epicycle> new_epicycles;
+
+        new_epicycles.emplace_back(left);
+        new_epicycles.emplace_back(right);
+        for (size_t i = 0; i < old_epicycles.size(); ++i) {
+            new_epicycles.emplace_back(old_epicycles[i]);
+        }
+        old_epicycles = new_epicycles;
     }
-    for (size_t i = 0; i < public_inputs.size(); ++i)
-    {
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
         poly_q_m[i] = fr::zero;
-        poly_q_1[i] = fr::zero;
+        poly_q_1[i] = fr::one;
         poly_q_2[i] = fr::zero;
         poly_q_3[i] = fr::zero;
         poly_q_c[i] = fr::zero;
@@ -318,7 +327,8 @@ std::shared_ptr<verification_key> MiMCComposer::compute_verification_key()
                                commitments[i]);
     }
 
-    circuit_verification_key = std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs, crs_path);
+    circuit_verification_key =
+        std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs, crs_path);
 
     circuit_verification_key->constraint_selectors.insert({ "Q_1", commitments[0] });
     circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });
@@ -367,10 +377,9 @@ std::shared_ptr<program_witness> MiMCComposer::compute_witness()
     polynomial poly_w_1(new_n);
     polynomial poly_w_2(new_n);
     polynomial poly_w_3(new_n);
-    for (size_t i = 0; i < public_inputs.size(); ++i)
-    {
-        fr::__copy(variables[public_inputs[i]], poly_w_1[i]);
-        fr::__copy(fr::zero, poly_w_2[i]);
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
+        fr::__copy(fr::zero, poly_w_1[i]);
+        fr::__copy(variables[public_inputs[i]], poly_w_2[i]);
         fr::__copy(fr::zero, poly_w_3[i]);
     }
     for (size_t i = public_inputs.size(); i < new_n; ++i) {
@@ -407,10 +416,8 @@ ExtendedVerifier MiMCComposer::create_verifier()
 
     ExtendedVerifier output_state(circuit_verification_key, create_manifest(public_inputs.size()));
 
-    std::unique_ptr<VerifierArithmeticWidget> arithmetic_widget =
-        std::make_unique<VerifierArithmeticWidget>();
-    std::unique_ptr<VerifierMiMCWidget> mimc_widget =
-        std::make_unique<VerifierMiMCWidget>();
+    std::unique_ptr<VerifierArithmeticWidget> arithmetic_widget = std::make_unique<VerifierArithmeticWidget>();
+    std::unique_ptr<VerifierMiMCWidget> mimc_widget = std::make_unique<VerifierMiMCWidget>();
 
     output_state.verifier_widgets.push_back(std::move(arithmetic_widget));
     output_state.verifier_widgets.push_back(std::move(mimc_widget));

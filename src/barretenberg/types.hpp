@@ -28,6 +28,9 @@
 #define USE_AVX 1
 #endif
 
+#ifndef PIPPENGER_BLOCK_SIZE
+#define PIPPENGER_BLOCK_SIZE 20
+#endif
 // void foo(const evaluation_domain& domain)
 // {
 //     std::vector<std::thread> threads(domain.thread_size);

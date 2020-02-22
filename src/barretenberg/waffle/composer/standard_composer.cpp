@@ -291,37 +291,20 @@ std::vector<uint32_t> StandardComposer::create_range_constraint(const uint32_t w
         uint64_t quad = (lo ? 1U : 0U) + (hi ? 2U : 0U);
         uint32_t quad_idx = add_variable(fr::to_montgomery_form({ quad, 0, 0, 0 }));
 
-        create_add_gate(add_triple{
-            lo_idx,
-            hi_idx,
-            quad_idx,
-            fr::one,
-            fr::add(fr::one, fr::one),
-            fr::neg_one(),
-            fr::zero
-        });
+        create_add_gate(
+            add_triple{ lo_idx, hi_idx, quad_idx, fr::one, fr::add(fr::one, fr::one), fr::neg_one(), fr::zero });
 
-        if (i == num_bits - 1)
-        {
+        if (i == num_bits - 1) {
             accumulators.push_back(quad_idx);
             accumulator = variables[quad_idx];
             accumulator_idx = quad_idx;
-        }
-        else
-        {
+        } else {
             fr::field_t new_accumulator = fr::add(accumulator, accumulator);
             new_accumulator = fr::add(new_accumulator, new_accumulator);
             new_accumulator = fr::add(new_accumulator, variables[quad_idx]);
             uint32_t new_accumulator_idx = add_variable(new_accumulator);
-            create_add_gate(add_triple{
-                accumulator_idx,
-                quad_idx,
-                new_accumulator_idx,
-                four,
-                fr::one,
-                fr::neg_one(),
-                fr::zero
-            });
+            create_add_gate(
+                add_triple{ accumulator_idx, quad_idx, new_accumulator_idx, four, fr::one, fr::neg_one(), fr::zero });
             accumulators.push_back(new_accumulator_idx);
             accumulator = new_accumulator;
             accumulator_idx = new_accumulator_idx;
@@ -331,9 +314,9 @@ std::vector<uint32_t> StandardComposer::create_range_constraint(const uint32_t w
 }
 
 waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint32_t a,
-                                                                         const uint32_t b,
-                                                                         const size_t num_bits,
-                                                                         const bool is_xor_gate)
+                                                                     const uint32_t b,
+                                                                     const size_t num_bits,
+                                                                     const bool is_xor_gate)
 {
     waffle::accumulator_triple accumulators;
 
@@ -347,10 +330,9 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
     uint32_t left_accumulator_idx = zero_idx;
     uint32_t right_accumulator_idx = zero_idx;
     uint32_t out_accumulator_idx = zero_idx;
-    fr::field_t four = fr::to_montgomery_form({{ 4, 0, 0, 0 }});
-    fr::field_t neg_two = fr::neg(fr::to_montgomery_form({{ 2, 0, 0, 0 }}));
-    for (size_t i = num_bits - 1; i < num_bits; i -= 2)
-    {
+    fr::field_t four = fr::to_montgomery_form({ { 4, 0, 0, 0 } });
+    fr::field_t neg_two = fr::neg(fr::to_montgomery_form({ { 2, 0, 0, 0 } }));
+    for (size_t i = num_bits - 1; i < num_bits; i -= 2) {
         bool left_hi_val = fr::get_bit(left_witness_value, i);
         bool left_lo_val = fr::get_bit(left_witness_value, (i - 1));
         bool right_hi_val = fr::get_bit(right_witness_value, (i));
@@ -377,30 +359,28 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
 
         // a & b = ab
         // a ^ b = a + b - ab
-        create_poly_gate(poly_triple{
-            left_hi_idx,
-            right_hi_idx,
-            out_hi_idx,
-            is_xor_gate ? neg_two : fr::one,
-            is_xor_gate ? fr::one : fr::zero,
-            is_xor_gate ? fr::one : fr::zero,
-            fr::neg_one(),
-            fr::zero
-        });
+        create_poly_gate(poly_triple{ left_hi_idx,
+                                      right_hi_idx,
+                                      out_hi_idx,
+                                      is_xor_gate ? neg_two : fr::one,
+                                      is_xor_gate ? fr::one : fr::zero,
+                                      is_xor_gate ? fr::one : fr::zero,
+                                      fr::neg_one(),
+                                      fr::zero });
 
-        create_poly_gate(poly_triple{
-            left_lo_idx,
-            right_lo_idx,
-            out_lo_idx,
-            is_xor_gate ? neg_two: fr::one,
-            is_xor_gate ? fr::one : fr::zero,
-            is_xor_gate ? fr::one : fr::zero,
-            fr::neg_one(),
-            fr::zero
-        });
+        create_poly_gate(poly_triple{ left_lo_idx,
+                                      right_lo_idx,
+                                      out_lo_idx,
+                                      is_xor_gate ? neg_two : fr::one,
+                                      is_xor_gate ? fr::one : fr::zero,
+                                      is_xor_gate ? fr::one : fr::zero,
+                                      fr::neg_one(),
+                                      fr::zero });
 
-        fr::field_t left_quad = fr::add(fr::add(variables[left_lo_idx], variables[left_hi_idx]), variables[left_hi_idx]);
-        fr::field_t right_quad = fr::add(fr::add(variables[right_lo_idx], variables[right_hi_idx]), variables[right_hi_idx]);
+        fr::field_t left_quad =
+            fr::add(fr::add(variables[left_lo_idx], variables[left_hi_idx]), variables[left_hi_idx]);
+        fr::field_t right_quad =
+            fr::add(fr::add(variables[right_lo_idx], variables[right_hi_idx]), variables[right_hi_idx]);
         fr::field_t out_quad = fr::add(fr::add(variables[out_lo_idx], variables[out_hi_idx]), variables[out_hi_idx]);
 
         uint32_t left_quad_idx = add_variable(left_quad);
@@ -413,14 +393,7 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
         uint32_t new_left_accumulator_idx = add_variable(new_left_accumulator);
 
         create_add_gate(add_triple{
-            left_accumulator_idx,
-            left_quad_idx,
-            new_left_accumulator_idx,
-            four,
-            fr::one,
-            fr::neg_one(),
-            fr::zero
-        });
+            left_accumulator_idx, left_quad_idx, new_left_accumulator_idx, four, fr::one, fr::neg_one(), fr::zero });
 
         fr::field_t new_right_accumulator = fr::add(right_accumulator, right_accumulator);
         new_right_accumulator = fr::add(new_right_accumulator, new_right_accumulator);
@@ -428,14 +401,7 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
         uint32_t new_right_accumulator_idx = add_variable(new_right_accumulator);
 
         create_add_gate(add_triple{
-            right_accumulator_idx,
-            right_quad_idx,
-            new_right_accumulator_idx,
-            four,
-            fr::one,
-            fr::neg_one(),
-            fr::zero
-        });
+            right_accumulator_idx, right_quad_idx, new_right_accumulator_idx, four, fr::one, fr::neg_one(), fr::zero });
 
         fr::field_t new_out_accumulator = fr::add(out_accumulator, out_accumulator);
         new_out_accumulator = fr::add(new_out_accumulator, new_out_accumulator);
@@ -443,14 +409,7 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
         uint32_t new_out_accumulator_idx = add_variable(new_out_accumulator);
 
         create_add_gate(add_triple{
-            out_accumulator_idx,
-            out_quad_idx,
-            new_out_accumulator_idx,
-            four,
-            fr::one,
-            fr::neg_one(),
-            fr::zero
-        });
+            out_accumulator_idx, out_quad_idx, new_out_accumulator_idx, four, fr::one, fr::neg_one(), fr::zero });
 
         accumulators.left.emplace_back(new_left_accumulator_idx);
         accumulators.right.emplace_back(new_right_accumulator_idx);
@@ -491,7 +450,6 @@ void StandardComposer::fix_witness(const uint32_t witness_index, const barretenb
     ++n;
 }
 
-
 uint32_t StandardComposer::put_constant_variable(const barretenberg::fr::field_t& variable)
 {
     if (constant_variables.count(variable) == 1) {
@@ -504,21 +462,19 @@ uint32_t StandardComposer::put_constant_variable(const barretenberg::fr::field_t
     }
 }
 
-
 waffle::accumulator_triple StandardComposer::create_and_constraint(const uint32_t a,
-                                                                       const uint32_t b,
-                                                                       const size_t num_bits)
+                                                                   const uint32_t b,
+                                                                   const size_t num_bits)
 {
     return create_logic_constraint(a, b, num_bits, false);
 }
 
 waffle::accumulator_triple StandardComposer::create_xor_constraint(const uint32_t a,
-                                                                       const uint32_t b,
-                                                                       const size_t num_bits)
+                                                                   const uint32_t b,
+                                                                   const size_t num_bits)
 {
     return create_logic_constraint(a, b, num_bits, true);
 }
-
 
 void StandardComposer::create_dummy_gates()
 {
@@ -600,7 +556,18 @@ std::shared_ptr<proving_key> StandardComposer::compute_proving_key()
 
     for (size_t i = 0; i < public_inputs.size(); ++i) {
         epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
-        wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
+        epicycle right{ static_cast<uint32_t>(i - public_inputs.size()), WireType::RIGHT };
+
+        std::vector<epicycle>& old_epicycles = wire_epicycles[static_cast<size_t>(public_inputs[i])];
+
+        std::vector<epicycle> new_epicycles;
+
+        new_epicycles.emplace_back(left);
+        new_epicycles.emplace_back(right);
+        for (size_t i = 0; i < old_epicycles.size(); ++i) {
+            new_epicycles.emplace_back(old_epicycles[i]);
+        }
+        old_epicycles = new_epicycles;
     }
     circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size(), crs_path);
     polynomial poly_q_m(new_n);
@@ -611,7 +578,7 @@ std::shared_ptr<proving_key> StandardComposer::compute_proving_key()
 
     for (size_t i = 0; i < public_inputs.size(); ++i) {
         poly_q_m[i] = fr::zero;
-        poly_q_1[i] = fr::zero;
+        poly_q_1[i] = fr::one;
         poly_q_2[i] = fr::zero;
         poly_q_3[i] = fr::zero;
         poly_q_c[i] = fr::zero;
@@ -727,8 +694,8 @@ std::shared_ptr<program_witness> StandardComposer::compute_witness()
     polynomial poly_w_2 = polynomial(new_n);
     polynomial poly_w_3 = polynomial(new_n);
     for (size_t i = 0; i < public_inputs.size(); ++i) {
-        fr::__copy(variables[public_inputs[i]], poly_w_1[i]);
-        fr::__copy(fr::zero, poly_w_2[i]);
+        fr::__copy(fr::zero, poly_w_1[i]);
+        fr::__copy(variables[public_inputs[i]], poly_w_2[i]);
         fr::__copy(fr::zero, poly_w_3[i]);
     }
     for (size_t i = public_inputs.size(); i < new_n; ++i) {

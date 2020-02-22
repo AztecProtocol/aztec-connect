@@ -1,6 +1,8 @@
 # barretenberg
 # copyright 2019 Spilsbury Holdings
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-copy")
+
 add_definitions(-DGTEST_HAS_EXCEPTIONS=0)
 if(WASM)
     add_definitions(-DGTEST_HAS_STREAM_REDIRECTION=0)
@@ -50,14 +52,15 @@ add_executable(
     test_io.cpp
     test_polynomial_arithmetic.cpp
     test_preprocess.cpp
-    test_prover.cpp
-    test_verifier.cpp
     test_transcript.cpp
     test_logic_identities.cpp
     uint256/test_uint256.cpp
     misc_crypto/test_schnorr.cpp
     misc_crypto/test_blake2s.cpp
     misc_crypto/test_sha256.cpp
+    proof_system/test_public_inputs.cpp
+    proof_system/test_prover.cpp
+    proof_system/test_verifier.cpp
     widgets/test_turbo_arithmetic_widget.cpp
     widgets/test_turbo_fixed_base_widget.cpp
     widgets/test_turbo_range_widget.cpp
