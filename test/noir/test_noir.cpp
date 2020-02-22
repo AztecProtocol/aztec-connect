@@ -157,24 +157,24 @@ TEST(noir, bool_circuit)
     auto r = compiler.start(ast, inputs);
     auto prover = std::move(r.second);
 
-    EXPECT_EQ(prover.w_l[0].from_montgomery_form(), { { 1, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_r[0].from_montgomery_form(), { { 1, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_o[0].from_montgomery_form(), { { 1, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_l[1].from_montgomery_form(), { { 0, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_r[1].from_montgomery_form(), { { 0, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_o[1].from_montgomery_form(), { { 0, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_l[2].from_montgomery_form(), { { 1, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_r[2].from_montgomery_form(), { { 0, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_o[2].from_montgomery_form(), { { 1, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_l[3].from_montgomery_form(), { { 1, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_r[3].from_montgomery_form(), { { 0, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_o[3].from_montgomery_form(), { { 1, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_l[4].from_montgomery_form(), { { 1, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_r[4].from_montgomery_form(), { { 0, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_o[4].from_montgomery_form(), { { 0, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_l[5].from_montgomery_form(), { { 0, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_r[5].from_montgomery_form(), { { 1, 0, 0, 0 } });
-    EXPECT_EQ(prover.w_o[5].from_montgomery_form(), { { 1, 0, 0, 0 } });
+    EXPECT_EQ(prover.w_l[0], fr::field_t(1));
+    EXPECT_EQ(prover.w_r[0], fr::field_t(1));
+    EXPECT_EQ(prover.w_o[0], fr::field_t(1));
+    EXPECT_EQ(prover.w_l[1], fr::field_t(0));
+    EXPECT_EQ(prover.w_r[1], fr::field_t(0));
+    EXPECT_EQ(prover.w_o[1], fr::field_t(0));
+    EXPECT_EQ(prover.w_l[2], fr::field_t(1));
+    EXPECT_EQ(prover.w_r[2], fr::field_t(0));
+    EXPECT_EQ(prover.w_o[2], fr::field_t(1));
+    EXPECT_EQ(prover.w_l[3], fr::field_t(1));
+    EXPECT_EQ(prover.w_r[3], fr::field_t(0));
+    EXPECT_EQ(prover.w_o[3], fr::field_t(1));
+    EXPECT_EQ(prover.w_l[4], fr::field_t(1));
+    EXPECT_EQ(prover.w_r[4], fr::field_t(0));
+    EXPECT_EQ(prover.w_o[4], fr::field_t(0));
+    EXPECT_EQ(prover.w_l[5], fr::field_t(0));
+    EXPECT_EQ(prover.w_r[5], fr::field_t(1));
+    EXPECT_EQ(prover.w_o[5], fr::field_t(1));
     EXPECT_EQ(prover.n, 8UL);
 }
 */

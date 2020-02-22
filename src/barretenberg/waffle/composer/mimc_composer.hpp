@@ -55,8 +55,8 @@ class MiMCComposer : public StandardComposer {
         const size_t diff = new_n - old_n;
         for (size_t i = 0; i < diff; ++i)
         {
-            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
-            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_coefficient.emplace_back(0);
+            q_mimc_selector.emplace_back(0);
         }
         current_output_wire = static_cast<uint32_t>(-1);
         return out;
@@ -76,8 +76,8 @@ class MiMCComposer : public StandardComposer {
         const size_t diff = new_n - old_n;
         for (size_t i = 0; i < diff; ++i)
         {
-            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
-            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_coefficient.emplace_back(0);
+            q_mimc_selector.emplace_back(0);
         }
         current_output_wire = static_cast<uint32_t>(-1);
         return out;
@@ -94,8 +94,8 @@ class MiMCComposer : public StandardComposer {
         const size_t diff = new_n - old_n;
         for (size_t i = 0; i < diff; ++i)
         {
-            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
-            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_coefficient.emplace_back(0);
+            q_mimc_selector.emplace_back(0);
         }
         current_output_wire = static_cast<uint32_t>(-1);
     }
@@ -110,8 +110,8 @@ class MiMCComposer : public StandardComposer {
         const size_t diff = new_n - old_n;
         for (size_t i = 0; i < diff; ++i)
         {
-            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
-            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_coefficient.emplace_back(0);
+            q_mimc_selector.emplace_back(0);
         }
         current_output_wire = static_cast<uint32_t>(-1);
     }
@@ -126,8 +126,8 @@ class MiMCComposer : public StandardComposer {
         const size_t diff = new_n - old_n;
         for (size_t i = 0; i < diff; ++i)
         {
-            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
-            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_coefficient.emplace_back(0);
+            q_mimc_selector.emplace_back(0);
         }
         current_output_wire = static_cast<uint32_t>(-1);
     }
@@ -142,8 +142,8 @@ class MiMCComposer : public StandardComposer {
         const size_t diff = new_n - old_n;
         for (size_t i = 0; i < diff; ++i)
         {
-            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
-            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_coefficient.emplace_back(0);
+            q_mimc_selector.emplace_back(0);
         }
         current_output_wire = static_cast<uint32_t>(-1);
     }
@@ -159,8 +159,8 @@ class MiMCComposer : public StandardComposer {
         const size_t diff = new_n - old_n;
         for (size_t i = 0; i < diff; ++i)
         {
-            q_mimc_coefficient.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
-            q_mimc_selector.emplace_back(barretenberg::fr::field_t({ { 0, 0, 0, 0 } }));
+            q_mimc_coefficient.emplace_back(0);
+            q_mimc_selector.emplace_back(0);
         }
         current_output_wire = static_cast<uint32_t>(-1);
     }

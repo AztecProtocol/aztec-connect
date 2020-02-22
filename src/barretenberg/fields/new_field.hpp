@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 
+#include "../uint256/uint256.hpp"
 #include "../utils.hpp"
 
 __extension__ using uint128_t = unsigned __int128;
@@ -10,105 +11,125 @@ __extension__ using uint128_t = unsigned __int128;
 namespace test {
 template <class Params> struct field {
   public:
+    field() noexcept {}
+
+    constexpr field(const uint256_t& input) noexcept
+        : data{ input.data[0], input.data[1], input.data[2], input.data[3] }
+    {
+        self_to_montgomery_form();
+    }
+
+    constexpr field(const uint64_t input) noexcept
+        : data{ input, 0, 0, 0 }
+    {
+        self_to_montgomery_form();
+    }
+    constexpr field(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t d) noexcept
+        : data{ a, b, c, d } {};
+
+    constexpr operator uint256_t() const noexcept
+    {
+        field out = from_montgomery_form();
+        return uint256_t(out.data[0], out.data[1], out.data[2], out.data[3]);
+    }
+
+    constexpr field(const field& other) = default;
+    constexpr field& operator=(const field& other) = default;
+
     alignas(32) uint64_t data[4];
 
-    static constexpr field modulus = { Params::modulus_0, Params::modulus_1, Params::modulus_2, Params::modulus_3 };
-    static constexpr field twice_modulus = {
-        Params::twice_modulus_0, Params::twice_modulus_1, Params::twice_modulus_2, Params::twice_modulus_3
-    };
-    static constexpr field zero{ 0x00, 0x00, 0x00, 0x00 };
-    static constexpr field two_inv{ Params::two_inv_0, Params::two_inv_1, Params::two_inv_2, Params::two_inv_3 };
-    static constexpr field modulus_plus_one{
-        Params::modulus_0 + 1ULL, Params::modulus_1, Params::modulus_2, Params::modulus_3
-    };
-    static constexpr field modulus_minus_two = {
-        Params::modulus_0 - 2ULL, Params::modulus_1, Params::modulus_2, Params::modulus_3
-    };
-    static constexpr field sqrt_exponent = {
-        Params::sqrt_exponent_0, Params::sqrt_exponent_1, Params::sqrt_exponent_2, Params::sqrt_exponent_3
-    };
-    static constexpr field r_squared{
-        Params::r_squared_0, Params::r_squared_1, Params::r_squared_2, Params::r_squared_3
-    };
-    static constexpr field one_raw{ 1ULL, 0ULL, 0ULL, 0ULL };
-    static constexpr field one{ Params::one_mont_0, Params::one_mont_1, Params::one_mont_2, Params::one_mont_3 };
-    static constexpr field beta{ Params::cube_root_0, Params::cube_root_1, Params::cube_root_2, Params::cube_root_3 };
-    static constexpr field multiplicative_generator{ Params::multiplicative_generator_0,
-                                                     Params::multiplicative_generator_1,
-                                                     Params::multiplicative_generator_2,
-                                                     Params::multiplicative_generator_3 };
-    static constexpr field multiplicative_generator_inverse{ Params::multiplicative_generator_inverse_0,
-                                                             Params::multiplicative_generator_inverse_1,
-                                                             Params::multiplicative_generator_inverse_2,
-                                                             Params::multiplicative_generator_inverse_3 };
-    static constexpr field alternate_multiplicative_generator{ Params::alternate_multiplicative_generator_0,
-                                                               Params::alternate_multiplicative_generator_1,
-                                                               Params::alternate_multiplicative_generator_2,
-                                                               Params::alternate_multiplicative_generator_3 };
-    static constexpr field root_of_unity{
-        Params::primitive_root_0, Params::primitive_root_1, Params::primitive_root_2, Params::primitive_root_3
-    };
+    static constexpr field modulus = field(Params::modulus_0, Params::modulus_1, Params::modulus_2, Params::modulus_3);
+    static constexpr field twice_modulus =
+        field(Params::twice_modulus_0, Params::twice_modulus_1, Params::twice_modulus_2, Params::twice_modulus_3);
+    static constexpr field zero = field(0ULL, 0ULL, 0ULL, 0ULL);
+    static constexpr field two_inv = field(Params::two_inv_0, Params::two_inv_1, Params::two_inv_2, Params::two_inv_3);
+    static constexpr field modulus_plus_one =
+        field(Params::modulus_0 + 1ULL, Params::modulus_1, Params::modulus_2, Params::modulus_3);
+    static constexpr field modulus_minus_two =
+        field(Params::modulus_0 - 2ULL, Params::modulus_1, Params::modulus_2, Params::modulus_3);
+    static constexpr field sqrt_exponent =
+        field(Params::sqrt_exponent_0, Params::sqrt_exponent_1, Params::sqrt_exponent_2, Params::sqrt_exponent_3);
+    static constexpr field r_squared =
+        field(Params::r_squared_0, Params::r_squared_1, Params::r_squared_2, Params::r_squared_3);
+    static constexpr field one_raw = field(1ULL, 0ULL, 0ULL, 0ULL);
+    static constexpr field one = field(Params::one_mont_0, Params::one_mont_1, Params::one_mont_2, Params::one_mont_3);
+    static constexpr field beta =
+        field(Params::cube_root_0, Params::cube_root_1, Params::cube_root_2, Params::cube_root_3);
+    static constexpr field multiplicative_generator = field(Params::multiplicative_generator_0,
+                                                            Params::multiplicative_generator_1,
+                                                            Params::multiplicative_generator_2,
+                                                            Params::multiplicative_generator_3);
+    static constexpr field multiplicative_generator_inverse = field(Params::multiplicative_generator_inverse_0,
+                                                                    Params::multiplicative_generator_inverse_1,
+                                                                    Params::multiplicative_generator_inverse_2,
+                                                                    Params::multiplicative_generator_inverse_3);
+    static constexpr field alternate_multiplicative_generator = field(Params::alternate_multiplicative_generator_0,
+                                                                      Params::alternate_multiplicative_generator_1,
+                                                                      Params::alternate_multiplicative_generator_2,
+                                                                      Params::alternate_multiplicative_generator_3);
+    static constexpr field root_of_unity =
+        field(Params::primitive_root_0, Params::primitive_root_1, Params::primitive_root_2, Params::primitive_root_3);
 
-    static constexpr field coset_generators[15]{ { Params::coset_generators_0[0],
-                                                   Params::coset_generators_1[0],
-                                                   Params::coset_generators_2[0],
-                                                   Params::coset_generators_3[0] },
-                                                 { Params::coset_generators_0[1],
-                                                   Params::coset_generators_1[1],
-                                                   Params::coset_generators_2[1],
-                                                   Params::coset_generators_3[1] },
-                                                 { Params::coset_generators_0[2],
-                                                   Params::coset_generators_1[2],
-                                                   Params::coset_generators_2[2],
-                                                   Params::coset_generators_3[2] },
-                                                 { Params::coset_generators_0[3],
-                                                   Params::coset_generators_1[3],
-                                                   Params::coset_generators_2[3],
-                                                   Params::coset_generators_3[3] },
-                                                 { Params::coset_generators_0[4],
-                                                   Params::coset_generators_1[4],
-                                                   Params::coset_generators_2[4],
-                                                   Params::coset_generators_3[4] },
-                                                 { Params::coset_generators_0[5],
-                                                   Params::coset_generators_1[5],
-                                                   Params::coset_generators_2[5],
-                                                   Params::coset_generators_3[5] },
-                                                 { Params::coset_generators_0[6],
-                                                   Params::coset_generators_1[6],
-                                                   Params::coset_generators_2[6],
-                                                   Params::coset_generators_3[6] },
-                                                 { Params::coset_generators_0[7],
-                                                   Params::coset_generators_1[7],
-                                                   Params::coset_generators_2[7],
-                                                   Params::coset_generators_3[7] },
-                                                 { Params::coset_generators_0[8],
-                                                   Params::coset_generators_1[8],
-                                                   Params::coset_generators_2[8],
-                                                   Params::coset_generators_3[8] },
-                                                 { Params::coset_generators_0[9],
-                                                   Params::coset_generators_1[9],
-                                                   Params::coset_generators_2[9],
-                                                   Params::coset_generators_3[9] },
-                                                 { Params::coset_generators_0[10],
-                                                   Params::coset_generators_1[10],
-                                                   Params::coset_generators_2[10],
-                                                   Params::coset_generators_3[10] },
-                                                 { Params::coset_generators_0[11],
-                                                   Params::coset_generators_1[11],
-                                                   Params::coset_generators_2[11],
-                                                   Params::coset_generators_3[11] },
-                                                 { Params::coset_generators_0[12],
-                                                   Params::coset_generators_1[12],
-                                                   Params::coset_generators_2[12],
-                                                   Params::coset_generators_3[12] },
-                                                 { Params::coset_generators_0[13],
-                                                   Params::coset_generators_1[13],
-                                                   Params::coset_generators_2[13],
-                                                   Params::coset_generators_3[13] },
-                                                 { Params::coset_generators_0[14],
-                                                   Params::coset_generators_1[14],
-                                                   Params::coset_generators_2[14],
-                                                   Params::coset_generators_3[14] } };
+    static constexpr field coset_generators[15] = { field(Params::coset_generators_0[0],
+                                                          Params::coset_generators_1[0],
+                                                          Params::coset_generators_2[0],
+                                                          Params::coset_generators_3[0]),
+                                                    field(Params::coset_generators_0[1],
+                                                          Params::coset_generators_1[1],
+                                                          Params::coset_generators_2[1],
+                                                          Params::coset_generators_3[1]),
+                                                    field(Params::coset_generators_0[2],
+                                                          Params::coset_generators_1[2],
+                                                          Params::coset_generators_2[2],
+                                                          Params::coset_generators_3[2]),
+                                                    field(Params::coset_generators_0[3],
+                                                          Params::coset_generators_1[3],
+                                                          Params::coset_generators_2[3],
+                                                          Params::coset_generators_3[3]),
+                                                    field(Params::coset_generators_0[4],
+                                                          Params::coset_generators_1[4],
+                                                          Params::coset_generators_2[4],
+                                                          Params::coset_generators_3[4]),
+                                                    field(Params::coset_generators_0[5],
+                                                          Params::coset_generators_1[5],
+                                                          Params::coset_generators_2[5],
+                                                          Params::coset_generators_3[5]),
+                                                    field(Params::coset_generators_0[6],
+                                                          Params::coset_generators_1[6],
+                                                          Params::coset_generators_2[6],
+                                                          Params::coset_generators_3[6]),
+                                                    field(Params::coset_generators_0[7],
+                                                          Params::coset_generators_1[7],
+                                                          Params::coset_generators_2[7],
+                                                          Params::coset_generators_3[7]),
+                                                    field(Params::coset_generators_0[8],
+                                                          Params::coset_generators_1[8],
+                                                          Params::coset_generators_2[8],
+                                                          Params::coset_generators_3[8]),
+                                                    field(Params::coset_generators_0[9],
+                                                          Params::coset_generators_1[9],
+                                                          Params::coset_generators_2[9],
+                                                          Params::coset_generators_3[9]),
+                                                    field(Params::coset_generators_0[10],
+                                                          Params::coset_generators_1[10],
+                                                          Params::coset_generators_2[10],
+                                                          Params::coset_generators_3[10]),
+                                                    field(Params::coset_generators_0[11],
+                                                          Params::coset_generators_1[11],
+                                                          Params::coset_generators_2[11],
+                                                          Params::coset_generators_3[11]),
+                                                    field(Params::coset_generators_0[12],
+                                                          Params::coset_generators_1[12],
+                                                          Params::coset_generators_2[12],
+                                                          Params::coset_generators_3[12]),
+                                                    field(Params::coset_generators_0[13],
+                                                          Params::coset_generators_1[13],
+                                                          Params::coset_generators_2[13],
+                                                          Params::coset_generators_3[13]),
+                                                    field(Params::coset_generators_0[14],
+                                                          Params::coset_generators_1[14],
+                                                          Params::coset_generators_2[14],
+                                                          Params::coset_generators_3[14]) };
 
     // constexpr field() noexcept
     // {
@@ -153,6 +174,7 @@ template <class Params> struct field {
     BBERG_INLINE constexpr field operator*(const field& other) const noexcept;
     BBERG_INLINE constexpr field operator+(const field& other) const noexcept;
     BBERG_INLINE constexpr field operator-(const field& other) const noexcept;
+    BBERG_INLINE constexpr field operator-() const noexcept;
     constexpr field operator/(const field& other) const noexcept;
 
     BBERG_INLINE constexpr bool operator>(const field& other) const noexcept;
@@ -276,13 +298,13 @@ template <class Params> struct field {
 
         // TODO: these parameters only work for the bn254 coordinate field.
         // Need to shift into Params and calculate correct constants for the subgroup field
-        constexpr field endo_g1 = { { Params::endo_g1_lo, Params::endo_g1_mid, Params::endo_g1_hi, 0 } };
+        constexpr field endo_g1 = { Params::endo_g1_lo, Params::endo_g1_mid, Params::endo_g1_hi, 0 };
 
-        constexpr field endo_g2 = { { Params::endo_g2_lo, Params::endo_g2_mid, 0, 0 } };
+        constexpr field endo_g2 = { Params::endo_g2_lo, Params::endo_g2_mid, 0, 0 };
 
-        constexpr field endo_minus_b1 = { { Params::endo_minus_b1_lo, Params::endo_minus_b1_mid, 0, 0 } };
+        constexpr field endo_minus_b1 = { Params::endo_minus_b1_lo, Params::endo_minus_b1_mid, 0, 0 };
 
-        constexpr field endo_b2 = { { Params::endo_b2_lo, Params::endo_b2_mid, 0, 0 } };
+        constexpr field endo_b2 = { Params::endo_b2_lo, Params::endo_b2_mid, 0, 0 };
 
         // compute c1 = (g2 * k) >> 256
         wide_array c1 = endo_g2.mul_512(k);
@@ -293,10 +315,10 @@ template <class Params> struct field {
 
         // TODO remove data duplication
         field c1_hi = {
-            { c1.data[4], c1.data[5], c1.data[6], c1.data[7] }
+            c1.data[4], c1.data[5], c1.data[6], c1.data[7]
         }; // *(field*)((uintptr_t)(&c1) + (4 * sizeof(uint64_t)));
         field c2_hi = {
-            { c2.data[4], c2.data[5], c2.data[6], c2.data[7] }
+            c2.data[4], c2.data[5], c2.data[6], c2.data[7]
         }; // *(field*)((uintptr_t)(&c2) + (4 * sizeof(uint64_t)));
 
         // compute q1 = c1 * -b1
@@ -306,7 +328,7 @@ template <class Params> struct field {
 
         // TODO: this doesn't have to be a 512-bit multiply...
         field q1_lo{ q1.data[0], q1.data[1], q1.data[2], q1.data[3] };
-        field q2_lo = { q2.data[0], q2.data[1], q2.data[2], q2.data[3] };
+        field q2_lo{ q2.data[0], q2.data[1], q2.data[2], q2.data[3] };
 
         field t1 = q2_lo - q1_lo;
         field t2 = t1 * beta + k;

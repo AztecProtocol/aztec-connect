@@ -557,8 +557,8 @@ TEST(scalar_multiplication, endomorphism_split)
 
     fr::field_t::split_into_endomorphism_scalars(scalar, *k1_t, *k2_t);
 
-    fr::field_t k1{ { (*k1_t).data[0], (*k1_t).data[1], 0, 0 } };
-    fr::field_t k2{ { (*k2_t).data[0], (*k2_t).data[1], 0, 0 } };
+    fr::field_t k1{ (*k1_t).data[0], (*k1_t).data[1], 0, 0 };
+    fr::field_t k2{ (*k2_t).data[0], (*k2_t).data[1], 0, 0 };
 
     g1::element result;
     g1::element t1 = g1::group_exponentiation_inner(g1::affine_one, k1);

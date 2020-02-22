@@ -375,7 +375,7 @@ template <typename ComposerContext> field_t<ComposerContext> field_t<ComposerCon
     result.multiplicative_constant = barretenberg::fr::one;
     const waffle::add_triple gate_coefficients{ witness_index,        witness_index,
                                                 result.witness_index, multiplicative_constant,
-                                                { { 0, 0, 0, 0 } },   barretenberg::fr::neg_one(),
+                                                0,   barretenberg::fr::neg_one(),
                                                 additive_constant };
 
     context->create_add_gate(gate_coefficients);

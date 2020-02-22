@@ -45,11 +45,11 @@ void BoolComposer::create_dummy_gates()
     q_right_bools.emplace_back(fr::zero);
 
     // add a dummy gate to ensure that left / right bool selectors are nonzero
-    q_1.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_2.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_3.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_m.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_c.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_1.emplace_back(0);
+    q_2.emplace_back(0);
+    q_3.emplace_back(0);
+    q_m.emplace_back(0);
+    q_c.emplace_back(0);
     q_left_bools.emplace_back(fr::one);
     q_right_bools.emplace_back(fr::one);
     w_l.emplace_back(zero_idx);

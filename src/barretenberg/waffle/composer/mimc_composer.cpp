@@ -19,8 +19,8 @@ void MiMCComposer::create_add_gate(const add_triple& in)
         create_noop_gate();
     }
     StandardComposer::create_add_gate(in);
-    q_mimc_coefficient.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_selector.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_mimc_coefficient.emplace_back(0);
+    q_mimc_selector.emplace_back(0);
     current_output_wire = static_cast<uint32_t>(-1);
 }
 
@@ -30,8 +30,8 @@ void MiMCComposer::create_mul_gate(const mul_triple& in)
         create_noop_gate();
     }
     StandardComposer::create_mul_gate(in);
-    q_mimc_coefficient.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_selector.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_mimc_coefficient.emplace_back(0);
+    q_mimc_selector.emplace_back(0);
     current_output_wire = static_cast<uint32_t>(-1);
 }
 
@@ -41,8 +41,8 @@ void MiMCComposer::create_bool_gate(const uint32_t variable_index)
         create_noop_gate();
     }
     StandardComposer::create_bool_gate(variable_index);
-    q_mimc_coefficient.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_selector.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_mimc_coefficient.emplace_back(0);
+    q_mimc_selector.emplace_back(0);
     current_output_wire = static_cast<uint32_t>(-1);
 }
 
@@ -52,8 +52,8 @@ void MiMCComposer::create_poly_gate(const poly_triple& in)
         create_noop_gate();
     }
     StandardComposer::create_poly_gate(in);
-    q_mimc_coefficient.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_selector.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_mimc_coefficient.emplace_back(0);
+    q_mimc_selector.emplace_back(0);
     current_output_wire = static_cast<uint32_t>(-1);
 }
 
@@ -67,11 +67,11 @@ void MiMCComposer::create_mimc_gate(const mimc_quadruplet& in)
     w_r.emplace_back(in.x_cubed_idx);
     current_output_wire = in.x_out_idx;
 
-    q_m.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_1.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_2.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_3.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_c.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_m.emplace_back(0);
+    q_1.emplace_back(0);
+    q_2.emplace_back(0);
+    q_3.emplace_back(0);
+    q_c.emplace_back(0);
     q_mimc_coefficient.emplace_back(in.mimc_constant);
     q_mimc_selector.emplace_back(fr::one);
 
@@ -86,13 +86,13 @@ void MiMCComposer::create_mimc_gate(const mimc_quadruplet& in)
 
 void MiMCComposer::create_noop_gate()
 {
-    q_m.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_1.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_2.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_3.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_c.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_coefficient.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_selector.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_m.emplace_back(0);
+    q_1.emplace_back(0);
+    q_2.emplace_back(0);
+    q_3.emplace_back(0);
+    q_c.emplace_back(0);
+    q_mimc_coefficient.emplace_back(0);
+    q_mimc_selector.emplace_back(0);
     w_l.emplace_back(zero_idx);
     w_r.emplace_back(zero_idx);
 
@@ -123,12 +123,12 @@ void MiMCComposer::create_dummy_gates()
 
     // add in dummy gates to ensure that all of our polynomials are not zero and not identical
     // TODO: sanitise this :/
-    q_m.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_1.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_2.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_3.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_c.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_coefficient.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_m.emplace_back(0);
+    q_1.emplace_back(0);
+    q_2.emplace_back(0);
+    q_3.emplace_back(0);
+    q_c.emplace_back(0);
+    q_mimc_coefficient.emplace_back(0);
     q_mimc_selector.emplace_back(fr::one);
     w_l.emplace_back(zero_idx);
     w_r.emplace_back(zero_idx);
@@ -142,13 +142,13 @@ void MiMCComposer::create_dummy_gates()
 
     ++n;
 
-    q_m.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_1.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_2.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_3.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_c.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_m.emplace_back(0);
+    q_1.emplace_back(0);
+    q_2.emplace_back(0);
+    q_3.emplace_back(0);
+    q_c.emplace_back(0);
     q_mimc_coefficient.emplace_back(fr::one);
-    q_mimc_selector.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_mimc_selector.emplace_back(0);
     w_l.emplace_back(zero_idx);
     w_r.emplace_back(zero_idx);
     w_o.emplace_back(zero_idx);

@@ -42,7 +42,7 @@ inline uint128_t field_to_uint128(const fr::field_t& input)
 
 inline fr::field_t uint128_to_field(uint128_t input)
 {
-    return { { (uint64_t)input, (uint64_t)(input >> 64), 0, 0 } };
+    return { (uint64_t)input, (uint64_t)(input >> 64), 0, 0 };
 }
 
 template <typename ComposerContext>

@@ -40,7 +40,7 @@ TEST(stdlib_merkle_tree, test_sha256_native)
 {
     std::string x = VALUES[0];
     auto y = plonk::stdlib::merkle_tree::sha256(x);
-    fr::field_t expected = { { 0x6c5a56b8fc3993a5, 0x6779c81c73019227, 0xc41c137a5c7ff2ca, 0x16bdc392b31aad9a } };
+    fr::field_t expected = { 0x6c5a56b8fc3993a5, 0x6779c81c73019227, 0xc41c137a5c7ff2ca, 0x16bdc392b31aad9a };
     EXPECT_EQ(y, expected);
 }
 
@@ -200,8 +200,8 @@ TEST(stdlib_merkle_tree, test_leveldb_get_hash_path)
 
 TEST(stdlib_merkle_tree, pedersen_native_vs_circuit)
 {
-    fr::field_t x = fr::field_t{ 0x5ec473eb273a8011, 0x50160109385471ca, 0x2f3095267e02607d, 0x02586f4a39e69b86 }
-                        .to_montgomery_form();
+    fr::field_t x = uint256_t(0x5ec473eb273a8011, 0x50160109385471ca, 0x2f3095267e02607d, 0x02586f4a39e69b86);
+
     Composer composer = Composer();
     witness_t y = witness_t(&composer, x);
     auto z = plonk::stdlib::pedersen::compress(y, y);
@@ -300,7 +300,7 @@ TEST(stdlib_merkle_tree, test_add_members)
     std::vector<field_t> values(size);
 
     for (size_t i = 0; i < size; ++i) {
-        values[i] = witness_t(&composer, i);
+        values[i] = witness_t(&composer, uint256_t(i));
     }
 
     merkle_tree tree = merkle_tree(composer, db);

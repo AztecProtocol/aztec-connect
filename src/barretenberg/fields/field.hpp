@@ -20,6 +20,31 @@ namespace barretenberg {
 template <typename FieldParams> class field {
   public:
     typedef test::field<FieldParams> field_t;
+
+    static constexpr field_t zero = field_t::zero;
+    static constexpr field_t one = field_t::one;
+    static constexpr field_t modulus = field_t::modulus;
+    static constexpr field_t two_inv = field_t::two_inv;
+    static constexpr field_t one_raw = field_t::one_raw;
+    static constexpr field_t beta = field_t::beta;
+    static constexpr field_t multiplicative_generator = field_t::multiplicative_generator;
+    static constexpr field_t coset_generators[15] = {
+        field_t::coset_generators[0],  field_t::coset_generators[1],  field_t::coset_generators[2],
+        field_t::coset_generators[3],  field_t::coset_generators[4],  field_t::coset_generators[5],
+        field_t::coset_generators[6],  field_t::coset_generators[7],  field_t::coset_generators[8],
+        field_t::coset_generators[9],  field_t::coset_generators[10], field_t::coset_generators[11],
+        field_t::coset_generators[12], field_t::coset_generators[13], field_t::coset_generators[14],
+    };
+    static constexpr field_t multiplicative_generator_inverse = field_t::multiplicative_generator_inverse;
+    static constexpr field_t alternate_multiplicative_generator = field_t::alternate_multiplicative_generator;
+    static constexpr field_t alternate_multiplicative_generator_inverse =
+        field_t::alternate_multiplicative_generator_inverse;
+    static constexpr field_t root_of_unity = field_t::root_of_unity;
+    static constexpr field_t sqrt_exponent = field_t::sqrt_exponent;
+    static constexpr field_t r_squared = field_t::r_squared;
+    static constexpr field_t modulus_plus_one = field_t::modulus_plus_one;
+    static constexpr field_t modulus_minus_two = field_t::modulus_minus_two;
+    static constexpr field_t twice_modulus = field_t::twice_modulus;
     // struct field_t : public test::field<FieldParams> {
     //     bool operator<(const field_t& other) const { return gt(other, *this); }
     // };
@@ -29,7 +54,6 @@ template <typename FieldParams> class field {
     //     // constexpr field_t()
     //     //     : data()
     //     // {}
-    //     // constexpr field_t(uint64_t a, uint64_t b, uint64_t c, uint64_t d)
     //     //     : data{ a, b, c, d }
     //     // {}
     //     // constexpr field_t(const std::array<uint64_t, 4>& in)
@@ -49,118 +73,6 @@ template <typename FieldParams> class field {
         alignas(64) uint64_t data[8];
     };
 
-    static constexpr field_t modulus = {
-        { FieldParams::modulus_0, FieldParams::modulus_1, FieldParams::modulus_2, FieldParams::modulus_3 }
-    };
-    static constexpr field_t twice_modulus = { { FieldParams::twice_modulus_0,
-                                                 FieldParams::twice_modulus_1,
-                                                 FieldParams::twice_modulus_2,
-                                                 FieldParams::twice_modulus_3 } };
-    static constexpr field_t zero{ { 0x00, 0x00, 0x00, 0x00 } };
-    static constexpr field_t two_inv{
-        { FieldParams::two_inv_0, FieldParams::two_inv_1, FieldParams::two_inv_2, FieldParams::two_inv_3 }
-    };
-    static constexpr field_t modulus_plus_one{
-        { FieldParams::modulus_0 + 1ULL, FieldParams::modulus_1, FieldParams::modulus_2, FieldParams::modulus_3 }
-    };
-    static constexpr field_t modulus_minus_two = {
-        { FieldParams::modulus_0 - 2ULL, FieldParams::modulus_1, FieldParams::modulus_2, FieldParams::modulus_3 }
-    };
-    static constexpr field_t sqrt_exponent = { { FieldParams::sqrt_exponent_0,
-                                                 FieldParams::sqrt_exponent_1,
-                                                 FieldParams::sqrt_exponent_2,
-                                                 FieldParams::sqrt_exponent_3 } };
-    static constexpr field_t r_squared{
-        { FieldParams::r_squared_0, FieldParams::r_squared_1, FieldParams::r_squared_2, FieldParams::r_squared_3 }
-    };
-    static constexpr field_t one_raw{ { 1ULL, 0ULL, 0ULL, 0ULL } };
-    static constexpr field_t one{
-        { FieldParams::one_mont_0, FieldParams::one_mont_1, FieldParams::one_mont_2, FieldParams::one_mont_3 }
-    };
-    static constexpr field_t beta{
-        { FieldParams::cube_root_0, FieldParams::cube_root_1, FieldParams::cube_root_2, FieldParams::cube_root_3 }
-    };
-    static constexpr field_t multiplicative_generator{ { FieldParams::multiplicative_generator_0,
-                                                         FieldParams::multiplicative_generator_1,
-                                                         FieldParams::multiplicative_generator_2,
-                                                         FieldParams::multiplicative_generator_3 } };
-    static constexpr field_t multiplicative_generator_inverse{ { FieldParams::multiplicative_generator_inverse_0,
-                                                                 FieldParams::multiplicative_generator_inverse_1,
-                                                                 FieldParams::multiplicative_generator_inverse_2,
-                                                                 FieldParams::multiplicative_generator_inverse_3 } };
-    static constexpr field_t alternate_multiplicative_generator{
-        { FieldParams::alternate_multiplicative_generator_0,
-          FieldParams::alternate_multiplicative_generator_1,
-          FieldParams::alternate_multiplicative_generator_2,
-          FieldParams::alternate_multiplicative_generator_3 }
-    };
-    static constexpr field_t root_of_unity{ { FieldParams::primitive_root_0,
-                                              FieldParams::primitive_root_1,
-                                              FieldParams::primitive_root_2,
-                                              FieldParams::primitive_root_3 } };
-
-    static constexpr field_t coset_generators[15]{
-        { { FieldParams::coset_generators_0[0],
-            FieldParams::coset_generators_1[0],
-            FieldParams::coset_generators_2[0],
-            FieldParams::coset_generators_3[0] } },
-        { { FieldParams::coset_generators_0[1],
-            FieldParams::coset_generators_1[1],
-            FieldParams::coset_generators_2[1],
-            FieldParams::coset_generators_3[1] } },
-        { { FieldParams::coset_generators_0[2],
-            FieldParams::coset_generators_1[2],
-            FieldParams::coset_generators_2[2],
-            FieldParams::coset_generators_3[2] } },
-        { { FieldParams::coset_generators_0[3],
-            FieldParams::coset_generators_1[3],
-            FieldParams::coset_generators_2[3],
-            FieldParams::coset_generators_3[3] } },
-        { { FieldParams::coset_generators_0[4],
-            FieldParams::coset_generators_1[4],
-            FieldParams::coset_generators_2[4],
-            FieldParams::coset_generators_3[4] } },
-        { { FieldParams::coset_generators_0[5],
-            FieldParams::coset_generators_1[5],
-            FieldParams::coset_generators_2[5],
-            FieldParams::coset_generators_3[5] } },
-        { { FieldParams::coset_generators_0[6],
-            FieldParams::coset_generators_1[6],
-            FieldParams::coset_generators_2[6],
-            FieldParams::coset_generators_3[6] } },
-        { { FieldParams::coset_generators_0[7],
-            FieldParams::coset_generators_1[7],
-            FieldParams::coset_generators_2[7],
-            FieldParams::coset_generators_3[7] } },
-        { { FieldParams::coset_generators_0[8],
-            FieldParams::coset_generators_1[8],
-            FieldParams::coset_generators_2[8],
-            FieldParams::coset_generators_3[8] } },
-        { { FieldParams::coset_generators_0[9],
-            FieldParams::coset_generators_1[9],
-            FieldParams::coset_generators_2[9],
-            FieldParams::coset_generators_3[9] } },
-        { { FieldParams::coset_generators_0[10],
-            FieldParams::coset_generators_1[10],
-            FieldParams::coset_generators_2[10],
-            FieldParams::coset_generators_3[10] } },
-        { { FieldParams::coset_generators_0[11],
-            FieldParams::coset_generators_1[11],
-            FieldParams::coset_generators_2[11],
-            FieldParams::coset_generators_3[11] } },
-        { { FieldParams::coset_generators_0[12],
-            FieldParams::coset_generators_1[12],
-            FieldParams::coset_generators_2[12],
-            FieldParams::coset_generators_3[12] } },
-        { { FieldParams::coset_generators_0[13],
-            FieldParams::coset_generators_1[13],
-            FieldParams::coset_generators_2[13],
-            FieldParams::coset_generators_3[13] } },
-        { { FieldParams::coset_generators_0[14],
-            FieldParams::coset_generators_1[14],
-            FieldParams::coset_generators_2[14],
-            FieldParams::coset_generators_3[14] } },
-    };
     /**
      * Arithmetic Methods (with return parameters)
      *
@@ -184,10 +96,9 @@ template <typename FieldParams> class field {
     //     return to_montgomery_form(out);
     // }
 
-    __attribute__((always_inline)) inline static field_t neg_one() noexcept
+    __attribute__((always_inline)) inline static constexpr field_t neg_one() noexcept
     {
-        field_t r = (zero - one);
-        return r;
+        return field_t::zero - field_t::one;
     }
 
     /**
@@ -261,7 +172,7 @@ template <typename FieldParams> class field {
                                                                    field_t* scratch_space = nullptr)
     {
         field_t* temporaries = scratch_space ? scratch_space : (field_t*)aligned_alloc(32, sizeof(field_t) * n);
-        field_t accumulator = one;
+        field_t accumulator = field_t::one;
         for (size_t i = 0; i < n; ++i) {
             __copy(accumulator, temporaries[i]);
             accumulator = accumulator * coeffs[i];
@@ -285,9 +196,9 @@ template <typename FieldParams> class field {
                                                                                field_t* result)
     {
         if (n > 0) {
-            result[0] = (multiplicative_generator);
+            result[0] = (field_t::multiplicative_generator);
         }
-        field_t work_variable = multiplicative_generator + one;
+        field_t work_variable = field_t::multiplicative_generator + field_t::one;
 
         size_t count = 1;
         while (count < n) {
@@ -298,20 +209,20 @@ template <typename FieldParams> class field {
             for (size_t j = 0; j < count; ++j) {
                 field_t target_element = result[j] * work_inverse;
                 field_t subgroup_check = target_element.pow(subgroup_size);
-                if (subgroup_check == one) {
+                if (subgroup_check == field_t::one) {
                     valid = false;
                     break;
                 }
             }
             if (valid) {
-                printf("adding ");
-                print(work_variable);
-                printf("at index %lu . \n expected = ", count);
-                print(coset_generators[count]);
+                // printf("adding ");
+                // print(work_variable);
+                // printf("at index %lu . \n expected = ", count);
+                // print(coset_generators[count]);
                 result[count] = (work_variable);
                 ++count;
             }
-            work_variable = work_variable + one;
+            work_variable = work_variable + field_t::one;
         }
     }
 
@@ -328,7 +239,7 @@ template <typename FieldParams> class field {
 
     __attribute__((always_inline)) inline static field_t serialize_from_buffer(const uint8_t* buffer)
     {
-        field_t result = zero;
+        field_t result = field_t::zero;
         for (size_t j = 0; j < 4; ++j) {
             for (size_t i = 0; i < 8; ++i) {
                 uint8_t byte = buffer[j * 8 + i];

@@ -42,24 +42,24 @@ TEST(stdlib_bool, test_basic_operations)
     d = (!f) & a;        // d = 1
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(prover.witness->wires.at("w_1")[1].from_montgomery_form(), fr::field_t({ 1, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_2")[1].from_montgomery_form(), fr::field_t({ 1, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_3")[1].from_montgomery_form(), fr::field_t({ 1, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_1")[2].from_montgomery_form(), fr::field_t({ 0, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_2")[2].from_montgomery_form(), fr::field_t({ 0, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_3")[2].from_montgomery_form(), fr::field_t({ 0, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_1")[3].from_montgomery_form(), fr::field_t({ 1, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_2")[3].from_montgomery_form(), fr::field_t({ 0, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_3")[3].from_montgomery_form(), fr::field_t({ 1, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_1")[4].from_montgomery_form(), fr::field_t({ 1, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_2")[4].from_montgomery_form(), fr::field_t({ 0, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_3")[4].from_montgomery_form(), fr::field_t({ 1, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_1")[5].from_montgomery_form(), fr::field_t({ 1, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_2")[5].from_montgomery_form(), fr::field_t({ 0, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_3")[5].from_montgomery_form(), fr::field_t({ 0, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_1")[6].from_montgomery_form(), fr::field_t({ 0, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_2")[6].from_montgomery_form(), fr::field_t({ 1, 0, 0, 0 }));
-    EXPECT_EQ(prover.witness->wires.at("w_3")[6].from_montgomery_form(), fr::field_t({ 1, 0, 0, 0 }));
+    EXPECT_EQ(prover.witness->wires.at("w_1")[1], fr::field_t(1));
+    EXPECT_EQ(prover.witness->wires.at("w_2")[1], fr::field_t(1));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[1], fr::field_t(1));
+    EXPECT_EQ(prover.witness->wires.at("w_1")[2], fr::field_t(0));
+    EXPECT_EQ(prover.witness->wires.at("w_2")[2], fr::field_t(0));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[2], fr::field_t(0));
+    EXPECT_EQ(prover.witness->wires.at("w_1")[3], fr::field_t(1));
+    EXPECT_EQ(prover.witness->wires.at("w_2")[3], fr::field_t(0));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[3], fr::field_t(1));
+    EXPECT_EQ(prover.witness->wires.at("w_1")[4], fr::field_t(1));
+    EXPECT_EQ(prover.witness->wires.at("w_2")[4], fr::field_t(0));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[4], fr::field_t(1));
+    EXPECT_EQ(prover.witness->wires.at("w_1")[5], fr::field_t(1));
+    EXPECT_EQ(prover.witness->wires.at("w_2")[5], fr::field_t(0));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[5], fr::field_t(0));
+    EXPECT_EQ(prover.witness->wires.at("w_1")[6], fr::field_t(0));
+    EXPECT_EQ(prover.witness->wires.at("w_2")[6], fr::field_t(1));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[6], fr::field_t(1));
 
     EXPECT_EQ(prover.n, 8UL);
 }

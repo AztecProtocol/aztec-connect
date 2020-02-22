@@ -14,7 +14,7 @@ static size_t current_size = 0;
 const auto init = []() {
     constexpr size_t max_num_elements = (1 << 20);
     working_memory = (fr::field_t*)(aligned_alloc(64, max_num_elements * 4 * sizeof(fr::field_t)));
-    memset(working_memory, 1, max_num_elements * 4 * sizeof(fr::field_t));
+    memset((void*)working_memory, 1, max_num_elements * 4 * sizeof(fr::field_t));
     current_size = (max_num_elements * 4);
     return 1;
 }();

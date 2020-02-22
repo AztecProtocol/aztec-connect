@@ -93,12 +93,12 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
     EXPECT_EQ(got_entropy, 0);
     rand_buffer[3] &= 0x0fffffffffffffffUL;
 
-    fr::field_t k{ { 0, 0, 0, 0 } };
+    fr::field_t k{ 0, 0, 0, 0 };
     fr::__copy(*(fr::field_t*)&rand_buffer[0], k);
     // k.self_to_montgomery_form();
-    fr::field_t k1{ { 0, 0, 0, 0 } };
+    fr::field_t k1{ 0, 0, 0, 0 };
     ;
-    fr::field_t k2{ { 0, 0, 0, 0 } };
+    fr::field_t k2{ 0, 0, 0, 0 };
     ;
 
     fr::field_t::split_into_endomorphism_scalars(k, k1, k2);
@@ -109,9 +109,9 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
     wnaf::fixed_wnaf<1, 5>(&k1.data[0], wnaf, skew, 0);
     wnaf::fixed_wnaf<1, 5>(&k2.data[0], endo_wnaf, endo_skew, 0);
 
-    fr::field_t k1_recovered{ { 0, 0, 0, 0 } };
+    fr::field_t k1_recovered{ 0, 0, 0, 0 };
     ;
-    fr::field_t k2_recovered{ { 0, 0, 0, 0 } };
+    fr::field_t k2_recovered{ 0, 0, 0, 0 };
     ;
 
     recover_fixed_wnaf(wnaf, skew, k1_recovered.data[1], k1_recovered.data[0], 5);

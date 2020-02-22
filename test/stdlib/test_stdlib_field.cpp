@@ -85,7 +85,7 @@ TEST(stdlib_field, test_add_mul_with_constants)
 
     uint64_t expected = fidget(composer);
     waffle::Prover prover = composer.preprocess();
-    EXPECT_EQ(prover.witness->wires.at("w_3")[18].from_montgomery_form(), fr::field_t({ expected, 0, 0, 0 }));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[18], fr::field_t(expected));
 
     EXPECT_EQ(prover.n, 32UL);
     waffle::Verifier verifier = composer.create_verifier();
@@ -102,7 +102,7 @@ TEST(stdlib_field, test_field_fibbonaci)
 
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(prover.witness->wires.at("w_3")[17].from_montgomery_form(), fr::field_t({ 4181, 0, 0, 0 }));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[17], fr::field_t(4181));
     EXPECT_EQ(prover.n, 32UL);
     waffle::Verifier verifier = composer.create_verifier();
 
@@ -124,8 +124,8 @@ TEST(stdlib_field, test_equality)
 
     waffle::Prover prover = composer.preprocess();
 
-    fr::field_t x = composer.get_variable(r.witness_index).from_montgomery_form();
-    EXPECT_EQ(x, fr::field_t({ 1, 0, 0, 0 }));
+    fr::field_t x = composer.get_variable(r.witness_index);
+    EXPECT_EQ(x, fr::field_t(1));
 
     EXPECT_EQ(prover.n, 8UL);
     waffle::Verifier verifier = composer.create_verifier();
@@ -148,8 +148,8 @@ TEST(stdlib_field, test_equality_false)
 
     waffle::Prover prover = composer.preprocess();
 
-    fr::field_t x = composer.get_variable(r.witness_index).from_montgomery_form();
-    EXPECT_EQ(x, fr::field_t({ 0, 0, 0, 0 }));
+    fr::field_t x = composer.get_variable(r.witness_index);
+    EXPECT_EQ(x, fr::field_t(0));
 
     EXPECT_EQ(prover.n, 8UL);
     waffle::Verifier verifier = composer.create_verifier();
@@ -173,8 +173,8 @@ TEST(stdlib_field, test_equality_with_constants)
 
     waffle::Prover prover = composer.preprocess();
 
-    fr::field_t x = composer.get_variable(r.witness_index).from_montgomery_form();
-    EXPECT_EQ(x, fr::field_t({ 1, 0, 0, 0 }));
+    fr::field_t x = composer.get_variable(r.witness_index);
+    EXPECT_EQ(x, fr::field_t(1));
 
     EXPECT_EQ(prover.n, 16UL);
     waffle::Verifier verifier = composer.create_verifier();
@@ -209,14 +209,8 @@ TEST(stdlib_field, is_zero)
     // yuck
     field_t a = (public_witness_t(&composer, fr::random_element()));
     field_t b = (public_witness_t(&composer, fr::neg_one()));
-    field_t c_1(
-        &composer,
-        barretenberg::fr::field_t{ 0x1122334455667788, 0x8877665544332211, 0xaabbccddeeff9933, 0x1122112211221122 }
-            .to_montgomery_form());
-    field_t c_2(
-        &composer,
-        barretenberg::fr::field_t{ 0xaabbccddeeff9933, 0x8877665544332211, 0x1122334455667788, 0x1122112211221122 }
-            .to_montgomery_form());
+    field_t c_1(&composer, uint256_t(0x1122334455667788, 0x8877665544332211, 0xaabbccddeeff9933, 0x1122112211221122));
+    field_t c_2(&composer, uint256_t(0xaabbccddeeff9933, 0x8877665544332211, 0x1122334455667788, 0x1122112211221122));
     field_t c_3(&composer, barretenberg::fr::one);
 
     field_t c_4 = c_1 + c_2;

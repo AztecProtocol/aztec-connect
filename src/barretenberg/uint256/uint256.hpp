@@ -14,43 +14,21 @@
 #include <cstdint>
 #include <iostream>
 
-#include "../curves/bn254/fr.hpp"
-
 class uint256_t {
   public:
-    constexpr uint256_t(const uint64_t a = 0, const uint64_t b = 0, const uint64_t c = 0, const uint64_t d = 0)
-        : data()
-    {
-        data[0] = a;
-        data[1] = b;
-        data[2] = c;
-        data[3] = d;
-    }
+    constexpr uint256_t(const uint64_t a = 0)
+        : data{ a, 0, 0, 0 }
+    {}
+
+    constexpr uint256_t(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t d)
+        : data{ a, b, c, d }
+    {}
 
     constexpr uint256_t(const uint256_t& other)
-        : data()
-    {
-        data[0] = other.data[0];
-        data[1] = other.data[1];
-        data[2] = other.data[2];
-        data[3] = other.data[3];
-    }
-
-    uint256_t(const barretenberg::fr::field_t& input)
-    {
-        barretenberg::fr::field_t val = input.from_montgomery_form();
-        data[0] = val.data[0];
-        data[1] = val.data[1];
-        data[2] = val.data[2];
-        data[3] = val.data[3];
-    }
+        : data{ other.data[0], other.data[1], other.data[2], other.data[3] }
+    {}
 
     constexpr uint256_t& operator=(const uint256_t& other) = default;
-
-    operator barretenberg::fr::field_t() const
-    {
-        return barretenberg::fr::field_t{ data[0], data[1], data[2], data[3] }.to_montgomery_form();
-    }
 
     explicit constexpr operator bool() const { return static_cast<bool>(data[0]); };
     explicit constexpr operator uint8_t() const { return static_cast<uint8_t>(data[0]); };
@@ -63,6 +41,7 @@ class uint256_t {
 
     constexpr uint256_t operator+(const uint256_t& other) const;
     constexpr uint256_t operator-(const uint256_t& other) const;
+    constexpr uint256_t operator-() const;
 
     constexpr uint256_t operator*(const uint256_t& other) const;
     constexpr uint256_t operator/(const uint256_t& other) const;
@@ -111,6 +90,17 @@ class uint256_t {
         return *this;
     };
 
+    constexpr uint256_t& operator++()
+    {
+        *this += uint256_t(1);
+        return *this;
+    };
+    constexpr uint256_t& operator--()
+    {
+        *this -= uint256_t(1);
+        return *this;
+    };
+
     constexpr uint256_t& operator&=(const uint256_t& other)
     {
         *this = *this & other;
@@ -137,6 +127,8 @@ class uint256_t {
         *this = *this << other;
         return *this;
     };
+
+    constexpr uint256_t invmod(const uint256_t& modulus) const;
 
     friend std::ostream& operator<<(std::ostream& os, const uint256_t& val);
 

@@ -92,13 +92,12 @@ constexpr uint256_t::divmod_output uint256_t::divmod(const uint256_t& a, const u
     uint64_t bit_difference = a.get_msb() - b.get_msb();
 
     uint256_t divisor = b << bit_difference;
-    uint256_t CIRCUIT_UINT_MAX_PLUS_ONE = uint256_t(1) << bit_difference;
+    uint256_t accumulator = uint256_t(1) << bit_difference;
 
     // if the divisor is bigger than the remainder, a and b have the same bit length
     if (divisor > remainder) {
-        // TODO: what is faster, adding or shifting?
-        divisor += divisor;
-        CIRCUIT_UINT_MAX_PLUS_ONE += CIRCUIT_UINT_MAX_PLUS_ONE;
+        divisor >>= 1;
+        accumulator >>= 1;
     }
 
     // while the remainder is bigger than our original divisor, we can subtract multiples of b from the remainder,
@@ -110,15 +109,45 @@ constexpr uint256_t::divmod_output uint256_t::divmod(const uint256_t& a, const u
         if (remainder >= divisor) {
             remainder -= divisor;
             // we can use OR here instead of +, as
-            // CIRCUIT_UINT_MAX_PLUS_ONE is always a nice power of two
-            quotient |= CIRCUIT_UINT_MAX_PLUS_ONE;
+            // accumulator is always a nice power of two
+            quotient |= accumulator;
         }
         divisor >>= 1;
-        CIRCUIT_UINT_MAX_PLUS_ONE >>= 1;
+        accumulator >>= 1;
     }
 
     return { { quotient.data[0], quotient.data[1], quotient.data[2], quotient.data[3] },
              { remainder.data[0], remainder.data[1], remainder.data[2], remainder.data[3] } };
+}
+
+/**
+ * computes the inverse of *this, modulo modulus, via the extended Euclidean algorithm
+ **/
+constexpr uint256_t uint256_t::invmod(const uint256_t& modulus) const
+{
+    if (*this == 0 || modulus == 0) {
+        return 0;
+    }
+
+    uint256_t t1 = 0;
+    uint256_t t2 = 1;
+    uint256_t r2 = (*this > modulus) ? *this % modulus : *this;
+    uint256_t r1 = modulus;
+    uint256_t q = 0;
+    while (r2 != 0) {
+        q = r1 / r2;
+        uint256_t temp_t1 = t1;
+        uint256_t temp_r1 = r1;
+        t1 = t2;
+        t2 = temp_t1 - q * t2;
+        r1 = r2;
+        r2 = temp_r1 - q * r2;
+    }
+
+    if (t1 > modulus) {
+        return modulus + t1;
+    }
+    return t1;
 }
 
 constexpr bool uint256_t::get_bit(const uint64_t bit_index) const
@@ -146,9 +175,9 @@ constexpr uint64_t uint256_t::get_msb() const
     };
 
     uint64_t idx = get_uint64_msb(data[3]);
-    idx = idx == 0 ? get_uint64_msb(data[2]) : idx + 64;
-    idx = idx == 0 ? get_uint64_msb(data[1]) : idx + 64;
-    idx = idx == 0 ? get_uint64_msb(data[0]) : idx + 64;
+    idx = (idx == 0 && data[3] == 0) ? get_uint64_msb(data[2]) : idx + 64;
+    idx = (idx == 0 && data[2] == 0) ? get_uint64_msb(data[1]) : idx + 64;
+    idx = (idx == 0 && data[1] == 0) ? get_uint64_msb(data[0]) : idx + 64;
     return idx;
 }
 
@@ -169,6 +198,11 @@ constexpr uint256_t uint256_t::operator-(const uint256_t& other) const
     const auto [r2, t2] = sbb(data[2], other.data[2], t1);
     const auto r3 = sbb_discard_hi(data[3], other.data[3], t2);
     return { r0, r1, r2, r3 };
+}
+
+constexpr uint256_t uint256_t::operator-() const
+{
+    return uint256_t(0) - *this;
 }
 
 constexpr uint256_t uint256_t::operator*(const uint256_t& other) const

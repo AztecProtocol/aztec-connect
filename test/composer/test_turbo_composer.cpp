@@ -224,7 +224,7 @@ TEST(turbo_composer, small_scalar_multipliers)
     origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
 
     grumpkin::fr::field_t scalar_multiplier_entropy = grumpkin::fr::random_element();
-    grumpkin::fr::field_t scalar_multiplier_base{ { scalar_multiplier_entropy.data[0] & bit_mask, 0, 0, 0 } };
+    grumpkin::fr::field_t scalar_multiplier_base{ scalar_multiplier_entropy.data[0] & bit_mask, 0, 0, 0 };
     // scalar_multiplier_base.data[0] = scalar_multiplier_base.data[0] | (1ULL);
     scalar_multiplier_base.data[0] = scalar_multiplier_base.data[0] & (~1ULL);
     grumpkin::fr::field_t scalar_multiplier = scalar_multiplier_base;

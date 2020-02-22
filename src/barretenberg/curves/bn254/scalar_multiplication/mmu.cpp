@@ -46,10 +46,10 @@ const auto init = []() {
     skew_memory = (bool*)(aligned_alloc(64, max_num_points * 2 * sizeof(bool)));
     memset((void*)skew_memory, 0, max_num_points * 2 * sizeof(bool));
     memset((void*)wnaf_memory, 1, max_num_points * max_num_rounds * 2 * sizeof(uint64_t));
-    memset((g1::element*)bucket_memory, 0xff, (max_buckets + thread_overspill) * sizeof(g1::element));
-    memset((g1::affine_element*)point_pairs_1, 0xff, (max_num_points * 2) * sizeof(g1::affine_element));
-    memset((g1::affine_element*)point_pairs_2, 0xff, (max_num_points * 2) * sizeof(g1::affine_element));
-    memset((fq::field_t*)scratch_space, 0xff, (max_num_points) * sizeof(fq::field_t));
+    memset((void*)bucket_memory, 0xff, (max_buckets + thread_overspill) * sizeof(g1::element));
+    memset((void*)point_pairs_1, 0xff, (max_num_points * 2) * sizeof(g1::affine_element));
+    memset((void*)point_pairs_2, 0xff, (max_num_points * 2) * sizeof(g1::affine_element));
+    memset((void*)scratch_space, 0xff, (max_num_points) * sizeof(fq::field_t));
 
     memset((void*)bucket_count_memory, 0x00, max_num_points * 2 * sizeof(uint32_t));
     memset((void*)bit_count_memory, 0x00, max_num_points * 2 * sizeof(uint32_t));

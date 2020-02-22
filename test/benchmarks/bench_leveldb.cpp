@@ -25,7 +25,7 @@ static std::vector<std::string> VALUES = []() {
 void hash(State& state) noexcept
 {
     for (auto _ : state) {
-        hash({ { { 0, 0, 0, 0 } }, { { 1, 1, 1, 1 } } });
+        hash({ { 0, 0, 0, 0 }, { 1, 1, 1, 1 } });
     }
 }
 BENCHMARK(hash)->MinTime(5);

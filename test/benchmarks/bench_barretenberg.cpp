@@ -330,8 +330,8 @@ void fq_sqr_asm_bench(State& state) noexcept
 {
     uint64_t count = 0;
     uint64_t i = 0;
-    fq::field_t a{ { 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
-    fq::field_t r{ { 1, 0, 0, 0 } };
+    fq::field_t a{ 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 };
+    fq::field_t r{ 1, 0, 0, 0 };
     for (auto _ : state) {
         size_t before = rdtsc();
         (DoNotOptimize(fq_sqr_asm(a, r)));
@@ -348,8 +348,8 @@ void fq_mul_asm_bench(State& state) noexcept
 {
     uint64_t count = 0;
     uint64_t i = 0;
-    fq::field_t a{ { 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
-    fq::field_t r{ { 1, 0, 0, 0 } };
+    fq::field_t a{ 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 };
+    fq::field_t r{ 1, 0, 0, 0 } };
     for (auto _ : state) {
         size_t before = rdtsc();
         (DoNotOptimize(fq_mul_asm(a, r)));

@@ -4,29 +4,6 @@
 
 using namespace grumpkin;
 
-// TEST(grumpkin, generator)
-// {
-//     g1::element result = g1::one;
-//     result.y = fq::to_montgomery_form({{ 0x833fc48d823f272c, 0x2d270d45f1181294, 0xcf135e7506a45d63, 2 }});
-//     result.y.print();
-//     EXPECT_EQ(g1::on_curve(result), true);
-
-//     fq::field_t T0 = result.y.sqr();
-//     fq::field_t T2 = fq::to_montgomery_form({{ 17, 0, 0, 0 }});
-//     fq::field_t T3 = T0 + T2;
-//     fq::print(T3).from_montgomery_form();
-//     fq::print(T2.neg());
-
-//     fq::field_t xx = result.x.sqr();
-//     fq::field_t xxx = result.x * xx;
-
-//     fq::field_t yy_sub_xxx = result.y.sqr() - xxx;
-//     printf("y^2 - x^3 = \n");
-//     fq::print(yy_sub_xxx).from_montgomery_form();
-
-//     printf("foo\n");
-// }
-
 TEST(grumpkin, random_element)
 {
     g1::element result = g1::random_element();

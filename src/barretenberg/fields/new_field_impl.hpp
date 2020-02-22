@@ -1041,7 +1041,7 @@ template <class T> constexpr void field<T>::self_add_with_coarse_reduction(const
 template <class T> constexpr field<T> field<T>::operator-(const field& other) const noexcept
 {
 #ifdef DISABLE_SHENANIGANS
-    return subtract(other);
+    return modulus - *this;
 #else
     if (std::is_constant_evaluated()) {
         return subtract(other);
@@ -1049,6 +1049,11 @@ template <class T> constexpr field<T> field<T>::operator-(const field& other) co
         return asm_sub(*this, other);
     }
 #endif
+}
+
+template <class T> constexpr field<T> field<T>::operator-() const noexcept
+{
+    return modulus - *this;
 }
 
 template <class T> constexpr field<T> field<T>::sub_with_coarse_reduction(const field& other) const noexcept
@@ -1261,9 +1266,8 @@ template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noex
     // We can iteratively transform t into ever smaller subgroups, until t = 1.
     // At each iteration, we need to find a new value for b, which we can obtain
     // by repeatedly squaring z^{Q}
-    field Q_minus_one_over_two{
-        { T::Q_minus_one_over_two_0, T::Q_minus_one_over_two_1, T::Q_minus_one_over_two_2, T::Q_minus_one_over_two_3 }
-    };
+    constexpr field Q_minus_one_over_two = field(
+        T::Q_minus_one_over_two_0, T::Q_minus_one_over_two_1, T::Q_minus_one_over_two_2, T::Q_minus_one_over_two_3);
     // __to_montgomery_form(Q_minus_one_over_two, Q_minus_one_over_two);
     field z = multiplicative_generator; // the generator is a non-residue
     field b = pow(Q_minus_one_over_two);
