@@ -63,9 +63,9 @@ template <typename T> inline T keep_n_lsb(T input, size_t num_bits)
     return num_bits >= sizeof(T) * 8 ? input : input & (((T)1 << num_bits) - 1);
 }
 
-inline uint128_t field_to_uint128(barretenberg::fr::field_t input)
+inline uint128_t field_to_uint128(barretenberg::fr::field_t const& in)
 {
-    input = barretenberg::fr::from_montgomery_form(input);
+    barretenberg::fr::field_t input = barretenberg::fr::from_montgomery_form(in);
     uint128_t lo = input.data[0];
     uint128_t hi = input.data[1];
     return (hi << 64) | lo;
