@@ -9,7 +9,7 @@ option(TESTING "Build tests" ON)
 option(BENCHMARKS "Build benchmarks" ON)
 option(PROFILING "Build profiling" ON)
 option(FORCE_CLANG "force build with clang" OFF) # OFF is the default
-option(PIPPENGER_BLOCK_SIZE "maximum multi-exponentiation size" "20")
+SET(PIPPENGER_BLOCK_SIZE "20" CACHE STRING "maximum multi-exponentiation size")
 
 if (ARM)
     set(DISABLE_ASM ON)
