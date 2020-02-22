@@ -125,7 +125,7 @@ endif()
 message(STATUS "Setting pippenger block size to " ${PIPPENGER_BLOCK_SIZE})
 add_definitions(-DPIPPENGER_BLOCK_SIZE=${PIPPENGER_BLOCK_SIZE})
 
-add_definitions(-DBOOST_SPIRIT_X3_NO_FILESYSTEM=1")
+add_definitions(-DBOOST_SPIRIT_X3_NO_FILESYSTEM=1)
 
 set(private_include_dir ${PROJECT_SOURCE_DIR}/src)
 
