@@ -206,14 +206,15 @@ int main(int argc, char** argv)
         std::cout << tx << std::flush;
         success = join_split(ctx, tx);
     } else if (args[1] == "join-split-auto") {
-        if (args.size() != 2) {
-            std::cout << "usage: " << argv[0] << " join-split-auto" << std::endl;
+        if (args.size() != 3) {
+            std::cout << "usage: " << argv[0] << " join-split-auto <num transactions>" << std::endl;
             return -1;
         }
+        uint32_t num_txs = (uint32_t)atoi(args[2].c_str());
 
         join_split(ctx, create_join_split_tx({ "0", "0", "-", "-", "50", "50", "100", "0" }, user));
 
-        for (size_t i=0; i<4; ++i) {
+        for (size_t i=0; i<num_txs-1; ++i) {
             auto index1 = std::to_string(i * 2);
             auto index2 = std::to_string(i * 2 + 1);
             join_split(ctx, create_join_split_tx({ index1, index2, "50", "50", "50", "50", "0", "0" }, user));
