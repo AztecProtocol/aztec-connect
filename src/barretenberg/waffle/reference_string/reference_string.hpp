@@ -20,7 +20,7 @@ class VerifierReferenceString
 public:
 
     VerifierReferenceString();
-    VerifierReferenceString(const size_t num_points);
+    VerifierReferenceString(const size_t num_points, std::string const& path);
     VerifierReferenceString(const VerifierReferenceString &other);
     VerifierReferenceString(VerifierReferenceString &&other);
 
@@ -41,7 +41,7 @@ class ReferenceString
 public:
 
     ReferenceString();
-    ReferenceString(const size_t num_points);
+    ReferenceString(const size_t num_points, std::string const& path);
     ReferenceString(const ReferenceString &other);
     ReferenceString(ReferenceString &&other);
 

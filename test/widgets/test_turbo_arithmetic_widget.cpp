@@ -16,7 +16,7 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
     const size_t num_gates = 4;
 
     std::shared_ptr<program_witness> witness = std::make_shared<program_witness>();
-    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(num_gates);
+    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(num_gates, 0, BARRETENBERG_SRS_PATH);
 
     polynomial w_1(num_gates);
     polynomial w_2(num_gates);
@@ -159,7 +159,7 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
 
 
     waffle::ProverTurboArithmeticWidget widget(key.get(), witness.get());
-    
+
 
     transcript::Transcript transcript = test_helpers::create_dummy_standard_transcript();
 

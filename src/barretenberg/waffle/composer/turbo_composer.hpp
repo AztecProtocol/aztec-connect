@@ -9,7 +9,7 @@
 namespace waffle {
 class TurboComposer : public ComposerBase {
   public:
-    TurboComposer(const size_t size_hint = 0);
+    TurboComposer(std::string const& crs_path = BARRETENBERG_SRS_PATH, const size_t size_hint = 0);
     TurboComposer(TurboComposer&& other) = default;
     TurboComposer& operator=(TurboComposer&& other) = default;
     ~TurboComposer() {}

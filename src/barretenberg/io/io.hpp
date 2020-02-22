@@ -238,8 +238,8 @@ inline void read_transcript(g1::affine_element* monomials,
     g2::copy_affine(g2_buffer[1], g2_x);
     aligned_free(g2_buffer);
     */
-   read_transcript_g1(monomials, degree, path);
-   read_transcript_g2(g2_x, path);
+    read_transcript_g1(monomials, degree, path);
+    read_transcript_g2(g2_x, path);
 }
 
 } // namespace io

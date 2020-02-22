@@ -156,7 +156,7 @@ int main(int argc, char** argv)
     }
 
     // Composer get's corrupted if we use move ctors. Have to create at top level :/
-    Composer composer = Composer();
+    Composer composer = Composer("../srs_db/ignition");
     rollup_context ctx = create_rollup_context(composer);
     user_context user = create_user_context();
     std::vector<std::string> tx_args(args.begin() + 2, args.end());

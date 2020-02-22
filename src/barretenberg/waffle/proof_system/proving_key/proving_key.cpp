@@ -3,13 +3,13 @@
 #include "../../../polynomials/polynomial_arithmetic.hpp"
 
 namespace waffle {
-proving_key::proving_key(const size_t num_gates, const size_t num_inputs)
+proving_key::proving_key(const size_t num_gates, const size_t num_inputs, std::string const& crs_path)
     : n(num_gates)
     , num_public_inputs(num_inputs)
     , small_domain(n, n)
     , mid_domain(2 * n, n > min_thread_block ? n : 2 * n)
     , large_domain(4 * n, n > min_thread_block ? n : 4 * n)
-    , reference_string(n)
+    , reference_string(n, crs_path)
 {
     if (n != 0) {
         small_domain.compute_lookup_table();

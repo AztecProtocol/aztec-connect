@@ -421,7 +421,7 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
             fr::neg_one(),
             fr::zero
         });
-    
+
         fr::field_t new_right_accumulator = fr::add(right_accumulator, right_accumulator);
         new_right_accumulator = fr::add(new_right_accumulator, new_right_accumulator);
         new_right_accumulator = fr::add(new_right_accumulator, right_quad);
@@ -602,7 +602,7 @@ std::shared_ptr<proving_key> StandardComposer::compute_proving_key()
         epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
         wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
     }
-    circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size());
+    circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size(), crs_path);
     polynomial poly_q_m(new_n);
     polynomial poly_q_c(new_n);
     polynomial poly_q_1(new_n);
@@ -689,7 +689,7 @@ std::shared_ptr<verification_key> StandardComposer::compute_verification_key()
     }
 
     circuit_verification_key =
-        std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs);
+        std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs, crs_path);
 
     circuit_verification_key->constraint_selectors.insert({ "Q_1", commitments[0] });
     circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });

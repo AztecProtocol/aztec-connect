@@ -164,7 +164,7 @@ TEST(turbo_logic_widget, xor_quotient_polynomial_satisfiability)
 {
     const size_t num_gates = 64;
     std::shared_ptr<program_witness> witness = std::make_shared<program_witness>();
-    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(num_gates);
+    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(num_gates, 0, BARRETENBERG_SRS_PATH);
 
     waffle::ProverTurboLogicWidget widget = create_test_widget_circuit(num_gates, witness, key, false, true);
 
@@ -181,7 +181,7 @@ TEST(turbo_logic_widget, and_quotient_polynomial_satisfiability)
 {
     const size_t num_gates = 64;
     std::shared_ptr<program_witness> witness = std::make_shared<program_witness>();
-    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(num_gates);
+    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(num_gates, 0, BARRETENBERG_SRS_PATH);
 
     waffle::ProverTurboLogicWidget widget = create_test_widget_circuit(num_gates, witness, key, true, false);
 
@@ -199,7 +199,7 @@ TEST(turbo_logic_widget, and_xor_quotient_polynomial_satisfiability)
 {
     const size_t num_gates = 64;
     std::shared_ptr<program_witness> witness = std::make_shared<program_witness>();
-    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(num_gates);
+    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(num_gates, 0, BARRETENBERG_SRS_PATH);
 
     waffle::ProverTurboLogicWidget widget = create_test_widget_circuit(num_gates, witness, key, true, true);
 
@@ -216,7 +216,7 @@ TEST(turbo_logic_widget, xor_compute_linear_contribution)
 {
     const size_t num_gates = 64;
     std::shared_ptr<program_witness> witness = std::make_shared<program_witness>();
-    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(num_gates);
+    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(num_gates, 0, BARRETENBERG_SRS_PATH);
 
     waffle::ProverTurboLogicWidget widget = create_test_widget_circuit(num_gates, witness, key, false, true, true);
 
@@ -244,7 +244,7 @@ TEST(turbo_logic_widget, xor_compute_linear_contribution)
     const polynomial& q_c = key->constraint_selectors.at("q_c");
     fr::field_t q_c_eval = q_c.evaluate(z_challenge, num_gates);
     transcript.add_element("q_c", transcript_helpers::convert_field_element(q_c_eval));
-    
+
     for (size_t i = 0; i < num_gates; ++i)
     {
         key->linear_poly[i] = fr::zero;

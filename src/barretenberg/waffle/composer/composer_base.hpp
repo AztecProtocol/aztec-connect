@@ -149,7 +149,11 @@ class ComposerBase {
     };
 
     ComposerBase()
-        : n(0){};
+        : n(0)
+        , crs_path(BARRETENBERG_SRS_PATH){};
+    ComposerBase(std::string const& crs_path)
+        : n(0)
+        , crs_path(crs_path){};
     ComposerBase(ComposerBase&& other) = default;
     ComposerBase& operator=(ComposerBase&& other) = default;
     virtual ~ComposerBase(){};
@@ -233,6 +237,8 @@ class ComposerBase {
 
     bool computed_witness = false;
     std::shared_ptr<program_witness> witness;
+
+    std::string crs_path;
 };
 
 extern template void ComposerBase::compute_sigma_permutations<3>(proving_key* key);

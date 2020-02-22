@@ -14,13 +14,13 @@ VerifierReferenceString::VerifierReferenceString()
     , degree(0)
 {}
 
-VerifierReferenceString::VerifierReferenceString(const size_t num_points)
+VerifierReferenceString::VerifierReferenceString(const size_t num_points, std::string const& path)
 {
     degree = num_points;
     if (num_points > 0) {
         precomputed_g2_lines =
             (barretenberg::pairing::miller_lines*)(aligned_alloc(64, sizeof(barretenberg::pairing::miller_lines) * 2));
-        barretenberg::io::read_transcript_g2(g2_x, BARRETENBERG_SRS_PATH);
+        barretenberg::io::read_transcript_g2(g2_x, path);
 
         barretenberg::g2::element g2_x_jac;
         barretenberg::g2::affine_to_jacobian(g2_x, g2_x_jac);
@@ -108,7 +108,7 @@ ReferenceString::ReferenceString()
     , degree(0)
 {}
 
-ReferenceString::ReferenceString(const size_t num_points)
+ReferenceString::ReferenceString(const size_t num_points, std::string const& path)
 {
     degree = num_points;
     if (num_points > 0) {
@@ -116,8 +116,8 @@ ReferenceString::ReferenceString(const size_t num_points)
             64, sizeof(barretenberg::g1::affine_element) * (2 * degree + 2)));
         precomputed_g2_lines =
             (barretenberg::pairing::miller_lines*)(aligned_alloc(64, sizeof(barretenberg::pairing::miller_lines) * 2));
-        barretenberg::io::read_transcript_g1(monomials, degree, BARRETENBERG_SRS_PATH);
-        barretenberg::io::read_transcript_g2(g2_x, BARRETENBERG_SRS_PATH);
+        barretenberg::io::read_transcript_g1(monomials, degree, path);
+        barretenberg::io::read_transcript_g2(g2_x, path);
         barretenberg::scalar_multiplication::generate_pippenger_point_table(monomials, monomials, degree);
 
         barretenberg::g2::element g2_x_jac;
