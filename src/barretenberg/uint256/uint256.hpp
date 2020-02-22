@@ -130,6 +130,8 @@ class uint256_t {
 
     constexpr uint256_t invmod(const uint256_t& modulus) const;
 
+    constexpr std::pair<uint256_t, uint256_t> mul_512(const uint256_t& other) const;
+
     friend std::ostream& operator<<(std::ostream& os, const uint256_t& val);
 
     uint64_t data[4];

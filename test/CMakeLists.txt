@@ -56,6 +56,7 @@ add_executable(
     test_transcript.cpp
     test_logic_identities.cpp
     uint256/test_uint256.cpp
+    uint256/test_uint512.cpp
     misc_crypto/test_schnorr.cpp
     misc_crypto/test_sha256.cpp
     proof_system/test_public_inputs.cpp

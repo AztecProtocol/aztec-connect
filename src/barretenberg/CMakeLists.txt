@@ -24,7 +24,10 @@ endif()
 add_library(
     barretenberg STATIC
     types.hpp
+    uint256/uint256_impl.hpp
     uint256/uint256.hpp
+    uint256/uint512_impl.hpp
+    uint256/uint512.hpp
     fields/new_field.hpp
     fields/new_field_impl.hpp
     fields/new_field2.hpp
@@ -193,6 +196,9 @@ if(PROFILING)
         fields/asm_macros.hpp
         types.hpp
         uint256/uint256.hpp
+        uint256/uint256_impl.hpp
+        uint256/uint512_impl.hpp
+        uint256/uint512.hpp
         fields/new_field.hpp
         fields/new_field_impl.hpp
         fields/new_field2.hpp
