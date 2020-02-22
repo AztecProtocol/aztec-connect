@@ -7,8 +7,8 @@
 #include "../../../curves/bn254/scalar_multiplication/scalar_multiplication.hpp"
 #include "../../../polynomials/evaluation_domain.hpp"
 #include "../../../polynomials/polynomial_arithmetic.hpp"
-
 #include "../../../types.hpp"
+#include "../public_inputs/public_inputs.hpp"
 
 #include "../../reference_string/reference_string.hpp"
 
@@ -17,18 +17,20 @@
 
 #include "../transcript_helpers.hpp"
 
-
 using namespace barretenberg;
 
 namespace waffle {
 template <typename program_settings>
-VerifierBase<program_settings>::VerifierBase(std::shared_ptr<verification_key> verifier_key, const transcript::Manifest &input_manifest)
-    : manifest(input_manifest), key(verifier_key)
+VerifierBase<program_settings>::VerifierBase(std::shared_ptr<verification_key> verifier_key,
+                                             const transcript::Manifest& input_manifest)
+    : manifest(input_manifest)
+    , key(verifier_key)
 {}
 
 template <typename program_settings>
 VerifierBase<program_settings>::VerifierBase(VerifierBase&& other)
-    : manifest(other.manifest), key(other.key)
+    : manifest(other.manifest)
+    , key(other.key)
 {
     for (size_t i = 0; i < other.verifier_widgets.size(); ++i) {
         verifier_widgets.emplace_back(std::move(other.verifier_widgets[i]));
@@ -48,8 +50,7 @@ VerifierBase<program_settings>& VerifierBase<program_settings>::operator=(Verifi
     return *this;
 }
 
-template <typename program_settings>
-bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &proof)
+template <typename program_settings> bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof& proof)
 {
     transcript::Transcript transcript = transcript::Transcript(proof.proof_data, manifest);
 
@@ -59,15 +60,13 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     std::array<fr::field_t, program_settings::program_width> wire_evaluations;
     std::array<fr::field_t, program_settings::program_width - 1> sigma_evaluations;
 
-    for (size_t i = 0; i < program_settings::program_width; ++i)
-    {
+    for (size_t i = 0; i < program_settings::program_width; ++i) {
         std::string index = std::to_string(i + 1);
         T[i] = g1::serialize_from_buffer(&transcript.get_element("T_" + index)[0]);
         W[i] = g1::serialize_from_buffer(&transcript.get_element("W_" + index)[0]);
         wire_evaluations[i] = fr::serialize_from_buffer(&transcript.get_element("w_" + index)[0]);
     }
-    for (size_t i = 0; i < program_settings::program_width - 1; ++i)
-    {
+    for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
         std::string index = std::to_string(i + 1);
         sigma_evaluations[i] = fr::serialize_from_buffer(&transcript.get_element("sigma_" + index)[0]);
     }
@@ -78,8 +77,7 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     fr::field_t linear_eval = fr::serialize_from_buffer(&transcript.get_element("r")[0]);
     fr::field_t z_1_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("z_omega")[0]);
 
-    bool inputs_valid = g1::on_curve(T[0])
-                        && g1::on_curve(Z_1) && g1::on_curve(PI_Z);
+    bool inputs_valid = g1::on_curve(T[0]) && g1::on_curve(Z_1) && g1::on_curve(PI_Z);
 
     if (!inputs_valid) {
         printf("inputs not valid!\n");
@@ -90,9 +88,9 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     }
 
     bool instance_valid = true;
-    for (size_t i = 0; i < program_settings::program_width; ++i)
-    {
-        instance_valid = instance_valid && g1::on_curve(key->permutation_selectors.at("SIGMA_" + std::to_string(i + 1))); // SIGMA[i]);
+    for (size_t i = 0; i < program_settings::program_width; ++i) {
+        instance_valid = instance_valid &&
+                         g1::on_curve(key->permutation_selectors.at("SIGMA_" + std::to_string(i + 1))); // SIGMA[i]);
     }
     if (!instance_valid) {
         printf("instance not valid!\n");
@@ -109,8 +107,7 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     }
 
     bool field_elements_valid = true;
-    for (size_t i = 0; i < program_settings::program_width - 1; ++i)
-    {
+    for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
         field_elements_valid = field_elements_valid && !fr::eq(sigma_evaluations[i], fr::zero);
     }
     field_elements_valid = field_elements_valid && !fr::eq(linear_eval, fr::zero);
@@ -158,20 +155,23 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     }
 
     fr::field_t sigma_contribution = fr::one;
-    for (size_t i = 0; i < program_settings::program_width - 1; ++i)
-    {
+    for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
         fr::__mul(sigma_evaluations[i], beta, T0);
         fr::__add(wire_evaluations[i], gamma, T1);
         fr::__add(T0, T1, T0);
         fr::__mul(sigma_contribution, T0, sigma_contribution);
     }
 
+    std::vector<barretenberg::fr::field_t> public_inputs =
+        transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
+
+    fr::field_t public_input_delta = compute_public_input_delta(public_inputs, beta, gamma, key->domain.root);
     fr::__add(wire_evaluations[program_settings::program_width - 1], gamma, T0);
     fr::__mul(sigma_contribution, T0, sigma_contribution);
     fr::__mul(sigma_contribution, z_1_shifted_eval, sigma_contribution);
     fr::__mul(sigma_contribution, alpha_pow[0], sigma_contribution);
 
-    fr::__sub(z_1_shifted_eval, fr::one, T1);
+    fr::__sub(z_1_shifted_eval, public_input_delta, T1);
     fr::__mul(T1, lagrange_evals.l_n_minus_1, T1);
     fr::__mul(T1, alpha_pow[1], T1);
 
@@ -183,29 +183,10 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
 
     fr::field_t alpha_base = fr::sqr(fr::sqr(alpha));
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
-        alpha_base = verifier_widgets[i]->compute_quotient_evaluation_contribution(key.get(), alpha_base, transcript, t_eval);
+        alpha_base =
+            verifier_widgets[i]->compute_quotient_evaluation_contribution(key.get(), alpha_base, transcript, t_eval);
     }
 
-    std::vector<barretenberg::fr::field_t> public_inputs =
-    transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
-    if (public_inputs.size() > 0) {
-        fr::field_t public_input_evaluation = fr::zero;
-        public_input_evaluation = barretenberg::polynomial_arithmetic::compute_barycentric_evaluation(
-            &public_inputs[0], public_inputs.size(), z_challenge, key->domain);
-    
-    
-        public_input_evaluation = fr::sub(wire_evaluations[0], public_input_evaluation);
-
-        std::vector<fr::field_t> public_eval_vector;
-        for (size_t i = 0; i < public_inputs.size(); ++i)
-        {
-            public_eval_vector.push_back(public_input_evaluation);
-        }
-        public_input_evaluation = barretenberg::polynomial_arithmetic::compute_barycentric_evaluation(
-            &public_eval_vector[0], public_eval_vector.size(), z_challenge, key->domain);
-        public_input_evaluation = fr::mul(public_input_evaluation, alpha_base);
-        t_eval = fr::add(t_eval, public_input_evaluation);
-    }
     fr::__invert(lagrange_evals.vanishing_poly, T0);
     fr::__mul(t_eval, T0, t_eval);
 
@@ -231,28 +212,26 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     fr::__mul(nu_pow[0], linear_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
-    for (size_t i = 0; i < program_settings::program_width; ++i)
-    {
+    for (size_t i = 0; i < program_settings::program_width; ++i) {
         fr::__mul(nu_pow[i + 1], wire_evaluations[i], T0);
         fr::__add(batch_evaluation, T0, batch_evaluation);
     }
 
-    for (size_t i = 0; i < program_settings::program_width - 1; ++i)
-    {
+    for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
         fr::__mul(nu_pow[5 + i], sigma_evaluations[i], T0);
-        fr::__add(batch_evaluation, T0, batch_evaluation);        
+        fr::__add(batch_evaluation, T0, batch_evaluation);
     }
 
     fr::__mul(nu_pow[7], u, T0);
     fr::__mul(T0, z_1_shifted_eval, T0);
     fr::__add(batch_evaluation, T0, batch_evaluation);
 
-
     fr::field_t nu_base = nu_pow[8];
 
     for (size_t i = 0; i < program_settings::program_width; ++i) {
         if (program_settings::requires_shifted_wire(program_settings::wire_shift_settings, i)) {
-            fr::field_t wire_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_" + std::to_string(i + 1) + "_omega")[0]);
+            fr::field_t wire_shifted_eval =
+                fr::serialize_from_buffer(&transcript.get_element("w_" + std::to_string(i + 1) + "_omega")[0]);
             fr::__mul(wire_shifted_eval, nu_base, T0);
             fr::__mul(T0, u, T0);
             fr::__add(batch_evaluation, T0, batch_evaluation);
@@ -261,8 +240,8 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     }
 
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
-        nu_base =
-            verifier_widgets[i]->compute_batch_evaluation_contribution(key.get(), batch_evaluation, nu_base, transcript);
+        nu_base = verifier_widgets[i]->compute_batch_evaluation_contribution(
+            key.get(), batch_evaluation, nu_base, transcript);
     }
 
     fr::__neg(batch_evaluation, batch_evaluation);
@@ -293,11 +272,9 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
         }
     }
 
-    for (size_t i = 0; i < program_settings::program_width - 1; ++i)
-    {
+    for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
         elements.emplace_back(key->permutation_selectors.at("SIGMA_" + std::to_string(i + 1)));
         scalars.emplace_back(nu_pow[5 + i]);
-
     }
 
     elements.emplace_back(key->permutation_selectors.at("SIGMA_" + std::to_string(program_settings::program_width)));
@@ -322,12 +299,11 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
         }
     }
 
-    VerifierBaseWidget::challenge_coefficients coeffs{
-        fr::sqr(fr::sqr(alpha)), alpha, nu_base, nu, nu
-    };
+    VerifierBaseWidget::challenge_coefficients coeffs{ fr::sqr(fr::sqr(alpha)), alpha, nu_base, nu, nu };
 
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
-        coeffs = verifier_widgets[i]->append_scalar_multiplication_inputs(key.get(), coeffs, transcript, elements, scalars);
+        coeffs =
+            verifier_widgets[i]->append_scalar_multiplication_inputs(key.get(), coeffs, transcript, elements, scalars);
     }
 
     size_t num_elements = elements.size();
@@ -349,8 +325,8 @@ bool VerifierBase<program_settings>::verify_proof(const waffle::plonk_proof &pro
     barretenberg::fq::__copy(P[1].x, P_affine[0].x);
     barretenberg::fq::__copy(P[1].y, P_affine[0].y);
 
-    barretenberg::fq12::field_t result =
-        barretenberg::pairing::reduced_ate_pairing_batch_precomputed(P_affine, key->reference_string.precomputed_g2_lines, 2);
+    barretenberg::fq12::field_t result = barretenberg::pairing::reduced_ate_pairing_batch_precomputed(
+        P_affine, key->reference_string.precomputed_g2_lines, 2);
 
     return barretenberg::fq12::eq(result, barretenberg::fq12::one);
 }

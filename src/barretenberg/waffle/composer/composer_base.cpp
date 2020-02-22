@@ -58,6 +58,15 @@ template <size_t program_width> void ComposerBase::compute_sigma_permutations(pr
         barretenberg::polynomial sigma_polynomial(key->n);
         compute_permutation_lagrange_base_single<standard_settings>(
             sigma_polynomial, sigma_mappings[i], key->small_domain);
+
+        if (i == 0) {
+            barretenberg::fr::field_t work_root = barretenberg::fr::one;
+            for (size_t j = 0; j < num_public_inputs; ++j) {
+                sigma_polynomial[j] = work_root;
+                barretenberg::fr::__mul(work_root, key->small_domain.root, work_root);
+            }
+        }
+    
         barretenberg::polynomial sigma_polynomial_lagrange_base(sigma_polynomial);
         key->permutation_selectors_lagrange_base.insert(
             { "sigma_" + index, std::move(sigma_polynomial_lagrange_base) });
