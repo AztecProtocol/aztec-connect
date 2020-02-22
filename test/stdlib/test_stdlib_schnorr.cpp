@@ -56,7 +56,7 @@ TEST(stdlib_schnorr, test_scalar_mul)
     EXPECT_EQ(fr::eq(output.x.get_value(), expected.x), true);
     EXPECT_EQ(fr::eq(output.y.get_value(), expected.y), true);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();
@@ -93,7 +93,7 @@ TEST(stdlib_schnorr, verify_signature)
 
     EXPECT_EQ(signature_result, true);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();

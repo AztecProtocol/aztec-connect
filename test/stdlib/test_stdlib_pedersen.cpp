@@ -45,7 +45,7 @@ TEST(stdlib_pedersen, test_pedersen)
 
     field_t out = plonk::stdlib::pedersen::compress(left, right);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();
@@ -166,7 +166,7 @@ TEST(stdlib_pedersen, test_pedersen_large)
 
     composer.set_public_input(left.witness_index);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();

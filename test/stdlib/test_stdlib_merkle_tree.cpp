@@ -335,7 +335,7 @@ TEST(stdlib_merkle_tree, test_check_membership)
         check_membership(composer, root, create_witness_hash_path(composer, db.get_hash_path(0)), value, zero);
     EXPECT_EQ(is_member.get_value(), true);
 
-    auto prover = composer.preprocess();
+    auto prover = composer.create_prover();
     printf("composer gates = %zu\n", composer.get_num_gates());
 
     auto verifier = composer.create_verifier();
@@ -360,7 +360,7 @@ TEST(stdlib_merkle_tree, test_assert_check_membership)
 
     assert_check_membership(composer, root, create_witness_hash_path(composer, db.get_hash_path(0)), value, zero);
 
-    auto prover = composer.preprocess();
+    auto prover = composer.create_prover();
     printf("composer gates = %zu\n", composer.get_num_gates());
 
     auto verifier = composer.create_verifier();
@@ -385,7 +385,7 @@ TEST(stdlib_merkle_tree, test_assert_check_membership_fail)
 
     assert_check_membership(composer, root, create_witness_hash_path(composer, db.get_hash_path(0)), value, zero);
 
-    auto prover = composer.preprocess();
+    auto prover = composer.create_prover();
     printf("composer gates = %zu\n", composer.get_num_gates());
 
     auto verifier = composer.create_verifier();
@@ -418,7 +418,7 @@ TEST(stdlib_merkle_tree, test_update_members)
 
     update_membership(composer, new_root, new_path, new_value, old_root, old_path, old_value, zero);
 
-    auto prover = composer.preprocess();
+    auto prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     auto verifier = composer.create_verifier();

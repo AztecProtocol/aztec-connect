@@ -62,7 +62,7 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note)
     composer.assert_equal(result.ciphertext.x.witness_index, target_encryption.ciphertext.x.witness_index);
     composer.assert_equal(result.ciphertext.y.witness_index, target_encryption.ciphertext.y.witness_index);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();
@@ -110,7 +110,7 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note_zero)
     composer.assert_equal(result.ciphertext.x.witness_index, target_encryption.ciphertext.x.witness_index);
     composer.assert_equal(result.ciphertext.y.witness_index, target_encryption.ciphertext.y.witness_index);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();
