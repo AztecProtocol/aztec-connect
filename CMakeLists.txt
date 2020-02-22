@@ -9,6 +9,7 @@ option(TESTING "Build tests" ON)
 option(BENCHMARKS "Build benchmarks" ON)
 option(PROFILING "Build profiling" ON)
 option(FORCE_CLANG "force build with clang" OFF) # OFF is the default
+option(PIPPENGER_BLOCK_SIZE "maximum multi-exponentiation size" "20")
 
 if (ARM)
     set(DISABLE_ASM ON)
@@ -115,6 +116,13 @@ endif()
 if(WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-float-conversion -Wimplicit-fallthrough=0")
 endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-copy -Wno-tautological-compare")
+
+
+message(STATUS "Setting pippenger block size to " ${PIPPENGER_BLOCK_SIZE})
+add_definitions(-DPIPPENGER_BLOCK_SIZE=${PIPPENGER_BLOCK_SIZE})
+
 
 add_definitions(-DBOOST_SPIRIT_X3_NO_FILESYSTEM=1 -DBARRETENBERG_SRS_PATH=\"../srs_db/transcript.dat\")
 
