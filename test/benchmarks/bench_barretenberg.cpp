@@ -49,8 +49,10 @@ struct global_vars {
 global_vars globals;
 
 barretenberg::evaluation_domain evaluation_domains[10]{
-    barretenberg::evaluation_domain(START),      barretenberg::evaluation_domain(START * 2),  barretenberg::evaluation_domain(START * 4),  barretenberg::evaluation_domain(START * 8),
-    barretenberg::evaluation_domain(START * 16), barretenberg::evaluation_domain(START * 32), barretenberg::evaluation_domain(START * 64), barretenberg::evaluation_domain(START * 128),
+    barretenberg::evaluation_domain(START),       barretenberg::evaluation_domain(START * 2),
+    barretenberg::evaluation_domain(START * 4),   barretenberg::evaluation_domain(START * 8),
+    barretenberg::evaluation_domain(START * 16),  barretenberg::evaluation_domain(START * 32),
+    barretenberg::evaluation_domain(START * 64),  barretenberg::evaluation_domain(START * 128),
     barretenberg::evaluation_domain(START * 256), barretenberg::evaluation_domain(START * 512)
 };
 
@@ -58,10 +60,10 @@ void generate_scalars(fr::field_t* scalars)
 {
     fr::field_t T0 = fr::random_element();
     fr::field_t acc;
-    fr::__copy(T0, acc);
+    fr::field_t::__copy(T0, acc);
     for (size_t i = 0; i < MAX_GATES; ++i) {
         acc.self_mul(T0);
-        fr::__copy(acc, scalars[i]);
+        fr::field_t::__copy(acc, scalars[i]);
     }
 }
 
@@ -87,8 +89,7 @@ const auto init = []() {
     }
     globals.plonk_instances.resize(8);
     globals.plonk_proofs.resize(8);
-    for (size_t i = 0; i < 10; ++i)
-    {
+    for (size_t i = 0; i < 10; ++i) {
         evaluation_domains[i].compute_lookup_table();
     }
     printf("finished generating test data\n");
@@ -148,7 +149,6 @@ void pippenger_bench(State& state) noexcept
 }
 BENCHMARK(pippenger_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
 
-
 void unsafe_pippenger_bench(State& state) noexcept
 {
     uint64_t count = 0;
@@ -156,7 +156,8 @@ void unsafe_pippenger_bench(State& state) noexcept
     uint64_t i = 0;
     for (auto _ : state) {
         uint64_t before = rdtsc();
-        scalar_multiplication::pippenger_unsafe(&globals.scalars[0], &globals.reference_string.monomials[0], num_points);
+        scalar_multiplication::pippenger_unsafe(
+            &globals.scalars[0], &globals.reference_string.monomials[0], num_points);
         uint64_t after = rdtsc();
         count += (after - before);
         ++i;
@@ -166,7 +167,6 @@ void unsafe_pippenger_bench(State& state) noexcept
     printf("unsafe pippenger clock cycles per mul = %" PRIu64 "\n", (avg_cycles / (MAX_GATES)));
 }
 BENCHMARK(unsafe_pippenger_bench)->RangeMultiplier(2)->Range(1 << 20, 1 << 20);
-
 
 void new_plonk_scalar_multiplications_bench(State& state) noexcept
 {
@@ -206,7 +206,6 @@ void new_plonk_scalar_multiplications_bench(State& state) noexcept
         g1::add(g, out, out);
         g1::add(h, out, out);
         g1::add(i, out, out);
-        g1::print(out);
     }
     uint64_t avg_cycles = count / k;
     printf("plonk clock cycles = %" PRIu64 "\n", (avg_cycles));
@@ -228,7 +227,8 @@ void alternate_coset_fft_bench_parallel(State& state) noexcept
 {
     for (auto _ : state) {
         size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
-        barretenberg::polynomial_arithmetic::coset_fft(globals.data, evaluation_domains[idx - 2], evaluation_domains[idx - 2], 4);
+        barretenberg::polynomial_arithmetic::coset_fft(
+            globals.data, evaluation_domains[idx - 2], evaluation_domains[idx - 2], 4);
     }
 }
 BENCHMARK(alternate_coset_fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
@@ -247,9 +247,7 @@ void fft_bench_serial(State& state) noexcept
     for (auto _ : state) {
         size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::fft_inner_serial(
-            globals.data,
-            evaluation_domains[idx].thread_size,
-            evaluation_domains[idx].get_round_roots());
+            globals.data, evaluation_domains[idx].thread_size, evaluation_domains[idx].get_round_roots());
     }
 }
 BENCHMARK(fft_bench_serial)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
@@ -349,7 +347,7 @@ void fq_mul_asm_bench(State& state) noexcept
     uint64_t count = 0;
     uint64_t i = 0;
     fq::field_t a{ 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 };
-    fq::field_t r{ 1, 0, 0, 0 } };
+    fq::field_t r{ 1, 0, 0, 0 };
     for (auto _ : state) {
         size_t before = rdtsc();
         (DoNotOptimize(fq_mul_asm(a, r)));

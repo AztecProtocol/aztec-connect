@@ -94,7 +94,7 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
     rand_buffer[3] &= 0x0fffffffffffffffUL;
 
     fr::field_t k{ 0, 0, 0, 0 };
-    fr::__copy(*(fr::field_t*)&rand_buffer[0], k);
+    fr::field_t::__copy(*(fr::field_t*)&rand_buffer[0], k);
     // k.self_to_montgomery_form();
     fr::field_t k1{ 0, 0, 0, 0 };
     ;

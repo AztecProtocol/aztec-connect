@@ -22,20 +22,20 @@ namespace waffle
     template <typename program_settings>
     inline plonk_linear_terms compute_linear_terms(const transcript::Transcript& transcript, const barretenberg::fr::field_t& l_1)
     {
-        barretenberg::fr::field_t alpha = barretenberg::fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
+        barretenberg::fr::field_t alpha = barretenberg::fr::field_t::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
         barretenberg::fr::field_t alpha_cubed = alpha.sqr() * alpha;
-        barretenberg::fr::field_t beta = barretenberg::fr::serialize_from_buffer(&transcript.get_challenge("beta")[0]);
-        barretenberg::fr::field_t gamma = barretenberg::fr::serialize_from_buffer(&transcript.get_challenge("gamma")[0]);
-        barretenberg::fr::field_t z = barretenberg::fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
+        barretenberg::fr::field_t beta = barretenberg::fr::field_t::serialize_from_buffer(&transcript.get_challenge("beta")[0]);
+        barretenberg::fr::field_t gamma = barretenberg::fr::field_t::serialize_from_buffer(&transcript.get_challenge("gamma")[0]);
+        barretenberg::fr::field_t z = barretenberg::fr::field_t::serialize_from_buffer(&transcript.get_challenge("z")[0]);
         barretenberg::fr::field_t z_beta = z * beta;
 
         std::array<barretenberg::fr::field_t, program_settings::program_width> wire_evaluations;
         for (size_t i = 0; i < program_settings::program_width; ++i)
         {
-            wire_evaluations[i] = barretenberg::fr::serialize_from_buffer(&transcript.get_element("w_" + std::to_string(i + 1))[0]);
+            wire_evaluations[i] = barretenberg::fr::field_t::serialize_from_buffer(&transcript.get_element("w_" + std::to_string(i + 1))[0]);
         }
 
-        barretenberg::fr::field_t z_1_shifted_eval = barretenberg::fr::serialize_from_buffer(&transcript.get_element("z_omega")[0]);
+        barretenberg::fr::field_t z_1_shifted_eval = barretenberg::fr::field_t::serialize_from_buffer(&transcript.get_element("z_omega")[0]);
 
         plonk_linear_terms result;
 
@@ -56,7 +56,7 @@ namespace waffle
         barretenberg::fr::field_t sigma_contribution = barretenberg::fr::one;
         for (size_t i = 0; i < program_settings::program_width - 1; ++i)
         {
-            barretenberg::fr::field_t permutation_evaluation = barretenberg::fr::serialize_from_buffer(&transcript.get_element("sigma_" + std::to_string(i + 1))[0]);
+            barretenberg::fr::field_t permutation_evaluation = barretenberg::fr::field_t::serialize_from_buffer(&transcript.get_element("sigma_" + std::to_string(i + 1))[0]);
             T0 = permutation_evaluation * beta;
             T0.self_add(wire_evaluations[i]);
             T0.self_add(gamma);

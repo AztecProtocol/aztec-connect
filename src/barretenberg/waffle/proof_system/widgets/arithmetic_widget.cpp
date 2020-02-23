@@ -91,7 +91,7 @@ ProverArithmeticWidget& ProverArithmeticWidget::operator=(ProverArithmeticWidget
 fr::field_t ProverArithmeticWidget::compute_quotient_contribution(const fr::field_t& alpha_base,
                                                                   const transcript::Transcript& transcript)
 {
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
     polynomial& w_1_fft = key->wire_ffts.at("w_1_fft");
     polynomial& w_2_fft = key->wire_ffts.at("w_2_fft");
@@ -114,10 +114,10 @@ fr::field_t ProverArithmeticWidget::compute_linear_contribution(const fr::field_
                                                                 const transcript::Transcript& transcript,
                                                                 polynomial& r)
 {
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-    fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
-    fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
-    fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr::field_t w_l_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+    fr::field_t w_r_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+    fr::field_t w_o_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
     fr::field_t w_lr = w_l_eval * w_r_eval;
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0 = w_lr * q_m[i];
@@ -149,7 +149,7 @@ fr::field_t VerifierArithmeticWidget::compute_quotient_evaluation_contribution(v
                                                                                const transcript::Transcript& transcript,
                                                                                fr::field_t&)
 {
-    return alpha_base * fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    return alpha_base * fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 }
 
 fr::field_t VerifierArithmeticWidget::compute_batch_evaluation_contribution(verification_key*,
@@ -167,9 +167,9 @@ VerifierBaseWidget::challenge_coefficients VerifierArithmeticWidget::append_scal
     std::vector<g1::affine_element>& points,
     std::vector<fr::field_t>& scalars)
 {
-    fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
-    fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
-    fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+    fr::field_t w_l_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+    fr::field_t w_r_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+    fr::field_t w_o_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
     fr::field_t q_m_term = w_l_eval * w_r_eval * challenge.alpha_base * challenge.linear_nu;

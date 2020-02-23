@@ -12,6 +12,7 @@
 #pragma once
 
 #include <cstdint>
+#include <iomanip>
 #include <iostream>
 
 #include "./uint256.hpp"
@@ -140,8 +141,6 @@ class uint512_t {
 
     constexpr uint512_t invmod(const uint512_t& modulus) const;
 
-    friend std::ostream& operator<<(std::ostream& os, const uint512_t& val);
-
     uint256_t lo;
     uint256_t hi;
 
@@ -151,9 +150,12 @@ class uint512_t {
 
 #include "./uint512_impl.hpp"
 
-inline std::ostream& operator<<(std::ostream& os, const uint512_t& val)
+inline std::ostream& operator<<(std::ostream& os, uint512_t const& a)
 {
-    os << "[" << val.lo.data[0] << ", " << val.lo.data[1] << ", " << val.lo.data[2] << ", " << val.lo.data[3] << ", "
-       << val.hi.data[0] << ", " << val.hi.data[1] << ", " << val.hi.data[2] << ", " << val.hi.data[3] << "]";
+    std::ios_base::fmtflags f(os.flags());
+    os << std::hex << "0x" << std::setfill('0') << std::setw(16) << a.hi.data[3] << std::setw(16) << a.hi.data[2]
+       << std::setw(16) << a.hi.data[1] << std::setw(16) << a.hi.data[0] << std::setw(16) << a.lo.data[3]
+       << std::setw(16) << a.lo.data[2] << std::setw(16) << a.lo.data[1] << std::setw(16) << a.lo.data[0];
+    os.flags(f);
     return os;
 }

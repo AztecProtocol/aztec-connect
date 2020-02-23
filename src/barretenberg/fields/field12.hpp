@@ -259,15 +259,6 @@ template <typename quadratic_field, typename base_field, typename Fq12Params> cl
         base_field::__copy(a.c1, r.c1);
     }
 
-    static inline void print(const field_t& a)
-    {
-        printf("fq12:\n");
-        printf("c0:\n");
-        base_field::print(a.c0);
-        printf("c1: \n");
-        base_field::print(a.c1);
-    }
-
     static inline bool is_zero(const field_t& a)
     {
         return (base_field::is_zero(a.c0) && base_field::is_zero(a.c1));

@@ -8,7 +8,7 @@ namespace transcript_helpers {
 inline std::vector<uint8_t> convert_field_element(const barretenberg::fr::field_t& ele)
 {
     std::vector<uint8_t> buffer(sizeof(barretenberg::fr::field_t));
-    barretenberg::fr::serialize_to_buffer(ele, &buffer[0]);
+    barretenberg::fr::field_t::serialize_to_buffer(ele, &buffer[0]);
     return buffer;
 }
 
@@ -17,7 +17,7 @@ inline std::vector<uint8_t> convert_field_elements(const std::vector<barretenber
     std::vector<uint8_t> buffer(sizeof(barretenberg::fr::field_t) * ele.size());  
     for (size_t i = 0; i < ele.size(); ++i)
     {
-        barretenberg::fr::serialize_to_buffer(ele[i], &buffer[i * sizeof(barretenberg::fr::field_t)]);
+        barretenberg::fr::field_t::serialize_to_buffer(ele[i], &buffer[i * sizeof(barretenberg::fr::field_t)]);
     }
     return buffer;
 }
@@ -35,7 +35,7 @@ inline std::vector<barretenberg::fr::field_t> read_field_elements(const std::vec
     std::vector<barretenberg::fr::field_t> elements;
     for (size_t i = 0; i < num_elements; ++i)
     {
-        elements.push_back(barretenberg::fr::serialize_from_buffer(&buffer[i * sizeof(barretenberg::fr::field_t)]));
+        elements.push_back(barretenberg::fr::field_t::serialize_from_buffer(&buffer[i * sizeof(barretenberg::fr::field_t)]));
     }
     return elements;
 }

@@ -2,6 +2,7 @@
 #include "../field/field.hpp"
 #include "../int_utils.hpp"
 #include "hash.hpp"
+#include <iostream>
 #include <vector>
 
 namespace plonk {

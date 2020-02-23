@@ -1,13 +1,11 @@
 #pragma once
 
+#include "../types.hpp"
 #include <array>
 #include <cinttypes>
 #include <cstdint>
 #include <cstdio>
 #include <unistd.h>
-
-#include "../assert.hpp"
-#include "../types.hpp"
 
 #include "./new_field.hpp"
 
@@ -21,11 +19,11 @@ template <typename FieldParams> class field {
   public:
     typedef test::field<FieldParams> field_t;
 
+    static constexpr field_t modulus = field_t::modulus;
     static constexpr field_t zero = field_t::zero;
     static constexpr field_t one = field_t::one;
-    static constexpr field_t modulus = field_t::modulus;
+    static constexpr field_t neg_one = field_t::neg_one;
     static constexpr field_t two_inv = field_t::two_inv;
-    static constexpr field_t one_raw = field_t::one_raw;
     static constexpr field_t beta = field_t::beta;
     static constexpr field_t multiplicative_generator = field_t::multiplicative_generator;
     static constexpr field_t coset_generators[15] = {
@@ -36,15 +34,7 @@ template <typename FieldParams> class field {
         field_t::coset_generators[12], field_t::coset_generators[13], field_t::coset_generators[14],
     };
     static constexpr field_t multiplicative_generator_inverse = field_t::multiplicative_generator_inverse;
-    static constexpr field_t alternate_multiplicative_generator = field_t::alternate_multiplicative_generator;
-    static constexpr field_t alternate_multiplicative_generator_inverse =
-        field_t::alternate_multiplicative_generator_inverse;
     static constexpr field_t root_of_unity = field_t::root_of_unity;
-    static constexpr field_t sqrt_exponent = field_t::sqrt_exponent;
-    static constexpr field_t r_squared = field_t::r_squared;
-    static constexpr field_t modulus_plus_one = field_t::modulus_plus_one;
-    static constexpr field_t modulus_minus_two = field_t::modulus_minus_two;
-    static constexpr field_t twice_modulus = field_t::twice_modulus;
     // struct field_t : public test::field<FieldParams> {
     //     bool operator<(const field_t& other) const { return gt(other, *this); }
     // };
@@ -96,11 +86,6 @@ template <typename FieldParams> class field {
     //     return to_montgomery_form(out);
     // }
 
-    __attribute__((always_inline)) inline static constexpr field_t neg_one() noexcept
-    {
-        return field_t::zero - field_t::one;
-    }
-
     /**
      * Comparison methods and bit operations
      **/
@@ -113,15 +98,6 @@ template <typename FieldParams> class field {
         field_t T = dest;
         dest = src;
         src = T;
-    }
-
-    static void __copy(const field_t& a, field_t& r) noexcept { r = a; }
-
-    static field_t copy(const field_t& src) noexcept
-    {
-        field_t r;
-        __copy(src, r);
-        return r;
     }
 
     /**
@@ -151,30 +127,17 @@ template <typename FieldParams> class field {
     {
         field_t r;
         int got_entropy = getentropy((void*)r.data, 32);
-        ASSERT(got_entropy == 0);
+        //  ASSERT(got_entropy == 0);
         return r.to_montgomery_form();
     }
 
-    /**
-     * print `r`
-     **/
-    __attribute__((always_inline)) inline static void print(const field_t& a)
-    {
-        printf("field: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
-               a.data[0],
-               a.data[1],
-               a.data[2],
-               a.data[3]);
-    }
 
-    __attribute__((always_inline)) inline static void batch_invert(field_t* coeffs,
-                                                                   size_t n,
-                                                                   field_t* scratch_space = nullptr)
+    static void batch_invert(field_t* coeffs, size_t n, field_t* scratch_space = nullptr)
     {
         field_t* temporaries = scratch_space ? scratch_space : (field_t*)aligned_alloc(32, sizeof(field_t) * n);
         field_t accumulator = field_t::one;
         for (size_t i = 0; i < n; ++i) {
-            __copy(accumulator, temporaries[i]);
+            temporaries[i] = accumulator;
             accumulator = accumulator * coeffs[i];
         }
 
@@ -184,70 +147,13 @@ template <typename FieldParams> class field {
         for (size_t i = n - 1; i < n; --i) {
             T0 = accumulator * temporaries[i];
             accumulator = accumulator * coeffs[i];
-            __copy(T0, coeffs[i]);
+            coeffs[i] = T0;
         }
         if (scratch_space == nullptr) {
             aligned_free(temporaries);
         }
     }
 
-    __attribute__((always_inline)) inline static void compute_coset_generators(const size_t n,
-                                                                               const uint64_t subgroup_size,
-                                                                               field_t* result)
-    {
-        if (n > 0) {
-            result[0] = (field_t::multiplicative_generator);
-        }
-        field_t work_variable = field_t::multiplicative_generator + field_t::one;
-
-        size_t count = 1;
-        while (count < n) {
-            // work_variable contains a new field element, and we need to test that, for all previous vector elements,
-            // result[i] / work_variable is not a member of our subgroup
-            field_t work_inverse = work_variable.invert();
-            bool valid = true;
-            for (size_t j = 0; j < count; ++j) {
-                field_t target_element = result[j] * work_inverse;
-                field_t subgroup_check = target_element.pow(subgroup_size);
-                if (subgroup_check == field_t::one) {
-                    valid = false;
-                    break;
-                }
-            }
-            if (valid) {
-                // printf("adding ");
-                // print(work_variable);
-                // printf("at index %lu . \n expected = ", count);
-                // print(coset_generators[count]);
-                result[count] = (work_variable);
-                ++count;
-            }
-            work_variable = work_variable + field_t::one;
-        }
-    }
-
-    __attribute__((always_inline)) inline static void serialize_to_buffer(const field_t& value, uint8_t* buffer)
-    {
-        field_t input = value.from_montgomery_form();
-        for (size_t j = 0; j < 4; ++j) {
-            for (size_t i = 0; i < 8; ++i) {
-                uint8_t byte = static_cast<uint8_t>(input.data[3 - j] >> (56 - (i * 8)));
-                buffer[j * 8 + i] = byte;
-            }
-        }
-    }
-
-    __attribute__((always_inline)) inline static field_t serialize_from_buffer(const uint8_t* buffer)
-    {
-        field_t result = field_t::zero;
-        for (size_t j = 0; j < 4; ++j) {
-            for (size_t i = 0; i < 8; ++i) {
-                uint8_t byte = buffer[j * 8 + i];
-                result.data[3 - j] = result.data[3 - j] | (static_cast<uint64_t>(byte) << (56 - (i * 8)));
-            }
-        }
-        return (result.to_montgomery_form());
-    }
 }; // class field
 
 } // namespace barretenberg

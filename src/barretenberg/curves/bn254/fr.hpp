@@ -122,14 +122,14 @@ class FrParams {
 
 typedef field<FrParams> fr;
 
-inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fr::field_t const& a)
-{
-    std::ios_base::fmtflags f(os.flags());
-    os << std::hex << "0x" << std::setfill('0') << std::setw(16) << a.data[3] << std::setw(16) << a.data[2]
-       << std::setw(16) << a.data[1] << std::setw(16) << a.data[0];
-    os.flags(f);
-    return os;
-}
+// inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fr::field_t const& a)
+// {
+//     std::ios_base::fmtflags f(os.flags());
+//     os << std::hex << "0x" << std::setfill('0') << std::setw(16) << a.data[3] << std::setw(16) << a.data[2]
+//        << std::setw(16) << a.data[1] << std::setw(16) << a.data[0];
+//     os.flags(f);
+//     return os;
+// }
 
 // inline bool operator==(fr::field_t const& lhs, fr::field_t const& rhs)
 // {

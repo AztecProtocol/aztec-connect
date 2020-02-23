@@ -4,10 +4,8 @@
 
 #include "../../fields/field.hpp"
 
-namespace barretenberg
-{
-class Bn254FqParams
-{
+namespace barretenberg {
+class Bn254FqParams {
   public:
     static constexpr uint64_t modulus_0 = 0x3C208C16D87CFD47UL;
     static constexpr uint64_t modulus_1 = 0x97816a916871ca8dUL;
@@ -90,10 +88,10 @@ class Bn254FqParams
     static constexpr uint64_t alternate_multiplicative_generator_3 = 0UL;
 
     static constexpr uint64_t coset_generators_0[15]{ 0xd35d438dc58f0d9d, 0xa6ba871b8b1e1b3a, 0x7a17caa950ad28d7,
-                                                     0x115482203dbf392d, 0xe4b1c5ae034e46ca, 0xb80f093bc8dd5467,
-                                                     0x4f4bc0b2b5ef64bd, 0x22a904407b7e725a, 0xf60647ce410d7ff7,
-                                                     0xc9638b5c069c8d94, 0x60a042d2f3ae9dea, 0x33fd8660b93dab87,
-                                                     0x75ac9ee7eccb924,  0x9e9781656bdec97a, 0x71f4c4f3316dd717 };
+                                                      0x115482203dbf392d, 0xe4b1c5ae034e46ca, 0xb80f093bc8dd5467,
+                                                      0x4f4bc0b2b5ef64bd, 0x22a904407b7e725a, 0xf60647ce410d7ff7,
+                                                      0xc9638b5c069c8d94, 0x60a042d2f3ae9dea, 0x33fd8660b93dab87,
+                                                      0x75ac9ee7eccb924,  0x9e9781656bdec97a, 0x71f4c4f3316dd717 };
 
     static constexpr uint64_t coset_generators_1[15]{ 0xa78eb28f5c70b3d,  0x14f1d651eb8e167b, 0x1f6ac17ae15521b9,
                                                       0x926242126eaa626a, 0x9cdb2d3b64716da7, 0xa75418645a3878e5,
@@ -112,8 +110,17 @@ class Bn254FqParams
                                                       0x0180a96573d3d9f8, 0x0f8b21270ddbb927, 0x1d9598e8a7e39857,
                                                       0x2ba010aa41eb7786, 0x094639f8fac1b68c, 0x1750b1ba94c995bb,
                                                       0x255b297c2ed174eb, 0x030152cae7a7b3f0, 0x110bca8c81af9320 };
-
 };
 
 typedef field<Bn254FqParams> fq;
+
+// inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fq::field_t const& a)
+// {
+//     std::ios_base::fmtflags f(os.flags());
+//     os << std::hex << "0x" << std::setfill('0') << std::setw(16) << a.data[3] << std::setw(16) << a.data[2]
+//        << std::setw(16) << a.data[1] << std::setw(16) << a.data[0];
+//     os.flags(f);
+//     return os;
+// }
+
 } // namespace barretenberg

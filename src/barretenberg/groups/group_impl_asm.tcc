@@ -2,14 +2,12 @@
 
 #include <cstdint>
 
-namespace barretenberg
-{
+namespace barretenberg {
 // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
 template <typename coordinate_field, typename subgroup_field, typename GroupParams>
 inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const affine_element* src, affine_element* dest)
 {
-    if constexpr (GroupParams::small_elements)
-    {
+    if constexpr (GroupParams::small_elements) {
 #if defined __AVX__ && defined USE_AVX
         ASSERT((((uintptr_t)src & 0x1f) == 0));
         ASSERT((((uintptr_t)dest & 0x1f) == 0));
@@ -21,14 +19,10 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const aff
                              : "r"(src), "r"(dest)
                              : "%ymm0", "%ymm1", "memory");
 #else
-        coordinate_field::__copy(src->x, dest->x);
-        coordinate_field::__copy(src->y, dest->y);
+        *dest = *src;
 #endif
-    }
-    else
-    {
-        coordinate_field::__copy(src->x, dest->x);
-        coordinate_field::__copy(src->y, dest->y);
+    } else {
+        *dest = *src;
     }
 }
 
@@ -36,8 +30,7 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const aff
 template <typename coordinate_field, typename subgroup_field, typename GroupParams>
 inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const element* src, element* dest)
 {
-    if constexpr (GroupParams::small_elements)
-    {
+    if constexpr (GroupParams::small_elements) {
 #if defined __AVX__ && defined USE_AVX
         ASSERT((((uintptr_t)src & 0x1f) == 0));
         ASSERT((((uintptr_t)dest & 0x1f) == 0));
@@ -51,16 +44,10 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const ele
                              : "r"(src), "r"(dest)
                              : "%ymm0", "%ymm1", "%ymm2", "memory");
 #else
-        coordinate_field::__copy(src->x, dest->x);
-        coordinate_field::__copy(src->y, dest->y);
-        coordinate_field::__copy(src->z, dest->z);
+        *dest = *src;
 #endif
-    }
-    else
-    {
-        coordinate_field::__copy(src->x, dest->x);
-        coordinate_field::__copy(src->y, dest->y);
-        coordinate_field::__copy(src->z, dest->z);
+    } else {
+        *dest = src;
     }
 }
 
@@ -71,8 +58,7 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
                                                                                             affine_element* dest,
                                                                                             uint64_t predicate)
 {
-    if constexpr (GroupParams::small_elements)
-    {
+    if constexpr (GroupParams::small_elements) {
 #if defined __AVX__ && defined USE_AVX
         ASSERT((((uintptr_t)src & 0x1f) == 0));
         ASSERT((((uintptr_t)dest & 0x1f) == 0));
@@ -150,16 +136,11 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
                                [modulus_3] "i"(coordinate_field::modulus.data[3])
                              : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "memory", "cc");
 #endif
-    }
-    else
-    {
-        if (predicate)
-        {
-            coordinate_field::__copy(src->x, dest->x);
+    } else {
+        if (predicate) {
+            coordinate_field::field_t::__copy(src->x, dest->x);
             dest->y = src->y.neg();
-        }
-        else
-        {
+        } else {
             copy_affine(*src, *dest);
         }
     }

@@ -51,7 +51,7 @@ TEST(polynomials, fft_with_small_degree)
 
     for (size_t i = 0; i < n; ++i) {
         poly[i] = fr::random_element();
-        fr::__copy(poly[i], fft_transform[i]);
+        fr::field_t::__copy(poly[i], fft_transform[i]);
     }
 
     evaluation_domain domain = evaluation_domain(n);
@@ -76,7 +76,7 @@ TEST(polynomials, basic_fft)
     fr::field_t* expected = &data[n];
     for (size_t i = 0; i < n; ++i) {
         result[i] = fr::random_element();
-        fr::__copy(result[i], expected[i]);
+        fr::field_t::__copy(result[i], expected[i]);
     }
 
     evaluation_domain domain = evaluation_domain(n);
@@ -97,7 +97,7 @@ TEST(polynomials, fft_ifft_consistency)
     fr::field_t expected[n];
     for (size_t i = 0; i < n; ++i) {
         result[i] = fr::random_element();
-        fr::__copy(result[i], expected[i]);
+        fr::field_t::__copy(result[i], expected[i]);
     }
 
     evaluation_domain domain = evaluation_domain(n);
@@ -117,7 +117,7 @@ TEST(polynomials, fft_coset_ifft_consistency)
     fr::field_t expected[n];
     for (size_t i = 0; i < n; ++i) {
         result[i] = fr::random_element();
-        fr::__copy(result[i], expected[i]);
+        fr::field_t::__copy(result[i], expected[i]);
     }
 
     evaluation_domain domain = evaluation_domain(n);
@@ -144,8 +144,8 @@ TEST(polynomials, fft_coset_ifft_cross_consistency)
 
     for (size_t i = 0; i < n; ++i) {
         poly_a[i] = fr::random_element();
-        fr::__copy(poly_a[i], poly_b[i]);
-        fr::__copy(poly_a[i], poly_c[i]);
+        fr::field_t::__copy(poly_a[i], poly_b[i]);
+        fr::field_t::__copy(poly_a[i], poly_c[i]);
         expected[i] = poly_a[i] + poly_c[i];
         expected[i].self_add(poly_b[i]);
     }
@@ -207,10 +207,10 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
     eval = polynomial_arithmetic::evaluate(l_1_coefficients, shifted_z, small_domain.size);
     polynomial_arithmetic::fft(l_1_coefficients, small_domain);
 
-    fr::__copy(scratch_memory[0], scratch_memory[2 * n]);
-    fr::__copy(scratch_memory[1], scratch_memory[2 * n + 1]);
-    fr::__copy(scratch_memory[2], scratch_memory[2 * n + 2]);
-    fr::__copy(scratch_memory[3], scratch_memory[2 * n + 3]);
+    fr::field_t::__copy(scratch_memory[0], scratch_memory[2 * n]);
+    fr::field_t::__copy(scratch_memory[1], scratch_memory[2 * n + 1]);
+    fr::field_t::__copy(scratch_memory[2], scratch_memory[2 * n + 2]);
+    fr::field_t::__copy(scratch_memory[3], scratch_memory[2 * n + 3]);
     fr::field_t* l_n_minus_one_coefficients = &scratch_memory[4];
     polynomial_arithmetic::coset_ifft(l_n_minus_one_coefficients, mid_domain);
 

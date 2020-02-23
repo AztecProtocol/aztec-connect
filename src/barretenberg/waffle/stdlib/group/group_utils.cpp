@@ -54,10 +54,10 @@ void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fi
     }
     grumpkin::g1::batch_normalize(&ladder_temp[0], quad_length * 2);
     for (size_t i = 0; i < quad_length; ++i) {
-        grumpkin::fq::__copy(ladder_temp[i].x, ladder[quad_length - 1 - i].one.x);
-        grumpkin::fq::__copy(ladder_temp[i].y, ladder[quad_length - 1 - i].one.y);
-        grumpkin::fq::__copy(ladder_temp[quad_length + i].x, ladder[quad_length - 1 - i].three.x);
-        grumpkin::fq::__copy(ladder_temp[quad_length + i].y, ladder[quad_length - 1 - i].three.y);
+        grumpkin::fq::field_t::__copy(ladder_temp[i].x, ladder[quad_length - 1 - i].one.x);
+        grumpkin::fq::field_t::__copy(ladder_temp[i].y, ladder[quad_length - 1 - i].one.y);
+        grumpkin::fq::field_t::__copy(ladder_temp[quad_length + i].x, ladder[quad_length - 1 - i].three.x);
+        grumpkin::fq::field_t::__copy(ladder_temp[quad_length + i].y, ladder[quad_length - 1 - i].three.y);
     }
 
     constexpr grumpkin::fq::field_t eight_inverse = grumpkin::fq::field_t{ 8, 0, 0, 0 }.to_montgomery_form().invert();

@@ -195,8 +195,8 @@ if(PROFILING)
         main.cpp
         fields/asm_macros.hpp
         types.hpp
-        uint256/uint256.hpp
         uint256/uint256_impl.hpp
+        uint256/uint256.hpp
         uint256/uint512_impl.hpp
         uint256/uint512.hpp
         fields/new_field.hpp

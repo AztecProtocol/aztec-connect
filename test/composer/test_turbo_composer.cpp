@@ -69,46 +69,46 @@ TEST(turbo_composer, test_add_gate_proofs)
     uint32_t c_idx = composer.add_variable(c);
     uint32_t d_idx = composer.add_variable(d);
 
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ d_idx, c_idx, a_idx, fr::one, fr::neg_one(), fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ b_idx, a_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ d_idx, c_idx, a_idx, fr::one, fr::neg_one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ b_idx, a_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
 
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
+    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one, fr::zero });
 
     // TODO: proof fails if one wire contains all zeros. Should we support this?
     uint32_t zero_idx = composer.add_variable(fr::zero);
 
     composer.create_big_add_gate(
-        { zero_idx, zero_idx, zero_idx, a_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+        { zero_idx, zero_idx, zero_idx, a_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one });
 
     waffle::TurboProver prover = composer.preprocess();
 
@@ -192,7 +192,7 @@ TEST(turbo_composer, test_mul_gate_proofs)
     uint32_t zero_idx = composer.add_variable(fr::zero);
     uint32_t one_idx = composer.add_variable(fr::one);
     composer.create_big_add_gate(
-        { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+        { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one });
 
     uint32_t e_idx = composer.add_variable(a - fr::one);
     composer.create_add_gate({ e_idx, b_idx, c_idx, q[0], q[1], q[2], (q[3] + q[0]) });
@@ -506,7 +506,7 @@ TEST(turbo_composer, range_constraint)
     uint32_t zero_idx = composer.add_variable(fr::zero);
     uint32_t one_idx = composer.add_variable(fr::one);
     composer.create_big_add_gate(
-        { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+        { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one });
 
     waffle::TurboProver prover = composer.preprocess();
 
@@ -580,7 +580,7 @@ TEST(turbo_composer, and_constraint)
     uint32_t zero_idx = composer.add_variable(fr::zero);
     uint32_t one_idx = composer.add_variable(fr::one);
     composer.create_big_add_gate(
-        { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+        { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one });
 
     waffle::TurboProver prover = composer.preprocess();
 
@@ -653,7 +653,7 @@ TEST(turbo_composer, xor_constraint)
     uint32_t zero_idx = composer.add_variable(fr::zero);
     uint32_t one_idx = composer.add_variable(fr::one);
     composer.create_big_add_gate(
-        { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+        { zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one });
 
     waffle::TurboProver prover = composer.preprocess();
 

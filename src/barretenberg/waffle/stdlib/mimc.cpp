@@ -92,7 +92,7 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> me
         x_out_idx = context->add_variable(x_out);
         context->create_mimc_gate({ x_in_idx, x_cubed_idx, k_idx, x_out_idx, mimc_round_constants[i] });
         x_in_idx = x_out_idx;
-        barretenberg::fr::__copy(x_out, x_in);
+        barretenberg::fr::field_t::__copy(x_out, x_in);
     }
     field_t<waffle::MiMCComposer> result(context, x_out);
     result.witness_index = x_out_idx;

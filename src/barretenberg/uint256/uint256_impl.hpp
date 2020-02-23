@@ -74,22 +74,22 @@ constexpr uint64_t uint256_t::mac_discard_hi(const uint64_t a,
     return (b * c + a + carry_in);
 }
 
-constexpr uint256_t::divmod_output uint256_t::divmod(const uint256_t& a, const uint256_t& b) const
+constexpr std::pair<uint256_t, uint256_t> uint256_t::divmod(const uint256_t& b) const
 {
-    if (a == 0 || b == 0) {
-        return { { { 0 } }, { { 0 } } };
+    if (*this == 0 || b == 0) {
+        return { 0, 0 };
     } else if (b == 1) {
-        return { { { a.data[0], a.data[1], a.data[2], a.data[3] } }, { { 0 } } };
-    } else if (a == b) {
-        return { { { 1, 0, 0, 0 } }, { { 0 } } };
-    } else if (b > a) {
-        return { { { 0 } }, { { a.data[0], a.data[1], a.data[2], a.data[3] } } };
+        return { *this, 0 };
+    } else if (*this == b) {
+        return { 1, 0 };
+    } else if (b > *this) {
+        return { 0, *this };
     }
 
     uint256_t quotient = 0;
-    uint256_t remainder = a;
+    uint256_t remainder = *this;
 
-    uint64_t bit_difference = a.get_msb() - b.get_msb();
+    uint64_t bit_difference = get_msb() - b.get_msb();
 
     uint256_t divisor = b << bit_difference;
     uint256_t accumulator = uint256_t(1) << bit_difference;
@@ -116,8 +116,7 @@ constexpr uint256_t::divmod_output uint256_t::divmod(const uint256_t& a, const u
         accumulator >>= 1;
     }
 
-    return { { quotient.data[0], quotient.data[1], quotient.data[2], quotient.data[3] },
-             { remainder.data[0], remainder.data[1], remainder.data[2], remainder.data[3] } };
+    return { quotient, remainder };
 }
 
 constexpr std::pair<uint256_t, uint256_t> uint256_t::mul_512(const uint256_t& other) const
@@ -145,36 +144,6 @@ constexpr std::pair<uint256_t, uint256_t> uint256_t::mul_512(const uint256_t& ot
     uint256_t lo(r0, r1, r2, r3);
     uint256_t hi(r4, r5, r6, r7);
     return { lo, hi };
-}
-
-/**
- * computes the inverse of *this, modulo modulus, via the extended Euclidean algorithm
- **/
-constexpr uint256_t uint256_t::invmod(const uint256_t& modulus) const
-{
-    if (*this == 0 || modulus == 0) {
-        return 0;
-    }
-
-    uint256_t t1 = 0;
-    uint256_t t2 = 1;
-    uint256_t r2 = (*this > modulus) ? *this % modulus : *this;
-    uint256_t r1 = modulus;
-    uint256_t q = 0;
-    while (r2 != 0) {
-        q = r1 / r2;
-        uint256_t temp_t1 = t1;
-        uint256_t temp_r1 = r1;
-        t1 = t2;
-        t2 = temp_t1 - q * t2;
-        r1 = r2;
-        r2 = temp_r1 - q * r2;
-    }
-
-    if (t1 > modulus) {
-        return modulus + t1;
-    }
-    return t1;
 }
 
 constexpr bool uint256_t::get_bit(const uint64_t bit_index) const
@@ -253,14 +222,12 @@ constexpr uint256_t uint256_t::operator*(const uint256_t& other) const
 
 constexpr uint256_t uint256_t::operator/(const uint256_t& other) const
 {
-    uint64_quad res = divmod(*this, other).quotient;
-    return uint256_t(res.data[0], res.data[1], res.data[2], res.data[3]);
+    return divmod(other).first;
 }
 
 constexpr uint256_t uint256_t::operator%(const uint256_t& other) const
 {
-    uint64_quad res = divmod(*this, other).remainder;
-    return uint256_t(res.data[0], res.data[1], res.data[2], res.data[3]);
+    return divmod(other).second;
 }
 
 constexpr uint256_t uint256_t::operator&(const uint256_t& other) const

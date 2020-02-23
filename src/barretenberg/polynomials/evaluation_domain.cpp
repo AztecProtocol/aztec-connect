@@ -138,12 +138,12 @@ evaluation_domain& evaluation_domain::operator=(evaluation_domain&& other)
     log2_size = static_cast<size_t>(log2(size));
     log2_thread_size = static_cast<size_t>(log2(thread_size));
     log2_num_threads = static_cast<size_t>(log2(num_threads));
-    fr::__copy(other.root, root);
-    fr::__copy(other.root_inverse, root_inverse);
-    fr::__copy(other.domain, domain);
-    fr::__copy(other.domain_inverse, domain_inverse);
-    fr::__copy(other.generator, generator);
-    fr::__copy(other.generator_inverse, generator_inverse);
+    fr::field_t::__copy(other.root, root);
+    fr::field_t::__copy(other.root_inverse, root_inverse);
+    fr::field_t::__copy(other.domain, domain);
+    fr::field_t::__copy(other.domain_inverse, domain_inverse);
+    fr::field_t::__copy(other.generator, generator);
+    fr::field_t::__copy(other.generator_inverse, generator_inverse);
     if (roots != nullptr) {
         aligned_free(roots);
     }

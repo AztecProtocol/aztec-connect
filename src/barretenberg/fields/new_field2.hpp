@@ -11,6 +11,7 @@ template <class base_field, class Params> struct field2 {
     constexpr field2 operator*(const field2& other) const noexcept;
     constexpr field2 operator+(const field2& other) const noexcept;
     constexpr field2 operator-(const field2& other) const noexcept;
+    constexpr field2 operator-() const noexcept;
     constexpr field2 operator/(const field2& other) const noexcept;
 
     // constexpr bool operator>(const field& other) const noexcept;
@@ -60,6 +61,21 @@ template <class base_field, class Params> struct field2 {
 
     constexpr field2 frobenius_map() const noexcept;
     constexpr void self_frobenius_map() noexcept;
+
+    static void serialize_to_buffer(const field2& value, uint8_t* buffer)
+    {
+        base_field::field_t::serialize_to_buffer(value.c0, buffer);
+        base_field::field_t::serialize_to_buffer(value.c1, buffer + sizeof(typename base_field::field_t));
+    }
+
+    static field2 serialize_from_buffer(uint8_t* buffer)
+    {
+        field2 result{ base_field::zero, base_field::zero };
+        result.c0 = base_field::field_t::serialize_from_buffer(buffer);
+        result.c1 = base_field::field_t::serialize_from_buffer(buffer + sizeof(typename base_field::field_t));
+
+        return result;
+    }
 };
 } // namespace test
 

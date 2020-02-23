@@ -53,7 +53,7 @@ ProverSequentialWidget& ProverSequentialWidget::operator=(ProverSequentialWidget
 fr::field_t ProverSequentialWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
                                                                   const transcript::Transcript& transcript)
 {
-    fr::field_t alpha = fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
 
     barretenberg::fr::field_t old_alpha = alpha_base * alpha.invert();
     polynomial& w_3_fft = key->wire_ffts.at("w_3_fft");
@@ -72,8 +72,8 @@ fr::field_t ProverSequentialWidget::compute_linear_contribution(const fr::field_
                                                                 const transcript::Transcript& transcript,
                                                                 polynomial& r)
 {
-    fr::field_t w_o_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
-    fr::field_t alpha = fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
+    fr::field_t w_o_shifted_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
 
     barretenberg::fr::field_t old_alpha = alpha_base * alpha.invert();
     ITERATE_OVER_DOMAIN_START(key->small_domain);
@@ -98,7 +98,7 @@ VerifierBaseWidget::challenge_coefficients VerifierSequentialWidget::append_scal
     std::vector<barretenberg::g1::affine_element>& points,
     std::vector<barretenberg::fr::field_t>& scalars)
 {
-    fr::field_t w_o_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
+    fr::field_t w_o_shifted_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
 
     barretenberg::fr::field_t old_alpha = (challenge.alpha_base * (challenge.alpha_step.invert()));
 

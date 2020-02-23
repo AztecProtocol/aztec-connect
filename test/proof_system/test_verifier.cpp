@@ -122,11 +122,11 @@ waffle::Prover generate_test_data(const size_t n)
         w_o[2 * i] = w_o[2 * i] + w_l[2 * i];
         w_o[2 * i] = w_o[2 * i] + w_r[2 * i];
         w_o[2 * i] = w_o[2 * i] + fr::one;
-        fr::__copy(fr::one, q_l.at(2 * i));
-        fr::__copy(fr::one, q_r.at(2 * i));
-        fr::__copy(fr::neg_one(), q_o.at(2 * i));
-        fr::__copy(fr::one, q_c.at(2 * i));
-        fr::__copy(fr::one, q_m.at(2 * i));
+        fr::field_t::__copy(fr::one, q_l.at(2 * i));
+        fr::field_t::__copy(fr::one, q_r.at(2 * i));
+        fr::field_t::__copy(fr::neg_one, q_o.at(2 * i));
+        fr::field_t::__copy(fr::one, q_c.at(2 * i));
+        fr::field_t::__copy(fr::one, q_m.at(2 * i));
 
         w_l.at(2 * i + 1) = fr::random_element();
         w_r.at(2 * i + 1) = fr::random_element();

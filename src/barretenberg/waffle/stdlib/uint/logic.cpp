@@ -188,7 +188,7 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
                                        context->add_variable(output),
                                        base_shift_factor,
                                        fr::field_t(right_shift_factor).neg(),
-                                       fr::neg_one(),
+                                       fr::neg_one,
                                        fr::zero };
 
         context->create_add_gate(gate);
@@ -284,7 +284,7 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
         const fr::field_t base_shift_factor = t1;
 
         const waffle::add_triple gate{ base_idx,          left_idx,          context->add_variable(output),
-                                       base_shift_factor, left_shift_factor, fr::neg_one(),
+                                       base_shift_factor, left_shift_factor, fr::neg_one,
                                        fr::zero };
 
         context->create_add_gate(gate);

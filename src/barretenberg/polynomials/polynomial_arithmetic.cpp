@@ -75,7 +75,7 @@ void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::
 
     // perform first butterfly iteration explicitly: x0 = x0 + x1, x1 = x0 - x1
     for (size_t k = 0; k < domain_size; k += 2) {
-        fr::__copy(coeffs[k + 1], temp);
+        fr::field_t::__copy(coeffs[k + 1], temp);
         coeffs[k + 1] = coeffs[k].sub_with_coarse_reduction(coeffs[k + 1]);
         coeffs[k].self_add_with_coarse_reduction(temp);
     }
@@ -164,8 +164,8 @@ void fft_inner_parallel(fr::field_t* coeffs,
                 uint32_t swap_index_1 = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)domain.log2_size);
                 uint32_t swap_index_2 = (uint32_t)reverse_bits((uint32_t)i + 1, (uint32_t)domain.log2_size);
 
-                fr::__copy(coeffs[swap_index_1], temp_1);
-                fr::__copy(coeffs[swap_index_2], temp_2);
+                fr::field_t::__copy(coeffs[swap_index_1], temp_1);
+                fr::field_t::__copy(coeffs[swap_index_2], temp_2);
                 scratch_space[i + 1] = temp_1.sub_with_coarse_reduction(temp_2);
                 scratch_space[i] = temp_1.add_with_coarse_reduction(temp_2);
             }
@@ -285,8 +285,8 @@ void fft_inner_parallel(fr::field_t* coeffs,
                 uint32_t swap_index_1 = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)domain.log2_size);
                 uint32_t swap_index_2 = (uint32_t)reverse_bits((uint32_t)i + 1, (uint32_t)domain.log2_size);
 
-                fr::__copy(coeffs[swap_index_1], temp_1);
-                fr::__copy(coeffs[swap_index_2], temp_2);
+                fr::field_t::__copy(coeffs[swap_index_1], temp_1);
+                fr::field_t::__copy(coeffs[swap_index_2], temp_2);
                 target[i + 1] = temp_1.sub_with_coarse_reduction(temp_2);
                 target[i] = temp_1.add_with_coarse_reduction(temp_2);
             }
@@ -443,21 +443,21 @@ void coset_fft(fr::field_t* coeffs,
             const size_t start = j * domain.thread_size;
             const size_t end = (j + 1) * domain.thread_size;
             for (size_t i = start; i < end; ++i) {
-                fr::__copy(scratch_space[i], coeffs[(i << 2UL)]);
-                fr::__copy(scratch_space[i + (1UL << domain.log2_size)], coeffs[(i << 2UL) + 1UL]);
-                fr::__copy(scratch_space[i + (2UL << domain.log2_size)], coeffs[(i << 2UL) + 2UL]);
-                fr::__copy(scratch_space[i + (3UL << domain.log2_size)], coeffs[(i << 2UL) + 3UL]);
+                fr::field_t::__copy(scratch_space[i], coeffs[(i << 2UL)]);
+                fr::field_t::__copy(scratch_space[i + (1UL << domain.log2_size)], coeffs[(i << 2UL) + 1UL]);
+                fr::field_t::__copy(scratch_space[i + (2UL << domain.log2_size)], coeffs[(i << 2UL) + 2UL]);
+                fr::field_t::__copy(scratch_space[i + (3UL << domain.log2_size)], coeffs[(i << 2UL) + 3UL]);
             }
         }
         for (size_t i = 0; i < domain.size; ++i) {
             for (size_t j = 0; j < domain_extension; ++j) {
-                fr::__copy(scratch_space[i + (j << domain.log2_size)], coeffs[(i << log2_domain_extension) + j]);
+                fr::field_t::__copy(scratch_space[i + (j << domain.log2_size)], coeffs[(i << log2_domain_extension) + j]);
             }
         }
     } else {
         for (size_t i = 0; i < domain.size; ++i) {
             for (size_t j = 0; j < domain_extension; ++j) {
-                fr::__copy(scratch_space[i + (j << domain.log2_size)], coeffs[(i << log2_domain_extension) + j]);
+                fr::field_t::__copy(scratch_space[i + (j << domain.log2_size)], coeffs[(i << log2_domain_extension) + j]);
             }
         }
     }
@@ -797,7 +797,7 @@ void compress_fft(const fr::field_t* src, fr::field_t* dest, const size_t cur_si
     ASSERT(1UL << log2_compress_factor == compress_factor);
     size_t new_size = cur_size >> log2_compress_factor;
     for (size_t i = 0; i < new_size; ++i) {
-        fr::__copy(src[i << log2_compress_factor], dest[i]);
+        fr::field_t::__copy(src[i << log2_compress_factor], dest[i]);
     }
 }
 

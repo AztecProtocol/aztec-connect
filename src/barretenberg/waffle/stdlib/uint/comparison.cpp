@@ -53,8 +53,8 @@ template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Na
                                      rhs_idx,
                                      diff_idx,
                                      fr::one,
-                                     fr::neg_one(),
-                                     fr::neg_one(),
+                                     fr::neg_one,
+                                     fr::neg_one,
                                      (additive_constant - other.additive_constant) };
 
     ctx->create_add_gate(gate_a);

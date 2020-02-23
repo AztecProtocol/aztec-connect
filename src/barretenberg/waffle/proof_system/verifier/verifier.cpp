@@ -64,18 +64,18 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
         std::string index = std::to_string(i + 1);
         T[i] = g1::serialize_from_buffer(&transcript.get_element("T_" + index)[0]);
         W[i] = g1::serialize_from_buffer(&transcript.get_element("W_" + index)[0]);
-        wire_evaluations[i] = fr::serialize_from_buffer(&transcript.get_element("w_" + index)[0]);
+        wire_evaluations[i] = fr::field_t::serialize_from_buffer(&transcript.get_element("w_" + index)[0]);
     }
     for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
         std::string index = std::to_string(i + 1);
-        sigma_evaluations[i] = fr::serialize_from_buffer(&transcript.get_element("sigma_" + index)[0]);
+        sigma_evaluations[i] = fr::field_t::serialize_from_buffer(&transcript.get_element("sigma_" + index)[0]);
     }
     g1::affine_element Z_1 = g1::serialize_from_buffer(&transcript.get_element("Z")[0]);
     g1::affine_element PI_Z = g1::serialize_from_buffer(&transcript.get_element("PI_Z")[0]);
     g1::affine_element PI_Z_OMEGA = g1::serialize_from_buffer(&transcript.get_element("PI_Z_OMEGA")[0]);
 
-    fr::field_t linear_eval = fr::serialize_from_buffer(&transcript.get_element("r")[0]);
-    fr::field_t z_1_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("z_omega")[0]);
+    fr::field_t linear_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("r")[0]);
+    fr::field_t z_1_shifted_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("z_omega")[0]);
 
     bool inputs_valid = g1::on_curve(T[0]) && g1::on_curve(Z_1) && g1::on_curve(PI_Z);
 
@@ -132,10 +132,10 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
                              static_cast<uint8_t>(key->num_public_inputs >> 16),
                              static_cast<uint8_t>(key->num_public_inputs >> 24) });
     transcript.apply_fiat_shamir("init");
-    fr::field_t beta = fr::serialize_from_buffer(transcript.apply_fiat_shamir("beta").begin());
-    fr::field_t gamma = fr::serialize_from_buffer(transcript.apply_fiat_shamir("gamma").begin());
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.apply_fiat_shamir("alpha").begin());
-    fr::field_t z_challenge = fr::serialize_from_buffer(transcript.apply_fiat_shamir("z").begin());
+    fr::field_t beta = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("beta").begin());
+    fr::field_t gamma = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("gamma").begin());
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("alpha").begin());
+    fr::field_t z_challenge = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("z").begin());
 
     fr::field_t t_eval = fr::zero;
 
@@ -149,7 +149,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     fr::field_t T0;
     fr::field_t T1;
     fr::field_t T2;
-    fr::__copy(alpha, alpha_pow[0]);
+    fr::field_t::__copy(alpha, alpha_pow[0]);
     for (size_t i = 1; i < 4; ++i) {
         alpha_pow[i] = alpha_pow[i - 1] * alpha_pow[0];
     }
@@ -192,10 +192,10 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
     transcript.add_element("t", transcript_helpers::convert_field_element(t_eval));
 
-    fr::field_t nu = fr::serialize_from_buffer(transcript.apply_fiat_shamir("nu").begin());
+    fr::field_t nu = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("nu").begin());
 
-    fr::field_t u = fr::serialize_from_buffer(transcript.apply_fiat_shamir("separator").begin());
-    fr::__copy(nu, nu_pow[0]);
+    fr::field_t u = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("separator").begin());
+    fr::field_t::__copy(nu, nu_pow[0]);
     for (size_t i = 1; i < 10; ++i) {
         nu_pow[i] = nu_pow[i - 1] * nu_pow[0];
     }
@@ -208,7 +208,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     linear_terms.z_1.self_add(T0);
 
     fr::field_t batch_evaluation;
-    fr::__copy(t_eval, batch_evaluation);
+    fr::field_t::__copy(t_eval, batch_evaluation);
     T0 = nu_pow[0] * linear_eval;
     batch_evaluation.self_add(T0);
 
@@ -231,7 +231,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     for (size_t i = 0; i < program_settings::program_width; ++i) {
         if (program_settings::requires_shifted_wire(program_settings::wire_shift_settings, i)) {
             fr::field_t wire_shifted_eval =
-                fr::serialize_from_buffer(&transcript.get_element("w_" + std::to_string(i + 1) + "_omega")[0]);
+                fr::field_t::serialize_from_buffer(&transcript.get_element("w_" + std::to_string(i + 1) + "_omega")[0]);
             T0 = wire_shifted_eval * nu_base;
             T0.self_mul(u);
             batch_evaluation.self_add(T0);
@@ -256,7 +256,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     elements.emplace_back(Z_1);
     scalars.emplace_back(linear_terms.z_1);
 
-    fr::__copy(nu_pow[8], nu_base);
+    fr::field_t::__copy(nu_pow[8], nu_base);
 
     for (size_t i = 0; i < program_settings::program_width; ++i) {
         if (g1::on_curve(W[i])) {
@@ -320,10 +320,10 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     g1::batch_normalize(P, 2);
 
     g1::affine_element P_affine[2];
-    barretenberg::fq::__copy(P[0].x, P_affine[1].x);
-    barretenberg::fq::__copy(P[0].y, P_affine[1].y);
-    barretenberg::fq::__copy(P[1].x, P_affine[0].x);
-    barretenberg::fq::__copy(P[1].y, P_affine[0].y);
+    barretenberg::fq::field_t::__copy(P[0].x, P_affine[1].x);
+    barretenberg::fq::field_t::__copy(P[0].y, P_affine[1].y);
+    barretenberg::fq::field_t::__copy(P[1].x, P_affine[0].x);
+    barretenberg::fq::field_t::__copy(P[1].y, P_affine[0].y);
 
     barretenberg::fq12::field_t result = barretenberg::pairing::reduced_ate_pairing_batch_precomputed(
         P_affine, key->reference_string.precomputed_g2_lines, 2);

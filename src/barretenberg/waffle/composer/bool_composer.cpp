@@ -276,14 +276,14 @@ std::shared_ptr<program_witness> BoolComposer::compute_witness()
 
     for (size_t i = 0; i < public_inputs.size(); ++i)
     {
-        fr::__copy(variables[public_inputs[i]], poly_w_1[i]);
-        fr::__copy(fr::zero, poly_w_2[i]);
-        fr::__copy(fr::zero, poly_w_3[i]);
+        fr::field_t::__copy(variables[public_inputs[i]], poly_w_1[i]);
+        fr::field_t::__copy(fr::zero, poly_w_2[i]);
+        fr::field_t::__copy(fr::zero, poly_w_3[i]);
     }
     for (size_t i = public_inputs.size(); i < new_n; ++i) {
-        fr::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1.at(i));
-        fr::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2.at(i));
-        fr::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3.at(i));
+        fr::field_t::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1.at(i));
+        fr::field_t::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2.at(i));
+        fr::field_t::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3.at(i));
     }
 
     witness->wires.insert({ "w_1", std::move(poly_w_1) });

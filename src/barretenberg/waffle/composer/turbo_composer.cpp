@@ -312,7 +312,7 @@ void TurboComposer::create_bool_gate(const uint32_t variable_index)
     q_m.emplace_back(fr::one);
     q_1.emplace_back(fr::zero);
     q_2.emplace_back(fr::zero);
-    q_3.emplace_back(fr::neg_one());
+    q_3.emplace_back(fr::neg_one);
     q_c.emplace_back(fr::zero);
     q_logic.emplace_back(fr::zero);
 
@@ -786,8 +786,8 @@ waffle::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t
         q_ecc_1.emplace_back(fr::zero);
         q_range.emplace_back(fr::zero);
         if (is_xor_gate) {
-            q_c.emplace_back(fr::neg_one());
-            q_logic.emplace_back(fr::neg_one());
+            q_c.emplace_back(fr::neg_one);
+            q_logic.emplace_back(fr::neg_one);
         } else {
             q_c.emplace_back(fr::one);
             q_logic.emplace_back(fr::one);
@@ -1082,16 +1082,16 @@ std::shared_ptr<program_witness> TurboComposer::compute_witness()
     polynomial poly_w_4(new_n);
 
     for (size_t i = 0; i < public_inputs.size(); ++i) {
-        fr::__copy(fr::zero, poly_w_1[i]);
-        fr::__copy(variables[public_inputs[i]], poly_w_2[i]);
-        fr::__copy(fr::zero, poly_w_3[i]);
-        fr::__copy(fr::zero, poly_w_4[i]);
+        fr::field_t::__copy(fr::zero, poly_w_1[i]);
+        fr::field_t::__copy(variables[public_inputs[i]], poly_w_2[i]);
+        fr::field_t::__copy(fr::zero, poly_w_3[i]);
+        fr::field_t::__copy(fr::zero, poly_w_4[i]);
     }
     for (size_t i = public_inputs.size(); i < new_n; ++i) {
-        fr::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1.at(i));
-        fr::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2.at(i));
-        fr::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3.at(i));
-        fr::__copy(variables[w_4[i - public_inputs.size()]], poly_w_4.at(i));
+        fr::field_t::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1.at(i));
+        fr::field_t::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2.at(i));
+        fr::field_t::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3.at(i));
+        fr::field_t::__copy(variables[w_4[i - public_inputs.size()]], poly_w_4.at(i));
     }
 
     witness = std::make_shared<program_witness>();

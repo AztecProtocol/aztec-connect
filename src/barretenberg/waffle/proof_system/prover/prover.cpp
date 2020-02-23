@@ -167,8 +167,8 @@ template <typename settings> void ProverBase<settings>::compute_z_coefficients()
         accumulators[(k - 1) * 2 + 1] = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * n));
     }
 
-    fr::field_t beta = fr::serialize_from_buffer(transcript.get_challenge("beta").begin());
-    fr::field_t gamma = fr::serialize_from_buffer(transcript.get_challenge("gamma").begin());
+    fr::field_t beta = fr::field_t::serialize_from_buffer(transcript.get_challenge("beta").begin());
+    fr::field_t gamma = fr::field_t::serialize_from_buffer(transcript.get_challenge("gamma").begin());
 
     std::array<fr::field_t*, settings::program_width> lagrange_base_wires;
     std::array<fr::field_t*, settings::program_width> lagrange_base_sigmas;
@@ -268,11 +268,11 @@ template <typename settings> void ProverBase<settings>::compute_permutation_gran
 {
     polynomial& z_fft = key->z_fft;
 
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
     fr::field_t neg_alpha = alpha.neg();
     fr::field_t alpha_squared = alpha.sqr();
-    fr::field_t beta = fr::serialize_from_buffer(transcript.get_challenge("beta").begin());
-    fr::field_t gamma = fr::serialize_from_buffer(transcript.get_challenge("gamma").begin());
+    fr::field_t beta = fr::field_t::serialize_from_buffer(transcript.get_challenge("beta").begin());
+    fr::field_t gamma = fr::field_t::serialize_from_buffer(transcript.get_challenge("gamma").begin());
 
     // Our permutation check boils down to two 'grand product' arguments,
     // that we represent with a single polynomial Z(X).
@@ -535,7 +535,7 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "compute permutation grand product coeffs: " << diff.count() << "ms" << std::endl;
 #endif
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
     fr::field_t alpha_base = alpha.sqr().sqr();
 
     for (size_t i = 0; i < widgets.size(); ++i) {
@@ -614,8 +614,8 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
 #ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 #endif
-    fr::field_t nu = fr::serialize_from_buffer(transcript.get_challenge("nu").begin());
-    fr::field_t z_challenge = fr::serialize_from_buffer(transcript.get_challenge("z").begin());
+    fr::field_t nu = fr::field_t::serialize_from_buffer(transcript.get_challenge("nu").begin());
+    fr::field_t z_challenge = fr::field_t::serialize_from_buffer(transcript.get_challenge("z").begin());
     fr::field_t* r = key->linear_poly.get_coefficients();
 
     std::array<fr::field_t*, settings::program_width> wires;
@@ -629,7 +629,7 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
     }
 
     fr::field_t nu_powers[9 + settings::program_width];
-    fr::__copy(nu, nu_powers[0]);
+    fr::field_t::__copy(nu, nu_powers[0]);
     for (size_t i = 1; i < 9 + settings::program_width; ++i) {
         nu_powers[i] = nu_powers[i - 1] * nu_powers[0];
     }
@@ -777,8 +777,8 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
 template <typename settings> barretenberg::fr::field_t ProverBase<settings>::compute_linearisation_coefficients()
 {
 
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-    fr::field_t z_challenge = fr::serialize_from_buffer(transcript.get_challenge("z").begin());
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr::field_t z_challenge = fr::field_t::serialize_from_buffer(transcript.get_challenge("z").begin());
     fr::field_t shifted_z;
     shifted_z = z_challenge * key->small_domain.root;
 

@@ -177,10 +177,10 @@ template <class T> constexpr field<T> field<T>::subtract_coarse(const field& oth
     const auto [r2, t2] = sbb(data[2], other.data[2], t1);
     const auto [r3, t3] = sbb(data[3], other.data[3], t2);
 
-    const auto [r4, c0] = addc(r0, T::twice_modulus_0 & t3, 0);
-    const auto [r5, c1] = addc(r1, T::twice_modulus_1 & t3, c0);
-    const auto [r6, c2] = addc(r2, T::twice_modulus_2 & t3, c1);
-    const auto r7 = addc_discard_hi(r3, T::twice_modulus_3 & t3, c2);
+    const auto [r4, c0] = addc(r0, twice_modulus.data[0] & t3, 0);
+    const auto [r5, c1] = addc(r1, twice_modulus.data[1] & t3, c0);
+    const auto [r6, c2] = addc(r2, twice_modulus.data[2] & t3, c1);
+    const auto r7 = addc_discard_hi(r3, twice_modulus.data[3] & t3, c2);
     return { r4, r5, r6, r7 };
 }
 
@@ -721,10 +721,10 @@ template <class T> void field<T>::asm_self_add_with_coarse_reduction(const field
 template <class T> field<T> field<T>::asm_sub_with_coarse_reduction(const field& a, const field& b) noexcept
 {
     field r;
-    constexpr uint64_t twice_modulus_3 = T::twice_modulus_3;
-    constexpr uint64_t twice_modulus_2 = T::twice_modulus_2;
-    constexpr uint64_t twice_modulus_1 = T::twice_modulus_1;
-    constexpr uint64_t twice_modulus_0 = T::twice_modulus_0;
+    constexpr uint64_t twice_modulus_3 = twice_modulus.data[3];
+    constexpr uint64_t twice_modulus_2 = twice_modulus.data[2];
+    constexpr uint64_t twice_modulus_1 = twice_modulus.data[1];
+    constexpr uint64_t twice_modulus_0 = twice_modulus.data[0];
     __asm__(
         CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15") SUB("%1")
             REDUCE_FIELD_ELEMENT("%[twice_modulus_0]", "%[twice_modulus_1]", "%[twice_modulus_2]", "%[twice_modulus_3]")
@@ -743,10 +743,10 @@ template <class T> field<T> field<T>::asm_sub_with_coarse_reduction(const field&
 
 template <class T> void field<T>::asm_self_sub_with_coarse_reduction(const field& a, const field& b) noexcept
 {
-    constexpr uint64_t twice_modulus_3 = T::twice_modulus_3;
-    constexpr uint64_t twice_modulus_2 = T::twice_modulus_2;
-    constexpr uint64_t twice_modulus_1 = T::twice_modulus_1;
-    constexpr uint64_t twice_modulus_0 = T::twice_modulus_0;
+    constexpr uint64_t twice_modulus_3 = twice_modulus.data[3];
+    constexpr uint64_t twice_modulus_2 = twice_modulus.data[2];
+    constexpr uint64_t twice_modulus_1 = twice_modulus.data[1];
+    constexpr uint64_t twice_modulus_0 = twice_modulus.data[0];
     __asm__(
         CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15") SUB("%1")
             REDUCE_FIELD_ELEMENT("%[twice_modulus_0]", "%[twice_modulus_1]", "%[twice_modulus_2]", "%[twice_modulus_3]")
@@ -1132,6 +1132,7 @@ template <class T> constexpr field<T> field<T>::to_montgomery_form() const noexc
 
 template <class T> constexpr field<T> field<T>::from_montgomery_form() const noexcept
 {
+    constexpr field one_raw{ 1, 0, 0, 0 };
     return operator*(one_raw);
 }
 
@@ -1145,6 +1146,7 @@ template <class T> constexpr void field<T>::self_to_montgomery_form() noexcept
 
 template <class T> constexpr void field<T>::self_from_montgomery_form() noexcept
 {
+    constexpr field one_raw{ 1, 0, 0, 0 };
     self_mul(one_raw);
 }
 
@@ -1233,7 +1235,7 @@ template <class T> constexpr field<T> field<T>::invert() const noexcept
 
 template <class T> constexpr void field<T>::self_invert() noexcept
 {
-    *this = pow(modulus_minus_two);
+    *this = invert();
 }
 
 template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noexcept
@@ -1266,8 +1268,9 @@ template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noex
     // We can iteratively transform t into ever smaller subgroups, until t = 1.
     // At each iteration, we need to find a new value for b, which we can obtain
     // by repeatedly squaring z^{Q}
-    constexpr field Q_minus_one_over_two = field(
-        T::Q_minus_one_over_two_0, T::Q_minus_one_over_two_1, T::Q_minus_one_over_two_2, T::Q_minus_one_over_two_3);
+    constexpr field Q_minus_one_over_two{
+        T::Q_minus_one_over_two_0, T::Q_minus_one_over_two_1, T::Q_minus_one_over_two_2, T::Q_minus_one_over_two_3
+    };
     // __to_montgomery_form(Q_minus_one_over_two, Q_minus_one_over_two);
     field z = multiplicative_generator; // the generator is a non-residue
     field b = pow(Q_minus_one_over_two);

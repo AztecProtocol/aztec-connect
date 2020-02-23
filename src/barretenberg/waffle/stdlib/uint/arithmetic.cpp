@@ -51,7 +51,7 @@ uint<Composer, Native> uint<Composer, Native>::operator+(const uint& other) cons
         ctx->add_variable(overflow),
         fr::one,
         fr::one,
-        fr::neg_one(),
+        fr::neg_one,
         fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE).neg(),
         constants,
     };
@@ -101,8 +101,8 @@ uint<Composer, Native> uint<Composer, Native>::operator-(const uint& other) cons
         ctx->add_variable(remainder),
         ctx->add_variable(overflow),
         fr::one,
-        fr::neg_one(),
-        fr::neg_one(),
+        fr::neg_one,
+        fr::neg_one,
         fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE).neg(),
         CIRCUIT_UINT_MAX_PLUS_ONE + constant_term,
     };
@@ -147,7 +147,7 @@ uint<Composer, Native> uint<Composer, Native>::operator*(const uint& other) cons
         fr::one,
         other.additive_constant,
         additive_constant,
-        fr::neg_one(),
+        fr::neg_one,
         fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE).neg(),
         constant_term,
     };
@@ -250,7 +250,7 @@ std::pair<uint<Composer, Native>, uint<Composer, Native>> uint<Composer, Native>
         fr::one,                             // q_m.w_1.w_2 = q.b
         other.additive_constant,             // q_l.w_1 = q.b if b const
         fr::zero,                            // q_2.w_2 = 0
-        fr::neg_one(),                       // q_3.w_3 = -a
+        fr::neg_one,                       // q_3.w_3 = -a
         fr::one,                             // q_4.w_4 = r
         fr::field_t(additive_constant).neg() // q_c = -a if a const
     };
@@ -265,8 +265,8 @@ std::pair<uint<Composer, Native>, uint<Composer, Native>> uint<Composer, Native>
         remainder_idx,           // r
         delta_idx,               // d
         fr::one,                 // q_l = 1
-        fr::neg_one(),           // q_r = -1
-        fr::neg_one(),           // q_o = -1
+        fr::neg_one,           // q_r = -1
+        fr::neg_one,           // q_o = -1
         other.additive_constant, // q_c = d if const
     };
     ctx->create_add_gate(delta_gate);

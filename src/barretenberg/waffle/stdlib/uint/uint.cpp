@@ -174,7 +174,7 @@ template <typename Context, typename Native> uint<Context, Native>::operator byt
         waffle::add_quad gate{ lo.witness_index, hi.witness_index,
                                accumulator_idx,  context->add_variable(next_accumulator),
                                scale_factor,     scale_factor + scale_factor,
-                               fr::one,          fr::neg_one(),
+                               fr::one,          fr::neg_one,
                                fr::zero };
 
         context->create_big_add_gate(gate);
@@ -219,7 +219,7 @@ template <typename Composer, typename Native> uint<Composer, Native> uint<Compos
             context->add_variable(overflow),
             fr::one,
             fr::zero,
-            fr::neg_one(),
+            fr::neg_one,
             fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE).neg(),
             (additive_constant & MASK),
         };

@@ -229,7 +229,7 @@ TEST(scalar_multiplication, reduce_buckets)
     for (size_t i = 0; i < num_initial_points; ++i) {
         // source_scalar.self_sqr();
         source_scalar = fr::random_element();
-        fr::__copy(source_scalar, scalars[i]);
+        fr::field_t::__copy(source_scalar, scalars[i]);
     }
 
     // scalar_multiplication::generate_pippenger_point_table(monomials, monomials, num_initial_points);
@@ -351,7 +351,7 @@ TEST(scalar_multiplication, reduce_buckets_basic)
     fr::field_t source_scalar = fr::random_element();
     for (size_t i = 0; i < num_initial_points; ++i) {
         source_scalar.self_sqr();
-        fr::__copy(source_scalar, scalars[i]);
+        fr::field_t::__copy(source_scalar, scalars[i]);
     }
 
     scalar_multiplication::multiplication_runtime_state state;
@@ -452,7 +452,7 @@ TEST(scalar_multiplication, construct_addition_chains)
     fr::field_t source_scalar = fr::random_element();
     for (size_t i = 0; i < num_initial_points; ++i) {
         source_scalar.self_sqr();
-        fr::__copy(source_scalar, scalars[i]);
+        fr::field_t::__copy(source_scalar, scalars[i]);
     }
 
     scalar_multiplication::multiplication_runtime_state state;
@@ -517,7 +517,7 @@ TEST(scalar_multiplication, construct_addition_chains)
 //     fr::field_t source_scalar = fr::random_element();
 //     for (size_t i = 0; i < num_initial_points; ++i) {
 //         source_scalar.self_sqr();
-//         fr::__copy(source_scalar, scalars[i]);
+//         fr::field_t::__copy(source_scalar, scalars[i]);
 //     }
 
 //     scalar_multiplication::multiplication_runtime_state state;
@@ -581,7 +581,7 @@ TEST(scalar_multiplication, radix_sort)
     fr::field_t source_scalar = fr::random_element();
     for (size_t i = 0; i < target_degree; ++i) {
         source_scalar.self_sqr();
-        fr::__copy(source_scalar, scalars[i]);
+        fr::field_t::__copy(source_scalar, scalars[i]);
     }
 
     scalar_multiplication::multiplication_runtime_state state;
@@ -636,7 +636,7 @@ TEST(scalar_multiplication, oversized_inputs)
     fr::field_t source_scalar = fr::random_element();
     for (size_t i = 0; i < target_degree; ++i) {
         source_scalar.self_sqr();
-        fr::__copy(source_scalar, scalars[i]);
+        fr::field_t::__copy(source_scalar, scalars[i]);
     }
 
     g1::element first = scalar_multiplication::pippenger(scalars, monomials, target_degree);

@@ -238,7 +238,7 @@ TEST(fr, copy)
 {
     fr::field_t result = fr::random_element();
     fr::field_t expected;
-    fr::__copy(result, expected);
+    fr::field_t::__copy(result, expected);
     EXPECT_EQ((result == expected), true);
 }
 
@@ -259,7 +259,7 @@ TEST(fr, split_into_endomorphism_scalars)
     EXPECT_EQ(got_entropy, 0);
     input.data[3] &= 0x7fffffffffffffff;
 
-    while (input > fr::modulus_plus_one) {
+    while (input > fr::modulus) {
         input.self_sub(fr::modulus);
     }
     fr::field_t k = { input.data[0], input.data[1], input.data[2], input.data[3] };
@@ -289,7 +289,7 @@ TEST(fr, split_into_endomorphism_scalars_simple)
     fr::field_t k = { 0, 0, 0, 0 };
     fr::field_t k1 = { 0, 0, 0, 0 };
     fr::field_t k2 = { 0, 0, 0, 0 };
-    fr::__copy(input, k);
+    fr::field_t::__copy(input, k);
 
     fr::field_t::split_into_endomorphism_scalars(k, k1, k2);
 
@@ -314,7 +314,7 @@ TEST(fr, batch_invert)
     fr::field_t one = fr::one;
     for (size_t i = 0; i < n; ++i) {
         coeffs[i] = fr::random_element();
-        fr::__copy(coeffs[i], inverses[i]);
+        fr::field_t::__copy(coeffs[i], inverses[i]);
     }
     fr::batch_invert(inverses, n);
 
@@ -335,7 +335,7 @@ TEST(fr, coset_generator_consistency)
 {
     size_t num_generators = 15;
     std::vector<fr::field_t> generators(num_generators);
-    fr::compute_coset_generators(num_generators, 1 << 30, &generators[0]);
+    fr::field_t::compute_coset_generators(num_generators, 1 << 30, &generators[0]);
     EXPECT_EQ(generators.size() == num_generators, true);
     for (size_t i = 0; i < generators.size(); ++i) {
         EXPECT_EQ((generators[i] == fr::coset_generators[i]), true);

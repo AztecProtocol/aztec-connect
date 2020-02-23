@@ -108,7 +108,7 @@ ProverTurboRangeWidget& ProverTurboRangeWidget::operator=(ProverTurboRangeWidget
 fr::field_t ProverTurboRangeWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
                                                                   const transcript::Transcript& transcript)
 {
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
     fr::field_t alpha_a = alpha_base;
     fr::field_t alpha_b = alpha_a * alpha;
@@ -192,13 +192,13 @@ fr::field_t ProverTurboRangeWidget::compute_linear_contribution(const fr::field_
                                                                 const transcript::Transcript& transcript,
                                                                 barretenberg::polynomial& r)
 {
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
-    fr::field_t w_4_eval = fr::serialize_from_buffer(&transcript.get_element("w_4")[0]);
-    fr::field_t w_1_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
-    fr::field_t w_2_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
-    fr::field_t w_3_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
-    fr::field_t w_4_omega_eval = fr::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
+    fr::field_t w_4_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4")[0]);
+    fr::field_t w_1_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+    fr::field_t w_2_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+    fr::field_t w_3_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+    fr::field_t w_4_omega_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
 
     constexpr fr::field_t minus_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
     constexpr fr::field_t minus_three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form().neg();
@@ -284,7 +284,7 @@ VerifierTurboRangeWidget::VerifierTurboRangeWidget()
 barretenberg::fr::field_t VerifierTurboRangeWidget::compute_quotient_evaluation_contribution(
     verification_key*, const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t&)
 {
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
     return alpha_base * alpha.sqr().sqr();
 }
@@ -305,11 +305,11 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboRangeWidget::append_scal
     std::vector<barretenberg::g1::affine_element>& points,
     std::vector<barretenberg::fr::field_t>& scalars)
 {
-    fr::field_t w_4_eval = fr::serialize_from_buffer(&transcript.get_element("w_4")[0]);
-    fr::field_t w_1_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
-    fr::field_t w_2_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
-    fr::field_t w_3_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
-    fr::field_t w_4_omega_eval = fr::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
+    fr::field_t w_4_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4")[0]);
+    fr::field_t w_1_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+    fr::field_t w_2_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+    fr::field_t w_3_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+    fr::field_t w_4_omega_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
 
     constexpr fr::field_t minus_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
     constexpr fr::field_t minus_three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form().neg();

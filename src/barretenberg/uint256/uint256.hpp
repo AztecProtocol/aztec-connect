@@ -13,6 +13,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <iomanip>
 
 class uint256_t {
   public:
@@ -128,25 +129,11 @@ class uint256_t {
         return *this;
     };
 
-    constexpr uint256_t invmod(const uint256_t& modulus) const;
-
     constexpr std::pair<uint256_t, uint256_t> mul_512(const uint256_t& other) const;
-
-    friend std::ostream& operator<<(std::ostream& os, const uint256_t& val);
 
     uint64_t data[4];
 
   private:
-    struct uint64_pair {
-        uint64_t data[2];
-    };
-    struct uint64_quad {
-        uint64_t data[4];
-    };
-    struct divmod_output {
-        uint64_quad quotient;
-        uint64_quad remainder;
-    };
 
     constexpr std::pair<uint64_t, uint64_t> mul_wide(const uint64_t a, const uint64_t b) const;
     constexpr std::pair<uint64_t, uint64_t> addc(const uint64_t a, const uint64_t b, const uint64_t carry_in) const;
@@ -162,13 +149,16 @@ class uint256_t {
                                                 const uint64_t b,
                                                 const uint64_t c,
                                                 const uint64_t carry_in) const;
-    constexpr divmod_output divmod(const uint256_t& a, const uint256_t& b) const;
+    constexpr std::pair<uint256_t, uint256_t> divmod(const uint256_t& b) const;
 };
 
 #include "./uint256_impl.hpp"
 
-inline std::ostream& operator<<(std::ostream& os, const uint256_t& val)
+inline std::ostream& operator<<(std::ostream& os, uint256_t const& a)
 {
-    os << "[" << val.data[0] << ", " << val.data[1] << ", " << val.data[2] << ", " << val.data[3] << "]";
+    std::ios_base::fmtflags f(os.flags());
+    os << std::hex << "0x" << std::setfill('0') << std::setw(16) << a.data[3] << std::setw(16) << a.data[2]
+       << std::setw(16) << a.data[1] << std::setw(16) << a.data[0];
+    os.flags(f);
     return os;
 }

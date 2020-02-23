@@ -63,7 +63,7 @@ ProverMiMCWidget& ProverMiMCWidget::operator=(ProverMiMCWidget&& other)
 fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
                                                             const transcript::Transcript& transcript)
 {
-    fr::field_t alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
     polynomial& w_1_fft = key->wire_ffts.at("w_1_fft");
     polynomial& w_2_fft = key->wire_ffts.at("w_2_fft");
@@ -84,7 +84,7 @@ fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::
 
 void ProverMiMCWidget::compute_transcript_elements(transcript::Transcript& transcript)
 {
-    fr::field_t z = fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
+    fr::field_t z = fr::field_t::serialize_from_buffer(&transcript.get_challenge("z")[0]);
     transcript.add_element(
         "q_mimc_coefficient",
         transcript_helpers::convert_field_element(q_mimc_coefficient.evaluate(z, key->small_domain.size)));
@@ -94,12 +94,12 @@ fr::field_t ProverMiMCWidget::compute_linear_contribution(const fr::field_t& alp
                                                           const transcript::Transcript& transcript,
                                                           polynomial& r)
 {
-    fr::field_t alpha = fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
-    fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
-    fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
-    fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
-    fr::field_t w_o_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
-    fr::field_t q_mimc_coefficient_eval = fr::serialize_from_buffer(&transcript.get_element("q_mimc_coefficient")[0]);
+    fr::field_t alpha = fr::field_t::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
+    fr::field_t w_l_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+    fr::field_t w_r_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+    fr::field_t w_o_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+    fr::field_t w_o_shifted_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
+    fr::field_t q_mimc_coefficient_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("q_mimc_coefficient")[0]);
 
     fr::field_t mimc_T0 = w_l_eval + w_o_eval + q_mimc_coefficient_eval;
     fr::field_t mimc_a = (mimc_T0.sqr() * mimc_T0) - w_r_eval;
@@ -116,7 +116,7 @@ fr::field_t ProverMiMCWidget::compute_opening_poly_contribution(const fr::field_
                                                                 fr::field_t* poly,
                                                                 fr::field_t*)
 {
-    fr::field_t nu = fr::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
+    fr::field_t nu = fr::field_t::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     poly[i].self_add(q_mimc_coefficient[i] * nu_base);
     ITERATE_OVER_DOMAIN_END;
@@ -136,8 +136,8 @@ barretenberg::fr::field_t VerifierMiMCWidget::compute_batch_evaluation_contribut
     const barretenberg::fr::field_t& nu_base,
     const transcript::Transcript& transcript)
 {
-    fr::field_t q_mimc_coefficient_eval = fr::serialize_from_buffer(&transcript.get_element("q_mimc_coefficient")[0]);
-    fr::field_t nu = fr::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
+    fr::field_t q_mimc_coefficient_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("q_mimc_coefficient")[0]);
+    fr::field_t nu = fr::field_t::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
 
     batch_eval.self_add(q_mimc_coefficient_eval * nu_base);
 
@@ -155,11 +155,11 @@ VerifierBaseWidget::challenge_coefficients VerifierMiMCWidget::append_scalar_mul
         points.push_back(key->constraint_selectors.at("Q_MIMC_COEFFICIENT"));
         scalars.push_back(challenge.nu_base);
     }
-    fr::field_t w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
-    fr::field_t w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
-    fr::field_t w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
-    fr::field_t w_o_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
-    fr::field_t q_mimc_coefficient_eval = fr::serialize_from_buffer(&transcript.get_element("q_mimc_coefficient")[0]);
+    fr::field_t w_l_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+    fr::field_t w_r_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+    fr::field_t w_o_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+    fr::field_t w_o_shifted_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
+    fr::field_t q_mimc_coefficient_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("q_mimc_coefficient")[0]);
 
     fr::field_t mimc_T0 = w_l_eval + w_o_eval + q_mimc_coefficient_eval;
     fr::field_t mimc_a = (mimc_T0.sqr() * mimc_T0) - w_r_eval;

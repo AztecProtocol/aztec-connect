@@ -26,6 +26,7 @@ fq::field_t get_pseudorandom_element()
     return out;
 }
 } // namespace
+
 TEST(fq, eq)
 {
     constexpr fq::field_t a{ 0x01, 0x02, 0x03, 0x04 };
@@ -398,7 +399,7 @@ TEST(fq, copy)
 {
     fq::field_t result = fq::random_element();
     fq::field_t expected;
-    fq::__copy(result, expected);
+    fq::field_t::__copy(result, expected);
     EXPECT_EQ((result == expected), true);
 }
 
@@ -419,17 +420,16 @@ TEST(fq, split_into_endomorphism_scalars)
     EXPECT_EQ(got_entropy, 0);
     input.data[3] &= 0x7fffffffffffffff;
 
-    while (input > fq::modulus_plus_one) {
+    while (input > fq::modulus) {
         input.self_sub(fq::modulus);
     }
-    printf("input data = [%lx, %lx, %lx, %lx] \n", input.data[0], input.data[1], input.data[2], input.data[3]);
     fq::field_t k = { input.data[0], input.data[1], input.data[2], input.data[3] };
-    printf("k = [%lx, %lx, %lx, %lx] \n", k.data[0], k.data[1], k.data[2], k.data[3]);
     fq::field_t k1 = 0;
     fq::field_t k2 = 0;
 
     fq::field_t::split_into_endomorphism_scalars(k, k1, k2);
 
+    std::cout << "endo scalars = " << k1 << k2 << std::endl;
     fq::field_t result = 0;
 
     k1.self_to_montgomery_form();
@@ -451,7 +451,7 @@ TEST(fq, split_into_endomorphism_scalars_simple)
     fq::field_t k = { 0, 0, 0, 0 };
     fq::field_t k1 = { 0, 0, 0, 0 };
     fq::field_t k2 = { 0, 0, 0, 0 };
-    fq::__copy(input, k);
+    fq::field_t::__copy(input, k);
 
     fq::field_t::split_into_endomorphism_scalars(k, k1, k2);
 
@@ -472,7 +472,7 @@ TEST(fq, coset_generator_consistency)
 {
     size_t num_generators = 15;
     std::vector<fq::field_t> generators(num_generators);
-    fq::compute_coset_generators(num_generators, 1 << 30, &generators[0]);
+    fq::field_t::compute_coset_generators(num_generators, 1 << 30, &generators[0]);
     EXPECT_EQ(generators.size() == num_generators, true);
     for (size_t i = 0; i < generators.size(); ++i) {
         EXPECT_EQ((generators[i] == fq::coset_generators[i]), true);
@@ -485,7 +485,7 @@ TEST(fq, serialize_to_buffer)
     fq::field_t a = { 0x1234567876543210, 0x2345678987654321, 0x3456789a98765432, 0x006789abcba98765 };
     a = a.to_montgomery_form();
 
-    fq::serialize_to_buffer(a, &buffer[0]);
+    fq::field_t::serialize_to_buffer(a, &buffer[0]);
 
     EXPECT_EQ(buffer[31], 0x10);
     EXPECT_EQ(buffer[30], 0x32);
@@ -529,9 +529,9 @@ TEST(fq, serialize_from_buffer)
     uint8_t buffer[32];
     fq::field_t expected = { 0x1234567876543210, 0x2345678987654321, 0x3456789a98765432, 0x006789abcba98765 };
 
-    fq::serialize_to_buffer(expected, &buffer[0]);
+    fq::field_t::serialize_to_buffer(expected, &buffer[0]);
 
-    fq::field_t result = fq::serialize_from_buffer(&buffer[0]);
+    fq::field_t result = fq::field_t::serialize_from_buffer(&buffer[0]);
 
     EXPECT_EQ((result == expected), true);
 }

@@ -329,12 +329,3 @@ TEST(uint256, field_conversions)
     static_assert(a == c);
     EXPECT_EQ(a, c);
 }
-
-TEST(uint256, invmod)
-{
-    uint256_t prime(fr::modulus.data[0], fr::modulus.data[1], fr::modulus.data[2], fr::modulus.data[3]);
-    uint256_t target = get_pseudorandom_uint256();
-    uint256_t result = target.invmod(prime);
-    uint256_t expected = fr::field_t(target).invert();
-    EXPECT_EQ(result, expected);
-}

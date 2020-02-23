@@ -23,6 +23,11 @@ template <class base, class T> constexpr field2<base, T> field2<base, T>::operat
     return { c0 - other.c0, c1 - other.c1 };
 }
 
+template <class base, class T> constexpr field2<base, T> field2<base, T>::operator-() const noexcept
+{
+    return { -c0, -c1 };
+}
+
 template <class base, class T> constexpr field2<base, T> field2<base, T>::operator/(const field2& other) const noexcept
 {
     return operator*(other.invert());

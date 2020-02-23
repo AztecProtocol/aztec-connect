@@ -60,7 +60,7 @@ struct Bn254Fq6Params
 
         T2 = T0 - a.c1;   // T2 = 9a.c0 - a.c1
         r.c1 = T1 + a.c0; // r.c1 = 9a.c1 + a.c0
-        fq::__copy(T2, r.c0);        // r.c0 = T2
+        fq::field_t::__copy(T2, r.c0);        // r.c0 = T2
     }
 };
 

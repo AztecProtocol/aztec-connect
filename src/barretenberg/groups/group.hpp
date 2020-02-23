@@ -28,23 +28,6 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     static constexpr affine_element affine_one{ GroupParams::one_x, GroupParams::one_y };
 
     static constexpr typename coordinate_field::field_t curve_b = GroupParams::b;
-    static inline void print(const affine_element& p)
-    {
-        printf("p.x: ");
-        coordinate_field::print(p.x);
-        printf("p.y: ");
-        coordinate_field::print(p.y);
-    }
-
-    static inline void print(const element& p)
-    {
-        printf("p.x: ");
-        coordinate_field::print(p.x);
-        printf("p.y: ");
-        coordinate_field::print(p.y);
-        printf("p.z: ");
-        coordinate_field::print(p.z);
-    }
 
     static inline void random_coordinates_on_curve(typename coordinate_field::field_t& x,
                                                    typename coordinate_field::field_t& y)
@@ -426,15 +409,11 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         bool p2_zero = p2.y.is_msb_set();
         if (__builtin_expect((p1_zero || p2_zero), 0)) {
             if (p1_zero && !p2_zero) {
-                coordinate_field::__copy(p2.x, p3.x);
-                coordinate_field::__copy(p2.y, p3.y);
-                coordinate_field::__copy(p2.z, p3.z);
+                p3 = { p2.x, p2.y, p2.z };
                 return;
             }
             if (p2_zero && !p1_zero) {
-                coordinate_field::__copy(p1.x, p3.x);
-                coordinate_field::__copy(p1.y, p3.y);
-                coordinate_field::__copy(p1.z, p3.z);
+                p3 = { p1.x, p1.y, p1.z };
                 return;
             }
             set_infinity(p3);
@@ -534,7 +513,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         // Iterate over the points, computing the product of their z-coordinates.
         // At each iteration, store the currently-accumulated z-coordinate in `temporaries`
         for (size_t i = 0; i < num_points; ++i) {
-            coordinate_field::__copy(accumulator, temporaries[i]);
+            temporaries[i] = accumulator;
             if (!is_point_at_infinity(points[i])) {
                 accumulator.self_mul(points[i].z);
             }
@@ -602,48 +581,24 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         return (xxx == yy);
     }
 
-    static inline void __neg(const element& a, element& r)
-    {
-        coordinate_field::__copy(a.x, r.x);
-        coordinate_field::__copy(a.y, r.y);
-        coordinate_field::__copy(a.z, r.z);
-        r.y.self_neg();
-    }
+    static inline void __neg(const element& a, element& r) { r = { a.x, -a.y, a.z }; }
 
-    static inline void __neg(const affine_element& a, affine_element& r)
-    {
-        coordinate_field::__copy(a.x, r.x);
-        r.y = a.y.neg();
-    }
+    static inline void __neg(const affine_element& a, affine_element& r) { r = { a.x, -a.y }; }
 
     static inline void affine_to_jacobian(const affine_element& a, element& r)
     {
-        coordinate_field::__copy(a.x, r.x);
-        coordinate_field::__copy(a.y, r.y);
-        r.z = coordinate_field::one;
+        r = { a.x, a.y, coordinate_field::one };
     }
 
-    static inline element affine_to_jacobian(const affine_element& a)
-    {
-        element r;
-        coordinate_field::__copy(a.x, r.x);
-        coordinate_field::__copy(a.y, r.y);
-        r.z = coordinate_field::one;
-        return r;
-    }
+    static inline element affine_to_jacobian(const affine_element& a) { return element{ a.x, a.y, a.z }; }
 
     static inline void jacobian_to_affine(const element& a, affine_element& r)
     {
         element temp = normalize(a);
-        coordinate_field::__copy(temp.x, r.x);
-        coordinate_field::__copy(temp.y, r.y);
+        r = { temp.x, temp.y };
     }
 
-    static inline void copy_affine(const affine_element& a, affine_element& r)
-    {
-        coordinate_field::__copy(a.x, r.x);
-        coordinate_field::__copy(a.y, r.y);
-    }
+    static inline void copy_affine(const affine_element& a, affine_element& r) { r = { a.x, a.y }; }
 
     static inline element group_exponentiation_no_endo(const element& a, const typename subgroup_field::field_t& scalar)
     {
@@ -699,8 +654,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         batch_normalize(precomp_table, lookup_size);
 
         for (size_t i = 0; i < lookup_size; ++i) {
-            coordinate_field::__copy(precomp_table[i].x, lookup_table[i].x);
-            coordinate_field::__copy(precomp_table[i].y, lookup_table[i].y);
+            lookup_table[i] = { precomp_table[i].x, precomp_table[i].y };
         }
 
         uint64_t wnaf_table[num_rounds * 2];
@@ -796,8 +750,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             set_infinity(result);
         } else {
             batch_normalize(&output, 1);
-            coordinate_field::__copy(output.x, result.x);
-            coordinate_field::__copy(output.y, result.y);
+            result = { output.x, output.y };
         }
         return result;
     }
@@ -831,27 +784,18 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
     static void copy(const affine_element* src, affine_element* dest);
 
-    static inline void copy(const affine_element& src, affine_element& dest)
-    {
-        coordinate_field::__copy(src.x, dest.x);
-        coordinate_field::__copy(src.y, dest.y);
-    }
+    static inline void copy(const affine_element& src, affine_element& dest) { dest = src; }
     // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
     static void copy(const element* src, element* dest);
 
-    static inline void copy(const element& src, element& dest)
-    {
-        coordinate_field::__copy(src.x, dest.x);
-        coordinate_field::__copy(src.y, dest.y);
-        coordinate_field::__copy(src.z, dest.z);
-    }
+    static inline void copy(const element& src, element& dest) { dest = src; }
 
     static void conditional_negate_affine(const affine_element* src, affine_element* dest, uint64_t predicate);
 
     static inline void serialize_to_buffer(const affine_element& value, uint8_t* buffer)
     {
-        coordinate_field::serialize_to_buffer(value.y, buffer);
-        coordinate_field::serialize_to_buffer(value.x, buffer + sizeof(typename coordinate_field::field_t));
+        coordinate_field::field_t::serialize_to_buffer(value.y, buffer);
+        coordinate_field::field_t::serialize_to_buffer(value.x, buffer + sizeof(typename coordinate_field::field_t));
         if (!on_curve(value)) {
             buffer[0] = buffer[0] | (1 << 7);
         }
@@ -860,8 +804,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     static inline affine_element serialize_from_buffer(uint8_t* buffer)
     {
         affine_element result;
-        result.y = coordinate_field::serialize_from_buffer(buffer);
-        result.x = coordinate_field::serialize_from_buffer(buffer + sizeof(typename coordinate_field::field_t));
+        result.y = coordinate_field::field_t::serialize_from_buffer(buffer);
+        result.x =
+            coordinate_field::field_t::serialize_from_buffer(buffer + sizeof(typename coordinate_field::field_t));
         if (((buffer[0] >> 7) & 1) == 1) {
             set_infinity(result);
         }

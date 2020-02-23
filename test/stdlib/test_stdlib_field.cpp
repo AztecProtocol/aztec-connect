@@ -208,7 +208,7 @@ TEST(stdlib_field, is_zero)
 
     // yuck
     field_t a = (public_witness_t(&composer, fr::random_element()));
-    field_t b = (public_witness_t(&composer, fr::neg_one()));
+    field_t b = (public_witness_t(&composer, fr::neg_one));
     field_t c_1(&composer, uint256_t(0x1122334455667788, 0x8877665544332211, 0xaabbccddeeff9933, 0x1122112211221122));
     field_t c_2(&composer, uint256_t(0xaabbccddeeff9933, 0x8877665544332211, 0x1122334455667788, 0x1122112211221122));
     field_t c_3(&composer, barretenberg::fr::one);

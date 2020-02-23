@@ -36,11 +36,11 @@
 //                               composer.add_variable(wires[4]), composer.add_variable(wires[5]),
 //                               composer.add_variable(wires[6]) };
 //     composer.create_add_gate(
-//         { wire_indices[0], wire_indices[1], wire_indices[2], fr::one, fr::one, fr::neg_one(), fr::zero });
+//         { wire_indices[0], wire_indices[1], wire_indices[2], fr::one, fr::one, fr::neg_one, fr::zero });
 //     composer.create_add_gate(
-//         { wire_indices[2], wire_indices[3], wire_indices[4], fr::one, fr::one, fr::neg_one(), fr::zero });
+//         { wire_indices[2], wire_indices[3], wire_indices[4], fr::one, fr::one, fr::neg_one, fr::zero });
 //     composer.create_add_gate(
-//         { wire_indices[4], wire_indices[5], wire_indices[6], fr::one, fr::one, fr::neg_one(), fr::zero });
+//         { wire_indices[4], wire_indices[5], wire_indices[6], fr::one, fr::one, fr::neg_one, fr::zero });
 
 //     composer.combine_linear_relations();
 
@@ -59,11 +59,11 @@
 //                               composer.add_variable(wires[2]), composer.add_variable(wires[3]),
 //                               composer.add_variable(wires[4]), composer.add_variable(wires[5]),
 //                               composer.add_variable(wires[6]) };
-//     composer.create_mul_gate({ wire_indices[0], wire_indices[1], wire_indices[2], fr::one, fr::neg_one(), fr::zero });
+//     composer.create_mul_gate({ wire_indices[0], wire_indices[1], wire_indices[2], fr::one, fr::neg_one, fr::zero });
 //     composer.create_add_gate(
-//         { wire_indices[2], wire_indices[3], wire_indices[4], fr::one, fr::one, fr::neg_one(), fr::zero });
+//         { wire_indices[2], wire_indices[3], wire_indices[4], fr::one, fr::one, fr::neg_one, fr::zero });
 //     composer.create_add_gate(
-//         { wire_indices[4], wire_indices[5], wire_indices[6], fr::one, fr::one, fr::neg_one(), fr::zero });
+//         { wire_indices[4], wire_indices[5], wire_indices[6], fr::one, fr::one, fr::neg_one, fr::zero });
 
 //     composer.combine_linear_relations();
 
@@ -116,16 +116,16 @@
 //     EXPECT_EQ(composer.q_1[0]).data[0], 1UL << 2UL.from_montgomery_form();
 //     EXPECT_EQ(composer.q_2[0]).data[0], 1UL << 1UL.from_montgomery_form();
 //     EXPECT_EQ(composer.q_3[0]).data[0], 1UL.from_montgomery_form();
-//     EXPECT_EQ((composer.q_3_next[0] == fr::neg_one()), true);
+//     EXPECT_EQ((composer.q_3_next[0] == fr::neg_one), true);
 
 //     for (size_t i = 2; i < 30; i += 2) {
 //         uint64_t shift = static_cast<uint64_t>(i) + 1UL;
 //         EXPECT_EQ(composer.q_1[i]).data[0], 1UL << (shift + 1UL).from_montgomery_form();
 //         EXPECT_EQ(composer.q_2[i]).data[0], 1UL << shift.from_montgomery_form();
 //         EXPECT_EQ((composer.q_3[i] == fr::one), true);
-//         EXPECT_EQ((composer.q_3_next[i] == fr::neg_one()), true);
+//         EXPECT_EQ((composer.q_3_next[i] == fr::neg_one), true);
 //     }
-//     EXPECT_EQ((composer.q_1[30] == fr::neg_one()), true);
+//     EXPECT_EQ((composer.q_1[30] == fr::neg_one), true);
 //     EXPECT_EQ(composer.q_2[30]).data[0], 1UL << 31UL.from_montgomery_form();
 //     EXPECT_EQ(composer.q_3[30]).data[0], 1UL.from_montgomery_form();
 //     EXPECT_EQ((composer.q_3_next[30] == fr::zero), true);

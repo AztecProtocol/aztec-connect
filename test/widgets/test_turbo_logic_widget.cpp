@@ -46,8 +46,8 @@ waffle::ProverTurboLogicWidget create_test_widget_circuit(const size_t num_gates
         if (xor_gates && and_gates) {
             if (((i / 16) & 1) == 1) {
                 out = left ^ right;
-                q_c[i - 1] = fr::neg_one();
-                q_logic[i - 1] = fr::neg_one();
+                q_c[i - 1] = fr::neg_one;
+                q_logic[i - 1] = fr::neg_one;
             } else {
                 out = left & right;
                 q_c[i - 1] = fr::one;
@@ -56,8 +56,8 @@ waffle::ProverTurboLogicWidget create_test_widget_circuit(const size_t num_gates
         }
         else if (xor_gates) {
             out = left ^ right;
-            q_c[i - 1] = fr::neg_one();
-            q_logic[i - 1] = fr::neg_one();
+            q_c[i - 1] = fr::neg_one;
+            q_logic[i - 1] = fr::neg_one;
         }
         else {
             out = left & right;

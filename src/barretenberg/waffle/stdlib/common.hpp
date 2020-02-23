@@ -23,7 +23,7 @@ template <typename ComposerContext> class witness_t {
     witness_t(ComposerContext* parent_context, const barretenberg::fr::field_t& in)
     {
         context = parent_context;
-        barretenberg::fr::__copy(in, witness);
+        barretenberg::fr::field_t::__copy(in, witness);
         witness_index = context->add_variable(witness);
     }
 
@@ -31,9 +31,9 @@ template <typename ComposerContext> class witness_t {
     {
         context = parent_context;
         if (in) {
-            barretenberg::fr::__copy(barretenberg::fr::one, witness);
+            barretenberg::fr::field_t::__copy(barretenberg::fr::one, witness);
         } else {
-            barretenberg::fr::__copy(barretenberg::fr::zero, witness);
+            barretenberg::fr::field_t::__copy(barretenberg::fr::zero, witness);
         }
         witness_index = context->add_variable(witness);
     }
@@ -59,7 +59,7 @@ template <typename ComposerContext> class public_witness_t : public witness_t<Co
     public_witness_t(ComposerContext* parent_context, const barretenberg::fr::field_t& in)
     {
         context = parent_context;
-        barretenberg::fr::__copy(in, witness);
+        barretenberg::fr::field_t::__copy(in, witness);
         witness_index = context->add_public_variable(witness);
     }
 
@@ -67,9 +67,9 @@ template <typename ComposerContext> class public_witness_t : public witness_t<Co
     {
         context = parent_context;
         if (in) {
-            barretenberg::fr::__copy(barretenberg::fr::one, witness);
+            barretenberg::fr::field_t::__copy(barretenberg::fr::one, witness);
         } else {
-            barretenberg::fr::__copy(barretenberg::fr::zero, witness);
+            barretenberg::fr::field_t::__copy(barretenberg::fr::zero, witness);
         }
         witness_index = context->add_public_variable(witness);
     }

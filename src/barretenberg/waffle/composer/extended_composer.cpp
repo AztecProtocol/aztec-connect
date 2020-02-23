@@ -339,10 +339,10 @@ void ExtendedComposer::combine_linear_relations()
             fr::field_t new_output = compute_new_selector(gate_wires[2]);
             fr::field_t new_next_output = compute_new_selector(gate_wires[3]);
 
-            fr::__copy(new_left, q_1[gate_1_index]);
-            fr::__copy(new_right, q_2[gate_1_index]);
-            fr::__copy(new_output, q_3[gate_1_index]);
-            fr::__copy(new_next_output, q_3_next[gate_1_index]);
+            fr::field_t::__copy(new_left, q_1[gate_1_index]);
+            fr::field_t::__copy(new_right, q_2[gate_1_index]);
+            fr::field_t::__copy(new_output, q_3[gate_1_index]);
+            fr::field_t::__copy(new_next_output, q_3_next[gate_1_index]);
             q_c[gate_1_index].self_add(q_c[gate_2_index]);
             if (!(fr::zero == q_m[gate_2_index])) {
                 q_m[gate_1_index].self_add(q_m[gate_2_index]);
@@ -553,15 +553,15 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
         }
 
         size_t index = adjusted_gate_indices[i] + public_inputs.size();
-        fr::__copy(q_m[i - public_inputs.size()], poly_q_m[index]);
-        fr::__copy(q_1[i - public_inputs.size()], poly_q_1[index]);
-        fr::__copy(q_2[i - public_inputs.size()], poly_q_2[index]);
-        fr::__copy(q_3[i - public_inputs.size()], poly_q_3[index]);
-        fr::__copy(q_c[i - public_inputs.size()], poly_q_c[index]);
-        fr::__copy(q_left_bools[i - public_inputs.size()], poly_q_bl[index]);
-        fr::__copy(q_right_bools[i - public_inputs.size()], poly_q_br[index]);
-        fr::__copy(q_output_bools[i - public_inputs.size()], poly_q_bo[index]);
-        fr::__copy(q_3_next[i - public_inputs.size()], poly_q_3_next[index]);
+        fr::field_t::__copy(q_m[i - public_inputs.size()], poly_q_m[index]);
+        fr::field_t::__copy(q_1[i - public_inputs.size()], poly_q_1[index]);
+        fr::field_t::__copy(q_2[i - public_inputs.size()], poly_q_2[index]);
+        fr::field_t::__copy(q_3[i - public_inputs.size()], poly_q_3[index]);
+        fr::field_t::__copy(q_c[i - public_inputs.size()], poly_q_c[index]);
+        fr::field_t::__copy(q_left_bools[i - public_inputs.size()], poly_q_bl[index]);
+        fr::field_t::__copy(q_right_bools[i - public_inputs.size()], poly_q_br[index]);
+        fr::field_t::__copy(q_output_bools[i - public_inputs.size()], poly_q_bo[index]);
+        fr::field_t::__copy(q_3_next[i - public_inputs.size()], poly_q_3_next[index]);
         fill_tags[index] = true;
     }
 
@@ -704,18 +704,18 @@ std::shared_ptr<program_witness> ExtendedComposer::compute_witness()
     }
     const size_t n_delta = new_n - (adjusted_n)-public_inputs.size();
     for (size_t i = 0; i < public_inputs.size(); ++i) {
-        fr::__copy(variables[public_inputs[i]], poly_w_1[i]);
-        fr::__copy(fr::zero, poly_w_2[i]);
-        fr::__copy(fr::zero, poly_w_3[i]);
+        fr::field_t::__copy(variables[public_inputs[i]], poly_w_1[i]);
+        fr::field_t::__copy(fr::zero, poly_w_2[i]);
+        fr::field_t::__copy(fr::zero, poly_w_3[i]);
     }
     for (size_t i = public_inputs.size(); i < n + n_delta + public_inputs.size(); ++i) {
         if ((i <= n + public_inputs.size()) && deleted_gates[i - public_inputs.size()] == true) {
             continue;
         }
         size_t index = adjusted_gate_indices[i] + public_inputs.size();
-        fr::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1[index]);
-        fr::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2[index]);
-        fr::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3[index]);
+        fr::field_t::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1[index]);
+        fr::field_t::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2[index]);
+        fr::field_t::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3[index]);
     }
     witness->wires.insert({ "w_1", std::move(poly_w_1) });
     witness->wires.insert({ "w_2", std::move(poly_w_2) });
