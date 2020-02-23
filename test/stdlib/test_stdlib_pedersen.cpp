@@ -32,10 +32,10 @@ TEST(stdlib_pedersen, test_pedersen)
     fr::field_t right_in = fr::random_element();
     // ensure left has skew 1, right has skew 0
     if ((left_in.from_montgomery_form().data[0] & 1) == 1) {
-        left_in.self_add(fr::one);
+        left_in += fr::one;
     }
     if ((right_in.from_montgomery_form().data[0] & 1) == 0) {
-        right_in.self_add(fr::one);
+        right_in += fr::one;
     }
     field_t left = public_witness_t(&composer, left_in);
     field_t right = witness_t(&composer, right_in);
@@ -111,10 +111,10 @@ TEST(stdlib_pedersen, test_pedersen)
                                                compute_split_scalar(&right_wnafs[0], 126),
                                                compute_split_scalar(&right_wnafs[126], 2) };
     if (left_skew) {
-        grumpkin_scalars[1].self_add(grumpkin::fr::one);
+        grumpkin_scalars[1] += grumpkin::fr::one;
     }
     if (right_skew) {
-        grumpkin_scalars[3].self_add(grumpkin::fr::one);
+        grumpkin_scalars[3] += grumpkin::fr::one;
     }
 
     grumpkin::g1::affine_element grumpkin_points[4]{
@@ -156,9 +156,9 @@ TEST(stdlib_pedersen, test_pedersen_large)
     fr::field_t right_in = fr::random_element();
     // ensure left has skew 1, right has skew 0
     if ((left_in.from_montgomery_form().data[0] & 1)
-        == 1) { left_in.self_add(fr::one); }
+        == 1) { left_in += fr::one; }
     if ((right_in.from_montgomery_form().data[0] & 1)
-        == 0) { right_in.self_add(fr::one); }
+        == 0) { right_in += fr::one; }
     field_t left = witness_t(&composer, left_in);
     field_t right = witness_t(&composer, right_in);
 

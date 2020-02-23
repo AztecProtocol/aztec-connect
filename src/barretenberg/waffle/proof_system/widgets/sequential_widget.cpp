@@ -61,8 +61,8 @@ fr::field_t ProverSequentialWidget::compute_quotient_contribution(const barreten
     ITERATE_OVER_DOMAIN_START(key->mid_domain);
     fr::field_t T0;
     T0 = w_3_fft.at(2 * i + 4) * q_3_next_fft[i]; // w_l * q_m = rdx
-    T0.self_mul(old_alpha);
-    quotient_mid[i].self_add(T0);
+    T0 *= old_alpha;
+    quotient_mid[i] += T0;
     ITERATE_OVER_DOMAIN_END;
 
     return alpha_base;
@@ -79,8 +79,8 @@ fr::field_t ProverSequentialWidget::compute_linear_contribution(const fr::field_
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     fr::field_t T0;
     T0 = w_o_shifted_eval * q_3_next[i];
-    T0.self_mul(old_alpha);
-    r[i].self_add(T0);
+    T0 *= old_alpha;
+    r[i] += T0;
     ITERATE_OVER_DOMAIN_END;
     return alpha_base;
 }
@@ -105,7 +105,7 @@ VerifierBaseWidget::challenge_coefficients VerifierSequentialWidget::append_scal
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
     fr::field_t q_o_next_term;
     q_o_next_term = w_o_shifted_eval * old_alpha;
-    q_o_next_term.self_mul(challenge.linear_nu);
+    q_o_next_term *= challenge.linear_nu;
 
     if (g1::on_curve(key->constraint_selectors.at("Q_3_NEXT"))) {
         points.push_back(key->constraint_selectors.at("Q_3_NEXT"));

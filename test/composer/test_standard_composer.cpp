@@ -99,8 +99,8 @@ TEST(standard_composer, test_mul_gate_proofs)
 
     fr::field_t a = fr::random_element();
     fr::field_t b = fr::random_element();
-    fr::field_t c = ((((q[0] * a) + (q[1] * b)) + q[3]) * q_inv[2]).neg();
-    fr::field_t d = ((((q[4] * (a * b)) + q[6]) * q_inv[5])).neg();
+    fr::field_t c = -((((q[0] * a) + (q[1] * b)) + q[3]) * q_inv[2]);
+    fr::field_t d = -((((q[4] * (a * b)) + q[6]) * q_inv[5]));
 
     uint32_t a_idx = composer.add_variable(a);
     uint32_t b_idx = composer.add_variable(b);
@@ -376,8 +376,8 @@ TEST(standard_composer, big_add_gate_with_bit_extract)
                                composer.add_variable(uint256_t(output)),
                                right_idx,
                                left_idx,
-                               fr::field_t{ 6, 0, 0, 0 }.to_montgomery_form(),
-                               fr::field_t{ 6, 0, 0, 0 }.to_montgomery_form().neg(),
+                               fr::field_t(6),
+                               -fr::field_t(6),
                                fr::zero,
                                fr::zero,
                                fr::zero };

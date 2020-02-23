@@ -142,10 +142,10 @@ TEST(fr, add_mul_consistency)
 
     fr::field_t a = fr::random_element();
     fr::field_t result;
-    result = a + a;          // 2
-    result.self_add(result); // 4
-    result.self_add(result); // 8
-    result.self_add(a);      // 9
+    result = a + a;   // 2
+    result += result; // 4
+    result += result; // 8
+    result += a;      // 9
 
     fr::field_t expected;
     expected = a * multiplicand;
@@ -160,12 +160,12 @@ TEST(fr, sub_mul_consistency)
 
     fr::field_t a = fr::random_element();
     fr::field_t result;
-    result = a + a;          // 2
-    result.self_add(result); // 4
-    result.self_add(result); // 8
-    result.self_sub(a);      // 7
-    result.self_sub(a);      // 6
-    result.self_sub(a);      // 5
+    result = a + a;   // 2
+    result += result; // 4
+    result += result; // 8
+    result -= a;      // 7
+    result -= a;      // 6
+    result -= a;      // 5
 
     fr::field_t expected;
     expected = a * multiplicand;
@@ -183,12 +183,12 @@ TEST(fr, lambda)
     // compute x^3
     fr::field_t x_cubed;
     x_cubed = x * x;
-    x_cubed.self_mul(x);
+    x_cubed *= x;
 
     // compute lambda_x^3
     fr::field_t lambda_x_cubed;
     lambda_x_cubed = lambda_x * lambda_x;
-    lambda_x_cubed.self_mul(lambda_x);
+    lambda_x_cubed *= lambda_x;
 
     EXPECT_EQ((x_cubed == lambda_x_cubed), true);
 }
@@ -246,7 +246,7 @@ TEST(fr, neg)
 {
     fr::field_t a = fr::random_element();
     fr::field_t b;
-    b = a.neg();
+    b = -a;
     fr::field_t result;
     result = a + b;
     EXPECT_EQ((result == fr::zero), true);
@@ -314,8 +314,8 @@ TEST(fr, batch_invert)
     fr::batch_invert(inverses, n);
 
     for (size_t i = 0; i < n; ++i) {
-        coeffs[i].self_mul(inverses[i]);
-        coeffs[i].self_sub(one);
+        coeffs[i] *= inverses[i];
+        coeffs[i] -= one;
     }
 
     for (size_t i = 0; i < n; ++i) {

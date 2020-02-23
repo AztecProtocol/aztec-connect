@@ -61,10 +61,10 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     // wire permutations) (ditto for right wire and output wire mappings)
 
     // isolate the highest 2 bits of `permutation[i]` and shunt them down into the 2 least significant bits
-    const uint32_t column_index = ((permutation[i] & program_settings::permutation_mask) >> program_settings::permutation_shift);
-    if (column_index > 0)
-    {
-        output[i].self_mul(barretenberg::fr::coset_generators[column_index - 1]);
+    const uint32_t column_index =
+        ((permutation[i] & program_settings::permutation_mask) >> program_settings::permutation_shift);
+    if (column_index > 0) {
+        output[i] *= barretenberg::fr::coset_generators[column_index - 1];
     }
     ITERATE_OVER_DOMAIN_END;
 }

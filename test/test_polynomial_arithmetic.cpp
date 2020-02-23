@@ -64,7 +64,7 @@ TEST(polynomials, fft_with_small_degree)
     for (size_t i = 0; i < n; ++i) {
         expected = polynomial_arithmetic::evaluate(poly, work_root, n);
         EXPECT_EQ((fft_transform[i] == expected), true);
-        work_root.self_mul(domain.root);
+        work_root *= domain.root;
     }
 }
 
@@ -147,7 +147,7 @@ TEST(polynomials, fft_coset_ifft_cross_consistency)
         fr::field_t::__copy(poly_a[i], poly_b[i]);
         fr::field_t::__copy(poly_a[i], poly_c[i]);
         expected[i] = poly_a[i] + poly_c[i];
-        expected[i].self_add(poly_b[i]);
+        expected[i] += poly_b[i];
     }
 
     for (size_t i = n; i < 4 * n; ++i) {
@@ -199,7 +199,7 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
     fr::field_t z = fr::random_element();
     fr::field_t shifted_z;
     shifted_z = z * small_domain.root;
-    shifted_z.self_mul(small_domain.root);
+    shifted_z *= small_domain.root;
 
     fr::field_t eval;
     fr::field_t shifted_eval;
@@ -249,7 +249,7 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
         c[i] = a[i] * b[i];
         c[i].self_neg();
         T0 = a[i] * b[i];
-        T0.self_add(c[i]);
+        T0 += c[i];
     }
     for (size_t i = n; i < 4 * n; ++i) {
         a[i] = fr::zero;
@@ -275,7 +275,7 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
     fr::field_t result[mid_domain.size];
     for (size_t i = 0; i < mid_domain.size; ++i) {
         result[i] = a[i] * b[i];
-        result[i].self_add(c[i]);
+        result[i] += c[i];
     }
 
     polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(&result[0], small_domain, mid_domain);
@@ -309,14 +309,14 @@ TEST(polynomials, compute_kate_opening_coefficients)
     // validate that W(X)(X - z) = F(X) - F(z)
     // compute (X - z) in coefficient form
     fr::field_t* multiplicand = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
-    multiplicand[0] = z.neg();
+    multiplicand[0] = -z;
     multiplicand[1] = fr::one;
     for (size_t i = 2; i < 2 * n; ++i) {
         multiplicand[i] = fr::zero;
     }
 
     // set F(X) = F(X) - F(z)
-    coeffs[0].self_sub(f);
+    coeffs[0] -= f;
 
     // compute fft of polynomials
     evaluation_domain domain = evaluation_domain(2 * n);

@@ -414,10 +414,6 @@ TEST(scalar_multiplication, add_affine_points)
         points_copy[i].y = points[i].y;
         points_copy[i].z = fq::one;
     }
-    // for (size_t i = 0; i < num_points; i += 2)
-    // {
-    //     points[i].y = points[i].y.neg();
-    // }
 
     size_t count = num_points - 1;
     for (size_t i = num_points - 2; i < num_points; i -= 2) {
@@ -564,7 +560,7 @@ TEST(scalar_multiplication, endomorphism_split)
     g1::element t1 = g1::group_exponentiation_inner(g1::affine_one, k1);
     g1::affine_element beta = g1::affine_one;
     beta.x = beta.x * fq::beta;
-    beta.y.self_neg();
+    -beta.y;
     g1::element t2 = g1::group_exponentiation_inner(beta, k2);
     g1::add(t1, t2, result);
 
@@ -652,7 +648,7 @@ TEST(scalar_multiplication, oversized_inputs)
     EXPECT_EQ((first.z == second.z), true);
     EXPECT_EQ((first.z == fq::one), true);
     EXPECT_EQ((first.x == second.x), true);
-    EXPECT_EQ((first.y == second.y.neg()), true);
+    EXPECT_EQ((first.y == -second.y), true);
 
     aligned_free(monomials);
     aligned_free(scalars);

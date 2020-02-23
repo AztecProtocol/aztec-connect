@@ -165,6 +165,11 @@ template <class Params> struct field {
     BBERG_INLINE constexpr field operator-() const noexcept;
     constexpr field operator/(const field& other) const noexcept;
 
+    BBERG_INLINE constexpr field operator*=(const field& other) noexcept;
+    BBERG_INLINE constexpr field operator+=(const field& other) noexcept;
+    BBERG_INLINE constexpr field operator-=(const field& other) noexcept;
+    constexpr field operator/=(const field& other) noexcept;
+
     BBERG_INLINE constexpr bool operator>(const field& other) const noexcept;
     BBERG_INLINE constexpr bool operator<(const field& other) const noexcept;
     BBERG_INLINE constexpr bool operator==(const field& other) const noexcept;
@@ -174,31 +179,15 @@ template <class Params> struct field {
     BBERG_INLINE constexpr field from_montgomery_form() const noexcept;
 
     BBERG_INLINE constexpr field sqr() const noexcept;
-    BBERG_INLINE constexpr field neg() const noexcept;
+    BBERG_INLINE constexpr void self_sqr() noexcept;
+
     BBERG_INLINE constexpr field pow(const field& exponent) const noexcept;
     BBERG_INLINE constexpr field pow(const uint64_t exponent) const noexcept;
     constexpr field invert() const noexcept;
     constexpr field sqrt() const noexcept;
 
-    BBERG_INLINE constexpr field mul_with_coarse_reduction(const field& other) const noexcept;
-    BBERG_INLINE constexpr field sqr_with_coarse_reduction() const noexcept;
-    BBERG_INLINE constexpr field add_without_reduction(const field& other) const noexcept;
-    BBERG_INLINE constexpr field add_with_coarse_reduction(const field& other) const noexcept;
-    BBERG_INLINE constexpr field sub_with_coarse_reduction(const field& other) const noexcept;
-
-    BBERG_INLINE constexpr void self_mul_with_coarse_reduction(const field& other) noexcept;
-    BBERG_INLINE constexpr void self_sqr_with_coarse_reduction() noexcept;
-    BBERG_INLINE constexpr void self_add_without_reduction(const field& other) noexcept;
-    BBERG_INLINE constexpr void self_add_with_coarse_reduction(const field& other) noexcept;
-    BBERG_INLINE constexpr void self_sub_with_coarse_reduction(const field& other) noexcept;
-
-    BBERG_INLINE constexpr void self_mul(const field& other) noexcept;
-    BBERG_INLINE constexpr void self_sqr() noexcept;
-    BBERG_INLINE constexpr void self_add(const field& other) noexcept;
-    BBERG_INLINE constexpr void self_sub(const field& other) noexcept;
     BBERG_INLINE constexpr void self_neg() noexcept;
     constexpr void self_invert() noexcept;
-    constexpr void self_sqrt() noexcept;
 
     BBERG_INLINE constexpr void self_to_montgomery_form() noexcept;
     BBERG_INLINE constexpr void self_from_montgomery_form() noexcept;

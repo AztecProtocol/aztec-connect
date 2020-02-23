@@ -140,8 +140,8 @@ uint<Composer, Native> uint<Composer, Native>::operator>>(const uint64_t shift) 
     const waffle::add_quad gate{
         context->zero_idx, context->add_variable(output),
         right_index,       left_index,
-        fr::zero,          fr::field_t{ 6, 0, 0, 0 }.to_montgomery_form().neg(),
-        fr::zero,          fr::field_t{ 12, 0, 0, 0 }.to_montgomery_form(),
+        fr::zero,          -fr::field_t(6),
+        fr::zero,          -fr::field_t(12),
         fr::zero,
     };
 
@@ -187,7 +187,7 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
                                        right_idx,
                                        context->add_variable(output),
                                        base_shift_factor,
-                                       fr::field_t(right_shift_factor).neg(),
+                                       -fr::field_t(right_shift_factor),
                                        fr::neg_one,
                                        fr::zero };
 
@@ -220,19 +220,19 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
     denominator.self_neg();
     denominator = denominator.invert();
 
-    q_1.self_mul(denominator);
-    q_2.self_mul(denominator);
-    q_3.self_mul(denominator);
+    q_1 *= denominator;
+    q_2 *= denominator;
+    q_3 *= denominator;
 
     const waffle::add_quad gate{
         context->add_variable(output),
         base_index,
         left_index,
         right_index,
-        q_1.neg(),
+        -q_1,
         q_2,
         fr::zero,
-        q_3.neg(),
+        -q_3,
         fr::zero,
     };
 
@@ -308,7 +308,7 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
     const uint256_t pivot_scale_factor = (uint256_t(1) << (uint256_t(width) + uint256_t(1))) * uint256_t(6);
     const uint256_t b_hi_scale_factor = (uint256_t(1) << uint256_t(width));
 
-    fr::field_t q_1 = fr::field_t(out_scale_factor).neg();
+    fr::field_t q_1 = -fr::field_t(out_scale_factor);
     fr::field_t q_2 = base_scale_factor;
     constexpr fr::field_t twelve = fr::field_t{ 12, 0, 0, 0 }.to_montgomery_form();
     fr::field_t q_3 = twelve - pivot_scale_factor;
@@ -316,9 +316,9 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
     fr::field_t denominator = fr::one - b_hi_scale_factor;
     denominator = denominator.invert();
 
-    q_1.self_mul(denominator);
-    q_2.self_mul(denominator);
-    q_3.self_mul(denominator);
+    q_1 *= denominator;
+    q_2 *= denominator;
+    q_3 *= denominator;
 
     const waffle::add_quad gate{
         context->add_variable(output), base_idx, next_pivot_idx, pivot_idx, q_1, q_2, fr::zero, q_3, fr::zero,

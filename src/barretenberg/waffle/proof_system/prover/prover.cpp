@@ -194,22 +194,22 @@ template <typename settings> void ProverBase<settings>::compute_z_coefficients()
             size_t start = j * key->small_domain.thread_size;
             size_t end = (j + 1) * key->small_domain.thread_size;
             for (size_t i = start; i < end; ++i) {
-                wire_plus_gamma = gamma.add_without_reduction(lagrange_base_wires[0][i]);
-                accumulators[0][i] = wire_plus_gamma.add_with_coarse_reduction(work_root);
+                wire_plus_gamma = gamma + lagrange_base_wires[0][i];
+                accumulators[0][i] = wire_plus_gamma + work_root;
 
-                T0 = lagrange_base_sigmas[0][i].mul_with_coarse_reduction(beta);
-                accumulators[settings::program_width][i] = T0.add_with_coarse_reduction(wire_plus_gamma);
+                T0 = lagrange_base_sigmas[0][i] * beta;
+                accumulators[settings::program_width][i] = T0 + wire_plus_gamma;
 
                 for (size_t k = 1; k < settings::program_width; ++k) {
-                    wire_plus_gamma = gamma.add_without_reduction(lagrange_base_wires[k][i]);
-                    T0 = fr::coset_generators[k - 1].mul_with_coarse_reduction(work_root);
-                    accumulators[k][i] = T0.add_with_coarse_reduction(wire_plus_gamma);
+                    wire_plus_gamma = gamma + lagrange_base_wires[k][i];
+                    T0 = fr::coset_generators[k - 1] * work_root;
+                    accumulators[k][i] = T0 + wire_plus_gamma;
 
-                    T0 = lagrange_base_sigmas[k][i].mul_with_coarse_reduction(beta);
-                    accumulators[k + settings::program_width][i] = T0.add_with_coarse_reduction(wire_plus_gamma);
+                    T0 = lagrange_base_sigmas[k][i] * beta;
+                    accumulators[k + settings::program_width][i] = T0 + wire_plus_gamma;
                 }
 
-                work_root.self_mul_with_coarse_reduction(key->small_domain.root);
+                work_root *= key->small_domain.root;
             }
         }
 
@@ -221,7 +221,7 @@ template <typename settings> void ProverBase<settings>::compute_z_coefficients()
         for (size_t i = 0; i < settings::program_width * 2; ++i) {
             fr::field_t* coeffs = &accumulators[i][0];
             for (size_t j = 0; j < key->small_domain.size - 1; ++j) {
-                coeffs[j + 1].self_mul_with_coarse_reduction(coeffs[j]);
+                coeffs[j + 1] *= coeffs[j];
             }
         }
 
@@ -239,20 +239,19 @@ template <typename settings> void ProverBase<settings>::compute_z_coefficients()
             for (size_t i = start; i < end; ++i) {
 
                 for (size_t k = 1; k < settings::program_width; ++k) {
-                    accumulators[0][i].self_mul_with_coarse_reduction(accumulators[k][i]);
-                    accumulators[settings::program_width][i].self_mul_with_coarse_reduction(
-                        accumulators[settings::program_width + k][i]);
+                    accumulators[0][i] *= accumulators[k][i];
+                    accumulators[settings::program_width][i] *= accumulators[settings::program_width + k][i];
                 }
-                inversion_coefficients[i] = accumulators[0][i].mul_with_coarse_reduction(inversion_accumulator);
-                inversion_accumulator.self_mul_with_coarse_reduction(accumulators[settings::program_width][i]);
+                inversion_coefficients[i] = accumulators[0][i] * inversion_accumulator;
+                inversion_accumulator *= accumulators[settings::program_width][i];
             }
             inversion_accumulator = inversion_accumulator.invert();
             for (size_t i = end - 1; i != start - 1; --i) {
 
                 // N.B. accumulators[0][i] = z[i + 1]
                 // We can avoid fully reducing z[i + 1] as the inverse fft will take care of that for us
-                accumulators[0][i] = inversion_accumulator.mul_with_coarse_reduction(inversion_coefficients[i]);
-                inversion_accumulator.self_mul_with_coarse_reduction(accumulators[settings::program_width][i]);
+                accumulators[0][i] = inversion_accumulator * inversion_coefficients[i];
+                inversion_accumulator *= accumulators[settings::program_width][i];
             }
         }
     }
@@ -269,7 +268,7 @@ template <typename settings> void ProverBase<settings>::compute_permutation_gran
     polynomial& z_fft = key->z_fft;
 
     fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-    fr::field_t neg_alpha = alpha.neg();
+    fr::field_t neg_alpha = -alpha;
     fr::field_t alpha_squared = alpha.sqr();
     fr::field_t beta = fr::field_t::serialize_from_buffer(transcript.get_challenge("beta").begin());
     fr::field_t gamma = fr::field_t::serialize_from_buffer(transcript.get_challenge("gamma").begin());
@@ -321,7 +320,7 @@ template <typename settings> void ProverBase<settings>::compute_permutation_gran
         transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
 
     fr::field_t public_input_delta = compute_public_input_delta(public_inputs, beta, gamma, key->small_domain.root);
-    public_input_delta.self_mul(alpha);
+    public_input_delta *= alpha;
 
     polynomial& quotient_large = key->quotient_large;
     // Step 4: Set the quotient polynomial to be equal to
@@ -335,37 +334,37 @@ template <typename settings> void ProverBase<settings>::compute_permutation_gran
         const size_t end = (j + 1) * key->large_domain.thread_size;
 
         fr::field_t work_root = key->large_domain.root.pow(static_cast<uint64_t>(j * key->large_domain.thread_size));
-        work_root.self_mul(key->small_domain.generator);
-        // work_root.self_mul(fr::coset_generators[0]);
-        work_root.self_mul(beta);
+        work_root *= key->small_domain.generator;
+        // work_root *= fr::coset_generators[0];
+        work_root *= beta;
 
         fr::field_t wire_plus_gamma;
         fr::field_t T0;
         fr::field_t denominator;
         fr::field_t numerator;
         for (size_t i = start; i < end; ++i) {
-            wire_plus_gamma = gamma.add_without_reduction(wire_ffts[0][i]);
+            wire_plus_gamma = gamma + wire_ffts[0][i];
 
             // Numerator computation
-            numerator = work_root.add_with_coarse_reduction(wire_plus_gamma);
+            numerator = work_root + wire_plus_gamma;
 
             // Denominator computation
-            denominator = sigma_ffts[0][i].mul_with_coarse_reduction(beta);
-            denominator.self_add_with_coarse_reduction(wire_plus_gamma);
+            denominator = sigma_ffts[0][i] * beta;
+            denominator += wire_plus_gamma;
 
             for (size_t k = 1; k < settings::program_width; ++k) {
-                wire_plus_gamma = gamma.add_without_reduction(wire_ffts[k][i]);
-                T0 = fr::coset_generators[k - 1].mul_with_coarse_reduction(work_root);
-                T0.self_add_with_coarse_reduction(wire_plus_gamma);
-                numerator.self_mul_with_coarse_reduction(T0);
+                wire_plus_gamma = gamma + wire_ffts[k][i];
+                T0 = fr::coset_generators[k - 1] * work_root;
+                T0 += wire_plus_gamma;
+                numerator *= T0;
 
-                T0 = sigma_ffts[k][i].mul_with_coarse_reduction(beta);
-                T0.self_add_with_coarse_reduction(wire_plus_gamma);
-                denominator.self_mul_with_coarse_reduction(T0);
+                T0 = sigma_ffts[k][i] * beta;
+                T0 += wire_plus_gamma;
+                denominator *= T0;
             }
 
-            numerator.self_mul_with_coarse_reduction(z_fft[i]);
-            denominator.self_mul_with_coarse_reduction(z_fft[i + 4]);
+            numerator *= z_fft[i];
+            denominator *= z_fft[i + 4];
 
             /**
              * Permutation bounds check
@@ -396,26 +395,26 @@ template <typename settings> void ProverBase<settings>::compute_permutation_gran
             // z_fft already contains evaluations of Z(X).(\alpha^2)
             // at the (2n)'th roots of unity
             // => to get Z(X.w) instead of Z(X), index element (i+2) instead of i
-            T0 = z_fft[i + 4].sub_with_coarse_reduction(public_input_delta); // T0 = (Z(X.w) - (delta)).(\alpha^2)
-            T0.self_mul_with_coarse_reduction(alpha);                        // T0 = (Z(X.w) - (delta)).(\alpha^3)
-            T0.self_mul_with_coarse_reduction(l_1[i + 8]);                   // T0 = (Z(X.w)-delta).(\alpha^3).L{n-1}
-            numerator.self_add_with_coarse_reduction(T0);
+            T0 = z_fft[i + 4] - public_input_delta; // T0 = (Z(X.w) - (delta)).(\alpha^2)
+            T0 *= alpha;                            // T0 = (Z(X.w) - (delta)).(\alpha^3)
+            T0 *= l_1[i + 8];                       // T0 = (Z(X.w)-delta).(\alpha^3).L{n-1}
+            numerator += T0;
 
             // Step 2: Compute (Z(X) - 1).(\alpha^4).L1(X)
             // We need to verify that Z(X) equals `1` when evaluated at the first element of our subgroup H
             // i.e. Z(X) starts at 1 and ends at 1
             // The `alpha^4` term is so that we can add this as a linearly independent term in our quotient polynomial
-            T0 = z_fft[i].add_without_reduction(neg_alpha);   // T0 = (Z(X) - 1).(\alpha^2)
-            T0.self_mul_with_coarse_reduction(alpha_squared); // T0 = (Z(X) - 1).(\alpha^4)
-            T0.self_mul_with_coarse_reduction(l_1[i]);        // T0 = (Z(X) - 1).(\alpha^2).L1(X)
-            numerator.self_add_with_coarse_reduction(T0);
+            T0 = z_fft[i] + neg_alpha; // T0 = (Z(X) - 1).(\alpha^2)
+            T0 *= alpha_squared;       // T0 = (Z(X) - 1).(\alpha^4)
+            T0 *= l_1[i];              // T0 = (Z(X) - 1).(\alpha^2).L1(X)
+            numerator += T0;
 
             // Combine into quotient polynomial
-            T0 = numerator.sub_with_coarse_reduction(denominator);
-            quotient_large[i] = T0.reduce_once();
+            T0 = numerator - denominator;
+            quotient_large[i] = T0;
 
             // Update our working root of unity
-            work_root.self_mul_with_coarse_reduction(key->large_domain.root);
+            work_root *= key->large_domain.root;
         }
     }
 }
@@ -581,7 +580,7 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
 #endif
     if (settings::uses_quotient_mid) {
         ITERATE_OVER_DOMAIN_START(key->mid_domain);
-        q_large[i].self_add(q_mid[i]);
+        q_large[i] += q_mid[i];
         ITERATE_OVER_DOMAIN_END;
     }
 #ifdef DEBUG_TIMING
@@ -654,26 +653,25 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
 
     fr::field_t T0;
     fr::field_t quotient_temp;
-    quotient_temp = r[i].mul_with_coarse_reduction(nu_powers[0]);
+    quotient_temp = r[i] * nu_powers[0];
 
     for (size_t k = 1; k < settings::program_width; ++k) {
-        T0 = quotient_large[i + (k * n)].mul_with_coarse_reduction(z_powers[k]);
-        quotient_temp.self_add_with_coarse_reduction(T0);
+        T0 = quotient_large[i + (k * n)] * z_powers[k];
+        quotient_temp += T0;
     }
 
     for (size_t k = 0; k < settings::program_width - 1; ++k) {
-        T0 = sigmas[k][i].mul_with_coarse_reduction(nu_powers[k + 5]);
-        quotient_temp.self_add_with_coarse_reduction(T0);
+        T0 = sigmas[k][i] * nu_powers[k + 5];
+        quotient_temp += T0;
     }
 
     for (size_t k = 0; k < settings::program_width; ++k) {
-        T0 = wires[k][i].mul_with_coarse_reduction(nu_powers[k + 1]);
-        quotient_temp.self_add_with_coarse_reduction(T0);
+        T0 = wires[k][i] * nu_powers[k + 1];
+        quotient_temp += T0;
     }
 
     shifted_opening_poly[i] = z[i] * nu_powers[7];
 
-    quotient_temp.self_reduce_once();
     opening_poly[i] = quotient_large[i] + quotient_temp;
 
     ITERATE_OVER_DOMAIN_END;
@@ -694,28 +692,28 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
         if constexpr (settings::requires_shifted_wire(settings::wire_shift_settings, 0)) {
             fr::field_t T0;
             T0 = shift_nu_powers[0] * wires[0][i];
-            shifted_opening_poly[i].self_add(T0);
+            shifted_opening_poly[i] += T0;
         }
         if constexpr (settings::requires_shifted_wire(settings::wire_shift_settings, 1)) {
             fr::field_t T0;
             T0 = shift_nu_powers[1] * wires[1][i];
-            shifted_opening_poly[i].self_add(T0);
+            shifted_opening_poly[i] += T0;
         }
         if constexpr (settings::requires_shifted_wire(settings::wire_shift_settings, 2)) {
             fr::field_t T0;
             T0 = shift_nu_powers[2] * wires[2][i];
-            shifted_opening_poly[i].self_add(T0);
+            shifted_opening_poly[i] += T0;
         }
         if constexpr (settings::requires_shifted_wire(settings::wire_shift_settings, 3)) {
             fr::field_t T0;
             T0 = shift_nu_powers[3] * wires[3][i];
-            shifted_opening_poly[i].self_add(T0);
+            shifted_opening_poly[i] += T0;
         }
         for (size_t k = 4; k < settings::program_width; ++k) {
             if (settings::requires_shifted_wire(settings::wire_shift_settings, k)) {
                 fr::field_t T0;
                 T0 = shift_nu_powers[k] * wires[k][i];
-                shifted_opening_poly[i].self_add(T0);
+                shifted_opening_poly[i] += T0;
             }
         }
         ITERATE_OVER_DOMAIN_END;
@@ -826,12 +824,7 @@ template <typename settings> barretenberg::fr::field_t ProverBase<settings>::com
 
     const polynomial& sigma_last = key->permutation_selectors.at("sigma_" + std::to_string(settings::program_width));
     ITERATE_OVER_DOMAIN_START(key->small_domain);
-    fr::field_t T0;
-    fr::field_t T1;
-    T0 = z[i].mul_with_coarse_reduction(linear_terms.z_1);
-    T1 = sigma_last[i].mul_with_coarse_reduction(linear_terms.sigma_last);
-    T0.self_add_with_coarse_reduction(T1);
-    r[i] = T0.reduce_once();
+    r[i] = (z[i] * linear_terms.z_1) + (sigma_last[i] * linear_terms.sigma_last);
     ITERATE_OVER_DOMAIN_END;
 
     fr::field_t alpha_base = alpha.sqr().sqr();

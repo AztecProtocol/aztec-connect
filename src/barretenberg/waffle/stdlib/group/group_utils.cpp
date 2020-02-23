@@ -92,8 +92,8 @@ void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fi
     }
     grumpkin::fq::batch_invert(&y_denominators[0], quad_length);
     for (size_t i = 0; i < quad_length; ++i) {
-        ladder[i].q_y_1.self_mul(y_denominators[i]);
-        ladder[i].q_y_2.self_mul(y_denominators[i]);
+        ladder[i].q_y_1 *= y_denominators[i];
+        ladder[i].q_y_2 *= y_denominators[i];
     }
     free(ladder_temp);
 }

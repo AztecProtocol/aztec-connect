@@ -131,8 +131,8 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
 
     fr::field_t* quotient_large = &key->quotient_large[0];
 
-    constexpr fr::field_t minus_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
-    constexpr fr::field_t minus_seven = fr::field_t{ 7, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t minus_two = -fr::field_t(2);
+    constexpr fr::field_t minus_seven = -fr::field_t(7);
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
@@ -148,26 +148,26 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
         fr::field_t T6;
         for (size_t i = start; i < end; ++i) {
 
-            T0 = w_1_fft[i].mul_with_coarse_reduction(q_m_fft[i]);
-            T0.self_mul_with_coarse_reduction(w_2_fft[i]);
-            T1 = w_1_fft[i].mul_with_coarse_reduction(q_1_fft[i]);
-            T2 = w_2_fft[i].mul_with_coarse_reduction(q_2_fft[i]);
-            T3 = w_3_fft[i].mul_with_coarse_reduction(q_3_fft[i]);
-            T4 = w_4_fft[i].mul_with_coarse_reduction(q_4_fft[i]);
-            T5 = w_4_fft[i].sqr_with_coarse_reduction();
-            T5.self_sub_with_coarse_reduction(w_4_fft[i]);
-            T6 = w_4_fft[i].add_with_coarse_reduction(minus_two);
-            T5.self_mul_with_coarse_reduction(T6);
-            T5.self_mul_with_coarse_reduction(q_5_fft[i]);
-            T5.self_mul_with_coarse_reduction(alpha);
+            T0 = w_1_fft[i] * q_m_fft[i];
+            T0 *= w_2_fft[i];
+            T1 = w_1_fft[i] * q_1_fft[i];
+            T2 = w_2_fft[i] * q_2_fft[i];
+            T3 = w_3_fft[i] * q_3_fft[i];
+            T4 = w_4_fft[i] * q_4_fft[i];
+            T5 = w_4_fft[i].sqr();
+            T5 -= w_4_fft[i];
+            T6 = w_4_fft[i] + minus_two;
+            T5 *= T6;
+            T5 *= q_5_fft[i];
+            T5 *= alpha;
 
-            T0.self_add_with_coarse_reduction(T1);
-            T0.self_add_with_coarse_reduction(T2);
-            T0.self_add_with_coarse_reduction(T3);
-            T0.self_add_with_coarse_reduction(T4);
-            T0.self_add_with_coarse_reduction(T5);
-            T0.self_add_with_coarse_reduction(q_c_fft[i]);
-            T0.self_mul_with_coarse_reduction(q_arith_fft[i]);
+            T0 += T1;
+            T0 += T2;
+            T0 += T3;
+            T0 += T4;
+            T0 += T5;
+            T0 += q_c_fft[i];
+            T0 *= q_arith_fft[i];
 
             /**
              * quad extraction term
@@ -181,34 +181,34 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
              *
              * This term is only active when q_arith[i] is set to 2
              **/
-            T1 = q_arith_fft[i].sqr_with_coarse_reduction();
-            T1.self_sub_with_coarse_reduction(q_arith_fft[i]);
+            T1 = q_arith_fft[i].sqr();
+            T1 -= q_arith_fft[i];
 
-            T2 = w_4_fft[i].add_without_reduction(w_4_fft[i]);
-            T2.self_add_with_coarse_reduction(T2);
-            T2 = w_3_fft[i].sub_with_coarse_reduction(T2);
+            T2 = w_4_fft[i] + w_4_fft[i];
+            T2 += T2;
+            T2 = w_3_fft[i] - T2;
 
-            T3 = T2.sqr_with_coarse_reduction();
-            T3.self_add_with_coarse_reduction(T3);
+            T3 = T2.sqr();
+            T3 += T3;
 
-            T4 = T2.add_with_coarse_reduction(T2);
-            T4.self_add_with_coarse_reduction(T2);
-            T5 = T4.add_with_coarse_reduction(T4);
-            T4.self_add_with_coarse_reduction(T5);
+            T4 = T2 + T2;
+            T4 += T2;
+            T5 = T4 + T4;
+            T4 += T5;
 
-            T4.self_sub_with_coarse_reduction(T3);
-            T4.self_add_with_coarse_reduction(minus_seven);
+            T4 -= T3;
+            T4 += minus_seven;
 
             // T2 = 6 iff delta is 2 or 3
             // T2 = 0 iff delta is 0 or 1 (extracts high bit)
-            T2.self_mul_with_coarse_reduction(T4);
+            T2 *= T4;
 
-            T1.self_mul_with_coarse_reduction(T2);
+            T1 *= T2;
 
-            T0.self_add_with_coarse_reduction(T1);
-            T0.self_mul_with_coarse_reduction(alpha_base);
+            T0 += T1;
+            T0 *= alpha_base;
 
-            quotient_large[i].self_add(T0);
+            quotient_large[i] += T0;
         }
     }
     return alpha_base * alpha.sqr();
@@ -234,7 +234,7 @@ fr::field_t ProverTurboArithmeticWidget::compute_linear_contribution(const fr::f
     fr::field_t w_4_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4")[0]);
     fr::field_t q_arith_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
 
-    fr::field_t neg_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
+    fr::field_t neg_two = -fr::field_t(2);
     fr::field_t w_lr = w_l_eval * w_r_eval;
     fr::field_t is_w_4_bool = (w_4_eval.sqr() - w_4_eval) * (w_4_eval + neg_two) * alpha;
     ITERATE_OVER_DOMAIN_START(key->small_domain);
@@ -244,7 +244,7 @@ fr::field_t ProverTurboArithmeticWidget::compute_linear_contribution(const fr::f
     fr::field_t T3 = w_o_eval * q_3[i];
     fr::field_t T4 = w_4_eval * q_4[i];
     fr::field_t T5 = is_w_4_bool * q_5[i];
-    r[i].self_add((T0 + T1 + T2 + T3 + T4 + T5 + q_c[i]) * q_arith_eval * alpha_base);
+    r[i] += ((T0 + T1 + T2 + T3 + T4 + T5 + q_c[i]) * q_arith_eval * alpha_base);
     ITERATE_OVER_DOMAIN_END;
 
     return alpha_base * alpha.sqr();
@@ -258,7 +258,7 @@ fr::field_t ProverTurboArithmeticWidget::compute_opening_poly_contribution(const
     fr::field_t nu = fr::field_t::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
 
     ITERATE_OVER_DOMAIN_START(key->small_domain);
-    poly[i].self_add(q_arith[i] * nu_base);
+    poly[i] += (q_arith[i] * nu_base);
     ITERATE_OVER_DOMAIN_END;
 
     return nu_base * nu;
@@ -284,7 +284,7 @@ fr::field_t VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribut
     fr::field_t T3;
     fr::field_t T4;
     fr::field_t T5;
-    constexpr fr::field_t minus_seven = fr::field_t{ 7, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t minus_seven = -fr::field_t(7);
 
     T1 = q_arith_eval.sqr() - q_arith_eval;
 
@@ -364,7 +364,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
         scalars.push_back(q_4_term);
     }
 
-    constexpr fr::field_t minus_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t minus_two = -fr::field_t(2);
     fr::field_t q_5_term = (w_4_eval.sqr() - w_4_eval) * (w_4_eval + minus_two) * challenge.alpha_base *
                            challenge.alpha_step * challenge.linear_nu * q_arith_eval;
     if (g1::on_curve(key->constraint_selectors.at("Q_5"))) {

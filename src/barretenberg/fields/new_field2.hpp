@@ -14,31 +14,19 @@ template <class base_field, class Params> struct field2 {
     constexpr field2 operator-() const noexcept;
     constexpr field2 operator/(const field2& other) const noexcept;
 
+    constexpr field2 operator*=(const field2& other) noexcept;
+    constexpr field2 operator+=(const field2& other) noexcept;
+    constexpr field2 operator-=(const field2& other) noexcept;
+    constexpr field2 operator/=(const field2& other) noexcept;
+
     // constexpr bool operator>(const field& other) const noexcept;
     // constexpr bool operator<(const field& other) const noexcept;
     constexpr bool operator==(const field2& other) const noexcept;
 
     constexpr field2 sqr() const noexcept;
-    constexpr field2 neg() const noexcept;
-    constexpr field2 pow(const field2& exponent) const noexcept;
+    constexpr void self_sqr() noexcept;
     constexpr field2 invert() const noexcept;
 
-    constexpr field2 mul_with_coarse_reduction(const field2& other) const noexcept;
-    constexpr field2 sqr_with_coarse_reduction() const noexcept;
-    constexpr field2 add_without_reduction(const field2& other) const noexcept;
-    constexpr field2 add_with_coarse_reduction(const field2& other) const noexcept;
-    constexpr field2 sub_with_coarse_reduction(const field2& other) const noexcept;
-
-    constexpr void self_mul_with_coarse_reduction(const field2& other) noexcept;
-    constexpr void self_sqr_with_coarse_reduction() noexcept;
-    constexpr void self_add_without_reduction(const field2& other) noexcept;
-    constexpr void self_add_with_coarse_reduction(const field2& other) noexcept;
-    constexpr void self_sub_with_coarse_reduction(const field2& other) noexcept;
-
-    constexpr void self_mul(const field2& other) noexcept;
-    constexpr void self_sqr() noexcept;
-    constexpr void self_add(const field2& other) noexcept;
-    constexpr void self_sub(const field2& other) noexcept;
     constexpr void self_neg() noexcept;
     constexpr void self_invert() noexcept;
 

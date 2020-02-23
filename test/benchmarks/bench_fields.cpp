@@ -18,38 +18,38 @@ void new_field_mixed_add(const new_field& x1,
                          new_field& y3,
                          new_field& z3)
 {
-    new_field T0 = z1.sqr_with_coarse_reduction();
+    new_field T0 = z1.sqr();
     new_field T1 = T0 * x2;
-    T1.self_sub(x1);
-    new_field T2 = T0.mul_with_coarse_reduction(z1) * y2;
-    T2.self_sub(y1);
+    T1 -= x1;
+    new_field T2 = T0 * z1 * y2;
+    T2 -= y1;
 
-    T2.self_add_without_reduction(T2);
-    z3 = z1.add_without_reduction(T1);
-    new_field T3 = T1.sqr_with_coarse_reduction();
-    T0.self_add_with_coarse_reduction(T3);
-    z3.self_sqr_with_coarse_reduction();
-    z3.self_sub_with_coarse_reduction(T0);
+    T2 += T2;
+    z3 = z1 + T1;
+    new_field T3 = T1.sqr();
+    T0 += T3;
+    z3.self_sqr();
+    z3 -= T0;
 
-    T3.self_add_with_coarse_reduction(T3);
-    T3.self_add_with_coarse_reduction(T3);
+    T3 += T3;
+    T3 += T3;
 
-    T1.self_mul_with_coarse_reduction(T3);
-    T3.self_mul_with_coarse_reduction(x1);
-    T0 = T3.add_with_coarse_reduction(T3);
+    T1 *= T3;
+    T3 *= x1;
+    T0 = T3 + T3;
 
-    T0.self_add_with_coarse_reduction(T1);
+    T0 += T1;
 
-    x3 = T2.sqr_with_coarse_reduction();
+    x3 = T2.sqr();
 
-    x3.self_sub_with_coarse_reduction(T0);
+    x3 -= T0;
 
-    T1.self_mul_with_coarse_reduction(y1);
-    T1.self_add_with_coarse_reduction(T1);
+    T1 *= y1;
+    T1 += T1;
 
-    T3.self_mul_with_coarse_reduction(T2);
+    T3 *= T2;
 
-    y3 = T3.sub_with_coarse_reduction(T1);
+    y3 = T3 - T1;
 }
 
 void old_field_mixed_add(const fr::field_t& x1,
@@ -68,29 +68,29 @@ void old_field_mixed_add(const fr::field_t& x1,
 
     T0 = z1.sqr();
     T1 = x2 * T0;
-    T1.self_sub(x1);
-    T2 = z1.mul_with_coarse_reduction(T0);
-    T2.self_mul(y2);
-    T2.self_sub(y1);
-    z3 = z1.add_without_reduction(T1);
-    T2.self_add_without_reduction(T2);
+    T1 -= x1;
+    T2 = z1 * T0;
+    T2 *= y2;
+    T2 -= y1;
+    z3 = z1 + T1;
+    T2 += T2;
     T3 = T1.sqr();
-    T0.self_add_with_coarse_reduction(T3);
-    z3.self_sqr_with_coarse_reduction();
-    z3.self_sub_with_coarse_reduction(T0);
-    T3.self_add_with_coarse_reduction(T3);
-    T3.self_add_with_coarse_reduction(T3);
-    T1.self_mul_with_coarse_reduction(T3);
-    T3.self_mul_with_coarse_reduction(x1);
-    T0 = T3.add_with_coarse_reduction(T3);
-    T0.self_add_with_coarse_reduction(T1);
+    T0 += T3;
+    z3.self_sqr();
+    z3 -= T0;
+    T3 += T3;
+    T3 += T3;
+    T1 *= T3;
+    T3 *= x1;
+    T0 = T3 + T3;
+    T0 += T1;
     x3 = T2.sqr();
-    x3.self_sub_with_coarse_reduction(T0);
-    T3.self_sub_with_coarse_reduction(x3);
-    T1.self_mul_with_coarse_reduction(y1);
-    T1.self_add_with_coarse_reduction(T1);
-    T3.self_mul_with_coarse_reduction(T2);
-    y3 = T3.sub_with_coarse_reduction(T1);
+    x3 -= T0;
+    T3 -= x3;
+    T1 *= y1;
+    T1 += T1;
+    T3 *= T2;
+    y3 = T3 - T1;
 }
 
 constexpr size_t NUM_POINTS = 1 << 22;

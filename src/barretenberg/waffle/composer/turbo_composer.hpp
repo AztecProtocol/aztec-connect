@@ -58,7 +58,7 @@ class TurboComposer : public ComposerBase {
             barretenberg::fr::one,
             barretenberg::fr::zero,
             barretenberg::fr::zero,
-            b.neg(),
+            -b,
         };
         create_add_gate(gate_coefficients);
     }

@@ -158,8 +158,8 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
         T0 = sigma_evaluations[i] * beta;
         T1 = wire_evaluations[i] + gamma;
-        T0.self_add(T1);
-        sigma_contribution.self_mul(T0);
+        T0 += T1;
+        sigma_contribution *= T0;
     }
 
     std::vector<barretenberg::fr::field_t> public_inputs =
@@ -167,19 +167,19 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
     fr::field_t public_input_delta = compute_public_input_delta(public_inputs, beta, gamma, key->domain.root);
     T0 = wire_evaluations[program_settings::program_width - 1] + gamma;
-    sigma_contribution.self_mul(T0);
-    sigma_contribution.self_mul(z_1_shifted_eval);
-    sigma_contribution.self_mul(alpha_pow[0]);
+    sigma_contribution *= T0;
+    sigma_contribution *= z_1_shifted_eval;
+    sigma_contribution *= alpha_pow[0];
 
     T1 = z_1_shifted_eval - public_input_delta;
-    T1.self_mul(lagrange_evals.l_n_minus_1);
-    T1.self_mul(alpha_pow[1]);
+    T1 *= lagrange_evals.l_n_minus_1;
+    T1 *= alpha_pow[1];
 
     T2 = lagrange_evals.l_1 * alpha_pow[2];
-    T1.self_sub(T2);
-    T1.self_sub(sigma_contribution);
-    T1.self_add(linear_eval);
-    t_eval.self_add(T1);
+    T1 -= T2;
+    T1 -= sigma_contribution;
+    T1 += linear_eval;
+    t_eval += T1;
 
     fr::field_t alpha_base = alpha.sqr().sqr();
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
@@ -188,7 +188,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     }
 
     T0 = lagrange_evals.vanishing_poly.invert();
-    t_eval.self_mul(T0);
+    t_eval *= T0;
 
     transcript.add_element("t", transcript_helpers::convert_field_element(t_eval));
 
@@ -201,30 +201,30 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     }
 
     // reconstruct Kate opening commitments from committed values
-    linear_terms.z_1.self_mul(nu_pow[0]);
-    linear_terms.sigma_last.self_mul(nu_pow[0]);
+    linear_terms.z_1 *= nu_pow[0];
+    linear_terms.sigma_last *= nu_pow[0];
 
     T0 = nu_pow[7] * u;
-    linear_terms.z_1.self_add(T0);
+    linear_terms.z_1 += T0;
 
     fr::field_t batch_evaluation;
     fr::field_t::__copy(t_eval, batch_evaluation);
     T0 = nu_pow[0] * linear_eval;
-    batch_evaluation.self_add(T0);
+    batch_evaluation += T0;
 
     for (size_t i = 0; i < program_settings::program_width; ++i) {
         T0 = nu_pow[i + 1] * wire_evaluations[i];
-        batch_evaluation.self_add(T0);
+        batch_evaluation += T0;
     }
 
     for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
         T0 = nu_pow[5 + i] * sigma_evaluations[i];
-        batch_evaluation.self_add(T0);
+        batch_evaluation += T0;
     }
 
     T0 = nu_pow[7] * u;
-    T0.self_mul(z_1_shifted_eval);
-    batch_evaluation.self_add(T0);
+    T0 *= z_1_shifted_eval;
+    batch_evaluation += T0;
 
     fr::field_t nu_base = nu_pow[8];
 
@@ -233,9 +233,9 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
             fr::field_t wire_shifted_eval =
                 fr::field_t::serialize_from_buffer(&transcript.get_element("w_" + std::to_string(i + 1) + "_omega")[0]);
             T0 = wire_shifted_eval * nu_base;
-            T0.self_mul(u);
-            batch_evaluation.self_add(T0);
-            nu_base.self_mul(nu_pow[0]);
+            T0 *= u;
+            batch_evaluation += T0;
+            nu_base *= nu_pow[0];
         }
     }
 
@@ -248,7 +248,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
     fr::field_t z_omega_scalar;
     z_omega_scalar = z_challenge * key->domain.root;
-    z_omega_scalar.self_mul(u);
+    z_omega_scalar *= u;
 
     std::vector<fr::field_t> scalars;
     std::vector<g1::affine_element> elements;
@@ -263,9 +263,9 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
             elements.emplace_back(W[i]);
             if (program_settings::requires_shifted_wire(program_settings::wire_shift_settings, i)) {
                 T0 = nu_base * u;
-                T0.self_add(nu_pow[1 + i]);
+                T0 += nu_pow[1 + i];
                 scalars.emplace_back(T0);
-                nu_base.self_mul(nu_pow[0]);
+                nu_base *= nu_pow[0];
             } else {
                 scalars.emplace_back(nu_pow[1 + i]);
             }

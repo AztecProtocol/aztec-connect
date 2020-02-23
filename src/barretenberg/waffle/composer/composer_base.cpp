@@ -59,7 +59,7 @@ template <size_t program_width> void ComposerBase::compute_sigma_permutations(pr
             barretenberg::fr::field_t work_root = barretenberg::fr::one;
             for (size_t j = 0; j < num_public_inputs; ++j) {
                 sigma_polynomial[j] = work_root;
-                work_root.self_mul(key->small_domain.root);
+                work_root *= key->small_domain.root;
             }
         }
     

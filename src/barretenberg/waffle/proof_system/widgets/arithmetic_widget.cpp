@@ -104,7 +104,7 @@ fr::field_t ProverArithmeticWidget::compute_quotient_contribution(const fr::fiel
     fr::field_t T1 = w_1_fft[2 * i] * q_1_fft[i];
     fr::field_t T2 = w_2_fft[2 * i] * q_2_fft[i];
     fr::field_t T3 = w_3_fft[2 * i] * q_3_fft[i];
-    quotient_mid[i].self_add((T0 + T1 + T2 + T3 + q_c_fft[i]) * alpha_base);
+    quotient_mid[i] += ((T0 + T1 + T2 + T3 + q_c_fft[i]) * alpha_base);
     ITERATE_OVER_DOMAIN_END;
 
     return alpha_base * alpha;
@@ -124,7 +124,7 @@ fr::field_t ProverArithmeticWidget::compute_linear_contribution(const fr::field_
     fr::field_t T1 = w_l_eval * q_1[i];
     fr::field_t T2 = w_r_eval * q_2[i];
     fr::field_t T3 = w_o_eval * q_3[i];
-    r[i].self_add((T0 + T1 + T2 + T3 + q_c[i]) * alpha_base);
+    r[i] += ((T0 + T1 + T2 + T3 + q_c[i]) * alpha_base);
     ITERATE_OVER_DOMAIN_END;
 
     return alpha_base * alpha;

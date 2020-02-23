@@ -4,10 +4,8 @@
 #include "./fq.hpp"
 #include "./fq2.hpp"
 
-namespace barretenberg
-{
-struct Bn254Fq6Params
-{
+namespace barretenberg {
+struct Bn254Fq6Params {
     static constexpr fq2::field_t frobenius_coeffs_c1_1{
         { 0xb5773b104563ab30UL, 0x347f91c8a9aa6454UL, 0x7a007127242e0991UL, 0x1956bcd8118214ecUL },
         { 0x6e849f1ea0aa4757UL, 0xaa1c7b6d89f89141UL, 0xb6e713cdfae0ca3aUL, 0x26694fbb4e82ebc3UL }
@@ -49,18 +47,18 @@ struct Bn254Fq6Params
         fq::field_t T2;
 
         T0 = a.c0 + a.c0; // T0 = 2a.c0
-        T0.self_add(T0);     // T0 = 4a.c0
-        T0.self_add(T0);     // T0 = 8a.c0
-        T0.self_add(a.c0);   // T0 = 9a.c0
+        T0 += T0;         // T0 = 4a.c0
+        T0 += T0;         // T0 = 8a.c0
+        T0 += a.c0;       // T0 = 9a.c0
 
         T1 = a.c1 + a.c1; // T1 = 2a.c1
-        T1.self_add(T1);     // T1 = 4a.c1
-        T1.self_add(T1);     // T1 = 8a.c1
-        T1.self_add(a.c1);   // T1 = 9a.c1
+        T1 += T1;         // T1 = 4a.c1
+        T1 += T1;         // T1 = 8a.c1
+        T1 += a.c1;       // T1 = 9a.c1
 
-        T2 = T0 - a.c1;   // T2 = 9a.c0 - a.c1
-        r.c1 = T1 + a.c0; // r.c1 = 9a.c1 + a.c0
-        fq::field_t::__copy(T2, r.c0);        // r.c0 = T2
+        T2 = T0 - a.c1;                // T2 = 9a.c0 - a.c1
+        r.c1 = T1 + a.c0;              // r.c1 = 9a.c1 + a.c0
+        fq::field_t::__copy(T2, r.c0); // r.c0 = T2
     }
 };
 

@@ -121,11 +121,11 @@ void add_affine_points(g1::affine_element* points, const size_t num_points, fq::
     // std::chrono::steady_clock::time_point time_start = std::chrono::steady_clock::now();
 
     for (size_t i = 0; i < num_points; i += 2) {
-        scratch_space[i >> 1] = points[i].x.add_without_reduction(points[i + 1].x);  // x2 + x1
-        points[i + 1].x.self_sub(points[i].x);                                       // x2 - x1
-        points[i + 1].y.self_sub(points[i].y);                                       // y2 - y1
-        points[i + 1].y.self_mul_with_coarse_reduction(batch_inversion_accumulator); // (y2 - y1)*accumulator_old
-        batch_inversion_accumulator.self_mul_with_coarse_reduction(points[i + 1].x);
+        scratch_space[i >> 1] = points[i].x + points[i + 1].x; // x2 + x1
+        points[i + 1].x -= points[i].x;                        // x2 - x1
+        points[i + 1].y -= points[i].y;                        // y2 - y1
+        points[i + 1].y *= batch_inversion_accumulator;        // (y2 - y1)*accumulator_old
+        batch_inversion_accumulator *= (points[i + 1].x);
     }
     // std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
     // std::chrono::microseconds diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
@@ -151,14 +151,13 @@ void add_affine_points(g1::affine_element* points, const size_t num_points, fq::
         __builtin_prefetch(points + ((i + num_points - 2) >> 1));
         __builtin_prefetch(scratch_space + ((i - 2) >> 1));
 
-        points[i + 1].y.self_mul_with_coarse_reduction(batch_inversion_accumulator); // update accumulator
-        batch_inversion_accumulator.self_mul_with_coarse_reduction(points[i + 1].x);
-        points[i + 1].x = points[i + 1].y.sqr_with_coarse_reduction();
-        points[(i + num_points) >> 1].x =
-            points[i + 1].x.sub_with_coarse_reduction(scratch_space[i >> 1]).reduce_once(); // x3 = lambda_squared - x2
-                                                                                            // - x1
-        points[i].x.self_sub_with_coarse_reduction(points[(i + num_points) >> 1].x);
-        points[i].x.self_mul(points[i + 1].y);
+        points[i + 1].y *= batch_inversion_accumulator; // update accumulator
+        batch_inversion_accumulator *= points[i + 1].x;
+        points[i + 1].x = points[i + 1].y.sqr();
+        points[(i + num_points) >> 1].x = points[i + 1].x - (scratch_space[i >> 1]); // x3 = lambda_squared - x2
+                                                                                     // - x1
+        points[i].x -= points[(i + num_points) >> 1].x;
+        points[i].x *= points[i + 1].y;
         points[(i + num_points) >> 1].y = points[i].x - points[i].y;
     }
 }

@@ -59,14 +59,14 @@ template <typename base_field, typename Fq2Params> class field2 {
 
     static inline void __sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) { r = a - b; }
 
-    static inline void __neg(const field_t& a, field_t& r) { r = a.neg(); }
+    static inline void __neg(const field_t& a, field_t& r) { r = -a; }
 
     static inline void __invert(const field_t& a, field_t& r) { r = a.invert(); }
 
     static inline void frobenius_map(const field_t& a, field_t& r)
     {
         r.c0 = a.c0;
-        r.c1 = a.c1.neg();
+        r.c1 = -a.c1;
     }
 
     static inline void __to_montgomery_form(const field_t& a, field_t& r) { r = a.to_montgomery_form(); }

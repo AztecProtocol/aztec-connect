@@ -6,6 +6,7 @@ using namespace benchmark;
 #include <math.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 #include <vector>
 
 #include <barretenberg/types.hpp>
@@ -62,7 +63,7 @@ void generate_scalars(fr::field_t* scalars)
     fr::field_t acc;
     fr::field_t::__copy(T0, acc);
     for (size_t i = 0; i < MAX_GATES; ++i) {
-        acc.self_mul(T0);
+        acc *= T0;
         fr::field_t::__copy(acc, scalars[i]);
     }
 }

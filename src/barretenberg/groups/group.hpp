@@ -82,8 +82,8 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             output.z = coordinate_field::random_element();
             typename coordinate_field::field_t zz = output.z.sqr();
             typename coordinate_field::field_t zzz = zz * output.z;
-            output.x.self_mul(zz);
-            output.y.self_mul(zzz);
+            output.x *= zz;
+            output.y *= zzz;
             return output;
         } else {
             typename subgroup_field::field_t scalar = subgroup_field::random_element();
@@ -174,76 +174,73 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             return;
         }
         // z2 = 2*y*z
-        p2.z = p1.z.add_without_reduction(p1.z);
-        p2.z.self_mul_with_coarse_reduction(p1.y);
-        p2.z.self_reduce_once();
+        p2.z = p1.z + p1.z;
+        p2.z *= p1.y;
 
         // T0 = x*x
-        typename coordinate_field::field_t T0 = p1.x.sqr_with_coarse_reduction();
+        typename coordinate_field::field_t T0 = p1.x.sqr();
 
         // T1 = y*y
-        typename coordinate_field::field_t T1 = p1.y.sqr_with_coarse_reduction();
+        typename coordinate_field::field_t T1 = p1.y.sqr();
 
         // T2 = T2*T1 = y*y*y*y
-        typename coordinate_field::field_t T2 = T1.sqr_with_coarse_reduction();
+        typename coordinate_field::field_t T2 = T1.sqr();
 
         // T1 = T1 + x = x + y*y
-        T1.self_add_with_coarse_reduction(p1.x);
+        T1 += p1.x;
 
         // T1 = T1 * T1
-        T1.self_sqr_with_coarse_reduction();
+        T1.self_sqr();
 
         // T3 = T0 + T2 = xx + y*y*y*y
-        typename coordinate_field::field_t T3 = T0.add_with_coarse_reduction(T2);
+        typename coordinate_field::field_t T3 = T0 + T2;
 
         // T1 = T1 - T3 = x*x + y*y*y*y + 2*x*x*y*y*y*y - x*x - y*y*y*y = 2*x*x*y*y*y*y = 2*S
-        T1.self_sub_with_coarse_reduction(T3);
+        T1 -= T3;
 
         // T1 = 2T1 = 4*S
-        T1.self_add_with_coarse_reduction(T1);
+        T1 += T1;
 
         // T3 = 3T0
-        T3 = T0.add_with_coarse_reduction(T0);
-        T3.self_add_with_coarse_reduction(T0);
+        T3 = T0 + T0;
+        T3 += T0;
 
         // T0 = 2T1
-        T0 = T1.add_with_coarse_reduction(T1);
+        T0 = T1 + T1;
 
         // x2 = T3*T3
-        p2.x = T3.sqr_with_coarse_reduction();
+        p2.x = T3.sqr();
 
         // x2 = x2 - 2T1
-        p2.x.self_sub_with_coarse_reduction(T0);
-        p2.x.self_reduce_once();
+        p2.x -= T0;
 
         // T2 = 8T2
-        T2.self_add_with_coarse_reduction(T2);
-        T2.self_add_with_coarse_reduction(T2);
-        T2.self_add_with_coarse_reduction(T2);
+        T2 += T2;
+        T2 += T2;
+        T2 += T2;
 
         // y2 = T1 - x2
-        p2.y = T1.sub_with_coarse_reduction(p2.x);
+        p2.y = T1 - p2.x;
 
         // y2 = y2 * T3 - T2
-        p2.y.self_mul_with_coarse_reduction(T3);
-        p2.y.self_sub_with_coarse_reduction(T2);
-        p2.y.self_reduce_once();
+        p2.y *= T3;
+        p2.y -= T2;
     }
 
     static inline void mixed_add_inner(const element& p1, const affine_element& p2, element& p3) noexcept
     {
         // T0 = z1.z1
-        typename coordinate_field::field_t T0 = p1.z.sqr_with_coarse_reduction();
+        typename coordinate_field::field_t T0 = p1.z.sqr();
 
         // T1 = x2.t0 - x1 = x2.z1.z1 - x1
         typename coordinate_field::field_t T1 = p2.x * T0;
-        T1.self_sub(p1.x);
+        T1 -= p1.x;
 
         // T2 = T0.z1 = z1.z1.z1
         // T2 = T2.y2 - y1 = y2.z1.z1.z1 - y1
-        typename coordinate_field::field_t T2 = p1.z.mul_with_coarse_reduction(T0);
-        T2.self_mul(p2.y);
-        T2.self_sub(p1.y);
+        typename coordinate_field::field_t T2 = p1.z * T0;
+        T2 *= p2.y;
+        T2 -= p1.y;
 
         if (__builtin_expect(T1.is_zero(), 0)) {
             if (T2.is_zero()) {
@@ -258,53 +255,50 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         // T2 = 2T2 = 2(y2.z1.z1.z1 - y1) = R
         // z3 = z1 + H
-        T2.self_add_without_reduction(T2);
-        p3.z = T1.add_without_reduction(p1.z);
+        T2 += T2;
+        p3.z = T1 + p1.z;
 
         // T3 = T1*T1 = HH
-        typename coordinate_field::field_t T3 = T1.sqr_with_coarse_reduction();
+        typename coordinate_field::field_t T3 = T1.sqr();
 
         // z3 = z3 - z1z1 - HH
-        T0.self_add_with_coarse_reduction(T3);
+        T0 += T3;
 
         // z3 = (z1 + H)*(z1 + H)
-        p3.z.self_sqr_with_coarse_reduction();
-        p3.z.self_sub_with_coarse_reduction(T0);
-        p3.z.self_reduce_once();
+        p3.z.self_sqr();
+        p3.z -= T0;
 
         // T3 = 4HH
-        T3.self_add_with_coarse_reduction(T3);
-        T3.self_add_with_coarse_reduction(T3);
+        T3 += T3;
+        T3 += T3;
 
         // T1 = T1*T3 = 4HHH
-        T1.self_mul_with_coarse_reduction(T3);
+        T1 *= T3;
 
         // T3 = T3 * x1 = 4HH*x1
-        T3.self_mul_with_coarse_reduction(p1.x);
+        T3 *= p1.x;
 
         // T0 = 2T3
-        T0 = T3.add_with_coarse_reduction(T3);
+        T0 = T3 + T3;
 
         // T0 = T0 + T1 = 2(4HH*x1) + 4HHH
-        T0.self_add_with_coarse_reduction(T1);
-        p3.x = T2.sqr_with_coarse_reduction();
+        T0 += T1;
+        p3.x = T2.sqr();
 
         // x3 = x3 - T0 = R*R - 8HH*x1 -4HHH
-        p3.x.self_sub_with_coarse_reduction(T0);
+        p3.x -= T0;
 
         // T3 = T3 - x3 = 4HH*x1 - x3
-        T3.self_sub_with_coarse_reduction(p3.x);
-        p3.x.self_reduce_once();
+        T3 -= p3.x;
 
-        T1.self_mul_with_coarse_reduction(p1.y);
-        T1.self_add_with_coarse_reduction(T1);
+        T1 *= p1.y;
+        T1 += T1;
 
         // T3 = T2 * T3 = R*(4HH*x1 - x3)
-        T3.self_mul_with_coarse_reduction(T2);
+        T3 *= T2;
 
         // y3 = T3 - T1
-        p3.y = T3.sub_with_coarse_reduction(T1);
-        p3.y.self_reduce_once();
+        p3.y = T3 - T1;
     }
     // add: 10 mul_w_o_reduction 1 mul, 5 sqr
 
@@ -315,18 +309,18 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     {
 
         // T0 = z1.z1
-        typename coordinate_field::field_t T0 = p1.z.sqr_with_coarse_reduction();
+        typename coordinate_field::field_t T0 = p1.z.sqr();
 
         // T1 = x2.t0 - x1 = x2.z1.z1 - x1
         typename coordinate_field::field_t T1 = p2.x * T0;
-        T1.self_sub(p1.x);
+        T1 -= p1.x;
 
         // T2 = T0.z1 = z1.z1.z1
         // T2 = T2.y2 - y1 = y2.z1.z1.z1 - y1
-        typename coordinate_field::field_t T2 = p1.z.mul_with_coarse_reduction(T0);
-        T2.self_mul(p2.y);
+        typename coordinate_field::field_t T2 = p1.z * T0;
+        T2 *= p2.y;
         T2.self_conditional_negate(predicate);
-        T2.self_sub(p1.y);
+        T2 -= p1.y;
 
         if (__builtin_expect(T1.is_zero(), 0)) {
             if (T2.is_zero()) {
@@ -341,53 +335,50 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         // T2 = 2T2 = 2(y2.z1.z1.z1 - y1) = R
         // z3 = z1 + H
-        T2.self_add_without_reduction(T2);
-        p3.z = T1.add_without_reduction(p1.z);
+        T2 += T2;
+        p3.z = T1 + p1.z;
 
         // T3 = T1*T1 = HH
-        typename coordinate_field::field_t T3 = T1.sqr_with_coarse_reduction();
+        typename coordinate_field::field_t T3 = T1.sqr();
 
         // z3 = z3 - z1z1 - HH
-        T0.self_add_with_coarse_reduction(T3);
+        T0 += T3;
 
         // z3 = (z1 + H)*(z1 + H)
-        p3.z.self_sqr_with_coarse_reduction();
-        p3.z.self_sub_with_coarse_reduction(T0);
-        p3.z.self_reduce_once();
+        p3.z.self_sqr();
+        p3.z -= T0;
 
         // T3 = 4HH
-        T3.self_add_with_coarse_reduction(T3);
-        T3.self_add_with_coarse_reduction(T3);
+        T3 += T3;
+        T3 += T3;
 
         // T1 = T1*T3 = 4HHH
-        T1.self_mul_with_coarse_reduction(T3);
+        T1 *= T3;
 
         // T3 = T3 * x1 = 4HH*x1
-        T3.self_mul_with_coarse_reduction(p1.x);
+        T3 *= p1.x;
 
         // T0 = 2T3
-        T0 = T3.add_with_coarse_reduction(T3);
+        T0 = T3 + T3;
 
         // T0 = T0 + T1 = 2(4HH*x1) + 4HHH
-        T0.self_add_with_coarse_reduction(T1);
-        p3.x = T2.sqr_with_coarse_reduction();
+        T0 += T1;
+        p3.x = T2.sqr();
 
         // x3 = x3 - T0 = R*R - 8HH*x1 -4HHH
-        p3.x.self_sub_with_coarse_reduction(T0);
+        p3.x -= T0;
 
         // T3 = T3 - x3 = 4HH*x1 - x3
-        T3.self_sub_with_coarse_reduction(p3.x);
-        p3.x.self_reduce_once();
+        T3 -= p3.x;
 
-        T1.self_mul_with_coarse_reduction(p1.y);
-        T1.self_add_with_coarse_reduction(T1);
+        T1 *= p1.y;
+        T1 += T1;
 
         // T3 = T2 * T3 = R*(4HH*x1 - x3)
-        T3.self_mul_with_coarse_reduction(T2);
+        T3 *= T2;
 
         // y3 = T3 - T1
-        p3.y = T3.sub_with_coarse_reduction(T1);
-        p3.y.self_reduce_once();
+        p3.y = T3 - T1;
     }
 
     static inline void mixed_add(const element& p1, const affine_element& p2, element& p3) noexcept
@@ -442,20 +433,18 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             set_infinity(p3);
             return;
         }
-        typename coordinate_field::field_t Z1Z1(p1.z.sqr_with_coarse_reduction());
-        typename coordinate_field::field_t Z2Z2(p2.z.sqr_with_coarse_reduction());
-        typename coordinate_field::field_t S2(Z1Z1.mul_with_coarse_reduction(p1.z));
-        typename coordinate_field::field_t U2(Z1Z1.mul_with_coarse_reduction(p2.x));
-        S2.self_mul_with_coarse_reduction(p2.y);
-        typename coordinate_field::field_t U1(Z2Z2.mul_with_coarse_reduction(p1.x));
-        typename coordinate_field::field_t S1(Z2Z2.mul_with_coarse_reduction(p2.z));
-        S1.self_mul_with_coarse_reduction(p1.y);
+        typename coordinate_field::field_t Z1Z1(p1.z.sqr());
+        typename coordinate_field::field_t Z2Z2(p2.z.sqr());
+        typename coordinate_field::field_t S2(Z1Z1 * p1.z);
+        typename coordinate_field::field_t U2(Z1Z1 * p2.x);
+        S2 *= p2.y;
+        typename coordinate_field::field_t U1(Z2Z2 * p1.x);
+        typename coordinate_field::field_t S1(Z2Z2 * p2.z);
+        S1 *= p1.y;
 
-        typename coordinate_field::field_t F(S2.sub_with_coarse_reduction(S1));
-        F.self_reduce_once();
+        typename coordinate_field::field_t F(S2 - S1);
 
-        typename coordinate_field::field_t H(U2.sub_with_coarse_reduction(U1));
-        H.self_reduce_once();
+        typename coordinate_field::field_t H(U2 - U1);
 
         if (__builtin_expect(H.is_zero(), 0)) {
             if (F.is_zero()) {
@@ -468,40 +457,38 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             }
         }
 
-        F.self_add_without_reduction(F);
+        F += F;
 
-        typename coordinate_field::field_t I(H.add_without_reduction(H));
-        I.self_sqr_with_coarse_reduction();
+        typename coordinate_field::field_t I(H + H);
+        I.self_sqr();
 
-        typename coordinate_field::field_t J(H.mul_with_coarse_reduction(I));
+        typename coordinate_field::field_t J(H * I);
 
-        U1.self_mul_with_coarse_reduction(I);
+        U1 *= I;
 
-        U2 = U1.add_with_coarse_reduction(U1);
-        U2.self_add_with_coarse_reduction(J);
+        U2 = U1 + U1;
+        U2 += J;
 
-        p3.x = F.sqr_with_coarse_reduction();
+        p3.x = F.sqr();
 
-        p3.x.self_sub_with_coarse_reduction(U2);
-        p3.x.self_reduce_once();
+        p3.x -= U2;
 
-        J.self_mul_with_coarse_reduction(S1);
-        J.self_add_with_coarse_reduction(J);
+        J *= S1;
+        J += J;
 
-        p3.y = U1.sub_with_coarse_reduction(p3.x);
+        p3.y = U1 - p3.x;
 
-        p3.y.self_mul_with_coarse_reduction(F);
+        p3.y *= F;
 
-        p3.y.self_sub_with_coarse_reduction(J);
-        p3.y.self_reduce_once();
+        p3.y -= J;
 
-        p3.z = p1.z.add_with_coarse_reduction(p2.z);
+        p3.z = p1.z + p2.z;
 
-        Z1Z1.self_add_with_coarse_reduction(Z2Z2);
+        Z1Z1 += Z2Z2;
 
-        p3.z.self_sqr_with_coarse_reduction();
-        p3.z.self_sub_with_coarse_reduction(Z1Z1);
-        p3.z.self_mul(H);
+        p3.z.self_sqr();
+        p3.z -= Z1Z1;
+        p3.z *= H;
     }
 
     static inline element normalize(const element& src)
@@ -538,7 +525,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         for (size_t i = 0; i < num_points; ++i) {
             temporaries[i] = accumulator;
             if (!is_point_at_infinity(points[i])) {
-                accumulator.self_mul(points[i].z);
+                accumulator *= points[i].z;
             }
         }
         // For the rest of this method I'll refer to the product of all z-coordinates as the 'global' z-coordinate
@@ -572,9 +559,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
                 z_inv = accumulator * temporaries[i];
                 zz_inv = z_inv.sqr();
                 zzz_inv = zz_inv * z_inv;
-                points[i].x.self_mul(zz_inv);
-                points[i].y.self_mul(zzz_inv);
-                accumulator.self_mul(points[i].z);
+                points[i].x *= zz_inv;
+                points[i].y *= zzz_inv;
+                accumulator *= points[i].z;
             }
             points[i].z = coordinate_field::one;
         }
@@ -712,7 +699,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             sign = static_cast<bool>((wnaf_entry >> 31) & 1);
             copy(&lookup_table[index], &temporary);
             conditional_negate_affine(&lookup_table[index], &temporary, !sign);
-            temporary.x.self_mul(coordinate_field::beta);
+            temporary.x *= coordinate_field::beta;
 
             mixed_add(work_element, temporary, work_element);
 
@@ -732,7 +719,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         }
 
         copy(&lookup_table[0], &temporary);
-        temporary.x.self_mul(coordinate_field::beta);
+        temporary.x *= coordinate_field::beta;
 
         if (endo_skew) {
             mixed_add(work_element, temporary, work_element);

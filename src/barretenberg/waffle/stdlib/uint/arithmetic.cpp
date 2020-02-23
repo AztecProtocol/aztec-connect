@@ -52,7 +52,7 @@ uint<Composer, Native> uint<Composer, Native>::operator+(const uint& other) cons
         fr::one,
         fr::one,
         fr::neg_one,
-        fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE).neg(),
+        -fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE),
         constants,
     };
 
@@ -103,7 +103,7 @@ uint<Composer, Native> uint<Composer, Native>::operator-(const uint& other) cons
         fr::one,
         fr::neg_one,
         fr::neg_one,
-        fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE).neg(),
+        -fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE),
         CIRCUIT_UINT_MAX_PLUS_ONE + constant_term,
     };
 
@@ -148,7 +148,7 @@ uint<Composer, Native> uint<Composer, Native>::operator*(const uint& other) cons
         other.additive_constant,
         additive_constant,
         fr::neg_one,
-        fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE).neg(),
+        -fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE),
         constant_term,
     };
 
@@ -252,7 +252,7 @@ std::pair<uint<Composer, Native>, uint<Composer, Native>> uint<Composer, Native>
         fr::zero,                            // q_2.w_2 = 0
         fr::neg_one,                       // q_3.w_3 = -a
         fr::one,                             // q_4.w_4 = r
-        fr::field_t(additive_constant).neg() // q_c = -a if a const
+        -fr::field_t(additive_constant) // q_c = -a if a const
     };
     ctx->create_big_mul_gate(division_gate);
 

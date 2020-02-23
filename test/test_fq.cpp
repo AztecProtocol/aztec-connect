@@ -196,45 +196,6 @@ TEST(fq, sub_check_against_constants)
     EXPECT_EQ(c - d, const_expected);
 }
 
-TEST(fq, const_coarse_equivalence_check)
-{
-    constexpr fq::field_t a{ 0xd68d01812313fb7c, 0x2965d7ae7c6070a5, 0x08ef9af6d6ba9a48, 0x0cb8fe2108914f53 };
-    constexpr fq::field_t b{ 0x2cd2a2a37e9bf14a, 0xebc86ef589c530f6, 0x75124885b362b8fe, 0x1394324205c7a41d };
-
-    constexpr fq::field_t c = a * b;
-    constexpr fq::field_t d = a.mul_with_coarse_reduction(b).reduce_once();
-
-    constexpr fq::field_t e = [b]() {
-        fq::field_t temp{ 0xd68d01812313fb7c, 0x2965d7ae7c6070a5, 0x08ef9af6d6ba9a48, 0x0cb8fe2108914f53 };
-        temp.self_mul(b);
-        return temp;
-    }();
-
-    constexpr fq::field_t f = [b]() {
-        fq::field_t temp{ 0xd68d01812313fb7c, 0x2965d7ae7c6070a5, 0x08ef9af6d6ba9a48, 0x0cb8fe2108914f53 };
-        temp.self_mul_with_coarse_reduction(b);
-        temp.self_reduce_once();
-        return temp;
-    }();
-
-    static_assert(c == d);
-    static_assert(c == e);
-    static_assert(c == f);
-
-    fq::field_t c_val = a * b;
-    fq::field_t d_val = a.mul_with_coarse_reduction(b).reduce_once();
-    fq::field_t e_val = b;
-    e_val.self_mul(a);
-    fq::field_t f_val = b;
-    f_val.self_mul_with_coarse_reduction(a);
-    f_val.self_reduce_once();
-
-    EXPECT_EQ(c, c_val);
-    EXPECT_EQ(c, d_val);
-    EXPECT_EQ(c, e_val);
-    EXPECT_EQ(c, f_val);
-}
-
 TEST(fq, coarse_equivalence_checks)
 {
     fq::field_t a = get_pseudorandom_element();
@@ -242,8 +203,7 @@ TEST(fq, coarse_equivalence_checks)
 
     fq::field_t c = (a * b) + a - b;
 
-    fq::field_t d =
-        a.mul_with_coarse_reduction(b).add_with_coarse_reduction(a).sub_with_coarse_reduction(b).reduce_once();
+    fq::field_t d = a * b + a - b;
 
     EXPECT_EQ(c, d);
 }
@@ -302,10 +262,10 @@ TEST(fq, add_mul_consistency)
 
     fq::field_t a = fq::random_element();
     fq::field_t result;
-    result = a + a;          // 2
-    result.self_add(result); // 4
-    result.self_add(result); // 8
-    result.self_add(a);      // 9
+    result = a + a;   // 2
+    result += result; // 4
+    result += result; // 8
+    result += a;      // 9
 
     fq::field_t expected;
     expected = a * multiplicand;
@@ -320,12 +280,12 @@ TEST(fq, sub_mul_consistency)
 
     fq::field_t a = fq::random_element();
     fq::field_t result;
-    result = a + a;          // 2
-    result.self_add(result); // 4
-    result.self_add(result); // 8
-    result.self_sub(a);      // 7
-    result.self_sub(a);      // 6
-    result.self_sub(a);      // 5
+    result = a + a;   // 2
+    result += result; // 4
+    result += result; // 8
+    result -= a;      // 7
+    result -= a;      // 6
+    result -= a;      // 5
 
     fq::field_t expected;
     expected = a * multiplicand;
@@ -343,12 +303,12 @@ TEST(fq, beta)
     // compute x^3
     fq::field_t x_cubed;
     x_cubed = x * x;
-    x_cubed.self_mul(x);
+    x_cubed *= x;
 
     // compute beta_x^3
     fq::field_t beta_x_cubed;
     beta_x_cubed = beta_x * beta_x;
-    beta_x_cubed.self_mul(beta_x);
+    beta_x_cubed *= beta_x;
 
     EXPECT_EQ((x_cubed == beta_x_cubed), true);
 }
@@ -358,8 +318,8 @@ TEST(fq, invert)
     fq::field_t input = fq::random_element();
     fq::field_t inverse = input.invert();
     fq::field_t result = input * inverse;
-    result.self_reduce_once();
-    result.self_reduce_once();
+    result = result.reduce_once();
+    result = result.reduce_once();
     EXPECT_EQ(result, fq::one);
 }
 
@@ -407,7 +367,7 @@ TEST(fq, neg)
 {
     fq::field_t a = fq::random_element();
     fq::field_t b;
-    b = a.neg();
+    b = -a;
     fq::field_t result;
     result = a + b;
     EXPECT_EQ((result == fq::zero), true);
@@ -419,7 +379,7 @@ TEST(fq, split_into_endomorphism_scalars)
     fq::field_t input = 0;
     int got_entropy = getentropy((void*)&input.data[0], 32);
     EXPECT_EQ(got_entropy, 0);
-    input.data[3] &= 0x7fffffffffffffff;
+    input.data[3] &= 0x0fffffffffffffff;
 
     fq::field_t k = { input.data[0], input.data[1], input.data[2], input.data[3] };
     fq::field_t k1 = 0;

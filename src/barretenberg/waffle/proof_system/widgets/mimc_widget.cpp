@@ -76,7 +76,7 @@ fr::field_t ProverMiMCWidget::compute_quotient_contribution(const barretenberg::
     fr::field_t T1 = (T0.sqr() * T0) - w_2_fft[i];
     fr::field_t T2 = (w_2_fft[i].sqr() * T0 - w_3_fft[i + 4]) * alpha;
     fr::field_t T3 = (T1 + T2) * q_mimc_selector_fft[i] * alpha_base;
-    quotient_large[i].self_add(T3);
+    quotient_large[i] += T3;
     ITERATE_OVER_DOMAIN_END;
 
     return alpha_base * alpha.sqr();
@@ -106,7 +106,7 @@ fr::field_t ProverMiMCWidget::compute_linear_contribution(const fr::field_t& alp
     fr::field_t mimc_term = ((w_r_eval.sqr() * mimc_T0 - w_o_shifted_eval) * alpha + mimc_a) * alpha_base;
 
     ITERATE_OVER_DOMAIN_START(key->small_domain);
-    r[i].self_add(mimc_term * q_mimc_selector[i]);
+    r[i] += (mimc_term * q_mimc_selector[i]);
     ITERATE_OVER_DOMAIN_END;
     return alpha_base * alpha.sqr();
 }
@@ -118,7 +118,7 @@ fr::field_t ProverMiMCWidget::compute_opening_poly_contribution(const fr::field_
 {
     fr::field_t nu = fr::field_t::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
     ITERATE_OVER_DOMAIN_START(key->small_domain);
-    poly[i].self_add(q_mimc_coefficient[i] * nu_base);
+    poly[i] += (q_mimc_coefficient[i] * nu_base);
     ITERATE_OVER_DOMAIN_END;
 
     return nu_base * nu;
@@ -139,7 +139,7 @@ barretenberg::fr::field_t VerifierMiMCWidget::compute_batch_evaluation_contribut
     fr::field_t q_mimc_coefficient_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("q_mimc_coefficient")[0]);
     fr::field_t nu = fr::field_t::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
 
-    batch_eval.self_add(q_mimc_coefficient_eval * nu_base);
+    batch_eval += (q_mimc_coefficient_eval * nu_base);
 
     return nu_base * nu;
 }

@@ -139,7 +139,7 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
     } else {
         if (predicate) {
             coordinate_field::field_t::__copy(src->x, dest->x);
-            dest->y = src->y.neg();
+            dest->y = -src->y;
         } else {
             copy_affine(*src, *dest);
         }

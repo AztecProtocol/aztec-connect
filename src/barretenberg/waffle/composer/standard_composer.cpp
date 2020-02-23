@@ -120,7 +120,7 @@ void StandardComposer::create_balanced_add_gate(const add_quad& in)
 
     ++n;
 
-    constexpr fr::field_t neg_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t neg_two = -fr::field_t(2);
     w_l.emplace_back(temp_2_idx);
     w_r.emplace_back(in.d);
     w_o.emplace_back(zero_idx);
@@ -147,20 +147,20 @@ void StandardComposer::create_big_add_gate_with_bit_extraction(const add_quad& i
     // r =
 
     fr::field_t delta = variables[in.d];
-    delta.self_add(delta);
-    delta.self_add(delta);
+    delta += delta;
+    delta += delta;
     delta = variables[in.c] - delta;
 
     uint32_t delta_idx = add_variable(delta);
-    constexpr fr::field_t neg_four = fr::field_t{ 4, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t neg_four = -fr::field_t(4);
     create_add_gate(add_triple{ in.c, in.d, delta_idx, fr::one, neg_four, fr::neg_one, fr::zero });
 
-    constexpr fr::field_t two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form();
-    constexpr fr::field_t seven = fr::field_t{ 7, 0, 0, 0 }.to_montgomery_form();
-    constexpr fr::field_t nine = fr::field_t{ 9, 0, 0, 0 }.to_montgomery_form();
+    constexpr fr::field_t two = fr::field_t(2);
+    constexpr fr::field_t seven = fr::field_t(7);
+    constexpr fr::field_t nine = fr::field_t(9);
     const fr::field_t r_0 = (delta * nine) - ((delta.sqr() * two) + seven);
     uint32_t r_0_idx = add_variable(r_0);
-    create_poly_gate(poly_triple{ delta_idx, delta_idx, r_0_idx, two.neg(), nine, fr::zero, fr::neg_one, seven.neg() });
+    create_poly_gate(poly_triple{ delta_idx, delta_idx, r_0_idx, -two, nine, fr::zero, fr::neg_one, -seven });
 
     fr::field_t r_1 = r_0 * delta;
     uint32_t r_1_idx = add_variable(r_1);
@@ -329,8 +329,8 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
     uint32_t left_accumulator_idx = zero_idx;
     uint32_t right_accumulator_idx = zero_idx;
     uint32_t out_accumulator_idx = zero_idx;
-    constexpr fr::field_t four = fr::field_t{ 4, 0, 0, 0 }.to_montgomery_form();
-    constexpr fr::field_t neg_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t four = -fr::field_t(4);
+    constexpr fr::field_t neg_two = -fr::field_t(2);
     for (size_t i = num_bits - 1; i < num_bits; i -= 2) {
         bool left_hi_val = left_witness_value.get_bit(i);
         bool left_lo_val = left_witness_value.get_bit(i - 1);
@@ -435,7 +435,7 @@ void StandardComposer::fix_witness(const uint32_t witness_index, const barretenb
     q_1.emplace_back(fr::one);
     q_2.emplace_back(fr::zero);
     q_3.emplace_back(fr::zero);
-    q_c.emplace_back(witness_value.neg());
+    q_c.emplace_back(-witness_value);
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
 
@@ -477,14 +477,14 @@ void StandardComposer::create_dummy_gates()
 {
     gate_flags.push_back(0);
     // add in a dummy gate to ensure that all of our polynomials are not zero and not identical
-    constexpr fr::field_t one = fr::field_t{ 1, 0, 0, 0 }.to_montgomery_form();
-    constexpr fr::field_t two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form();
-    constexpr fr::field_t three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form();
-    constexpr fr::field_t four = fr::field_t{ 4, 0, 0, 0 }.to_montgomery_form();
-    constexpr fr::field_t five = fr::field_t{ 5, 0, 0, 0 }.to_montgomery_form();
-    constexpr fr::field_t six = fr::field_t{ 6, 0, 0, 0 }.to_montgomery_form();
-    constexpr fr::field_t seven = fr::field_t{ 7, 0, 0, 0 }.to_montgomery_form();
-    constexpr fr::field_t minus_twenty = fr::field_t{ 20, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t one =   fr::field_t(1);
+    constexpr fr::field_t two =   fr::field_t(2);
+    constexpr fr::field_t three = fr::field_t(3);
+    constexpr fr::field_t four =  fr::field_t(4);
+    constexpr fr::field_t five =  fr::field_t(5);
+    constexpr fr::field_t six =   fr::field_t(6);
+    constexpr fr::field_t seven = fr::field_t(7);
+    constexpr fr::field_t minus_twenty = - fr::field_t(20);
 
     q_m.emplace_back(one);
     q_1.emplace_back(two);
@@ -745,7 +745,7 @@ Prover StandardComposer::preprocess()
 void StandardComposer::assert_equal_constant(uint32_t const a_idx, fr::field_t const& b)
 {
     const add_triple gate_coefficients{
-        a_idx, a_idx, a_idx, fr::one, fr::zero, fr::zero, b.neg(),
+        a_idx, a_idx, a_idx, fr::one, fr::zero, fr::zero, -b,
     };
     create_add_gate(gate_coefficients);
 }

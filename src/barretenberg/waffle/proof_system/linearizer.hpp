@@ -45,27 +45,27 @@ namespace waffle
         {
             barretenberg::fr::field_t coset_generator = (i == 0) ? barretenberg::fr::one : barretenberg::fr::coset_generators[i - 1];
             T0 = z_beta * coset_generator;
-            T0.self_add(wire_evaluations[i]);
-            T0.self_add(gamma);
-            z_contribution.self_mul(T0);
+            T0 += wire_evaluations[i];
+            T0 += gamma;
+            z_contribution *= T0;
         }
         result.z_1 = z_contribution * alpha;
         T0 = l_1 * alpha_cubed;
-        result.z_1.self_add(T0);
+        result.z_1 += T0;
 
         barretenberg::fr::field_t sigma_contribution = barretenberg::fr::one;
         for (size_t i = 0; i < program_settings::program_width - 1; ++i)
         {
             barretenberg::fr::field_t permutation_evaluation = barretenberg::fr::field_t::serialize_from_buffer(&transcript.get_element("sigma_" + std::to_string(i + 1))[0]);
             T0 = permutation_evaluation * beta;
-            T0.self_add(wire_evaluations[i]);
-            T0.self_add(gamma);
-            sigma_contribution.self_mul(T0);
+            T0 += wire_evaluations[i];
+            T0 += gamma;
+            sigma_contribution *= T0;
         }
-        sigma_contribution.self_mul(z_1_shifted_eval);
+        sigma_contribution *= z_1_shifted_eval;
         result.sigma_last = sigma_contribution * alpha;
         result.sigma_last.self_neg();
-        result.sigma_last.self_mul(beta);
+        result.sigma_last *= beta;
 
         return result;
     }

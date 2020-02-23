@@ -23,10 +23,10 @@ const auto init = []() {
 testField get_pseudorandom_element()
 {
     testField out{ dist(engine), dist(engine), dist(engine), dist(engine) };
-    out.self_reduce_once();
-    out.self_reduce_once();
-    out.self_reduce_once();
-    out.self_reduce_once();
+    out = out.reduce_once();
+    out = out.reduce_once();
+    out = out.reduce_once();
+    out = out.reduce_once();
     return out;
 }
 } // namespace
@@ -67,12 +67,12 @@ TEST(test_new_field, multiply)
     t0 = alt_a + alt_b;
     t0.self_sqr();
     t1 = alt_a.sqr();
-    t0.self_sub(t1);
+    t0 -= t1;
     t1 = alt_b.sqr();
-    t0.self_sub(t1);
+    t0 -= t1;
     fr::field_t expected;
     expected = alt_a * alt_b;
-    expected.self_add(expected);
+    expected += expected;
 
     EXPECT_EQ((t0 == expected), true);
     // testField result = a * b;

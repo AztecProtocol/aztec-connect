@@ -122,65 +122,65 @@ fr::field_t ProverTurboRangeWidget::compute_quotient_contribution(const barreten
 
     fr::field_t* quotient_large = &key->quotient_large[0];
 
-    constexpr fr::field_t minus_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
-    constexpr fr::field_t minus_three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t minus_two = -fr::field_t(2);
+    constexpr fr::field_t minus_three = -fr::field_t(3);
 
     ITERATE_OVER_DOMAIN_START(key->large_domain);
 
-    fr::field_t delta_1 = w_4_fft[i].add_without_reduction(w_4_fft[i]);
-    delta_1.self_add_with_coarse_reduction(delta_1);
-    delta_1 = w_3_fft[i].sub_with_coarse_reduction(delta_1);
+    fr::field_t delta_1 = w_4_fft[i] + w_4_fft[i];
+    delta_1 += delta_1;
+    delta_1 = w_3_fft[i] - delta_1;
 
-    fr::field_t delta_2 = w_3_fft[i].add_without_reduction(w_3_fft[i]);
-    delta_2.self_add_with_coarse_reduction(delta_2);
-    delta_2 = w_2_fft[i].sub_with_coarse_reduction(delta_2);
+    fr::field_t delta_2 = w_3_fft[i] + w_3_fft[i];
+    delta_2 += delta_2;
+    delta_2 = w_2_fft[i] - delta_2;
 
-    fr::field_t delta_3 = w_2_fft[i].add_without_reduction(w_2_fft[i]);
-    delta_3.self_add_with_coarse_reduction(delta_3);
-    delta_3 = w_1_fft[i].sub_with_coarse_reduction(delta_3);
+    fr::field_t delta_3 = w_2_fft[i] + w_2_fft[i];
+    delta_3 += delta_3;
+    delta_3 = w_1_fft[i] - delta_3;
 
-    fr::field_t delta_4 = w_1_fft[i].add_without_reduction(w_1_fft[i]);
-    delta_4.self_add_with_coarse_reduction(delta_4);
-    delta_4 = w_4_fft[i + 4].sub_with_coarse_reduction(delta_4);
+    fr::field_t delta_4 = w_1_fft[i] + w_1_fft[i];
+    delta_4 += delta_4;
+    delta_4 = w_4_fft[i + 4] - delta_4;
 
     // D(D - 1)(D - 2)(D - 3).alpha
-    fr::field_t T0 = delta_1.sqr_with_coarse_reduction();
-    T0.self_sub_with_coarse_reduction(delta_1);
-    fr::field_t T1 = delta_1.add_with_coarse_reduction(minus_two);
-    T0.self_mul_with_coarse_reduction(T1);
-    T1 = delta_1.add_with_coarse_reduction(minus_three);
-    T0.self_mul_with_coarse_reduction(T1);
-    fr::field_t range_accumulator = T0.mul_with_coarse_reduction(alpha_a);
+    fr::field_t T0 = delta_1.sqr();
+    T0 -= delta_1;
+    fr::field_t T1 = delta_1 + minus_two;
+    T0 *= T1;
+    T1 = delta_1 + minus_three;
+    T0 *= T1;
+    fr::field_t range_accumulator = T0 * alpha_a;
 
-    T0 = delta_2.sqr_with_coarse_reduction();
-    T0.self_sub_with_coarse_reduction(delta_2);
-    T1 = delta_2.add_with_coarse_reduction(minus_two);
-    T0.self_mul_with_coarse_reduction(T1);
-    T1 = delta_2.add_with_coarse_reduction(minus_three);
-    T0.self_mul_with_coarse_reduction(T1);
-    T0.self_mul_with_coarse_reduction(alpha_b);
-    range_accumulator.self_add_with_coarse_reduction(T0);
+    T0 = delta_2.sqr();
+    T0 -= delta_2;
+    T1 = delta_2 + minus_two;
+    T0 *= T1;
+    T1 = delta_2 + minus_three;
+    T0 *= T1;
+    T0 *= alpha_b;
+    range_accumulator += T0;
 
-    T0 = delta_3.sqr_with_coarse_reduction();
-    T0.self_sub_with_coarse_reduction(delta_3);
-    T1 = delta_3.add_with_coarse_reduction(minus_two);
-    T0.self_mul_with_coarse_reduction(T1);
-    T1 = delta_3.add_with_coarse_reduction(minus_three);
-    T0.self_mul_with_coarse_reduction(T1);
-    T0.self_mul_with_coarse_reduction(alpha_c);
-    range_accumulator.self_add_with_coarse_reduction(T0);
+    T0 = delta_3.sqr();
+    T0 -= delta_3;
+    T1 = delta_3 + minus_two;
+    T0 *= T1;
+    T1 = delta_3 + minus_three;
+    T0 *= T1;
+    T0 *= alpha_c;
+    range_accumulator += T0;
 
-    T0 = delta_4.sqr_with_coarse_reduction();
-    T0.self_sub_with_coarse_reduction(delta_4);
-    T1 = delta_4.add_with_coarse_reduction(minus_two);
-    T0.self_mul_with_coarse_reduction(T1);
-    T1 = delta_4.add_with_coarse_reduction(minus_three);
-    T0.self_mul_with_coarse_reduction(T1);
-    T0.self_mul_with_coarse_reduction(alpha_d);
-    range_accumulator.self_add_with_coarse_reduction(T0);
+    T0 = delta_4.sqr();
+    T0 -= delta_4;
+    T1 = delta_4 + minus_two;
+    T0 *= T1;
+    T1 = delta_4 + minus_three;
+    T0 *= T1;
+    T0 *= alpha_d;
+    range_accumulator += T0;
 
-    range_accumulator.self_mul(q_range_fft[i]);
-    quotient_large[i].self_add(range_accumulator);
+    range_accumulator *= q_range_fft[i];
+    quotient_large[i] += range_accumulator;
     ITERATE_OVER_DOMAIN_END;
 
     return alpha_d * alpha;
@@ -200,68 +200,68 @@ fr::field_t ProverTurboRangeWidget::compute_linear_contribution(const fr::field_
     fr::field_t w_3_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
     fr::field_t w_4_omega_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
 
-    constexpr fr::field_t minus_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
-    constexpr fr::field_t minus_three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t minus_two = -fr::field_t(2);
+    constexpr fr::field_t minus_three = -fr::field_t(3);
 
     fr::field_t alpha_a = alpha_base;
     fr::field_t alpha_b = alpha_a * alpha;
     fr::field_t alpha_c = alpha_b * alpha;
     fr::field_t alpha_d = alpha_c * alpha;
 
-    fr::field_t delta_1 = w_4_eval.add_without_reduction(w_4_eval);
-    delta_1.self_add_with_coarse_reduction(delta_1);
-    delta_1 = w_3_eval.sub_with_coarse_reduction(delta_1);
+    fr::field_t delta_1 = w_4_eval + w_4_eval;
+    delta_1 += delta_1;
+    delta_1 = w_3_eval - delta_1;
 
-    fr::field_t delta_2 = w_3_eval.add_without_reduction(w_3_eval);
-    delta_2.self_add_with_coarse_reduction(delta_2);
-    delta_2 = w_2_eval.sub_with_coarse_reduction(delta_2);
+    fr::field_t delta_2 = w_3_eval + w_3_eval;
+    delta_2 += delta_2;
+    delta_2 = w_2_eval - delta_2;
 
-    fr::field_t delta_3 = w_2_eval.add_without_reduction(w_2_eval);
-    delta_3.self_add_with_coarse_reduction(delta_3);
-    delta_3 = w_1_eval.sub_with_coarse_reduction(delta_3);
+    fr::field_t delta_3 = w_2_eval + w_2_eval;
+    delta_3 += delta_3;
+    delta_3 = w_1_eval - delta_3;
 
-    fr::field_t delta_4 = w_1_eval.add_without_reduction(w_1_eval);
-    delta_4.self_add_with_coarse_reduction(delta_4);
-    delta_4 = w_4_omega_eval.sub_with_coarse_reduction(delta_4);
+    fr::field_t delta_4 = w_1_eval + w_1_eval;
+    delta_4 += delta_4;
+    delta_4 = w_4_omega_eval - delta_4;
 
     // D(D - 1)(D - 2)(D - 3).alpha
-    fr::field_t T0 = delta_1.sqr_with_coarse_reduction();
-    T0.self_sub_with_coarse_reduction(delta_1);
-    fr::field_t T1 = delta_1.add_with_coarse_reduction(minus_two);
-    T0.self_mul_with_coarse_reduction(T1);
-    T1 = delta_1.add_with_coarse_reduction(minus_three);
-    T0.self_mul_with_coarse_reduction(T1);
-    fr::field_t range_accumulator = T0.mul_with_coarse_reduction(alpha_a);
+    fr::field_t T0 = delta_1.sqr();
+    T0 -= delta_1;
+    fr::field_t T1 = delta_1 + minus_two;
+    T0 *= T1;
+    T1 = delta_1 + minus_three;
+    T0 *= T1;
+    fr::field_t range_accumulator = T0 * alpha_a;
 
-    T0 = delta_2.sqr_with_coarse_reduction();
-    T0.self_sub_with_coarse_reduction(delta_2);
-    T1 = delta_2.add_with_coarse_reduction(minus_two);
-    T0.self_mul_with_coarse_reduction(T1);
-    T1 = delta_2.add_with_coarse_reduction(minus_three);
-    T0.self_mul_with_coarse_reduction(T1);
-    T0.self_mul_with_coarse_reduction(alpha_b);
-    range_accumulator.self_add_with_coarse_reduction(T0);
+    T0 = delta_2.sqr();
+    T0 -= delta_2;
+    T1 = delta_2 + minus_two;
+    T0 *= T1;
+    T1 = delta_2 + minus_three;
+    T0 *= T1;
+    T0 *= alpha_b;
+    range_accumulator += T0;
 
-    T0 = delta_3.sqr_with_coarse_reduction();
-    T0.self_sub_with_coarse_reduction(delta_3);
-    T1 = delta_3.add_with_coarse_reduction(minus_two);
-    T0.self_mul_with_coarse_reduction(T1);
-    T1 = delta_3.add_with_coarse_reduction(minus_three);
-    T0.self_mul_with_coarse_reduction(T1);
-    T0.self_mul_with_coarse_reduction(alpha_c);
-    range_accumulator.self_add_with_coarse_reduction(T0);
+    T0 = delta_3.sqr();
+    T0 -= delta_3;
+    T1 = delta_3 + minus_two;
+    T0 *= T1;
+    T1 = delta_3 + minus_three;
+    T0 *= T1;
+    T0 *= alpha_c;
+    range_accumulator += T0;
 
-    T0 = delta_4.sqr_with_coarse_reduction();
-    T0.self_sub_with_coarse_reduction(delta_4);
-    T1 = delta_4.add_with_coarse_reduction(minus_two);
-    T0.self_mul_with_coarse_reduction(T1);
-    T1 = delta_4.add_with_coarse_reduction(minus_three);
-    T0.self_mul_with_coarse_reduction(T1);
-    T0.self_mul_with_coarse_reduction(alpha_d);
-    range_accumulator.self_add_with_coarse_reduction(T0);
+    T0 = delta_4.sqr();
+    T0 -= delta_4;
+    T1 = delta_4 + minus_two;
+    T0 *= T1;
+    T1 = delta_4 + minus_three;
+    T0 *= T1;
+    T0 *= alpha_d;
+    range_accumulator += T0;
 
     ITERATE_OVER_DOMAIN_START(key->small_domain);
-    r[i].self_add(range_accumulator * q_range[i]);
+    r[i] += (range_accumulator * q_range[i]);
     ITERATE_OVER_DOMAIN_END;
 
     return alpha_d * alpha;
@@ -311,67 +311,67 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboRangeWidget::append_scal
     fr::field_t w_3_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
     fr::field_t w_4_omega_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
 
-    constexpr fr::field_t minus_two = fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form().neg();
-    constexpr fr::field_t minus_three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form().neg();
+    constexpr fr::field_t minus_two = -fr::field_t(2);
+    constexpr fr::field_t minus_three = -fr::field_t(3);
 
     fr::field_t alpha_a = challenge.alpha_base;
     fr::field_t alpha_b = alpha_a * challenge.alpha_step;
     fr::field_t alpha_c = alpha_b * challenge.alpha_step;
     fr::field_t alpha_d = alpha_c * challenge.alpha_step;
 
-    fr::field_t delta_1 = w_4_eval.add_without_reduction(w_4_eval);
-    delta_1.self_add_with_coarse_reduction(delta_1);
-    delta_1 = w_3_eval.sub_with_coarse_reduction(delta_1);
+    fr::field_t delta_1 = w_4_eval + w_4_eval;
+    delta_1 += delta_1;
+    delta_1 = w_3_eval - delta_1;
 
-    fr::field_t delta_2 = w_3_eval.add_without_reduction(w_3_eval);
-    delta_2.self_add_with_coarse_reduction(delta_2);
-    delta_2 = w_2_eval.sub_with_coarse_reduction(delta_2);
+    fr::field_t delta_2 = w_3_eval + w_3_eval;
+    delta_2 += delta_2;
+    delta_2 = w_2_eval - delta_2;
 
-    fr::field_t delta_3 = w_2_eval.add_without_reduction(w_2_eval);
-    delta_3.self_add_with_coarse_reduction(delta_3);
-    delta_3 = w_1_eval.sub_with_coarse_reduction(delta_3);
+    fr::field_t delta_3 = w_2_eval + w_2_eval;
+    delta_3 += delta_3;
+    delta_3 = w_1_eval - delta_3;
 
-    fr::field_t delta_4 = w_1_eval.add_without_reduction(w_1_eval);
-    delta_4.self_add_with_coarse_reduction(delta_4);
-    delta_4 = w_4_omega_eval.sub_with_coarse_reduction(delta_4);
+    fr::field_t delta_4 = w_1_eval + w_1_eval;
+    delta_4 += delta_4;
+    delta_4 = w_4_omega_eval - delta_4;
 
     // D(D - 1)(D - 2)(D - 3).alpha
-    fr::field_t T0 = delta_1.sqr_with_coarse_reduction();
-    T0.self_sub_with_coarse_reduction(delta_1);
-    fr::field_t T1 = delta_1.add_with_coarse_reduction(minus_two);
-    T0.self_mul_with_coarse_reduction(T1);
-    T1 = delta_1.add_with_coarse_reduction(minus_three);
-    T0.self_mul_with_coarse_reduction(T1);
-    fr::field_t range_accumulator = T0.mul_with_coarse_reduction(alpha_a);
+    fr::field_t T0 = delta_1.sqr();
+    T0 -= delta_1;
+    fr::field_t T1 = delta_1 + minus_two;
+    T0 *= T1;
+    T1 = delta_1 + minus_three;
+    T0 *= T1;
+    fr::field_t range_accumulator = T0 * alpha_a;
 
-    T0 = delta_2.sqr_with_coarse_reduction();
-    T0.self_sub_with_coarse_reduction(delta_2);
-    T1 = delta_2.add_with_coarse_reduction(minus_two);
-    T0.self_mul_with_coarse_reduction(T1);
-    T1 = delta_2.add_with_coarse_reduction(minus_three);
-    T0.self_mul_with_coarse_reduction(T1);
-    T0.self_mul_with_coarse_reduction(alpha_b);
-    range_accumulator.self_add_with_coarse_reduction(T0);
+    T0 = delta_2.sqr();
+    T0 -= delta_2;
+    T1 = delta_2 + minus_two;
+    T0 *= T1;
+    T1 = delta_2 + minus_three;
+    T0 *= T1;
+    T0 *= alpha_b;
+    range_accumulator += T0;
 
-    T0 = delta_3.sqr_with_coarse_reduction();
-    T0.self_sub_with_coarse_reduction(delta_3);
-    T1 = delta_3.add_with_coarse_reduction(minus_two);
-    T0.self_mul_with_coarse_reduction(T1);
-    T1 = delta_3.add_with_coarse_reduction(minus_three);
-    T0.self_mul_with_coarse_reduction(T1);
-    T0.self_mul_with_coarse_reduction(alpha_c);
-    range_accumulator.self_add_with_coarse_reduction(T0);
+    T0 = delta_3.sqr();
+    T0 -= delta_3;
+    T1 = delta_3 + minus_two;
+    T0 *= T1;
+    T1 = delta_3 + minus_three;
+    T0 *= T1;
+    T0 *= alpha_c;
+    range_accumulator += T0;
 
-    T0 = delta_4.sqr_with_coarse_reduction();
-    T0.self_sub_with_coarse_reduction(delta_4);
-    T1 = delta_4.add_with_coarse_reduction(minus_two);
-    T0.self_mul_with_coarse_reduction(T1);
-    T1 = delta_4.add_with_coarse_reduction(minus_three);
-    T0.self_mul_with_coarse_reduction(T1);
-    T0.self_mul_with_coarse_reduction(alpha_d);
-    range_accumulator.self_add_with_coarse_reduction(T0);
+    T0 = delta_4.sqr();
+    T0 -= delta_4;
+    T1 = delta_4 + minus_two;
+    T0 *= T1;
+    T1 = delta_4 + minus_three;
+    T0 *= T1;
+    T0 *= alpha_d;
+    range_accumulator += T0;
 
-    range_accumulator.self_mul(challenge.linear_nu);
+    range_accumulator *= challenge.linear_nu;
 
     if (g1::on_curve(key->constraint_selectors.at("Q_RANGE_SELECTOR"))) {
         points.push_back(key->constraint_selectors.at("Q_RANGE_SELECTOR"));

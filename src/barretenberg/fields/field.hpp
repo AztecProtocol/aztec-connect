@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <unistd.h>
 
+#include "../assert.hpp"
 #include "../types.hpp"
 #include "./new_field.hpp"
 
@@ -126,6 +127,7 @@ template <typename FieldParams> class field {
     {
         field_t r;
         int got_entropy = getentropy((void*)r.data, 32);
+        ASSERT(got_entropy == 0);
         return r.to_montgomery_form();
     }
 

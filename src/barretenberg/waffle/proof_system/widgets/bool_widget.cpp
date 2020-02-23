@@ -86,7 +86,7 @@ fr::field_t ProverBoolWidget::compute_quotient_contribution(const fr::field_t& a
     fr::field_t T1 = (w_2_fft[i * 2].sqr() - w_2_fft[i * 2]) * q_br_fft[i] * alpha_a;
     fr::field_t T2 = (w_3_fft[i * 3].sqr() - w_3_fft[i * 2]) * q_bo_fft[i] * alpha_b;
 
-    quotient_mid[i].self_add(T0 + T1 + T2);
+    quotient_mid[i] += (T0 + T1 + T2);
     ITERATE_OVER_DOMAIN_END;
 
     return alpha_base * alpha_b * alpha;
@@ -106,7 +106,7 @@ fr::field_t ProverBoolWidget::compute_linear_contribution(const fr::field_t& alp
     fr::field_t out = (w_o_eval.sqr() - w_o_eval) * alpha_base * alpha.sqr();
 
     ITERATE_OVER_DOMAIN_START(key->small_domain);
-    r[i].self_add((left * q_bl[i]) + (right * q_br[i]) + (out * q_bo[i]));
+    r[i] += ((left * q_bl[i]) + (right * q_br[i]) + (out * q_bo[i]));
     ITERATE_OVER_DOMAIN_END;
 
     return alpha_base * alpha.sqr() * alpha;

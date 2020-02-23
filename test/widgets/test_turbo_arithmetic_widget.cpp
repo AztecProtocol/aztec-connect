@@ -49,19 +49,19 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
         fr::field_t T0;
         fr::field_t T1;
         T0 = w_1[i] * w_2[i];
-        T0.self_mul(q_m[i]);
+        T0 *= q_m[i];
 
         T1 = w_1[i] * q_1[i];
-        T0.self_add(T1);
+        T0 += T1;
 
         T1 = w_2[i] * q_2[i];
-        T0.self_add(T1);
+        T0 += T1;
 
         T1 = w_3[i] * q_3[i];
-        T0.self_add(T1);
+        T0 += T1;
 
         T1 = w_4[i] * q_4[i];
-        T0.self_add(T1);
+        T0 += T1;
 
         T0.self_neg();
         q_c[i] = (T0);

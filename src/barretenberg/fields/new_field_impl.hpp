@@ -282,89 +282,9 @@ constexpr class field<T>::wide_array field<T>::sqr_512() const noexcept {
 }
 
 #ifndef DISABLE_SHENANIGANS
+
 template <class T>
-field<T> field<T>::asm_mul(const field& a, const field& b) noexcept
-{
-    field r;
-    constexpr uint64_t not_modulus_3 = T::not_modulus_3;
-    constexpr uint64_t not_modulus_2 = T::not_modulus_2;
-    constexpr uint64_t not_modulus_1 = T::not_modulus_1;
-    constexpr uint64_t not_modulus_0 = T::not_modulus_0;
-    constexpr uint64_t r_inv = T::r_inv;
-    constexpr uint64_t modulus_3 = T::modulus_3;
-    constexpr uint64_t modulus_2 = T::modulus_2;
-    constexpr uint64_t modulus_1 = T::modulus_1;
-    constexpr uint64_t modulus_0 = T::modulus_0;
-    /**
-     * Registers: rax:rdx = multiplication accumulator
-     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
-     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
-     *            %r10: zero register
-     *            %0: pointer to `a`
-     *            %1: pointer to `b`
-     *            %2: pointer to `r`
-     **/
-    __asm__(MUL("%0", "%1")
-                REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
-                    STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
-            :
-            : "%r"(&a),
-              "%r"(&b),
-              "r"(&r),
-              [modulus_0] "m"(modulus_0),
-              [modulus_1] "m"(modulus_1),
-              [modulus_2] "m"(modulus_2),
-              [modulus_3] "m"(modulus_3),
-              [r_inv] "m"(r_inv),
-              [not_modulus_0] "m"(not_modulus_0),
-              [not_modulus_1] "m"(not_modulus_1),
-              [not_modulus_2] "m"(not_modulus_2),
-              [not_modulus_3] "m"(not_modulus_3),
-              [zero_reference] "m"(internal::zero_reference)
-            : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "%rdx", "%rdi", "cc", "memory");
-    return r;
-}
-
-template <class T> void field<T>::asm_self_mul(const field& a, const field& b) noexcept
-{
-    constexpr uint64_t not_modulus_3 = T::not_modulus_3;
-    constexpr uint64_t not_modulus_2 = T::not_modulus_2;
-    constexpr uint64_t not_modulus_1 = T::not_modulus_1;
-    constexpr uint64_t not_modulus_0 = T::not_modulus_0;
-    constexpr uint64_t r_inv = T::r_inv;
-    constexpr uint64_t modulus_3 = T::modulus_3;
-    constexpr uint64_t modulus_2 = T::modulus_2;
-    constexpr uint64_t modulus_1 = T::modulus_1;
-    constexpr uint64_t modulus_0 = T::modulus_0;
-    /**
-     * Registers: rax:rdx = multiplication accumulator
-     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
-     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
-     *            %r10: zero register
-     *            %0: pointer to `a`
-     *            %1: pointer to `b`
-     *            %2: pointer to `r`
-     **/
-    __asm__(MUL("%0", "%1")
-                REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
-                    STORE_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
-            :
-            : "r"(&a),
-              "r"(&b),
-              [modulus_0] "m"(modulus_0),
-              [modulus_1] "m"(modulus_1),
-              [modulus_2] "m"(modulus_2),
-              [modulus_3] "m"(modulus_3),
-              [r_inv] "m"(r_inv),
-              [not_modulus_0] "m"(not_modulus_0),
-              [not_modulus_1] "m"(not_modulus_1),
-              [not_modulus_2] "m"(not_modulus_2),
-              [not_modulus_3] "m"(not_modulus_3),
-              [zero_reference] "m"(internal::zero_reference)
-            : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "%rdx", "%rdi", "cc", "memory");
-}
-
-template <class T> field<T> field<T>::asm_mul_with_coarse_reduction(const field& a, const field& b) noexcept
+field<T> field<T>::asm_mul_with_coarse_reduction(const field& a, const field& b) noexcept
 {
     field r;
     constexpr uint64_t r_inv = T::r_inv;
@@ -423,85 +343,6 @@ template <class T> void field<T>::asm_self_mul_with_coarse_reduction(const field
               [r_inv] "m"(r_inv),
               [zero_reference] "m"(internal::zero_reference)
             : "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-}
-
-template <class T> field<T> field<T>::asm_sqr(const field& a) noexcept
-{
-    field r;
-    constexpr uint64_t not_modulus_3 = T::not_modulus_3;
-    constexpr uint64_t not_modulus_2 = T::not_modulus_2;
-    constexpr uint64_t not_modulus_1 = T::not_modulus_1;
-    constexpr uint64_t not_modulus_0 = T::not_modulus_0;
-    constexpr uint64_t r_inv = T::r_inv;
-    constexpr uint64_t modulus_3 = T::modulus_3;
-    constexpr uint64_t modulus_2 = T::modulus_2;
-    constexpr uint64_t modulus_1 = T::modulus_1;
-    constexpr uint64_t modulus_0 = T::modulus_0;
-    /**
-     * Registers: rax:rdx = multiplication accumulator
-     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
-     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
-     *            %[zero_reference]: memory location of zero value
-     *            %0: pointer to `a`
-     *            %[r_ptr]: memory location of pointer to `r`
-     **/
-    __asm__(SQR("%0")
-            // "movq %[r_ptr], %%rsi                   \n\t"
-            REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
-                STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
-            :
-            : "r"(&a),
-              "r"(&r),
-              [zero_reference] "m"(internal::zero_reference),
-              [modulus_0] "m"(modulus_0),
-              [modulus_1] "m"(modulus_1),
-              [modulus_2] "m"(modulus_2),
-              [modulus_3] "m"(modulus_3),
-              [r_inv] "m"(r_inv),
-              [not_modulus_0] "m"(not_modulus_0),
-              [not_modulus_1] "m"(not_modulus_1),
-              [not_modulus_2] "m"(not_modulus_2),
-              [not_modulus_3] "m"(not_modulus_3)
-            : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-    return r;
-}
-
-template <class T> void field<T>::asm_self_sqr(const field& a) noexcept
-{
-    constexpr uint64_t not_modulus_3 = T::not_modulus_3;
-    constexpr uint64_t not_modulus_2 = T::not_modulus_2;
-    constexpr uint64_t not_modulus_1 = T::not_modulus_1;
-    constexpr uint64_t not_modulus_0 = T::not_modulus_0;
-    constexpr uint64_t r_inv = T::r_inv;
-    constexpr uint64_t modulus_3 = T::modulus_3;
-    constexpr uint64_t modulus_2 = T::modulus_2;
-    constexpr uint64_t modulus_1 = T::modulus_1;
-    constexpr uint64_t modulus_0 = T::modulus_0;
-    /**
-     * Registers: rax:rdx = multiplication accumulator
-     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
-     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
-     *            %[zero_reference]: memory location of zero value
-     *            %0: pointer to `a`
-     *            %[r_ptr]: memory location of pointer to `r`
-     **/
-    __asm__(SQR("%0")
-            // "movq %[r_ptr], %%rsi                   \n\t"
-            REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
-                STORE_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
-            :
-            : "r"(&a),
-              [zero_reference] "m"(internal::zero_reference),
-              [modulus_0] "m"(modulus_0),
-              [modulus_1] "m"(modulus_1),
-              [modulus_2] "m"(modulus_2),
-              [modulus_3] "m"(modulus_3),
-              [r_inv] "m"(r_inv),
-              [not_modulus_0] "m"(not_modulus_0),
-              [not_modulus_1] "m"(not_modulus_1),
-              [not_modulus_2] "m"(not_modulus_2),
-              [not_modulus_3] "m"(not_modulus_3)
-            : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
 template <class T> field<T> field<T>::asm_sqr_with_coarse_reduction(const field& a) noexcept
@@ -563,112 +404,6 @@ template <class T> void field<T>::asm_self_sqr_with_coarse_reduction(const field
               [modulus_3] "m"(modulus_3),
               [r_inv] "m"(r_inv)
             : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-}
-
-template <class T> field<T> field<T>::asm_add(const field& a, const field& b) noexcept
-{
-    field r;
-    constexpr uint64_t not_modulus_3 = T::not_modulus_3;
-    constexpr uint64_t not_modulus_2 = T::not_modulus_2;
-    constexpr uint64_t not_modulus_1 = T::not_modulus_1;
-    constexpr uint64_t not_modulus_0 = T::not_modulus_0;
-    __asm__(CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
-                ADD_REDUCE("%1", "%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
-                    STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
-            :
-            : "%r"(&a),
-              "%r"(&b),
-              "r"(&r),
-              [not_modulus_0] "m"(not_modulus_0),
-              [not_modulus_1] "m"(not_modulus_1),
-              [not_modulus_2] "m"(not_modulus_2),
-              [not_modulus_3] "m"(not_modulus_3)
-            : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-    return r;
-}
-
-template <class T> void field<T>::asm_self_add(const field& a, const field& b) noexcept
-{
-    constexpr uint64_t not_modulus_3 = T::not_modulus_3;
-    constexpr uint64_t not_modulus_2 = T::not_modulus_2;
-    constexpr uint64_t not_modulus_1 = T::not_modulus_1;
-    constexpr uint64_t not_modulus_0 = T::not_modulus_0;
-    __asm__(CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
-                ADD_REDUCE("%1", "%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
-                    STORE_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
-            :
-            : "r"(&a),
-              "r"(&b),
-              [not_modulus_0] "m"(not_modulus_0),
-              [not_modulus_1] "m"(not_modulus_1),
-              [not_modulus_2] "m"(not_modulus_2),
-              [not_modulus_3] "m"(not_modulus_3)
-            : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-}
-
-template <class T> field<T> field<T>::asm_sub(const field& a, const field& b) noexcept
-{
-    field r;
-    constexpr uint64_t modulus_3 = T::modulus_3;
-    constexpr uint64_t modulus_2 = T::modulus_2;
-    constexpr uint64_t modulus_1 = T::modulus_1;
-    constexpr uint64_t modulus_0 = T::modulus_0;
-    __asm__(CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15") SUB("%1")
-            // If b > a, then we've underflowed: adding the modulus will flip the overflow flag, so we can use
-            // REDUCE_FIELD_ELEMENT to normalize r.
-            REDUCE_FIELD_ELEMENT("%[modulus_0]", "%[modulus_1]", "%[modulus_2]", "%[modulus_3]")
-                STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
-            :
-            : "r"(&a),
-              "r"(&b),
-              "r"(&r),
-              [modulus_0] "m"(modulus_0),
-              [modulus_1] "m"(modulus_1),
-              [modulus_2] "m"(modulus_2),
-              [modulus_3] "m"(modulus_3)
-            : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-    return r;
-}
-
-template <class T> void field<T>::asm_self_sub(const field& a, const field& b) noexcept
-{
-    constexpr uint64_t modulus_3 = T::modulus_3;
-    constexpr uint64_t modulus_2 = T::modulus_2;
-    constexpr uint64_t modulus_1 = T::modulus_1;
-    constexpr uint64_t modulus_0 = T::modulus_0;
-    __asm__(CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15") SUB("%1")
-            // If b > a, then we've underflowed: adding the modulus will flip the overflow flag, so we can use
-            // REDUCE_FIELD_ELEMENT to normalize r.
-            REDUCE_FIELD_ELEMENT("%[modulus_0]", "%[modulus_1]", "%[modulus_2]", "%[modulus_3]")
-                STORE_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
-            :
-            : "r"(&a),
-              "r"(&b),
-              [modulus_0] "m"(modulus_0),
-              [modulus_1] "m"(modulus_1),
-              [modulus_2] "m"(modulus_2),
-              [modulus_3] "m"(modulus_3)
-            : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-}
-
-template <class T> field<T> field<T>::asm_add_without_reduction(const field& a, const field& b) noexcept
-{
-    field r;
-    __asm__(CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15") ADD("%1")
-                STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
-            :
-            : "%r"(&a), "%r"(&b), "r"(&r)
-            : "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-    return r;
-}
-
-template <class T> void field<T>::asm_self_add_without_reduction(const field& a, const field& b) noexcept
-{
-    __asm__(CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15") ADD("%1")
-                STORE_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
-            :
-            : "r"(&a), "r"(&b)
-            : "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
 template <class T> field<T> field<T>::asm_add_with_coarse_reduction(const field& a, const field& b) noexcept
@@ -764,10 +499,10 @@ template <class T> void field<T>::asm_self_sub_with_coarse_reduction(const field
 template <class T> void field<T>::asm_conditional_negate(field& r, const uint64_t predicate) noexcept
 {
     __asm__(CLEAR_FLAGS("%%r8") LOAD_FIELD_ELEMENT(
-                "%1", "%%r8", "%%r9", "%%r10", "%%r11") "movq %[modulus_0], %%r12 \n\t"
-                                                        "movq %[modulus_1], %%r13 \n\t"
-                                                        "movq %[modulus_2], %%r14 \n\t"
-                                                        "movq %[modulus_3], %%r15 \n\t"
+                "%1", "%%r8", "%%r9", "%%r10", "%%r11") "movq %[twice_modulus_0], %%r12 \n\t"
+                                                        "movq %[twice_modulus_1], %%r13 \n\t"
+                                                        "movq %[twice_modulus_2], %%r14 \n\t"
+                                                        "movq %[twice_modulus_3], %%r15 \n\t"
                                                         "subq %%r8, %%r12 \n\t"
                                                         "sbbq %%r9, %%r13 \n\t"
                                                         "sbbq %%r10, %%r14 \n\t"
@@ -781,10 +516,10 @@ template <class T> void field<T>::asm_conditional_negate(field& r, const uint64_
             :
             : "r"(predicate),
               "r"(&r),
-              [modulus_0] "i"(T::twice_modulus_0),
-              [modulus_1] "i"(T::twice_modulus_1),
-              [modulus_2] "i"(T::twice_modulus_2),
-              [modulus_3] "i"(T::twice_modulus_3)
+              [twice_modulus_0] "i"(T::twice_modulus_0),
+              [twice_modulus_1] "i"(T::twice_modulus_1),
+              [twice_modulus_2] "i"(T::twice_modulus_2),
+              [twice_modulus_3] "i"(T::twice_modulus_3)
             : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -845,20 +580,7 @@ template <class T> constexpr field<T> field<T>::operator*(const field& other) co
 #endif
 }
 
-template <class T> constexpr field<T> field<T>::mul_with_coarse_reduction(const field& other) const noexcept
-{
-#ifdef DISABLE_SHENANIGANS
-    return montgomery_reduce(mul_512(other));
-#else
-    if (std::is_constant_evaluated()) {
-        return montgomery_reduce(mul_512(other));
-    } else {
-        return asm_mul_with_coarse_reduction(*this, other);
-    }
-#endif
-}
-
-template <class T> constexpr void field<T>::self_mul(const field& other) noexcept
+template <class T> constexpr field<T> field<T>::operator*=(const field& other) noexcept
 {
 #ifdef DISABLE_SHENANIGANS
     *this = operator*(other);
@@ -869,19 +591,7 @@ template <class T> constexpr void field<T>::self_mul(const field& other) noexcep
         asm_self_mul_with_coarse_reduction(*this, other); // asm_self_mul(*this, other);
     }
 #endif
-}
-
-template <class T> constexpr void field<T>::self_mul_with_coarse_reduction(const field& other) noexcept
-{
-#ifdef DISABLE_SHENANIGANS
-    *this = montgomery_reduce(mul_512(other));
-#else
-    if (std::is_constant_evaluated()) {
-        *this = montgomery_reduce(mul_512(other));
-    } else {
-        asm_self_mul_with_coarse_reduction(*this, other);
-    }
-#endif
+    return *this;
 }
 
 /**
@@ -902,19 +612,6 @@ template <class T> constexpr field<T> field<T>::sqr() const noexcept
 #endif
 }
 
-template <class T> constexpr field<T> field<T>::sqr_with_coarse_reduction() const noexcept
-{
-#ifdef DISABLE_SHENANIGANS
-    return montgomery_reduce(sqr_512());
-#else
-    if (std::is_constant_evaluated()) {
-        return montgomery_reduce(sqr_512());
-    } else {
-        return asm_sqr_with_coarse_reduction(*this);
-    }
-#endif
-}
-
 template <class T> constexpr void field<T>::self_sqr() noexcept
 {
 #ifdef DISABLE_SHENANIGANS
@@ -928,26 +625,13 @@ template <class T> constexpr void field<T>::self_sqr() noexcept
 #endif
 }
 
-template <class T> constexpr void field<T>::self_sqr_with_coarse_reduction() noexcept
-{
-#ifdef DISABLE_SHENANIGANS
-    *this = montgomery_reduce(sqr_512());
-#else
-    if (std::is_constant_evaluated()) {
-        *this = montgomery_reduce(sqr_512());
-    } else {
-        asm_self_sqr_with_coarse_reduction(*this);
-    }
-#endif
-}
-
 /**
  *
  * Addition
  *
  **/
 
-template <class T> constexpr field<T> field<T>::add_without_reduction(const field& other) const noexcept
+template <class T> constexpr field<T> field<T>::operator+(const field& other) const noexcept
 {
 #ifdef DISABLE_SHENANIGANS
     const auto [r0, c0] = addc(data[0], other.data[0], 0);
@@ -968,46 +652,7 @@ template <class T> constexpr field<T> field<T>::add_without_reduction(const fiel
 #endif
 }
 
-template <class T> constexpr field<T> field<T>::operator+(const field& other) const noexcept
-{
-#ifdef DISABLE_SHENANIGANS
-    return add_without_reduction(other); // .subtract(twice_modulus); // .subtract(modulus);
-#else
-    if (std::is_constant_evaluated()) {
-        return add_without_reduction(other); // .subtract(modulus);
-    } else {
-        return asm_add_with_coarse_reduction(*this, other); // asm_add(*this, other);
-    }
-#endif
-}
-
-template <class T> constexpr field<T> field<T>::add_with_coarse_reduction(const field& other) const noexcept
-{
-#ifdef DISABLE_SHENANIGANS
-    return add_without_reduction(other); // .subtract_coarse(twice_modulus);
-#else
-    if (std::is_constant_evaluated()) {
-        return add_without_reduction(other); // .subtract_coarse(twice_modulus);
-    } else {
-        return asm_add_with_coarse_reduction(*this, other);
-    }
-#endif
-}
-
-template <class T> constexpr void field<T>::self_add_without_reduction(const field& other) noexcept
-{
-#ifdef DISABLE_SHENANIGANS
-    *this = add_without_reduction(other);
-#else
-    if (std::is_constant_evaluated()) {
-        *this = add_without_reduction(other);
-    } else {
-        asm_self_add_with_coarse_reduction(*this, other); // asm_self_add_without_reduction(*this, other);
-    }
-#endif
-}
-
-template <class T> constexpr void field<T>::self_add(const field& other) noexcept
+template <class T> constexpr field<T> field<T>::operator+=(const field& other) noexcept
 {
 #ifdef DISABLE_SHENANIGANS
     (*this) = operator+(other);
@@ -1018,19 +663,7 @@ template <class T> constexpr void field<T>::self_add(const field& other) noexcep
         asm_self_add_with_coarse_reduction(*this, other); // asm_self_add(*this, other);
     }
 #endif
-}
-
-template <class T> constexpr void field<T>::self_add_with_coarse_reduction(const field& other) noexcept
-{
-#ifdef DISABLE_SHENANIGANS
-    *this = add_without_reduction(other); // .subtract_coarse(twice_modulus);
-#else
-    if (std::is_constant_evaluated()) {
-        *this = add_without_reduction(other); // .subtract_coarse(twice_modulus);
-    } else {
-        asm_self_add_with_coarse_reduction(*this, other);
-    }
-#endif
+    return *this;
 }
 
 /**
@@ -1056,20 +689,7 @@ template <class T> constexpr field<T> field<T>::operator-() const noexcept
     return twice_modulus - *this; // modulus - *this;
 }
 
-template <class T> constexpr field<T> field<T>::sub_with_coarse_reduction(const field& other) const noexcept
-{
-#ifdef DISABLE_SHENANIGANS
-    return subtract_coarse(other);
-#else
-    if (std::is_constant_evaluated()) {
-        return subtract_coarse(other);
-    } else {
-        return asm_sub_with_coarse_reduction(*this, other);
-    }
-#endif
-}
-
-template <class T> constexpr void field<T>::self_sub(const field& other) noexcept
+template <class T> constexpr field<T> field<T>::operator-=(const field& other) noexcept
 {
 #ifdef DISABLE_SHENANIGANS
     *this = subtract_coarse(other); // subtract(other);
@@ -1080,21 +700,30 @@ template <class T> constexpr void field<T>::self_sub(const field& other) noexcep
         asm_self_sub_with_coarse_reduction(*this, other); // asm_self_sub(*this, other);
     }
 #endif
+    return *this;
 }
 
-template <class T> constexpr void field<T>::self_sub_with_coarse_reduction(const field& other) noexcept
+template <class T> constexpr void field<T>::self_neg() noexcept
+{
+    *this = twice_modulus - *this;
+}
+
+template <class T> constexpr void field<T>::self_conditional_negate(const uint64_t predicate) noexcept
 {
 #ifdef DISABLE_SHENANIGANS
-    *this = subtract_coarse(other);
+    *this = predicate ? -(*this) : *this;
 #else
     if (std::is_constant_evaluated()) {
-        *this = subtract_coarse(other);
+        *this = predicate ? -(*this) : *this;
     } else {
-        asm_self_sub_with_coarse_reduction(*this, other);
+        asm_conditional_negate(*this, predicate);
     }
 #endif
 }
 
+/**
+ * Comparison operators
+ **/
 template <class T> constexpr bool field<T>::operator>(const field& other) const noexcept
 {
     const field left = reduce_once();
@@ -1117,19 +746,8 @@ template <class T> constexpr bool field<T>::operator==(const field& other) const
 {
     const field left = reduce_once();
     const field right = other.reduce_once();
-    // if (!std::is_constant_evaluated()) {
-    //     printf("in eq\n");
-    // }
-    // if (!std::is_constant_evaluated()) {
-    //     std::cout << "old left = " << *this << std::endl;
-    //     std::cout << "new left = " << left << std::endl;
-    //     std::cout << "old right = " << other << std::endl;
-    //     std::cout << "new right = " << right << std::endl;
-    // }
-    bool res = (left.data[0] == right.data[0]) && (left.data[1] == right.data[1]) && (left.data[2] == right.data[2]) &&
-               (left.data[3] == right.data[3]);
-
-    return res;
+    return (left.data[0] == right.data[0]) && (left.data[1] == right.data[1]) && (left.data[2] == right.data[2]) &&
+           (left.data[3] == right.data[3]);
 }
 
 template <class T> constexpr bool field<T>::operator!=(const field& other) const noexcept
@@ -1157,14 +775,14 @@ template <class T> constexpr void field<T>::self_to_montgomery_form() noexcept
     self_reduce_once();
     self_reduce_once();
     self_reduce_once();
-    self_mul(r_squared);
+    *this *= r_squared;
     self_reduce_once();
 }
 
 template <class T> constexpr void field<T>::self_from_montgomery_form() noexcept
 {
     constexpr field one_raw{ 1, 0, 0, 0 };
-    self_mul(one_raw);
+    *this *= one_raw;
     self_reduce_once();
 }
 
@@ -1194,29 +812,6 @@ template <class T> constexpr void field<T>::self_reduce_once() noexcept
 #endif
 }
 
-template <class T> field<T> constexpr field<T>::neg() const noexcept
-{
-    return twice_modulus - *this;
-}
-
-template <class T> constexpr void field<T>::self_neg() noexcept
-{
-    *this = twice_modulus - *this;
-}
-
-template <class T> constexpr void field<T>::self_conditional_negate(const uint64_t predicate) noexcept
-{
-#ifdef DISABLE_SHENANIGANS
-    *this = predicate ? neg() : *this;
-#else
-    if (std::is_constant_evaluated()) {
-        *this = predicate ? neg() : *this;
-    } else {
-        asm_conditional_negate(*this, predicate);
-    }
-#endif
-}
-
 template <class T> constexpr field<T> field<T>::pow(const field& exponent) const noexcept
 {
     if (*this == zero) {
@@ -1233,9 +828,9 @@ template <class T> constexpr field<T> field<T>::pow(const field& exponent) const
     const uint64_t maximum_set_bit = exponent.get_msb();
 
     for (uint64_t i = maximum_set_bit - 1; i < maximum_set_bit; --i) {
-        accumulator.self_sqr_with_coarse_reduction();
+        accumulator.self_sqr();
         if (exponent.get_bit(i)) {
-            accumulator.self_mul_with_coarse_reduction(*this);
+            accumulator *= *this;
         }
     }
     return accumulator; // .reduce_once();
@@ -1344,14 +939,15 @@ template <class T> constexpr field<T> field<T>::sqrt() const noexcept
     }
 }
 
-template <class T> constexpr void field<T>::self_sqrt() noexcept
-{
-    *this = sqrt();
-}
-
 template <class T> constexpr field<T> field<T>::operator/(const field& other) const noexcept
 {
     return operator*(other.invert());
+}
+
+template <class T> constexpr field<T> field<T>::operator/=(const field& other) noexcept
+{
+    *this = operator/(other);
+    return *this;
 }
 
 template <class T> constexpr uint64_t field<T>::get_msb() const noexcept
@@ -1400,8 +996,8 @@ template <class T> constexpr bool field<T>::get_bit(const uint64_t bit_index) co
 
 template <class T> constexpr bool field<T>::is_zero() const noexcept
 {
-    field target = reduce_once();
-    return ((target.data[0] | target.data[1] | target.data[2] | target.data[3]) == 0);
+    return ((data[0] | data[1] | data[2] | data[3]) == 0) ||
+           (data[0] == T::modulus_0 && data[1] == T::modulus_1 && data[2] == T::modulus_2 && data[3] == T::modulus_3);
 }
 
 template <class T> constexpr field<T> field<T>::get_root_of_unity(const size_t subgroup_size) noexcept

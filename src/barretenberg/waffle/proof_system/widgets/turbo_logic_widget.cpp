@@ -202,130 +202,130 @@ fr::field_t ProverTurboLogicWidget::compute_quotient_contribution(const barreten
         fr::field_t identity;
         for (size_t i = start; i < end; ++i) {
             // T0 = a
-            T0 = w_1_fft[i].add_without_reduction(w_1_fft[i]);
-            T0.self_add_with_coarse_reduction(T0);
-            T0 = w_1_fft[i + 4].sub_with_coarse_reduction(T0);
+            T0 = w_1_fft[i] + w_1_fft[i];
+            T0 += T0;
+            T0 = w_1_fft[i + 4] - T0;
 
             // T1 = b
-            T1 = w_2_fft[i].add_without_reduction(w_2_fft[i]);
-            T1.self_add_with_coarse_reduction(T1);
-            T1 = w_2_fft[i + 4].sub_with_coarse_reduction(T1);
+            T1 = w_2_fft[i] + w_2_fft[i];
+            T1 += T1;
+            T1 = w_2_fft[i + 4] - T1;
 
             // delta_sum = a + b
-            delta_sum = T0.add_with_coarse_reduction(T1);
+            delta_sum = T0 + T1;
 
             // T2 = a^2, T3 = b^2
-            T2 = T0.sqr_with_coarse_reduction();
-            T3 = T1.sqr_with_coarse_reduction();
+            T2 = T0.sqr();
+            T3 = T1.sqr();
 
-            delta_squared_sum = T2.add_with_coarse_reduction(T3);
+            delta_squared_sum = T2 + T3;
 
             // identity = a^2 + b^2 + 2ab
-            identity = delta_sum.sqr_with_coarse_reduction();
+            identity = delta_sum.sqr();
             // identity = 2ab
-            identity.self_sub_with_coarse_reduction(delta_squared_sum);
+            identity -= delta_squared_sum;
 
             // identity = 2(ab - w)
-            T4 = w_3_fft[i].add_without_reduction(w_3_fft[i]);
-            identity.self_sub_with_coarse_reduction(T4);
-            identity.self_mul_with_coarse_reduction(alpha);
+            T4 = w_3_fft[i] + w_3_fft[i];
+            identity -= T4;
+            identity *= alpha;
 
             // T4 = 4w
-            T4.self_add_with_coarse_reduction(T4);
+            T4 += T4;
 
             // T2 = a^2 - a
-            T2.self_sub_with_coarse_reduction(T0);
+            T2 -= T0;
 
             // T0 = a^2 - 5a + 6
-            T0.self_add_with_coarse_reduction(T0);
-            T0.self_add_with_coarse_reduction(T0);
-            T0 = T2.sub_with_coarse_reduction(T0);
-            T0.self_add_with_coarse_reduction(six);
+            T0 += T0;
+            T0 += T0;
+            T0 = T2 - T0;
+            T0 += six;
 
             // identity = (identity + a(a - 1)(a - 2)(a - 3)) * alpha
-            T0.self_mul_with_coarse_reduction(T2);
-            identity.self_add_with_coarse_reduction(T0);
-            identity.self_mul_with_coarse_reduction(alpha);
+            T0 *= T2;
+            identity += T0;
+            identity *= alpha;
 
             // T3 = b^2 - b
-            T3.self_sub_with_coarse_reduction(T1);
+            T3 -= T1;
 
             // T1 = b^2 - 5b + 6
-            T1.self_add_with_coarse_reduction(T1);
-            T1.self_add_with_coarse_reduction(T1);
-            T1 = T3.sub_with_coarse_reduction(T1);
-            T1.self_add_with_coarse_reduction(six);
+            T1 += T1;
+            T1 += T1;
+            T1 = T3 - T1;
+            T1 += six;
 
             // identity = (identity + b(b - 1)(b - 2)(b - 3)) * alpha
-            T1.self_mul_with_coarse_reduction(T3);
-            identity.self_add_with_coarse_reduction(T1);
-            identity.self_mul_with_coarse_reduction(alpha);
+            T1 *= T3;
+            identity += T1;
+            identity *= alpha;
 
             // T0 = 3(a + b)
-            T0 = delta_sum.add_with_coarse_reduction(delta_sum);
-            T0.self_add_with_coarse_reduction(delta_sum);
+            T0 = delta_sum + delta_sum;
+            T0 += delta_sum;
 
             // T1 = 9(a + b)
-            T1 = T0.add_with_coarse_reduction(T0);
-            T1.self_add_with_coarse_reduction(T0);
+            T1 = T0 + T0;
+            T1 += T0;
 
             // delta_sum = 18(a + b)
-            delta_sum = T1.add_with_coarse_reduction(T1);
+            delta_sum = T1 + T1;
 
             // T1 = 81(a + b)
-            T2 = delta_sum.add_with_coarse_reduction(delta_sum);
-            T2.self_add_with_coarse_reduction(T2);
-            T1.self_add_with_coarse_reduction(T2);
+            T2 = delta_sum + delta_sum;
+            T2 += T2;
+            T1 += T2;
 
             // delta_squared_sum = 18(a^2 + b^2)
-            T2 = delta_squared_sum.add_with_coarse_reduction(delta_squared_sum);
-            T2.self_add_with_coarse_reduction(delta_squared_sum);
-            delta_squared_sum = T2.add_with_coarse_reduction(T2);
-            delta_squared_sum.self_add_with_coarse_reduction(T2);
-            delta_squared_sum.self_add_with_coarse_reduction(delta_squared_sum);
+            T2 = delta_squared_sum + delta_squared_sum;
+            T2 += delta_squared_sum;
+            delta_squared_sum = T2 + T2;
+            delta_squared_sum += T2;
+            delta_squared_sum += delta_squared_sum;
 
             // delta_sum = w(4w - 18(a + b) + 81)
-            delta_sum = T4.sub_with_coarse_reduction(delta_sum);
-            delta_sum.self_add_with_coarse_reduction(eighty_one);
-            delta_sum.self_mul_with_coarse_reduction(w_3_fft[i]);
+            delta_sum = T4 - delta_sum;
+            delta_sum += eighty_one;
+            delta_sum *= w_3_fft[i];
 
             // T1 = 18(a^2 + b^2) - 81(a + b) + 83
-            T1 = delta_squared_sum.sub_with_coarse_reduction(T1);
-            T1.self_add_with_coarse_reduction(eighty_three);
+            T1 = delta_squared_sum - T1;
+            T1 += eighty_three;
 
             // delta_sum = w ( w ( 4w - 18(a + b) + 81) + 18(a^2 + b^2) - 81(a + b) + 83)
-            delta_sum.self_add_with_coarse_reduction(T1);
-            delta_sum.self_mul_with_coarse_reduction(w_3_fft[i]);
+            delta_sum += T1;
+            delta_sum *= w_3_fft[i];
 
             // T2 = 3c
-            T2 = w_4_fft[i].add_without_reduction(w_4_fft[i]);
-            T2.self_add_with_coarse_reduction(T2);
-            T2 = w_4_fft[i + 4].sub_with_coarse_reduction(T2);
-            T3 = T2.add_with_coarse_reduction(T2);
-            T2.self_add_with_coarse_reduction(T3);
+            T2 = w_4_fft[i] + w_4_fft[i];
+            T2 += T2;
+            T2 = w_4_fft[i + 4] - T2;
+            T3 = T2 + T2;
+            T2 += T3;
 
             // T3 = 9c
-            T3 = T2.add_with_coarse_reduction(T2);
-            T3.self_add_with_coarse_reduction(T2);
+            T3 = T2 + T2;
+            T3 += T2;
 
             // T3 = q_c * (9c - 3(a + b))
-            T3.self_sub_with_coarse_reduction(T0);
-            T3.self_mul_with_coarse_reduction(q_c_fft[i]);
+            T3 -= T0;
+            T3 *= q_c_fft[i];
 
             // T2 = 3c + 3(a + b) - 2 * delta_sum
-            T2.self_add_with_coarse_reduction(T0);
-            delta_sum.self_add_with_coarse_reduction(delta_sum);
-            T2.self_sub_with_coarse_reduction(delta_sum);
+            T2 += T0;
+            delta_sum += delta_sum;
+            T2 -= delta_sum;
 
             // T2 = T2 + T3
-            T2.self_add_with_coarse_reduction(T3);
+            T2 += T3;
 
             // identity = q_logic * alpha_base * (identity + T2)
-            identity.self_add_with_coarse_reduction(T2);
-            identity.self_mul_with_coarse_reduction(alpha_base);
-            identity.self_mul(q_logic_fft[i]);
+            identity += T2;
+            identity *= alpha_base;
+            identity *= q_logic_fft[i];
 
-            quotient_large[i].self_add(identity);
+            quotient_large[i] += identity;
         }
     }
 
@@ -367,130 +367,130 @@ fr::field_t ProverTurboLogicWidget::compute_linear_contribution(const fr::field_
     fr::field_t T4;
     fr::field_t identity;
 
-    T0 = w_1_eval.add_without_reduction(w_1_eval);
-    T0.self_add_with_coarse_reduction(T0);
-    T0 = w_1_omega_eval.sub_with_coarse_reduction(T0);
+    T0 = w_1_eval + w_1_eval;
+    T0 += T0;
+    T0 = w_1_omega_eval - T0;
 
     // T1 = b
-    T1 = w_2_eval.add_without_reduction(w_2_eval);
-    T1.self_add_with_coarse_reduction(T1);
-    T1 = w_2_omega_eval.sub_with_coarse_reduction(T1);
+    T1 = w_2_eval + w_2_eval;
+    T1 += T1;
+    T1 = w_2_omega_eval - T1;
 
     // delta_sum = a + b
-    delta_sum = T0.add_with_coarse_reduction(T1);
+    delta_sum = T0 + T1;
 
     // T2 = a^2, T3 = b^2
-    T2 = T0.sqr_with_coarse_reduction();
-    T3 = T1.sqr_with_coarse_reduction();
+    T2 = T0.sqr();
+    T3 = T1.sqr();
 
-    delta_squared_sum = T2.add_with_coarse_reduction(T3);
+    delta_squared_sum = T2 + T3;
 
     // identity = a^2 + b^2 + 2ab
-    identity = delta_sum.sqr_with_coarse_reduction();
+    identity = delta_sum.sqr();
     // identity = 2ab
-    identity.self_sub_with_coarse_reduction(delta_squared_sum);
+    identity -= delta_squared_sum;
 
     // identity = 2(ab - w)
-    T4 = w_3_eval.add_without_reduction(w_3_eval);
-    identity.self_sub_with_coarse_reduction(T4);
-    identity.self_mul_with_coarse_reduction(alpha);
+    T4 = w_3_eval + w_3_eval;
+    identity -= T4;
+    identity *= alpha;
 
     // T4 = 4w
-    T4.self_add_with_coarse_reduction(T4);
+    T4 += T4;
 
     // T2 = a^2 - a
-    T2.self_sub_with_coarse_reduction(T0);
+    T2 -= T0;
 
     // T0 = a^2 - 5a + 6
-    T0.self_add_with_coarse_reduction(T0);
-    T0.self_add_with_coarse_reduction(T0);
-    T0 = T2.sub_with_coarse_reduction(T0);
-    T0.self_add_with_coarse_reduction(six);
+    T0 += T0;
+    T0 += T0;
+    T0 = T2 - T0;
+    T0 += six;
 
     // identity = (identity + a(a - 1)(a - 2)(a - 3)) * alpha
-    T0.self_mul_with_coarse_reduction(T2);
-    identity.self_add_with_coarse_reduction(T0);
-    identity.self_mul_with_coarse_reduction(alpha);
+    T0 *= T2;
+    identity += T0;
+    identity *= alpha;
 
     // T3 = b^2 - b
-    T3.self_sub_with_coarse_reduction(T1);
+    T3 -= T1;
 
     // T1 = b^2 - 5b + 6
-    T1.self_add_with_coarse_reduction(T1);
-    T1.self_add_with_coarse_reduction(T1);
-    T1 = T3.sub_with_coarse_reduction(T1);
-    T1.self_add_with_coarse_reduction(six);
+    T1 += T1;
+    T1 += T1;
+    T1 = T3 - T1;
+    T1 += six;
 
     // identity = (identity + b(b - 1)(b - 2)(b - 3)) * alpha
-    T1.self_mul_with_coarse_reduction(T3);
-    identity.self_add_with_coarse_reduction(T1);
-    identity.self_mul_with_coarse_reduction(alpha);
+    T1 *= T3;
+    identity += T1;
+    identity *= alpha;
 
     // T0 = 3(a + b)
-    T0 = delta_sum.add_with_coarse_reduction(delta_sum);
-    T0.self_add_with_coarse_reduction(delta_sum);
+    T0 = delta_sum + delta_sum;
+    T0 += delta_sum;
 
     // T1 = 9(a + b)
-    T1 = T0.add_with_coarse_reduction(T0);
-    T1.self_add_with_coarse_reduction(T0);
+    T1 = T0 + T0;
+    T1 += T0;
 
     // delta_sum = 18(a + b)
-    delta_sum = T1.add_with_coarse_reduction(T1);
+    delta_sum = T1 + T1;
 
     // T1 = 81(a + b)
-    T2 = delta_sum.add_with_coarse_reduction(delta_sum);
-    T2.self_add_with_coarse_reduction(T2);
-    T1.self_add_with_coarse_reduction(T2);
+    T2 = delta_sum + delta_sum;
+    T2 += T2;
+    T1 += T2;
 
     // delta_squared_sum = 18(a^2 + b^2)
-    T2 = delta_squared_sum.add_with_coarse_reduction(delta_squared_sum);
-    T2.self_add_with_coarse_reduction(delta_squared_sum);
-    delta_squared_sum = T2.add_with_coarse_reduction(T2);
-    delta_squared_sum.self_add_with_coarse_reduction(T2);
-    delta_squared_sum.self_add_with_coarse_reduction(delta_squared_sum);
+    T2 = delta_squared_sum + delta_squared_sum;
+    T2 += delta_squared_sum;
+    delta_squared_sum = T2 + T2;
+    delta_squared_sum += T2;
+    delta_squared_sum += delta_squared_sum;
 
     // delta_sum = w(4w - 18(a + b) + 81)
-    delta_sum = T4.sub_with_coarse_reduction(delta_sum);
-    delta_sum.self_add_with_coarse_reduction(eighty_one);
-    delta_sum.self_mul_with_coarse_reduction(w_3_eval);
+    delta_sum = T4 - delta_sum;
+    delta_sum += eighty_one;
+    delta_sum *= w_3_eval;
 
     // T1 = 18(a^2 + b^2) - 81(a + b) + 83
-    T1 = delta_squared_sum.sub_with_coarse_reduction(T1);
-    T1.self_add_with_coarse_reduction(eighty_three);
+    T1 = delta_squared_sum - T1;
+    T1 += eighty_three;
 
     // delta_sum = w ( w ( 4w - 18(a + b) + 81) + 18(a^2 + b^2) - 81(a + b) + 83)
-    delta_sum.self_add_with_coarse_reduction(T1);
-    delta_sum.self_mul_with_coarse_reduction(w_3_eval);
+    delta_sum += T1;
+    delta_sum *= w_3_eval;
 
     // T2 = 3c
-    T2 = w_4_eval.add_without_reduction(w_4_eval);
-    T2.self_add_with_coarse_reduction(T2);
-    T2 = w_4_omega_eval.sub_with_coarse_reduction(T2);
-    T3 = T2.add_with_coarse_reduction(T2);
-    T2.self_add_with_coarse_reduction(T3);
+    T2 = w_4_eval + w_4_eval;
+    T2 += T2;
+    T2 = w_4_omega_eval - T2;
+    T3 = T2 + T2;
+    T2 += T3;
 
     // T3 = 9c
-    T3 = T2.add_with_coarse_reduction(T2);
-    T3.self_add_with_coarse_reduction(T2);
+    T3 = T2 + T2;
+    T3 += T2;
 
     // T3 = q_c * (9c - 3(a + b))
-    T3.self_sub_with_coarse_reduction(T0);
-    T3.self_mul_with_coarse_reduction(q_c_eval);
+    T3 -= T0;
+    T3 *= q_c_eval;
 
     // T2 = 3c + 3(a + b) - 2 * delta_sum
-    T2.self_add_with_coarse_reduction(T0);
-    delta_sum.self_add_with_coarse_reduction(delta_sum);
-    T2.self_sub_with_coarse_reduction(delta_sum);
+    T2 += T0;
+    delta_sum += delta_sum;
+    T2 -= delta_sum;
 
     // T2 = T2 + T3
-    T2.self_add_with_coarse_reduction(T3);
+    T2 += T3;
 
     // identity = q_logic * alpha_base * (identity + T2)
-    identity.self_add_with_coarse_reduction(T2);
-    identity.self_mul_with_coarse_reduction(alpha_base);
+    identity += T2;
+    identity *= alpha_base;
 
     ITERATE_OVER_DOMAIN_START(key->small_domain);
-    r[i].self_add(identity * q_logic[i]);
+    r[i] += (identity * q_logic[i]);
     ITERATE_OVER_DOMAIN_END;
 
     return alpha_d * alpha;
@@ -559,128 +559,128 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboLogicWidget::append_scal
     fr::field_t T3;
     fr::field_t T4;
     fr::field_t identity;
-    T0 = w_1_eval.add_without_reduction(w_1_eval);
-    T0.self_add_with_coarse_reduction(T0);
-    T0 = w_1_omega_eval.sub_with_coarse_reduction(T0);
+    T0 = w_1_eval + w_1_eval;
+    T0 += T0;
+    T0 = w_1_omega_eval - T0;
 
     // T1 = b
-    T1 = w_2_eval.add_without_reduction(w_2_eval);
-    T1.self_add_with_coarse_reduction(T1);
-    T1 = w_2_omega_eval.sub_with_coarse_reduction(T1);
+    T1 = w_2_eval + w_2_eval;
+    T1 += T1;
+    T1 = w_2_omega_eval - T1;
 
     // delta_sum = a + b
-    delta_sum = T0.add_with_coarse_reduction(T1);
+    delta_sum = T0 + T1;
 
     // T2 = a^2, T3 = b^2
-    T2 = T0.sqr_with_coarse_reduction();
-    T3 = T1.sqr_with_coarse_reduction();
+    T2 = T0.sqr();
+    T3 = T1.sqr();
 
-    delta_squared_sum = T2.add_with_coarse_reduction(T3);
+    delta_squared_sum = T2 + T3;
 
     // identity = a^2 + b^2 + 2ab
-    identity = delta_sum.sqr_with_coarse_reduction();
+    identity = delta_sum.sqr();
     // identity = 2ab
-    identity.self_sub_with_coarse_reduction(delta_squared_sum);
+    identity -= delta_squared_sum;
 
     // identity = 2(ab - w)
-    T4 = w_3_eval.add_without_reduction(w_3_eval);
-    identity.self_sub_with_coarse_reduction(T4);
-    identity.self_mul_with_coarse_reduction(challenge.alpha_step);
+    T4 = w_3_eval + w_3_eval;
+    identity -= T4;
+    identity *= challenge.alpha_step;
 
     // T4 = 4w
-    T4.self_add_with_coarse_reduction(T4);
+    T4 += T4;
 
     // T2 = a^2 - a
-    T2.self_sub_with_coarse_reduction(T0);
+    T2 -= T0;
 
     // T0 = a^2 - 5a + 6
-    T0.self_add_with_coarse_reduction(T0);
-    T0.self_add_with_coarse_reduction(T0);
-    T0 = T2.sub_with_coarse_reduction(T0);
-    T0.self_add_with_coarse_reduction(six);
+    T0 += T0;
+    T0 += T0;
+    T0 = T2 - T0;
+    T0 += six;
 
     // identity = (identity + a(a - 1)(a - 2)(a - 3)) * alpha
-    T0.self_mul_with_coarse_reduction(T2);
-    identity.self_add_with_coarse_reduction(T0);
-    identity.self_mul_with_coarse_reduction(challenge.alpha_step);
+    T0 *= T2;
+    identity += T0;
+    identity *= challenge.alpha_step;
 
     // T3 = b^2 - b
-    T3.self_sub_with_coarse_reduction(T1);
+    T3 -= T1;
 
     // T1 = b^2 - 5b + 6
-    T1.self_add_with_coarse_reduction(T1);
-    T1.self_add_with_coarse_reduction(T1);
-    T1 = T3.sub_with_coarse_reduction(T1);
-    T1.self_add_with_coarse_reduction(six);
+    T1 += T1;
+    T1 += T1;
+    T1 = T3 - T1;
+    T1 += six;
 
     // identity = (identity + b(b - 1)(b - 2)(b - 3)) * alpha
-    T1.self_mul_with_coarse_reduction(T3);
-    identity.self_add_with_coarse_reduction(T1);
-    identity.self_mul_with_coarse_reduction(challenge.alpha_step);
+    T1 *= T3;
+    identity += T1;
+    identity *= challenge.alpha_step;
 
     // T0 = 3(a + b)
-    T0 = delta_sum.add_with_coarse_reduction(delta_sum);
-    T0.self_add_with_coarse_reduction(delta_sum);
+    T0 = delta_sum + delta_sum;
+    T0 += delta_sum;
 
     // T1 = 9(a + b)
-    T1 = T0.add_with_coarse_reduction(T0);
-    T1.self_add_with_coarse_reduction(T0);
+    T1 = T0 + T0;
+    T1 += T0;
 
     // delta_sum = 18(a + b)
-    delta_sum = T1.add_with_coarse_reduction(T1);
+    delta_sum = T1 + T1;
 
     // T1 = 81(a + b)
-    T2 = delta_sum.add_with_coarse_reduction(delta_sum);
-    T2.self_add_with_coarse_reduction(T2);
-    T1.self_add_with_coarse_reduction(T2);
+    T2 = delta_sum + delta_sum;
+    T2 += T2;
+    T1 += T2;
 
     // delta_squared_sum = 18(a^2 + b^2)
-    T2 = delta_squared_sum.add_with_coarse_reduction(delta_squared_sum);
-    T2.self_add_with_coarse_reduction(delta_squared_sum);
-    delta_squared_sum = T2.add_with_coarse_reduction(T2);
-    delta_squared_sum.self_add_with_coarse_reduction(T2);
-    delta_squared_sum.self_add_with_coarse_reduction(delta_squared_sum);
+    T2 = delta_squared_sum + delta_squared_sum;
+    T2 += delta_squared_sum;
+    delta_squared_sum = T2 + T2;
+    delta_squared_sum += T2;
+    delta_squared_sum += delta_squared_sum;
 
     // delta_sum = w(4w - 18(a + b) + 81)
-    delta_sum = T4.sub_with_coarse_reduction(delta_sum);
-    delta_sum.self_add_with_coarse_reduction(eighty_one);
-    delta_sum.self_mul_with_coarse_reduction(w_3_eval);
+    delta_sum = T4 - delta_sum;
+    delta_sum += eighty_one;
+    delta_sum *= w_3_eval;
 
     // T1 = 18(a^2 + b^2) - 81(a + b) + 83
-    T1 = delta_squared_sum.sub_with_coarse_reduction(T1);
-    T1.self_add_with_coarse_reduction(eighty_three);
+    T1 = delta_squared_sum - T1;
+    T1 += eighty_three;
 
     // delta_sum = w ( w ( 4w - 18(a + b) + 81) + 18(a^2 + b^2) - 81(a + b) + 83)
-    delta_sum.self_add_with_coarse_reduction(T1);
-    delta_sum.self_mul_with_coarse_reduction(w_3_eval);
+    delta_sum += T1;
+    delta_sum *= w_3_eval;
 
     // T2 = 3c
-    T2 = w_4_eval.add_without_reduction(w_4_eval);
-    T2.self_add_with_coarse_reduction(T2);
-    T2 = w_4_omega_eval.sub_with_coarse_reduction(T2);
-    T3 = T2.add_with_coarse_reduction(T2);
-    T2.self_add_with_coarse_reduction(T3);
+    T2 = w_4_eval + w_4_eval;
+    T2 += T2;
+    T2 = w_4_omega_eval - T2;
+    T3 = T2 + T2;
+    T2 += T3;
 
     // T3 = 9c
-    T3 = T2.add_with_coarse_reduction(T2);
-    T3.self_add_with_coarse_reduction(T2);
+    T3 = T2 + T2;
+    T3 += T2;
 
     // T3 = q_c * (9c - 3(a + b))
-    T3.self_sub_with_coarse_reduction(T0);
-    T3.self_mul_with_coarse_reduction(q_c_eval);
+    T3 -= T0;
+    T3 *= q_c_eval;
 
     // T2 = 3c + 3(a + b) - 2 * delta_sum
-    T2.self_add_with_coarse_reduction(T0);
-    delta_sum.self_add_with_coarse_reduction(delta_sum);
-    T2.self_sub_with_coarse_reduction(delta_sum);
+    T2 += T0;
+    delta_sum += delta_sum;
+    T2 -= delta_sum;
 
     // T2 = T2 + T3
-    T2.self_add_with_coarse_reduction(T3);
+    T2 += T3;
 
     // identity = q_logic * alpha_base * (identity + T2)
-    identity.self_add_with_coarse_reduction(T2);
-    identity.self_mul_with_coarse_reduction(challenge.alpha_base);
-    identity.self_mul(challenge.linear_nu);
+    identity += T2;
+    identity *= challenge.alpha_base;
+    identity *= challenge.linear_nu;
 
     if (g1::on_curve(key->constraint_selectors.at("Q_LOGIC_SELECTOR"))) {
         points.push_back(key->constraint_selectors.at("Q_LOGIC_SELECTOR"));

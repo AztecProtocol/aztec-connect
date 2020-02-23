@@ -223,7 +223,7 @@ TEST(grumpkin, mixed_add_exception_test_infinity)
     g1::element lhs = g1::one;
     g1::affine_element rhs = g1::random_affine_element();
     fq::field_t::__copy(rhs.x, lhs.x);
-    lhs.y = rhs.y.neg();
+    lhs.y = -rhs.y;
 
     g1::element result;
     g1::mixed_add(lhs, rhs, result);

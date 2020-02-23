@@ -82,11 +82,11 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> me
         barretenberg::fr::field_t T0;
         barretenberg::fr::field_t x_cubed;
         T0 = x_in + k;
-        T0.self_add(mimc_round_constants[i]);
+        T0 += mimc_round_constants[i];
         x_cubed = T0.sqr();
-        x_cubed.self_mul(T0);
+        x_cubed *= T0;
         x_out = x_cubed.sqr();
-        x_out.self_mul(T0);
+        x_out *= T0;
 
         uint32_t x_cubed_idx = context->add_variable(x_cubed);
         x_out_idx = context->add_variable(x_out);
