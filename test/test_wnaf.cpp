@@ -121,8 +121,5 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
     result = k2_recovered * fr::beta;
     result = k1_recovered - result;
 
-    EXPECT_EQ(result.data[0], k.data[0]);
-    EXPECT_EQ(result.data[1], k.data[1]);
-    EXPECT_EQ(result.data[2], k.data[2]);
-    EXPECT_EQ(result.data[3], k.data[3]);
+    EXPECT_EQ(result, k);
 }

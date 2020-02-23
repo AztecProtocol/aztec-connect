@@ -74,7 +74,7 @@ TEST(fr, add)
     fr::field_t expected{ 0x7de76c654ce1394f, 0xc7fb821e66f26999, 0x4882d6a6d6fa59b0, 0x6b717a8ed0c5c6db };
     fr::field_t result;
     result = a + b;
-    EXPECT_EQ((result == expected), true);
+    EXPECT_EQ(result, expected.reduce_once());
 }
 
 TEST(fr, sub)
@@ -257,11 +257,8 @@ TEST(fr, split_into_endomorphism_scalars)
     fr::field_t input = { 0, 0, 0, 0 };
     int got_entropy = getentropy((void*)&input.data[0], 32);
     EXPECT_EQ(got_entropy, 0);
-    input.data[3] &= 0x7fffffffffffffff;
+    input.data[3] &= 0x0fffffffffffffff;
 
-    while (input > fr::modulus) {
-        input.self_sub(fr::modulus);
-    }
     fr::field_t k = { input.data[0], input.data[1], input.data[2], input.data[3] };
     fr::field_t k1 = { 0, 0, 0, 0 };
     fr::field_t k2 = { 0, 0, 0, 0 };
@@ -277,9 +274,7 @@ TEST(fr, split_into_endomorphism_scalars)
     result = k1 - result;
 
     result.self_from_montgomery_form();
-    for (size_t i = 0; i < 4; ++i) {
-        EXPECT_EQ(result.data[i], k.data[i]);
-    }
+    EXPECT_EQ(result, k);
 }
 
 TEST(fr, split_into_endomorphism_scalars_simple)

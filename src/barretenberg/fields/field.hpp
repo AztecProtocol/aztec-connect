@@ -1,12 +1,11 @@
 #pragma once
 
-#include "../types.hpp"
-#include <array>
 #include <cinttypes>
 #include <cstdint>
 #include <cstdio>
 #include <unistd.h>
 
+#include "../types.hpp"
 #include "./new_field.hpp"
 
 // #include "../uint256/uint256.hpp"
@@ -127,14 +126,12 @@ template <typename FieldParams> class field {
     {
         field_t r;
         int got_entropy = getentropy((void*)r.data, 32);
-        //  ASSERT(got_entropy == 0);
         return r.to_montgomery_form();
     }
 
-
-    static void batch_invert(field_t* coeffs, size_t n, field_t* scratch_space = nullptr)
+    static void batch_invert(field_t* coeffs, size_t n)
     {
-        field_t* temporaries = scratch_space ? scratch_space : (field_t*)aligned_alloc(32, sizeof(field_t) * n);
+        field_t* temporaries = new field_t[n];
         field_t accumulator = field_t::one;
         for (size_t i = 0; i < n; ++i) {
             temporaries[i] = accumulator;
@@ -149,9 +146,7 @@ template <typename FieldParams> class field {
             accumulator = accumulator * coeffs[i];
             coeffs[i] = T0;
         }
-        if (scratch_space == nullptr) {
-            aligned_free(temporaries);
-        }
+        delete[] temporaries;
     }
 
 }; // class field

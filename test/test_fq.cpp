@@ -415,21 +415,19 @@ TEST(fq, neg)
 
 TEST(fq, split_into_endomorphism_scalars)
 {
+    printf("start\n");
     fq::field_t input = 0;
     int got_entropy = getentropy((void*)&input.data[0], 32);
     EXPECT_EQ(got_entropy, 0);
     input.data[3] &= 0x7fffffffffffffff;
 
-    while (input > fq::modulus) {
-        input.self_sub(fq::modulus);
-    }
     fq::field_t k = { input.data[0], input.data[1], input.data[2], input.data[3] };
     fq::field_t k1 = 0;
     fq::field_t k2 = 0;
 
     fq::field_t::split_into_endomorphism_scalars(k, k1, k2);
 
-    std::cout << "endo scalars = " << k1 << k2 << std::endl;
+    // std::cout << "endo scalars = " << k1 << k2 << std::endl;
     fq::field_t result = 0;
 
     k1.self_to_montgomery_form();
@@ -439,9 +437,8 @@ TEST(fq, split_into_endomorphism_scalars)
     result = k1 - result;
 
     result.self_from_montgomery_form();
-    for (size_t i = 0; i < 4; ++i) {
-        EXPECT_EQ(result.data[i], k.data[i]);
-    }
+    printf("about to call eq\n");
+    EXPECT_EQ(result, k);
 }
 
 TEST(fq, split_into_endomorphism_scalars_simple)

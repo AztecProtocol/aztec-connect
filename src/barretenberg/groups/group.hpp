@@ -16,12 +16,35 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     struct affine_element {
         typename coordinate_field::field_t x;
         typename coordinate_field::field_t y;
+
+        // bool operator=(const affine_element& other) const
+        // {
+        //     bool both_infinity = is_point_at_infinity(*this) && is_point_at_infinity(other);
+        //     return both_infinity || ((x == other.x) && (y == other.y));
+        // }
     };
 
     struct element {
         typename coordinate_field::field_t x;
         typename coordinate_field::field_t y;
         typename coordinate_field::field_t z;
+
+        // bool operator=(const affine_element& other) const
+        // {
+        //     bool both_infinity = is_point_at_infinity(*this) && is_point_at_infinity(other);
+
+        //     typename coordinate_field::field_t a_zz = z.sqr();
+        //     typename coordinate_field::field_t a_zzz = a_zz * z;
+        //     typename coordinate_field::field_t b_zz = other.z.sqr();
+        //     typename coordinate_field::field_t b_zzz = b_zz * other.z;
+
+        //     typename coordinate_field::field_t T0 = x * b_zz;
+        //     typename coordinate_field::field_t T1 = y * b_zzz;
+        //     typename coordinate_field::field_t T2 = other.x * a_zz;
+        //     typename coordinate_field::field_t T3 = other.y * a_zzz;
+
+        //     return both_infinity || ((T0 == T2) && (T1 == T3));
+        // }
     };
 
     static constexpr element one{ GroupParams::one_x, GroupParams::one_y, coordinate_field::one };

@@ -40,6 +40,8 @@ template <class Params> struct field {
     alignas(32) uint64_t data[4];
 
     static constexpr field modulus = field(Params::modulus_0, Params::modulus_1, Params::modulus_2, Params::modulus_3);
+    static constexpr field twice_modulus =
+        field(Params::twice_modulus_0, Params::twice_modulus_1, Params::twice_modulus_2, Params::twice_modulus_3);
     static constexpr field two_inv = field(Params::two_inv_0, Params::two_inv_1, Params::two_inv_2, Params::two_inv_3);
     static constexpr field beta =
         field(Params::cube_root_0, Params::cube_root_1, Params::cube_root_2, Params::cube_root_3);
@@ -279,6 +281,7 @@ template <class Params> struct field {
      **/
     BBERG_INLINE static void split_into_endomorphism_scalars(field& k, field& k1, field& k2)
     {
+        field input = k.reduce_once();
         // uint64_t lambda_reduction[4] = { 0 };
         // __to_montgomery_form(lambda, lambda_reduction);
 
@@ -293,9 +296,9 @@ template <class Params> struct field {
         constexpr field endo_b2 = { Params::endo_b2_lo, Params::endo_b2_mid, 0, 0 };
 
         // compute c1 = (g2 * k) >> 256
-        wide_array c1 = endo_g2.mul_512(k);
+        wide_array c1 = endo_g2.mul_512(input);
         // compute c2 = (g1 * k) >> 256
-        wide_array c2 = endo_g1.mul_512(k);
+        wide_array c2 = endo_g1.mul_512(input);
 
         // (the bit shifts are implicit, as we only utilize the high limbs of c1, c2
 
@@ -316,9 +319,8 @@ template <class Params> struct field {
         field q1_lo{ q1.data[0], q1.data[1], q1.data[2], q1.data[3] };
         field q2_lo{ q2.data[0], q2.data[1], q2.data[2], q2.data[3] };
 
-        field t1 = q2_lo - q1_lo;
-        field t2 = t1 * beta + k;
-
+        field t1 = (q2_lo - q1_lo).reduce_once();
+        field t2 = (t1 * beta + input).reduce_once();
         k2.data[0] = t1.data[0];
         k2.data[1] = t1.data[1];
         k1.data[0] = t2.data[0];
@@ -359,9 +361,10 @@ template <class Params> struct field {
 
     friend std::ostream& operator<<(std::ostream& os, const field& a)
     {
+        field out = a.reduce_once().reduce_once();
         std::ios_base::fmtflags f(os.flags());
-        os << std::hex << "0x" << std::setfill('0') << std::setw(16) << a.data[3] << std::setw(16) << a.data[2]
-           << std::setw(16) << a.data[1] << std::setw(16) << a.data[0];
+        os << std::hex << "0x" << std::setfill('0') << std::setw(16) << out.data[3] << std::setw(16) << out.data[2]
+           << std::setw(16) << out.data[1] << std::setw(16) << out.data[0];
         os.flags(f);
         return os;
     }
@@ -369,8 +372,6 @@ template <class Params> struct field {
     BBERG_INLINE static void __copy(const field& a, field& r) noexcept { r = a; }
 
   private:
-    static constexpr field twice_modulus =
-        field(Params::twice_modulus_0, Params::twice_modulus_1, Params::twice_modulus_2, Params::twice_modulus_3);
     static constexpr field modulus_plus_one =
         field(Params::modulus_0 + 1ULL, Params::modulus_1, Params::modulus_2, Params::modulus_3);
     static constexpr field modulus_minus_two =
