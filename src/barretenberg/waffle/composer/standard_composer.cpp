@@ -152,7 +152,7 @@ void StandardComposer::create_big_add_gate_with_bit_extraction(const add_quad& i
     delta = variables[in.c] - delta;
 
     uint32_t delta_idx = add_variable(delta);
-    constexpr fr::field_t neg_four = -fr::field_t(4);
+    constexpr fr::field_t neg_four = -(fr::field_t(4));
     create_add_gate(add_triple{ in.c, in.d, delta_idx, fr::one, neg_four, fr::neg_one, fr::zero });
 
     constexpr fr::field_t two = fr::field_t(2);
@@ -329,7 +329,7 @@ waffle::accumulator_triple StandardComposer::create_logic_constraint(const uint3
     uint32_t left_accumulator_idx = zero_idx;
     uint32_t right_accumulator_idx = zero_idx;
     uint32_t out_accumulator_idx = zero_idx;
-    constexpr fr::field_t four = -fr::field_t(4);
+    constexpr fr::field_t four = fr::field_t(4);
     constexpr fr::field_t neg_two = -fr::field_t(2);
     for (size_t i = num_bits - 1; i < num_bits; i -= 2) {
         bool left_hi_val = left_witness_value.get_bit(i);
@@ -477,14 +477,14 @@ void StandardComposer::create_dummy_gates()
 {
     gate_flags.push_back(0);
     // add in a dummy gate to ensure that all of our polynomials are not zero and not identical
-    constexpr fr::field_t one =   fr::field_t(1);
-    constexpr fr::field_t two =   fr::field_t(2);
+    constexpr fr::field_t one = fr::field_t(1);
+    constexpr fr::field_t two = fr::field_t(2);
     constexpr fr::field_t three = fr::field_t(3);
-    constexpr fr::field_t four =  fr::field_t(4);
-    constexpr fr::field_t five =  fr::field_t(5);
-    constexpr fr::field_t six =   fr::field_t(6);
+    constexpr fr::field_t four = fr::field_t(4);
+    constexpr fr::field_t five = fr::field_t(5);
+    constexpr fr::field_t six = fr::field_t(6);
     constexpr fr::field_t seven = fr::field_t(7);
-    constexpr fr::field_t minus_twenty = - fr::field_t(20);
+    constexpr fr::field_t minus_twenty = -(fr::field_t(20));
 
     q_m.emplace_back(one);
     q_1.emplace_back(two);

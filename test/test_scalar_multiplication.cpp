@@ -560,7 +560,7 @@ TEST(scalar_multiplication, endomorphism_split)
     g1::element t1 = g1::group_exponentiation_inner(g1::affine_one, k1);
     g1::affine_element beta = g1::affine_one;
     beta.x = beta.x * fq::beta;
-    -beta.y;
+    beta.y = -beta.y;
     g1::element t2 = g1::group_exponentiation_inner(beta, k2);
     g1::add(t1, t2, result);
 

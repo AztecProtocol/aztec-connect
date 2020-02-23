@@ -28,8 +28,6 @@ template <class base_field, class Params> struct field2 {
     constexpr field2 invert() const noexcept;
 
     constexpr void self_neg() noexcept;
-    constexpr void self_invert() noexcept;
-
     constexpr field2 to_montgomery_form() const noexcept;
     constexpr field2 from_montgomery_form() const noexcept;
 

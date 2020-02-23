@@ -311,7 +311,7 @@ TEST(fr, batch_invert)
         coeffs[i] = fr::random_element();
         fr::field_t::__copy(coeffs[i], inverses[i]);
     }
-    fr::batch_invert(inverses, n);
+    fr::field_t::batch_invert(inverses, n);
 
     for (size_t i = 0; i < n; ++i) {
         coeffs[i] *= inverses[i];

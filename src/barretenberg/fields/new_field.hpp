@@ -184,10 +184,10 @@ template <class Params> struct field {
     BBERG_INLINE constexpr field pow(const field& exponent) const noexcept;
     BBERG_INLINE constexpr field pow(const uint64_t exponent) const noexcept;
     constexpr field invert() const noexcept;
+    static void batch_invert(field* coeffs, const size_t n) noexcept;
     constexpr field sqrt() const noexcept;
 
     BBERG_INLINE constexpr void self_neg() noexcept;
-    constexpr void self_invert() noexcept;
 
     BBERG_INLINE constexpr void self_to_montgomery_form() noexcept;
     BBERG_INLINE constexpr void self_from_montgomery_form() noexcept;
@@ -359,6 +359,12 @@ template <class Params> struct field {
     }
 
     BBERG_INLINE static void __copy(const field& a, field& r) noexcept { r = a; }
+    BBERG_INLINE static void __swap(field& src, field& dest) noexcept
+    {
+        field T = dest;
+        dest = src;
+        src = T;
+    }
 
   private:
     static constexpr field modulus_plus_one =

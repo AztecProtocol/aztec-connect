@@ -308,7 +308,8 @@ void ExtendedComposer::combine_linear_relations()
                     change_permutation(wire_epicycles[lookahead_wire.index], old_cycle, new_cycle);
                     change_permutation(wire_epicycles[w_o[next_gate_index]], new_cycle, old_cycle);
                     std::swap(left ? w_l[next_gate_index] : w_r[next_gate_index], w_o[next_gate_index]);
-                    barretenberg::fr::__swap(left ? q_1[next_gate_index] : q_2[next_gate_index], q_3[next_gate_index]);
+                    barretenberg::fr::field_t::__swap(left ? q_1[next_gate_index] : q_2[next_gate_index],
+                                                      q_3[next_gate_index]);
                 }
                 deleted_gates[potential_quads[j].gate_indices[1]] = true;
             }

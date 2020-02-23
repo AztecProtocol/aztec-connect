@@ -64,7 +64,7 @@ void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::
         uint32_t swap_index = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)log2_size);
         // TODO: should probably use CMOV here insead of an if statement
         if (i < swap_index) {
-            fr::__swap(coeffs[i], coeffs[swap_index]);
+            fr::field_t::__swap(coeffs[i], coeffs[swap_index]);
         }
     }
 
@@ -576,7 +576,7 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
     }
 
     // use Montgomery's trick to invert all of these at once
-    fr::batch_invert(l_1_coefficients, target_domain.size);
+    fr::field_t::batch_invert(l_1_coefficients, target_domain.size);
 
     // next: compute numerator multiplicand: w'^{n}.g^n
     // Here, w' is the primitive 2n'th root of unity
@@ -654,7 +654,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
     }
 
     // Step 4: invert array entries to compute denominator term of 1/Z_H*(X)
-    fr::batch_invert(&subgroup_roots[0], subgroup_size);
+    fr::field_t::batch_invert(&subgroup_roots[0], subgroup_size);
 
     // The numerator term of Z_H*(X) is the polynomial (X - w^{n-1})
     // => (g.w_i - w^{n-1})
@@ -738,7 +738,7 @@ barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluatio
     denominators[0] = z - domain.root_inverse;
     denominators[1] = z - fr::one;
     denominators[2] = (z * domain.root.sqr()) - fr::one;
-    fr::batch_invert(denominators, 3);
+    fr::field_t::batch_invert(denominators, 3);
 
     barretenberg::polynomial_arithmetic::lagrange_evaluations result;
     result.vanishing_poly = numerator * denominators[0];
@@ -773,7 +773,7 @@ fr::field_t compute_barycentric_evaluation(fr::field_t* coeffs,
         work_root *= domain.root_inverse;
     }
 
-    fr::batch_invert(denominators, num_coeffs);
+    fr::field_t::batch_invert(denominators, num_coeffs);
 
     fr::field_t result = fr::zero;
 

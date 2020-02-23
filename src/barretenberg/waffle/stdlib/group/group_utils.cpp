@@ -90,7 +90,7 @@ void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fi
         ladder[i].q_y_1 = y_alpha_1;
         ladder[i].q_y_2 = y_alpha_2;
     }
-    grumpkin::fq::batch_invert(&y_denominators[0], quad_length);
+    grumpkin::fq::field_t::batch_invert(&y_denominators[0], quad_length);
     for (size_t i = 0; i < quad_length; ++i) {
         ladder[i].q_y_1 *= y_denominators[i];
         ladder[i].q_y_2 *= y_denominators[i];

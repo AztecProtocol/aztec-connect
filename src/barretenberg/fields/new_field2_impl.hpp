@@ -114,11 +114,6 @@ template <class base, class T> constexpr field2<base, T> field2<base, T>::invert
     return { c0 * t3, -(c1 * t3) };
 }
 
-template <class base, class T> constexpr void field2<base, T>::self_invert() noexcept
-{
-    *this = invert();
-}
-
 template <class base, class T>
 constexpr void field2<base, T>::self_conditional_negate(const uint64_t predicate) noexcept
 {

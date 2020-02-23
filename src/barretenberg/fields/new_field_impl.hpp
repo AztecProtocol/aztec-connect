@@ -846,9 +846,24 @@ template <class T> constexpr field<T> field<T>::invert() const noexcept
     return pow(modulus_minus_two);
 }
 
-template <class T> constexpr void field<T>::self_invert() noexcept
+template <class T> void field<T>::batch_invert(field* coeffs, const size_t n) noexcept
 {
-    *this = invert();
+    field* temporaries = new field[n];
+    field accumulator = one;
+    for (size_t i = 0; i < n; ++i) {
+        temporaries[i] = accumulator;
+        accumulator = accumulator * coeffs[i];
+    }
+
+    accumulator = accumulator.invert();
+
+    field T0;
+    for (size_t i = n - 1; i < n; --i) {
+        T0 = accumulator * temporaries[i];
+        accumulator = accumulator * coeffs[i];
+        coeffs[i] = T0;
+    }
+    delete[] temporaries;
 }
 
 template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noexcept

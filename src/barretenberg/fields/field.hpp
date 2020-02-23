@@ -59,9 +59,6 @@ template <typename FieldParams> class field {
     //     // bool operator<(const field_t& other) const { return gt(other, *this); }
     // };
 
-    struct field_wide_t {
-        alignas(64) uint64_t data[8];
-    };
 
     /**
      * Arithmetic Methods (with return parameters)
@@ -93,12 +90,7 @@ template <typename FieldParams> class field {
     /**
      * Copy methods
      **/
-    static void __swap(field_t& src, field_t& dest) noexcept
-    {
-        field_t T = dest;
-        dest = src;
-        src = T;
-    }
+
 
     /**
      * Montgomery modular reduction methods
@@ -131,25 +123,7 @@ template <typename FieldParams> class field {
         return r.to_montgomery_form();
     }
 
-    static void batch_invert(field_t* coeffs, size_t n)
-    {
-        field_t* temporaries = new field_t[n];
-        field_t accumulator = field_t::one;
-        for (size_t i = 0; i < n; ++i) {
-            temporaries[i] = accumulator;
-            accumulator = accumulator * coeffs[i];
-        }
 
-        accumulator = accumulator.invert();
-
-        field_t T0;
-        for (size_t i = n - 1; i < n; --i) {
-            T0 = accumulator * temporaries[i];
-            accumulator = accumulator * coeffs[i];
-            coeffs[i] = T0;
-        }
-        delete[] temporaries;
-    }
 
 }; // class field
 
