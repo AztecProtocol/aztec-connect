@@ -180,7 +180,7 @@ grumpkin::fq::field_t compress_eight_native(const std::array<grumpkin::fq::field
     grumpkin::g1::element out[8];
 
 #ifndef NO_MULTITHREADING
-#pragma omp parallel for
+#pragma omp parallel for num_threads(8)
 #endif
     for (size_t i = 0; i < 8; ++i) {
         out[i] = hash_single(inputs[i], 16 + i);
