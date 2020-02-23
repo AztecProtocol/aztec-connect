@@ -6,7 +6,7 @@ template <typename Hash, typename Fq, typename Fr, typename G1>
 signature construct_signature(const std::string& message, const key_pair<Fr, G1>& account)
 {
     signature sig;
-    typename Fr::field_t k = Fr::random_element(); // TODO replace with HMAC
+    typename Fr::field_t k = Fr::field_t::random_element(); // TODO replace with HMAC
     typename G1::affine_element R = G1::group_exponentiation(G1::affine_one, k);
 
     std::vector<uint8_t> r(sizeof(typename Fq::field_t));
@@ -32,7 +32,7 @@ template <typename Hash, typename Fq, typename Fr, typename G1>
 signature_b construct_signature_b(const std::string& message, const key_pair<Fr, G1>& account)
 {
     signature_b sig;
-    typename Fr::field_t k = Fr::random_element(); // TODO replace with HMAC
+    typename Fr::field_t k = Fr::field_t::random_element(); // TODO replace with HMAC
     typename G1::affine_element R = G1::group_exponentiation(G1::affine_one, k);
     sig.r.resize(32);
     Fq::field_t::serialize_to_buffer(R.x, &sig.r[0]);

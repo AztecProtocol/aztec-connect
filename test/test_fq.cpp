@@ -83,8 +83,8 @@ TEST(fq, is_zero)
 
 TEST(fq, random_element)
 {
-    fq::field_t a = fq::random_element();
-    fq::field_t b = fq::random_element();
+    fq::field_t a = fq::field_t::random_element();
+    fq::field_t b = fq::field_t::random_element();
 
     EXPECT_EQ(a == b, false);
     EXPECT_EQ(a.is_zero(), false);
@@ -134,8 +134,8 @@ TEST(fq, mul_short_integers)
 
 TEST(fq, mul_sqr_consistency)
 {
-    fq::field_t a = fq::random_element();
-    fq::field_t b = fq::random_element();
+    fq::field_t a = fq::field_t::random_element();
+    fq::field_t b = fq::field_t::random_element();
     fq::field_t t1;
     fq::field_t t2;
     fq::field_t mul_result;
@@ -225,8 +225,8 @@ TEST(fq, from_montgomery_form)
 
 TEST(fq, montgomery_consistency_check)
 {
-    fq::field_t a = fq::random_element();
-    fq::field_t b = fq::random_element();
+    fq::field_t a = fq::field_t::random_element();
+    fq::field_t b = fq::field_t::random_element();
     fq::field_t aR;
     fq::field_t bR;
     fq::field_t aRR;
@@ -260,7 +260,7 @@ TEST(fq, add_mul_consistency)
     fq::field_t multiplicand = { 0x09, 0, 0, 0 };
     multiplicand.self_to_montgomery_form();
 
-    fq::field_t a = fq::random_element();
+    fq::field_t a = fq::field_t::random_element();
     fq::field_t result;
     result = a + a;   // 2
     result += result; // 4
@@ -278,7 +278,7 @@ TEST(fq, sub_mul_consistency)
     fq::field_t multiplicand = { 0x05, 0, 0, 0 };
     multiplicand.self_to_montgomery_form();
 
-    fq::field_t a = fq::random_element();
+    fq::field_t a = fq::field_t::random_element();
     fq::field_t result;
     result = a + a;   // 2
     result += result; // 4
@@ -295,7 +295,7 @@ TEST(fq, sub_mul_consistency)
 
 TEST(fq, beta)
 {
-    fq::field_t x = fq::random_element();
+    fq::field_t x = fq::field_t::random_element();
 
     fq::field_t beta_x = { x.data[0], x.data[1], x.data[2], x.data[3] };
     beta_x = beta_x * fq::beta;
@@ -315,7 +315,7 @@ TEST(fq, beta)
 
 TEST(fq, invert)
 {
-    fq::field_t input = fq::random_element();
+    fq::field_t input = fq::field_t::random_element();
     fq::field_t inverse = input.invert();
     fq::field_t result = input * inverse;
     result = result.reduce_once();
@@ -342,7 +342,7 @@ TEST(fq, sqrt_random)
 {
     size_t n = 1024;
     for (size_t i = 0; i < n; ++i) {
-        fq::field_t input = fq::random_element().sqr();
+        fq::field_t input = fq::field_t::random_element().sqr();
         fq::field_t root_test = input.sqrt().sqr();
         EXPECT_EQ(root_test, input);
     }
@@ -357,7 +357,7 @@ TEST(fq, one_and_zero)
 
 TEST(fq, copy)
 {
-    fq::field_t result = fq::random_element();
+    fq::field_t result = fq::field_t::random_element();
     fq::field_t expected;
     fq::field_t::__copy(result, expected);
     EXPECT_EQ((result == expected), true);
@@ -365,7 +365,7 @@ TEST(fq, copy)
 
 TEST(fq, neg)
 {
-    fq::field_t a = fq::random_element();
+    fq::field_t a = fq::field_t::random_element();
     fq::field_t b;
     b = -a;
     fq::field_t result;

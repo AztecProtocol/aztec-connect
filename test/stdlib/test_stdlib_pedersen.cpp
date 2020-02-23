@@ -28,8 +28,8 @@ TEST(stdlib_pedersen, test_pedersen)
 
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    fr::field_t left_in = fr::random_element();
-    fr::field_t right_in = fr::random_element();
+    fr::field_t left_in = fr::field_t::random_element();
+    fr::field_t right_in = fr::field_t::random_element();
     // ensure left has skew 1, right has skew 0
     if ((left_in.from_montgomery_form().data[0] & 1) == 1) {
         left_in += fr::one;
@@ -152,8 +152,8 @@ TEST(stdlib_pedersen, test_pedersen_large)
 
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    fr::field_t left_in = fr::random_element();
-    fr::field_t right_in = fr::random_element();
+    fr::field_t left_in = fr::field_t::random_element();
+    fr::field_t right_in = fr::field_t::random_element();
     // ensure left has skew 1, right has skew 0
     if ((left_in.from_montgomery_form().data[0] & 1)
         == 1) { left_in += fr::one; }

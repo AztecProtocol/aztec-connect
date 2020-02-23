@@ -49,7 +49,7 @@ TEST(pairing, reduced_ate_pairing_consistency_check)
     g1::affine_element P = g1::random_affine_element();
     g2::affine_element Q = g2::random_affine_element();
 
-    fr::field_t scalar = fr::random_element();
+    fr::field_t scalar = fr::field_t::random_element();
 
     g1::affine_element Pmul = g1::group_exponentiation(P, scalar);
     g2::affine_element Qmul = g2::group_exponentiation(Q, scalar);
@@ -88,8 +88,8 @@ TEST(pairing, reduced_ate_pairing_consistency_check_batch)
 
     fr::field_t scalars[num_points + num_points];
     for (size_t i = 0; i < 10; ++i) {
-        scalars[i] = fr::random_element();
-        scalars[i + num_points] = fr::random_element();
+        scalars[i] = fr::field_t::random_element();
+        scalars[i + num_points] = fr::field_t::random_element();
         g1::affine_element P = g1::random_affine_element();
         g2::affine_element Q = g2::random_affine_element();
         g1::copy_affine(P, P_a[i]);
@@ -137,8 +137,8 @@ TEST(pairing, reduced_ate_pairing_precompute_consistency_check_batch)
     pairing::miller_lines precompute_miller_lines[num_points];
     fr::field_t scalars[num_points + num_points];
     for (size_t i = 0; i < 10; ++i) {
-        scalars[i] = fr::random_element();
-        scalars[i + num_points] = fr::random_element();
+        scalars[i] = fr::field_t::random_element();
+        scalars[i + num_points] = fr::field_t::random_element();
         g1::affine_element P = g1::random_affine_element();
         g2::affine_element Q = g2::random_affine_element();
         g1::copy_affine(P, P_a[i]);

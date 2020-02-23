@@ -229,7 +229,7 @@ TEST(turbo_logic_widget, xor_compute_linear_contribution)
 
     key->quotient_large.coset_ifft(key->large_domain);
 
-    fr::field_t z_challenge = fr::random_element();
+    fr::field_t z_challenge = fr::field_t::random_element();
     fr::field_t shifted_z = key->small_domain.root * z_challenge;
 
     for (size_t i = 0; i < 4; ++i) {

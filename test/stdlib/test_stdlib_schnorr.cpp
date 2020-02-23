@@ -30,7 +30,7 @@ typedef stdlib::public_witness_t<waffle::TurboComposer> public_witness_t;
 namespace {
 uint32_t get_random_int()
 {
-    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+    return static_cast<uint32_t>(barretenberg::fr::field_t::random_element().data[0]);
 }
 } // namespace
 
@@ -39,7 +39,7 @@ TEST(stdlib_schnorr, test_scalar_mul)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    grumpkin::fr::field_t scalar_mont = grumpkin::fr::random_element();
+    grumpkin::fr::field_t scalar_mont = grumpkin::fr::field_t::random_element();
     grumpkin::fr::field_t scalar = scalar_mont.from_montgomery_form();
 
     bitarray scalar_bits(&composer, 256);
@@ -77,7 +77,7 @@ TEST(stdlib_schnorr, verify_signature)
     std::string message_string = "Instructions unclear, ask again later.";
 
     crypto::schnorr::key_pair<grumpkin::fr, grumpkin::g1> account;
-    account.private_key = grumpkin::fr::random_element();
+    account.private_key = grumpkin::fr::field_t::random_element();
     account.public_key = grumpkin::g1::group_exponentiation(grumpkin::g1::affine_one, account.private_key);
 
     crypto::schnorr::signature signature = crypto::schnorr::construct_signature<Sha256Hasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(message_string, account);

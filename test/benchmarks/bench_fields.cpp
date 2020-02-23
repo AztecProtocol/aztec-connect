@@ -106,9 +106,9 @@ fr::field_t accx;
 fr::field_t accy;
 fr::field_t accz;
 const auto init = []() {
-    fr::field_t seed_x = fr::random_element();
-    fr::field_t seed_y = fr::random_element();
-    fr::field_t seed_z = fr::random_element();
+    fr::field_t seed_x = fr::field_t::random_element();
+    fr::field_t seed_y = fr::field_t::random_element();
+    fr::field_t seed_z = fr::field_t::random_element();
     accx = seed_x;
     accy = seed_y;
     accz = seed_z;

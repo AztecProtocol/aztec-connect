@@ -11,7 +11,7 @@ namespace internal {
 constexpr uint64_t zero_reference = 0;
 }
 template <class T>
-constexpr std::pair<uint64_t, uint64_t> field<T>::mul_wide(const uint64_t a, const uint64_t b) const noexcept
+constexpr std::pair<uint64_t, uint64_t> field<T>::mul_wide(const uint64_t a, const uint64_t b) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     const uint128_t res = ((uint128_t)a * (uint128_t)b);
@@ -37,7 +37,7 @@ template <class T>
 constexpr std::pair<uint64_t, uint64_t> field<T>::mac(const uint64_t a,
                                                       const uint64_t b,
                                                       const uint64_t c,
-                                                      const uint64_t carry_in) const noexcept
+                                                      const uint64_t carry_in) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
@@ -54,8 +54,9 @@ constexpr std::pair<uint64_t, uint64_t> field<T>::mac(const uint64_t a,
 }
 
 template <class T>
-constexpr std::pair<uint64_t, uint64_t> field<T>::mac_mini(const uint64_t a, const uint64_t b, const uint64_t c) const
-    noexcept
+constexpr std::pair<uint64_t, uint64_t> field<T>::mac_mini(const uint64_t a,
+                                                           const uint64_t b,
+                                                           const uint64_t c) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c);
@@ -73,7 +74,7 @@ template <class T>
 constexpr uint64_t field<T>::mac_discard_hi(const uint64_t a,
                                             const uint64_t b,
                                             const uint64_t c,
-                                            const uint64_t carry_in) const noexcept
+                                            const uint64_t carry_in) noexcept
 {
     return (b * c) + a + carry_in;
 }
@@ -82,7 +83,7 @@ template <class T>
 constexpr uint64_t field<T>::mac_discard_lo(const uint64_t a,
                                             const uint64_t b,
                                             const uint64_t c,
-                                            const uint64_t carry_in) const noexcept
+                                            const uint64_t carry_in) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
@@ -101,7 +102,7 @@ constexpr uint64_t field<T>::mac_discard_lo(const uint64_t a,
 template <class T>
 constexpr std::pair<uint64_t, uint64_t> field<T>::addc(const uint64_t a,
                                                        const uint64_t b,
-                                                       const uint64_t carry_in) const noexcept
+                                                       const uint64_t carry_in) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     uint128_t res = (uint128_t)a + (uint128_t)b + (uint128_t)carry_in;
@@ -116,7 +117,7 @@ constexpr std::pair<uint64_t, uint64_t> field<T>::addc(const uint64_t a,
 }
 
 template <class T>
-constexpr std::pair<uint64_t, uint64_t> field<T>::addc_mini(const uint64_t a, const uint64_t b) const noexcept
+constexpr std::pair<uint64_t, uint64_t> field<T>::addc_mini(const uint64_t a, const uint64_t b) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     uint128_t res = (uint128_t)a + (uint128_t)b;
@@ -128,7 +129,7 @@ constexpr std::pair<uint64_t, uint64_t> field<T>::addc_mini(const uint64_t a, co
 }
 
 template <class T>
-constexpr uint64_t field<T>::addc_discard_hi(const uint64_t a, const uint64_t b, const uint64_t carry_in) const noexcept
+constexpr uint64_t field<T>::addc_discard_hi(const uint64_t a, const uint64_t b, const uint64_t carry_in) noexcept
 {
     return a + b + carry_in;
 }
@@ -136,7 +137,7 @@ constexpr uint64_t field<T>::addc_discard_hi(const uint64_t a, const uint64_t b,
 template <class T>
 constexpr std::pair<uint64_t, uint64_t> field<T>::sbb(const uint64_t a,
                                                       const uint64_t b,
-                                                      const uint64_t borrow_in) const noexcept
+                                                      const uint64_t borrow_in) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     uint128_t res = (uint128_t)a - ((uint128_t)b + (uint128_t)(borrow_in >> 63));
@@ -151,7 +152,7 @@ constexpr std::pair<uint64_t, uint64_t> field<T>::sbb(const uint64_t a,
 }
 
 template <class T>
-constexpr uint64_t field<T>::sbb_discard_hi(const uint64_t a, const uint64_t b, const uint64_t borrow_in) const noexcept
+constexpr uint64_t field<T>::sbb_discard_hi(const uint64_t a, const uint64_t b, const uint64_t borrow_in) noexcept
 {
     return a - b - (borrow_in >> 63);
 }
@@ -184,7 +185,7 @@ template <class T> constexpr field<T> field<T>::subtract_coarse(const field& oth
     return { r4, r5, r6, r7 };
 }
 
-template <class T> constexpr field<T> field<T>::montgomery_reduce(const wide_array& r) const noexcept
+template <class T> constexpr field<T> field<T>::montgomery_reduce(const wide_array& r) noexcept
 {
     uint64_t k = r.data[0] * T::r_inv;
 
@@ -1021,6 +1022,27 @@ template <class T> constexpr field<T> field<T>::get_root_of_unity(const size_t s
     for (size_t i = T::primitive_root_log_size; i > subgroup_size; --i) {
         r.self_sqr();
     }
+    return r;
+}
+
+template <class T>
+field<T> field<T>::random_element(std::mt19937_64* engine, std::uniform_int_distribution<uint64_t>* dist) noexcept
+{
+    std::mt19937_64* engine_ptr;
+    std::uniform_int_distribution<uint64_t>* dist_ptr;
+    if (engine == nullptr) {
+        engine_ptr = barretenberg::random::get_debug_engine();
+        dist_ptr = barretenberg::random::get_distribution();
+    } else {
+        engine_ptr = engine;
+        dist_ptr = dist;
+    }
+    wide_array random_data{ dist_ptr->operator()(*engine_ptr), dist_ptr->operator()(*engine_ptr),
+                            dist_ptr->operator()(*engine_ptr), dist_ptr->operator()(*engine_ptr),
+                            dist_ptr->operator()(*engine_ptr), dist_ptr->operator()(*engine_ptr),
+                            dist_ptr->operator()(*engine_ptr), dist_ptr->operator()(*engine_ptr) };
+    random_data.data[7] = random_data.data[7] & 0b0000111111111111111111111111111111111111111111111111111111111111ULL;
+    field r = montgomery_reduce(random_data).reduce_once();
     return r;
 }
 } // namespace test

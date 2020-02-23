@@ -25,7 +25,7 @@ TEST(stdlib_pedersen_note, test_pedersen_note)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    fr::field_t view_key_value = fr::random_element();
+    fr::field_t view_key_value = fr::field_t::random_element();
     view_key_value.data[3] = view_key_value.data[3] & 0x3FFFFFFFFFFFFFFFULL;
     view_key_value = view_key_value.to_montgomery_form();
 
@@ -64,7 +64,7 @@ TEST(stdlib_pedersen_note, test_pedersen_note_zero)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    fr::field_t view_key_value = fr::random_element();
+    fr::field_t view_key_value = fr::field_t::random_element();
     view_key_value.data[3] = view_key_value.data[3] & 0x3FFFFFFFFFFFFFFFULL;
     view_key_value = view_key_value.to_montgomery_form();
 

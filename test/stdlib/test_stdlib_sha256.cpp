@@ -26,7 +26,7 @@ typedef stdlib::public_witness_t<waffle::TurboComposer> public_witness_t;
 namespace {
 uint32_t get_random_int()
 {
-    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+    return static_cast<uint32_t>(barretenberg::fr::field_t::random_element().data[0]);
 }
 } // namespace
 

@@ -18,10 +18,10 @@ TEST(mimc_composer, test_mimc_gate_proof)
     fr::field_t c[n];
     for (size_t i = 0; i < n; ++i)
     {
-        c[i] = fr::random_element();
+        c[i] = fr::field_t::random_element();
     }
-    fr::field_t x = fr::random_element();
-    fr::field_t k = fr::random_element();
+    fr::field_t x = fr::field_t::random_element();
+    fr::field_t k = fr::field_t::random_element();
 
     uint32_t x_in_idx = composer.add_variable(x);
     uint32_t k_idx = composer.add_variable(k);

@@ -34,16 +34,16 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
 
     for (size_t i = 0; i < num_gates; ++i)
     {
-        w_1[i] = (fr::random_element());
-        w_2[i] = (fr::random_element());
-        w_3[i] = (fr::random_element());
-        w_4[i] = (fr::random_element());
+        w_1[i] = (fr::field_t::random_element());
+        w_2[i] = (fr::field_t::random_element());
+        w_3[i] = (fr::field_t::random_element());
+        w_4[i] = (fr::field_t::random_element());
 
-        q_1[i] = (fr::random_element());
-        q_2[i] = (fr::random_element());
-        q_3[i] = (fr::random_element());
-        q_4[i] = (fr::random_element());
-        q_m[i] = (fr::random_element());
+        q_1[i] = (fr::field_t::random_element());
+        q_2[i] = (fr::field_t::random_element());
+        q_3[i] = (fr::field_t::random_element());
+        q_4[i] = (fr::field_t::random_element());
+        q_m[i] = (fr::field_t::random_element());
         q_5[i] = (fr::zero);
 
         fr::field_t T0;

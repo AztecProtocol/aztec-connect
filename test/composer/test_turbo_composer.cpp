@@ -20,7 +20,7 @@ using namespace barretenberg;
 namespace {
 uint32_t get_random_int()
 {
-    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+    return static_cast<uint32_t>(barretenberg::fr::field_t::random_element().data[0]);
 }
 } // namespace
 
@@ -123,14 +123,15 @@ TEST(turbo_composer, test_add_gate_proofs)
 TEST(turbo_composer, test_mul_gate_proofs)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
-    fr::field_t q[7]{ fr::random_element(), fr::random_element(), fr::random_element(), fr::random_element(),
-                      fr::random_element(), fr::random_element(), fr::random_element() };
+    fr::field_t q[7]{ fr::field_t::random_element(), fr::field_t::random_element(), fr::field_t::random_element(),
+                      fr::field_t::random_element(), fr::field_t::random_element(), fr::field_t::random_element(),
+                      fr::field_t::random_element() };
     fr::field_t q_inv[7]{
         q[0].invert(), q[1].invert(), q[2].invert(), q[3].invert(), q[4].invert(), q[5].invert(), q[6].invert(),
     };
 
-    fr::field_t a = fr::random_element();
-    fr::field_t b = fr::random_element();
+    fr::field_t a = fr::field_t::random_element();
+    fr::field_t b = fr::field_t::random_element();
     fr::field_t c = -((((q[0] * a) + (q[1] * b)) + q[3]) * q_inv[2]);
     fr::field_t d = -((((q[4] * (a * b)) + q[6]) * q_inv[5]));
 
@@ -223,7 +224,7 @@ TEST(turbo_composer, small_scalar_multipliers)
     grumpkin::g1::mixed_add(origin_points[0], generator, origin_points[1]);
     origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
 
-    grumpkin::fr::field_t scalar_multiplier_entropy = grumpkin::fr::random_element();
+    grumpkin::fr::field_t scalar_multiplier_entropy = grumpkin::fr::field_t::random_element();
     grumpkin::fr::field_t scalar_multiplier_base{ scalar_multiplier_entropy.data[0] & bit_mask, 0, 0, 0 };
     // scalar_multiplier_base.data[0] = scalar_multiplier_base.data[0] | (1ULL);
     scalar_multiplier_base.data[0] = scalar_multiplier_base.data[0] & (~1ULL);
@@ -355,7 +356,7 @@ TEST(turbo_composer, large_scalar_multipliers)
     grumpkin::g1::mixed_add(origin_points[0], generator, origin_points[1]);
     origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
 
-    grumpkin::fr::field_t scalar_multiplier_base = grumpkin::fr::random_element();
+    grumpkin::fr::field_t scalar_multiplier_base = grumpkin::fr::field_t::random_element();
 
     grumpkin::fr::field_t scalar_multiplier = scalar_multiplier_base.from_montgomery_form();
 

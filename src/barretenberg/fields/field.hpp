@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <unistd.h>
+#include "../utils.hpp"
 
 #include "../assert.hpp"
 #include "../types.hpp"
@@ -115,13 +116,15 @@ template <typename FieldParams> class field {
     /**
      * Get a random field element in montgomery form, place in `r`
      **/
-    __attribute__((always_inline)) inline static field_t random_element()
-    {
-        field_t r;
-        int got_entropy = getentropy((void*)r.data, 32);
-        ASSERT(got_entropy == 0);
-        return r.to_montgomery_form();
-    }
+    // __attribute__((always_inline)) inline static field_t random_element(std::mt19937_64& engine)
+    // {
+    //     static std::uniform_int_distribution<uint64_t> dist{ 0ULL, UINT64_MAX };
+
+    //     field_t r;
+    //     int got_entropy = getentropy((void*)r.data, 32);
+    //     ASSERT(got_entropy == 0);
+    //     return r.to_montgomery_form();
+    // }
 
 
 

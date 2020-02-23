@@ -56,14 +56,14 @@
 
 //     for (size_t i = 0; i < n; ++i)
 //     {
-//         state.w_l.at(i) = fr::random_element();
-//         state.w_r.at(i) = fr::random_element();
-//         state.w_o.at(i) = fr::random_element();
-//         widget->q_m.at(i) = fr::random_element();
-//         widget->q_l.at(i) = fr::random_element();
-//         widget->q_r.at(i) = fr::random_element();
-//         widget->q_o.at(i) = fr::random_element();
-//         widget->q_c.at(i) = fr::random_element();
+//         state.w_l.at(i) = fr::field_t::random_element();
+//         state.w_r.at(i) = fr::field_t::random_element();
+//         state.w_o.at(i) = fr::field_t::random_element();
+//         widget->q_m.at(i) = fr::field_t::random_element();
+//         widget->q_l.at(i) = fr::field_t::random_element();
+//         widget->q_r.at(i) = fr::field_t::random_element();
+//         widget->q_o.at(i) = fr::field_t::random_element();
+//         widget->q_c.at(i) = fr::field_t::random_element();
 //     }
 
 //     for (size_t i = 0; i < n; ++i)
@@ -75,7 +75,7 @@
 
 //     state.widgets.emplace_back(std::move(widget));
 
-//     fr::field_t x = fr::random_element();
+//     fr::field_t x = fr::field_t::random_element();
 //     DummyReferenceString fake_srs(n);
 //     fake_srs.compute_dummy_srs(x);
 

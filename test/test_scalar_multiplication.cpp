@@ -225,10 +225,10 @@ TEST(scalar_multiplication, reduce_buckets)
 
     fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * num_initial_points));
 
-    fr::field_t source_scalar = fr::random_element();
+    fr::field_t source_scalar = fr::field_t::random_element();
     for (size_t i = 0; i < num_initial_points; ++i) {
         // source_scalar.self_sqr();
-        source_scalar = fr::random_element();
+        source_scalar = fr::field_t::random_element();
         fr::field_t::__copy(source_scalar, scalars[i]);
     }
 
@@ -348,7 +348,7 @@ TEST(scalar_multiplication, reduce_buckets_basic)
 
     fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * num_initial_points));
 
-    fr::field_t source_scalar = fr::random_element();
+    fr::field_t source_scalar = fr::field_t::random_element();
     for (size_t i = 0; i < num_initial_points; ++i) {
         source_scalar.self_sqr();
         fr::field_t::__copy(source_scalar, scalars[i]);
@@ -445,7 +445,7 @@ TEST(scalar_multiplication, construct_addition_chains)
 
     fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * num_initial_points));
 
-    fr::field_t source_scalar = fr::random_element();
+    fr::field_t source_scalar = fr::field_t::random_element();
     for (size_t i = 0; i < num_initial_points; ++i) {
         source_scalar.self_sqr();
         fr::field_t::__copy(source_scalar, scalars[i]);
@@ -510,7 +510,7 @@ TEST(scalar_multiplication, construct_addition_chains)
 
 //     fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * num_initial_points));
 
-//     fr::field_t source_scalar = fr::random_element();
+//     fr::field_t source_scalar = fr::field_t::random_element();
 //     for (size_t i = 0; i < num_initial_points; ++i) {
 //         source_scalar.self_sqr();
 //         fr::field_t::__copy(source_scalar, scalars[i]);
@@ -543,7 +543,7 @@ TEST(scalar_multiplication, construct_addition_chains)
 
 TEST(scalar_multiplication, endomorphism_split)
 {
-    fr::field_t scalar = fr::random_element();
+    fr::field_t scalar = fr::field_t::random_element();
 
     g1::element expected = g1::group_exponentiation_inner(g1::affine_one, scalar);
 
@@ -574,7 +574,7 @@ TEST(scalar_multiplication, radix_sort)
     constexpr size_t num_rounds = scalar_multiplication::get_num_rounds(target_degree * 2);
     fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * target_degree));
 
-    fr::field_t source_scalar = fr::random_element();
+    fr::field_t source_scalar = fr::field_t::random_element();
     for (size_t i = 0; i < target_degree; ++i) {
         source_scalar.self_sqr();
         fr::field_t::__copy(source_scalar, scalars[i]);
@@ -629,7 +629,7 @@ TEST(scalar_multiplication, oversized_inputs)
 
     fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * target_degree));
 
-    fr::field_t source_scalar = fr::random_element();
+    fr::field_t source_scalar = fr::field_t::random_element();
     for (size_t i = 0; i < target_degree; ++i) {
         source_scalar.self_sqr();
         fr::field_t::__copy(source_scalar, scalars[i]);
@@ -666,7 +666,7 @@ TEST(scalar_multiplication, undersized_inputs)
         (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
     for (size_t i = 0; i < num_points; ++i) {
-        scalars[i] = fr::random_element();
+        scalars[i] = fr::field_t::random_element();
         points[i] = g1::random_affine_element();
     }
 
@@ -698,7 +698,7 @@ TEST(scalar_multiplication, pippenger)
         (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
     for (size_t i = 0; i < num_points; ++i) {
-        scalars[i] = fr::random_element();
+        scalars[i] = fr::field_t::random_element();
         points[i] = g1::random_affine_element();
     }
 
@@ -730,7 +730,7 @@ TEST(scalar_multiplication, pippenger_unsafe)
         (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
     for (size_t i = 0; i < num_points; ++i) {
-        scalars[i] = fr::random_element();
+        scalars[i] = fr::field_t::random_element();
         points[i] = g1::random_affine_element();
     }
 
@@ -762,7 +762,7 @@ TEST(scalar_multiplication, pippenger_one)
         (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
     for (size_t i = 0; i < num_points; ++i) {
-        scalars[i] = fr::random_element();
+        scalars[i] = fr::field_t::random_element();
         points[i] = g1::random_affine_element();
     }
 

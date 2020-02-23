@@ -78,8 +78,8 @@ template <typename base_field, typename Fq2Params> class field2 {
     static inline field_t random_element()
     {
         field_t r;
-        r.c0 = base_field::random_element();
-        r.c1 = base_field::random_element();
+        r.c0 = base_field::field_t::random_element();
+        r.c1 = base_field::field_t::random_element();
         return r;
     }
 

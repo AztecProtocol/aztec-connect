@@ -91,14 +91,15 @@ TEST(standard_composer, test_add_gate_proofs)
 TEST(standard_composer, test_mul_gate_proofs)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
-    fr::field_t q[7]{ fr::random_element(), fr::random_element(), fr::random_element(), fr::random_element(),
-                      fr::random_element(), fr::random_element(), fr::random_element() };
+    fr::field_t q[7]{ fr::field_t::random_element(), fr::field_t::random_element(), fr::field_t::random_element(),
+                      fr::field_t::random_element(), fr::field_t::random_element(), fr::field_t::random_element(),
+                      fr::field_t::random_element() };
     fr::field_t q_inv[7]{
         q[0].invert(), q[1].invert(), q[2].invert(), q[3].invert(), q[4].invert(), q[5].invert(), q[6].invert(),
     };
 
-    fr::field_t a = fr::random_element();
-    fr::field_t b = fr::random_element();
+    fr::field_t a = fr::field_t::random_element();
+    fr::field_t b = fr::field_t::random_element();
     fr::field_t c = -((((q[0] * a) + (q[1] * b)) + q[3]) * q_inv[2]);
     fr::field_t d = -((((q[4] * (a * b)) + q[6]) * q_inv[5]));
 

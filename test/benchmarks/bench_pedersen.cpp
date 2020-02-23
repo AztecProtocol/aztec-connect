@@ -43,9 +43,9 @@ constexpr size_t get_index(const size_t target_count_base)
 void generate_test_pedersen_circuit(waffle::TurboComposer& turbo_composer, size_t num_repetitions)
 {
     plonk::stdlib::field_t<waffle::TurboComposer> left(
-        plonk::stdlib::witness_t(&turbo_composer, barretenberg::fr::random_element()));
+        plonk::stdlib::witness_t(&turbo_composer, barretenberg::fr::field_t::random_element()));
     plonk::stdlib::field_t<waffle::TurboComposer> out(
-        plonk::stdlib::witness_t(&turbo_composer, barretenberg::fr::random_element()));
+        plonk::stdlib::witness_t(&turbo_composer, barretenberg::fr::field_t::random_element()));
 
     for (size_t i = 0; i < num_repetitions; ++i) {
         out = plonk::stdlib::pedersen::compress(left, out);
@@ -58,8 +58,8 @@ waffle::plonk_proof pedersen_proofs[NUM_CIRCUITS];
 
 grumpkin::fq::field_t pedersen_function(const size_t count)
 {
-    grumpkin::fq::field_t left = grumpkin::fq::random_element();
-    grumpkin::fq::field_t out = grumpkin::fq::random_element();
+    grumpkin::fq::field_t left = grumpkin::fq::field_t::random_element();
+    grumpkin::fq::field_t out = grumpkin::fq::field_t::random_element();
     for (size_t i = 0; i < count; ++i) {
         out = plonk::stdlib::group_utils::compress_native(left, out);
     }

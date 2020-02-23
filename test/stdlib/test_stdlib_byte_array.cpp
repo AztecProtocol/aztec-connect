@@ -27,7 +27,7 @@ typedef stdlib::byte_array<waffle::TurboComposer> byte_array;
 namespace {
 inline uint32_t get_random_int()
 {
-    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
+    return static_cast<uint32_t>(barretenberg::fr::field_t::random_element().data[0]);
 }
 } // namespace
 
@@ -73,8 +73,8 @@ TEST(stdlib_byte_array, test_field_t_input_output_consistency)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    fr::field_t a_expected = fr::random_element();
-    fr::field_t b_expected = fr::random_element();
+    fr::field_t a_expected = fr::field_t::random_element();
+    fr::field_t b_expected = fr::field_t::random_element();
 
     field_t a = witness_t(&composer, a_expected);
     field_t b = witness_t(&composer, b_expected);

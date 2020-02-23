@@ -59,7 +59,7 @@ barretenberg::evaluation_domain evaluation_domains[10]{
 
 void generate_scalars(fr::field_t* scalars)
 {
-    fr::field_t T0 = fr::random_element();
+    fr::field_t T0 = fr::field_t::random_element();
     fr::field_t acc;
     fr::field_t::__copy(T0, acc);
     for (size_t i = 0; i < MAX_GATES; ++i) {

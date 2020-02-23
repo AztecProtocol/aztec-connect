@@ -40,8 +40,8 @@ TEST(fr, is_zero)
 
 TEST(fr, random_element)
 {
-    fr::field_t a = fr::random_element();
-    fr::field_t b = fr::random_element();
+    fr::field_t a = fr::field_t::random_element();
+    fr::field_t b = fr::field_t::random_element();
 
     EXPECT_EQ((a == b), false);
     EXPECT_EQ(a.is_zero(), false);
@@ -105,8 +105,8 @@ TEST(fr, from_montgomery_form)
 
 TEST(fr, montgomery_consistency_check)
 {
-    fr::field_t a = fr::random_element();
-    fr::field_t b = fr::random_element();
+    fr::field_t a = fr::field_t::random_element();
+    fr::field_t b = fr::field_t::random_element();
     fr::field_t aR;
     fr::field_t bR;
     fr::field_t aRR;
@@ -140,7 +140,7 @@ TEST(fr, add_mul_consistency)
     fr::field_t multiplicand = { 0x09, 0, 0, 0 };
     multiplicand.self_to_montgomery_form();
 
-    fr::field_t a = fr::random_element();
+    fr::field_t a = fr::field_t::random_element();
     fr::field_t result;
     result = a + a;   // 2
     result += result; // 4
@@ -158,7 +158,7 @@ TEST(fr, sub_mul_consistency)
     fr::field_t multiplicand = { 0x05, 0, 0, 0 };
     multiplicand.self_to_montgomery_form();
 
-    fr::field_t a = fr::random_element();
+    fr::field_t a = fr::field_t::random_element();
     fr::field_t result;
     result = a + a;   // 2
     result += result; // 4
@@ -175,7 +175,7 @@ TEST(fr, sub_mul_consistency)
 
 TEST(fr, lambda)
 {
-    fr::field_t x = fr::random_element();
+    fr::field_t x = fr::field_t::random_element();
 
     fr::field_t lambda_x = { x.data[0], x.data[1], x.data[2], x.data[3] };
     lambda_x = lambda_x * fr::beta;
@@ -195,7 +195,7 @@ TEST(fr, lambda)
 
 TEST(fr, invert)
 {
-    fr::field_t input = fr::random_element();
+    fr::field_t input = fr::field_t::random_element();
     fr::field_t inverse = input.invert();
     fr::field_t result = input * inverse;
 
@@ -221,7 +221,7 @@ TEST(fr, sqrt_random)
 {
     size_t n = 1024;
     for (size_t i = 0; i < n; ++i) {
-        fr::field_t input = fr::random_element().sqr();
+        fr::field_t input = fr::field_t::random_element().sqr();
         fr::field_t root_test = input.sqrt().sqr();
         EXPECT_EQ(root_test, input);
     }
@@ -236,7 +236,7 @@ TEST(fr, one_and_zero)
 
 TEST(fr, copy)
 {
-    fr::field_t result = fr::random_element();
+    fr::field_t result = fr::field_t::random_element();
     fr::field_t expected;
     fr::field_t::__copy(result, expected);
     EXPECT_EQ((result == expected), true);
@@ -244,7 +244,7 @@ TEST(fr, copy)
 
 TEST(fr, neg)
 {
-    fr::field_t a = fr::random_element();
+    fr::field_t a = fr::field_t::random_element();
     fr::field_t b;
     b = -a;
     fr::field_t result;
@@ -308,7 +308,7 @@ TEST(fr, batch_invert)
     fr::field_t inverses[n];
     fr::field_t one = fr::one;
     for (size_t i = 0; i < n; ++i) {
-        coeffs[i] = fr::random_element();
+        coeffs[i] = fr::field_t::random_element();
         fr::field_t::__copy(coeffs[i], inverses[i]);
     }
     fr::field_t::batch_invert(inverses, n);

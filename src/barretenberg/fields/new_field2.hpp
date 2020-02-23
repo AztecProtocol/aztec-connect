@@ -1,5 +1,6 @@
 #pragma once
 
+#include <random>
 #include <stdint.h>
 
 namespace test {
@@ -47,6 +48,11 @@ template <class base_field, class Params> struct field2 {
 
     constexpr field2 frobenius_map() const noexcept;
     constexpr void self_frobenius_map() noexcept;
+
+    static field2 random_element(std::mt19937_64)
+    {
+        return { base_field::field_t::random_element(), base_field::field_t::random_element() };
+    }
 
     static void serialize_to_buffer(const field2& value, uint8_t* buffer)
     {

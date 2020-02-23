@@ -116,8 +116,8 @@ waffle::Prover generate_test_data(const size_t n)
     q_c.resize(n);
 
     for (size_t i = 0; i < n / 4; ++i) {
-        w_l.at(2 * i) = fr::random_element();
-        w_r.at(2 * i) = fr::random_element();
+        w_l.at(2 * i) = fr::field_t::random_element();
+        w_r.at(2 * i) = fr::field_t::random_element();
         w_o.at(2 * i) = w_l.at(2 * i) * w_r.at(2 * i);
         w_o[2 * i] = w_o[2 * i] + w_l[2 * i];
         w_o[2 * i] = w_o[2 * i] + w_r[2 * i];
@@ -128,9 +128,9 @@ waffle::Prover generate_test_data(const size_t n)
         fr::field_t::__copy(fr::one, q_c.at(2 * i));
         fr::field_t::__copy(fr::one, q_m.at(2 * i));
 
-        w_l.at(2 * i + 1) = fr::random_element();
-        w_r.at(2 * i + 1) = fr::random_element();
-        w_o.at(2 * i + 1) = fr::random_element();
+        w_l.at(2 * i + 1) = fr::field_t::random_element();
+        w_r.at(2 * i + 1) = fr::field_t::random_element();
+        w_o.at(2 * i + 1) = fr::field_t::random_element();
 
         T0 = w_l.at(2 * i + 1) + w_r.at(2 * i + 1);
         q_c.at(2 * i + 1) = T0 + w_o.at(2 * i + 1);

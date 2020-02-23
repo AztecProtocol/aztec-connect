@@ -50,7 +50,7 @@ TEST(polynomials, fft_with_small_degree)
     fr::field_t poly[n];
 
     for (size_t i = 0; i < n; ++i) {
-        poly[i] = fr::random_element();
+        poly[i] = fr::field_t::random_element();
         fr::field_t::__copy(poly[i], fft_transform[i]);
     }
 
@@ -75,7 +75,7 @@ TEST(polynomials, basic_fft)
     fr::field_t* result = &data[0];
     fr::field_t* expected = &data[n];
     for (size_t i = 0; i < n; ++i) {
-        result[i] = fr::random_element();
+        result[i] = fr::field_t::random_element();
         fr::field_t::__copy(result[i], expected[i]);
     }
 
@@ -96,7 +96,7 @@ TEST(polynomials, fft_ifft_consistency)
     fr::field_t result[n];
     fr::field_t expected[n];
     for (size_t i = 0; i < n; ++i) {
-        result[i] = fr::random_element();
+        result[i] = fr::field_t::random_element();
         fr::field_t::__copy(result[i], expected[i]);
     }
 
@@ -116,7 +116,7 @@ TEST(polynomials, fft_coset_ifft_consistency)
     fr::field_t result[n];
     fr::field_t expected[n];
     for (size_t i = 0; i < n; ++i) {
-        result[i] = fr::random_element();
+        result[i] = fr::field_t::random_element();
         fr::field_t::__copy(result[i], expected[i]);
     }
 
@@ -143,7 +143,7 @@ TEST(polynomials, fft_coset_ifft_cross_consistency)
     fr::field_t poly_c[4 * n];
 
     for (size_t i = 0; i < n; ++i) {
-        poly_a[i] = fr::random_element();
+        poly_a[i] = fr::field_t::random_element();
         fr::field_t::__copy(poly_a[i], poly_b[i]);
         fr::field_t::__copy(poly_a[i], poly_c[i]);
         expected[i] = poly_a[i] + poly_c[i];
@@ -196,7 +196,7 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
 
     polynomial_arithmetic::coset_ifft(l_1_coefficients, mid_domain);
 
-    fr::field_t z = fr::random_element();
+    fr::field_t z = fr::field_t::random_element();
     fr::field_t shifted_z;
     shifted_z = z * small_domain.root;
     shifted_z *= small_domain.root;
@@ -244,8 +244,8 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
 
     fr::field_t T0;
     for (size_t i = 0; i < n; ++i) {
-        a[i] = fr::random_element();
-        b[i] = fr::random_element();
+        a[i] = fr::field_t::random_element();
+        b[i] = fr::field_t::random_element();
         c[i] = a[i] * b[i];
         c[i].self_neg();
         T0 = a[i] * b[i];
@@ -295,13 +295,13 @@ TEST(polynomials, compute_kate_opening_coefficients)
     fr::field_t* coeffs = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
     fr::field_t* W = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
     for (size_t i = 0; i < n; ++i) {
-        coeffs[i] = fr::random_element();
+        coeffs[i] = fr::field_t::random_element();
         coeffs[i + n] = fr::zero;
     }
     polynomial_arithmetic::copy_polynomial(coeffs, W, 2 * n, 2 * n);
 
     // generate random evaluation point z
-    fr::field_t z = fr::random_element();
+    fr::field_t z = fr::field_t::random_element();
 
     // compute opening polynomial W(X), and evaluation f = F(z)
     fr::field_t f = polynomial_arithmetic::compute_kate_opening_coefficients(W, W, z, n);
@@ -343,7 +343,7 @@ TEST(polynomials, get_lagrange_evaluations)
 
     evaluation_domain domain = evaluation_domain(n);
     domain.compute_lookup_table();
-    fr::field_t z = fr::random_element();
+    fr::field_t z = fr::field_t::random_element();
 
     polynomial_arithmetic::lagrange_evaluations evals = polynomial_arithmetic::get_lagrange_evaluations(z, domain);
 
@@ -388,7 +388,7 @@ TEST(polynomials, barycentric_weight_evaluations)
     std::vector<fr::field_t> barycentric_poly(n);
 
     for (size_t i = 0; i < n / 2; ++i) {
-        poly[i] = fr::random_element();
+        poly[i] = fr::field_t::random_element();
         barycentric_poly[i] = poly[i];
     }
     for (size_t i = n / 2; i < n; ++i) {

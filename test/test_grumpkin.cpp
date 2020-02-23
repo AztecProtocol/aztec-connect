@@ -335,8 +335,8 @@ TEST(grumpkin, group_exponentiation_zero_and_one)
 
 TEST(grumpkin, group_exponentiation_consistency_check)
 {
-    fr::field_t a = fr::random_element();
-    fr::field_t b = fr::random_element();
+    fr::field_t a = fr::field_t::random_element();
+    fr::field_t b = fr::field_t::random_element();
 
     fr::field_t c;
     c = a * b;

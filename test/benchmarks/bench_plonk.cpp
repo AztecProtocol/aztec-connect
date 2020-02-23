@@ -22,8 +22,8 @@ constexpr size_t START = (MAX_GATES) >> (NUM_CIRCUITS - 1);
 
 void generate_test_plonk_circuit(waffle::StandardComposer& composer, size_t num_gates)
 {
-    plonk::stdlib::field_t a(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
-    plonk::stdlib::field_t b(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
+    plonk::stdlib::field_t a(plonk::stdlib::witness_t(&composer, barretenberg::fr::field_t::random_element()));
+    plonk::stdlib::field_t b(plonk::stdlib::witness_t(&composer, barretenberg::fr::field_t::random_element()));
     plonk::stdlib::field_t c(&composer);
     for (size_t i = 0; i < (num_gates / 4) - 4; ++i)
     {

@@ -61,7 +61,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         while (!found_one) {
             // generate a random x-coordinate
-            x = coordinate_field::random_element();
+            x = coordinate_field::field_t::random_element();
             // derive y^2 = x^3 + b
             yy = x.sqr() * x + GroupParams::b;
             // coordinate_field::__sqr(x, yy);
@@ -79,14 +79,14 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         if constexpr (GroupParams::can_hash_to_curve) {
             element output;
             random_coordinates_on_curve(output.x, output.y);
-            output.z = coordinate_field::random_element();
+            output.z = coordinate_field::field_t::random_element();
             typename coordinate_field::field_t zz = output.z.sqr();
             typename coordinate_field::field_t zzz = zz * output.z;
             output.x *= zz;
             output.y *= zzz;
             return output;
         } else {
-            typename subgroup_field::field_t scalar = subgroup_field::random_element();
+            typename subgroup_field::field_t scalar = subgroup_field::field_t::random_element();
             affine_element res = affine_one;
             res = group_exponentiation(res, scalar);
             element result;
