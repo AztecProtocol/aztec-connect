@@ -338,9 +338,9 @@ TEST(fq12, unitary_inverse)
     fq12::field_t input = fq12::random_element();
     fq12::field_t result;
     fq12::unitary_inverse(input, result);
-    EXPECT_EQ(fq6::eq(input.c0, result.c0), true);
-    fq6::__add(input.c1, result.c1, result.c1);
-    EXPECT_EQ(fq6::eq(result.c1, fq6::zero), true);
+    EXPECT_EQ(input.c0, result.c0);
+    result.c1 += input.c1;
+    EXPECT_EQ(result.c1, fq6::field_t::zero);
 }
 
 TEST(fq12, frobenius_map_three)

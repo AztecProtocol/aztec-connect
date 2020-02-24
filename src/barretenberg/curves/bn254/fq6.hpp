@@ -37,30 +37,27 @@ struct Bn254Fq6Params {
     };
 
     // non residue = 9 + i \in Fq2
-    static inline void __mul_by_non_residue(const fq2::field_t& a, fq2::field_t& r)
+    static inline fq2::field_t mul_by_non_residue(const fq2::field_t& a)
     {
         // non residue = 9 + i \in Fq2
         // r.c0 = 9a0 - a1
         // r.c1 = 9a1 + a0
-        fq::field_t T0;
-        fq::field_t T1;
-        fq::field_t T2;
+        fq::field_t T0 = a.c0 + a.c0;
+        T0 += T0;
+        T0 += T0;
+        T0 += a.c0;
+        fq::field_t T1 = a.c1 + a.c1;
+        T1 += T1;
+        T1 += T1;
+        T1 += a.c1;
+        fq::field_t T2 = T0 - a.c1;
 
-        T0 = a.c0 + a.c0; // T0 = 2a.c0
-        T0 += T0;         // T0 = 4a.c0
-        T0 += T0;         // T0 = 8a.c0
-        T0 += a.c0;       // T0 = 9a.c0
-
-        T1 = a.c1 + a.c1; // T1 = 2a.c1
-        T1 += T1;         // T1 = 4a.c1
-        T1 += T1;         // T1 = 8a.c1
-        T1 += a.c1;       // T1 = 9a.c1
-
-        T2 = T0 - a.c1;   // T2 = 9a.c0 - a.c1
-        r.c1 = T1 + a.c0; // r.c1 = 9a.c1 + a.c0
-        r.c0 = T2;
+        return { T2, T1 + a.c0 };
+        T0 = a.c0 + a.c0;
     }
 };
 
-typedef field6<fq2::field_t, Bn254Fq6Params> fq6;
+namespace fq6 {
+typedef field6<fq2::field_t, Bn254Fq6Params> field_t;
+}
 } // namespace barretenberg

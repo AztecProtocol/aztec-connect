@@ -61,7 +61,7 @@ void doubling_step_for_flipped_miller_loop(g2::element& current, fq12::ell_coeff
     current.y = c - k;
     current.z = b * h;
 
-    fq6::__mul_by_non_residue(i, ell.o);
+    ell.o = fq6::field_t::mul_by_non_residue(i);
 
     ell.vw = -h;
     ell.vv = j + j;
@@ -105,7 +105,7 @@ void mixed_addition_step_for_flipped_miller_loop(const g2::element& base, g2::el
     i = d * base.y;
 
     h -= i;
-    fq6::__mul_by_non_residue(h, line.o);
+    line.o = fq6::field_t::mul_by_non_residue(h);
 
     line.vv = -e;
     line.vw = d;
@@ -236,7 +236,7 @@ void final_exponentiation_easy_part(const fq12::field_t& elt, fq12::field_t& r)
     fq12::field_t b;
 
     fq12::copy(elt, a);
-    fq6::__neg(a.c1, a.c1);
+    a.c1 = -a.c1;
     fq12::invert(elt, b);
     fq12::mul(a, b, a);
     fq12::frobenius_map_two(a, b);

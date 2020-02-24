@@ -156,8 +156,8 @@ template <class base, class T> constexpr void field2<base, T>::self_frobenius_ma
 }
 
 template <class base, class T>
-field2<base, T> field2<base, T>::random_element(std::mt19937_64*, std::uniform_int_distribution<uint64_t>*)
+field2<base, T> field2<base, T>::random_element(std::mt19937_64* engine, std::uniform_int_distribution<uint64_t>* dest)
 {
-    return { base::random_element(), base::random_element() };
+    return { base::random_element(engine, dest), base::random_element(engine, dest) };
 }
 } // namespace barretenberg
