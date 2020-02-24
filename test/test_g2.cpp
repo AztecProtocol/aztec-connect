@@ -55,12 +55,12 @@ TEST(g2, dbl_check_against_constants)
                .c1 = { 0xab59b5b9a2452eb6, 0x78966266e1671de6, 0xd93d335ad218672b, 0x120d13a0b0bfe0eb } }
     };
 
-    fq2::__to_montgomery_form(lhs.x, lhs.x);
-    fq2::__to_montgomery_form(lhs.y, lhs.y);
-    fq2::__to_montgomery_form(lhs.z, lhs.z);
-    fq2::__to_montgomery_form(expected.x, expected.x);
-    fq2::__to_montgomery_form(expected.y, expected.y);
-    fq2::__to_montgomery_form(expected.z, expected.z);
+    lhs.x = lhs.x.to_montgomery_form();
+    lhs.y = lhs.y.to_montgomery_form();
+    lhs.z = lhs.z.to_montgomery_form();
+    expected.x = expected.x.to_montgomery_form();
+    expected.y = expected.y.to_montgomery_form();
+    expected.z = expected.z.to_montgomery_form();
 
     g2::element result;
     g2::dbl(lhs, result);
@@ -92,14 +92,14 @@ TEST(g2, mixed_add_check_against_constants)
                .c1 = { 0x18457bf2457b178d, 0x8d9a26e09db091c1, 0xce0fce46e53efa63, 0x2594360eb4eaf8e4 } }
     };
 
-    fq2::__to_montgomery_form(lhs.x, lhs.x);
-    fq2::__to_montgomery_form(lhs.y, lhs.y);
-    fq2::__to_montgomery_form(lhs.z, lhs.z);
-    fq2::__to_montgomery_form(affine_rhs.x, affine_rhs.x);
-    fq2::__to_montgomery_form(affine_rhs.y, affine_rhs.y);
-    fq2::__to_montgomery_form(expected.x, expected.x);
-    fq2::__to_montgomery_form(expected.y, expected.y);
-    fq2::__to_montgomery_form(expected.z, expected.z);
+    lhs.x = lhs.x.to_montgomery_form();
+    lhs.y = lhs.y.to_montgomery_form();
+    lhs.z = lhs.z.to_montgomery_form();
+    affine_rhs.x = affine_rhs.x.to_montgomery_form();
+    affine_rhs.y = affine_rhs.y.to_montgomery_form();
+    expected.x = expected.x.to_montgomery_form();
+    expected.y = expected.y.to_montgomery_form();
+    expected.z = expected.z.to_montgomery_form();
 
     g2::element result;
 
@@ -133,15 +133,16 @@ TEST(g2, add_check_against_constants)
                .c1 = { 0x18457bf2457b178d, 0x8d9a26e09db091c1, 0xce0fce46e53efa63, 0x2594360eb4eaf8e4 } }
     };
 
-    fq2::__to_montgomery_form(lhs.x, lhs.x);
-    fq2::__to_montgomery_form(lhs.y, lhs.y);
-    fq2::__to_montgomery_form(lhs.z, lhs.z);
-    fq2::__to_montgomery_form(rhs.x, rhs.x);
-    fq2::__to_montgomery_form(rhs.y, rhs.y);
-    fq2::__to_montgomery_form(rhs.z, rhs.z);
-    fq2::__to_montgomery_form(expected.x, expected.x);
-    fq2::__to_montgomery_form(expected.y, expected.y);
-    fq2::__to_montgomery_form(expected.z, expected.z);
+    lhs.x = lhs.x.to_montgomery_form();
+    lhs.y = lhs.y.to_montgomery_form();
+    lhs.z = lhs.z.to_montgomery_form();
+    rhs.x = rhs.x.to_montgomery_form();
+    rhs.y = rhs.y.to_montgomery_form();
+    rhs.z = rhs.z.to_montgomery_form();
+
+    expected.x = expected.x.to_montgomery_form();
+    expected.y = expected.y.to_montgomery_form();
+    expected.z = expected.z.to_montgomery_form();
 
     g2::element result;
     g2::add(lhs, rhs, result);
@@ -236,8 +237,7 @@ TEST(g2, mixed_add_exception_test_infinity)
 {
     g2::element lhs = g2::one;
     g2::affine_element rhs = g2::random_affine_element();
-    fq2::__copy(rhs.x, lhs.x);
-    fq2::__neg(rhs.y, lhs.y);
+    lhs = { rhs.x, -rhs.y, fq2::field_t::one };
 
     g2::element result;
     g2::mixed_add(lhs, rhs, result);
@@ -296,17 +296,13 @@ TEST(g2, batch_normalize)
     g2::batch_normalize(normalized, num_points);
 
     for (size_t i = 0; i < num_points; ++i) {
-        fq2::field_t zz;
-        fq2::field_t zzz;
-        fq2::field_t result_x;
-        fq2::field_t result_y;
-        fq2::__sqr(points[i].z, zz);
-        fq2::__mul(points[i].z, zz, zzz);
-        fq2::__mul(normalized[i].x, zz, result_x);
-        fq2::__mul(normalized[i].y, zzz, result_y);
+        fq2::field_t zz = points[i].z.sqr();
+        fq2::field_t zzz = zz * points[i].z;
+        fq2::field_t result_x = normalized[i].x * zz;
+        fq2::field_t result_y = normalized[i].y * zzz;
 
-        EXPECT_EQ(fq2::eq(result_x, points[i].x), true);
-        EXPECT_EQ(fq2::eq(result_y, points[i].y), true);
+        EXPECT_EQ(result_x, points[i].x);
+        EXPECT_EQ(result_y, points[i].y);
     }
 }
 
@@ -327,10 +323,10 @@ TEST(g2, group_exponentiation_check_against_constants)
     };
 
     scalar.self_to_montgomery_form();
-    fq2::__to_montgomery_form(lhs.x, lhs.x);
-    fq2::__to_montgomery_form(lhs.y, lhs.y);
-    fq2::__to_montgomery_form(expected.x, expected.x);
-    fq2::__to_montgomery_form(expected.y, expected.y);
+    lhs.x = lhs.x.to_montgomery_form();
+    lhs.y = lhs.y.to_montgomery_form();
+    expected.x = expected.x.to_montgomery_form();
+    expected.y = expected.y.to_montgomery_form();
 
     g2::affine_element result = g2::group_exponentiation(lhs, scalar);
 
@@ -339,11 +335,11 @@ TEST(g2, group_exponentiation_check_against_constants)
 
 TEST(g2, group_exponentiation_zero_and_one)
 {
-    g2::affine_element result = g2::group_exponentiation(g2::affine_one, fr::zero);
+    g2::affine_element result = g2::group_exponentiation(g2::affine_one, fr::field_t::zero);
 
     EXPECT_EQ(g2::is_point_at_infinity(result), true);
 
-    result = g2::group_exponentiation(g2::affine_one, fr::one);
+    result = g2::group_exponentiation(g2::affine_one, fr::field_t::one);
     EXPECT_EQ(g2::eq(result, g2::affine_one), true);
 }
 

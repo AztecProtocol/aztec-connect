@@ -151,7 +151,7 @@ void ExtendedComposer::combine_linear_relations()
 {
     q_3_next.resize(n);
     for (size_t i = 0; i < n; ++i) {
-        q_3_next[i] = fr::zero;
+        q_3_next[i] = fr::field_t::zero;
     }
     std::vector<quad> potential_quads;
     potential_quads.reserve(w_l.size());
@@ -314,7 +314,9 @@ void ExtendedComposer::combine_linear_relations()
                 deleted_gates[potential_quads[j].gate_indices[1]] = true;
             }
 
-            const auto assign = [](const fr::field_t& input) { return ((input == fr::zero)) ? fr::one : input; };
+            const auto assign = [](const fr::field_t& input) {
+                return ((input == fr::field_t::zero)) ? fr::field_t::one : input;
+            };
             fr::field_t left = -(assign(*potential_quads[j].removed_wire.selectors[0]));
             fr::field_t right = assign(*potential_quads[j].removed_wire.selectors[1]);
 
@@ -331,7 +333,7 @@ void ExtendedComposer::combine_linear_relations()
             q_c[gate_2_index] *= left;
 
             const auto compute_new_selector = [](const auto& wire) {
-                fr::field_t temp = fr::zero;
+                fr::field_t temp = fr::field_t::zero;
                 std::for_each(wire.selectors.begin(), wire.selectors.end(), [&temp](auto x) { temp += *x; });
                 return temp;
             };
@@ -345,7 +347,7 @@ void ExtendedComposer::combine_linear_relations()
             fr::field_t::__copy(new_output, q_3[gate_1_index]);
             fr::field_t::__copy(new_next_output, q_3_next[gate_1_index]);
             q_c[gate_1_index] += q_c[gate_2_index];
-            if (!(fr::zero == q_m[gate_2_index])) {
+            if (!(fr::field_t::zero == q_m[gate_2_index])) {
                 q_m[gate_1_index] += q_m[gate_2_index];
             }
 
@@ -369,11 +371,11 @@ void ExtendedComposer::combine_linear_relations()
                 w_r[gate_2_index] = zero_idx;
                 w_o[gate_2_index] = gate_wires[3].index;
 
-                q_m[gate_2_index] = fr::zero;
-                q_1[gate_2_index] = fr::zero;
-                q_2[gate_2_index] = fr::zero;
-                q_3[gate_2_index] = fr::zero;
-                q_c[gate_2_index] = fr::zero;
+                q_m[gate_2_index] = fr::field_t::zero;
+                q_1[gate_2_index] = fr::field_t::zero;
+                q_2[gate_2_index] = fr::field_t::zero;
+                q_3[gate_2_index] = fr::field_t::zero;
+                q_c[gate_2_index] = fr::field_t::zero;
                 wire_epicycles[w_l[gate_2_index]].push_back({ static_cast<uint32_t>(gate_2_index), WireType::LEFT });
                 wire_epicycles[w_r[gate_2_index]].push_back({ static_cast<uint32_t>(gate_2_index), WireType::RIGHT });
                 wire_epicycles[w_o[gate_2_index]].push_back({ static_cast<uint32_t>(gate_2_index), WireType::OUTPUT });
@@ -493,15 +495,15 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
     }
     size_t new_n = 1UL << log2_n;
     for (size_t i = adjusted_n; i < new_n; ++i) {
-        q_1.emplace_back(fr::zero);
-        q_2.emplace_back(fr::zero);
-        q_3.emplace_back(fr::zero);
-        q_3_next.emplace_back(fr::zero);
-        q_m.emplace_back(fr::zero);
-        q_c.emplace_back(fr::zero);
-        q_left_bools.emplace_back(fr::zero);
-        q_right_bools.emplace_back(fr::zero);
-        q_output_bools.emplace_back(fr::zero);
+        q_1.emplace_back(fr::field_t::zero);
+        q_2.emplace_back(fr::field_t::zero);
+        q_3.emplace_back(fr::field_t::zero);
+        q_3_next.emplace_back(fr::field_t::zero);
+        q_m.emplace_back(fr::field_t::zero);
+        q_c.emplace_back(fr::field_t::zero);
+        q_left_bools.emplace_back(fr::field_t::zero);
+        q_right_bools.emplace_back(fr::field_t::zero);
+        q_output_bools.emplace_back(fr::field_t::zero);
         adjusted_gate_indices.push_back(static_cast<uint32_t>(i));
         // ++bar;
     }
@@ -524,26 +526,26 @@ std::shared_ptr<proving_key> ExtendedComposer::compute_proving_key()
     polynomial poly_q_bo(new_n);
 
     for (size_t i = 0; i < new_n; ++i) {
-        poly_q_m[i] = fr::zero;
-        poly_q_1[i] = fr::zero;
-        poly_q_2[i] = fr::zero;
-        poly_q_3[i] = fr::zero;
-        poly_q_c[i] = fr::zero;
-        poly_q_bl[i] = fr::zero;
-        poly_q_br[i] = fr::zero;
-        poly_q_bo[i] = fr::zero;
-        poly_q_3_next[i] = fr::zero;
+        poly_q_m[i] = fr::field_t::zero;
+        poly_q_1[i] = fr::field_t::zero;
+        poly_q_2[i] = fr::field_t::zero;
+        poly_q_3[i] = fr::field_t::zero;
+        poly_q_c[i] = fr::field_t::zero;
+        poly_q_bl[i] = fr::field_t::zero;
+        poly_q_br[i] = fr::field_t::zero;
+        poly_q_bo[i] = fr::field_t::zero;
+        poly_q_3_next[i] = fr::field_t::zero;
     }
     for (size_t i = 0; i < public_inputs.size(); ++i) {
-        poly_q_m[i] = fr::zero;
-        poly_q_1[i] = fr::zero;
-        poly_q_2[i] = fr::zero;
-        poly_q_3[i] = fr::zero;
-        poly_q_c[i] = fr::zero;
-        poly_q_bl[i] = fr::zero;
-        poly_q_br[i] = fr::zero;
-        poly_q_bo[i] = fr::zero;
-        poly_q_3_next[i] = fr::zero;
+        poly_q_m[i] = fr::field_t::zero;
+        poly_q_1[i] = fr::field_t::zero;
+        poly_q_2[i] = fr::field_t::zero;
+        poly_q_3[i] = fr::field_t::zero;
+        poly_q_c[i] = fr::field_t::zero;
+        poly_q_bl[i] = fr::field_t::zero;
+        poly_q_br[i] = fr::field_t::zero;
+        poly_q_bo[i] = fr::field_t::zero;
+        poly_q_3_next[i] = fr::field_t::zero;
     }
     std::vector<bool> fill_tags(new_n, false);
 
@@ -699,15 +701,15 @@ std::shared_ptr<program_witness> ExtendedComposer::compute_witness()
     polynomial poly_w_2(new_n);
     polynomial poly_w_3(new_n);
     for (size_t i = 0; i < new_n; ++i) {
-        poly_w_1[i] = (fr::zero);
-        poly_w_2[i] = (fr::zero);
-        poly_w_3[i] = (fr::zero);
+        poly_w_1[i] = (fr::field_t::zero);
+        poly_w_2[i] = (fr::field_t::zero);
+        poly_w_3[i] = (fr::field_t::zero);
     }
     const size_t n_delta = new_n - (adjusted_n)-public_inputs.size();
     for (size_t i = 0; i < public_inputs.size(); ++i) {
         fr::field_t::__copy(variables[public_inputs[i]], poly_w_1[i]);
-        fr::field_t::__copy(fr::zero, poly_w_2[i]);
-        fr::field_t::__copy(fr::zero, poly_w_3[i]);
+        fr::field_t::__copy(fr::field_t::zero, poly_w_2[i]);
+        fr::field_t::__copy(fr::field_t::zero, poly_w_3[i]);
     }
     for (size_t i = public_inputs.size(); i < n + n_delta + public_inputs.size(); ++i) {
         if ((i <= n + public_inputs.size()) && deleted_gates[i - public_inputs.size()] == true) {
@@ -846,7 +848,7 @@ ExtendedProver ExtendedComposer::preprocess()
     // //     result = result + t3;
     // //     result = result + t4;
     // //     result = result + arithmetic_widget->q_c[i];
-    // //     if (!(result == fr::zero))
+    // //     if (!(result == fr::field_t::zero))
     // //     {
     // //         size_t failure_idx = i;
     // //         size_t original_failure_idx;
@@ -880,20 +882,20 @@ ExtendedProver ExtendedComposer::preprocess()
     // // printf("bool wires...\n");
     // // for (size_t i = 0; i < bool_widget->q_bl.get_size(); ++i)
     // // {
-    // //     if (!(bool_widget->q_bl[i]) == fr::zero).from_montgomery_form()
+    // //     if (!(bool_widget->q_bl[i]) == fr::field_t::zero).from_montgomery_form()
     // //     {
     // //         fr::field_t t = output_state.w_l[i];
     // //         fr::field_t u = t.sqr() - t;
-    // //         if (!(u == fr::zero))
+    // //         if (!(u == fr::field_t::zero))
     // //         {
     // //             printf("bool fail? left \n");
     // //         }
     // //     }
-    // //     if (!(bool_widget->q_br[i]) == fr::zero).from_montgomery_form()
+    // //     if (!(bool_widget->q_br[i]) == fr::field_t::zero).from_montgomery_form()
     // //     {
     // //         fr::field_t t = output_state.w_r[i];
     // //         fr::field_t u = t.sqr() - t;
-    // //         if (!(u == fr::zero))
+    // //         if (!(u == fr::field_t::zero))
     // //         {
     // //             printf("bool fail? right \n");
     // //         }

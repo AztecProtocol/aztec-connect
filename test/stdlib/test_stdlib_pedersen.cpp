@@ -32,10 +32,10 @@ TEST(stdlib_pedersen, test_pedersen)
     fr::field_t right_in = fr::field_t::random_element();
     // ensure left has skew 1, right has skew 0
     if ((left_in.from_montgomery_form().data[0] & 1) == 1) {
-        left_in += fr::one;
+        left_in += fr::field_t::one;
     }
     if ((right_in.from_montgomery_form().data[0] & 1) == 0) {
-        right_in += fr::one;
+        right_in += fr::field_t::one;
     }
     field_t left = public_witness_t(&composer, left_in);
     field_t right = witness_t(&composer, right_in);
@@ -64,13 +64,13 @@ TEST(stdlib_pedersen, test_pedersen)
     if ((left_in.from_montgomery_form().data[0] & 1)
         == 0)
         {
-            fr::field_t two = fr::one + fr::one;
+            fr::field_t two = fr::field_t::one + fr::field_t::one;
             left_in = left_in - two;
         }
     if ((right_in.from_montgomery_form().data[0] & 1)
         == 0)
         {
-            fr::field_t two = fr::one + fr::one;
+            fr::field_t two = fr::field_t::one + fr::field_t::one;
             right_in = right_in - two;
         }
     fr::field_t converted_left = left_in.from_montgomery_form();
@@ -83,7 +83,7 @@ TEST(stdlib_pedersen, test_pedersen)
     barretenberg::wnaf::fixed_wnaf<255, 1, 2>(right_scalar, &right_wnafs[0], right_skew, 0);
 
     const auto compute_split_scalar = [](uint64_t* wnafs, const size_t range) {
-        grumpkin::fr::field_t result = grumpkin::fr::zero;
+        grumpkin::fr::field_t result = grumpkin::fr::field_t::zero;
         grumpkin::fr::field_t three = grumpkin::fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form();
         for (size_t i = 0; i < range; ++i) {
             uint64_t entry = wnafs[i];
@@ -91,9 +91,9 @@ TEST(stdlib_pedersen, test_pedersen)
             prev = prev + prev;
             if ((entry & 0xffffff) == 0) {
                 if (((entry >> 31UL) & 1UL) == 1UL) {
-                    result = prev - grumpkin::fr::one;
+                    result = prev - grumpkin::fr::field_t::one;
                 } else {
-                    result = prev + grumpkin::fr::one;
+                    result = prev + grumpkin::fr::field_t::one;
                 }
             } else {
                 if (((entry >> 31UL) & 1UL) == 1UL) {
@@ -111,10 +111,10 @@ TEST(stdlib_pedersen, test_pedersen)
                                                compute_split_scalar(&right_wnafs[0], 126),
                                                compute_split_scalar(&right_wnafs[126], 2) };
     if (left_skew) {
-        grumpkin_scalars[1] += grumpkin::fr::one;
+        grumpkin_scalars[1] += grumpkin::fr::field_t::one;
     }
     if (right_skew) {
-        grumpkin_scalars[3] += grumpkin::fr::one;
+        grumpkin_scalars[3] += grumpkin::fr::field_t::one;
     }
 
     grumpkin::g1::affine_element grumpkin_points[4]{
@@ -156,9 +156,9 @@ TEST(stdlib_pedersen, test_pedersen_large)
     fr::field_t right_in = fr::field_t::random_element();
     // ensure left has skew 1, right has skew 0
     if ((left_in.from_montgomery_form().data[0] & 1)
-        == 1) { left_in += fr::one; }
+        == 1) { left_in += fr::field_t::one; }
     if ((right_in.from_montgomery_form().data[0] & 1)
-        == 0) { right_in += fr::one; }
+        == 0) { right_in += fr::field_t::one; }
     field_t left = witness_t(&composer, left_in);
     field_t right = witness_t(&composer, right_in);
 

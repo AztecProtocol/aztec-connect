@@ -56,7 +56,7 @@ template <size_t program_width> void ComposerBase::compute_sigma_permutations(pr
             sigma_polynomial, sigma_mappings[i], key->small_domain);
 
         if (i == 0) {
-            barretenberg::fr::field_t work_root = barretenberg::fr::one;
+            barretenberg::fr::field_t work_root = barretenberg::fr::field_t::one;
             for (size_t j = 0; j < num_public_inputs; ++j) {
                 sigma_polynomial[j] = work_root;
                 work_root *= key->small_domain.root;

@@ -21,7 +21,7 @@ class StandardComposer : public ComposerBase {
         q_2.reserve(size_hint);
         q_3.reserve(size_hint);
         q_c.reserve(size_hint);
-        zero_idx = put_constant_variable(barretenberg::fr::zero);
+        zero_idx = put_constant_variable(barretenberg::fr::field_t::zero);
     };
     StandardComposer(StandardComposer&& other) = default;
     StandardComposer& operator=(StandardComposer&& other) = default;

@@ -5,10 +5,10 @@
 namespace test {
 template <class base, class T> constexpr field2<base, T> field2<base, T>::operator*(const field2& other) const noexcept
 {
-    typename base::field_t t1 = c0 * other.c0;
-    typename base::field_t t2 = c1 * other.c1;
-    typename base::field_t t3 = c0 + c1;
-    typename base::field_t t4 = other.c0 + other.c1;
+    base t1 = c0 * other.c0;
+    base t2 = c1 * other.c1;
+    base t3 = c0 + c1;
+    base t4 = other.c0 + other.c1;
 
     return { t1 - t2, t3 * t4 - (t1 + t2) };
 }
@@ -59,7 +59,7 @@ template <class base, class T> constexpr field2<base, T> field2<base, T>::operat
 
 template <class base, class T> constexpr field2<base, T> field2<base, T>::sqr() const noexcept
 {
-    typename base::field_t t1 = (c0 * c1);
+    base t1 = (c0 * c1);
     return { (c0 + c1) * (c0 - c1), t1 + t1 };
 }
 
@@ -110,7 +110,7 @@ template <class base, class T> constexpr void field2<base, T>::self_neg() noexce
 
 template <class base, class T> constexpr field2<base, T> field2<base, T>::invert() const noexcept
 {
-    typename base::field_t t3 = (c0.sqr() + c1.sqr()).invert();
+    base t3 = (c0.sqr() + c1.sqr()).invert();
     return { c0 * t3, -(c1 * t3) };
 }
 
@@ -153,5 +153,11 @@ template <class base, class T> constexpr field2<base, T> field2<base, T>::froben
 template <class base, class T> constexpr void field2<base, T>::self_frobenius_map() noexcept
 {
     c1.self_neg();
+}
+
+template <class base, class T>
+field2<base, T> field2<base, T>::random_element(std::mt19937_64*, std::uniform_int_distribution<uint64_t>*)
+{
+    return { base::random_element(), base::random_element() };
 }
 } // namespace test

@@ -120,7 +120,12 @@ class FrParams {
     static constexpr uint64_t Q_minus_one_over_two_3 = 0x183227397UL;
 };
 
-typedef field<FrParams> fr;
+namespace fr
+{
+typedef test::field<FrParams> field_t;
+}
+
+// typedef field<FrParams> fr;
 
 // inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fr::field_t const& a)
 // {

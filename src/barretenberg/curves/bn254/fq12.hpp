@@ -4,10 +4,8 @@
 #include "./fq2.hpp"
 #include "./fq6.hpp"
 
-namespace barretenberg
-{
-struct Bn254Fq12Params
-{
+namespace barretenberg {
+struct Bn254Fq12Params {
     static constexpr fq2::field_t frobenius_coefficients_1{
         { 0xaf9ba69633144907UL, 0xca6b1d7387afb78aUL, 0x11bded5ef08a2087UL, 0x02f34d751a1f3a7cUL },
         { 0xa222ae234c492d72UL, 0xd00f02a4565de15bUL, 0xdc2ff3a253dfc926UL, 0x10a75716b3899551UL }
@@ -24,5 +22,5 @@ struct Bn254Fq12Params
     };
 };
 
-typedef field12<fq2, fq6, Bn254Fq12Params> fq12;
+typedef field12<fq2::field_t, fq6, Bn254Fq12Params> fq12;
 } // namespace barretenberg

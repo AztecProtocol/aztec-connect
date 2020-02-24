@@ -40,10 +40,10 @@ namespace waffle
         plonk_linear_terms result;
 
         barretenberg::fr::field_t T0;
-        barretenberg::fr::field_t z_contribution = barretenberg::fr::one;
+        barretenberg::fr::field_t z_contribution = barretenberg::fr::field_t::one;
         for (size_t i = 0; i < program_settings::program_width; ++i)
         {
-            barretenberg::fr::field_t coset_generator = (i == 0) ? barretenberg::fr::one : barretenberg::fr::coset_generators[i - 1];
+            barretenberg::fr::field_t coset_generator = (i == 0) ? barretenberg::fr::field_t::one : barretenberg::fr::field_t::coset_generators[i - 1];
             T0 = z_beta * coset_generator;
             T0 += wire_evaluations[i];
             T0 += gamma;
@@ -53,7 +53,7 @@ namespace waffle
         T0 = l_1 * alpha_cubed;
         result.z_1 += T0;
 
-        barretenberg::fr::field_t sigma_contribution = barretenberg::fr::one;
+        barretenberg::fr::field_t sigma_contribution = barretenberg::fr::field_t::one;
         for (size_t i = 0; i < program_settings::program_width - 1; ++i)
         {
             barretenberg::fr::field_t permutation_evaluation = barretenberg::fr::field_t::serialize_from_buffer(&transcript.get_element("sigma_" + std::to_string(i + 1))[0]);

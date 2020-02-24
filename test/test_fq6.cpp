@@ -139,27 +139,27 @@ TEST(fq6, mul_check_against_constants)
 {
     fq6::field_t a = {
         .c0 = { .c0 = { 0xa7e3494fc528b8c8, 0xc8c8906c9682e43f, 0xc6e76fc21152721c, 0x12a4c3ee3ff10dbd },
-                .c1 = { 0x887ce62a3ae2a578, 0x70caee28e1942bac, 0xc1a58242c34ff94f, 0xb154d910b492542 } },
+                .c1 = { 0x887ce62a3ae2a578, 0x70caee28e1942bac, 0xc1a58242c34ff94f, 0x0b154d910b492542 } },
         .c1 = { .c0 = { 0x8c885006cc08667a, 0xee0b6c4a0dbb9592, 0xa755229d6272b51e, 0x2629b93f67eb8dd6 },
                 .c1 = { 0xe4ececfd79a858ea, 0xd68b54a557d3a745, 0x11583e88259747aa, 0x1843766463ee1ad4 } },
         .c2 = { .c0 = { 0x986c9795d5703de6, 0x57987869bb56865f, 0x42bb014b1256a07b, 0x1388b70999724ec8 },
                 .c1 = { 0x1ac82ca3e5494c3d, 0xc88fad298864779d, 0xc6d8b5505d04bdaa, 0x26426a0b70727a4d } }
     };
     fq6::field_t b = {
-        .c0 = { .c0 = { 0xdd7298233cd1b137, 0x26d2c68a832cb24, 0xbbab93115cbb50bb, 0x2aa110dfddd74cdf },
+        .c0 = { .c0 = { 0xdd7298233cd1b137, 0x026d2c68a832cb24, 0xbbab93115cbb50bb, 0x2aa110dfddd74cdf },
                 .c1 = { 0x4f4f74ad1223b0d8, 0x338a7892782a6432, 0xa5691849f99e6ac3, 0x24b57a6e0862e7fc } },
         .c1 = { .c0 = { 0x462cb81e0326de60, 0x4f43a8b4bd7ec7f3, 0xebdf4944e5d45872, 0x1bda04585d1e5734 },
                 .c1 = { 0xc88dc3fccb7def5a, 0x4363011c6f7e5ddf, 0x22ae64ed8c54e29d, 0x1ca466f35116b625 } },
         .c2 = { .c0 = { 0xc594e787e224746a, 0xc3d7d28811903ae5, 0xc56df7874c74120e, 0x252d38bf0b1e7e90 },
-                .c1 = { 0xbc5e4e1584480db3, 0x5adcfa1d2fca7c5e, 0xe47f725d6a7381e6, 0x4eb7a445804ec46 } }
+                .c1 = { 0xbc5e4e1584480db3, 0x5adcfa1d2fca7c5e, 0xe47f725d6a7381e6, 0x04eb7a445804ec46 } }
     };
     fq6::field_t expected = {
-        .c0 = { .c0 = { 0x774f378764a25ae1, 0xa233ed1ce173ca63, 0xd17c631b84f48368, 0xe09a8d87850c96e },
-                .c1 = { 0x73ac39b5e9b9dbed, 0xf7f67afbfcbd26e2, 0x615245fa820a57f7, 0xc752643305ac50f } },
-        .c1 = { .c0 = { 0xd106f17bee42abe1, 0xe29882030d238c60, 0x58001634ca9d66d1, 0xecae4532209b838 },
-                .c1 = { 0x4b2fbc422420f06a, 0x3a8e5b388fdedd1f, 0x6006b4471134540, 0xd4fee4f7966d63d } },
+        .c0 = { .c0 = { 0x774f378764a25ae1, 0xa233ed1ce173ca63, 0xd17c631b84f48368, 0x0e09a8d87850c96e },
+                .c1 = { 0x73ac39b5e9b9dbed, 0xf7f67afbfcbd26e2, 0x615245fa820a57f7, 0x0c752643305ac50f } },
+        .c1 = { .c0 = { 0xd106f17bee42abe1, 0xe29882030d238c60, 0x58001634ca9d66d1, 0x0ecae4532209b838 },
+                .c1 = { 0x4b2fbc422420f06a, 0x3a8e5b388fdedd1f, 0x06006b4471134540, 0x0d4fee4f7966d63d } },
         .c2 = { .c0 = { 0x4ffcbaa876979a1c, 0x32b7c1ef7d251306, 0x1b4e0712f969804e, 0x200592dfe71b710f },
-                .c1 = { 0xe3eb378754bfb1ac, 0x6b517c1cae53d784, 0xd1b29c0eb1e4d46f, 0x8b42f13fdd14172 } }
+                .c1 = { 0xe3eb378754bfb1ac, 0x6b517c1cae53d784, 0xd1b29c0eb1e4d46f, 0x08b42f13fdd14172 } }
     };
     fq6::field_t result;
     fq6::__mul(a, b, result);

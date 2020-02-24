@@ -112,7 +112,10 @@ class Bn254FqParams {
                                                       0x255b297c2ed174eb, 0x030152cae7a7b3f0, 0x110bca8c81af9320 };
 };
 
-typedef field<Bn254FqParams> fq;
+namespace fq {
+typedef test::field<Bn254FqParams> field_t;
+}
+// typedef field<Bn254FqParams> fq;
 
 // inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fq::field_t const& a)
 // {

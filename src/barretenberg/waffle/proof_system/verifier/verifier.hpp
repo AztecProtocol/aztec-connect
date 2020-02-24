@@ -13,8 +13,6 @@
 
 namespace waffle {
 template <typename program_settings> class VerifierBase {
-    typedef barretenberg::fr fr;
-    typedef barretenberg::g1 g1;
 
   public:
     VerifierBase(std::shared_ptr<verification_key> verifier_key = nullptr,

@@ -15,12 +15,12 @@ class evaluation_domain {
         , log2_thread_size(0)
         , log2_num_threads(0)
         , generator_size(0)
-        , root(fr::zero)
-        , root_inverse(fr::zero)
-        , domain(fr::zero)
-        , domain_inverse(fr::zero)
-        , generator(fr::zero)
-        , generator_inverse(fr::zero)
+        , root(fr::field_t::zero)
+        , root_inverse(fr::field_t::zero)
+        , domain(fr::field_t::zero)
+        , domain_inverse(fr::field_t::zero)
+        , generator(fr::field_t::zero)
+        , generator_inverse(fr::field_t::zero)
         , roots(nullptr){};
 
     evaluation_domain(const size_t domain_size, const size_t target_generator_size = 0);

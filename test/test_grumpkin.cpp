@@ -39,9 +39,11 @@ TEST(grumpkin, eq)
 TEST(grumpkin, check_group_modulus)
 {
     // g1::affine_element expected = g1::affine_one;
-    fr::field_t exponent =
-        fr::field_t{ fr::modulus.data[0] - 1, fr::modulus.data[1], fr::modulus.data[2], fr::modulus.data[3] }
-            .to_montgomery_form();
+    fr::field_t exponent = fr::field_t{ fr::field_t::modulus.data[0] - 1,
+                                        fr::field_t::modulus.data[1],
+                                        fr::field_t::modulus.data[2],
+                                        fr::field_t::modulus.data[3] }
+                               .to_montgomery_form();
     printf("a\n");
     g1::element result = g1::group_exponentiation_no_endo(g1::one, exponent);
     printf("b\n");
@@ -324,11 +326,11 @@ TEST(grumpkin, batch_normalize)
 
 TEST(grumpkin, group_exponentiation_zero_and_one)
 {
-    g1::affine_element result = g1::group_exponentiation(g1::affine_one, fr::zero);
+    g1::affine_element result = g1::group_exponentiation(g1::affine_one, fr::field_t::zero);
 
     EXPECT_EQ(g1::is_point_at_infinity(result), true);
 
-    result = g1::group_exponentiation(g1::affine_one, fr::one);
+    result = g1::group_exponentiation(g1::affine_one, fr::field_t::one);
 
     EXPECT_EQ(g1::eq(result, g1::affine_one), true);
 }

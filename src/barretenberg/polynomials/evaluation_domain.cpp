@@ -44,7 +44,7 @@ void compute_lookup_table_single(const fr::field_t& input_root,
         const size_t m = 1UL << (i + 1);
         const fr::field_t round_root = input_root.pow(static_cast<uint64_t>(size / (2 * m)));
         fr::field_t* const current_round_roots = round_roots[i];
-        current_round_roots[0] = fr::one;
+        current_round_roots[0] = fr::field_t::one;
         for (size_t j = 1; j < m; ++j) {
             current_round_roots[j] = current_round_roots[j - 1] * round_root;
         }
@@ -64,8 +64,8 @@ evaluation_domain::evaluation_domain(const size_t domain_size, const size_t targ
     , root_inverse(root.invert())
     , domain(fr::field_t{ size, 0, 0, 0 }.to_montgomery_form())
     , domain_inverse(domain.invert())
-    , generator(fr::coset_generators[0])
-    , generator_inverse(fr::multiplicative_generator_inverse)
+    , generator(fr::field_t::coset_generators[0])
+    , generator_inverse(fr::field_t::multiplicative_generator_inverse)
     , roots(nullptr)
 {
     ASSERT((1UL << log2_size) == size || (size == 0));

@@ -1,21 +1,17 @@
 #pragma once
 
-namespace barretenberg
-{
-template <typename quadratic_field, typename base_field, typename Fq12Params> class field12
-{
+namespace barretenberg {
+template <typename quadratic_field, typename base_field, typename Fq12Params> class field12 {
   public:
-    struct field_t
-    {
+    struct field_t {
         typename base_field::field_t c0;
         typename base_field::field_t c1;
     };
 
-    struct ell_coeffs
-    {
-        typename quadratic_field::field_t o;
-        typename quadratic_field::field_t vw;
-        typename quadratic_field::field_t vv;
+    struct ell_coeffs {
+        quadratic_field o;
+        quadratic_field vw;
+        quadratic_field vv;
     };
 
     static constexpr field_t zero{ base_field::zero, base_field::zero };
@@ -23,11 +19,10 @@ template <typename quadratic_field, typename base_field, typename Fq12Params> cl
 
     static inline void mul_by_non_residue(const typename base_field::field_t& a, typename base_field::field_t& r)
     {
-        typename quadratic_field::field_t T0;
-        quadratic_field::__copy(a.c0, T0);
+        quadratic_field T0 = a.c0;
         base_field::__mul_by_non_residue(a.c2, r.c0);
-        quadratic_field::__copy(a.c1, r.c2);
-        quadratic_field::__copy(T0, r.c1);
+        r.c2 = a.c1;
+        r.c1 = T0;
     }
 
     static inline void add(const field_t& a, const field_t& b, field_t& r)
@@ -79,72 +74,69 @@ template <typename quadratic_field, typename base_field, typename Fq12Params> cl
     static inline void sparse_mul(const field_t& a, const ell_coeffs& ell, field_t& r)
     {
         // multiplicand is sparse fp12 element (ell.0, 0, ell.vv) + \beta(0, ell.vw, 0)
-        typename quadratic_field::field_t d0;
-        typename quadratic_field::field_t d2;
-        typename quadratic_field::field_t d4;
-        typename quadratic_field::field_t t2;
-        typename quadratic_field::field_t t1;
-        typename quadratic_field::field_t t0;
-        typename quadratic_field::field_t s0;
-        typename quadratic_field::field_t s1;
-        typename quadratic_field::field_t t3;
-        typename quadratic_field::field_t t4;
+        quadratic_field d0;
+        quadratic_field d2;
+        quadratic_field d4;
+        quadratic_field t2;
+        quadratic_field t1;
+        quadratic_field t0;
+        quadratic_field s0;
+        quadratic_field s1;
+        quadratic_field t3;
+        quadratic_field t4;
 
-        quadratic_field::__mul(a.c0.c0, ell.o, d0);
-        quadratic_field::__mul(a.c0.c2, ell.vv, d2);
-        quadratic_field::__mul(a.c1.c1, ell.vw, d4);
-        quadratic_field::__add(a.c0.c0, a.c1.c1, t2);
-        quadratic_field::__add(a.c0.c0, a.c0.c2, t1);
-        quadratic_field::__add(a.c0.c1, a.c1.c0, s0);
-        quadratic_field::__add(s0, a.c1.c2, s0);
+        d0 = a.c0.c0 * ell.o;
+        d2 = a.c0.c2 * ell.vv;
+        d4 = a.c1.c1 * ell.vw;
+        t2 = a.c0.c0 + a.c1.c1;
+        t1 = a.c0.c0 + a.c0.c2;
+        s0 = a.c0.c1 + a.c1.c0;
+        s0 += a.c1.c2;
 
-        quadratic_field::__mul(a.c0.c1, ell.vv, s1);
-        quadratic_field::__add(s1, d4, t3);
+        s1 = a.c0.c1 * ell.vv;
+        t3 = s1 + d4;
         base_field::__mul_by_non_residue(t3, t4);
-        quadratic_field::__add(t4, d0, r.c0.c0);
-
-        // let z0 = t4;
-
-        quadratic_field::__mul(a.c1.c2, ell.vw, t3);
-        quadratic_field::__add(s1, t3, s1);
-        quadratic_field::__add(t3, d2, t3);
+        r.c0.c0 = t4 + d0;
+        t3 = a.c1.c2 * ell.vw;
+        s1 += t3;
+        t3 += d2;
         base_field::__mul_by_non_residue(t3, t4);
-        quadratic_field::__mul(a.c0.c1, ell.o, t3);
-        quadratic_field::__add(s1, t3, s1);
-        quadratic_field::__add(t4, t3, r.c0.c1);
+        t3 = a.c0.c1 * ell.o;
+        s1 += t3;
+        r.c0.c1 = t4 + t3;
 
-        quadratic_field::__add(ell.o, ell.vv, t0);
-        quadratic_field::__mul(t1, t0, t3);
-        quadratic_field::__sub(t3, d0, t3);
-        quadratic_field::__sub(t3, d2, t3);
-        quadratic_field::__mul(a.c1.c0, ell.vw, t4);
-        quadratic_field::__add(s1, t4, s1);
+        t0 = ell.o + ell.vv;
+        t3 = t1 * t0;
+        t3 -= d0;
+        t3 -= d2;
+        t4 = a.c1.c0 * ell.vw;
+        s1 += t4;
 
-        quadratic_field::__add(a.c0.c2, a.c1.c1, t0);
-        quadratic_field::__add(t3, t4, r.c0.c2);
+        t0 = a.c0.c2 + a.c1.c1;
+        r.c0.c2 = t3 + t4;
 
-        quadratic_field::__add(ell.vv, ell.vw, t1);
-        quadratic_field::__mul(t0, t1, t3);
-        quadratic_field::__sub(t3, d2, t3);
-        quadratic_field::__sub(t3, d4, t3);
+        t1 = ell.vv + ell.vw;
+        t3 = t0 * t1;
+        t3 -= d2;
+        t3 -= d4;
         base_field::__mul_by_non_residue(t3, t4);
-        quadratic_field::__mul(a.c1.c0, ell.o, t3);
-        quadratic_field::__add(s1, t3, s1);
-        quadratic_field::__add(t4, t3, r.c1.c0);
+        t3 = a.c1.c0 * ell.o;
+        s1 += t3;
+        r.c1.c0 = t3 + t4;
 
-        quadratic_field::__mul(a.c1.c2, ell.vv, t3);
-        quadratic_field::__add(s1, t3, s1);
+        t3 = a.c1.c2 * ell.vv;
+        s1 += t3;
         base_field::__mul_by_non_residue(t3, t4);
-        quadratic_field::__add(ell.o, ell.vw, t0);
-        quadratic_field::__mul(t2, t0, t3);
-        quadratic_field::__sub(t3, d0, t3);
-        quadratic_field::__sub(t3, d4, t3);
-        quadratic_field::__add(t4, t3, r.c1.c1);
+        t0 = ell.o + ell.vw;
+        t3 = t0 * t2;
+        t3 -= d0;
+        t3 -= d4;
+        r.c1.c1 = t3 + t4;
 
-        quadratic_field::__add(ell.o, ell.vv, t0);
-        quadratic_field::__add(t0, ell.vw, t0);
-        quadratic_field::__mul(s0, t0, t3);
-        quadratic_field::__sub(t3, s1, r.c1.c2);
+        t0 = ell.o + ell.vv;
+        t0 += ell.vw;
+        t3 = s0 * t0;
+        r.c1.c2 = t3 - s1;
     }
 
     static inline void sqr(const field_t& a, field_t& r)
@@ -259,10 +251,7 @@ template <typename quadratic_field, typename base_field, typename Fq12Params> cl
         base_field::__copy(a.c1, r.c1);
     }
 
-    static inline bool is_zero(const field_t& a)
-    {
-        return (base_field::is_zero(a.c0) && base_field::is_zero(a.c1));
-    }
+    static inline bool is_zero(const field_t& a) { return (base_field::is_zero(a.c0) && base_field::is_zero(a.c1)); }
 
     static inline bool eq(const field_t& a, const field_t& b)
     {

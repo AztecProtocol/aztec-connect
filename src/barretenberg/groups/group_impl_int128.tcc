@@ -2,8 +2,7 @@
 
 #include <cstdint>
 
-namespace barretenberg
-{
+namespace barretenberg {
 
 // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
 template <typename coordinate_field, typename subgroup_field, typename GroupParams>
@@ -25,8 +24,7 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
                                                                                             uint64_t predicate)
 {
     copy(src, dest);
-    if (predicate)
-    {
+    if (predicate) {
         dest->y.self_neg();
     }
 }

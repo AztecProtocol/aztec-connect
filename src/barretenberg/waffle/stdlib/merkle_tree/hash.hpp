@@ -49,7 +49,7 @@ inline barretenberg::fr::field_t sha256(std::string const& input)
     */
     std::vector<uint8_t> inputv(input.begin(), input.end());
     std::vector<uint8_t> output = sha256::sha256(inputv);
-    barretenberg::fr::field_t result = barretenberg::fr::zero;
+    barretenberg::fr::field_t result = barretenberg::fr::field_t::zero;
     if (isLittleEndian()) {
         result.data[0] = __builtin_bswap64(*(uint64_t*)&output[24]);
         result.data[1] = __builtin_bswap64(*(uint64_t*)&output[16]);

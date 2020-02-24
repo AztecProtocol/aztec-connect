@@ -21,8 +21,8 @@ class MiMCComposer : public StandardComposer {
         q_mimc_coefficient.reserve(size_hint);
         q_mimc_selector.reserve(size_hint);
         features |= static_cast<size_t>(Features::MIMC_SELECTORS);
-        q_mimc_coefficient.push_back(barretenberg::fr::zero);
-        q_mimc_selector.push_back(barretenberg::fr::zero);
+        q_mimc_coefficient.push_back(barretenberg::fr::field_t::zero);
+        q_mimc_selector.push_back(barretenberg::fr::field_t::zero);
     };
     MiMCComposer(MiMCComposer&& other) = default;
     MiMCComposer& operator=(MiMCComposer&& other) = default;
@@ -53,8 +53,7 @@ class MiMCComposer : public StandardComposer {
         std::vector<uint32_t> out = StandardComposer::create_range_constraint(witness_index, num_bits);
         const size_t new_n = n;
         const size_t diff = new_n - old_n;
-        for (size_t i = 0; i < diff; ++i)
-        {
+        for (size_t i = 0; i < diff; ++i) {
             q_mimc_coefficient.emplace_back(0);
             q_mimc_selector.emplace_back(0);
         }
@@ -74,8 +73,7 @@ class MiMCComposer : public StandardComposer {
         accumulator_triple out = StandardComposer::create_logic_constraint(a, b, num_bits, is_xor_gate);
         const size_t new_n = n;
         const size_t diff = new_n - old_n;
-        for (size_t i = 0; i < diff; ++i)
-        {
+        for (size_t i = 0; i < diff; ++i) {
             q_mimc_coefficient.emplace_back(0);
             q_mimc_selector.emplace_back(0);
         }
@@ -92,8 +90,7 @@ class MiMCComposer : public StandardComposer {
         StandardComposer::create_big_add_gate(in);
         const size_t new_n = n;
         const size_t diff = new_n - old_n;
-        for (size_t i = 0; i < diff; ++i)
-        {
+        for (size_t i = 0; i < diff; ++i) {
             q_mimc_coefficient.emplace_back(0);
             q_mimc_selector.emplace_back(0);
         }
@@ -108,8 +105,7 @@ class MiMCComposer : public StandardComposer {
         StandardComposer::create_big_add_gate_with_bit_extraction(in);
         const size_t new_n = n;
         const size_t diff = new_n - old_n;
-        for (size_t i = 0; i < diff; ++i)
-        {
+        for (size_t i = 0; i < diff; ++i) {
             q_mimc_coefficient.emplace_back(0);
             q_mimc_selector.emplace_back(0);
         }
@@ -124,8 +120,7 @@ class MiMCComposer : public StandardComposer {
         StandardComposer::create_big_mul_gate(in);
         const size_t new_n = n;
         const size_t diff = new_n - old_n;
-        for (size_t i = 0; i < diff; ++i)
-        {
+        for (size_t i = 0; i < diff; ++i) {
             q_mimc_coefficient.emplace_back(0);
             q_mimc_selector.emplace_back(0);
         }
@@ -140,8 +135,7 @@ class MiMCComposer : public StandardComposer {
         StandardComposer::create_balanced_add_gate(in);
         const size_t new_n = n;
         const size_t diff = new_n - old_n;
-        for (size_t i = 0; i < diff; ++i)
-        {
+        for (size_t i = 0; i < diff; ++i) {
             q_mimc_coefficient.emplace_back(0);
             q_mimc_selector.emplace_back(0);
         }
@@ -157,8 +151,7 @@ class MiMCComposer : public StandardComposer {
         StandardComposer::fix_witness(witness_index, witness_value);
         const size_t new_n = n;
         const size_t diff = new_n - old_n;
-        for (size_t i = 0; i < diff; ++i)
-        {
+        for (size_t i = 0; i < diff; ++i) {
             q_mimc_coefficient.emplace_back(0);
             q_mimc_selector.emplace_back(0);
         }
@@ -168,7 +161,13 @@ class MiMCComposer : public StandardComposer {
     void assert_equal_constant(uint32_t const a_idx, barretenberg::fr::field_t const& b)
     {
         const add_triple gate_coefficients{
-            a_idx, a_idx, a_idx, barretenberg::fr::one, barretenberg::fr::zero, barretenberg::fr::zero, -b,
+            a_idx,
+            a_idx,
+            a_idx,
+            barretenberg::fr::field_t::one,
+            barretenberg::fr::field_t::zero,
+            barretenberg::fr::field_t::zero,
+            -b,
         };
         create_add_gate(gate_coefficients);
     }
@@ -185,29 +184,30 @@ class MiMCComposer : public StandardComposer {
         constexpr size_t fr_size = 32;
         const size_t public_input_size = fr_size * num_public_inputs;
         const transcript::Manifest output = transcript::Manifest(
-            { transcript::Manifest::RoundManifest({ { "circuit_size", 4, true }, { "public_input_size", 4, true } }, "init"),
+            { transcript::Manifest::RoundManifest({ { "circuit_size", 4, true }, { "public_input_size", 4, true } },
+                                                  "init"),
               transcript::Manifest::RoundManifest({ { "public_inputs", public_input_size, false },
-                                                           { "W_1", g1_size, false },
-                                                           { "W_2", g1_size, false },
-                                                           { "W_3", g1_size, false } },
-                                                         "beta"),
+                                                    { "W_1", g1_size, false },
+                                                    { "W_2", g1_size, false },
+                                                    { "W_3", g1_size, false } },
+                                                  "beta"),
               transcript::Manifest::RoundManifest({ {} }, "gamma"),
               transcript::Manifest::RoundManifest({ { "Z", g1_size, false } }, "alpha"),
               transcript::Manifest::RoundManifest(
                   { { "T_1", g1_size, false }, { "T_2", g1_size, false }, { "T_3", g1_size, false } }, "z"),
               transcript::Manifest::RoundManifest({ { "w_1", fr_size, false },
-                                                           { "w_2", fr_size, false },
-                                                           { "w_3", fr_size, false },
-                                                           { "w_3_omega", fr_size, false },
-                                                           { "z_omega", fr_size, false },
-                                                           { "sigma_1", fr_size, false },
-                                                           { "sigma_2", fr_size, false },
-                                                           { "r", fr_size, false },
-                                                           { "q_mimc_coefficient", fr_size, false },
-                                                           { "t", fr_size, true } },
-                                                         "nu"),
-              transcript::Manifest::RoundManifest(
-                  { { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } }, "separator") });
+                                                    { "w_2", fr_size, false },
+                                                    { "w_3", fr_size, false },
+                                                    { "w_3_omega", fr_size, false },
+                                                    { "z_omega", fr_size, false },
+                                                    { "sigma_1", fr_size, false },
+                                                    { "sigma_2", fr_size, false },
+                                                    { "r", fr_size, false },
+                                                    { "q_mimc_coefficient", fr_size, false },
+                                                    { "t", fr_size, true } },
+                                                  "nu"),
+              transcript::Manifest::RoundManifest({ { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } },
+                                                  "separator") });
         return output;
     }
 };

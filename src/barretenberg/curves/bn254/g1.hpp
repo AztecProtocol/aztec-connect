@@ -9,7 +9,7 @@ struct Bn254G1Params {
     static constexpr bool USE_ENDOMORPHISM = true;
     static constexpr bool can_hash_to_curve = true;
     static constexpr bool small_elements = true;
-    static constexpr fq::field_t one_x = fq::one;
+    static constexpr fq::field_t one_x = fq::field_t::one;
     static constexpr fq::field_t one_y{
         0xa6ba871b8b1e1b3aUL, 0x14f1d651eb8e167bUL, 0xccdd46def0f28c58UL, 0x1c14ef83340fbe5eUL
     };
@@ -17,5 +17,5 @@ struct Bn254G1Params {
         0x7a17caa950ad28d7UL, 0x1f6ac17ae15521b9UL, 0x334bea4e696bd284UL, 0x2a1f6744ce179d8eUL
     };
 };
-typedef group<fq, fr, Bn254G1Params> g1;
+typedef group<fq::field_t, fr::field_t, Bn254G1Params> g1;
 } // namespace barretenberg

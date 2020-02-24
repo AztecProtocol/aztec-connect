@@ -397,7 +397,7 @@ void fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, con
 
 void coset_fft(fr::field_t* coeffs, const evaluation_domain& domain)
 {
-    scale_by_generator(coeffs, coeffs, domain, fr::one, domain.generator, domain.generator_size);
+    scale_by_generator(coeffs, coeffs, domain, fr::field_t::one, domain.generator, domain.generator_size);
     fft(coeffs, domain);
 }
 
@@ -422,7 +422,8 @@ void coset_fft(fr::field_t* coeffs,
         coset_generators[i] = coset_generators[i - 1] * primitive_root;
     }
     for (size_t i = domain_extension - 1; i < domain_extension; --i) {
-        scale_by_generator(coeffs, coeffs + (i * domain.size), domain, fr::one, coset_generators[i], domain.size);
+        scale_by_generator(
+            coeffs, coeffs + (i * domain.size), domain, fr::field_t::one, coset_generators[i], domain.size);
     }
 
     for (size_t i = 0; i < domain_extension; ++i) {
@@ -482,7 +483,7 @@ void ifft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, co
 void coset_ifft(fr::field_t* coeffs, const evaluation_domain& domain)
 {
     ifft(coeffs, domain);
-    scale_by_generator(coeffs, coeffs, domain, fr::one, domain.generator_inverse, domain.size);
+    scale_by_generator(coeffs, coeffs, domain, fr::field_t::one, domain.generator_inverse, domain.size);
 }
 
 void add(const fr::field_t* a_coeffs,
@@ -521,7 +522,7 @@ fr::field_t evaluate(const fr::field_t* coeffs, const fr::field_t& z, const size
     for (size_t j = 0; j < num_threads; ++j) {
         fr::field_t z_acc = z.pow(static_cast<uint64_t>(j * range_per_thread));
         size_t offset = j * range_per_thread;
-        evaluations[j] = fr::zero;
+        evaluations[j] = fr::field_t::zero;
         size_t end = (j == num_threads - 1) ? offset + range_per_thread + leftovers : offset + range_per_thread;
         for (size_t i = offset; i < end; ++i) {
             fr::field_t work_var = z_acc * coeffs[i];
@@ -530,7 +531,7 @@ fr::field_t evaluate(const fr::field_t* coeffs, const fr::field_t& z, const size
         }
     }
 
-    fr::field_t r = fr::zero;
+    fr::field_t r = fr::field_t::zero;
     for (size_t j = 0; j < num_threads; ++j) {
         r += evaluations[j];
     }
@@ -570,7 +571,7 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
         fr::field_t work_root = src_domain.generator * root_shift;
         size_t offset = j * target_domain.thread_size;
         for (size_t i = offset; i < offset + target_domain.thread_size; ++i) {
-            l_1_coefficients[i] = work_root - fr::one;
+            l_1_coefficients[i] = work_root - fr::field_t::one;
             work_root *= multiplicand;
         }
     }
@@ -600,7 +601,7 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
     // Each element of `subgroup_roots[i]` contains some root wi^n
     // want to compute (1/n)(wi^n - 1)
     for (size_t i = 0; i < subgroup_size; ++i) {
-        subgroup_roots[i] -= fr::one;
+        subgroup_roots[i] -= fr::field_t::one;
         subgroup_roots[i] *= src_domain.domain_inverse;
     }
     // TODO: this is disgusting! Fix it fix it fix it fix it...
@@ -650,7 +651,7 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
 
     // Step 3: fill array with values of (g.X)^n - 1, scaled by the cofactor
     for (size_t i = 0; i < subgroup_size; ++i) {
-        subgroup_roots[i] -= fr::one;
+        subgroup_roots[i] -= fr::field_t::one;
     }
 
     // Step 4: invert array entries to compute denominator term of 1/Z_H*(X)
@@ -732,12 +733,12 @@ barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluatio
         z_pow.self_sqr();
     }
 
-    fr::field_t numerator = z_pow - fr::one;
+    fr::field_t numerator = z_pow - fr::field_t::one;
 
     fr::field_t denominators[3];
     denominators[0] = z - domain.root_inverse;
-    denominators[1] = z - fr::one;
-    denominators[2] = (z * domain.root.sqr()) - fr::one;
+    denominators[1] = z - fr::field_t::one;
+    denominators[2] = (z * domain.root.sqr()) - fr::field_t::one;
     fr::field_t::batch_invert(denominators, 3);
 
     barretenberg::polynomial_arithmetic::lagrange_evaluations result;
@@ -762,20 +763,20 @@ fr::field_t compute_barycentric_evaluation(fr::field_t* coeffs,
     for (size_t i = 0; i < domain.log2_size; ++i) {
         numerator.self_sqr();
     }
-    numerator -= fr::one;
+    numerator -= fr::field_t::one;
     numerator *= domain.domain_inverse;
 
-    denominators[0] = z - fr::one;
+    denominators[0] = z - fr::field_t::one;
     fr::field_t work_root = domain.root_inverse;
     for (size_t i = 1; i < num_coeffs; ++i) {
         denominators[i] = work_root * z;
-        denominators[i] -= fr::one;
+        denominators[i] -= fr::field_t::one;
         work_root *= domain.root_inverse;
     }
 
     fr::field_t::batch_invert(denominators, num_coeffs);
 
-    fr::field_t result = fr::zero;
+    fr::field_t result = fr::field_t::zero;
 
     for (size_t i = 0; i < num_coeffs; ++i) {
         fr::field_t temp = coeffs[i] * denominators[i];

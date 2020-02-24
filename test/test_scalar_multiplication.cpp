@@ -412,7 +412,7 @@ TEST(scalar_multiplication, add_affine_points)
         points[i] = g1::random_affine_element();
         points_copy[i].x = points[i].x;
         points_copy[i].y = points[i].y;
-        points_copy[i].z = fq::one;
+        points_copy[i].z = fq::field_t::one;
     }
 
     size_t count = num_points - 1;
@@ -559,7 +559,7 @@ TEST(scalar_multiplication, endomorphism_split)
     g1::element result;
     g1::element t1 = g1::group_exponentiation_inner(g1::affine_one, k1);
     g1::affine_element beta = g1::affine_one;
-    beta.x = beta.x * fq::beta;
+    beta.x = beta.x * fq::field_t::beta;
     beta.y = -beta.y;
     g1::element t2 = g1::group_exponentiation_inner(beta, k2);
     g1::add(t1, t2, result);
@@ -646,7 +646,7 @@ TEST(scalar_multiplication, oversized_inputs)
     second = g1::normalize(second);
 
     EXPECT_EQ((first.z == second.z), true);
-    EXPECT_EQ((first.z == fq::one), true);
+    EXPECT_EQ((first.z == fq::field_t::one), true);
     EXPECT_EQ((first.x == second.x), true);
     EXPECT_EQ((first.y == -second.y), true);
 
@@ -800,7 +800,7 @@ TEST(scalar_multiplication, pippenger_mul_by_zero)
 
     g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 2 + 1);
 
-    scalars[0] = fr::zero;
+    scalars[0] = fr::field_t::zero;
     points[0] = g1::affine_one;
     scalar_multiplication::generate_pippenger_point_table(points, points, 1);
 

@@ -17,7 +17,7 @@ struct Bn254G2Params {
         { 0x619dfa9d886be9f6, 0xfe7fd297f59e9b78, 0xff9e1a62231b7dfe, 0x28fd7eebae9e4206 },
         { 0x64095b56c71856ee, 0xdc57f922327d3cbb, 0x55f935be33351076, 0x0da4a0e693fd6482 }
     };
-    static constexpr fq2::field_t b = fq2::twist_coeff_b;
+    static constexpr fq2::field_t b = fq2::field_t::twist_coeff_b;
 };
-typedef group<fq2, fr, Bn254G2Params> g2;
+typedef group<fq2::field_t, fr::field_t, Bn254G2Params> g2;
 } // namespace barretenberg

@@ -17,7 +17,7 @@ using namespace barretenberg;
 point hash_single(const field_t& in, const size_t hash_index)
 {
     field_t scalar = in;
-    if (!(in.additive_constant == fr::zero) || !(in.multiplicative_constant == fr::one)) {
+    if (!(in.additive_constant == fr::field_t::zero) || !(in.multiplicative_constant == fr::field_t::one)) {
         scalar = scalar.normalize();
     }
     waffle::TurboComposer* ctx = in.context;
@@ -42,7 +42,7 @@ point hash_single(const field_t& in, const size_t hash_index)
     fr::field_t scalar_multiplier_base = scalar_multiplier.to_montgomery_form();
 
     if ((scalar_multiplier.data[0] & 1) == 0) {
-        fr::field_t two = fr::one + fr::one;
+        fr::field_t two = fr::field_t::one + fr::field_t::one;
         scalar_multiplier_base = scalar_multiplier_base - two;
     }
     scalar_multiplier_base = scalar_multiplier_base.from_montgomery_form();
@@ -51,9 +51,9 @@ point hash_single(const field_t& in, const size_t hash_index)
 
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    fr::field_t accumulator_offset = (fr::one + fr::one).pow(static_cast<uint64_t>(initial_exponent)).invert();
+    fr::field_t accumulator_offset = (fr::field_t::one + fr::field_t::one).pow(static_cast<uint64_t>(initial_exponent)).invert();
 
-    fr::field_t origin_accumulators[2]{ fr::one, accumulator_offset + fr::one };
+    fr::field_t origin_accumulators[2]{ fr::field_t::one, accumulator_offset + fr::field_t::one };
 
     grumpkin::g1::element* multiplication_transcript =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
@@ -67,7 +67,7 @@ point hash_single(const field_t& in, const size_t hash_index)
         multiplication_transcript[0] = origin_points[0];
         accumulator_transcript[0] = origin_accumulators[0];
     }
-    constexpr fr::field_t one = fr::one;
+    constexpr fr::field_t one = fr::field_t::one;
     constexpr fr::field_t three = ((one + one) + one);
 
     for (size_t i = 0; i < num_quads; ++i) {
@@ -131,11 +131,11 @@ point hash_single(const field_t& in, const size_t hash_index)
                                ctx->add_variable(multiplication_transcript[num_quads].y),
                                ctx->add_variable(x_alpha),
                                ctx->add_variable(accumulator_transcript[num_quads]),
-                               fr::zero,
-                               fr::zero,
-                               fr::zero,
-                               fr::zero,
-                               fr::zero };
+                               fr::field_t::zero,
+                               fr::field_t::zero,
+                               fr::field_t::zero,
+                               fr::field_t::zero,
+                               fr::field_t::zero };
     ctx->create_big_add_gate(add_quad);
 
     point result;

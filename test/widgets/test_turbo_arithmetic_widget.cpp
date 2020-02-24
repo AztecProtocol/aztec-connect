@@ -44,7 +44,7 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
         q_3[i] = (fr::field_t::random_element());
         q_4[i] = (fr::field_t::random_element());
         q_m[i] = (fr::field_t::random_element());
-        q_5[i] = (fr::zero);
+        q_5[i] = (fr::field_t::zero);
 
         fr::field_t T0;
         fr::field_t T1;
@@ -65,7 +65,7 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
 
         T0.self_neg();
         q_c[i] = (T0);
-        q_arith[i] = fr::one;
+        q_arith[i] = fr::field_t::one;
 
     }
 
@@ -166,14 +166,14 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
     key->quotient_large = polynomial(num_gates * 4);
     for (size_t i = 0; i < num_gates * 4; ++i)
     {
-        key->quotient_large[i] = fr::zero;
+        key->quotient_large[i] = fr::field_t::zero;
     }
-    widget.compute_quotient_contribution(fr::one, transcript);
+    widget.compute_quotient_contribution(fr::field_t::one, transcript);
 
     key->quotient_large.coset_ifft(key->large_domain);
     key->quotient_large.fft(key->large_domain);
     for (size_t i = 0; i < num_gates; ++i)
     {
-        EXPECT_EQ(key->quotient_large[i * 4] == fr::zero, true);
+        EXPECT_EQ(key->quotient_large[i * 4] == fr::field_t::zero, true);
     }
 }

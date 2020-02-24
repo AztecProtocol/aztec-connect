@@ -39,10 +39,10 @@ void BoolComposer::create_poly_gate(const poly_triple& in)
 void BoolComposer::create_dummy_gates()
 {
     StandardComposer::create_dummy_gates();
-    q_left_bools.emplace_back(fr::zero);
-    q_right_bools.emplace_back(fr::zero);
-    q_left_bools.emplace_back(fr::zero);
-    q_right_bools.emplace_back(fr::zero);
+    q_left_bools.emplace_back(fr::field_t::zero);
+    q_right_bools.emplace_back(fr::field_t::zero);
+    q_left_bools.emplace_back(fr::field_t::zero);
+    q_right_bools.emplace_back(fr::field_t::zero);
 
     // add a dummy gate to ensure that left / right bool selectors are nonzero
     q_1.emplace_back(0);
@@ -50,8 +50,8 @@ void BoolComposer::create_dummy_gates()
     q_3.emplace_back(0);
     q_m.emplace_back(0);
     q_c.emplace_back(0);
-    q_left_bools.emplace_back(fr::one);
-    q_right_bools.emplace_back(fr::one);
+    q_left_bools.emplace_back(fr::field_t::one);
+    q_right_bools.emplace_back(fr::field_t::one);
     w_l.emplace_back(zero_idx);
     w_r.emplace_back(zero_idx);
     w_o.emplace_back(zero_idx);
@@ -72,9 +72,9 @@ void BoolComposer::process_bool_gates()
     q_right_bools.reserve(n);
     q_output_bools.reserve(n);
     for (size_t i = 0; i < n; ++i) {
-        q_left_bools.emplace_back(is_bool[w_l[i]] ? fr::one : fr::zero);
-        q_right_bools.emplace_back(is_bool[w_r[i]] ? fr::one : fr::zero);
-        q_output_bools.emplace_back(is_bool[w_o[i]] ? fr::one : fr::zero);
+        q_left_bools.emplace_back(is_bool[w_l[i]] ? fr::field_t::one : fr::field_t::zero);
+        q_right_bools.emplace_back(is_bool[w_r[i]] ? fr::field_t::one : fr::field_t::zero);
+        q_output_bools.emplace_back(is_bool[w_o[i]] ? fr::field_t::one : fr::field_t::zero);
     }
 }
 
@@ -102,14 +102,14 @@ std::shared_ptr<proving_key> BoolComposer::compute_proving_key()
     }
     size_t new_n = 1UL << log2_n;
     for (size_t i = total_num_gates; i < new_n; ++i) {
-        q_1.emplace_back(fr::zero);
-        q_2.emplace_back(fr::zero);
-        q_3.emplace_back(fr::zero);
-        q_m.emplace_back(fr::zero);
-        q_c.emplace_back(fr::zero);
-        q_left_bools.emplace_back(fr::zero);
-        q_right_bools.emplace_back(fr::zero);
-        q_output_bools.emplace_back(fr::zero);
+        q_1.emplace_back(fr::field_t::zero);
+        q_2.emplace_back(fr::field_t::zero);
+        q_3.emplace_back(fr::field_t::zero);
+        q_m.emplace_back(fr::field_t::zero);
+        q_c.emplace_back(fr::field_t::zero);
+        q_left_bools.emplace_back(fr::field_t::zero);
+        q_right_bools.emplace_back(fr::field_t::zero);
+        q_output_bools.emplace_back(fr::field_t::zero);
     }
     for (size_t i = 0; i < public_inputs.size(); ++i)
     {
@@ -129,14 +129,14 @@ std::shared_ptr<proving_key> BoolComposer::compute_proving_key()
     polynomial poly_q_bo(new_n);
 
     for (size_t i = 0; i < public_inputs.size(); ++i) {
-        poly_q_m[i] = fr::zero;
-        poly_q_1[i] = fr::zero;
-        poly_q_2[i] = fr::zero;
-        poly_q_3[i] = fr::zero;
-        poly_q_c[i] = fr::zero;
-        poly_q_bl[i] = fr::zero;
-        poly_q_br[i] = fr::zero;
-        poly_q_bo[i] = fr::zero;
+        poly_q_m[i] = fr::field_t::zero;
+        poly_q_1[i] = fr::field_t::zero;
+        poly_q_2[i] = fr::field_t::zero;
+        poly_q_3[i] = fr::field_t::zero;
+        poly_q_c[i] = fr::field_t::zero;
+        poly_q_bl[i] = fr::field_t::zero;
+        poly_q_br[i] = fr::field_t::zero;
+        poly_q_bo[i] = fr::field_t::zero;
     }
     for (size_t i = public_inputs.size(); i < new_n; ++i) {
         poly_q_1[i] = q_1[i - public_inputs.size()];
@@ -277,8 +277,8 @@ std::shared_ptr<program_witness> BoolComposer::compute_witness()
     for (size_t i = 0; i < public_inputs.size(); ++i)
     {
         fr::field_t::__copy(variables[public_inputs[i]], poly_w_1[i]);
-        fr::field_t::__copy(fr::zero, poly_w_2[i]);
-        fr::field_t::__copy(fr::zero, poly_w_3[i]);
+        fr::field_t::__copy(fr::field_t::zero, poly_w_2[i]);
+        fr::field_t::__copy(fr::field_t::zero, poly_w_3[i]);
     }
     for (size_t i = public_inputs.size(); i < new_n; ++i) {
         fr::field_t::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1.at(i));

@@ -30,9 +30,9 @@ TEST(fq2, eq)
 
 TEST(fq2, is_zero)
 {
-    fq2::field_t a = fq2::zero;
-    fq2::field_t b = fq2::zero;
-    fq2::field_t c = fq2::zero;
+    fq2::field_t a = fq2::field_t::zero;
+    fq2::field_t b = fq2::field_t::zero;
+    fq2::field_t c = fq2::field_t::zero;
     b.c0.data[0] = 1;
     c.c1.data[0] = 1;
     EXPECT_EQ(a.is_zero(), true);
@@ -42,12 +42,12 @@ TEST(fq2, is_zero)
 
 TEST(fq2, random_element)
 {
-    fq2::field_t a = fq2::random_element();
-    fq2::field_t b = fq2::random_element();
+    fq2::field_t a = fq2::field_t::random_element();
+    fq2::field_t b = fq2::field_t::random_element();
 
-    EXPECT_EQ(fq2::eq(a, b), false);
-    EXPECT_EQ(fq2::is_zero(a), false);
-    EXPECT_EQ(fq2::is_zero(b), false);
+    EXPECT_EQ(a == b, false);
+    EXPECT_EQ(a.is_zero(), false);
+    EXPECT_EQ(b.is_zero(), false);
 }
 
 TEST(fq2, mul_check_against_constants)
@@ -102,58 +102,26 @@ TEST(fq2, sub_check_against_constants)
 
 TEST(fq2, to_montgomery_form)
 {
-    fq2::field_t result = fq2::zero;
+    fq2::field_t result = fq2::field_t::zero;
     result.c0.data[0] = 1;
-    fq2::field_t expected = fq2::one;
+    fq2::field_t expected = fq2::field_t::one;
     result.self_to_montgomery_form();
     EXPECT_EQ(result, expected);
 }
 
 TEST(fq2, from_montgomery_form)
 {
-    fq2::field_t result = fq2::one;
-    fq2::field_t expected = fq2::zero;
+    fq2::field_t result = fq2::field_t::one;
+    fq2::field_t expected = fq2::field_t::zero;
     expected.c0.data[0] = 1;
     result.self_from_montgomery_form();
     EXPECT_EQ(result, expected);
 }
 
-TEST(fq2, montgomery_consistency_check)
-{
-    fq2::field_t a = fq2::random_element();
-    fq2::field_t b = fq2::random_element();
-    fq2::field_t aR;
-    fq2::field_t bR;
-    fq2::field_t aRR;
-    fq2::field_t bRR;
-    fq2::field_t bRRR;
-    fq2::field_t result_a;
-    fq2::field_t result_b;
-    fq2::field_t result_c;
-    fq2::field_t result_d;
-    fq2::__to_montgomery_form(a, aR);
-    fq2::__to_montgomery_form(aR, aRR);
-    fq2::__to_montgomery_form(b, bR);
-    fq2::__to_montgomery_form(bR, bRR);
-    fq2::__to_montgomery_form(bRR, bRRR);
-    fq2::__mul(aRR, bRR, result_a); // abRRR
-    fq2::__mul(aR, bRRR, result_b); // abRRR
-    fq2::__mul(aR, bR, result_c);   // abR
-    fq2::__mul(a, b, result_d);     // abR^-1
-    EXPECT_EQ(fq2::eq(result_a, result_b), true);
-    fq2::__from_montgomery_form(result_a, result_a); // abRR
-    fq2::__from_montgomery_form(result_a, result_a); // abR
-    fq2::__from_montgomery_form(result_a, result_a); // ab
-    fq2::__from_montgomery_form(result_c, result_c); // ab
-    fq2::__to_montgomery_form(result_d, result_d);   // ab
-    EXPECT_EQ(fq2::eq(result_a, result_c), true);
-    EXPECT_EQ(fq2::eq(result_a, result_d), true);
-}
-
 TEST(fq2, mul_sqr_consistency)
 {
-    fq2::field_t a = fq2::random_element();
-    fq2::field_t b = fq2::random_element();
+    fq2::field_t a = fq2::field_t::random_element();
+    fq2::field_t b = fq2::field_t::random_element();
     fq2::field_t t1;
     fq2::field_t t2;
     fq2::field_t mul_result;
@@ -170,55 +138,43 @@ TEST(fq2, mul_sqr_consistency)
 TEST(fq2, add_mul_consistency)
 {
     fq2::field_t multiplicand = { .c0 = { 0x09, 0x00, 0x00, 0x00 }, .c1 = { 0x00, 0x00, 0x00, 0x00 } };
-    fq2::__to_montgomery_form(multiplicand, multiplicand);
+    multiplicand = multiplicand.to_montgomery_form();
 
-    fq2::field_t a = fq2::random_element();
-    fq2::field_t result;
-    fq2::__add(a, a, result);           // 2
-    fq2::__add(result, result, result); // 4
-    fq2::__add(result, result, result); // 8
-    fq2::__add(result, a, result);      // 9
+    fq2::field_t a = fq2::field_t::random_element();
+    fq2::field_t result = a + a;
+    result += result;
+    result += result;
+    result += a;
 
-    fq2::field_t expected;
-    fq2::__mul(a, multiplicand, expected);
+    fq2::field_t expected = a * multiplicand;
 
-    EXPECT_EQ(fq2::eq(result, expected), true);
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq2, sub_mul_consistency)
 {
     fq2::field_t multiplicand = { .c0 = { 0x05, 0, 0, 0 }, .c1 = { 0x00, 0x00, 0x00, 0x00 } };
-    fq2::__to_montgomery_form(multiplicand, multiplicand);
+    multiplicand = multiplicand.to_montgomery_form();
 
-    fq2::field_t a = fq2::random_element();
-    fq2::field_t result;
-    fq2::__add(a, a, result);           // 2
-    fq2::__add(result, result, result); // 4
-    fq2::__add(result, result, result); // 8
-    fq2::__sub(result, a, result);      // 7
-    fq2::__sub(result, a, result);      // 6
-    fq2::__sub(result, a, result);      // 5
+    fq2::field_t a = fq2::field_t::random_element();
+    fq2::field_t result = a + a;
+    result += result;
+    result += result;
+    result -= a;
+    result -= a;
+    result -= a;
 
-    fq2::field_t expected;
-    fq2::__mul(a, multiplicand, expected);
+    fq2::field_t expected = a * multiplicand;
 
-    EXPECT_EQ(fq2::eq(result, expected), true);
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq2, invert)
 {
-    fq2::field_t input = fq2::random_element();
+    fq2::field_t input = fq2::field_t::random_element();
     fq2::field_t inverse = input.invert();
     fq2::field_t result = inverse * input;
-    EXPECT_EQ(result, fq2::one);
-}
-
-TEST(fq2, copy)
-{
-    fq2::field_t result = fq2::random_element();
-    fq2::field_t expected;
-    fq2::__copy(result, expected);
-    EXPECT_EQ(fq2::eq(result, expected), true);
+    EXPECT_EQ(result, fq2::field_t::one);
 }
 
 TEST(fq2, serialize)
@@ -228,9 +184,9 @@ TEST(fq2, serialize)
     fq::field_t expected_c1 = { 0x12a4e67f76b43210, 0x23e56f898a65cc21, 0x005678add98e5432, 0x1f6789a2cba98700 };
     fq2::field_t expected{ expected_c0, expected_c1 };
 
-    fq2::serialize_to_buffer(expected, &buffer[0]);
+    fq2::field_t::serialize_to_buffer(expected, &buffer[0]);
 
-    fq2::field_t result = fq2::serialize_from_buffer(&buffer[0]);
+    fq2::field_t result = fq2::field_t::serialize_from_buffer(&buffer[0]);
 
-    EXPECT_EQ(fq2::eq(result, expected), true);
+    EXPECT_EQ(result, expected);
 }

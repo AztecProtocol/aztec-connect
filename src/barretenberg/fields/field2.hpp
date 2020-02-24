@@ -24,7 +24,7 @@ template <typename base_field, typename Fq2Params> class field2 {
 
     static inline void __mul_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) { r = a * b; }
 
-    static inline void __mul_by_fq(const typename base_field::field_t& a, const field_t& b, field_t& r)
+    static inline void __mul_by_fq(const base_field& a, const field_t& b, field_t& r)
     {
         r.c0 = a * b.c0;
         r.c1 = a * b.c1;
@@ -78,8 +78,8 @@ template <typename base_field, typename Fq2Params> class field2 {
     static inline field_t random_element()
     {
         field_t r;
-        r.c0 = base_field::field_t::random_element();
-        r.c1 = base_field::field_t::random_element();
+        r.c0 = base_field::random_element();
+        r.c1 = base_field::random_element();
         return r;
     }
 
@@ -93,15 +93,15 @@ template <typename base_field, typename Fq2Params> class field2 {
 
     static inline void serialize_to_buffer(const field_t& value, uint8_t* buffer)
     {
-        base_field::field_t::serialize_to_buffer(value.c0, buffer);
-        base_field::field_t::serialize_to_buffer(value.c1, buffer + sizeof(typename base_field::field_t));
+        base_field::serialize_to_buffer(value.c0, buffer);
+        base_field::serialize_to_buffer(value.c1, buffer + sizeof(base_field));
     }
 
     static inline field_t serialize_from_buffer(uint8_t* buffer)
     {
         field_t result = zero;
-        result.c0 = base_field::field_t::serialize_from_buffer(buffer);
-        result.c1 = base_field::field_t::serialize_from_buffer(buffer + sizeof(typename base_field::field_t));
+        result.c0 = field_t::serialize_from_buffer(buffer);
+        result.c1 = field_t::serialize_from_buffer(buffer + sizeof(base_field));
 
         return result;
     }

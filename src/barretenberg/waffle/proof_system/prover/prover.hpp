@@ -17,9 +17,6 @@
 namespace waffle {
 
 template <typename settings> class ProverBase {
-    typedef barretenberg::fr fr;
-    typedef barretenberg::g1 g1;
-    typedef barretenberg::polynomial polynomial;
 
   public:
     ProverBase(std::shared_ptr<proving_key> input_key = nullptr,

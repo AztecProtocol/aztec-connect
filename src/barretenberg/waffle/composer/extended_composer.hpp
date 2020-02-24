@@ -38,7 +38,7 @@ class ExtendedComposer : public BoolComposer {
     {
         q_3_next.reserve(size_hint);
         features |= static_cast<size_t>(Features::EXTENDED_ARITHMETISATION);
-        zero_selector = barretenberg::fr::zero;
+        zero_selector = barretenberg::fr::field_t::zero;
     };
     ExtendedComposer(ExtendedComposer&& other) = default;
     ExtendedComposer& operator=(ExtendedComposer&& other) = default;

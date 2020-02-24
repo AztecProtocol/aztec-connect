@@ -227,7 +227,7 @@ TEST(stdlib_merkle_tree, test_check_membership)
     Composer composer = Composer();
 
     byte_array zero_value(&composer, VALUES[0]);
-    field_t zero = witness_t(&composer, fr::zero);
+    field_t zero = witness_t(&composer, fr::field_t::zero);
 
     merkle_tree tree = merkle_tree(composer, db);
     bool_t is_member = tree.check_membership(zero_value, zero);

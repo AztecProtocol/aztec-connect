@@ -23,7 +23,7 @@ void generate_test_mimc_circuit(waffle::MiMCComposer& mimc_composer, size_t num_
     plonk::stdlib::field_t<waffle::MiMCComposer> mimc_input(
         plonk::stdlib::witness_t(&mimc_composer, barretenberg::fr::field_t::random_element()));
     plonk::stdlib::field_t<waffle::MiMCComposer> mimc_k(
-        plonk::stdlib::witness_t(&mimc_composer, barretenberg::fr::zero));
+        plonk::stdlib::witness_t(&mimc_composer, barretenberg::fr::field_t::zero));
     plonk::stdlib::field_t<waffle::MiMCComposer> mimc_output(&mimc_composer);
 
     for (size_t i = 0; i < num_repetitions; ++i) {

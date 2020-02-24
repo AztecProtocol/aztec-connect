@@ -246,7 +246,7 @@ fr::field_t ProverTurboFixedBaseWidget::compute_linear_contribution(const fr::fi
 
     fr::field_t q_4_multiplicand = w_o_eval * q_ecc_1_eval * q_c_eval * alpha_f;
 
-    fr::field_t q_5_multiplicand = (fr::one - w_4_eval) * q_ecc_1_eval * q_c_eval * alpha_f;
+    fr::field_t q_5_multiplicand = (fr::field_t::one - w_4_eval) * q_ecc_1_eval * q_c_eval * alpha_f;
 
     fr::field_t q_m_multiplicand = w_o_eval * q_ecc_1_eval * q_c_eval * alpha_g;
 
@@ -318,9 +318,9 @@ barretenberg::fr::field_t VerifierTurboFixedBaseWidget::compute_quotient_evaluat
 
     constexpr fr::field_t three = fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form();
 
-    fr::field_t T1 = (delta + fr::one);
+    fr::field_t T1 = (delta + fr::field_t::one);
     fr::field_t T2 = (delta + three);
-    fr::field_t T3 = (delta - fr::one);
+    fr::field_t T3 = (delta - fr::field_t::one);
     fr::field_t T4 = (delta - three);
 
     fr::field_t accumulator_identity = T1 * T2 * T3 * T4 * alpha_a;
@@ -349,13 +349,13 @@ barretenberg::fr::field_t VerifierTurboFixedBaseWidget::compute_quotient_evaluat
 
     fr::field_t y_accumulator_identity = (T0 + T1) * alpha_d;
 
-    T0 = w_4_eval - fr::one;
+    T0 = w_4_eval - fr::field_t::one;
     T1 = T0 - w_o_eval;
     fr::field_t accumulator_init_identity = T0 * T1 * alpha_e;
 
     fr::field_t x_init_identity = -(w_l_eval * w_o_eval) * alpha_f;
 
-    T0 = fr::one - w_4_eval;
+    T0 = fr::field_t::one - w_4_eval;
     T0 = T0 * q_c_eval;
     T1 = w_r_eval * w_o_eval;
     fr::field_t y_init_identity = (T0 - T1) * alpha_g;
@@ -472,7 +472,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
         scalars.push_back(q_4_term);
     }
 
-    fr::field_t q_5_term_ecc = (fr::one - w_4_eval) * q_ecc_1_eval * q_c_eval * alpha_f;
+    fr::field_t q_5_term_ecc = (fr::field_t::one - w_4_eval) * q_ecc_1_eval * q_c_eval * alpha_f;
 
     constexpr fr::field_t minus_two = -fr::field_t(2);
     fr::field_t q_5_term_arith = (w_4_eval.sqr() - w_4_eval) * (w_4_eval + minus_two) * challenge.alpha_base *

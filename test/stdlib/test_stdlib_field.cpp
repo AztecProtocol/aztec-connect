@@ -23,8 +23,8 @@ typedef stdlib::public_witness_t<waffle::StandardComposer> public_witness_t;
 
 void fibbonaci(waffle::StandardComposer& composer)
 {
-    field_t a(stdlib::witness_t(&composer, fr::one));
-    field_t b(stdlib::witness_t(&composer, fr::one));
+    field_t a(stdlib::witness_t(&composer, fr::field_t::one));
+    field_t b(stdlib::witness_t(&composer, fr::field_t::one));
 
     field_t c = a + b;
 
@@ -36,13 +36,13 @@ void fibbonaci(waffle::StandardComposer& composer)
 }
 uint64_t fidget(waffle::StandardComposer& composer)
 {
-    field_t a(public_witness_t(&composer, fr::one)); // a is a legit wire value in our circuit
-    field_t b(&composer, (fr::one)); // b is just a constant, and should not turn up as a wire value in our circuit
+    field_t a(public_witness_t(&composer, fr::field_t::one)); // a is a legit wire value in our circuit
+    field_t b(&composer, (fr::field_t::one)); // b is just a constant, and should not turn up as a wire value in our circuit
 
     // this shouldn't create a constraint - we just need to scale the addition/multiplication gates that `a` is involved
     // in c should point to the same wire value as a
     field_t c = a + b;
-    field_t d(&composer, fr::coset_generators[0]); // like b, d is just a constant and not a wire value
+    field_t d(&composer, fr::field_t::coset_generators[0]); // like b, d is just a constant and not a wire value
 
     // by this point, we shouldn't have added any constraints in our circuit
     for (size_t i = 0; i < 17; ++i) {
@@ -208,10 +208,10 @@ TEST(stdlib_field, is_zero)
 
     // yuck
     field_t a = (public_witness_t(&composer, fr::field_t::random_element()));
-    field_t b = (public_witness_t(&composer, fr::neg_one));
+    field_t b = (public_witness_t(&composer, fr::field_t::neg_one));
     field_t c_1(&composer, uint256_t(0x1122334455667788, 0x8877665544332211, 0xaabbccddeeff9933, 0x1122112211221122));
     field_t c_2(&composer, uint256_t(0xaabbccddeeff9933, 0x8877665544332211, 0x1122334455667788, 0x1122112211221122));
-    field_t c_3(&composer, barretenberg::fr::one);
+    field_t c_3(&composer, barretenberg::fr::field_t::one);
 
     field_t c_4 = c_1 + c_2;
     a = a * c_4 + c_4; // add some constant terms in to validate our normalization check works
@@ -219,8 +219,8 @@ TEST(stdlib_field, is_zero)
     b = (b - c_1 - c_2) / c_4;
     b = b + c_3;
 
-    field_t d(&composer, fr::zero);
-    field_t e(&composer, fr::one);
+    field_t d(&composer, fr::field_t::zero);
+    field_t e(&composer, fr::field_t::one);
 
     const size_t old_n = composer.get_num_gates();
     bool_t d_zero = d.is_zero();

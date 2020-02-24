@@ -14,8 +14,8 @@ namespace barretenberg {
 template <typename coordinate_field, typename subgroup_field, typename GroupParams> class group {
   public:
     struct affine_element {
-        typename coordinate_field::field_t x;
-        typename coordinate_field::field_t y;
+        coordinate_field x;
+        coordinate_field y;
 
         // bool operator=(const affine_element& other) const
         // {
@@ -25,23 +25,23 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     };
 
     struct element {
-        typename coordinate_field::field_t x;
-        typename coordinate_field::field_t y;
-        typename coordinate_field::field_t z;
+        coordinate_field x;
+        coordinate_field y;
+        coordinate_field z;
 
         // bool operator=(const affine_element& other) const
         // {
         //     bool both_infinity = is_point_at_infinity(*this) && is_point_at_infinity(other);
 
-        //     typename coordinate_field::field_t a_zz = z.sqr();
-        //     typename coordinate_field::field_t a_zzz = a_zz * z;
-        //     typename coordinate_field::field_t b_zz = other.z.sqr();
-        //     typename coordinate_field::field_t b_zzz = b_zz * other.z;
+        //     coordinate_field a_zz = z.sqr();
+        //     coordinate_field a_zzz = a_zz * z;
+        //     coordinate_field b_zz = other.z.sqr();
+        //     coordinate_field b_zzz = b_zz * other.z;
 
-        //     typename coordinate_field::field_t T0 = x * b_zz;
-        //     typename coordinate_field::field_t T1 = y * b_zzz;
-        //     typename coordinate_field::field_t T2 = other.x * a_zz;
-        //     typename coordinate_field::field_t T3 = other.y * a_zzz;
+        //     coordinate_field T0 = x * b_zz;
+        //     coordinate_field T1 = y * b_zzz;
+        //     coordinate_field T2 = other.x * a_zz;
+        //     coordinate_field T3 = other.y * a_zzz;
 
         //     return both_infinity || ((T0 == T2) && (T1 == T3));
         // }
@@ -50,18 +50,17 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     static constexpr element one{ GroupParams::one_x, GroupParams::one_y, coordinate_field::one };
     static constexpr affine_element affine_one{ GroupParams::one_x, GroupParams::one_y };
 
-    static constexpr typename coordinate_field::field_t curve_b = GroupParams::b;
+    static constexpr coordinate_field curve_b = GroupParams::b;
 
-    static inline void random_coordinates_on_curve(typename coordinate_field::field_t& x,
-                                                   typename coordinate_field::field_t& y)
+    static inline void random_coordinates_on_curve(coordinate_field& x, coordinate_field& y)
     {
         bool found_one = false;
-        typename coordinate_field::field_t yy;
-        typename coordinate_field::field_t t0;
+        coordinate_field yy;
+        coordinate_field t0;
 
         while (!found_one) {
             // generate a random x-coordinate
-            x = coordinate_field::field_t::random_element();
+            x = coordinate_field::random_element();
             // derive y^2 = x^3 + b
             yy = x.sqr() * x + GroupParams::b;
             // coordinate_field::__sqr(x, yy);
@@ -79,14 +78,14 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         if constexpr (GroupParams::can_hash_to_curve) {
             element output;
             random_coordinates_on_curve(output.x, output.y);
-            output.z = coordinate_field::field_t::random_element();
-            typename coordinate_field::field_t zz = output.z.sqr();
-            typename coordinate_field::field_t zzz = zz * output.z;
+            output.z = coordinate_field::random_element();
+            coordinate_field zz = output.z.sqr();
+            coordinate_field zzz = zz * output.z;
             output.x *= zz;
             output.y *= zzz;
             return output;
         } else {
-            typename subgroup_field::field_t scalar = subgroup_field::field_t::random_element();
+            subgroup_field scalar = subgroup_field::random_element();
             affine_element res = affine_one;
             res = group_exponentiation(res, scalar);
             element result;
@@ -109,20 +108,20 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         }
     }
 
-    static inline affine_element decompress(const typename coordinate_field::field_t& compressed)
+    static inline affine_element decompress(const coordinate_field& compressed)
     {
         uint64_t y_sign = compressed.data[3] >> 63UL;
         affine_element result{ compressed.to_montgomery_form(), coordinate_field::zero };
 
         result.x.data[3] = result.x.data[3] & 0x7fffffffffffffffUL;
 
-        typename coordinate_field::field_t xxx = result.x.sqr() * result.x;
+        coordinate_field xxx = result.x.sqr() * result.x;
 
-        typename coordinate_field::field_t yy = xxx + GroupParams::b;
+        coordinate_field yy = xxx + GroupParams::b;
 
         result.y = yy.sqrt();
 
-        typename coordinate_field::field_t y_test = result.y.from_montgomery_form();
+        coordinate_field y_test = result.y.from_montgomery_form();
         if ((y_test.data[0] & 1UL) != y_sign) {
             result.y.self_neg();
         }
@@ -135,10 +134,10 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static inline affine_element hash_to_curve(uint64_t seed)
     {
-        typename coordinate_field::field_t input = coordinate_field::zero;
+        coordinate_field input = coordinate_field::zero;
         input.data[0] = seed;
         keccak256 c = hash_field_element((uint64_t*)&input.data[0]);
-        typename coordinate_field::field_t compressed{ c.word64s[0], c.word64s[1], c.word64s[2], c.word64s[3] };
+        coordinate_field compressed{ c.word64s[0], c.word64s[1], c.word64s[2], c.word64s[3] };
         return decompress(compressed);
     }
 
@@ -178,13 +177,13 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         p2.z *= p1.y;
 
         // T0 = x*x
-        typename coordinate_field::field_t T0 = p1.x.sqr();
+        coordinate_field T0 = p1.x.sqr();
 
         // T1 = y*y
-        typename coordinate_field::field_t T1 = p1.y.sqr();
+        coordinate_field T1 = p1.y.sqr();
 
         // T2 = T2*T1 = y*y*y*y
-        typename coordinate_field::field_t T2 = T1.sqr();
+        coordinate_field T2 = T1.sqr();
 
         // T1 = T1 + x = x + y*y
         T1 += p1.x;
@@ -193,7 +192,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         T1.self_sqr();
 
         // T3 = T0 + T2 = xx + y*y*y*y
-        typename coordinate_field::field_t T3 = T0 + T2;
+        coordinate_field T3 = T0 + T2;
 
         // T1 = T1 - T3 = x*x + y*y*y*y + 2*x*x*y*y*y*y - x*x - y*y*y*y = 2*x*x*y*y*y*y = 2*S
         T1 -= T3;
@@ -230,15 +229,15 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     static inline void mixed_add_inner(const element& p1, const affine_element& p2, element& p3) noexcept
     {
         // T0 = z1.z1
-        typename coordinate_field::field_t T0 = p1.z.sqr();
+        coordinate_field T0 = p1.z.sqr();
 
         // T1 = x2.t0 - x1 = x2.z1.z1 - x1
-        typename coordinate_field::field_t T1 = p2.x * T0;
+        coordinate_field T1 = p2.x * T0;
         T1 -= p1.x;
 
         // T2 = T0.z1 = z1.z1.z1
         // T2 = T2.y2 - y1 = y2.z1.z1.z1 - y1
-        typename coordinate_field::field_t T2 = p1.z * T0;
+        coordinate_field T2 = p1.z * T0;
         T2 *= p2.y;
         T2 -= p1.y;
 
@@ -259,7 +258,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         p3.z = T1 + p1.z;
 
         // T3 = T1*T1 = HH
-        typename coordinate_field::field_t T3 = T1.sqr();
+        coordinate_field T3 = T1.sqr();
 
         // z3 = z3 - z1z1 - HH
         T0 += T3;
@@ -309,15 +308,15 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     {
 
         // T0 = z1.z1
-        typename coordinate_field::field_t T0 = p1.z.sqr();
+        coordinate_field T0 = p1.z.sqr();
 
         // T1 = x2.t0 - x1 = x2.z1.z1 - x1
-        typename coordinate_field::field_t T1 = p2.x * T0;
+        coordinate_field T1 = p2.x * T0;
         T1 -= p1.x;
 
         // T2 = T0.z1 = z1.z1.z1
         // T2 = T2.y2 - y1 = y2.z1.z1.z1 - y1
-        typename coordinate_field::field_t T2 = p1.z * T0;
+        coordinate_field T2 = p1.z * T0;
         T2 *= p2.y;
         T2.self_conditional_negate(predicate);
         T2 -= p1.y;
@@ -339,7 +338,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         p3.z = T1 + p1.z;
 
         // T3 = T1*T1 = HH
-        typename coordinate_field::field_t T3 = T1.sqr();
+        coordinate_field T3 = T1.sqr();
 
         // z3 = z3 - z1z1 - HH
         T0 += T3;
@@ -433,18 +432,18 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             set_infinity(p3);
             return;
         }
-        typename coordinate_field::field_t Z1Z1(p1.z.sqr());
-        typename coordinate_field::field_t Z2Z2(p2.z.sqr());
-        typename coordinate_field::field_t S2(Z1Z1 * p1.z);
-        typename coordinate_field::field_t U2(Z1Z1 * p2.x);
+        coordinate_field Z1Z1(p1.z.sqr());
+        coordinate_field Z2Z2(p2.z.sqr());
+        coordinate_field S2(Z1Z1 * p1.z);
+        coordinate_field U2(Z1Z1 * p2.x);
         S2 *= p2.y;
-        typename coordinate_field::field_t U1(Z2Z2 * p1.x);
-        typename coordinate_field::field_t S1(Z2Z2 * p2.z);
+        coordinate_field U1(Z2Z2 * p1.x);
+        coordinate_field S1(Z2Z2 * p2.z);
         S1 *= p1.y;
 
-        typename coordinate_field::field_t F(S2 - S1);
+        coordinate_field F(S2 - S1);
 
-        typename coordinate_field::field_t H(U2 - U1);
+        coordinate_field H(U2 - U1);
 
         if (__builtin_expect(H.is_zero(), 0)) {
             if (F.is_zero()) {
@@ -459,10 +458,10 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         F += F;
 
-        typename coordinate_field::field_t I(H + H);
+        coordinate_field I(H + H);
         I.self_sqr();
 
-        typename coordinate_field::field_t J(H * I);
+        coordinate_field J(H * I);
 
         U1 *= I;
 
@@ -494,9 +493,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     static inline element normalize(const element& src)
     {
         element dest;
-        typename coordinate_field::field_t z_inv = src.z.invert();
-        typename coordinate_field::field_t zz_inv = z_inv.sqr();
-        typename coordinate_field::field_t zzz_inv = zz_inv * z_inv;
+        coordinate_field z_inv = src.z.invert();
+        coordinate_field zz_inv = z_inv.sqr();
+        coordinate_field zzz_inv = zz_inv * z_inv;
 
         dest.x = src.x * zz_inv;
         dest.y = src.y * zzz_inv;
@@ -513,12 +512,12 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
      **/
     static inline void batch_normalize(element* points, size_t num_points)
     {
-        typename coordinate_field::field_t* temporaries = (typename coordinate_field::field_t*)(aligned_alloc(
-            32, sizeof(typename coordinate_field::field_t) * num_points * 2));
-        typename coordinate_field::field_t accumulator = coordinate_field::one;
-        typename coordinate_field::field_t z_inv;
-        typename coordinate_field::field_t zz_inv;
-        typename coordinate_field::field_t zzz_inv;
+        coordinate_field* temporaries =
+            (coordinate_field*)(aligned_alloc(32, sizeof(coordinate_field) * num_points * 2));
+        coordinate_field accumulator = coordinate_field::one;
+        coordinate_field z_inv;
+        coordinate_field zz_inv;
+        coordinate_field zzz_inv;
 
         // Iterate over the points, computing the product of their z-coordinates.
         // At each iteration, store the currently-accumulated z-coordinate in `temporaries`
@@ -574,8 +573,8 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         if (is_point_at_infinity(pt)) {
             return false;
         }
-        typename coordinate_field::field_t xxx = pt.x.sqr() * pt.x + GroupParams::b;
-        typename coordinate_field::field_t yy = pt.y.sqr();
+        coordinate_field xxx = pt.x.sqr() * pt.x + GroupParams::b;
+        coordinate_field yy = pt.y.sqr();
         return (xxx == yy);
     }
 
@@ -584,10 +583,10 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         if (is_point_at_infinity(pt)) {
             return false;
         }
-        typename coordinate_field::field_t zz = pt.z.sqr();
-        typename coordinate_field::field_t bz_6 = zz.sqr() * zz * GroupParams::b;
-        typename coordinate_field::field_t xxx = pt.x.sqr() * pt.x + bz_6;
-        typename coordinate_field::field_t yy = pt.y.sqr();
+        coordinate_field zz = pt.z.sqr();
+        coordinate_field bz_6 = zz.sqr() * zz * GroupParams::b;
+        coordinate_field xxx = pt.x.sqr() * pt.x + bz_6;
+        coordinate_field yy = pt.y.sqr();
         return (xxx == yy);
     }
 
@@ -610,7 +609,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static inline void copy_affine(const affine_element& a, affine_element& r) { r = { a.x, a.y }; }
 
-    static inline element group_exponentiation_no_endo(const element& a, const typename subgroup_field::field_t& scalar)
+    static inline element group_exponentiation_no_endo(const element& a, const subgroup_field& scalar)
     {
         if (scalar == subgroup_field::zero) {
             element result;
@@ -622,7 +621,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         }
         element work_element = a;
 
-        typename subgroup_field::field_t converted_scalar = scalar.from_montgomery_form();
+        subgroup_field converted_scalar = scalar.from_montgomery_form();
 
         const uint64_t maximum_set_bit = converted_scalar.get_msb();
         for (uint64_t i = maximum_set_bit - 1; i < maximum_set_bit; --i) {
@@ -634,9 +633,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         return work_element;
     }
 
-    static inline element group_exponentiation_endo(const element& a, const typename subgroup_field::field_t& scalar)
+    static inline element group_exponentiation_endo(const element& a, const subgroup_field& scalar)
     {
-        typename subgroup_field::field_t converted_scalar = scalar.from_montgomery_form();
+        subgroup_field converted_scalar = scalar.from_montgomery_form();
 
         if (converted_scalar == subgroup_field::zero) {
             element result;
@@ -668,9 +667,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         }
 
         uint64_t wnaf_table[num_rounds * 2];
-        typename subgroup_field::field_t endo_scalar;
-        subgroup_field::field_t::split_into_endomorphism_scalars(
-            converted_scalar, endo_scalar, *(typename subgroup_field::field_t*)&endo_scalar.data[2]);
+        subgroup_field endo_scalar;
+        subgroup_field::split_into_endomorphism_scalars(
+            converted_scalar, endo_scalar, *(subgroup_field*)&endo_scalar.data[2]);
 
         bool skew = false;
         bool endo_skew = false;
@@ -733,7 +732,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         return work_element;
     }
 
-    static inline element group_exponentiation(const element& a, const typename subgroup_field::field_t& scalar)
+    static inline element group_exponentiation(const element& a, const subgroup_field& scalar)
     {
         if constexpr (GroupParams::USE_ENDOMORPHISM) {
             return group_exponentiation_endo(a, scalar);
@@ -741,16 +740,14 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
             return group_exponentiation_no_endo(a, scalar);
         }
     }
-    static inline element group_exponentiation_inner(const affine_element& a,
-                                                     const typename subgroup_field::field_t& scalar)
+    static inline element group_exponentiation_inner(const affine_element& a, const subgroup_field& scalar)
     {
         element point;
         affine_to_jacobian(a, point);
         return group_exponentiation(point, scalar);
     }
 
-    static inline affine_element group_exponentiation(const affine_element& a,
-                                                      const typename subgroup_field::field_t& scalar)
+    static inline affine_element group_exponentiation(const affine_element& a, const subgroup_field& scalar)
     {
         element output = group_exponentiation_inner(a, scalar);
         affine_element result;
@@ -769,15 +766,15 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     {
         bool both_infinity = is_point_at_infinity(a) && is_point_at_infinity(b);
 
-        typename coordinate_field::field_t a_zz = a.z.sqr();
-        typename coordinate_field::field_t a_zzz = a_zz * a.z;
-        typename coordinate_field::field_t b_zz = b.z.sqr();
-        typename coordinate_field::field_t b_zzz = b_zz * b.z;
+        coordinate_field a_zz = a.z.sqr();
+        coordinate_field a_zzz = a_zz * a.z;
+        coordinate_field b_zz = b.z.sqr();
+        coordinate_field b_zzz = b_zz * b.z;
 
-        typename coordinate_field::field_t T0 = a.x * b_zz;
-        typename coordinate_field::field_t T1 = a.y * b_zzz;
-        typename coordinate_field::field_t T2 = b.x * a_zz;
-        typename coordinate_field::field_t T3 = b.y * a_zzz;
+        coordinate_field T0 = a.x * b_zz;
+        coordinate_field T1 = a.y * b_zzz;
+        coordinate_field T2 = b.x * a_zz;
+        coordinate_field T3 = b.y * a_zzz;
 
         return both_infinity || ((T0 == T2) && (T1 == T3));
     }
@@ -804,8 +801,8 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static inline void serialize_to_buffer(const affine_element& value, uint8_t* buffer)
     {
-        coordinate_field::field_t::serialize_to_buffer(value.y, buffer);
-        coordinate_field::field_t::serialize_to_buffer(value.x, buffer + sizeof(typename coordinate_field::field_t));
+        coordinate_field::serialize_to_buffer(value.y, buffer);
+        coordinate_field::serialize_to_buffer(value.x, buffer + sizeof(coordinate_field));
         if (!on_curve(value)) {
             buffer[0] = buffer[0] | (1 << 7);
         }
@@ -814,9 +811,8 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     static inline affine_element serialize_from_buffer(uint8_t* buffer)
     {
         affine_element result;
-        result.y = coordinate_field::field_t::serialize_from_buffer(buffer);
-        result.x =
-            coordinate_field::field_t::serialize_from_buffer(buffer + sizeof(typename coordinate_field::field_t));
+        result.y = coordinate_field::serialize_from_buffer(buffer);
+        result.x = coordinate_field::serialize_from_buffer(buffer + sizeof(coordinate_field));
         if (((buffer[0] >> 7) & 1) == 1) {
             set_infinity(result);
         }
