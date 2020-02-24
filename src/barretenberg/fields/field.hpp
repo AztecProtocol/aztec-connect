@@ -371,6 +371,48 @@ template <class Params> struct field {
                                 std::uniform_int_distribution<uint64_t>* dist = nullptr) noexcept;
 
   private:
+    struct wnaf_table {
+        uint8_t windows[64];
+
+        constexpr wnaf_table(const field& target)
+            : windows{ (uint8_t)(target.data[0] & 15),         (uint8_t)((target.data[0] >> 4) & 15),
+                       (uint8_t)((target.data[0] >> 8) & 15),  (uint8_t)((target.data[0] >> 12) & 15),
+                       (uint8_t)((target.data[0] >> 16) & 15), (uint8_t)((target.data[0] >> 20) & 15),
+                       (uint8_t)((target.data[0] >> 24) & 15), (uint8_t)((target.data[0] >> 28) & 15),
+                       (uint8_t)((target.data[0] >> 32) & 15), (uint8_t)((target.data[0] >> 36) & 15),
+                       (uint8_t)((target.data[0] >> 40) & 15), (uint8_t)((target.data[0] >> 44) & 15),
+                       (uint8_t)((target.data[0] >> 48) & 15), (uint8_t)((target.data[0] >> 52) & 15),
+                       (uint8_t)((target.data[0] >> 56) & 15), (uint8_t)((target.data[0] >> 60) & 15),
+                       (uint8_t)(target.data[1] & 15),         (uint8_t)((target.data[1] >> 4) & 15),
+                       (uint8_t)((target.data[1] >> 8) & 15),  (uint8_t)((target.data[1] >> 12) & 15),
+                       (uint8_t)((target.data[1] >> 16) & 15), (uint8_t)((target.data[1] >> 20) & 15),
+                       (uint8_t)((target.data[1] >> 24) & 15), (uint8_t)((target.data[1] >> 28) & 15),
+                       (uint8_t)((target.data[1] >> 32) & 15), (uint8_t)((target.data[1] >> 36) & 15),
+                       (uint8_t)((target.data[1] >> 40) & 15), (uint8_t)((target.data[1] >> 44) & 15),
+                       (uint8_t)((target.data[1] >> 48) & 15), (uint8_t)((target.data[1] >> 52) & 15),
+                       (uint8_t)((target.data[1] >> 56) & 15), (uint8_t)((target.data[1] >> 60) & 15),
+                       (uint8_t)(target.data[2] & 15),         (uint8_t)((target.data[2] >> 4) & 15),
+                       (uint8_t)((target.data[2] >> 8) & 15),  (uint8_t)((target.data[2] >> 12) & 15),
+                       (uint8_t)((target.data[2] >> 16) & 15), (uint8_t)((target.data[2] >> 20) & 15),
+                       (uint8_t)((target.data[2] >> 24) & 15), (uint8_t)((target.data[2] >> 28) & 15),
+                       (uint8_t)((target.data[2] >> 32) & 15), (uint8_t)((target.data[2] >> 36) & 15),
+                       (uint8_t)((target.data[2] >> 40) & 15), (uint8_t)((target.data[2] >> 44) & 15),
+                       (uint8_t)((target.data[2] >> 48) & 15), (uint8_t)((target.data[2] >> 52) & 15),
+                       (uint8_t)((target.data[2] >> 56) & 15), (uint8_t)((target.data[2] >> 60) & 15),
+                       (uint8_t)(target.data[3] & 15),         (uint8_t)((target.data[3] >> 4) & 15),
+                       (uint8_t)((target.data[3] >> 8) & 15),  (uint8_t)((target.data[3] >> 12) & 15),
+                       (uint8_t)((target.data[3] >> 16) & 15), (uint8_t)((target.data[3] >> 20) & 15),
+                       (uint8_t)((target.data[3] >> 24) & 15), (uint8_t)((target.data[3] >> 28) & 15),
+                       (uint8_t)((target.data[3] >> 32) & 15), (uint8_t)((target.data[3] >> 36) & 15),
+                       (uint8_t)((target.data[3] >> 40) & 15), (uint8_t)((target.data[3] >> 44) & 15),
+                       (uint8_t)((target.data[3] >> 48) & 15), (uint8_t)((target.data[3] >> 52) & 15),
+                       (uint8_t)((target.data[3] >> 56) & 15), (uint8_t)((target.data[3] >> 60) & 15) }
+        {}
+    };
+
+    template <size_t idx, field::wnaf_table window>
+    constexpr field exponentiation_round([[maybe_unused]] const field* lookup_table) noexcept;
+
     static constexpr field modulus_plus_one =
         field(Params::modulus_0 + 1ULL, Params::modulus_1, Params::modulus_2, Params::modulus_3);
     static constexpr field modulus_minus_two =

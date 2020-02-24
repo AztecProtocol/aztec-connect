@@ -7,7 +7,6 @@
 
 #include <type_traits>
 
-
 namespace barretenberg {
 /**
  *
@@ -279,7 +278,7 @@ template <class T> constexpr field<T> field<T>::pow(const field& exponent) const
             accumulator *= *this;
         }
     }
-    return accumulator; // .reduce_once();
+    return accumulator;
 }
 
 template <class T> constexpr field<T> field<T>::pow(const uint64_t exponent) const noexcept
@@ -287,9 +286,59 @@ template <class T> constexpr field<T> field<T>::pow(const uint64_t exponent) con
     return pow({ exponent, 0, 0, 0 });
 }
 
+template <class T>
+template <size_t idx, field<T>::wnaf_table window>
+constexpr field<T> field<T>::exponentiation_round([[maybe_unused]] const field<T>* lookup_table) noexcept
+{
+    self_sqr();
+    self_sqr();
+    self_sqr();
+    self_sqr();
+    if constexpr (window.windows[idx] > 0) {
+        operator*=(lookup_table[window.windows[idx] - 1]);
+    }
+    if constexpr (idx == 0) {
+        return *this;
+    } else {
+        return exponentiation_round<idx - 1, window>(lookup_table);
+    }
+}
+
 template <class T> constexpr field<T> field<T>::invert() const noexcept
 {
-    return pow(modulus_minus_two);
+    if (*this == zero) {
+        return zero;
+    }
+
+    const field pow_two = sqr();
+    const field pow_three = operator*(pow_two);
+    const field pow_four = pow_two.sqr();
+    const field pow_five = operator*(pow_four);
+    const field pow_six = pow_three.sqr();
+    const field pow_seven = operator*(pow_six);
+    const field pow_eight = pow_four.sqr();
+
+    const field lookup_table[15]{ *this,
+                                  pow_two,
+                                  pow_three,
+                                  pow_four,
+                                  pow_five,
+                                  pow_six,
+                                  pow_seven,
+                                  pow_eight,
+                                  operator*(pow_eight),
+                                  pow_five.sqr(),
+                                  pow_five * pow_six,
+                                  pow_six.sqr(),
+                                  pow_six * pow_seven,
+                                  pow_seven.sqr(),
+                                  pow_seven * pow_eight };
+
+    constexpr wnaf_table window = wnaf_table(modulus_minus_two);
+
+    field accumulator = (window.windows[63] > 0) ? lookup_table[window.windows[63] - 1] : one;
+
+    return accumulator.exponentiation_round<62, window>(lookup_table);
 }
 
 template <class T> void field<T>::batch_invert(field* coeffs, const size_t n) noexcept
