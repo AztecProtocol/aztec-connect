@@ -67,37 +67,37 @@ TEST(fq12, eq)
                                 .c1 = { .c0 = { 0x01, 0x02, 0x03, 0x04 }, .c1 = { 0x06, 0x07, 0x08, 0x0a } },
                                 .c2 = { .c0 = { 0x01, 0x02, 0x03, 0x04 }, .c1 = { 0x06, 0x07, 0x08, 0x0a } } } };
 
-    EXPECT_EQ(fq12::eq(a, b), true);
-    EXPECT_EQ(fq12::eq(a, c), false);
-    EXPECT_EQ(fq12::eq(a, d), false);
-    EXPECT_EQ(fq12::eq(a, e), false);
-    EXPECT_EQ(fq12::eq(a, f), false);
-    EXPECT_EQ(fq12::eq(a, g), false);
-    EXPECT_EQ(fq12::eq(a, h), false);
-    EXPECT_EQ(fq12::eq(a, i), false);
-    EXPECT_EQ(fq12::eq(a, j), false);
+    EXPECT_EQ((a == b), true);
+    EXPECT_EQ((a == c), false);
+    EXPECT_EQ((a == d), false);
+    EXPECT_EQ((a == e), false);
+    EXPECT_EQ((a == f), false);
+    EXPECT_EQ((a == g), false);
+    EXPECT_EQ((a == h), false);
+    EXPECT_EQ((a == i), false);
+    EXPECT_EQ((a == j), false);
 }
 
 TEST(fq12, is_zero)
 {
-    fq12::field_t a = fq12::zero;
-    fq12::field_t b = fq12::zero;
-    fq12::field_t c = fq12::zero;
+    fq12::field_t a = fq12::field_t::zero;
+    fq12::field_t b = fq12::field_t::zero;
+    fq12::field_t c = fq12::field_t::zero;
     b.c0.c0.c0.data[0] = 1;
     c.c1.c0.c0.data[0] = 1;
-    EXPECT_EQ(fq12::is_zero(a), true);
-    EXPECT_EQ(fq12::is_zero(b), false);
-    EXPECT_EQ(fq12::is_zero(c), false);
+    EXPECT_EQ(a.is_zero(), true);
+    EXPECT_EQ(b.is_zero(), false);
+    EXPECT_EQ(c.is_zero(), false);
 }
 
 TEST(fq12, random_element)
 {
-    fq12::field_t a = fq12::random_element();
-    fq12::field_t b = fq12::random_element();
+    fq12::field_t a = fq12::field_t::random_element();
+    fq12::field_t b = fq12::field_t::random_element();
 
-    EXPECT_EQ(fq12::eq(a, b), false);
-    EXPECT_EQ(fq12::is_zero(a), false);
-    EXPECT_EQ(fq12::is_zero(b), false);
+    EXPECT_EQ(a == b, false);
+    EXPECT_EQ(a.is_zero(), false);
+    EXPECT_EQ(a.is_zero(), false);
 }
 
 TEST(fq12, add_check_against_constants)
@@ -144,9 +144,8 @@ TEST(fq12, add_check_against_constants)
                 .c2 = { .c0 = { 0xa96dd6ac377eb304, 0x55497fc4486d9366, 0x188ea2f363f252fa, 0x3015259a255493fd },
                         .c1 = { 0xbee6e17fbff935dc, 0xdb66f429c87efb07, 0x87b7caa8446495ab, 0x154bd403500adfa0 } } }
     };
-    fq12::field_t result;
-    fq12::add(a, b, result);
-    EXPECT_EQ(fq12::eq(result, expected), true);
+    fq12::field_t result = a + b;
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq12, sub_check_against_constants)
@@ -193,9 +192,8 @@ TEST(fq12, sub_check_against_constants)
                 .c2 = { .c0 = { 0x7427eb2acbcbf2, 0x2603a2998369a289, 0xe612e59c555ddc7d, 0x2ac9751a9e41a2f },
                         .c1 = { 0xcf24bb1c5208f889, 0x138f729b7fb5b87c, 0xb9c3c64609846a70, 0x2f1fcb962aa6c170 } } }
     };
-    fq12::field_t result;
-    fq12::sub(a, b, result);
-    EXPECT_EQ(fq12::eq(result, expected), true);
+    fq12::field_t result = a - b;
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq12, mul_check_against_constants)
@@ -242,9 +240,8 @@ TEST(fq12, mul_check_against_constants)
                 .c2 = { .c0 = { 0x1f7661fa7dd7d68c, 0x71c1360fdb272200, 0x3fdb8fcc1dbfd160, 0x1ba330295e24399b },
                         .c1 = { 0x5c93a291c6579918, 0x6536baab9e09bc80, 0x93ad9959edff4c64, 0x138af9a14abfeb1e } } }
     };
-    fq12::field_t result;
-    fq12::mul(a, b, result);
-    EXPECT_EQ(fq12::eq(result, expected), true);
+    fq12::field_t result = a * b;
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq12, sparse_mul_check_against_constants)
@@ -263,7 +260,7 @@ TEST(fq12, sparse_mul_check_against_constants)
                 .c2 = { .c0 = { 0x64f434f52a58b19b, 0xcdab64e3ae898031, 0x5d10a474f28b9462, 0x85452691edf6f18 },
                         .c1 = { 0x2bb46c10f494b711, 0x66a853baee9e6a00, 0x3b3e0fd932afa021, 0x1ae752d1bbdef131 } } }
     };
-    fq12::ell_coeffs ell;
+    fq12::field_t::ell_coeffs ell;
     ell.o = { .c0 = { 0xe49c67a74aaf8c22, 0xc5cc428c85da5d5a, 0xc946262e0c99d3d9, 0x2307b236a862e3e9 },
               .c1 = { 0x1659aef76f0397ef, 0x32d0c2d00f81d8a5, 0x7e87867d5f0c5ccd, 0x247307a3fd6fece7 } };
     ell.vv = { .c0 = { 0x6e6f2db65bdf07bd, 0xc26fa997848fb1e4, 0x13ec10cb6a0cd0ae, 0xf86d8967480301c },
@@ -284,9 +281,9 @@ TEST(fq12, sparse_mul_check_against_constants)
                 .c2 = { .c0 = { 0x475dec6d5f2e2a75, 0xf25390f14ed7106, 0x61a4b571cb15d2fe, 0x1ad83abac0d5bdd7 },
                         .c1 = { 0x8f730272c4cfee79, 0x60833c047d98a040, 0xbd1da3dc3fe5ad4a, 0x11bcc8faf5176d94 } } }
     };
-    fq12::field_t result;
-    fq12::sparse_mul(a, ell, result);
-    EXPECT_EQ(fq12::eq(result, expected), true);
+    a.self_sparse_mul(ell);
+    fq12::field_t result = a;
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq12, sqr_check_against_constants)
@@ -319,25 +316,21 @@ TEST(fq12, sqr_check_against_constants)
                 .c2 = { .c0 = { 0xceb417494bece8e, 0x7f3d84971a20d351, 0x31679ed74c101d91, 0x1bb2c06842073c0c },
                         .c1 = { 0x6db2993066e5fd73, 0x2c08c9fd6c3b5483, 0x3b32d43ab22d6cea, 0x3df72d32906f5f0 } } }
     };
-    fq12::field_t result;
-    fq12::sqr(a, result);
-    EXPECT_EQ(fq12::eq(result, expected), true);
+    fq12::field_t result = a.sqr();
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq12, inverse)
 {
-    fq12::field_t input = fq12::random_element();
-    fq12::field_t result;
-    fq12::invert(input, result);
-    fq12::mul(result, input, result);
-    EXPECT_EQ(fq12::eq(result, fq12::one), true);
+    fq12::field_t input = fq12::field_t::random_element();
+    fq12::field_t result = input.invert() * input;
+    EXPECT_EQ(result, fq12::field_t::one);
 }
 
 TEST(fq12, unitary_inverse)
 {
-    fq12::field_t input = fq12::random_element();
-    fq12::field_t result;
-    fq12::unitary_inverse(input, result);
+    fq12::field_t input = fq12::field_t::random_element();
+    fq12::field_t result = input.unitary_inverse();
     EXPECT_EQ(input.c0, result.c0);
     result.c1 += input.c1;
     EXPECT_EQ(result.c1, fq6::field_t::zero);
@@ -373,9 +366,8 @@ TEST(fq12, frobenius_map_three)
                 .c2 = { .c0 = { 0xf8c975188dd668a5, 0xfa38a6144e0c5451, 0x8ebdddc91016c224, 0x13fe7e09fe48aefb },
                         .c1 = { 0x2ce375ffd1c12d33, 0xc2099e064cd9724d, 0x9c54b742a4d8bd59, 0x1c79d60ac5202c8c } } }
     };
-    fq12::field_t result;
-    fq12::frobenius_map_three(a, result);
-    EXPECT_EQ(fq12::eq(result, expected), true);
+    fq12::field_t result = a.frobenius_map_three();
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq12, frobenius_map_two)
@@ -408,9 +400,8 @@ TEST(fq12, frobenius_map_two)
                 .c2 = { .c0 = { 0xe1148c424a589341, 0x40ab0d25fb7fd0d1, 0x7909a54a9569db90, 0x99bde98bbc4352f },
                         .c1 = { 0xfaa4fdcf224e38ee, 0x42b25f170bf5f577, 0xc13bf097c75be619, 0xbcb9923cbd60387 } } }
     };
-    fq12::field_t result;
-    fq12::frobenius_map_two(a, result);
-    EXPECT_EQ(fq12::eq(result, expected), true);
+    fq12::field_t result = a.frobenius_map_two();
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq12, frobenius_map_one)
@@ -443,123 +434,70 @@ TEST(fq12, frobenius_map_one)
                 .c2 = { .c0 = { 0xcba1922169de670, 0xcd20689212638b5e, 0x8dbbc53af7639bbb, 0x57a19a043d38c39 },
                         .c1 = { 0x2b2d3090bfb1118b, 0xa752e789e316e0c7, 0xc1c4d33385bc3e10, 0x2610936b5468ba45 } } }
     };
-    fq12::field_t result;
-    fq12::frobenius_map_one(a, result);
-    EXPECT_EQ(fq12::eq(result, expected), true);
+    fq12::field_t result = a.frobenius_map_one();
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq12, to_montgomery_form)
 {
-    fq12::field_t result = fq12::zero;
+    fq12::field_t result = fq12::field_t::zero;
     result.c0.c0.c0.data[0] = 1;
-    fq12::field_t expected = fq12::one;
-    fq12::__to_montgomery_form(result, result);
-    EXPECT_EQ(fq12::eq(result, expected), true);
+    fq12::field_t expected = fq12::field_t::one;
+    result = result.to_montgomery_form();
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq12, from_montgomery_form)
 {
-    fq12::field_t result = fq12::one;
-    fq12::field_t expected = fq12::zero;
+    fq12::field_t result = fq12::field_t::one;
+    fq12::field_t expected = fq12::field_t::zero;
     expected.c0.c0.c0.data[0] = 1;
-    fq12::__from_montgomery_form(result, result);
-    EXPECT_EQ(fq12::eq(result, expected), true);
-}
-
-TEST(fq12, montgomery_consistency_check)
-{
-    fq12::field_t a = fq12::random_element();
-    fq12::field_t b = fq12::random_element();
-    fq12::field_t aR;
-    fq12::field_t bR;
-    fq12::field_t aRR;
-    fq12::field_t bRR;
-    fq12::field_t bRRR;
-    fq12::field_t result_a;
-    fq12::field_t result_b;
-    fq12::field_t result_c;
-    fq12::field_t result_d;
-    fq12::__to_montgomery_form(a, aR);
-    fq12::__to_montgomery_form(aR, aRR);
-    fq12::__to_montgomery_form(b, bR);
-    fq12::__to_montgomery_form(bR, bRR);
-    fq12::__to_montgomery_form(bRR, bRRR);
-    fq12::mul(aRR, bRR, result_a); // abRRR
-    fq12::mul(aR, bRRR, result_b); // abRRR
-    fq12::mul(aR, bR, result_c);   // abR
-    fq12::mul(a, b, result_d);     // abR^-1
-    EXPECT_EQ(fq12::eq(result_a, result_b), true);
-    fq12::__from_montgomery_form(result_a, result_a); // abRR
-    fq12::__from_montgomery_form(result_a, result_a); // abR
-    fq12::__from_montgomery_form(result_a, result_a); // ab
-    fq12::__from_montgomery_form(result_c, result_c); // ab
-    fq12::__to_montgomery_form(result_d, result_d);   // ab
-    EXPECT_EQ(fq12::eq(result_a, result_c), true);
-    EXPECT_EQ(fq12::eq(result_a, result_d), true);
+    result = result.from_montgomery_form();
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq12, mul_sqr_consistency)
 {
-    fq12::field_t a = fq12::random_element();
-    fq12::field_t b = fq12::random_element();
-    fq12::field_t t1;
-    fq12::field_t t2;
-    fq12::field_t mul_result;
-    fq12::field_t sqr_result;
-    fq12::sub(a, b, t1);
-    fq12::add(a, b, t2);
-    fq12::mul(t1, t2, mul_result);
-    fq12::sqr(a, t1);
-    fq12::sqr(b, t2);
-    fq12::sub(t1, t2, sqr_result);
-
-    EXPECT_EQ(fq12::eq(mul_result, sqr_result), true);
+    fq12::field_t a = fq12::field_t::random_element();
+    fq12::field_t b = fq12::field_t::random_element();
+    fq12::field_t t1 = a - b;
+    fq12::field_t t2 = a + b;
+    fq12::field_t mul_result = t1 * t2;
+    fq12::field_t sqr_result = a.sqr() - b.sqr();
+    EXPECT_EQ(mul_result, sqr_result);
 }
 
 TEST(fq12, add_mul_consistency)
 {
-    fq12::field_t multiplicand = fq12::zero;
+    fq12::field_t multiplicand = fq12::field_t::zero;
     multiplicand.c0.c0.c0.data[0] = 9;
-    fq12::__to_montgomery_form(multiplicand, multiplicand);
+    multiplicand = multiplicand.to_montgomery_form();
 
-    fq12::field_t a = fq12::random_element();
-    fq12::field_t result;
-    fq12::add(a, a, result);           // 2
-    fq12::add(result, result, result); // 4
-    fq12::add(result, result, result); // 8
-    fq12::add(result, a, result);      // 9
+    fq12::field_t a = fq12::field_t::random_element();
+    fq12::field_t result = a + a;
+    result += result;
+    result += result;
+    result += a;
 
-    fq12::field_t expected;
-    fq12::mul(a, multiplicand, expected);
+    fq12::field_t expected = a * multiplicand;
 
-    EXPECT_EQ(fq12::eq(result, expected), true);
+    EXPECT_EQ(result, expected);
 }
 
 TEST(fq12, sub_mul_consistency)
 {
-    fq12::field_t multiplicand = fq12::zero;
+    fq12::field_t multiplicand = fq12::field_t::zero;
     multiplicand.c0.c0.c0.data[0] = 5;
-    fq12::__to_montgomery_form(multiplicand, multiplicand);
+    multiplicand = multiplicand.to_montgomery_form();
 
-    fq12::field_t a = fq12::random_element();
-    fq12::field_t result;
-    fq12::add(a, a, result);           // 2
-    fq12::add(result, result, result); // 4
-    fq12::add(result, result, result); // 8
-    fq12::sub(result, a, result);      // 7
-    fq12::sub(result, a, result);      // 6
-    fq12::sub(result, a, result);      // 5
+    fq12::field_t a = fq12::field_t::random_element();
+    fq12::field_t result = a + a;
+    result += result;
+    result += result;
+    result -= a;
+    result -= a;
+    result -= a;
 
-    fq12::field_t expected;
-    fq12::mul(a, multiplicand, expected);
-
-    EXPECT_EQ(fq12::eq(result, expected), true);
-}
-
-TEST(fq12, copy)
-{
-    fq12::field_t result = fq12::random_element();
-    fq12::field_t expected;
-    fq12::copy(result, expected);
-    EXPECT_EQ(fq12::eq(result, expected), true);
+    fq12::field_t expected = a * multiplicand;
+    EXPECT_EQ(result, expected);
 }

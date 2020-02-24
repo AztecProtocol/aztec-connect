@@ -6,6 +6,34 @@
 namespace barretenberg {
 template <class base_field, class Params> struct field2 {
   public:
+    constexpr field2(const base_field& a = base_field::zero, const base_field& b = base_field::zero)
+        : c0(a)
+        , c1(b)
+    {}
+
+    constexpr field2(const field2& other)
+        : c0(other.c0)
+        , c1(other.c1)
+    {}
+    constexpr field2(field2&& other)
+        : c0(other.c0)
+        , c1(other.c1)
+    {}
+
+    constexpr field2& operator=(const field2& other)
+    {
+        c0 = other.c0;
+        c1 = other.c1;
+        return *this;
+    }
+
+    constexpr field2& operator=(field2&& other)
+    {
+        c0 = other.c0;
+        c1 = other.c1;
+        return *this;
+    }
+
     base_field c0;
     base_field c1;
 

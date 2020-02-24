@@ -328,7 +328,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     barretenberg::fq12::field_t result = barretenberg::pairing::reduced_ate_pairing_batch_precomputed(
         P_affine, key->reference_string.precomputed_g2_lines, 2);
 
-    return barretenberg::fq12::eq(result, barretenberg::fq12::one);
+    return (result == barretenberg::fq12::field_t::one);
 }
 
 template class VerifierBase<standard_settings>;

@@ -37,11 +37,11 @@ TEST(pairing, reduced_ate_pairing_check_against_constants)
     P.y.self_to_montgomery_form();
     Q.x = Q.x.to_montgomery_form();
     Q.y = Q.y.to_montgomery_form();
-    fq12::__to_montgomery_form(expected, expected);
+    expected = expected.to_montgomery_form();
 
     fq12::field_t result = pairing::reduced_ate_pairing(P, Q);
 
-    EXPECT_EQ(fq12::eq(result, expected), true);
+    EXPECT_EQ(result, expected);
 }
 
 TEST(pairing, reduced_ate_pairing_consistency_check)
@@ -54,26 +54,10 @@ TEST(pairing, reduced_ate_pairing_consistency_check)
     g1::affine_element Pmul = g1::group_exponentiation(P, scalar);
     g2::affine_element Qmul = g2::group_exponentiation(Q, scalar);
 
-    fq12::field_t result = pairing::reduced_ate_pairing(Pmul, Q);
-    fq12::field_t expected = pairing::reduced_ate_pairing(P, Qmul);
+    fq12::field_t result = pairing::reduced_ate_pairing(Pmul, Q).from_montgomery_form();
+    fq12::field_t expected = pairing::reduced_ate_pairing(P, Qmul).from_montgomery_form();
 
-    fq12::__from_montgomery_form(result, result);
-    fq12::__from_montgomery_form(expected, expected);
-
-    for (size_t j = 0; j < 4; ++j) {
-        EXPECT_EQ(result.c0.c0.c0.data[j], expected.c0.c0.c0.data[j]);
-        EXPECT_EQ(result.c0.c0.c1.data[j], expected.c0.c0.c1.data[j]);
-        EXPECT_EQ(result.c0.c1.c0.data[j], expected.c0.c1.c0.data[j]);
-        EXPECT_EQ(result.c0.c1.c1.data[j], expected.c0.c1.c1.data[j]);
-        EXPECT_EQ(result.c0.c2.c0.data[j], expected.c0.c2.c0.data[j]);
-        EXPECT_EQ(result.c0.c2.c1.data[j], expected.c0.c2.c1.data[j]);
-        EXPECT_EQ(result.c1.c0.c0.data[j], expected.c1.c0.c0.data[j]);
-        EXPECT_EQ(result.c1.c0.c1.data[j], expected.c1.c0.c1.data[j]);
-        EXPECT_EQ(result.c1.c1.c0.data[j], expected.c1.c1.c0.data[j]);
-        EXPECT_EQ(result.c1.c1.c1.data[j], expected.c1.c1.c1.data[j]);
-        EXPECT_EQ(result.c1.c2.c0.data[j], expected.c1.c2.c0.data[j]);
-        EXPECT_EQ(result.c1.c2.c1.data[j], expected.c1.c2.c1.data[j]);
-    }
+    EXPECT_EQ(result, expected);
 }
 
 TEST(pairing, reduced_ate_pairing_consistency_check_batch)
@@ -105,26 +89,10 @@ TEST(pairing, reduced_ate_pairing_consistency_check_batch)
         Q_a[i] = g2::group_exponentiation(Q_a[i], scalars[i + num_points]);
     }
 
-    fq12::field_t result = pairing::reduced_ate_pairing_batch(&P_a[0], &Q_a[0], num_points);
-    fq12::field_t expected = pairing::reduced_ate_pairing_batch(&P_b[0], &Q_b[0], num_points);
+    fq12::field_t result = pairing::reduced_ate_pairing_batch(&P_a[0], &Q_a[0], num_points).from_montgomery_form();
+    fq12::field_t expected = pairing::reduced_ate_pairing_batch(&P_b[0], &Q_b[0], num_points).from_montgomery_form();
 
-    fq12::__from_montgomery_form(result, result);
-    fq12::__from_montgomery_form(expected, expected);
-
-    for (size_t j = 0; j < 4; ++j) {
-        EXPECT_EQ(result.c0.c0.c0.data[j], expected.c0.c0.c0.data[j]);
-        EXPECT_EQ(result.c0.c0.c1.data[j], expected.c0.c0.c1.data[j]);
-        EXPECT_EQ(result.c0.c1.c0.data[j], expected.c0.c1.c0.data[j]);
-        EXPECT_EQ(result.c0.c1.c1.data[j], expected.c0.c1.c1.data[j]);
-        EXPECT_EQ(result.c0.c2.c0.data[j], expected.c0.c2.c0.data[j]);
-        EXPECT_EQ(result.c0.c2.c1.data[j], expected.c0.c2.c1.data[j]);
-        EXPECT_EQ(result.c1.c0.c0.data[j], expected.c1.c0.c0.data[j]);
-        EXPECT_EQ(result.c1.c0.c1.data[j], expected.c1.c0.c1.data[j]);
-        EXPECT_EQ(result.c1.c1.c0.data[j], expected.c1.c1.c0.data[j]);
-        EXPECT_EQ(result.c1.c1.c1.data[j], expected.c1.c1.c1.data[j]);
-        EXPECT_EQ(result.c1.c2.c0.data[j], expected.c1.c2.c0.data[j]);
-        EXPECT_EQ(result.c1.c2.c1.data[j], expected.c1.c2.c1.data[j]);
-    }
+    EXPECT_EQ(result, expected);
 }
 
 TEST(pairing, reduced_ate_pairing_precompute_consistency_check_batch)
@@ -158,22 +126,9 @@ TEST(pairing, reduced_ate_pairing_precompute_consistency_check_batch)
         pairing::precompute_miller_lines(jac, precompute_miller_lines[i]);
     }
     fq12::field_t result =
-        pairing::reduced_ate_pairing_batch_precomputed(&P_a[0], &precompute_miller_lines[0], num_points);
-    fq12::field_t expected = pairing::reduced_ate_pairing_batch(&P_b[0], &Q_b[0], num_points);
-    fq12::__from_montgomery_form(result, result);
-    fq12::__from_montgomery_form(expected, expected);
-    for (size_t j = 0; j < 4; ++j) {
-        EXPECT_EQ(result.c0.c0.c0.data[j], expected.c0.c0.c0.data[j]);
-        EXPECT_EQ(result.c0.c0.c1.data[j], expected.c0.c0.c1.data[j]);
-        EXPECT_EQ(result.c0.c1.c0.data[j], expected.c0.c1.c0.data[j]);
-        EXPECT_EQ(result.c0.c1.c1.data[j], expected.c0.c1.c1.data[j]);
-        EXPECT_EQ(result.c0.c2.c0.data[j], expected.c0.c2.c0.data[j]);
-        EXPECT_EQ(result.c0.c2.c1.data[j], expected.c0.c2.c1.data[j]);
-        EXPECT_EQ(result.c1.c0.c0.data[j], expected.c1.c0.c0.data[j]);
-        EXPECT_EQ(result.c1.c0.c1.data[j], expected.c1.c0.c1.data[j]);
-        EXPECT_EQ(result.c1.c1.c0.data[j], expected.c1.c1.c0.data[j]);
-        EXPECT_EQ(result.c1.c1.c1.data[j], expected.c1.c1.c1.data[j]);
-        EXPECT_EQ(result.c1.c2.c0.data[j], expected.c1.c2.c0.data[j]);
-        EXPECT_EQ(result.c1.c2.c1.data[j], expected.c1.c2.c1.data[j]);
-    }
+        pairing::reduced_ate_pairing_batch_precomputed(&P_a[0], &precompute_miller_lines[0], num_points)
+            .from_montgomery_form();
+    fq12::field_t expected = pairing::reduced_ate_pairing_batch(&P_b[0], &Q_b[0], num_points).from_montgomery_form();
+
+    EXPECT_EQ(result, expected);
 }
