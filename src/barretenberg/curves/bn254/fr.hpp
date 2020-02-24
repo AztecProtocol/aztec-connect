@@ -120,9 +120,8 @@ class FrParams {
     static constexpr uint64_t Q_minus_one_over_two_3 = 0x183227397UL;
 };
 
-namespace fr
-{
-typedef test::field<FrParams> field_t;
+namespace fr {
+typedef field<FrParams> field_t;
 }
 
 // typedef field<FrParams> fr;

@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-namespace test {
+namespace barretenberg {
 template <class base, class T> constexpr field2<base, T> field2<base, T>::operator*(const field2& other) const noexcept
 {
     base t1 = c0 * other.c0;
@@ -160,4 +160,4 @@ field2<base, T> field2<base, T>::random_element(std::mt19937_64*, std::uniform_i
 {
     return { base::random_element(), base::random_element() };
 }
-} // namespace test
+} // namespace barretenberg

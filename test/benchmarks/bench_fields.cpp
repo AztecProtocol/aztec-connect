@@ -5,7 +5,7 @@ using namespace benchmark;
 #include <barretenberg/curves/bn254/fr.hpp>
 #include <barretenberg/fields/new_field.hpp>
 
-typedef test::field<barretenberg::FrParams> new_field;
+typedef barretenberg::field<barretenberg::FrParams> new_field;
 
 using namespace barretenberg;
 

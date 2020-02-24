@@ -1,0 +1,284 @@
+#pragma once
+
+#include "asm_macros.hpp"
+
+namespace barretenberg {
+
+template <class T> field<T> field<T>::asm_mul_with_coarse_reduction(const field& a, const field& b) noexcept
+{
+    field r;
+    constexpr uint64_t r_inv = T::r_inv;
+    constexpr uint64_t modulus_3 = T::modulus_3;
+    constexpr uint64_t modulus_2 = T::modulus_2;
+    constexpr uint64_t modulus_1 = T::modulus_1;
+    constexpr uint64_t modulus_0 = T::modulus_0;
+    /**
+     * Registers: rax:rdx = multiplication accumulator
+     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
+     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
+     *            %r10: zero register
+     *            %0: pointer to `a`
+     *            %1: pointer to `b`
+     *            %2: pointer to `r`
+     **/
+    __asm__(MUL("%0", "%1") STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
+            :
+            : "%r"(&a),
+              "%r"(&b),
+              "r"(&r),
+              [modulus_0] "m"(modulus_0),
+              [modulus_1] "m"(modulus_1),
+              [modulus_2] "m"(modulus_2),
+              [modulus_3] "m"(modulus_3),
+              [r_inv] "m"(r_inv),
+              [zero_reference] "m"(zero_reference)
+            : "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+    return r;
+}
+
+template <class T> void field<T>::asm_self_mul_with_coarse_reduction(const field& a, const field& b) noexcept
+{
+    constexpr uint64_t r_inv = T::r_inv;
+    constexpr uint64_t modulus_3 = T::modulus_3;
+    constexpr uint64_t modulus_2 = T::modulus_2;
+    constexpr uint64_t modulus_1 = T::modulus_1;
+    constexpr uint64_t modulus_0 = T::modulus_0;
+    /**
+     * Registers: rax:rdx = multiplication accumulator
+     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
+     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
+     *            %r10: zero register
+     *            %0: pointer to `a`
+     *            %1: pointer to `b`
+     *            %2: pointer to `r`
+     **/
+    __asm__(MUL("%0", "%1") STORE_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
+            :
+            : "r"(&a),
+              "r"(&b),
+              [modulus_0] "m"(modulus_0),
+              [modulus_1] "m"(modulus_1),
+              [modulus_2] "m"(modulus_2),
+              [modulus_3] "m"(modulus_3),
+              [r_inv] "m"(r_inv),
+              [zero_reference] "m"(zero_reference)
+            : "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+template <class T> field<T> field<T>::asm_sqr_with_coarse_reduction(const field& a) noexcept
+{
+    field r;
+    constexpr uint64_t r_inv = T::r_inv;
+    constexpr uint64_t modulus_3 = T::modulus_3;
+    constexpr uint64_t modulus_2 = T::modulus_2;
+    constexpr uint64_t modulus_1 = T::modulus_1;
+    constexpr uint64_t modulus_0 = T::modulus_0;
+    /**
+     * Registers: rax:rdx = multiplication accumulator
+     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
+     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
+     *            %[zero_reference]: memory location of zero value
+     *            %0: pointer to `a`
+     *            %[r_ptr]: memory location of pointer to `r`
+     **/
+    __asm__(SQR("%0")
+            // "movq %[r_ptr], %%rsi                   \n\t"
+            STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
+            :
+            : "r"(&a),
+              "r"(&r),
+              [zero_reference] "m"(zero_reference),
+              [modulus_0] "m"(modulus_0),
+              [modulus_1] "m"(modulus_1),
+              [modulus_2] "m"(modulus_2),
+              [modulus_3] "m"(modulus_3),
+              [r_inv] "m"(r_inv)
+            : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+    return r;
+}
+
+template <class T> void field<T>::asm_self_sqr_with_coarse_reduction(const field& a) noexcept
+{
+    constexpr uint64_t r_inv = T::r_inv;
+    constexpr uint64_t modulus_3 = T::modulus_3;
+    constexpr uint64_t modulus_2 = T::modulus_2;
+    constexpr uint64_t modulus_1 = T::modulus_1;
+    constexpr uint64_t modulus_0 = T::modulus_0;
+    /**
+     * Registers: rax:rdx = multiplication accumulator
+     *            %r12, %r13, %r14, %r15, %rax: work registers for `r`
+     *            %r8, %r9, %rdi, %rsi: scratch registers for multiplication results
+     *            %[zero_reference]: memory location of zero value
+     *            %0: pointer to `a`
+     *            %[r_ptr]: memory location of pointer to `r`
+     **/
+    __asm__(SQR("%0")
+            // "movq %[r_ptr], %%rsi                   \n\t"
+            STORE_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
+            :
+            : "r"(&a),
+              [zero_reference] "m"(zero_reference),
+              [modulus_0] "m"(modulus_0),
+              [modulus_1] "m"(modulus_1),
+              [modulus_2] "m"(modulus_2),
+              [modulus_3] "m"(modulus_3),
+              [r_inv] "m"(r_inv)
+            : "%rcx", "%rdx", "%rdi", "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+template <class T> field<T> field<T>::asm_add_with_coarse_reduction(const field& a, const field& b) noexcept
+{
+    field r;
+    constexpr uint64_t twice_not_modulus_3 = T::twice_not_modulus_3;
+    constexpr uint64_t twice_not_modulus_2 = T::twice_not_modulus_2;
+    constexpr uint64_t twice_not_modulus_1 = T::twice_not_modulus_1;
+    constexpr uint64_t twice_not_modulus_0 = T::twice_not_modulus_0;
+    __asm__(CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
+                ADD_REDUCE("%1",
+                           "%[twice_not_modulus_0]",
+                           "%[twice_not_modulus_1]",
+                           "%[twice_not_modulus_2]",
+                           "%[twice_not_modulus_3]") STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
+            :
+            : "%r"(&a),
+              "%r"(&b),
+              "r"(&r),
+              [twice_not_modulus_0] "m"(twice_not_modulus_0),
+              [twice_not_modulus_1] "m"(twice_not_modulus_1),
+              [twice_not_modulus_2] "m"(twice_not_modulus_2),
+              [twice_not_modulus_3] "m"(twice_not_modulus_3)
+            : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+    return r;
+}
+
+template <class T> void field<T>::asm_self_add_with_coarse_reduction(const field& a, const field& b) noexcept
+{
+    constexpr uint64_t twice_not_modulus_3 = T::twice_not_modulus_3;
+    constexpr uint64_t twice_not_modulus_2 = T::twice_not_modulus_2;
+    constexpr uint64_t twice_not_modulus_1 = T::twice_not_modulus_1;
+    constexpr uint64_t twice_not_modulus_0 = T::twice_not_modulus_0;
+    __asm__(CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
+                ADD_REDUCE("%1",
+                           "%[twice_not_modulus_0]",
+                           "%[twice_not_modulus_1]",
+                           "%[twice_not_modulus_2]",
+                           "%[twice_not_modulus_3]") STORE_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
+            :
+            : "r"(&a),
+              "r"(&b),
+              [twice_not_modulus_0] "m"(twice_not_modulus_0),
+              [twice_not_modulus_1] "m"(twice_not_modulus_1),
+              [twice_not_modulus_2] "m"(twice_not_modulus_2),
+              [twice_not_modulus_3] "m"(twice_not_modulus_3)
+            : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+template <class T> field<T> field<T>::asm_sub_with_coarse_reduction(const field& a, const field& b) noexcept
+{
+    field r;
+    constexpr uint64_t twice_modulus_3 = twice_modulus.data[3];
+    constexpr uint64_t twice_modulus_2 = twice_modulus.data[2];
+    constexpr uint64_t twice_modulus_1 = twice_modulus.data[1];
+    constexpr uint64_t twice_modulus_0 = twice_modulus.data[0];
+    __asm__(
+        CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15") SUB("%1")
+            REDUCE_FIELD_ELEMENT("%[twice_modulus_0]", "%[twice_modulus_1]", "%[twice_modulus_2]", "%[twice_modulus_3]")
+                STORE_FIELD_ELEMENT("%2", "%%r12", "%%r13", "%%r14", "%%r15")
+        :
+        : "r"(&a),
+          "r"(&b),
+          "r"(&r),
+          [twice_modulus_0] "m"(twice_modulus_0),
+          [twice_modulus_1] "m"(twice_modulus_1),
+          [twice_modulus_2] "m"(twice_modulus_2),
+          [twice_modulus_3] "m"(twice_modulus_3)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+    return r;
+}
+
+template <class T> void field<T>::asm_self_sub_with_coarse_reduction(const field& a, const field& b) noexcept
+{
+    constexpr uint64_t twice_modulus_3 = twice_modulus.data[3];
+    constexpr uint64_t twice_modulus_2 = twice_modulus.data[2];
+    constexpr uint64_t twice_modulus_1 = twice_modulus.data[1];
+    constexpr uint64_t twice_modulus_0 = twice_modulus.data[0];
+    __asm__(
+        CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15") SUB("%1")
+            REDUCE_FIELD_ELEMENT("%[twice_modulus_0]", "%[twice_modulus_1]", "%[twice_modulus_2]", "%[twice_modulus_3]")
+                STORE_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
+        :
+        : "r"(&a),
+          "r"(&b),
+          [twice_modulus_0] "m"(twice_modulus_0),
+          [twice_modulus_1] "m"(twice_modulus_1),
+          [twice_modulus_2] "m"(twice_modulus_2),
+          [twice_modulus_3] "m"(twice_modulus_3)
+        : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+template <class T> void field<T>::asm_conditional_negate(field& r, const uint64_t predicate) noexcept
+{
+    __asm__(CLEAR_FLAGS("%%r8") LOAD_FIELD_ELEMENT(
+                "%1", "%%r8", "%%r9", "%%r10", "%%r11") "movq %[twice_modulus_0], %%r12 \n\t"
+                                                        "movq %[twice_modulus_1], %%r13 \n\t"
+                                                        "movq %[twice_modulus_2], %%r14 \n\t"
+                                                        "movq %[twice_modulus_3], %%r15 \n\t"
+                                                        "subq %%r8, %%r12 \n\t"
+                                                        "sbbq %%r9, %%r13 \n\t"
+                                                        "sbbq %%r10, %%r14 \n\t"
+                                                        "sbbq %%r11, %%r15 \n\t"
+                                                        "btq $0, %0 \n\t"
+                                                        "cmovcq %%r12, %%r8 \n\t"
+                                                        "cmovcq %%r13, %%r9 \n\t"
+                                                        "cmovcq %%r14, %%r10 \n\t"
+                                                        "cmovcq %%r15, %%r11 \n\t" STORE_FIELD_ELEMENT(
+                                                            "%1", "%%r8", "%%r9", "%%r10", "%%r11")
+            :
+            : "r"(predicate),
+              "r"(&r),
+              [twice_modulus_0] "i"(T::twice_modulus_0),
+              [twice_modulus_1] "i"(T::twice_modulus_1),
+              [twice_modulus_2] "i"(T::twice_modulus_2),
+              [twice_modulus_3] "i"(T::twice_modulus_3)
+            : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
+template <class T> field<T> field<T>::asm_reduce_once(const field& a) noexcept
+{
+    field r;
+    constexpr uint64_t not_modulus_3 = T::not_modulus_3;
+    constexpr uint64_t not_modulus_2 = T::not_modulus_2;
+    constexpr uint64_t not_modulus_1 = T::not_modulus_1;
+    constexpr uint64_t not_modulus_0 = T::not_modulus_0;
+    __asm__(CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
+                REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
+                    STORE_FIELD_ELEMENT("%1", "%%r12", "%%r13", "%%r14", "%%r15")
+            :
+            : "r"(&a),
+              "r"(&r),
+              [not_modulus_0] "m"(not_modulus_0),
+              [not_modulus_1] "m"(not_modulus_1),
+              [not_modulus_2] "m"(not_modulus_2),
+              [not_modulus_3] "m"(not_modulus_3)
+            : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+    return r;
+}
+
+template <class T> void field<T>::asm_self_reduce_once(const field& a) noexcept
+{
+    constexpr uint64_t not_modulus_3 = T::not_modulus_3;
+    constexpr uint64_t not_modulus_2 = T::not_modulus_2;
+    constexpr uint64_t not_modulus_1 = T::not_modulus_1;
+    constexpr uint64_t not_modulus_0 = T::not_modulus_0;
+    __asm__(CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
+                REDUCE_FIELD_ELEMENT("%[not_modulus_0]", "%[not_modulus_1]", "%[not_modulus_2]", "%[not_modulus_3]")
+                    STORE_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
+            :
+            : "r"(&a),
+              [not_modulus_0] "m"(not_modulus_0),
+              [not_modulus_1] "m"(not_modulus_1),
+              [not_modulus_2] "m"(not_modulus_2),
+              [not_modulus_3] "m"(not_modulus_3)
+            : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+} // namespace barretenberg

@@ -37,7 +37,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-class-memaccess -Wno-error=deprecat
 
 add_executable(
     barretenberg_tests
-    test_new_field.cpp
     test_helpers.hpp
     test_wnaf.cpp
     test_fq.cpp

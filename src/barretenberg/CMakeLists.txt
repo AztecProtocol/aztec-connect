@@ -28,13 +28,10 @@ add_library(
     uint256/uint256.hpp
     uint256/uint512_impl.hpp
     uint256/uint512.hpp
-    fields/new_field.hpp
-    fields/new_field_impl.hpp
-    fields/new_field2.hpp
-    fields/new_field2_impl.hpp
-    fields/field_impl_int128.tcc
-    fields/field_impl_asm.tcc
+    fields/field_impl_generic.hpp
+    fields/field_impl_x64.hpp
     fields/field.hpp
+    fields/field2_impl.hpp
     fields/field2.hpp
     fields/field6.hpp
     fields/field12.hpp
@@ -199,13 +196,10 @@ if(PROFILING)
         uint256/uint256.hpp
         uint256/uint512_impl.hpp
         uint256/uint512.hpp
-        fields/new_field.hpp
-        fields/new_field_impl.hpp
-        fields/new_field2.hpp
-        fields/new_field2_impl.hpp
-        fields/field_impl_int128.tcc
-        fields/field_impl_asm.tcc
+        fields/field_impl_generic.hpp
+        fields/field_impl_x64.hpp
         fields/field.hpp
+        fields/field2_impl.hpp
         fields/field2.hpp
         fields/field6.hpp
         fields/field12.hpp

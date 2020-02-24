@@ -113,7 +113,7 @@ class Bn254FqParams {
 };
 
 namespace fq {
-typedef test::field<Bn254FqParams> field_t;
+typedef field<Bn254FqParams> field_t;
 }
 // typedef field<Bn254FqParams> fq;
 
