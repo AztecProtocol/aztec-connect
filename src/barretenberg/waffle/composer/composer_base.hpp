@@ -151,9 +151,9 @@ class ComposerBase {
     ComposerBase()
         : n(0)
         , crs_path(BARRETENBERG_SRS_PATH){};
-    ComposerBase(std::string const& crs_path)
+    ComposerBase(std::string const& crs_path_)
         : n(0)
-        , crs_path(crs_path){};
+        , crs_path(crs_path_){};
     ComposerBase(ComposerBase&& other) = default;
     ComposerBase& operator=(ComposerBase&& other) = default;
     virtual ~ComposerBase(){};
