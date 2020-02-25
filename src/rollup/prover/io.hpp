@@ -1,4 +1,5 @@
 #pragma once
+#include <arpa/inet.h>
 #include <barretenberg/curves/grumpkin/grumpkin.hpp>
 #include <barretenberg/misc_crypto/pedersen/pedersen.hpp>
 
