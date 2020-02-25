@@ -2,6 +2,7 @@
 
 #include <memory.h>
 #include <string>
+#include <array>
 
 #include "../../keccak/keccak.h"
 #include "../blake2s/blake2s.hpp"
@@ -36,13 +37,13 @@ template <typename Fr, typename G1> struct key_pair {
 };
 
 struct signature {
-    std::vector<uint8_t> s;
-    std::vector<uint8_t> e;
+    std::array<uint8_t, 32> s;
+    std::array<uint8_t, 32> e;
 };
 
 struct signature_b {
-    std::vector<uint8_t> s;
-    std::vector<uint8_t> r;
+    std::array<uint8_t, 32> s;
+    std::array<uint8_t, 32> r;
 };
 
 template <typename Hash, typename Fq, typename Fr, typename G1>

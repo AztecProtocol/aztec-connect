@@ -8,34 +8,27 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 add_executable(
-    rollup_proof
-    create.cpp
-    destroy.cpp
-    join_split.cpp
-    join_split_tx.cpp
-    join.cpp
+    tx_factory
+    ../prover/join_split_tx.cpp
     main.cpp
-    note.cpp
-    split.cpp
 )
 
 set_target_properties(
-    rollup_proof
+    tx_factory
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY .
 )
 
 target_link_libraries(
-    rollup_proof
+    tx_factory
     PUBLIC
     barretenberg
     PRIVATE
-    leveldb
     ${private_os_libs}
 )
 
 target_include_directories(
-    rollup_proof
+    tx_factory
     PRIVATE
     ${private_include_dir}
     ${include_dir}
