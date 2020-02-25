@@ -167,9 +167,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static inline bool is_point_at_infinity(const element& p) { return p.is_point_at_infinity(); }
 
-    static inline void set_infinity(element& p) { p.set_infinity(); }
+    static inline void set_infinity(element& p) { p.self_set_infinity(); }
 
-    static inline void set_infinity(affine_element& p) { p.set_infinity(); }
+    static inline void set_infinity(affine_element& p) { p.self_set_infinity(); }
 
     static inline void dbl(const element& p1, element& p2) noexcept
     {
@@ -424,79 +424,7 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         // mixed_add_or_sub_inner(p1, p2, p3, predicate);
     }
 
-    static inline void add(const element& p1, const element& p2, element& p3)
-    {
-        bool p1_zero = p1.y.is_msb_set();
-        bool p2_zero = p2.y.is_msb_set();
-        if (__builtin_expect((p1_zero || p2_zero), 0)) {
-            if (p1_zero && !p2_zero) {
-                p3 = { p2.x, p2.y, p2.z };
-                return;
-            }
-            if (p2_zero && !p1_zero) {
-                p3 = { p1.x, p1.y, p1.z };
-                return;
-            }
-            set_infinity(p3);
-            return;
-        }
-        coordinate_field Z1Z1(p1.z.sqr());
-        coordinate_field Z2Z2(p2.z.sqr());
-        coordinate_field S2(Z1Z1 * p1.z);
-        coordinate_field U2(Z1Z1 * p2.x);
-        S2 *= p2.y;
-        coordinate_field U1(Z2Z2 * p1.x);
-        coordinate_field S1(Z2Z2 * p2.z);
-        S1 *= p1.y;
-
-        coordinate_field F(S2 - S1);
-
-        coordinate_field H(U2 - U1);
-
-        if (__builtin_expect(H.is_zero(), 0)) {
-            if (F.is_zero()) {
-                // y2 equals y1, x2 equals x1, double x1
-                dbl(p1, p3);
-                return;
-            } else {
-                set_infinity(p3);
-                return;
-            }
-        }
-
-        F += F;
-
-        coordinate_field I(H + H);
-        I.self_sqr();
-
-        coordinate_field J(H * I);
-
-        U1 *= I;
-
-        U2 = U1 + U1;
-        U2 += J;
-
-        p3.x = F.sqr();
-
-        p3.x -= U2;
-
-        J *= S1;
-        J += J;
-
-        p3.y = U1 - p3.x;
-
-        p3.y *= F;
-
-        p3.y -= J;
-
-        p3.z = p1.z + p2.z;
-
-        Z1Z1 += Z2Z2;
-
-        p3.z.self_sqr();
-        p3.z -= Z1Z1;
-        p3.z *= H;
-    }
+    static inline void add(const element& p1, const element& p2, element& p3) { p3 = p1 + p2; }
 
     static inline element normalize(const element& src)
     {
@@ -576,29 +504,11 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         aligned_free(temporaries);
     }
 
-    static inline bool on_curve(const affine_element& pt)
-    {
-        if (is_point_at_infinity(pt)) {
-            return false;
-        }
-        coordinate_field xxx = pt.x.sqr() * pt.x + GroupParams::b;
-        coordinate_field yy = pt.y.sqr();
-        return (xxx == yy);
-    }
+    static inline bool on_curve(const affine_element& pt) { return pt.on_curve(); }
 
-    static inline bool on_curve(const element& pt)
-    {
-        if (is_point_at_infinity(pt)) {
-            return false;
-        }
-        coordinate_field zz = pt.z.sqr();
-        coordinate_field bz_6 = zz.sqr() * zz * GroupParams::b;
-        coordinate_field xxx = pt.x.sqr() * pt.x + bz_6;
-        coordinate_field yy = pt.y.sqr();
-        return (xxx == yy);
-    }
+    static inline bool on_curve(const element& pt) { return pt.on_curve(); }
 
-    static inline void __neg(const element& a, element& r) { r = { a.x, -a.y, a.z }; }
+    static inline void __neg(const element& a, element& r) { r = -a; }
 
     static inline void __neg(const affine_element& a, affine_element& r) { r = { a.x, -a.y }; }
 
@@ -619,145 +529,23 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static inline element group_exponentiation_no_endo(const element& a, const subgroup_field& scalar)
     {
-        if (scalar == subgroup_field::zero) {
-            element result;
-            result.x = coordinate_field::zero;
-            result.y = coordinate_field::zero;
-            result.z = coordinate_field::zero;
-            set_infinity(result);
-            return result;
-        }
-        element work_element = a;
-
-        subgroup_field converted_scalar = scalar.from_montgomery_form();
-
-        const uint64_t maximum_set_bit = converted_scalar.get_msb();
-        for (uint64_t i = maximum_set_bit - 1; i < maximum_set_bit; --i) {
-            dbl(work_element, work_element);
-            if (converted_scalar.get_bit(i)) {
-                add(work_element, a, work_element);
-            }
-        }
-        return work_element;
+        return a * scalar;
     }
 
     static inline element group_exponentiation_endo(const element& a, const subgroup_field& scalar)
     {
-        subgroup_field converted_scalar = scalar.from_montgomery_form();
-
-        if (converted_scalar == subgroup_field::zero) {
-            element result;
-            result.x = coordinate_field::zero;
-            result.y = coordinate_field::zero;
-            result.z = coordinate_field::zero;
-            set_infinity(result);
-            return result;
-        }
-        element point = a;
-
-        constexpr size_t lookup_size = 8;
-        constexpr size_t num_rounds = 32;
-        constexpr size_t num_wnaf_bits = 4;
-        element* precomp_table = (element*)(aligned_alloc(64, sizeof(element) * lookup_size));
-        affine_element* lookup_table = (affine_element*)(aligned_alloc(64, sizeof(element) * lookup_size));
-
-        element d2;
-        copy(&point, &precomp_table[0]); // 1
-        dbl(point, d2);                  // 2
-        for (size_t i = 1; i < lookup_size; ++i) {
-            add(precomp_table[i - 1], d2, precomp_table[i]);
-        }
-
-        batch_normalize(precomp_table, lookup_size);
-
-        for (size_t i = 0; i < lookup_size; ++i) {
-            lookup_table[i] = { precomp_table[i].x, precomp_table[i].y };
-        }
-
-        uint64_t wnaf_table[num_rounds * 2];
-        subgroup_field endo_scalar;
-        subgroup_field::split_into_endomorphism_scalars(
-            converted_scalar, endo_scalar, *(subgroup_field*)&endo_scalar.data[2]);
-
-        bool skew = false;
-        bool endo_skew = false;
-        wnaf::fixed_wnaf<2, num_wnaf_bits>(&endo_scalar.data[0], &wnaf_table[0], skew, 0);
-        wnaf::fixed_wnaf<2, num_wnaf_bits>(&endo_scalar.data[2], &wnaf_table[1], endo_skew, 0);
-
-        element work_element = one;
-        element dummy_element = one;
-        affine_element temporary;
-        set_infinity(work_element);
-
-        uint64_t wnaf_entry;
-        uint64_t index;
-        bool sign;
-        for (size_t i = 0; i < num_rounds; ++i) {
-            wnaf_entry = wnaf_table[2 * i];
-            index = wnaf_entry & 0x0fffffffU;
-            sign = static_cast<bool>((wnaf_entry >> 31) & 1);
-            copy(&lookup_table[index], &temporary);
-            conditional_negate_affine(&lookup_table[index], &temporary, sign);
-
-            mixed_add(work_element, temporary, work_element);
-
-            wnaf_entry = wnaf_table[2 * i + 1];
-            index = wnaf_entry & 0x0fffffffU;
-            sign = static_cast<bool>((wnaf_entry >> 31) & 1);
-            copy(&lookup_table[index], &temporary);
-            conditional_negate_affine(&lookup_table[index], &temporary, !sign);
-            temporary.x *= coordinate_field::beta;
-
-            mixed_add(work_element, temporary, work_element);
-
-            if (i != num_rounds - 1) {
-                dbl(work_element, work_element);
-                dbl(work_element, work_element);
-                dbl(work_element, work_element);
-                dbl(work_element, work_element);
-            }
-        }
-        __neg(lookup_table[0], temporary);
-        if (skew) {
-            mixed_add(work_element, temporary, work_element);
-        } else {
-            // grotty attempt at making this constant-time
-            mixed_add(dummy_element, temporary, dummy_element);
-        }
-
-        copy(&lookup_table[0], &temporary);
-        temporary.x *= coordinate_field::beta;
-
-        if (endo_skew) {
-            mixed_add(work_element, temporary, work_element);
-        } else {
-            // grotty attempt at making this constant-time
-            mixed_add(dummy_element, temporary, dummy_element);
-        }
-
-        aligned_free(precomp_table);
-        aligned_free(lookup_table);
-        return work_element;
+        return a * scalar;
     }
 
-    static inline element group_exponentiation(const element& a, const subgroup_field& scalar)
-    {
-        if constexpr (GroupParams::USE_ENDOMORPHISM) {
-            return group_exponentiation_endo(a, scalar);
-        } else {
-            return group_exponentiation_no_endo(a, scalar);
-        }
-    }
+    static inline element group_exponentiation(const element& a, const subgroup_field& scalar) { return a * scalar; }
     static inline element group_exponentiation_inner(const affine_element& a, const subgroup_field& scalar)
     {
-        element point;
-        affine_to_jacobian(a, point);
-        return group_exponentiation(point, scalar);
+        return element(a) * scalar;
     }
 
     static inline affine_element group_exponentiation(const affine_element& a, const subgroup_field& scalar)
     {
-        element output = group_exponentiation_inner(a, scalar);
+        element output = element(a) * scalar;
         affine_element result;
         if (is_point_at_infinity(output)) {
             result.x = coordinate_field::zero;
@@ -770,31 +558,9 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         return result;
     }
 
-    static inline bool eq(const element& a, const element& b)
-    {
-        bool both_infinity = is_point_at_infinity(a) && is_point_at_infinity(b);
+    static inline bool eq(const element& a, const element& b) { return a == b; }
 
-        coordinate_field a_zz = a.z.sqr();
-        coordinate_field a_zzz = a_zz * a.z;
-        coordinate_field b_zz = b.z.sqr();
-        coordinate_field b_zzz = b_zz * b.z;
-
-        coordinate_field T0 = a.x * b_zz;
-        coordinate_field T1 = a.y * b_zzz;
-        coordinate_field T2 = b.x * a_zz;
-        coordinate_field T3 = b.y * a_zzz;
-
-        return both_infinity || ((T0 == T2) && (T1 == T3));
-    }
-
-    static inline bool eq(const affine_element& a, const affine_element& b)
-    {
-        element a_ele;
-        element b_ele;
-        affine_to_jacobian(a, a_ele);
-        affine_to_jacobian(b, b_ele);
-        return eq(a_ele, b_ele);
-    }
+    static inline bool eq(const affine_element& a, const affine_element& b) { return a == b; }
 
     // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
     static void copy(const affine_element* src, affine_element* dest);

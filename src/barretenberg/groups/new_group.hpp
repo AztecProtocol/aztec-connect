@@ -12,6 +12,7 @@ namespace test {
 template <class Fq, class Fr, class Params> class alignas(32) element {
   public:
     static constexpr element one{ Params::one_x, Params::one_y, Fq::one };
+    static constexpr element point_at_infinity = one.set_infinity();
     element() noexcept {}
 
     constexpr element(const Fq& a, const Fq& b, const Fq& c) noexcept;
@@ -45,12 +46,24 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
     constexpr element operator-=(const element& other) noexcept;
     constexpr element operator-=(const affine_element<Fq, Fr, Params>& other) noexcept;
 
+    friend constexpr element operator+(const affine_element<Fq, Fr, Params>& left, const element& right) noexcept
+    {
+        return right + left;
+    }
+    friend constexpr element operator-(const affine_element<Fq, Fr, Params>& left, const element& right) noexcept
+    {
+        return -right + left;
+    }
+
     element operator*(const Fr& other) const noexcept;
     element operator*=(const Fr& other) noexcept;
 
+    friend element operator*(const Fr& exponent, const element& base) noexcept { return base * exponent; }
+
     // constexpr Fr operator/(const element& other) noexcept {} TODO: this one seems harder than the others...
 
-    constexpr void set_infinity() noexcept;
+    constexpr element set_infinity() const noexcept;
+    constexpr void self_set_infinity() noexcept;
     constexpr bool is_point_at_infinity() const noexcept;
     constexpr bool on_curve() const noexcept;
     constexpr bool operator==(const element& other) const noexcept;
@@ -67,6 +80,7 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
     static void conditional_negate_affine(const affine_element<Fq, Fr, Params>& in,
                                           affine_element<Fq, Fr, Params>& out,
                                           const uint64_t predicate) noexcept;
+    static void batch_normalize(element* elements, const size_t num_elements) noexcept;
 };
 } // namespace test
 } // namespace barretenberg

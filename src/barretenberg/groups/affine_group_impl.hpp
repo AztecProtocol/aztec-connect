@@ -60,7 +60,15 @@ template <class Fq, class Fr, class T> constexpr affine_element<Fq, Fr, T>::oper
     return out;
 }
 
-template <class Fq, class Fr, class T> constexpr void affine_element<Fq, Fr, T>::set_infinity() noexcept
+template <class Fq, class Fr, class T>
+constexpr affine_element<Fq, Fr, T> affine_element<Fq, Fr, T>::set_infinity() const noexcept
+{
+    affine_element result(*this);
+    result.self_set_infinity();
+    return result;
+}
+
+template <class Fq, class Fr, class T> constexpr void affine_element<Fq, Fr, T>::self_set_infinity() noexcept
 {
     y.self_set_msb();
 }

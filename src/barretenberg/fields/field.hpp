@@ -269,7 +269,7 @@ template <class Params> struct alignas(32) field {
      * We pre-compute scalars g1 = (2^256 * b1) / n, g2 = (2^256 * b2) / n, to avoid having to perform long division
      * on 512-bit scalars
      **/
-    BBERG_INLINE static void split_into_endomorphism_scalars(field& k, field& k1, field& k2)
+    BBERG_INLINE static void split_into_endomorphism_scalars(const field& k, field& k1, field& k2)
     {
         field input = k.reduce_once();
         // uint64_t lambda_reduction[4] = { 0 };

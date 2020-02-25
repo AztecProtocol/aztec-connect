@@ -26,7 +26,7 @@ constexpr element<Fq, Fr, T>::element(element&& other) noexcept
 template <class Fq, class Fr, class T>
 constexpr element<Fq, Fr, T>::element(const affine_element<Fq, Fr, T>& other) noexcept
     : x(other.x)
-    , y(other.x)
+    , y(other.y)
     , z(Fq::one)
 {}
 
@@ -55,7 +55,7 @@ template <class Fq, class Fr, class T> constexpr element<Fq, Fr, T>::operator af
     Fq zzz_inv = zz_inv * z_inv;
     affine_element<Fq, Fr, T> result(x * zz_inv, y * zzz_inv);
     if (is_point_at_infinity()) {
-        result.set_infinity();
+        result.self_set_infinity();
     }
     return result;
 }
@@ -63,7 +63,7 @@ template <class Fq, class Fr, class T> constexpr element<Fq, Fr, T>::operator af
 template <class Fq, class Fr, class T> constexpr void element<Fq, Fr, T>::self_dbl() noexcept
 {
     if (y.is_msb_set_word()) {
-        set_infinity();
+        self_set_infinity();
         return;
     }
     // z2 = 2*y*z
@@ -156,7 +156,7 @@ constexpr void element<Fq, Fr, T>::self_mixed_add_or_sub(const affine_element<Fq
             self_dbl();
             return;
         } else {
-            set_infinity();
+            self_set_infinity();
             return;
         }
     }
@@ -234,7 +234,7 @@ constexpr element<Fq, Fr, T> element<Fq, Fr, T>::operator+=(const affine_element
             self_dbl();
             return *this;
         } else {
-            set_infinity();
+            self_set_infinity();
             return *this;
         }
     }
@@ -322,7 +322,7 @@ constexpr element<Fq, Fr, T> element<Fq, Fr, T>::operator+=(const element& other
         if (p2_zero && !p1_zero) {
             return *this;
         }
-        set_infinity();
+        self_set_infinity();
         return *this;
     }
     Fq Z1Z1(z.sqr());
@@ -343,7 +343,7 @@ constexpr element<Fq, Fr, T> element<Fq, Fr, T>::operator+=(const element& other
             self_dbl();
             return *this;
         } else {
-            set_infinity();
+            self_set_infinity();
             return *this;
         }
     }
@@ -424,7 +424,14 @@ template <class Fq, class Fr, class T> element<Fq, Fr, T> element<Fq, Fr, T>::op
     return *this;
 }
 
-template <class Fq, class Fr, class T> constexpr void element<Fq, Fr, T>::set_infinity() noexcept
+template <class Fq, class Fr, class T> constexpr element<Fq, Fr, T> element<Fq, Fr, T>::set_infinity() const noexcept
+{
+    element result(*this);
+    result.self_set_infinity();
+    return result;
+}
+
+template <class Fq, class Fr, class T> constexpr void element<Fq, Fr, T>::self_set_infinity() noexcept
 {
     y.self_set_msb();
 }
@@ -518,7 +525,7 @@ element<Fq, Fr, T> element<Fq, Fr, T>::mul_without_endomorphism(const Fr& expone
 
     if (converted_scalar.is_zero()) {
         element result{ Fq::zero, Fq::zero, Fq::zero };
-        result.set_infinity();
+        result.self_set_infinity();
         return result;
     }
 
@@ -541,7 +548,7 @@ element<Fq, Fr, T> element<Fq, Fr, T>::mul_with_endomorphism(const Fr& exponent)
 
     if (converted_scalar.is_zero()) {
         element result{ Fq::zero, Fq::zero, Fq::zero };
-        result.set_infinity();
+        result.self_set_infinity();
         return result;
     }
 
@@ -553,7 +560,7 @@ element<Fq, Fr, T> element<Fq, Fr, T>::mul_with_endomorphism(const Fr& exponent)
         (affine_element<Fq, Fr, T>*)(aligned_alloc(64, sizeof(element) * lookup_size));
 
     element d2 = dbl();
-    precomp_table[0] = *this;
+    precomp_table[0] = element(*this);
     for (size_t i = 1; i < lookup_size; ++i) {
         precomp_table[i] = precomp_table[i - 1] + d2;
     }
@@ -576,7 +583,7 @@ element<Fq, Fr, T> element<Fq, Fr, T>::mul_with_endomorphism(const Fr& exponent)
     element work_element = one;
     element dummy_element = one;
     affine_element<Fq, Fr, T> temporary;
-    work_element.set_infinity();
+    work_element.self_set_infinity();
 
     uint64_t wnaf_entry;
     uint64_t index;
@@ -585,13 +592,13 @@ element<Fq, Fr, T> element<Fq, Fr, T>::mul_with_endomorphism(const Fr& exponent)
         wnaf_entry = wnaf_table[2 * i];
         index = wnaf_entry & 0x0fffffffU;
         sign = static_cast<bool>((wnaf_entry >> 31) & 1);
-        work_element.self_add_or_sub(lookup_table[index], sign);
+        work_element.self_mixed_add_or_sub(lookup_table[index], sign);
 
         wnaf_entry = wnaf_table[2 * i + 1];
         index = wnaf_entry & 0x0fffffffU;
         sign = static_cast<bool>((wnaf_entry >> 31) & 1);
         temporary = { lookup_table[index].x * Fq::beta, lookup_table[index].y };
-        work_element.self_add_or_sub(temporary, !sign);
+        work_element.self_mixed_add_or_sub(temporary, !sign);
 
         if (i != num_rounds - 1) {
             work_element.self_dbl();
@@ -608,14 +615,13 @@ element<Fq, Fr, T> element<Fq, Fr, T>::mul_with_endomorphism(const Fr& exponent)
         dummy_element += temporary;
     }
 
-    temporary = { lookup_table[0].x * Fq::beta, -lookup_table[0].y };
+    temporary = { lookup_table[0].x * Fq::beta, lookup_table[0].y };
 
     if (endo_skew) {
         work_element += temporary;
     } else {
         // grotty attempt at making this constant-time
         dummy_element += temporary;
-        mixed_add(dummy_element, temporary, dummy_element);
     }
 
     aligned_free(precomp_table);
@@ -632,6 +638,60 @@ void element<Fq, Fr, T>::conditional_negate_affine(const affine_element<Fq, Fr, 
         src.x,
         predicate ? -src.y : src.y,
     };
+}
+
+template <typename Fq, typename Fr, typename T>
+void element<Fq, Fr, T>::batch_normalize(element* elements, const size_t num_elements) noexcept
+{
+    Fq* temporaries = new Fq[num_elements * 2];
+    Fq accumulator = Fq::one;
+
+    // Iterate over the points, computing the product of their z-coordinates.
+    // At each iteration, store the currently-accumulated z-coordinate in `temporaries`
+    for (size_t i = 0; i < num_elements; ++i) {
+        temporaries[i] = accumulator;
+        if (!elements[i].is_point_at_infinity()) {
+            accumulator *= elements[i].z;
+        }
+    }
+    // For the rest of this method we refer to the product of all z-coordinates as the 'global' z-coordinate
+    // Invert the global z-coordinate and store in `accumulator`
+    accumulator = accumulator.invert();
+
+    /**
+     * We now proceed to iterate back down the array of points.
+     * At each iteration we update the accumulator to contain the z-coordinate of the currently worked-upon
+     *z-coordinate. We can then multiply this accumulator with `temporaries`, to get a scalar that is equal to the
+     *inverse of the z-coordinate of the point at the next iteration cycle e.g. Imagine we have 4 points, such that:
+     *
+     * accumulator = 1 / z.data[0]*z.data[1]*z.data[2]*z.data[3]
+     * temporaries[3] = z.data[0]*z.data[1]*z.data[2]
+     * temporaries[2] = z.data[0]*z.data[1]
+     * temporaries[1] = z.data[0]
+     * temporaries[0] = 1
+     *
+     * At the first iteration, accumulator * temporaries[3] = z.data[0]*z.data[1]*z.data[2] /
+     *z.data[0]*z.data[1]*z.data[2]*z.data[3]  = (1 / z.data[3]) We then update accumulator, such that:
+     *
+     * accumulator = accumulator * z.data[3] = 1 / z.data[0]*z.data[1]*z.data[2]
+     *
+     * At the second iteration, accumulator * temporaries[2] = z.data[0]*z.data[1] / z.data[0]*z.data[1]*z.data[2] =
+     *(1 z.data[2]) And so on, until we have computed every z-inverse!
+     *
+     * We can then convert out of Jacobian form (x = X / Z^2, y = Y / Z^3) with 4 muls and 1 square.
+     **/
+    for (size_t i = num_elements - 1; i < num_elements; --i) {
+        if (!elements[i].is_point_at_infinity()) {
+            Fq z_inv = accumulator * temporaries[i];
+            Fq zz_inv = z_inv.sqr();
+            elements[i].x *= zz_inv;
+            elements[i].y *= (zz_inv * z_inv);
+            accumulator *= elements[i].z;
+        }
+        elements[i].z = Fq::one;
+    }
+
+    delete[] temporaries;
 }
 } // namespace test
 } // namespace barretenberg

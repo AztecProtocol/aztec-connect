@@ -318,8 +318,7 @@ inline g1::element scalar_multiplication_internal(multiplication_runtime_state& 
             if (first_bucket > 0) {
                 uint32_t multiplier = static_cast<uint32_t>(first_bucket << 1UL);
                 size_t shift = internal::get_msb(multiplier);
-                g1::element rolling_accumulator;
-                g1::set_infinity(rolling_accumulator);
+                g1::element rolling_accumulator = g1::element::point_at_infinity;
                 bool init = false;
                 while (shift != static_cast<size_t>(-1)) {
                     if (init) {
@@ -437,8 +436,7 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
             if (first_bucket > 0) {
                 uint32_t multiplier = static_cast<uint32_t>(first_bucket << 1UL);
                 size_t shift = internal::get_msb(multiplier);
-                g1::element rolling_accumulator;
-                g1::set_infinity(rolling_accumulator);
+                g1::element rolling_accumulator = g1::element::point_at_infinity;
                 bool init = false;
                 while (shift != static_cast<size_t>(-1)) {
                     if (init) {

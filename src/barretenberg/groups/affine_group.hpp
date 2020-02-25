@@ -25,7 +25,8 @@ template <typename Fq, typename Fr, typename Params> class alignas(64) affine_el
 
     explicit constexpr operator uint256_t() const noexcept;
 
-    constexpr void set_infinity() noexcept;
+    constexpr affine_element set_infinity() const noexcept;
+    constexpr void self_set_infinity() noexcept;
 
     constexpr bool is_point_at_infinity() const noexcept;
 
@@ -33,6 +34,7 @@ template <typename Fq, typename Fr, typename Params> class alignas(64) affine_el
 
     constexpr bool operator==(const affine_element& other) const noexcept;
 
+    constexpr affine_element operator-() const noexcept { return { x, -y }; }
     Fq x;
     Fq y;
 };
