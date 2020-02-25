@@ -10,7 +10,7 @@
 #include <barretenberg/waffle/stdlib/bitarray/bitarray.hpp>
 #include <barretenberg/waffle/stdlib/common.hpp>
 #include <barretenberg/waffle/stdlib/crypto/commitment/pedersen_note.hpp>
-#include <barretenberg/waffle/stdlib/group/group_utils.hpp>
+#include <barretenberg/misc_crypto/pedersen/pedersen.hpp>
 #include <iostream>
 #include <memory>
 
@@ -33,13 +33,14 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note)
 
     fr::field_t note_value = fr::to_montgomery_form({ { 9999, 0, 0, 0 } });
 
-    grumpkin::g1::element left = plonk::stdlib::group_utils::fixed_base_scalar_mul<32>(note_value, 0);
-    grumpkin::g1::element right = plonk::stdlib::group_utils::fixed_base_scalar_mul<250>(view_key_value, 1);
+    grumpkin::g1::element left = crypto::pedersen::fixed_base_scalar_mul<32>(note_value, 0);
+    grumpkin::g1::element right = crypto::pedersen::fixed_base_scalar_mul<250>(view_key_value, 1);
     grumpkin::g1::element expected;
     grumpkin::g1::add(left, right, expected);
 
+    // TODO MAKE THIS HASH INDEX NOT ZERO
     grumpkin::g1::affine_element hashed_pub_key =
-        plonk::stdlib::group_utils::compress_to_point_native(note_owner_pub_key.x, note_owner_pub_key.y);
+        crypto::pedersen::compress_to_point_native(note_owner_pub_key.x, note_owner_pub_key.y, 0);
 
     grumpkin::g1::mixed_add(expected, hashed_pub_key, expected);
     expected = grumpkin::g1::normalize(expected);
@@ -61,7 +62,7 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note)
     composer.assert_equal(result.ciphertext.x.witness_index, target_encryption.ciphertext.x.witness_index);
     composer.assert_equal(result.ciphertext.y.witness_index, target_encryption.ciphertext.y.witness_index);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();
@@ -84,10 +85,10 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note_zero)
 
     fr::field_t note_value = fr::to_montgomery_form({ { 0, 0, 0, 0 } });
 
-    grumpkin::g1::element expected = plonk::stdlib::group_utils::fixed_base_scalar_mul<32>(note_value, 0);
+    grumpkin::g1::element expected = crypto::pedersen::fixed_base_scalar_mul<32>(note_value, 0);
 
     grumpkin::g1::affine_element hashed_pub_key =
-        plonk::stdlib::group_utils::compress_to_point_native(note_owner_pub_key.x, note_owner_pub_key.y);
+        crypto::pedersen::compress_to_point_native(note_owner_pub_key.x, note_owner_pub_key.y);
 
     grumpkin::g1::mixed_add(expected, hashed_pub_key, expected);
     expected = grumpkin::g1::normalize(expected);
@@ -109,7 +110,7 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note_zero)
     composer.assert_equal(result.ciphertext.x.witness_index, target_encryption.ciphertext.x.witness_index);
     composer.assert_equal(result.ciphertext.y.witness_index, target_encryption.ciphertext.y.witness_index);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();

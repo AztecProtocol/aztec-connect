@@ -2,8 +2,8 @@
 
 #include "../../../composer/turbo_composer.hpp"
 
+#include "../../../../misc_crypto/pedersen/pedersen.hpp"
 #include "../../field/field.hpp"
-#include "../../group/group_utils.hpp"
 
 #include "../crypto.hpp"
 
@@ -13,6 +13,15 @@ namespace pedersen {
 typedef field_t<waffle::TurboComposer> field_t;
 using namespace barretenberg;
 
+namespace {
+point add_points(const point& first, const point& second)
+{
+    field_t lambda = (second.y - first.y) / (second.x - first.x);
+    field_t x_3 = lambda * lambda - second.x - first.x;
+    field_t y_3 = lambda * (first.x - x_3) - first.y;
+    return { x_3, y_3 };
+}
+} // namespace
 
 point hash_single(const field_t& in, const size_t hash_index)
 {
@@ -29,10 +38,9 @@ point hash_single(const field_t& in, const size_t hash_index)
     constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
 
-    constexpr size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1: num_bits;
-    const plonk::stdlib::group_utils::fixed_base_ladder* ladder =
-        plonk::stdlib::group_utils::get_hash_ladder(hash_index, num_bits);
-    grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1);
+    constexpr size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1 : num_bits;
+    const crypto::pedersen::fixed_base_ladder* ladder = crypto::pedersen::get_hash_ladder(hash_index, num_bits);
+    grumpkin::g1::affine_element generator = crypto::pedersen::get_generator(hash_index * 2 + 1);
 
     grumpkin::g1::element origin_points[2];
     grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
@@ -52,7 +60,7 @@ point hash_single(const field_t& in, const size_t hash_index)
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
     fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), initial_exponent));
-    
+
     fr::field_t origin_accumulators[2]{ fr::one, fr::add(accumulator_offset, fr::one) };
 
     grumpkin::g1::element* multiplication_transcript =
@@ -69,7 +77,7 @@ point hash_single(const field_t& in, const size_t hash_index)
     }
     fr::field_t one = fr::one;
     fr::field_t three = fr::add(fr::add(one, one), one);
-    
+
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
 
@@ -102,15 +110,12 @@ point hash_single(const field_t& in, const size_t hash_index)
         round_quad.a = ctx->add_variable(multiplication_transcript[i].x);
         round_quad.b = ctx->add_variable(multiplication_transcript[i].y);
 
-        if (i == 0)
-        {
+        if (i == 0) {
             // we need to ensure that the first value of x_alpha is a defined constant.
             // However, repeated applications of the pedersen hash will use the same constant value.
             // `put_constant_variable` will create a gate that fixes the value of x_alpha, but only once
             round_quad.c = ctx->put_constant_variable(x_alpha);
-        }
-        else
-        {
+        } else {
             round_quad.c = ctx->add_variable(x_alpha);
         }
         if ((wnaf_entries[i + 1] & 0xffffffU) == 0) {
@@ -155,26 +160,23 @@ field_t compress(const field_t& in_left, const field_t& in_right, const size_t h
 {
     point first = hash_single(in_left, hash_index);
     point second = hash_single(in_right, hash_index + 1);
-
-    // combine hash limbs
-    // TODO: replace this addition with a variable-base custom gate
-    field_t lambda = (second.y - first.y) / (second.x - first.x);
-    field_t x_3 = lambda * lambda - second.x - first.x;
-    return x_3;
+    return add_points(first, second).x;
 }
 
+field_t compress_eight(const std::array<field_t, 8>& inputs)
+{
+    point accumulator = hash_single(inputs[0], 16);
+    for (size_t i = 1; i < 8; ++i) {
+        accumulator = add_points(accumulator, hash_single(inputs[i], 16 + i));
+    }
+    return accumulator.x;
+}
 
 point compress_to_point(const field_t& in_left, const field_t& in_right, const size_t hash_index)
 {
     point first = hash_single(in_left, hash_index);
     point second = hash_single(in_right, hash_index + 1);
-
-    // combine hash limbs
-    // TODO: replace this addition with a variable-base custom gate
-    field_t lambda = (second.y - first.y) / (second.x - first.x);
-    field_t x_3 = lambda * lambda - second.x - first.x;
-    field_t y_3 = lambda * (first.x - x_3) - first.y;
-    return { x_3, y_3 };
+    return add_points(first, second);
 }
 } // namespace pedersen
 } // namespace stdlib

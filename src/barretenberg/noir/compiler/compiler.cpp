@@ -68,7 +68,7 @@ std::pair<var_t, waffle::TurboProver> Compiler::start(ast::statement_list const&
     var_t result = function_call(ctx_, "main", args);
 
     if (ctx_.composer.get_num_gates()) {
-        auto prover = ctx_.composer.preprocess();
+        auto prover = ctx_.composer.create_prover();
         return std::make_pair(std::move(result), std::move(prover));
     } else {
         return std::make_pair(std::move(result), waffle::TurboProver());

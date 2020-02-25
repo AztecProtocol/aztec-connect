@@ -76,7 +76,7 @@ void generate_pairing_points(g1::affine_element* p1s, g2::affine_element* p2s)
 constexpr size_t MAX_ROUNDS = 9;
 const auto init = []() {
     printf("generating test data\n");
-    globals.reference_string = waffle::ReferenceString(MAX_GATES);
+    globals.reference_string = waffle::ReferenceString(MAX_GATES, BARRETENBERG_SRS_PATH);
     globals.scalars = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * MAX_GATES * MAX_ROUNDS));
     std::string my_file_path = std::string(BARRETENBERG_SRS_PATH);
     globals.data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (8 * 17 * MAX_GATES)));

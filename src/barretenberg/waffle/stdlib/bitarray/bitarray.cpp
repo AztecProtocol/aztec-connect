@@ -40,6 +40,11 @@ bitarray<ComposerContext>::bitarray(ComposerContext* parent_context, const std::
     }
 }
 
+template <typename ComposerContext>
+bitarray<ComposerContext>::bitarray(ComposerContext* parent_context, const std::vector<uint8_t>& input)
+    : bitarray(parent_context, std::string(input.begin(), input.end()))
+{}
+
 template <typename ComposerContext> bitarray<ComposerContext>::bitarray(uint32<ComposerContext> const& input)
 {
     context = input.get_context();

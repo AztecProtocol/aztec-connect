@@ -1,419 +1,294 @@
-#include <array>
+#include "create.hpp"
+#include "destroy.hpp"
+#include "join.hpp"
+#include "join_split.hpp"
+#include "split.hpp"
+#include "timer.hpp"
+#include "user_context.hpp"
+#include <barretenberg/waffle/stdlib/merkle_tree/leveldb_store.hpp>
 
-#include <barretenberg/curves/grumpkin/grumpkin.hpp>
-#include <barretenberg/waffle/composer/turbo_composer.hpp>
-#include <barretenberg/waffle/stdlib/crypto/commitment/pedersen_note.hpp>
-#include <barretenberg/waffle/stdlib/merkle_tree/merkle_tree.hpp>
+char const* DATA_DB_PATH = "/tmp/rollup_prover";
+char const* NULLIFIER_DB_PATH = "/tmp/rollup_prover_nullifier";
 
-using namespace barretenberg;
-using namespace plonk;
-using namespace int_utils;
+namespace {
+using namespace rollup;
 
-typedef waffle::TurboComposer Composer;
-typedef stdlib::uint32<Composer> uint32;
-typedef stdlib::field_t<Composer> field_t;
-typedef stdlib::bool_t<Composer> bool_t;
-typedef stdlib::byte_array<Composer> byte_array;
-typedef stdlib::merkle_tree::fr_hash_path fr_hash_path;
-typedef stdlib::merkle_tree::hash_path<Composer> hash_path;
-typedef stdlib::merkle_tree::LevelDbStore leveldb_store;
-typedef stdlib::witness_t<Composer> witness_t;
-typedef stdlib::public_witness_t<Composer> public_witness_t;
-typedef std::pair<stdlib::pedersen_note::private_note, stdlib::pedersen_note::public_note> note_pair;
+user_context create_user_context()
+{
+    barretenberg::fr::field_t note_secret = { { 0x11111111, 0x11111111, 0x11111111, 0x11111111 } };
+    grumpkin::fr::field_t owner_secret = { { 0x11111111, 0x11111111, 0x11111111, 0x11111111 } };
+    grumpkin::g1::affine_element owner_pub_key =
+        grumpkin::g1::group_exponentiation(grumpkin::g1::affine_one, owner_secret);
+    return { note_secret, owner_secret, owner_pub_key };
+}
 
-barretenberg::fr::field_t note_secret;
-grumpkin::fr::field_t owner_secret;
-grumpkin::g1::affine_element owner_pub_key;
-
-struct rollup_context {
-    Composer& composer;
-    leveldb_store& data_db;
-    leveldb_store& nullifier_db;
-    field_t data_size;
-    field_t data_root;
-    field_t nullifier_root;
+fr::field_t generate_random_secret()
+{
+    fr::field_t secret = fr::from_montgomery_form(fr::random_element());
+    secret.data[3] = secret.data[3] & (~0b1111110000000000000000000000000000000000000000000000000000000000ULL);
+    return fr::to_montgomery_form(secret);
 };
 
-const auto init = []() {
-    note_secret = { { 0x11111111, 0x11111111, 0x11111111, 0x11111111 } };
-    owner_secret = { { 0x11111111, 0x11111111, 0x11111111, 0x11111111 } };
-    owner_pub_key = grumpkin::g1::group_exponentiation(grumpkin::g1::affine_one, owner_secret);
-    return true;
-}();
-
-note_pair create_note_pair(Composer& composer, uint32 const& value)
+tx_note create_note(user_context const& user, uint32_t value)
 {
-    note_pair result;
-
-    field_t view_key = witness_t(&composer, note_secret);
-    field_t note_owner_x = witness_t(&composer, owner_pub_key.x);
-    field_t note_owner_y = witness_t(&composer, owner_pub_key.y);
-    result.first = { { note_owner_x, note_owner_y }, value, view_key };
-    result.second = plonk::stdlib::pedersen_note::encrypt_note(result.first);
-    return result;
+    return { { user.public_key.x, user.public_key.y }, value, user.note_secret };
 }
 
-void set_note_public(Composer& composer, stdlib::pedersen_note::public_note const& note)
+tx_note create_gibberish_note(user_context const& user, uint32_t value)
 {
-    composer.set_public_input(note.ciphertext.x.witness_index);
-    composer.set_public_input(note.ciphertext.y.witness_index);
+    return { { user.public_key.x, user.public_key.y }, value, generate_random_secret() };
 }
 
-byte_array create_note_leaf(Composer& composer, stdlib::pedersen_note::public_note const& note)
+rollup_context create_rollup_context(Composer& composer)
 {
-    byte_array value_byte_array(&composer);
-    value_byte_array.write(note.ciphertext.x).write(note.ciphertext.y);
-    return value_byte_array;
-}
-
-std::string create_note_db_element(stdlib::pedersen_note::public_note const& note)
-{
-    // TODO: Compress point.
-    std::string new_element = std::string(64, 0);
-    fr::serialize_to_buffer(note.ciphertext.x.get_value(), (uint8_t*)(&new_element[0]));
-    fr::serialize_to_buffer(note.ciphertext.y.get_value(), (uint8_t*)(&new_element[32]));
-    return new_element;
-}
-
-struct new_note_context {
-    byte_array note_index;
-    note_pair note_data;
-    hash_path old_path;
-    hash_path new_path;
-    field_t old_root;
-    field_t new_root;
-    byte_array value;
-};
-
-new_note_context create_new_note_context(rollup_context& ctx, field_t const& index_field, uint32 const& value)
-{
-    uint128_t index_to_create = field_to_uint128(index_field.get_value());
-
-    note_pair note_data = create_note_pair(ctx.composer, value);
-
-    std::string new_element = create_note_db_element(note_data.second);
-
-    fr_hash_path old_path = ctx.data_db.get_hash_path(index_to_create);
-    fr_hash_path new_path = stdlib::merkle_tree::get_new_hash_path(old_path, index_to_create, new_element);
-
-    byte_array new_value_byte_array(&ctx.composer);
-    new_value_byte_array.write(note_data.second.ciphertext.x).write(note_data.second.ciphertext.y);
-
-    field_t old_root = ctx.data_root;
-    field_t new_root = witness_t(&ctx.composer, stdlib::merkle_tree::get_hash_path_root(new_path));
-
-    new_note_context note_ctx = {
-        index_field,
-        note_data,
-        stdlib::merkle_tree::create_witness_hash_path(ctx.composer, old_path),
-        stdlib::merkle_tree::create_witness_hash_path(ctx.composer, new_path),
-        old_root,
-        new_root,
-        new_value_byte_array,
-    };
-
-    return note_ctx;
-}
-
-void create_note(rollup_context& ctx, new_note_context const& note_ctx)
-{
-    stdlib::merkle_tree::update_membership(ctx.composer,
-                                           note_ctx.new_root,
-                                           note_ctx.new_path,
-                                           note_ctx.value,
-                                           note_ctx.old_root,
-                                           note_ctx.old_path,
-                                           byte_array(&ctx.composer, 64),
-                                           note_ctx.note_index);
-
-    ctx.data_db.update_element(ctx.data_db.size(), note_ctx.value.get_value());
-
-    ctx.data_size = (ctx.data_size + 1).normalize();
-    ctx.data_root = note_ctx.new_root;
-}
-
-bool create(rollup_context& ctx, uint32_t const value)
-{
-    uint32 value_uint = witness_t(&ctx.composer, value);
-    new_note_context note_ctx = create_new_note_context(ctx, ctx.data_size, value_uint);
-    set_note_public(ctx.composer, note_ctx.note_data.second);
-
-    create_note(ctx, note_ctx);
-
-    ctx.composer.set_public_input(ctx.data_root.witness_index);
-
-    auto prover = ctx.composer.preprocess();
-    printf("composer gates = %zu\n", ctx.composer.get_num_gates());
-    waffle::plonk_proof proof = prover.construct_proof();
-
-    auto verifier = ctx.composer.create_verifier();
-    bool verified = verifier.verify_proof(proof);
-
-    std::cout << "Verified: " << verified << std::endl;
-
-    if (verified) {
-        ctx.data_db.commit();
-    }
-
-    return verified;
-}
-
-struct destroy_note_context {
-    note_pair note_data;
-    byte_array data_index;
-    field_t data_root;
-    hash_path data_path;
-    byte_array data_value;
-    field_t nullifier_index;
-    hash_path nullifier_old_path;
-    hash_path nullifier_new_path;
-    field_t nullifier_old_root;
-    field_t nullifier_new_root;
-    byte_array nullifier_value;
-};
-
-destroy_note_context create_destroy_note_context(rollup_context& ctx, field_t const& index_field, uint32 const& value)
-{
-    uint128_t index_to_destroy = field_to_uint128(index_field.get_value());
-    note_pair note_data = create_note_pair(ctx.composer, value);
-    field_t data_root = ctx.data_root;
-    fr_hash_path data_path = ctx.data_db.get_hash_path(index_to_destroy);
-    byte_array data_value = create_note_leaf(ctx.composer, note_data.second);
-
-    // We mix in the index and notes secret as part of the value we hash into the tree to ensure notes will always have
-    // unique entries.
-    byte_array note_hash_data = byte_array(&ctx.composer);
-    note_hash_data.write(note_data.second.ciphertext.x)
-        .write(byte_array(index_field).slice(28, 4))
-        .write(byte_array(note_data.first.secret).slice(4, 28));
-
-    // We have to convert the byte_array into a field_t to get the montgomery form. Can we avoid this?
-    field_t nullifier_index = stdlib::merkle_tree::hash_value(note_hash_data);
-    uint128_t nullifier_index_raw = field_to_uint128(nullifier_index.get_value());
-
-    byte_array nullifier_value(&ctx.composer);
-    nullifier_value.write(field_t(1ULL)).write(field_t(uint64_t(0)));
-
-    fr_hash_path nullifier_old_path = ctx.nullifier_db.get_hash_path(nullifier_index_raw);
-    fr_hash_path nullifier_new_path =
-        stdlib::merkle_tree::get_new_hash_path(nullifier_old_path, nullifier_index_raw, nullifier_value.get_value());
-
-    field_t nullifier_old_root = ctx.nullifier_root;
-    field_t nullifier_new_root = witness_t(&ctx.composer, stdlib::merkle_tree::get_hash_path_root(nullifier_new_path));
-
-    destroy_note_context note_ctx = {
-        note_data,
-        index_field,
-        data_root,
-        stdlib::merkle_tree::create_witness_hash_path(ctx.composer, data_path),
-        data_value,
-        nullifier_index,
-        stdlib::merkle_tree::create_witness_hash_path(ctx.composer, nullifier_old_path),
-        stdlib::merkle_tree::create_witness_hash_path(ctx.composer, nullifier_new_path),
-        nullifier_old_root,
-        nullifier_new_root,
-        nullifier_value,
-    };
-
-    return note_ctx;
-}
-
-void destroy_note(rollup_context& ctx, destroy_note_context const& destroy_ctx)
-{
-    // Check that the note we want to destroy exists.
-    stdlib::merkle_tree::assert_check_membership(
-        ctx.composer, destroy_ctx.data_root, destroy_ctx.data_path, destroy_ctx.data_value, destroy_ctx.data_index);
-
-    stdlib::merkle_tree::update_membership(ctx.composer,
-                                           destroy_ctx.nullifier_new_root,
-                                           destroy_ctx.nullifier_new_path,
-                                           destroy_ctx.nullifier_value,
-                                           destroy_ctx.nullifier_old_root,
-                                           destroy_ctx.nullifier_old_path,
-                                           byte_array(&ctx.composer, 64),
-                                           static_cast<byte_array>(destroy_ctx.nullifier_index));
-
-    ctx.nullifier_db.update_element(field_to_uint128(destroy_ctx.nullifier_index.get_value()),
-                                    destroy_ctx.nullifier_value.get_value());
-
-    ctx.nullifier_root = destroy_ctx.nullifier_new_root;
-}
-
-bool destroy(rollup_context& ctx, uint32_t const index, uint32_t const value)
-{
-    field_t index_to_destroy_field = witness_t(&ctx.composer, index);
-    uint32 value_uint = witness_t(&ctx.composer, value);
-    destroy_note_context destroy_ctx = create_destroy_note_context(ctx, index_to_destroy_field, value_uint);
-    set_note_public(ctx.composer, destroy_ctx.note_data.second);
-
-    destroy_note(ctx, destroy_ctx);
-
-    ctx.composer.set_public_input(ctx.nullifier_root.witness_index);
-
-    auto prover = ctx.composer.preprocess();
-    printf("composer gates = %zu\n", ctx.composer.get_num_gates());
-    waffle::plonk_proof proof = prover.construct_proof();
-
-    auto verifier = ctx.composer.create_verifier();
-    bool verified = verifier.verify_proof(proof);
-
-    std::cout << "Verified: " << verified << std::endl;
-
-    if (verified) {
-        ctx.nullifier_db.commit();
-    }
-
-    return verified;
-}
-
-bool split(rollup_context& ctx, uint32_t in_index, uint32_t out_value1, uint32_t out_value2)
-{
-    uint32 out_value1_uint = witness_t(&ctx.composer, out_value1);
-    uint32 out_value2_uint = witness_t(&ctx.composer, out_value2);
-    field_t in_index_field = witness_t(&ctx.composer, in_index);
-    uint32 in_value_uint = out_value1_uint + out_value2_uint;
-
-    auto note1 = create_new_note_context(ctx, ctx.data_size, out_value1_uint);
-    set_note_public(ctx.composer, note1.note_data.second);
-    create_note(ctx, note1);
-
-    auto note2 = create_new_note_context(ctx, ctx.data_size, out_value2_uint);
-    set_note_public(ctx.composer, note2.note_data.second);
-    create_note(ctx, note2);
-
-    auto in_note = create_destroy_note_context(ctx, in_index_field, in_value_uint);
-    destroy_note(ctx, in_note);
-
-    ctx.composer.set_public_input(ctx.data_root.witness_index);
-    ctx.composer.set_public_input(ctx.nullifier_root.witness_index);
-
-    auto prover = ctx.composer.preprocess();
-    printf("composer gates = %zu\n", ctx.composer.get_num_gates());
-    waffle::plonk_proof proof = prover.construct_proof();
-
-    auto verifier = ctx.composer.create_verifier();
-    bool verified = verifier.verify_proof(proof);
-
-    std::cout << "Verified: " << verified << std::endl;
-
-    if (verified) {
-        ctx.data_db.commit();
-        ctx.nullifier_db.commit();
-    }
-
-    return verified;
-}
-
-bool join(rollup_context& ctx, uint32_t in_index1, uint32_t in_index2, uint32_t in_value1, uint32_t in_value2)
-{
-    field_t in_index1_field = witness_t(&ctx.composer, in_index1);
-    field_t in_index2_field = witness_t(&ctx.composer, in_index2);
-    uint32 in_value1_uint = witness_t(&ctx.composer, in_value1);
-    uint32 in_value2_uint = witness_t(&ctx.composer, in_value2);
-    uint32 out_value_uint = in_value1_uint + in_value2_uint;
-
-    auto new_note = create_new_note_context(ctx, ctx.data_size, out_value_uint);
-    create_note(ctx, new_note);
-
-    auto note1 = create_destroy_note_context(ctx, in_index1_field, in_value1_uint);
-    set_note_public(ctx.composer, note1.note_data.second);
-    destroy_note(ctx, note1);
-
-    auto note2 = create_destroy_note_context(ctx, in_index2_field, in_value2_uint);
-    set_note_public(ctx.composer, note2.note_data.second);
-    destroy_note(ctx, note2);
-
-    ctx.composer.set_public_input(ctx.data_root.witness_index);
-    ctx.composer.set_public_input(ctx.nullifier_root.witness_index);
-
-    auto prover = ctx.composer.preprocess();
-    printf("composer gates = %zu\n", ctx.composer.get_num_gates());
-    waffle::plonk_proof proof = prover.construct_proof();
-
-    auto verifier = ctx.composer.create_verifier();
-    bool verified = verifier.verify_proof(proof);
-
-    std::cout << "Verified: " << verified << std::endl;
-
-    if (verified) {
-        ctx.data_db.commit();
-        ctx.nullifier_db.commit();
-    }
-
-    return verified;
-}
-
-int main(int argc, char** argv)
-{
-    if (argc < 2) {
-        std::cout << "usage: " << argv[0] << " [create ...] [split ...]" << std::endl;
-    }
-
-    std::string cmd = argv[1];
-
-    if (cmd == "reset") {
-        leveldb::DestroyDB("/tmp/rollup_prover", leveldb::Options());
-        leveldb::DestroyDB("/tmp/rollup_prover_nullifier", leveldb::Options());
-        return 0;
-    }
-
-    stdlib::merkle_tree::LevelDbStore data_db("/tmp/rollup_prover", 32);
-    stdlib::merkle_tree::LevelDbStore nullifier_db("/tmp/rollup_prover_nullifier", 128);
-    Composer composer = Composer();
+    // TODO: We can't have distinct databases due to requiring atomicity. Change to use a single db with multiple trees.
+    leveldb_store data_db(DATA_DB_PATH, 32);
+    leveldb_store nullifier_db(NULLIFIER_DB_PATH, 128);
 
     std::cout << "DB root: " << data_db.root() << " size: " << data_db.size() << std::endl;
     std::cout << "Nullifier root: " << nullifier_db.root() << " size: " << nullifier_db.size() << std::endl;
 
-    rollup_context ctx = {
+    return {
         composer,
-        data_db,
-        nullifier_db,
+        std::move(data_db),
+        std::move(nullifier_db),
         public_witness_t(&composer, data_db.size()),
         public_witness_t(&composer, data_db.root()),
         public_witness_t(&composer, nullifier_db.root()),
     };
+}
 
+bool create(std::vector<std::string> const& args, rollup_context& ctx, user_context const& user)
+{
+    uint32_t value = (uint32_t)atoi(args[0].c_str());
+    tx_note note = create_note(user, value);
+    return create(ctx, note);
+}
+
+bool destroy(std::vector<std::string> const& args, rollup_context& ctx, user_context const& user)
+{
+    uint32_t index = (uint32_t)atoi(args[2].c_str());
+    uint32_t value = (uint32_t)atoi(args[3].c_str());
+    tx_note note = create_note(user, value);
+    return destroy(ctx, index, note);
+}
+
+bool split(std::vector<std::string> const& args, rollup_context& ctx, user_context const& user)
+{
+    uint32_t index = (uint32_t)atoi(args[2].c_str());
+    uint32_t value1 = (uint32_t)atoi(args[3].c_str());
+    uint32_t value2 = (uint32_t)atoi(args[4].c_str());
+    tx_note in_note = create_note(user, value1 + value2);
+    tx_note out_note1 = create_note(user, value1);
+    tx_note out_note2 = create_note(user, value2);
+    return split(ctx, index, in_note, out_note1, out_note2);
+}
+
+bool join(std::vector<std::string> const& args, rollup_context& ctx, user_context const& user)
+{
+    uint32_t index1 = (uint32_t)atoi(args[2].c_str());
+    uint32_t index2 = (uint32_t)atoi(args[3].c_str());
+    uint32_t value1 = (uint32_t)atoi(args[4].c_str());
+    uint32_t value2 = (uint32_t)atoi(args[5].c_str());
+    tx_note in_note1 = create_note(user, value1);
+    tx_note in_note2 = create_note(user, value2);
+    tx_note out_note = create_note(user, value1 + value2);
+    return join(ctx, index1, index2, in_note1, in_note2, out_note);
+}
+
+crypto::schnorr::signature sign_notes(std::array<tx_note, 4> const& notes, user_context const& user)
+{
+    std::array<grumpkin::fq::field_t, 8> to_compress;
+    for (size_t i = 0; i < 4; ++i) {
+        auto encrypted = crypto::pedersen_note::encrypt_note(notes[i]);
+        to_compress[i * 2] = encrypted.x;
+        to_compress[i * 2 + 1] = encrypted.y;
+    }
+    fr::field_t compressed = crypto::pedersen::compress_eight_native(to_compress);
+    std::vector<uint8_t> message(sizeof(fr::field_t));
+    fr::serialize_to_buffer(compressed, &message[0]);
+    crypto::schnorr::signature signature =
+        crypto::schnorr::construct_signature<Blake2sHasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(
+            std::string(message.begin(), message.end()), { user.private_key, user.public_key });
+    return signature;
+}
+
+join_split_tx create_join_split_tx(std::vector<std::string> const& args, user_context const& user)
+{
+    uint32_t index1 = (uint32_t)atoi(args[0].c_str());
+    uint32_t index2 = (uint32_t)atoi(args[1].c_str());
+    uint32_t in_value1 = (uint32_t)atoi(args[2].c_str());
+    uint32_t in_value2 = (uint32_t)atoi(args[3].c_str());
+    uint32_t out_value1 = (uint32_t)atoi(args[4].c_str());
+    uint32_t out_value2 = (uint32_t)atoi(args[5].c_str());
+    uint32_t public_input = args.size() > 6 ? (uint32_t)atoi(args[6].c_str()) : 0;
+    uint32_t public_output = args.size() > 7 ? (uint32_t)atoi(args[7].c_str()) : 0;
+    uint32_t num_input_notes = (uint32_t)(args[2][0] != '-') + (uint32_t)(args[3][0] != '-');
+
+    tx_note in_note1 = num_input_notes < 1 ? create_gibberish_note(user, in_value1) : create_note(user, in_value1);
+    tx_note in_note2 = num_input_notes < 2 ? create_gibberish_note(user, in_value2) : create_note(user, in_value2);
+    tx_note out_note1 = create_note(user, out_value1);
+    tx_note out_note2 = create_note(user, out_value2);
+
+    auto signature = sign_notes({ in_note1, in_note2, out_note1, out_note2 }, user);
+
+    return {
+        user.public_key,
+        public_input,
+        public_output,
+        num_input_notes,
+        {
+            index1,
+            index2,
+        },
+        {
+            in_note1,
+            in_note2,
+        },
+        {
+            out_note1,
+            out_note2,
+        },
+        signature,
+    };
+}
+
+void usage(std::vector<std::string> const& args)
+{
+    std::cout << "usage: " << args[0] << " [create ...] [destroy ...] [split ...] [join ...] [join-split ...]"
+              << std::endl;
+}
+
+} // namespace
+
+int main(int argc, char** argv)
+{
+    std::vector<std::string> args(argv, argv + argc);
+
+    if (args.size() < 2) {
+        usage(args);
+        return -1;
+    }
+
+    if (args[1] == "reset") {
+        leveldb::DestroyDB(DATA_DB_PATH, leveldb::Options());
+        leveldb::DestroyDB(NULLIFIER_DB_PATH, leveldb::Options());
+        return 0;
+    }
+
+    // Composer get's corrupted if we use move ctors. Have to create at top level :/
+    Composer composer = Composer("../srs_db/ignition");
+    rollup_context ctx = create_rollup_context(composer);
+    user_context user = create_user_context();
+    std::vector<std::string> tx_args(args.begin() + 2, args.end());
     bool success = false;
+    Timer circuit_timer;
 
-    if (cmd == "create") {
-        if (argc != 3) {
+    if (args[1] == "create") {
+        if (args.size() != 3) {
             std::cout << "usage: " << argv[0] << " create <value>" << std::endl;
             return -1;
         }
-        uint32_t value = (uint32_t)atoi(argv[2]);
-        success = create(ctx, value);
-    } else if (cmd == "destroy") {
-        if (argc != 4) {
+        success = create(tx_args, ctx, user);
+    } else if (args[1] == "destroy") {
+        if (args.size() != 4) {
             std::cout << "usage: " << argv[0] << " destroy <index> <value>" << std::endl;
             return -1;
         }
-        uint32_t index = (uint32_t)atoi(argv[2]);
-        uint32_t value = (uint32_t)atoi(argv[3]);
-        success = destroy(ctx, index, value);
-    } else if (cmd == "split") {
-        if (argc != 5) {
+        success = destroy(args, ctx, user);
+    } else if (args[1] == "split") {
+        if (args.size() != 5) {
             std::cout << "usage: " << argv[0]
                       << " split <note index to spend> <first new note value> <second new note value>" << std::endl;
             return -1;
         }
-        uint32_t index = (uint32_t)atoi(argv[2]);
-        uint32_t value1 = (uint32_t)atoi(argv[3]);
-        uint32_t value2 = (uint32_t)atoi(argv[4]);
-        success = split(ctx, index, value1, value2);
-    } else if (cmd == "join") {
-        if (argc != 6) {
+        success = split(args, ctx, user);
+    } else if (args[1] == "join") {
+        if (args.size() != 6) {
             std::cout << "usage: " << argv[0]
-                      << " join <first note index to join> <second note index to join> <first note value> <second "
-                         "note value>"
+                      << " join <first note index to join> <second note index to join> <first note value> "
+                         " <second note value>"
                       << std::endl;
             return -1;
         }
-        uint32_t index1 = (uint32_t)atoi(argv[2]);
-        uint32_t index2 = (uint32_t)atoi(argv[3]);
-        uint32_t value1 = (uint32_t)atoi(argv[4]);
-        uint32_t value2 = (uint32_t)atoi(argv[5]);
-        success = join(ctx, index1, index2, value1, value2);
+        success = join(args, ctx, user);
+    } else if (args[1] == "join-split") {
+        if (args.size() < 8) {
+            std::cout << "usage: " << argv[0]
+                      << " join-split <first note index to join> <second note index to join> <first input note value>"
+                         " <second input note value> <first output note value> <second output note value>"
+                         " [public input] [public output]"
+                      << std::endl;
+            return -1;
+        }
+
+        auto tx = create_join_split_tx({ args.begin() + 2, args.end() }, user);
+        std::cout << tx << std::flush;
+        success = join_split(ctx, tx);
+    } else if (args[1] == "join-split-auto") {
+        if (args.size() != 3) {
+            std::cout << "usage: " << argv[0] << " join-split-auto <num transactions>" << std::endl;
+            return -1;
+        }
+        uint32_t num_txs = (uint32_t)atoi(args[2].c_str());
+
+        join_split(ctx, create_join_split_tx({ "0", "0", "-", "-", "50", "50", "100", "0" }, user));
+
+        for (size_t i = 0; i < num_txs - 1; ++i) {
+            auto index1 = std::to_string(i * 2);
+            auto index2 = std::to_string(i * 2 + 1);
+            join_split(ctx, create_join_split_tx({ index1, index2, "50", "50", "50", "50", "0", "0" }, user));
+        }
+
+        success = true;
+    } else if (args[1] == "join-split-stdin") {
+        // Read transactions from stdin.
+        while (true) {
+            join_split_tx tx;
+            read(std::cin, tx);
+            if (!std::cin.good()) {
+                break;
+            }
+            std::cout << tx << std::endl;
+            join_split(ctx, tx);
+        }
+        success = true;
+    } else {
+        usage(args);
+        return -1;
     }
 
-    return success ? 0 : 1;
+    if (!success) {
+        std::cout << "Failed to generate witness data." << std::endl;
+        return -1;
+    }
+
+    std::cout << "Time taken to create circuit: " << circuit_timer.toString() << std::endl;
+    printf("composer gates = %zu\n", ctx.composer.get_num_gates());
+
+    std::cout << "Computing witness..." << std::endl;
+    Timer witness_timer;
+    ctx.composer.compute_witness();
+    std::cout << "Time taken to compute witness: " << witness_timer.toString() << std::endl;
+
+    std::cout << "Creating prover..." << std::endl;
+    Timer prover_timer;
+    auto prover = ctx.composer.create_prover();
+    std::cout << "Time taken to create prover: " << prover_timer.toString() << std::endl;
+
+    std::cout << "Constructing proof..." << std::endl;
+    Timer proof_timer;
+    waffle::plonk_proof proof = prover.construct_proof();
+    std::cout << "Time taken to construct proof: " << proof_timer.toString() << std::endl;
+
+    auto verifier = ctx.composer.create_verifier();
+    bool verified = verifier.verify_proof(proof);
+    std::cout << "Verified: " << verified << std::endl;
+
+    if (verified) {
+        ctx.data_db.commit();
+        ctx.nullifier_db.commit();
+    }
+
+    return verified ? 0 : 1;
 }

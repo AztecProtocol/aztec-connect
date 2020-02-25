@@ -1,10 +1,11 @@
 #pragma once
 
-#include "../../../curves/grumpkin/grumpkin.hpp"
+#include <array>
 
-namespace plonk {
-namespace stdlib {
-namespace group_utils {
+#include "../../curves/grumpkin/grumpkin.hpp"
+
+namespace crypto {
+namespace pedersen {
 struct fixed_base_ladder {
     grumpkin::g1::affine_element one;
     grumpkin::g1::affine_element three;
@@ -19,8 +20,13 @@ const fixed_base_ladder* get_ladder(const size_t generator_index, const size_t n
 const fixed_base_ladder* get_hash_ladder(const size_t generator_index, const size_t num_bits);
 grumpkin::g1::affine_element get_generator(const size_t generator_index);
 
-grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left, const grumpkin::fq::field_t& right, const size_t hash_index = 0);
-grumpkin::g1::affine_element compress_to_point_native(const grumpkin::fq::field_t& left, const grumpkin::fq::field_t& right, const size_t hash_index = 0);
+grumpkin::fq::field_t compress_eight_native(const std::array<grumpkin::fq::field_t, 8>& inputs);
+grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left,
+                                      const grumpkin::fq::field_t& right,
+                                      const size_t hash_index = 0);
+grumpkin::g1::affine_element compress_to_point_native(const grumpkin::fq::field_t& left,
+                                                      const grumpkin::fq::field_t& right,
+                                                      const size_t hash_index = 0);
 
 template <size_t num_bits>
 grumpkin::g1::element fixed_base_scalar_mul(const barretenberg::fr::field_t& in, const size_t generator_index)
@@ -31,8 +37,7 @@ grumpkin::g1::element fixed_base_scalar_mul(const barretenberg::fr::field_t& in,
     constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
 
-    const plonk::stdlib::group_utils::fixed_base_ladder* ladder =
-        plonk::stdlib::group_utils::get_ladder(generator_index, num_bits);
+    const crypto::pedersen::fixed_base_ladder* ladder = crypto::pedersen::get_ladder(generator_index, num_bits);
 
     barretenberg::fr::field_t scalar_multiplier_base = barretenberg::fr::to_montgomery_form(scalar_multiplier);
     if ((scalar_multiplier.data[0] & 1) == 0) {
@@ -47,7 +52,7 @@ grumpkin::g1::element fixed_base_scalar_mul(const barretenberg::fr::field_t& in,
     grumpkin::g1::element accumulator;
     grumpkin::g1::affine_to_jacobian(ladder[0].one, accumulator);
     if (skew) {
-        grumpkin::g1::mixed_add(accumulator, plonk::stdlib::group_utils::get_generator(generator_index), accumulator);
+        grumpkin::g1::mixed_add(accumulator, crypto::pedersen::get_generator(generator_index), accumulator);
     }
 
     for (size_t i = 0; i < num_quads; ++i) {
@@ -60,6 +65,5 @@ grumpkin::g1::element fixed_base_scalar_mul(const barretenberg::fr::field_t& in,
     }
     return accumulator;
 }
-} // namespace group_utils
-} // namespace stdlib
-} // namespace plonk
+} // namespace pedersen
+} // namespace crypto

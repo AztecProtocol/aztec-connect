@@ -25,6 +25,7 @@ template <typename ComposerContext> class bitarray {
   public:
     bitarray(ComposerContext* parent_context, const size_t n);
     bitarray(ComposerContext* parent_context, const std::string& input);
+    bitarray(ComposerContext* parent_context, const std::vector<uint8_t>& input);
     bitarray(const std::vector<uint32<ComposerContext>>& input);
     bitarray(uint32<ComposerContext> const& input);
     bitarray(byte_array<ComposerContext> const& input)
@@ -67,9 +68,7 @@ template <typename ComposerContext> class bitarray {
 
     operator byte_array<ComposerContext>()
     {
-        typename byte_array<ComposerContext>::bits_t bits(values);
-        std::reverse(bits.begin(), bits.end());
-        return byte_array(context, bits);
+        return byte_array(context, values.rbegin(), values.rend());
     };
 
     template <size_t N> operator std::array<uint32<ComposerContext>, N>()

@@ -28,9 +28,9 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
 
     size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1 : num_bits;
-    const plonk::stdlib::group_utils::fixed_base_ladder* ladder =
-        plonk::stdlib::group_utils::get_ladder(generator_index, num_bits);
-    grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(generator_index);
+    const crypto::pedersen::fixed_base_ladder* ladder =
+        crypto::pedersen::get_ladder(generator_index, num_bits);
+    grumpkin::g1::affine_element generator = crypto::pedersen::get_generator(generator_index);
 
     grumpkin::g1::element origin_points[2];
     grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
@@ -180,7 +180,7 @@ public_note encrypt_note(const private_note& plaintext)
     // If k = 0 we want to return p_2.base, as g^{0} = 1
     // If k != 0, we want to return p_1.base + p_2.base
     field_t lambda = (p_2.base.y - p_1.base.y) / (p_2.base.x - p_1.base.x);
-    field_t x_3 = (lambda * lambda) - (p_2.base.x - p_1.base.x);
+    field_t x_3 = (lambda * lambda) - (p_2.base.x + p_1.base.x);
     field_t y_3 = lambda * (p_1.base.x - x_3) - p_1.base.y;
 
     field_t x_4 = (p_2.base.x - x_3) * is_zero + x_3;

@@ -43,7 +43,7 @@ TEST(stdlib_blake2s, test_single_block)
 
     EXPECT_EQ(output.get_value(), std::string(expected.begin(), expected.end()));
 
-    auto prover = composer.preprocess();
+    auto prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     auto verifier = composer.create_verifier();
@@ -67,7 +67,7 @@ TEST(stdlib_blake2s, test_double_block)
 
     EXPECT_EQ(output.get_value(), std::string(expected.begin(), expected.end()));
 
-    auto prover = composer.preprocess();
+    auto prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     auto verifier = composer.create_verifier();

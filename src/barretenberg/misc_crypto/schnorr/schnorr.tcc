@@ -17,13 +17,13 @@ signature construct_signature(const std::string& message, const key_pair<Fr, G1>
     std::copy(r.begin(), r.end(), std::back_inserter(message_buffer));
     std::copy(message.begin(), message.end(), std::back_inserter(message_buffer));
 
-    sig.e = Hash::hash(message_buffer);
+    auto ev = Hash::hash(message_buffer);
+    std::copy(ev.begin(), ev.end(), sig.e.begin());
 
     typename Fr::field_t e = Fr::serialize_from_buffer(&sig.e[0]);
 
     typename Fr::field_t s = Fr::sub(k, Fr::mul(account.private_key, e));
 
-    sig.s.resize(32);
     Fr::serialize_to_buffer(s, &sig.s[0]);
     return sig;
 }
@@ -34,7 +34,6 @@ signature_b construct_signature_b(const std::string& message, const key_pair<Fr,
     signature_b sig;
     typename Fr::field_t k = Fr::random_element(); // TODO replace with HMAC
     typename G1::affine_element R = G1::group_exponentiation(G1::affine_one, k);
-    sig.r.resize(32);
     Fq::serialize_to_buffer(R.x, &sig.r[0]);
 
     typename Fq::field_t yy = Fq::add(Fq::mul(Fq::sqr(R.x), R.x), G1::curve_b);
@@ -52,7 +51,6 @@ signature_b construct_signature_b(const std::string& message, const key_pair<Fr,
     typename Fr::field_t e = Fr::serialize_from_buffer(&e_vec[0]);
     typename Fr::field_t s = Fr::sub(account.private_key, Fr::mul(k, e));
 
-    sig.s.resize(32);
     Fr::serialize_to_buffer(s, &sig.s[0]);
     return sig;
 }
@@ -68,7 +66,7 @@ typename G1::affine_element ecrecover(const std::string& message, const signatur
 
     std::vector<uint8_t> r;
     std::copy(sig.r.begin(), sig.r.end(), std::back_inserter(r));
-    
+
     bool flip_sign = (r[0] & 128U) == 128U;
     r[0] = r[0] & 127U;
     typename Fq::field_t r_x = Fq::serialize_from_buffer(&r[0]);

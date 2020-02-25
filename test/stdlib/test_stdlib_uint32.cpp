@@ -72,7 +72,7 @@ TEST(stdlib_uint32, test_add)
         a = c;
         c = a + b;
     }
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -113,7 +113,7 @@ TEST(stdlib_uint32, test_add_with_constants)
     // for (size_t i = 0; i < 8; ++i) {
     //     EXPECT_EQ(get_value(result[i]), expected[i]);
     // }
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -150,7 +150,7 @@ TEST(stdlib_uint32, test_mul)
     uint32_t c_result = static_cast<uint32_t>(
         barretenberg::fr::from_montgomery_form(composer.get_variable(c.get_witness_index())).data[0]);
     EXPECT_EQ(c_result, c_expected);
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -189,7 +189,7 @@ TEST(stdlib_uint32, test_xor)
     uint32_t a_result = static_cast<uint32_t>(
         barretenberg::fr::from_montgomery_form(composer.get_variable(a.get_witness_index())).data[0]);
     EXPECT_EQ(a_result, a_expected);
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -245,7 +245,7 @@ TEST(stdlib_uint32, test_xor_more_constants)
     uint32_t c_result =
         static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(c_witness_index)).data[0]);
     EXPECT_EQ(c_result, c_expected);
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -286,7 +286,7 @@ TEST(stdlib_uint32, test_and_constants)
     uint32_t c_result =
         static_cast<uint32_t>(barretenberg::fr::from_montgomery_form(composer.get_variable(c_witness_index)).data[0]);
     EXPECT_EQ(c_result, c_expected);
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -326,7 +326,7 @@ TEST(stdlib_uint32s, test_and)
         barretenberg::fr::from_montgomery_form(composer.get_variable(a.get_witness_index())).data[0]);
     EXPECT_EQ(a_result, a_expected);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -366,7 +366,7 @@ TEST(stdlib_uint32, test_or)
         barretenberg::fr::from_montgomery_form(composer.get_variable(a.get_witness_index())).data[0]);
     EXPECT_EQ(a_result, a_expected);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -411,7 +411,7 @@ TEST(stdlib_uint32, test_ror)
         barretenberg::fr::from_montgomery_form(composer.get_variable(a.get_witness_index())).data[0]);
     EXPECT_EQ(a_result, a_expected);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -538,7 +538,7 @@ TEST(stdlib_uint32, test_hash_rounds)
     EXPECT_EQ(g_result, g_alt);
     EXPECT_EQ(h_result, h_alt);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
