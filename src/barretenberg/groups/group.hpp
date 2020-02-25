@@ -10,42 +10,46 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "./affine_group.hpp"
+#include "./new_group.hpp"
 namespace barretenberg {
 template <typename coordinate_field, typename subgroup_field, typename GroupParams> class group {
   public:
-    struct affine_element {
-        coordinate_field x;
-        coordinate_field y;
+    typedef test::element<coordinate_field, subgroup_field, GroupParams> element;
+    typedef test::affine_element<coordinate_field, subgroup_field, GroupParams> affine_element;
+    // struct affine_element {
+    //     coordinate_field x;
+    //     coordinate_field y;
 
-        // bool operator=(const affine_element& other) const
-        // {
-        //     bool both_infinity = is_point_at_infinity(*this) && is_point_at_infinity(other);
-        //     return both_infinity || ((x == other.x) && (y == other.y));
-        // }
-    };
+    //     // bool operator=(const affine_element& other) const
+    //     // {
+    //     //     bool both_infinity = is_point_at_infinity(*this) && is_point_at_infinity(other);
+    //     //     return both_infinity || ((x == other.x) && (y == other.y));
+    //     // }
+    // };
 
-    struct element {
-        coordinate_field x;
-        coordinate_field y;
-        coordinate_field z;
+    // struct element {
+    //     coordinate_field x;
+    //     coordinate_field y;
+    //     coordinate_field z;
 
-        // bool operator=(const affine_element& other) const
-        // {
-        //     bool both_infinity = is_point_at_infinity(*this) && is_point_at_infinity(other);
+    //     // bool operator=(const affine_element& other) const
+    //     // {
+    //     //     bool both_infinity = is_point_at_infinity(*this) && is_point_at_infinity(other);
 
-        //     coordinate_field a_zz = z.sqr();
-        //     coordinate_field a_zzz = a_zz * z;
-        //     coordinate_field b_zz = other.z.sqr();
-        //     coordinate_field b_zzz = b_zz * other.z;
+    //     //     coordinate_field a_zz = z.sqr();
+    //     //     coordinate_field a_zzz = a_zz * z;
+    //     //     coordinate_field b_zz = other.z.sqr();
+    //     //     coordinate_field b_zzz = b_zz * other.z;
 
-        //     coordinate_field T0 = x * b_zz;
-        //     coordinate_field T1 = y * b_zzz;
-        //     coordinate_field T2 = other.x * a_zz;
-        //     coordinate_field T3 = other.y * a_zzz;
+    //     //     coordinate_field T0 = x * b_zz;
+    //     //     coordinate_field T1 = y * b_zzz;
+    //     //     coordinate_field T2 = other.x * a_zz;
+    //     //     coordinate_field T3 = other.y * a_zzz;
 
-        //     return both_infinity || ((T0 == T2) && (T1 == T3));
-        // }
-    };
+    //     //     return both_infinity || ((T0 == T2) && (T1 == T3));
+    //     // }
+    // };
 
     static constexpr element one{ GroupParams::one_x, GroupParams::one_y, coordinate_field::one };
     static constexpr affine_element affine_one{ GroupParams::one_x, GroupParams::one_y };
