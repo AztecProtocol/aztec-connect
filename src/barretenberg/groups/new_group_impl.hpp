@@ -132,7 +132,7 @@ constexpr void element<Fq, Fr, T>::self_mixed_add_or_sub(const affine_element<Fq
                                                          const uint64_t predicate) noexcept
 {
     if (y.is_msb_set_word()) {
-        conditional_negate_affine(&other, (affine_element<Fq, Fr, T>*)&this, predicate);
+        conditional_negate_affine(other, *(affine_element<Fq, Fr, T>*)this, predicate);
         z = Fq::one;
         return;
     }
@@ -213,7 +213,7 @@ template <class Fq, class Fr, class T>
 constexpr element<Fq, Fr, T> element<Fq, Fr, T>::operator+=(const affine_element<Fq, Fr, T>& other) noexcept
 {
     if (y.is_msb_set_word()) {
-        *this = { x, y, Fq::one };
+        *this = { other.x, other.y, Fq::one };
         return *this;
     }
     // T0 = z1.z1
@@ -332,7 +332,7 @@ constexpr element<Fq, Fr, T> element<Fq, Fr, T>::operator+=(const element& other
     S2 *= other.y;
     Fq U1(Z2Z2 * x);
     Fq S1(Z2Z2 * other.z);
-    S1 *= other.y;
+    S1 *= y;
 
     Fq F(S2 - S1);
 
@@ -469,8 +469,9 @@ element<Fq, Fr, T> element<Fq, Fr, T>::random_element(std::mt19937_64* engine,
                                                       std::uniform_int_distribution<uint64_t>* dist) noexcept
 {
     if constexpr (T::can_hash_to_curve) {
-        affine_element<Fq, Fr, T> result = random_coordinates_on_curve(engine, dist);
-        Fq zz = result.z.zqr();
+        element result = random_coordinates_on_curve(engine, dist);
+        result.z = Fq::random_element(engine, dist);
+        Fq zz = result.z.sqr();
         Fq zzz = zz * result.z;
         result.x *= zz;
         result.y *= zzz;
@@ -501,13 +502,13 @@ element<Fq, Fr, T> element<Fq, Fr, T>::random_coordinates_on_curve(
     Fq y;
     Fq t0;
     while (!found_one) {
-        x = Fq::random_element();
+        x = Fq::random_element(engine, dist);
         yy = x.sqr() * x + T::b;
         y = yy.sqrt();
         t0 = y.sqr();
         found_one = (yy == t0);
     }
-    return { x, y, one };
+    return { x, y, Fq::one };
 }
 
 template <class Fq, class Fr, class T>
@@ -623,14 +624,13 @@ element<Fq, Fr, T> element<Fq, Fr, T>::mul_with_endomorphism(const Fr& exponent)
 }
 
 template <typename Fq, typename Fr, typename T>
-void element<Fq, Fr, T>::conditional_negate_affine(const affine_element<Fq, Fr, T>* src,
-                                                   affine_element<Fq, Fr, T>* dest,
+void element<Fq, Fr, T>::conditional_negate_affine(const affine_element<Fq, Fr, T>& src,
+                                                   affine_element<Fq, Fr, T>& dest,
                                                    const uint64_t predicate) noexcept
 {
     dest = {
         src.x,
         predicate ? -src.y : src.y,
-        src.z,
     };
 }
 } // namespace test

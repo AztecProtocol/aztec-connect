@@ -5,7 +5,7 @@
 
 namespace barretenberg {
 namespace test {
-template <typename Fq, typename Fr, typename Params> class affine_element {
+template <typename Fq, typename Fr, typename Params> class alignas(64) affine_element {
   public:
     static constexpr affine_element one{ Params::one_x, Params::one_y };
 

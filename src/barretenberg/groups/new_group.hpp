@@ -9,9 +9,9 @@
 #include "./affine_group.hpp"
 namespace barretenberg {
 namespace test {
-template <class Fq, class Fr, class Params> class element {
+template <class Fq, class Fr, class Params> class alignas(32) element {
   public:
-    static constexpr element one{ Params::one_x, Params::one_y, Params::one };
+    static constexpr element one{ Params::one_x, Params::one_y, Fq::one };
     element() noexcept {}
 
     constexpr element(const Fq& a, const Fq& b, const Fq& c) noexcept;
@@ -64,8 +64,8 @@ template <class Fq, class Fr, class Params> class element {
     element mul_with_endomorphism(const Fr& exponent) const noexcept;
     static element random_coordinates_on_curve(std::mt19937_64* engine = nullptr,
                                                std::uniform_int_distribution<uint64_t>* dist = nullptr) noexcept;
-    static void conditional_negate_affine(const affine_element<Fq, Fr, Params>* in,
-                                          affine_element<Fq, Fr, Params>* out,
+    static void conditional_negate_affine(const affine_element<Fq, Fr, Params>& in,
+                                          affine_element<Fq, Fr, Params>& out,
                                           const uint64_t predicate) noexcept;
 };
 } // namespace test

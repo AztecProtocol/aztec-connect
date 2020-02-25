@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 namespace barretenberg {
-template <class base_field, class Params> struct field2 {
+template <class base_field, class Params> struct alignas(64) field2 {
   public:
     constexpr field2(const base_field& a = base_field::zero, const base_field& b = base_field::zero)
         : c0(a)

@@ -11,7 +11,7 @@ __extension__ using uint128_t = unsigned __int128;
 #endif
 
 namespace barretenberg {
-template <class Params> struct field {
+template <class Params> struct alignas(32) field {
   public:
     field() noexcept {}
 

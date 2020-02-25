@@ -79,23 +79,24 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
     static inline element random_element()
     {
-        if constexpr (GroupParams::can_hash_to_curve) {
-            element output;
-            random_coordinates_on_curve(output.x, output.y);
-            output.z = coordinate_field::random_element();
-            coordinate_field zz = output.z.sqr();
-            coordinate_field zzz = zz * output.z;
-            output.x *= zz;
-            output.y *= zzz;
-            return output;
-        } else {
-            subgroup_field scalar = subgroup_field::random_element();
-            affine_element res = affine_one;
-            res = group_exponentiation(res, scalar);
-            element result;
-            affine_to_jacobian(res, result);
-            return result;
-        }
+        return element::random_element();
+        // if constexpr (GroupParams::can_hash_to_curve) {
+        //     element output;
+        //     random_coordinates_on_curve(output.x, output.y);
+        //     output.z = coordinate_field::random_element();
+        //     coordinate_field zz = output.z.sqr();
+        //     coordinate_field zzz = zz * output.z;
+        //     output.x *= zz;
+        //     output.y *= zzz;
+        //     return output;
+        // } else {
+        //     subgroup_field scalar = subgroup_field::random_element();
+        //     affine_element res = affine_one;
+        //     res = group_exponentiation(res, scalar);
+        //     element result;
+        //     affine_to_jacobian(res, result);
+        //     return result;
+        // }
     }
 
     static inline affine_element random_affine_element()
@@ -162,72 +163,73 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         return generators;
     }
 
-    static inline bool is_point_at_infinity(const affine_element& p) { return (p.y.is_msb_set()); }
+    static inline bool is_point_at_infinity(const affine_element& p) { return p.is_point_at_infinity(); }
 
-    static inline bool is_point_at_infinity(const element& p) { return (p.y.is_msb_set()); }
+    static inline bool is_point_at_infinity(const element& p) { return p.is_point_at_infinity(); }
 
-    static inline void set_infinity(element& p) { p.y.self_set_msb(); }
+    static inline void set_infinity(element& p) { p.set_infinity(); }
 
-    static inline void set_infinity(affine_element& p) { p.y.self_set_msb(); }
+    static inline void set_infinity(affine_element& p) { p.set_infinity(); }
 
     static inline void dbl(const element& p1, element& p2) noexcept
     {
-        if (p1.y.is_msb_set_word()) {
-            set_infinity(p2);
-            return;
-        }
-        // z2 = 2*y*z
-        p2.z = p1.z + p1.z;
-        p2.z *= p1.y;
+        p2 = p1.dbl();
+        // if (p1.y.is_msb_set_word()) {
+        //     set_infinity(p2);
+        //     return;
+        // }
+        // // z2 = 2*y*z
+        // p2.z = p1.z + p1.z;
+        // p2.z *= p1.y;
 
-        // T0 = x*x
-        coordinate_field T0 = p1.x.sqr();
+        // // T0 = x*x
+        // coordinate_field T0 = p1.x.sqr();
 
-        // T1 = y*y
-        coordinate_field T1 = p1.y.sqr();
+        // // T1 = y*y
+        // coordinate_field T1 = p1.y.sqr();
 
-        // T2 = T2*T1 = y*y*y*y
-        coordinate_field T2 = T1.sqr();
+        // // T2 = T2*T1 = y*y*y*y
+        // coordinate_field T2 = T1.sqr();
 
-        // T1 = T1 + x = x + y*y
-        T1 += p1.x;
+        // // T1 = T1 + x = x + y*y
+        // T1 += p1.x;
 
-        // T1 = T1 * T1
-        T1.self_sqr();
+        // // T1 = T1 * T1
+        // T1.self_sqr();
 
-        // T3 = T0 + T2 = xx + y*y*y*y
-        coordinate_field T3 = T0 + T2;
+        // // T3 = T0 + T2 = xx + y*y*y*y
+        // coordinate_field T3 = T0 + T2;
 
-        // T1 = T1 - T3 = x*x + y*y*y*y + 2*x*x*y*y*y*y - x*x - y*y*y*y = 2*x*x*y*y*y*y = 2*S
-        T1 -= T3;
+        // // T1 = T1 - T3 = x*x + y*y*y*y + 2*x*x*y*y*y*y - x*x - y*y*y*y = 2*x*x*y*y*y*y = 2*S
+        // T1 -= T3;
 
-        // T1 = 2T1 = 4*S
-        T1 += T1;
+        // // T1 = 2T1 = 4*S
+        // T1 += T1;
 
-        // T3 = 3T0
-        T3 = T0 + T0;
-        T3 += T0;
+        // // T3 = 3T0
+        // T3 = T0 + T0;
+        // T3 += T0;
 
-        // T0 = 2T1
-        T0 = T1 + T1;
+        // // T0 = 2T1
+        // T0 = T1 + T1;
 
-        // x2 = T3*T3
-        p2.x = T3.sqr();
+        // // x2 = T3*T3
+        // p2.x = T3.sqr();
 
-        // x2 = x2 - 2T1
-        p2.x -= T0;
+        // // x2 = x2 - 2T1
+        // p2.x -= T0;
 
-        // T2 = 8T2
-        T2 += T2;
-        T2 += T2;
-        T2 += T2;
+        // // T2 = 8T2
+        // T2 += T2;
+        // T2 += T2;
+        // T2 += T2;
 
-        // y2 = T1 - x2
-        p2.y = T1 - p2.x;
+        // // y2 = T1 - x2
+        // p2.y = T1 - p2.x;
 
-        // y2 = y2 * T3 - T2
-        p2.y *= T3;
-        p2.y -= T2;
+        // // y2 = y2 * T3 - T2
+        // p2.y *= T3;
+        // p2.y -= T2;
     }
 
     static inline void mixed_add_inner(const element& p1, const affine_element& p2, element& p3) noexcept
@@ -391,14 +393,15 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
 
         // N.B. we implicitly assume p2 is not a point at infinity, as it will be coming from a lookup table of
         // constants
-        if (p1.y.is_msb_set_word()) {
-            p3.x = p2.x;
-            p3.y = p2.y;
-            p3.z = coordinate_field::one;
-            return;
-        }
+        p3 = p1 + p2;
+        // if (p1.y.is_msb_set_word()) {
+        //     p3.x = p2.x;
+        //     p3.y = p2.y;
+        //     p3.z = coordinate_field::one;
+        //     return;
+        // }
 
-        mixed_add_inner(p1, p2, p3);
+        // mixed_add_inner(p1, p2, p3);
     }
 
     static inline void mixed_add_or_sub(const element& p1,
@@ -408,16 +411,17 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
     {
         // TODO: quantitavely check if __builtin_expect helps here
         // if (__builtin_expect(((p1.y.data[3] >> 63)), 0))
-
+        p3 = p1;
+        p3.self_mixed_add_or_sub(p2, predicate);
         // N.B. we implicitly assume p2 is not a point at infinity, as it will be coming from a lookup table of
         // constants
-        if (p1.y.is_msb_set_word()) {
-            conditional_negate_affine(&p2, (affine_element*)&p3, predicate);
-            p3.z = coordinate_field::one;
-            return;
-        }
+        // if (p1.y.is_msb_set_word()) {
+        //     conditional_negate_affine(&p2, (affine_element*)&p3, predicate);
+        //     p3.z = coordinate_field::one;
+        //     return;
+        // }
 
-        mixed_add_or_sub_inner(p1, p2, p3, predicate);
+        // mixed_add_or_sub_inner(p1, p2, p3, predicate);
     }
 
     static inline void add(const element& p1, const element& p2, element& p3)
