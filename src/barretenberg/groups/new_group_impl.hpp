@@ -489,25 +489,25 @@ element<Fq, Fr, T> element<Fq, Fr, T>::random_element(std::mt19937_64* engine,
     }
 }
 
-
-template <class Fq, class Fr, class T>
-element<Fq, Fr, T> element<Fq, Fr, T>::random_coordinates_on_curve(
-    std::mt19937_64* engine, std::uniform_int_distribution<uint64_t>* dist) noexcept
-{
-    bool found_one = false;
-    Fq yy;
-    Fq x;
-    Fq y;
-    Fq t0;
-    while (!found_one) {
-        x = Fq::random_element(engine, dist);
-        yy = x.sqr() * x + T::b;
-        y = yy.sqrt();
-        t0 = y.sqr();
-        found_one = (yy == t0);
-    }
-    return { x, y, Fq::one };
-}
+// template <class Fq, class Fr, class T>
+// template <typename = typename std::enable_if<T::can_hash_to_curve>>
+// element<Fq, Fr, T> element<Fq, Fr, T>::random_coordinates_on_curve(
+//     std::mt19937_64* engine, std::uniform_int_distribution<uint64_t>* dist) noexcept
+// {
+//     bool found_one = false;
+//     Fq yy;
+//     Fq x;
+//     Fq y;
+//     Fq t0;
+//     while (!found_one) {
+//         x = Fq::random_element(engine, dist);
+//         yy = x.sqr() * x + T::b;
+//         y = yy.sqrt();
+//         t0 = y.sqr();
+//         found_one = (yy == t0);
+//     }
+//     return { x, y, Fq::one };
+// }
 
 template <class Fq, class Fr, class T>
 element<Fq, Fr, T> element<Fq, Fr, T>::mul_without_endomorphism(const Fr& exponent) const noexcept

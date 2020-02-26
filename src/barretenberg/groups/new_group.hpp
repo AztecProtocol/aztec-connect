@@ -54,24 +54,9 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
     }
 
     element operator*(const Fr& other) const noexcept;
-    // friend element operator*(const Fr& exponent, const affine_element<Fq, Fr, Params>& base) noexcept
-    // {
-    //     return element(base) * exponent;
-    // }
-    // friend element operator*(const affine_element<Fq, Fr, Params>& base, const Fr& exponent) noexcept
-    // {
-    //     return element(base) * exponent;
-    // }
 
     element operator*=(const Fr& other) noexcept;
 
-    friend element operator*(const Fr& exponent, const element& base) noexcept { return base * exponent; }
-
-    friend affine_element<Fq, Fr, Params> operator*(const affine_element<Fq, Fr, Params>& base,
-                                                    const Fr& exponent) noexcept
-    {
-        return affine_element<Fq, Fr, Params>(element(base) * exponent);
-    }
     // constexpr Fr operator/(const element& other) noexcept {} TODO: this one seems harder than the others...
 
     constexpr element set_infinity() const noexcept;
@@ -87,8 +72,26 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
   private:
     element mul_without_endomorphism(const Fr& exponent) const noexcept;
     element mul_with_endomorphism(const Fr& exponent) const noexcept;
+
+    template <typename = typename std::enable_if<Params::can_hash_to_curve>>
     static element random_coordinates_on_curve(std::mt19937_64* engine = nullptr,
-                                               std::uniform_int_distribution<uint64_t>* dist = nullptr) noexcept;
+                                               std::uniform_int_distribution<uint64_t>* dist = nullptr) noexcept
+    {
+        bool found_one = false;
+        Fq yy;
+        Fq x;
+        Fq y;
+        Fq t0;
+        while (!found_one) {
+            x = Fq::random_element(engine, dist);
+            yy = x.sqr() * x + Params::b;
+            y = yy.sqrt();
+            t0 = y.sqr();
+            found_one = (yy == t0);
+        }
+        return { x, y, Fq::one };
+    }
+
     static void conditional_negate_affine(const affine_element<Fq, Fr, Params>& in,
                                           affine_element<Fq, Fr, Params>& out,
                                           const uint64_t predicate) noexcept;
@@ -98,3 +101,18 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
 } // namespace barretenberg
 
 #include "./new_group_impl.hpp"
+
+template <class Fq, class Fr, class Params>
+barretenberg::test::affine_element<Fq, Fr, Params> operator*(
+    const barretenberg::test::affine_element<Fq, Fr, Params>& base, const Fr& exponent) noexcept
+{
+    return barretenberg::test::affine_element<Fq, Fr, Params>(barretenberg::test::element(base) * exponent);
+}
+
+
+template <class Fq, class Fr, class Params>
+barretenberg::test::affine_element<Fq, Fr, Params> operator*(const barretenberg::test::element<Fq, Fr, Params>& base,
+                                                             const Fr& exponent) noexcept
+{
+    return (barretenberg::test::element(base) * exponent);
+}

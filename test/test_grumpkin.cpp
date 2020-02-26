@@ -307,30 +307,13 @@ TEST(grumpkin, batch_normalize)
     }
 }
 
-// TEST(grumpkin, group_exponentiation_check_against_constants)
-// {
-//     fr::field_t a{{0xb67299b792199cf0, 0xc1da7df1e7e12768, 0x692e427911532edf, 0x13dd85e87dc89978}};
-//     a.self_to_montgomery_form();
-
-//     fq::field_t expected_x = {{0x9bf840faf1b4ba00, 0xe81b7260d068e663, 0x7610c9a658d2c443, 0x278307cd3d0cddb0}};
-//     fq::field_t expected_y = {{0xf6ed5fb779ebecb, 0x414ca771acbe183c, 0xe3692cb56dfbdb67, 0x3d3c5ed19b080a3}};
-
-//     g1::affine_element expected;
-//     fq::__to_montgomery_form(expected_x, expected.x);
-//     fq::__to_montgomery_form(expected_y, expected.y);
-
-//     g1::affine_element result = g1::group_exponentiation(g1::affine_one, a);
-
-//     EXPECT_EQ(g1::eq(result, expected), true);
-// }
-
 TEST(grumpkin, group_exponentiation_zero_and_one)
 {
-    g1::affine_element result = g1::group_exponentiation(g1::affine_one, fr::field_t::zero);
+    g1::affine_element result = g1::one * fr::field_t::zero;
 
     EXPECT_EQ(g1::is_point_at_infinity(result), true);
 
-    result = g1::group_exponentiation(g1::affine_one, fr::field_t::one);
+    result = g1::one * fr::field_t::one;
 
     EXPECT_EQ(g1::eq(result, g1::affine_one), true);
 }
@@ -344,10 +327,10 @@ TEST(grumpkin, group_exponentiation_consistency_check)
     c = a * b;
 
     g1::affine_element input = g1::affine_one;
-    g1::affine_element result = g1::group_exponentiation(input, a);
-    result = g1::group_exponentiation(result, b);
+    g1::affine_element result = input * a;
+    result = result * b;
 
-    g1::affine_element expected = g1::group_exponentiation(input, c);
+    g1::affine_element expected = input * c;
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }

@@ -51,8 +51,8 @@ TEST(pairing, reduced_ate_pairing_consistency_check)
 
     fr::field_t scalar = fr::field_t::random_element();
 
-    g1::affine_element Pmul = g1::group_exponentiation(P, scalar);
-    g2::affine_element Qmul = g2::group_exponentiation(Q, scalar);
+    g1::affine_element Pmul = P * scalar;
+    g2::affine_element Qmul = Q * scalar;
 
     fq12::field_t result = pairing::reduced_ate_pairing(Pmul, Q).from_montgomery_form();
     fq12::field_t expected = pairing::reduced_ate_pairing(P, Qmul).from_montgomery_form();
@@ -83,10 +83,10 @@ TEST(pairing, reduced_ate_pairing_consistency_check_batch)
     }
 
     for (size_t i = 0; i < 10; ++i) {
-        P_a[i] = g1::group_exponentiation(P_a[i], scalars[i]);
-        Q_b[i] = g2::group_exponentiation(Q_b[i], scalars[i]);
-        P_b[i] = g1::group_exponentiation(P_b[i], scalars[i + num_points]);
-        Q_a[i] = g2::group_exponentiation(Q_a[i], scalars[i + num_points]);
+        P_a[i] = P_a[i] * scalars[i];
+        Q_b[i] = Q_b[i] * scalars[i];
+        P_b[i] = P_b[i] * scalars[i + num_points];
+        Q_a[i] = Q_a[i] * scalars[i + num_points];
     }
 
     fq12::field_t result = pairing::reduced_ate_pairing_batch(&P_a[0], &Q_a[0], num_points).from_montgomery_form();
@@ -115,10 +115,10 @@ TEST(pairing, reduced_ate_pairing_precompute_consistency_check_batch)
         g2::copy_affine(Q, Q_b[i]);
     }
     for (size_t i = 0; i < 10; ++i) {
-        P_a[i] = g1::group_exponentiation(P_a[i], scalars[i]);
-        Q_b[i] = g2::group_exponentiation(Q_b[i], scalars[i]);
-        P_b[i] = g1::group_exponentiation(P_b[i], scalars[i + num_points]);
-        Q_a[i] = g2::group_exponentiation(Q_a[i], scalars[i + num_points]);
+        P_a[i] = P_a[i] * scalars[i];
+        Q_b[i] = Q_b[i] * scalars[i];
+        P_b[i] = P_b[i] * scalars[i + num_points];
+        Q_a[i] = Q_a[i] * scalars[i + num_points];
     }
     for (size_t i = 0; i < 10; ++i) {
         g2::element jac;

@@ -11,7 +11,7 @@ TEST(schnorr, verify_signature_keccak256)
 
     crypto::schnorr::key_pair<grumpkin::fr::field_t, grumpkin::g1> account;
     account.private_key = grumpkin::fr::field_t::random_element();
-    account.public_key = grumpkin::g1::group_exponentiation(grumpkin::g1::affine_one, account.private_key);
+    account.public_key = grumpkin::g1::one * account.private_key;
 
     crypto::schnorr::signature signature =
         crypto::schnorr::construct_signature<KeccakHasher, grumpkin::fq::field_t, grumpkin::fr::field_t, grumpkin::g1>(
@@ -30,7 +30,7 @@ TEST(schnorr, verify_signature_sha256)
 
     crypto::schnorr::key_pair<grumpkin::fr::field_t, grumpkin::g1> account;
     account.private_key = grumpkin::fr::field_t::random_element();
-    account.public_key = grumpkin::g1::group_exponentiation(grumpkin::g1::affine_one, account.private_key);
+    account.public_key = grumpkin::g1::one * account.private_key;
 
     crypto::schnorr::signature signature =
         crypto::schnorr::construct_signature<Sha256Hasher, grumpkin::fq::field_t, grumpkin::fr::field_t, grumpkin::g1>(
@@ -49,7 +49,7 @@ TEST(schnorr, verify_ecrecover)
 
     crypto::schnorr::key_pair<grumpkin::fr::field_t, grumpkin::g1> account;
     account.private_key = grumpkin::fr::field_t::random_element();
-    account.public_key = grumpkin::g1::group_exponentiation(grumpkin::g1::affine_one, account.private_key);
+    account.public_key = grumpkin::g1::one * account.private_key;
 
     crypto::schnorr::signature_b signature = crypto::schnorr::
         construct_signature_b<Sha256Hasher, grumpkin::fq::field_t, grumpkin::fr::field_t, grumpkin::g1>(message,

@@ -42,7 +42,7 @@ template <class base_field, class Params> struct alignas(64) field2 {
     static constexpr field2 twist_coeff_b{ Params::twist_coeff_b_0, Params::twist_coeff_b_1 };
     static constexpr field2 twist_mul_by_q_x{ Params::twist_mul_by_q_x_0, Params::twist_mul_by_q_x_1 };
     static constexpr field2 twist_mul_by_q_y{ Params::twist_mul_by_q_y_0, Params::twist_mul_by_q_y_1 };
-    static constexpr field2 twist_cube_root{ Params::twist_cube_root_0, Params::twist_cube_root_1 };
+    static constexpr field2 beta{ Params::twist_cube_root_0, Params::twist_cube_root_1 };
 
     constexpr field2 operator*(const field2& other) const noexcept;
     constexpr field2 operator+(const field2& other) const noexcept;

@@ -14,7 +14,6 @@ static uint32_t* bit_count_memory = nullptr;
 static bool* bucket_empty_status = nullptr;
 
 const auto init = []() {
-    printf("init...\n");
     constexpr size_t max_num_points = (1 << 20);
     constexpr size_t max_num_rounds = 8;
     constexpr size_t max_buckets = 1 << 15;

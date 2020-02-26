@@ -59,8 +59,6 @@ class Bn254FqParams {
     static constexpr uint64_t primitive_root_2 = 0UL;
     static constexpr uint64_t primitive_root_3 = 0UL;
 
-    static constexpr uint64_t r_inv = 0x87d20782e4866389UL;
-
     static constexpr uint64_t endo_g1_lo = 0x7a7bd9d4391eb18d;
     static constexpr uint64_t endo_g1_mid = 0x4ccef014a773d2cfUL;
     static constexpr uint64_t endo_g1_hi = 0x0000000000000002UL;
@@ -87,6 +85,8 @@ class Bn254FqParams {
     static constexpr uint64_t alternate_multiplicative_generator_2 = 0UL;
     static constexpr uint64_t alternate_multiplicative_generator_3 = 0UL;
 
+    static constexpr uint64_t r_inv = 0x87d20782e4866389UL;
+
     static constexpr uint64_t coset_generators_0[15]{ 0xd35d438dc58f0d9d, 0xa6ba871b8b1e1b3a, 0x7a17caa950ad28d7,
                                                       0x115482203dbf392d, 0xe4b1c5ae034e46ca, 0xb80f093bc8dd5467,
                                                       0x4f4bc0b2b5ef64bd, 0x22a904407b7e725a, 0xf60647ce410d7ff7,
@@ -110,6 +110,11 @@ class Bn254FqParams {
                                                       0x0180a96573d3d9f8, 0x0f8b21270ddbb927, 0x1d9598e8a7e39857,
                                                       0x2ba010aa41eb7786, 0x094639f8fac1b68c, 0x1750b1ba94c995bb,
                                                       0x255b297c2ed174eb, 0x030152cae7a7b3f0, 0x110bca8c81af9320 };
+
+    static constexpr uint64_t Q_minus_one_over_two_0 = 0;
+    static constexpr uint64_t Q_minus_one_over_two_1 = 0;
+    static constexpr uint64_t Q_minus_one_over_two_2 = 0;
+    static constexpr uint64_t Q_minus_one_over_two_3 = 0;
 };
 
 namespace fq {

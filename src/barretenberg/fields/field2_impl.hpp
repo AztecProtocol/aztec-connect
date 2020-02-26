@@ -54,7 +54,7 @@ template <class base, class T> constexpr field2<base, T> field2<base, T>::operat
 template <class base, class T> constexpr field2<base, T> field2<base, T>::operator/=(const field2& other) noexcept
 {
     *this = operator/(other);
-    return this;
+    return *this;
 }
 
 template <class base, class T> constexpr field2<base, T> field2<base, T>::sqr() const noexcept

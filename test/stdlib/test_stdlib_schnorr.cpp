@@ -76,7 +76,7 @@ TEST(stdlib_schnorr, verify_signature)
 
     crypto::schnorr::key_pair<grumpkin::fr::field_t, grumpkin::g1> account;
     account.private_key = grumpkin::fr::field_t::random_element();
-    account.public_key = grumpkin::g1::group_exponentiation(grumpkin::g1::affine_one, account.private_key);
+    account.public_key = grumpkin::g1::one * account.private_key;
 
     crypto::schnorr::signature signature =
         crypto::schnorr::construct_signature<Sha256Hasher, grumpkin::fq::field_t, grumpkin::fr::field_t, grumpkin::g1>(

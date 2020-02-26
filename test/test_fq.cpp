@@ -340,8 +340,7 @@ TEST(fq, sqrt)
 
 TEST(fq, sqrt_random)
 {
-    size_t n = 1024;
-    for (size_t i = 0; i < n; ++i) {
+    for (size_t i = 0; i < 1; ++i) {
         fq::field_t input = fq::field_t::random_element().sqr();
         fq::field_t root_test = input.sqrt().sqr();
         EXPECT_EQ(root_test, input);

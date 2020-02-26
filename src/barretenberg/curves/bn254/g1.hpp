@@ -17,5 +17,6 @@ struct Bn254G1Params {
         0x7a17caa950ad28d7UL, 0x1f6ac17ae15521b9UL, 0x334bea4e696bd284UL, 0x2a1f6744ce179d8eUL
     };
 };
+
 typedef group<fq::field_t, fr::field_t, Bn254G1Params> g1;
 } // namespace barretenberg

@@ -300,6 +300,31 @@ TEST(g1, group_exponentiation_check_against_constants)
     EXPECT_EQ(g1::eq(result, expected), true);
 }
 
+TEST(g1, operator_ordering)
+{
+    fq::field_t a_x{ 0x92716caa6cac6d26, 0x1e6e234136736544, 0x1bb04588cde00af0, 0x9a2ac922d97e6f5 };
+    fq::field_t a_y{ 0x9e693aeb52d79d2d, 0xf0c1895a61e5e975, 0x18cd7f5310ced70f, 0xac67920a22939ad };
+    fq::field_t a_z{ 0xfef593c9ce1df132, 0xe0486f801303c27d, 0x9bbd01ab881dc08e, 0x2a589badf38ec0f9 };
+    fr::field_t scalar{ 0xcfbfd4441138823e, 0xb5f817e28a1ef904, 0xefb7c5629dcc1c42, 0x1a9ed3d6f846230e };
+    fq::field_t expected_x{ 0x2a9d0201fccca20, 0x36f969b294f31776, 0xee5534422a6f646, 0x911dbc6b02310b6 };
+    fq::field_t expected_y{ 0x14c30aaeb4f135ef, 0x9c27c128ea2017a1, 0xf9b7d80c8315eabf, 0x35e628df8add760 };
+    fq::field_t expected_z{ 0xa43fe96673d10eb3, 0x88fbe6351753d410, 0x45c21cc9d99cb7d, 0x3018020aa6e9ede5 };
+
+    g1::element a{ a_x, a_y, a_z };
+    g1::affine_element b(a);
+
+    g1::element c = a + b;
+    g1::element d = b + a;
+    EXPECT_EQ(c, d);
+
+    g1::element e = a * scalar;
+    g1::element f = b * scalar;
+    g1::affine_element g = b * scalar;
+    g1::affine_element h = a * scalar;
+    EXPECT_EQ(e, f);
+    EXPECT_EQ(g, h);
+}
+
 TEST(g1, group_exponentiation_zero_and_one)
 {
     g1::affine_element result(g1::one * fr::field_t::zero);
