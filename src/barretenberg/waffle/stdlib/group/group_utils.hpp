@@ -46,7 +46,7 @@ grumpkin::g1::element fixed_base_scalar_mul(const barretenberg::fr::field_t& in,
     grumpkin::g1::element accumulator;
     grumpkin::g1::affine_to_jacobian(ladder[0].one, accumulator);
     if (skew) {
-        grumpkin::g1::mixed_add(accumulator, plonk::stdlib::group_utils::get_generator(generator_index), accumulator);
+        accumulator += plonk::stdlib::group_utils::get_generator(generator_index);
     }
 
     for (size_t i = 0; i < num_quads; ++i) {
@@ -55,7 +55,7 @@ grumpkin::g1::element fixed_base_scalar_mul(const barretenberg::fr::field_t& in,
         const grumpkin::g1::affine_element& point_to_add =
             ((entry & 0xffffff) == 1) ? ladder[i + 1].three : ladder[i + 1].one;
         uint64_t predicate = (entry >> 31U) & 1U;
-        grumpkin::g1::mixed_add_or_sub(accumulator, point_to_add, accumulator, predicate);
+        accumulator.self_mixed_add_or_sub(point_to_add, predicate);
     }
     return accumulator;
 }

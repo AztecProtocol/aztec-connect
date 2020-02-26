@@ -198,15 +198,15 @@ void new_plonk_scalar_multiplications_bench(State& state) noexcept
         ++k;
         g1::element out;
         g1::set_infinity(out);
-        g1::add(a, out, out);
-        g1::add(b, out, out);
-        g1::add(c, out, out);
-        g1::add(d, out, out);
-        g1::add(e, out, out);
-        g1::add(f, out, out);
-        g1::add(g, out, out);
-        g1::add(h, out, out);
-        g1::add(i, out, out);
+        out = a + out;
+        out = b + out;
+        out = c + out;
+        out = d + out;
+        out = e + out;
+        out = f + out;
+        out = g + out;
+        out = h + out;
+        out = i + out;
     }
     uint64_t avg_cycles = count / k;
     printf("plonk clock cycles = %" PRIu64 "\n", (avg_cycles));
@@ -295,7 +295,7 @@ void add_bench(State& state) noexcept
     for (auto _ : state) {
         uint64_t before = rdtsc();
         for (size_t i = 0; i < NUM_G1_ADDITIONS; ++i) {
-            g1::add(a, b, a);
+            a += b;
         }
         uint64_t after = rdtsc();
         count += (after - before);
@@ -314,7 +314,7 @@ void mixed_add_bench(State& state) noexcept
     for (auto _ : state) {
         uint64_t before = rdtsc();
         for (size_t i = 0; i < NUM_G1_ADDITIONS; ++i) {
-            g1::mixed_add(a, b, a);
+            a += b;
         }
         uint64_t after = rdtsc();
         count += (after - before);

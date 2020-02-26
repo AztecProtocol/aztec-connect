@@ -311,11 +311,11 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     barretenberg::scalar_multiplication::generate_pippenger_point_table(&elements[0], &elements[0], num_elements);
     g1::element P[2];
 
-    P[0] = g1::group_exponentiation_inner(PI_Z_OMEGA, u);
+    P[0] = g1::affine_element(g1::element(PI_Z_OMEGA) * u);
     P[1] = barretenberg::scalar_multiplication::pippenger(&scalars[0], &elements[0], num_elements);
 
-    g1::mixed_add(P[1], T[0], P[1]);
-    g1::mixed_add(P[0], PI_Z, P[0]);
+    P[1] += T[0];
+    P[0] += PI_Z;
     g1::__neg(P[0], P[0]);
     g1::batch_normalize(P, 2);
 

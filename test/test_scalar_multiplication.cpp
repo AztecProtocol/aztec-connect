@@ -170,7 +170,7 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     for (size_t i = 0; i < num_points; ++i) {
         uint64_t schedule = transcript[i] & 0x7fffffffU;
         {
-            g1::mixed_add(expected[schedule], monomials[transcript_points[i]], expected[schedule]);
+            expected[schedule] += monomials[transcript_points[i]];
         }
     }
 
@@ -290,7 +290,7 @@ TEST(scalar_multiplication, reduce_buckets)
         // printf("expected bucket index = %lu \n", bucket_index - first_bucket);
         g1::element& bucket = expected_buckets[bucket_index - first_bucket];
         g1::affine_element& point = monomials[point_index];
-        g1::mixed_add_or_sub(bucket, point, bucket, predicate);
+        bucket.self_mixed_add_or_sub(point, predicate);
     }
 
     size_t it = 0;
@@ -562,7 +562,7 @@ TEST(scalar_multiplication, endomorphism_split)
     beta.x = beta.x * fq::field_t::beta;
     beta.y = -beta.y;
     g1::element t2 = g1::group_exponentiation_inner(beta, k2);
-    g1::add(t1, t2, result);
+    result = t1 + t2;
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
@@ -674,7 +674,7 @@ TEST(scalar_multiplication, undersized_inputs)
     g1::set_infinity(expected);
     for (size_t i = 0; i < num_points; ++i) {
         g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
-        g1::add(expected, temp, expected);
+        expected += temp;
     }
     expected = g1::normalize(expected);
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
@@ -706,7 +706,7 @@ TEST(scalar_multiplication, pippenger)
     g1::set_infinity(expected);
     for (size_t i = 0; i < num_points; ++i) {
         g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
-        g1::add(expected, temp, expected);
+        expected += temp;
     }
     expected = g1::normalize(expected);
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
@@ -738,7 +738,7 @@ TEST(scalar_multiplication, pippenger_unsafe)
     g1::set_infinity(expected);
     for (size_t i = 0; i < num_points; ++i) {
         g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
-        g1::add(expected, temp, expected);
+        expected += temp;
     }
     expected = g1::normalize(expected);
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
@@ -770,7 +770,7 @@ TEST(scalar_multiplication, pippenger_one)
     g1::set_infinity(expected);
     for (size_t i = 0; i < num_points; ++i) {
         g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
-        g1::add(expected, temp, expected);
+        expected += temp;
     }
     expected = g1::normalize(expected);
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);

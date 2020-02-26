@@ -23,12 +23,10 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
     constexpr element& operator=(const element& other) noexcept;
     constexpr element& operator=(element&& other) noexcept;
 
-    explicit constexpr operator affine_element<Fq, Fr, Params>() noexcept;
+    constexpr operator affine_element<Fq, Fr, Params>() noexcept;
 
     static element random_element(std::mt19937_64* engine = nullptr,
                                   std::uniform_int_distribution<uint64_t>* dist = nullptr) noexcept;
-
-    static element hash_to_curve(uint64_t seed) noexcept;
 
     constexpr element dbl() const noexcept;
     constexpr void self_dbl() noexcept;
@@ -56,10 +54,24 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
     }
 
     element operator*(const Fr& other) const noexcept;
+    // friend element operator*(const Fr& exponent, const affine_element<Fq, Fr, Params>& base) noexcept
+    // {
+    //     return element(base) * exponent;
+    // }
+    // friend element operator*(const affine_element<Fq, Fr, Params>& base, const Fr& exponent) noexcept
+    // {
+    //     return element(base) * exponent;
+    // }
+
     element operator*=(const Fr& other) noexcept;
 
     friend element operator*(const Fr& exponent, const element& base) noexcept { return base * exponent; }
 
+    friend affine_element<Fq, Fr, Params> operator*(const affine_element<Fq, Fr, Params>& base,
+                                                    const Fr& exponent) noexcept
+    {
+        return affine_element<Fq, Fr, Params>(element(base) * exponent);
+    }
     // constexpr Fr operator/(const element& other) noexcept {} TODO: this one seems harder than the others...
 
     constexpr element set_infinity() const noexcept;

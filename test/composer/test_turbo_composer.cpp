@@ -268,7 +268,7 @@ TEST(turbo_composer, small_scalar_multipliers)
 
     grumpkin::g1::element origin_points[2];
     grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
-    grumpkin::g1::mixed_add(origin_points[0], generator, origin_points[1]);
+    origin_points[1] = origin_points[0] + generator;
     origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
 
     grumpkin::fr::field_t scalar_multiplier_entropy = grumpkin::fr::field_t::random_element();
@@ -401,7 +401,7 @@ TEST(turbo_composer, large_scalar_multipliers)
 
     grumpkin::g1::element origin_points[2];
     grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
-    grumpkin::g1::mixed_add(origin_points[0], generator, origin_points[1]);
+    origin_points[1] = origin_points[0] + generator;
     origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
 
     grumpkin::fr::field_t scalar_multiplier_base = grumpkin::fr::field_t::random_element();

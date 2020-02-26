@@ -48,9 +48,9 @@ void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fi
     grumpkin::g1::affine_to_jacobian(generator, accumulator);
     for (size_t i = 0; i < quad_length; ++i) {
         ladder_temp[i] = accumulator;
-        grumpkin::g1::dbl(accumulator, accumulator);
+        accumulator.self_dbl();
         grumpkin::g1::add(accumulator, ladder_temp[i], ladder_temp[quad_length + i]);
-        grumpkin::g1::dbl(accumulator, accumulator);
+        accumulator.self_dbl();
     }
     grumpkin::g1::batch_normalize(&ladder_temp[0], quad_length * 2);
     for (size_t i = 0; i < quad_length; ++i) {
@@ -170,7 +170,7 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
         const grumpkin::g1::affine_element& point_to_add =
             ((entry & 0xffffff) == 1) ? ladder[i + 1].three : ladder[i + 1].one;
         uint64_t predicate = (entry >> 31U) & 1U;
-        grumpkin::g1::mixed_add_or_sub(accumulator, point_to_add, accumulator, predicate);
+        accumulator.self_mixed_add_or_sub(point_to_add, predicate);
     }
     return accumulator;
 }
@@ -186,14 +186,14 @@ grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left, const g
         out[i] = hash_single(in[i], i);
     }
     grumpkin::g1::element r;
-    grumpkin::g1::add(out[0], out[1], r);
+    r = out[0] + out[1];
     r = grumpkin::g1::normalize(r);
     return r.x;
 #else
     grumpkin::g1::element r;
     grumpkin::g1::element first = hash_single(left, 0);
     grumpkin::g1::element second = hash_single(right, 1);
-    grumpkin::g1::add(first, second, r);
+    r = first + second;
     r = grumpkin::g1::normalize(r);
     return r.x;
 #endif

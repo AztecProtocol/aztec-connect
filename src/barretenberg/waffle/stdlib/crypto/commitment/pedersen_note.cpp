@@ -31,7 +31,7 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
 
     grumpkin::g1::element origin_points[2];
     grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
-    grumpkin::g1::mixed_add(origin_points[0], generator, origin_points[1]);
+    origin_points[1] = origin_points[0] + generator;
     origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
 
     barretenberg::fr::field_t scalar_multiplier_base = scalar_multiplier.to_montgomery_form();

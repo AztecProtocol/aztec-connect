@@ -489,15 +489,6 @@ element<Fq, Fr, T> element<Fq, Fr, T>::random_element(std::mt19937_64* engine,
     }
 }
 
-template <class Fq, class Fr, class T> element<Fq, Fr, T> element<Fq, Fr, T>::hash_to_curve(uint64_t seed) noexcept
-{
-    static_assert(T::can_hash_to_curve == true);
-
-    Fq input(seed, 0, 0, 0);
-    keccak256 c = hash_field_element((uint64_t*)&input.data[0]);
-    uint256_t compressed{ c.word64s[0], c.word64s[1], c.word64s[2], c.word64s[3] };
-    return element(affine_element<Fq, Fr, T>(compressed));
-}
 
 template <class Fq, class Fr, class T>
 element<Fq, Fr, T> element<Fq, Fr, T>::random_coordinates_on_curve(

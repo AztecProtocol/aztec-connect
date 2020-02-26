@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../keccak/keccak.h"
+
 namespace barretenberg {
 namespace test {
 template <class Fq, class Fr, class T>
@@ -95,5 +97,15 @@ constexpr bool affine_element<Fq, Fr, T>::operator==(const affine_element& other
     return both_infinity || ((x == other.x) && (y == other.y));
 }
 
+template <class Fq, class Fr, class T>
+affine_element<Fq, Fr, T> affine_element<Fq, Fr, T>::hash_to_curve(const uint64_t seed) noexcept
+{
+    static_assert(T::can_hash_to_curve == true);
+
+    Fq input(seed, 0, 0, 0);
+    keccak256 c = hash_field_element((uint64_t*)&input.data[0]);
+    uint256_t compressed{ c.word64s[0], c.word64s[1], c.word64s[2], c.word64s[3] };
+    return affine_element<Fq, Fr, T>(compressed);
+}
 } // namespace test
 } // namespace barretenberg

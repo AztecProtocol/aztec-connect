@@ -7,7 +7,7 @@ signature construct_signature(const std::string& message, const key_pair<Fr, G1>
 {
     signature sig;
     Fr k = Fr::random_element(); // TODO replace with HMAC
-    typename G1::affine_element R = G1::group_exponentiation(G1::affine_one, k);
+    typename G1::affine_element R(G1::one * k);
 
     std::vector<uint8_t> r(sizeof(Fq));
     Fq::serialize_to_buffer(R.x, &r[0]);
@@ -33,7 +33,7 @@ signature_b construct_signature_b(const std::string& message, const key_pair<Fr,
 {
     signature_b sig;
     Fr k = Fr::random_element(); // TODO replace with HMAC
-    typename G1::affine_element R = G1::group_exponentiation(G1::affine_one, k);
+    typename G1::affine_element R(G1::one * k);
     sig.r.resize(32);
     Fq::serialize_to_buffer(R.x, &sig.r[0]);
 
@@ -80,11 +80,11 @@ typename G1::affine_element ecrecover(const std::string& message, const signatur
     }
     typename G1::affine_element R{ r_x, r_y };
     Fr s = Fr::serialize_from_buffer(&sig.s[0]);
-    typename G1::affine_element R1 = G1::group_exponentiation(G1::affine_one, s);
-    typename G1::affine_element R2 = G1::group_exponentiation(R, target_e);
+    typename G1::affine_element R1(G1::one * s);
+    typename G1::affine_element R2(typename G1::element(R) * target_e);
     typename G1::element R2_jac{ R2.x, R2.y, Fq::one };
     typename G1::element key_jac;
-    G1::mixed_add(R2_jac, R1, key_jac);
+    key_jac = R2_jac + R1;
     key_jac = G1::normalize(key_jac);
     typename G1::affine_element key{ key_jac.x, key_jac.y };
     return key;
@@ -98,13 +98,13 @@ bool verify_signature(const std::string& message, const typename G1::affine_elem
     Fr s = Fr::serialize_from_buffer(&sig.s[0]);
     Fr source_e = Fr::serialize_from_buffer(&sig.e[0]);
 
-    typename G1::affine_element R1 = G1::group_exponentiation(G1::affine_one, s);
-    typename G1::affine_element R2 = G1::group_exponentiation(public_key, source_e);
+    typename G1::affine_element R1(G1::one * s);
+    typename G1::affine_element R2(typename G1::element(public_key) * source_e);
 
     typename G1::element R2_ele{ R2.x, R2.y, Fq::one };
 
     typename G1::element R;
-    G1::mixed_add(R2_ele, R1, R);
+    R = R2_ele + R1;
     R = G1::normalize(R);
 
     std::vector<uint8_t> r(sizeof(Fq));

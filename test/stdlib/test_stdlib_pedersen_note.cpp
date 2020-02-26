@@ -34,7 +34,7 @@ TEST(stdlib_pedersen_note, test_pedersen_note)
     grumpkin::g1::element left = plonk::stdlib::group_utils::fixed_base_scalar_mul<32>(note_value, 0);
     grumpkin::g1::element right = plonk::stdlib::group_utils::fixed_base_scalar_mul<250>(view_key_value, 1);
     grumpkin::g1::element expected;
-    grumpkin::g1::add(left, right, expected);
+    expected = left + right;
     expected = grumpkin::g1::normalize(expected);
 
     field_t view_key = public_witness_t(&composer, view_key_value);

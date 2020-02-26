@@ -60,7 +60,7 @@ TEST(g1, mixed_add_check_against_constants)
     expected.x = expected_x.to_montgomery_form();
     expected.y = expected_y.to_montgomery_form();
     expected.z = expected_z.to_montgomery_form();
-    g1::mixed_add(lhs, rhs, result);
+    result = lhs + rhs;
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
@@ -83,9 +83,9 @@ TEST(g1, dbl_check_against_constants)
     expected.y = expected_y.to_montgomery_form();
     expected.z = expected_z.to_montgomery_form();
 
-    g1::dbl(lhs, result);
-    g1::dbl(result, result);
-    g1::dbl(result, result);
+    result = lhs.dbl();
+    result.self_dbl();
+    result.self_dbl();
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
@@ -116,7 +116,7 @@ TEST(g1, add_check_against_constants)
     expected.y = expected_y.to_montgomery_form();
     expected.z = expected_z.to_montgomery_form();
 
-    g1::add(lhs, rhs, result);
+    result = lhs + rhs;
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
@@ -129,7 +129,7 @@ TEST(g1, add_exception_test_infinity)
 
     g1::__neg(lhs, rhs);
 
-    g1::add(lhs, rhs, result);
+    result = lhs + rhs;
 
     EXPECT_EQ(g1::is_point_at_infinity(result), true);
 
@@ -137,12 +137,12 @@ TEST(g1, add_exception_test_infinity)
     g1::copy(&rhs, &rhs_b);
     g1::set_infinity(rhs_b);
 
-    g1::add(lhs, rhs_b, result);
+    result = lhs + rhs_b;
 
     EXPECT_EQ(g1::eq(lhs, result), true);
 
     g1::set_infinity(lhs);
-    g1::add(lhs, rhs, result);
+    result = lhs + rhs;
 
     EXPECT_EQ(g1::eq(rhs, result), true);
 }
@@ -156,8 +156,8 @@ TEST(g1, add_exception_test_dbl)
     g1::element result;
     g1::element expected;
 
-    g1::add(lhs, rhs, result);
-    g1::dbl(lhs, expected);
+    result = lhs + rhs;
+    expected = lhs.dbl();
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
@@ -172,12 +172,12 @@ TEST(g1, add_dbl_consistency)
     g1::element add_result;
     g1::element dbl_result;
 
-    g1::add(a, b, c);
+    c = a + b;
     g1::__neg(b, b);
-    g1::add(a, b, d);
+    d = a + b;
 
-    g1::add(c, d, add_result);
-    g1::dbl(a, dbl_result);
+    add_result = c + d;
+    dbl_result = a.dbl();
 
     EXPECT_EQ(g1::eq(add_result, dbl_result), true);
 }
@@ -193,14 +193,14 @@ TEST(g1, add_dbl_consistency_repeated)
     g1::element result;
     g1::element expected;
 
-    g1::dbl(a, b); // b = 2a
-    g1::dbl(b, c); // c = 4a
+    b = a.dbl(); // b = 2a
+    c = b.dbl(); // c = 4a
 
-    g1::add(a, b, d);      // d = 3a
-    g1::add(a, c, e);      // e = 5a
-    g1::add(d, e, result); // result = 8a
+    d = a + b;      // d = 3a
+    e = a + c;      // e = 5a
+    result = d + e; // result = 8a
 
-    g1::dbl(c, expected); // expected = 8a
+    expected = c.dbl(); // expected = 8a
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
@@ -213,12 +213,12 @@ TEST(g1, mixed_add_exception_test_infinity)
     lhs.y = -rhs.y;
 
     g1::element result;
-    g1::mixed_add(lhs, rhs, result);
+    result = lhs + rhs;
 
     EXPECT_EQ(g1::is_point_at_infinity(result), true);
 
     g1::set_infinity(lhs);
-    g1::mixed_add(lhs, rhs, result);
+    result = lhs + rhs;
     g1::element rhs_c;
     g1::affine_to_jacobian(rhs, rhs_c);
 
@@ -233,9 +233,9 @@ TEST(g1, mixed_add_exception_test_dbl)
 
     g1::element result;
     g1::element expected;
-    g1::mixed_add(lhs, rhs, result);
+    result = lhs + rhs;
 
-    g1::dbl(lhs, expected);
+    expected = lhs.dbl();
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
@@ -249,8 +249,8 @@ TEST(g1, add_mixed_add_consistency_check)
 
     g1::element add_result;
     g1::element mixed_add_result;
-    g1::add(lhs, rhs_b, add_result);
-    g1::mixed_add(lhs, rhs, mixed_add_result);
+    add_result = lhs + rhs_b;
+    mixed_add_result = lhs + rhs;
 
     EXPECT_EQ(g1::eq(add_result, mixed_add_result), true);
 }
@@ -263,7 +263,7 @@ TEST(g1, batch_normalize)
     for (size_t i = 0; i < num_points; ++i) {
         g1::element a = g1::random_element();
         g1::element b = g1::random_element();
-        g1::add(a, b, points[i]);
+        points[i] = a + b;
         g1::copy(&points[i], &normalized[i]);
     }
     g1::batch_normalize(normalized, num_points);
@@ -295,18 +295,18 @@ TEST(g1, group_exponentiation_check_against_constants)
     expected.x = expected_x.to_montgomery_form();
     expected.y = expected_y.to_montgomery_form();
 
-    g1::affine_element result = g1::group_exponentiation(g1::affine_one, a);
+    g1::affine_element result(g1::one * a);
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }
 
 TEST(g1, group_exponentiation_zero_and_one)
 {
-    g1::affine_element result = g1::group_exponentiation(g1::affine_one, fr::field_t::zero);
+    g1::affine_element result(g1::one * fr::field_t::zero);
 
     EXPECT_EQ(g1::is_point_at_infinity(result), true);
 
-    result = g1::group_exponentiation(g1::affine_one, fr::field_t::one);
+    result = g1::affine_element(g1::one * fr::field_t::one);
 
     EXPECT_EQ(g1::eq(result, g1::affine_one), true);
 }
@@ -320,10 +320,10 @@ TEST(g1, group_exponentiation_consistency_check)
     c = a * b;
 
     g1::affine_element input = g1::affine_one;
-    g1::affine_element result = g1::group_exponentiation(input, a);
-    result = g1::group_exponentiation(result, b);
+    g1::affine_element result(g1::element(input) * a);
+    result = g1::affine_element(g1::element(result) * b);
 
-    g1::affine_element expected = g1::group_exponentiation(input, c);
+    g1::affine_element expected = g1::affine_element(g1::element(input) * c);
 
     EXPECT_EQ(g1::eq(result, expected), true);
 }

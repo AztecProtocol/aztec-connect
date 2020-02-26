@@ -113,37 +113,14 @@ template <typename coordinate_field, typename subgroup_field, typename GroupPara
         }
     }
 
-    static inline affine_element decompress(const coordinate_field& compressed)
-    {
-        uint64_t y_sign = compressed.data[3] >> 63UL;
-        affine_element result{ compressed.to_montgomery_form(), coordinate_field::zero };
-
-        result.x.data[3] = result.x.data[3] & 0x7fffffffffffffffUL;
-
-        coordinate_field xxx = result.x.sqr() * result.x;
-
-        coordinate_field yy = xxx + GroupParams::b;
-
-        result.y = yy.sqrt();
-
-        coordinate_field y_test = result.y.from_montgomery_form();
-        if ((y_test.data[0] & 1UL) != y_sign) {
-            result.y.self_neg();
-        }
-        if (!on_curve(result)) {
-            set_infinity(result);
-        }
-
-        return result;
-    }
-
     static inline affine_element hash_to_curve(uint64_t seed)
     {
-        coordinate_field input = coordinate_field::zero;
-        input.data[0] = seed;
-        keccak256 c = hash_field_element((uint64_t*)&input.data[0]);
-        coordinate_field compressed{ c.word64s[0], c.word64s[1], c.word64s[2], c.word64s[3] };
-        return decompress(compressed);
+        return affine_element::hash_to_curve(seed);
+        // coordinate_field input = coordinate_field::zero;
+        // input.data[0] = seed;
+        // keccak256 c = hash_field_element((uint64_t*)&input.data[0]);
+        // coordinate_field compressed{ c.word64s[0], c.word64s[1], c.word64s[2], c.word64s[3] };
+        // return decompress(compressed);
     }
 
     template <size_t N> static inline std::array<affine_element, N> derive_generators()

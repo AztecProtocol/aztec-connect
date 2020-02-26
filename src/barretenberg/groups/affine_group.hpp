@@ -32,6 +32,8 @@ template <typename Fq, typename Fr, typename Params> class alignas(64) affine_el
 
     constexpr bool on_curve() const noexcept;
 
+    static affine_element hash_to_curve(const uint64_t seed) noexcept;
+
     constexpr bool operator==(const affine_element& other) const noexcept;
 
     constexpr affine_element operator-() const noexcept { return { x, -y }; }

@@ -242,10 +242,10 @@ inline void scalar_multiplication_round_inner(multiplication_thread_state& state
 
         __builtin_prefetch(next_point);
 
-        g1::mixed_add_or_sub(*current_bucket, *current_point, *current_bucket, current_negative);
+        (*current_bucket).self_mixed_add_or_sub(*current_point, current_negative);
     }
 
-    g1::mixed_add_or_sub(*next_bucket, *next_point, *next_bucket, next_negative);
+    (*next_bucket).self_mixed_add_or_sub(*next_point, next_negative);
 }
 
 template <size_t num_points>
@@ -305,12 +305,12 @@ inline g1::element scalar_multiplication_internal(multiplication_runtime_state& 
             g1::set_infinity(running_sum);
             g1::set_infinity(accumulator);
             for (size_t k = num_thread_buckets - 1; k > 0; --k) {
-                g1::add(running_sum, thread_buckets[k], running_sum);
-                g1::add(accumulator, running_sum, accumulator);
+                running_sum += thread_buckets[k];
+                accumulator += running_sum;
             }
-            g1::add(running_sum, thread_buckets[0], running_sum);
-            g1::dbl(accumulator, accumulator);
-            g1::add(accumulator, running_sum, accumulator);
+            running_sum += thread_buckets[0];
+            accumulator.self_dbl();
+            accumulator += running_sum;
 
             // we now need to scale up 'running sum' up to the value of the first bucket.
             // e.g. if first bucket is 0, no scaling
@@ -322,17 +322,17 @@ inline g1::element scalar_multiplication_internal(multiplication_runtime_state& 
                 bool init = false;
                 while (shift != static_cast<size_t>(-1)) {
                     if (init) {
-                        g1::dbl(rolling_accumulator, rolling_accumulator);
+                        rolling_accumulator.self_dbl();
                         if (((multiplier >> shift) & 1)) {
-                            g1::add(rolling_accumulator, running_sum, rolling_accumulator);
+                            rolling_accumulator += running_sum;
                         }
                     } else {
-                        g1::add(rolling_accumulator, running_sum, rolling_accumulator);
+                        rolling_accumulator += running_sum;
                     }
                     init = true;
                     shift -= 1;
                 }
-                g1::add(accumulator, rolling_accumulator, accumulator);
+                accumulator += rolling_accumulator;
             }
 
             if (i == (num_rounds - 1)) {
@@ -342,24 +342,24 @@ inline g1::element scalar_multiplication_internal(multiplication_runtime_state& 
                 for (size_t k = 0; k < num_points_per_thread; ++k) {
                     if (skew_table[k]) {
                         g1::__neg(point_table[k], addition_temporary);
-                        g1::mixed_add(accumulator, addition_temporary, accumulator);
+                        accumulator += addition_temporary;
                     }
                 }
             }
 
             if (i > 0) {
                 for (size_t k = 0; k < bits_per_bucket + 1; ++k) {
-                    g1::dbl(thread_accumulators[j], thread_accumulators[j]);
+                    thread_accumulators[j].self_dbl();
                 }
             }
-            g1::add(thread_accumulators[j], accumulator, thread_accumulators[j]);
+            thread_accumulators[j] += accumulator;
         }
     }
 
     g1::element result;
     g1::set_infinity(result);
     for (size_t i = 0; i < num_threads; ++i) {
-        g1::add(result, thread_accumulators[i], result);
+        result += thread_accumulators[i];
     }
     free(thread_accumulators);
     return result;
@@ -421,14 +421,14 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
             size_t output_it = product_state.num_points - 1;
             for (size_t k = num_thread_buckets - 1; k > 0; --k) {
                 if (__builtin_expect(!product_state.bucket_empty_status[k], 1)) {
-                    g1::mixed_add(running_sum, (output_buckets[output_it]), running_sum);
+                    running_sum += (output_buckets[output_it]);
                     --output_it;
                 }
-                g1::add(accumulator, running_sum, accumulator);
+                accumulator += running_sum;
             }
-            g1::mixed_add(running_sum, output_buckets[0], running_sum);
-            g1::dbl(accumulator, accumulator);
-            g1::add(accumulator, running_sum, accumulator);
+            running_sum += output_buckets[0];
+            accumulator.self_dbl();
+            accumulator += running_sum;
 
             // we now need to scale up 'running sum' up to the value of the first bucket.
             // e.g. if first bucket is 0, no scaling
@@ -440,17 +440,17 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
                 bool init = false;
                 while (shift != static_cast<size_t>(-1)) {
                     if (init) {
-                        g1::dbl(rolling_accumulator, rolling_accumulator);
+                        rolling_accumulator.self_dbl();
                         if (((multiplier >> shift) & 1)) {
-                            g1::add(rolling_accumulator, running_sum, rolling_accumulator);
+                            rolling_accumulator += running_sum;
                         }
                     } else {
-                        g1::add(rolling_accumulator, running_sum, rolling_accumulator);
+                        rolling_accumulator += running_sum;
                     }
                     init = true;
                     shift -= 1;
                 }
-                g1::add(accumulator, rolling_accumulator, accumulator);
+                accumulator += rolling_accumulator;
             }
 
             if (i == (num_rounds - 1)) {
@@ -460,24 +460,24 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
                 for (size_t k = 0; k < num_points_per_thread; ++k) {
                     if (skew_table[k]) {
                         g1::__neg(point_table[k], addition_temporary);
-                        g1::mixed_add(accumulator, addition_temporary, accumulator);
+                        accumulator += addition_temporary;
                     }
                 }
             }
 
             if (i > 0) {
                 for (size_t k = 0; k < bits_per_bucket + 1; ++k) {
-                    g1::dbl(thread_accumulators[j], thread_accumulators[j]);
+                    thread_accumulators[j].self_dbl();
                 }
             }
-            g1::add(thread_accumulators[j], accumulator, thread_accumulators[j]);
+            thread_accumulators[j] += accumulator;
         }
     }
 
     g1::element result;
     g1::set_infinity(result);
     for (size_t i = 0; i < num_threads; ++i) {
-        g1::add(result, thread_accumulators[i], result);
+        result += thread_accumulators[i];
     }
     free(thread_accumulators);
     return result;
@@ -518,7 +518,8 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, c
 #pragma omp parallel for
 #endif
         for (size_t i = 0; i < num_initial_points; ++i) {
-            exponentiation_results[i] = g1::group_exponentiation_inner((points[i * 2]), scalars[i]);
+            exponentiation_results[i] = g1::element(points[i * 2]) * scalars[i];
+            // g1::group_exponentiation_inner((points[i * 2]), scalars[i]);
         }
 
         for (size_t i = num_initial_points - 1; i > 0; --i) {
@@ -640,7 +641,7 @@ g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, c
 #pragma omp parallel for
 #endif
         for (size_t i = 0; i < num_initial_points; ++i) {
-            exponentiation_results[i] = g1::group_exponentiation_inner((points[i * 2]), scalars[i]);
+            exponentiation_results[i] = g1::element(points[i * 2]) * scalars[i];
         }
 
         for (size_t i = num_initial_points - 1; i > 0; --i) {

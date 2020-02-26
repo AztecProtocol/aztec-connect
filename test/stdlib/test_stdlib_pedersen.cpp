@@ -134,11 +134,11 @@ TEST(stdlib_pedersen, test_pedersen)
     grumpkin::g1::element hash_output_left;
     grumpkin::g1::element hash_output_right;
 
-    grumpkin::g1::add(result_points[0], result_points[1], hash_output_left);
-    grumpkin::g1::add(result_points[2], result_points[3], hash_output_right);
+    hash_output_left = result_points[0] + result_points[1];
+    hash_output_right = result_points[2] + result_points[3];
 
     grumpkin::g1::element hash_output;
-    grumpkin::g1::add(hash_output_left, hash_output_right, hash_output);
+    hash_output = hash_output_left + hash_output_right;
     hash_output = grumpkin::g1::normalize(hash_output);
 
     EXPECT_EQ((out.get_value() == hash_output.x), true);

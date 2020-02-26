@@ -18,6 +18,14 @@ cmake --build . --parallel --target barretenberg_tests
 
 regex scrapboook
 
+(grumpkin::)?g(1|2)::dbl\(([^,\s]*), \3\);
+$3.self_dbl();
+
+(grumpkin::)?g(1|2)::dbl\(([^,\s]*), ([^,\s]*)\);
+$4 = $3.dbl();
+
+(grumpkin::)?g(1|2)::mixed_add_or_sub\(([^,\s]*), ([^,\s]*), \3, ([^\s]*)\);
+
 barretenberg::fq::__mul(q1,q2, q1);
 fq::__mul_with_coarse_reduction(q1, q2,   q1);
 
