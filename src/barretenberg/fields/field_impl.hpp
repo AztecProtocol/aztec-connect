@@ -1,7 +1,14 @@
 #pragma once
 
-#include "field_impl_generic.hpp"
 #ifndef DISABLE_SHENANIGANS
+#ifdef __BMI2__
+#define BBERG_USE_ASM
+#endif
+#endif
+
+#include "field_impl_generic.hpp"
+
+#ifdef BBERG_USE_ASM
 #include "field_impl_x64.hpp"
 #endif
 
@@ -15,7 +22,7 @@ namespace barretenberg {
  **/
 template <class T> constexpr field<T> field<T>::operator*(const field& other) const noexcept
 {
-#ifdef DISABLE_SHENANIGANS
+#ifdef BBERG_USE_ASM
     return montgomery_reduce(mul_512(other)); //.subtract(modulus);
 #else
     if (std::is_constant_evaluated()) {
@@ -28,7 +35,7 @@ template <class T> constexpr field<T> field<T>::operator*(const field& other) co
 
 template <class T> constexpr field<T> field<T>::operator*=(const field& other) noexcept
 {
-#ifdef DISABLE_SHENANIGANS
+#ifdef BBERG_USE_ASM
     *this = operator*(other);
 #else
     if (std::is_constant_evaluated()) {
@@ -47,7 +54,7 @@ template <class T> constexpr field<T> field<T>::operator*=(const field& other) n
  **/
 template <class T> constexpr field<T> field<T>::sqr() const noexcept
 {
-#ifdef DISABLE_SHENANIGANS
+#ifdef BBERG_USE_ASM
     return montgomery_reduce(sqr_512()); // .subtract(modulus);
 #else
     if (std::is_constant_evaluated()) {
@@ -60,7 +67,7 @@ template <class T> constexpr field<T> field<T>::sqr() const noexcept
 
 template <class T> constexpr void field<T>::self_sqr() noexcept
 {
-#ifdef DISABLE_SHENANIGANS
+#ifdef BBERG_USE_ASM
     *this = montgomery_reduce(sqr_512()); // .subtract(modulus);
 #else
     if (std::is_constant_evaluated()) {
@@ -78,7 +85,7 @@ template <class T> constexpr void field<T>::self_sqr() noexcept
  **/
 template <class T> constexpr field<T> field<T>::operator+(const field& other) const noexcept
 {
-#ifdef DISABLE_SHENANIGANS
+#ifdef BBERG_USE_ASM
     const auto [r0, c0] = addc(data[0], other.data[0], 0);
     const auto [r1, c1] = addc(data[1], other.data[1], c0);
     const auto [r2, c2] = addc(data[2], other.data[2], c1);
@@ -99,7 +106,7 @@ template <class T> constexpr field<T> field<T>::operator+(const field& other) co
 
 template <class T> constexpr field<T> field<T>::operator+=(const field& other) noexcept
 {
-#ifdef DISABLE_SHENANIGANS
+#ifdef BBERG_USE_ASM
     (*this) = operator+(other);
 #else
     if (std::is_constant_evaluated()) {
@@ -118,7 +125,7 @@ template <class T> constexpr field<T> field<T>::operator+=(const field& other) n
  **/
 template <class T> constexpr field<T> field<T>::operator-(const field& other) const noexcept
 {
-#ifdef DISABLE_SHENANIGANS
+#ifdef BBERG_USE_ASM
     return subtract_coarse(other); // modulus - *this;
 #else
     if (std::is_constant_evaluated()) {
@@ -136,7 +143,7 @@ template <class T> constexpr field<T> field<T>::operator-() const noexcept
 
 template <class T> constexpr field<T> field<T>::operator-=(const field& other) noexcept
 {
-#ifdef DISABLE_SHENANIGANS
+#ifdef BBERG_USE_ASM
     *this = subtract_coarse(other); // subtract(other);
 #else
     if (std::is_constant_evaluated()) {
@@ -155,7 +162,7 @@ template <class T> constexpr void field<T>::self_neg() noexcept
 
 template <class T> constexpr void field<T>::self_conditional_negate(const uint64_t predicate) noexcept
 {
-#ifdef DISABLE_SHENANIGANS
+#ifdef BBERG_USE_ASM
     *this = predicate ? -(*this) : *this;
 #else
     if (std::is_constant_evaluated()) {
@@ -233,7 +240,7 @@ template <class T> constexpr void field<T>::self_from_montgomery_form() noexcept
 
 template <class T> constexpr field<T> field<T>::reduce_once() const noexcept
 {
-#ifdef DISABLE_SHENANIGANS
+#ifdef BBERG_USE_ASM
     return subtract(modulus);
 #else
     if (std::is_constant_evaluated()) {
@@ -246,7 +253,7 @@ template <class T> constexpr field<T> field<T>::reduce_once() const noexcept
 
 template <class T> constexpr void field<T>::self_reduce_once() noexcept
 {
-#ifdef DISABLE_SHENANIGANS
+#ifdef BBERG_USE_ASM
     *this = subtract(modulus);
 #else
     if (std::is_constant_evaluated()) {
