@@ -422,42 +422,53 @@ template <class Params> struct alignas(32) field {
         field(Params::primitive_root_0, Params::primitive_root_1, Params::primitive_root_2, Params::primitive_root_3);
 
     BBERG_INLINE static constexpr std::pair<uint64_t, uint64_t> mul_wide(const uint64_t a, const uint64_t b) noexcept;
-    BBERG_INLINE static constexpr std::pair<uint64_t, uint64_t> mac(const uint64_t a,
-                                                                    const uint64_t b,
-                                                                    const uint64_t c,
-                                                                    const uint64_t carry_in) noexcept;
-    BBERG_INLINE static constexpr std::pair<uint64_t, uint64_t> mac_mini(const uint64_t a,
-                                                                         const uint64_t b,
-                                                                         const uint64_t c) noexcept;
+
+    BBERG_INLINE static constexpr uint64_t mac(
+        const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t& carry_out) noexcept;
+
+    BBERG_INLINE static constexpr void mac(const uint64_t a,
+                                           const uint64_t b,
+                                           const uint64_t c,
+                                           const uint64_t carry_in,
+                                           uint64_t& out,
+                                           uint64_t& carry_out) noexcept;
+
+    BBERG_INLINE static constexpr uint64_t mac_mini(const uint64_t a,
+                                                    const uint64_t b,
+                                                    const uint64_t c,
+                                                    uint64_t& out) noexcept;
+
+    BBERG_INLINE static constexpr void mac_mini(
+        const uint64_t a, const uint64_t b, const uint64_t c, uint64_t& out, uint64_t& carry_out) noexcept;
+
     BBERG_INLINE static constexpr uint64_t mac_discard_lo(const uint64_t a,
                                                           const uint64_t b,
-                                                          const uint64_t c,
-                                                          const uint64_t carry_in) noexcept;
-    BBERG_INLINE static constexpr uint64_t mac_discard_hi(const uint64_t a,
-                                                          const uint64_t b,
-                                                          const uint64_t c,
-                                                          const uint64_t carry_in) noexcept;
+                                                          const uint64_t c) noexcept;
 
-    BBERG_INLINE static constexpr std::pair<uint64_t, uint64_t> addc(const uint64_t a,
-                                                                     const uint64_t b,
-                                                                     const uint64_t carry_in) noexcept;
+    BBERG_INLINE static constexpr uint64_t addc(const uint64_t a,
+                                                const uint64_t b,
+                                                const uint64_t carry_in,
+                                                uint64_t& carry_out) noexcept;
 
-    BBERG_INLINE static constexpr std::pair<uint64_t, uint64_t> addc_mini(const uint64_t a, const uint64_t b) noexcept;
+    BBERG_INLINE static constexpr uint64_t sbb(const uint64_t a,
+                                               const uint64_t b,
+                                               const uint64_t borrow_in,
+                                               uint64_t& borrow_out) noexcept;
 
-    BBERG_INLINE static constexpr uint64_t addc_discard_hi(const uint64_t a,
-                                                           const uint64_t b,
-                                                           const uint64_t carry_in) noexcept;
-
-    BBERG_INLINE static constexpr std::pair<uint64_t, uint64_t> sbb(const uint64_t a,
-                                                                    const uint64_t b,
-                                                                    const uint64_t borrow_in) noexcept;
-    BBERG_INLINE static constexpr uint64_t sbb_discard_hi(const uint64_t a,
-                                                          const uint64_t b,
-                                                          uint64_t borrow_in) noexcept;
-
+    BBERG_INLINE static constexpr void square_accumulate(const uint64_t a,
+                                                         const uint64_t b,
+                                                         const uint64_t c,
+                                                         const uint64_t carry_in_lo,
+                                                         const uint64_t carry_in_hi,
+                                                         uint64_t& out,
+                                                         uint64_t& carry_lo,
+                                                         uint64_t& carry_hi) noexcept;
+    BBERG_INLINE constexpr field reduce() const noexcept;
+    BBERG_INLINE constexpr field add(const field& other) const noexcept;
     BBERG_INLINE constexpr field subtract(const field& other) const noexcept;
     BBERG_INLINE constexpr field subtract_coarse(const field& other) const noexcept;
-    BBERG_INLINE static constexpr field montgomery_reduce(const wide_array& r) noexcept;
+    BBERG_INLINE constexpr field montgomery_mul(const field& other) const noexcept;
+    BBERG_INLINE constexpr field montgomery_square() const noexcept;
 
 #ifndef DISABLE_SHENANIGANS
     BBERG_INLINE static field asm_mul(const field& a, const field& b) noexcept;

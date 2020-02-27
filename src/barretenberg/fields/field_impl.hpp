@@ -22,20 +22,20 @@ namespace barretenberg {
  **/
 template <class T> constexpr field<T> field<T>::operator*(const field& other) const noexcept
 {
-#ifdef BBERG_USE_ASM
-    return montgomery_reduce(mul_512(other)); //.subtract(modulus);
+#ifndef BBERG_USE_ASM
+    return montgomery_mul(other);
 #else
     if (std::is_constant_evaluated()) {
-        return montgomery_reduce(mul_512(other)); // .subtract(modulus);
+        return montgomery_mul(other);
     } else {
-        return asm_mul_with_coarse_reduction(*this, other); // asm_mul(*this, other);
+        return asm_mul_with_coarse_reduction(*this, other);
     }
 #endif
 }
 
 template <class T> constexpr field<T> field<T>::operator*=(const field& other) noexcept
 {
-#ifdef BBERG_USE_ASM
+#ifndef BBERG_USE_ASM
     *this = operator*(other);
 #else
     if (std::is_constant_evaluated()) {
@@ -54,11 +54,11 @@ template <class T> constexpr field<T> field<T>::operator*=(const field& other) n
  **/
 template <class T> constexpr field<T> field<T>::sqr() const noexcept
 {
-#ifdef BBERG_USE_ASM
-    return montgomery_reduce(sqr_512()); // .subtract(modulus);
+#ifndef BBERG_USE_ASM
+    return montgomery_square();
 #else
     if (std::is_constant_evaluated()) {
-        return montgomery_reduce(sqr_512()); // .subtract(modulus);
+        return montgomery_square();
     } else {
         return asm_sqr_with_coarse_reduction(*this); // asm_sqr(*this);
     }
@@ -67,13 +67,13 @@ template <class T> constexpr field<T> field<T>::sqr() const noexcept
 
 template <class T> constexpr void field<T>::self_sqr() noexcept
 {
-#ifdef BBERG_USE_ASM
-    *this = montgomery_reduce(sqr_512()); // .subtract(modulus);
+#ifndef BBERG_USE_ASM
+    *this = montgomery_square();
 #else
     if (std::is_constant_evaluated()) {
-        *this = montgomery_reduce(sqr_512()); // .subtract(modulus);
+        *this = montgomery_square();
     } else {
-        asm_self_sqr_with_coarse_reduction(*this); // asm_self_sqr(*this);
+        asm_self_sqr_with_coarse_reduction(*this);
     }
 #endif
 }
@@ -85,19 +85,11 @@ template <class T> constexpr void field<T>::self_sqr() noexcept
  **/
 template <class T> constexpr field<T> field<T>::operator+(const field& other) const noexcept
 {
-#ifdef BBERG_USE_ASM
-    const auto [r0, c0] = addc(data[0], other.data[0], 0);
-    const auto [r1, c1] = addc(data[1], other.data[1], c0);
-    const auto [r2, c2] = addc(data[2], other.data[2], c1);
-    const auto r3 = addc_discard_hi(data[3], other.data[3], c2);
-    return (field{ r0, r1, r2, r3 }).subtract_coarse(twice_modulus);
+#ifndef BBERG_USE_ASM
+    return add(other);
 #else
     if (std::is_constant_evaluated()) {
-        const auto [r0, c0] = addc(data[0], other.data[0], 0);
-        const auto [r1, c1] = addc(data[1], other.data[1], c0);
-        const auto [r2, c2] = addc(data[2], other.data[2], c1);
-        const auto r3 = addc_discard_hi(data[3], other.data[3], c2);
-        return (field{ r0, r1, r2, r3 }).subtract_coarse(twice_modulus);
+        return add(other);
     } else {
         return asm_add_with_coarse_reduction(*this, other); // asm_add_without_reduction(*this, other);
     }
@@ -106,7 +98,7 @@ template <class T> constexpr field<T> field<T>::operator+(const field& other) co
 
 template <class T> constexpr field<T> field<T>::operator+=(const field& other) noexcept
 {
-#ifdef BBERG_USE_ASM
+#ifndef BBERG_USE_ASM
     (*this) = operator+(other);
 #else
     if (std::is_constant_evaluated()) {
@@ -125,7 +117,7 @@ template <class T> constexpr field<T> field<T>::operator+=(const field& other) n
  **/
 template <class T> constexpr field<T> field<T>::operator-(const field& other) const noexcept
 {
-#ifdef BBERG_USE_ASM
+#ifndef BBERG_USE_ASM
     return subtract_coarse(other); // modulus - *this;
 #else
     if (std::is_constant_evaluated()) {
@@ -143,7 +135,7 @@ template <class T> constexpr field<T> field<T>::operator-() const noexcept
 
 template <class T> constexpr field<T> field<T>::operator-=(const field& other) noexcept
 {
-#ifdef BBERG_USE_ASM
+#ifndef BBERG_USE_ASM
     *this = subtract_coarse(other); // subtract(other);
 #else
     if (std::is_constant_evaluated()) {
@@ -162,7 +154,7 @@ template <class T> constexpr void field<T>::self_neg() noexcept
 
 template <class T> constexpr void field<T>::self_conditional_negate(const uint64_t predicate) noexcept
 {
-#ifdef BBERG_USE_ASM
+#ifndef BBERG_USE_ASM
     *this = predicate ? -(*this) : *this;
 #else
     if (std::is_constant_evaluated()) {
@@ -240,11 +232,11 @@ template <class T> constexpr void field<T>::self_from_montgomery_form() noexcept
 
 template <class T> constexpr field<T> field<T>::reduce_once() const noexcept
 {
-#ifdef BBERG_USE_ASM
-    return subtract(modulus);
+#ifndef BBERG_USE_ASM
+    return reduce();
 #else
     if (std::is_constant_evaluated()) {
-        return subtract(modulus);
+        return reduce();
     } else {
         return asm_reduce_once(*this);
     }
@@ -253,11 +245,11 @@ template <class T> constexpr field<T> field<T>::reduce_once() const noexcept
 
 template <class T> constexpr void field<T>::self_reduce_once() noexcept
 {
-#ifdef BBERG_USE_ASM
-    *this = subtract(modulus);
+#ifndef BBERG_USE_ASM
+    *this = reduce();
 #else
     if (std::is_constant_evaluated()) {
-        *this = subtract(modulus);
+        *this = reduce();
     } else {
         asm_self_reduce_once(*this);
     }
@@ -534,7 +526,12 @@ field<T> field<T>::random_element(std::mt19937_64* engine, std::uniform_int_dist
                             dist_ptr->operator()(*engine_ptr), dist_ptr->operator()(*engine_ptr),
                             dist_ptr->operator()(*engine_ptr), dist_ptr->operator()(*engine_ptr) };
     random_data.data[7] = random_data.data[7] & 0b0000111111111111111111111111111111111111111111111111111111111111ULL;
-    field r = montgomery_reduce(random_data).reduce_once();
-    return r;
+    random_data.data[3] = random_data.data[3] & 0b0000111111111111111111111111111111111111111111111111111111111111ULL;
+    field left{ random_data.data[0], random_data.data[1], random_data.data[2], random_data.data[3] };
+    field right{ random_data.data[4], random_data.data[5], random_data.data[6], random_data.data[7] };
+    left = left.reduce_once().reduce_once();
+    right = right.reduce_once().reduce_once();
+    field result = (left * right).reduce_once();
+    return result;
 }
 } // namespace barretenberg

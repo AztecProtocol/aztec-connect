@@ -4,6 +4,7 @@
 cmake_minimum_required(VERSION 3.14)
 
 option(DISABLE_ASM "Disable custom assembly" OFF)
+option(DISABLE_ADX "Disable ADX assembly variant" OFF)
 option(MULTITHREADING "Enable multi-threading" ON)
 option(TESTING "Build tests" ON)
 option(BENCHMARKS "Build benchmarks" ON)
@@ -119,6 +120,11 @@ endif()
 
 if(WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-float-conversion -Wimplicit-fallthrough=0")
+endif()
+
+if(DISABLE_ADX)
+    message(STATUS "disabling ADX assembly variant")
+    add_definitions(-DDISABLE_ADX=1)
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Wno-deprecated-copy")

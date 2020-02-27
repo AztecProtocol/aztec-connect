@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef BBERG_USE_ASM
 #include "asm_macros.hpp"
 
 namespace barretenberg {
@@ -282,3 +283,4 @@ template <class T> void field<T>::asm_self_reduce_once(const field& a) noexcept
             : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 } // namespace barretenberg
+#endif

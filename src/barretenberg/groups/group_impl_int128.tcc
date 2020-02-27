@@ -24,6 +24,6 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
                                                                                             affine_element* dest,
                                                                                             uint64_t predicate)
 {
-    dest = { src.x, predicate ? -src.y : src.y, src.z };
+    *dest = predicate ? -(*src) : (*src);
 }
 } // namespace barretenberg

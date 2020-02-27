@@ -1,13 +1,12 @@
 #pragma once
 
-namespace barretenberg
-{
+namespace barretenberg {
 template <class T>
 constexpr std::pair<uint64_t, uint64_t> field<T>::mul_wide(const uint64_t a, const uint64_t b) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     const uint128_t res = ((uint128_t)a * (uint128_t)b);
-    return { (uint64_t)(res & lo_mask), (uint64_t)(res >> 64) };
+    return { (uint64_t)(res), (uint64_t)(res >> 64) };
 #else
     const uint64_t a_lo = a & 0xffffffffULL;
     const uint64_t a_hi = a >> 32ULL;
@@ -26,251 +25,367 @@ constexpr std::pair<uint64_t, uint64_t> field<T>::mul_wide(const uint64_t a, con
 }
 
 template <class T>
-constexpr std::pair<uint64_t, uint64_t> field<T>::mac(const uint64_t a,
-                                                      const uint64_t b,
-                                                      const uint64_t c,
-                                                      const uint64_t carry_in) noexcept
+constexpr uint64_t field<T>::mac(
+    const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t& carry_out) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
-    return { (uint64_t)(res & lo_mask), (uint64_t)(res >> 64) };
+    carry_out = (uint64_t)(res >> 64);
+    return (uint64_t)res;
 #else
     auto result = mul_wide(b, c, r, carry_out);
     result.first += a;
     const uint64_t overflow_c = (result.first < a);
     result.first += carry_in;
     const uint64_t overflow_carry = (result.first < carry_in);
-    result.second += (overflow_c + overflow_carry);
-    return result;
+    carry_out = result.second + (overflow_c + overflow_carry);
+    return result.first;
 #endif
 }
 
 template <class T>
-constexpr std::pair<uint64_t, uint64_t> field<T>::mac_mini(const uint64_t a,
-                                                           const uint64_t b,
-                                                           const uint64_t c) noexcept
+constexpr void field<T>::mac(const uint64_t a,
+                             const uint64_t b,
+                             const uint64_t c,
+                             const uint64_t carry_in,
+                             uint64_t& out,
+                             uint64_t& carry_out) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
-    const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c);
-    return { (uint64_t)(res & lo_mask), (uint64_t)(res >> 64) };
+    constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
+    const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
+    out = (uint64_t)(res);
+    carry_out = (uint64_t)(res >> 64);
 #else
     auto result = mul_wide(b, c, r, carry_out);
     result.first += a;
     const uint64_t overflow_c = (result.first < a);
-    result.second += (overflow_c);
-    return result;
+    result.first += carry_in;
+    const uint64_t overflow_carry = (result.first < carry_in);
+    carry_out = result.second + (overflow_c + overflow_carry);
+    out = result.first;
 #endif
 }
 
 template <class T>
-constexpr uint64_t field<T>::mac_discard_hi(const uint64_t a,
-                                            const uint64_t b,
-                                            const uint64_t c,
-                                            const uint64_t carry_in) noexcept
+constexpr uint64_t field<T>::mac_mini(const uint64_t a,
+                                      const uint64_t b,
+                                      const uint64_t c,
+                                      uint64_t& carry_out) noexcept
 {
-    return (b * c) + a + carry_in;
+#if defined(__SIZEOF_INT128__) && !defined(__wasm__)
+    constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
+    const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c);
+    carry_out = (uint64_t)(res >> 64);
+    return (uint64_t)(res);
+#else
+    auto result = mul_wide(b, c, r, carry_out);
+    result.first += a;
+    const uint64_t overflow_c = (result.first < a);
+    carry_out = result.second + (overflow_c);
+    return result.first;
+#endif
 }
 
 template <class T>
-constexpr uint64_t field<T>::mac_discard_lo(const uint64_t a,
-                                            const uint64_t b,
-                                            const uint64_t c,
-                                            const uint64_t carry_in) noexcept
+constexpr void field<T>::mac_mini(
+    const uint64_t a, const uint64_t b, const uint64_t c, uint64_t& out, uint64_t& carry_out) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
-    const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
+    constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
+    const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c);
+    out = (uint64_t)(res);
+    carry_out = (uint64_t)(res >> 64);
+#else
+    auto result = mul_wide(b, c, r, carry_out);
+    result.first += a;
+    const uint64_t overflow_c = (result.first < a);
+    carry_out = result.second + (overflow_c);
+    out = result.first;
+#endif
+}
+
+template <class T>
+constexpr uint64_t field<T>::mac_discard_lo(const uint64_t a, const uint64_t b, const uint64_t c) noexcept
+{
+#if defined(__SIZEOF_INT128__) && !defined(__wasm__)
+    const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c);
     return (uint64_t)(res >> 64);
 #else
     auto result = mul_wide(b, c, r, carry_out);
     result.first += a;
     const uint64_t overflow_c = (result.first < a);
-    result.first += carry_in;
-    const uint64_t overflow_carry = (result.first < carry_in);
-    result.second += (overflow_c + overflow_carry);
+    result.second += (overflow_c);
     return result.second;
 #endif
 }
 
 template <class T>
-constexpr std::pair<uint64_t, uint64_t> field<T>::addc(const uint64_t a,
-                                                       const uint64_t b,
-                                                       const uint64_t carry_in) noexcept
+constexpr uint64_t field<T>::addc(const uint64_t a,
+                                  const uint64_t b,
+                                  const uint64_t carry_in,
+                                  uint64_t& carry_out) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     uint128_t res = (uint128_t)a + (uint128_t)b + (uint128_t)carry_in;
-    return { (uint64_t)(res & lo_mask), (uint64_t)(res >> 64) };
+    carry_out = (uint64_t)(res >> 64);
+    return (uint64_t)res;
 #else
     uint64_t r = a + b;
     const uint64_t carry_temp = r < a;
     r += carry_in;
-    const uint64_t carry_out = carry_temp + (r < carry_in);
-    return { r, carry_out };
+    carry_out = carry_temp + (r < carry_in);
+    return r;
 #endif
 }
 
 template <class T>
-constexpr std::pair<uint64_t, uint64_t> field<T>::addc_mini(const uint64_t a, const uint64_t b) noexcept
-{
-#if defined(__SIZEOF_INT128__) && !defined(__wasm__)
-    uint128_t res = (uint128_t)a + (uint128_t)b;
-    return { (uint64_t)(res & lo_mask), (uint64_t)(res >> 64) };
-#else
-    uint64_t r = a + b;
-    return { r, uint64_t(r < a) };
-#endif
-}
-
-template <class T>
-constexpr uint64_t field<T>::addc_discard_hi(const uint64_t a, const uint64_t b, const uint64_t carry_in) noexcept
-{
-    return a + b + carry_in;
-}
-
-template <class T>
-constexpr std::pair<uint64_t, uint64_t> field<T>::sbb(const uint64_t a,
-                                                      const uint64_t b,
-                                                      const uint64_t borrow_in) noexcept
+constexpr uint64_t field<T>::sbb(const uint64_t a,
+                                 const uint64_t b,
+                                 const uint64_t borrow_in,
+                                 uint64_t& borrow_out) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     uint128_t res = (uint128_t)a - ((uint128_t)b + (uint128_t)(borrow_in >> 63));
-    return { (uint64_t)(res & lo_mask), (uint64_t)(res >> 64) };
+    borrow_out = (uint64_t)(res >> 64);
+    return (uint64_t)res;
 #else
     uint64_t t_1 = a - (borrow_in >> 63ULL);
     uint64_t borrow_temp_1 = t_1 > a;
     uint64_t t_2 = t_1 - b;
     uint64_t borrow_temp_2 = t_2 > t_1;
-    return { t_2, 0ULL - (borrow_temp_1 | borrow_temp_2) };
+    borrow_out = 0ULL = (borrow_temp_1 | borrow_temp_2);
+    return t_2;
 #endif
 }
 
 template <class T>
-constexpr uint64_t field<T>::sbb_discard_hi(const uint64_t a, const uint64_t b, const uint64_t borrow_in) noexcept
+constexpr void field<T>::square_accumulate(const uint64_t a,
+                                           const uint64_t b,
+                                           const uint64_t c,
+                                           const uint64_t carry_in_lo,
+                                           const uint64_t carry_in_hi,
+                                           uint64_t& out,
+                                           uint64_t& carry_lo,
+                                           uint64_t& carry_hi) noexcept
 {
-    return a - b - (borrow_in >> 63);
+    const auto [r0, r1] = mul_wide(b, c);
+    out = r0 + r0;
+    carry_lo = (out < r0);
+    out += a;
+    carry_lo += (out < a);
+    out += carry_in_lo;
+    carry_lo += (out < carry_in_lo);
+    carry_lo += r1;
+    carry_hi = (carry_lo < r1);
+    carry_lo += r1;
+    carry_hi += (carry_lo < r1);
+    carry_lo += carry_in_hi;
+    carry_hi += (carry_lo < carry_in_hi);
+}
+
+template <class T> constexpr field<T> field<T>::reduce() const noexcept
+{
+    uint64_t t0 = data[0] + T::not_modulus_0;
+    uint64_t c = t0 < data[0];
+    auto t1 = addc(data[1], T::not_modulus_1, c, c);
+    auto t2 = addc(data[2], T::not_modulus_2, c, c);
+    auto t3 = addc(data[3], T::not_modulus_3, c, c);
+    const uint64_t selection_mask = 0ULL - c; // 0xffff... if we have overflowed.
+    const uint64_t selection_mask_inverse = ~selection_mask;
+    // if we overflow, we want to swap
+    return {
+        (data[0] & selection_mask_inverse) | (t0 & selection_mask),
+        (data[1] & selection_mask_inverse) | (t1 & selection_mask),
+        (data[2] & selection_mask_inverse) | (t2 & selection_mask),
+        (data[3] & selection_mask_inverse) | (t3 & selection_mask),
+    };
+}
+
+template <class T> constexpr field<T> field<T>::add(const field& other) const noexcept
+{
+    uint64_t r0 = data[0] + other.data[0];
+    uint64_t c = r0 < data[0];
+    auto r1 = addc(data[1], other.data[1], c, c);
+    auto r2 = addc(data[2], other.data[2], c, c);
+    uint64_t r3 = data[3] + other.data[3] + c;
+
+    uint64_t t0 = r0 + T::twice_not_modulus_0;
+    c = t0 < T::twice_not_modulus_0;
+    uint64_t t1 = addc(r1, T::twice_not_modulus_1, c, c);
+    uint64_t t2 = addc(r2, T::twice_not_modulus_2, c, c);
+    uint64_t t3 = addc(r3, T::twice_not_modulus_3, c, c);
+    const uint64_t selection_mask = 0ULL - c;
+    const uint64_t selection_mask_inverse = ~selection_mask;
+
+    return {
+        (r0 & selection_mask_inverse) | (t0 & selection_mask),
+        (r1 & selection_mask_inverse) | (t1 & selection_mask),
+        (r2 & selection_mask_inverse) | (t2 & selection_mask),
+        (r3 & selection_mask_inverse) | (t3 & selection_mask),
+    };
 }
 
 template <class T> constexpr field<T> field<T>::subtract(const field& other) const noexcept
 {
-    const auto [r0, t0] = sbb(data[0], other.data[0], 0ULL);
-    const auto [r1, t1] = sbb(data[1], other.data[1], t0);
-    const auto [r2, t2] = sbb(data[2], other.data[2], t1);
-    const auto [r3, t3] = sbb(data[3], other.data[3], t2);
+    uint64_t borrow = 0;
+    uint64_t r0 = sbb(data[0], other.data[0], borrow, borrow);
+    uint64_t r1 = sbb(data[1], other.data[1], borrow, borrow);
+    uint64_t r2 = sbb(data[2], other.data[2], borrow, borrow);
+    uint64_t r3 = sbb(data[3], other.data[3], borrow, borrow);
 
-    const auto [r4, c0] = addc(r0, T::modulus_0 & t3, 0);
-    const auto [r5, c1] = addc(r1, T::modulus_1 & t3, c0);
-    const auto [r6, c2] = addc(r2, T::modulus_2 & t3, c1);
-    const auto r7 = addc_discard_hi(r3, T::modulus_3 & t3, c2);
-    return { r4, r5, r6, r7 };
-}
-
-template <class T> constexpr field<T> field<T>::subtract_coarse(const field& other) const noexcept
-{
-    const auto [r0, t0] = sbb(data[0], other.data[0], 0ULL);
-    const auto [r1, t1] = sbb(data[1], other.data[1], t0);
-    const auto [r2, t2] = sbb(data[2], other.data[2], t1);
-    const auto [r3, t3] = sbb(data[3], other.data[3], t2);
-
-    const auto [r4, c0] = addc(r0, twice_modulus.data[0] & t3, 0);
-    const auto [r5, c1] = addc(r1, twice_modulus.data[1] & t3, c0);
-    const auto [r6, c2] = addc(r2, twice_modulus.data[2] & t3, c1);
-    const auto r7 = addc_discard_hi(r3, twice_modulus.data[3] & t3, c2);
-    return { r4, r5, r6, r7 };
-}
-
-template <class T> constexpr field<T> field<T>::montgomery_reduce(const wide_array& r) noexcept
-{
-    uint64_t k = r.data[0] * T::r_inv;
-
-    const auto c0 = mac_discard_lo(r.data[0], k, T::modulus_0, 0);
-    const auto [t1, c1] = mac(r.data[1], k, T::modulus_1, c0);
-    const auto [t2, c2] = mac(r.data[2], k, T::modulus_2, c1);
-    const auto [t3, c3] = mac(r.data[3], k, T::modulus_3, c2);
-
-    const auto [v0, z0] = addc(r.data[4], 0, c3);
-
-    k = t1 * T::r_inv;
-
-    const auto c4 = mac_discard_lo(t1, k, T::modulus_0, 0);
-    const auto [t5, c5] = mac(t2, k, T::modulus_1, c4);
-    const auto [t6, c6] = mac(t3, k, T::modulus_2, c5);
-    const auto [t7, c7] = mac(v0, k, T::modulus_3, c6);
-
-    const auto [v1, z1] = addc(r.data[5], z0, c7);
-
-    k = t5 * T::r_inv;
-
-    const auto c8 = mac_discard_lo(t5, k, T::modulus_0, 0);
-    const auto [t8, c9] = mac(t6, k, T::modulus_1, c8);
-    const auto [t9, c10] = mac(t7, k, T::modulus_2, c9);
-    const auto [t10, c11] = mac(v1, k, T::modulus_3, c10);
-
-    const auto [v2, z2] = addc(r.data[6], z1, c11);
-
-    k = t8 * T::r_inv;
-
-    const auto c12 = mac_discard_lo(t8, k, T::modulus_0, 0);
-    const auto [r0, c13] = mac(t9, k, T::modulus_1, c12);
-    const auto [r1, c14] = mac(t10, k, T::modulus_2, c13);
-    const auto [r2, c15] = mac(v2, k, T::modulus_3, c14);
-    const auto r3 = addc_discard_hi(r.data[7], z2, c15);
+    r0 += (T::modulus_0 & borrow);
+    uint64_t carry = r0 < (T::modulus_0 & borrow);
+    r1 = addc(r1, T::modulus_1 & borrow, carry, carry);
+    r2 = addc(r2, T::modulus_2 & borrow, carry, carry);
+    r3 += (T::modulus_3 & borrow) + carry;
 
     return { r0, r1, r2, r3 };
 }
 
+template <class T> constexpr field<T> field<T>::subtract_coarse(const field& other) const noexcept
+{
+    uint64_t borrow = 0;
+    uint64_t r0 = sbb(data[0], other.data[0], borrow, borrow);
+    uint64_t r1 = sbb(data[1], other.data[1], borrow, borrow);
+    uint64_t r2 = sbb(data[2], other.data[2], borrow, borrow);
+    uint64_t r3 = sbb(data[3], other.data[3], borrow, borrow);
+
+    r0 += (T::twice_modulus_0 & borrow);
+    uint64_t carry = r0 < (T::twice_modulus_0 & borrow);
+    r1 = addc(r1, T::twice_modulus_1 & borrow, carry, carry);
+    r2 = addc(r2, T::twice_modulus_2 & borrow, carry, carry);
+    r3 += (T::twice_modulus_3 & borrow) + carry;
+
+    return { r0, r1, r2, r3 };
+}
+
+template <class T> constexpr field<T> field<T>::montgomery_mul(const field& other) const noexcept
+{
+    auto [t0, c] = mul_wide(data[0], other.data[0]);
+    uint64_t k = t0 * T::r_inv;
+    uint64_t a = mac_discard_lo(t0, k, T::modulus_0);
+
+    uint64_t t1 = mac_mini(a, data[0], other.data[1], a);
+    mac(t1, k, T::modulus_1, c, t0, c);
+    uint64_t t2 = mac_mini(a, data[0], other.data[2], a);
+    mac(t2, k, T::modulus_2, c, t1, c);
+    uint64_t t3 = mac_mini(a, data[0], other.data[3], a);
+    mac(t3, k, T::modulus_3, c, t2, c);
+    t3 = c + a;
+
+    mac_mini(t0, data[1], other.data[0], t0, a);
+    k = t0 * T::r_inv;
+    c = mac_discard_lo(t0, k, T::modulus_0);
+    mac(t1, data[1], other.data[1], a, t1, a);
+    mac(t1, k, T::modulus_1, c, t0, c);
+    mac(t2, data[1], other.data[2], a, t2, a);
+    mac(t2, k, T::modulus_2, c, t1, c);
+    mac(t3, data[1], other.data[3], a, t3, a);
+    mac(t3, k, T::modulus_3, c, t2, c);
+    t3 = c + a;
+
+    mac_mini(t0, data[2], other.data[0], t0, a);
+    k = t0 * T::r_inv;
+    c = mac_discard_lo(t0, k, T::modulus_0);
+    mac(t1, data[2], other.data[1], a, t1, a);
+    mac(t1, k, T::modulus_1, c, t0, c);
+    mac(t2, data[2], other.data[2], a, t2, a);
+    mac(t2, k, T::modulus_2, c, t1, c);
+    mac(t3, data[2], other.data[3], a, t3, a);
+    mac(t3, k, T::modulus_3, c, t2, c);
+    t3 = c + a;
+
+    mac_mini(t0, data[3], other.data[0], t0, a);
+    k = t0 * T::r_inv;
+    c = mac_discard_lo(t0, k, T::modulus_0);
+    mac(t1, data[3], other.data[1], a, t1, a);
+    mac(t1, k, T::modulus_1, c, t0, c);
+    mac(t2, data[3], other.data[2], a, t2, a);
+    mac(t2, k, T::modulus_2, c, t1, c);
+    mac(t3, data[3], other.data[3], a, t3, a);
+    mac(t3, k, T::modulus_3, c, t2, c);
+    t3 = c + a;
+    return { t0, t1, t2, t3 };
+}
+
+template <class T> constexpr field<T> field<T>::montgomery_square() const noexcept
+{
+    uint64_t t1 = 0;
+    uint64_t t2 = 0;
+    uint64_t t3 = 0;
+    uint64_t carry_hi = 0;
+
+    auto [t0, carry_lo] = mul_wide(data[0], data[0]);
+    square_accumulate(t1, data[1], data[0], carry_lo, carry_hi, t1, carry_lo, carry_hi);
+    square_accumulate(t2, data[2], data[0], carry_lo, carry_hi, t2, carry_lo, carry_hi);
+    square_accumulate(t3, data[3], data[0], carry_lo, carry_hi, t3, carry_lo, carry_hi);
+
+    uint64_t round_carry = carry_lo;
+    uint64_t k = t0 * T::r_inv;
+    carry_lo = mac_discard_lo(t0, k, T::modulus_0);
+    mac(t1, k, T::modulus_1, carry_lo, t0, carry_lo);
+    mac(t2, k, T::modulus_2, carry_lo, t1, carry_lo);
+    mac(t3, k, T::modulus_3, carry_lo, t2, carry_lo);
+    t3 = carry_lo + round_carry;
+
+    t1 = mac_mini(t1, data[1], data[1], carry_lo);
+    carry_hi = 0;
+    square_accumulate(t2, data[2], data[1], carry_lo, carry_hi, t2, carry_lo, carry_hi);
+    square_accumulate(t3, data[3], data[1], carry_lo, carry_hi, t3, carry_lo, carry_hi);
+    round_carry = carry_lo;
+    k = t0 * T::r_inv;
+    carry_lo = mac_discard_lo(t0, k, T::modulus_0);
+    mac(t1, k, T::modulus_1, carry_lo, t0, carry_lo);
+    mac(t2, k, T::modulus_2, carry_lo, t1, carry_lo);
+    mac(t3, k, T::modulus_3, carry_lo, t2, carry_lo);
+    t3 = carry_lo + round_carry;
+
+    t2 = mac_mini(t2, data[2], data[2], carry_lo);
+    carry_hi = 0;
+    square_accumulate(t3, data[3], data[2], carry_lo, carry_hi, t3, carry_lo, carry_hi);
+    round_carry = carry_lo;
+    k = t0 * T::r_inv;
+    carry_lo = mac_discard_lo(t0, k, T::modulus_0);
+    mac(t1, k, T::modulus_1, carry_lo, t0, carry_lo);
+    mac(t2, k, T::modulus_2, carry_lo, t1, carry_lo);
+    mac(t3, k, T::modulus_3, carry_lo, t2, carry_lo);
+    t3 = carry_lo + round_carry;
+
+    t3 = mac_mini(t3, data[3], data[3], carry_lo);
+    k = t0 * T::r_inv;
+    round_carry = carry_lo;
+    carry_lo = mac_discard_lo(t0, k, T::modulus_0);
+    mac(t1, k, T::modulus_1, carry_lo, t0, carry_lo);
+    mac(t2, k, T::modulus_2, carry_lo, t1, carry_lo);
+    mac(t3, k, T::modulus_3, carry_lo, t2, carry_lo);
+    t3 = carry_lo + round_carry;
+    return { t0, t1, t2, t3 };
+}
+
 template <class T> constexpr class field<T>::wide_array field<T>::mul_512(const field& other) const noexcept {
-    const auto [r0, t0] = mul_wide(data[0], other.data[0]);
-    const auto [q0, t1] = mac_mini(t0, data[0], other.data[1]);
-    const auto [q1, t2] = mac_mini(t1, data[0], other.data[2]);
-    const auto [q2, z0] = mac_mini(t2, data[0], other.data[3]);
+    uint64_t carry_2 = 0;
+    auto [r0, carry] = mul_wide(data[0], other.data[0]);
+    uint64_t r1 = mac_mini(carry, data[0], other.data[1], carry);
+    uint64_t r2 = mac_mini(carry, data[0], other.data[2], carry);
+    uint64_t r3 = mac_mini(carry, data[0], other.data[3], carry_2);
 
-    const auto [r1, t3] = mac_mini(q0, data[1], other.data[0]);
-    const auto [q3, t4] = mac(q1, data[1], other.data[1], t3);
-    const auto [q4, t5] = mac(q2, data[1], other.data[2], t4);
-    const auto [q5, z1] = mac(z0, data[1], other.data[3], t5);
+    r1 = mac_mini(r1, data[1], other.data[0], carry);
+    r2 = mac(r2, data[1], other.data[1], carry, carry);
+    r3 = mac(r3, data[1], other.data[2], carry, carry);
+    uint64_t r4 = mac(carry_2, data[1], other.data[3], carry, carry_2);
 
-    const auto [r2, t6] = mac_mini(q3, data[2], other.data[0]);
-    const auto [q6, t7] = mac(q4, data[2], other.data[1], t6);
-    const auto [q7, t8] = mac(q5, data[2], other.data[2], t7);
-    const auto [q8, z2] = mac(z1, data[2], other.data[3], t8);
+    r2 = mac_mini(r2, data[2], other.data[0], carry);
+    r3 = mac(r3, data[2], other.data[1], carry, carry);
+    r4 = mac(r4, data[2], other.data[2], carry, carry);
+    uint64_t r5 = mac(carry_2, data[2], other.data[3], carry, carry_2);
 
-    const auto [r3, t9] = mac_mini(q6, data[3], other.data[0]);
-    const auto [r4, t10] = mac(q7, data[3], other.data[1], t9);
-    const auto [r5, t11] = mac(q8, data[3], other.data[2], t10);
-    const auto [r6, r7] = mac(z2, data[3], other.data[3], t11);
+    r3 = mac_mini(r3, data[3], other.data[0], carry);
+    r4 = mac(r4, data[3], other.data[1], carry, carry);
+    r5 = mac(r5, data[3], other.data[2], carry, carry);
+    uint64_t r6 = mac(carry_2, data[3], other.data[3], carry, carry_2);
 
-    return { r0, r1, r2, r3, r4, r5, r6, r7 };
+    return { r0, r1, r2, r3, r4, r5, r6, carry_2 };
 }
 
-template <class T>
-constexpr class field<T>::wide_array field<T>::sqr_512() const noexcept {
-    const auto [r0, aa1] = mul_wide(data[0], data[0]);
-    const auto [ab0, ab1] = mul_wide(data[0], data[1]);
-
-    const auto [r1, c0] = addc(ab0, ab0, aa1);
-
-    const auto [ac0, ac1] = mul_wide(data[0], data[2]);
-    const auto [bb0, bb1] = mac(ac0, data[1], data[1], ac0);
-    const auto [t0, c1a] = addc(ab1, ab1, c0);
-    const auto [r2, c1b] = addc_mini(t0, bb0);
-
-    const auto [ad0, ad1] = mac_mini(ac1, data[0], data[3]);
-    const auto [bc0, bc1] = mul_wide(data[1], data[2]);
-    const auto [t1, c3a] = addc(bb1, c1a + c1b, ad0);
-    const auto [t2, c3b] = addc(t1, ad0, bc0);
-    const auto [r3, c3c] = addc_mini(t2, bc0);
-
-    const auto [bd0, bd1] = mac(bc1, data[1], data[3], ad1);
-    const auto [cc0, cc1] = mul_wide(data[2], data[2]);
-    const auto [t3, c4a] = addc(bd0, bd0, c3a + c3b + c3c);
-    const auto [r4, c4b] = addc_mini(cc0, t3);
-
-    const auto [cd0, cd1] = mac_mini(bd1, data[2], data[3]);
-    const auto [t4, c5a] = addc(cd0, cd0, cc1);
-    const auto [r5, c5b] = addc_mini(t4, c4a + c4b);
-
-    const auto [dd0, dd1] = mac_mini(cd1, data[3], data[3]);
-    const auto [r6, t5] = addc(dd0, c5a + c5b, cd1);
-    const auto r7 = addc_discard_hi(t5, dd1, 0ULL);
-    return { r0, r1, r2, r3, r4, r5, r6, r7 };
-}
-}
+} // namespace barretenberg

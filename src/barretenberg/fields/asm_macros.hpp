@@ -28,7 +28,7 @@
         "movq " hilo ", 16(" r ")               \n\t"                                                                    \
         "movq " hihi ", 24(" r ")               \n\t"
 
-#ifndef __ADX__
+#if !defined(__ADX__) || defined(DISABLE_ADX)
 /**
  * Take a 4-limb field element, in (%r12, %r13, %r14, %r15),
  * and add 4-limb field element pointed to by a
