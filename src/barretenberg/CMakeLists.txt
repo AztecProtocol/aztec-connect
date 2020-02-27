@@ -30,10 +30,10 @@ add_library(
     fields/field6.hpp
     fields/field12.hpp
     groups/wnaf.hpp
-    groups/affine_group_impl.hpp
-    groups/affine_group.hpp
-    groups/new_group_impl.hpp
-    groups/new_group.hpp
+    groups/affine_element_impl.hpp
+    groups/affine_element.hpp
+    groups/element_impl.hpp
+    groups/element.hpp
     groups/group_impl_asm.tcc
     groups/group_impl_int128.tcc
     groups/group.hpp
@@ -218,10 +218,10 @@ if(PROFILING)
         fields/field6.hpp
         fields/field12.hpp
         groups/wnaf.hpp
-        groups/affine_group_impl.hpp
-        groups/affine_group.hpp
-        groups/new_group_impl.hpp
-        groups/new_group.hpp
+        groups/affine_element_impl.hpp
+        groups/affine_element.hpp
+        groups/element_impl.hpp
+        groups/element.hpp
         groups/group_impl_asm.tcc
         groups/group_impl_int128.tcc
         groups/group.hpp

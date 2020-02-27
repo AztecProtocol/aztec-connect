@@ -6,9 +6,9 @@
 #include <array>
 #include <random>
 
-#include "./affine_group.hpp"
+#include "./affine_element.hpp"
 namespace barretenberg {
-namespace test {
+namespace group_elements {
 template <class Fq, class Fr, class Params> class alignas(32) element {
   public:
     static constexpr element one{ Params::one_x, Params::one_y, Fq::one };
@@ -32,17 +32,17 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
 
     constexpr element dbl() const noexcept;
     constexpr void self_dbl() noexcept;
-    constexpr void self_mixed_add_or_sub(const affine_element<Fq, Fr, Params>& other,
-                                         const uint64_t predicate) noexcept;
+    BBERG_INLINE constexpr void self_mixed_add_or_sub(const affine_element<Fq, Fr, Params>& other,
+                                                      const uint64_t predicate) noexcept;
 
-    constexpr element operator+(const element& other) const noexcept;
-    constexpr element operator+(const affine_element<Fq, Fr, Params>& other) const noexcept;
-    constexpr element operator+=(const element& other) noexcept;
-    constexpr element operator+=(const affine_element<Fq, Fr, Params>& other) noexcept;
+    BBERG_INLINE constexpr element operator+(const element& other) const noexcept;
+    BBERG_INLINE constexpr element operator+(const affine_element<Fq, Fr, Params>& other) const noexcept;
+    BBERG_INLINE constexpr element operator+=(const element& other) noexcept;
+    BBERG_INLINE constexpr element operator+=(const affine_element<Fq, Fr, Params>& other) noexcept;
 
     constexpr element operator-(const element& other) const noexcept;
     constexpr element operator-(const affine_element<Fq, Fr, Params>& other) const noexcept;
-    constexpr element operator-() const noexcept;
+    BBERG_INLINE constexpr element operator-() const noexcept;
     constexpr element operator-=(const element& other) noexcept;
     constexpr element operator-=(const affine_element<Fq, Fr, Params>& other) noexcept;
 
@@ -62,11 +62,11 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
     // constexpr Fr operator/(const element& other) noexcept {} TODO: this one seems harder than the others...
 
     constexpr element normalize() const noexcept;
-    constexpr element set_infinity() const noexcept;
-    constexpr void self_set_infinity() noexcept;
-    constexpr bool is_point_at_infinity() const noexcept;
-    constexpr bool on_curve() const noexcept;
-    constexpr bool operator==(const element& other) const noexcept;
+    BBERG_INLINE constexpr element set_infinity() const noexcept;
+    BBERG_INLINE constexpr void self_set_infinity() noexcept;
+    BBERG_INLINE constexpr bool is_point_at_infinity() const noexcept;
+    BBERG_INLINE constexpr bool on_curve() const noexcept;
+    BBERG_INLINE constexpr bool operator==(const element& other) const noexcept;
 
     static void batch_normalize(element* elements, const size_t num_elements) noexcept;
 
@@ -101,21 +101,22 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
                                           affine_element<Fq, Fr, Params>& out,
                                           const uint64_t predicate) noexcept;
 };
-} // namespace test
+} // namespace group_elements
 } // namespace barretenberg
 
-#include "./new_group_impl.hpp"
+#include "./element_impl.hpp"
 
 template <class Fq, class Fr, class Params>
-barretenberg::test::affine_element<Fq, Fr, Params> operator*(
-    const barretenberg::test::affine_element<Fq, Fr, Params>& base, const Fr& exponent) noexcept
+barretenberg::group_elements::affine_element<Fq, Fr, Params> operator*(
+    const barretenberg::group_elements::affine_element<Fq, Fr, Params>& base, const Fr& exponent) noexcept
 {
-    return barretenberg::test::affine_element<Fq, Fr, Params>(barretenberg::test::element(base) * exponent);
+    return barretenberg::group_elements::affine_element<Fq, Fr, Params>(barretenberg::group_elements::element(base) *
+                                                                        exponent);
 }
 
 template <class Fq, class Fr, class Params>
-barretenberg::test::affine_element<Fq, Fr, Params> operator*(const barretenberg::test::element<Fq, Fr, Params>& base,
-                                                             const Fr& exponent) noexcept
+barretenberg::group_elements::affine_element<Fq, Fr, Params> operator*(
+    const barretenberg::group_elements::element<Fq, Fr, Params>& base, const Fr& exponent) noexcept
 {
-    return (barretenberg::test::element(base) * exponent);
+    return (barretenberg::group_elements::element(base) * exponent);
 }

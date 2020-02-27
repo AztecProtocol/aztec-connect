@@ -6,16 +6,33 @@ using namespace benchmark;
 
 /*
 ADX asm
------------------------------------------------------------
-Benchmark                 Time             CPU   Iterations
------------------------------------------------------------
-invert_bench     5075034000 ns   5078125000 ns            1
-pow_bench        5930272400 ns   5921875000 ns            1
-field_bench       924996100 ns    937500000 ns            1
-mul_assign_bench   62410491 ns     62500000 ns           11
-mul_bench          65305467 ns     64236111 ns            9
-add_bench          27792532 ns     28125000 ns           25
-sub_bench          28106346 ns     28645833 ns           24
+------------------------------------------------------------
+Benchmark                  Time             CPU   Iterations
+------------------------------------------------------------
+sqr_assign_bench    58897282 ns     59659091 ns           11
+sqr_bench           80042911 ns     79861111 ns            9
+unary_minus_bench   33735725 ns     34375000 ns           20
+mul_assign_bench    61236664 ns     61079545 ns           11
+mul_bench           81490829 ns     80357143 ns            7
+add_bench           31052175 ns     31250000 ns           24
+sub_bench           33843720 ns     33593750 ns           20
+invert_bench      5008074600 ns   5000000000 ns            1
+pow_bench         6020118300 ns   6015625000 ns            1
+field_bench        916661900 ns    921875000 ns            1
+-------------------------------------------------------------------------------------
+Benchmark                                           Time             CPU   Iterations
+-------------------------------------------------------------------------------------
+pippenger_bench/8192                         16347884 ns     16047297 ns           37
+pippenger_bench/16384                        29240762 ns     29296875 ns           24
+pippenger_bench/32768                        57061918 ns     55397727 ns           11
+pippenger_bench/65536                       106352929 ns    104910714 ns            7
+pippenger_bench/131072                      205578500 ns    203125000 ns            4
+pippenger_bench/262144                      352079750 ns    351562500 ns            2
+pippenger_bench/524288                      691483800 ns    687500000 ns            1
+pippenger_bench/1048576                    1333215400 ns   1250000000 ns            1
+unsafe pippenger. 1048576 points. clock cycles = 1898152911
+unsafe pippenger clock cycles per mul = 1810
+unsafe_pippenger_bench/1048576              898753700 ns    875000000 ns            1
 */
 /*
 Generic

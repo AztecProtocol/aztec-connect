@@ -4,7 +4,7 @@
 #include "../uint256/uint256.hpp"
 
 namespace barretenberg {
-namespace test {
+namespace group_elements {
 template <typename Fq, typename Fr, typename Params> class alignas(64) affine_element {
   public:
     static constexpr affine_element one{ Params::one_x, Params::one_y };
@@ -60,7 +60,7 @@ template <typename Fq, typename Fr, typename Params> class alignas(64) affine_el
     Fq x;
     Fq y;
 };
-} // namespace test
+} // namespace group_elements
 } // namespace barretenberg
 
-#include "./affine_group_impl.hpp"
+#include "./affine_element_impl.hpp"

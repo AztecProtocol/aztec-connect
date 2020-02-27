@@ -1,7 +1,7 @@
 #pragma once
 
 namespace barretenberg {
-namespace test {
+namespace group_elements {
 template <class Fq, class Fr, class T>
 constexpr element<Fq, Fr, T>::element(const Fq& a, const Fq& b, const Fq& c) noexcept
     : x(a)
@@ -690,5 +690,5 @@ void element<Fq, Fr, T>::batch_normalize(element* elements, const size_t num_ele
 
     delete[] temporaries;
 }
-} // namespace test
+} // namespace group_elements
 } // namespace barretenberg

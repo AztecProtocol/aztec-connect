@@ -3,7 +3,7 @@
 #include "../keccak/keccak.h"
 
 namespace barretenberg {
-namespace test {
+namespace group_elements {
 template <class Fq, class Fr, class T>
 constexpr affine_element<Fq, Fr, T>::affine_element(const Fq& a, const Fq& b) noexcept
     : x(a)
@@ -107,5 +107,5 @@ affine_element<Fq, Fr, T> affine_element<Fq, Fr, T>::hash_to_curve(const uint64_
     uint256_t compressed{ c.word64s[0], c.word64s[1], c.word64s[2], c.word64s[3] };
     return affine_element<Fq, Fr, T>(compressed);
 }
-} // namespace test
+} // namespace group_elements
 } // namespace barretenberg
