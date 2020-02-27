@@ -10,6 +10,9 @@ namespace waffle {
 class TurboComposer : public ComposerBase {
   public:
     TurboComposer(std::string const& crs_path = BARRETENBERG_SRS_PATH, const size_t size_hint = 0);
+    TurboComposer(std::shared_ptr<proving_key> const& p_key,
+                  std::shared_ptr<verification_key> const& v_key,
+                  size_t size_hint = 0);
     TurboComposer(TurboComposer&& other) = default;
     TurboComposer& operator=(TurboComposer&& other) = default;
     ~TurboComposer() {}

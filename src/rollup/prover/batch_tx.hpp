@@ -30,7 +30,9 @@ std::ostream& write(std::ostream& os, batch_tx const& txs) {
     uint32_t nsize = htonl(size);
     os.write(reinterpret_cast<char*>(&be_txs.batch_num), sizeof(be_txs.batch_num));
     os.write(reinterpret_cast<char*>(&nsize), sizeof(nsize));
-    os.write(reinterpret_cast<char*>(&be_txs.txs[0]), sizeof(join_split_tx) * size);
+    for (auto tx : be_txs.txs) {
+        write(os, tx);
+    }
     return os;
 }
 
@@ -41,7 +43,9 @@ std::istream& read(std::istream& is, batch_tx& txs) {
     is.read(reinterpret_cast<char*>(&size), sizeof(size));
     size = ntohl(size);
     be_txs.txs.resize(size);
-    is.read(reinterpret_cast<char*>(&be_txs.txs[0]), sizeof(join_split_tx) * size);
+    for (size_t i=0; i<size; ++i) {
+        read(is, be_txs.txs[i]);
+    }
     txs = ntoh(be_txs);
     return is;
 }

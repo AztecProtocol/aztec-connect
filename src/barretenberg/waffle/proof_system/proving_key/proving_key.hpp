@@ -22,6 +22,8 @@ struct proving_key
 
     proving_key& operator=(proving_key&& other);
 
+    void reset();
+
     size_t n;
     size_t num_public_inputs;
 

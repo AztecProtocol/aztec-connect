@@ -11,16 +11,16 @@
 char const* DATA_DB_PATH = "/tmp/rollup_prover";
 char const* NULLIFIER_DB_PATH = "/tmp/rollup_prover_nullifier";
 
+typedef std::tuple<std::shared_ptr<waffle::proving_key>, std::shared_ptr<waffle::verification_key>, size_t>
+    circuit_keys;
+
 using namespace rollup;
 
-rollup_context create_rollup_context(Composer& composer)
+rollup_context create_rollup_context(std::string const& id, Composer& composer)
 {
     // TODO: We can't have distinct databases due to requiring atomicity. Change to use a single db with multiple trees.
-    leveldb_store data_db(DATA_DB_PATH, 32);
-    leveldb_store nullifier_db(NULLIFIER_DB_PATH, 128);
-
-    std::cout << "DB root: " << data_db.root() << " size: " << data_db.size() << std::endl;
-    std::cout << "Nullifier root: " << nullifier_db.root() << " size: " << nullifier_db.size() << std::endl;
+    leveldb_store data_db("/tmp/" + id, 32);
+    leveldb_store nullifier_db("/tmp/" + id + "_nullifier", 128);
 
     return {
         composer,
@@ -32,19 +32,56 @@ rollup_context create_rollup_context(Composer& composer)
     };
 }
 
+void reset_db(std::string const& id)
+{
+    std::string data_db_path = "/tmp/" + id;
+    std::string nullifier_db_path = "/tmp/" + id + "_nullifier";
+    leveldb::DestroyDB(data_db_path, leveldb::Options());
+    leveldb::DestroyDB(nullifier_db_path, leveldb::Options());
+}
+
+circuit_keys create_circuit_keys(size_t batch_size)
+{
+    std::cout << "Generating circuit keys..." << std::endl;
+
+    std::string id = "gen_circuit_keys";
+    reset_db(id);
+
+    Composer composer = Composer("../srs_db/ignition");
+    rollup_context ctx = create_rollup_context(id, composer);
+    user_context user = create_user_context();
+
+    auto tx = create_join_split_tx({ "0", "0", "-", "-", "50", "50", "100", "0" }, user);
+    join_split(ctx, tx);
+
+    for (size_t i = 0; i < batch_size - 1; ++i) {
+        auto index1 = std::to_string(i * 2);
+        auto index2 = std::to_string(i * 2 + 1);
+        tx = create_join_split_tx({ index1, index2, "50", "50", "50", "50", "0", "0" }, user);
+        join_split(ctx, tx);
+    }
+    std::cout << "Circuit size: " << composer.get_num_gates() << std::endl;
+    auto keys = std::make_tuple(
+        ctx.composer.compute_proving_key(), ctx.composer.compute_verification_key(), composer.get_num_gates());
+    std::cout << "Done." << std::endl;
+
+    return keys;
+}
+
 int main(int argc, char** argv)
 {
     std::vector<std::string> args(argv, argv + argc);
+    std::string db_id = "rollup_prover";
 
     if (args.size() > 1 && args[1] == "reset") {
-        leveldb::DestroyDB(DATA_DB_PATH, leveldb::Options());
-        leveldb::DestroyDB(NULLIFIER_DB_PATH, leveldb::Options());
+        reset_db(db_id);
+        std::cout << "Erased db." << std::endl;
         return 0;
     }
 
-    // Composer get's corrupted if we use move ctors. Have to create at top level :/
-    Composer composer = Composer("../srs_db/ignition");
-    rollup_context ctx = create_rollup_context(composer);
+    size_t batch_size = (args.size() > 1) ? (size_t)atoi(args[1].c_str()) : 1;
+
+    auto circuit_keys = create_circuit_keys(batch_size);
 
     // Read transactions from stdin.
     while (true) {
@@ -56,6 +93,20 @@ int main(int argc, char** argv)
 
         read(std::cin, batch);
 
+        if (batch.txs.size() > batch_size) {
+            std::cerr << "Receieved batch size too large: " << batch.txs.size() << std::endl;
+            continue;
+        }
+
+        std::get<0>(circuit_keys)->reset();
+        // Composer get's corrupted if we use move ctors.
+        // Have to create at top level (as opposed to in create_rollup_context).
+        Composer composer = Composer(std::get<0>(circuit_keys), std::get<1>(circuit_keys), std::get<2>(circuit_keys));
+        rollup_context ctx = create_rollup_context(db_id, composer);
+
+        std::cout << "DB root: " << ctx.data_db.root() << " size: " << ctx.data_db.size() << std::endl;
+        std::cout << "Nullifier root: " << ctx.nullifier_db.root() << " size: " << ctx.nullifier_db.size() << std::endl;
+
         Timer circuit_timer;
         for (auto tx : batch.txs) {
             std::cout << tx << std::endl;
@@ -63,6 +114,12 @@ int main(int argc, char** argv)
                 std::cout << "Failed to generate witness data." << std::endl;
                 return -1;
             }
+        }
+
+        // Pad the circuit with gibberish notes.
+        auto user = create_user_context();
+        for (size_t i = 0; i < batch_size - batch.txs.size(); ++i) {
+            join_split(ctx, create_join_split_tx({ "0", "0", "-", "-", "0", "0", "0", "0" }, user));
         }
 
         std::cout << "Time taken to create circuit: " << circuit_timer.toString() << std::endl;
@@ -90,6 +147,9 @@ int main(int argc, char** argv)
         if (verified) {
             ctx.data_db.commit();
             ctx.nullifier_db.commit();
+        } else {
+            ctx.data_db.rollback();
+            ctx.nullifier_db.rollback();
         }
     }
 
