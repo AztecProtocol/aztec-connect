@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../types.hpp"
+#include "../utils.hpp"
 #include "../uint256/uint256.hpp"
 #include "wnaf.hpp"
 #include <array>

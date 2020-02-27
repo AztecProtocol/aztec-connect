@@ -52,7 +52,6 @@ constexpr void field<T>::mac(const uint64_t a,
                              uint64_t& carry_out) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
-    constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
     const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c) + (uint128_t)carry_in;
     out = (uint64_t)(res);
     carry_out = (uint64_t)(res >> 64);
@@ -74,7 +73,6 @@ constexpr uint64_t field<T>::mac_mini(const uint64_t a,
                                       uint64_t& carry_out) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
-    constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
     const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c);
     carry_out = (uint64_t)(res >> 64);
     return (uint64_t)(res);
@@ -92,7 +90,6 @@ constexpr void field<T>::mac_mini(
     const uint64_t a, const uint64_t b, const uint64_t c, uint64_t& out, uint64_t& carry_out) noexcept
 {
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
-    constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
     const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c);
     out = (uint64_t)(res);
     carry_out = (uint64_t)(res >> 64);

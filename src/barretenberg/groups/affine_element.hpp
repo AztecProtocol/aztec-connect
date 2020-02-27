@@ -2,6 +2,7 @@
 
 #include "../types.hpp"
 #include "../uint256/uint256.hpp"
+#include "../utils.hpp"
 
 namespace barretenberg {
 namespace group_elements {
