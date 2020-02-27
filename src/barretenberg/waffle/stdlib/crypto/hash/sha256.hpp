@@ -5,9 +5,7 @@
 
 namespace waffle {
 class StandardComposer;
-class BoolComposer;
 class MiMCComposer;
-class TurboComposer;
 class TurboComposer;
 } // namespace waffle
 
@@ -24,7 +22,6 @@ std::array<uint<Composer, uint32_t>, 8> sha256_block(const std::array<uint<Compo
 template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>& input);
 
 extern template bitarray<waffle::StandardComposer> sha256(const bitarray<waffle::StandardComposer>& input);
-extern template bitarray<waffle::BoolComposer> sha256(const bitarray<waffle::BoolComposer>& input);
 extern template bitarray<waffle::MiMCComposer> sha256(const bitarray<waffle::MiMCComposer>& input);
 extern template bitarray<waffle::TurboComposer> sha256(const bitarray<waffle::TurboComposer>& input);
 

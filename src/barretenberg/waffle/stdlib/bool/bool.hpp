@@ -8,9 +8,7 @@
 namespace waffle
 {
     class StandardComposer;
-    class BoolComposer;
     class MiMCComposer;
-    class TurboComposer;
     class TurboComposer;
 }
 
@@ -75,7 +73,6 @@ template <typename T> inline std::ostream& operator<<(std::ostream& os, bool_t<T
 }
 
 extern template class bool_t<waffle::StandardComposer>;
-extern template class bool_t<waffle::BoolComposer>;
 extern template class bool_t<waffle::MiMCComposer>;
 extern template class bool_t<waffle::TurboComposer>;
 

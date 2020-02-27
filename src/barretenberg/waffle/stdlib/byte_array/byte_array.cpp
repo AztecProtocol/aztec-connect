@@ -3,7 +3,6 @@
 #include <bitset>
 #include <string>
 
-#include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
 #include "../../composer/standard_composer.hpp"
 #include "../../composer/turbo_composer.hpp"
@@ -115,7 +114,6 @@ template <typename ComposerContext> std::string byte_array<ComposerContext>::get
 }
 
 template class byte_array<waffle::StandardComposer>;
-template class byte_array<waffle::BoolComposer>;
 template class byte_array<waffle::MiMCComposer>;
 template class byte_array<waffle::TurboComposer>;
 

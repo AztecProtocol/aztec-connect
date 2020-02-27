@@ -3,7 +3,6 @@
 
 #include "../../../curves/bn254/fr.hpp"
 
-#include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
 #include "../../composer/standard_composer.hpp"
 #include "../../composer/turbo_composer.hpp"
@@ -400,7 +399,6 @@ template <typename ComposerContext> bool_t<ComposerContext> bool_t<ComposerConte
 }
 
 template class bool_t<waffle::StandardComposer>;
-template class bool_t<waffle::BoolComposer>;
 template class bool_t<waffle::MiMCComposer>;
 template class bool_t<waffle::TurboComposer>;
 

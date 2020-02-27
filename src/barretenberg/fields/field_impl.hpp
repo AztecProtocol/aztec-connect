@@ -293,24 +293,6 @@ template <class T> constexpr field<T> field<T>::pow(const uint64_t exponent) con
     return pow({ exponent, 0, 0, 0 });
 }
 
-template <class T>
-template <size_t idx, field<T>::wnaf_table window>
-constexpr field<T> field<T>::exponentiation_round([[maybe_unused]] const field<T>* lookup_table) noexcept
-{
-    self_sqr();
-    self_sqr();
-    self_sqr();
-    self_sqr();
-    if constexpr (window.windows[idx] > 0) {
-        operator*=(lookup_table[window.windows[idx] - 1]);
-    }
-    if constexpr (idx == 0) {
-        return *this;
-    } else {
-        return exponentiation_round<idx - 1, window>(lookup_table);
-    }
-}
-
 template <class T> constexpr field<T> field<T>::invert() const noexcept
 {
     if (*this == zero) {
@@ -345,7 +327,16 @@ template <class T> constexpr field<T> field<T>::invert() const noexcept
 
     field accumulator = (window.windows[63] > 0) ? lookup_table[window.windows[63] - 1] : one;
 
-    return accumulator.exponentiation_round<62, window>(lookup_table);
+    for (size_t i = 62; i < 63; --i) {
+        accumulator.self_sqr();
+        accumulator.self_sqr();
+        accumulator.self_sqr();
+        accumulator.self_sqr();
+        if (window.windows[i] > 0) {
+            accumulator *= lookup_table[window.windows[i] - 1];
+        }
+    }
+    return accumulator;
 }
 
 template <class T> void field<T>::batch_invert(field* coeffs, const size_t n) noexcept

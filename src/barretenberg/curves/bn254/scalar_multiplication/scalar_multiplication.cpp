@@ -108,10 +108,11 @@ void generate_pippenger_point_table(g1::affine_element* points, g1::affine_eleme
 template <size_t num_initial_points>
 inline void compute_wnaf_states(multiplication_runtime_state& state, fr::field_t* scalars)
 {
-    constexpr size_t num_points = num_initial_points * 2;
-    constexpr size_t num_rounds = get_num_rounds(num_points);
+    const size_t num_points = num_initial_points * 2;
+    constexpr size_t SCALAR_MULTIPLICATION_MAX_ROUNDS = 256;
+    const size_t num_rounds = get_num_rounds(num_points);
     constexpr size_t bits_per_bucket = get_optimal_bucket_width(num_initial_points);
-    constexpr size_t log2_num_points = static_cast<uint64_t>(internal::get_msb(static_cast<uint32_t>(num_points)));
+    const size_t log2_num_points = static_cast<uint64_t>(internal::get_msb(static_cast<uint32_t>(num_points)));
 
     // fetch our wnaf table and skew table pointers from pre-allocated memory. This eliminates soft page faults when
     // writing to newly allocated memory. The page faults were adding up to 200 milliseconds onto the runtime of our
@@ -131,15 +132,12 @@ inline void compute_wnaf_states(multiplication_runtime_state& state, fr::field_t
 #pragma omp parallel for
 #endif
     for (size_t i = 0; i < num_threads; ++i) {
-        std::array<uint64_t, num_rounds * 8> wnaf_entries{};
         fr::field_t T0;
-        fr::field_t T1;
-        fr::field_t T2;
-        fr::field_t T3;
         uint64_t* wnaf_table = &state.wnaf_table[(2 * i) * num_initial_points_per_thread];
         fr::field_t* thread_scalars = &scalars[i * num_initial_points_per_thread];
         bool* skew_table = &state.skew_table[(2 * i) * num_initial_points_per_thread];
         uint64_t offset = i * num_points_per_thread;
+        std::array<uint64_t, SCALAR_MULTIPLICATION_MAX_ROUNDS * 8> wnaf_entries{};
 
         // have our main loop work on 8 wnaf entries at a time. This ensures that, for
         // each iteration of the loop, each round's wnaf entries fit into a cache line.
@@ -148,54 +146,18 @@ inline void compute_wnaf_states(multiplication_runtime_state& state, fr::field_t
         // but these entries are not densely packed in memory - they are stored `num_points` apart from each other).
         // If we collect 8 wnaf entries together, we ensure that multiple iterations will not require the same cache
         // lines (wnaf entry = 8 bytes => 8 entries = 64 bytes)
-        for (uint64_t j = 0; j < num_initial_points_per_thread; j += 4) {
+        for (uint64_t j = 0; j < num_initial_points_per_thread; ++j) {
             T0 = thread_scalars[j].from_montgomery_form();
             fr::field_t::split_into_endomorphism_scalars(T0, T0, *(fr::field_t*)&T0.data[2]);
-            T1 = thread_scalars[j + 1].from_montgomery_form();
-            fr::field_t::split_into_endomorphism_scalars(T1, T1, *(fr::field_t*)&T1.data[2]);
-            T2 = thread_scalars[j + 2].from_montgomery_form();
-            fr::field_t::split_into_endomorphism_scalars(T2, T2, *(fr::field_t*)&T2.data[2]);
-            T3 = thread_scalars[j + 3].from_montgomery_form();
-            fr::field_t::split_into_endomorphism_scalars(T3, T3, *(fr::field_t*)&T3.data[2]);
 
             wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(
                 &T0.data[0], &wnaf_entries[0], skew_table[j << 1ULL], ((j << 1ULL) + offset) << 32ULL);
             wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(
                 &T0.data[2], &wnaf_entries[num_rounds], skew_table[(j << 1UL) + 1], ((j << 1UL) + offset + 1) << 32UL);
-            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(&T1.data[0],
-                                                         &wnaf_entries[num_rounds * 2],
-                                                         skew_table[(j << 1UL) + 2],
-                                                         ((j << 1UL) + offset + 2) << 32ULL);
-            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(&T1.data[2],
-                                                         &wnaf_entries[num_rounds * 3],
-                                                         skew_table[(j << 1UL) + 3],
-                                                         ((j << 1UL) + offset + 3) << 32ULL);
-            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(&T2.data[0],
-                                                         &wnaf_entries[num_rounds * 4],
-                                                         skew_table[(j << 1UL) + 4],
-                                                         ((j << 1UL) + offset + 4) << 32ULL);
-            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(&T2.data[2],
-                                                         &wnaf_entries[num_rounds * 5],
-                                                         skew_table[(j << 1UL) + 5],
-                                                         ((j << 1UL) + offset + 5) << 32ULL);
-            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(&T3.data[0],
-                                                         &wnaf_entries[num_rounds * 6],
-                                                         skew_table[(j << 1UL) + 6],
-                                                         ((j << 1UL) + offset + 6) << 32ULL);
-            wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(&T3.data[2],
-                                                         &wnaf_entries[num_rounds * 7],
-                                                         skew_table[(j << 1UL) + 7],
-                                                         ((j << 1UL) + offset + 7) << 32ULL);
 
             for (size_t k = 0; k < num_rounds; ++k) {
                 wnaf_table[(k << log2_num_points) + (j << 1UL)] = wnaf_entries[k];
                 wnaf_table[(k << log2_num_points) + (j << 1UL) + 1] = wnaf_entries[k + num_rounds];
-                wnaf_table[(k << log2_num_points) + (j << 1UL) + 2] = wnaf_entries[k + (2 * num_rounds)];
-                wnaf_table[(k << log2_num_points) + (j << 1UL) + 3] = wnaf_entries[k + (3 * num_rounds)];
-                wnaf_table[(k << log2_num_points) + (j << 1UL) + 4] = wnaf_entries[k + (4 * num_rounds)];
-                wnaf_table[(k << log2_num_points) + (j << 1UL) + 5] = wnaf_entries[k + (5 * num_rounds)];
-                wnaf_table[(k << log2_num_points) + (j << 1UL) + 6] = wnaf_entries[k + (6 * num_rounds)];
-                wnaf_table[(k << log2_num_points) + (j << 1UL) + 7] = wnaf_entries[k + (7 * num_rounds)];
             }
         }
     }
@@ -209,7 +171,7 @@ inline void compute_wnaf_states(multiplication_runtime_state& state, fr::field_t
  **/
 template <size_t num_points> void organize_buckets(multiplication_runtime_state& state)
 {
-    constexpr size_t num_rounds = get_num_rounds(num_points);
+    const size_t num_rounds = get_num_rounds(num_points);
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
@@ -248,16 +210,17 @@ inline void scalar_multiplication_round_inner(multiplication_thread_state& state
     (*next_bucket).self_mixed_add_or_sub(*next_point, next_negative);
 }
 
-template <size_t num_points>
-inline g1::element scalar_multiplication_internal(multiplication_runtime_state& state, g1::affine_element* points)
+inline g1::element scalar_multiplication_internal(multiplication_runtime_state& state,
+                                                  g1::affine_element* points,
+                                                  const size_t num_points)
 {
-    constexpr size_t num_rounds = get_num_rounds(num_points);
+    const size_t num_rounds = get_num_rounds(num_points);
 #ifndef NO_MULTITHREADING
     const size_t num_threads = static_cast<size_t>(omp_get_max_threads());
 #else
     const size_t num_threads = 1;
 #endif
-    constexpr size_t bits_per_bucket = get_optimal_bucket_width(num_points / 2);
+    const size_t bits_per_bucket = get_optimal_bucket_width(num_points / 2);
     const size_t num_points_per_thread = num_points / num_threads; // assume a power of 2
 
     g1::element* thread_accumulators = static_cast<g1::element*>(aligned_alloc(64, num_threads * sizeof(g1::element)));
@@ -371,22 +334,22 @@ inline g1::element pippenger_internal(g1::affine_element* points, fr::field_t* s
     multiplication_runtime_state state;
     compute_wnaf_states<num_initial_points>(state, scalars);
     organize_buckets<num_initial_points * 2>(state);
-    g1::element result = scalar_multiplication_internal<num_initial_points * 2>(state, points);
+    g1::element result = scalar_multiplication_internal(state, points, num_initial_points * 2);
     return result;
 }
 
 // TODO: this is a lot of code duplication, need to fix that once the method has stabilized
-template <size_t num_points>
 inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_state& state,
-                                                         g1::affine_element* points)
+                                                         g1::affine_element* points,
+                                                         const size_t num_points)
 {
-    constexpr size_t num_rounds = get_num_rounds(num_points);
+    const size_t num_rounds = get_num_rounds(num_points);
 #ifndef NO_MULTITHREADING
     const size_t num_threads = static_cast<size_t>(omp_get_max_threads());
 #else
     const size_t num_threads = 1;
 #endif
-    constexpr size_t bits_per_bucket = get_optimal_bucket_width(num_points / 2);
+    const size_t bits_per_bucket = get_optimal_bucket_width(num_points / 2);
     const size_t num_points_per_thread = num_points / num_threads; // assume a power of 2
 
     g1::element* thread_accumulators = static_cast<g1::element*>(aligned_alloc(64, num_threads * sizeof(g1::element)));
@@ -489,7 +452,7 @@ inline g1::element pippenger_unsafe_internal(g1::affine_element* points, fr::fie
     multiplication_runtime_state state;
     compute_wnaf_states<num_initial_points>(state, scalars);
     organize_buckets<num_initial_points * 2>(state);
-    g1::element result = unsafe_scalar_multiplication_internal<num_initial_points * 2>(state, points);
+    g1::element result = unsafe_scalar_multiplication_internal(state, points, num_initial_points * 2);
     return result;
 }
 
@@ -717,45 +680,6 @@ g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, c
         return result;
     }
 }
-
-template g1::element scalar_multiplication_internal<1 << 2>(multiplication_runtime_state& state,
-                                                            g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 3>(multiplication_runtime_state& state,
-                                                            g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 4>(multiplication_runtime_state& state,
-                                                            g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 5>(multiplication_runtime_state& state,
-                                                            g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 6>(multiplication_runtime_state& state,
-                                                            g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 7>(multiplication_runtime_state& state,
-                                                            g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 8>(multiplication_runtime_state& state,
-                                                            g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 9>(multiplication_runtime_state& state,
-                                                            g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 10>(multiplication_runtime_state& state,
-                                                             g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 11>(multiplication_runtime_state& state,
-                                                             g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 12>(multiplication_runtime_state& state,
-                                                             g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 13>(multiplication_runtime_state& state,
-                                                             g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 14>(multiplication_runtime_state& state,
-                                                             g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 15>(multiplication_runtime_state& state,
-                                                             g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 16>(multiplication_runtime_state& state,
-                                                             g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 17>(multiplication_runtime_state& state,
-                                                             g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 18>(multiplication_runtime_state& state,
-                                                             g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 19>(multiplication_runtime_state& state,
-                                                             g1::affine_element* points);
-template g1::element scalar_multiplication_internal<1 << 20>(multiplication_runtime_state& state,
-                                                             g1::affine_element* points);
 
 template void compute_wnaf_states<1 << 2>(multiplication_runtime_state& state, fr::field_t* scalars);
 template void compute_wnaf_states<1 << 3>(multiplication_runtime_state& state, fr::field_t* scalars);

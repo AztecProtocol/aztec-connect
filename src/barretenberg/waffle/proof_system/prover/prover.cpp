@@ -557,7 +557,7 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
 #ifdef DEBUG_TIMING
     start = std::chrono::steady_clock::now();
 #endif
-    if (settings::uses_quotient_mid) {
+    if constexpr (settings::uses_quotient_mid) {
         barretenberg::polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(
             key->quotient_mid.get_coefficients(), key->small_domain, key->mid_domain);
     }
@@ -862,7 +862,6 @@ template <typename settings> void ProverBase<settings>::reset()
 }
 
 template class ProverBase<standard_settings>;
-template class ProverBase<extended_settings>;
 template class ProverBase<turbo_settings>;
 
 } // namespace waffle

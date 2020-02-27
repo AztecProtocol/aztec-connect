@@ -423,33 +423,6 @@ uint32_t construct_addition_chains(affine_product_runtime_state& state, bool emp
             // In the absence of a more elegant solution, we use ugly macro hacks to try and
             // unroll loops, and prefetch memory a few cycles before we need it
             switch (k_end) {
-            case 128: {
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                break;
-            }
             case 64: {
                 {
                     BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;

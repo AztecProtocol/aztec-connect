@@ -333,7 +333,6 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 }
 
 template class VerifierBase<standard_settings>;
-template class VerifierBase<extended_settings>;
 template class VerifierBase<turbo_settings>;
 
 } // namespace waffle

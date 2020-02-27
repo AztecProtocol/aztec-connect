@@ -7,9 +7,7 @@
 
 namespace waffle {
 class StandardComposer;
-class BoolComposer;
 class MiMCComposer;
-class TurboComposer;
 class TurboComposer;
 } // namespace waffle
 
@@ -61,7 +59,6 @@ template <typename ComposerContext> inline std::ostream& operator<<(std::ostream
 }
 
 extern template class field_t<waffle::StandardComposer>;
-extern template class field_t<waffle::BoolComposer>;
 extern template class field_t<waffle::MiMCComposer>;
 extern template class field_t<waffle::TurboComposer>;
 

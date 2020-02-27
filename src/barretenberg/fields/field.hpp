@@ -410,9 +410,6 @@ template <class Params> struct alignas(32) field {
         {}
     };
 
-    template <size_t idx, field::wnaf_table window>
-    constexpr field exponentiation_round([[maybe_unused]] const field* lookup_table) noexcept;
-
     static constexpr field modulus_plus_one =
         field(Params::modulus_0 + 1ULL, Params::modulus_1, Params::modulus_2, Params::modulus_3);
     static constexpr field modulus_minus_two =

@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-#include <barretenberg/waffle/composer/bool_composer.hpp>
+#include <barretenberg/waffle/composer/standard_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
@@ -20,15 +20,15 @@ namespace test_stdlib_bitarray {
 using namespace barretenberg;
 using namespace plonk;
 
-typedef stdlib::bool_t<waffle::BoolComposer> bool_t;
-typedef stdlib::field_t<waffle::BoolComposer> field_t;
-typedef stdlib::uint32<waffle::BoolComposer> uint32;
-typedef stdlib::witness_t<waffle::BoolComposer> witness_t;
-typedef stdlib::bitarray<waffle::BoolComposer> bitarray;
+typedef stdlib::bool_t<waffle::StandardComposer> bool_t;
+typedef stdlib::field_t<waffle::StandardComposer> field_t;
+typedef stdlib::uint32<waffle::StandardComposer> uint32;
+typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
+typedef stdlib::bitarray<waffle::StandardComposer> bitarray;
 
 TEST(stdlib_bitarray, test_uint32_input_output_consistency)
 {
-    waffle::BoolComposer composer = waffle::BoolComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     uint32_t a_expected = test_helpers::get_pseudorandom_uint32();
     uint32_t b_expected = test_helpers::get_pseudorandom_uint32();
@@ -54,7 +54,7 @@ TEST(stdlib_bitarray, test_uint32_input_output_consistency)
 
 TEST(stdlib_bitarray, test_binary_input_output_consistency)
 {
-    waffle::BoolComposer composer = waffle::BoolComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     bitarray test_bitarray = bitarray(&composer, 5);
 
@@ -77,7 +77,7 @@ TEST(stdlib_bitarray, test_binary_input_output_consistency)
 
 TEST(stdlib_bitarray, test_string_input_output_consistency)
 {
-    waffle::BoolComposer composer = waffle::BoolComposer();
+    waffle::StandardComposer composer = waffle::StandardComposer();
 
     std::string expected = "string literals inside a SNARK circuit? What nonsense!";
     bitarray test_bitarray = bitarray(&composer, expected);

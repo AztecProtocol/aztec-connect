@@ -109,12 +109,8 @@ add_library(
     waffle/composer/composer_base.hpp
     waffle/composer/standard_composer.cpp
     waffle/composer/standard_composer.hpp
-    waffle/composer/bool_composer.cpp
-    waffle/composer/bool_composer.hpp
     waffle/composer/mimc_composer.cpp
     waffle/composer/mimc_composer.hpp
-    waffle/composer/extended_composer.cpp
-    waffle/composer/extended_composer.hpp
     waffle/composer/turbo_composer.cpp
     waffle/composer/turbo_composer.hpp
     waffle/stdlib/common.hpp
@@ -301,12 +297,8 @@ if(PROFILING)
         waffle/composer/composer_base.hpp
         waffle/composer/standard_composer.cpp
         waffle/composer/standard_composer.hpp
-        waffle/composer/bool_composer.cpp
-        waffle/composer/bool_composer.hpp
         waffle/composer/mimc_composer.cpp
         waffle/composer/mimc_composer.hpp
-        waffle/composer/extended_composer.cpp
-        waffle/composer/extended_composer.hpp
         waffle/composer/turbo_composer.cpp
         waffle/composer/turbo_composer.hpp
         waffle/stdlib/common.hpp

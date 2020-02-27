@@ -392,11 +392,11 @@ std::shared_ptr<program_witness> MiMCComposer::compute_witness()
     return witness;
 }
 
-ExtendedProver MiMCComposer::preprocess()
+Prover MiMCComposer::preprocess()
 {
     compute_proving_key();
     compute_witness();
-    ExtendedProver output_state(circuit_proving_key, witness, create_manifest(public_inputs.size()));
+    Prover output_state(circuit_proving_key, witness, create_manifest(public_inputs.size()));
 
     std::unique_ptr<ProverMiMCWidget> mimc_widget =
         std::make_unique<ProverMiMCWidget>(circuit_proving_key.get(), witness.get());
@@ -408,11 +408,11 @@ ExtendedProver MiMCComposer::preprocess()
     return output_state;
 }
 
-ExtendedVerifier MiMCComposer::create_verifier()
+Verifier MiMCComposer::create_verifier()
 {
     compute_verification_key();
 
-    ExtendedVerifier output_state(circuit_verification_key, create_manifest(public_inputs.size()));
+    Verifier output_state(circuit_verification_key, create_manifest(public_inputs.size()));
 
     std::unique_ptr<VerifierArithmeticWidget> arithmetic_widget = std::make_unique<VerifierArithmeticWidget>();
     std::unique_ptr<VerifierMiMCWidget> mimc_widget = std::make_unique<VerifierMiMCWidget>();

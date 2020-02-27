@@ -67,7 +67,6 @@ add_executable(
     widgets/test_turbo_logic_widget.cpp
     composer/test_standard_composer.cpp
     composer/test_mimc_composer.cpp
-    composer/test_bool_composer.cpp
     composer/test_extended_composer.cpp
     composer/test_turbo_composer.cpp
     stdlib/test_stdlib_bool.cpp

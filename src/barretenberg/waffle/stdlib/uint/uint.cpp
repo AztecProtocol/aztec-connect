@@ -1,7 +1,6 @@
 #include "./uint.hpp"
 
 #include "../../../curves/bn254/fr.hpp"
-#include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
 #include "../../composer/standard_composer.hpp"
 #include "../../composer/turbo_composer.hpp"
@@ -336,11 +335,6 @@ template class uint<waffle::StandardComposer, uint8_t>;
 template class uint<waffle::StandardComposer, uint16_t>;
 template class uint<waffle::StandardComposer, uint32_t>;
 template class uint<waffle::StandardComposer, uint64_t>;
-
-template class uint<waffle::BoolComposer, uint8_t>;
-template class uint<waffle::BoolComposer, uint16_t>;
-template class uint<waffle::BoolComposer, uint32_t>;
-template class uint<waffle::BoolComposer, uint64_t>;
 
 template class uint<waffle::MiMCComposer, uint8_t>;
 template class uint<waffle::MiMCComposer, uint16_t>;

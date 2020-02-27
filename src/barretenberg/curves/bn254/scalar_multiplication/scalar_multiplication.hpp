@@ -228,25 +228,6 @@ void evaluate_addition_chains(affine_product_runtime_state& state, const size_t 
 
 g1::affine_element* reduce_buckets(affine_product_runtime_state& state, bool first_round = true);
 
-extern template g1::element scalar_multiplication_internal<1 << 2>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 3>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 4>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 5>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 6>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 7>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 8>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 9>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 10>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 11>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 12>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 13>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 14>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 15>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 16>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 17>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 18>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 19>(multiplication_runtime_state& state, g1::affine_element* points);
-extern template g1::element scalar_multiplication_internal<1 << 20>(multiplication_runtime_state& state, g1::affine_element* points);
 
 extern template void compute_wnaf_states<1 << 2>(multiplication_runtime_state& state, fr::field_t* scalars);
 extern template void compute_wnaf_states<1 << 3>(multiplication_runtime_state& state, fr::field_t* scalars);

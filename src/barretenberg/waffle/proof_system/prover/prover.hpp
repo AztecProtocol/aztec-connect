@@ -68,11 +68,9 @@ template <typename settings> class ProverBase {
 };
 
 extern template class ProverBase<standard_settings>;
-extern template class ProverBase<extended_settings>;
 extern template class ProverBase<turbo_settings>;
 
 typedef ProverBase<standard_settings> Prover;
-typedef ProverBase<extended_settings> ExtendedProver;
 typedef ProverBase<turbo_settings> TurboProver;
 
 } // namespace waffle

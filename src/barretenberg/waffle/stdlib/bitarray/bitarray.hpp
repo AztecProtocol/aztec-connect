@@ -14,7 +14,6 @@
 
 namespace waffle {
 class StandardComposer;
-class BoolComposer;
 class MiMCComposer;
 class TurboComposer;
 class TurboComposer;
@@ -158,7 +157,6 @@ template <typename ComposerContext> class bitarray {
 };
 
 extern template class bitarray<waffle::StandardComposer>;
-extern template class bitarray<waffle::BoolComposer>;
 extern template class bitarray<waffle::MiMCComposer>;
 extern template class bitarray<waffle::TurboComposer>;
 
