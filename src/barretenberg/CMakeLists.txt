@@ -50,7 +50,7 @@ add_library(
     curves/bn254/scalar_multiplication/scalar_multiplication_unsafe.cpp
     curves/bn254/scalar_multiplication/scalar_multiplication.cpp
     curves/bn254/scalar_multiplication/scalar_multiplication.hpp
-    curves/bn254/pairing.cpp
+    curves/bn254/pairing_impl.hpp
     curves/bn254/pairing.hpp
     curves/grumpkin/grumpkin.hpp
     misc_crypto/sha256/sha256.cpp
@@ -238,7 +238,7 @@ if(PROFILING)
         curves/bn254/scalar_multiplication/scalar_multiplication_unsafe.cpp
         curves/bn254/scalar_multiplication/scalar_multiplication.cpp
         curves/bn254/scalar_multiplication/scalar_multiplication.hpp
-        curves/bn254/pairing.cpp
+        curves/bn254/pairing_impl.hpp
         curves/bn254/pairing.hpp
         curves/grumpkin/grumpkin.hpp
         misc_crypto/sha256/sha256.cpp

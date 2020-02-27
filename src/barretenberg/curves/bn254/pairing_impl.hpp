@@ -1,4 +1,4 @@
-#include "./pairing.hpp"
+#pragma once
 
 #include "./fq12.hpp"
 #include "./g1.hpp"
@@ -7,16 +7,18 @@
 namespace barretenberg {
 namespace pairing {
 namespace {
-inline void mul_by_q(const g2::element& a, g2::element& r)
+inline constexpr g2::element mul_by_q(const g2::element& a)
 {
     fq2::field_t T0 = a.x.frobenius_map();
     fq2::field_t T1 = a.y.frobenius_map();
-    r.x = fq2::field_t::twist_mul_by_q_x * T0;
-    r.y = fq2::field_t::twist_mul_by_q_y * T1;
-    r.z = a.z.frobenius_map();
+    return {
+        fq2::field_t::twist_mul_by_q_x * T0,
+        fq2::field_t::twist_mul_by_q_y * T1,
+        a.z.frobenius_map(),
+    };
 }
 } // namespace
-void doubling_step_for_flipped_miller_loop(g2::element& current, fq12::field_t::ell_coeffs& ell)
+constexpr void doubling_step_for_flipped_miller_loop(g2::element& current, fq12::field_t::ell_coeffs& ell)
 {
     fq2::field_t a = current.x.mul_by_fq(fq::field_t::two_inv);
     a *= current.y;
@@ -55,9 +57,9 @@ void doubling_step_for_flipped_miller_loop(g2::element& current, fq12::field_t::
     ell.vv += j;
 }
 
-void mixed_addition_step_for_flipped_miller_loop(const g2::element& base,
-                                                 g2::element& Q,
-                                                 fq12::field_t::ell_coeffs& line)
+constexpr void mixed_addition_step_for_flipped_miller_loop(const g2::element& base,
+                                                           g2::element& Q,
+                                                           fq12::field_t::ell_coeffs& line)
 {
     fq2::field_t d = base.x * Q.z;
     d = Q.x - d;
@@ -92,13 +94,10 @@ void mixed_addition_step_for_flipped_miller_loop(const g2::element& base,
     line.vw = d;
 }
 
-void precompute_miller_lines(const g2::element& Q, miller_lines& lines)
+constexpr void precompute_miller_lines(const g2::element& Q, miller_lines& lines)
 {
     g2::element Q_neg{ Q.x, -Q.y, fq2::field_t::one };
-    g2::element work_point;
-    g2::element result_point;
-    work_point = Q;
-    result_point = Q;
+    g2::element work_point = Q;
 
     size_t it = 0;
     for (size_t i = 0; i < loop_length; ++i) {
@@ -113,17 +112,15 @@ void precompute_miller_lines(const g2::element& Q, miller_lines& lines)
         }
     }
 
-    g2::element Q1;
-    g2::element Q2;
-    mul_by_q(Q, Q1);
-    mul_by_q(Q1, Q2);
+    g2::element Q1 = mul_by_q(Q);
+    g2::element Q2 = mul_by_q(Q1);
     Q2 = -Q2;
     mixed_addition_step_for_flipped_miller_loop(Q1, work_point, lines.lines[it]);
     ++it;
     mixed_addition_step_for_flipped_miller_loop(Q2, work_point, lines.lines[it]);
 }
 
-fq12::field_t miller_loop(g1::element& P, miller_lines& lines)
+constexpr fq12::field_t miller_loop(g1::element& P, miller_lines& lines)
 {
     fq12::field_t work_scalar = fq12::field_t::one;
 
@@ -161,7 +158,7 @@ fq12::field_t miller_loop(g1::element& P, miller_lines& lines)
     return work_scalar;
 }
 
-fq12::field_t miller_loop_batch(const g1::element* points, const miller_lines* lines, size_t num_pairs)
+constexpr fq12::field_t miller_loop_batch(const g1::element* points, const miller_lines* lines, size_t num_pairs)
 {
     fq12::field_t work_scalar = fq12::field_t::one;
 
@@ -205,14 +202,14 @@ fq12::field_t miller_loop_batch(const g1::element* points, const miller_lines* l
     return work_scalar;
 }
 
-fq12::field_t final_exponentiation_easy_part(const fq12::field_t& elt)
+constexpr fq12::field_t final_exponentiation_easy_part(const fq12::field_t& elt)
 {
     fq12::field_t a{ elt.c0, -elt.c1 };
     a *= elt.invert();
     return a * a.frobenius_map_two();
 }
 
-fq12::field_t final_exponentiation_exp_by_neg_z(const fq12::field_t& elt)
+constexpr fq12::field_t final_exponentiation_exp_by_neg_z(const fq12::field_t& elt)
 {
     fq12::field_t scalar{ elt };
     fq12::field_t r = elt;
@@ -226,7 +223,7 @@ fq12::field_t final_exponentiation_exp_by_neg_z(const fq12::field_t& elt)
     return r.unitary_inverse();
 }
 
-fq12::field_t final_exponentiation_tricky_part(const fq12::field_t& elt)
+constexpr fq12::field_t final_exponentiation_tricky_part(const fq12::field_t& elt)
 {
     fq12::field_t A = final_exponentiation_exp_by_neg_z(elt);
     fq12::field_t B = A.cyclotomic_squared();
@@ -253,7 +250,7 @@ fq12::field_t final_exponentiation_tricky_part(const fq12::field_t& elt)
     return R * U;
 }
 
-fq12::field_t reduced_ate_pairing(const g1::affine_element& P_affine, const g2::affine_element& Q_affine)
+constexpr fq12::field_t reduced_ate_pairing(const g1::affine_element& P_affine, const g2::affine_element& Q_affine)
 {
     g1::element P(P_affine);
     g2::element Q(Q_affine);

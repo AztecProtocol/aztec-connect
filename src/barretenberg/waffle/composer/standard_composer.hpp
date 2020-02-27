@@ -46,7 +46,6 @@ class StandardComposer : public ComposerBase {
     void create_balanced_add_gate(const add_quad& in);
     void fix_witness(const uint32_t witness_index, const barretenberg::fr::field_t& witness_value);
 
-
     std::vector<uint32_t> create_range_constraint(const uint32_t witness_index, const size_t num_bits);
     accumulator_triple create_logic_constraint(const uint32_t a,
                                                const uint32_t b,
@@ -92,6 +91,7 @@ class StandardComposer : public ComposerBase {
               transcript::Manifest::RoundManifest({ { "w_1", fr_size, false },
                                                     { "w_2", fr_size, false },
                                                     { "w_3", fr_size, false },
+                                                    { "w_3_omega", fr_size, false },
                                                     { "z_omega", fr_size, false },
                                                     { "sigma_1", fr_size, false },
                                                     { "sigma_2", fr_size, false },

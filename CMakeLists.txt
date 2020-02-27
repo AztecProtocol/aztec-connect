@@ -127,7 +127,7 @@ if(DISABLE_ADX)
     add_definitions(-DDISABLE_ADX=1)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Wno-deprecated-copy")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Wno-deprecated-copy -fconstexpr-ops-limit=100000000")
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=deprecated-copy -fconstexpr-ops-limit=100000000")
 
 add_definitions(-DBOOST_SPIRIT_X3_NO_FILESYSTEM=1 -DBARRETENBERG_SRS_PATH=\"../srs_db/transcript.dat\")

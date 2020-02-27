@@ -91,6 +91,7 @@ transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
           transcript::Manifest::RoundManifest({ { "w_1", fr_size, false },
                                                 { "w_2", fr_size, false },
                                                 { "w_3", fr_size, false },
+                                                { "w_3_omega", fr_size, false },
                                                 { "z_omega", fr_size, false },
                                                 { "sigma_1", fr_size, false },
                                                 { "sigma_2", fr_size, false },

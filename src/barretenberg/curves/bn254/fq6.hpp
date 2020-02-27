@@ -37,7 +37,7 @@ struct Bn254Fq6Params {
     };
 
     // non residue = 9 + i \in Fq2
-    static inline fq2::field_t mul_by_non_residue(const fq2::field_t& a)
+    static inline constexpr fq2::field_t mul_by_non_residue(const fq2::field_t& a)
     {
         // non residue = 9 + i \in Fq2
         // r.c0 = 9a0 - a1
