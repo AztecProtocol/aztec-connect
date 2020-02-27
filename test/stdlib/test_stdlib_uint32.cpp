@@ -16,38 +16,24 @@
 
 #include <random>
 
+#include "../test_helpers.hpp"
+
 using namespace barretenberg;
 using namespace plonk;
 
+namespace test_stlib_uint32 {
 typedef stdlib::field_t<waffle::TurboComposer> field_t;
 typedef stdlib::uint32<waffle::TurboComposer> uint32;
 typedef stdlib::witness_t<waffle::TurboComposer> witness_t;
-
-namespace {
-std::mt19937 engine;
-std::uniform_int_distribution<uint32_t> dist{ 0ULL, UINT32_MAX };
-
-const auto init = []() {
-    // std::random_device rd{};
-    std::seed_seq seed2{ 1, 2, 3, 4, 5, 6, 7, 8 };
-    engine = std::mt19937(seed2);
-    return 1;
-}();
-
-uint32_t get_random_int()
-{
-    return dist(engine);
-}
 
 std::vector<uint32_t> get_random_ints(size_t num)
 {
     std::vector<uint32_t> result;
     for (size_t i = 0; i < num; ++i) {
-        result.emplace_back(get_random_int());
+        result.emplace_back(test_helpers::get_pseudorandom_uint32());
     }
     return result;
 }
-} // namespace
 
 uint32_t get_value(uint32& input)
 {
@@ -542,3 +528,4 @@ TEST(stdlib_uint32, test_hash_rounds)
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }
+} // namespace test_stlib_uint32

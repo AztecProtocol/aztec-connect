@@ -82,9 +82,9 @@ add_executable(
     stdlib/test_stdlib_pedersen.cpp
     stdlib/test_stdlib_schnorr.cpp
     stdlib/test_stdlib_pedersen_note.cpp
-    noir/test_noir.cpp
 )
 
+#     noir/test_noir.cpp
 set_target_properties(
     barretenberg_tests
     PROPERTIES
@@ -95,8 +95,8 @@ set_target_properties(
 target_include_directories(
     barretenberg_tests
     SYSTEM PRIVATE
-        ${private_include_dir}/boost
 )
+#         ${private_include_dir}/boost
 
 target_link_libraries(
     barretenberg_tests

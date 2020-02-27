@@ -13,6 +13,8 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
   public:
     static constexpr element one{ Params::one_x, Params::one_y, Fq::one };
     static constexpr element point_at_infinity = one.set_infinity();
+    static constexpr Fq curve_b = Params::b;
+
     element() noexcept {}
 
     constexpr element(const Fq& a, const Fq& b, const Fq& c) noexcept;
@@ -23,7 +25,7 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
     constexpr element& operator=(const element& other) noexcept;
     constexpr element& operator=(element&& other) noexcept;
 
-    constexpr operator affine_element<Fq, Fr, Params>() noexcept;
+    constexpr operator affine_element<Fq, Fr, Params>() const noexcept;
 
     static element random_element(std::mt19937_64* engine = nullptr,
                                   std::uniform_int_distribution<uint64_t>* dist = nullptr) noexcept;
@@ -59,11 +61,14 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
 
     // constexpr Fr operator/(const element& other) noexcept {} TODO: this one seems harder than the others...
 
+    constexpr element normalize() const noexcept;
     constexpr element set_infinity() const noexcept;
     constexpr void self_set_infinity() noexcept;
     constexpr bool is_point_at_infinity() const noexcept;
     constexpr bool on_curve() const noexcept;
     constexpr bool operator==(const element& other) const noexcept;
+
+    static void batch_normalize(element* elements, const size_t num_elements) noexcept;
 
     Fq x;
     Fq y;
@@ -95,7 +100,6 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
     static void conditional_negate_affine(const affine_element<Fq, Fr, Params>& in,
                                           affine_element<Fq, Fr, Params>& out,
                                           const uint64_t predicate) noexcept;
-    static void batch_normalize(element* elements, const size_t num_elements) noexcept;
 };
 } // namespace test
 } // namespace barretenberg
@@ -108,7 +112,6 @@ barretenberg::test::affine_element<Fq, Fr, Params> operator*(
 {
     return barretenberg::test::affine_element<Fq, Fr, Params>(barretenberg::test::element(base) * exponent);
 }
-
 
 template <class Fq, class Fr, class Params>
 barretenberg::test::affine_element<Fq, Fr, Params> operator*(const barretenberg::test::element<Fq, Fr, Params>& base,

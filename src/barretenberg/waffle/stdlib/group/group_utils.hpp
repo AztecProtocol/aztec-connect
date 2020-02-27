@@ -44,7 +44,7 @@ grumpkin::g1::element fixed_base_scalar_mul(const barretenberg::fr::field_t& in,
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
     grumpkin::g1::element accumulator;
-    grumpkin::g1::affine_to_jacobian(ladder[0].one, accumulator);
+    accumulator = grumpkin::g1::element(ladder[0].one);
     if (skew) {
         accumulator += plonk::stdlib::group_utils::get_generator(generator_index);
     }

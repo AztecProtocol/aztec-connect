@@ -4,10 +4,10 @@
 
 #include "../../assert.hpp"
 #include "../../curves/bn254/fr.hpp"
-#include "../proof_system/widgets/arithmetic_widget.hpp"
-#include "../proof_system/widgets/bool_widget.hpp"
 #include "../proof_system/proving_key/proving_key.hpp"
 #include "../proof_system/verification_key/verification_key.hpp"
+#include "../proof_system/widgets/arithmetic_widget.hpp"
+#include "../proof_system/widgets/bool_widget.hpp"
 
 #include <math.h>
 
@@ -111,8 +111,7 @@ std::shared_ptr<proving_key> BoolComposer::compute_proving_key()
         q_right_bools.emplace_back(fr::field_t::zero);
         q_output_bools.emplace_back(fr::field_t::zero);
     }
-    for (size_t i = 0; i < public_inputs.size(); ++i)
-    {
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
         epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
         wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
     }
@@ -225,13 +224,12 @@ std::shared_ptr<verification_key> BoolComposer::compute_verification_key()
     commitments.resize(11);
 
     for (size_t i = 0; i < 11; ++i) {
-        g1::jacobian_to_affine(scalar_multiplication::pippenger(poly_coefficients[i],
-                                                                circuit_proving_key->reference_string.monomials,
-                                                                circuit_proving_key->n),
-                               commitments[i]);
+        commitments[i] = g1::affine_element(scalar_multiplication::pippenger(
+            poly_coefficients[i], circuit_proving_key->reference_string.monomials, circuit_proving_key->n));
     }
 
-    circuit_verification_key = std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs);
+    circuit_verification_key =
+        std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs);
 
     circuit_verification_key->constraint_selectors.insert({ "Q_1", commitments[0] });
     circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });
@@ -252,8 +250,7 @@ std::shared_ptr<verification_key> BoolComposer::compute_verification_key()
 
 std::shared_ptr<program_witness> BoolComposer::compute_witness()
 {
-    if (computed_witness)
-    {
+    if (computed_witness) {
         return witness;
     }
     witness = std::make_shared<program_witness>();
@@ -274,8 +271,7 @@ std::shared_ptr<program_witness> BoolComposer::compute_witness()
     polynomial poly_w_2(new_n);
     polynomial poly_w_3(new_n);
 
-    for (size_t i = 0; i < public_inputs.size(); ++i)
-    {
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
         fr::field_t::__copy(variables[public_inputs[i]], poly_w_1[i]);
         fr::field_t::__copy(fr::field_t::zero, poly_w_2[i]);
         fr::field_t::__copy(fr::field_t::zero, poly_w_3[i]);
@@ -314,8 +310,10 @@ Prover BoolComposer::preprocess()
 
     Prover output_state(circuit_proving_key, witness, create_manifest(public_inputs.size()));
 
-    std::unique_ptr<ProverBoolWidget> bool_widget = std::make_unique<ProverBoolWidget>(circuit_proving_key.get(), witness.get());
-    std::unique_ptr<ProverArithmeticWidget> arithmetic_widget = std::make_unique<ProverArithmeticWidget>(circuit_proving_key.get(), witness.get());
+    std::unique_ptr<ProverBoolWidget> bool_widget =
+        std::make_unique<ProverBoolWidget>(circuit_proving_key.get(), witness.get());
+    std::unique_ptr<ProverArithmeticWidget> arithmetic_widget =
+        std::make_unique<ProverArithmeticWidget>(circuit_proving_key.get(), witness.get());
 
     output_state.widgets.emplace_back(std::move(arithmetic_widget));
     output_state.widgets.emplace_back(std::move(bool_widget));

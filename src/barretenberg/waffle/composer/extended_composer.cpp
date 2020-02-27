@@ -651,10 +651,8 @@ std::shared_ptr<verification_key> ExtendedComposer::compute_verification_key()
     commitments.resize(12);
 
     for (size_t i = 0; i < 12; ++i) {
-        g1::jacobian_to_affine(scalar_multiplication::pippenger(poly_coefficients[i],
-                                                                circuit_proving_key->reference_string.monomials,
-                                                                circuit_proving_key->n),
-                               commitments[i]);
+        commitments[i] = g1::affine_element(scalar_multiplication::pippenger(
+            poly_coefficients[i], circuit_proving_key->reference_string.monomials, circuit_proving_key->n));
     }
 
     circuit_verification_key =

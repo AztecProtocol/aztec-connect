@@ -3,29 +3,9 @@
 #include <barretenberg/curves/bn254/fq.hpp>
 #include <random>
 
+#include "./test_helpers.hpp"
+
 using namespace barretenberg;
-
-namespace {
-std::mt19937 engine;
-std::uniform_int_distribution<uint64_t> dist{ 0ULL, UINT64_MAX };
-
-const auto init = []() {
-    // std::random_device rd{};
-    std::seed_seq seed2{ 1, 2, 3, 4, 5, 6, 7, 8 };
-    engine = std::mt19937(seed2);
-    return 1;
-}();
-
-fq::field_t get_pseudorandom_element()
-{
-    fq::field_t out{ dist(engine), dist(engine), dist(engine), dist(engine) };
-    out.self_reduce_once();
-    out.self_reduce_once();
-    out.self_reduce_once();
-    out.self_reduce_once();
-    return out;
-}
-} // namespace
 
 TEST(fq, eq)
 {
@@ -198,8 +178,8 @@ TEST(fq, sub_check_against_constants)
 
 TEST(fq, coarse_equivalence_checks)
 {
-    fq::field_t a = get_pseudorandom_element();
-    fq::field_t b = get_pseudorandom_element();
+    fq::field_t a = test_helpers::get_pseudorandom_fq();
+    fq::field_t b = test_helpers::get_pseudorandom_fq();
 
     fq::field_t c = (a * b) + a - b;
 

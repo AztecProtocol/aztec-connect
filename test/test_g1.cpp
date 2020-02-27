@@ -6,36 +6,37 @@
 
 using namespace barretenberg;
 
+namespace test_g1 {
 TEST(g1, random_element)
 {
-    g1::element result = g1::random_element();
-    EXPECT_EQ(g1::on_curve(result), true);
+    g1::element result = g1::element::random_element();
+    EXPECT_EQ(result.on_curve(), true);
 }
 
 TEST(g1, random_affine_element)
 {
-    g1::affine_element result = g1::random_affine_element();
-    EXPECT_EQ(g1::on_curve(result), true);
+    g1::affine_element result = g1::affine_element(g1::element::random_element());
+    EXPECT_EQ(result.on_curve(), true);
 }
 
 TEST(g1, eq)
 {
-    g1::element a = g1::random_element();
-    g1::element b = g1::normalize(a);
+    g1::element a = g1::element::random_element();
+    g1::element b = a.normalize();
 
-    EXPECT_EQ(g1::eq(a, b), true);
-    EXPECT_EQ(g1::eq(a, a), true);
+    EXPECT_EQ(a == b, true);
+    EXPECT_EQ(a == a, true);
 
-    g1::set_infinity(b);
+    b.self_set_infinity();
 
-    EXPECT_EQ(g1::eq(a, b), false);
-    g1::element c = g1::random_element();
+    EXPECT_EQ(a == b, false);
+    g1::element c = g1::element::random_element();
 
-    EXPECT_EQ(g1::eq(a, c), false);
+    EXPECT_EQ(a == c, false);
 
-    g1::set_infinity(a);
+    a.self_set_infinity();
 
-    EXPECT_EQ(g1::eq(a, b), true);
+    EXPECT_EQ(a == b, true);
 }
 
 TEST(g1, mixed_add_check_against_constants)
@@ -62,7 +63,7 @@ TEST(g1, mixed_add_check_against_constants)
     expected.z = expected_z.to_montgomery_form();
     result = lhs + rhs;
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(g1, dbl_check_against_constants)
@@ -87,7 +88,7 @@ TEST(g1, dbl_check_against_constants)
     result.self_dbl();
     result.self_dbl();
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(g1, add_check_against_constants)
@@ -118,40 +119,40 @@ TEST(g1, add_check_against_constants)
 
     result = lhs + rhs;
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(g1, add_exception_test_infinity)
 {
-    g1::element lhs = g1::random_element();
+    g1::element lhs = g1::element::random_element();
     g1::element rhs;
     g1::element result;
 
-    g1::__neg(lhs, rhs);
+    rhs = -lhs;
 
     result = lhs + rhs;
 
-    EXPECT_EQ(g1::is_point_at_infinity(result), true);
+    EXPECT_EQ(result.is_point_at_infinity(), true);
 
     g1::element rhs_b;
-    g1::copy(&rhs, &rhs_b);
-    g1::set_infinity(rhs_b);
+    rhs_b = rhs;
+    rhs_b.self_set_infinity();
 
     result = lhs + rhs_b;
 
-    EXPECT_EQ(g1::eq(lhs, result), true);
+    EXPECT_EQ(lhs == result, true);
 
-    g1::set_infinity(lhs);
+    lhs.self_set_infinity();
     result = lhs + rhs;
 
-    EXPECT_EQ(g1::eq(rhs, result), true);
+    EXPECT_EQ(rhs == result, true);
 }
 
 TEST(g1, add_exception_test_dbl)
 {
-    g1::element lhs = g1::random_element();
+    g1::element lhs = g1::element::random_element();
     g1::element rhs;
-    g1::copy(&lhs, &rhs);
+    rhs = lhs;
 
     g1::element result;
     g1::element expected;
@@ -159,13 +160,13 @@ TEST(g1, add_exception_test_dbl)
     result = lhs + rhs;
     expected = lhs.dbl();
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(g1, add_dbl_consistency)
 {
-    g1::element a = g1::random_element();
-    g1::element b = g1::random_element();
+    g1::element a = g1::element::random_element();
+    g1::element b = g1::element::random_element();
 
     g1::element c;
     g1::element d;
@@ -173,18 +174,18 @@ TEST(g1, add_dbl_consistency)
     g1::element dbl_result;
 
     c = a + b;
-    g1::__neg(b, b);
+    b = -b;
     d = a + b;
 
     add_result = c + d;
     dbl_result = a.dbl();
 
-    EXPECT_EQ(g1::eq(add_result, dbl_result), true);
+    EXPECT_EQ(add_result == dbl_result, true);
 }
 
 TEST(g1, add_dbl_consistency_repeated)
 {
-    g1::element a = g1::random_element();
+    g1::element a = g1::element::random_element();
     g1::element b;
     g1::element c;
     g1::element d;
@@ -202,34 +203,34 @@ TEST(g1, add_dbl_consistency_repeated)
 
     expected = c.dbl(); // expected = 8a
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(g1, mixed_add_exception_test_infinity)
 {
     g1::element lhs = g1::one;
-    g1::affine_element rhs = g1::random_affine_element();
+    g1::affine_element rhs = g1::affine_element(g1::element::random_element());
     fq::field_t::__copy(rhs.x, lhs.x);
     lhs.y = -rhs.y;
 
     g1::element result;
     result = lhs + rhs;
 
-    EXPECT_EQ(g1::is_point_at_infinity(result), true);
+    EXPECT_EQ(result.is_point_at_infinity(), true);
 
-    g1::set_infinity(lhs);
+    lhs.self_set_infinity();
     result = lhs + rhs;
     g1::element rhs_c;
-    g1::affine_to_jacobian(rhs, rhs_c);
+    rhs_c = g1::element(rhs);
 
-    EXPECT_EQ(g1::eq(rhs_c, result), true);
+    EXPECT_EQ(rhs_c == result, true);
 }
 
 TEST(g1, mixed_add_exception_test_dbl)
 {
-    g1::affine_element rhs = g1::random_affine_element();
+    g1::affine_element rhs = g1::affine_element(g1::element::random_element());
     g1::element lhs;
-    g1::affine_to_jacobian(rhs, lhs);
+    lhs = g1::element(rhs);
 
     g1::element result;
     g1::element expected;
@@ -237,22 +238,22 @@ TEST(g1, mixed_add_exception_test_dbl)
 
     expected = lhs.dbl();
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(g1, add_mixed_add_consistency_check)
 {
-    g1::affine_element rhs = g1::random_affine_element();
-    g1::element lhs = g1::random_element();
+    g1::affine_element rhs = g1::affine_element(g1::element::random_element());
+    g1::element lhs = g1::element::random_element();
     g1::element rhs_b;
-    g1::affine_to_jacobian(rhs, rhs_b);
+    rhs_b = g1::element(rhs);
 
     g1::element add_result;
     g1::element mixed_add_result;
     add_result = lhs + rhs_b;
     mixed_add_result = lhs + rhs;
 
-    EXPECT_EQ(g1::eq(add_result, mixed_add_result), true);
+    EXPECT_EQ(add_result == mixed_add_result, true);
 }
 
 TEST(g1, batch_normalize)
@@ -261,12 +262,12 @@ TEST(g1, batch_normalize)
     g1::element points[num_points];
     g1::element normalized[num_points];
     for (size_t i = 0; i < num_points; ++i) {
-        g1::element a = g1::random_element();
-        g1::element b = g1::random_element();
+        g1::element a = g1::element::random_element();
+        g1::element b = g1::element::random_element();
         points[i] = a + b;
-        g1::copy(&points[i], &normalized[i]);
+        normalized[i] = points[i];
     }
-    g1::batch_normalize(normalized, num_points);
+    g1::element::batch_normalize(normalized, num_points);
 
     for (size_t i = 0; i < num_points; ++i) {
         fq::field_t zz;
@@ -297,7 +298,7 @@ TEST(g1, group_exponentiation_check_against_constants)
 
     g1::affine_element result(g1::one * a);
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(g1, operator_ordering)
@@ -329,11 +330,11 @@ TEST(g1, group_exponentiation_zero_and_one)
 {
     g1::affine_element result(g1::one * fr::field_t::zero);
 
-    EXPECT_EQ(g1::is_point_at_infinity(result), true);
+    EXPECT_EQ(result.is_point_at_infinity(), true);
 
     result = g1::affine_element(g1::one * fr::field_t::one);
 
-    EXPECT_EQ(g1::eq(result, g1::affine_one), true);
+    EXPECT_EQ(result == g1::affine_one, true);
 }
 
 TEST(g1, group_exponentiation_consistency_check)
@@ -350,7 +351,7 @@ TEST(g1, group_exponentiation_consistency_check)
 
     g1::affine_element expected = g1::affine_element(g1::element(input) * c);
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(g1, derive_generators)
@@ -360,7 +361,7 @@ TEST(g1, derive_generators)
 
     const auto is_unique = [&result](const g1::affine_element& y, const size_t j) {
         for (size_t i = 0; i < result.size(); ++i) {
-            if ((i != j) && g1::eq(result[i], y)) {
+            if ((i != j) && result[i] == y) {
                 return false;
             }
         }
@@ -369,19 +370,20 @@ TEST(g1, derive_generators)
 
     for (size_t k = 0; k < num_generators; ++k) {
         EXPECT_EQ(is_unique(result[k], k), true);
-        EXPECT_EQ(g1::on_curve(result[k]), true);
+        EXPECT_EQ(result[k].on_curve(), true);
     }
 }
 
 TEST(g1, serialize)
 {
-    g1::affine_element expected = g1::random_affine_element();
+    g1::affine_element expected = g1::affine_element(g1::element::random_element());
 
     uint8_t buffer[sizeof(g1::affine_element)];
 
-    g1::serialize_to_buffer(expected, buffer);
+    g1::affine_element::serialize_to_buffer(expected, buffer);
 
-    g1::affine_element result = g1::serialize_from_buffer(buffer);
+    g1::affine_element result = g1::affine_element::serialize_from_buffer(buffer);
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
+} // namespace test_g1

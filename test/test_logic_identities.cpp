@@ -4,22 +4,7 @@
 #include <inttypes.h>
 #include <random>
 
-namespace {
-std::mt19937 engine;
-std::uniform_int_distribution<uint32_t> dist{ 0ULL, UINT32_MAX };
-
-const auto init = []() {
-    // std::random_device rd{};
-    std::seed_seq seed2{ 1, 2, 3, 4, 5, 6, 7, 8 };
-    engine = std::mt19937(seed2);
-    return 1;
-}();
-
-uint32_t get_pseudorandom_uint32()
-{
-    return dist(engine);
-}
-} // namespace
+#include "./test_helpers.hpp"
 
 bool quaternary_ror(const std::vector<uint64_t>& accumulators, uint64_t ror, uint64_t target)
 {
@@ -271,8 +256,8 @@ bool and_identity(uint64_t a_x,
 TEST(test_logic_identities, quaternary_rol)
 {
     for (size_t i = 0; i < 100; ++i) {
-        uint64_t input = get_pseudorandom_uint32();
-        uint64_t rol = get_pseudorandom_uint32() & 31ULL;
+        uint64_t input = test_helpers::get_pseudorandom_uint32();
+        uint64_t rol = test_helpers::get_pseudorandom_uint32() & 31ULL;
         std::vector<uint64_t> accumulators;
         uint64_t accumulator = 0;
         for (uint64_t i = 0; i < 32; i += 2) {
@@ -295,8 +280,8 @@ TEST(test_logic_identities, quaternary_rol)
 TEST(test_logic_identities, quaternary_ror)
 {
     for (size_t i = 0; i < 100; ++i) {
-        uint64_t input = get_pseudorandom_uint32();
-        uint64_t ror = get_pseudorandom_uint32() & 31ULL;
+        uint64_t input = test_helpers::get_pseudorandom_uint32();
+        uint64_t ror = test_helpers::get_pseudorandom_uint32() & 31ULL;
         std::vector<uint64_t> accumulators;
         uint64_t accumulator = 0;
         for (uint64_t i = 0; i < 32; i += 2) {
@@ -319,8 +304,8 @@ TEST(test_logic_identities, quaternary_ror)
 TEST(test_logic_identities, quaternary_left_shift)
 {
     for (size_t i = 0; i < 100; ++i) {
-        uint64_t input = get_pseudorandom_uint32();
-        uint64_t shift = get_pseudorandom_uint32() & 31ULL;
+        uint64_t input = test_helpers::get_pseudorandom_uint32();
+        uint64_t shift = test_helpers::get_pseudorandom_uint32() & 31ULL;
         std::vector<uint64_t> accumulators;
         uint64_t accumulator = 0;
         for (uint64_t i = 0; i < 32; i += 2) {
@@ -343,8 +328,8 @@ TEST(test_logic_identities, quaternary_left_shift)
 TEST(test_logic_identities, quaternary_right_shift)
 {
     for (size_t i = 0; i < 100; ++i) {
-        uint64_t input = get_pseudorandom_uint32();
-        uint64_t shift = get_pseudorandom_uint32() & 31ULL;
+        uint64_t input = test_helpers::get_pseudorandom_uint32();
+        uint64_t shift = test_helpers::get_pseudorandom_uint32() & 31ULL;
         std::vector<uint64_t> accumulators;
         uint64_t accumulator = 0;
         for (uint64_t i = 0; i < 32; i += 2) {

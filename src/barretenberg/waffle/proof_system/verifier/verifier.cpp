@@ -62,35 +62,36 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
     for (size_t i = 0; i < program_settings::program_width; ++i) {
         std::string index = std::to_string(i + 1);
-        T[i] = g1::serialize_from_buffer(&transcript.get_element("T_" + index)[0]);
-        W[i] = g1::serialize_from_buffer(&transcript.get_element("W_" + index)[0]);
+        T[i] = g1::affine_element::serialize_from_buffer(&transcript.get_element("T_" + index)[0]);
+        W[i] = g1::affine_element::serialize_from_buffer(&transcript.get_element("W_" + index)[0]);
         wire_evaluations[i] = fr::field_t::serialize_from_buffer(&transcript.get_element("w_" + index)[0]);
     }
     for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
         std::string index = std::to_string(i + 1);
         sigma_evaluations[i] = fr::field_t::serialize_from_buffer(&transcript.get_element("sigma_" + index)[0]);
     }
-    g1::affine_element Z_1 = g1::serialize_from_buffer(&transcript.get_element("Z")[0]);
-    g1::affine_element PI_Z = g1::serialize_from_buffer(&transcript.get_element("PI_Z")[0]);
-    g1::affine_element PI_Z_OMEGA = g1::serialize_from_buffer(&transcript.get_element("PI_Z_OMEGA")[0]);
+    g1::affine_element Z_1 = g1::affine_element::serialize_from_buffer(&transcript.get_element("Z")[0]);
+    g1::affine_element PI_Z = g1::affine_element::serialize_from_buffer(&transcript.get_element("PI_Z")[0]);
+    g1::affine_element PI_Z_OMEGA = g1::affine_element::serialize_from_buffer(&transcript.get_element("PI_Z_OMEGA")[0]);
 
     fr::field_t linear_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("r")[0]);
     fr::field_t z_1_shifted_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("z_omega")[0]);
 
-    bool inputs_valid = g1::on_curve(T[0]) && g1::on_curve(Z_1) && g1::on_curve(PI_Z);
+    bool inputs_valid = T[0].on_curve() && Z_1.on_curve() && PI_Z.on_curve();
 
     if (!inputs_valid) {
         printf("inputs not valid!\n");
-        printf("T[0] on curve: %u \n", g1::on_curve(T[0]) ? 1 : 0);
-        printf("Z_1 on curve: %u \n", g1::on_curve(Z_1) ? 1 : 0);
-        printf("PI_Z on curve: %u \n", g1::on_curve(PI_Z) ? 1 : 0);
+        printf("T[0] on curve: %u \n", T[0].on_curve() ? 1 : 0);
+        printf("Z_1 on curve: %u \n", Z_1.on_curve() ? 1 : 0);
+        printf("PI_Z on curve: %u \n", PI_Z.on_curve() ? 1 : 0);
         return false;
     }
 
     bool instance_valid = true;
     for (size_t i = 0; i < program_settings::program_width; ++i) {
-        instance_valid = instance_valid &&
-                         g1::on_curve(key->permutation_selectors.at("SIGMA_" + std::to_string(i + 1))); // SIGMA[i]);
+        instance_valid =
+            instance_valid &&
+            key->permutation_selectors.at("SIGMA_" + std::to_string(i + 1)).on_curve(); // SIGMA[i].on_curve();
     }
     if (!instance_valid) {
         printf("instance not valid!\n");
@@ -259,7 +260,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     fr::field_t::__copy(nu_pow[8], nu_base);
 
     for (size_t i = 0; i < program_settings::program_width; ++i) {
-        if (g1::on_curve(W[i])) {
+        if (W[i].on_curve()) {
             elements.emplace_back(W[i]);
             if (program_settings::requires_shifted_wire(program_settings::wire_shift_settings, i)) {
                 T0 = nu_base * u;
@@ -283,7 +284,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     elements.emplace_back(g1::affine_one);
     scalars.emplace_back(batch_evaluation);
 
-    if (g1::on_curve(PI_Z_OMEGA)) {
+    if (PI_Z_OMEGA.on_curve()) {
         elements.emplace_back(PI_Z_OMEGA);
         scalars.emplace_back(z_omega_scalar);
     }
@@ -293,7 +294,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
     for (size_t i = 1; i < program_settings::program_width; ++i) {
         fr::field_t z_power = z_challenge.pow(static_cast<uint64_t>(key->n * i));
-        if (g1::on_curve(T[i])) {
+        if (T[i].on_curve()) {
             elements.emplace_back(T[i]);
             scalars.emplace_back(z_power);
         }
@@ -316,8 +317,8 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
     P[1] += T[0];
     P[0] += PI_Z;
-    g1::__neg(P[0], P[0]);
-    g1::batch_normalize(P, 2);
+    P[0] = -P[0];
+    g1::element::batch_normalize(P, 2);
 
     g1::affine_element P_affine[2];
     barretenberg::fq::field_t::__copy(P[0].x, P_affine[1].x);

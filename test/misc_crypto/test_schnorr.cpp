@@ -58,9 +58,6 @@ TEST(schnorr, verify_ecrecover)
     grumpkin::g1::affine_element recovered_key =
         crypto::schnorr::ecrecover<Sha256Hasher, grumpkin::fq::field_t, grumpkin::fr::field_t, grumpkin::g1>(message,
                                                                                                              signature);
-    bool result = grumpkin::g1::eq(
-        recovered_key, account.public_key); // crypto::schnorr::verify_signature<Sha256Hasher, grumpkin::fq::field_t,
-                                            // grumpkin::fr, grumpkin::g1>(message, account.public_key, signature);
 
-    EXPECT_EQ(result, true);
+    EXPECT_EQ(recovered_key, account.public_key);
 }

@@ -4,52 +4,52 @@
 
 namespace barretenberg {
 // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-template <typename coordinate_field, typename subgroup_field, typename GroupParams>
-inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const affine_element* src, affine_element* dest)
-{
-    if constexpr (GroupParams::small_elements) {
-#if defined __AVX__ && defined USE_AVX
-        ASSERT((((uintptr_t)src & 0x1f) == 0));
-        ASSERT((((uintptr_t)dest & 0x1f) == 0));
-        __asm__ __volatile__("vmovdqa 0(%0), %%ymm0              \n\t"
-                             "vmovdqa 32(%0), %%ymm1             \n\t"
-                             "vmovdqa %%ymm0, 0(%1)              \n\t"
-                             "vmovdqa %%ymm1, 32(%1)             \n\t"
-                             :
-                             : "r"(src), "r"(dest)
-                             : "%ymm0", "%ymm1", "memory");
-#else
-        *dest = *src;
-#endif
-    } else {
-        *dest = *src;
-    }
-}
+// template <typename coordinate_field, typename subgroup_field, typename GroupParams>
+// inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const affine_element* src, affine_element* dest)
+// {
+//     if constexpr (GroupParams::small_elements) {
+// #if defined __AVX__ && defined USE_AVX
+//         ASSERT((((uintptr_t)src & 0x1f) == 0));
+//         ASSERT((((uintptr_t)dest & 0x1f) == 0));
+//         __asm__ __volatile__("vmovdqa 0(%0), %%ymm0              \n\t"
+//                              "vmovdqa 32(%0), %%ymm1             \n\t"
+//                              "vmovdqa %%ymm0, 0(%1)              \n\t"
+//                              "vmovdqa %%ymm1, 32(%1)             \n\t"
+//                              :
+//                              : "r"(src), "r"(dest)
+//                              : "%ymm0", "%ymm1", "memory");
+// #else
+//         *dest = *src;
+// #endif
+//     } else {
+//         *dest = *src;
+//     }
+// }
 
-// copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-template <typename coordinate_field, typename subgroup_field, typename GroupParams>
-inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const element* src, element* dest)
-{
-    if constexpr (GroupParams::small_elements) {
-#if defined __AVX__ && defined USE_AVX
-        ASSERT((((uintptr_t)src & 0x1f) == 0));
-        ASSERT((((uintptr_t)dest & 0x1f) == 0));
-        __asm__ __volatile__("vmovdqa 0(%0), %%ymm0              \n\t"
-                             "vmovdqa 32(%0), %%ymm1             \n\t"
-                             "vmovdqa 64(%0), %%ymm2             \n\t"
-                             "vmovdqa %%ymm0, 0(%1)              \n\t"
-                             "vmovdqa %%ymm1, 32(%1)             \n\t"
-                             "vmovdqa %%ymm2, 64(%1)             \n\t"
-                             :
-                             : "r"(src), "r"(dest)
-                             : "%ymm0", "%ymm1", "%ymm2", "memory");
-#else
-        *dest = *src;
-#endif
-    } else {
-        *dest = src;
-    }
-}
+// // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
+// template <typename coordinate_field, typename subgroup_field, typename GroupParams>
+// inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const element* src, element* dest)
+// {
+//     if constexpr (GroupParams::small_elements) {
+// #if defined __AVX__ && defined USE_AVX
+//         ASSERT((((uintptr_t)src & 0x1f) == 0));
+//         ASSERT((((uintptr_t)dest & 0x1f) == 0));
+//         __asm__ __volatile__("vmovdqa 0(%0), %%ymm0              \n\t"
+//                              "vmovdqa 32(%0), %%ymm1             \n\t"
+//                              "vmovdqa 64(%0), %%ymm2             \n\t"
+//                              "vmovdqa %%ymm0, 0(%1)              \n\t"
+//                              "vmovdqa %%ymm1, 32(%1)             \n\t"
+//                              "vmovdqa %%ymm2, 64(%1)             \n\t"
+//                              :
+//                              : "r"(src), "r"(dest)
+//                              : "%ymm0", "%ymm1", "%ymm2", "memory");
+// #else
+//         *dest = *src;
+// #endif
+//     } else {
+//         *dest = src;
+//     }
+// }
 
 // copies src into dest, inverting y-coordinate if 'predicate' is true
 // n.b. requires src and dest to be aligned on 32 byte boundary

@@ -46,8 +46,8 @@ TEST(pairing, reduced_ate_pairing_check_against_constants)
 
 TEST(pairing, reduced_ate_pairing_consistency_check)
 {
-    g1::affine_element P = g1::random_affine_element();
-    g2::affine_element Q = g2::random_affine_element();
+    g1::affine_element P = g1::affine_element(g1::element::random_element());
+    g2::affine_element Q = g2::affine_element(g2::element::random_element());
 
     fr::field_t scalar = fr::field_t::random_element();
 
@@ -74,12 +74,12 @@ TEST(pairing, reduced_ate_pairing_consistency_check_batch)
     for (size_t i = 0; i < 10; ++i) {
         scalars[i] = fr::field_t::random_element();
         scalars[i + num_points] = fr::field_t::random_element();
-        g1::affine_element P = g1::random_affine_element();
-        g2::affine_element Q = g2::random_affine_element();
-        g1::copy_affine(P, P_a[i]);
-        g2::copy_affine(Q, Q_a[i]);
-        g1::copy_affine(P, P_b[i]);
-        g2::copy_affine(Q, Q_b[i]);
+        g1::affine_element P = g1::affine_element(g1::element::random_element());
+        g2::affine_element Q = g2::affine_element(g2::element::random_element());
+        P_a[i] = P;
+        Q_a[i] = Q;
+        P_b[i] = P;
+        Q_b[i] = Q;
     }
 
     for (size_t i = 0; i < 10; ++i) {
@@ -107,12 +107,12 @@ TEST(pairing, reduced_ate_pairing_precompute_consistency_check_batch)
     for (size_t i = 0; i < 10; ++i) {
         scalars[i] = fr::field_t::random_element();
         scalars[i + num_points] = fr::field_t::random_element();
-        g1::affine_element P = g1::random_affine_element();
-        g2::affine_element Q = g2::random_affine_element();
-        g1::copy_affine(P, P_a[i]);
-        g2::copy_affine(Q, Q_a[i]);
-        g1::copy_affine(P, P_b[i]);
-        g2::copy_affine(Q, Q_b[i]);
+        g1::affine_element P = g1::affine_element(g1::element::random_element());
+        g2::affine_element Q = g2::affine_element(g2::element::random_element());
+        P_a[i] = P;
+        Q_a[i] = Q;
+        P_b[i] = P;
+        Q_b[i] = Q;
     }
     for (size_t i = 0; i < 10; ++i) {
         P_a[i] = P_a[i] * scalars[i];
@@ -122,7 +122,7 @@ TEST(pairing, reduced_ate_pairing_precompute_consistency_check_batch)
     }
     for (size_t i = 0; i < 10; ++i) {
         g2::element jac;
-        g2::affine_to_jacobian(Q_a[i], jac);
+        jac = g2::element(Q_a[i]);
         pairing::precompute_miller_lines(jac, precompute_miller_lines[i]);
     }
     fq12::field_t result =

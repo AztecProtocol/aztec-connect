@@ -16,6 +16,7 @@
 #include <iostream>
 #include <memory>
 
+namespace test_stdlib_pedersen {
 using namespace barretenberg;
 using namespace plonk;
 
@@ -61,18 +62,14 @@ TEST(stdlib_pedersen, test_pedersen)
     uint64_t left_wnafs[255] = { 0 };
     uint64_t right_wnafs[255] = { 0 };
 
-    if ((left_in.from_montgomery_form().data[0] & 1)
-        == 0)
-        {
-            fr::field_t two = fr::field_t::one + fr::field_t::one;
-            left_in = left_in - two;
-        }
-    if ((right_in.from_montgomery_form().data[0] & 1)
-        == 0)
-        {
-            fr::field_t two = fr::field_t::one + fr::field_t::one;
-            right_in = right_in - two;
-        }
+    if ((left_in.from_montgomery_form().data[0] & 1) == 0) {
+        fr::field_t two = fr::field_t::one + fr::field_t::one;
+        left_in = left_in - two;
+    }
+    if ((right_in.from_montgomery_form().data[0] & 1) == 0) {
+        fr::field_t two = fr::field_t::one + fr::field_t::one;
+        right_in = right_in - two;
+    }
     fr::field_t converted_left = left_in.from_montgomery_form();
     fr::field_t converted_right = right_in.from_montgomery_form();
 
@@ -125,10 +122,10 @@ TEST(stdlib_pedersen, test_pedersen)
     };
 
     grumpkin::g1::element result_points[4]{
-        grumpkin::g1::group_exponentiation_inner(grumpkin_points[0], grumpkin_scalars[0]),
-        grumpkin::g1::group_exponentiation_inner(grumpkin_points[1], grumpkin_scalars[1]),
-        grumpkin::g1::group_exponentiation_inner(grumpkin_points[2], grumpkin_scalars[2]),
-        grumpkin::g1::group_exponentiation_inner(grumpkin_points[3], grumpkin_scalars[3]),
+        grumpkin_points[0] * grumpkin_scalars[0],
+        grumpkin_points[1] * grumpkin_scalars[1],
+        grumpkin_points[2] * grumpkin_scalars[2],
+        grumpkin_points[3] * grumpkin_scalars[3],
     };
 
     grumpkin::g1::element hash_output_left;
@@ -139,7 +136,7 @@ TEST(stdlib_pedersen, test_pedersen)
 
     grumpkin::g1::element hash_output;
     hash_output = hash_output_left + hash_output_right;
-    hash_output = grumpkin::g1::normalize(hash_output);
+    hash_output = hash_output.normalize();
 
     EXPECT_EQ((out.get_value() == hash_output.x), true);
 
@@ -155,10 +152,12 @@ TEST(stdlib_pedersen, test_pedersen_large)
     fr::field_t left_in = fr::field_t::random_element();
     fr::field_t right_in = fr::field_t::random_element();
     // ensure left has skew 1, right has skew 0
-    if ((left_in.from_montgomery_form().data[0] & 1)
-        == 1) { left_in += fr::field_t::one; }
-    if ((right_in.from_montgomery_form().data[0] & 1)
-        == 0) { right_in += fr::field_t::one; }
+    if ((left_in.from_montgomery_form().data[0] & 1) == 1) {
+        left_in += fr::field_t::one;
+    }
+    if ((right_in.from_montgomery_form().data[0] & 1) == 0) {
+        right_in += fr::field_t::one;
+    }
     field_t left = witness_t(&composer, left_in);
     field_t right = witness_t(&composer, right_in);
 
@@ -178,3 +177,5 @@ TEST(stdlib_pedersen, test_pedersen_large)
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }
+
+} // namespace test_stdlib_pedersen

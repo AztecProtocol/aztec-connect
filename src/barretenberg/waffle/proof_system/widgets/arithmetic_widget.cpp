@@ -173,31 +173,31 @@ VerifierBaseWidget::challenge_coefficients VerifierArithmeticWidget::append_scal
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
     fr::field_t q_m_term = w_l_eval * w_r_eval * challenge.alpha_base * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_M"))) {
+    if (key->constraint_selectors.at("Q_M").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_M"));
         scalars.push_back(q_m_term);
     }
 
     fr::field_t q_l_term = w_l_eval * challenge.alpha_base * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_1"))) {
+    if (key->constraint_selectors.at("Q_1").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_1"));
         scalars.push_back(q_l_term);
     }
 
     fr::field_t q_r_term = w_r_eval * challenge.alpha_base * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_2"))) {
+    if (key->constraint_selectors.at("Q_2").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_2"));
         scalars.push_back(q_r_term);
     }
 
     fr::field_t q_o_term = w_o_eval * challenge.alpha_base * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_3"))) {
+    if (key->constraint_selectors.at("Q_3").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_3"));
         scalars.push_back(q_o_term);
     }
 
     fr::field_t q_c_term = challenge.alpha_base * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_C"))) {
+    if (key->constraint_selectors.at("Q_C").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_C"));
         scalars.push_back(q_c_term);
     }

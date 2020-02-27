@@ -64,7 +64,7 @@ class VerifierBaseWidget {
         // because selector polynomials can be all zero :/. TODO: check?
         // for (size_t i = 0; i < instance.size(); ++i)
         // {
-        //     valid = valid && barretenberg::g1::on_curve(instance[i]);
+        //     valid = valid && barretenberg::instance[i].on_curve();
         // }
         return valid;
     }

@@ -13,6 +13,7 @@
 
 #include <memory>
 
+namespace test_stdlib_field {
 using namespace barretenberg;
 using namespace plonk;
 
@@ -37,7 +38,8 @@ void fibbonaci(waffle::StandardComposer& composer)
 uint64_t fidget(waffle::StandardComposer& composer)
 {
     field_t a(public_witness_t(&composer, fr::field_t::one)); // a is a legit wire value in our circuit
-    field_t b(&composer, (fr::field_t::one)); // b is just a constant, and should not turn up as a wire value in our circuit
+    field_t b(&composer,
+              (fr::field_t::one)); // b is just a constant, and should not turn up as a wire value in our circuit
 
     // this shouldn't create a constraint - we just need to scale the addition/multiplication gates that `a` is involved
     // in c should point to the same wire value as a
@@ -245,3 +247,4 @@ TEST(stdlib_field, is_zero)
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }
+} // namespace test_stdlib_field

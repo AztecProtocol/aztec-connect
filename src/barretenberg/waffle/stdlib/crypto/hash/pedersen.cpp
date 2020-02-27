@@ -35,9 +35,9 @@ point hash_single(const field_t& in, const size_t hash_index)
     grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1);
 
     grumpkin::g1::element origin_points[2];
-    grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
+    origin_points[0] = grumpkin::g1::element(ladder[0].one);
     origin_points[1] = origin_points[0] + generator;
-    origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
+    origin_points[1] = origin_points[1].normalize();
 
     fr::field_t scalar_multiplier_base = scalar_multiplier.to_montgomery_form();
 
@@ -51,7 +51,8 @@ point hash_single(const field_t& in, const size_t hash_index)
 
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    fr::field_t accumulator_offset = (fr::field_t::one + fr::field_t::one).pow(static_cast<uint64_t>(initial_exponent)).invert();
+    fr::field_t accumulator_offset =
+        (fr::field_t::one + fr::field_t::one).pow(static_cast<uint64_t>(initial_exponent)).invert();
 
     fr::field_t origin_accumulators[2]{ fr::field_t::one, accumulator_offset + fr::field_t::one };
 
@@ -81,14 +82,14 @@ point hash_single(const field_t& in, const size_t hash_index)
         fr::field_t scalar_to_add = (entry == 1) ? three : one;
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
         if (predicate) {
-            grumpkin::g1::__neg(point_to_add, point_to_add);
+            point_to_add = -point_to_add;
             scalar_to_add.self_neg();
         }
         accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
-        grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
+        multiplication_transcript[i + 1] = multiplication_transcript[i] + point_to_add;
     }
 
-    grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
+    grumpkin::g1::element::batch_normalize(&multiplication_transcript[0], num_quads + 1);
 
     waffle::fixed_group_init_quad init_quad{ origin_points[0].x,
                                              (origin_points[0].x - origin_points[1].x),

@@ -2,55 +2,55 @@
 
 #include <barretenberg/curves/grumpkin/grumpkin.hpp>
 
-using namespace grumpkin;
+namespace test_grumpkin {
 
 TEST(grumpkin, random_element)
 {
-    g1::element result = g1::random_element();
-    EXPECT_EQ(g1::on_curve(result), true);
+    grumpkin::g1::element result = grumpkin::g1::element::random_element();
+    EXPECT_EQ(result.on_curve(), true);
 }
 
 TEST(grumpkin, random_affine_element)
 {
-    g1::affine_element result = g1::random_affine_element();
-    EXPECT_EQ(g1::on_curve(result), true);
+    grumpkin::g1::affine_element result = grumpkin::g1::affine_element(grumpkin::g1::element::random_element());
+    EXPECT_EQ(result.on_curve(), true);
 }
 
 TEST(grumpkin, eq)
 {
-    g1::element a = g1::random_element();
-    g1::element b = g1::normalize(a);
+    grumpkin::g1::element a = grumpkin::g1::element::random_element();
+    grumpkin::g1::element b = a.normalize();
 
-    EXPECT_EQ(g1::eq(a, b), true);
-    EXPECT_EQ(g1::eq(a, a), true);
+    EXPECT_EQ(a == b, true);
+    EXPECT_EQ(a == a, true);
 
-    g1::set_infinity(b);
+    b.self_set_infinity();
 
-    EXPECT_EQ(g1::eq(a, b), false);
-    g1::element c = g1::random_element();
+    EXPECT_EQ(a == b, false);
+    grumpkin::g1::element c = grumpkin::g1::element::random_element();
 
-    EXPECT_EQ(g1::eq(a, c), false);
+    EXPECT_EQ(a == c, false);
 
-    g1::set_infinity(a);
+    a.self_set_infinity();
 
-    EXPECT_EQ(g1::eq(a, b), true);
+    EXPECT_EQ(a == b, true);
 }
 
 TEST(grumpkin, check_group_modulus)
 {
-    // g1::affine_element expected = g1::affine_one;
-    fr::field_t exponent = fr::field_t{ fr::field_t::modulus.data[0] - 1,
-                                        fr::field_t::modulus.data[1],
-                                        fr::field_t::modulus.data[2],
-                                        fr::field_t::modulus.data[3] }
-                               .to_montgomery_form();
+    // grumpkin::g1::affine_element expected = grumpkin::g1::affine_one;
+    grumpkin::fr::field_t exponent = grumpkin::fr::field_t{ grumpkin::fr::field_t::modulus.data[0] - 1,
+                                                            grumpkin::fr::field_t::modulus.data[1],
+                                                            grumpkin::fr::field_t::modulus.data[2],
+                                                            grumpkin::fr::field_t::modulus.data[3] }
+                                         .to_montgomery_form();
     printf("a\n");
-    g1::element result = g1::group_exponentiation_no_endo(g1::one, exponent);
+    grumpkin::g1::element result = grumpkin::g1::element::one * exponent;
     printf("b\n");
-    result += g1::one;
-    result += g1::one;
-    EXPECT_EQ(g1::on_curve(result), true);
-    EXPECT_EQ(g1::eq(result, g1::one), true);
+    result += grumpkin::g1::element::one;
+    result += grumpkin::g1::element::one;
+    EXPECT_EQ(result.on_curve(), true);
+    EXPECT_EQ(result == grumpkin::g1::element::one, true);
 }
 
 // TEST(grumpkin, mixed_add_check_against_constants)
@@ -63,10 +63,10 @@ TEST(grumpkin, check_group_modulus)
 //     fq::field_t expected_x = {{0x2a9d0201fccca20, 0x36f969b294f31776, 0xee5534422a6f646, 0x911dbc6b02310b6}};
 //     fq::field_t expected_y = {{0x14c30aaeb4f135ef, 0x9c27c128ea2017a1, 0xf9b7d80c8315eabf, 0x35e628df8add760}};
 //     fq::field_t expected_z = {{0xa43fe96673d10eb3, 0x88fbe6351753d410, 0x45c21cc9d99cb7d, 0x3018020aa6e9ede5}};
-//     g1::element lhs;
-//     g1::affine_element rhs;
-//     g1::element result;
-//     g1::element expected;
+//     grumpkin::g1::element lhs;
+//     grumpkin::g1::affine_element rhs;
+//     grumpkin::g1::element result;
+//     grumpkin::g1::element expected;
 //     fq::__to_montgomery_form(a_x, lhs.x);
 //     fq::__to_montgomery_form(a_y, lhs.y);
 //     fq::__to_montgomery_form(a_z, lhs.z);
@@ -77,7 +77,7 @@ TEST(grumpkin, check_group_modulus)
 //     fq::__to_montgomery_form(expected_z, expected.z);
 //     result = lhs + rhs;
 
-//     EXPECT_EQ(g1::eq(result, expected), true);
+//     EXPECT_EQ(result == expected, true);
 // }
 
 // TEST(grumpkin, dbl_check_against_constants)
@@ -88,9 +88,9 @@ TEST(grumpkin, check_group_modulus)
 //     fq::field_t expected_x = {{0xd5c6473044b2e67c, 0x89b185ea20951f3a, 0x4ac597219cf47467, 0x2d00482f63b12c86}};
 //     fq::field_t expected_y = {{0x4e7e6c06a87e4314, 0x906a877a71735161, 0xaa7b9893cc370d39, 0x62f206bef795a05}};
 //     fq::field_t expected_z = {{0x8813bdca7b0b115a, 0x929104dffdfabd22, 0x3fff575136879112, 0x18a299c1f683bdca}};
-//     g1::element lhs;
-//     g1::element result;
-//     g1::element expected;
+//     grumpkin::g1::element lhs;
+//     grumpkin::g1::element result;
+//     grumpkin::g1::element expected;
 //     fq::__to_montgomery_form(a_x, lhs.x);
 //     fq::__to_montgomery_form(a_y, lhs.y);
 //     fq::__to_montgomery_form(a_z, lhs.z);
@@ -102,7 +102,7 @@ TEST(grumpkin, check_group_modulus)
 //     result.self_dbl();
 //     result.self_dbl();
 
-//     EXPECT_EQ(g1::eq(result, expected), true);
+//     EXPECT_EQ(result == expected, true);
 // }
 
 // TEST(grumpkin, add_check_against_constants)
@@ -116,10 +116,10 @@ TEST(grumpkin, check_group_modulus)
 //     fq::field_t expected_x = {{0x18764da36aa4cd81, 0xd15388d1fea9f3d3, 0xeb7c437de4bbd748, 0x2f09b712adf6f18f}};
 //     fq::field_t expected_y = {{0x50c5f3cab191498c, 0xe50aa3ce802ea3b5, 0xd9d6125b82ebeff8, 0x27e91ba0686e54fe}};
 //     fq::field_t expected_z = {{0xe4b81ef75fedf95, 0xf608edef14913c75, 0xfd9e178143224c96, 0xa8ae44990c8accd}};
-//     g1::element lhs;
-//     g1::element rhs;
-//     g1::element result;
-//     g1::element expected;
+//     grumpkin::g1::element lhs;
+//     grumpkin::g1::element rhs;
+//     grumpkin::g1::element result;
+//     grumpkin::g1::element expected;
 
 //     fq::__to_montgomery_form(a_x, lhs.x);
 //     fq::__to_montgomery_form(a_y, lhs.y);
@@ -133,80 +133,80 @@ TEST(grumpkin, check_group_modulus)
 
 //     result = lhs + rhs;
 
-//     EXPECT_EQ(g1::eq(result, expected), true);
+//     EXPECT_EQ(result == expected, true);
 // }
 
 TEST(grumpkin, add_exception_test_infinity)
 {
-    g1::element lhs = g1::random_element();
-    g1::element rhs;
-    g1::element result;
+    grumpkin::g1::element lhs = grumpkin::g1::element::random_element();
+    grumpkin::g1::element rhs;
+    grumpkin::g1::element result;
 
-    g1::__neg(lhs, rhs);
+    rhs = -lhs;
 
     result = lhs + rhs;
 
-    EXPECT_EQ(g1::is_point_at_infinity(result), true);
+    EXPECT_EQ(result.is_point_at_infinity(), true);
 
-    g1::element rhs_b;
-    g1::copy(&rhs, &rhs_b);
-    g1::set_infinity(rhs_b);
+    grumpkin::g1::element rhs_b;
+    rhs_b = rhs;
+    rhs_b.self_set_infinity();
 
     result = lhs + rhs_b;
 
-    EXPECT_EQ(g1::eq(lhs, result), true);
+    EXPECT_EQ(lhs == result, true);
 
-    g1::set_infinity(lhs);
+    lhs.self_set_infinity();
     result = lhs + rhs;
 
-    EXPECT_EQ(g1::eq(rhs, result), true);
+    EXPECT_EQ(rhs == result, true);
 }
 
 TEST(grumpkin, add_exception_test_dbl)
 {
-    g1::element lhs = g1::random_element();
-    g1::element rhs;
-    g1::copy(&lhs, &rhs);
+    grumpkin::g1::element lhs = grumpkin::g1::element::random_element();
+    grumpkin::g1::element rhs;
+    rhs = lhs;
 
-    g1::element result;
-    g1::element expected;
+    grumpkin::g1::element result;
+    grumpkin::g1::element expected;
 
     result = lhs + rhs;
     expected = lhs.dbl();
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(grumpkin, add_dbl_consistency)
 {
-    g1::element a = g1::random_element();
-    g1::element b = g1::random_element();
+    grumpkin::g1::element a = grumpkin::g1::element::random_element();
+    grumpkin::g1::element b = grumpkin::g1::element::random_element();
 
-    g1::element c;
-    g1::element d;
-    g1::element add_result;
-    g1::element dbl_result;
+    grumpkin::g1::element c;
+    grumpkin::g1::element d;
+    grumpkin::g1::element add_result;
+    grumpkin::g1::element dbl_result;
 
     c = a + b;
-    g1::__neg(b, b);
+    b = -b;
     d = a + b;
 
     add_result = c + d;
     dbl_result = a.dbl();
 
-    EXPECT_EQ(g1::eq(add_result, dbl_result), true);
+    EXPECT_EQ(add_result == dbl_result, true);
 }
 
 TEST(grumpkin, add_dbl_consistency_repeated)
 {
-    g1::element a = g1::random_element();
-    g1::element b;
-    g1::element c;
-    g1::element d;
-    g1::element e;
+    grumpkin::g1::element a = grumpkin::g1::element::random_element();
+    grumpkin::g1::element b;
+    grumpkin::g1::element c;
+    grumpkin::g1::element d;
+    grumpkin::g1::element e;
 
-    g1::element result;
-    g1::element expected;
+    grumpkin::g1::element result;
+    grumpkin::g1::element expected;
 
     b = a.dbl(); // b = 2a
     c = b.dbl(); // c = 4a
@@ -217,86 +217,87 @@ TEST(grumpkin, add_dbl_consistency_repeated)
 
     expected = c.dbl(); // expected = 8a
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(grumpkin, mixed_add_exception_test_infinity)
 {
-    g1::element lhs = g1::one;
-    g1::affine_element rhs = g1::random_affine_element();
-    fq::field_t::__copy(rhs.x, lhs.x);
+    grumpkin::g1::element lhs = grumpkin::g1::element::one;
+    grumpkin::g1::affine_element rhs = grumpkin::g1::affine_element(grumpkin::g1::element::random_element());
+    grumpkin::fq::field_t::__copy(rhs.x, lhs.x);
     lhs.y = -rhs.y;
 
-    g1::element result;
+    grumpkin::g1::element result;
     result = lhs + rhs;
 
-    EXPECT_EQ(g1::is_point_at_infinity(result), true);
+    EXPECT_EQ(result.is_point_at_infinity(), true);
 
-    g1::set_infinity(lhs);
+    lhs.self_set_infinity();
     result = lhs + rhs;
-    g1::element rhs_c;
-    g1::affine_to_jacobian(rhs, rhs_c);
+    grumpkin::g1::element rhs_c;
+    rhs_c = grumpkin::g1::element(rhs);
 
-    EXPECT_EQ(g1::eq(rhs_c, result), true);
+    EXPECT_EQ(rhs_c == result, true);
 }
 
 TEST(grumpkin, mixed_add_exception_test_dbl)
 {
-    g1::affine_element rhs = g1::random_affine_element();
-    g1::element lhs;
-    g1::affine_to_jacobian(rhs, lhs);
+    grumpkin::g1::affine_element rhs = grumpkin::g1::affine_element(grumpkin::g1::element::random_element());
+    grumpkin::g1::element lhs;
+    lhs = grumpkin::g1::element(rhs);
 
-    g1::element result;
-    g1::element expected;
+    grumpkin::g1::element result;
+    grumpkin::g1::element expected;
     result = lhs + rhs;
 
     expected = lhs.dbl();
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(grumpkin, add_mixed_add_consistency_check)
 {
-    g1::affine_element rhs = g1::random_affine_element();
-    g1::element lhs = g1::random_element();
-    g1::element rhs_b;
-    g1::affine_to_jacobian(rhs, rhs_b);
+    grumpkin::g1::affine_element rhs = grumpkin::g1::affine_element(grumpkin::g1::element::random_element());
+    grumpkin::g1::element lhs = grumpkin::g1::element::random_element();
+    grumpkin::g1::element rhs_b;
+    rhs_b = grumpkin::g1::element(rhs);
 
-    g1::element add_result;
-    g1::element mixed_add_result;
+    grumpkin::g1::element add_result;
+    grumpkin::g1::element mixed_add_result;
     add_result = lhs + rhs_b;
     mixed_add_result = lhs + rhs;
 
-    EXPECT_EQ(g1::eq(add_result, mixed_add_result), true);
+    EXPECT_EQ(add_result == mixed_add_result, true);
 }
 
 TEST(grumpkin, on_curve)
 {
     for (size_t i = 0; i < 100; ++i) {
-        g1::element test = g1::random_element();
-        EXPECT_EQ(g1::on_curve(test), true);
-        g1::affine_element affine_test = g1::random_affine_element();
-        EXPECT_EQ(g1::on_curve(affine_test), true);
+        grumpkin::g1::element test = grumpkin::g1::element::random_element();
+        EXPECT_EQ(test.on_curve(), true);
+        grumpkin::g1::affine_element affine_test =
+            grumpkin::g1::affine_element(grumpkin::g1::element::random_element());
+        EXPECT_EQ(affine_test.on_curve(), true);
     }
 }
 TEST(grumpkin, batch_normalize)
 {
     size_t num_points = 2;
-    g1::element points[num_points];
-    g1::element normalized[num_points];
+    grumpkin::g1::element points[num_points];
+    grumpkin::g1::element normalized[num_points];
     for (size_t i = 0; i < num_points; ++i) {
-        g1::element a = g1::random_element();
-        g1::element b = g1::random_element();
+        grumpkin::g1::element a = grumpkin::g1::element::random_element();
+        grumpkin::g1::element b = grumpkin::g1::element::random_element();
         points[i] = a + b;
-        g1::copy(&points[i], &normalized[i]);
+        normalized[i] = points[i];
     }
-    g1::batch_normalize(normalized, num_points);
+    grumpkin::g1::element::batch_normalize(normalized, num_points);
 
     for (size_t i = 0; i < num_points; ++i) {
-        fq::field_t zz;
-        fq::field_t zzz;
-        fq::field_t result_x;
-        fq::field_t result_y;
+        grumpkin::fq::field_t zz;
+        grumpkin::fq::field_t zzz;
+        grumpkin::fq::field_t result_x;
+        grumpkin::fq::field_t result_y;
         zz = points[i].z.sqr();
         zzz = points[i].z * zz;
         result_x = normalized[i].x * zz;
@@ -309,40 +310,40 @@ TEST(grumpkin, batch_normalize)
 
 TEST(grumpkin, group_exponentiation_zero_and_one)
 {
-    g1::affine_element result = g1::one * fr::field_t::zero;
+    grumpkin::g1::affine_element result = grumpkin::g1::element::one * grumpkin::fr::field_t::zero;
 
-    EXPECT_EQ(g1::is_point_at_infinity(result), true);
+    EXPECT_EQ(result.is_point_at_infinity(), true);
 
-    result = g1::one * fr::field_t::one;
+    result = grumpkin::g1::element::one * grumpkin::fr::field_t::one;
 
-    EXPECT_EQ(g1::eq(result, g1::affine_one), true);
+    EXPECT_EQ(result == grumpkin::g1::affine_one, true);
 }
 
 TEST(grumpkin, group_exponentiation_consistency_check)
 {
-    fr::field_t a = fr::field_t::random_element();
-    fr::field_t b = fr::field_t::random_element();
+    grumpkin::fr::field_t a = grumpkin::fr::field_t::random_element();
+    grumpkin::fr::field_t b = grumpkin::fr::field_t::random_element();
 
-    fr::field_t c;
+    grumpkin::fr::field_t c;
     c = a * b;
 
-    g1::affine_element input = g1::affine_one;
-    g1::affine_element result = input * a;
+    grumpkin::g1::affine_element input = grumpkin::g1::affine_one;
+    grumpkin::g1::affine_element result = input * a;
     result = result * b;
 
-    g1::affine_element expected = input * c;
+    grumpkin::g1::affine_element expected = input * c;
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(grumpkin, derive_generators)
 {
     constexpr size_t num_generators = 128;
-    std::array<g1::affine_element, num_generators> result = g1::derive_generators<num_generators>();
+    std::array<grumpkin::g1::affine_element, num_generators> result = grumpkin::g1::derive_generators<num_generators>();
 
-    const auto is_unique = [&result](const g1::affine_element& y, const size_t j) {
+    const auto is_unique = [&result](const grumpkin::g1::affine_element& y, const size_t j) {
         for (size_t i = 0; i < result.size(); ++i) {
-            if ((i != j) && g1::eq(result[i], y)) {
+            if ((i != j) && result[i] == y) {
                 return false;
             }
         }
@@ -351,6 +352,7 @@ TEST(grumpkin, derive_generators)
 
     for (size_t k = 0; k < num_generators; ++k) {
         EXPECT_EQ(is_unique(result[k], k), true);
-        EXPECT_EQ(g1::on_curve(result[k]), true);
+        EXPECT_EQ(result[k].on_curve(), true);
     }
 }
+} // namespace test_grumpkin

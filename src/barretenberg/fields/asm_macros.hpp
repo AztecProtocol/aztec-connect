@@ -84,11 +84,6 @@
         "movq %%r13, %%r9                       \n\t"                                                                    \
         "movq %%r14, %%r10                      \n\t"                                                                    \
         "movq %%r15, %%r11                      \n\t"                                                                    \
-        /* Add the negative representation of 'modulus' into `r`. We do this instead                                */   \
-        /* of subtracting, because we can use `adoxq`.                                                              */   \
-        /* This opcode only has a dependence on the overflow                                                        */   \
-        /* flag (sub/sbb changes both carry and overflow flags).                                                    */   \
-        /* We can process an `adcxq` and `acoxq` opcode simultaneously.                                             */   \
         "addq " neg_modulus_0 ", %%r12          \n\t" /* r'[0] -= modulus.data[0]                                   */   \
         "adcq " neg_modulus_1 ", %%r13          \n\t" /* r'[1] -= modulus.data[1]                                   */   \
         "adcq " neg_modulus_2 ", %%r14          \n\t" /* r'[2] -= modulus.data[2]                                   */   \

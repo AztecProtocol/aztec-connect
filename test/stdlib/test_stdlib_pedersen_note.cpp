@@ -14,6 +14,7 @@
 #include <iostream>
 #include <memory>
 
+namespace test_stdlib_pedersen_note {
 using namespace barretenberg;
 using namespace plonk;
 
@@ -35,7 +36,7 @@ TEST(stdlib_pedersen_note, test_pedersen_note)
     grumpkin::g1::element right = plonk::stdlib::group_utils::fixed_base_scalar_mul<250>(view_key_value, 1);
     grumpkin::g1::element expected;
     expected = left + right;
-    expected = grumpkin::g1::normalize(expected);
+    expected = expected.normalize();
 
     field_t view_key = public_witness_t(&composer, view_key_value);
     field_t note_value_field = public_witness_t(&composer, note_value);
@@ -71,7 +72,7 @@ TEST(stdlib_pedersen_note, test_pedersen_note_zero)
     fr::field_t note_value = fr::field_t{ 0, 0, 0, 0 }.to_montgomery_form();
 
     grumpkin::g1::element expected = plonk::stdlib::group_utils::fixed_base_scalar_mul<250>(view_key_value, 1);
-    expected = grumpkin::g1::normalize(expected);
+    expected = expected.normalize();
 
     field_t view_key = public_witness_t(&composer, view_key_value);
     field_t note_value_field = public_witness_t(&composer, note_value);
@@ -95,3 +96,5 @@ TEST(stdlib_pedersen_note, test_pedersen_note_zero)
     bool proof_result = verifier.verify_proof(proof);
     EXPECT_EQ(proof_result, true);
 }
+
+} // namespace test_stdlib_pedersen_note

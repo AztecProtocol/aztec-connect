@@ -14,6 +14,9 @@
 #include <barretenberg/waffle/stdlib/field/field.hpp>
 #include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
 
+#include "../test_helpers.hpp"
+
+namespace test_stdlib_bitarray {
 using namespace barretenberg;
 using namespace plonk;
 
@@ -23,17 +26,12 @@ typedef stdlib::uint32<waffle::BoolComposer> uint32;
 typedef stdlib::witness_t<waffle::BoolComposer> witness_t;
 typedef stdlib::bitarray<waffle::BoolComposer> bitarray;
 
-uint32_t get_random_int()
-{
-    return static_cast<uint32_t>(barretenberg::fr::field_t::random_element().data[0]);
-}
-
 TEST(stdlib_bitarray, test_uint32_input_output_consistency)
 {
     waffle::BoolComposer composer = waffle::BoolComposer();
 
-    uint32_t a_expected = get_random_int();
-    uint32_t b_expected = get_random_int();
+    uint32_t a_expected = test_helpers::get_pseudorandom_uint32();
+    uint32_t b_expected = test_helpers::get_pseudorandom_uint32();
 
     uint32 a = witness_t(&composer, a_expected);
     uint32 b = witness_t(&composer, b_expected);
@@ -88,3 +86,4 @@ TEST(stdlib_bitarray, test_string_input_output_consistency)
 
     EXPECT_EQ(result, expected);
 }
+} // namespace test_stdlib_bitarray

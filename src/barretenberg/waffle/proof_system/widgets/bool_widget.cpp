@@ -159,15 +159,15 @@ VerifierBaseWidget::challenge_coefficients VerifierBoolWidget::append_scalar_mul
     fr::field_t output_bool_multiplier =
         (w_o_eval.sqr() - w_o_eval) * challenge.alpha_base * challenge.alpha_step.sqr() * challenge.linear_nu;
 
-    if (g1::on_curve(key->constraint_selectors.at("Q_BL"))) {
+    if (key->constraint_selectors.at("Q_BL").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_BL"));
         scalars.push_back(left_bool_multiplier);
     }
-    if (g1::on_curve(key->constraint_selectors.at("Q_BR"))) {
+    if (key->constraint_selectors.at("Q_BR").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_BR"));
         scalars.push_back(right_bool_multiplier);
     }
-    if (g1::on_curve(key->constraint_selectors.at("Q_BO"))) {
+    if (key->constraint_selectors.at("Q_BO").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_BO"));
         scalars.push_back(output_bool_multiplier);
     }

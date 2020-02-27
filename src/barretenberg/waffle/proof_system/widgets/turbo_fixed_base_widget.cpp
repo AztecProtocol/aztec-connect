@@ -127,7 +127,7 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
 
     // x-accumulator consistency check
     // ((x_2 + x_1 + x_alpha)(x_alpha - x_1)^2 - (y_alpha - y_1)^2).q_ecc = 0 mod Z_H
-    // we use the fact that y_alpha^2 = x_alpha^3 + grumpkin::g1::curve_b
+    // we use the fact that y_alpha^2 = x_alpha^3 + grumpkin::g1::element::curve_b
     fr::field_t x_alpha_minus_x_1 = w_3_fft[i + 4] - (w_1_fft[i]);
 
     T0 = y_alpha * w_2_fft[i];
@@ -138,7 +138,7 @@ fr::field_t ProverTurboFixedBaseWidget::compute_quotient_contribution(const barr
     T2 += w_3_fft[i + 4];                         // T2 = (x_2 + x_1 + x_alpha)
     T1 *= T2;
     T2 = w_2_fft[i].sqr(); // T1 = y_1^2
-    T2 += grumpkin::g1::curve_b;
+    T2 += grumpkin::g1::element::curve_b;
     fr::field_t x_accumulator_identity = T0 + T1;
     x_accumulator_identity -= T2;
     T0 = w_3_fft[i + 4].sqr(); // y_alpha^2 = x_alpha^3 + b
@@ -334,7 +334,7 @@ barretenberg::fr::field_t VerifierTurboFixedBaseWidget::compute_quotient_evaluat
     T1 = w_o_omega_eval.sqr() * w_o_omega_eval;
     T2 = w_r_eval.sqr();
     T1 = T1 + T2;
-    T1 = -(T1 + grumpkin::g1::curve_b);
+    T1 = -(T1 + grumpkin::g1::element::curve_b);
 
     T2 = delta * w_r_eval * q_ecc_1_eval;
     T2 = T2 + T2;
@@ -431,7 +431,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::field_t q_l_term_arith = w_l_eval * challenge.alpha_base * q_arith_eval;
 
     fr::field_t q_l_term = (q_l_term_arith + q_l_term_ecc) * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_1"))) {
+    if (key->constraint_selectors.at("Q_1").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_1"));
         scalars.push_back(q_l_term);
     }
@@ -441,7 +441,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::field_t q_r_term_arith = w_r_eval * challenge.alpha_base * q_arith_eval;
 
     fr::field_t q_r_term = (q_r_term_ecc + q_r_term_arith) * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_2"))) {
+    if (key->constraint_selectors.at("Q_2").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_2"));
         scalars.push_back(q_r_term);
     }
@@ -457,7 +457,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::field_t q_o_term_arith = w_o_eval * challenge.alpha_base * q_arith_eval;
 
     fr::field_t q_o_term = (q_o_term_ecc + q_o_term_arith) * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_3"))) {
+    if (key->constraint_selectors.at("Q_3").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_3"));
         scalars.push_back(q_o_term);
     }
@@ -467,7 +467,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::field_t q_4_term_arith = w_4_eval * challenge.alpha_base * q_arith_eval;
 
     fr::field_t q_4_term = (q_4_term_ecc + q_4_term_arith) * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_4"))) {
+    if (key->constraint_selectors.at("Q_4").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_4"));
         scalars.push_back(q_4_term);
     }
@@ -479,7 +479,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
                                  challenge.alpha_step * q_arith_eval;
 
     fr::field_t q_5_term = (q_5_term_ecc + q_5_term_arith) * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_5"))) {
+    if (key->constraint_selectors.at("Q_5").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_5"));
         scalars.push_back(q_5_term);
     }
@@ -490,13 +490,13 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
     fr::field_t q_m_term_arith = w_l_eval * w_r_eval * challenge.alpha_base * q_arith_eval;
 
     fr::field_t q_m_term = (q_m_term_ecc + q_m_term_arith) * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_M"))) {
+    if (key->constraint_selectors.at("Q_M").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_M"));
         scalars.push_back(q_m_term);
     }
 
     fr::field_t q_c_term = challenge.alpha_base * challenge.linear_nu * q_arith_eval;
-    if (g1::on_curve(key->constraint_selectors.at("Q_C"))) {
+    if (key->constraint_selectors.at("Q_C").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_C"));
 
         // TODO: ROLL ARITHMETIC EXPRESSION INVOLVING Q_C INTO BATCH EVALUATION OF T(X)
@@ -505,12 +505,12 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboFixedBaseWidget::append_
         scalars.push_back(q_c_term);
     }
 
-    if (g1::on_curve(key->constraint_selectors.at("Q_ARITHMETIC_SELECTOR"))) {
+    if (key->constraint_selectors.at("Q_ARITHMETIC_SELECTOR").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_ARITHMETIC_SELECTOR"));
         scalars.push_back(challenge.nu_base);
     }
 
-    if (g1::on_curve(key->constraint_selectors.at("Q_FIXED_BASE_SELECTOR"))) {
+    if (key->constraint_selectors.at("Q_FIXED_BASE_SELECTOR").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_FIXED_BASE_SELECTOR"));
         scalars.push_back((challenge.nu_base * challenge.nu_step));
     }

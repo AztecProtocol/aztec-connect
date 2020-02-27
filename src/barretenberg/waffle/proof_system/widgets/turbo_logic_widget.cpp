@@ -682,7 +682,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboLogicWidget::append_scal
     identity *= challenge.alpha_base;
     identity *= challenge.linear_nu;
 
-    if (g1::on_curve(key->constraint_selectors.at("Q_LOGIC_SELECTOR"))) {
+    if (key->constraint_selectors.at("Q_LOGIC_SELECTOR").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_LOGIC_SELECTOR"));
         scalars.push_back(identity);
     }

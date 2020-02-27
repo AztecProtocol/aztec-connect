@@ -6,12 +6,7 @@
 #include <iostream>
 #include <memory>
 
-namespace {
-uint32_t get_random_int()
-{
-    return static_cast<uint32_t>(barretenberg::fr::field_t::random_element().data[0]);
-}
-} // namespace
+
 
 
 TEST(misc_sha256, ror)

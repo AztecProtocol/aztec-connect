@@ -25,7 +25,7 @@ void generate_pippenger_point_table(g1::affine_element* points, g1::affine_eleme
 {
     // iterate backwards, so that `points` and `table` can point to the same memory location
     for (size_t i = num_points - 1; i < num_points; --i) {
-        g1::copy(&points[i], &table[i * 2]);
+        table[i * 2] = points[i];
         table[i * 2 + 1].x = fq::field_t::beta * points[i].x;
         table[i * 2 + 1].y = -points[i].y;
     }
@@ -284,7 +284,7 @@ inline g1::element scalar_multiplication_internal(multiplication_runtime_state& 
 #pragma omp parallel for
 #endif
     for (size_t j = 0; j < num_threads; ++j) {
-        g1::set_infinity(thread_accumulators[j]);
+        thread_accumulators[j].self_set_infinity();
 
         g1::element* thread_buckets = buckets + (j == 0 ? 0 : bucket_offsets[j - 1]);
         for (size_t i = 0; i < num_rounds; ++i) {
@@ -294,7 +294,7 @@ inline g1::element scalar_multiplication_internal(multiplication_runtime_state& 
             const size_t num_thread_buckets = (last_bucket - first_bucket) + 1;
 
             for (size_t k = 0; k < num_thread_buckets; ++k) {
-                g1::set_infinity(thread_buckets[k]);
+                thread_buckets[k].self_set_infinity();
             }
             multiplication_thread_state thread_state{ thread_buckets, thread_point_schedule };
 
@@ -302,8 +302,8 @@ inline g1::element scalar_multiplication_internal(multiplication_runtime_state& 
 
             g1::element running_sum;
             g1::element accumulator;
-            g1::set_infinity(running_sum);
-            g1::set_infinity(accumulator);
+            running_sum.self_set_infinity();
+            accumulator.self_set_infinity();
             for (size_t k = num_thread_buckets - 1; k > 0; --k) {
                 running_sum += thread_buckets[k];
                 accumulator += running_sum;
@@ -341,7 +341,7 @@ inline g1::element scalar_multiplication_internal(multiplication_runtime_state& 
                 g1::affine_element addition_temporary;
                 for (size_t k = 0; k < num_points_per_thread; ++k) {
                     if (skew_table[k]) {
-                        g1::__neg(point_table[k], addition_temporary);
+                        addition_temporary = -point_table[k];
                         accumulator += addition_temporary;
                     }
                 }
@@ -357,7 +357,7 @@ inline g1::element scalar_multiplication_internal(multiplication_runtime_state& 
     }
 
     g1::element result;
-    g1::set_infinity(result);
+    result.self_set_infinity();
     for (size_t i = 0; i < num_threads; ++i) {
         result += thread_accumulators[i];
     }
@@ -395,7 +395,7 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
 #pragma omp parallel for
 #endif
     for (size_t j = 0; j < num_threads; ++j) {
-        g1::set_infinity(thread_accumulators[j]);
+        thread_accumulators[j].self_set_infinity();
 
         for (size_t i = 0; i < num_rounds; ++i) {
             uint64_t* thread_point_schedule = &state.wnaf_table[(i * num_points) + j * num_points_per_thread];
@@ -413,8 +413,8 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
 
             g1::element running_sum;
             g1::element accumulator;
-            g1::set_infinity(running_sum);
-            g1::set_infinity(accumulator);
+            running_sum.self_set_infinity();
+            accumulator.self_set_infinity();
 
             // one nice side-effect of the affine trick, is that half of the bucket concatenation
             // algorithm can use mixed addition formulae, instead of full addition formulae
@@ -459,7 +459,7 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
                 g1::affine_element addition_temporary;
                 for (size_t k = 0; k < num_points_per_thread; ++k) {
                     if (skew_table[k]) {
-                        g1::__neg(point_table[k], addition_temporary);
+                        addition_temporary = -point_table[k];
                         accumulator += addition_temporary;
                     }
                 }
@@ -475,7 +475,7 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
     }
 
     g1::element result;
-    g1::set_infinity(result);
+    result.self_set_infinity();
     for (size_t i = 0; i < num_threads; ++i) {
         result += thread_accumulators[i];
     }
@@ -506,7 +506,7 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, c
 
     if (num_initial_points == 0) {
         g1::element out = g1::one;
-        g1::set_infinity(out);
+        out.self_set_infinity();
         return out;
     }
 
@@ -519,11 +519,10 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, c
 #endif
         for (size_t i = 0; i < num_initial_points; ++i) {
             exponentiation_results[i] = g1::element(points[i * 2]) * scalars[i];
-            // g1::group_exponentiation_inner((points[i * 2]), scalars[i]);
         }
 
         for (size_t i = num_initial_points - 1; i > 0; --i) {
-            g1::add(exponentiation_results[i - 1], exponentiation_results[i], exponentiation_results[i - 1]);
+            exponentiation_results[i - 1] += exponentiation_results[i];
         }
         return exponentiation_results[0];
     }
@@ -592,11 +591,9 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, c
     if ((1UL << log2_initial_points) == num_initial_points) {
         return result;
     } else {
-        g1::add(result,
-                pippenger(scalars + (1UL << log2_initial_points),
-                          points + (1UL << (log2_initial_points + 1)),
-                          num_initial_points - (1UL << log2_initial_points)),
-                result);
+        result += pippenger(scalars + (1UL << log2_initial_points),
+                            points + (1UL << (log2_initial_points + 1)),
+                            num_initial_points - (1UL << log2_initial_points));
         return result;
     }
 }
@@ -629,7 +626,7 @@ g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, c
 
     if (num_initial_points == 0) {
         g1::element out = g1::one;
-        g1::set_infinity(out);
+        out.self_set_infinity();
         return out;
     }
 
@@ -645,7 +642,7 @@ g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, c
         }
 
         for (size_t i = num_initial_points - 1; i > 0; --i) {
-            g1::add(exponentiation_results[i - 1], exponentiation_results[i], exponentiation_results[i - 1]);
+            exponentiation_results[i - 1] += exponentiation_results[i];
         }
         return exponentiation_results[0];
     }
@@ -714,11 +711,9 @@ g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, c
     if ((1UL << log2_initial_points) == num_initial_points) {
         return result;
     } else {
-        g1::add(result,
-                pippenger(scalars + (1UL << log2_initial_points),
-                          points + (1UL << (log2_initial_points + 1)),
-                          num_initial_points - (1UL << log2_initial_points)),
-                result);
+        result += pippenger(scalars + (1UL << log2_initial_points),
+                            points + (1UL << (log2_initial_points + 1)),
+                            num_initial_points - (1UL << log2_initial_points));
         return result;
     }
 }

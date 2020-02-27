@@ -17,23 +17,6 @@
 
 using namespace barretenberg;
 
-namespace {
-std::mt19937 engine;
-std::uniform_int_distribution<uint64_t> dist{ 0ULL, UINT64_MAX };
-
-const auto init = []() {
-    // std::random_device rd{};
-    std::seed_seq seed2{ 1, 2, 3, 4, 5, 6, 7, 8 };
-    engine = std::mt19937(seed2);
-    return 1;
-}();
-
-fr::field_t get_pseudorandom_element()
-{
-    return uint256_t(dist(engine), dist(engine), dist(engine), dist(engine));
-}
-} // namespace
-
 /*
 ```
 elliptic curve point addition on a short weierstrass curve.
@@ -95,7 +78,6 @@ using namespace waffle;
 
 namespace {
 
-
 TEST(test_public_inputs, compute_delta)
 {
     constexpr uint32_t circuit_size = 256;
@@ -110,7 +92,7 @@ TEST(test_public_inputs, compute_delta)
 
     fr::field_t work_root = fr::field_t::one;
     for (size_t i = 0; i < circuit_size; ++i) {
-        fr::field_t temp = get_pseudorandom_element();
+        fr::field_t temp = fr::field_t::random_element();
         left.push_back(temp);
         right.push_back(temp);
         sigma_1.push_back((fr::field_t::coset_generators[0] * work_root));
@@ -118,8 +100,8 @@ TEST(test_public_inputs, compute_delta)
         work_root = work_root * domain.root;
     }
 
-    fr::field_t beta = get_pseudorandom_element();
-    fr::field_t gamma = get_pseudorandom_element();
+    fr::field_t beta = fr::field_t::random_element();
+    fr::field_t gamma = fr::field_t::random_element();
     fr::field_t root = domain.root;
     const auto compute_grand_product = [root, beta, gamma](std::vector<fr::field_t>& left,
                                                            std::vector<fr::field_t>& right,

@@ -8,7 +8,7 @@
 #include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
 #include <memory>
 
-namespace {
+namespace verifier_helpers {
 
 transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
 {
@@ -60,10 +60,8 @@ waffle::Verifier generate_verifier(std::shared_ptr<proving_key> circuit_proving_
     commitments.resize(8);
 
     for (size_t i = 0; i < 8; ++i) {
-        g1::jacobian_to_affine(scalar_multiplication::pippenger(poly_coefficients[i],
-                                                                circuit_proving_key->reference_string.monomials,
-                                                                circuit_proving_key->n),
-                               commitments[i]);
+        commitments[i] = g1::affine_element(scalar_multiplication::pippenger(
+            poly_coefficients[i], circuit_proving_key->reference_string.monomials, circuit_proving_key->n));
     }
 
     std::shared_ptr<verification_key> circuit_verification_key =
@@ -264,15 +262,15 @@ waffle::Prover generate_test_data(const size_t n)
     state.widgets.emplace_back(std::move(widget));
     return state;
 }
-} // namespace
+} // namespace verifier_helpers
 
 TEST(verifier, verify_arithmetic_proof_small)
 {
     size_t n = 4;
 
-    waffle::Prover state = generate_test_data(n);
+    waffle::Prover state = verifier_helpers::generate_test_data(n);
 
-    waffle::Verifier verifier = generate_verifier(state.key);
+    waffle::Verifier verifier = verifier_helpers::generate_verifier(state.key);
 
     // construct proof
     waffle::plonk_proof proof = state.construct_proof();
@@ -287,9 +285,9 @@ TEST(verifier, verify_arithmetic_proof)
 {
     size_t n = 1 << 14;
 
-    waffle::Prover state = generate_test_data(n);
+    waffle::Prover state = verifier_helpers::generate_test_data(n);
 
-    waffle::Verifier verifier = generate_verifier(state.key);
+    waffle::Verifier verifier = verifier_helpers::generate_verifier(state.key);
 
     // construct proof
     waffle::plonk_proof proof = state.construct_proof();

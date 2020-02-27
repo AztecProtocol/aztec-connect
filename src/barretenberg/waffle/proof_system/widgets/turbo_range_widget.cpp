@@ -373,7 +373,7 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboRangeWidget::append_scal
 
     range_accumulator *= challenge.linear_nu;
 
-    if (g1::on_curve(key->constraint_selectors.at("Q_RANGE_SELECTOR"))) {
+    if (key->constraint_selectors.at("Q_RANGE_SELECTOR").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_RANGE_SELECTOR"));
         scalars.push_back(range_accumulator);
     }

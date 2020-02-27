@@ -25,7 +25,7 @@ inline std::vector<uint8_t> convert_field_elements(const std::vector<barretenber
 inline std::vector<uint8_t> convert_g1_element(const barretenberg::g1::affine_element& ele)
 {
     std::vector<uint8_t> buffer(sizeof(barretenberg::g1::affine_element));
-    barretenberg::g1::serialize_to_buffer(ele, &buffer[0]);
+    barretenberg::g1::affine_element::serialize_to_buffer(ele, &buffer[0]);
     return buffer;
 }
 

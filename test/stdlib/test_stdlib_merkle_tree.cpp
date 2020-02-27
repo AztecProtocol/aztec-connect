@@ -16,6 +16,7 @@
 
 #include <memory>
 
+namespace test_stdlib_merkle_tree {
 using namespace barretenberg;
 using namespace plonk;
 
@@ -361,3 +362,5 @@ TEST(stdlib_merkle_tree, test_update_members)
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }
+
+} // namespace test_stdlib_merkle_tree

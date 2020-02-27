@@ -151,7 +151,7 @@ VerifierBaseWidget::challenge_coefficients VerifierMiMCWidget::append_scalar_mul
     std::vector<barretenberg::g1::affine_element>& points,
     std::vector<barretenberg::fr::field_t>& scalars)
 {
-    if (g1::on_curve(key->constraint_selectors.at("Q_MIMC_COEFFICIENT"))) {
+    if (key->constraint_selectors.at("Q_MIMC_COEFFICIENT").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_MIMC_COEFFICIENT"));
         scalars.push_back(challenge.nu_base);
     }
@@ -167,7 +167,7 @@ VerifierBaseWidget::challenge_coefficients VerifierMiMCWidget::append_scalar_mul
         ((w_r_eval.sqr() * mimc_T0 - w_o_shifted_eval) * challenge.alpha_step + mimc_a) * challenge.alpha_base;
     q_mimc_term = q_mimc_term * challenge.linear_nu;
 
-    if (g1::on_curve(key->constraint_selectors.at("Q_MIMC_SELECTOR"))) {
+    if (key->constraint_selectors.at("Q_MIMC_SELECTOR").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_MIMC_SELECTOR"));
         scalars.push_back(q_mimc_term);
     }

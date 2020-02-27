@@ -15,31 +15,9 @@
 #include <random>
 #include <stdio.h>
 
+#include "../test_helpers.hpp"
+
 using namespace barretenberg;
-
-namespace {
-uint32_t get_random_int()
-{
-    return static_cast<uint32_t>(barretenberg::fr::field_t::random_element().data[0]);
-}
-} // namespace
-
-namespace {
-std::mt19937 engine;
-std::uniform_int_distribution<uint32_t> dist{ 0ULL, UINT32_MAX };
-
-const auto init = []() {
-    // std::random_device rd{};
-    std::seed_seq seed2{ 1, 2, 3, 4, 5, 6, 7, 8 };
-    engine = std::mt19937(seed2);
-    return 1;
-}();
-
-uint32_t get_pseudorandom_uint32()
-{
-    return dist(engine);
-}
-} // namespace
 
 TEST(turbo_composer, base_case)
 {
@@ -267,9 +245,9 @@ TEST(turbo_composer, small_scalar_multipliers)
     grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(0);
 
     grumpkin::g1::element origin_points[2];
-    grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
+    origin_points[0] = grumpkin::g1::element(ladder[0].one);
     origin_points[1] = origin_points[0] + generator;
-    origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
+    origin_points[1] = origin_points[1].normalize();
 
     grumpkin::fr::field_t scalar_multiplier_entropy = grumpkin::fr::field_t::random_element();
     grumpkin::fr::field_t scalar_multiplier_base{ scalar_multiplier_entropy.data[0] & bit_mask, 0, 0, 0 };
@@ -312,13 +290,13 @@ TEST(turbo_composer, small_scalar_multipliers)
         fr::field_t scalar_to_add = (entry == 1) ? three : one;
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
         if (predicate) {
-            grumpkin::g1::__neg(point_to_add, point_to_add);
+            point_to_add = -point_to_add;
             scalar_to_add.self_neg();
         }
         accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
-        grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
+        multiplication_transcript[i + 1] = multiplication_transcript[i] + point_to_add;
     }
-    grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
+    grumpkin::g1::element::batch_normalize(&multiplication_transcript[0], num_quads + 1);
 
     waffle::fixed_group_init_quad init_quad{ origin_points[0].x,
                                              (origin_points[0].x - origin_points[1].x),
@@ -362,8 +340,8 @@ TEST(turbo_composer, small_scalar_multipliers)
                                fr::field_t::zero };
     composer.create_big_add_gate(add_quad);
 
-    grumpkin::g1::element expected_point = grumpkin::g1::normalize(
-        grumpkin::g1::group_exponentiation_inner(generator, scalar_multiplier.to_montgomery_form()));
+    grumpkin::g1::element expected_point =
+        grumpkin::g1::element(generator * scalar_multiplier.to_montgomery_form()).normalize();
     EXPECT_EQ((multiplication_transcript[num_quads].x == expected_point.x), true);
     EXPECT_EQ((multiplication_transcript[num_quads].y == expected_point.y), true);
 
@@ -400,9 +378,9 @@ TEST(turbo_composer, large_scalar_multipliers)
     grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(0);
 
     grumpkin::g1::element origin_points[2];
-    grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
+    origin_points[0] = grumpkin::g1::element(ladder[0].one);
     origin_points[1] = origin_points[0] + generator;
-    origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
+    origin_points[1] = origin_points[1].normalize();
 
     grumpkin::fr::field_t scalar_multiplier_base = grumpkin::fr::field_t::random_element();
 
@@ -446,13 +424,13 @@ TEST(turbo_composer, large_scalar_multipliers)
         fr::field_t scalar_to_add = (entry == 1) ? three : one;
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
         if (predicate) {
-            grumpkin::g1::__neg(point_to_add, point_to_add);
+            point_to_add = -point_to_add;
             scalar_to_add.self_neg();
         }
         accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
-        grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
+        multiplication_transcript[i + 1] = multiplication_transcript[i] + point_to_add;
     }
-    grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
+    grumpkin::g1::element::batch_normalize(&multiplication_transcript[0], num_quads + 1);
 
     waffle::fixed_group_init_quad init_quad{ origin_points[0].x,
                                              (origin_points[0].x - origin_points[1].x),
@@ -496,8 +474,8 @@ TEST(turbo_composer, large_scalar_multipliers)
                                fr::field_t::zero };
     composer.create_big_add_gate(add_quad);
 
-    grumpkin::g1::element expected_point = grumpkin::g1::normalize(
-        grumpkin::g1::group_exponentiation_inner(generator, scalar_multiplier.to_montgomery_form()));
+    grumpkin::g1::element expected_point =
+        grumpkin::g1::element(generator * scalar_multiplier.to_montgomery_form()).normalize();
     EXPECT_EQ((multiplication_transcript[num_quads].x == expected_point.x), true);
     EXPECT_EQ((multiplication_transcript[num_quads].y == expected_point.y), true);
 
@@ -531,7 +509,7 @@ TEST(turbo_composer, range_constraint)
     waffle::TurboComposer composer = waffle::TurboComposer();
 
     for (size_t i = 0; i < 10; ++i) {
-        uint32_t value = get_random_int();
+        uint32_t value = test_helpers::get_pseudorandom_uint32();
         fr::field_t witness_value = fr::field_t{ value, 0, 0, 0 }.to_montgomery_form();
         uint32_t witness_index = composer.add_variable(witness_value);
 
@@ -581,12 +559,12 @@ TEST(turbo_composer, and_constraint)
     waffle::TurboComposer composer = waffle::TurboComposer();
 
     for (size_t i = 0; i < /*10*/ 1; ++i) {
-        uint32_t left_value = get_random_int();
+        uint32_t left_value = test_helpers::get_pseudorandom_uint32();
 
         fr::field_t left_witness_value = fr::field_t{ left_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t left_witness_index = composer.add_variable(left_witness_value);
 
-        uint32_t right_value = get_random_int();
+        uint32_t right_value = test_helpers::get_pseudorandom_uint32();
         fr::field_t right_witness_value = fr::field_t{ right_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t right_witness_index = composer.add_variable(right_witness_value);
 
@@ -662,12 +640,12 @@ TEST(turbo_composer, xor_constraint)
     waffle::TurboComposer composer = waffle::TurboComposer();
 
     for (size_t i = 0; i < /*10*/ 1; ++i) {
-        uint32_t left_value = get_random_int();
+        uint32_t left_value = test_helpers::get_pseudorandom_uint32();
 
         fr::field_t left_witness_value = fr::field_t{ left_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t left_witness_index = composer.add_variable(left_witness_value);
 
-        uint32_t right_value = get_random_int();
+        uint32_t right_value = test_helpers::get_pseudorandom_uint32();
         fr::field_t right_witness_value = fr::field_t{ right_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t right_witness_index = composer.add_variable(right_witness_value);
 
@@ -743,13 +721,13 @@ TEST(turbo_composer, big_add_gate_with_bit_extract)
 
     const auto generate_constraints = [&composer](uint32_t quad_value) {
         uint32_t quad_accumulator_left =
-            (get_pseudorandom_uint32() & 0x3fffffff) - quad_value; // make sure this won't overflow
+            (test_helpers::get_pseudorandom_uint32() & 0x3fffffff) - quad_value; // make sure this won't overflow
         uint32_t quad_accumulator_right = (4 * quad_accumulator_left) + quad_value;
 
         uint32_t left_idx = composer.add_variable(uint256_t(quad_accumulator_left));
         uint32_t right_idx = composer.add_variable(uint256_t(quad_accumulator_right));
 
-        uint32_t input = get_pseudorandom_uint32();
+        uint32_t input = test_helpers::get_pseudorandom_uint32();
         uint32_t output = input + (quad_value > 1 ? 1 : 0);
 
         waffle::add_quad gate{ composer.add_variable(uint256_t(input)),

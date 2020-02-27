@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
+#include "stddef.h"
+#include "stdint.h"
+#include "stdlib.h"
 
 #ifdef _WIN32
 #include "./portability/win32.hpp"

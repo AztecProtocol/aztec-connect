@@ -11,24 +11,9 @@
 #include <memory>
 #include <random>
 
+#include "../test_helpers.hpp"
+
 using namespace barretenberg;
-
-namespace {
-std::mt19937 engine;
-std::uniform_int_distribution<uint32_t> dist{ 0ULL, UINT32_MAX };
-
-const auto init = []() {
-    // std::random_device rd{};
-    std::seed_seq seed2{ 1, 2, 3, 4, 5, 6, 7, 8 };
-    engine = std::mt19937(seed2);
-    return 1;
-}();
-
-uint32_t get_pseudorandom_uint32()
-{
-    return dist(engine);
-}
-} // namespace
 
 TEST(standard_composer, test_add_gate_proofs)
 {
@@ -206,7 +191,7 @@ TEST(standard_composer, range_constraint)
     waffle::StandardComposer composer = waffle::StandardComposer();
 
     for (size_t i = 0; i < 10; ++i) {
-        uint32_t value = get_pseudorandom_uint32();
+        uint32_t value = test_helpers::get_pseudorandom_uint32();
         fr::field_t witness_value = fr::field_t{ value, 0, 0, 0 }.to_montgomery_form();
         uint32_t witness_index = composer.add_variable(witness_value);
 
@@ -256,12 +241,12 @@ TEST(standard_composer, and_constraint)
     waffle::StandardComposer composer = waffle::StandardComposer();
 
     for (size_t i = 0; i < /*10*/ 1; ++i) {
-        uint32_t left_value = get_pseudorandom_uint32();
+        uint32_t left_value = test_helpers::get_pseudorandom_uint32();
 
         fr::field_t left_witness_value = fr::field_t{ left_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t left_witness_index = composer.add_variable(left_witness_value);
 
-        uint32_t right_value = get_pseudorandom_uint32();
+        uint32_t right_value = test_helpers::get_pseudorandom_uint32();
         fr::field_t right_witness_value = fr::field_t{ right_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t right_witness_index = composer.add_variable(right_witness_value);
 
@@ -337,12 +322,12 @@ TEST(standard_composer, xor_constraint)
     waffle::StandardComposer composer = waffle::StandardComposer();
 
     for (size_t i = 0; i < /*10*/ 1; ++i) {
-        uint32_t left_value = get_pseudorandom_uint32();
+        uint32_t left_value = test_helpers::get_pseudorandom_uint32();
 
         fr::field_t left_witness_value = fr::field_t{ left_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t left_witness_index = composer.add_variable(left_witness_value);
 
-        uint32_t right_value = get_pseudorandom_uint32();
+        uint32_t right_value = test_helpers::get_pseudorandom_uint32();
         fr::field_t right_witness_value = fr::field_t{ right_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t right_witness_index = composer.add_variable(right_witness_value);
 
@@ -418,13 +403,13 @@ TEST(standard_composer, big_add_gate_with_bit_extract)
 
     const auto generate_constraints = [&composer](uint32_t quad_value) {
         uint32_t quad_accumulator_left =
-            (get_pseudorandom_uint32() & 0x3fffffff) - quad_value; // make sure this won't overflow
+            (test_helpers::get_pseudorandom_uint32() & 0x3fffffff) - quad_value; // make sure this won't overflow
         uint32_t quad_accumulator_right = (4 * quad_accumulator_left) + quad_value;
 
         uint32_t left_idx = composer.add_variable(uint256_t(quad_accumulator_left));
         uint32_t right_idx = composer.add_variable(uint256_t(quad_accumulator_right));
 
-        uint32_t input = get_pseudorandom_uint32();
+        uint32_t input = test_helpers::get_pseudorandom_uint32();
         uint32_t output = input + (quad_value > 1 ? 1 : 0);
 
         waffle::add_quad gate{ composer.add_variable(uint256_t(input)),

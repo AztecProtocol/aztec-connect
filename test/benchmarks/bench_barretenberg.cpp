@@ -70,10 +70,10 @@ void generate_scalars(fr::field_t* scalars)
 
 void generate_pairing_points(g1::affine_element* p1s, g2::affine_element* p2s)
 {
-    p1s[0] = g1::random_affine_element();
-    p1s[1] = g1::random_affine_element();
-    p2s[0] = g2::random_affine_element();
-    p2s[1] = g2::random_affine_element();
+    p1s[0] = g1::affine_element(g1::element::random_element());
+    p1s[1] = g1::affine_element(g1::element::random_element());
+    p2s[0] = g2::affine_element(g2::element::random_element());
+    p2s[1] = g2::affine_element(g2::element::random_element());
 }
 
 constexpr size_t MAX_ROUNDS = 9;
@@ -197,7 +197,7 @@ void new_plonk_scalar_multiplications_bench(State& state) noexcept
         count += (after - before);
         ++k;
         g1::element out;
-        g1::set_infinity(out);
+        out.self_set_infinity();
         out = a + out;
         out = b + out;
         out = c + out;
@@ -290,8 +290,8 @@ void add_bench(State& state) noexcept
 {
     uint64_t count = 0;
     uint64_t j = 0;
-    g1::element a = g1::random_element();
-    g1::element b = g1::random_element();
+    g1::element a = g1::element::random_element();
+    g1::element b = g1::element::random_element();
     for (auto _ : state) {
         uint64_t before = rdtsc();
         for (size_t i = 0; i < NUM_G1_ADDITIONS; ++i) {
@@ -309,8 +309,8 @@ void mixed_add_bench(State& state) noexcept
 {
     uint64_t count = 0;
     uint64_t j = 0;
-    g1::element a = g1::random_element();
-    g1::affine_element b = g1::random_affine_element();
+    g1::element a = g1::element::random_element();
+    g1::affine_element b = g1::affine_element(g1::element::random_element());
     for (auto _ : state) {
         uint64_t before = rdtsc();
         for (size_t i = 0; i < NUM_G1_ADDITIONS; ++i) {

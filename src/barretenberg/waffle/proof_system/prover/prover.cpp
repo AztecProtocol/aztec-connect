@@ -80,7 +80,7 @@ template <typename settings> void ProverBase<settings>::compute_wire_commitments
             witness->wires.at(wire_tag).get_coefficients(), key->reference_string.monomials, n);
     }
 
-    g1::batch_normalize(&W[0], settings::program_width);
+    g1::element::batch_normalize(&W[0], settings::program_width);
 
     for (size_t i = 0; i < settings::program_width; ++i) {
         g1::affine_element W_affine;
@@ -107,7 +107,7 @@ template <typename settings> void ProverBase<settings>::compute_z_commitment()
     g1::element Z = barretenberg::scalar_multiplication::pippenger_unsafe(
         key->z.get_coefficients(), key->reference_string.monomials, n);
     g1::affine_element Z_affine;
-    g1::jacobian_to_affine(Z, Z_affine);
+    Z_affine = g1::affine_element(Z);
 
     transcript.add_element("Z", transcript_helpers::convert_g1_element(Z_affine));
     transcript.apply_fiat_shamir("alpha");
@@ -122,7 +122,7 @@ template <typename settings> void ProverBase<settings>::compute_quotient_commitm
             &key->quotient_large.get_coefficients()[offset], key->reference_string.monomials, n);
     }
 
-    g1::batch_normalize(&T[0], settings::program_width);
+    g1::element::batch_normalize(&T[0], settings::program_width);
 
     for (size_t i = 0; i < settings::program_width; ++i) {
         g1::affine_element T_affine;
@@ -763,8 +763,8 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
     g1::affine_element PI_Z_affine;
     g1::affine_element PI_Z_OMEGA_affine;
 
-    g1::jacobian_to_affine(PI_Z, PI_Z_affine);
-    g1::jacobian_to_affine(PI_Z_OMEGA, PI_Z_OMEGA_affine);
+    PI_Z_affine = g1::affine_element(PI_Z);
+    PI_Z_OMEGA_affine = g1::affine_element(PI_Z_OMEGA);
 #ifdef DEBUG_TIMING
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

@@ -18,16 +18,16 @@ TEST(io, read_transcript_loads_well_formed_srs)
 
     g1::affine_element P[2];
     g2::affine_element Q[2];
-    g1::copy_affine(monomials[1], P[0]);
-    g1::copy_affine(g1::affine_one, P[1]);
+    P[0] = monomials[1];
+    P[1] = g1::affine_one;
     P[0].y.self_neg();
-    g2::copy_affine(g2::affine_one, Q[0]);
-    g2::copy_affine(g2_x, Q[1]);
+    Q[0] = g2::affine_one;
+    Q[1] = g2_x;
     fq12::field_t res = pairing::reduced_ate_pairing_batch(P, Q, 2);
 
     EXPECT_EQ(res, fq12::field_t::one);
     for (size_t i = 0; i < degree; ++i) {
-        EXPECT_EQ(g1::on_curve(monomials[i]), true);
+        EXPECT_EQ(monomials[i].on_curve(), true);
     }
     aligned_free(monomials);
 }

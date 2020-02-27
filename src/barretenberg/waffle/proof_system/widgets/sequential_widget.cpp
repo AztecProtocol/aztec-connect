@@ -107,7 +107,7 @@ VerifierBaseWidget::challenge_coefficients VerifierSequentialWidget::append_scal
     q_o_next_term = w_o_shifted_eval * old_alpha;
     q_o_next_term *= challenge.linear_nu;
 
-    if (g1::on_curve(key->constraint_selectors.at("Q_3_NEXT"))) {
+    if (key->constraint_selectors.at("Q_3_NEXT").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_3_NEXT"));
         scalars.push_back(q_o_next_term);
     }

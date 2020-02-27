@@ -45,14 +45,14 @@ void compute_fixed_base_ladder(const grumpkin::g1::affine_element& generator, fi
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (quad_length * 2)));
 
     grumpkin::g1::element accumulator;
-    grumpkin::g1::affine_to_jacobian(generator, accumulator);
+    accumulator = grumpkin::g1::element(generator);
     for (size_t i = 0; i < quad_length; ++i) {
         ladder_temp[i] = accumulator;
         accumulator.self_dbl();
-        grumpkin::g1::add(accumulator, ladder_temp[i], ladder_temp[quad_length + i]);
+        ladder_temp[quad_length + i] = ladder_temp[i] + accumulator;
         accumulator.self_dbl();
     }
-    grumpkin::g1::batch_normalize(&ladder_temp[0], quad_length * 2);
+    grumpkin::g1::element::batch_normalize(&ladder_temp[0], quad_length * 2);
     for (size_t i = 0; i < quad_length; ++i) {
         grumpkin::fq::field_t::__copy(ladder_temp[i].x, ladder[quad_length - 1 - i].one.x);
         grumpkin::fq::field_t::__copy(ladder_temp[i].y, ladder[quad_length - 1 - i].one.y);
@@ -158,10 +158,9 @@ grumpkin::g1::element hash_single(const barretenberg::fr::field_t& in, const siz
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
     grumpkin::g1::element accumulator;
-    grumpkin::g1::affine_to_jacobian(ladder[0].one, accumulator);
+    accumulator = grumpkin::g1::element(ladder[0].one);
     if (skew) {
-        grumpkin::g1::mixed_add(
-            accumulator, plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1), accumulator);
+        accumulator += plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1);
     }
 
     for (size_t i = 0; i < num_quads; ++i) {
@@ -187,14 +186,14 @@ grumpkin::fq::field_t compress_native(const grumpkin::fq::field_t& left, const g
     }
     grumpkin::g1::element r;
     r = out[0] + out[1];
-    r = grumpkin::g1::normalize(r);
+    r = r.normalize();
     return r.x;
 #else
     grumpkin::g1::element r;
     grumpkin::g1::element first = hash_single(left, 0);
     grumpkin::g1::element second = hash_single(right, 1);
     r = first + second;
-    r = grumpkin::g1::normalize(r);
+    r = r.normalize();
     return r.x;
 #endif
 }

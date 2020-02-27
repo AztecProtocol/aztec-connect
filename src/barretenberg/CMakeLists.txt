@@ -23,14 +23,8 @@ endif()
 
 add_library(
     barretenberg STATIC
-    types.hpp
-    uint256/uint256_impl.hpp
-    uint256/uint256.hpp
     uint256/uint512_impl.hpp
     uint256/uint512.hpp
-    fields/field_impl_generic.hpp
-    fields/field_impl_x64.hpp
-    fields/field.hpp
     fields/field2_impl.hpp
     fields/field2.hpp
     fields/field6.hpp
@@ -136,7 +130,7 @@ add_library(
     waffle/stdlib/uint/comparison.cpp
     waffle/stdlib/uint/uint.cpp
     waffle/stdlib/uint/uint.hpp
-    waffle/stdlib/uint/noir_uint.hpp
+#    waffle/stdlib/uint/noir_uint.hpp
     waffle/stdlib/uint32/uint32.hpp
     waffle/stdlib/bitarray/bitarray.cpp
     waffle/stdlib/bitarray/bitarray.hpp
@@ -160,26 +154,42 @@ add_library(
     waffle/stdlib/crypto/schnorr/schnorr.hpp
     waffle/stdlib/crypto/commitment/pedersen_note.cpp
     waffle/stdlib/crypto/commitment/pedersen_note.hpp
-    noir/expression.cpp
-    noir/statement.cpp
-    noir/printer.cpp
-    noir/parse.cpp
-    noir/compiler/compiler.cpp
-    noir/compiler/function_statement_visitor.cpp
-    noir/compiler/expression_visitor.cpp
-    noir/compiler/function_call.cpp
-    noir/compiler/symbol_table.cpp
+#    noir/expression.cpp
+#    noir/statement.cpp
+#    noir/printer.cpp
+#    noir/parse.cpp
+#    noir/compiler/compiler.cpp
+#    noir/compiler/function_statement_visitor.cpp
+#    noir/compiler/expression_visitor.cpp
+#    noir/compiler/function_call.cpp
+#    noir/compiler/symbol_table.cpp
+)
+
+target_precompile_headers(
+    barretenberg
+    PUBLIC
+    "$<$<COMPILE_LANGUAGE:CXX>:<random$<ANGLE-R>>"
+    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/assert.hpp">
+    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/portability/win32.hpp">
+    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/portability/apple.hpp">
+    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/portability/linux.hpp">
+    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/types.hpp">
+    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/utils.hpp">
+    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/uint256/uint256.hpp">
+    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/uint256/uint256_impl.hpp">
+    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/fields/asm_macros.hpp">
+    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/fields/field.hpp">
+    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/fields/field_impl_generic.hpp">
+    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/fields/field_impl_x64.hpp">
 )
 
 target_include_directories(
     barretenberg
     SYSTEM PRIVATE
-        ${private_include_dir}/boost
 )
-
+#         ${private_include_dir}/boost
 set_target_properties(
     barretenberg
-
     PROPERTIES
     LINKER_LANGUAGE CXX
 )
@@ -189,6 +199,10 @@ target_link_libraries(
     PRIVATE
     leveldb
 )
+
+
+message(STATUS "current source dir = ${CMAKE_CURRENT_SOURCE_DIR}")
+
 
 if(PROFILING)
     add_executable(
@@ -309,7 +323,7 @@ if(PROFILING)
         waffle/stdlib/uint/comparison.cpp
         waffle/stdlib/uint/uint.cpp
         waffle/stdlib/uint/uint.hpp
-        waffle/stdlib/uint/noir_uint.hpp
+#        waffle/stdlib/uint/noir_uint.hpp
         waffle/stdlib/bitarray/bitarray.cpp
         waffle/stdlib/bitarray/bitarray.hpp
         waffle/stdlib/byte_array/byte_array.cpp

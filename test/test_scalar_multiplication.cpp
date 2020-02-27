@@ -164,7 +164,7 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     }
     std::array<g1::element, num_points> expected;
     for (size_t i = 0; i < num_points; ++i) {
-        g1::set_infinity(expected[i]);
+        expected[i].self_set_infinity();
     }
 
     for (size_t i = 0; i < num_points; ++i) {
@@ -190,7 +190,7 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     g1::affine_element* output = scalar_multiplication::reduce_buckets(product_state, true);
 
     for (size_t i = 0; i < product_state.num_buckets; ++i) {
-        expected[i] = g1::normalize(expected[i]);
+        expected[i] = expected[i].normalize();
         EXPECT_EQ((output[i].x == expected[i].x), true);
         EXPECT_EQ((output[i].y == expected[i].y), true);
     }
@@ -280,7 +280,7 @@ TEST(scalar_multiplication, reduce_buckets)
     std::cout << "scalar mul: " << diff.count() << "ms" << std::endl;
 
     for (size_t i = 0; i < num_points; ++i) {
-        g1::set_infinity(expected_buckets[i]);
+        expected_buckets[i].self_set_infinity();
     }
     for (size_t i = 0; i < num_points; ++i) {
         uint64_t schedule = point_schedule_copy[i];
@@ -294,17 +294,13 @@ TEST(scalar_multiplication, reduce_buckets)
     }
 
     size_t it = 0;
-    for (size_t i = 0; i < num_buckets; ++i) {
-        if (g1::is_point_at_infinity(expected_buckets[i])) {
-            printf("OUTPUT[%lu] IS POINT AT INFINITY!", i);
-        }
-    }
+
     g1::affine_element* result_buckets = scalar_multiplication::reduce_buckets(product_state, true);
 
     printf("num buckets = %lu \n", num_buckets);
     for (size_t i = 0; i < num_buckets; ++i) {
         if (!bucket_empty_status[i]) {
-            g1::element expected = g1::normalize(expected_buckets[i]);
+            g1::element expected = expected_buckets[i].normalize();
             EXPECT_EQ((expected.x == result_buckets[it].x), true);
             EXPECT_EQ((expected.y == result_buckets[it].y), true);
             ++it;
@@ -409,7 +405,7 @@ TEST(scalar_multiplication, add_affine_points)
 
     g1::element* points_copy = (g1::element*)(aligned_alloc(64, sizeof(g1::element) * (num_points)));
     for (size_t i = 0; i < num_points; ++i) {
-        points[i] = g1::random_affine_element();
+        points[i] = g1::affine_element(g1::element::random_element());
         points_copy[i].x = points[i].x;
         points_copy[i].y = points[i].y;
         points_copy[i].z = fq::field_t::one;
@@ -417,8 +413,8 @@ TEST(scalar_multiplication, add_affine_points)
 
     size_t count = num_points - 1;
     for (size_t i = num_points - 2; i < num_points; i -= 2) {
-        g1::add(points_copy[i], points_copy[i + 1], points_copy[count--]);
-        points_copy[count + 1] = g1::normalize(points_copy[count + 1]);
+        points_copy[count--] = points_copy[i] + points_copy[i + 1];
+        points_copy[count + 1] = points_copy[count + 1].normalize();
     }
 
     scalar_multiplication::add_affine_points(points, num_points, scratch_space);
@@ -545,7 +541,7 @@ TEST(scalar_multiplication, endomorphism_split)
 {
     fr::field_t scalar = fr::field_t::random_element();
 
-    g1::element expected = g1::group_exponentiation_inner(g1::affine_one, scalar);
+    g1::element expected = g1::one * scalar;
 
     // we want to test that we can split a scalar into two half-length components, using the same location in memory.
     fr::field_t* k1_t = &scalar;
@@ -557,14 +553,14 @@ TEST(scalar_multiplication, endomorphism_split)
     fr::field_t k2{ (*k2_t).data[0], (*k2_t).data[1], 0, 0 };
 
     g1::element result;
-    g1::element t1 = g1::group_exponentiation_inner(g1::affine_one, k1);
+    g1::element t1 = g1::affine_one * k1;
     g1::affine_element beta = g1::affine_one;
     beta.x = beta.x * fq::field_t::beta;
     beta.y = -beta.y;
-    g1::element t2 = g1::group_exponentiation_inner(beta, k2);
+    g1::element t2 = beta * k2;
     result = t1 + t2;
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(scalar_multiplication, radix_sort)
@@ -636,14 +632,14 @@ TEST(scalar_multiplication, oversized_inputs)
     }
 
     g1::element first = scalar_multiplication::pippenger(scalars, monomials, target_degree);
-    first = g1::normalize(first);
+    first = first.normalize();
 
     for (size_t i = 0; i < target_degree; ++i) {
         scalars[i].self_neg();
     }
 
     g1::element second = scalar_multiplication::pippenger(scalars, monomials, target_degree);
-    second = g1::normalize(second);
+    second = second.normalize();
 
     EXPECT_EQ((first.z == second.z), true);
     EXPECT_EQ((first.z == fq::field_t::one), true);
@@ -667,25 +663,25 @@ TEST(scalar_multiplication, undersized_inputs)
 
     for (size_t i = 0; i < num_points; ++i) {
         scalars[i] = fr::field_t::random_element();
-        points[i] = g1::random_affine_element();
+        points[i] = g1::affine_element(g1::element::random_element());
     }
 
     g1::element expected;
-    g1::set_infinity(expected);
+    expected.self_set_infinity();
     for (size_t i = 0; i < num_points; ++i) {
-        g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
+        g1::element temp = points[i] * scalars[i];
         expected += temp;
     }
-    expected = g1::normalize(expected);
+    expected = expected.normalize();
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
 
     g1::element result = scalar_multiplication::pippenger(scalars, points, num_points);
-    result = g1::normalize(result);
+    result = result.normalize();
 
     aligned_free(scalars);
     aligned_free(points);
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(scalar_multiplication, pippenger)
@@ -699,25 +695,25 @@ TEST(scalar_multiplication, pippenger)
 
     for (size_t i = 0; i < num_points; ++i) {
         scalars[i] = fr::field_t::random_element();
-        points[i] = g1::random_affine_element();
+        points[i] = g1::affine_element(g1::element::random_element());
     }
 
     g1::element expected;
-    g1::set_infinity(expected);
+    expected.self_set_infinity();
     for (size_t i = 0; i < num_points; ++i) {
-        g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
+        g1::element temp = points[i] * scalars[i];
         expected += temp;
     }
-    expected = g1::normalize(expected);
+    expected = expected.normalize();
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
 
     g1::element result = scalar_multiplication::pippenger(scalars, points, num_points);
-    result = g1::normalize(result);
+    result = result.normalize();
 
     aligned_free(scalars);
     aligned_free(points);
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(scalar_multiplication, pippenger_unsafe)
@@ -731,25 +727,25 @@ TEST(scalar_multiplication, pippenger_unsafe)
 
     for (size_t i = 0; i < num_points; ++i) {
         scalars[i] = fr::field_t::random_element();
-        points[i] = g1::random_affine_element();
+        points[i] = g1::affine_element(g1::element::random_element());
     }
 
     g1::element expected;
-    g1::set_infinity(expected);
+    expected.self_set_infinity();
     for (size_t i = 0; i < num_points; ++i) {
-        g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
+        g1::element temp = points[i] * scalars[i];
         expected += temp;
     }
-    expected = g1::normalize(expected);
+    expected = expected.normalize();
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
 
     g1::element result = scalar_multiplication::pippenger_unsafe(scalars, points, num_points);
-    result = g1::normalize(result);
+    result = result.normalize();
 
     aligned_free(scalars);
     aligned_free(points);
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(scalar_multiplication, pippenger_one)
@@ -763,25 +759,25 @@ TEST(scalar_multiplication, pippenger_one)
 
     for (size_t i = 0; i < num_points; ++i) {
         scalars[i] = fr::field_t::random_element();
-        points[i] = g1::random_affine_element();
+        points[i] = g1::affine_element(g1::element::random_element());
     }
 
     g1::element expected;
-    g1::set_infinity(expected);
+    expected.self_set_infinity();
     for (size_t i = 0; i < num_points; ++i) {
-        g1::element temp = g1::group_exponentiation_inner(points[i], scalars[i]);
+        g1::element temp = points[i] * scalars[i];
         expected += temp;
     }
-    expected = g1::normalize(expected);
+    expected = expected.normalize();
     scalar_multiplication::generate_pippenger_point_table(points, points, num_points);
 
     g1::element result = scalar_multiplication::pippenger(scalars, points, num_points);
-    result = g1::normalize(result);
+    result = result.normalize();
 
     aligned_free(scalars);
     aligned_free(points);
 
-    EXPECT_EQ(g1::eq(result, expected), true);
+    EXPECT_EQ(result == expected, true);
 }
 
 TEST(scalar_multiplication, pippenger_zero_points)
@@ -791,7 +787,7 @@ TEST(scalar_multiplication, pippenger_zero_points)
     g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 2 + 1);
 
     g1::element result = scalar_multiplication::pippenger(scalars, points, 0);
-    EXPECT_EQ(g1::is_point_at_infinity(result), true);
+    EXPECT_EQ(result.is_point_at_infinity(), true);
 }
 
 TEST(scalar_multiplication, pippenger_mul_by_zero)
@@ -805,5 +801,5 @@ TEST(scalar_multiplication, pippenger_mul_by_zero)
     scalar_multiplication::generate_pippenger_point_table(points, points, 1);
 
     g1::element result = scalar_multiplication::pippenger(scalars, points, 1);
-    EXPECT_EQ(g1::is_point_at_infinity(result), true);
+    EXPECT_EQ(result.is_point_at_infinity(), true);
 }

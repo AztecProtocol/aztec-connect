@@ -48,7 +48,7 @@ constexpr element<Fq, Fr, T>& element<Fq, Fr, T>::operator=(element&& other) noe
     return *this;
 }
 
-template <class Fq, class Fr, class T> constexpr element<Fq, Fr, T>::operator affine_element<Fq, Fr, T>() noexcept
+template <class Fq, class Fr, class T> constexpr element<Fq, Fr, T>::operator affine_element<Fq, Fr, T>() const noexcept
 {
     Fq z_inv = z.invert();
     Fq zz_inv = z_inv.sqr();
@@ -422,6 +422,12 @@ template <class Fq, class Fr, class T> element<Fq, Fr, T> element<Fq, Fr, T>::op
 {
     *this = operator*(exponent);
     return *this;
+}
+
+template <class Fq, class Fr, class T> constexpr element<Fq, Fr, T> element<Fq, Fr, T>::normalize() const noexcept
+{
+    const affine_element<Fq, Fr, T> converted = *this;
+    return element(converted);
 }
 
 template <class Fq, class Fr, class T> constexpr element<Fq, Fr, T> element<Fq, Fr, T>::set_infinity() const noexcept

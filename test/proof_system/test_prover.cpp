@@ -70,7 +70,7 @@ sigma_3 = [39, 23, 4, 40, 41, 25, 33, 36, 37, 42, 43, 44, 45, 46, 47, 48]
 using namespace barretenberg;
 using namespace waffle;
 
-namespace {
+namespace prover_helpers {
 
 transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
 {
@@ -281,13 +281,13 @@ waffle::Prover generate_test_data(const size_t n)
     state.widgets.emplace_back(std::move(widget));
     return state;
 }
-} // namespace
+} // namespace prover_helpers
 
 TEST(prover, compute_quotient_polynomial)
 {
     size_t n = 1 << 10;
 
-    waffle::Prover state = generate_test_data(n);
+    waffle::Prover state = prover_helpers::generate_test_data(n);
 
     state.execute_preamble_round();
     state.execute_first_round();

@@ -14,6 +14,7 @@
 
 #include <memory>
 
+namespace test_stdlib_bool {
 using namespace barretenberg;
 using namespace plonk;
 
@@ -344,3 +345,4 @@ TEST(stdlib_bool, normalize)
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }
+} // namespace test_stdlib_bool

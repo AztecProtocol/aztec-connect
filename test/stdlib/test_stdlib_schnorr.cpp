@@ -27,13 +27,7 @@ typedef stdlib::bitarray<waffle::TurboComposer> bitarray;
 typedef stdlib::witness_t<waffle::TurboComposer> witness_t;
 typedef stdlib::public_witness_t<waffle::TurboComposer> public_witness_t;
 
-namespace {
-uint32_t get_random_int()
-{
-    return static_cast<uint32_t>(barretenberg::fr::field_t::random_element().data[0]);
-}
-} // namespace
-
+namespace test_stdlib_schnorr {
 TEST(stdlib_schnorr, test_scalar_mul)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
@@ -46,8 +40,8 @@ TEST(stdlib_schnorr, test_scalar_mul)
         scalar_bits[255 - i] = bool_t(&composer, scalar.get_bit(i));
     }
 
-    grumpkin::g1::element expected = grumpkin::g1::group_exponentiation_no_endo(grumpkin::g1::one, scalar_mont);
-    expected = grumpkin::g1::normalize(expected);
+    grumpkin::g1::element expected = grumpkin::g1::one * scalar_mont;
+    expected = expected.normalize();
     plonk::stdlib::point input{ witness_t(&composer, grumpkin::g1::affine_one.x),
                                 witness_t(&composer, grumpkin::g1::affine_one.y) };
 
@@ -104,3 +98,4 @@ TEST(stdlib_schnorr, verify_signature)
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }
+} // namespace test_stdlib_schnorr

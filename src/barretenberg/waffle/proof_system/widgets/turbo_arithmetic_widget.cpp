@@ -341,25 +341,25 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
     fr::field_t q_arith_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
 
     fr::field_t q_l_term = w_l_eval * q_arith_eval * challenge.alpha_base * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_1"))) {
+    if (key->constraint_selectors.at("Q_1").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_1"));
         scalars.push_back(q_l_term);
     }
 
     fr::field_t q_r_term = w_r_eval * q_arith_eval * challenge.alpha_base * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_2"))) {
+    if (key->constraint_selectors.at("Q_2").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_2"));
         scalars.push_back(q_r_term);
     }
 
     fr::field_t q_o_term = w_o_eval * q_arith_eval * challenge.alpha_base * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_3"))) {
+    if (key->constraint_selectors.at("Q_3").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_3"));
         scalars.push_back(q_o_term);
     }
 
     fr::field_t q_4_term = w_4_eval * q_arith_eval * challenge.alpha_base * challenge.linear_nu;
-    if (g1::on_curve(key->constraint_selectors.at("Q_4"))) {
+    if (key->constraint_selectors.at("Q_4").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_4"));
         scalars.push_back(q_4_term);
     }
@@ -367,25 +367,25 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
     constexpr fr::field_t minus_two = -fr::field_t(2);
     fr::field_t q_5_term = (w_4_eval.sqr() - w_4_eval) * (w_4_eval + minus_two) * challenge.alpha_base *
                            challenge.alpha_step * challenge.linear_nu * q_arith_eval;
-    if (g1::on_curve(key->constraint_selectors.at("Q_5"))) {
+    if (key->constraint_selectors.at("Q_5").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_5"));
         scalars.push_back(q_5_term);
     }
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
     fr::field_t q_m_term = w_l_eval * w_r_eval * challenge.alpha_base * challenge.linear_nu * q_arith_eval;
-    if (g1::on_curve(key->constraint_selectors.at("Q_M"))) {
+    if (key->constraint_selectors.at("Q_M").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_M"));
         scalars.push_back(q_m_term);
     }
 
     fr::field_t q_c_term = challenge.alpha_base * challenge.linear_nu * q_arith_eval;
-    if (g1::on_curve(key->constraint_selectors.at("Q_C"))) {
+    if (key->constraint_selectors.at("Q_C").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_C"));
         scalars.push_back(q_c_term);
     }
 
-    if (g1::on_curve(key->constraint_selectors.at("Q_ARITHMETIC_SELECTOR"))) {
+    if (key->constraint_selectors.at("Q_ARITHMETIC_SELECTOR").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_ARITHMETIC_SELECTOR"));
         scalars.push_back(challenge.nu_base);
     }

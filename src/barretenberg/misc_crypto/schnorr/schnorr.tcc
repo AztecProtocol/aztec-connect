@@ -37,7 +37,7 @@ signature_b construct_signature_b(const std::string& message, const key_pair<Fr,
     sig.r.resize(32);
     Fq::serialize_to_buffer(R.x, &sig.r[0]);
 
-    Fq yy = R.x.sqr() * R.x + G1::curve_b;
+    Fq yy = R.x.sqr() * R.x + G1::element::curve_b;
     Fq y_candidate = yy.sqrt();
 
     // if the signer / verifier sqrt algorithm is consistent, this *should* work...
@@ -72,7 +72,7 @@ typename G1::affine_element ecrecover(const std::string& message, const signatur
     bool flip_sign = (r[0] & 128U) == 128U;
     r[0] = r[0] & 127U;
     Fq r_x = Fq::serialize_from_buffer(&r[0]);
-    Fq r_yy = r_x.sqr() * r_x + G1::curve_b;
+    Fq r_yy = r_x.sqr() * r_x + G1::element::curve_b;
     Fq r_y = r_yy.sqrt();
 
     if ((flip_sign)) {
@@ -85,7 +85,7 @@ typename G1::affine_element ecrecover(const std::string& message, const signatur
     typename G1::element R2_jac{ R2.x, R2.y, Fq::one };
     typename G1::element key_jac;
     key_jac = R2_jac + R1;
-    key_jac = G1::normalize(key_jac);
+    key_jac = key_jac.normalize();
     typename G1::affine_element key{ key_jac.x, key_jac.y };
     return key;
 }
@@ -105,7 +105,7 @@ bool verify_signature(const std::string& message, const typename G1::affine_elem
 
     typename G1::element R;
     R = R2_ele + R1;
-    R = G1::normalize(R);
+    R = R.normalize();
 
     std::vector<uint8_t> r(sizeof(Fq));
     Fq::serialize_to_buffer(R.x, &r[0]);
