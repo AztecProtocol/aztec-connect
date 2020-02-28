@@ -10,7 +10,29 @@ int main(int argc, char** argv)
     std::vector<std::string> args(argv, argv + argc);
     user_context user = create_user_context();
 
-    if (args.size() > 1 && args[1] == "join-split") {
+    if (args.size() < 2) {
+        std::cout << "usage: " << args[0] << " [join-split] [join-split-auto ...>]" << std::endl;
+        return -1;
+    }
+
+    if (args[1] == "join-split") {
+        if (args.size() < 8) {
+            std::cout << "usage: " << argv[0]
+                      << " join-split <first note index to join> <second note index to join> <first input note value>"
+                         " <second input note value> <first output note value> <second output note value>"
+                         " [public input] [public output] [json | binary]"
+                      << std::endl;
+            return -1;
+        }
+
+        auto tx = create_join_split_tx({ args.begin() + 2, args.end() }, user);
+        if (args.size() < 11 || args[10] == "binary") {
+            write(std::cout, hton(tx));
+        } else {
+            write_json(std::cout, tx);
+            std::cout << std::endl;
+        }
+    } else if (args[1] == "join-split-single") {
         if (args.size() < 8) {
             std::cout << "usage: " << argv[0]
                       << " join-split <first note index to join> <second note index to join> <first input note value>"
@@ -26,8 +48,10 @@ int main(int argc, char** argv)
         std::cerr << batch.txs[0] << std::endl;
         write(std::cout, batch);
     } else if (args.size() > 1 && args[1] == "join-split-auto") {
-        if (args.size() != 3) {
-            std::cout << "usage: " << argv[0] << " join-split-auto <num transactions>" << std::endl;
+        bool valid_args = args.size() == 3;
+        valid_args |= args.size() == 4 && (args[3] == "binary" || args[3] == "json");
+        if (!valid_args) {
+            std::cout << "usage: " << argv[0] << " join-split-auto <num transactions> [json | binary]" << std::endl;
             return -1;
         }
 
@@ -42,7 +66,13 @@ int main(int argc, char** argv)
             batch.txs.push_back(create_join_split_tx({ index1, index2, "50", "50", "50", "50", "0", "0" }, user));
         }
 
-        write(std::cout, batch);
+        auto format = args.size() == 4 ? args[3] : "binary";
+
+        if (format == "binary") {
+            write(std::cout, hton(batch));
+        } else {
+            write_json(std::cout, batch);
+        }
     } else {
         std::cout << "usage: " << args[0] << " [join-split] [join-split-auto ...>]" << std::endl;
         return -1;

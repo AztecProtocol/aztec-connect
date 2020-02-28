@@ -122,8 +122,9 @@ class FrParams {
 
 typedef field<FrParams> fr;
 
-inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fr::field_t const& a)
+inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fr::field_t const& v)
 {
+    auto a = barretenberg::fr::from_montgomery_form(v);
     std::ios_base::fmtflags f(os.flags());
     os << std::hex << "0x" << std::setfill('0') << std::setw(16) << a.data[3] << std::setw(16) << a.data[2]
        << std::setw(16) << a.data[1] << std::setw(16) << a.data[0];
