@@ -41,19 +41,19 @@ TEST(stdlib_merkle_tree, test_sha256_native)
 {
     std::string x = VALUES[0];
     auto y = plonk::stdlib::merkle_tree::sha256(x);
-    fr::field_t expected = { 0x6c5a56b8fc3993a5, 0x6779c81c73019227, 0xc41c137a5c7ff2ca, 0x16bdc392b31aad9a };
+    fr expected = { 0x6c5a56b8fc3993a5, 0x6779c81c73019227, 0xc41c137a5c7ff2ca, 0x16bdc392b31aad9a };
     EXPECT_EQ(y, expected);
 }
 
 TEST(stdlib_merkle_tree, test_memory_store)
 {
-    fr::field_t e00 = plonk::stdlib::merkle_tree::sha256(VALUES[1]);
-    fr::field_t e01 = plonk::stdlib::merkle_tree::sha256(VALUES[2]);
-    fr::field_t e02 = plonk::stdlib::merkle_tree::sha256(VALUES[3]);
-    fr::field_t e03 = plonk::stdlib::merkle_tree::sha256(VALUES[4]);
-    fr::field_t e10 = stdlib::merkle_tree::hash({ e00, e01 });
-    fr::field_t e11 = stdlib::merkle_tree::hash({ e02, e03 });
-    fr::field_t root = stdlib::merkle_tree::hash({ e10, e11 });
+    fr e00 = plonk::stdlib::merkle_tree::sha256(VALUES[1]);
+    fr e01 = plonk::stdlib::merkle_tree::sha256(VALUES[2]);
+    fr e02 = plonk::stdlib::merkle_tree::sha256(VALUES[3]);
+    fr e03 = plonk::stdlib::merkle_tree::sha256(VALUES[4]);
+    fr e10 = stdlib::merkle_tree::hash({ e00, e01 });
+    fr e11 = stdlib::merkle_tree::hash({ e02, e03 });
+    fr root = stdlib::merkle_tree::hash({ e10, e11 });
 
     stdlib::merkle_tree::MemoryStore db(2);
 
@@ -201,7 +201,7 @@ TEST(stdlib_merkle_tree, test_leveldb_get_hash_path)
 
 TEST(stdlib_merkle_tree, pedersen_native_vs_circuit)
 {
-    fr::field_t x = uint256_t(0x5ec473eb273a8011, 0x50160109385471ca, 0x2f3095267e02607d, 0x02586f4a39e69b86);
+    fr x = uint256_t(0x5ec473eb273a8011, 0x50160109385471ca, 0x2f3095267e02607d, 0x02586f4a39e69b86);
 
     Composer composer = Composer();
     witness_t y = witness_t(&composer, x);
@@ -228,7 +228,7 @@ TEST(stdlib_merkle_tree, test_check_membership)
     Composer composer = Composer();
 
     byte_array zero_value(&composer, VALUES[0]);
-    field_t zero = witness_t(&composer, fr::field_t::zero());
+    field_t zero = witness_t(&composer, fr::zero());
 
     merkle_tree tree = merkle_tree(composer, db);
     bool_t is_member = tree.check_membership(zero_value, zero);

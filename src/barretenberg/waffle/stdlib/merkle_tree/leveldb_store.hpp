@@ -23,40 +23,40 @@ class LevelDbStore {
 
     value_t get_element(index_t index);
 
-    fr::field_t root() const;
+    fr root() const;
 
     size_t depth() const { return depth_; }
 
   private:
-    fr::field_t update_element(
-        fr::field_t const& root, fr::field_t const& value, index_t index, size_t height, leveldb::WriteBatch& batch);
+    fr update_element(
+        fr const& root, fr const& value, index_t index, size_t height, leveldb::WriteBatch& batch);
 
-    fr::field_t get_element(fr::field_t const& root, index_t index, size_t height);
+    fr get_element(fr const& root, index_t index, size_t height);
 
-    fr::field_t compute_zero_path_hash(size_t height, index_t index, fr::field_t const& value);
+    fr compute_zero_path_hash(size_t height, index_t index, fr const& value);
 
-    fr::field_t binary_put(
-        index_t a_index, fr::field_t const& a, fr::field_t const& b, size_t height, leveldb::WriteBatch& batch);
+    fr binary_put(
+        index_t a_index, fr const& a, fr const& b, size_t height, leveldb::WriteBatch& batch);
 
-    fr::field_t fork_stump(fr::field_t const& value1,
+    fr fork_stump(fr const& value1,
                            index_t index1,
-                           fr::field_t const& value2,
+                           fr const& value2,
                            index_t index2,
                            size_t height,
                            size_t stump_height,
                            leveldb::WriteBatch& batch);
 
-    void put(fr::field_t const& key, fr::field_t const& left, fr::field_t const& right, leveldb::WriteBatch& batch);
+    void put(fr const& key, fr const& left, fr const& right, leveldb::WriteBatch& batch);
 
-    void put_stump(fr::field_t const& key, index_t index, fr::field_t const& value, leveldb::WriteBatch& batch);
+    void put_stump(fr const& key, index_t index, fr const& value, leveldb::WriteBatch& batch);
 
   private:
     static constexpr size_t LEAF_BYTES = 64;
     std::unique_ptr<leveldb::DB> db_;
-    std::vector<fr::field_t> zero_hashes_;
+    std::vector<fr> zero_hashes_;
     size_t depth_;
     size_t total_size_;
-    fr::field_t root_;
+    fr root_;
 };
 
 } // namespace merkle_tree

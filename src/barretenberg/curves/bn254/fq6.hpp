@@ -42,15 +42,15 @@ struct Bn254Fq6Params {
         // non residue = 9 + i \in Fq2
         // r.c0 = 9a0 - a1
         // r.c1 = 9a1 + a0
-        fq::field_t T0 = a.c0 + a.c0;
+        fq T0 = a.c0 + a.c0;
         T0 += T0;
         T0 += T0;
         T0 += a.c0;
-        fq::field_t T1 = a.c1 + a.c1;
+        fq T1 = a.c1 + a.c1;
         T1 += T1;
         T1 += T1;
         T1 += a.c1;
-        fq::field_t T2 = T0 - a.c1;
+        fq T2 = T0 - a.c1;
 
         return { T2, T1 + a.c0 };
         T0 = a.c0 + a.c0;

@@ -29,15 +29,15 @@ inline bool isLittleEndian()
     return (*(char*)&num == 42);
 }
 
-inline barretenberg::fr::field_t sha256(std::string const& input)
+inline barretenberg::fr sha256(std::string const& input)
 {
     /*
     std::vector<unsigned char> src(input.size() * 32);
-    auto src_ptr = (barretenberg::fr::field_t*)&src[0];
+    auto src_ptr = (barretenberg::fr*)&src[0];
     for (size_t i = 0; i < input.size(); ++i) {
         src_ptr[i] = input[i].from_montgomery_form();
         if (isLittleEndian()) {
-            barretenberg::fr::field_t be;
+            barretenberg::fr be;
             be.data[0] = __builtin_bswap64(src_ptr[i].data[3]);
             be.data[1] = __builtin_bswap64(src_ptr[i].data[2]);
             be.data[2] = __builtin_bswap64(src_ptr[i].data[1]);
@@ -49,7 +49,7 @@ inline barretenberg::fr::field_t sha256(std::string const& input)
     */
     std::vector<uint8_t> inputv(input.begin(), input.end());
     std::vector<uint8_t> output = sha256::sha256(inputv);
-    barretenberg::fr::field_t result = barretenberg::fr::field_t::zero();
+    barretenberg::fr result = barretenberg::fr::zero();
     if (isLittleEndian()) {
         result.data[0] = __builtin_bswap64(*(uint64_t*)&output[24]);
         result.data[1] = __builtin_bswap64(*(uint64_t*)&output[16]);
@@ -64,12 +64,12 @@ inline barretenberg::fr::field_t sha256(std::string const& input)
     return result.to_montgomery_form();
 }
 
-inline barretenberg::fr::field_t hash(std::vector<barretenberg::fr::field_t> const& input)
+inline barretenberg::fr hash(std::vector<barretenberg::fr> const& input)
 {
     return group_utils::compress_native(input[0], input[1]);
 }
 
-// inline barretenberg::fr::field_t hash(std::vector<barretenberg::fr::field_t> const& input)
+// inline barretenberg::fr hash(std::vector<barretenberg::fr> const& input)
 // {
 //     waffle::StandardComposer throw_away_composer;
 //     std::vector<field_t<waffle::StandardComposer>> inputs;

@@ -24,12 +24,12 @@ proving_key::proving_key(const size_t num_gates, const size_t num_inputs)
     z = barretenberg::polynomial(n, n + 1);
     z_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
 
-    memset((void*)&w_1_fft[0], 0x00, sizeof(barretenberg::fr::field_t) * (4 * n + 4));
-    memset((void*)&w_2_fft[0], 0x00, sizeof(barretenberg::fr::field_t) * (4 * n + 4));
-    memset((void*)&w_3_fft[0], 0x00, sizeof(barretenberg::fr::field_t) * (4 * n + 4));
-    memset((void*)&w_4_fft[0], 0x00, sizeof(barretenberg::fr::field_t) * (4 * n + 4));
-    memset((void*)&z[0], 0x00, sizeof(barretenberg::fr::field_t) * n);
-    memset((void*)&z_fft[0], 0x00, sizeof(barretenberg::fr::field_t) * (4 * n + 4));
+    memset((void*)&w_1_fft[0], 0x00, sizeof(barretenberg::fr) * (4 * n + 4));
+    memset((void*)&w_2_fft[0], 0x00, sizeof(barretenberg::fr) * (4 * n + 4));
+    memset((void*)&w_3_fft[0], 0x00, sizeof(barretenberg::fr) * (4 * n + 4));
+    memset((void*)&w_4_fft[0], 0x00, sizeof(barretenberg::fr) * (4 * n + 4));
+    memset((void*)&z[0], 0x00, sizeof(barretenberg::fr) * n);
+    memset((void*)&z_fft[0], 0x00, sizeof(barretenberg::fr) * (4 * n + 4));
 
     wire_ffts.insert({ "w_1_fft", std::move(w_1_fft) });
     wire_ffts.insert({ "w_2_fft", std::move(w_2_fft) });
@@ -55,11 +55,11 @@ proving_key::proving_key(const size_t num_gates, const size_t num_inputs)
     quotient_mid = barretenberg::polynomial(2 * n, 2 * n);
     quotient_large = barretenberg::polynomial(4 * n, 4 * n);
 
-    memset((void*)&opening_poly[0], 0x00, sizeof(barretenberg::fr::field_t) * n);
-    memset((void*)&shifted_opening_poly[0], 0x00, sizeof(barretenberg::fr::field_t) * n);
-    memset((void*)&linear_poly[0], 0x00, sizeof(barretenberg::fr::field_t) * n);
-    memset((void*)&quotient_mid[0], 0x00, sizeof(barretenberg::fr::field_t) * 2 * n);
-    memset((void*)&quotient_large[0], 0x00, sizeof(barretenberg::fr::field_t) * 4 * n);
+    memset((void*)&opening_poly[0], 0x00, sizeof(barretenberg::fr) * n);
+    memset((void*)&shifted_opening_poly[0], 0x00, sizeof(barretenberg::fr) * n);
+    memset((void*)&linear_poly[0], 0x00, sizeof(barretenberg::fr) * n);
+    memset((void*)&quotient_mid[0], 0x00, sizeof(barretenberg::fr) * 2 * n);
+    memset((void*)&quotient_large[0], 0x00, sizeof(barretenberg::fr) * 4 * n);
 
     // size_t memory = opening_poly.get_max_size() * 32;
     // memory += (linear_poly.get_max_size() * 32);

@@ -29,14 +29,14 @@ TEST(stdlib_pedersen, test_pedersen)
 
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    fr::field_t left_in = fr::field_t::random_element();
-    fr::field_t right_in = fr::field_t::random_element();
+    fr left_in = fr::random_element();
+    fr right_in = fr::random_element();
     // ensure left has skew 1, right has skew 0
     if ((left_in.from_montgomery_form().data[0] & 1) == 1) {
-        left_in += fr::field_t::one();
+        left_in += fr::one();
     }
     if ((right_in.from_montgomery_form().data[0] & 1) == 0) {
-        right_in += fr::field_t::one();
+        right_in += fr::one();
     }
     field_t left = public_witness_t(&composer, left_in);
     field_t right = witness_t(&composer, right_in);
@@ -63,15 +63,15 @@ TEST(stdlib_pedersen, test_pedersen)
     uint64_t right_wnafs[255] = { 0 };
 
     if ((left_in.from_montgomery_form().data[0] & 1) == 0) {
-        fr::field_t two = fr::field_t::one() + fr::field_t::one();
+        fr two = fr::one() + fr::one();
         left_in = left_in - two;
     }
     if ((right_in.from_montgomery_form().data[0] & 1) == 0) {
-        fr::field_t two = fr::field_t::one() + fr::field_t::one();
+        fr two = fr::one() + fr::one();
         right_in = right_in - two;
     }
-    fr::field_t converted_left = left_in.from_montgomery_form();
-    fr::field_t converted_right = right_in.from_montgomery_form();
+    fr converted_left = left_in.from_montgomery_form();
+    fr converted_right = right_in.from_montgomery_form();
 
     uint64_t* left_scalar = &(converted_left.data[0]);
     uint64_t* right_scalar = &(converted_right.data[0]);
@@ -80,17 +80,17 @@ TEST(stdlib_pedersen, test_pedersen)
     barretenberg::wnaf::fixed_wnaf<255, 1, 2>(right_scalar, &right_wnafs[0], right_skew, 0);
 
     const auto compute_split_scalar = [](uint64_t* wnafs, const size_t range) {
-        grumpkin::fr::field_t result = grumpkin::fr::field_t::zero();
-        grumpkin::fr::field_t three = grumpkin::fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form();
+        grumpkin::fr result = grumpkin::fr::zero();
+        grumpkin::fr three = grumpkin::fr{ 3, 0, 0, 0 }.to_montgomery_form();
         for (size_t i = 0; i < range; ++i) {
             uint64_t entry = wnafs[i];
-            grumpkin::fr::field_t prev = result + result;
+            grumpkin::fr prev = result + result;
             prev = prev + prev;
             if ((entry & 0xffffff) == 0) {
                 if (((entry >> 31UL) & 1UL) == 1UL) {
-                    result = prev - grumpkin::fr::field_t::one();
+                    result = prev - grumpkin::fr::one();
                 } else {
-                    result = prev + grumpkin::fr::field_t::one();
+                    result = prev + grumpkin::fr::one();
                 }
             } else {
                 if (((entry >> 31UL) & 1UL) == 1UL) {
@@ -103,15 +103,15 @@ TEST(stdlib_pedersen, test_pedersen)
         return result;
     };
 
-    grumpkin::fr::field_t grumpkin_scalars[4]{ compute_split_scalar(&left_wnafs[0], 126),
+    grumpkin::fr grumpkin_scalars[4]{ compute_split_scalar(&left_wnafs[0], 126),
                                                compute_split_scalar(&left_wnafs[126], 2),
                                                compute_split_scalar(&right_wnafs[0], 126),
                                                compute_split_scalar(&right_wnafs[126], 2) };
     if (left_skew) {
-        grumpkin_scalars[1] += grumpkin::fr::field_t::one();
+        grumpkin_scalars[1] += grumpkin::fr::one();
     }
     if (right_skew) {
-        grumpkin_scalars[3] += grumpkin::fr::field_t::one();
+        grumpkin_scalars[3] += grumpkin::fr::one();
     }
 
     grumpkin::g1::affine_element grumpkin_points[4]{
@@ -140,7 +140,7 @@ TEST(stdlib_pedersen, test_pedersen)
 
     EXPECT_EQ((out.get_value() == hash_output.x), true);
 
-    fr::field_t compress_native = plonk::stdlib::group_utils::compress_native(left.get_value(), right.get_value());
+    fr compress_native = plonk::stdlib::group_utils::compress_native(left.get_value(), right.get_value());
     EXPECT_EQ((out.get_value() == compress_native), true);
 }
 
@@ -149,14 +149,14 @@ TEST(stdlib_pedersen, test_pedersen_large)
 
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    fr::field_t left_in = fr::field_t::random_element();
-    fr::field_t right_in = fr::field_t::random_element();
+    fr left_in = fr::random_element();
+    fr right_in = fr::random_element();
     // ensure left has skew 1, right has skew 0
     if ((left_in.from_montgomery_form().data[0] & 1) == 1) {
-        left_in += fr::field_t::one();
+        left_in += fr::one();
     }
     if ((right_in.from_montgomery_form().data[0] & 1) == 0) {
-        right_in += fr::field_t::one();
+        right_in += fr::one();
     }
     field_t left = witness_t(&composer, left_in);
     field_t right = witness_t(&composer, right_in);

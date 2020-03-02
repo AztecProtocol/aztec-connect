@@ -85,74 +85,74 @@ TEST(test_public_inputs, compute_delta)
 
     evaluation_domain domain(circuit_size);
 
-    std::vector<fr::field_t> left;
-    std::vector<fr::field_t> right;
-    std::vector<fr::field_t> sigma_1;
-    std::vector<fr::field_t> sigma_2;
+    std::vector<fr> left;
+    std::vector<fr> right;
+    std::vector<fr> sigma_1;
+    std::vector<fr> sigma_2;
 
-    fr::field_t work_root = fr::field_t::one();
+    fr work_root = fr::one();
     for (size_t i = 0; i < circuit_size; ++i) {
-        fr::field_t temp = fr::field_t::random_element();
+        fr temp = fr::random_element();
         left.push_back(temp);
         right.push_back(temp);
-        sigma_1.push_back((fr::field_t::coset_generator(0) * work_root));
+        sigma_1.push_back((fr::coset_generator(0) * work_root));
         sigma_2.push_back(work_root);
         work_root = work_root * domain.root;
     }
 
-    fr::field_t beta = fr::field_t::random_element();
-    fr::field_t gamma = fr::field_t::random_element();
-    fr::field_t root = domain.root;
-    const auto compute_grand_product = [root, beta, gamma](std::vector<fr::field_t>& left,
-                                                           std::vector<fr::field_t>& right,
-                                                           std::vector<fr::field_t>& sigma_1,
-                                                           std::vector<fr::field_t>& sigma_2) {
-        fr::field_t numerator = fr::field_t::one();
-        fr::field_t denominator = fr::field_t::one();
-        fr::field_t work_root = fr::field_t::one();
+    fr beta = fr::random_element();
+    fr gamma = fr::random_element();
+    fr root = domain.root;
+    const auto compute_grand_product = [root, beta, gamma](std::vector<fr>& left,
+                                                           std::vector<fr>& right,
+                                                           std::vector<fr>& sigma_1,
+                                                           std::vector<fr>& sigma_2) {
+        fr numerator = fr::one();
+        fr denominator = fr::one();
+        fr work_root = fr::one();
         for (size_t i = 0; i < circuit_size; ++i) {
-            fr::field_t T0 = left[i] + gamma;
-            fr::field_t T1 = right[i] + gamma;
+            fr T0 = left[i] + gamma;
+            fr T1 = right[i] + gamma;
 
-            fr::field_t T2 = work_root * beta;
-            fr::field_t T3 = fr::field_t::coset_generator(0) * T2;
+            fr T2 = work_root * beta;
+            fr T3 = fr::coset_generator(0) * T2;
 
-            fr::field_t T4 = T0 + T2;
-            fr::field_t T5 = T1 + T3;
-            fr::field_t T6 = T4 * T5;
+            fr T4 = T0 + T2;
+            fr T5 = T1 + T3;
+            fr T6 = T4 * T5;
 
             numerator = numerator * T6;
 
-            fr::field_t T7 = (T0 + sigma_1[i] * beta);
-            fr::field_t T8 = (T1 + sigma_2[i] * beta);
-            fr::field_t T9 = T7 * T8;
+            fr T7 = (T0 + sigma_1[i] * beta);
+            fr T8 = (T1 + sigma_2[i] * beta);
+            fr T9 = T7 * T8;
             denominator = denominator * T9;
             work_root = work_root * root;
         }
 
         denominator = denominator.invert();
 
-        fr::field_t product = numerator * denominator;
+        fr product = numerator * denominator;
         return product;
     };
 
-    fr::field_t init_result = compute_grand_product(left, right, sigma_1, sigma_2);
+    fr init_result = compute_grand_product(left, right, sigma_1, sigma_2);
 
-    EXPECT_EQ((init_result == fr::field_t::one()), true);
+    EXPECT_EQ((init_result == fr::one()), true);
 
-    work_root = fr::field_t::one();
+    work_root = fr::one();
     for (size_t i = 0; i < num_public_inputs; ++i) {
         sigma_1[i] = work_root;
         work_root = work_root * domain.root;
     }
 
-    fr::field_t modified_result = compute_grand_product(left, right, sigma_1, sigma_2);
+    fr modified_result = compute_grand_product(left, right, sigma_1, sigma_2);
 
-    std::vector<fr::field_t> public_inputs;
+    std::vector<fr> public_inputs;
     for (size_t i = 0; i < num_public_inputs; ++i) {
         public_inputs.push_back(left[i]);
     }
-    fr::field_t target_delta = waffle::compute_public_input_delta(public_inputs, beta, gamma, domain.root);
+    fr target_delta = waffle::compute_public_input_delta(public_inputs, beta, gamma, domain.root);
 
     EXPECT_EQ((modified_result == target_delta), true);
 }

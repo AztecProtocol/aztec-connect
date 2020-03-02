@@ -28,7 +28,7 @@ template <typename ComposerContext> class bool_t {
     bool_t& operator=(const witness_t<ComposerContext>& other);
     bool_t& operator=(const bool_t& other);
     bool_t& operator=(bool_t&& other);
-    // field_t& operator=(const barretenberg::fr::field_t &value);
+    // field_t& operator=(const barretenberg::fr &value);
 
     // bitwise operations
     bool_t operator&(const bool_t& other) const;

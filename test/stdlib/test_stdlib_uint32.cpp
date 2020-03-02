@@ -427,7 +427,7 @@ TEST(stdlib_uint32, test_hash_rounds)
     uint32_t w_alt[64];
 
     for (size_t i = 0; i < 64; ++i) {
-        w_alt[i] = static_cast<uint32_t>(barretenberg::fr::field_t::random_element().data[0]);
+        w_alt[i] = static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
     }
     uint32_t a_alt = round_values[0];
     uint32_t b_alt = round_values[1];

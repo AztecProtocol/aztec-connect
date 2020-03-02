@@ -50,16 +50,16 @@ ProverSequentialWidget& ProverSequentialWidget::operator=(ProverSequentialWidget
     return *this;
 }
 
-fr::field_t ProverSequentialWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
+fr ProverSequentialWidget::compute_quotient_contribution(const barretenberg::fr& alpha_base,
                                                                   const transcript::Transcript& transcript)
 {
-    fr::field_t alpha = fr::field_t::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
+    fr alpha = fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
 
-    barretenberg::fr::field_t old_alpha = alpha_base * alpha.invert();
+    barretenberg::fr old_alpha = alpha_base * alpha.invert();
     polynomial& w_3_fft = key->wire_ffts.at("w_3_fft");
     polynomial& quotient_mid = key->quotient_mid;
     ITERATE_OVER_DOMAIN_START(key->mid_domain);
-    fr::field_t T0;
+    fr T0;
     T0 = w_3_fft.at(2 * i + 4) * q_3_next_fft[i]; // w_l * q_m = rdx
     T0 *= old_alpha;
     quotient_mid[i] += T0;
@@ -68,16 +68,16 @@ fr::field_t ProverSequentialWidget::compute_quotient_contribution(const barreten
     return alpha_base;
 }
 
-fr::field_t ProverSequentialWidget::compute_linear_contribution(const fr::field_t& alpha_base,
+fr ProverSequentialWidget::compute_linear_contribution(const fr& alpha_base,
                                                                 const transcript::Transcript& transcript,
                                                                 polynomial& r)
 {
-    fr::field_t w_o_shifted_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
-    fr::field_t alpha = fr::field_t::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
+    fr w_o_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
+    fr alpha = fr::serialize_from_buffer(&transcript.get_challenge("alpha")[0]);
 
-    barretenberg::fr::field_t old_alpha = alpha_base * alpha.invert();
+    barretenberg::fr old_alpha = alpha_base * alpha.invert();
     ITERATE_OVER_DOMAIN_START(key->small_domain);
-    fr::field_t T0;
+    fr T0;
     T0 = w_o_shifted_eval * q_3_next[i];
     T0 *= old_alpha;
     r[i] += T0;
@@ -96,14 +96,14 @@ VerifierBaseWidget::challenge_coefficients VerifierSequentialWidget::append_scal
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
     std::vector<barretenberg::g1::affine_element>& points,
-    std::vector<barretenberg::fr::field_t>& scalars)
+    std::vector<barretenberg::fr>& scalars)
 {
-    fr::field_t w_o_shifted_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
+    fr w_o_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("w_3_omega")[0]);
 
-    barretenberg::fr::field_t old_alpha = (challenge.alpha_base * (challenge.alpha_step.invert()));
+    barretenberg::fr old_alpha = (challenge.alpha_base * (challenge.alpha_step.invert()));
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
-    fr::field_t q_o_next_term;
+    fr q_o_next_term;
     q_o_next_term = w_o_shifted_eval * old_alpha;
     q_o_next_term *= challenge.linear_nu;
 

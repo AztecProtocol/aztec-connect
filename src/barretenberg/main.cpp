@@ -46,12 +46,12 @@ using namespace barretenberg;
 //     return acc;
 // }
 constexpr size_t NUM_POINTS = 1 << 20;
-std::vector<fr::field_t> scalars;
+std::vector<fr> scalars;
 waffle::ReferenceString reference_string;
 
 const auto init = []() {
-    fr::field_t element = fr::field_t::random_element();
-    fr::field_t accumulator = element;
+    fr element = fr::random_element();
+    fr accumulator = element;
     scalars.reserve(NUM_POINTS);
     for (size_t i = 0; i < NUM_POINTS; ++i) {
         accumulator *= element;

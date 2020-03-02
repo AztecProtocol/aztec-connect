@@ -29,9 +29,9 @@ inline uint512_t get_pseudorandom_uint512()
     return { get_pseudorandom_uint256(), get_pseudorandom_uint256() };
 }
 
-inline barretenberg::fq::field_t get_pseudorandom_fq()
+inline barretenberg::fq get_pseudorandom_fq()
 {
-    barretenberg::fq::field_t out{
+    barretenberg::fq out{
         (uint64_t)dist(engine), (uint64_t)dist(engine), (uint64_t)dist(engine), (uint64_t)dist(engine)
     };
     out.self_reduce_once();

@@ -18,13 +18,13 @@ class MemoryStore {
 
     std::string const& get_element(size_t index);
 
-    fr::field_t root() const { return root_; }
+    fr root() const { return root_; }
 
   private:
     size_t depth_;
     size_t total_size_;
-    barretenberg::fr::field_t root_;
-    std::vector<barretenberg::fr::field_t> hashes_;
+    barretenberg::fr root_;
+    std::vector<barretenberg::fr> hashes_;
     std::vector<std::string> preimages_;
 };
 

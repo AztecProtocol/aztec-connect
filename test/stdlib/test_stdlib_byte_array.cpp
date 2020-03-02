@@ -67,8 +67,8 @@ TEST(stdlib_byte_array, test_field_t_input_output_consistency)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    fr::field_t a_expected = fr::field_t::random_element();
-    fr::field_t b_expected = fr::field_t::random_element();
+    fr a_expected = fr::random_element();
+    fr b_expected = fr::random_element();
 
     field_t a = witness_t(&composer, a_expected);
     field_t b = witness_t(&composer, b_expected);

@@ -42,24 +42,6 @@ class FrParams {
     static constexpr uint64_t r_inv = 0xc2e1f593efffffffUL;
 };
 
-namespace fr {
-typedef field<FrParams> field_t;
-}
-
-// typedef field<FrParams> fr;
-
-// inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fr::field_t const& a)
-// {
-//     std::ios_base::fmtflags f(os.flags());
-//     os << std::hex << "0x" << std::setfill('0') << std::setw(16) << a.data[3] << std::setw(16) << a.data[2]
-//        << std::setw(16) << a.data[1] << std::setw(16) << a.data[0];
-//     os.flags(f);
-//     return os;
-// }
-
-// inline bool operator==(fr::field_t const& lhs, fr::field_t const& rhs)
-// {
-//     return (lhs == rhs);
-// }
+typedef field<FrParams> fr;
 
 } // namespace barretenberg

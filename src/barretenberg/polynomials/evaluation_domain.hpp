@@ -15,12 +15,12 @@ class evaluation_domain {
         , log2_thread_size(0)
         , log2_num_threads(0)
         , generator_size(0)
-        , root(fr::field_t::zero())
-        , root_inverse(fr::field_t::zero())
-        , domain(fr::field_t::zero())
-        , domain_inverse(fr::field_t::zero())
-        , generator(fr::field_t::zero())
-        , generator_inverse(fr::field_t::zero())
+        , root(fr::zero())
+        , root_inverse(fr::zero())
+        , domain(fr::zero())
+        , domain_inverse(fr::zero())
+        , generator(fr::zero())
+        , generator_inverse(fr::zero())
         , roots(nullptr){};
 
     evaluation_domain(const size_t domain_size, const size_t target_generator_size = 0);
@@ -35,8 +35,8 @@ class evaluation_domain {
     void compute_lookup_table();
     void compute_generator_table(const size_t target_generator_size);
 
-    const std::vector<barretenberg::fr::field_t*>& get_round_roots() const { return round_roots; };
-    const std::vector<barretenberg::fr::field_t*>& get_inverse_round_roots() const { return inverse_round_roots; }
+    const std::vector<barretenberg::fr*>& get_round_roots() const { return round_roots; };
+    const std::vector<barretenberg::fr*>& get_inverse_round_roots() const { return inverse_round_roots; }
 
     size_t size;
     size_t num_threads;
@@ -46,17 +46,17 @@ class evaluation_domain {
     size_t log2_num_threads;
     size_t generator_size;
 
-    barretenberg::fr::field_t root;
-    barretenberg::fr::field_t root_inverse;
-    barretenberg::fr::field_t domain;
-    barretenberg::fr::field_t domain_inverse;
-    barretenberg::fr::field_t generator;
-    barretenberg::fr::field_t generator_inverse;
+    barretenberg::fr root;
+    barretenberg::fr root_inverse;
+    barretenberg::fr domain;
+    barretenberg::fr domain_inverse;
+    barretenberg::fr generator;
+    barretenberg::fr generator_inverse;
 
   private:
-    std::vector<barretenberg::fr::field_t*> round_roots;
-    std::vector<barretenberg::fr::field_t*> inverse_round_roots;
+    std::vector<barretenberg::fr*> round_roots;
+    std::vector<barretenberg::fr*> inverse_round_roots;
 
-    barretenberg::fr::field_t* roots;
+    barretenberg::fr* roots;
 };
 } // namespace barretenberg

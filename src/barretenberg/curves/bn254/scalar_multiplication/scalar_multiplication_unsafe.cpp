@@ -115,9 +115,9 @@ namespace scalar_multiplication {
  *
  * We can re-arrange the Pippenger algorithm to get this property, but it's...complicated
  **/
-void add_affine_points(g1::affine_element* points, const size_t num_points, fq::field_t* scratch_space)
+void add_affine_points(g1::affine_element* points, const size_t num_points, fq* scratch_space)
 {
-    fq::field_t batch_inversion_accumulator = fq::field_t::one();
+    fq batch_inversion_accumulator = fq::one();
     // std::chrono::steady_clock::time_point time_start = std::chrono::steady_clock::now();
 
     for (size_t i = 0; i < num_points; i += 2) {

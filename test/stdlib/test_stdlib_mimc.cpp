@@ -20,8 +20,8 @@ TEST(stdlib_mimc, composer_consistency_check)
     waffle::StandardComposer standard_composer = waffle::StandardComposer();
     waffle::MiMCComposer mimc_composer = waffle::MiMCComposer();
 
-    fr::field_t input = fr::field_t::random_element();
-    fr::field_t k_in = fr::field_t::zero();
+    fr input = fr::random_element();
+    fr k_in = fr::zero();
 
     stdlib::field_t<waffle::StandardComposer> standard_input(
         stdlib::public_witness_t<waffle::StandardComposer>(&standard_composer, input));
@@ -59,7 +59,7 @@ TEST(stdlib_mimc, repeated_hashing)
     std::vector<stdlib::field_t<waffle::MiMCComposer>> inputs;
     for (size_t i = 0; i < num_hashes; ++i) {
         stdlib::field_t<waffle::MiMCComposer> input(
-            stdlib::witness_t<waffle::MiMCComposer>(&mimc_composer, barretenberg::fr::field_t::random_element()));
+            stdlib::witness_t<waffle::MiMCComposer>(&mimc_composer, barretenberg::fr::random_element()));
         inputs.push_back(input);
     }
 

@@ -26,7 +26,7 @@ namespace {
 
 constexpr size_t num_mimc_rounds = 91;
 
-barretenberg::fr::field_t mimc_round_constants[num_mimc_rounds];
+barretenberg::fr mimc_round_constants[num_mimc_rounds];
 
 #pragma GCC diagnostic ignored "-Wunused-variable"
 const auto init_var = []() {
@@ -42,7 +42,7 @@ const auto init_var = []() {
     for (size_t i = 0; i < num_mimc_rounds; ++i) {
         keccak256 keccak256_hash = ethash_keccak256(&inputs[0], 32);
         memcpy((void*)&inputs[0], (void*)&keccak256_hash.word64s[0], 32);
-        mimc_round_constants[i] = barretenberg::fr::field_t{ keccak256_hash.word64s[0],
+        mimc_round_constants[i] = barretenberg::fr{ keccak256_hash.word64s[0],
                                                              keccak256_hash.word64s[1],
                                                              keccak256_hash.word64s[2],
                                                              keccak256_hash.word64s[3] }
@@ -59,28 +59,28 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> me
     waffle::MiMCComposer* context = message.context;
     ASSERT(context != nullptr);
 
-    if (!(message.additive_constant == barretenberg::fr::field_t::zero()) ||
-        !(message.multiplicative_constant == barretenberg::fr::field_t::one())) {
+    if (!(message.additive_constant == barretenberg::fr::zero()) ||
+        !(message.multiplicative_constant == barretenberg::fr::one())) {
         message = message.normalize();
     };
-    if (!(key.additive_constant == barretenberg::fr::field_t::zero()) || !(key.multiplicative_constant == barretenberg::fr::field_t::one())) {
+    if (!(key.additive_constant == barretenberg::fr::zero()) || !(key.multiplicative_constant == barretenberg::fr::one())) {
         key = key.normalize();
     }
 
     // for now assume we have a mimc gate at our disposal
 
     // each mimc round is (x_in + k + c[i])^7
-    barretenberg::fr::field_t x_in = message.get_value();
-    barretenberg::fr::field_t x_out;
-    barretenberg::fr::field_t k = key.get_value();
+    barretenberg::fr x_in = message.get_value();
+    barretenberg::fr x_out;
+    barretenberg::fr k = key.get_value();
     uint32_t k_idx = key.witness_index;
     uint32_t x_in_idx = message.witness_index;
     uint32_t x_out_idx;
     ASSERT(k_idx != static_cast<uint32_t>(-1));
     ASSERT(message.witness_index != static_cast<uint32_t>(-1));
     for (size_t i = 0; i < num_mimc_rounds; ++i) {
-        barretenberg::fr::field_t T0;
-        barretenberg::fr::field_t x_cubed;
+        barretenberg::fr T0;
+        barretenberg::fr x_cubed;
         T0 = x_in + k;
         T0 += mimc_round_constants[i];
         x_cubed = T0.sqr();
@@ -92,7 +92,7 @@ field_t<waffle::MiMCComposer> mimc_block_cipher(field_t<waffle::MiMCComposer> me
         x_out_idx = context->add_variable(x_out);
         context->create_mimc_gate({ x_in_idx, x_cubed_idx, k_idx, x_out_idx, mimc_round_constants[i] });
         x_in_idx = x_out_idx;
-        barretenberg::fr::field_t::__copy(x_out, x_in);
+        barretenberg::fr::__copy(x_out, x_in);
     }
     field_t<waffle::MiMCComposer> result(context, x_out);
     result.witness_index = x_out_idx;

@@ -40,12 +40,11 @@ class Bn254FqParams {
     static constexpr uint64_t r_inv = 0x87d20782e4866389UL;
 };
 
-namespace fq {
-typedef field<Bn254FqParams> field_t;
-}
+typedef field<Bn254FqParams> fq;
+
 // typedef field<Bn254FqParams> fq;
 
-// inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fq::field_t const& a)
+// inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fq const& a)
 // {
 //     std::ios_base::fmtflags f(os.flags());
 //     os << std::hex << "0x" << std::setfill('0') << std::setw(16) << a.data[3] << std::setw(16) << a.data[2]

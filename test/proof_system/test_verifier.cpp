@@ -47,7 +47,7 @@ using namespace waffle;
 
 waffle::Verifier generate_verifier(std::shared_ptr<proving_key> circuit_proving_key)
 {
-    std::array<fr::field_t*, 8> poly_coefficients;
+    std::array<fr*, 8> poly_coefficients;
     poly_coefficients[0] = circuit_proving_key->constraint_selectors.at("q_1").get_coefficients();
     poly_coefficients[1] = circuit_proving_key->constraint_selectors.at("q_2").get_coefficients();
     poly_coefficients[2] = circuit_proving_key->constraint_selectors.at("q_3").get_coefficients();
@@ -89,7 +89,7 @@ waffle::Prover generate_test_data(const size_t n)
     // state.widgets.emplace_back(std::make_unique<waffle::ProverArithmeticWidget>(n));
 
     // create some constraints that satisfy our arithmetic circuit relation
-    fr::field_t T0;
+    fr T0;
 
     // even indices = mul gates, odd incides = add gates
 
@@ -115,29 +115,29 @@ waffle::Prover generate_test_data(const size_t n)
     q_c.resize(n);
 
     for (size_t i = 0; i < n / 4; ++i) {
-        w_l.at(2 * i) = fr::field_t::random_element();
-        w_r.at(2 * i) = fr::field_t::random_element();
+        w_l.at(2 * i) = fr::random_element();
+        w_r.at(2 * i) = fr::random_element();
         w_o.at(2 * i) = w_l.at(2 * i) * w_r.at(2 * i);
         w_o[2 * i] = w_o[2 * i] + w_l[2 * i];
         w_o[2 * i] = w_o[2 * i] + w_r[2 * i];
-        w_o[2 * i] = w_o[2 * i] + fr::field_t::one();
-        fr::field_t::__copy(fr::field_t::one(), q_l.at(2 * i));
-        fr::field_t::__copy(fr::field_t::one(), q_r.at(2 * i));
-        fr::field_t::__copy(fr::field_t::neg_one(), q_o.at(2 * i));
-        fr::field_t::__copy(fr::field_t::one(), q_c.at(2 * i));
-        fr::field_t::__copy(fr::field_t::one(), q_m.at(2 * i));
+        w_o[2 * i] = w_o[2 * i] + fr::one();
+        fr::__copy(fr::one(), q_l.at(2 * i));
+        fr::__copy(fr::one(), q_r.at(2 * i));
+        fr::__copy(fr::neg_one(), q_o.at(2 * i));
+        fr::__copy(fr::one(), q_c.at(2 * i));
+        fr::__copy(fr::one(), q_m.at(2 * i));
 
-        w_l.at(2 * i + 1) = fr::field_t::random_element();
-        w_r.at(2 * i + 1) = fr::field_t::random_element();
-        w_o.at(2 * i + 1) = fr::field_t::random_element();
+        w_l.at(2 * i + 1) = fr::random_element();
+        w_r.at(2 * i + 1) = fr::random_element();
+        w_o.at(2 * i + 1) = fr::random_element();
 
         T0 = w_l.at(2 * i + 1) + w_r.at(2 * i + 1);
         q_c.at(2 * i + 1) = T0 + w_o.at(2 * i + 1);
         q_c.at(2 * i + 1).self_neg();
-        q_l.at(2 * i + 1) = fr::field_t::one();
-        q_r.at(2 * i + 1) = fr::field_t::one();
-        q_o.at(2 * i + 1) = fr::field_t::one();
-        q_m.at(2 * i + 1) = fr::field_t::zero();
+        q_l.at(2 * i + 1) = fr::one();
+        q_r.at(2 * i + 1) = fr::one();
+        q_o.at(2 * i + 1) = fr::one();
+        q_m.at(2 * i + 1) = fr::zero();
     }
     size_t shift = n / 2;
     polynomial_arithmetic::copy_polynomial(&w_l.at(0), &w_l.at(shift), shift, shift);
@@ -209,19 +209,19 @@ waffle::Prover generate_test_data(const size_t n)
     key->permutation_selector_ffts.insert({ "sigma_2_fft", std::move(sigma_2_fft) });
     key->permutation_selector_ffts.insert({ "sigma_3_fft", std::move(sigma_3_fft) });
 
-    w_l.at(n - 1) = fr::field_t::zero();
-    w_r.at(n - 1) = fr::field_t::zero();
-    w_o.at(n - 1) = fr::field_t::zero();
-    q_c.at(n - 1) = fr::field_t::zero();
-    q_l.at(n - 1) = fr::field_t::zero();
-    q_r.at(n - 1) = fr::field_t::zero();
-    q_o.at(n - 1) = fr::field_t::zero();
-    q_m.at(n - 1) = fr::field_t::zero();
+    w_l.at(n - 1) = fr::zero();
+    w_r.at(n - 1) = fr::zero();
+    w_o.at(n - 1) = fr::zero();
+    q_c.at(n - 1) = fr::zero();
+    q_l.at(n - 1) = fr::zero();
+    q_r.at(n - 1) = fr::zero();
+    q_o.at(n - 1) = fr::zero();
+    q_m.at(n - 1) = fr::zero();
 
-    w_l.at(shift - 1) = fr::field_t::zero();
-    w_r.at(shift - 1) = fr::field_t::zero();
-    w_o.at(shift - 1) = fr::field_t::zero();
-    q_c.at(shift - 1) = fr::field_t::zero();
+    w_l.at(shift - 1) = fr::zero();
+    w_r.at(shift - 1) = fr::zero();
+    w_o.at(shift - 1) = fr::zero();
+    q_c.at(shift - 1) = fr::zero();
 
     witness->wires.insert({ "w_1", std::move(w_l) });
     witness->wires.insert({ "w_2", std::move(w_r) });

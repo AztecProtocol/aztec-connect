@@ -36,7 +36,7 @@ polynomial::polynomial(const size_t initial_size, const size_t initial_max_size_
     size_t target_max_size = std::max(initial_size, initial_max_size_hint + DEFAULT_PAGE_SPILL);
     if (target_max_size > 0)
     {
-        coefficients = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * target_max_size));
+        coefficients = (fr*)(aligned_alloc(32, sizeof(fr) * target_max_size));
         max_size = target_max_size;
     }
     zero_memory(max_size);
@@ -50,11 +50,11 @@ polynomial::polynomial(const polynomial& other, const size_t target_max_size) :
     allocated_pages(max_size / page_size)
 {
     ASSERT(page_size != 0);
-    coefficients = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * max_size));
+    coefficients = (fr*)(aligned_alloc(32, sizeof(fr) * max_size));
 
     if (other.coefficients != nullptr)
     {
-        memcpy(static_cast<void*>(coefficients), static_cast<void*>(other.coefficients), sizeof(fr::field_t) * size);
+        memcpy(static_cast<void*>(coefficients), static_cast<void*>(other.coefficients), sizeof(fr) * size);
     }
     zero_memory(max_size);
 }
@@ -76,7 +76,7 @@ polynomial& polynomial::operator=(const polynomial& other)
     }
     if (other.coefficients != nullptr)
     {
-        memcpy(static_cast<void*>(coefficients), static_cast<void*>(other.coefficients), sizeof(fr::field_t) * size);
+        memcpy(static_cast<void*>(coefficients), static_cast<void*>(other.coefficients), sizeof(fr) * size);
     }
     zero_memory(max_size);
     return *this;
@@ -148,7 +148,7 @@ polynomial::~polynomial()
 
 // #######
 
-fr::field_t polynomial::evaluate(const fr::field_t& z, const size_t target_size) const
+fr polynomial::evaluate(const fr& z, const size_t target_size) const
 {
     return polynomial_arithmetic::evaluate(coefficients, z, target_size);
 }
@@ -158,7 +158,7 @@ void polynomial::zero_memory(const size_t zero_size)
     size_t delta = zero_size - size;
     if (delta > 0)
     {
-        memset(static_cast<void*>(&coefficients[size]), 0, sizeof(fr::field_t) * delta);
+        memset(static_cast<void*>(&coefficients[size]), 0, sizeof(fr) * delta);
     }
 }
 
@@ -171,10 +171,10 @@ void polynomial::bump_memory(const size_t new_size_hint)
         new_size += page_size;
     }
 
-    fr::field_t* new_memory = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * new_size));
+    fr* new_memory = (fr*)(aligned_alloc(32, sizeof(fr) * new_size));
     if (coefficients != nullptr)
     {
-        memcpy(static_cast<void*>(coefficients), static_cast<void*>(new_memory), sizeof(fr::field_t) * size);
+        memcpy(static_cast<void*>(coefficients), static_cast<void*>(new_memory), sizeof(fr) * size);
         aligned_free(coefficients);
     }
     coefficients = new_memory;
@@ -182,23 +182,23 @@ void polynomial::bump_memory(const size_t new_size_hint)
     max_size = new_size;
 }
 
-void polynomial::add_coefficient_internal(const fr::field_t &coefficient)
+void polynomial::add_coefficient_internal(const fr &coefficient)
 {
     if (size + 1 > max_size)
     {
         bump_memory((allocated_pages + 1) * page_size);
     }
-    fr::field_t::__copy(coefficient, coefficients[size]);
+    fr::__copy(coefficient, coefficients[size]);
     ++size;
 }
 
-void polynomial::add_lagrange_base_coefficient(const fr::field_t &coefficient)
+void polynomial::add_lagrange_base_coefficient(const fr &coefficient)
 {
     ASSERT(representation == Representation::ROOTS_OF_UNITY);
     add_coefficient_internal(coefficient);
 }
 
-void polynomial::add_coefficient(const fr::field_t &coefficient)
+void polynomial::add_coefficient(const fr &coefficient)
 {
     ASSERT(representation == Representation::COEFFICIENT_FORM);
     add_coefficient_internal(coefficient);
@@ -209,7 +209,7 @@ void polynomial::reserve(const size_t new_max_size)
     if (new_max_size > max_size)
     {
         bump_memory(new_max_size);
-        memset(static_cast<void*>(&coefficients[size]), 0, sizeof(fr::field_t) * (new_max_size - max_size));
+        memset(static_cast<void*>(&coefficients[size]), 0, sizeof(fr) * (new_max_size - max_size));
     }
 }
 
@@ -222,8 +222,8 @@ void polynomial::resize(const size_t new_size)
         bump_memory(new_size);
     }
 
-    fr::field_t* back = &coefficients[size];
-    memset(static_cast<void*>(back), 0, sizeof(fr::field_t) * (new_size - size));
+    fr* back = &coefficients[size];
+    memset(static_cast<void*>(back), 0, sizeof(fr) * (new_size - size));
     size = new_size;
 }
 
@@ -252,7 +252,7 @@ void polynomial::fft(const evaluation_domain &domain)
 
     // (ZERO OUT MEMORY!)
     // TODO: wait, do we still need this?
-    // memset(static_cast<void*>(back), 0, sizeof(fr::field_t) * (new_size - size));
+    // memset(static_cast<void*>(back), 0, sizeof(fr) * (new_size - size));
     polynomial_arithmetic::fft(coefficients, domain);
     size = domain.size;
 }
@@ -279,7 +279,7 @@ void polynomial::coset_fft(const evaluation_domain &domain, const evaluation_dom
     size = (domain.size * domain_extension);
 }
 
-void polynomial::coset_fft_with_constant(const evaluation_domain &domain, const fr::field_t& constant)
+void polynomial::coset_fft_with_constant(const evaluation_domain &domain, const fr& constant)
 {
     if (domain.size > max_size)
     {
@@ -301,7 +301,7 @@ void polynomial::ifft(const evaluation_domain &domain)
     size = domain.size;
 }
 
-void polynomial::ifft_with_constant(const evaluation_domain &domain, const barretenberg::fr::field_t &constant)
+void polynomial::ifft_with_constant(const evaluation_domain &domain, const barretenberg::fr &constant)
 {
     if (domain.size > max_size)
     {
@@ -323,7 +323,7 @@ void polynomial::coset_ifft(const evaluation_domain &domain)
     size = domain.size;
 }
 
-// void polynomial::coset_ifft_with_constant(const evaluation_domain &domain, const fr::field_t &constant)
+// void polynomial::coset_ifft_with_constant(const evaluation_domain &domain, const fr &constant)
 // {
 //     if (domain.size > max_size)
 //     {
@@ -333,7 +333,7 @@ void polynomial::coset_ifft(const evaluation_domain &domain)
 //     polynomial_arithmetic::coset_ifft_with_constant(coefficients, domain, constant);
 // }
 
-fr::field_t polynomial::compute_kate_opening_coefficients(const barretenberg::fr::field_t &z)
+fr polynomial::compute_kate_opening_coefficients(const barretenberg::fr &z)
 {
     return polynomial_arithmetic::compute_kate_opening_coefficients(coefficients, coefficients, z, size);
 }
@@ -344,10 +344,10 @@ void polynomial::shrink_evaluation_domain(const size_t shrink_factor)
     size_t log2_shrink_factor = static_cast<size_t>(log2(shrink_factor));
     ASSERT(1UL << log2_shrink_factor == shrink_factor);
 
-    fr::field_t* new_memory = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * max_size >> log2_shrink_factor));
+    fr* new_memory = (fr*)(aligned_alloc(32, sizeof(fr) * max_size >> log2_shrink_factor));
     for (size_t i = 0; i < size; i += shrink_factor)
     {
-        fr::field_t::__copy(coefficients[i], new_memory[i >> log2_shrink_factor]);
+        fr::__copy(coefficients[i], new_memory[i >> log2_shrink_factor]);
     }
     aligned_free(coefficients);
     coefficients = new_memory;

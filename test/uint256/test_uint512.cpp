@@ -305,26 +305,26 @@ TEST(uint512, greater_than_or_equal)
 
 TEST(uint512, invmod)
 {
-    uint256_t prime_lo =fr::field_t::modulus;
-    // uint256_t prime_lo(fr::field_t::modulus.data[0],
-    //                    fr::field_t::modulus.data[1],
-    //                    fr::field_t::modulus.data[2],
-    //                    fr::field_t::modulus.data[3]);
+    uint256_t prime_lo =fr::modulus;
+    // uint256_t prime_lo(fr::modulus.data[0],
+    //                    fr::modulus.data[1],
+    //                    fr::modulus.data[2],
+    //                    fr::modulus.data[3]);
     uint512_t prime(prime_lo, uint256_t(0));
     uint256_t target_lo = test_helpers::get_pseudorandom_uint256();
     uint512_t inverse = uint512_t(target_lo, uint256_t(0)).invmod(prime);
 
-    uint512_t expected = uint256_t(fr::field_t(target_lo).invert());
+    uint512_t expected = uint256_t(fr(target_lo).invert());
     EXPECT_EQ(inverse, expected);
 }
 
 TEST(uint512, r_squared)
 {
-    uint256_t prime_256 =fr::field_t::modulus;
-    // uint256_t prime_256(fr::field_t::modulus.data[0],
-    //                     fr::field_t::modulus.data[1],
-    //                     fr::field_t::modulus.data[2],
-    //                     fr::field_t::modulus.data[3]);
+    uint256_t prime_256 =fr::modulus;
+    // uint256_t prime_256(fr::modulus.data[0],
+    //                     fr::modulus.data[1],
+    //                     fr::modulus.data[2],
+    //                     fr::modulus.data[3]);
     uint256_t R = -prime_256;
     uint256_t R_mod_p = R % prime_256;
 

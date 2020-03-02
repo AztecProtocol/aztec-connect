@@ -306,7 +306,7 @@ TEST(uint256, field_conversions)
 {
     constexpr uint256_t a{ 0x1111, 0x2222, 0x3333, 0x4444 };
 
-    constexpr barretenberg::fr::field_t b(a);
+    constexpr barretenberg::fr b(a);
     constexpr uint256_t c = b;
 
     static_assert(a == c);

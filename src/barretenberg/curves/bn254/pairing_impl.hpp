@@ -7,7 +7,7 @@
 namespace barretenberg {
 namespace pairing {
 namespace {
-constexpr fq::field_t two_inv = fq::field_t(2).invert();
+constexpr fq two_inv = fq(2).invert();
 inline constexpr g2::element mul_by_q(const g2::element& a)
 {
 

@@ -32,8 +32,8 @@ TEST(stdlib_schnorr, test_scalar_mul)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    grumpkin::fr::field_t scalar_mont = grumpkin::fr::field_t::random_element();
-    grumpkin::fr::field_t scalar = scalar_mont.from_montgomery_form();
+    grumpkin::fr scalar_mont = grumpkin::fr::random_element();
+    grumpkin::fr scalar = scalar_mont.from_montgomery_form();
 
     bitarray scalar_bits(&composer, 256);
     for (size_t i = 0; i < 256; ++i) {
@@ -68,16 +68,16 @@ TEST(stdlib_schnorr, verify_signature)
     // erm...what do we do now?
     std::string message_string = "Instructions unclear, ask again later.";
 
-    crypto::schnorr::key_pair<grumpkin::fr::field_t, grumpkin::g1> account;
-    account.private_key = grumpkin::fr::field_t::random_element();
+    crypto::schnorr::key_pair<grumpkin::fr, grumpkin::g1> account;
+    account.private_key = grumpkin::fr::random_element();
     account.public_key = grumpkin::g1::one * account.private_key;
 
     crypto::schnorr::signature signature =
-        crypto::schnorr::construct_signature<Sha256Hasher, grumpkin::fq::field_t, grumpkin::fr::field_t, grumpkin::g1>(
+        crypto::schnorr::construct_signature<Sha256Hasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(
             message_string, account);
 
     bool first_result =
-        crypto::schnorr::verify_signature<Sha256Hasher, grumpkin::fq::field_t, grumpkin::fr::field_t, grumpkin::g1>(
+        crypto::schnorr::verify_signature<Sha256Hasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(
             message_string, account.public_key, signature);
     EXPECT_EQ(first_result, true);
 

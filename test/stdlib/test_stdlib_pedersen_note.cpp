@@ -26,11 +26,11 @@ TEST(stdlib_pedersen_note, test_pedersen_note)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    fr::field_t view_key_value = fr::field_t::random_element();
+    fr view_key_value = fr::random_element();
     view_key_value.data[3] = view_key_value.data[3] & 0x3FFFFFFFFFFFFFFFULL;
     view_key_value = view_key_value.to_montgomery_form();
 
-    fr::field_t note_value = fr::field_t{ 9999, 0, 0, 0 }.to_montgomery_form();
+    fr note_value = fr{ 9999, 0, 0, 0 }.to_montgomery_form();
 
     grumpkin::g1::element left = plonk::stdlib::group_utils::fixed_base_scalar_mul<32>(note_value, 0);
     grumpkin::g1::element right = plonk::stdlib::group_utils::fixed_base_scalar_mul<250>(view_key_value, 1);
@@ -65,11 +65,11 @@ TEST(stdlib_pedersen_note, test_pedersen_note_zero)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    fr::field_t view_key_value = fr::field_t::random_element();
+    fr view_key_value = fr::random_element();
     view_key_value.data[3] = view_key_value.data[3] & 0x3FFFFFFFFFFFFFFFULL;
     view_key_value = view_key_value.to_montgomery_form();
 
-    fr::field_t note_value = fr::field_t{ 0, 0, 0, 0 }.to_montgomery_form();
+    fr note_value = fr{ 0, 0, 0, 0 }.to_montgomery_form();
 
     grumpkin::g1::element expected = plonk::stdlib::group_utils::fixed_base_scalar_mul<250>(view_key_value, 1);
     expected = expected.normalize();

@@ -176,8 +176,8 @@ TEST(fq2, invert)
 TEST(fq2, serialize)
 {
     uint8_t buffer[64];
-    fq::field_t expected_c0 = { 0x1234567876543210, 0x2345678987654321, 0x3456789a98765432, 0x006789abcba98765 };
-    fq::field_t expected_c1 = { 0x12a4e67f76b43210, 0x23e56f898a65cc21, 0x005678add98e5432, 0x1f6789a2cba98700 };
+    fq expected_c0 = { 0x1234567876543210, 0x2345678987654321, 0x3456789a98765432, 0x006789abcba98765 };
+    fq expected_c1 = { 0x12a4e67f76b43210, 0x23e56f898a65cc21, 0x005678add98e5432, 0x1f6789a2cba98700 };
     fq2::field_t expected{ expected_c0, expected_c1 };
 
     fq2::field_t::serialize_to_buffer(expected, &buffer[0]);

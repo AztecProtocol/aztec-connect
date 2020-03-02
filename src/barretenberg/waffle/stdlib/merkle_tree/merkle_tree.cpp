@@ -32,15 +32,15 @@ typename merkle_tree<ComposerContext>::hash_path merkle_tree<ComposerContext>::c
     return result;
 }
 
-inline uint128_t field_to_uint128(const fr::field_t& input)
+inline uint128_t field_to_uint128(const fr& input)
 {
-    fr::field_t raw = input.from_montgomery_form();
+    fr raw = input.from_montgomery_form();
     uint128_t lo = raw.data[0];
     uint128_t hi = raw.data[1];
     return (hi << 64) | lo;
 }
 
-inline fr::field_t uint128_to_field(uint128_t input)
+inline fr uint128_to_field(uint128_t input)
 {
     return { (uint64_t)input, (uint64_t)(input >> 64), 0, 0 };
 }
@@ -63,7 +63,7 @@ bool_t<ComposerContext> merkle_tree<ComposerContext>::assert_check_membership(va
                                                                               index_t const& index)
 {
     bool_t is_member = check_membership(value, index);
-    ctx_.assert_equal_constant(is_member.witness_index, barretenberg::fr::field_t::one());
+    ctx_.assert_equal_constant(is_member.witness_index, barretenberg::fr::one());
     return is_member;
 }
 
@@ -151,7 +151,7 @@ void merkle_tree<ComposerContext>::update_member(value_t const& value, index_t c
 
     // TODO: Enforce a check here that index < size? (operator currently broken)
     // uint32 size = witness_t(&ctx_, size_);
-    // ctx_.assert_equal_constant((index < size).witness_index, barretenberg::fr::field_t::one());
+    // ctx_.assert_equal_constant((index < size).witness_index, barretenberg::fr::one());
 
     fr_hash_path old_hashes = store_.get_hash_path(idx);
     fr_hash_path new_hashes = get_new_hash_path(old_hashes, idx, value.get_value());
@@ -178,20 +178,20 @@ void merkle_tree<ComposerContext>::update_membership(field_t const& new_root,
 {
     // Check old path hashes lead to the old root. They're used when validating the new path hashes.
     bool_t old_hashes_valid = check_hash_path(old_root, old_hashes, index);
-    ctx_.assert_equal_constant(old_hashes_valid.witness_index, barretenberg::fr::field_t::one());
+    ctx_.assert_equal_constant(old_hashes_valid.witness_index, barretenberg::fr::one());
 
     field_t sha_value = sha256_value(new_value);
 
     // Check the new path hashes lead from the new value to the new root.
     bool_t new_hashes_valid = check_membership(new_root, new_hashes, sha_value, index);
-    ctx_.assert_equal_constant(new_hashes_valid.witness_index, barretenberg::fr::field_t::one());
+    ctx_.assert_equal_constant(new_hashes_valid.witness_index, barretenberg::fr::one());
 
     // Check that only the appropriate left or right hash was updated in the new hash path.
     for (size_t i = 0; i < depth_; ++i) {
         bool_t path_bit = index.get_bit(i);
         bool_t share_left = (old_hashes[i].first == new_hashes[i].first) & path_bit;
         bool_t share_right = (old_hashes[i].second == new_hashes[i].second) & !path_bit;
-        ctx_.assert_equal_constant((share_left ^ share_right).witness_index, barretenberg::fr::field_t::one());
+        ctx_.assert_equal_constant((share_left ^ share_right).witness_index, barretenberg::fr::one());
     }
 }
 

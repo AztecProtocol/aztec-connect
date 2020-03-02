@@ -8,22 +8,22 @@
 namespace barretenberg {
 namespace polynomial_arithmetic {
 namespace {
-static fr::field_t* working_memory = nullptr;
+static fr* working_memory = nullptr;
 static size_t current_size = 0;
 
 const auto init = []() {
     constexpr size_t max_num_elements = (1 << 20);
-    working_memory = (fr::field_t*)(aligned_alloc(64, max_num_elements * 4 * sizeof(fr::field_t)));
-    memset((void*)working_memory, 1, max_num_elements * 4 * sizeof(fr::field_t));
+    working_memory = (fr*)(aligned_alloc(64, max_num_elements * 4 * sizeof(fr)));
+    memset((void*)working_memory, 1, max_num_elements * 4 * sizeof(fr));
     current_size = (max_num_elements * 4);
     return 1;
 }();
 
-fr::field_t* get_scratch_space(const size_t num_elements)
+fr* get_scratch_space(const size_t num_elements)
 {
     if (num_elements > current_size) {
         free(working_memory);
-        working_memory = (fr::field_t*)(aligned_alloc(64, num_elements * sizeof(fr::field_t)));
+        working_memory = (fr*)(aligned_alloc(64, num_elements * sizeof(fr)));
         current_size = num_elements;
     }
     return working_memory;
@@ -41,22 +41,22 @@ inline uint32_t reverse_bits(uint32_t x, uint32_t bit_length)
     return (((x >> 16) | (x << 16))) >> (32 - bit_length);
 }
 
-void copy_polynomial(fr::field_t* src, fr::field_t* dest, size_t num_src_coefficients, size_t num_target_coefficients)
+void copy_polynomial(fr* src, fr* dest, size_t num_src_coefficients, size_t num_target_coefficients)
 {
     // TODO: fiddle around with avx asm to see if we can speed up
-    memcpy((void*)dest, (void*)src, num_src_coefficients * sizeof(fr::field_t));
+    memcpy((void*)dest, (void*)src, num_src_coefficients * sizeof(fr));
 
     if (num_target_coefficients > num_src_coefficients) {
         // fill out the polynomial coefficients with zeroes
         memset((void*)(dest + num_src_coefficients),
                0,
-               (num_target_coefficients - num_src_coefficients) * sizeof(fr::field_t));
+               (num_target_coefficients - num_src_coefficients) * sizeof(fr));
     }
 }
 
-void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::vector<fr::field_t*>& root_table)
+void fft_inner_serial(fr* coeffs, const size_t domain_size, const std::vector<fr*>& root_table)
 {
-    fr::field_t temp;
+    fr temp;
     size_t log2_size = (size_t)log2(domain_size);
     // efficiently separate odd and even indices - (An introduction to algorithms, section 30.3)
 
@@ -64,7 +64,7 @@ void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::
         uint32_t swap_index = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)log2_size);
         // TODO: should probably use CMOV here insead of an if statement
         if (i < swap_index) {
-            fr::field_t::__swap(coeffs[i], coeffs[swap_index]);
+            fr::__swap(coeffs[i], coeffs[swap_index]);
         }
     }
 
@@ -75,7 +75,7 @@ void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::
 
     // perform first butterfly iteration explicitly: x0 = x0 + x1, x1 = x0 - x1
     for (size_t k = 0; k < domain_size; k += 2) {
-        fr::field_t::__copy(coeffs[k + 1], temp);
+        fr::__copy(coeffs[k + 1], temp);
         coeffs[k + 1] = coeffs[k] - coeffs[k + 1];
         coeffs[k] += temp;
     }
@@ -92,20 +92,20 @@ void fft_inner_serial(fr::field_t* coeffs, const size_t domain_size, const std::
     }
 }
 
-void scale_by_generator(fr::field_t* coeffs,
-                        fr::field_t* target,
+void scale_by_generator(fr* coeffs,
+                        fr* target,
                         const evaluation_domain& domain,
-                        const fr::field_t& generator_start,
-                        const fr::field_t& generator_shift,
+                        const fr& generator_start,
+                        const fr& generator_shift,
                         const size_t generator_size)
 {
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
     for (size_t j = 0; j < domain.num_threads; ++j) {
-        fr::field_t thread_shift =
+        fr thread_shift =
             generator_shift.pow(static_cast<uint64_t>(j * (generator_size / domain.num_threads)));
-        fr::field_t work_generator = generator_start * thread_shift;
+        fr work_generator = generator_start * thread_shift;
         const size_t offset = j * (generator_size / domain.num_threads);
         const size_t end = offset + (generator_size / domain.num_threads);
         for (size_t i = offset; i < end; ++i) {
@@ -117,14 +117,14 @@ void scale_by_generator(fr::field_t* coeffs,
 
 void compute_multiplicative_subgroup(const size_t log2_subgroup_size,
                                      const evaluation_domain& src_domain,
-                                     fr::field_t* subgroup_roots)
+                                     fr* subgroup_roots)
 {
     size_t subgroup_size = 1UL << log2_subgroup_size;
     // Step 1: get primitive 4th root of unity
-    fr::field_t subgroup_root = fr::field_t::get_root_of_unity(log2_subgroup_size);
+    fr subgroup_root = fr::get_root_of_unity(log2_subgroup_size);
 
     // Step 2: compute the cofactor term g^n
-    fr::field_t accumulator = src_domain.generator;
+    fr accumulator = src_domain.generator;
     for (size_t i = 0; i < src_domain.log2_size; ++i) {
         accumulator.self_sqr();
     }
@@ -136,13 +136,13 @@ void compute_multiplicative_subgroup(const size_t log2_subgroup_size,
     }
 }
 
-void fft_inner_parallel(fr::field_t* coeffs,
+void fft_inner_parallel(fr* coeffs,
                         const evaluation_domain& domain,
-                        const fr::field_t&,
-                        const std::vector<fr::field_t*>& root_table)
+                        const fr&,
+                        const std::vector<fr*>& root_table)
 {
-    // hmm  // fr::field_t* scratch_space = (fr::field_t*)aligned_alloc(64, sizeof(fr::field_t) * domain.size);
-    fr::field_t* scratch_space = get_scratch_space(domain.size);
+    // hmm  // fr* scratch_space = (fr*)aligned_alloc(64, sizeof(fr) * domain.size);
+    fr* scratch_space = get_scratch_space(domain.size);
 #ifndef NO_MULTITHREADING
 #pragma omp parallel
 #endif
@@ -153,8 +153,8 @@ void fft_inner_parallel(fr::field_t* coeffs,
 #pragma omp for
 #endif
         for (size_t j = 0; j < domain.num_threads; ++j) {
-            fr::field_t temp_1;
-            fr::field_t temp_2;
+            fr temp_1;
+            fr temp_2;
             for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); i += 2) {
                 uint32_t next_index_1 = (uint32_t)reverse_bits((uint32_t)i + 2, (uint32_t)domain.log2_size);
                 uint32_t next_index_2 = (uint32_t)reverse_bits((uint32_t)i + 3, (uint32_t)domain.log2_size);
@@ -164,8 +164,8 @@ void fft_inner_parallel(fr::field_t* coeffs,
                 uint32_t swap_index_1 = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)domain.log2_size);
                 uint32_t swap_index_2 = (uint32_t)reverse_bits((uint32_t)i + 1, (uint32_t)domain.log2_size);
 
-                fr::field_t::__copy(coeffs[swap_index_1], temp_1);
-                fr::field_t::__copy(coeffs[swap_index_2], temp_2);
+                fr::__copy(coeffs[swap_index_1], temp_1);
+                fr::__copy(coeffs[swap_index_2], temp_2);
                 scratch_space[i + 1] = temp_1 - temp_2;
                 scratch_space[i] = temp_1 + temp_2;
             }
@@ -184,7 +184,7 @@ void fft_inner_parallel(fr::field_t* coeffs,
 #pragma omp for
 #endif
             for (size_t j = 0; j < domain.num_threads; ++j) {
-                fr::field_t temp;
+                fr temp;
 
                 // Ok! So, what's going on here? This is the inner loop of the FFT algorithm, and we want to break it
                 // out into multiple independent threads. For `num_threads`, each thread will evaluation `domain.size /
@@ -228,7 +228,7 @@ void fft_inner_parallel(fr::field_t* coeffs,
 
                 // `round_roots` fetches the pointer to this round's lookup table. We use `log2(m) - 1` as our indexer,
                 // because we don't store the precomputed root values for the 1st round (because they're all 1).
-                const fr::field_t* round_roots = root_table[static_cast<size_t>(log2(m)) - 1];
+                const fr* round_roots = root_table[static_cast<size_t>(log2(m)) - 1];
 
                 // Finally, we want to treat the final round differently from the others,
                 // so that we can reduce out of our 'coarse' reduction and store the output in `coeffs` instead of
@@ -255,13 +255,13 @@ void fft_inner_parallel(fr::field_t* coeffs,
     }
 }
 
-void fft_inner_parallel(fr::field_t* coeffs,
-                        fr::field_t* target,
+void fft_inner_parallel(fr* coeffs,
+                        fr* target,
                         const evaluation_domain& domain,
-                        const fr::field_t&,
-                        const std::vector<fr::field_t*>& root_table)
+                        const fr&,
+                        const std::vector<fr*>& root_table)
 {
-    // hmm  // fr::field_t* scratch_space = (fr::field_t*)aligned_alloc(64, sizeof(fr::field_t) * domain.size);
+    // hmm  // fr* scratch_space = (fr*)aligned_alloc(64, sizeof(fr) * domain.size);
 #ifndef NO_MULTITHREADING
 #pragma omp parallel
 #endif
@@ -272,8 +272,8 @@ void fft_inner_parallel(fr::field_t* coeffs,
 #pragma omp for
 #endif
         for (size_t j = 0; j < domain.num_threads; ++j) {
-            fr::field_t temp_1;
-            fr::field_t temp_2;
+            fr temp_1;
+            fr temp_2;
             for (size_t i = (j * domain.thread_size); i < ((j + 1) * domain.thread_size); i += 2) {
                 uint32_t next_index_1 = (uint32_t)reverse_bits((uint32_t)i + 2, (uint32_t)domain.log2_size);
                 uint32_t next_index_2 = (uint32_t)reverse_bits((uint32_t)i + 3, (uint32_t)domain.log2_size);
@@ -283,8 +283,8 @@ void fft_inner_parallel(fr::field_t* coeffs,
                 uint32_t swap_index_1 = (uint32_t)reverse_bits((uint32_t)i, (uint32_t)domain.log2_size);
                 uint32_t swap_index_2 = (uint32_t)reverse_bits((uint32_t)i + 1, (uint32_t)domain.log2_size);
 
-                fr::field_t::__copy(coeffs[swap_index_1], temp_1);
-                fr::field_t::__copy(coeffs[swap_index_2], temp_2);
+                fr::__copy(coeffs[swap_index_1], temp_1);
+                fr::__copy(coeffs[swap_index_2], temp_2);
                 target[i + 1] = temp_1 - temp_2;
                 target[i] = temp_1 + temp_2;
             }
@@ -303,7 +303,7 @@ void fft_inner_parallel(fr::field_t* coeffs,
 #pragma omp for
 #endif
             for (size_t j = 0; j < domain.num_threads; ++j) {
-                fr::field_t temp;
+                fr temp;
 
                 // Ok! So, what's going on here? This is the inner loop of the FFT algorithm, and we want to break it
                 // out into multiple independent threads. For `num_threads`, each thread will evaluation `domain.size /
@@ -347,7 +347,7 @@ void fft_inner_parallel(fr::field_t* coeffs,
 
                 // `round_roots` fetches the pointer to this round's lookup table. We use `log2(m) - 1` as our indexer,
                 // because we don't store the precomputed root values for the 1st round (because they're all 1).
-                const fr::field_t* round_roots = root_table[static_cast<size_t>(log2(m)) - 1];
+                const fr* round_roots = root_table[static_cast<size_t>(log2(m)) - 1];
 
                 // Finally, we want to treat the final round differently from the others,
                 // so that we can reduce out of our 'coarse' reduction and store the output in `coeffs` instead of
@@ -374,12 +374,12 @@ void fft_inner_parallel(fr::field_t* coeffs,
     }
 }
 
-void fft(fr::field_t* coeffs, const evaluation_domain& domain)
+void fft(fr* coeffs, const evaluation_domain& domain)
 {
     fft_inner_parallel(coeffs, domain, domain.root, domain.get_round_roots());
 }
 
-void ifft(fr::field_t* coeffs, const evaluation_domain& domain)
+void ifft(fr* coeffs, const evaluation_domain& domain)
 {
     fft_inner_parallel(coeffs, domain, domain.root_inverse, domain.get_inverse_round_roots());
     ITERATE_OVER_DOMAIN_START(domain);
@@ -387,7 +387,7 @@ void ifft(fr::field_t* coeffs, const evaluation_domain& domain)
     ITERATE_OVER_DOMAIN_END;
 }
 
-void fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, const fr::field_t& value)
+void fft_with_constant(fr* coeffs, const evaluation_domain& domain, const fr& value)
 {
     fft_inner_parallel(coeffs, domain, domain.root, domain.get_round_roots());
     ITERATE_OVER_DOMAIN_START(domain);
@@ -395,35 +395,35 @@ void fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, con
     ITERATE_OVER_DOMAIN_END;
 }
 
-void coset_fft(fr::field_t* coeffs, const evaluation_domain& domain)
+void coset_fft(fr* coeffs, const evaluation_domain& domain)
 {
-    scale_by_generator(coeffs, coeffs, domain, fr::field_t::one(), domain.generator, domain.generator_size);
+    scale_by_generator(coeffs, coeffs, domain, fr::one(), domain.generator, domain.generator_size);
     fft(coeffs, domain);
 }
 
-void coset_fft(fr::field_t* coeffs,
+void coset_fft(fr* coeffs,
                const evaluation_domain& domain,
                const evaluation_domain&,
                const size_t domain_extension)
 {
     const size_t log2_domain_extension = static_cast<size_t>(log2(domain_extension));
-    fr::field_t primitive_root = fr::field_t::get_root_of_unity(domain.log2_size + log2_domain_extension);
+    fr primitive_root = fr::get_root_of_unity(domain.log2_size + log2_domain_extension);
 
-    // fr::field_t work_root = domain.generator.sqr();
+    // fr work_root = domain.generator.sqr();
     // work_root = domain.generator.sqr();
-    fr::field_t* scratch_space = get_scratch_space(domain.size * domain_extension);
+    fr* scratch_space = get_scratch_space(domain.size * domain_extension);
 
-    // fr::field_t* temp_memory = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * domain.size *
+    // fr* temp_memory = static_cast<fr*>(aligned_alloc(64, sizeof(fr) * domain.size *
     // domain_extension));
 
-    std::vector<fr::field_t> coset_generators(domain_extension);
+    std::vector<fr> coset_generators(domain_extension);
     coset_generators[0] = domain.generator;
     for (size_t i = 1; i < domain_extension; ++i) {
         coset_generators[i] = coset_generators[i - 1] * primitive_root;
     }
     for (size_t i = domain_extension - 1; i < domain_extension; --i) {
         scale_by_generator(
-            coeffs, coeffs + (i * domain.size), domain, fr::field_t::one(), coset_generators[i], domain.size);
+            coeffs, coeffs + (i * domain.size), domain, fr::one(), coset_generators[i], domain.size);
     }
 
     for (size_t i = 0; i < domain_extension; ++i) {
@@ -442,53 +442,53 @@ void coset_fft(fr::field_t* coeffs,
             const size_t start = j * domain.thread_size;
             const size_t end = (j + 1) * domain.thread_size;
             for (size_t i = start; i < end; ++i) {
-                fr::field_t::__copy(scratch_space[i], coeffs[(i << 2UL)]);
-                fr::field_t::__copy(scratch_space[i + (1UL << domain.log2_size)], coeffs[(i << 2UL) + 1UL]);
-                fr::field_t::__copy(scratch_space[i + (2UL << domain.log2_size)], coeffs[(i << 2UL) + 2UL]);
-                fr::field_t::__copy(scratch_space[i + (3UL << domain.log2_size)], coeffs[(i << 2UL) + 3UL]);
+                fr::__copy(scratch_space[i], coeffs[(i << 2UL)]);
+                fr::__copy(scratch_space[i + (1UL << domain.log2_size)], coeffs[(i << 2UL) + 1UL]);
+                fr::__copy(scratch_space[i + (2UL << domain.log2_size)], coeffs[(i << 2UL) + 2UL]);
+                fr::__copy(scratch_space[i + (3UL << domain.log2_size)], coeffs[(i << 2UL) + 3UL]);
             }
         }
         for (size_t i = 0; i < domain.size; ++i) {
             for (size_t j = 0; j < domain_extension; ++j) {
-                fr::field_t::__copy(scratch_space[i + (j << domain.log2_size)],
+                fr::__copy(scratch_space[i + (j << domain.log2_size)],
                                     coeffs[(i << log2_domain_extension) + j]);
             }
         }
     } else {
         for (size_t i = 0; i < domain.size; ++i) {
             for (size_t j = 0; j < domain_extension; ++j) {
-                fr::field_t::__copy(scratch_space[i + (j << domain.log2_size)],
+                fr::__copy(scratch_space[i + (j << domain.log2_size)],
                                     coeffs[(i << log2_domain_extension) + j]);
             }
         }
     }
 }
 
-void coset_fft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, const fr::field_t& constant)
+void coset_fft_with_constant(fr* coeffs, const evaluation_domain& domain, const fr& constant)
 {
-    fr::field_t start = constant;
+    fr start = constant;
     scale_by_generator(coeffs, coeffs, domain, start, domain.generator, domain.generator_size);
     fft(coeffs, domain);
 }
 
-void ifft_with_constant(fr::field_t* coeffs, const evaluation_domain& domain, const fr::field_t& value)
+void ifft_with_constant(fr* coeffs, const evaluation_domain& domain, const fr& value)
 {
     fft_inner_parallel(coeffs, domain, domain.root_inverse, domain.get_inverse_round_roots());
-    fr::field_t T0 = domain.domain_inverse * value;
+    fr T0 = domain.domain_inverse * value;
     ITERATE_OVER_DOMAIN_START(domain);
     coeffs[i] *= T0;
     ITERATE_OVER_DOMAIN_END;
 }
 
-void coset_ifft(fr::field_t* coeffs, const evaluation_domain& domain)
+void coset_ifft(fr* coeffs, const evaluation_domain& domain)
 {
     ifft(coeffs, domain);
-    scale_by_generator(coeffs, coeffs, domain, fr::field_t::one(), domain.generator_inverse, domain.size);
+    scale_by_generator(coeffs, coeffs, domain, fr::one(), domain.generator_inverse, domain.size);
 }
 
-void add(const fr::field_t* a_coeffs,
-         const fr::field_t* b_coeffs,
-         fr::field_t* r_coeffs,
+void add(const fr* a_coeffs,
+         const fr* b_coeffs,
+         fr* r_coeffs,
          const evaluation_domain& domain)
 {
     ITERATE_OVER_DOMAIN_START(domain);
@@ -496,9 +496,9 @@ void add(const fr::field_t* a_coeffs,
     ITERATE_OVER_DOMAIN_END;
 }
 
-void mul(const fr::field_t* a_coeffs,
-         const fr::field_t* b_coeffs,
-         fr::field_t* r_coeffs,
+void mul(const fr* a_coeffs,
+         const fr* b_coeffs,
+         fr* r_coeffs,
          const evaluation_domain& domain)
 {
     ITERATE_OVER_DOMAIN_START(domain);
@@ -506,7 +506,7 @@ void mul(const fr::field_t* a_coeffs,
     ITERATE_OVER_DOMAIN_END;
 }
 
-fr::field_t evaluate(const fr::field_t* coeffs, const fr::field_t& z, const size_t n)
+fr evaluate(const fr* coeffs, const fr& z, const size_t n)
 {
 #ifndef NO_MULTITHREADING
     size_t num_threads = (size_t)omp_get_max_threads();
@@ -515,23 +515,23 @@ fr::field_t evaluate(const fr::field_t* coeffs, const fr::field_t& z, const size
 #endif
     size_t range_per_thread = n / num_threads;
     size_t leftovers = n - (range_per_thread * num_threads);
-    fr::field_t* evaluations = new fr::field_t[num_threads];
+    fr* evaluations = new fr[num_threads];
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
     for (size_t j = 0; j < num_threads; ++j) {
-        fr::field_t z_acc = z.pow(static_cast<uint64_t>(j * range_per_thread));
+        fr z_acc = z.pow(static_cast<uint64_t>(j * range_per_thread));
         size_t offset = j * range_per_thread;
-        evaluations[j] = fr::field_t::zero();
+        evaluations[j] = fr::zero();
         size_t end = (j == num_threads - 1) ? offset + range_per_thread + leftovers : offset + range_per_thread;
         for (size_t i = offset; i < end; ++i) {
-            fr::field_t work_var = z_acc * coeffs[i];
+            fr work_var = z_acc * coeffs[i];
             evaluations[j] += work_var;
             z_acc *= z;
         }
     }
 
-    fr::field_t r = fr::field_t::zero();
+    fr r = fr::zero();
     for (size_t j = 0; j < num_threads; ++j) {
         r += evaluations[j];
     }
@@ -545,7 +545,7 @@ fr::field_t evaluate(const fr::field_t* coeffs, const fr::field_t& z, const size
 // We can consider `l_1_coefficients` to be a 2n-sized vector of the evaluations of L_1(X),
 // for all X = 2n'th roots of unity.
 // To compute the vector for the 2n-fft transform of L_i(X), we perform a (2i)-left-shift of this vector
-void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
+void compute_lagrange_polynomial_fft(fr* l_1_coefficients,
                                      const evaluation_domain& src_domain,
                                      const evaluation_domain& target_domain)
 {
@@ -560,24 +560,24 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
     // by zero
 
     // Step 1: compute the denominator for each evaluation: 1 / (X.g - 1)
-    // fr::field_t work_root;
-    fr::field_t multiplicand = target_domain.root;
+    // fr work_root;
+    fr multiplicand = target_domain.root;
 
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
     for (size_t j = 0; j < target_domain.num_threads; ++j) {
-        const fr::field_t root_shift = multiplicand.pow(static_cast<uint64_t>(j * target_domain.thread_size));
-        fr::field_t work_root = src_domain.generator * root_shift;
+        const fr root_shift = multiplicand.pow(static_cast<uint64_t>(j * target_domain.thread_size));
+        fr work_root = src_domain.generator * root_shift;
         size_t offset = j * target_domain.thread_size;
         for (size_t i = offset; i < offset + target_domain.thread_size; ++i) {
-            l_1_coefficients[i] = work_root - fr::field_t::one();
+            l_1_coefficients[i] = work_root - fr::one();
             work_root *= multiplicand;
         }
     }
 
     // use Montgomery's trick to invert all of these at once
-    fr::field_t::batch_invert(l_1_coefficients, target_domain.size);
+    fr::batch_invert(l_1_coefficients, target_domain.size);
 
     // next: compute numerator multiplicand: w'^{n}.g^n
     // Here, w' is the primitive 2n'th root of unity
@@ -595,13 +595,13 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
     size_t subgroup_size = 1UL << log2_subgroup_size;
     ASSERT(target_domain.log2_size >= src_domain.log2_size);
 
-    fr::field_t* subgroup_roots = new fr::field_t[subgroup_size];
+    fr* subgroup_roots = new fr[subgroup_size];
     compute_multiplicative_subgroup(log2_subgroup_size, src_domain, &subgroup_roots[0]);
 
     // Each element of `subgroup_roots[i]` contains some root wi^n
     // want to compute (1/n)(wi^n - 1)
     for (size_t i = 0; i < subgroup_size; ++i) {
-        subgroup_roots[i] -= fr::field_t::one();
+        subgroup_roots[i] -= fr::one();
         subgroup_roots[i] *= src_domain.domain_inverse;
     }
     // TODO: this is disgusting! Fix it fix it fix it fix it...
@@ -627,7 +627,7 @@ void compute_lagrange_polynomial_fft(fr::field_t* l_1_coefficients,
     delete[] subgroup_roots;
 }
 
-void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
+void divide_by_pseudo_vanishing_polynomial(fr* coeffs,
                                            const evaluation_domain& src_domain,
                                            const evaluation_domain& target_domain)
 {
@@ -646,31 +646,31 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
     size_t subgroup_size = 1UL << log2_subgroup_size;
     ASSERT(target_domain.log2_size >= src_domain.log2_size);
 
-    fr::field_t* subgroup_roots = new fr::field_t[subgroup_size];
+    fr* subgroup_roots = new fr[subgroup_size];
     compute_multiplicative_subgroup(log2_subgroup_size, src_domain, &subgroup_roots[0]);
 
     // Step 3: fill array with values of (g.X)^n - 1, scaled by the cofactor
     for (size_t i = 0; i < subgroup_size; ++i) {
-        subgroup_roots[i] -= fr::field_t::one();
+        subgroup_roots[i] -= fr::one();
     }
 
     // Step 4: invert array entries to compute denominator term of 1/Z_H*(X)
-    fr::field_t::batch_invert(&subgroup_roots[0], subgroup_size);
+    fr::batch_invert(&subgroup_roots[0], subgroup_size);
 
     // The numerator term of Z_H*(X) is the polynomial (X - w^{n-1})
     // => (g.w_i - w^{n-1})
     // Compute w^{n-1}
-    fr::field_t numerator_constant = -src_domain.root_inverse;
+    fr numerator_constant = -src_domain.root_inverse;
 
     // Compute first value of g.w_i
 
     // Step 5: iterate over point evaluations, scaling each one by the inverse of the vanishing polynomial
     if (subgroup_size >= target_domain.thread_size) {
-        fr::field_t work_root = src_domain.generator;
+        fr work_root = src_domain.generator;
         for (size_t i = 0; i < target_domain.size; i += subgroup_size) {
             for (size_t j = 0; j < subgroup_size; ++j) {
                 coeffs[i + j] *= subgroup_roots[j];
-                fr::field_t T0 = work_root + numerator_constant;
+                fr T0 = work_root + numerator_constant;
                 coeffs[i + j] *= T0;
                 work_root *= target_domain.root;
             }
@@ -681,12 +681,12 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
 #endif
         for (size_t k = 0; k < target_domain.num_threads; ++k) {
             size_t offset = k * target_domain.thread_size;
-            const fr::field_t root_shift = target_domain.root.pow(static_cast<uint64_t>(offset));
-            fr::field_t work_root = src_domain.generator * root_shift;
+            const fr root_shift = target_domain.root.pow(static_cast<uint64_t>(offset));
+            fr work_root = src_domain.generator * root_shift;
             for (size_t i = offset; i < offset + target_domain.thread_size; i += subgroup_size) {
                 for (size_t j = 0; j < subgroup_size; ++j) {
                     coeffs[i + j] *= subgroup_roots[j];
-                    fr::field_t T0 = work_root + numerator_constant;
+                    fr T0 = work_root + numerator_constant;
                     coeffs[i + j] *= T0;
                     work_root *= target_domain.root;
                 }
@@ -696,9 +696,9 @@ void divide_by_pseudo_vanishing_polynomial(fr::field_t* coeffs,
     delete[] subgroup_roots;
 }
 
-fr::field_t compute_kate_opening_coefficients(const fr::field_t* src,
-                                              fr::field_t* dest,
-                                              const fr::field_t& z,
+fr compute_kate_opening_coefficients(const fr* src,
+                                              fr* dest,
+                                              const fr& z,
                                               const size_t n)
 {
     // if `coeffs` represents F(X), we want to compute W(X)
@@ -708,9 +708,9 @@ fr::field_t compute_kate_opening_coefficients(const fr::field_t* src,
     // We assume that the commitment is well-formed and that there is no remainder term.
     // Under these conditions we can perform this polynomial division in linear time with good constants
 
-    fr::field_t f = evaluate(src, z, n);
+    fr f = evaluate(src, z, n);
     // compute (1 / -z)
-    fr::field_t divisor = -z.invert();
+    fr divisor = -z.invert();
 
     // we're about to shove these coefficients into a pippenger multi-exponentiation routine, where we need
     // to convert out of montgomery form. So, we can use lazy reduction techniques here without triggering overflows
@@ -725,21 +725,21 @@ fr::field_t compute_kate_opening_coefficients(const fr::field_t* src,
 }
 
 // compute Z_H*(z), l_1(z), l_{n-1}(z)
-barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluations(const fr::field_t& z,
+barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluations(const fr& z,
                                                                                    const evaluation_domain& domain)
 {
-    fr::field_t z_pow = z;
+    fr z_pow = z;
     for (size_t i = 0; i < domain.log2_size; ++i) {
         z_pow.self_sqr();
     }
 
-    fr::field_t numerator = z_pow - fr::field_t::one();
+    fr numerator = z_pow - fr::one();
 
-    fr::field_t denominators[3];
+    fr denominators[3];
     denominators[0] = z - domain.root_inverse;
-    denominators[1] = z - fr::field_t::one();
-    denominators[2] = (z * domain.root.sqr()) - fr::field_t::one();
-    fr::field_t::batch_invert(denominators, 3);
+    denominators[1] = z - fr::one();
+    denominators[2] = (z * domain.root.sqr()) - fr::one();
+    fr::batch_invert(denominators, 3);
 
     barretenberg::polynomial_arithmetic::lagrange_evaluations result;
     result.vanishing_poly = numerator * denominators[0];
@@ -752,34 +752,34 @@ barretenberg::polynomial_arithmetic::lagrange_evaluations get_lagrange_evaluatio
 // computes r = \sum_{i=0}^{num_coeffs}(L_i(z).f_i)
 // start with L_1(z) = ((z^n - 1)/n).(1 / z - 1)
 // L_i(z) = L_1(z.w^{1-i}) = ((z^n - 1) / n).(1 / z.w^{1-i} - 1)
-fr::field_t compute_barycentric_evaluation(fr::field_t* coeffs,
+fr compute_barycentric_evaluation(fr* coeffs,
                                            const size_t num_coeffs,
-                                           const fr::field_t& z,
+                                           const fr& z,
                                            const evaluation_domain& domain)
 {
-    fr::field_t* denominators = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * num_coeffs));
+    fr* denominators = static_cast<fr*>(aligned_alloc(64, sizeof(fr) * num_coeffs));
 
-    fr::field_t numerator = z;
+    fr numerator = z;
     for (size_t i = 0; i < domain.log2_size; ++i) {
         numerator.self_sqr();
     }
-    numerator -= fr::field_t::one();
+    numerator -= fr::one();
     numerator *= domain.domain_inverse;
 
-    denominators[0] = z - fr::field_t::one();
-    fr::field_t work_root = domain.root_inverse;
+    denominators[0] = z - fr::one();
+    fr work_root = domain.root_inverse;
     for (size_t i = 1; i < num_coeffs; ++i) {
         denominators[i] = work_root * z;
-        denominators[i] -= fr::field_t::one();
+        denominators[i] -= fr::one();
         work_root *= domain.root_inverse;
     }
 
-    fr::field_t::batch_invert(denominators, num_coeffs);
+    fr::batch_invert(denominators, num_coeffs);
 
-    fr::field_t result = fr::field_t::zero();
+    fr result = fr::zero();
 
     for (size_t i = 0; i < num_coeffs; ++i) {
-        fr::field_t temp = coeffs[i] * denominators[i];
+        fr temp = coeffs[i] * denominators[i];
         result = result + temp;
     }
 
@@ -791,14 +791,14 @@ fr::field_t compute_barycentric_evaluation(fr::field_t* coeffs,
 }
 
 // Convert an fft with `current_size` point evaluations, to one with `current_size >> compress_factor` point evaluations
-void compress_fft(const fr::field_t* src, fr::field_t* dest, const size_t cur_size, const size_t compress_factor)
+void compress_fft(const fr* src, fr* dest, const size_t cur_size, const size_t compress_factor)
 {
     // iterate from top to bottom, allows `dest` to overlap with `src`
     size_t log2_compress_factor = (size_t)log2(compress_factor);
     ASSERT(1UL << log2_compress_factor == compress_factor);
     size_t new_size = cur_size >> log2_compress_factor;
     for (size_t i = 0; i < new_size; ++i) {
-        fr::field_t::__copy(src[i << log2_compress_factor], dest[i]);
+        fr::__copy(src[i << log2_compress_factor], dest[i]);
     }
 }
 

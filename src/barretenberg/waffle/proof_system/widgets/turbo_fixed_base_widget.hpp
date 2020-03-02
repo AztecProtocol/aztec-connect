@@ -12,17 +12,17 @@ class VerifierTurboFixedBaseWidget : public VerifierTurboArithmeticWidget {
         const challenge_coefficients& challenge,
         const transcript::Transcript& transcript,
         std::vector<barretenberg::g1::affine_element>& points,
-        std::vector<barretenberg::fr::field_t>& scalars) override;
+        std::vector<barretenberg::fr>& scalars) override;
 
-    barretenberg::fr::field_t compute_batch_evaluation_contribution(verification_key*,
-                                                                    barretenberg::fr::field_t&,
-                                                                    const barretenberg::fr::field_t& nu_base,
+    barretenberg::fr compute_batch_evaluation_contribution(verification_key*,
+                                                                    barretenberg::fr&,
+                                                                    const barretenberg::fr& nu_base,
                                                                     const transcript::Transcript&) override;
 
-    barretenberg::fr::field_t compute_quotient_evaluation_contribution(verification_key*,
-                                                                       const barretenberg::fr::field_t&,
+    barretenberg::fr compute_quotient_evaluation_contribution(verification_key*,
+                                                                       const barretenberg::fr&,
                                                                        const transcript::Transcript& transcript,
-                                                                       barretenberg::fr::field_t&) override;
+                                                                       barretenberg::fr&) override;
 };
 
 class ProverTurboFixedBaseWidget : public ProverTurboArithmeticWidget {
@@ -33,15 +33,15 @@ class ProverTurboFixedBaseWidget : public ProverTurboArithmeticWidget {
     ProverTurboFixedBaseWidget& operator=(const ProverTurboFixedBaseWidget& other);
     ProverTurboFixedBaseWidget& operator=(ProverTurboFixedBaseWidget&& other);
 
-    barretenberg::fr::field_t compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
+    barretenberg::fr compute_quotient_contribution(const barretenberg::fr& alpha_base,
                                                             const transcript::Transcript& transcript);
-    barretenberg::fr::field_t compute_linear_contribution(const barretenberg::fr::field_t& alpha_base,
+    barretenberg::fr compute_linear_contribution(const barretenberg::fr& alpha_base,
                                                           const transcript::Transcript& transcript,
                                                           barretenberg::polynomial& r);
-    barretenberg::fr::field_t compute_opening_poly_contribution(const barretenberg::fr::field_t& nu_base,
+    barretenberg::fr compute_opening_poly_contribution(const barretenberg::fr& nu_base,
                                                                 const transcript::Transcript&,
-                                                                barretenberg::fr::field_t*,
-                                                                barretenberg::fr::field_t*);
+                                                                barretenberg::fr*,
+                                                                barretenberg::fr*);
 
     void compute_transcript_elements(transcript::Transcript& transcript);
 

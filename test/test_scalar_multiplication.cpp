@@ -176,7 +176,7 @@ TEST(scalar_multiplication, reduce_buckets_simple)
 
     std::array<g1::affine_element, num_points> point_pairs;
     std::array<g1::affine_element, num_points> output_buckets;
-    std::array<fq::field_t, num_points> scratch_space;
+    std::array<fq, num_points> scratch_space;
     std::array<uint32_t, num_points> bucket_counts;
     std::array<uint32_t, num_points> bit_offsets = { 0 };
 
@@ -214,22 +214,22 @@ TEST(scalar_multiplication, reduce_buckets)
     memset((void*)expected_buckets, 0x00, (num_points * 2) * sizeof(g1::element));
     memset((void*)bucket_empty_status, 0x00, (num_points * 2) * sizeof(bool));
 
-    fq::field_t* scratch_field = (fq::field_t*)(aligned_alloc(64, sizeof(fq::field_t) * (num_points)));
+    fq* scratch_field = (fq*)(aligned_alloc(64, sizeof(fq) * (num_points)));
 
-    memset((void*)scratch_field, 0x00, num_points * sizeof(fq::field_t));
+    memset((void*)scratch_field, 0x00, num_points * sizeof(fq));
 
     g2::affine_element g2_x;
     io::read_transcript(monomials, g2_x, num_initial_points, BARRETENBERG_SRS_PATH);
 
     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, num_initial_points);
 
-    fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * num_initial_points));
+    fr* scalars = (fr*)(aligned_alloc(64, sizeof(fr) * num_initial_points));
 
-    fr::field_t source_scalar = fr::field_t::random_element();
+    fr source_scalar = fr::random_element();
     for (size_t i = 0; i < num_initial_points; ++i) {
         // source_scalar.self_sqr();
-        source_scalar = fr::field_t::random_element();
-        fr::field_t::__copy(source_scalar, scalars[i]);
+        source_scalar = fr::random_element();
+        fr::__copy(source_scalar, scalars[i]);
     }
 
     // scalar_multiplication::generate_pippenger_point_table(monomials, monomials, num_initial_points);
@@ -330,11 +330,11 @@ TEST(scalar_multiplication, reduce_buckets_basic)
         (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points)));
     bool* bucket_empty_status = (bool*)(aligned_alloc(64, sizeof(bool) * (num_points)));
 
-    fq::field_t* scratch_field = (fq::field_t*)(aligned_alloc(64, sizeof(fq::field_t) * (num_points)));
+    fq* scratch_field = (fq*)(aligned_alloc(64, sizeof(fq) * (num_points)));
 
     memset((void*)scratch_points, 0x00, num_points * sizeof(g1::affine_element));
     memset((void*)point_pairs, 0x00, num_points * sizeof(g1::affine_element));
-    memset((void*)scratch_field, 0x00, num_points * sizeof(fq::field_t));
+    memset((void*)scratch_field, 0x00, num_points * sizeof(fq));
     memset((void*)bucket_empty_status, 0x00, num_points * sizeof(bool));
 
     g2::affine_element g2_x;
@@ -342,12 +342,12 @@ TEST(scalar_multiplication, reduce_buckets_basic)
 
     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, num_initial_points);
 
-    fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * num_initial_points));
+    fr* scalars = (fr*)(aligned_alloc(64, sizeof(fr) * num_initial_points));
 
-    fr::field_t source_scalar = fr::field_t::random_element();
+    fr source_scalar = fr::random_element();
     for (size_t i = 0; i < num_initial_points; ++i) {
         source_scalar.self_sqr();
-        fr::field_t::__copy(source_scalar, scalars[i]);
+        fr::__copy(source_scalar, scalars[i]);
     }
 
     scalar_multiplication::multiplication_runtime_state state;
@@ -400,15 +400,15 @@ TEST(scalar_multiplication, add_affine_points)
 {
     constexpr size_t num_points = 20;
     g1::affine_element* points = (g1::affine_element*)(aligned_alloc(64, sizeof(g1::affine_element) * (num_points)));
-    fq::field_t* scratch_space = (fq::field_t*)(aligned_alloc(64, sizeof(fq::field_t) * (num_points * 2)));
-    fq::field_t* lambda = (fq::field_t*)(aligned_alloc(64, sizeof(fq::field_t) * (num_points * 2)));
+    fq* scratch_space = (fq*)(aligned_alloc(64, sizeof(fq) * (num_points * 2)));
+    fq* lambda = (fq*)(aligned_alloc(64, sizeof(fq) * (num_points * 2)));
 
     g1::element* points_copy = (g1::element*)(aligned_alloc(64, sizeof(g1::element) * (num_points)));
     for (size_t i = 0; i < num_points; ++i) {
         points[i] = g1::affine_element(g1::element::random_element());
         points_copy[i].x = points[i].x;
         points_copy[i].y = points[i].y;
-        points_copy[i].z = fq::field_t::one();
+        points_copy[i].z = fq::one();
     }
 
     size_t count = num_points - 1;
@@ -439,12 +439,12 @@ TEST(scalar_multiplication, construct_addition_chains)
 
     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, num_initial_points);
 
-    fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * num_initial_points));
+    fr* scalars = (fr*)(aligned_alloc(64, sizeof(fr) * num_initial_points));
 
-    fr::field_t source_scalar = fr::field_t::random_element();
+    fr source_scalar = fr::random_element();
     for (size_t i = 0; i < num_initial_points; ++i) {
         source_scalar.self_sqr();
-        fr::field_t::__copy(source_scalar, scalars[i]);
+        fr::__copy(source_scalar, scalars[i]);
     }
 
     scalar_multiplication::multiplication_runtime_state state;
@@ -504,12 +504,12 @@ TEST(scalar_multiplication, construct_addition_chains)
 
 //     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, num_initial_points);
 
-//     fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * num_initial_points));
+//     fr* scalars = (fr*)(aligned_alloc(64, sizeof(fr) * num_initial_points));
 
-//     fr::field_t source_scalar = fr::field_t::random_element();
+//     fr source_scalar = fr::random_element();
 //     for (size_t i = 0; i < num_initial_points; ++i) {
 //         source_scalar.self_sqr();
-//         fr::field_t::__copy(source_scalar, scalars[i]);
+//         fr::__copy(source_scalar, scalars[i]);
 //     }
 
 //     scalar_multiplication::multiplication_runtime_state state;
@@ -539,23 +539,23 @@ TEST(scalar_multiplication, construct_addition_chains)
 
 TEST(scalar_multiplication, endomorphism_split)
 {
-    fr::field_t scalar = fr::field_t::random_element();
+    fr scalar = fr::random_element();
 
     g1::element expected = g1::one * scalar;
 
     // we want to test that we can split a scalar into two half-length components, using the same location in memory.
-    fr::field_t* k1_t = &scalar;
-    fr::field_t* k2_t = (fr::field_t*)&scalar.data[2];
+    fr* k1_t = &scalar;
+    fr* k2_t = (fr*)&scalar.data[2];
 
-    fr::field_t::split_into_endomorphism_scalars(scalar, *k1_t, *k2_t);
+    fr::split_into_endomorphism_scalars(scalar, *k1_t, *k2_t);
 
-    fr::field_t k1{ (*k1_t).data[0], (*k1_t).data[1], 0, 0 };
-    fr::field_t k2{ (*k2_t).data[0], (*k2_t).data[1], 0, 0 };
+    fr k1{ (*k1_t).data[0], (*k1_t).data[1], 0, 0 };
+    fr k2{ (*k2_t).data[0], (*k2_t).data[1], 0, 0 };
 
     g1::element result;
     g1::element t1 = g1::affine_one * k1;
     g1::affine_element beta = g1::affine_one;
-    beta.x = beta.x * fq::field_t::beta();
+    beta.x = beta.x * fq::beta();
     beta.y = -beta.y;
     g1::element t2 = beta * k2;
     result = t1 + t2;
@@ -568,12 +568,12 @@ TEST(scalar_multiplication, radix_sort)
     // check that our radix sort correctly sorts!
     constexpr size_t target_degree = 1 << 8;
     constexpr size_t num_rounds = scalar_multiplication::get_num_rounds(target_degree * 2);
-    fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * target_degree));
+    fr* scalars = (fr*)(aligned_alloc(64, sizeof(fr) * target_degree));
 
-    fr::field_t source_scalar = fr::field_t::random_element();
+    fr source_scalar = fr::random_element();
     for (size_t i = 0; i < target_degree; ++i) {
         source_scalar.self_sqr();
-        fr::field_t::__copy(source_scalar, scalars[i]);
+        fr::__copy(source_scalar, scalars[i]);
     }
 
     scalar_multiplication::multiplication_runtime_state state;
@@ -623,12 +623,12 @@ TEST(scalar_multiplication, oversized_inputs)
            ((2 * target_degree - 2 * transcript_degree) * sizeof(g1::affine_element)));
     scalar_multiplication::generate_pippenger_point_table(monomials, monomials, target_degree);
 
-    fr::field_t* scalars = (fr::field_t*)(aligned_alloc(64, sizeof(fr::field_t) * target_degree));
+    fr* scalars = (fr*)(aligned_alloc(64, sizeof(fr) * target_degree));
 
-    fr::field_t source_scalar = fr::field_t::random_element();
+    fr source_scalar = fr::random_element();
     for (size_t i = 0; i < target_degree; ++i) {
         source_scalar.self_sqr();
-        fr::field_t::__copy(source_scalar, scalars[i]);
+        fr::__copy(source_scalar, scalars[i]);
     }
 
     g1::element first = scalar_multiplication::pippenger(scalars, monomials, target_degree);
@@ -642,7 +642,7 @@ TEST(scalar_multiplication, oversized_inputs)
     second = second.normalize();
 
     EXPECT_EQ((first.z == second.z), true);
-    EXPECT_EQ((first.z == fq::field_t::one()), true);
+    EXPECT_EQ((first.z == fq::one()), true);
     EXPECT_EQ((first.x == second.x), true);
     EXPECT_EQ((first.y == -second.y), true);
 
@@ -656,13 +656,13 @@ TEST(scalar_multiplication, undersized_inputs)
     // Check this is done correctly
     size_t num_points = 17;
 
-    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
+    fr* scalars = (fr*)aligned_alloc(32, sizeof(fr) * num_points);
 
     g1::affine_element* points =
         (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
     for (size_t i = 0; i < num_points; ++i) {
-        scalars[i] = fr::field_t::random_element();
+        scalars[i] = fr::random_element();
         points[i] = g1::affine_element(g1::element::random_element());
     }
 
@@ -688,13 +688,13 @@ TEST(scalar_multiplication, pippenger)
 {
     constexpr size_t num_points = 8192;
 
-    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
+    fr* scalars = (fr*)aligned_alloc(32, sizeof(fr) * num_points);
 
     g1::affine_element* points =
         (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
     for (size_t i = 0; i < num_points; ++i) {
-        scalars[i] = fr::field_t::random_element();
+        scalars[i] = fr::random_element();
         points[i] = g1::affine_element(g1::element::random_element());
     }
 
@@ -720,13 +720,13 @@ TEST(scalar_multiplication, pippenger_unsafe)
 {
     constexpr size_t num_points = 8192;
 
-    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * num_points);
+    fr* scalars = (fr*)aligned_alloc(32, sizeof(fr) * num_points);
 
     g1::affine_element* points =
         (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
     for (size_t i = 0; i < num_points; ++i) {
-        scalars[i] = fr::field_t::random_element();
+        scalars[i] = fr::random_element();
         points[i] = g1::affine_element(g1::element::random_element());
     }
 
@@ -752,13 +752,13 @@ TEST(scalar_multiplication, pippenger_one)
 {
     size_t num_points = 1;
 
-    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * 1);
+    fr* scalars = (fr*)aligned_alloc(32, sizeof(fr) * 1);
 
     g1::affine_element* points =
         (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * num_points * 2 + 1);
 
     for (size_t i = 0; i < num_points; ++i) {
-        scalars[i] = fr::field_t::random_element();
+        scalars[i] = fr::random_element();
         points[i] = g1::affine_element(g1::element::random_element());
     }
 
@@ -782,7 +782,7 @@ TEST(scalar_multiplication, pippenger_one)
 
 TEST(scalar_multiplication, pippenger_zero_points)
 {
-    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t));
+    fr* scalars = (fr*)aligned_alloc(32, sizeof(fr));
 
     g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 2 + 1);
 
@@ -792,11 +792,11 @@ TEST(scalar_multiplication, pippenger_zero_points)
 
 TEST(scalar_multiplication, pippenger_mul_by_zero)
 {
-    fr::field_t* scalars = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t));
+    fr* scalars = (fr*)aligned_alloc(32, sizeof(fr));
 
     g1::affine_element* points = (g1::affine_element*)aligned_alloc(32, sizeof(g1::affine_element) * 2 + 1);
 
-    scalars[0] = fr::field_t::zero();
+    scalars[0] = fr::zero();
     points[0] = g1::affine_one;
     scalar_multiplication::generate_pippenger_point_table(points, points, 1);
 

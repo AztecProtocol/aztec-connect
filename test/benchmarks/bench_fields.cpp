@@ -66,19 +66,12 @@ unsafe_pippenger_bench/1048576             1717275300 ns   1640625000 ns        
 */
 using namespace barretenberg;
 
-void field_mixed_add(const fr::field_t& x1,
-                     const fr::field_t& y1,
-                     const fr::field_t& z1,
-                     const fr::field_t& x2,
-                     const fr::field_t& y2,
-                     fr::field_t& x3,
-                     fr::field_t& y3,
-                     fr::field_t& z3)
+void field_mixed_add(const fr& x1, const fr& y1, const fr& z1, const fr& x2, const fr& y2, fr& x3, fr& y3, fr& z3)
 {
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
-    fr::field_t T3;
+    fr T0;
+    fr T1;
+    fr T2;
+    fr T3;
 
     // 3 sqr // 90 cycles
     // 1 self sqr // 30 cycles
@@ -133,16 +126,16 @@ uint64_t rdtsc()
 
 constexpr size_t NUM_POINTS = 1 << 24;
 constexpr size_t NUM_INVERSIONS = 1 << 20;
-std::vector<barretenberg::fr::field_t> oldx;
-std::vector<barretenberg::fr::field_t> oldy;
+std::vector<barretenberg::fr> oldx;
+std::vector<barretenberg::fr> oldy;
 
-fr::field_t accx;
-fr::field_t accy;
-fr::field_t accz;
+fr accx;
+fr accy;
+fr accz;
 const auto init = []() {
-    fr::field_t seed_x = fr::field_t::random_element();
-    fr::field_t seed_y = fr::field_t::random_element();
-    fr::field_t seed_z = fr::field_t::random_element();
+    fr seed_x = fr::random_element();
+    fr seed_y = fr::random_element();
+    fr seed_z = fr::random_element();
     accx = seed_x;
     accy = seed_y;
     accz = seed_z;
@@ -157,9 +150,9 @@ const auto init = []() {
     return 1;
 }();
 
-fr::field_t sqr_assign_impl(const fr::field_t& x)
+fr sqr_assign_impl(const fr& x)
 {
-    fr::field_t acc = x;
+    fr acc = x;
     for (size_t i = 0; i < NUM_POINTS; ++i) {
         acc.self_sqr();
     }
@@ -180,9 +173,9 @@ void sqr_assign_bench(State& state) noexcept
 }
 BENCHMARK(sqr_assign_bench);
 
-fr::field_t sqr_impl(const fr::field_t& x)
+fr sqr_impl(const fr& x)
 {
-    fr::field_t acc = x;
+    fr acc = x;
     for (size_t i = 0; i < NUM_POINTS; ++i) {
         acc = acc.sqr();
     }
@@ -203,9 +196,9 @@ void sqr_bench(State& state) noexcept
 }
 BENCHMARK(sqr_bench);
 
-fr::field_t unary_minus_impl(const fr::field_t& x)
+fr unary_minus_impl(const fr& x)
 {
-    fr::field_t acc = x;
+    fr acc = x;
     for (size_t i = 0; i < NUM_POINTS; ++i) {
         acc = -acc;
     }
@@ -226,11 +219,11 @@ void unary_minus_bench(State& state) noexcept
 }
 BENCHMARK(unary_minus_bench);
 
-fr::field_t static_mul_assign_impl(const fr::field_t& x, const fr::field_t& y)
+fr static_mul_assign_impl(const fr& x, const fr& y)
 {
-    fr::field_t acc = x;
+    fr acc = x;
     for (size_t i = 0; i < NUM_POINTS; ++i) {
-        fr::field_t::asm_self_mul_with_coarse_reduction(acc, y);
+        fr::asm_self_mul_with_coarse_reduction(acc, y);
     }
     return acc;
 }
@@ -249,9 +242,9 @@ void static_mul_assign_bench(State& state) noexcept
 }
 BENCHMARK(static_mul_assign_bench);
 
-fr::field_t mul_assign_impl(const fr::field_t& x, fr::field_t& y)
+fr mul_assign_impl(const fr& x, fr& y)
 {
-    fr::field_t acc = x;
+    fr acc = x;
     for (size_t i = 0; i < NUM_POINTS; ++i) {
         acc *= y;
     }
@@ -272,9 +265,9 @@ void mul_assign_bench(State& state) noexcept
 }
 BENCHMARK(mul_assign_bench);
 
-fr::field_t mul_impl(const fr::field_t& x, fr::field_t& y)
+fr mul_impl(const fr& x, fr& y)
 {
-    fr::field_t acc = x;
+    fr acc = x;
     for (size_t i = 0; i < NUM_POINTS; ++i) {
         acc = acc * y;
     }
@@ -296,9 +289,9 @@ void mul_bench(State& state) noexcept
 }
 BENCHMARK(mul_bench);
 
-fr::field_t self_add_impl(const fr::field_t& x, fr::field_t& y)
+fr self_add_impl(const fr& x, fr& y)
 {
-    fr::field_t acc = x;
+    fr acc = x;
     for (size_t i = 0; i < NUM_POINTS; ++i) {
         acc += y;
     }
@@ -320,9 +313,9 @@ void self_add_bench(State& state) noexcept
 }
 BENCHMARK(self_add_bench);
 
-fr::field_t add_impl(const fr::field_t& x, fr::field_t& y)
+fr add_impl(const fr& x, fr& y)
 {
-    fr::field_t acc = x;
+    fr acc = x;
     for (size_t i = 0; i < NUM_POINTS; ++i) {
         acc = acc + y;
     }
@@ -344,9 +337,9 @@ void add_bench(State& state) noexcept
 }
 BENCHMARK(add_bench);
 
-fr::field_t sub_impl(const fr::field_t& x, fr::field_t& y)
+fr sub_impl(const fr& x, fr& y)
 {
-    fr::field_t acc = x;
+    fr acc = x;
     for (size_t i = 0; i < NUM_POINTS; ++i) {
         acc = acc - y;
     }
@@ -368,9 +361,9 @@ void sub_bench(State& state) noexcept
 }
 BENCHMARK(sub_bench);
 
-fr::field_t addaddmul_impl(const fr::field_t& x, const fr::field_t& y, const fr::field_t& z)
+fr addaddmul_impl(const fr& x, const fr& y, const fr& z)
 {
-    fr::field_t acc = x;
+    fr acc = x;
     for (size_t i = 0; i < NUM_POINTS; ++i) {
         acc *= y;
         acc += z;
@@ -394,9 +387,9 @@ void addaddmul_bench(State& state) noexcept
 }
 BENCHMARK(addaddmul_bench);
 
-fr::field_t subaddmul_impl(const fr::field_t& x, const fr::field_t& y, const fr::field_t& z)
+fr subaddmul_impl(const fr& x, const fr& y, const fr& z)
 {
-    fr::field_t acc = x;
+    fr acc = x;
     for (size_t i = 0; i < NUM_POINTS; ++i) {
         acc *= y;
         acc -= z;
@@ -426,9 +419,9 @@ void field_bench(State& state) noexcept
     uint64_t count = 0;
     for (auto _ : state) {
         uint64_t before = rdtsc();
-        fr::field_t x = accx;
-        fr::field_t y = accy;
-        fr::field_t z = accz;
+        fr x = accx;
+        fr y = accy;
+        fr z = accz;
         for (size_t i = 0; i < NUM_POINTS; ++i) {
             field_mixed_add(x, y, z, oldx[i], oldy[i], x, y, z);
         }
@@ -444,7 +437,7 @@ BENCHMARK(field_bench);
 void invert_bench(State& state) noexcept
 {
     for (auto _ : state) {
-        fr::field_t x = accx;
+        fr x = accx;
         for (size_t i = 0; i < NUM_INVERSIONS; ++i) {
             x = x.invert();
         }
@@ -456,8 +449,8 @@ BENCHMARK(invert_bench);
 void pow_bench(State& state) noexcept
 {
     for (auto _ : state) {
-        constexpr uint256_t exponent = fr::field_t::modulus - uint256_t(2);
-        fr::field_t x = accx;
+        constexpr uint256_t exponent = fr::modulus - uint256_t(2);
+        fr x = accx;
         for (size_t i = 0; i < NUM_INVERSIONS; ++i) {
             x = x.pow(exponent);
         }

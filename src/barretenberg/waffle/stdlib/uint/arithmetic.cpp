@@ -45,7 +45,7 @@ uint<Composer, Native> uint<Composer, Native>::operator+(const uint& other) cons
 
     const waffle::add_quad gate{
         witness_index,      other.witness_index, ctx->add_variable(remainder), ctx->add_variable(overflow),
-        fr::field_t::one(), fr::field_t::one(),  fr::field_t::neg_one(),       -fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE),
+        fr::one(), fr::one(),  fr::neg_one(),       -fr(CIRCUIT_UINT_MAX_PLUS_ONE),
         constants,
     };
 
@@ -93,10 +93,10 @@ uint<Composer, Native> uint<Composer, Native>::operator-(const uint& other) cons
         rhs_idx,
         ctx->add_variable(remainder),
         ctx->add_variable(overflow),
-        fr::field_t::one(),
-        fr::field_t::neg_one(),
-        fr::field_t::neg_one(),
-        -fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE),
+        fr::one(),
+        fr::neg_one(),
+        fr::neg_one(),
+        -fr(CIRCUIT_UINT_MAX_PLUS_ONE),
         CIRCUIT_UINT_MAX_PLUS_ONE + constant_term,
     };
 
@@ -137,11 +137,11 @@ uint<Composer, Native> uint<Composer, Native>::operator*(const uint& other) cons
         rhs_idx,
         ctx->add_variable(remainder),
         ctx->add_variable(overflow),
-        fr::field_t::one(),
+        fr::one(),
         other.additive_constant,
         additive_constant,
-        fr::field_t::neg_one(),
-        -fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE),
+        fr::neg_one(),
+        -fr(CIRCUIT_UINT_MAX_PLUS_ONE),
         constant_term,
     };
 
@@ -206,11 +206,11 @@ std::pair<uint<Composer, Native>, uint<Composer, Native>> uint<Composer, Native>
     // We want to force the divisor to be non-zero, as this is an error state
     if (other.is_constant() && other.get_value() == 0) {
         // TODO: should have an actual error handler!
-        const uint32_t one = ctx->add_variable(fr::field_t::one());
-        ctx->assert_equal_constant(one, fr::field_t::zero());
+        const uint32_t one = ctx->add_variable(fr::one());
+        ctx->assert_equal_constant(one, fr::zero());
     } else if (!other.is_constant()) {
         const bool_t<Composer> is_divisor_zero = field_t<Composer>(other).is_zero();
-        ctx->assert_equal_constant(is_divisor_zero.witness_index, fr::field_t::zero());
+        ctx->assert_equal_constant(is_divisor_zero.witness_index, fr::zero());
     }
 
     if (is_constant() && other.is_constant()) {
@@ -240,12 +240,12 @@ std::pair<uint<Composer, Native>, uint<Composer, Native>> uint<Composer, Native>
         divisor_idx,                    // b
         dividend_idx,                   // a
         remainder_idx,                  // r
-        fr::field_t::one(),             // q_m.w_1.w_2 = q.b
+        fr::one(),             // q_m.w_1.w_2 = q.b
         other.additive_constant,        // q_l.w_1 = q.b if b const
-        fr::field_t::zero(),            // q_2.w_2 = 0
-        fr::field_t::neg_one(),         // q_3.w_3 = -a
-        fr::field_t::one(),             // q_4.w_4 = r
-        -fr::field_t(additive_constant) // q_c = -a if a const
+        fr::zero(),            // q_2.w_2 = 0
+        fr::neg_one(),         // q_3.w_3 = -a
+        fr::one(),             // q_4.w_4 = r
+        -fr(additive_constant) // q_c = -a if a const
     };
     ctx->create_big_mul_gate(division_gate);
 
@@ -257,9 +257,9 @@ std::pair<uint<Composer, Native>, uint<Composer, Native>> uint<Composer, Native>
         divisor_idx,             // b
         remainder_idx,           // r
         delta_idx,               // d
-        fr::field_t::one(),      // q_l = 1
-        fr::field_t::neg_one(),  // q_r = -1
-        fr::field_t::neg_one(),  // q_o = -1
+        fr::one(),      // q_l = 1
+        fr::neg_one(),  // q_r = -1
+        fr::neg_one(),  // q_o = -1
         other.additive_constant, // q_c = d if const
     };
     ctx->create_add_gate(delta_gate);

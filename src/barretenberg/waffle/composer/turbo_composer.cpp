@@ -36,29 +36,29 @@ TurboComposer::TurboComposer(const size_t size_hint)
     q_range.reserve(size_hint);
     q_logic.reserve(size_hint);
 
-    zero_idx = put_constant_variable(fr::field_t::zero());
-    // zero_idx = add_variable(barretenberg::fr::field_t::zero());
+    zero_idx = put_constant_variable(fr::zero());
+    // zero_idx = add_variable(barretenberg::fr::zero());
 };
 
 void TurboComposer::create_dummy_gate()
 {
     gate_flags.push_back(0);
-    uint32_t idx = add_variable(fr::field_t{ 1, 1, 1, 1 }.to_montgomery_form());
+    uint32_t idx = add_variable(fr{ 1, 1, 1, 1 }.to_montgomery_form());
     w_l.emplace_back(idx);
     w_r.emplace_back(idx);
     w_o.emplace_back(idx);
     w_4.emplace_back(idx);
-    q_arith.emplace_back(fr::field_t::zero());
-    q_4.emplace_back(fr::field_t::zero());
-    q_5.emplace_back(fr::field_t::zero());
-    q_ecc_1.emplace_back(fr::field_t::zero());
-    q_m.emplace_back(fr::field_t::zero());
-    q_1.emplace_back(fr::field_t::zero());
-    q_2.emplace_back(fr::field_t::zero());
-    q_3.emplace_back(fr::field_t::zero());
-    q_c.emplace_back(fr::field_t::zero());
-    q_range.emplace_back(fr::field_t::zero());
-    q_logic.emplace_back(fr::field_t::zero());
+    q_arith.emplace_back(fr::zero());
+    q_4.emplace_back(fr::zero());
+    q_5.emplace_back(fr::zero());
+    q_ecc_1.emplace_back(fr::zero());
+    q_m.emplace_back(fr::zero());
+    q_1.emplace_back(fr::zero());
+    q_2.emplace_back(fr::zero());
+    q_3.emplace_back(fr::zero());
+    q_c.emplace_back(fr::zero());
+    q_range.emplace_back(fr::zero());
+    q_logic.emplace_back(fr::zero());
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
@@ -80,17 +80,17 @@ void TurboComposer::create_add_gate(const add_triple& in)
     w_r.emplace_back(in.b);
     w_o.emplace_back(in.c);
     w_4.emplace_back(zero_idx);
-    q_m.emplace_back(fr::field_t::zero());
+    q_m.emplace_back(fr::zero());
     q_1.emplace_back(in.a_scaling);
     q_2.emplace_back(in.b_scaling);
     q_3.emplace_back(in.c_scaling);
     q_c.emplace_back(in.const_scaling);
-    q_arith.emplace_back(fr::field_t::one());
-    q_4.emplace_back(fr::field_t::zero());
-    q_5.emplace_back(fr::field_t::zero());
-    q_ecc_1.emplace_back(fr::field_t::zero());
-    q_range.emplace_back(fr::field_t::zero());
-    q_logic.emplace_back(fr::field_t::zero());
+    q_arith.emplace_back(fr::one());
+    q_4.emplace_back(fr::zero());
+    q_5.emplace_back(fr::zero());
+    q_ecc_1.emplace_back(fr::zero());
+    q_range.emplace_back(fr::zero());
+    q_logic.emplace_back(fr::zero());
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
@@ -114,17 +114,17 @@ void TurboComposer::create_big_add_gate(const add_quad& in)
     w_r.emplace_back(in.b);
     w_o.emplace_back(in.c);
     w_4.emplace_back(in.d);
-    q_m.emplace_back(fr::field_t::zero());
+    q_m.emplace_back(fr::zero());
     q_1.emplace_back(in.a_scaling);
     q_2.emplace_back(in.b_scaling);
     q_3.emplace_back(in.c_scaling);
     q_c.emplace_back(in.const_scaling);
-    q_arith.emplace_back(fr::field_t::one());
+    q_arith.emplace_back(fr::one());
     q_4.emplace_back(in.d_scaling);
-    q_5.emplace_back(fr::field_t::zero());
-    q_ecc_1.emplace_back(fr::field_t::zero());
-    q_range.emplace_back(fr::field_t::zero());
-    q_logic.emplace_back(fr::field_t::zero());
+    q_5.emplace_back(fr::zero());
+    q_ecc_1.emplace_back(fr::zero());
+    q_range.emplace_back(fr::zero());
+    q_logic.emplace_back(fr::zero());
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
@@ -151,17 +151,17 @@ void TurboComposer::create_big_add_gate_with_bit_extraction(const add_quad& in)
     w_r.emplace_back(in.b);
     w_o.emplace_back(in.c);
     w_4.emplace_back(in.d);
-    q_m.emplace_back(fr::field_t::zero());
+    q_m.emplace_back(fr::zero());
     q_1.emplace_back(in.a_scaling);
     q_2.emplace_back(in.b_scaling);
     q_3.emplace_back(in.c_scaling);
     q_c.emplace_back(in.const_scaling);
-    q_arith.emplace_back(fr::field_t::one() + fr::field_t::one());
+    q_arith.emplace_back(fr::one() + fr::one());
     q_4.emplace_back(in.d_scaling);
-    q_5.emplace_back(fr::field_t::zero());
-    q_ecc_1.emplace_back(fr::field_t::zero());
-    q_range.emplace_back(fr::field_t::zero());
-    q_logic.emplace_back(fr::field_t::zero());
+    q_5.emplace_back(fr::zero());
+    q_ecc_1.emplace_back(fr::zero());
+    q_range.emplace_back(fr::zero());
+    q_logic.emplace_back(fr::zero());
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
@@ -193,12 +193,12 @@ void TurboComposer::create_big_mul_gate(const mul_quad& in)
     q_2.emplace_back(in.b_scaling);
     q_3.emplace_back(in.c_scaling);
     q_c.emplace_back(in.const_scaling);
-    q_arith.emplace_back(fr::field_t::one());
+    q_arith.emplace_back(fr::one());
     q_4.emplace_back(in.d_scaling);
-    q_5.emplace_back(fr::field_t::zero());
-    q_ecc_1.emplace_back(fr::field_t::zero());
-    q_range.emplace_back(fr::field_t::zero());
-    q_logic.emplace_back(fr::field_t::zero());
+    q_5.emplace_back(fr::zero());
+    q_ecc_1.emplace_back(fr::zero());
+    q_range.emplace_back(fr::zero());
+    q_logic.emplace_back(fr::zero());
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
@@ -227,17 +227,17 @@ void TurboComposer::create_balanced_add_gate(const add_quad& in)
     w_r.emplace_back(in.b);
     w_o.emplace_back(in.c);
     w_4.emplace_back(in.d);
-    q_m.emplace_back(fr::field_t::zero());
+    q_m.emplace_back(fr::zero());
     q_1.emplace_back(in.a_scaling);
     q_2.emplace_back(in.b_scaling);
     q_3.emplace_back(in.c_scaling);
     q_c.emplace_back(in.const_scaling);
-    q_arith.emplace_back(fr::field_t::one());
+    q_arith.emplace_back(fr::one());
     q_4.emplace_back(in.d_scaling);
-    q_5.emplace_back(fr::field_t::one());
-    q_ecc_1.emplace_back(fr::field_t::zero());
-    q_range.emplace_back(fr::field_t::zero());
-    q_logic.emplace_back(fr::field_t::zero());
+    q_5.emplace_back(fr::one());
+    q_ecc_1.emplace_back(fr::zero());
+    q_range.emplace_back(fr::zero());
+    q_logic.emplace_back(fr::zero());
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
@@ -267,16 +267,16 @@ void TurboComposer::create_mul_gate(const mul_triple& in)
     w_o.emplace_back(in.c);
     w_4.emplace_back(zero_idx);
     q_m.emplace_back(in.mul_scaling);
-    q_1.emplace_back(fr::field_t::zero());
-    q_2.emplace_back(fr::field_t::zero());
+    q_1.emplace_back(fr::zero());
+    q_2.emplace_back(fr::zero());
     q_3.emplace_back(in.c_scaling);
     q_c.emplace_back(in.const_scaling);
-    q_arith.emplace_back(fr::field_t::one());
-    q_4.emplace_back(fr::field_t::zero());
-    q_5.emplace_back(fr::field_t::zero());
-    q_ecc_1.emplace_back(fr::field_t::zero());
-    q_range.emplace_back(fr::field_t::zero());
-    q_logic.emplace_back(fr::field_t::zero());
+    q_arith.emplace_back(fr::one());
+    q_4.emplace_back(fr::zero());
+    q_5.emplace_back(fr::zero());
+    q_ecc_1.emplace_back(fr::zero());
+    q_range.emplace_back(fr::zero());
+    q_logic.emplace_back(fr::zero());
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
@@ -303,18 +303,18 @@ void TurboComposer::create_bool_gate(const uint32_t variable_index)
     w_r.emplace_back(variable_index);
     w_o.emplace_back(variable_index);
     w_4.emplace_back(zero_idx);
-    q_arith.emplace_back(fr::field_t::one());
-    q_4.emplace_back(fr::field_t::zero());
-    q_5.emplace_back(fr::field_t::zero());
-    q_ecc_1.emplace_back(fr::field_t::zero());
-    q_range.emplace_back(fr::field_t::zero());
+    q_arith.emplace_back(fr::one());
+    q_4.emplace_back(fr::zero());
+    q_5.emplace_back(fr::zero());
+    q_ecc_1.emplace_back(fr::zero());
+    q_range.emplace_back(fr::zero());
 
-    q_m.emplace_back(fr::field_t::one());
-    q_1.emplace_back(fr::field_t::zero());
-    q_2.emplace_back(fr::field_t::zero());
-    q_3.emplace_back(fr::field_t::neg_one());
-    q_c.emplace_back(fr::field_t::zero());
-    q_logic.emplace_back(fr::field_t::zero());
+    q_m.emplace_back(fr::one());
+    q_1.emplace_back(fr::zero());
+    q_2.emplace_back(fr::zero());
+    q_3.emplace_back(fr::neg_one());
+    q_c.emplace_back(fr::zero());
+    q_logic.emplace_back(fr::zero());
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
@@ -342,13 +342,13 @@ void TurboComposer::create_poly_gate(const poly_triple& in)
     q_2.emplace_back(in.q_r);
     q_3.emplace_back(in.q_o);
     q_c.emplace_back(in.q_c);
-    q_range.emplace_back(fr::field_t::zero());
-    q_logic.emplace_back(fr::field_t::zero());
+    q_range.emplace_back(fr::zero());
+    q_logic.emplace_back(fr::zero());
 
-    q_arith.emplace_back(fr::field_t::one());
-    q_4.emplace_back(fr::field_t::zero());
-    q_5.emplace_back(fr::field_t::zero());
-    q_ecc_1.emplace_back(fr::field_t::zero());
+    q_arith.emplace_back(fr::one());
+    q_4.emplace_back(fr::zero());
+    q_5.emplace_back(fr::zero());
+    q_ecc_1.emplace_back(fr::zero());
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
@@ -374,13 +374,13 @@ void TurboComposer::create_fixed_group_add_gate(const fixed_group_add_quad& in)
     w_o.emplace_back(in.c);
     w_4.emplace_back(in.d);
 
-    q_arith.emplace_back(fr::field_t::zero());
-    q_4.emplace_back(fr::field_t::zero());
-    q_5.emplace_back(fr::field_t::zero());
-    q_m.emplace_back(fr::field_t::zero());
-    q_c.emplace_back(fr::field_t::zero());
-    q_range.emplace_back(fr::field_t::zero());
-    q_logic.emplace_back(fr::field_t::zero());
+    q_arith.emplace_back(fr::zero());
+    q_4.emplace_back(fr::zero());
+    q_5.emplace_back(fr::zero());
+    q_m.emplace_back(fr::zero());
+    q_c.emplace_back(fr::zero());
+    q_range.emplace_back(fr::zero());
+    q_logic.emplace_back(fr::zero());
 
     q_1.emplace_back(in.q_x_1);
     q_2.emplace_back(in.q_x_2);
@@ -414,13 +414,13 @@ void TurboComposer::create_fixed_group_add_gate_with_init(const fixed_group_add_
     w_o.emplace_back(in.c);
     w_4.emplace_back(in.d);
 
-    q_arith.emplace_back(fr::field_t::zero());
+    q_arith.emplace_back(fr::zero());
     q_4.emplace_back(init.q_x_1);
     q_5.emplace_back(init.q_x_2);
     q_m.emplace_back(init.q_y_1);
     q_c.emplace_back(init.q_y_2);
-    q_range.emplace_back(fr::field_t::zero());
-    q_logic.emplace_back(fr::field_t::zero());
+    q_range.emplace_back(fr::zero());
+    q_logic.emplace_back(fr::zero());
 
     q_1.emplace_back(in.q_x_1);
     q_2.emplace_back(in.q_x_2);
@@ -445,7 +445,7 @@ void TurboComposer::create_fixed_group_add_gate_with_init(const fixed_group_add_
     ++n;
 }
 
-void TurboComposer::fix_witness(const uint32_t witness_index, const barretenberg::fr::field_t& witness_value)
+void TurboComposer::fix_witness(const uint32_t witness_index, const barretenberg::fr& witness_value)
 {
     gate_flags.push_back(0);
 
@@ -453,17 +453,17 @@ void TurboComposer::fix_witness(const uint32_t witness_index, const barretenberg
     w_r.emplace_back(zero_idx);
     w_o.emplace_back(zero_idx);
     w_4.emplace_back(zero_idx);
-    q_m.emplace_back(fr::field_t::zero());
-    q_1.emplace_back(fr::field_t::one());
-    q_2.emplace_back(fr::field_t::zero());
-    q_3.emplace_back(fr::field_t::zero());
+    q_m.emplace_back(fr::zero());
+    q_1.emplace_back(fr::one());
+    q_2.emplace_back(fr::zero());
+    q_3.emplace_back(fr::zero());
     q_c.emplace_back(-witness_value);
-    q_arith.emplace_back(fr::field_t::one());
-    q_4.emplace_back(fr::field_t::zero());
-    q_5.emplace_back(fr::field_t::zero());
-    q_ecc_1.emplace_back(fr::field_t::zero());
-    q_range.emplace_back(fr::field_t::zero());
-    q_logic.emplace_back(fr::field_t::zero());
+    q_arith.emplace_back(fr::one());
+    q_4.emplace_back(fr::zero());
+    q_5.emplace_back(fr::zero());
+    q_ecc_1.emplace_back(fr::zero());
+    q_range.emplace_back(fr::zero());
+    q_logic.emplace_back(fr::zero());
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
 
@@ -537,7 +537,7 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
      *
      **/
 
-    const fr::field_t witness_value = variables[witness_index].from_montgomery_form();
+    const fr witness_value = variables[witness_index].from_montgomery_form();
 
     // one gate accmulates 4 quads, or 8 bits.
     // # gates = (bits / 8)
@@ -554,7 +554,7 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
     const size_t num_quads = (num_quad_gates << 2);
     const size_t forced_zero_threshold = 1 + (((num_quads << 1) - num_bits) >> 1);
     std::vector<uint32_t> accumulators;
-    fr::field_t accumulator = fr::field_t::zero();
+    fr accumulator = fr::zero();
 
     for (size_t i = 0; i < num_quads + 1; ++i) {
         const size_t gate_index = n + (i / 4);
@@ -565,7 +565,7 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
             const size_t bit_index = (num_quads - i) << 1;
             const uint64_t quad = static_cast<uint64_t>(witness_value.get_bit(bit_index)) +
                                   2ULL * static_cast<uint64_t>(witness_value.get_bit(bit_index + 1));
-            const fr::field_t quad_element = fr::field_t{ quad, 0, 0, 0 }.to_montgomery_form();
+            const fr quad_element = fr{ quad, 0, 0, 0 }.to_montgomery_form();
             accumulator += accumulator;
             accumulator += accumulator;
             accumulator += quad_element;
@@ -589,20 +589,20 @@ std::vector<uint32_t> TurboComposer::create_range_constraint(const uint32_t witn
     }
 
     for (size_t i = 0; i < used_gates; ++i) {
-        q_m.emplace_back(fr::field_t::zero());
-        q_1.emplace_back(fr::field_t::zero());
-        q_2.emplace_back(fr::field_t::zero());
-        q_3.emplace_back(fr::field_t::zero());
-        q_c.emplace_back(fr::field_t::zero());
-        q_arith.emplace_back(fr::field_t::zero());
-        q_4.emplace_back(fr::field_t::zero());
-        q_5.emplace_back(fr::field_t::zero());
-        q_ecc_1.emplace_back(fr::field_t::zero());
-        q_logic.emplace_back(fr::field_t::zero());
-        q_range.emplace_back(fr::field_t::one());
+        q_m.emplace_back(fr::zero());
+        q_1.emplace_back(fr::zero());
+        q_2.emplace_back(fr::zero());
+        q_3.emplace_back(fr::zero());
+        q_c.emplace_back(fr::zero());
+        q_arith.emplace_back(fr::zero());
+        q_4.emplace_back(fr::zero());
+        q_5.emplace_back(fr::zero());
+        q_ecc_1.emplace_back(fr::zero());
+        q_logic.emplace_back(fr::zero());
+        q_range.emplace_back(fr::one());
     }
 
-    q_range[q_range.size() - 1] = fr::field_t::zero();
+    q_range[q_range.size() - 1] = fr::zero();
 
     w_l.emplace_back(zero_idx);
     w_r.emplace_back(zero_idx);
@@ -690,17 +690,17 @@ waffle::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t
      *
      **/
 
-    const fr::field_t left_witness_value = variables[a].from_montgomery_form();
-    const fr::field_t right_witness_value = variables[b].from_montgomery_form();
+    const fr left_witness_value = variables[a].from_montgomery_form();
+    const fr right_witness_value = variables[b].from_montgomery_form();
 
     // one gate accmulates 1 quads, or 2 bits.
     // # gates = (bits / 2)
     const size_t num_quads = (num_bits >> 1);
 
     waffle::accumulator_triple accumulators;
-    fr::field_t left_accumulator = fr::field_t::zero();
-    fr::field_t right_accumulator = fr::field_t::zero();
-    fr::field_t out_accumulator = fr::field_t::zero();
+    fr left_accumulator = fr::zero();
+    fr right_accumulator = fr::zero();
+    fr out_accumulator = fr::zero();
 
     // Step 1: populare 1st row accumulators with zero
     w_l.emplace_back(zero_idx);
@@ -725,16 +725,16 @@ waffle::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t
 
         const uint64_t right_quad = static_cast<uint64_t>(right_witness_value.get_bit(bit_index)) +
                                     2ULL * static_cast<uint64_t>(right_witness_value.get_bit(bit_index + 1));
-        const fr::field_t left_quad_element = fr::field_t{ left_quad, 0, 0, 0 }.to_montgomery_form();
-        const fr::field_t right_quad_element = fr::field_t{ right_quad, 0, 0, 0 }.to_montgomery_form();
-        fr::field_t out_quad_element;
+        const fr left_quad_element = fr{ left_quad, 0, 0, 0 }.to_montgomery_form();
+        const fr right_quad_element = fr{ right_quad, 0, 0, 0 }.to_montgomery_form();
+        fr out_quad_element;
         if (is_xor_gate) {
-            out_quad_element = fr::field_t{ left_quad ^ right_quad, 0, 0, 0 }.to_montgomery_form();
+            out_quad_element = fr{ left_quad ^ right_quad, 0, 0, 0 }.to_montgomery_form();
         } else {
-            out_quad_element = fr::field_t{ left_quad & right_quad, 0, 0, 0 }.to_montgomery_form();
+            out_quad_element = fr{ left_quad & right_quad, 0, 0, 0 }.to_montgomery_form();
         }
 
-        const fr::field_t product_quad_element = fr::field_t{ left_quad * right_quad, 0, 0, 0 }.to_montgomery_form();
+        const fr product_quad_element = fr{ left_quad * right_quad, 0, 0, 0 }.to_montgomery_form();
 
         left_accumulator += left_accumulator;
         left_accumulator += left_accumulator;
@@ -776,25 +776,25 @@ waffle::accumulator_triple TurboComposer::create_logic_constraint(const uint32_t
     w_o.emplace_back(zero_idx);
 
     for (size_t i = 0; i < num_quads + 1; ++i) {
-        q_m.emplace_back(fr::field_t::zero());
-        q_1.emplace_back(fr::field_t::zero());
-        q_2.emplace_back(fr::field_t::zero());
-        q_3.emplace_back(fr::field_t::zero());
-        q_arith.emplace_back(fr::field_t::zero());
-        q_4.emplace_back(fr::field_t::zero());
-        q_5.emplace_back(fr::field_t::zero());
-        q_ecc_1.emplace_back(fr::field_t::zero());
-        q_range.emplace_back(fr::field_t::zero());
+        q_m.emplace_back(fr::zero());
+        q_1.emplace_back(fr::zero());
+        q_2.emplace_back(fr::zero());
+        q_3.emplace_back(fr::zero());
+        q_arith.emplace_back(fr::zero());
+        q_4.emplace_back(fr::zero());
+        q_5.emplace_back(fr::zero());
+        q_ecc_1.emplace_back(fr::zero());
+        q_range.emplace_back(fr::zero());
         if (is_xor_gate) {
-            q_c.emplace_back(fr::field_t::neg_one());
-            q_logic.emplace_back(fr::field_t::neg_one());
+            q_c.emplace_back(fr::neg_one());
+            q_logic.emplace_back(fr::neg_one());
         } else {
-            q_c.emplace_back(fr::field_t::one());
-            q_logic.emplace_back(fr::field_t::one());
+            q_c.emplace_back(fr::one());
+            q_logic.emplace_back(fr::one());
         }
     }
-    q_c[q_c.size() - 1] = fr::field_t::zero();         // last gate is a noop
-    q_logic[q_logic.size() - 1] = fr::field_t::zero(); // last gate is a noop
+    q_c[q_c.size() - 1] = fr::zero();         // last gate is a noop
+    q_logic[q_logic.size() - 1] = fr::zero(); // last gate is a noop
 
     assert_equal(accumulators.left[accumulators.left.size() - 1], a);
     accumulators.left[accumulators.left.size() - 1] = a;
@@ -820,7 +820,7 @@ waffle::accumulator_triple TurboComposer::create_xor_constraint(const uint32_t a
     return create_logic_constraint(a, b, num_bits, true);
 }
 
-uint32_t TurboComposer::put_constant_variable(const barretenberg::fr::field_t& variable)
+uint32_t TurboComposer::put_constant_variable(const barretenberg::fr& variable)
 {
     if (constant_variables.count(variable) == 1) {
         return constant_variables.at(variable);
@@ -860,17 +860,17 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     size_t new_n = 1UL << log2_n;
 
     for (size_t i = total_num_gates; i < new_n; ++i) {
-        q_m.emplace_back(fr::field_t::zero());
-        q_1.emplace_back(fr::field_t::zero());
-        q_2.emplace_back(fr::field_t::zero());
-        q_3.emplace_back(fr::field_t::zero());
-        q_c.emplace_back(fr::field_t::zero());
-        q_4.emplace_back(fr::field_t::zero());
-        q_5.emplace_back(fr::field_t::zero());
-        q_arith.emplace_back(fr::field_t::zero());
-        q_ecc_1.emplace_back(fr::field_t::zero());
-        q_range.emplace_back(fr::field_t::zero());
-        q_logic.emplace_back(fr::field_t::zero());
+        q_m.emplace_back(fr::zero());
+        q_1.emplace_back(fr::zero());
+        q_2.emplace_back(fr::zero());
+        q_3.emplace_back(fr::zero());
+        q_c.emplace_back(fr::zero());
+        q_4.emplace_back(fr::zero());
+        q_5.emplace_back(fr::zero());
+        q_arith.emplace_back(fr::zero());
+        q_ecc_1.emplace_back(fr::zero());
+        q_range.emplace_back(fr::zero());
+        q_logic.emplace_back(fr::zero());
     }
 
     for (size_t i = 0; i < public_inputs.size(); ++i) {
@@ -904,17 +904,17 @@ std::shared_ptr<proving_key> TurboComposer::compute_proving_key()
     polynomial poly_q_logic(new_n);
 
     for (size_t i = 0; i < public_inputs.size(); ++i) {
-        poly_q_m[i] = fr::field_t::zero();
-        poly_q_1[i] = fr::field_t::one();
-        poly_q_2[i] = fr::field_t::zero();
-        poly_q_3[i] = fr::field_t::zero();
-        poly_q_4[i] = fr::field_t::zero();
-        poly_q_5[i] = fr::field_t::zero();
-        poly_q_arith[i] = fr::field_t::zero();
-        poly_q_ecc_1[i] = fr::field_t::zero();
-        poly_q_c[i] = fr::field_t::zero();
-        poly_q_range[i] = fr::field_t::zero();
-        poly_q_logic[i] = fr::field_t::zero();
+        poly_q_m[i] = fr::zero();
+        poly_q_1[i] = fr::one();
+        poly_q_2[i] = fr::zero();
+        poly_q_3[i] = fr::zero();
+        poly_q_4[i] = fr::zero();
+        poly_q_5[i] = fr::zero();
+        poly_q_arith[i] = fr::zero();
+        poly_q_ecc_1[i] = fr::zero();
+        poly_q_c[i] = fr::zero();
+        poly_q_range[i] = fr::zero();
+        poly_q_logic[i] = fr::zero();
     }
 
     for (size_t i = public_inputs.size(); i < new_n; ++i) {
@@ -1005,7 +1005,7 @@ std::shared_ptr<verification_key> TurboComposer::compute_verification_key()
         compute_proving_key();
     }
 
-    std::array<fr::field_t*, 15> poly_coefficients;
+    std::array<fr*, 15> poly_coefficients;
     poly_coefficients[0] = circuit_proving_key->constraint_selectors.at("q_1").get_coefficients();
     poly_coefficients[1] = circuit_proving_key->constraint_selectors.at("q_2").get_coefficients();
     poly_coefficients[2] = circuit_proving_key->constraint_selectors.at("q_3").get_coefficients();
@@ -1080,16 +1080,16 @@ std::shared_ptr<program_witness> TurboComposer::compute_witness()
     polynomial poly_w_4(new_n);
 
     for (size_t i = 0; i < public_inputs.size(); ++i) {
-        fr::field_t::__copy(fr::field_t::zero(), poly_w_1[i]);
-        fr::field_t::__copy(variables[public_inputs[i]], poly_w_2[i]);
-        fr::field_t::__copy(fr::field_t::zero(), poly_w_3[i]);
-        fr::field_t::__copy(fr::field_t::zero(), poly_w_4[i]);
+        fr::__copy(fr::zero(), poly_w_1[i]);
+        fr::__copy(variables[public_inputs[i]], poly_w_2[i]);
+        fr::__copy(fr::zero(), poly_w_3[i]);
+        fr::__copy(fr::zero(), poly_w_4[i]);
     }
     for (size_t i = public_inputs.size(); i < new_n; ++i) {
-        fr::field_t::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1.at(i));
-        fr::field_t::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2.at(i));
-        fr::field_t::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3.at(i));
-        fr::field_t::__copy(variables[w_4[i - public_inputs.size()]], poly_w_4.at(i));
+        fr::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1.at(i));
+        fr::__copy(variables[w_r[i - public_inputs.size()]], poly_w_2.at(i));
+        fr::__copy(variables[w_o[i - public_inputs.size()]], poly_w_3.at(i));
+        fr::__copy(variables[w_4[i - public_inputs.size()]], poly_w_4.at(i));
     }
 
     witness = std::make_shared<program_witness>();

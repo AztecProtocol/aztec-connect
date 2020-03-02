@@ -26,7 +26,7 @@ void generate_pippenger_point_table(g1::affine_element* points, g1::affine_eleme
     // iterate backwards, so that `points` and `table` can point to the same memory location
     for (size_t i = num_points - 1; i < num_points; --i) {
         table[i * 2] = points[i];
-        table[i * 2 + 1].x = fq::field_t::beta() * points[i].x;
+        table[i * 2 + 1].x = fq::beta() * points[i].x;
         table[i * 2 + 1].y = -points[i].y;
     }
 }
@@ -106,7 +106,7 @@ void generate_pippenger_point_table(g1::affine_element* points, g1::affine_eleme
  * At the end of `compute_wnaf_states`, `state.wnaf_table` will contain our wnaf entries, but unsorted.
  **/
 template <size_t num_initial_points>
-inline void compute_wnaf_states(multiplication_runtime_state& state, fr::field_t* scalars)
+inline void compute_wnaf_states(multiplication_runtime_state& state, fr* scalars)
 {
     const size_t num_points = num_initial_points * 2;
     constexpr size_t SCALAR_MULTIPLICATION_MAX_ROUNDS = 256;
@@ -132,9 +132,9 @@ inline void compute_wnaf_states(multiplication_runtime_state& state, fr::field_t
 #pragma omp parallel for
 #endif
     for (size_t i = 0; i < num_threads; ++i) {
-        fr::field_t T0;
+        fr T0;
         uint64_t* wnaf_table = &state.wnaf_table[(2 * i) * num_initial_points_per_thread];
-        fr::field_t* thread_scalars = &scalars[i * num_initial_points_per_thread];
+        fr* thread_scalars = &scalars[i * num_initial_points_per_thread];
         bool* skew_table = &state.skew_table[(2 * i) * num_initial_points_per_thread];
         uint64_t offset = i * num_points_per_thread;
         std::array<uint64_t, SCALAR_MULTIPLICATION_MAX_ROUNDS * 8> wnaf_entries{};
@@ -148,7 +148,7 @@ inline void compute_wnaf_states(multiplication_runtime_state& state, fr::field_t
         // lines (wnaf entry = 8 bytes => 8 entries = 64 bytes)
         for (uint64_t j = 0; j < num_initial_points_per_thread; ++j) {
             T0 = thread_scalars[j].from_montgomery_form();
-            fr::field_t::split_into_endomorphism_scalars(T0, T0, *(fr::field_t*)&T0.data[2]);
+            fr::split_into_endomorphism_scalars(T0, T0, *(fr*)&T0.data[2]);
 
             wnaf::fixed_wnaf_packed<bits_per_bucket + 1>(
                 &T0.data[0], &wnaf_entries[0], skew_table[j << 1ULL], ((j << 1ULL) + offset) << 32ULL);
@@ -329,7 +329,7 @@ inline g1::element scalar_multiplication_internal(multiplication_runtime_state& 
 }
 
 template <size_t num_initial_points>
-inline g1::element pippenger_internal(g1::affine_element* points, fr::field_t* scalars)
+inline g1::element pippenger_internal(g1::affine_element* points, fr* scalars)
 {
     multiplication_runtime_state state;
     compute_wnaf_states<num_initial_points>(state, scalars);
@@ -447,7 +447,7 @@ inline g1::element unsafe_scalar_multiplication_internal(multiplication_runtime_
 }
 
 template <size_t num_initial_points>
-inline g1::element pippenger_unsafe_internal(g1::affine_element* points, fr::field_t* scalars)
+inline g1::element pippenger_unsafe_internal(g1::affine_element* points, fr* scalars)
 {
     multiplication_runtime_state state;
     compute_wnaf_states<num_initial_points>(state, scalars);
@@ -456,7 +456,7 @@ inline g1::element pippenger_unsafe_internal(g1::affine_element* points, fr::fie
     return result;
 }
 
-inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, const size_t num_initial_points)
+inline g1::element pippenger(fr* scalars, g1::affine_element* points, const size_t num_initial_points)
 {
     // our windowed non-adjacent form algorthm requires that each thread can work on at least 8 points.
     // If we fall below this theshold, fall back to the traditional scalar multiplication algorithm.
@@ -576,7 +576,7 @@ inline g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, c
  * Unless you're a malicious adversary, then it would be a great idea!
  *
  **/
-g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, const size_t num_initial_points)
+g1::element pippenger_unsafe(fr* scalars, g1::affine_element* points, const size_t num_initial_points)
 {
     // our windowed non-adjacent form algorthm requires that each thread can work on at least 8 points.
     // If we fall below this theshold, fall back to the traditional scalar multiplication algorithm.
@@ -681,25 +681,25 @@ g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, c
     }
 }
 
-template void compute_wnaf_states<1 << 2>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 3>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 4>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 5>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 6>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 7>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 8>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 9>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 10>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 11>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 12>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 13>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 14>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 15>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 16>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 17>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 18>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 19>(multiplication_runtime_state& state, fr::field_t* scalars);
-template void compute_wnaf_states<1 << 20>(multiplication_runtime_state& state, fr::field_t* scalars);
+template void compute_wnaf_states<1 << 2>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 3>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 4>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 5>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 6>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 7>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 8>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 9>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 10>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 11>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 12>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 13>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 14>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 15>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 16>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 17>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 18>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 19>(multiplication_runtime_state& state, fr* scalars);
+template void compute_wnaf_states<1 << 20>(multiplication_runtime_state& state, fr* scalars);
 
 template void organize_buckets<1 << 2>(multiplication_runtime_state& state);
 template void organize_buckets<1 << 3>(multiplication_runtime_state& state);

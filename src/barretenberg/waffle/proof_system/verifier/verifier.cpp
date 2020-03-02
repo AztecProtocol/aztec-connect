@@ -57,25 +57,25 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     std::array<g1::affine_element, program_settings::program_width> T;
     std::array<g1::affine_element, program_settings::program_width> W;
 
-    std::array<fr::field_t, program_settings::program_width> wire_evaluations;
-    std::array<fr::field_t, program_settings::program_width - 1> sigma_evaluations;
+    std::array<fr, program_settings::program_width> wire_evaluations;
+    std::array<fr, program_settings::program_width - 1> sigma_evaluations;
 
     for (size_t i = 0; i < program_settings::program_width; ++i) {
         std::string index = std::to_string(i + 1);
         T[i] = g1::affine_element::serialize_from_buffer(&transcript.get_element("T_" + index)[0]);
         W[i] = g1::affine_element::serialize_from_buffer(&transcript.get_element("W_" + index)[0]);
-        wire_evaluations[i] = fr::field_t::serialize_from_buffer(&transcript.get_element("w_" + index)[0]);
+        wire_evaluations[i] = fr::serialize_from_buffer(&transcript.get_element("w_" + index)[0]);
     }
     for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
         std::string index = std::to_string(i + 1);
-        sigma_evaluations[i] = fr::field_t::serialize_from_buffer(&transcript.get_element("sigma_" + index)[0]);
+        sigma_evaluations[i] = fr::serialize_from_buffer(&transcript.get_element("sigma_" + index)[0]);
     }
     g1::affine_element Z_1 = g1::affine_element::serialize_from_buffer(&transcript.get_element("Z")[0]);
     g1::affine_element PI_Z = g1::affine_element::serialize_from_buffer(&transcript.get_element("PI_Z")[0]);
     g1::affine_element PI_Z_OMEGA = g1::affine_element::serialize_from_buffer(&transcript.get_element("PI_Z_OMEGA")[0]);
 
-    fr::field_t linear_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("r")[0]);
-    fr::field_t z_1_shifted_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("z_omega")[0]);
+    fr linear_eval = fr::serialize_from_buffer(&transcript.get_element("r")[0]);
+    fr z_1_shifted_eval = fr::serialize_from_buffer(&transcript.get_element("z_omega")[0]);
 
     bool inputs_valid = T[0].on_curve() && Z_1.on_curve() && PI_Z.on_curve();
 
@@ -109,9 +109,9 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
     bool field_elements_valid = true;
     for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
-        field_elements_valid = field_elements_valid && !(sigma_evaluations[i] == fr::field_t::zero());
+        field_elements_valid = field_elements_valid && !(sigma_evaluations[i] == fr::zero());
     }
-    field_elements_valid = field_elements_valid && !(linear_eval == fr::field_t::zero());
+    field_elements_valid = field_elements_valid && !(linear_eval == fr::zero());
 
     if (!field_elements_valid) {
         printf("proof field elements not valid!\n");
@@ -119,8 +119,8 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     }
 
     // reconstruct challenges
-    fr::field_t alpha_pow[4];
-    fr::field_t nu_pow[11];
+    fr alpha_pow[4];
+    fr nu_pow[11];
 
     transcript.add_element("circuit_size",
                            { static_cast<uint8_t>(key->n),
@@ -133,12 +133,12 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
                              static_cast<uint8_t>(key->num_public_inputs >> 16),
                              static_cast<uint8_t>(key->num_public_inputs >> 24) });
     transcript.apply_fiat_shamir("init");
-    fr::field_t beta = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("beta").begin());
-    fr::field_t gamma = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("gamma").begin());
-    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("alpha").begin());
-    fr::field_t z_challenge = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("z").begin());
+    fr beta = fr::serialize_from_buffer(transcript.apply_fiat_shamir("beta").begin());
+    fr gamma = fr::serialize_from_buffer(transcript.apply_fiat_shamir("gamma").begin());
+    fr alpha = fr::serialize_from_buffer(transcript.apply_fiat_shamir("alpha").begin());
+    fr z_challenge = fr::serialize_from_buffer(transcript.apply_fiat_shamir("z").begin());
 
-    fr::field_t t_eval = fr::field_t::zero();
+    fr t_eval = fr::zero();
 
     barretenberg::polynomial_arithmetic::lagrange_evaluations lagrange_evals =
         barretenberg::polynomial_arithmetic::get_lagrange_evaluations(z_challenge, key->domain);
@@ -147,15 +147,15 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     plonk_linear_terms linear_terms = compute_linear_terms<program_settings>(transcript, lagrange_evals.l_1);
 
     // reconstruct evaluation of quotient polynomial from prover messages
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
-    fr::field_t::__copy(alpha, alpha_pow[0]);
+    fr T0;
+    fr T1;
+    fr T2;
+    fr::__copy(alpha, alpha_pow[0]);
     for (size_t i = 1; i < 4; ++i) {
         alpha_pow[i] = alpha_pow[i - 1] * alpha_pow[0];
     }
 
-    fr::field_t sigma_contribution = fr::field_t::one();
+    fr sigma_contribution = fr::one();
     for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
         T0 = sigma_evaluations[i] * beta;
         T1 = wire_evaluations[i] + gamma;
@@ -163,10 +163,10 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
         sigma_contribution *= T0;
     }
 
-    std::vector<barretenberg::fr::field_t> public_inputs =
+    std::vector<barretenberg::fr> public_inputs =
         transcript_helpers::read_field_elements(transcript.get_element("public_inputs"));
 
-    fr::field_t public_input_delta = compute_public_input_delta(public_inputs, beta, gamma, key->domain.root);
+    fr public_input_delta = compute_public_input_delta(public_inputs, beta, gamma, key->domain.root);
     T0 = wire_evaluations[program_settings::program_width - 1] + gamma;
     sigma_contribution *= T0;
     sigma_contribution *= z_1_shifted_eval;
@@ -182,7 +182,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     T1 += linear_eval;
     t_eval += T1;
 
-    fr::field_t alpha_base = alpha.sqr().sqr();
+    fr alpha_base = alpha.sqr().sqr();
     for (size_t i = 0; i < verifier_widgets.size(); ++i) {
         alpha_base =
             verifier_widgets[i]->compute_quotient_evaluation_contribution(key.get(), alpha_base, transcript, t_eval);
@@ -193,10 +193,10 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
     transcript.add_element("t", transcript_helpers::convert_field_element(t_eval));
 
-    fr::field_t nu = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("nu").begin());
+    fr nu = fr::serialize_from_buffer(transcript.apply_fiat_shamir("nu").begin());
 
-    fr::field_t u = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("separator").begin());
-    fr::field_t::__copy(nu, nu_pow[0]);
+    fr u = fr::serialize_from_buffer(transcript.apply_fiat_shamir("separator").begin());
+    fr::__copy(nu, nu_pow[0]);
     for (size_t i = 1; i < 10; ++i) {
         nu_pow[i] = nu_pow[i - 1] * nu_pow[0];
     }
@@ -208,8 +208,8 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     T0 = nu_pow[7] * u;
     linear_terms.z_1 += T0;
 
-    fr::field_t batch_evaluation;
-    fr::field_t::__copy(t_eval, batch_evaluation);
+    fr batch_evaluation;
+    fr::__copy(t_eval, batch_evaluation);
     T0 = nu_pow[0] * linear_eval;
     batch_evaluation += T0;
 
@@ -227,12 +227,12 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     T0 *= z_1_shifted_eval;
     batch_evaluation += T0;
 
-    fr::field_t nu_base = nu_pow[8];
+    fr nu_base = nu_pow[8];
 
     for (size_t i = 0; i < program_settings::program_width; ++i) {
         if (program_settings::requires_shifted_wire(program_settings::wire_shift_settings, i)) {
-            fr::field_t wire_shifted_eval =
-                fr::field_t::serialize_from_buffer(&transcript.get_element("w_" + std::to_string(i + 1) + "_omega")[0]);
+            fr wire_shifted_eval =
+                fr::serialize_from_buffer(&transcript.get_element("w_" + std::to_string(i + 1) + "_omega")[0]);
             T0 = wire_shifted_eval * nu_base;
             T0 *= u;
             batch_evaluation += T0;
@@ -247,17 +247,17 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
     batch_evaluation.self_neg();
 
-    fr::field_t z_omega_scalar;
+    fr z_omega_scalar;
     z_omega_scalar = z_challenge * key->domain.root;
     z_omega_scalar *= u;
 
-    std::vector<fr::field_t> scalars;
+    std::vector<fr> scalars;
     std::vector<g1::affine_element> elements;
 
     elements.emplace_back(Z_1);
     scalars.emplace_back(linear_terms.z_1);
 
-    fr::field_t::__copy(nu_pow[8], nu_base);
+    fr::__copy(nu_pow[8], nu_base);
 
     for (size_t i = 0; i < program_settings::program_width; ++i) {
         if (W[i].on_curve()) {
@@ -293,7 +293,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     scalars.emplace_back(z_challenge);
 
     for (size_t i = 1; i < program_settings::program_width; ++i) {
-        fr::field_t z_power = z_challenge.pow(static_cast<uint64_t>(key->n * i));
+        fr z_power = z_challenge.pow(static_cast<uint64_t>(key->n * i));
         if (T[i].on_curve()) {
             elements.emplace_back(T[i]);
             scalars.emplace_back(z_power);
@@ -321,10 +321,10 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     g1::element::batch_normalize(P, 2);
 
     g1::affine_element P_affine[2];
-    barretenberg::fq::field_t::__copy(P[0].x, P_affine[1].x);
-    barretenberg::fq::field_t::__copy(P[0].y, P_affine[1].y);
-    barretenberg::fq::field_t::__copy(P[1].x, P_affine[0].x);
-    barretenberg::fq::field_t::__copy(P[1].y, P_affine[0].y);
+    barretenberg::fq::__copy(P[0].x, P_affine[1].x);
+    barretenberg::fq::__copy(P[0].y, P_affine[1].y);
+    barretenberg::fq::__copy(P[1].x, P_affine[0].x);
+    barretenberg::fq::__copy(P[1].y, P_affine[0].y);
 
     barretenberg::fq12::field_t result = barretenberg::pairing::reduced_ate_pairing_batch_precomputed(
         P_affine, key->reference_string.precomputed_g2_lines, 2);

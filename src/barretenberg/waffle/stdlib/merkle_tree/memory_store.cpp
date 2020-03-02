@@ -50,7 +50,7 @@ void MemoryStore::update_element(size_t index, std::string const& value)
 
     size_t offset = 0;
     size_t layer_size = total_size_;
-    fr::field_t current = sha256(value);
+    fr current = sha256(value);
     for (size_t i = 0; i < depth_; ++i) {
         hashes_[offset + index] = current;
         index &= (~0ULL) - 1;

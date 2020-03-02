@@ -294,7 +294,7 @@ TEST(g2, batch_normalize)
 
 TEST(g2, group_exponentiation_check_against_constants)
 {
-    fr::field_t scalar = { 0xc4199e4b971f705, 0xc8d89c916a23ab3d, 0x7ea3cd7c05c7af82, 0x2fdafbf994a8d400 };
+    fr scalar = { 0xc4199e4b971f705, 0xc8d89c916a23ab3d, 0x7ea3cd7c05c7af82, 0x2fdafbf994a8d400 };
     g2::affine_element lhs = { { { 0x46debd5cd992f6ed, 0x674322d4f75edadd, 0x426a00665e5c4479, 0x1800deef121f1e76 },
                                  { 0x97e485b7aef312c2, 0xf1aa493335a9e712, 0x7260bfb731fb5d25, 0x198e9393920d483a } },
                                { { 0x4ce6cc0166fa7daa, 0xe3d1e7690c43d37b, 0x4aab71808dcb408f, 0x12c85ea5db8c6deb },
@@ -319,20 +319,20 @@ TEST(g2, group_exponentiation_check_against_constants)
 
 TEST(g2, group_exponentiation_zero_and_one)
 {
-    g2::affine_element result = g2::one * fr::field_t::zero();
+    g2::affine_element result = g2::one * fr::zero();
 
     EXPECT_EQ(result.is_point_at_infinity(), true);
 
-    result = g2::affine_element(g2::one * fr::field_t::one());
+    result = g2::affine_element(g2::one * fr::one());
     EXPECT_EQ(result == g2::affine_one, true);
 }
 
 TEST(g2, group_exponentiation_consistency_check)
 {
-    fr::field_t a = fr::field_t::random_element();
-    fr::field_t b = fr::field_t::random_element();
+    fr a = fr::random_element();
+    fr b = fr::random_element();
 
-    fr::field_t c;
+    fr c;
     c = a * b;
 
     g2::affine_element input = g2::affine_one;

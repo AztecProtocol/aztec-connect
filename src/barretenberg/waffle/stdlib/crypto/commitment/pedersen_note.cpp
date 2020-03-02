@@ -12,13 +12,13 @@ template <size_t num_bits>
 note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, const size_t generator_index)
 {
     field_t<waffle::TurboComposer> scalar = in;
-    if (!(in.additive_constant == barretenberg::fr::field_t::zero()) ||
-        !(in.multiplicative_constant == barretenberg::fr::field_t::one())) {
+    if (!(in.additive_constant == barretenberg::fr::zero()) ||
+        !(in.multiplicative_constant == barretenberg::fr::one())) {
         scalar = scalar.normalize();
     }
     waffle::TurboComposer* ctx = in.context;
     ASSERT(ctx != nullptr);
-    barretenberg::fr::field_t scalar_multiplier = scalar.get_value().from_montgomery_form();
+    barretenberg::fr scalar_multiplier = scalar.get_value().from_montgomery_form();
 
     // constexpr size_t num_bits = 250;
     constexpr size_t num_quads_base = (num_bits - 1) >> 1;
@@ -35,10 +35,10 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
     origin_points[1] = origin_points[0] + generator;
     origin_points[1] = origin_points[1].normalize();
 
-    barretenberg::fr::field_t scalar_multiplier_base = scalar_multiplier.to_montgomery_form();
+    barretenberg::fr scalar_multiplier_base = scalar_multiplier.to_montgomery_form();
 
     if ((scalar_multiplier.data[0] & 1) == 0) {
-        barretenberg::fr::field_t two = barretenberg::fr::field_t::one() + barretenberg::fr::field_t::one();
+        barretenberg::fr two = barretenberg::fr::one() + barretenberg::fr::one();
         scalar_multiplier_base = scalar_multiplier_base - two;
     }
     scalar_multiplier_base = scalar_multiplier_base.from_montgomery_form();
@@ -47,17 +47,17 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
 
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    barretenberg::fr::field_t accumulator_offset = (barretenberg::fr::field_t::one() + barretenberg::fr::field_t::one())
+    barretenberg::fr accumulator_offset = (barretenberg::fr::one() + barretenberg::fr::one())
                                                        .pow(static_cast<uint64_t>(initial_exponent))
                                                        .invert();
 
-    barretenberg::fr::field_t origin_accumulators[2]{ barretenberg::fr::field_t::one(),
-                                                      accumulator_offset + barretenberg::fr::field_t::one() };
+    barretenberg::fr origin_accumulators[2]{ barretenberg::fr::one(),
+                                                      accumulator_offset + barretenberg::fr::one() };
 
     grumpkin::g1::element* multiplication_transcript =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
-    barretenberg::fr::field_t* accumulator_transcript =
-        static_cast<barretenberg::fr::field_t*>(aligned_alloc(64, sizeof(barretenberg::fr::field_t) * (num_quads + 1)));
+    barretenberg::fr* accumulator_transcript =
+        static_cast<barretenberg::fr*>(aligned_alloc(64, sizeof(barretenberg::fr) * (num_quads + 1)));
 
     if (skew) {
         multiplication_transcript[0] = origin_points[1];
@@ -66,18 +66,18 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
         multiplication_transcript[0] = origin_points[0];
         accumulator_transcript[0] = origin_accumulators[0];
     }
-    barretenberg::fr::field_t one = barretenberg::fr::field_t::one();
-    barretenberg::fr::field_t three = ((one + one) + one);
+    barretenberg::fr one = barretenberg::fr::one();
+    barretenberg::fr three = ((one + one) + one);
 
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
 
-        barretenberg::fr::field_t prev_accumulator = accumulator_transcript[i] + accumulator_transcript[i];
+        barretenberg::fr prev_accumulator = accumulator_transcript[i] + accumulator_transcript[i];
         prev_accumulator = prev_accumulator + prev_accumulator;
 
         grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
 
-        barretenberg::fr::field_t scalar_to_add = (entry == 1) ? three : one;
+        barretenberg::fr scalar_to_add = (entry == 1) ? three : one;
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
         if (predicate) {
             point_to_add = -point_to_add;
@@ -94,7 +94,7 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
                                              origin_points[0].y,
                                              (origin_points[0].y - origin_points[1].y) };
 
-    barretenberg::fr::field_t x_alpha = accumulator_offset;
+    barretenberg::fr x_alpha = accumulator_offset;
     for (size_t i = 0; i < num_quads; ++i) {
         waffle::fixed_group_add_quad round_quad;
         round_quad.d = ctx->add_variable(accumulator_transcript[i]);
@@ -130,11 +130,11 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
                                ctx->add_variable(multiplication_transcript[num_quads].y),
                                ctx->add_variable(x_alpha),
                                ctx->add_variable(accumulator_transcript[num_quads]),
-                               barretenberg::fr::field_t::zero(),
-                               barretenberg::fr::field_t::zero(),
-                               barretenberg::fr::field_t::zero(),
-                               barretenberg::fr::field_t::zero(),
-                               barretenberg::fr::field_t::zero() };
+                               barretenberg::fr::zero(),
+                               barretenberg::fr::zero(),
+                               barretenberg::fr::zero(),
+                               barretenberg::fr::zero(),
+                               barretenberg::fr::zero() };
     ctx->create_big_add_gate(add_quad);
 
     note_triple result;
@@ -164,7 +164,7 @@ note compute_commitment(const field_t<waffle::TurboComposer>& view_key,
 
     // if k = 0, then k * inv - 1 != 0
     // k * inv - (1 - is_zero)
-    field_t one(context, barretenberg::fr::field_t::one());
+    field_t one(context, barretenberg::fr::one());
     bool_t is_zero = k.is_zero();
 
     // If k = 0, our scalar multiplier is going to be nonsense.

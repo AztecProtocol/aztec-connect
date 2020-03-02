@@ -23,7 +23,7 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     // 0 = left
     // 1 = right
     // 2 = output
-    const barretenberg::fr::field_t* roots = small_domain.get_round_roots()[small_domain.log2_size - 2];
+    const barretenberg::fr* roots = small_domain.get_round_roots()[small_domain.log2_size - 2];
     const size_t root_size = small_domain.size >> 1UL;
     const size_t log2_root_size = static_cast<size_t>(log2(root_size));
 
@@ -64,7 +64,7 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     const uint32_t column_index =
         ((permutation[i] & program_settings::permutation_mask) >> program_settings::permutation_shift);
     if (column_index > 0) {
-        output[i] *= barretenberg::fr::field_t::coset_generator(column_index - 1);
+        output[i] *= barretenberg::fr::coset_generator(column_index - 1);
     }
     ITERATE_OVER_DOMAIN_END;
 }

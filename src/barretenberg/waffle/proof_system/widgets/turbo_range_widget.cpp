@@ -105,52 +105,52 @@ ProverTurboRangeWidget& ProverTurboRangeWidget::operator=(ProverTurboRangeWidget
  * is (n / 8) gates
  *
  **/
-fr::field_t ProverTurboRangeWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
+fr ProverTurboRangeWidget::compute_quotient_contribution(const barretenberg::fr& alpha_base,
                                                                   const transcript::Transcript& transcript)
 {
-    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
-    fr::field_t alpha_a = alpha_base;
-    fr::field_t alpha_b = alpha_a * alpha;
-    fr::field_t alpha_c = alpha_b * alpha;
-    fr::field_t alpha_d = alpha_c * alpha;
+    fr alpha_a = alpha_base;
+    fr alpha_b = alpha_a * alpha;
+    fr alpha_c = alpha_b * alpha;
+    fr alpha_d = alpha_c * alpha;
 
-    fr::field_t* w_1_fft = &key->wire_ffts.at("w_1_fft")[0];
-    fr::field_t* w_2_fft = &key->wire_ffts.at("w_2_fft")[0];
-    fr::field_t* w_3_fft = &key->wire_ffts.at("w_3_fft")[0];
-    fr::field_t* w_4_fft = &key->wire_ffts.at("w_4_fft")[0];
+    fr* w_1_fft = &key->wire_ffts.at("w_1_fft")[0];
+    fr* w_2_fft = &key->wire_ffts.at("w_2_fft")[0];
+    fr* w_3_fft = &key->wire_ffts.at("w_3_fft")[0];
+    fr* w_4_fft = &key->wire_ffts.at("w_4_fft")[0];
 
-    fr::field_t* quotient_large = &key->quotient_large[0];
+    fr* quotient_large = &key->quotient_large[0];
 
-    constexpr fr::field_t minus_two = -fr::field_t(2);
-    constexpr fr::field_t minus_three = -fr::field_t(3);
+    constexpr fr minus_two = -fr(2);
+    constexpr fr minus_three = -fr(3);
 
     ITERATE_OVER_DOMAIN_START(key->large_domain);
 
-    fr::field_t delta_1 = w_4_fft[i] + w_4_fft[i];
+    fr delta_1 = w_4_fft[i] + w_4_fft[i];
     delta_1 += delta_1;
     delta_1 = w_3_fft[i] - delta_1;
 
-    fr::field_t delta_2 = w_3_fft[i] + w_3_fft[i];
+    fr delta_2 = w_3_fft[i] + w_3_fft[i];
     delta_2 += delta_2;
     delta_2 = w_2_fft[i] - delta_2;
 
-    fr::field_t delta_3 = w_2_fft[i] + w_2_fft[i];
+    fr delta_3 = w_2_fft[i] + w_2_fft[i];
     delta_3 += delta_3;
     delta_3 = w_1_fft[i] - delta_3;
 
-    fr::field_t delta_4 = w_1_fft[i] + w_1_fft[i];
+    fr delta_4 = w_1_fft[i] + w_1_fft[i];
     delta_4 += delta_4;
     delta_4 = w_4_fft[i + 4] - delta_4;
 
     // D(D - 1)(D - 2)(D - 3).alpha
-    fr::field_t T0 = delta_1.sqr();
+    fr T0 = delta_1.sqr();
     T0 -= delta_1;
-    fr::field_t T1 = delta_1 + minus_two;
+    fr T1 = delta_1 + minus_two;
     T0 *= T1;
     T1 = delta_1 + minus_three;
     T0 *= T1;
-    fr::field_t range_accumulator = T0 * alpha_a;
+    fr range_accumulator = T0 * alpha_a;
 
     T0 = delta_2.sqr();
     T0 -= delta_2;
@@ -188,50 +188,50 @@ fr::field_t ProverTurboRangeWidget::compute_quotient_contribution(const barreten
 
 void ProverTurboRangeWidget::compute_transcript_elements(transcript::Transcript&) {}
 
-fr::field_t ProverTurboRangeWidget::compute_linear_contribution(const fr::field_t& alpha_base,
+fr ProverTurboRangeWidget::compute_linear_contribution(const fr& alpha_base,
                                                                 const transcript::Transcript& transcript,
                                                                 barretenberg::polynomial& r)
 {
-    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
-    fr::field_t w_4_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4")[0]);
-    fr::field_t w_1_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_1")[0]);
-    fr::field_t w_2_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_2")[0]);
-    fr::field_t w_3_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
-    fr::field_t w_4_omega_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
+    fr w_4_eval = fr::serialize_from_buffer(&transcript.get_element("w_4")[0]);
+    fr w_1_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+    fr w_2_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+    fr w_3_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+    fr w_4_omega_eval = fr::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
 
-    constexpr fr::field_t minus_two = -fr::field_t(2);
-    constexpr fr::field_t minus_three = -fr::field_t(3);
+    constexpr fr minus_two = -fr(2);
+    constexpr fr minus_three = -fr(3);
 
-    fr::field_t alpha_a = alpha_base;
-    fr::field_t alpha_b = alpha_a * alpha;
-    fr::field_t alpha_c = alpha_b * alpha;
-    fr::field_t alpha_d = alpha_c * alpha;
+    fr alpha_a = alpha_base;
+    fr alpha_b = alpha_a * alpha;
+    fr alpha_c = alpha_b * alpha;
+    fr alpha_d = alpha_c * alpha;
 
-    fr::field_t delta_1 = w_4_eval + w_4_eval;
+    fr delta_1 = w_4_eval + w_4_eval;
     delta_1 += delta_1;
     delta_1 = w_3_eval - delta_1;
 
-    fr::field_t delta_2 = w_3_eval + w_3_eval;
+    fr delta_2 = w_3_eval + w_3_eval;
     delta_2 += delta_2;
     delta_2 = w_2_eval - delta_2;
 
-    fr::field_t delta_3 = w_2_eval + w_2_eval;
+    fr delta_3 = w_2_eval + w_2_eval;
     delta_3 += delta_3;
     delta_3 = w_1_eval - delta_3;
 
-    fr::field_t delta_4 = w_1_eval + w_1_eval;
+    fr delta_4 = w_1_eval + w_1_eval;
     delta_4 += delta_4;
     delta_4 = w_4_omega_eval - delta_4;
 
     // D(D - 1)(D - 2)(D - 3).alpha
-    fr::field_t T0 = delta_1.sqr();
+    fr T0 = delta_1.sqr();
     T0 -= delta_1;
-    fr::field_t T1 = delta_1 + minus_two;
+    fr T1 = delta_1 + minus_two;
     T0 *= T1;
     T1 = delta_1 + minus_three;
     T0 *= T1;
-    fr::field_t range_accumulator = T0 * alpha_a;
+    fr range_accumulator = T0 * alpha_a;
 
     T0 = delta_2.sqr();
     T0 -= delta_2;
@@ -267,10 +267,10 @@ fr::field_t ProverTurboRangeWidget::compute_linear_contribution(const fr::field_
     return alpha_d * alpha;
 }
 
-fr::field_t ProverTurboRangeWidget::compute_opening_poly_contribution(const fr::field_t& nu_base,
+fr ProverTurboRangeWidget::compute_opening_poly_contribution(const fr& nu_base,
                                                                       const transcript::Transcript&,
-                                                                      fr::field_t*,
-                                                                      fr::field_t*)
+                                                                      fr*,
+                                                                      fr*)
 {
     return nu_base;
 }
@@ -281,18 +281,18 @@ VerifierTurboRangeWidget::VerifierTurboRangeWidget()
     : VerifierBaseWidget()
 {}
 
-barretenberg::fr::field_t VerifierTurboRangeWidget::compute_quotient_evaluation_contribution(
-    verification_key*, const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t&)
+barretenberg::fr VerifierTurboRangeWidget::compute_quotient_evaluation_contribution(
+    verification_key*, const fr& alpha_base, const transcript::Transcript& transcript, fr&)
 {
-    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
     return alpha_base * alpha.sqr().sqr();
 }
 
-barretenberg::fr::field_t VerifierTurboRangeWidget::compute_batch_evaluation_contribution(
+barretenberg::fr VerifierTurboRangeWidget::compute_batch_evaluation_contribution(
     verification_key*,
-    barretenberg::fr::field_t&,
-    const barretenberg::fr::field_t& nu_base,
+    barretenberg::fr&,
+    const barretenberg::fr& nu_base,
     const transcript::Transcript&)
 {
     return nu_base;
@@ -303,46 +303,46 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboRangeWidget::append_scal
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
     std::vector<barretenberg::g1::affine_element>& points,
-    std::vector<barretenberg::fr::field_t>& scalars)
+    std::vector<barretenberg::fr>& scalars)
 {
-    fr::field_t w_4_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4")[0]);
-    fr::field_t w_1_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_1")[0]);
-    fr::field_t w_2_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_2")[0]);
-    fr::field_t w_3_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
-    fr::field_t w_4_omega_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
+    fr w_4_eval = fr::serialize_from_buffer(&transcript.get_element("w_4")[0]);
+    fr w_1_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+    fr w_2_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+    fr w_3_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+    fr w_4_omega_eval = fr::serialize_from_buffer(&transcript.get_element("w_4_omega")[0]);
 
-    constexpr fr::field_t minus_two = -fr::field_t(2);
-    constexpr fr::field_t minus_three = -fr::field_t(3);
+    constexpr fr minus_two = -fr(2);
+    constexpr fr minus_three = -fr(3);
 
-    fr::field_t alpha_a = challenge.alpha_base;
-    fr::field_t alpha_b = alpha_a * challenge.alpha_step;
-    fr::field_t alpha_c = alpha_b * challenge.alpha_step;
-    fr::field_t alpha_d = alpha_c * challenge.alpha_step;
+    fr alpha_a = challenge.alpha_base;
+    fr alpha_b = alpha_a * challenge.alpha_step;
+    fr alpha_c = alpha_b * challenge.alpha_step;
+    fr alpha_d = alpha_c * challenge.alpha_step;
 
-    fr::field_t delta_1 = w_4_eval + w_4_eval;
+    fr delta_1 = w_4_eval + w_4_eval;
     delta_1 += delta_1;
     delta_1 = w_3_eval - delta_1;
 
-    fr::field_t delta_2 = w_3_eval + w_3_eval;
+    fr delta_2 = w_3_eval + w_3_eval;
     delta_2 += delta_2;
     delta_2 = w_2_eval - delta_2;
 
-    fr::field_t delta_3 = w_2_eval + w_2_eval;
+    fr delta_3 = w_2_eval + w_2_eval;
     delta_3 += delta_3;
     delta_3 = w_1_eval - delta_3;
 
-    fr::field_t delta_4 = w_1_eval + w_1_eval;
+    fr delta_4 = w_1_eval + w_1_eval;
     delta_4 += delta_4;
     delta_4 = w_4_omega_eval - delta_4;
 
     // D(D - 1)(D - 2)(D - 3).alpha
-    fr::field_t T0 = delta_1.sqr();
+    fr T0 = delta_1.sqr();
     T0 -= delta_1;
-    fr::field_t T1 = delta_1 + minus_two;
+    fr T1 = delta_1 + minus_two;
     T0 *= T1;
     T1 = delta_1 + minus_three;
     T0 *= T1;
-    fr::field_t range_accumulator = T0 * alpha_a;
+    fr range_accumulator = T0 * alpha_a;
 
     T0 = delta_2.sqr();
     T0 -= delta_2;

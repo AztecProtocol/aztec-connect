@@ -119,33 +119,33 @@ ProverTurboArithmeticWidget& ProverTurboArithmeticWidget::operator=(ProverTurboA
     return *this;
 }
 
-fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const barretenberg::fr::field_t& alpha_base,
+fr ProverTurboArithmeticWidget::compute_quotient_contribution(const barretenberg::fr& alpha_base,
                                                                        const transcript::Transcript& transcript)
 {
-    const fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    const fr alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
 
-    const fr::field_t* w_1_fft = &key->wire_ffts.at("w_1_fft")[0];
-    const fr::field_t* w_2_fft = &key->wire_ffts.at("w_2_fft")[0];
-    const fr::field_t* w_3_fft = &key->wire_ffts.at("w_3_fft")[0];
-    const fr::field_t* w_4_fft = &key->wire_ffts.at("w_4_fft")[0];
+    const fr* w_1_fft = &key->wire_ffts.at("w_1_fft")[0];
+    const fr* w_2_fft = &key->wire_ffts.at("w_2_fft")[0];
+    const fr* w_3_fft = &key->wire_ffts.at("w_3_fft")[0];
+    const fr* w_4_fft = &key->wire_ffts.at("w_4_fft")[0];
 
-    fr::field_t* quotient_large = &key->quotient_large[0];
+    fr* quotient_large = &key->quotient_large[0];
 
-    constexpr fr::field_t minus_two = -fr::field_t(2);
-    constexpr fr::field_t minus_seven = -fr::field_t(7);
+    constexpr fr minus_two = -fr(2);
+    constexpr fr minus_seven = -fr(7);
 #ifndef NO_MULTITHREADING
 #pragma omp parallel for
 #endif
     for (size_t j = 0; j < key->large_domain.num_threads; ++j) {
         const size_t start = j * key->large_domain.thread_size;
         const size_t end = (j + 1) * key->large_domain.thread_size;
-        fr::field_t T0;
-        fr::field_t T1;
-        fr::field_t T2;
-        fr::field_t T3;
-        fr::field_t T4;
-        fr::field_t T5;
-        fr::field_t T6;
+        fr T0;
+        fr T1;
+        fr T2;
+        fr T3;
+        fr T4;
+        fr T5;
+        fr T6;
         for (size_t i = start; i < end; ++i) {
 
             T0 = w_1_fft[i] * q_m_fft[i];
@@ -216,46 +216,46 @@ fr::field_t ProverTurboArithmeticWidget::compute_quotient_contribution(const bar
 
 void ProverTurboArithmeticWidget::compute_transcript_elements(transcript::Transcript& transcript)
 {
-    fr::field_t z = fr::field_t::serialize_from_buffer(&transcript.get_challenge("z")[0]);
+    fr z = fr::serialize_from_buffer(&transcript.get_challenge("z")[0]);
 
     transcript.add_element("q_arith",
                            transcript_helpers::convert_field_element(q_arith.evaluate(z, key->small_domain.size)));
 }
 
-fr::field_t ProverTurboArithmeticWidget::compute_linear_contribution(const fr::field_t& alpha_base,
+fr ProverTurboArithmeticWidget::compute_linear_contribution(const fr& alpha_base,
                                                                      const transcript::Transcript& transcript,
                                                                      barretenberg::polynomial& r)
 {
 
-    fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-    fr::field_t w_l_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_1")[0]);
-    fr::field_t w_r_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_2")[0]);
-    fr::field_t w_o_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
-    fr::field_t w_4_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4")[0]);
-    fr::field_t q_arith_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
+    fr alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    fr w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+    fr w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+    fr w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+    fr w_4_eval = fr::serialize_from_buffer(&transcript.get_element("w_4")[0]);
+    fr q_arith_eval = fr::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
 
-    fr::field_t neg_two = -fr::field_t(2);
-    fr::field_t w_lr = w_l_eval * w_r_eval;
-    fr::field_t is_w_4_bool = (w_4_eval.sqr() - w_4_eval) * (w_4_eval + neg_two) * alpha;
+    fr neg_two = -fr(2);
+    fr w_lr = w_l_eval * w_r_eval;
+    fr is_w_4_bool = (w_4_eval.sqr() - w_4_eval) * (w_4_eval + neg_two) * alpha;
     ITERATE_OVER_DOMAIN_START(key->small_domain);
-    fr::field_t T0 = w_lr * q_m[i];
-    fr::field_t T1 = w_l_eval * q_1[i];
-    fr::field_t T2 = w_r_eval * q_2[i];
-    fr::field_t T3 = w_o_eval * q_3[i];
-    fr::field_t T4 = w_4_eval * q_4[i];
-    fr::field_t T5 = is_w_4_bool * q_5[i];
+    fr T0 = w_lr * q_m[i];
+    fr T1 = w_l_eval * q_1[i];
+    fr T2 = w_r_eval * q_2[i];
+    fr T3 = w_o_eval * q_3[i];
+    fr T4 = w_4_eval * q_4[i];
+    fr T5 = is_w_4_bool * q_5[i];
     r[i] += ((T0 + T1 + T2 + T3 + T4 + T5 + q_c[i]) * q_arith_eval * alpha_base);
     ITERATE_OVER_DOMAIN_END;
 
     return alpha_base * alpha.sqr();
 }
 
-fr::field_t ProverTurboArithmeticWidget::compute_opening_poly_contribution(const fr::field_t& nu_base,
+fr ProverTurboArithmeticWidget::compute_opening_poly_contribution(const fr& nu_base,
                                                                            const transcript::Transcript& transcript,
-                                                                           fr::field_t* poly,
-                                                                           fr::field_t*)
+                                                                           fr* poly,
+                                                                           fr*)
 {
-    fr::field_t nu = fr::field_t::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
+    fr nu = fr::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
 
     ITERATE_OVER_DOMAIN_START(key->small_domain);
     poly[i] += (q_arith[i] * nu_base);
@@ -270,21 +270,21 @@ VerifierTurboArithmeticWidget::VerifierTurboArithmeticWidget()
     : VerifierBaseWidget()
 {}
 
-fr::field_t VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribution(
-    verification_key*, const fr::field_t& alpha_base, const transcript::Transcript& transcript, fr::field_t& t_eval)
+fr VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribution(
+    verification_key*, const fr& alpha_base, const transcript::Transcript& transcript, fr& t_eval)
 {
-    const fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.get_challenge("alpha").begin());
-    const fr::field_t q_arith_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
+    const fr alpha = fr::serialize_from_buffer(transcript.get_challenge("alpha").begin());
+    const fr q_arith_eval = fr::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
 
-    const fr::field_t w_3_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
-    const fr::field_t w_4_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4")[0]);
+    const fr w_3_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+    const fr w_4_eval = fr::serialize_from_buffer(&transcript.get_element("w_4")[0]);
 
-    fr::field_t T1;
-    fr::field_t T2;
-    fr::field_t T3;
-    fr::field_t T4;
-    fr::field_t T5;
-    constexpr fr::field_t minus_seven = -fr::field_t(7);
+    fr T1;
+    fr T2;
+    fr T3;
+    fr T4;
+    fr T5;
+    constexpr fr minus_seven = -fr(7);
 
     T1 = q_arith_eval.sqr() - q_arith_eval;
 
@@ -311,15 +311,15 @@ fr::field_t VerifierTurboArithmeticWidget::compute_quotient_evaluation_contribut
     return alpha_base * alpha.sqr();
 }
 
-barretenberg::fr::field_t VerifierTurboArithmeticWidget::compute_batch_evaluation_contribution(
+barretenberg::fr VerifierTurboArithmeticWidget::compute_batch_evaluation_contribution(
     verification_key*,
-    barretenberg::fr::field_t& batch_eval,
-    const barretenberg::fr::field_t& nu_base,
+    barretenberg::fr& batch_eval,
+    const barretenberg::fr& nu_base,
     const transcript::Transcript& transcript)
 {
-    fr::field_t q_arith_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
+    fr q_arith_eval = fr::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
 
-    fr::field_t nu = fr::field_t::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
+    fr nu = fr::serialize_from_buffer(&transcript.get_challenge("nu")[0]);
 
     batch_eval = batch_eval + (nu_base * q_arith_eval);
 
@@ -331,41 +331,41 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
     const challenge_coefficients& challenge,
     const transcript::Transcript& transcript,
     std::vector<barretenberg::g1::affine_element>& points,
-    std::vector<barretenberg::fr::field_t>& scalars)
+    std::vector<barretenberg::fr>& scalars)
 {
-    fr::field_t w_l_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_1")[0]);
-    fr::field_t w_r_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_2")[0]);
-    fr::field_t w_o_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_3")[0]);
-    fr::field_t w_4_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("w_4")[0]);
+    fr w_l_eval = fr::serialize_from_buffer(&transcript.get_element("w_1")[0]);
+    fr w_r_eval = fr::serialize_from_buffer(&transcript.get_element("w_2")[0]);
+    fr w_o_eval = fr::serialize_from_buffer(&transcript.get_element("w_3")[0]);
+    fr w_4_eval = fr::serialize_from_buffer(&transcript.get_element("w_4")[0]);
 
-    fr::field_t q_arith_eval = fr::field_t::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
+    fr q_arith_eval = fr::serialize_from_buffer(&transcript.get_element("q_arith")[0]);
 
-    fr::field_t q_l_term = w_l_eval * q_arith_eval * challenge.alpha_base * challenge.linear_nu;
+    fr q_l_term = w_l_eval * q_arith_eval * challenge.alpha_base * challenge.linear_nu;
     if (key->constraint_selectors.at("Q_1").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_1"));
         scalars.push_back(q_l_term);
     }
 
-    fr::field_t q_r_term = w_r_eval * q_arith_eval * challenge.alpha_base * challenge.linear_nu;
+    fr q_r_term = w_r_eval * q_arith_eval * challenge.alpha_base * challenge.linear_nu;
     if (key->constraint_selectors.at("Q_2").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_2"));
         scalars.push_back(q_r_term);
     }
 
-    fr::field_t q_o_term = w_o_eval * q_arith_eval * challenge.alpha_base * challenge.linear_nu;
+    fr q_o_term = w_o_eval * q_arith_eval * challenge.alpha_base * challenge.linear_nu;
     if (key->constraint_selectors.at("Q_3").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_3"));
         scalars.push_back(q_o_term);
     }
 
-    fr::field_t q_4_term = w_4_eval * q_arith_eval * challenge.alpha_base * challenge.linear_nu;
+    fr q_4_term = w_4_eval * q_arith_eval * challenge.alpha_base * challenge.linear_nu;
     if (key->constraint_selectors.at("Q_4").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_4"));
         scalars.push_back(q_4_term);
     }
 
-    constexpr fr::field_t minus_two = -fr::field_t(2);
-    fr::field_t q_5_term = (w_4_eval.sqr() - w_4_eval) * (w_4_eval + minus_two) * challenge.alpha_base *
+    constexpr fr minus_two = -fr(2);
+    fr q_5_term = (w_4_eval.sqr() - w_4_eval) * (w_4_eval + minus_two) * challenge.alpha_base *
                            challenge.alpha_step * challenge.linear_nu * q_arith_eval;
     if (key->constraint_selectors.at("Q_5").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_5"));
@@ -373,13 +373,13 @@ VerifierBaseWidget::challenge_coefficients VerifierTurboArithmeticWidget::append
     }
 
     // Q_M term = w_l * w_r * challenge.alpha_base * nu
-    fr::field_t q_m_term = w_l_eval * w_r_eval * challenge.alpha_base * challenge.linear_nu * q_arith_eval;
+    fr q_m_term = w_l_eval * w_r_eval * challenge.alpha_base * challenge.linear_nu * q_arith_eval;
     if (key->constraint_selectors.at("Q_M").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_M"));
         scalars.push_back(q_m_term);
     }
 
-    fr::field_t q_c_term = challenge.alpha_base * challenge.linear_nu * q_arith_eval;
+    fr q_c_term = challenge.alpha_base * challenge.linear_nu * q_arith_eval;
     if (key->constraint_selectors.at("Q_C").on_curve()) {
         points.push_back(key->constraint_selectors.at("Q_C"));
         scalars.push_back(q_c_term);

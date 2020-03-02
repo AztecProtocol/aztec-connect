@@ -18,83 +18,83 @@ using namespace barretenberg;
 TEST(standard_composer, test_add_gate_proofs)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
-    fr::field_t a = fr::field_t::one();
-    fr::field_t b = fr::field_t::one();
-    fr::field_t c = a + b;
-    fr::field_t d = a + c;
+    fr a = fr::one();
+    fr b = fr::one();
+    fr c = a + b;
+    fr d = a + c;
     uint32_t a_idx = composer.add_variable(a);
     uint32_t b_idx = composer.add_variable(b);
     uint32_t c_idx = composer.add_variable(c);
     uint32_t d_idx = composer.add_variable(d);
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
 
     composer.create_add_gate(
-        { d_idx, c_idx, a_idx, fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { d_idx, c_idx, a_idx, fr::one(), fr::neg_one(), fr::neg_one(), fr::zero() });
 
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { b_idx, a_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { b_idx, a_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
 
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -109,17 +109,17 @@ TEST(standard_composer, test_add_gate_proofs)
 TEST(standard_composer, test_mul_gate_proofs)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
-    fr::field_t q[7]{ fr::field_t::random_element(), fr::field_t::random_element(), fr::field_t::random_element(),
-                      fr::field_t::random_element(), fr::field_t::random_element(), fr::field_t::random_element(),
-                      fr::field_t::random_element() };
-    fr::field_t q_inv[7]{
+    fr q[7]{ fr::random_element(), fr::random_element(), fr::random_element(),
+                      fr::random_element(), fr::random_element(), fr::random_element(),
+                      fr::random_element() };
+    fr q_inv[7]{
         q[0].invert(), q[1].invert(), q[2].invert(), q[3].invert(), q[4].invert(), q[5].invert(), q[6].invert(),
     };
 
-    fr::field_t a = fr::field_t::random_element();
-    fr::field_t b = fr::field_t::random_element();
-    fr::field_t c = -((((q[0] * a) + (q[1] * b)) + q[3]) * q_inv[2]);
-    fr::field_t d = -((((q[4] * (a * b)) + q[6]) * q_inv[5]));
+    fr a = fr::random_element();
+    fr b = fr::random_element();
+    fr c = -((((q[0] * a) + (q[1] * b)) + q[3]) * q_inv[2]);
+    fr d = -((((q[4] * (a * b)) + q[6]) * q_inv[5]));
 
     uint32_t a_idx = composer.add_variable(a);
     uint32_t b_idx = composer.add_variable(b);
@@ -192,7 +192,7 @@ TEST(standard_composer, range_constraint)
 
     for (size_t i = 0; i < 10; ++i) {
         uint32_t value = test_helpers::get_pseudorandom_uint32();
-        fr::field_t witness_value = fr::field_t{ value, 0, 0, 0 }.to_montgomery_form();
+        fr witness_value = fr{ value, 0, 0, 0 }.to_montgomery_form();
         uint32_t witness_index = composer.add_variable(witness_value);
 
         // include non-nice numbers of bits, that will bleed over gate boundaries
@@ -202,7 +202,7 @@ TEST(standard_composer, range_constraint)
 
         for (uint32_t j = 0; j < 16; ++j) {
             uint32_t result = (value >> (30U - (2 * j)));
-            fr::field_t source = composer.get_variable(accumulators[j + (extra_bits >> 1)]).from_montgomery_form();
+            fr source = composer.get_variable(accumulators[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t expected = static_cast<uint32_t>(source.data[0]);
             EXPECT_EQ(result, expected);
         }
@@ -213,17 +213,17 @@ TEST(standard_composer, range_constraint)
         }
     }
 
-    uint32_t zero_idx = composer.add_variable(fr::field_t::zero());
-    uint32_t one_idx = composer.add_variable(fr::field_t::one());
+    uint32_t zero_idx = composer.add_variable(fr::zero());
+    uint32_t one_idx = composer.add_variable(fr::one());
     composer.create_big_add_gate({ zero_idx,
                                    zero_idx,
                                    zero_idx,
                                    one_idx,
-                                   fr::field_t::one(),
-                                   fr::field_t::one(),
-                                   fr::field_t::one(),
-                                   fr::field_t::one(),
-                                   fr::field_t::neg_one() });
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::neg_one() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -243,11 +243,11 @@ TEST(standard_composer, and_constraint)
     for (size_t i = 0; i < /*10*/ 1; ++i) {
         uint32_t left_value = test_helpers::get_pseudorandom_uint32();
 
-        fr::field_t left_witness_value = fr::field_t{ left_value, 0, 0, 0 }.to_montgomery_form();
+        fr left_witness_value = fr{ left_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t left_witness_index = composer.add_variable(left_witness_value);
 
         uint32_t right_value = test_helpers::get_pseudorandom_uint32();
-        fr::field_t right_witness_value = fr::field_t{ right_value, 0, 0, 0 }.to_montgomery_form();
+        fr right_witness_value = fr{ right_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t right_witness_index = composer.add_variable(right_witness_value);
 
         uint32_t out_value = left_value & right_value;
@@ -263,15 +263,15 @@ TEST(standard_composer, and_constraint)
             uint32_t right_expected = (right_value >> (30U - (2 * j)));
             uint32_t out_expected = left_expected & right_expected;
 
-            fr::field_t left_source =
+            fr left_source =
                 composer.get_variable(accumulators.left[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t left_result = static_cast<uint32_t>(left_source.data[0]);
 
-            fr::field_t right_source =
+            fr right_source =
                 composer.get_variable(accumulators.right[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t right_result = static_cast<uint32_t>(right_source.data[0]);
 
-            fr::field_t out_source =
+            fr out_source =
                 composer.get_variable(accumulators.out[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t out_result = static_cast<uint32_t>(out_source.data[0]);
 
@@ -294,17 +294,17 @@ TEST(standard_composer, and_constraint)
         }
     }
 
-    uint32_t zero_idx = composer.add_variable(fr::field_t::zero());
-    uint32_t one_idx = composer.add_variable(fr::field_t::one());
+    uint32_t zero_idx = composer.add_variable(fr::zero());
+    uint32_t one_idx = composer.add_variable(fr::one());
     composer.create_big_add_gate({ zero_idx,
                                    zero_idx,
                                    zero_idx,
                                    one_idx,
-                                   fr::field_t::one(),
-                                   fr::field_t::one(),
-                                   fr::field_t::one(),
-                                   fr::field_t::one(),
-                                   fr::field_t::neg_one() });
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::neg_one() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -324,11 +324,11 @@ TEST(standard_composer, xor_constraint)
     for (size_t i = 0; i < /*10*/ 1; ++i) {
         uint32_t left_value = test_helpers::get_pseudorandom_uint32();
 
-        fr::field_t left_witness_value = fr::field_t{ left_value, 0, 0, 0 }.to_montgomery_form();
+        fr left_witness_value = fr{ left_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t left_witness_index = composer.add_variable(left_witness_value);
 
         uint32_t right_value = test_helpers::get_pseudorandom_uint32();
-        fr::field_t right_witness_value = fr::field_t{ right_value, 0, 0, 0 }.to_montgomery_form();
+        fr right_witness_value = fr{ right_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t right_witness_index = composer.add_variable(right_witness_value);
 
         uint32_t out_value = left_value ^ right_value;
@@ -343,15 +343,15 @@ TEST(standard_composer, xor_constraint)
             uint32_t right_expected = (right_value >> (30U - (2 * j)));
             uint32_t out_expected = left_expected ^ right_expected;
 
-            fr::field_t left_source =
+            fr left_source =
                 composer.get_variable(accumulators.left[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t left_result = static_cast<uint32_t>(left_source.data[0]);
 
-            fr::field_t right_source =
+            fr right_source =
                 composer.get_variable(accumulators.right[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t right_result = static_cast<uint32_t>(right_source.data[0]);
 
-            fr::field_t out_source =
+            fr out_source =
                 composer.get_variable(accumulators.out[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t out_result = static_cast<uint32_t>(out_source.data[0]);
 
@@ -374,17 +374,17 @@ TEST(standard_composer, xor_constraint)
         }
     }
 
-    uint32_t zero_idx = composer.add_variable(fr::field_t::zero());
-    uint32_t one_idx = composer.add_variable(fr::field_t::one());
+    uint32_t zero_idx = composer.add_variable(fr::zero());
+    uint32_t one_idx = composer.add_variable(fr::one());
     composer.create_big_add_gate({ zero_idx,
                                    zero_idx,
                                    zero_idx,
                                    one_idx,
-                                   fr::field_t::one(),
-                                   fr::field_t::one(),
-                                   fr::field_t::one(),
-                                   fr::field_t::one(),
-                                   fr::field_t::neg_one() });
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::neg_one() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -416,11 +416,11 @@ TEST(standard_composer, big_add_gate_with_bit_extract)
                                composer.add_variable(uint256_t(output)),
                                right_idx,
                                left_idx,
-                               fr::field_t(6),
-                               -fr::field_t(6),
-                               fr::field_t::zero(),
-                               fr::field_t::zero(),
-                               fr::field_t::zero() };
+                               fr(6),
+                               -fr(6),
+                               fr::zero(),
+                               fr::zero(),
+                               fr::zero() };
 
         composer.create_big_add_gate_with_bit_extraction(gate);
     };

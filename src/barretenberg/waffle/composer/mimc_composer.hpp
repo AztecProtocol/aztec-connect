@@ -10,7 +10,7 @@ struct mimc_quadruplet {
     uint32_t x_cubed_idx;
     uint32_t k_idx;
     uint32_t x_out_idx;
-    barretenberg::fr::field_t mimc_constant;
+    barretenberg::fr mimc_constant;
 };
 
 class MiMCComposer : public StandardComposer {
@@ -21,8 +21,8 @@ class MiMCComposer : public StandardComposer {
         q_mimc_coefficient.reserve(size_hint);
         q_mimc_selector.reserve(size_hint);
         features |= static_cast<size_t>(Features::MIMC_SELECTORS);
-        q_mimc_coefficient.push_back(barretenberg::fr::field_t::zero());
-        q_mimc_selector.push_back(barretenberg::fr::field_t::zero());
+        q_mimc_coefficient.push_back(barretenberg::fr::zero());
+        q_mimc_selector.push_back(barretenberg::fr::zero());
     };
     MiMCComposer(MiMCComposer&& other) = default;
     MiMCComposer& operator=(MiMCComposer&& other) = default;
@@ -142,7 +142,7 @@ class MiMCComposer : public StandardComposer {
         current_output_wire = static_cast<uint32_t>(-1);
     }
 
-    void fix_witness(const uint32_t witness_index, const barretenberg::fr::field_t& witness_value)
+    void fix_witness(const uint32_t witness_index, const barretenberg::fr& witness_value)
     {
         if (current_output_wire != static_cast<uint32_t>(-1)) {
             create_noop_gate();
@@ -158,22 +158,22 @@ class MiMCComposer : public StandardComposer {
         current_output_wire = static_cast<uint32_t>(-1);
     }
 
-    void assert_equal_constant(uint32_t const a_idx, barretenberg::fr::field_t const& b)
+    void assert_equal_constant(uint32_t const a_idx, barretenberg::fr const& b)
     {
         const add_triple gate_coefficients{
             a_idx,
             a_idx,
             a_idx,
-            barretenberg::fr::field_t::one(),
-            barretenberg::fr::field_t::zero(),
-            barretenberg::fr::field_t::zero(),
+            barretenberg::fr::one(),
+            barretenberg::fr::zero(),
+            barretenberg::fr::zero(),
             -b,
         };
         create_add_gate(gate_coefficients);
     }
 
-    std::vector<barretenberg::fr::field_t> q_mimc_coefficient;
-    std::vector<barretenberg::fr::field_t> q_mimc_selector;
+    std::vector<barretenberg::fr> q_mimc_coefficient;
+    std::vector<barretenberg::fr> q_mimc_selector;
 
     uint32_t current_output_wire = static_cast<uint32_t>(-1);
 

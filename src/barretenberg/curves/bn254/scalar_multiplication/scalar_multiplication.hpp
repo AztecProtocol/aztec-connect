@@ -181,7 +181,7 @@ struct multiplication_thread_state
 
 
 template <size_t num_initial_points>
-void compute_wnaf_states(multiplication_runtime_state& state, fr::field_t* scalars);
+void compute_wnaf_states(multiplication_runtime_state& state, fr* scalars);
 
 void generate_pippenger_point_table(g1::affine_element* points, g1::affine_element* table, size_t num_points);
 
@@ -198,9 +198,9 @@ template <size_t num_points>
 g1::element scalar_multiplication_internal(multiplication_runtime_state& state,
                                                      g1::affine_element* points);
 
-g1::element pippenger(fr::field_t* scalars, g1::affine_element* points, const size_t num_points);
+g1::element pippenger(fr* scalars, g1::affine_element* points, const size_t num_points);
 
-g1::element pippenger_unsafe(fr::field_t* scalars, g1::affine_element* points, const size_t num_initial_points);
+g1::element pippenger_unsafe(fr* scalars, g1::affine_element* points, const size_t num_initial_points);
 
 template <size_t num_bits>
 inline void count_bits(uint32_t* bucket_counts, uint32_t* bit_offsets, const uint32_t num_buckets)
@@ -222,32 +222,32 @@ inline void count_bits(uint32_t* bucket_counts, uint32_t* bit_offsets, const uin
 
 uint32_t construct_addition_chains(affine_product_runtime_state& state, bool empty_bucket_counts = true);
 
-void add_affine_points(g1::affine_element* points, const size_t num_points, fq::field_t* scratch_space);
+void add_affine_points(g1::affine_element* points, const size_t num_points, fq* scratch_space);
 
 void evaluate_addition_chains(affine_product_runtime_state& state, const size_t max_bucket_bits);
 
 g1::affine_element* reduce_buckets(affine_product_runtime_state& state, bool first_round = true);
 
 
-extern template void compute_wnaf_states<1 << 2>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 3>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 4>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 5>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 6>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 7>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 8>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 9>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 10>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 11>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 12>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 13>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 14>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 15>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 16>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 17>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 18>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 19>(multiplication_runtime_state& state, fr::field_t* scalars);
-extern template void compute_wnaf_states<1 << 20>(multiplication_runtime_state& state, fr::field_t* scalars);
+extern template void compute_wnaf_states<1 << 2>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 3>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 4>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 5>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 6>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 7>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 8>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 9>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 10>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 11>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 12>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 13>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 14>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 15>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 16>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 17>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 18>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 19>(multiplication_runtime_state& state, fr* scalars);
+extern template void compute_wnaf_states<1 << 20>(multiplication_runtime_state& state, fr* scalars);
 
 extern template void organize_buckets<1 << 2>(multiplication_runtime_state& state);
 extern template void organize_buckets<1 << 3>(multiplication_runtime_state& state);

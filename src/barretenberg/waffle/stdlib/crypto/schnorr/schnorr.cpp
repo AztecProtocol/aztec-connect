@@ -45,10 +45,10 @@ point variable_base_mul(const point& pub_key, const bitarray<waffle::TurboCompos
 {
     point accumulator{ pub_key.x, pub_key.y };
     bool_t<waffle::TurboComposer> initialized(pub_key.x.context, false);
-    field_t<waffle::TurboComposer> one(pub_key.x.context, barretenberg::fr::field_t::one());
-    field_t<waffle::TurboComposer> two(pub_key.x.context, barretenberg::fr::field_t{ 2, 0, 0, 0 }.to_montgomery_form());
+    field_t<waffle::TurboComposer> one(pub_key.x.context, barretenberg::fr::one());
+    field_t<waffle::TurboComposer> two(pub_key.x.context, barretenberg::fr{ 2, 0, 0, 0 }.to_montgomery_form());
     field_t<waffle::TurboComposer> three(pub_key.x.context,
-                                         barretenberg::fr::field_t{ 3, 0, 0, 0 }.to_montgomery_form());
+                                         barretenberg::fr{ 3, 0, 0, 0 }.to_montgomery_form());
     for (size_t i = 0; i < 256; ++i) {
         field_t dbl_lambda = (accumulator.x * accumulator.x * three) / (accumulator.y * two);
         field_t x_dbl = (dbl_lambda * dbl_lambda) - (accumulator.x * two);
@@ -91,11 +91,11 @@ bool verify_signature(const bitarray<waffle::TurboComposer>& message, const poin
 
     bitarray hash_input(context, 256 + message.size());
 
-    barretenberg::fr::field_t r_x = x_3.get_value();
+    barretenberg::fr r_x = x_3.get_value();
     r_x = r_x.from_montgomery_form();
 
-    field_t sum(context, barretenberg::fr::field_t::one());
-    field_t accumulator(context, barretenberg::fr::field_t::zero());
+    field_t sum(context, barretenberg::fr::one());
+    field_t accumulator(context, barretenberg::fr::zero());
     size_t input_length = 256 + message.size();
 
     for (size_t i = 0; i < 256; ++i) {

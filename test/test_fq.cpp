@@ -9,24 +9,24 @@ using namespace barretenberg;
 
 TEST(fq, eq)
 {
-    constexpr fq::field_t a{ 0x01, 0x02, 0x03, 0x04 };
-    constexpr fq::field_t b{ 0x01, 0x02, 0x03, 0x04 };
-    constexpr fq::field_t c{ 0x01, 0x02, 0x03, 0x05 };
-    constexpr fq::field_t d{ 0x01, 0x02, 0x04, 0x04 };
-    constexpr fq::field_t e{ 0x01, 0x03, 0x03, 0x04 };
-    constexpr fq::field_t f{ 0x02, 0x02, 0x03, 0x04 };
+    constexpr fq a{ 0x01, 0x02, 0x03, 0x04 };
+    constexpr fq b{ 0x01, 0x02, 0x03, 0x04 };
+    constexpr fq c{ 0x01, 0x02, 0x03, 0x05 };
+    constexpr fq d{ 0x01, 0x02, 0x04, 0x04 };
+    constexpr fq e{ 0x01, 0x03, 0x03, 0x04 };
+    constexpr fq f{ 0x02, 0x02, 0x03, 0x04 };
     static_assert(a == b);
     static_assert(!(a == c));
     static_assert(!(a == d));
     static_assert(!(a == e));
     static_assert(!(a == f));
 
-    fq::field_t a_var;
-    fq::field_t b_var;
-    fq::field_t c_var;
-    fq::field_t d_var;
-    fq::field_t e_var;
-    fq::field_t f_var;
+    fq a_var;
+    fq b_var;
+    fq c_var;
+    fq d_var;
+    fq e_var;
+    fq f_var;
     memcpy((void*)a_var.data, (void*)a.data, 32);
     memcpy((void*)b_var.data, (void*)b.data, 32);
     memcpy((void*)c_var.data, (void*)c.data, 32);
@@ -44,11 +44,11 @@ TEST(fq, eq)
 
 TEST(fq, is_zero)
 {
-    fq::field_t a = fq::field_t::zero();
-    fq::field_t b = fq::field_t::zero();
-    fq::field_t c = fq::field_t::zero();
-    fq::field_t d = fq::field_t::zero();
-    fq::field_t e = fq::field_t::zero();
+    fq a = fq::zero();
+    fq b = fq::zero();
+    fq c = fq::zero();
+    fq d = fq::zero();
+    fq e = fq::zero();
 
     b.data[0] = 1;
     c.data[1] = 1;
@@ -63,8 +63,8 @@ TEST(fq, is_zero)
 
 TEST(fq, random_element)
 {
-    fq::field_t a = fq::field_t::random_element();
-    fq::field_t b = fq::field_t::random_element();
+    fq a = fq::random_element();
+    fq b = fq::random_element();
 
     EXPECT_EQ(a == b, false);
     EXPECT_EQ(a.is_zero(), false);
@@ -74,21 +74,19 @@ TEST(fq, random_element)
 TEST(fq, mul_check_against_constants)
 {
     // test against some randomly generated test data
-    constexpr fq::field_t a{ 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf };
-    constexpr fq::field_t a_copy{ 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf };
-    constexpr fq::field_t b{ 0xb68aee5e4c8fc17c, 0xc5193de7f401d5e8, 0xb8777d4dde671db3, 0xe513e75c087b0bb };
-    constexpr fq::field_t b_copy = { 0xb68aee5e4c8fc17c, 0xc5193de7f401d5e8, 0xb8777d4dde671db3, 0xe513e75c087b0bb };
-    constexpr fq::field_t const_expected{
-        0x7ed4174114b521c4, 0x58f5bd1d4279fdc2, 0x6a73ac09ee843d41, 0x687a76ae9b3425c
-    };
-    constexpr fq::field_t const_result = a * b;
+    constexpr fq a{ 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf };
+    constexpr fq a_copy{ 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf };
+    constexpr fq b{ 0xb68aee5e4c8fc17c, 0xc5193de7f401d5e8, 0xb8777d4dde671db3, 0xe513e75c087b0bb };
+    constexpr fq b_copy = { 0xb68aee5e4c8fc17c, 0xc5193de7f401d5e8, 0xb8777d4dde671db3, 0xe513e75c087b0bb };
+    constexpr fq const_expected{ 0x7ed4174114b521c4, 0x58f5bd1d4279fdc2, 0x6a73ac09ee843d41, 0x687a76ae9b3425c };
+    constexpr fq const_result = a * b;
 
     static_assert(const_result == const_expected);
     static_assert(a == a_copy);
     static_assert(b == b_copy);
 
-    fq::field_t c;
-    fq::field_t d;
+    fq c;
+    fq d;
     memcpy((void*)c.data, (void*)a.data, 32);
     memcpy((void*)d.data, (void*)b.data, 32);
     EXPECT_EQ(c * d, const_expected);
@@ -97,16 +95,14 @@ TEST(fq, mul_check_against_constants)
 // validate that zero-value limbs don't cause any problems
 TEST(fq, mul_short_integers)
 {
-    constexpr fq::field_t a{ 0xa, 0, 0, 0 };
-    constexpr fq::field_t b{ 0xb, 0, 0, 0 };
-    constexpr fq::field_t const_expected = {
-        0x65991a6dc2f3a183, 0xe3ba1f83394a2d08, 0x8401df65a169db3f, 0x1727099643607bba
-    };
-    constexpr fq::field_t const_result = a * b;
+    constexpr fq a{ 0xa, 0, 0, 0 };
+    constexpr fq b{ 0xb, 0, 0, 0 };
+    constexpr fq const_expected = { 0x65991a6dc2f3a183, 0xe3ba1f83394a2d08, 0x8401df65a169db3f, 0x1727099643607bba };
+    constexpr fq const_result = a * b;
     static_assert(const_result == const_expected);
 
-    fq::field_t c;
-    fq::field_t d;
+    fq c;
+    fq d;
     memcpy((void*)c.data, (void*)a.data, 32);
     memcpy((void*)d.data, (void*)b.data, 32);
     EXPECT_EQ(c * d, const_expected);
@@ -114,12 +110,12 @@ TEST(fq, mul_short_integers)
 
 TEST(fq, mul_sqr_consistency)
 {
-    fq::field_t a = fq::field_t::random_element();
-    fq::field_t b = fq::field_t::random_element();
-    fq::field_t t1;
-    fq::field_t t2;
-    fq::field_t mul_result;
-    fq::field_t sqr_result;
+    fq a = fq::random_element();
+    fq b = fq::random_element();
+    fq t1;
+    fq t2;
+    fq mul_result;
+    fq sqr_result;
     t1 = a - b;
     t2 = a + b;
     mul_result = t1 * t2;
@@ -131,29 +127,27 @@ TEST(fq, mul_sqr_consistency)
 
 TEST(fq, sqr_check_against_constants)
 {
-    constexpr fq::field_t a{ 0x329596aa978981e8, 0x8542e6e254c2a5d0, 0xc5b687d82eadb178, 0x2d242aaf48f56b8a };
-    constexpr fq::field_t expected{ 0xbf4fb34e120b8b12, 0xf64d70efbf848328, 0xefbb6a533f2e7d89, 0x1de50f941425e4aa };
-    constexpr fq::field_t result = a.sqr();
+    constexpr fq a{ 0x329596aa978981e8, 0x8542e6e254c2a5d0, 0xc5b687d82eadb178, 0x2d242aaf48f56b8a };
+    constexpr fq expected{ 0xbf4fb34e120b8b12, 0xf64d70efbf848328, 0xefbb6a533f2e7d89, 0x1de50f941425e4aa };
+    constexpr fq result = a.sqr();
     static_assert(result == expected);
 
-    fq::field_t b;
+    fq b;
     memcpy((void*)b.data, (void*)a.data, 32);
-    fq::field_t c = b.sqr();
+    fq c = b.sqr();
     EXPECT_EQ(result, c);
 }
 
 TEST(fq, add_check_against_constants)
 {
-    constexpr fq::field_t a{ 0x7d2e20e82f73d3e8, 0x8e50616a7a9d419d, 0xcdc833531508914b, 0xd510253a2ce62c };
-    constexpr fq::field_t b{ 0x2829438b071fd14e, 0xb03ef3f9ff9274e, 0x605b671f6dc7b209, 0x8701f9d971fbc9 };
-    constexpr fq::field_t const_expected{
-        0xa55764733693a536, 0x995450aa1a9668eb, 0x2e239a7282d04354, 0x15c121f139ee1f6
-    };
-    constexpr fq::field_t const_result = a + b;
+    constexpr fq a{ 0x7d2e20e82f73d3e8, 0x8e50616a7a9d419d, 0xcdc833531508914b, 0xd510253a2ce62c };
+    constexpr fq b{ 0x2829438b071fd14e, 0xb03ef3f9ff9274e, 0x605b671f6dc7b209, 0x8701f9d971fbc9 };
+    constexpr fq const_expected{ 0xa55764733693a536, 0x995450aa1a9668eb, 0x2e239a7282d04354, 0x15c121f139ee1f6 };
+    constexpr fq const_result = a + b;
     static_assert(const_result == const_expected);
 
-    fq::field_t c;
-    fq::field_t d;
+    fq c;
+    fq d;
     memcpy((void*)c.data, (void*)a.data, 32);
     memcpy((void*)d.data, (void*)b.data, 32);
     EXPECT_EQ(c + d, const_expected);
@@ -161,16 +155,14 @@ TEST(fq, add_check_against_constants)
 
 TEST(fq, sub_check_against_constants)
 {
-    constexpr fq::field_t a{ 0xd68d01812313fb7c, 0x2965d7ae7c6070a5, 0x08ef9af6d6ba9a48, 0x0cb8fe2108914f53 };
-    constexpr fq::field_t b{ 0x2cd2a2a37e9bf14a, 0xebc86ef589c530f6, 0x75124885b362b8fe, 0x1394324205c7a41d };
-    constexpr fq::field_t const_expected{
-        0xe5daeaf47cf50779, 0xd51ed34a5b0d0a3c, 0x4c2d9827a4d939a6, 0x29891a51e3fb4b5f
-    };
-    constexpr fq::field_t const_result = a - b;
+    constexpr fq a{ 0xd68d01812313fb7c, 0x2965d7ae7c6070a5, 0x08ef9af6d6ba9a48, 0x0cb8fe2108914f53 };
+    constexpr fq b{ 0x2cd2a2a37e9bf14a, 0xebc86ef589c530f6, 0x75124885b362b8fe, 0x1394324205c7a41d };
+    constexpr fq const_expected{ 0xe5daeaf47cf50779, 0xd51ed34a5b0d0a3c, 0x4c2d9827a4d939a6, 0x29891a51e3fb4b5f };
+    constexpr fq const_result = a - b;
     static_assert(const_result == const_expected);
 
-    fq::field_t c;
-    fq::field_t d;
+    fq c;
+    fq d;
     memcpy((void*)c.data, (void*)a.data, 32);
     memcpy((void*)d.data, (void*)b.data, 32);
     EXPECT_EQ(c - d, const_expected);
@@ -178,44 +170,44 @@ TEST(fq, sub_check_against_constants)
 
 TEST(fq, coarse_equivalence_checks)
 {
-    fq::field_t a = test_helpers::get_pseudorandom_fq();
-    fq::field_t b = test_helpers::get_pseudorandom_fq();
+    fq a = test_helpers::get_pseudorandom_fq();
+    fq b = test_helpers::get_pseudorandom_fq();
 
-    fq::field_t c = (a * b) + a - b;
+    fq c = (a * b) + a - b;
 
-    fq::field_t d = a * b + a - b;
+    fq d = a * b + a - b;
 
     EXPECT_EQ(c, d);
 }
 
 TEST(fq, to_montgomery_form)
 {
-    fq::field_t result = fq::field_t{ 0x01, 0x00, 0x00, 0x00 }.to_montgomery_form();
-    fq::field_t expected = fq::field_t::one();
+    fq result = fq{ 0x01, 0x00, 0x00, 0x00 }.to_montgomery_form();
+    fq expected = fq::one();
     EXPECT_EQ(result, expected);
 }
 
 TEST(fq, from_montgomery_form)
 {
-    constexpr fq::field_t t0 = fq::field_t::one();
-    constexpr fq::field_t result = t0.from_montgomery_form();
-    constexpr fq::field_t expected{ 0x01, 0x00, 0x00, 0x00 };
+    constexpr fq t0 = fq::one();
+    constexpr fq result = t0.from_montgomery_form();
+    constexpr fq expected{ 0x01, 0x00, 0x00, 0x00 };
     EXPECT_EQ(result, expected);
 }
 
 TEST(fq, montgomery_consistency_check)
 {
-    fq::field_t a = fq::field_t::random_element();
-    fq::field_t b = fq::field_t::random_element();
-    fq::field_t aR;
-    fq::field_t bR;
-    fq::field_t aRR;
-    fq::field_t bRR;
-    fq::field_t bRRR;
-    fq::field_t result_a;
-    fq::field_t result_b;
-    fq::field_t result_c;
-    fq::field_t result_d;
+    fq a = fq::random_element();
+    fq b = fq::random_element();
+    fq aR;
+    fq bR;
+    fq aRR;
+    fq bRR;
+    fq bRRR;
+    fq result_a;
+    fq result_b;
+    fq result_c;
+    fq result_d;
     aR = a.to_montgomery_form();
     aRR = aR.to_montgomery_form();
     bR = b.to_montgomery_form();
@@ -237,17 +229,17 @@ TEST(fq, montgomery_consistency_check)
 
 TEST(fq, add_mul_consistency)
 {
-    fq::field_t multiplicand = { 0x09, 0, 0, 0 };
+    fq multiplicand = { 0x09, 0, 0, 0 };
     multiplicand.self_to_montgomery_form();
 
-    fq::field_t a = fq::field_t::random_element();
-    fq::field_t result;
+    fq a = fq::random_element();
+    fq result;
     result = a + a;   // 2
     result += result; // 4
     result += result; // 8
     result += a;      // 9
 
-    fq::field_t expected;
+    fq expected;
     expected = a * multiplicand;
 
     EXPECT_EQ((result == expected), true);
@@ -255,11 +247,11 @@ TEST(fq, add_mul_consistency)
 
 TEST(fq, sub_mul_consistency)
 {
-    fq::field_t multiplicand = { 0x05, 0, 0, 0 };
+    fq multiplicand = { 0x05, 0, 0, 0 };
     multiplicand.self_to_montgomery_form();
 
-    fq::field_t a = fq::field_t::random_element();
-    fq::field_t result;
+    fq a = fq::random_element();
+    fq result;
     result = a + a;   // 2
     result += result; // 4
     result += result; // 8
@@ -267,7 +259,7 @@ TEST(fq, sub_mul_consistency)
     result -= a;      // 6
     result -= a;      // 5
 
-    fq::field_t expected;
+    fq expected;
     expected = a * multiplicand;
 
     EXPECT_EQ((result == expected), true);
@@ -275,18 +267,18 @@ TEST(fq, sub_mul_consistency)
 
 TEST(fq, beta)
 {
-    fq::field_t x = fq::field_t::random_element();
+    fq x = fq::random_element();
 
-    fq::field_t beta_x = { x.data[0], x.data[1], x.data[2], x.data[3] };
-    beta_x = beta_x * fq::field_t::beta();
+    fq beta_x = { x.data[0], x.data[1], x.data[2], x.data[3] };
+    beta_x = beta_x * fq::beta();
 
     // compute x^3
-    fq::field_t x_cubed;
+    fq x_cubed;
     x_cubed = x * x;
     x_cubed *= x;
 
     // compute beta_x^3
-    fq::field_t beta_x_cubed;
+    fq beta_x_cubed;
     beta_x_cubed = beta_x * beta_x;
     beta_x_cubed *= beta_x;
 
@@ -295,84 +287,84 @@ TEST(fq, beta)
 
 TEST(fq, invert)
 {
-    fq::field_t input = fq::field_t::random_element();
-    fq::field_t inverse = input.invert();
-    fq::field_t result = input * inverse;
+    fq input = fq::random_element();
+    fq inverse = input.invert();
+    fq result = input * inverse;
     result = result.reduce_once();
     result = result.reduce_once();
-    EXPECT_EQ(result, fq::field_t::one());
+    EXPECT_EQ(result, fq::one());
 }
 
 TEST(fq, invert_one_is_one)
 {
-    fq::field_t result = fq::field_t::one();
+    fq result = fq::one();
     result = result.invert();
-    EXPECT_EQ((result == fq::field_t::one()), true);
+    EXPECT_EQ((result == fq::one()), true);
 }
 
 TEST(fq, sqrt)
 {
-    fq::field_t input = fq::field_t::one();
-    fq::field_t root = input.sqrt();
-    fq::field_t result = root.sqr();
+    fq input = fq::one();
+    fq root = input.sqrt();
+    fq result = root.sqr();
     EXPECT_EQ(result, input);
 }
 
 TEST(fq, sqrt_random)
 {
     for (size_t i = 0; i < 1; ++i) {
-        fq::field_t input = fq::field_t::random_element().sqr();
-        fq::field_t root_test = input.sqrt().sqr();
+        fq input = fq::random_element().sqr();
+        fq root_test = input.sqrt().sqr();
         EXPECT_EQ(root_test, input);
     }
 }
 
 TEST(fq, one_and_zero)
 {
-    fq::field_t result;
-    result = fq::field_t::one() - fq::field_t::one();
-    EXPECT_EQ((result == fq::field_t::zero()), true);
+    fq result;
+    result = fq::one() - fq::one();
+    EXPECT_EQ((result == fq::zero()), true);
 }
 
 TEST(fq, copy)
 {
-    fq::field_t result = fq::field_t::random_element();
-    fq::field_t expected;
-    fq::field_t::__copy(result, expected);
+    fq result = fq::random_element();
+    fq expected;
+    fq::__copy(result, expected);
     EXPECT_EQ((result == expected), true);
 }
 
 TEST(fq, neg)
 {
-    fq::field_t a = fq::field_t::random_element();
-    fq::field_t b;
+    fq a = fq::random_element();
+    fq b;
     b = -a;
-    fq::field_t result;
+    fq result;
     result = a + b;
-    EXPECT_EQ((result == fq::field_t::zero()), true);
+    EXPECT_EQ((result == fq::zero()), true);
 }
 
 TEST(fq, split_into_endomorphism_scalars)
 {
     printf("start\n");
-    fq::field_t input = 0;
+    fq input = 0;
     int got_entropy = getentropy((void*)&input.data[0], 32);
     EXPECT_EQ(got_entropy, 0);
     input.data[3] &= 0x0fffffffffffffff;
 
-    fq::field_t k = { input.data[0], input.data[1], input.data[2], input.data[3] };
-    fq::field_t k1 = 0;
-    fq::field_t k2 = 0;
+    fq k = { input.data[0], input.data[1], input.data[2], input.data[3] };
+    fq k1 = 0;
+    fq k2 = 0;
 
-    fq::field_t::split_into_endomorphism_scalars(k, k1, k2);
+    fq::split_into_endomorphism_scalars(k, k1, k2);
 
     // std::cout << "endo scalars = " << k1 << k2 << std::endl;
-    fq::field_t result = 0;
+    fq result = 0;
 
     k1.self_to_montgomery_form();
     k2.self_to_montgomery_form();
 
-    result = k2 * fq::field_t::beta();
+    result = k2 * fq::beta();
     result = k1 - result;
 
     result.self_from_montgomery_form();
@@ -383,19 +375,19 @@ TEST(fq, split_into_endomorphism_scalars)
 TEST(fq, split_into_endomorphism_scalars_simple)
 {
 
-    fq::field_t input = { 1, 0, 0, 0 };
-    fq::field_t k = { 0, 0, 0, 0 };
-    fq::field_t k1 = { 0, 0, 0, 0 };
-    fq::field_t k2 = { 0, 0, 0, 0 };
-    fq::field_t::__copy(input, k);
+    fq input = { 1, 0, 0, 0 };
+    fq k = { 0, 0, 0, 0 };
+    fq k1 = { 0, 0, 0, 0 };
+    fq k2 = { 0, 0, 0, 0 };
+    fq::__copy(input, k);
 
-    fq::field_t::split_into_endomorphism_scalars(k, k1, k2);
+    fq::split_into_endomorphism_scalars(k, k1, k2);
 
-    fq::field_t result{ 0, 0, 0, 0 };
+    fq result{ 0, 0, 0, 0 };
     k1.self_to_montgomery_form();
     k2.self_to_montgomery_form();
 
-    result = k2 * fq::field_t::beta();
+    result = k2 * fq::beta();
     result = k1 - result;
 
     result.self_from_montgomery_form();
@@ -407,10 +399,10 @@ TEST(fq, split_into_endomorphism_scalars_simple)
 TEST(fq, serialize_to_buffer)
 {
     uint8_t buffer[32];
-    fq::field_t a = { 0x1234567876543210, 0x2345678987654321, 0x3456789a98765432, 0x006789abcba98765 };
+    fq a = { 0x1234567876543210, 0x2345678987654321, 0x3456789a98765432, 0x006789abcba98765 };
     a = a.to_montgomery_form();
 
-    fq::field_t::serialize_to_buffer(a, &buffer[0]);
+    fq::serialize_to_buffer(a, &buffer[0]);
 
     EXPECT_EQ(buffer[31], 0x10);
     EXPECT_EQ(buffer[30], 0x32);
@@ -452,19 +444,16 @@ TEST(fq, serialize_to_buffer)
 TEST(fq, serialize_from_buffer)
 {
     uint8_t buffer[32];
-    fq::field_t expected = { 0x1234567876543210, 0x2345678987654321, 0x3456789a98765432, 0x006789abcba98765 };
+    fq expected = { 0x1234567876543210, 0x2345678987654321, 0x3456789a98765432, 0x006789abcba98765 };
 
-    fq::field_t::serialize_to_buffer(expected, &buffer[0]);
+    fq::serialize_to_buffer(expected, &buffer[0]);
 
-    fq::field_t result = fq::field_t::serialize_from_buffer(&buffer[0]);
+    fq result = fq::serialize_from_buffer(&buffer[0]);
 
     EXPECT_EQ((result == expected), true);
 }
 
 TEST(fq, multiplicative_generator)
 {
-    std::cout << fq::field_t::beta() << std::endl;
-    std::cout << fq::field_t::beta().sqr() << std::endl;
-    std::cout << fq::field_t::beta().sqr() * fq::field_t::beta() << std::endl;
-    EXPECT_EQ(fq::field_t::multiplicative_generator(), fq::field_t(3));
+    EXPECT_EQ(fq::multiplicative_generator(), fq(3));
 }
