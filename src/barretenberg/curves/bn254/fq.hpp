@@ -33,10 +33,10 @@ class Bn254FqParams {
     static constexpr uint64_t one_mont_2 = 0x666ea36f7879462cUL;
     static constexpr uint64_t one_mont_3 = 0x0e0a77c19a07df2fUL;
 
-    static constexpr uint64_t two_inv_0 = 0x87bee7d24f060572UL;
-    static constexpr uint64_t two_inv_1 = 0xd0fd2add2f1c6ae5UL;
-    static constexpr uint64_t two_inv_2 = 0x8f5f7492fcfd4f44UL;
-    static constexpr uint64_t two_inv_3 = 0x1f37631a3d9cbfacUL;
+    // static constexpr uint64_t two_inv_0 = 0x87bee7d24f060572UL;
+    // static constexpr uint64_t two_inv_1 = 0xd0fd2add2f1c6ae5UL;
+    // static constexpr uint64_t two_inv_2 = 0x8f5f7492fcfd4f44UL;
+    // static constexpr uint64_t two_inv_3 = 0x1f37631a3d9cbfacUL;
 
     static constexpr uint64_t sqrt_exponent_0 = 0x4F082305B61F3F52UL;
     static constexpr uint64_t sqrt_exponent_1 = 0x65E05AA45A1C72A3UL;
@@ -75,15 +75,15 @@ class Bn254FqParams {
     static constexpr uint64_t multiplicative_generator_2 = 0x666ea36f7879462cUL;
     static constexpr uint64_t multiplicative_generator_3 = 0x0e0a77c19a07df2fUL;
 
-    static constexpr uint64_t multiplicative_generator_inverse_0 = 0UL;
-    static constexpr uint64_t multiplicative_generator_inverse_1 = 0UL;
-    static constexpr uint64_t multiplicative_generator_inverse_2 = 0UL;
-    static constexpr uint64_t multiplicative_generator_inverse_3 = 0UL;
+    // static constexpr uint64_t multiplicative_generator_inverse_0 = 0UL;
+    // static constexpr uint64_t multiplicative_generator_inverse_1 = 0UL;
+    // static constexpr uint64_t multiplicative_generator_inverse_2 = 0UL;
+    // static constexpr uint64_t multiplicative_generator_inverse_3 = 0UL;
 
-    static constexpr uint64_t alternate_multiplicative_generator_0 = 0UL;
-    static constexpr uint64_t alternate_multiplicative_generator_1 = 0UL;
-    static constexpr uint64_t alternate_multiplicative_generator_2 = 0UL;
-    static constexpr uint64_t alternate_multiplicative_generator_3 = 0UL;
+    // static constexpr uint64_t alternate_multiplicative_generator_0 = 0UL;
+    // static constexpr uint64_t alternate_multiplicative_generator_1 = 0UL;
+    // static constexpr uint64_t alternate_multiplicative_generator_2 = 0UL;
+    // static constexpr uint64_t alternate_multiplicative_generator_3 = 0UL;
 
     static constexpr uint64_t r_inv = 0x87d20782e4866389UL;
 

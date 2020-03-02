@@ -120,17 +120,17 @@ fr::field_t compute_public_input_delta(const std::vector<barretenberg::fr::field
                                        const fr::field_t& gamma,
                                        const fr::field_t& subgroup_generator)
 {
-    fr::field_t numerator = fr::field_t::one;
-    fr::field_t denominator = fr::field_t::one;
+    fr::field_t numerator = fr::field_t::one();
+    fr::field_t denominator = fr::field_t::one();
 
-    fr::field_t work_root = fr::field_t::one;
+    fr::field_t work_root = fr::field_t::one();
     fr::field_t T0;
     fr::field_t T1;
     fr::field_t T2;
     for (const auto& witness : inputs) {
         T0 = witness + gamma;
         T1 = work_root * beta;
-        T2 = T1 * fr::field_t::coset_generators[0];
+        T2 = T1 * fr::field_t::coset_generator(0);
         T1 += T0;
         T2 += T0;
         numerator *= T2;

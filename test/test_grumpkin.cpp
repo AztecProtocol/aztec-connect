@@ -39,18 +39,14 @@ TEST(grumpkin, eq)
 TEST(grumpkin, check_group_modulus)
 {
     // grumpkin::g1::affine_element expected = grumpkin::g1::affine_one;
-    grumpkin::fr::field_t exponent = grumpkin::fr::field_t{ grumpkin::fr::field_t::modulus.data[0] - 1,
-                                                            grumpkin::fr::field_t::modulus.data[1],
-                                                            grumpkin::fr::field_t::modulus.data[2],
-                                                            grumpkin::fr::field_t::modulus.data[3] }
-                                         .to_montgomery_form();
+    grumpkin::fr::field_t exponent = -grumpkin::fr::field_t(1);
     printf("a\n");
-    grumpkin::g1::element result = grumpkin::g1::element::one * exponent;
+    grumpkin::g1::element result = grumpkin::g1::one * exponent;
     printf("b\n");
-    result += grumpkin::g1::element::one;
-    result += grumpkin::g1::element::one;
+    result += grumpkin::g1::one;
+    result += grumpkin::g1::one;
     EXPECT_EQ(result.on_curve(), true);
-    EXPECT_EQ(result == grumpkin::g1::element::one, true);
+    EXPECT_EQ(result == grumpkin::g1::one, true);
 }
 
 // TEST(grumpkin, mixed_add_check_against_constants)
@@ -222,7 +218,7 @@ TEST(grumpkin, add_dbl_consistency_repeated)
 
 TEST(grumpkin, mixed_add_exception_test_infinity)
 {
-    grumpkin::g1::element lhs = grumpkin::g1::element::one;
+    grumpkin::g1::element lhs = grumpkin::g1::one;
     grumpkin::g1::affine_element rhs = grumpkin::g1::affine_element(grumpkin::g1::element::random_element());
     grumpkin::fq::field_t::__copy(rhs.x, lhs.x);
     lhs.y = -rhs.y;
@@ -310,11 +306,11 @@ TEST(grumpkin, batch_normalize)
 
 TEST(grumpkin, group_exponentiation_zero_and_one)
 {
-    grumpkin::g1::affine_element result = grumpkin::g1::element::one * grumpkin::fr::field_t::zero;
+    grumpkin::g1::affine_element result = grumpkin::g1::one * grumpkin::fr::field_t::zero();
 
     EXPECT_EQ(result.is_point_at_infinity(), true);
 
-    result = grumpkin::g1::element::one * grumpkin::fr::field_t::one;
+    result = grumpkin::g1::one * grumpkin::fr::field_t::one();
 
     EXPECT_EQ(result == grumpkin::g1::affine_one, true);
 }

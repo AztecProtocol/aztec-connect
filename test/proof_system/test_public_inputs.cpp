@@ -90,12 +90,12 @@ TEST(test_public_inputs, compute_delta)
     std::vector<fr::field_t> sigma_1;
     std::vector<fr::field_t> sigma_2;
 
-    fr::field_t work_root = fr::field_t::one;
+    fr::field_t work_root = fr::field_t::one();
     for (size_t i = 0; i < circuit_size; ++i) {
         fr::field_t temp = fr::field_t::random_element();
         left.push_back(temp);
         right.push_back(temp);
-        sigma_1.push_back((fr::field_t::coset_generators[0] * work_root));
+        sigma_1.push_back((fr::field_t::coset_generator(0) * work_root));
         sigma_2.push_back(work_root);
         work_root = work_root * domain.root;
     }
@@ -107,15 +107,15 @@ TEST(test_public_inputs, compute_delta)
                                                            std::vector<fr::field_t>& right,
                                                            std::vector<fr::field_t>& sigma_1,
                                                            std::vector<fr::field_t>& sigma_2) {
-        fr::field_t numerator = fr::field_t::one;
-        fr::field_t denominator = fr::field_t::one;
-        fr::field_t work_root = fr::field_t::one;
+        fr::field_t numerator = fr::field_t::one();
+        fr::field_t denominator = fr::field_t::one();
+        fr::field_t work_root = fr::field_t::one();
         for (size_t i = 0; i < circuit_size; ++i) {
             fr::field_t T0 = left[i] + gamma;
             fr::field_t T1 = right[i] + gamma;
 
             fr::field_t T2 = work_root * beta;
-            fr::field_t T3 = fr::field_t::coset_generators[0] * T2;
+            fr::field_t T3 = fr::field_t::coset_generator(0) * T2;
 
             fr::field_t T4 = T0 + T2;
             fr::field_t T5 = T1 + T3;
@@ -138,9 +138,9 @@ TEST(test_public_inputs, compute_delta)
 
     fr::field_t init_result = compute_grand_product(left, right, sigma_1, sigma_2);
 
-    EXPECT_EQ((init_result == fr::field_t::one), true);
+    EXPECT_EQ((init_result == fr::field_t::one()), true);
 
-    work_root = fr::field_t::one;
+    work_root = fr::field_t::one();
     for (size_t i = 0; i < num_public_inputs; ++i) {
         sigma_1[i] = work_root;
         work_root = work_root * domain.root;

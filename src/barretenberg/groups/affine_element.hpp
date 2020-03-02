@@ -8,8 +8,6 @@ namespace barretenberg {
 namespace group_elements {
 template <typename Fq, typename Fr, typename Params> class alignas(64) affine_element {
   public:
-    static constexpr affine_element one{ Params::one_x, Params::one_y };
-
     affine_element() noexcept {}
 
     constexpr affine_element(const Fq& a, const Fq& b) noexcept;

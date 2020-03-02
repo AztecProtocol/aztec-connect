@@ -80,9 +80,9 @@ TEST(fq12, eq)
 
 TEST(fq12, is_zero)
 {
-    fq12::field_t a = fq12::field_t::zero;
-    fq12::field_t b = fq12::field_t::zero;
-    fq12::field_t c = fq12::field_t::zero;
+    fq12::field_t a = fq12::field_t::zero();
+    fq12::field_t b = fq12::field_t::zero();
+    fq12::field_t c = fq12::field_t::zero();
     b.c0.c0.c0.data[0] = 1;
     c.c1.c0.c0.data[0] = 1;
     EXPECT_EQ(a.is_zero(), true);
@@ -324,7 +324,7 @@ TEST(fq12, inverse)
 {
     fq12::field_t input = fq12::field_t::random_element();
     fq12::field_t result = input.invert() * input;
-    EXPECT_EQ(result, fq12::field_t::one);
+    EXPECT_EQ(result, fq12::field_t::one());
 }
 
 TEST(fq12, unitary_inverse)
@@ -333,7 +333,7 @@ TEST(fq12, unitary_inverse)
     fq12::field_t result = input.unitary_inverse();
     EXPECT_EQ(input.c0, result.c0);
     result.c1 += input.c1;
-    EXPECT_EQ(result.c1, fq6::field_t::zero);
+    EXPECT_EQ(result.c1, fq6::field_t::zero());
 }
 
 TEST(fq12, frobenius_map_three)
@@ -440,17 +440,17 @@ TEST(fq12, frobenius_map_one)
 
 TEST(fq12, to_montgomery_form)
 {
-    fq12::field_t result = fq12::field_t::zero;
+    fq12::field_t result = fq12::field_t::zero();
     result.c0.c0.c0.data[0] = 1;
-    fq12::field_t expected = fq12::field_t::one;
+    fq12::field_t expected = fq12::field_t::one();
     result = result.to_montgomery_form();
     EXPECT_EQ(result, expected);
 }
 
 TEST(fq12, from_montgomery_form)
 {
-    fq12::field_t result = fq12::field_t::one;
-    fq12::field_t expected = fq12::field_t::zero;
+    fq12::field_t result = fq12::field_t::one();
+    fq12::field_t expected = fq12::field_t::zero();
     expected.c0.c0.c0.data[0] = 1;
     result = result.from_montgomery_form();
     EXPECT_EQ(result, expected);
@@ -469,7 +469,7 @@ TEST(fq12, mul_sqr_consistency)
 
 TEST(fq12, add_mul_consistency)
 {
-    fq12::field_t multiplicand = fq12::field_t::zero;
+    fq12::field_t multiplicand = fq12::field_t::zero();
     multiplicand.c0.c0.c0.data[0] = 9;
     multiplicand = multiplicand.to_montgomery_form();
 
@@ -486,7 +486,7 @@ TEST(fq12, add_mul_consistency)
 
 TEST(fq12, sub_mul_consistency)
 {
-    fq12::field_t multiplicand = fq12::field_t::zero;
+    fq12::field_t multiplicand = fq12::field_t::zero();
     multiplicand.c0.c0.c0.data[0] = 5;
     multiplicand = multiplicand.to_montgomery_form();
 

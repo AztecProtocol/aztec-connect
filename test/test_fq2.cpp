@@ -30,9 +30,9 @@ TEST(fq2, eq)
 
 TEST(fq2, is_zero)
 {
-    fq2::field_t a = fq2::field_t::zero;
-    fq2::field_t b = fq2::field_t::zero;
-    fq2::field_t c = fq2::field_t::zero;
+    fq2::field_t a = fq2::field_t::zero();
+    fq2::field_t b = fq2::field_t::zero();
+    fq2::field_t c = fq2::field_t::zero();
     b.c0.data[0] = 1;
     c.c1.data[0] = 1;
     EXPECT_EQ(a.is_zero(), true);
@@ -102,17 +102,17 @@ TEST(fq2, sub_check_against_constants)
 
 TEST(fq2, to_montgomery_form)
 {
-    fq2::field_t result = fq2::field_t::zero;
+    fq2::field_t result = fq2::field_t::zero();
     result.c0.data[0] = 1;
-    fq2::field_t expected = fq2::field_t::one;
+    fq2::field_t expected = fq2::field_t::one();
     result.self_to_montgomery_form();
     EXPECT_EQ(result, expected);
 }
 
 TEST(fq2, from_montgomery_form)
 {
-    fq2::field_t result = fq2::field_t::one;
-    fq2::field_t expected = fq2::field_t::zero;
+    fq2::field_t result = fq2::field_t::one();
+    fq2::field_t expected = fq2::field_t::zero();
     expected.c0.data[0] = 1;
     result.self_from_montgomery_form();
     EXPECT_EQ(result, expected);
@@ -174,7 +174,7 @@ TEST(fq2, invert)
     fq2::field_t input = fq2::field_t::random_element();
     fq2::field_t inverse = input.invert();
     fq2::field_t result = inverse * input;
-    EXPECT_EQ(result, fq2::field_t::one);
+    EXPECT_EQ(result, fq2::field_t::one());
 }
 
 TEST(fq2, serialize)

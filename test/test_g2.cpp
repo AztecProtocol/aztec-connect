@@ -237,7 +237,7 @@ TEST(g2, mixed_add_exception_test_infinity)
 {
     g2::element lhs = g2::one;
     g2::affine_element rhs = g2::affine_element(g2::element::random_element());
-    lhs = { rhs.x, -rhs.y, fq2::field_t::one };
+    lhs = { rhs.x, -rhs.y, fq2::field_t::one() };
 
     g2::element result;
     result = lhs + rhs;
@@ -335,11 +335,11 @@ TEST(g2, group_exponentiation_check_against_constants)
 
 TEST(g2, group_exponentiation_zero_and_one)
 {
-    g2::affine_element result = g2::one * fr::field_t::zero;
+    g2::affine_element result = g2::one * fr::field_t::zero();
 
     EXPECT_EQ(result.is_point_at_infinity(), true);
 
-    result = g2::affine_element(g2::one * fr::field_t::one);
+    result = g2::affine_element(g2::one * fr::field_t::one());
     EXPECT_EQ(result == g2::affine_one, true);
 }
 

@@ -12,6 +12,10 @@
 #include "./portability/linux.hpp"
 #endif
 
+#ifdef __wasm__
+#define aligned_free free
+#endif
+
 #ifdef __APPLE__
 #include "./portability/apple.hpp"
 #endif

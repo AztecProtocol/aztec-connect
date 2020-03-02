@@ -50,10 +50,10 @@ TEST(fq6, eq)
 
 TEST(fq6, is_zero)
 {
-    fq6::field_t a = fq6::field_t::zero;
-    fq6::field_t b = fq6::field_t::zero;
-    fq6::field_t c = fq6::field_t::zero;
-    fq6::field_t d = fq6::field_t::zero;
+    fq6::field_t a = fq6::field_t::zero();
+    fq6::field_t b = fq6::field_t::zero();
+    fq6::field_t c = fq6::field_t::zero();
+    fq6::field_t d = fq6::field_t::zero();
     b.c0.c0.data[0] = 1;
     c.c1.c0.data[0] = 1;
     d.c2.c0.data[0] = 1;
@@ -187,17 +187,17 @@ TEST(fq6, sqr_check_against_constants)
 
 TEST(fq6, to_montgomery_form)
 {
-    fq6::field_t result = fq6::field_t::zero;
+    fq6::field_t result = fq6::field_t::zero();
     result.c0.c0.data[0] = 1;
-    fq6::field_t expected = fq6::field_t::one;
+    fq6::field_t expected = fq6::field_t::one();
     result = result.to_montgomery_form();
     EXPECT_EQ(result, expected);
 }
 
 TEST(fq6, from_montgomery_form)
 {
-    fq6::field_t result = fq6::field_t::one;
-    fq6::field_t expected = fq6::field_t::zero;
+    fq6::field_t result = fq6::field_t::one();
+    fq6::field_t expected = fq6::field_t::zero();
     expected.c0.c0.data[0] = 1;
     result = result.from_montgomery_form();
     EXPECT_EQ(result, expected);
@@ -217,7 +217,7 @@ TEST(fq6, mul_sqr_consistency)
 
 TEST(fq6, add_mul_consistency)
 {
-    fq6::field_t multiplicand = fq6::field_t::zero;
+    fq6::field_t multiplicand = fq6::field_t::zero();
     multiplicand.c0.c0.data[0] = 9;
     multiplicand = multiplicand.to_montgomery_form();
 
@@ -233,7 +233,7 @@ TEST(fq6, add_mul_consistency)
 
 TEST(fq6, sub_mul_consistency)
 {
-    fq6::field_t multiplicand = fq6::field_t::zero;
+    fq6::field_t multiplicand = fq6::field_t::zero();
     multiplicand.c0.c0.data[0] = 5;
     multiplicand = multiplicand.to_montgomery_form();
     fq6::field_t a = fq6::field_t::random_element();
@@ -255,7 +255,7 @@ TEST(fq6, invert)
     fq6::field_t result = input.invert();
 
     result *= input;
-    EXPECT_EQ(result, fq6::field_t::one);
+    EXPECT_EQ(result, fq6::field_t::one());
 }
 
 TEST(fq6, copy)

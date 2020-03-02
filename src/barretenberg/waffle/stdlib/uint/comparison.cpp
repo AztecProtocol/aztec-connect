@@ -52,9 +52,9 @@ bool_t<Composer> uint<Composer, Native>::operator>(const uint& other) const
     const waffle::add_triple gate_a{ lhs_idx,
                                      rhs_idx,
                                      diff_idx,
-                                     fr::field_t::one,
-                                     fr::field_t::neg_one,
-                                     fr::field_t::neg_one,
+                                     fr::field_t::one(),
+                                     fr::field_t::neg_one(),
+                                     fr::field_t::neg_one(),
                                      (additive_constant - other.additive_constant) };
 
     ctx->create_add_gate(gate_a);
@@ -64,8 +64,8 @@ bool_t<Composer> uint<Composer, Native>::operator>(const uint& other) const
     const bool_t<Composer> result = witness_t(ctx, lhs > rhs);
 
     const waffle::mul_quad gate_b{ diff_idx,          result.witness_index, ctx->add_variable(delta), ctx->zero_idx,
-                                   -fr::field_t(2),   fr::field_t::one,     fr::field_t::one,         fr::field_t::one,
-                                   fr::field_t::zero, fr::field_t::zero };
+                                   -fr::field_t(2),   fr::field_t::one(),     fr::field_t::one(),         fr::field_t::one(),
+                                   fr::field_t::zero(), fr::field_t::zero() };
     ctx->create_big_mul_gate(gate_b);
 
     return result;

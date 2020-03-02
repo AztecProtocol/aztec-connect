@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../types.hpp"
-#include "../utils.hpp"
 #include "../uint256/uint256.hpp"
+#include "../utils.hpp"
 #include "wnaf.hpp"
 #include <array>
 #include <random>
@@ -12,8 +12,6 @@ namespace barretenberg {
 namespace group_elements {
 template <class Fq, class Fr, class Params> class alignas(32) element {
   public:
-    static constexpr element one{ Params::one_x, Params::one_y, Fq::one };
-    static constexpr element point_at_infinity = one.set_infinity();
     static constexpr Fq curve_b = Params::b;
 
     element() noexcept {}
@@ -95,13 +93,17 @@ template <class Fq, class Fr, class Params> class alignas(32) element {
             t0 = y.sqr();
             found_one = (yy == t0);
         }
-        return { x, y, Fq::one };
+        return { x, y, Fq::one() };
     }
 
     static void conditional_negate_affine(const affine_element<Fq, Fr, Params>& in,
                                           affine_element<Fq, Fr, Params>& out,
                                           const uint64_t predicate) noexcept;
 };
+
+// constexpr element<Fq, Fr, Params>::one = element<Fq, Fr, Params>{ Params::one_x, Params::one_y, Fq::one() };
+// constexpr element<Fq, Fr, Params>::point_at_infinity = one.set_infinity();
+// constexpr element<Fq, Fr, Params>::curve_b = Params::b;
 } // namespace group_elements
 } // namespace barretenberg
 

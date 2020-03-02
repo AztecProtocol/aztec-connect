@@ -24,7 +24,7 @@ struct GrumpkinG1Params {
     };
 
     // generator point = (x, y) = (1, sqrt(-15))
-    static constexpr barretenberg::fr::field_t one_x = barretenberg::fr::field_t::one;
+    static constexpr barretenberg::fr::field_t one_x = barretenberg::fr::field_t::one();
     static constexpr barretenberg::fr::field_t one_y{
         0x11b2dff1448c41d8UL, 0x23d3446f21c77dc3UL, 0xaa7b8cf435dfafbbUL, 0x14b34cf69dc25d68UL
     };

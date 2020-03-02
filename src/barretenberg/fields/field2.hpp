@@ -4,9 +4,9 @@
 #include <stdint.h>
 
 namespace barretenberg {
-template <class base_field, class Params> struct alignas(64) field2 {
+template <class base_field, class Params> struct alignas(32) field2 {
   public:
-    constexpr field2(const base_field& a = base_field::zero, const base_field& b = base_field::zero)
+    constexpr field2(const base_field& a = base_field::zero(), const base_field& b = base_field::zero())
         : c0(a)
         , c1(b)
     {}
@@ -37,12 +37,18 @@ template <class base_field, class Params> struct alignas(64) field2 {
     base_field c0;
     base_field c1;
 
-    static constexpr field2 zero{ base_field::zero, base_field::zero };
-    static constexpr field2 one{ base_field::one, base_field::zero };
-    static constexpr field2 twist_coeff_b{ Params::twist_coeff_b_0, Params::twist_coeff_b_1 };
-    static constexpr field2 twist_mul_by_q_x{ Params::twist_mul_by_q_x_0, Params::twist_mul_by_q_x_1 };
-    static constexpr field2 twist_mul_by_q_y{ Params::twist_mul_by_q_y_0, Params::twist_mul_by_q_y_1 };
-    static constexpr field2 beta{ Params::twist_cube_root_0, Params::twist_cube_root_1 };
+    static constexpr field2 zero() { return field2{ base_field::zero(), base_field::zero() }; }
+    static constexpr field2 one() { return field2{ base_field::one(), base_field::zero() }; }
+    static constexpr field2 twist_coeff_b() { return field2{ Params::twist_coeff_b_0, Params::twist_coeff_b_1 }; }
+    static constexpr field2 twist_mul_by_q_x()
+    {
+        return field2{ Params::twist_mul_by_q_x_0, Params::twist_mul_by_q_x_1 };
+    }
+    static constexpr field2 twist_mul_by_q_y()
+    {
+        return field2{ Params::twist_mul_by_q_y_0, Params::twist_mul_by_q_y_1 };
+    }
+    static constexpr field2 beta() { return field2{ Params::twist_cube_root_0, Params::twist_cube_root_1 }; }
 
     constexpr field2 operator*(const field2& other) const noexcept;
     constexpr field2 operator+(const field2& other) const noexcept;
@@ -100,13 +106,14 @@ template <class base_field, class Params> struct alignas(64) field2 {
 
     static field2 serialize_from_buffer(uint8_t* buffer)
     {
-        field2 result{ base_field::zero, base_field::zero };
+        field2 result{ base_field::zero(), base_field::zero() };
         result.c0 = base_field::serialize_from_buffer(buffer);
         result.c1 = base_field::serialize_from_buffer(buffer + sizeof(base_field));
 
         return result;
     }
 };
+
 } // namespace barretenberg
 
 #include "field2_impl.hpp"

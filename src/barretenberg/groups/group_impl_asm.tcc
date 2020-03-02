@@ -5,7 +5,8 @@
 namespace barretenberg {
 // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
 // template <typename coordinate_field, typename subgroup_field, typename GroupParams>
-// inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const affine_element* src, affine_element* dest)
+// inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const affine_element* src, affine_element*
+// dest)
 // {
 //     if constexpr (GroupParams::small_elements) {
 // #if defined __AVX__ && defined USE_AVX
@@ -59,6 +60,7 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
                                                                                             uint64_t predicate)
 {
     if constexpr (GroupParams::small_elements) {
+        constexpr uint256_t twice_modulus = coordinate_field::modulus + coordinate_field::modulus;
 #if defined __AVX__ && defined USE_AVX
         ASSERT((((uintptr_t)src & 0x1f) == 0));
         ASSERT((((uintptr_t)dest & 0x1f) == 0));
@@ -90,10 +92,10 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
                              : "r"(src),
                                "r"(dest),
                                "r"(predicate),
-                               [modulus_0] "i"(coordinate_field::twice_modulus.data[0]),
-                               [modulus_1] "i"(coordinate_field::twice_modulus.data[1]),
-                               [modulus_2] "i"(coordinate_field::twice_modulus.data[2]),
-                               [modulus_3] "i"(coordinate_field::twice_modulus.data[3])
+                               [modulus_0] "i"(twice_modulus.data[0]),
+                               [modulus_1] "i"(twice_modulus.data[1]),
+                               [modulus_2] "i"(twice_modulus.data[2]),
+                               [modulus_3] "i"(twice_modulus.data[3])
                              : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "%ymm0", "memory", "cc");
 #else
         __asm__ __volatile__("xorq %%r8, %%r8                              \n\t"
@@ -130,10 +132,10 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
                              : "r"(src),
                                "r"(dest),
                                "r"(predicate),
-                               [modulus_0] "i"(coordinate_field::twice_modulus.data[0]),
-                               [modulus_1] "i"(coordinate_field::twice_modulus.data[1]),
-                               [modulus_2] "i"(coordinate_field::twice_modulus.data[2]),
-                               [modulus_3] "i"(coordinate_field::twice_modulus.data[3])
+                               [modulus_0] "i"(twice_modulus.data[0]),
+                               [modulus_1] "i"(twice_modulus.data[1]),
+                               [modulus_2] "i"(twice_modulus.data[2]),
+                               [modulus_3] "i"(twice_modulus.data[3])
                              : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "memory", "cc");
 #endif
     } else {

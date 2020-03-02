@@ -328,11 +328,11 @@ TEST(g1, operator_ordering)
 
 TEST(g1, group_exponentiation_zero_and_one)
 {
-    g1::affine_element result(g1::one * fr::field_t::zero);
+    g1::affine_element result(g1::one * fr::field_t::zero());
 
     EXPECT_EQ(result.is_point_at_infinity(), true);
 
-    result = g1::affine_element(g1::one * fr::field_t::one);
+    result = g1::affine_element(g1::one * fr::field_t::one());
 
     EXPECT_EQ(result == g1::affine_one, true);
 }

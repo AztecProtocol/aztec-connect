@@ -65,8 +65,8 @@ uint<Composer, Native>::uint(const byte_array<Composer>& other)
     , accumulators()
     , witness_index(UINT32_MAX)
 {
-    field_t<Composer> accumulator(context, fr::field_t::zero);
-    field_t<Composer> scaling_factor(context, fr::field_t::one);
+    field_t<Composer> accumulator(context, fr::field_t::zero());
+    field_t<Composer> scaling_factor(context, fr::field_t::one());
     for (size_t i = 0; i < other.bits().size(); ++i) {
         accumulator = accumulator + scaling_factor * other.get_bit(i);
         scaling_factor = scaling_factor + scaling_factor;
@@ -86,8 +86,8 @@ uint<Composer, Native>::uint(Composer* parent_context, const std::vector<bool_t<
     , accumulators()
     , witness_index(UINT32_MAX)
 {
-    field_t<Composer> accumulator(context, fr::field_t::zero);
-    field_t<Composer> scaling_factor(context, fr::field_t::one);
+    field_t<Composer> accumulator(context, fr::field_t::zero());
+    field_t<Composer> scaling_factor(context, fr::field_t::one());
     for (size_t i = 0; i < wires.size(); ++i) {
         accumulator = accumulator + scaling_factor * wires[i];
         scaling_factor = scaling_factor + scaling_factor;
@@ -173,8 +173,8 @@ template <typename Context, typename Native> uint<Context, Native>::operator byt
         waffle::add_quad gate{ lo.witness_index, hi.witness_index,
                                accumulator_idx,  context->add_variable(next_accumulator),
                                scale_factor,     scale_factor + scale_factor,
-                               fr::field_t::one, fr::field_t::neg_one,
-                               fr::field_t::zero };
+                               fr::field_t::one(), fr::field_t::neg_one(),
+                               fr::field_t::zero() };
 
         context->create_big_add_gate(gate);
 
@@ -195,7 +195,7 @@ template <typename Context, typename Native> uint<Context, Native>::operator fie
     normalize();
     field_t<Context> target(context);
     target.witness_index = witness_index;
-    target.additive_constant = is_constant() ? fr::field_t(additive_constant) : fr::field_t::zero;
+    target.additive_constant = is_constant() ? fr::field_t(additive_constant) : fr::field_t::zero();
     return target;
 }
 
@@ -216,9 +216,9 @@ template <typename Composer, typename Native> uint<Composer, Native> uint<Compos
             context->zero_idx,
             context->add_variable(remainder),
             context->add_variable(overflow),
-            fr::field_t::one,
-            fr::field_t::zero,
-            fr::field_t::neg_one,
+            fr::field_t::one(),
+            fr::field_t::zero(),
+            fr::field_t::neg_one(),
             -fr::field_t(CIRCUIT_UINT_MAX_PLUS_ONE),
             (additive_constant & MASK),
         };
@@ -293,10 +293,10 @@ template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Na
             right_idx,                     // large accumulator
             left_idx,                      // small accumulator
             fr::field_t(3),                // 3 * lo_bit + 6 * hi_bit = 3 * a[pivot] - 12 * a[pivot - 1]
-            fr::field_t::zero,             // 0
+            fr::field_t::zero(),             // 0
             -fr::field_t(3),               // -3 * a[pivot]
             fr::field_t(12),               // 12 * a[pivot - 1]
-            fr::field_t::zero              // 0
+            fr::field_t::zero()              // 0
         };
         context->create_big_add_gate_with_bit_extraction(gate);
         bool_t<Composer> result;
@@ -313,11 +313,11 @@ template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Na
         context->add_variable(hi_bit), // our extracted bit
         right_idx,                     // large accumlator
         left_idx,                      // small accumulator
-        fr::field_t::zero,             // 0
+        fr::field_t::zero(),             // 0
         -fr::field_t(6),               // extracted bit is scaled by 6, so apply -6 to our high bit
-        fr::field_t::zero,             // 0
-        fr::field_t::zero,             // 0
-        fr::field_t::zero              // 0
+        fr::field_t::zero(),             // 0
+        fr::field_t::zero(),             // 0
+        fr::field_t::zero()              // 0
     };
     context->create_big_add_gate_with_bit_extraction(gate);
     bool_t<Composer> result;

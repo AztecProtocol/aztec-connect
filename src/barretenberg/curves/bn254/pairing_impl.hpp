@@ -7,32 +7,34 @@
 namespace barretenberg {
 namespace pairing {
 namespace {
+constexpr fq::field_t two_inv = fq::field_t(2).invert();
 inline constexpr g2::element mul_by_q(const g2::element& a)
 {
+
     fq2::field_t T0 = a.x.frobenius_map();
     fq2::field_t T1 = a.y.frobenius_map();
     return {
-        fq2::field_t::twist_mul_by_q_x * T0,
-        fq2::field_t::twist_mul_by_q_y * T1,
+        fq2::field_t::twist_mul_by_q_x() * T0,
+        fq2::field_t::twist_mul_by_q_y() * T1,
         a.z.frobenius_map(),
     };
 }
 } // namespace
 constexpr void doubling_step_for_flipped_miller_loop(g2::element& current, fq12::field_t::ell_coeffs& ell)
 {
-    fq2::field_t a = current.x.mul_by_fq(fq::field_t::two_inv);
+    fq2::field_t a = current.x.mul_by_fq(two_inv);
     a *= current.y;
 
     fq2::field_t b = current.y.sqr();
     fq2::field_t c = current.z.sqr();
     fq2::field_t d = c + c;
     d += c;
-    fq2::field_t e = d * fq2::field_t::twist_coeff_b;
+    fq2::field_t e = d * fq2::field_t::twist_coeff_b();
     fq2::field_t f = e + e;
     f += e;
 
     fq2::field_t g = b + f;
-    g = g.mul_by_fq(fq::field_t::two_inv);
+    g = g.mul_by_fq(two_inv);
     fq2::field_t h = current.y + current.z;
     h = h.sqr();
     fq2::field_t i = b + c;
@@ -96,7 +98,7 @@ constexpr void mixed_addition_step_for_flipped_miller_loop(const g2::element& ba
 
 constexpr void precompute_miller_lines(const g2::element& Q, miller_lines& lines)
 {
-    g2::element Q_neg{ Q.x, -Q.y, fq2::field_t::one };
+    g2::element Q_neg{ Q.x, -Q.y, fq2::field_t::one() };
     g2::element work_point = Q;
 
     size_t it = 0;
@@ -122,7 +124,7 @@ constexpr void precompute_miller_lines(const g2::element& Q, miller_lines& lines
 
 constexpr fq12::field_t miller_loop(g1::element& P, miller_lines& lines)
 {
-    fq12::field_t work_scalar = fq12::field_t::one;
+    fq12::field_t work_scalar = fq12::field_t::one();
 
     size_t it = 0;
     fq12::field_t::ell_coeffs work_line;
@@ -160,7 +162,7 @@ constexpr fq12::field_t miller_loop(g1::element& P, miller_lines& lines)
 
 constexpr fq12::field_t miller_loop_batch(const g1::element* points, const miller_lines* lines, size_t num_pairs)
 {
-    fq12::field_t work_scalar = fq12::field_t::one;
+    fq12::field_t work_scalar = fq12::field_t::one();
 
     size_t it = 0;
     fq12::field_t::ell_coeffs work_line;

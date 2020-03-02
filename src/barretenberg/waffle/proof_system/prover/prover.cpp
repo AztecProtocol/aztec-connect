@@ -204,7 +204,7 @@ template <typename settings> void ProverBase<settings>::compute_z_coefficients()
 
                 for (size_t k = 1; k < settings::program_width; ++k) {
                     wire_plus_gamma = gamma + lagrange_base_wires[k][i];
-                    T0 = fr::field_t::coset_generators[k - 1] * work_root;
+                    T0 = fr::field_t::coset_generator(k - 1) * work_root;
                     accumulators[k][i] = T0 + wire_plus_gamma;
 
                     T0 = lagrange_base_sigmas[k][i] * beta;
@@ -235,7 +235,7 @@ template <typename settings> void ProverBase<settings>::compute_z_coefficients()
             const size_t start = j * key->small_domain.thread_size;
             const size_t end =
                 ((j + 1) * key->small_domain.thread_size) - ((j == key->small_domain.num_threads - 1) ? 1 : 0);
-            fr::field_t inversion_accumulator = fr::field_t::one;
+            fr::field_t inversion_accumulator = fr::field_t::one();
             constexpr size_t inversion_index = (settings::program_width == 1) ? 2 : settings::program_width * 2 - 1;
             fr::field_t* inversion_coefficients = &accumulators[inversion_index][0];
             for (size_t i = start; i < end; ++i) {
@@ -257,7 +257,7 @@ template <typename settings> void ProverBase<settings>::compute_z_coefficients()
             }
         }
     }
-    z[0] = fr::field_t::one;
+    z[0] = fr::field_t::one();
     z.ifft(key->small_domain);
     for (size_t k = 7; k < settings::program_width; ++k) {
         aligned_free(accumulators[(k - 1) * 2]);
@@ -337,7 +337,7 @@ template <typename settings> void ProverBase<settings>::compute_permutation_gran
 
         fr::field_t work_root = key->large_domain.root.pow(static_cast<uint64_t>(j * key->large_domain.thread_size));
         work_root *= key->small_domain.generator;
-        // work_root *= fr::field_t::coset_generators[0];
+        // work_root *= fr::field_t::coset_generator(0);
         work_root *= beta;
 
         fr::field_t wire_plus_gamma;
@@ -356,7 +356,7 @@ template <typename settings> void ProverBase<settings>::compute_permutation_gran
 
             for (size_t k = 1; k < settings::program_width; ++k) {
                 wire_plus_gamma = gamma + wire_ffts[k][i];
-                T0 = fr::field_t::coset_generators[k - 1] * work_root;
+                T0 = fr::field_t::coset_generator(k - 1) * work_root;
                 T0 += wire_plus_gamma;
                 numerator *= T0;
 

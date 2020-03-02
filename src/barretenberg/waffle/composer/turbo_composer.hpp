@@ -55,9 +55,9 @@ class TurboComposer : public ComposerBase {
             a_idx,
             a_idx,
             a_idx,
-            barretenberg::fr::field_t::one,
-            barretenberg::fr::field_t::zero,
-            barretenberg::fr::field_t::zero,
+            barretenberg::fr::field_t::one(),
+            barretenberg::fr::field_t::zero(),
+            barretenberg::fr::field_t::zero(),
             -b,
         };
         create_add_gate(gate_coefficients);

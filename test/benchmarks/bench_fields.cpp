@@ -80,6 +80,15 @@ void field_mixed_add(const fr::field_t& x1,
     fr::field_t T2;
     fr::field_t T3;
 
+    // 3 sqr // 90 cycles
+    // 1 self sqr // 30 cycles
+    // 2 * // 72 cycles
+    // 5 *= // 180 cycles
+    // 1 - // 6 cycles
+    // 5 -= // 36 cycles
+    // 2 + // 12 cycles
+    // 6 += // 36 cycles
+    // 22 + 340 + 100 = 462 cycles
     T0 = z1.sqr();
     T1 = x2 * T0;
     T1 -= x1;
@@ -107,7 +116,22 @@ void field_mixed_add(const fr::field_t& x1,
     y3 = T3 - T1;
 }
 
-constexpr size_t NUM_POINTS = 1 << 22;
+uint64_t rdtsc()
+{
+#ifdef __aarch64__
+    uint64_t pmccntr;
+    __asm__ __volatile__("mrs %0, pmccntr_el0" : "=r"(pmccntr));
+    return pmccntr;
+#elif __x86_64__
+    unsigned int lo, hi;
+    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((uint64_t)hi << 32) | lo;
+#else
+    return 0;
+#endif
+}
+
+constexpr size_t NUM_POINTS = 1 << 24;
 constexpr size_t NUM_INVERSIONS = 1 << 20;
 std::vector<barretenberg::fr::field_t> oldx;
 std::vector<barretenberg::fr::field_t> oldy;
@@ -143,9 +167,16 @@ fr::field_t sqr_assign_impl(const fr::field_t& x)
 }
 void sqr_assign_bench(State& state) noexcept
 {
+    uint64_t clocks = 0;
+    uint64_t count = 0;
     for (auto _ : state) {
+        uint64_t before = rdtsc();
         DoNotOptimize(sqr_assign_impl(accx));
+        clocks += (rdtsc() - before);
+        ++count;
     }
+    double average = static_cast<double>(clocks) / (static_cast<double>(count) * double(NUM_POINTS));
+    std::cout << "sqr_assign clocks per operation = " << average << std::endl;
 }
 BENCHMARK(sqr_assign_bench);
 
@@ -159,9 +190,16 @@ fr::field_t sqr_impl(const fr::field_t& x)
 }
 void sqr_bench(State& state) noexcept
 {
+    uint64_t clocks = 0;
+    uint64_t count = 0;
     for (auto _ : state) {
+        uint64_t before = rdtsc();
         DoNotOptimize(sqr_impl(accx));
+        clocks += (rdtsc() - before);
+        ++count;
     }
+    double average = static_cast<double>(clocks) / (static_cast<double>(count) * double(NUM_POINTS));
+    std::cout << "sqr clocks per operation = " << average << std::endl;
 }
 BENCHMARK(sqr_bench);
 
@@ -175,11 +213,41 @@ fr::field_t unary_minus_impl(const fr::field_t& x)
 }
 void unary_minus_bench(State& state) noexcept
 {
+    uint64_t clocks = 0;
+    uint64_t count = 0;
     for (auto _ : state) {
+        uint64_t before = rdtsc();
         DoNotOptimize(unary_minus_impl(accx));
+        clocks += (rdtsc() - before);
+        ++count;
     }
+    double average = static_cast<double>(clocks) / (static_cast<double>(count) * double(NUM_POINTS));
+    std::cout << "unary minus clocks per operation = " << average << std::endl;
 }
 BENCHMARK(unary_minus_bench);
+
+fr::field_t static_mul_assign_impl(const fr::field_t& x, const fr::field_t& y)
+{
+    fr::field_t acc = x;
+    for (size_t i = 0; i < NUM_POINTS; ++i) {
+        fr::field_t::asm_self_mul_with_coarse_reduction(acc, y);
+    }
+    return acc;
+}
+void static_mul_assign_bench(State& state) noexcept
+{
+    uint64_t clocks = 0;
+    uint64_t count = 0;
+    for (auto _ : state) {
+        uint64_t before = rdtsc();
+        DoNotOptimize(static_mul_assign_impl(accx, accy));
+        clocks += (rdtsc() - before);
+        ++count;
+    }
+    double average = static_cast<double>(clocks) / (static_cast<double>(count) * double(NUM_POINTS));
+    std::cout << "static mul assign clocks per operation = " << average << std::endl;
+}
+BENCHMARK(static_mul_assign_bench);
 
 fr::field_t mul_assign_impl(const fr::field_t& x, fr::field_t& y)
 {
@@ -191,9 +259,16 @@ fr::field_t mul_assign_impl(const fr::field_t& x, fr::field_t& y)
 }
 void mul_assign_bench(State& state) noexcept
 {
+    uint64_t clocks = 0;
+    uint64_t count = 0;
     for (auto _ : state) {
+        uint64_t before = rdtsc();
         DoNotOptimize(mul_assign_impl(accx, accy));
+        clocks += (rdtsc() - before);
+        ++count;
     }
+    double average = static_cast<double>(clocks) / (static_cast<double>(count) * double(NUM_POINTS));
+    std::cout << "mul assign clocks per operation = " << average << std::endl;
 }
 BENCHMARK(mul_assign_bench);
 
@@ -208,11 +283,42 @@ fr::field_t mul_impl(const fr::field_t& x, fr::field_t& y)
 
 void mul_bench(State& state) noexcept
 {
+    uint64_t clocks = 0;
+    uint64_t count = 0;
     for (auto _ : state) {
+        uint64_t before = rdtsc();
         DoNotOptimize(mul_impl(accx, accy));
+        clocks += (rdtsc() - before);
+        ++count;
     }
+    double average = static_cast<double>(clocks) / (static_cast<double>(count) * double(NUM_POINTS));
+    std::cout << "mul clocks per operation = " << average << std::endl;
 }
 BENCHMARK(mul_bench);
+
+fr::field_t self_add_impl(const fr::field_t& x, fr::field_t& y)
+{
+    fr::field_t acc = x;
+    for (size_t i = 0; i < NUM_POINTS; ++i) {
+        acc += y;
+    }
+    return acc;
+}
+
+void self_add_bench(State& state) noexcept
+{
+    uint64_t clocks = 0;
+    uint64_t count = 0;
+    for (auto _ : state) {
+        uint64_t before = rdtsc();
+        DoNotOptimize(self_add_impl(accx, accy));
+        clocks += (rdtsc() - before);
+        ++count;
+    }
+    double average = static_cast<double>(clocks) / (static_cast<double>(count) * double(NUM_POINTS));
+    std::cout << "self add clocks per operation = " << average << std::endl;
+}
+BENCHMARK(self_add_bench);
 
 fr::field_t add_impl(const fr::field_t& x, fr::field_t& y)
 {
@@ -225,9 +331,16 @@ fr::field_t add_impl(const fr::field_t& x, fr::field_t& y)
 
 void add_bench(State& state) noexcept
 {
+    uint64_t clocks = 0;
+    uint64_t count = 0;
     for (auto _ : state) {
+        uint64_t before = rdtsc();
         DoNotOptimize(add_impl(accx, accy));
+        clocks += (rdtsc() - before);
+        ++count;
     }
+    double average = static_cast<double>(clocks) / (static_cast<double>(count) * double(NUM_POINTS));
+    std::cout << "add clocks per operation = " << average << std::endl;
 }
 BENCHMARK(add_bench);
 
@@ -242,11 +355,91 @@ fr::field_t sub_impl(const fr::field_t& x, fr::field_t& y)
 
 void sub_bench(State& state) noexcept
 {
+    uint64_t clocks = 0;
+    uint64_t count = 0;
     for (auto _ : state) {
+        uint64_t before = rdtsc();
         DoNotOptimize(sub_impl(accx, accy));
+        clocks += (rdtsc() - before);
+        ++count;
     }
+    double average = static_cast<double>(clocks) / (static_cast<double>(count) * double(NUM_POINTS));
+    std::cout << "sub clocks per operation = " << average << std::endl;
 }
 BENCHMARK(sub_bench);
+
+fr::field_t addaddmul_impl(const fr::field_t& x, const fr::field_t& y, const fr::field_t& z)
+{
+    fr::field_t acc = x;
+    for (size_t i = 0; i < NUM_POINTS; ++i) {
+        acc *= y;
+        acc += z;
+        acc += y;
+    }
+    return acc;
+}
+
+void addaddmul_bench(State& state) noexcept
+{
+    uint64_t clocks = 0;
+    uint64_t count = 0;
+    for (auto _ : state) {
+        uint64_t before = rdtsc();
+        DoNotOptimize(addaddmul_impl(accx, accy, accz));
+        clocks += (rdtsc() - before);
+        ++count;
+    }
+    double average = static_cast<double>(clocks) / (static_cast<double>(count) * double(NUM_POINTS));
+    std::cout << "field clocks per call = " << average << std::endl;
+}
+BENCHMARK(addaddmul_bench);
+
+fr::field_t subaddmul_impl(const fr::field_t& x, const fr::field_t& y, const fr::field_t& z)
+{
+    fr::field_t acc = x;
+    for (size_t i = 0; i < NUM_POINTS; ++i) {
+        acc *= y;
+        acc -= z;
+        acc += y;
+    }
+    return acc;
+}
+
+void subaddmul_bench(State& state) noexcept
+{
+    uint64_t clocks = 0;
+    uint64_t count = 0;
+    for (auto _ : state) {
+        uint64_t before = rdtsc();
+        DoNotOptimize(subaddmul_impl(accx, accy, accz));
+        clocks += (rdtsc() - before);
+        ++count;
+    }
+    double average = static_cast<double>(clocks) / (static_cast<double>(count) * double(NUM_POINTS));
+    std::cout << "field clocks per call = " << average << std::endl;
+}
+BENCHMARK(subaddmul_bench);
+
+void field_bench(State& state) noexcept
+{
+    uint64_t clocks = 0;
+    uint64_t count = 0;
+    for (auto _ : state) {
+        uint64_t before = rdtsc();
+        fr::field_t x = accx;
+        fr::field_t y = accy;
+        fr::field_t z = accz;
+        for (size_t i = 0; i < NUM_POINTS; ++i) {
+            field_mixed_add(x, y, z, oldx[i], oldy[i], x, y, z);
+        }
+        DoNotOptimize(z);
+        clocks += (rdtsc() - before);
+        ++count;
+    }
+    double average = static_cast<double>(clocks) / (static_cast<double>(count) * double(NUM_POINTS));
+    std::cout << "field clocks per call = " << average << std::endl;
+}
+BENCHMARK(field_bench);
 
 void invert_bench(State& state) noexcept
 {
@@ -263,7 +456,7 @@ BENCHMARK(invert_bench);
 void pow_bench(State& state) noexcept
 {
     for (auto _ : state) {
-        constexpr fr::field_t exponent = fr::field_t::modulus - fr::field_t(2);
+        constexpr uint256_t exponent = fr::field_t::modulus - uint256_t(2);
         fr::field_t x = accx;
         for (size_t i = 0; i < NUM_INVERSIONS; ++i) {
             x = x.pow(exponent);
@@ -272,19 +465,5 @@ void pow_bench(State& state) noexcept
     }
 }
 BENCHMARK(pow_bench);
-
-void field_bench(State& state) noexcept
-{
-    for (auto _ : state) {
-        fr::field_t x = accx;
-        fr::field_t y = accy;
-        fr::field_t z = accz;
-        for (size_t i = 0; i < NUM_POINTS; ++i) {
-            field_mixed_add(x, y, z, oldx[i], oldy[i], x, y, z);
-        }
-        DoNotOptimize(z);
-    }
-}
-BENCHMARK(field_bench);
 
 BENCHMARK_MAIN();

@@ -117,7 +117,7 @@ namespace scalar_multiplication {
  **/
 void add_affine_points(g1::affine_element* points, const size_t num_points, fq::field_t* scratch_space)
 {
-    fq::field_t batch_inversion_accumulator = fq::field_t::one;
+    fq::field_t batch_inversion_accumulator = fq::field_t::one();
     // std::chrono::steady_clock::time_point time_start = std::chrono::steady_clock::now();
 
     for (size_t i = 0; i < num_points; i += 2) {

@@ -25,7 +25,7 @@ TEST(io, read_transcript_loads_well_formed_srs)
     Q[1] = g2_x;
     fq12::field_t res = pairing::reduced_ate_pairing_batch(P, Q, 2);
 
-    EXPECT_EQ(res, fq12::field_t::one);
+    EXPECT_EQ(res, fq12::field_t::one());
     for (size_t i = 0; i < degree; ++i) {
         EXPECT_EQ(monomials[i].on_curve(), true);
     }

@@ -9,7 +9,7 @@ struct Bn254G1Params {
     static constexpr bool USE_ENDOMORPHISM = true;
     static constexpr bool can_hash_to_curve = true;
     static constexpr bool small_elements = true;
-    static constexpr fq::field_t one_x = fq::field_t::one;
+    static constexpr fq::field_t one_x = fq::field_t::one();
     static constexpr fq::field_t one_y{
         0xa6ba871b8b1e1b3aUL, 0x14f1d651eb8e167bUL, 0xccdd46def0f28c58UL, 0x1c14ef83340fbe5eUL
     };

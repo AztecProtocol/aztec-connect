@@ -21,8 +21,8 @@ class MiMCComposer : public StandardComposer {
         q_mimc_coefficient.reserve(size_hint);
         q_mimc_selector.reserve(size_hint);
         features |= static_cast<size_t>(Features::MIMC_SELECTORS);
-        q_mimc_coefficient.push_back(barretenberg::fr::field_t::zero);
-        q_mimc_selector.push_back(barretenberg::fr::field_t::zero);
+        q_mimc_coefficient.push_back(barretenberg::fr::field_t::zero());
+        q_mimc_selector.push_back(barretenberg::fr::field_t::zero());
     };
     MiMCComposer(MiMCComposer&& other) = default;
     MiMCComposer& operator=(MiMCComposer&& other) = default;
@@ -164,9 +164,9 @@ class MiMCComposer : public StandardComposer {
             a_idx,
             a_idx,
             a_idx,
-            barretenberg::fr::field_t::one,
-            barretenberg::fr::field_t::zero,
-            barretenberg::fr::field_t::zero,
+            barretenberg::fr::field_t::one(),
+            barretenberg::fr::field_t::zero(),
+            barretenberg::fr::field_t::zero(),
             -b,
         };
         create_add_gate(gate_coefficients);

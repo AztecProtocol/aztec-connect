@@ -5,7 +5,7 @@
 namespace barretenberg {
 template <typename quadratic_field, typename base_field, typename Fq12Params> class field12 {
   public:
-    constexpr field12(const base_field& a = base_field::zero, const base_field& b = base_field::zero)
+    constexpr field12(const base_field& a = base_field::zero(), const base_field& b = base_field::zero())
         : c0(a)
         , c1(b)
     {}
@@ -43,8 +43,8 @@ template <typename quadratic_field, typename base_field, typename Fq12Params> cl
         quadratic_field vv;
     };
 
-    static constexpr field12 zero{ base_field::zero, base_field::zero };
-    static constexpr field12 one{ base_field::one, base_field::zero };
+    static constexpr field12 zero() { return { base_field::zero(), base_field::zero() }; };
+    static constexpr field12 one() { return { base_field::one(), base_field::zero() }; };
 
     static constexpr base_field mul_by_non_residue(const base_field& a)
     {

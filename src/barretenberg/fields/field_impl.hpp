@@ -5,6 +5,7 @@
 #define BBERG_USE_ASM
 #endif
 #endif
+#define BBERG_USE_ASM
 
 #include "field_impl_generic.hpp"
 
@@ -15,6 +16,17 @@
 #include <type_traits>
 
 namespace barretenberg {
+
+// template <class T> constexpr void field<T>::butterfly(field& left, field& right) noexcept
+// {
+// #ifndef BBERG_USE_ASM
+
+// #else
+//     if (std::is_constant_evaluated()) {
+//     }
+//     return asm_butterfly(left, right);
+// #endif
+// }
 /**
  *
  * Mutiplication
@@ -27,9 +39,8 @@ template <class T> constexpr field<T> field<T>::operator*(const field& other) co
 #else
     if (std::is_constant_evaluated()) {
         return montgomery_mul(other);
-    } else {
-        return asm_mul_with_coarse_reduction(*this, other);
     }
+    return asm_mul_with_coarse_reduction(*this, other);
 #endif
 }
 
@@ -130,7 +141,8 @@ template <class T> constexpr field<T> field<T>::operator-(const field& other) co
 
 template <class T> constexpr field<T> field<T>::operator-() const noexcept
 {
-    return twice_modulus - *this; // modulus - *this;
+    constexpr field p{ twice_modulus.data[0], twice_modulus.data[1], twice_modulus.data[2], twice_modulus.data[3] };
+    return p - *this; // modulus - *this;
 }
 
 template <class T> constexpr field<T> field<T>::operator-=(const field& other) noexcept
@@ -201,6 +213,8 @@ template <class T> constexpr bool field<T>::operator!=(const field& other) const
 
 template <class T> constexpr field<T> field<T>::to_montgomery_form() const noexcept
 {
+    constexpr field r_squared{ T::r_squared_0, T::r_squared_1, T::r_squared_2, T::r_squared_3 };
+
     field result = *this;
     result.reduce_once();
     result.reduce_once();
@@ -216,6 +230,7 @@ template <class T> constexpr field<T> field<T>::from_montgomery_form() const noe
 
 template <class T> constexpr void field<T>::self_to_montgomery_form() noexcept
 {
+    constexpr field r_squared{ T::r_squared_0, T::r_squared_1, T::r_squared_2, T::r_squared_3 };
     self_reduce_once();
     self_reduce_once();
     self_reduce_once();
@@ -256,15 +271,15 @@ template <class T> constexpr void field<T>::self_reduce_once() noexcept
 #endif
 }
 
-template <class T> constexpr field<T> field<T>::pow(const field& exponent) const noexcept
+template <class T> constexpr field<T> field<T>::pow(const uint256_t& exponent) const noexcept
 {
-    if (*this == zero) {
-        return zero;
+    if (*this == zero()) {
+        return zero();
     }
-    if (exponent == zero) {
-        return one;
+    if (exponent == uint256_t(0)) {
+        return one();
     }
-    if (exponent == one) {
+    if (exponent == uint256_t(1)) {
         return *this;
     }
 
@@ -287,8 +302,8 @@ template <class T> constexpr field<T> field<T>::pow(const uint64_t exponent) con
 
 template <class T> constexpr field<T> field<T>::invert() const noexcept
 {
-    if (*this == zero) {
-        return zero;
+    if (*this == zero()) {
+        return zero();
     }
 
     const field pow_two = sqr();
@@ -315,9 +330,9 @@ template <class T> constexpr field<T> field<T>::invert() const noexcept
                                   pow_seven.sqr(),
                                   pow_seven * pow_eight };
 
-    constexpr wnaf_table window = wnaf_table(modulus_minus_two);
+    constexpr wnaf_table window = wnaf_table(modulus - uint256_t(2));
 
-    field accumulator = (window.windows[63] > 0) ? lookup_table[window.windows[63] - 1] : one;
+    field accumulator = (window.windows[63] > 0) ? lookup_table[window.windows[63] - 1] : one();
 
     for (size_t i = 62; i < 63; --i) {
         accumulator.self_sqr();
@@ -334,7 +349,7 @@ template <class T> constexpr field<T> field<T>::invert() const noexcept
 template <class T> void field<T>::batch_invert(field* coeffs, const size_t n) noexcept
 {
     field* temporaries = new field[n];
-    field accumulator = one;
+    field accumulator = one();
     for (size_t i = 0; i < n; ++i) {
         temporaries[i] = accumulator;
         accumulator = accumulator * coeffs[i];
@@ -385,7 +400,7 @@ template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noex
         T::Q_minus_one_over_two_0, T::Q_minus_one_over_two_1, T::Q_minus_one_over_two_2, T::Q_minus_one_over_two_3
     };
     // __to_montgomery_form(Q_minus_one_over_two, Q_minus_one_over_two);
-    field z = multiplicative_generator; // the generator is a non-residue
+    field z = coset_generator(0); // the generator is a non-residue
     field b = pow(Q_minus_one_over_two);
     field r = operator*(b); // r = a^{(Q + 1) / 2}
     field t = r * b;        // t = a^{(Q - 1) / 2 + (Q + 1) / 2} = a^{Q}
@@ -396,8 +411,8 @@ template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noex
     for (size_t i = 0; i < T::primitive_root_log_size - 1; ++i) {
         check.self_sqr();
     }
-    if (check != one) {
-        return zero;
+    if (check != one()) {
+        return zero();
     }
     field t1 = z.pow(Q_minus_one_over_two);
     field t2 = t1 * z;
@@ -405,12 +420,12 @@ template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noex
 
     size_t m = T::primitive_root_log_size;
 
-    while (t != one) {
+    while (t != one()) {
         size_t i = 0;
         field t2m = t;
 
         // find the smallest value of m, such that t^{2^m} = 1
-        while (t2m != one) {
+        while (t2m != one()) {
             t2m.self_sqr();
             i += 1;
         }
@@ -433,11 +448,14 @@ template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noex
 template <class T> constexpr field<T> field<T>::sqrt() const noexcept
 {
     if constexpr ((T::modulus_0 & 0x3UL) == 0x3UL) {
+        constexpr uint256_t sqrt_exponent{
+            T::sqrt_exponent_0, T::sqrt_exponent_1, T::sqrt_exponent_2, T::sqrt_exponent_3
+        };
         return pow(sqrt_exponent);
     } else {
         return tonelli_shanks_sqrt();
     }
-}
+} // namespace barretenberg
 
 template <class T> constexpr field<T> field<T>::operator/(const field& other) const noexcept
 {
@@ -502,7 +520,7 @@ template <class T> constexpr bool field<T>::is_zero() const noexcept
 
 template <class T> constexpr field<T> field<T>::get_root_of_unity(const size_t subgroup_size) noexcept
 {
-    field r = root_of_unity;
+    field r{ T::primitive_root_0, T::primitive_root_1, T::primitive_root_2, T::primitive_root_3 };
     for (size_t i = T::primitive_root_log_size; i > subgroup_size; --i) {
         r.self_sqr();
     }

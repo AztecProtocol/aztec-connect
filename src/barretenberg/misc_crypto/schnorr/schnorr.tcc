@@ -82,7 +82,7 @@ typename G1::affine_element ecrecover(const std::string& message, const signatur
     Fr s = Fr::serialize_from_buffer(&sig.s[0]);
     typename G1::affine_element R1(G1::one * s);
     typename G1::affine_element R2(typename G1::element(R) * target_e);
-    typename G1::element R2_jac{ R2.x, R2.y, Fq::one };
+    typename G1::element R2_jac{ R2.x, R2.y, Fq::one() };
     typename G1::element key_jac;
     key_jac = R2_jac + R1;
     key_jac = key_jac.normalize();
@@ -101,7 +101,7 @@ bool verify_signature(const std::string& message, const typename G1::affine_elem
     typename G1::affine_element R1(G1::one * s);
     typename G1::affine_element R2(typename G1::element(public_key) * source_e);
 
-    typename G1::element R2_ele{ R2.x, R2.y, Fq::one };
+    typename G1::element R2_ele{ R2.x, R2.y, Fq::one() };
 
     typename G1::element R;
     R = R2_ele + R1;

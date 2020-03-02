@@ -23,7 +23,7 @@ if(WASM)
     set(DISABLE_ASM ON)
     set(MULTITHREADING OFF)
     set(BENCHMARKS OFF)
-    set(PROFILING OFF)
+    set(PROFILING ON)
     set(CMAKE_TOOLCHAIN_FILE "./cmake/toolchain-wasm-linux-clang.cmake")
     set(WASI_SDK_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/src/wasi-sdk-8.0")
     add_compile_options(-fno-exceptions)
@@ -54,6 +54,7 @@ set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS ON)
+
 
 OptimizeForArchitecture()
 list(FIND _available_vector_units_list bmi2 HAS_BMI2)
@@ -127,8 +128,11 @@ if(DISABLE_ADX)
     add_definitions(-DDISABLE_ADX=1)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Wno-deprecated-copy -fconstexpr-ops-limit=100000000")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=deprecated-copy -fconstexpr-ops-limit=100000000")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-deprecated")
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=deprecated-copy -fconstexpr-ops-limit=100000000")
+endif()
 
 add_definitions(-DBOOST_SPIRIT_X3_NO_FILESYSTEM=1 -DBARRETENBERG_SRS_PATH=\"../srs_db/transcript.dat\")
 

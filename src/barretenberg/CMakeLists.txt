@@ -3,6 +3,7 @@
 
 include(FetchContent)
 
+if(NOT WASM)
 FetchContent_Declare(
     leveldb
     GIT_REPOSITORY https://github.com/google/leveldb.git
@@ -13,6 +14,7 @@ FetchContent_GetProperties(leveldb)
 if(NOT leveldb_POPULATED)
     FetchContent_Populate(leveldb)
     add_subdirectory(${leveldb_SOURCE_DIR} ${leveldb_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 endif()
 
 add_compile_options(-Werror -Wall -Wextra -Wconversion -Wsign-conversion)
@@ -325,12 +327,6 @@ if(PROFILING)
         waffle/stdlib/crypto/crypto.hpp
         waffle/stdlib/crypto/hash/sha256.cpp
         waffle/stdlib/crypto/hash/sha256.hpp
-        waffle/stdlib/merkle_tree/merkle_tree.cpp
-        waffle/stdlib/merkle_tree/merkle_tree.hpp
-        waffle/stdlib/merkle_tree/memory_store.hpp
-        waffle/stdlib/merkle_tree/memory_store.cpp
-        waffle/stdlib/merkle_tree/leveldb_store.hpp
-        waffle/stdlib/merkle_tree/leveldb_store.cpp
         waffle/stdlib/crypto/hash/pedersen.cpp
         waffle/stdlib/crypto/hash/pedersen.hpp
         waffle/stdlib/crypto/schnorr/schnorr.cpp
@@ -342,7 +338,6 @@ if(PROFILING)
     target_link_libraries(
         barretenberg_profiling
         PRIVATE
-        leveldb
     )
 
     set_target_properties(

@@ -5,9 +5,9 @@
 namespace barretenberg {
 template <typename base_field, typename Fq6Params> class field6 {
   public:
-    constexpr field6(const base_field& a = base_field::zero,
-                     const base_field& b = base_field::zero,
-                     const base_field& c = base_field::zero)
+    constexpr field6(const base_field& a = base_field::zero(),
+                     const base_field& b = base_field::zero(),
+                     const base_field& c = base_field::zero())
         : c0(a)
         , c1(b)
         , c2(c)
@@ -45,8 +45,8 @@ template <typename base_field, typename Fq6Params> class field6 {
     base_field c1;
     base_field c2;
 
-    static constexpr field6 zero{ base_field::zero, base_field::zero, base_field::zero };
-    static constexpr field6 one{ base_field::one, base_field::zero, base_field::zero };
+    static constexpr field6 zero() { return { base_field::zero(), base_field::zero(), base_field::zero() }; };
+    static constexpr field6 one() { return { base_field::one(), base_field::zero(), base_field::zero() }; };
 
     static constexpr base_field mul_by_non_residue(const base_field& a) { return Fq6Params::mul_by_non_residue(a); }
 
@@ -101,7 +101,6 @@ template <typename base_field, typename Fq6Params> class field6 {
 
     constexpr field6 sqr() const
     {
-        field6 r;
         /* Devegili OhEig Scott Dahab --- Multiplication and Squaring on Pairing-Friendly Fields.pdf; Section 4
          * (CH-SQR2) */
         base_field S0 = c0.sqr();
@@ -148,7 +147,6 @@ template <typename base_field, typename Fq6Params> class field6 {
 
     constexpr field6 invert() const
     {
-        field6 r;
         /* From "High-Speed Software Implementation of the Optimal Ate Pairing over Barreto-Naehrig Curves"; Algorithm
          * 17 */
         base_field C0 = c0.sqr() - mul_by_non_residue(c1 * c2);

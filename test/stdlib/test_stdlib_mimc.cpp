@@ -21,7 +21,7 @@ TEST(stdlib_mimc, composer_consistency_check)
     waffle::MiMCComposer mimc_composer = waffle::MiMCComposer();
 
     fr::field_t input = fr::field_t::random_element();
-    fr::field_t k_in = fr::field_t::zero;
+    fr::field_t k_in = fr::field_t::zero();
 
     stdlib::field_t<waffle::StandardComposer> standard_input(
         stdlib::public_witness_t<waffle::StandardComposer>(&standard_composer, input));

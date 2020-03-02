@@ -18,8 +18,8 @@ using namespace barretenberg;
 TEST(standard_composer, test_add_gate_proofs)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
-    fr::field_t a = fr::field_t::one;
-    fr::field_t b = fr::field_t::one;
+    fr::field_t a = fr::field_t::one();
+    fr::field_t b = fr::field_t::one();
     fr::field_t c = a + b;
     fr::field_t d = a + c;
     uint32_t a_idx = composer.add_variable(a);
@@ -27,74 +27,74 @@ TEST(standard_composer, test_add_gate_proofs)
     uint32_t c_idx = composer.add_variable(c);
     uint32_t d_idx = composer.add_variable(d);
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
 
     composer.create_add_gate(
-        { d_idx, c_idx, a_idx, fr::field_t::one, fr::field_t::neg_one, fr::field_t::neg_one, fr::field_t::zero });
+        { d_idx, c_idx, a_idx, fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::neg_one(), fr::field_t::zero() });
 
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { b_idx, a_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { b_idx, a_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
 
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
     composer.create_add_gate(
-        { a_idx, b_idx, c_idx, fr::field_t::one, fr::field_t::one, fr::field_t::neg_one, fr::field_t::zero });
+        { a_idx, b_idx, c_idx, fr::field_t::one(), fr::field_t::one(), fr::field_t::neg_one(), fr::field_t::zero() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -213,17 +213,17 @@ TEST(standard_composer, range_constraint)
         }
     }
 
-    uint32_t zero_idx = composer.add_variable(fr::field_t::zero);
-    uint32_t one_idx = composer.add_variable(fr::field_t::one);
+    uint32_t zero_idx = composer.add_variable(fr::field_t::zero());
+    uint32_t one_idx = composer.add_variable(fr::field_t::one());
     composer.create_big_add_gate({ zero_idx,
                                    zero_idx,
                                    zero_idx,
                                    one_idx,
-                                   fr::field_t::one,
-                                   fr::field_t::one,
-                                   fr::field_t::one,
-                                   fr::field_t::one,
-                                   fr::field_t::neg_one });
+                                   fr::field_t::one(),
+                                   fr::field_t::one(),
+                                   fr::field_t::one(),
+                                   fr::field_t::one(),
+                                   fr::field_t::neg_one() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -294,17 +294,17 @@ TEST(standard_composer, and_constraint)
         }
     }
 
-    uint32_t zero_idx = composer.add_variable(fr::field_t::zero);
-    uint32_t one_idx = composer.add_variable(fr::field_t::one);
+    uint32_t zero_idx = composer.add_variable(fr::field_t::zero());
+    uint32_t one_idx = composer.add_variable(fr::field_t::one());
     composer.create_big_add_gate({ zero_idx,
                                    zero_idx,
                                    zero_idx,
                                    one_idx,
-                                   fr::field_t::one,
-                                   fr::field_t::one,
-                                   fr::field_t::one,
-                                   fr::field_t::one,
-                                   fr::field_t::neg_one });
+                                   fr::field_t::one(),
+                                   fr::field_t::one(),
+                                   fr::field_t::one(),
+                                   fr::field_t::one(),
+                                   fr::field_t::neg_one() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -374,17 +374,17 @@ TEST(standard_composer, xor_constraint)
         }
     }
 
-    uint32_t zero_idx = composer.add_variable(fr::field_t::zero);
-    uint32_t one_idx = composer.add_variable(fr::field_t::one);
+    uint32_t zero_idx = composer.add_variable(fr::field_t::zero());
+    uint32_t one_idx = composer.add_variable(fr::field_t::one());
     composer.create_big_add_gate({ zero_idx,
                                    zero_idx,
                                    zero_idx,
                                    one_idx,
-                                   fr::field_t::one,
-                                   fr::field_t::one,
-                                   fr::field_t::one,
-                                   fr::field_t::one,
-                                   fr::field_t::neg_one });
+                                   fr::field_t::one(),
+                                   fr::field_t::one(),
+                                   fr::field_t::one(),
+                                   fr::field_t::one(),
+                                   fr::field_t::neg_one() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -418,9 +418,9 @@ TEST(standard_composer, big_add_gate_with_bit_extract)
                                left_idx,
                                fr::field_t(6),
                                -fr::field_t(6),
-                               fr::field_t::zero,
-                               fr::field_t::zero,
-                               fr::field_t::zero };
+                               fr::field_t::zero(),
+                               fr::field_t::zero(),
+                               fr::field_t::zero() };
 
         composer.create_big_add_gate_with_bit_extraction(gate);
     };

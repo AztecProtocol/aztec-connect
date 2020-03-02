@@ -29,16 +29,16 @@ waffle::ProverTurboLogicWidget create_test_widget_circuit(const size_t num_gates
     polynomial q_logic(num_gates);
     polynomial q_c(num_gates);
 
-    fr::field_t four = (fr::field_t::one + fr::field_t::one + fr::field_t::one + fr::field_t::one);
+    fr::field_t four = (fr::field_t::one() + fr::field_t::one() + fr::field_t::one() + fr::field_t::one());
 
     std::array<fr::field_t, 4> values{
-        fr::field_t::zero, fr::field_t::one, fr::field_t::one + fr::field_t::one, (fr::field_t::one + fr::field_t::one + fr::field_t::one)
+        fr::field_t::zero(), fr::field_t::one(), fr::field_t::one() + fr::field_t::one(), (fr::field_t::one() + fr::field_t::one() + fr::field_t::one())
     };
 
-    w_4[0] = fr::field_t::zero;
-    w_3[0] = fr::field_t::zero;
-    w_2[0] = fr::field_t::zero;
-    w_1[0] = fr::field_t::zero;
+    w_4[0] = fr::field_t::zero();
+    w_3[0] = fr::field_t::zero();
+    w_2[0] = fr::field_t::zero();
+    w_1[0] = fr::field_t::zero();
     for (uint64_t i = 1; i < num_gates; ++i) {
         uint64_t left = (i - 1) & 3;
         uint64_t right = ((i - 1) / 4) & 3;
@@ -46,32 +46,32 @@ waffle::ProverTurboLogicWidget create_test_widget_circuit(const size_t num_gates
         if (xor_gates && and_gates) {
             if (((i / 16) & 1) == 1) {
                 out = left ^ right;
-                q_c[i - 1] = fr::field_t::neg_one;
-                q_logic[i - 1] = fr::field_t::neg_one;
+                q_c[i - 1] = fr::field_t::neg_one();
+                q_logic[i - 1] = fr::field_t::neg_one();
             } else {
                 out = left & right;
-                q_c[i - 1] = fr::field_t::one;
-                q_logic[i - 1] = fr::field_t::one;
+                q_c[i - 1] = fr::field_t::one();
+                q_logic[i - 1] = fr::field_t::one();
             }
         }
         else if (xor_gates) {
             out = left ^ right;
-            q_c[i - 1] = fr::field_t::neg_one;
-            q_logic[i - 1] = fr::field_t::neg_one;
+            q_c[i - 1] = fr::field_t::neg_one();
+            q_logic[i - 1] = fr::field_t::neg_one();
         }
         else {
             out = left & right;
-            q_c[i - 1] = fr::field_t::one;
-            q_logic[i - 1] = fr::field_t::one;
+            q_c[i - 1] = fr::field_t::one();
+            q_logic[i - 1] = fr::field_t::one();
         }
         w_1[i] = (w_1[i - 1] * four + values[left]);
         w_2[i] = (w_2[i - 1] * four + values[right]);
         w_4[i] = (w_4[i - 1] * four + values[out]);
         w_3[i - 1] = values[left] * values[right];
     }
-    w_3[num_gates - 1] = fr::field_t::zero;
-    q_c[num_gates - 1] = fr::field_t::zero;
-    q_logic[num_gates - 1] = fr::field_t::zero;
+    w_3[num_gates - 1] = fr::field_t::zero();
+    q_c[num_gates - 1] = fr::field_t::zero();
+    q_logic[num_gates - 1] = fr::field_t::zero();
 
     polynomial& w_1_fft = key->wire_ffts.at("w_1_fft");
     polynomial& w_2_fft = key->wire_ffts.at("w_2_fft");
@@ -152,7 +152,7 @@ waffle::ProverTurboLogicWidget create_test_widget_circuit(const size_t num_gates
 
     key->quotient_large = polynomial(num_gates * 4);
     for (size_t i = 0; i < num_gates * 4; ++i) {
-        key->quotient_large[i] = fr::field_t::zero;
+        key->quotient_large[i] = fr::field_t::zero();
     }
 
     waffle::ProverTurboLogicWidget widget(key.get(), witness.get());
@@ -170,10 +170,10 @@ TEST(turbo_logic_widget, xor_quotient_polynomial_satisfiability)
 
     transcript::Transcript transcript = test_helpers::create_dummy_standard_transcript();
 
-    widget.compute_quotient_contribution(fr::field_t::one, transcript);
+    widget.compute_quotient_contribution(fr::field_t::one(), transcript);
 
     for (size_t i = 0; i < num_gates * 4; i += 4) {
-        EXPECT_EQ((key->quotient_large[i] == fr::field_t::zero), true);
+        EXPECT_EQ((key->quotient_large[i] == fr::field_t::zero()), true);
     }
 }
 
@@ -187,10 +187,10 @@ TEST(turbo_logic_widget, and_quotient_polynomial_satisfiability)
 
     transcript::Transcript transcript = test_helpers::create_dummy_standard_transcript();
 
-    widget.compute_quotient_contribution(fr::field_t::one, transcript);
+    widget.compute_quotient_contribution(fr::field_t::one(), transcript);
 
     for (size_t i = 0; i < num_gates * 4; i += 4) {
-        EXPECT_EQ((key->quotient_large[i] == fr::field_t::zero), true);
+        EXPECT_EQ((key->quotient_large[i] == fr::field_t::zero()), true);
     }
 }
 
@@ -205,10 +205,10 @@ TEST(turbo_logic_widget, and_xor_quotient_polynomial_satisfiability)
 
     transcript::Transcript transcript = test_helpers::create_dummy_standard_transcript();
 
-    widget.compute_quotient_contribution(fr::field_t::one, transcript);
+    widget.compute_quotient_contribution(fr::field_t::one(), transcript);
 
     for (size_t i = 0; i < num_gates * 4; i += 4) {
-        EXPECT_EQ((key->quotient_large[i] == fr::field_t::zero), true);
+        EXPECT_EQ((key->quotient_large[i] == fr::field_t::zero()), true);
     }
 }
 
@@ -222,7 +222,7 @@ TEST(turbo_logic_widget, xor_compute_linear_contribution)
 
     transcript::Transcript transcript = test_helpers::create_dummy_standard_transcript();
 
-    widget.compute_quotient_contribution(fr::field_t::one, transcript);
+    widget.compute_quotient_contribution(fr::field_t::one(), transcript);
 
     barretenberg::polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(
         key->quotient_large.get_coefficients(), key->small_domain, key->large_domain);
@@ -247,9 +247,9 @@ TEST(turbo_logic_widget, xor_compute_linear_contribution)
     
     for (size_t i = 0; i < num_gates; ++i)
     {
-        key->linear_poly[i] = fr::field_t::zero;
+        key->linear_poly[i] = fr::field_t::zero();
     }
-    widget.compute_linear_contribution(fr::field_t::one, transcript, key->linear_poly);
+    widget.compute_linear_contribution(fr::field_t::one(), transcript, key->linear_poly);
 
     fr::field_t quotient_eval = key->quotient_large.evaluate(z_challenge, 4 * num_gates);
     fr::field_t result = key->linear_poly.evaluate(z_challenge, num_gates);

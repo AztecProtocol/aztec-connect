@@ -109,9 +109,9 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
     bool field_elements_valid = true;
     for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
-        field_elements_valid = field_elements_valid && !(sigma_evaluations[i] == fr::field_t::zero);
+        field_elements_valid = field_elements_valid && !(sigma_evaluations[i] == fr::field_t::zero());
     }
-    field_elements_valid = field_elements_valid && !(linear_eval == fr::field_t::zero);
+    field_elements_valid = field_elements_valid && !(linear_eval == fr::field_t::zero());
 
     if (!field_elements_valid) {
         printf("proof field elements not valid!\n");
@@ -138,7 +138,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     fr::field_t alpha = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("alpha").begin());
     fr::field_t z_challenge = fr::field_t::serialize_from_buffer(transcript.apply_fiat_shamir("z").begin());
 
-    fr::field_t t_eval = fr::field_t::zero;
+    fr::field_t t_eval = fr::field_t::zero();
 
     barretenberg::polynomial_arithmetic::lagrange_evaluations lagrange_evals =
         barretenberg::polynomial_arithmetic::get_lagrange_evaluations(z_challenge, key->domain);
@@ -155,7 +155,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
         alpha_pow[i] = alpha_pow[i - 1] * alpha_pow[0];
     }
 
-    fr::field_t sigma_contribution = fr::field_t::one;
+    fr::field_t sigma_contribution = fr::field_t::one();
     for (size_t i = 0; i < program_settings::program_width - 1; ++i) {
         T0 = sigma_evaluations[i] * beta;
         T1 = wire_evaluations[i] + gamma;
@@ -329,7 +329,7 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     barretenberg::fq12::field_t result = barretenberg::pairing::reduced_ate_pairing_batch_precomputed(
         P_affine, key->reference_string.precomputed_g2_lines, 2);
 
-    return (result == barretenberg::fq12::field_t::one);
+    return (result == barretenberg::fq12::field_t::one());
 }
 
 template class VerifierBase<standard_settings>;

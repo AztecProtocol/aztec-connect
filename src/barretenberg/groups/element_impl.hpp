@@ -27,7 +27,7 @@ template <class Fq, class Fr, class T>
 constexpr element<Fq, Fr, T>::element(const affine_element<Fq, Fr, T>& other) noexcept
     : x(other.x)
     , y(other.y)
-    , z(Fq::one)
+    , z(Fq::one())
 {}
 
 template <class Fq, class Fr, class T>
@@ -133,7 +133,7 @@ constexpr void element<Fq, Fr, T>::self_mixed_add_or_sub(const affine_element<Fq
 {
     if (y.is_msb_set_word()) {
         conditional_negate_affine(other, *(affine_element<Fq, Fr, T>*)this, predicate);
-        z = Fq::one;
+        z = Fq::one();
         return;
     }
     // T0 = z1.z1
@@ -213,7 +213,7 @@ template <class Fq, class Fr, class T>
 constexpr element<Fq, Fr, T> element<Fq, Fr, T>::operator+=(const affine_element<Fq, Fr, T>& other) noexcept
 {
     if (y.is_msb_set_word()) {
-        *this = { other.x, other.y, Fq::one };
+        *this = { other.x, other.y, Fq::one() };
         return *this;
     }
     // T0 = z1.z1
@@ -491,7 +491,7 @@ element<Fq, Fr, T> element<Fq, Fr, T>::random_element(std::mt19937_64* engine,
         return result;
     } else {
         Fr scalar = Fr::random_element(engine, dist);
-        return (one * scalar);
+        return (element{ T::one_x, T::one_y, Fq::one() } * scalar);
     }
 }
 
@@ -512,7 +512,7 @@ element<Fq, Fr, T> element<Fq, Fr, T>::random_element(std::mt19937_64* engine,
 //         t0 = y.sqr();
 //         found_one = (yy == t0);
 //     }
-//     return { x, y, Fq::one };
+//     return { x, y, Fq::one() };
 // }
 
 template <class Fq, class Fr, class T>
@@ -521,7 +521,7 @@ element<Fq, Fr, T> element<Fq, Fr, T>::mul_without_endomorphism(const Fr& expone
     const Fr converted_scalar = exponent.from_montgomery_form();
 
     if (converted_scalar.is_zero()) {
-        element result{ Fq::zero, Fq::zero, Fq::zero };
+        element result{ Fq::zero(), Fq::zero(), Fq::zero() };
         result.self_set_infinity();
         return result;
     }
@@ -544,7 +544,7 @@ element<Fq, Fr, T> element<Fq, Fr, T>::mul_with_endomorphism(const Fr& exponent)
     const Fr converted_scalar = exponent.from_montgomery_form();
 
     if (converted_scalar.is_zero()) {
-        element result{ Fq::zero, Fq::zero, Fq::zero };
+        element result{ Fq::zero(), Fq::zero(), Fq::zero() };
         result.self_set_infinity();
         return result;
     }
@@ -577,8 +577,8 @@ element<Fq, Fr, T> element<Fq, Fr, T>::mul_with_endomorphism(const Fr& exponent)
     wnaf::fixed_wnaf<2, num_wnaf_bits>(&endo_scalar.data[0], &wnaf_table[0], skew, 0);
     wnaf::fixed_wnaf<2, num_wnaf_bits>(&endo_scalar.data[2], &wnaf_table[1], endo_skew, 0);
 
-    element work_element = one;
-    element dummy_element = one;
+    element work_element{ T::one_x, T::one_y, Fq::one() };
+    element dummy_element{ T::one_x, T::one_y, Fq::one() };
     affine_element<Fq, Fr, T> temporary;
     work_element.self_set_infinity();
 
@@ -594,7 +594,7 @@ element<Fq, Fr, T> element<Fq, Fr, T>::mul_with_endomorphism(const Fr& exponent)
         wnaf_entry = wnaf_table[2 * i + 1];
         index = wnaf_entry & 0x0fffffffU;
         sign = static_cast<bool>((wnaf_entry >> 31) & 1);
-        temporary = { lookup_table[index].x * Fq::beta, lookup_table[index].y };
+        temporary = { lookup_table[index].x * Fq::beta(), lookup_table[index].y };
         work_element.self_mixed_add_or_sub(temporary, !sign);
 
         if (i != num_rounds - 1) {
@@ -612,7 +612,7 @@ element<Fq, Fr, T> element<Fq, Fr, T>::mul_with_endomorphism(const Fr& exponent)
         dummy_element += temporary;
     }
 
-    temporary = { lookup_table[0].x * Fq::beta, lookup_table[0].y };
+    temporary = { lookup_table[0].x * Fq::beta(), lookup_table[0].y };
 
     if (endo_skew) {
         work_element += temporary;
@@ -641,7 +641,7 @@ template <typename Fq, typename Fr, typename T>
 void element<Fq, Fr, T>::batch_normalize(element* elements, const size_t num_elements) noexcept
 {
     Fq* temporaries = new Fq[num_elements * 2];
-    Fq accumulator = Fq::one;
+    Fq accumulator = Fq::one();
 
     // Iterate over the points, computing the product of their z-coordinates.
     // At each iteration, store the currently-accumulated z-coordinate in `temporaries`
@@ -685,7 +685,7 @@ void element<Fq, Fr, T>::batch_normalize(element* elements, const size_t num_ele
             elements[i].y *= (zz_inv * z_inv);
             accumulator *= elements[i].z;
         }
-        elements[i].z = Fq::one;
+        elements[i].z = Fq::one();
     }
 
     delete[] temporaries;

@@ -33,7 +33,7 @@ constexpr uint64_t field<T>::mac(
     carry_out = (uint64_t)(res >> 64);
     return (uint64_t)res;
 #else
-    auto result = mul_wide(b, c, r, carry_out);
+    auto result = mul_wide(b, c);
     result.first += a;
     const uint64_t overflow_c = (result.first < a);
     result.first += carry_in;
@@ -56,7 +56,7 @@ constexpr void field<T>::mac(const uint64_t a,
     out = (uint64_t)(res);
     carry_out = (uint64_t)(res >> 64);
 #else
-    auto result = mul_wide(b, c, r, carry_out);
+    auto result = mul_wide(b, c);
     result.first += a;
     const uint64_t overflow_c = (result.first < a);
     result.first += carry_in;
@@ -77,7 +77,7 @@ constexpr uint64_t field<T>::mac_mini(const uint64_t a,
     carry_out = (uint64_t)(res >> 64);
     return (uint64_t)(res);
 #else
-    auto result = mul_wide(b, c, r, carry_out);
+    auto result = mul_wide(b, c);
     result.first += a;
     const uint64_t overflow_c = (result.first < a);
     carry_out = result.second + (overflow_c);
@@ -94,7 +94,7 @@ constexpr void field<T>::mac_mini(
     out = (uint64_t)(res);
     carry_out = (uint64_t)(res >> 64);
 #else
-    auto result = mul_wide(b, c, r, carry_out);
+    auto result = mul_wide(b, c);
     result.first += a;
     const uint64_t overflow_c = (result.first < a);
     carry_out = result.second + (overflow_c);
@@ -109,7 +109,7 @@ constexpr uint64_t field<T>::mac_discard_lo(const uint64_t a, const uint64_t b, 
     const uint128_t res = (uint128_t)a + ((uint128_t)b * (uint128_t)c);
     return (uint64_t)(res >> 64);
 #else
-    auto result = mul_wide(b, c, r, carry_out);
+    auto result = mul_wide(b, c);
     result.first += a;
     const uint64_t overflow_c = (result.first < a);
     result.second += (overflow_c);
@@ -151,7 +151,7 @@ constexpr uint64_t field<T>::sbb(const uint64_t a,
     uint64_t borrow_temp_1 = t_1 > a;
     uint64_t t_2 = t_1 - b;
     uint64_t borrow_temp_2 = t_2 > t_1;
-    borrow_out = 0ULL = (borrow_temp_1 | borrow_temp_2);
+    borrow_out = 0ULL - (borrow_temp_1 | borrow_temp_2);
     return t_2;
 #endif
 }
@@ -360,7 +360,7 @@ template <class T> constexpr field<T> field<T>::montgomery_square() const noexce
     return { t0, t1, t2, t3 };
 }
 
-template <class T> constexpr class field<T>::wide_array field<T>::mul_512(const field& other) const noexcept {
+template <class T> constexpr struct field<T>::wide_array field<T>::mul_512(const field& other) const noexcept {
     uint64_t carry_2 = 0;
     auto [r0, carry] = mul_wide(data[0], other.data[0]);
     uint64_t r1 = mac_mini(carry, data[0], other.data[1], carry);

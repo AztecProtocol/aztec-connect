@@ -26,6 +26,7 @@ template <class Params> struct alignas(32) field {
     {
         self_to_montgomery_form();
     }
+
     constexpr field(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t d) noexcept
         : data{ a, b, c, d } {};
 
@@ -40,83 +41,84 @@ template <class Params> struct alignas(32) field {
 
     alignas(32) uint64_t data[4];
 
-    static constexpr field modulus = field(Params::modulus_0, Params::modulus_1, Params::modulus_2, Params::modulus_3);
-    static constexpr field twice_modulus =
-        field(Params::twice_modulus_0, Params::twice_modulus_1, Params::twice_modulus_2, Params::twice_modulus_3);
-    static constexpr field two_inv = field(Params::two_inv_0, Params::two_inv_1, Params::two_inv_2, Params::two_inv_3);
-    static constexpr field beta =
-        field(Params::cube_root_0, Params::cube_root_1, Params::cube_root_2, Params::cube_root_3);
-    static constexpr field multiplicative_generator = field(Params::multiplicative_generator_0,
-                                                            Params::multiplicative_generator_1,
-                                                            Params::multiplicative_generator_2,
-                                                            Params::multiplicative_generator_3);
-    static constexpr field multiplicative_generator_inverse = field(Params::multiplicative_generator_inverse_0,
-                                                                    Params::multiplicative_generator_inverse_1,
-                                                                    Params::multiplicative_generator_inverse_2,
-                                                                    Params::multiplicative_generator_inverse_3);
-    static constexpr field one = field(Params::one_mont_0, Params::one_mont_1, Params::one_mont_2, Params::one_mont_3);
-    static constexpr field zero = field(0ULL, 0ULL, 0ULL, 0ULL);
-    static constexpr field neg_one = zero - one;
-    static constexpr field coset_generators[15] = { field(Params::coset_generators_0[0],
-                                                          Params::coset_generators_1[0],
-                                                          Params::coset_generators_2[0],
-                                                          Params::coset_generators_3[0]),
-                                                    field(Params::coset_generators_0[1],
-                                                          Params::coset_generators_1[1],
-                                                          Params::coset_generators_2[1],
-                                                          Params::coset_generators_3[1]),
-                                                    field(Params::coset_generators_0[2],
-                                                          Params::coset_generators_1[2],
-                                                          Params::coset_generators_2[2],
-                                                          Params::coset_generators_3[2]),
-                                                    field(Params::coset_generators_0[3],
-                                                          Params::coset_generators_1[3],
-                                                          Params::coset_generators_2[3],
-                                                          Params::coset_generators_3[3]),
-                                                    field(Params::coset_generators_0[4],
-                                                          Params::coset_generators_1[4],
-                                                          Params::coset_generators_2[4],
-                                                          Params::coset_generators_3[4]),
-                                                    field(Params::coset_generators_0[5],
-                                                          Params::coset_generators_1[5],
-                                                          Params::coset_generators_2[5],
-                                                          Params::coset_generators_3[5]),
-                                                    field(Params::coset_generators_0[6],
-                                                          Params::coset_generators_1[6],
-                                                          Params::coset_generators_2[6],
-                                                          Params::coset_generators_3[6]),
-                                                    field(Params::coset_generators_0[7],
-                                                          Params::coset_generators_1[7],
-                                                          Params::coset_generators_2[7],
-                                                          Params::coset_generators_3[7]),
-                                                    field(Params::coset_generators_0[8],
-                                                          Params::coset_generators_1[8],
-                                                          Params::coset_generators_2[8],
-                                                          Params::coset_generators_3[8]),
-                                                    field(Params::coset_generators_0[9],
-                                                          Params::coset_generators_1[9],
-                                                          Params::coset_generators_2[9],
-                                                          Params::coset_generators_3[9]),
-                                                    field(Params::coset_generators_0[10],
-                                                          Params::coset_generators_1[10],
-                                                          Params::coset_generators_2[10],
-                                                          Params::coset_generators_3[10]),
-                                                    field(Params::coset_generators_0[11],
-                                                          Params::coset_generators_1[11],
-                                                          Params::coset_generators_2[11],
-                                                          Params::coset_generators_3[11]),
-                                                    field(Params::coset_generators_0[12],
-                                                          Params::coset_generators_1[12],
-                                                          Params::coset_generators_2[12],
-                                                          Params::coset_generators_3[12]),
-                                                    field(Params::coset_generators_0[13],
-                                                          Params::coset_generators_1[13],
-                                                          Params::coset_generators_2[13],
-                                                          Params::coset_generators_3[13]),
-                                                    field(Params::coset_generators_0[14],
-                                                          Params::coset_generators_1[14],
-                                                          Params::coset_generators_2[14],
-                                                          Params::coset_generators_3[14]) };
+    static constexpr uint256_t modulus =
+        uint256_t{ Params::modulus_0, Params::modulus_1, Params::modulus_2, Params::modulus_3 };
+    static constexpr uint256_t twice_modulus = modulus + modulus;
+
+    static constexpr field beta()
+    {
+        return field(Params::cube_root_0, Params::cube_root_1, Params::cube_root_2, Params::cube_root_3);
+    };
+    // static const field one;
+    // static const field zero;
+    static constexpr field zero() { return field(0, 0, 0, 0); }
+    static constexpr field neg_one() { return -field(1); }
+    static constexpr field one() { return field(1); }
+
+    static constexpr field coset_generator(const size_t idx)
+    {
+        constexpr field generators[15] = { field(Params::coset_generators_0[0],
+                                                 Params::coset_generators_1[0],
+                                                 Params::coset_generators_2[0],
+                                                 Params::coset_generators_3[0]),
+                                           field(Params::coset_generators_0[1],
+                                                 Params::coset_generators_1[1],
+                                                 Params::coset_generators_2[1],
+                                                 Params::coset_generators_3[1]),
+                                           field(Params::coset_generators_0[2],
+                                                 Params::coset_generators_1[2],
+                                                 Params::coset_generators_2[2],
+                                                 Params::coset_generators_3[2]),
+                                           field(Params::coset_generators_0[3],
+                                                 Params::coset_generators_1[3],
+                                                 Params::coset_generators_2[3],
+                                                 Params::coset_generators_3[3]),
+                                           field(Params::coset_generators_0[4],
+                                                 Params::coset_generators_1[4],
+                                                 Params::coset_generators_2[4],
+                                                 Params::coset_generators_3[4]),
+                                           field(Params::coset_generators_0[5],
+                                                 Params::coset_generators_1[5],
+                                                 Params::coset_generators_2[5],
+                                                 Params::coset_generators_3[5]),
+                                           field(Params::coset_generators_0[6],
+                                                 Params::coset_generators_1[6],
+                                                 Params::coset_generators_2[6],
+                                                 Params::coset_generators_3[6]),
+                                           field(Params::coset_generators_0[7],
+                                                 Params::coset_generators_1[7],
+                                                 Params::coset_generators_2[7],
+                                                 Params::coset_generators_3[7]),
+                                           field(Params::coset_generators_0[8],
+                                                 Params::coset_generators_1[8],
+                                                 Params::coset_generators_2[8],
+                                                 Params::coset_generators_3[8]),
+                                           field(Params::coset_generators_0[9],
+                                                 Params::coset_generators_1[9],
+                                                 Params::coset_generators_2[9],
+                                                 Params::coset_generators_3[9]),
+                                           field(Params::coset_generators_0[10],
+                                                 Params::coset_generators_1[10],
+                                                 Params::coset_generators_2[10],
+                                                 Params::coset_generators_3[10]),
+                                           field(Params::coset_generators_0[11],
+                                                 Params::coset_generators_1[11],
+                                                 Params::coset_generators_2[11],
+                                                 Params::coset_generators_3[11]),
+                                           field(Params::coset_generators_0[12],
+                                                 Params::coset_generators_1[12],
+                                                 Params::coset_generators_2[12],
+                                                 Params::coset_generators_3[12]),
+                                           field(Params::coset_generators_0[13],
+                                                 Params::coset_generators_1[13],
+                                                 Params::coset_generators_2[13],
+                                                 Params::coset_generators_3[13]),
+                                           field(Params::coset_generators_0[14],
+                                                 Params::coset_generators_1[14],
+                                                 Params::coset_generators_2[14],
+                                                 Params::coset_generators_3[14]) };
+        return generators[idx];
+    }
 
     // static constexpr std::array<field, 15> coset_generators = compute_coset_generators();
 
@@ -182,7 +184,7 @@ template <class Params> struct alignas(32) field {
     BBERG_INLINE constexpr field sqr() const noexcept;
     BBERG_INLINE constexpr void self_sqr() noexcept;
 
-    BBERG_INLINE constexpr field pow(const field& exponent) const noexcept;
+    BBERG_INLINE constexpr field pow(const uint256_t& exponent) const noexcept;
     BBERG_INLINE constexpr field pow(const uint64_t exponent) const noexcept;
     constexpr field invert() const noexcept;
     static void batch_invert(field* coeffs, const size_t n) noexcept;
@@ -221,7 +223,7 @@ template <class Params> struct alignas(32) field {
 
     static field serialize_from_buffer(const uint8_t* buffer)
     {
-        field result = zero;
+        field result{ 0, 0, 0, 0 };
         for (size_t j = 0; j < 4; ++j) {
             for (size_t i = 0; i < 8; ++i) {
                 uint8_t byte = buffer[j * 8 + i];
@@ -240,7 +242,10 @@ template <class Params> struct alignas(32) field {
     BBERG_INLINE constexpr field conditionally_subtract_from_double_modulus(const uint64_t predicate) const noexcept
     {
         if (predicate) {
-            return twice_modulus - *this;
+            constexpr field p{
+                twice_modulus.data[0], twice_modulus.data[1], twice_modulus.data[2], twice_modulus.data[3]
+            };
+            return p - *this;
         } else {
             return *this;
         }
@@ -310,7 +315,7 @@ template <class Params> struct alignas(32) field {
         field q2_lo{ q2.data[0], q2.data[1], q2.data[2], q2.data[3] };
 
         field t1 = (q2_lo - q1_lo).reduce_once();
-        field t2 = (t1 * beta + input).reduce_once();
+        field t2 = (t1 * beta() + input).reduce_once();
         k2.data[0] = t1.data[0];
         k2.data[1] = t1.data[1];
         k1.data[0] = t2.data[0];
@@ -319,10 +324,16 @@ template <class Params> struct alignas(32) field {
 
     static void compute_coset_generators(const size_t n, const size_t subgroup_size, field* result)
     {
+        constexpr field multiplicative_generator{
+            Params::multiplicative_generator_0,
+            Params::multiplicative_generator_1,
+            Params::multiplicative_generator_2,
+            Params::multiplicative_generator_3,
+        };
         if (n > 0) {
             result[0] = multiplicative_generator;
         }
-        field work_variable = multiplicative_generator + one;
+        field work_variable = multiplicative_generator + one();
 
         size_t count = 1;
         while (count < n) {
@@ -333,7 +344,7 @@ template <class Params> struct alignas(32) field {
             for (size_t j = 0; j < count; ++j) {
                 field target_element = result[j] * work_inverse;
                 field subgroup_check = target_element.pow(subgroup_size);
-                if (subgroup_check == one) {
+                if (subgroup_check == one()) {
                     valid = false;
                     break;
                 }
@@ -342,7 +353,7 @@ template <class Params> struct alignas(32) field {
                 result[count] = (work_variable);
                 ++count;
             }
-            work_variable = work_variable + one;
+            work_variable = work_variable + one();
         }
     }
 
@@ -370,11 +381,15 @@ template <class Params> struct alignas(32) field {
     static field random_element(std::mt19937_64* engine = nullptr,
                                 std::uniform_int_distribution<uint64_t>* dist = nullptr) noexcept;
 
+    // BBERG_INLINE sstatic constexpr void butterfly(field& left, field& right) noexcept;
+#ifndef DISABLE_SHENANIGANS
+    BBERG_INLINE static void asm_self_mul_with_coarse_reduction(const field& a, const field& b) noexcept;
+#endif
   private:
     struct wnaf_table {
         uint8_t windows[64];
 
-        constexpr wnaf_table(const field& target)
+        constexpr wnaf_table(const uint256_t& target)
             : windows{ (uint8_t)(target.data[0] & 15),         (uint8_t)((target.data[0] >> 4) & 15),
                        (uint8_t)((target.data[0] >> 8) & 15),  (uint8_t)((target.data[0] >> 12) & 15),
                        (uint8_t)((target.data[0] >> 16) & 15), (uint8_t)((target.data[0] >> 20) & 15),
@@ -409,17 +424,6 @@ template <class Params> struct alignas(32) field {
                        (uint8_t)((target.data[3] >> 56) & 15), (uint8_t)((target.data[3] >> 60) & 15) }
         {}
     };
-
-    static constexpr field modulus_plus_one =
-        field(Params::modulus_0 + 1ULL, Params::modulus_1, Params::modulus_2, Params::modulus_3);
-    static constexpr field modulus_minus_two =
-        field(Params::modulus_0 - 2ULL, Params::modulus_1, Params::modulus_2, Params::modulus_3);
-    static constexpr field sqrt_exponent =
-        field(Params::sqrt_exponent_0, Params::sqrt_exponent_1, Params::sqrt_exponent_2, Params::sqrt_exponent_3);
-    static constexpr field r_squared =
-        field(Params::r_squared_0, Params::r_squared_1, Params::r_squared_2, Params::r_squared_3);
-    static constexpr field root_of_unity =
-        field(Params::primitive_root_0, Params::primitive_root_1, Params::primitive_root_2, Params::primitive_root_3);
 
     BBERG_INLINE static constexpr std::pair<uint64_t, uint64_t> mul_wide(const uint64_t a, const uint64_t b) noexcept;
 
@@ -481,11 +485,10 @@ template <class Params> struct alignas(32) field {
     BBERG_INLINE static field asm_sub_with_coarse_reduction(const field& a, const field& b) noexcept;
     BBERG_INLINE static field asm_add_without_reduction(const field& a, const field& b) noexcept;
 
-    BBERG_INLINE static void asm_self_mul(const field& a, const field& b) noexcept;
     BBERG_INLINE static void asm_self_sqr(const field& a) noexcept;
     BBERG_INLINE static void asm_self_add(const field& a, const field& b) noexcept;
     BBERG_INLINE static void asm_self_sub(const field& a, const field& b) noexcept;
-    BBERG_INLINE static void asm_self_mul_with_coarse_reduction(const field& a, const field& b) noexcept;
+    // BBERG_INLINE static void asm_self_mul_with_coarse_reduction(const field& a, const field& b) noexcept;
     BBERG_INLINE static void asm_self_sqr_with_coarse_reduction(const field& a) noexcept;
     BBERG_INLINE static void asm_self_add_with_coarse_reduction(const field& a, const field& b) noexcept;
     BBERG_INLINE static void asm_self_sub_with_coarse_reduction(const field& a, const field& b) noexcept;
@@ -501,6 +504,97 @@ template <class Params> struct alignas(32) field {
     static constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 #endif
 };
+
+// template <class Params>
+// constexpr field<Params> field<Params>::modulus_plus_one =
+//     field(Params::modulus_0 + 1ULL, Params::modulus_1, Params::modulus_2, Params::modulus_3);
+// template <class Params>
+// constexpr field<Params> field<Params>::modulus_minus_two =
+//     field(Params::modulus_0 - 2ULL, Params::modulus_1, Params::modulus_2, Params::modulus_3);
+// template <class Params>
+// template <class Params>
+// constexpr field<Params> field<Params>::r_squared =
+//     field(Params::r_squared_0, Params::r_squared_1, Params::r_squared_2, Params::r_squared_3);
+// template <class Params>
+
+// template <class Params>
+// constexpr field<Params> field<Params>::modulus =
+//     field<Params>(Params::modulus_0, Params::modulus_1, Params::modulus_2, Params::modulus_3);
+// template <class Params>
+// constexpr field<Params> field<Params>::twice_modulus =
+//     field<Params>(Params::twice_modulus_0, Params::twice_modulus_1, Params::twice_modulus_2,
+//     Params::twice_modulus_3);
+// template <class Params>
+// constexpr field<Params> field<Params>::beta =
+//     field<Params>(Params::cube_root_0, Params::cube_root_1, Params::cube_root_2, Params::cube_root_3);
+// template <class Params>
+// template <class Params>
+// constexpr field<Params> field<Params>::one =
+//     field<Params>(Params::one_mont_0, Params::one_mont_1, Params::one_mont_2, Params::one_mont_3);
+// template <class Params> constexpr field<Params> field<Params>::zero = field(0ULL, 0ULL, 0ULL, 0ULL);
+// template <class Params> constexpr field<Params> field<Params>::neg_one = zero - one;
+// template <class Params>
+// constexpr field<Params> field<Params>::coset_generators[15] = { field<Params>(Params::coset_generators_0[0],
+//                                                                               Params::coset_generators_1[0],
+//                                                                               Params::coset_generators_2[0],
+//                                                                               Params::coset_generators_3[0]),
+//                                                                 field<Params>(Params::coset_generators_0[1],
+//                                                                               Params::coset_generators_1[1],
+//                                                                               Params::coset_generators_2[1],
+//                                                                               Params::coset_generators_3[1]),
+//                                                                 field<Params>(Params::coset_generators_0[2],
+//                                                                               Params::coset_generators_1[2],
+//                                                                               Params::coset_generators_2[2],
+//                                                                               Params::coset_generators_3[2]),
+//                                                                 field<Params>(Params::coset_generators_0[3],
+//                                                                               Params::coset_generators_1[3],
+//                                                                               Params::coset_generators_2[3],
+//                                                                               Params::coset_generators_3[3]),
+//                                                                 field<Params>(Params::coset_generators_0[4],
+//                                                                               Params::coset_generators_1[4],
+//                                                                               Params::coset_generators_2[4],
+//                                                                               Params::coset_generators_3[4]),
+//                                                                 field<Params>(Params::coset_generators_0[5],
+//                                                                               Params::coset_generators_1[5],
+//                                                                               Params::coset_generators_2[5],
+//                                                                               Params::coset_generators_3[5]),
+//                                                                 field<Params>(Params::coset_generators_0[6],
+//                                                                               Params::coset_generators_1[6],
+//                                                                               Params::coset_generators_2[6],
+//                                                                               Params::coset_generators_3[6]),
+//                                                                 field<Params>(Params::coset_generators_0[7],
+//                                                                               Params::coset_generators_1[7],
+//                                                                               Params::coset_generators_2[7],
+//                                                                               Params::coset_generators_3[7]),
+//                                                                 field<Params>(Params::coset_generators_0[8],
+//                                                                               Params::coset_generators_1[8],
+//                                                                               Params::coset_generators_2[8],
+//                                                                               Params::coset_generators_3[8]),
+//                                                                 field<Params>(Params::coset_generators_0[9],
+//                                                                               Params::coset_generators_1[9],
+//                                                                               Params::coset_generators_2[9],
+//                                                                               Params::coset_generators_3[9]),
+//                                                                 field<Params>(Params::coset_generators_0[10],
+//                                                                               Params::coset_generators_1[10],
+//                                                                               Params::coset_generators_2[10],
+//                                                                               Params::coset_generators_3[10]),
+//                                                                 field<Params>(Params::coset_generators_0[11],
+//                                                                               Params::coset_generators_1[11],
+//                                                                               Params::coset_generators_2[11],
+//                                                                               Params::coset_generators_3[11]),
+//                                                                 field<Params>(Params::coset_generators_0[12],
+//                                                                               Params::coset_generators_1[12],
+//                                                                               Params::coset_generators_2[12],
+//                                                                               Params::coset_generators_3[12]),
+//                                                                 field<Params>(Params::coset_generators_0[13],
+//                                                                               Params::coset_generators_1[13],
+//                                                                               Params::coset_generators_2[13],
+//                                                                               Params::coset_generators_3[13]),
+//                                                                 field<Params>(Params::coset_generators_0[14],
+//                                                                               Params::coset_generators_1[14],
+//                                                                               Params::coset_generators_2[14],
+//                                                                               Params::coset_generators_3[14]) };
+
 } // namespace barretenberg
 
 #include "./field_impl.hpp"

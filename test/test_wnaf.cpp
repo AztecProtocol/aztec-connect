@@ -118,7 +118,7 @@ TEST(wnaf, wnaf_fixed_with_endo_split)
     recover_fixed_wnaf(endo_wnaf, endo_skew, k2_recovered.data[1], k2_recovered.data[0], 5);
 
     fr::field_t result;
-    result = k2_recovered * fr::field_t::beta;
+    result = k2_recovered * fr::field_t::beta();
     result = k1_recovered - result;
 
     EXPECT_EQ(result, k);
