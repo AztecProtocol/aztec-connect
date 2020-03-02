@@ -183,11 +183,11 @@ constexpr void field<T>::square_accumulate(const uint64_t a,
 
 template <class T> constexpr field<T> field<T>::reduce() const noexcept
 {
-    uint64_t t0 = data[0] + T::not_modulus_0;
+    uint64_t t0 = data[0] + not_modulus.data[0];
     uint64_t c = t0 < data[0];
-    auto t1 = addc(data[1], T::not_modulus_1, c, c);
-    auto t2 = addc(data[2], T::not_modulus_2, c, c);
-    auto t3 = addc(data[3], T::not_modulus_3, c, c);
+    auto t1 = addc(data[1], not_modulus.data[1], c, c);
+    auto t2 = addc(data[2], not_modulus.data[2], c, c);
+    auto t3 = addc(data[3], not_modulus.data[3], c, c);
     const uint64_t selection_mask = 0ULL - c; // 0xffff... if we have overflowed.
     const uint64_t selection_mask_inverse = ~selection_mask;
     // if we overflow, we want to swap
@@ -207,11 +207,11 @@ template <class T> constexpr field<T> field<T>::add(const field& other) const no
     auto r2 = addc(data[2], other.data[2], c, c);
     uint64_t r3 = data[3] + other.data[3] + c;
 
-    uint64_t t0 = r0 + T::twice_not_modulus_0;
-    c = t0 < T::twice_not_modulus_0;
-    uint64_t t1 = addc(r1, T::twice_not_modulus_1, c, c);
-    uint64_t t2 = addc(r2, T::twice_not_modulus_2, c, c);
-    uint64_t t3 = addc(r3, T::twice_not_modulus_3, c, c);
+    uint64_t t0 = r0 + twice_not_modulus.data[0];
+    c = t0 < twice_not_modulus.data[0];
+    uint64_t t1 = addc(r1, twice_not_modulus.data[1], c, c);
+    uint64_t t2 = addc(r2, twice_not_modulus.data[2], c, c);
+    uint64_t t3 = addc(r3, twice_not_modulus.data[3], c, c);
     const uint64_t selection_mask = 0ULL - c;
     const uint64_t selection_mask_inverse = ~selection_mask;
 
@@ -231,11 +231,11 @@ template <class T> constexpr field<T> field<T>::subtract(const field& other) con
     uint64_t r2 = sbb(data[2], other.data[2], borrow, borrow);
     uint64_t r3 = sbb(data[3], other.data[3], borrow, borrow);
 
-    r0 += (T::modulus_0 & borrow);
-    uint64_t carry = r0 < (T::modulus_0 & borrow);
-    r1 = addc(r1, T::modulus_1 & borrow, carry, carry);
-    r2 = addc(r2, T::modulus_2 & borrow, carry, carry);
-    r3 += (T::modulus_3 & borrow) + carry;
+    r0 += (modulus.data[0] & borrow);
+    uint64_t carry = r0 < (modulus.data[0] & borrow);
+    r1 = addc(r1, modulus.data[1] & borrow, carry, carry);
+    r2 = addc(r2, modulus.data[2] & borrow, carry, carry);
+    r3 += (modulus.data[3] & borrow) + carry;
 
     return { r0, r1, r2, r3 };
 }
@@ -248,11 +248,11 @@ template <class T> constexpr field<T> field<T>::subtract_coarse(const field& oth
     uint64_t r2 = sbb(data[2], other.data[2], borrow, borrow);
     uint64_t r3 = sbb(data[3], other.data[3], borrow, borrow);
 
-    r0 += (T::twice_modulus_0 & borrow);
-    uint64_t carry = r0 < (T::twice_modulus_0 & borrow);
-    r1 = addc(r1, T::twice_modulus_1 & borrow, carry, carry);
-    r2 = addc(r2, T::twice_modulus_2 & borrow, carry, carry);
-    r3 += (T::twice_modulus_3 & borrow) + carry;
+    r0 += (twice_modulus.data[0] & borrow);
+    uint64_t carry = r0 < (twice_modulus.data[0] & borrow);
+    r1 = addc(r1, twice_modulus.data[1] & borrow, carry, carry);
+    r2 = addc(r2, twice_modulus.data[2] & borrow, carry, carry);
+    r3 += (twice_modulus.data[3] & borrow) + carry;
 
     return { r0, r1, r2, r3 };
 }
@@ -261,47 +261,47 @@ template <class T> constexpr field<T> field<T>::montgomery_mul(const field& othe
 {
     auto [t0, c] = mul_wide(data[0], other.data[0]);
     uint64_t k = t0 * T::r_inv;
-    uint64_t a = mac_discard_lo(t0, k, T::modulus_0);
+    uint64_t a = mac_discard_lo(t0, k, modulus.data[0]);
 
     uint64_t t1 = mac_mini(a, data[0], other.data[1], a);
-    mac(t1, k, T::modulus_1, c, t0, c);
+    mac(t1, k, modulus.data[1], c, t0, c);
     uint64_t t2 = mac_mini(a, data[0], other.data[2], a);
-    mac(t2, k, T::modulus_2, c, t1, c);
+    mac(t2, k, modulus.data[2], c, t1, c);
     uint64_t t3 = mac_mini(a, data[0], other.data[3], a);
-    mac(t3, k, T::modulus_3, c, t2, c);
+    mac(t3, k, modulus.data[3], c, t2, c);
     t3 = c + a;
 
     mac_mini(t0, data[1], other.data[0], t0, a);
     k = t0 * T::r_inv;
-    c = mac_discard_lo(t0, k, T::modulus_0);
+    c = mac_discard_lo(t0, k, modulus.data[0]);
     mac(t1, data[1], other.data[1], a, t1, a);
-    mac(t1, k, T::modulus_1, c, t0, c);
+    mac(t1, k, modulus.data[1], c, t0, c);
     mac(t2, data[1], other.data[2], a, t2, a);
-    mac(t2, k, T::modulus_2, c, t1, c);
+    mac(t2, k, modulus.data[2], c, t1, c);
     mac(t3, data[1], other.data[3], a, t3, a);
-    mac(t3, k, T::modulus_3, c, t2, c);
+    mac(t3, k, modulus.data[3], c, t2, c);
     t3 = c + a;
 
     mac_mini(t0, data[2], other.data[0], t0, a);
     k = t0 * T::r_inv;
-    c = mac_discard_lo(t0, k, T::modulus_0);
+    c = mac_discard_lo(t0, k, modulus.data[0]);
     mac(t1, data[2], other.data[1], a, t1, a);
-    mac(t1, k, T::modulus_1, c, t0, c);
+    mac(t1, k, modulus.data[1], c, t0, c);
     mac(t2, data[2], other.data[2], a, t2, a);
-    mac(t2, k, T::modulus_2, c, t1, c);
+    mac(t2, k, modulus.data[2], c, t1, c);
     mac(t3, data[2], other.data[3], a, t3, a);
-    mac(t3, k, T::modulus_3, c, t2, c);
+    mac(t3, k, modulus.data[3], c, t2, c);
     t3 = c + a;
 
     mac_mini(t0, data[3], other.data[0], t0, a);
     k = t0 * T::r_inv;
-    c = mac_discard_lo(t0, k, T::modulus_0);
+    c = mac_discard_lo(t0, k, modulus.data[0]);
     mac(t1, data[3], other.data[1], a, t1, a);
-    mac(t1, k, T::modulus_1, c, t0, c);
+    mac(t1, k, modulus.data[1], c, t0, c);
     mac(t2, data[3], other.data[2], a, t2, a);
-    mac(t2, k, T::modulus_2, c, t1, c);
+    mac(t2, k, modulus.data[2], c, t1, c);
     mac(t3, data[3], other.data[3], a, t3, a);
-    mac(t3, k, T::modulus_3, c, t2, c);
+    mac(t3, k, modulus.data[3], c, t2, c);
     t3 = c + a;
     return { t0, t1, t2, t3 };
 }
@@ -320,10 +320,10 @@ template <class T> constexpr field<T> field<T>::montgomery_square() const noexce
 
     uint64_t round_carry = carry_lo;
     uint64_t k = t0 * T::r_inv;
-    carry_lo = mac_discard_lo(t0, k, T::modulus_0);
-    mac(t1, k, T::modulus_1, carry_lo, t0, carry_lo);
-    mac(t2, k, T::modulus_2, carry_lo, t1, carry_lo);
-    mac(t3, k, T::modulus_3, carry_lo, t2, carry_lo);
+    carry_lo = mac_discard_lo(t0, k, modulus.data[0]);
+    mac(t1, k, modulus.data[1], carry_lo, t0, carry_lo);
+    mac(t2, k, modulus.data[2], carry_lo, t1, carry_lo);
+    mac(t3, k, modulus.data[3], carry_lo, t2, carry_lo);
     t3 = carry_lo + round_carry;
 
     t1 = mac_mini(t1, data[1], data[1], carry_lo);
@@ -332,10 +332,10 @@ template <class T> constexpr field<T> field<T>::montgomery_square() const noexce
     square_accumulate(t3, data[3], data[1], carry_lo, carry_hi, t3, carry_lo, carry_hi);
     round_carry = carry_lo;
     k = t0 * T::r_inv;
-    carry_lo = mac_discard_lo(t0, k, T::modulus_0);
-    mac(t1, k, T::modulus_1, carry_lo, t0, carry_lo);
-    mac(t2, k, T::modulus_2, carry_lo, t1, carry_lo);
-    mac(t3, k, T::modulus_3, carry_lo, t2, carry_lo);
+    carry_lo = mac_discard_lo(t0, k, modulus.data[0]);
+    mac(t1, k, modulus.data[1], carry_lo, t0, carry_lo);
+    mac(t2, k, modulus.data[2], carry_lo, t1, carry_lo);
+    mac(t3, k, modulus.data[3], carry_lo, t2, carry_lo);
     t3 = carry_lo + round_carry;
 
     t2 = mac_mini(t2, data[2], data[2], carry_lo);
@@ -343,19 +343,19 @@ template <class T> constexpr field<T> field<T>::montgomery_square() const noexce
     square_accumulate(t3, data[3], data[2], carry_lo, carry_hi, t3, carry_lo, carry_hi);
     round_carry = carry_lo;
     k = t0 * T::r_inv;
-    carry_lo = mac_discard_lo(t0, k, T::modulus_0);
-    mac(t1, k, T::modulus_1, carry_lo, t0, carry_lo);
-    mac(t2, k, T::modulus_2, carry_lo, t1, carry_lo);
-    mac(t3, k, T::modulus_3, carry_lo, t2, carry_lo);
+    carry_lo = mac_discard_lo(t0, k, modulus.data[0]);
+    mac(t1, k, modulus.data[1], carry_lo, t0, carry_lo);
+    mac(t2, k, modulus.data[2], carry_lo, t1, carry_lo);
+    mac(t3, k, modulus.data[3], carry_lo, t2, carry_lo);
     t3 = carry_lo + round_carry;
 
     t3 = mac_mini(t3, data[3], data[3], carry_lo);
     k = t0 * T::r_inv;
     round_carry = carry_lo;
-    carry_lo = mac_discard_lo(t0, k, T::modulus_0);
-    mac(t1, k, T::modulus_1, carry_lo, t0, carry_lo);
-    mac(t2, k, T::modulus_2, carry_lo, t1, carry_lo);
-    mac(t3, k, T::modulus_3, carry_lo, t2, carry_lo);
+    carry_lo = mac_discard_lo(t0, k, modulus.data[0]);
+    mac(t1, k, modulus.data[1], carry_lo, t0, carry_lo);
+    mac(t2, k, modulus.data[2], carry_lo, t1, carry_lo);
+    mac(t3, k, modulus.data[3], carry_lo, t2, carry_lo);
     t3 = carry_lo + round_carry;
     return { t0, t1, t2, t3 };
 }

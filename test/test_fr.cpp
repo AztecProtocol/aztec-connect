@@ -326,13 +326,7 @@ TEST(fr, batch_invert)
     }
 }
 
-TEST(fr, coset_generator_consistency)
+TEST(fr, multiplicative_generator)
 {
-    size_t num_generators = 15;
-    std::vector<fr::field_t> generators(num_generators);
-    fr::field_t::compute_coset_generators(num_generators, 1 << 30, &generators[0]);
-    EXPECT_EQ(generators.size() == num_generators, true);
-    for (size_t i = 0; i < generators.size(); ++i) {
-        EXPECT_EQ((generators[i] == fr::field_t::coset_generator(i)), true);
-    }
+    EXPECT_EQ(fr::field_t::multiplicative_generator(), fr::field_t(5));
 }

@@ -404,17 +404,6 @@ TEST(fq, split_into_endomorphism_scalars_simple)
     }
 }
 
-TEST(fq, coset_generator_consistency)
-{
-    size_t num_generators = 15;
-    std::vector<fq::field_t> generators(num_generators);
-    fq::field_t::compute_coset_generators(num_generators, 1 << 30, &generators[0]);
-    EXPECT_EQ(generators.size() == num_generators, true);
-    for (size_t i = 0; i < generators.size(); ++i) {
-        EXPECT_EQ((generators[i] == fq::field_t::coset_generator(i)), true);
-    }
-}
-
 TEST(fq, serialize_to_buffer)
 {
     uint8_t buffer[32];
@@ -470,4 +459,12 @@ TEST(fq, serialize_from_buffer)
     fq::field_t result = fq::field_t::serialize_from_buffer(&buffer[0]);
 
     EXPECT_EQ((result == expected), true);
+}
+
+TEST(fq, multiplicative_generator)
+{
+    std::cout << fq::field_t::beta() << std::endl;
+    std::cout << fq::field_t::beta().sqr() << std::endl;
+    std::cout << fq::field_t::beta().sqr() * fq::field_t::beta() << std::endl;
+    EXPECT_EQ(fq::field_t::multiplicative_generator(), fq::field_t(3));
 }

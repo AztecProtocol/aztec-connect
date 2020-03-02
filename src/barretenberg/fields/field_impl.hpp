@@ -396,9 +396,9 @@ template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noex
     // We can iteratively transform t into ever smaller subgroups, until t = 1.
     // At each iteration, we need to find a new value for b, which we can obtain
     // by repeatedly squaring z^{Q}
-    constexpr uint256_t Q_minus_one_over_two{
-        T::Q_minus_one_over_two_0, T::Q_minus_one_over_two_1, T::Q_minus_one_over_two_2, T::Q_minus_one_over_two_3
-    };
+    constexpr uint256_t Q = (modulus - 1) >> static_cast<uint64_t>(primitive_root_log_size() - 1);
+    constexpr uint256_t Q_minus_one_over_two = (Q - 1) >> 2;
+
     // __to_montgomery_form(Q_minus_one_over_two, Q_minus_one_over_two);
     field z = coset_generator(0); // the generator is a non-residue
     field b = pow(Q_minus_one_over_two);
@@ -408,7 +408,7 @@ template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noex
     // check if t is a square with euler's criterion
     // if not, we don't have a quadratic residue and a has no square root!
     field check = t;
-    for (size_t i = 0; i < T::primitive_root_log_size - 1; ++i) {
+    for (size_t i = 0; i < primitive_root_log_size() - 1; ++i) {
         check.self_sqr();
     }
     if (check != one()) {
@@ -418,7 +418,7 @@ template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noex
     field t2 = t1 * z;
     field c = t2 * t1; // z^Q
 
-    size_t m = T::primitive_root_log_size;
+    size_t m = primitive_root_log_size();
 
     while (t != one()) {
         size_t i = 0;
@@ -519,7 +519,7 @@ template <class T> constexpr bool field<T>::is_zero() const noexcept
 template <class T> constexpr field<T> field<T>::get_root_of_unity(const size_t subgroup_size) noexcept
 {
     field r{ T::primitive_root_0, T::primitive_root_1, T::primitive_root_2, T::primitive_root_3 };
-    for (size_t i = T::primitive_root_log_size; i > subgroup_size; --i) {
+    for (size_t i = primitive_root_log_size(); i > subgroup_size; --i) {
         r.self_sqr();
     }
     return r;
@@ -550,4 +550,61 @@ field<T> field<T>::random_element(std::mt19937_64* engine, std::uniform_int_dist
     field result = (left * right).reduce_once();
     return result;
 }
+
+template <class T> constexpr size_t field<T>::primitive_root_log_size() noexcept
+{
+    uint256_t target = modulus - 1;
+    size_t result = 0;
+    while (target.get_bit(result) == 0) {
+        ++result;
+    }
+    return result;
+}
+
+template <class T>
+constexpr std::array<field<T>, field<T>::COSET_GENERATOR_SIZE> field<T>::compute_coset_generators() noexcept
+{
+    constexpr size_t n = COSET_GENERATOR_SIZE;
+    constexpr uint64_t subgroup_size = 1 << 30;
+
+    std::array<field, COSET_GENERATOR_SIZE> result{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    if (n > 0) {
+        result[0] = (multiplicative_generator());
+    }
+    field work_variable = multiplicative_generator() + field(1);
+
+    size_t count = 1;
+    while (count < n) {
+        // work_variable contains a new field element, and we need to test that, for all previous vector elements,
+        // result[i] / work_variable is not a member of our subgroup
+        field work_inverse = work_variable.invert();
+        bool valid = true;
+        for (size_t j = 0; j < count; ++j) {
+            field subgroup_check = (work_inverse * result[j]).pow(subgroup_size);
+            if (subgroup_check == field(1)) {
+                valid = false;
+                break;
+            }
+        }
+        if (valid) {
+            result[count] = (work_variable);
+            ++count;
+        }
+        work_variable += field(1);
+    }
+    return result;
+}
+
+template <class T> constexpr field<T> field<T>::multiplicative_generator() noexcept
+{
+    field target(1);
+    uint256_t p_minus_one_over_two = (modulus - 1) >> 1;
+    bool found = false;
+    while (!found) {
+        target += field(1);
+        found = (target.pow(p_minus_one_over_two) == -field(1));
+    }
+    return target;
+}
+
 } // namespace barretenberg

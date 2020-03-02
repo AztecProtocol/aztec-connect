@@ -43,124 +43,27 @@ template <class Params> struct alignas(32) field {
 
     static constexpr uint256_t modulus =
         uint256_t{ Params::modulus_0, Params::modulus_1, Params::modulus_2, Params::modulus_3 };
-    static constexpr uint256_t twice_modulus = modulus + modulus;
 
     static constexpr field beta()
     {
-        return field(Params::cube_root_0, Params::cube_root_1, Params::cube_root_2, Params::cube_root_3);
-    };
-    // static const field one;
-    // static const field zero;
+        // TODO: move this into group, so that we can pick cube roots over both Fq and Fr that align with the curve
+        // endomorphism i.e. lambda * [P] = (beta * x, y) constexpr field two_inv = field(2).invert(); constexpr field
+        // numerator = (-field(3)).sqrt() - field(1); constexpr field result = two_inv * numerator;
+        constexpr field result =
+            field(Params::cube_root_0, Params::cube_root_1, Params::cube_root_2, Params::cube_root_3);
+        static_assert((result * result * result) == field(1));
+        return result;
+    }
+
     static constexpr field zero() { return field(0, 0, 0, 0); }
     static constexpr field neg_one() { return -field(1); }
     static constexpr field one() { return field(1); }
 
     static constexpr field coset_generator(const size_t idx)
     {
-        constexpr field generators[15] = { field(Params::coset_generators_0[0],
-                                                 Params::coset_generators_1[0],
-                                                 Params::coset_generators_2[0],
-                                                 Params::coset_generators_3[0]),
-                                           field(Params::coset_generators_0[1],
-                                                 Params::coset_generators_1[1],
-                                                 Params::coset_generators_2[1],
-                                                 Params::coset_generators_3[1]),
-                                           field(Params::coset_generators_0[2],
-                                                 Params::coset_generators_1[2],
-                                                 Params::coset_generators_2[2],
-                                                 Params::coset_generators_3[2]),
-                                           field(Params::coset_generators_0[3],
-                                                 Params::coset_generators_1[3],
-                                                 Params::coset_generators_2[3],
-                                                 Params::coset_generators_3[3]),
-                                           field(Params::coset_generators_0[4],
-                                                 Params::coset_generators_1[4],
-                                                 Params::coset_generators_2[4],
-                                                 Params::coset_generators_3[4]),
-                                           field(Params::coset_generators_0[5],
-                                                 Params::coset_generators_1[5],
-                                                 Params::coset_generators_2[5],
-                                                 Params::coset_generators_3[5]),
-                                           field(Params::coset_generators_0[6],
-                                                 Params::coset_generators_1[6],
-                                                 Params::coset_generators_2[6],
-                                                 Params::coset_generators_3[6]),
-                                           field(Params::coset_generators_0[7],
-                                                 Params::coset_generators_1[7],
-                                                 Params::coset_generators_2[7],
-                                                 Params::coset_generators_3[7]),
-                                           field(Params::coset_generators_0[8],
-                                                 Params::coset_generators_1[8],
-                                                 Params::coset_generators_2[8],
-                                                 Params::coset_generators_3[8]),
-                                           field(Params::coset_generators_0[9],
-                                                 Params::coset_generators_1[9],
-                                                 Params::coset_generators_2[9],
-                                                 Params::coset_generators_3[9]),
-                                           field(Params::coset_generators_0[10],
-                                                 Params::coset_generators_1[10],
-                                                 Params::coset_generators_2[10],
-                                                 Params::coset_generators_3[10]),
-                                           field(Params::coset_generators_0[11],
-                                                 Params::coset_generators_1[11],
-                                                 Params::coset_generators_2[11],
-                                                 Params::coset_generators_3[11]),
-                                           field(Params::coset_generators_0[12],
-                                                 Params::coset_generators_1[12],
-                                                 Params::coset_generators_2[12],
-                                                 Params::coset_generators_3[12]),
-                                           field(Params::coset_generators_0[13],
-                                                 Params::coset_generators_1[13],
-                                                 Params::coset_generators_2[13],
-                                                 Params::coset_generators_3[13]),
-                                           field(Params::coset_generators_0[14],
-                                                 Params::coset_generators_1[14],
-                                                 Params::coset_generators_2[14],
-                                                 Params::coset_generators_3[14]) };
+        constexpr std::array<field, COSET_GENERATOR_SIZE> generators = compute_coset_generators();
         return generators[idx];
     }
-
-    // static constexpr std::array<field, 15> coset_generators = compute_coset_generators();
-
-    // constexpr field() noexcept
-    // {
-    //     if constexpr (unstd::is_constant_evaluated()) {
-    //         data[0] = 0;
-    //         data[1] = 1;
-    //         data[2] = 2;
-    //         data[3] = 3;
-    //     }
-    // }
-
-    // constexpr field() = default;
-
-    // constexpr field(uint64_t* inputs) noexcept
-    //     : data{ inputs }
-    // {}
-
-    // constexpr field(const field& other) = default;
-    // constexpr field(field&& other) = default;
-
-    // constexpr field& operator=(const field& other) = default;
-    // constexpr field& operator=(field&& other) = default;
-    // // field() noexcept {}
-    // constexpr field() noexcept
-    //     : data()
-    // {}
-    // constexpr field(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t d) noexcept
-    //     : data{ a, b, c, d }
-    // {}
-
-    // constexpr field(const std::array<uint64_t, 4>& input) noexcept
-    //     : data{ input[0], input[1], input[2], input[3] }
-    // {}
-
-    // constexpr field(const field& other) noexcept
-    //     : data{ other.data[0], other.data[1], other.data[2], other.data[3] }
-    // {}
-
-    // constexpr field& operator=(const field& other) = default;
-    // constexpr field& operator=(field&& other) = default;
 
     BBERG_INLINE constexpr field operator*(const field& other) const noexcept;
     BBERG_INLINE constexpr field operator+(const field& other) const noexcept;
@@ -322,47 +225,12 @@ template <class Params> struct alignas(32) field {
         k1.data[1] = t2.data[1];
     }
 
-    static void compute_coset_generators(const size_t n, const size_t subgroup_size, field* result)
-    {
-        constexpr field multiplicative_generator{
-            Params::multiplicative_generator_0,
-            Params::multiplicative_generator_1,
-            Params::multiplicative_generator_2,
-            Params::multiplicative_generator_3,
-        };
-        if (n > 0) {
-            result[0] = multiplicative_generator;
-        }
-        field work_variable = multiplicative_generator + one();
-
-        size_t count = 1;
-        while (count < n) {
-            // work_variable contains a new field element, and we need to test that, for all previous vector
-            // elements, result[i] / work_variable is not a member of our subgroup
-            field work_inverse = work_variable.invert();
-            bool valid = true;
-            for (size_t j = 0; j < count; ++j) {
-                field target_element = result[j] * work_inverse;
-                field subgroup_check = target_element.pow(subgroup_size);
-                if (subgroup_check == one()) {
-                    valid = false;
-                    break;
-                }
-            }
-            if (valid) {
-                result[count] = (work_variable);
-                ++count;
-            }
-            work_variable = work_variable + one();
-        }
-    }
-
     // static constexpr auto coset_generators = compute_coset_generators();
     // static constexpr std::array<field, 15> coset_generators = compute_coset_generators((1 << 30U));
 
     friend std::ostream& operator<<(std::ostream& os, const field& a)
     {
-        field out = a.reduce_once().reduce_once();
+        field out = a.from_montgomery_form();
         std::ios_base::fmtflags f(os.flags());
         os << std::hex << "0x" << std::setfill('0') << std::setw(16) << out.data[3] << std::setw(16) << out.data[2]
            << std::setw(16) << out.data[1] << std::setw(16) << out.data[0];
@@ -381,11 +249,15 @@ template <class Params> struct alignas(32) field {
     static field random_element(std::mt19937_64* engine = nullptr,
                                 std::uniform_int_distribution<uint64_t>* dist = nullptr) noexcept;
 
+    static constexpr field multiplicative_generator() noexcept;
+
     // BBERG_INLINE sstatic constexpr void butterfly(field& left, field& right) noexcept;
-#ifndef DISABLE_SHENANIGANS
-    BBERG_INLINE static void asm_self_mul_with_coarse_reduction(const field& a, const field& b) noexcept;
-#endif
+
   private:
+    static constexpr uint256_t twice_modulus = modulus + modulus;
+    static constexpr uint256_t not_modulus = -modulus;
+    static constexpr uint256_t twice_not_modulus = -twice_modulus;
+
     struct wnaf_table {
         uint8_t windows[64];
 
@@ -484,11 +356,10 @@ template <class Params> struct alignas(32) field {
     BBERG_INLINE static field asm_add_with_coarse_reduction(const field& a, const field& b) noexcept;
     BBERG_INLINE static field asm_sub_with_coarse_reduction(const field& a, const field& b) noexcept;
     BBERG_INLINE static field asm_add_without_reduction(const field& a, const field& b) noexcept;
-
     BBERG_INLINE static void asm_self_sqr(const field& a) noexcept;
     BBERG_INLINE static void asm_self_add(const field& a, const field& b) noexcept;
     BBERG_INLINE static void asm_self_sub(const field& a, const field& b) noexcept;
-    // BBERG_INLINE static void asm_self_mul_with_coarse_reduction(const field& a, const field& b) noexcept;
+    BBERG_INLINE static void asm_self_mul_with_coarse_reduction(const field& a, const field& b) noexcept;
     BBERG_INLINE static void asm_self_sqr_with_coarse_reduction(const field& a) noexcept;
     BBERG_INLINE static void asm_self_add_with_coarse_reduction(const field& a, const field& b) noexcept;
     BBERG_INLINE static void asm_self_sub_with_coarse_reduction(const field& a, const field& b) noexcept;
@@ -499,7 +370,11 @@ template <class Params> struct alignas(32) field {
     BBERG_INLINE static void asm_self_reduce_once(const field& a) noexcept;
     static constexpr uint64_t zero_reference = 0x00ULL;
 #endif
+    static constexpr size_t COSET_GENERATOR_SIZE = 15;
     constexpr field tonelli_shanks_sqrt() const noexcept;
+    static constexpr size_t primitive_root_log_size() noexcept;
+    static constexpr std::array<field, COSET_GENERATOR_SIZE> compute_coset_generators() noexcept;
+
 #if defined(__SIZEOF_INT128__) && !defined(__wasm__)
     static constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 #endif
