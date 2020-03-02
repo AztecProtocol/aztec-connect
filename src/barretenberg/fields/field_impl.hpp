@@ -448,9 +448,7 @@ template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noex
 template <class T> constexpr field<T> field<T>::sqrt() const noexcept
 {
     if constexpr ((T::modulus_0 & 0x3UL) == 0x3UL) {
-        constexpr uint256_t sqrt_exponent{
-            T::sqrt_exponent_0, T::sqrt_exponent_1, T::sqrt_exponent_2, T::sqrt_exponent_3
-        };
+        constexpr uint256_t sqrt_exponent = (modulus + uint256_t(1)) >> 2;
         return pow(sqrt_exponent);
     } else {
         return tonelli_shanks_sqrt();

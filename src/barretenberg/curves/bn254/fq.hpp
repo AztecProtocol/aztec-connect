@@ -33,16 +33,6 @@ class Bn254FqParams {
     static constexpr uint64_t one_mont_2 = 0x666ea36f7879462cUL;
     static constexpr uint64_t one_mont_3 = 0x0e0a77c19a07df2fUL;
 
-    // static constexpr uint64_t two_inv_0 = 0x87bee7d24f060572UL;
-    // static constexpr uint64_t two_inv_1 = 0xd0fd2add2f1c6ae5UL;
-    // static constexpr uint64_t two_inv_2 = 0x8f5f7492fcfd4f44UL;
-    // static constexpr uint64_t two_inv_3 = 0x1f37631a3d9cbfacUL;
-
-    static constexpr uint64_t sqrt_exponent_0 = 0x4F082305B61F3F52UL;
-    static constexpr uint64_t sqrt_exponent_1 = 0x65E05AA45A1C72A3UL;
-    static constexpr uint64_t sqrt_exponent_2 = 0x6E14116DA0605617UL;
-    static constexpr uint64_t sqrt_exponent_3 = 0xC19139CB84C680AUL;
-
     static constexpr uint64_t r_squared_0 = 0xF32CFC5B538AFA89UL;
     static constexpr uint64_t r_squared_1 = 0xB5E71911D44501FBUL;
     static constexpr uint64_t r_squared_2 = 0x47AB1EFF0A417FF6UL;

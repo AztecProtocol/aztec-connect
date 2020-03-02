@@ -35,8 +35,8 @@ constexpr size_t START = (1 << 20) >> 7;
 #define FFT_SIZE(x) (x * 22 * sizeof(fr::field_t))
 
 struct global_vars {
-    alignas(32) g1::affine_element g1_pair_points[2];
-    alignas(32) g2::affine_element g2_pair_points[2];
+    g1::affine_element g1_pair_points[2];
+    g2::affine_element g2_pair_points[2];
     std::vector<waffle::Verifier> plonk_instances;
     waffle::plonk_proof plonk_proof;
     waffle::ReferenceString reference_string;

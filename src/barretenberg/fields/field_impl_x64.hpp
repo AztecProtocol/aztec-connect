@@ -111,7 +111,8 @@ template <class T> void field<T>::asm_self_mul_with_coarse_reduction(const field
      *            %1: pointer to `b`
      *            %2: pointer to `r`
      **/
-    __asm__(MUL("0(%0)", "8(%0)", "16(%0)", "24(%0)", "%1") STORE_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
+    __asm__(MUL("0(%0)", "8(%0)", "16(%0)", "24(%0)", "%1")
+                STORE_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15")
             :
             : "r"(&a),
               "r"(&b),
@@ -235,10 +236,6 @@ template <class T> void field<T>::asm_self_add_with_coarse_reduction(const field
 template <class T> field<T> field<T>::asm_sub_with_coarse_reduction(const field& a, const field& b) noexcept
 {
     field r;
-    constexpr uint64_t twice_modulus_3 = twice_modulus.data[3];
-    constexpr uint64_t twice_modulus_2 = twice_modulus.data[2];
-    constexpr uint64_t twice_modulus_1 = twice_modulus.data[1];
-    constexpr uint64_t twice_modulus_0 = twice_modulus.data[0];
     __asm__(
         CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15") SUB("%1")
             REDUCE_FIELD_ELEMENT("%[twice_modulus_0]", "%[twice_modulus_1]", "%[twice_modulus_2]", "%[twice_modulus_3]")
@@ -247,20 +244,16 @@ template <class T> field<T> field<T>::asm_sub_with_coarse_reduction(const field&
         : "r"(&a),
           "r"(&b),
           "r"(&r),
-          [twice_modulus_0] "m"(twice_modulus_0),
-          [twice_modulus_1] "m"(twice_modulus_1),
-          [twice_modulus_2] "m"(twice_modulus_2),
-          [twice_modulus_3] "m"(twice_modulus_3)
+          [twice_modulus_0] "m"(twice_modulus.data[0]),
+          [twice_modulus_1] "m"(twice_modulus.data[1]),
+          [twice_modulus_2] "m"(twice_modulus.data[2]),
+          [twice_modulus_3] "m"(twice_modulus.data[3])
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
     return r;
 }
 
 template <class T> void field<T>::asm_self_sub_with_coarse_reduction(const field& a, const field& b) noexcept
 {
-    constexpr uint64_t twice_modulus_3 = twice_modulus.data[3];
-    constexpr uint64_t twice_modulus_2 = twice_modulus.data[2];
-    constexpr uint64_t twice_modulus_1 = twice_modulus.data[1];
-    constexpr uint64_t twice_modulus_0 = twice_modulus.data[0];
     __asm__(
         CLEAR_FLAGS("%%r12") LOAD_FIELD_ELEMENT("%0", "%%r12", "%%r13", "%%r14", "%%r15") SUB("%1")
             REDUCE_FIELD_ELEMENT("%[twice_modulus_0]", "%[twice_modulus_1]", "%[twice_modulus_2]", "%[twice_modulus_3]")
@@ -268,10 +261,10 @@ template <class T> void field<T>::asm_self_sub_with_coarse_reduction(const field
         :
         : "r"(&a),
           "r"(&b),
-          [twice_modulus_0] "m"(twice_modulus_0),
-          [twice_modulus_1] "m"(twice_modulus_1),
-          [twice_modulus_2] "m"(twice_modulus_2),
-          [twice_modulus_3] "m"(twice_modulus_3)
+          [twice_modulus_0] "m"(twice_modulus.data[0]),
+          [twice_modulus_1] "m"(twice_modulus.data[1]),
+          [twice_modulus_2] "m"(twice_modulus.data[2]),
+          [twice_modulus_3] "m"(twice_modulus.data[3])
         : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -295,10 +288,10 @@ template <class T> void field<T>::asm_conditional_negate(field& r, const uint64_
             :
             : "r"(predicate),
               "r"(&r),
-              [twice_modulus_0] "i"(T::twice_modulus_0),
-              [twice_modulus_1] "i"(T::twice_modulus_1),
-              [twice_modulus_2] "i"(T::twice_modulus_2),
-              [twice_modulus_3] "i"(T::twice_modulus_3)
+              [twice_modulus_0] "i"(twice_modulus.data[0]),
+              [twice_modulus_1] "i"(twice_modulus.data[1]),
+              [twice_modulus_2] "i"(twice_modulus.data[2]),
+              [twice_modulus_3] "i"(twice_modulus.data[3])
             : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
