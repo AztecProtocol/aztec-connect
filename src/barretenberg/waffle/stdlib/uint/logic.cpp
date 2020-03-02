@@ -37,7 +37,7 @@ template <typename Composer, typename Native> uint<Composer, Native> uint<Compos
 }
 
 template <typename Composer, typename Native>
-uint<Composer, Native> uint<Composer, Native>::operator>>(const uint64_t shift) const
+uint<Composer, Native> uint<Composer, Native>::operator>>(const size_t shift) const
 {
     if (shift >= width) {
         return uint(context, 0);
@@ -127,7 +127,7 @@ uint<Composer, Native> uint<Composer, Native>::operator>>(const uint64_t shift) 
     const uint256_t output = get_value() >> shift;
 
     // get accumulator index
-    const uint64_t x = ((width >> 1) - 1 - (shift >> 1));
+    const size_t x = ((width >> 1) - 1 - (shift >> 1));
 
     // this >> shift = 2 * a[x - 1] + high bit of (a[x] - 4 * a[x - 1])
     // our add-with-bit-extract gate will pull out the high bit of ^^
@@ -155,7 +155,7 @@ uint<Composer, Native> uint<Composer, Native>::operator>>(const uint64_t shift) 
 }
 
 template <typename Composer, typename Native>
-uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) const
+uint<Composer, Native> uint<Composer, Native>::operator<<(const size_t shift) const
 {
     if (shift >= width) {
         return uint(context, 0);
@@ -174,7 +174,7 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
     }
 
     if ((shift & 1) == 0) {
-        const uint64_t x = (shift >> 1);
+        const size_t x = (shift >> 1);
         const uint32_t right_idx = accumulators[x - 1];
         const uint32_t base_idx = witness_index;
 
@@ -199,7 +199,7 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
     const uint256_t output = (get_value() << shift) & MASK;
 
     // get accumulator index
-    const uint64_t x = (shift >> 1);
+    const size_t x = (shift >> 1);
 
     const uint32_t right_index = shift == 1 ? context->zero_idx : accumulators[x - 1];
     const uint32_t left_index = accumulators[x];
@@ -243,9 +243,9 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
 }
 
 template <typename Composer, typename Native>
-uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotation) const
+uint<Composer, Native> uint<Composer, Native>::ror(const size_t target_rotation) const
 {
-    const uint64_t rotation = target_rotation & (static_cast<uint64_t>(width) - 1ULL);
+    const size_t rotation = target_rotation & (width - 1);
 
     const auto rotate = [](const uint256_t input, const uint64_t rot) {
         uint256_t r0 = (input >> rot);
@@ -268,8 +268,8 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
     const uint256_t output = rotate(get_value(), rotation);
 
     if ((rotation & 1) == 0) {
-        const uint64_t x = (rotation >> 1);
-        const uint64_t pivot = ((width >> 1) - 1 - x);
+        const size_t x = (rotation >> 1);
+        const size_t pivot = ((width >> 1) - 1 - x);
         const uint32_t left_idx = accumulators[pivot];
         const uint32_t base_idx = witness_index;
 
@@ -292,8 +292,8 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
         return result;
     }
 
-    const uint64_t x = (rotation >> 1) + 1;
-    const uint64_t pivot = ((width >> 1) - 1 - x);
+    const size_t x = (rotation >> 1) + 1;
+    const size_t pivot = ((width >> 1) - 1 - x);
 
     const uint32_t pivot_idx = rotation == 31 ? context->zero_idx : accumulators[pivot];
     const uint32_t next_pivot_idx = accumulators[pivot + 1];
@@ -330,10 +330,9 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
 }
 
 template <typename Composer, typename Native>
-uint<Composer, Native> uint<Composer, Native>::rol(const uint64_t target_rotation) const
+uint<Composer, Native> uint<Composer, Native>::rol(const size_t target_rotation) const
 {
-    const uint64_t max = static_cast<uint64_t>(width);
-    return ror(max - (target_rotation & (max - 1)));
+    return ror(width - (target_rotation & (width - 1)));
 }
 
 template <typename Composer, typename Native>

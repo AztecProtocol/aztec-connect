@@ -217,7 +217,7 @@ TEST(turbo_composer, small_scalar_multipliers)
     constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
     constexpr size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1 : num_bits;
-    constexpr size_t bit_mask = (1ULL << num_bits) - 1UL;
+    constexpr uint64_t bit_mask = (1ULL << num_bits) - 1UL;
     const crypto::pedersen::fixed_base_ladder* ladder = crypto::pedersen::get_ladder(0, num_bits);
     grumpkin::g1::affine_element generator = crypto::pedersen::get_generator(0);
 

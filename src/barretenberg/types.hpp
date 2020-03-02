@@ -16,6 +16,10 @@
 #include "./portability/apple.hpp"
 #endif
 
+#ifdef __wasm__
+#define aligned_free free
+#endif
+
 #ifndef BARRETENBERG_SRS_PATH
 #define BARRETENBERG_SRS_PATH "../srs_db"
 #endif

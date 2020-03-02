@@ -27,6 +27,17 @@ export function appFactory(server: Server, prefix: string) {
     }
   });
 
+  router.post("/flush", async (ctx: Koa.Context) => {
+    try {
+      await server.flushTxs();
+      ctx.status = 200;
+    } catch (err) {
+      console.log(err);
+      ctx.body = { error: err.message };
+      ctx.status = 400;
+    }
+  });
+
   const app = new Koa();
   app.proxy = true;
   app.use(compress());

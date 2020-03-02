@@ -7,3 +7,4 @@ srs_db/ignition
 **/node_modules
 yarn.lock
 *.log
+*.wasm

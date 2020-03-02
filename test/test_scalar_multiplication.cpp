@@ -90,7 +90,7 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     transcript_points[62] = 0x7c;
     transcript_points[61] = 0x7e;
     transcript_points[63] = 0x7f;
-    
+
     transcript_points[64] = 0x1;
     transcript_points[65] = 0x3;
     transcript_points[66] = 0x5;
@@ -175,7 +175,7 @@ TEST(scalar_multiplication, reduce_buckets_simple)
     {
         uint64_t schedule = transcript[i] & 0x7fffffffU;
         {
-            g1::mixed_add(expected[schedule], monomials[transcript_points[i]], expected[schedule]);
+            g1::mixed_add(expected[(size_t)schedule], monomials[(size_t)transcript_points[i]], expected[(size_t)schedule]);
         }
     }
 

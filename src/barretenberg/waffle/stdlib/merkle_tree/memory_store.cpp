@@ -8,8 +8,8 @@ namespace merkle_tree {
 MemoryStore::MemoryStore(size_t depth)
     : depth_(depth)
 {
-    ASSERT(depth_ >= 1 && depth <= 256);
-    total_size_ = 1ULL << depth_;
+    ASSERT(depth_ >= 1 && depth <= 20);
+    total_size_ = 1UL << depth_;
     hashes_.resize(total_size_ * 2 - 2);
     std::string zero_element(64, 0);
     preimages_.resize(total_size_, zero_element);

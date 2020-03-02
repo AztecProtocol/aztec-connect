@@ -4,13 +4,18 @@ import { Block } from './block';
 
 export class Server {
   private interval?: NodeJS.Timer;
-  private proof_generator = new ProofGenerator(1);
+  private proof_generator: ProofGenerator;
+  private txPool: Tx[] = [];
+  private blockNum = 0;
+  private maxBlockInterval = 600 * 1000;
 
-  constructor() {
+  constructor(private batchSize: number) {
+    this.proof_generator = new ProofGenerator(batchSize);
   }
 
   public async start() {
     this.proof_generator.run();
+    this.interval = setInterval(() => this.flushTxs(), this.maxBlockInterval)
   }
 
   public stop() {
@@ -18,8 +23,23 @@ export class Server {
     this.proof_generator.cancel();
   }
 
-  public async receiveTx(tx: Tx) {
-    let block = new Block(0, [tx]);
+  public receiveTx(tx: Tx) {
+    this.txPool.push(tx);
+    if (this.txPool.length == this.batchSize) {
+      this.createBlock();
+    }
+  }
+
+  public flushTxs() {
+    if (this.txPool.length) {
+      this.createBlock();
+    }
+  }
+
+  private createBlock() {
+    let block = new Block(this.blockNum, this.txPool);
+    this.txPool = [];
+    this.blockNum++;
     this.proof_generator.enqueue(block);
   }
 }

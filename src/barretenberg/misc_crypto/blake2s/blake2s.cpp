@@ -13,7 +13,6 @@
    https://blake2.net.
 */
 
-#include <iostream>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>

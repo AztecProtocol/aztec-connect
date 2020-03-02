@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <iomanip>
 
 #include "../../fields/field.hpp"
 
@@ -116,4 +117,15 @@ class Bn254FqParams
 };
 
 typedef field<Bn254FqParams> fq;
+
+inline std::ostream& operator<<(std::ostream& os, typename barretenberg::fq::field_t const& v)
+{
+    auto a = barretenberg::fq::from_montgomery_form(v);
+    std::ios_base::fmtflags f(os.flags());
+    os << std::hex << "0x" << std::setfill('0') << std::setw(16) << a.data[3] << std::setw(16) << a.data[2]
+       << std::setw(16) << a.data[1] << std::setw(16) << a.data[0];
+    os.flags(f);
+    return os;
+}
+
 } // namespace barretenberg

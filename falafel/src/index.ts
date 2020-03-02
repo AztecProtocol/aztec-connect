@@ -9,7 +9,7 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  const server = new Server();
+  const server = new Server(3);
   await server.start();
 
   const app = appFactory(server, '/api');

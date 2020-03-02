@@ -4,6 +4,15 @@
 add_definitions(-DGTEST_HAS_EXCEPTIONS=0)
 if(WASM)
     add_definitions(-DGTEST_HAS_STREAM_REDIRECTION=0)
+else()
+    set(
+        CONDITIONAL_SOURCES
+        stdlib/test_stdlib_merkle_tree.cpp
+    )
+    set(
+        CONDITIONAL_LIBRARIES
+        leveldb
+    )
 endif()
 
 include(FetchContent)
@@ -77,11 +86,11 @@ add_executable(
     stdlib/test_stdlib_mimc.cpp
     stdlib/test_stdlib_blake2s.cpp
     stdlib/test_stdlib_sha256.cpp
-    stdlib/test_stdlib_merkle_tree.cpp
     stdlib/test_stdlib_pedersen.cpp
     stdlib/test_stdlib_schnorr.cpp
     stdlib/test_stdlib_pedersen_note.cpp
     noir/test_noir.cpp
+    ${CONDITIONAL_SOURCES}
 )
 
 set_target_properties(
@@ -97,6 +106,14 @@ target_include_directories(
         ${private_include_dir}/boost
 )
 
+if(WASM)
+    target_link_options(
+        barretenberg_tests
+        PRIVATE
+        -Wl,-z,stack-size=8388608
+    )
+endif()
+
 target_link_libraries(
     barretenberg_tests
     PUBLIC
@@ -105,7 +122,7 @@ target_link_libraries(
     gtest
     gmock
     gtest_main
-    leveldb
+    ${CONDITIONAL_LIBRARIES}
     ${private_os_libs}
 )
 

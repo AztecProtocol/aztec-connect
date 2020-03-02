@@ -97,7 +97,7 @@ constexpr uint256_t::divmod_output uint256_t::divmod(const uint256_t& a, const u
 
 constexpr bool uint256_t::get_bit(const uint64_t bit_index) const
 {
-    const size_t idx = bit_index >> 6;
+    const size_t idx = static_cast<size_t>(bit_index >> 6);
     const size_t shift = bit_index & 63;
     return bool((data[idx] >> shift) & 1);
 }
