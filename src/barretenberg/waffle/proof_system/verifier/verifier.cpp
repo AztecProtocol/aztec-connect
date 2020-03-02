@@ -326,10 +326,10 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
     barretenberg::fq::__copy(P[1].x, P_affine[0].x);
     barretenberg::fq::__copy(P[1].y, P_affine[0].y);
 
-    barretenberg::fq12::field_t result = barretenberg::pairing::reduced_ate_pairing_batch_precomputed(
+    barretenberg::fq12 result = barretenberg::pairing::reduced_ate_pairing_batch_precomputed(
         P_affine, key->reference_string.precomputed_g2_lines, 2);
 
-    return (result == barretenberg::fq12::field_t::one());
+    return (result == barretenberg::fq12::one());
 }
 
 template class VerifierBase<standard_settings>;

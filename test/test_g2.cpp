@@ -223,7 +223,7 @@ TEST(g2, mixed_add_exception_test_infinity)
 {
     g2::element lhs = g2::one;
     g2::affine_element rhs = g2::affine_element(g2::element::random_element());
-    lhs = { rhs.x, -rhs.y, fq2::field_t::one() };
+    lhs = { rhs.x, -rhs.y, fq2::one() };
 
     g2::element result;
     result = lhs + rhs;
@@ -282,10 +282,10 @@ TEST(g2, batch_normalize)
     g2::element::batch_normalize(normalized, num_points);
 
     for (size_t i = 0; i < num_points; ++i) {
-        fq2::field_t zz = points[i].z.sqr();
-        fq2::field_t zzz = zz * points[i].z;
-        fq2::field_t result_x = normalized[i].x * zz;
-        fq2::field_t result_y = normalized[i].y * zzz;
+        fq2 zz = points[i].z.sqr();
+        fq2 zzz = zz * points[i].z;
+        fq2 result_x = normalized[i].x * zz;
+        fq2 result_y = normalized[i].y * zzz;
 
         EXPECT_EQ(result_x, points[i].x);
         EXPECT_EQ(result_y, points[i].y);

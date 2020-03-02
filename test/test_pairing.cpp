@@ -20,7 +20,7 @@ TEST(pairing, reduced_ate_pairing_check_against_constants)
         { uint256_t(0x890d5a50c1d88e96, 0x6ae79a7a2b439172, 0x4c120a629ced363c, 0x295bd556fe685dd),
           uint256_t(0xa3189c7f120d4738, 0x4416da0df17c8ee, 0x4cc514acc1c2ac45, 0xb17d8f998e4ebe6) }
     };
-    constexpr fq12::field_t expected = {
+    constexpr fq12 expected = {
 
         { { uint256_t(0xd3b91c8dc40a9b8c, 0x5c8a39a470fcb4ea, 0x763e904e585a87e7, 0x2026f0077c50afa4),
             uint256_t(0xddc69495371e5f38, 0x290bfc6512704e60, 0xc208c0f8e90bd52f, 0x2e82c92370a2f000) },
@@ -38,7 +38,7 @@ TEST(pairing, reduced_ate_pairing_check_against_constants)
             uint256_t(0x31d7525fa8914a4c, 0xe1ed738718e2e8b8, 0x18305c749a9d97a2, 0x20534d878e1e9db0) } }
     };
 
-    constexpr fq12::field_t result = pairing::reduced_ate_pairing(P, Q);
+    constexpr fq12 result = pairing::reduced_ate_pairing(P, Q);
 
     static_assert(result == expected); // test to see if compiler can evaluate bilinear pairing at compile time
     EXPECT_EQ(result, expected);
@@ -54,8 +54,8 @@ TEST(pairing, reduced_ate_pairing_consistency_check)
     g1::affine_element Pmul = P * scalar;
     g2::affine_element Qmul = Q * scalar;
 
-    fq12::field_t result = pairing::reduced_ate_pairing(Pmul, Q).from_montgomery_form();
-    fq12::field_t expected = pairing::reduced_ate_pairing(P, Qmul).from_montgomery_form();
+    fq12 result = pairing::reduced_ate_pairing(Pmul, Q).from_montgomery_form();
+    fq12 expected = pairing::reduced_ate_pairing(P, Qmul).from_montgomery_form();
 
     EXPECT_EQ(result, expected);
 }
@@ -89,8 +89,8 @@ TEST(pairing, reduced_ate_pairing_consistency_check_batch)
         Q_a[i] = Q_a[i] * scalars[i + num_points];
     }
 
-    fq12::field_t result = pairing::reduced_ate_pairing_batch(&P_a[0], &Q_a[0], num_points).from_montgomery_form();
-    fq12::field_t expected = pairing::reduced_ate_pairing_batch(&P_b[0], &Q_b[0], num_points).from_montgomery_form();
+    fq12 result = pairing::reduced_ate_pairing_batch(&P_a[0], &Q_a[0], num_points).from_montgomery_form();
+    fq12 expected = pairing::reduced_ate_pairing_batch(&P_b[0], &Q_b[0], num_points).from_montgomery_form();
 
     EXPECT_EQ(result, expected);
 }
@@ -125,10 +125,9 @@ TEST(pairing, reduced_ate_pairing_precompute_consistency_check_batch)
         jac = g2::element(Q_a[i]);
         pairing::precompute_miller_lines(jac, precompute_miller_lines[i]);
     }
-    fq12::field_t result =
-        pairing::reduced_ate_pairing_batch_precomputed(&P_a[0], &precompute_miller_lines[0], num_points)
-            .from_montgomery_form();
-    fq12::field_t expected = pairing::reduced_ate_pairing_batch(&P_b[0], &Q_b[0], num_points).from_montgomery_form();
+    fq12 result = pairing::reduced_ate_pairing_batch_precomputed(&P_a[0], &precompute_miller_lines[0], num_points)
+                      .from_montgomery_form();
+    fq12 expected = pairing::reduced_ate_pairing_batch(&P_b[0], &Q_b[0], num_points).from_montgomery_form();
 
     EXPECT_EQ(result, expected);
 }
