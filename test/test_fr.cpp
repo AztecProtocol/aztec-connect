@@ -219,7 +219,7 @@ TEST(fr, sqrt)
 
 TEST(fr, sqrt_random)
 {
-    size_t n = 1024;
+    size_t n = 1;
     for (size_t i = 0; i < n; ++i) {
         fr::field_t input = fr::field_t::random_element().sqr();
         fr::field_t root_test = input.sqrt().sqr();

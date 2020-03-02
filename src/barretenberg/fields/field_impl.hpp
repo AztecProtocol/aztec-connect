@@ -396,7 +396,7 @@ template <class T> constexpr field<T> field<T>::tonelli_shanks_sqrt() const noex
     // We can iteratively transform t into ever smaller subgroups, until t = 1.
     // At each iteration, we need to find a new value for b, which we can obtain
     // by repeatedly squaring z^{Q}
-    constexpr field Q_minus_one_over_two{
+    constexpr uint256_t Q_minus_one_over_two{
         T::Q_minus_one_over_two_0, T::Q_minus_one_over_two_1, T::Q_minus_one_over_two_2, T::Q_minus_one_over_two_3
     };
     // __to_montgomery_form(Q_minus_one_over_two, Q_minus_one_over_two);
