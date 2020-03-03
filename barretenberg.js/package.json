@@ -1,11 +1,12 @@
 {
-  "name": "barretenberg.js",
+  "name": "barretenberg",
   "version": "1.0.0",
-  "main": "dest/index.js",
+  "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.cjs.json && cp ./src/wasm/barretenberg.wasm ./dest/wasm",
-    "test": "jest"
+    "build": "tsc -p tsconfig.cjs.json && cp ./src/wasm/barretenberg.wasm ./dest/wasm && cp package.json dest",
+    "test": "jest",
+    "start:dev": "tsc -p tsconfig.cjs.json --watch"
   },
   "jest": {
     "transform": {

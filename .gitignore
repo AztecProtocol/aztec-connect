@@ -4,6 +4,7 @@ build*
 src/wasi-sdk-8.0
 srs_db/ignition
 **/dest
+**/dist
 **/node_modules
 yarn.lock
 *.log

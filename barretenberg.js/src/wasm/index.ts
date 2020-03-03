@@ -1,6 +1,7 @@
 import fetch from 'isomorphic-fetch';
-import { readFileAsync } from './fs-async';
+import { readFile } from 'fs';
 import isNode from 'detect-node';
+import { promisify } from 'util';
 
 export class BarretenbergWasm {
   private memory!: WebAssembly.Memory;
@@ -30,11 +31,11 @@ export class BarretenbergWasm {
     };
 
     if (isNode) {
-      const res = await readFileAsync('./src/wasm/barretenberg.wasm')
+      const res = await promisify(readFile)(__dirname + '/barretenberg.wasm');
       const mod = await WebAssembly.instantiate(res, importObj);
       this.instance = mod.instance;
     } else {
-      const res = await fetch('file://barretenberg.wasm');
+      const res = await fetch('barretenberg.wasm');
       const mod = await WebAssembly.instantiateStreaming(res, importObj);
       this.instance = mod.instance;
     }
