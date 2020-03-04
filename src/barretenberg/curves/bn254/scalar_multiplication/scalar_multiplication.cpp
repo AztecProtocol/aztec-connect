@@ -105,8 +105,7 @@ void generate_pippenger_point_table(g1::affine_element* points, g1::affine_eleme
  *
  * At the end of `compute_wnaf_states`, `state.wnaf_table` will contain our wnaf entries, but unsorted.
  **/
-template <size_t num_initial_points>
-inline void compute_wnaf_states(multiplication_runtime_state& state, fr* scalars)
+template <size_t num_initial_points> inline void compute_wnaf_states(multiplication_runtime_state& state, fr* scalars)
 {
     const size_t num_points = num_initial_points * 2;
     constexpr size_t SCALAR_MULTIPLICATION_MAX_ROUNDS = 256;
@@ -328,8 +327,7 @@ inline g1::element scalar_multiplication_internal(multiplication_runtime_state& 
     return result;
 }
 
-template <size_t num_initial_points>
-inline g1::element pippenger_internal(g1::affine_element* points, fr* scalars)
+template <size_t num_initial_points> inline g1::element pippenger_internal(g1::affine_element* points, fr* scalars)
 {
     multiplication_runtime_state state;
     compute_wnaf_states<num_initial_points>(state, scalars);
@@ -578,6 +576,7 @@ inline g1::element pippenger(fr* scalars, g1::affine_element* points, const size
  **/
 g1::element pippenger_unsafe(fr* scalars, g1::affine_element* points, const size_t num_initial_points)
 {
+    static_assert(PIPPENGER_BLOCK_SIZE <= 26);
     // our windowed non-adjacent form algorthm requires that each thread can work on at least 8 points.
     // If we fall below this theshold, fall back to the traditional scalar multiplication algorithm.
     // For 8 threads, this neatly coincides with the threshold where Strauss scalar multiplication outperforms Pippenger
@@ -615,6 +614,36 @@ g1::element pippenger_unsafe(fr* scalars, g1::affine_element* points, const size
     g1::element result;
 
     switch (log2_initial_points) {
+#if PIPPENGER_BLOCK_SIZE > 25
+    case 26:
+        result = pippenger_unsafe_internal<1 << 26>(points, scalars);
+        break;
+#endif
+#if PIPPENGER_BLOCK_SIZE > 24
+    case 25:
+        result = pippenger_unsafe_internal<1 << 25>(points, scalars);
+        break;
+#endif
+#if PIPPENGER_BLOCK_SIZE > 23
+    case 24:
+        result = pippenger_unsafe_internal<1 << 24>(points, scalars);
+        break;
+#endif
+#if PIPPENGER_BLOCK_SIZE > 22
+    case 23:
+        result = pippenger_unsafe_internal<1 << 23>(points, scalars);
+        break;
+#endif
+#if PIPPENGER_BLOCK_SIZE > 21
+    case 22:
+        result = pippenger_unsafe_internal<1 << 22>(points, scalars);
+        break;
+#endif
+#if PIPPENGER_BLOCK_SIZE > 20
+    case 21:
+        result = pippenger_unsafe_internal<1 << 21>(points, scalars);
+        break;
+#endif
     case 20:
         result = pippenger_unsafe_internal<1 << 20>(points, scalars);
         break;
@@ -680,6 +709,31 @@ g1::element pippenger_unsafe(fr* scalars, g1::affine_element* points, const size
         return result;
     }
 }
+
+#if PIPPENGER_BLOCK_SIZE > 25
+template void compute_wnaf_states<1 << 26>(multiplication_runtime_state& state, fr* scalars);
+template void organize_buckets<1 << 27>(multiplication_runtime_state& state);
+#endif
+#if PIPPENGER_BLOCK_SIZE > 24
+template void compute_wnaf_states<1 << 25>(multiplication_runtime_state& state, fr* scalars);
+template void organize_buckets<1 << 26>(multiplication_runtime_state& state);
+#endif
+#if PIPPENGER_BLOCK_SIZE > 23
+template void compute_wnaf_states<1 << 24>(multiplication_runtime_state& state, fr* scalars);
+template void organize_buckets<1 << 25>(multiplication_runtime_state& state);
+#endif
+#if PIPPENGER_BLOCK_SIZE > 22
+template void compute_wnaf_states<1 << 23>(multiplication_runtime_state& state, fr* scalars);
+template void organize_buckets<1 << 24>(multiplication_runtime_state& state);
+#endif
+#if PIPPENGER_BLOCK_SIZE > 21
+template void compute_wnaf_states<1 << 22>(multiplication_runtime_state& state, fr* scalars);
+template void organize_buckets<1 << 23>(multiplication_runtime_state& state);
+#endif
+#if PIPPENGER_BLOCK_SIZE > 20
+template void compute_wnaf_states<1 << 21>(multiplication_runtime_state& state, fr* scalars);
+template void organize_buckets<1 << 22>(multiplication_runtime_state& state);
+#endif
 
 template void compute_wnaf_states<1 << 2>(multiplication_runtime_state& state, fr* scalars);
 template void compute_wnaf_states<1 << 3>(multiplication_runtime_state& state, fr* scalars);

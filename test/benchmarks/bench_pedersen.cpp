@@ -12,7 +12,7 @@
 
 #include <barretenberg/waffle/stdlib/crypto/hash/pedersen.hpp>
 #include <barretenberg/waffle/stdlib/field/field.hpp>
-#include <barretenberg/waffle/stdlib/group/group_utils.hpp>
+#include <barretenberg/waffle/misc_crypto/pederse/pedersen.hpp>
 
 using namespace benchmark;
 
