@@ -55,6 +55,7 @@ add_executable(
     uint256/test_uint256.cpp
     uint256/test_uint512.cpp
     misc_crypto/test_schnorr.cpp
+    misc_crypto/test_blake2s.cpp
     misc_crypto/test_sha256.cpp
     proof_system/test_public_inputs.cpp
     proof_system/test_prover.cpp
@@ -74,6 +75,7 @@ add_executable(
     stdlib/test_stdlib_bitarray.cpp
     stdlib/test_stdlib_byte_array.cpp
     stdlib/test_stdlib_mimc.cpp
+    stdlib/test_stdlib_blake2s.cpp
     stdlib/test_stdlib_sha256.cpp
     stdlib/test_stdlib_merkle_tree.cpp
     stdlib/test_stdlib_pedersen.cpp

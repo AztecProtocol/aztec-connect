@@ -15,14 +15,14 @@ MemoryStore::MemoryStore(size_t depth)
     preimages_.resize(total_size_, zero_element);
 
     // Build the entire tree.
-    auto current = sha256(zero_element);
+    auto current = hash_value_native(zero_element);
     size_t layer_size = total_size_;
     for (size_t offset = 0; offset < hashes_.size(); offset += layer_size, layer_size /= 2) {
         // std::cout << "zero: " << current << std::endl;
         for (size_t i = 0; i < layer_size; ++i) {
             hashes_[offset + i] = current;
         }
-        current = hash({ current, current });
+        current = compress_native({ current, current });
     }
 
     // std::cout << "root: " << current << std::endl;
@@ -50,11 +50,11 @@ void MemoryStore::update_element(size_t index, std::string const& value)
 
     size_t offset = 0;
     size_t layer_size = total_size_;
-    fr current = sha256(value);
+    fr current = hash_value_native(value);
     for (size_t i = 0; i < depth_; ++i) {
         hashes_[offset + index] = current;
         index &= (~0ULL) - 1;
-        current = hash({ hashes_[offset + index], hashes_[offset + index + 1] });
+        current = compress_native({ hashes_[offset + index], hashes_[offset + index + 1] });
         offset += layer_size;
         layer_size /= 2;
         index /= 2;

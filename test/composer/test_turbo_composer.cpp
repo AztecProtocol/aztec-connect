@@ -7,7 +7,7 @@
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
 #include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
-#include <barretenberg/waffle/stdlib/group/group_utils.hpp>
+#include <barretenberg/misc_crypto/pedersen/pedersen.hpp>
 
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
 #include <memory>
@@ -25,7 +25,7 @@ TEST(turbo_composer, base_case)
     fr a = fr::one();
     composer.add_public_variable(a);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -128,7 +128,7 @@ TEST(turbo_composer, test_add_gate_proofs)
                                    fr::one(),
                                    fr::neg_one() });
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -222,7 +222,7 @@ TEST(turbo_composer, test_mul_gate_proofs)
 
     uint32_t e_idx = composer.add_variable(a - fr::one());
     composer.create_add_gate({ e_idx, b_idx, c_idx, q[0], q[1], q[2], (q[3] + q[0]) });
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -241,8 +241,8 @@ TEST(turbo_composer, small_scalar_multipliers)
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
     constexpr size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1 : num_bits;
     constexpr size_t bit_mask = (1ULL << num_bits) - 1UL;
-    const plonk::stdlib::group_utils::fixed_base_ladder* ladder = plonk::stdlib::group_utils::get_ladder(0, num_bits);
-    grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(0);
+    const crypto::pedersen::fixed_base_ladder* ladder = crypto::pedersen::get_ladder(0, num_bits);
+    grumpkin::g1::affine_element generator = crypto::pedersen::get_generator(0);
 
     grumpkin::g1::element origin_points[2];
     origin_points[0] = grumpkin::g1::element(ladder[0].one);
@@ -349,7 +349,7 @@ TEST(turbo_composer, small_scalar_multipliers)
     uint64_t expected_accumulator = scalar_multiplier.data[0];
     EXPECT_EQ(result_accumulator, expected_accumulator);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -374,8 +374,8 @@ TEST(turbo_composer, large_scalar_multipliers)
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
 
     constexpr size_t initial_exponent = num_bits; // ((num_bits & 1) == 1) ? num_bits - 1 : num_bits;
-    const plonk::stdlib::group_utils::fixed_base_ladder* ladder = plonk::stdlib::group_utils::get_ladder(0, num_bits);
-    grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(0);
+    const crypto::pedersen::fixed_base_ladder* ladder = crypto::pedersen::get_ladder(0, num_bits);
+    grumpkin::g1::affine_element generator = crypto::pedersen::get_generator(0);
 
     grumpkin::g1::element origin_points[2];
     origin_points[0] = grumpkin::g1::element(ladder[0].one);
@@ -487,7 +487,7 @@ TEST(turbo_composer, large_scalar_multipliers)
                                            .to_montgomery_form();
     EXPECT_EQ((result_accumulator == expected_accumulator), true);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -543,7 +543,7 @@ TEST(turbo_composer, range_constraint)
                                    fr::one(),
                                    fr::neg_one() });
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -624,7 +624,7 @@ TEST(turbo_composer, and_constraint)
                                    fr::one(),
                                    fr::neg_one() });
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -704,7 +704,7 @@ TEST(turbo_composer, xor_constraint)
                                    fr::one(),
                                    fr::neg_one() });
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 
@@ -748,7 +748,7 @@ TEST(turbo_composer, big_add_gate_with_bit_extract)
     generate_constraints(2);
     generate_constraints(3);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     waffle::TurboVerifier verifier = composer.create_verifier();
 

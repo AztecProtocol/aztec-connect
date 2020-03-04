@@ -4,6 +4,7 @@
 #include "../../../composer/turbo_composer.hpp"
 #include "../../bitarray/bitarray.hpp"
 #include "../../field/field.hpp"
+#include "../hash/blake2s.hpp"
 #include "../hash/sha256.hpp"
 
 namespace plonk {
@@ -47,8 +48,7 @@ point variable_base_mul(const point& pub_key, const bitarray<waffle::TurboCompos
     bool_t<waffle::TurboComposer> initialized(pub_key.x.context, false);
     field_t<waffle::TurboComposer> one(pub_key.x.context, barretenberg::fr::one());
     field_t<waffle::TurboComposer> two(pub_key.x.context, barretenberg::fr{ 2, 0, 0, 0 }.to_montgomery_form());
-    field_t<waffle::TurboComposer> three(pub_key.x.context,
-                                         barretenberg::fr{ 3, 0, 0, 0 }.to_montgomery_form());
+    field_t<waffle::TurboComposer> three(pub_key.x.context, barretenberg::fr{ 3, 0, 0, 0 }.to_montgomery_form());
     for (size_t i = 0; i < 256; ++i) {
         field_t dbl_lambda = (accumulator.x * accumulator.x * three) / (accumulator.y * two);
         field_t x_dbl = (dbl_lambda * dbl_lambda) - (accumulator.x * two);
@@ -77,6 +77,7 @@ bool verify_signature(const bitarray<waffle::TurboComposer>& message, const poin
     typedef bool_t<waffle::TurboComposer> bool_t;
     typedef field_t<waffle::TurboComposer> field_t;
     typedef bitarray<waffle::TurboComposer> bitarray;
+    typedef byte_array<waffle::TurboComposer> byte_array;
 
     waffle::TurboComposer* context = pub_key.x.context;
 
@@ -112,7 +113,7 @@ bool verify_signature(const bitarray<waffle::TurboComposer>& message, const poin
         hash_input[input_length - 1 - (256 + i)] = message[i];
     }
 
-    bitarray output = sha256(hash_input);
+    bitarray output = blake2s(byte_array(hash_input));
 
     bool valid = true;
     for (size_t i = 0; i < 256; ++i) {

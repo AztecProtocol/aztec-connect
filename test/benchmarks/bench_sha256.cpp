@@ -59,7 +59,7 @@ void construct_witnesses_bench(State& state) noexcept
 {
     for (auto _ : state) {
         size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
-        composers[idx] = waffle::TurboComposer(static_cast<size_t>(state.range(0)));
+        composers[idx] = waffle::TurboComposer(BARRETENBERG_SRS_PATH, static_cast<size_t>(state.range(0)));
         generate_test_plonk_circuit(composers[idx], static_cast<size_t>(state.range(0)));
     }
 }

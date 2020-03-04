@@ -62,7 +62,7 @@ template <size_t program_width> void ComposerBase::compute_sigma_permutations(pr
                 work_root *= key->small_domain.root;
             }
         }
-    
+
         barretenberg::polynomial sigma_polynomial_lagrange_base(sigma_polynomial);
         key->permutation_selectors_lagrange_base.insert(
             { "sigma_" + index, std::move(sigma_polynomial_lagrange_base) });

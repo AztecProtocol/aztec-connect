@@ -2,8 +2,10 @@
 
 #include <memory.h>
 #include <string>
+#include <array>
 
 #include "../../keccak/keccak.h"
+#include "../blake2s/blake2s.hpp"
 #include "../sha256/sha256.hpp"
 
 struct KeccakHasher {
@@ -23,6 +25,10 @@ struct Sha256Hasher {
     static std::vector<uint8_t> hash(const std::vector<uint8_t>& message) { return sha256::sha256(message); }
 };
 
+struct Blake2sHasher {
+    static std::vector<uint8_t> hash(const std::vector<uint8_t>& message) { return blake2::blake2s(message); }
+};
+
 namespace crypto {
 namespace schnorr {
 template <typename Fr, typename G1> struct key_pair {
@@ -31,13 +37,13 @@ template <typename Fr, typename G1> struct key_pair {
 };
 
 struct signature {
-    std::vector<uint8_t> s;
-    std::vector<uint8_t> e;
+    std::array<uint8_t, 32> s;
+    std::array<uint8_t, 32> e;
 };
 
 struct signature_b {
-    std::vector<uint8_t> s;
-    std::vector<uint8_t> r;
+    std::array<uint8_t, 32> s;
+    std::array<uint8_t, 32> r;
 };
 
 template <typename Hash, typename Fq, typename Fr, typename G1>

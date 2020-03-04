@@ -55,8 +55,15 @@ add_library(
     curves/bn254/pairing_impl.hpp
     curves/bn254/pairing.hpp
     curves/grumpkin/grumpkin.hpp
+    misc_crypto/blake2s/blake2s.cpp
+    misc_crypto/blake2s/blake2s.hpp
+    misc_crypto/blake2s/blake2-impl.hpp
     misc_crypto/sha256/sha256.cpp
     misc_crypto/sha256/sha256.hpp
+    misc_crypto/pedersen/pedersen.cpp
+    misc_crypto/pedersen/pedersen.hpp
+    misc_crypto/commitment/pedersen_note.cpp
+    misc_crypto/commitment/pedersen_note.hpp
     misc_crypto/schnorr/schnorr.tcc
     misc_crypto/schnorr/schnorr.hpp
     io/io.hpp
@@ -116,8 +123,6 @@ add_library(
     waffle/composer/turbo_composer.cpp
     waffle/composer/turbo_composer.hpp
     waffle/stdlib/common.hpp
-    waffle/stdlib/group/group_utils.hpp
-    waffle/stdlib/group/group_utils.cpp
     waffle/stdlib/int_utils.hpp
     waffle/stdlib/bool/bool.cpp
     waffle/stdlib/bool/bool.hpp
@@ -137,10 +142,11 @@ add_library(
     waffle/stdlib/mimc.cpp
     waffle/stdlib/mimc.hpp
     waffle/stdlib/crypto/crypto.hpp
+    waffle/stdlib/crypto/hash/blake2s.cpp
+    waffle/stdlib/crypto/hash/blake2s.hpp
     waffle/stdlib/crypto/hash/sha256.cpp
     waffle/stdlib/crypto/hash/sha256.hpp
     waffle/stdlib/merkle_tree/hash.hpp
-    waffle/stdlib/merkle_tree/merkle_tree.cpp
     waffle/stdlib/merkle_tree/merkle_tree.hpp
     waffle/stdlib/merkle_tree/memory_store.hpp
     waffle/stdlib/merkle_tree/memory_store.cpp
@@ -168,9 +174,6 @@ target_precompile_headers(
     PUBLIC
     "$<$<COMPILE_LANGUAGE:CXX>:<random$<ANGLE-R>>"
     $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/assert.hpp">
-    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/portability/win32.hpp">
-    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/portability/apple.hpp">
-    $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/portability/linux.hpp">
     $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/types.hpp">
     $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/utils.hpp">
     $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/uint256/uint256.hpp">
@@ -243,10 +246,17 @@ if(PROFILING)
         curves/bn254/pairing_impl.hpp
         curves/bn254/pairing.hpp
         curves/grumpkin/grumpkin.hpp
+        misc_crypto/blake2s/blake2s.cpp
+        misc_crypto/blake2s/blake2s.hpp
+        misc_crypto/blake2s/blake2-impl.hpp
         misc_crypto/sha256/sha256.cpp
         misc_crypto/sha256/sha256.hpp
         misc_crypto/schnorr/schnorr.tcc
         misc_crypto/schnorr/schnorr.hpp
+        misc_crypto/pedersen/pedersen.cpp
+        misc_crypto/pedersen/pedersen.hpp
+        misc_crypto/commitment/pedersen_note.cpp
+        misc_crypto/commitment/pedersen_note.hpp
         io/io.hpp
         keccak/hash_types.h
         keccak/keccakf1600.c
@@ -304,8 +314,6 @@ if(PROFILING)
         waffle/composer/turbo_composer.cpp
         waffle/composer/turbo_composer.hpp
         waffle/stdlib/common.hpp
-        waffle/stdlib/group/group_utils.hpp
-        waffle/stdlib/group/group_utils.cpp
         waffle/stdlib/int_utils.hpp
         waffle/stdlib/bool/bool.cpp
         waffle/stdlib/bool/bool.hpp
@@ -325,8 +333,15 @@ if(PROFILING)
         waffle/stdlib/mimc.cpp
         waffle/stdlib/mimc.hpp
         waffle/stdlib/crypto/crypto.hpp
+        waffle/stdlib/crypto/hash/blake2s.cpp
+        waffle/stdlib/crypto/hash/blake2s.hpp
         waffle/stdlib/crypto/hash/sha256.cpp
         waffle/stdlib/crypto/hash/sha256.hpp
+        waffle/stdlib/merkle_tree/merkle_tree.hpp
+        waffle/stdlib/merkle_tree/memory_store.hpp
+        waffle/stdlib/merkle_tree/memory_store.cpp
+        waffle/stdlib/merkle_tree/leveldb_store.hpp
+        waffle/stdlib/merkle_tree/leveldb_store.cpp
         waffle/stdlib/crypto/hash/pedersen.cpp
         waffle/stdlib/crypto/hash/pedersen.hpp
         waffle/stdlib/crypto/schnorr/schnorr.cpp

@@ -4,20 +4,6 @@
 #include "unistd.h"
 #include <random>
 
-// #include "assert.hpp"
-
-#ifdef _WIN32
-#include "./portability/win32.hpp"
-#endif
-
-#ifdef __linux__
-#include "./portability/linux.hpp"
-#endif
-
-#ifdef __APPLE__
-#include "./portability/apple.hpp"
-#endif
-
 #ifdef _WIN32
 #define BBERG_INLINE __forceinline inline
 #else

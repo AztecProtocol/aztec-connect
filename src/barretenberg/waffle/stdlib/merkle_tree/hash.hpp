@@ -1,23 +1,13 @@
 #pragma once
+#include "../../../misc_crypto/blake2s/blake2s.hpp"
+#include "../../../misc_crypto/pedersen/pedersen.hpp"
 #include "../../../misc_crypto/sha256/sha256.hpp"
-#include "../../composer/standard_composer.hpp"
-#include "../field/field.hpp"
-#include "../group/group_utils.hpp"
-#include "../mimc.hpp"
+#include "../byte_array/byte_array.hpp"
+#include "../crypto/hash/blake2s.hpp"
+#include "../crypto/hash/sha256.hpp"
 #include <iomanip>
 #include <iostream>
 #include <vector>
-
-namespace std {
-inline std::ostream& operator<<(std::ostream& os, std::vector<unsigned char> const& t)
-{
-    os << "0x";
-    for (auto e : t) {
-        os << std::setfill('0') << std::hex << std::setw(2) << (int)e;
-    }
-    return os;
-}
-} // namespace std
 
 namespace plonk {
 namespace stdlib {
@@ -29,26 +19,17 @@ inline bool isLittleEndian()
     return (*(char*)&num == 42);
 }
 
-inline barretenberg::fr sha256(std::string const& input)
+template <typename ComposerContext> inline field_t<ComposerContext> hash_value(byte_array<ComposerContext> const& input)
 {
-    /*
-    std::vector<unsigned char> src(input.size() * 32);
-    auto src_ptr = (barretenberg::fr*)&src[0];
-    for (size_t i = 0; i < input.size(); ++i) {
-        src_ptr[i] = input[i].from_montgomery_form();
-        if (isLittleEndian()) {
-            barretenberg::fr be;
-            be.data[0] = __builtin_bswap64(src_ptr[i].data[3]);
-            be.data[1] = __builtin_bswap64(src_ptr[i].data[2]);
-            be.data[2] = __builtin_bswap64(src_ptr[i].data[1]);
-            be.data[3] = __builtin_bswap64(src_ptr[i].data[0]);
-            src_ptr[i] = be;
-        }
-        // TODO: Reverse machine words on BE?
-    }
-    */
+    ASSERT(input.get_context() != nullptr);
+    return stdlib::blake2s(input);
+}
+
+inline barretenberg::fr hash_value_native(std::string const& input)
+{
     std::vector<uint8_t> inputv(input.begin(), input.end());
-    std::vector<uint8_t> output = sha256::sha256(inputv);
+    // std::vector<uint8_t> output = blake2::blake2s(inputv);
+    std::vector<uint8_t> output = blake2::blake2s(inputv);
     barretenberg::fr result = barretenberg::fr::zero();
     if (isLittleEndian()) {
         result.data[0] = __builtin_bswap64(*(uint64_t*)&output[24]);
@@ -64,20 +45,10 @@ inline barretenberg::fr sha256(std::string const& input)
     return result.to_montgomery_form();
 }
 
-inline barretenberg::fr hash(std::vector<barretenberg::fr> const& input)
+inline barretenberg::fr compress_native(std::vector<barretenberg::fr> const& input)
 {
-    return group_utils::compress_native(input[0], input[1]);
+    return crypto::pedersen::compress_native(input[0], input[1]);
 }
-
-// inline barretenberg::fr hash(std::vector<barretenberg::fr> const& input)
-// {
-//     waffle::StandardComposer throw_away_composer;
-//     std::vector<field_t<waffle::StandardComposer>> inputs;
-//     std::transform(input.begin(), input.end(), std::back_inserter(inputs), [&](auto const& v) {
-//         return field_t<waffle::StandardComposer>(witness_t(&throw_away_composer, v));
-//     });
-//     return stdlib::mimc7<waffle::StandardComposer>(inputs).get_value();
-// }
 
 } // namespace merkle_tree
 } // namespace stdlib

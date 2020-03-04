@@ -1,10 +1,5 @@
 #pragma once
-
-#ifdef __wasm__
+#include <endian.h>
 #define aligned_free free
-#endif
-#ifdef __linux__
-
-#define aligned_free free
-
-#endif
+#define ntohll be64toh
+#define htonll htobe64

@@ -10,10 +10,10 @@
 
 namespace waffle
 {
-    
+
 struct verification_key
 {
-    verification_key(const size_t num_gates, const size_t num_inputs = 0);
+    verification_key(const size_t num_gates, const size_t num_inputs, std::string const& crs_path);
     verification_key(const verification_key& other);
     verification_key(verification_key&& other);
     verification_key& operator=(verification_key&& other);

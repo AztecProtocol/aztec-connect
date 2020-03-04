@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <array>
 
 #include "../uint256/uint256.hpp"
 #include "../utils.hpp"

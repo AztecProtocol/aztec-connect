@@ -112,7 +112,7 @@ waffle::Prover generate_test_data(const size_t n)
 
     // even indices = mul gates, odd incides = add gates
 
-    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(n);
+    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(n, 0, BARRETENBERG_SRS_PATH);
     std::shared_ptr<program_witness> witness = std::make_shared<program_witness>();
 
     polynomial w_l;

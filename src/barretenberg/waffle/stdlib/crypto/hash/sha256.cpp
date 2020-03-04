@@ -112,6 +112,29 @@ std::array<uint32<Composer>, 8> sha256_block(const std::array<uint32<Composer>, 
     return output;
 }
 
+template <typename Composer> byte_array<Composer> sha256_block(const byte_array<Composer>& input)
+{
+    typedef uint32<Composer> uint32;
+
+    ASSERT(input.size() == 64);
+
+    std::array<uint32, 8> hash;
+    prepare_constants(hash);
+
+    std::array<uint32, 16> hash_input;
+    for (size_t i = 0; i < 16; ++i) {
+        hash_input[i] = uint32(input.slice(i * 4, 4));
+    }
+    hash = sha256_block(hash, hash_input);
+
+    byte_array<Composer> result(input.get_context());
+    for (size_t i = 0; i < 8; ++i) {
+        result.write(hash[i]);
+    }
+
+    return result;
+}
+
 template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>& input)
 {
     typedef uint32<Composer> uint32;
@@ -143,6 +166,8 @@ template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>&
     }
     return bitarray(rolling_hash);
 }
+
+template byte_array<waffle::TurboComposer> sha256_block(const byte_array<waffle::TurboComposer>& input);
 
 template bitarray<waffle::StandardComposer> sha256(const bitarray<waffle::StandardComposer>& input);
 template bitarray<waffle::MiMCComposer> sha256(const bitarray<waffle::MiMCComposer>& input);

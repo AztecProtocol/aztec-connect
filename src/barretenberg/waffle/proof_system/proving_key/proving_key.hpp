@@ -14,7 +14,7 @@ namespace waffle
 struct proving_key
 {
     public:
-    proving_key(const size_t num_gates, const size_t num_inputs = 0);
+    proving_key(const size_t num_gates, const size_t num_inputs, std::string const& crs_path);
 
     proving_key(const proving_key& other);
 

@@ -2,8 +2,8 @@
 
 #include "../../../composer/turbo_composer.hpp"
 
+#include "../../../../misc_crypto/pedersen/pedersen.hpp"
 #include "../../field/field.hpp"
-#include "../../group/group_utils.hpp"
 
 #include "../crypto.hpp"
 
@@ -13,6 +13,16 @@ namespace pedersen {
 
 typedef plonk::stdlib::field_t<waffle::TurboComposer> field_t;
 using namespace barretenberg;
+
+namespace {
+point add_points(const point& first, const point& second)
+{
+    field_t lambda = (second.y - first.y) / (second.x - first.x);
+    field_t x_3 = lambda * lambda - second.x - first.x;
+    field_t y_3 = lambda * (first.x - x_3) - first.y;
+    return { x_3, y_3 };
+}
+} // namespace
 
 point hash_single(const field_t& in, const size_t hash_index)
 {
@@ -30,9 +40,8 @@ point hash_single(const field_t& in, const size_t hash_index)
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
 
     constexpr size_t initial_exponent = num_bits; // ((num_bits & 1) == 1) ? num_bits - 1: num_bits;
-    const plonk::stdlib::group_utils::fixed_base_ladder* ladder =
-        plonk::stdlib::group_utils::get_hash_ladder(hash_index, num_bits);
-    grumpkin::g1::affine_element generator = plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1);
+    const crypto::pedersen::fixed_base_ladder* ladder = crypto::pedersen::get_hash_ladder(hash_index, num_bits);
+    grumpkin::g1::affine_element generator = crypto::pedersen::get_generator(hash_index * 2 + 1);
 
     grumpkin::g1::element origin_points[2];
     origin_points[0] = grumpkin::g1::element(ladder[0].one);
@@ -149,18 +158,28 @@ point hash_single(const field_t& in, const size_t hash_index)
     return result;
 }
 
-field_t compress(const field_t& in_left, const field_t& in_right)
+field_t compress(const field_t& in_left, const field_t& in_right, const size_t hash_index)
 {
-    point first = hash_single(in_left, 0);
-    point second = hash_single(in_right, 1);
-
-    // combine hash limbs
-    // TODO: replace this addition with a variable-base custom gate
-    field_t lambda = (second.y - first.y) / (second.x - first.x);
-    field_t x_3 = lambda * lambda - second.x - first.x;
-    return x_3;
+    point first = hash_single(in_left, hash_index);
+    point second = hash_single(in_right, hash_index + 1);
+    return add_points(first, second).x;
 }
 
+field_t compress_eight(const std::array<field_t, 8>& inputs)
+{
+    point accumulator = hash_single(inputs[0], 16);
+    for (size_t i = 1; i < 8; ++i) {
+        accumulator = add_points(accumulator, hash_single(inputs[i], 16 + i));
+    }
+    return accumulator.x;
+}
+
+point compress_to_point(const field_t& in_left, const field_t& in_right, const size_t hash_index)
+{
+    point first = hash_single(in_left, hash_index);
+    point second = hash_single(in_right, hash_index + 1);
+    return add_points(first, second);
+}
 } // namespace pedersen
 } // namespace stdlib
 } // namespace plonk

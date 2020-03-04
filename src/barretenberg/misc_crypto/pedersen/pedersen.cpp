@@ -1,14 +1,14 @@
-#include "./group_utils.hpp"
+#include "./pedersen.hpp"
 
-#include "../../../curves/grumpkin/grumpkin.hpp"
+#include "../../curves/grumpkin/grumpkin.hpp"
+#include <iostream>
 
 #ifndef NO_MULTITHREADING
 #include <omp.h>
 #endif
 
-namespace plonk {
-namespace stdlib {
-namespace group_utils {
+namespace crypto {
+namespace pedersen {
 namespace {
 
 static constexpr size_t num_generators = 128;
@@ -144,8 +144,7 @@ grumpkin::g1::element hash_single(const barretenberg::fr& in, const size_t hash_
     constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
 
-    const plonk::stdlib::group_utils::fixed_base_ladder* ladder =
-        plonk::stdlib::group_utils::get_hash_ladder(hash_index, num_bits);
+    const crypto::pedersen::fixed_base_ladder* ladder = crypto::pedersen::get_hash_ladder(hash_index, num_bits);
 
     barretenberg::fr scalar_multiplier_base = scalar_multiplier.to_montgomery_form();
     if ((scalar_multiplier.data[0] & 1) == 0) {
@@ -160,7 +159,7 @@ grumpkin::g1::element hash_single(const barretenberg::fr& in, const size_t hash_
     grumpkin::g1::element accumulator;
     accumulator = grumpkin::g1::element(ladder[0].one);
     if (skew) {
-        accumulator += plonk::stdlib::group_utils::get_generator(hash_index * 2 + 1);
+        accumulator += crypto::pedersen::get_generator(hash_index * 2 + 1);
     }
 
     for (size_t i = 0; i < num_quads; ++i) {
@@ -174,7 +173,28 @@ grumpkin::g1::element hash_single(const barretenberg::fr& in, const size_t hash_
     return accumulator;
 }
 
-grumpkin::fq compress_native(const grumpkin::fq& left, const grumpkin::fq& right)
+grumpkin::fq compress_eight_native(const std::array<grumpkin::fq, 8>& inputs)
+{
+    grumpkin::g1::element out[8];
+
+#ifndef NO_MULTITHREADING
+#pragma omp parallel for num_threads(8)
+#endif
+    for (size_t i = 0; i < 8; ++i) {
+        out[i] = hash_single(inputs[i], 16 + i);
+    }
+
+    grumpkin::g1::element r = out[0];
+    for (size_t i = 1; i < 8; ++i) {
+        r = out[i] + r;
+    }
+    r = r.normalize();
+    return r.x;
+}
+
+grumpkin::fq compress_native(const grumpkin::fq& left,
+                                      const grumpkin::fq& right,
+                                      const size_t hash_index)
 {
 #ifndef NO_MULTITHREADING
     grumpkin::fq in[2] = { left, right };
@@ -182,7 +202,7 @@ grumpkin::fq compress_native(const grumpkin::fq& left, const grumpkin::fq& right
 #pragma omp parallel num_threads(2)
     {
         size_t i = (size_t)omp_get_thread_num();
-        out[i] = hash_single(in[i], i);
+        out[i] = hash_single(in[i], hash_index + i);
     }
     grumpkin::g1::element r;
     r = out[0] + out[1];
@@ -190,14 +210,23 @@ grumpkin::fq compress_native(const grumpkin::fq& left, const grumpkin::fq& right
     return r.x;
 #else
     grumpkin::g1::element r;
-    grumpkin::g1::element first = hash_single(left, 0);
-    grumpkin::g1::element second = hash_single(right, 1);
+    grumpkin::g1::element first = hash_single(left, hash_index);
+    grumpkin::g1::element second = hash_single(right, hash_index + 1);
     r = first + second;
-    r = r.normalize();
+    r = grumpkin::g1::normalize(r);
     return r.x;
 #endif
 }
 
-} // namespace group_utils
-} // namespace stdlib
-} // namespace plonk
+grumpkin::g1::affine_element compress_to_point_native(const grumpkin::fq& left,
+                                                      const grumpkin::fq& right,
+                                                      const size_t hash_index)
+{
+    grumpkin::g1::element first = hash_single(left, hash_index);
+    grumpkin::g1::element second = hash_single(right, hash_index + 1);
+    first = first + second;
+    first = first.normalize();
+    return { first.x, first.y };
+}
+} // namespace pedersen
+} // namespace crypto

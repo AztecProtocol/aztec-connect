@@ -17,13 +17,13 @@ signature construct_signature(const std::string& message, const key_pair<Fr, G1>
     std::copy(r.begin(), r.end(), std::back_inserter(message_buffer));
     std::copy(message.begin(), message.end(), std::back_inserter(message_buffer));
 
-    sig.e = Hash::hash(message_buffer);
+    auto ev = Hash::hash(message_buffer);
+    std::copy(ev.begin(), ev.end(), sig.e.begin());
 
     Fr e = Fr::serialize_from_buffer(&sig.e[0]);
 
     Fr s = k - (account.private_key * e);
 
-    sig.s.resize(32);
     Fr::serialize_to_buffer(s, &sig.s[0]);
     return sig;
 }
@@ -34,7 +34,6 @@ signature_b construct_signature_b(const std::string& message, const key_pair<Fr,
     signature_b sig;
     Fr k = Fr::random_element(); // TODO replace with HMAC
     typename G1::affine_element R(G1::one * k);
-    sig.r.resize(32);
     Fq::serialize_to_buffer(R.x, &sig.r[0]);
 
     Fq yy = R.x.sqr() * R.x + G1::element::curve_b;
@@ -52,7 +51,6 @@ signature_b construct_signature_b(const std::string& message, const key_pair<Fr,
     Fr e = Fr::serialize_from_buffer(&e_vec[0]);
     Fr s = account.private_key - (k * e);
 
-    sig.s.resize(32);
     Fr::serialize_to_buffer(s, &sig.s[0]);
     return sig;
 }

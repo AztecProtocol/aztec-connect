@@ -65,8 +65,8 @@ waffle::Verifier generate_verifier(std::shared_ptr<proving_key> circuit_proving_
             poly_coefficients[i], circuit_proving_key->reference_string.monomials, circuit_proving_key->n));
     }
 
-    std::shared_ptr<verification_key> circuit_verification_key =
-        std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs);
+    std::shared_ptr<verification_key> circuit_verification_key = std::make_shared<verification_key>(
+        circuit_proving_key->n, circuit_proving_key->num_public_inputs, BARRETENBERG_SRS_PATH);
 
     circuit_verification_key->constraint_selectors.insert({ "Q_1", commitments[0] });
     circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });
@@ -93,7 +93,7 @@ waffle::Prover generate_test_data(const size_t n)
 
     // even indices = mul gates, odd incides = add gates
 
-    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(n, 0);
+    std::shared_ptr<proving_key> key = std::make_shared<proving_key>(n, 0, BARRETENBERG_SRS_PATH);
     std::shared_ptr<program_witness> witness = std::make_shared<program_witness>();
 
     polynomial w_l;

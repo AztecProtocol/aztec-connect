@@ -217,7 +217,7 @@ bool xor_identity(uint64_t a_x,
 
     uint64_t poly_test = (delta_c * 3) - poly_c;
     if (poly_test != 0) {
-        printf("invalid at index %" PRIu64 " : %" PRIu64 "  value = %" PRIu64 " \n", i, j, poly_c);
+        printf("invalid at index %zu : %zu  value = %" PRIu64 " \n", i, j, poly_c);
     }
     return !(delta_a_test || delta_b_test || delta_c_test || w_test || poly_test);
 }
@@ -248,7 +248,7 @@ bool and_identity(uint64_t a_x,
 
     uint64_t poly_test = (delta_c * 6) - poly_c;
     if (poly_test != 0) {
-        printf("invalid at index %" PRIu64 " : %" PRIu64 " , value = %" PRIu64 " \n", i, j, poly_c);
+        printf("invalid at index %zu : %zu , value = %" PRIu64 " \n", i, j, poly_c);
     }
     return !(delta_a_test || delta_b_test || delta_c_test || w_test || poly_test);
 }

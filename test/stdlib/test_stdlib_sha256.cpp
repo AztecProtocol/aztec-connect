@@ -38,7 +38,7 @@ typedef stdlib::public_witness_t<waffle::TurboComposer> public_witness_t;
 //     plonk::stdlib::prepare_constants(init_constants);
 //     plonk::stdlib::sha256_block(init_constants, inputs);
 
-//     waffle::TurboProver prover = composer.preprocess();
+//     waffle::TurboProver prover = composer.create_prover();
 
 //     printf("composer gates = %zu\n", composer.get_num_gates());
 //     waffle::TurboVerifier verifier = composer.create_verifier();
@@ -69,7 +69,7 @@ TEST(stdlib_sha256, test_55_bytes)
     EXPECT_EQ(output[6].get_value(), 0x54a8fac7U);
     EXPECT_EQ(output[7].get_value(), 0x93791fc7U);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();
@@ -99,7 +99,7 @@ TEST(stdlib_sha256, test_NIST_vector_one)
     EXPECT_EQ(output[6].get_value(), 0xB410FF61U);
     EXPECT_EQ(output[7].get_value(), 0xF20015ADU);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();
@@ -129,7 +129,7 @@ TEST(stdlib_sha256, test_NIST_vector_two)
     EXPECT_EQ(output[6].get_value(), 0xF6ECEDD4U);
     EXPECT_EQ(output[7].get_value(), 0x19DB06C1U);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();
@@ -168,7 +168,7 @@ TEST(stdlib_sha256, test_NIST_vector_three)
     EXPECT_EQ(output[6].get_value(), 0xe11204c0U);
     EXPECT_EQ(output[7].get_value(), 0x8ffe732bU);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();
@@ -201,7 +201,7 @@ TEST(stdlib_sha256, test_NIST_vector_four)
     EXPECT_EQ(output[6].get_value(), 0xbd56c61cU);
     EXPECT_EQ(output[7].get_value(), 0xcccd9504U);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();
@@ -242,7 +242,7 @@ TEST(stdlib_sha256, test_NIST_vector_five)
     EXPECT_EQ(output[6].get_value(), 0xa519105aU);
     EXPECT_EQ(output[7].get_value(), 0x1eadd6e4U);
 
-    waffle::TurboProver prover = composer.preprocess();
+    waffle::TurboProver prover = composer.create_prover();
 
     printf("composer gates = %zu\n", composer.get_num_gates());
     waffle::TurboVerifier verifier = composer.create_verifier();
