@@ -73,11 +73,11 @@ TEST(stdlib_schnorr, verify_signature)
     account.public_key = grumpkin::g1::one * account.private_key;
 
     crypto::schnorr::signature signature =
-        crypto::schnorr::construct_signature<Sha256Hasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(
+        crypto::schnorr::construct_signature<Blake2sHasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(
             message_string, account);
 
     bool first_result =
-        crypto::schnorr::verify_signature<Sha256Hasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(
+        crypto::schnorr::verify_signature<Blake2sHasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(
             message_string, account.public_key, signature);
     EXPECT_EQ(first_result, true);
 
