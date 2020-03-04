@@ -1,7 +1,6 @@
 #include "./sha256.hpp"
-
+#include "../../../../assert.hpp"
 #include "../../bitarray/bitarray.hpp"
-// #include "../../uint32/uint32.hpp"
 
 namespace plonk {
 namespace stdlib {

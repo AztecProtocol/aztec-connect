@@ -223,7 +223,7 @@ fr static_mul_assign_impl(const fr& x, const fr& y)
 {
     fr acc = x;
     for (size_t i = 0; i < NUM_POINTS; ++i) {
-        fr::asm_self_mul_with_coarse_reduction(acc, y);
+        acc += y;
     }
     return acc;
 }

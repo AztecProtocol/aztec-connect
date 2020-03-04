@@ -353,6 +353,7 @@ if(PROFILING)
     target_link_libraries(
         barretenberg_profiling
         PRIVATE
+        leveldb
     )
 
     set_target_properties(

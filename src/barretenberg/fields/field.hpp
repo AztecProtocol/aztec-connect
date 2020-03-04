@@ -380,6 +380,7 @@ template <class Params> struct alignas(32) field {
     static constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
 #endif
 };
+
 } // namespace barretenberg
 
 #include "./field_impl.hpp"

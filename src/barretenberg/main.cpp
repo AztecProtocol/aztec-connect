@@ -57,7 +57,7 @@ const auto init = []() {
         accumulator *= element;
         scalars.emplace_back(accumulator);
     }
-    reference_string = waffle::ReferenceString(NUM_POINTS);
+    reference_string = waffle::ReferenceString(NUM_POINTS, BARRETENBERG_SRS_PATH);
 
     return 1;
 }();

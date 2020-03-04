@@ -69,7 +69,7 @@ void preprocess_witnesses_bench(State& state) noexcept
 {
     for (auto _ : state) {
         size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
-        provers[idx] = composers[idx].preprocess();
+        provers[idx] = composers[idx].create_prover();
         // printf("num bytes = %" PRIx64 ", num gates = %zu\n", state.range(0), composers[idx].get_num_gates());
     }
 }
