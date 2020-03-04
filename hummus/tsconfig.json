@@ -3,6 +3,7 @@
     "target": "es6",
     "module": "es6",
     "moduleResolution": "node",
+    "jsx": "react",
     "outDir": "dest",
     "strict": true,
     "noImplicitAny": true,

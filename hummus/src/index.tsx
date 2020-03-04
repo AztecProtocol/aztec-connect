@@ -5,6 +5,8 @@
   https://opensource.org/licenses/MIT
 */
 
+import React from 'react';
+import ReactDOM from 'react-dom';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { Schnorr } from 'barretenberg/crypto/schnorr';
 require('barretenberg/wasm/barretenberg.wasm');
@@ -24,6 +26,8 @@ async function main() {
   const verified = schnorr.verifySignature(msg, pubKey, signature);
 
   console.log(verified);
+
+  ReactDOM.render(<p/>, document.getElementById('root'));
 }
 
 // tslint:disable-next-line:no-console
