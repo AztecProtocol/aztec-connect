@@ -1,4 +1,4 @@
-FROM aztecprotocol/cmake:3.15.4
+FROM aztecprotocol/cmake:3.16.4
 RUN apt-get update && apt-get install -y \
   xz-utils \
   build-essential \
