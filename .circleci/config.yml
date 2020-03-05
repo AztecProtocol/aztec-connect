@@ -23,7 +23,7 @@ jobs:
           command: |
             if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q ^dockerfiles/Dockerfile.cmake; then
               docker-compose build cmake
-              docker push aztecprotocol/cmake:3.15.4
+              docker push aztecprotocol/cmake:3.16.4
             fi
       - run:
           name: 'clang'
@@ -76,7 +76,9 @@ jobs:
       - checkout
       - run:
           name: 'Build'
-          command: docker-compose build x86_64-linux-clang
+          command: |
+            docker pull aztecprotocol/clang:9.0.0
+            docker-compose build x86_64-linux-clang
 
   x86_64-win32-mingw:
     machine:
@@ -109,7 +111,9 @@ jobs:
       - checkout
       - run:
           name: 'Build'
-          command: docker-compose build wasm-linux-clang
+          command: |
+            docker pull aztecprotocol/clang:9.0.0
+            docker-compose build wasm-linux-clang
 
 workflows:
   build:
