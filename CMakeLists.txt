@@ -55,8 +55,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS ON)
 
-OptimizeForArchitecture()
-list(FIND _available_vector_units_list bmi2 HAS_BMI2)
+#OptimizeForArchitecture()
+#list(FIND _available_vector_units_list bmi2 HAS_BMI2)
 
 if(APPLE)
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
@@ -136,7 +136,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=deprecated-copy -fconstexpr-ops-limit=100000000")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-copy -fconstexpr-ops-limit=100000000")
 endif()
 
 if(NOT DEFINED PIPPENGER_BLOCK_SIZE)
