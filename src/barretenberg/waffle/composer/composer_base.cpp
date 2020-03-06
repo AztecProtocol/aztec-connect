@@ -7,13 +7,7 @@
 namespace waffle {
 void ComposerBase::assert_equal(const uint32_t a_idx, const uint32_t b_idx)
 {
-    if (!barretenberg::fr::eq(variables[a_idx], variables[b_idx])) {
-        printf("assert equal check failed! indices %u, %u \n", a_idx, b_idx);
-        printf("left witness epicycle count = %lu, right witness epicycle count = %lu \n",
-               wire_epicycles[a_idx].size(),
-               wire_epicycles[b_idx].size());
-    }
-    ASSERT(barretenberg::fr::eq(variables[a_idx], variables[b_idx]));
+    ASSERT((variables[a_idx] == variables[b_idx]));
     for (size_t i = 0; i < wire_epicycles[b_idx].size(); ++i) {
         wire_epicycles[a_idx].emplace_back(wire_epicycles[b_idx][i]);
         if (wire_epicycles[b_idx][i].wire_type == WireType::LEFT) {
@@ -62,13 +56,13 @@ template <size_t program_width> void ComposerBase::compute_sigma_permutations(pr
             sigma_polynomial, sigma_mappings[i], key->small_domain);
 
         if (i == 0) {
-            barretenberg::fr::field_t work_root = barretenberg::fr::one;
+            barretenberg::fr work_root = barretenberg::fr::one();
             for (size_t j = 0; j < num_public_inputs; ++j) {
                 sigma_polynomial[j] = work_root;
-                barretenberg::fr::__mul(work_root, key->small_domain.root, work_root);
+                work_root *= key->small_domain.root;
             }
         }
-    
+
         barretenberg::polynomial sigma_polynomial_lagrange_base(sigma_polynomial);
         key->permutation_selectors_lagrange_base.insert(
             { "sigma_" + index, std::move(sigma_polynomial_lagrange_base) });

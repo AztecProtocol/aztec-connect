@@ -8,13 +8,12 @@ static uint64_t* wnaf_memory = nullptr;
 static g1::element* bucket_memory = nullptr;
 static g1::affine_element* point_pairs_1 = nullptr;
 static g1::affine_element* point_pairs_2 = nullptr;
-static fq::field_t* scratch_space = nullptr;
+static fq* scratch_space = nullptr;
 static uint32_t* bucket_count_memory = nullptr;
 static uint32_t* bit_count_memory = nullptr;
 static bool* bucket_empty_status = nullptr;
 
 const auto init = []() {
-    printf("init. pippenger block size = %d\n", PIPPENGER_BLOCK_SIZE);
     static_assert(PIPPENGER_BLOCK_SIZE < 27);
     constexpr size_t max_num_points = (1 << PIPPENGER_BLOCK_SIZE);
     constexpr size_t max_num_rounds = 8;
@@ -26,7 +25,7 @@ const auto init = []() {
     // memory += (max_buckets + thread_overspill) * sizeof(g1::element);
     // memory += (max_num_points * 2) * sizeof(g1::affine_element);
     // memory += (max_num_points * 2) * sizeof(g1::affine_element);
-    // memory += (max_num_points) * sizeof(fq::field_t);
+    // memory += (max_num_points) * sizeof(fq);
     // memory += max_num_points * 2 * sizeof(uint32_t);
     // memory += max_num_points * 2 * sizeof(uint32_t);
     // memory += max_num_points * 2 * sizeof(bool);
@@ -39,7 +38,7 @@ const auto init = []() {
     // TODO: we're allocating too much memory here, trim this down
     point_pairs_1 = (g1::affine_element*)(aligned_alloc(64, (max_num_points * 2 + 256) * sizeof(g1::affine_element)));
     point_pairs_2 = (g1::affine_element*)(aligned_alloc(64, (max_num_points * 2 + 256) * sizeof(g1::affine_element)));
-    scratch_space = (fq::field_t*)(aligned_alloc(64, (max_num_points) * sizeof(fq::field_t)));
+    scratch_space = (fq*)(aligned_alloc(64, (max_num_points) * sizeof(fq)));
 
     bucket_count_memory = (uint32_t*)(aligned_alloc(64, max_num_points * 2 * sizeof(uint32_t)));
     bit_count_memory = (uint32_t*)(aligned_alloc(64, max_num_points * 2 * sizeof(uint32_t)));
@@ -48,10 +47,10 @@ const auto init = []() {
     skew_memory = (bool*)(aligned_alloc(64, max_num_points * 2 * sizeof(bool)));
     memset((void*)skew_memory, 0, max_num_points * 2 * sizeof(bool));
     memset((void*)wnaf_memory, 1, max_num_points * max_num_rounds * 2 * sizeof(uint64_t));
-    memset((g1::element*)bucket_memory, 0xff, (max_buckets + thread_overspill) * sizeof(g1::element));
-    memset((g1::affine_element*)point_pairs_1, 0xff, (max_num_points * 2) * sizeof(g1::affine_element));
-    memset((g1::affine_element*)point_pairs_2, 0xff, (max_num_points * 2) * sizeof(g1::affine_element));
-    memset((fq::field_t*)scratch_space, 0xff, (max_num_points) * sizeof(fq::field_t));
+    memset((void*)bucket_memory, 0xff, (max_buckets + thread_overspill) * sizeof(g1::element));
+    memset((void*)point_pairs_1, 0xff, (max_num_points * 2) * sizeof(g1::affine_element));
+    memset((void*)point_pairs_2, 0xff, (max_num_points * 2) * sizeof(g1::affine_element));
+    memset((void*)scratch_space, 0xff, (max_num_points) * sizeof(fq));
 
     memset((void*)bucket_count_memory, 0x00, max_num_points * 2 * sizeof(uint32_t));
     memset((void*)bit_count_memory, 0x00, max_num_points * 2 * sizeof(uint32_t));

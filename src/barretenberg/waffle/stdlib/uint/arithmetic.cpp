@@ -1,10 +1,9 @@
 #include "./uint.hpp"
 
 #include "../../../curves/bn254/fr.hpp"
-#include "../../composer/turbo_composer.hpp"
-#include "../../composer/standard_composer.hpp"
-#include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
+#include "../../composer/standard_composer.hpp"
+#include "../../composer/turbo_composer.hpp"
 
 #include "../bool/bool.hpp"
 #include "../field/field.hpp"
@@ -37,7 +36,7 @@ uint<Composer, Native> uint<Composer, Native>::operator+(const uint& other) cons
         return result;
     }
 
-    const uint256_t lhs = ctx->get_variable(witness_index); // get_unbounded_value();
+    const uint256_t lhs = ctx->get_variable(witness_index);       // get_unbounded_value();
     const uint256_t rhs = ctx->get_variable(other.witness_index); // other.get_unbounded_value();
     const uint256_t constants = (additive_constant + other.additive_constant) & MASK;
     const uint256_t sum = lhs + rhs + constants;
@@ -45,14 +44,8 @@ uint<Composer, Native> uint<Composer, Native>::operator+(const uint& other) cons
     const uint256_t remainder = sum & MASK;
 
     const waffle::add_quad gate{
-        witness_index,
-        other.witness_index,
-        ctx->add_variable(remainder),
-        ctx->add_variable(overflow),
-        fr::one,
-        fr::one,
-        fr::neg_one(),
-        fr::neg(CIRCUIT_UINT_MAX_PLUS_ONE),
+        witness_index,      other.witness_index, ctx->add_variable(remainder), ctx->add_variable(overflow),
+        fr::one(), fr::one(),  fr::neg_one(),       -fr(CIRCUIT_UINT_MAX_PLUS_ONE),
         constants,
     };
 
@@ -100,10 +93,10 @@ uint<Composer, Native> uint<Composer, Native>::operator-(const uint& other) cons
         rhs_idx,
         ctx->add_variable(remainder),
         ctx->add_variable(overflow),
-        fr::one,
+        fr::one(),
         fr::neg_one(),
         fr::neg_one(),
-        fr::neg(CIRCUIT_UINT_MAX_PLUS_ONE),
+        -fr(CIRCUIT_UINT_MAX_PLUS_ONE),
         CIRCUIT_UINT_MAX_PLUS_ONE + constant_term,
     };
 
@@ -144,11 +137,11 @@ uint<Composer, Native> uint<Composer, Native>::operator*(const uint& other) cons
         rhs_idx,
         ctx->add_variable(remainder),
         ctx->add_variable(overflow),
-        fr::one,
+        fr::one(),
         other.additive_constant,
         additive_constant,
         fr::neg_one(),
-        fr::neg(CIRCUIT_UINT_MAX_PLUS_ONE),
+        -fr(CIRCUIT_UINT_MAX_PLUS_ONE),
         constant_term,
     };
 
@@ -213,11 +206,11 @@ std::pair<uint<Composer, Native>, uint<Composer, Native>> uint<Composer, Native>
     // We want to force the divisor to be non-zero, as this is an error state
     if (other.is_constant() && other.get_value() == 0) {
         // TODO: should have an actual error handler!
-        const uint32_t one = ctx->add_variable(fr::one);
-        ctx->assert_equal_constant(one, fr::zero);
+        const uint32_t one = ctx->add_variable(fr::one());
+        ctx->assert_equal_constant(one, fr::zero());
     } else if (!other.is_constant()) {
         const bool_t<Composer> is_divisor_zero = field_t<Composer>(other).is_zero();
-        ctx->assert_equal_constant(is_divisor_zero.witness_index, fr::zero);
+        ctx->assert_equal_constant(is_divisor_zero.witness_index, fr::zero());
     }
 
     if (is_constant() && other.is_constant()) {
@@ -243,16 +236,16 @@ std::pair<uint<Composer, Native>, uint<Composer, Native>> uint<Composer, Native>
     const uint32_t remainder_idx = ctx->add_variable(r);
 
     const waffle::mul_quad division_gate{
-        quotient_idx,              // q
-        divisor_idx,               // b
-        dividend_idx,              // a
-        remainder_idx,             // r
-        fr::one,                   // q_m.w_1.w_2 = q.b
-        other.additive_constant,   // q_l.w_1 = q.b if b const
-        fr::zero,                  // q_2.w_2 = 0
-        fr::neg_one(),             // q_3.w_3 = -a
-        fr::one,                   // q_4.w_4 = r
-        fr::neg(additive_constant) // q_c = -a if a const
+        quotient_idx,                   // q
+        divisor_idx,                    // b
+        dividend_idx,                   // a
+        remainder_idx,                  // r
+        fr::one(),             // q_m.w_1.w_2 = q.b
+        other.additive_constant,        // q_l.w_1 = q.b if b const
+        fr::zero(),            // q_2.w_2 = 0
+        fr::neg_one(),         // q_3.w_3 = -a
+        fr::one(),             // q_4.w_4 = r
+        -fr(additive_constant) // q_c = -a if a const
     };
     ctx->create_big_mul_gate(division_gate);
 
@@ -264,9 +257,9 @@ std::pair<uint<Composer, Native>, uint<Composer, Native>> uint<Composer, Native>
         divisor_idx,             // b
         remainder_idx,           // r
         delta_idx,               // d
-        fr::one,                 // q_l = 1
-        fr::neg_one(),           // q_r = -1
-        fr::neg_one(),           // q_o = -1
+        fr::one(),      // q_l = 1
+        fr::neg_one(),  // q_r = -1
+        fr::neg_one(),  // q_o = -1
         other.additive_constant, // q_c = d if const
     };
     ctx->create_add_gate(delta_gate);
@@ -286,7 +279,6 @@ std::pair<uint<Composer, Native>, uint<Composer, Native>> uint<Composer, Native>
 
     return std::make_pair(quotient, remainder);
 }
-
 template class uint<waffle::TurboComposer, uint8_t>;
 template class uint<waffle::TurboComposer, uint16_t>;
 template class uint<waffle::TurboComposer, uint32_t>;
@@ -296,11 +288,6 @@ template class uint<waffle::StandardComposer, uint8_t>;
 template class uint<waffle::StandardComposer, uint16_t>;
 template class uint<waffle::StandardComposer, uint32_t>;
 template class uint<waffle::StandardComposer, uint64_t>;
-
-template class uint<waffle::BoolComposer, uint8_t>;
-template class uint<waffle::BoolComposer, uint16_t>;
-template class uint<waffle::BoolComposer, uint32_t>;
-template class uint<waffle::BoolComposer, uint64_t>;
 
 template class uint<waffle::MiMCComposer, uint8_t>;
 template class uint<waffle::MiMCComposer, uint16_t>;

@@ -6,7 +6,7 @@
  *****************************************************************************/
 
 #pragma once
-#include <cassert>
+#include "assert.h"
 
 // compiler should optimize this out in release builds, without triggering
 // an unused variable warning

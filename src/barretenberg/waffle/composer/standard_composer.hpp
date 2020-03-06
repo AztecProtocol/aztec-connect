@@ -21,13 +21,13 @@ class StandardComposer : public ComposerBase {
         q_2.reserve(size_hint);
         q_3.reserve(size_hint);
         q_c.reserve(size_hint);
-        zero_idx = put_constant_variable(barretenberg::fr::zero);
+        zero_idx = put_constant_variable(barretenberg::fr::zero());
     };
     StandardComposer(StandardComposer&& other) = default;
     StandardComposer& operator=(StandardComposer&& other) = default;
     ~StandardComposer() {}
 
-    void assert_equal_constant(uint32_t const a_idx, barretenberg::fr::field_t const& b);
+    void assert_equal_constant(uint32_t const a_idx, barretenberg::fr const& b);
 
     virtual std::shared_ptr<proving_key> compute_proving_key() override;
     virtual std::shared_ptr<verification_key> compute_verification_key() override;
@@ -44,8 +44,7 @@ class StandardComposer : public ComposerBase {
     void create_big_add_gate_with_bit_extraction(const add_quad& in);
     void create_big_mul_gate(const mul_quad& in);
     void create_balanced_add_gate(const add_quad& in);
-    void fix_witness(const uint32_t witness_index, const barretenberg::fr::field_t& witness_value);
-
+    void fix_witness(const uint32_t witness_index, const barretenberg::fr& witness_value);
 
     std::vector<uint32_t> create_range_constraint(const uint32_t witness_index, const size_t num_bits);
     accumulator_triple create_logic_constraint(const uint32_t a,
@@ -55,7 +54,7 @@ class StandardComposer : public ComposerBase {
     accumulator_triple create_and_constraint(const uint32_t a, const uint32_t b, const size_t num_bits);
     accumulator_triple create_xor_constraint(const uint32_t a, const uint32_t b, const size_t num_bits);
 
-    uint32_t put_constant_variable(const barretenberg::fr::field_t& variable);
+    uint32_t put_constant_variable(const barretenberg::fr& variable);
 
     void create_dummy_gates();
     size_t get_num_constant_gates() const override { return 0; }
@@ -63,13 +62,13 @@ class StandardComposer : public ComposerBase {
     uint32_t zero_idx = 0;
 
     // these are variables that we have used a gate on, to enforce that they are equal to a defined value
-    std::map<barretenberg::fr::field_t, uint32_t> constant_variables;
+    std::map<barretenberg::fr, uint32_t> constant_variables;
 
-    std::vector<barretenberg::fr::field_t> q_m;
-    std::vector<barretenberg::fr::field_t> q_1;
-    std::vector<barretenberg::fr::field_t> q_2;
-    std::vector<barretenberg::fr::field_t> q_3;
-    std::vector<barretenberg::fr::field_t> q_c;
+    std::vector<barretenberg::fr> q_m;
+    std::vector<barretenberg::fr> q_1;
+    std::vector<barretenberg::fr> q_2;
+    std::vector<barretenberg::fr> q_3;
+    std::vector<barretenberg::fr> q_c;
 
     static transcript::Manifest create_manifest(const size_t num_public_inputs)
     {
@@ -92,6 +91,7 @@ class StandardComposer : public ComposerBase {
               transcript::Manifest::RoundManifest({ { "w_1", fr_size, false },
                                                     { "w_2", fr_size, false },
                                                     { "w_3", fr_size, false },
+                                                    { "w_3_omega", fr_size, false },
                                                     { "z_omega", fr_size, false },
                                                     { "sigma_1", fr_size, false },
                                                     { "sigma_2", fr_size, false },

@@ -8,9 +8,7 @@
 
 namespace waffle {
 class StandardComposer;
-class BoolComposer;
 class MiMCComposer;
-class TurboComposer;
 class TurboComposer;
 } // namespace waffle
 
@@ -77,7 +75,6 @@ inline std::ostream& operator<<(std::ostream& os, byte_array<ComposerContext> co
 }
 
 extern template class byte_array<waffle::StandardComposer>;
-extern template class byte_array<waffle::BoolComposer>;
 extern template class byte_array<waffle::MiMCComposer>;
 extern template class byte_array<waffle::TurboComposer>;
 

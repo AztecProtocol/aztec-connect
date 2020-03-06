@@ -25,25 +25,26 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    grumpkin::g1::affine_element note_owner_pub_key = grumpkin::g1::random_affine_element();
+    grumpkin::g1::element note_owner_pub_key = grumpkin::g1::element::random_element();
 
-    fr::field_t view_key_value = fr::random_element();
+    fr view_key_value = fr::random_element();
     view_key_value.data[3] = view_key_value.data[3] & 0x3FFFFFFFFFFFFFFFULL;
-    view_key_value = fr::to_montgomery_form(view_key_value);
+    view_key_value = view_key_value.to_montgomery_form();
 
-    fr::field_t note_value = fr::to_montgomery_form({ { 9999, 0, 0, 0 } });
+    fr note_value = fr{ 9999, 0, 0, 0 }.to_montgomery_form();
 
     grumpkin::g1::element left = crypto::pedersen::fixed_base_scalar_mul<32>(note_value, 0);
     grumpkin::g1::element right = crypto::pedersen::fixed_base_scalar_mul<250>(view_key_value, 1);
     grumpkin::g1::element expected;
-    grumpkin::g1::add(left, right, expected);
+    expected = left + right;
+    expected = expected.normalize();
 
     // TODO MAKE THIS HASH INDEX NOT ZERO
     grumpkin::g1::affine_element hashed_pub_key =
         crypto::pedersen::compress_to_point_native(note_owner_pub_key.x, note_owner_pub_key.y, 0);
 
-    grumpkin::g1::mixed_add(expected, hashed_pub_key, expected);
-    expected = grumpkin::g1::normalize(expected);
+    expected += hashed_pub_key;
+    expected = expected.normalize();
 
     field_t view_key = witness_t(&composer, view_key_value);
     field_t note_value_field = witness_t(&composer, note_value);
@@ -77,21 +78,21 @@ TEST(stdlib_pedersen_note, test_new_pedersen_note_zero)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    grumpkin::g1::affine_element note_owner_pub_key = grumpkin::g1::random_affine_element();
+    grumpkin::g1::element note_owner_pub_key = grumpkin::g1::element::random_element();
 
-    fr::field_t view_key_value = fr::random_element();
+    fr view_key_value = fr::random_element();
     view_key_value.data[3] = view_key_value.data[3] & 0x3FFFFFFFFFFFFFFFULL;
-    view_key_value = fr::to_montgomery_form(view_key_value);
+    view_key_value = view_key_value.to_montgomery_form();
 
-    fr::field_t note_value = fr::to_montgomery_form({ { 0, 0, 0, 0 } });
+    fr note_value = fr{ 0, 0, 0, 0 }.to_montgomery_form();
 
     grumpkin::g1::element expected = crypto::pedersen::fixed_base_scalar_mul<32>(note_value, 0);
 
     grumpkin::g1::affine_element hashed_pub_key =
         crypto::pedersen::compress_to_point_native(note_owner_pub_key.x, note_owner_pub_key.y);
 
-    grumpkin::g1::mixed_add(expected, hashed_pub_key, expected);
-    expected = grumpkin::g1::normalize(expected);
+    expected += hashed_pub_key;
+    expected = expected.normalize();
 
     field_t view_key = witness_t(&composer, view_key_value);
     field_t note_value_field = witness_t(&composer, note_value);

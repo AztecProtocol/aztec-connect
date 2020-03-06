@@ -11,10 +11,10 @@ namespace merkle_tree {
 using namespace int_utils;
 
 namespace {
-barretenberg::fr::field_t from_string(std::string const& data, size_t offset = 0)
+barretenberg::fr from_string(std::string const& data, size_t offset = 0)
 {
-    barretenberg::fr::field_t result;
-    std::copy(data.data() + offset, data.data() + offset + sizeof(barretenberg::fr::field_t), (char*)result.data);
+    barretenberg::fr result;
+    std::copy(data.data() + offset, data.data() + offset + sizeof(barretenberg::fr), (char*)result.data);
     return result;
 }
 } // namespace
@@ -51,7 +51,7 @@ LevelDbStore::LevelDbStore(std::string const& db_path, size_t depth)
     size_ = status.ok() ? ntohll(*reinterpret_cast<uint64_t*>(size.data())) : 0ULL;
 }
 
-barretenberg::fr::field_t LevelDbStore::root() const
+barretenberg::fr LevelDbStore::root() const
 {
     return root_;
 }
@@ -85,7 +85,7 @@ fr_hash_path LevelDbStore::get_hash_path(index_t index)
         } else {
             // This is a stump. The hash path can be fully restored from this node.
             index_t element_index = *(index_t*)(data.data() + 32);
-            fr::field_t current = from_string(data, 0);
+            fr current = from_string(data, 0);
             index_t diff = element_index ^ keep_n_lsb(index, i + 1);
 
             // std::cout << "ghp hit stump height:" << i << " element_index:" << (uint64_t)element_index
@@ -131,13 +131,13 @@ fr_hash_path LevelDbStore::get_hash_path(index_t index)
 
 LevelDbStore::value_t LevelDbStore::get_element(index_t index)
 {
-    fr::field_t leaf = get_element(root_, index, depth_);
+    fr leaf = get_element(root_, index, depth_);
     std::string data;
     auto status = tx_->Get(leveldb::Slice((char*)&leaf, 32), &data);
     return status.ok() ? data : std::string(64, 0);
 }
 
-fr::field_t LevelDbStore::get_element(fr::field_t const& root, index_t index, size_t height)
+fr LevelDbStore::get_element(fr const& root, index_t index, size_t height)
 {
     // std::cout << "get_element root:" << root << " index:" << (uint64_t)index << " height:" << height << std::endl;
     if (height == 0) {
@@ -153,21 +153,21 @@ fr::field_t LevelDbStore::get_element(fr::field_t const& root, index_t index, si
 
     if (data.size() != 64) {
         index_t existing_index = *(index_t*)(data.data() + 32);
-        fr::field_t existing_value = from_string(data, 0);
+        fr existing_value = from_string(data, 0);
         // std::cout << "get_element stump existing_index:" << (uint64_t)existing_index << " index:" << (uint64_t)index
         //           << std::endl;
         return (existing_index == index) ? existing_value : zero_hashes_[0];
     } else {
         bool is_right = (index >> (height - 1)) & 0x1;
         // std::cout << "get_element reg is_right:" << is_right << std::endl;
-        fr::field_t subtree_root = from_string(data, is_right ? 32 : 0);
+        fr subtree_root = from_string(data, is_right ? 32 : 0);
         return get_element(subtree_root, keep_n_lsb(index, height - 1), height - 1);
     }
 }
 
 void LevelDbStore::update_element(index_t index, value_t const& value)
 {
-    fr::field_t sha_leaf = hash_value_native(value);
+    fr sha_leaf = hash_value_native(value);
 
     auto new_root = update_element(root_, sha_leaf, index, depth_);
 
@@ -199,7 +199,7 @@ void LevelDbStore::rollback()
     size_ = status.ok() ? ntohll(*reinterpret_cast<uint64_t*>(size.data())) : 0ULL;
 }
 
-fr::field_t LevelDbStore::binary_put(index_t a_index, fr::field_t const& a, fr::field_t const& b, size_t height)
+fr LevelDbStore::binary_put(index_t a_index, fr const& a, fr const& b, size_t height)
 {
     bool a_is_right = (a_index >> (height - 1)) & 0x1;
     auto left = a_is_right ? b : a;
@@ -211,12 +211,8 @@ fr::field_t LevelDbStore::binary_put(index_t a_index, fr::field_t const& a, fr::
     return key;
 }
 
-fr::field_t LevelDbStore::fork_stump(fr::field_t const& value1,
-                                     index_t index1,
-                                     fr::field_t const& value2,
-                                     index_t index2,
-                                     size_t height,
-                                     size_t common_height)
+fr LevelDbStore::fork_stump(
+    fr const& value1, index_t index1, fr const& value2, index_t index2, size_t height, size_t common_height)
 {
     if (height == common_height) {
         if (height == 1) {
@@ -230,8 +226,8 @@ fr::field_t LevelDbStore::fork_stump(fr::field_t const& value1,
             index_t stump2_index = keep_n_lsb(index2, stump_height);
             // std::cout << "Stump forked into two at height " << stump_height << " index1 " << (uint64_t)index1
             //           << " index2 " << (uint64_t)index2 << std::endl;
-            fr::field_t stump1_hash = compute_zero_path_hash(stump_height, stump1_index, value1);
-            fr::field_t stump2_hash = compute_zero_path_hash(stump_height, stump2_index, value2);
+            fr stump1_hash = compute_zero_path_hash(stump_height, stump1_index, value1);
+            fr stump2_hash = compute_zero_path_hash(stump_height, stump2_index, value2);
             put_stump(stump1_hash, stump1_index, value1);
             put_stump(stump2_hash, stump2_index, value2);
             return binary_put(index1, stump1_hash, stump2_hash, height);
@@ -244,10 +240,7 @@ fr::field_t LevelDbStore::fork_stump(fr::field_t const& value1,
     }
 }
 
-fr::field_t LevelDbStore::update_element(fr::field_t const& root,
-                                         fr::field_t const& value,
-                                         index_t index,
-                                         size_t height)
+fr LevelDbStore::update_element(fr const& root, fr const& value, index_t index, size_t height)
 {
     // std::cout << "update_element root:" << root << " value:" << value << " index:" << (uint64_t)index
     //           << " height:" << height << std::endl;
@@ -260,7 +253,7 @@ fr::field_t LevelDbStore::update_element(fr::field_t const& root,
 
     if (!status.ok()) {
         // std::cout << "Adding new stump at height " << height << std::endl;
-        fr::field_t key = compute_zero_path_hash(height, index, value);
+        fr key = compute_zero_path_hash(height, index, value);
         put_stump(key, index, value);
         size_ += 1;
         return key;
@@ -274,12 +267,12 @@ fr::field_t LevelDbStore::update_element(fr::field_t const& root,
         if (existing_index == index) {
             // We are updating the stumps element. Easy update.
             // std::cout << "Updating existing stump element at index " << (uint64_t)index << std::endl;
-            fr::field_t new_hash = compute_zero_path_hash(height, index, value);
+            fr new_hash = compute_zero_path_hash(height, index, value);
             put_stump(new_hash, existing_index, value);
             return new_hash;
         }
 
-        fr::field_t existing_value = from_string(data, 0);
+        fr existing_value = from_string(data, 0);
         size_t common_bits = count_leading_zeros(existing_index ^ index);
         size_t ignored_bits = sizeof(index_t) * 8 - height;
         size_t common_height = height - (common_bits - ignored_bits);
@@ -292,7 +285,7 @@ fr::field_t LevelDbStore::update_element(fr::field_t const& root,
     } else {
         bool is_right = (index >> (height - 1)) & 0x1;
         // std::cout << "Normal node is_right:" << is_right << std::endl;
-        fr::field_t subtree_root = from_string(data, is_right ? 32 : 0);
+        fr subtree_root = from_string(data, is_right ? 32 : 0);
         subtree_root = update_element(subtree_root, value, keep_n_lsb(index, height - 1), height - 1);
         auto left = from_string(data, 0);
         auto right = from_string(data, 32);
@@ -308,12 +301,12 @@ fr::field_t LevelDbStore::update_element(fr::field_t const& root,
     }
 }
 
-fr::field_t LevelDbStore::compute_zero_path_hash(size_t height, index_t index, fr::field_t const& value)
+fr LevelDbStore::compute_zero_path_hash(size_t height, index_t index, fr const& value)
 {
-    fr::field_t current = value;
+    fr current = value;
     for (size_t i = 0; i < height; ++i) {
         bool is_right = (index >> i) & 0x1;
-        fr::field_t left, right;
+        fr left, right;
         if (is_right) {
             left = zero_hashes_[i];
             right = current;
@@ -326,7 +319,7 @@ fr::field_t LevelDbStore::compute_zero_path_hash(size_t height, index_t index, f
     return current;
 }
 
-void LevelDbStore::put(fr::field_t const& key, fr::field_t const& left, fr::field_t const& right)
+void LevelDbStore::put(fr const& key, fr const& left, fr const& right)
 {
     std::ostringstream os;
     os.write((char*)left.data, 32);
@@ -335,7 +328,7 @@ void LevelDbStore::put(fr::field_t const& key, fr::field_t const& left, fr::fiel
     // std::cout << "PUT key:" << key << " left:" << left << " right:" << right << std::endl;
 }
 
-void LevelDbStore::put_stump(fr::field_t const& key, index_t index, fr::field_t const& value)
+void LevelDbStore::put_stump(fr const& key, index_t index, fr const& value)
 {
     std::ostringstream os;
     os.write((char*)value.data, 32);

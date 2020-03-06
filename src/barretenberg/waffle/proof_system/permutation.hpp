@@ -23,7 +23,7 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     // 0 = left
     // 1 = right
     // 2 = output
-    const barretenberg::fr::field_t* roots = small_domain.get_round_roots()[small_domain.log2_size - 2];
+    const barretenberg::fr* roots = small_domain.get_round_roots()[small_domain.log2_size - 2];
     const size_t root_size = small_domain.size >> 1UL;
     const size_t log2_root_size = static_cast<size_t>(log2(root_size));
 
@@ -53,8 +53,7 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     // Our roots of unity table is partially 'overloaded' - we either store the root `w`, or `modulus + w`
     // So to ensure we correctly compute `modulus - w`, we need to compute `2 * modulus - w`
     // The output will similarly be overloaded (containing either 2 * modulus - w, or modulus - w)
-    barretenberg::fr::__conditionally_subtract_from_double_modulus(
-        roots[idx], output.at(i), static_cast<uint64_t>(negative_idx));
+    output[i] = roots[idx].conditionally_subtract_from_double_modulus(static_cast<uint64_t>(negative_idx));
 
     // finally, if our permutation maps to an index in either the right wire vector, or the output wire vector, we need
     // to multiply our result by one of two quadratic non-residues.
@@ -62,10 +61,10 @@ inline void compute_permutation_lagrange_base_single(barretenberg::polynomial& o
     // wire permutations) (ditto for right wire and output wire mappings)
 
     // isolate the highest 2 bits of `permutation[i]` and shunt them down into the 2 least significant bits
-    const uint32_t column_index = ((permutation[i] & program_settings::permutation_mask) >> program_settings::permutation_shift);
-    if (column_index > 0)
-    {
-        barretenberg::fr::__mul(output[i], barretenberg::fr::coset_generators[column_index - 1], output[i]);
+    const uint32_t column_index =
+        ((permutation[i] & program_settings::permutation_mask) >> program_settings::permutation_shift);
+    if (column_index > 0) {
+        output[i] *= barretenberg::fr::coset_generator(column_index - 1);
     }
     ITERATE_OVER_DOMAIN_END;
 }

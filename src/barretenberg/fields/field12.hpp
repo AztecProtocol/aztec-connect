@@ -1,281 +1,265 @@
 #pragma once
 
-namespace barretenberg
-{
-template <typename quadratic_field, typename base_field, typename Fq12Params> class field12
-{
+#include <random>
+
+namespace barretenberg {
+template <typename quadratic_field, typename base_field, typename Fq12Params> class field12 {
   public:
-    struct field_t
+    constexpr field12(const base_field& a = base_field::zero(), const base_field& b = base_field::zero())
+        : c0(a)
+        , c1(b)
+    {}
+
+    constexpr field12(const field12& other)
+        : c0(other.c0)
+        , c1(other.c1)
+    {}
+
+    constexpr field12(field12&& other)
+        : c0(other.c0)
+        , c1(other.c1)
+    {}
+
+    constexpr field12& operator=(const field12& other)
     {
-        typename base_field::field_t c0;
-        typename base_field::field_t c1;
+        c0 = other.c0;
+        c1 = other.c1;
+        return *this;
+    }
+
+    constexpr field12& operator=(field12&& other)
+    {
+        c0 = other.c0;
+        c1 = other.c1;
+        return *this;
+    }
+
+    base_field c0;
+    base_field c1;
+
+    struct ell_coeffs {
+        quadratic_field o;
+        quadratic_field vw;
+        quadratic_field vv;
     };
 
-    struct ell_coeffs
-    {
-        typename quadratic_field::field_t o;
-        typename quadratic_field::field_t vw;
-        typename quadratic_field::field_t vv;
-    };
+    static constexpr field12 zero() { return { base_field::zero(), base_field::zero() }; };
+    static constexpr field12 one() { return { base_field::one(), base_field::zero() }; };
 
-    static constexpr field_t zero{ base_field::zero, base_field::zero };
-    static constexpr field_t one{ base_field::one, base_field::zero };
-
-    static inline void mul_by_non_residue(const typename base_field::field_t& a, typename base_field::field_t& r)
+    static constexpr base_field mul_by_non_residue(const base_field& a)
     {
-        typename quadratic_field::field_t T0;
-        quadratic_field::__copy(a.c0, T0);
-        base_field::__mul_by_non_residue(a.c2, r.c0);
-        quadratic_field::__copy(a.c1, r.c2);
-        quadratic_field::__copy(T0, r.c1);
+        return {
+            base_field::mul_by_non_residue(a.c2),
+            a.c0,
+            a.c1,
+        };
     }
 
-    static inline void add(const field_t& a, const field_t& b, field_t& r)
+    constexpr field12 operator+(const field12& other) const
     {
-        base_field::__add(a.c0, b.c0, r.c0);
-        base_field::__add(a.c1, b.c1, r.c1);
+        return {
+            c0 + other.c0,
+            c1 + other.c1,
+        };
     }
 
-    static inline void sub(const field_t& a, const field_t& b, field_t& r)
+    constexpr field12 operator-(const field12& other) const
     {
-        base_field::__sub(a.c0, b.c0, r.c0);
-        base_field::__sub(a.c1, b.c1, r.c1);
+        return {
+            c0 - other.c0,
+            c1 - other.c1,
+        };
     }
 
-    static inline void mul(const field_t& a, const field_t& b, field_t& r)
+    constexpr field12 operator*(const field12& other) const
     {
-        typename base_field::field_t T0;
-        typename base_field::field_t T1;
-        typename base_field::field_t T2;
-        typename base_field::field_t T3;
-        // T0 = a.c0*b.c0
-        base_field::__mul(a.c0, b.c0, T0);
+        base_field T0 = c0 * other.c0;
+        base_field T1 = c1 * other.c1;
+        base_field T2 = c0 + c1;
+        base_field T3 = other.c0 + other.c1;
 
-        // T1 = a.c1*b.c1
-        base_field::__mul(a.c1, b.c1, T1);
-
-        // T2 = a.c0 + a.c1
-        base_field::__add(a.c0, a.c1, T2);
-
-        // T3 = b.c0 + b.c1
-        base_field::__add(b.c0, b.c1, T3);
-
-        // r.c0 = \beta(a.c1*b.c1)
-        mul_by_non_residue(T1, r.c0);
-
-        // r.c0 = a.c0*b.c0 + \beta(a.c1*b.c1)
-        base_field::__add(T0, r.c0, r.c0);
-
-        // T0 = a.c0*b.c0 + a.c1*b.c1
-        base_field::__add(T0, T1, T0);
-
-        // r.c1 = (a.c0 + a.c1)(b.c0 + b.c1)
-        base_field::__mul(T2, T3, r.c1);
-
-        // r.c1 = (a.c0 + a.c1)(b.c0 + b.c1) - (a.c0*b.c0 + a.c1*b.c1) = a.c0 * b.c1 + a.c1 * b.c0
-        base_field::__sub(r.c1, T0, r.c1);
+        return {
+            mul_by_non_residue(T1) + T0,
+            T2 * T3 - (T0 + T1),
+        };
     }
 
-    static inline void sparse_mul(const field_t& a, const ell_coeffs& ell, field_t& r)
+    constexpr field12 operator/(const field12& other) const { return operator*(other.invert()); }
+
+    constexpr field12 operator+=(const field12& other)
+    {
+        c0 += other.c0;
+        c1 += other.c1;
+        return *this;
+    }
+
+    constexpr field12 operator-=(const field12& other)
+    {
+        c0 -= other.c0;
+        c1 -= other.c1;
+        return *this;
+    }
+
+    constexpr field12 operator*=(const field12& other)
+    {
+        *this = operator*(other);
+        return *this;
+    }
+
+    constexpr field12 operator/=(const field12& other)
+    {
+        *this = operator/(other);
+        return *this;
+    }
+
+    constexpr void self_sparse_mul(const ell_coeffs& ell)
     {
         // multiplicand is sparse fp12 element (ell.0, 0, ell.vv) + \beta(0, ell.vw, 0)
-        typename quadratic_field::field_t d0;
-        typename quadratic_field::field_t d2;
-        typename quadratic_field::field_t d4;
-        typename quadratic_field::field_t t2;
-        typename quadratic_field::field_t t1;
-        typename quadratic_field::field_t t0;
-        typename quadratic_field::field_t s0;
-        typename quadratic_field::field_t s1;
-        typename quadratic_field::field_t t3;
-        typename quadratic_field::field_t t4;
+        quadratic_field d0 = c0.c0 * ell.o;
+        quadratic_field d2 = c0.c2 * ell.vv;
+        quadratic_field d4 = c1.c1 * ell.vw;
+        quadratic_field t2 = c0.c0 + c1.c1;
+        quadratic_field t1 = c0.c0 + c0.c2;
+        quadratic_field s0 = c0.c1 + c1.c0;
+        s0 += c1.c2;
 
-        quadratic_field::__mul(a.c0.c0, ell.o, d0);
-        quadratic_field::__mul(a.c0.c2, ell.vv, d2);
-        quadratic_field::__mul(a.c1.c1, ell.vw, d4);
-        quadratic_field::__add(a.c0.c0, a.c1.c1, t2);
-        quadratic_field::__add(a.c0.c0, a.c0.c2, t1);
-        quadratic_field::__add(a.c0.c1, a.c1.c0, s0);
-        quadratic_field::__add(s0, a.c1.c2, s0);
+        quadratic_field s1 = c0.c1 * ell.vv;
+        quadratic_field t3 = s1 + d4;
+        quadratic_field t4 = base_field::mul_by_non_residue(t3);
+        c0.c0 = t4 + d0;
 
-        quadratic_field::__mul(a.c0.c1, ell.vv, s1);
-        quadratic_field::__add(s1, d4, t3);
-        base_field::__mul_by_non_residue(t3, t4);
-        quadratic_field::__add(t4, d0, r.c0.c0);
+        t3 = c1.c2 * ell.vw;
+        s1 += t3;
+        t3 += d2;
+        t4 = base_field::mul_by_non_residue(t3);
+        t3 = c0.c1 * ell.o;
+        s1 += t3;
+        c0.c1 = t4 + t3;
 
-        // let z0 = t4;
+        quadratic_field t0 = ell.o + ell.vv;
+        t3 = t1 * t0;
+        t3 -= d0;
+        t3 -= d2;
+        t4 = c1.c0 * ell.vw;
+        s1 += t4;
 
-        quadratic_field::__mul(a.c1.c2, ell.vw, t3);
-        quadratic_field::__add(s1, t3, s1);
-        quadratic_field::__add(t3, d2, t3);
-        base_field::__mul_by_non_residue(t3, t4);
-        quadratic_field::__mul(a.c0.c1, ell.o, t3);
-        quadratic_field::__add(s1, t3, s1);
-        quadratic_field::__add(t4, t3, r.c0.c1);
+        t0 = c0.c2 + c1.c1;
+        c0.c2 = t3 + t4;
 
-        quadratic_field::__add(ell.o, ell.vv, t0);
-        quadratic_field::__mul(t1, t0, t3);
-        quadratic_field::__sub(t3, d0, t3);
-        quadratic_field::__sub(t3, d2, t3);
-        quadratic_field::__mul(a.c1.c0, ell.vw, t4);
-        quadratic_field::__add(s1, t4, s1);
+        t1 = ell.vv + ell.vw;
+        t3 = t0 * t1;
+        t3 -= d2;
+        t3 -= d4;
+        t4 = base_field::mul_by_non_residue(t3);
+        t3 = c1.c0 * ell.o;
+        s1 += t3;
+        c1.c0 = t3 + t4;
 
-        quadratic_field::__add(a.c0.c2, a.c1.c1, t0);
-        quadratic_field::__add(t3, t4, r.c0.c2);
+        t3 = c1.c2 * ell.vv;
+        s1 += t3;
+        t4 = base_field::mul_by_non_residue(t3);
+        t0 = ell.o + ell.vw;
+        t3 = t0 * t2;
+        t3 -= d0;
+        t3 -= d4;
+        c1.c1 = t3 + t4;
 
-        quadratic_field::__add(ell.vv, ell.vw, t1);
-        quadratic_field::__mul(t0, t1, t3);
-        quadratic_field::__sub(t3, d2, t3);
-        quadratic_field::__sub(t3, d4, t3);
-        base_field::__mul_by_non_residue(t3, t4);
-        quadratic_field::__mul(a.c1.c0, ell.o, t3);
-        quadratic_field::__add(s1, t3, s1);
-        quadratic_field::__add(t4, t3, r.c1.c0);
-
-        quadratic_field::__mul(a.c1.c2, ell.vv, t3);
-        quadratic_field::__add(s1, t3, s1);
-        base_field::__mul_by_non_residue(t3, t4);
-        quadratic_field::__add(ell.o, ell.vw, t0);
-        quadratic_field::__mul(t2, t0, t3);
-        quadratic_field::__sub(t3, d0, t3);
-        quadratic_field::__sub(t3, d4, t3);
-        quadratic_field::__add(t4, t3, r.c1.c1);
-
-        quadratic_field::__add(ell.o, ell.vv, t0);
-        quadratic_field::__add(t0, ell.vw, t0);
-        quadratic_field::__mul(s0, t0, t3);
-        quadratic_field::__sub(t3, s1, r.c1.c2);
+        t0 = ell.o + ell.vv;
+        t0 += ell.vw;
+        t3 = s0 * t0;
+        c1.c2 = t3 - s1;
     }
 
-    static inline void sqr(const field_t& a, field_t& r)
+    constexpr field12 sqr() const
     {
-        typename base_field::field_t T0;
-        typename base_field::field_t T1;
+        base_field T0 = c0 + c1;
+        base_field T1 = mul_by_non_residue(c1) + c0;
 
-        // T0 = a.c0 + a.c1
-        base_field::__add(a.c0, a.c1, T0);
+        T0 *= T1;
+        T1 = c0 * c1;
 
-        // T1 = \beta * a.c1
-        mul_by_non_residue(a.c1, T1);
-
-        // T1 = a.c0 + \beta * a.c1
-        base_field::__add(T1, a.c0, T1);
-
-        // T0 = (a.c0 + a.c1)(a.c0 + \beta * a.c1)
-        base_field::__mul(T0, T1, T0);
-
-        // T1 = a.c0 * b.c0
-        base_field::__mul(a.c0, a.c1, T1);
-
-        // r.c1 = 2(a.c0 * b.c0)
-        base_field::__add(T1, T1, r.c1);
-
-        // r.c0 = (a.c0 + a.c1)(a.c0 + \beta * a.c1) - a.c0 * b.c0
-        base_field::__sub(T0, T1, r.c0);
-
-        // T1 = \beta(a.c0 * b.c0)
-        mul_by_non_residue(T1, T1);
-
-        // r.c0 =  (a.c0 + a.c1)(a.c0 + \beta * a.c1) - a.c0 * b.c0 - \beta(a.c0 * b.c0) = a.c1*a.c0 + \beta * a.c0 *
-        // a.c1
-        base_field::__sub(r.c0, T1, r.c0);
+        return {
+            T0 - (T1 + mul_by_non_residue(T1)),
+            T1 + T1,
+        };
     }
 
-    static inline void invert(const field_t& a, field_t& r)
+    constexpr field12 invert() const
     {
         /* From "High-Speed Software Implementation of the Optimal Ate Pairing over Barreto-Naehrig Curves"; Algorithm 8
          */
-        typename base_field::field_t T0;
-        typename base_field::field_t T1;
-        base_field::__sqr(a.c0, T0);
-        base_field::__sqr(a.c1, T1);
-        mul_by_non_residue(T1, T1);
-        base_field::__sub(T0, T1, T0);
-        base_field::__invert(T0, T0);
-        base_field::__mul(a.c0, T0, r.c0);
-        base_field::__mul(a.c1, T0, r.c1);
-        base_field::__neg(r.c1, r.c1);
+        base_field T0 = (c0.sqr() - mul_by_non_residue(c1.sqr())).invert();
+        return {
+            c0 * T0,
+            -(c1 * T0),
+        };
     }
 
-    static inline void frobenius_map_three(const field_t& a, field_t& r)
+    constexpr field12 frobenius_map_three() const
     {
-        typename base_field::field_t T0;
-        base_field::frobenius_map_three(a.c1, T0);
-        base_field::frobenius_map_three(a.c0, r.c0);
-        base_field::__mul_by_fq2(Fq12Params::frobenius_coefficients_3, T0, r.c1);
+        return {
+            c0.frobenius_map_three(),
+            c1.frobenius_map_three().mul_by_fq2(Fq12Params::frobenius_coefficients_3),
+        };
     }
 
-    static inline void frobenius_map_two(const field_t& a, field_t& r)
+    constexpr field12 frobenius_map_two() const
     {
-        typename base_field::field_t T0;
-        base_field::frobenius_map_two(a.c1, T0);
-        base_field::frobenius_map_two(a.c0, r.c0);
-        base_field::__mul_by_fq2(Fq12Params::frobenius_coefficients_2, T0, r.c1);
+        return {
+            c0.frobenius_map_two(),
+            c1.frobenius_map_two().mul_by_fq2(Fq12Params::frobenius_coefficients_2),
+        };
     }
 
-    static inline void frobenius_map_one(const field_t& a, field_t& r)
+    constexpr field12 frobenius_map_one() const
     {
-        typename base_field::field_t T0;
-        base_field::frobenius_map_one(a.c1, T0);
-        base_field::frobenius_map_one(a.c0, r.c0);
-        base_field::__mul_by_fq2(Fq12Params::frobenius_coefficients_1, T0, r.c1);
+        return {
+            c0.frobenius_map_one(),
+            c1.frobenius_map_one().mul_by_fq2(Fq12Params::frobenius_coefficients_1),
+        };
     }
 
-    static inline void cyclotomic_squared(const field_t& a, field_t& r)
+    constexpr field12 cyclotomic_squared() const
     {
         // TODO: write more efficient version...
-        sqr(a, r);
+        return sqr();
     }
 
-    static inline void unitary_inverse(const field_t& a, field_t& r)
+    constexpr field12 unitary_inverse() const
     {
-        base_field::__copy(a.c0, r.c0);
-        base_field::__neg(a.c1, r.c1);
+        return {
+            c0,
+            -c1,
+        };
     }
 
-    static inline field_t random_element()
+    static constexpr field12 random_element(std::mt19937_64* engine = nullptr,
+                                            std::uniform_int_distribution<uint64_t>* dist = nullptr)
     {
-        field_t r;
-        r.c0 = base_field::random_element();
-        r.c1 = base_field::random_element();
-        return r;
+        return {
+            base_field::random_element(engine, dist),
+            base_field::random_element(engine, dist),
+        };
     }
 
-    static inline void __to_montgomery_form(const field_t& a, field_t& r)
+    constexpr field12 to_montgomery_form()
     {
-        base_field::__to_montgomery_form(a.c0, r.c0);
-        base_field::__to_montgomery_form(a.c1, r.c1);
+        return {
+            c0.to_montgomery_form(),
+            c1.to_montgomery_form(),
+        };
     }
 
-    static inline void __from_montgomery_form(const field_t& a, field_t& r)
+    constexpr field12 from_montgomery_form()
     {
-        base_field::__from_montgomery_form(a.c0, r.c0);
-        base_field::__from_montgomery_form(a.c1, r.c1);
+        return {
+            c0.from_montgomery_form(),
+            c1.from_montgomery_form(),
+        };
     }
 
-    static inline void copy(const field_t& a, field_t& r)
-    {
-        base_field::__copy(a.c0, r.c0);
-        base_field::__copy(a.c1, r.c1);
-    }
+    constexpr bool is_zero() const { return c0.is_zero() && c1.is_zero(); }
 
-    static inline void print(const field_t& a)
-    {
-        printf("fq12:\n");
-        printf("c0:\n");
-        base_field::print(a.c0);
-        printf("c1: \n");
-        base_field::print(a.c1);
-    }
-
-    static inline bool is_zero(const field_t& a)
-    {
-        return (base_field::is_zero(a.c0) && base_field::is_zero(a.c1));
-    }
-
-    static inline bool eq(const field_t& a, const field_t& b)
-    {
-        return (base_field::eq(a.c0, b.c0) && base_field::eq(a.c1, b.c1));
-    }
+    constexpr bool operator==(const field12& other) const { return c0 == other.c0 && c1 == other.c1; }
 };
 } // namespace barretenberg

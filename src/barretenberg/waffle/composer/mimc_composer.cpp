@@ -19,8 +19,8 @@ void MiMCComposer::create_add_gate(const add_triple& in)
         create_noop_gate();
     }
     StandardComposer::create_add_gate(in);
-    q_mimc_coefficient.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_selector.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_mimc_coefficient.emplace_back(0);
+    q_mimc_selector.emplace_back(0);
     current_output_wire = static_cast<uint32_t>(-1);
 }
 
@@ -30,8 +30,8 @@ void MiMCComposer::create_mul_gate(const mul_triple& in)
         create_noop_gate();
     }
     StandardComposer::create_mul_gate(in);
-    q_mimc_coefficient.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_selector.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_mimc_coefficient.emplace_back(0);
+    q_mimc_selector.emplace_back(0);
     current_output_wire = static_cast<uint32_t>(-1);
 }
 
@@ -41,8 +41,8 @@ void MiMCComposer::create_bool_gate(const uint32_t variable_index)
         create_noop_gate();
     }
     StandardComposer::create_bool_gate(variable_index);
-    q_mimc_coefficient.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_selector.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_mimc_coefficient.emplace_back(0);
+    q_mimc_selector.emplace_back(0);
     current_output_wire = static_cast<uint32_t>(-1);
 }
 
@@ -52,8 +52,8 @@ void MiMCComposer::create_poly_gate(const poly_triple& in)
         create_noop_gate();
     }
     StandardComposer::create_poly_gate(in);
-    q_mimc_coefficient.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_selector.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_mimc_coefficient.emplace_back(0);
+    q_mimc_selector.emplace_back(0);
     current_output_wire = static_cast<uint32_t>(-1);
 }
 
@@ -67,13 +67,13 @@ void MiMCComposer::create_mimc_gate(const mimc_quadruplet& in)
     w_r.emplace_back(in.x_cubed_idx);
     current_output_wire = in.x_out_idx;
 
-    q_m.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_1.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_2.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_3.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_c.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_m.emplace_back(0);
+    q_1.emplace_back(0);
+    q_2.emplace_back(0);
+    q_3.emplace_back(0);
+    q_c.emplace_back(0);
     q_mimc_coefficient.emplace_back(in.mimc_constant);
-    q_mimc_selector.emplace_back(fr::one);
+    q_mimc_selector.emplace_back(fr::one());
 
     epicycle left{ static_cast<uint32_t>(n), WireType::LEFT };
     epicycle right{ static_cast<uint32_t>(n), WireType::RIGHT };
@@ -86,13 +86,13 @@ void MiMCComposer::create_mimc_gate(const mimc_quadruplet& in)
 
 void MiMCComposer::create_noop_gate()
 {
-    q_m.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_1.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_2.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_3.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_c.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_coefficient.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_selector.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_m.emplace_back(0);
+    q_1.emplace_back(0);
+    q_2.emplace_back(0);
+    q_3.emplace_back(0);
+    q_c.emplace_back(0);
+    q_mimc_coefficient.emplace_back(0);
+    q_mimc_selector.emplace_back(0);
     w_l.emplace_back(zero_idx);
     w_r.emplace_back(zero_idx);
 
@@ -116,20 +116,20 @@ void MiMCComposer::create_noop_gate()
 void MiMCComposer::create_dummy_gates()
 {
     StandardComposer::create_dummy_gates();
-    q_mimc_coefficient.emplace_back(fr::zero);
-    q_mimc_selector.emplace_back(fr::zero);
-    q_mimc_coefficient.emplace_back(fr::zero);
-    q_mimc_selector.emplace_back(fr::zero);
+    q_mimc_coefficient.emplace_back(fr::zero());
+    q_mimc_selector.emplace_back(fr::zero());
+    q_mimc_coefficient.emplace_back(fr::zero());
+    q_mimc_selector.emplace_back(fr::zero());
 
     // add in dummy gates to ensure that all of our polynomials are not zero and not identical
     // TODO: sanitise this :/
-    q_m.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_1.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_2.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_3.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_c.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_coefficient.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_selector.emplace_back(fr::one);
+    q_m.emplace_back(0);
+    q_1.emplace_back(0);
+    q_2.emplace_back(0);
+    q_3.emplace_back(0);
+    q_c.emplace_back(0);
+    q_mimc_coefficient.emplace_back(0);
+    q_mimc_selector.emplace_back(fr::one());
     w_l.emplace_back(zero_idx);
     w_r.emplace_back(zero_idx);
     w_o.emplace_back(zero_idx);
@@ -142,13 +142,13 @@ void MiMCComposer::create_dummy_gates()
 
     ++n;
 
-    q_m.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_1.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_2.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_3.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_c.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_mimc_coefficient.emplace_back(fr::one);
-    q_mimc_selector.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_m.emplace_back(0);
+    q_1.emplace_back(0);
+    q_2.emplace_back(0);
+    q_3.emplace_back(0);
+    q_c.emplace_back(0);
+    q_mimc_coefficient.emplace_back(fr::one());
+    q_mimc_selector.emplace_back(0);
     w_l.emplace_back(zero_idx);
     w_r.emplace_back(zero_idx);
     w_o.emplace_back(zero_idx);
@@ -178,13 +178,13 @@ std::shared_ptr<proving_key> MiMCComposer::compute_proving_key()
 
     size_t offset = 0;
     if (current_output_wire != static_cast<uint32_t>(-1)) {
-        q_m.emplace_back(fr::zero);
-        q_1.emplace_back(fr::zero);
-        q_2.emplace_back(fr::zero);
-        q_3.emplace_back(fr::zero);
-        q_c.emplace_back(fr::zero);
-        q_mimc_coefficient.emplace_back(fr::zero);
-        q_mimc_selector.emplace_back(fr::zero);
+        q_m.emplace_back(fr::zero());
+        q_1.emplace_back(fr::zero());
+        q_2.emplace_back(fr::zero());
+        q_3.emplace_back(fr::zero());
+        q_c.emplace_back(fr::zero());
+        q_mimc_coefficient.emplace_back(fr::zero());
+        q_mimc_selector.emplace_back(fr::zero());
         ++offset;
     }
 
@@ -195,13 +195,13 @@ std::shared_ptr<proving_key> MiMCComposer::compute_proving_key()
     }
     size_t new_n = 1UL << log2_n;
     for (size_t i = total_num_gates; i < new_n; ++i) {
-        q_m.emplace_back(fr::zero);
-        q_1.emplace_back(fr::zero);
-        q_2.emplace_back(fr::zero);
-        q_3.emplace_back(fr::zero);
-        q_c.emplace_back(fr::zero);
-        q_mimc_coefficient.emplace_back(fr::zero);
-        q_mimc_selector.emplace_back(fr::zero);
+        q_m.emplace_back(fr::zero());
+        q_1.emplace_back(fr::zero());
+        q_2.emplace_back(fr::zero());
+        q_3.emplace_back(fr::zero());
+        q_c.emplace_back(fr::zero());
+        q_mimc_coefficient.emplace_back(fr::zero());
+        q_mimc_selector.emplace_back(fr::zero());
     }
 
     circuit_proving_key = std::make_shared<proving_key>(new_n, public_inputs.size(), crs_path);
@@ -230,13 +230,13 @@ std::shared_ptr<proving_key> MiMCComposer::compute_proving_key()
         old_epicycles = new_epicycles;
     }
     for (size_t i = 0; i < public_inputs.size(); ++i) {
-        poly_q_m[i] = fr::zero;
-        poly_q_1[i] = fr::one;
-        poly_q_2[i] = fr::zero;
-        poly_q_3[i] = fr::zero;
-        poly_q_c[i] = fr::zero;
-        poly_q_mimc_coefficient[i] = fr::zero;
-        poly_q_mimc_selector[i] = fr::zero;
+        poly_q_m[i] = fr::zero();
+        poly_q_1[i] = fr::one();
+        poly_q_2[i] = fr::zero();
+        poly_q_3[i] = fr::zero();
+        poly_q_c[i] = fr::zero();
+        poly_q_mimc_coefficient[i] = fr::zero();
+        poly_q_mimc_selector[i] = fr::zero();
     }
     for (size_t i = public_inputs.size(); i < new_n; ++i) {
         poly_q_m[i] = q_m[i - public_inputs.size()];
@@ -304,7 +304,7 @@ std::shared_ptr<verification_key> MiMCComposer::compute_verification_key()
         compute_proving_key();
     }
 
-    std::array<fr::field_t*, 10> poly_coefficients;
+    std::array<fr*, 10> poly_coefficients;
     poly_coefficients[0] = circuit_proving_key->constraint_selectors.at("q_1").get_coefficients();
     poly_coefficients[1] = circuit_proving_key->constraint_selectors.at("q_2").get_coefficients();
     poly_coefficients[2] = circuit_proving_key->constraint_selectors.at("q_3").get_coefficients();
@@ -321,10 +321,8 @@ std::shared_ptr<verification_key> MiMCComposer::compute_verification_key()
     commitments.resize(10);
 
     for (size_t i = 0; i < 10; ++i) {
-        g1::jacobian_to_affine(scalar_multiplication::pippenger(poly_coefficients[i],
-                                                                circuit_proving_key->reference_string.monomials,
-                                                                circuit_proving_key->n),
-                               commitments[i]);
+        commitments[i] = g1::affine_element(scalar_multiplication::pippenger(
+            poly_coefficients[i], circuit_proving_key->reference_string.monomials, circuit_proving_key->n));
     }
 
     circuit_verification_key =
@@ -378,9 +376,9 @@ std::shared_ptr<program_witness> MiMCComposer::compute_witness()
     polynomial poly_w_2(new_n);
     polynomial poly_w_3(new_n);
     for (size_t i = 0; i < public_inputs.size(); ++i) {
-        fr::__copy(fr::zero, poly_w_1[i]);
+        fr::__copy(fr::zero(), poly_w_1[i]);
         fr::__copy(variables[public_inputs[i]], poly_w_2[i]);
-        fr::__copy(fr::zero, poly_w_3[i]);
+        fr::__copy(fr::zero(), poly_w_3[i]);
     }
     for (size_t i = public_inputs.size(); i < new_n; ++i) {
         fr::__copy(variables[w_l[i - public_inputs.size()]], poly_w_1.at(i));
@@ -394,11 +392,11 @@ std::shared_ptr<program_witness> MiMCComposer::compute_witness()
     return witness;
 }
 
-ExtendedProver MiMCComposer::preprocess()
+Prover MiMCComposer::preprocess()
 {
     compute_proving_key();
     compute_witness();
-    ExtendedProver output_state(circuit_proving_key, witness, create_manifest(public_inputs.size()));
+    Prover output_state(circuit_proving_key, witness, create_manifest(public_inputs.size()));
 
     std::unique_ptr<ProverMiMCWidget> mimc_widget =
         std::make_unique<ProverMiMCWidget>(circuit_proving_key.get(), witness.get());
@@ -410,11 +408,11 @@ ExtendedProver MiMCComposer::preprocess()
     return output_state;
 }
 
-ExtendedVerifier MiMCComposer::create_verifier()
+Verifier MiMCComposer::create_verifier()
 {
     compute_verification_key();
 
-    ExtendedVerifier output_state(circuit_verification_key, create_manifest(public_inputs.size()));
+    Verifier output_state(circuit_verification_key, create_manifest(public_inputs.size()));
 
     std::unique_ptr<VerifierArithmeticWidget> arithmetic_widget = std::make_unique<VerifierArithmeticWidget>();
     std::unique_ptr<VerifierMiMCWidget> mimc_widget = std::make_unique<VerifierMiMCWidget>();

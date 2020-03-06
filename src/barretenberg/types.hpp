@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
+#include "stddef.h"
+#include "stdint.h"
+#include "stdlib.h"
 
 #ifdef _WIN32
 #include "./portability/win32.hpp"
@@ -10,6 +10,10 @@
 
 #ifdef __linux__
 #include "./portability/linux.hpp"
+#endif
+
+#ifdef __wasm__
+#define aligned_free free
 #endif
 
 #ifdef __APPLE__

@@ -14,6 +14,7 @@
 
 #include <memory>
 
+namespace test_stdlib_bool {
 using namespace barretenberg;
 using namespace plonk;
 
@@ -23,7 +24,7 @@ typedef stdlib::witness_t<waffle::StandardComposer> witness_t;
 
 bool get_value(bool_t& input)
 {
-    return static_cast<bool>(barretenberg::fr::from_montgomery_form(field_t(input).get_value()).data[0]);
+    return static_cast<bool>(field_t(input).get_value().from_montgomery_form().data[0]);
 }
 
 TEST(stdlib_bool, test_basic_operations)
@@ -31,8 +32,8 @@ TEST(stdlib_bool, test_basic_operations)
     waffle::StandardComposer composer = waffle::StandardComposer();
     bool_t a(&composer);
     bool_t b(&composer);
-    a = stdlib::witness_t(&composer, barretenberg::fr::one);
-    b = stdlib::witness_t(&composer, barretenberg::fr::zero);
+    a = stdlib::witness_t(&composer, barretenberg::fr::one());
+    b = stdlib::witness_t(&composer, barretenberg::fr::zero());
     a = a ^ b;           // a = 1
     b = !b;              // b = 1 (witness 0)
     bool_t d = (a == b); //
@@ -42,29 +43,24 @@ TEST(stdlib_bool, test_basic_operations)
     d = (!f) & a;        // d = 1
     waffle::Prover prover = composer.preprocess();
 
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[1]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[1]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[1]), { { 1, 0, 0, 0 } }), true);
-
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[2]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[2]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[2]), { { 0, 0, 0, 0 } }), true);
-
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[3]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[3]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[3]), { { 1, 0, 0, 0 } }), true);
-
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[4]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[4]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[4]), { { 1, 0, 0, 0 } }), true);
-
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[5]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[5]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[5]), { { 0, 0, 0, 0 } }), true);
-
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_1")[6]), { { 0, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_2")[6]), { { 1, 0, 0, 0 } }), true);
-    EXPECT_EQ(fr::eq(fr::from_montgomery_form(prover.witness->wires.at("w_3")[6]), { { 1, 0, 0, 0 } }), true);
+    EXPECT_EQ(prover.witness->wires.at("w_1")[1], fr(1));
+    EXPECT_EQ(prover.witness->wires.at("w_2")[1], fr(1));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[1], fr(1));
+    EXPECT_EQ(prover.witness->wires.at("w_1")[2], fr(0));
+    EXPECT_EQ(prover.witness->wires.at("w_2")[2], fr(0));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[2], fr(0));
+    EXPECT_EQ(prover.witness->wires.at("w_1")[3], fr(1));
+    EXPECT_EQ(prover.witness->wires.at("w_2")[3], fr(0));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[3], fr(1));
+    EXPECT_EQ(prover.witness->wires.at("w_1")[4], fr(1));
+    EXPECT_EQ(prover.witness->wires.at("w_2")[4], fr(0));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[4], fr(1));
+    EXPECT_EQ(prover.witness->wires.at("w_1")[5], fr(1));
+    EXPECT_EQ(prover.witness->wires.at("w_2")[5], fr(0));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[5], fr(0));
+    EXPECT_EQ(prover.witness->wires.at("w_1")[6], fr(0));
+    EXPECT_EQ(prover.witness->wires.at("w_2")[6], fr(1));
+    EXPECT_EQ(prover.witness->wires.at("w_3")[6], fr(1));
 
     EXPECT_EQ(prover.n, 8UL);
 }
@@ -291,8 +287,8 @@ TEST(stdlib_bool, test_simple_proof)
     waffle::StandardComposer composer = waffle::StandardComposer();
     bool_t a(&composer);
     bool_t b(&composer);
-    a = stdlib::witness_t(&composer, barretenberg::fr::one);
-    b = stdlib::witness_t(&composer, barretenberg::fr::zero);
+    a = stdlib::witness_t(&composer, barretenberg::fr::one());
+    b = stdlib::witness_t(&composer, barretenberg::fr::zero());
     // bool_t c(&composer);
     a = a ^ b;           // a = 1
     b = !b;              // b = 1 (witness 0)
@@ -324,8 +320,7 @@ TEST(stdlib_bool, normalize)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
 
-    auto generate_constraints = [&composer](bool value, bool is_constant, bool is_inverted)
-    {
+    auto generate_constraints = [&composer](bool value, bool is_constant, bool is_inverted) {
         bool_t a = is_constant ? bool_t(&composer, value) : witness_t(&composer, value);
         bool_t b = is_inverted ? !a : a;
         bool_t c = b.normalize();
@@ -334,12 +329,12 @@ TEST(stdlib_bool, normalize)
 
     generate_constraints(false, false, false);
     generate_constraints(false, false, true);
-    generate_constraints(false, true , false);
-    generate_constraints(false, true , true);
-    generate_constraints(true , false, false);
-    generate_constraints(true , false, true);
-    generate_constraints(true , true , false);
-    generate_constraints(true , true , true);
+    generate_constraints(false, true, false);
+    generate_constraints(false, true, true);
+    generate_constraints(true, false, false);
+    generate_constraints(true, false, true);
+    generate_constraints(true, true, false);
+    generate_constraints(true, true, true);
 
     waffle::Prover prover = composer.preprocess();
 
@@ -350,3 +345,4 @@ TEST(stdlib_bool, normalize)
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }
+} // namespace test_stdlib_bool

@@ -5,8 +5,8 @@
 namespace rollup {
 
 struct user_context {
-    barretenberg::fr::field_t note_secret;
-    grumpkin::fr::field_t private_key;
+    barretenberg::fr note_secret;
+    grumpkin::fr private_key;
     grumpkin::g1::affine_element public_key;
 };
 

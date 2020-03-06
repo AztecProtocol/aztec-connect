@@ -18,6 +18,7 @@
 #include <numeric>
 #include <random>
 
+namespace test_stdlib_merkle_tree {
 using namespace barretenberg;
 using namespace plonk;
 using namespace plonk::stdlib::merkle_tree;
@@ -40,13 +41,12 @@ static std::vector<std::string> VALUES = []() {
 
 TEST(stdlib_merkle_tree, compress_native_vs_circuit)
 {
-    fr::field_t x =
-        fr::to_montgomery_form({ { 0x5ec473eb273a8011, 0x50160109385471ca, 0x2f3095267e02607d, 0x02586f4a39e69b86 } });
+    fr x = uint256_t(0x5ec473eb273a8011, 0x50160109385471ca, 0x2f3095267e02607d, 0x02586f4a39e69b86);
     Composer composer = Composer();
     witness_t y = witness_t(&composer, x);
     auto z = plonk::stdlib::pedersen::compress(y, y);
     auto zz = crypto::pedersen::compress_native(x, x);
-    EXPECT_TRUE(fr::eq(z.get_value(), zz));
+    EXPECT_EQ(z.get_value(), zz);
 }
 
 TEST(stdlib_merkle_tree, hash_value_native_vs_circuit)
@@ -55,19 +55,19 @@ TEST(stdlib_merkle_tree, hash_value_native_vs_circuit)
     Composer composer = Composer();
     byte_array y(&composer, x);
     field_t z = plonk::stdlib::merkle_tree::hash_value(y);
-    fr::field_t zz = plonk::stdlib::merkle_tree::hash_value_native(x);
-    EXPECT_TRUE(fr::eq(z.get_value(), zz));
+    fr zz = plonk::stdlib::merkle_tree::hash_value_native(x);
+    EXPECT_EQ(z.get_value(), zz);
 }
 
 TEST(stdlib_merkle_tree, test_memory_store)
 {
-    fr::field_t e00 = plonk::stdlib::merkle_tree::hash_value_native(VALUES[1]);
-    fr::field_t e01 = plonk::stdlib::merkle_tree::hash_value_native(VALUES[2]);
-    fr::field_t e02 = plonk::stdlib::merkle_tree::hash_value_native(VALUES[3]);
-    fr::field_t e03 = plonk::stdlib::merkle_tree::hash_value_native(VALUES[4]);
-    fr::field_t e10 = stdlib::merkle_tree::compress_native({ e00, e01 });
-    fr::field_t e11 = stdlib::merkle_tree::compress_native({ e02, e03 });
-    fr::field_t root = stdlib::merkle_tree::compress_native({ e10, e11 });
+    fr e00 = plonk::stdlib::merkle_tree::hash_value_native(VALUES[1]);
+    fr e01 = plonk::stdlib::merkle_tree::hash_value_native(VALUES[2]);
+    fr e02 = plonk::stdlib::merkle_tree::hash_value_native(VALUES[3]);
+    fr e03 = plonk::stdlib::merkle_tree::hash_value_native(VALUES[4]);
+    fr e10 = stdlib::merkle_tree::compress_native({ e00, e01 });
+    fr e11 = stdlib::merkle_tree::compress_native({ e02, e03 });
+    fr root = stdlib::merkle_tree::compress_native({ e10, e11 });
 
     stdlib::merkle_tree::MemoryStore db(2);
 
@@ -119,7 +119,7 @@ TEST(stdlib_merkle_tree, test_leveldb_vs_memory_consistency)
         EXPECT_EQ(db.get_hash_path(idx), memdb.get_hash_path(idx));
     }
 
-    EXPECT_TRUE(fr::eq(db.root(), memdb.root()));
+    EXPECT_EQ(db.root(), memdb.root());
 }
 
 TEST(stdlib_merkle_tree, test_leveldb_update_members)
@@ -140,7 +140,7 @@ TEST(stdlib_merkle_tree, test_leveldb_update_members)
         EXPECT_EQ(db.get_element(i), memdb.get_element(i));
     }
 
-    EXPECT_TRUE(fr::eq(db.root(), memdb.root()));
+    EXPECT_TRUE((db.root() == memdb.root()));
 }
 
 TEST(stdlib_merkle_tree, test_leveldb_deep)
@@ -229,7 +229,7 @@ TEST(stdlib_merkle_tree, test_leveldb_persistence)
 {
     leveldb::DestroyDB("/tmp/leveldb_test", leveldb::Options());
 
-    fr::field_t root;
+    fr root;
     {
         stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 128);
         db.update_element(0, VALUES[1]);
@@ -241,7 +241,7 @@ TEST(stdlib_merkle_tree, test_leveldb_persistence)
     {
         stdlib::merkle_tree::LevelDbStore db("/tmp/leveldb_test", 128);
 
-        EXPECT_TRUE(fr::eq(db.root(), root));
+        EXPECT_EQ(db.root(), root);
         EXPECT_EQ(db.size(), 3ULL);
         EXPECT_EQ(db.get_element(0), VALUES[1]);
         EXPECT_EQ(db.get_element(1), VALUES[2]);
@@ -326,7 +326,7 @@ TEST(stdlib_merkle_tree, test_check_membership)
 
     Composer composer = Composer();
 
-    byte_array zero = field_t(witness_t(&composer, fr::zero));
+    byte_array zero = field_t(witness_t(&composer, fr::zero()));
     byte_array value = zero;
     value.write(zero);
     field_t root = witness_t(&composer, db.root());
@@ -353,7 +353,7 @@ TEST(stdlib_merkle_tree, test_assert_check_membership)
 
     Composer composer = Composer();
 
-    byte_array zero = field_t(witness_t(&composer, fr::zero));
+    byte_array zero = field_t(witness_t(&composer, fr::zero()));
     byte_array value = zero;
     value.write(zero);
     field_t root = witness_t(&composer, db.root());
@@ -378,8 +378,8 @@ TEST(stdlib_merkle_tree, test_assert_check_membership_fail)
 
     Composer composer = Composer();
 
-    byte_array zero = field_t(witness_t(&composer, fr::zero));
-    byte_array value = field_t(witness_t(&composer, fr::one));
+    byte_array zero = field_t(witness_t(&composer, fr::zero()));
+    byte_array value = field_t(witness_t(&composer, fr::one()));
     value.write(zero);
     field_t root = witness_t(&composer, db.root());
 
@@ -403,14 +403,14 @@ TEST(stdlib_merkle_tree, test_update_members)
 
     Composer composer = Composer();
 
-    byte_array zero = field_t(witness_t(&composer, fr::zero));
+    byte_array zero = field_t(witness_t(&composer, fr::zero()));
 
     byte_array old_value = zero;
     old_value.write(zero);
     hash_path<Composer> old_path = create_witness_hash_path(composer, db.get_hash_path(0));
     field_t old_root = witness_t(&composer, db.root());
 
-    byte_array new_value = field_t(witness_t(&composer, fr::one));
+    byte_array new_value = field_t(witness_t(&composer, fr::one()));
     new_value.write(zero);
     auto new_path_fr = get_new_hash_path(db.get_hash_path(0), 0, new_value.get_value());
     hash_path<Composer> new_path = create_witness_hash_path(composer, new_path_fr);
@@ -428,3 +428,5 @@ TEST(stdlib_merkle_tree, test_update_members)
     bool result = verifier.verify_proof(proof);
     EXPECT_EQ(result, true);
 }
+
+} // namespace test_stdlib_merkle_tree

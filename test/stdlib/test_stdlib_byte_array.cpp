@@ -15,6 +15,7 @@
 #include <barretenberg/waffle/stdlib/field/field.hpp>
 #include <barretenberg/waffle/stdlib/uint32/uint32.hpp>
 
+namespace test_stdlib_byte_array {
 using namespace barretenberg;
 using namespace plonk;
 
@@ -23,13 +24,6 @@ typedef stdlib::field_t<waffle::TurboComposer> field_t;
 typedef stdlib::uint32<waffle::TurboComposer> uint32;
 typedef stdlib::witness_t<waffle::TurboComposer> witness_t;
 typedef stdlib::byte_array<waffle::TurboComposer> byte_array;
-
-namespace {
-inline uint32_t get_random_int()
-{
-    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
-}
-} // namespace
 
 TEST(stdlib_byte_array, test_uint32_byte_array_conversion)
 {
@@ -84,8 +78,8 @@ TEST(stdlib_byte_array, test_field_t_input_output_consistency)
 {
     waffle::TurboComposer composer = waffle::TurboComposer();
 
-    fr::field_t a_expected = fr::random_element();
-    fr::field_t b_expected = fr::random_element();
+    fr a_expected = fr::random_element();
+    fr b_expected = fr::random_element();
 
     field_t a = witness_t(&composer, a_expected);
     field_t b = witness_t(&composer, b_expected);
@@ -121,3 +115,5 @@ TEST(stdlib_byte_array, test_ostream_operator)
     os << arr;
     EXPECT_EQ(os.str(), "[ 01 02 03 61 ]");
 }
+
+} // namespace test_stdlib_byte_array

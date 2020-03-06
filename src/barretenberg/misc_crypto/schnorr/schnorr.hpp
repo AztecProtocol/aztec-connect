@@ -32,7 +32,7 @@ struct Blake2sHasher {
 namespace crypto {
 namespace schnorr {
 template <typename Fr, typename G1> struct key_pair {
-    typename Fr::field_t private_key;
+    Fr private_key;
     typename G1::affine_element public_key;
 };
 

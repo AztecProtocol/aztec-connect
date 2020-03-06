@@ -2,67 +2,55 @@
 
 #include <cstdint>
 
-namespace barretenberg
-{
+namespace barretenberg {
 // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-template <typename coordinate_field, typename subgroup_field, typename GroupParams>
-inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const affine_element* src, affine_element* dest)
-{
-    if constexpr (GroupParams::small_elements)
-    {
-#if defined __AVX__ && defined USE_AVX
-        ASSERT((((uintptr_t)src & 0x1f) == 0));
-        ASSERT((((uintptr_t)dest & 0x1f) == 0));
-        __asm__ __volatile__("vmovdqa 0(%0), %%ymm0              \n\t"
-                             "vmovdqa 32(%0), %%ymm1             \n\t"
-                             "vmovdqa %%ymm0, 0(%1)              \n\t"
-                             "vmovdqa %%ymm1, 32(%1)             \n\t"
-                             :
-                             : "r"(src), "r"(dest)
-                             : "%ymm0", "%ymm1", "memory");
-#else
-        coordinate_field::__copy(src->x, dest->x);
-        coordinate_field::__copy(src->y, dest->y);
-#endif
-    }
-    else
-    {
-        coordinate_field::__copy(src->x, dest->x);
-        coordinate_field::__copy(src->y, dest->y);
-    }
-}
+// template <typename coordinate_field, typename subgroup_field, typename GroupParams>
+// inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const affine_element* src, affine_element*
+// dest)
+// {
+//     if constexpr (GroupParams::small_elements) {
+// #if defined __AVX__ && defined USE_AVX
+//         ASSERT((((uintptr_t)src & 0x1f) == 0));
+//         ASSERT((((uintptr_t)dest & 0x1f) == 0));
+//         __asm__ __volatile__("vmovdqa 0(%0), %%ymm0              \n\t"
+//                              "vmovdqa 32(%0), %%ymm1             \n\t"
+//                              "vmovdqa %%ymm0, 0(%1)              \n\t"
+//                              "vmovdqa %%ymm1, 32(%1)             \n\t"
+//                              :
+//                              : "r"(src), "r"(dest)
+//                              : "%ymm0", "%ymm1", "memory");
+// #else
+//         *dest = *src;
+// #endif
+//     } else {
+//         *dest = *src;
+//     }
+// }
 
-// copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
-template <typename coordinate_field, typename subgroup_field, typename GroupParams>
-inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const element* src, element* dest)
-{
-    if constexpr (GroupParams::small_elements)
-    {
-#if defined __AVX__ && defined USE_AVX
-        ASSERT((((uintptr_t)src & 0x1f) == 0));
-        ASSERT((((uintptr_t)dest & 0x1f) == 0));
-        __asm__ __volatile__("vmovdqa 0(%0), %%ymm0              \n\t"
-                             "vmovdqa 32(%0), %%ymm1             \n\t"
-                             "vmovdqa 64(%0), %%ymm2             \n\t"
-                             "vmovdqa %%ymm0, 0(%1)              \n\t"
-                             "vmovdqa %%ymm1, 32(%1)             \n\t"
-                             "vmovdqa %%ymm2, 64(%1)             \n\t"
-                             :
-                             : "r"(src), "r"(dest)
-                             : "%ymm0", "%ymm1", "%ymm2", "memory");
-#else
-        coordinate_field::__copy(src->x, dest->x);
-        coordinate_field::__copy(src->y, dest->y);
-        coordinate_field::__copy(src->z, dest->z);
-#endif
-    }
-    else
-    {
-        coordinate_field::__copy(src->x, dest->x);
-        coordinate_field::__copy(src->y, dest->y);
-        coordinate_field::__copy(src->z, dest->z);
-    }
-}
+// // copies src into dest. n.b. both src and dest must be aligned on 32 byte boundaries
+// template <typename coordinate_field, typename subgroup_field, typename GroupParams>
+// inline void group<coordinate_field, subgroup_field, GroupParams>::copy(const element* src, element* dest)
+// {
+//     if constexpr (GroupParams::small_elements) {
+// #if defined __AVX__ && defined USE_AVX
+//         ASSERT((((uintptr_t)src & 0x1f) == 0));
+//         ASSERT((((uintptr_t)dest & 0x1f) == 0));
+//         __asm__ __volatile__("vmovdqa 0(%0), %%ymm0              \n\t"
+//                              "vmovdqa 32(%0), %%ymm1             \n\t"
+//                              "vmovdqa 64(%0), %%ymm2             \n\t"
+//                              "vmovdqa %%ymm0, 0(%1)              \n\t"
+//                              "vmovdqa %%ymm1, 32(%1)             \n\t"
+//                              "vmovdqa %%ymm2, 64(%1)             \n\t"
+//                              :
+//                              : "r"(src), "r"(dest)
+//                              : "%ymm0", "%ymm1", "%ymm2", "memory");
+// #else
+//         *dest = *src;
+// #endif
+//     } else {
+//         *dest = src;
+//     }
+// }
 
 // copies src into dest, inverting y-coordinate if 'predicate' is true
 // n.b. requires src and dest to be aligned on 32 byte boundary
@@ -71,8 +59,8 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
                                                                                             affine_element* dest,
                                                                                             uint64_t predicate)
 {
-    if constexpr (GroupParams::small_elements)
-    {
+    if constexpr (GroupParams::small_elements) {
+        constexpr uint256_t twice_modulus = coordinate_field::modulus + coordinate_field::modulus;
 #if defined __AVX__ && defined USE_AVX
         ASSERT((((uintptr_t)src & 0x1f) == 0));
         ASSERT((((uintptr_t)dest & 0x1f) == 0));
@@ -104,10 +92,10 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
                              : "r"(src),
                                "r"(dest),
                                "r"(predicate),
-                               [modulus_0] "i"(coordinate_field::modulus.data[0]),
-                               [modulus_1] "i"(coordinate_field::modulus.data[1]),
-                               [modulus_2] "i"(coordinate_field::modulus.data[2]),
-                               [modulus_3] "i"(coordinate_field::modulus.data[3])
+                               [modulus_0] "i"(twice_modulus.data[0]),
+                               [modulus_1] "i"(twice_modulus.data[1]),
+                               [modulus_2] "i"(twice_modulus.data[2]),
+                               [modulus_3] "i"(twice_modulus.data[3])
                              : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "%ymm0", "memory", "cc");
 #else
         __asm__ __volatile__("xorq %%r8, %%r8                              \n\t"
@@ -144,22 +132,17 @@ inline void group<coordinate_field, subgroup_field, GroupParams>::conditional_ne
                              : "r"(src),
                                "r"(dest),
                                "r"(predicate),
-                               [modulus_0] "i"(coordinate_field::modulus.data[0]),
-                               [modulus_1] "i"(coordinate_field::modulus.data[1]),
-                               [modulus_2] "i"(coordinate_field::modulus.data[2]),
-                               [modulus_3] "i"(coordinate_field::modulus.data[3])
+                               [modulus_0] "i"(twice_modulus.data[0]),
+                               [modulus_1] "i"(twice_modulus.data[1]),
+                               [modulus_2] "i"(twice_modulus.data[2]),
+                               [modulus_3] "i"(twice_modulus.data[3])
                              : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "memory", "cc");
 #endif
-    }
-    else
-    {
-        if (predicate)
-        {
+    } else {
+        if (predicate) {
             coordinate_field::__copy(src->x, dest->x);
-            coordinate_field::__neg(src->y, dest->y);
-        }
-        else
-        {
+            dest->y = -src->y;
+        } else {
             copy_affine(*src, *dest);
         }
     }

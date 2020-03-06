@@ -4,6 +4,7 @@
 cmake_minimum_required(VERSION 3.14)
 
 option(DISABLE_ASM "Disable custom assembly" OFF)
+option(DISABLE_ADX "Disable ADX assembly variant" OFF)
 option(MULTITHREADING "Enable multi-threading" ON)
 option(TESTING "Build tests" ON)
 option(BENCHMARKS "Build benchmarks" ON)
@@ -22,7 +23,7 @@ if(WASM)
     set(DISABLE_ASM ON)
     set(MULTITHREADING OFF)
     set(BENCHMARKS OFF)
-    set(PROFILING OFF)
+    set(PROFILING ON)
     set(CMAKE_TOOLCHAIN_FILE "./cmake/toolchain-wasm-linux-clang.cmake")
     set(WASI_SDK_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/src/wasi-sdk-8.0")
     add_compile_options(-fno-exceptions)
@@ -50,9 +51,12 @@ project(Barretenberg
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_EXTENSIONS ON)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS ON)
+
+#OptimizeForArchitecture()
+#list(FIND _available_vector_units_list bmi2 HAS_BMI2)
 
 if(APPLE)
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
@@ -104,19 +108,35 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+if((NOT DISABLE_ASM) AND (HAS_BMI2 EQUAL -1))
+    message(STATUS "Cannot detect BMI2 instruction set.")
+    set(DISABLE_ASM ON)
+endif()
+
 if(DISABLE_ASM)
     message(STATUS "Using fallback non-assembly methods for field multiplications.")
     add_definitions(-DDISABLE_SHENANIGANS=1)
 else()
-    message(STATUS "Using custom assembly.")
+    message(STATUS "Using optimized assembly for field arithmetic.")
 endif()
 
 if(WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-float-conversion -Wimplicit-fallthrough=0")
 endif()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-copy -Wno-tautological-compare")
+if(DISABLE_ADX)
+    message(STATUS "Disabling ADX assembly variant.")
+    add_definitions(-DDISABLE_ADX=1)
+endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-deprecated")
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconstexpr-steps=100000000")
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-copy -fconstexpr-ops-limit=100000000")
 endif()
 
 if(NOT DEFINED PIPPENGER_BLOCK_SIZE)

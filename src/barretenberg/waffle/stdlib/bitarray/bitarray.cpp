@@ -5,7 +5,6 @@
 #include <bitset>
 #include <string>
 
-#include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
 #include "../../composer/standard_composer.hpp"
 #include "../../composer/turbo_composer.hpp"
@@ -168,7 +167,6 @@ template <typename ComposerContext> std::string bitarray<ComposerContext>::get_w
 }
 
 template class bitarray<waffle::StandardComposer>;
-template class bitarray<waffle::BoolComposer>;
 template class bitarray<waffle::MiMCComposer>;
 template class bitarray<waffle::TurboComposer>;
 } // namespace stdlib

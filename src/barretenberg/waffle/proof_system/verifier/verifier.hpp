@@ -8,13 +8,11 @@
 #include "../../waffle_types.hpp"
 
 #include "../program_settings.hpp"
-#include "../widgets/base_widget.hpp"
 #include "../verification_key/verification_key.hpp"
+#include "../widgets/base_widget.hpp"
 
 namespace waffle {
 template <typename program_settings> class VerifierBase {
-    typedef barretenberg::fr fr;
-    typedef barretenberg::g1 g1;
 
   public:
     VerifierBase(std::shared_ptr<verification_key> verifier_key = nullptr,
@@ -34,11 +32,9 @@ template <typename program_settings> class VerifierBase {
 };
 
 extern template class VerifierBase<standard_settings>;
-extern template class VerifierBase<extended_settings>;
 extern template class VerifierBase<turbo_settings>;
 
 typedef VerifierBase<standard_settings> Verifier;
-typedef VerifierBase<extended_settings> ExtendedVerifier;
 typedef VerifierBase<turbo_settings> TurboVerifier;
 
 } // namespace waffle

@@ -8,7 +8,7 @@ using namespace barretenberg;
 namespace
 {
     constexpr size_t NUM_ROUNDS = 93;
-    static fr::field_t constants[NUM_ROUNDS];
+    static fr constants[NUM_ROUNDS];
     auto foo = [](){
         uint8_t input[32] = {
             0, 0, 0, 0, (uint8_t)atoi("m"), (uint8_t)atoi("i"), (uint8_t)atoi("m"), (uint8_t)atoi("c"), 
@@ -17,16 +17,13 @@ namespace
             0, 0, 0, 0, 0, 0, 0, 0
         };
         keccak256 c = hash_field_element((uint64_t*)&input[0]);
-        fr::field_t c_mont = *(fr::field_t*)&c.word64s[0];
-        // fr::to_montgomery_form(*(fr::field_t*)&c.word64s[0], c_mont);
-        // fr::field_t constants[NUM_ROUNDS];
+        fr c_mont = *(fr*)&c.word64s[0];
         for (size_t i = 1; i < NUM_ROUNDS; ++i)
         {
             c = hash_field_element((uint64_t*)&c_mont);
-            fr::to_montgomery_form(*(fr::field_t*)&c.word64s[0], c_mont);
-            fr::__copy(c_mont, constants[i]);
+            constants[i] = fr{ c.word64s[0], c.word64s[1], c.word64s[2], c.word64s[3] }.to_montgomery_form();
         }
-        fr::__copy(fr::zero, constants[0]);
+        fr::__copy(fr::zero(), constants[0]);
         return 0;
     }();
 }
@@ -130,16 +127,16 @@ namespace mimc
     ];
 */
 
-// fr::field_t mimc_round_comparison(fr::field_t& input, fr::field_t& k)
+// fr mimc_round_comparison(fr& input, fr& k)
 // {
-//     fr::field_t previous;
+//     fr previous;
 //     fr::__copy(input, previous);
 //     for (size_t i = 0; i < NUM_ROUNDS; ++i)
 //     {
-//         fr::field_t t = fr::add(constants[i], previous);
-//         fr::field_t tt = fr::sqr(t);
-//         fr::field_t tttt = fr::sqr(tt);
-//         fr::field_t ttttt = fr::mul(t, tttt);
+//         fr t = constants[i] + previous;
+//         fr tt = t.sqr();
+//         fr tttt = tt.sqr();
+//         fr ttttt = t * tttt;
 //         fr::__copy(ttttt, previous);
 //     }
 //     return previous;
@@ -147,47 +144,47 @@ namespace mimc
 
 size_t mimc_round(const uint32_t input_index, const uint32_t k_index, Composer *composer)
 {
-    // fr::field_t input = composer->get_variable(input_index);
-    fr::field_t k = composer->get_variable(k_index);
+    // fr input = composer->get_variable(input_index);
+    fr k = composer->get_variable(k_index);
     size_t idx_a = input_index;
     // composer->set_variable_to_constant(idx_a, k);
     for (size_t i = 0; i < NUM_ROUNDS; ++i)
     {
-        fr::field_t t = composer->get_variable(idx_a);
-        // t = fr::add(constants[i], t);
+        fr t = composer->get_variable(idx_a);
+        // t = constants[i] + t;
         
         // if i == 0, t = t + k
         // else, t_out = t + k + c[i]
         size_t t_idx;
         if (i == 0)
         {
-            t = fr::add(t, k);
+            t = t + k;
             t_idx = composer->add_variable(t);
             composer->add_basic_add_gate(idx_a, k_index, t_idx);
         }
         else
         {
-            t = fr::add(t, k);
-            t = fr::add(t, constants[i]);
+            t = t + k;
+            t = t + constants[i];
             t_idx = composer->add_variable(t);
             composer->add_basic_add_gate(idx_a, k_index, t_idx, constants[i]); 
         }
         // idx_a = composer->add_variable(t);
         
-        fr::field_t tt = fr::sqr(t);
-        fr::field_t tttt = fr::sqr(tt);
-        fr::field_t ttttt = fr::mul(t, tttt);
+        fr tt = t.sqr();
+        fr tttt = tt.sqr();
+        fr ttttt = t * tttt;
         size_t tt_idx = composer->add_variable(tt);
         size_t tttt_idx = composer->add_variable(tttt);
         size_t ttttt_idx = composer->add_variable(ttttt);
 
         // idx_a = composer->add_add_basic_gate(k_idx, input_idx, idx_a);
-        // fr::field_t two_c = fr::add(constants[i], constants[i]); // 2c
-        // fr::field_t c_squared = fr::sqr(constants[i]);              // -c^2
+        // fr two_c = constants[i] + constants[i]; // 2c
+        // fr c_squared = constants[i].sqr();              // -c^2
         // (t + c)(t + c) = t.t + 2c.t + cc = tt
         // t.t + 2c.t + cc - tt
         composer->add_basic_mul_gate(t_idx, t_idx, tt_idx);
-        // composer->add_poly_gate(fr::one, two_c, fr::zero, fr::neg_one(), c_squared, idx_a, idx_a, idx_b);
+        // composer->add_poly_gate(fr::one(), two_c, fr::zero(), fr::neg_one(), c_squared, idx_a, idx_a, idx_b);
 
         // tt.tt = tttt;
         composer->add_basic_mul_gate(tt_idx, tt_idx, tttt_idx);
@@ -197,7 +194,7 @@ size_t mimc_round(const uint32_t input_index, const uint32_t k_index, Composer *
 
         idx_a = ttttt_idx;
         // out = ttttt + k
-        // fr::field_t out = fr::add(ttttt, k);
+        // fr out = ttttt + k;
         // size_t out_idx = composer->add_variable(out);
         // composer->add_basic_add_gate(idx_d, k_index, out_idx);
         // idx_a = out_idx;

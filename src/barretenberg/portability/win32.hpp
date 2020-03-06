@@ -1,5 +1,11 @@
+#pragma once
+
+#ifdef _WIN32
+
 #define PRIx64 "llx"
 #define PRIu64 "llu"
+
+#include "stddef.h"
 
 inline void* aligned_alloc(size_t alignment, size_t size)
 {
@@ -16,3 +22,5 @@ inline int getentropy(void* buf, size_t size)
     }
     return 0;
 }
+
+#endif

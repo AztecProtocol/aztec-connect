@@ -17,9 +17,6 @@
 namespace waffle {
 
 template <typename settings> class ProverBase {
-    typedef barretenberg::fr fr;
-    typedef barretenberg::g1 g1;
-    typedef barretenberg::polynomial polynomial;
 
   public:
     ProverBase(std::shared_ptr<proving_key> input_key = nullptr,
@@ -48,7 +45,7 @@ template <typename settings> class ProverBase {
     void init_quotient_polynomials();
     void compute_opening_elements();
 
-    barretenberg::fr::field_t compute_linearisation_coefficients();
+    barretenberg::fr compute_linearisation_coefficients();
     waffle::plonk_proof construct_proof();
     void reset();
 
@@ -71,11 +68,9 @@ template <typename settings> class ProverBase {
 };
 
 extern template class ProverBase<standard_settings>;
-extern template class ProverBase<extended_settings>;
 extern template class ProverBase<turbo_settings>;
 
 typedef ProverBase<standard_settings> Prover;
-typedef ProverBase<extended_settings> ExtendedProver;
 typedef ProverBase<turbo_settings> TurboProver;
 
 } // namespace waffle

@@ -1,9 +1,8 @@
 #include "./uint.hpp"
 
-#include "../../composer/turbo_composer.hpp"
-#include "../../composer/standard_composer.hpp"
-#include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
+#include "../../composer/standard_composer.hpp"
+#include "../../composer/turbo_composer.hpp"
 
 using namespace barretenberg;
 
@@ -119,7 +118,7 @@ uint<Composer, Native> uint<Composer, Native>::operator>>(const uint64_t shift) 
 
     if ((shift & 1) == 0) {
         uint result(context);
-        result.witness_index = accumulators[((width >> 1) - 1 - (shift >> 1))];
+        result.witness_index = accumulators[static_cast<size_t>(((width >> 1) - 1 - (shift >> 1)))];
         result.witness_status = WitnessStatus::WEAK_NORMALIZED;
         return result;
     }
@@ -135,14 +134,11 @@ uint<Composer, Native> uint<Composer, Native>::operator>>(const uint64_t shift) 
     // (but it actually extracts 6 * high_bit for efficiency reasons)
     // so we need to scale everything else accordingly
     const uint32_t right_index = accumulators[x];
-    const uint32_t left_index = shift == 31 ? context->zero_idx : accumulators[x - 1];
+    const uint32_t left_index = shift == 31 ? context->zero_idx : accumulators[static_cast<size_t>(x - 1)];
 
     const waffle::add_quad gate{
-        context->zero_idx, context->add_variable(output),
-        right_index,       left_index,
-        fr::zero,          fr::neg(fr::to_montgomery_form({ { 6, 0, 0, 0 } })),
-        fr::zero,          fr::to_montgomery_form({ { 12, 0, 0, 0 } }),
-        fr::zero,
+        context->zero_idx, context->add_variable(output), right_index,     left_index,          fr::zero(),
+        -fr(6),   fr::zero(),           fr(12), fr::zero(),
     };
 
     context->create_big_add_gate_with_bit_extraction(gate);
@@ -175,7 +171,7 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
 
     if ((shift & 1) == 0) {
         const uint64_t x = (shift >> 1);
-        const uint32_t right_idx = accumulators[x - 1];
+        const uint32_t right_idx = accumulators[static_cast<size_t>(x - 1)];
         const uint32_t base_idx = witness_index;
 
         const uint256_t base_shift_factor = uint256_t(1) << (x * 2);
@@ -183,10 +179,13 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
 
         const uint256_t output = (get_value() << shift) & MASK;
 
-        const waffle::add_triple gate{
-            base_idx,      right_idx, context->add_variable(output), base_shift_factor, fr::neg(right_shift_factor),
-            fr::neg_one(), fr::zero
-        };
+        const waffle::add_triple gate{ base_idx,
+                                       right_idx,
+                                       context->add_variable(output),
+                                       base_shift_factor,
+                                       -fr(right_shift_factor),
+                                       fr::neg_one(),
+                                       fr::zero() };
 
         context->create_add_gate(gate);
 
@@ -201,7 +200,7 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
     // get accumulator index
     const uint64_t x = (shift >> 1);
 
-    const uint32_t right_index = shift == 1 ? context->zero_idx : accumulators[x - 1];
+    const uint32_t right_index = shift == 1 ? context->zero_idx : accumulators[static_cast<size_t>(x - 1)];
     const uint32_t left_index = accumulators[x];
     const uint32_t base_index = witness_index;
 
@@ -209,28 +208,21 @@ uint<Composer, Native> uint<Composer, Native>::operator<<(const uint64_t shift) 
     const uint256_t b_hi_shift_factor = CIRCUIT_UINT_MAX_PLUS_ONE;
     const uint256_t right_shift_factor = CIRCUIT_UINT_MAX_PLUS_ONE * uint256_t(12);
 
-    fr::field_t q_1 = uint256_t(6);
-    fr::field_t q_2 = base_shift_factor;
-    fr::field_t q_3 = right_shift_factor;
+    fr q_1 = uint256_t(6);
+    fr q_2 = base_shift_factor;
+    fr q_3 = right_shift_factor;
 
-    fr::field_t denominator = b_hi_shift_factor;
-    fr::__neg(denominator, denominator);
-    fr::__invert(denominator, denominator);
+    fr denominator = b_hi_shift_factor;
+    denominator.self_neg();
+    denominator = denominator.invert();
 
-    fr::__mul(q_1, denominator, q_1);
-    fr::__mul(q_2, denominator, q_2);
-    fr::__mul(q_3, denominator, q_3);
+    q_1 *= denominator;
+    q_2 *= denominator;
+    q_3 *= denominator;
 
     const waffle::add_quad gate{
-        context->add_variable(output),
-        base_index,
-        left_index,
-        right_index,
-        fr::neg(q_1),
-        q_2,
-        fr::zero,
-        fr::neg(q_3),
-        fr::zero,
+        context->add_variable(output), base_index, left_index,          right_index, -q_1, q_2,
+        fr::zero(),           -q_3,       fr::zero(),
     };
 
     context->create_big_add_gate_with_bit_extraction(gate);
@@ -270,19 +262,19 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
     if ((rotation & 1) == 0) {
         const uint64_t x = (rotation >> 1);
         const uint64_t pivot = ((width >> 1) - 1 - x);
-        const uint32_t left_idx = accumulators[pivot];
+        const uint32_t left_idx = accumulators[static_cast<size_t>(pivot)];
         const uint32_t base_idx = witness_index;
 
         const uint256_t t0 = (1ULL << (x * 2));
         const uint256_t t1 = (1ULL << ((width >> 1) - x) * 2);
         const uint256_t t2 = t0 * t1;
 
-        const fr::field_t left_shift_factor = fr::sub(fr::one, t2);
-        const fr::field_t base_shift_factor = t1;
+        const fr left_shift_factor = fr::one() - t2;
+        const fr base_shift_factor = t1;
 
-        const waffle::add_triple gate{ base_idx,          left_idx,          context->add_variable(output),
-                                 base_shift_factor, left_shift_factor, fr::neg_one(),
-                                 fr::zero };
+        const waffle::add_triple gate{ base_idx,           left_idx,          context->add_variable(output),
+                                       base_shift_factor,  left_shift_factor, fr::neg_one(),
+                                       fr::zero() };
 
         context->create_add_gate(gate);
 
@@ -295,8 +287,8 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
     const uint64_t x = (rotation >> 1) + 1;
     const uint64_t pivot = ((width >> 1) - 1 - x);
 
-    const uint32_t pivot_idx = rotation == 31 ? context->zero_idx : accumulators[pivot];
-    const uint32_t next_pivot_idx = accumulators[pivot + 1];
+    const uint32_t pivot_idx = rotation == 31 ? context->zero_idx : accumulators[static_cast<size_t>(pivot)];
+    const uint32_t next_pivot_idx = accumulators[static_cast<size_t>(pivot + 1)];
     const uint32_t base_idx = witness_index;
 
     const uint256_t out_scale_factor = uint256_t(6);
@@ -305,19 +297,21 @@ uint<Composer, Native> uint<Composer, Native>::ror(const uint64_t target_rotatio
     const uint256_t pivot_scale_factor = (uint256_t(1) << (uint256_t(width) + uint256_t(1))) * uint256_t(6);
     const uint256_t b_hi_scale_factor = (uint256_t(1) << uint256_t(width));
 
-    fr::field_t q_1 = fr::neg(out_scale_factor);
-    fr::field_t q_2 = base_scale_factor;
-    fr::field_t q_3 = fr::sub(fr::to_montgomery_form({ { 12, 0, 0, 0 } }), pivot_scale_factor);
+    fr q_1 = -fr(out_scale_factor);
+    fr q_2 = base_scale_factor;
+    constexpr fr twelve = fr{ 12, 0, 0, 0 }.to_montgomery_form();
+    fr q_3 = twelve - pivot_scale_factor;
 
-    fr::field_t denominator = fr::sub(fr::one, b_hi_scale_factor);
-    fr::__invert(denominator, denominator);
+    fr denominator = fr::one() - b_hi_scale_factor;
+    denominator = denominator.invert();
 
-    fr::__mul(q_1, denominator, q_1);
-    fr::__mul(q_2, denominator, q_2);
-    fr::__mul(q_3, denominator, q_3);
+    q_1 *= denominator;
+    q_2 *= denominator;
+    q_3 *= denominator;
 
     const waffle::add_quad gate{
-        context->add_variable(output), base_idx, next_pivot_idx, pivot_idx, q_1, q_2, fr::zero, q_3, fr::zero,
+        context->add_variable(output), base_idx, next_pivot_idx,      pivot_idx, q_1, q_2,
+        fr::zero(),           q_3,      fr::zero(),
     };
 
     context->create_big_add_gate_with_bit_extraction(gate);
@@ -392,7 +386,7 @@ uint<Composer, Native> uint<Composer, Native>::logic_operator(const uint& other,
         ctx->assert_equal(lhs_idx, constant_idx);
     } else {
         accumulators = logic_accumulators.left;
-        witness_index = accumulators[(width >> 1) - 1];
+        witness_index = accumulators[((width >> 1) - 1)];
         witness_status = WitnessStatus::OK;
     }
 
@@ -411,7 +405,6 @@ uint<Composer, Native> uint<Composer, Native>::logic_operator(const uint& other,
     result.witness_status = WitnessStatus::OK;
     return result;
 }
-
 template class uint<waffle::TurboComposer, uint8_t>;
 template class uint<waffle::TurboComposer, uint16_t>;
 template class uint<waffle::TurboComposer, uint32_t>;
@@ -421,11 +414,6 @@ template class uint<waffle::StandardComposer, uint8_t>;
 template class uint<waffle::StandardComposer, uint16_t>;
 template class uint<waffle::StandardComposer, uint32_t>;
 template class uint<waffle::StandardComposer, uint64_t>;
-
-template class uint<waffle::BoolComposer, uint8_t>;
-template class uint<waffle::BoolComposer, uint16_t>;
-template class uint<waffle::BoolComposer, uint32_t>;
-template class uint<waffle::BoolComposer, uint64_t>;
 
 template class uint<waffle::MiMCComposer, uint8_t>;
 template class uint<waffle::MiMCComposer, uint16_t>;

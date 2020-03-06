@@ -25,12 +25,12 @@ template <typename ComposerContext> inline field_t<ComposerContext> hash_value(b
     return stdlib::blake2s(input);
 }
 
-inline barretenberg::fr::field_t hash_value_native(std::string const& input)
+inline barretenberg::fr hash_value_native(std::string const& input)
 {
     std::vector<uint8_t> inputv(input.begin(), input.end());
     // std::vector<uint8_t> output = blake2::blake2s(inputv);
     std::vector<uint8_t> output = blake2::blake2s(inputv);
-    barretenberg::fr::field_t result = barretenberg::fr::zero;
+    barretenberg::fr result = barretenberg::fr::zero();
     if (isLittleEndian()) {
         result.data[0] = __builtin_bswap64(*(uint64_t*)&output[24]);
         result.data[1] = __builtin_bswap64(*(uint64_t*)&output[16]);
@@ -42,10 +42,10 @@ inline barretenberg::fr::field_t hash_value_native(std::string const& input)
         result.data[2] = *(uint64_t*)&output[8];
         result.data[3] = *(uint64_t*)&output[0];
     }
-    return barretenberg::fr::to_montgomery_form(result);
+    return result.to_montgomery_form();
 }
 
-inline barretenberg::fr::field_t compress_native(std::vector<barretenberg::fr::field_t> const& input)
+inline barretenberg::fr compress_native(std::vector<barretenberg::fr> const& input)
 {
     return crypto::pedersen::compress_native(input[0], input[1]);
 }

@@ -45,11 +45,11 @@ void BoolComposer::create_dummy_gates()
     q_right_bools.emplace_back(fr::zero);
 
     // add a dummy gate to ensure that left / right bool selectors are nonzero
-    q_1.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_2.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_3.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_m.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
-    q_c.emplace_back(fr::field_t({ { 0, 0, 0, 0 } }));
+    q_1.emplace_back(fr({ { 0, 0, 0, 0 } }));
+    q_2.emplace_back(fr({ { 0, 0, 0, 0 } }));
+    q_3.emplace_back(fr({ { 0, 0, 0, 0 } }));
+    q_m.emplace_back(fr({ { 0, 0, 0, 0 } }));
+    q_c.emplace_back(fr({ { 0, 0, 0, 0 } }));
     q_left_bools.emplace_back(fr::one);
     q_right_bools.emplace_back(fr::one);
     w_l.emplace_back(zero_idx);
@@ -111,8 +111,7 @@ std::shared_ptr<proving_key> BoolComposer::compute_proving_key()
         q_right_bools.emplace_back(fr::zero);
         q_output_bools.emplace_back(fr::zero);
     }
-    for (size_t i = 0; i < public_inputs.size(); ++i)
-    {
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
         epicycle left{ static_cast<uint32_t>(i - public_inputs.size()), WireType::LEFT };
         wire_epicycles[static_cast<size_t>(public_inputs[i])].emplace_back(left);
     }
@@ -208,7 +207,7 @@ std::shared_ptr<verification_key> BoolComposer::compute_verification_key()
         compute_proving_key();
     }
 
-    std::array<fr::field_t*, 11> poly_coefficients;
+    std::array<fr*, 11> poly_coefficients;
     poly_coefficients[0] = circuit_proving_key->constraint_selectors.at("q_1").get_coefficients();
     poly_coefficients[1] = circuit_proving_key->constraint_selectors.at("q_2").get_coefficients();
     poly_coefficients[2] = circuit_proving_key->constraint_selectors.at("q_3").get_coefficients();
@@ -231,7 +230,8 @@ std::shared_ptr<verification_key> BoolComposer::compute_verification_key()
                                commitments[i]);
     }
 
-    circuit_verification_key = std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs, crs_path);
+    circuit_verification_key =
+        std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs, crs_path);
 
     circuit_verification_key->constraint_selectors.insert({ "Q_1", commitments[0] });
     circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });
@@ -252,8 +252,7 @@ std::shared_ptr<verification_key> BoolComposer::compute_verification_key()
 
 std::shared_ptr<program_witness> BoolComposer::compute_witness()
 {
-    if (computed_witness)
-    {
+    if (computed_witness) {
         return witness;
     }
     witness = std::make_shared<program_witness>();
@@ -274,8 +273,7 @@ std::shared_ptr<program_witness> BoolComposer::compute_witness()
     polynomial poly_w_2(new_n);
     polynomial poly_w_3(new_n);
 
-    for (size_t i = 0; i < public_inputs.size(); ++i)
-    {
+    for (size_t i = 0; i < public_inputs.size(); ++i) {
         fr::__copy(variables[public_inputs[i]], poly_w_1[i]);
         fr::__copy(fr::zero, poly_w_2[i]);
         fr::__copy(fr::zero, poly_w_3[i]);
@@ -314,8 +312,10 @@ Prover BoolComposer::preprocess()
 
     Prover output_state(circuit_proving_key, witness, create_manifest(public_inputs.size()));
 
-    std::unique_ptr<ProverBoolWidget> bool_widget = std::make_unique<ProverBoolWidget>(circuit_proving_key.get(), witness.get());
-    std::unique_ptr<ProverArithmeticWidget> arithmetic_widget = std::make_unique<ProverArithmeticWidget>(circuit_proving_key.get(), witness.get());
+    std::unique_ptr<ProverBoolWidget> bool_widget =
+        std::make_unique<ProverBoolWidget>(circuit_proving_key.get(), witness.get());
+    std::unique_ptr<ProverArithmeticWidget> arithmetic_widget =
+        std::make_unique<ProverArithmeticWidget>(circuit_proving_key.get(), witness.get());
 
     output_state.widgets.emplace_back(std::move(arithmetic_widget));
     output_state.widgets.emplace_back(std::move(bool_widget));

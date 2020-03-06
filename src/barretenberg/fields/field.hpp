@@ -1,535 +1,159 @@
 #pragma once
 
-#include <cinttypes>
 #include <cstdint>
-#include <cstdio>
-#include <unistd.h>
+#include <iostream>
 #include <array>
 
-#include "../assert.hpp"
-#include "../types.hpp"
+#include "../uint256/uint256.hpp"
+#include "../utils.hpp"
 
-// #include "../uint256/uint256.hpp"
-
-// 2: all methods that pass in a reference to the return value should be prefixed by __
-// 3: all methods that have a __ prefix, should have a partner method that returns by value
+#if defined(__SIZEOF_INT128__)
+__extension__ using uint128_t = unsigned __int128;
+#endif
 
 namespace barretenberg {
-template <typename FieldParams> class field {
+template <class Params> struct alignas(32) field {
   public:
-    struct field_t {
-        alignas(32) uint64_t data[4];
+    field() noexcept {}
 
-        // constexpr field_t() : data() {}
-        // constexpr field_t(const std::array<uint64_t, 4>& in) : data{ in[0], in[1], in[2], in[3] } {}
-        // constexpr field_t(const uint64_t* in) : data{ in[0], in[1], in[2], in[3] } {}
-        // constexpr field_t(uint64_t a, uint64_t b, uint64_t c, uint64_t d) : data{ a, b, c, d } {}
-
-        // field_t(const uint256_t &input)
-        // {
-        //     *this = field<FieldParams>::to_montgomery_form({{ input.data[0], input.data[1], input.data[2], input.data[3] }});
-        // }
-
-        // operator uint256_t() {
-        //     field_t converted = field<FieldParams>::from_montgomery_form({{ data[0], data[1], data[2], data[3] }});
-        //     return uint256_t(converted.data[0], converted.data[1], converted.data[2], converted.data[3]);
-        // }
-
-        bool operator<(const field_t& other) const { return gt(other, *this); }
-    };
-
-    struct field_wide_t {
-        alignas(64) uint64_t data[8];
-    };
-
-
-    static constexpr field_t modulus = {
-        { FieldParams::modulus_0, FieldParams::modulus_1, FieldParams::modulus_2, FieldParams::modulus_3 }
-    };
-    static constexpr field_t twice_modulus = { { FieldParams::twice_modulus_0,
-                                                 FieldParams::twice_modulus_1,
-                                                 FieldParams::twice_modulus_2,
-                                                 FieldParams::twice_modulus_3 } };
-    static constexpr field_t zero{ { 0x00, 0x00, 0x00, 0x00 } };
-    static constexpr field_t two_inv{
-        { FieldParams::two_inv_0, FieldParams::two_inv_1, FieldParams::two_inv_2, FieldParams::two_inv_3 }
-    };
-    static constexpr field_t modulus_plus_one{
-        { FieldParams::modulus_0 + 1ULL, FieldParams::modulus_1, FieldParams::modulus_2, FieldParams::modulus_3 }
-    };
-    static constexpr field_t modulus_minus_two = {
-        { FieldParams::modulus_0 - 2ULL, FieldParams::modulus_1, FieldParams::modulus_2, FieldParams::modulus_3 }
-    };
-    static constexpr field_t sqrt_exponent = { { FieldParams::sqrt_exponent_0,
-                                                 FieldParams::sqrt_exponent_1,
-                                                 FieldParams::sqrt_exponent_2,
-                                                 FieldParams::sqrt_exponent_3 } };
-    static constexpr field_t r_squared{
-        { FieldParams::r_squared_0, FieldParams::r_squared_1, FieldParams::r_squared_2, FieldParams::r_squared_3 }
-    };
-    static constexpr field_t one_raw{ { 1ULL, 0ULL, 0ULL, 0ULL } };
-    static constexpr field_t one{
-        { FieldParams::one_mont_0, FieldParams::one_mont_1, FieldParams::one_mont_2, FieldParams::one_mont_3 }
-    };
-    static constexpr field_t beta{
-        { FieldParams::cube_root_0, FieldParams::cube_root_1, FieldParams::cube_root_2, FieldParams::cube_root_3 }
-    };
-    static constexpr field_t multiplicative_generator{ { FieldParams::multiplicative_generator_0,
-                                                         FieldParams::multiplicative_generator_1,
-                                                         FieldParams::multiplicative_generator_2,
-                                                         FieldParams::multiplicative_generator_3 } };
-    static constexpr field_t multiplicative_generator_inverse{ { FieldParams::multiplicative_generator_inverse_0,
-                                                                 FieldParams::multiplicative_generator_inverse_1,
-                                                                 FieldParams::multiplicative_generator_inverse_2,
-                                                                 FieldParams::multiplicative_generator_inverse_3 } };
-    static constexpr field_t alternate_multiplicative_generator{
-        { FieldParams::alternate_multiplicative_generator_0,
-          FieldParams::alternate_multiplicative_generator_1,
-          FieldParams::alternate_multiplicative_generator_2,
-          FieldParams::alternate_multiplicative_generator_3 }
-    };
-    static constexpr field_t root_of_unity{ { FieldParams::primitive_root_0,
-                                              FieldParams::primitive_root_1,
-                                              FieldParams::primitive_root_2,
-                                              FieldParams::primitive_root_3 } };
-
-    static constexpr field_t coset_generators[15]{
-        { { FieldParams::coset_generators_0[0],
-            FieldParams::coset_generators_1[0],
-            FieldParams::coset_generators_2[0],
-            FieldParams::coset_generators_3[0] } },
-        { { FieldParams::coset_generators_0[1],
-            FieldParams::coset_generators_1[1],
-            FieldParams::coset_generators_2[1],
-            FieldParams::coset_generators_3[1] } },
-        { { FieldParams::coset_generators_0[2],
-            FieldParams::coset_generators_1[2],
-            FieldParams::coset_generators_2[2],
-            FieldParams::coset_generators_3[2] } },
-        { { FieldParams::coset_generators_0[3],
-            FieldParams::coset_generators_1[3],
-            FieldParams::coset_generators_2[3],
-            FieldParams::coset_generators_3[3] } },
-        { { FieldParams::coset_generators_0[4],
-            FieldParams::coset_generators_1[4],
-            FieldParams::coset_generators_2[4],
-            FieldParams::coset_generators_3[4] } },
-        { { FieldParams::coset_generators_0[5],
-            FieldParams::coset_generators_1[5],
-            FieldParams::coset_generators_2[5],
-            FieldParams::coset_generators_3[5] } },
-        { { FieldParams::coset_generators_0[6],
-            FieldParams::coset_generators_1[6],
-            FieldParams::coset_generators_2[6],
-            FieldParams::coset_generators_3[6] } },
-        { { FieldParams::coset_generators_0[7],
-            FieldParams::coset_generators_1[7],
-            FieldParams::coset_generators_2[7],
-            FieldParams::coset_generators_3[7] } },
-        { { FieldParams::coset_generators_0[8],
-            FieldParams::coset_generators_1[8],
-            FieldParams::coset_generators_2[8],
-            FieldParams::coset_generators_3[8] } },
-        { { FieldParams::coset_generators_0[9],
-            FieldParams::coset_generators_1[9],
-            FieldParams::coset_generators_2[9],
-            FieldParams::coset_generators_3[9] } },
-        { { FieldParams::coset_generators_0[10],
-            FieldParams::coset_generators_1[10],
-            FieldParams::coset_generators_2[10],
-            FieldParams::coset_generators_3[10] } },
-        { { FieldParams::coset_generators_0[11],
-            FieldParams::coset_generators_1[11],
-            FieldParams::coset_generators_2[11],
-            FieldParams::coset_generators_3[11] } },
-        { { FieldParams::coset_generators_0[12],
-            FieldParams::coset_generators_1[12],
-            FieldParams::coset_generators_2[12],
-            FieldParams::coset_generators_3[12] } },
-        { { FieldParams::coset_generators_0[13],
-            FieldParams::coset_generators_1[13],
-            FieldParams::coset_generators_2[13],
-            FieldParams::coset_generators_3[13] } },
-        { { FieldParams::coset_generators_0[14],
-            FieldParams::coset_generators_1[14],
-            FieldParams::coset_generators_2[14],
-            FieldParams::coset_generators_3[14] } },
-    };
-    /**
-     * Arithmetic Methods (with return parameters)
-     *
-     * We pass in return value as a parameter, so that the input references and
-     * the output references can overlap, without affecting performance.
-     *
-     * The 'without reduction' methods do not perform a conditional check on the result,
-     * to determine whether the value exceeds our modulus p.
-     *
-     * The 'with coarse reduction' methods will constrain the result to be modulo 2p
-     **/
-    static void __mul(const field_t& a, const field_t& b, field_t& r) noexcept;
-
-    static void __mul_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) noexcept;
-    static void __sqr(const field_t& a, field_t& r) noexcept;
-    static void __sqr_with_coarse_reduction(const field_t& a, field_t& r) noexcept;
-    static void __add(const field_t& a, const field_t& b, field_t& r) noexcept;
-    static void __add_without_reduction(const field_t& a, const field_t& b, field_t& r) noexcept;
-    static void __add_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) noexcept;
-    static void __quad_with_coarse_reduction(const field_t& a, field_t& r) noexcept;
-    static void __oct_with_coarse_reduction(const field_t& a, field_t& r) noexcept;
-    static void __paralell_double_and_add_without_reduction(field_t& x_0,
-                                                            const field_t& y_0,
-                                                            const field_t& y_1,
-                                                            field_t& r) noexcept;
-    static void __sub(const field_t& a, const field_t& b, field_t& r) noexcept;
-    static void __sub_with_coarse_reduction(const field_t& a, const field_t& b, field_t& r) noexcept;
-    static void __conditionally_subtract_from_double_modulus(const field_t& a,
-                                                             field_t& r,
-                                                             const uint64_t predicate) noexcept;
-    static void __conditionally_negate_self(field_t& r, const uint64_t predicate) noexcept;
-    // compute a * b, put 512-bit result in r (do not reduce)
-    static void __mul_512(const field_t& a, const field_t& b, field_wide_t& r) noexcept;
-
-    // Multiply field_t `a` by the cube root of unity, modulo `q`. Store result in `r`
-    static inline void __mul_beta(const field_t& a, field_t& r) noexcept { __mul(a, beta, r); }
-    static inline void __neg(const field_t& a, field_t& r) noexcept { __sub(modulus, a, r); }
-
-    /**
-     * Arithmetic Methods (return by value)
-     **/
-    // inline static field_t from_uint256(const uint256_t& input) noexcept
-    // {
-    //     field_t out{ input.data[0], input.data[1], input.data[2], input.data[3] };
-    //     return to_montgomery_form(out);
-    // }
-
-    inline static field_t mul(const field_t& a, const field_t& b) noexcept
+    constexpr field(const uint256_t& input) noexcept
+        : data{ input.data[0], input.data[1], input.data[2], input.data[3] }
     {
-        field_t r;
-        __mul(a, b, r);
-        return r;
-    }
-    inline static field_t sqr(const field_t& a) noexcept
-    {
-        field_t r;
-        __sqr(a, r);
-        return r;
-    }
-    inline static field_t add(const field_t& a, const field_t& b) noexcept
-    {
-        field_t r;
-        __add(a, b, r);
-        return r;
-    }
-    inline static field_t sub(const field_t& a, const field_t& b) noexcept
-    {
-        field_t r;
-        __sub(a, b, r);
-        return r;
-    }
-    static inline field_t neg(const field_t& a) noexcept
-    {
-        field_t r;
-        __neg(a, r);
-        return r;
-    }
-    static inline field_t neg_one() noexcept
-    {
-        field_t r = sub(zero, one);
-        return r;
+        self_to_montgomery_form();
     }
 
-    /**
-     * Comparison methods and bit operations
-     **/
-    static inline bool eq(const field_t& a, const field_t& b) noexcept
+    constexpr field(const uint64_t input) noexcept
+        : data{ input, 0, 0, 0 }
     {
-        return (a.data[0] == b.data[0]) && (a.data[1] == b.data[1]) && (a.data[2] == b.data[2]) &&
-               (a.data[3] == b.data[3]);
-    }
-    static inline bool is_zero(const field_t& a) noexcept
-    {
-        return ((a.data[0] | a.data[1] | a.data[2] | a.data[3]) == 0);
+        self_to_montgomery_form();
     }
 
-    static inline bool gt(const field_t& a, const field_t& b) noexcept
-    {
-        bool t0 = a.data[3] > b.data[3];
-        bool t1 = (a.data[3] == b.data[3]) && (a.data[2] > b.data[2]);
-        bool t2 = (a.data[3] == b.data[3]) && (a.data[2] == b.data[2]) && (a.data[1] > b.data[1]);
-        bool t3 =
-            (a.data[3] == b.data[3]) && (a.data[2] == b.data[2]) && (a.data[1] == b.data[1]) && (a.data[0] > b.data[0]);
-        return (t0 || t1 || t2 || t3);
-    }
-    static inline bool get_bit(const field_t& a, size_t bit_index) noexcept
-    {
-        size_t idx = bit_index >> 6;
-        size_t shift = bit_index & 63;
-        return bool((a.data[idx] >> shift) & 1);
-    }
-    static inline bool is_msb_set(const field_t& a) noexcept { return (a.data[3] >> 63ULL) == 1ULL; }
-    static inline uint64_t is_msb_set_word(const field_t& a) noexcept { return a.data[3] >> 63ULL; }
-    static inline void __set_msb(field_t& a) noexcept { a.data[3] = 0ULL | (1ULL << 63ULL); }
+    constexpr field(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t d) noexcept
+        : data{ a, b, c, d } {};
 
-    /**
-     * Copy methods
-     **/
-    static void __swap(field_t& src, field_t& dest) noexcept;
-
-    // AVX implementation requires words to be aligned on 32 byte bounary
-    static void __copy(const field_t& a, field_t& r) noexcept;
-
-    static field_t copy(const field_t& src) noexcept
+    constexpr operator uint256_t() const noexcept
     {
-        field_t r;
-        __copy(src, r);
-        return r;
+        field out = from_montgomery_form();
+        return uint256_t(out.data[0], out.data[1], out.data[2], out.data[3]);
     }
 
-    /**
-     * Montgomery modular reduction methods
-     **/
-    static void reduce_once(const field_t& a, field_t& r) noexcept;
+    constexpr field(const field& other) = default;
+    constexpr field& operator=(const field& other) = default;
 
-    static inline void __to_montgomery_form(const field_t& a, field_t& r) noexcept
+    alignas(32) uint64_t data[4];
+
+    static constexpr uint256_t modulus =
+        uint256_t{ Params::modulus_0, Params::modulus_1, Params::modulus_2, Params::modulus_3 };
+
+    static constexpr field beta()
     {
-        __copy(a, r);
-        while (gt(r, modulus_plus_one)) {
-            __sub(r, modulus, r);
-        }
-        __mul(r, r_squared, r);
-    }
-    static inline void __from_montgomery_form(const field_t& a, field_t& r) noexcept { __mul(a, one_raw, r); }
-
-    static inline field_t to_montgomery_form(const field_t& a) noexcept
-    {
-        field_t r;
-        __to_montgomery_form(a, r);
-        return r;
-    }
-    static inline field_t from_montgomery_form(const field_t& a) noexcept
-    {
-        field_t r;
-        __from_montgomery_form(a, r);
-        return r;
-    }
-
-    /**
-     * Algorithms
-     **/
-
-    /**
-     * compute a^b mod q, return result in r
-     **/
-    static inline void __pow(const field_t& a, const field_t& b, field_t& r)
-    {
-        if (eq(a, zero)) {
-            __copy(zero, r);
-            return;
-        }
-        field_t accumulator;
-        __copy(a, accumulator);
-        bool found_one = false;
-        size_t i = 255;
-        while (!found_one) {
-            found_one = get_bit(b, i);
-            --i;
-        }
-        size_t sqr_count = 0;
-        for (; i < 256; --i) {
-            sqr_count++;
-            __sqr_with_coarse_reduction(accumulator, accumulator);
-            if (get_bit(b, i)) {
-                __mul_with_coarse_reduction(accumulator, a, accumulator);
-            }
-        }
-        while (gt(accumulator, modulus_plus_one)) {
-            __sub(accumulator, modulus, accumulator);
-        }
-        __copy(accumulator, r);
-    }
-
-    static inline void __pow_small(const field_t& a, const uint64_t exponent, field_t& r)
-    {
-        if (exponent == 0) {
-            __copy(one, r);
-            return;
-        }
-        if (exponent == 1) {
-            __copy(a, r);
-            return;
-        }
-        if (exponent == 2) {
-            __sqr(a, r);
-            return;
-        }
-        field_t accumulator;
-        __copy(a, accumulator);
-
-        bool found_one = false;
-        size_t i = 63;
-        while (!found_one) {
-            found_one = (exponent >> (i)) & 1;
-            --i;
-        }
-        size_t sqr_count = 0;
-        for (; i < 64; --i) {
-            sqr_count++;
-            __sqr(accumulator, accumulator);
-            bool bit = (exponent >> (i)) & 1;
-            if (bit) {
-                __mul(accumulator, a, accumulator);
-            }
-        }
-        while (gt(accumulator, modulus_plus_one)) {
-            __sub(accumulator, modulus, accumulator);
-        }
-        __copy(accumulator, r);
-    }
-
-    static inline field_t pow_small(const field_t& a, const uint64_t exponent)
-    {
-        field_t result;
-        __pow_small(a, exponent, result);
+        // TODO: move this into group, so that we can pick cube roots over both Fq and Fr that align with the curve
+        // endomorphism i.e. lambda * [P] = (beta * x, y) constexpr field two_inv = field(2).invert(); constexpr field
+        // numerator = (-field(3)).sqrt() - field(1); constexpr field result = two_inv * numerator;
+        constexpr field result =
+            field(Params::cube_root_0, Params::cube_root_1, Params::cube_root_2, Params::cube_root_3);
+        static_assert((result * result * result) == field(1));
         return result;
     }
 
-    /**
-     * compute a^{q - 2} mod q, place result in r
-     **/
-    static inline void __invert(const field_t& a, field_t& r) { __pow(a, modulus_minus_two, r); }
+    static constexpr field zero() { return field(0, 0, 0, 0); }
+    static constexpr field neg_one() { return -field(1); }
+    static constexpr field one() { return field(1); }
 
-    static inline field_t invert(const field_t& a)
+    static constexpr field coset_generator(const size_t idx)
     {
-        field_t r;
-        __invert(a, r);
-        return r;
+        constexpr std::array<field, COSET_GENERATOR_SIZE> generators = compute_coset_generators();
+        return generators[idx];
     }
 
-    static inline void __tonelli_shanks_sqrt(const field_t& a, field_t& r)
+    BBERG_INLINE constexpr field operator*(const field& other) const noexcept;
+    BBERG_INLINE constexpr field operator+(const field& other) const noexcept;
+    BBERG_INLINE constexpr field operator-(const field& other) const noexcept;
+    BBERG_INLINE constexpr field operator-() const noexcept;
+    constexpr field operator/(const field& other) const noexcept;
+
+    BBERG_INLINE constexpr field operator*=(const field& other) noexcept;
+    BBERG_INLINE constexpr field operator+=(const field& other) noexcept;
+    BBERG_INLINE constexpr field operator-=(const field& other) noexcept;
+    constexpr field operator/=(const field& other) noexcept;
+
+    BBERG_INLINE constexpr bool operator>(const field& other) const noexcept;
+    BBERG_INLINE constexpr bool operator<(const field& other) const noexcept;
+    BBERG_INLINE constexpr bool operator==(const field& other) const noexcept;
+    BBERG_INLINE constexpr bool operator!=(const field& other) const noexcept;
+
+    BBERG_INLINE constexpr field to_montgomery_form() const noexcept;
+    BBERG_INLINE constexpr field from_montgomery_form() const noexcept;
+
+    BBERG_INLINE constexpr field sqr() const noexcept;
+    BBERG_INLINE constexpr void self_sqr() noexcept;
+
+    BBERG_INLINE constexpr field pow(const uint256_t& exponent) const noexcept;
+    BBERG_INLINE constexpr field pow(const uint64_t exponent) const noexcept;
+    constexpr field invert() const noexcept;
+    static void batch_invert(field* coeffs, const size_t n) noexcept;
+    constexpr field sqrt() const noexcept;
+
+    BBERG_INLINE constexpr void self_neg() noexcept;
+
+    BBERG_INLINE constexpr void self_to_montgomery_form() noexcept;
+    BBERG_INLINE constexpr void self_from_montgomery_form() noexcept;
+
+    BBERG_INLINE constexpr void self_conditional_negate(const uint64_t predicate) noexcept;
+
+    BBERG_INLINE constexpr field reduce_once() const noexcept;
+    BBERG_INLINE constexpr void self_reduce_once() noexcept;
+
+    BBERG_INLINE constexpr uint64_t get_msb() const noexcept;
+    BBERG_INLINE constexpr void self_set_msb() noexcept;
+    BBERG_INLINE constexpr bool is_msb_set() const noexcept;
+    BBERG_INLINE constexpr uint64_t is_msb_set_word() const noexcept;
+    BBERG_INLINE constexpr bool get_bit(const uint64_t bit_index) const noexcept;
+
+    BBERG_INLINE constexpr bool is_zero() const noexcept;
+
+    static constexpr field get_root_of_unity(const size_t degree) noexcept;
+
+    static void serialize_to_buffer(const field& value, uint8_t* buffer)
     {
-        // Tonelli-shanks algorithm begins by finding a field element Q and integer S,
-        // such that (p - 1) = Q.2^{s}
-
-        // We can compute the square root of a, by considering a^{(Q + 1) / 2} = R
-        // Once we have found such an R, we have
-        // R^{2} = a^{Q + 1} = a^{Q}a
-        // If a^{Q} = 1, we have found our square root.
-        // Otherwise, we have a^{Q} = t, where t is a 2^{s-1}'th root of unity.
-        // This is because t^{2^{s-1}} = a^{Q.2^{s-1}}.
-        // We know that (p - 1) = Q.w^{s}, therefore t^{2^{s-1}} = a^{(p - 1) / 2}
-        // From Euler's criterion, if a is a quadratic residue, a^{(p - 1) / 2} = 1
-        // i.e. t^{2^{s-1}} = 1
-
-        // To proceed with computing our square root, we want to transform t into a smaller subgroup,
-        // specifically, the (s-2)'th roots of unity.
-        // We do this by finding some value b,such that
-        // (t.b^2)^{2^{s-2}} = 1 and R' = R.b
-        // Finding such a b is trivial, because from Euler's criterion, we know that,
-        // for any quadratic non-residue z, z^{(p - 1) / 2} = -1
-        // i.e. z^{Q.2^{s-1}} = -1
-        // => z^Q is a 2^{s-1}'th root of -1
-        // => z^{Q^2} is a 2^{s-2}'th root of -1
-        // Since t^{2^{s-1}} = 1, we know that t^{2^{s - 2}} = -1
-        // => t.z^{Q^2} is a 2^{s - 2}'th root of unity.
-
-        // We can iteratively transform t into ever smaller subgroups, until t = 1.
-        // At each iteration, we need to find a new value for b, which we can obtain
-        // by repeatedly squaring z^{Q}
-        field_t Q_minus_one_over_two{ { FieldParams::Q_minus_one_over_two_0,
-                                        FieldParams::Q_minus_one_over_two_1,
-                                        FieldParams::Q_minus_one_over_two_2,
-                                        FieldParams::Q_minus_one_over_two_3 } };
-        // __to_montgomery_form(Q_minus_one_over_two, Q_minus_one_over_two);
-        field_t z = multiplicative_generator; // the generator is a non-residue
-        field_t b;
-        __pow(a, Q_minus_one_over_two, b); // compute a^{(Q - 1 )/ 2}
-        r = mul(a, b);                     // r = a^{(Q + 1) / 2}
-        field_t t = mul(r, b);             // t = a^{(Q - 1) / 2 + (Q + 1) / 2} = a^{Q}
-
-        // check if t is a square with euler's criterion
-        // if not, we don't have a quadratic residue and a has no square root!
-        field_t check = t;
-        for (size_t i = 0; i < FieldParams::primitive_root_log_size - 1; ++i) {
-            __sqr(check, check);
-        }
-        if (!eq(check, one)) {
-            r = zero;
-            return;
-        }
-        field_t t1;
-        __pow(z, Q_minus_one_over_two, t1);
-        field_t t2 = mul(t1, z);
-        field_t c = mul(t2, t1); // z^Q
-
-        size_t m = FieldParams::primitive_root_log_size;
-        while (!eq(t, one)) {
-            size_t i = 0;
-            field_t t2m = t;
-
-            // find the smallest value of m, such that t^{2^m} = 1
-            while (!eq(t2m, one)) {
-                __sqr(t2m, t2m);
-                i += 1;
+        const field input = value.from_montgomery_form();
+        for (size_t j = 0; j < 4; ++j) {
+            for (size_t i = 0; i < 8; ++i) {
+                uint8_t byte = static_cast<uint8_t>(input.data[3 - j] >> (56 - (i * 8)));
+                buffer[j * 8 + i] = byte;
             }
-
-            size_t j = m - i - 1;
-            b = c;
-            while (j > 0) {
-                __sqr(b, b);
-                --j;
-            } // b = z^2^(m-i-1)
-
-            c = sqr(b);
-            t = mul(t, c);
-            r = mul(r, b);
-            m = i;
         }
     }
 
-    /**
-     * compute a^{(q + 1) / 4}, place result in r
-     **/
-    static inline void __sqrt(const field_t& a, field_t& r)
+    static field serialize_from_buffer(const uint8_t* buffer)
     {
-        // if p = 3 mod 4, use exponentiation trick
-        if constexpr ((FieldParams::modulus_0 & 0x3UL) == 0x3UL) {
-            __pow(a, sqrt_exponent, r);
+        field result{ 0, 0, 0, 0 };
+        for (size_t j = 0; j < 4; ++j) {
+            for (size_t i = 0; i < 8; ++i) {
+                uint8_t byte = buffer[j * 8 + i];
+                result.data[3 - j] = result.data[3 - j] | (static_cast<uint64_t>(byte) << (56 - (i * 8)));
+            }
+        }
+        return result.to_montgomery_form();
+    }
+
+    struct wide_array {
+        uint64_t data[8];
+    };
+    BBERG_INLINE constexpr wide_array mul_512(const field& other) const noexcept;
+    BBERG_INLINE constexpr wide_array sqr_512() const noexcept;
+
+    BBERG_INLINE constexpr field conditionally_subtract_from_double_modulus(const uint64_t predicate) const noexcept
+    {
+        if (predicate) {
+            constexpr field p{
+                twice_modulus.data[0], twice_modulus.data[1], twice_modulus.data[2], twice_modulus.data[3]
+            };
+            return p - *this;
         } else {
-            __tonelli_shanks_sqrt(a, r);
+            return *this;
         }
     }
-
-    static inline bool is_quadratic_residue(const field_t& a)
-    {
-        field_t target_sqrt;
-        __sqrt(a, target_sqrt);
-        return eq(sqr(target_sqrt), a);
-    }
-
-    /**
-     * Get a random field element in montgomery form, place in `r`
-     **/
-    static inline field_t random_element()
-    {
-        field_t r;
-        int got_entropy = getentropy((void*)r.data, 32);
-        ASSERT(got_entropy == 0);
-        __to_montgomery_form(r, r);
-        return r;
-    }
-
-    /**
-     * print `r`
-     **/
-    static inline void print(const field_t& a)
-    {
-        printf("field: [%" PRIx64 ", %" PRIx64 ", %" PRIx64 ", %" PRIx64 "]\n",
-               a.data[0],
-               a.data[1],
-               a.data[2],
-               a.data[3]);
-    }
-
     /**
      * For short Weierstrass curves y^2 = x^3 + b mod r, if there exists a cube root of unity mod r,
      * we can take advantage of an enodmorphism to decompose a 254 bit scalar into 2 128 bit scalars.
@@ -554,175 +178,209 @@ template <typename FieldParams> class field {
      * We pre-compute scalars g1 = (2^256 * b1) / n, g2 = (2^256 * b2) / n, to avoid having to perform long division
      * on 512-bit scalars
      **/
-    static inline void split_into_endomorphism_scalars(field_t& k, field_t& k1, field_t& k2)
+    BBERG_INLINE static void split_into_endomorphism_scalars(const field& k, field& k1, field& k2)
     {
+        field input = k.reduce_once();
         // uint64_t lambda_reduction[4] = { 0 };
         // __to_montgomery_form(lambda, lambda_reduction);
 
         // TODO: these parameters only work for the bn254 coordinate field.
-        // Need to shift into FieldParams and calculate correct constants for the subgroup field
-        constexpr field_t endo_g1 = {
-            { FieldParams::endo_g1_lo, FieldParams::endo_g1_mid, FieldParams::endo_g1_hi, 0 }
-        };
+        // Need to shift into Params and calculate correct constants for the subgroup field
+        constexpr field endo_g1 = { Params::endo_g1_lo, Params::endo_g1_mid, Params::endo_g1_hi, 0 };
 
-        constexpr field_t endo_g2 = { { FieldParams::endo_g2_lo, FieldParams::endo_g2_mid, 0, 0 } };
+        constexpr field endo_g2 = { Params::endo_g2_lo, Params::endo_g2_mid, 0, 0 };
 
-        constexpr field_t endo_minus_b1 = { { FieldParams::endo_minus_b1_lo, FieldParams::endo_minus_b1_mid, 0, 0 } };
+        constexpr field endo_minus_b1 = { Params::endo_minus_b1_lo, Params::endo_minus_b1_mid, 0, 0 };
 
-        constexpr field_t endo_b2 = { { FieldParams::endo_b2_lo, FieldParams::endo_b2_mid, 0, 0 } };
-
-        field_wide_t c1;
-        field_wide_t c2;
+        constexpr field endo_b2 = { Params::endo_b2_lo, Params::endo_b2_mid, 0, 0 };
 
         // compute c1 = (g2 * k) >> 256
-        __mul_512(endo_g2, k, c1);
+        wide_array c1 = endo_g2.mul_512(input);
         // compute c2 = (g1 * k) >> 256
-        __mul_512(endo_g1, k, c2);
+        wide_array c2 = endo_g1.mul_512(input);
+
         // (the bit shifts are implicit, as we only utilize the high limbs of c1, c2
 
-        field_wide_t q1;
-        field_wide_t q2;
         // TODO remove data duplication
-        field_t c1_hi = {
-            { c1.data[4], c1.data[5], c1.data[6], c1.data[7] }
-        }; // *(field_t*)((uintptr_t)(&c1) + (4 * sizeof(uint64_t)));
-        field_t c2_hi = {
-            { c2.data[4], c2.data[5], c2.data[6], c2.data[7] }
-        }; // *(field_t*)((uintptr_t)(&c2) + (4 * sizeof(uint64_t)));
+        field c1_hi = {
+            c1.data[4], c1.data[5], c1.data[6], c1.data[7]
+        }; // *(field*)((uintptr_t)(&c1) + (4 * sizeof(uint64_t)));
+        field c2_hi = {
+            c2.data[4], c2.data[5], c2.data[6], c2.data[7]
+        }; // *(field*)((uintptr_t)(&c2) + (4 * sizeof(uint64_t)));
 
         // compute q1 = c1 * -b1
-        __mul_512(c1_hi, endo_minus_b1, q1);
+        wide_array q1 = c1_hi.mul_512(endo_minus_b1);
         // compute q2 = c2 * b2
-        __mul_512(c2_hi, endo_b2, q2);
+        wide_array q2 = c2_hi.mul_512(endo_b2);
 
-        field_t t1 = { {
-            0,
-            0,
-            0,
-            0,
-        } };
-        field_t t2 = { {
-            0,
-            0,
-            0,
-            0,
-        } };
         // TODO: this doesn't have to be a 512-bit multiply...
-        field_t q1_lo = {
-            { q1.data[0], q1.data[1], q1.data[2], q1.data[3] }
-        }; // *(field_t*)((uintptr_t)(&q1) + (4 * sizeof(uint64_t)));
-        field_t q2_lo = {
-            { q2.data[0], q2.data[1], q2.data[2], q2.data[3] }
-        }; // *(field_t*)((uintptr_t)(&q2) + (4 * sizeof(uint64_t)));
+        field q1_lo{ q1.data[0], q1.data[1], q1.data[2], q1.data[3] };
+        field q2_lo{ q2.data[0], q2.data[1], q2.data[2], q2.data[3] };
 
-        __sub(q2_lo, q1_lo, t1);
-
-        // if k = k'.R
-        // and t2 = t2'.R...so, k2 = t1'.R, k1 = t2'.R?
-        // __to_montgomery_form(t1, t1);
-        __mul(t1, beta, t2);
-        // __from_montgomery_form(t2, t2);
-        __add(k, t2, t2);
-
+        field t1 = (q2_lo - q1_lo).reduce_once();
+        field t2 = (t1 * beta() + input).reduce_once();
         k2.data[0] = t1.data[0];
         k2.data[1] = t1.data[1];
         k1.data[0] = t2.data[0];
         k1.data[1] = t2.data[1];
     }
 
-    static inline void __get_root_of_unity(const size_t degree, field_t& r)
+    // static constexpr auto coset_generators = compute_coset_generators();
+    // static constexpr std::array<field, 15> coset_generators = compute_coset_generators((1 << 30U));
+
+    friend std::ostream& operator<<(std::ostream& os, const field& a)
     {
-        __copy(root_of_unity, r);
-        for (size_t i = FieldParams::primitive_root_log_size; i > degree; --i) {
-            __sqr(r, r);
-        }
+        field out = a.from_montgomery_form();
+        std::ios_base::fmtflags f(os.flags());
+        os << std::hex << "0x" << std::setfill('0') << std::setw(16) << out.data[3] << std::setw(16) << out.data[2]
+           << std::setw(16) << out.data[1] << std::setw(16) << out.data[0];
+        os.flags(f);
+        return os;
     }
 
-    static inline field_t get_root_of_unity(const size_t degree)
+    BBERG_INLINE static void __copy(const field& a, field& r) noexcept { r = a; }
+    BBERG_INLINE static void __swap(field& src, field& dest) noexcept
     {
-        field_t r;
-        __get_root_of_unity(degree, r);
-        return r;
+        field T = dest;
+        dest = src;
+        src = T;
     }
 
-    static inline void batch_invert(field_t* coeffs, size_t n, field_t* scratch_space = nullptr)
-    {
-        field_t* temporaries = scratch_space ? scratch_space : (field_t*)aligned_alloc(32, sizeof(field_t) * n);
-        field_t accumulator = one;
-        for (size_t i = 0; i < n; ++i) {
-            __copy(accumulator, temporaries[i]);
-            __mul(accumulator, coeffs[i], accumulator);
-        }
-        __invert(accumulator, accumulator);
+    static field random_element(std::mt19937_64* engine = nullptr,
+                                std::uniform_int_distribution<uint64_t>* dist = nullptr) noexcept;
 
-        field_t T0;
-        for (size_t i = n - 1; i < n; --i) {
-            __mul(accumulator, temporaries[i], T0);
-            __mul(accumulator, coeffs[i], accumulator);
-            __copy(T0, coeffs[i]);
-        }
-        if (scratch_space == nullptr) {
-            aligned_free(temporaries);
-        }
-    }
+    static constexpr field multiplicative_generator() noexcept;
 
-    static inline void compute_coset_generators(const size_t n, const uint64_t subgroup_size, field_t* result)
-    {
-        if (n > 0) {
-            result[0] = (multiplicative_generator);
-        }
-        field_t work_variable = add(multiplicative_generator, one);
+    // BBERG_INLINE sstatic constexpr void butterfly(field& left, field& right) noexcept;
 
-        size_t count = 1;
-        while (count < n) {
-            // work_variable contains a new field element, and we need to test that, for all previous vector elements,
-            // result[i] / work_variable is not a member of our subgroup
-            field_t work_inverse = invert(work_variable);
-            bool valid = true;
-            for (size_t j = 0; j < count; ++j) {
-                field_t target_element = mul(result[j], work_inverse);
-                field_t subgroup_check = pow_small(target_element, subgroup_size);
-                if (eq(subgroup_check, one)) {
-                    valid = false;
-                    break;
-                }
-            }
-            if (valid) {
-                result[count] = (work_variable);
-                ++count;
-            }
-            __add(work_variable, one, work_variable);
-        }
-    }
+  private:
+    static constexpr uint256_t twice_modulus = modulus + modulus;
+    static constexpr uint256_t not_modulus = -modulus;
+    static constexpr uint256_t twice_not_modulus = -twice_modulus;
 
-    static inline void serialize_to_buffer(const field_t& value, uint8_t* buffer)
-    {
-        field_t input = from_montgomery_form(value);
-        for (size_t j = 0; j < 4; ++j) {
-            for (size_t i = 0; i < 8; ++i) {
-                uint8_t byte = static_cast<uint8_t>(input.data[3 - j] >> (56 - (i * 8)));
-                buffer[j * 8 + i] = byte;
-            }
-        }
-    }
+    struct wnaf_table {
+        uint8_t windows[64];
 
-    static inline field_t serialize_from_buffer(const uint8_t* buffer)
-    {
-        field_t result = zero;
-        for (size_t j = 0; j < 4; ++j) {
-            for (size_t i = 0; i < 8; ++i) {
-                uint8_t byte = buffer[j * 8 + i];
-                result.data[3 - j] = result.data[3 - j] | (static_cast<uint64_t>(byte) << (56 - (i * 8)));
-            }
-        }
-        return to_montgomery_form(result);
-    }
-}; // class field
+        constexpr wnaf_table(const uint256_t& target)
+            : windows{ (uint8_t)(target.data[0] & 15),         (uint8_t)((target.data[0] >> 4) & 15),
+                       (uint8_t)((target.data[0] >> 8) & 15),  (uint8_t)((target.data[0] >> 12) & 15),
+                       (uint8_t)((target.data[0] >> 16) & 15), (uint8_t)((target.data[0] >> 20) & 15),
+                       (uint8_t)((target.data[0] >> 24) & 15), (uint8_t)((target.data[0] >> 28) & 15),
+                       (uint8_t)((target.data[0] >> 32) & 15), (uint8_t)((target.data[0] >> 36) & 15),
+                       (uint8_t)((target.data[0] >> 40) & 15), (uint8_t)((target.data[0] >> 44) & 15),
+                       (uint8_t)((target.data[0] >> 48) & 15), (uint8_t)((target.data[0] >> 52) & 15),
+                       (uint8_t)((target.data[0] >> 56) & 15), (uint8_t)((target.data[0] >> 60) & 15),
+                       (uint8_t)(target.data[1] & 15),         (uint8_t)((target.data[1] >> 4) & 15),
+                       (uint8_t)((target.data[1] >> 8) & 15),  (uint8_t)((target.data[1] >> 12) & 15),
+                       (uint8_t)((target.data[1] >> 16) & 15), (uint8_t)((target.data[1] >> 20) & 15),
+                       (uint8_t)((target.data[1] >> 24) & 15), (uint8_t)((target.data[1] >> 28) & 15),
+                       (uint8_t)((target.data[1] >> 32) & 15), (uint8_t)((target.data[1] >> 36) & 15),
+                       (uint8_t)((target.data[1] >> 40) & 15), (uint8_t)((target.data[1] >> 44) & 15),
+                       (uint8_t)((target.data[1] >> 48) & 15), (uint8_t)((target.data[1] >> 52) & 15),
+                       (uint8_t)((target.data[1] >> 56) & 15), (uint8_t)((target.data[1] >> 60) & 15),
+                       (uint8_t)(target.data[2] & 15),         (uint8_t)((target.data[2] >> 4) & 15),
+                       (uint8_t)((target.data[2] >> 8) & 15),  (uint8_t)((target.data[2] >> 12) & 15),
+                       (uint8_t)((target.data[2] >> 16) & 15), (uint8_t)((target.data[2] >> 20) & 15),
+                       (uint8_t)((target.data[2] >> 24) & 15), (uint8_t)((target.data[2] >> 28) & 15),
+                       (uint8_t)((target.data[2] >> 32) & 15), (uint8_t)((target.data[2] >> 36) & 15),
+                       (uint8_t)((target.data[2] >> 40) & 15), (uint8_t)((target.data[2] >> 44) & 15),
+                       (uint8_t)((target.data[2] >> 48) & 15), (uint8_t)((target.data[2] >> 52) & 15),
+                       (uint8_t)((target.data[2] >> 56) & 15), (uint8_t)((target.data[2] >> 60) & 15),
+                       (uint8_t)(target.data[3] & 15),         (uint8_t)((target.data[3] >> 4) & 15),
+                       (uint8_t)((target.data[3] >> 8) & 15),  (uint8_t)((target.data[3] >> 12) & 15),
+                       (uint8_t)((target.data[3] >> 16) & 15), (uint8_t)((target.data[3] >> 20) & 15),
+                       (uint8_t)((target.data[3] >> 24) & 15), (uint8_t)((target.data[3] >> 28) & 15),
+                       (uint8_t)((target.data[3] >> 32) & 15), (uint8_t)((target.data[3] >> 36) & 15),
+                       (uint8_t)((target.data[3] >> 40) & 15), (uint8_t)((target.data[3] >> 44) & 15),
+                       (uint8_t)((target.data[3] >> 48) & 15), (uint8_t)((target.data[3] >> 52) & 15),
+                       (uint8_t)((target.data[3] >> 56) & 15), (uint8_t)((target.data[3] >> 60) & 15) }
+        {}
+    };
+
+    BBERG_INLINE static constexpr std::pair<uint64_t, uint64_t> mul_wide(const uint64_t a, const uint64_t b) noexcept;
+
+    BBERG_INLINE static constexpr uint64_t mac(
+        const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t carry_in, uint64_t& carry_out) noexcept;
+
+    BBERG_INLINE static constexpr void mac(const uint64_t a,
+                                           const uint64_t b,
+                                           const uint64_t c,
+                                           const uint64_t carry_in,
+                                           uint64_t& out,
+                                           uint64_t& carry_out) noexcept;
+
+    BBERG_INLINE static constexpr uint64_t mac_mini(const uint64_t a,
+                                                    const uint64_t b,
+                                                    const uint64_t c,
+                                                    uint64_t& out) noexcept;
+
+    BBERG_INLINE static constexpr void mac_mini(
+        const uint64_t a, const uint64_t b, const uint64_t c, uint64_t& out, uint64_t& carry_out) noexcept;
+
+    BBERG_INLINE static constexpr uint64_t mac_discard_lo(const uint64_t a,
+                                                          const uint64_t b,
+                                                          const uint64_t c) noexcept;
+
+    BBERG_INLINE static constexpr uint64_t addc(const uint64_t a,
+                                                const uint64_t b,
+                                                const uint64_t carry_in,
+                                                uint64_t& carry_out) noexcept;
+
+    BBERG_INLINE static constexpr uint64_t sbb(const uint64_t a,
+                                               const uint64_t b,
+                                               const uint64_t borrow_in,
+                                               uint64_t& borrow_out) noexcept;
+
+    BBERG_INLINE static constexpr void square_accumulate(const uint64_t a,
+                                                         const uint64_t b,
+                                                         const uint64_t c,
+                                                         const uint64_t carry_in_lo,
+                                                         const uint64_t carry_in_hi,
+                                                         uint64_t& out,
+                                                         uint64_t& carry_lo,
+                                                         uint64_t& carry_hi) noexcept;
+    BBERG_INLINE constexpr field reduce() const noexcept;
+    BBERG_INLINE constexpr field add(const field& other) const noexcept;
+    BBERG_INLINE constexpr field subtract(const field& other) const noexcept;
+    BBERG_INLINE constexpr field subtract_coarse(const field& other) const noexcept;
+    BBERG_INLINE constexpr field montgomery_mul(const field& other) const noexcept;
+    BBERG_INLINE constexpr field montgomery_square() const noexcept;
+
+#ifndef DISABLE_SHENANIGANS
+    BBERG_INLINE static field asm_mul(const field& a, const field& b) noexcept;
+    BBERG_INLINE static field asm_sqr(const field& a) noexcept;
+    BBERG_INLINE static field asm_add(const field& a, const field& b) noexcept;
+    BBERG_INLINE static field asm_sub(const field& a, const field& b) noexcept;
+    BBERG_INLINE static field asm_mul_with_coarse_reduction(const field& a, const field& b) noexcept;
+    BBERG_INLINE static field asm_sqr_with_coarse_reduction(const field& a) noexcept;
+    BBERG_INLINE static field asm_add_with_coarse_reduction(const field& a, const field& b) noexcept;
+    BBERG_INLINE static field asm_sub_with_coarse_reduction(const field& a, const field& b) noexcept;
+    BBERG_INLINE static field asm_add_without_reduction(const field& a, const field& b) noexcept;
+    BBERG_INLINE static void asm_self_sqr(const field& a) noexcept;
+    BBERG_INLINE static void asm_self_add(const field& a, const field& b) noexcept;
+    BBERG_INLINE static void asm_self_sub(const field& a, const field& b) noexcept;
+    BBERG_INLINE static void asm_self_mul_with_coarse_reduction(const field& a, const field& b) noexcept;
+    BBERG_INLINE static void asm_self_sqr_with_coarse_reduction(const field& a) noexcept;
+    BBERG_INLINE static void asm_self_add_with_coarse_reduction(const field& a, const field& b) noexcept;
+    BBERG_INLINE static void asm_self_sub_with_coarse_reduction(const field& a, const field& b) noexcept;
+    BBERG_INLINE static void asm_self_add_without_reduction(const field& a, const field& b) noexcept;
+
+    BBERG_INLINE static void asm_conditional_negate(field& a, const uint64_t predicate) noexcept;
+    BBERG_INLINE static field asm_reduce_once(const field& a) noexcept;
+    BBERG_INLINE static void asm_self_reduce_once(const field& a) noexcept;
+    static constexpr uint64_t zero_reference = 0x00ULL;
+#endif
+    static constexpr size_t COSET_GENERATOR_SIZE = 15;
+    constexpr field tonelli_shanks_sqrt() const noexcept;
+    static constexpr size_t primitive_root_log_size() noexcept;
+    static constexpr std::array<field, COSET_GENERATOR_SIZE> compute_coset_generators() noexcept;
+
+#if defined(__SIZEOF_INT128__) && !defined(__wasm__)
+    static constexpr uint128_t lo_mask = 0xffffffffffffffffUL;
+#endif
+};
 
 } // namespace barretenberg
 
-#ifdef DISABLE_SHENANIGANS
-#include "field_impl_int128.tcc"
-#else
-#include "field_impl_asm.tcc"
-#endif
+#include "./field_impl.hpp"

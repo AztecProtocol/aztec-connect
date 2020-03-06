@@ -70,7 +70,7 @@ sigma_3 = [39, 23, 4, 40, 41, 25, 33, 36, 37, 42, 43, 44, 45, 46, 47, 48]
 using namespace barretenberg;
 using namespace waffle;
 
-namespace {
+namespace prover_helpers {
 
 transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
 {
@@ -80,25 +80,26 @@ transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
     const transcript::Manifest output = transcript::Manifest(
         { transcript::Manifest::RoundManifest({ { "circuit_size", 4, false } }, "init"),
           transcript::Manifest::RoundManifest({ { "public_inputs", public_input_size, false },
-                                                               { "W_1", g1_size, false },
-                                                               { "W_2", g1_size, false },
-                                                               { "W_3", g1_size, false } },
-                                                             "beta"),
+                                                { "W_1", g1_size, false },
+                                                { "W_2", g1_size, false },
+                                                { "W_3", g1_size, false } },
+                                              "beta"),
           transcript::Manifest::RoundManifest({ {} }, "gamma"),
           transcript::Manifest::RoundManifest({ { "Z", g1_size, false } }, "alpha"),
           transcript::Manifest::RoundManifest(
               { { "T_1", g1_size, false }, { "T_2", g1_size, false }, { "T_3", g1_size, false } }, "z"),
           transcript::Manifest::RoundManifest({ { "w_1", fr_size, false },
-                                                               { "w_2", fr_size, false },
-                                                               { "w_3", fr_size, false },
-                                                               { "z_omega", fr_size, false },
-                                                               { "sigma_1", fr_size, false },
-                                                               { "sigma_2", fr_size, false },
-                                                               { "r", fr_size, false },
-                                                               { "t", fr_size, true } },
-                                                             "nu"),
-          transcript::Manifest::RoundManifest(
-              { { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } }, "separator") });
+                                                { "w_2", fr_size, false },
+                                                { "w_3", fr_size, false },
+                                                { "w_3_omega", fr_size, false },
+                                                { "z_omega", fr_size, false },
+                                                { "sigma_1", fr_size, false },
+                                                { "sigma_2", fr_size, false },
+                                                { "r", fr_size, false },
+                                                { "t", fr_size, true } },
+                                              "nu"),
+          transcript::Manifest::RoundManifest({ { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } },
+                                              "separator") });
     return output;
 }
 
@@ -107,7 +108,7 @@ waffle::Prover generate_test_data(const size_t n)
     // state.widgets.emplace_back(std::make_unique<waffle::ProverArithmeticWidget>(n));
 
     // create some constraints that satisfy our arithmetic circuit relation
-    fr::field_t T0;
+    fr T0;
 
     // even indices = mul gates, odd incides = add gates
 
@@ -135,27 +136,27 @@ waffle::Prover generate_test_data(const size_t n)
     for (size_t i = 0; i < n / 4; ++i) {
         w_l.at(2 * i) = fr::random_element();
         w_r.at(2 * i) = fr::random_element();
-        fr::__mul(w_l.at(2 * i), w_r.at(2 * i), w_o.at(2 * i));
-        fr::__add(w_o[2 * i], w_l[2 * i], w_o[2 * i]);
-        fr::__add(w_o[2 * i], w_r[2 * i], w_o[2 * i]);
-        fr::__add(w_o[2 * i], fr::one, w_o[2 * i]);
-        fr::__copy(fr::one, q_l.at(2 * i));
-        fr::__copy(fr::one, q_r.at(2 * i));
+        w_o.at(2 * i) = w_l.at(2 * i) * w_r.at(2 * i);
+        w_o[2 * i] = w_o[2 * i] + w_l[2 * i];
+        w_o[2 * i] = w_o[2 * i] + w_r[2 * i];
+        w_o[2 * i] = fr::one() + w_o[2 * i];
+        fr::__copy(fr::one(), q_l.at(2 * i));
+        fr::__copy(fr::one(), q_r.at(2 * i));
         fr::__copy(fr::neg_one(), q_o.at(2 * i));
-        fr::__copy(fr::one, q_c.at(2 * i));
-        fr::__copy(fr::one, q_m.at(2 * i));
+        fr::__copy(fr::one(), q_c.at(2 * i));
+        fr::__copy(fr::one(), q_m.at(2 * i));
 
         w_l.at(2 * i + 1) = fr::random_element();
         w_r.at(2 * i + 1) = fr::random_element();
         w_o.at(2 * i + 1) = fr::random_element();
 
-        fr::__add(w_l.at(2 * i + 1), w_r.at(2 * i + 1), T0);
-        fr::__add(T0, w_o.at(2 * i + 1), q_c.at(2 * i + 1));
-        fr::__neg(q_c.at(2 * i + 1), q_c.at(2 * i + 1));
-        q_l.at(2 * i + 1) = fr::one;
-        q_r.at(2 * i + 1) = fr::one;
-        q_o.at(2 * i + 1) = fr::one;
-        q_m.at(2 * i + 1) = fr::zero;
+        T0 = w_l.at(2 * i + 1) + w_r.at(2 * i + 1);
+        q_c.at(2 * i + 1) = T0 + w_o.at(2 * i + 1);
+        q_c.at(2 * i + 1).self_neg();
+        q_l.at(2 * i + 1) = fr::one();
+        q_r.at(2 * i + 1) = fr::one();
+        q_o.at(2 * i + 1) = fr::one();
+        q_m.at(2 * i + 1) = fr::zero();
     }
     size_t shift = n / 2;
     polynomial_arithmetic::copy_polynomial(&w_l.at(0), &w_l.at(shift), shift, shift);
@@ -227,23 +228,23 @@ waffle::Prover generate_test_data(const size_t n)
     key->permutation_selector_ffts.insert({ "sigma_2_fft", std::move(sigma_2_fft) });
     key->permutation_selector_ffts.insert({ "sigma_3_fft", std::move(sigma_3_fft) });
 
-    w_l.at(n - 1) = fr::zero;
-    w_r.at(n - 1) = fr::zero;
-    w_o.at(n - 1) = fr::zero;
-    q_c.at(n - 1) = fr::zero;
-    q_l.at(n - 1) = fr::zero;
-    q_r.at(n - 1) = fr::zero;
-    q_o.at(n - 1) = fr::zero;
-    q_m.at(n - 1) = fr::zero;
+    w_l.at(n - 1) = fr::zero();
+    w_r.at(n - 1) = fr::zero();
+    w_o.at(n - 1) = fr::zero();
+    q_c.at(n - 1) = fr::zero();
+    q_l.at(n - 1) = fr::zero();
+    q_r.at(n - 1) = fr::zero();
+    q_o.at(n - 1) = fr::zero();
+    q_m.at(n - 1) = fr::zero();
 
-    w_l.at(shift - 1) = fr::zero;
-    w_r.at(shift - 1) = fr::zero;
-    w_o.at(shift - 1) = fr::zero;
-    q_c.at(shift - 1) = fr::zero;
+    w_l.at(shift - 1) = fr::zero();
+    w_r.at(shift - 1) = fr::zero();
+    w_o.at(shift - 1) = fr::zero();
+    q_c.at(shift - 1) = fr::zero();
 
-    witness->wires.insert({ "w_1" , std::move(w_l) });
-    witness->wires.insert({ "w_2" , std::move(w_r) });
-    witness->wires.insert({ "w_3" , std::move(w_o) });
+    witness->wires.insert({ "w_1", std::move(w_l) });
+    witness->wires.insert({ "w_2", std::move(w_r) });
+    witness->wires.insert({ "w_3", std::move(w_o) });
 
     q_l.ifft(key->small_domain);
     q_r.ifft(key->small_domain);
@@ -274,19 +275,20 @@ waffle::Prover generate_test_data(const size_t n)
     key->constraint_selector_ffts.insert({ "q_3_fft", std::move(q_3_fft) });
     key->constraint_selector_ffts.insert({ "q_m_fft", std::move(q_m_fft) });
     key->constraint_selector_ffts.insert({ "q_c_fft", std::move(q_c_fft) });
-    std::unique_ptr<waffle::ProverArithmeticWidget> widget = std::make_unique<waffle::ProverArithmeticWidget>(key.get(), witness.get());
+    std::unique_ptr<waffle::ProverArithmeticWidget> widget =
+        std::make_unique<waffle::ProverArithmeticWidget>(key.get(), witness.get());
 
     waffle::Prover state = waffle::Prover(key, witness, create_manifest());
     state.widgets.emplace_back(std::move(widget));
     return state;
 }
-} // namespace
+} // namespace prover_helpers
 
 TEST(prover, compute_quotient_polynomial)
 {
     size_t n = 1 << 10;
 
-    waffle::Prover state = generate_test_data(n);
+    waffle::Prover state = prover_helpers::generate_test_data(n);
 
     state.execute_preamble_round();
     state.execute_first_round();
@@ -295,69 +297,6 @@ TEST(prover, compute_quotient_polynomial)
 
     // check that the max degree of our quotient polynomial is 3n
     for (size_t i = 3 * n; i < 4 * n; ++i) {
-        EXPECT_EQ(fr::eq(state.key->quotient_large.at(i), fr::zero), true);
+        EXPECT_EQ((state.key->quotient_large.at(i) == fr::zero()), true);
     }
 }
-
-/*
-TEST(prover, compute_linearisation_coefficients)
-{
-    size_t n = 256;
-
-    waffle::plonk_circuit_state state(n);
-    generate_test_data(state);
-
-    waffle::compute_permutation_lagrange_base_single(state.sigma_1, state.sigma_1_mapping,
-state.circuit_state.small_domain); waffle::compute_permutation_lagrange_base_single(state.sigma_2,
-state.sigma_2_mapping, state.circuit_state.small_domain);
-    waffle::compute_permutation_lagrange_base_single(state.sigma_3, state.sigma_3_mapping,
-state.circuit_state.small_domain); state.compute_quotient_polynomial(); state.compute_quotient_commitment();
-
-    fr::field_t t_eval = state.compute_linearisation_coefficients();
-
-    polynomial_arithmetic::lagrange_evaluations lagrange_evals =
-polynomial_arithmetic::get_lagrange_evaluations(state.challenges.z, state.circuit_state.small_domain);
-
-    fr::field_t alpha_pow[6];
-    fr::__copy(state.challenges.alpha, alpha_pow[0]);
-    for (size_t i = 1; i < 6; ++i)
-    {
-        fr::__mul(alpha_pow[i - 1], alpha_pow[0], alpha_pow[i]);
-    }
-
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
-    fr::field_t T3;
-    fr::__mul(state.proof.sigma_1_eval, state.challenges.beta, T0);
-    fr::__add(state.proof.w_l_eval, state.challenges.gamma, T1);
-    fr::__add(T0, T1, T0);
-
-    fr::__mul(state.proof.sigma_2_eval, state.challenges.beta, T2);
-    fr::__add(state.proof.w_r_eval, state.challenges.gamma, T1);
-    fr::__add(T2, T1, T2);
-
-    fr::__add(state.proof.w_o_eval, state.challenges.gamma, T3);
-
-    fr::__mul(T0, T2, T0);
-    fr::__mul(T0, T3, T0);
-    fr::__mul(T0, state.proof.z_1_shifted_eval, T0);
-    fr::__mul(T0, alpha_pow[1], T0);
-
-    fr::__sub(state.proof.z_1_shifted_eval, fr::one, T1);
-    fr::__mul(T1, lagrange_evals.l_n_minus_1, T1);
-    fr::__mul(T1, alpha_pow[2], T1);
-
-    fr::__mul(lagrange_evals.l_1, alpha_pow[3], T2);
-
-    fr::__sub(T1, T2, T1);
-    fr::__sub(T1, T0, T1);
-
-    fr::field_t rhs;
-    fr::__add(T1, state.proof.linear_eval, rhs);
-    fr::__invert(lagrange_evals.vanishing_poly, T0);
-    fr::__mul(rhs, T0, rhs);
-
-    EXPECT_EQ(fr::eq(t_eval, rhs), true);
-}
-*/

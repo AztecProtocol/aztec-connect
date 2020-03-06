@@ -25,7 +25,7 @@ static std::vector<std::string> VALUES = []() {
 void hash(State& state) noexcept
 {
     for (auto _ : state) {
-        compress_native({ { { 0, 0, 0, 0 } }, { { 1, 1, 1, 1 } } });
+        compress_native({ { 0, 0, 0, 0 }, { 1, 1, 1, 1 } });
     }
 }
 BENCHMARK(hash)->MinTime(5);

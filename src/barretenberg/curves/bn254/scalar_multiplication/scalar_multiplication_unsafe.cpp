@@ -115,18 +115,17 @@ namespace scalar_multiplication {
  *
  * We can re-arrange the Pippenger algorithm to get this property, but it's...complicated
  **/
-void add_affine_points(g1::affine_element* points, const size_t num_points, fq::field_t* scratch_space)
+void add_affine_points(g1::affine_element* points, const size_t num_points, fq* scratch_space)
 {
-    fq::field_t batch_inversion_accumulator = fq::one;
+    fq batch_inversion_accumulator = fq::one();
     // std::chrono::steady_clock::time_point time_start = std::chrono::steady_clock::now();
 
     for (size_t i = 0; i < num_points; i += 2) {
-        fq::__add_without_reduction(points[i + 1].x, points[i].x, scratch_space[i >> 1]); // x2 + x1
-        fq::__sub(points[i + 1].x, points[i].x, points[i + 1].x);                         // x2 - x1
-        fq::__sub(points[i + 1].y, points[i].y, points[i + 1].y);                         // y2 - y1
-        fq::__mul_with_coarse_reduction(
-            points[i + 1].y, batch_inversion_accumulator, points[i + 1].y); // (y2 - y1)*accumulator_old
-        fq::__mul_with_coarse_reduction(batch_inversion_accumulator, points[i + 1].x, batch_inversion_accumulator);
+        scratch_space[i >> 1] = points[i].x + points[i + 1].x; // x2 + x1
+        points[i + 1].x -= points[i].x;                        // x2 - x1
+        points[i + 1].y -= points[i].y;                        // y2 - y1
+        points[i + 1].y *= batch_inversion_accumulator;        // (y2 - y1)*accumulator_old
+        batch_inversion_accumulator *= (points[i + 1].x);
     }
     // std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
     // std::chrono::microseconds diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
@@ -135,7 +134,7 @@ void add_affine_points(g1::affine_element* points, const size_t num_points, fq::
     // std::cout << "forward run time: " << diff.count() << "us" << std::endl;
     // }
     // time_start = std::chrono::steady_clock::now();
-    fq::__invert(batch_inversion_accumulator, batch_inversion_accumulator);
+    batch_inversion_accumulator = batch_inversion_accumulator.invert();
     // time_end = std::chrono::steady_clock::now();
     //  diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
     // if (num_points > 100000)
@@ -152,23 +151,15 @@ void add_affine_points(g1::affine_element* points, const size_t num_points, fq::
         __builtin_prefetch(points + ((i + num_points - 2) >> 1));
         __builtin_prefetch(scratch_space + ((i - 2) >> 1));
 
-        fq::__mul_with_coarse_reduction(batch_inversion_accumulator, points[i + 1].y, points[i + 1].y);
-        fq::__mul_with_coarse_reduction(
-            batch_inversion_accumulator, points[i + 1].x, batch_inversion_accumulator); // update accumulator
-        fq::__sqr_with_coarse_reduction(points[i + 1].y, points[i + 1].x);
-        fq::__sub_with_coarse_reduction(
-            points[i + 1].x, scratch_space[i >> 1], points[(i + num_points) >> 1].x); // x3 = lambda_squared - x2 - x1
-        fq::__sub_with_coarse_reduction(points[i].x, points[(i + num_points) >> 1].x, points[i].x);
-        fq::__mul(points[i].x, points[i + 1].y, points[i].x);
-        fq::__sub(points[i].x, points[i].y, points[(i + num_points) >> 1].y);
-        fq::reduce_once(points[(i + num_points) >> 1].x, points[(i + num_points) >> 1].x);
+        points[i + 1].y *= batch_inversion_accumulator; // update accumulator
+        batch_inversion_accumulator *= points[i + 1].x;
+        points[i + 1].x = points[i + 1].y.sqr();
+        points[(i + num_points) >> 1].x = points[i + 1].x - (scratch_space[i >> 1]); // x3 = lambda_squared - x2
+                                                                                     // - x1
+        points[i].x -= points[(i + num_points) >> 1].x;
+        points[i].x *= points[i + 1].y;
+        points[(i + num_points) >> 1].y = points[i].x - points[i].y;
     }
-//     time_end = std::chrono::steady_clock::now();
-//      diff = std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_start);
-//        if (num_points > 100000)
-//     {
-//    std::cout << "reverse run time: " << diff.count() << "us" << std::endl;
-//     }
 }
 
 /**
@@ -429,36 +420,9 @@ uint32_t construct_addition_chains(affine_product_runtime_state& state, bool emp
             // This section is a bottleneck - to populate our point array, we need
             // to read from memory locations that are effectively uniformly randomly distributed!
             // (assuming our scalar multipliers are uniformly random...)
-            // In the absence of a more elegant solution, we use ugly macro hacks to try and 
+            // In the absence of a more elegant solution, we use ugly macro hacks to try and
             // unroll loops, and prefetch memory a few cycles before we need it
             switch (k_end) {
-            case 128: {
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                {
-                    BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;
-                }
-                break;
-            }
             case 64: {
                 {
                     BBERG_SCALAR_MULTIPLICATION_FETCH_BLOCK;

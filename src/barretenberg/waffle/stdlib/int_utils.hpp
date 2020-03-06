@@ -7,9 +7,9 @@ __extension__ using uint128_t = unsigned __int128;
 // from http://supertech.csail.mit.edu/papers/debruijn.pdf
 inline size_t get_msb(uint32_t v)
 {
-    static const uint32_t MultiplyDeBruijnBitPosition[32] = { 0,  9,  1,  10, 13, 21, 2,  29, 11, 14, 16,
-                                                              18, 22, 25, 3,  30, 8,  12, 20, 28, 15, 17,
-                                                              24, 7,  19, 27, 23, 6,  26, 5,  4,  31 };
+    static constexpr uint32_t MultiplyDeBruijnBitPosition[32] = { 0,  9,  1,  10, 13, 21, 2,  29, 11, 14, 16,
+                                                                  18, 22, 25, 3,  30, 8,  12, 20, 28, 15, 17,
+                                                                  24, 7,  19, 27, 23, 6,  26, 5,  4,  31 };
 
     v |= v >> 1; // first round down to one less than a power of 2
     v |= v >> 2;
@@ -63,22 +63,17 @@ template <typename T> inline T keep_n_lsb(T input, size_t num_bits)
     return num_bits >= sizeof(T) * 8 ? input : input & (((T)1 << num_bits) - 1);
 }
 
-inline uint128_t field_to_uint128(barretenberg::fr::field_t const& in)
+inline uint128_t field_to_uint128(barretenberg::fr const& in)
 {
-    barretenberg::fr::field_t input = barretenberg::fr::from_montgomery_form(in);
+    barretenberg::fr input = in.from_montgomery_form();
     uint128_t lo = input.data[0];
     uint128_t hi = input.data[1];
     return (hi << 64) | lo;
 }
 
-inline barretenberg::fr::field_t uint128_to_field(uint128_t input)
+inline barretenberg::fr uint128_to_field(uint128_t input)
 {
     return { { (uint64_t)input, (uint64_t)(input >> 64), 0, 0 } };
 }
 
-// inline bool get_bit(uint128_t v, size_t index)
-// {
-//     uint128_t T0 = v >> static_cast<uint128_t>(index);
-//     return static_cast<bool>(T0 & static_cast<uint128_t>(1UL));
-// }
 } // namespace int_utils

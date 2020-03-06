@@ -1,7 +1,6 @@
 #include "./sha256.hpp"
-
+#include "../../../../assert.hpp"
 #include "../../bitarray/bitarray.hpp"
-// #include "../../uint32/uint32.hpp"
 
 namespace plonk {
 namespace stdlib {
@@ -170,7 +169,6 @@ template <typename Composer> bitarray<Composer> sha256(const bitarray<Composer>&
 template byte_array<waffle::TurboComposer> sha256_block(const byte_array<waffle::TurboComposer>& input);
 
 template bitarray<waffle::StandardComposer> sha256(const bitarray<waffle::StandardComposer>& input);
-template bitarray<waffle::BoolComposer> sha256(const bitarray<waffle::BoolComposer>& input);
 template bitarray<waffle::MiMCComposer> sha256(const bitarray<waffle::MiMCComposer>& input);
 template bitarray<waffle::TurboComposer> sha256(const bitarray<waffle::TurboComposer>& input);
 

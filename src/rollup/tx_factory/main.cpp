@@ -10,18 +10,17 @@ typedef crypto::pedersen_note::private_note tx_note;
 
 user_context create_user_context()
 {
-    barretenberg::fr::field_t note_secret = { { 0x11111111, 0x11111111, 0x11111111, 0x11111111 } };
-    grumpkin::fr::field_t owner_secret = { { 0x11111111, 0x11111111, 0x11111111, 0x11111111 } };
-    grumpkin::g1::affine_element owner_pub_key =
-        grumpkin::g1::group_exponentiation(grumpkin::g1::affine_one, owner_secret);
+    barretenberg::fr note_secret = { { 0x11111111, 0x11111111, 0x11111111, 0x11111111 } };
+    grumpkin::fr owner_secret = { { 0x11111111, 0x11111111, 0x11111111, 0x11111111 } };
+    grumpkin::g1::affine_element owner_pub_key(grumpkin::g1::one * owner_secret);
     return { note_secret, owner_secret, owner_pub_key };
 }
 
-fr::field_t generate_random_secret()
+fr generate_random_secret()
 {
-    fr::field_t secret = fr::from_montgomery_form(fr::random_element());
+    fr secret = fr::random_element().from_montgomery_form();
     secret.data[3] = secret.data[3] & (~0b1111110000000000000000000000000000000000000000000000000000000000ULL);
-    return fr::to_montgomery_form(secret);
+    return secret.to_montgomery_form();
 };
 
 tx_note create_note(user_context const& user, uint32_t value)
@@ -36,14 +35,14 @@ tx_note create_gibberish_note(user_context const& user, uint32_t value)
 
 crypto::schnorr::signature sign_notes(std::array<tx_note, 4> const& notes, user_context const& user)
 {
-    std::array<grumpkin::fq::field_t, 8> to_compress;
+    std::array<grumpkin::fq, 8> to_compress;
     for (size_t i = 0; i < 4; ++i) {
         auto encrypted = crypto::pedersen_note::encrypt_note(notes[i]);
         to_compress[i * 2] = encrypted.x;
         to_compress[i * 2 + 1] = encrypted.y;
     }
-    fr::field_t compressed = crypto::pedersen::compress_eight_native(to_compress);
-    std::vector<uint8_t> message(sizeof(fr::field_t));
+    fr compressed = crypto::pedersen::compress_eight_native(to_compress);
+    std::vector<uint8_t> message(sizeof(fr));
     fr::serialize_to_buffer(compressed, &message[0]);
     crypto::schnorr::signature signature =
         crypto::schnorr::construct_signature<Blake2sHasher, grumpkin::fq, grumpkin::fr, grumpkin::g1>(
