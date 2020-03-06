@@ -2,6 +2,7 @@
 #include "join_split_tx.hpp"
 #include <arpa/inet.h>
 #include <sstream>
+#include <algorithm>
 
 namespace rollup {
 
