@@ -1,4 +1,5 @@
 #pragma once
+#include "user_context.hpp"
 #include <barretenberg/misc_crypto/commitment/pedersen_note.hpp>
 #include <barretenberg/misc_crypto/schnorr/schnorr.hpp>
 
@@ -23,8 +24,11 @@ inline std::ostream& operator<<(std::ostream& os, join_split_tx const& tx)
               << "in_value2: " << tx.input_note[1].value << "\n"
               << "out_value1: " << tx.output_note[0].value << "\n"
               << "out_value2: " << tx.output_note[1].value << "\n"
-              << "num_input_notes: " << tx.num_input_notes << "\n";
+              << "num_input_notes: " << tx.num_input_notes << "\n"
+              << "owner: " << tx.owner_pub_key.x << " " << tx.owner_pub_key.y << "\n";
 }
+
+join_split_tx create_join_split_tx(std::vector<std::string> const& args, user_context const& user);
 
 join_split_tx hton(join_split_tx const& tx);
 join_split_tx ntoh(join_split_tx const& tx);

@@ -184,7 +184,11 @@ inline void read_transcript_g1(g1::affine_element* monomials, size_t degree, std
     }
 
     if (num == 0) {
-        throw std::runtime_error("No input files found.");
+        #ifdef __wasm__
+        std::abort();
+        #else
+        std::runtime_error("No input files found.");
+        #endif
     }
 }
 

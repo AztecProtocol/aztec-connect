@@ -40,6 +40,30 @@ TurboComposer::TurboComposer(std::string const& crs_path, const size_t size_hint
     // zero_idx = add_variable(barretenberg::fr::zero());
 };
 
+TurboComposer::TurboComposer(std::shared_ptr<proving_key> const& p_key,
+                             std::shared_ptr<verification_key> const& v_key,
+                             size_t size_hint)
+    : ComposerBase(p_key, v_key)
+{
+    w_l.reserve(size_hint);
+    w_r.reserve(size_hint);
+    w_o.reserve(size_hint);
+    w_4.reserve(size_hint);
+    q_m.reserve(size_hint);
+    q_1.reserve(size_hint);
+    q_2.reserve(size_hint);
+    q_3.reserve(size_hint);
+    q_4.reserve(size_hint);
+    q_arith.reserve(size_hint);
+    q_c.reserve(size_hint);
+    q_5.reserve(size_hint);
+    q_ecc_1.reserve(size_hint);
+    q_range.reserve(size_hint);
+    q_logic.reserve(size_hint);
+
+    zero_idx = put_constant_variable(fr::zero());
+};
+
 void TurboComposer::create_dummy_gate()
 {
     gate_flags.push_back(0);

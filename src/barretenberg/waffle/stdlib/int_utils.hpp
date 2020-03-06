@@ -51,10 +51,10 @@ template <> inline size_t count_leading_zeros<uint128_t>(uint128_t u)
 {
     uint64_t hi = static_cast<uint64_t>(u >> 64);
     if (hi) {
-        return (size_t)__builtin_clzl(hi);
+        return (size_t)__builtin_clzll(hi);
     } else {
         uint64_t lo = static_cast<uint64_t>(u);
-        return (size_t)__builtin_clzl(lo) + 64;
+        return (size_t)__builtin_clzll(lo) + 64;
     }
 }
 

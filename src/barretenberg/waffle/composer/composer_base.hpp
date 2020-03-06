@@ -154,6 +154,13 @@ class ComposerBase {
     ComposerBase(std::string const& crs_path_)
         : n(0)
         , crs_path(crs_path_){};
+    ComposerBase(std::shared_ptr<proving_key> const& p_key, std::shared_ptr<verification_key> const& v_key)
+        : n(0)
+        , computed_proving_key(true)
+        , circuit_proving_key(p_key)
+        , computed_verification_key(true)
+        , circuit_verification_key(v_key)
+    {}
     ComposerBase(ComposerBase&& other) = default;
     ComposerBase& operator=(ComposerBase&& other) = default;
     virtual ~ComposerBase(){};

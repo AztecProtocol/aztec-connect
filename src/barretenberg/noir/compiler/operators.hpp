@@ -92,7 +92,7 @@ struct BitwiseRorVisitor : boost::static_visitor<var_t> {
         if (!rhs.is_constant()) {
             abort("Can only perform bitwise rotation by constants.");
         }
-        return lhs.ror(rhs.get_value());
+        return lhs.ror(static_cast<size_t>(rhs.get_value()));
     }
     template <typename T, typename U> var_t operator()(T const&, U const&) const { abort("Cannot rotate right."); }
 };
@@ -103,7 +103,7 @@ struct BitwiseRolVisitor : boost::static_visitor<var_t> {
         if (!rhs.is_constant()) {
             abort("Can only perform bitwise rotation by constants.");
         }
-        return lhs.rol(rhs.get_value());
+        return lhs.rol(static_cast<size_t>(rhs.get_value()));
     }
     template <typename T, typename U> var_t operator()(T const&, U const&) const { abort("Cannot rotate left."); }
 };
@@ -114,7 +114,7 @@ struct BitwiseShlVisitor : boost::static_visitor<var_t> {
         if (!rhs.is_constant()) {
             abort("Can only perform bitwise shift by constants.");
         }
-        return lhs << rhs.get_value();
+        return lhs << static_cast<size_t>(rhs.get_value());
     }
     template <typename T, typename U> var_t operator()(T const&, U const&) const { abort("Cannot shift left."); }
 };
@@ -125,7 +125,7 @@ struct BitwiseShrVisitor : boost::static_visitor<var_t> {
         if (!rhs.is_constant()) {
             abort("Can only perform bitwise shift by constants.");
         }
-        return lhs >> rhs.get_value();
+        return lhs >> static_cast<size_t>(rhs.get_value());
     }
     template <typename T, typename U> var_t operator()(T const&, U const&) const { abort("Cannot shift right."); }
 };

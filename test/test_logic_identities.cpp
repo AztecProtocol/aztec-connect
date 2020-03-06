@@ -6,17 +6,17 @@
 
 #include "./test_helpers.hpp"
 
-bool quaternary_ror(const std::vector<uint64_t>& accumulators, uint64_t ror, uint64_t target)
+bool quaternary_ror(const std::vector<uint64_t>& accumulators, size_t ror, uint64_t target)
 {
-    uint64_t n = accumulators.size();
+    size_t n = accumulators.size();
 
     if (ror == 0 || ror == 32) {
         return true;
     }
 
     if ((ror & 1) == 0) {
-        uint64_t x = ror >> 1;
-        uint64_t pivot = (n - 1 - x);
+        size_t x = ror >> 1;
+        size_t pivot = (n - 1 - x);
 
         uint64_t left = accumulators[pivot];
         uint64_t right = accumulators[n - 1];
@@ -31,8 +31,8 @@ bool quaternary_ror(const std::vector<uint64_t>& accumulators, uint64_t ror, uin
         return (out == target);
     }
 
-    uint64_t x = (ror >> 1) + 1;
-    uint64_t pivot = (n - 1 - x);
+    size_t x = (ror >> 1) + 1;
+    size_t pivot = (n - 1 - x);
 
     uint64_t a_pivot = ror == 31 ? 0 : accumulators[pivot];
 
@@ -53,16 +53,16 @@ bool quaternary_ror(const std::vector<uint64_t>& accumulators, uint64_t ror, uin
     return (out == target) && delta_valid;
 }
 
-bool quaternary_left_shift(const std::vector<uint64_t>& accumulators, uint64_t shift, uint64_t target)
+bool quaternary_left_shift(const std::vector<uint64_t>& accumulators, size_t shift, uint64_t target)
 {
-    uint64_t n = accumulators.size();
+    size_t n = accumulators.size();
 
     if (shift == 0) {
         return true;
     }
 
     if ((shift & 1) == 0) {
-        uint64_t x = (shift >> 1);
+        size_t x = (shift >> 1);
         uint64_t right = accumulators[x - 1];
         uint64_t base = accumulators[n - 1];
 
@@ -73,7 +73,7 @@ bool quaternary_left_shift(const std::vector<uint64_t>& accumulators, uint64_t s
         return diff == target;
     }
 
-    uint64_t x = (shift >> 1);
+    size_t x = (shift >> 1);
     uint64_t right = (shift == 1) ? 0 : accumulators[x - 1];
     uint64_t left = accumulators[x];
     uint64_t base = accumulators[n - 1];
@@ -92,20 +92,20 @@ bool quaternary_left_shift(const std::vector<uint64_t>& accumulators, uint64_t s
     return (out == target) && delta_valid;
 }
 
-bool quaternary_rol(const std::vector<uint64_t>& accumulators, uint64_t rol, uint64_t target)
+bool quaternary_rol(const std::vector<uint64_t>& accumulators, size_t rol, uint64_t target)
 {
     return quaternary_ror(accumulators, 32 - rol, target);
 }
 
-bool quaternary_right_shift(const std::vector<uint64_t>& accumulators, uint64_t shift, uint64_t target)
+bool quaternary_right_shift(const std::vector<uint64_t>& accumulators, size_t shift, uint64_t target)
 {
-    uint64_t n = accumulators.size();
+    size_t n = accumulators.size();
 
     if ((shift & 1) == 0) {
         return accumulators[(n - 1 - (shift >> 1))] == target;
     }
 
-    uint64_t x = (n - 1 - (shift >> 1));
+    size_t x = (n - 1 - (shift >> 1));
     uint64_t right = accumulators[x];
     uint64_t left = shift == 31 ? 0 : accumulators[x - 1];
 
@@ -256,8 +256,8 @@ bool and_identity(uint64_t a_x,
 TEST(test_logic_identities, quaternary_rol)
 {
     for (size_t i = 0; i < 100; ++i) {
-        uint64_t input = test_helpers::get_pseudorandom_uint32();
-        uint64_t rol = test_helpers::get_pseudorandom_uint32() & 31ULL;
+        size_t input = test_helpers::get_pseudorandom_uint32();
+        size_t rol = test_helpers::get_pseudorandom_uint32() & 31ULL;
         std::vector<uint64_t> accumulators;
         uint64_t accumulator = 0;
         for (uint64_t i = 0; i < 32; i += 2) {
@@ -268,10 +268,10 @@ TEST(test_logic_identities, quaternary_rol)
             accumulators.emplace_back(accumulator);
         }
 
-        uint64_t target = rol == 0 ? input : ((input << (rol)) & 0xffffffff) | (input >> (32 - rol));
+        size_t target = rol == 0 ? input : ((input << (rol)) & 0xffffffff) | (input >> (32 - rol));
 
         if (!quaternary_rol(accumulators, rol, target)) {
-            printf("ror failed. target = %" PRIu64 ", ror = %" PRIu64 " \n", target, rol);
+            printf("ror failed. target = %zu, ror = %zu \n", target, rol);
         }
         EXPECT_EQ(quaternary_rol(accumulators, rol, target), true);
     }
@@ -281,7 +281,7 @@ TEST(test_logic_identities, quaternary_ror)
 {
     for (size_t i = 0; i < 100; ++i) {
         uint64_t input = test_helpers::get_pseudorandom_uint32();
-        uint64_t ror = test_helpers::get_pseudorandom_uint32() & 31ULL;
+        size_t ror = test_helpers::get_pseudorandom_uint32() & 31ULL;
         std::vector<uint64_t> accumulators;
         uint64_t accumulator = 0;
         for (uint64_t i = 0; i < 32; i += 2) {
@@ -292,10 +292,10 @@ TEST(test_logic_identities, quaternary_ror)
             accumulators.emplace_back(accumulator);
         }
 
-        uint64_t target = ror == 0 ? input : ((input << (32 - ror)) & 0xffffffff) | (input >> ror);
+        size_t target = ror == 0 ? input : ((input << (32 - ror)) & 0xffffffff) | (input >> ror);
 
         if (!quaternary_ror(accumulators, ror, target)) {
-            printf("ror failed. target = %" PRIu64 ", ror = %" PRIu64 " \n", target, ror);
+            printf("ror failed. target = %zu, ror = %zu \n", target, ror);
         }
         EXPECT_EQ(quaternary_ror(accumulators, ror, target), true);
     }
@@ -304,8 +304,8 @@ TEST(test_logic_identities, quaternary_ror)
 TEST(test_logic_identities, quaternary_left_shift)
 {
     for (size_t i = 0; i < 100; ++i) {
-        uint64_t input = test_helpers::get_pseudorandom_uint32();
-        uint64_t shift = test_helpers::get_pseudorandom_uint32() & 31ULL;
+        size_t input = test_helpers::get_pseudorandom_uint32();
+        size_t shift = test_helpers::get_pseudorandom_uint32() & 31ULL;
         std::vector<uint64_t> accumulators;
         uint64_t accumulator = 0;
         for (uint64_t i = 0; i < 32; i += 2) {
@@ -316,10 +316,10 @@ TEST(test_logic_identities, quaternary_left_shift)
             accumulators.emplace_back(accumulator);
         }
 
-        uint64_t target = (input << shift) & 0xffffffff;
+        size_t target = (input << shift) & 0xffffffff;
 
         if (!quaternary_left_shift(accumulators, shift, target)) {
-            printf("left shift failed. target = %" PRIu64 ", shift = %" PRIu64 " \n", target, shift);
+            printf("left shift failed. target = %zu, shift = %zu \n", target, shift);
         }
         EXPECT_EQ(quaternary_left_shift(accumulators, shift, target), true);
     }
@@ -328,8 +328,8 @@ TEST(test_logic_identities, quaternary_left_shift)
 TEST(test_logic_identities, quaternary_right_shift)
 {
     for (size_t i = 0; i < 100; ++i) {
-        uint64_t input = test_helpers::get_pseudorandom_uint32();
-        uint64_t shift = test_helpers::get_pseudorandom_uint32() & 31ULL;
+        size_t input = test_helpers::get_pseudorandom_uint32();
+        size_t shift = test_helpers::get_pseudorandom_uint32() & 31ULL;
         std::vector<uint64_t> accumulators;
         uint64_t accumulator = 0;
         for (uint64_t i = 0; i < 32; i += 2) {
@@ -340,10 +340,10 @@ TEST(test_logic_identities, quaternary_right_shift)
             accumulators.emplace_back(accumulator);
         }
 
-        uint64_t target = input >> shift;
+        size_t target = input >> shift;
 
         if (!quaternary_right_shift(accumulators, shift, target)) {
-            printf("right shift failed. target = %" PRIu64 ", shift = %" PRIu64 " \n", target, shift);
+            printf("right shift failed. target = %zu, shift = %zu \n", target, shift);
         }
         EXPECT_EQ(quaternary_right_shift(accumulators, shift, target), true);
     }

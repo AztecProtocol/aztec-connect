@@ -148,8 +148,8 @@ constexpr std::pair<uint256_t, uint256_t> uint256_t::mul_512(const uint256_t& ot
 
 constexpr bool uint256_t::get_bit(const uint64_t bit_index) const
 {
-    const uint64_t idx = bit_index >> 6;
-    const uint64_t shift = bit_index & 63;
+    const size_t idx = static_cast<size_t>(bit_index >> 6);
+    const size_t shift = bit_index & 63;
     return bool((data[idx] >> shift) & 1);
 }
 

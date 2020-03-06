@@ -27,6 +27,14 @@ template <typename Composer> class uintNoir {
         , uint64(uint256_t(other))
     {}
 
+    uintNoir(size_t width, const uint256_t other)
+        : __width(width)
+        , uint8(other)
+        , uint16(other)
+        , uint32(other)
+        , uint64(other)
+    {}
+
 
     uintNoir(uint64_t value)
         : __width(32)
@@ -526,7 +534,7 @@ template <typename Composer> class uintNoir {
     }
 
 
-    uintNoir operator>>(const uint64_t const_shift) const
+    uintNoir operator>>(const size_t const_shift) const
     {
         switch (__width) {
         case 8: {
@@ -549,7 +557,7 @@ template <typename Composer> class uintNoir {
     }
 
 
-    uintNoir operator<<(const uint64_t const_shift) const
+    uintNoir operator<<(const size_t const_shift) const
     {
         switch (__width) {
         case 8: {
@@ -572,7 +580,7 @@ template <typename Composer> class uintNoir {
     }
 
 
-    uintNoir ror(const uint64_t rot) const
+    uintNoir ror(const size_t rot) const
     {
         switch (__width) {
         case 8: {
@@ -594,7 +602,7 @@ template <typename Composer> class uintNoir {
         }
     }
 
-    uintNoir rol(const uint64_t rot) const
+    uintNoir rol(const size_t rot) const
     {
         switch (__width) {
         case 8: {
@@ -635,7 +643,7 @@ template <typename Composer> class uintNoir {
             return uint64 > other.uint64;
             break;
         }
-        }   
+        }
     }
 
 
@@ -658,7 +666,7 @@ template <typename Composer> class uintNoir {
             return uint64 >= other.uint64;
             break;
         }
-        }   
+        }
     }
 
     bool_t<Composer> operator<(const uintNoir& other) const
@@ -680,7 +688,7 @@ template <typename Composer> class uintNoir {
             return uint64 < other.uint64;
             break;
         }
-        }   
+        }
     }
 
     bool_t<Composer> operator<=(const uintNoir& other) const
@@ -702,7 +710,7 @@ template <typename Composer> class uintNoir {
             return uint64 <= other.uint64;
             break;
         }
-        }   
+        }
     }
 
     bool_t<Composer> operator==(const uintNoir& other) const
@@ -724,7 +732,7 @@ template <typename Composer> class uintNoir {
             return uint64 == other.uint64;
             break;
         }
-        }   
+        }
     }
 
 
@@ -747,7 +755,7 @@ template <typename Composer> class uintNoir {
             return uint64 != other.uint64;
             break;
         }
-        }   
+        }
     }
 
     bool_t<Composer> at(const size_t bit_index) const
@@ -769,7 +777,7 @@ template <typename Composer> class uintNoir {
             return uint64.at(bit_index);
             break;
         }
-        } 
+        }
     }
     uintNoir operator++() { return operator+(uintNoir(width(), nullptr, 1)); };
     uintNoir operator--() { return operator-(uintNoir(width(), nullptr, 1)); };
@@ -786,7 +794,7 @@ template <typename Composer> class uintNoir {
     uintNoir operator>>=(const uint64_t const_shift) { *this = operator>>(const_shift); return *this; };
     uintNoir operator<<=(const uint64_t const_shift) { *this = operator<<(const_shift); return *this; };
 
-    uint64_t get_value() const
+    uint256_t get_value() const
     {
         switch (__width) {
         case 8: {

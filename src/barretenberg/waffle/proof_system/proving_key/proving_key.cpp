@@ -81,6 +81,27 @@ proving_key::proving_key(const size_t num_gates, const size_t num_inputs, std::s
     // printf("proving key allocated memory = %lu \n", memory / (1024UL * 1024UL));
 }
 
+void proving_key::reset() {
+    wire_ffts.clear();
+
+    barretenberg::polynomial w_1_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
+    barretenberg::polynomial w_2_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
+    barretenberg::polynomial w_3_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
+    barretenberg::polynomial w_4_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
+    z_fft = barretenberg::polynomial(4 * n + 4, 4 * n + 4);
+
+    memset((void*)&w_1_fft[0], 0x00, sizeof(barretenberg::fr) * (4 * n + 4));
+    memset((void*)&w_2_fft[0], 0x00, sizeof(barretenberg::fr) * (4 * n + 4));
+    memset((void*)&w_3_fft[0], 0x00, sizeof(barretenberg::fr) * (4 * n + 4));
+    memset((void*)&w_4_fft[0], 0x00, sizeof(barretenberg::fr) * (4 * n + 4));
+    memset((void*)&z_fft[0], 0x00, sizeof(barretenberg::fr) * (4 * n + 4));
+
+    wire_ffts.insert({ "w_1_fft", std::move(w_1_fft) });
+    wire_ffts.insert({ "w_2_fft", std::move(w_2_fft) });
+    wire_ffts.insert({ "w_3_fft", std::move(w_3_fft) });
+    wire_ffts.insert({ "w_4_fft", std::move(w_4_fft) });
+}
+
 proving_key::proving_key(const proving_key& other)
     : n(other.n)
     , num_public_inputs(other.num_public_inputs)
