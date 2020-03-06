@@ -1,8 +1,8 @@
 .vscode
 .viscode
 build*
-src/wasi-sdk-8.0
-srs_db/ignition
+barretenberg/src/wasi-sdk-8.0
+barretenberg/srs_db/ignition
 **/dest
 **/dist
 **/node_modules
