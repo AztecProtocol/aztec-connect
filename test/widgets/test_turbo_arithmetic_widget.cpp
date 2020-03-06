@@ -44,28 +44,28 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
         q_3[i] = (fr::random_element());
         q_4[i] = (fr::random_element());
         q_m[i] = (fr::random_element());
-        q_5[i] = (fr::zero);
+        q_5[i] = (fr::zero());
 
-        fr::field_t T0;
-        fr::field_t T1;
-        fr::__mul(w_1[i], w_2[i], T0);
-        fr::__mul(T0, q_m[i], T0);
+        fr T0;
+        fr T1;
+        T0 = w_1[i] * w_2[i];
+        T0 *= q_m[i];
 
-        fr::__mul(w_1[i], q_1[i], T1);
-        fr::__add(T0, T1, T0);
+        T1 = w_1[i] * q_1[i];
+        T0 += T1;
 
-        fr::__mul(w_2[i], q_2[i], T1);
-        fr::__add(T0, T1, T0);
+        T1 = w_2[i] * q_2[i];
+        T0 += T1;
 
-        fr::__mul(w_3[i], q_3[i], T1);
-        fr::__add(T0, T1, T0);
+        T1 = w_3[i] * q_3[i];
+        T0 += T1;
 
-        fr::__mul(w_4[i], q_4[i], T1);
-        fr::__add(T0, T1, T0);
+        T1 = w_4[i] * q_4[i];
+        T0 += T1;
 
-        fr::__neg(T0, T0);
+        T0.self_neg();
         q_c[i] = (T0);
-        q_arith[i] = fr::one;
+        q_arith[i] = fr::one();
 
     }
 
@@ -166,14 +166,14 @@ TEST(turbo_arithmetic_widget, quotient_polynomial_satisfiability)
     key->quotient_large = polynomial(num_gates * 4);
     for (size_t i = 0; i < num_gates * 4; ++i)
     {
-        key->quotient_large[i] = fr::zero;
+        key->quotient_large[i] = fr::zero();
     }
-    widget.compute_quotient_contribution(fr::one, transcript);
+    widget.compute_quotient_contribution(fr::one(), transcript);
 
     key->quotient_large.coset_ifft(key->large_domain);
     key->quotient_large.fft(key->large_domain);
     for (size_t i = 0; i < num_gates; ++i)
     {
-        EXPECT_EQ(fr::eq(key->quotient_large[i * 4], fr::zero), true);
+        EXPECT_EQ(key->quotient_large[i * 4] == fr::zero(), true);
     }
 }

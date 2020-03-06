@@ -1,10 +1,7 @@
 #include "./pedersen_note.hpp"
-
 #include "../hash/pedersen.hpp"
-
 #include "../../bool/bool.hpp"
 #include "../../field/field.hpp"
-
 #include "../../../composer/turbo_composer.hpp"
 
 namespace plonk {
@@ -14,13 +11,13 @@ template <size_t num_bits>
 note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, const size_t generator_index)
 {
     field_t<waffle::TurboComposer> scalar = in;
-    if (!barretenberg::fr::eq(in.additive_constant, barretenberg::fr::zero) ||
-        !barretenberg::fr::eq(in.multiplicative_constant, barretenberg::fr::one)) {
+    if (!(in.additive_constant == barretenberg::fr::zero()) ||
+        !(in.multiplicative_constant == barretenberg::fr::one())) {
         scalar = scalar.normalize();
     }
     waffle::TurboComposer* ctx = in.context;
     ASSERT(ctx != nullptr);
-    barretenberg::fr::field_t scalar_multiplier = barretenberg::fr::from_montgomery_form(scalar.get_value());
+    barretenberg::fr scalar_multiplier = scalar.get_value().from_montgomery_form();
 
     // constexpr size_t num_bits = 250;
     constexpr size_t num_quads_base = (num_bits - 1) >> 1;
@@ -28,38 +25,37 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
 
     size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1 : num_bits;
-    const crypto::pedersen::fixed_base_ladder* ladder =
-        crypto::pedersen::get_ladder(generator_index, num_bits);
+    const crypto::pedersen::fixed_base_ladder* ladder = crypto::pedersen::get_ladder(generator_index, num_bits);
     grumpkin::g1::affine_element generator = crypto::pedersen::get_generator(generator_index);
 
     grumpkin::g1::element origin_points[2];
-    grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
-    grumpkin::g1::mixed_add(origin_points[0], generator, origin_points[1]);
-    origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
+    origin_points[0] = grumpkin::g1::element(ladder[0].one);
+    origin_points[1] = origin_points[0] + generator;
+    origin_points[1] = origin_points[1].normalize();
 
-    barretenberg::fr::field_t scalar_multiplier_base = barretenberg::fr::to_montgomery_form(scalar_multiplier);
+    barretenberg::fr scalar_multiplier_base = scalar_multiplier.to_montgomery_form();
 
     if ((scalar_multiplier.data[0] & 1) == 0) {
-        barretenberg::fr::field_t two = barretenberg::fr::add(barretenberg::fr::one, barretenberg::fr::one);
-        scalar_multiplier_base = barretenberg::fr::sub(scalar_multiplier_base, two);
+        barretenberg::fr two = barretenberg::fr::one() + barretenberg::fr::one();
+        scalar_multiplier_base = scalar_multiplier_base - two;
     }
-    scalar_multiplier_base = barretenberg::fr::from_montgomery_form(scalar_multiplier_base);
+    scalar_multiplier_base = scalar_multiplier_base.from_montgomery_form();
     uint64_t wnaf_entries[num_quads + 1] = { 0 };
     bool skew = false;
 
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    barretenberg::fr::field_t accumulator_offset = barretenberg::fr::invert(barretenberg::fr::pow_small(
-        barretenberg::fr::add(barretenberg::fr::one, barretenberg::fr::one), initial_exponent));
+    barretenberg::fr accumulator_offset = (barretenberg::fr::one() + barretenberg::fr::one())
+                                                       .pow(static_cast<uint64_t>(initial_exponent))
+                                                       .invert();
 
-    barretenberg::fr::field_t origin_accumulators[2]{
-        barretenberg::fr::one, barretenberg::fr::add(accumulator_offset, barretenberg::fr::one)
-    };
+    barretenberg::fr origin_accumulators[2]{ barretenberg::fr::one(),
+                                                      accumulator_offset + barretenberg::fr::one() };
 
     grumpkin::g1::element* multiplication_transcript =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
-    barretenberg::fr::field_t* accumulator_transcript =
-        static_cast<barretenberg::fr::field_t*>(aligned_alloc(64, sizeof(barretenberg::fr::field_t) * (num_quads + 1)));
+    barretenberg::fr* accumulator_transcript =
+        static_cast<barretenberg::fr*>(aligned_alloc(64, sizeof(barretenberg::fr) * (num_quads + 1)));
 
     if (skew) {
         multiplication_transcript[0] = origin_points[1];
@@ -68,36 +64,35 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
         multiplication_transcript[0] = origin_points[0];
         accumulator_transcript[0] = origin_accumulators[0];
     }
-    barretenberg::fr::field_t one = barretenberg::fr::one;
-    barretenberg::fr::field_t three = barretenberg::fr::add(barretenberg::fr::add(one, one), one);
+    barretenberg::fr one = barretenberg::fr::one();
+    barretenberg::fr three = ((one + one) + one);
 
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
 
-        barretenberg::fr::field_t prev_accumulator =
-            barretenberg::fr::add(accumulator_transcript[i], accumulator_transcript[i]);
-        prev_accumulator = barretenberg::fr::add(prev_accumulator, prev_accumulator);
+        barretenberg::fr prev_accumulator = accumulator_transcript[i] + accumulator_transcript[i];
+        prev_accumulator = prev_accumulator + prev_accumulator;
 
         grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
 
-        barretenberg::fr::field_t scalar_to_add = (entry == 1) ? three : one;
+        barretenberg::fr scalar_to_add = (entry == 1) ? three : one;
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
         if (predicate) {
-            grumpkin::g1::__neg(point_to_add, point_to_add);
-            barretenberg::fr::__neg(scalar_to_add, scalar_to_add);
+            point_to_add = -point_to_add;
+            scalar_to_add.self_neg();
         }
-        accumulator_transcript[i + 1] = barretenberg::fr::add(prev_accumulator, scalar_to_add);
-        grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
+        accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
+        multiplication_transcript[i + 1] = multiplication_transcript[i] + point_to_add;
     }
 
-    grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
+    grumpkin::g1::element::batch_normalize(&multiplication_transcript[0], num_quads + 1);
 
     waffle::fixed_group_init_quad init_quad{ origin_points[0].x,
-                                             barretenberg::fr::sub(origin_points[0].x, origin_points[1].x),
+                                             (origin_points[0].x - origin_points[1].x),
                                              origin_points[0].y,
-                                             barretenberg::fr::sub(origin_points[0].y, origin_points[1].y) };
+                                             (origin_points[0].y - origin_points[1].y) };
 
-    barretenberg::fr::field_t x_alpha = accumulator_offset;
+    barretenberg::fr x_alpha = accumulator_offset;
     for (size_t i = 0; i < num_quads; ++i) {
         waffle::fixed_group_add_quad round_quad;
         round_quad.d = ctx->add_variable(accumulator_transcript[i]);
@@ -133,11 +128,11 @@ note_triple fixed_base_scalar_mul(const field_t<waffle::TurboComposer>& in, cons
                                ctx->add_variable(multiplication_transcript[num_quads].y),
                                ctx->add_variable(x_alpha),
                                ctx->add_variable(accumulator_transcript[num_quads]),
-                               barretenberg::fr::zero,
-                               barretenberg::fr::zero,
-                               barretenberg::fr::zero,
-                               barretenberg::fr::zero,
-                               barretenberg::fr::zero };
+                               barretenberg::fr::zero(),
+                               barretenberg::fr::zero(),
+                               barretenberg::fr::zero(),
+                               barretenberg::fr::zero(),
+                               barretenberg::fr::zero() };
     ctx->create_big_add_gate(add_quad);
 
     note_triple result;
@@ -166,7 +161,7 @@ public_note encrypt_note(const private_note& plaintext)
 
     // if k = 0, then k * inv - 1 != 0
     // k * inv - (1 - is_zero)
-    field_t one(context, barretenberg::fr::one);
+    field_t one(context, barretenberg::fr::one());
     bool_t is_zero = k.is_zero();
 
     // If k = 0, our scalar multiplier is going to be nonsense.

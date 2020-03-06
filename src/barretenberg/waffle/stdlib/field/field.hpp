@@ -7,9 +7,7 @@
 
 namespace waffle {
 class StandardComposer;
-class BoolComposer;
 class MiMCComposer;
-class TurboComposer;
 class TurboComposer;
 } // namespace waffle
 
@@ -21,7 +19,7 @@ template <typename ComposerContext> class bool_t;
 template <typename ComposerContext> class field_t {
   public:
     field_t(ComposerContext* parent_context = nullptr);
-    field_t(ComposerContext* parent_context, const barretenberg::fr::field_t& value);
+    field_t(ComposerContext* parent_context, const barretenberg::fr& value);
     field_t(const uint64_t value);
     field_t(const witness_t<ComposerContext>& value);
     field_t(const field_t& other);
@@ -44,14 +42,14 @@ template <typename ComposerContext> class field_t {
 
     field_t normalize() const;
 
-    barretenberg::fr::field_t get_value() const;
+    barretenberg::fr get_value() const;
 
     bool_t<ComposerContext> is_zero();
     bool is_constant() const { return witness_index == static_cast<uint32_t>(-1); }
 
     mutable ComposerContext* context = nullptr;
-    mutable barretenberg::fr::field_t additive_constant;
-    mutable barretenberg::fr::field_t multiplicative_constant;
+    mutable barretenberg::fr additive_constant;
+    mutable barretenberg::fr multiplicative_constant;
     mutable uint32_t witness_index = static_cast<uint32_t>(-1);
 };
 
@@ -61,7 +59,6 @@ template <typename ComposerContext> inline std::ostream& operator<<(std::ostream
 }
 
 extern template class field_t<waffle::StandardComposer>;
-extern template class field_t<waffle::BoolComposer>;
 extern template class field_t<waffle::MiMCComposer>;
 extern template class field_t<waffle::TurboComposer>;
 

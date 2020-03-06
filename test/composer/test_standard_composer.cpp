@@ -11,74 +11,90 @@
 #include <memory>
 #include <random>
 
+#include "../test_helpers.hpp"
+
 using namespace barretenberg;
-
-namespace
-{
-std::mt19937 engine;
-std::uniform_int_distribution<uint32_t> dist{ 0ULL, UINT32_MAX };
-
-const auto init = []() {
-    // std::random_device rd{};
-    std::seed_seq seed2{ 1, 2, 3, 4, 5, 6, 7, 8 };
-    engine = std::mt19937(seed2);
-    return 1;
-}();
-
-uint32_t get_pseudorandom_uint32()
-{
-    return dist(engine);
-}
-}
-
 
 TEST(standard_composer, test_add_gate_proofs)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
-    fr::field_t a = fr::one;
-    fr::field_t b = fr::one;
-    fr::field_t c = fr::add(a, b);
-    fr::field_t d = fr::add(a, c);
+    fr a = fr::one();
+    fr b = fr::one();
+    fr c = a + b;
+    fr d = a + c;
     uint32_t a_idx = composer.add_variable(a);
     uint32_t b_idx = composer.add_variable(b);
     uint32_t c_idx = composer.add_variable(c);
     uint32_t d_idx = composer.add_variable(d);
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
 
-    composer.create_add_gate({ d_idx, c_idx, a_idx, fr::one, fr::neg_one(), fr::neg_one(), fr::zero });
+    composer.create_add_gate(
+        { d_idx, c_idx, a_idx, fr::one(), fr::neg_one(), fr::neg_one(), fr::zero() });
 
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ b_idx, a_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { b_idx, a_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
 
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
-    composer.create_add_gate({ a_idx, b_idx, c_idx, fr::one, fr::one, fr::neg_one(), fr::zero });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    composer.create_add_gate(
+        { a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -93,17 +109,17 @@ TEST(standard_composer, test_add_gate_proofs)
 TEST(standard_composer, test_mul_gate_proofs)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
-    fr::field_t q[7]{ fr::random_element(), fr::random_element(), fr::random_element(), fr::random_element(),
-                      fr::random_element(), fr::random_element(), fr::random_element() };
-    fr::field_t q_inv[7]{
-        fr::invert(q[0]), fr::invert(q[1]), fr::invert(q[2]), fr::invert(q[3]),
-        fr::invert(q[4]), fr::invert(q[5]), fr::invert(q[6]),
+    fr q[7]{ fr::random_element(), fr::random_element(), fr::random_element(),
+                      fr::random_element(), fr::random_element(), fr::random_element(),
+                      fr::random_element() };
+    fr q_inv[7]{
+        q[0].invert(), q[1].invert(), q[2].invert(), q[3].invert(), q[4].invert(), q[5].invert(), q[6].invert(),
     };
 
-    fr::field_t a = fr::random_element();
-    fr::field_t b = fr::random_element();
-    fr::field_t c = fr::neg(fr::mul(fr::add(fr::add(fr::mul(q[0], a), fr::mul(q[1], b)), q[3]), q_inv[2]));
-    fr::field_t d = fr::neg(fr::mul(fr::add(fr::mul(q[4], fr::mul(a, b)), q[6]), q_inv[5]));
+    fr a = fr::random_element();
+    fr b = fr::random_element();
+    fr c = -((((q[0] * a) + (q[1] * b)) + q[3]) * q_inv[2]);
+    fr d = -((((q[4] * (a * b)) + q[6]) * q_inv[5]));
 
     uint32_t a_idx = composer.add_variable(a);
     uint32_t b_idx = composer.add_variable(b);
@@ -170,40 +186,44 @@ TEST(standard_composer, test_mul_gate_proofs)
     EXPECT_EQ(result, true);
 }
 
-
 TEST(standard_composer, range_constraint)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
 
-    for (size_t i = 0; i < 10; ++i)
-    {
-        uint32_t value = get_pseudorandom_uint32();
-        fr::field_t witness_value = fr::to_montgomery_form({{ value, 0, 0, 0 }});
+    for (size_t i = 0; i < 10; ++i) {
+        uint32_t value = test_helpers::get_pseudorandom_uint32();
+        fr witness_value = fr{ value, 0, 0, 0 }.to_montgomery_form();
         uint32_t witness_index = composer.add_variable(witness_value);
 
         // include non-nice numbers of bits, that will bleed over gate boundaries
         size_t extra_bits = 2 * (i % 4);
-    
+
         std::vector<uint32_t> accumulators = composer.create_range_constraint(witness_index, 32 + extra_bits);
 
-        for (uint32_t j = 0; j < 16; ++j)
-        {
-            uint32_t result = (value >> (30U - (2* j)));
-            fr::field_t source = fr::from_montgomery_form(composer.get_variable(accumulators[j + (extra_bits >> 1)]));
+        for (uint32_t j = 0; j < 16; ++j) {
+            uint32_t result = (value >> (30U - (2 * j)));
+            fr source = composer.get_variable(accumulators[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t expected = static_cast<uint32_t>(source.data[0]);
             EXPECT_EQ(result, expected);
         }
-        for (uint32_t j = 1; j < 16; ++j)
-        {
-            uint32_t left = (value >> (30U - (2* j)));
-            uint32_t right = (value >> (30U - (2* (j - 1))));
+        for (uint32_t j = 1; j < 16; ++j) {
+            uint32_t left = (value >> (30U - (2 * j)));
+            uint32_t right = (value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
         }
     }
 
-    uint32_t zero_idx = composer.add_variable(fr::zero);
-    uint32_t one_idx = composer.add_variable(fr::one);
-    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+    uint32_t zero_idx = composer.add_variable(fr::zero());
+    uint32_t one_idx = composer.add_variable(fr::one());
+    composer.create_big_add_gate({ zero_idx,
+                                   zero_idx,
+                                   zero_idx,
+                                   one_idx,
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::neg_one() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -216,67 +236,75 @@ TEST(standard_composer, range_constraint)
     EXPECT_EQ(result, true);
 }
 
-
 TEST(standard_composer, and_constraint)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
 
-    for (size_t i = 0; i < /*10*/1; ++i)
-    {
-        uint32_t left_value = get_pseudorandom_uint32();
+    for (size_t i = 0; i < /*10*/ 1; ++i) {
+        uint32_t left_value = test_helpers::get_pseudorandom_uint32();
 
-        fr::field_t left_witness_value = fr::to_montgomery_form({{ left_value, 0, 0, 0 }});
+        fr left_witness_value = fr{ left_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t left_witness_index = composer.add_variable(left_witness_value);
 
-        uint32_t right_value = get_pseudorandom_uint32();
-        fr::field_t right_witness_value = fr::to_montgomery_form({{ right_value, 0, 0, 0 }});
+        uint32_t right_value = test_helpers::get_pseudorandom_uint32();
+        fr right_witness_value = fr{ right_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t right_witness_index = composer.add_variable(right_witness_value);
 
         uint32_t out_value = left_value & right_value;
         // include non-nice numbers of bits, that will bleed over gate boundaries
         size_t extra_bits = 2 * (i % 4);
-    
-        waffle::accumulator_triple accumulators = composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
+
+        waffle::accumulator_triple accumulators =
+            composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
         // composer.create_and_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
 
-        for (uint32_t j = 0; j < 16; ++j)
-        {
-            uint32_t left_expected = (left_value >> (30U - (2* j)));
-            uint32_t right_expected = (right_value >> (30U - (2* j)));
+        for (uint32_t j = 0; j < 16; ++j) {
+            uint32_t left_expected = (left_value >> (30U - (2 * j)));
+            uint32_t right_expected = (right_value >> (30U - (2 * j)));
             uint32_t out_expected = left_expected & right_expected;
 
-            fr::field_t left_source = fr::from_montgomery_form(composer.get_variable(accumulators.left[j + (extra_bits >> 1)]));
+            fr left_source =
+                composer.get_variable(accumulators.left[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t left_result = static_cast<uint32_t>(left_source.data[0]);
 
-            fr::field_t right_source = fr::from_montgomery_form(composer.get_variable(accumulators.right[j + (extra_bits >> 1)]));
+            fr right_source =
+                composer.get_variable(accumulators.right[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t right_result = static_cast<uint32_t>(right_source.data[0]);
 
-            fr::field_t out_source = fr::from_montgomery_form(composer.get_variable(accumulators.out[j + (extra_bits >> 1)]));
+            fr out_source =
+                composer.get_variable(accumulators.out[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t out_result = static_cast<uint32_t>(out_source.data[0]);
 
             EXPECT_EQ(left_result, left_expected);
             EXPECT_EQ(right_result, right_expected);
             EXPECT_EQ(out_result, out_expected);
         }
-        for (uint32_t j = 1; j < 16; ++j)
-        {
-            uint32_t left = (left_value >> (30U - (2* j)));
-            uint32_t right = (left_value >> (30U - (2* (j - 1))));
+        for (uint32_t j = 1; j < 16; ++j) {
+            uint32_t left = (left_value >> (30U - (2 * j)));
+            uint32_t right = (left_value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
 
-            left = (right_value >> (30U - (2* j)));
-            right = (right_value >> (30U - (2* (j - 1))));
+            left = (right_value >> (30U - (2 * j)));
+            right = (right_value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
 
-            left = (out_value >> (30U - (2* j)));
-            right = (out_value >> (30U - (2* (j - 1))));
+            left = (out_value >> (30U - (2 * j)));
+            right = (out_value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
         }
     }
 
-    uint32_t zero_idx = composer.add_variable(fr::zero);
-    uint32_t one_idx = composer.add_variable(fr::one);
-    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+    uint32_t zero_idx = composer.add_variable(fr::zero());
+    uint32_t one_idx = composer.add_variable(fr::one());
+    composer.create_big_add_gate({ zero_idx,
+                                   zero_idx,
+                                   zero_idx,
+                                   one_idx,
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::neg_one() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -293,61 +321,70 @@ TEST(standard_composer, xor_constraint)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
 
-    for (size_t i = 0; i < /*10*/1; ++i)
-    {
-        uint32_t left_value = get_pseudorandom_uint32();
+    for (size_t i = 0; i < /*10*/ 1; ++i) {
+        uint32_t left_value = test_helpers::get_pseudorandom_uint32();
 
-        fr::field_t left_witness_value = fr::to_montgomery_form({{ left_value, 0, 0, 0 }});
+        fr left_witness_value = fr{ left_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t left_witness_index = composer.add_variable(left_witness_value);
 
-        uint32_t right_value = get_pseudorandom_uint32();
-        fr::field_t right_witness_value = fr::to_montgomery_form({{ right_value, 0, 0, 0 }});
+        uint32_t right_value = test_helpers::get_pseudorandom_uint32();
+        fr right_witness_value = fr{ right_value, 0, 0, 0 }.to_montgomery_form();
         uint32_t right_witness_index = composer.add_variable(right_witness_value);
 
         uint32_t out_value = left_value ^ right_value;
         // include non-nice numbers of bits, that will bleed over gate boundaries
         size_t extra_bits = 2 * (i % 4);
-    
-        waffle::accumulator_triple accumulators = composer.create_xor_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
 
-        for (uint32_t j = 0; j < 16; ++j)
-        {
-            uint32_t left_expected = (left_value >> (30U - (2* j)));
-            uint32_t right_expected = (right_value >> (30U - (2* j)));
+        waffle::accumulator_triple accumulators =
+            composer.create_xor_constraint(left_witness_index, right_witness_index, 32 + extra_bits);
+
+        for (uint32_t j = 0; j < 16; ++j) {
+            uint32_t left_expected = (left_value >> (30U - (2 * j)));
+            uint32_t right_expected = (right_value >> (30U - (2 * j)));
             uint32_t out_expected = left_expected ^ right_expected;
 
-            fr::field_t left_source = fr::from_montgomery_form(composer.get_variable(accumulators.left[j + (extra_bits >> 1)]));
+            fr left_source =
+                composer.get_variable(accumulators.left[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t left_result = static_cast<uint32_t>(left_source.data[0]);
 
-            fr::field_t right_source = fr::from_montgomery_form(composer.get_variable(accumulators.right[j + (extra_bits >> 1)]));
+            fr right_source =
+                composer.get_variable(accumulators.right[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t right_result = static_cast<uint32_t>(right_source.data[0]);
 
-            fr::field_t out_source = fr::from_montgomery_form(composer.get_variable(accumulators.out[j + (extra_bits >> 1)]));
+            fr out_source =
+                composer.get_variable(accumulators.out[j + (extra_bits >> 1)]).from_montgomery_form();
             uint32_t out_result = static_cast<uint32_t>(out_source.data[0]);
 
             EXPECT_EQ(left_result, left_expected);
             EXPECT_EQ(right_result, right_expected);
             EXPECT_EQ(out_result, out_expected);
         }
-        for (uint32_t j = 1; j < 16; ++j)
-        {
-            uint32_t left = (left_value >> (30U - (2* j)));
-            uint32_t right = (left_value >> (30U - (2* (j - 1))));
+        for (uint32_t j = 1; j < 16; ++j) {
+            uint32_t left = (left_value >> (30U - (2 * j)));
+            uint32_t right = (left_value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
 
-            left = (right_value >> (30U - (2* j)));
-            right = (right_value >> (30U - (2* (j - 1))));
+            left = (right_value >> (30U - (2 * j)));
+            right = (right_value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
 
-            left = (out_value >> (30U - (2* j)));
-            right = (out_value >> (30U - (2* (j - 1))));
+            left = (out_value >> (30U - (2 * j)));
+            right = (out_value >> (30U - (2 * (j - 1))));
             EXPECT_EQ(left - 4 * right < 4, true);
         }
     }
 
-    uint32_t zero_idx = composer.add_variable(fr::zero);
-    uint32_t one_idx = composer.add_variable(fr::one);
-    composer.create_big_add_gate({ zero_idx, zero_idx, zero_idx, one_idx, fr::one, fr::one, fr::one, fr::one, fr::neg_one() });
+    uint32_t zero_idx = composer.add_variable(fr::zero());
+    uint32_t one_idx = composer.add_variable(fr::one());
+    composer.create_big_add_gate({ zero_idx,
+                                   zero_idx,
+                                   zero_idx,
+                                   one_idx,
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::one(),
+                                   fr::neg_one() });
 
     waffle::Prover prover = composer.preprocess();
 
@@ -364,28 +401,26 @@ TEST(standard_composer, big_add_gate_with_bit_extract)
 {
     waffle::StandardComposer composer = waffle::StandardComposer();
 
-
     const auto generate_constraints = [&composer](uint32_t quad_value) {
-        uint32_t quad_accumulator_left = (get_pseudorandom_uint32() & 0x3fffffff) - quad_value; // make sure this won't overflow
+        uint32_t quad_accumulator_left =
+            (test_helpers::get_pseudorandom_uint32() & 0x3fffffff) - quad_value; // make sure this won't overflow
         uint32_t quad_accumulator_right = (4 * quad_accumulator_left) + quad_value;
 
         uint32_t left_idx = composer.add_variable(uint256_t(quad_accumulator_left));
         uint32_t right_idx = composer.add_variable(uint256_t(quad_accumulator_right));
 
-        uint32_t input = get_pseudorandom_uint32();
+        uint32_t input = test_helpers::get_pseudorandom_uint32();
         uint32_t output = input + (quad_value > 1 ? 1 : 0);
 
-        waffle::add_quad gate{
-            composer.add_variable(uint256_t(input)),
-            composer.add_variable(uint256_t(output)),
-            right_idx,
-            left_idx,
-            fr::to_montgomery_form({{ 6, 0, 0, 0 }}),
-            fr::neg(fr::to_montgomery_form({{ 6, 0, 0, 0 }})),
-            fr::zero,
-            fr::zero,
-            fr::zero
-        };
+        waffle::add_quad gate{ composer.add_variable(uint256_t(input)),
+                               composer.add_variable(uint256_t(output)),
+                               right_idx,
+                               left_idx,
+                               fr(6),
+                               -fr(6),
+                               fr::zero(),
+                               fr::zero(),
+                               fr::zero() };
 
         composer.create_big_add_gate_with_bit_extraction(gate);
     };

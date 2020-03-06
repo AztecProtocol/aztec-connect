@@ -13,35 +13,35 @@ namespace polynomial_arithmetic
 {
 struct lagrange_evaluations
 {
-    fr::field_t vanishing_poly;
-    fr::field_t l_1;
-    fr::field_t l_n_minus_1;
+    fr vanishing_poly;
+    fr l_1;
+    fr l_n_minus_1;
 };
 
-fr::field_t evaluate(const fr::field_t *coeffs, const fr::field_t &z, const size_t n);
-void copy_polynomial(fr::field_t *src, fr::field_t *dest, size_t num_src_coefficients, size_t num_target_coefficients);
+fr evaluate(const fr *coeffs, const fr &z, const size_t n);
+void copy_polynomial(fr *src, fr *dest, size_t num_src_coefficients, size_t num_target_coefficients);
 
 //  2. Compute a lookup table of the roots of unity, and suffer through cache misses from nonlinear access patterns
-void fft_inner_serial(fr::field_t *coeffs, const size_t domain_size, const std::vector<fr::field_t*>& root_table);
-void fft_inner_parallel(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &, const std::vector<fr::field_t*> &root_table);
+void fft_inner_serial(fr *coeffs, const size_t domain_size, const std::vector<fr*>& root_table);
+void fft_inner_parallel(fr *coeffs, const evaluation_domain &domain, const fr &, const std::vector<fr*> &root_table);
 
-void fft(fr::field_t *coeffs, const evaluation_domain &domain);
-void fft_with_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &value);
+void fft(fr *coeffs, const evaluation_domain &domain);
+void fft_with_constant(fr *coeffs, const evaluation_domain &domain, const fr &value);
 
-void coset_fft(fr::field_t *coeffs, const evaluation_domain &domain);
-void coset_fft(fr::field_t *coeffs, const evaluation_domain& small_domain, const evaluation_domain& large_domain, const size_t domain_extension);
+void coset_fft(fr *coeffs, const evaluation_domain &domain);
+void coset_fft(fr *coeffs, const evaluation_domain& small_domain, const evaluation_domain& large_domain, const size_t domain_extension);
 
-void coset_fft_with_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &constant);
+void coset_fft_with_constant(fr *coeffs, const evaluation_domain &domain, const fr &constant);
 
-void ifft(fr::field_t *coeffs, const evaluation_domain &domain);
+void ifft(fr *coeffs, const evaluation_domain &domain);
 
-void ifft_with_constant(fr::field_t *coeffs, const evaluation_domain &domain, const fr::field_t &value);
+void ifft_with_constant(fr *coeffs, const evaluation_domain &domain, const fr &value);
 
-void coset_ifft(fr::field_t *coeffs, const evaluation_domain &domain);
+void coset_ifft(fr *coeffs, const evaluation_domain &domain);
 
-void add(const fr::field_t *a_coeffs, const fr::field_t *b_coeffs, fr::field_t *r_coeffs, const evaluation_domain &domain);
+void add(const fr *a_coeffs, const fr *b_coeffs, fr *r_coeffs, const evaluation_domain &domain);
 
-void mul(const fr::field_t *a_coeffs, const fr::field_t *b_coeffs, fr::field_t *r_coeffs, const evaluation_domain &domain);
+void mul(const fr *a_coeffs, const fr *b_coeffs, fr *r_coeffs, const evaluation_domain &domain);
 
 // For L_1(X) = (X^{n} - 1 / (X - 1)) * (1 / n)
 // Compute the 2n-fft of L_1(X)
@@ -49,18 +49,18 @@ void mul(const fr::field_t *a_coeffs, const fr::field_t *b_coeffs, fr::field_t *
 // We can consider `l_1_coefficients` to be a 2n-sized vector of the evaluations of L_1(X),
 // for all X = 2n'th roots of unity.
 // To compute the vector for the 2n-fft transform of L_i(X), we perform a (2i)-left-shift of this vector
-void compute_lagrange_polynomial_fft(fr::field_t *l_1_coefficients, const evaluation_domain &src_domain, const evaluation_domain &target_domain);
+void compute_lagrange_polynomial_fft(fr *l_1_coefficients, const evaluation_domain &src_domain, const evaluation_domain &target_domain);
 
-void divide_by_pseudo_vanishing_polynomial(fr::field_t *coeffs, const evaluation_domain &src_domain, const evaluation_domain &target_domain);
+void divide_by_pseudo_vanishing_polynomial(fr *coeffs, const evaluation_domain &src_domain, const evaluation_domain &target_domain);
 
-// void populate_with_vanishing_polynomial(fr::field_t* coeffs, const size_t num_non_zero_entries, const evaluation_domain& src_domain, const evaluation_domain& target_domain);
+// void populate_with_vanishing_polynomial(fr* coeffs, const size_t num_non_zero_entries, const evaluation_domain& src_domain, const evaluation_domain& target_domain);
 
-fr::field_t compute_kate_opening_coefficients(const fr::field_t *src, fr::field_t *dest, const fr::field_t &z, const size_t n);
+fr compute_kate_opening_coefficients(const fr *src, fr *dest, const fr &z, const size_t n);
 
 // compute Z_H*(z), l_1(z), l_{n-1}(z)
-lagrange_evaluations get_lagrange_evaluations(const fr::field_t &z, const evaluation_domain &domain);
-fr::field_t compute_barycentric_evaluation(fr::field_t *coeffs,const size_t num_coeffs, const fr::field_t &z,  const evaluation_domain &domain);
+lagrange_evaluations get_lagrange_evaluations(const fr &z, const evaluation_domain &domain);
+fr compute_barycentric_evaluation(fr *coeffs,const size_t num_coeffs, const fr &z,  const evaluation_domain &domain);
 // Convert an fft with `current_size` point evaluations, to one with `current_size >> compress_factor` point evaluations
-void compress_fft(const fr::field_t *src, fr::field_t *dest, const size_t current_size, const size_t compress_factor);
+void compress_fft(const fr *src, fr *dest, const size_t current_size, const size_t compress_factor);
 } // namespace polynomials
 } // namespace barretenberg

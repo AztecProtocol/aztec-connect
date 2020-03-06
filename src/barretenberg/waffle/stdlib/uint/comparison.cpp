@@ -1,10 +1,9 @@
 #include "./uint.hpp"
 
 #include "../../../curves/bn254/fr.hpp"
-#include "../../composer/turbo_composer.hpp"
-#include "../../composer/standard_composer.hpp"
-#include "../../composer/bool_composer.hpp"
 #include "../../composer/mimc_composer.hpp"
+#include "../../composer/standard_composer.hpp"
+#include "../../composer/turbo_composer.hpp"
 
 #include "../bool/bool.hpp"
 #include "../field/field.hpp"
@@ -14,7 +13,8 @@ using namespace barretenberg;
 namespace plonk {
 namespace stdlib {
 
-template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator>(const uint& other) const
+template <typename Composer, typename Native>
+bool_t<Composer> uint<Composer, Native>::operator>(const uint& other) const
 {
     Composer* ctx = (context == nullptr) ? other.context : context;
 
@@ -41,9 +41,9 @@ template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Na
         return bool_t<Composer>(ctx, lhs > rhs);
     }
 
-    const fr::field_t a = lhs;
-    const fr::field_t b = rhs;
-    const fr::field_t diff = fr::sub(a, b);
+    const fr a = lhs;
+    const fr b = rhs;
+    const fr diff = a - b;
 
     const uint32_t lhs_idx = is_constant() ? ctx->zero_idx : witness_index;
     const uint32_t rhs_idx = other.is_constant() ? ctx->zero_idx : other.witness_index;
@@ -52,10 +52,10 @@ template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Na
     const waffle::add_triple gate_a{ lhs_idx,
                                      rhs_idx,
                                      diff_idx,
-                                     fr::one,
+                                     fr::one(),
                                      fr::neg_one(),
                                      fr::neg_one(),
-                                     fr::sub(additive_constant, other.additive_constant) };
+                                     (additive_constant - other.additive_constant) };
 
     ctx->create_add_gate(gate_a);
 
@@ -63,37 +63,34 @@ template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Na
 
     const bool_t<Composer> result = witness_t(ctx, lhs > rhs);
 
-    const waffle::mul_quad gate_b{ diff_idx,
-                                   result.witness_index,
-                                   ctx->add_variable(delta),
-                                   ctx->zero_idx,
-                                   fr::neg(uint256_t(2)),
-                                   fr::one,
-                                   fr::one,
-                                   fr::one,
-                                   fr::zero,
-                                   fr::zero };
+    const waffle::mul_quad gate_b{ diff_idx,          result.witness_index, ctx->add_variable(delta), ctx->zero_idx,
+                                   -fr(2),   fr::one(),     fr::one(),         fr::one(),
+                                   fr::zero(), fr::zero() };
     ctx->create_big_mul_gate(gate_b);
 
     return result;
 }
 
-template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator<(const uint& other) const
+template <typename Composer, typename Native>
+bool_t<Composer> uint<Composer, Native>::operator<(const uint& other) const
 {
     return other > *this;
 }
 
-template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator>=(const uint& other) const
+template <typename Composer, typename Native>
+bool_t<Composer> uint<Composer, Native>::operator>=(const uint& other) const
 {
     return (!(other > *this)).normalize();
 }
 
-template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator<=(const uint& other) const
+template <typename Composer, typename Native>
+bool_t<Composer> uint<Composer, Native>::operator<=(const uint& other) const
 {
     return (!(*this > other)).normalize();
 }
 
-template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator==(const uint& other) const
+template <typename Composer, typename Native>
+bool_t<Composer> uint<Composer, Native>::operator==(const uint& other) const
 {
     // casting to a field type will ensure that lhs / rhs are both normalized
     const field_t<Composer> lhs = *this;
@@ -102,7 +99,8 @@ template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Na
     return (lhs == rhs).normalize();
 }
 
-template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Native>::operator!=(const uint& other) const
+template <typename Composer, typename Native>
+bool_t<Composer> uint<Composer, Native>::operator!=(const uint& other) const
 {
     return (!(*this == other)).normalize();
 }
@@ -111,7 +109,6 @@ template <typename Composer, typename Native> bool_t<Composer> uint<Composer, Na
 {
     return (field_t<Composer>(*this).is_zero()).normalize();
 }
-
 template class uint<waffle::TurboComposer, uint8_t>;
 template class uint<waffle::TurboComposer, uint16_t>;
 template class uint<waffle::TurboComposer, uint32_t>;
@@ -121,11 +118,6 @@ template class uint<waffle::StandardComposer, uint8_t>;
 template class uint<waffle::StandardComposer, uint16_t>;
 template class uint<waffle::StandardComposer, uint32_t>;
 template class uint<waffle::StandardComposer, uint64_t>;
-
-template class uint<waffle::BoolComposer, uint8_t>;
-template class uint<waffle::BoolComposer, uint16_t>;
-template class uint<waffle::BoolComposer, uint32_t>;
-template class uint<waffle::BoolComposer, uint64_t>;
 
 template class uint<waffle::MiMCComposer, uint8_t>;
 template class uint<waffle::MiMCComposer, uint16_t>;

@@ -14,6 +14,9 @@
 #include <iostream>
 #include <memory>
 
+#include "../test_helpers.hpp"
+
+namespace test_stdlib_sha256 {
 using namespace barretenberg;
 using namespace plonk;
 
@@ -22,13 +25,6 @@ typedef stdlib::uint32<waffle::TurboComposer> uint32;
 typedef stdlib::bitarray<waffle::TurboComposer> bitarray;
 typedef stdlib::witness_t<waffle::TurboComposer> witness_t;
 typedef stdlib::public_witness_t<waffle::TurboComposer> public_witness_t;
-
-namespace {
-uint32_t get_random_int()
-{
-    return static_cast<uint32_t>(barretenberg::fr::random_element().data[0]);
-}
-} // namespace
 
 // TEST(stdlib_sha256, test_sha256)
 // {
@@ -256,3 +252,5 @@ TEST(stdlib_sha256, test_NIST_vector_five)
     bool proof_result = verifier.verify_proof(proof);
     EXPECT_EQ(proof_result, true);
 }
+
+} // namespace test_stdlib_sha256

@@ -62,6 +62,7 @@ add_executable(
     test_transcript.cpp
     test_logic_identities.cpp
     uint256/test_uint256.cpp
+    uint256/test_uint512.cpp
     misc_crypto/test_schnorr.cpp
     misc_crypto/test_blake2s.cpp
     misc_crypto/test_sha256.cpp
@@ -74,7 +75,6 @@ add_executable(
     widgets/test_turbo_logic_widget.cpp
     composer/test_standard_composer.cpp
     composer/test_mimc_composer.cpp
-    composer/test_bool_composer.cpp
     composer/test_extended_composer.cpp
     composer/test_turbo_composer.cpp
     stdlib/test_stdlib_bool.cpp
@@ -89,10 +89,10 @@ add_executable(
     stdlib/test_stdlib_pedersen.cpp
     stdlib/test_stdlib_schnorr.cpp
     stdlib/test_stdlib_pedersen_note.cpp
-    noir/test_noir.cpp
     ${CONDITIONAL_SOURCES}
 )
 
+#     noir/test_noir.cpp
 set_target_properties(
     barretenberg_tests
     PROPERTIES
@@ -103,8 +103,8 @@ set_target_properties(
 target_include_directories(
     barretenberg_tests
     SYSTEM PRIVATE
-        ${private_include_dir}/boost
 )
+#         ${private_include_dir}/boost
 
 if(WASM)
     target_link_options(

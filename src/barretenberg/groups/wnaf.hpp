@@ -161,5 +161,13 @@ inline void fixed_wnaf_packed(const uint64_t *scalar, uint64_t *wnaf, bool &skew
     wnaf_round_packed<wnaf_bits, 1UL>(scalar, wnaf, point_index, previous);
 }
 
+
+// template <size_t wnaf_bits>
+// inline constexpr std::array<uint32_t, WNAF_SIZE(wnaf_bits)> fixed_wnaf(const uint64_t *scalar) const noexcept
+// {
+//     bool skew_map = ((scalar[0] * 1) == 0);
+//     uint64_t previous = get_wnaf_bits_const<wnaf_bits, 0>(scalar) + (uint64_t)skew_map;
+//     std::array<uint32_t, WNAF_SIZE(wnaf_bits)> result;
+// }
 } // namespace wnaf
 } // namespace barretenberg

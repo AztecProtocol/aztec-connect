@@ -115,30 +115,30 @@ namespace waffle {
  * the memory cells on the second column map to our public inputs. We can then use traditional copy constraints to map
  * these cells to other locations in program memory.
  **/
-fr::field_t compute_public_input_delta(const std::vector<barretenberg::fr::field_t>& inputs,
-                                       const fr::field_t& beta,
-                                       const fr::field_t& gamma,
-                                       const fr::field_t& subgroup_generator)
+fr compute_public_input_delta(const std::vector<barretenberg::fr>& inputs,
+                                       const fr& beta,
+                                       const fr& gamma,
+                                       const fr& subgroup_generator)
 {
-    fr::field_t numerator = fr::one;
-    fr::field_t denominator = fr::one;
+    fr numerator = fr::one();
+    fr denominator = fr::one();
 
-    fr::field_t work_root = fr::one;
-    fr::field_t T0;
-    fr::field_t T1;
-    fr::field_t T2;
+    fr work_root = fr::one();
+    fr T0;
+    fr T1;
+    fr T2;
     for (const auto& witness : inputs) {
-        fr::__add(witness, gamma, T0);
-        fr::__mul(work_root, beta, T1);
-        fr::__mul(T1, fr::coset_generators[0], T2);
-        fr::__add(T1, T0, T1);
-        fr::__add(T2, T0, T2);
-        fr::__mul(numerator, T2, numerator);
-        fr::__mul(denominator, T1, denominator);
-        fr::__mul(work_root, subgroup_generator, work_root);
+        T0 = witness + gamma;
+        T1 = work_root * beta;
+        T2 = T1 * fr::coset_generator(0);
+        T1 += T0;
+        T2 += T0;
+        numerator *= T2;
+        denominator *= T1;
+        work_root *= subgroup_generator;
     }
-    fr::__invert(denominator, denominator);
-    fr::__mul(denominator, numerator, T0);
+    denominator = denominator.invert();
+    T0 = denominator * numerator;
     return T0;
 }
 } // namespace waffle

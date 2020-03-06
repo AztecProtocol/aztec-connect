@@ -30,16 +30,13 @@ struct constant : x3::variant<unsigned int, bool> {
 
 struct array : std::vector<expression> {};
 
-struct operand : x3::variant<nil,
-                             constant,
-                             array,
-                             variable,
-                             x3::forward_ast<unary>,
-                             x3::forward_ast<function_call>,
-                             x3::forward_ast<expression>> {
-    using base_type::base_type;
-    using base_type::operator=;
-};
+using operand = x3::variant<nil,
+                            constant,
+                            array,
+                            variable,
+                            x3::forward_ast<unary>,
+                            x3::forward_ast<function_call>,
+                            x3::forward_ast<expression>>;
 
 enum optoken {
     op_plus,
@@ -149,7 +146,8 @@ struct statement : x3::variant<function_declaration, variable_declaration, boost
 
 struct statement_list : std::vector<statement> {};
 
-typedef x3::variant<variable_declaration, expression, assignment, boost::recursive_wrapper<for_statement>, return_expr> function_statement;
+typedef x3::variant<variable_declaration, expression, assignment, boost::recursive_wrapper<for_statement>, return_expr>
+    function_statement;
 
 struct function_statement_list : std::vector<function_statement> {};
 

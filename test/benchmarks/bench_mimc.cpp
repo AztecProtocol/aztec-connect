@@ -23,7 +23,7 @@ void generate_test_mimc_circuit(waffle::MiMCComposer& mimc_composer, size_t num_
     plonk::stdlib::field_t<waffle::MiMCComposer> mimc_input(
         plonk::stdlib::witness_t(&mimc_composer, barretenberg::fr::random_element()));
     plonk::stdlib::field_t<waffle::MiMCComposer> mimc_k(
-        plonk::stdlib::witness_t(&mimc_composer, barretenberg::fr::zero));
+        plonk::stdlib::witness_t(&mimc_composer, barretenberg::fr::zero()));
     plonk::stdlib::field_t<waffle::MiMCComposer> mimc_output(&mimc_composer);
 
     for (size_t i = 0; i < num_repetitions; ++i) {
@@ -31,8 +31,8 @@ void generate_test_mimc_circuit(waffle::MiMCComposer& mimc_composer, size_t num_
     }
 }
 
-waffle::ExtendedProver mimc_provers[NUM_CIRCUITS];
-waffle::ExtendedVerifier mimc_verifiers[NUM_CIRCUITS];
+waffle::Prover mimc_provers[NUM_CIRCUITS];
+waffle::Verifier mimc_verifiers[NUM_CIRCUITS];
 waffle::plonk_proof mimc_proofs[NUM_CIRCUITS];
 
 void construct_mimc_witnesses_bench(State& state) noexcept

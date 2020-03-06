@@ -6,6 +6,7 @@ using namespace benchmark;
 #include <math.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 #include <vector>
 
 #include <barretenberg/types.hpp>
@@ -30,56 +31,58 @@ using namespace barretenberg;
 constexpr size_t MAX_GATES = 1 << 20;
 constexpr size_t START = (1 << 20) >> 7;
 
-#define CIRCUIT_STATE_SIZE(x) ((x * 17 * sizeof(fr::field_t)) + (x * 3 * sizeof(uint32_t)))
-#define FFT_SIZE(x) (x * 22 * sizeof(fr::field_t))
+#define CIRCUIT_STATE_SIZE(x) ((x * 17 * sizeof(fr)) + (x * 3 * sizeof(uint32_t)))
+#define FFT_SIZE(x) (x * 22 * sizeof(fr))
 
 struct global_vars {
-    alignas(32) g1::affine_element g1_pair_points[2];
-    alignas(32) g2::affine_element g2_pair_points[2];
+    g1::affine_element g1_pair_points[2];
+    g2::affine_element g2_pair_points[2];
     std::vector<waffle::Verifier> plonk_instances;
     waffle::plonk_proof plonk_proof;
     waffle::ReferenceString reference_string;
     std::vector<waffle::plonk_proof> plonk_proofs;
-    fr::field_t* data;
-    fr::field_t* scalars;
-    fr::field_t* roots;
-    fr::field_t* coefficients;
+    fr* data;
+    fr* scalars;
+    fr* roots;
+    fr* coefficients;
 };
 
 global_vars globals;
 
 barretenberg::evaluation_domain evaluation_domains[10]{
-    barretenberg::evaluation_domain(START),      barretenberg::evaluation_domain(START * 2),  barretenberg::evaluation_domain(START * 4),  barretenberg::evaluation_domain(START * 8),
-    barretenberg::evaluation_domain(START * 16), barretenberg::evaluation_domain(START * 32), barretenberg::evaluation_domain(START * 64), barretenberg::evaluation_domain(START * 128),
+    barretenberg::evaluation_domain(START),       barretenberg::evaluation_domain(START * 2),
+    barretenberg::evaluation_domain(START * 4),   barretenberg::evaluation_domain(START * 8),
+    barretenberg::evaluation_domain(START * 16),  barretenberg::evaluation_domain(START * 32),
+    barretenberg::evaluation_domain(START * 64),  barretenberg::evaluation_domain(START * 128),
     barretenberg::evaluation_domain(START * 256), barretenberg::evaluation_domain(START * 512)
 };
 
-void generate_scalars(fr::field_t* scalars)
+void generate_scalars(fr* scalars)
 {
-    fr::field_t T0 = fr::random_element();
-    fr::field_t acc;
+    fr T0 = fr::random_element();
+    fr acc;
     fr::__copy(T0, acc);
     for (size_t i = 0; i < MAX_GATES; ++i) {
-        fr::__mul(acc, T0, acc);
+        acc *= T0;
         fr::__copy(acc, scalars[i]);
     }
 }
 
 void generate_pairing_points(g1::affine_element* p1s, g2::affine_element* p2s)
 {
-    p1s[0] = g1::random_affine_element();
-    p1s[1] = g1::random_affine_element();
-    p2s[0] = g2::random_affine_element();
-    p2s[1] = g2::random_affine_element();
+    p1s[0] = g1::affine_element(g1::element::random_element());
+    p1s[1] = g1::affine_element(g1::element::random_element());
+    p2s[0] = g2::affine_element(g2::element::random_element());
+    p2s[1] = g2::affine_element(g2::element::random_element());
 }
 
 constexpr size_t MAX_ROUNDS = 9;
 const auto init = []() {
     printf("generating test data\n");
     globals.reference_string = waffle::ReferenceString(MAX_GATES, BARRETENBERG_SRS_PATH);
-    globals.scalars = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * MAX_GATES * MAX_ROUNDS));
+    globals.scalars = (fr*)(aligned_alloc(32, sizeof(fr) * MAX_GATES * MAX_ROUNDS));
     std::string my_file_path = std::string(BARRETENBERG_SRS_PATH);
-    globals.data = (fr::field_t*)(aligned_alloc(32, sizeof(fr::field_t) * (8 * 17 * MAX_GATES)));
+    globals.data = (fr*)(aligned_alloc(32, sizeof(fr) * (8 * 17 * MAX_GATES)));
 
     generate_pairing_points(&globals.g1_pair_points[0], &globals.g2_pair_points[0]);
     for (size_t i = 0; i < MAX_ROUNDS; ++i) {
@@ -87,8 +90,7 @@ const auto init = []() {
     }
     globals.plonk_instances.resize(8);
     globals.plonk_proofs.resize(8);
-    for (size_t i = 0; i < 10; ++i)
-    {
+    for (size_t i = 0; i < 10; ++i) {
         evaluation_domains[i].compute_lookup_table();
     }
     printf("finished generating test data\n");
@@ -111,20 +113,20 @@ uint64_t rdtsc()
 }
 
 constexpr size_t NUM_SQUARINGS = 10000000;
-inline fq::field_t fq_sqr_asm(fq::field_t& a, fq::field_t& r) noexcept
+inline fq fq_sqr_asm(fq& a, fq& r) noexcept
 {
     for (size_t i = 0; i < NUM_SQUARINGS; ++i) {
-        fq::__sqr(a, r);
+        r = a.sqr();
     }
     DoNotOptimize(r);
     return r;
 }
 
 constexpr size_t NUM_MULTIPLICATIONS = 10000000;
-inline fq::field_t fq_mul_asm(fq::field_t& a, fq::field_t& r) noexcept
+inline fq fq_mul_asm(fq& a, fq& r) noexcept
 {
     for (size_t i = 0; i < NUM_MULTIPLICATIONS; ++i) {
-        fq::__mul(a, r, r);
+        r = a * r;
     }
     DoNotOptimize(r);
     return r;
@@ -148,7 +150,6 @@ void pippenger_bench(State& state) noexcept
 }
 BENCHMARK(pippenger_bench)->RangeMultiplier(2)->Range(START, MAX_GATES);
 
-
 void unsafe_pippenger_bench(State& state) noexcept
 {
     uint64_t count = 0;
@@ -156,7 +157,8 @@ void unsafe_pippenger_bench(State& state) noexcept
     uint64_t i = 0;
     for (auto _ : state) {
         uint64_t before = rdtsc();
-        scalar_multiplication::pippenger_unsafe(&globals.scalars[0], &globals.reference_string.monomials[0], num_points);
+        scalar_multiplication::pippenger_unsafe(
+            &globals.scalars[0], &globals.reference_string.monomials[0], num_points);
         uint64_t after = rdtsc();
         count += (after - before);
         ++i;
@@ -166,7 +168,6 @@ void unsafe_pippenger_bench(State& state) noexcept
     printf("unsafe pippenger clock cycles per mul = %" PRIu64 "\n", (avg_cycles / (MAX_GATES)));
 }
 BENCHMARK(unsafe_pippenger_bench)->RangeMultiplier(2)->Range(1 << 20, 1 << 20);
-
 
 void new_plonk_scalar_multiplications_bench(State& state) noexcept
 {
@@ -196,17 +197,16 @@ void new_plonk_scalar_multiplications_bench(State& state) noexcept
         count += (after - before);
         ++k;
         g1::element out;
-        g1::set_infinity(out);
-        g1::add(a, out, out);
-        g1::add(b, out, out);
-        g1::add(c, out, out);
-        g1::add(d, out, out);
-        g1::add(e, out, out);
-        g1::add(f, out, out);
-        g1::add(g, out, out);
-        g1::add(h, out, out);
-        g1::add(i, out, out);
-        g1::print(out);
+        out.self_set_infinity();
+        out = a + out;
+        out = b + out;
+        out = c + out;
+        out = d + out;
+        out = e + out;
+        out = f + out;
+        out = g + out;
+        out = h + out;
+        out = i + out;
     }
     uint64_t avg_cycles = count / k;
     printf("plonk clock cycles = %" PRIu64 "\n", (avg_cycles));
@@ -228,7 +228,8 @@ void alternate_coset_fft_bench_parallel(State& state) noexcept
 {
     for (auto _ : state) {
         size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
-        barretenberg::polynomial_arithmetic::coset_fft(globals.data, evaluation_domains[idx - 2], evaluation_domains[idx - 2], 4);
+        barretenberg::polynomial_arithmetic::coset_fft(
+            globals.data, evaluation_domains[idx - 2], evaluation_domains[idx - 2], 4);
     }
 }
 BENCHMARK(alternate_coset_fft_bench_parallel)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
@@ -247,9 +248,7 @@ void fft_bench_serial(State& state) noexcept
     for (auto _ : state) {
         size_t idx = (size_t)log2(state.range(0)) - (size_t)log2(START);
         barretenberg::polynomial_arithmetic::fft_inner_serial(
-            globals.data,
-            evaluation_domains[idx].thread_size,
-            evaluation_domains[idx].get_round_roots());
+            globals.data, evaluation_domains[idx].thread_size, evaluation_domains[idx].get_round_roots());
     }
 }
 BENCHMARK(fft_bench_serial)->RangeMultiplier(2)->Range(START * 4, MAX_GATES * 4);
@@ -291,12 +290,12 @@ void add_bench(State& state) noexcept
 {
     uint64_t count = 0;
     uint64_t j = 0;
-    g1::element a = g1::random_element();
-    g1::element b = g1::random_element();
+    g1::element a = g1::element::random_element();
+    g1::element b = g1::element::random_element();
     for (auto _ : state) {
         uint64_t before = rdtsc();
         for (size_t i = 0; i < NUM_G1_ADDITIONS; ++i) {
-            g1::add(a, b, a);
+            a += b;
         }
         uint64_t after = rdtsc();
         count += (after - before);
@@ -310,12 +309,12 @@ void mixed_add_bench(State& state) noexcept
 {
     uint64_t count = 0;
     uint64_t j = 0;
-    g1::element a = g1::random_element();
-    g1::affine_element b = g1::random_affine_element();
+    g1::element a = g1::element::random_element();
+    g1::affine_element b = g1::affine_element(g1::element::random_element());
     for (auto _ : state) {
         uint64_t before = rdtsc();
         for (size_t i = 0; i < NUM_G1_ADDITIONS; ++i) {
-            g1::mixed_add(a, b, a);
+            a += b;
         }
         uint64_t after = rdtsc();
         count += (after - before);
@@ -330,8 +329,8 @@ void fq_sqr_asm_bench(State& state) noexcept
 {
     uint64_t count = 0;
     uint64_t i = 0;
-    fq::field_t a{ { 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
-    fq::field_t r{ { 1, 0, 0, 0 } };
+    fq a{ 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 };
+    fq r{ 1, 0, 0, 0 };
     for (auto _ : state) {
         size_t before = rdtsc();
         (DoNotOptimize(fq_sqr_asm(a, r)));
@@ -348,8 +347,8 @@ void fq_mul_asm_bench(State& state) noexcept
 {
     uint64_t count = 0;
     uint64_t i = 0;
-    fq::field_t a{ { 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 } };
-    fq::field_t r{ { 1, 0, 0, 0 } };
+    fq a{ 0x1122334455667788, 0x8877665544332211, 0x0123456701234567, 0x0efdfcfbfaf9f8f7 };
+    fq r{ 1, 0, 0, 0 };
     for (auto _ : state) {
         size_t before = rdtsc();
         (DoNotOptimize(fq_mul_asm(a, r)));

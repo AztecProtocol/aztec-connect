@@ -37,7 +37,7 @@ class TurboComposer : public ComposerBase {
     void create_poly_gate(const poly_triple& in) override;
     void create_fixed_group_add_gate(const fixed_group_add_quad& in);
     void create_fixed_group_add_gate_with_init(const fixed_group_add_quad& in, const fixed_group_init_quad& init);
-    void fix_witness(const uint32_t witness_index, const barretenberg::fr::field_t& witness_value);
+    void fix_witness(const uint32_t witness_index, const barretenberg::fr& witness_value);
 
     std::vector<uint32_t> create_range_constraint(const uint32_t witness_index, const size_t num_bits);
     accumulator_triple create_logic_constraint(const uint32_t a,
@@ -47,21 +47,21 @@ class TurboComposer : public ComposerBase {
     accumulator_triple create_and_constraint(const uint32_t a, const uint32_t b, const size_t num_bits);
     accumulator_triple create_xor_constraint(const uint32_t a, const uint32_t b, const size_t num_bits);
 
-    uint32_t put_constant_variable(const barretenberg::fr::field_t& variable);
+    uint32_t put_constant_variable(const barretenberg::fr& variable);
 
     void create_dummy_gates();
     size_t get_num_constant_gates() const override { return 0; }
 
-    void assert_equal_constant(const uint32_t a_idx, const barretenberg::fr::field_t& b)
+    void assert_equal_constant(const uint32_t a_idx, const barretenberg::fr& b)
     {
         const add_triple gate_coefficients{
             a_idx,
             a_idx,
             a_idx,
-            barretenberg::fr::one,
-            barretenberg::fr::zero,
-            barretenberg::fr::zero,
-            barretenberg::fr::neg(b),
+            barretenberg::fr::one(),
+            barretenberg::fr::zero(),
+            barretenberg::fr::zero(),
+            -b,
         };
         create_add_gate(gate_coefficients);
     }
@@ -69,19 +69,19 @@ class TurboComposer : public ComposerBase {
     uint32_t zero_idx = 0;
 
     // these are variables that we have used a gate on, to enforce that they are equal to a defined value
-    std::map<barretenberg::fr::field_t, uint32_t> constant_variables;
+    std::map<barretenberg::fr, uint32_t> constant_variables;
 
-    std::vector<barretenberg::fr::field_t> q_m;
-    std::vector<barretenberg::fr::field_t> q_c;
-    std::vector<barretenberg::fr::field_t> q_1;
-    std::vector<barretenberg::fr::field_t> q_2;
-    std::vector<barretenberg::fr::field_t> q_3;
-    std::vector<barretenberg::fr::field_t> q_4;
-    std::vector<barretenberg::fr::field_t> q_5;
-    std::vector<barretenberg::fr::field_t> q_arith;
-    std::vector<barretenberg::fr::field_t> q_ecc_1;
-    std::vector<barretenberg::fr::field_t> q_range;
-    std::vector<barretenberg::fr::field_t> q_logic;
+    std::vector<barretenberg::fr> q_m;
+    std::vector<barretenberg::fr> q_c;
+    std::vector<barretenberg::fr> q_1;
+    std::vector<barretenberg::fr> q_2;
+    std::vector<barretenberg::fr> q_3;
+    std::vector<barretenberg::fr> q_4;
+    std::vector<barretenberg::fr> q_5;
+    std::vector<barretenberg::fr> q_arith;
+    std::vector<barretenberg::fr> q_ecc_1;
+    std::vector<barretenberg::fr> q_range;
+    std::vector<barretenberg::fr> q_logic;
 
     static transcript::Manifest create_manifest(const size_t num_public_inputs)
     {

@@ -56,7 +56,7 @@ void assert_check_membership(Ctx& ctx,
 {
     auto exists = stdlib::merkle_tree::check_membership(ctx, root, hashes, value, index);
     // std::cout << "assert check membership " << exists << std::endl;
-    ctx.assert_equal_constant(exists.witness_index, fr::one);
+    ctx.assert_equal_constant(exists.witness_index, fr::one());
 }
 
 template <typename Ctx>
@@ -80,7 +80,7 @@ void update_membership(Ctx& ctx,
         bool_t path_bit = index.get_bit(i);
         bool_t share_left = (old_hashes[i].first == new_hashes[i].first) & path_bit;
         bool_t share_right = (old_hashes[i].second == new_hashes[i].second) & !path_bit;
-        ctx.assert_equal_constant((share_left ^ share_right).witness_index, barretenberg::fr::one);
+        ctx.assert_equal_constant((share_left ^ share_right).witness_index, barretenberg::fr::one());
     }
 }
 

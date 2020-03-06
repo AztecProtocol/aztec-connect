@@ -1,25 +1,10 @@
+#include "../test_helpers.hpp"
 #include <barretenberg/curves/bn254/fr.hpp>
 #include <barretenberg/uint256/uint256.hpp>
 #include <gtest/gtest.h>
-
 #include <random>
 
-namespace {
-std::mt19937 engine;
-std::uniform_int_distribution<uint64_t> dist{ 0ULL, UINT64_MAX };
-
-const auto init = []() {
-    // std::random_device rd{};
-    std::seed_seq seed2{ 1, 2, 3, 4, 5, 6, 7, 8 };
-    engine = std::mt19937(seed2);
-    return 1;
-}();
-
-uint256_t get_pseudorandom_uint256()
-{
-    return { dist(engine), dist(engine), dist(engine), dist(engine) };
-}
-} // namespace
+using namespace barretenberg;
 
 TEST(uint256, get_bit)
 {
@@ -54,10 +39,23 @@ TEST(uint256, add)
     EXPECT_EQ(d.data[3], 12ULL);
 }
 
+TEST(uint256, get_msb)
+{
+    uint256_t a{ 0, 0, 1, 1 };
+    uint256_t b{ 1, 0, 1, 0 };
+    uint256_t c{ 0, 1, 0, 0 };
+    uint256_t d{ 1, 0, 0, 0 };
+
+    EXPECT_EQ(a.get_msb(), 192ULL);
+    EXPECT_EQ(b.get_msb(), 128ULL);
+    EXPECT_EQ(c.get_msb(), 64ULL);
+    EXPECT_EQ(d.get_msb(), 0ULL);
+}
+
 TEST(uint256, mul)
 {
-    uint256_t a = get_pseudorandom_uint256();
-    uint256_t b = get_pseudorandom_uint256();
+    uint256_t a = test_helpers::get_pseudorandom_uint256();
+    uint256_t b = test_helpers::get_pseudorandom_uint256();
 
     uint256_t c = (a + b) * (a + b);
     uint256_t d = (a * a) + (b * b) + (a * b) + (a * b);
@@ -69,9 +67,9 @@ TEST(uint256, mul)
 
 TEST(uint256, div_and_mod)
 {
-    for (size_t i = 0; i < 4; ++i) {
-        uint256_t a = get_pseudorandom_uint256();
-        uint256_t b = get_pseudorandom_uint256();
+    for (size_t i = 0; i < 256; ++i) {
+        uint256_t a = test_helpers::get_pseudorandom_uint256();
+        uint256_t b = test_helpers::get_pseudorandom_uint256();
 
         b.data[3] = (i > 0) ? 0 : b.data[3];
         b.data[2] = (i > 1) ? 0 : b.data[2];
@@ -86,7 +84,7 @@ TEST(uint256, div_and_mod)
         EXPECT_EQ(c.data[3], a.data[3]);
     }
 
-    uint256_t a = get_pseudorandom_uint256();
+    uint256_t a = test_helpers::get_pseudorandom_uint256();
     uint256_t b = 0;
 
     uint256_t q = a / b;
@@ -105,8 +103,8 @@ TEST(uint256, div_and_mod)
 
 TEST(uint256, sub)
 {
-    uint256_t a = get_pseudorandom_uint256();
-    uint256_t b = get_pseudorandom_uint256();
+    uint256_t a = test_helpers::get_pseudorandom_uint256();
+    uint256_t b = test_helpers::get_pseudorandom_uint256();
 
     uint256_t c = (a - b) * (a + b);
     uint256_t d = (a * a) - (b * b);
@@ -163,8 +161,8 @@ TEST(uint256, left_shift)
 
 TEST(uint256, and)
 {
-    uint256_t a = get_pseudorandom_uint256();
-    uint256_t b = get_pseudorandom_uint256();
+    uint256_t a = test_helpers::get_pseudorandom_uint256();
+    uint256_t b = test_helpers::get_pseudorandom_uint256();
 
     uint256_t c = a & b;
 
@@ -176,8 +174,8 @@ TEST(uint256, and)
 
 TEST(uint256, or)
 {
-    uint256_t a = get_pseudorandom_uint256();
-    uint256_t b = get_pseudorandom_uint256();
+    uint256_t a = test_helpers::get_pseudorandom_uint256();
+    uint256_t b = test_helpers::get_pseudorandom_uint256();
 
     uint256_t c = a | b;
 
@@ -189,8 +187,8 @@ TEST(uint256, or)
 
 TEST(uint256, xor)
 {
-    uint256_t a = get_pseudorandom_uint256();
-    uint256_t b = get_pseudorandom_uint256();
+    uint256_t a = test_helpers::get_pseudorandom_uint256();
+    uint256_t b = test_helpers::get_pseudorandom_uint256();
 
     uint256_t c = a ^ b;
 
@@ -202,7 +200,7 @@ TEST(uint256, xor)
 
 TEST(uint256, bit_not)
 {
-    uint256_t a = get_pseudorandom_uint256();
+    uint256_t a = test_helpers::get_pseudorandom_uint256();
 
     uint256_t c = ~a;
 
@@ -306,11 +304,11 @@ TEST(uint256, greater_than_or_equal)
 
 TEST(uint256, field_conversions)
 {
-    uint256_t a{ 0x1111, 0x2222, 0x3333, 0x4444 };
+    constexpr uint256_t a{ 0x1111, 0x2222, 0x3333, 0x4444 };
 
-    barretenberg::fr::field_t b;
-    b = a.operator barretenberg::fr::field_t();
-    uint256_t c = b;
+    constexpr barretenberg::fr b(a);
+    constexpr uint256_t c = b;
 
+    static_assert(a == c);
     EXPECT_EQ(a, c);
 }

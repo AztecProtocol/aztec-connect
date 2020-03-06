@@ -20,19 +20,34 @@ TEST(polynomials, domain_roots)
     size_t n = 256;
     evaluation_domain domain = evaluation_domain(n);
 
-    fr::field_t result;
-    fr::field_t expected;
-    expected = fr::one;
-    fr::__pow_small(domain.root, n, result);
+    fr result;
+    fr expected;
+    expected = fr::one();
+    result = domain.root.pow(static_cast<uint64_t>(n));
 
-    EXPECT_EQ(fr::eq(result, expected), true);
+    EXPECT_EQ((result == expected), true);
 }
 
+TEST(polynomials, evaluation_domain_roots)
+{
+    constexpr size_t n = 16;
+    evaluation_domain domain(n);
+    domain.compute_lookup_table();
+    std::vector<fr*> root_table = domain.get_round_roots();
+    std::vector<fr*> inverse_root_table = domain.get_inverse_round_roots();
+    fr* roots = root_table[root_table.size() - 1];
+    fr* inverse_roots = inverse_root_table[inverse_root_table.size() - 1];
+    for (size_t i = 0; i < (n - 1) / 2; ++i) {
+        EXPECT_EQ(roots[i] * domain.root, roots[i + 1]);
+        EXPECT_EQ(inverse_roots[i] * domain.root_inverse, inverse_roots[i + 1]);
+        EXPECT_EQ(roots[i] * inverse_roots[i], fr::one());
+    }
+}
 TEST(polynomials, fft_with_small_degree)
 {
     size_t n = 16;
-    fr::field_t fft_transform[n];
-    fr::field_t poly[n];
+    fr fft_transform[n];
+    fr poly[n];
 
     for (size_t i = 0; i < n; ++i) {
         poly[i] = fr::random_element();
@@ -43,22 +58,22 @@ TEST(polynomials, fft_with_small_degree)
     domain.compute_lookup_table();
     polynomial_arithmetic::fft(fft_transform, domain);
 
-    fr::field_t work_root;
-    work_root = fr::one;
-    fr::field_t expected;
+    fr work_root;
+    work_root = fr::one();
+    fr expected;
     for (size_t i = 0; i < n; ++i) {
         expected = polynomial_arithmetic::evaluate(poly, work_root, n);
-        EXPECT_EQ(fr::eq(fft_transform[i], expected), true);
-        fr::__mul(work_root, domain.root, work_root);
+        EXPECT_EQ((fft_transform[i] == expected), true);
+        work_root *= domain.root;
     }
 }
 
 TEST(polynomials, basic_fft)
 {
     size_t n = 1 << 14;
-    fr::field_t* data = (fr::field_t*)aligned_alloc(32, sizeof(fr::field_t) * n * 2);
-    fr::field_t* result = &data[0];
-    fr::field_t* expected = &data[n];
+    fr* data = (fr*)aligned_alloc(32, sizeof(fr) * n * 2);
+    fr* result = &data[0];
+    fr* expected = &data[n];
     for (size_t i = 0; i < n; ++i) {
         result[i] = fr::random_element();
         fr::__copy(result[i], expected[i]);
@@ -70,7 +85,7 @@ TEST(polynomials, basic_fft)
     polynomial_arithmetic::ifft(result, domain);
 
     for (size_t i = 0; i < n; ++i) {
-        EXPECT_EQ(fr::eq(result[i], expected[i]), true);
+        EXPECT_EQ((result[i] == expected[i]), true);
     }
     aligned_free(data);
 }
@@ -78,8 +93,8 @@ TEST(polynomials, basic_fft)
 TEST(polynomials, fft_ifft_consistency)
 {
     size_t n = 256;
-    fr::field_t result[n];
-    fr::field_t expected[n];
+    fr result[n];
+    fr expected[n];
     for (size_t i = 0; i < n; ++i) {
         result[i] = fr::random_element();
         fr::__copy(result[i], expected[i]);
@@ -91,15 +106,15 @@ TEST(polynomials, fft_ifft_consistency)
     polynomial_arithmetic::ifft(result, domain);
 
     for (size_t i = 0; i < n; ++i) {
-        EXPECT_EQ(fr::eq(result[i], expected[i]), true);
+        EXPECT_EQ((result[i] == expected[i]), true);
     }
 }
 
 TEST(polynomials, fft_coset_ifft_consistency)
 {
     size_t n = 256;
-    fr::field_t result[n];
-    fr::field_t expected[n];
+    fr result[n];
+    fr expected[n];
     for (size_t i = 0; i < n; ++i) {
         result[i] = fr::random_element();
         fr::__copy(result[i], expected[i]);
@@ -107,38 +122,38 @@ TEST(polynomials, fft_coset_ifft_consistency)
 
     evaluation_domain domain = evaluation_domain(n);
     domain.compute_lookup_table();
-    fr::field_t T0;
-    fr::__mul(domain.generator, domain.generator_inverse, T0);
-    EXPECT_EQ(fr::eq(T0, fr::one), true);
+    fr T0;
+    T0 = domain.generator * domain.generator_inverse;
+    EXPECT_EQ((T0 == fr::one()), true);
 
     polynomial_arithmetic::coset_fft(result, domain);
     polynomial_arithmetic::coset_ifft(result, domain);
 
     for (size_t i = 0; i < n; ++i) {
-        EXPECT_EQ(fr::eq(result[i], expected[i]), true);
+        EXPECT_EQ((result[i] == expected[i]), true);
     }
 }
 
 TEST(polynomials, fft_coset_ifft_cross_consistency)
 {
     size_t n = 2;
-    fr::field_t expected[n];
-    fr::field_t poly_a[4 * n];
-    fr::field_t poly_b[4 * n];
-    fr::field_t poly_c[4 * n];
+    fr expected[n];
+    fr poly_a[4 * n];
+    fr poly_b[4 * n];
+    fr poly_c[4 * n];
 
     for (size_t i = 0; i < n; ++i) {
         poly_a[i] = fr::random_element();
         fr::__copy(poly_a[i], poly_b[i]);
         fr::__copy(poly_a[i], poly_c[i]);
-        fr::__add(poly_a[i], poly_c[i], expected[i]);
-        fr::__add(expected[i], poly_b[i], expected[i]);
+        expected[i] = poly_a[i] + poly_c[i];
+        expected[i] += poly_b[i];
     }
 
     for (size_t i = n; i < 4 * n; ++i) {
-        poly_a[i] = fr::zero;
-        poly_b[i] = fr::zero;
-        poly_c[i] = fr::zero;
+        poly_a[i] = fr::zero();
+        poly_b[i] = fr::zero();
+        poly_c[i] = fr::zero();
     }
     evaluation_domain small_domain = evaluation_domain(n);
     evaluation_domain mid_domain = evaluation_domain(2 * n);
@@ -151,14 +166,14 @@ TEST(polynomials, fft_coset_ifft_cross_consistency)
     polynomial_arithmetic::coset_fft(poly_c, large_domain);
 
     for (size_t i = 0; i < n; ++i) {
-        fr::__add(poly_a[i], poly_c[4 * i], poly_a[i]);
-        fr::__add(poly_a[i], poly_b[2 * i], poly_a[i]);
+        poly_a[i] = poly_a[i] + poly_c[4 * i];
+        poly_a[i] = poly_a[i] + poly_b[2 * i];
     }
 
     polynomial_arithmetic::coset_ifft(poly_a, small_domain);
 
     for (size_t i = 0; i < n; ++i) {
-        EXPECT_EQ(fr::eq(poly_a[i], expected[i]), true);
+        EXPECT_EQ((poly_a[i] == expected[i]), true);
     }
 }
 
@@ -169,11 +184,11 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
     evaluation_domain mid_domain = evaluation_domain(2 * n);
     small_domain.compute_lookup_table();
     mid_domain.compute_lookup_table();
-    fr::field_t l_1_coefficients[2 * n];
-    fr::field_t scratch_memory[2 * n + 4];
+    fr l_1_coefficients[2 * n];
+    fr scratch_memory[2 * n + 4];
     for (size_t i = 0; i < 2 * n; ++i) {
-        l_1_coefficients[i] = fr::zero;
-        scratch_memory[i] = fr::zero;
+        l_1_coefficients[i] = fr::zero();
+        scratch_memory[i] = fr::zero();
     }
     polynomial_arithmetic::compute_lagrange_polynomial_fft(l_1_coefficients, small_domain, mid_domain);
 
@@ -181,13 +196,13 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
 
     polynomial_arithmetic::coset_ifft(l_1_coefficients, mid_domain);
 
-    fr::field_t z = fr::random_element();
-    fr::field_t shifted_z;
-    fr::__mul(z, small_domain.root, shifted_z);
-    fr::__mul(shifted_z, small_domain.root, shifted_z);
+    fr z = fr::random_element();
+    fr shifted_z;
+    shifted_z = z * small_domain.root;
+    shifted_z *= small_domain.root;
 
-    fr::field_t eval;
-    fr::field_t shifted_eval;
+    fr eval;
+    fr shifted_eval;
 
     eval = polynomial_arithmetic::evaluate(l_1_coefficients, shifted_z, small_domain.size);
     polynomial_arithmetic::fft(l_1_coefficients, small_domain);
@@ -196,54 +211,54 @@ TEST(polynomials, compute_lagrange_polynomial_fft)
     fr::__copy(scratch_memory[1], scratch_memory[2 * n + 1]);
     fr::__copy(scratch_memory[2], scratch_memory[2 * n + 2]);
     fr::__copy(scratch_memory[3], scratch_memory[2 * n + 3]);
-    fr::field_t* l_n_minus_one_coefficients = &scratch_memory[4];
+    fr* l_n_minus_one_coefficients = &scratch_memory[4];
     polynomial_arithmetic::coset_ifft(l_n_minus_one_coefficients, mid_domain);
 
     shifted_eval = polynomial_arithmetic::evaluate(l_n_minus_one_coefficients, z, small_domain.size);
-    EXPECT_EQ(fr::eq(eval, shifted_eval), true);
+    EXPECT_EQ((eval == shifted_eval), true);
 
     polynomial_arithmetic::fft(l_n_minus_one_coefficients, small_domain);
 
-    EXPECT_EQ(fr::eq(l_1_coefficients[0], fr::one), true);
+    EXPECT_EQ((l_1_coefficients[0] == fr::one()), true);
 
     for (size_t i = 1; i < n; ++i) {
-        EXPECT_EQ(fr::eq(l_1_coefficients[i], fr::zero), true);
+        EXPECT_EQ((l_1_coefficients[i] == fr::zero()), true);
     }
 
-    EXPECT_EQ(fr::eq(l_n_minus_one_coefficients[n - 2], fr::one), true);
+    EXPECT_EQ(l_n_minus_one_coefficients[n - 2] == fr::one(), true);
 
     for (size_t i = 0; i < n; ++i) {
         if (i == (n - 2)) {
             continue;
         }
-        EXPECT_EQ(fr::eq(l_n_minus_one_coefficients[i], fr::zero), true);
+        EXPECT_EQ((l_n_minus_one_coefficients[i] == fr::zero()), true);
     }
 }
 
 TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
 {
     size_t n = 256;
-    fr::field_t a[4 * n];
-    fr::field_t b[4 * n];
-    fr::field_t c[4 * n];
+    fr a[4 * n];
+    fr b[4 * n];
+    fr c[4 * n];
 
-    fr::field_t T0;
+    fr T0;
     for (size_t i = 0; i < n; ++i) {
         a[i] = fr::random_element();
         b[i] = fr::random_element();
-        fr::__mul(a[i], b[i], c[i]);
-        fr::__neg(c[i], c[i]);
-        fr::__mul(a[i], b[i], T0);
-        fr::__add(T0, c[i], T0);
+        c[i] = a[i] * b[i];
+        c[i].self_neg();
+        T0 = a[i] * b[i];
+        T0 += c[i];
     }
     for (size_t i = n; i < 4 * n; ++i) {
-        a[i] = fr::zero;
-        b[i] = fr::zero;
-        c[i] = fr::zero;
+        a[i] = fr::zero();
+        b[i] = fr::zero();
+        c[i] = fr::zero();
     }
 
     // make the final evaluation not vanish
-    // fr::one(c[n-1]);
+    // c[n-1].one();
     evaluation_domain small_domain = evaluation_domain(n);
     evaluation_domain mid_domain = evaluation_domain(4 * n);
     small_domain.compute_lookup_table();
@@ -257,10 +272,10 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
     polynomial_arithmetic::coset_fft(b, mid_domain);
     polynomial_arithmetic::coset_fft(c, mid_domain);
 
-    fr::field_t result[mid_domain.size];
+    fr result[mid_domain.size];
     for (size_t i = 0; i < mid_domain.size; ++i) {
-        fr::__mul(a[i], b[i], result[i]);
-        fr::__add(result[i], c[i], result[i]);
+        result[i] = a[i] * b[i];
+        result[i] += c[i];
     }
 
     polynomial_arithmetic::divide_by_pseudo_vanishing_polynomial(&result[0], small_domain, mid_domain);
@@ -269,7 +284,7 @@ TEST(polynomials, divide_by_pseudo_vanishing_polynomial)
 
     for (size_t i = n + 1; i < mid_domain.size; ++i) {
 
-        EXPECT_EQ(fr::eq(result[i], fr::zero), true);
+        EXPECT_EQ((result[i] == fr::zero()), true);
     }
 }
 
@@ -277,31 +292,31 @@ TEST(polynomials, compute_kate_opening_coefficients)
 {
     // generate random polynomial F(X) = coeffs
     size_t n = 256;
-    fr::field_t* coeffs = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
-    fr::field_t* W = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
+    fr* coeffs = static_cast<fr*>(aligned_alloc(64, sizeof(fr) * 2 * n));
+    fr* W = static_cast<fr*>(aligned_alloc(64, sizeof(fr) * 2 * n));
     for (size_t i = 0; i < n; ++i) {
         coeffs[i] = fr::random_element();
-        coeffs[i + n] = fr::zero;
+        coeffs[i + n] = fr::zero();
     }
     polynomial_arithmetic::copy_polynomial(coeffs, W, 2 * n, 2 * n);
 
     // generate random evaluation point z
-    fr::field_t z = fr::random_element();
+    fr z = fr::random_element();
 
     // compute opening polynomial W(X), and evaluation f = F(z)
-    fr::field_t f = polynomial_arithmetic::compute_kate_opening_coefficients(W, W, z, n);
+    fr f = polynomial_arithmetic::compute_kate_opening_coefficients(W, W, z, n);
 
     // validate that W(X)(X - z) = F(X) - F(z)
     // compute (X - z) in coefficient form
-    fr::field_t* multiplicand = static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * 2 * n));
-    fr::__neg(z, multiplicand[0]);
-    multiplicand[1] = fr::one;
+    fr* multiplicand = static_cast<fr*>(aligned_alloc(64, sizeof(fr) * 2 * n));
+    multiplicand[0] = -z;
+    multiplicand[1] = fr::one();
     for (size_t i = 2; i < 2 * n; ++i) {
-        multiplicand[i] = fr::zero;
+        multiplicand[i] = fr::zero();
     }
 
     // set F(X) = F(X) - F(z)
-    fr::__sub(coeffs[0], f, coeffs[0]);
+    coeffs[0] -= f;
 
     // compute fft of polynomials
     evaluation_domain domain = evaluation_domain(2 * n);
@@ -311,10 +326,10 @@ TEST(polynomials, compute_kate_opening_coefficients)
     polynomial_arithmetic::coset_fft(multiplicand, domain);
 
     // validate that, at each evaluation, W(X)(X - z) = F(X) - F(z)
-    fr::field_t result;
+    fr result;
     for (size_t i = 0; i < domain.size; ++i) {
-        fr::__mul(W[i], multiplicand[i], result);
-        EXPECT_EQ(fr::eq(result, coeffs[i]), true);
+        result = W[i] * multiplicand[i];
+        EXPECT_EQ((result == coeffs[i]), true);
     }
 
     aligned_free(coeffs);
@@ -328,39 +343,39 @@ TEST(polynomials, get_lagrange_evaluations)
 
     evaluation_domain domain = evaluation_domain(n);
     domain.compute_lookup_table();
-    fr::field_t z = fr::random_element();
+    fr z = fr::random_element();
 
     polynomial_arithmetic::lagrange_evaluations evals = polynomial_arithmetic::get_lagrange_evaluations(z, domain);
 
-    fr::field_t vanishing_poly[2 * n];
-    fr::field_t l_1_poly[n];
-    fr::field_t l_n_minus_1_poly[n];
+    fr vanishing_poly[2 * n];
+    fr l_1_poly[n];
+    fr l_n_minus_1_poly[n];
 
     for (size_t i = 0; i < n; ++i) {
-        l_1_poly[i] = fr::zero;
-        l_n_minus_1_poly[i] = fr::zero;
-        vanishing_poly[i] = fr::zero;
+        l_1_poly[i] = fr::zero();
+        l_n_minus_1_poly[i] = fr::zero();
+        vanishing_poly[i] = fr::zero();
     }
-    l_1_poly[0] = fr::one;
-    l_n_minus_1_poly[n - 2] = fr::one;
+    l_1_poly[0] = fr::one();
+    l_n_minus_1_poly[n - 2] = fr::one();
 
-    fr::field_t n_mont{ { n, 0, 0, 0 } };
-    fr::__to_montgomery_form(n_mont, n_mont);
-    fr::__mul(n_mont, domain.root, vanishing_poly[n - 1]);
+    fr n_mont{ n, 0, 0, 0 };
+    n_mont.self_to_montgomery_form();
+    vanishing_poly[n - 1] = n_mont * domain.root;
 
     polynomial_arithmetic::ifft(l_1_poly, domain);
     polynomial_arithmetic::ifft(l_n_minus_1_poly, domain);
     polynomial_arithmetic::ifft(vanishing_poly, domain);
 
-    fr::field_t l_1_expected;
-    fr::field_t l_n_minus_1_expected;
-    fr::field_t vanishing_poly_expected;
+    fr l_1_expected;
+    fr l_n_minus_1_expected;
+    fr vanishing_poly_expected;
     l_1_expected = polynomial_arithmetic::evaluate(l_1_poly, z, n);
     l_n_minus_1_expected = polynomial_arithmetic::evaluate(l_n_minus_1_poly, z, n);
     vanishing_poly_expected = polynomial_arithmetic::evaluate(vanishing_poly, z, n);
-    EXPECT_EQ(fr::eq(evals.l_1, l_1_expected), true);
-    EXPECT_EQ(fr::eq(evals.l_n_minus_1, l_n_minus_1_expected), true);
-    EXPECT_EQ(fr::eq(evals.vanishing_poly, vanishing_poly_expected), true);
+    EXPECT_EQ((evals.l_1 == l_1_expected), true);
+    EXPECT_EQ((evals.l_n_minus_1 == l_n_minus_1_expected), true);
+    EXPECT_EQ((evals.vanishing_poly == vanishing_poly_expected), true);
 }
 
 TEST(polynomials, barycentric_weight_evaluations)
@@ -369,72 +384,27 @@ TEST(polynomials, barycentric_weight_evaluations)
 
     evaluation_domain domain(n);
 
-    std::vector<fr::field_t> poly(n);
-    std::vector<fr::field_t> barycentric_poly(n);
+    std::vector<fr> poly(n);
+    std::vector<fr> barycentric_poly(n);
 
-    for (size_t i = 0; i < n / 2; ++i)
-    {
+    for (size_t i = 0; i < n / 2; ++i) {
         poly[i] = fr::random_element();
         barycentric_poly[i] = poly[i];
     }
-    for (size_t i = n / 2; i < n; ++i)
-    {
-        poly[i] = fr::zero;
+    for (size_t i = n / 2; i < n; ++i) {
+        poly[i] = fr::zero();
         barycentric_poly[i] = poly[i];
     }
-    fr::field_t evaluation_point = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
+    fr evaluation_point = fr{ 2, 0, 0, 0 }.to_montgomery_form();
 
-    fr::field_t result = polynomial_arithmetic::compute_barycentric_evaluation(&barycentric_poly[0], n / 2, evaluation_point, domain);
+    fr result =
+        polynomial_arithmetic::compute_barycentric_evaluation(&barycentric_poly[0], n / 2, evaluation_point, domain);
 
     domain.compute_lookup_table();
 
     polynomial_arithmetic::ifft(&poly[0], domain);
 
-    fr::field_t expected = polynomial_arithmetic::evaluate(&poly[0], evaluation_point, n);
+    fr expected = polynomial_arithmetic::evaluate(&poly[0], evaluation_point, n);
 
-    EXPECT_EQ(fr::eq(result, expected), true);
+    EXPECT_EQ((result == expected), true);
 }
-
-// TEST(polynomials, fft_experiments)
-// {
-//     const size_t domain_size = 4;
-//     evaluation_domain small_domain(domain_size);
-//     evaluation_domain mid_domain(domain_size * 2);
-//     small_domain.compute_lookup_table();
-//     mid_domain.compute_lookup_table();
-
-//     std::vector<fr::field_t> poly_a(2 * domain_size);
-//     // std::vector<fr::field_t> poly_b;
-//     poly_a[0] = fr::one;
-//     poly_a[1] = fr::zero;
-//     poly_a[2] = fr::zero;
-//     poly_a[3] = fr::zero;
-//     // std::copy(poly_a.begin(), poly_a.end(), std::back_inserter(poly_b));
-//     polynomial_arithmetic::ifft(&poly_a[0], small_domain);
-//     printf("coeffs \n");
-//     for (size_t i = 0; i < small_domain.size; ++i)
-//     {
-//         fr::print(fr::from_montgomery_form(fr::mul(small_domain.domain, poly_a[i])));
-//     }
-//     printf("#\n");
-//     poly_a[4] = fr::zero;
-//     poly_a[5] = fr::zero;
-//     poly_a[6] = fr::zero;
-//     poly_a[7] = fr::zero;
-//     polynomial_arithmetic::fft(&poly_a[0], mid_domain);
-//     fr::field_t root = mid_domain.root;
-//     for (size_t i = 0; i < domain_size * 2; ++i)
-//     {
-//         fr::print(fr::from_montgomery_form(poly_a[i]));
-//     }
-//     printf("roots \n");
-//     // fr::field_t two_inv = fr::to_montgomery_form({{ 2, 0, 0, 0 }});
-//     // fr::__invert(two_inv, two_inv);
-//     for (size_t i = 0; i < domain_size * 2; ++i)
-//     {
-
-//        fr::print(fr::from_montgomery_form((root)));
-//        // fr::print(fr::from_montgomery_form(fr::mul(root, two_inv)));
-//         root = fr::mul(root, mid_domain.root);
-//     }
-// }

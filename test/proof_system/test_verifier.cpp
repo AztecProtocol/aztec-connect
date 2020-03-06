@@ -1,14 +1,14 @@
 #include <gtest/gtest.h>
 
 #include <barretenberg/polynomials/polynomial_arithmetic.hpp>
+#include <barretenberg/transcript/manifest.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
-#include <barretenberg/transcript/manifest.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
 #include <barretenberg/waffle/proof_system/widgets/arithmetic_widget.hpp>
 #include <memory>
 
-namespace {
+namespace verifier_helpers {
 
 transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
 {
@@ -16,37 +16,38 @@ transcript::Manifest create_manifest(const size_t num_public_inputs = 0)
     constexpr size_t fr_size = 32;
     const size_t public_input_size = fr_size * num_public_inputs;
     const transcript::Manifest output = transcript::Manifest(
-        { transcript::Manifest::RoundManifest({ { "circuit_size", 4, true }, { "public_input_size", 4, true } }, "init"),
+        { transcript::Manifest::RoundManifest({ { "circuit_size", 4, true }, { "public_input_size", 4, true } },
+                                              "init"),
           transcript::Manifest::RoundManifest({ { "public_inputs", public_input_size, false },
-                                                               { "W_1", g1_size, false },
-                                                               { "W_2", g1_size, false },
-                                                               { "W_3", g1_size, false } },
-                                                             "beta"),
+                                                { "W_1", g1_size, false },
+                                                { "W_2", g1_size, false },
+                                                { "W_3", g1_size, false } },
+                                              "beta"),
           transcript::Manifest::RoundManifest({ {} }, "gamma"),
           transcript::Manifest::RoundManifest({ { "Z", g1_size, false } }, "alpha"),
           transcript::Manifest::RoundManifest(
               { { "T_1", g1_size, false }, { "T_2", g1_size, false }, { "T_3", g1_size, false } }, "z"),
           transcript::Manifest::RoundManifest({ { "w_1", fr_size, false },
-                                                               { "w_2", fr_size, false },
-                                                               { "w_3", fr_size, false },
-                                                               { "z_omega", fr_size, false },
-                                                               { "sigma_1", fr_size, false },
-                                                               { "sigma_2", fr_size, false },
-                                                               { "r", fr_size, false },
-                                                               { "t", fr_size, true } },
-                                                             "nu"),
-          transcript::Manifest::RoundManifest(
-              { { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } }, "separator") });
+                                                { "w_2", fr_size, false },
+                                                { "w_3", fr_size, false },
+                                                { "w_3_omega", fr_size, false },
+                                                { "z_omega", fr_size, false },
+                                                { "sigma_1", fr_size, false },
+                                                { "sigma_2", fr_size, false },
+                                                { "r", fr_size, false },
+                                                { "t", fr_size, true } },
+                                              "nu"),
+          transcript::Manifest::RoundManifest({ { "PI_Z", g1_size, false }, { "PI_Z_OMEGA", g1_size, false } },
+                                              "separator") });
     return output;
 }
 
 using namespace barretenberg;
 using namespace waffle;
 
-
 waffle::Verifier generate_verifier(std::shared_ptr<proving_key> circuit_proving_key)
 {
-    std::array<fr::field_t*, 8> poly_coefficients;
+    std::array<fr*, 8> poly_coefficients;
     poly_coefficients[0] = circuit_proving_key->constraint_selectors.at("q_1").get_coefficients();
     poly_coefficients[1] = circuit_proving_key->constraint_selectors.at("q_2").get_coefficients();
     poly_coefficients[2] = circuit_proving_key->constraint_selectors.at("q_3").get_coefficients();
@@ -60,12 +61,12 @@ waffle::Verifier generate_verifier(std::shared_ptr<proving_key> circuit_proving_
     commitments.resize(8);
 
     for (size_t i = 0; i < 8; ++i) {
-        g1::jacobian_to_affine(
-            scalar_multiplication::pippenger(poly_coefficients[i], circuit_proving_key->reference_string.monomials, circuit_proving_key->n),
-            commitments[i]);
+        commitments[i] = g1::affine_element(scalar_multiplication::pippenger(
+            poly_coefficients[i], circuit_proving_key->reference_string.monomials, circuit_proving_key->n));
     }
 
-    std::shared_ptr<verification_key> circuit_verification_key = std::make_shared<verification_key>(circuit_proving_key->n, circuit_proving_key->num_public_inputs, BARRETENBERG_SRS_PATH);
+    std::shared_ptr<verification_key> circuit_verification_key = std::make_shared<verification_key>(
+        circuit_proving_key->n, circuit_proving_key->num_public_inputs, BARRETENBERG_SRS_PATH);
 
     circuit_verification_key->constraint_selectors.insert({ "Q_1", commitments[0] });
     circuit_verification_key->constraint_selectors.insert({ "Q_2", commitments[1] });
@@ -88,7 +89,7 @@ waffle::Prover generate_test_data(const size_t n)
     // state.widgets.emplace_back(std::make_unique<waffle::ProverArithmeticWidget>(n));
 
     // create some constraints that satisfy our arithmetic circuit relation
-    fr::field_t T0;
+    fr T0;
 
     // even indices = mul gates, odd incides = add gates
 
@@ -116,27 +117,27 @@ waffle::Prover generate_test_data(const size_t n)
     for (size_t i = 0; i < n / 4; ++i) {
         w_l.at(2 * i) = fr::random_element();
         w_r.at(2 * i) = fr::random_element();
-        fr::__mul(w_l.at(2 * i), w_r.at(2 * i), w_o.at(2 * i));
-        fr::__add(w_o[2 * i], w_l[2 * i], w_o[2 * i]);
-        fr::__add(w_o[2 * i], w_r[2 * i], w_o[2 * i]);
-        fr::__add(w_o[2 * i], fr::one, w_o[2 * i]);
-        fr::__copy(fr::one, q_l.at(2 * i));
-        fr::__copy(fr::one, q_r.at(2 * i));
+        w_o.at(2 * i) = w_l.at(2 * i) * w_r.at(2 * i);
+        w_o[2 * i] = w_o[2 * i] + w_l[2 * i];
+        w_o[2 * i] = w_o[2 * i] + w_r[2 * i];
+        w_o[2 * i] = w_o[2 * i] + fr::one();
+        fr::__copy(fr::one(), q_l.at(2 * i));
+        fr::__copy(fr::one(), q_r.at(2 * i));
         fr::__copy(fr::neg_one(), q_o.at(2 * i));
-        fr::__copy(fr::one, q_c.at(2 * i));
-        fr::__copy(fr::one, q_m.at(2 * i));
+        fr::__copy(fr::one(), q_c.at(2 * i));
+        fr::__copy(fr::one(), q_m.at(2 * i));
 
         w_l.at(2 * i + 1) = fr::random_element();
         w_r.at(2 * i + 1) = fr::random_element();
         w_o.at(2 * i + 1) = fr::random_element();
 
-        fr::__add(w_l.at(2 * i + 1), w_r.at(2 * i + 1), T0);
-        fr::__add(T0, w_o.at(2 * i + 1), q_c.at(2 * i + 1));
-        fr::__neg(q_c.at(2 * i + 1), q_c.at(2 * i + 1));
-        q_l.at(2 * i + 1) = fr::one;
-        q_r.at(2 * i + 1) = fr::one;
-        q_o.at(2 * i + 1) = fr::one;
-        q_m.at(2 * i + 1) = fr::zero;
+        T0 = w_l.at(2 * i + 1) + w_r.at(2 * i + 1);
+        q_c.at(2 * i + 1) = T0 + w_o.at(2 * i + 1);
+        q_c.at(2 * i + 1).self_neg();
+        q_l.at(2 * i + 1) = fr::one();
+        q_r.at(2 * i + 1) = fr::one();
+        q_o.at(2 * i + 1) = fr::one();
+        q_m.at(2 * i + 1) = fr::zero();
     }
     size_t shift = n / 2;
     polynomial_arithmetic::copy_polynomial(&w_l.at(0), &w_l.at(shift), shift, shift);
@@ -208,23 +209,23 @@ waffle::Prover generate_test_data(const size_t n)
     key->permutation_selector_ffts.insert({ "sigma_2_fft", std::move(sigma_2_fft) });
     key->permutation_selector_ffts.insert({ "sigma_3_fft", std::move(sigma_3_fft) });
 
-    w_l.at(n - 1) = fr::zero;
-    w_r.at(n - 1) = fr::zero;
-    w_o.at(n - 1) = fr::zero;
-    q_c.at(n - 1) = fr::zero;
-    q_l.at(n - 1) = fr::zero;
-    q_r.at(n - 1) = fr::zero;
-    q_o.at(n - 1) = fr::zero;
-    q_m.at(n - 1) = fr::zero;
+    w_l.at(n - 1) = fr::zero();
+    w_r.at(n - 1) = fr::zero();
+    w_o.at(n - 1) = fr::zero();
+    q_c.at(n - 1) = fr::zero();
+    q_l.at(n - 1) = fr::zero();
+    q_r.at(n - 1) = fr::zero();
+    q_o.at(n - 1) = fr::zero();
+    q_m.at(n - 1) = fr::zero();
 
-    w_l.at(shift - 1) = fr::zero;
-    w_r.at(shift - 1) = fr::zero;
-    w_o.at(shift - 1) = fr::zero;
-    q_c.at(shift - 1) = fr::zero;
+    w_l.at(shift - 1) = fr::zero();
+    w_r.at(shift - 1) = fr::zero();
+    w_o.at(shift - 1) = fr::zero();
+    q_c.at(shift - 1) = fr::zero();
 
-    witness->wires.insert({ "w_1" , std::move(w_l) });
-    witness->wires.insert({ "w_2" , std::move(w_r) });
-    witness->wires.insert({ "w_3" , std::move(w_o) });
+    witness->wires.insert({ "w_1", std::move(w_l) });
+    witness->wires.insert({ "w_2", std::move(w_r) });
+    witness->wires.insert({ "w_3", std::move(w_o) });
 
     q_l.ifft(key->small_domain);
     q_r.ifft(key->small_domain);
@@ -244,7 +245,6 @@ waffle::Prover generate_test_data(const size_t n)
     q_m_fft.coset_fft(key->mid_domain);
     q_c_fft.coset_fft(key->mid_domain);
 
-
     key->constraint_selectors.insert({ "q_1", std::move(q_l) });
     key->constraint_selectors.insert({ "q_2", std::move(q_r) });
     key->constraint_selectors.insert({ "q_3", std::move(q_o) });
@@ -256,107 +256,22 @@ waffle::Prover generate_test_data(const size_t n)
     key->constraint_selector_ffts.insert({ "q_3_fft", std::move(q_3_fft) });
     key->constraint_selector_ffts.insert({ "q_m_fft", std::move(q_m_fft) });
     key->constraint_selector_ffts.insert({ "q_c_fft", std::move(q_c_fft) });
-    std::unique_ptr<waffle::ProverArithmeticWidget> widget = std::make_unique<waffle::ProverArithmeticWidget>(key.get(), witness.get());
+    std::unique_ptr<waffle::ProverArithmeticWidget> widget =
+        std::make_unique<waffle::ProverArithmeticWidget>(key.get(), witness.get());
 
     waffle::Prover state = waffle::Prover(std::move(key), std::move(witness), create_manifest());
     state.widgets.emplace_back(std::move(widget));
     return state;
 }
-
-// void generate_test_data(waffle::Prover& state)
-// {
-//     size_t n = state.n;
-//     std::unique_ptr<waffle::ProverArithmeticWidget> widget = std::make_unique<waffle::ProverArithmeticWidget>(n);
-//     // state.widgets.emplace_back(std::make_unique<waffle::ProverArithmeticWidget>(n));
-
-//     fr::field_t T0;
-//     // even indices = mul gates, odd incides = add gates
-
-//     state.w_l.resize(n);
-//     state.w_r.resize(n);
-//     state.w_o.resize(n);
-
-//     for (size_t i = 0; i < n / 4; ++i) {
-//         state.w_l.at(2 * i) = fr::random_element();
-//         state.w_r.at(2 * i) = fr::random_element();
-//         fr::__mul(state.w_l.at(2 * i), state.w_r.at(2 * i), state.w_o.at(2 * i));
-//         fr::__add(state.w_o[2 * i], state.w_l[2 * i], state.w_o[2 * i]);
-//         fr::__add(state.w_o[2 * i], state.w_r[2 * i], state.w_o[2 * i]);
-//         fr::__add(state.w_o[2 * i], fr::one, state.w_o[2 * i]);
-//         fr::__copy(fr::one, widget->q_l.at(2 * i));
-//         fr::__copy(fr::one, widget->q_r.at(2 * i));
-//         fr::__copy(fr::neg_one(), widget->q_o.at(2 * i));
-//         fr::__copy(fr::one, widget->q_c.at(2 * i));
-//         fr::__copy(fr::one, widget->q_m.at(2 * i));
-
-//         state.w_l.at(2 * i + 1) = fr::random_element();
-//         state.w_r.at(2 * i + 1) = fr::random_element();
-//         state.w_o.at(2 * i + 1) = fr::random_element();
-
-//         fr::__add(state.w_l.at(2 * i + 1), state.w_r.at(2 * i + 1), T0);
-//         fr::__add(T0, state.w_o.at(2 * i + 1), widget->q_c.at(2 * i + 1));
-//         fr::__neg(widget->q_c.at(2 * i + 1), widget->q_c.at(2 * i + 1));
-//         widget->q_l.at(2 * i + 1) = fr::one;
-//         widget->q_r.at(2 * i + 1) = fr::one;
-//         widget->q_o.at(2 * i + 1) = fr::one;
-//         widget->q_m.at(2 * i + 1) = fr::zero;
-//     }
-//     size_t shift = n / 2;
-//     polynomial_arithmetic::copy_polynomial(&state.w_l.at(0), &state.w_l.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&state.w_r.at(0), &state.w_r.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&state.w_o.at(0), &state.w_o.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&widget->q_m.at(0), &widget->q_m.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&widget->q_l.at(0), &widget->q_l.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&widget->q_r.at(0), &widget->q_r.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&widget->q_o.at(0), &widget->q_o.at(shift), shift, shift);
-//     polynomial_arithmetic::copy_polynomial(&widget->q_c.at(0), &widget->q_c.at(shift), shift, shift);
-
-//     // create basic permutation - second half of witness vector is a copy of the first half
-//     state.sigma_1_mapping.resize(n);
-//     state.sigma_2_mapping.resize(n);
-//     state.sigma_3_mapping.resize(n);
-
-//     for (size_t i = 0; i < n / 2; ++i) {
-//         state.sigma_1_mapping[shift + i] = (uint32_t)i;
-//         state.sigma_2_mapping[shift + i] = (uint32_t)i + (1U << 30U);
-//         state.sigma_3_mapping[shift + i] = (uint32_t)i + (1U << 31U);
-//         state.sigma_1_mapping[i] = (uint32_t)(i + shift);
-//         state.sigma_2_mapping[i] = (uint32_t)(i + shift) + (1U << 30U);
-//         state.sigma_3_mapping[i] = (uint32_t)(i + shift) + (1U << 31U);
-//     }
-//     // make last permutation the same as identity permutation
-//     state.sigma_1_mapping[shift - 1] = (uint32_t)shift - 1;
-//     state.sigma_2_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 30U);
-//     state.sigma_3_mapping[shift - 1] = (uint32_t)shift - 1 + (1U << 31U);
-//     state.sigma_1_mapping[n - 1] = (uint32_t)n - 1;
-//     state.sigma_2_mapping[n - 1] = (uint32_t)n - 1 + (1U << 30U);
-//     state.sigma_3_mapping[n - 1] = (uint32_t)n - 1 + (1U << 31U);
-
-//     state.w_l.at(n - 1) = fr::zero;
-//     state.w_r.at(n - 1) = fr::zero;
-//     state.w_o.at(n - 1) = fr::zero;
-//     widget->q_c.at(n - 1) = fr::zero;
-//     widget->q_l.at(n - 1) = fr::zero;
-//     widget->q_r.at(n - 1) = fr::zero;
-//     widget->q_o.at(n - 1) = fr::zero;
-//     widget->q_m.at(n - 1) = fr::zero;
-
-//     state.w_l.at(shift - 1) = fr::zero;
-//     state.w_r.at(shift - 1) = fr::zero;
-//     state.w_o.at(shift - 1) = fr::zero;
-//     widget->q_c.at(shift - 1) = fr::zero;
-
-//     state.widgets.emplace_back(std::move(widget));
-// }
-} // namespace
+} // namespace verifier_helpers
 
 TEST(verifier, verify_arithmetic_proof_small)
 {
     size_t n = 4;
 
-    waffle::Prover state = generate_test_data(n);
+    waffle::Prover state = verifier_helpers::generate_test_data(n);
 
-    waffle::Verifier verifier = generate_verifier(state.key);
+    waffle::Verifier verifier = verifier_helpers::generate_verifier(state.key);
 
     // construct proof
     waffle::plonk_proof proof = state.construct_proof();
@@ -371,9 +286,9 @@ TEST(verifier, verify_arithmetic_proof)
 {
     size_t n = 1 << 14;
 
-    waffle::Prover state = generate_test_data(n);
+    waffle::Prover state = verifier_helpers::generate_test_data(n);
 
-    waffle::Verifier verifier = generate_verifier(state.key);
+    waffle::Verifier verifier = verifier_helpers::generate_verifier(state.key);
 
     // construct proof
     waffle::plonk_proof proof = state.construct_proof();

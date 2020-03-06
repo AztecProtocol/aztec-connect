@@ -22,8 +22,7 @@ VerifierReferenceString::VerifierReferenceString(const size_t num_points, std::s
             (barretenberg::pairing::miller_lines*)(aligned_alloc(64, sizeof(barretenberg::pairing::miller_lines) * 2));
         barretenberg::io::read_transcript_g2(g2_x, path);
 
-        barretenberg::g2::element g2_x_jac;
-        barretenberg::g2::affine_to_jacobian(g2_x, g2_x_jac);
+        barretenberg::g2::element g2_x_jac(g2_x);
         barretenberg::pairing::precompute_miller_lines(barretenberg::g2::one, precomputed_g2_lines[0]);
         barretenberg::pairing::precompute_miller_lines(g2_x_jac, precomputed_g2_lines[1]);
     } else {
@@ -41,7 +40,7 @@ VerifierReferenceString::VerifierReferenceString(const VerifierReferenceString& 
            static_cast<void*>(other.precomputed_g2_lines),
            sizeof(barretenberg::pairing::miller_lines) * 2);
 
-    barretenberg::g2::copy_affine(other.g2_x, g2_x);
+    g2_x = other.g2_x;
 }
 
 VerifierReferenceString::VerifierReferenceString(VerifierReferenceString&& other)
@@ -53,7 +52,7 @@ VerifierReferenceString::VerifierReferenceString(VerifierReferenceString&& other
         other.precomputed_g2_lines = nullptr;
     }
 
-    barretenberg::g2::copy_affine(other.g2_x, g2_x);
+    g2_x = other.g2_x;
 }
 
 VerifierReferenceString& VerifierReferenceString::operator=(const VerifierReferenceString& other)
@@ -72,7 +71,7 @@ VerifierReferenceString& VerifierReferenceString::operator=(const VerifierRefere
            static_cast<void*>(other.precomputed_g2_lines),
            sizeof(barretenberg::pairing::miller_lines) * 2);
 
-    barretenberg::g2::copy_affine(other.g2_x, g2_x);
+    g2_x = other.g2_x;
     return *this;
 }
 
@@ -90,7 +89,7 @@ VerifierReferenceString& VerifierReferenceString::operator=(VerifierReferenceStr
         other.precomputed_g2_lines = nullptr;
     }
 
-    barretenberg::g2::copy_affine(other.g2_x, g2_x);
+    g2_x = other.g2_x;
 
     return *this;
 }
@@ -120,8 +119,7 @@ ReferenceString::ReferenceString(const size_t num_points, std::string const& pat
         barretenberg::io::read_transcript_g2(g2_x, path);
         barretenberg::scalar_multiplication::generate_pippenger_point_table(monomials, monomials, degree);
 
-        barretenberg::g2::element g2_x_jac;
-        barretenberg::g2::affine_to_jacobian(g2_x, g2_x_jac);
+        barretenberg::g2::element g2_x_jac(g2_x);
         barretenberg::pairing::precompute_miller_lines(barretenberg::g2::one, precomputed_g2_lines[0]);
         barretenberg::pairing::precompute_miller_lines(g2_x_jac, precomputed_g2_lines[1]);
     } else {
@@ -145,7 +143,7 @@ ReferenceString::ReferenceString(const ReferenceString& other)
            static_cast<void*>(other.precomputed_g2_lines),
            sizeof(barretenberg::pairing::miller_lines) * 2);
 
-    barretenberg::g2::copy_affine(other.g2_x, g2_x);
+    g2_x = other.g2_x;
 }
 
 ReferenceString::ReferenceString(ReferenceString&& other)
@@ -162,7 +160,7 @@ ReferenceString::ReferenceString(ReferenceString&& other)
         other.precomputed_g2_lines = nullptr;
     }
 
-    barretenberg::g2::copy_affine(other.g2_x, g2_x);
+    g2_x = other.g2_x;
 }
 
 ReferenceString& ReferenceString::operator=(const ReferenceString& other)
@@ -190,7 +188,7 @@ ReferenceString& ReferenceString::operator=(const ReferenceString& other)
            static_cast<void*>(other.precomputed_g2_lines),
            sizeof(barretenberg::pairing::miller_lines) * 2);
 
-    barretenberg::g2::copy_affine(other.g2_x, g2_x);
+    g2_x = other.g2_x;
     return *this;
 }
 
@@ -216,7 +214,7 @@ ReferenceString& ReferenceString::operator=(ReferenceString&& other)
         other.precomputed_g2_lines = nullptr;
     }
 
-    barretenberg::g2::copy_affine(other.g2_x, g2_x);
+    g2_x = other.g2_x;
 
     return *this;
 }
@@ -235,7 +233,7 @@ ReferenceString ReferenceString::get_verifier_reference_string() const
 {
     ASSERT(monomials != nullptr);
     ReferenceString result;
-    barretenberg::g2::copy_affine(g2_x, result.g2_x);
+    result.g2_x = g2_x;
 
     result.precomputed_g2_lines =
         (barretenberg::pairing::miller_lines*)(aligned_alloc(64, sizeof(barretenberg::pairing::miller_lines) * 2));

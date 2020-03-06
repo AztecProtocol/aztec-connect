@@ -12,7 +12,6 @@
 
 namespace waffle {
 class StandardComposer;
-class BoolComposer;
 class MiMCComposer;
 class TurboComposer;
 class TurboComposer;
@@ -73,7 +72,7 @@ template <typename ComposerContext> class bitarray {
 
     template <size_t N> operator std::array<uint32<ComposerContext>, N>()
     {
-        ASSERT(N * 32 == length);
+        // ASSERT(N * 32 == length);
         std::array<uint32<ComposerContext>, N> output;
         for (size_t i = 0; i < N; ++i) {
             std::array<bool_t<ComposerContext>, 32> bools;
@@ -155,7 +154,6 @@ template <typename ComposerContext> class bitarray {
 };
 
 extern template class bitarray<waffle::StandardComposer>;
-extern template class bitarray<waffle::BoolComposer>;
 extern template class bitarray<waffle::MiMCComposer>;
 extern template class bitarray<waffle::TurboComposer>;
 

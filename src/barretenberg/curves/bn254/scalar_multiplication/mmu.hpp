@@ -61,7 +61,7 @@ struct affine_product_runtime_state {
     g1::affine_element* points;
     g1::affine_element* point_pairs_1;
     g1::affine_element* point_pairs_2;
-    fq::field_t* scratch_space;
+    fq* scratch_space;
     uint32_t* bucket_counts;
     uint32_t* bit_offsets;
     uint64_t* point_schedule;

@@ -8,9 +8,7 @@
 namespace waffle
 {
     class StandardComposer;
-    class BoolComposer;
     class MiMCComposer;
-    class TurboComposer;
     class TurboComposer;
 }
 
@@ -30,7 +28,7 @@ template <typename ComposerContext> class bool_t {
     bool_t& operator=(const witness_t<ComposerContext>& other);
     bool_t& operator=(const bool_t& other);
     bool_t& operator=(bool_t&& other);
-    // field_t& operator=(const barretenberg::fr::field_t &value);
+    // field_t& operator=(const barretenberg::fr &value);
 
     // bitwise operations
     bool_t operator&(const bool_t& other) const;
@@ -75,7 +73,6 @@ template <typename T> inline std::ostream& operator<<(std::ostream& os, bool_t<T
 }
 
 extern template class bool_t<waffle::StandardComposer>;
-extern template class bool_t<waffle::BoolComposer>;
 extern template class bool_t<waffle::MiMCComposer>;
 extern template class bool_t<waffle::TurboComposer>;
 

@@ -4,8 +4,8 @@
 
 #include <barretenberg/curves/bn254/fr.hpp>
 
-#include <barretenberg/waffle/composer/turbo_composer.hpp>
 #include <barretenberg/waffle/composer/standard_composer.hpp>
+#include <barretenberg/waffle/composer/turbo_composer.hpp>
 #include <barretenberg/waffle/proof_system/preprocess.hpp>
 #include <barretenberg/waffle/proof_system/prover/prover.hpp>
 #include <barretenberg/waffle/proof_system/verifier/verifier.hpp>
@@ -70,7 +70,7 @@ void preprocess_witnesses_bench(State& state) noexcept
     for (auto _ : state) {
         size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
         provers[idx] = composers[idx].create_prover();
-        printf("num bytes = %" PRIx64 ", num gates = %zu\n", state.range(0), composers[idx].get_num_gates());
+        // printf("num bytes = %" PRIx64 ", num gates = %zu\n", state.range(0), composers[idx].get_num_gates());
     }
 }
 BENCHMARK(preprocess_witnesses_bench)->DenseRange(55, MAX_BYTES, 64);
@@ -100,12 +100,7 @@ void verify_proofs_bench(State& state) noexcept
 {
     for (auto _ : state) {
         size_t idx = (static_cast<size_t>((state.range(0))) - 55) / 64;
-        bool valid = verifiers[idx].verify_proof(proofs[idx]);
-        state.PauseTiming();
-        if (!valid) {
-            printf("hey! proof not valid!\n");
-        }
-        state.ResumeTiming();
+        verifiers[idx].verify_proof(proofs[idx]);
     }
 }
 BENCHMARK(verify_proofs_bench)->DenseRange(55, MAX_BYTES, 64);

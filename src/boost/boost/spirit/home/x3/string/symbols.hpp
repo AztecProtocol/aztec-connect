@@ -128,7 +128,7 @@ namespace boost { namespace spirit { namespace x3
         friend adder const&
         operator+=(symbols_parser& sym, Str const& str)
         {
-            return sym.add(str);
+            return (sym + str);
         }
 
         template <typename Str>

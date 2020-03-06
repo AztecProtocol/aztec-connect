@@ -19,10 +19,10 @@ struct add_triple {
     uint32_t a;
     uint32_t b;
     uint32_t c;
-    barretenberg::fr::field_t a_scaling;
-    barretenberg::fr::field_t b_scaling;
-    barretenberg::fr::field_t c_scaling;
-    barretenberg::fr::field_t const_scaling;
+    barretenberg::fr a_scaling;
+    barretenberg::fr b_scaling;
+    barretenberg::fr c_scaling;
+    barretenberg::fr const_scaling;
 };
 
 struct add_quad {
@@ -30,11 +30,11 @@ struct add_quad {
     uint32_t b;
     uint32_t c;
     uint32_t d;
-    barretenberg::fr::field_t a_scaling;
-    barretenberg::fr::field_t b_scaling;
-    barretenberg::fr::field_t c_scaling;
-    barretenberg::fr::field_t d_scaling;
-    barretenberg::fr::field_t const_scaling;
+    barretenberg::fr a_scaling;
+    barretenberg::fr b_scaling;
+    barretenberg::fr c_scaling;
+    barretenberg::fr d_scaling;
+    barretenberg::fr const_scaling;
 };
 
 struct mul_quad {
@@ -42,32 +42,32 @@ struct mul_quad {
     uint32_t b;
     uint32_t c;
     uint32_t d;
-    barretenberg::fr::field_t mul_scaling;
-    barretenberg::fr::field_t a_scaling;
-    barretenberg::fr::field_t b_scaling;
-    barretenberg::fr::field_t c_scaling;
-    barretenberg::fr::field_t d_scaling;
-    barretenberg::fr::field_t const_scaling;
+    barretenberg::fr mul_scaling;
+    barretenberg::fr a_scaling;
+    barretenberg::fr b_scaling;
+    barretenberg::fr c_scaling;
+    barretenberg::fr d_scaling;
+    barretenberg::fr const_scaling;
 };
 
 struct mul_triple {
     uint32_t a;
     uint32_t b;
     uint32_t c;
-    barretenberg::fr::field_t mul_scaling;
-    barretenberg::fr::field_t c_scaling;
-    barretenberg::fr::field_t const_scaling;
+    barretenberg::fr mul_scaling;
+    barretenberg::fr c_scaling;
+    barretenberg::fr const_scaling;
 };
 
 struct poly_triple {
     uint32_t a;
     uint32_t b;
     uint32_t c;
-    barretenberg::fr::field_t q_m;
-    barretenberg::fr::field_t q_l;
-    barretenberg::fr::field_t q_r;
-    barretenberg::fr::field_t q_o;
-    barretenberg::fr::field_t q_c;
+    barretenberg::fr q_m;
+    barretenberg::fr q_l;
+    barretenberg::fr q_r;
+    barretenberg::fr q_o;
+    barretenberg::fr q_c;
 };
 
 struct fixed_group_add_quad {
@@ -75,17 +75,17 @@ struct fixed_group_add_quad {
     uint32_t b;
     uint32_t c;
     uint32_t d;
-    barretenberg::fr::field_t q_x_1;
-    barretenberg::fr::field_t q_x_2;
-    barretenberg::fr::field_t q_y_1;
-    barretenberg::fr::field_t q_y_2;
+    barretenberg::fr q_x_1;
+    barretenberg::fr q_x_2;
+    barretenberg::fr q_y_1;
+    barretenberg::fr q_y_2;
 };
 
 struct fixed_group_init_quad {
-    barretenberg::fr::field_t q_x_1;
-    barretenberg::fr::field_t q_x_2;
-    barretenberg::fr::field_t q_y_1;
-    barretenberg::fr::field_t q_y_2;
+    barretenberg::fr q_x_1;
+    barretenberg::fr q_x_2;
+    barretenberg::fr q_y_1;
+    barretenberg::fr q_y_2;
 };
 
 struct accumulator_triple {
@@ -187,20 +187,20 @@ class ComposerBase {
         gate_flags[idx] = gate_flags[idx] | static_cast<size_t>(new_flag);
     }
 
-    barretenberg::fr::field_t get_variable(const uint32_t index) const
+    barretenberg::fr get_variable(const uint32_t index) const
     {
         ASSERT(variables.size() > index);
         return variables[index];
     }
 
-    virtual uint32_t add_variable(const barretenberg::fr::field_t& in)
+    virtual uint32_t add_variable(const barretenberg::fr& in)
     {
         variables.emplace_back(in);
         wire_epicycles.push_back(std::vector<epicycle>());
         return static_cast<uint32_t>(variables.size()) - 1U;
     }
 
-    virtual uint32_t add_public_variable(const barretenberg::fr::field_t& in)
+    virtual uint32_t add_public_variable(const barretenberg::fr& in)
     {
         variables.emplace_back(in);
         wire_epicycles.push_back(std::vector<epicycle>());
@@ -232,7 +232,7 @@ class ComposerBase {
     std::vector<uint32_t> w_4;
     std::vector<size_t> gate_flags;
     std::vector<uint32_t> public_inputs;
-    std::vector<barretenberg::fr::field_t> variables;
+    std::vector<barretenberg::fr> variables;
     std::vector<std::vector<epicycle>> wire_epicycles;
     size_t features = static_cast<size_t>(Features::SAD_TROMBONE);
 

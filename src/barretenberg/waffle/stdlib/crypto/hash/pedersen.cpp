@@ -10,7 +10,8 @@
 namespace plonk {
 namespace stdlib {
 namespace pedersen {
-typedef field_t<waffle::TurboComposer> field_t;
+
+typedef plonk::stdlib::field_t<waffle::TurboComposer> field_t;
 using namespace barretenberg;
 
 namespace {
@@ -26,47 +27,48 @@ point add_points(const point& first, const point& second)
 point hash_single(const field_t& in, const size_t hash_index)
 {
     field_t scalar = in;
-    if (!fr::eq(in.additive_constant, fr::zero) || !fr::eq(in.multiplicative_constant, fr::one)) {
+    if (!(in.additive_constant == fr::zero()) || !(in.multiplicative_constant == fr::one())) {
         scalar = scalar.normalize();
     }
     waffle::TurboComposer* ctx = in.context;
     ASSERT(ctx != nullptr);
-    fr::field_t scalar_multiplier = fr::from_montgomery_form(scalar.get_value());
+    fr scalar_multiplier = scalar.get_value().from_montgomery_form();
 
     constexpr size_t num_bits = 254;
     constexpr size_t num_quads_base = (num_bits - 1) >> 1;
     constexpr size_t num_quads = ((num_quads_base << 1) + 1 < num_bits) ? num_quads_base + 1 : num_quads_base;
     constexpr size_t num_wnaf_bits = (num_quads << 1) + 1;
 
-    constexpr size_t initial_exponent = ((num_bits & 1) == 1) ? num_bits - 1 : num_bits;
+    constexpr size_t initial_exponent = num_bits; // ((num_bits & 1) == 1) ? num_bits - 1: num_bits;
     const crypto::pedersen::fixed_base_ladder* ladder = crypto::pedersen::get_hash_ladder(hash_index, num_bits);
     grumpkin::g1::affine_element generator = crypto::pedersen::get_generator(hash_index * 2 + 1);
 
     grumpkin::g1::element origin_points[2];
-    grumpkin::g1::affine_to_jacobian(ladder[0].one, origin_points[0]);
-    grumpkin::g1::mixed_add(origin_points[0], generator, origin_points[1]);
-    origin_points[1] = grumpkin::g1::normalize(origin_points[1]);
+    origin_points[0] = grumpkin::g1::element(ladder[0].one);
+    origin_points[1] = origin_points[0] + generator;
+    origin_points[1] = origin_points[1].normalize();
 
-    fr::field_t scalar_multiplier_base = fr::to_montgomery_form(scalar_multiplier);
+    fr scalar_multiplier_base = scalar_multiplier.to_montgomery_form();
 
     if ((scalar_multiplier.data[0] & 1) == 0) {
-        fr::field_t two = fr::add(fr::one, fr::one);
-        scalar_multiplier_base = fr::sub(scalar_multiplier_base, two);
+        fr two = fr::one() + fr::one();
+        scalar_multiplier_base = scalar_multiplier_base - two;
     }
-    scalar_multiplier_base = fr::from_montgomery_form(scalar_multiplier_base);
+    scalar_multiplier_base = scalar_multiplier_base.from_montgomery_form();
     uint64_t wnaf_entries[num_quads + 1] = { 0 };
     bool skew = false;
 
     barretenberg::wnaf::fixed_wnaf<num_wnaf_bits, 1, 2>(&scalar_multiplier_base.data[0], &wnaf_entries[0], skew, 0);
 
-    fr::field_t accumulator_offset = fr::invert(fr::pow_small(fr::add(fr::one, fr::one), initial_exponent));
+    fr accumulator_offset =
+        (fr::one() + fr::one()).pow(static_cast<uint64_t>(initial_exponent)).invert();
 
-    fr::field_t origin_accumulators[2]{ fr::one, fr::add(accumulator_offset, fr::one) };
+    fr origin_accumulators[2]{ fr::one(), accumulator_offset + fr::one() };
 
     grumpkin::g1::element* multiplication_transcript =
         static_cast<grumpkin::g1::element*>(aligned_alloc(64, sizeof(grumpkin::g1::element) * (num_quads + 1)));
-    fr::field_t* accumulator_transcript =
-        static_cast<fr::field_t*>(aligned_alloc(64, sizeof(fr::field_t) * (num_quads + 1)));
+    fr* accumulator_transcript =
+        static_cast<fr*>(aligned_alloc(64, sizeof(fr) * (num_quads + 1)));
 
     if (skew) {
         multiplication_transcript[0] = origin_points[1];
@@ -75,35 +77,35 @@ point hash_single(const field_t& in, const size_t hash_index)
         multiplication_transcript[0] = origin_points[0];
         accumulator_transcript[0] = origin_accumulators[0];
     }
-    fr::field_t one = fr::one;
-    fr::field_t three = fr::add(fr::add(one, one), one);
+    constexpr fr one = fr::one();
+    constexpr fr three = ((one + one) + one);
 
     for (size_t i = 0; i < num_quads; ++i) {
         uint64_t entry = wnaf_entries[i + 1] & 0xffffff;
 
-        fr::field_t prev_accumulator = fr::add(accumulator_transcript[i], accumulator_transcript[i]);
-        prev_accumulator = fr::add(prev_accumulator, prev_accumulator);
+        fr prev_accumulator = accumulator_transcript[i] + accumulator_transcript[i];
+        prev_accumulator = prev_accumulator + prev_accumulator;
 
         grumpkin::g1::affine_element point_to_add = (entry == 1) ? ladder[i + 1].three : ladder[i + 1].one;
 
-        fr::field_t scalar_to_add = (entry == 1) ? three : one;
+        fr scalar_to_add = (entry == 1) ? three : one;
         uint64_t predicate = (wnaf_entries[i + 1] >> 31U) & 1U;
         if (predicate) {
-            grumpkin::g1::__neg(point_to_add, point_to_add);
-            fr::__neg(scalar_to_add, scalar_to_add);
+            point_to_add = -point_to_add;
+            scalar_to_add.self_neg();
         }
-        accumulator_transcript[i + 1] = fr::add(prev_accumulator, scalar_to_add);
-        grumpkin::g1::mixed_add(multiplication_transcript[i], point_to_add, multiplication_transcript[i + 1]);
+        accumulator_transcript[i + 1] = prev_accumulator + scalar_to_add;
+        multiplication_transcript[i + 1] = multiplication_transcript[i] + point_to_add;
     }
 
-    grumpkin::g1::batch_normalize(&multiplication_transcript[0], num_quads + 1);
+    grumpkin::g1::element::batch_normalize(&multiplication_transcript[0], num_quads + 1);
 
     waffle::fixed_group_init_quad init_quad{ origin_points[0].x,
-                                             fr::sub(origin_points[0].x, origin_points[1].x),
+                                             (origin_points[0].x - origin_points[1].x),
                                              origin_points[0].y,
-                                             fr::sub(origin_points[0].y, origin_points[1].y) };
+                                             (origin_points[0].y - origin_points[1].y) };
 
-    fr::field_t x_alpha = accumulator_offset;
+    fr x_alpha = accumulator_offset;
     for (size_t i = 0; i < num_quads; ++i) {
         waffle::fixed_group_add_quad round_quad;
         round_quad.d = ctx->add_variable(accumulator_transcript[i]);
@@ -139,11 +141,11 @@ point hash_single(const field_t& in, const size_t hash_index)
                                ctx->add_variable(multiplication_transcript[num_quads].y),
                                ctx->add_variable(x_alpha),
                                ctx->add_variable(accumulator_transcript[num_quads]),
-                               fr::zero,
-                               fr::zero,
-                               fr::zero,
-                               fr::zero,
-                               fr::zero };
+                               fr::zero(),
+                               fr::zero(),
+                               fr::zero(),
+                               fr::zero(),
+                               fr::zero() };
     ctx->create_big_add_gate(add_quad);
 
     point result;

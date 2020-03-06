@@ -10,7 +10,7 @@ However, the algorithm, as it stands, is not parallelisable, due to the highly n
 
 ## The algorithm 
 
-Say you have `n` `g1::affine_element` points, and `n` `fr::field_t` scalars you want to multiply each point by. 
+Say you have `n` `g1::affine_element` points, and `n` `fr` scalars you want to multiply each point by. 
 
 Pippenger's algorithm proceeds, but taking each scalar and slicing it into sequences of bits. The size of each slice depends on the number of points being multiplied.
 
