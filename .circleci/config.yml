@@ -98,6 +98,20 @@ jobs:
             docker pull aztecprotocol/clang:9.0.0
             docker-compose build x86_64-linux-clang
 
+  wasm-linux-clang:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: 'Build'
+          working_directory: barretenberg
+          command: |
+            docker pull aztecprotocol/clang:9.0.0
+            docker-compose build wasm-linux-clang
+
   x86_64-win32-mingw:
     machine:
       image: ubuntu-1604:201903-01
@@ -122,20 +136,6 @@ jobs:
           working_directory: barretenberg
           command: docker-compose build arm64-linux-gcc
 
-  wasm-linux-clang:
-    machine:
-      image: ubuntu-1604:201903-01
-      docker_layer_caching: true
-    resource_class: large
-    steps:
-      - checkout
-      - run:
-          name: 'Build'
-          working_directory: barretenberg
-          command: |
-            docker pull aztecprotocol/clang:9.0.0
-            docker-compose build wasm-linux-clang
-
 workflows:
   build:
     jobs:
@@ -146,12 +146,12 @@ workflows:
       - x86_64-linux-clang:
           requires:
             - toolchains
+      - wasm-linux-clang:
+          requires:
+            - toolchains
       # - x86_64-win32-mingw:
       #     requires:
       #       - toolchains
       # - arm64-linux-gcc:
-      #     requires:
-      #       - toolchains
-      # - wasm-linux-clang:
       #     requires:
       #       - toolchains
