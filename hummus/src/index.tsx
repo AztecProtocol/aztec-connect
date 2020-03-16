@@ -11,7 +11,8 @@ import { BarretenbergWasm } from 'barretenberg/wasm';
 import { Schnorr } from 'barretenberg/crypto/schnorr';
 import { parseAuthData, AuthData } from './parseAuthData';
 import * as cbor from 'cbor';
-import { createHash } from 'crypto';
+import { createHash, createVerify } from 'crypto';
+const secp256r1 = require('secp256r1');
 require('barretenberg/wasm/barretenberg.wasm');
 
 async function signAThing() {
@@ -94,17 +95,13 @@ interface Creds {
   pubKey: Buffer;
 };
 
-function toHexString(byteArray: Uint8Array) {
-  return Array.prototype.map.call(byteArray, function(byte) {
-    return ('0' + (byte & 0xFF).toString(16)).slice(-2);
-  }).join('');
-}
-function toByteArray(hexString: string) {
-  var result = [];
-  for (var i = 0; i < hexString.length; i += 2) {
-    result.push(parseInt(hexString.substr(i, 2), 16));
-  }
-  return result;
+function COSEECDHAtoPKCS(COSEPublicKey: Buffer) {
+  const coseStruct = cbor.decodeAllSync(COSEPublicKey)[0]
+  const tag = Buffer.from([0x04])
+  const x = coseStruct.get(-2)
+  const y = coseStruct.get(-3)
+
+  return Buffer.concat([tag, x, y])
 }
 
 async function doTheThings() {
@@ -113,17 +110,18 @@ async function doTheThings() {
   if (!existingCreds) {
     const parsedAuthData = await makeCred();
     console.log(parsedAuthData);
+    const pubKey = COSEECDHAtoPKCS(parsedAuthData.cosePublicKeyBuffer!);
 
     // Store counter, credId, and pub key.
     creds = {
       counter: parsedAuthData.counter,
       credId: parsedAuthData.credIdBuffer!,
-      pubKey: parsedAuthData.cosePublicKeyBuffer!,
+      pubKey,
     };
     const toStore = {
       counter: parsedAuthData.counter,
       credId: parsedAuthData.credIdBuffer!.toString('base64'),
-      pubKey: parsedAuthData.cosePublicKeyBuffer!.toString('base64'),
+      pubKey: pubKey.toString('base64'),
     }
     window.localStorage.setItem("creds", JSON.stringify(toStore))
   } else {
@@ -141,7 +139,11 @@ async function doTheThings() {
   const signResponse = await sign(creds.credId, challenge);
   console.log(signResponse);
 
-  const clientDataJson = JSON.parse(new TextDecoder("utf-8").decode(signResponse.clientDataJSON));
+  const clientDataJsonStr = new TextDecoder("utf-8").decode(signResponse.clientDataJSON);
+  console.log(clientDataJsonStr);
+  console.log('client json length: ', clientDataJsonStr.length);
+
+  const clientDataJson = JSON.parse(clientDataJsonStr);
   console.log(clientDataJson);
   if (!challenge.equals(Buffer.from(clientDataJson.challenge, 'base64'))) {
     throw "Challenge unequal.";
@@ -153,11 +155,55 @@ async function doTheThings() {
     throw "Type unequal.";
   }
 
-  const authData = Buffer.from(signResponse.authenticatorData);
-  console.log("auth data", parseAuthData(authData));
+  const authDataBuf = Buffer.from(signResponse.authenticatorData);
+  const authData = parseAuthData(authDataBuf);
+  console.log("auth data", authData);
 
-  const clientDataHash = createHash('sha256').update('alice', 'utf8').digest();
-  const signatureBase = Buffer.concat([authData, clientDataHash]);
+  if (!authData.flags.up) {
+    throw new Error('User was not presented during authentication!')
+  }
+
+  if (!authData.flags.uv) {
+    throw new Error('User was not verified during authentication!')
+  }
+
+  const clientDataHash = createHash('sha256').update(clientDataJsonStr).digest();
+  const signatureBase = Buffer.concat([authDataBuf, clientDataHash]);
+  const publicKey = ASN1toPEM(creds.pubKey);
+  console.log(publicKey);
+  console.log('length of message: ', signatureBase.length);
+
+  const verified = createVerify('sha256')
+      .update(signatureBase)
+      .verify(publicKey, Buffer.from(signResponse.signature));
+
+  console.log(verified);
+}
+
+
+function ASN1toPEM (pkBuffer: Buffer) {
+  let type;
+  if (pkBuffer.length == 65 && pkBuffer[0] == 0x04) {
+    pkBuffer = Buffer.concat([
+      Buffer.from("3059301306072a8648ce3d020106082a8648ce3d030107034200", "hex"),
+      pkBuffer
+    ])
+
+    type = 'PUBLIC KEY'
+  } else {
+    type = 'CERTIFICATE'
+  }
+
+  const b64cert = pkBuffer.toString('base64')
+
+  let PEMKey = ''
+  for (let i = 0; i < Math.ceil(b64cert.length / 64); i++) {
+    const start = 64 * i
+    PEMKey += b64cert.substr(start, 64) + '\n'
+  }
+
+  PEMKey = `-----BEGIN ${type}-----\n` + PEMKey + `-----END ${type}-----\n`
+  return PEMKey
 }
 
 function LandingPage(props: any) {
