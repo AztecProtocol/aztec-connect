@@ -1,5 +1,10 @@
 import { BarretenbergWasm } from '../../wasm';
 
+export interface Signature {
+  s: Buffer;
+  e: Buffer
+}
+
 export class Schnorr {
   constructor(private wasm: BarretenbergWasm) {}
 
