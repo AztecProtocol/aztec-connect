@@ -23,7 +23,7 @@ jobs:
           name: 'cmake'
           working_directory: barretenberg
           command: |
-            if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q ^dockerfiles/Dockerfile.cmake; then
+            if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q dockerfiles/Dockerfile.cmake; then
               docker-compose build cmake
               docker push aztecprotocol/cmake:3.16.5
             fi
@@ -31,7 +31,7 @@ jobs:
           name: 'gcc'
           working_directory: barretenberg
           command: |
-            if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q ^dockerfiles/Dockerfile.gcc; then
+            if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q dockerfiles/Dockerfile.gcc; then
               docker-compose build gcc
               docker push aztecprotocol/gcc:9
             fi
@@ -39,7 +39,7 @@ jobs:
           name: 'clang'
           working_directory: barretenberg
           command: |
-            if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q ^dockerfiles/Dockerfile.clang; then
+            if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q dockerfiles/Dockerfile.clang; then
               docker-compose build clang
               docker push aztecprotocol/clang:9.0.0
             fi
@@ -47,7 +47,7 @@ jobs:
       #     name: 'crosstool-ng'
       #     working_directory: barretenberg
       #     command: |
-      #       if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q ^dockerfiles/Dockerfile.crosstool-ng; then
+      #       if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q dockerfiles/Dockerfile.crosstool-ng; then
       #         docker-compose build crosstool-ng
       #         docker push aztecprotocol/crosstool-ng:1.24.0
       #       fi
@@ -55,7 +55,7 @@ jobs:
       #     name: 'crosstool-ng-arm64'
       #     working_directory: barretenberg
       #     command: |
-      #       if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q ^dockerfiles/Dockerfile.crosstool-ng-arm64; then
+      #       if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q dockerfiles/Dockerfile.crosstool-ng-arm64; then
       #         docker-compose build crosstool-ng-arm64
       #         docker push aztecprotocol/crosstool-ng-arm64:latest
       #       fi
@@ -64,7 +64,7 @@ jobs:
       #     name: 'mingw'
       #     working_directory: barretenberg
       #     command: |
-      #       if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q ^dockerfiles/Dockerfile.mingw; then
+      #       if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q dockerfiles/Dockerfile.mingw; then
       #         docker-compose build mingw
       #         docker push aztecprotocol/mingw:latest
       #       fi
