@@ -1,6 +1,7 @@
 import { BarretenbergWasm } from '../../wasm';
 import { CreateProof } from './index';
 import { Schnorr } from '../../crypto/schnorr';
+import { Crs } from '../../crs';
 import { randomBytes } from 'crypto';
 
 describe('create_proof', () => {
@@ -16,6 +17,9 @@ describe('create_proof', () => {
   });
 
   it('should construct "create note" proof', async () => {
+    const crs = new Crs(1);
+    await crs.download();
+
     // prettier-ignore
     const pk = Buffer.from([
       0x0b, 0x9b, 0x3a, 0xde, 0xe6, 0xb3, 0xd8, 0x1b, 0x28, 0xa0, 0x88, 0x6b, 0x2a, 0x84, 0x15, 0xc7,
@@ -23,10 +27,8 @@ describe('create_proof', () => {
     const pubKey = schnorr.computePublicKey(pk);
     const viewingKey = randomBytes(32);
     const noteData = createProof.createNote(pubKey, 100, viewingKey);
-    console.log(noteData);
     const signature = schnorr.constructSignature(noteData, pk);
-    console.log(signature);
 
-    const proof = createProof.createNoteProof(pubKey, 100, viewingKey, signature);
-  });
+    const proof = createProof.createNoteProof(pubKey, 100, viewingKey, signature, crs);
+  }, 60000);
 });

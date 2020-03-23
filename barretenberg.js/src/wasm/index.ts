@@ -1,4 +1,3 @@
-import fetch from 'isomorphic-fetch';
 import { readFile } from 'fs';
 import isNode from 'detect-node';
 import { promisify, TextDecoder } from 'util';
@@ -14,40 +13,24 @@ export class BarretenbergWasm {
 
     const importObj = {
       wasi_unstable: {
-        fd_close: () => {
-          console.log('fd_close');
-        },
-        fd_read: () => {
-          console.log('fd_read');
-        },
+        fd_close: () => {},
+        fd_read: () => {},
         fd_write: (fd, iovs: number) => {
-          console.log('fd_write');
           if (fd === 1) {
             const m = this.getMemory();
-            const iovsBuf = Buffer.from(m.slice(iovs, iovs+8));
+            const iovsBuf = Buffer.from(m.slice(iovs, iovs + 8));
             const loc = iovsBuf.readUInt32LE(0);
             const len = iovsBuf.readUInt32LE(4);
             console.log('len: ', len);
-            console.log(new TextDecoder().decode(this.getMemory().slice(loc, loc+len)));
+            console.log(new TextDecoder().decode(this.getMemory().slice(loc, loc + len)));
           }
         },
-        fd_seek: () => {
-          console.log('fd_seek');
-        },
-        fd_fdstat_get: () => {
-          console.log('fd_fdstat_get');
-        },
-        fd_fdstat_set_flags: () => {
-          console.log('fd_fdstat_set_flags');
-        },
-        path_open: () => {
-          console.log('path_open');
-        },
-        path_filestat_get: () => {
-          console.log('path_filestat_get');
-        },
+        fd_seek: () => {},
+        fd_fdstat_get: () => {},
+        fd_fdstat_set_flags: () => {},
+        path_open: () => {},
+        path_filestat_get: () => {},
         random_get: (arr, length) => {
-          console.log('random_get');
           const heap = new Uint8Array(this.memory.buffer);
           for (let i = arr; i < arr + length; ++i) {
             heap[i] = Math.floor(Math.random() * 256);
