@@ -20,7 +20,8 @@ export class CreateProof {
     const crsData = crs.getData();
     this.wasm.transferToHeap(crsData, 160);
     const resultLoc = 160 + crsData.length;
-    this.wasm.exports().create_note_proof(0, value, 64, 96, 128, 160, crsData, crsData.length, resultLoc);
-    return Buffer.from(this.wasm.getMemory().slice(resultLoc, resultLoc+64));
+    this.wasm.exports().create_note_proof(0, value, 64, 96, 128, 160, crsData.length, resultLoc);
+    const proofLength = Buffer.from(this.wasm.getMemory().slice(resultLoc, resultLoc+4)).readUInt32LE(0);
+    return Buffer.from(this.wasm.getMemory().slice(resultLoc+4, resultLoc+4+proofLength));
   }
 }

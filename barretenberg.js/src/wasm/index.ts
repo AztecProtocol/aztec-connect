@@ -8,7 +8,7 @@ export class BarretenbergWasm {
   private instance!: WebAssembly.Instance;
 
   public async init() {
-    this.memory = new WebAssembly.Memory({ initial: 130 });
+    this.memory = new WebAssembly.Memory({ initial: 256 });
     this.heap = new Uint8Array(this.memory.buffer);
 
     const importObj = {

@@ -17,7 +17,7 @@ describe('create_proof', () => {
   });
 
   it('should construct "create note" proof', async () => {
-    const crs = new Crs(1);
+    const crs = new Crs(32768);
     await crs.download();
 
     // prettier-ignore
@@ -29,6 +29,11 @@ describe('create_proof', () => {
     const noteData = createProof.createNote(pubKey, 100, viewingKey);
     const signature = schnorr.constructSignature(noteData, pk);
 
+    const start = new Date().getTime();
     const proof = createProof.createNoteProof(pubKey, 100, viewingKey, signature, crs);
+    console.log(new Date().getTime() - start);
+
+    console.log(proof.length);
+    console.log(proof);
   }, 60000);
 });

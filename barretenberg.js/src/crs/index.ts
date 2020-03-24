@@ -18,7 +18,6 @@ export class Crs {
     });
 
     this.data = new Uint8Array(await response.arrayBuffer());
-    console.log(`Downloaded ${this.data.length} bytes.`);
   }
 
   getData() {
