@@ -1,7 +1,6 @@
-import fetch from 'isomorphic-fetch';
 import { readFile } from 'fs';
 import isNode from 'detect-node';
-import { promisify } from 'util';
+import { promisify, TextDecoder } from 'util';
 
 export class BarretenbergWasm {
   private memory!: WebAssembly.Memory;
@@ -9,7 +8,7 @@ export class BarretenbergWasm {
   private instance!: WebAssembly.Instance;
 
   public async init() {
-    this.memory = new WebAssembly.Memory({ initial: 2 });
+    this.memory = new WebAssembly.Memory({ initial: 256 });
     this.heap = new Uint8Array(this.memory.buffer);
 
     const importObj = {
@@ -19,6 +18,9 @@ export class BarretenbergWasm {
         fd_write: () => {},
         fd_seek: () => {},
         fd_fdstat_get: () => {},
+        fd_fdstat_set_flags: () => {},
+        path_open: () => {},
+        path_filestat_get: () => {},
         random_get: (arr, length) => {
           const heap = new Uint8Array(this.memory.buffer);
           for (let i = arr; i < arr + length; ++i) {
@@ -27,7 +29,15 @@ export class BarretenbergWasm {
         },
       },
       module: {},
-      env: { memory: this.memory },
+      env: {
+        logstr: (addr: number) => {
+          const m = this.getMemory();
+          let i;
+          for (i=addr; m[i] !== 0; ++i);
+          // tslint:disable-next-line:no-console
+          console.log(new TextDecoder().decode(m.slice(addr, i)));
+        },
+        memory: this.memory },
     };
 
     if (isNode) {
