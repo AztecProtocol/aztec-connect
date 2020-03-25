@@ -15,16 +15,7 @@ export class BarretenbergWasm {
       wasi_unstable: {
         fd_close: () => {},
         fd_read: () => {},
-        fd_write: (fd, iovs: number) => {
-          if (fd === 1) {
-            const m = this.getMemory();
-            const iovsBuf = Buffer.from(m.slice(iovs, iovs + 8));
-            const loc = iovsBuf.readUInt32LE(0);
-            const len = iovsBuf.readUInt32LE(4);
-            console.log('len: ', len);
-            console.log(new TextDecoder().decode(this.getMemory().slice(loc, loc + len)));
-          }
-        },
+        fd_write: () => {},
         fd_seek: () => {},
         fd_fdstat_get: () => {},
         fd_fdstat_set_flags: () => {},
@@ -38,7 +29,15 @@ export class BarretenbergWasm {
         },
       },
       module: {},
-      env: { memory: this.memory },
+      env: {
+        logstr: (addr: number) => {
+          const m = this.getMemory();
+          let i;
+          for (i=addr; m[i] !== 0; ++i);
+          // tslint:disable-next-line:no-console
+          console.log(new TextDecoder().decode(m.slice(addr, i)));
+        },
+        memory: this.memory },
     };
 
     if (isNode) {
