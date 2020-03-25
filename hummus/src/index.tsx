@@ -1,10 +1,3 @@
-/*
-  Copyright (c) 2019 Spilsbury Holdings
-
-  This file is part of web3x and is released under the MIT License.
-  https://opensource.org/licenses/MIT
-*/
-
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { BarretenbergWasm } from 'barretenberg/wasm';
@@ -12,7 +5,6 @@ import { Schnorr } from 'barretenberg/crypto/schnorr';
 import { parseAuthData, AuthData } from './parseAuthData';
 import * as cbor from 'cbor';
 import { createHash, createVerify } from 'crypto';
-const secp256r1 = require('secp256r1');
 require('barretenberg/wasm/barretenberg.wasm');
 
 async function signAThing() {
