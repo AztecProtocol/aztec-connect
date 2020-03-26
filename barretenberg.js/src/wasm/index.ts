@@ -1,6 +1,6 @@
 import { readFile } from 'fs';
 import isNode from 'detect-node';
-import { promisify, TextDecoder } from 'util';
+import { promisify } from 'util';
 
 export class BarretenbergWasm {
   private memory!: WebAssembly.Memory;
@@ -35,7 +35,12 @@ export class BarretenbergWasm {
           let i;
           for (i=addr; m[i] !== 0; ++i);
           // tslint:disable-next-line:no-console
-          console.log(new TextDecoder().decode(m.slice(addr, i)));
+          if (isNode) {
+            const TextDecoder = require('util').TextDecoder;
+            console.log(new TextDecoder().decode(m.slice(addr, i)));
+          } else {
+            console.log(new TextDecoder().decode(m.slice(addr, i)));
+          }
         },
         memory: this.memory },
     };

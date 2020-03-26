@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc -p tsconfig.cjs.json && cp ./src/wasm/barretenberg.wasm ./dest/wasm && cp package.json dest",
+    "build:watch": "mkdir -p ./dest/wasm && cp -R ./src/wasm/barretenberg.wasm ./dest/wasm && tsc -p tsconfig.cjs.json --watch",
     "test": "jest",
     "start:dev": "tsc -p tsconfig.cjs.json --watch"
   },
