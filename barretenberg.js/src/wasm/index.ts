@@ -1,15 +1,22 @@
 import { readFile } from 'fs';
 import isNode from 'detect-node';
 import { promisify } from 'util';
+import { Crs } from '../crs';
 
 export class BarretenbergWasm {
   private memory!: WebAssembly.Memory;
   private heap!: Uint8Array;
   private instance!: WebAssembly.Instance;
 
+  constructor(private crs?: Crs) {}
+
   public async init() {
     this.memory = new WebAssembly.Memory({ initial: 256 });
     this.heap = new Uint8Array(this.memory.buffer);
+
+    if (this.crs) {
+      this.transferToHeap(this.crs.getData(), this.getMonomialsAddress());
+    }
 
     const importObj = {
       wasi_unstable: {
@@ -42,6 +49,11 @@ export class BarretenbergWasm {
             console.log(new TextDecoder().decode(m.slice(addr, i)));
           }
         },
+        wasm_pippenger_unsafe: (scalars: number, numPoints: number, result: number) => {
+          this.exports().pippenger_unsafe(
+            scalars, this.getMonomialsAddress(), numPoints, result
+          );
+        },
         memory: this.memory },
     };
 
@@ -54,6 +66,10 @@ export class BarretenbergWasm {
       const mod = await WebAssembly.instantiateStreaming(res, importObj);
       this.instance = mod.instance;
     }
+  }
+
+  public getMonomialsAddress(): number {
+    return 1024;
   }
 
   public exports(): any {

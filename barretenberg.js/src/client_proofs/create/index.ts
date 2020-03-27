@@ -24,9 +24,8 @@ export class CreateProof {
     // TODO: Test local storage has the proving key.
     // If not, fire off (eventually in webworker), call to compute the proving key, feeding in crs data.
     const crsData = crs.getData();
-    this.wasm.transferToHeap(crsData, 0);
-    this.wasm.transferToHeap(crs.getG2Data(), crsData.length);
-    this.wasm.exports().init_keys(0, crsData.length, crsData.length);
+    this.wasm.transferToHeap(crs.getG2Data(), 0);
+    this.wasm.exports().init_keys(this.wasm.getMonomialsAddress(), crsData.length, 0);
   }
 
   public encryptNote(note: Note) {

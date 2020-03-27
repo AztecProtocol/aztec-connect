@@ -2,7 +2,7 @@
   "name": "hummus",
   "version": "1.0.0",
   "main": "dist/main.js",
-  "license": "MIT",
+  "license": "GPL-2.0",
   "scripts": {
     "build": "webpack --config webpack.prod.js",
     "start": "node ./server",

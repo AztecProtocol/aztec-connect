@@ -2,7 +2,6 @@ import { BarretenbergWasm } from '../../wasm';
 import { CreateProof, Note } from './index';
 import { Schnorr } from '../../crypto/schnorr';
 import { Crs } from '../../crs';
-import { randomBytes } from 'crypto';
 
 describe('create_proof', () => {
   let barretenberg!: BarretenbergWasm;
@@ -10,11 +9,11 @@ describe('create_proof', () => {
   let schnorr!: Schnorr;
 
   beforeAll(async () => {
-    barretenberg = new BarretenbergWasm();
-    await barretenberg.init();
-
     const crs = new Crs(32768);
     await crs.download();
+
+    barretenberg = new BarretenbergWasm(crs);
+    await barretenberg.init();
 
     schnorr = new Schnorr(barretenberg);
     createProof = new CreateProof(barretenberg);
