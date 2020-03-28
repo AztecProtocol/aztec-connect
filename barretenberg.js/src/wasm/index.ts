@@ -50,9 +50,21 @@ export class BarretenbergWasm {
           }
         },
         wasm_pippenger_unsafe: (scalars: number, numPoints: number, result: number) => {
+          const pointsPerRun = numPoints/2;
+          const scalarBufLen = pointsPerRun * 32;
+          const s1 = this.exports().bbmalloc(scalarBufLen);
+          const s2 = this.exports().bbmalloc(scalarBufLen);
+          this.transferToHeap(this.getMemory().slice(scalars, scalars + scalarBufLen), s1);
+          this.transferToHeap(this.getMemory().slice(scalars + scalarBufLen, scalars + numPoints * 32), s2);
           this.exports().pippenger_unsafe(
-            scalars, this.getMonomialsAddress(), numPoints, result
+            s1, 0, pointsPerRun, this.getMonomialsAddress(), numPoints, 0
           );
+          this.exports().pippenger_unsafe(
+            s2, pointsPerRun, pointsPerRun, this.getMonomialsAddress(), numPoints, 96
+          );
+          this.exports().g1_sum(0, 2, result);
+          this.exports().bbfree(s1);
+          this.exports().bbfree(s2);
         },
         memory: this.memory },
     };
