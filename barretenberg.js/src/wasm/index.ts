@@ -1,22 +1,34 @@
 import { readFile } from 'fs';
 import isNode from 'detect-node';
 import { promisify } from 'util';
-import { Crs } from '../crs';
+import { BarretenbergWorker } from './worker';
+import { spawn, Thread, Worker } from 'threads';
+
+export async function fetchCode() {
+  if (isNode) {
+    return await promisify(readFile)(__dirname + '/barretenberg.wasm');
+  } else {
+    const res = await fetch('barretenberg.wasm');
+    return Buffer.from(res.arrayBuffer());
+  }
+}
+
+export async function createWorker() {
+  return await spawn<BarretenbergWorker>(new Worker('./worker'));
+}
+
+export async function destroyWorker(worker: BarretenbergWorker) {
+  await Thread.terminate(worker as any);
+}
 
 export class BarretenbergWasm {
   private memory!: WebAssembly.Memory;
   private heap!: Uint8Array;
   private instance!: WebAssembly.Instance;
 
-  constructor(private crs?: Crs) {}
-
-  public async init() {
+  public async init(code: Uint8Array) {
     this.memory = new WebAssembly.Memory({ initial: 256 });
     this.heap = new Uint8Array(this.memory.buffer);
-
-    if (this.crs) {
-      this.transferToHeap(this.crs.getData(), this.getMonomialsAddress());
-    }
 
     const importObj = {
       wasi_unstable: {
@@ -40,48 +52,39 @@ export class BarretenbergWasm {
         logstr: (addr: number) => {
           const m = this.getMemory();
           let i;
-          for (i=addr; m[i] !== 0; ++i);
-          // tslint:disable-next-line:no-console
+          for (i = addr; m[i] !== 0; ++i);
           if (isNode) {
             const TextDecoder = require('util').TextDecoder;
+            // tslint:disable-next-line:no-console
             console.log(new TextDecoder().decode(m.slice(addr, i)));
           } else {
+            // tslint:disable-next-line:no-console
             console.log(new TextDecoder().decode(m.slice(addr, i)));
           }
         },
+        /*
         wasm_pippenger_unsafe: (scalars: number, numPoints: number, result: number) => {
-          const pointsPerRun = numPoints/2;
+          console.log("wasm_pippenger_unsafe");
+          // const scalarBuf = this.getMemory().slice(scalars, numPoints * 32);
+          const pointsPerRun = numPoints / 2;
           const scalarBufLen = pointsPerRun * 32;
-          const s1 = this.exports().bbmalloc(scalarBufLen);
-          const s2 = this.exports().bbmalloc(scalarBufLen);
-          this.transferToHeap(this.getMemory().slice(scalars, scalars + scalarBufLen), s1);
-          this.transferToHeap(this.getMemory().slice(scalars + scalarBufLen, scalars + numPoints * 32), s2);
-          this.exports().pippenger_unsafe(
-            s1, 0, pointsPerRun, this.getMonomialsAddress(), numPoints, 0
-          );
-          this.exports().pippenger_unsafe(
-            s2, pointsPerRun, pointsPerRun, this.getMonomialsAddress(), numPoints, 96
-          );
-          this.exports().g1_sum(0, 2, result);
-          this.exports().bbfree(s1);
-          this.exports().bbfree(s2);
+          const s1 = Buffer.from(this.getMemory().slice(scalars, scalars + scalarBufLen));
+          const s2 = Buffer.from(this.getMemory().slice(scalars + scalarBufLen, scalars + numPoints * 32));
+
+
+          const resultBuf = new Uint8Array(sharedBuf.slice(2));
+          const mem = this.exports().bbmalloc(resultBuf.length);
+          this.transferToHeap(resultBuf, mem);
+          this.exports().g1_sum(mem, 2, result);
+          this.exports().bbfree(mem);
         },
-        memory: this.memory },
+        */
+        memory: this.memory,
+      },
     };
 
-    if (isNode) {
-      const res = await promisify(readFile)(__dirname + '/barretenberg.wasm');
-      const mod = await WebAssembly.instantiate(res, importObj);
-      this.instance = mod.instance;
-    } else {
-      const res = await fetch('barretenberg.wasm');
-      const mod = await WebAssembly.instantiateStreaming(res, importObj);
-      this.instance = mod.instance;
-    }
-  }
-
-  public getMonomialsAddress(): number {
-    return 1024;
+    const mod = await WebAssembly.instantiate(code, importObj);
+    this.instance = mod.instance;
   }
 
   public exports(): any {
