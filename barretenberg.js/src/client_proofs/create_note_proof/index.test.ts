@@ -5,6 +5,7 @@ import { destroyWorker, createWorker, fetchCode } from '../../wasm';
 import { Prover } from '../prover';
 import { Crs } from '../../crs';
 
+// tslint:disable:no-console
 describe('create_proof', () => {
   let barretenberg!: BarretenbergWorker;
   let createProof!: CreateNoteProof;
@@ -25,11 +26,10 @@ describe('create_proof', () => {
     schnorr = new Schnorr(barretenberg);
     createProof = new CreateNoteProof(barretenberg, prover);
 
-    await barretenberg.log("creating keys...");
+    console.log("creating keys...");
     const start = new Date().getTime();
     await createProof.init();
-    // tslint:disable-next-line:no-console
-    await barretenberg.log(`create circuit keys: ${new Date().getTime() - start}ms`);
+    console.log(`create circuit keys: ${new Date().getTime() - start}ms`);
   }, 60000);
 
   afterAll(async () => {
@@ -54,11 +54,12 @@ describe('create_proof', () => {
 
     expect(await schnorr.verifySignature(encryptedNoteX, pubKey, signature)).toBe(true);
 
-    await barretenberg.log("creating proof...");
+    console.log("creating proof...");
     const start = new Date().getTime();
     const proof = await createProof.createNoteProof(note, signature);
-    // tslint:disable-next-line:no-console
-    await barretenberg.log(`create proof time: ${new Date().getTime() - start}ms`);
+    console.log(proof);
+    console.log(`create proof time: ${new Date().getTime() - start}ms`);
+    console.log(`proof size: ${proof.length}`);
 
     const verified = await createProof.verifyProof(proof);
     expect(verified).toBe(true);
