@@ -4,12 +4,15 @@ import { BarretenbergWorker } from '../../wasm/worker';
 import { destroyWorker, createWorker, fetchCode } from '../../wasm';
 import { Prover } from '../prover';
 import { Crs } from '../../crs';
+import { SinglePippenger } from '../../pippenger';
+import { PooledPippenger } from '../../pippenger/pooled_pippenger';
 
 // tslint:disable:no-console
 describe('create_proof', () => {
   let barretenberg!: BarretenbergWorker;
   let createProof!: CreateNoteProof;
   let schnorr!: Schnorr;
+  let pippenger!: PooledPippenger;
 
   beforeAll(async () => {
     const code = await fetchCode();
@@ -20,19 +23,28 @@ describe('create_proof', () => {
     const crs = new Crs(32*1024);
     await crs.download();
 
-    const prover = new Prover(barretenberg, crs);
-    await prover.init();
+    const keyGenPippenger = new SinglePippenger(barretenberg);
+    await keyGenPippenger.init(crs.getData());
+
+    console.log("creating workers...");
+    let start = new Date().getTime();
+    pippenger = new PooledPippenger(barretenberg);
+    await pippenger.init(code, crs.getData(), 1);
+    console.log(`create workers: ${new Date().getTime() - start}ms`);
+
+    const prover = new Prover(barretenberg, crs, pippenger);
 
     schnorr = new Schnorr(barretenberg);
-    createProof = new CreateNoteProof(barretenberg, prover);
+    createProof = new CreateNoteProof(barretenberg, prover, keyGenPippenger);
 
     console.log("creating keys...");
-    const start = new Date().getTime();
+    start = new Date().getTime();
     await createProof.init();
     console.log(`create circuit keys: ${new Date().getTime() - start}ms`);
   }, 60000);
 
   afterAll(async () => {
+    await pippenger.destroy();
     await destroyWorker(barretenberg);
   });
 
@@ -57,7 +69,6 @@ describe('create_proof', () => {
     console.log("creating proof...");
     const start = new Date().getTime();
     const proof = await createProof.createNoteProof(note, signature);
-    console.log(proof);
     console.log(`create proof time: ${new Date().getTime() - start}ms`);
     console.log(`proof size: ${proof.length}`);
 

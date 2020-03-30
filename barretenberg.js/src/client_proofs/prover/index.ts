@@ -3,24 +3,10 @@ import { BarretenbergWorker } from '../../wasm/worker';
 import { Pippenger } from '../../pippenger';
 
 export class Prover {
-  private pippenger: Pippenger;
   private g2Data: Uint8Array;
 
-  constructor(private wasm: BarretenbergWorker, private crs: Crs) {
-    this.pippenger = new Pippenger(this.wasm);
+  constructor(private wasm: BarretenbergWorker, crs: Crs, private pippenger: Pippenger) {
     this.g2Data = crs.getG2Data();
-  }
-
-  public async init() {
-    await this.pippenger.init(this.crs.getData());
-  }
-
-  public getPointTableAddr() {
-    return this.pippenger.getPointTableAddr();
-  }
-
-  public getNumCrsPoints() {
-    return this.pippenger.getNumCrsPoints();
   }
 
   public getG2Data() {
@@ -29,7 +15,6 @@ export class Prover {
 
   public async createProof(proverPtr: number) {
     const circuitSize = await this.wasm.call("prover_get_circuit_size", proverPtr);
-    console.log(`reported circuit size: ${circuitSize}`);
     await this.wasm.call("prover_execute_preamble_round", proverPtr);
     await this.processProverQueue(proverPtr, circuitSize);
     await this.wasm.call("prover_execute_first_round", proverPtr);
@@ -49,12 +34,10 @@ export class Prover {
 
   private async processProverQueue(proverPtr: number, circuitSize: number) {
     const jobs = await this.wasm.call("prover_get_num_queued_scalar_multiplications", proverPtr);
-    console.log(`jobs: ${jobs}`);
     for (let i=0; i<jobs; ++i) {
       const scalarsPtr = await this.wasm.call("prover_get_scalar_multiplication_data", proverPtr, i);
       const scalars = await this.wasm.sliceMemory(scalarsPtr, scalarsPtr + circuitSize*32);
       const result = await this.pippenger.pippengerUnsafe(scalars, 0, circuitSize);
-      console.log(result);
       await this.wasm.transferToHeap(result, 0);
       await this.wasm.call("prover_put_scalar_multiplication_data", proverPtr, 0, i);
     }

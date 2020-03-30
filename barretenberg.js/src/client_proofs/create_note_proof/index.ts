@@ -1,6 +1,7 @@
 import { Signature } from '../../crypto/schnorr';
 import { BarretenbergWorker } from '../../wasm/worker';
 import { Prover } from '../prover';
+import { SinglePippenger } from '../../pippenger';
 
 export class Note {
   constructor(
@@ -17,12 +18,12 @@ export class Note {
 }
 
 export class CreateNoteProof {
-  constructor(private wasm: BarretenbergWorker, private prover: Prover) {
+  constructor(private wasm: BarretenbergWorker, private prover: Prover, private keyGenPippenger: SinglePippenger) {
   }
 
   public async init() {
-    const pointTablePtr = this.prover.getPointTableAddr();
-    const numPoints = this.prover.getNumCrsPoints();
+    const pointTablePtr = this.keyGenPippenger.getPointTableAddr();
+    const numPoints = this.keyGenPippenger.getNumCrsPoints();
     await this.wasm.transferToHeap(this.prover.getG2Data(), 0);
     await this.wasm.call("init_keys", pointTablePtr, numPoints, 0);
   }
@@ -39,9 +40,7 @@ export class CreateNoteProof {
     await this.wasm.transferToHeap(note.viewingKey, 64);
     await this.wasm.transferToHeap(sig.s, 96);
     await this.wasm.transferToHeap(sig.e, 128);
-    console.log("creating note prover.");
     const proverPtr = await this.wasm.call("new_create_note_prover", 0, note.value, 64, 96, 128);
-    console.log("created.");
     const proof = await this.prover.createProof(proverPtr);
     await this.wasm.call("delete_create_note_prover", proverPtr);
     return proof;
