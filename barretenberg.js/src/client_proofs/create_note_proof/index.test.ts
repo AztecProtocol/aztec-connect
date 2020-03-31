@@ -6,8 +6,10 @@ import { Prover } from '../prover';
 import { Crs } from '../../crs';
 import { SinglePippenger } from '../../pippenger';
 import { PooledPippenger } from '../../pippenger/pooled_pippenger';
+import createDebug from 'debug';
 
-// tslint:disable:no-console
+const debug = createDebug('create_proof');
+
 describe('create_proof', () => {
   let barretenberg!: BarretenbergWorker;
   let createProof!: CreateNoteProof;
@@ -26,21 +28,21 @@ describe('create_proof', () => {
     const keyGenPippenger = new SinglePippenger(barretenberg);
     await keyGenPippenger.init(crs.getData());
 
-    console.log("creating workers...");
+    debug("creating workers...");
     let start = new Date().getTime();
     pippenger = new PooledPippenger(barretenberg);
-    await pippenger.init(code, crs.getData(), 1);
-    console.log(`create workers: ${new Date().getTime() - start}ms`);
+    await pippenger.init(code, crs.getData(), 8);
+    debug(`create workers: ${new Date().getTime() - start}ms`);
 
     const prover = new Prover(barretenberg, crs, pippenger);
 
     schnorr = new Schnorr(barretenberg);
     createProof = new CreateNoteProof(barretenberg, prover, keyGenPippenger);
 
-    console.log("creating keys...");
+    debug("creating keys...");
     start = new Date().getTime();
     await createProof.init();
-    console.log(`create circuit keys: ${new Date().getTime() - start}ms`);
+    debug(`create circuit keys: ${new Date().getTime() - start}ms`);
   }, 60000);
 
   afterAll(async () => {
@@ -66,11 +68,11 @@ describe('create_proof', () => {
 
     expect(await schnorr.verifySignature(encryptedNoteX, pubKey, signature)).toBe(true);
 
-    console.log("creating proof...");
+    debug("creating proof...");
     const start = new Date().getTime();
     const proof = await createProof.createNoteProof(note, signature);
-    console.log(`create proof time: ${new Date().getTime() - start}ms`);
-    console.log(`proof size: ${proof.length}`);
+    debug(`create proof time: ${new Date().getTime() - start}ms`);
+    debug(`proof size: ${proof.length}`);
 
     const verified = await createProof.verifyProof(proof);
     expect(verified).toBe(true);
