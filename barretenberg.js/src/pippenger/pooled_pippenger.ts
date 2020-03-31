@@ -1,8 +1,11 @@
 import { Pippenger } from './pippenger';
 import { SinglePippenger } from './single_pippenger';
-import { createWorker, destroyWorker } from '../wasm';
+import { createWorker, destroyWorker } from '../wasm/worker_factory';
 import { BarretenbergWorker } from '../wasm/worker';
 import { ModuleThread } from 'threads';
+import createDebug from 'debug';
+
+const debug = createDebug('pippenger')
 
 export class PooledPippenger implements Pippenger {
   private workers: ModuleThread<BarretenbergWorker>[] = [];
@@ -14,7 +17,7 @@ export class PooledPippenger implements Pippenger {
     this.workers = await Promise.all(
       Array(poolSize)
         .fill(0)
-        .map(createWorker),
+        .map((_,i) => createWorker(`pippenger_child_${i}`))
     );
     this.pool = await Promise.all(this.workers.map(async w => {
       await w.init(code);
@@ -37,7 +40,7 @@ export class PooledPippenger implements Pippenger {
         return p.pippengerUnsafe(subset, scalarsPerWorker * i, scalarsPerWorker);
       }),
     );
-    console.log(`pippenger run took: ${new Date().getTime() - start}ms`);
+    debug(`pippenger run took: ${new Date().getTime() - start}ms`);
     return await this.sumElements(Buffer.concat(results));
   }
 

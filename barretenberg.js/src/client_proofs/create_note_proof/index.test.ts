@@ -1,7 +1,8 @@
 import { CreateNoteProof, Note } from './index';
 import { Schnorr } from '../../crypto/schnorr';
 import { BarretenbergWorker } from '../../wasm/worker';
-import { destroyWorker, createWorker, fetchCode } from '../../wasm';
+import { fetchCode } from '../../wasm';
+import { destroyWorker, createWorker, } from '../../wasm/worker_factory';
 import { Prover } from '../prover';
 import { Crs } from '../../crs';
 import { SinglePippenger } from '../../pippenger';
@@ -32,7 +33,7 @@ describe('create_proof', () => {
     let start = new Date().getTime();
     pippenger = new PooledPippenger(barretenberg);
     await pippenger.init(code, crs.getData(), 8);
-    debug(`create workers: ${new Date().getTime() - start}ms`);
+    debug(`created workers: ${new Date().getTime() - start}ms`);
 
     const prover = new Prover(barretenberg, crs, pippenger);
 
@@ -42,7 +43,7 @@ describe('create_proof', () => {
     debug("creating keys...");
     start = new Date().getTime();
     await createProof.init();
-    debug(`create circuit keys: ${new Date().getTime() - start}ms`);
+    debug(`created circuit keys: ${new Date().getTime() - start}ms`);
   }, 60000);
 
   afterAll(async () => {
@@ -71,7 +72,7 @@ describe('create_proof', () => {
     debug("creating proof...");
     const start = new Date().getTime();
     const proof = await createProof.createNoteProof(note, signature);
-    debug(`create proof time: ${new Date().getTime() - start}ms`);
+    debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
 
     const verified = await createProof.verifyProof(proof);

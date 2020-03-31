@@ -1,27 +1,18 @@
 import { readFile } from 'fs';
 import isNode from 'detect-node';
 import { promisify } from 'util';
-import { BarretenbergWorker } from './worker';
-import { spawn, Thread, Worker } from 'threads';
+import { EventEmitter } from 'events';
 
 export async function fetchCode() {
   if (isNode) {
     return await promisify(readFile)(__dirname + '/barretenberg.wasm');
   } else {
     const res = await fetch('barretenberg.wasm');
-    return Buffer.from(res.arrayBuffer());
+    return Buffer.from(await res.arrayBuffer());
   }
 }
 
-export async function createWorker() {
-  return await spawn<BarretenbergWorker>(new Worker('./worker'));
-}
-
-export async function destroyWorker(worker: BarretenbergWorker) {
-  await Thread.terminate(worker as any);
-}
-
-export class BarretenbergWasm {
+export class BarretenbergWasm extends EventEmitter {
   private memory!: WebAssembly.Memory;
   private heap!: Uint8Array;
   private instance!: WebAssembly.Instance;
@@ -53,32 +44,10 @@ export class BarretenbergWasm {
           const m = this.getMemory();
           let i;
           for (i = addr; m[i] !== 0; ++i);
-          if (isNode) {
-            const TextDecoder = require('util').TextDecoder;
-            // tslint:disable-next-line:no-console
-            console.log(new TextDecoder().decode(m.slice(addr, i)));
-          } else {
-            // tslint:disable-next-line:no-console
-            console.log(new TextDecoder().decode(m.slice(addr, i)));
-          }
+          const decoder = isNode ? new (require('util').TextDecoder)() : new TextDecoder();
+          const str = decoder.decode(m.slice(addr, i));
+          this.emit('log', str);
         },
-        /*
-        wasm_pippenger_unsafe: (scalars: number, numPoints: number, result: number) => {
-          console.log("wasm_pippenger_unsafe");
-          // const scalarBuf = this.getMemory().slice(scalars, numPoints * 32);
-          const pointsPerRun = numPoints / 2;
-          const scalarBufLen = pointsPerRun * 32;
-          const s1 = Buffer.from(this.getMemory().slice(scalars, scalars + scalarBufLen));
-          const s2 = Buffer.from(this.getMemory().slice(scalars + scalarBufLen, scalars + numPoints * 32));
-
-
-          const resultBuf = new Uint8Array(sharedBuf.slice(2));
-          const mem = this.exports().bbmalloc(resultBuf.length);
-          this.transferToHeap(resultBuf, mem);
-          this.exports().g1_sum(mem, 2, result);
-          this.exports().bbfree(mem);
-        },
-        */
         memory: this.memory,
       },
     };

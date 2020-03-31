@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { doTheThings } from './tmp_sign';
 import { createProof } from './create_proof';
 require('barretenberg/wasm/barretenberg.wasm');
 

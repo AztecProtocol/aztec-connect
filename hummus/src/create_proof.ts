@@ -1,22 +1,44 @@
-import { BarretenbergWasm } from 'barretenberg/wasm';
+import { fetchCode } from 'barretenberg/wasm';
+import { createWorker } from 'barretenberg/wasm/worker_factory';
+import { SinglePippenger, PooledPippenger } from 'barretenberg/pippenger';
+import { CreateNoteProof } from 'barretenberg/client_proofs/create_note_proof';
+import { Prover } from 'barretenberg/client_proofs/prover';
 import { Schnorr } from 'barretenberg/crypto/schnorr';
-import { CreateProof, Note } from 'barretenberg/client_proofs/create';
+import { Note } from 'barretenberg/client_proofs/create';
 import { Crs } from 'barretenberg/crs';
+import createDebug from 'debug';
+
+const debug = createDebug('create_proof');
 
 export async function createProof() {
-  const barretenberg = new BarretenbergWasm();
-  await barretenberg.init();
+  createDebug.enable('create_proof,pippenger,barretenberg*');
+
+  const code = await fetchCode();
+
+  const barretenberg = await createWorker();
+  await barretenberg.init(code);
 
   const crs = new Crs(32768);
   await crs.download();
 
-  const schnorr = new Schnorr(barretenberg);
-  const createProof = new CreateProof(barretenberg);
+  const keyGenPippenger = new SinglePippenger(barretenberg);
+  await keyGenPippenger.init(crs.getData());
 
+  debug('creating workers...');
   let start = new Date().getTime();
-  createProof.init(crs);
-  // tslint:disable-next-line:no-console
-  console.log(`create circuit keys: ${new Date().getTime() - start}ms`);
+  const pippenger = new PooledPippenger(barretenberg);
+  await pippenger.init(code, crs.getData(), 8);
+  debug(`created workers: ${new Date().getTime() - start}ms`);
+
+  const prover = new Prover(barretenberg, crs, pippenger);
+
+  const schnorr = new Schnorr(barretenberg);
+  const createProof = new CreateNoteProof(barretenberg, prover, keyGenPippenger);
+
+  debug('creating keys...');
+  start = new Date().getTime();
+  await createProof.init();
+  debug(`created circuit keys: ${new Date().getTime() - start}ms`);
 
   // prettier-ignore
   const pk = Buffer.from([
@@ -27,17 +49,18 @@ export async function createProof() {
       0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
       0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11 ]);
 
-  const pubKey = schnorr.computePublicKey(pk);
+  const pubKey = await schnorr.computePublicKey(pk);
   const note = new Note(pubKey, viewingKey, 100);
-  const encryptedNote = createProof.encryptNote(note);
+  const encryptedNote = await createProof.encryptNote(note);
   const encryptedNoteX = encryptedNote.slice(32, 64);
-  const signature = schnorr.constructSignature(encryptedNoteX, pk);
+  const signature = await schnorr.constructSignature(encryptedNoteX, pk);
 
+  debug("creating proof...");
   start = new Date().getTime();
-  const proof = createProof.createNoteProof(note, signature);
-  // tslint:disable-next-line:no-console
-  console.log(`create proof time: ${new Date().getTime() - start}ms`);
+  const proof = await createProof.createNoteProof(note, signature);
+  debug(`created proof: ${new Date().getTime() - start}ms`);
+  debug(`proof size: ${proof.length}`);
 
-  const verified = createProof.verifyProof(proof);
-  console.log(verified);
+  const verified = await createProof.verifyProof(proof);
+  debug(`verified: ${verified}`);
 }
