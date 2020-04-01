@@ -2,12 +2,14 @@
   "name": "barretenberg",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "MIT",
+  "license": "GPL-2.0",
   "scripts": {
-    "build": "tsc -p tsconfig.es.json && rm -f ./dest/wasm/barretenberg.wasm && cp -L ./src/wasm/barretenberg.wasm ./dest/wasm && cp package.json dest",
-    "build:watch": "mkdir -p ./dest/wasm && cp -R ./src/wasm/barretenberg.wasm ./dest/wasm && tsc -p tsconfig.es.json --watch",
+    "build": "yarn clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js",
+    "clean": "rm -rf ./dest ./dest-es",
     "test": "jest",
-    "start:dev": "tsc -p tsconfig.es.json --watch"
+    "build:dev:cjs": "tsc -p tsconfig.cjs.json --watch",
+    "build:dev:es": "tsc -p tsconfig.es.json --watch",
+    "symlink-wasm": "cp -R ./src/wasm/barretenberg.wasm ./dest/wasm && cp -R ./src/wasm/barretenberg.wasm ./dest-es/wasm"
   },
   "jest": {
     "transform": {

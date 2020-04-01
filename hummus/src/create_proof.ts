@@ -1,12 +1,12 @@
-import { fetchCode } from 'barretenberg/wasm';
-import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
-import { SinglePippenger, PooledPippenger } from 'barretenberg/pippenger';
-import { CreateNoteProof } from 'barretenberg/client_proofs/create_note_proof';
-import { Prover } from 'barretenberg/client_proofs/prover';
-import { Schnorr } from 'barretenberg/crypto/schnorr';
-import { Note } from 'barretenberg/client_proofs/create';
-import { Crs } from 'barretenberg/crs';
-import { BarretenbergWorker } from 'barretenberg/wasm/worker';
+import { fetchCode } from 'barretenberg-es/wasm';
+import { createWorker, destroyWorker } from 'barretenberg-es/wasm/worker_factory';
+import { SinglePippenger, PooledPippenger } from 'barretenberg-es/pippenger';
+import { CreateNoteProof } from 'barretenberg-es/client_proofs/create_note_proof';
+import { Prover } from 'barretenberg-es/client_proofs/prover';
+import { Schnorr } from 'barretenberg-es/crypto/schnorr';
+import { Note } from 'barretenberg-es/client_proofs/create_note_proof';
+import { Crs } from 'barretenberg-es/crs';
+import { BarretenbergWorker } from 'barretenberg-es/wasm/worker';
 import createDebug from 'debug';
 
 const debug = createDebug('create_proof');
