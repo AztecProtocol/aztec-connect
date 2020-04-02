@@ -1,7 +1,8 @@
 import { Schnorr } from './index';
 import { TextEncoder } from 'util';
 import { BarretenbergWorker } from '../../wasm/worker';
-import { createWorker, destroyWorker, fetchCode } from '../../wasm';
+import { fetchCode } from '../../wasm';
+import { createWorker, destroyWorker } from '../../wasm/worker_factory';
 
 describe('schnorr', () => {
   let barretenberg!: BarretenbergWorker;
@@ -10,13 +11,14 @@ describe('schnorr', () => {
   beforeAll(async () => {
     barretenberg = await createWorker();
     const code = await fetchCode();
-    await barretenberg.init(code);
+    const module = new WebAssembly.Module(code);
+    await barretenberg.init(module);
     schnorr = new Schnorr(barretenberg);
   });
 
   afterAll(async () => {
     await destroyWorker(barretenberg);
-  })
+  });
 
   it('should verify signature', async () => {
     // prettier-ignore

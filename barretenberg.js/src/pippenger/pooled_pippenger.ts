@@ -13,14 +13,14 @@ export class PooledPippenger implements Pippenger {
 
   constructor(private wasm: BarretenbergWorker) {}
 
-  public async init(code: Uint8Array, crsData: Uint8Array, poolSize: number) {
+  public async init(module: WebAssembly.Module, crsData: Uint8Array, poolSize: number) {
     this.workers = await Promise.all(
       Array(poolSize)
         .fill(0)
         .map((_,i) => createWorker(`pippenger_child_${i}`))
     );
     this.pool = await Promise.all(this.workers.map(async w => {
-      await w.init(code);
+      await w.init(module);
       const p = new SinglePippenger(w);
       await p.init(crsData);
       return p;

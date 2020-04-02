@@ -19,9 +19,10 @@ describe('create_proof', () => {
 
   beforeAll(async () => {
     const code = await fetchCode();
+    const module = new WebAssembly.Module(code);
 
     barretenberg = await createWorker();
-    await barretenberg.init(code);
+    await barretenberg.init(module);
 
     const crs = new Crs(32*1024);
     await crs.download();
@@ -32,7 +33,7 @@ describe('create_proof', () => {
     debug("creating workers...");
     let start = new Date().getTime();
     pippenger = new PooledPippenger(barretenberg);
-    await pippenger.init(code, crs.getData(), 8);
+    await pippenger.init(module, crs.getData(), 4);
     debug(`created workers: ${new Date().getTime() - start}ms`);
 
     const prover = new Prover(barretenberg, crs, pippenger);
@@ -77,5 +78,7 @@ describe('create_proof', () => {
 
     const verified = await createProof.verifyProof(proof);
     expect(verified).toBe(true);
+
+    debug(`mem: ${await barretenberg.memSize()}`);
   }, 60000);
 });

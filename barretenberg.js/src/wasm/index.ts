@@ -17,8 +17,8 @@ export class BarretenbergWasm extends EventEmitter {
   private heap!: Uint8Array;
   private instance!: WebAssembly.Instance;
 
-  public async init(code: Uint8Array) {
-    this.memory = new WebAssembly.Memory({ initial: 256 });
+  public async init(module: WebAssembly.Module, prealloc: number = 0) {
+    this.memory = new WebAssembly.Memory({ initial: 256, maximum: 8192 });
     this.heap = new Uint8Array(this.memory.buffer);
 
     const importObj = {
@@ -46,14 +46,19 @@ export class BarretenbergWasm extends EventEmitter {
           for (i = addr; m[i] !== 0; ++i);
           const decoder = isNode ? new (require('util').TextDecoder)() : new TextDecoder();
           const str = decoder.decode(m.slice(addr, i));
-          this.emit('log', str);
+          const str2 = `${str} (mem:${m.length})`;
+          this.emit('log', str2);
         },
         memory: this.memory,
       },
     };
 
-    const mod = await WebAssembly.instantiate(code, importObj);
-    this.instance = mod.instance;
+    this.instance = await WebAssembly.instantiate(module, importObj);
+
+    if (prealloc) {
+      const pa = this.exports().bbmalloc(prealloc);
+      this.exports().bbfree(pa);
+    }
   }
 
   public exports(): any {

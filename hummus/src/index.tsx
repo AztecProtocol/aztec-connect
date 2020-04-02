@@ -13,11 +13,22 @@ enum State {
   INITIALIZED = 'Initialized',
 }
 
+enum ProofState {
+  NADA = 'Nada',
+  RUNNING = 'Running',
+  FAILED = 'Failed',
+  VERIFIED = 'Verified',
+}
+
 function LandingPage({ proofCreator }: LandingPageProps) {
   const [init, setInit] = useState(State.UNINITIALIZED);
+  const [result, setResult] = useState(ProofState.NADA);
+  const [time, setTime] = useState(0);
   return (
     <form>
-      <p>State: {init.toString()}</p>
+      <p>Init State: {init.toString()}</p>
+      <p>Proof State: {result.toString()}</p>
+      <p>Proof Time: {time.toString()}ms</p>
       <label>Press the button: </label>
       <input
         type="button"
@@ -31,13 +42,17 @@ function LandingPage({ proofCreator }: LandingPageProps) {
               break;
             }
             case State.INITIALIZED: {
+              const start = new Date().getTime();
+              setResult(ProofState.RUNNING);
               const p = await proofCreator.createProof();
-              await proofCreator.verifyProof(p);
+              const r = await proofCreator.verifyProof(p);
+              setResult(r ? ProofState.VERIFIED : ProofState.FAILED);
+              setTime(new Date().getTime() - start);
               break;
             }
           }
         }}
-        disabled={init == State.INITIALIZING}
+        disabled={init == State.INITIALIZING || result == ProofState.RUNNING}
       ></input>
     </form>
   );

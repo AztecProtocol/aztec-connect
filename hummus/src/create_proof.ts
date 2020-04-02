@@ -1,4 +1,3 @@
-import { fetchCode } from 'barretenberg-es/wasm';
 import { createWorker, destroyWorker } from 'barretenberg-es/wasm/worker_factory';
 import { SinglePippenger, PooledPippenger } from 'barretenberg-es/pippenger';
 import { CreateNoteProof } from 'barretenberg-es/client_proofs/create_note_proof';
@@ -19,10 +18,8 @@ export class ProofCreator {
   private createNoteProof!: CreateNoteProof;
 
   public async init() {
-    const code = await fetchCode();
-
     const barretenberg = await createWorker();
-    await barretenberg.init(code);
+    const module = await barretenberg.init();
 
     const crs = new Crs(32768);
     await crs.download();
@@ -33,7 +30,7 @@ export class ProofCreator {
     debug('creating workers...');
     let start = new Date().getTime();
     this.pippenger = new PooledPippenger(barretenberg);
-    await this.pippenger.init(code, crs.getData(), 8);
+    await this.pippenger.init(module, crs.getData(), 8);
     debug(`created workers: ${new Date().getTime() - start}ms`);
 
     const prover = new Prover(barretenberg, crs, this.pippenger);
