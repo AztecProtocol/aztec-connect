@@ -1,14 +1,24 @@
 import { readFile } from 'fs';
 import isNode from 'detect-node';
-import { promisify, TextDecoder } from 'util';
+import { promisify } from 'util';
+import { EventEmitter } from 'events';
 
-export class BarretenbergWasm {
+export async function fetchCode() {
+  if (isNode) {
+    return await promisify(readFile)(__dirname + '/barretenberg.wasm');
+  } else {
+    const res = await fetch('barretenberg.wasm');
+    return Buffer.from(await res.arrayBuffer());
+  }
+}
+
+export class BarretenbergWasm extends EventEmitter {
   private memory!: WebAssembly.Memory;
   private heap!: Uint8Array;
   private instance!: WebAssembly.Instance;
 
-  public async init() {
-    this.memory = new WebAssembly.Memory({ initial: 256 });
+  public async init(module: WebAssembly.Module, prealloc: number = 0) {
+    this.memory = new WebAssembly.Memory({ initial: 256, maximum: 8192 });
     this.heap = new Uint8Array(this.memory.buffer);
 
     const importObj = {
@@ -33,21 +43,21 @@ export class BarretenbergWasm {
         logstr: (addr: number) => {
           const m = this.getMemory();
           let i;
-          for (i=addr; m[i] !== 0; ++i);
-          // tslint:disable-next-line:no-console
-          console.log(new TextDecoder().decode(m.slice(addr, i)));
+          for (i = addr; m[i] !== 0; ++i);
+          const decoder = isNode ? new (require('util').TextDecoder)() : new TextDecoder();
+          const str = decoder.decode(m.slice(addr, i));
+          const str2 = `${str} (mem:${m.length})`;
+          this.emit('log', str2);
         },
-        memory: this.memory },
+        memory: this.memory,
+      },
     };
 
-    if (isNode) {
-      const res = await promisify(readFile)(__dirname + '/barretenberg.wasm');
-      const mod = await WebAssembly.instantiate(res, importObj);
-      this.instance = mod.instance;
-    } else {
-      const res = await fetch('barretenberg.wasm');
-      const mod = await WebAssembly.instantiateStreaming(res, importObj);
-      this.instance = mod.instance;
+    this.instance = await WebAssembly.instantiate(module, importObj);
+
+    if (prealloc) {
+      const pa = this.exports().bbmalloc(prealloc);
+      this.exports().bbfree(pa);
     }
   }
 
