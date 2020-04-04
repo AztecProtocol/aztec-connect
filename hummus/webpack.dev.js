@@ -1,5 +1,6 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
+const ThreadsPlugin = require('threads-plugin');
 
 module.exports = {
   mode: 'development',
@@ -21,13 +22,13 @@ module.exports = {
       },
       {
         test: /barretenberg\.wasm$/,
-        type: "javascript/auto",
-        loader: "file-loader",
+        type: 'javascript/auto',
+        loader: 'file-loader',
         options: {
-          name: "barretenberg.wasm",
-          publicPath: "dist/"
-        }
-      }
+          name: 'barretenberg.wasm',
+          publicPath: 'dist/',
+        },
+      },
     ],
   },
   resolve: {
@@ -36,7 +37,14 @@ module.exports = {
   devServer: {
     hot: true,
   },
-  plugins: [new HtmlWebpackPlugin({ template: './src/index.html' }), new webpack.HotModuleReplacementPlugin()],
+  output: {
+    globalObject: 'this'
+  },
+  plugins: [
+    new HtmlWebpackPlugin({ template: './src/index.html' }),
+    new webpack.HotModuleReplacementPlugin(),
+    new ThreadsPlugin(),
+  ],
   node: {
     fs: 'empty',
   },

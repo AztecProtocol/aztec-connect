@@ -4,7 +4,7 @@ export class Crs {
   private data!: Uint8Array;
   private g2Data!: Uint8Array;
 
-  constructor(private numPoints: number) { }
+  constructor(public readonly numPoints: number) { }
 
   async download() {
     const g1Start = 28;

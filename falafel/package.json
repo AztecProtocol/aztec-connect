@@ -2,7 +2,7 @@
   "name": "falafel",
   "version": "1.0.0",
   "main": "dest/index.js",
-  "license": "MIT",
+  "license": "GPL-2.0",
   "scripts": {
     "build": "tsc -p tsconfig.prod.json",
     "start": "node ./dest",
