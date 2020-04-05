@@ -2,11 +2,14 @@
   "name": "barretenberg",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "MIT",
+  "license": "GPL-2.0",
   "scripts": {
-    "build": "tsc -p tsconfig.cjs.json && cp ./src/wasm/barretenberg.wasm ./dest/wasm && cp package.json dest",
+    "build": "yarn clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js",
+    "clean": "rm -rf ./dest ./dest-es",
     "test": "jest",
-    "start:dev": "tsc -p tsconfig.cjs.json --watch"
+    "build:dev:cjs": "tsc -p tsconfig.cjs.json --watch",
+    "build:dev:es": "tsc -p tsconfig.es.json --watch",
+    "symlink-wasm": "cp -R ./src/wasm/barretenberg.wasm ./dest/wasm && cp -R ./src/wasm/barretenberg.wasm ./dest-es/wasm"
   },
   "jest": {
     "transform": {
@@ -19,15 +22,18 @@
     ]
   },
   "dependencies": {
+    "debug": "^4.1.1",
     "detect-node": "^2.0.4",
-    "isomorphic-fetch": "^2.2.1"
+    "node-fetch": "^2.6.0",
+    "threads": "^1.3.1"
   },
   "devDependencies": {
-    "@types/isomorphic-fetch": "^0.0.35",
+    "@types/debug": "^4.1.5",
     "@types/jest": "^25.1.3",
     "@types/node": "^13.7.7",
     "jest": "^25.1.0",
     "ts-jest": "^25.2.1",
+    "ts-node": "^8.8.1",
     "tslint": "^6.0.0",
     "tslint-config-prettier": "^1.18.0",
     "typescript": "^3.8.3"

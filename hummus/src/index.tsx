@@ -1,33 +1,66 @@
-/*
-  Copyright (c) 2019 Spilsbury Holdings
-
-  This file is part of web3x and is released under the MIT License.
-  https://opensource.org/licenses/MIT
-*/
-
-import React from 'react';
+import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import { BarretenbergWasm } from 'barretenberg/wasm';
-import { Schnorr } from 'barretenberg/crypto/schnorr';
-require('barretenberg/wasm/barretenberg.wasm');
+import { ProofCreator } from './create_proof';
+require('barretenberg-es/wasm/barretenberg.wasm');
+
+interface LandingPageProps {
+  proofCreator: ProofCreator;
+}
+
+enum State {
+  UNINITIALIZED = 'Uninitialized',
+  INITIALIZING = 'Initializing',
+  INITIALIZED = 'Initialized',
+}
+
+enum ProofState {
+  NADA = 'Nada',
+  RUNNING = 'Running',
+  FAILED = 'Failed',
+  VERIFIED = 'Verified',
+}
+
+function LandingPage({ proofCreator }: LandingPageProps) {
+  const [init, setInit] = useState(State.UNINITIALIZED);
+  const [result, setResult] = useState(ProofState.NADA);
+  const [time, setTime] = useState(0);
+  return (
+    <form>
+      <p>Init State: {init.toString()}</p>
+      <p>Proof State: {result.toString()}</p>
+      <p>Proof Time: {time.toString()}ms</p>
+      <label>Press the button: </label>
+      <input
+        type="button"
+        value="The Button"
+        onClick={async () => {
+          switch (init) {
+            case State.UNINITIALIZED: {
+              setInit(State.INITIALIZING);
+              await proofCreator.init();
+              setInit(State.INITIALIZED);
+              break;
+            }
+            case State.INITIALIZED: {
+              const start = new Date().getTime();
+              setResult(ProofState.RUNNING);
+              const p = await proofCreator.createProof();
+              const r = await proofCreator.verifyProof(p);
+              setResult(r ? ProofState.VERIFIED : ProofState.FAILED);
+              setTime(new Date().getTime() - start);
+              break;
+            }
+          }
+        }}
+        disabled={init == State.INITIALIZING || result == ProofState.RUNNING}
+      ></input>
+    </form>
+  );
+}
 
 async function main() {
-  const barretenberg = new BarretenbergWasm();
-  await barretenberg.init();
-  const schnorr = new Schnorr(barretenberg);
-
-  const pk = Buffer.from([
-    0x0b, 0x9b, 0x3a, 0xde, 0xe6, 0xb3, 0xd8, 0x1b, 0x28, 0xa0, 0x88, 0x6b, 0x2a, 0x84, 0x15, 0xc7,
-    0xda, 0x31, 0x29, 0x1a, 0x5e, 0x96, 0xbb, 0x7a, 0x56, 0x63, 0x9e, 0x17, 0x7d, 0x30, 0x1b, 0xeb ]);
-
-  const pubKey = schnorr.computePublicKey(pk);
-  const msg = new TextEncoder().encode('The quick brown dog jumped over the lazy fox.');
-  const signature = schnorr.constructSignature(msg, pk);
-  const verified = schnorr.verifySignature(msg, pubKey, signature);
-
-  console.log(verified);
-
-  ReactDOM.render(<p/>, document.getElementById('root'));
+  const proofCreator = new ProofCreator();
+  ReactDOM.render(<LandingPage proofCreator={proofCreator} />, document.getElementById('root'));
 }
 
 // tslint:disable-next-line:no-console

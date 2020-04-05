@@ -1,4 +1,5 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const ThreadsPlugin = require('threads-plugin');
 
 module.exports = {
   mode: 'production',
@@ -25,8 +26,14 @@ module.exports = {
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.wasm'],
   },
-  plugins: [new HtmlWebpackPlugin({ template: './src/index.html' })],
+  plugins: [
+    new HtmlWebpackPlugin({ template: './src/index.html' }),
+    new ThreadsPlugin(),
+  ],
   node: {
     fs: 'empty',
+  },
+  output: {
+    globalObject: 'this'
   },
 };
