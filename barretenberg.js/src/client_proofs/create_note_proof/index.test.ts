@@ -1,55 +1,58 @@
-import { CreateNoteProof, Note } from './index';
+import { CreateNoteProver, Note, CreateNoteVerifier } from './index';
 import { Schnorr } from '../../crypto/schnorr';
 import { BarretenbergWorker } from '../../wasm/worker';
-import { fetchCode } from '../../wasm';
-import { destroyWorker, createWorker, } from '../../wasm/worker_factory';
+import { WorkerPool } from '../../wasm/worker_pool';
 import { Prover } from '../prover';
 import { Crs } from '../../crs';
-import { SinglePippenger } from '../../pippenger';
 import { PooledPippenger } from '../../pippenger/pooled_pippenger';
+import { PooledFft } from '../../fft/pooled_fft';
 import createDebug from 'debug';
+import { fetchCode } from '../../wasm';
+import { EventEmitter } from 'events';
 
-const debug = createDebug('create_proof');
+const debug = createDebug('bb:create_proof');
 
 describe('create_proof', () => {
   let barretenberg!: BarretenbergWorker;
-  let createProof!: CreateNoteProof;
+  let pool!: WorkerPool;
+  let createNoteProver!: CreateNoteProver;
+  let createNoteVerifier!: CreateNoteVerifier;
   let schnorr!: Schnorr;
-  let pippenger!: PooledPippenger;
+  let prover!: Prover;
 
   beforeAll(async () => {
-    const code = await fetchCode();
-    const module = new WebAssembly.Module(code);
-
-    barretenberg = await createWorker();
-    await barretenberg.init(module);
+    EventEmitter.defaultMaxListeners = 16;
 
     const crs = new Crs(32*1024);
     await crs.download();
 
-    const keyGenPippenger = new SinglePippenger(barretenberg);
-    await keyGenPippenger.init(crs.getData());
+    const module = new WebAssembly.Module(await fetchCode());
+    pool = new WorkerPool();
+    await pool.init(module, 8);
 
-    debug("creating workers...");
-    let start = new Date().getTime();
-    pippenger = new PooledPippenger(barretenberg);
-    await pippenger.init(module, crs.getData(), 4);
-    debug(`created workers: ${new Date().getTime() - start}ms`);
+    const pippenger = new PooledPippenger();
+    await pippenger.init(crs.getData(), pool);
 
-    const prover = new Prover(barretenberg, crs, pippenger);
+    const fft = new PooledFft(pool);
+    await fft.init();
+
+    barretenberg = pool.workers[0];
+
+    prover = new Prover(barretenberg, pippenger, fft);
 
     schnorr = new Schnorr(barretenberg);
-    createProof = new CreateNoteProof(barretenberg, prover, keyGenPippenger);
+    createNoteProver = new CreateNoteProver(barretenberg, prover);
+    createNoteVerifier = new CreateNoteVerifier(pippenger.pool[0]);
 
     debug("creating keys...");
-    start = new Date().getTime();
-    await createProof.init();
+    const start = new Date().getTime();
+    await createNoteProver.init();
+    await createNoteVerifier.init(crs.getG2Data());
     debug(`created circuit keys: ${new Date().getTime() - start}ms`);
   }, 60000);
 
   afterAll(async () => {
-    await pippenger.destroy();
-    await destroyWorker(barretenberg);
+    await pool.destroy();
   });
 
   it('should construct "create note" proof', async () => {
@@ -64,7 +67,7 @@ describe('create_proof', () => {
 
     const pubKey = await schnorr.computePublicKey(pk);
     const note = new Note(pubKey, viewingKey, 100);
-    const encryptedNote = await createProof.encryptNote(note);
+    const encryptedNote = await createNoteProver.encryptNote(note);
     const encryptedNoteX = encryptedNote.slice(32, 64);
     const signature = await schnorr.constructSignature(encryptedNoteX, pk);
 
@@ -72,11 +75,11 @@ describe('create_proof', () => {
 
     debug("creating proof...");
     const start = new Date().getTime();
-    const proof = await createProof.createNoteProof(note, signature);
+    const proof = await createNoteProver.createNoteProof(note, signature);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
 
-    const verified = await createProof.verifyProof(proof);
+    const verified = await createNoteVerifier.verifyProof(proof);
     expect(verified).toBe(true);
 
     debug(`mem: ${await barretenberg.memSize()}`);

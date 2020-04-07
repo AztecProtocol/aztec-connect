@@ -20,7 +20,7 @@ describe('pippenger', () => {
     const crsData = crs.getData();
     const crsPtr = wasm.exports().bbmalloc(crsData.length);
     wasm.transferToHeap(crsData, crsPtr);
-    const pointTablePtr = wasm.exports().create_pippenger_point_table(crsPtr, numPoints);
+    const pointTablePtr = wasm.exports().new_pippenger(crsPtr, numPoints);
     wasm.exports().bbfree(crsPtr);
 
     const scalars = Buffer.alloc(numPoints * 32);
