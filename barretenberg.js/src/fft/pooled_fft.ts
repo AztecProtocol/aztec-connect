@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import { WorkerPool } from '../wasm/worker_pool';
 import { MemoryFifo } from '../fifo';
-import { BarretenbergWorker } from '../wasm/worker';
+import { SingleFft } from './single_fft';
 
 const debug = createDebug('bb:fft');
 
@@ -14,26 +14,33 @@ interface Job {
 
 export class PooledFft {
   private queue = new MemoryFifo<Job>();
+  private ffts: SingleFft[];
 
-  constructor(private pool: WorkerPool) {}
+  constructor(pool: WorkerPool) {
+    this.ffts = pool.workers.map(w => new SingleFft(w));
+  }
 
-  public async init() {
-    this.pool.workers.forEach(async (w) => this.processJobs(w));
+  public async init(circuitSize: number) {
+    const start = new Date().getTime();
+    debug(`initializing: ${new Date().getTime() - start}ms`);
+    await Promise.all(this.ffts.map(f => f.init(circuitSize)))
+    this.ffts.forEach(async (w) => this.processJobs(w));
+    debug(`initalization took: ${new Date().getTime() - start}ms`);
   }
 
   public destroy() {
     this.queue.cancel();
   }
 
-  private async processJobs(worker: BarretenbergWorker) {
+  private async processJobs(worker: SingleFft) {
     while (true) {
       const job = await this.queue.get();
       if (!job) {
         break;
       }
       const result = await (job.inverse
-        ? this.ifftInternal(worker, job.coefficients)
-        : this.fftInternal(worker, job.coefficients, job.constant!));
+        ? worker.ifft(job.coefficients)
+        : worker.fft(job.coefficients, job.constant!));
       job.resolve(result);
     }
   }
@@ -44,26 +51,5 @@ export class PooledFft {
 
   public async ifft(coefficients: Uint8Array): Promise<Uint8Array> {
     return await new Promise((resolve) => this.queue.put({ coefficients, inverse: true, resolve }));
-  }
-
-  private async fftInternal(worker: BarretenbergWorker, coefficients: Uint8Array, constant: Uint8Array) {
-    const circuitSize = coefficients.length / 32;
-    const newPtr = await worker.call('bbmalloc', coefficients.length);
-    await worker.transferToHeap(coefficients, newPtr);
-    await worker.transferToHeap(constant, 0);
-    await worker.call('coset_fft_with_generator_shift', circuitSize, newPtr, 0);
-    const result = await worker.sliceMemory(newPtr, newPtr + circuitSize * 32);
-    await worker.call('bbfree', newPtr);
-    return result;
-  }
-
-  private async ifftInternal(worker: BarretenbergWorker, coefficients: Uint8Array) {
-    const circuitSize = coefficients.length / 32;
-    const newPtr = await worker.call('bbmalloc', coefficients.length);
-    await worker.transferToHeap(coefficients, newPtr);
-    await worker.call('ifft', circuitSize, newPtr);
-    const result = await worker.sliceMemory(newPtr, newPtr + circuitSize * 32);
-    await worker.call('bbfree', newPtr);
-    return result;
   }
 }

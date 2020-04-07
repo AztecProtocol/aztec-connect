@@ -22,8 +22,9 @@ describe('create_proof', () => {
 
   beforeAll(async () => {
     EventEmitter.defaultMaxListeners = 16;
+    const circuitSize = 32*1024;
 
-    const crs = new Crs(32*1024);
+    const crs = new Crs(circuitSize);
     await crs.download();
 
     const module = new WebAssembly.Module(await fetchCode());
@@ -34,7 +35,7 @@ describe('create_proof', () => {
     await pippenger.init(crs.getData(), pool);
 
     const fft = new PooledFft(pool);
-    await fft.init();
+    await fft.init(circuitSize);
 
     barretenberg = pool.workers[0];
 
