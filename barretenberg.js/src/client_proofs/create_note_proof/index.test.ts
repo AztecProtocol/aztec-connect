@@ -21,7 +21,7 @@ describe('create_proof', () => {
   let prover!: Prover;
 
   beforeAll(async () => {
-    EventEmitter.defaultMaxListeners = 16;
+    EventEmitter.defaultMaxListeners = 32;
     const circuitSize = 32*1024;
 
     const crs = new Crs(circuitSize);
@@ -29,7 +29,7 @@ describe('create_proof', () => {
 
     const module = new WebAssembly.Module(await fetchCode());
     pool = new WorkerPool();
-    await pool.init(module, 8);
+    await pool.init(module, Math.min(navigator.hardwareConcurrency, 8));
 
     const pippenger = new PooledPippenger();
     await pippenger.init(crs.getData(), pool);

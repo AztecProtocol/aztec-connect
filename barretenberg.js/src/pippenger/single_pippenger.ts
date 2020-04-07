@@ -1,5 +1,6 @@
 import { BarretenbergWorker } from '../wasm/worker';
 import { Pippenger } from './pippenger';
+import { Transfer } from 'threads';
 
 export class SinglePippenger implements Pippenger {
   private pippengerPtr!: number;
@@ -21,7 +22,7 @@ export class SinglePippenger implements Pippenger {
 
   public async pippengerUnsafe(scalars: Uint8Array, from: number, range: number) {
     const mem = await this.wasm.call("bbmalloc", scalars.length);
-    await this.wasm.transferToHeap(scalars, mem);
+    await this.wasm.transferToHeap(Transfer(scalars, [scalars.buffer]) as any, mem);
     await this.wasm.call("pippenger_unsafe", this.pippengerPtr, mem, from, range, 0);
     await this.wasm.call("bbfree", mem);
     return Buffer.from(await this.wasm.sliceMemory(0, 96));

@@ -9,7 +9,7 @@ export class WorkerPool {
   public workers: ModuleThread<BarretenbergWorker>[] = [];
 
   public async init(module: WebAssembly.Module, poolSize: number) {
-    debug("creating workers...");
+    debug(`creating ${poolSize} workers...`);
     const start = new Date().getTime();
     this.workers = await Promise.all(
       Array(poolSize)
