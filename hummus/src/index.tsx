@@ -42,12 +42,12 @@ function LandingPage({ proofCreator }: LandingPageProps) {
               break;
             }
             case State.INITIALIZED: {
-              const start = new Date().getTime();
               setResult(ProofState.RUNNING);
+              const start = new Date().getTime();
               const p = await proofCreator.createProof();
+              setTime(new Date().getTime() - start);
               const r = await proofCreator.verifyProof(p);
               setResult(r ? ProofState.VERIFIED : ProofState.FAILED);
-              setTime(new Date().getTime() - start);
               break;
             }
           }

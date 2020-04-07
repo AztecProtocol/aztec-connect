@@ -2,6 +2,7 @@ import createDebug from 'debug';
 import { WorkerPool } from '../wasm/worker_pool';
 import { MemoryFifo } from '../fifo';
 import { SingleFft } from './single_fft';
+import { Fft } from './fft';
 
 const debug = createDebug('bb:fft');
 
@@ -12,7 +13,7 @@ interface Job {
   resolve: (r: Uint8Array) => void;
 }
 
-export class PooledFft {
+export class PooledFft implements Fft {
   private queue = new MemoryFifo<Job>();
   private ffts: SingleFft[];
 

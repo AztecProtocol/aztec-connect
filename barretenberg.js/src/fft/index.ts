@@ -1,4 +1,3 @@
-export interface Fft {
-  fft(coefficients: Uint8Array, constant: Uint8Array): Promise<Uint8Array>;
-  ifft(coefficients: Uint8Array): Promise<Uint8Array>;
-}
+export * from './fft';
+export * from './single_fft';
+export * from './pooled_fft';

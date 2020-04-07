@@ -18,7 +18,6 @@ describe('create_proof', () => {
   let createNoteProver!: CreateNoteProver;
   let createNoteVerifier!: CreateNoteVerifier;
   let schnorr!: Schnorr;
-  let prover!: Prover;
 
   beforeAll(async () => {
     EventEmitter.defaultMaxListeners = 32;
@@ -27,9 +26,8 @@ describe('create_proof', () => {
     const crs = new Crs(circuitSize);
     await crs.download();
 
-    const module = new WebAssembly.Module(await fetchCode());
     pool = new WorkerPool();
-    await pool.init(module, Math.min(navigator.hardwareConcurrency, 8));
+    await pool.init(Math.min(navigator.hardwareConcurrency, 8));
 
     const pippenger = new PooledPippenger();
     await pippenger.init(crs.getData(), pool);
@@ -39,7 +37,7 @@ describe('create_proof', () => {
 
     barretenberg = pool.workers[0];
 
-    prover = new Prover(barretenberg, pippenger, fft);
+    const prover = new Prover(barretenberg, pippenger, fft);
 
     schnorr = new Schnorr(barretenberg);
     createNoteProver = new CreateNoteProver(barretenberg, prover);

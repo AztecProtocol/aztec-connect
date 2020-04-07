@@ -1,7 +1,8 @@
 import { BarretenbergWorker } from '../wasm/worker';
 import { Transfer } from 'threads';
+import { Fft } from './fft';
 
-export class SingleFft {
+export class SingleFft implements Fft {
   private domainPtr!: number;
 
   constructor(private wasm: BarretenbergWorker) {}
