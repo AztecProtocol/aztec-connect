@@ -4,11 +4,7 @@ import { Prover } from '../prover';
 import { SinglePippenger } from '../../pippenger';
 
 export class Note {
-  constructor(
-  public ownerPubKey: Buffer,
-  public viewingKey: Buffer,
-  public value: number,
-  ){}
+  constructor(public ownerPubKey: Buffer, public viewingKey: Buffer, public value: number) {}
 
   public toBuffer() {
     const valueBuf = Buffer.alloc(4);
@@ -17,21 +13,17 @@ export class Note {
   }
 }
 
-export class CreateNoteProof {
-  constructor(private wasm: BarretenbergWorker, private prover: Prover, private keyGenPippenger: SinglePippenger) {
-  }
+export class CreateNoteProver {
+  constructor(private wasm: BarretenbergWorker, private prover: Prover) {}
 
   public async init() {
-    const pointTablePtr = this.keyGenPippenger.getPointTableAddr();
-    const numPoints = this.keyGenPippenger.getNumCrsPoints();
-    await this.wasm.transferToHeap(this.prover.getG2Data(), 0);
-    await this.wasm.call("init_keys", pointTablePtr, numPoints, 0);
+    await this.wasm.call('create_note__init_proving_key');
   }
 
   public async encryptNote(note: Note) {
     await this.wasm.transferToHeap(note.ownerPubKey, 0);
     await this.wasm.transferToHeap(note.viewingKey, 64);
-    await this.wasm.call("encrypt_note", 0, note.value, 64, 96);
+    await this.wasm.call('create_note__encrypt_note', 0, note.value, 64, 96);
     return Buffer.from(await this.wasm.sliceMemory(96, 160));
   }
 
@@ -40,17 +32,30 @@ export class CreateNoteProof {
     await this.wasm.transferToHeap(note.viewingKey, 64);
     await this.wasm.transferToHeap(sig.s, 96);
     await this.wasm.transferToHeap(sig.e, 128);
-    const proverPtr = await this.wasm.call("new_create_note_prover", 0, note.value, 64, 96, 128);
+    const proverPtr = await this.wasm.call('create_note__new_prover', 0, note.value, 64, 96, 128);
     const proof = await this.prover.createProof(proverPtr);
-    await this.wasm.call("delete_create_note_prover", proverPtr);
+    await this.wasm.call('create_note__delete_prover', proverPtr);
     return proof;
+  }
+}
+
+export class CreateNoteVerifier {
+  private wasm: BarretenbergWorker;
+
+  constructor(private pippenger: SinglePippenger) {
+    this.wasm = pippenger.getWorker();
+  }
+
+  public async init(g2Data: Uint8Array) {
+    await this.wasm.transferToHeap(g2Data, 0);
+    await this.wasm.call('create_note__init_verification_key', this.pippenger.getPointer(), 0);
   }
 
   public async verifyProof(proof: Buffer) {
-    const proofPtr = await this.wasm.call("bbmalloc", proof.length);
+    const proofPtr = await this.wasm.call('bbmalloc', proof.length);
     await this.wasm.transferToHeap(proof, proofPtr);
-    const verified = await this.wasm.call("verify_proof", proofPtr, proof.length) ? true : false;
-    await this.wasm.call("bbfree", proofPtr);
+    const verified = (await this.wasm.call('create_note__verify_proof', proofPtr, proof.length)) ? true : false;
+    await this.wasm.call('bbfree', proofPtr);
     return verified;
   }
 }

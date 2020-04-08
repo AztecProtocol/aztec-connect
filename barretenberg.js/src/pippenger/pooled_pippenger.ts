@@ -1,34 +1,22 @@
 import { Pippenger } from './pippenger';
 import { SinglePippenger } from './single_pippenger';
-import { createWorker, destroyWorker } from '../wasm/worker_factory';
-import { BarretenbergWorker } from '../wasm/worker';
-import { ModuleThread } from 'threads';
 import createDebug from 'debug';
+import { WorkerPool } from '../wasm/worker_pool';
 
-const debug = createDebug('pippenger')
+const debug = createDebug('bb:pippenger')
 
 export class PooledPippenger implements Pippenger {
-  private workers: ModuleThread<BarretenbergWorker>[] = [];
-  private pool: SinglePippenger[] = [];
+  public pool: SinglePippenger[] = [];
 
-  constructor(private wasm: BarretenbergWorker) {}
-
-  public async init(module: WebAssembly.Module, crsData: Uint8Array, poolSize: number) {
-    this.workers = await Promise.all(
-      Array(poolSize)
-        .fill(0)
-        .map((_,i) => createWorker(`pippenger_child_${i}`))
-    );
-    this.pool = await Promise.all(this.workers.map(async w => {
-      await w.init(module);
+  public async init(crsData: Uint8Array, pool: WorkerPool) {
+    const start = new Date().getTime();
+    debug(`initializing: ${new Date().getTime() - start}ms`);
+    this.pool = await Promise.all(pool.workers.map(async w => {
       const p = new SinglePippenger(w);
       await p.init(crsData);
       return p;
     }));
-  }
-
-  public async destroy() {
-    await Promise.all(this.workers.map(destroyWorker));
+    debug(`initalization took: ${new Date().getTime() - start}ms`);
   }
 
   public async pippengerUnsafe(scalars: Uint8Array, from: number, range: number) {
@@ -45,10 +33,6 @@ export class PooledPippenger implements Pippenger {
   }
 
   public async sumElements(buffer: Uint8Array) {
-    const mem = await this.wasm.call('bbmalloc', buffer.length);
-    await this.wasm.transferToHeap(buffer, mem);
-    await this.wasm.call('g1_sum', mem, buffer.length / 96, 0);
-    await this.wasm.call('bbfree', mem);
-    return Buffer.from(await this.wasm.sliceMemory(0, 96));
+    return this.pool[0].sumElements(buffer);
   }
 }
