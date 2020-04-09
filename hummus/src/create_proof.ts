@@ -1,52 +1,55 @@
-import { createWorker, destroyWorker } from 'barretenberg-es/wasm/worker_factory';
-import { SinglePippenger, PooledPippenger } from 'barretenberg-es/pippenger';
-import { CreateNoteProof } from 'barretenberg-es/client_proofs/create_note_proof';
+import { PooledFft } from 'barretenberg-es/fft';
+import { PooledPippenger } from 'barretenberg-es/pippenger';
+import { CreateNoteProver, CreateNoteVerifier } from 'barretenberg-es/client_proofs/create_note_proof';
 import { Prover } from 'barretenberg-es/client_proofs/prover';
 import { Schnorr } from 'barretenberg-es/crypto/schnorr';
 import { Note } from 'barretenberg-es/client_proofs/create_note_proof';
 import { Crs } from 'barretenberg-es/crs';
-import { BarretenbergWorker } from 'barretenberg-es/wasm/worker';
 import createDebug from 'debug';
+import { WorkerPool } from 'barretenberg-es/wasm/worker_pool';
 
-const debug = createDebug('create_proof');
-createDebug.enable('create_proof,pippenger,barretenberg*');
+const debug = createDebug('bb:create_proof');
+createDebug.enable('bb:*');
 
 export class ProofCreator {
-  private barretenberg!: BarretenbergWorker;
-  private pippenger!: PooledPippenger;
+  private pool!: WorkerPool;
   private schnorr!: Schnorr;
-  private createNoteProof!: CreateNoteProof;
+  private createNoteProver!: CreateNoteProver;
+  private createNoteVerifier!: CreateNoteVerifier;
 
   public async init() {
-    const barretenberg = await createWorker();
-    const module = await barretenberg.init();
+    const circuitSize = 32*1024;
 
-    const crs = new Crs(32768);
+    const crs = new Crs(circuitSize);
     await crs.download();
 
-    const keyGenPippenger = new SinglePippenger(barretenberg);
-    await keyGenPippenger.init(crs.getData());
+    this.pool = new WorkerPool();
+    // await this.pool.init(Math.min(navigator.hardwareConcurrency, 8));
+    await this.pool.init(8);
 
-    debug('creating workers...');
-    let start = new Date().getTime();
-    this.pippenger = new PooledPippenger(barretenberg);
-    await this.pippenger.init(module, crs.getData(), 8);
-    debug(`created workers: ${new Date().getTime() - start}ms`);
+    const pippenger = new PooledPippenger();
+    await pippenger.init(crs.getData(), this.pool);
 
-    const prover = new Prover(barretenberg, crs, this.pippenger);
+    const fft = new PooledFft(this.pool);
+    await fft.init(circuitSize);
+
+    const barretenberg = this.pool.workers[0];
+
+    const prover = new Prover(barretenberg, pippenger, fft);
 
     this.schnorr = new Schnorr(barretenberg);
-    this.createNoteProof = new CreateNoteProof(barretenberg, prover, keyGenPippenger);
+    this.createNoteProver = new CreateNoteProver(barretenberg, prover);
+    this.createNoteVerifier = new CreateNoteVerifier(pippenger.pool[0]);
 
     debug('creating keys...');
-    start = new Date().getTime();
-    await this.createNoteProof.init();
+    const start = new Date().getTime();
+    await this.createNoteProver.init();
+    await this.createNoteVerifier.init(crs.getG2Data());
     debug(`created circuit keys: ${new Date().getTime() - start}ms`);
   }
 
   public async destroy() {
-    await this.pippenger.destroy();
-    destroyWorker(this.barretenberg);
+    await this.pool.destroy();
   }
 
   public async createProof() {
@@ -61,13 +64,13 @@ export class ProofCreator {
 
     const pubKey = await this.schnorr.computePublicKey(pk);
     const note = new Note(pubKey, viewingKey, 100);
-    const encryptedNote = await this.createNoteProof.encryptNote(note);
+    const encryptedNote = await this.createNoteProver.encryptNote(note);
     const encryptedNoteX = encryptedNote.slice(32, 64);
     const signature = await this.schnorr.constructSignature(encryptedNoteX, pk);
 
     debug('creating proof...');
     const start = new Date().getTime();
-    const proof = await this.createNoteProof.createNoteProof(note, signature);
+    const proof = await this.createNoteProver.createNoteProof(note, signature);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
 
@@ -75,7 +78,7 @@ export class ProofCreator {
   }
 
   public async verifyProof(proof: Buffer) {
-    const verified = await this.createNoteProof.verifyProof(proof);
+    const verified = await this.createNoteVerifier.verifyProof(proof);
     debug(`verified: ${verified}`);
     return verified;
   }

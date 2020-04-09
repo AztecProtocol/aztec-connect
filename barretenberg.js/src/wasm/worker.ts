@@ -1,5 +1,5 @@
 import { Subject, Observable } from 'threads/observable';
-import { expose } from 'threads/worker';
+import { expose, Transfer } from 'threads/worker';
 import { BarretenbergWasm, fetchCode } from '../wasm';
 
 let wasm: BarretenbergWasm;
@@ -21,7 +21,8 @@ const worker = {
   },
 
   async sliceMemory(start: number, end: number) {
-    return wasm.getMemory().slice(start, end);
+    const mem = wasm.getMemory().slice(start, end);
+    return Transfer(mem, [mem.buffer]) as any as Uint8Array;
   },
 
   async call(name: string, ...args: any) {
