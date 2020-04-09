@@ -20,14 +20,14 @@ describe('pippenger', () => {
     const crsData = crs.getData();
     const crsPtr = wasm.exports().bbmalloc(crsData.length);
     wasm.transferToHeap(crsData, crsPtr);
-    const pointTablePtr = wasm.exports().new_pippenger(crsPtr, numPoints);
+    const pippengerPtr = wasm.exports().new_pippenger(crsPtr, numPoints);
     wasm.exports().bbfree(crsPtr);
 
     const scalars = Buffer.alloc(numPoints * 32);
     const mem = wasm.exports().bbmalloc(scalars.length);
 
     wasm.transferToHeap(scalars, mem);
-    wasm.exports().pippenger_unsafe(mem, 0, numPoints, pointTablePtr, 0);
+    wasm.exports().pippenger_unsafe(pippengerPtr, mem, 0, numPoints, 0);
     wasm.exports().bbfree(mem);
 
     debug('mem: ', wasm.getMemory().length);
