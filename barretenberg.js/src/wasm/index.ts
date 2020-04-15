@@ -12,6 +12,10 @@ export async function fetchCode() {
   }
 }
 
+export async function createModule() {
+  return new WebAssembly.Module(await fetchCode());
+}
+
 export class BarretenbergWasm extends EventEmitter {
   private memory!: WebAssembly.Memory;
   private heap!: Uint8Array;
@@ -65,11 +69,19 @@ export class BarretenbergWasm extends EventEmitter {
     return this.instance.exports;
   }
 
+  public call(name: string, ...args: any) {
+    return this.exports()[name](...args);
+  }
+
   public getMemory() {
     if (this.heap.length === 0) {
       return new Uint8Array(this.memory.buffer);
     }
     return this.heap;
+  }
+
+  public sliceMemory(start: number, end: number) {
+    return this.getMemory().slice(start, end);
   }
 
   public transferToHeap(arr: Uint8Array, offset: number) {
