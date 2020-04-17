@@ -1,19 +1,18 @@
 import { CreateNoteProver, Note, CreateNoteVerifier } from './index';
 import { Schnorr } from '../../crypto/schnorr';
-import { BarretenbergWorker } from '../../wasm/worker';
 import { WorkerPool } from '../../wasm/worker_pool';
 import { Prover } from '../prover';
 import { Crs } from '../../crs';
 import { PooledPippenger } from '../../pippenger/pooled_pippenger';
 import { PooledFft } from '../../fft/pooled_fft';
 import createDebug from 'debug';
-import { fetchCode } from '../../wasm';
 import { EventEmitter } from 'events';
+import { BarretenbergWasm } from '../../wasm';
 
 const debug = createDebug('bb:create_proof');
 
 describe('create_proof', () => {
-  let barretenberg!: BarretenbergWorker;
+  let barretenberg!: BarretenbergWasm;
   let pool!: WorkerPool;
   let createNoteProver!: CreateNoteProver;
   let createNoteVerifier!: CreateNoteVerifier;
@@ -26,8 +25,10 @@ describe('create_proof', () => {
     const crs = new Crs(circuitSize);
     await crs.download();
 
+    barretenberg = await BarretenbergWasm.new();
+
     pool = new WorkerPool();
-    await pool.init(Math.min(navigator.hardwareConcurrency, 8));
+    await pool.init(barretenberg.module, Math.min(navigator.hardwareConcurrency, 8));
 
     const pippenger = new PooledPippenger();
     await pippenger.init(crs.getData(), pool);
@@ -35,12 +36,10 @@ describe('create_proof', () => {
     const fft = new PooledFft(pool);
     await fft.init(circuitSize);
 
-    barretenberg = pool.workers[0];
-
-    const prover = new Prover(barretenberg, pippenger, fft);
+    const prover = new Prover(pool.workers[0], pippenger, fft);
 
     schnorr = new Schnorr(barretenberg);
-    createNoteProver = new CreateNoteProver(barretenberg, prover);
+    createNoteProver = new CreateNoteProver(pool.workers[0], prover);
     createNoteVerifier = new CreateNoteVerifier(pippenger.pool[0]);
 
     debug("creating keys...");
@@ -81,6 +80,6 @@ describe('create_proof', () => {
     const verified = await createNoteVerifier.verifyProof(proof);
     expect(verified).toBe(true);
 
-    debug(`mem: ${await barretenberg.memSize()}`);
+    debug(`mem: ${await barretenberg.getMemory().length}`);
   }, 60000);
 });

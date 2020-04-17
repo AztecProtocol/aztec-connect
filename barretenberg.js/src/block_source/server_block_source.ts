@@ -1,6 +1,6 @@
 import { BlockSource, Block } from '.';
 import { EventEmitter } from 'events';
-import { fetch } from '../iso-fetch';
+import { fetch } from '../iso_fetch';
 
 export class ServerBlockSource extends EventEmitter implements BlockSource {
   private running = true;

@@ -21,13 +21,12 @@ export class JoinSplitProver {
 
   public async createJoinSplitProof(tx: JoinSplitTx) {
     const buf = tx.toBuffer();
-    console.log('BUFF LEN: ', buf.length);
     const mem = this.wasm.call('bbmalloc', buf.length);
     this.wasm.transferToHeap(buf, mem);
     const proverPtr = this.wasm.call('join_split__new_prover', mem, buf.length);
     this.wasm.call('bbfree', mem);
     // const proof = await this.prover.createProof(proverPtr);
-    // await this.wasm.call('create_note__delete_prover', proverPtr);
+    await this.wasm.call('create_note__delete_prover', proverPtr);
     return Buffer.alloc(0);
   }
 }

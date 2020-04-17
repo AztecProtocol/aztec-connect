@@ -23,12 +23,7 @@ describe('join_split_proof', () => {
   let pedersen!: Pedersen;
 
   beforeAll(async () => {
-    barretenberg = new BarretenbergWasm();
-
-    const bbDebug = createDebug('bb:wasm');
-    barretenberg.on('log', bbDebug);
-
-    await barretenberg.init();
+    barretenberg = await BarretenbergWasm.new();
     joinSplitProver = new JoinSplitProver(barretenberg);
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
@@ -59,7 +54,6 @@ describe('join_split_proof', () => {
 
     const inputNote1Path = await tree.getHashPath(0);
     const inputNote2Path = await tree.getHashPath(1);
-    debug(inputNote1Path);
 
     const signature = new Signature(new BN(1), new BN(2));
 
@@ -75,8 +69,6 @@ describe('join_split_proof', () => {
       [outputNote1, outputNote2],
       signature,
     );
-
-    //debug(tx);
 
     await joinSplitProver.createJoinSplitProof(tx);
   });

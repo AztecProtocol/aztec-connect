@@ -1,19 +1,15 @@
 import { Subject, Observable } from 'threads/observable';
 import { expose, Transfer } from 'threads/worker';
-import { BarretenbergWasm, createModule } from '../wasm';
+import { BarretenbergWasm } from '../wasm';
 
 let wasm: BarretenbergWasm;
 const subject = new Subject();
 
 const worker = {
-  async init(module?: WebAssembly.Module, prealloc: number = 0) {
-    if (!module) {
-      module = await createModule();
-    }
+  async init(module?: WebAssembly.Module) {
     wasm = new BarretenbergWasm();
-    await wasm.init(module, prealloc);
     wasm.on('log', str => subject.next(str));
-    return module;
+    await wasm.init(module);
   },
 
   async transferToHeap(buffer: Uint8Array, offset: number) {

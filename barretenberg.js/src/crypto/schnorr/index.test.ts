@@ -1,7 +1,6 @@
 import { Schnorr } from './index';
 import { TextEncoder } from 'util';
 import { BarretenbergWasm } from '../../wasm';
-import { destroyWorker } from '../../wasm/worker_factory';
 
 describe('schnorr', () => {
   let barretenberg!: BarretenbergWasm;
