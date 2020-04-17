@@ -63,11 +63,9 @@ export class BarretenbergWasm extends EventEmitter {
     };
 
     if (module) {
-    this.emit('log', 'init from module');
       this.instance = await WebAssembly.instantiate(module, importObj);
       this.module = module;
     } else {
-    this.emit('log', 'init from fetchCode');
       const { instance, module } = await WebAssembly.instantiate(await fetchCode(), importObj);
       this.instance = instance;
       this.module = module;

@@ -22,7 +22,7 @@ const worker = {
   },
 
   async call(name: string, ...args: any) {
-    return wasm.call(name, args);
+    return wasm.call(name, ...args);
   },
 
   async memSize() {
