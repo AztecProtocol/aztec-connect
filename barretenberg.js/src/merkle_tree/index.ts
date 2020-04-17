@@ -26,6 +26,8 @@ export interface LeafHasher {
   hashToField(data: Uint8Array): Buffer;
 }
 
+export type HashPath = Buffer[][];
+
 export class MerkleTree {
   private root!: Buffer;
   private zeroHashes: Buffer[] = [];
@@ -39,6 +41,10 @@ export class MerkleTree {
     private size: number = 0,
     root?: Buffer,
   ) {
+    if (!(depth >= 1 && depth <= MAX_DEPTH)) {
+      throw Error('Bad depth');
+    }
+
     // Compute the zero values at each layer.
     let current = this.leafHasher.hashToField(Buffer.alloc(LEAF_BYTES, '0'));
     for (let i = 0; i < depth; ++i) {
@@ -50,10 +56,6 @@ export class MerkleTree {
   }
 
   static async new(db: LevelUp, fieldCompressor: FieldCompressor, leafHasher: LeafHasher, name: string, depth: number) {
-    if (!(depth >= 1 && depth <= MAX_DEPTH)) {
-      throw Error('Bad depth');
-    }
-
     const tree = new MerkleTree(db, fieldCompressor, leafHasher, name, depth);
     await tree.writeMeta();
 
@@ -89,7 +91,7 @@ export class MerkleTree {
   }
 
   public async getHashPath(index: number) {
-    const path: Buffer[][] = [];
+    const path: HashPath = [];
 
     let data = await this.dbGet(this.root);
 
@@ -136,6 +138,9 @@ export class MerkleTree {
     const shaLeaf = this.leafHasher.hashToField(value);
     this.root = await this.updateElementInternal(this.root, shaLeaf, index, this.depth);
     await this.db.put(shaLeaf, value);
+
+    this.size = Math.max(this.size, index + 1);
+
     await this.writeMeta();
   }
 
@@ -145,25 +150,18 @@ export class MerkleTree {
     }
 
     const data = await this.dbGet(root);
-    // console.log('data ', data);
     const isRight = (index >> (height - 1)) & 0x1;
-    // console.log('isRight ', isRight);
-
-    if (!data && height === 1) {
-      this.size++;
-    }
 
     let left = data ? data.slice(0, 32) : this.zeroHashes[height - 1];
     let right = data ? data.slice(32, 64) : this.zeroHashes[height - 1];
-    // console.log('left ', left);
-    // console.log('right ', right);
+    const subtreeRoot = isRight ? right : left;
     const newSubtreeRoot = await this.updateElementInternal(
-      isRight ? right : left,
+      subtreeRoot,
       value,
       keepNLsb(index, height - 1),
       height - 1,
     );
-    // console.log('new subtree root ', height - 1, newSubtreeRoot);
+
     if (isRight) {
       right = newSubtreeRoot;
     } else {

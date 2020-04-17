@@ -1,14 +1,15 @@
 import { ChildProcess, spawn } from 'child_process';
 import { EventEmitter } from 'events';
-import { MemoryFifo } from './fifo';
-import { Block } from './block';
+import { MemoryFifo } from '../fifo';
+import { TxBatch } from './tx_batch';
+import { PromiseReadable } from 'promise-readable';
 
 class CancelledError extends Error {}
 
 export class ProofGenerator extends EventEmitter {
   private proc?: ChildProcess;
   private cancelled = false;
-  private queue = new MemoryFifo<Block>();
+  private queue = new MemoryFifo<TxBatch>();
 
   constructor(private batchSize: number) {
     super();
@@ -16,6 +17,8 @@ export class ProofGenerator extends EventEmitter {
 
   public async run() {
     this.launch();
+
+    const stdout = new PromiseReadable(this.proc!.stdout!);
 
     while (true) {
       try {
@@ -25,8 +28,24 @@ export class ProofGenerator extends EventEmitter {
         }
         let buffer = block.toBuffer();
         this.proc!.stdin!.write(buffer);
-        // let proof = await this.computeProof(block);
-        // this.emit('proof', proof);
+
+        const header = await stdout.read(8) as Buffer | undefined;
+
+        if (!header) {
+          console.log('Failed to read header.');
+          break;
+        }
+
+        const blockNum = header.readUInt32BE(0);
+        const proofLength = header.readUInt32BE(4);
+        const data = await stdout.read(proofLength) as Buffer | undefined;
+
+        if (!data) {
+          console.log('Failed to read data.');
+          break;
+        }
+
+        this.emit('proof', { blockNum, data });
       } catch (err) {
         if (err instanceof CancelledError) {
           console.log('Proof generator cancelled.');
@@ -48,7 +67,7 @@ export class ProofGenerator extends EventEmitter {
     }
   }
 
-  public enqueue(block: Block) {
+  public enqueue(block: TxBatch) {
     this.queue.put(block);
   }
 
@@ -56,7 +75,7 @@ export class ProofGenerator extends EventEmitter {
     const binPath = '../build/src/rollup/prover/rollup_proof';
     const proc = (this.proc = spawn(binPath, [this.batchSize.toString()]));
 
-    proc.stdout.on('data', data => console.log(data.toString().trim()));
+    // proc.stdout.on('data', data => console.log(data.toString().trim()));
     proc.stderr.on('data', data => console.log(data.toString().trim()));
     proc.on('close', code => {
       this.proc = undefined;

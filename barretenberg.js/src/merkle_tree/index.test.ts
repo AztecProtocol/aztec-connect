@@ -1,4 +1,4 @@
-import { BarretenbergWasm, createModule } from '../wasm';
+import { BarretenbergWasm } from '../wasm';
 import { Blake2s } from '../crypto/blake2s';
 import { Pedersen } from '../crypto/pedersen';
 import { MerkleTree } from '.';
@@ -13,7 +13,7 @@ describe('merkle_tree', () => {
 
   beforeAll(async () => {
     barretenberg = new BarretenbergWasm();
-    await barretenberg.init(await createModule());
+    await barretenberg.init();
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
 
@@ -35,7 +35,7 @@ describe('merkle_tree', () => {
     const e11 = pedersen.compress(e02, e03);
     const root = pedersen.compress(e10, e11);
 
-    const tree = new MerkleTree(db, pedersen, blake2s, "test", 2);
+    const tree = await MerkleTree.new(db, pedersen, blake2s, "test", 2);
 
     for (let i = 0; i < 4; ++i) {
         await tree.updateElement(i, values[i]);
@@ -61,6 +61,7 @@ describe('merkle_tree', () => {
     expect(await tree.getHashPath(2)).toEqual(expected);
     expect(await tree.getHashPath(3)).toEqual(expected);
     expect(tree.getRoot()).toEqual(root);
+    expect(tree.getSize()).toBe(4);
 
     // Lifted from memory_store.test.cpp to ensure consistency.
     expect(root).toEqual(Buffer.from('2fa6d2259d22e6992f4824d80cd2ef803c54b83b885d611a6b37c138b119d08b', 'hex'));

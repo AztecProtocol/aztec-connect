@@ -1,6 +1,6 @@
 import isNode from 'detect-node';
 
-export default function fetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
+export function fetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
   if (isNode) {
     const f = require('node-fetch');
     return f(input, init);

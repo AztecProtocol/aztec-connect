@@ -21,7 +21,11 @@ export class BarretenbergWasm extends EventEmitter {
   private heap!: Uint8Array;
   private instance!: WebAssembly.Instance;
 
-  public async init(module: WebAssembly.Module, prealloc: number = 0) {
+  public async init(module?: WebAssembly.Module, prealloc: number = 0) {
+    if (!module) {
+      module = await createModule();
+    }
+
     this.memory = new WebAssembly.Memory({ initial: 256, maximum: 8192 });
     this.heap = new Uint8Array(this.memory.buffer);
 
@@ -63,6 +67,8 @@ export class BarretenbergWasm extends EventEmitter {
       const pa = this.exports().bbmalloc(prealloc);
       this.exports().bbfree(pa);
     }
+
+    return module;
   }
 
   public exports(): any {
