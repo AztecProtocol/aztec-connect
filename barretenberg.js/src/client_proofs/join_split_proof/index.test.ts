@@ -8,8 +8,6 @@ import levelup from 'levelup';
 import memdown from 'memdown';
 import { Blake2s } from '../../crypto/blake2s';
 import { Pedersen } from '../../crypto/pedersen';
-import BN from 'bn.js';
-import { Signature } from '../signature';
 import { Note } from '../note';
 
 const debug = createDebug('bb:join_split_proof');
@@ -55,7 +53,7 @@ describe('join_split_proof', () => {
     const inputNote1Path = await tree.getHashPath(0);
     const inputNote2Path = await tree.getHashPath(1);
 
-    const signature = new Signature(new BN(1), new BN(2));
+    const signature = joinSplitProver.sign4Notes([inputNote1, inputNote2, outputNote1, outputNote2], pk);
 
     // const encryptedNoteX = encryptedNote.slice(32, 64);
     // const signature = await schnorr.constructSignature(encryptedNoteX, pk);

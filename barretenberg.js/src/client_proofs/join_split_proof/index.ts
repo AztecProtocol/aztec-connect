@@ -4,6 +4,7 @@ import { SinglePippenger } from '../../pippenger';
 import { JoinSplitTx } from './join_split_tx';
 import { BarretenbergWasm } from '../../wasm';
 import { Note } from '../note';
+import { Signature } from '../signature';
 
 export class JoinSplitProver {
   constructor(private wasm: BarretenbergWasm/*, private prover: Prover*/) {}
@@ -13,10 +14,18 @@ export class JoinSplitProver {
   }
 
   public encryptNote(note: Note) {
-    note.toBuffer()
     this.wasm.transferToHeap(note.toBuffer(), 0);
     this.wasm.call('join_split__encrypt_note', 0, 100);
     return Buffer.from(this.wasm.sliceMemory(100, 164));
+  }
+
+  public sign4Notes(notes: Note[], pk: Buffer) {
+    const buf = Buffer.concat(notes.map(n => n.toBuffer()));
+    this.wasm.transferToHeap(pk, 0);
+    this.wasm.transferToHeap(buf, 32);
+    this.wasm.call('join_split__sign_4_notes', 32, 0, 0);
+    const sig = Buffer.from(this.wasm.sliceMemory(0, 64));
+    return new Signature(sig.slice(0, 32), sig.slice(32, 64));
   }
 
   public async createJoinSplitProof(tx: JoinSplitTx) {
