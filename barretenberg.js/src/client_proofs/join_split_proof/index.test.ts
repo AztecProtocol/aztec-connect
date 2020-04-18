@@ -64,6 +64,8 @@ describe('join_split_proof', () => {
       10,
       20,
       2,
+      [0, 1],
+      tree.getRoot(),
       [inputNote1Path, inputNote2Path],
       [inputNote1, inputNote2],
       [outputNote1, outputNote2],
