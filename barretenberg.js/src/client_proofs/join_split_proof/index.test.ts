@@ -55,8 +55,6 @@ describe('join_split_proof', () => {
 
     const signature = joinSplitProver.sign4Notes([inputNote1, inputNote2, outputNote1, outputNote2], pk);
 
-    // const encryptedNoteX = encryptedNote.slice(32, 64);
-    // const signature = await schnorr.constructSignature(encryptedNoteX, pk);
     const tx = new JoinSplitTx(
       pubKey,
       10,
