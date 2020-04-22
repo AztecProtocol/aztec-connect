@@ -97,6 +97,7 @@ jobs:
           command: |
             docker pull aztecprotocol/clang:9.0.0
             docker-compose build x86_64-linux-clang
+            docker-compose run x86_64-linux-clang
 
   wasm-linux-clang:
     machine:
