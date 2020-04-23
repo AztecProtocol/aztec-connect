@@ -46,7 +46,7 @@ export class MerkleTree {
     }
 
     // Compute the zero values at each layer.
-    let current = this.leafHasher.hashToField(Buffer.alloc(LEAF_BYTES, '0'));
+    let current = this.leafHasher.hashToField(Buffer.alloc(LEAF_BYTES, 0));
     for (let i = 0; i < depth; ++i) {
       this.zeroHashes[i] = current;
       current = fieldCompressor.compress(current, current);
@@ -115,7 +115,7 @@ export class MerkleTree {
   public async getElement(index: number) {
     const leaf = await this.getElementInternal(this.root, index, this.depth);
     const data = await this.dbGet(leaf);
-    return data ? data : Buffer.alloc(64, '0');
+    return data ? data : Buffer.alloc(64, 0);
   }
 
   private async getElementInternal(root: Buffer, index: number, height: number): Promise<Buffer> {

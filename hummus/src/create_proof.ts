@@ -3,9 +3,10 @@ import { PooledPippenger } from 'barretenberg-es/pippenger';
 import { CreateNoteProver, CreateNoteVerifier } from 'barretenberg-es/client_proofs/create_note_proof';
 import { Prover } from 'barretenberg-es/client_proofs/prover';
 import { Schnorr } from 'barretenberg-es/crypto/schnorr';
-import { Note } from 'barretenberg-es/client_proofs/create_note_proof';
+import { Note } from 'barretenberg-es/client_proofs/note';
 import { Crs } from 'barretenberg-es/crs';
 import createDebug from 'debug';
+import { BarretenbergWasm } from 'barretenberg-es/wasm';
 import { WorkerPool } from 'barretenberg-es/wasm/worker_pool';
 
 const debug = createDebug('bb:create_proof');
@@ -18,14 +19,17 @@ export class ProofCreator {
   private createNoteVerifier!: CreateNoteVerifier;
 
   public async init() {
-    const circuitSize = 32*1024;
+    const circuitSize = 32 * 1024;
 
     const crs = new Crs(circuitSize);
     await crs.download();
 
+    const barretenberg = await BarretenbergWasm.new();
+
     this.pool = new WorkerPool();
-    // await this.pool.init(Math.min(navigator.hardwareConcurrency, 8));
-    await this.pool.init(8);
+    await this.pool.init(barretenberg.module, 8);
+
+    const barretenbergWorker = this.pool.workers[0];
 
     const pippenger = new PooledPippenger();
     await pippenger.init(crs.getData(), this.pool);
@@ -33,12 +37,10 @@ export class ProofCreator {
     const fft = new PooledFft(this.pool);
     await fft.init(circuitSize);
 
-    const barretenberg = this.pool.workers[0];
-
-    const prover = new Prover(barretenberg, pippenger, fft);
+    const prover = new Prover(barretenbergWorker, pippenger, fft);
 
     this.schnorr = new Schnorr(barretenberg);
-    this.createNoteProver = new CreateNoteProver(barretenberg, prover);
+    this.createNoteProver = new CreateNoteProver(barretenbergWorker, prover);
     this.createNoteVerifier = new CreateNoteVerifier(pippenger.pool[0]);
 
     debug('creating keys...');

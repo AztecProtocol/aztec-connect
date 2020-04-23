@@ -47,7 +47,7 @@ describe('join_split_proof', () => {
 
     const prover = new Prover(pool.workers[0], pippenger, fft);
 
-    joinSplitProver = new JoinSplitProver(pool.workers[0], prover);
+    joinSplitProver = new JoinSplitProver(barretenberg, prover);
     joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);

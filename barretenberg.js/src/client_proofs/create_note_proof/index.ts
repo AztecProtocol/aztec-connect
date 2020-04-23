@@ -2,16 +2,7 @@ import { Signature } from '../../crypto/schnorr';
 import { BarretenbergWorker } from '../../wasm/worker';
 import { Prover } from '../prover';
 import { SinglePippenger } from '../../pippenger';
-
-export class Note {
-  constructor(public ownerPubKey: Buffer, public viewingKey: Buffer, public value: number) {}
-
-  public toBuffer() {
-    const valueBuf = Buffer.alloc(4);
-    valueBuf.writeUInt32LE(this.value, 0);
-    return Buffer.concat([this.ownerPubKey, valueBuf, this.viewingKey]);
-  }
-}
+import { Note } from '../note';
 
 export class CreateNoteProver {
   constructor(private wasm: BarretenbergWorker, private prover: Prover) {}
