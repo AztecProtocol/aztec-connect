@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Block, Button } from '@aztec/guacamole-ui';
-import JoinSplitProof from './join_split_proof';
+import { App } from './app';
+import { JoinSplitProofCreator } from './join_split_proof';
 import Input from './input';
 
 import './styles/guacamole.css';
+import { LocalRollupProvider } from './local_rollup_provider';
 require('barretenberg-es/wasm/barretenberg.wasm');
 
 interface JoinSplitFormProps {
-  joinSplit: JoinSplitProof;
+  app: App;
 }
 
 enum State {
@@ -21,9 +23,10 @@ enum ProofState {
   RUNNING = 'Running',
   FAILED = 'Failed',
   VERIFIED = 'Verified',
+  FINISHED = 'Finished',
 }
 
-export default function JoinSplitForm({ joinSplit }: JoinSplitFormProps) {
+export default function JoinSplitForm({ app }: JoinSplitFormProps) {
   const [init, setInit] = useState(State.UNINITIALIZED);
   const [result, setResult] = useState(ProofState.NADA);
   const [time, setTime] = useState(0);
@@ -47,7 +50,7 @@ export default function JoinSplitForm({ joinSplit }: JoinSplitFormProps) {
             text="The Button"
             onSubmit={async () => {
               setInit(State.INITIALIZING);
-              await joinSplit.init();
+              await app.init();
               setInit(State.INITIALIZED);
             }}
             isLoading={init == State.INITIALIZING}
@@ -74,12 +77,12 @@ export default function JoinSplitForm({ joinSplit }: JoinSplitFormProps) {
                 setResult(ProofState.RUNNING);
                 try {
                   const start = Date.now();
-                  const r = await joinSplit.createProof({
-                    inputValue: parseInt(inputValue, 10),
-                    outputValue: parseInt(outputValue, 10),
-                  });
+                  await app.createAndSendProof(
+                    parseInt(inputValue, 10),
+                    parseInt(outputValue, 10),
+                  );
                   setTime(Date.now() - start);
-                  setResult(r ? ProofState.VERIFIED : ProofState.FAILED);
+                  setResult(ProofState.FINISHED);
                 } catch (e) {
                   console.log(e);
                   setResult(ProofState.FAILED);

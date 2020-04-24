@@ -1,30 +1,30 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { Block } from '@aztec/guacamole-ui';
-import JoinSplitProof from './join_split_proof';
+import { App } from './app';
 import JoinSplitForm from './join_split_form';
 
 import './styles/guacamole.css';
 require('barretenberg-es/wasm/barretenberg.wasm');
 
 interface LandingPageProps {
-  joinSplit: JoinSplitProof;
+  app: App;
 }
 
-function LandingPage({ joinSplit }: LandingPageProps) {
+function LandingPage({ app }: LandingPageProps) {
   return (
     <Block
       padding="xl"
       align="center"
     >
-      <JoinSplitForm joinSplit={joinSplit} />
+      <JoinSplitForm app={app} />
     </Block>
   );
 }
 
 async function main() {
-  const joinSplit = new JoinSplitProof();
-  ReactDOM.render(<LandingPage joinSplit={joinSplit} />, document.getElementById('root'));
+  const app = new App();
+  ReactDOM.render(<LandingPage app={app} />, document.getElementById('root'));
 }
 
 // tslint:disable-next-line:no-console

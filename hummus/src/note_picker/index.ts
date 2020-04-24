@@ -6,7 +6,7 @@ import { pick } from './pick';
 export class NotePicker {
   private sortedNotes: SortedNotes;
 
-  constructor(notes: TrackedNote[]) {
+  constructor(notes: TrackedNote[] = []) {
     this.sortedNotes = new SortedNotes(notes);
   }
 
@@ -16,6 +16,10 @@ export class NotePicker {
 
   removeNote(note: TrackedNote) {
     this.sortedNotes.remove(note);
+  }
+
+  findNote(callback: (note: TrackedNote, i?: number) => boolean) {
+    return this.sortedNotes.find(callback);
   }
 
   validate(value: number, numberOfNotes: number) {

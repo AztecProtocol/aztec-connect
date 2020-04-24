@@ -31,6 +31,10 @@ export default class SortedNotes {
     this.sortedNotes.forEach((note, i) => callback(note, i));
   }
 
+  find(callback: (note: TrackedNote, i?: number) => boolean) {
+    return this.sortedNotes.find(callback);
+  }
+
   first(count: number): TrackedNote[] {
     return this.sortedNotes.slice(0, count);
   }

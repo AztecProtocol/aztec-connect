@@ -7,4 +7,5 @@ export interface Block {
 
 export interface BlockSource {
   on(event: 'block', fn: (block: Block) => void);
+  removeAllListeners();
 }
