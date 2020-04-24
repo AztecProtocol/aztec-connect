@@ -1,6 +1,7 @@
 import * as random from '../utils/random';
 import { pick, getStartIndex } from './pick';
 import SortedNotes from './sorted_notes';
+import { TrackedNote } from './note';
 
 const toSortedNotes = (values: number[]) => {
   const notes = values.map((value, index) => ({
@@ -8,8 +9,7 @@ const toSortedNotes = (values: number[]) => {
     note: {
       value,
     },
-  }));
-  // @ts-ignore
+  } as TrackedNote));
   return new SortedNotes(notes);
 };
 
@@ -82,20 +82,20 @@ describe('pick', () => {
     ]);
   });
 
-  it('throw error if there is no note combinations whose sum is equal to or larger than value', () => {
+  it('return undefined if there is no note combinations whose sum is equal to or larger than value', () => {
     const sortedNotes = toSortedNotes([0, 10, 100]);
 
-    expect(() => pick(
+    expect(pick(
       sortedNotes,
       1000,
       1,
-    )).toThrow();
+    )).toBeUndefined()
 
-    expect(() => pick(
+    expect(pick(
       sortedNotes,
       1000,
       3,
-    )).toThrow();
+    )).toBeUndefined();
   });
 
   it('skip repeating min values if current sum is not enough', () => {

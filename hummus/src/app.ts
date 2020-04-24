@@ -11,7 +11,7 @@ import { BarretenbergWasm } from 'barretenberg-es/wasm';
 import { WorkerPool } from 'barretenberg-es/wasm/worker_pool';
 import { WorldState } from 'barretenberg-es/world_state';
 import { UserState, User } from './user_state';
-import { JoinSplitProofCreator } from './join_split_proof';
+import { JoinSplitProofCreator } from './join_split_proof_creator';
 import { LocalRollupProvider } from './local_rollup_provider';
 import { Blake2s } from 'barretenberg-es/crypto/blake2s';
 import { Pedersen } from 'barretenberg-es/crypto/pedersen';

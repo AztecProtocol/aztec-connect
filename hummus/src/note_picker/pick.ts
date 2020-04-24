@@ -39,7 +39,7 @@ export const pick = (
   const totalNotes = sortedNotes.length;
   let start = getStartIndex(sortedNotes, value, numberOfNotes);
   if (start < 0) {
-    throw new Error(`Cannot pick ${numberOfNotes} notes with sum ${value}.`);
+    return;
   }
 
   while (start <= totalNotes - numberOfNotes) {

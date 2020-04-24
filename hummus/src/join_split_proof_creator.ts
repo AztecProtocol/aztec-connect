@@ -19,6 +19,9 @@ export class JoinSplitProofCreator {
     const receiverViewingKey = senderViewingKey;
 
     const notes = this.userState.pickNotes(inputValue);
+    if (!notes) {
+      throw new Error(`Failed to find no more than 2 notes that sum to ${inputValue}.`);
+    }
     const numInputNotes = notes.length;
 
     while (notes.length < 2) {

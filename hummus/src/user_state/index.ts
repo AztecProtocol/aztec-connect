@@ -58,7 +58,7 @@ export class UserState {
   }
 
   public pickNotes(value: number) {
-    return this.notePicker.pick(value);
+    return this.notePicker.pick(value, 2) || this.notePicker.pick(value, 1);
   }
 
   // [256 bits of encrypted note x coord][32 least sig bits of index][223 bits of note viewing key][1 bit is_real]
