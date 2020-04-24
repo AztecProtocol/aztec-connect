@@ -1,6 +1,4 @@
-import { BarretenbergWorker } from '../../wasm/worker';
 import { Prover } from '../prover';
-import { SinglePippenger } from '../../pippenger';
 import { JoinSplitTx } from './join_split_tx';
 import { Note } from '../note';
 import { Signature } from '../signature';
@@ -18,6 +16,15 @@ export class JoinSplitProver {
     this.wasm.transferToHeap(note.toBuffer(), 0);
     this.wasm.call('join_split__encrypt_note', 0, 100);
     return Buffer.from(this.wasm.sliceMemory(100, 164));
+  }
+
+  public decryptNote(encryptedNote: Buffer, privateKey: Buffer, viewingKey: Buffer) {
+    this.wasm.transferToHeap(encryptedNote, 0);
+    this.wasm.transferToHeap(privateKey, 64);
+    this.wasm.transferToHeap(viewingKey, 96);
+    const success = this.wasm.call('join_split__decrypt_note', 0, 64, 96, 128) ? true : false;
+    const value = Buffer.from(this.wasm.sliceMemory(128, 132)).readUInt32BE(0);
+    return { success, value };
   }
 
   public sign4Notes(notes: Note[], pk: Buffer) {

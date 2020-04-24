@@ -1,4 +1,4 @@
-import { CreateNoteProver, Note, CreateNoteVerifier } from './index';
+import { CreateNoteProver, CreateNoteVerifier } from './index';
 import { Schnorr } from '../../crypto/schnorr';
 import { WorkerPool } from '../../wasm/worker_pool';
 import { Prover } from '../prover';
@@ -8,6 +8,7 @@ import { PooledFft } from '../../fft/pooled_fft';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { BarretenbergWasm } from '../../wasm';
+import { Note } from '../note';
 
 const debug = createDebug('bb:create_proof');
 
