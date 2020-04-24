@@ -66,4 +66,11 @@ describe('merkle_tree', () => {
     // Lifted from memory_store.test.cpp to ensure consistency.
     expect(root).toEqual(Buffer.from('2fa6d2259d22e6992f4824d80cd2ef803c54b83b885d611a6b37c138b119d08b', 'hex'));
   });
+
+  it('should have correct empty tree root for depth 10', async () => {
+    const db = levelup(memdown());
+    const tree = await MerkleTree.new(db, pedersen, blake2s, "test", 10);
+    const root = tree.getRoot();
+    expect(root).toEqual(Buffer.from('28703b88327e4d75dca124b208f36f39915714fe14cb9bb2f852afc1aa9244be', 'hex'));
+  });
 });
