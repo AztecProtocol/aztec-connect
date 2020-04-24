@@ -3,6 +3,7 @@ import { JoinSplitProver, JoinSplitTx } from 'barretenberg-es/client_proofs/join
 import { Note } from 'barretenberg-es/client_proofs/note';
 import { WorldState } from 'barretenberg-es/world_state';
 import { UserState, User } from './user_state';
+import { randomBytes } from 'crypto';
 
 const debug = createDebug('bb:join_split_proof');
 
@@ -21,7 +22,7 @@ export class JoinSplitProofCreator {
     const numInputNotes = notes.length;
 
     while (notes.length < 2) {
-      notes.push({ index: notes.length, nullifier: new Buffer([]), note: new Note(sender.publicKey, senderViewingKey, 0) });
+      notes.push({ index: notes.length, nullifier: new Buffer([]), note: new Note(sender.publicKey, randomBytes(32), 0) });
     }
 
     const totalInputValue = notes.reduce((sum, note) => sum + note.note.value, 0);
@@ -32,8 +33,7 @@ export class JoinSplitProofCreator {
     const remainder = totalInputValue - inputValue;
     const outputNotes = [
       new Note(receiver.publicKey, receiverViewingKey, outputValue),
-      // TODO: Make unviewable zero note when remainder 0?
-      new Note(sender.publicKey, senderViewingKey, remainder)
+      new Note(sender.publicKey, remainder ? senderViewingKey : randomBytes(32), remainder)
     ];
 
     const publicInput = Math.max(0, outputValue - inputValue);

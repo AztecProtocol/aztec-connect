@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { Block, Button } from '@aztec/guacamole-ui';
 import { App } from './app';
-import { JoinSplitProofCreator } from './join_split_proof';
 import Input from './input';
-
 import './styles/guacamole.css';
-import { LocalRollupProvider } from './local_rollup_provider';
 require('barretenberg-es/wasm/barretenberg.wasm');
 
 interface JoinSplitFormProps {
