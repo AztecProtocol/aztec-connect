@@ -32,4 +32,10 @@ export class NotePicker {
     }
     return pick(this.sortedNotes, value, numberOfNotes);
   }
+
+  getNoteSum() {
+    let sum = 0;
+    this.sortedNotes.each((n: TrackedNote) => sum += n.note.value);
+    return sum;
+  }
 }

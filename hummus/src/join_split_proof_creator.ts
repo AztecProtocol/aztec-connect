@@ -10,17 +10,17 @@ const debug = createDebug('bb:join_split_proof');
 export class JoinSplitProofCreator {
   constructor(private joinSplitProver: JoinSplitProver, private userState: UserState, private worldState: WorldState) {}
 
-  public async createProof(inputValue: number, outputValue: number, sender: User) {
-    const receiver = sender;
+  public async createProof(deposit: number, widthraw: number, transfer: number, sender: User, receiverPubKey: Buffer) {
     // prettier-ignore
     const senderViewingKey = Buffer.from([
       0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
       0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11]);
     const receiverViewingKey = senderViewingKey;
 
-    const notes = this.userState.pickNotes(inputValue);
+    const requiredInputNoteValue = Math.max(0, transfer + widthraw - deposit);
+    const notes = this.userState.pickNotes(requiredInputNoteValue);
     if (!notes) {
-      throw new Error(`Failed to find no more than 2 notes that sum to ${inputValue}.`);
+      throw new Error(`Failed to find no more than 2 notes that sum to ${requiredInputNoteValue}.`);
     }
     const numInputNotes = notes.length;
 
@@ -28,26 +28,23 @@ export class JoinSplitProofCreator {
       notes.push({ index: notes.length, nullifier: new Buffer([]), note: new Note(sender.publicKey, randomBytes(32), 0) });
     }
 
-    const totalInputValue = notes.reduce((sum, note) => sum + note.note.value, 0);
+    const totalNoteInputValue = notes.reduce((sum, note) => sum + note.note.value, 0);
     const inputNoteIndices = notes.map(n => n.index);
     const inputNotes = notes.map(n => n.note);
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
-    const remainder = totalInputValue - inputValue;
+    const changeValue = totalNoteInputValue - transfer - widthraw;
     const outputNotes = [
-      new Note(receiver.publicKey, receiverViewingKey, outputValue),
-      new Note(sender.publicKey, remainder ? senderViewingKey : randomBytes(32), remainder)
+      new Note(receiverPubKey, receiverViewingKey, transfer + deposit),
+      new Note(sender.publicKey, changeValue ? senderViewingKey : randomBytes(32), changeValue)
     ];
-
-    const publicInput = Math.max(0, outputValue - inputValue);
-    const publicOutput = Math.max(0, inputValue - outputValue);
 
     const signature = this.joinSplitProver.sign4Notes([...inputNotes, ...outputNotes], sender.privateKey);
 
     const tx = new JoinSplitTx(
       sender.publicKey,
-      publicInput,
-      publicOutput,
+      deposit,
+      widthraw,
       numInputNotes,
       inputNoteIndices,
       this.worldState.getRoot(),

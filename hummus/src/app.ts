@@ -15,11 +15,12 @@ import { JoinSplitProofCreator } from './join_split_proof_creator';
 import { LocalRollupProvider } from './local_rollup_provider';
 import { Blake2s } from 'barretenberg-es/crypto/blake2s';
 import { Pedersen } from 'barretenberg-es/crypto/pedersen';
+import { EventEmitter } from 'events';
 
 createDebug.enable('bb:*');
 const debug = createDebug('bb:app');
 
-export class App {
+export class App extends EventEmitter {
   private pool!: WorkerPool;
   private schnorr!: Schnorr;
   private joinSplitProver!: JoinSplitProver;
@@ -76,6 +77,8 @@ export class App {
 
     this.worldState.start();
 
+    this.userState.on('updated', () => this.emit('updated'));
+
     debug('creating keys...');
     const start = new Date().getTime();
     await this.joinSplitProver.init();
@@ -83,13 +86,31 @@ export class App {
     debug(`created circuit keys: ${new Date().getTime() - start}ms`);
   }
 
-  public async createAndSendProof(inputValue: number, outputValue: number) {
-    const proof = await this.joinSplitProofCreator.createProof(inputValue, outputValue, this.user);
+  public async deposit(value: number) {
+    const proof = await this.joinSplitProofCreator.createProof(value, 0, 0, this.user, this.user.publicKey);
+    await this.rollupProvider.sendProof(proof);
+  }
+
+  public async withdraw(value: number) {
+    const proof = await this.joinSplitProofCreator.createProof(0, value, 0, this.user, this.user.publicKey);
+    await this.rollupProvider.sendProof(proof);
+  }
+
+  public async transfer(value: number, receiverPubKey: Buffer) {
+    const proof = await this.joinSplitProofCreator.createProof(0, 0, value, this.user, receiverPubKey);
     await this.rollupProvider.sendProof(proof);
   }
 
   public async destroy() {
     await this.pool.destroy();
     this.worldState.stop();
+  }
+
+  public getUser() {
+    return this.user;
+  }
+
+  public getBalance() {
+    return this.userState.getBalance();
   }
 }

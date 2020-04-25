@@ -6,6 +6,7 @@ import { NotePicker } from '../note_picker';
 import createDebug from 'debug';
 import { TrackedNote } from '../note_picker/note';
 import { Blake2s } from 'barretenberg-es/crypto/blake2s';
+import { EventEmitter } from 'events';
 
 const debug = createDebug('bb:user_state');
 
@@ -19,7 +20,7 @@ const computeViewingKey = () => Buffer.from([
   0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
   0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11 ]);
 
-export class UserState {
+export class UserState extends EventEmitter {
   private notePicker = new NotePicker();
 
   constructor(
@@ -28,10 +29,13 @@ export class UserState {
     worldState: WorldState,
     private blake2s: Blake2s
   ) {
+    super();
     worldState.on('block', (b: Block) => this.processBlock(b));
   }
 
   private processBlock(block: Block) {
+    let update = false;
+
     block.dataEntries.forEach((encryptedNote, i) => {
       const viewingKey = computeViewingKey();
       const { success, value } = this.joinSplitProver.decryptNote(encryptedNote, this.user.privateKey, viewingKey);
@@ -45,6 +49,7 @@ export class UserState {
         };
         debug(`succesfully decrypted note ${index}:`, trackedNote);
         this.notePicker.addNote(trackedNote);
+        update = true;
       }
     });
 
@@ -53,8 +58,13 @@ export class UserState {
       if (note) {
         debug(`removing note ${note.index}`);
         this.notePicker.removeNote(note);
+        update = true;
       }
     });
+
+    if (update) {
+      this.emit('updated');
+    }
   }
 
   public pickNotes(value: number) {
@@ -70,4 +80,7 @@ export class UserState {
     return this.blake2s.hashToField(nullifier).slice(16, 32);
   }
 
+  public getBalance() {
+    return this.notePicker.getNoteSum();
+  }
 }
