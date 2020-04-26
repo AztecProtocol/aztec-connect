@@ -82,5 +82,5 @@ describe('create_proof', () => {
     expect(verified).toBe(true);
 
     debug(`mem: ${await barretenberg.getMemory().length}`);
-  }, 60000);
+  }, 120000);
 });
