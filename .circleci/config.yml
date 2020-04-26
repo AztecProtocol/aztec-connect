@@ -114,7 +114,7 @@ jobs:
             docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
             docker push aztecprotocol/barretenberg:wasm-linux-clang
 
-  barretenberg.js:
+  barretenberg-js:
     machine:
       image: ubuntu-1604:201903-01
       docker_layer_caching: true
@@ -147,6 +147,6 @@ workflows:
       - wasm-linux-clang:
           requires:
             - toolchains
-      - barretenberg.js:
+      - barretenberg-js:
           requires:
             - wasm-linux-clang
