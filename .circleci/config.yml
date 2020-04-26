@@ -132,7 +132,7 @@ jobs:
           name: 'Test'
           working_directory: barretenberg.js
           command: |
-            docker build .
+            docker build --pull .
 
 workflows:
   build:
