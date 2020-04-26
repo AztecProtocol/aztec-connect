@@ -92,7 +92,7 @@ describe('join_split_proof', () => {
       await joinSplitProver.init();
       await joinSplitVerifier.init(crs.getG2Data());
       debug(`created circuit keys: ${new Date().getTime() - start}ms`);
-    }, 60000);
+    }, 120000);
 
     it('should construct join split proof', async () => {
       const pubKey = schnorr.computePublicKey(privateKey);
