@@ -65,7 +65,7 @@ jobs:
       - checkout
       - *check_for_bb_changes
       - run:
-          name: 'Build'
+          name: 'Build and test'
           working_directory: barretenberg
           command: |
             docker pull aztecprotocol/gcc:9
@@ -86,6 +86,10 @@ jobs:
           command: |
             docker pull aztecprotocol/clang:9.0.0
             docker-compose build x86_64-linux-clang
+      - run:
+          name: 'Test'
+          working_directory: barretenberg
+          command: |
             docker-compose run x86_64-linux-clang
 
   wasm-linux-clang:
@@ -98,15 +102,10 @@ jobs:
       - checkout
       - *check_for_bb_changes
       - run:
-          name: 'Build'
+          name: 'Build and test'
           working_directory: barretenberg
           command: |
             docker-compose build --pull wasm-linux-clang
-      - run:
-          name: 'Test'
-          working_directory: barretenberg
-          command: |
-            docker-compose run wasm-linux-clang
       - run:
           name: 'Push'
           working_directory: barretenberg
