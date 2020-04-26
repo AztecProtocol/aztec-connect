@@ -62,7 +62,7 @@ describe('join_split_proof', () => {
       blake2s = new Blake2s(barretenberg);
       pedersen = new Pedersen(barretenberg);
       schnorr = new Schnorr(barretenberg);
-  });
+  }, 60000);
 
   afterAll(async () => {
     await pool.destroy();
@@ -75,7 +75,7 @@ describe('join_split_proof', () => {
     const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, viewingKey);
     expect(success).toBe(true);
     expect(value).toBe(100);
-  }, 10000);
+  }, 60000);
 
   it('should not decrypt note', () => {
     const pubKey = schnorr.computePublicKey(privateKey);
@@ -83,7 +83,7 @@ describe('join_split_proof', () => {
     const encryptedNote = joinSplitProver.encryptNote(note);
     const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, viewingKey);
     expect(success).toBe(false);
-  }, 10000);
+  }, 60000);
 
   describe('join_split_proof_generation', () => {
     beforeAll(async () => {
