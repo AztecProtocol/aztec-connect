@@ -1,4 +1,4 @@
-import { parseAuthData, AuthData } from './parseAuthData';
+import { parseAuthData, AuthData } from './parse_auth_data';
 import * as cbor from 'cbor';
 import { createHash, createVerify } from 'crypto';
 
