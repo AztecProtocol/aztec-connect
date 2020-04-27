@@ -1,4 +1,4 @@
-import fetch from '../iso-fetch';
+import { fetch } from '../iso_fetch';
 
 export class Crs {
   private data!: Uint8Array;

@@ -8,6 +8,7 @@
     "strict": true,
     "noImplicitAny": true,
     "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "typeRoots" : ["./node_modules/@types", "./src/@types"]
   }
 }

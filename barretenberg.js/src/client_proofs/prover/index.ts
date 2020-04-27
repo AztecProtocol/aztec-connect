@@ -23,6 +23,10 @@ class Timer {
 export class Prover {
   constructor(private wasm: BarretenbergWorker, private pippenger: Pippenger, private fft: Fft) {}
 
+  public getWorker() {
+    return this.wasm;
+  }
+
   public async createProof(proverPtr: number) {
     const circuitSize = await this.wasm.call('prover_get_circuit_size', proverPtr);
     const timer = new Timer('enter createProof');

@@ -2,6 +2,7 @@ import { readFile } from 'fs';
 import isNode from 'detect-node';
 import { promisify } from 'util';
 import { EventEmitter } from 'events';
+import createDebug from 'debug';
 
 export async function fetchCode() {
   if (isNode) {
@@ -16,9 +17,17 @@ export class BarretenbergWasm extends EventEmitter {
   private memory!: WebAssembly.Memory;
   private heap!: Uint8Array;
   private instance!: WebAssembly.Instance;
+  public module!: WebAssembly.Module;
 
-  public async init(module: WebAssembly.Module, prealloc: number = 0) {
-    this.memory = new WebAssembly.Memory({ initial: 256, maximum: 8192 });
+  public static async new(name: string = 'wasm') {
+    const barretenberg = new BarretenbergWasm();
+    barretenberg.on('log', createDebug(`bb:${name}`));
+    await barretenberg.init();
+    return barretenberg;
+  }
+
+  public async init(module?: WebAssembly.Module) {
+    this.memory = new WebAssembly.Memory({ initial: 256, maximum: 16384 });
     this.heap = new Uint8Array(this.memory.buffer);
 
     const importObj = {
@@ -42,8 +51,8 @@ export class BarretenbergWasm extends EventEmitter {
       env: {
         logstr: (addr: number) => {
           const m = this.getMemory();
-          let i;
-          for (i = addr; m[i] !== 0; ++i);
+          let i = addr;
+          for (; m[i] !== 0; ++i);
           const decoder = isNode ? new (require('util').TextDecoder)() : new TextDecoder();
           const str = decoder.decode(m.slice(addr, i));
           const str2 = `${str} (mem:${m.length})`;
@@ -53,11 +62,13 @@ export class BarretenbergWasm extends EventEmitter {
       },
     };
 
-    this.instance = await WebAssembly.instantiate(module, importObj);
-
-    if (prealloc) {
-      const pa = this.exports().bbmalloc(prealloc);
-      this.exports().bbfree(pa);
+    if (module) {
+      this.instance = await WebAssembly.instantiate(module, importObj);
+      this.module = module;
+    } else {
+      const { instance, module } = await WebAssembly.instantiate(await fetchCode(), importObj);
+      this.instance = instance;
+      this.module = module;
     }
   }
 
@@ -65,11 +76,19 @@ export class BarretenbergWasm extends EventEmitter {
     return this.instance.exports;
   }
 
+  public call(name: string, ...args: any) {
+    return this.exports()[name](...args);
+  }
+
   public getMemory() {
     if (this.heap.length === 0) {
       return new Uint8Array(this.memory.buffer);
     }
     return this.heap;
+  }
+
+  public sliceMemory(start: number, end: number) {
+    return this.getMemory().slice(start, end);
   }
 
   public transferToHeap(arr: Uint8Array, offset: number) {

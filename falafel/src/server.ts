@@ -1,11 +1,11 @@
-import { ProofGenerator } from "./proof-generator";
-import { Tx } from "./tx";
-import { Block } from './block';
+import { ProofGenerator } from "./proof_generator";
+import { JoinSplitTx } from "../../barretenberg.js/src/client_proofs/join_split_proof/join_split_tx";
+import { TxBatch } from './proof_generator/tx_batch';
 
 export class Server {
   private interval?: NodeJS.Timer;
   private proof_generator: ProofGenerator;
-  private txPool: Tx[] = [];
+  private txPool: Buffer[] = [];
   private blockNum = 0;
   private maxBlockInterval = 600 * 1000;
 
@@ -23,8 +23,11 @@ export class Server {
     this.proof_generator.cancel();
   }
 
-  public receiveTx(tx: Tx) {
+  public receiveTx(tx: Buffer) {
     this.txPool.push(tx);
+
+
+
     if (this.txPool.length == this.batchSize) {
       this.createBlock();
     }
@@ -37,7 +40,7 @@ export class Server {
   }
 
   private createBlock() {
-    let block = new Block(this.blockNum, this.txPool);
+    let block = new TxBatch(this.blockNum, this.txPool);
     this.txPool = [];
     this.blockNum++;
     this.proof_generator.enqueue(block);
