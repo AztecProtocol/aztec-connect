@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Block, Button, TextInput } from '@aztec/guacamole-ui';
+import { Block, Button } from '@aztec/guacamole-ui';
 import { App } from './app';
-import Input from './input';
+import { Balance, Input } from './components';
 import './styles/guacamole.css';
 require('barretenberg-es/wasm/barretenberg.wasm');
 
@@ -23,20 +23,23 @@ enum ProofState {
   FINISHED = 'Finished',
 }
 
+enum ApiNames {
+  NADA,
+  DEPOSIT,
+  WITHDRAW,
+  TRANSFER,
+}
+
 export default function JoinSplitForm({ app }: JoinSplitFormProps) {
   const [init, setInit] = useState(State.UNINITIALIZED);
   const [result, setResult] = useState(ProofState.NADA);
   const [time, setTime] = useState(0);
   // TODO: Should not be strings. UI component should output right types.
+  const [currentApi, setCurrentApi] = useState(ApiNames.NADA);
   const [depositValue, setDepositValue] = useState('100');
   const [withdrawValue, setWithdrawValue] = useState('0');
   const [transferValue, setTransferValue] = useState('0');
   const [transferTo, setTransferTo] = useState('');
-  const [balance, setBalance] = useState(0);
-
-  app.on('updated', () => {
-    setBalance(app.getBalance());
-  })
 
   return (
     <Block
@@ -48,7 +51,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
       <Block padding="m">Init State: {init.toString()}</Block>
       <Block padding="m">Proof State: {result.toString()}</Block>
       <Block padding="m">Proof Time: {time.toString()}ms</Block>
-      <Block padding="m">Balance: {balance}</Block>
+      <Block padding="m">Balance: <Balance app={app} /></Block>
       {init !== State.INITIALIZED && (
         <Block padding="m">
           <label>Press the button: </label>
@@ -67,6 +70,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
       {init === State.INITIALIZED && (
         <Block padding="xs 0">
           <Input
+            type="number"
             label="Deposit Value"
             value={depositValue}
             onChange={setDepositValue}
@@ -75,6 +79,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
             <Button
               text="Deposit"
               onSubmit={async () => {
+                setCurrentApi(ApiNames.DEPOSIT);
                 setResult(ProofState.RUNNING);
                 try {
                   const start = Date.now();
@@ -86,10 +91,12 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
                   setResult(ProofState.FAILED);
                 }
               }}
-              isLoading={result == ProofState.RUNNING}
+              isLoading={result === ProofState.RUNNING && currentApi === ApiNames.DEPOSIT}
+              disabled={result === ProofState.RUNNING && currentApi !== ApiNames.DEPOSIT}
             />
           </Block>
           <Input
+            type="number"
             label="Withdraw Value"
             value={withdrawValue}
             onChange={setWithdrawValue}
@@ -98,6 +105,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
             <Button
               text="Withdraw"
               onSubmit={async () => {
+                setCurrentApi(ApiNames.WITHDRAW);
                 setResult(ProofState.RUNNING);
                 try {
                   const start = Date.now();
@@ -109,15 +117,17 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
                   setResult(ProofState.FAILED);
                 }
               }}
-              isLoading={result == ProofState.RUNNING}
+              isLoading={result === ProofState.RUNNING && currentApi === ApiNames.WITHDRAW}
+              disabled={result === ProofState.RUNNING && currentApi !== ApiNames.WITHDRAW}
             />
           </Block>
           <Input
+            type="number"
             label="Transfer Value"
             value={transferValue}
             onChange={setTransferValue}
           />
-          <TextInput
+          <Input
             label="To"
             value={transferTo}
             onChange={setTransferTo}
@@ -126,6 +136,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
             <Button
               text="Transfer"
               onSubmit={async () => {
+                setCurrentApi(ApiNames.TRANSFER);
                 setResult(ProofState.RUNNING);
                 try {
                   const start = Date.now();
@@ -137,7 +148,8 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
                   setResult(ProofState.FAILED);
                 }
               }}
-              isLoading={result == ProofState.RUNNING}
+              isLoading={result === ProofState.RUNNING && currentApi === ApiNames.TRANSFER}
+              disabled={result === ProofState.RUNNING && currentApi !== ApiNames.TRANSFER}
             />
           </Block>
         </Block>

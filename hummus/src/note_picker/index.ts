@@ -14,8 +14,16 @@ export class NotePicker {
     this.sortedNotes.add(note);
   }
 
+  addNotes(notes: TrackedNote[]) {
+    this.sortedNotes.bulkAdd(notes);
+  }
+
   removeNote(note: TrackedNote) {
     this.sortedNotes.remove(note);
+  }
+
+  hasNote(index: number) {
+    return !!this.sortedNotes.find((n) => n.index === index);
   }
 
   findNote(callback: (note: TrackedNote, i?: number) => boolean) {

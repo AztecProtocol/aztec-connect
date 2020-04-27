@@ -20,7 +20,6 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
   async sendProof(proof: Buffer) {
     const verified = await this.joinSplitVerifier.verifyProof(proof);
     debug(`verified: ${verified}`);
-
     if (!verified) {
       return;
     }
@@ -40,5 +39,12 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
     this.dataTreeSize += 2;
 
     this.emit('block', block);
+  }
+
+  appendBlock(blockNum: number, size: number) {
+    if (blockNum > this.blockNum) {
+      this.blockNum = blockNum;
+      this.dataTreeSize += size;
+    }
   }
 }

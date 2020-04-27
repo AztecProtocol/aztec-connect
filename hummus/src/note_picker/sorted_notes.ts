@@ -22,6 +22,14 @@ export default class SortedNotes {
     this.sortedNotes.splice(i, 0, note);
   }
 
+  bulkAdd(notes: TrackedNote[]) {
+    if (!this.sortedNotes.length) {
+      this.sortedNotes = [...notes].sort((a, b) => a.note.value - b.note.value);
+    } else {
+      notes.forEach(n => this.add(n));
+    }
+  }
+
   remove(note: TrackedNote) {
     let idx = this.sortedNotes.findIndex(n => n.index === note.index);
     this.sortedNotes.splice(idx, 1);

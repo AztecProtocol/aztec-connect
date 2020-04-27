@@ -3,7 +3,7 @@ import memdown from 'memdown';
 import createDebug from 'debug';
 import { PooledFft } from 'barretenberg-es/fft';
 import { PooledPippenger } from 'barretenberg-es/pippenger';
-import { JoinSplitProver, JoinSplitVerifier, JoinSplitTx } from 'barretenberg-es/client_proofs/join_split_proof';
+import { JoinSplitProver, JoinSplitVerifier } from 'barretenberg-es/client_proofs/join_split_proof';
 import { Prover } from 'barretenberg-es/client_proofs/prover';
 import { Schnorr } from 'barretenberg-es/crypto/schnorr';
 import { Crs } from 'barretenberg-es/crs';
@@ -16,6 +16,8 @@ import { LocalRollupProvider } from './local_rollup_provider';
 import { Blake2s } from 'barretenberg-es/crypto/blake2s';
 import { Pedersen } from 'barretenberg-es/crypto/pedersen';
 import { EventEmitter } from 'events';
+import { asyncForEach } from './utils/async';
+import { db } from './database';
 
 createDebug.enable('bb:*');
 const debug = createDebug('bb:app');
@@ -31,13 +33,13 @@ export class App extends EventEmitter {
   private joinSplitProofCreator!: JoinSplitProofCreator;
   private rollupProvider!: LocalRollupProvider;
 
-  public createUser(): User {
+  public createUser(id: number): User {
     // prettier-ignore
     const privateKey = Buffer.from([
       0x0b, 0x9b, 0x3a, 0xde, 0xe6, 0xb3, 0xd8, 0x1b, 0x28, 0xa0, 0x88, 0x6b, 0x2a, 0x84, 0x15, 0xc7,
       0xda, 0x31, 0x29, 0x1a, 0x5e, 0x96, 0xbb, 0x7a, 0x56, 0x63, 0x9e, 0x17, 0x7d, 0x30, 0x1b, 0xeb]);
     const publicKey = this.schnorr.computePublicKey(privateKey);
-    return { privateKey, publicKey }
+    return { id, privateKey, publicKey }
   }
 
   public async init() {
@@ -68,16 +70,38 @@ export class App extends EventEmitter {
     this.joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
     this.rollupProvider = new LocalRollupProvider(this.joinSplitVerifier);
 
-    const db = levelup(memdown());
-    this.worldState = new WorldState(db, pedersen, blake2s, this.rollupProvider);
-    this.user = this.createUser();
+    const leveldb = levelup(memdown());
+    this.worldState = new WorldState(leveldb, pedersen, blake2s, this.rollupProvider);
+
+    const firstUser = await db.user.get(1);
+    let user;
+    if (firstUser) {
+      const { id, privateKey, publicKey } = firstUser;
+      user = {
+        id,
+        privateKey: Buffer.from(privateKey),
+        publicKey: Buffer.from(publicKey),
+      };
+    } else {
+      const id = await db.user.count();
+      user = this.createUser(id);
+      await db.user.add(user);
+    }
+    this.user = user;
+
     this.userState = new UserState(this.user, this.joinSplitProver, this.worldState, blake2s);
+    this.userState.on('updated', () => this.emit('updated'));
+    await this.userState.init();
 
     this.joinSplitProofCreator = new JoinSplitProofCreator(this.joinSplitProver, this.userState, this.worldState);
 
+    const localNotes = await db.note.toArray();
+    const maxLocalId = localNotes.reduce((maxId, n) => Math.max(maxId, n.id), 0);
+    this.rollupProvider.appendBlock(1, Math.ceil((maxLocalId + 1) / 2) * 2);
+    await asyncForEach(localNotes, async (note) => {
+      await this.worldState.addClientElement(note.id, Buffer.from(note.encrypted));
+    });
     this.worldState.start();
-
-    this.userState.on('updated', () => this.emit('updated'));
 
     debug('creating keys...');
     const start = new Date().getTime();

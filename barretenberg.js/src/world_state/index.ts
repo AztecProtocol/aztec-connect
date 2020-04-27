@@ -46,4 +46,8 @@ export class WorldState extends EventEmitter {
   public getRoot() {
     return this.tree.getRoot();
   }
+
+  public async addClientElement(index: number, encryptedNote: Buffer) {
+    await this.tree.updateElement(index, encryptedNote);
+  }
 }

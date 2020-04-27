@@ -23,6 +23,7 @@
   "dependencies": {
     "@aztec/guacamole-ui": "^1.2.1",
     "css-loader": "^3.5.2",
+    "dexie": "^2.0.4",
     "koa": "^2.5.2",
     "koa-compress": "^3.0.0",
     "koa-static": "^5.0.0",
