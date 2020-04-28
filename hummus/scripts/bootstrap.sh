@@ -1,30 +1,29 @@
 #!/bin/bash
 
-bootstrap_macOS () {
-    # Build WASM build
-    brew list gnu-sed || brew install gnu-sed
-    cd ./src
-    curl -s -L https://github.com/CraneStation/wasi-sdk/releases/download/wasi-sdk-8/wasi-sdk-8.0-macos.tar.gz | tar zxfv - 
-    sed -e $'213i\\\n#include "../../../../wasi/stdlib-hook.h"' -i.old ./wasi-sdk-8.0/share/wasi-sysroot/include/stdlib.h
-}
-
-
-bootstrap_linux () {
-    # Build WASM build
-    cd ./src
-    curl -s -L https://github.com/CraneStation/wasi-sdk/releases/download/wasi-sdk-8/wasi-sdk-8.0-linux.tar.gz | tar zxfv - 
-    sed -e '213i#include "../../../../wasi/stdlib-hook.h"' -i ./wasi-sdk-8.0/share/wasi-sysroot/include/stdlib.h 
-}
-
+# CWD is ./barretenberg/hummus
 cd ..
 rm -rf ./**/node_modules/ ./*/yarn.lock
 cd ./barretenberg
 
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    bootstrap_macOS
-elif [[ "$OSTYPE" == "linux-gnu" ]]; then
-    bootstrap_linux
+WASI_SDK_URL=$1
+WASI_SDK_PATH=$2
+
+if [[ -z $1 ]]; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        WASI_SDK_URL="https://github.com/CraneStation/wasi-sdk/releases/download/wasi-sdk-8/wasi-sdk-8.0-macos.tar.gz"
+    elif [[ "$OSTYPE" == "linux-gnu" ]]; then
+        WASI_SDK_URL="https://github.com/CraneStation/wasi-sdk/releases/download/wasi-sdk-8/wasi-sdk-8.0-linux.tar.gz"
+    fi
 fi
+
+if [[ -z $2 ]]; then
+    WASI_SDK_PATH="./wasi-sdk-8.0/share/wasi-sysroot/include/stdlib.h"
+fi
+
+# Build WASM build
+cd ./src
+curl -s -L $WASI_SDK_URL | tar zxfv - 
+sed -e $'213i\\\n#include "../../../../wasi/stdlib-hook.h"' -i.old $WASI_SDK_PATH
 
 cd ..
 rm -rf build-wasm && mkdir build-wasm && cd build-wasm
