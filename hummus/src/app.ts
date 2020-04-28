@@ -1,5 +1,5 @@
 import levelup from 'levelup';
-import memdown from 'memdown';
+import leveljs from 'level-js';
 import createDebug from 'debug';
 import { PooledFft } from 'barretenberg-es/fft';
 import { PooledPippenger } from 'barretenberg-es/pippenger';
@@ -67,7 +67,7 @@ export class App extends EventEmitter {
     this.joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
     this.rollupProvider = new LocalRollupProvider(this.joinSplitVerifier);
 
-    const leveldb = levelup(memdown());
+    const leveldb = levelup(leveljs('hummus'));
     this.worldState = new WorldState(leveldb, pedersen, blake2s, this.rollupProvider);
 
     this.userState = new UserState(this.user, this.joinSplitProver, this.worldState, blake2s);
@@ -81,24 +81,6 @@ export class App extends EventEmitter {
 
     this.joinSplitProofCreator = new JoinSplitProofCreator(this.joinSplitProver, this.userState, this.worldState);
 
-    const localNotes = await db.note.toArray();
-    if (localNotes.length) {
-      const maxLocalId = localNotes.reduce((maxId, n) => Math.max(maxId, n.id), 0);
-      const numberOfLeaves = 2 * Math.ceil((maxLocalId + 1) / 2);
-      this.rollupProvider.appendBlock(1, numberOfLeaves);
-      const sortedLocalNotes = localNotes.sort((a, b) => a.id < b.id ? -1 : 1);
-      for (let i = 0, noteIdx = 0; i < numberOfLeaves; i++) {
-        let encryptedNote;
-        const note = sortedLocalNotes[noteIdx];
-        if (note && note.id === i) {
-          noteIdx++;
-          encryptedNote = Buffer.from(note.encrypted);
-        } else {
-          encryptedNote = new Buffer([]);
-        }
-        await this.worldState.addClientElement(i, encryptedNote);
-      }
-    }
     this.worldState.start();
 
     debug('creating keys...');

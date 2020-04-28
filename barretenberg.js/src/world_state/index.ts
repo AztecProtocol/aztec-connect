@@ -10,17 +10,23 @@ import createDebug from 'debug';
 const debug = createDebug('bb:world_state');
 
 export class WorldState extends EventEmitter {
-  private tree: MerkleTree;
+  private tree?: MerkleTree;
 
   private queue = new MemoryFifo<Block>();
 
-  constructor(db: LevelUp, pedersen: Pedersen, blake2s: Blake2s, private blockSource: BlockSource) {
+  constructor(private db: LevelUp, private pedersen: Pedersen, private blake2s: Blake2s, private blockSource: BlockSource) {
     super();
-    this.tree = new MerkleTree(db, pedersen, blake2s, 'data', 32);
     blockSource.on('block', (b) => this.queue.put(b));
   }
 
   public async start() {
+    try {
+      const prevTree = await MerkleTree.fromName(this.db, this.pedersen, this.blake2s, 'data');
+      this.tree = prevTree;
+    } catch (e) {
+      this.tree = new MerkleTree(this.db, this.pedersen, this.blake2s, 'data', 32);
+    }
+
     while (true) {
       const block = await this.queue.get();
       if (!block) {
@@ -40,14 +46,23 @@ export class WorldState extends EventEmitter {
   }
 
   public async getHashPath(index: number) {
+    if (!this.tree) {
+      throw new Error('Tree is not initialized.');
+    }
     return await this.tree.getHashPath(index);
   }
 
   public getRoot() {
+    if (!this.tree) {
+      throw new Error('Tree is not initialized.');
+    }
     return this.tree.getRoot();
   }
 
   public async addClientElement(index: number, encryptedNote: Buffer) {
+    if (!this.tree) {
+      throw new Error('Tree is not initialized.');
+    }
     await this.tree.updateElement(index, encryptedNote);
   }
 }
