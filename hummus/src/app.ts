@@ -16,7 +16,7 @@ import { LocalRollupProvider } from './local_rollup_provider';
 import { Blake2s } from 'barretenberg-es/crypto/blake2s';
 import { Pedersen } from 'barretenberg-es/crypto/pedersen';
 import { EventEmitter } from 'events';
-import { asyncForEach } from './utils/async';
+import { randomInt } from './utils/random';
 import { db } from './database';
 
 createDebug.enable('bb:*');
@@ -34,12 +34,9 @@ export class App extends EventEmitter {
   private rollupProvider!: LocalRollupProvider;
 
   public createUser(id: number): User {
-    // prettier-ignore
-    const privateKey = Buffer.from([
-      0x0b, 0x9b, 0x3a, 0xde, 0xe6, 0xb3, 0xd8, 0x1b, 0x28, 0xa0, 0x88, 0x6b, 0x2a, 0x84, 0x15, 0xc7,
-      0xda, 0x31, 0x29, 0x1a, 0x5e, 0x96, 0xbb, 0x7a, 0x56, 0x63, 0x9e, 0x17, 0x7d, 0x30, 0x1b, 0xeb]);
+    const privateKey = Buffer.from([...Array(32)].map(() => randomInt(0, 255)));
     const publicKey = this.schnorr.computePublicKey(privateKey);
-    return { id, privateKey, publicKey }
+    return { id, privateKey, publicKey };
   }
 
   public async init() {
@@ -73,34 +70,35 @@ export class App extends EventEmitter {
     const leveldb = levelup(memdown());
     this.worldState = new WorldState(leveldb, pedersen, blake2s, this.rollupProvider);
 
-    const firstUser = await db.user.get(1);
-    let user;
-    if (firstUser) {
-      const { id, privateKey, publicKey } = firstUser;
-      user = {
-        id,
-        privateKey: Buffer.from(privateKey),
-        publicKey: Buffer.from(publicKey),
-      };
-    } else {
-      const id = await db.user.count();
-      user = this.createUser(id);
-      await db.user.add(user);
-    }
-    this.user = user;
-
     this.userState = new UserState(this.user, this.joinSplitProver, this.worldState, blake2s);
     this.userState.on('updated', () => this.emit('updated'));
-    await this.userState.init();
+    const user = await this.userState.init();
+    if (user) {
+      this.user = user;
+    } else {
+      await this.switchToNewUser();
+    }
 
     this.joinSplitProofCreator = new JoinSplitProofCreator(this.joinSplitProver, this.userState, this.worldState);
 
     const localNotes = await db.note.toArray();
-    const maxLocalId = localNotes.reduce((maxId, n) => Math.max(maxId, n.id), 0);
-    this.rollupProvider.appendBlock(1, Math.ceil((maxLocalId + 1) / 2) * 2);
-    await asyncForEach(localNotes, async (note) => {
-      await this.worldState.addClientElement(note.id, Buffer.from(note.encrypted));
-    });
+    if (localNotes.length) {
+      const maxLocalId = localNotes.reduce((maxId, n) => Math.max(maxId, n.id), 0);
+      const numberOfLeaves = 2 * Math.ceil((maxLocalId + 1) / 2);
+      this.rollupProvider.appendBlock(1, numberOfLeaves);
+      const sortedLocalNotes = localNotes.sort((a, b) => a.id < b.id ? -1 : 1);
+      for (let i = 0, noteIdx = 0; i < numberOfLeaves; i++) {
+        let encryptedNote;
+        const note = sortedLocalNotes[noteIdx];
+        if (note && note.id === i) {
+          noteIdx++;
+          encryptedNote = Buffer.from(note.encrypted);
+        } else {
+          encryptedNote = new Buffer([]);
+        }
+        await this.worldState.addClientElement(i, encryptedNote);
+      }
+    }
     this.worldState.start();
 
     debug('creating keys...');
@@ -132,6 +130,27 @@ export class App extends EventEmitter {
 
   public getUser() {
     return this.user;
+  }
+
+  public getUsers() {
+    return this.userState.getUsers();
+  }
+
+  public async switchUser(id: number) {
+    const user = await this.userState.switchUser(id);
+    if (!user) return;
+
+    this.user = user;
+  }
+
+  public async switchToNewUser() {
+    const id = await db.user.count();
+    const user = this.createUser(id);
+    await db.user.add(user);
+    this.userState.addUser(user);
+    await this.userState.switchUser(user.id);
+    this.user = user;
+    return user;
   }
 
   public getBalance() {

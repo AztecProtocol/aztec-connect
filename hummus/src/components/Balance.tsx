@@ -11,6 +11,7 @@ export default function Balance({ app }: BalanceProps) {
 
   if (!bindListener) {
     setBindListener(true);
+    setBalance(app.getBalance());
     const listener = () => {
       setBalance(app.getBalance());
     };

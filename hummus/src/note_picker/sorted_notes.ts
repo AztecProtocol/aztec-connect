@@ -11,6 +11,10 @@ export default class SortedNotes {
     return this.sortedNotes.length;
   }
 
+  reset() {
+    this.sortedNotes = [];
+  }
+
   add(note: TrackedNote) {
     let i = this.sortedNotes.length;
     for (; i > 0; i--) {

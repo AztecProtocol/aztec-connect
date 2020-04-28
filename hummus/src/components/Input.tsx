@@ -18,7 +18,7 @@ export default function Input({
 }: InputProps) {
   const InputTag = type === 'text' ? TextInput : MaskedNumberInput;
   return (
-    <Block padding="xs m">
+    <Block padding="xs 0">
       <FlexBox valign="center">
         <Block right="s">
           <Text
@@ -27,7 +27,7 @@ export default function Input({
           />
         </Block>
         <InputTag
-          className={type === 'text' ? 'flex-free-expand' : ''}
+          className="flex-free-expand"
           size="s"
           value={value}
           onChange={onChange}

@@ -10,6 +10,10 @@ export class NotePicker {
     this.sortedNotes = new SortedNotes(notes);
   }
 
+  reset() {
+    this.sortedNotes.reset();
+  }
+
   addNote(note: TrackedNote) {
     this.sortedNotes.add(note);
   }

@@ -25,6 +25,7 @@ const computeViewingKey = () => Buffer.from([
 
 export class UserState extends EventEmitter {
   private notePicker = new NotePicker();
+  private users: User[] = [];
 
   constructor(
     private user: User,
@@ -37,15 +38,31 @@ export class UserState extends EventEmitter {
   }
 
   async init() {
-    const notes = await db.note.filter((n) => !n.nullified).toArray();
-    const trackedNotes = await asyncMap(notes, async (note) => {
+    const allUsers = await db.user.toArray();
+    // @ts-ignore
+    this.users = await asyncMap(allUsers, (user) => user.toUser());
+    if (!this.users.length) {
+      return null;
+    }
+
+    this.user = this.users[0];
+    await this.resetUserNotes();
+    return this.user;
+  }
+
+  private async resetUserNotes() {
+    const trackedNotes = await this.getUserNotes();
+    this.notePicker.reset();
+    this.notePicker.addNotes(trackedNotes);
+    this.emit('updated');
+  }
+
+  private async getUserNotes() {
+    const notes = await db.note.filter((n) => !n.nullified && n.owner === this.user.id).toArray();
+    return await asyncMap(notes, async (note) => {
       // @ts-ignore
       return note.toTrackedNote(this.computeNullifier);
     });
-    this.notePicker.addNotes(trackedNotes);
-    if (trackedNotes.length) {
-      this.emit('updated');
-    }
   }
 
   private processBlock(block: Block) {
@@ -56,34 +73,39 @@ export class UserState extends EventEmitter {
       if (this.notePicker.hasNote(index)) return;
 
       const viewingKey = computeViewingKey();
-      const { success, value } = this.joinSplitProver.decryptNote(encryptedNote, this.user.privateKey, viewingKey);
-      if (success) {
-        const note = new Note(this.user.publicKey, viewingKey, value);
-        const nullifier = this.computeNullifier(encryptedNote, index, viewingKey);
-        const trackedNote: TrackedNote = {
-          index,
-          nullifier,
-          note,
-        };
-        debug(`succesfully decrypted note ${index}:`, trackedNote);
-        this.notePicker.addNote(trackedNote);
-        const iNote = {
-          id: index,
-          value,
-          viewingKey,
-          encrypted: encryptedNote,
-          nullified: false,
-          owner: this.user.id,
-        };
-        db.note.put(iNote);
-        update = true;
-      }
+      this.users.find((user) => {
+        const { success, value } = this.joinSplitProver.decryptNote(encryptedNote, user.privateKey, viewingKey);
+        if (success) {
+          const note = new Note(user.publicKey, viewingKey, value);
+          const nullifier = this.computeNullifier(encryptedNote, index, viewingKey);
+          const trackedNote: TrackedNote = {
+            index,
+            nullifier,
+            note,
+          };
+          debug(`succesfully decrypted note ${index}:`, trackedNote);
+          const iNote = {
+            id: index,
+            value,
+            viewingKey,
+            encrypted: encryptedNote,
+            nullified: false,
+            owner: user.id,
+          };
+          db.note.put(iNote);
+          if (user.id === this.user.id) {
+            this.notePicker.addNote(trackedNote);
+            update = true;
+          }
+        }
+        return success;
+      });
     });
 
     block.nullifiers.forEach((nullifier) => {
       const note = this.notePicker.findNote((note) => note.nullifier.equals(nullifier));
       if (note) {
-        debug(`removing note ${note.index}`);
+        debug(`removing note ${note.index}`, note);
         this.notePicker.removeNote(note);
         db.note.update(note.index, { nullified: true });
         update = true;
@@ -110,5 +132,29 @@ export class UserState extends EventEmitter {
 
   public getBalance() {
     return this.notePicker.getNoteSum();
+  }
+
+  public addUser(user: User) {
+    this.users.push(user);
+    // TODO - sync notes for new user
+  }
+
+  public getUserById(id: number) {
+    return this.users.find((u) => u.id === id);
+  }
+
+  public getUsers() {
+    return this.users;
+  }
+
+  public async switchUser(id: number) {
+    const user = this.getUserById(id);
+    if (!user) {
+      return null;
+    }
+
+    this.user = user;
+    await this.resetUserNotes();
+    return user;
   }
 }

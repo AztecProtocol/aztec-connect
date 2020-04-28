@@ -30,6 +30,7 @@
     "levelup": "^4.4.0",
     "memdown": "^5.1.0",
     "mini-css-extract-plugin": "^0.9.0",
+    "react-copy-to-clipboard": "^5.0.2",
     "svg-sprite-loader": "^4.2.5"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Block } from '@aztec/guacamole-ui';
+import { FlexBox, Block } from '@aztec/guacamole-ui';
 import { App } from './app';
 import JoinSplitForm from './join_split_form';
 
@@ -17,7 +17,9 @@ function LandingPage({ app }: LandingPageProps) {
       padding="xl"
       align="center"
     >
-      <JoinSplitForm app={app} />
+      <FlexBox align="center">
+        <JoinSplitForm app={app} />
+      </FlexBox>
     </Block>
   );
 }
