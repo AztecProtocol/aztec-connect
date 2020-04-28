@@ -4,7 +4,6 @@
   "main": "dist/main.js",
   "license": "GPL-2.0",
   "scripts": {
-    "bootstrap": "./scripts/bootstrap.sh",
     "build": "webpack --config webpack.prod.js",
     "generate:styles": "guacamole generateStyles",
     "start": "node ./server",

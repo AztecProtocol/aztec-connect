@@ -4,9 +4,7 @@
 
 # Getting started
 
-You will need to compile `Barretenberg`, link it with `barretenberg.js`, and install and build `Hummus`. You can do this simply by calling:
-
-`yarn bootstrap`
+You will need to compile `Barretenberg`, link it with `barretenberg.js`, and install and build `Hummus`. You can do this simply by calling `./bootstrap.sh` at the root of the repo.
 
 Once bootstrapped, you are ready to launch the front-end:
 
