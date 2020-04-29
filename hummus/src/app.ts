@@ -67,6 +67,13 @@ export class App extends EventEmitter {
     this.joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
     this.rollupProvider = new LocalRollupProvider(this.joinSplitVerifier);
 
+    const localNotes = await db.note.toArray();
+    if (localNotes.length) {
+      const maxLocalId = localNotes.reduce((maxId, n) => Math.max(maxId, n.id), 0);
+      const numberOfLeaves = 2 * Math.ceil((maxLocalId + 1) / 2);
+      this.rollupProvider.appendBlock(1, numberOfLeaves);
+    }
+
     const leveldb = levelup(leveljs('hummus'));
     this.worldState = new WorldState(leveldb, pedersen, blake2s, this.rollupProvider);
 
