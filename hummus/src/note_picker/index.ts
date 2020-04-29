@@ -1,11 +1,9 @@
-import { TrackedNote } from './note';
+import { TrackedNote as _TrackedNote } from './note';
 import SortedNotes from './sorted_notes';
 import validate from './validate';
 import { pick } from './pick';
 
-export {
-  TrackedNote,
-};
+export type TrackedNote = _TrackedNote;
 
 export class NotePicker {
   private sortedNotes: SortedNotes;
