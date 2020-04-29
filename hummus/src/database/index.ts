@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import { Note } from 'barretenberg-es/client_proofs/note';
+import { Note as ProofNote } from 'barretenberg-es/client_proofs/note';
 
 let db: Database;
 
@@ -18,30 +18,11 @@ interface INote {
   owner: number;
 }
 
-class Database extends Dexie {
-  user: Dexie.Table<IUser, number>;
-  note: Dexie.Table<INote, number>;
-
-  constructor() {
-    super('hummus');
-
-    this.version(1).stores({
-      user: '++id, publicKey, privateKey',
-      note: '++id, value, nullified, owner',
-    });
-
-    this.user = this.table('user');
-    this.note = this.table('note');
-    this.user.mapToClass(UserExt);
-    this.note.mapToClass(NoteExt);
-  }
-}
-
-class UserExt {
+export class User implements IUser {
   constructor(
-    private id: number,
-    private publicKey: Uint8Array,
-    private privateKey: Uint8Array,
+    public id: number,
+    public publicKey: Uint8Array,
+    public privateKey: Uint8Array,
   ) {}
 
   toUser() {
@@ -53,30 +34,50 @@ class UserExt {
   }
 }
 
-class NoteExt {
+export class Note implements INote {
   constructor(
-    private id: number,
-    private value: number,
-    private viewingKey: Uint8Array,
-    private encrypted: Uint8Array,
-    private owner: number,
+    public id: number,
+    public value: number,
+    public viewingKey: Uint8Array,
+    public encrypted: Uint8Array,
+    public nullified: boolean,
+    public owner: number,
   ) {}
 
-  async toTrackedNote(computeNullifier: (encryptedNote: Buffer, index: number, viewingKey: Buffer) => Buffer) {
+  async toTrackedNote(computeNullifier: (encryptedNote: Buffer, index: number, viewingKey: Buffer) => Buffer): TrackedNote {
     const owner = await db.user.get(this.owner);
     if (!owner) {
-      return null;
+      throw Error(`Owner '${this.owner}' not found.`);
     }
 
     const encryptedNote = Buffer.from(this.encrypted);
     const viewingKeyBuf = Buffer.from(this.viewingKey);
-    const note = new Note(Buffer.from(owner.publicKey), viewingKeyBuf, this.value);
+    const note = new ProofNote(Buffer.from(owner.publicKey), viewingKeyBuf, this.value);
     const nullifier = computeNullifier(encryptedNote, this.id, viewingKeyBuf);
     return {
       index: this.id,
       nullifier,
       note,
     };
+  }
+}
+
+class Database extends Dexie {
+  user: Dexie.Table<User, number>;
+  note: Dexie.Table<Note, number>;
+
+  constructor() {
+    super('hummus');
+
+    this.version(1).stores({
+      user: '++id, publicKey, privateKey',
+      note: '++id, value, nullified, owner',
+    });
+
+    this.user = this.table('user');
+    this.note = this.table('note');
+    this.user.mapToClass(User);
+    this.note.mapToClass(Note);
   }
 }
 

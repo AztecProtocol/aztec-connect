@@ -8,7 +8,7 @@ import { EventEmitter } from 'events';
 import { NotePicker } from '../note_picker';
 import { TrackedNote } from '../note_picker/note';
 import { asyncMap } from '../utils/async';
-import { db } from '../database';
+import { db, Note as NoteEntity } from '../database';
 
 const debug = createDebug('bb:user_state');
 
@@ -39,8 +39,7 @@ export class UserState extends EventEmitter {
 
   async init() {
     const allUsers = await db.user.toArray();
-    // @ts-ignore
-    this.users = await asyncMap(allUsers, (user) => user.toUser());
+    this.users = await asyncMap(allUsers, async (user) => user.toUser());
     if (!this.users.length) {
       return null;
     }
@@ -60,7 +59,6 @@ export class UserState extends EventEmitter {
   private async getUserNotes() {
     const notes = await db.note.filter((n) => !n.nullified && n.owner === this.user.id).toArray();
     return await asyncMap(notes, async (note) => {
-      // @ts-ignore
       return note.toTrackedNote(this.computeNullifier);
     });
   }
@@ -84,15 +82,14 @@ export class UserState extends EventEmitter {
             note,
           };
           debug(`succesfully decrypted note ${index}:`, trackedNote);
-          const iNote = {
-            id: index,
+          db.note.put(new NoteEntity(
+            index,
             value,
             viewingKey,
-            encrypted: encryptedNote,
-            nullified: false,
-            owner: user.id,
-          };
-          db.note.put(iNote);
+            encryptedNote,
+            false,
+            user.id,
+          ));
           if (user.id === this.user.id) {
             this.notePicker.addNote(trackedNote);
             update = true;

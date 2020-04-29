@@ -17,7 +17,7 @@ import { Blake2s } from 'barretenberg-es/crypto/blake2s';
 import { Pedersen } from 'barretenberg-es/crypto/pedersen';
 import { EventEmitter } from 'events';
 import { randomInt } from './utils/random';
-import { db } from './database';
+import { db, User as UserEntity } from './database';
 
 createDebug.enable('bb:*');
 const debug = createDebug('bb:app');
@@ -128,7 +128,7 @@ export class App extends EventEmitter {
   public async switchToNewUser() {
     const id = await db.user.count();
     const user = this.createUser(id);
-    await db.user.add(user);
+    await db.user.add(new UserEntity(user.id, user.publicKey, user.privateKey));
     this.userState.addUser(user);
     await this.userState.switchUser(user.id);
     this.user = user;
