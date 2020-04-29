@@ -35,11 +35,11 @@ export default class SortedNotes {
   }
 
   remove(note: TrackedNote) {
-    let idx = this.sortedNotes.findIndex(n => n.index === note.index);
+    const idx = this.sortedNotes.findIndex(n => n.index === note.index);
     this.sortedNotes.splice(idx, 1);
   }
 
-  each(callback: Function) {
+  each(callback: (note: TrackedNote, i: number) => void) {
     this.sortedNotes.forEach((note, i) => callback(note, i));
   }
 

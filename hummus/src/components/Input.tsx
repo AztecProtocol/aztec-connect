@@ -3,10 +3,10 @@ import { FlexBox, Block, Text, TextInput, MaskedNumberInput } from '@aztec/guaca
 
 interface InputProps {
   type?: 'text' | 'number',
-  label: String;
-  value: String,
-  onChange: Function,
-  error?: String;
+  label: string;
+  value: string,
+  onChange: (value: string) => void,
+  error?: string;
 }
 
 export default function Input({

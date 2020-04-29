@@ -5,8 +5,7 @@ import { Note } from 'barretenberg-es/client_proofs/note';
 import createDebug from 'debug';
 import { Blake2s } from 'barretenberg-es/crypto/blake2s';
 import { EventEmitter } from 'events';
-import { NotePicker } from '../note_picker';
-import { TrackedNote } from '../note_picker/note';
+import { NotePicker, TrackedNote } from '../note_picker';
 import { asyncMap } from '../utils/async';
 import { db, Note as NoteEntity } from '../database';
 

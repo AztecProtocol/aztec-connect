@@ -3,6 +3,10 @@ import SortedNotes from './sorted_notes';
 import validate from './validate';
 import { pick } from './pick';
 
+export {
+  TrackedNote,
+};
+
 export class NotePicker {
   private sortedNotes: SortedNotes;
 

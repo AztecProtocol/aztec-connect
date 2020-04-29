@@ -1,5 +1,6 @@
 import Dexie from 'dexie';
 import { Note as ProofNote } from 'barretenberg-es/client_proofs/note';
+import { TrackedNote } from '../note_picker';
 
 let db: Database;
 
@@ -44,7 +45,7 @@ export class Note implements INote {
     public owner: number,
   ) {}
 
-  async toTrackedNote(computeNullifier: (encryptedNote: Buffer, index: number, viewingKey: Buffer) => Buffer): TrackedNote {
+  async toTrackedNote(computeNullifier: (encryptedNote: Buffer, index: number, viewingKey: Buffer) => Buffer): Promise<TrackedNote> {
     const owner = await db.user.get(this.owner);
     if (!owner) {
       throw Error(`Owner '${this.owner}' not found.`);

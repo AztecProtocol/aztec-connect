@@ -2,7 +2,7 @@ import React from 'react';
 import { FlexBox, Block, Text } from '@aztec/guacamole-ui';
 
 interface FormFieldProps {
-  label: String;
+  label: string;
   children: React.ReactNode;
 }
 

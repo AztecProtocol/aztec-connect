@@ -65,7 +65,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
               setTransferTo(app.getUser().publicKey.toString('hex'));
               setInit(State.INITIALIZED);
             }}
-            isLoading={init == State.INITIALIZING}
+            isLoading={init === State.INITIALIZING}
           />
         </FormField>
       )}
@@ -152,7 +152,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
                   setTime(Date.now() - start);
                   setResult(ProofState.FINISHED);
                 } catch (e) {
-                  console.log(e);
+                  console.log(e); // tslint:disable-line no-console
                   setResult(ProofState.FAILED);
                 }
               }}
@@ -178,7 +178,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
                   setTime(Date.now() - start);
                   setResult(ProofState.FINISHED);
                 } catch (e) {
-                  console.log(e);
+                  console.log(e); // tslint:disable-line no-console
                   setResult(ProofState.FAILED);
                 }
               }}
@@ -211,7 +211,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
                   setTime(Date.now() - start);
                   setResult(ProofState.FINISHED);
                 } catch (e) {
-                  console.log(e);
+                  console.log(e); // tslint:disable-line no-console
                   setResult(ProofState.FAILED);
                 }
               }}
