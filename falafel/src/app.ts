@@ -2,7 +2,6 @@ import Koa from "koa";
 import compress from "koa-compress";
 import Router from "koa-router";
 import { Server } from "./server";
-import { JoinSplitTx } from "../../barretenberg.js/src/client_proofs/join_split_proof/join_split_tx";
 import { PromiseReadable } from 'promise-readable';
 
 const cors = require("@koa/cors");
