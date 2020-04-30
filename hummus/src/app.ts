@@ -44,7 +44,7 @@ export class App extends EventEmitter {
     return { id, privateKey, publicKey };
   }
 
-  public async init() {
+  public async init(serverUrl: string) {
     const circuitSize = 128 * 1024;
 
     const crs = new Crs(circuitSize);
@@ -72,7 +72,7 @@ export class App extends EventEmitter {
     this.joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
 
     // this.initLocalRollupProvider();
-    this.initServerRollupProvider();
+    this.initServerRollupProvider(serverUrl);
 
     const leveldb = levelup(leveljs('hummus'));
     this.worldState = new WorldState(leveldb, pedersen, blake2s, this.blockSource);
@@ -103,8 +103,8 @@ export class App extends EventEmitter {
     this.blockSource = lrp;
   }
 
-  public initServerRollupProvider() {
-    const url = new URL('http://localhost');
+  public initServerRollupProvider(serverUrl: string) {
+    const url = new URL(serverUrl);
     const sbs = new ServerBlockSource(url);
     this.rollupProvider = new ServerRollupProvider(url);
     this.blockSource = sbs;

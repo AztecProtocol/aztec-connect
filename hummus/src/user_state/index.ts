@@ -67,7 +67,7 @@ export class UserState extends EventEmitter {
 
     block.dataEntries.forEach((encryptedNote, i) => {
       const index = block.dataStartIndex + i;
-      if (this.notePicker.hasNote(index)) { return; }
+      if (this.notePicker.hasNote(index)) return;
 
       const viewingKey = computeViewingKey();
       this.users.find((user) => {

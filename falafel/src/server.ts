@@ -79,6 +79,10 @@ export class Server {
       throw new Error("Nullifier 2 already exists.");
     }
 
+    if (!clientTx.noteTreeRoot.equals(this.worldStateDb.getRoot(0))) {
+      throw new Error("Merkle roots do not match.")
+    }
+
     console.log('Attempting verify...');
     if (!await this.joinSplitVerifier.verifyProof(proofData)) {
       throw new Error("Proof verification failed.");

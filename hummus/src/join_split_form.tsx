@@ -43,31 +43,41 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
   const [withdrawValue, setWithdrawValue] = useState('0');
   const [transferValue, setTransferValue] = useState('0');
   const [transferTo, setTransferTo] = useState('');
+  const [serverUrl, setServerUrl] = useState('http://localhost');
 
   return (
     <Block
       padding="l"
       align="left"
       borderRadius="m"
-      style={{ width: '100%', maxWidth: '420px' }}
+      style={{ width: '100%', maxWidth: '640px' }}
       hasBorder
     >
       <FormField label="Init State">{init.toString()}</FormField>
       <FormField label="Proof State">{result.toString()}</FormField>
       <FormField label="Proof Time">{time.toString()}ms</FormField>
       {init !== State.INITIALIZED && (
-        <FormField label="Press the button">
-          <Button
-            text="The Button"
-            onSubmit={async () => {
-              setInit(State.INITIALIZING);
-              await app.init();
-              setTransferTo(app.getUser().publicKey.toString('hex'));
-              setInit(State.INITIALIZED);
-            }}
-            isLoading={init === State.INITIALIZING}
-          />
-        </FormField>
+        <Block padding="xs 0">
+          <Block padding="m">
+            <Input
+              label="Server url"
+              value={serverUrl}
+              onChange={setServerUrl}
+            />
+          </Block>
+          <FormField label="Press the button">
+            <Button
+              text="The Button"
+              onSubmit={async () => {
+                setInit(State.INITIALIZING);
+                await app.init(serverUrl);
+                setTransferTo(app.getUser().publicKey.toString('hex'));
+                setInit(State.INITIALIZED);
+              }}
+              isLoading={init === State.INITIALIZING}
+            />
+          </FormField>
+        </Block>
       )}
       {init === State.INITIALIZED && (
         <Block padding="xs 0">
