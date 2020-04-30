@@ -1,25 +1,27 @@
-import levelup from 'levelup';
-import memdown from 'memdown';
-import createDebug from 'debug';
+import { BlockSource } from 'barretenberg-es/block_source';
+import { ServerBlockSource } from 'barretenberg-es/block_source/server_block_source';
+import { JoinSplitProver, JoinSplitVerifier } from 'barretenberg-es/client_proofs/join_split_proof';
+import { Prover } from 'barretenberg-es/client_proofs/prover';
+import { Crs } from 'barretenberg-es/crs';
+import { Blake2s } from 'barretenberg-es/crypto/blake2s';
+import { Pedersen } from 'barretenberg-es/crypto/pedersen';
+import { Schnorr } from 'barretenberg-es/crypto/schnorr';
 import { PooledFft } from 'barretenberg-es/fft';
 import { PooledPippenger } from 'barretenberg-es/pippenger';
-import { JoinSplitProver, JoinSplitVerifier, JoinSplitTx } from 'barretenberg-es/client_proofs/join_split_proof';
-import { Prover } from 'barretenberg-es/client_proofs/prover';
-import { Schnorr } from 'barretenberg-es/crypto/schnorr';
-import { Crs } from 'barretenberg-es/crs';
 import { BarretenbergWasm } from 'barretenberg-es/wasm';
 import { WorkerPool } from 'barretenberg-es/wasm/worker_pool';
 import { WorldState } from 'barretenberg-es/world_state';
-import { UserState, User } from './user_state';
+import createDebug from 'debug';
+import { EventEmitter } from 'events';
+import leveljs from 'level-js';
+import levelup from 'levelup';
+import { db, User as UserEntity } from './database';
 import { JoinSplitProofCreator } from './join_split_proof_creator';
 import { LocalRollupProvider } from './rollup_provider/local_rollup_provider';
-import { Blake2s } from 'barretenberg-es/crypto/blake2s';
-import { Pedersen } from 'barretenberg-es/crypto/pedersen';
-import { EventEmitter } from 'events';
 import { RollupProvider } from './rollup_provider/rollup_provider';
-import { BlockSource } from 'barretenberg-es/block_source';
-import { ServerBlockSource } from 'barretenberg-es/block_source/server_block_source';
 import { ServerRollupProvider } from './rollup_provider/server_rollup_provider';
+import { User, UserState } from './user_state';
+import { randomInt } from './utils/random';
 
 createDebug.enable('bb:*');
 const debug = createDebug('bb:app');
@@ -36,13 +38,10 @@ export class App extends EventEmitter {
   private rollupProvider!: RollupProvider;
   private blockSource!: BlockSource;
 
-  public createUser(): User {
-    // prettier-ignore
-    const privateKey = Buffer.from([
-      0x0b, 0x9b, 0x3a, 0xde, 0xe6, 0xb3, 0xd8, 0x1b, 0x28, 0xa0, 0x88, 0x6b, 0x2a, 0x84, 0x15, 0xc7,
-      0xda, 0x31, 0x29, 0x1a, 0x5e, 0x96, 0xbb, 0x7a, 0x56, 0x63, 0x9e, 0x17, 0x7d, 0x30, 0x1b, 0xeb]);
+  public createUser(id: number): User {
+    const privateKey = Buffer.from([...Array(32)].map(() => randomInt(0, 255)));
     const publicKey = this.schnorr.computePublicKey(privateKey);
-    return { privateKey, publicKey }
+    return { id, privateKey, publicKey };
   }
 
   public async init() {
@@ -75,16 +74,21 @@ export class App extends EventEmitter {
     // this.initLocalRollupProvider();
     this.initServerRollupProvider();
 
-    const db = levelup(memdown());
-    this.worldState = new WorldState(db, pedersen, blake2s, this.blockSource);
-    this.user = this.createUser();
+    const leveldb = levelup(leveljs('hummus'));
+    this.worldState = new WorldState(leveldb, pedersen, blake2s, this.blockSource);
+
     this.userState = new UserState(this.user, this.joinSplitProver, this.worldState, blake2s);
+    this.userState.on('updated', () => this.emit('updated'));
+    const user = await this.userState.init();
+    if (user) {
+      this.user = user;
+    } else {
+      await this.switchToNewUser();
+    }
 
     this.joinSplitProofCreator = new JoinSplitProofCreator(this.joinSplitProver, this.userState, this.worldState);
 
     this.worldState.start();
-
-    this.userState.on('updated', () => this.emit('updated'));
 
     debug('creating keys...');
     const start = new Date().getTime();
@@ -129,6 +133,27 @@ export class App extends EventEmitter {
 
   public getUser() {
     return this.user;
+  }
+
+  public getUsers() {
+    return this.userState.getUsers();
+  }
+
+  public async switchUser(id: number) {
+    const user = await this.userState.switchUser(id);
+    if (!user) { return; }
+
+    this.user = user;
+  }
+
+  public async switchToNewUser() {
+    const id = await db.user.count();
+    const user = this.createUser(id);
+    await db.user.add(new UserEntity(user.id, user.publicKey, user.privateKey));
+    this.userState.addUser(user);
+    await this.userState.switchUser(user.id);
+    this.user = user;
+    return user;
   }
 
   public getBalance() {

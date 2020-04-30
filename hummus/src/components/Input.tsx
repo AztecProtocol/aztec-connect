@@ -1,21 +1,24 @@
 import React from 'react';
-import { FlexBox, Block, Text, MaskedNumberInput } from '@aztec/guacamole-ui';
+import { FlexBox, Block, Text, TextInput, MaskedNumberInput } from '@aztec/guacamole-ui';
 
 interface InputProps {
-  label: String;
-  value: String,
-  onChange: Function,
-  error?: String;
+  type?: 'text' | 'number',
+  label: string;
+  value: string,
+  onChange: (value: string) => void,
+  error?: string;
 }
 
-const Input = ({
+export default function Input({
+  type = 'text',
   label,
   value,
   onChange,
   error,
-}: InputProps) => {
+}: InputProps) {
+  const InputTag = type === 'text' ? TextInput : MaskedNumberInput;
   return (
-    <Block padding="xs m">
+    <Block padding="xs 0">
       <FlexBox valign="center">
         <Block right="s">
           <Text
@@ -23,7 +26,8 @@ const Input = ({
             size="xs"
           />
         </Block>
-        <MaskedNumberInput
+        <InputTag
+          className="flex-free-expand"
           size="s"
           value={value}
           onChange={onChange}
@@ -40,6 +44,4 @@ const Input = ({
       )}
     </Block>
   );
-};
-
-export default Input;
+}

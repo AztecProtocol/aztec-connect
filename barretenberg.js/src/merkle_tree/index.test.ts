@@ -73,4 +73,28 @@ describe('merkle_tree', () => {
     const root = tree.getRoot();
     expect(root).toEqual(Buffer.from('28703b88327e4d75dca124b208f36f39915714fe14cb9bb2f852afc1aa9244be', 'hex'));
   });
+
+  it('should be able to restore from previous data', async () => {
+    const levelDown = memdown();
+    const db = levelup(levelDown);
+    const tree = await MerkleTree.new(db, pedersen, blake2s, "test", 10);
+    for (let i = 0; i < 4; ++i) {
+      await tree.updateElement(i, values[i]);
+    }
+
+    const db2 = levelup(levelDown);
+    const tree2 = await MerkleTree.fromName(db2, pedersen, blake2s, 'test');
+
+    expect(tree.getRoot()).toEqual(tree2.getRoot());
+    for (let i = 0; i < 4; ++i) {
+      expect(await tree.getHashPath(i)).toEqual(await tree2.getHashPath(i));
+    }
+  });
+
+  it('should throw an error if previous data does not exist for the given name', async () => {
+    const db = levelup(memdown());
+    await expect((async () => {
+      await MerkleTree.fromName(db, pedersen, blake2s, 'a_whole_new_tree');
+    })()).rejects.toThrow();
+  });
 });
