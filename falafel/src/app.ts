@@ -26,6 +26,16 @@ export function appFactory(server: Server, prefix: string) {
     }
   });
 
+  router.get("/get-blocks", async (ctx: Koa.Context) => {
+    const blocks = server.getBlocks(+ctx.query['from']);
+    ctx.body = blocks.map(({ blockNum, dataStartIndex, dataEntries, nullifiers }) => ({
+      blockNum,
+      dataStartIndex,
+      dataEntries: dataEntries.map(b => b.toString('hex')),
+      nullifiers: nullifiers.map(b => b.toString('hex')),
+    }));
+  });
+
   router.post("/flush", async (ctx: Koa.Context) => {
     try {
       await server.flushTxs();

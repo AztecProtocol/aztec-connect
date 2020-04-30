@@ -2,12 +2,9 @@ import { BlockSource, Block } from 'barretenberg-es/block_source';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import { JoinSplitVerifier } from 'barretenberg-es/client_proofs/join_split_proof';
+import { RollupProvider } from './rollup_provider';
 
 const debug = createDebug('bb:local_rollup_provider');
-
-export interface RollupProvider {
-  sendProof(proof: Buffer): Promise<void>;
-}
 
 export class LocalRollupProvider extends EventEmitter implements BlockSource, RollupProvider {
   private blockNum = 0;

@@ -1,28 +1,42 @@
 import { BlockSource, Block } from '.';
 import { EventEmitter } from 'events';
 import { fetch } from '../iso_fetch';
+import createDebug from 'debug';
+
+const debug = createDebug("bb:server_block_source");
 
 export class ServerBlockSource extends EventEmitter implements BlockSource {
   private running = true;
 
-  constructor(private host: URL, private lastBlock: number = 0) {
+  constructor(private host: URL, private fromBlock: number = 0) {
     super();
   }
 
   public async start() {
     while (this.running) {
-      const url = new URL(`/get-blocks`, this.host);
-      url.searchParams.append('from', this.lastBlock.toString());
+      try {
+        const url = new URL(`/api/get-blocks`, this.host);
+        url.searchParams.append('from', this.fromBlock.toString());
 
-      const response = await fetch(url.toString())
-      const blocks: Block[] = await response.json();
+        const response = await fetch(url.toString())
+        const jsonBlocks = await response.json();
 
-      for (const block of blocks) {
-        this.emit('block', block);
-        this.lastBlock = block.blockNum;
+        const blocks = jsonBlocks.map(({ blockNum, dataStartIndex, dataEntries, nullifiers }) => ({
+          blockNum,
+          dataStartIndex,
+          dataEntries: dataEntries.map(str => Buffer.from(str, 'hex')),
+          nullifiers: nullifiers.map(str => Buffer.from(str, 'hex')),
+        } as Block));
+
+        for (const block of blocks) {
+          this.emit('block', block);
+          this.fromBlock = block.blockNum + 1;
+        }
+      } catch(err) {
+        debug(err);
       }
 
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 

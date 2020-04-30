@@ -12,10 +12,14 @@ import { WorkerPool } from 'barretenberg-es/wasm/worker_pool';
 import { WorldState } from 'barretenberg-es/world_state';
 import { UserState, User } from './user_state';
 import { JoinSplitProofCreator } from './join_split_proof_creator';
-import { LocalRollupProvider } from './local_rollup_provider';
+import { LocalRollupProvider } from './rollup_provider/local_rollup_provider';
 import { Blake2s } from 'barretenberg-es/crypto/blake2s';
 import { Pedersen } from 'barretenberg-es/crypto/pedersen';
 import { EventEmitter } from 'events';
+import { RollupProvider } from './rollup_provider/rollup_provider';
+import { BlockSource } from 'barretenberg-es/block_source';
+import { ServerBlockSource } from 'barretenberg-es/block_source/server_block_source';
+import { ServerRollupProvider } from './rollup_provider/server_rollup_provider';
 
 createDebug.enable('bb:*');
 const debug = createDebug('bb:app');
@@ -29,7 +33,8 @@ export class App extends EventEmitter {
   private worldState!: WorldState;
   private userState!: UserState;
   private joinSplitProofCreator!: JoinSplitProofCreator;
-  private rollupProvider!: LocalRollupProvider;
+  private rollupProvider!: RollupProvider;
+  private blockSource!: BlockSource;
 
   public createUser(): User {
     // prettier-ignore
@@ -66,10 +71,12 @@ export class App extends EventEmitter {
     this.schnorr = new Schnorr(barretenberg);
     this.joinSplitProver = new JoinSplitProver(barretenberg, prover);
     this.joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
-    this.rollupProvider = new LocalRollupProvider(this.joinSplitVerifier);
+
+    // this.initLocalRollupProvider();
+    this.initServerRollupProvider();
 
     const db = levelup(memdown());
-    this.worldState = new WorldState(db, pedersen, blake2s, this.rollupProvider);
+    this.worldState = new WorldState(db, pedersen, blake2s, this.blockSource);
     this.user = this.createUser();
     this.userState = new UserState(this.user, this.joinSplitProver, this.worldState, blake2s);
 
@@ -84,6 +91,20 @@ export class App extends EventEmitter {
     await this.joinSplitProver.init();
     await this.joinSplitVerifier.init(crs.getG2Data());
     debug(`created circuit keys: ${new Date().getTime() - start}ms`);
+  }
+
+  public initLocalRollupProvider() {
+    const lrp = new LocalRollupProvider(this.joinSplitVerifier);
+    this.rollupProvider = lrp;
+    this.blockSource = lrp;
+  }
+
+  public initServerRollupProvider() {
+    const url = new URL('http://localhost');
+    const sbs = new ServerBlockSource(url);
+    this.rollupProvider = new ServerRollupProvider(url);
+    this.blockSource = sbs;
+    sbs.start();
   }
 
   public async deposit(value: number) {
