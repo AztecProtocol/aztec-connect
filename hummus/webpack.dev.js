@@ -1,6 +1,8 @@
+const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
 const ThreadsPlugin = require('threads-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 module.exports = {
   mode: 'development',
@@ -29,10 +31,43 @@ module.exports = {
           publicPath: 'dist/',
         },
       },
+      {
+        test: /\.css$/,
+        use: [
+          {
+            loader: MiniCssExtractPlugin.loader,
+          },
+          'css-loader',
+        ],
+      },
+      {
+        test: /\.(png|jpe?g|gif|woff|woff2|eot|ttf)$/,
+        loader: 'file-loader?limit=100000',
+        options: {
+          outputPath: 'static',
+          publicPath: 'dist/static',
+          name: '[name].[ext]',
+        },
+      },
+      {
+        test: /\.svg$/,
+        use: [
+          {
+            loader: 'svg-sprite-loader',
+            options: {
+              name: '[name]_[hash:base64:3]',
+              extract: false,
+            },
+          },
+        ],
+      },
     ],
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.wasm'],
+    alias: {
+      'barretenberg-es': path.resolve(__dirname, '../barretenberg.js/dest-es'),
+    },
   },
   devServer: {
     hot: true,
@@ -44,6 +79,9 @@ module.exports = {
     new HtmlWebpackPlugin({ template: './src/index.html' }),
     new webpack.HotModuleReplacementPlugin(),
     new ThreadsPlugin(),
+    new MiniCssExtractPlugin({
+      filename: '[name].css',
+    }),
   ],
   node: {
     fs: 'empty',

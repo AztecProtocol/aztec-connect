@@ -9,7 +9,9 @@
     "noImplicitAny": true,
     "noImplicitThis": false,
     "esModuleInterop": true,
-    "declaration": true
+    "declaration": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
   },
-  "include": ["src"]
+  "include": ["src", "../barretenberg.js/src/client_proofs/join_split_proof/join_split_tx.ts", "../barretenberg.js/src/client_proofs/point.ts", "../barretenberg.js/src/client_proofs/signature.ts", "../barretenberg.js/src/client_proofs/note.ts"]
 }

@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import http from 'http';
 import { appFactory } from './app';
 import { Server } from './server';

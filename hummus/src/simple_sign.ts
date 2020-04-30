@@ -1,11 +1,10 @@
 import { Schnorr } from 'barretenberg-es/crypto/schnorr';
 import { createWorker } from 'barretenberg-es/wasm/worker_factory';
-import { fetchCode } from 'barretenberg-es/wasm';
+import { BarretenbergWasm } from 'barretenberg-es/wasm';
 
 export async function signAThing() {
-  const code = await fetchCode();
-  const barretenberg = await createWorker();
-  await barretenberg.init(code);
+  const barretenberg = await BarretenbergWasm.new();
+  await barretenberg.init();
   const schnorr = new Schnorr(barretenberg);
 
   const pk = Buffer.from([

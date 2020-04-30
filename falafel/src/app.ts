@@ -1,10 +1,9 @@
 import Koa from "koa";
-import koaBody from "koa-body";
 import compress from "koa-compress";
 import Router from "koa-router";
 import { Server } from "./server";
-import { Tx } from "./tx";
-import BN from "bn.js";
+import { JoinSplitTx } from "../../barretenberg.js/src/client_proofs/join_split_proof/join_split_tx";
+import { PromiseReadable } from 'promise-readable';
 
 const cors = require("@koa/cors");
 
@@ -15,9 +14,10 @@ export function appFactory(server: Server, prefix: string) {
     ctx.body = "OK\n";
   });
 
-  router.post("/tx", koaBody(), async (ctx: Koa.Context) => {
+  router.post("/tx", async (ctx: Koa.Context) => {
     try {
-      let tx = Tx.fromJSON(ctx.request.body);
+      const stream = new PromiseReadable(ctx.req);
+      let tx = await stream.readAll() as Buffer;
       await server.receiveTx(tx);
       ctx.status = 200;
     } catch (err) {
