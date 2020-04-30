@@ -49,7 +49,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
       padding="l"
       align="left"
       borderRadius="m"
-      style={{ width: '100%', maxWidth: '360px' }}
+      style={{ width: '100%', maxWidth: '420px' }}
       hasBorder
     >
       <FormField label="Init State">{init.toString()}</FormField>

@@ -33,9 +33,10 @@ export class JoinSplitProofCreator {
     const inputNotes = notes.map(n => n.note);
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
+    const sendValue = transfer + deposit;
     const changeValue = totalNoteInputValue - transfer - widthraw;
     const outputNotes = [
-      new Note(receiverPubKey, receiverViewingKey, transfer + deposit),
+      new Note(receiverPubKey, sendValue ? receiverViewingKey : randomBytes(32), sendValue),
       new Note(sender.publicKey, changeValue ? senderViewingKey : randomBytes(32), changeValue)
     ];
 
