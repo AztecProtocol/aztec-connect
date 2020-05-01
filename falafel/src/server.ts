@@ -6,38 +6,84 @@ import { createWorker, destroyWorker } from "barretenberg/wasm/worker_factory";
 import { SinglePippenger } from "barretenberg/pippenger";
 import { JoinSplitVerifier } from "barretenberg/client_proofs/join_split_proof";
 import { Block } from "barretenberg/block_source";
-import { toBufferBE } from 'bigint-buffer';
+import { toBigIntBE } from "bigint-buffer";
+import { BarretenbergWorker } from "barretenberg/wasm/worker";
+import { LocalBlockchain } from "./blockchain";
+import { MemoryFifo } from "./fifo";
+import { RollupDb } from "./rollup_db";
+import { Rollup } from "./rollup";
+import { createConnection } from 'typeorm';
 
 export class Server {
   private interval?: NodeJS.Timer;
-  // private proof_generator: ProofGenerator;
   private worldStateDb: WorldStateDb;
-  private txPool: ClientTx[] = [];
-  private blockNum = 0;
   private maxBlockInterval = 600 * 1000;
   private joinSplitVerifier!: JoinSplitVerifier;
-  private blockchain: Block[] = [];
+  private blockchain!: LocalBlockchain;
+  private worker!: BarretenbergWorker;
+  private rollupDb!: RollupDb;
+  private blockQueue = new MemoryFifo<Block>();
 
   constructor(private batchSize: number) {
     this.worldStateDb = new WorldStateDb();
-    // this.proof_generator = new ProofGenerator(batchSize);
   }
 
   public async start() {
-    // this.proof_generator.run();
-    await this.worldStateDb.destroy();
+    const connection = await createConnection();
+    this.blockchain = new LocalBlockchain(connection);
+    this.rollupDb = new RollupDb(connection);
+    await this.blockchain.init();
+    await this.rollupDb.init();
     await this.worldStateDb.start();
     await this.createJoinSplitVerifier();
     this.interval = setInterval(() => this.flushTxs(), this.maxBlockInterval);
+    this.blockchain.on("block", (b) => this.blockQueue.put(b));
+    this.processQueue();
   }
 
   public stop() {
+    this.blockQueue.cancel();
     clearInterval(this.interval!);
-    // this.proof_generator.cancel();
+    destroyWorker(this.worker);
+  }
+
+  private async processQueue() {
+    while (true) {
+      const block = await this.blockQueue.get();
+      if (!block) {
+        break;
+      }
+      this.handleNewBlock(block);
+    }
+  }
+
+  private async handleNewBlock(block: Block) {
+    for (let i = 0; i < block.dataEntries.length; ++i) {
+      await this.worldStateDb.put(
+        0,
+        BigInt(block.dataStartIndex + i),
+        block.dataEntries[i]
+      );
+    }
+
+    const nullifierValue = Buffer.alloc(64, 0);
+    nullifierValue.writeUInt8(1, 63);
+    for (let i = 0; i < block.nullifiers.length; ++i) {
+      await this.worldStateDb.put(
+        1,
+        toBigIntBE(block.nullifiers[i]),
+        nullifierValue
+      );
+    }
+
+    await this.worldStateDb.commit();
+
+    // TODO: Confirm rollup by adding eth block and tx hash.
+    // await this.rollupDb.confirm(block);
   }
 
   public getBlocks(from: number) {
-    return this.blockchain.slice(from);
+    return this.blockchain.getBlocks(from);
   }
 
   private async createJoinSplitVerifier() {
@@ -48,13 +94,13 @@ export class Server {
     await crs.download();
 
     const barretenberg = await BarretenbergWasm.new();
-    const worker = await createWorker("0", barretenberg.module);
+    this.worker = await createWorker("0", barretenberg.module);
 
-    const pippenger = new SinglePippenger(worker);
+    const pippenger = new SinglePippenger(this.worker);
     await pippenger.init(crs.getData());
 
     // We need to init the proving key to create the verification key...
-    await worker.call("join_split__init_proving_key");
+    await this.worker.call("join_split__init_proving_key");
 
     this.joinSplitVerifier = new JoinSplitVerifier(pippenger);
     await this.joinSplitVerifier.init(crs.getG2Data());
@@ -80,56 +126,24 @@ export class Server {
     }
 
     if (!clientTx.noteTreeRoot.equals(this.worldStateDb.getRoot(0))) {
-      throw new Error("Merkle roots do not match.")
+      throw new Error("Merkle roots do not match.");
     }
 
-    console.log('Attempting verify...');
+    console.log("Attempting verify...");
     if (!await this.joinSplitVerifier.verifyProof(proofData)) {
       throw new Error("Proof verification failed.");
     }
 
-    // TODO VERIFY ROOT
-    console.log('Verification complete. Adding to mempool.');
+    console.log("Verification complete. Adding to mempool.");
 
-    this.txPool.push(clientTx);
-
-    this.createBlock();
-    // if (this.txPool.length == this.batchSize) {
-    //   this.createBlock();
-    // }
-  }
-
-  public flushTxs() {
-    if (this.txPool.length) {
-      this.createBlock();
-    }
-  }
-
-  private async createBlock() {
-    const nullifierValue = Buffer.alloc(64, 0);
-    nullifierValue.writeUInt8(1, 63);
-    let dataIndex = this.worldStateDb.getSize(0);
-    const block: Block = {
-      blockNum: this.blockNum,
-      dataStartIndex: Number(dataIndex),
-      dataEntries: [],
-      nullifiers: [],
+    const rollup: Rollup = {
+      rollupId: this.rollupDb.getNextRollupId(),
+      txs: [clientTx],
     };
+    await this.rollupDb.addRollup(rollup);
 
-    for (let tx of this.txPool) {
-      await this.worldStateDb.put(0, dataIndex++, tx.newNote1);
-      await this.worldStateDb.put(0, dataIndex++, tx.newNote2);
-      await this.worldStateDb.put(1, tx.nullifier1, nullifierValue);
-      await this.worldStateDb.put(1, tx.nullifier2, nullifierValue);
-      block.dataEntries.push(tx.newNote1, tx.newNote2);
-      block.nullifiers.push(toBufferBE(tx.nullifier1, 16), toBufferBE(tx.nullifier2, 16));
-    }
-    await this.worldStateDb.commit();
-    // Add all data elements and nullifiers in txPool to world state.
-    // commit world state.
-    this.txPool = [];
-    this.blockNum++;
-    this.blockchain.push(block);
-    console.log('Added block:', block);
+    this.blockchain.sendProof(proofData, rollup.rollupId);
   }
+
+  public flushTxs() {}
 }

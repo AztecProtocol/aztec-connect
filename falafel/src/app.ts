@@ -16,7 +16,8 @@ export function appFactory(server: Server, prefix: string) {
   router.post("/tx", async (ctx: Koa.Context) => {
     try {
       const stream = new PromiseReadable(ctx.req);
-      let tx = await stream.readAll() as Buffer;
+      const json = JSON.parse(await stream.readAll() as string);
+      const tx = Buffer.from(json, 'hex');
       await server.receiveTx(tx);
       ctx.status = 200;
     } catch (err) {
