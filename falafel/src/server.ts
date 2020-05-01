@@ -14,6 +14,12 @@ import { RollupDb } from "./rollup_db";
 import { Rollup } from "./rollup";
 import { createConnection } from 'typeorm';
 
+interface Proof {
+  proofData: Buffer,
+  viewKey1: Buffer,
+  viewKey2: Buffer,
+};
+
 export class Server {
   private interval?: NodeJS.Timer;
   private worldStateDb: WorldStateDb;
@@ -109,8 +115,11 @@ export class Server {
     console.log("Done.");
   }
 
-  public async receiveTx(proofData: Buffer) {
-    const clientTx = new ClientTx(proofData);
+  public async receiveTx(proof: Proof) {
+    const {
+      proofData,
+    } = proof;
+    const clientTx = new ClientTx(proof);
 
     console.log(clientTx);
 

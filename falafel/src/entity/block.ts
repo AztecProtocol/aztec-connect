@@ -19,4 +19,7 @@ export class BlockDao {
 
   @Column()
   public nullifiers!: Buffer;
+
+  @Column()
+  public viewingKeys!: Buffer;
 }

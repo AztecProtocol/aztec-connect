@@ -6,7 +6,7 @@ import { Connection, Repository, createConnection } from "typeorm";
 import { BlockDao } from "../entity/block";
 
 export interface ProofReceiver {
-  sendProof(proof: Buffer, rollupId: number): Promise<void>;
+  sendProof(proof: Buffer, rollupId: number, viewingKeys: Buffer[]): Promise<void>;
 }
 
 export interface Blockchain extends BlockSource, ProofReceiver {
@@ -37,7 +37,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     console.log(`Local blockchain restored: block:${this.blockNum} size:${this.dataTreeSize}.`);
   }
 
-  async sendProof(proofData: Buffer, rollupId: number) {
+  async sendProof(proofData: Buffer, rollupId: number, viewingKeys: Buffer[]) {
     const tx = new ClientTx(proofData);
 
     const block: Block = {
@@ -49,27 +49,29 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
         toBufferBE(tx.nullifier1, 16),
         toBufferBE(tx.nullifier2, 16),
       ],
+      viewingKeys,
     };
 
     this.blockNum++;
     this.dataTreeSize += 2;
     this.blockchain.push(block);
 
-    await this.saveBlock(block);
+    await this.saveBlock(block, rollupId, viewingKeys);
 
     console.log("Added block:", block);
 
     this.emit('block', block);
   }
 
-  private async saveBlock(block: Block) {
+  private async saveBlock(block: Block, rollupId: number, viewingKeys: Buffer[]) {
     const blockDao = new BlockDao();
     blockDao.created = new Date();
     blockDao.id = block.blockNum;
-    blockDao.rollupId = block.rollupId;
+    blockDao.rollupId = rollupId;
     blockDao.dataStartIndex = block.dataStartIndex;
     blockDao.dataEntries = Buffer.concat(block.dataEntries);
     blockDao.nullifiers = Buffer.concat(block.nullifiers);
+    blockDao.viewingKeys = Buffer.concat(viewingKeys);
     await this.blockRep.save(blockDao);
   }
 
@@ -82,12 +84,16 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
         dataStartIndex: b.dataStartIndex,
         dataEntries: [],
         nullifiers: [],
+        viewingKeys: [],
       };
       for (let i = 0; i < b.dataEntries.length; i += 64) {
         block.dataEntries.push(b.dataEntries.slice(i, i + 64));
       }
       for (let i = 0; i < b.nullifiers.length; i += 16) {
         block.nullifiers.push(b.nullifiers.slice(i, i + 16));
+      }
+      for (let i = 0; i < b.viewingKeys.length; i += 48) {
+        block.viewingKeys.push(b.viewingKeys.slice(i, i + 48));
       }
       return block;
     });
