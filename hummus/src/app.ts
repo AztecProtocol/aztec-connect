@@ -1,4 +1,4 @@
-import { BlockSource } from 'barretenberg-es/block_source';
+import { BlockSource, Block } from 'barretenberg-es/block_source';
 import { LocalRollupProvider, RollupProvider, ServerRollupProvider } from 'barretenberg-es/rollup_provider';
 import { ServerBlockSource } from 'barretenberg-es/block_source/server_block_source';
 import { JoinSplitProver, JoinSplitVerifier } from 'barretenberg-es/client_proofs/join_split_proof';
@@ -6,7 +6,6 @@ import { Prover } from 'barretenberg-es/client_proofs/prover';
 import { Crs } from 'barretenberg-es/crs';
 import { Blake2s } from 'barretenberg-es/crypto/blake2s';
 import { Pedersen } from 'barretenberg-es/crypto/pedersen';
-import { Schnorr } from 'barretenberg-es/crypto/schnorr';
 import { PooledFft } from 'barretenberg-es/fft';
 import { PooledPippenger } from 'barretenberg-es/pippenger';
 import { BarretenbergWasm } from 'barretenberg-es/wasm';
@@ -16,18 +15,26 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import leveljs from 'level-js';
 import levelup from 'levelup';
-import { db, User as UserEntity } from './database';
+import { DbUser, DexieDatabase } from './database';
 import { JoinSplitProofCreator } from './join_split_proof';
-import { User, UserState } from './user_state';
-import { randomInt } from './utils/random';
+import { UserState } from './user_state';
 import { Grumpkin } from 'barretenberg-es/ecc/grumpkin';
+import { MemoryFifo } from 'barretenberg-es/fifo';
+import { User, createUser } from './user';
 
 createDebug.enable('bb:*');
 const debug = createDebug('bb:app');
 
+function dbUserToUser(dbUser: DbUser): User {
+  return {
+    id: dbUser.id,
+    privateKey: Buffer.from(dbUser.privateKey),
+    publicKey: Buffer.from(dbUser.publicKey),
+  };
+}
+
 export class App extends EventEmitter {
   private pool!: WorkerPool;
-  private schnorr!: Schnorr;
   private joinSplitProver!: JoinSplitProver;
   private joinSplitVerifier!: JoinSplitVerifier;
   private user!: User;
@@ -36,12 +43,10 @@ export class App extends EventEmitter {
   private joinSplitProofCreator!: JoinSplitProofCreator;
   private rollupProvider!: RollupProvider;
   private blockSource!: BlockSource;
-
-  public createUser(id: number): User {
-    const privateKey = Buffer.from([...Array(32)].map(() => randomInt(0, 255)));
-    const publicKey = this.schnorr.computePublicKey(privateKey);
-    return { id, privateKey, publicKey };
-  }
+  private grumpkin!: Grumpkin;
+  private blake2s!: Blake2s;
+  private db = new DexieDatabase();
+  private blockQueue = new MemoryFifo<Block>();
 
   public async init(serverUrl: string) {
     const circuitSize = 128 * 1024;
@@ -64,9 +69,8 @@ export class App extends EventEmitter {
 
     const prover = new Prover(barretenbergWorker, pippenger, fft);
 
-    const blake2s = new Blake2s(barretenberg);
     const pedersen = new Pedersen(barretenberg);
-    this.schnorr = new Schnorr(barretenberg);
+    this.blake2s = new Blake2s(barretenberg);
     this.joinSplitProver = new JoinSplitProver(barretenberg, prover);
     this.joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
 
@@ -74,41 +78,62 @@ export class App extends EventEmitter {
     this.initServerRollupProvider(serverUrl);
 
     const leveldb = levelup(leveljs('hummus'));
-    this.worldState = new WorldState(leveldb, pedersen, blake2s, this.blockSource);
+    this.worldState = new WorldState(leveldb, pedersen, this.blake2s);
 
-    const grumpkin = new Grumpkin(barretenberg);
-    this.userState = new UserState(this.user, grumpkin, this.worldState, blake2s);
-    this.userState.on('updated', () => this.emit('updated'));
-    const user = await this.userState.init();
-    if (user) {
-      this.user = user;
-    } else {
-      await this.switchToNewUser();
-    }
+    this.grumpkin = new Grumpkin(barretenberg);
 
-    this.joinSplitProofCreator = new JoinSplitProofCreator(this.joinSplitProver, this.userState, this.worldState, grumpkin);
+    this.joinSplitProofCreator = new JoinSplitProofCreator(
+      this.joinSplitProver,
+      this.userState,
+      this.worldState,
+      this.grumpkin
+    );
 
-    this.worldState.start();
+    this.blockSource.on('block', (b) => this.blockQueue.put(b));
+
+    await this.initUser();
 
     debug('creating keys...');
     const start = new Date().getTime();
-    await this.joinSplitProver.init();
-    await this.joinSplitVerifier.init(crs.getG2Data());
+    // await this.joinSplitProver.init();
+    // await this.joinSplitVerifier.init(crs.getG2Data());
     debug(`created circuit keys: ${new Date().getTime() - start}ms`);
   }
 
-  public initLocalRollupProvider() {
+  private async initUser() {
+    const users = await this.getUsers();
+    if (users.length) {
+      await this.switchToUser(users[0].id);
+    } else {
+      const user = await this.createUser();
+      debug(`created new user:`, user);
+      await this.switchToUser(user.id);
+    }
+  }
+
+  private initLocalRollupProvider() {
     const lrp = new LocalRollupProvider(this.joinSplitVerifier);
     this.rollupProvider = lrp;
     this.blockSource = lrp;
   }
 
-  public initServerRollupProvider(serverUrl: string) {
+  private initServerRollupProvider(serverUrl: string) {
     const url = new URL(serverUrl);
     const sbs = new ServerBlockSource(url);
     this.rollupProvider = new ServerRollupProvider(url);
     this.blockSource = sbs;
     sbs.start();
+  }
+
+  private async processBlockQueue() {
+    while (true) {
+      const block = await this.blockQueue.get();
+      if (!block) {
+        break;
+      }
+      await this.worldState.processBlock(block);
+      await this.userState.processBlock(block);
+    }
   }
 
   public async deposit(value: number) {
@@ -128,32 +153,34 @@ export class App extends EventEmitter {
 
   public async destroy() {
     await this.pool.destroy();
-    this.worldState.stop();
+    this.blockQueue.cancel();
   }
 
   public getUser() {
     return this.user;
   }
 
-  public getUsers() {
-    return this.userState.getUsers();
+  public async getUsers() {
+    const dbUsers = await this.db.getUsers();
+    return dbUsers.map(dbUserToUser);
   }
 
-  public async switchUser(id: number) {
-    const user = await this.userState.switchUser(id);
-    if (!user) { return; }
-
-    this.user = user;
-  }
-
-  public async switchToNewUser() {
-    const id = await db.user.count();
-    const user = this.createUser(id);
-    await db.user.add(new UserEntity(user.id, user.publicKey, user.privateKey));
-    this.userState.addUser(user);
-    await this.userState.switchUser(user.id);
-    this.user = user;
+  public async createUser() {
+    const users = await this.db.getUsers();
+    const user = createUser(users.length, this.grumpkin);
+    this.db.addUser(user);
     return user;
+  }
+
+  public async switchToUser(userId: number) {
+    const dbUser = await this.db.getUser(userId);
+    if (!dbUser) {
+      throw new Error('User not found.');
+    }
+    this.user = dbUserToUser(dbUser);
+    debug(`Switching to user:`, this.user);
+    this.userState = new UserState(this.user, this.grumpkin, this.blake2s, this.db);
+    await this.userState.init();
   }
 
   public getBalance() {

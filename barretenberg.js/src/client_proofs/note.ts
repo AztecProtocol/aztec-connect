@@ -11,7 +11,7 @@ export class Note {
   toBuffer() {
     const vbuf = Buffer.alloc(4);
     vbuf.writeUInt32BE(this.value, 0);
-    return Buffer.concat([this.ownerPubKey, vbuf, this.secret])
+    return Buffer.concat([this.ownerPubKey, vbuf, this.secret]);
   }
 }
 
@@ -25,20 +25,23 @@ export function encryptNote(note: Note, grumpkin: Grumpkin) {
 
   const cipher = createCipheriv('aes-128-cbc', aesKey, iv);
   return Buffer.concat([cipher.update(note.toBuffer()), cipher.final(), ephPubKey]);
-};
+}
 
-export function decryptNote(viewingKey: Buffer, privateKey: Buffer, grumpkin: Grumpkin) {
+export function decryptNote(encryptedNote: Buffer, privateKey: Buffer, grumpkin: Grumpkin) {
   const expectedPubKey = grumpkin.mul(Grumpkin.one, privateKey);
 
-  const ephPubKey = viewingKey.slice(-64);
+  const ephPubKey = encryptedNote.slice(-64);
   const P = grumpkin.mul(ephPubKey, privateKey);
   const hash = createHash('sha256').update(P).digest();
   const aesKey = hash.slice(0, 16);
   const iv = hash.slice(16, 32);
 
-  const decipher = createDecipheriv('aes-128-cbc', aesKey, iv);
-  const noteData = Buffer.concat([decipher.update(viewingKey.slice(0, -64)), decipher.final()]);
-  const note = Note.fromBuffer(noteData);
-
-  return expectedPubKey.equals(note.ownerPubKey) ? note : undefined;
+  try {
+    const decipher = createDecipheriv('aes-128-cbc', aesKey, iv);
+    const noteData = Buffer.concat([decipher.update(encryptedNote.slice(0, -64)), decipher.final()]);
+    const note = Note.fromBuffer(noteData);
+    return expectedPubKey.equals(note.ownerPubKey) ? note : undefined;
+  } catch (err) {
+    return;
+  }
 }

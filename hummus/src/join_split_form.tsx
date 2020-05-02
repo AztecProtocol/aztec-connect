@@ -3,8 +3,12 @@ import { FlexBox, Block, Button, SelectInput, Text, Icon } from '@aztec/guacamol
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import { App } from './app';
 import { Balance, Input, FormField } from './components';
+import { User } from './user';
+import createDebug from 'debug';
 import './styles/guacamole.css';
 require('barretenberg-es/wasm/barretenberg.wasm');
+
+const debug = createDebug('bb:join_split_form');
 
 interface JoinSplitFormProps {
   app: App;
@@ -44,6 +48,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
   const [transferValue, setTransferValue] = useState('0');
   const [transferTo, setTransferTo] = useState('');
   const [serverUrl, setServerUrl] = useState('http://localhost');
+  const [users, setUsers] = useState([] as User[]);
 
   return (
     <Block
@@ -71,6 +76,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
               onSubmit={async () => {
                 setInit(State.INITIALIZING);
                 await app.init(serverUrl);
+                setUsers(await app.getUsers());
                 setTransferTo(app.getUser().publicKey.toString('hex'));
                 setInit(State.INITIALIZED);
               }}
@@ -87,7 +93,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
                 className="flex-free-expand"
                 size="s"
                 itemGroups={[{
-                  items: app.getUsers().map(({ id, publicKey }) => ({
+                  items: users.map(({ id, publicKey }) => ({
                     value: `${id}`,
                     title: publicKey.toString('hex').replace(/^(.{10})(.+)(.{4})$/, '$1...$3'),
                   })).concat([{
@@ -105,12 +111,13 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
                 value={`${userId}`}
                 onSelect={async (id: string) => {
                   if (id === 'new') {
-                    const user = await app.switchToNewUser();
+                    const user = await app.createUser();
+                    setUsers(await app.getUsers());
                     setUserId(user.id);
-                    return;
+                  } else {
+                    setUserId(parseInt(id, 10));
                   }
-                  await app.switchUser(+id);
-                  setUserId(parseInt(id, 10));
+                  await app.switchToUser(+id);
                 }}
                 highlightSelected
               />
@@ -162,7 +169,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
                   setTime(Date.now() - start);
                   setResult(ProofState.FINISHED);
                 } catch (e) {
-                  console.log(e); // tslint:disable-line no-console
+                  debug(e);
                   setResult(ProofState.FAILED);
                 }
               }}
@@ -188,7 +195,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
                   setTime(Date.now() - start);
                   setResult(ProofState.FINISHED);
                 } catch (e) {
-                  console.log(e); // tslint:disable-line no-console
+                  debug(e);
                   setResult(ProofState.FAILED);
                 }
               }}
@@ -221,7 +228,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
                   setTime(Date.now() - start);
                   setResult(ProofState.FINISHED);
                 } catch (e) {
-                  console.log(e); // tslint:disable-line no-console
+                  debug(e);
                   setResult(ProofState.FAILED);
                 }
               }}

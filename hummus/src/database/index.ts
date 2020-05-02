@@ -1,26 +1,14 @@
 import Dexie from 'dexie';
-import { Note as ProofNote } from 'barretenberg-es/client_proofs/note';
-import { TrackedNote } from '../note_picker';
 
-let db: Database;
-
-export class User {
+export class DbUser {
   constructor(
     public id: number,
     public publicKey: Uint8Array,
     public privateKey: Uint8Array,
   ) {}
-
-  toUser() {
-    return {
-      id: this.id,
-      privateKey: Buffer.from(this.privateKey),
-      publicKey: Buffer.from(this.publicKey),
-    };
-  }
 }
 
-export class Note {
+export class DbNote {
   constructor(
     public id: number,
     public value: number,
@@ -29,45 +17,55 @@ export class Note {
     public nullified: boolean,
     public owner: number,
   ) {}
-
-  async toTrackedNote(computeNullifier: (encryptedNote: Buffer, index: number, viewingKey: Buffer) => Buffer) {
-    const owner = await db.user.get(this.owner);
-    if (!owner) {
-      throw Error(`Owner '${this.owner}' not found.`);
-    }
-
-    const encryptedNote = Buffer.from(this.encrypted);
-    const viewingKeyBuf = Buffer.from(this.viewingKey);
-    const note = new ProofNote(Buffer.from(owner.publicKey), viewingKeyBuf, this.value);
-    const nullifier = computeNullifier(encryptedNote, this.id, viewingKeyBuf);
-    const trackedNote: TrackedNote = {
-      index: this.id,
-      nullifier,
-      note,
-    };
-    return trackedNote;
-  }
 }
 
-class Database extends Dexie {
-  user: Dexie.Table<User, number>;
-  note: Dexie.Table<Note, number>;
+export interface Database {
+  addNote(note: DbNote): Promise<void>;
+  nullifyNote(index: number): Promise<void>;
+  getUserNotes(userId: number): Promise<DbNote[]>;
+  getUser(userId: number): Promise<DbUser | undefined>;
+  getUsers(): Promise<DbUser[]>;
+  addUser(user: DbUser): Promise<void>;
+}
+
+export class DexieDatabase implements Database {
+  private dexie = new Dexie("hummus");
+  private user: Dexie.Table<DbUser, number>;
+  private note: Dexie.Table<DbNote, number>;
 
   constructor() {
-    super('hummus');
-
-    this.version(1).stores({
+    this.dexie.version(1).stores({
       user: '++id, publicKey, privateKey',
       note: '++id, value, nullified, owner',
     });
 
-    this.user = this.table('user');
-    this.note = this.table('note');
-    this.user.mapToClass(User);
-    this.note.mapToClass(Note);
+    this.user = this.dexie.table('user');
+    this.note = this.dexie.table('note');
+    this.user.mapToClass(DbUser);
+    this.note.mapToClass(DbNote);
+  }
+
+  async addNote(note: DbNote) {
+    await this.note.put(note);
+  }
+
+  async nullifyNote(index: number) {
+    await this.note.update(index, { nullified: true });
+  }
+
+  async getUserNotes(userId: number) {
+    return await this.note.filter(n => !n.nullified && n.owner === userId).toArray();
+  }
+
+  async getUser(userId: number) {
+    return await this.user.get(userId);
+  }
+
+  async getUsers() {
+    return await this.user.toArray();
+  }
+
+  async addUser(user: DbUser) {
+    await this.user.put(user);
   }
 }
-
-db = new Database();
-
-export { db };
