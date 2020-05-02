@@ -13,12 +13,7 @@ import { MemoryFifo } from "./fifo";
 import { RollupDb } from "./rollup_db";
 import { Rollup } from "./rollup";
 import { createConnection } from 'typeorm';
-
-interface Proof {
-  proofData: Buffer,
-  viewKey1: Buffer,
-  viewKey2: Buffer,
-};
+import { Proof } from 'barretenberg/rollup_provider';
 
 export class Server {
   private interval?: NodeJS.Timer;
@@ -115,11 +110,8 @@ export class Server {
     console.log("Done.");
   }
 
-  public async receiveTx(proof: Proof) {
-    const {
-      proofData,
-    } = proof;
-    const clientTx = new ClientTx(proof);
+  public async receiveTx({ proofData, encViewingKey1, encViewingKey2 }: Proof) {
+    const clientTx = new ClientTx(proofData);
 
     console.log(clientTx);
 
@@ -151,7 +143,7 @@ export class Server {
     };
     await this.rollupDb.addRollup(rollup);
 
-    this.blockchain.sendProof(proofData, rollup.rollupId);
+    this.blockchain.sendProof(proofData, rollup.rollupId, [encViewingKey1, encViewingKey2]);
   }
 
   public flushTxs() {}

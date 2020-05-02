@@ -56,14 +56,14 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     this.dataTreeSize += 2;
     this.blockchain.push(block);
 
-    await this.saveBlock(block, rollupId, viewingKeys);
+    await this.saveBlock(block, rollupId);
 
     console.log("Added block:", block);
 
     this.emit('block', block);
   }
 
-  private async saveBlock(block: Block, rollupId: number, viewingKeys: Buffer[]) {
+  private async saveBlock(block: Block, rollupId: number) {
     const blockDao = new BlockDao();
     blockDao.created = new Date();
     blockDao.id = block.blockNum;
@@ -71,7 +71,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     blockDao.dataStartIndex = block.dataStartIndex;
     blockDao.dataEntries = Buffer.concat(block.dataEntries);
     blockDao.nullifiers = Buffer.concat(block.nullifiers);
-    blockDao.viewingKeys = Buffer.concat(viewingKeys);
+    blockDao.viewingKeys = Buffer.concat(block.viewingKeys);
     await this.blockRep.save(blockDao);
   }
 
@@ -92,8 +92,8 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       for (let i = 0; i < b.nullifiers.length; i += 16) {
         block.nullifiers.push(b.nullifiers.slice(i, i + 16));
       }
-      for (let i = 0; i < b.viewingKeys.length; i += 48) {
-        block.viewingKeys.push(b.viewingKeys.slice(i, i + 48));
+      for (let i = 0; i < b.viewingKeys.length; i += 176) {
+        block.viewingKeys.push(b.viewingKeys.slice(i, i + 176));
       }
       return block;
     });

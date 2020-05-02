@@ -11,3 +11,5 @@ export interface BlockSource {
   on(event: 'block', fn: (block: Block) => void);
   removeAllListeners();
 }
+
+export * from './server_block_source';

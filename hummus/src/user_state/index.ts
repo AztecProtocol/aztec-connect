@@ -1,13 +1,13 @@
-import { JoinSplitProver } from 'barretenberg-es/client_proofs/join_split_proof';
 import { WorldState } from 'barretenberg-es/world_state';
 import { Block } from 'barretenberg-es/block_source';
-import { Note } from 'barretenberg-es/client_proofs/note';
+import { Note, decryptNote } from 'barretenberg-es/client_proofs/note';
 import createDebug from 'debug';
 import { Blake2s } from 'barretenberg-es/crypto/blake2s';
 import { EventEmitter } from 'events';
 import { NotePicker, TrackedNote } from '../note_picker';
 import { asyncMap } from '../utils/async';
 import { db, Note as NoteEntity } from '../database';
+import { Grumpkin } from 'barretenberg-es/ecc/grumpkin';
 
 const debug = createDebug('bb:user_state');
 
@@ -26,12 +26,7 @@ export class UserState extends EventEmitter {
   private notePicker = new NotePicker();
   private users: User[] = [];
 
-  constructor(
-    private user: User,
-    private joinSplitProver: JoinSplitProver,
-    worldState: WorldState,
-    private blake2s: Blake2s
-  ) {
+  constructor(private user: User, private grumpkin: Grumpkin, worldState: WorldState, private blake2s: Blake2s) {
     super();
     worldState.on('block', (b: Block) => this.processBlock(b));
   }
@@ -65,36 +60,30 @@ export class UserState extends EventEmitter {
   private processBlock(block: Block) {
     let update = false;
 
-    block.dataEntries.forEach((encryptedNote, i) => {
+    block.viewingKeys.forEach((encryptedNote, i) => {
       const index = block.dataStartIndex + i;
-      if (this.notePicker.hasNote(index)) return;
+      if (this.notePicker.hasNote(index)) {
+        return;
+      }
 
-      const viewingKey = computeViewingKey();
       this.users.find((user) => {
-        const { success, value } = this.joinSplitProver.decryptNote(encryptedNote, user.privateKey, viewingKey);
-        if (success) {
-          const note = new Note(user.publicKey, viewingKey, value);
-          const nullifier = this.computeNullifier(encryptedNote, index, viewingKey);
-          const trackedNote: TrackedNote = {
-            index,
-            nullifier,
-            note,
-          };
-          debug(`succesfully decrypted note ${index}:`, trackedNote);
-          db.note.put(new NoteEntity(
-            index,
-            value,
-            viewingKey,
-            encryptedNote,
-            false,
-            user.id,
-          ));
-          if (user.id === this.user.id) {
-            this.notePicker.addNote(trackedNote);
-            update = true;
-          }
+        const note = decryptNote(encryptedNote, user.privateKey, this.grumpkin);
+        if (!note) {
+          return undefined;
         }
-        return success;
+        const { secret, value } = note;
+        const nullifier = this.computeNullifier(encryptedNote, index, secret);
+        const trackedNote: TrackedNote = {
+          index,
+          nullifier,
+          note,
+        };
+        debug(`succesfully decrypted note ${index}:`, trackedNote);
+        db.note.put(new NoteEntity(index, value, secret, encryptedNote, false, user.id));
+        if (user.id === this.user.id) {
+          this.notePicker.addNote(trackedNote);
+          update = true;
+        }
       });
     });
 
@@ -118,10 +107,10 @@ export class UserState extends EventEmitter {
   }
 
   // [256 bits of encrypted note x coord][32 least sig bits of index][223 bits of note viewing key][1 bit is_real]
-  private computeNullifier = (encryptedNote: Buffer, index: number, viewingKey: Buffer) => {
+  private computeNullifier = (encryptedNote: Buffer, index: number, noteSecret: Buffer) => {
     const indexBuf = Buffer.alloc(4);
     indexBuf.writeUInt32BE(index, 0);
-    const nullifier = Buffer.concat([encryptedNote.slice(0, 32), indexBuf, viewingKey.slice(4, 32)]);
+    const nullifier = Buffer.concat([encryptedNote.slice(0, 32), indexBuf, noteSecret.slice(4, 32)]);
     nullifier.writeUInt8(nullifier.readUInt8(63) | 1, 63);
     return this.blake2s.hashToField(nullifier).slice(16, 32);
   };

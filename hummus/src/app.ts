@@ -1,4 +1,5 @@
 import { BlockSource } from 'barretenberg-es/block_source';
+import { LocalRollupProvider, RollupProvider, ServerRollupProvider } from 'barretenberg-es/rollup_provider';
 import { ServerBlockSource } from 'barretenberg-es/block_source/server_block_source';
 import { JoinSplitProver, JoinSplitVerifier } from 'barretenberg-es/client_proofs/join_split_proof';
 import { Prover } from 'barretenberg-es/client_proofs/prover';
@@ -16,12 +17,10 @@ import { EventEmitter } from 'events';
 import leveljs from 'level-js';
 import levelup from 'levelup';
 import { db, User as UserEntity } from './database';
-import { JoinSplitProofCreator } from './join_split_proof_creator';
-import { LocalRollupProvider } from './rollup_provider/local_rollup_provider';
-import { RollupProvider } from './rollup_provider/rollup_provider';
-import { ServerRollupProvider } from './rollup_provider/server_rollup_provider';
+import { JoinSplitProofCreator } from './join_split_proof';
 import { User, UserState } from './user_state';
 import { randomInt } from './utils/random';
+import { Grumpkin } from 'barretenberg-es/ecc/grumpkin';
 
 createDebug.enable('bb:*');
 const debug = createDebug('bb:app');
@@ -77,7 +76,8 @@ export class App extends EventEmitter {
     const leveldb = levelup(leveljs('hummus'));
     this.worldState = new WorldState(leveldb, pedersen, blake2s, this.blockSource);
 
-    this.userState = new UserState(this.user, this.joinSplitProver, this.worldState, blake2s);
+    const grumpkin = new Grumpkin(barretenberg);
+    this.userState = new UserState(this.user, grumpkin, this.worldState, blake2s);
     this.userState.on('updated', () => this.emit('updated'));
     const user = await this.userState.init();
     if (user) {
@@ -86,7 +86,7 @@ export class App extends EventEmitter {
       await this.switchToNewUser();
     }
 
-    this.joinSplitProofCreator = new JoinSplitProofCreator(this.joinSplitProver, this.userState, this.worldState);
+    this.joinSplitProofCreator = new JoinSplitProofCreator(this.joinSplitProver, this.userState, this.worldState, grumpkin);
 
     this.worldState.start();
 

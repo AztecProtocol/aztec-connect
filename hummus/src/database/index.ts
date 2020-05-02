@@ -4,22 +4,7 @@ import { TrackedNote } from '../note_picker';
 
 let db: Database;
 
-interface IUser {
-  id: number;
-  publicKey: Uint8Array;
-  privateKey: Uint8Array;
-}
-
-interface INote {
-  id: number;
-  value: number;
-  viewingKey: Uint8Array;
-  encrypted: Uint8Array;
-  nullified: boolean;
-  owner: number;
-}
-
-export class User implements IUser {
+export class User {
   constructor(
     public id: number,
     public publicKey: Uint8Array,
@@ -35,7 +20,7 @@ export class User implements IUser {
   }
 }
 
-export class Note implements INote {
+export class Note {
   constructor(
     public id: number,
     public value: number,
@@ -45,7 +30,7 @@ export class Note implements INote {
     public owner: number,
   ) {}
 
-  async toTrackedNote(computeNullifier: (encryptedNote: Buffer, index: number, viewingKey: Buffer) => Buffer): Promise<TrackedNote> {
+  async toTrackedNote(computeNullifier: (encryptedNote: Buffer, index: number, viewingKey: Buffer) => Buffer) {
     const owner = await db.user.get(this.owner);
     if (!owner) {
       throw Error(`Owner '${this.owner}' not found.`);
@@ -55,11 +40,12 @@ export class Note implements INote {
     const viewingKeyBuf = Buffer.from(this.viewingKey);
     const note = new ProofNote(Buffer.from(owner.publicKey), viewingKeyBuf, this.value);
     const nullifier = computeNullifier(encryptedNote, this.id, viewingKeyBuf);
-    return {
+    const trackedNote: TrackedNote = {
       index: this.id,
       nullifier,
       note,
     };
+    return trackedNote;
   }
 }
 

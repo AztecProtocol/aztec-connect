@@ -3,6 +3,7 @@ import compress from "koa-compress";
 import Router from "koa-router";
 import { Server } from "./server";
 import { PromiseReadable } from 'promise-readable';
+import { Proof } from 'barretenberg/rollup_provider';
 
 const cors = require("@koa/cors");
 
@@ -16,15 +17,11 @@ export function appFactory(server: Server, prefix: string) {
   router.post("/tx", async (ctx: Koa.Context) => {
     try {
       const stream = new PromiseReadable(ctx.req);
-      const {
-        proofData,
-        encryptedViewingKey1,
-        encryptedViewingKey2,
-      } = JSON.parse(await stream.readAll() as string);
-      const tx = {
+      const { proofData, encViewingKey1, encViewingKey2 } = JSON.parse(await stream.readAll() as string);
+      const tx: Proof = {
         proofData: Buffer.from(proofData, 'hex'),
-        encryptedViewingKey1: Buffer.from(encryptedViewingKey1, 'hex'),
-        encryptedViewingKey2: Buffer.from(encryptedViewingKey2, 'hex'),
+        encViewingKey1: Buffer.from(encViewingKey1, 'hex'),
+        encViewingKey2: Buffer.from(encViewingKey2, 'hex'),
       };
       await server.receiveTx(tx);
       ctx.status = 200;
