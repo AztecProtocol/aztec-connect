@@ -18,6 +18,8 @@ export class WorldState {
     } catch (e) {
       this.tree = new MerkleTree(this.db, this.pedersen, this.blake2s, 'data', 32);
     }
+    debug(`data size: ${this.tree.getSize()}`);
+    debug(`data root: ${this.tree.getRoot().toString('hex')}`);
   }
 
   public async processBlock(block: Block) {
@@ -25,7 +27,8 @@ export class WorldState {
     for (let i = 0; i < block.dataEntries.length; ++i) {
       await this.tree.updateElement(block.dataStartIndex + i, block.dataEntries[i]);
     }
-    debug('done.', block);
+    debug(`data size: ${this.tree.getSize()}`);
+    debug(`data root: ${this.tree.getRoot().toString('hex')}`);
   }
 
   public async getHashPath(index: number) {

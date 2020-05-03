@@ -2,8 +2,10 @@ import { parseAuthData, AuthData } from './parse_auth_data';
 import * as cbor from 'cbor';
 import { createHash, createVerify } from 'crypto';
 
+/* tslint:disable:no-console */
+
 async function makeCred(): Promise<AuthData> {
-  const id = Uint8Array.from(window.atob('MIIBkzCCATigAwIBAjCCAZMwggE4oAMCAQIwggGTMII='), c => c.charCodeAt(0));
+  const id = Uint8Array.from(window.atob('MIIBkzCCATigAwIBAjCCAZMwggE4oAMCAQIwggGTMII='), (c) => c.charCodeAt(0));
   const challenge = new Uint8Array(32);
   window.crypto.getRandomValues(challenge);
   const publicKey: PublicKeyCredentialCreationOptions = {
@@ -40,14 +42,14 @@ async function makeCred(): Promise<AuthData> {
 
   console.log(attestationResponse);
   // let attestationObjectBuffer = window.atob(attestationResponse.attestationObject);
-  let ctapMakeCredResp = cbor.decodeAllSync(Buffer.from(attestationResponse.attestationObject))[0];
+  const ctapMakeCredResp = cbor.decodeAllSync(Buffer.from(attestationResponse.attestationObject))[0];
   console.log(ctapMakeCredResp);
 
   return parseAuthData(ctapMakeCredResp.authData);
 }
 
 async function sign(credentialId: Buffer, challenge: Buffer) {
-  var publicKey: PublicKeyCredentialRequestOptions = {
+  const publicKey: PublicKeyCredentialRequestOptions = {
     challenge,
     allowCredentials: [{ type: 'public-key', id: credentialId }],
     userVerification: 'required',
@@ -114,13 +116,13 @@ export async function doTheThings() {
   const clientDataJson = JSON.parse(clientDataJsonStr);
   console.log(clientDataJson);
   if (!challenge.equals(Buffer.from(clientDataJson.challenge, 'base64'))) {
-    throw 'Challenge unequal.';
+    throw new Error('Challenge unequal.');
   }
-  if (clientDataJson.origin != window.location.origin) {
-    throw 'Origin unequal.';
+  if (clientDataJson.origin !== window.location.origin) {
+    throw new Error('Origin unequal.');
   }
-  if (clientDataJson.type != 'webauthn.get') {
-    throw 'Type unequal.';
+  if (clientDataJson.type !== 'webauthn.get') {
+    throw new Error('Type unequal.');
   }
 
   const authDataBuf = Buffer.from(signResponse.authenticatorData);
@@ -135,24 +137,20 @@ export async function doTheThings() {
     throw new Error('User was not verified during authentication!');
   }
 
-  const clientDataHash = createHash('sha256')
-    .update(clientDataJsonStr)
-    .digest();
+  const clientDataHash = createHash('sha256').update(clientDataJsonStr).digest();
   const signatureBase = Buffer.concat([authDataBuf, clientDataHash]);
   const publicKey = ASN1toPEM(creds.pubKey);
   console.log(publicKey);
   console.log('length of message: ', signatureBase.length);
 
-  const verified = createVerify('sha256')
-    .update(signatureBase)
-    .verify(publicKey, Buffer.from(signResponse.signature));
+  const verified = createVerify('sha256').update(signatureBase).verify(publicKey, Buffer.from(signResponse.signature));
 
   console.log(verified);
 }
 
 function ASN1toPEM(pkBuffer: Buffer) {
   let type;
-  if (pkBuffer.length == 65 && pkBuffer[0] == 0x04) {
+  if (pkBuffer.length === 65 && pkBuffer[0] === 0x04) {
     pkBuffer = Buffer.concat([Buffer.from('3059301306072a8648ce3d020106082a8648ce3d030107034200', 'hex'), pkBuffer]);
 
     type = 'PUBLIC KEY';

@@ -22,7 +22,6 @@ import { Grumpkin } from 'barretenberg-es/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg-es/fifo';
 import { User, createUser } from './user';
 
-createDebug.enable('bb:*');
 const debug = createDebug('bb:app');
 
 function dbUserToUser(dbUser: DbUser): User {
@@ -121,7 +120,7 @@ export class App extends EventEmitter {
 
   private initServerRollupProvider(serverUrl: string) {
     const url = new URL(serverUrl);
-    const fromBlock = window.localStorage.getItem('syncedToBlock') || 0;
+    const fromBlock = window.localStorage.getItem('syncedToBlock') || -1;
     const sbs = new ServerBlockSource(url, +fromBlock + 1);
     this.rollupProvider = new ServerRollupProvider(url);
     this.blockSource = sbs;

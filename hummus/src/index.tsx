@@ -4,6 +4,7 @@ import { FlexBox, Block } from '@aztec/guacamole-ui';
 import { App } from './app';
 import { JoinSplitForm } from './join_split_form';
 import './styles/guacamole.css';
+import debug from 'debug';
 require('barretenberg-es/wasm/barretenberg.wasm');
 
 interface LandingPageProps {
@@ -12,10 +13,7 @@ interface LandingPageProps {
 
 function LandingPage({ app }: LandingPageProps) {
   return (
-    <Block
-      padding="xl"
-      align="center"
-    >
+    <Block padding="xl" align="center">
       <FlexBox align="center">
         <JoinSplitForm app={app} />
       </FlexBox>
@@ -24,13 +22,9 @@ function LandingPage({ app }: LandingPageProps) {
 }
 
 async function main() {
+  debug.enable('bb:*');
   const app = new App();
-  ReactDOM.render(<LandingPage app={app}/>, document.getElementById('root'));
-
-  const dropdowns = document.getElementsByClassName('popup_popup-menu__1lw');
-  for(const dropdown of dropdowns) {
-    dropdown.style.backgroundColor = 'blue';
-  }
+  ReactDOM.render(<LandingPage app={app} />, document.getElementById('root'));
 }
 
 // tslint:disable-next-line:no-console

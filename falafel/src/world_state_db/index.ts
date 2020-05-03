@@ -8,8 +8,7 @@ export class WorldStateDb {
   private roots: Buffer[] = [];
   private sizes: bigint[] = [];
 
-  constructor() {
-  }
+  constructor() {}
 
   public async start() {
     await this.launch();
@@ -60,13 +59,13 @@ export class WorldStateDb {
   }
 
   public async commit() {
-    const buffer = Buffer.from([ 0x02 ]);
+    const buffer = Buffer.from([0x02]);
     this.proc!.stdin!.write(buffer);
     await this.stdout.read(1);
   }
 
   public async rollback() {
-    const buffer = Buffer.from([ 0x03 ]);
+    const buffer = Buffer.from([0x03]);
     this.proc!.stdin!.write(buffer);
     await this.stdout.read(1);
   }
@@ -79,9 +78,9 @@ export class WorldStateDb {
     const binPath = '../barretenberg/build/src/aztec/rollup/db_cli/db_cli';
     const proc = (this.proc = spawn(binPath));
 
-    proc.stderr.on('data', data => {});
+    proc.stderr.on('data', (data) => {});
     // proc.stderr.on('data', data => console.log(data.toString().trim()));
-    proc.on('close', code => {
+    proc.on('close', (code) => {
       this.proc = undefined;
       if (code) {
         console.log(`db_cli exited with unexpected code ${code}.`);
@@ -94,8 +93,8 @@ export class WorldStateDb {
 
     this.roots[0] = await this.stdout.read(32);
     this.roots[1] = await this.stdout.read(32);
-    const dataSize = await this.stdout.read(16) as Buffer;
-    const nullifierSize = await this.stdout.read(16) as Buffer;
+    const dataSize = (await this.stdout.read(16)) as Buffer;
+    const nullifierSize = (await this.stdout.read(16)) as Buffer;
     this.sizes[0] = toBigIntBE(dataSize);
     this.sizes[1] = toBigIntBE(nullifierSize);
   }

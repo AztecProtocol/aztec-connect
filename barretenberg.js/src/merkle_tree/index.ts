@@ -169,11 +169,13 @@ export class MerkleTree {
     }
     const newRoot = this.fieldCompressor.compress(left, right);
     await this.db.put(newRoot, Buffer.concat([left, right]));
-    await this.db.del(root);
+    if (!root.equals(newRoot)) {
+      await this.db.del(root);
+    }
     return newRoot;
   }
 
-  private async dbGet(key: Buffer): Promise<Buffer> {
+  private async dbGet(key: Buffer): Promise<Buffer | undefined> {
     return this.db.get(key).catch(() => {});
   }
 }

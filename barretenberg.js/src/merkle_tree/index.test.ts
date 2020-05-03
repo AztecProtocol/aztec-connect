@@ -17,7 +17,7 @@ describe('merkle_tree', () => {
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
 
-    for (let i = 0; i < 4; ++i) {
+    for (let i = 0; i < 10; ++i) {
       const v = Buffer.alloc(64, 0);
       v.writeUInt32LE(i, 0);
       values[i] = v;
@@ -45,12 +45,18 @@ describe('merkle_tree', () => {
       expect(await tree.getElement(i)).toEqual(values[i]);
     }
 
-    let expected = [[e00, e01], [e10, e11]];
+    let expected = [
+      [e00, e01],
+      [e10, e11],
+    ];
 
     expect(await tree.getHashPath(0)).toEqual(expected);
     expect(await tree.getHashPath(1)).toEqual(expected);
 
-    expected = [[e02, e03], [e10, e11]];
+    expected = [
+      [e02, e03],
+      [e10, e11],
+    ];
 
     expect(await tree.getHashPath(2)).toEqual(expected);
     expect(await tree.getHashPath(3)).toEqual(expected);
@@ -66,6 +72,23 @@ describe('merkle_tree', () => {
     const tree = await MerkleTree.new(db, pedersen, blake2s, 'test', 10);
     const root = tree.getRoot();
     expect(root).toEqual(Buffer.from('28703b88327e4d75dca124b208f36f39915714fe14cb9bb2f852afc1aa9244be', 'hex'));
+  });
+
+  it('should have same result when setting same values', async () => {
+    const db = levelup(memdown());
+    const tree = await MerkleTree.new(db, pedersen, blake2s, 'test', 10);
+
+    for (let i = 0; i < 10; ++i) {
+      await tree.updateElement(i, values[i]);
+    }
+    const root1 = tree.getRoot();
+
+    for (let i = 0; i < 10; ++i) {
+      await tree.updateElement(i, values[i]);
+    }
+    const root2 = tree.getRoot();
+
+    expect(root1).toEqual(root2);
   });
 
   it('should be able to restore from previous data', async () => {
