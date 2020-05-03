@@ -2,7 +2,6 @@ import { Note } from 'barretenberg-es/client_proofs/note';
 
 export interface TrackedNote {
   index: number;
-  nullifier: Buffer;
   note: Note;
 }
 

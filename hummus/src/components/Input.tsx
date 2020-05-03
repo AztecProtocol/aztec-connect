@@ -9,7 +9,7 @@ interface InputProps {
   error?: string;
 }
 
-export default function Input({
+export function Input({
   type = 'text',
   label,
   value,

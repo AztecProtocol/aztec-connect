@@ -1,6 +1,6 @@
 import { randomInts } from '../utils/random';
-import SortedNotes from './sorted_notes';
-import { TrackedNote, noteSum } from './note';
+import { SortedNotes } from './sorted_notes';
+import { TrackedNote, noteSum } from './tracked_note';
 
 export const getStartIndex = (
   sortedNotes: SortedNotes,

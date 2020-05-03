@@ -8,13 +8,16 @@ import levelup from 'levelup';
 import memdown from 'memdown';
 import { Blake2s } from '../../crypto/blake2s';
 import { Pedersen } from '../../crypto/pedersen';
-import { Note } from '../note';
+import { Note, createNoteSecret } from '../note';
 import { EventEmitter } from 'events';
 import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
 import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
 import { Prover } from '../prover';
+import { JoinSplitProof } from './join_split_proof';
+import { computeNullifier } from './compute_nullifier';
+import { randomBytes } from 'crypto';
 
 const debug = createDebug('bb:join_split_proof');
 
@@ -32,10 +35,6 @@ describe('join_split_proof', () => {
   const privateKey = Buffer.from([
     0x0b, 0x9b, 0x3a, 0xde, 0xe6, 0xb3, 0xd8, 0x1b, 0x28, 0xa0, 0x88, 0x6b, 0x2a, 0x84, 0x15, 0xc7,
     0xda, 0x31, 0x29, 0x1a, 0x5e, 0x96, 0xbb, 0x7a, 0x56, 0x63, 0x9e, 0x17, 0x7d, 0x30, 0x1b, 0xeb ]);
-  // prettier-ignore
-  const viewingKey = Buffer.from([
-    0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
-    0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11 ]);
 
   beforeAll(async () => {
       EventEmitter.defaultMaxListeners = 32;
@@ -70,18 +69,20 @@ describe('join_split_proof', () => {
 
   it('should decrypt note', () => {
     const pubKey = schnorr.computePublicKey(privateKey);
-    const note = new Note(pubKey, viewingKey, 100);
+    const secret = randomBytes(32);
+    const note = new Note(pubKey, secret, 100);
     const encryptedNote = joinSplitProver.encryptNote(note);
-    const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, viewingKey);
+    const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, secret);
     expect(success).toBe(true);
     expect(value).toBe(100);
   }, 60000);
 
   it('should not decrypt note', () => {
     const pubKey = schnorr.computePublicKey(privateKey);
-    const note = new Note(pubKey, viewingKey, 2000);
+    const secret = randomBytes(32);
+    const note = new Note(pubKey, secret, 2000);
     const encryptedNote = joinSplitProver.encryptNote(note);
-    const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, viewingKey);
+    const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, secret);
     expect(success).toBe(false);
   }, 60000);
 
@@ -96,10 +97,10 @@ describe('join_split_proof', () => {
 
     it('should construct join split proof', async () => {
       const pubKey = schnorr.computePublicKey(privateKey);
-      const inputNote1 = new Note(pubKey, viewingKey, 100);
-      const inputNote2 = new Note(pubKey, viewingKey, 50);
-      const outputNote1 = new Note(pubKey, viewingKey, 70);
-      const outputNote2 = new Note(pubKey, viewingKey, 80);
+      const inputNote1 = new Note(pubKey, createNoteSecret(), 100);
+      const inputNote2 = new Note(pubKey, createNoteSecret(), 50);
+      const outputNote1 = new Note(pubKey, randomBytes(32), 70);
+      const outputNote2 = new Note(pubKey, randomBytes(32), 80);
 
       const inputNote1Enc = await joinSplitProver.encryptNote(inputNote1);
       const inputNote2Enc = await joinSplitProver.encryptNote(inputNote2);
@@ -134,7 +135,12 @@ describe('join_split_proof', () => {
       const verified = await joinSplitVerifier.verifyProof(proof);
       expect(verified).toBe(true);
 
-      debug(`mem: ${await barretenberg.getMemory().length}`);
+      const joinSplitProof = new JoinSplitProof(proof);
+
+      const expectedNullifier1 = computeNullifier(inputNote1Enc, 0, inputNote1.secret, blake2s);
+      const expectedNullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, blake2s);
+      expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
+      expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
     }, 120000);
   });
 });

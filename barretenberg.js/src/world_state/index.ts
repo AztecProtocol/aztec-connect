@@ -25,10 +25,11 @@ export class WorldState {
   }
 
   public async processBlock(block: Block) {
-    debug('received block', block);
+    debug('processing block...', block);
     for (let i = 0; i < block.dataEntries.length; ++i) {
       await this.tree.updateElement(block.dataStartIndex + i, block.dataEntries[i]);
     }
+    debug('done.', block);
   }
 
   public async getHashPath(index: number) {

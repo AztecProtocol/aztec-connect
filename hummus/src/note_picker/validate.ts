@@ -1,7 +1,7 @@
-import SortedNotes from './sorted_notes';
-import { noteSum } from './note';
+import { SortedNotes } from './sorted_notes';
+import { noteSum } from './tracked_note';
 
-export default function validate(
+export function validate(
   sortedNotes: SortedNotes,
   value: number,
   numberOfNotes: number,

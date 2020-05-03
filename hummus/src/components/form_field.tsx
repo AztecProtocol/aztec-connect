@@ -6,7 +6,7 @@ interface FormFieldProps {
   children: React.ReactNode;
 }
 
-export default function FormField({
+export function FormField({
   label,
   children,
 }: FormFieldProps) {

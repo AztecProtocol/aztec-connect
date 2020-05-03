@@ -15,6 +15,12 @@ export class Note {
   }
 }
 
+export function createNoteSecret() {
+  const key = randomBytes(32);
+  key[0] &= 0x1f;
+  return key;
+}
+
 export function encryptNote(note: Note, grumpkin: Grumpkin) {
   const ephPrivKey = randomBytes(32);
   const ephPubKey = grumpkin.mul(Grumpkin.one, ephPrivKey);

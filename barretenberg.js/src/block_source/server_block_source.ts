@@ -34,7 +34,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
           this.fromBlock = block.blockNum + 1;
         }
       } catch(err) {
-        debug(err);
+        // debug(err);
       }
 
       await new Promise(resolve => setTimeout(resolve, 1000));

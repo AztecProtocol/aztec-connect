@@ -1,9 +1,9 @@
-import { TrackedNote as _TrackedNote } from './note';
-import SortedNotes from './sorted_notes';
-import validate from './validate';
+import { TrackedNote } from './tracked_note';
+import { SortedNotes } from './sorted_notes';
+import { validate } from './validate';
 import { pick } from './pick';
 
-export type TrackedNote = _TrackedNote;
+export * from './tracked_note';
 
 export class NotePicker {
   private sortedNotes: SortedNotes;
@@ -24,8 +24,12 @@ export class NotePicker {
     this.sortedNotes.bulkAdd(notes);
   }
 
-  removeNote(note: TrackedNote) {
-    this.sortedNotes.remove(note);
+  removeNote(index: number) {
+    const note = this.sortedNotes.find((n) => n.index === index);
+    if (note) {
+      this.sortedNotes.remove(note);
+    }
+    return note;
   }
 
   hasNote(index: number) {

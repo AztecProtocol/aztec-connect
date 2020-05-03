@@ -1,7 +1,7 @@
 import * as random from '../utils/random';
 import { pick, getStartIndex } from './pick';
-import SortedNotes from './sorted_notes';
-import { TrackedNote } from './note';
+import { SortedNotes } from './sorted_notes';
+import { TrackedNote } from './tracked_note';
 
 const toSortedNotes = (values: number[]) => {
   const notes = values.map((value, index) => ({

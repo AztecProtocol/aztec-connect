@@ -35,7 +35,7 @@ enum ApiNames {
   TRANSFER,
 }
 
-export default function JoinSplitForm({ app }: JoinSplitFormProps) {
+export function JoinSplitForm({ app }: JoinSplitFormProps) {
   const [init, setInit] = useState(State.UNINITIALIZED);
   const [result, setResult] = useState(ProofState.NADA);
   const [time, setTime] = useState(0);
@@ -76,7 +76,7 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
               onSubmit={async () => {
                 setInit(State.INITIALIZING);
                 await app.init(serverUrl);
-                setUsers(await app.getUsers());
+                setUsers(app.getUsers());
                 setTransferTo(app.getUser().publicKey.toString('hex'));
                 setInit(State.INITIALIZED);
               }}
@@ -112,12 +112,13 @@ export default function JoinSplitForm({ app }: JoinSplitFormProps) {
                 onSelect={async (id: string) => {
                   if (id === 'new') {
                     const user = await app.createUser();
-                    setUsers(await app.getUsers());
+                    setUsers(app.getUsers());
                     setUserId(user.id);
+                    await app.switchToUser(user.id);
                   } else {
-                    setUserId(parseInt(id, 10));
+                    setUserId(+id);
+                    await app.switchToUser(+id);
                   }
-                  await app.switchToUser(+id);
                 }}
                 highlightSelected
               />

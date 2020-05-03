@@ -14,6 +14,7 @@ export class DbNote {
     public value: number,
     public viewingKey: Uint8Array,
     public encrypted: Uint8Array,
+    public nullifier: Uint8Array,
     public nullified: boolean,
     public owner: number,
   ) {}
@@ -21,6 +22,7 @@ export class DbNote {
 
 export interface Database {
   addNote(note: DbNote): Promise<void>;
+  getNote(userId: number, nullifier: Uint8Array): Promise<DbNote | undefined>;
   nullifyNote(index: number): Promise<void>;
   getUserNotes(userId: number): Promise<DbNote[]>;
   getUser(userId: number): Promise<DbUser | undefined>;
@@ -47,6 +49,10 @@ export class DexieDatabase implements Database {
 
   async addNote(note: DbNote) {
     await this.note.put(note);
+  }
+
+  async getNote(userId: number, nullifier: Buffer) {
+    return (await this.note.filter(n => nullifier.equals(Buffer.from(n.nullifier)) && n.owner === userId).toArray())[0];
   }
 
   async nullifyNote(index: number) {

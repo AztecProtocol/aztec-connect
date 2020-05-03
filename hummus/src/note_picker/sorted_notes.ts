@@ -1,6 +1,6 @@
-import { TrackedNote } from './note';
+import { TrackedNote } from './tracked_note';
 
-export default class SortedNotes {
+export class SortedNotes {
   private sortedNotes: TrackedNote[] = [];
 
   constructor(notes: TrackedNote[] = []) {

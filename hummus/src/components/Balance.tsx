@@ -5,7 +5,7 @@ interface BalanceProps {
   app: App;
 }
 
-export default function Balance({ app }: BalanceProps) {
+export function Balance({ app }: BalanceProps) {
   const [bindListener, setBindListener] = useState(false);
   const [balance, setBalance] = useState(0);
 

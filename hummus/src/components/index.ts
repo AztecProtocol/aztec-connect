@@ -1,9 +1,3 @@
-import Balance from './Balance';
-import FormField from './FormField';
-import Input from './Input';
-
-export {
-  Balance,
-  FormField,
-  Input,
-};
+export * from './balance';
+export * from './form_field';
+export * from './input';

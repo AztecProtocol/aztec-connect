@@ -1,6 +1,6 @@
 import createDebug from 'debug';
 import { JoinSplitProver, JoinSplitTx } from 'barretenberg-es/client_proofs/join_split_proof';
-import { Note, encryptNote } from 'barretenberg-es/client_proofs/note';
+import { Note, encryptNote, createNoteSecret } from 'barretenberg-es/client_proofs/note';
 import { WorldState } from 'barretenberg-es/world_state';
 import { UserState } from '../user_state';
 import { randomBytes } from 'crypto';
@@ -29,8 +29,7 @@ export class JoinSplitProofCreator {
     while (notes.length < 2) {
       notes.push({
         index: notes.length,
-        nullifier: new Buffer([]),
-        note: new Note(sender.publicKey, randomBytes(32), 0),
+        note: new Note(sender.publicKey, createNoteSecret(), 0),
       });
     }
 
@@ -42,8 +41,8 @@ export class JoinSplitProofCreator {
     const sendValue = transfer + deposit;
     const changeValue = totalNoteInputValue - transfer - widthraw;
     const outputNotes = [
-      new Note(sendValue ? receiverPubKey : randomBytes(64), randomBytes(32), sendValue),
-      new Note(changeValue ? sender.publicKey : randomBytes(64), randomBytes(32), changeValue),
+      new Note(sendValue ? receiverPubKey : randomBytes(64), createNoteSecret(), sendValue),
+      new Note(changeValue ? sender.publicKey : randomBytes(64), createNoteSecret(), changeValue),
     ];
 
     const encViewingKey1 = encryptNote(outputNotes[0], this.grumpkin);

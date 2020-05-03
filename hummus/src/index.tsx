@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { FlexBox, Block } from '@aztec/guacamole-ui';
 import { App } from './app';
-import JoinSplitForm from './join_split_form';
+import { JoinSplitForm } from './join_split_form';
 import { User } from './user';
 import './styles/guacamole.css';
 require('barretenberg-es/wasm/barretenberg.wasm');
