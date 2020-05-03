@@ -49,14 +49,14 @@ export function parseAuthData(buffer: Buffer): AuthData {
     // Attested Data
     if (buffer.byteLength < attestationMinLen)
       throw new Error(
-        `It seems as the Attestation Data flag is set, but the remaining data is smaller than ${attestationMinLen} bytes. You might have set AT flag for the assertion response.`
+        `It seems as the Attestation Data flag is set, but the remaining data is smaller than ${attestationMinLen} bytes. You might have set AT flag for the assertion response.`,
       );
 
     aaguid = buffer.slice(0, 16).toString('hex');
     buffer = buffer.slice(16);
     aaguidBuffer = `${aaguid.slice(0, 8)}-${aaguid.slice(8, 12)}-${aaguid.slice(12, 16)}-${aaguid.slice(
       16,
-      20
+      20,
     )}-${aaguid.slice(20)}`;
 
     let credIdLenBuffer = buffer.slice(0, 2);

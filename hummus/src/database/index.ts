@@ -12,7 +12,7 @@ export class DbNote {
     public encrypted: Uint8Array,
     public nullifier: Uint8Array,
     public nullified: boolean,
-    public owner: number
+    public owner: number,
   ) {}
 }
 

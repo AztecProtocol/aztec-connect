@@ -1,23 +1,23 @@
-import Koa from "koa";
-import compress from "koa-compress";
-import Router from "koa-router";
-import { Server } from "./server";
+import Koa from 'koa';
+import compress from 'koa-compress';
+import Router from 'koa-router';
+import { Server } from './server';
 import { PromiseReadable } from 'promise-readable';
 import { Proof } from 'barretenberg/rollup_provider';
 
-const cors = require("@koa/cors");
+const cors = require('@koa/cors');
 
 export function appFactory(server: Server, prefix: string) {
   const router = new Router({ prefix });
 
-  router.get("/", async (ctx: Koa.Context) => {
-    ctx.body = "OK\n";
+  router.get('/', async (ctx: Koa.Context) => {
+    ctx.body = 'OK\n';
   });
 
-  router.post("/tx", async (ctx: Koa.Context) => {
+  router.post('/tx', async (ctx: Koa.Context) => {
     try {
       const stream = new PromiseReadable(ctx.req);
-      const { proofData, encViewingKey1, encViewingKey2 } = JSON.parse(await stream.readAll() as string);
+      const { proofData, encViewingKey1, encViewingKey2 } = JSON.parse((await stream.readAll()) as string);
       const tx: Proof = {
         proofData: Buffer.from(proofData, 'hex'),
         encViewingKey1: Buffer.from(encViewingKey1, 'hex'),
@@ -32,7 +32,7 @@ export function appFactory(server: Server, prefix: string) {
     }
   });
 
-  router.get("/get-blocks", async (ctx: Koa.Context) => {
+  router.get('/get-blocks', async (ctx: Koa.Context) => {
     const blocks = server.getBlocks(+ctx.query['from']);
     ctx.body = blocks.map(({ blockNum, dataStartIndex, dataEntries, nullifiers, viewingKeys }) => ({
       blockNum,
@@ -43,7 +43,7 @@ export function appFactory(server: Server, prefix: string) {
     }));
   });
 
-  router.post("/flush", async (ctx: Koa.Context) => {
+  router.post('/flush', async (ctx: Koa.Context) => {
     try {
       await server.flushTxs();
       ctx.status = 200;

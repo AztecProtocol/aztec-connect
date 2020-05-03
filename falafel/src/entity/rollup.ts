@@ -9,11 +9,7 @@ export class RollupDao {
   @Column()
   public created!: Date;
 
-  @OneToMany(
-    type => RollupTxDao,
-    tx => tx.rollupId,
-    { cascade: true },
-  )
+  @OneToMany(type => RollupTxDao, tx => tx.rollupId, { cascade: true })
   public txs!: RollupTxDao[];
 
   @Column({ nullable: true })

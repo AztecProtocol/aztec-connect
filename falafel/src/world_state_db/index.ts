@@ -78,9 +78,9 @@ export class WorldStateDb {
     const binPath = '../barretenberg/build/src/aztec/rollup/db_cli/db_cli';
     const proc = (this.proc = spawn(binPath));
 
-    proc.stderr.on('data', (data) => {});
+    proc.stderr.on('data', data => {});
     // proc.stderr.on('data', data => console.log(data.toString().trim()));
-    proc.on('close', (code) => {
+    proc.on('close', code => {
       this.proc = undefined;
       if (code) {
         console.log(`db_cli exited with unexpected code ${code}.`);

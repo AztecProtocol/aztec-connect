@@ -15,7 +15,7 @@ export class JoinSplitProofCreator {
     private joinSplitProver: JoinSplitProver,
     private userState: UserState,
     private worldState: WorldState,
-    private grumpkin: Grumpkin
+    private grumpkin: Grumpkin,
   ) {}
 
   public async createProof(deposit: number, widthraw: number, transfer: number, sender: User, receiverPubKey: Buffer) {
@@ -59,7 +59,7 @@ export class JoinSplitProofCreator {
       inputNotePaths,
       inputNotes,
       outputNotes,
-      signature
+      signature,
     );
 
     debug(tx);

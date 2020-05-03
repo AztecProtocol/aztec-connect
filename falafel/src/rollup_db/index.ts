@@ -16,7 +16,7 @@ export class RollupDb {
   async addRollup(rollup: Rollup) {
     const rollupDao = new RollupDao();
     rollupDao.created = new Date();
-    rollupDao.id = rollup.rollupId
+    rollupDao.id = rollup.rollupId;
     rollupDao.txs = rollup.txs.map(tx => {
       const txDao = new RollupTxDao();
       txDao.merkleRoot = tx.noteTreeRoot;
@@ -30,7 +30,7 @@ export class RollupDb {
     });
     await this.rollupRep.save(rollupDao);
 
-    this.rollupId++
+    this.rollupId++;
   }
 
   getNextRollupId() {

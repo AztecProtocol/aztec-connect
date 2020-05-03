@@ -53,7 +53,7 @@ export class BarretenbergWasm extends EventEmitter {
           const m = this.getMemory();
           let i = addr;
           for (; m[i] !== 0; ++i);
-          const decoder = isNode ? new (require('util')).TextDecoder() : new TextDecoder();
+          const decoder = isNode ? new (require('util').TextDecoder)() : new TextDecoder();
           const str = decoder.decode(m.slice(addr, i));
           const str2 = `${str} (mem:${m.length})`;
           this.emit('log', str2);

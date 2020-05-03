@@ -25,9 +25,7 @@ export function encryptNote(note: Note, grumpkin: Grumpkin) {
   const ephPrivKey = randomBytes(32);
   const ephPubKey = grumpkin.mul(Grumpkin.one, ephPrivKey);
   const P = grumpkin.mul(note.ownerPubKey, ephPrivKey);
-  const hash = createHash('sha256')
-    .update(P)
-    .digest();
+  const hash = createHash('sha256').update(P).digest();
   const aesKey = hash.slice(0, 16);
   const iv = hash.slice(16, 32);
 
@@ -40,9 +38,7 @@ export function decryptNote(encryptedNote: Buffer, privateKey: Buffer, grumpkin:
 
   const ephPubKey = encryptedNote.slice(-64);
   const P = grumpkin.mul(ephPubKey, privateKey);
-  const hash = createHash('sha256')
-    .update(P)
-    .digest();
+  const hash = createHash('sha256').update(P).digest();
   const aesKey = hash.slice(0, 16);
   const iv = hash.slice(16, 32);
 

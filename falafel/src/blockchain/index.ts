@@ -72,7 +72,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
   private async loadBlocks() {
     const blockDaos = await this.blockRep.find();
-    return blockDaos.map((b) => {
+    return blockDaos.map(b => {
       const block: Block = {
         blockNum: b.id,
         rollupId: b.rollupId,

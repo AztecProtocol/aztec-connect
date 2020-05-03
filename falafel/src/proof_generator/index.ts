@@ -29,7 +29,7 @@ export class ProofGenerator extends EventEmitter {
         let buffer = block.toBuffer();
         this.proc!.stdin!.write(buffer);
 
-        const header = await stdout.read(8) as Buffer | undefined;
+        const header = (await stdout.read(8)) as Buffer | undefined;
 
         if (!header) {
           console.log('Failed to read header.');
@@ -38,7 +38,7 @@ export class ProofGenerator extends EventEmitter {
 
         const blockNum = header.readUInt32BE(0);
         const proofLength = header.readUInt32BE(4);
-        const data = await stdout.read(proofLength) as Buffer | undefined;
+        const data = (await stdout.read(proofLength)) as Buffer | undefined;
 
         if (!data) {
           console.log('Failed to read data.');

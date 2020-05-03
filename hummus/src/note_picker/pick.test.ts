@@ -11,7 +11,7 @@ const toSortedNotes = (values: number[]) => {
         note: {
           value,
         },
-      } as TrackedNote)
+      } as TrackedNote),
   );
   return new SortedNotes(notes);
 };

@@ -1,7 +1,7 @@
-import { WorldStateDb } from "./index";
-import { randomBytes } from "crypto";
+import { WorldStateDb } from './index';
+import { randomBytes } from 'crypto';
 
-describe("world_state_db", () => {
+describe('world_state_db', () => {
   let worldStateDb: WorldStateDb;
 
   beforeEach(async () => {
@@ -14,7 +14,7 @@ describe("world_state_db", () => {
     worldStateDb.stop();
   });
 
-  it("should be initialized with correct metadata", async () => {
+  it('should be initialized with correct metadata', async () => {
     // prettier-ignore
     const expectedDataRoot = Buffer.from([
       0x1d, 0xf6, 0xbd, 0xe5, 0x05, 0x16, 0xdd, 0x12, 0x01, 0x08, 0x8f, 0xd8, 0xdd, 0xa8, 0x4c, 0x97,
@@ -33,12 +33,12 @@ describe("world_state_db", () => {
     expect(worldStateDb.getSize(1)).toEqual(0n);
   });
 
-  it("should get correct value", async () => {
+  it('should get correct value', async () => {
     const buffer = await worldStateDb.get(0, 0n);
     expect(buffer).toEqual(Buffer.alloc(64, 0));
   });
 
-  it("should update value", async () => {
+  it('should update value', async () => {
     const value = Buffer.alloc(64, 5);
     const root = await worldStateDb.put(0, 0n, value);
 
@@ -55,9 +55,9 @@ describe("world_state_db", () => {
     expect(worldStateDb.getSize(0)).toEqual(1n);
   });
 
-  it("should update multiple values", async () => {
+  it('should update multiple values', async () => {
     const num = 1024;
-    const values = new Array(num).fill(0).map((_) => randomBytes(64));
+    const values = new Array(num).fill(0).map(_ => randomBytes(64));
     for (let i = 0; i < num; ++i) {
       await worldStateDb.put(0, BigInt(i), values[i]);
     }
@@ -70,7 +70,7 @@ describe("world_state_db", () => {
     expect(worldStateDb.getSize(0)).toEqual(BigInt(num));
   }, 60000);
 
-  it("should update same value in both trees", async () => {
+  it('should update same value in both trees', async () => {
     const value1 = Buffer.alloc(64, 5);
     const value2 = Buffer.alloc(64, 6);
     await worldStateDb.put(0, 10n, value1);

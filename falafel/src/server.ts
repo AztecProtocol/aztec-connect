@@ -38,7 +38,7 @@ export class Server {
     this.printState();
     await this.createJoinSplitVerifier();
     this.interval = setInterval(() => this.flushTxs(), this.maxBlockInterval);
-    this.blockchain.on('block', (b) => this.blockQueue.put(b));
+    this.blockchain.on('block', b => this.blockQueue.put(b));
     this.processQueue();
   }
 

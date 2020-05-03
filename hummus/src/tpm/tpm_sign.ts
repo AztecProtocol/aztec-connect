@@ -5,7 +5,7 @@ import { createHash, createVerify } from 'crypto';
 /* tslint:disable:no-console */
 
 async function makeCred(): Promise<AuthData> {
-  const id = Uint8Array.from(window.atob('MIIBkzCCATigAwIBAjCCAZMwggE4oAMCAQIwggGTMII='), (c) => c.charCodeAt(0));
+  const id = Uint8Array.from(window.atob('MIIBkzCCATigAwIBAjCCAZMwggE4oAMCAQIwggGTMII='), c => c.charCodeAt(0));
   const challenge = new Uint8Array(32);
   window.crypto.getRandomValues(challenge);
   const publicKey: PublicKeyCredentialCreationOptions = {
