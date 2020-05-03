@@ -86,18 +86,18 @@ export class App extends EventEmitter {
     await this.initUsers();
     this.switchToUser(0);
 
-    this.blockSource.on('block', (b) => this.blockQueue.put(b));
     this.processBlockQueue();
 
     debug('creating keys...');
     const start = new Date().getTime();
-    await this.joinSplitProver.init();
-    await this.joinSplitVerifier.init(crs.getG2Data());
+    // await this.joinSplitProver.init();
+    // await this.joinSplitVerifier.init(crs.getG2Data());
     debug(`created circuit keys: ${new Date().getTime() - start}ms`);
   }
 
   public async destroy() {
     await this.pool.destroy();
+    this.blockSource.removeAllListeners();
     this.blockQueue.cancel();
   }
 
@@ -106,9 +106,9 @@ export class App extends EventEmitter {
     if (!users.length) {
       const user = await this.createUser();
       debug(`created new user:`, user);
-    } else  {
+    } else {
       this.userStates = users.map((u) => new UserState(u, this.grumpkin, this.blake2s, this.db));
-      await Promise.all(this.userStates.map(us => us.init()));
+      await Promise.all(this.userStates.map((us) => us.init()));
     }
   }
 
@@ -116,13 +116,16 @@ export class App extends EventEmitter {
     const lrp = new LocalRollupProvider(this.joinSplitVerifier);
     this.rollupProvider = lrp;
     this.blockSource = lrp;
+    this.blockSource.on('block', (b) => this.blockQueue.put(b));
   }
 
   private initServerRollupProvider(serverUrl: string) {
     const url = new URL(serverUrl);
-    const sbs = new ServerBlockSource(url);
+    const fromBlock = window.localStorage.getItem('syncedToBlock') || 0;
+    const sbs = new ServerBlockSource(url, +fromBlock + 1);
     this.rollupProvider = new ServerRollupProvider(url);
     this.blockSource = sbs;
+    this.blockSource.on('block', (b) => this.blockQueue.put(b));
     sbs.start();
   }
 
@@ -137,6 +140,7 @@ export class App extends EventEmitter {
       if (updates.some((x) => x)) {
         this.emit('updated');
       }
+      window.localStorage.setItem('syncedToBlock', block.blockNum.toString());
     }
   }
 

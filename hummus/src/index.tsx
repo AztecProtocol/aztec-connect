@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom';
 import { FlexBox, Block } from '@aztec/guacamole-ui';
 import { App } from './app';
 import { JoinSplitForm } from './join_split_form';
-import { User } from './user';
 import './styles/guacamole.css';
 require('barretenberg-es/wasm/barretenberg.wasm');
 
@@ -27,6 +26,11 @@ function LandingPage({ app }: LandingPageProps) {
 async function main() {
   const app = new App();
   ReactDOM.render(<LandingPage app={app}/>, document.getElementById('root'));
+
+  const dropdowns = document.getElementsByClassName('popup_popup-menu__1lw');
+  for(const dropdown of dropdowns) {
+    dropdown.style.backgroundColor = 'blue';
+  }
 }
 
 // tslint:disable-next-line:no-console

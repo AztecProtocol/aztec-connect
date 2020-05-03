@@ -1,19 +1,16 @@
-import { Connection, createConnection, Repository } from 'typeorm';
+import { Connection, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { RollupTxDao } from '../entity/rollup_tx';
 import { Rollup } from '../rollup';
-import { toBufferBE } from 'bigint-buffer';
 
 export class RollupDb {
   private rollupRep!: Repository<RollupDao>;
-  private txRep!: Repository<RollupTxDao>;
   private rollupId = 0;
 
   constructor(private connection: Connection) {}
 
   async init() {
     this.rollupRep = this.connection.getRepository(RollupDao);
-    this.txRep = this.connection.getRepository(RollupTxDao);
   }
 
   async addRollup(rollup: Rollup) {
@@ -25,10 +22,10 @@ export class RollupDb {
       txDao.merkleRoot = tx.noteTreeRoot;
       txDao.newNote1 = tx.newNote1;
       txDao.newNote2 = tx.newNote2;
-      txDao.nullifier1 = toBufferBE(tx.nullifier1, 16);
-      txDao.nullifier2 = toBufferBE(tx.nullifier2, 16);
-      txDao.publicInput = toBufferBE(tx.publicInput, 32);
-      txDao.publicOutput = toBufferBE(tx.publicOutput, 32);
+      txDao.nullifier1 = tx.nullifier1;
+      txDao.nullifier2 = tx.nullifier2;
+      txDao.publicInput = tx.publicInput;
+      txDao.publicOutput = tx.publicOutput;
       return txDao;
     });
     await this.rollupRep.save(rollupDao);

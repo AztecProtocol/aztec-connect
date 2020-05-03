@@ -63,7 +63,7 @@ export class UserState {
 
     for (const nullifier of block.nullifiers) {
       const dbNote = await this.db.getNote(this.user.id, nullifier);
-      if (!dbNote) {
+      if (!dbNote || dbNote.nullified) {
         continue;
       }
       const note = this.notePicker.removeNote(dbNote.id)!;

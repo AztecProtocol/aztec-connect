@@ -1,12 +1,16 @@
 import { BlockSource, Block } from "barretenberg/block_source";
 import { EventEmitter } from "events";
-import { ClientTx } from "../client_tx";
 import { toBufferBE } from "bigint-buffer";
-import { Connection, Repository, createConnection } from "typeorm";
+import { Connection, Repository } from "typeorm";
 import { BlockDao } from "../entity/block";
+import { JoinSplitProof } from "barretenberg/client_proofs/join_split_proof";
 
 export interface ProofReceiver {
-  sendProof(proof: Buffer, rollupId: number, viewingKeys: Buffer[]): Promise<void>;
+  sendProof(
+    proof: Buffer,
+    rollupId: number,
+    viewingKeys: Buffer[]
+  ): Promise<void>;
 }
 
 export interface Blockchain extends BlockSource, ProofReceiver {
@@ -30,25 +34,25 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
     const [lastBlock] = this.blockchain.slice(-1);
     if (lastBlock) {
-      this.dataTreeSize = lastBlock.dataStartIndex + lastBlock.dataEntries.length;
+      this.dataTreeSize =
+        lastBlock.dataStartIndex + lastBlock.dataEntries.length;
       this.blockNum = lastBlock.blockNum + 1;
     }
 
-    console.log(`Local blockchain restored: block:${this.blockNum} size:${this.dataTreeSize}.`);
+    console.log(
+      `Local blockchain restored: block:${this.blockNum} size:${this.dataTreeSize}.`
+    );
   }
 
   async sendProof(proofData: Buffer, rollupId: number, viewingKeys: Buffer[]) {
-    const tx = new ClientTx(proofData);
+    const tx = new JoinSplitProof(proofData);
 
     const block: Block = {
       blockNum: this.blockNum,
       rollupId,
       dataStartIndex: this.dataTreeSize,
       dataEntries: [tx.newNote1, tx.newNote2],
-      nullifiers: [
-        toBufferBE(tx.nullifier1, 16),
-        toBufferBE(tx.nullifier2, 16),
-      ],
+      nullifiers: [tx.nullifier1, tx.nullifier2],
       viewingKeys,
     };
 
@@ -60,7 +64,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
     console.log("Added block:", block);
 
-    this.emit('block', block);
+    this.emit("block", block);
   }
 
   private async saveBlock(block: Block, rollupId: number) {

@@ -1,10 +1,9 @@
-import { ClientTx } from "./client_tx";
 import { WorldStateDb } from "./world_state_db";
 import { Crs } from "barretenberg/crs";
 import { BarretenbergWasm } from "barretenberg/wasm";
 import { createWorker, destroyWorker } from "barretenberg/wasm/worker_factory";
 import { SinglePippenger } from "barretenberg/pippenger";
-import { JoinSplitVerifier } from "barretenberg/client_proofs/join_split_proof";
+import { JoinSplitProof, JoinSplitVerifier } from "barretenberg/client_proofs/join_split_proof";
 import { Block } from "barretenberg/block_source";
 import { toBigIntBE } from "bigint-buffer";
 import { BarretenbergWorker } from "barretenberg/wasm/worker";
@@ -106,31 +105,29 @@ export class Server {
     this.joinSplitVerifier = new JoinSplitVerifier(pippenger);
     await this.joinSplitVerifier.init(crs.getG2Data());
 
-    // destroyWorker(worker);
     console.log("Done.");
   }
 
   public async receiveTx({ proofData, encViewingKey1, encViewingKey2 }: Proof) {
-    const clientTx = new ClientTx(proofData);
+    const proof = new JoinSplitProof(proofData);
 
-    console.log(clientTx);
+    console.log(proof);
 
     // Check nullifiers don't exist (tree id 1 returns 0 at index).
     const emptyValue = Buffer.alloc(64, 0);
-    const nullifierVal1 = await this.worldStateDb.get(1, clientTx.nullifier1);
+    const nullifierVal1 = await this.worldStateDb.get(1, toBigIntBE(proof.nullifier1));
     if (!nullifierVal1.equals(emptyValue)) {
       throw new Error("Nullifier 1 already exists.");
     }
-    const nullifierVal2 = await this.worldStateDb.get(1, clientTx.nullifier2);
+    const nullifierVal2 = await this.worldStateDb.get(1, toBigIntBE(proof.nullifier2));
     if (!nullifierVal2.equals(emptyValue)) {
       throw new Error("Nullifier 2 already exists.");
     }
 
-    if (!clientTx.noteTreeRoot.equals(this.worldStateDb.getRoot(0))) {
+    if (!proof.noteTreeRoot.equals(this.worldStateDb.getRoot(0))) {
       throw new Error("Merkle roots do not match.");
     }
 
-    console.log("Attempting verify...");
     if (!await this.joinSplitVerifier.verifyProof(proofData)) {
       throw new Error("Proof verification failed.");
     }
@@ -139,7 +136,7 @@ export class Server {
 
     const rollup: Rollup = {
       rollupId: this.rollupDb.getNextRollupId(),
-      txs: [clientTx],
+      txs: [proof],
     };
     await this.rollupDb.addRollup(rollup);
 

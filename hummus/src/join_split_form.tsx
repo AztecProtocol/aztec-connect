@@ -95,7 +95,7 @@ export function JoinSplitForm({ app }: JoinSplitFormProps) {
                 itemGroups={[{
                   items: users.map(({ id, publicKey }) => ({
                     value: `${id}`,
-                    title: publicKey.toString('hex').replace(/^(.{10})(.+)(.{4})$/, '$1...$3'),
+                    title: publicKey.toString('hex').replace(/^(.{58})(.+)(.{4})$/, '$1...$3'),
                   })).concat([{
                     value: 'new',
                     // @ts-ignore
