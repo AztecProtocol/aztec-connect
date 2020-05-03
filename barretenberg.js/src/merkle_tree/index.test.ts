@@ -18,9 +18,9 @@ describe('merkle_tree', () => {
     pedersen = new Pedersen(barretenberg);
 
     for (let i = 0; i < 4; ++i) {
-        const v = Buffer.alloc(64, 0);
-        v.writeUInt32LE(i, 0);
-        values[i] = v;
+      const v = Buffer.alloc(64, 0);
+      v.writeUInt32LE(i, 0);
+      values[i] = v;
     }
   });
 
@@ -35,28 +35,22 @@ describe('merkle_tree', () => {
     const e11 = pedersen.compress(e02, e03);
     const root = pedersen.compress(e10, e11);
 
-    const tree = await MerkleTree.new(db, pedersen, blake2s, "test", 2);
+    const tree = await MerkleTree.new(db, pedersen, blake2s, 'test', 2);
 
     for (let i = 0; i < 4; ++i) {
-        await tree.updateElement(i, values[i]);
+      await tree.updateElement(i, values[i]);
     }
 
     for (let i = 0; i < 4; ++i) {
-        expect(await tree.getElement(i)).toEqual(values[i]);
+      expect(await tree.getElement(i)).toEqual(values[i]);
     }
 
-    let expected = [
-        [ e00, e01 ],
-        [ e10, e11 ],
-    ];
+    let expected = [[e00, e01], [e10, e11]];
 
     expect(await tree.getHashPath(0)).toEqual(expected);
     expect(await tree.getHashPath(1)).toEqual(expected);
 
-    expected = [
-        [ e02, e03 ],
-        [ e10, e11 ],
-    ];
+    expected = [[e02, e03], [e10, e11]];
 
     expect(await tree.getHashPath(2)).toEqual(expected);
     expect(await tree.getHashPath(3)).toEqual(expected);
@@ -69,7 +63,7 @@ describe('merkle_tree', () => {
 
   it('should have correct empty tree root for depth 10', async () => {
     const db = levelup(memdown());
-    const tree = await MerkleTree.new(db, pedersen, blake2s, "test", 10);
+    const tree = await MerkleTree.new(db, pedersen, blake2s, 'test', 10);
     const root = tree.getRoot();
     expect(root).toEqual(Buffer.from('28703b88327e4d75dca124b208f36f39915714fe14cb9bb2f852afc1aa9244be', 'hex'));
   });
@@ -77,7 +71,7 @@ describe('merkle_tree', () => {
   it('should be able to restore from previous data', async () => {
     const levelDown = memdown();
     const db = levelup(levelDown);
-    const tree = await MerkleTree.new(db, pedersen, blake2s, "test", 10);
+    const tree = await MerkleTree.new(db, pedersen, blake2s, 'test', 10);
     for (let i = 0; i < 4; ++i) {
       await tree.updateElement(i, values[i]);
     }
@@ -93,8 +87,10 @@ describe('merkle_tree', () => {
 
   it('should throw an error if previous data does not exist for the given name', async () => {
     const db = levelup(memdown());
-    await expect((async () => {
-      await MerkleTree.fromName(db, pedersen, blake2s, 'a_whole_new_tree');
-    })()).rejects.toThrow();
+    await expect(
+      (async () => {
+        await MerkleTree.fromName(db, pedersen, blake2s, 'a_whole_new_tree');
+      })(),
+    ).rejects.toThrow();
   });
 });

@@ -104,7 +104,7 @@ interface TLV {
   VAL: any;
   TLVTOTALLEN: number;
   TLLEN: number;
-};
+}
 
 const getTLVForNext = (buffer: Uint8Array): TLV => {
   let lennum = buffer[0] - (buffer[0] & 32) - (buffer[0] & 64) - (buffer[0] & 128);
@@ -323,8 +323,8 @@ export const decode = (buffer: any, expectedLength: number) => {
 
 export const decodeOnlyFirst = (buffer: Uint8Array) => {
   return decode(buffer, 1);
-}
+};
 
 export const encode = () => {
   throw new Error('NOT IMPLEMENTED YET');
-}
+};

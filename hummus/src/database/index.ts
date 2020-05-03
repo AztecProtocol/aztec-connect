@@ -1,11 +1,7 @@
 import Dexie from 'dexie';
 
 export class DbUser {
-  constructor(
-    public id: number,
-    public publicKey: Uint8Array,
-    public privateKey: Uint8Array,
-  ) {}
+  constructor(public id: number, public publicKey: Uint8Array, public privateKey: Uint8Array) {}
 }
 
 export class DbNote {
@@ -16,7 +12,7 @@ export class DbNote {
     public encrypted: Uint8Array,
     public nullifier: Uint8Array,
     public nullified: boolean,
-    public owner: number,
+    public owner: number
   ) {}
 }
 
@@ -31,7 +27,7 @@ export interface Database {
 }
 
 export class DexieDatabase implements Database {
-  private dexie = new Dexie("hummus");
+  private dexie = new Dexie('hummus');
   private user: Dexie.Table<DbUser, number>;
   private note: Dexie.Table<DbNote, number>;
 

@@ -2,7 +2,7 @@ import { BarretenbergWasm } from '../../wasm';
 
 export interface Signature {
   s: Buffer;
-  e: Buffer
+  e: Buffer;
 }
 
 export class Schnorr {
@@ -20,7 +20,7 @@ export class Schnorr {
 
   public computePublicKey(pk: Uint8Array) {
     this.wasm.transferToHeap(pk, 0);
-    this.wasm.call("compute_public_key", 0, 32);
+    this.wasm.call('compute_public_key', 0, 32);
     return Buffer.from(this.wasm.sliceMemory(32, 96));
   }
 
@@ -29,6 +29,6 @@ export class Schnorr {
     this.wasm.transferToHeap(sig.s, 64);
     this.wasm.transferToHeap(sig.e, 96);
     this.wasm.transferToHeap(msg, 128);
-    return this.wasm.call("verify_signature", 128, msg.length, 0, 64, 96) ? true : false;
+    return this.wasm.call('verify_signature', 128, msg.length, 0, 64, 96) ? true : false;
   }
 }

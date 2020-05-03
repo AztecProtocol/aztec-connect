@@ -76,37 +76,48 @@ export class Prover {
       await this.wasm.call('prover_put_scalar_multiplication_data', proverPtr, 0, i);
     }
 
-    const jobs: { coefficients: Uint8Array, constant?: Uint8Array, inverse: boolean, i: number}[] = [];
+    const jobs: { coefficients: Uint8Array; constant?: Uint8Array; inverse: boolean; i: number }[] = [];
     for (let i = 0; i < fftJobs; ++i) {
       const coeffsPtr = await this.wasm.call('prover_get_fft_data', proverPtr, 0, i);
       const coefficients = await this.wasm.sliceMemory(coeffsPtr, coeffsPtr + circuitSize * 32);
       const constant = await this.wasm.sliceMemory(0, 32);
-      jobs.push({coefficients, constant, inverse: false, i});
+      jobs.push({ coefficients, constant, inverse: false, i });
     }
 
     for (let i = 0; i < ifftJobs; ++i) {
       const coeffsPtr = await this.wasm.call('prover_get_ifft_data', proverPtr, i);
       const coefficients = await this.wasm.sliceMemory(coeffsPtr, coeffsPtr + circuitSize * 32);
-      jobs.push({coefficients, inverse: true, i});
+      jobs.push({ coefficients, inverse: true, i });
     }
 
-    await Promise.all(jobs.map(({inverse, coefficients, constant, i}) =>
-      inverse ? this.doIfft(proverPtr, i, circuitSize, coefficients) : this.doFft(proverPtr, i, circuitSize, coefficients, constant!)));
+    await Promise.all(
+      jobs.map(({ inverse, coefficients, constant, i }) =>
+        inverse
+          ? this.doIfft(proverPtr, i, circuitSize, coefficients)
+          : this.doFft(proverPtr, i, circuitSize, coefficients, constant!),
+      ),
+    );
   }
 
-  private async doFft(proverPtr: number, i: number, circuitSize: number, coefficients: Uint8Array, constant: Uint8Array) {
-      const result = await this.fft.fft(coefficients, constant);
-      const resultPtr = await this.wasm.call("bbmalloc", circuitSize * 32);
-      await this.wasm.transferToHeap(result, resultPtr)
-      await this.wasm.call('prover_put_fft_data', proverPtr, resultPtr, i);
-      await this.wasm.call("bbfree", resultPtr);
+  private async doFft(
+    proverPtr: number,
+    i: number,
+    circuitSize: number,
+    coefficients: Uint8Array,
+    constant: Uint8Array,
+  ) {
+    const result = await this.fft.fft(coefficients, constant);
+    const resultPtr = await this.wasm.call('bbmalloc', circuitSize * 32);
+    await this.wasm.transferToHeap(result, resultPtr);
+    await this.wasm.call('prover_put_fft_data', proverPtr, resultPtr, i);
+    await this.wasm.call('bbfree', resultPtr);
   }
 
   private async doIfft(proverPtr: number, i: number, circuitSize: number, coefficients: Uint8Array) {
-      const result = await this.fft.ifft(coefficients);
-      const resultPtr = await this.wasm.call("bbmalloc", circuitSize * 32);
-      await this.wasm.transferToHeap(result, resultPtr)
-      await this.wasm.call('prover_put_ifft_data', proverPtr, resultPtr, i);
-      await this.wasm.call("bbfree", resultPtr);
+    const result = await this.fft.ifft(coefficients);
+    const resultPtr = await this.wasm.call('bbmalloc', circuitSize * 32);
+    await this.wasm.transferToHeap(result, resultPtr);
+    await this.wasm.call('prover_put_ifft_data', proverPtr, resultPtr, i);
+    await this.wasm.call('bbfree', resultPtr);
   }
 }

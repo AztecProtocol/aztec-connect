@@ -11,7 +11,11 @@ export class WorkerPool {
   public async init(module: WebAssembly.Module, poolSize: number) {
     debug(`creating ${poolSize} workers...`);
     const start = new Date().getTime();
-    this.workers = await Promise.all(Array(poolSize).fill(0).map((_,i) => createWorker(`${i}`, module)));
+    this.workers = await Promise.all(
+      Array(poolSize)
+        .fill(0)
+        .map((_, i) => createWorker(`${i}`, module)),
+    );
     debug(`created workers: ${new Date().getTime() - start}ms`);
   }
 

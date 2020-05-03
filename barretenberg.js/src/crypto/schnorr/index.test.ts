@@ -7,7 +7,7 @@ describe('schnorr', () => {
   let schnorr!: Schnorr;
 
   beforeAll(async () => {
-    barretenberg = new BarretenbergWasm()
+    barretenberg = new BarretenbergWasm();
     await barretenberg.init();
     schnorr = new Schnorr(barretenberg);
   });

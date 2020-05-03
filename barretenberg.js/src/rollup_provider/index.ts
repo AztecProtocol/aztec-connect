@@ -1,8 +1,8 @@
 export interface Proof {
-  proofData: Buffer,
-  encViewingKey1: Buffer,
-  encViewingKey2: Buffer,
-};
+  proofData: Buffer;
+  encViewingKey1: Buffer;
+  encViewingKey2: Buffer;
+}
 
 export interface RollupProvider {
   sendProof(proof: Proof): Promise<void>;

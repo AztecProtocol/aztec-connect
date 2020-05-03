@@ -37,30 +37,30 @@ describe('join_split_proof', () => {
     0xda, 0x31, 0x29, 0x1a, 0x5e, 0x96, 0xbb, 0x7a, 0x56, 0x63, 0x9e, 0x17, 0x7d, 0x30, 0x1b, 0xeb ]);
 
   beforeAll(async () => {
-      EventEmitter.defaultMaxListeners = 32;
-      const circuitSize = 128 * 1024;
+    EventEmitter.defaultMaxListeners = 32;
+    const circuitSize = 128 * 1024;
 
-      crs = new Crs(circuitSize);
-      await crs.download();
+    crs = new Crs(circuitSize);
+    await crs.download();
 
-      barretenberg = await BarretenbergWasm.new();
+    barretenberg = await BarretenbergWasm.new();
 
-      pool = new WorkerPool();
-      await pool.init(barretenberg.module, Math.min(navigator.hardwareConcurrency, 8));
+    pool = new WorkerPool();
+    await pool.init(barretenberg.module, Math.min(navigator.hardwareConcurrency, 8));
 
-      const pippenger = new PooledPippenger();
-      await pippenger.init(crs.getData(), pool);
+    const pippenger = new PooledPippenger();
+    await pippenger.init(crs.getData(), pool);
 
-      const fft = new PooledFft(pool);
-      await fft.init(circuitSize);
+    const fft = new PooledFft(pool);
+    await fft.init(circuitSize);
 
-      const prover = new Prover(pool.workers[0], pippenger, fft);
+    const prover = new Prover(pool.workers[0], pippenger, fft);
 
-      joinSplitProver = new JoinSplitProver(barretenberg, prover);
-      joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
-      blake2s = new Blake2s(barretenberg);
-      pedersen = new Pedersen(barretenberg);
-      schnorr = new Schnorr(barretenberg);
+    joinSplitProver = new JoinSplitProver(barretenberg, prover);
+    joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
+    blake2s = new Blake2s(barretenberg);
+    pedersen = new Pedersen(barretenberg);
+    schnorr = new Schnorr(barretenberg);
   }, 60000);
 
   afterAll(async () => {
@@ -111,7 +111,10 @@ describe('join_split_proof', () => {
       const inputNote1Path = await tree.getHashPath(0);
       const inputNote2Path = await tree.getHashPath(1);
 
-      const signature = await joinSplitProver.sign4Notes([inputNote1, inputNote2, outputNote1, outputNote2], privateKey);
+      const signature = await joinSplitProver.sign4Notes(
+        [inputNote1, inputNote2, outputNote1, outputNote2],
+        privateKey,
+      );
 
       const tx = new JoinSplitTx(
         pubKey,

@@ -1,6 +1,6 @@
-import { Note } from "../note";
-import { Signature } from "../signature";
-import { HashPath } from "../../merkle_tree";
+import { Note } from '../note';
+import { Signature } from '../signature';
+import { HashPath } from '../../merkle_tree';
 
 export class JoinSplitTx {
   constructor(
@@ -13,7 +13,7 @@ export class JoinSplitTx {
     public inputNotePaths: HashPath[],
     public inputNotes: Note[],
     public outputNotes: Note[],
-    public signature: Signature
+    public signature: Signature,
   ) {}
 
   toBuffer() {

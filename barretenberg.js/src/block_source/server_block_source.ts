@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 import { fetch } from '../iso_fetch';
 import createDebug from 'debug';
 
-const debug = createDebug("bb:server_block_source");
+const debug = createDebug('bb:server_block_source');
 
 export class ServerBlockSource extends EventEmitter implements BlockSource {
   private running = true;
@@ -18,22 +18,25 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
         const url = new URL(`/api/get-blocks`, this.host);
         url.searchParams.append('from', this.fromBlock.toString());
 
-        const response = await fetch(url.toString())
+        const response = await fetch(url.toString());
         const jsonBlocks = await response.json();
 
-        const blocks = jsonBlocks.map(({ blockNum, dataStartIndex, dataEntries, nullifiers, viewingKeys }) => ({
-          blockNum,
-          dataStartIndex,
-          dataEntries: dataEntries.map(str => Buffer.from(str, 'hex')),
-          nullifiers: nullifiers.map(str => Buffer.from(str, 'hex')),
-          viewingKeys: viewingKeys.map(str => Buffer.from(str, 'hex')),
-        } as Block));
+        const blocks = jsonBlocks.map(
+          ({ blockNum, dataStartIndex, dataEntries, nullifiers, viewingKeys }) =>
+            ({
+              blockNum,
+              dataStartIndex,
+              dataEntries: dataEntries.map(str => Buffer.from(str, 'hex')),
+              nullifiers: nullifiers.map(str => Buffer.from(str, 'hex')),
+              viewingKeys: viewingKeys.map(str => Buffer.from(str, 'hex')),
+            } as Block),
+        );
 
         for (const block of blocks) {
           this.emit('block', block);
           this.fromBlock = block.blockNum + 1;
         }
-      } catch(err) {
+      } catch (err) {
         // debug(err);
       }
 
@@ -44,5 +47,4 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
   public stop() {
     this.running = false;
   }
-
 }

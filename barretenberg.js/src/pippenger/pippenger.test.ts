@@ -9,7 +9,7 @@ describe('pippenger', () => {
   it('should not blow up', async () => {
     const wasm = await BarretenbergWasm.new();
 
-    const numPoints = 4*1024;
+    const numPoints = 4 * 1024;
 
     const crs = new Crs(numPoints);
     await crs.download();
@@ -33,7 +33,7 @@ describe('pippenger', () => {
   it('should not blow up with worker', async () => {
     const wasm = await createWorker('worker_test');
 
-    const numPoints = 4*1024;
+    const numPoints = 4 * 1024;
 
     const crs = new Crs(numPoints);
     await crs.download();

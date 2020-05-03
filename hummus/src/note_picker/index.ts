@@ -25,7 +25,7 @@ export class NotePicker {
   }
 
   removeNote(index: number) {
-    const note = this.sortedNotes.find((n) => n.index === index);
+    const note = this.sortedNotes.find(n => n.index === index);
     if (note) {
       this.sortedNotes.remove(note);
     }
@@ -33,7 +33,7 @@ export class NotePicker {
   }
 
   hasNote(index: number) {
-    return !!this.sortedNotes.find((n) => n.index === index);
+    return !!this.sortedNotes.find(n => n.index === index);
   }
 
   findNote(callback: (note: TrackedNote, i?: number) => boolean) {
@@ -53,7 +53,7 @@ export class NotePicker {
 
   getNoteSum() {
     let sum = 0;
-    this.sortedNotes.each((n: TrackedNote) => sum += n.note.value);
+    this.sortedNotes.each((n: TrackedNote) => (sum += n.note.value));
     return sum;
   }
 }

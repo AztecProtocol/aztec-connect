@@ -14,7 +14,7 @@ export class Grumpkin {
   public mul(point: Uint8Array, scalar: Uint8Array) {
     this.wasm.transferToHeap(point, 0);
     this.wasm.transferToHeap(scalar, 64);
-    this.wasm.call("ecc_grumpkin__mul", 0, 64, 96);
+    this.wasm.call('ecc_grumpkin__mul', 0, 64, 96);
     return Buffer.from(this.wasm.sliceMemory(96, 160));
   }
 }

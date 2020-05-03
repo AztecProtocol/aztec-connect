@@ -10,11 +10,7 @@ const debug = createDebug('bb:world_state');
 export class WorldState {
   private tree!: MerkleTree;
 
-  constructor(
-    private db: LevelUp,
-    private pedersen: Pedersen,
-    private blake2s: Blake2s,
-  ) {}
+  constructor(private db: LevelUp, private pedersen: Pedersen, private blake2s: Blake2s) {}
 
   public async init() {
     try {

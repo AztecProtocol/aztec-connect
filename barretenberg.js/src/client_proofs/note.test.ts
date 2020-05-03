@@ -17,7 +17,7 @@ describe('note', () => {
 
     const note2 = decryptNote(encryptedNote, receiverPrivKey, grumpkin)!;
 
-    expect(note2).not.toBeUndefined()
+    expect(note2).not.toBeUndefined();
     expect(note2.secret).toEqual(note.secret);
     expect(note2.ownerPubKey).toEqual(note.ownerPubKey);
     expect(note2.value).toEqual(note.value);
@@ -36,6 +36,6 @@ describe('note', () => {
 
     const note2 = decryptNote(encryptedNote, randomBytes(32), grumpkin)!;
 
-    expect(note2).toBeUndefined()
+    expect(note2).toBeUndefined();
   });
-})
+});

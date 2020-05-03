@@ -98,13 +98,13 @@ export class MerkleTree {
     for (let i = this.depth - 1; i >= 0; --i) {
       if (!data) {
         // This is an empty subtree. Fill in zero value.
-        path[i] = [ this.zeroHashes[i], this.zeroHashes[i] ];
+        path[i] = [this.zeroHashes[i], this.zeroHashes[i]];
         continue;
       }
 
       const lhs = data.slice(0, 32);
       const rhs = data.slice(32, 64);
-      path[i] = [ lhs, rhs ];
+      path[i] = [lhs, rhs];
       const isRight = (index >> i) & 0x1;
       data = await this.dbGet(isRight ? rhs : lhs);
     }

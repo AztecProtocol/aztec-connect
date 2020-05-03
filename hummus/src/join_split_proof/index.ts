@@ -34,9 +34,9 @@ export class JoinSplitProofCreator {
     }
 
     const totalNoteInputValue = notes.reduce((sum, note) => sum + note.note.value, 0);
-    const inputNoteIndices = notes.map((n) => n.index);
-    const inputNotes = notes.map((n) => n.note);
-    const inputNotePaths = await Promise.all(inputNoteIndices.map(async (idx) => this.worldState.getHashPath(idx)));
+    const inputNoteIndices = notes.map(n => n.index);
+    const inputNotes = notes.map(n => n.note);
+    const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
     const sendValue = transfer + deposit;
     const changeValue = totalNoteInputValue - transfer - widthraw;

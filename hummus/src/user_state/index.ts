@@ -22,9 +22,9 @@ export class UserState {
       throw new Error('User not found.');
     }
     const notes = dbNotes.map(({ id: index, viewingKey, value }) => {
-        const viewingKeyBuf = Buffer.from(viewingKey);
-        const note = new Note(Buffer.from(owner.publicKey), viewingKeyBuf, value);
-        return { index, note } as TrackedNote;
+      const viewingKeyBuf = Buffer.from(viewingKey);
+      const note = new Note(Buffer.from(owner.publicKey), viewingKeyBuf, value);
+      return { index, note } as TrackedNote;
     });
     debug(`adding notes for user ${this.user.id}`, notes);
     this.notePicker.addNotes(notes);

@@ -4,12 +4,15 @@ import { SortedNotes } from './sorted_notes';
 import { TrackedNote } from './tracked_note';
 
 const toSortedNotes = (values: number[]) => {
-  const notes = values.map((value, index) => ({
-    index,
-    note: {
-      value,
-    },
-  } as TrackedNote));
+  const notes = values.map(
+    (value, index) =>
+      ({
+        index,
+        note: {
+          value,
+        },
+      } as TrackedNote)
+  );
   return new SortedNotes(notes);
 };
 
@@ -42,17 +45,9 @@ describe('pick', () => {
   it('pick a set of notes from sortedNotes whose sum is equal to or larger than value', () => {
     const sortedNotes = toSortedNotes([0, 0, 1, 1, 4, 10]);
 
-    expect(pick(
-      sortedNotes,
-      6,
-      0,
-    )).toEqual([]);
+    expect(pick(sortedNotes, 6, 0)).toEqual([]);
 
-    expect(pick(
-      sortedNotes,
-      6,
-      1,
-    )).toEqual([
+    expect(pick(sortedNotes, 6, 1)).toEqual([
       {
         index: 5,
         note: {
@@ -61,15 +56,10 @@ describe('pick', () => {
       },
     ]);
 
-    expect(pick(
-      sortedNotes,
-      13,
-      2,
-    )).toEqual([
+    expect(pick(sortedNotes, 13, 2)).toEqual([
       {
         index: 4,
-        note:
-        {
+        note: {
           value: 4,
         },
       },
@@ -85,56 +75,26 @@ describe('pick', () => {
   it('return undefined if there is no note combinations whose sum is equal to or larger than value', () => {
     const sortedNotes = toSortedNotes([0, 10, 100]);
 
-    expect(pick(
-      sortedNotes,
-      1000,
-      1,
-    )).toBeUndefined()
+    expect(pick(sortedNotes, 1000, 1)).toBeUndefined();
 
-    expect(pick(
-      sortedNotes,
-      1000,
-      3,
-    )).toBeUndefined();
+    expect(pick(sortedNotes, 1000, 3)).toBeUndefined();
   });
 
   it('skip repeating min values if current sum is not enough', () => {
     const sortedNotes = toSortedNotes([1, 1, 1, 1, 1, 2, 2, 3]);
 
-    const randomIntsSpy = jest.spyOn(random, 'randomInts')
-      .mockImplementationOnce(() => [
-        0,
-        1,
-      ]);
-    pick(
-      sortedNotes,
-      4,
-      2,
-    );
+    const randomIntsSpy = jest.spyOn(random, 'randomInts').mockImplementationOnce(() => [0, 1]);
+    pick(sortedNotes, 4, 2);
     expect(randomIntsSpy.mock.calls[1][1]).toBe(4); // start index in second round. the second round can have up to one 1.
 
     randomIntsSpy.mockClear();
-    randomIntsSpy.mockImplementationOnce(() => [
-      0,
-      4,
-    ]);
-    pick(
-      sortedNotes,
-      4,
-      2,
-    );
+    randomIntsSpy.mockImplementationOnce(() => [0, 4]);
+    pick(sortedNotes, 4, 2);
     expect(randomIntsSpy.mock.calls[1][1]).toBe(4); // the second round can have up to one 1.
 
     randomIntsSpy.mockClear();
-    randomIntsSpy.mockImplementationOnce(() => [
-      0,
-      5,
-    ]);
-    pick(
-      sortedNotes,
-      4,
-      2,
-    );
+    randomIntsSpy.mockImplementationOnce(() => [0, 5]);
+    pick(sortedNotes, 4, 2);
     expect(randomIntsSpy.mock.calls[1][1]).toBe(5); // the second round can not contain 1s.
   });
 });
