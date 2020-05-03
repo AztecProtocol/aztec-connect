@@ -54,6 +54,7 @@
     "@types/level-js": "^4.0.1",
     "@types/levelup": "^4.3.0",
     "@types/react": "^16.9.23",
+    "@types/react-copy-to-clipboard": "^4.3.0",
     "@types/react-dom": "^16.9.5",
     "@types/webpack-env": "^1.13.6",
     "cbor": "^5.0.1",

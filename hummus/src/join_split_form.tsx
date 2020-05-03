@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FlexBox, Block, Button, SelectInput, Text, Icon } from '@aztec/guacamole-ui';
-import { CopyToClipboard } from 'react-copy-to-clipboard';
+import CopyToClipboard from 'react-copy-to-clipboard';
 import { App } from './app';
 import { Balance, Input, FormField } from './components';
 import { User } from './user';
