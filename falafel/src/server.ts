@@ -1,18 +1,18 @@
-import { WorldStateDb } from './world_state_db';
-import { Crs } from 'barretenberg/crs';
-import { BarretenbergWasm } from 'barretenberg/wasm';
-import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
-import { SinglePippenger } from 'barretenberg/pippenger';
-import { JoinSplitProof, JoinSplitVerifier } from 'barretenberg/client_proofs/join_split_proof';
 import { Block } from 'barretenberg/block_source';
-import { toBigIntBE } from 'bigint-buffer';
+import { JoinSplitProof, JoinSplitVerifier } from 'barretenberg/client_proofs/join_split_proof';
+import { Crs } from 'barretenberg/crs';
+import { SinglePippenger } from 'barretenberg/pippenger';
+import { Proof } from 'barretenberg/rollup_provider';
+import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
+import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
+import { toBigIntBE } from 'bigint-buffer';
+import { createConnection } from 'typeorm';
 import { LocalBlockchain } from './blockchain';
 import { MemoryFifo } from './fifo';
-import { RollupDb } from './rollup_db';
 import { Rollup } from './rollup';
-import { createConnection } from 'typeorm';
-import { Proof } from 'barretenberg/rollup_provider';
+import { RollupDb } from './rollup_db';
+import { WorldStateDb } from './world_state_db';
 
 export class Server {
   private interval?: NodeJS.Timer;
@@ -73,8 +73,8 @@ export class Server {
 
     const nullifierValue = Buffer.alloc(64, 0);
     nullifierValue.writeUInt8(1, 63);
-    for (let i = 0; i < block.nullifiers.length; ++i) {
-      await this.worldStateDb.put(1, toBigIntBE(block.nullifiers[i]), nullifierValue);
+    for (const nullifier of block.nullifiers) {
+      await this.worldStateDb.put(1, toBigIntBE(nullifier), nullifierValue);
     }
 
     await this.worldStateDb.commit();

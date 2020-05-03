@@ -1,9 +1,8 @@
-import { BlockSource, Block } from 'barretenberg/block_source';
+import { Block, BlockSource } from 'barretenberg/block_source';
+import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { EventEmitter } from 'events';
-import { toBufferBE } from 'bigint-buffer';
 import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
-import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 
 export interface ProofReceiver {
   sendProof(proof: Buffer, rollupId: number, viewingKeys: Buffer[]): Promise<void>;
@@ -23,7 +22,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     super();
   }
 
-  async init() {
+  public async init() {
     this.blockRep = this.connection.getRepository(BlockDao);
 
     this.blockchain = await this.loadBlocks();
@@ -37,7 +36,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     console.log(`Local blockchain restored: block:${this.blockNum} size:${this.dataTreeSize}.`);
   }
 
-  async sendProof(proofData: Buffer, rollupId: number, viewingKeys: Buffer[]) {
+  public async sendProof(proofData: Buffer, rollupId: number, viewingKeys: Buffer[]) {
     const tx = new JoinSplitProof(proofData);
 
     const block: Block = {
@@ -94,7 +93,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     });
   }
 
-  getBlocks(from: number) {
+  public getBlocks(from: number) {
     return this.blockchain.slice(from);
   }
 }

@@ -1,9 +1,9 @@
+import { Proof } from 'barretenberg/rollup_provider';
 import Koa from 'koa';
 import compress from 'koa-compress';
 import Router from 'koa-router';
-import { Server } from './server';
 import { PromiseReadable } from 'promise-readable';
-import { Proof } from 'barretenberg/rollup_provider';
+import { Server } from './server';
 
 const cors = require('@koa/cors');
 
@@ -33,7 +33,7 @@ export function appFactory(server: Server, prefix: string) {
   });
 
   router.get('/get-blocks', async (ctx: Koa.Context) => {
-    const blocks = server.getBlocks(+ctx.query['from']);
+    const blocks = server.getBlocks(+ctx.query.from);
     ctx.body = blocks.map(({ blockNum, dataStartIndex, dataEntries, nullifiers, viewingKeys }) => ({
       blockNum,
       dataStartIndex,

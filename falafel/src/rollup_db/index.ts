@@ -9,11 +9,11 @@ export class RollupDb {
 
   constructor(private connection: Connection) {}
 
-  async init() {
+  public async init() {
     this.rollupRep = this.connection.getRepository(RollupDao);
   }
 
-  async addRollup(rollup: Rollup) {
+  public async addRollup(rollup: Rollup) {
     const rollupDao = new RollupDao();
     rollupDao.created = new Date();
     rollupDao.id = rollup.rollupId;
@@ -33,7 +33,7 @@ export class RollupDb {
     this.rollupId++;
   }
 
-  getNextRollupId() {
+  public getNextRollupId() {
     return this.rollupId;
   }
 }

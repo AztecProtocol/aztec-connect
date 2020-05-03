@@ -1,14 +1,12 @@
+import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
-import { toBufferBE, toBigIntBE } from 'bigint-buffer';
 
 export class WorldStateDb {
   private proc?: ChildProcess;
   private stdout!: any;
   private roots: Buffer[] = [];
   private sizes: bigint[] = [];
-
-  constructor() {}
 
   public async start() {
     await this.launch();
