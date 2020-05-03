@@ -90,8 +90,8 @@ export class App extends EventEmitter {
 
     debug('creating keys...');
     const start = new Date().getTime();
-    // await this.joinSplitProver.init();
-    // await this.joinSplitVerifier.init(crs.getG2Data());
+    await this.joinSplitProver.init();
+    await this.joinSplitVerifier.init(crs.getG2Data());
     debug(`created circuit keys: ${new Date().getTime() - start}ms`);
   }
 
@@ -107,8 +107,8 @@ export class App extends EventEmitter {
       const user = await this.createUser();
       debug(`created new user:`, user);
     } else {
-      this.userStates = users.map(u => new UserState(u, this.grumpkin, this.blake2s, this.db));
-      await Promise.all(this.userStates.map(us => us.init()));
+      this.userStates = users.map((u) => new UserState(u, this.grumpkin, this.blake2s, this.db));
+      await Promise.all(this.userStates.map((us) => us.init()));
     }
   }
 
@@ -116,7 +116,7 @@ export class App extends EventEmitter {
     const lrp = new LocalRollupProvider(this.joinSplitVerifier);
     this.rollupProvider = lrp;
     this.blockSource = lrp;
-    this.blockSource.on('block', b => this.blockQueue.put(b));
+    this.blockSource.on('block', (b) => this.blockQueue.put(b));
   }
 
   private initServerRollupProvider(serverUrl: string) {
@@ -125,7 +125,7 @@ export class App extends EventEmitter {
     const sbs = new ServerBlockSource(url, +fromBlock + 1);
     this.rollupProvider = new ServerRollupProvider(url);
     this.blockSource = sbs;
-    this.blockSource.on('block', b => this.blockQueue.put(b));
+    this.blockSource.on('block', (b) => this.blockQueue.put(b));
     sbs.start();
   }
 
@@ -136,8 +136,8 @@ export class App extends EventEmitter {
         break;
       }
       await this.worldState.processBlock(block);
-      const updates = await Promise.all(this.userStates.map(us => us.processBlock(block)));
-      if (updates.some(x => x)) {
+      const updates = await Promise.all(this.userStates.map((us) => us.processBlock(block)));
+      if (updates.some((x) => x)) {
         this.emit('updated');
       }
       window.localStorage.setItem('syncedToBlock', block.blockNum.toString());
@@ -167,7 +167,7 @@ export class App extends EventEmitter {
   }
 
   public getUsers() {
-    return this.userStates.map(us => us.getUser());
+    return this.userStates.map((us) => us.getUser());
   }
 
   public async createUser() {
