@@ -1,9 +1,5 @@
 import { BarretenbergWorker } from '../../wasm/worker';
-import { Prover } from '../prover';
 import { SinglePippenger } from '../../pippenger';
-import { JoinSplitTx } from './join_split_tx';
-import { Note } from '../note';
-import { Signature } from '../signature';
 
 export class JoinSplitVerifier {
   private wasm: BarretenbergWorker;

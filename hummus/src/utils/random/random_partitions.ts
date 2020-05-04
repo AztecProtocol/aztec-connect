@@ -1,10 +1,6 @@
 import { randomInt } from './random_int';
 
-export const randomPartitions = (
-  sum: number,
-  numberOfPartitions: number,
-  rand: () => number = Math.random,
-) => {
+export const randomPartitions = (sum: number, numberOfPartitions: number, rand: () => number = Math.random) => {
   if (numberOfPartitions <= 0) {
     return [];
   }

@@ -1,6 +1,6 @@
-import { TrackedNote } from './note';
+import { TrackedNote } from './tracked_note';
 
-export default class SortedNotes {
+export class SortedNotes {
   private sortedNotes: TrackedNote[] = [];
 
   constructor(notes: TrackedNote[] = []) {
@@ -9,6 +9,10 @@ export default class SortedNotes {
 
   get length(): number {
     return this.sortedNotes.length;
+  }
+
+  reset() {
+    this.sortedNotes = [];
   }
 
   add(note: TrackedNote) {
@@ -22,12 +26,20 @@ export default class SortedNotes {
     this.sortedNotes.splice(i, 0, note);
   }
 
+  bulkAdd(notes: TrackedNote[]) {
+    if (!this.sortedNotes.length) {
+      this.sortedNotes = [...notes].sort((a, b) => a.note.value - b.note.value);
+    } else {
+      notes.forEach(n => this.add(n));
+    }
+  }
+
   remove(note: TrackedNote) {
-    let idx = this.sortedNotes.findIndex(n => n.index === note.index);
+    const idx = this.sortedNotes.findIndex(n => n.index === note.index);
     this.sortedNotes.splice(idx, 1);
   }
 
-  each(callback: Function) {
+  each(callback: (note: TrackedNote, i: number) => void) {
     this.sortedNotes.forEach((note, i) => callback(note, i));
   }
 

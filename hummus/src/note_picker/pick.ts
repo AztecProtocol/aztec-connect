@@ -1,16 +1,11 @@
 import { randomInts } from '../utils/random';
-import SortedNotes from './sorted_notes';
-import { TrackedNote, noteSum } from './note';
+import { SortedNotes } from './sorted_notes';
+import { TrackedNote, noteSum } from './tracked_note';
 
-export const getStartIndex = (
-  sortedNotes: SortedNotes,
-  value: number,
-  numberOfNotes: number,
-) => {
-  const suffixSum = numberOfNotes <= 1
-    ? 0
-    : sortedNotes.last(numberOfNotes - 1).reduce((accum, note) => accum + note.note.value, 0);
-  const ceil = (sortedNotes.length - numberOfNotes) + 1;
+export const getStartIndex = (sortedNotes: SortedNotes, value: number, numberOfNotes: number) => {
+  const suffixSum =
+    numberOfNotes <= 1 ? 0 : sortedNotes.last(numberOfNotes - 1).reduce((accum, note) => accum + note.note.value, 0);
+  const ceil = sortedNotes.length - numberOfNotes + 1;
   let start = 0;
   while (start < ceil) {
     if (suffixSum + sortedNotes.nth(start).note.value >= value) {
@@ -25,11 +20,7 @@ export const getStartIndex = (
   return -1;
 };
 
-export const pick = (
-  sortedNotes: SortedNotes,
-  value: number,
-  numberOfNotes: number,
-) => {
+export const pick = (sortedNotes: SortedNotes, value: number, numberOfNotes: number) => {
   let notes: TrackedNote[] = [];
 
   if (numberOfNotes <= 0) {
@@ -45,19 +36,16 @@ export const pick = (
   while (start <= totalNotes - numberOfNotes) {
     const indexes = randomInts(numberOfNotes, start, totalNotes - 1);
 
-    notes = indexes.map((idx) => sortedNotes.nth(idx));
+    notes = indexes.map(idx => sortedNotes.nth(idx));
     if (noteSum(notes) >= value) {
       break;
     }
     // skip redundant identical values
     const minValue = notes[0].note.value;
-    const minValueCount = notes.reduce((count, note) => count + ((note.note.value === minValue ? 1 : 0)), 0);
+    const minValueCount = notes.reduce((count, note) => count + (note.note.value === minValue ? 1 : 0), 0);
     const firstMinIndex = sortedNotes.indexOfValue(minValue, start);
     const lastMinIndex = sortedNotes.lastIndexOfValue(minValue);
-    start = Math.max(
-      firstMinIndex + 1,
-      (lastMinIndex - (minValueCount - 1)) + 1,
-    );
+    start = Math.max(firstMinIndex + 1, lastMinIndex - (minValueCount - 1) + 1);
   }
 
   return notes;

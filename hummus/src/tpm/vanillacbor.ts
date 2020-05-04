@@ -30,10 +30,7 @@ enum float_and_no_content_semantics {
 }
 
 var type = (obj: any) => {
-  return {}.toString
-    .call(obj)
-    .replace(/\[|\]/g, '')
-    .split(' ')[1];
+  return {}.toString.call(obj).replace(/\[|\]/g, '').split(' ')[1];
 };
 
 const enforceUint8Array = (buffer: any) => {
@@ -53,7 +50,7 @@ const enforceUint8Array = (buffer: any) => {
   }
 };
 
-const mergeTwoBuffers = function(buffer1: Uint8Array, buffer2: Uint8Array) {
+const mergeTwoBuffers = function (buffer1: Uint8Array, buffer2: Uint8Array) {
   buffer1 = enforceBigEndian(enforceUint8Array(buffer1));
   buffer2 = enforceBigEndian(enforceUint8Array(buffer2));
 
@@ -104,7 +101,7 @@ interface TLV {
   VAL: any;
   TLVTOTALLEN: number;
   TLLEN: number;
-};
+}
 
 const getTLVForNext = (buffer: Uint8Array): TLV => {
   let lennum = buffer[0] - (buffer[0] & 32) - (buffer[0] & 64) - (buffer[0] & 128);
@@ -323,8 +320,8 @@ export const decode = (buffer: any, expectedLength: number) => {
 
 export const decodeOnlyFirst = (buffer: Uint8Array) => {
   return decode(buffer, 1);
-}
+};
 
 export const encode = () => {
   throw new Error('NOT IMPLEMENTED YET');
-}
+};

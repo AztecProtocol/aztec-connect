@@ -1,11 +1,6 @@
 import { randomInt } from './random_int';
 
-const pick = (
-  count: number,
-  start: number,
-  end: number,
-  rand: () => number = Math.random,
-): number[] => {
+const pick = (count: number, start: number, end: number, rand: () => number = Math.random): number[] => {
   if (count <= 0 || end < start) {
     return [];
   }
@@ -23,29 +18,18 @@ const pick = (
   leftCount += Math.max(0, Math.max(0, rightCount - rightLen));
   rightCount += Math.max(0, Math.max(0, leftCount - leftLen));
 
-  return [
-    ...pick(leftCount, start, mid - 1, rand),
-    mid,
-    ...pick(rightCount, mid + 1, end, rand),
-  ];
+  return [...pick(leftCount, start, mid - 1, rand), mid, ...pick(rightCount, mid + 1, end, rand)];
 };
 
-export const randomInts = (
-  count: number,
-  from?: number,
-  to?: number,
-  rand: () => number = Math.random,
-) => {
-  const pivot = to !== undefined ? (from || 0) : 0;
+export const randomInts = (count: number, from?: number, to?: number, rand: () => number = Math.random) => {
+  const pivot = to !== undefined ? from || 0 : 0;
   let offset: number;
   if (to !== undefined) {
     offset = to - pivot;
   } else {
     offset = from !== undefined ? from : 2 ** 32;
   }
-  const [start, end] = offset >= 0
-    ? [pivot, pivot + offset]
-    : [pivot + offset, pivot];
+  const [start, end] = offset >= 0 ? [pivot, pivot + offset] : [pivot + offset, pivot];
 
   return pick(count, start, end, rand);
 };

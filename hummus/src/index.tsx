@@ -1,10 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Block } from '@aztec/guacamole-ui';
+import { FlexBox, Block } from '@aztec/guacamole-ui';
 import { App } from './app';
-import JoinSplitForm from './join_split_form';
-
+import { JoinSplitForm } from './join_split_form';
 import './styles/guacamole.css';
+import debug from 'debug';
 require('barretenberg-es/wasm/barretenberg.wasm');
 
 interface LandingPageProps {
@@ -13,16 +13,16 @@ interface LandingPageProps {
 
 function LandingPage({ app }: LandingPageProps) {
   return (
-    <Block
-      padding="xl"
-      align="center"
-    >
-      <JoinSplitForm app={app} />
+    <Block padding="xl" align="center">
+      <FlexBox align="center">
+        <JoinSplitForm app={app} />
+      </FlexBox>
     </Block>
   );
 }
 
 async function main() {
+  debug.enable('bb:*');
   const app = new App();
   ReactDOM.render(<LandingPage app={app} />, document.getElementById('root'));
 }

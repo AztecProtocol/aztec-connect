@@ -1,5 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
-import { TxDao } from './tx';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'block' })
 export class BlockDao {
@@ -9,10 +8,18 @@ export class BlockDao {
   @Column()
   public created!: Date;
 
-  @OneToMany(
-    type => TxDao,
-    tx => tx.blockNum,
-    { cascade: true },
-  )
-  public txs!: TxDao[];
+  @Column()
+  public rollupId!: number;
+
+  @Column()
+  public dataStartIndex!: number;
+
+  @Column()
+  public dataEntries!: Buffer;
+
+  @Column()
+  public nullifiers!: Buffer;
+
+  @Column()
+  public viewingKeys!: Buffer;
 }

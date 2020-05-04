@@ -1,10 +1,10 @@
-import { JoinSplitTx } from "../../../barretenberg.js/src/client_proofs/join_split_proof/join_split_tx";
+import { JoinSplitTx } from 'barretenberg/client_proofs/join_split_proof/join_split_tx';
 
 export class TxBatch {
   constructor(public blockNum: number, public txs: Buffer[]) {}
 
   static fromJSON(json: any) {
-    return new TxBatch(json.block_num, json.txs.map(JoinSplitTx.fromJSON));
+    return new TxBatch(json.block_num, []); //json.txs.map(JoinSplitTx.fromJSON));
   }
 
   toBuffer() {

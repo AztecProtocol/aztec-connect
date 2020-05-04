@@ -18,7 +18,7 @@ const worker = {
 
   async sliceMemory(start: number, end: number) {
     const mem = wasm.sliceMemory(start, end);
-    return Transfer(mem, [mem.buffer]) as any as Uint8Array;
+    return (Transfer(mem, [mem.buffer]) as any) as Uint8Array;
   },
 
   async call(name: string, ...args: any) {
@@ -30,7 +30,7 @@ const worker = {
   },
 
   logs() {
-    return Observable.from(subject)
+    return Observable.from(subject);
   },
 };
 

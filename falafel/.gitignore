@@ -1,1 +1,3 @@
 store
+*.db
+db.sqlite

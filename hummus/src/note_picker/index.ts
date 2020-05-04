@@ -1,7 +1,9 @@
-import { TrackedNote } from './note';
-import SortedNotes from './sorted_notes';
-import validate from './validate';
+import { TrackedNote } from './tracked_note';
+import { SortedNotes } from './sorted_notes';
+import { validate } from './validate';
 import { pick } from './pick';
+
+export * from './tracked_note';
 
 export class NotePicker {
   private sortedNotes: SortedNotes;
@@ -10,12 +12,28 @@ export class NotePicker {
     this.sortedNotes = new SortedNotes(notes);
   }
 
+  reset() {
+    this.sortedNotes.reset();
+  }
+
   addNote(note: TrackedNote) {
     this.sortedNotes.add(note);
   }
 
-  removeNote(note: TrackedNote) {
-    this.sortedNotes.remove(note);
+  addNotes(notes: TrackedNote[]) {
+    this.sortedNotes.bulkAdd(notes);
+  }
+
+  removeNote(index: number) {
+    const note = this.sortedNotes.find(n => n.index === index);
+    if (note) {
+      this.sortedNotes.remove(note);
+    }
+    return note;
+  }
+
+  hasNote(index: number) {
+    return !!this.sortedNotes.find(n => n.index === index);
   }
 
   findNote(callback: (note: TrackedNote, i?: number) => boolean) {
@@ -35,7 +53,7 @@ export class NotePicker {
 
   getNoteSum() {
     let sum = 0;
-    this.sortedNotes.each((n: TrackedNote) => sum += n.note.value);
+    this.sortedNotes.each((n: TrackedNote) => (sum += n.note.value));
     return sum;
   }
 }
