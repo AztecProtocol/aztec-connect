@@ -73,7 +73,7 @@ module.exports = {
     hot: true,
   },
   output: {
-    globalObject: 'this'
+    globalObject: 'this',
   },
   plugins: [
     new HtmlWebpackPlugin({ template: './src/index.html' }),
