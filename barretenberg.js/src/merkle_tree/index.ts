@@ -1,4 +1,4 @@
-import { LevelUp } from 'levelup';
+import { LevelUp, LevelUpChain } from 'levelup';
 
 const MAX_DEPTH = 32;
 const LEAF_BYTES = 64;
@@ -74,12 +74,16 @@ export class MerkleTree {
     await this.db.clear();
   }
 
-  private async writeMeta() {
+  private async writeMeta(batch?: LevelUpChain<string, Buffer>) {
     const data = Buffer.alloc(40);
     this.root.copy(data);
     data.writeUInt32LE(this.depth, 32);
     data.writeUInt32LE(this.size, 36);
-    await this.db.put(this.name, data);
+    if (batch) {
+      batch.put(this.name, data);
+    } else {
+      await this.db.put(this.name, data);
+    }
   }
 
   public getRoot() {
@@ -135,16 +139,24 @@ export class MerkleTree {
   }
 
   public async updateElement(index: number, value: Buffer) {
+    const batch = this.db.batch();
     const shaLeaf = this.leafHasher.hashToField(value);
-    this.root = await this.updateElementInternal(this.root, shaLeaf, index, this.depth);
+    this.root = await this.updateElementInternal(this.root, shaLeaf, index, this.depth, batch);
     await this.db.put(shaLeaf, value);
 
     this.size = Math.max(this.size, index + 1);
 
-    await this.writeMeta();
+    await this.writeMeta(batch);
+    await batch.write();
   }
 
-  private async updateElementInternal(root: Buffer, value: Buffer, index: number, height: number) {
+  private async updateElementInternal(
+    root: Buffer,
+    value: Buffer,
+    index: number,
+    height: number,
+    batch: LevelUpChain<Buffer, Buffer>,
+  ) {
     if (height === 0) {
       return value;
     }
@@ -160,6 +172,7 @@ export class MerkleTree {
       value,
       keepNLsb(index, height - 1),
       height - 1,
+      batch,
     );
 
     if (isRight) {
@@ -168,9 +181,9 @@ export class MerkleTree {
       left = newSubtreeRoot;
     }
     const newRoot = this.fieldCompressor.compress(left, right);
-    await this.db.put(newRoot, Buffer.concat([left, right]));
+    batch.put(newRoot, Buffer.concat([left, right]));
     if (!root.equals(newRoot)) {
-      await this.db.del(root);
+      await batch.del(root);
     }
     return newRoot;
   }
