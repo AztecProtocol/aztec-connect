@@ -1,47 +1,30 @@
 import React from 'react';
-import { FlexBox, Block, Text, TextInput, MaskedNumberInput } from '@aztec/guacamole-ui';
+import { TextInput, MaskedNumberInput } from '@aztec/guacamole-ui';
+import { ThemeContext } from '../config/context';
 
 interface InputProps {
   type?: 'text' | 'number',
-  label: string;
   value: string,
   onChange: (value: string) => void,
-  error?: string;
 }
 
 export function Input({
   type = 'text',
-  label,
   value,
   onChange,
-  error,
 }: InputProps) {
   const InputTag = type === 'text' ? TextInput : MaskedNumberInput;
   return (
-    <Block padding="xs 0">
-      <FlexBox valign="center">
-        <Block right="s">
-          <Text
-            text={`${label}:`}
-            size="xs"
-          />
-        </Block>
+    <ThemeContext.Consumer>
+      {({ theme }) => (
         <InputTag
           className="flex-free-expand"
+          theme={theme === 'light' ? 'default' : theme}
           size="s"
           value={value}
           onChange={onChange}
         />
-      </FlexBox>
-      {error && (
-        <Block top="xs">
-          <Text
-            text={error}
-            color="red"
-            size="xxs"
-          />
-        </Block>
       )}
-    </Block>
+    </ThemeContext.Consumer>
   );
 }

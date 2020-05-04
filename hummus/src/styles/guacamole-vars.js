@@ -135,6 +135,11 @@ export const inputFontSizeKeyMap = {
   l: 's',
 };
 export const inputBorderWidth = '1px';
+export const inputMenuDefaultBackground = 'white';
+export const inputMenuBorderColor = ;
+export const inputMenuBorderRadius = 'xs';
+export const inputMenuLayer = 2;
+export const inputMenuOffsetTop = ;
 export const defaultInputBgColorName = 'white';
 export const defaultInputBgColor = '#FFFFFF';
 export const defaultInputOutlineColorName = 'grey-light';
