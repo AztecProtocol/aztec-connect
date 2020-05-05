@@ -8,6 +8,7 @@ import debug from 'debug';
 import { TerminalPage, Terminal } from './terminal';
 import { createGlobalStyle } from 'styled-components';
 import { MemoryFifo } from 'barretenberg-es/fifo';
+import { User } from './user';
 require('barretenberg-es/wasm/barretenberg.wasm');
 
 // interface LandingPageProps {
@@ -28,89 +29,6 @@ const GlobalStyle = createGlobalStyle`
   body {
     background-color: black;
   }
-/*
-.scanline{
-  width:100%;
-  display:block;
-  background:#000;
-  height:4px;
-  position:relative;
-  z-index:3;
-  margin-bottom:5px;
-  opacity:0.1;
-}
-.buzz_wrapper span{
-  position:absolute;
-  -webkit-filter: blur(1px);
-  font-size:80px;
-  font-family:'Courier new', fixed;
-  font-weight:bold;
-}
-.buzz_wrapper span:nth-child(1){
-  color:red;
-  margin-left:-2px;
-  -webkit-filter: blur(2px);
-}
-.buzz_wrapper span:nth-child(2){
-  color:green;
-  margin-left:2px;
-  -webkit-filter: blur(2px);
-}
-.buzz_wrapper span:nth-child(3){
-  color:blue;
-  position:20px 0;
-  -webkit-filter: blur(1px);
-}
-.buzz_wrapper span:nth-child(4){
-  color:#fff;
-  -webkit-filter: blur(1px);
-  text-shadow:0 0 10px rgba(255,255,255,0.4);
-}
-.buzz_wrapper span:nth-child(5){
-  color:rgba(255,255,255,0.4);
-  -webkit-filter: blur(15px);
-}
-
-.buzz_wrapper span{
-  -webkit-animation: blur 30ms infinite, jerk 50ms infinite;
-}
-
-@-webkit-keyframes blur {
-  0%   { -webkit-filter: blur(1px); opacity:0.8;}
-  50% { -webkit-filter: blur(1px); opacity:1; }
-  100%{ -webkit-filter: blur(1px); opacity:0.8; }
-}
-@-webkit-keyframes jerk {
-  50% { left:1px; }
-  51% { left:0; }
-}
-@-webkit-keyframes jerkup {
-  50% { top:1px; }
-  51% { top:0; }
-}
-
-.buzz_wrapper span:nth-child(3){
-  -webkit-animation: jerkblue 1s infinite;
-}
-@-webkit-keyframes jerkblue {
-  0% { left:0; }
-  30% { left:0; }
-  31% { left:10px; }
-  32% { left:0; }
-  98% { left:0; }
-  100% { left:10px; }
-}
-.buzz_wrapper span:nth-child(2){
-  -webkit-animation: jerkgreen 1s infinite;
-}
-@-webkit-keyframes jerkgreen {
-  0% { left:0; }
-  30% { left:0; }
-  31% { left:-10px; }
-  32% { left:0; }
-  98% { left:0; }
-  100% { left:-10px; }
-}*/
 `;
 
 async function main() {
@@ -153,28 +71,89 @@ async function main() {
       if (cmdStr === null) {
         break;
       }
-      const [cmd, ...args] = cmdStr.toLowerCase().split(/ +/g);
-      switch (cmd) {
-        case 'help':
-          printQueue.put('init [server]\ndeposit <amount>\nwithdraw <amount>\nbalance\n');
-          break;
-        case 'init':
-          printQueue.put('initializing...\n');
-          await app.init(args[0] || 'http://localhost');
-          break;
-        case 'deposit':
-          printQueue.put(`generating deposit proof...\n`);
-          await app.deposit(+args[0]);
-          printQueue.put(`deposit proof sent.\n`);
-          break;
-        case 'withdraw':
-          printQueue.put(`generating withdrawl proof...\n`);
-          await app.withdraw(+args[0]);
-          printQueue.put(`withdrawl proof sent.\n`);
-          break;
-        case 'balance':
-          await terminal.putString(`${app.getBalance()}\n`);
-          break;
+      try {
+        const [cmd, ...args] = cmdStr.toLowerCase().split(/ +/g);
+        if (!app.isInitialised()) {
+          switch (cmd) {
+            case 'help':
+              printQueue.put('init [server]\n');
+              break;
+            case 'init':
+              printQueue.put('initializing...\n');
+              await app.init(args[0] || 'http://localhost');
+              break;
+          }
+        } else {
+          const userStr = (u: User) =>
+            `${u.id}: ${u.publicKey.toString('hex').slice(0, 8)}...` +
+            (u.alias ? ` (${u.alias})` : '') +
+            (u.privateKey ? ' *' : '') +
+            '\n';
+
+          switch (cmd) {
+            case 'help':
+              printQueue.put(
+                'deposit <amount>\n' +
+                  'withdraw <amount>\n' +
+                  'transfer <to> <amount>\n' +
+                  'balance [id/alias]\n' +
+                  'user [id/alias]\n' +
+                  'adduser <alias> [pubkey]\n',
+              );
+              break;
+            case 'deposit':
+              printQueue.put(`generating deposit proof...\n`);
+              await app.deposit(+args[0]);
+              printQueue.put(`deposit proof sent.\n`);
+              break;
+            case 'withdraw':
+              printQueue.put(`generating withdrawl proof...\n`);
+              await app.withdraw(+args[0]);
+              printQueue.put(`withdrawl proof sent.\n`);
+              break;
+            case 'transfer': {
+              const user = app.findUser(args[0], true);
+              if (!user) {
+                throw new Error('User not found.');
+              }
+              printQueue.put(`generating transfer proof...\n`);
+              await app.transfer(+args[1], user.publicKey);
+              printQueue.put(`transfer proof sent.\n`);
+              break;
+            }
+            case 'balance':
+              await terminal.putString(`${app.getBalance(args[0])}\n`);
+              break;
+            case 'user':
+              if (args[0]) {
+                const user = app.switchToUser(args[0]);
+                printQueue.put(
+                  `switched to ${user.publicKey.toString('hex').slice(0, 8)}...\nbalance ${app.getBalance()}\n`,
+                );
+              } else {
+                const str = app.getUsers().map(userStr).join('');
+                printQueue.put(str);
+              }
+              break;
+            case 'adduser': {
+              if (args.length === 1) {
+                const user = await app.createUser(args[0]);
+                printQueue.put(userStr(user));
+                break;
+              } else {
+                const publicKey = Buffer.from(args[1], 'hex');
+                if (publicKey.length !== 64) {
+                  throw new Error('Bad public key.');
+                }
+                const user = await app.addUser(args[0], publicKey);
+                printQueue.put(userStr(user));
+              }
+              break;
+            }
+          }
+        }
+      } catch (err) {
+        printQueue.put(err.message + '\n');
       }
       printQueue.put(undefined);
     }

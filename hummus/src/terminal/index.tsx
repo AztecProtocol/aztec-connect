@@ -121,10 +121,6 @@ export class Terminal extends EventEmitter {
     this.charBuf.fill(' ', this.cols * this.cursorY);
   }
 
-  private lockInput() {
-    this.inputLocked = true;
-  }
-
   public isPrompting() {
     return !this.inputLocked;
   }
@@ -139,8 +135,18 @@ export class Terminal extends EventEmitter {
     this.emit('updated', ++this.stateCounter);
   }
 
+  async pasteString(str: string) {
+    if (this.inputLocked) {
+      return;
+    }
+    this.cmd += str;
+    await this.putString(str);
+  }
+
   async putString(str: string) {
+    const savedInputLocked = this.inputLocked;
     const savedCursor = this.cursor;
+    this.inputLocked = true;
     for (const char of str.toUpperCase()) {
       // Reset blink.
       this.setCursor(blockCursor());
@@ -162,6 +168,7 @@ export class Terminal extends EventEmitter {
       await new Promise(resolve => setTimeout(resolve, 30));
     }
     this.setCursor(savedCursor);
+    this.inputLocked = savedInputLocked;
     this.updated();
   }
 
@@ -183,7 +190,17 @@ export class Terminal extends EventEmitter {
   }
 
   keyDown(event: KeyboardEvent) {
-    if (this.inputLocked) {
+    if (this.inputLocked || event.metaKey) {
+      return;
+    }
+
+    if (event.ctrlKey) {
+      if (event.key.toLowerCase() === 'c') {
+          this.cmd = '';
+          this.newLine();
+          this.prompt();
+          this.updated();
+      }
       return;
     }
 
@@ -207,8 +224,8 @@ export class Terminal extends EventEmitter {
         case 13:
           const cmd = this.cmd;
           this.cmd = '';
+          this.inputLocked = true;
           this.newLine();
-          this.lockInput();
           this.setCursor(spinnerCursor());
           this.emit('cmd', cmd);
           break;
@@ -290,7 +307,7 @@ export function TerminalPage({ terminal }: TerminalProps) {
   }, [terminal]);
 
   return (
-    <Display>
+    <Display onPaste={async e => terminal.pasteString(e.clipboardData.getData('text'))}>
       <Logo>
         <svg viewBox="500 80 135 138">
           <g>

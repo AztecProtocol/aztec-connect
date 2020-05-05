@@ -1,7 +1,7 @@
 import Dexie from 'dexie';
 
 export class DbUser {
-  constructor(public id: number, public publicKey: Uint8Array, public privateKey: Uint8Array) {}
+  constructor(public id: number, public publicKey: Uint8Array, public privateKey?: Uint8Array, public alias?: string) {}
 }
 
 export class DbNote {
