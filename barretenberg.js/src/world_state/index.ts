@@ -39,6 +39,10 @@ export class WorldState {
     return this.tree.getRoot();
   }
 
+  public getSize() {
+    return this.tree.getSize();
+  }
+
   public async addClientElement(index: number, encryptedNote: Buffer) {
     await this.tree.updateElement(index, encryptedNote);
   }

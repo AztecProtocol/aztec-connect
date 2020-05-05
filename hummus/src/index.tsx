@@ -1,12 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 // import { FlexBox, Block } from '@aztec/guacamole-ui';
-// import { App } from './app';
+import { App } from './app';
 // import { JoinSplitForm } from './join_split_form';
 // import './styles/guacamole.css';
 import debug from 'debug';
 import { TerminalPage, Terminal } from './terminal';
 import { createGlobalStyle } from 'styled-components';
+import { MemoryFifo } from 'barretenberg-es/fifo';
 require('barretenberg-es/wasm/barretenberg.wasm');
 
 // interface LandingPageProps {
@@ -27,14 +28,6 @@ const GlobalStyle = createGlobalStyle`
   body {
     background-color: black;
   }
-  .buzz_wrapper{
-  position:relative;
-  width:700px;
-  margin:20px auto;
-  background-color:#000;
-  overflow:hidden;
-  padding: 100px;
-}
 /*
 .scanline{
   width:100%;
@@ -118,26 +111,15 @@ const GlobalStyle = createGlobalStyle`
   98% { left:0; }
   100% { left:-10px; }
 }*/
-
-.buzz_wrapper {
-  /* -webkit-animation: jerkwhole 20s infinite; */
-  position:relative;
-}
-@-webkit-keyframes jerkwhole {
-  30% {  }
-  40% { opacity:1; top:0; left:0;  -webkit-transform:scale(1,1);  -webkit-transform:skew(0,0);}
-  41% { opacity:0.8; top:0px; left:-100px; -webkit-transform:scale(1,1.2);  -webkit-transform:skew(50deg,0);}
-  42% { opacity:0.8; top:0px; left:100px; -webkit-transform:scale(1,1.2);  -webkit-transform:skew(-80deg,0);}
-  43% { opacity:1; top:0; left:0; -webkit-transform:scale(1,1);  -webkit-transform:skew(0,0);}
-  65% { }
-}
 `;
 
 async function main() {
   debug.enable('bb:*');
-  // const app = new App();
+  const cmdQueue = new MemoryFifo<string>();
+  const printQueue = new MemoryFifo<string | undefined>();
+  const app = new App();
   // ReactDOM.render(<LandingPage app={app} />, document.getElementById('root'));
-  const terminal = new Terminal(10, 40);
+  const terminal = new Terminal(12, 40);
   ReactDOM.render(
     <React.Fragment>
       <GlobalStyle />
@@ -145,6 +127,64 @@ async function main() {
     </React.Fragment>,
     document.getElementById('root'),
   );
+
+  const printHandler = async () => {
+    while (true) {
+      const str = await printQueue.get();
+      if (str === null) {
+        break;
+      }
+      if (str === undefined) {
+        await terminal.prompt();
+      } else {
+        if (terminal.isPrompting()) {
+          await terminal.putString('\r' + str);
+          printQueue.put(undefined);
+        } else {
+          await terminal.putString(str);
+        }
+      }
+    }
+  };
+
+  const cmdHandler = async () => {
+    while (true) {
+      const cmdStr = await cmdQueue.get();
+      if (cmdStr === null) {
+        break;
+      }
+      const [cmd, ...args] = cmdStr.toLowerCase().split(/ +/g);
+      switch (cmd) {
+        case 'help':
+          printQueue.put('init [server]\ndeposit <amount>\nwithdraw <amount>\nbalance\n');
+          break;
+        case 'init':
+          printQueue.put('initializing...\n');
+          await app.init(args[0] || 'http://localhost');
+          break;
+        case 'deposit':
+          printQueue.put(`generating deposit proof...\n`);
+          await app.deposit(+args[0]);
+          printQueue.put(`deposit proof sent.\n`);
+          break;
+        case 'withdraw':
+          printQueue.put(`generating withdrawl proof...\n`);
+          await app.withdraw(+args[0]);
+          printQueue.put(`withdrawl proof sent.\n`);
+          break;
+        case 'balance':
+          await terminal.putString(`${app.getBalance()}\n`);
+          break;
+      }
+      printQueue.put(undefined);
+    }
+  };
+
+  cmdHandler();
+  printHandler();
+  printQueue.put("aztec zero knowledge terminal.\x01\ntype command or 'help'\n");
+  terminal.on('cmd', (cmd: string) => cmdQueue.put(cmd));
+  app.on('log', (str: string) => printQueue.put(str));
 }
 
 // tslint:disable-next-line:no-console

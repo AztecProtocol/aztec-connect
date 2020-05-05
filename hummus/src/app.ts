@@ -46,6 +46,7 @@ export class App extends EventEmitter {
   private blake2s!: Blake2s;
   private db = new DexieDatabase();
   private blockQueue = new MemoryFifo<Block>();
+  private initialized = false;
 
   public async init(serverUrl: string) {
     const circuitSize = 128 * 1024;
@@ -79,19 +80,34 @@ export class App extends EventEmitter {
     const leveldb = levelup(leveljs('hummus'));
     this.worldState = new WorldState(leveldb, pedersen, this.blake2s);
     await this.worldState.init();
+    this.log(`data size: ${this.worldState.getSize()}`);
+    this.log(`data root: ${this.worldState.getRoot().slice(0, 8).toString('hex')}...`);
 
     this.grumpkin = new Grumpkin(barretenberg);
 
     await this.initUsers();
     this.switchToUser(0);
+    this.log(`user: ${this.getUser().publicKey.slice(0, 8).toString('hex')}...`);
+    this.log(`balance: ${this.getBalance()}`);
 
     this.processBlockQueue();
 
-    debug('creating keys...');
+    this.logAndDebug('creating keys...');
     const start = new Date().getTime();
     await this.joinSplitProver.init();
     await this.joinSplitVerifier.init(crs.getG2Data());
-    debug(`created circuit keys: ${new Date().getTime() - start}ms`);
+    this.logAndDebug(`created circuit keys: ${new Date().getTime() - start}ms`);
+
+    this.initialized = true;
+  }
+
+  private log(str: string) {
+    this.emit('log', str + '\n');
+  }
+
+  private logAndDebug(str: string) {
+    debug(str);
+    this.log(str);
   }
 
   public async destroy() {
@@ -134,12 +150,19 @@ export class App extends EventEmitter {
       if (!block) {
         break;
       }
+
+      const balanceBefore = this.getBalance();
+
       await this.worldState.processBlock(block);
       const updates = await Promise.all(this.userStates.map(us => us.processBlock(block)));
       if (updates.some(x => x)) {
         this.emit('updated');
       }
       window.localStorage.setItem('syncedToBlock', block.blockNum.toString());
+
+      if (this.initialized && this.getBalance() !== balanceBefore) {
+        this.log(`balance updated: ${this.getBalance()}`);
+      }
     }
   }
 
