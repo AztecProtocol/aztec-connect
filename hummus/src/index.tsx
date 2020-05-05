@@ -182,7 +182,9 @@ async function main() {
 
   cmdHandler();
   printHandler();
+  await new Promise(resolve => setTimeout(resolve, 2000));
   printQueue.put("aztec zero knowledge terminal.\x01\ntype command or 'help'\n");
+  printQueue.put(undefined);
   terminal.on('cmd', (cmd: string) => cmdQueue.put(cmd));
   app.on('log', (str: string) => printQueue.put(str));
 }

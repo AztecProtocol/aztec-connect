@@ -4,17 +4,17 @@ import { EventEmitter } from 'events';
 
 const glitch = keyframes`
   30% {  }
-  40% { opacity:1; top:0; left:0;  -webkit-transform:scale(1,1);  -webkit-transform:skew(0,0);}
-  41% { opacity:0.8; top:0px; left:-100px; -webkit-transform:scale(1,1.2);  -webkit-transform:skew(50deg,0);}
-  42% { opacity:0.8; top:0px; left:100px; -webkit-transform:scale(1,1.2);  -webkit-transform:skew(-80deg,0);}
-  43% { opacity:1; top:0; left:0; -webkit-transform:scale(1,1);  -webkit-transform:skew(0,0);}
-  65% { }
+  95% { opacity:1; left:0;  -webkit-transform:scale(1,1);  -webkit-transform:skew(0,0);}
+  96% { opacity:0.8; left:-100px; -webkit-transform:scale(1,1.2);  -webkit-transform:skew(50deg,0);}
+  97% { opacity:0.8; left:100px; -webkit-transform:scale(1,1.2);  -webkit-transform:skew(-80deg,0);}
+  98% { opacity:1; left:0; -webkit-transform:scale(0,0);  -webkit-transform:skew(0,0);}
+  100% { opacity:0; }
 `;
 
-const blur = keyframes`
-  0%   { -webkit-filter: blur(1px); opacity:0.9;}
-  50% { -webkit-filter: blur(1px); opacity:1; }
-  100%{ -webkit-filter: blur(1px); opacity:0.9; }
+const flicker = keyframes`
+  0%   {  opacity:0.9;}
+  50% {  opacity:1; }
+  100%{ opacity:0.9; }
 `;
 
 const jerk = keyframes`
@@ -22,18 +22,29 @@ const jerk = keyframes`
   51% { padding-left:0; }
 `;
 
-const GlitchWrapper = styled.div`
+const Display = styled.div`
   position: relative;
   margin: 50px auto;
   background-color: #000;
   overflow: hidden;
   padding: 30px;
-  /* animation: ${glitch} 5s infinite; */
+  animation: ${flicker} 32ms infinite;
+`;
+
+const Logo = styled.div`
+  position: absolute;
+  margin: auto auto;
+  fill: rgba(255, 255, 255, 0.8);
+  filter: blur(3px);
+  width: 400px;
+  left: 0;
+  right: 0;
+  animation: ${jerk} 50ms infinite, ${glitch} 2s 1;
+  animation-fill-mode: forwards;
 `;
 
 const StyledTerminal = styled.div`
   font-family: 'Courier new';
-  background-color: black;
   color: rgba(255, 255, 255, 0.8);
   font-size: 60px;
   font-weight: bold;
@@ -42,7 +53,7 @@ const StyledTerminal = styled.div`
   filter: blur(1px);
   text-align: center;
   text-shadow: 0 0 30px rgba(255, 255, 255, 0.4);
-  animation: ${blur} 32ms infinite, ${jerk} 50ms infinite;
+  animation: ${jerk} 50ms infinite;
 `;
 
 class Cursor {
@@ -67,7 +78,7 @@ export class Terminal extends EventEmitter {
   private cursorX = 0;
   private cursorY = 0;
   private cursor!: Cursor;
-  private inputLocked = false;
+  private inputLocked = true;
   private stateCounter = 0;
   private interval!: number;
   private cmd: string = '';
@@ -279,7 +290,22 @@ export function TerminalPage({ terminal }: TerminalProps) {
   }, [terminal]);
 
   return (
-    <GlitchWrapper>
+    <Display>
+      <Logo>
+        <svg viewBox="500 80 135 138">
+          <g>
+            <path
+              fillRule="evenodd"
+              clipRule="evenodd"
+              d="M 573.12 83.536 L 632.518 142.933 C 635.642 146.057 635.642 151.123 632.518 154.247 L 573.12 213.643 C 569.996 216.768 564.931 216.768 561.807 213.643 L 502.41 154.247 C 499.286 151.123 499.286 146.057 502.41 142.933 L 561.807 83.536 C 564.931 80.412 569.996 80.412 573.12 83.536 Z M 573.12 104.749 C 569.996 101.625 564.931 101.625 561.807 104.749 L 523.623 142.933 C 520.499 146.057 520.499 151.123 523.623 154.247 L 561.807 192.43 C 564.931 195.554 569.996 195.554 573.12 192.43 L 611.304 154.247 C 614.428 151.123 614.428 146.057 611.304 142.933 L 573.12 104.749 Z"
+            ></path>
+            <path
+              opacity="1"
+              d="M 590.091 142.933 L 573.12 125.963 C 569.996 122.838 564.931 122.838 561.807 125.963 L 544.836 142.933 C 541.712 146.057 541.712 151.123 544.836 154.247 L 561.807 171.217 C 564.931 174.342 569.996 174.342 573.12 171.217 L 590.091 154.247 C 593.215 151.123 593.215 146.057 590.091 142.933 Z"
+            ></path>
+          </g>
+        </svg>
+      </Logo>
       <StyledTerminal>{terminal.asString()}</StyledTerminal>
       <ScanlineContainer>
         {Array(8 * terminal.getRows())
@@ -288,6 +314,6 @@ export function TerminalPage({ terminal }: TerminalProps) {
             <Scanline key={i}></Scanline>
           ))}
       </ScanlineContainer>
-    </GlitchWrapper>
+    </Display>
   );
 }
