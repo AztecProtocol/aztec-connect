@@ -20,6 +20,12 @@ export const themes: { [key: string]: IThemeContext } = {
     color: 'white',
     link: 'white',
   },
+  terminalTheme: {
+    theme: 'terminal',
+    background: 'black',
+    color: 'white',
+    link: 'white',
+  },
 };
 
 export const ThemeContext = createContext(themes.darkTheme);
