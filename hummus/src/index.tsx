@@ -9,6 +9,7 @@ import { TerminalPage, Terminal } from './terminal';
 import { createGlobalStyle } from 'styled-components';
 import { MemoryFifo } from 'barretenberg-es/fifo';
 import { User } from './user';
+import copy from 'copy-to-clipboard';
 require('barretenberg-es/wasm/barretenberg.wasm');
 
 // interface LandingPageProps {
@@ -150,6 +151,9 @@ async function main() {
               }
               break;
             }
+            case 'copykey':
+              copy(app.getUser().publicKey.toString('hex'));
+              break;
           }
         }
       } catch (err) {

@@ -48,6 +48,7 @@
     "@types/koa-router": "^7.0.42",
     "@types/node": "^12.6.8",
     "@types/supertest": "^2.0.8",
+    "copy-to-clipboard": "^3.3.1",
     "jest": "^24.8.0",
     "prettier": "^2.0.5",
     "supertest": "^4.0.2",

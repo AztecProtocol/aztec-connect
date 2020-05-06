@@ -46,7 +46,7 @@ export class UserState {
         continue;
       }
 
-      const note = decryptNote(encryptedNote, this.user.privateKey, this.grumpkin);
+      const note = decryptNote(encryptedNote, this.user.privateKey!, this.grumpkin);
       if (!note) {
         continue;
       }
