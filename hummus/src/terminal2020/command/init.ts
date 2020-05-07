@@ -33,6 +33,11 @@ const run = async (buf: TerminalBuffer, app: App) => {
     }
   }
 
+  if (app.initialized()) {
+    await buf.log([{ text: 'App already initialized.' }]);
+    return;
+  }
+
   const loader = loading(buf);
   loader.start();
   await app.init(serverUrl);
