@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
+import { BrowserRouter, Switch, Route, Link } from 'react-router-dom';
+import { History } from 'history';
 import { FlexBox, Block, SwitchInput, TextButton, Icon } from '@aztec/guacamole-ui';
 import { App } from './app';
 import { JoinSplitForm } from './join_split_form';
@@ -14,12 +16,8 @@ interface LandingPageProps {
   app: App;
 }
 
-function LandingPage({ app }: LandingPageProps) {
+function ThemedForm({ app }: LandingPageProps) {
   const [theme, setTheme] = useState(themes.darkTheme);
-
-  if (theme.theme === 'terminal') {
-    return <Terminal app={app} onExit={() => setTheme(themes.darkTheme)} />;
-  }
 
   return (
     <ThemeContext.Provider value={theme}>
@@ -29,12 +27,12 @@ function LandingPage({ app }: LandingPageProps) {
             <JoinSplitForm app={app} theme={theme} />
             <Block top="xl">
               <FlexBox valign="center" align="space-between">
-                <FlexBox valign="center">
-                  <TextButton text="Terminal Mode" color={theme.link} onClick={() => setTheme(themes.terminalTheme)} />
-                  <Block padding="0 xs">
+                <TextButton theme="implicit" color={theme.link} href="/terminal-2020" Link={Link}>
+                  <FlexBox valign="center">
+                    <Block right="xs">Terminal Mode</Block>
                     <Icon name="chevron_right" color={theme.link} />
-                  </Block>
-                </FlexBox>
+                  </FlexBox>
+                </TextButton>
                 <SwitchInput
                   theme={theme.theme}
                   onClick={() => setTheme(theme.theme === 'light' ? themes.darkTheme : themes.lightTheme)}
@@ -49,10 +47,30 @@ function LandingPage({ app }: LandingPageProps) {
   );
 }
 
+function LandingPage({ app }: LandingPageProps) {
+  return (
+    <Switch>
+      <Route
+        exact
+        path="/terminal-2020"
+        component={({ history }: { history: History }) => <Terminal app={app} onExit={() => history.push('/')} />}
+      />
+      <Route>
+        <ThemedForm app={app} />
+      </Route>
+    </Switch>
+  );
+}
+
 async function main() {
   debug.enable('bb:*');
   const app = new App();
-  ReactDOM.render(<LandingPage app={app} />, document.getElementById('root'));
+  ReactDOM.render(
+    <BrowserRouter>
+      <LandingPage app={app} />
+    </BrowserRouter>,
+    document.getElementById('root'),
+  );
 }
 
 // tslint:disable-next-line:no-console
