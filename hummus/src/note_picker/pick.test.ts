@@ -30,7 +30,7 @@ describe('pick', () => {
     ]);
   });
 
-  it('return the pair of notes whose sum is the smallest among all quilified pairs', () => {
+  it('return the pair of notes whose sum is the smallest among all qualified pairs', () => {
     const sortedNotes = toSortedNotes([1, 3, 5, 8, 12, 20]);
 
     expect(pick(sortedNotes, 10)).toEqual([
