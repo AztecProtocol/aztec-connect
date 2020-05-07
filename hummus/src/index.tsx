@@ -13,7 +13,7 @@ require('barretenberg-es/wasm/barretenberg.wasm');
 function LandingPage({ app }: { app: App }) {
   const [theme, setTheme] = useState(themes.terminal);
 
-  if (theme.theme === 'terminal') {
+  if (theme.theme === 'terminal1970') {
     return (<TerminalComponent app={app} terminal={new Terminal(12, 40)} onExit={() => setTheme(themes.darkTheme)}/>);
   }
 

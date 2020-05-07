@@ -21,7 +21,7 @@ export const themes: { [key: string]: ThemeContext } = {
     link: 'white',
   },
   terminal: {
-    theme: 'terminal',
+    theme: 'terminal1970',
     background: 'black',
     color: 'white',
     link: 'white',
