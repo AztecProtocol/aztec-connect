@@ -39,4 +39,12 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
 
     this.emit('block', block);
   }
+
+  async status() {
+    return {
+      dataSize: this.dataTreeSize,
+      dataRoot: Buffer.alloc(32, 0),
+      nullRoot: Buffer.alloc(32, 0),
+    };
+  }
 }

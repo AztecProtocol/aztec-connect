@@ -4,8 +4,15 @@ export interface Proof {
   encViewingKey2: Buffer;
 }
 
+export interface RollupProviderStatus {
+  dataSize: number;
+  dataRoot: Buffer;
+  nullRoot: Buffer;
+}
+
 export interface RollupProvider {
   sendProof(proof: Proof): Promise<void>;
+  status(): Promise<RollupProviderStatus>;
 }
 
 export * from './local_rollup_provider';

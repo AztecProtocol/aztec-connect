@@ -47,7 +47,7 @@ export class JoinSplitProofCreator {
 
     const encViewingKey1 = encryptNote(outputNotes[0], this.grumpkin);
     const encViewingKey2 = encryptNote(outputNotes[1], this.grumpkin);
-    const signature = this.joinSplitProver.sign4Notes([...inputNotes, ...outputNotes], sender.privateKey);
+    const signature = this.joinSplitProver.sign4Notes([...inputNotes, ...outputNotes], sender.privateKey!);
 
     const tx = new JoinSplitTx(
       sender.publicKey,
