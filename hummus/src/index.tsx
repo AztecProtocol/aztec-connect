@@ -4,7 +4,7 @@ import { FlexBox, Block, SwitchInput, TextButton, Icon } from '@aztec/guacamole-
 import { App } from './app';
 import { JoinSplitForm } from './join_split_form';
 import { ThemeContext, themes } from './config/context';
-import { Terminal } from './terminal';
+import { Terminal } from './terminal2020';
 import styles from './index.scss';
 import './styles/guacamole.css';
 import debug from 'debug';
