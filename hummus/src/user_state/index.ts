@@ -76,7 +76,7 @@ export class UserState {
   }
 
   public pickNotes(value: number) {
-    return this.notePicker.pick(value, 2) || this.notePicker.pick(value, 1);
+    return this.notePicker.pick(value);
   }
 
   public getBalance() {

@@ -65,7 +65,7 @@ export class TerminalHandler {
       }
       try {
         const [cmd, ...args] = cmdStr.toLowerCase().split(/ +/g);
-        if (!this.app.isInitialised()) {
+        if (!this.app.isInitialized()) {
           await this.handleCommand(cmd, args, this.preInitCmds);
         } else {
           await this.handleCommand(cmd, args, this.postInitCmds);
@@ -86,7 +86,7 @@ export class TerminalHandler {
 
   private async help() {
     this.printQueue.put('[]optional <>required\n');
-    if (!this.app.isInitialised()) {
+    if (!this.app.isInitialized()) {
       this.printQueue.put('init [server]\nexit\n');
     } else {
       this.printQueue.put(
