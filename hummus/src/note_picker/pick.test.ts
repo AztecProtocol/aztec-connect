@@ -1,5 +1,4 @@
-import * as random from '../utils/random';
-import { pick, getStartIndex } from './pick';
+import { pick } from './pick';
 import { SortedNotes } from './sorted_notes';
 import { TrackedNote } from './tracked_note';
 
@@ -16,85 +15,67 @@ const toSortedNotes = (values: number[]) => {
   return new SortedNotes(notes);
 };
 
-describe('getStartIndex', () => {
-  it('return a start index that will guarantee at least one valid combination after that index', () => {
-    const sortedNotes = toSortedNotes([0, 1, 2, 3, 4, 5, 6]);
-    expect(getStartIndex(sortedNotes, 4, 1)).toBe(4);
-    expect(getStartIndex(sortedNotes, 4, 2)).toBe(0);
-    expect(getStartIndex(sortedNotes, 4, 3)).toBe(0);
-    expect(getStartIndex(sortedNotes, 9, 2)).toBe(3);
-    expect(getStartIndex(sortedNotes, 9, 3)).toBe(0);
-  });
-
-  it('properly process repeating values', () => {
-    const sortedNotes = toSortedNotes([0, 1, 1, 1, 1, 1, 2, 3, 4, 5]);
-    expect(getStartIndex(sortedNotes, 3, 1)).toBe(7);
-    expect(getStartIndex(sortedNotes, 3, 2)).toBe(0);
-    expect(getStartIndex(sortedNotes, 6, 2)).toBe(1);
-    expect(getStartIndex(sortedNotes, 7, 2)).toBe(6);
-  });
-
-  it('return -1 if there is no valid combination in it', () => {
-    const sortedNotes = toSortedNotes([0, 1, 2, 3, 4, 5, 6]);
-    expect(getStartIndex(sortedNotes, 7, 1)).toBe(-1);
-    expect(getStartIndex(sortedNotes, 12, 2)).toBe(-1);
-  });
-});
-
 describe('pick', () => {
-  it('pick a set of notes from sortedNotes whose sum is equal to or larger than value', () => {
-    const sortedNotes = toSortedNotes([0, 0, 1, 1, 4, 10]);
+  it('pick a pair of notes whose sum is equal to or larger than the required sum', () => {
+    const sortedNotes = toSortedNotes([0, 1, 2, 3, 6, 10]);
 
-    expect(pick(sortedNotes, 6, 0)).toEqual([]);
-
-    expect(pick(sortedNotes, 6, 1)).toEqual([
-      {
-        index: 5,
-        note: {
-          value: 10,
-        },
-      },
+    expect(pick(sortedNotes, 8)).toEqual([
+      { index: 2, note: { value: 2 } },
+      { index: 4, note: { value: 6 } },
     ]);
 
-    expect(pick(sortedNotes, 13, 2)).toEqual([
-      {
-        index: 4,
-        note: {
-          value: 4,
-        },
-      },
-      {
-        index: 5,
-        note: {
-          value: 10,
-        },
-      },
+    expect(pick(sortedNotes, 15)).toEqual([
+      { index: 4, note: { value: 6 } },
+      { index: 5, note: { value: 10 } },
     ]);
   });
 
-  it('return undefined if there is no note combinations whose sum is equal to or larger than value', () => {
-    const sortedNotes = toSortedNotes([0, 10, 100]);
+  it('return the pair of notes whose sum is the smallest among all qualified pairs', () => {
+    const sortedNotes = toSortedNotes([1, 3, 5, 8, 12, 20]);
 
-    expect(pick(sortedNotes, 1000, 1)).toBeUndefined();
-
-    expect(pick(sortedNotes, 1000, 3)).toBeUndefined();
+    expect(pick(sortedNotes, 10)).toEqual([
+      { index: 1, note: { value: 3 } },
+      { index: 3, note: { value: 8 } },
+    ]);
   });
 
-  it('skip repeating min values if current sum is not enough', () => {
-    const sortedNotes = toSortedNotes([1, 1, 1, 1, 1, 2, 2, 3]);
+  it('return the pair of notes that has the closest value to each other', () => {
+    const sortedNotes = toSortedNotes([1, 2, 3, 4, 5, 6, 7]);
 
-    const randomIntsSpy = jest.spyOn(random, 'randomInts').mockImplementationOnce(() => [0, 1]);
-    pick(sortedNotes, 4, 2);
-    expect(randomIntsSpy.mock.calls[1][1]).toBe(4); // start index in second round. the second round can have up to one 1.
+    expect(pick(sortedNotes, 7)).toEqual([
+      { index: 2, note: { value: 3 } },
+      { index: 3, note: { value: 4 } },
+    ]);
 
-    randomIntsSpy.mockClear();
-    randomIntsSpy.mockImplementationOnce(() => [0, 4]);
-    pick(sortedNotes, 4, 2);
-    expect(randomIntsSpy.mock.calls[1][1]).toBe(4); // the second round can have up to one 1.
+    expect(pick(sortedNotes, 8)).toEqual([
+      { index: 2, note: { value: 3 } },
+      { index: 4, note: { value: 5 } },
+    ]);
+  });
 
-    randomIntsSpy.mockClear();
-    randomIntsSpy.mockImplementationOnce(() => [0, 5]);
-    pick(sortedNotes, 4, 2);
-    expect(randomIntsSpy.mock.calls[1][1]).toBe(5); // the second round can not contain 1s.
+  it('return the note if there is only one note and its value is equal to or larger than the required sum', () => {
+    const sortedNotes = toSortedNotes([2]);
+
+    expect(pick(sortedNotes, 1)).toEqual([{ index: 0, note: { value: 2 } }]);
+
+    expect(pick(sortedNotes, 2)).toEqual([{ index: 0, note: { value: 2 } }]);
+  });
+
+  it('return null if the only note value is less than the required sum', () => {
+    const sortedNotes = toSortedNotes([2]);
+
+    expect(pick(sortedNotes, 3)).toBe(null);
+  });
+
+  it('return null if there is no combinations whose sum is equal to or larger than the required sum', () => {
+    const sortedNotes = toSortedNotes([2, 5, 8, 10]);
+
+    expect(pick(sortedNotes, 20)).toBe(null);
+  });
+
+  it('return null if there is no notes', () => {
+    const sortedNotes = toSortedNotes([]);
+
+    expect(pick(sortedNotes, 1)).toBe(null);
   });
 });
