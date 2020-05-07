@@ -7,7 +7,7 @@ export class JoinSplitProof {
   public nullifier1: Buffer;
   public nullifier2: Buffer;
 
-  constructor(public proofData: Buffer) {
+  constructor(public proofData: Buffer, public viewingKeys: Buffer[]) {
     this.publicInput = proofData.slice(0, 32);
     this.publicOutput = proofData.slice(32, 64);
     this.newNote1 = proofData.slice(2 * 32, 2 * 32 + 64);

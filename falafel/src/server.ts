@@ -22,9 +22,10 @@ export class Server {
   private blockchain!: LocalBlockchain;
   private worker!: BarretenbergWorker;
   private rollupDb!: RollupDb;
-  private blockQueue = new MemoryFifo<Block>();
+  private queue = new MemoryFifo<() => void>();
+  private txPool: JoinSplitProof[] = [];
 
-  constructor(private batchSize: number) {
+  constructor(private rollupSize: number) {
     this.worldStateDb = new WorldStateDb();
   }
 
@@ -38,12 +39,12 @@ export class Server {
     this.printState();
     await this.createJoinSplitVerifier();
     this.interval = setInterval(() => this.flushTxs(), this.maxBlockInterval);
-    this.blockchain.on('block', b => this.blockQueue.put(b));
+    this.blockchain.on('block', b => this.queue.put(() => this.handleNewBlock(b)));
     this.processQueue();
   }
 
   public stop() {
-    this.blockQueue.cancel();
+    this.queue.cancel();
     clearInterval(this.interval!);
     destroyWorker(this.worker);
   }
@@ -64,11 +65,11 @@ export class Server {
 
   private async processQueue() {
     while (true) {
-      const block = await this.blockQueue.get();
-      if (!block) {
+      const f = await this.queue.get();
+      if (!f) {
         break;
       }
-      this.handleNewBlock(block);
+      f();
     }
   }
 
@@ -118,8 +119,8 @@ export class Server {
     console.log('Done.');
   }
 
-  public async receiveTx({ proofData, encViewingKey1, encViewingKey2 }: Proof) {
-    const proof = new JoinSplitProof(proofData);
+  public async receiveTx({proofData, encViewingKey1, encViewingKey2}: Proof) {
+    const proof = new JoinSplitProof(proofData, [encViewingKey1, encViewingKey2]);
 
     // Check nullifiers don't exist (tree id 1 returns 0 at index).
     const emptyValue = Buffer.alloc(64, 0);
@@ -140,16 +141,31 @@ export class Server {
       throw new Error('Proof verification failed.');
     }
 
-    console.log('Verification complete. Adding to mempool.');
+    this.addToPool(proof);
+  }
 
+  private addToPool(proof: JoinSplitProof) {
+    this.txPool.push(proof);
+    if (this.txPool.length >= this.rollupSize) {
+      this.flushTxs();
+    }
+  }
+
+  private async rollup(txs: JoinSplitProof[]) {
     const rollup: Rollup = {
       rollupId: this.rollupDb.getNextRollupId(),
-      txs: [proof],
+      txs,
     };
     await this.rollupDb.addRollup(rollup);
 
-    this.blockchain.sendProof(proofData, rollup.rollupId, [encViewingKey1, encViewingKey2]);
+    //
+
+    // For now, just the first tx is considered.
+    this.blockchain.sendProof(txs[0].proofData, rollup.rollupId, txs[0].viewingKeys);
   }
 
-  public flushTxs() {}
+  public flushTxs() {
+    this.queue.put(() => this.rollup(this.txPool));
+    this.txPool = [];
+  }
 }
