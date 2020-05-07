@@ -15,7 +15,7 @@ interface LandingPageProps {
 }
 
 function LandingPage({ app }: LandingPageProps) {
-  const [theme, setTheme] = useState(themes.terminalTheme);
+  const [theme, setTheme] = useState(themes.darkTheme);
 
   if (theme.theme === 'terminal') {
     return <Terminal app={app} onExit={() => setTheme(themes.darkTheme)} />;
