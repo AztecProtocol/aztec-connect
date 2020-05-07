@@ -1,6 +1,6 @@
 import { App } from '../../app';
 import { Text } from '../display';
-import { TerminalBuffer } from './terminal_buffer';
+import { TerminalBuffer, loading } from './terminal_buffer';
 
 const logUsage = async (buf: TerminalBuffer, unknown: string = '') => {
   let texts: Text[] = [];
@@ -33,9 +33,10 @@ const run = async (buf: TerminalBuffer, app: App) => {
     }
   }
 
-  await buf.log([{ text: 'Initializing keys...' }]);
+  const loader = loading(buf);
+  loader.start();
   await app.init(serverUrl);
-  await buf.removeLog(1);
+  await loader.stop();
 };
 
 export const init = {

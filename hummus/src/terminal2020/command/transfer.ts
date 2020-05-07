@@ -1,6 +1,6 @@
 import { App } from '../../app';
 import { Text } from '../display';
-import { TerminalBuffer } from './terminal_buffer';
+import { TerminalBuffer, loading } from './terminal_buffer';
 
 const validOptions = ['-a', '-i', '-k'];
 
@@ -71,9 +71,10 @@ const run = async (buf: TerminalBuffer, app: App) => {
     return;
   }
 
-  await buf.log([{ text: 'Transfering...' }]);
+  const loader = loading(buf);
+  loader.start();
   await app.transfer(parseInt(amount, 10), publicKey);
-  await buf.removeLog(1);
+  await loader.stop();
 };
 
 export const transfer = {

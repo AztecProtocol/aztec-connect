@@ -1,5 +1,5 @@
 import { App } from '../../app';
-import { TerminalBuffer } from './terminal_buffer';
+import { TerminalBuffer, loading } from './terminal_buffer';
 
 const run = async (buf: TerminalBuffer, app: App) => {
   const option = buf.argv[1];
@@ -19,10 +19,11 @@ const run = async (buf: TerminalBuffer, app: App) => {
     return;
   }
 
-  await buf.log([{ text: 'Withdrawing...' }]);
+  const loader = loading(buf);
+  loader.start();
   const amount = parseInt(option, 10);
   await app.withdraw(amount);
-  await buf.removeLog(1);
+  await loader.stop();
 };
 
 export const withdraw = {
