@@ -1,52 +1,41 @@
-import { randomInts } from '../utils/random';
 import { SortedNotes } from './sorted_notes';
-import { TrackedNote, noteSum } from './tracked_note';
 
-export const getStartIndex = (sortedNotes: SortedNotes, value: number, numberOfNotes: number) => {
-  const suffixSum =
-    numberOfNotes <= 1 ? 0 : sortedNotes.last(numberOfNotes - 1).reduce((accum, note) => accum + note.note.value, 0);
-  const ceil = sortedNotes.length - numberOfNotes + 1;
-  let start = 0;
-  while (start < ceil) {
-    if (suffixSum + sortedNotes.nth(start).note.value >= value) {
-      return start;
-    }
-
-    do {
-      start += 1;
-    } while (sortedNotes.nth(start) && sortedNotes.nth(start).note.value === sortedNotes.nth(start - 1).note.value);
+export const pick = (sortedNotes: SortedNotes, value: number) => {
+  let i = 0;
+  const left = sortedNotes.nth(i);
+  if (!left) {
+    return null;
   }
 
-  return -1;
-};
-
-export const pick = (sortedNotes: SortedNotes, value: number, numberOfNotes: number) => {
-  let notes: TrackedNote[] = [];
-
-  if (numberOfNotes <= 0) {
-    return notes;
+  let sum = left.note.value;
+  let j = sortedNotes.length - 1;
+  if (i === j) {
+    return sum >= value ? [left] : null;
   }
 
-  const totalNotes = sortedNotes.length;
-  let start = getStartIndex(sortedNotes, value, numberOfNotes);
-  if (start < 0) {
-    return;
-  }
-
-  while (start <= totalNotes - numberOfNotes) {
-    const indexes = randomInts(numberOfNotes, start, totalNotes - 1);
-
-    notes = indexes.map(idx => sortedNotes.nth(idx));
-    if (noteSum(notes) >= value) {
+  const right = sortedNotes.nth(j);
+  sum += right.note.value;
+  let tmpSum = sum;
+  let pair = [left, right];
+  while (i < j - 1) {
+    if (tmpSum > value) {
+      j--;
+    } else if (tmpSum < value) {
+      i++;
+    } else if (i < j - 2) {
+      i++;
+      j--;
+    } else {
       break;
     }
-    // skip redundant identical values
-    const minValue = notes[0].note.value;
-    const minValueCount = notes.reduce((count, note) => count + (note.note.value === minValue ? 1 : 0), 0);
-    const firstMinIndex = sortedNotes.indexOfValue(minValue, start);
-    const lastMinIndex = sortedNotes.lastIndexOfValue(minValue);
-    start = Math.max(firstMinIndex + 1, lastMinIndex - (minValueCount - 1) + 1);
+
+    const thisPair = [sortedNotes.nth(i), sortedNotes.nth(j)];
+    tmpSum = thisPair[0].note.value + thisPair[1].note.value;
+    if (tmpSum === value || (sum !== value && tmpSum > value)) {
+      sum = tmpSum;
+      pair = thisPair;
+    }
   }
 
-  return notes;
+  return sum >= value ? pair : null;
 };

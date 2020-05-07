@@ -1,6 +1,5 @@
 import { TrackedNote } from './tracked_note';
 import { SortedNotes } from './sorted_notes';
-import { validate } from './validate';
 import { pick } from './pick';
 
 export * from './tracked_note';
@@ -40,15 +39,11 @@ export class NotePicker {
     return this.sortedNotes.find(callback);
   }
 
-  validate(value: number, numberOfNotes: number) {
-    return validate(this.sortedNotes, value, numberOfNotes);
-  }
-
-  pick(value: number, numberOfNotes: number = 2) {
+  pick(value: number) {
     if (value === 0) {
       return [];
     }
-    return pick(this.sortedNotes, value, numberOfNotes);
+    return pick(this.sortedNotes, value);
   }
 
   getNoteSum() {
