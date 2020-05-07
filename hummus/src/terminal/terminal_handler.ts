@@ -171,7 +171,7 @@ export class TerminalHandler {
 
   private userStr(u: User) {
     return (
-      `${u.id}: ${u.publicKey.toString('hex').slice(0, 8)}...` +
+      `${u.id}: ${u.publicKey.slice(0, 4).toString('hex')}...` +
       (u.alias ? ` (${u.alias})` : '') +
       (u.privateKey ? ' *' : '') +
       '\n'

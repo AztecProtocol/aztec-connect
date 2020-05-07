@@ -54,6 +54,14 @@ export class Server {
     console.log(`Null root: ${this.worldStateDb.getRoot(1).toString('hex')}`);
   }
 
+  public status() {
+    return {
+      dataSize: Number(this.worldStateDb.getSize(0)),
+      dataRoot: this.worldStateDb.getRoot(0).toString('hex'),
+      nullRoot: this.worldStateDb.getRoot(1).toString('hex'),
+    };
+  }
+
   private async processQueue() {
     while (true) {
       const block = await this.blockQueue.get();
