@@ -107,6 +107,14 @@ export class App extends EventEmitter {
     return this.initialized;
   }
 
+  public getDataRoot() {
+    return this.worldState.getRoot();
+  }
+
+  public getDataSize() {
+    return this.worldState.getSize();
+  }
+
   private log(str: string) {
     this.emit('log', str + '\n');
   }
