@@ -85,6 +85,7 @@ export class TerminalHandler {
   }
 
   private async help() {
+    this.printQueue.put('[]optional <>required\n');
     if (!this.app.isInitialised()) {
       this.printQueue.put('init [server]\nexit\n');
     } else {
