@@ -179,8 +179,9 @@ export class App extends EventEmitter {
       }
       window.localStorage.setItem('syncedToBlock', block.blockNum.toString());
 
-      if (this.initialized && this.getBalance() !== balanceBefore) {
-        this.log(`balance updated: ${this.getBalance()}`);
+      const diff = this.getBalance() - balanceBefore;
+      if (this.initialized && diff !== 0) {
+        this.log(`balance updated: ${this.getBalance()} (${diff >= 0 ? '+' : ''}${diff})`);
       }
     }
   }
