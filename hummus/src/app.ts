@@ -47,6 +47,10 @@ export class App extends EventEmitter {
   private db = new DexieDatabase();
   private blockQueue = new MemoryFifo<Block>();
 
+  public initialized() {
+    return !!this.joinSplitProofCreator;
+  }
+
   public async init(serverUrl: string) {
     const circuitSize = 128 * 1024;
 
@@ -192,6 +196,12 @@ export class App extends EventEmitter {
       this.grumpkin,
     );
     this.emit('updated');
+  }
+
+  public getUserById(userId: number) {
+    const userState = this.userStates[userId];
+    if (!userState) return;
+    return userState.getUser();
   }
 
   public getBalance() {

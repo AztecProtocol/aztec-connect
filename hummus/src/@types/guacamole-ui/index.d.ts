@@ -1,11 +1,12 @@
 declare module '@aztec/guacamole-ui' {
-  const FlexBox: any;
   const Block: any;
-  const Text: any;
-  const TextInput: any;
-  const SelectInput: any;
-  const MaskedNumberInput: any;
   const Button: any;
-  const TextButton: any;
+  const FlexBox: any;
   const Icon: any;
+  const MaskedNumberInput: any;
+  const SelectInput: any;
+  const SwitchInput: any;
+  const Text: any;
+  const TextButton: any;
+  const TextInput: any;
 }

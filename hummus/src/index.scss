@@ -1,0 +1,16 @@
+:global {
+  #root {
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
+.container {
+  height: 100vh;
+  overflow: auto;
+}
+
+.content {
+  width: 100%;
+  max-width: 640px;;
+}

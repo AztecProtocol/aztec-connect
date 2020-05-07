@@ -27,6 +27,11 @@ $icon-size-map: ('xxs':12px,'xs':14px,'s':16px,'m':18px,'l':24px,'xl':36px,'xxl'
 $input-size-map: ('xs':24px,'s':28px,'m':32px,'l':40px);
 $input-font-size-key-map: ('xs':'xxs','s':'xxs','m':'xs','l':'s');
 $input-border-width: 1px;
+$input-menu-default-background: 'white';
+$input-menu-border-color: 'undefined';
+$input-menu-border-radius: 'xs';
+$input-menu-layer: 2;
+$input-menu-offset-top: 'undefined';
 $default-input-bg-color-name: 'white';
 $default-input-bg-color: #FFFFFF;
 $default-input-outline-color-name: 'grey-light';
