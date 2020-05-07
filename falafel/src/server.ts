@@ -158,7 +158,15 @@ export class Server {
     };
     await this.rollupDb.addRollup(rollup);
 
-    //
+    // 1. Get current hash paths for all data element target indicies.
+    //    (future optimization: leverage most results are zero hashes due to zero values).
+    // 2. Get hash paths for all given nullifier indices.
+    // 2. Perform puts of all data and nullifier elements into db.
+    // 3. Get new hash paths for all data elements and nullifiers.
+    //    (future optimization: The put could actually return old and new paths as it discovers them also).
+    // 4. Gather all this data into the Rollup struct, and send it to the RollupProofGenerator.
+    // 5. Serialize it, send it to process, await response data.
+    // 6. Send to blockchain (as per below).
 
     // For now, just the first tx is considered.
     this.blockchain.sendProof(txs[0].proofData, rollup.rollupId, txs[0].viewingKeys);
