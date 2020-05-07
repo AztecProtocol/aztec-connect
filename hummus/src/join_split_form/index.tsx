@@ -7,7 +7,7 @@ import { UserSelect } from './user_select';
 import { Deposit } from './deposit';
 import { Withdraw } from './withdraw';
 import { Transfer } from './transfer';
-import { IThemeContext } from '../config/context';
+import { ThemeContext } from '../config/context';
 import { User } from '../user';
 import createDebug from 'debug';
 
@@ -36,7 +36,7 @@ enum ApiNames {
 
 interface JoinSplitFormProps {
   app: App;
-  theme: IThemeContext;
+  theme: ThemeContext;
 }
 
 export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
@@ -51,7 +51,7 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
   useEffect(() => {
     const fetchBalance = () => setBalance(app.getBalance());
     app.on('updated', fetchBalance);
-    const initialized = app.initialized();
+    const initialized = app.isInitialized();
     if (initialized && !user) {
       setUsers(app.getUsers());
       setUser(app.getUser());

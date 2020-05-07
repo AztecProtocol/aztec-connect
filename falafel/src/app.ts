@@ -54,6 +54,10 @@ export function appFactory(server: Server, prefix: string) {
     }
   });
 
+  router.get('/status', async (ctx: Koa.Context) => {
+    ctx.body = server.status();
+  });
+
   const app = new Koa();
   app.proxy = true;
   app.use(compress());

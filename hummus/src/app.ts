@@ -27,8 +27,9 @@ const debug = createDebug('bb:app');
 function dbUserToUser(dbUser: DbUser): User {
   return {
     id: dbUser.id,
-    privateKey: Buffer.from(dbUser.privateKey),
+    privateKey: dbUser.privateKey ? Buffer.from(dbUser.privateKey) : undefined,
     publicKey: Buffer.from(dbUser.publicKey),
+    alias: dbUser.alias,
   };
 }
 
@@ -36,8 +37,9 @@ export class App extends EventEmitter {
   private pool!: WorkerPool;
   private joinSplitProver!: JoinSplitProver;
   private joinSplitVerifier!: JoinSplitVerifier;
-  private userId = 0;
+  private user!: User;
   private worldState!: WorldState;
+  private users: User[] = [];
   private userStates: UserState[] = [];
   private joinSplitProofCreator!: JoinSplitProofCreator;
   private rollupProvider!: RollupProvider;
@@ -46,10 +48,7 @@ export class App extends EventEmitter {
   private blake2s!: Blake2s;
   private db = new DexieDatabase();
   private blockQueue = new MemoryFifo<Block>();
-
-  public initialized() {
-    return !!this.joinSplitProofCreator;
-  }
+  private initialized = false;
 
   public async init(serverUrl: string) {
     const circuitSize = 128 * 1024;
@@ -83,19 +82,48 @@ export class App extends EventEmitter {
     const leveldb = levelup(leveljs('hummus'));
     this.worldState = new WorldState(leveldb, pedersen, this.blake2s);
     await this.worldState.init();
+    const { dataSize, dataRoot, nullRoot } = await this.rollupProvider.status();
+    this.log(`data size: ${dataSize}`);
+    this.log(`data root: ${dataRoot.slice(0, 8).toString('hex')}...`);
+    this.log(`null root: ${nullRoot.slice(0, 8).toString('hex')}...`);
 
     this.grumpkin = new Grumpkin(barretenberg);
 
     await this.initUsers();
     this.switchToUser(0);
+    this.log(`user: ${this.getUser().publicKey.slice(0, 4).toString('hex')}...`);
+    this.log(`balance: ${this.getBalance()}`);
 
     this.processBlockQueue();
 
-    debug('creating keys...');
+    this.logAndDebug('creating keys...');
     const start = new Date().getTime();
     await this.joinSplitProver.init();
     await this.joinSplitVerifier.init(crs.getG2Data());
-    debug(`created circuit keys: ${new Date().getTime() - start}ms`);
+    this.logAndDebug(`created circuit keys: ${new Date().getTime() - start}ms`);
+
+    this.initialized = true;
+  }
+
+  public isInitialized() {
+    return this.initialized;
+  }
+
+  public getDataRoot() {
+    return this.worldState.getRoot();
+  }
+
+  public getDataSize() {
+    return this.worldState.getSize();
+  }
+
+  private log(str: string) {
+    this.emit('log', str + '\n');
+  }
+
+  private logAndDebug(str: string) {
+    debug(str);
+    this.log(str);
   }
 
   public async destroy() {
@@ -105,14 +133,17 @@ export class App extends EventEmitter {
   }
 
   private async initUsers() {
-    const users = (await this.db.getUsers()).map(dbUserToUser);
-    if (!users.length) {
-      const user = await this.createUser();
-      debug(`created new user:`, user);
+    this.users = (await this.db.getUsers()).map(dbUserToUser);
+    if (!this.users.length) {
+      this.user = await this.createUser();
+      debug(`created new user:`, this.user);
     } else {
-      this.userStates = users.map(u => new UserState(u, this.grumpkin, this.blake2s, this.db));
+      this.userStates = this.users
+        .filter(u => u.privateKey)
+        .map(u => new UserState(u, this.grumpkin, this.blake2s, this.db));
       await Promise.all(this.userStates.map(us => us.init()));
     }
+    this.user = this.users[0];
   }
 
   private initLocalRollupProvider() {
@@ -138,12 +169,20 @@ export class App extends EventEmitter {
       if (!block) {
         break;
       }
+
+      const balanceBefore = this.getBalance();
+
       await this.worldState.processBlock(block);
       const updates = await Promise.all(this.userStates.map(us => us.processBlock(block)));
       if (updates.some(x => x)) {
         this.emit('updated');
       }
       window.localStorage.setItem('syncedToBlock', block.blockNum.toString());
+
+      const diff = this.getBalance() - balanceBefore;
+      if (this.initialized && diff !== 0) {
+        this.log(`balance updated: ${this.getBalance()} (${diff >= 0 ? '+' : ''}${diff})`);
+      }
     }
   }
 
@@ -166,16 +205,17 @@ export class App extends EventEmitter {
   }
 
   public getUser() {
-    return this.userStates[this.userId].getUser();
+    return this.user;
   }
 
   public getUsers() {
-    return this.userStates.map(us => us.getUser());
+    return this.users;
   }
 
-  public async createUser() {
+  public async createUser(alias?: string) {
     const users = await this.db.getUsers();
-    const user = createUser(users.length, this.grumpkin);
+    const user = createUser(users.length, this.grumpkin, alias);
+    this.users.push(user);
     this.db.addUser(user);
     const userState = new UserState(user, this.grumpkin, this.blake2s, this.db);
     await userState.init();
@@ -183,28 +223,47 @@ export class App extends EventEmitter {
     return user;
   }
 
-  public switchToUser(userId: number) {
-    if (userId >= this.userStates.length) {
-      throw new Error('User not found.');
+  public async addUser(alias: string, publicKey: Buffer) {
+    if (this.users.find(u => u.alias === alias)) {
+      throw new Error('Alias already exists.');
     }
-    this.userId = userId;
-    debug(`switching to user id: ${this.userId}`);
+    const users = await this.db.getUsers();
+    const user: User = { id: users.length, publicKey, alias };
+    this.users.push(user);
+    this.db.addUser(user);
+    return user;
+  }
+
+  public switchToUser(userIdOrAlias: string | number) {
+    userIdOrAlias = userIdOrAlias.toString();
+    const user = this.findUser(userIdOrAlias);
+    if (!user) {
+      throw new Error('Local user not found.');
+    }
+    this.user = user;
+    debug(`switching to user id: ${user.id}`);
     this.joinSplitProofCreator = new JoinSplitProofCreator(
       this.joinSplitProver,
-      this.userStates[this.userId],
+      this.userStates.find(us => us.getUser().id === user.id)!,
       this.worldState,
       this.grumpkin,
     );
     this.emit('updated');
+    return user;
   }
 
-  public getUserById(userId: number) {
-    const userState = this.userStates[userId];
-    if (!userState) return;
-    return userState.getUser();
+  public getBalance(userIdOrAlias?: string | number) {
+    const user = userIdOrAlias ? this.findUser(userIdOrAlias) || this.user : this.user;
+    return this.userStates.find(us => us.getUser().id === user.id)!.getBalance();
   }
 
-  public getBalance() {
-    return this.userStates[this.userId].getBalance();
+  public findUser(userIdOrAlias: string | number, remote: boolean = false) {
+    userIdOrAlias = userIdOrAlias.toString();
+    const user = this.users
+      .filter(u => remote || u.privateKey)
+      .find(u => {
+        return u.id.toString() === userIdOrAlias || u.alias === userIdOrAlias;
+      });
+    return user;
   }
 }

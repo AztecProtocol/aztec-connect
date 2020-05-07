@@ -1,13 +1,13 @@
 import { createContext } from 'react';
 
-export interface IThemeContext {
+export interface ThemeContext {
   theme: string;
   background: string;
   color: string;
   link: string;
 };
 
-export const themes: { [key: string]: IThemeContext } = {
+export const themes: { [key: string]: ThemeContext } = {
   lightTheme: {
     theme: 'light',
     background: 'white',
@@ -19,7 +19,7 @@ export const themes: { [key: string]: IThemeContext } = {
     background: 'grey-darker',
     color: 'white',
     link: 'white',
-  },
+  }
 };
 
 export const ThemeContext = createContext(themes.darkTheme);

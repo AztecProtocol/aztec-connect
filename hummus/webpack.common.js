@@ -1,6 +1,5 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const webpack = require('webpack');
 const ThreadsPlugin = require('threads-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
@@ -110,7 +109,6 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({ template: './src/index.html' }),
-    new webpack.HotModuleReplacementPlugin(),
     new ThreadsPlugin(),
     new MiniCssExtractPlugin({
       filename: '[name].css',
