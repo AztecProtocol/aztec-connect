@@ -37,7 +37,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async sendProof(proofData: Buffer, rollupId: number, viewingKeys: Buffer[]) {
-    const tx = new JoinSplitProof(proofData);
+    const tx = new JoinSplitProof(proofData, viewingKeys);
 
     const block: Block = {
       blockNum: this.blockNum,

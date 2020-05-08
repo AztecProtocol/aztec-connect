@@ -2,6 +2,8 @@ import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
 
+export type HashPath = Buffer[][];
+
 export class WorldStateDb {
   private proc?: ChildProcess;
   private stdout!: { read: (size: number) => Promise<Buffer> };
@@ -49,7 +51,7 @@ export class WorldStateDb {
     const depth = (await this.stdout.read(4)).readUInt32BE(0);
     const result = await this.stdout.read(depth * 64);
 
-    const path: Buffer[][] = [];
+    const path: HashPath = [];
     for (let i=0; i<depth; ++i) {
       const lhs = result.slice(i*64, i*64+32);
       const rhs = result.slice(i*64+32, i*64+64);
