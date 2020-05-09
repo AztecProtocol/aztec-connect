@@ -6,11 +6,11 @@ import { Proof } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
-import { toBigIntBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { createConnection } from 'typeorm';
 import { LocalBlockchain } from './blockchain';
 import { MemoryFifo } from './fifo';
-import { Rollup } from './rollup';
+import { IndexedHashPath, Rollup } from './rollup';
 import { RollupDb } from './rollup_db';
 import { WorldStateDb } from './world_state_db';
 
@@ -124,11 +124,11 @@ export class Server {
 
     // Check nullifiers don't exist (tree id 1 returns 0 at index).
     const emptyValue = Buffer.alloc(64, 0);
-    const nullifierVal1 = await this.worldStateDb.get(1, toBigIntBE(proof.nullifier1));
+    const nullifierVal1 = await this.worldStateDb.get(1, proof.nullifier1);
     if (!nullifierVal1.equals(emptyValue)) {
       throw new Error('Nullifier 1 already exists.');
     }
-    const nullifierVal2 = await this.worldStateDb.get(1, toBigIntBE(proof.nullifier2));
+    const nullifierVal2 = await this.worldStateDb.get(1, proof.nullifier2);
     if (!nullifierVal2.equals(emptyValue)) {
       throw new Error('Nullifier 2 already exists.');
     }
@@ -144,6 +144,64 @@ export class Server {
     this.addToPool(proof);
   }
 
+  private async createIndexedHashPaths(txs: JoinSplitProof[]) {
+    const dataPaths: IndexedHashPath[] = [];
+    const nullPaths: IndexedHashPath[] = [];
+
+    let nextDataIndex = this.worldStateDb.getSize(0);
+    for (const proof of txs) {
+      const dataPath1 = await this.worldStateDb.getHashPath(0, nextDataIndex);
+      // As txs always are pairs of notes (first even index, second odd index), we know hash paths will be the same.
+      const dataPath2 = dataPath1;
+      const nullPath1 = await this.worldStateDb.getHashPath(0, proof.nullifier1);
+      const nullPath2 = await this.worldStateDb.getHashPath(0, proof.nullifier2);
+      dataPaths.push(new IndexedHashPath(nextDataIndex++, dataPath1));
+      dataPaths.push(new IndexedHashPath(nextDataIndex++, dataPath2));
+      nullPaths.push(new IndexedHashPath(proof.nullifier1, nullPath1));
+      nullPaths.push(new IndexedHashPath(proof.nullifier2, nullPath2));
+    }
+
+    return {dataPaths, nullPaths};
+  }
+
+  private async createRollup(txs: JoinSplitProof[]) {
+    // Get old data.
+    const oldDataRoot = this.worldStateDb.getRoot(0);
+    const oldNullRoot = this.worldStateDb.getRoot(1);
+    const {dataPaths: oldDataPaths, nullPaths: oldNullPaths} = await this.createIndexedHashPaths(txs);
+
+    // Insert each txs element into the tree (will be thrown away).
+    let nextDataIndex = this.worldStateDb.getSize(0);
+    for (const proof of txs) {
+      this.worldStateDb.put(0, nextDataIndex++, proof.newNote1);
+      this.worldStateDb.put(0, nextDataIndex++, proof.newNote2);
+      this.worldStateDb.put(1, proof.nullifier1, toBufferBE(1n, 64));
+      this.worldStateDb.put(1, proof.nullifier2, toBufferBE(1n, 64));
+    }
+
+    // Get new data.
+    const newDataRoot = this.worldStateDb.getRoot(0);
+    const newNullRoot = this.worldStateDb.getRoot(1);
+    const {dataPaths: newDataPaths, nullPaths: newNullPaths} = await this.createIndexedHashPaths(txs);
+
+    // Discard changes.
+    // TODO: WARNING! ROOTS AND SIZE ARE NOT RESTORED. FIX!
+    await this.worldStateDb.rollback();
+
+    return new Rollup(
+      this.rollupDb.getNextRollupId(),
+      txs.map(tx=>tx.proofData),
+      oldDataRoot,
+      oldNullRoot,
+      oldDataPaths,
+      oldNullPaths,
+      newDataRoot,
+      newNullRoot,
+      newDataPaths,
+      newNullPaths
+    );
+  }
+
   private addToPool(proof: JoinSplitProof) {
     this.txPool.push(proof);
     if (this.txPool.length >= this.rollupSize) {
@@ -152,21 +210,9 @@ export class Server {
   }
 
   private async rollup(txs: JoinSplitProof[]) {
-    const rollup: Rollup = {
-      rollupId: this.rollupDb.getNextRollupId(),
-      txs,
-    };
-    await this.rollupDb.addRollup(rollup);
+    const rollup = await this.createRollup(txs);
 
-    // 1. Get current hash paths for all data element target indicies.
-    //    (future optimization: leverage most results are zero hashes due to zero values).
-    // 2. Get hash paths for all given nullifier indices.
-    // 2. Perform puts of all data and nullifier elements into db.
-    // 3. Get new hash paths for all data elements and nullifiers.
-    //    (future optimization: The put could actually return old and new paths as it discovers them also).
-    // 4. Gather all this data into the Rollup struct, and send it to the RollupProofGenerator.
-    // 5. Serialize it, send it to process, await response data.
-    // 6. Send to blockchain (as per below).
+    await this.rollupDb.addRollup(rollup);
 
     // For now, just the first tx is considered.
     this.blockchain.sendProof(txs[0].proofData, rollup.rollupId, txs[0].viewingKeys);
