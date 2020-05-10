@@ -165,12 +165,14 @@ export class Server {
   }
 
   private async createRollup(txs: JoinSplitProof[]) {
+    const dataStartIndex = Number(this.worldStateDb.getSize(0));
+
     // Get old data.
     const oldDataRoot = this.worldStateDb.getRoot(0);
     const oldNullRoot = this.worldStateDb.getRoot(1);
     const {dataPaths: oldDataPaths, nullPaths: oldNullPaths} = await this.createIndexedHashPaths(txs);
 
-    // Insert each txs element into the tree (will be thrown away).
+    // Insert each txs elements into the db (modified state will be thrown away).
     let nextDataIndex = this.worldStateDb.getSize(0);
     for (const proof of txs) {
       this.worldStateDb.put(0, nextDataIndex++, proof.newNote1);
@@ -190,6 +192,7 @@ export class Server {
 
     return new Rollup(
       this.rollupDb.getNextRollupId(),
+      dataStartIndex,
       txs.map(tx=>tx.proofData),
       oldDataRoot,
       oldNullRoot,

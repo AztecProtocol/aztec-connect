@@ -21,6 +21,7 @@ export class IndexedHashPath {
 export class Rollup {
   constructor(
     public rollupId: number,
+    public dataStartIndex: number,
     public proofs: Buffer[],
     public oldDataRoot: Buffer,
     public oldNullRoot: Buffer,
@@ -33,10 +34,11 @@ export class Rollup {
   ) {}
 
   public toBuffer() {
-    const numBuf = Buffer.alloc(12);
+    const numBuf = Buffer.alloc(16);
     numBuf.writeUInt32BE(this.rollupId, 0);
     numBuf.writeUInt32BE(this.proofs.length, 4);
     numBuf.writeUInt32BE(this.proofs[0].length, 8);
+    numBuf.writeUInt32BE(this.dataStartIndex, 12);
 
     return Buffer.concat([
       numBuf,
