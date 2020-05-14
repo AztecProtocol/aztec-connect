@@ -82,10 +82,15 @@ export class App extends EventEmitter {
     const leveldb = levelup(leveljs('hummus'));
     this.worldState = new WorldState(leveldb, pedersen, this.blake2s);
     await this.worldState.init();
-    const { dataSize, dataRoot, nullRoot } = await this.rollupProvider.status();
-    this.log(`data size: ${dataSize}`);
-    this.log(`data root: ${dataRoot.slice(0, 8).toString('hex')}...`);
-    this.log(`null root: ${nullRoot.slice(0, 8).toString('hex')}...`);
+
+    try {
+      const { dataSize, dataRoot, nullRoot } = await this.rollupProvider.status();
+      this.log(`data size: ${dataSize}`);
+      this.log(`data root: ${dataRoot.slice(0, 8).toString('hex')}...`);
+      this.log(`null root: ${nullRoot.slice(0, 8).toString('hex')}...`);
+    } catch (err) {
+      this.log('Failed to get server status.');
+    }
 
     this.grumpkin = new Grumpkin(barretenberg);
 

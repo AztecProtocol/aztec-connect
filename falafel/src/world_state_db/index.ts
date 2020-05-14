@@ -1,8 +1,7 @@
+import { HashPath } from 'barretenberg/merkle_tree';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
-
-export type HashPath = Buffer[][];
 
 export class WorldStateDb {
   private proc?: ChildProcess;
@@ -51,11 +50,11 @@ export class WorldStateDb {
     const depth = (await this.stdout.read(4)).readUInt32BE(0);
     const result = await this.stdout.read(depth * 64);
 
-    const path: HashPath = [];
+    const path = new HashPath();
     for (let i=0; i<depth; ++i) {
       const lhs = result.slice(i*64, i*64+32);
       const rhs = result.slice(i*64+32, i*64+64);
-      path.push([lhs, rhs]);
+      path.data.push([lhs, rhs]);
     }
     return path;
   }
@@ -81,13 +80,13 @@ export class WorldStateDb {
   public async commit() {
     const buffer = Buffer.from([0x02]);
     this.proc!.stdin!.write(buffer);
-    await this.stdout.read(1);
+    await this.readMetadata();
   }
 
   public async rollback() {
     const buffer = Buffer.from([0x03]);
     this.proc!.stdin!.write(buffer);
-    await this.stdout.read(1);
+    await this.readMetadata();
   }
 
   public async destroy() {
@@ -111,6 +110,10 @@ export class WorldStateDb {
 
     this.stdout = new PromiseReadable(this.proc!.stdout!) as any;
 
+    await this.readMetadata();
+  }
+
+  private async readMetadata() {
     this.roots[0] = await this.stdout.read(32);
     this.roots[1] = await this.stdout.read(32);
     const dataSize = await this.stdout.read(16);

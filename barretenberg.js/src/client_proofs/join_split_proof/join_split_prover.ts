@@ -44,7 +44,7 @@ export class JoinSplitProver {
     const proverPtr = await worker.call('join_split__new_prover', mem, buf.length);
     await worker.call('bbfree', mem);
     const proof = await this.prover.createProof(proverPtr);
-    await worker.call('create_note__delete_prover', proverPtr);
+    await worker.call('join_split__delete_prover', proverPtr);
     return proof;
   }
 }

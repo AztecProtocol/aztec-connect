@@ -1,56 +1,44 @@
 import { HashPath } from 'barretenberg/merkle_tree';
-import { toBufferBE } from 'bigint-buffer';
-
-export class IndexedHashPath {
-  constructor(
-    public index: bigint,
-    public path: HashPath,
-  ) {}
-
-  public toBuffer() {
-    const depthBuf = Buffer.alloc(12);
-    depthBuf.writeUInt32BE(this.path.length, 0);
-    return Buffer.concat([
-      toBufferBE(this.index, 16),
-      depthBuf,
-      ...this.path.flat(),
-    ]);
-  }
-}
+import { serializeVector } from 'barretenberg/serialize';
 
 export class Rollup {
   constructor(
     public rollupId: number,
     public dataStartIndex: number,
     public proofs: Buffer[],
+
+    public rollupRoot: Buffer,
     public oldDataRoot: Buffer,
-    public oldNullRoot: Buffer,
-    public oldDataPaths: IndexedHashPath[],
-    public oldNullPaths: IndexedHashPath[],
     public newDataRoot: Buffer,
-    public newNullRoot: Buffer,
-    public newDataPaths: IndexedHashPath[],
-    public newNullPaths: IndexedHashPath[],
+    public oldDataPath: HashPath,
+    public newDataPath: HashPath,
+
+    public oldNullRoot: Buffer,
+    public newNullRoots: Buffer[],
+    public oldNullPaths: HashPath[],
+    public newNullPaths: HashPath[],
   ) {}
 
   public toBuffer() {
-    const numBuf = Buffer.alloc(16);
+    const numBuf = Buffer.alloc(12);
     numBuf.writeUInt32BE(this.rollupId, 0);
     numBuf.writeUInt32BE(this.proofs.length, 4);
-    numBuf.writeUInt32BE(this.proofs[0].length, 8);
-    numBuf.writeUInt32BE(this.dataStartIndex, 12);
+    numBuf.writeUInt32BE(this.dataStartIndex, 8);
 
     return Buffer.concat([
       numBuf,
-      ...this.proofs,
+      serializeVector(this.proofs.map(p => serializeVector(p))),
+
+      this.rollupRoot,
       this.oldDataRoot,
-      this.oldNullRoot,
-      ...this.oldDataPaths.map(p=>p.toBuffer()),
-      ...this.oldNullPaths.map(p=>p.toBuffer()),
       this.newDataRoot,
-      this.newNullRoot,
-      ...this.newDataPaths.map(p=>p.toBuffer()),
-      ...this.newNullPaths.map(p=>p.toBuffer()),
+      this.oldDataPath.toBuffer(),
+      this.newDataPath.toBuffer(),
+
+      this.oldNullRoot,
+      serializeVector(this.newNullRoots),
+      serializeVector(this.oldNullPaths),
+      serializeVector(this.newNullPaths),
     ]);
   }
 }

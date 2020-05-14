@@ -1,8 +1,8 @@
 import { Block, BlockSource } from 'barretenberg/block_source';
-import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { EventEmitter } from 'events';
 import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
+import { RollupProof } from './rollup_proof';
 
 export interface ProofReceiver {
   sendProof(proof: Buffer, rollupId: number, viewingKeys: Buffer[]): Promise<void>;
@@ -37,19 +37,21 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async sendProof(proofData: Buffer, rollupId: number, viewingKeys: Buffer[]) {
-    const tx = new JoinSplitProof(proofData, viewingKeys);
+    const tx = new RollupProof(proofData);
+    const dataEntries = tx.innerProofData.map(p => [p.newNote1, p.newNote2]).flat();
+    const nullifiers = tx.innerProofData.map(p => [p.nullifier1, p.nullifier2]).flat();
 
     const block: Block = {
       blockNum: this.blockNum,
       rollupId,
       dataStartIndex: this.dataTreeSize,
-      dataEntries: [tx.newNote1, tx.newNote2],
-      nullifiers: [tx.nullifier1, tx.nullifier2],
+      dataEntries,
+      nullifiers,
       viewingKeys,
     };
 
     this.blockNum++;
-    this.dataTreeSize += 2;
+    this.dataTreeSize += dataEntries.length;
     this.blockchain.push(block);
 
     await this.saveBlock(block, rollupId);

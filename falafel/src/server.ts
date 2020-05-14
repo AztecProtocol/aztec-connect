@@ -1,6 +1,7 @@
 import { Block } from 'barretenberg/block_source';
 import { JoinSplitProof, JoinSplitVerifier } from 'barretenberg/client_proofs/join_split_proof';
 import { Crs } from 'barretenberg/crs';
+import { HashPath } from 'barretenberg/merkle_tree';
 import { SinglePippenger } from 'barretenberg/pippenger';
 import { Proof } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
@@ -10,7 +11,8 @@ import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { createConnection } from 'typeorm';
 import { LocalBlockchain } from './blockchain';
 import { MemoryFifo } from './fifo';
-import { IndexedHashPath, Rollup } from './rollup';
+import { ProofGenerator } from './proof_generator';
+import { Rollup } from './rollup';
 import { RollupDb } from './rollup_db';
 import { WorldStateDb } from './world_state_db';
 
@@ -24,12 +26,15 @@ export class Server {
   private rollupDb!: RollupDb;
   private queue = new MemoryFifo<() => void>();
   private txPool: JoinSplitProof[] = [];
+  private proofGenerator: ProofGenerator;
 
   constructor(private rollupSize: number) {
     this.worldStateDb = new WorldStateDb();
+    this.proofGenerator = new ProofGenerator(rollupSize);
   }
 
   public async start() {
+    this.proofGenerator.run();
     const connection = await createConnection();
     this.blockchain = new LocalBlockchain(connection);
     this.rollupDb = new RollupDb(connection);
@@ -44,6 +49,7 @@ export class Server {
   }
 
   public stop() {
+    this.proofGenerator.cancel();
     this.queue.cancel();
     clearInterval(this.interval!);
     destroyWorker(this.worker);
@@ -119,7 +125,7 @@ export class Server {
     console.log('Done.');
   }
 
-  public async receiveTx({proofData, encViewingKey1, encViewingKey2}: Proof) {
+  public async receiveTx({ proofData, encViewingKey1, encViewingKey2 }: Proof) {
     const proof = new JoinSplitProof(proofData, [encViewingKey1, encViewingKey2]);
 
     // Check nullifiers don't exist (tree id 1 returns 0 at index).
@@ -144,85 +150,88 @@ export class Server {
     this.addToPool(proof);
   }
 
-  private async createIndexedHashPaths(txs: JoinSplitProof[]) {
-    const dataPaths: IndexedHashPath[] = [];
-    const nullPaths: IndexedHashPath[] = [];
-
-    let nextDataIndex = this.worldStateDb.getSize(0);
-    for (const proof of txs) {
-      const dataPath1 = await this.worldStateDb.getHashPath(0, nextDataIndex);
-      // As txs always are pairs of notes (first even index, second odd index), we know hash paths will be the same.
-      const dataPath2 = dataPath1;
-      const nullPath1 = await this.worldStateDb.getHashPath(0, proof.nullifier1);
-      const nullPath2 = await this.worldStateDb.getHashPath(0, proof.nullifier2);
-      dataPaths.push(new IndexedHashPath(nextDataIndex++, dataPath1));
-      dataPaths.push(new IndexedHashPath(nextDataIndex++, dataPath2));
-      nullPaths.push(new IndexedHashPath(proof.nullifier1, nullPath1));
-      nullPaths.push(new IndexedHashPath(proof.nullifier2, nullPath2));
-    }
-
-    return {dataPaths, nullPaths};
+  public flushTxs() {
+    const txs = this.txPool;
+    this.txPool = [];
+    this.queue.put(() => this.rollup(txs));
   }
 
   private async createRollup(txs: JoinSplitProof[]) {
-    const dataStartIndex = Number(this.worldStateDb.getSize(0));
+    const dataStartIndex = this.worldStateDb.getSize(0);
 
     // Get old data.
     const oldDataRoot = this.worldStateDb.getRoot(0);
+    const oldDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
     const oldNullRoot = this.worldStateDb.getRoot(1);
-    const {dataPaths: oldDataPaths, nullPaths: oldNullPaths} = await this.createIndexedHashPaths(txs);
 
     // Insert each txs elements into the db (modified state will be thrown away).
     let nextDataIndex = this.worldStateDb.getSize(0);
+    const newNullRoots: Buffer[] = [];
+    const oldNullPaths: HashPath[] = [];
+    const newNullPaths: HashPath[] = [];
+
     for (const proof of txs) {
-      this.worldStateDb.put(0, nextDataIndex++, proof.newNote1);
-      this.worldStateDb.put(0, nextDataIndex++, proof.newNote2);
-      this.worldStateDb.put(1, proof.nullifier1, toBufferBE(1n, 64));
-      this.worldStateDb.put(1, proof.nullifier2, toBufferBE(1n, 64));
+      await this.worldStateDb.put(0, nextDataIndex++, proof.newNote1);
+      await this.worldStateDb.put(0, nextDataIndex++, proof.newNote2);
+
+      oldNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier1));
+      await this.worldStateDb.put(1, proof.nullifier1, toBufferBE(1n, 64));
+      newNullRoots.push(this.worldStateDb.getRoot(1));
+      newNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier1));
+
+      oldNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier2));
+      await this.worldStateDb.put(1, proof.nullifier2, toBufferBE(1n, 64));
+      newNullRoots.push(this.worldStateDb.getRoot(1));
+      newNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier2));
     }
 
     // Get new data.
+    const newDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
+    const rollupRootHeight = Math.log2(this.rollupSize) + 1;
+    const rollupRoot = newDataPath.data[rollupRootHeight][0];
     const newDataRoot = this.worldStateDb.getRoot(0);
-    const newNullRoot = this.worldStateDb.getRoot(1);
-    const {dataPaths: newDataPaths, nullPaths: newNullPaths} = await this.createIndexedHashPaths(txs);
 
     // Discard changes.
-    // TODO: WARNING! ROOTS AND SIZE ARE NOT RESTORED. FIX!
     await this.worldStateDb.rollback();
 
     return new Rollup(
       this.rollupDb.getNextRollupId(),
-      dataStartIndex,
-      txs.map(tx=>tx.proofData),
+      Number(dataStartIndex),
+      txs.map(tx => tx.proofData),
+
+      rollupRoot,
       oldDataRoot,
-      oldNullRoot,
-      oldDataPaths,
-      oldNullPaths,
       newDataRoot,
-      newNullRoot,
-      newDataPaths,
-      newNullPaths
+      oldDataPath,
+      newDataPath,
+
+      oldNullRoot,
+      newNullRoots,
+      oldNullPaths,
+      newNullPaths,
     );
   }
 
   private addToPool(proof: JoinSplitProof) {
     this.txPool.push(proof);
-    if (this.txPool.length >= this.rollupSize) {
+    if (this.txPool.length === this.rollupSize) {
       this.flushTxs();
     }
   }
 
   private async rollup(txs: JoinSplitProof[]) {
+    console.log(`Creating rollup with ${txs.length} txs...`);
     const rollup = await this.createRollup(txs);
-
-    await this.rollupDb.addRollup(rollup);
-
-    // For now, just the first tx is considered.
-    this.blockchain.sendProof(txs[0].proofData, rollup.rollupId, txs[0].viewingKeys);
+    this.createProof(rollup, txs.map(tx => tx.viewingKeys).flat());
+    // await this.rollupDb.addRollup(rollup);
   }
 
-  public flushTxs() {
-    this.queue.put(() => this.rollup(this.txPool));
-    this.txPool = [];
+  private async createProof(rollup: Rollup, viewingKeys: Buffer[]) {
+    const proof = await this.proofGenerator.createProof(rollup);
+    if (proof) {
+      this.blockchain.sendProof(proof, rollup.rollupId, viewingKeys);
+    } else {
+      console.log('Invalid proof.');
+    }
   }
 }

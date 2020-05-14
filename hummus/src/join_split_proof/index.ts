@@ -5,7 +5,7 @@ import { WorldState } from 'barretenberg-es/world_state';
 import { UserState } from '../user_state';
 import { randomBytes } from 'crypto';
 import { Grumpkin } from 'barretenberg-es/ecc/grumpkin';
-import { Proof } from 'barretenberg-es/rollup_provider/rollup_provider';
+import { Proof } from 'barretenberg-es/rollup_provider';
 import { User } from '../user';
 
 const debug = createDebug('bb:join_split_proof');
