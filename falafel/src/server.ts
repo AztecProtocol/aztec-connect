@@ -8,7 +8,7 @@ import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
-import moment from 'moment';
+import moment, { Duration } from 'moment';
 import { createConnection } from 'typeorm';
 import { LocalBlockchain } from './blockchain';
 import { MemoryFifo } from './fifo';
@@ -18,17 +18,13 @@ import { RollupDb } from './rollup_db';
 import { WorldStateDb } from './world_state_db';
 
 export class Server {
-  private interval?: NodeJS.Timer;
   private worldStateDb: WorldStateDb;
-  private maxBlockInterval = 60;
-  private minBlockInterval = moment.duration(1, 'm');
-  private lastRollupTime = moment.unix(0);
   private joinSplitVerifier!: JoinSplitVerifier;
   private blockchain!: LocalBlockchain;
   private worker!: BarretenbergWorker;
   private rollupDb!: RollupDb;
-  private queue = new MemoryFifo<() => void>();
-  private txPool: JoinSplitProof[] = [];
+  private stateQueue = new MemoryFifo<() => Promise<void>>();
+  private txQueue = new MemoryFifo<JoinSplitProof | null>();
   private proofGenerator: ProofGenerator;
 
   constructor(private rollupSize: number) {
@@ -46,15 +42,15 @@ export class Server {
     await this.worldStateDb.start();
     this.printState();
     await this.createJoinSplitVerifier();
-    this.interval = setInterval(() => this.flushTxs(), this.maxBlockInterval * 1000);
-    this.blockchain.on('block', b => this.queue.put(() => this.handleNewBlock(b)));
-    this.processQueue();
+    this.blockchain.on('block', b => this.stateQueue.put(() => this.handleNewBlock(b)));
+    this.processStateQueue();
+    this.processTxQueue(moment.duration(2, 'm'), moment.duration(1, 'm'));
   }
 
   public stop() {
     this.proofGenerator.cancel();
-    this.queue.cancel();
-    clearInterval(this.interval!);
+    this.stateQueue.cancel();
+    this.txQueue.cancel();
     destroyWorker(this.worker);
   }
 
@@ -72,14 +68,59 @@ export class Server {
     };
   }
 
-  private async processQueue() {
+  private async processStateQueue() {
     while (true) {
-      const f = await this.queue.get();
+      const f = await this.stateQueue.get();
       if (!f) {
         break;
       }
-      f();
+      await f();
     }
+  }
+
+  private async processTxQueue(maxRollupWaitTime: Duration, minRollupInterval: Duration) {
+    let flushTimeout!: NodeJS.Timeout;
+    let lastTxReceivedTime = moment.unix(0);
+    let txs: JoinSplitProof[] = [];
+
+    if (minRollupInterval.asSeconds() > maxRollupWaitTime.asSeconds()) {
+      throw new Error('minRollupInterval must be <= maxRollupWaitTime');
+    }
+
+    while (true) {
+      const tx = await this.txQueue.get();
+      if (tx === undefined) {
+        break;
+      }
+
+      if (tx) {
+        txs.push(tx);
+      }
+
+      clearTimeout(flushTimeout);
+      flushTimeout = setTimeout(() => this.flushTxs(), maxRollupWaitTime.asMilliseconds());
+
+      const shouldRollup =
+        txs.length &&
+        (tx === null ||
+          txs.length === this.rollupSize ||
+          lastTxReceivedTime.isBefore(moment().subtract(maxRollupWaitTime)));
+
+      if (tx) {
+        lastTxReceivedTime = moment();
+      }
+
+      if (shouldRollup) {
+        const rollupTxs = txs;
+        txs = [];
+        this.stateQueue.put(() => this.rollup(rollupTxs));
+
+        // Throttle.
+        await new Promise(resolve => setTimeout(resolve, minRollupInterval.asMilliseconds()));
+      }
+    }
+
+    clearInterval(flushTimeout);
   }
 
   private async handleNewBlock(block: Block) {
@@ -150,15 +191,11 @@ export class Server {
       throw new Error('Proof verification failed.');
     }
 
-    this.addToPool(proof);
+    this.txQueue.put(proof);
   }
 
   public flushTxs() {
-    if (this.txPool.length) {
-      const txs = this.txPool;
-      this.txPool = [];
-      this.queue.put(() => this.rollup(txs));
-    }
+    this.txQueue.put(null);
   }
 
   private async createRollup(txs: JoinSplitProof[]) {
@@ -216,16 +253,6 @@ export class Server {
       oldNullPaths,
       newNullPaths,
     );
-  }
-
-  private addToPool(proof: JoinSplitProof) {
-    this.txPool.push(proof);
-    if (
-      this.txPool.length === this.rollupSize ||
-      this.lastRollupTime.isBefore(moment().subtract(this.minBlockInterval))
-    ) {
-      this.flushTxs();
-    }
   }
 
   private async rollup(txs: JoinSplitProof[]) {

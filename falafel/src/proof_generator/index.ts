@@ -1,5 +1,6 @@
 import { ChildProcess, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
+import { createInterface } from 'readline';
 import { MemoryFifo } from '../fifo';
 import { Rollup } from '../rollup';
 
@@ -66,8 +67,12 @@ export class ProofGenerator {
     const binPath = '../barretenberg/build/src/aztec/rollup/rollup_cli/rollup_cli';
     const proc = (this.proc = spawn(binPath, [this.rollupSize.toString(), '../barretenberg/srs_db/ignition']));
 
-    // proc.stdout.on('data', data => console.log(data.toString().trim()));
-    proc.stderr.on('data', data => console.log('rollup_cli: ' + data.toString().trim()));
+    const rl = createInterface({
+      input: proc.stderr,
+      crlfDelay: Infinity
+    });
+    rl.on('line', (line: string) => console.log('rollup_cli: ' + line.trim()) );
+
     proc.on('close', code => {
       this.proc = undefined;
       if (code !== 0) {
