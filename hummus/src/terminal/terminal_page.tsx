@@ -25,7 +25,7 @@ const jerk = keyframes`
 const Monitor = styled.div`
   position: absolute;
   width: 100%;
-  animation: ${flicker} 32ms infinite, ${jerk} 50ms infinite;
+  animation: ${flicker} 32ms infinite/*, ${jerk} 50ms infinite*/;
 `;
 
 const Display = styled.div`

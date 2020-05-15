@@ -8,6 +8,7 @@ import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import moment from 'moment';
 import { createConnection } from 'typeorm';
 import { LocalBlockchain } from './blockchain';
 import { MemoryFifo } from './fifo';
@@ -19,7 +20,9 @@ import { WorldStateDb } from './world_state_db';
 export class Server {
   private interval?: NodeJS.Timer;
   private worldStateDb: WorldStateDb;
-  private maxBlockInterval = 600 * 1000;
+  private maxBlockInterval = 60;
+  private minBlockInterval = moment.duration(1, 'm');
+  private lastRollupTime = moment.unix(0);
   private joinSplitVerifier!: JoinSplitVerifier;
   private blockchain!: LocalBlockchain;
   private worker!: BarretenbergWorker;
@@ -43,7 +46,7 @@ export class Server {
     await this.worldStateDb.start();
     this.printState();
     await this.createJoinSplitVerifier();
-    this.interval = setInterval(() => this.flushTxs(), this.maxBlockInterval);
+    this.interval = setInterval(() => this.flushTxs(), this.maxBlockInterval * 1000);
     this.blockchain.on('block', b => this.queue.put(() => this.handleNewBlock(b)));
     this.processQueue();
   }
@@ -151,9 +154,11 @@ export class Server {
   }
 
   public flushTxs() {
-    const txs = this.txPool;
-    this.txPool = [];
-    this.queue.put(() => this.rollup(txs));
+    if (this.txPool.length) {
+      const txs = this.txPool;
+      this.txPool = [];
+      this.queue.put(() => this.rollup(txs));
+    }
   }
 
   private async createRollup(txs: JoinSplitProof[]) {
@@ -165,7 +170,7 @@ export class Server {
     const oldNullRoot = this.worldStateDb.getRoot(1);
 
     // Insert each txs elements into the db (modified state will be thrown away).
-    let nextDataIndex = this.worldStateDb.getSize(0);
+    let nextDataIndex = dataStartIndex;
     const newNullRoots: Buffer[] = [];
     const oldNullPaths: HashPath[] = [];
     const newNullPaths: HashPath[] = [];
@@ -188,7 +193,8 @@ export class Server {
     // Get new data.
     const newDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
     const rollupRootHeight = Math.log2(this.rollupSize) + 1;
-    const rollupRoot = newDataPath.data[rollupRootHeight][0];
+    const rootIndex = (Number(dataStartIndex) / (this.rollupSize * 2)) % 2;
+    const rollupRoot = newDataPath.data[rollupRootHeight][rootIndex];
     const newDataRoot = this.worldStateDb.getRoot(0);
 
     // Discard changes.
@@ -214,7 +220,10 @@ export class Server {
 
   private addToPool(proof: JoinSplitProof) {
     this.txPool.push(proof);
-    if (this.txPool.length === this.rollupSize) {
+    if (
+      this.txPool.length === this.rollupSize ||
+      this.lastRollupTime.isBefore(moment().subtract(this.minBlockInterval))
+    ) {
       this.flushTxs();
     }
   }
