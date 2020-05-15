@@ -44,7 +44,7 @@ export class Server {
     await this.createJoinSplitVerifier();
     this.blockchain.on('block', b => this.stateQueue.put(() => this.handleNewBlock(b)));
     this.processStateQueue();
-    this.processTxQueue(moment.duration(2, 'm'), moment.duration(1, 'm'));
+    this.processTxQueue(moment.duration(30, 's'), moment.duration(30, 's'));
   }
 
   public stop() {
@@ -128,6 +128,11 @@ export class Server {
 
     for (let i = 0; i < block.dataEntries.length; ++i) {
       await this.worldStateDb.put(0, BigInt(block.dataStartIndex + i), block.dataEntries[i]);
+    }
+
+    // Pad data tree with zero entries to ensure correct size.
+    if (block.dataEntries.length < block.numDataEntries) {
+      await this.worldStateDb.put(0, BigInt(block.dataStartIndex + block.numDataEntries - 1), Buffer.alloc(64, 0));
     }
 
     const nullifierValue = Buffer.alloc(64, 0);
@@ -265,7 +270,7 @@ export class Server {
   private async createProof(rollup: Rollup, viewingKeys: Buffer[]) {
     const proof = await this.proofGenerator.createProof(rollup);
     if (proof) {
-      this.blockchain.sendProof(proof, rollup.rollupId, viewingKeys);
+      this.blockchain.sendProof(proof, rollup.rollupId, this.rollupSize, viewingKeys);
     } else {
       console.log('Invalid proof.');
     }
