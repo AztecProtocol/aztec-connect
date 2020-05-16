@@ -1,9 +1,10 @@
 import http from 'http';
 import 'reflect-metadata';
+import 'source-map-support/register';
 import { appFactory } from './app';
 import { Server } from './server';
 
-const { PORT = 80, INFURA_API_KEY = '' } = process.env;
+const { PORT = 80 } = process.env;
 
 async function main() {
   const shutdown = async () => process.exit(0);
