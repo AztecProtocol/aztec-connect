@@ -1,26 +1,21 @@
-// import { Connection, Repository } from 'typeorm';
-// import { InformationKey } from '../entity/key';
+import { Connection, Repository } from 'typeorm';
+import { Key } from '../entity/key';
 
-// export class KeyDb {
-//   private keyRep!: Repository<KeyRep>;
-//   private keyID = 0;
+export class KeyDb {
+  private keyRep!: Repository<Key>;
 
-//   constructor(private connection: Connection) {}
+  constructor(private connection: Connection) {}
 
-//   public async init() {
-//     this.keyRep = this.connection.getRepository(KeyRep);
-//   }
+  public async init() {
+    this.keyRep = this.connection.getRepository(Key);
+  }
 
-//   public async addKey(key: InformationKey) {
-//       const informationKey = new InformationKey();
-//       informationKey.id = key.ID;
-//       informationKey.key = key;
+  public async addKey(inputKey: Key) {
+      const key = new Key();
+      key.id = inputKey.id;
+      key.informationKey = inputKey.informationKey;
 
-//       await this.rollupRep.save(rollupDao)
-//       this.
-//   }
+      await this.keyRep.save(key)
+  }
 
-//   public getNextKeyID() {
-//     return this.keyID;
-//   }
-// }
+}
