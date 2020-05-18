@@ -14,11 +14,23 @@ build_barretenberg_wasm() {
     cd ../..
 }
 
+build_barretenberg() {
+    cd ./barretenberg
+    rm -rf ./build
+    mkdir build
+    cd build
+    cmake ..
+    make -j$(nproc)
+    cd ../..
+}
+
 build_barretenberg_js() {
     cd ./barretenberg.js
     yarn install
     yarn build
     cd dest-es && yarn link
+    cd ..
+    cd dest && yarn link
     cd ..
     yarn symlink-wasm
     cd ..
@@ -32,11 +44,21 @@ build_hummus() {
     cd ..
 }
 
+build_tahini() {
+    build_barretenberg
+    cd ./tahini
+    yarn install
+    yarn link barretenberg-es
+    yarn build
+    cd ..
+}
+
 bootstrap () {
     rm -rf ./**/node_modules/ ./*/yarn.lock
     build_barretenberg_wasm $1
     build_barretenberg_js
     build_hummus
+    build_tahini
 }
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
