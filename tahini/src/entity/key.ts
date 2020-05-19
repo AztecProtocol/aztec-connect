@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn, Unique, BeforeUpdate } from 'typeorm';
+import { Column, Entity, PrimaryColumn, Unique } from 'typeorm';
 
 @Entity({ name: 'Key' })
 @Unique(["id"])
