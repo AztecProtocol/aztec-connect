@@ -8,6 +8,7 @@ export class WorldStateDb {
   private stdout!: { read: (size: number) => Promise<Buffer> };
   private roots: Buffer[] = [];
   private sizes: bigint[] = [];
+  private binPath = '../barretenberg/build/src/aztec/rollup/db_cli/db_cli';
 
   public async start() {
     await this.launch();
@@ -51,9 +52,9 @@ export class WorldStateDb {
     const result = await this.stdout.read(depth * 64);
 
     const path = new HashPath();
-    for (let i=0; i<depth; ++i) {
-      const lhs = result.slice(i*64, i*64+32);
-      const rhs = result.slice(i*64+32, i*64+64);
+    for (let i = 0; i < depth; ++i) {
+      const lhs = result.slice(i * 64, i * 64 + 32);
+      const rhs = result.slice(i * 64 + 32, i * 64 + 64);
       path.data.push([lhs, rhs]);
     }
     return path;
@@ -90,12 +91,11 @@ export class WorldStateDb {
   }
 
   public async destroy() {
-    execSync('../barretenberg/build/src/aztec/rollup/db_cli/db_cli reset');
+    execSync(`${this.binPath} reset`);
   }
 
   private async launch() {
-    const binPath = '../barretenberg/build/src/aztec/rollup/db_cli/db_cli';
-    const proc = (this.proc = spawn(binPath));
+    const proc = (this.proc = spawn(this.binPath));
 
     proc.stderr.on('data', data => {});
     // proc.stderr.on('data', data => console.log(data.toString().trim()));
@@ -111,14 +111,25 @@ export class WorldStateDb {
     this.stdout = new PromiseReadable(this.proc!.stdout!) as any;
 
     await this.readMetadata();
+
+    if (!this.getSize(0)) {
+      const nonEmptyValue = Buffer.alloc(64, 0);
+      nonEmptyValue.writeUInt8(1, 63);
+      const root = this.getRoot(0);
+      await this.put(2, toBigIntBE(root.slice(16)), nonEmptyValue);
+      await this.commit();
+    }
   }
 
   private async readMetadata() {
     this.roots[0] = await this.stdout.read(32);
     this.roots[1] = await this.stdout.read(32);
+    this.roots[2] = await this.stdout.read(32);
     const dataSize = await this.stdout.read(16);
     const nullifierSize = await this.stdout.read(16);
+    const rootSize = await this.stdout.read(16);
     this.sizes[0] = toBigIntBE(dataSize);
     this.sizes[1] = toBigIntBE(nullifierSize);
+    this.sizes[2] = toBigIntBE(rootSize);
   }
 }

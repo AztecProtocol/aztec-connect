@@ -13,6 +13,7 @@ export class RollupProof {
   public newDataRoot: Buffer;
   public oldNullRoot: Buffer;
   public newNullRoot: Buffer;
+  public oldRootRoot: Buffer;
   public numTxs: number;
   public innerProofData: InnerProof[] = [];
 
@@ -22,11 +23,12 @@ export class RollupProof {
     this.newDataRoot = proofData.slice(64, 96);
     this.oldNullRoot = proofData.slice(96, 128);
     this.newNullRoot = proofData.slice(128, 160);
-    this.numTxs = proofData.readUInt32BE(188);
+    this.oldRootRoot = proofData.slice(160, 192);
+    this.numTxs = proofData.readUInt32BE(220);
 
     const innerLength = 32 * 8;
     for (let i = 0; i < this.numTxs; ++i) {
-      const startIndex = 192 + i * innerLength;
+      const startIndex = 224 + i * innerLength;
       const innerData = proofData.slice(startIndex, startIndex + innerLength);
       this.innerProofData[i] = {
         publicInput: innerData.slice(0, 32),

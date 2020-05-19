@@ -58,6 +58,7 @@ export class Server {
     console.log(`Data size: ${this.worldStateDb.getSize(0)}`);
     console.log(`Data root: ${this.worldStateDb.getRoot(0).toString('hex')}`);
     console.log(`Null root: ${this.worldStateDb.getRoot(1).toString('hex')}`);
+    console.log(`Root root: ${this.worldStateDb.getRoot(2).toString('hex')}`);
   }
 
   public status() {
@@ -65,6 +66,7 @@ export class Server {
       dataSize: Number(this.worldStateDb.getSize(0)),
       dataRoot: this.worldStateDb.getRoot(0).toString('hex'),
       nullRoot: this.worldStateDb.getRoot(1).toString('hex'),
+      rootRoot: this.worldStateDb.getRoot(2).toString('hex'),
     };
   }
 
@@ -135,10 +137,14 @@ export class Server {
       await this.worldStateDb.put(0, BigInt(block.dataStartIndex + block.numDataEntries - 1), Buffer.alloc(64, 0));
     }
 
-    const nullifierValue = Buffer.alloc(64, 0);
-    nullifierValue.writeUInt8(1, 63);
+    const nonEmptyValue = Buffer.alloc(64, 0);
+    nonEmptyValue.writeUInt8(1, 63);
+
+    const dataRoot = this.worldStateDb.getRoot(0);
+    await this.worldStateDb.put(2, toBigIntBE(dataRoot.slice(16)), nonEmptyValue);
+
     for (const nullifier of block.nullifiers) {
-      await this.worldStateDb.put(1, toBigIntBE(nullifier), nullifierValue);
+      await this.worldStateDb.put(1, toBigIntBE(nullifier), nonEmptyValue);
     }
 
     await this.worldStateDb.commit();
@@ -188,8 +194,8 @@ export class Server {
       throw new Error('Nullifier 2 already exists.');
     }
 
-    if (!proof.noteTreeRoot.equals(this.worldStateDb.getRoot(0))) {
-      throw new Error('Merkle roots do not match.');
+    if ((await this.worldStateDb.get(2, toBigIntBE(proof.noteTreeRoot.slice(16)))).equals(emptyValue)) {
+      throw new Error(`Merkle root does not exist - ${proof.noteTreeRoot.toString('hex')}`);
     }
 
     if (!(await this.joinSplitVerifier.verifyProof(proofData))) {
@@ -210,12 +216,14 @@ export class Server {
     const oldDataRoot = this.worldStateDb.getRoot(0);
     const oldDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
     const oldNullRoot = this.worldStateDb.getRoot(1);
+    const oldRootRoot = this.worldStateDb.getRoot(2);
 
     // Insert each txs elements into the db (modified state will be thrown away).
     let nextDataIndex = dataStartIndex;
     const newNullRoots: Buffer[] = [];
     const oldNullPaths: HashPath[] = [];
     const newNullPaths: HashPath[] = [];
+    const oldRootPaths: HashPath[] = [];
 
     for (const proof of txs) {
       await this.worldStateDb.put(0, nextDataIndex++, proof.newNote1);
@@ -230,6 +238,9 @@ export class Server {
       await this.worldStateDb.put(1, proof.nullifier2, toBufferBE(1n, 64));
       newNullRoots.push(this.worldStateDb.getRoot(1));
       newNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier2));
+
+      const dataRootIndex = proof.noteTreeRoot.slice(16);
+      oldRootPaths.push(await this.worldStateDb.getHashPath(2, toBigIntBE(dataRootIndex)));
     }
 
     // Get new data.
@@ -257,6 +268,9 @@ export class Server {
       newNullRoots,
       oldNullPaths,
       newNullPaths,
+
+      oldRootRoot,
+      oldRootPaths,
     );
   }
 

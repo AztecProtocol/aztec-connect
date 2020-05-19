@@ -17,6 +17,9 @@ export class Rollup {
     public newNullRoots: Buffer[],
     public oldNullPaths: HashPath[],
     public newNullPaths: HashPath[],
+
+    public oldRootRoot: Buffer,
+    public oldRootPaths: HashPath[],
   ) {}
 
   public toBuffer() {
@@ -39,6 +42,9 @@ export class Rollup {
       serializeVector(this.newNullRoots),
       serializeVector(this.oldNullPaths),
       serializeVector(this.newNullPaths),
+
+      this.oldRootRoot,
+      serializeVector(this.oldRootPaths),
     ]);
   }
 }
