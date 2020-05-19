@@ -14,10 +14,11 @@ export interface Blockchain extends BlockSource, ProofReceiver {
 
 export class LocalBlockchain extends EventEmitter implements Blockchain {
   private blockNum = 0;
+  private dataStartIndex = 0;
   private blockRep!: Repository<BlockDao>;
   private blockchain: Block[] = [];
 
-  constructor(private connection: Connection) {
+  constructor(private connection: Connection, private rollupSize: number) {
     super();
   }
 
@@ -28,7 +29,12 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
     const [lastBlock] = this.blockchain.slice(-1);
     if (lastBlock) {
+      const prevRollupSize = lastBlock.numDataEntries / 2;
+      if (prevRollupSize !== this.rollupSize) {
+        throw new Error(`Previous data on chain has a rollup size of ${prevRollupSize}.`);
+      }
       this.blockNum = lastBlock.blockNum + 1;
+      this.dataStartIndex = this.blockchain.length * this.rollupSize * 2;
     }
 
     console.log(`Local blockchain restored: (blocks: ${this.blockNum})`);
@@ -36,20 +42,31 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
   public async sendProof(proofData: Buffer, rollupId: number, rollupSize: number, viewingKeys: Buffer[]) {
     const tx = new RollupProof(proofData);
+
+    if (rollupSize !== this.rollupSize) {
+      throw new Error(`Inconsistent rollup size. Expecting ${this.rollupSize}. Got ${rollupSize}.`);
+    }
+    if (tx.dataStartIndex !== this.dataStartIndex) {
+      console.log(`Incorrect dataStartIndex. Expecting ${this.dataStartIndex}. Got ${tx.dataStartIndex}.`);
+      return;
+    }
+
     const dataEntries = tx.innerProofData.map(p => [p.newNote1, p.newNote2]).flat();
     const nullifiers = tx.innerProofData.map(p => [p.nullifier1, p.nullifier2]).flat();
+    const numDataEntries = rollupSize * 2;
 
     const block: Block = {
       blockNum: this.blockNum,
       rollupId,
       dataStartIndex: tx.dataStartIndex,
-      numDataEntries: rollupSize * 2,
+      numDataEntries,
       dataEntries,
       nullifiers,
       viewingKeys,
     };
 
     this.blockNum++;
+    this.dataStartIndex += numDataEntries;
     this.blockchain.push(block);
 
     await this.saveBlock(block, rollupId);
