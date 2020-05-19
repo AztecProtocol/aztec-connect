@@ -1,4 +1,5 @@
 import accountWriteValidate from './accountWriteValidation';
-import { inputNoteValidation, inputKeyValidation } from './inputValidation'
+import validateSignature from './validateSignature';
+import { inputNoteValidation, inputKeyValidation } from './inputValidation';
 
-export { accountWriteValidate, inputKeyValidation, inputNoteValidation }
+export { accountWriteValidate, inputKeyValidation, inputNoteValidation, validateSignature };

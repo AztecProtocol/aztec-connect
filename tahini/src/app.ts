@@ -10,8 +10,7 @@ import bodyParser from 'koa-bodyparser';
 import { Key } from './entity/key';
 import { Note } from './entity/note';
 
-
-import { inputKeyValidation, inputNoteValidation, accountWriteValidate } from './middleware';
+import { inputKeyValidation, inputNoteValidation, accountWriteValidate, validateSignature } from './middleware';
 import Server from './server';
 
 const cors = require('@koa/cors');
@@ -42,23 +41,15 @@ export function appFactory(server: Server, prefix: string) {
     },
   );
 
-  router.get('/account/:accountId/key', async (ctx: Koa.Context) => {
-    const { id, signature, message } = ctx.request.query;
-    const recoveredAddress = utils.verifyMessage(message, signature).slice(2);
-    const retrievedKey = await keyRepo.findOne({ id });
-
-    if (retrievedKey && id === recoveredAddress) {
-      ctx.body = 'OK\n';
-      ctx.response.status = 200;
-      ctx.response.body = retrievedKey;
-    } else {
-      ctx.response.status = 401;
-      ctx.response.body = 'Fail';
-    }
+  router.get('/account/:accountId/key', validateSignature, async (ctx: Koa.Context) => {
+    const retrievedKey = await keyRepo.findOne({ id: ctx.request.query.id });
+    ctx.body = 'OK\n';
+    ctx.response.status = 200;
+    ctx.response.body = retrievedKey;
   });
 
   router.post(
-    '/account/:accountID/notes',
+    '/account/:accountID/newNote',
     inputNoteValidation,
     (ctx, next) => {
       return accountWriteValidate(ctx, next, noteRepo);
@@ -76,6 +67,13 @@ export function appFactory(server: Server, prefix: string) {
       await noteRepo.save(note);
     },
   );
+
+  router.get('/account/:accountId/getNote', validateSignature, async (ctx: Koa.Context) => {
+    const retrievedNote = await noteRepo.findOne({ id: ctx.request.query.id });
+    ctx.body = 'OK\n';
+    ctx.response.status = 200;
+    ctx.response.body = retrievedNote;
+  });
 
   const app = new Koa();
   app.proxy = true;
