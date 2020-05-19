@@ -18,6 +18,7 @@ import { Prover } from '../prover';
 import { JoinSplitProof } from './join_split_proof';
 import { computeNullifier } from './compute_nullifier';
 import { randomBytes } from 'crypto';
+import { toBufferBE } from 'bigint-buffer';
 
 const debug = createDebug('bb:join_split_proof');
 
@@ -138,12 +139,12 @@ describe('join_split_proof', () => {
       const verified = await joinSplitVerifier.verifyProof(proof);
       expect(verified).toBe(true);
 
-      const joinSplitProof = new JoinSplitProof(proof);
+      const joinSplitProof = new JoinSplitProof(proof, []);
 
       const expectedNullifier1 = computeNullifier(inputNote1Enc, 0, inputNote1.secret, blake2s);
       const expectedNullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, blake2s);
-      expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
-      expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
+      expect(toBufferBE(joinSplitProof.nullifier1, 16)).toEqual(expectedNullifier1);
+      expect(toBufferBE(joinSplitProof.nullifier2, 16)).toEqual(expectedNullifier2);
     }, 120000);
   });
 });
