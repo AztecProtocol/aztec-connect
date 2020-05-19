@@ -1,4 +1,5 @@
 import { LevelUp, LevelUpChain } from 'levelup';
+import { serializeVector } from '../serialize';
 
 const MAX_DEPTH = 32;
 const LEAF_BYTES = 64;
@@ -26,7 +27,14 @@ export interface LeafHasher {
   hashToField(data: Uint8Array): Buffer;
 }
 
-export type HashPath = Buffer[][];
+export class HashPath {
+  constructor(public data: Buffer[][] = []) {}
+
+  public toBuffer() {
+    const elements = this.data.map(nodes => Buffer.concat([nodes[0], nodes[1]]));
+    return serializeVector(elements);
+  }
+}
 
 export class MerkleTree {
   private root!: Buffer;
@@ -95,20 +103,20 @@ export class MerkleTree {
   }
 
   public async getHashPath(index: number) {
-    const path: HashPath = [];
+    const path = new HashPath();
 
     let data = await this.dbGet(this.root);
 
     for (let i = this.depth - 1; i >= 0; --i) {
       if (!data) {
         // This is an empty subtree. Fill in zero value.
-        path[i] = [this.zeroHashes[i], this.zeroHashes[i]];
+        path.data[i] = [this.zeroHashes[i], this.zeroHashes[i]];
         continue;
       }
 
       const lhs = data.slice(0, 32);
       const rhs = data.slice(32, 64);
-      path[i] = [lhs, rhs];
+      path.data[i] = [lhs, rhs];
       const isRight = (index >> i) & 0x1;
       data = await this.dbGet(isRight ? rhs : lhs);
     }

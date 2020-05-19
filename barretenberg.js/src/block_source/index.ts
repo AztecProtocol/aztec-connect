@@ -2,6 +2,7 @@ export interface Block {
   blockNum: number;
   rollupId: number;
   dataStartIndex: number;
+  numDataEntries: number;
   dataEntries: Buffer[];
   nullifiers: Buffer[];
   viewingKeys: Buffer[];

@@ -80,6 +80,11 @@ export class Terminal extends EventEmitter {
     const savedCursor = this.cursor;
     this.inputLocked = true;
     for (const char of str.toUpperCase()) {
+      if (char === '\x01') {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        continue;
+      }
+
       // Reset blink.
       this.setCursor(blockCursor());
 
@@ -89,9 +94,6 @@ export class Terminal extends EventEmitter {
           break;
         case '\r':
           this.clearLine();
-          break;
-        case '\x01':
-          await new Promise(resolve => setTimeout(resolve, 500));
           break;
         default:
           this.putCursorChar(char);

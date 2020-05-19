@@ -1,11 +1,11 @@
 import { Block, BlockSource } from 'barretenberg/block_source';
-import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { EventEmitter } from 'events';
 import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
+import { RollupProof } from './rollup_proof';
 
 export interface ProofReceiver {
-  sendProof(proof: Buffer, rollupId: number, viewingKeys: Buffer[]): Promise<void>;
+  sendProof(proof: Buffer, rollupId: number, rollupSize: number, viewingKeys: Buffer[]): Promise<void>;
 }
 
 export interface Blockchain extends BlockSource, ProofReceiver {
@@ -14,7 +14,6 @@ export interface Blockchain extends BlockSource, ProofReceiver {
 
 export class LocalBlockchain extends EventEmitter implements Blockchain {
   private blockNum = 0;
-  private dataTreeSize = 0;
   private blockRep!: Repository<BlockDao>;
   private blockchain: Block[] = [];
 
@@ -29,27 +28,28 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
     const [lastBlock] = this.blockchain.slice(-1);
     if (lastBlock) {
-      this.dataTreeSize = lastBlock.dataStartIndex + lastBlock.dataEntries.length;
       this.blockNum = lastBlock.blockNum + 1;
     }
 
-    console.log(`Local blockchain restored: block:${this.blockNum} size:${this.dataTreeSize}.`);
+    console.log(`Local blockchain restored: (blocks: ${this.blockNum})`);
   }
 
-  public async sendProof(proofData: Buffer, rollupId: number, viewingKeys: Buffer[]) {
-    const tx = new JoinSplitProof(proofData);
+  public async sendProof(proofData: Buffer, rollupId: number, rollupSize: number, viewingKeys: Buffer[]) {
+    const tx = new RollupProof(proofData);
+    const dataEntries = tx.innerProofData.map(p => [p.newNote1, p.newNote2]).flat();
+    const nullifiers = tx.innerProofData.map(p => [p.nullifier1, p.nullifier2]).flat();
 
     const block: Block = {
       blockNum: this.blockNum,
       rollupId,
-      dataStartIndex: this.dataTreeSize,
-      dataEntries: [tx.newNote1, tx.newNote2],
-      nullifiers: [tx.nullifier1, tx.nullifier2],
+      dataStartIndex: tx.dataStartIndex,
+      numDataEntries: rollupSize * 2,
+      dataEntries,
+      nullifiers,
       viewingKeys,
     };
 
     this.blockNum++;
-    this.dataTreeSize += 2;
     this.blockchain.push(block);
 
     await this.saveBlock(block, rollupId);
@@ -63,6 +63,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     blockDao.id = block.blockNum;
     blockDao.rollupId = rollupId;
     blockDao.dataStartIndex = block.dataStartIndex;
+    blockDao.numDataEntries = block.numDataEntries;
     blockDao.dataEntries = Buffer.concat(block.dataEntries);
     blockDao.nullifiers = Buffer.concat(block.nullifiers);
     blockDao.viewingKeys = Buffer.concat(block.viewingKeys);
@@ -76,6 +77,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
         blockNum: b.id,
         rollupId: b.rollupId,
         dataStartIndex: b.dataStartIndex,
+        numDataEntries: b.numDataEntries,
         dataEntries: [],
         nullifiers: [],
         viewingKeys: [],

@@ -1,10 +1,11 @@
+import { HashPath } from 'barretenberg/merkle_tree';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
 
 export class WorldStateDb {
   private proc?: ChildProcess;
-  private stdout!: any;
+  private stdout!: { read: (size: number) => Promise<Buffer> };
   private roots: Buffer[] = [];
   private sizes: bigint[] = [];
 
@@ -38,6 +39,26 @@ export class WorldStateDb {
     return result as Buffer;
   }
 
+  public async getHashPath(treeId: number, index: bigint) {
+    const buffer = Buffer.alloc(18);
+    buffer.writeInt8(4, 0);
+    buffer.writeInt8(treeId, 1);
+    const indexBuf = toBufferBE(index, 16);
+    indexBuf.copy(buffer, 2);
+    this.proc!.stdin!.write(buffer);
+
+    const depth = (await this.stdout.read(4)).readUInt32BE(0);
+    const result = await this.stdout.read(depth * 64);
+
+    const path = new HashPath();
+    for (let i=0; i<depth; ++i) {
+      const lhs = result.slice(i*64, i*64+32);
+      const rhs = result.slice(i*64+32, i*64+64);
+      path.data.push([lhs, rhs]);
+    }
+    return path;
+  }
+
   public async put(treeId: number, index: bigint, value: Buffer) {
     const buffer = Buffer.alloc(82);
     buffer.writeInt8(1, 0);
@@ -59,13 +80,13 @@ export class WorldStateDb {
   public async commit() {
     const buffer = Buffer.from([0x02]);
     this.proc!.stdin!.write(buffer);
-    await this.stdout.read(1);
+    await this.readMetadata();
   }
 
   public async rollback() {
     const buffer = Buffer.from([0x03]);
     this.proc!.stdin!.write(buffer);
-    await this.stdout.read(1);
+    await this.readMetadata();
   }
 
   public async destroy() {
@@ -87,12 +108,16 @@ export class WorldStateDb {
 
     proc.on('error', console.log);
 
-    this.stdout = new PromiseReadable(this.proc!.stdout!);
+    this.stdout = new PromiseReadable(this.proc!.stdout!) as any;
 
+    await this.readMetadata();
+  }
+
+  private async readMetadata() {
     this.roots[0] = await this.stdout.read(32);
     this.roots[1] = await this.stdout.read(32);
-    const dataSize = (await this.stdout.read(16)) as Buffer;
-    const nullifierSize = (await this.stdout.read(16)) as Buffer;
+    const dataSize = await this.stdout.read(16);
+    const nullifierSize = await this.stdout.read(16);
     this.sizes[0] = toBigIntBE(dataSize);
     this.sizes[1] = toBigIntBE(nullifierSize);
   }

@@ -77,6 +77,9 @@ export class BarretenbergWasm extends EventEmitter {
   }
 
   public call(name: string, ...args: any) {
+    if (!this.exports()[name]) {
+      throw new Error(`WASM function ${name} not found.`);
+    }
     return this.exports()[name](...args);
   }
 

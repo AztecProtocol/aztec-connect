@@ -32,8 +32,9 @@
     "koa": "^2.7.0",
     "koa-compress": "^3.0.0",
     "koa-router": "^7.4.0",
-    "moment": "^2.24.0",
+    "moment": "^2.25.3",
     "promise-readable": "^5.0.4",
+    "source-map-support": "^0.5.19",
     "sqlite3": "^4.2.0",
     "typeorm": "^0.2.24",
     "typescript": "^3.5.3"

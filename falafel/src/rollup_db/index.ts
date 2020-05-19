@@ -14,23 +14,23 @@ export class RollupDb {
   }
 
   public async addRollup(rollup: Rollup) {
-    const rollupDao = new RollupDao();
-    rollupDao.created = new Date();
-    rollupDao.id = rollup.rollupId;
-    rollupDao.txs = rollup.txs.map(tx => {
-      const txDao = new RollupTxDao();
-      txDao.merkleRoot = tx.noteTreeRoot;
-      txDao.newNote1 = tx.newNote1;
-      txDao.newNote2 = tx.newNote2;
-      txDao.nullifier1 = tx.nullifier1;
-      txDao.nullifier2 = tx.nullifier2;
-      txDao.publicInput = tx.publicInput;
-      txDao.publicOutput = tx.publicOutput;
-      return txDao;
-    });
-    await this.rollupRep.save(rollupDao);
+    // const rollupDao = new RollupDao();
+    // rollupDao.created = new Date();
+    // rollupDao.id = rollup.rollupId;
+    // rollupDao.txs = rollup.txs.map(tx => {
+    //   const txDao = new RollupTxDao();
+    //   txDao.merkleRoot = tx.noteTreeRoot;
+    //   txDao.newNote1 = tx.newNote1;
+    //   txDao.newNote2 = tx.newNote2;
+    //   txDao.nullifier1 = tx.nullifier1;
+    //   txDao.nullifier2 = tx.nullifier2;
+    //   txDao.publicInput = tx.publicInput;
+    //   txDao.publicOutput = tx.publicOutput;
+    //   return txDao;
+    // });
+    // await this.rollupRep.save(rollupDao);
 
-    this.rollupId++;
+    // this.rollupId++;
   }
 
   public getNextRollupId() {

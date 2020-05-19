@@ -27,6 +27,9 @@ export class WorldState {
     for (let i = 0; i < block.dataEntries.length; ++i) {
       await this.tree.updateElement(block.dataStartIndex + i, block.dataEntries[i]);
     }
+    if (block.dataEntries.length < block.numDataEntries) {
+      await this.tree.updateElement(block.dataStartIndex + block.numDataEntries - 1, Buffer.alloc(64, 0));
+    }
     debug(`data size: ${this.tree.getSize()}`);
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);
   }

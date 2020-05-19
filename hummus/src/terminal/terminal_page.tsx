@@ -18,19 +18,19 @@ const flicker = keyframes`
 `;
 
 const jerk = keyframes`
-  50% { padding-left: 1.5px; }
-  51% { padding-left: 0px; }
+  50% { padding-top: 1px; }
+  51% { padding-top: 0px; }
 `;
 
 const Monitor = styled.div`
-  position: absolute;
-  width: 100%;
-  animation: ${flicker} 32ms infinite, ${jerk} 50ms infinite;
+  margin: 50px auto;
+  text-align: center;
+  animation: ${flicker} 32ms infinite/*, ${jerk} 50ms infinite*/;
 `;
 
 const Display = styled.div`
+  display: inline-block;
   position: relative;
-  margin: 50px auto;
   background-color: #000;
   overflow: hidden;
   padding: 30px;
@@ -58,7 +58,6 @@ const StyledTerminal = styled.div`
   filter: blur(1px);
   text-align: center;
   text-shadow: 0 0 30px rgba(255, 255, 255, 0.4);
-  /* animation: ${jerk} 50ms infinite; */
 `;
 
 const Scanline = styled.div`

@@ -1,34 +1,39 @@
 import { Block } from 'barretenberg/block_source';
 import { JoinSplitProof, JoinSplitVerifier } from 'barretenberg/client_proofs/join_split_proof';
 import { Crs } from 'barretenberg/crs';
+import { HashPath } from 'barretenberg/merkle_tree';
 import { SinglePippenger } from 'barretenberg/pippenger';
 import { Proof } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
-import { toBigIntBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import moment, { Duration } from 'moment';
 import { createConnection } from 'typeorm';
 import { LocalBlockchain } from './blockchain';
 import { MemoryFifo } from './fifo';
+import { ProofGenerator } from './proof_generator';
 import { Rollup } from './rollup';
 import { RollupDb } from './rollup_db';
 import { WorldStateDb } from './world_state_db';
 
 export class Server {
-  private interval?: NodeJS.Timer;
   private worldStateDb: WorldStateDb;
-  private maxBlockInterval = 600 * 1000;
   private joinSplitVerifier!: JoinSplitVerifier;
   private blockchain!: LocalBlockchain;
   private worker!: BarretenbergWorker;
   private rollupDb!: RollupDb;
-  private blockQueue = new MemoryFifo<Block>();
+  private stateQueue = new MemoryFifo<() => Promise<void>>();
+  private txQueue = new MemoryFifo<JoinSplitProof | null>();
+  private proofGenerator: ProofGenerator;
 
-  constructor(private batchSize: number) {
+  constructor(private rollupSize: number) {
     this.worldStateDb = new WorldStateDb();
+    this.proofGenerator = new ProofGenerator(rollupSize);
   }
 
   public async start() {
+    this.proofGenerator.run();
     const connection = await createConnection();
     this.blockchain = new LocalBlockchain(connection);
     this.rollupDb = new RollupDb(connection);
@@ -37,14 +42,15 @@ export class Server {
     await this.worldStateDb.start();
     this.printState();
     await this.createJoinSplitVerifier();
-    this.interval = setInterval(() => this.flushTxs(), this.maxBlockInterval);
-    this.blockchain.on('block', b => this.blockQueue.put(b));
-    this.processQueue();
+    this.blockchain.on('block', b => this.stateQueue.put(() => this.handleNewBlock(b)));
+    this.processStateQueue();
+    this.processTxQueue(moment.duration(30, 's'), moment.duration(30, 's'));
   }
 
   public stop() {
-    this.blockQueue.cancel();
-    clearInterval(this.interval!);
+    this.proofGenerator.cancel();
+    this.stateQueue.cancel();
+    this.txQueue.cancel();
     destroyWorker(this.worker);
   }
 
@@ -62,14 +68,59 @@ export class Server {
     };
   }
 
-  private async processQueue() {
+  private async processStateQueue() {
     while (true) {
-      const block = await this.blockQueue.get();
-      if (!block) {
+      const f = await this.stateQueue.get();
+      if (!f) {
         break;
       }
-      this.handleNewBlock(block);
+      await f();
     }
+  }
+
+  private async processTxQueue(maxRollupWaitTime: Duration, minRollupInterval: Duration) {
+    let flushTimeout!: NodeJS.Timeout;
+    let lastTxReceivedTime = moment.unix(0);
+    let txs: JoinSplitProof[] = [];
+
+    if (minRollupInterval.asSeconds() > maxRollupWaitTime.asSeconds()) {
+      throw new Error('minRollupInterval must be <= maxRollupWaitTime');
+    }
+
+    while (true) {
+      const tx = await this.txQueue.get();
+      if (tx === undefined) {
+        break;
+      }
+
+      if (tx) {
+        txs.push(tx);
+      }
+
+      clearTimeout(flushTimeout);
+      flushTimeout = setTimeout(() => this.flushTxs(), maxRollupWaitTime.asMilliseconds());
+
+      const shouldRollup =
+        txs.length &&
+        (tx === null ||
+          txs.length === this.rollupSize ||
+          lastTxReceivedTime.isBefore(moment().subtract(maxRollupWaitTime)));
+
+      if (tx) {
+        lastTxReceivedTime = moment();
+      }
+
+      if (shouldRollup) {
+        const rollupTxs = txs;
+        txs = [];
+        this.stateQueue.put(() => this.rollup(rollupTxs));
+
+        // Throttle.
+        await new Promise(resolve => setTimeout(resolve, minRollupInterval.asMilliseconds()));
+      }
+    }
+
+    clearInterval(flushTimeout);
   }
 
   private async handleNewBlock(block: Block) {
@@ -77,6 +128,11 @@ export class Server {
 
     for (let i = 0; i < block.dataEntries.length; ++i) {
       await this.worldStateDb.put(0, BigInt(block.dataStartIndex + i), block.dataEntries[i]);
+    }
+
+    // Pad data tree with zero entries to ensure correct size.
+    if (block.dataEntries.length < block.numDataEntries) {
+      await this.worldStateDb.put(0, BigInt(block.dataStartIndex + block.numDataEntries - 1), Buffer.alloc(64, 0));
     }
 
     const nullifierValue = Buffer.alloc(64, 0);
@@ -119,15 +175,15 @@ export class Server {
   }
 
   public async receiveTx({ proofData, encViewingKey1, encViewingKey2 }: Proof) {
-    const proof = new JoinSplitProof(proofData);
+    const proof = new JoinSplitProof(proofData, [encViewingKey1, encViewingKey2]);
 
     // Check nullifiers don't exist (tree id 1 returns 0 at index).
     const emptyValue = Buffer.alloc(64, 0);
-    const nullifierVal1 = await this.worldStateDb.get(1, toBigIntBE(proof.nullifier1));
+    const nullifierVal1 = await this.worldStateDb.get(1, proof.nullifier1);
     if (!nullifierVal1.equals(emptyValue)) {
       throw new Error('Nullifier 1 already exists.');
     }
-    const nullifierVal2 = await this.worldStateDb.get(1, toBigIntBE(proof.nullifier2));
+    const nullifierVal2 = await this.worldStateDb.get(1, proof.nullifier2);
     if (!nullifierVal2.equals(emptyValue)) {
       throw new Error('Nullifier 2 already exists.');
     }
@@ -140,16 +196,83 @@ export class Server {
       throw new Error('Proof verification failed.');
     }
 
-    console.log('Verification complete. Adding to mempool.');
-
-    const rollup: Rollup = {
-      rollupId: this.rollupDb.getNextRollupId(),
-      txs: [proof],
-    };
-    await this.rollupDb.addRollup(rollup);
-
-    this.blockchain.sendProof(proofData, rollup.rollupId, [encViewingKey1, encViewingKey2]);
+    this.txQueue.put(proof);
   }
 
-  public flushTxs() {}
+  public flushTxs() {
+    this.txQueue.put(null);
+  }
+
+  private async createRollup(txs: JoinSplitProof[]) {
+    const dataStartIndex = this.worldStateDb.getSize(0);
+
+    // Get old data.
+    const oldDataRoot = this.worldStateDb.getRoot(0);
+    const oldDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
+    const oldNullRoot = this.worldStateDb.getRoot(1);
+
+    // Insert each txs elements into the db (modified state will be thrown away).
+    let nextDataIndex = dataStartIndex;
+    const newNullRoots: Buffer[] = [];
+    const oldNullPaths: HashPath[] = [];
+    const newNullPaths: HashPath[] = [];
+
+    for (const proof of txs) {
+      await this.worldStateDb.put(0, nextDataIndex++, proof.newNote1);
+      await this.worldStateDb.put(0, nextDataIndex++, proof.newNote2);
+
+      oldNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier1));
+      await this.worldStateDb.put(1, proof.nullifier1, toBufferBE(1n, 64));
+      newNullRoots.push(this.worldStateDb.getRoot(1));
+      newNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier1));
+
+      oldNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier2));
+      await this.worldStateDb.put(1, proof.nullifier2, toBufferBE(1n, 64));
+      newNullRoots.push(this.worldStateDb.getRoot(1));
+      newNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier2));
+    }
+
+    // Get new data.
+    const newDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
+    const rollupRootHeight = Math.log2(this.rollupSize) + 1;
+    const rootIndex = (Number(dataStartIndex) / (this.rollupSize * 2)) % 2;
+    const rollupRoot = newDataPath.data[rollupRootHeight][rootIndex];
+    const newDataRoot = this.worldStateDb.getRoot(0);
+
+    // Discard changes.
+    await this.worldStateDb.rollback();
+
+    return new Rollup(
+      this.rollupDb.getNextRollupId(),
+      Number(dataStartIndex),
+      txs.map(tx => tx.proofData),
+
+      rollupRoot,
+      oldDataRoot,
+      newDataRoot,
+      oldDataPath,
+      newDataPath,
+
+      oldNullRoot,
+      newNullRoots,
+      oldNullPaths,
+      newNullPaths,
+    );
+  }
+
+  private async rollup(txs: JoinSplitProof[]) {
+    console.log(`Creating rollup with ${txs.length} txs...`);
+    const rollup = await this.createRollup(txs);
+    this.createProof(rollup, txs.map(tx => tx.viewingKeys).flat());
+    // await this.rollupDb.addRollup(rollup);
+  }
+
+  private async createProof(rollup: Rollup, viewingKeys: Buffer[]) {
+    const proof = await this.proofGenerator.createProof(rollup);
+    if (proof) {
+      this.blockchain.sendProof(proof, rollup.rollupId, this.rollupSize, viewingKeys);
+    } else {
+      console.log('Invalid proof.');
+    }
+  }
 }

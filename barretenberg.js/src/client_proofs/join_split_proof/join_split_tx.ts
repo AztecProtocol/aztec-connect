@@ -24,7 +24,7 @@ export class JoinSplitTx {
     numBuffer.writeUInt32BE(this.inputNoteIndices[0], 12);
     numBuffer.writeUInt32BE(this.inputNoteIndices[1], 16);
 
-    const pathBuffer = Buffer.concat(this.inputNotePaths.flat().flat());
+    const pathBuffer = Buffer.concat(this.inputNotePaths.map(p => p.toBuffer()));
     const noteBuffer = Buffer.concat([...this.inputNotes, ...this.outputNotes].map(n => n.toBuffer()));
 
     return Buffer.concat([

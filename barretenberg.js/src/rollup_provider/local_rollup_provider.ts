@@ -29,6 +29,7 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
       blockNum: this.blockNum,
       rollupId: this.blockNum,
       dataStartIndex: this.dataTreeSize,
+      numDataEntries: 2,
       dataEntries: [outputNote1, outputNote2],
       nullifiers: [nullifer1, nullifer2],
       viewingKeys: [encViewingKey1, encViewingKey2],

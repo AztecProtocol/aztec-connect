@@ -15,6 +15,9 @@ export class BlockDao {
   public dataStartIndex!: number;
 
   @Column()
+  public numDataEntries!: number;
+
+  @Column()
   public dataEntries!: Buffer;
 
   @Column()
