@@ -37,26 +37,42 @@ export function appFactory(server: Server, prefix: string) {
     } else {
       ctx.body = 'OK\n';
       ctx.response.status = 201;
+      await keyRepo.save(key);
     }
-
-    await keyRepo.save(key);
   });
 
   // TODO: work out how to do with query params on a GET rather than POST
-  router.post('/account/notes', async (ctx: Koa.Context) => {
-    const { id, signature, message } = ctx.request.body;
+  // use middleware to check condition
+  router.get('/account/fetchKey', async (ctx: Koa.Context) => {
+    const { id, signature, message } = ctx.request.query;
     const recoveredAddress = utils.verifyMessage(message, signature).slice(2);
     const retrievedKey = await keyRepo.findOne({ id });
+    
 
-    if (id && id !== recoveredAddress) {
-        ctx.response.status = 401;
-        ctx.response.body = 'Fail'
-    } else {
+    if (retrievedKey && id === recoveredAddress) {
         ctx.body = 'OK\n';
         ctx.response.status = 200;
         ctx.response.body = retrievedKey
+    } else {
+        ctx.response.status = 401;
+        ctx.response.body = 'Fail'
     }
+  });
 
+    // TODO: work out how to do with query params on a GET rather than POST
+  // use middleware to check condition
+  router.post('/account/notes', async (ctx: Koa.Context) => {
+    
+    // const retrievedKey = await keyRepo.findOne({ id });
+
+    // if (retrievedKey && id === recoveredAddress) {
+    //     ctx.body = 'OK\n';
+    //     ctx.response.status = 200;
+    //     ctx.response.body = retrievedKey
+    // } else {
+    //     ctx.response.status = 401;
+    //     ctx.response.body = 'Fail'
+    // }
   });
 
   const app = new Koa();

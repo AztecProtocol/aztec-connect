@@ -68,7 +68,7 @@ describe('basic route tests', () => {
     expect(response.text).toContain('Fail');
   });
 
-  it('should request notes for a particular ID', async () => {
+  it.only('should request keys for a particular ID', async () => {
     const wallet = Wallet.createRandom();
     const id = wallet.address.slice(2);
     const informationKey = randomHex(20);
@@ -79,9 +79,41 @@ describe('basic route tests', () => {
 
     const message = 'hello world';
     const signature = await wallet.signMessage(message);
-    const queryData = await request(api).post('/api/account/notes').send({ id, signature, message });
+    // '/account/:accountId'
+    // '/account/status?signature=0x...&'
+    // '/account/:accountId/notes/?'
+    // '/account/0x../notes'
+
+    // ctx.params.accountId = 0x...
+    // ctx.request.query = { signature: 0x... }
+
+    const queryData = await request(api).get('/api/account/fetchKey').query({ id, signature, message });
 
     expect(queryData.status).toEqual(200);
     expect(queryData.text).toContain(informationKey);
+  });
+
+  it('should fail to fetch keys for invalid signature', async () => {
+    const id = randomHex(20);
+    const informationKey = randomHex(20);
+
+    // create 2 entries in the database, same id but different informationKey
+    const writeData = await request(api).post('/api/account/new').send({ id, informationKey });
+    expect(writeData.status).toEqual(201);
+
+    const message = 'hello world';
+    const wallet = Wallet.createRandom();
+    const fakeID = wallet.address.slice(2);
+    const signature = await wallet.signMessage(message);
+
+    const queryData = await request(api).get('/api/account/fetchKey').query({ id: fakeID, signature, message });
+
+    expect(queryData.status).toEqual(401);
+    expect(queryData.text).toContain('Fail');
+  });
+
+  it('should write notes into storage', async () => {
+    const id = randomHex(20);
+    const writeData = await request(api).post('/api/account/notes').send({  });
   });
 });
