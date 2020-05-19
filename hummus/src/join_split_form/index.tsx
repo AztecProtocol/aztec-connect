@@ -7,6 +7,7 @@ import { UserSelect } from './user_select';
 import { Deposit } from './deposit';
 import { Withdraw } from './withdraw';
 import { Transfer } from './transfer';
+import { ClearDataButton } from './clear_data_button';
 import { ThemeContext } from '../config/context';
 import { User } from '../user';
 import createDebug from 'debug';
@@ -125,6 +126,10 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
     }
   };
 
+  const clearData = async () => {
+    await app.clearNoteData();
+  };
+
   return (
     <Form>
       <FormField label="Init State">{initState.toString()}</FormField>
@@ -160,6 +165,9 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
           />
         </Block>
       )}
+      <Block padding="m">
+        <ClearDataButton onClearData={clearData} disabled={initState === InitState.INITIALIZING} />
+      </Block>
     </Form>
   );
 };

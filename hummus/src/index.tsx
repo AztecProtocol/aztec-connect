@@ -27,7 +27,7 @@ function ThemedForm({ app }: { app: App }) {
                 <TextButton theme="implicit" color={theme.link} href="/terminal" Link={Link}>
                   <FlexBox valign="center">
                     <Block right="xs">Terminal Mode</Block>
-                    <Icon name="chevron_right" color={theme.link} />
+                    <Icon name="chevron_right" />
                   </FlexBox>
                 </TextButton>
                 <SwitchInput
@@ -54,7 +54,9 @@ function LandingPage({ app }: { app: App }) {
       />
       <Route
         path="/terminal"
-        component={({ history }: { history: History }) => <TerminalComponent app={app} terminal={new Terminal(12, 40)} onExit={() => history.push('/')} />}
+        component={({ history }: { history: History }) => (
+          <TerminalComponent app={app} terminal={new Terminal(12, 40)} onExit={() => history.push('/')} />
+        )}
       />
       <Route>
         <ThemedForm app={app} />
