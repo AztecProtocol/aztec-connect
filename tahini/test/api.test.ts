@@ -49,9 +49,8 @@ describe('basic route tests', () => {
 
   it('should reject malformed ID', async () => {
     const informationKey = randomHex(20);
-    const id = randomHex(20);
-
     const malformedID = '0x01';
+    
     const response = await request(api).post('/api/account/new').send({ id: malformedID, informationKey });
     expect(response.status).toEqual(400);
     expect(response.text).toContain('Fail');
@@ -68,12 +67,11 @@ describe('basic route tests', () => {
     expect(response.text).toContain('Fail');
   });
 
-  it('should request keys for a particular ID', async () => {
+  it('should fetch keys for a particular ID', async () => {
     const wallet = Wallet.createRandom();
     const id = wallet.address.slice(2);
     const informationKey = randomHex(20);
 
-    // create 2 entries in the database, same id but different informationKey
     const writeData = await request(api).post('/api/account/new').send({ id, informationKey });
     expect(writeData.status).toEqual(201);
 
@@ -87,7 +85,7 @@ describe('basic route tests', () => {
     // ctx.params.accountId = 0x...
     // ctx.request.query = { signature: 0x... }
 
-    const queryData = await request(api).get('/api/account/fetchKey').query({ id, signature, message });
+    const queryData = await request(api).get('/api/account/:accountId/key').query({ id, signature, message });
 
     expect(queryData.status).toEqual(200);
     expect(queryData.text).toContain(informationKey);
@@ -106,19 +104,19 @@ describe('basic route tests', () => {
     const fakeID = wallet.address.slice(2);
     const signature = await wallet.signMessage(message);
 
-    const queryData = await request(api).get('/api/account/fetchKey').query({ id: fakeID, signature, message });
+    const queryData = await request(api).get('/api/account/:accountId/key').query({ id: fakeID, signature, message });
 
     expect(queryData.status).toEqual(401);
     expect(queryData.text).toContain('Fail');
   });
 
-  it.only('should write notes into storage', async () => {
+  it('should write notes into storage', async () => {
     const id = randomHex(20);
     const owner = randomHex(20);
     const viewingKey = randomHex(60);
 
     const note = {id, owner, viewingKey };
-    const response = await request(api).post('/api/account/notes').send({ note });
+    const response = await request(api).post('/api/account/:accountID/notes').send({ note });
     expect(response.status).toEqual(201);
     expect(response.text).toContain('OK');
 
