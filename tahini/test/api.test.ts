@@ -1,7 +1,7 @@
 import { Wallet, utils } from 'ethers';
 import request from 'supertest';
-import { createConnection } from 'typeorm';
 
+import { Note } from '../dest/entity/note';
 import { Key } from '../dest/entity/key';
 import { appFactory } from '../dest/app';
 import Server from '../dest/server';
@@ -68,7 +68,7 @@ describe('basic route tests', () => {
     expect(response.text).toContain('Fail');
   });
 
-  it.only('should request keys for a particular ID', async () => {
+  it('should request keys for a particular ID', async () => {
     const wallet = Wallet.createRandom();
     const id = wallet.address.slice(2);
     const informationKey = randomHex(20);
@@ -112,8 +112,20 @@ describe('basic route tests', () => {
     expect(queryData.text).toContain('Fail');
   });
 
-  it('should write notes into storage', async () => {
+  it.only('should write notes into storage', async () => {
     const id = randomHex(20);
-    const writeData = await request(api).post('/api/account/notes').send({  });
+    const owner = randomHex(20);
+    const viewingKey = randomHex(60);
+
+    const note = {id, owner, viewingKey };
+    const response = await request(api).post('/api/account/notes').send({ note });
+    expect(response.status).toEqual(201);
+    expect(response.text).toContain('OK');
+
+    const repository = server.connection.getRepository(Note);
+    const retrievedNoteData = await repository.findOne({ note });
+    expect(retrievedNoteData.id).toEqual(id);
+    expect(retrievedNoteData.owner).toEqual(owner);
+    expect(retrievedNoteData.viewingKey).toEqual(viewingKey);
   });
 });
