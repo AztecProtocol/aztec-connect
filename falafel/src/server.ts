@@ -8,6 +8,7 @@ import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import fs from 'fs';
 import moment, { Duration } from 'moment';
 import { createConnection } from 'typeorm';
 import { LocalBlockchain } from './blockchain';
@@ -16,6 +17,11 @@ import { ProofGenerator } from './proof_generator';
 import { Rollup } from './rollup';
 import { RollupDb } from './rollup_db';
 import { WorldStateDb } from './world_state_db';
+
+interface ServerState {
+  readonly rollupSize: number;
+  lastSyncedBlock: number;
+}
 
 export class Server {
   private worldStateDb: WorldStateDb;
@@ -26,22 +32,39 @@ export class Server {
   private stateQueue = new MemoryFifo<() => Promise<void>>();
   private txQueue = new MemoryFifo<JoinSplitProof | null>();
   private proofGenerator: ProofGenerator;
+  private state: ServerState;
 
-  constructor(private rollupSize: number) {
+  constructor(private serverStateFilePath: string) {
+    try {
+      const jsonStr = fs.readFileSync(serverStateFilePath, 'utf8');
+      this.state = JSON.parse(jsonStr);
+    } catch (e) {
+      this.state = {
+        rollupSize: 1,
+        lastSyncedBlock: -1,
+      };
+    }
+    if (!this.state.rollupSize) {
+      throw new Error('Rollup size must be greater than 0.');
+    }
     this.worldStateDb = new WorldStateDb();
-    this.proofGenerator = new ProofGenerator(rollupSize);
+    this.proofGenerator = new ProofGenerator(this.state.rollupSize);
   }
 
   public async start() {
     this.proofGenerator.run();
     const connection = await createConnection();
-    this.blockchain = new LocalBlockchain(connection);
+    this.blockchain = new LocalBlockchain(connection, this.state.rollupSize);
     this.rollupDb = new RollupDb(connection);
     await this.blockchain.init();
     await this.rollupDb.init();
     await this.worldStateDb.start();
     this.printState();
     await this.createJoinSplitVerifier();
+    const newBlocks = this.getBlocks(this.state.lastSyncedBlock + 1);
+    for (const block of newBlocks) {
+      await this.handleNewBlock(block);
+    }
     this.blockchain.on('block', b => this.stateQueue.put(() => this.handleNewBlock(b)));
     this.processStateQueue();
     this.processTxQueue(moment.duration(30, 's'), moment.duration(30, 's'));
@@ -59,6 +82,23 @@ export class Server {
     console.log(`Data root: ${this.worldStateDb.getRoot(0).toString('hex')}`);
     console.log(`Null root: ${this.worldStateDb.getRoot(1).toString('hex')}`);
     console.log(`Root root: ${this.worldStateDb.getRoot(2).toString('hex')}`);
+  }
+
+  private updateServerState(key: keyof ServerState, value: number) {
+    if (key === 'rollupSize') return;
+
+    this.state = {
+      ...this.state,
+      [key]: value,
+    };
+    const newStateJson = JSON.stringify(this.state, null, 2);
+
+    try {
+      fs.writeFileSync(this.serverStateFilePath, `${newStateJson}\n`);
+      this.state[key] = value;
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   public status() {
@@ -105,7 +145,7 @@ export class Server {
       const shouldRollup =
         txs.length &&
         (tx === null ||
-          txs.length === this.rollupSize ||
+          txs.length === this.state.rollupSize ||
           lastTxReceivedTime.isBefore(moment().subtract(maxRollupWaitTime)));
 
       if (tx) {
@@ -149,6 +189,10 @@ export class Server {
 
     await this.worldStateDb.commit();
     this.printState();
+
+    if (block.blockNum > this.state.lastSyncedBlock) {
+      this.updateServerState('lastSyncedBlock', block.blockNum);
+    }
 
     // TODO: Confirm rollup by adding eth block and tx hash.
     // await this.rollupDb.confirm(block);
@@ -245,8 +289,8 @@ export class Server {
 
     // Get new data.
     const newDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
-    const rollupRootHeight = Math.log2(this.rollupSize) + 1;
-    const rootIndex = (Number(dataStartIndex) / (this.rollupSize * 2)) % 2;
+    const rollupRootHeight = Math.log2(this.state.rollupSize) + 1;
+    const rootIndex = (Number(dataStartIndex) / (this.state.rollupSize * 2)) % 2;
     const rollupRoot = newDataPath.data[rollupRootHeight][rootIndex];
     const newDataRoot = this.worldStateDb.getRoot(0);
 
@@ -284,7 +328,7 @@ export class Server {
   private async createProof(rollup: Rollup, viewingKeys: Buffer[]) {
     const proof = await this.proofGenerator.createProof(rollup);
     if (proof) {
-      this.blockchain.sendProof(proof, rollup.rollupId, this.rollupSize, viewingKeys);
+      this.blockchain.sendProof(proof, rollup.rollupId, this.state.rollupSize, viewingKeys);
     } else {
       console.log('Invalid proof.');
     }

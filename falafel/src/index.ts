@@ -11,7 +11,7 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  const server = new Server(2);
+  const server = new Server('./server_state.json');
   await server.start();
 
   const app = appFactory(server, '/api');
