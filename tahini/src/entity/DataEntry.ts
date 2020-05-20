@@ -1,9 +1,9 @@
-import { Column, Entity, PrimaryColumn, Unique, OneToMany, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity, PrimaryColumn, Unique, OneToMany } from 'typeorm';
 import { Note } from './Note';
 
-@Entity({ name: 'Notes' })
+@Entity({ name: 'DataEntry' })
 @Unique(['id'])
-export class Notes {
+export class DataEntry {
   @PrimaryColumn()
   public id!: string;
 

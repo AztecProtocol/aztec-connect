@@ -1,17 +1,16 @@
-import { Connection, Repository } from 'typeorm';
-import { Notes } from '../entity/Notes';
+import { Connection } from 'typeorm';
+import { DataEntry } from '../entity/DataEntry';
 import { BaseDb } from './Base';
-import { write } from 'fs';
 
 export class NotesDb extends BaseDb {
-  constructor(connection: Connection, note: Notes) {
+  constructor(connection: Connection, note: DataEntry) {
     super(connection, note);
   }
 
-  public async addNote(inputNotes: Notes) {
-    const writeNotes: any = new Notes();
-    writeNotes.id = inputNotes.id
-    writeNotes.notes = inputNotes.notes;    
-    await super.rep.save(writeNotes);
+  public async addNote(inputNotes: DataEntry) {
+    const dataEntry: any = new DataEntry();
+    dataEntry.id = inputNotes.id
+    dataEntry.notes = inputNotes.notes;    
+    await super.rep.save(dataEntry);
   }
 }

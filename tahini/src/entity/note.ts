@@ -1,5 +1,5 @@
-import { Column, Entity, PrimaryColumn, ManyToOne, OneToMany } from 'typeorm';
-import { Notes } from './Notes';
+import { Column, Entity, PrimaryColumn, ManyToOne } from 'typeorm';
+import { DataEntry } from './DataEntry';
 
 @Entity({ name: 'Note' })
 export class Note {
@@ -8,7 +8,10 @@ export class Note {
 
   @Column()
   public viewingKey!: string;
+  
+  @Column()
+  public informationKey!: string;
 
-  @ManyToOne(type => Notes, inverseType => inverseType.notes) 
+  @ManyToOne(type => DataEntry, dataEntry => dataEntry.notes) 
   public entryId!: number
 }

@@ -8,80 +8,57 @@ import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
 
 import { Keys } from './entity/Keys';
-import { Notes } from './entity/Notes';
+import { DataEntry } from './entity/DataEntry';
 import { Note } from './entity/Note';
 
-import { inputKeyValidation, inputNoteValidation, accountWriteValidate, validateSignature } from './middleware';
+import { inputValidation, accountWriteValidate, validateSignature } from './middleware';
 import Server from './server';
 
 const cors = require('@koa/cors');
 
 export function appFactory(server: Server, prefix: string) {
   const router = new Router({ prefix });
-  const keyRepo = server.connection.getRepository(Keys);
-  const notesRepo = server.connection.getRepository(Notes);
+  const dataEntryRepo = server.connection.getRepository(DataEntry);
 
   router.get('/', async (ctx: Koa.Context) => {
     ctx.body = 'OK\n';
   });
 
+
   router.post(
     '/account/new',
-    inputKeyValidation,
+    inputValidation,
     (ctx, next) => {
-      return accountWriteValidate(ctx, next, keyRepo);
+      return accountWriteValidate(ctx, next, dataEntryRepo);
     },
-    async (ctx: Koa.Context) => {
-      const key = new Keys();
-      const { id, informationKeys } = ctx.request.body;
-      key.id = id;
-      key.informationKeys = informationKeys;
-      ctx.body = 'OK\n';
-      ctx.response.status = 201;
-      await keyRepo.save(key);
-    },
-  );
-
-  router.get('/account/:accountId/getKeys', validateSignature, async (ctx: Koa.Context) => {
-    const retrievedKey = await keyRepo.findOne({ id: ctx.request.query.id });
-    ctx.body = 'OK\n';
-    ctx.response.status = 200;
-    ctx.response.body = retrievedKey;
-  });
-
-  router.post(
-    '/account/:accountID/newNotes',
-    // inputNoteValidation,
-    // (ctx, next) => {
-    //   return accountWriteValidate(ctx, next, noteRepo);
-    // },
     async (ctx: Koa.Context) => {
       const { id, notes } = ctx.request.body;
-      const notesEntity = new Notes();
-      notesEntity.id = id;
+      const dataEntry = new DataEntry();
+      dataEntry.id = id;
 
       // Create the various note entitites
-      const noteEntitity: any = await Promise.all(
+      const notesEntitity: any = await Promise.all(
         notes.map(async (currentNote: Note) => {
           const entity = new Note();
           entity.owner = currentNote.owner;
           entity.viewingKey = currentNote.viewingKey;
+          entity.informationKey = currentNote.informationKey;
           return entity;
         }),
       );
-
-      notesEntity.notes = noteEntitity;
+    
+      dataEntry.notes = notesEntitity;
       ctx.body = 'OK\n';
       ctx.response.status = 201;
-      await notesRepo.save(notesEntity);
+      await dataEntryRepo.save(dataEntry);
     },
   );
 
-  router.get('/account/:accountId/getNotes', validateSignature, async (ctx: Koa.Context) => {
-    const retrievedNotes = await notesRepo.findOne({ where: {id: ctx.request.query.id}, relations: ['notes'] });
+  router.get('/account/getNotes', validateSignature, async (ctx: Koa.Context) => {
+    const retrievedData = await dataEntryRepo.findOne({ where: {id: ctx.request.query.id}, relations: ['notes'] });
     ctx.body = 'OK\n';
     ctx.response.status = 200;
-    ctx.response.body = retrievedNotes;
+    ctx.response.body = retrievedData;
   });
 
   const app = new Koa();
