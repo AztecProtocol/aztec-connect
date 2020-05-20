@@ -2,7 +2,6 @@ import { Wallet, utils } from 'ethers';
 import request from 'supertest';
 
 import { DataEntry } from '../dest/entity/DataEntry';
-// import { Keys } from '../dest/entity/Keys';
 import { appFactory } from '../dest/app';
 import Server from '../dest/server';
 
@@ -18,28 +17,27 @@ describe.only('basic route tests', () => {
   let api: any;
   let server: any;
 
-  describe('Success cases', async () => {
+  beforeEach(async () => {
+    server = new Server();
+    await server.start();
 
-    beforeEach(async () => {
-      server = new Server();
-      await server.start();
+    const app = appFactory(server, '/api');
+    api = app.listen();
+  });
 
-      const app = appFactory(server, '/api');
-      api = app.listen();
+  afterEach(async () => {
+    await server.stop();
+    api.close();
+  });
+
+  describe('Success cases', () => {
+    it('get home route GET /', async () => {
+      const response = await request(api).get('/api');
+      expect(response.status).toEqual(200);
+      expect(response.text).toContain('OK');
     });
 
-    afterEach(async () => {
-      await server.stop();
-      api.close();
-    });
-
-    it.only('get home route GET /', async () => {
-        const response = await request(api).get('/api');
-        expect(response.status).toEqual(200);
-        expect(response.text).toContain('OK');
-      });
-
-    it.only('should write notes into storage for a user', async () => {
+    it('should write notes into storage for a user', async () => {
       const userA = randomHex(20);
       const userB = randomHex(20);
       const userANotes = [createRandomNote()];
@@ -64,8 +62,27 @@ describe.only('basic route tests', () => {
       expect(retrievedUserBData.notes[0].viewingKey).toEqual(userBNotes[0].viewingKey);
       expect(retrievedUserBData.notes[0].informationKey).toEqual(userBNotes[0].informationKey);
     });
+
+    it.only('should fetch user notes', async () => {
+      const wallet = Wallet.createRandom();
+      const message = 'hello world';
+      const signature = await wallet.signMessage(message);
+
+      const id = wallet.address.slice(2);
+      const userNotes = [createRandomNote()];
+
+      const writeResponse = await request(api).post('/api/account/new').send({ id, notes: userNotes });
+      expect(writeResponse.status).toEqual(201);
+
+      const readResponse = await request(api).get('/api/account/getNotes').query({ id, signature, message });
+      expect(readResponse.status).toEqual(200);
+      expect(readResponse.body.id).toEqual(id);
+      expect(readResponse.body.notes[0].owner).toEqual(userNotes[0].owner);
+      expect(readResponse.body.notes[0].viewingKey).toEqual(userNotes[0].viewingKey);
+    });
   });
-  describe('Failure cases', async () => {
+
+  describe('Failure cases', () => {
     it('should fail to overwrite user notes', async () => {
       const userA = randomHex(20);
       const userANotes = [createRandomNote()];
@@ -87,42 +104,17 @@ describe.only('basic route tests', () => {
       expect(response.text).toContain('Fail');
     });
 
-    it('should fetch user notes', async () => {
+    it('should fail to fetch notes for invalid signature', async () => {
       const wallet = Wallet.createRandom();
       const message = 'hello world';
       const signature = await wallet.signMessage(message);
-
-      const id = wallet.address.slice(2);
+      const fakeId = randomHex(20);
       const userNotes = [createRandomNote()];
+      await request(api).post('/api/account/getNotes').send({ id: fakeId, notes: userNotes });
 
-      const writeResponse = await request(api).post('/api/account/getNotes').send({ id, notes: userNotes });
-      expect(writeResponse.status).toEqual(201);
-
-      const readResponse = await request(api).get('/api/account/getNotes').query({ id, signature, message });
-      expect(readResponse.status).toEqual(200);
-      expect(readResponse.body.id).toEqual(id);
-      expect(readResponse.body.notes[0].owner).toEqual(userNotes[0].owner);
-      expect(readResponse.body.notes[0].viewingKey).toEqual(userNotes[0].viewingKey);
+      const readResponse = await request(api).get('/api/account/getNotes').query({ id: fakeId, signature, message });
+      expect(readResponse.status).toEqual(401);
+      expect(readResponse.text).toContain('Fail');
     });
-
-    it('should fail to fetch notes for invalid signature', async () => {});
   });
-
-  //   it('should fail to fetch keys for invalid signature', async () => {
-  //     const fakeID = randomHex(20);
-  //     const informationKeys = [randomHex(20)];
-
-  //     const writeData = await request(api).post('/api/account/new').send({ id: fakeID, informationKeys });
-  //     expect(writeData.status).toEqual(201);
-
-  //     const message = 'hello world';
-  //     const wallet = Wallet.createRandom();
-  //     const signature = await wallet.signMessage(message);
-
-  //     const queryData = await request(api)
-  //       .get('/api/account/:accountId/getKeys')
-  //       .query({ id: fakeID, signature, message });
-  //     expect(queryData.status).toEqual(401);
-  //     expect(queryData.text).toContain('Fail');
-  //   });
 });

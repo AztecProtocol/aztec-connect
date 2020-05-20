@@ -1,20 +1,12 @@
 import Koa from 'koa';
-import { keySchema, notesSchema } from '../schemas';
+import { inputSchema } from '../schemas';
 
-export async function inputNoteValidation(ctx: Koa.Context, next: Function) {
-  await baseInputValidation(notesSchema, ctx, next);
-}
-
-export async function inputKeyValidation(ctx: Koa.Context, next: Function) {
-  await baseInputValidation(keySchema, ctx, next);
-}
-
-async function baseInputValidation(schema: any, ctx: Koa.Context, next: Function) {
-  const { error } = schema.validate(ctx.request.body);
-  if (error) {
-    ctx.response.status = 400;
-    ctx.response.body = 'Fail';
-  } else {
-    await next();
-  }
+export default async function inputValidation(ctx: Koa.Context, next: Function) {
+    const { error } = inputSchema.validate(ctx.request.body);
+    if (error) {
+      ctx.response.status = 400;
+      ctx.response.body = 'Fail';
+    } else {
+      await next();
+    } 
 }
