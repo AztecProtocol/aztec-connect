@@ -49,6 +49,7 @@ build_tahini() {
     cd ./tahini
     yarn install
     yarn link barretenberg-es
+    yarn link barretenberg
     yarn build
     cd ..
 }

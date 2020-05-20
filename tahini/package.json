@@ -22,6 +22,9 @@
       "json",
       "node"
     ],
+    "transformIgnorePatterns": [
+      "/node_modules/(?!barretenberg-es).+\\.js$"
+    ],
     "rootDir": "./"
   },
   "dependencies": {
@@ -34,7 +37,6 @@
     "koa": "^2.7.0",
     "koa-compress": "^3.0.0",
     "koa-router": "^7.4.0",
-    "koa-router-joi-validator": "^0.0.4",
     "moment": "^2.24.0",
     "promise-readable": "^5.0.4",
     "sqlite3": "^4.2.0",
