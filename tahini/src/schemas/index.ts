@@ -1,14 +1,21 @@
 import Joi from '@hapi/joi';
 
-export const keySchema: any = Joi.object({
-  id: Joi.string().hex().length(40).required(),
-  informationKey: Joi.string().required(),
+const noteSchema: any = Joi.object({
+    note: Joi.object({
+      id: Joi.string().hex().length(40).required(),
+      owner: Joi.string().hex().length(40).required(),
+      viewingKey: Joi.string().required(),
+    }),
+  });
+
+export const notesSchema: any = Joi.object({
+  notes: Joi.object({ noteSchema }),
 });
 
-export const noteSchema: any = Joi.object({
-  note: Joi.object({
+export const keySchema: any = Joi.object({
     id: Joi.string().hex().length(40).required(),
-    owner: Joi.string().hex().length(40).required(),
-    viewingKey: Joi.string().required(),
-  }),
-});
+    informationKeys: Joi.array().items(Joi.string()),
+  });
+  
+
+

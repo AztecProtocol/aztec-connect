@@ -1,11 +1,11 @@
 import { Column, Entity, PrimaryColumn, Unique } from 'typeorm';
 
-@Entity({ name: 'Key' })
+@Entity({ name: 'Keys' })
 @Unique(["id"])
-export class Key {
+export class Keys {
   @PrimaryColumn()
   public id!: string;
 
-  @Column()
-  public informationKey!: string;
+  @Column("simple-array")
+  public informationKeys!: string[];
 }

@@ -1,16 +1,16 @@
 import { Connection, Repository } from 'typeorm';
-import { Key } from '../entity/key';
+import { Keys } from '../entity/Keys';
 import { BaseDb } from './Base';
 
 export class KeyDb extends BaseDb {
-  constructor(connection: Connection, key: Key) {
+  constructor(connection: Connection, key: Keys) {
     super(connection, key);
   }
 
-  public async addKey(inputKey: Key) {
-    const writeKey: any = new Key();
+  public async addKey(inputKey: Keys) {
+    const writeKey: any = new Keys();
     writeKey.id = inputKey.id;
-    writeKey.informationKey = inputKey.informationKey;
+    writeKey.informationKeys = inputKey.informationKeys;
 
     await super.rep.save(writeKey);
   }

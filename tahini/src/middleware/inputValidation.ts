@@ -1,8 +1,8 @@
 import Koa from 'koa';
-import { keySchema, noteSchema } from '../schemas';
+import { keySchema, notesSchema } from '../schemas';
 
 export async function inputNoteValidation(ctx: Koa.Context, next: Function) {
-  await baseInputValidation(noteSchema, ctx, next);
+  await baseInputValidation(notesSchema, ctx, next);
 }
 
 export async function inputKeyValidation(ctx: Koa.Context, next: Function) {
