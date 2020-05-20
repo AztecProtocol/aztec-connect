@@ -1,17 +1,18 @@
-import { Column, Entity, PrimaryColumn, ManyToOne } from 'typeorm';
-import { DataEntry } from './DataEntry';
+import { PrimaryColumn, Column, Entity, Unique, ManyToOne } from 'typeorm';
+import { Key } from './key';
 
 @Entity({ name: 'Note' })
+@Unique(["note"])
 export class Note {
   @PrimaryColumn()
+  public note!: Buffer;
+
+  @Column()
+  public blockNum!: number;
+
+  @Column()
+  public nullifier!: boolean;
+
+  @ManyToOne(type => Key, key => key.id)
   public owner!: string;
-
-  @Column()
-  public viewingKey!: string;
-  
-  @Column()
-  public informationKey!: string;
-
-  @ManyToOne(type => DataEntry, dataEntry => dataEntry.notes) 
-  public entryId!: number
 }
