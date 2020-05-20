@@ -1,14 +1,14 @@
-import { Column, Entity, PrimaryColumn, Unique } from 'typeorm';
+import { Column, Entity, PrimaryColumn, ManyToOne, OneToMany } from 'typeorm';
+import { Notes } from './Notes';
 
 @Entity({ name: 'Note' })
-@Unique(["id"])
 export class Note {
   @PrimaryColumn()
-  public id!: string;
-
-  @Column()
   public owner!: string;
 
   @Column()
   public viewingKey!: string;
+
+  @ManyToOne(type => Notes, inverseType => inverseType.notes) 
+  public entryId!: number
 }
