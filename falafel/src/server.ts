@@ -85,7 +85,9 @@ export class Server {
   }
 
   private updateServerState(key: keyof ServerState, value: number) {
-    if (key === 'rollupSize') return;
+    if (key === 'rollupSize') {
+      return;
+    }
 
     this.state = {
       ...this.state,
@@ -177,14 +179,15 @@ export class Server {
       await this.worldStateDb.put(0, BigInt(block.dataStartIndex + block.numDataEntries - 1), Buffer.alloc(64, 0));
     }
 
-    const nonEmptyValue = Buffer.alloc(64, 0);
-    nonEmptyValue.writeUInt8(1, 63);
-
+    // Update data root tree with latest.
     const dataRoot = this.worldStateDb.getRoot(0);
-    await this.worldStateDb.put(2, toBigIntBE(dataRoot.slice(16)), nonEmptyValue);
+    await this.worldStateDb.put(2, BigInt(block.rollupId + 1), dataRoot);
 
+    // Set nullifiers.
+    const nullifier = Buffer.alloc(64, 0);
+    nullifier.writeUInt8(1, 63);
     for (const nullifier of block.nullifiers) {
-      await this.worldStateDb.put(1, toBigIntBE(nullifier), nonEmptyValue);
+      await this.worldStateDb.put(1, toBigIntBE(nullifier), nullifier);
     }
 
     await this.worldStateDb.commit();
@@ -224,8 +227,8 @@ export class Server {
     console.log('Done.');
   }
 
-  public async receiveTx({ proofData, encViewingKey1, encViewingKey2 }: Proof) {
-    const proof = new JoinSplitProof(proofData, [encViewingKey1, encViewingKey2]);
+  public async receiveTx({ proofData, encViewingKey1, encViewingKey2, dataRootsIndex }: Proof) {
+    const proof = new JoinSplitProof(proofData, [encViewingKey1, encViewingKey2], dataRootsIndex);
 
     // Check nullifiers don't exist (tree id 1 returns 0 at index).
     const emptyValue = Buffer.alloc(64, 0);
@@ -238,9 +241,17 @@ export class Server {
       throw new Error('Nullifier 2 already exists.');
     }
 
-    if ((await this.worldStateDb.get(2, toBigIntBE(proof.noteTreeRoot.slice(16)))).equals(emptyValue)) {
-      throw new Error(`Merkle root does not exist - ${proof.noteTreeRoot.toString('hex')}`);
+    const merkleRoot = await this.worldStateDb.get(2, BigInt(dataRootsIndex));
+    if (!merkleRoot.equals(proof.noteTreeRoot)) {
+      throw new Error(`Merkle root does not exist: ${merkleRoot.toString('hex')}`);
     }
+
+    // TODO: Maybe use server to index?
+    // const rollup = await this.rollupDb.getRollupByDataRoot(proof.noteTreeRoot);
+    // if (!rollup) {
+    //   throw new Error(`Rollup not found for merkle root: ${proof.noteTreeRoot.toString('hex')}`);
+    // }
+    // proof.dataRootsIndex = rollup.id;
 
     if (!(await this.joinSplitVerifier.verifyProof(proofData))) {
       throw new Error('Proof verification failed.');
@@ -260,14 +271,15 @@ export class Server {
     const oldDataRoot = this.worldStateDb.getRoot(0);
     const oldDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
     const oldNullRoot = this.worldStateDb.getRoot(1);
-    const oldRootRoot = this.worldStateDb.getRoot(2);
+    const dataRootsRoot = this.worldStateDb.getRoot(2);
 
     // Insert each txs elements into the db (modified state will be thrown away).
     let nextDataIndex = dataStartIndex;
     const newNullRoots: Buffer[] = [];
     const oldNullPaths: HashPath[] = [];
     const newNullPaths: HashPath[] = [];
-    const oldRootPaths: HashPath[] = [];
+    const dataRootsPaths: HashPath[] = [];
+    const dataRootsIndicies: number[] = [];
 
     for (const proof of txs) {
       await this.worldStateDb.put(0, nextDataIndex++, proof.newNote1);
@@ -283,8 +295,8 @@ export class Server {
       newNullRoots.push(this.worldStateDb.getRoot(1));
       newNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier2));
 
-      const dataRootIndex = proof.noteTreeRoot.slice(16);
-      oldRootPaths.push(await this.worldStateDb.getHashPath(2, toBigIntBE(dataRootIndex)));
+      dataRootsPaths.push(await this.worldStateDb.getHashPath(2, BigInt(proof.dataRootsIndex)));
+      dataRootsIndicies.push(proof.dataRootsIndex);
     }
 
     // Get new data.
@@ -298,7 +310,7 @@ export class Server {
     await this.worldStateDb.rollback();
 
     return new Rollup(
-      this.rollupDb.getNextRollupId(),
+      await this.rollupDb.getNextRollupId(),
       Number(dataStartIndex),
       txs.map(tx => tx.proofData),
 
@@ -313,8 +325,9 @@ export class Server {
       oldNullPaths,
       newNullPaths,
 
-      oldRootRoot,
-      oldRootPaths,
+      dataRootsRoot,
+      dataRootsPaths,
+      dataRootsIndicies,
     );
   }
 
@@ -322,7 +335,7 @@ export class Server {
     console.log(`Creating rollup with ${txs.length} txs...`);
     const rollup = await this.createRollup(txs);
     this.createProof(rollup, txs.map(tx => tx.viewingKeys).flat());
-    // await this.rollupDb.addRollup(rollup);
+    await this.rollupDb.addRollup(rollup);
   }
 
   private async createProof(rollup: Rollup, viewingKeys: Buffer[]) {

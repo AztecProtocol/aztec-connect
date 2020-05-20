@@ -125,7 +125,8 @@ export class App extends EventEmitter {
 
     this.initRollupProvider();
 
-    this.worldState = new WorldState(this.leveldb, this.pedersen, this.blake2s);
+    const lastDataRootsIndex = +(window.localStorage.getItem('lastDataRootsIndex') || 0);
+    this.worldState = new WorldState(this.leveldb, this.pedersen, this.blake2s, lastDataRootsIndex);
     await this.worldState.init();
 
     try {
@@ -195,10 +196,14 @@ export class App extends EventEmitter {
       const balanceBefore = this.getBalance();
 
       await this.worldState.processBlock(block);
+
+      window.localStorage.setItem('lastDataRootsIndex', this.worldState.getDataRootsIndex().toString());
+
       const updates = await Promise.all(this.userStates.map(us => us.processBlock(block)));
       if (updates.some(x => x)) {
         this.emit('updated');
       }
+
       window.localStorage.setItem('syncedToBlock', block.blockNum.toString());
 
       const diff = this.getBalance() - balanceBefore;
@@ -300,6 +305,7 @@ export class App extends EventEmitter {
 
     await this.leveldb.clear();
     localStorage.removeItem('syncedToBlock');
+    localStorage.removeItem('lastDataRootsIndex');
     await this.db.clearNote();
 
     if (this.initialized) {

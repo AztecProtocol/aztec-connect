@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
+import { Column, Entity, Index, OneToMany, PrimaryColumn } from 'typeorm';
 import { RollupTxDao } from './rollup_tx';
 
 @Entity({ name: 'rollup' })
@@ -8,6 +8,10 @@ export class RollupDao {
 
   @Column()
   public created!: Date;
+
+  @Index({ unique: true })
+  @Column()
+  public dataRoot!: Buffer;
 
   @OneToMany(type => RollupTxDao, tx => tx.rollupId, { cascade: true })
   public txs!: RollupTxDao[];

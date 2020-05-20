@@ -36,7 +36,13 @@ export class WorldStateDb {
     indexBuf.copy(buffer, 2);
     this.proc!.stdin!.write(buffer);
 
-    const result = await this.stdout.read(64);
+    const lengthBuf = (await this.stdout.read(4)) as Buffer | undefined;
+    if (!lengthBuf) {
+      throw new Error('Failed to read length.');
+    }
+    const length = lengthBuf.readUInt32BE(0);
+
+    const result = await this.stdout.read(length);
     return result as Buffer;
   }
 
@@ -61,13 +67,13 @@ export class WorldStateDb {
   }
 
   public async put(treeId: number, index: bigint, value: Buffer) {
-    const buffer = Buffer.alloc(82);
+    const buffer = Buffer.alloc(22);
     buffer.writeInt8(1, 0);
     buffer.writeInt8(treeId, 1);
     const indexBuf = toBufferBE(index, 16);
     indexBuf.copy(buffer, 2);
-    value.copy(buffer, 18);
-    this.proc!.stdin!.write(buffer);
+    buffer.writeUInt32BE(value.length, 18);
+    this.proc!.stdin!.write(Buffer.concat([buffer, value]));
 
     this.roots[treeId] = await this.stdout.read(32);
 
@@ -111,14 +117,6 @@ export class WorldStateDb {
     this.stdout = new PromiseReadable(this.proc!.stdout!) as any;
 
     await this.readMetadata();
-
-    if (!this.getSize(0)) {
-      const nonEmptyValue = Buffer.alloc(64, 0);
-      nonEmptyValue.writeUInt8(1, 63);
-      const root = this.getRoot(0);
-      await this.put(2, toBigIntBE(root.slice(16)), nonEmptyValue);
-      await this.commit();
-    }
   }
 
   private async readMetadata() {
