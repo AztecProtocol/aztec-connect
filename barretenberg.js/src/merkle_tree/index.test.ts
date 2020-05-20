@@ -1,7 +1,7 @@
 import { BarretenbergWasm } from '../wasm';
 import { Blake2s } from '../crypto/blake2s';
 import { Pedersen } from '../crypto/pedersen';
-import { MerkleTree } from '.';
+import { MerkleTree, HashPath } from '.';
 import levelup from 'levelup';
 import memdown from 'memdown';
 
@@ -45,18 +45,18 @@ describe('merkle_tree', () => {
       expect(await tree.getElement(i)).toEqual(values[i]);
     }
 
-    let expected = [
+    let expected = new HashPath([
       [e00, e01],
       [e10, e11],
-    ];
+    ]);
 
     expect(await tree.getHashPath(0)).toEqual(expected);
     expect(await tree.getHashPath(1)).toEqual(expected);
 
-    expected = [
+    expected = new HashPath([
       [e02, e03],
       [e10, e11],
-    ];
+    ]);
 
     expect(await tree.getHashPath(2)).toEqual(expected);
     expect(await tree.getHashPath(3)).toEqual(expected);

@@ -28,7 +28,7 @@ export interface LeafHasher {
 }
 
 export class HashPath {
-  public data: Buffer[][] = [];
+  constructor(public data: Buffer[][] = []) {}
 
   public toBuffer() {
     const elements = this.data.map(nodes => Buffer.concat([nodes[0], nodes[1]]));
