@@ -9,12 +9,21 @@ const debug = createDebug('bb:local_rollup_provider');
 export class LocalRollupProvider extends EventEmitter implements BlockSource, RollupProvider {
   private blockNum = 0;
   private dataTreeSize = 0;
+  private running = false;
 
   constructor(private joinSplitVerifier: JoinSplitVerifier) {
     super();
   }
 
-  async sendProof({ proofData, encViewingKey1, encViewingKey2 }: Proof) {
+  start() {
+    this.running = true;
+  }
+
+  async sendProof({ proofData, viewingKeys }: Proof) {
+    if (!this.running) {
+      return;
+    }
+
     const verified = await this.joinSplitVerifier.verifyProof(proofData);
     debug(`verified: ${verified}`);
     if (!verified) {
@@ -32,7 +41,7 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
       numDataEntries: 2,
       dataEntries: [outputNote1, outputNote2],
       nullifiers: [nullifer1, nullifer2],
-      viewingKeys: [encViewingKey1, encViewingKey2],
+      viewingKeys,
     };
 
     this.blockNum++;
@@ -47,5 +56,9 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
       dataRoot: Buffer.alloc(32, 0),
       nullRoot: Buffer.alloc(32, 0),
     };
+  }
+
+  stop() {
+    this.running = false;
   }
 }

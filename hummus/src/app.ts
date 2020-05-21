@@ -1,5 +1,5 @@
 import { BlockSource, Block } from 'barretenberg-es/block_source';
-import { LocalRollupProvider, RollupProvider, ServerRollupProvider } from 'barretenberg-es/rollup_provider';
+import { LocalRollupProvider, RollupProvider, ServerRollupProvider, Proof } from 'barretenberg-es/rollup_provider';
 import { ServerBlockSource } from 'barretenberg-es/block_source/server_block_source';
 import { JoinSplitProver, JoinSplitVerifier } from 'barretenberg-es/client_proofs/join_split_proof';
 import { Prover } from 'barretenberg-es/client_proofs/prover';
@@ -42,15 +42,19 @@ export class App extends EventEmitter {
   private users: User[] = [];
   private userStates: UserState[] = [];
   private joinSplitProofCreator!: JoinSplitProofCreator;
+  private rollupProviderUrl = '';
   private rollupProvider!: RollupProvider;
   private blockSource!: BlockSource;
+  private blockQueue!: MemoryFifo<Block>;
   private grumpkin!: Grumpkin;
   private blake2s!: Blake2s;
+  private pedersen!: Pedersen;
   private db = new DexieDatabase();
-  private blockQueue = new MemoryFifo<Block>();
+  private leveldb = levelup(leveljs('hummus'));
   private initialized = false;
 
   public async init(serverUrl: string) {
+    this.rollupProviderUrl = serverUrl;
     const circuitSize = 128 * 1024;
 
     const crs = new Crs(circuitSize);
@@ -71,35 +75,14 @@ export class App extends EventEmitter {
 
     const prover = new Prover(barretenbergWorker, pippenger, fft);
 
-    const pedersen = new Pedersen(barretenberg);
+    this.pedersen = new Pedersen(barretenberg);
     this.blake2s = new Blake2s(barretenberg);
     this.joinSplitProver = new JoinSplitProver(barretenberg, prover);
     this.joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
 
-    // this.initLocalRollupProvider();
-    this.initServerRollupProvider(serverUrl);
-
-    const leveldb = levelup(leveljs('hummus'));
-    this.worldState = new WorldState(leveldb, pedersen, this.blake2s);
-    await this.worldState.init();
-
-    try {
-      const { dataSize, dataRoot, nullRoot } = await this.rollupProvider.status();
-      this.log(`data size: ${dataSize}`);
-      this.log(`data root: ${dataRoot.slice(0, 8).toString('hex')}...`);
-      this.log(`null root: ${nullRoot.slice(0, 8).toString('hex')}...`);
-    } catch (err) {
-      this.log('Failed to get server status.');
-    }
-
     this.grumpkin = new Grumpkin(barretenberg);
 
-    await this.initUsers();
-    this.switchToUser(0);
-    this.log(`user: ${this.getUser().publicKey.slice(0, 4).toString('hex')}...`);
-    this.log(`balance: ${this.getBalance()}`);
-
-    this.processBlockQueue();
+    await this.startNewSession();
 
     this.logAndDebug('creating keys...');
     const start = new Date().getTime();
@@ -133,8 +116,34 @@ export class App extends EventEmitter {
 
   public async destroy() {
     await this.pool.destroy();
+    this.blockSource.stop();
     this.blockSource.removeAllListeners();
     this.blockQueue.cancel();
+  }
+
+  private async startNewSession(userId: number = 0) {
+    this.blockQueue = new MemoryFifo<Block>();
+
+    this.initRollupProvider();
+
+    this.worldState = new WorldState(this.leveldb, this.pedersen, this.blake2s);
+    await this.worldState.init();
+
+    try {
+      const { dataSize, dataRoot, nullRoot } = await this.rollupProvider.status();
+      this.log(`data size: ${dataSize}`);
+      this.log(`data root: ${dataRoot.slice(0, 8).toString('hex')}...`);
+      this.log(`null root: ${nullRoot.slice(0, 8).toString('hex')}...`);
+    } catch (err) {
+      this.log('Failed to get server status.');
+    }
+
+    await this.initUsers();
+    this.switchToUser(userId);
+    this.log(`user: ${this.getUser().publicKey.slice(0, 4).toString('hex')}...`);
+    this.log(`balance: ${this.getBalance()}`);
+
+    this.processBlockQueue();
   }
 
   private async initUsers() {
@@ -151,21 +160,28 @@ export class App extends EventEmitter {
     this.user = this.users[0];
   }
 
-  private initLocalRollupProvider() {
-    const lrp = new LocalRollupProvider(this.joinSplitVerifier);
-    this.rollupProvider = lrp;
-    this.blockSource = lrp;
+  private initRollupProvider() {
+    if (this.rollupProviderUrl) {
+      this.initServerRollupProvider(this.rollupProviderUrl);
+    } else {
+      this.initLocalRollupProvider();
+    }
     this.blockSource.on('block', b => this.blockQueue.put(b));
+    this.blockSource.start();
+  }
+
+  private initLocalRollupProvider() {
+    debug('No server url provided. Use local rollup provider.');
+    const lrp = new LocalRollupProvider(this.joinSplitVerifier);
+    this.blockSource = lrp;
+    this.rollupProvider = lrp;
   }
 
   private initServerRollupProvider(serverUrl: string) {
     const url = new URL(serverUrl);
     const fromBlock = window.localStorage.getItem('syncedToBlock') || -1;
-    const sbs = new ServerBlockSource(url, +fromBlock + 1);
+    this.blockSource = new ServerBlockSource(url, +fromBlock + 1);
     this.rollupProvider = new ServerRollupProvider(url);
-    this.blockSource = sbs;
-    this.blockSource.on('block', b => this.blockQueue.put(b));
-    sbs.start();
   }
 
   private async processBlockQueue() {
@@ -178,10 +194,12 @@ export class App extends EventEmitter {
       const balanceBefore = this.getBalance();
 
       await this.worldState.processBlock(block);
+
       const updates = await Promise.all(this.userStates.map(us => us.processBlock(block)));
       if (updates.some(x => x)) {
         this.emit('updated');
       }
+
       window.localStorage.setItem('syncedToBlock', block.blockNum.toString());
 
       const diff = this.getBalance() - balanceBefore;
@@ -207,6 +225,10 @@ export class App extends EventEmitter {
     const user = this.getUser();
     const proof = await this.joinSplitProofCreator.createProof(0, 0, value, user, receiverPubKey);
     await this.rollupProvider.sendProof(proof);
+  }
+
+  private getUserState(userId: number) {
+    return this.userStates.find(us => us.getUser().id === userId)!;
   }
 
   public getUser() {
@@ -259,7 +281,7 @@ export class App extends EventEmitter {
 
   public getBalance(userIdOrAlias?: string | number) {
     const user = userIdOrAlias ? this.findUser(userIdOrAlias) || this.user : this.user;
-    return this.userStates.find(us => us.getUser().id === user.id)!.getBalance();
+    return this.getUserState(user.id).getBalance();
   }
 
   public findUser(userIdOrAlias: string | number, remote: boolean = false) {
@@ -270,5 +292,22 @@ export class App extends EventEmitter {
         return u.id.toString() === userIdOrAlias || u.alias === userIdOrAlias;
       });
     return user;
+  }
+
+  public async clearNoteData() {
+    if (this.initialized) {
+      this.blockSource.stop();
+      this.blockSource.removeAllListeners();
+      this.blockQueue.cancel();
+    }
+
+    await this.leveldb.clear();
+    localStorage.removeItem('syncedToBlock');
+    await this.db.clearNote();
+
+    if (this.initialized) {
+      const userId = this.user.id;
+      await this.startNewSession(userId);
+    }
   }
 }

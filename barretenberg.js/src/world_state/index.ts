@@ -30,6 +30,7 @@ export class WorldState {
     if (block.dataEntries.length < block.numDataEntries) {
       await this.tree.updateElement(block.dataStartIndex + block.numDataEntries - 1, Buffer.alloc(64, 0));
     }
+
     debug(`data size: ${this.tree.getSize()}`);
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);
   }

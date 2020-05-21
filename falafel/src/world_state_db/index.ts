@@ -8,6 +8,7 @@ export class WorldStateDb {
   private stdout!: { read: (size: number) => Promise<Buffer> };
   private roots: Buffer[] = [];
   private sizes: bigint[] = [];
+  private binPath = '../barretenberg/build/src/aztec/rollup/db_cli/db_cli';
 
   public async start() {
     await this.launch();
@@ -35,7 +36,13 @@ export class WorldStateDb {
     indexBuf.copy(buffer, 2);
     this.proc!.stdin!.write(buffer);
 
-    const result = await this.stdout.read(64);
+    const lengthBuf = (await this.stdout.read(4)) as Buffer | undefined;
+    if (!lengthBuf) {
+      throw new Error('Failed to read length.');
+    }
+    const length = lengthBuf.readUInt32BE(0);
+
+    const result = await this.stdout.read(length);
     return result as Buffer;
   }
 
@@ -51,22 +58,22 @@ export class WorldStateDb {
     const result = await this.stdout.read(depth * 64);
 
     const path = new HashPath();
-    for (let i=0; i<depth; ++i) {
-      const lhs = result.slice(i*64, i*64+32);
-      const rhs = result.slice(i*64+32, i*64+64);
+    for (let i = 0; i < depth; ++i) {
+      const lhs = result.slice(i * 64, i * 64 + 32);
+      const rhs = result.slice(i * 64 + 32, i * 64 + 64);
       path.data.push([lhs, rhs]);
     }
     return path;
   }
 
   public async put(treeId: number, index: bigint, value: Buffer) {
-    const buffer = Buffer.alloc(82);
+    const buffer = Buffer.alloc(22);
     buffer.writeInt8(1, 0);
     buffer.writeInt8(treeId, 1);
     const indexBuf = toBufferBE(index, 16);
     indexBuf.copy(buffer, 2);
-    value.copy(buffer, 18);
-    this.proc!.stdin!.write(buffer);
+    buffer.writeUInt32BE(value.length, 18);
+    this.proc!.stdin!.write(Buffer.concat([buffer, value]));
 
     this.roots[treeId] = await this.stdout.read(32);
 
@@ -90,12 +97,11 @@ export class WorldStateDb {
   }
 
   public async destroy() {
-    execSync('../barretenberg/build/src/aztec/rollup/db_cli/db_cli reset');
+    execSync(`${this.binPath} reset`);
   }
 
   private async launch() {
-    const binPath = '../barretenberg/build/src/aztec/rollup/db_cli/db_cli';
-    const proc = (this.proc = spawn(binPath));
+    const proc = (this.proc = spawn(this.binPath));
 
     proc.stderr.on('data', data => {});
     // proc.stderr.on('data', data => console.log(data.toString().trim()));
@@ -116,9 +122,12 @@ export class WorldStateDb {
   private async readMetadata() {
     this.roots[0] = await this.stdout.read(32);
     this.roots[1] = await this.stdout.read(32);
+    this.roots[2] = await this.stdout.read(32);
     const dataSize = await this.stdout.read(16);
     const nullifierSize = await this.stdout.read(16);
+    const rootSize = await this.stdout.read(16);
     this.sizes[0] = toBigIntBE(dataSize);
     this.sizes[1] = toBigIntBE(nullifierSize);
+    this.sizes[2] = toBigIntBE(rootSize);
   }
 }

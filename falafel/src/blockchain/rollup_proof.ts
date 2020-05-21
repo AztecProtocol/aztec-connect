@@ -8,25 +8,29 @@ interface InnerProof {
 }
 
 export class RollupProof {
+  public rollupId: number;
   public dataStartIndex: number;
   public oldDataRoot: Buffer;
   public newDataRoot: Buffer;
   public oldNullRoot: Buffer;
   public newNullRoot: Buffer;
+  public dataRootsRoot: Buffer;
   public numTxs: number;
   public innerProofData: InnerProof[] = [];
 
   constructor(public proofData: Buffer) {
-    this.dataStartIndex = proofData.readUInt32BE(28);
-    this.oldDataRoot = proofData.slice(32, 64);
-    this.newDataRoot = proofData.slice(64, 96);
-    this.oldNullRoot = proofData.slice(96, 128);
-    this.newNullRoot = proofData.slice(128, 160);
-    this.numTxs = proofData.readUInt32BE(188);
+    this.rollupId = proofData.readUInt32BE(28);
+    this.dataStartIndex = proofData.readUInt32BE(60);
+    this.oldDataRoot = proofData.slice(64, 96);
+    this.newDataRoot = proofData.slice(96, 128);
+    this.oldNullRoot = proofData.slice(128, 160);
+    this.newNullRoot = proofData.slice(160, 192);
+    this.dataRootsRoot = proofData.slice(192, 224);
+    this.numTxs = proofData.readUInt32BE(252);
 
     const innerLength = 32 * 8;
     for (let i = 0; i < this.numTxs; ++i) {
-      const startIndex = 192 + i * innerLength;
+      const startIndex = 256 + i * innerLength;
       const innerData = proofData.slice(startIndex, startIndex + innerLength);
       this.innerProofData[i] = {
         publicInput: innerData.slice(0, 32),

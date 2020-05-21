@@ -1,7 +1,6 @@
 export interface Proof {
   proofData: Buffer;
-  encViewingKey1: Buffer;
-  encViewingKey2: Buffer;
+  viewingKeys: Buffer[];
 }
 
 export interface RollupProviderStatus {

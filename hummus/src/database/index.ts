@@ -70,4 +70,12 @@ export class DexieDatabase implements Database {
   async addUser(user: DbUser) {
     await this.user.put(user);
   }
+
+  async clearNote() {
+    this.note.clear();
+  }
+
+  async clearUser() {
+    this.user.clear();
+  }
 }

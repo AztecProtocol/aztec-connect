@@ -49,13 +49,15 @@ export class JoinSplitProofCreator {
     const encViewingKey2 = encryptNote(outputNotes[1], this.grumpkin);
     const signature = this.joinSplitProver.sign4Notes([...inputNotes, ...outputNotes], sender.privateKey!);
 
+    const dataRoot = this.worldState.getRoot();
+
     const tx = new JoinSplitTx(
       sender.publicKey,
       deposit,
       widthraw,
       numInputNotes,
       inputNoteIndices,
-      this.worldState.getRoot(),
+      dataRoot,
       inputNotePaths,
       inputNotes,
       outputNotes,
@@ -71,7 +73,7 @@ export class JoinSplitProofCreator {
     debug(`proof size: ${proofData.length}`);
     debug(proofData);
 
-    const proof: Proof = { proofData, encViewingKey1, encViewingKey2 };
+    const proof: Proof = { proofData, viewingKeys: [encViewingKey1, encViewingKey2] };
     return proof;
   }
 }

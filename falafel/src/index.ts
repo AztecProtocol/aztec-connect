@@ -1,4 +1,5 @@
 import http from 'http';
+import moment from 'moment';
 import 'reflect-metadata';
 import 'source-map-support/register';
 import { appFactory } from './app';
@@ -11,7 +12,11 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  const server = new Server(2);
+  const server = new Server({
+    rollupSize: 2,
+    maxRollupWaitTime: moment.duration(120, 's'),
+    minRollupInterval: moment.duration(0, 's'),
+  });
   await server.start();
 
   const app = appFactory(server, '/api');

@@ -17,6 +17,10 @@ export class Rollup {
     public newNullRoots: Buffer[],
     public oldNullPaths: HashPath[],
     public newNullPaths: HashPath[],
+
+    public dataRootsRoot: Buffer,
+    public dataRootsPaths: HashPath[],
+    public dataRootsIndicies: number[],
   ) {}
 
   public toBuffer() {
@@ -39,6 +43,16 @@ export class Rollup {
       serializeVector(this.newNullRoots),
       serializeVector(this.oldNullPaths),
       serializeVector(this.newNullPaths),
+
+      this.dataRootsRoot,
+      serializeVector(this.dataRootsPaths),
+      serializeVector(
+        this.dataRootsIndicies.map(v => {
+          const buf = Buffer.alloc(4);
+          buf.writeUInt32BE(v, 0);
+          return buf;
+        }),
+      ),
     ]);
   }
 }

@@ -27,10 +27,18 @@ describe('world_state_db', () => {
       0xdb, 0x5f, 0xdc, 0xb9, 0x1b, 0xa0, 0xa0, 0x52, 0x7a, 0xb1, 0xff, 0xb3, 0x23, 0xbf, 0x3f, 0xc0,
     ]);
 
+    // prettier-ignore
+    const expectedRootRoot = Buffer.from([
+      0x1b, 0x22, 0xef, 0x60, 0x7a, 0xe0, 0x85, 0x88, 0xbc, 0x83, 0xa7, 0x9f, 0xfa, 0xce, 0xc5, 0x07,
+      0x34, 0x7b, 0xd2, 0xde, 0xe4, 0x4c, 0x84, 0x61, 0x81, 0xb7, 0x05, 0x12, 0x85, 0xc3, 0x2c, 0x0a,
+    ]);
+
     expect(worldStateDb.getRoot(0)).toEqual(expectedDataRoot);
     expect(worldStateDb.getRoot(1)).toEqual(expectedNullifierRoot);
-    expect(worldStateDb.getSize(0)).toEqual(0n);
-    expect(worldStateDb.getSize(1)).toEqual(0n);
+    expect(worldStateDb.getRoot(2)).toEqual(expectedRootRoot);
+    expect(worldStateDb.getSize(0)).toBe(0n);
+    expect(worldStateDb.getSize(1)).toBe(0n);
+    expect(worldStateDb.getSize(2)).toBe(1n);
   });
 
   it('should get correct value', async () => {
@@ -39,7 +47,7 @@ describe('world_state_db', () => {
   });
 
   it('should get correct hash path', async () => {
-    const path = await worldStateDb.getHashPath(0, 0n);
+    const path = (await worldStateDb.getHashPath(0, 0n)).data;
 
     const expectedFirst = Buffer.from('1cdcf02431ba623767fe389337d011df1048dcc24b98ed81cec97627bab454a0', 'hex');
     const expectedLast = Buffer.from('10ae15eed66d2b5fa24239d72aa47d1bfd7f37eb0a1a55baf69e363c4808fc14', 'hex');
@@ -50,7 +58,7 @@ describe('world_state_db', () => {
     expect(path[31][0]).toEqual(expectedLast);
     expect(path[31][1]).toEqual(expectedLast);
 
-    const nullPath = await worldStateDb.getHashPath(1, 0n);
+    const nullPath = (await worldStateDb.getHashPath(1, 0n)).data;
     expect(nullPath.length).toEqual(128);
   });
 
