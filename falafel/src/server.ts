@@ -276,6 +276,9 @@ export class Server {
 
       dataRootsPaths.push(await this.worldStateDb.getHashPath(2, BigInt(proof.dataRootsIndex)));
       dataRootsIndicies.push(proof.dataRootsIndex);
+
+      this.pendingNullifiers.delete(nullifier1);
+      this.pendingNullifiers.delete(nullifier2);
     }
 
     if (txs.length < rollupSize) {
