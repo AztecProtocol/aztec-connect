@@ -3,6 +3,7 @@ import { Connection, createConnection } from 'typeorm';
 
 import { appFactory } from '../dest/src/app';
 import { Note as NoteEntity } from '../dest/src/entity/Note';
+import { NoteDb } from '../dest/src/db/note';
 import Server from '../dest/src/server';
 import { NoteProcessor } from '../dest/src/note_processor';
 import { randomHex } from './helpers';
@@ -12,16 +13,15 @@ import { BarretenbergWasm } from 'barretenberg/wasm';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { randomBytes } from 'crypto';
 
-function createNote(grumpkin: Grumpkin) {
-  const receiverPrivKey = randomBytes(32);
+function createNote(grumpkin: Grumpkin, receiverPrivKey: Buffer = randomBytes(32)) {
   const receiverPubKey = grumpkin.mul(Grumpkin.one, receiverPrivKey);
   const secret = randomBytes(32);
   const note = new Note(receiverPubKey, secret, 100);
   const encryptedNote = encryptNote(note, grumpkin); // this is notedata
-  const informationKeys = receiverPrivKey.toString('hex');
+  const informationKey = receiverPrivKey.toString('hex');
   const id = receiverPubKey.toString('hex');
 
-  return { note, id, informationKeys, noteData: encryptedNote };
+  return { note, id, informationKey, noteData: encryptedNote };
 }
 
 describe('Note processor tests', () => {
@@ -65,45 +65,68 @@ describe('Note processor tests', () => {
     expect(retrievedData[1].note).toEqual(noteNullifier[0]);
   });
 
-  it('should decrypt a note for a provided note owner', async () => {
+  it.only('should decrypt a note for a provided note owner', async () => {
     // create a note
-    const { id, informationKeys, noteData } = createNote(grumpkin);
+    const { id, informationKey, noteData } = createNote(grumpkin);
 
     // create user account
-    const response = await request(api).post('/api/account/new').send({ id, informationKeys });
+    const response = await request(api).post('/api/account/new').send({ id, informationKey });
     expect(response.status).toEqual(201);
+    
+    // format notes and decrypt owners if possible
+    let notesToSave = noteProcessor.formatNotes([noteData], 5, false);
+    notesToSave = await noteProcessor.updateOwners(notesToSave, grumpkin);
 
-    // sync notes off blockchain into database
-    const syncNotes = await noteProcessor.syncNotes([noteData], 5, false);
-
-    // ascertain owners
-    const owners = await noteProcessor.ascertainOwners(syncNotes, grumpkin);
-    expect(owners.length).toEqual(1);
-    expect(owners[0]).toEqual(Buffer.from(id, 'hex'));
+    expect(notesToSave.length).toEqual(1);
+    expect(notesToSave[0].owner).toEqual(id);
   });
 
-  it('should decrypt multiple notes for multiple owners', async () => {
+  it.only('should decrypt multiple notes for multiple owners', async () => {
     // create user notes
     const noteA = createNote(grumpkin);
     const dummyNote = createNote(grumpkin); // to check this isn't recorded as an owner
     const noteB = createNote(grumpkin);
 
     // create user accounts
-    await request(api).post('/api/account/new').send({ id: noteA.id, informationKeys: noteA.informationKeys });
-    await request(api).post('/api/account/new').send({ id: noteB.id, informationKeys: noteB.informationKeys });
+    await request(api).post('/api/account/new').send({ id: noteA.id, informationKey: noteA.informationKey });
+    await request(api).post('/api/account/new').send({ id: noteB.id, informationKey: noteB.informationKey });
 
-    // sync notes off blockchain into database
-    const syncNotes = await noteProcessor.syncNotes([noteA.noteData, dummyNote.noteData, noteB.noteData], 5, false);
+    // format notes and decrypt owners if possible
+    let notesToSave = noteProcessor.formatNotes([noteA.noteData, dummyNote.noteData, noteB.noteData], 5, false);
+    notesToSave = await noteProcessor.updateOwners(notesToSave, grumpkin);
 
-    // ascertain owners
-    const owners = await noteProcessor.ascertainOwners(syncNotes, grumpkin);
-    expect(owners.length).toEqual(2);
-    expect(owners[0]).toEqual(Buffer.from(noteA.id, 'hex'));
-    expect(owners[1]).toEqual(Buffer.from(noteB.id, 'hex'));
+    expect(notesToSave.length).toEqual(3);
+    expect(notesToSave[0].owner).toEqual(noteA.id);
+    expect(notesToSave[1].owner).toEqual(undefined);
+    expect(notesToSave[2].owner).toEqual(noteB.id);
   });
 
-  it('should update informationKey links with decrypted note owners', async () => {
-    const noteA = createNote(grumpkin);
-    
+  it.only('should update informationKey links with decrypted note owners', async () => {
+    const privateKey = randomBytes(32);
+    const userFirstNote = createNote(grumpkin, privateKey);
+    const userSecondNote = createNote(grumpkin, privateKey);
+
+    await request(api).post('/api/account/new').send({ id: userFirstNote.id, informationKey: userFirstNote.informationKey });
+    await request(api).post('/api/account/new').send({ id: userSecondNote.id, informationKey: userSecondNote.informationKey });
+
+    // format notes and decrypt owners if possible
+    let notesToSave = noteProcessor.formatNotes([userFirstNote.noteData, userSecondNote.noteData], 5, false);
+    notesToSave = await noteProcessor.updateOwners(notesToSave, grumpkin);
+
+    // save notes, with decrypted owners, to local database
+    const noteDb = new NoteDb(connection);
+    noteDb.init();
+    await noteDb.saveNotes(notesToSave);
+
+    // TODO: replace with a route GET method
+    const noteRepo = connection.getRepository(NoteEntity);
+    const notesForKey = await noteRepo.find();
+    console.log({ notesForKey });
+
+    const userPublicKey = userFirstNote.id;
+    console.log({ userPublicKey });
+    expect(notesForKey.length).toEqual(2);
+    expect(notesForKey[0].owner).toEqual(userPublicKey);
+    expect(notesForKey[1].owner).toEqual(userPublicKey);
   });
 });

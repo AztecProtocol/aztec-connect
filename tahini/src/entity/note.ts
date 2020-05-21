@@ -13,6 +13,6 @@ export class Note {
   @Column()
   public nullifier!: boolean;
 
-  @ManyToOne(type => Key, key => key.id)
+  @Column()
   public owner!: string;
 }

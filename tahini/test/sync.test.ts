@@ -15,7 +15,7 @@ import { randomBytes } from 'crypto';
 describe('basic sync tests', () => {
   let api: any;
   let server: any;
-  let informationKeys: any;
+  let informationKey: any;
 
   beforeEach(async () => {
     server = new Server();
@@ -33,7 +33,7 @@ describe('basic sync tests', () => {
     const note = new Note(receiverPubKey, secret, 100);
     const encryptedNote = encryptNote(note, grumpkin); // this is notedata
 
-    informationKeys = receiverPrivKey.toString('hex');
+    informationKey = receiverPrivKey.toString('hex');
   });
 
   afterEach(async () => {
@@ -65,8 +65,8 @@ describe('basic sync tests', () => {
     // create ID:information key pairing
 
     const id = randomHex(20);
-    console.log({ informationKeys });
-    const response = await request(api).post('/api/account/new').send({ id, informationKeys });
+    console.log({ informationKey });
+    const response = await request(api).post('/api/account/new').send({ id, informationKey });
     expect(response.status).toEqual(201);
 
     // create and fetch notes
@@ -78,7 +78,7 @@ describe('basic sync tests', () => {
     const retrivedNotes: any = await noteRepo.find();
 
     console.log('server.noteProcessor: ', server.noteProcessor)
-    const owners = await server.noteProcessor.ascertainOwners(retrivedNotes);
+    const owners = await server.noteProcessor.updateOwners(retrivedNotes);
     console.log({ owners });
     expect(owners[0]).toEqual(id);
 

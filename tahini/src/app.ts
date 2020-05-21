@@ -27,15 +27,15 @@ export function appFactory(server: Server, prefix: string) {
 
   router.post(
     '/account/new',
-    // inputValidation,
-    // (ctx, next) => {
-    //   return accountWriteValidate(ctx, next, keyRepo);
-    // },
+    inputValidation,
+    (ctx, next) => {
+      return accountWriteValidate(ctx, next, keyRepo);
+    },
     async (ctx: Koa.Context) => {
       const key = new Key();
-      const { id, informationKeys } = ctx.request.body;
+      const { id, informationKey } = ctx.request.body;
       key.id = id;
-      key.informationKeys = informationKeys;
+      key.informationKey = informationKey;
       ctx.body = 'OK\n';
       ctx.response.status = 201;
       await keyRepo.save(key);
@@ -43,7 +43,7 @@ export function appFactory(server: Server, prefix: string) {
   );
 
   router.get('/account/getNotes', validateSignature, async (ctx: Koa.Context) => {
-    const retrievedData = await keyRepo.findOne({ where: {id: ctx.request.query.id} });
+    const retrievedData = await noteRepo.find({ where: {owner: ctx.request.query.id} });
     ctx.body = 'OK\n';
     ctx.response.status = 200;
     ctx.response.body = retrievedData;

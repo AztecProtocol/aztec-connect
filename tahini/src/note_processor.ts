@@ -27,40 +27,34 @@ export class NoteProcessor {
   }
 
   public async processNewNotes(notes: Buffer[], blockNum: number, isNullifiers: boolean) {
-    const notesToSave = await this.syncNotes(notes, blockNum, isNullifiers);
-    const owners = await this.ascertainOwners(notesToSave, this.grumpkin)
-    await this.updateOwners(owners, notesToSave);
-
+    let notesToSave = this.formatNotes(notes, blockNum, isNullifiers); 
+    notesToSave = await this.updateOwners(notesToSave, this.grumpkin)
+    await this.noteDb.saveNotes(notesToSave);
   }
 
-  public async syncNotes(notes: Buffer[], blockNum: number, isNullifiers: boolean) {
-    const notesToSave: Note[] = notes.map(noteData => {
+  public formatNotes(notes: Buffer[], blockNum: number, isNullifiers: boolean): Note[] {
+    let notesToSave: Note[] = notes.map(noteData => {
         const note = new Note();
         note.blockNum = blockNum;
         note.note = noteData;
         note.nullifier = isNullifiers;
         return note;
-      });
-      await this.noteDb.saveNotes(notesToSave);
-      return notesToSave;
+      });  
+    return notesToSave; 
   }
 
-  public async ascertainOwners(notes: Note[], grumpkin: Grumpkin) {
+  public async updateOwners(notes: Note[], grumpkin: Grumpkin): Promise<Note[]> {
     const keys = await this.keyRepo.find();
 
-    const owners: any[] = []
     keys.forEach((key: any) => {
         notes.forEach((note) => {
-            const decryption = decryptNote(note.note, Buffer.from(key.informationKeys, 'hex'), grumpkin);
+            const decryption = decryptNote(note.note, Buffer.from(key.informationKey, 'hex'), grumpkin);
             if (decryption) {
-                owners.push(decryption.ownerPubKey);
+                const owner = decryption.ownerPubKey;
+                note.owner = owner.toString('hex');
             }
         })
     });
-    return owners
-  }
-
-  public async updateOwners(owners: string[], notes: Note[]) {
-    
+    return notes;
   }
 }

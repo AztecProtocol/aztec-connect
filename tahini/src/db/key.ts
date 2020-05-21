@@ -10,7 +10,7 @@ export class KeyDb extends BaseDb {
   public async addKey(inputKey: Key) {
     const writeKey: any = new Key();
     writeKey.id = inputKey.id;
-    writeKey.informationKeys = inputKey.informationKeys;
+    writeKey.informationKey = inputKey.informationKey;
 
     await super.rep.save(writeKey);
   }
