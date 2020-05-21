@@ -17,14 +17,12 @@ export function appFactory(server: Server, prefix: string) {
   router.post('/tx', async (ctx: Koa.Context) => {
     try {
       const stream = new PromiseReadable(ctx.req);
-      const { proofData, encViewingKey1, encViewingKey2, dataRootsIndex } = JSON.parse(
+      const { proofData, viewingKeys } = JSON.parse(
         (await stream.readAll()) as string,
       );
       const tx: Proof = {
         proofData: Buffer.from(proofData, 'hex'),
-        encViewingKey1: Buffer.from(encViewingKey1, 'hex'),
-        encViewingKey2: Buffer.from(encViewingKey2, 'hex'),
-        dataRootsIndex,
+        viewingKeys: viewingKeys.map((v: string) => Buffer.from(v, 'hex')),
       };
       await server.receiveTx(tx);
       ctx.status = 200;

@@ -8,8 +8,9 @@ export class JoinSplitProof {
   public newNote2: Buffer;
   public nullifier1: bigint;
   public nullifier2: bigint;
+  public dataRootsIndex = 0;
 
-  constructor(public proofData: Buffer, public viewingKeys: Buffer[], public dataRootsIndex: number) {
+  constructor(public proofData: Buffer, public viewingKeys: Buffer[]) {
     this.publicInput = proofData.slice(0, 32);
     this.publicOutput = proofData.slice(32, 64);
     this.newNote1 = proofData.slice(2 * 32, 2 * 32 + 64);

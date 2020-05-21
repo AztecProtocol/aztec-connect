@@ -20,7 +20,7 @@ export class RollupDb {
     rollupDao.id = rollup.rollupId;
     rollupDao.dataRoot = rollup.newDataRoot;
     rollupDao.txs = rollup.proofs.map(txBuf => {
-      const tx = new JoinSplitProof(txBuf, [], 0);
+      const tx = new JoinSplitProof(txBuf, []);
       const txDao = new RollupTxDao();
       txDao.merkleRoot = tx.noteTreeRoot;
       txDao.newNote1 = tx.newNote1;

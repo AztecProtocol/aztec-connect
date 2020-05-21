@@ -10,7 +10,7 @@ const debug = createDebug('bb:world_state');
 export class WorldState {
   private tree!: MerkleTree;
 
-  constructor(private db: LevelUp, private pedersen: Pedersen, private blake2s: Blake2s, private lastDataRootsIndex) {}
+  constructor(private db: LevelUp, private pedersen: Pedersen, private blake2s: Blake2s) {}
 
   public async init() {
     try {
@@ -30,12 +30,9 @@ export class WorldState {
     if (block.dataEntries.length < block.numDataEntries) {
       await this.tree.updateElement(block.dataStartIndex + block.numDataEntries - 1, Buffer.alloc(64, 0));
     }
-    const dataRoot = this.tree.getRoot();
-    const dataRootsIndex = block.rollupId + 1;
-    this.lastDataRootsIndex = dataRootsIndex;
 
     debug(`data size: ${this.tree.getSize()}`);
-    debug(`data root: ${dataRoot.toString('hex')}`);
+    debug(`data root: ${this.tree.getRoot().toString('hex')}`);
   }
 
   public async getHashPath(index: number) {
@@ -44,10 +41,6 @@ export class WorldState {
 
   public getRoot() {
     return this.tree.getRoot();
-  }
-
-  public getDataRootsIndex() {
-    return this.lastDataRootsIndex;
   }
 
   public getSize() {

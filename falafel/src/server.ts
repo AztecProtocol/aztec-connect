@@ -227,10 +227,10 @@ export class Server {
     console.log('Done.');
   }
 
-  public async receiveTx({ proofData, encViewingKey1, encViewingKey2, dataRootsIndex }: Proof) {
-    const proof = new JoinSplitProof(proofData, [encViewingKey1, encViewingKey2], dataRootsIndex);
+  public async receiveTx({ proofData, viewingKeys }: Proof) {
+    const proof = new JoinSplitProof(proofData, viewingKeys);
 
-    // Check nullifiers don't exist (tree id 1 returns 0 at index).
+    // Check nullifiers don't exist.
     const emptyValue = Buffer.alloc(64, 0);
     const nullifierVal1 = await this.worldStateDb.get(1, proof.nullifier1);
     if (!nullifierVal1.equals(emptyValue)) {
@@ -241,20 +241,18 @@ export class Server {
       throw new Error('Nullifier 2 already exists.');
     }
 
-    const merkleRoot = await this.worldStateDb.get(2, BigInt(dataRootsIndex));
-    if (!merkleRoot.equals(proof.noteTreeRoot)) {
-      throw new Error(`Merkle root does not exist: ${merkleRoot.toString('hex')}`);
-    }
-
-    // TODO: Maybe use server to index?
-    // const rollup = await this.rollupDb.getRollupByDataRoot(proof.noteTreeRoot);
-    // if (!rollup) {
-    //   throw new Error(`Rollup not found for merkle root: ${proof.noteTreeRoot.toString('hex')}`);
-    // }
-    // proof.dataRootsIndex = rollup.id;
-
+    // Check the proof is valid.
     if (!(await this.joinSplitVerifier.verifyProof(proofData))) {
       throw new Error('Proof verification failed.');
+    }
+
+    // Lookup and save the proofs data root index (for old root support).
+    if (this.worldStateDb.getSize(2) > 1n) {
+      const rollup = await this.rollupDb.getRollupByDataRoot(proof.noteTreeRoot);
+      if (!rollup) {
+        throw new Error(`Rollup not found for merkle root: ${proof.noteTreeRoot.toString('hex')}`);
+      }
+      proof.dataRootsIndex = rollup.id + 1;
     }
 
     this.txQueue.put(proof);

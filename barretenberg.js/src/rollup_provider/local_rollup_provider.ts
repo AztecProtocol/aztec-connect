@@ -14,7 +14,7 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
     super();
   }
 
-  async sendProof({ proofData, encViewingKey1, encViewingKey2 }: Proof) {
+  async sendProof({ proofData, viewingKeys }: Proof) {
     const verified = await this.joinSplitVerifier.verifyProof(proofData);
     debug(`verified: ${verified}`);
     if (!verified) {
@@ -32,7 +32,7 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
       numDataEntries: 2,
       dataEntries: [outputNote1, outputNote2],
       nullifiers: [nullifer1, nullifer2],
-      viewingKeys: [encViewingKey1, encViewingKey2],
+      viewingKeys,
     };
 
     this.blockNum++;

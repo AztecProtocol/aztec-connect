@@ -50,7 +50,6 @@ export class JoinSplitProofCreator {
     const signature = this.joinSplitProver.sign4Notes([...inputNotes, ...outputNotes], sender.privateKey!);
 
     const dataRoot = this.worldState.getRoot();
-    const dataRootsIndex = this.worldState.getDataRootsIndex();
 
     const tx = new JoinSplitTx(
       sender.publicKey,
@@ -74,7 +73,7 @@ export class JoinSplitProofCreator {
     debug(`proof size: ${proofData.length}`);
     debug(proofData);
 
-    const proof: Proof = { proofData, encViewingKey1, encViewingKey2, dataRootsIndex };
+    const proof: Proof = { proofData, viewingKeys: [encViewingKey1, encViewingKey2] };
     return proof;
   }
 }

@@ -1,4 +1,4 @@
 store
 *.db
 db.sqlite
-/server_state.json
+server_state.json
