@@ -4,7 +4,7 @@ import { Note } from '../entity/note';
 export class NoteDb {
   private noteRep!: Repository<Note>;
 
-  constructor(private connection: Connection) {}
+  constructor(private connection: Connection, ) {}
 
   public async init() {
     this.noteRep = this.connection.getRepository(Note);

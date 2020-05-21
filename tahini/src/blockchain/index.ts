@@ -49,7 +49,6 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     this.blockchain.push(block);
 
     await this.saveBlock(block);
-
     this.emit('block', block);
   }
 

@@ -1,19 +1,16 @@
-import { Wallet, utils } from 'ethers';
+import { Wallet } from 'ethers';
 import request from 'supertest';
 
-import { DataEntry } from '../dest/entity/DataEntry';
+import { Note } from '../dest/entity/Note';
+import { Key } from '../dest/entity/Key';
 import { appFactory } from '../dest/app';
+import { NoteDb } from '../dest/db/note';
+
 import Server from '../dest/server';
+import { randomHex, createRandomNote } from './helpers'
 
-function randomHex(hexLength: number): string {
-  return utils.hexlify(utils.randomBytes(hexLength)).slice(2);
-}
 
-function createRandomNote() {
-  return { owner: randomHex(20), viewingKey: randomHex(60), informationKey: randomHex(60) };
-}
-
-describe.only('basic route tests', () => {
+describe('basic route tests', () => {
   let api: any;
   let server: any;
 
@@ -37,70 +34,71 @@ describe.only('basic route tests', () => {
       expect(response.text).toContain('OK');
     });
 
-    it('should write notes into storage for a user', async () => {
-      const userA = randomHex(20);
-      const userB = randomHex(20);
-      const userANotes = [createRandomNote()];
-      const userBNotes = [createRandomNote()];
+    it('should write informationKey into storage for a user', async () => {
+      const informationKeys = randomHex(20);
+      const id = randomHex(20);
 
-      const responseA = await request(api).post('/api/account/new').send({ id: userA, notes: userANotes });
-      expect(responseA.status).toEqual(201);
-      expect(responseA.text).toContain('OK');
-      await request(api).post('/api/account/new').send({ id: userB, notes: userBNotes });
+      const response = await request(api).post('/api/account/new').send({ id, informationKeys });
+      expect(response.status).toEqual(201);
+      expect(response.text).toContain('OK');
 
-      const repository = server.connection.getRepository(DataEntry);
-
-      // User A
-      const retrievedUserAData = await repository.findOne({ where: { id: userA }, relations: ['notes'] });
-      expect(retrievedUserAData.notes[0].owner).toEqual(userANotes[0].owner);
-      expect(retrievedUserAData.notes[0].viewingKey).toEqual(userANotes[0].viewingKey);
-      expect(retrievedUserAData.notes[0].informationKey).toEqual(userANotes[0].informationKey);
-
-      // User B
-      const retrievedUserBData = await repository.findOne({ where: { id: userB }, relations: ['notes'] });
-      expect(retrievedUserBData.notes[0].owner).toEqual(userBNotes[0].owner);
-      expect(retrievedUserBData.notes[0].viewingKey).toEqual(userBNotes[0].viewingKey);
-      expect(retrievedUserBData.notes[0].informationKey).toEqual(userBNotes[0].informationKey);
+      const repository = server.connection.getRepository(Key);
+      const retrievedData = await repository.findOne({ id });
+      expect(retrievedData.id).toEqual(id);
+      expect(retrievedData.informationKeys[0]).toEqual(informationKeys[0]);
     });
 
-    it.only('should fetch user notes', async () => {
+    it('should fetch user notes', async () => {
       const wallet = Wallet.createRandom();
       const message = 'hello world';
       const signature = await wallet.signMessage(message);
-
       const id = wallet.address.slice(2);
-      const userNotes = [createRandomNote()];
+      const informationKeys = randomHex(20);
 
-      const writeResponse = await request(api).post('/api/account/new').send({ id, notes: userNotes });
+      // create the user's account
+      const writeResponse = await request(api).post('/api/account/new').send({ id, informationKeys });
       expect(writeResponse.status).toEqual(201);
+
+      // Simulate action of blockchain server - store some notes in the database
+      const userNotes: any = createRandomNote();
+      const existingKey = new Key();
+      existingKey.id = id;
+      existingKey.informationKeys = informationKeys;
+      userNotes.owner = existingKey;
+      console.log({ userNotes });
+    
+      const noteRepo = server.connection.getRepository(Note);
+      await noteRepo.save(userNotes);
+      // TODO: get saving of notes to auto update Key 
 
       const readResponse = await request(api).get('/api/account/getNotes').query({ id, signature, message });
       expect(readResponse.status).toEqual(200);
       expect(readResponse.body.id).toEqual(id);
-      expect(readResponse.body.notes[0].owner).toEqual(userNotes[0].owner);
-      expect(readResponse.body.notes[0].viewingKey).toEqual(userNotes[0].viewingKey);
+    //   expect(readResponse.body.notes[0].note).toEqual(userNotes.note);
+    //   expect(readResponse.body.notes[0].viewingKey).toEqual(userNotes[0].viewingKey);
     });
   });
 
   describe('Failure cases', () => {
-    it('should fail to overwrite user notes', async () => {
-      const userA = randomHex(20);
-      const userANotes = [createRandomNote()];
-      const overwriteNotes = [createRandomNote()];
-      await request(api).post('/api/account/new').send({ id: userA, notes: userANotes });
+    it('should fail to write informationKey for malformed ID', async () => {
+      const informationKeys = randomHex(20);
+      const malformedID = '0x01';
 
-      // attempt overwrite
-      const overwriteResponse = await request(api).post('/api/account/new').send({ id: userA, notes: overwriteNotes });
-      expect(overwriteResponse.status).toEqual(403);
-      expect(overwriteResponse.text).toContain('Fail');
+      const response = await request(api).post('/api/account/new').send({ id: malformedID, informationKeys });
+      expect(response.status).toEqual(400);
+      expect(response.text).toContain('Fail');
     });
 
-    it('should fail to write notes for malformed ID', async () => {
-      const malformedId = randomHex(25);
-      const userANotes = [createRandomNote()];
+    it('should fail to overwrite user information key', async () => {
+      const informationKeys = randomHex(20);
+      const id = randomHex(20);
+      await request(api).post('/api/account/new').send({ id, informationKeys });
 
-      const response = await request(api).post('/api/account/new').send({ id: malformedId, notes: userANotes });
-      expect(response.status).toEqual(400);
+      const maliciousInformationKeys = '0x01';
+      const response = await request(api)
+        .post('/api/account/new')
+        .send({ id, informationKeys: maliciousInformationKeys });
+      expect(response.status).toEqual(403);
       expect(response.text).toContain('Fail');
     });
 
