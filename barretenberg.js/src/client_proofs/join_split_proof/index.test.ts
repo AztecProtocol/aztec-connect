@@ -143,8 +143,8 @@ describe('join_split_proof', () => {
 
       const expectedNullifier1 = computeNullifier(inputNote1Enc, 0, inputNote1.secret, blake2s);
       const expectedNullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, blake2s);
-      expect(toBufferBE(joinSplitProof.nullifier1, 16)).toEqual(expectedNullifier1);
-      expect(toBufferBE(joinSplitProof.nullifier2, 16)).toEqual(expectedNullifier2);
+      expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
+      expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
     }, 120000);
   });
 });
