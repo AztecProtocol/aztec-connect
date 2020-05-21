@@ -1,5 +1,4 @@
 import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
-import { toBufferBE } from 'bigint-buffer';
 import { Connection, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { RollupTxDao } from '../entity/rollup_tx';
@@ -25,8 +24,8 @@ export class RollupDb {
       txDao.merkleRoot = tx.noteTreeRoot;
       txDao.newNote1 = tx.newNote1;
       txDao.newNote2 = tx.newNote2;
-      txDao.nullifier1 = toBufferBE(tx.nullifier1, 16);
-      txDao.nullifier2 = toBufferBE(tx.nullifier2, 16);
+      txDao.nullifier1 = tx.nullifier1;
+      txDao.nullifier2 = tx.nullifier2;
       txDao.publicInput = tx.publicInput;
       txDao.publicOutput = tx.publicOutput;
       return txDao;
@@ -41,5 +40,19 @@ export class RollupDb {
   public async getNextRollupId() {
     const latestRollup = await this.rollupRep.findOne(undefined, { order: { id: 'DESC' } });
     return latestRollup ? latestRollup.id + 1 : 0;
+  }
+
+  public async confirmRollup(ethBlock: number, rollupId: number) {
+    const rollup = await this.rollupRep.findOne(rollupId);
+    if (!rollup) {
+      throw new Error(`Rollup not found: ${rollupId}`);
+    }
+    rollup.ethBlock = ethBlock;
+    await this.rollupRep.save(rollup);
+  }
+
+  public async getLastBlockNum() {
+    const latest = await this.rollupRep.findOne(undefined, { order: { ethBlock: 'DESC' } });
+    return latest && latest.ethBlock !== undefined ? latest.ethBlock : -1;
   }
 }

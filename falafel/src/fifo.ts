@@ -3,7 +3,7 @@ export class MemoryFifo<T> {
   private items: T[] = [];
   private flushing: boolean = false;
 
-  public async length(): Promise<number> {
+  public length() {
     return this.items.length;
   }
 

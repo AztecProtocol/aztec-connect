@@ -8,8 +8,7 @@ import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
-import fs from 'fs';
-import moment, { Duration } from 'moment';
+import moment, { Duration, Moment } from 'moment';
 import { createConnection } from 'typeorm';
 import { LocalBlockchain } from './blockchain';
 import { MemoryFifo } from './fifo';
@@ -18,9 +17,10 @@ import { Rollup } from './rollup';
 import { RollupDb } from './rollup_db';
 import { WorldStateDb } from './world_state_db';
 
-interface ServerState {
+interface ServerConfig {
   readonly rollupSize: number;
-  lastSyncedBlock: number;
+  readonly maxRollupWaitTime: Duration;
+  readonly minRollupInterval: Duration;
 }
 
 export class Server {
@@ -32,42 +32,33 @@ export class Server {
   private stateQueue = new MemoryFifo<() => Promise<void>>();
   private txQueue = new MemoryFifo<JoinSplitProof | null>();
   private proofGenerator: ProofGenerator;
-  private state: ServerState;
+  private pendingNullifiers = new Set<bigint>();
 
-  constructor(private serverStateFilePath: string) {
-    try {
-      const jsonStr = fs.readFileSync(serverStateFilePath, 'utf8');
-      this.state = JSON.parse(jsonStr);
-    } catch (e) {
-      this.state = {
-        rollupSize: 1,
-        lastSyncedBlock: -1,
-      };
-    }
-    if (!this.state.rollupSize) {
+  constructor(private config: ServerConfig) {
+    if (!this.config.rollupSize) {
       throw new Error('Rollup size must be greater than 0.');
     }
     this.worldStateDb = new WorldStateDb();
-    this.proofGenerator = new ProofGenerator(this.state.rollupSize);
+    this.proofGenerator = new ProofGenerator(this.config.rollupSize);
   }
 
   public async start() {
     this.proofGenerator.run();
     const connection = await createConnection();
-    this.blockchain = new LocalBlockchain(connection, this.state.rollupSize);
+    this.blockchain = new LocalBlockchain(connection, this.config.rollupSize);
     this.rollupDb = new RollupDb(connection);
     await this.blockchain.start();
     await this.rollupDb.init();
     await this.worldStateDb.start();
     this.printState();
     await this.createJoinSplitVerifier();
-    const newBlocks = this.getBlocks(this.state.lastSyncedBlock + 1);
+    const newBlocks = this.getBlocks((await this.rollupDb.getLastBlockNum()) + 1);
     for (const block of newBlocks) {
       await this.handleNewBlock(block);
     }
     this.blockchain.on('block', b => this.stateQueue.put(() => this.handleNewBlock(b)));
     this.processStateQueue();
-    this.processTxQueue(moment.duration(30, 's'), moment.duration(30, 's'));
+    this.processTxQueue(this.config.maxRollupWaitTime, this.config.minRollupInterval);
   }
 
   public stop() {
@@ -83,25 +74,6 @@ export class Server {
     console.log(`Data root: ${this.worldStateDb.getRoot(0).toString('hex')}`);
     console.log(`Null root: ${this.worldStateDb.getRoot(1).toString('hex')}`);
     console.log(`Root root: ${this.worldStateDb.getRoot(2).toString('hex')}`);
-  }
-
-  private updateServerState(key: keyof ServerState, value: number) {
-    if (key === 'rollupSize') {
-      return;
-    }
-
-    this.state = {
-      ...this.state,
-      [key]: value,
-    };
-    const newStateJson = JSON.stringify(this.state, null, 2);
-
-    try {
-      fs.writeFileSync(this.serverStateFilePath, `${newStateJson}\n`);
-      this.state[key] = value;
-    } catch (e) {
-      console.log(e);
-    }
   }
 
   public status() {
@@ -140,6 +112,9 @@ export class Server {
 
       if (tx) {
         txs.push(tx);
+        if (txs.length < this.config.rollupSize && this.txQueue.length() > 0) {
+          continue;
+        }
       }
 
       clearTimeout(flushTimeout);
@@ -148,7 +123,7 @@ export class Server {
       const shouldRollup =
         txs.length &&
         (tx === null ||
-          txs.length === this.state.rollupSize ||
+          txs.length === this.config.rollupSize ||
           lastTxReceivedTime.isBefore(moment().subtract(maxRollupWaitTime)));
 
       if (tx) {
@@ -185,21 +160,18 @@ export class Server {
     await this.worldStateDb.put(2, BigInt(block.rollupId + 1), dataRoot);
 
     // Set nullifiers.
-    const nullifier = Buffer.alloc(64, 0);
-    nullifier.writeUInt8(1, 63);
-    for (const nullifier of block.nullifiers) {
-      await this.worldStateDb.put(1, toBigIntBE(nullifier), nullifier);
+    const nullifierValue = Buffer.alloc(64, 0);
+    nullifierValue.writeUInt8(1, 63);
+    for (const nullifierBuf of block.nullifiers) {
+      const nullifier = toBigIntBE(nullifierBuf);
+      await this.worldStateDb.put(1, nullifier, nullifierValue);
+      this.pendingNullifiers.delete(nullifier);
     }
 
     await this.worldStateDb.commit();
     this.printState();
 
-    if (block.blockNum > this.state.lastSyncedBlock) {
-      this.updateServerState('lastSyncedBlock', block.blockNum);
-    }
-
-    // TODO: Confirm rollup by adding eth block and tx hash.
-    // await this.rollupDb.confirm(block);
+    await this.rollupDb.confirmRollup(block.blockNum, block.rollupId);
   }
 
   public getBlocks(from: number) {
@@ -230,16 +202,23 @@ export class Server {
 
   public async receiveTx({ proofData, viewingKeys }: Proof) {
     const proof = new JoinSplitProof(proofData, viewingKeys);
+    const nullifier1 = toBigIntBE(proof.nullifier1);
+    const nullifier2 = toBigIntBE(proof.nullifier2);
 
-    // Check nullifiers don't exist.
+    // Check nullifiers don't exist in the db.
     const emptyValue = Buffer.alloc(64, 0);
-    const nullifierVal1 = await this.worldStateDb.get(1, proof.nullifier1);
+    const nullifierVal1 = await this.worldStateDb.get(1, nullifier1);
     if (!nullifierVal1.equals(emptyValue)) {
       throw new Error('Nullifier 1 already exists.');
     }
-    const nullifierVal2 = await this.worldStateDb.get(1, proof.nullifier2);
+    const nullifierVal2 = await this.worldStateDb.get(1, nullifier2);
     if (!nullifierVal2.equals(emptyValue)) {
       throw new Error('Nullifier 2 already exists.');
+    }
+
+    // Check nullifiers don't exist in the pending nullifier set.
+    if (this.pendingNullifiers.has(nullifier1) || this.pendingNullifiers.has(nullifier2)) {
+      throw new Error('Nullifier already exists in pending nullifier set.');
     }
 
     // Check the proof is valid.
@@ -256,6 +235,8 @@ export class Server {
       proof.dataRootsIndex = rollup.id + 1;
     }
 
+    this.pendingNullifiers.add(nullifier1);
+    this.pendingNullifiers.add(nullifier2);
     this.txQueue.put(proof);
   }
 
@@ -283,16 +264,18 @@ export class Server {
     for (const proof of txs) {
       await this.worldStateDb.put(0, nextDataIndex++, proof.newNote1);
       await this.worldStateDb.put(0, nextDataIndex++, proof.newNote2);
+      const nullifier1 = toBigIntBE(proof.nullifier1);
+      const nullifier2 = toBigIntBE(proof.nullifier2);
 
-      oldNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier1));
-      await this.worldStateDb.put(1, proof.nullifier1, toBufferBE(1n, 64));
+      oldNullPaths.push(await this.worldStateDb.getHashPath(1, nullifier1));
+      await this.worldStateDb.put(1, nullifier1, toBufferBE(1n, 64));
       newNullRoots.push(this.worldStateDb.getRoot(1));
-      newNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier1));
+      newNullPaths.push(await this.worldStateDb.getHashPath(1, nullifier1));
 
-      oldNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier2));
-      await this.worldStateDb.put(1, proof.nullifier2, toBufferBE(1n, 64));
+      oldNullPaths.push(await this.worldStateDb.getHashPath(1, nullifier2));
+      await this.worldStateDb.put(1, nullifier2, toBufferBE(1n, 64));
       newNullRoots.push(this.worldStateDb.getRoot(1));
-      newNullPaths.push(await this.worldStateDb.getHashPath(1, proof.nullifier2));
+      newNullPaths.push(await this.worldStateDb.getHashPath(1, nullifier2));
 
       dataRootsPaths.push(await this.worldStateDb.getHashPath(2, BigInt(proof.dataRootsIndex)));
       dataRootsIndicies.push(proof.dataRootsIndex);
@@ -300,8 +283,8 @@ export class Server {
 
     // Get new data.
     const newDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
-    const rollupRootHeight = Math.log2(this.state.rollupSize) + 1;
-    const rootIndex = (Number(dataStartIndex) / (this.state.rollupSize * 2)) % 2;
+    const rollupRootHeight = Math.log2(this.config.rollupSize) + 1;
+    const rootIndex = (Number(dataStartIndex) / (this.config.rollupSize * 2)) % 2;
     const rollupRoot = newDataPath.data[rollupRootHeight][rootIndex];
     const newDataRoot = this.worldStateDb.getRoot(0);
 
@@ -340,7 +323,7 @@ export class Server {
   private async createProof(rollup: Rollup, viewingKeys: Buffer[]) {
     const proof = await this.proofGenerator.createProof(rollup);
     if (proof) {
-      this.blockchain.sendProof(proof, rollup.rollupId, this.state.rollupSize, viewingKeys);
+      this.blockchain.sendProof(proof, rollup.rollupId, this.config.rollupSize, viewingKeys);
     } else {
       console.log('Invalid proof.');
     }

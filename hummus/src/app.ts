@@ -1,5 +1,5 @@
 import { BlockSource, Block } from 'barretenberg-es/block_source';
-import { LocalRollupProvider, RollupProvider, ServerRollupProvider } from 'barretenberg-es/rollup_provider';
+import { LocalRollupProvider, RollupProvider, ServerRollupProvider, Proof } from 'barretenberg-es/rollup_provider';
 import { ServerBlockSource } from 'barretenberg-es/block_source/server_block_source';
 import { JoinSplitProver, JoinSplitVerifier } from 'barretenberg-es/client_proofs/join_split_proof';
 import { Prover } from 'barretenberg-es/client_proofs/prover';
@@ -227,6 +227,10 @@ export class App extends EventEmitter {
     await this.rollupProvider.sendProof(proof);
   }
 
+  private getUserState(userId: number) {
+    return this.userStates.find(us => us.getUser().id === userId)!;
+  }
+
   public getUser() {
     return this.user;
   }
@@ -277,7 +281,7 @@ export class App extends EventEmitter {
 
   public getBalance(userIdOrAlias?: string | number) {
     const user = userIdOrAlias ? this.findUser(userIdOrAlias) || this.user : this.user;
-    return this.userStates.find(us => us.getUser().id === user.id)!.getBalance();
+    return this.getUserState(user.id).getBalance();
   }
 
   public findUser(userIdOrAlias: string | number, remote: boolean = false) {
