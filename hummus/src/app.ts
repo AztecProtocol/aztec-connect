@@ -116,6 +116,7 @@ export class App extends EventEmitter {
 
   public async destroy() {
     await this.pool.destroy();
+    this.blockSource.stop();
     this.blockSource.removeAllListeners();
     this.blockQueue.cancel();
   }
@@ -165,24 +166,22 @@ export class App extends EventEmitter {
     } else {
       this.initLocalRollupProvider();
     }
+    this.blockSource.on('block', b => this.blockQueue.put(b));
+    this.blockSource.start();
   }
 
   private initLocalRollupProvider() {
     debug('No server url provided. Use local rollup provider.');
     const lrp = new LocalRollupProvider(this.joinSplitVerifier);
-    this.rollupProvider = lrp;
     this.blockSource = lrp;
-    this.blockSource.on('block', b => this.blockQueue.put(b));
+    this.rollupProvider = lrp;
   }
 
   private initServerRollupProvider(serverUrl: string) {
     const url = new URL(serverUrl);
     const fromBlock = window.localStorage.getItem('syncedToBlock') || -1;
-    const sbs = new ServerBlockSource(url, +fromBlock + 1);
+    this.blockSource = new ServerBlockSource(url, +fromBlock + 1);
     this.rollupProvider = new ServerRollupProvider(url);
-    this.blockSource = sbs;
-    this.blockSource.on('block', b => this.blockQueue.put(b));
-    sbs.start();
   }
 
   private async processBlockQueue() {
@@ -293,9 +292,7 @@ export class App extends EventEmitter {
 
   public async clearNoteData() {
     if (this.initialized) {
-      if (typeof this.blockSource.stop !== 'undefined') {
-        this.blockSource.stop();
-      }
+      this.blockSource.stop();
       this.blockSource.removeAllListeners();
       this.blockQueue.cancel();
     }

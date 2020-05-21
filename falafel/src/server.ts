@@ -56,7 +56,7 @@ export class Server {
     const connection = await createConnection();
     this.blockchain = new LocalBlockchain(connection, this.state.rollupSize);
     this.rollupDb = new RollupDb(connection);
-    await this.blockchain.init();
+    await this.blockchain.start();
     await this.rollupDb.init();
     await this.worldStateDb.start();
     this.printState();
@@ -71,6 +71,7 @@ export class Server {
   }
 
   public stop() {
+    this.blockchain.stop();
     this.proofGenerator.cancel();
     this.stateQueue.cancel();
     this.txQueue.cancel();

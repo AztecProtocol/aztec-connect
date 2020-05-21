@@ -17,12 +17,15 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
   private dataStartIndex = 0;
   private blockRep!: Repository<BlockDao>;
   private blockchain: Block[] = [];
+  private running = false;
 
   constructor(private connection: Connection, private rollupSize: number) {
     super();
   }
 
-  public async init() {
+  public async start() {
+    this.running = true;
+
     this.blockRep = this.connection.getRepository(BlockDao);
 
     this.blockchain = await this.loadBlocks();
@@ -40,7 +43,15 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     console.log(`Local blockchain restored: (blocks: ${this.blockNum})`);
   }
 
+  public stop() {
+    this.running = false;
+  }
+
   public async sendProof(proofData: Buffer, rollupId: number, rollupSize: number, viewingKeys: Buffer[]) {
+    if (!this.running) {
+      return;
+    }
+
     const tx = new RollupProof(proofData);
 
     if (rollupSize !== this.rollupSize) {

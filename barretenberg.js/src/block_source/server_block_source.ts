@@ -6,13 +6,15 @@ import createDebug from 'debug';
 const debug = createDebug('bb:server_block_source');
 
 export class ServerBlockSource extends EventEmitter implements BlockSource {
-  private running = true;
+  private running = false;
 
   constructor(private host: URL, private fromBlock: number = 0) {
     super();
   }
 
   public async start() {
+    this.running = true;
+
     while (this.running) {
       try {
         const url = new URL(`/api/get-blocks`, this.host);
