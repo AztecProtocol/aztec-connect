@@ -1,12 +1,12 @@
 import { Wallet } from 'ethers';
 import request from 'supertest';
 
-import { Note } from '../dest/entity/Note';
-import { Key } from '../dest/entity/Key';
-import { appFactory } from '../dest/app';
-import { NoteDb } from '../dest/db/note';
+import { Note } from '../dest/src/entity/Note';
+import { Key } from '../dest/src/entity/Key';
+import { appFactory } from '../dest/src/app';
+import { NoteDb } from '../dest/src/db/note';
 
-import Server from '../dest/server';
+import Server from '../dest/src/server';
 import { randomHex, createRandomNote } from './helpers'
 
 

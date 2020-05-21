@@ -4,7 +4,7 @@
   "synchronize": true,
   "logging": false,
   "entities": [
-     "dest/entity/**/*.js"
+     "dest/src/entity/**/*.js"
   ],
   "migrations": [
      "dest/migration/**/*.js"

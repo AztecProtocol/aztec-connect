@@ -13,6 +13,6 @@ export class Note {
   @Column()
   public nullifier!: boolean;
 
-  @ManyToOne(type => Key, key => key.notes, { cascade: true })
-  public owner!: Key;
+  @ManyToOne(type => Key, key => key.id)
+  public owner!: string;
 }

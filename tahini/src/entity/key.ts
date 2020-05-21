@@ -11,8 +11,4 @@ export class Key {
   // informationKey of the user
   @Column()
   public informationKeys!: string;
-
-  @Column("simple-array", { nullable: true })
-  @OneToMany(type => Note, note => note.owner)
-  public notes!: Note[];
 }
