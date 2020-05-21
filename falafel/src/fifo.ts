@@ -7,6 +7,7 @@ export class MemoryFifo<T> {
     return this.items.length;
   }
 
+  // Returns null when the queue has been terminated.
   public async get(timeout?: number): Promise<T | null> {
     if (this.items.length) {
       return Promise.resolve(this.items.shift()!);
@@ -32,6 +33,7 @@ export class MemoryFifo<T> {
     });
   }
 
+  // Does nothing if the queue has been ended or cancelled.
   public async put(item: T) {
     if (this.flushing) {
       return;
@@ -42,11 +44,13 @@ export class MemoryFifo<T> {
     }
   }
 
+  // Consumers will drain queue before receiving null.
   public end() {
     this.flushing = true;
     this.waiting.forEach(resolve => resolve(null));
   }
 
+  // Consumers will receive null immediately.
   public cancel() {
     this.flushing = true;
     this.items = [];

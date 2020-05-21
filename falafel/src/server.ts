@@ -29,8 +29,8 @@ export class Server {
   private blockchain!: LocalBlockchain;
   private worker!: BarretenbergWorker;
   private rollupDb!: RollupDb;
-  private stateQueue = new MemoryFifo<() => Promise<void>>();
-  private txQueue = new MemoryFifo<JoinSplitProof | null>();
+  private rollupQueue = new MemoryFifo<JoinSplitProof[]>();
+  private txQueue = new MemoryFifo<JoinSplitProof | undefined>();
   private proofGenerator: ProofGenerator;
   private pendingNullifiers = new Set<bigint>();
 
@@ -56,15 +56,15 @@ export class Server {
     for (const block of newBlocks) {
       await this.handleNewBlock(block);
     }
-    this.blockchain.on('block', b => this.stateQueue.put(() => this.handleNewBlock(b)));
-    this.processStateQueue();
+    this.blockchain.on('block', b => this.handleNewBlock(b));
     this.processTxQueue(this.config.maxRollupWaitTime, this.config.minRollupInterval);
+    this.processRollupQueue();
   }
 
   public stop() {
     this.blockchain.stop();
     this.proofGenerator.cancel();
-    this.stateQueue.cancel();
+    this.rollupQueue.cancel();
     this.txQueue.cancel();
     destroyWorker(this.worker);
   }
@@ -85,16 +85,6 @@ export class Server {
     };
   }
 
-  private async processStateQueue() {
-    while (true) {
-      const f = await this.stateQueue.get();
-      if (!f) {
-        break;
-      }
-      await f();
-    }
-  }
-
   private async processTxQueue(maxRollupWaitTime: Duration, minRollupInterval: Duration) {
     let flushTimeout!: NodeJS.Timeout;
     let lastTxReceivedTime = moment.unix(0);
@@ -106,7 +96,7 @@ export class Server {
 
     while (true) {
       const tx = await this.txQueue.get();
-      if (tx === undefined) {
+      if (tx === null) {
         break;
       }
 
@@ -122,7 +112,7 @@ export class Server {
 
       const shouldRollup =
         txs.length &&
-        (tx === null ||
+        (tx === undefined ||
           txs.length === this.config.rollupSize ||
           lastTxReceivedTime.isBefore(moment().subtract(maxRollupWaitTime)));
 
@@ -133,7 +123,7 @@ export class Server {
       if (shouldRollup) {
         const rollupTxs = txs;
         txs = [];
-        this.stateQueue.put(() => this.rollup(rollupTxs));
+        this.rollupQueue.put(rollupTxs);
 
         // Throttle.
         await new Promise(resolve => setTimeout(resolve, minRollupInterval.asMilliseconds()));
@@ -143,35 +133,36 @@ export class Server {
     clearInterval(flushTimeout);
   }
 
+  private async processRollupQueue() {
+    while (true) {
+      const txs = await this.rollupQueue.get();
+      if (!txs) {
+        break;
+      }
+
+      console.log(`Creating rollup with ${txs.length} txs...`);
+      const rollup = await this.createRollup(txs);
+      await this.rollupDb.addRollup(rollup);
+
+      const proof = await this.proofGenerator.createProof(rollup);
+
+      if (proof) {
+        const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
+        await this.blockchain.sendProof(proof, rollup.rollupId, this.config.rollupSize, viewingKeys);
+        await this.worldStateDb.commit();
+        this.printState();
+      } else {
+        console.log('Invalid proof.');
+        await this.worldStateDb.rollback();
+        await this.rollupDb.deleteRollup(rollup.rollupId);
+      }
+    }
+  }
+
   private async handleNewBlock(block: Block) {
-    console.log(`Processing block ${block.blockNum}...`);
-
-    for (let i = 0; i < block.dataEntries.length; ++i) {
-      await this.worldStateDb.put(0, BigInt(block.dataStartIndex + i), block.dataEntries[i]);
-    }
-
-    // Pad data tree with zero entries to ensure correct size.
-    if (block.dataEntries.length < block.numDataEntries) {
-      await this.worldStateDb.put(0, BigInt(block.dataStartIndex + block.numDataEntries - 1), Buffer.alloc(64, 0));
-    }
-
-    // Update data root tree with latest.
-    const dataRoot = this.worldStateDb.getRoot(0);
-    await this.worldStateDb.put(2, BigInt(block.rollupId + 1), dataRoot);
-
-    // Set nullifiers.
-    const nullifierValue = Buffer.alloc(64, 0);
-    nullifierValue.writeUInt8(1, 63);
-    for (const nullifierBuf of block.nullifiers) {
-      const nullifier = toBigIntBE(nullifierBuf);
-      await this.worldStateDb.put(1, nullifier, nullifierValue);
-      this.pendingNullifiers.delete(nullifier);
-    }
-
-    await this.worldStateDb.commit();
-    this.printState();
-
+    console.log(`Block received: ${block.blockNum}`);
     await this.rollupDb.confirmRollup(block.blockNum, block.rollupId);
+    console.log(`Confirmed rollup: ${block.rollupId}`);
   }
 
   public getBlocks(from: number) {
@@ -227,7 +218,12 @@ export class Server {
     }
 
     // Lookup and save the proofs data root index (for old root support).
-    if (this.worldStateDb.getSize(2) > 1n) {
+    // prettier-ignore
+    const emptyDataRoot = Buffer.from([
+      0x1d, 0xf6, 0xbd, 0xe5, 0x05, 0x16, 0xdd, 0x12, 0x01, 0x08, 0x8f, 0xd8, 0xdd, 0xa8, 0x4c, 0x97,
+      0xed, 0xa5, 0x65, 0x24, 0x28, 0xd1, 0xc7, 0xe8, 0x6a, 0xf5, 0x29, 0xcc, 0x5e, 0x0e, 0xb8, 0x21,
+    ]);
+    if (!proof.noteTreeRoot.equals(emptyDataRoot)) {
       const rollup = await this.rollupDb.getRollupByDataRoot(proof.noteTreeRoot);
       if (!rollup) {
         throw new Error(`Rollup not found for merkle root: ${proof.noteTreeRoot.toString('hex')}`);
@@ -241,10 +237,11 @@ export class Server {
   }
 
   public flushTxs() {
-    this.txQueue.put(null);
+    this.txQueue.put(undefined);
   }
 
   private async createRollup(txs: JoinSplitProof[]) {
+    const { rollupSize } = this.config;
     const dataStartIndex = this.worldStateDb.getSize(0);
 
     // Get old data.
@@ -281,6 +278,10 @@ export class Server {
       dataRootsIndicies.push(proof.dataRootsIndex);
     }
 
+    if (txs.length < rollupSize) {
+      this.worldStateDb.put(0, dataStartIndex + BigInt(rollupSize) * 2n - 1n, Buffer.alloc(64, 0));
+    }
+
     // Get new data.
     const newDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
     const rollupRootHeight = Math.log2(this.config.rollupSize) + 1;
@@ -288,8 +289,8 @@ export class Server {
     const rollupRoot = newDataPath.data[rollupRootHeight][rootIndex];
     const newDataRoot = this.worldStateDb.getRoot(0);
 
-    // Discard changes.
-    await this.worldStateDb.rollback();
+    const rootTreeSize = this.worldStateDb.getSize(2);
+    await this.worldStateDb.put(2, rootTreeSize, newDataRoot);
 
     return new Rollup(
       await this.rollupDb.getNextRollupId(),
@@ -311,21 +312,5 @@ export class Server {
       dataRootsPaths,
       dataRootsIndicies,
     );
-  }
-
-  private async rollup(txs: JoinSplitProof[]) {
-    console.log(`Creating rollup with ${txs.length} txs...`);
-    const rollup = await this.createRollup(txs);
-    this.createProof(rollup, txs.map(tx => tx.viewingKeys).flat());
-    await this.rollupDb.addRollup(rollup);
-  }
-
-  private async createProof(rollup: Rollup, viewingKeys: Buffer[]) {
-    const proof = await this.proofGenerator.createProof(rollup);
-    if (proof) {
-      this.blockchain.sendProof(proof, rollup.rollupId, this.config.rollupSize, viewingKeys);
-    } else {
-      console.log('Invalid proof.');
-    }
   }
 }

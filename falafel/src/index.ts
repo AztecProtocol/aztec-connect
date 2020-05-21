@@ -15,7 +15,7 @@ async function main() {
   const server = new Server({
     rollupSize: 2,
     maxRollupWaitTime: moment.duration(120, 's'),
-    minRollupInterval: moment.duration(120, 's'),
+    minRollupInterval: moment.duration(0, 's'),
   });
   await server.start();
 

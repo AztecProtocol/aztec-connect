@@ -33,6 +33,10 @@ export class RollupDb {
     await this.rollupRep.save(rollupDao);
   }
 
+  public async deleteRollup(rollupId: number) {
+    await this.rollupRep.delete(rollupId);
+  }
+
   public async getRollupByDataRoot(dataRoot: Buffer) {
     return await this.rollupRep.findOne({ dataRoot });
   }
