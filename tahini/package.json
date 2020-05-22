@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.prod.json",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
-    "test": "rm -rf db.sqlite && yarn build && jest"
+    "test": "rm -rf db.sqlite && yarn build && jest --runInBand"
   },
   "jest": {
     "transform": {

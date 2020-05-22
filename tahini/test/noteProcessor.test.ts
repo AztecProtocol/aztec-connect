@@ -46,7 +46,7 @@ describe('Note processor tests', () => {
     const keys = await keyRepo.find();
 
     await noteProcessor.updateOwners(notesToSave, keys, server.grumpkin);
-    const recoveredNote = await noteRepo.find();
+    const recoveredNote = await noteRepo.find({ where: { note: noteData } });
     expect(recoveredNote.length).toEqual(1);
     expect(recoveredNote[0].owner).toEqual(id);
   });

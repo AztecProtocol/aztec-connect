@@ -55,6 +55,6 @@ export default class Server {
   }
 
   public async registerNewKey(key: Key) {
-    await this.noteProcessor.processNewKeys([key], this.grumpkin);
+    await this.noteProcessor.processNewKey(key, this.grumpkin);
   }
 }
