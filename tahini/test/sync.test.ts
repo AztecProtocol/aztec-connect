@@ -1,21 +1,13 @@
+import { randomBytes } from 'crypto';
 import request from 'supertest';
 
 import { appFactory } from '../dest/src/app';
-import { Note as NoteEntity } from '../dest/src/entity/Note'
 import Server from '../dest/src/server';
-import { randomHex } from './helpers';
+import { createNote } from './helpers';
 
-import { Note, encryptNote } from 'barretenberg/client_proofs/note';
-import { BarretenbergWasm } from 'barretenberg/wasm';
-import { Grumpkin } from 'barretenberg/ecc/grumpkin';
-import { randomBytes } from 'crypto';
-
-
-
-describe('basic sync tests', () => {
+describe('Server sync', () => {
   let api: any;
   let server: any;
-  let informationKey: any;
 
   beforeEach(async () => {
     server = new Server();
@@ -23,17 +15,6 @@ describe('basic sync tests', () => {
 
     const app = appFactory(server, '/api');
     api = app.listen();
-
-    // create a note, as it will be stored on the blockchain
-    const wasm = await BarretenbergWasm.new();
-    const grumpkin = new Grumpkin(wasm);
-    const receiverPrivKey = randomBytes(32);
-    const receiverPubKey = grumpkin.mul(Grumpkin.one, receiverPrivKey);
-    const secret = randomBytes(32);
-    const note = new Note(receiverPubKey, secret, 100);
-    const encryptedNote = encryptNote(note, grumpkin); // this is notedata
-
-    informationKey = receiverPrivKey.toString('hex');
   });
 
   afterEach(async () => {
@@ -41,50 +22,57 @@ describe('basic sync tests', () => {
     api.close();
   });
 
-  it('should process transaction and save notes', async () => {
-    const firstNoteData = Buffer.from(randomHex(64));
-    const firstNoteNullifier = Buffer.from(randomHex(64));
-    const secondNoteData = Buffer.from(randomHex(64));
-    const secondNoteNullifier = Buffer.from(randomHex(64));
+  it('should process transaction, save notes and update note owners', async () => {
+    // Two users, A and B, sign up for the service
+    const informationKeyA = randomBytes(32);
+    const userADataNote = createNote(server.grumpkin, informationKeyA);
+    const userANullifierNote = createNote(server.grumpkin, informationKeyA);
 
-    await server.blockchain.submitTx([firstNoteData], [firstNoteNullifier]);
-    await server.blockchain.submitTx([secondNoteData], [secondNoteNullifier]);
+    const informationKeyB = randomBytes(32);
+    const userBDataNote = createNote(server.grumpkin, informationKeyB);
+    const userBNullifierNote = createNote(server.grumpkin, informationKeyB);
 
-    const noteRepo = server.connection.getRepository(NoteEntity);
-    const retrievedData: any = await noteRepo.find();
+    const responseA = await request(api)
+      .post('/api/account/new')
+      .send({ id: userADataNote.id, informationKey: informationKeyA.toString('hex') });
+    expect(responseA.status).toEqual(201);
 
-    // TODO: fix problem whereby the second note isn't placed into the db in time
-    expect(retrievedData[0].note).toEqual(firstNoteData);
-    expect(retrievedData[1].note).toEqual(firstNoteNullifier);
-    // expect(retrievedNote[2].note).toEqual(secondNoteData);
-    // expect(retrievedNote[3].note).toEqual(secondNoteNullifier);
-  });
+    const responseB = await request(api)
+      .post('/api/account/new')
+      .send({ id: userBDataNote.id, informationKey: informationKeyB.toString('hex') });
+    expect(responseB.status).toEqual(201);
 
-  it('should decrypt note owners', async () => {
-    // TODO: get actual information key, work out how to decrypt a note 
-    // create ID:information key pairing
+    // Users interact on the blockchain, submitting transactions
+    await server.blockchain.submitTx([userADataNote.noteData], [userANullifierNote.noteData]);
+    await server.blockchain.submitTx([userBDataNote.noteData], [userBNullifierNote.noteData]);
 
-    const id = randomHex(20);
-    console.log({ informationKey });
-    const response = await request(api).post('/api/account/new').send({ id, informationKey });
-    expect(response.status).toEqual(201);
+    // Users later seek to retrieve their notes easily
+    const message = 'hello world';
+    const signature = '000'; // TODO: correct when know how to sign
 
-    // create and fetch notes
-    const noteData = Buffer.from(randomHex(64));
-    const noteNullifier = Buffer.from(randomHex(64));
-    await server.blockchain.submitTx([noteData], [noteNullifier]);
+    const userARead = await request(api)
+      .get('/api/account/getNotes')
+      .query({ id: userADataNote.id, signature, message });
 
-    const noteRepo = server.connection.getRepository(NoteEntity);
-    const retrivedNotes: any = await noteRepo.find();
+    // Have to check multiple possible assertions, due to undefined processing order of data and nullifier
+    expect(userARead.body[0].blockNum).toEqual(0);
+    expect([true, false]).toContain(userARead.body[0].nullifier);
+    expect([userADataNote.id, userANullifierNote.id]).toContain(userARead.body[0].owner);
 
-    console.log('server.noteProcessor: ', server.noteProcessor)
-    const owners = await server.noteProcessor.updateOwners(retrivedNotes);
-    console.log({ owners });
-    expect(owners[0]).toEqual(id);
+    expect(userARead.body[1].blockNum).toEqual(0);
+    expect([true, false]).toContain(userARead.body[1].nullifier);
+    expect([userANullifierNote.id, userADataNote.id]).toContain(userARead.body[1].owner);
 
-  });
+    const userBRead = await request(api)
+      .get('/api/account/getNotes')
+      .query({ id: userBDataNote.id, signature, message });
 
-  it('should link notes to owners', async () => {
+    expect(userBRead.body[0].blockNum).toEqual(1);
+    expect([true, false]).toContain(userBRead.body[0].nullifier);
+    expect([userBDataNote.id, userBNullifierNote.id]).toContain(userBRead.body[0].owner);
 
+    expect(userBRead.body[1].blockNum).toEqual(1);
+    expect([true, false]).toContain(userBRead.body[1].nullifier);
+    expect([userBNullifierNote.id, userBDataNote.id]).toContain(userBRead.body[1].owner);
   });
 });

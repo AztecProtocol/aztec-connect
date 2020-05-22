@@ -13,6 +13,6 @@ export class Note {
   @Column()
   public nullifier!: boolean;
 
-  @Column()
+  @Column({ nullable: true })
   public owner!: string;
 }
