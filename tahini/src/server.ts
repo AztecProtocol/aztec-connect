@@ -6,6 +6,7 @@ import { MemoryFifo } from './fifo';
 import { LocalBlockchain } from './blockchain';
 import { NoteProcessor } from './NoteProcessor';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
+import { Key } from './entity/key';
 
 export default class Server {
   public connection!: Connection;
@@ -49,7 +50,11 @@ export default class Server {
       this.noteProcessor.processNewNotes(block.dataEntries, block.blockNum, false, this.grumpkin);
       this.noteProcessor.processNewNotes(block.nullifiers, block.blockNum, true, this.grumpkin);
     } catch (error) {
-        console.log('Error in processing new notes: ', error);
+      console.log('Error in processing new notes: ', error);
     }
+  }
+
+  public async registerNewKey(key: Key) {
+    await this.noteProcessor.processNewKeys([key], this.grumpkin);
   }
 }

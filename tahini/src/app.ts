@@ -35,6 +35,9 @@ export function appFactory(server: Server, prefix: string) {
       ctx.body = 'OK\n';
       ctx.response.status = 201;
       await keyRepo.save(key);
+
+      // notify server of new key
+      await server.registerNewKey(key);
     },
   );
 

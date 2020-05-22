@@ -3,7 +3,7 @@ import request from 'supertest';
 
 import { appFactory } from '../dest/src/app';
 import Server from '../dest/src/server';
-import { createNote } from './helpers';
+import { createNote, randomHex } from './helpers';
 
 describe('Server sync', () => {
   let api: any;
@@ -74,5 +74,35 @@ describe('Server sync', () => {
     expect(userBRead.body[1].blockNum).toEqual(1);
     expect([true, false]).toContain(userBRead.body[1].nullifier);
     expect([userBNullifierNote.id, userBDataNote.id]).toContain(userBRead.body[1].owner);
+  });
+
+  it('should find notes for user if they sign up after having already transacted', async () => {
+    const informationKey = randomBytes(32);
+    const userDataNote = createNote(server.grumpkin, informationKey);
+    const userNullifierNote = createNote(server.grumpkin, informationKey);
+
+    // simulate action of transacting on blockchain
+    await server.blockchain.submitTx([userDataNote.noteData], [userNullifierNote.noteData]);
+
+    // register account for user
+    const response = await request(api)
+      .post('/api/account/new')
+      .send({ id: userDataNote.id, informationKey: userDataNote.informationKey });
+    expect(response.status).toEqual(201);
+
+    // recover user notes - backfilled with
+    const message = 'hello world';
+    const signature = '01';
+    const readResponse = await request(api)
+      .get('/api/account/getNotes')
+      .query({ id: userDataNote.id, signature, message });
+
+    const blockNum = 2;
+    expect(readResponse.body[0].blockNum).toEqual(blockNum);
+    expect(readResponse.body[0].owner).toEqual(userDataNote.id);
+    expect([true, false]).toContain(readResponse.body[0].nullifier);
+    expect(readResponse.body[1].blockNum).toEqual(blockNum);
+    expect(readResponse.body[1].owner).toEqual(userNullifierNote.id);
+    expect([true, false]).toContain(readResponse.body[1].nullifier);
   });
 });
