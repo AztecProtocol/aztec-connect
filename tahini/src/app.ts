@@ -1,7 +1,3 @@
-// import { Proof } from 'barretenberg/rollup_provider';
-
-import { Connection, Repository, Entity } from 'typeorm';
-import { utils } from 'ethers';
 import Koa from 'koa';
 import compress from 'koa-compress';
 import Router from 'koa-router';
@@ -42,7 +38,8 @@ export function appFactory(server: Server, prefix: string) {
     },
   );
 
-  router.get('/account/getNotes', validateSignature, async (ctx: Koa.Context) => {
+  // TODO: find out how to sign over grumpkin curve, put validateSignature back in
+  router.get('/account/getNotes', async (ctx: Koa.Context) => {
     const retrievedData = await noteRepo.find({ where: {owner: ctx.request.query.id} });
     ctx.body = 'OK\n';
     ctx.response.status = 200;

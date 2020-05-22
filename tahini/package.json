@@ -1,6 +1,6 @@
 {
-  "name": "olive_oil",
-  "version": "1.0.0",
+  "name": "tahini",
+  "version": "0.0.0",
   "main": "dest/index.js",
   "license": "GPL-2.0",
   "scripts": {
