@@ -1,4 +1,4 @@
+keys
 store
 *.db
 db.sqlite
-server_state.json

@@ -51,7 +51,7 @@ export class Server {
     await this.rollupDb.init();
     await this.worldStateDb.start();
     this.printState();
-    await this.createJoinSplitVerifier();
+    // await this.createJoinSplitVerifier();
     const newBlocks = this.getBlocks((await this.rollupDb.getLastBlockNum()) + 1);
     for (const block of newBlocks) {
       await this.handleNewBlock(block);
@@ -142,6 +142,7 @@ export class Server {
 
       console.log(`Creating rollup with ${txs.length} txs...`);
       const rollup = await this.createRollup(txs);
+      await this.rollupDb.deleteRollup(rollup.rollupId);
       await this.rollupDb.addRollup(rollup);
 
       const proof = await this.proofGenerator.createProof(rollup);
@@ -213,9 +214,9 @@ export class Server {
     }
 
     // Check the proof is valid.
-    if (!(await this.joinSplitVerifier.verifyProof(proofData))) {
-      throw new Error('Proof verification failed.');
-    }
+    // if (!(await this.joinSplitVerifier.verifyProof(proofData))) {
+    //   throw new Error('Proof verification failed.');
+    // }
 
     // Lookup and save the proofs data root index (for old root support).
     // prettier-ignore
