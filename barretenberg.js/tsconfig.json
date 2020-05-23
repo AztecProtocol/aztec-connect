@@ -11,6 +11,7 @@
     "esModuleInterop": true,
     "downlevelIteration": true,
     "inlineSourceMap": true,
+    "declarationMap": true,
     "importHelpers": true
   },
   "include": ["src"]
