@@ -145,15 +145,18 @@ export class Server {
       await this.rollupDb.deleteRollup(rollup.rollupId);
       await this.rollupDb.addRollup(rollup);
 
-      const proof = await this.proofGenerator.createProof(rollup);
+      try {
+        const proof = await this.proofGenerator.createProof(rollup);
+        if (!proof) {
+          throw new Error('Invalid proof.');
+        }
 
-      if (proof) {
         const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
         await this.blockchain.sendProof(proof, rollup.rollupId, this.config.rollupSize, viewingKeys);
         await this.worldStateDb.commit();
         this.printState();
-      } else {
-        console.log('Invalid proof.');
+      } catch (err) {
+        console.log(err.message);
         await this.worldStateDb.rollback();
         await this.rollupDb.deleteRollup(rollup.rollupId);
       }
