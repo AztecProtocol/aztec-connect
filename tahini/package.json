@@ -1,13 +1,13 @@
 {
-  "name": "olive_oil",
-  "version": "1.0.0",
+  "name": "tahini",
+  "version": "0.0.0",
   "main": "dest/index.js",
   "license": "GPL-2.0",
   "scripts": {
     "build": "tsc -p tsconfig.prod.json",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
-    "test": "rm -rf db.sqlite && yarn build && jest"
+    "test": "rm -rf db.sqlite && yarn build && jest --runInBand"
   },
   "jest": {
     "transform": {
