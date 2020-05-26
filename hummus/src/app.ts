@@ -57,8 +57,20 @@ export class App extends EventEmitter {
     this.rollupProviderUrl = serverUrl;
     const circuitSize = 128 * 1024;
 
-    const crs = new Crs(circuitSize);
-    await crs.download();
+    debug('Fetching crs data...');
+    let crsData = await this.db.getKey(`crs-${circuitSize}`);
+    let g2Data = await this.db.getKey(`crs-g2-${circuitSize}`);
+    if (!crsData || !g2Data) {
+      debug('Downloading crs data...');
+      const crs = new Crs(circuitSize);
+      await crs.download();
+      crsData = crs.getData();
+      await this.db.addKey(`crs-${circuitSize}`, crsData);
+      g2Data = crs.getG2Data();
+      await this.db.addKey(`crs-g2-${circuitSize}`, g2Data);
+    }
+    console.log(crsData.slice(-10));
+    debug('Done.');
 
     const barretenberg = await BarretenbergWasm.new();
 
@@ -68,7 +80,7 @@ export class App extends EventEmitter {
     const barretenbergWorker = this.pool.workers[0];
 
     const pippenger = new PooledPippenger();
-    await pippenger.init(crs.getData(), this.pool);
+    await pippenger.init(crsData, this.pool);
 
     const fft = new PooledFft(this.pool);
     await fft.init(circuitSize);
@@ -78,16 +90,26 @@ export class App extends EventEmitter {
     this.pedersen = new Pedersen(barretenberg);
     this.blake2s = new Blake2s(barretenberg);
     this.joinSplitProver = new JoinSplitProver(barretenberg, prover);
-    this.joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
-
+    this.joinSplitVerifier = new JoinSplitVerifier();
     this.grumpkin = new Grumpkin(barretenberg);
 
     await this.startNewSession();
 
-    this.logAndDebug('creating keys...');
+    this.logAndDebug('Creating keys...');
     const start = new Date().getTime();
     await this.joinSplitProver.init();
-    await this.joinSplitVerifier.init(crs.getG2Data());
+    if (!serverUrl) {
+      debug('Creating verification key...');
+      const verificationKey = await this.db.getKey('join-split-verification-key');
+      if (verificationKey) {
+        await this.joinSplitVerifier.loadKey(barretenbergWorker, verificationKey, g2Data);
+      } else {
+        await this.joinSplitVerifier.computeKey(pippenger.pool[0], g2Data);
+        const newVerificationKey = await this.joinSplitVerifier.getKey();
+        await this.db.addKey('join-split-verification-key', newVerificationKey);
+      }
+      debug('Done.');
+    }
     this.logAndDebug(`created circuit keys: ${new Date().getTime() - start}ms`);
 
     this.initialized = true;
