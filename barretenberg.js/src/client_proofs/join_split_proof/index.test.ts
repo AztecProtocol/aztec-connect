@@ -93,12 +93,15 @@ describe('join_split_proof', () => {
     beforeAll(async () => {
       debug('creating keys...');
       const start = new Date().getTime();
-      await joinSplitProver.init();
+      await joinSplitProver.computeKey();
       await joinSplitVerifier.computeKey(pippenger.pool[0], crs.getG2Data());
       debug(`created circuit keys: ${new Date().getTime() - start}ms`);
     });
 
     it('should get key data', async () => {
+      const provingKey = await joinSplitProver.getKey();
+      expect(provingKey.length).toBeGreaterThan(0);
+
       const verificationKey = await joinSplitVerifier.getKey();
       expect(verificationKey.length).toBeGreaterThan(0);
     });

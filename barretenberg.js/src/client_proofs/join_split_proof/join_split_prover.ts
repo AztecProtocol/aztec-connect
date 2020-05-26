@@ -7,16 +7,25 @@ import { BarretenbergWasm } from '../../wasm';
 export class JoinSplitProver {
   constructor(private wasm: BarretenbergWasm, private prover: Prover) {}
 
-  public async init() {
+  public async computeKey() {
     const worker = this.prover.getWorker();
     await worker.call('join_split__init_proving_key');
   }
 
+  public async loadKey(keyBuf: Uint8Array) {
+    const worker = this.prover.getWorker();
+    const keyPtr = await worker.call('bbmalloc', keyBuf.length);
+    await worker.transferToHeap(keyBuf, keyPtr);
+    await worker.call('join_split__init_proving_key_from_buffer', keyPtr);
+    await worker.call('bbfree', keyPtr);
+  }
+
   public async getKey() {
-    const keySize = await this.wasm.call('join_split__get_new_proving_key_data', 0);
-    const keyPtr = Buffer.from(await this.wasm.sliceMemory(0, 4)).readUInt32LE(0);
-    const buf = Buffer.from(await this.wasm.sliceMemory(keyPtr, keyPtr + keySize));
-    await this.wasm.call('bbfree', keyPtr);
+    const worker = this.prover.getWorker();
+    const keySize = await worker.call('join_split__get_new_proving_key_data', 0);
+    const keyPtr = Buffer.from(await worker.sliceMemory(0, 4)).readUInt32LE(0);
+    const buf = Buffer.from(await worker.sliceMemory(keyPtr, keyPtr + keySize));
+    await worker.call('bbfree', keyPtr);
     return buf;
   }
 

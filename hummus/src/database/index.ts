@@ -1,6 +1,6 @@
 import Dexie from 'dexie';
 
-const MAX_BYTE_LENGTH = 130000000;
+const MAX_BYTE_LENGTH = 100000000;
 
 export class DbUser {
   constructor(public id: number, public publicKey: Uint8Array, public privateKey?: Uint8Array, public alias?: string) {}
@@ -103,7 +103,7 @@ export class DexieDatabase implements Database {
     await this.key.where({ name }).delete();
   }
 
-  async addKey(name: string, value: Buffer | Uint8Array) {
+  async addKey(name: string, value: Buffer) {
     const size = value.byteLength;
     if (size <= MAX_BYTE_LENGTH) {
       await this.key.put({ name, value, size });
@@ -112,7 +112,7 @@ export class DexieDatabase implements Database {
 
       const count = Math.ceil(size / MAX_BYTE_LENGTH);
       for (let i = 0; i < count; ++i) {
-        const subValue = value.slice(MAX_BYTE_LENGTH * i, MAX_BYTE_LENGTH * (i + 1));
+        const subValue = new Uint8Array(value.buffer.slice(MAX_BYTE_LENGTH * i, MAX_BYTE_LENGTH * (i + 1)));
         await this.key.add({
           name: toSubKeyName(name, i),
           value: subValue,
@@ -144,6 +144,6 @@ export class DexieDatabase implements Database {
       prevSize += subKey.value.byteLength;
     }
 
-    return value;
+    return Buffer.from(value);
   }
 }

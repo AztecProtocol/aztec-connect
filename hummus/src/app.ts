@@ -57,20 +57,18 @@ export class App extends EventEmitter {
     this.rollupProviderUrl = serverUrl;
     const circuitSize = 128 * 1024;
 
-    debug('Fetching crs data...');
     let crsData = await this.db.getKey(`crs-${circuitSize}`);
     let g2Data = await this.db.getKey(`crs-g2-${circuitSize}`);
     if (!crsData || !g2Data) {
-      debug('Downloading crs data...');
+      debug('downloading crs data...');
       const crs = new Crs(circuitSize);
       await crs.download();
       crsData = crs.getData();
-      await this.db.addKey(`crs-${circuitSize}`, crsData);
+      await this.db.addKey(`crs-${circuitSize}`, Buffer.from(crsData));
       g2Data = crs.getG2Data();
-      await this.db.addKey(`crs-g2-${circuitSize}`, g2Data);
+      await this.db.addKey(`crs-g2-${circuitSize}`, Buffer.from(g2Data));
+      debug('done.');
     }
-    console.log(crsData.slice(-10));
-    debug('Done.');
 
     const barretenberg = await BarretenbergWasm.new();
 
@@ -95,22 +93,33 @@ export class App extends EventEmitter {
 
     await this.startNewSession();
 
-    this.logAndDebug('Creating keys...');
+    this.logAndDebug('creating proving key...');
     const start = new Date().getTime();
-    await this.joinSplitProver.init();
+    const provingKey = await this.db.getKey('join-split-proving-key');
+    if (provingKey) {
+      await this.joinSplitProver.loadKey(provingKey);
+    } else {
+      debug('computing...');
+      await this.joinSplitProver.computeKey();
+      debug('saving...');
+      const newProvingKey = await this.joinSplitProver.getKey();
+      await this.db.addKey('join-split-proving-key', newProvingKey);
+    }
+
     if (!serverUrl) {
-      debug('Creating verification key...');
+      debug('creating verification key...');
       const verificationKey = await this.db.getKey('join-split-verification-key');
       if (verificationKey) {
         await this.joinSplitVerifier.loadKey(barretenbergWorker, verificationKey, g2Data);
       } else {
+        debug('computing...');
         await this.joinSplitVerifier.computeKey(pippenger.pool[0], g2Data);
+        debug('saving...');
         const newVerificationKey = await this.joinSplitVerifier.getKey();
         await this.db.addKey('join-split-verification-key', newVerificationKey);
       }
-      debug('Done.');
     }
-    this.logAndDebug(`created circuit keys: ${new Date().getTime() - start}ms`);
+    this.logAndDebug(`complete: ${new Date().getTime() - start}ms`);
 
     this.initialized = true;
   }
