@@ -23,7 +23,7 @@
       "node"
     ],
     "transformIgnorePatterns": [
-      "/node_modules/(?!barretenberg-es).+\\.js$"
+      "/node_modules/(?!barretenberg).+\\.js$"
     ],
     "rootDir": "./"
   },

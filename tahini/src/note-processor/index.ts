@@ -1,8 +1,8 @@
 import { Connection } from 'typeorm';
 
-import { Note } from './entity/note';
-import { Key } from './entity/key';
-import { NoteDb } from './db/note';
+import { Note } from '../entity/note';
+import { Key } from '../entity/key';
+import { NoteDb } from '../db/note';
 import { decryptNote } from 'barretenberg/client_proofs/note';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 

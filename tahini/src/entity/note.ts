@@ -1,5 +1,4 @@
 import { PrimaryColumn, Column, Entity, Unique, ManyToOne } from 'typeorm';
-import { Key } from './key';
 
 @Entity({ name: 'Note' })
 @Unique(["note"])

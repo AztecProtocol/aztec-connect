@@ -3,7 +3,7 @@ import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { randomBytes } from 'crypto';
 import { utils } from 'ethers';
 
-import { Note as NoteEntity } from '../src/entity/Note';
+import { Note as NoteEntity } from './entity/note';
 
 export function randomHex(hexLength: number): string {
   return utils.hexlify(utils.randomBytes(hexLength)).slice(2);

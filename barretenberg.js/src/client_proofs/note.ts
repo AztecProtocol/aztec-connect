@@ -1,5 +1,5 @@
 import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'crypto';
-import { Grumpkin } from 'barretenberg/ecc/grumpkin';
+import { Grumpkin } from '../ecc/grumpkin';
 
 export class Note {
   constructor(public ownerPubKey: Buffer, public secret: Buffer, public value: number) {}

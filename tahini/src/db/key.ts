@@ -1,4 +1,4 @@
-import { Connection, Repository } from 'typeorm';
+import { Connection } from 'typeorm';
 import { Key } from '../entity/key';
 import { BaseDb } from './Base';
 

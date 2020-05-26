@@ -1,10 +1,10 @@
 import { Connection, createConnection } from 'typeorm';
-import { Block } from 'barretenberg-es/block_source';
+import { Block } from 'barretenberg/block_source';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 
 import { MemoryFifo } from './fifo';
 import { LocalBlockchain } from './blockchain';
-import { NoteProcessor } from './NoteProcessor';
+import { NoteProcessor } from './note-processor';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 
 export default class Server {

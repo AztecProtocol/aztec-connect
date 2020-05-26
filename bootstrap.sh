@@ -19,43 +19,44 @@ build_barretenberg() {
     rm -rf ./build
     mkdir build
     cd build
-    cmake ..
+    cmake .. -DTESTING=OFF -DBENCHMARKS=OFF
     make -j$(nproc)
     cd ../..
 }
 
 build_barretenberg_js() {
     cd ./barretenberg.js
+    yarn symlink-wasm
     yarn install
     yarn build
-    cd dest-es && yarn link
-    cd ..
     cd dest && yarn link
     cd ..
-    yarn symlink-wasm
+    cd dest-es && yarn link
+    cd ..
     cd ..
 }
 
 build_hummus() {
     cd ./hummus
-    yarn install
     yarn link barretenberg-es
+    yarn install
     yarn build
     cd ..
 }
 
 build_tahini() {
-    build_barretenberg
     cd ./tahini
-    yarn install
-    yarn link barretenberg-es
     yarn link barretenberg
+    yarn install --force
     yarn build
     cd ..
 }
 
 bootstrap () {
+    yarn unlink barretenberg
+    yarn unlink barretenberg-es
     rm -rf ./**/node_modules/ ./*/yarn.lock
+    build_barretenberg
     build_barretenberg_wasm $1
     build_barretenberg_js
     build_hummus

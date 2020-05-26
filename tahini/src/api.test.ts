@@ -1,12 +1,11 @@
 import { Wallet } from 'ethers';
 import request from 'supertest';
 
-import { Note } from '../dest/src/entity/Note';
-import { Key } from '../dest/src/entity/Key';
-import { appFactory } from '../dest/src/app';
-import { NoteDb } from '../dest/src/db/note';
+import { Note } from './entity/Note';
+import { Key } from './entity/Key';
+import { appFactory } from './app';
 
-import Server from '../dest/src/server';
+import Server from './server';
 import { randomHex, createNoteEntity } from './helpers';
 
 describe('Route tests', () => {

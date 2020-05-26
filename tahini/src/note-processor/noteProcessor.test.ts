@@ -4,10 +4,10 @@ import { Wallet } from 'ethers';
 import request from 'supertest';
 import { createConnection } from 'typeorm';
 
-import { appFactory } from '../dest/src/app';
-import Server from '../dest/src/server';
-import { NoteProcessor } from '../dest/src/noteProcessor';
-import { createNote } from './helpers';
+import { appFactory } from '../app';
+import Server from '../server';
+import { NoteProcessor } from '.';
+import { createNote } from '../helpers';
 
 describe('Note processor tests', () => {
   let api!: any;

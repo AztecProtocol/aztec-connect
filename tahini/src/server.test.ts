@@ -1,8 +1,8 @@
 import { randomBytes } from 'crypto';
 import request from 'supertest';
 
-import { appFactory } from '../dest/src/app';
-import Server from '../dest/src/server';
+import { appFactory } from './app';
+import Server from './server';
 import { createNote } from './helpers';
 
 describe('Server sync', () => {

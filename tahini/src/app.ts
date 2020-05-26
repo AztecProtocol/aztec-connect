@@ -6,7 +6,7 @@ import bodyParser from 'koa-bodyparser';
 import { Key } from './entity/key';
 import { Note } from './entity/Note';
 
-import { inputValidation, accountWriteValidate, validateSignature } from './middleware';
+import { inputValidation, accountWriteValidate } from './middleware';
 import Server from './server';
 
 const cors = require('@koa/cors');

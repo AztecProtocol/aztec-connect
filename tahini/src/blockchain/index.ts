@@ -1,4 +1,3 @@
-import { BlockSource } from 'barretenberg-es/block_source';
 import { EventEmitter } from 'events';
 import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
@@ -10,7 +9,7 @@ export interface Block {
     nullifiers: Buffer[];
 }
 
-export interface Blockchain extends BlockSource {
+export interface Blockchain {
   getBlocks(from: number): Block[];
 }
 
