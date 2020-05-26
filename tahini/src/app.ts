@@ -20,7 +20,6 @@ export function appFactory(server: Server, prefix: string) {
     ctx.body = 'OK\n';
   });
 
-
   router.post(
     '/account/new',
     inputValidation,
@@ -41,13 +40,32 @@ export function appFactory(server: Server, prefix: string) {
     },
   );
 
-  // TODO: find out how to sign over grumpkin curve, put validateSignature back in
-  router.get('/account/getNotes', async (ctx: Koa.Context) => {
-    const retrievedData = await noteRepo.find({ where: {owner: ctx.request.query.id} });
-    ctx.body = 'OK\n';
-    ctx.response.status = 200;
-    ctx.response.body = retrievedData;
-  });
+  router.post(
+    '/account/updateKey',
+    //   validateSignature,
+    async (ctx: Koa.Context) => {
+      const { id, newInformationKey } = ctx.request.body;
+      const userKey = await keyRepo.find({ where: { id } });
+      userKey[0].informationKey = newInformationKey;
+
+      ctx.body = 'OK\n';
+      ctx.response.status = 200;
+
+      await keyRepo.save(userKey[0]);
+    },
+  );
+
+  // TODO: Add validateSignature in
+  router.get(
+    '/account/getNotes',
+    //   validateSignature,
+    async (ctx: Koa.Context) => {
+      const retrievedData = await noteRepo.find({ where: { owner: ctx.request.query.id } });
+      ctx.body = 'OK\n';
+      ctx.response.status = 200;
+      ctx.response.body = retrievedData;
+    },
+  );
 
   const app = new Koa();
   app.proxy = true;

@@ -74,6 +74,26 @@ describe('Route tests', () => {
       expect(readResponse.body[1].nullifier).toEqual(noteA.nullifier);
       expect(readResponse.body[1].owner).toEqual(noteA.owner);
     });
+
+    it('should update key associated with a user account', async () => {
+        const keyRepo = server.connection.getRepository(Key);
+
+        const informationKey = randomHex(20);
+        const id = randomHex(20);
+  
+        const response = await request(api).post('/api/account/new').send({ id, informationKey });
+        expect(response.status).toEqual(201);
+        const originalKey = await keyRepo.find({ where: { id }})
+
+        // updateKey
+        const newInformationKey = randomHex(20);
+        const updateResponse = await request(api).post('/api/account/updateKey').send({id, newInformationKey });
+        expect(updateResponse.status).toEqual(200);
+
+        const updatedKey = await keyRepo.find({ where: { id }})
+        expect(updatedKey[0].id).toEqual(id);
+        expect(updatedKey[0].informationKey).toEqual(newInformationKey);
+    })
   });
 
   describe('Failure cases', () => {
@@ -86,7 +106,8 @@ describe('Route tests', () => {
       expect(response.text).toContain('Fail');
     });
 
-    it('should fail to overwrite user information key', async () => {
+    // TODO: protect using a signature
+    it.skip('should fail to overwrite user information key by non-user', async () => {
       const informationKey = randomHex(20);
       const id = randomHex(20);
       await request(api).post('/api/account/new').send({ id, informationKey });
@@ -99,6 +120,7 @@ describe('Route tests', () => {
       expect(response.text).toContain('Fail');
     });
 
+    // TODO: protect by using correct signature
     it.skip('should fail to fetch notes for invalid signature', async () => {
       const wallet = Wallet.createRandom();
       const message = 'hello world';
