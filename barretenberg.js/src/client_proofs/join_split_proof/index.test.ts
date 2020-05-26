@@ -18,9 +18,10 @@ import { Prover } from '../prover';
 import { JoinSplitProof } from './join_split_proof';
 import { computeNullifier } from './compute_nullifier';
 import { randomBytes } from 'crypto';
-import { toBufferBE } from 'bigint-buffer';
 
 const debug = createDebug('bb:join_split_proof');
+
+jest.setTimeout(120000);
 
 describe('join_split_proof', () => {
   let barretenberg!: BarretenbergWasm;
@@ -31,6 +32,7 @@ describe('join_split_proof', () => {
   let pedersen!: Pedersen;
   let schnorr!: Schnorr;
   let crs!: Crs;
+  let pippenger!: PooledPippenger;
 
   // prettier-ignore
   const privateKey = Buffer.from([
@@ -49,7 +51,7 @@ describe('join_split_proof', () => {
     pool = new WorkerPool();
     await pool.init(barretenberg.module, Math.min(navigator.hardwareConcurrency, 8));
 
-    const pippenger = new PooledPippenger();
+    pippenger = new PooledPippenger();
     await pippenger.init(crs.getData(), pool);
 
     const fft = new PooledFft(pool);
@@ -58,11 +60,11 @@ describe('join_split_proof', () => {
     const prover = new Prover(pool.workers[0], pippenger, fft);
 
     joinSplitProver = new JoinSplitProver(barretenberg, prover);
-    joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
+    joinSplitVerifier = new JoinSplitVerifier();
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
     schnorr = new Schnorr(barretenberg);
-  }, 60000);
+  });
 
   afterAll(async () => {
     await pool.destroy();
@@ -76,7 +78,7 @@ describe('join_split_proof', () => {
     const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, secret);
     expect(success).toBe(true);
     expect(value).toBe(100);
-  }, 60000);
+  });
 
   it('should not decrypt note', () => {
     const pubKey = schnorr.computePublicKey(privateKey);
@@ -85,16 +87,21 @@ describe('join_split_proof', () => {
     const encryptedNote = joinSplitProver.encryptNote(note);
     const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, secret);
     expect(success).toBe(false);
-  }, 60000);
+  });
 
   describe('join_split_proof_generation', () => {
     beforeAll(async () => {
       debug('creating keys...');
       const start = new Date().getTime();
       await joinSplitProver.init();
-      await joinSplitVerifier.init(crs.getG2Data());
+      await joinSplitVerifier.computeKey(pippenger.pool[0], crs.getG2Data());
       debug(`created circuit keys: ${new Date().getTime() - start}ms`);
-    }, 120000);
+    });
+
+    it('should get key data', async () => {
+      const verificationKey = await joinSplitVerifier.getKey();
+      expect(verificationKey.length).toBeGreaterThan(0);
+    });
 
     it('should construct join split proof', async () => {
       const pubKey = schnorr.computePublicKey(privateKey);
@@ -145,6 +152,6 @@ describe('join_split_proof', () => {
       const expectedNullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, blake2s);
       expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
       expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
-    }, 120000);
+    });
   });
 });

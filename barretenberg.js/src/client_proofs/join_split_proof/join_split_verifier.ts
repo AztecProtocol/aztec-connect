@@ -10,6 +10,14 @@ export class JoinSplitVerifier {
     await this.wasm.call('join_split__init_verification_key', pippenger.getPointer(), 0);
   }
 
+  public async getKey() {
+    const keySize = await this.wasm.call('join_split__get_new_verification_key_data', 0);
+    const keyPtr = Buffer.from(await this.wasm.sliceMemory(0, 4)).readUInt32LE(0);
+    const buf = Buffer.from(await this.wasm.sliceMemory(keyPtr, keyPtr + keySize));
+    await this.wasm.call('bbfree', keyPtr);
+    return buf;
+  }
+
   public async loadKey(worker: BarretenbergWorker, keyBuf: Uint8Array, g2Data: Uint8Array) {
     this.wasm = worker;
     const keyPtr = await this.wasm.call('bbmalloc', keyBuf.length);
