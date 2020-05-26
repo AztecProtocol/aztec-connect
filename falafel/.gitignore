@@ -1,4 +1,3 @@
-keys
-store
+/data
 *.db
 db.sqlite

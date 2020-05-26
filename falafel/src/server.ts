@@ -180,7 +180,7 @@ export class Server {
     const barretenberg = await BarretenbergWasm.new();
     this.worker = await createWorker('0', barretenberg.module);
 
-    const key = await readFileAsync('./keys/join_split_verification_key');
+    const key = await readFileAsync('./data/join_split/verification_key');
 
     this.joinSplitVerifier = new JoinSplitVerifier();
     await this.joinSplitVerifier.loadKey(this.worker, key, crs.getG2Data());
