@@ -12,6 +12,14 @@ export class JoinSplitProver {
     await worker.call('join_split__init_proving_key');
   }
 
+  public async getKey() {
+    const keySize = await this.wasm.call('join_split__get_new_proving_key_data', 0);
+    const keyPtr = Buffer.from(await this.wasm.sliceMemory(0, 4)).readUInt32LE(0);
+    const buf = Buffer.from(await this.wasm.sliceMemory(keyPtr, keyPtr + keySize));
+    await this.wasm.call('bbfree', keyPtr);
+    return buf;
+  }
+
   public encryptNote(note: Note) {
     this.wasm.transferToHeap(note.toBuffer(), 0);
     this.wasm.call('join_split__encrypt_note', 0, 100);
