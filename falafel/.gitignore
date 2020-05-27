@@ -1,4 +1,3 @@
-store
+/data
 *.db
 db.sqlite
-server_state.json

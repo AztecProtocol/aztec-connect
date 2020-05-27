@@ -7,7 +7,7 @@ import copy from 'copy-to-clipboard';
 export class TerminalHandler {
   private cmdQueue = new MemoryFifo<string>();
   private printQueue = new MemoryFifo<string | undefined>();
-  private preInitCmds = { help: this.help, init: this.init, exit: this.onExit };
+  private preInitCmds = { help: this.help, init: this.init, exit: this.onExit, cleardata: this.clearData };
   private postInitCmds = {
     help: this.help,
     deposit: this.deposit,
@@ -19,6 +19,7 @@ export class TerminalHandler {
     copykey: this.copyKey,
     status: this.status,
     exit: this.onExit,
+    cleardata: this.clearData,
   };
 
   constructor(private app: App, private terminal: Terminal, private onExit: () => void) {}
@@ -106,6 +107,17 @@ export class TerminalHandler {
   private async init(server: string) {
     this.printQueue.put('initializing...\n');
     await this.app.init(server || 'http://localhost');
+
+    try {
+      const { dataSize, dataRoot, nullRoot } = await this.app.getStatus();
+      this.printQueue.put(`data size: ${dataSize}\n`);
+      this.printQueue.put(`data root: ${dataRoot.slice(0, 8).toString('hex')}...\n`);
+      this.printQueue.put(`null root: ${nullRoot.slice(0, 8).toString('hex')}...\n`);
+    } catch (err) {
+      this.printQueue.put('Failed to get server status.\n');
+    }
+    this.printQueue.put(`user: ${this.app.getUser().publicKey.slice(0, 4).toString('hex')}...\n`);
+    this.printQueue.put(`balance: ${this.app.getBalance()}\n`);
   }
 
   private async deposit(value: string) {
@@ -167,6 +179,10 @@ export class TerminalHandler {
   private async status() {
     this.printQueue.put(`data size: ${this.app.getDataSize()}\n`);
     this.printQueue.put(`data root: ${this.app.getDataRoot().slice(0, 8).toString('hex')}...\n`);
+  }
+
+  private async clearData() {
+    await this.app.clearNoteData();
   }
 
   private userStr(u: User) {

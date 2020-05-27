@@ -1,5 +1,7 @@
 import Dexie from 'dexie';
 
+const MAX_BYTE_LENGTH = 100000000;
+
 export class DbUser {
   constructor(public id: number, public publicKey: Uint8Array, public privateKey?: Uint8Array, public alias?: string) {}
 }
@@ -16,6 +18,10 @@ export class DbNote {
   ) {}
 }
 
+export class DbKey {
+  constructor(public name: string, public value: Uint8Array, public size: number, public count?: number) {}
+}
+
 export interface Database {
   addNote(note: DbNote): Promise<void>;
   getNote(userId: number, nullifier: Uint8Array): Promise<DbNote | undefined>;
@@ -26,21 +32,27 @@ export interface Database {
   addUser(user: DbUser): Promise<void>;
 }
 
+const toSubKeyName = (name: string, index: number) => `${name}__${index}`;
+
 export class DexieDatabase implements Database {
   private dexie = new Dexie('hummus');
   private user: Dexie.Table<DbUser, number>;
   private note: Dexie.Table<DbNote, number>;
+  private key: Dexie.Table<DbKey, string>;
 
   constructor() {
     this.dexie.version(1).stores({
-      user: '++id, publicKey, privateKey',
+      user: '++id, publicKey',
       note: '++id, value, nullified, owner',
+      key: '&name',
     });
 
     this.user = this.dexie.table('user');
     this.note = this.dexie.table('note');
+    this.key = this.dexie.table('key');
     this.user.mapToClass(DbUser);
     this.note.mapToClass(DbNote);
+    this.key.mapToClass(DbKey);
   }
 
   async addNote(note: DbNote) {
@@ -72,10 +84,68 @@ export class DexieDatabase implements Database {
   }
 
   async clearNote() {
-    this.note.clear();
+    await this.note.clear();
   }
 
   async clearUser() {
-    this.user.clear();
+    await this.user.clear();
+  }
+
+  async deleteKey(name: string) {
+    const key = await this.key.get(name);
+    if (!key) {
+      return;
+    }
+
+    for (let i = 0; i < key.count!; ++i) {
+      await this.key.where({ name: toSubKeyName(name, i) }).delete();
+    }
+    await this.key.where({ name }).delete();
+  }
+
+  async addKey(name: string, value: Buffer) {
+    const size = value.byteLength;
+    if (size <= MAX_BYTE_LENGTH) {
+      await this.key.put({ name, value, size });
+    } else {
+      await this.deleteKey(name);
+
+      const count = Math.ceil(size / MAX_BYTE_LENGTH);
+      for (let i = 0; i < count; ++i) {
+        const subValue = new Uint8Array(value.buffer.slice(MAX_BYTE_LENGTH * i, MAX_BYTE_LENGTH * (i + 1)));
+        await this.key.add({
+          name: toSubKeyName(name, i),
+          value: subValue,
+          size: subValue.byteLength,
+        });
+      }
+      await this.key.add({ name, value: new Uint8Array(), size, count });
+    }
+  }
+
+  async getKey(name: string) {
+    const key = await this.key.get(name);
+    if (!key || !key.size) {
+      return null;
+    }
+
+    if (!key.count) {
+      return key.value;
+    }
+
+    const subKeyNames = [...Array(key.count)].map((_, i) => toSubKeyName(name, i));
+    const subKeys = await this.key.bulkGet(subKeyNames);
+    if (subKeys.some(k => !k)) {
+      return null;
+    }
+
+    const value = new Uint8Array(key.size);
+    let prevSize = 0;
+    for (let i = 0; i < key.count; ++i) {
+      value.set(subKeys[i]!.value, prevSize);
+      prevSize += subKeys[i]!.value.byteLength;
+    }
+
+    return value;
   }
 }

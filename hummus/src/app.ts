@@ -57,8 +57,18 @@ export class App extends EventEmitter {
     this.rollupProviderUrl = serverUrl;
     const circuitSize = 128 * 1024;
 
-    const crs = new Crs(circuitSize);
-    await crs.download();
+    let crsData = await this.db.getKey(`crs-${circuitSize}`);
+    let g2Data = await this.db.getKey(`crs-g2-${circuitSize}`);
+    if (!crsData || !g2Data) {
+      debug('downloading crs data...');
+      const crs = new Crs(circuitSize);
+      await crs.download();
+      crsData = crs.getData();
+      await this.db.addKey(`crs-${circuitSize}`, Buffer.from(crsData));
+      g2Data = crs.getG2Data();
+      await this.db.addKey(`crs-g2-${circuitSize}`, Buffer.from(g2Data));
+      debug('done.');
+    }
 
     const barretenberg = await BarretenbergWasm.new();
 
@@ -68,7 +78,7 @@ export class App extends EventEmitter {
     const barretenbergWorker = this.pool.workers[0];
 
     const pippenger = new PooledPippenger();
-    await pippenger.init(crs.getData(), this.pool);
+    await pippenger.init(crsData, this.pool);
 
     const fft = new PooledFft(this.pool);
     await fft.init(circuitSize);
@@ -78,17 +88,37 @@ export class App extends EventEmitter {
     this.pedersen = new Pedersen(barretenberg);
     this.blake2s = new Blake2s(barretenberg);
     this.joinSplitProver = new JoinSplitProver(barretenberg, prover);
-    this.joinSplitVerifier = new JoinSplitVerifier(pippenger.pool[0]);
-
+    this.joinSplitVerifier = new JoinSplitVerifier();
     this.grumpkin = new Grumpkin(barretenberg);
 
     await this.startNewSession();
 
-    this.logAndDebug('creating keys...');
     const start = new Date().getTime();
-    await this.joinSplitProver.init();
-    await this.joinSplitVerifier.init(crs.getG2Data());
-    this.logAndDebug(`created circuit keys: ${new Date().getTime() - start}ms`);
+    const provingKey = await this.db.getKey('join-split-proving-key');
+    if (provingKey) {
+      await this.joinSplitProver.loadKey(provingKey);
+    } else {
+      this.logAndDebug('computing proving key...');
+      await this.joinSplitProver.computeKey();
+      debug('saving...');
+      const newProvingKey = await this.joinSplitProver.getKey();
+      await this.db.addKey('join-split-proving-key', newProvingKey);
+      this.logAndDebug(`complete: ${new Date().getTime() - start}ms`);
+    }
+
+    if (!serverUrl) {
+      debug('creating verification key...');
+      const verificationKey = await this.db.getKey('join-split-verification-key');
+      if (verificationKey) {
+        await this.joinSplitVerifier.loadKey(barretenbergWorker, verificationKey, g2Data);
+      } else {
+        debug('computing...');
+        await this.joinSplitVerifier.computeKey(pippenger.pool[0], g2Data);
+        debug('saving...');
+        const newVerificationKey = await this.joinSplitVerifier.getKey();
+        await this.db.addKey('join-split-verification-key', newVerificationKey);
+      }
+    }
 
     this.initialized = true;
   }
@@ -129,21 +159,14 @@ export class App extends EventEmitter {
     this.worldState = new WorldState(this.leveldb, this.pedersen, this.blake2s);
     await this.worldState.init();
 
-    try {
-      const { dataSize, dataRoot, nullRoot } = await this.rollupProvider.status();
-      this.log(`data size: ${dataSize}`);
-      this.log(`data root: ${dataRoot.slice(0, 8).toString('hex')}...`);
-      this.log(`null root: ${nullRoot.slice(0, 8).toString('hex')}...`);
-    } catch (err) {
-      this.log('Failed to get server status.');
-    }
-
     await this.initUsers();
     this.switchToUser(userId);
-    this.log(`user: ${this.getUser().publicKey.slice(0, 4).toString('hex')}...`);
-    this.log(`balance: ${this.getBalance()}`);
 
     this.processBlockQueue();
+  }
+
+  public async getStatus() {
+      return await this.rollupProvider.status();
   }
 
   private async initUsers() {
