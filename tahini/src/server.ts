@@ -7,6 +7,9 @@ import { LocalBlockchain } from './blockchain';
 import { NoteProcessor } from './note-processor';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { Key } from './entity/key';
+import { BlockDao } from './entity/block';
+import { Note } from './entity/note';
+import { Schnorr } from 'barretenberg/crypto/schnorr';
 
 export default class Server {
   public connection!: Connection;
@@ -14,6 +17,7 @@ export default class Server {
   public noteProcessor!: NoteProcessor;
   private blockQueue = new MemoryFifo<Block>();
   public grumpkin!: Grumpkin;
+  public schnorr!: Schnorr;
 
   public async start() {
     this.connection = await createConnection();
@@ -28,6 +32,7 @@ export default class Server {
 
     const wasm = await BarretenbergWasm.new();
     this.grumpkin = new Grumpkin(wasm);
+    this.schnorr = new Schnorr(wasm);
   }
 
   async stop() {

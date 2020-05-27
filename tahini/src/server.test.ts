@@ -22,7 +22,7 @@ describe('Server sync', () => {
     api.close();
   });
 
-  it('should process transaction, save notes and update note owners', async () => {
+  it.only('should process transaction, save notes and update note owners', async () => {
     // Two users, A and B, sign up for the service
     const informationKeyA = randomBytes(32);
     const userADataNote = createNote(server.grumpkin, informationKeyA);

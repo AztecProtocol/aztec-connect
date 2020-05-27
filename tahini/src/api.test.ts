@@ -7,6 +7,7 @@ import { appFactory } from './app';
 
 import Server from './server';
 import { randomHex, createNoteEntity } from './helpers';
+import { TextEncoder } from 'util';
 
 describe('Route tests', () => {
   let api: any;
@@ -36,6 +37,8 @@ describe('Route tests', () => {
       const informationKey = randomHex(20);
       const id = randomHex(20);
 
+      const message = new TextEncoder().encode('hello world');
+      const signature = server.schnorr.constructSignature(message);
       const response = await request(api).post('/api/account/new').send({ id, informationKey });
       expect(response.status).toEqual(201);
       expect(response.text).toContain('OK');

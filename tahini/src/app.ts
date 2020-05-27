@@ -6,7 +6,7 @@ import bodyParser from 'koa-bodyparser';
 import { Key } from './entity/key';
 import { Note } from './entity/Note';
 
-import { inputValidation, accountWriteValidate } from './middleware';
+import { inputValidation, accountWriteValidate, validateSignature } from './middleware';
 import Server from './server';
 
 const cors = require('@koa/cors');
@@ -58,7 +58,9 @@ export function appFactory(server: Server, prefix: string) {
   // TODO: Add validateSignature in
   router.get(
     '/account/getNotes',
-    //   validateSignature,
+    (ctx, next) => {
+        validateSignature(ctx, next, server.schnorr);
+    },
     async (ctx: Koa.Context) => {
       const retrievedData = await noteRepo.find({ where: { owner: ctx.request.query.id } });
       ctx.body = 'OK\n';
