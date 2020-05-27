@@ -133,17 +133,19 @@ export class DexieDatabase implements Database {
       return key.value;
     }
 
+    const subKeyNames = [...Array(key.count)].map((_, i) => toSubKeyName(name, i));
+    const subKeys = await this.key.bulkGet(subKeyNames);
+    if (subKeys.some(k => !k)) {
+      return null;
+    }
+
     const value = new Uint8Array(key.size);
     let prevSize = 0;
     for (let i = 0; i < key.count; ++i) {
-      const subKey = await this.key.get(toSubKeyName(name, i));
-      if (!subKey) {
-        return null;
-      }
-      value.set(subKey.value, prevSize);
-      prevSize += subKey.value.byteLength;
+      value.set(subKeys[i]!.value, prevSize);
+      prevSize += subKeys[i]!.value.byteLength;
     }
 
-    return Buffer.from(value);
+    return value;
   }
 }

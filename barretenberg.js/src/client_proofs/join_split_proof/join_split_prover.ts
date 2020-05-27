@@ -1,3 +1,4 @@
+import { Transfer } from 'threads';
 import { Prover } from '../prover';
 import { JoinSplitTx } from './join_split_tx';
 import { Note } from '../note';
@@ -15,7 +16,7 @@ export class JoinSplitProver {
   public async loadKey(keyBuf: Uint8Array) {
     const worker = this.prover.getWorker();
     const keyPtr = await worker.call('bbmalloc', keyBuf.length);
-    await worker.transferToHeap(keyBuf, keyPtr);
+    await worker.transferToHeap(Transfer(keyBuf, [keyBuf.buffer]) as any, keyPtr);
     await worker.call('join_split__init_proving_key_from_buffer', keyPtr);
     await worker.call('bbfree', keyPtr);
   }
