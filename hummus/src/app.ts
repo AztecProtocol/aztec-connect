@@ -93,17 +93,17 @@ export class App extends EventEmitter {
 
     await this.startNewSession();
 
-    this.logAndDebug('creating proving key...');
     const start = new Date().getTime();
     const provingKey = await this.db.getKey('join-split-proving-key');
     if (provingKey) {
       await this.joinSplitProver.loadKey(provingKey);
     } else {
-      debug('computing...');
+      this.logAndDebug('computing proving key...');
       await this.joinSplitProver.computeKey();
       debug('saving...');
       const newProvingKey = await this.joinSplitProver.getKey();
       await this.db.addKey('join-split-proving-key', newProvingKey);
+      this.logAndDebug(`complete: ${new Date().getTime() - start}ms`);
     }
 
     if (!serverUrl) {
@@ -119,7 +119,6 @@ export class App extends EventEmitter {
         await this.db.addKey('join-split-verification-key', newVerificationKey);
       }
     }
-    this.logAndDebug(`complete: ${new Date().getTime() - start}ms`);
 
     this.initialized = true;
   }
@@ -160,21 +159,14 @@ export class App extends EventEmitter {
     this.worldState = new WorldState(this.leveldb, this.pedersen, this.blake2s);
     await this.worldState.init();
 
-    try {
-      const { dataSize, dataRoot, nullRoot } = await this.rollupProvider.status();
-      this.log(`data size: ${dataSize}`);
-      this.log(`data root: ${dataRoot.slice(0, 8).toString('hex')}...`);
-      this.log(`null root: ${nullRoot.slice(0, 8).toString('hex')}...`);
-    } catch (err) {
-      this.log('Failed to get server status.');
-    }
-
     await this.initUsers();
     this.switchToUser(userId);
-    this.log(`user: ${this.getUser().publicKey.slice(0, 4).toString('hex')}...`);
-    this.log(`balance: ${this.getBalance()}`);
 
     this.processBlockQueue();
+  }
+
+  public async getStatus() {
+      return await this.rollupProvider.status();
   }
 
   private async initUsers() {
