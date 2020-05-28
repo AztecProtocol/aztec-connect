@@ -8,17 +8,30 @@ import { appFactory } from './app';
 import Server from './server';
 import { randomHex, createNoteEntity } from './helpers';
 import { TextEncoder } from 'util';
+import { randomBytes } from 'ethers/utils';
 
 describe('Route tests', () => {
   let api: any;
   let server: any;
+  let signature: any;
+  let id: any;
+  let informationKey: any;
+  let message: any;
+  let pubKey: any;
 
   beforeEach(async () => {
     server = new Server();
-    await server.start();
 
+    await server.start();
     const app = appFactory(server, '/api');
     api = app.listen();
+
+    const privateKey = randomBytes(32);
+    message = 'hello world';
+    signature = server.schnorr.constructSignature(new TextEncoder().encode(message), privateKey);
+    pubKey = server.schnorr.computePublicKey(privateKey).toString('hex');
+    id = pubKey;
+    informationKey = randomHex(20);
   });
 
   afterEach(async () => {
@@ -34,30 +47,23 @@ describe('Route tests', () => {
     });
 
     it('should create account with ID and informationKey', async () => {
-      const informationKey = randomHex(20);
-      const id = randomHex(20);
-
-      const message = new TextEncoder().encode('hello world');
-      const signature = server.schnorr.constructSignature(message);
-      const response = await request(api).post('/api/account/new').send({ id, informationKey });
+      const response = await request(api)
+        .post('/api/account/new')
+        .send({ id: pubKey, informationKey, signature, message });
       expect(response.status).toEqual(201);
       expect(response.text).toContain('OK');
 
       const repository = server.connection.getRepository(Key);
-      const retrievedData = await repository.findOne({ id });
-      expect(retrievedData.id).toEqual(id);
+      const retrievedData = await repository.findOne({ id: pubKey });
+      expect(retrievedData.id).toEqual(pubKey);
       expect(retrievedData.informationKey[0]).toEqual(informationKey[0]);
     });
 
     it('should get the notes associated with a user account', async () => {
-      const wallet = Wallet.createRandom();
-      const message = 'hello world';
-      const signature = await wallet.signMessage(message);
-      const id = wallet.address.slice(2);
-      const informationKey = randomHex(20);
-
       // create the user's account
-      const writeResponse = await request(api).post('/api/account/new').send({ id, informationKey });
+      const writeResponse = await request(api)
+        .post('/api/account/new')
+        .send({ id, informationKey, message, signature });
       expect(writeResponse.status).toEqual(201);
 
       // Simulate action of blockchain server - store some notes in the database
@@ -68,7 +74,7 @@ describe('Route tests', () => {
       const noteRepo = server.connection.getRepository(Note);
       await noteRepo.save(userNotes);
 
-      const readResponse = await request(api).get('/api/account/getNotes').query({ id, signature, message });
+      const readResponse = await request(api).post('/api/account/getNotes').send({ id, signature, message });
       expect(readResponse.status).toEqual(200);
       expect(readResponse.body[0].blockNum).toEqual(noteA.blockNum);
       expect(readResponse.body[0].nullifier).toEqual(noteA.nullifier);
@@ -79,60 +85,54 @@ describe('Route tests', () => {
     });
 
     it('should update key associated with a user account', async () => {
-        const keyRepo = server.connection.getRepository(Key);
+      const keyRepo = server.connection.getRepository(Key);
 
-        const informationKey = randomHex(20);
-        const id = randomHex(20);
-  
-        const response = await request(api).post('/api/account/new').send({ id, informationKey });
-        expect(response.status).toEqual(201);
-        const originalKey = await keyRepo.find({ where: { id }})
+      const response = await request(api).post('/api/account/new').send({ id, informationKey, message, signature });
+      expect(response.status).toEqual(201);
 
-        // updateKey
-        const newInformationKey = randomHex(20);
-        const updateResponse = await request(api).post('/api/account/updateKey').send({id, newInformationKey });
-        expect(updateResponse.status).toEqual(200);
+      // updateKey
+      const newInformationKey = randomHex(20);
+      const updateResponse = await request(api).post('/api/account/updateKey').send({ id, newInformationKey, message, signature });
+      expect(updateResponse.status).toEqual(200);
 
-        const updatedKey = await keyRepo.find({ where: { id }})
-        expect(updatedKey[0].id).toEqual(id);
-        expect(updatedKey[0].informationKey).toEqual(newInformationKey);
-    })
+      const updatedKey = await keyRepo.find({ where: { id } });
+      expect(updatedKey[0].id).toEqual(id);
+      expect(updatedKey[0].informationKey).toEqual(newInformationKey);
+    });
   });
 
   describe('Failure cases', () => {
     it('should fail to write informationKey for malformed ID', async () => {
-      const informationKey = randomHex(20);
       const malformedID = 'ZYtj';
 
-      const response = await request(api).post('/api/account/new').send({ id: malformedID, informationKey });
+      const response = await request(api).post('/api/account/new').send({ id: malformedID, informationKey, message, signature });
       expect(response.status).toEqual(400);
       expect(response.text).toContain('Fail');
     });
 
-    // TODO: protect using a signature
-    it.skip('should fail to overwrite user information key by non-user', async () => {
-      const informationKey = randomHex(20);
-      const id = randomHex(20);
-      await request(api).post('/api/account/new').send({ id, informationKey });
+    it('should fail to overwrite user information key with non-user signature', async () => {
+      await request(api).post('/api/account/new').send({ id, informationKey, message, signature });
 
       const maliciousInformationKeys = '01';
+      
+      // mutate the signature
+      signature.s = Buffer.from(randomBytes(32));
+
       const response = await request(api)
         .post('/api/account/new')
-        .send({ id, informationKey: maliciousInformationKeys });
-      expect(response.status).toEqual(403);
+        .send({ id, informationKey: maliciousInformationKeys, message, signature });
+      expect(response.status).toEqual(401);
       expect(response.text).toContain('Fail');
     });
 
-    // TODO: protect by using correct signature
-    it.skip('should fail to fetch notes for invalid signature', async () => {
-      const wallet = Wallet.createRandom();
-      const message = 'hello world';
-      const signature = await wallet.signMessage(message);
-      const fakeId = randomHex(20);
+    it('should fail to fetch notes for non-user signature', async () => {
       const userNotes = [createNoteEntity()];
-      await request(api).post('/api/account/getNotes').send({ id: fakeId, notes: userNotes });
+      await request(api).post('/api/account/getNotes').send({ id, notes: userNotes, message, signature });
+            
+      // mutate the signature
+      signature.s = Buffer.from(randomBytes(32));
 
-      const readResponse = await request(api).get('/api/account/getNotes').query({ id: fakeId, signature, message });
+      const readResponse = await request(api).post('/api/account/getNotes').send({ id, informationKey, signature, message });
       expect(readResponse.status).toEqual(401);
       expect(readResponse.text).toContain('Fail');
     });

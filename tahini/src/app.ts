@@ -24,11 +24,14 @@ export function appFactory(server: Server, prefix: string) {
     '/account/new',
     inputValidation,
     (ctx, next) => {
+      return validateSignature(ctx, next, server.schnorr);
+    },
+    (ctx, next) => {
       return accountWriteValidate(ctx, next, keyRepo);
     },
     async (ctx: Koa.Context) => {
       const key = new Key();
-      const { id, informationKey } = ctx.request.body;
+      const { id, informationKey, message, signature } = ctx.request.body;
       key.id = id;
       key.informationKey = informationKey;
       ctx.body = 'OK\n';
@@ -42,7 +45,9 @@ export function appFactory(server: Server, prefix: string) {
 
   router.post(
     '/account/updateKey',
-    //   validateSignature,
+    (ctx, next) => {
+      return validateSignature(ctx, next, server.schnorr);
+    },
     async (ctx: Koa.Context) => {
       const { id, newInformationKey } = ctx.request.body;
       const userKey = await keyRepo.find({ where: { id } });
@@ -55,14 +60,13 @@ export function appFactory(server: Server, prefix: string) {
     },
   );
 
-  // TODO: Add validateSignature in
-  router.get(
+  router.post(
     '/account/getNotes',
     (ctx, next) => {
-        validateSignature(ctx, next, server.schnorr);
+      return validateSignature(ctx, next, server.schnorr);
     },
     async (ctx: Koa.Context) => {
-      const retrievedData = await noteRepo.find({ where: { owner: ctx.request.query.id } });
+      const retrievedData = await noteRepo.find({ where: { owner: ctx.request.body.id } });
       ctx.body = 'OK\n';
       ctx.response.status = 200;
       ctx.response.body = retrievedData;

@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-@Entity({ name: 'block' })
+@Entity({ name: 'BlockDao' })
 export class BlockDao {
   @PrimaryColumn()
   public id!: number;

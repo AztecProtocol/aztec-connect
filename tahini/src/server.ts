@@ -12,7 +12,7 @@ import { Note } from './entity/note';
 import { Schnorr } from 'barretenberg/crypto/schnorr';
 
 export default class Server {
-  public connection!: Connection;
+  public connection!: any;
   public blockchain!: LocalBlockchain;
   public noteProcessor!: NoteProcessor;
   private blockQueue = new MemoryFifo<Block>();
@@ -20,17 +20,25 @@ export default class Server {
   public schnorr!: Schnorr;
 
   public async start() {
-    this.connection = await createConnection();
+    this.connection = await createConnection({
+      type: 'sqlite',
+      database: 'db.sqlite',
+      synchronize: true,
+      logging: false,
+      entities: [Key, BlockDao, Note],
+    });
+
     this.blockchain = new LocalBlockchain(this.connection);
     this.noteProcessor = new NoteProcessor();
 
-    await this.blockchain.init();
     await this.noteProcessor.init(this.connection);
+    await this.blockchain.init();
 
     this.blockchain.on('block', b => this.blockQueue.put(b));
     this.processQueue();
 
     const wasm = await BarretenbergWasm.new();
+    await wasm.init();
     this.grumpkin = new Grumpkin(wasm);
     this.schnorr = new Schnorr(wasm);
   }

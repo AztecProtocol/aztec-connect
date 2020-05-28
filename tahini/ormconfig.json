@@ -4,12 +4,12 @@
   "synchronize": true,
   "logging": false,
   "entities": [
-     "dest/src/entity/**/*.js"
+     "dest/entity/*.js"
   ],
   "migrations": [
-     "dest/migration/**/*.js"
+     "dest/migration/*.js"
   ],
   "subscribers": [
-     "dest/subscriber/**/*.js"
+     "dest/subscriber/*.js"
   ]
 }
