@@ -13,7 +13,7 @@ WORKDIR /usr/src/barretenberg.js
 COPY --from=0 /usr/src/barretenberg.js/dest .
 RUN yarn install && yarn link
 WORKDIR /usr/src/falafel
-COPY package.json yarn.lock ./
+COPY package.json .
 RUN yarn install
 RUN yarn link barretenberg
 COPY . .
