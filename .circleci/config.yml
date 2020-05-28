@@ -126,7 +126,7 @@ jobs:
 
   barretenberg-js:
     docker:
-      image: aztecprotocol/build-image
+      - image: aztecprotocol/build-image
     steps:
       - *setup_env
       - checkout
@@ -150,7 +150,7 @@ jobs:
 
   falafel:
     docker:
-      image: aztecprotocol/build-image
+      - image: aztecprotocol/build-image
     steps:
       - *setup_env
       - checkout
