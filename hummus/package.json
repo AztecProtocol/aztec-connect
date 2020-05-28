@@ -56,6 +56,7 @@
     "@types/styled-components": "^5.1.0",
     "@types/webpack-env": "^1.13.6",
     "autoprefixer": "^9.7.6",
+    "barretenberg-es": "file:../barretenberg.js/dest-es",
     "cbor": "^5.0.1",
     "classnames": "^2.2.6",
     "css-loader": "^3.5.3",

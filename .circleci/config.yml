@@ -174,6 +174,30 @@ jobs:
             docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
             docker push aztecprotocol/falafel:latest
 
+  hummus:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - *setup_env
+      - checkout
+      - run:
+          name: 'Check for rebuild'
+          working_directory: hummus
+          command: *check_for_rebuild
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: 'Build and test'
+          working_directory: hummus
+          command: |
+            docker build --pull -t aztecprotocol/hummus:latest .
+      - run:
+          name: 'Push'
+          working_directory: hummus
+          command: |
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/hummus:latest
+
 workflows:
   build:
     jobs:
@@ -191,6 +215,9 @@ workflows:
           requires:
             - wasm-linux-clang
       - falafel:
+          requires:
+            - barretenberg-js
+      - hummus:
           requires:
             - barretenberg-js
 
