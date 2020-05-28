@@ -8,6 +8,8 @@ import { Key } from '../entity/key';
 import { Note } from '../entity/note';
 import { createNote, randomHex } from '../helpers';
 
+import { randomBytes } from 'ethers/utils';
+
 describe('Note processor tests', () => {
   let api!: any;
   let noteProcessor!: any;
@@ -35,10 +37,10 @@ describe('Note processor tests', () => {
 
   it('should decrypt a note for a provided note owner', async () => {
     // create a note
-    const { id, informationKey, noteData } = createNote(server.grumpkin);
+    const { id, informationKey, noteData, message, signature } = createNote(server);
 
     // create user account
-    const response = await request(api).post('/api/account/new').send({ id, informationKey });
+    const response = await request(api).post('/api/account/new').send({ id, informationKey, message, signature });
     expect(response.status).toEqual(201);
 
     // format notes and decrypt owners if possible
@@ -53,13 +55,13 @@ describe('Note processor tests', () => {
 
   it('should decrypt multiple notes for multiple owners', async () => {
     // create user notes
-    const noteA = createNote(server.grumpkin);
-    const dummyNote = createNote(server.grumpkin); // to check this isn't recorded as an owner
-    const noteB = createNote(server.grumpkin);
+    const noteA = createNote(server);
+    const dummyNote = createNote(server); // to check this isn't recorded as an owner
+    const noteB = createNote(server);
 
     // create user accounts
-    await request(api).post('/api/account/new').send({ id: noteA.id, informationKey: noteA.informationKey });
-    await request(api).post('/api/account/new').send({ id: noteB.id, informationKey: noteB.informationKey });
+    await request(api).post('/api/account/new').send({ id: noteA.id, informationKey: noteA.informationKey, message: noteA.message, signature: noteA.signature });
+    await request(api).post('/api/account/new').send({ id: noteB.id, informationKey: noteB.informationKey, message: noteB.message, signature: noteB.signature });
 
     // format notes and decrypt owners if possible
     let notesToSave = noteProcessor.formatNotes([noteA.noteData, dummyNote.noteData, noteB.noteData], 5, false);
@@ -76,28 +78,13 @@ describe('Note processor tests', () => {
   });
 
   it('should `processNewNotes` and be retrieveable using GET route by user ID', async () => {
-    const wallet = Wallet.createRandom();
-    const informationKey = wallet.privateKey.slice(2);
+    const informationKey = randomBytes(32);
 
-    // TODO: find out how to sign over grumpkin curve. Do notes definitely have to be defined on
-    // grumpkin full stop?
-    // Problem is as follows:
-    // Private key can be anything, random bytes or a private key from another curve.
-    // The public key is derived from the privateKey. The public key IS on the grumpkin curve
-
-    // A signature is produced using the privateKey. In a standard Ethereum setup, the privateKey is
-    // defined over the secp256k1 curve.
-
-    // When ecrecover() is used on the signature, it will recover the secp256k1 public key - rather
-    // than the desired grumpkin one
-
-    const userFirstNote = createNote(server.grumpkin, Buffer.from(informationKey, 'hex'));
-    const userSecondNote = createNote(server.grumpkin, Buffer.from(informationKey, 'hex'));
-    const message = 'hello world';
-    const signature = await wallet.signMessage(message);
+    const userFirstNote = createNote(server, Buffer.from(informationKey));
+    const userSecondNote = createNote(server, Buffer.from(informationKey));
 
     // register account for user
-    const response = await request(api).post('/api/account/new').send({ id: userFirstNote.id, informationKey });
+    const response = await request(api).post('/api/account/new').send({ id: userFirstNote.id, informationKey: Buffer.from(informationKey).toString('hex'), message: userFirstNote.message, signature: userFirstNote.signature  });
     expect(response.status).toEqual(201);
 
     // Simulate blockchain action - notes created and now being synced into local database
@@ -112,8 +99,8 @@ describe('Note processor tests', () => {
 
     // Retrieve user notes with GET request
     const readResponse = await request(api)
-      .get('/api/account/getNotes')
-      .query({ id: userFirstNote.id, signature, message });
+      .post('/api/account/getNotes')
+      .send({ id: userFirstNote.id, signature: userFirstNote.signature, message: userFirstNote.message });
     expect(readResponse.status).toEqual(200);
     expect(readResponse.body[0].blockNum).toEqual(blockNum);
     expect(readResponse.body[0].nullifier).toEqual(nullifier);

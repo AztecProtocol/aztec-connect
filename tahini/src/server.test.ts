@@ -25,21 +25,21 @@ describe('Server sync', () => {
   it.only('should process transaction, save notes and update note owners', async () => {
     // Two users, A and B, sign up for the service
     const informationKeyA = randomBytes(32);
-    const userADataNote = createNote(server.grumpkin, informationKeyA);
-    const userANullifierNote = createNote(server.grumpkin, informationKeyA);
+    const userADataNote = createNote(server, informationKeyA);
+    const userANullifierNote = createNote(server, informationKeyA);
 
     const informationKeyB = randomBytes(32);
-    const userBDataNote = createNote(server.grumpkin, informationKeyB);
-    const userBNullifierNote = createNote(server.grumpkin, informationKeyB);
+    const userBDataNote = createNote(server, informationKeyB);
+    const userBNullifierNote = createNote(server, informationKeyB);
 
     const responseA = await request(api)
       .post('/api/account/new')
-      .send({ id: userADataNote.id, informationKey: informationKeyA.toString('hex') });
+      .send({ id: userADataNote.id, informationKey: informationKeyA.toString('hex'), message: userADataNote.message, signature: userADataNote.signature });
     expect(responseA.status).toEqual(201);
 
     const responseB = await request(api)
       .post('/api/account/new')
-      .send({ id: userBDataNote.id, informationKey: informationKeyB.toString('hex') });
+      .send({ id: userBDataNote.id, informationKey: informationKeyB.toString('hex'), message: userBDataNote.message, signature: userBDataNote.signature });
     expect(responseB.status).toEqual(201);
 
     // Users interact on the blockchain, submitting transactions
@@ -47,12 +47,9 @@ describe('Server sync', () => {
     await server.blockchain.submitTx([userBDataNote.noteData], [userBNullifierNote.noteData]);
 
     // Users later seek to retrieve their notes easily
-    const message = 'hello world';
-    const signature = '000'; // TODO: correct when know how to sign
-
     const userARead = await request(api)
-      .get('/api/account/getNotes')
-      .query({ id: userADataNote.id, signature, message });
+      .post('/api/account/getNotes')
+      .send({ id: userADataNote.id, signature: userADataNote.signature, message: userADataNote.message });
 
     // Have to check multiple possible assertions, due to undefined processing order of data and nullifier
     expect(userARead.body[0].blockNum).toEqual(0);
@@ -64,8 +61,8 @@ describe('Server sync', () => {
     expect([userANullifierNote.id, userADataNote.id]).toContain(userARead.body[1].owner);
 
     const userBRead = await request(api)
-      .get('/api/account/getNotes')
-      .query({ id: userBDataNote.id, signature, message });
+      .post('/api/account/getNotes')
+      .send({ id: userBDataNote.id, signature: userBDataNote.signature, message: userBDataNote.message });
 
     expect(userBRead.body[0].blockNum).toEqual(1);
     expect([true, false]).toContain(userBRead.body[0].nullifier);
