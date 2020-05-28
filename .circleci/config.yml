@@ -8,7 +8,7 @@ setup_env: &setup_env
       cat $BASH_ENV
       docker system info
 
-check_for_rebuild: &check_for_rebuild
+check_for_rebuild: &check_for_rebuild |
     if ! git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q -f .rebuild_patterns; then
       echo No changes matching .rebuild_patterns since last successful master commit.
       circleci step halt
