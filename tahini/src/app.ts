@@ -21,7 +21,7 @@ export function appFactory(server: Server, prefix: string) {
   });
 
   router.post(
-    '/account/new',
+    '/POST/account/new',
     inputValidation,
     (ctx, next) => {
       return validateSignature(ctx, next, server.schnorr);
@@ -31,7 +31,7 @@ export function appFactory(server: Server, prefix: string) {
     },
     async (ctx: Koa.Context) => {
       const key = new Key();
-      const { id, informationKey, message, signature } = ctx.request.body;
+      const { id, informationKey } = ctx.request.body;
       key.id = id;
       key.informationKey = informationKey;
       ctx.body = 'OK\n';
@@ -44,7 +44,7 @@ export function appFactory(server: Server, prefix: string) {
   );
 
   router.post(
-    '/account/updateKey',
+    '/POST/account/key',
     (ctx, next) => {
       return validateSignature(ctx, next, server.schnorr);
     },
@@ -60,8 +60,9 @@ export function appFactory(server: Server, prefix: string) {
     },
   );
 
+  // TODO: change this to GET and use query params or header
   router.post(
-    '/account/getNotes',
+    '/GET/account/notes',
     (ctx, next) => {
       return validateSignature(ctx, next, server.schnorr);
     },

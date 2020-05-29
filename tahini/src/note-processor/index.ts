@@ -72,12 +72,12 @@ export class NoteProcessor {
    * Attempt note decryption for a supplied set of `notes` with a supplied set of `keys`. If
    * decryption is succesful, set the owner of the note to be the key id
    * @param notes - array of noteData, where noteData is represented as a buffer
-   * @param keys - 
+   * @param keys - array of ID:informationKey pairs
    * @param grumpkin - grumpkin instance to use when decrypting notes
    */
   public async updateOwners(notes: Note[], keys: Key[]) {
-    keys.forEach((key: any) => {
-      notes.forEach(note => {
+    notes.forEach((note: Note) => {
+      keys.forEach(key => {
         const decryption = decryptNote(note.note, Buffer.from(key.informationKey, 'hex'), this.grumpkin);
         if (decryption) {
           const owner = decryption.ownerPubKey;

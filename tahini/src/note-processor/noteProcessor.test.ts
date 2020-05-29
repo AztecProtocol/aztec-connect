@@ -40,7 +40,7 @@ describe('Note processor tests', () => {
     const { id, informationKey, noteData, message, signature } = createNote(server);
 
     // create user account
-    const response = await request(api).post('/api/account/new').send({ id, informationKey, message, signature });
+    const response = await request(api).post('/api/POST/account/new').send({ id, informationKey, message, signature });
     expect(response.status).toEqual(201);
 
     // format notes and decrypt owners if possible
@@ -60,8 +60,8 @@ describe('Note processor tests', () => {
     const noteB = createNote(server);
 
     // create user accounts
-    await request(api).post('/api/account/new').send({ id: noteA.id, informationKey: noteA.informationKey, message: noteA.message, signature: noteA.signature });
-    await request(api).post('/api/account/new').send({ id: noteB.id, informationKey: noteB.informationKey, message: noteB.message, signature: noteB.signature });
+    await request(api).post('/api/POST/account/new').send({ id: noteA.id, informationKey: noteA.informationKey, message: noteA.message, signature: noteA.signature });
+    await request(api).post('/api/POST/account/new').send({ id: noteB.id, informationKey: noteB.informationKey, message: noteB.message, signature: noteB.signature });
 
     // format notes and decrypt owners if possible
     const notesToSave = noteProcessor.formatNotes([noteA.noteData, dummyNote.noteData, noteB.noteData], 5, false);
@@ -84,7 +84,7 @@ describe('Note processor tests', () => {
     const userSecondNote = createNote(server, Buffer.from(informationKey));
 
     // register account for user
-    const response = await request(api).post('/api/account/new').send({ id: userFirstNote.id, informationKey: Buffer.from(informationKey).toString('hex'), message: userFirstNote.message, signature: userFirstNote.signature  });
+    const response = await request(api).post('/api/POST/account/new').send({ id: userFirstNote.id, informationKey: Buffer.from(informationKey).toString('hex'), message: userFirstNote.message, signature: userFirstNote.signature  });
     expect(response.status).toEqual(201);
 
     // Simulate blockchain action - notes created and now being synced into local database
@@ -98,7 +98,7 @@ describe('Note processor tests', () => {
 
     // Retrieve user notes with GET request
     const readResponse = await request(api)
-      .post('/api/account/getNotes')
+      .post('/api/GET/account/notes')
       .send({ id: userFirstNote.id, signature: userFirstNote.signature, message: userFirstNote.message });
     expect(readResponse.status).toEqual(200);
     expect(readResponse.body[0].blockNum).toEqual(blockNum);

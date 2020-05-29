@@ -47,7 +47,7 @@ describe('Route tests', () => {
 
     it('should create account with ID and informationKey', async () => {
       const response = await request(api)
-        .post('/api/account/new')
+        .post('/api/POST/account/new')
         .send({ id: pubKey, informationKey, signature, message });
       expect(response.status).toEqual(201);
       expect(response.text).toContain('OK');
@@ -61,7 +61,7 @@ describe('Route tests', () => {
     it('should get the notes associated with a user account', async () => {
       // create the user's account
       const writeResponse = await request(api)
-        .post('/api/account/new')
+        .post('/api/POST/account/new')
         .send({ id, informationKey, message, signature });
       expect(writeResponse.status).toEqual(201);
 
@@ -73,7 +73,7 @@ describe('Route tests', () => {
       const noteRepo = server.connection.getRepository(Note);
       await noteRepo.save(userNotes);
 
-      const readResponse = await request(api).post('/api/account/getNotes').send({ id, signature, message });
+      const readResponse = await request(api).post('/api/GET/account/notes').send({ id, signature, message });
       expect(readResponse.status).toEqual(200);
       expect(readResponse.body[0].blockNum).toEqual(noteA.blockNum);
       expect(readResponse.body[0].nullifier).toEqual(noteA.nullifier);
@@ -86,12 +86,12 @@ describe('Route tests', () => {
     it('should update key associated with a user account', async () => {
       const keyRepo = server.connection.getRepository(Key);
 
-      const response = await request(api).post('/api/account/new').send({ id, informationKey, message, signature });
+      const response = await request(api).post('/api/POST/account/new').send({ id, informationKey, message, signature });
       expect(response.status).toEqual(201);
 
       // updateKey
       const newInformationKey = randomHex(20);
-      const updateResponse = await request(api).post('/api/account/updateKey').send({ id, newInformationKey, message, signature });
+      const updateResponse = await request(api).post('/api/POST/account/key').send({ id, newInformationKey, message, signature });
       expect(updateResponse.status).toEqual(200);
 
       const updatedKey = await keyRepo.find({ where: { id } });
@@ -104,13 +104,13 @@ describe('Route tests', () => {
     it('should fail to write informationKey for malformed ID', async () => {
       const malformedID = 'ZYtj';
 
-      const response = await request(api).post('/api/account/new').send({ id: malformedID, informationKey, message, signature });
+      const response = await request(api).post('/api/POST/account/new').send({ id: malformedID, informationKey, message, signature });
       expect(response.status).toEqual(400);
       expect(response.text).toContain('Fail');
     });
 
     it('should fail to overwrite user information key with non-user signature', async () => {
-      await request(api).post('/api/account/new').send({ id, informationKey, message, signature });
+      await request(api).post('/api/POST/account/new').send({ id, informationKey, message, signature });
 
       const maliciousInformationKeys = '01';
       
@@ -118,7 +118,7 @@ describe('Route tests', () => {
       signature.s = Buffer.from(randomBytes(32));
 
       const response = await request(api)
-        .post('/api/account/new')
+        .post('/api/POST/account/new')
         .send({ id, informationKey: maliciousInformationKeys, message, signature });
       expect(response.status).toEqual(401);
       expect(response.text).toContain('Fail');
@@ -126,12 +126,12 @@ describe('Route tests', () => {
 
     it('should fail to fetch notes for non-user signature', async () => {
       const userNotes = [createNoteEntity()];
-      await request(api).post('/api/account/getNotes').send({ id, notes: userNotes, message, signature });
+      await request(api).post('/api/GET/account/notes').send({ id, notes: userNotes, message, signature });
             
       // mutate the signature
       signature.s = Buffer.from(randomBytes(32));
 
-      const readResponse = await request(api).post('/api/account/getNotes').send({ id, informationKey, signature, message });
+      const readResponse = await request(api).post('/api/GET/account/notes').send({ id, informationKey, signature, message });
       expect(readResponse.status).toEqual(401);
       expect(readResponse.text).toContain('Fail');
     });

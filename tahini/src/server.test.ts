@@ -33,12 +33,12 @@ describe('Server sync', () => {
     const userBNullifierNote = createNote(server, informationKeyB);
 
     const responseA = await request(api)
-      .post('/api/account/new')
+      .post('/api/POST/account/new')
       .send({ id: userADataNote.id, informationKey: informationKeyA.toString('hex'), message: userADataNote.message, signature: userADataNote.signature });
     expect(responseA.status).toEqual(201);
 
     const responseB = await request(api)
-      .post('/api/account/new')
+      .post('/api/POST/account/new')
       .send({ id: userBDataNote.id, informationKey: informationKeyB.toString('hex'), message: userBDataNote.message, signature: userBDataNote.signature });
     expect(responseB.status).toEqual(201);
 
@@ -48,7 +48,7 @@ describe('Server sync', () => {
 
     // Users later seek to retrieve their notes easily
     const userARead = await request(api)
-      .post('/api/account/getNotes')
+      .post('/api/GET/account/notes')
       .send({ id: userADataNote.id, signature: userADataNote.signature, message: userADataNote.message });
 
     // Have to check multiple possible assertions, due to undefined processing order of data and nullifier
@@ -61,7 +61,7 @@ describe('Server sync', () => {
     expect([userANullifierNote.id, userADataNote.id]).toContain(userARead.body[1].owner);
 
     const userBRead = await request(api)
-      .post('/api/account/getNotes')
+      .post('/api/GET/account/notes')
       .send({ id: userBDataNote.id, signature: userBDataNote.signature, message: userBDataNote.message });
 
     expect(userBRead.body[0].blockNum).toEqual(1);

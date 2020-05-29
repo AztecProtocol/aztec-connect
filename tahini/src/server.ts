@@ -4,11 +4,9 @@ import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { Connection, createConnection } from 'typeorm';
 
-
+import { ormConfig } from '../ormconfig';
 import { LocalBlockchain } from './blockchain';
-import { BlockDao } from './entity/block';
 import { Key } from './entity/key';
-import { Note } from './entity/note';
 import { MemoryFifo } from './fifo';
 import { NoteProcessor } from './note-processor';
 
@@ -21,13 +19,7 @@ export default class Server {
   public schnorr!: Schnorr;
 
   public async start() {
-    this.connection = await createConnection({
-      type: 'sqlite',
-      database: 'db.sqlite',
-      synchronize: true,
-      logging: false,
-      entities: [Key, BlockDao, Note],
-    });
+    this.connection = await createConnection(ormConfig);
 
     const wasm = await BarretenbergWasm.new();
     await wasm.init();
