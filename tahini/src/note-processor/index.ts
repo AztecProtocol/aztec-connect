@@ -1,22 +1,24 @@
-import { Connection } from 'typeorm';
+import { Connection, Repository } from 'typeorm';
 
 import { decryptNote } from 'barretenberg/client_proofs/note';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 
-import { Note } from '../entity/note';
-import { Key } from '../entity/key';
 import { NoteDb } from '../db/note';
+import { Key } from '../entity/key';
+import { Note } from '../entity/note';
 
 export class NoteProcessor {
   private noteDb!: NoteDb;
-  private noteRepo!: any;
-  private keyRepo!: any;
+  private noteRepo!: Repository<Note>;
+  private keyRepo!: Repository<Key>;
+  public grumpkin!: Grumpkin;
 
-  public async init(connection: Connection) {
+  public async init(connection: Connection, grumpkin: Grumpkin) {
     this.noteDb = new NoteDb(connection);
     this.noteDb.init();
     this.noteRepo = connection.getRepository(Note);
     this.keyRepo = connection.getRepository(Key);
+    this.grumpkin = grumpkin;
   }
 
   /**
@@ -29,10 +31,10 @@ export class NoteProcessor {
    * data set (true)
    * @param grumpkin - grumpkin instance to use when decrypting notes
    */
-  public async processNewNotes(notes: Buffer[], blockNum: number, isNullifiers: boolean, grumpkin: Grumpkin) {
-    let notesToSave = this.formatNotes(notes, blockNum, isNullifiers);
+  public async processNewNotes(notes: Buffer[], blockNum: number, isNullifiers: boolean) {
+    const notesToSave = this.formatNotes(notes, blockNum, isNullifiers);
     const keys = await this.keyRepo.find();
-    await this.updateOwners(notesToSave, keys, grumpkin);
+    await this.updateOwners(notesToSave, keys);
   }
 
   /**
@@ -42,9 +44,9 @@ export class NoteProcessor {
    * @param key - newly registered key entity for which pre-existing notes will be 
    * @param grumpkin - grumpkin instance to use when decrypting notes
    */
-  public async processNewKey(key: Key, grumpkin: Grumpkin) {
+  public async processNewKey(key: Key) {
     const notes = await this.noteRepo.find({ where: { owner: null } }); // find all notes without owners
-    await this.updateOwners(notes, [key], grumpkin);
+    await this.updateOwners(notes, [key]);
   }
 
   /**
@@ -56,7 +58,7 @@ export class NoteProcessor {
    * data set (true)
    */
   public formatNotes(notes: Buffer[], blockNum: number, isNullifiers: boolean): Note[] {
-    let notesToSave: Note[] = notes.map(noteData => {
+    const notesToSave: Note[] = notes.map(noteData => {
       const note = new Note();
       note.blockNum = blockNum;
       note.note = noteData;
@@ -73,10 +75,10 @@ export class NoteProcessor {
    * @param keys - 
    * @param grumpkin - grumpkin instance to use when decrypting notes
    */
-  public async updateOwners(notes: Note[], keys: Key[], grumpkin: Grumpkin) {
+  public async updateOwners(notes: Note[], keys: Key[]) {
     keys.forEach((key: any) => {
       notes.forEach(note => {
-        const decryption = decryptNote(note.note, Buffer.from(key.informationKey, 'hex'), grumpkin);
+        const decryption = decryptNote(note.note, Buffer.from(key.informationKey, 'hex'), this.grumpkin);
         if (decryption) {
           const owner = decryption.ownerPubKey;
           note.owner = owner.toString('hex');

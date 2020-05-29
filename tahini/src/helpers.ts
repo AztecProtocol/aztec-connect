@@ -1,9 +1,8 @@
-import { Note, encryptNote } from 'barretenberg/client_proofs/note';
+import { encryptNote, Note } from 'barretenberg/client_proofs/note';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { randomBytes } from 'crypto';
 import { utils } from 'ethers';
 import * as encoding from 'text-encoding';
-
 
 import { Note as NoteEntity } from './entity/note';
 

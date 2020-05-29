@@ -1,12 +1,12 @@
 import Koa from 'koa';
+import bodyParser from 'koa-bodyparser';
 import compress from 'koa-compress';
 import Router from 'koa-router';
-import bodyParser from 'koa-bodyparser';
 
 import { Key } from './entity/key';
 import { Note } from './entity/Note';
 
-import { inputValidation, accountWriteValidate, validateSignature } from './middleware';
+import { accountWriteValidate, inputValidation, validateSignature } from './middleware';
 import Server from './server';
 
 const cors = require('@koa/cors');

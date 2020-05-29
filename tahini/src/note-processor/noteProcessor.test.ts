@@ -1,21 +1,21 @@
-import { Grumpkin } from 'barretenberg/ecc/grumpkin';
-import { Wallet } from 'ethers';
 import request from 'supertest';
+import { Repository } from 'typeorm';
 
 import { appFactory } from '../app';
-import Server from '../server';
 import { Key } from '../entity/key';
 import { Note } from '../entity/note';
-import { createNote, randomHex } from '../helpers';
+import { createNote } from '../helpers';
+import Server from '../server';
 
 import { randomBytes } from 'ethers/utils';
+import { NoteProcessor } from '.';
 
 describe('Note processor tests', () => {
   let api!: any;
-  let noteProcessor!: any;
+  let noteProcessor!: NoteProcessor;
   let server!: Server;
-  let keyRepo!: any;
-  let noteRepo!: any;
+  let keyRepo!: Repository<Key>;
+  let noteRepo!: Repository<Note>;
 
   beforeEach(async () => {
     server = new Server();
@@ -44,10 +44,10 @@ describe('Note processor tests', () => {
     expect(response.status).toEqual(201);
 
     // format notes and decrypt owners if possible
-    let notesToSave = noteProcessor.formatNotes([noteData], 5, false);
+    const notesToSave = noteProcessor.formatNotes([noteData], 5, false);
     const keys = await keyRepo.find();
 
-    await noteProcessor.updateOwners(notesToSave, keys, server.grumpkin);
+    await noteProcessor.updateOwners(notesToSave, keys);
     const recoveredNote = await noteRepo.find({ where: { note: noteData } });
     expect(recoveredNote.length).toEqual(1);
     expect(recoveredNote[0].owner).toEqual(id);
@@ -64,10 +64,10 @@ describe('Note processor tests', () => {
     await request(api).post('/api/account/new').send({ id: noteB.id, informationKey: noteB.informationKey, message: noteB.message, signature: noteB.signature });
 
     // format notes and decrypt owners if possible
-    let notesToSave = noteProcessor.formatNotes([noteA.noteData, dummyNote.noteData, noteB.noteData], 5, false);
+    const notesToSave = noteProcessor.formatNotes([noteA.noteData, dummyNote.noteData, noteB.noteData], 5, false);
     const keys = await keyRepo.find();
 
-    await noteProcessor.updateOwners(notesToSave, keys, server.grumpkin);
+    await noteProcessor.updateOwners(notesToSave, keys);
     const recoveredNoteA = await noteRepo.find({ where: { note: noteA.noteData } });
     const recoveredDummyNote = await noteRepo.find({ where: { note: dummyNote.noteData } });
     const recoveredNoteB = await noteRepo.find({ where: { note: noteB.noteData } });
@@ -94,7 +94,6 @@ describe('Note processor tests', () => {
       [userFirstNote.noteData, userSecondNote.noteData],
       blockNum,
       nullifier,
-      server.grumpkin,
     );
 
     // Retrieve user notes with GET request

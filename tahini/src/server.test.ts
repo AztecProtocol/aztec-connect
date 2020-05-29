@@ -2,12 +2,12 @@ import { randomBytes } from 'crypto';
 import request from 'supertest';
 
 import { appFactory } from './app';
-import Server from './server';
 import { createNote } from './helpers';
+import Server from './server';
 
 describe('Server sync', () => {
   let api: any;
-  let server: any;
+  let server: Server;
 
   beforeEach(async () => {
     server = new Server();
@@ -22,7 +22,7 @@ describe('Server sync', () => {
     api.close();
   });
 
-  it.only('should process transaction, save notes and update note owners', async () => {
+  it('should process transaction, save notes and update note owners', async () => {
     // Two users, A and B, sign up for the service
     const informationKeyA = randomBytes(32);
     const userADataNote = createNote(server, informationKeyA);

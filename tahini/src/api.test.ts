@@ -1,4 +1,3 @@
-import { Wallet } from 'ethers';
 import request from 'supertest';
 
 import { Note } from './entity/Note';
@@ -12,12 +11,12 @@ import { randomBytes } from 'ethers/utils';
 
 describe('Route tests', () => {
   let api: any;
-  let server: any;
+  let server: Server;
   let signature: any;
-  let id: any;
-  let informationKey: any;
-  let message: any;
-  let pubKey: any;
+  let id: string;
+  let informationKey: string;
+  let message: string;
+  let pubKey: string;
 
   beforeEach(async () => {
     server = new Server();
@@ -55,8 +54,8 @@ describe('Route tests', () => {
 
       const repository = server.connection.getRepository(Key);
       const retrievedData = await repository.findOne({ id: pubKey });
-      expect(retrievedData.id).toEqual(pubKey);
-      expect(retrievedData.informationKey[0]).toEqual(informationKey[0]);
+      expect(retrievedData!.id).toEqual(pubKey);
+      expect(retrievedData!.informationKey[0]).toEqual(informationKey[0]);
     });
 
     it('should get the notes associated with a user account', async () => {

@@ -5,6 +5,7 @@
     "moduleResolution": "node",
     "lib": ["dom", "esnext", "es2017.object"],
     "outDir": "dest",
+    "types": ["jest"],
     "strict": true,
     "noImplicitAny": true,
     "noImplicitThis": false,
