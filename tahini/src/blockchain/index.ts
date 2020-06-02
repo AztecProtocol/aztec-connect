@@ -49,6 +49,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
     await this.saveBlock(block);
     this.emit('block', block);
+    return block;
   }
 
   private async saveBlock(block: Block) {

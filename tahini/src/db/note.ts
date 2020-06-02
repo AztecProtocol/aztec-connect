@@ -1,16 +1,18 @@
 import { Connection, Repository } from 'typeorm';
 import { Note } from '../entity/note';
+import { BaseDb } from './Base';
 
-export class NoteDb {
-  private noteRep!: Repository<Note>;
+export class NoteDb extends BaseDb {
 
-  constructor(private connection: Connection, ) {}
+    constructor(connection: Connection) {
+        super(connection, Note);
+    }
 
-  public async init() {
-    this.noteRep = this.connection.getRepository(Note);
-  }
+    public async findByNoteData(note: Buffer) {
+        return this.rep.find({ where: { note }})
+    }
 
-  public async saveNotes(notes: Note[]) {
-    await this.noteRep.save(notes);
-  }
+    public async saveNotes(notes: any[]) {
+        return this.rep.save(notes);
+    }
 }

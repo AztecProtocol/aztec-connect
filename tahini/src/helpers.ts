@@ -2,7 +2,6 @@ import { encryptNote, Note } from 'barretenberg/client_proofs/note';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { randomBytes } from 'crypto';
 import { utils } from 'ethers';
-import * as encoding from 'text-encoding';
 
 import { Note as NoteEntity } from './entity/note';
 
@@ -19,16 +18,9 @@ export function createNoteEntity(owner: string = randomHex(20)) {
   return noteToSave;
 }
 
-export function createNote(server: any, receiverPrivKey: Buffer = randomBytes(32)) {
-  const receiverPubKey = server.grumpkin.mul(Grumpkin.one, receiverPrivKey);
-  const secret = randomBytes(32);
-  const note = new Note(receiverPubKey, secret, 100);
-  const encryptedNote = encryptNote(note, server.grumpkin); // encryptedNote = notedata
-  const informationKey = receiverPrivKey.toString('hex'); // informationKey = privateKey
-  const id = receiverPubKey.toString('hex'); // id = publicKey
-
-  const message = 'hello world';
-  const signature = server.schnorr.constructSignature(new encoding.TextEncoder().encode(message), receiverPrivKey);
-
-  return { note, id, informationKey, noteData: encryptedNote, message, signature };
+export function createNote(grumpkin: any, receiverPrivKey: Buffer = randomBytes(32)) {
+  const receiverPubKey = grumpkin.mul(Grumpkin.one, receiverPrivKey);
+  const note = new Note(receiverPubKey, receiverPrivKey, 100);
+  const encryptedNote = encryptNote(note, grumpkin); // encryptedNote = notedata
+  return encryptedNote;
 }

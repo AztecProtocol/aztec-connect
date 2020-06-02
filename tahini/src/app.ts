@@ -2,85 +2,78 @@ import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import compress from 'koa-compress';
 import Router from 'koa-router';
+import cors from '@koa/cors';
 
-import { Key } from './entity/key';
 import { Note } from './entity/Note';
 
-import { accountWriteValidate, inputValidation, validateSignature } from './middleware';
+import { inputValidation, createValidateSignature } from './middleware';
 import Server from './server';
 
-const cors = require('@koa/cors');
-
 export function appFactory(server: Server, prefix: string) {
-  const router = new Router({ prefix });
-  const keyRepo = server.connection.getRepository(Key);
-  const noteRepo = server.connection.getRepository(Note);
+    const validateSignature = createValidateSignature(server.schnorr);
 
-  router.get('/', async (ctx: Koa.Context) => {
-    ctx.body = 'OK\n';
-  });
+    const router = new Router({ prefix });
 
-  router.post(
-    '/POST/account/new',
-    inputValidation,
-    (ctx, next) => {
-      return validateSignature(ctx, next, server.schnorr);
-    },
-    (ctx, next) => {
-      return accountWriteValidate(ctx, next, keyRepo);
-    },
-    async (ctx: Koa.Context) => {
-      const key = new Key();
-      const { id, informationKey } = ctx.request.body;
-      key.id = id;
-      key.informationKey = informationKey;
-      ctx.body = 'OK\n';
-      ctx.response.status = 201;
-      await keyRepo.save(key);
+    const noteRepo = server.connection.getRepository(Note);
 
-      // notify server of new key
-      await server.registerNewKey(key);
-    },
-  );
+    router.get('/', async (ctx: Koa.Context) => {
+        ctx.body = 'OK\n';
+    });
 
-  router.post(
-    '/POST/account/key',
-    (ctx, next) => {
-      return validateSignature(ctx, next, server.schnorr);
-    },
-    async (ctx: Koa.Context) => {
-      const { id, newInformationKey } = ctx.request.body;
-      const userKey = await keyRepo.find({ where: { id } });
-      userKey[0].informationKey = newInformationKey;
+    router.post(
+        '/account/new',
+        inputValidation,
+        validateSignature,
+        async (ctx: Koa.Context, next: Function) => {
+            const { id, informationKey } = ctx.request.body;
+            const newKey = await server.keyDb.addKey(id, informationKey);
 
-      ctx.body = 'OK\n';
-      ctx.response.status = 200;
+            if (!newKey) {
+                ctx.response.status = 400;
+                next();
+            }
 
-      await keyRepo.save(userKey[0]);
-    },
-  );
+            ctx.response.status = 201;
 
-  // TODO: change this to GET and use query params or header
-  router.post(
-    '/GET/account/notes',
-    (ctx, next) => {
-      return validateSignature(ctx, next, server.schnorr);
-    },
-    async (ctx: Koa.Context) => {
-      const retrievedData = await noteRepo.find({ where: { owner: ctx.request.body.id } });
-      ctx.body = 'OK\n';
-      ctx.response.status = 200;
-      ctx.response.body = retrievedData;
-    },
-  );
+            // notify server of new key
+            await server.registerNewKey(informationKey);
+        },
+    );
 
-  const app = new Koa();
-  app.proxy = true;
-  app.use(compress());
-  app.use(cors());
-  app.use(bodyParser());
-  app.use(router.routes());
-  app.use(router.allowedMethods());
+    router.put(
+        '/account/:id',
+        validateSignature,
+        async (ctx: Koa.Context) => {
+            const { id } = ctx.params;
+            const { newInformationKey } = ctx.request.body;
 
-  return app;
+            await server.keyDb.updateKey(id, newInformationKey);
+
+            ctx.body = 'OK\n';
+            ctx.response.status = 200;
+        },
+    );
+
+    router.get(
+        '/account/:id/notes',
+        validateSignature,
+        async (ctx: Koa.Context) => {
+            const { id } = ctx.params;
+
+            const retrievedData = await noteRepo.find({ where: { owner: id } });
+            ctx.body = 'OK\n';
+            ctx.response.status = 200;
+            ctx.response.body = retrievedData;
+        },
+    );
+
+    const app = new Koa();
+    app.proxy = true;
+    app.use(compress());
+    app.use(cors());
+    app.use(bodyParser());
+    app.use(router.routes());
+    app.use(router.allowedMethods());
+
+    return app;
 }
