@@ -12,6 +12,10 @@ export class NoteDb extends BaseDb {
         return this.rep.find({ where: { note }})
     }
 
+    public async findByOwnerId(id: string) {
+        return this.rep.find({ where: { owner: id }})
+    }
+
     public async saveNotes(notes: any[]) {
         return this.rep.save(notes);
     }

@@ -9,14 +9,18 @@ import { Connection, createConnection } from 'typeorm';
 import { ormConfig } from '../ormconfig';
 import { LocalBlockchain } from './blockchain';
 import { KeyDb } from './db/key';
+import { NoteDb } from './db/note';
+import { SignatureDb } from './db/signature';
 import { MemoryFifo } from './fifo';
 import { NoteProcessor } from './note-processor';
 
 export default class Server extends EventEmitter {
     private blockQueue = new MemoryFifo<Block>();
-    public connection!: Connection;
+    private connection!: Connection;
 
     public keyDb!: KeyDb;
+    public noteDb!: NoteDb;
+    public signatureDb!: SignatureDb;
     public blockchain!: LocalBlockchain;
     public noteProcessor!: NoteProcessor;
     public grumpkin!: Grumpkin;
@@ -32,6 +36,12 @@ export default class Server extends EventEmitter {
 
         this.keyDb = new KeyDb(this.connection);
         await this.keyDb.init();
+
+        this.noteDb = new NoteDb(this.connection);
+        await this.noteDb.init();
+
+        this.signatureDb = new SignatureDb(this.connection);
+        await this.signatureDb.init();
 
         this.blockchain = new LocalBlockchain(this.connection);
         this.noteProcessor = new NoteProcessor();

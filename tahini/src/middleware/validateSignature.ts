@@ -2,7 +2,9 @@ import Koa from 'koa';
 import { Schnorr } from 'barretenberg/crypto/schnorr';
 import * as encoding from 'text-encoding';
 
-export default function createValidateSignature(schnorr: Schnorr) {
+import { SignatureDb } from '../db/signature';
+
+export default function createValidateSignature(schnorr: Schnorr, signatureDb: SignatureDb) {
     async function validateSignature(ctx: Koa.Context, next: Function) {
         let id = ctx.params.id;
         const { headers } = ctx.request;
@@ -14,6 +16,12 @@ export default function createValidateSignature(schnorr: Schnorr) {
 
         const [s, e] = ctx.request.headers['x-signature'].split(';');
         const message = ctx.request.headers['x-message'];
+        const savedSignature = await signatureDb.saveSignature(message);
+
+        if (!savedSignature) {
+            ctx.response.status = 401;
+            return;
+        }
 
         if (!id) {
             ({ id } = ctx.request.body);

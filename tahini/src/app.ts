@@ -4,17 +4,13 @@ import compress from 'koa-compress';
 import Router from 'koa-router';
 import cors from '@koa/cors';
 
-import { Note } from './entity/Note';
-
 import { inputValidation, createValidateSignature } from './middleware';
 import Server from './server';
 
 export function appFactory(server: Server, prefix: string) {
-    const validateSignature = createValidateSignature(server.schnorr);
+    const validateSignature = createValidateSignature(server.schnorr, server.signatureDb);
 
     const router = new Router({ prefix });
-
-    const noteRepo = server.connection.getRepository(Note);
 
     router.get('/', async (ctx: Koa.Context) => {
         ctx.body = 'OK\n';
@@ -60,7 +56,7 @@ export function appFactory(server: Server, prefix: string) {
         async (ctx: Koa.Context) => {
             const { id } = ctx.params;
 
-            const retrievedData = await noteRepo.find({ where: { owner: id } });
+            const retrievedData = await server.noteDb.findByOwnerId(id);
             ctx.body = 'OK\n';
             ctx.response.status = 200;
             ctx.response.body = retrievedData;
