@@ -7,8 +7,6 @@ import { BarretenbergWasm } from '../../wasm';
 
 import createDebug from 'debug';
 
-const debug = createDebug('bb:join_split_prover');
-
 export class JoinSplitProver {
   constructor(private wasm: BarretenbergWasm, private prover: Prover) {}
 
@@ -64,13 +62,9 @@ export class JoinSplitProver {
     const mem = await worker.call('bbmalloc', buf.length);
     await worker.transferToHeap(buf, mem);
     const proverPtr = await worker.call('join_split__new_prover', mem, buf.length);
-    debug('calling bbfree...');
     await worker.call('bbfree', mem);
-    debug('calling create proof...');
     const proof = await this.prover.createProof(proverPtr);
-    debug('calling delete prover...');
     await worker.call('join_split__delete_prover', proverPtr);
-    debug('calling returning...');
     return proof;
   }
 }
