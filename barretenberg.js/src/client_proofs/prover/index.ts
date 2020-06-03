@@ -55,6 +55,7 @@ export class Prover {
     await this.processProverQueue(proverPtr, circuitSize);
     timer.mark('done');
     const proofSize = await this.wasm.call('prover_export_proof', proverPtr, 0);
+    timer.mark('exported');
     const proofPtr = Buffer.from(await this.wasm.sliceMemory(0, 4)).readUInt32LE(0);
     return Buffer.from(await this.wasm.sliceMemory(proofPtr, proofPtr + proofSize));
   }
