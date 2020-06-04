@@ -5,6 +5,8 @@ import { Note } from '../note';
 import { Signature } from '../signature';
 import { BarretenbergWasm } from '../../wasm';
 
+import createDebug from 'debug';
+
 export class JoinSplitProver {
   constructor(private wasm: BarretenbergWasm, private prover: Prover) {}
 
