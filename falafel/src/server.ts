@@ -2,16 +2,16 @@ import { Block } from 'barretenberg/block_source';
 import { JoinSplitProof, JoinSplitVerifier } from 'barretenberg/client_proofs/join_split_proof';
 import { Crs } from 'barretenberg/crs';
 import { HashPath } from 'barretenberg/merkle_tree';
-import { SinglePippenger } from 'barretenberg/pippenger';
 import { Proof } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
-import moment, { Duration, Moment } from 'moment';
+import moment, { Duration } from 'moment';
 import { createConnection } from 'typeorm';
 import { LocalBlockchain } from './blockchain';
 import { MemoryFifo } from './fifo';
+import { readFileAsync } from './fs_async';
 import { ProofGenerator } from './proof_generator';
 import { Rollup } from './rollup';
 import { RollupDb } from './rollup_db';
@@ -43,7 +43,7 @@ export class Server {
   }
 
   public async start() {
-    this.proofGenerator.run();
+    await this.proofGenerator.run();
     const connection = await createConnection();
     this.blockchain = new LocalBlockchain(connection, this.config.rollupSize);
     this.rollupDb = new RollupDb(connection);
@@ -142,17 +142,21 @@ export class Server {
 
       console.log(`Creating rollup with ${txs.length} txs...`);
       const rollup = await this.createRollup(txs);
+      await this.rollupDb.deleteRollup(rollup.rollupId);
       await this.rollupDb.addRollup(rollup);
 
-      const proof = await this.proofGenerator.createProof(rollup);
+      try {
+        const proof = await this.proofGenerator.createProof(rollup);
+        if (!proof) {
+          throw new Error('Invalid proof.');
+        }
 
-      if (proof) {
         const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
         await this.blockchain.sendProof(proof, rollup.rollupId, this.config.rollupSize, viewingKeys);
         await this.worldStateDb.commit();
         this.printState();
-      } else {
-        console.log('Invalid proof.');
+      } catch (err) {
+        console.log(err.message);
         await this.worldStateDb.rollback();
         await this.rollupDb.deleteRollup(rollup.rollupId);
       }
@@ -170,25 +174,16 @@ export class Server {
   }
 
   private async createJoinSplitVerifier() {
-    console.log('Generating keys...');
-    const circuitSize = 128 * 1024;
-
-    const crs = new Crs(circuitSize);
-    await crs.download();
+    const crs = new Crs(0);
+    await crs.downloadG2Data();
 
     const barretenberg = await BarretenbergWasm.new();
     this.worker = await createWorker('0', barretenberg.module);
 
-    const pippenger = new SinglePippenger(this.worker);
-    await pippenger.init(crs.getData());
+    const key = await readFileAsync('./data/join_split/verification_key');
 
-    // We need to init the proving key to create the verification key...
-    await this.worker.call('join_split__init_proving_key');
-
-    this.joinSplitVerifier = new JoinSplitVerifier(pippenger);
-    await this.joinSplitVerifier.init(crs.getG2Data());
-
-    console.log('Done.');
+    this.joinSplitVerifier = new JoinSplitVerifier();
+    await this.joinSplitVerifier.loadKey(this.worker, key, crs.getG2Data());
   }
 
   public async receiveTx({ proofData, viewingKeys }: Proof) {

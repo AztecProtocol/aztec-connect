@@ -12,6 +12,7 @@ export class ProofGenerator {
 
   public async run() {
     this.launch();
+    await this.stdout.read(1);
   }
 
   public cancel() {

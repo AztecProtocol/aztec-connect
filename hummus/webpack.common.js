@@ -94,9 +94,6 @@ module.exports = {
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.wasm'],
-    alias: {
-      'barretenberg-es': path.resolve(__dirname, '../barretenberg.js/dest-es'),
-    },
   },
   devServer: {
     hot: true,

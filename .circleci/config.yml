@@ -6,16 +6,12 @@ setup_env: &setup_env
       LAST_SUCCESSFUL_BUILD_URL="https://circleci.com/api/v1.1/project/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/tree/master?filter=successful&limit=30"
       echo export LAST_SUCCESSFUL_COMMIT=`curl -Ss -u "$CIRCLE_TOKEN:" $LAST_SUCCESSFUL_BUILD_URL | jq -r '[.[] | select(.build_parameters.CIRCLE_JOB != "toolchains")][0].vcs_revision'` >> $BASH_ENV
       cat $BASH_ENV
-      docker system info
 
-check_for_bb_changes: &check_for_bb_changes
-  run:
-    name: 'Check for changes'
-    command: |
-      if ! git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q ^barretenberg/; then
-        echo No changes in ./barretenberg since last successful master commit.
-        circleci step halt
-      fi
+check_for_rebuild: &check_for_rebuild |
+    if ! git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q -f .rebuild_patterns; then
+      echo No changes matching .rebuild_patterns since last successful master commit.
+      circleci step halt
+    fi
 
 version: 2.1
 jobs:
@@ -65,7 +61,10 @@ jobs:
     steps:
       - *setup_env
       - checkout
-      - *check_for_bb_changes
+      - run:
+          name: 'Check for rebuild'
+          working_directory: barretenberg
+          command: *check_for_rebuild
       - run:
           name: 'Build and test'
           working_directory: barretenberg
@@ -81,7 +80,10 @@ jobs:
     steps:
       - *setup_env
       - checkout
-      - *check_for_bb_changes
+      - run:
+          name: 'Check for rebuild'
+          working_directory: barretenberg
+          command: *check_for_rebuild
       - run:
           name: 'Build'
           working_directory: barretenberg
@@ -93,6 +95,12 @@ jobs:
           working_directory: barretenberg
           command: |
             docker-compose run x86_64-linux-clang
+      - run:
+          name: 'Push'
+          working_directory: barretenberg
+          command: |
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/barretenberg:x86_64-linux-clang
 
   wasm-linux-clang:
     machine:
@@ -102,7 +110,10 @@ jobs:
     steps:
       - *setup_env
       - checkout
-      - *check_for_bb_changes
+      - run:
+          name: 'Check for rebuild'
+          working_directory: barretenberg
+          command: *check_for_rebuild
       - run:
           name: 'Build and test'
           working_directory: barretenberg
@@ -116,24 +127,76 @@ jobs:
             docker push aztecprotocol/barretenberg:wasm-linux-clang
 
   barretenberg-js:
-    machine:
-      image: ubuntu-1604:201903-01
-      docker_layer_caching: true
-    resource_class: large
+    docker:
+      - image: aztecprotocol/build-image
     steps:
       - *setup_env
       - checkout
       - run:
-          name: 'Check for changes'
-          command: |
-            if ! git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q ^barretenberg; then
-              circleci step halt
-            fi
+          name: 'Check for rebuild'
+          working_directory: barretenberg.js
+          command: *check_for_rebuild
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
-          name: 'Test'
+          name: 'Build and test'
           working_directory: barretenberg.js
           command: |
-            docker build --pull .
+            docker build --pull -t aztecprotocol/barretenberg.js:latest .
+      - run:
+          name: 'Push'
+          working_directory: barretenberg.js
+          command: |
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/barretenberg.js:latest
+
+  falafel:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - *setup_env
+      - checkout
+      - run:
+          name: 'Check for rebuild'
+          working_directory: falafel
+          command: *check_for_rebuild
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: 'Build and test'
+          working_directory: falafel
+          command: |
+            docker build --pull -t aztecprotocol/falafel:latest .
+      - run:
+          name: 'Push'
+          working_directory: falafel
+          command: |
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/falafel:latest
+
+  hummus:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - *setup_env
+      - checkout
+      - run:
+          name: 'Check for rebuild'
+          working_directory: hummus
+          command: *check_for_rebuild
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: 'Build and test'
+          working_directory: hummus
+          command: |
+            docker build --pull -t aztecprotocol/hummus:latest .
+      - run:
+          name: 'Push'
+          working_directory: hummus
+          command: |
+            docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+            docker push aztecprotocol/hummus:latest
 
 workflows:
   build:
@@ -151,3 +214,10 @@ workflows:
       - barretenberg-js:
           requires:
             - wasm-linux-clang
+      - falafel:
+          requires:
+            - barretenberg-js
+      - hummus:
+          requires:
+            - barretenberg-js
+
