@@ -8,11 +8,11 @@ export class SingleFft implements Fft {
   constructor(private wasm: BarretenbergWorker) {}
 
   public async init(circuitSize: number) {
-    this.domainPtr = await this.wasm.call("new_evaluation_domain", circuitSize);
+    this.domainPtr = await this.wasm.call('new_evaluation_domain', circuitSize);
   }
 
   public async destroy() {
-    await this.wasm.call("delete_evaluation_domain", this.domainPtr);
+    await this.wasm.call('delete_evaluation_domain', this.domainPtr);
   }
 
   public async fft(coefficients: Uint8Array, constant: Uint8Array) {

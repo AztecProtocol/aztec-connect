@@ -3,7 +3,7 @@ import { SinglePippenger } from './single_pippenger';
 import createDebug from 'debug';
 import { WorkerPool } from '../wasm/worker_pool';
 
-const debug = createDebug('bb:pippenger')
+const debug = createDebug('bb:pippenger');
 
 export class PooledPippenger implements Pippenger {
   public pool: SinglePippenger[] = [];
@@ -11,11 +11,13 @@ export class PooledPippenger implements Pippenger {
   public async init(crsData: Uint8Array, pool: WorkerPool) {
     const start = new Date().getTime();
     debug(`initializing: ${new Date().getTime() - start}ms`);
-    this.pool = await Promise.all(pool.workers.map(async w => {
-      const p = new SinglePippenger(w);
-      await p.init(crsData);
-      return p;
-    }));
+    this.pool = await Promise.all(
+      pool.workers.map(async w => {
+        const p = new SinglePippenger(w);
+        await p.init(crsData);
+        return p;
+      }),
+    );
     debug(`initalization took: ${new Date().getTime() - start}ms`);
   }
 

@@ -8,21 +8,15 @@ const debug = createDebug('bb:worker_pool');
 export class WorkerPool {
   public workers: ModuleThread<BarretenbergWorker>[] = [];
 
-  public async init(poolSize: number) {
+  public async init(module: WebAssembly.Module, poolSize: number) {
     debug(`creating ${poolSize} workers...`);
     const start = new Date().getTime();
-    const mainWorker = await createWorker('0');
-    const module = await mainWorker.init();
-    this.workers.push(mainWorker);
-    const workers = await Promise.all(Array(poolSize-1).fill(0).map((_,i) => this.initWorker(module, i)));
-    this.workers = [mainWorker, ...workers];
+    this.workers = await Promise.all(
+      Array(poolSize)
+        .fill(0)
+        .map((_, i) => createWorker(`${i}`, module)),
+    );
     debug(`created workers: ${new Date().getTime() - start}ms`);
-  }
-
-  private async initWorker(module: WebAssembly.Module, i: number) {
-    const w = await createWorker(`${i}`);
-    await w.init(module);
-    return w;
   }
 
   public async destroy() {

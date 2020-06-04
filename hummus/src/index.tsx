@@ -1,66 +1,79 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import { ProofCreator } from './create_proof';
+import { BrowserRouter, Switch, Route, Link } from 'react-router-dom';
+import { History } from 'history';
+import { FlexBox, Block, SwitchInput, TextButton, Icon } from '@aztec/guacamole-ui';
+import { App } from './app';
+import { JoinSplitForm } from './join_split_form';
+import { ThemeContext, themes } from './config/context';
+import { Terminal2020 } from './terminal2020';
+import styles from './index.scss';
+import './styles/guacamole.css';
+import debug from 'debug';
+import { Terminal, TerminalComponent } from './terminal';
 require('barretenberg-es/wasm/barretenberg.wasm');
 
-interface LandingPageProps {
-  proofCreator: ProofCreator;
-}
+function ThemedForm({ app }: { app: App }) {
+  const [theme, setTheme] = useState(themes.darkTheme);
 
-enum State {
-  UNINITIALIZED = 'Uninitialized',
-  INITIALIZING = 'Initializing',
-  INITIALIZED = 'Initialized',
-}
-
-enum ProofState {
-  NADA = 'Nada',
-  RUNNING = 'Running',
-  FAILED = 'Failed',
-  VERIFIED = 'Verified',
-}
-
-function LandingPage({ proofCreator }: LandingPageProps) {
-  const [init, setInit] = useState(State.UNINITIALIZED);
-  const [result, setResult] = useState(ProofState.NADA);
-  const [time, setTime] = useState(0);
   return (
-    <form>
-      <p>Init State: {init.toString()}</p>
-      <p>Proof State: {result.toString()}</p>
-      <p>Proof Time: {time.toString()}ms</p>
-      <label>Press the button: </label>
-      <input
-        type="button"
-        value="The Button"
-        onClick={async () => {
-          switch (init) {
-            case State.UNINITIALIZED: {
-              setInit(State.INITIALIZING);
-              await proofCreator.init();
-              setInit(State.INITIALIZED);
-              break;
-            }
-            case State.INITIALIZED: {
-              setResult(ProofState.RUNNING);
-              const start = new Date().getTime();
-              const p = await proofCreator.createProof();
-              setTime(new Date().getTime() - start);
-              const r = await proofCreator.verifyProof(p);
-              setResult(r ? ProofState.VERIFIED : ProofState.FAILED);
-              break;
-            }
-          }
-        }}
-        disabled={init == State.INITIALIZING || result == ProofState.RUNNING}
-      ></input>
-    </form>
+    <ThemeContext.Provider value={theme}>
+      <Block className={styles.container} padding="xl" align="center" background={theme.background} stretch>
+        <FlexBox align="center">
+          <div className={styles.content}>
+            <JoinSplitForm app={app} theme={theme} />
+            <Block top="xl">
+              <FlexBox valign="center" align="space-between">
+                <TextButton theme="implicit" color={theme.link} href="/terminal" Link={Link}>
+                  <FlexBox valign="center">
+                    <Block right="xs">Terminal Mode</Block>
+                    <Icon name="chevron_right" />
+                  </FlexBox>
+                </TextButton>
+                <SwitchInput
+                  theme={theme.theme}
+                  onClick={() => setTheme(theme.theme === 'light' ? themes.darkTheme : themes.lightTheme)}
+                  checked={theme.theme === 'light'}
+                />
+              </FlexBox>
+            </Block>
+          </div>
+        </FlexBox>
+      </Block>
+    </ThemeContext.Provider>
+  );
+}
+
+function LandingPage({ app }: { app: App }) {
+  return (
+    <Switch>
+      <Route
+        exact
+        path="/terminal-2020"
+        component={({ history }: { history: History }) => <Terminal2020 app={app} onExit={() => history.push('/')} />}
+      />
+      <Route
+        path="/terminal"
+        component={({ history }: { history: History }) => (
+          <TerminalComponent app={app} terminal={new Terminal(12, 40)} onExit={() => history.push('/')} />
+        )}
+      />
+      <Route>
+        <ThemedForm app={app} />
+      </Route>
+    </Switch>
   );
 }
 
 async function main() {
-  const proofCreator = new ProofCreator();
-  ReactDOM.render(<LandingPage proofCreator={proofCreator} />, document.getElementById('root'));
+  debug.enable('bb:*');
+  const app = new App();
+  ReactDOM.render(
+    <BrowserRouter>
+      <LandingPage app={app} />
+    </BrowserRouter>,
+    document.getElementById('root'),
+  );
 }
 
 // tslint:disable-next-line:no-console

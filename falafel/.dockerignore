@@ -1,4 +1,7 @@
+Dockerfile
+data
 dest
 node_modules
-store
 **/.terraform
+world_state.db
+db.sqlite

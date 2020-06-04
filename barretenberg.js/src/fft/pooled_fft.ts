@@ -24,8 +24,8 @@ export class PooledFft implements Fft {
   public async init(circuitSize: number) {
     const start = new Date().getTime();
     debug(`initializing: ${new Date().getTime() - start}ms`);
-    await Promise.all(this.ffts.map(f => f.init(circuitSize)))
-    this.ffts.forEach(async (w) => this.processJobs(w));
+    await Promise.all(this.ffts.map(f => f.init(circuitSize)));
+    this.ffts.forEach(async w => this.processJobs(w));
     debug(`initalization took: ${new Date().getTime() - start}ms`);
   }
 
@@ -39,18 +39,16 @@ export class PooledFft implements Fft {
       if (!job) {
         break;
       }
-      const result = await (job.inverse
-        ? worker.ifft(job.coefficients)
-        : worker.fft(job.coefficients, job.constant!));
+      const result = await (job.inverse ? worker.ifft(job.coefficients) : worker.fft(job.coefficients, job.constant!));
       job.resolve(result);
     }
   }
 
   public async fft(coefficients: Uint8Array, constant: Uint8Array): Promise<Uint8Array> {
-    return await new Promise((resolve) => this.queue.put({ coefficients, constant, inverse: false, resolve }));
+    return await new Promise(resolve => this.queue.put({ coefficients, constant, inverse: false, resolve }));
   }
 
   public async ifft(coefficients: Uint8Array): Promise<Uint8Array> {
-    return await new Promise((resolve) => this.queue.put({ coefficients, inverse: true, resolve }));
+    return await new Promise(resolve => this.queue.put({ coefficients, inverse: true, resolve }));
   }
 }

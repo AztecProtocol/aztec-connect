@@ -9,7 +9,10 @@
     "noImplicitAny": true,
     "noImplicitThis": false,
     "esModuleInterop": true,
-    "declaration": true
+    "declaration": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "inlineSourceMap": true
   },
   "include": ["src"]
 }
