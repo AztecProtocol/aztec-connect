@@ -1,10 +1,8 @@
 .vscode
 .viscode
-barretenberg/build*
-barretenberg/src/wasi-sdk-8.0
-barretenberg/srs_db/ignition
 **/dest*
 **/dist
 **/node_modules
+**/.terraform
 yarn.lock
 *.log

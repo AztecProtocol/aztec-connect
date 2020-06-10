@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q -f .rebuild_patterns; then
+  exit 0
+else
+  exit 1
+fi

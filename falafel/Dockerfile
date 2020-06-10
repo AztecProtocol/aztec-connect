@@ -1,36 +1,18 @@
-FROM aztecprotocol/barretenberg.js:latest
-FROM aztecprotocol/barretenberg:x86_64-linux-clang
+FROM 278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg:x86_64-linux-clang
+FROM 278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg.js:latest
 
-FROM node:12
-COPY --from=1 /usr/src/barretenberg/build/src/aztec/rollup/db_cli/db_cli /usr/src/barretenberg/build/src/aztec/rollup/db_cli/db_cli
-COPY --from=1 /usr/src/barretenberg/build/src/aztec/rollup/rollup_cli/rollup_cli /usr/src/barretenberg/build/src/aztec/rollup/rollup_cli/rollup_cli
-COPY --from=1 /usr/src/barretenberg/srs_db/ignition /usr/src/barretenberg/srs_db/ignition
-COPY --from=1 /usr/local/clang_9.0.0/lib/libc++.so.1 /usr/local/clang_9.0.0/lib/libc++.so.1
-COPY --from=1 /usr/local/clang_9.0.0/lib/libc++abi.so.1 /usr/local/clang_9.0.0/lib/libc++abi.so.1
-COPY --from=1 /usr/local/clang_9.0.0/lib/libomp.so /usr/local/clang_9.0.0/lib/libomp.so
-ENV LD_LIBRARY_PATH /usr/local/clang_9.0.0/lib
-WORKDIR /usr/src/barretenberg.js
-COPY --from=0 /usr/src/barretenberg.js/dest .
-RUN yarn install && yarn link
+FROM node:12-alpine AS builder
+RUN apk update && apk add --no-cache build-base python llvm9-libs
+COPY --from=0 /usr/src/barretenberg/build/src/aztec/rollup/db_cli/db_cli /usr/src/barretenberg/build/src/aztec/rollup/db_cli/db_cli
+COPY --from=0 /usr/src/barretenberg/build/src/aztec/rollup/rollup_cli/rollup_cli /usr/src/barretenberg/build/src/aztec/rollup/rollup_cli/rollup_cli
+COPY --from=1 /usr/src/barretenberg.js/dest /usr/src/barretenberg.js/dest
 WORKDIR /usr/src/falafel
-COPY package.json .
-RUN yarn install
-RUN yarn link barretenberg
 COPY . .
-RUN yarn test && yarn build
+RUN yarn install && yarn test && yarn build && rm -rf node_modules && yarn install --production && yarn cache clean
 
-# Create minimal sized runtime image.
-FROM ubuntu:latest
-RUN apt update && \
- apt install -y curl && \
- curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
- curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
- echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
- apt update && apt install -y nodejs yarn && \
- apt clean
-ENV LD_LIBRARY_PATH /usr/local/clang_9.0.0/lib
-COPY --from=2 /usr/src /usr/src
-COPY --from=2 /usr/local/clang_9.0.0 /usr/local/clang_9.0.0
-COPY --from=2 /usr/local/share/.config /usr/local/share/.config
+FROM node:12-alpine
+RUN apk update && apk add --no-cache llvm9-libs
+COPY --from=builder /usr/src /usr/src
 WORKDIR /usr/src/falafel
-CMD [ "node", "./dest"]
+CMD ["yarn", "start"]
+EXPOSE 80

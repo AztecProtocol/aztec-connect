@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+[ ! -f /usr/local/bin/terraform ] || exit 0
+
+cd $HOME
+TERRAFORM_VERSION=0.12.16
+curl -sSL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip -o terraform.zip
+unzip terraform.zip
+sudo mv terraform /usr/local/bin/
+rm terraform.zip

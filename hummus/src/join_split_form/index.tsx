@@ -137,7 +137,7 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
       <FormField label="Proof Time">{time.toString()}ms</FormField>
       {initState !== InitState.INITIALIZED && (
         <Init
-          initialServerUrl="http://localhost"
+          initialServerUrl={window.location.protocol + '//' + window.location.hostname}
           onSubmit={initialize}
           isLoading={initState === InitState.INITIALIZING}
         />

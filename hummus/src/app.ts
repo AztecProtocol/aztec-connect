@@ -166,7 +166,7 @@ export class App extends EventEmitter {
   }
 
   public async getStatus() {
-      return await this.rollupProvider.status();
+    return await this.rollupProvider.status();
   }
 
   private async initUsers() {

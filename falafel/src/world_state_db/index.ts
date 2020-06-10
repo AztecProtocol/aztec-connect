@@ -2,6 +2,7 @@ import { HashPath } from 'barretenberg/merkle_tree';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
+import { mkdirAsync } from '../fs_async';
 
 export class WorldStateDb {
   private proc?: ChildProcess;
@@ -101,7 +102,8 @@ export class WorldStateDb {
   }
 
   private async launch() {
-    const proc = (this.proc = spawn(this.binPath));
+    await mkdirAsync('./data', { recursive: true });
+    const proc = (this.proc = spawn(this.binPath, ['./data/world_state.db']));
 
     proc.stderr.on('data', data => {});
     // proc.stderr.on('data', data => console.log(data.toString().trim()));
