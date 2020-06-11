@@ -11,7 +11,7 @@ IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1-$TAG
 DOCKERFILE=${2:-./Dockerfile}
 
 # Check if we should rebuild.
-[ check_rebuild ] || (echo "No rebuild necessary." && exit 0)
+check_rebuild || (echo "No rebuild necessary." && exit 0)
 
 # Ensure ECR repository exists.
 ensure_repo $REPOSITORY $ECR_REGION
