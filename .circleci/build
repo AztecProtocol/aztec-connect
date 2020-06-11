@@ -34,7 +34,7 @@ for PARENT in $PARENTS; do
   if docker pull $PARENT_IMAGE_URI > /dev/null 2>&1; then
     docker tag $PARENT_IMAGE_URI $ECR_URL/$PARENT
   else
-    docker pull $ECR_URL/$PARENT > /dev/null 2>&1
+    docker pull $ECR_URL/$PARENT_REPO:cache-master-$PARENT_TAG > /dev/null 2>&1
   fi
 done
 
