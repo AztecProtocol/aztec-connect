@@ -1,5 +1,10 @@
 import { BlockSource, Block } from 'barretenberg-es/block_source';
-import { LocalRollupProvider, RollupProvider, ServerRollupProvider, Proof } from 'barretenberg-es/rollup_provider';
+import {
+  LocalRollupProvider,
+  RollupProvider,
+  ServerRollupProvider,
+  RollupProviderExplorer,
+} from 'barretenberg-es/rollup_provider';
 import { ServerBlockSource } from 'barretenberg-es/block_source/server_block_source';
 import { JoinSplitProver, JoinSplitVerifier } from 'barretenberg-es/client_proofs/join_split_proof';
 import { Prover } from 'barretenberg-es/client_proofs/prover';
@@ -17,6 +22,7 @@ import leveljs from 'level-js';
 import levelup from 'levelup';
 import { DbUser, DexieDatabase } from './database';
 import { JoinSplitProofCreator } from './join_split_proof';
+import { TxsState } from './txs_state';
 import { UserState } from './user_state';
 import { Grumpkin } from 'barretenberg-es/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg-es/fifo';
@@ -33,6 +39,52 @@ function dbUserToUser(dbUser: DbUser): User {
   };
 }
 
+export enum AppInitState {
+  UNINITIALIZED = 'Uninitialized',
+  INITIALIZING = 'Initializing',
+  INITIALIZED = 'Initialized',
+}
+
+export enum AppEvent {
+  INIT = 'INIT',
+  PROOF = 'PROOF',
+  UPDATED_BALANCE = 'UPDATED_BALANCE',
+  UPDATED_ACCOUNT = 'UPDATED_ACCOUNT',
+  UPDATED_USERS = 'UPDATED_USERS',
+  UPDATED_ROLLUPS = 'UPDATED_ROLLUPS',
+  UPDATED_TXS = 'UPDATED_TXS',
+  UPDATED_USER_TXS = 'UPDATED_USER_TXS',
+}
+
+export enum ProofState {
+  NADA = 'Nada',
+  RUNNING = 'Running',
+  FAILED = 'Failed',
+  FINISHED = 'Finished',
+}
+
+export enum ProofApi {
+  NADA = 'NADA',
+  DEPOSIT = 'DEPOSIT',
+  WITHDRAW = 'WITHDRAW',
+  TRANSFER = 'TRANSFER',
+}
+
+interface ProofInput {
+  userId: number;
+  value: number;
+  recipient: Buffer;
+  created: Date;
+}
+
+export interface ProofEvent {
+  state: ProofState;
+  api: ProofApi;
+  txId?: string;
+  input?: ProofInput;
+  time?: number;
+}
+
 export class App extends EventEmitter {
   private pool!: WorkerPool;
   private joinSplitProver!: JoinSplitProver;
@@ -42,20 +94,33 @@ export class App extends EventEmitter {
   private users: User[] = [];
   private userStates: UserState[] = [];
   private joinSplitProofCreator!: JoinSplitProofCreator;
-  private rollupProviderUrl = '';
+  private rollupProviderUrl = 'http://localhost';
   private rollupProvider!: RollupProvider;
+  private rollupProviderExplorer = new RollupProviderExplorer(new URL(this.rollupProviderUrl));
   private blockSource!: BlockSource;
   private blockQueue!: MemoryFifo<Block>;
   private grumpkin!: Grumpkin;
   private blake2s!: Blake2s;
   private pedersen!: Pedersen;
   private db = new DexieDatabase();
+  private txsState = new TxsState(this.rollupProviderExplorer);
   private leveldb = levelup(leveljs('hummus'));
-  private initialized = false;
+  private initState = AppInitState.UNINITIALIZED;
+  private proof: ProofEvent = { state: ProofState.NADA, api: ProofApi.NADA };
+
+  constructor() {
+    super();
+  }
 
   public async init(serverUrl: string) {
-    this.rollupProviderUrl = serverUrl;
+    this.updateInitState(AppInitState.INITIALIZING);
     const circuitSize = 128 * 1024;
+
+    if (serverUrl !== this.rollupProviderUrl) {
+      this.rollupProviderUrl = serverUrl;
+      this.rollupProviderExplorer = new RollupProviderExplorer(new URL(serverUrl));
+      this.txsState = new TxsState(this.rollupProviderExplorer);
+    }
 
     let crsData = await this.db.getKey(`crs-${circuitSize}`);
     let g2Data = await this.db.getKey(`crs-g2-${circuitSize}`);
@@ -120,11 +185,29 @@ export class App extends EventEmitter {
       }
     }
 
-    this.initialized = true;
+    this.updateInitState(AppInitState.INITIALIZED);
+  }
+
+  private updateInitState(state: AppInitState) {
+    this.initState = state;
+    this.emit(AppEvent.INIT, state);
+  }
+
+  private updateCurrentProof(proof: ProofEvent) {
+    this.proof = proof;
+    this.emit(AppEvent.PROOF, proof);
   }
 
   public isInitialized() {
-    return this.initialized;
+    return this.initState === AppInitState.INITIALIZED;
+  }
+
+  public getInitState() {
+    return this.initState;
+  }
+
+  public getCurrentProof() {
+    return this.proof;
   }
 
   public getDataRoot() {
@@ -145,10 +228,14 @@ export class App extends EventEmitter {
   }
 
   public async destroy() {
+    if (!this.isInitialized()) return;
+
+    this.removeAllListeners();
     await this.pool.destroy();
     this.blockSource.stop();
     this.blockSource.removeAllListeners();
     this.blockQueue.cancel();
+    this.txsState.stop();
   }
 
   private async startNewSession(userId: number = 0) {
@@ -218,36 +305,135 @@ export class App extends EventEmitter {
 
       await this.worldState.processBlock(block);
 
-      const updates = await Promise.all(this.userStates.map(us => us.processBlock(block)));
-      if (updates.some(x => x)) {
-        this.emit('updated');
+      const updates = await Promise.all(
+        this.userStates.map(async us => {
+          const updated = await us.processBlock(block);
+          return { userId: us.getUser().id, updated };
+        }),
+      );
+      if (updates.some(x => x.updated)) {
+        this.emit(AppEvent.UPDATED_BALANCE, this.getBalance());
+        updates.filter(u => u.updated).forEach(u => this.emit(AppEvent.UPDATED_USER_TXS, u.userId));
       }
 
       window.localStorage.setItem('syncedToBlock', block.blockNum.toString());
 
       const diff = this.getBalance() - balanceBefore;
-      if (this.initialized && diff !== 0) {
+      if (this.isInitialized() && diff !== 0) {
         this.log(`balance updated: ${this.getBalance()} (${diff >= 0 ? '+' : ''}${diff})`);
       }
     }
   }
 
   public async deposit(value: number) {
+    const created = Date.now();
     const user = this.getUser();
-    const proof = await this.joinSplitProofCreator.createProof(value, 0, 0, user, user.publicKey);
-    await this.rollupProvider.sendProof(proof);
+    const recipient = user.publicKey;
+    const input = { userId: user.id, value, recipient, created: new Date(created) };
+    this.updateCurrentProof({ api: ProofApi.DEPOSIT, state: ProofState.RUNNING, input });
+    try {
+      const { proof, outputNote1, outputNote2 } = await this.joinSplitProofCreator.createProof(
+        value,
+        0,
+        0,
+        user,
+        recipient,
+      );
+      const { txId } = await this.rollupProvider.sendProof(proof);
+      const userState = this.getUserState(user.id);
+      await userState.addUserTx({ action: 'DEPOSIT', txId, outputNote1, outputNote2, settled: false, ...input });
+      this.emit(AppEvent.UPDATED_USER_TXS, user.id);
+      this.updateCurrentProof({
+        api: ProofApi.DEPOSIT,
+        state: ProofState.FINISHED,
+        txId,
+        input,
+        time: Date.now() - created,
+      });
+    } catch (e) {
+      debug(e);
+      this.updateCurrentProof({ api: ProofApi.DEPOSIT, state: ProofState.FAILED, input, time: Date.now() - created });
+    }
   }
 
   public async withdraw(value: number) {
+    const created = Date.now();
     const user = this.getUser();
-    const proof = await this.joinSplitProofCreator.createProof(0, value, 0, user, user.publicKey);
-    await this.rollupProvider.sendProof(proof);
+    const recipient = user.publicKey;
+    const input = { userId: user.id, value, recipient, created: new Date(created) };
+    this.updateCurrentProof({ api: ProofApi.WITHDRAW, state: ProofState.RUNNING, input });
+    try {
+      const { proof, inputNote1, inputNote2, outputNote1, outputNote2 } = await this.joinSplitProofCreator.createProof(
+        0,
+        value,
+        0,
+        user,
+        recipient,
+      );
+      const { txId } = await this.rollupProvider.sendProof(proof);
+      const userState = this.getUserState(user.id);
+      await userState.addUserTx({
+        action: 'WITHDRAW',
+        txId,
+        inputNote1,
+        inputNote2,
+        outputNote1,
+        outputNote2,
+        settled: false,
+        ...input,
+      });
+      this.emit(AppEvent.UPDATED_USER_TXS, user.id);
+      this.updateCurrentProof({
+        api: ProofApi.WITHDRAW,
+        state: ProofState.FINISHED,
+        txId,
+        input,
+        time: Date.now() - created,
+      });
+    } catch (e) {
+      debug(e);
+      this.updateCurrentProof({ api: ProofApi.WITHDRAW, state: ProofState.FAILED, input, time: Date.now() - created });
+    }
   }
 
-  public async transfer(value: number, receiverPubKey: Buffer) {
+  public async transfer(value: number, recipientStr: string) {
+    const created = Date.now();
     const user = this.getUser();
-    const proof = await this.joinSplitProofCreator.createProof(0, 0, value, user, receiverPubKey);
-    await this.rollupProvider.sendProof(proof);
+    const recipient = Buffer.from(recipientStr, 'hex');
+    const input = { userId: user.id, value, recipient, created: new Date(created) };
+    this.updateCurrentProof({ api: ProofApi.TRANSFER, state: ProofState.RUNNING, input });
+    try {
+      const { proof, inputNote1, inputNote2, outputNote1, outputNote2 } = await this.joinSplitProofCreator.createProof(
+        0,
+        0,
+        value,
+        user,
+        recipient,
+      );
+      const { txId } = await this.rollupProvider.sendProof(proof);
+      const userState = this.getUserState(user.id);
+      await userState.addUserTx({
+        action: 'TRANSFER',
+        txId,
+        inputNote1,
+        inputNote2,
+        outputNote1,
+        outputNote2,
+        settled: false,
+        ...input,
+      });
+      this.emit(AppEvent.UPDATED_USER_TXS, user.id);
+      this.updateCurrentProof({
+        api: ProofApi.TRANSFER,
+        state: ProofState.FINISHED,
+        txId,
+        input,
+        time: Date.now() - created,
+      });
+    } catch (e) {
+      debug(e);
+      this.updateCurrentProof({ api: ProofApi.TRANSFER, state: ProofState.FAILED, input, time: Date.now() - created });
+    }
   }
 
   private getUserState(userId: number) {
@@ -259,7 +445,7 @@ export class App extends EventEmitter {
   }
 
   public getUsers() {
-    return this.users;
+    return [...this.users];
   }
 
   public async createUser(alias?: string) {
@@ -270,6 +456,7 @@ export class App extends EventEmitter {
     const userState = new UserState(user, this.grumpkin, this.blake2s, this.db);
     await userState.init();
     this.userStates.push(userState);
+    this.emit(AppEvent.UPDATED_USERS, [...this.users]);
     return user;
   }
 
@@ -281,6 +468,7 @@ export class App extends EventEmitter {
     const user: User = { id: users.length, publicKey, alias };
     this.users.push(user);
     this.db.addUser(user);
+    this.emit(AppEvent.UPDATED_USERS, [...this.users]);
     return user;
   }
 
@@ -298,13 +486,35 @@ export class App extends EventEmitter {
       this.worldState,
       this.grumpkin,
     );
-    this.emit('updated');
+    this.emit(AppEvent.UPDATED_ACCOUNT, this.user);
+    this.emit(AppEvent.UPDATED_BALANCE, this.getBalance());
     return user;
   }
 
   public getBalance(userIdOrAlias?: string | number) {
     const user = userIdOrAlias ? this.findUser(userIdOrAlias) || this.user : this.user;
     return this.getUserState(user.id).getBalance();
+  }
+
+  public getLatestRollups() {
+    return this.txsState.getLatestRollups();
+  }
+
+  public getLatestTxs() {
+    return this.txsState.getLatestTxs();
+  }
+
+  public getUserTxs(userId: number) {
+    const userState = this.getUserState(userId);
+    return userState ? userState.getUserTxs() : [];
+  }
+
+  public async getRollup(id: number) {
+    return this.txsState.getRollup(id);
+  }
+
+  public async getTx(txId: string) {
+    return this.txsState.getTx(txId);
   }
 
   public findUser(userIdOrAlias: string | number, remote: boolean = false) {
@@ -317,8 +527,19 @@ export class App extends EventEmitter {
     return user;
   }
 
+  public startTrackingGlobalState() {
+    this.txsState.on('rollups', rollups => this.emit(AppEvent.UPDATED_ROLLUPS, rollups));
+    this.txsState.on('txs', txs => this.emit(AppEvent.UPDATED_TXS, txs));
+    this.txsState.start();
+  }
+
+  public stopTrackingGlobalState() {
+    this.txsState.removeAllListeners();
+    this.txsState.stop();
+  }
+
   public async clearNoteData() {
-    if (this.initialized) {
+    if (this.isInitialized()) {
       this.blockSource.stop();
       this.blockSource.removeAllListeners();
       this.blockQueue.cancel();
@@ -327,8 +548,9 @@ export class App extends EventEmitter {
     await this.leveldb.clear();
     localStorage.removeItem('syncedToBlock');
     await this.db.clearNote();
+    await this.db.clearUserTxState();
 
-    if (this.initialized) {
+    if (this.isInitialized()) {
       const userId = this.user.id;
       await this.startNewSession(userId);
     }

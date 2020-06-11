@@ -1,13 +1,24 @@
 import React, { PureComponent } from 'react';
+import styled from 'styled-components';
 import createDebug from 'debug';
 import { App } from '../app';
 import { Display, Text } from './display';
 import { header } from './header';
 import { UserInput } from './user_input';
 import { command, toArgv, toOptions } from './command';
-import styles from './terminal.scss';
 
 const debug = createDebug('bb:terminal');
+
+const TerminalContainer = styled.div`
+  width: 100%;
+  height: 100vh;
+  overflow: auto;
+  font-family: 'Courier New', Courier, monospace;
+
+  &:focus {
+    outline: none;
+  }
+`;
 
 export interface TerminalProps {
   app: App;
@@ -23,7 +34,7 @@ interface State {
 }
 
 export class Terminal2020 extends PureComponent<TerminalProps, State> {
-  private holder: any;
+  private container: any;
 
   constructor(props: TerminalProps) {
     super(props);
@@ -49,7 +60,7 @@ export class Terminal2020 extends PureComponent<TerminalProps, State> {
   }
 
   setRef = (ref: any) => {
-    this.holder = ref;
+    this.container = ref;
   };
 
   handleFocus = () => {
@@ -273,9 +284,9 @@ export class Terminal2020 extends PureComponent<TerminalProps, State> {
   }
 
   scrollToBottom() {
-    if (!this.holder) return;
+    if (!this.container) return;
 
-    this.holder.scrollTop = this.holder.scrollHeight;
+    this.container.scrollTop = this.container.scrollHeight;
   }
 
   log = async (newContent: Text[]) => {
@@ -302,15 +313,9 @@ export class Terminal2020 extends PureComponent<TerminalProps, State> {
     const content = [...staticContent, ...inputContent];
 
     return (
-      <div
-        ref={this.setRef}
-        className={styles.terminal}
-        onFocus={this.handleFocus}
-        onBlur={this.handleBlur}
-        tabIndex={0}
-      >
+      <TerminalContainer ref={this.setRef} onFocus={this.handleFocus} onBlur={this.handleBlur} tabIndex={0}>
         <Display content={content} />
-      </div>
+      </TerminalContainer>
     );
   }
 }

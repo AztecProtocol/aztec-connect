@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import { JoinSplitProver, JoinSplitTx } from 'barretenberg-es/client_proofs/join_split_proof';
+import { JoinSplitProver, JoinSplitTx, JoinSplitProof } from 'barretenberg-es/client_proofs/join_split_proof';
 import { Note, encryptNote, createNoteSecret } from 'barretenberg-es/client_proofs/note';
 import { WorldState } from 'barretenberg-es/world_state';
 import { UserState } from '../user_state';
@@ -40,9 +40,11 @@ export class JoinSplitProofCreator {
 
     const sendValue = transfer + deposit;
     const changeValue = totalNoteInputValue - transfer - widthraw;
+    const outputNoteOwner1 = sendValue ? receiverPubKey : undefined;
+    const outputNoteOwner2 = changeValue ? sender.publicKey : undefined;
     const outputNotes = [
-      new Note(sendValue ? receiverPubKey : randomBytes(64), createNoteSecret(), sendValue),
-      new Note(changeValue ? sender.publicKey : randomBytes(64), createNoteSecret(), changeValue),
+      new Note(outputNoteOwner1 || randomBytes(64), createNoteSecret(), sendValue),
+      new Note(outputNoteOwner2 || randomBytes(64), createNoteSecret(), changeValue),
     ];
 
     const encViewingKey1 = encryptNote(outputNotes[0], this.grumpkin);
@@ -73,7 +75,18 @@ export class JoinSplitProofCreator {
     debug(`proof size: ${proofData.length}`);
     debug(proofData);
 
-    const proof: Proof = { proofData, viewingKeys: [encViewingKey1, encViewingKey2] };
-    return proof;
+    const viewingKeys = [encViewingKey1, encViewingKey2];
+    const joinSplitProof = new JoinSplitProof(proofData, viewingKeys);
+    debug(joinSplitProof);
+    const { newNote1, newNote2 } = joinSplitProof;
+
+    // Only return notes that belong to the user.
+    return {
+      proof: { proofData, viewingKeys },
+      inputNote1: numInputNotes > 0 ? notes[0].index : undefined,
+      inputNote2: numInputNotes > 1 ? notes[1].index : undefined,
+      outputNote1: outputNoteOwner1?.equals(sender.publicKey) ? newNote1 : undefined,
+      outputNote2: outputNoteOwner2?.equals(sender.publicKey) ? newNote2 : undefined,
+    };
   }
 }

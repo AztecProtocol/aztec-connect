@@ -116,4 +116,26 @@ describe('merkle_tree', () => {
       })(),
     ).rejects.toThrow();
   });
+
+  it('should serialize hash path data to a buffer and be able to deserialize it back', async () => {
+    const db = levelup(memdown());
+    const tree = await MerkleTree.new(db, pedersen, blake2s, 'test', 10);
+    tree.updateElement(0, values[0]);
+
+    const hashPath = await tree.getHashPath(0);
+    const buf = hashPath.toBuffer();
+    const recovered = HashPath.fromBuffer(buf);
+    expect(recovered).toEqual(hashPath);
+    const deserialized = HashPath.deserialize(buf);
+    expect(deserialized.elem).toEqual(hashPath);
+    expect(deserialized.adv).toBe(4 + 10 * 64);
+
+    const dummyData = Buffer.alloc(23, 1);
+    const paddedBuf = Buffer.concat([dummyData, buf]);
+    const recovered2 = HashPath.fromBuffer(paddedBuf, 23);
+    expect(recovered2).toEqual(hashPath);
+    const deserialized2 = HashPath.deserialize(buf);
+    expect(deserialized2.elem).toEqual(hashPath);
+    expect(deserialized2.adv).toBe(4 + 10 * 64);
+  });
 });

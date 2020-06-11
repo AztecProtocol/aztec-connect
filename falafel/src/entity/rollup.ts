@@ -1,24 +1,36 @@
 import { Column, Entity, Index, OneToMany, PrimaryColumn } from 'typeorm';
-import { RollupTxDao } from './rollup_tx';
+import { TxDao } from './tx';
+
+export type RollupStatus = 'CREATING' | 'CREATED' | 'PUBLISHED' | 'SETTLED';
 
 @Entity({ name: 'rollup' })
 export class RollupDao {
   @PrimaryColumn()
   public id!: number;
 
-  @Column()
-  public created!: Date;
-
   @Index({ unique: true })
   @Column()
   public dataRoot!: Buffer;
 
-  @OneToMany(type => RollupTxDao, tx => tx.rollupId, { cascade: true })
-  public txs!: RollupTxDao[];
+  @Column()
+  public nullRoot!: Buffer;
+
+  @OneToMany(type => TxDao, tx => tx.rollup, { cascade: true })
+  public txs!: TxDao[];
+
+  @Column({ nullable: true })
+  public proofData?: Buffer;
 
   @Column({ nullable: true })
   public ethBlock?: number;
 
   @Column({ nullable: true })
   public ethTxHash?: Buffer;
+
+  @Index()
+  @Column()
+  public status!: RollupStatus;
+
+  @Column()
+  public created!: Date;
 }

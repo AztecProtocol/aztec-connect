@@ -1,9 +1,13 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'block' })
 export class BlockDao {
   @PrimaryColumn()
   public id!: number;
+
+  @Index({ unique: true })
+  @Column()
+  public txHash!: Buffer;
 
   @Column()
   public created!: Date;

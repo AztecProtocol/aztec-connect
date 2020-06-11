@@ -1,22 +1,46 @@
-export interface Bufferable {
-  toBuffer(): Buffer;
+// For serializing a buffer as a vector.
+export function serializeBufferToVector(buf: Buffer) {
+  const lengthBuf = Buffer.alloc(4);
+  lengthBuf.writeUInt32BE(buf.length, 0);
+  return Buffer.concat([lengthBuf, buf]);
 }
 
-function isBufferArray(arr: Bufferable[] | Buffer[]): arr is Buffer[] {
-  return Buffer.isBuffer(arr[0]);
+export function deserializeBufferFromVector(vector: Buffer, offset = 0) {
+  const length = vector.readUInt32BE(offset);
+  const adv = 4 + length;
+  return { elem: vector.slice(offset + 4, offset + adv), adv };
 }
 
-// Buffer: Treat as a variable length array.
-// Buffer[]: Treat as an array of fixed length elements.
-// Bufferable[]: Treat as a variable length of recursively bufferable elements.
-export function serializeVector(arr: Bufferable[] | Buffer | Buffer[]) {
+export function deserializeUInt32(buf: Buffer, offset = 0) {
+  const adv = 4;
+  return { elem: buf.readUInt32BE(offset), adv };
+}
+
+export function deserializeField(buf: Buffer, offset = 0) {
+  const adv = 32;
+  return { elem: buf.slice(offset, offset + adv), adv };
+}
+
+// For serializing an array of fixed length elements.
+export function serializeBufferArrayToVector(arr: Buffer[]) {
   const lengthBuf = Buffer.alloc(4);
   lengthBuf.writeUInt32BE(arr.length, 0);
-  if (Buffer.isBuffer(arr)) {
-    return Buffer.concat([lengthBuf, arr]);
+  return Buffer.concat([lengthBuf, ...arr]);
+}
+
+export function deserializeArrayFromVector<T>(
+  deserialize: (buf: Buffer, offset: number) => { elem: T; adv: number },
+  vector: Buffer,
+  offset = 0,
+) {
+  let startAt = offset;
+  const size = vector.readUInt32BE(startAt);
+  startAt += 4;
+  const arr: T[] = [];
+  for (let i = 0; i < size; ++i) {
+    const { elem, adv } = deserialize(vector, startAt);
+    startAt += adv;
+    arr.push(elem);
   }
-  if (isBufferArray(arr)) {
-    return Buffer.concat([ lengthBuf, ...arr]);
-  }
-  return Buffer.concat([lengthBuf, ...arr.map(e => e.toBuffer())]);
+  return { elem: arr, adv: startAt - offset };
 }

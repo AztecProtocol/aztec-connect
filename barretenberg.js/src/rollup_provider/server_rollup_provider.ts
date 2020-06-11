@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import { Proof, RollupProvider } from '.';
+import { Proof, RollupProvider } from './rollup_provider';
 
 const debug = createDebug('bb:server_rollup_provider');
 
@@ -17,6 +17,10 @@ export class ServerRollupProvider implements RollupProvider {
     if (response.status !== 200) {
       throw new Error(`Bad response code ${response.status}.`);
     }
+    const body = await response.json();
+    return {
+      txId: body.txId,
+    };
   }
 
   async status() {

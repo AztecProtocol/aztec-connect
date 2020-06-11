@@ -1,15 +1,20 @@
 import { Block, BlockSource } from 'barretenberg/block_source';
+import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
 import { RollupProof } from './rollup_proof';
 
 export interface ProofReceiver {
-  sendProof(proof: Buffer, rollupId: number, rollupSize: number, viewingKeys: Buffer[]): Promise<void>;
+  sendProof(proof: Buffer, rollupId: number, rollupSize: number, viewingKeys: Buffer[]): Promise<Buffer>;
 }
 
 export interface Blockchain extends BlockSource, ProofReceiver {
   getBlocks(from: number): Block[];
+}
+
+export interface Receipt {
+  blockNum: number;
 }
 
 export class LocalBlockchain extends EventEmitter implements Blockchain {
@@ -49,7 +54,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
   public async sendProof(proofData: Buffer, rollupId: number, rollupSize: number, viewingKeys: Buffer[]) {
     if (!this.running) {
-      return;
+      throw new Error('Blockchain is not accessible.');
     }
 
     const tx = new RollupProof(proofData);
@@ -58,15 +63,16 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       throw new Error(`Inconsistent rollup size. Expecting ${this.rollupSize}. Got ${rollupSize}.`);
     }
     if (tx.dataStartIndex !== this.dataStartIndex) {
-      console.log(`Incorrect dataStartIndex. Expecting ${this.dataStartIndex}. Got ${tx.dataStartIndex}.`);
-      return;
+      throw new Error(`Incorrect dataStartIndex. Expecting ${this.dataStartIndex}. Got ${tx.dataStartIndex}.`);
     }
 
+    const txHash = randomBytes(32);
     const dataEntries = tx.innerProofData.map(p => [p.newNote1, p.newNote2]).flat();
     const nullifiers = tx.innerProofData.map(p => [p.nullifier1, p.nullifier2]).flat();
     const numDataEntries = rollupSize * 2;
 
     const block: Block = {
+      txHash,
       blockNum: this.blockNum,
       rollupId,
       dataStartIndex: tx.dataStartIndex,
@@ -82,13 +88,27 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
     await this.saveBlock(block, rollupId);
 
-    this.emit('block', block);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    return txHash;
+  }
+
+  public async getTransactionReceipt(txHash: Buffer) {
+    const block = await this.blockRep.findOne({ txHash });
+    if (!block) {
+      throw new Error(`Block does not exist: ${txHash.toString('hex')}`);
+    }
+
+    return {
+      blockNum: block.id,
+    } as Receipt;
   }
 
   private async saveBlock(block: Block, rollupId: number) {
     const blockDao = new BlockDao();
     blockDao.created = new Date();
     blockDao.id = block.blockNum;
+    blockDao.txHash = block.txHash;
     blockDao.rollupId = rollupId;
     blockDao.dataStartIndex = block.dataStartIndex;
     blockDao.numDataEntries = block.numDataEntries;
@@ -102,6 +122,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     const blockDaos = await this.blockRep.find();
     return blockDaos.map(b => {
       const block: Block = {
+        txHash: b.txHash,
         blockNum: b.id,
         rollupId: b.rollupId,
         dataStartIndex: b.dataStartIndex,

@@ -1,8 +1,9 @@
 import { BlockSource, Block } from '../block_source';
+import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import { JoinSplitVerifier } from '../client_proofs/join_split_proof';
-import { RollupProvider, Proof } from '.';
+import { RollupProvider, Proof } from './rollup_provider';
 
 const debug = createDebug('bb:local_rollup_provider');
 
@@ -21,13 +22,13 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
 
   async sendProof({ proofData, viewingKeys }: Proof) {
     if (!this.running) {
-      return;
+      throw new Error('Server is not running.');
     }
 
     const verified = await this.joinSplitVerifier.verifyProof(proofData);
     debug(`verified: ${verified}`);
     if (!verified) {
-      return;
+      throw new Error('Proof not verified.');
     }
 
     const outputNote1 = proofData.slice(2 * 32, 2 * 32 + 64);
@@ -35,6 +36,7 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
     const nullifer1 = proofData.slice(7 * 32 + 16, 7 * 32 + 32);
     const nullifer2 = proofData.slice(8 * 32 + 16, 8 * 32 + 32);
     const block: Block = {
+      txHash: randomBytes(32),
       blockNum: this.blockNum,
       rollupId: this.blockNum,
       dataStartIndex: this.dataTreeSize,
@@ -48,6 +50,10 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
     this.dataTreeSize += 2;
 
     this.emit('block', block);
+
+    return {
+      txId: proofData.slice(-8).toString('hex'),
+    };
   }
 
   async status() {

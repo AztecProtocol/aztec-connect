@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Block } from '@aztec/guacamole-ui';
-import { App } from '../app';
+import { App, AppEvent, AppInitState, ProofState, ProofApi } from '../app';
 import { Form, FormField } from '../components';
 import { Init } from './init';
 import { UserSelect } from './user_select';
@@ -14,159 +14,93 @@ import createDebug from 'debug';
 
 const debug = createDebug('bb:join_split_form');
 
-enum InitState {
-  UNINITIALIZED = 'Uninitialized',
-  INITIALIZING = 'Initializing',
-  INITIALIZED = 'Initialized',
-}
-
-enum ProofState {
-  NADA = 'Nada',
-  RUNNING = 'Running',
-  FAILED = 'Failed',
-  VERIFIED = 'Verified',
-  FINISHED = 'Finished',
-}
-
-enum ApiNames {
-  NADA,
-  DEPOSIT,
-  WITHDRAW,
-  TRANSFER,
-}
-
 interface JoinSplitFormProps {
   app: App;
   theme: ThemeContext;
 }
 
 export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
-  const [initState, setInitState] = useState(InitState.UNINITIALIZED);
-  const [proofState, setProofState] = useState(ProofState.NADA);
-  const [currentApi, setCurrentApi] = useState(ApiNames.NADA);
-  const [time, setTime] = useState(0);
-  const [users, setUsers] = useState([] as User[]);
-  const [user, setUser] = useState<User | null>(null);
-  const [balance, setBalance] = useState(0);
+  const [initState, setInitState] = useState(app.getInitState());
+  const [users, setUsers] = useState(app.isInitialized() ? app.getUsers() : ([] as User[]));
+  const [user, setUser] = useState<User | null>(app.isInitialized() ? app.getUser() : null);
+  const [balance, setBalance] = useState(app.isInitialized() ? app.getBalance() : 0);
+  const [currentProof, setCurrentProof] = useState(app.getCurrentProof());
 
   useEffect(() => {
-    const fetchBalance = () => setBalance(app.getBalance());
-    app.on('updated', fetchBalance);
-    const initialized = app.isInitialized();
-    if (initialized && !user) {
+    const onUserChange = () => {
       setUsers(app.getUsers());
       setUser(app.getUser());
-      fetchBalance();
-      setInitState(InitState.INITIALIZED);
-    }
+    };
+    const onInitStateChange = (state: AppInitState) => {
+      setInitState(state);
+      if (state === AppInitState.INITIALIZED && !user) {
+        onUserChange();
+      }
+    };
+    app.on(AppEvent.INIT, onInitStateChange);
+    app.on(AppEvent.UPDATED_ACCOUNT, onUserChange);
+    app.on(AppEvent.UPDATED_BALANCE, setBalance);
+    app.on(AppEvent.PROOF, setCurrentProof);
 
     return () => {
-      app.off('updated', fetchBalance);
+      app.off(AppEvent.INIT, onInitStateChange);
+      app.off(AppEvent.UPDATED_ACCOUNT, onUserChange);
+      app.off(AppEvent.UPDATED_BALANCE, setBalance);
+      app.off(AppEvent.PROOF, setCurrentProof);
     };
   }, [app]);
-
-  const initialize = async (serverUrl: string) => {
-    setInitState(InitState.INITIALIZING);
-    await app.init(serverUrl);
-    setUsers(app.getUsers());
-    setUser(app.getUser());
-    setInitState(InitState.INITIALIZED);
-  };
 
   const selectUser = async (id: string) => {
     if (id === 'new') {
       const user = await app.createUser();
       await app.switchToUser(user.id);
-      setUsers(app.getUsers());
     } else {
       await app.switchToUser(+id);
     }
-    setUser(app.getUser());
   };
 
-  const deposit = async (value: number) => {
-    setProofState(ProofState.RUNNING);
-    setCurrentApi(ApiNames.DEPOSIT);
-    try {
-      const start = Date.now();
-      await app.deposit(value);
-      setTime(Date.now() - start);
-      setProofState(ProofState.FINISHED);
-    } catch (e) {
-      debug(e);
-      setProofState(ProofState.FAILED);
-    }
-  };
-
-  const withdraw = async (value: number) => {
-    setProofState(ProofState.RUNNING);
-    setCurrentApi(ApiNames.WITHDRAW);
-    try {
-      const start = Date.now();
-      await app.withdraw(value);
-      setTime(Date.now() - start);
-      setProofState(ProofState.FINISHED);
-    } catch (e) {
-      debug(e);
-      setProofState(ProofState.FAILED);
-    }
-  };
-
-  const transfer = async (value: number, recipient: string) => {
-    setProofState(ProofState.RUNNING);
-    setCurrentApi(ApiNames.TRANSFER);
-    try {
-      const start = Date.now();
-      await app.transfer(value, Buffer.from(recipient, 'hex'));
-      setTime(Date.now() - start);
-      setProofState(ProofState.FINISHED);
-    } catch (e) {
-      debug(e);
-      setProofState(ProofState.FAILED);
-    }
-  };
-
-  const clearData = async () => {
-    await app.clearNoteData();
-  };
+  const isRunning = currentProof.state === ProofState.RUNNING;
 
   return (
     <Form>
       <FormField label="Init State">{initState.toString()}</FormField>
-      <FormField label="Proof State">{proofState.toString()}</FormField>
-      <FormField label="Proof Time">{time.toString()}ms</FormField>
-      {initState !== InitState.INITIALIZED && (
+      <FormField label="Proof State">{currentProof.state.toString()}</FormField>
+      <FormField label="Proof Time">{currentProof.time ? `${currentProof.time.toString()}ms` : '-'}</FormField>
+      {initState !== AppInitState.INITIALIZED && (
         <Init
           initialServerUrl={window.location.protocol + '//' + window.location.hostname}
-          onSubmit={initialize}
-          isLoading={initState === InitState.INITIALIZING}
+          onSubmit={async (serverUrl: string) => app.init(serverUrl)}
+          isLoading={initState === AppInitState.INITIALIZING}
         />
       )}
-      {initState === InitState.INITIALIZED && (
+      {initState === AppInitState.INITIALIZED && !!user && (
         <Block padding="xs 0">
           <UserSelect users={users} user={user!} onSelect={selectUser} />
           <FormField label="Balance">{`${balance}`}</FormField>
           <Deposit
             initialValue={100}
-            onSubmit={deposit}
-            isLoading={proofState === ProofState.RUNNING && currentApi === ApiNames.DEPOSIT}
-            disabled={proofState === ProofState.RUNNING && currentApi !== ApiNames.DEPOSIT}
+            onSubmit={async (value: number) => app.deposit(value)}
+            isLoading={isRunning && currentProof.api === ProofApi.DEPOSIT}
+            disabled={isRunning && currentProof.api !== ProofApi.DEPOSIT}
           />
           <Withdraw
-            onSubmit={withdraw}
-            isLoading={proofState === ProofState.RUNNING && currentApi === ApiNames.WITHDRAW}
-            disabled={proofState === ProofState.RUNNING && currentApi !== ApiNames.WITHDRAW}
+            onSubmit={async (value: number) => app.withdraw(value)}
+            isLoading={isRunning && currentProof.api === ProofApi.WITHDRAW}
+            disabled={isRunning && currentProof.api !== ProofApi.WITHDRAW}
           />
           <Transfer
-            initialRecipient={user!.publicKey.toString('hex')}
-            onSubmit={transfer}
-            isLoading={proofState === ProofState.RUNNING && currentApi === ApiNames.TRANSFER}
-            disabled={proofState === ProofState.RUNNING && currentApi !== ApiNames.TRANSFER}
+            initialRecipient={user.publicKey.toString('hex')}
+            onSubmit={async (value: number, recipient: string) => app.transfer(value, recipient)}
+            isLoading={isRunning && currentProof.api === ProofApi.TRANSFER}
+            disabled={isRunning && currentProof.api !== ProofApi.TRANSFER}
           />
         </Block>
       )}
       <Block padding="m">
-        <ClearDataButton onClearData={clearData} disabled={initState === InitState.INITIALIZING} />
+        <ClearDataButton
+          onClearData={async () => app.clearNoteData()}
+          disabled={initState === AppInitState.INITIALIZING}
+        />
       </Block>
     </Form>
   );

@@ -1,4 +1,3 @@
-import { Block } from 'barretenberg/block_source';
 import { JoinSplitProof, JoinSplitVerifier } from 'barretenberg/client_proofs/join_split_proof';
 import { Crs } from 'barretenberg/crs';
 import { HashPath } from 'barretenberg/merkle_tree';
@@ -23,6 +22,12 @@ interface ServerConfig {
   readonly minRollupInterval: Duration;
 }
 
+interface PublishQueueItem {
+  rollupId: number;
+  proof: Buffer;
+  viewingKeys: Buffer[];
+}
+
 export class Server {
   private worldStateDb: WorldStateDb;
   private joinSplitVerifier!: JoinSplitVerifier;
@@ -30,6 +35,7 @@ export class Server {
   private worker!: BarretenbergWorker;
   private rollupDb!: RollupDb;
   private rollupQueue = new MemoryFifo<JoinSplitProof[]>();
+  private publishQueue = new MemoryFifo<PublishQueueItem>();
   private txQueue = new MemoryFifo<JoinSplitProof | undefined>();
   private proofGenerator: ProofGenerator;
   private pendingNullifiers = new Set<bigint>();
@@ -46,26 +52,70 @@ export class Server {
     const connection = await createConnection();
     this.blockchain = new LocalBlockchain(connection, this.config.rollupSize);
     this.rollupDb = new RollupDb(connection);
+    this.rollupDb.init();
     await this.blockchain.start();
-    await this.rollupDb.init();
     await this.worldStateDb.start();
     this.printState();
+    await this.proofGenerator.run();
     await this.createJoinSplitVerifier();
-    const newBlocks = this.getBlocks((await this.rollupDb.getLastBlockNum()) + 1);
-    for (const block of newBlocks) {
-      await this.handleNewBlock(block);
-    }
-    this.blockchain.on('block', b => this.handleNewBlock(b));
+    await this.restoreState();
     this.processTxQueue(this.config.maxRollupWaitTime, this.config.minRollupInterval);
     this.processRollupQueue();
+    this.processPublishQueue();
   }
 
   public stop() {
     this.blockchain.stop();
     this.proofGenerator.cancel();
+    this.publishQueue.cancel();
     this.rollupQueue.cancel();
     this.txQueue.cancel();
     destroyWorker(this.worker);
+  }
+
+  private async restoreState() {
+    // Ensure we confirm any rollups that we have missed while not running.
+    const newBlocks = this.getBlocks((await this.rollupDb.getLastBlockNum()) + 1);
+    for (const block of newBlocks) {
+      await this.rollupDb.confirmRollup(block.rollupId, block.blockNum);
+    }
+
+    // If there is a CREATING rollup, we need to detect if it's been committed.
+    //    If the world state db root matches the newRoot of the rollup, set it to CREATED.
+    //    Else remove CREATING rollups.
+    const pendingRollups = await this.rollupDb.getPendingRollups();
+    if (pendingRollups.length) {
+      const dataRoot = await this.worldStateDb.getRoot(0);
+      const lastCommittedIndex = pendingRollups.findIndex(r => r.dataRoot.equals(dataRoot));
+      for (let i = 0; i < lastCommittedIndex + 1; ++i) {
+        await this.rollupDb.confirmRollupCreated(pendingRollups[i].id);
+      }
+      await this.rollupDb.deletePendingRollups();
+    }
+
+    // Find all CREATED rollups and reinsert to publisher queue.
+    const createdRollups = await this.rollupDb.getCreatedRollups();
+    createdRollups.forEach(({ id, proofData, txs }) => {
+      console.log(`Rollup restored: ${id}`);
+      this.publishQueue.put({
+        rollupId: id,
+        proof: proofData!,
+        viewingKeys: txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat(),
+      });
+    });
+
+    // Find all txs without rollup ids and insert into tx queue.
+    const txs = await this.rollupDb.getPendingTxs();
+    for (const tx of txs) {
+      console.log(`Tx restored: ${tx.txId.toString('hex')}`);
+      const proof = new JoinSplitProof(tx.proofData, [tx.viewingKey1, tx.viewingKey2]);
+      proof.dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
+      const nullifier1 = toBigIntBE(proof.nullifier1);
+      const nullifier2 = toBigIntBE(proof.nullifier2);
+      this.pendingNullifiers.add(nullifier1);
+      this.pendingNullifiers.add(nullifier2);
+      this.txQueue.put(proof);
+    }
   }
 
   private printState() {
@@ -133,8 +183,6 @@ export class Server {
   }
 
   private async processRollupQueue() {
-    await this.proofGenerator.run();
-
     while (true) {
       const txs = await this.rollupQueue.get();
       if (!txs) {
@@ -143,35 +191,77 @@ export class Server {
 
       console.log(`Creating rollup with ${txs.length} txs...`);
       const rollup = await this.createRollup(txs);
-      await this.rollupDb.deleteRollup(rollup.rollupId);
       await this.rollupDb.addRollup(rollup);
 
-      try {
-        const proof = await this.proofGenerator.createProof(rollup);
-        if (!proof) {
-          throw new Error('Invalid proof.');
-        }
-
-        const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
-        await this.blockchain.sendProof(proof, rollup.rollupId, this.config.rollupSize, viewingKeys);
-        await this.worldStateDb.commit();
-        this.printState();
-      } catch (err) {
-        console.log(err.message);
+      const proof = await this.proofGenerator.createProof(rollup);
+      if (!proof) {
+        // This shouldn't happen!? What happens to the txs?
+        // Perhaps need to extract the troublemaker, and then reinsert all txs into queue?
         await this.worldStateDb.rollback();
         await this.rollupDb.deleteRollup(rollup.rollupId);
+        continue;
+      }
+
+      await this.rollupDb.setRollupProof(rollup.rollupId, proof);
+      await this.worldStateDb.commit();
+      await this.rollupDb.confirmRollupCreated(rollup.rollupId);
+
+      const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
+      this.publishQueue.put({ rollupId: rollup.rollupId, proof, viewingKeys });
+
+      this.printState();
+    }
+  }
+
+  private async processPublishQueue() {
+    while (true) {
+      const { rollupId, proof, viewingKeys } = (await this.publishQueue.get()) || ({} as PublishQueueItem);
+      if (!proof) {
+        break;
+      }
+
+      while (true) {
+        try {
+          const txHash = await this.blockchain.sendProof(proof!, rollupId, this.config.rollupSize, viewingKeys!);
+
+          await this.rollupDb.confirmSent(rollupId);
+
+          const receipt = await this.blockchain.getTransactionReceipt(txHash!);
+
+          await this.rollupDb.confirmRollup(rollupId, receipt.blockNum);
+          break;
+        } catch (err) {
+          // Could have failed due to not sending (network error), or not getting mined (gas too low?).
+          // But, the proof is assumed to always be valid. So let's try again.
+          console.log(err.message);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
     }
   }
 
-  private async handleNewBlock(block: Block) {
-    console.log(`Block received: ${block.blockNum}`);
-    await this.rollupDb.confirmRollup(block.blockNum, block.rollupId);
-    console.log(`Confirmed rollup: ${block.rollupId}`);
-  }
-
   public getBlocks(from: number) {
     return this.blockchain.getBlocks(from);
+  }
+
+  public async getLatestRollups(count: number) {
+    return this.rollupDb.getLatestRollups(count);
+  }
+
+  public async getLatestTxs(count: number) {
+    return this.rollupDb.getLatestTxs(count);
+  }
+
+  public async getRollup(id: number) {
+    return this.rollupDb.getRollupWithTxs(id);
+  }
+
+  public async getTxs(txIds: Buffer[]) {
+    return this.rollupDb.getTxsByTxIds(txIds);
+  }
+
+  public async getTx(txId: Buffer) {
+    return this.rollupDb.getTxByTxId(txId);
   }
 
   private async createJoinSplitVerifier() {
@@ -213,23 +303,14 @@ export class Server {
       throw new Error('Proof verification failed.');
     }
 
-    // Lookup and save the proofs data root index (for old root support).
-    // prettier-ignore
-    const emptyDataRoot = Buffer.from([
-      0x1d, 0xf6, 0xbd, 0xe5, 0x05, 0x16, 0xdd, 0x12, 0x01, 0x08, 0x8f, 0xd8, 0xdd, 0xa8, 0x4c, 0x97,
-      0xed, 0xa5, 0x65, 0x24, 0x28, 0xd1, 0xc7, 0xe8, 0x6a, 0xf5, 0x29, 0xcc, 0x5e, 0x0e, 0xb8, 0x21,
-    ]);
-    if (!proof.noteTreeRoot.equals(emptyDataRoot)) {
-      const rollup = await this.rollupDb.getRollupByDataRoot(proof.noteTreeRoot);
-      if (!rollup) {
-        throw new Error(`Rollup not found for merkle root: ${proof.noteTreeRoot.toString('hex')}`);
-      }
-      proof.dataRootsIndex = rollup.id + 1;
-    }
+    proof.dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
     this.pendingNullifiers.add(nullifier1);
     this.pendingNullifiers.add(nullifier2);
+    const txId = await this.rollupDb.addTx(proof);
     this.txQueue.put(proof);
+
+    return txId;
   }
 
   public flushTxs() {

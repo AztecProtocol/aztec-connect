@@ -19,7 +19,7 @@ const run = async (buf: TerminalBuffer, app: App) => {
     return;
   }
 
-  let serverUrl = 'http://localhost';
+  let serverUrl = window.location.protocol + '//' + window.location.hostname;
   if (option) {
     if (['-S', '--server'].indexOf(option) < 0) {
       await logUsage(buf, option);

@@ -183,7 +183,7 @@ export const deviceBreakpointMap = {
   xl: '1690px',
   l: '1248px',
   m: '960px',
-  s: '768px',
+  s: '600px',
   xs: '480px',
   xxs: '0',
 };
@@ -191,7 +191,7 @@ export const minDeviceWidthXxl = '2000px';
 export const minDeviceWidthXl = '1690px';
 export const minDeviceWidthL = '1248px';
 export const minDeviceWidthM = '960px';
-export const minDeviceWidthS = '768px';
+export const minDeviceWidthS = '600px';
 export const minDeviceWidthXs = '480px';
 export const minDeviceWidthXxs = '0';
 export const spacingMap = {

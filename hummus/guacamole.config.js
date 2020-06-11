@@ -6,5 +6,8 @@ module.exports = {
   },
   theme: {
     defaultFontFamily: 'Arial, Helvetica, sans-serif',
+    deviceBreakpointMap: {
+      s: '600px',
+    },
   },
 };

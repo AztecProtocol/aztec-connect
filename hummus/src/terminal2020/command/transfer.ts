@@ -49,11 +49,9 @@ const run = async (buf: TerminalBuffer, app: App) => {
     return;
   }
 
-  let publicKey;
+  let publicKey = options['-k'];
   const id = options['-i'];
-  if (options['-k']) {
-    publicKey = Buffer.from(options['-k'], 'hex');
-  } else if (id) {
+  if (!publicKey && id) {
     if (!id.match(/^[1-9][0-9]{0,}$/)) {
       await buf.log([{ text: 'Invalid user id.' }]);
       return;
@@ -64,7 +62,7 @@ const run = async (buf: TerminalBuffer, app: App) => {
       return;
     }
 
-    publicKey = user.publicKey;
+    publicKey = user.publicKey.toString('hex');
   }
   if (!publicKey) {
     await logUsage(buf, 'Recipient is not defined.');

@@ -1,4 +1,5 @@
 export interface Block {
+  txHash: Buffer;
   blockNum: number;
   rollupId: number;
   dataStartIndex: number;

@@ -106,7 +106,7 @@ export class TerminalHandler {
 
   private async init(server: string) {
     this.printQueue.put('initializing...\n');
-    await this.app.init(server || 'http://localhost');
+    await this.app.init(server || window.location.protocol + '//' + window.location.hostname);
 
     try {
       const { dataSize, dataRoot, nullRoot } = await this.app.getStatus();
@@ -138,7 +138,7 @@ export class TerminalHandler {
       throw new Error('User not found.');
     }
     this.printQueue.put(`generating transfer proof...\n`);
-    await this.app.transfer(+value, user.publicKey);
+    await this.app.transfer(+value, user.publicKey.toString('hex'));
     this.printQueue.put(`transfer proof sent.\n`);
   }
 

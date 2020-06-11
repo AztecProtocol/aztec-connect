@@ -2,8 +2,26 @@ import Dexie from 'dexie';
 
 const MAX_BYTE_LENGTH = 100000000;
 
+export type UserTxAction = 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'RECEIVE';
+
 export class DbUser {
   constructor(public id: number, public publicKey: Uint8Array, public privateKey?: Uint8Array, public alias?: string) {}
+}
+
+export class DbUserTx {
+  constructor(
+    public txId: string,
+    public userId: number,
+    public action: UserTxAction,
+    public value: number,
+    public recipient: Uint8Array,
+    public settled: 0 | 1, // boolean is non-indexable
+    public created: Date,
+    public inputNote1?: number,
+    public inputNote2?: number,
+    public outputNote1?: Uint8Array,
+    public outputNote2?: Uint8Array,
+  ) {}
 }
 
 export class DbNote {
@@ -13,7 +31,7 @@ export class DbNote {
     public viewingKey: Uint8Array,
     public encrypted: Uint8Array,
     public nullifier: Uint8Array,
-    public nullified: boolean,
+    public nullified: 0 | 1,
     public owner: number,
   ) {}
 }
@@ -30,6 +48,14 @@ export interface Database {
   getUser(userId: number): Promise<DbUser | undefined>;
   getUsers(): Promise<DbUser[]>;
   addUser(user: DbUser): Promise<void>;
+  getUserTxs(userId: number): Promise<DbUserTx[]>;
+  addUserTx(userTx: DbUserTx): Promise<void>;
+  settleUserTx(txId: string): Promise<void>;
+  deleteUserTx(txId: string): Promise<void>;
+  clearUserTxState(): Promise<void>;
+  deleteKey(name: string): Promise<void>;
+  addKey(name: string, value: Buffer): Promise<void>;
+  getKey(name: string): Promise<Uint8Array | undefined>;
 }
 
 const toSubKeyName = (name: string, index: number) => `${name}__${index}`;
@@ -37,18 +63,21 @@ const toSubKeyName = (name: string, index: number) => `${name}__${index}`;
 export class DexieDatabase implements Database {
   private dexie = new Dexie('hummus');
   private user: Dexie.Table<DbUser, number>;
+  private userTx: Dexie.Table<DbUserTx, string>;
   private note: Dexie.Table<DbNote, number>;
   private key: Dexie.Table<DbKey, string>;
 
   constructor() {
     this.dexie.version(1).stores({
       user: '++id, publicKey',
-      note: '++id, value, nullified, owner',
+      user_tx: '&txId, userId, settled, created',
+      note: '++id, nullified, owner',
       key: '&name',
     });
 
     this.user = this.dexie.table('user');
     this.note = this.dexie.table('note');
+    this.userTx = this.dexie.table('user_tx');
     this.key = this.dexie.table('key');
     this.user.mapToClass(DbUser);
     this.note.mapToClass(DbNote);
@@ -64,7 +93,7 @@ export class DexieDatabase implements Database {
   }
 
   async nullifyNote(index: number) {
-    await this.note.update(index, { nullified: true });
+    await this.note.update(index, { nullified: 1 });
   }
 
   async getUserNotes(userId: number) {
@@ -81,6 +110,26 @@ export class DexieDatabase implements Database {
 
   async addUser(user: DbUser) {
     await this.user.put(user);
+  }
+
+  async getUserTxs(userId: number) {
+    return this.userTx.where({ userId }).reverse().sortBy('created');
+  }
+
+  async addUserTx(userTx: DbUserTx) {
+    await this.userTx.put(userTx);
+  }
+
+  async settleUserTx(txId: string) {
+    await this.userTx.where({ txId }).modify({ settled: 1 });
+  }
+
+  async deleteUserTx(txId: string) {
+    await this.userTx.where({ txId }).delete();
+  }
+
+  async clearUserTxState() {
+    await this.userTx.where({ settled: 1 }).modify({ settled: 0 });
   }
 
   async clearNote() {
@@ -126,7 +175,7 @@ export class DexieDatabase implements Database {
   async getKey(name: string) {
     const key = await this.key.get(name);
     if (!key || !key.size) {
-      return null;
+      return undefined;
     }
 
     if (!key.count) {
@@ -136,7 +185,7 @@ export class DexieDatabase implements Database {
     const subKeyNames = [...Array(key.count)].map((_, i) => toSubKeyName(name, i));
     const subKeys = await this.key.bulkGet(subKeyNames);
     if (subKeys.some(k => !k)) {
-      return null;
+      return undefined;
     }
 
     const value = new Uint8Array(key.size);

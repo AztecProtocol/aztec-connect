@@ -106,4 +106,46 @@ describe('world_state_db', () => {
     expect(result1).toEqual(value1);
     expect(result2).toEqual(value2);
   });
+
+  it('should be able to rollback to the previous commit', async () => {
+    const values = new Array(3).fill(0).map(_ => randomBytes(64));
+
+    const rootEmpty = worldStateDb.getRoot(0);
+    await worldStateDb.put(0, BigInt(0), values[0]);
+    expect(worldStateDb.getRoot(0)).not.toEqual(rootEmpty);
+
+    await worldStateDb.rollback();
+    expect(worldStateDb.getRoot(0)).toEqual(rootEmpty);
+
+    await worldStateDb.put(0, BigInt(0), values[0]);
+    await worldStateDb.put(0, BigInt(1), values[1]);
+    await worldStateDb.commit();
+    const root2 = worldStateDb.getRoot(0);
+    await worldStateDb.put(0, BigInt(2), values[2]);
+    expect(worldStateDb.getRoot(0)).not.toEqual(root2);
+
+    await worldStateDb.rollback();
+    expect(worldStateDb.getRoot(0)).toEqual(root2);
+  });
+
+  it('should read and write standard I/O sequentially', async () => {
+    const num = 10;
+    const values = new Array(num).fill(0).map(_ => randomBytes(64));
+    await Promise.all(
+      values.map(async (value, i) => {
+        await worldStateDb.put(0, BigInt(i), value);
+      }),
+    );
+
+    const buffers = await Promise.all(values.map(async (_, i) => worldStateDb.get(0, BigInt(i))));
+    for (let i = 0; i < num; ++i) {
+      expect(buffers[i]).toEqual(values[i]);
+    }
+
+    const hashPaths = await Promise.all(values.map((_, i) => worldStateDb.getHashPath(0, BigInt(i))));
+    for (let i = 0; i < num; ++i) {
+      const hashPath = await worldStateDb.getHashPath(0, BigInt(i));
+      expect(hashPaths[i]).toEqual(hashPath);
+    }
+  });
 });

@@ -228,7 +228,7 @@ resource "aws_alb_target_group" "falafel" {
   health_check {
     path              = "/api"
     matcher           = "200"
-    interval          = 5
+    interval          = 60
     healthy_threshold = 2
     timeout           = 3
   }
