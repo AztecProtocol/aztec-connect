@@ -10,7 +10,7 @@ export class Crs {
     const g1Start = 28;
     const g1End = g1Start + this.numPoints * 64 - 1;
 
-    const response = await fetch('http://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript00.dat', {
+    const response = await fetch('https://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript00.dat', {
       headers: {
         Range: `bytes=${g1Start}-${g1End}`,
       },
@@ -25,7 +25,7 @@ export class Crs {
     const g2Start = 28 + 5040000 * 64;
     const g2End = g2Start + 128 - 1;
 
-    const response2 = await fetch('http://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript00.dat', {
+    const response2 = await fetch('https://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript00.dat', {
       headers: {
         Range: `bytes=${g2Start}-${g2End}`,
       },
