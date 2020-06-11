@@ -51,7 +51,7 @@ resource "aws_service_discovery_service" "falafel" {
 # Create EC2 instances in each AZ.
 resource "aws_instance" "container_instance_az1" {
   ami                    = "ami-08ebd554ebc53fa9f"
-  instance_type          = "r5.4xlarge"
+  instance_type          = "m5.4xlarge"
   subnet_id              = data.terraform_remote_state.setup_iac.outputs.subnet_az1_private_id
   vpc_security_group_ids = [data.terraform_remote_state.setup_iac.outputs.security_group_private_id]
   iam_instance_profile   = data.terraform_remote_state.setup_iac.outputs.ecs_instance_profile_name
