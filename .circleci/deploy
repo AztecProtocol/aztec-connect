@@ -16,6 +16,7 @@ docker pull $IMAGE_COMMIT_URI || exit 0
 
 # Tag and push image with production tag (used for lifecycle management).
 docker tag $IMAGE_COMMIT_URI $IMAGE_PROD_URI
+docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_URI
 docker push $IMAGE_PROD_URI
 
 # Ensure ECR repository exists in deployment region.
