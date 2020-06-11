@@ -9,7 +9,7 @@ IMAGE_PROD_URI=$ECR_URL/$REPOSITORY:prod-$TAG
 IMAGE_DEPLOY_URI=$ECR_DEPLOY_URL/$REPOSITORY:$TAG
 
 # Login.
-ensure_repo $IMAGE $ECR_REGION
+ensure_repo $REPOSITORY $ECR_REGION
 
 # Do nothing if this wasn't rebuilt.
 docker pull $IMAGE_COMMIT_URI || exit 0
