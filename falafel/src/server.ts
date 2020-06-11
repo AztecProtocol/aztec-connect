@@ -43,7 +43,6 @@ export class Server {
   }
 
   public async start() {
-    await this.proofGenerator.run();
     const connection = await createConnection();
     this.blockchain = new LocalBlockchain(connection, this.config.rollupSize);
     this.rollupDb = new RollupDb(connection);
@@ -134,6 +133,8 @@ export class Server {
   }
 
   private async processRollupQueue() {
+    await this.proofGenerator.run();
+
     while (true) {
       const txs = await this.rollupQueue.get();
       if (!txs) {
