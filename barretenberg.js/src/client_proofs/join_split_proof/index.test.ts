@@ -127,6 +127,8 @@ describe('join_split_proof', () => {
         privateKey,
       );
 
+      const publicOwner = randomBytes(20);
+
       const tx = new JoinSplitTx(
         pubKey,
         0,
@@ -138,6 +140,7 @@ describe('join_split_proof', () => {
         [inputNote1, inputNote2],
         [outputNote1, outputNote2],
         signature,
+        publicOwner,
       );
 
       debug('creating proof...');
@@ -155,6 +158,7 @@ describe('join_split_proof', () => {
       const expectedNullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, blake2s);
       expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
       expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
+      expect(joinSplitProof.publicOwner).toEqual(publicOwner);
     });
   });
 });

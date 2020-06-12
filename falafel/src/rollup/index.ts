@@ -1,11 +1,11 @@
 import { HashPath } from 'barretenberg/merkle_tree';
 import {
-  serializeBufferToVector,
-  serializeBufferArrayToVector,
+  deserializeArrayFromVector,
+  deserializeBufferFromVector,
   deserializeField,
   deserializeUInt32,
-  deserializeBufferFromVector,
-  deserializeArrayFromVector,
+  serializeBufferArrayToVector,
+  serializeBufferToVector,
 } from 'barretenberg/serialize';
 
 export class Rollup {
@@ -25,7 +25,10 @@ export class Rollup {
     public oldNullPaths: HashPath[],
     public newNullPaths: HashPath[],
 
-    public dataRootsRoot: Buffer,
+    public oldDataRootsRoot: Buffer,
+    public newDataRootsRoot: Buffer,
+    public oldDataRootsPath: HashPath,
+    public newDataRootsPath: HashPath,
     public dataRootsPaths: HashPath[],
     public dataRootsIndicies: number[],
   ) {}
@@ -51,7 +54,10 @@ export class Rollup {
       serializeBufferArrayToVector(this.oldNullPaths.map(path => path.toBuffer())),
       serializeBufferArrayToVector(this.newNullPaths.map(path => path.toBuffer())),
 
-      this.dataRootsRoot,
+      this.oldDataRootsRoot,
+      this.newDataRootsRoot,
+      this.oldDataRootsPath.toBuffer(),
+      this.newDataRootsPath.toBuffer(),
       serializeBufferArrayToVector(this.dataRootsPaths.map(path => path.toBuffer())),
       serializeBufferArrayToVector(
         this.dataRootsIndicies.map(v => {
@@ -63,7 +69,7 @@ export class Rollup {
     ]);
   }
 
-  static fromBuffer(buf: Buffer) {
+  public static fromBuffer(buf: Buffer) {
     const rollupId = buf.readUInt32BE(0);
     const dataStartIndex = buf.readUInt32BE(8);
     let offset = 12;
@@ -87,8 +93,14 @@ export class Rollup {
     offset += oldNullPaths.adv;
     const newNullPaths = deserializeArrayFromVector(HashPath.deserialize, buf, offset);
     offset += newNullPaths.adv;
-    const dataRootsRoot = deserializeField(buf, offset);
-    offset += dataRootsRoot.adv;
+    const oldDataRootsRoot = deserializeField(buf, offset);
+    offset += oldDataRootsRoot.adv;
+    const newDataRootsRoot = deserializeField(buf, offset);
+    offset += newDataRootsRoot.adv;
+    const oldDataRootsPath = HashPath.deserialize(buf, offset);
+    offset += oldDataRootsPath.adv;
+    const newDataRootsPath = HashPath.deserialize(buf, offset);
+    offset += newDataRootsPath.adv;
     const dataRootsPaths = deserializeArrayFromVector(HashPath.deserialize, buf, offset);
     offset += dataRootsPaths.adv;
     const dataRootsIndicies = deserializeArrayFromVector(deserializeUInt32, buf, offset);
@@ -106,7 +118,10 @@ export class Rollup {
       newNullRoots.elem,
       oldNullPaths.elem,
       newNullPaths.elem,
-      dataRootsRoot.elem,
+      oldDataRootsRoot.elem,
+      newDataRootsRoot.elem,
+      oldDataRootsPath.elem,
+      newDataRootsPath.elem,
       dataRootsPaths.elem,
       dataRootsIndicies.elem,
     );

@@ -325,7 +325,6 @@ export class Server {
     const oldDataRoot = this.worldStateDb.getRoot(0);
     const oldDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
     const oldNullRoot = this.worldStateDb.getRoot(1);
-    const dataRootsRoot = this.worldStateDb.getRoot(2);
 
     // Insert each txs elements into the db (modified state will be thrown away).
     let nextDataIndex = dataStartIndex;
@@ -369,8 +368,13 @@ export class Server {
     const rollupRoot = newDataPath.data[rollupRootHeight][rootIndex];
     const newDataRoot = this.worldStateDb.getRoot(0);
 
+    // Get root tree data.
+    const oldDataRootsRoot = this.worldStateDb.getRoot(2);
     const rootTreeSize = this.worldStateDb.getSize(2);
+    const oldDataRootsPath = await this.worldStateDb.getHashPath(2, rootTreeSize);
     await this.worldStateDb.put(2, rootTreeSize, newDataRoot);
+    const newDataRootsRoot = this.worldStateDb.getRoot(2);
+    const newDataRootsPath = await this.worldStateDb.getHashPath(2, rootTreeSize);
 
     return new Rollup(
       await this.rollupDb.getNextRollupId(),
@@ -388,7 +392,10 @@ export class Server {
       oldNullPaths,
       newNullPaths,
 
-      dataRootsRoot,
+      oldDataRootsRoot,
+      newDataRootsRoot,
+      oldDataRootsPath,
+      newDataRootsPath,
       dataRootsPaths,
       dataRootsIndicies,
     );

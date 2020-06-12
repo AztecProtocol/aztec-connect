@@ -14,6 +14,7 @@ export class JoinSplitTx {
     public inputNotes: Note[],
     public outputNotes: Note[],
     public signature: Signature,
+    public publicOwner: Buffer,
   ) {}
 
   toBuffer() {
@@ -27,6 +28,8 @@ export class JoinSplitTx {
     const pathBuffer = Buffer.concat(this.inputNotePaths.map(p => p.toBuffer()));
     const noteBuffer = Buffer.concat([...this.inputNotes, ...this.outputNotes].map(n => n.toBuffer()));
 
+    const publicOwnerBuffer = Buffer.concat([Buffer.alloc(12, 0), this.publicOwner]);
+
     return Buffer.concat([
       this.ownerPubKey,
       numBuffer,
@@ -34,6 +37,7 @@ export class JoinSplitTx {
       pathBuffer,
       noteBuffer,
       this.signature.toBuffer(),
+      publicOwnerBuffer,
     ]);
   }
 }

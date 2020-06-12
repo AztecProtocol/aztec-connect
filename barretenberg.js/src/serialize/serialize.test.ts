@@ -26,7 +26,7 @@ describe('serialize', () => {
 
   it('deserialize uint32', () => {
     const uintBuf = Buffer.alloc(4);
-    uintBuf.writeUInt32BE(19);
+    uintBuf.writeUInt32BE(19, 0);
 
     const recovered = deserializeUInt32(uintBuf);
     expect(recovered.elem).toBe(19);
@@ -56,7 +56,7 @@ describe('serialize', () => {
     const uintArr = [7, 13, 16];
     const uintBufArr = uintArr.map(num => {
       const uintBuf = Buffer.alloc(4);
-      uintBuf.writeUInt32BE(num);
+      uintBuf.writeUInt32BE(num, 0);
       return uintBuf;
     });
     const uintArrVec = serializeBufferArrayToVector(uintBufArr);

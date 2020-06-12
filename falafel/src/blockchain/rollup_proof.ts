@@ -5,6 +5,7 @@ interface InnerProof {
   newNote2: Buffer;
   nullifier1: Buffer;
   nullifier2: Buffer;
+  publicOwner: Buffer;
 }
 
 export class RollupProof {
@@ -14,7 +15,8 @@ export class RollupProof {
   public newDataRoot: Buffer;
   public oldNullRoot: Buffer;
   public newNullRoot: Buffer;
-  public dataRootsRoot: Buffer;
+  public oldDataRootsRoot: Buffer;
+  public newDataRootsRoot: Buffer;
   public numTxs: number;
   public innerProofData: InnerProof[] = [];
 
@@ -25,12 +27,13 @@ export class RollupProof {
     this.newDataRoot = proofData.slice(96, 128);
     this.oldNullRoot = proofData.slice(128, 160);
     this.newNullRoot = proofData.slice(160, 192);
-    this.dataRootsRoot = proofData.slice(192, 224);
-    this.numTxs = proofData.readUInt32BE(252);
+    this.oldDataRootsRoot = proofData.slice(192, 224);
+    this.newDataRootsRoot = proofData.slice(224, 256);
+    this.numTxs = proofData.readUInt32BE(284);
 
-    const innerLength = 32 * 8;
+    const innerLength = 32 * 9;
     for (let i = 0; i < this.numTxs; ++i) {
-      const startIndex = 256 + i * innerLength;
+      const startIndex = 288 + i * innerLength;
       const innerData = proofData.slice(startIndex, startIndex + innerLength);
       this.innerProofData[i] = {
         publicInput: innerData.slice(0, 32),
@@ -39,6 +42,7 @@ export class RollupProof {
         newNote2: innerData.slice(4 * 32, 4 * 32 + 64),
         nullifier1: innerData.slice(6 * 32 + 16, 6 * 32 + 32),
         nullifier2: innerData.slice(7 * 32 + 16, 7 * 32 + 32),
+        publicOwner: innerData.slice(8 * 32 + 12, 8 * 32 + 32),
       };
     }
   }

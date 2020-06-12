@@ -30,6 +30,9 @@ describe('Rollup', () => {
       oldNullPaths,
       newNullPaths,
       randomRoot(),
+      randomRoot(),
+      randomDataPath(),
+      randomDataPath(),
       dataRootsPaths,
       [1, 2],
     );

@@ -6,6 +6,7 @@ export class JoinSplitProof {
   public newNote2: Buffer;
   public nullifier1: Buffer;
   public nullifier2: Buffer;
+  public publicOwner: Buffer;
   public dataRootsIndex = 0;
 
   constructor(public proofData: Buffer, public viewingKeys: Buffer[]) {
@@ -16,5 +17,6 @@ export class JoinSplitProof {
     this.noteTreeRoot = proofData.slice(6 * 32, 6 * 32 + 32);
     this.nullifier1 = proofData.slice(7 * 32 + 16, 7 * 32 + 32);
     this.nullifier2 = proofData.slice(8 * 32 + 16, 8 * 32 + 32);
+    this.publicOwner = proofData.slice(9 * 32 + 12, 9 * 32 + 32);
   }
 }

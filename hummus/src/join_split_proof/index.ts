@@ -3,12 +3,13 @@ import { JoinSplitProver, JoinSplitTx, JoinSplitProof } from 'barretenberg-es/cl
 import { Note, encryptNote, createNoteSecret } from 'barretenberg-es/client_proofs/note';
 import { WorldState } from 'barretenberg-es/world_state';
 import { UserState } from '../user_state';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import { Grumpkin } from 'barretenberg-es/ecc/grumpkin';
-import { Proof } from 'barretenberg-es/rollup_provider';
 import { User } from '../user';
 
 const debug = createDebug('bb:join_split_proof');
+
+const toAddress = (pubKey: Buffer) => createHash('sha256').update(pubKey).digest().slice(-20);
 
 export class JoinSplitProofCreator {
   constructor(
@@ -18,8 +19,15 @@ export class JoinSplitProofCreator {
     private grumpkin: Grumpkin,
   ) {}
 
-  public async createProof(deposit: number, widthraw: number, transfer: number, sender: User, receiverPubKey: Buffer) {
-    const requiredInputNoteValue = Math.max(0, transfer + widthraw - deposit);
+  public async createProof(
+    deposit: number,
+    withdraw: number,
+    transfer: number,
+    sender: User,
+    receiverPubKey: Buffer,
+    publicOwnerAddress?: Buffer,
+  ) {
+    const requiredInputNoteValue = Math.max(0, transfer + withdraw - deposit);
     const notes = this.userState.pickNotes(requiredInputNoteValue);
     if (!notes) {
       throw new Error(`Failed to find no more than 2 notes that sum to ${requiredInputNoteValue}.`);
@@ -39,7 +47,7 @@ export class JoinSplitProofCreator {
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
     const sendValue = transfer + deposit;
-    const changeValue = totalNoteInputValue - transfer - widthraw;
+    const changeValue = totalNoteInputValue - transfer - withdraw;
     const outputNoteOwner1 = sendValue ? receiverPubKey : undefined;
     const outputNoteOwner2 = changeValue ? sender.publicKey : undefined;
     const outputNotes = [
@@ -56,7 +64,7 @@ export class JoinSplitProofCreator {
     const tx = new JoinSplitTx(
       sender.publicKey,
       deposit,
-      widthraw,
+      withdraw,
       numInputNotes,
       inputNoteIndices,
       dataRoot,
@@ -64,6 +72,7 @@ export class JoinSplitProofCreator {
       inputNotes,
       outputNotes,
       signature,
+      publicOwnerAddress || toAddress(sender.publicKey),
     );
 
     debug(tx);
