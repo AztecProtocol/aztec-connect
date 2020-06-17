@@ -1,4 +1,4 @@
-FROM 278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg:wasm-linux-clang
+FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg:wasm-linux-clang
 
 FROM node:12-alpine
 WORKDIR /usr/src/barretenberg.js

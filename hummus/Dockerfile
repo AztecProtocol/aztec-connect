@@ -1,4 +1,4 @@
-FROM 278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg.js:latest
+FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg.js:latest
 
 FROM node:12-alpine
 COPY --from=0 /usr/src/barretenberg.js/dest-es /usr/src/barretenberg.js/dest-es

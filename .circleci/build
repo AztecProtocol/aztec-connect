@@ -17,14 +17,14 @@ check_rebuild || { echo "No rebuild necessary." && exit 0; }
 ensure_repo $REPOSITORY $ECR_REGION
 
 # Pull latest parents that are not ours.
-PARENTS=$(cat $DOCKERFILE | sed -n -e 's/FROM \([^[:space:]]\+\).*/\1/p' | grep -v $ECR_URL | sort | uniq)
+PARENTS=$(cat $DOCKERFILE | sed -n -e 's/FROM \([^[:space:]]\+\).*/\1/p' | grep -v $ECR_DEPLOY_URL | sort | uniq)
 for PARENT in $PARENTS; do
   echo "Pulling parent: $PARENT"
   docker pull $PARENT > /dev/null 2>&1
 done
 
 # For each parent that's ours, pull in the newly rebuilt image if it's present.
-PARENTS=$(cat $DOCKERFILE | sed -n -e "s/FROM $ECR_URL\/\([^[:space:]]\+\)/\1/p")
+PARENTS=$(cat $DOCKERFILE | sed -n -e "s/FROM $ECR_DEPLOY_URL\/\([^[:space:]]\+\)/\1/p")
 for PARENT in $PARENTS; do
   [[ "$PARENT" =~ ":" ]] || PARENT="$PARENT:latest"
   echo "Pulling parent: $PARENT"
@@ -35,7 +35,7 @@ for PARENT in $PARENTS; do
     PARENT_IMAGE_URI=$ECR_URL/$PARENT_REPO:cache-master-$PARENT_TAG
     docker pull $PARENT_IMAGE_URI > /dev/null 2>&1
   fi
-  docker tag $PARENT_IMAGE_URI $ECR_URL/$PARENT
+  docker tag $PARENT_IMAGE_URI $ECR_DEPLOY_URL/$PARENT
 done
 
 function fetch_cache() {

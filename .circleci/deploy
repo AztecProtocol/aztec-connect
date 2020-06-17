@@ -16,13 +16,13 @@ docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." &
 
 # Tag and push image with production tag (used for lifecycle management).
 docker tag $IMAGE_COMMIT_URI $IMAGE_PROD_URI
-docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_URI
 docker push $IMAGE_PROD_URI
 
 # Ensure ECR repository exists in deployment region.
 ensure_repo $REPOSITORY $ECR_DEPLOY_REGION
 
 # Push image to deployment repo.
+docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_URI
 docker push $IMAGE_DEPLOY_URI
 
 # Apply terraform.
