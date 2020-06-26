@@ -14,10 +14,6 @@ ensure_repo $REPOSITORY $ECR_REGION
 # Do nothing if this wasn't rebuilt.
 docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." && exit 0; }
 
-# Tag and push image with production tag (used for lifecycle management).
-docker tag $IMAGE_COMMIT_URI $IMAGE_PROD_URI
-docker push $IMAGE_PROD_URI
-
 # Ensure ECR repository exists in deployment region.
 ensure_repo $REPOSITORY $ECR_DEPLOY_REGION
 
