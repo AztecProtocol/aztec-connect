@@ -16,7 +16,7 @@ const toRollupResponse = (rollup: RollupDao): RollupResponse => {
     status,
     dataRoot: dataRoot.toString('hex'),
     nullRoot: nullRoot.toString('hex'),
-    txIds: txs.map(tx => tx.txId.toString('hex')),
+    txHashes: txs.map(tx => tx.txId.toString('hex')),
     ethBlock,
     ethTxHash: ethTxHash ? ethTxHash.toString('hex') : undefined,
     created,
@@ -43,15 +43,15 @@ const toTxResponse = (tx: TxDao): TxResponse => {
         status: rollup.status,
       };
   return {
-    txId: txId.toString('hex'),
+    txHash: txId.toString('hex'),
     rollup: linkedRollup,
     merkleRoot: merkleRoot.toString('hex'),
     newNote1: newNote1.toString('hex'),
     newNote2: newNote2.toString('hex'),
     nullifier1: nullifier1.toString('hex'),
     nullifier2: nullifier2.toString('hex'),
-    publicInput: `0x${publicInput.toString('hex')}`,
-    publicOutput: `0x${publicOutput.toString('hex')}`,
+    publicInput: publicInput.toString('hex'),
+    publicOutput: publicOutput.toString('hex'),
     created,
   };
 };
@@ -135,7 +135,7 @@ export function appFactory(server: Server, prefix: string) {
 
   router.get('/get-tx', async (ctx: Koa.Context) => {
     try {
-      const tx = await server.getTx(Buffer.from(ctx.query.txId, 'hex'));
+      const tx = await server.getTx(Buffer.from(ctx.query.txHash, 'hex'));
       ctx.status = 200;
       ctx.body = tx ? toTxResponse(tx) : undefined;
     } catch (err) {

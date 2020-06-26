@@ -8,17 +8,17 @@ const debug = createDebug('bb:server_block_source');
 export class ServerBlockSource extends EventEmitter implements BlockSource {
   private running = false;
 
-  constructor(private host: URL, private fromBlock: number = 0) {
+  constructor(private host: URL) {
     super();
   }
 
-  public async start() {
+  public async start(fromBlock: number = 0) {
     this.running = true;
 
     while (this.running) {
       try {
         const url = new URL(`/api/get-blocks`, this.host);
-        url.searchParams.append('from', this.fromBlock.toString());
+        url.searchParams.append('from', fromBlock.toString());
 
         const response = await fetch(url.toString());
         const jsonBlocks = await response.json();
@@ -35,7 +35,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
 
         for (const block of blocks) {
           this.emit('block', block);
-          this.fromBlock = block.blockNum + 1;
+          fromBlock = block.blockNum + 1;
         }
       } catch (err) {
         // debug(err);

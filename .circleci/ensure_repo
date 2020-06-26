@@ -5,11 +5,24 @@ LIFECYCLE_POLICY='{
   "rules": [
     {
       "rulePriority": 1,
-      "description": "No more than 10 images.",
+      "description": "Master branch images should not expire.",
+      "selection": {
+        "tagStatus": "tagged",
+        "tagPrefixList": ["cache-master-"],
+        "countType": "imageCountMoreThan",
+        "countNumber": 100
+      },
+      "action": {
+        "type": "expire"
+      }
+    },
+    {
+      "rulePriority": 2,
+      "description": "No more than 20 images.",
       "selection": {
         "tagStatus": "any",
         "countType": "imageCountMoreThan",
-        "countNumber": 10
+        "countNumber": 20
       },
       "action": {
         "type": "expire"

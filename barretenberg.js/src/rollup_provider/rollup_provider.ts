@@ -10,7 +10,7 @@ export interface RollupProviderStatus {
 }
 
 export interface ProofResponse {
-  txId: string;
+  txHash: Buffer;
 }
 
 export interface RollupProvider {

@@ -1,4 +1,4 @@
-import { Rollup } from 'barretenberg-es/rollup_provider';
+import { Rollup, RollupProviderExplorer } from 'aztec2-sdk';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Block, Text, TextButton } from '@aztec/guacamole-ui';
@@ -8,14 +8,16 @@ import { StatusRow } from './status_row';
 interface LatestRollupsProps {
   bindSetter: (setter: (tx: Rollup[]) => void) => void;
   unbindSetter: (setter: (tx: Rollup[]) => void) => void;
-  initialData: Rollup[];
+  explorer: RollupProviderExplorer;
 }
 
-export const LatestRollups = ({ bindSetter, unbindSetter, initialData }: LatestRollupsProps) => {
-  const [rollups, setRollups] = useState(initialData);
+export const LatestRollups = ({ bindSetter, unbindSetter, explorer }: LatestRollupsProps) => {
+  const [rollups, setRollups] = useState<Rollup[]>([]);
 
   useEffect(() => {
     bindSetter(setRollups);
+
+    explorer.getLatestRollups(5).then(setRollups);
 
     return () => {
       unbindSetter(setRollups);
@@ -31,7 +33,7 @@ export const LatestRollups = ({ bindSetter, unbindSetter, initialData }: LatestR
   return (
     <ThemeContext.Consumer>
       {({ theme, link }) =>
-        rollups.map(({ id, txIds, status, created }, i) => (
+        rollups.map(({ id, txHashes, status, created }, i) => (
           <Block
             key={id}
             padding="xs 0"
@@ -41,7 +43,7 @@ export const LatestRollups = ({ bindSetter, unbindSetter, initialData }: LatestR
             <StatusRow
               alt="R"
               id={<TextButton text={`#${id}`} href={`/rollup/${id}`} color={link} Link={Link} />}
-              caption={`(${txIds.length} Tx${txIds.length === 1 ? '' : 's'})`}
+              caption={`(${txHashes.length} Tx${txHashes.length === 1 ? '' : 's'})`}
               status={status}
               created={created}
             />

@@ -35,6 +35,10 @@ export class WorldState {
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);
   }
 
+  public async syncFromDb() {
+    await this.tree.syncFromDb();
+  }
+
   public async getHashPath(index: number) {
     return await this.tree.getHashPath(index);
   }

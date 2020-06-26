@@ -52,7 +52,7 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
     this.emit('block', block);
 
     return {
-      txId: proofData.slice(-8).toString('hex'),
+      txHash: randomBytes(32),
     };
   }
 

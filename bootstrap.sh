@@ -26,9 +26,9 @@ build_barretenberg() {
 
 build_barretenberg_js() {
     cd ./barretenberg.js
-    yarn symlink-wasm
     yarn install
     yarn build
+    yarn symlink-wasm
     cd dest && yarn link
     cd ..
     cd dest-es && yarn link
@@ -36,9 +36,18 @@ build_barretenberg_js() {
     cd ..
 }
 
+build_sdk() {
+    cd ./sdk
+    yarn install
+    yarn build
+    cd dest && yarn link && cd ..
+    cd ..
+}
+
 build_hummus() {
     cd ./hummus
-    yarn link barretenberg-es
+    yarn link sdk
+    yarn link barretenberg
     yarn install
     yarn build
     cd ..

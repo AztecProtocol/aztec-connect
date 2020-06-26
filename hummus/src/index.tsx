@@ -12,7 +12,7 @@ import { Terminal2020 } from './terminal2020';
 import './styles/guacamole.css';
 import debug from 'debug';
 import { Terminal, TerminalComponent } from './terminal';
-require('barretenberg-es/wasm/barretenberg.wasm');
+require('barretenberg/wasm/barretenberg.wasm');
 
 const GlobalStyle = createGlobalStyle`
   #root {
@@ -58,7 +58,7 @@ interface RollupRouteParams {
 interface RollupRouteProps extends RouteComponentProps<RollupRouteParams> {}
 
 interface TxRouteParams {
-  txId: string;
+  txHash: string;
 }
 
 interface TxRouteProps extends RouteComponentProps<TxRouteParams> {}
@@ -86,8 +86,10 @@ function ThemedContent({ app }: { app: App }) {
                 component={({ match }: RollupRouteProps) => <RollupDetails app={app} id={+match.params.id} />}
               />
               <Route
-                path="/tx/:txId"
-                component={({ match }: TxRouteProps) => <TxDetails app={app} txId={match.params.txId} />}
+                path="/tx/:txHash"
+                component={({ match }: TxRouteProps) => (
+                  <TxDetails app={app} txHash={Buffer.from(match.params.txHash, 'hex')} />
+                )}
               />
               <Route exact path="/transactions">
                 <LocalState app={app} />

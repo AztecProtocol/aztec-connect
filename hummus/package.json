@@ -9,7 +9,7 @@
     "lint": "tslint './src/**/*.ts?(x)'",
     "start": "node ./server",
     "start:dev": "webpack-dev-server --config webpack.dev.js",
-    "test": "jest"
+    "test": "true"
   },
   "jest": {
     "transform": {
@@ -26,7 +26,7 @@
       "node"
     ],
     "transformIgnorePatterns": [
-      "/node_modules/(?!barretenberg-es).+\\.js$"
+      "/node_modules/(?!aztec2-sdk).+\\.js$"
     ]
   },
   "dependencies": {
@@ -46,24 +46,19 @@
     "@types/jest": "^23.3.1",
     "@types/koa": "^2.0.46",
     "@types/koa-static": "^4.0.0",
-    "@types/level-js": "^4.0.1",
-    "@types/levelup": "^4.3.0",
     "@types/react": "^16.9.23",
     "@types/react-copy-to-clipboard": "^4.3.0",
     "@types/react-dom": "^16.9.5",
     "@types/react-router-dom": "^5.1.5",
     "@types/styled-components": "^5.1.0",
     "@types/webpack-env": "^1.13.6",
-    "barretenberg-es": "file:../barretenberg.js/dest-es",
+    "aztec2-sdk": "file:../sdk/dest-es",
     "cbor": "^5.0.1",
     "css-loader": "^3.5.3",
     "debug": "^4.1.1",
-    "dexie": "^3.0.1",
     "file-loader": "^5.1.0",
     "html-webpack-plugin": "^3.2.0",
     "jest": "^23.5.0",
-    "level-js": "^5.0.2",
-    "levelup": "^4.4.0",
     "mini-css-extract-plugin": "^0.9.0",
     "moment": "^2.26.0",
     "polished": "^3.6.2",

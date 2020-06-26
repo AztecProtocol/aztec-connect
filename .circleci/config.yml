@@ -104,6 +104,18 @@ jobs:
           working_directory: falafel
           command: build falafel:latest
 
+  sdk:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - *setup_env
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: 'Build and test'
+          working_directory: sdk
+          command: build sdk:latest
+
   hummus:
     docker:
       - image: aztecprotocol/build-image
@@ -140,6 +152,10 @@ jobs:
           working_directory: barretenberg.js
           command: deploy barretenberg.js:latest
       - run:
+          name: 'sdk'
+          working_directory: sdk
+          command: deploy sdk:latest
+      - run:
           name: 'falafel'
           working_directory: falafel
           command: deploy falafel:latest
@@ -168,9 +184,12 @@ workflows:
           requires:
             - barretenberg-js
             - x86_64-linux-clang
-      - hummus:
+      - sdk:
           requires:
             - barretenberg-js
+      - hummus:
+          requires:
+            - sdk
       - deploy:
           requires:
             - x86_64-linux-gcc
@@ -180,4 +199,3 @@ workflows:
           filters:
             branches:
               only: master
-

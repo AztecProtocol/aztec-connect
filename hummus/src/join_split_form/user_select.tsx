@@ -3,7 +3,7 @@ import CopyToClipboard from 'react-copy-to-clipboard';
 import { FlexBox, Block, SelectInput, Icon, Text } from '@aztec/guacamole-ui';
 import { FormField } from '../components';
 import { ThemeContext } from '../config/context';
-import { User } from '../user';
+import { User } from 'aztec2-sdk';
 
 interface UserSelectProps {
   users: User[];

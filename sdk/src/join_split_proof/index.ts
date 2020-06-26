@@ -1,34 +1,39 @@
 import createDebug from 'debug';
-import { JoinSplitProver, JoinSplitTx, JoinSplitProof } from 'barretenberg-es/client_proofs/join_split_proof';
-import { Note, encryptNote, createNoteSecret } from 'barretenberg-es/client_proofs/note';
-import { WorldState } from 'barretenberg-es/world_state';
+import { JoinSplitProver, JoinSplitTx, JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
+import { Note, encryptNote, createNoteSecret } from 'barretenberg/client_proofs/note';
+import { Proof } from 'barretenberg/rollup_provider';
+import { WorldState } from 'barretenberg/world_state';
 import { UserState } from '../user_state';
 import { randomBytes, createHash } from 'crypto';
-import { Grumpkin } from 'barretenberg-es/ecc/grumpkin';
+import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { User } from '../user';
 
 const debug = createDebug('bb:join_split_proof');
 
 const toAddress = (pubKey: Buffer) => createHash('sha256').update(pubKey).digest().slice(-20);
 
+export type JoinSplitProofOutput = {
+  proof: Proof;
+  inputNote1?: number;
+  inputNote2?: number;
+  outputNote1?: Buffer;
+  outputNote2?: Buffer;
+};
+
 export class JoinSplitProofCreator {
-  constructor(
-    private joinSplitProver: JoinSplitProver,
-    private userState: UserState,
-    private worldState: WorldState,
-    private grumpkin: Grumpkin,
-  ) {}
+  constructor(private joinSplitProver: JoinSplitProver, private worldState: WorldState, private grumpkin: Grumpkin) {}
 
   public async createProof(
+    userState: UserState,
     deposit: number,
     withdraw: number,
     transfer: number,
     sender: User,
     receiverPubKey: Buffer,
     publicOwnerAddress?: Buffer,
-  ) {
+  ): Promise<JoinSplitProofOutput> {
     const requiredInputNoteValue = Math.max(0, transfer + withdraw - deposit);
-    const notes = this.userState.pickNotes(requiredInputNoteValue);
+    const notes = userState.pickNotes(requiredInputNoteValue);
     if (!notes) {
       throw new Error(`Failed to find no more than 2 notes that sum to ${requiredInputNoteValue}.`);
     }

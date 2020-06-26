@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Block } from '@aztec/guacamole-ui';
-import { App, AppEvent, AppInitState, ProofState, ProofApi } from '../app';
+import { App, AppEvent, ProofState } from '../app';
 import { Form, FormField } from '../components';
 import { Init } from './init';
 import { UserSelect } from './user_select';
@@ -9,8 +9,8 @@ import { Withdraw } from './withdraw';
 import { Transfer } from './transfer';
 import { ClearDataButton } from './clear_data_button';
 import { ThemeContext } from '../config/context';
-import { User } from '../user';
 import createDebug from 'debug';
+import { SdkEvent, SdkInitState, User } from 'aztec2-sdk';
 
 const debug = createDebug('bb:join_split_form');
 
@@ -24,29 +24,29 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
   const [users, setUsers] = useState(app.isInitialized() ? app.getUsers() : ([] as User[]));
   const [user, setUser] = useState<User | null>(app.isInitialized() ? app.getUser() : null);
   const [balance, setBalance] = useState(app.isInitialized() ? app.getBalance() : 0);
-  const [currentProof, setCurrentProof] = useState(app.getCurrentProof());
+  const [currentProof, setCurrentProof] = useState(app.getProofState());
+  const [serverUrl, setServerUrl] = useState(window.location.protocol + '//' + window.location.hostname);
 
   useEffect(() => {
-    const onUserChange = () => {
-      setUsers(app.getUsers());
-      setUser(app.getUser());
-    };
-    const onInitStateChange = (state: AppInitState) => {
+    const onInitStateChange = (state: SdkInitState) => {
       setInitState(state);
-      if (state === AppInitState.INITIALIZED && !user) {
-        onUserChange();
+      if (state === SdkInitState.INITIALIZED && !user) {
+        setUsers(app.getUsers());
+        setUser(app.getUser());
       }
     };
-    app.on(AppEvent.INIT, onInitStateChange);
-    app.on(AppEvent.UPDATED_ACCOUNT, onUserChange);
-    app.on(AppEvent.UPDATED_BALANCE, setBalance);
-    app.on(AppEvent.PROOF, setCurrentProof);
+    app.on(SdkEvent.UPDATED_INIT_STATE, onInitStateChange);
+    app.on(SdkEvent.UPDATED_USERS, setUsers);
+    app.on(SdkEvent.UPDATED_ACCOUNT, setUser);
+    app.on(SdkEvent.UPDATED_BALANCE, setBalance);
+    app.on(AppEvent.UPDATED_PROOF_STATE, setCurrentProof);
 
     return () => {
-      app.off(AppEvent.INIT, onInitStateChange);
-      app.off(AppEvent.UPDATED_ACCOUNT, onUserChange);
-      app.off(AppEvent.UPDATED_BALANCE, setBalance);
-      app.off(AppEvent.PROOF, setCurrentProof);
+      app.off(SdkEvent.UPDATED_INIT_STATE, onInitStateChange);
+      app.off(SdkEvent.UPDATED_USERS, setUsers);
+      app.off(SdkEvent.UPDATED_ACCOUNT, setUser);
+      app.off(SdkEvent.UPDATED_BALANCE, setBalance);
+      app.off(AppEvent.UPDATED_PROOF_STATE, setCurrentProof);
     };
   }, [app]);
 
@@ -66,42 +66,42 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
       <FormField label="Init State">{initState.toString()}</FormField>
       <FormField label="Proof State">{currentProof.state.toString()}</FormField>
       <FormField label="Proof Time">{currentProof.time ? `${currentProof.time.toString()}ms` : '-'}</FormField>
-      {initState !== AppInitState.INITIALIZED && (
+      {initState !== SdkInitState.INITIALIZED && (
         <Init
-          initialServerUrl={window.location.protocol + '//' + window.location.hostname}
-          onSubmit={async (serverUrl: string) => app.init(serverUrl)}
-          isLoading={initState === AppInitState.INITIALIZING}
+          initialServerUrl={serverUrl}
+          onSubmit={async (serverUrl: string) => {
+            setServerUrl(serverUrl);
+            app.init(serverUrl);
+          }}
+          isLoading={initState === SdkInitState.INITIALIZING}
         />
       )}
-      {initState === AppInitState.INITIALIZED && !!user && (
+      {initState === SdkInitState.INITIALIZED && !!user && (
         <Block padding="xs 0">
           <UserSelect users={users} user={user!} onSelect={selectUser} />
           <FormField label="Balance">{`${balance}`}</FormField>
           <Deposit
             initialValue={100}
             onSubmit={async (value: number) => app.deposit(value)}
-            isLoading={isRunning && currentProof.api === ProofApi.DEPOSIT}
-            disabled={isRunning && currentProof.api !== ProofApi.DEPOSIT}
+            isLoading={isRunning && currentProof.action === 'DEPOSIT'}
+            disabled={isRunning && currentProof.action !== 'DEPOSIT'}
           />
           <Withdraw
             onSubmit={async (value: number) => app.withdraw(value)}
-            isLoading={isRunning && currentProof.api === ProofApi.WITHDRAW}
-            disabled={isRunning && currentProof.api !== ProofApi.WITHDRAW}
+            isLoading={isRunning && currentProof.action === 'WITHDRAW'}
+            disabled={isRunning && currentProof.action !== 'WITHDRAW'}
           />
           <Transfer
             initialRecipient={user.publicKey.toString('hex')}
             onSubmit={async (value: number, recipient: string) => app.transfer(value, recipient)}
-            isLoading={isRunning && currentProof.api === ProofApi.TRANSFER}
-            disabled={isRunning && currentProof.api !== ProofApi.TRANSFER}
+            isLoading={isRunning && currentProof.action === 'TRANSFER'}
+            disabled={isRunning && currentProof.action !== 'TRANSFER'}
           />
+          <Block padding="m">
+            <ClearDataButton onClearData={async () => app.clearData()} disabled={false} />
+          </Block>
         </Block>
       )}
-      <Block padding="m">
-        <ClearDataButton
-          onClearData={async () => app.clearNoteData()}
-          disabled={initState === AppInitState.INITIALIZING}
-        />
-      </Block>
     </Form>
   );
 };

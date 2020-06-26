@@ -1,6 +1,6 @@
 #!/bin/bash
 [ -n "$CIRCLE_SHA1" ] || exit 1
-[ -n "$LAST_SUCCESSFULL_COMMIT" ] || exit 1
+[ -n "$LAST_SUCCESSFUL_COMMIT" ] || exit 1
 
 if git diff --name-only $LAST_SUCCESSFUL_COMMIT $CIRCLE_SHA1 | grep -q $1; then
   exit 0

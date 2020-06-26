@@ -19,7 +19,7 @@ export class ServerRollupProvider implements RollupProvider {
     }
     const body = await response.json();
     return {
-      txId: body.txId,
+      txHash: Buffer.from(body.txId, 'hex'),
     };
   }
 

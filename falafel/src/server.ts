@@ -49,6 +49,7 @@ export class Server {
   }
 
   public async start() {
+    await this.proofGenerator.run();
     const connection = await createConnection();
     this.blockchain = new LocalBlockchain(connection, this.config.rollupSize);
     this.rollupDb = new RollupDb(connection);
@@ -56,7 +57,6 @@ export class Server {
     await this.blockchain.start();
     await this.worldStateDb.start();
     this.printState();
-    await this.proofGenerator.run();
     await this.createJoinSplitVerifier();
     await this.restoreState();
     this.processTxQueue(this.config.maxRollupWaitTime, this.config.minRollupInterval);

@@ -13,14 +13,8 @@ interface ClearDataButtonProps {
 }
 
 export const ClearDataButton = ({ onClearData, disabled }: ClearDataButtonProps) => {
-  const [justCleared, setJustCleared] = useState(false);
-
   const clearData = async () => {
     await onClearData();
-    setJustCleared(true);
-    setTimeout(() => {
-      setJustCleared(false);
-    }, 1500);
   };
 
   return (
@@ -28,11 +22,7 @@ export const ClearDataButton = ({ onClearData, disabled }: ClearDataButtonProps)
       {({ theme, link }) => (
         <InlineBlockTextButton theme="implicit" size="xxs" color={link} onClick={clearData} disabled={disabled}>
           <FlexBox valign="center">
-            <Icon
-              name={justCleared ? 'check' : 'delete_outline'}
-              color={justCleared && theme === 'light' ? 'green' : ''}
-              size="xs"
-            />
+            <Icon name={'delete_outline'} color={''} size="xs" />
             <Block left="xs">Clear Data</Block>
           </FlexBox>
         </InlineBlockTextButton>

@@ -5,127 +5,36 @@ export interface LinkedRollup {
   status: RollupStatus;
 }
 
-export interface TxResponse {
-  txId: string;
-  rollup?: LinkedRollup;
-  merkleRoot: string;
-  newNote1: string;
-  newNote2: string;
-  nullifier1: string;
-  nullifier2: string;
-  publicInput: string;
-  publicOutput: string;
-  created: Date;
-}
-
 export interface Tx {
-  txId: string;
+  txHash: Buffer;
   rollup?: LinkedRollup;
-  merkleRoot: string;
-  newNote1: string;
-  newNote2: string;
-  nullifier1: string;
-  nullifier2: string;
-  publicInput: bigint;
-  publicOutput: bigint;
-  created: Date;
-}
-
-export interface RollupResponse {
-  id: number;
-  status: RollupStatus;
-  dataRoot: string;
-  nullRoot: string;
-  txIds: string[];
-  ethBlock?: number;
-  ethTxHash?: string;
+  merkleRoot: Buffer;
+  newNote1: Buffer;
+  newNote2: Buffer;
+  nullifier1: Buffer;
+  nullifier2: Buffer;
+  publicInput: Buffer;
+  publicOutput: Buffer;
   created: Date;
 }
 
 export interface Rollup {
   id: number;
   status: RollupStatus;
-  dataRoot: string;
-  nullRoot: string;
-  txIds: string[];
+  dataRoot: Buffer;
+  nullRoot: Buffer;
+  txHashes: Buffer[];
   ethBlock?: number;
-  ethTxHash?: string;
+  ethTxHash?: Buffer;
   created: Date;
 }
 
-const toRollup = (rollupResp: RollupResponse): Rollup => rollupResp;
+export interface RollupProviderExplorer {
+  getLatestRollups(count: number): Promise<Rollup[]>;
 
-const toTx = (txResp: TxResponse): Tx => ({
-  ...txResp,
-  publicInput: BigInt(txResp.publicInput),
-  publicOutput: BigInt(txResp.publicOutput),
-});
+  getLatestTxs(count: number): Promise<Tx[]>;
 
-export class RollupProviderExplorer {
-  constructor(private host: URL) {}
+  getRollup(id: number): Promise<Rollup | undefined>;
 
-  async fetchLatestRollups(count: number) {
-    const url = new URL(`/api/get-rollups`, this.host);
-    url.searchParams.append('count', `${count}`);
-
-    const response = await fetch(url.toString());
-    if (response.status !== 200) {
-      throw new Error(`Bad response code ${response.status}.`);
-    }
-
-    const rollups = (await response.json()) as RollupResponse[];
-    return rollups.map(rollupResp => toRollup(rollupResp));
-  }
-
-  async fetchLatestTxs(count: number) {
-    const url = new URL(`/api/get-txs`, this.host);
-    url.searchParams.append('count', `${count}`);
-
-    const response = await fetch(url.toString());
-    if (response.status !== 200) {
-      throw new Error(`Bad response code ${response.status}.`);
-    }
-
-    const txs = (await response.json()) as TxResponse[];
-    return txs.map(tx => toTx(tx));
-  }
-
-  async fetchRollup(id: number) {
-    const url = new URL(`/api/get-rollup`, this.host);
-    url.searchParams.append('id', `${id}`);
-
-    const response = await fetch(url.toString());
-    if (response.status !== 200) {
-      throw new Error(`Bad response code ${response.status}.`);
-    }
-
-    const rollup = await response.json();
-    return rollup ? toRollup(rollup) : undefined;
-  }
-
-  async fetchTxsByTxsIds(txIds: string[]) {
-    const url = new URL(`/api/get-txs`, this.host);
-    url.searchParams.append('txIds', txIds.join(','));
-
-    const response = await fetch(url.toString());
-    if (response.status !== 200) {
-      throw new Error(`Bad response code ${response.status}.`);
-    }
-
-    const txs = (await response.json()) as TxResponse[];
-    return txs.map(tx => toTx(tx));
-  }
-
-  async fetchTxByTxId(txId: string) {
-    const url = new URL(`/api/get-tx`, this.host);
-    url.searchParams.append('txId', txId);
-
-    const response = await fetch(url.toString());
-    if (response.status !== 200) {
-      throw new Error(`Bad response code ${response.status}.`);
-    }
-
-    const tx = await response.json();
-    return tx ? toTx(tx) : undefined;
-  }
+  getTx(txHash: Buffer): Promise<Tx | undefined>;
 }

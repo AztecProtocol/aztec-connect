@@ -1,4 +1,4 @@
-import { RollupProviderExplorer, Rollup, Tx } from 'barretenberg-es/rollup_provider';
+import { RollupProviderExplorer, Rollup, Tx } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 
@@ -14,7 +14,7 @@ export class TxsState extends EventEmitter {
   }
 
   private async fetchLatestRollups() {
-    const rollups = await this.explorer.fetchLatestRollups(this.latest);
+    const rollups = await this.explorer.getLatestRollups(this.latest);
     const hasChanged = rollups.some(rollup => {
       const prev = this.rollups.find(r => r.id === rollup.id);
       return !prev || prev.status !== rollup.status;
@@ -27,9 +27,9 @@ export class TxsState extends EventEmitter {
   }
 
   private async fetchLatestTxs() {
-    const txs = await this.explorer.fetchLatestTxs(this.latest);
+    const txs = await this.explorer.getLatestTxs(this.latest);
     const hasChanged = txs.some(tx => {
-      const prevTx = this.txs.find(t => t.txId === tx.txId);
+      const prevTx = this.txs.find(t => t.txHash.equals(tx.txHash));
       return !prevTx || prevTx.rollup?.status !== tx.rollup?.status;
     });
 
@@ -66,10 +66,10 @@ export class TxsState extends EventEmitter {
   }
 
   public async getRollup(id: number) {
-    return this.explorer.fetchRollup(id);
+    return this.explorer.getRollup(id);
   }
 
-  public async getTx(txId: string) {
-    return this.explorer.fetchTxByTxId(txId);
+  public async getTx(txHash: Buffer) {
+    return this.explorer.getTx(txHash);
   }
 }

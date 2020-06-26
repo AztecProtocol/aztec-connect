@@ -96,6 +96,13 @@ export class MerkleTree {
     await this.db.clear();
   }
 
+  public async syncFromDb() {
+    const meta: Buffer = await this.db.get(Buffer.from(this.name));
+    this.root = meta.slice(0, 32);
+    this.depth = meta.readUInt32LE(32);
+    this.size = meta.readUInt32LE(36);
+  }
+
   private async writeMeta(batch?: LevelUpChain<string, Buffer>) {
     const data = Buffer.alloc(40);
     this.root.copy(data);

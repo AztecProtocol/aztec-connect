@@ -5,8 +5,6 @@ import { Note } from '../note';
 import { Signature } from '../signature';
 import { BarretenbergWasm } from '../../wasm';
 
-import createDebug from 'debug';
-
 export class JoinSplitProver {
   constructor(private wasm: BarretenbergWasm, private prover: Prover) {}
 
@@ -66,5 +64,9 @@ export class JoinSplitProver {
     const proof = await this.prover.createProof(proverPtr);
     await worker.call('join_split__delete_prover', proverPtr);
     return proof;
+  }
+
+  public getProver() {
+    return this.prover;
   }
 }

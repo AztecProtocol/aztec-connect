@@ -1,6 +1,5 @@
 import { App } from '../app';
-import { MemoryFifo } from 'barretenberg-es/fifo';
-import { User } from '../user';
+import { MemoryFifo, User, SdkEvent } from 'aztec2-sdk';
 import { Terminal } from './terminal';
 import copy from 'copy-to-clipboard';
 
@@ -30,7 +29,7 @@ export class TerminalHandler {
     this.printQueue.put("\x01\x01\x01\x01aztec zero knowledge terminal.\x01\ntype command or 'help'\n");
     this.printQueue.put(undefined);
     this.terminal.on('cmd', (cmd: string) => this.cmdQueue.put(cmd));
-    this.app.on('log', (str: string) => this.printQueue.put(str));
+    this.app.on(SdkEvent.LOG, (str: string) => this.printQueue.put(str + '\n'));
   }
 
   public stop() {
@@ -153,7 +152,7 @@ export class TerminalHandler {
         `switched to ${user.publicKey.toString('hex').slice(0, 8)}...\nbalance ${this.app.getBalance()}\n`,
       );
     } else {
-      const str = this.app.getUsers().map(this.userStr).join('');
+      const str = this.app.getUsers(false).map(this.userStr).join('');
       this.printQueue.put(str);
     }
   }
@@ -182,7 +181,7 @@ export class TerminalHandler {
   }
 
   private async clearData() {
-    await this.app.clearNoteData();
+    await this.app.clearData();
   }
 
   private userStr(u: User) {

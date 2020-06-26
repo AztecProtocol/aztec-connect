@@ -8,7 +8,7 @@ export async function fetchCode() {
   if (isNode) {
     return await promisify(readFile)(__dirname + '/barretenberg.wasm');
   } else {
-    const res = await fetch('barretenberg.wasm');
+    const res = await fetch('/barretenberg.wasm');
     return Buffer.from(await res.arrayBuffer());
   }
 }
