@@ -2,9 +2,7 @@ import { ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg
 import { ServerBlockSource, Block } from 'barretenberg/block_source';
 import { DexieDatabase } from './database';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
-import leveljs from 'level-js';
 import levelup from 'levelup';
-import leveldown from 'leveldown';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import { SdkEvent, SdkInitState } from './sdk';
 import createDebug from 'debug';
@@ -32,7 +30,7 @@ export async function createSdk(hostStr: string, options: SdkOptions = {}) {
   options = { syncInstances: true, saveProvingKey: true, ...options };
   const host = new URL(hostStr);
   isNode && mkdirSync('./data');
-  const leveldb = levelup(isNode ? leveldown('./data/aztec2-sdk.db') : leveljs('aztec2-sdk'));
+  const leveldb = levelup(isNode ? require('leveldown')('./data/aztec2-sdk.db') : require('level-js')('aztec2-sdk'));
   const rollupProvider = new ServerRollupProvider(host);
   const rollupProviderExplorer = new ServerRollupProviderExplorer(host);
   const blockSource = new ServerBlockSource(host);
