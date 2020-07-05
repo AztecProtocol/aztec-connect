@@ -42,7 +42,7 @@ export class App extends EventEmitter implements RollupProviderExplorer {
     this.sdk = await createSdk(serverUrl);
 
     for (const e in SdkEvent) {
-      this.sdk.on((<any>SdkEvent)[e], (...args: any[]) => this.emit((<any>SdkEvent)[e], ...args));
+      this.sdk.on((SdkEvent as any)[e], (...args: any[]) => this.emit((SdkEvent as any)[e], ...args));
     }
 
     await this.sdk.init();
@@ -99,7 +99,7 @@ export class App extends EventEmitter implements RollupProviderExplorer {
     const input = { userId: user.id, value, recipient: user.publicKey, created: new Date(created) };
     this.updateProofState({ action, state: ProofState.RUNNING, input });
     try {
-      const txHash = await this.sdk.deposit(value);
+      const txHash = await this.sdk.deposit(value, Buffer.alloc(20));
       this.updateProofState({ action, state: ProofState.FINISHED, txHash, input, time: Date.now() - created });
     } catch (err) {
       debug(err);
@@ -114,7 +114,7 @@ export class App extends EventEmitter implements RollupProviderExplorer {
     const input = { userId: user.id, value, recipient: user.publicKey, created: new Date(created) };
     this.updateProofState({ action, state: ProofState.RUNNING, input });
     try {
-      const txHash = await this.sdk.withdraw(value);
+      const txHash = await this.sdk.withdraw(value, Buffer.alloc(20));
       this.updateProofState({ action, state: ProofState.FINISHED, txHash, input, time: Date.now() - created });
     } catch (err) {
       debug(err);

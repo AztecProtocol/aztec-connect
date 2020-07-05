@@ -17,7 +17,7 @@ import { JoinSplitProofCreator } from './join_split_proof';
 import { TxsState } from './txs_state';
 import { User, UserFactory } from './user';
 import { UserState, UserStateFactory } from './user_state';
-import { Sdk, SdkEvent, SdkInitState } from './sdk';
+import { Sdk, SdkEvent, SdkInitState, TxHash } from './sdk';
 import { UserTx } from './user_tx';
 import Mutex from 'idb-mutex';
 
@@ -48,6 +48,10 @@ export enum CoreSdkEvent {
   RESTART = 'CORESDKEVENT_RESTART',
 }
 
+export interface CoreSdkOptions {
+  saveProvingKey?: boolean;
+}
+
 export class CoreSdk extends EventEmitter implements Sdk {
   private initState = SdkInitState.UNINITIALIZED;
   private user!: User;
@@ -68,6 +72,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     private rollupProvider: RollupProvider,
     private rollupProviderExplorer: RollupProviderExplorer,
     private blockSource: BlockSource,
+    private options: CoreSdkOptions,
   ) {
     super();
   }
@@ -131,7 +136,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
       const user = this.userFactory.createUser(0);
       this.db.addUser(user);
       this.users = [user];
-      debug(`created new user:`, this.user);
+      debug(`created new user ${user.id}.`);
     }
     this.userStates = this.users.filter(u => u.privateKey).map(u => this.userStateFactory.createUserState(u));
     await Promise.all(this.userStates.map(us => us.init()));
@@ -147,14 +152,16 @@ export class CoreSdk extends EventEmitter implements Sdk {
     } else {
       this.logAndDebug('computing proving key...');
       await joinSplitProver.computeKey();
-      debug('saving...');
-      const newProvingKey = await joinSplitProver.getKey();
-      await this.db.addKey('join-split-proving-key', newProvingKey);
+      if (this.options.saveProvingKey) {
+        debug('saving...');
+        const newProvingKey = await joinSplitProver.getKey();
+        await this.db.addKey('join-split-proving-key', newProvingKey);
+      }
       this.logAndDebug(`complete: ${new Date().getTime() - start}ms`);
     }
   }
 
-  public async destroy() {
+  private async deinit() {
     await this.pooledProver.destroy();
     this.blockSource.stop();
     this.blockSource.removeAllListeners();
@@ -164,8 +171,13 @@ export class CoreSdk extends EventEmitter implements Sdk {
   }
 
   public async restart() {
-    await this.destroy();
+    await this.deinit();
     await this.init();
+  }
+
+  public async destroy() {
+    await this.deinit();
+    this.emit(SdkEvent.UPDATED_INIT_STATE, (this.initState = SdkInitState.DESTROYED));
   }
 
   public async clearData() {
@@ -216,10 +228,11 @@ export class CoreSdk extends EventEmitter implements Sdk {
       // be for only one tab to process the block, and to alert the others to sync.
       await this.mutex.lock();
       await this.worldState.syncFromDb().catch(() => {});
-      if (this.worldState.getSize() === block.dataStartIndex) {
+      const dataSize = this.worldState.getSize();
+      if (dataSize === block.dataStartIndex) {
         await this.worldState.processBlock(block);
       } else {
-        debug(`skipping block ${block.rollupId} (already processed).`);
+        debug(`skipping block ${block.rollupId}, dataSize != dataStartIndex: ${dataSize} != ${block.dataStartIndex}.`);
       }
       await this.mutex.unlock();
       await this.handleBlock(block);
@@ -257,7 +270,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     );
   }
 
-  private async createProof(action: UserTxAction, value: number, recipient: Buffer) {
+  private async createProof(action: UserTxAction, value: number, recipient: Buffer, publicAddress?: Buffer) {
     const created = Date.now();
     const user = this.getUser();
     const userState = this.getUserState(user.id)!;
@@ -273,6 +286,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
       transfer,
       user,
       recipient,
+      publicAddress,
     );
     const { txHash } = await this.rollupProvider.sendProof(proofOutput.proof);
 
@@ -293,16 +307,41 @@ export class CoreSdk extends EventEmitter implements Sdk {
     return txHash;
   }
 
-  public async deposit(value: number) {
-    return await this.createProof('DEPOSIT', value, this.user.publicKey);
+  public async deposit(value: number, publicAddress: Buffer) {
+    return await this.createProof('DEPOSIT', value, this.user.publicKey, publicAddress);
   }
 
-  public async withdraw(value: number) {
-    return await this.createProof('WITHDRAW', value, this.user.publicKey);
+  public async withdraw(value: number, publicAddress: Buffer) {
+    return await this.createProof('WITHDRAW', value, this.user.publicKey, publicAddress);
   }
 
   public async transfer(value: number, recipient: Buffer) {
     return await this.createProof('TRANSFER', value, recipient);
+  }
+
+  private async isSynchronised() {
+    const providerStatus = await this.rollupProvider.status();
+    const localDataRoot = await this.worldState.getRoot();
+    return localDataRoot.equals(providerStatus.dataRoot);
+  }
+
+  public async awaitSynchronised() {
+    while (!(await this.isSynchronised())) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  public async awaitSettlement(txHash: TxHash) {
+    while (true) {
+      const tx = await this.getUserState(this.user.id)!.getUserTx(txHash);
+      if (!tx) {
+        throw new Error(`Transaction hash not found: ${txHash.toString('hex')}`);
+      }
+      if (tx.settled === true) {
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }
 
   private getUserState(userId: number) {

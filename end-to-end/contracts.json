@@ -1,0 +1,13 @@
+{
+  "outputPath": "./src/contracts",
+  "contracts": {
+    "RollupProcessor": {
+      "source": "truffle",
+      "buildFile": "./node_modules/blockchain/artifacts/RollupProcessor.json"
+    },
+    "ERC20Mintable": {
+      "source": "truffle",
+      "buildFile": "./node_modules/blockchainc/artifacts/ERC20Mintable.json"
+    }
+  }
+}

@@ -3,9 +3,9 @@ import Koa from 'koa';
 import compress from 'koa-compress';
 import Router from 'koa-router';
 import { PromiseReadable } from 'promise-readable';
-import { Server } from './server';
 import { RollupDao } from './entity/rollup';
 import { TxDao } from './entity/tx';
+import { Server } from './server';
 
 const cors = require('@koa/cors');
 
@@ -82,7 +82,7 @@ export function appFactory(server: Server, prefix: string) {
   });
 
   router.get('/get-blocks', async (ctx: Koa.Context) => {
-    const blocks = server.getBlocks(+ctx.query.from);
+    const blocks = await server.getBlocks(+ctx.query.from);
     ctx.body = blocks.map(({ dataEntries, nullifiers, viewingKeys, ...rest }) => ({
       ...rest,
       dataEntries: dataEntries.map(b => b.toString('hex')),

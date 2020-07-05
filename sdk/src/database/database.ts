@@ -50,6 +50,7 @@ export interface Database {
   getUser(userId: number): Promise<DbUser | undefined>;
   getUsers(): Promise<DbUser[]>;
   addUser(user: DbUser): Promise<void>;
+  getUserTx(txHash: Uint8Array): Promise<DbUserTx | undefined>;
   getUserTxs(userId: number): Promise<DbUserTx[]>;
   addUserTx(userTx: DbUserTx): Promise<void>;
   settleUserTx(txHash: Uint8Array): Promise<void>;

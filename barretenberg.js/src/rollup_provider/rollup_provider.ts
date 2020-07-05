@@ -4,6 +4,8 @@ export interface Proof {
 }
 
 export interface RollupProviderStatus {
+  rollupContractAddress: string;
+  tokenContractAddress: string;
   dataSize: number;
   dataRoot: Buffer;
   nullRoot: Buffer;

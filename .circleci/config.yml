@@ -92,6 +92,18 @@ jobs:
           working_directory: barretenberg.js
           command: build barretenberg.js:latest
 
+  blockchain:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - *setup_env
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: 'Build and test'
+          working_directory: blockchain
+          command: build blockchain:latest
+
   falafel:
     machine:
       image: ubuntu-1604:201903-01
@@ -127,6 +139,23 @@ jobs:
           name: 'Build and test'
           working_directory: hummus
           command: build hummus:latest
+
+  end-to-end:
+    machine:
+      image: ubuntu-1604:201903-01
+    resource_class: large
+    steps:
+      - *setup_env
+      - checkout
+      - run:
+          name: 'Build and test'
+          working_directory: end-to-end
+          command: |
+            if check_rebuild; then
+              build end-to-end:latest
+              docker tag $ECR_URL/end-to-end:cache-$CIRCLE_SHA1-latest $ECR_DEPLOY_URL/end-to-end:latest
+              docker-compose run --rm end-to-end
+            fi
 
   deploy:
     docker:
@@ -180,21 +209,27 @@ workflows:
       - barretenberg-js:
           requires:
             - wasm-linux-clang
-      - falafel:
+      - blockchain:
           requires:
             - barretenberg-js
+      - falafel:
+          requires:
             - x86_64-linux-clang
+            - blockchain
       - sdk:
           requires:
             - barretenberg-js
       - hummus:
           requires:
             - sdk
+      - end-to-end:
+          requires:
+            - falafel
+            - sdk
       - deploy:
           requires:
             - x86_64-linux-gcc
-            - x86_64-linux-clang
-            - falafel
+            - end-to-end
             - hummus
           filters:
             branches:

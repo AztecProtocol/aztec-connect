@@ -4,13 +4,11 @@ import { Note, encryptNote, createNoteSecret } from 'barretenberg/client_proofs/
 import { Proof } from 'barretenberg/rollup_provider';
 import { WorldState } from 'barretenberg/world_state';
 import { UserState } from '../user_state';
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes } from 'crypto';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { User } from '../user';
 
 const debug = createDebug('bb:join_split_proof');
-
-const toAddress = (pubKey: Buffer) => createHash('sha256').update(pubKey).digest().slice(-20);
 
 export type JoinSplitProofOutput = {
   proof: Proof;
@@ -30,7 +28,7 @@ export class JoinSplitProofCreator {
     transfer: number,
     sender: User,
     receiverPubKey: Buffer,
-    publicOwnerAddress?: Buffer,
+    publicAddress?: Buffer,
   ): Promise<JoinSplitProofOutput> {
     const requiredInputNoteValue = Math.max(0, transfer + withdraw - deposit);
     const notes = userState.pickNotes(requiredInputNoteValue);
@@ -77,21 +75,17 @@ export class JoinSplitProofCreator {
       inputNotes,
       outputNotes,
       signature,
-      publicOwnerAddress || toAddress(sender.publicKey),
+      publicAddress || Buffer.alloc(20, 0),
     );
-
-    debug(tx);
 
     debug('creating proof...');
     const start = new Date().getTime();
     const proofData = await this.joinSplitProver.createJoinSplitProof(tx);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
-    debug(proofData);
 
     const viewingKeys = [encViewingKey1, encViewingKey2];
     const joinSplitProof = new JoinSplitProof(proofData, viewingKeys);
-    debug(joinSplitProof);
     const { newNote1, newNote2 } = joinSplitProof;
 
     // Only return notes that belong to the user.

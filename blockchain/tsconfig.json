@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "moduleResolution": "node",
+    "lib": ["dom", "esnext", "es2017.object"],
+    "outDir": "dest",
+    "module": "commonjs",
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitThis": false,
+    "esModuleInterop": true,
+    "declaration": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "inlineSourceMap": true,
+    "declarationMap": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src", "test"],
+  "files": [
+    "./node_modules/@nomiclabs/buidler-ethers/src/type-extensions.d.ts",
+    "./node_modules/@nomiclabs/buidler-waffle/src/type-extensions.d.ts"
+  ]
+}

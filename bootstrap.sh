@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# CWD is ./barretenberg/
-
+# CWD is ./monorepo-scripts/
 build_barretenberg_wasm() {
     cd ./barretenberg/src
     rm -rf wasi-sdk-8.0
@@ -19,7 +18,7 @@ build_barretenberg() {
     rm -rf ./build
     mkdir build
     cd build
-    cmake .. -DTESTING=OFF -DBENCHMARKS=OFF
+    cmake ..
     make -j$(nproc)
     cd ../..
 }
@@ -34,6 +33,13 @@ build_barretenberg_js() {
     cd dest-es && yarn link
     cd ..
     cd ..
+}
+
+build_falafel() {
+    cd ./falafel 
+    yarn install
+    yarn link barretenberg
+    yarn build 
 }
 
 build_sdk() {
@@ -61,6 +67,15 @@ build_tahini() {
     cd ..
 }
 
+build_blockchain() {
+    cd ./blockchain
+    yarn install
+    yarn link barretenberg-es
+    yarn build
+    yarn compile
+    cd ..
+}
+
 bootstrap () {
     yarn unlink barretenberg
     yarn unlink barretenberg-es
@@ -68,8 +83,10 @@ bootstrap () {
     build_barretenberg
     build_barretenberg_wasm $1
     build_barretenberg_js
+    build_blockchain
     build_hummus
     build_tahini
+    build_falafel
 }
 
 if [[ "$OSTYPE" == "darwin"* ]]; then

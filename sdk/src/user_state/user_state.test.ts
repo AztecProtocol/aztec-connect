@@ -91,7 +91,25 @@ describe('User State', () => {
     expect(updated).toBe(true);
   });
 
-  it('addUserTx idempotence', async () => {
+  it('add and get user', async () => {
+    const txHash = Buffer.from('test-id-1');
+    const userTx: UserTx = {
+      txHash,
+      userId: user.id,
+      action: 'DEPOSIT',
+      value: 100,
+      recipient: user.publicKey,
+      settled: false,
+      created: new Date(),
+    };
+
+    await userState.addUserTx(userTx);
+
+    const userTxResult = await userState.getUserTx(txHash);
+    expect(userTxResult).toEqual(userTx);
+  });
+
+  it('add user idempotence', async () => {
     const userTx1: UserTx = {
       txHash: Buffer.from('test-id-1'),
       userId: user.id,

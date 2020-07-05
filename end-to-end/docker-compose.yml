@@ -1,0 +1,40 @@
+version: '3'
+services:
+  ganache:
+    image: trufflesuite/ganache-cli
+    command: ['-a=10', '-h=0.0.0.0']
+    ports:
+      - 8545:8545
+
+  falafel:
+    build: ../falafel
+    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest
+    environment:
+      ETHEREUM_HOST: http://ganache:8545
+      NODE_ENV: production
+      MAX_ROLLUP_WAIT_TIME: 0
+      ROLLUP_SIZE: 1
+    depends_on:
+      - ganache
+    command: >
+      sh -c "
+      while ! nc -z ganache 8545; do sleep 1; done;
+      `yarn -s deploy_rollup_processor`;
+      yarn start
+      "
+    ports:
+      - 80:80
+
+  end-to-end:
+    build: .
+    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/end-to-end:latest
+    environment:
+      ETHEREUM_HOST: http://ganache:8545
+      ROLLUP_HOST: http://falafel
+    depends_on:
+      - falafel
+    command: >
+      sh -c "
+      while ! nc -z falafel 80; do sleep 1; done;
+      CI=true yarn -s test
+      "

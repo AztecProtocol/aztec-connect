@@ -57,7 +57,7 @@ export class UserState {
       if (!note) {
         continue;
       }
-      debug(`user ${this.user.id} successfully decrypted note at index ${treeIndex}:`, note);
+      debug(`user ${this.user.id} successfully decrypted note at index ${treeIndex} with value ${note.value}.`);
 
       const { secret, value } = note;
       const nullifier = computeNullifier(dataEntry, treeIndex, secret, this.blake2s);
@@ -82,7 +82,7 @@ export class UserState {
         continue;
       }
       await this.db.nullifyNote(dbNote.id);
-      debug(`user ${this.user.id} nullified note at index ${dbNote.id}`, dbNote);
+      debug(`user ${this.user.id} nullified note at index ${dbNote.id} with value ${dbNote.value}.`);
       await this.settleTxForNote(dbNote);
       updated = true;
     }
@@ -156,8 +156,13 @@ export class UserState {
     );
   }
 
-  public async removeUserTx(txId: Buffer) {
-    await this.db.deleteUserTx(txId);
+  public async removeUserTx(txHash: Buffer) {
+    await this.db.deleteUserTx(txHash);
+  }
+
+  public async getUserTx(txHash: Buffer) {
+    const tx = await this.db.getUserTx(new Uint8Array(txHash));
+    return tx ? dbUserTxToUserTx(tx) : undefined;
   }
 
   public async getUserTxs() {

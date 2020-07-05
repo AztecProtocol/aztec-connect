@@ -28,9 +28,10 @@ export enum SdkInitState {
   UNINITIALIZED = 'Uninitialized',
   INITIALIZING = 'Initializing',
   INITIALIZED = 'Initialized',
+  DESTROYED = 'Destroyed',
 }
 
-type TxHash = Buffer;
+export type TxHash = Buffer;
 
 export interface Sdk extends EventEmitter {
   init(): Promise<void>;
@@ -49,11 +50,15 @@ export interface Sdk extends EventEmitter {
 
   getStatus(): Promise<RollupProviderStatus>;
 
-  deposit(value: number): Promise<TxHash>;
+  deposit(value: number, publicAddress: Buffer): Promise<TxHash>;
 
-  withdraw(value: number): Promise<TxHash>;
+  withdraw(value: number, publicAddress: Buffer): Promise<TxHash>;
 
   transfer(value: number, recipient: Buffer): Promise<TxHash>;
+
+  awaitSynchronised(): Promise<void>;
+
+  awaitSettlement(txHash: TxHash): Promise<void>;
 
   getUser(): User;
 

@@ -12,7 +12,7 @@ export interface Block {
 export interface BlockSource {
   on(event: 'block', fn: (block: Block) => void);
   removeAllListeners();
-  start(fromBlock: number);
+  start(fromBlock?: number);
   stop();
 }
 

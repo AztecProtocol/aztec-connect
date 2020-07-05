@@ -1,8 +1,9 @@
 .vscode
 .viscode
-**/dest*
-**/dist
-**/node_modules
-**/.terraform
+dest*
+dist
+node_modules
+.terraform
+.env
 yarn.lock
 *.log

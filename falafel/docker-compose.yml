@@ -2,7 +2,7 @@ version: '3'
 services:
   falafel:
     build: .
-    image: 278380418400.dkr.ecr.us-east-2.amazonaws.com/falafel:latest
+    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest
     tty: true
     stdin_open: true
     environment:

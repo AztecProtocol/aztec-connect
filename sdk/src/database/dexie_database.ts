@@ -65,6 +65,10 @@ export class DexieDatabase implements Database {
     await this.user.put(user);
   }
 
+  async getUserTx(txHash: Uint8Array) {
+    return await this.userTx.get(txHash);
+  }
+
   async getUserTxs(userId: number) {
     return this.userTx.where({ userId }).reverse().sortBy('created');
   }

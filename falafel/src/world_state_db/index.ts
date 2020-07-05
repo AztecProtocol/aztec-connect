@@ -1,8 +1,8 @@
+import { MemoryFifo } from 'barretenberg/fifo';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
-import { MemoryFifo } from '../fifo';
 import { mkdirAsync } from '../fs_async';
 
 export class WorldStateDb {
@@ -12,6 +12,8 @@ export class WorldStateDb {
   private roots: Buffer[] = [];
   private sizes: bigint[] = [];
   private binPath = '../barretenberg/build/src/aztec/rollup/db_cli/db_cli';
+
+  constructor(private dbPath: string = './data/world_state.db') {}
 
   public async start() {
     await this.launch();
@@ -134,7 +136,7 @@ export class WorldStateDb {
 
   private async launch() {
     await mkdirAsync('./data', { recursive: true });
-    const proc = (this.proc = spawn(this.binPath, ['./data/world_state.db']));
+    const proc = (this.proc = spawn(this.binPath, [this.dbPath]));
 
     proc.stderr.on('data', data => {});
     // proc.stderr.on('data', data => console.log(data.toString().trim()));

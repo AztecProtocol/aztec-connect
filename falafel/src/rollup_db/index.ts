@@ -1,6 +1,6 @@
 import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { createHash } from 'crypto';
-import { Connection, Repository, In } from 'typeorm';
+import { Connection, In, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { Rollup } from '../rollup';

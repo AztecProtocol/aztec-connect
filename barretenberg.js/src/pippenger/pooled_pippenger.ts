@@ -18,7 +18,7 @@ export class PooledPippenger implements Pippenger {
         return p;
       }),
     );
-    debug(`initalization took: ${new Date().getTime() - start}ms`);
+    debug(`initialization took: ${new Date().getTime() - start}ms`);
   }
 
   public async pippengerUnsafe(scalars: Uint8Array, from: number, range: number) {

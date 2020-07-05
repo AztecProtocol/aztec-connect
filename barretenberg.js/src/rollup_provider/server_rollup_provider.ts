@@ -31,7 +31,7 @@ export class ServerRollupProvider implements RollupProvider {
     }
     const body = await response.json();
     return {
-      dataSize: body.dataSize,
+      ...body,
       dataRoot: Buffer.from(body.dataRoot, 'hex'),
       nullRoot: Buffer.from(body.nullRoot, 'hex'),
     };

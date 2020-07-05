@@ -6,17 +6,16 @@ import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { Blockchain } from 'blockchain';
 import moment, { Duration } from 'moment';
-import { createConnection } from 'typeorm';
-import { LocalBlockchain } from './blockchain';
-import { MemoryFifo } from './fifo';
+import { MemoryFifo } from 'barretenberg/fifo';
 import { readFileAsync } from './fs_async';
 import { ProofGenerator } from './proof_generator';
 import { Rollup } from './rollup';
 import { RollupDb } from './rollup_db';
 import { WorldStateDb } from './world_state_db';
 
-interface ServerConfig {
+export interface ServerConfig {
   readonly rollupSize: number;
   readonly maxRollupWaitTime: Duration;
   readonly minRollupInterval: Duration;
@@ -26,35 +25,36 @@ interface PublishQueueItem {
   rollupId: number;
   proof: Buffer;
   viewingKeys: Buffer[];
+  rollupSize: number;
 }
 
 export class Server {
   private worldStateDb: WorldStateDb;
   private joinSplitVerifier!: JoinSplitVerifier;
-  private blockchain!: LocalBlockchain;
   private worker!: BarretenbergWorker;
-  private rollupDb!: RollupDb;
   private rollupQueue = new MemoryFifo<JoinSplitProof[]>();
   private publishQueue = new MemoryFifo<PublishQueueItem>();
   private txQueue = new MemoryFifo<JoinSplitProof | undefined>();
   private proofGenerator: ProofGenerator;
   private pendingNullifiers = new Set<bigint>();
 
-  constructor(private config: ServerConfig) {
+  constructor(private config: ServerConfig, private blockchain: Blockchain, private rollupDb: RollupDb) {
     if (!this.config.rollupSize) {
       throw new Error('Rollup size must be greater than 0.');
     }
+
+    if (config.minRollupInterval.asSeconds() > config.maxRollupWaitTime.asSeconds()) {
+      throw new Error('minRollupInterval must be <= maxRollupWaitTime');
+    }
+
     this.worldStateDb = new WorldStateDb();
     this.proofGenerator = new ProofGenerator(this.config.rollupSize);
   }
 
   public async start() {
     await this.proofGenerator.run();
-    const connection = await createConnection();
-    this.blockchain = new LocalBlockchain(connection, this.config.rollupSize);
-    this.rollupDb = new RollupDb(connection);
+    this.blockchain.start();
     this.rollupDb.init();
-    await this.blockchain.start();
     await this.worldStateDb.start();
     this.printState();
     await this.createJoinSplitVerifier();
@@ -75,7 +75,7 @@ export class Server {
 
   private async restoreState() {
     // Ensure we confirm any rollups that we have missed while not running.
-    const newBlocks = this.getBlocks((await this.rollupDb.getLastBlockNum()) + 1);
+    const newBlocks = await this.getBlocks((await this.rollupDb.getLastBlockNum()) + 1);
     for (const block of newBlocks) {
       await this.rollupDb.confirmRollup(block.rollupId, block.blockNum);
     }
@@ -96,11 +96,11 @@ export class Server {
     // Find all CREATED rollups and reinsert to publisher queue.
     const createdRollups = await this.rollupDb.getCreatedRollups();
     createdRollups.forEach(({ id, proofData, txs }) => {
-      console.log(`Rollup restored: ${id}`);
       this.publishQueue.put({
         rollupId: id,
         proof: proofData!,
         viewingKeys: txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat(),
+        rollupSize: this.config.rollupSize,
       });
     });
 
@@ -127,6 +127,8 @@ export class Server {
 
   public status() {
     return {
+      rollupContractAddress: this.blockchain.getRollupContractAddress(),
+      tokenContractAddress: this.blockchain.getTokenContractAddress(),
       dataSize: Number(this.worldStateDb.getSize(0)),
       dataRoot: this.worldStateDb.getRoot(0).toString('hex'),
       nullRoot: this.worldStateDb.getRoot(1).toString('hex'),
@@ -138,10 +140,6 @@ export class Server {
     let flushTimeout!: NodeJS.Timeout;
     let lastTxReceivedTime = moment.unix(0);
     let txs: JoinSplitProof[] = [];
-
-    if (minRollupInterval.asSeconds() > maxRollupWaitTime.asSeconds()) {
-      throw new Error('minRollupInterval must be <= maxRollupWaitTime');
-    }
 
     while (true) {
       const tx = await this.txQueue.get();
@@ -194,6 +192,7 @@ export class Server {
       await this.rollupDb.addRollup(rollup);
 
       const proof = await this.proofGenerator.createProof(rollup);
+      
       if (!proof) {
         // This shouldn't happen!? What happens to the txs?
         // Perhaps need to extract the troublemaker, and then reinsert all txs into queue?
@@ -207,7 +206,7 @@ export class Server {
       await this.rollupDb.confirmRollupCreated(rollup.rollupId);
 
       const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
-      this.publishQueue.put({ rollupId: rollup.rollupId, proof, viewingKeys });
+      this.publishQueue.put({ rollupId: rollup.rollupId, proof, viewingKeys, rollupSize: this.config.rollupSize });
 
       this.printState();
     }
@@ -215,18 +214,19 @@ export class Server {
 
   private async processPublishQueue() {
     while (true) {
-      const { rollupId, proof, viewingKeys } = (await this.publishQueue.get()) || ({} as PublishQueueItem);
-      if (!proof) {
+      const item = await this.publishQueue.get();
+      if (!item) {
         break;
       }
+      const { rollupId, proof, viewingKeys, rollupSize } = item;
 
       while (true) {
         try {
-          const txHash = await this.blockchain.sendProof(proof!, rollupId, this.config.rollupSize, viewingKeys!);
+          const txHash = await this.blockchain.sendProof(proof, viewingKeys, rollupSize);
 
           await this.rollupDb.confirmSent(rollupId);
 
-          const receipt = await this.blockchain.getTransactionReceipt(txHash!);
+          const receipt = await this.blockchain.getTransactionReceipt(txHash);
 
           await this.rollupDb.confirmRollup(rollupId, receipt.blockNum);
           break;
@@ -234,14 +234,14 @@ export class Server {
           // Could have failed due to not sending (network error), or not getting mined (gas too low?).
           // But, the proof is assumed to always be valid. So let's try again.
           console.log(err.message);
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 10000));
         }
       }
     }
   }
 
-  public getBlocks(from: number) {
-    return this.blockchain.getBlocks(from);
+  public async getBlocks(from: number) {
+    return await this.blockchain.getBlocks(from);
   }
 
   public async getLatestRollups(count: number) {
@@ -301,6 +301,11 @@ export class Server {
     // Check the proof is valid.
     if (!(await this.joinSplitVerifier.verifyProof(proofData))) {
       throw new Error('Proof verification failed.');
+    }
+
+    // Check user has required funds if depositing.
+    if (!(await this.blockchain.validateDepositFunds(proof.publicOwner, proof.publicInput))) {
+      throw new Error('User has insufficient or unapproved deposit balance.');
     }
 
     proof.dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);

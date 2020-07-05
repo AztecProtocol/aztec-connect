@@ -1,21 +1,9 @@
-import { Block, BlockSource } from 'barretenberg/block_source';
+import { Block, Blockchain, Receipt, RollupProof } from 'blockchain';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
-import { RollupProof } from './rollup_proof';
-
-export interface ProofReceiver {
-  sendProof(proof: Buffer, rollupId: number, rollupSize: number, viewingKeys: Buffer[]): Promise<Buffer>;
-}
-
-export interface Blockchain extends BlockSource, ProofReceiver {
-  getBlocks(from: number): Block[];
-}
-
-export interface Receipt {
-  blockNum: number;
-}
+import { blockDaoToBlock, blockToBlockDao } from './blockdao_convert';
 
 export class LocalBlockchain extends EventEmitter implements Blockchain {
   private blockNum = 0;
@@ -26,6 +14,14 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
   constructor(private connection: Connection, private rollupSize: number) {
     super();
+  }
+
+  public getRollupContractAddress() {
+    return '';
+  }
+
+  public getTokenContractAddress() {
+    return '';
   }
 
   public async start() {
@@ -52,16 +48,14 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     this.running = false;
   }
 
-  public async sendProof(proofData: Buffer, rollupId: number, rollupSize: number, viewingKeys: Buffer[]) {
+  public async sendProof(proofData: Buffer, viewingKeys: Buffer[]) {
     if (!this.running) {
       throw new Error('Blockchain is not accessible.');
     }
 
     const tx = new RollupProof(proofData);
+    const rollupId = tx.rollupId;
 
-    if (rollupSize !== this.rollupSize) {
-      throw new Error(`Inconsistent rollup size. Expecting ${this.rollupSize}. Got ${rollupSize}.`);
-    }
     if (tx.dataStartIndex !== this.dataStartIndex) {
       throw new Error(`Incorrect dataStartIndex. Expecting ${this.dataStartIndex}. Got ${tx.dataStartIndex}.`);
     }
@@ -69,7 +63,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     const txHash = randomBytes(32);
     const dataEntries = tx.innerProofData.map(p => [p.newNote1, p.newNote2]).flat();
     const nullifiers = tx.innerProofData.map(p => [p.nullifier1, p.nullifier2]).flat();
-    const numDataEntries = rollupSize * 2;
+    const numDataEntries = this.rollupSize * 2;
 
     const block: Block = {
       txHash,
@@ -86,7 +80,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     this.dataStartIndex += numDataEntries;
     this.blockchain.push(block);
 
-    await this.saveBlock(block, rollupId);
+    await this.saveBlock(block);
 
     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -104,47 +98,20 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     } as Receipt;
   }
 
-  private async saveBlock(block: Block, rollupId: number) {
-    const blockDao = new BlockDao();
-    blockDao.created = new Date();
-    blockDao.id = block.blockNum;
-    blockDao.txHash = block.txHash;
-    blockDao.rollupId = rollupId;
-    blockDao.dataStartIndex = block.dataStartIndex;
-    blockDao.numDataEntries = block.numDataEntries;
-    blockDao.dataEntries = Buffer.concat(block.dataEntries);
-    blockDao.nullifiers = Buffer.concat(block.nullifiers);
-    blockDao.viewingKeys = Buffer.concat(block.viewingKeys);
-    await this.blockRep.save(blockDao);
+  private async saveBlock(block: Block) {
+    await this.blockRep.save(blockToBlockDao(block));
   }
 
   private async loadBlocks() {
     const blockDaos = await this.blockRep.find();
-    return blockDaos.map(b => {
-      const block: Block = {
-        txHash: b.txHash,
-        blockNum: b.id,
-        rollupId: b.rollupId,
-        dataStartIndex: b.dataStartIndex,
-        numDataEntries: b.numDataEntries,
-        dataEntries: [],
-        nullifiers: [],
-        viewingKeys: [],
-      };
-      for (let i = 0; i < b.dataEntries.length; i += 64) {
-        block.dataEntries.push(b.dataEntries.slice(i, i + 64));
-      }
-      for (let i = 0; i < b.nullifiers.length; i += 16) {
-        block.nullifiers.push(b.nullifiers.slice(i, i + 16));
-      }
-      for (let i = 0; i < b.viewingKeys.length; i += 176) {
-        block.viewingKeys.push(b.viewingKeys.slice(i, i + 176));
-      }
-      return block;
-    });
+    return blockDaos.map(blockDaoToBlock);
   }
 
-  public getBlocks(from: number) {
+  public async getBlocks(from: number): Promise<Block[]> {
     return this.blockchain.slice(from);
+  }
+
+  public async validateDepositFunds(publicOwner: Buffer, publicInput: Buffer) {
+    return true;
   }
 }

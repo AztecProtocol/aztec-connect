@@ -5,13 +5,14 @@ describe('world_state_db', () => {
   let worldStateDb: WorldStateDb;
 
   beforeEach(async () => {
-    worldStateDb = new WorldStateDb();
+    worldStateDb = new WorldStateDb('/tmp/world_state.db');
     worldStateDb.destroy();
     await worldStateDb.start();
   });
 
   afterEach(() => {
     worldStateDb.stop();
+    worldStateDb.destroy();
   });
 
   it('should be initialized with correct metadata', async () => {

@@ -1,0 +1,47 @@
+{
+  "name": "end-to-end",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dest/index.js",
+  "license": "GPL-2.0",
+  "scripts": {
+    "test": "DEBUG=bb:* jest"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "testRegex": ".*\\.test\\.(tsx?|js)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ],
+    "rootDir": "./src"
+  },
+  "dependencies": {
+    "aztec2-sdk": "file:../sdk/dest",
+    "blockchain": "file:../blockchain/dest",
+    "bn.js": "^5.0.0",
+    "fake-indexeddb": "^3.0.2",
+    "level": "^6.0.1",
+    "source-map-support": "^0.5.19",
+    "typescript": "^3.5.3",
+    "web3x": "^4.0.6"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^4.11.5",
+    "@types/jest": "^25.2.3",
+    "@types/node": "^14.0.5",
+    "jest": "^24.8.0",
+    "prettier": "^2.0.5",
+    "ts-jest": "^24.0.2",
+    "tsc-watch": "^2.2.1",
+    "tslint": "^5.18.0",
+    "tslint-config-prettier": "^1.18.0",
+    "web3x-codegen": "^4.0.6"
+  }
+}

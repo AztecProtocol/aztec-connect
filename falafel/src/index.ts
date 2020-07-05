@@ -1,22 +1,67 @@
+import { EthereumBlockchain } from 'blockchain';
+import dotenv from 'dotenv';
+import { ethers, Signer } from 'ethers';
 import http from 'http';
 import moment from 'moment';
 import 'reflect-metadata';
 import 'source-map-support/register';
+import { createConnection } from 'typeorm';
 import { appFactory } from './app';
-import { Server } from './server';
+import { LocalBlockchain } from './blockchain/local_blockchain';
+import { PersistentEthereumBlockchain } from './blockchain/persistent_ethereum_blockchain';
+import { RollupDb } from './rollup_db';
+import { Server, ServerConfig } from './server';
 
-const { PORT = 80 } = process.env;
+dotenv.config();
+
+const {
+  PORT = 80,
+  ROLLUP_CONTRACT_ADDRESS,
+  ETHEREUM_HOST,
+  INFURA_API_KEY,
+  NETWORK,
+  PRIVATE_KEY,
+  ROLLUP_SIZE = '2',
+  MAX_ROLLUP_WAIT_TIME = '120',
+  MIN_ROLLUP_INTERVAL = '0',
+} = process.env;
+
+function getSigner() {
+  if (INFURA_API_KEY && NETWORK && PRIVATE_KEY && ROLLUP_CONTRACT_ADDRESS) {
+    console.log(`Infura network: ${NETWORK}`);
+    console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
+    const provider = new ethers.providers.InfuraProvider(NETWORK, INFURA_API_KEY);
+    return new ethers.Wallet(PRIVATE_KEY, provider) as Signer;
+  } else if (ETHEREUM_HOST && ROLLUP_CONTRACT_ADDRESS) {
+    console.log(`Ethereum host: ${ETHEREUM_HOST}`);
+    console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
+    const provider = new ethers.providers.WebSocketProvider(ETHEREUM_HOST);
+    return provider.getSigner(0);
+  }
+}
 
 async function main() {
-  const shutdown = async () => process.exit(0);
+  const serverConfig: ServerConfig = {
+    rollupSize: +ROLLUP_SIZE,
+    maxRollupWaitTime: moment.duration(+MAX_ROLLUP_WAIT_TIME, 's'),
+    minRollupInterval: moment.duration(+MIN_ROLLUP_INTERVAL, 's'),
+  };
+
+  const connection = await createConnection();
+  const signer = getSigner();
+  const blockchain = signer
+    ? new PersistentEthereumBlockchain(new EthereumBlockchain(signer, ROLLUP_CONTRACT_ADDRESS!), connection)
+    : new LocalBlockchain(connection, serverConfig.rollupSize);
+  const rollupDb = new RollupDb(connection);
+
+  const shutdown = async () => {
+    await connection.close();
+    process.exit(0);
+  };
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  const server = new Server({
-    rollupSize: 2,
-    maxRollupWaitTime: moment.duration(120, 's'),
-    minRollupInterval: moment.duration(0, 's'),
-  });
+  const server = new Server(serverConfig, blockchain, rollupDb);
   await server.start();
 
   const app = appFactory(server, '/api');
