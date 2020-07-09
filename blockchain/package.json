@@ -5,7 +5,7 @@
   "license": "GPLv2",
   "private": true,
   "scripts": {
-    "build": "yarn clean && tsc -p tsconfig.prod.json && node ./package.js",
+    "build": "tsc -p tsconfig.prod.json && node ./package.js",
     "build:dev": "tsc -p tsconfig.prod.json --watch",
     "compile": "yarn buidler compile",
     "clean": "rm -rf ./cache ./dest",
@@ -25,7 +25,6 @@
     "debug": "^4.1.1",
     "dotenv": "^8.2.0",
     "ethers": "5.0.3",
-    "typeorm": "^0.2.25",
     "typescript": "^3.5.3"
   },
   "devDependencies": {
@@ -38,7 +37,6 @@
     "chai": "^4.2.0",
     "crypto": "^1.0.1",
     "ethereum-waffle": "3.0.0",
-    "shx": "^0.3.2",
     "sinon": "^9.0.2",
     "solidity-docgen": "^0.5.3",
     "ts-node": "^8.9.1",

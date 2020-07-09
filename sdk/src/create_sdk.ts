@@ -29,7 +29,7 @@ type SdkOptions = { syncInstances?: boolean; clearDb?: boolean } & CoreSdkOption
 export async function createSdk(hostStr: string, options: SdkOptions = {}) {
   options = { syncInstances: true, saveProvingKey: true, ...options };
   const host = new URL(hostStr);
-  isNode && mkdirSync('./data');
+  isNode && mkdirSync('./data', { recursive: true });
   const leveldb = levelup(isNode ? require('leveldown')('./data/aztec2-sdk.db') : require('level-js')('aztec2-sdk'));
   const rollupProvider = new ServerRollupProvider(host);
   const rollupProviderExplorer = new ServerRollupProviderExplorer(host);

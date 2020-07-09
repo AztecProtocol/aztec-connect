@@ -119,15 +119,15 @@ export class TerminalHandler {
     this.printQueue.put(`balance: ${this.app.getBalance()}\n`);
   }
 
-  private async deposit(value: string) {
+  private async deposit(value: string, account: string) {
     this.printQueue.put(`generating deposit proof...\n`);
-    await this.app.deposit(+value);
+    await this.app.deposit(+value, account);
     this.printQueue.put(`deposit proof sent.\n`);
   }
 
-  private async withdraw(value: string) {
+  private async withdraw(value: string, account: string) {
     this.printQueue.put(`generating withdrawl proof...\n`);
-    await this.app.withdraw(+value);
+    await this.app.withdraw(+value, account);
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
 

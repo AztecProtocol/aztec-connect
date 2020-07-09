@@ -66,10 +66,11 @@ export function appFactory(server: Server, prefix: string) {
   router.post('/tx', async (ctx: Koa.Context) => {
     try {
       const stream = new PromiseReadable(ctx.req);
-      const { proofData, viewingKeys } = JSON.parse((await stream.readAll()) as string);
+      const { proofData, viewingKeys, depositSignature } = JSON.parse((await stream.readAll()) as string);
       const tx: Proof = {
         proofData: Buffer.from(proofData, 'hex'),
         viewingKeys: viewingKeys.map((v: string) => Buffer.from(v, 'hex')),
+        depositSignature: depositSignature ? Buffer.from(depositSignature, 'hex') : undefined,
       };
       const txId = await server.receiveTx(tx);
       ctx.status = 200;

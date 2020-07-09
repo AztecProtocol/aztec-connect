@@ -1,4 +1,4 @@
-interface InnerProof {
+export interface InnerProof {
   publicInput: Buffer;
   publicOutput: Buffer;
   newNote1: Buffer;

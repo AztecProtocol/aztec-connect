@@ -1,6 +1,7 @@
 export interface Proof {
   proofData: Buffer;
   viewingKeys: Buffer[];
+  depositSignature?: Buffer;
 }
 
 export interface RollupProviderStatus {

@@ -6,7 +6,7 @@ import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { PooledProver } from 'barretenberg/client_proofs/prover/pooled_prover';
-import { RollupProvider, RollupProviderExplorer } from 'barretenberg/rollup_provider';
+import { RollupProvider, RollupProviderExplorer, Proof } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
@@ -20,6 +20,7 @@ import { UserState, UserStateFactory } from './user_state';
 import { Sdk, SdkEvent, SdkInitState, TxHash } from './sdk';
 import { UserTx } from './user_tx';
 import Mutex from 'idb-mutex';
+import { Signer } from './sdk';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -181,7 +182,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
   }
 
   public async clearData() {
-    await this.destroy();
+    await this.deinit();
     await this.leveldb.clear();
     await this.db.clearNote();
     await this.db.clearUserTxState();
@@ -270,7 +271,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     );
   }
 
-  private async createProof(action: UserTxAction, value: number, recipient: Buffer, publicAddress?: Buffer) {
+  private async createProof(action: UserTxAction, value: number, recipient: Buffer, signer?: Signer) {
     const created = Date.now();
     const user = this.getUser();
     const userState = this.getUserState(user.id)!;
@@ -286,7 +287,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
       transfer,
       user,
       recipient,
-      publicAddress,
+      signer,
     );
     const { txHash } = await this.rollupProvider.sendProof(proofOutput.proof);
 
@@ -307,12 +308,12 @@ export class CoreSdk extends EventEmitter implements Sdk {
     return txHash;
   }
 
-  public async deposit(value: number, publicAddress: Buffer) {
-    return await this.createProof('DEPOSIT', value, this.user.publicKey, publicAddress);
+  public async deposit(value: number, signer: Signer) {
+    return await this.createProof('DEPOSIT', value, this.user.publicKey, signer);
   }
 
-  public async withdraw(value: number, publicAddress: Buffer) {
-    return await this.createProof('WITHDRAW', value, this.user.publicKey, publicAddress);
+  public async withdraw(value: number, signer: Signer) {
+    return await this.createProof('WITHDRAW', value, this.user.publicKey, signer);
   }
 
   public async transfer(value: number, recipient: Buffer) {

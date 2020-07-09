@@ -35,6 +35,7 @@ export class RollupDb {
     txDao.proofData = tx.proofData;
     txDao.viewingKey1 = tx.viewingKeys[0];
     txDao.viewingKey2 = tx.viewingKeys[1];
+    txDao.signature = tx.signature;
     txDao.created = new Date();
     await this.rollupTxRep.save(txDao);
 

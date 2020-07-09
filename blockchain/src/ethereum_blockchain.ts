@@ -77,9 +77,37 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Appends viewingKeys to the proofData, so that they can later be fetched from the tx calldata
    * and added to the emitted rollupBlock.
    */
-  public async sendProof(proofData: Buffer, viewingKeys: Buffer[], rollupSize: number) {
-    const tx = await this.rollupProcessor.processRollup(`0x${proofData.toString('hex')}`, Buffer.concat(viewingKeys), rollupSize);
+  public async sendProof(
+    proofData: Buffer,
+    signatures: Buffer[],
+    sigIndexes: number[],
+    viewingKeys: Buffer[],
+    rollupSize: number,
+  ) {
+    const formattedSignatures = this.solidityFormatSignatures(signatures);
+    const tx = await this.rollupProcessor.processRollup(
+      `0x${proofData.toString('hex')}`,
+      formattedSignatures,
+      sigIndexes,
+      Buffer.concat(viewingKeys),
+      rollupSize,
+    );
     return Buffer.from(tx.hash.slice(2), 'hex');
+  }
+
+  /**
+   * Format all signatures into useful solidity format. EVM word size is 32bytes
+   * and we're supplying a concatenated array of signatures - so need each ECDSA
+   * param (v, r, s) to occupy 32 bytes.
+   *
+   * Zero left padding v by 31 bytes.
+   */
+  private solidityFormatSignatures(signatures: Buffer[]) {
+    const paddedSignatures = signatures.map(currentSignature => {
+      const v = currentSignature.slice(-1);
+      return Buffer.concat([currentSignature.slice(0, 64), Buffer.alloc(31), v]);
+    });
+    return Buffer.concat(paddedSignatures);
   }
 
   /**
@@ -104,7 +132,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     const tx = await this.signer.provider!.getTransaction(txHashStr);
     const txReceipt = await tx.wait();
     if (!txReceipt.blockNumber) {
-      throw new Error(`Failed to get valid receipt for: ${txHashStr}`);
+      throw new Error(`Failed to get valid receipt for {: $ }{txHashStr}`);
     }
     return { blockNum: txReceipt.blockNumber } as Receipt;
   }
@@ -122,6 +150,16 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     const erc20Balance = BigInt(await this.erc20.balanceOf(publicOwner));
     const erc20Approval = BigInt(await this.erc20.allowance(publicOwner, this.rollupProcessor.address));
     return erc20Balance >= publicInput && erc20Approval >= publicInput;
+  }
+
+  /**
+   * Validate locally that a signature was produced by a publicOwner
+   */
+  public validateSignature(publicOwnerBuf: Buffer, signature: Buffer, signingData: Buffer) {
+    const msgHash = ethers.utils.solidityKeccak256(['bytes'], [signingData]);
+    const digest = ethers.utils.arrayify(msgHash);
+    const recoveredSigner = ethers.utils.verifyMessage(digest, `0x${signature.toString('hex')}`);
+    return recoveredSigner.toLowerCase() === `0x${publicOwnerBuf.toString('hex')}`;
   }
 
   /**
@@ -160,7 +198,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     const proofData = Buffer.from(result.args.proofData.slice(2), 'hex');
     const viewingData = Buffer.from(result.args.viewingKeys.slice(2), 'hex');
     const rollupSize = result.args.rollupSize.toNumber();
-    
+
     const rollupProof = new RollupProof(Buffer.from(proofData));
     const rollupId = rollupProof.rollupId;
     const dataStartIndex = rollupProof.dataStartIndex;
@@ -178,7 +216,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
     const viewingKeysArray: Buffer[] = [];
     for (let i: number = 0; i < rollupProof.numTxs * 2 * 176; i += 176) {
-        viewingKeysArray.push(viewingData.slice(i, i + 176));
+      viewingKeysArray.push(viewingData.slice(i, i + 176));
     }
 
     return { rollupId, numDataEntries, dataEntries, dataStartIndex, nullifiers, viewingKeys: viewingKeysArray };

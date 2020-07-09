@@ -130,8 +130,8 @@ export class WorldStateDb {
     });
   }
 
-  public async destroy() {
-    execSync(`${this.binPath} reset`);
+  public destroy() {
+    execSync(`${this.binPath} reset ${this.dbPath}`);
   }
 
   private async launch() {

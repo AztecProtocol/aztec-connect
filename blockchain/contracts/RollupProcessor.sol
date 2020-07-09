@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
-
+// Copyright 2020 Spilsbury Holdings Ltd
 pragma solidity >=0.6.10 <0.7.0;
-
-import {IVerifier} from './interfaces/IVerifier.sol';
-import {Verifier} from './Verifier.sol';
-import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
 
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
 
-import "@nomiclabs/buidler/console.sol";
+import {IVerifier} from './interfaces/IVerifier.sol';
+import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
+import {Verifier} from './Verifier.sol';
+import {Decoder} from './Decoder.sol';
 
-contract RollupProcessor is IRollupProcessor {
+contract RollupProcessor is IRollupProcessor, Decoder {
     using SafeMath for uint256;
 
     bytes32 public dataRoot = 0x1df6bde50516dd1201088fd8dda84c97eda5652428d1c7e86af529cc5e0eb821;
@@ -23,7 +23,9 @@ contract RollupProcessor is IRollupProcessor {
 
     IVerifier public verifier;
     IERC20 public linkedToken;
+
     uint256 public scalingFactor; // scale between Aztec note units and ERC20 units
+    uint256 public constant txPubInputLength = 0x120; // public inputs length for of each inner proof tx
 
     event RollupProcessed(uint256 indexed rollupId, bytes32 dataRoot, bytes32 nullRoot);
     event Deposit(address depositorAddress, uint256 depositValue);
@@ -42,12 +44,75 @@ contract RollupProcessor is IRollupProcessor {
      * @dev Process a rollup - decode the rollup, update relevant state variables and
      * verify the proof
      * @param proofData - cryptographic proof data associated with a rollup
+     * @param signatures - bytes array of secp256k1 ECDSA signatures, authorising a transfer of tokens
+     * from the publicOwner for the particular inner proof in question. There is a signature for each
+     * inner proof.
+     *
+     * Structure of each signature in the bytes array is:
+     * 0x00 - 0x20 : r
+     * 0x20 - 0x40 : s
+     * 0x40 - 0x60 : v (in form: 0x0000....0001b for example)
+     *
+     * @param sigIndexes - array specifying which innerProof each signature corresponds to. This is needed
+     * as proofs without a token transfer do not require a token transfer authorisation signature.
+     *
+     * For example:
+     * If sigIndexes = [0, 2, 3] this would mean that:
+     * signature[0] corresponds to innerProof[0]
+     * signature[1] corresponds to innerProof[2]
+     * signature[2] corresponds to innerProof[3]
+     * @param viewingKeys - viewingKeys for the notes submitted in the rollup
+     * @param rollupSize - number of transactions included in the rollup
      */
     function processRollup(
         bytes calldata proofData,
+        bytes calldata signatures,
+        uint256[] calldata sigIndexes,
         bytes calldata viewingKeys,
         uint256 rollupSize
     ) external override {
+        uint256 numTxs = updateAndVerifyProof(proofData, rollupSize);
+        processTransactions(proofData[0x120:], numTxs, signatures, sigIndexes);
+    }
+
+    function updateAndVerifyProof(bytes memory _proofData, uint256 rollupSize) internal returns (uint256) {
+        (
+            bytes32 newDataRoot,
+            bytes32 newNullRoot,
+            uint256 rollupId,
+            bytes32 newRootRoot,
+            uint256 numTxs
+        ) = validateMerkleRoots(_proofData);
+
+        verifier.verify(_proofData);
+
+        // update state variables
+        dataRoot = newDataRoot;
+        nullRoot = newNullRoot;
+        nextRollupId = rollupId.add(1);
+        rootRoot = newRootRoot;
+        dataSize = dataSize.add(rollupSize.mul(2));
+
+        emit RollupProcessed(rollupId, newDataRoot, newNullRoot);
+        return numTxs;
+    }
+
+    /**
+     * @dev Decode a proof to extract the Merkle roots and validate they are as expected
+     * Return needed variables
+     * @param proofData - cryptographic proof data associated with a rollup
+     */
+    function validateMerkleRoots(bytes memory proofData)
+        internal
+        view
+        returns (
+            bytes32,
+            bytes32,
+            uint256,
+            bytes32,
+            uint256
+        )
+    {
         (
             uint256 rollupId,
             uint256 dataStartIndex,
@@ -60,26 +125,15 @@ contract RollupProcessor is IRollupProcessor {
             uint256 numTxs
         ) = decodeProof(proofData);
 
-        // data consistency checks
+        // data validation checks
         require(oldDataRoot == dataRoot, 'Rollup Processor: INCORRECT_DATA_ROOT');
         require(oldNullRoot == nullRoot, 'Rollup Processor: INCORRECT_NULL_ROOT');
         require(oldRootRoot == rootRoot, 'Rollup Processor: INCORRECT_ROOT_ROOT');
         require(rollupId == nextRollupId, 'Rollup Processor: ID_NOT_SEQUENTIAL');
-        require(dataStartIndex == dataSize, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
+        require(dataStartIndex >= 0, 'Rollup Processor: DATA_START_NOT_GREATER_ZERO');
         require(numTxs > 0, 'Rollup Processor: NUM_TX_IS_ZERO');
 
-        verifier.verify(proofData);
-        uint256 innerProofStart = 0x120;
-        processInnerProofs(proofData[innerProofStart:], numTxs);
-
-        // update state variables
-        dataRoot = newDataRoot;
-        nullRoot = newNullRoot;
-        nextRollupId = rollupId.add(1);
-        rootRoot = newRootRoot;
-        dataSize = dataSize.add(rollupSize.mul(2));
-
-        emit RollupProcessed(rollupId, newDataRoot, newNullRoot);
+        return (newDataRoot, newNullRoot, rollupId, newRootRoot, numTxs);
     }
 
     /**
@@ -120,44 +174,66 @@ contract RollupProcessor is IRollupProcessor {
      * any transfer of tokens
      * @param innerProofData - all proofData associated with the rolled up transactions
      * @param numTxs - number of transactions rolled up in the proof
+     * @param signatures - bytes array of secp256k1 ECDSA signatures, authorising a transfer of tokens
+     * @param sigIndexes - array specifying which innerProof each signature corresponds to. This is needed
+     * as proofs without a token transfer do not require a token transfer authorisation signature
+     *
+     * For example:
+     * If sigIndexes = [0, 2, 3] this would mean that:
+     * signature[0] corresponds to innerProof[0]
+     * signature[1] corresponds to innerProof[2]
+     * signature[2] corresponds to innerProof[3]
+     *
+     * 1st signature = 2nd inner proof
      */
-    function processInnerProofs(bytes calldata innerProofData, uint256 numTxs) internal {
-        uint256 proofLength = 0x120;
-
+    function processTransactions(
+        bytes calldata innerProofData,
+        uint256 numTxs,
+        bytes calldata signatures,
+        uint256[] calldata sigIndexes
+    ) internal {
         for (uint256 i = 0; i < numTxs; i += 1) {
-            uint256 startIndex = i.mul(proofLength);
-            uint256 finishIndex = startIndex.add(proofLength);
-            bytes calldata proof = innerProofData[startIndex:finishIndex];
-            transferTokens(proof);
+            bytes calldata proof = innerProofData[i.mul(txPubInputLength):i.mul(txPubInputLength).add(
+                txPubInputLength
+            )];
+            (uint256 publicInput, uint256 publicOutput, address publicOwner) = extractTxComponents(proof);
+
+            // scope block to avoid stack too deep errors
+            {
+                if (publicInput > 0) {
+                    bytes memory signature = extractSignature(signatures, findSigIndex(sigIndexes, i));
+                    validateSignature(proof, signature, publicOwner);
+                    deposit(publicInput, publicOwner);
+                }
+
+                if (publicOutput > 0) {
+                    withdraw(publicOutput, publicOwner);
+                }
+            }
         }
     }
 
     /**
-     * @dev Transfer tokens in and out of the Rollup contract, as appropriate depending on whether a
-     * deposit or withdrawal is taking place
-     * @param proof - inner proof data for a single transaction. Includes deposit and withdrawal data
+     * Perform ECDSA signature validation for a signature over a proof. Relies on the
+     * openzeppelin ECDSA cryptography library - this performs checks on `s` and `v`
+     * to prevent signature malleability based attacks
+     *
+     * @param innerPublicInputs - Inner proof data for a single transaction. Includes deposit and withdrawal data
+     * @param signature - ECDSA signature over the secp256k1 elliptic curve
+     * @param publicOwner - address which ERC20 tokens are from being transferred from or to
      */
-    function transferTokens(bytes memory proof) internal {
-        uint256 publicInput;
-        uint256 publicOutput;
-        address activeAddress;
+    function validateSignature(
+        bytes calldata innerPublicInputs,
+        bytes memory signature,
+        address publicOwner
+    ) public pure {
+        require(publicOwner != address(0x0), 'Rollup Processor: ZERO_ADDRESS');
 
-        assembly {
-            publicInput := mload(add(proof, 0x20))
-            publicOutput := mload(add(proof, 0x40))
-            activeAddress := mload(add(proof, 0x120))
-        }
+        bytes32 digest = keccak256(innerPublicInputs);
+        bytes32 msgHash = ECDSA.toEthSignedMessageHash(digest);
 
-        uint256 transferValue;
-        if (publicInput > publicOutput) {
-            // deposit
-            transferValue = publicInput.sub(publicOutput).mul(scalingFactor);
-            deposit(transferValue, activeAddress);
-        } else if (publicOutput > publicInput) {
-            // withdraw
-            transferValue = publicOutput.sub(publicInput).mul(scalingFactor);
-            withdraw(transferValue, activeAddress);
-        }
+        address recoveredSigner = ECDSA.recover(msgHash, signature);
+        require(recoveredSigner == publicOwner, 'Rollup Processor: INVALID_TRANSFER_SIGNATURE');
     }
 
     /**

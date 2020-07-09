@@ -51,14 +51,23 @@ export class PersistentEthereumBlockchain implements Blockchain {
     return this.ethereumBlockchain.getTransactionReceipt(txHash);
   }
 
-  public sendProof(proof: Buffer, viewingKeys: Buffer[], rollupSize: number) {
-    return this.ethereumBlockchain.sendProof(proof, viewingKeys, rollupSize);
+  public sendProof(
+    proof: Buffer,
+    signatures: Buffer[],
+    sigIndexes: number[],
+    viewingKeys: Buffer[],
+    rollupSize: number,
+  ) {
+    return this.ethereumBlockchain.sendProof(proof, signatures, sigIndexes, viewingKeys, rollupSize);
   }
 
   public async validateDepositFunds(publicOwner: Buffer, publicInput: Buffer) {
     return this.ethereumBlockchain.validateDepositFunds(publicOwner, publicInput);
   }
 
+  public validateSignature(publicOwnerBuf: Buffer, signature: Buffer, proof: Buffer) {
+    return this.ethereumBlockchain.validateSignature(publicOwnerBuf, signature, proof);
+  }
   private async saveBlock(block: Block) {
     await this.blockRep.save(blockToBlockDao(block));
   }

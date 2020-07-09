@@ -7,6 +7,7 @@
     "build": "yarn clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js",
     "clean": "rm -rf ./dest ./dest-es",
     "test": "jest",
+    "build:dev": "yarn build:dev:cjs & yarn build:dev:es",
     "build:dev:cjs": "tsc -p tsconfig.cjs.json --watch",
     "build:dev:es": "tsc -p tsconfig.es.json --watch",
     "symlink-wasm": "cp -R ./src/wasm/barretenberg.wasm ./dest/wasm && cp -R ./src/wasm/barretenberg.wasm ./dest-es/wasm"

@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { RollupDao } from './rollup';
 
 @Entity({ name: 'tx' })
@@ -42,6 +42,9 @@ export class TxDao {
 
   @Column()
   public viewingKey2!: Buffer;
+
+  @Column({ nullable: true })
+  public signature?: Buffer;
 
   @Column()
   public created!: Date;

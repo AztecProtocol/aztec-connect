@@ -31,6 +31,11 @@ export enum SdkInitState {
   DESTROYED = 'Destroyed',
 }
 
+export interface Signer {
+  getAddress(): Buffer;
+  signMessage(data: Buffer): Promise<Buffer>;
+}
+
 export type TxHash = Buffer;
 
 export interface Sdk extends EventEmitter {
@@ -50,9 +55,9 @@ export interface Sdk extends EventEmitter {
 
   getStatus(): Promise<RollupProviderStatus>;
 
-  deposit(value: number, publicAddress: Buffer): Promise<TxHash>;
+  deposit(value: number, signer: Signer): Promise<TxHash>;
 
-  withdraw(value: number, publicAddress: Buffer): Promise<TxHash>;
+  withdraw(value: number, signer: Signer): Promise<TxHash>;
 
   transfer(value: number, recipient: Buffer): Promise<TxHash>;
 

@@ -1,6 +1,7 @@
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { Sdk, SdkEvent, SdkInitState, UserTxAction, createSdk, RollupProviderExplorer } from 'aztec2-sdk';
+import { MetamaskSigner } from './signer';
 
 const debug = createDebug('bb:app');
 
@@ -92,14 +93,15 @@ export class App extends EventEmitter implements RollupProviderExplorer {
     return await this.sdk.getStatus();
   }
 
-  public async deposit(value: number) {
+  public async deposit(value: number, account: string) {
     const created = Date.now();
     const action = 'DEPOSIT';
     const user = this.sdk.getUser();
     const input = { userId: user.id, value, recipient: user.publicKey, created: new Date(created) };
     this.updateProofState({ action, state: ProofState.RUNNING, input });
     try {
-      const txHash = await this.sdk.deposit(value, Buffer.alloc(20));
+      const signer = new MetamaskSigner(account);
+      const txHash = await this.sdk.deposit(value, signer);
       this.updateProofState({ action, state: ProofState.FINISHED, txHash, input, time: Date.now() - created });
     } catch (err) {
       debug(err);
@@ -107,14 +109,15 @@ export class App extends EventEmitter implements RollupProviderExplorer {
     }
   }
 
-  public async withdraw(value: number) {
+  public async withdraw(value: number, account: string) {
     const created = Date.now();
     const action = 'WITHDRAW';
     const user = this.sdk.getUser();
     const input = { userId: user.id, value, recipient: user.publicKey, created: new Date(created) };
     this.updateProofState({ action, state: ProofState.RUNNING, input });
     try {
-      const txHash = await this.sdk.withdraw(value, Buffer.alloc(20));
+      const signer = new MetamaskSigner(account);
+      const txHash = await this.sdk.withdraw(value, signer);
       this.updateProofState({ action, state: ProofState.FINISHED, txHash, input, time: Date.now() - created });
     } catch (err) {
       debug(err);

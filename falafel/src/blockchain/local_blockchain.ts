@@ -48,7 +48,13 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     this.running = false;
   }
 
-  public async sendProof(proofData: Buffer, viewingKeys: Buffer[]) {
+  public async sendProof(
+    proofData: Buffer,
+    signatures: Buffer[],
+    sigIndexes: number[],
+    viewingKeys: Buffer[],
+    rollupSize: number,
+  ) {
     if (!this.running) {
       throw new Error('Blockchain is not accessible.');
     }
@@ -112,6 +118,10 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async validateDepositFunds(publicOwner: Buffer, publicInput: Buffer) {
+    return true;
+  }
+
+  public validateSignature(publicOwnerBuf: Buffer, signature: Buffer, proof: Buffer) {
     return true;
   }
 }

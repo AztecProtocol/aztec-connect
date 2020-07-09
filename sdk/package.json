@@ -7,6 +7,7 @@
     "build": "yarn clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js",
     "clean": "rm -rf ./dest ./dest-es",
     "test": "jest",
+    "build:dev": "yarn build:dev:cjs & yarn build:dev:es",
     "build:dev:cjs": "tsc -p tsconfig.cjs.json --watch",
     "build:dev:es": "tsc -p tsconfig.es.json --watch"
   },
@@ -25,6 +26,7 @@
     "broadcast-channel": "^3.1.0",
     "detect-node": "^2.0.4",
     "dexie": "^3.0.1",
+    "ethers": "^5.0.4",
     "idb-mutex": "^0.11.0",
     "level-js": "^5.0.2",
     "leveldown": "^5.6.0",

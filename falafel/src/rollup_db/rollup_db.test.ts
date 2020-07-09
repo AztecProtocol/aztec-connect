@@ -1,13 +1,13 @@
 import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { randomBytes } from 'crypto';
-import { createConnection, Connection } from 'typeorm';
-import { RollupDb } from './';
+import { Connection, createConnection } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { Rollup } from '../rollup';
+import { RollupDb } from './';
 
-const randomTx = () => new JoinSplitProof(randomBytes(9 * 32), [randomBytes(32), randomBytes(32)]);
+const randomTx = () => new JoinSplitProof(randomBytes(9 * 32), [randomBytes(32), randomBytes(32)], randomBytes(65));
 
 const randomRollup = (rollupId: number, txs: JoinSplitProof[]) =>
   new Rollup(
@@ -55,7 +55,6 @@ describe('Rollup DB', () => {
   it('should add raw data and tx with no rollup', async () => {
     const tx = randomTx();
     const txId = await rollupDb.addTx(tx);
-
     const txDao = (await rollupDb.getTxByTxId(txId)) as TxDao;
     expect(txId.length).toBe(32);
     expect(txDao.txId).toEqual(txId);
@@ -70,6 +69,7 @@ describe('Rollup DB', () => {
     expect(txDao.proofData).toEqual(tx.proofData);
     expect(txDao.viewingKey1).toEqual(tx.viewingKeys[0]);
     expect(txDao.viewingKey2).toEqual(tx.viewingKeys[1]);
+    expect(txDao.signature).toEqual(tx.signature);
   });
 
   it('should add rollup and update the rollup for all its txs', async () => {

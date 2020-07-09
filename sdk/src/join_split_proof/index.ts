@@ -6,7 +6,9 @@ import { WorldState } from 'barretenberg/world_state';
 import { UserState } from '../user_state';
 import { randomBytes } from 'crypto';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
+import { ethers } from 'ethers';
 import { User } from '../user';
+import { Signer } from '../sdk';
 
 const debug = createDebug('bb:join_split_proof');
 
@@ -28,8 +30,8 @@ export class JoinSplitProofCreator {
     transfer: number,
     sender: User,
     receiverPubKey: Buffer,
-    publicAddress?: Buffer,
-  ): Promise<JoinSplitProofOutput> {
+    signer?: Signer,
+  ) {
     const requiredInputNoteValue = Math.max(0, transfer + withdraw - deposit);
     const notes = userState.pickNotes(requiredInputNoteValue);
     if (!notes) {
@@ -75,7 +77,7 @@ export class JoinSplitProofCreator {
       inputNotes,
       outputNotes,
       signature,
-      publicAddress || Buffer.alloc(20, 0),
+      signer?.getAddress() || Buffer.alloc(20),
     );
 
     debug('creating proof...');
@@ -87,14 +89,23 @@ export class JoinSplitProofCreator {
     const viewingKeys = [encViewingKey1, encViewingKey2];
     const joinSplitProof = new JoinSplitProof(proofData, viewingKeys);
     const { newNote1, newNote2 } = joinSplitProof;
+    const depositSignature = deposit ? await this.ethSign(joinSplitProof.getDepositSigningData(), signer) : undefined;
 
     // Only return notes that belong to the user.
     return {
-      proof: { proofData, viewingKeys },
+      proof: { proofData, viewingKeys, depositSignature },
       inputNote1: numInputNotes > 0 ? notes[0].index : undefined,
       inputNote2: numInputNotes > 1 ? notes[1].index : undefined,
       outputNote1: outputNoteOwner1?.equals(sender.publicKey) ? newNote1 : undefined,
       outputNote2: outputNoteOwner2?.equals(sender.publicKey) ? newNote2 : undefined,
-    };
+    } as JoinSplitProofOutput;
+  }
+
+  private async ethSign(txPublicInputs: Buffer, signer?: Signer) {
+    if (!signer) {
+      throw new Error('Signer undefined.');
+    }
+    const msgHash = ethers.utils.keccak256(txPublicInputs);
+    return await signer.signMessage(Buffer.from(msgHash.slice(2), 'hex'));
   }
 }

@@ -11,6 +11,7 @@ import { ClearDataButton } from './clear_data_button';
 import { ThemeContext } from '../config/context';
 import createDebug from 'debug';
 import { SdkEvent, SdkInitState, User } from 'aztec2-sdk';
+import { Action, ActionSelect } from './action_select';
 
 const debug = createDebug('bb:join_split_form');
 
@@ -26,8 +27,21 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
   const [balance, setBalance] = useState(app.isInitialized() ? app.getBalance() : 0);
   const [currentProof, setCurrentProof] = useState(app.getProofState());
   const [serverUrl, setServerUrl] = useState(window.location.protocol + '//' + window.location.hostname);
+  const [accounts, setAccounts] = useState<string[]>([]);
+  const [depositAccount, setDepositAccount] = useState('');
+  const [withdrawAccount, setWithdrawAccount] = useState('');
+  const [action, setAction] = useState(Action.DEPOSIT);
+
+  useEffect(() => {}, []);
 
   useEffect(() => {
+    window.ethereum.autoRefreshOnNetworkChange = false;
+    window.ethereum.enable().then((accounts: string[]) => {
+      setAccounts(accounts);
+      setDepositAccount(accounts[0]);
+      setWithdrawAccount(accounts[0]);
+    });
+
     const onInitStateChange = (state: SdkInitState) => {
       setInitState(state);
       if (state === SdkInitState.INITIALIZED && !user) {
@@ -80,23 +94,36 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
         <Block padding="xs 0">
           <UserSelect users={users} user={user!} onSelect={selectUser} />
           <FormField label="Balance">{`${balance}`}</FormField>
-          <Deposit
-            initialValue={100}
-            onSubmit={async (value: number) => app.deposit(value)}
-            isLoading={isRunning && currentProof.action === 'DEPOSIT'}
-            disabled={isRunning && currentProof.action !== 'DEPOSIT'}
-          />
-          <Withdraw
-            onSubmit={async (value: number) => app.withdraw(value)}
-            isLoading={isRunning && currentProof.action === 'WITHDRAW'}
-            disabled={isRunning && currentProof.action !== 'WITHDRAW'}
-          />
-          <Transfer
-            initialRecipient={user.publicKey.toString('hex')}
-            onSubmit={async (value: number, recipient: string) => app.transfer(value, recipient)}
-            isLoading={isRunning && currentProof.action === 'TRANSFER'}
-            disabled={isRunning && currentProof.action !== 'TRANSFER'}
-          />
+          <ActionSelect action={action} onSelect={setAction} />
+          {action === Action.DEPOSIT && (
+            <Deposit
+              initialValue={100}
+              onSubmit={async (value: number) => app.deposit(value, depositAccount)}
+              account={depositAccount}
+              accounts={accounts}
+              onAccountSelect={setDepositAccount}
+              isLoading={isRunning && currentProof.action === 'DEPOSIT'}
+              disabled={isRunning && currentProof.action !== 'DEPOSIT'}
+            />
+          )}
+          {action === Action.WITHDRAW && (
+            <Withdraw
+              onSubmit={async (value: number) => app.withdraw(value, withdrawAccount)}
+              account={withdrawAccount}
+              accounts={accounts}
+              onAccountSelect={setWithdrawAccount}
+              isLoading={isRunning && currentProof.action === 'WITHDRAW'}
+              disabled={isRunning && currentProof.action !== 'WITHDRAW'}
+            />
+          )}
+          {action === Action.TRANSFER && (
+            <Transfer
+              initialRecipient={user.publicKey.toString('hex')}
+              onSubmit={async (value: number, recipient: string) => app.transfer(value, recipient)}
+              isLoading={isRunning && currentProof.action === 'TRANSFER'}
+              disabled={isRunning && currentProof.action !== 'TRANSFER'}
+            />
+          )}
           <Block padding="m">
             <ClearDataButton onClearData={async () => app.clearData()} disabled={false} />
           </Block>

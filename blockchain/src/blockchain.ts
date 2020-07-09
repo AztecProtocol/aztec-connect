@@ -3,7 +3,13 @@ import { Block, BlockSource } from 'barretenberg/block_source';
 export { Block } from 'barretenberg/block_source';
 
 export interface ProofReceiver {
-  sendProof(proof: Buffer, viewingKeys: Buffer[], rollupSize: number): Promise<Buffer>;
+  sendProof(
+    proof: Buffer,
+    signatures: Buffer[],
+    sigIndexes: number[],
+    viewingKeys: Buffer[],
+    rollupSize: number,
+  ): Promise<Buffer>;
 }
 
 export interface Receipt {
@@ -14,6 +20,7 @@ export interface Blockchain extends BlockSource, ProofReceiver {
   getBlocks(from: number): Promise<Block[]>;
   getTransactionReceipt(txHash: Buffer): Promise<Receipt>;
   validateDepositFunds(publicOwner: Buffer, publicInput: Buffer): Promise<boolean>;
+  validateSignature(publicOwnerBuf: Buffer, signature: Buffer, proof: Buffer): boolean;
   getRollupContractAddress(): string;
   getTokenContractAddress(): string;
 }

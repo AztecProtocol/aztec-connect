@@ -16,11 +16,11 @@ export const Transfer = ({ initialValue = 0, initialRecipient = '', onSubmit, is
 
   return (
     <Block padding="xs 0">
-      <FormField label="Transfer Value">
-        <Input type="number" value={value} onChange={setValue} />
-      </FormField>
       <FormField label="To">
         <Input value={recipient} onChange={setRecipient} />
+      </FormField>
+      <FormField label="Transfer Value">
+        <Input type="number" value={value} onChange={setValue} />
       </FormField>
       <Block padding="xs m" align="right">
         <Button

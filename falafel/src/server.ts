@@ -1,5 +1,6 @@
 import { JoinSplitProof, JoinSplitVerifier } from 'barretenberg/client_proofs/join_split_proof';
 import { Crs } from 'barretenberg/crs';
+import { MemoryFifo } from 'barretenberg/fifo';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { Proof } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
@@ -8,7 +9,6 @@ import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { Blockchain } from 'blockchain';
 import moment, { Duration } from 'moment';
-import { MemoryFifo } from 'barretenberg/fifo';
 import { readFileAsync } from './fs_async';
 import { ProofGenerator } from './proof_generator';
 import { Rollup } from './rollup';
@@ -24,6 +24,8 @@ export interface ServerConfig {
 interface PublishQueueItem {
   rollupId: number;
   proof: Buffer;
+  signatures: Buffer[];
+  sigIndexes: number[];
   viewingKeys: Buffer[];
   rollupSize: number;
 }
@@ -96,9 +98,13 @@ export class Server {
     // Find all CREATED rollups and reinsert to publisher queue.
     const createdRollups = await this.rollupDb.getCreatedRollups();
     createdRollups.forEach(({ id, proofData, txs }) => {
+      const signatures = txs.reduce((acc, tx) => (tx.signature ? [...acc, tx.signature] : acc), [] as Buffer[]);
+      const sigIndexes = txs.reduce((acc, tx, i) => (tx.signature ? [...acc, i] : acc), [] as number[]);
       this.publishQueue.put({
         rollupId: id,
         proof: proofData!,
+        signatures,
+        sigIndexes,
         viewingKeys: txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat(),
         rollupSize: this.config.rollupSize,
       });
@@ -192,7 +198,7 @@ export class Server {
       await this.rollupDb.addRollup(rollup);
 
       const proof = await this.proofGenerator.createProof(rollup);
-      
+
       if (!proof) {
         // This shouldn't happen!? What happens to the txs?
         // Perhaps need to extract the troublemaker, and then reinsert all txs into queue?
@@ -206,7 +212,17 @@ export class Server {
       await this.rollupDb.confirmRollupCreated(rollup.rollupId);
 
       const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
-      this.publishQueue.put({ rollupId: rollup.rollupId, proof, viewingKeys, rollupSize: this.config.rollupSize });
+      const signatures = txs.reduce((acc, tx) => (tx.signature ? [...acc, tx.signature] : acc), [] as Buffer[]);
+      const sigIndexes = txs.reduce((acc, tx, i) => (tx.signature ? [...acc, i] : acc), [] as number[]);
+
+      this.publishQueue.put({
+        rollupId: rollup.rollupId,
+        proof,
+        signatures,
+        sigIndexes,
+        viewingKeys,
+        rollupSize: this.config.rollupSize,
+      });
 
       this.printState();
     }
@@ -218,11 +234,11 @@ export class Server {
       if (!item) {
         break;
       }
-      const { rollupId, proof, viewingKeys, rollupSize } = item;
+      const { rollupId, proof, signatures, sigIndexes, viewingKeys, rollupSize } = item;
 
       while (true) {
         try {
-          const txHash = await this.blockchain.sendProof(proof, viewingKeys, rollupSize);
+          const txHash = await this.blockchain.sendProof(proof, signatures, sigIndexes, viewingKeys, rollupSize);
 
           await this.rollupDb.confirmSent(rollupId);
 
@@ -233,7 +249,7 @@ export class Server {
         } catch (err) {
           // Could have failed due to not sending (network error), or not getting mined (gas too low?).
           // But, the proof is assumed to always be valid. So let's try again.
-          console.log(err.message);
+          console.log(err);
           await new Promise(resolve => setTimeout(resolve, 10000));
         }
       }
@@ -277,10 +293,11 @@ export class Server {
     await this.joinSplitVerifier.loadKey(this.worker, key, crs.getG2Data());
   }
 
-  public async receiveTx({ proofData, viewingKeys }: Proof) {
-    const proof = new JoinSplitProof(proofData, viewingKeys);
+  public async receiveTx({ proofData, depositSignature, viewingKeys }: Proof) {
+    const proof = new JoinSplitProof(proofData, viewingKeys, depositSignature);
     const nullifier1 = toBigIntBE(proof.nullifier1);
     const nullifier2 = toBigIntBE(proof.nullifier2);
+    const { publicInput, publicOwner } = proof;
 
     // Check nullifiers don't exist in the db.
     const emptyValue = Buffer.alloc(64, 0);
@@ -303,9 +320,18 @@ export class Server {
       throw new Error('Proof verification failed.');
     }
 
-    // Check user has required funds if depositing.
-    if (!(await this.blockchain.validateDepositFunds(proof.publicOwner, proof.publicInput))) {
-      throw new Error('User has insufficient or unapproved deposit balance.');
+    if (toBigIntBE(publicInput) > 0n) {
+      if (!depositSignature) {
+        throw new Error('No deposit signature provided.');
+      }
+
+      if (!(await this.blockchain.validateSignature(publicOwner, depositSignature, proof.getDepositSigningData()))) {
+        throw new Error('Invalid deposit signature.');
+      }
+
+      if (!(await this.blockchain.validateDepositFunds(publicOwner, publicInput))) {
+        throw new Error('User has insufficient or unapproved deposit balance.');
+      }
     }
 
     proof.dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);

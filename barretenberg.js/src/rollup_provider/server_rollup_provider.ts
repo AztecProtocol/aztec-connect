@@ -6,11 +6,12 @@ const debug = createDebug('bb:server_rollup_provider');
 export class ServerRollupProvider implements RollupProvider {
   constructor(private host: URL) {}
 
-  async sendProof({ proofData, viewingKeys, ...rest }: Proof) {
+  async sendProof({ proofData, viewingKeys, depositSignature, ...rest }: Proof) {
     const url = new URL(`/api/tx`, this.host);
     const data = {
       proofData: proofData.toString('hex'),
       viewingKeys: viewingKeys.map(v => v.toString('hex')),
+      depositSignature: depositSignature ? depositSignature.toString('hex') : undefined,
       ...rest,
     };
     const response = await fetch(url.toString(), { method: 'POST', body: JSON.stringify(data) });
