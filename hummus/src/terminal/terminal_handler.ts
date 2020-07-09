@@ -90,8 +90,8 @@ export class TerminalHandler {
       this.printQueue.put('init [server]\nexit\n');
     } else {
       this.printQueue.put(
-        'deposit <amount>\n' +
-          'withdraw <amount>\n' +
+        'deposit <amount> <from address>\n' +
+          'withdraw <amount> <to address>\n' +
           'transfer <to> <amount>\n' +
           'balance [id/alias]\n' +
           'user [id/alias]\n' +

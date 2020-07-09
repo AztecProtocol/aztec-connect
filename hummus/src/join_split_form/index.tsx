@@ -43,6 +43,12 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
       setWithdrawAccount(accounts[0]);
     };
 
+    // Don't want to slam the user with a MetaMask popup as soon as they land,
+    // so only fetch accounts if we have already initialized.
+    if (initState === SdkInitState.INITIALIZED) {
+      window.ethereum.enable().then(refreshEthAccounts);
+    }
+
     const onInitStateChange = (state: SdkInitState) => {
       setInitState(state);
       if (state === SdkInitState.INITIALIZING) {
