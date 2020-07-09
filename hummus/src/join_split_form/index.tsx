@@ -36,14 +36,20 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
 
   useEffect(() => {
     window.ethereum.autoRefreshOnNetworkChange = false;
-    window.ethereum.enable().then((accounts: string[]) => {
+
+    const refreshEthAccounts = (accounts: string[]) => {
       setAccounts(accounts);
       setDepositAccount(accounts[0]);
       setWithdrawAccount(accounts[0]);
-    });
+    };
 
     const onInitStateChange = (state: SdkInitState) => {
       setInitState(state);
+      if (state === SdkInitState.INITIALIZING) {
+        window.ethereum.enable().then(refreshEthAccounts);
+        window.ethereum.off('accountsChanged', refreshEthAccounts);
+        window.ethereum.on('accountsChanged', refreshEthAccounts);
+      }
       if (state === SdkInitState.INITIALIZED && !user) {
         setUsers(app.getUsers());
         setUser(app.getUser());

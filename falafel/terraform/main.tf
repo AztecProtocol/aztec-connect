@@ -151,6 +151,22 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "NODE_ENV",
         "value": "production"
+      },
+      {
+        "name": "NETWORK",
+        "value": "ropsten"
+      },
+      {
+        "name": "INFURA_API_KEY",
+        "value": "${var.INFURA_API_KEY}"
+      },
+      {
+        "name": "PRIVATE_KEY",
+        "value": "${var.PRIVATE_KEY}"
+      },
+      {
+        "name": "ROLLUP_CONTRACT_ADDRESS",
+        "value": "0xe01ebd139C602118D40dD7466e75954D84Dc6A73"
       }
     ],
     "mountPoints": [
