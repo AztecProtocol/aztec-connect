@@ -30,6 +30,7 @@
     ]
   },
   "dependencies": {
+    "ethers": "^5.0.5",
     "koa": "^2.5.2",
     "koa-compress": "^3.0.0",
     "koa-static": "^5.0.0"

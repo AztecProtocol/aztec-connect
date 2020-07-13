@@ -261,8 +261,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
           const balanceAfter = userState.getBalance();
           const diff = balanceAfter - balanceBefore;
           if (diff !== 0) {
-            this.emit(SdkEvent.UPDATED_BALANCE, balanceAfter);
-            this.emit(SdkEvent.LOG, `balance updated: ${this.getBalance()} (${diff >= 0 ? '+' : ''}${diff})`);
+            this.emit(SdkEvent.UPDATED_BALANCE, balanceAfter, diff);
           }
         }
 

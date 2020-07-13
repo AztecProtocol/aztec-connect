@@ -44,6 +44,7 @@ describe('end-to-end tests', () => {
   let userASigner: Signer;
   let userBSigner: Signer;
   let erc20: ERC20Mintable;
+  const scalingFactor = 10000000000000000n;
 
   beforeAll(async () => {
     // init sdk
@@ -66,8 +67,14 @@ describe('end-to-end tests', () => {
     userBSigner = new RemoteSigner(eth, userB);
 
     // mint and approve funds
-    await erc20.methods.mint(userA, 1000).send().getReceipt();
-    await erc20.methods.approve(rollupContractAddress, 1000).send().getReceipt();
+    await erc20.methods
+      .mint(userA, (1000n * scalingFactor).toString())
+      .send()
+      .getReceipt();
+    await erc20.methods
+      .approve(rollupContractAddress, (1000n * scalingFactor).toString())
+      .send()
+      .getReceipt();
   });
 
   afterAll(async () => {
@@ -84,7 +91,7 @@ describe('end-to-end tests', () => {
 
   it('should deposit funds', async () => {
     const initialTokenBalance = BigInt(await erc20.methods.balanceOf(userA).call());
-    expect(initialTokenBalance).toBe(1000n);
+    expect(initialTokenBalance).toBe(1000n * scalingFactor);
     expect(sdk.getBalance(0)).toBe(0);
 
     const txHash = await sdk.deposit(1000, userASigner);
@@ -117,7 +124,7 @@ describe('end-to-end tests', () => {
     await sdk.awaitSettlement(withdrawTxHash);
 
     const finalTokenBalance = BigInt(await erc20.methods.balanceOf(userB).call());
-    expect(finalTokenBalance).toBe(1000n);
+    expect(finalTokenBalance).toBe(1000n * scalingFactor);
     expect(sdk.getBalance(1)).toBe(0);
   });
 });

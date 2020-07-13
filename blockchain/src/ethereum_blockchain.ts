@@ -17,6 +17,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private erc20!: Contract;
   private eventQueue = new MemoryFifo<Event>();
   private erc20Address!: string;
+  private scalingFactor = 10000000000000000n;
 
   constructor(private signer: Signer, private rollupContractAddress: string) {
     super();
@@ -146,7 +147,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public async validateDepositFunds(publicOwnerBuf: Buffer, publicInputBuf: Buffer) {
     const publicOwner = `0x${publicOwnerBuf.toString('hex')}`;
-    const publicInput = toBigIntBE(publicInputBuf);
+    const publicInput = toBigIntBE(publicInputBuf) * this.scalingFactor;
     const erc20Balance = BigInt(await this.erc20.balanceOf(publicOwner));
     const erc20Approval = BigInt(await this.erc20.allowance(publicOwner, this.rollupProcessor.address));
     return erc20Balance >= publicInput && erc20Approval >= publicInput;

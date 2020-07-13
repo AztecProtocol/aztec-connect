@@ -30,6 +30,11 @@ export class TerminalHandler {
     this.printQueue.put(undefined);
     this.terminal.on('cmd', (cmd: string) => this.cmdQueue.put(cmd));
     this.app.on(SdkEvent.LOG, (str: string) => this.printQueue.put(str + '\n'));
+    this.app.on(SdkEvent.UPDATED_BALANCE, (balance: number, diff?: number) => {
+      if (diff !== undefined) {
+        this.printQueue.put(`balance updated: ${balance / 100} (${diff >= 0 ? '+' : ''}${diff / 100})\n`);
+      }
+    });
   }
 
   public stop() {
@@ -116,7 +121,7 @@ export class TerminalHandler {
       this.printQueue.put('Failed to get server status.\n');
     }
     this.printQueue.put(`user: ${this.app.getUser().publicKey.slice(0, 4).toString('hex')}...\n`);
-    this.printQueue.put(`balance: ${this.app.getBalance()}\n`);
+    this.printQueue.put(`balance: ${this.getBalance()}\n`);
   }
 
   private async deposit(value: string, account: string) {
@@ -142,14 +147,18 @@ export class TerminalHandler {
   }
 
   private async balance(userIdOrAlias: string) {
-    await this.terminal.putString(`${this.app.getBalance(userIdOrAlias)}\n`);
+    await this.terminal.putString(`${this.getBalance(userIdOrAlias)}\n`);
+  }
+
+  private async getBalance(userIdOrAlias?: string) {
+    return this.app.getBalance(userIdOrAlias) / 100;
   }
 
   private async user(userIdOrAlias?: string) {
     if (userIdOrAlias) {
       const user = this.app.switchToUser(userIdOrAlias);
       this.printQueue.put(
-        `switched to ${user.publicKey.toString('hex').slice(0, 8)}...\nbalance ${this.app.getBalance()}\n`,
+        `switched to ${user.publicKey.toString('hex').slice(0, 8)}...\nbalance ${this.getBalance()}\n`,
       );
     } else {
       const str = this.app.getUsers(false).map(this.userStr).join('');

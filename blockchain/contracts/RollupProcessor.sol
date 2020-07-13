@@ -2,16 +2,17 @@
 // Copyright 2020 Spilsbury Holdings Ltd
 pragma solidity >=0.6.10 <0.7.0;
 
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {IVerifier} from './interfaces/IVerifier.sol';
 import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
 import {Verifier} from './Verifier.sol';
 import {Decoder} from './Decoder.sol';
 
-contract RollupProcessor is IRollupProcessor, Decoder {
+contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     using SafeMath for uint256;
 
     bytes32 public dataRoot = 0x1df6bde50516dd1201088fd8dda84c97eda5652428d1c7e86af529cc5e0eb821;
@@ -70,7 +71,7 @@ contract RollupProcessor is IRollupProcessor, Decoder {
         uint256[] calldata sigIndexes,
         bytes calldata viewingKeys,
         uint256 rollupSize
-    ) external override {
+    ) external override onlyOwner {
         uint256 numTxs = updateAndVerifyProof(proofData, rollupSize);
         processTransactions(proofData[0x120:], numTxs, signatures, sigIndexes);
     }
@@ -226,7 +227,7 @@ contract RollupProcessor is IRollupProcessor, Decoder {
         bytes calldata innerPublicInputs,
         bytes memory signature,
         address publicOwner
-    ) public pure {
+    ) internal pure {
         require(publicOwner != address(0x0), 'Rollup Processor: ZERO_ADDRESS');
 
         bytes32 digest = keccak256(innerPublicInputs);
@@ -250,7 +251,8 @@ contract RollupProcessor is IRollupProcessor, Decoder {
         uint256 rollupAllowance = linkedToken.allowance(depositorAddress, address(this));
         require(rollupAllowance >= depositValue, 'Rollup Processor: INSUFFICIENT_TOKEN_APPROVAL');
 
-        linkedToken.transferFrom(depositorAddress, address(this), depositValue);
+        // scaling factor to convert between Aztec notes and DAI
+        linkedToken.transferFrom(depositorAddress, address(this), depositValue.mul(scalingFactor));
         emit Deposit(depositorAddress, depositValue);
     }
 
@@ -265,7 +267,8 @@ contract RollupProcessor is IRollupProcessor, Decoder {
         uint256 rollupBalance = linkedToken.balanceOf(address(this));
         require(withdrawValue <= rollupBalance, 'Rollup Processor: INSUFFICIENT_FUNDS');
 
-        linkedToken.transfer(receiverAddress, withdrawValue);
+        // scaling factor to convert between Aztec notes and DAI
+        linkedToken.transfer(receiverAddress, withdrawValue.mul(scalingFactor));
         emit Withdraw(receiverAddress, withdrawValue);
     }
 }

@@ -5,22 +5,26 @@ import { AccountSelect } from './account_select';
 
 interface DepositProps {
   initialValue?: number;
-  onSubmit: (value: number) => void;
+  onDepositSubmit: (value: number) => void;
   onAccountSelect: (account: string) => void;
   isLoading: boolean;
   disabled: boolean;
   account: string;
   accounts: string[];
+  onApproveSubmit: (value: number) => void;
+  isLoadingApproval: boolean;
 }
 
 export const Deposit = ({
   initialValue = 0,
-  onSubmit,
+  onDepositSubmit,
   onAccountSelect,
   isLoading,
   disabled,
   account,
   accounts,
+  onApproveSubmit,
+  isLoadingApproval,
 }: DepositProps) => {
   const [value, setValue] = useState(`${initialValue}`);
 
@@ -31,9 +35,10 @@ export const Deposit = ({
         <Input type="number" value={value} onChange={setValue} />
       </FormField>
       <Block padding="xs m" align="right">
+        <Button text="Approve" onSubmit={() => onApproveSubmit(parseInt(value, 10))} isLoading={isLoadingApproval} />
         <Button
           text="Deposit"
-          onSubmit={() => onSubmit(parseInt(value, 10))}
+          onSubmit={() => onDepositSubmit(parseInt(value, 10))}
           isLoading={isLoading}
           disabled={disabled}
         />

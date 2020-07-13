@@ -1,4 +1,5 @@
 import createDebug from 'debug';
+import { Contract, ethers } from 'ethers';
 import { EventEmitter } from 'events';
 import { Sdk, SdkEvent, SdkInitState, UserTxAction, createSdk, RollupProviderExplorer } from 'aztec2-sdk';
 import { MetamaskSigner } from './signer';
@@ -7,6 +8,7 @@ const debug = createDebug('bb:app');
 
 export enum AppEvent {
   UPDATED_PROOF_STATE = 'UPDATED_PROOF_STATE',
+  APPROVED = 'APPROVED',
 }
 
 export enum ProofState {
@@ -69,6 +71,10 @@ export class App extends EventEmitter implements RollupProviderExplorer {
     this.emit(AppEvent.UPDATED_PROOF_STATE, proof);
   }
 
+  private updateApprovalState(approval: boolean) {
+    this.emit(AppEvent.APPROVED, approval);
+  }
+
   public isInitialized() {
     return this.getInitState() === SdkInitState.INITIALIZED;
   }
@@ -91,6 +97,22 @@ export class App extends EventEmitter implements RollupProviderExplorer {
 
   public async getStatus() {
     return await this.sdk.getStatus();
+  }
+
+  public async approve(value: bigint) {
+    const SCALING_FACTOR = 10000000000000000;
+    const minimalERC20ABI = ['function approve(address spender, uint256 amount) public returns (bool)'];
+    const { rollupContractAddress, tokenContractAddress } = await this.sdk.getStatus();
+    this.updateApprovalState(true);
+    try {
+      const provider = new ethers.providers.Web3Provider(window.web3.currentProvider);
+      const tokenContract = new Contract(tokenContractAddress, minimalERC20ABI, provider.getSigner());
+      await tokenContract.approve(rollupContractAddress, value * BigInt(SCALING_FACTOR));
+      this.updateApprovalState(false);
+    } catch (err) {
+      debug(err);
+      this.updateApprovalState(false);
+    }
   }
 
   public async deposit(value: number, account: string) {

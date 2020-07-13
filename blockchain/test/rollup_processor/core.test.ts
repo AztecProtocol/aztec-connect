@@ -164,6 +164,14 @@ describe('rollup_processor: core', () => {
       const receipt = await tx.wait();
       expect(receipt.status).to.equal(1);
     });
+
+    it('should reject processrollup() if not owner', async () => {
+      // owner is address that deployed contract - userA
+      const { proofData } = await createSendProof();
+      await expect(
+        rollupProcessor.connect(userB).processRollup(proofData, Buffer.alloc(32), [], viewingKeys, rollupSize),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
   });
 
   describe('Multi transaction rollup', async () => {

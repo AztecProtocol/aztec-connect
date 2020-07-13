@@ -14,6 +14,7 @@ import { SdkEvent, SdkInitState, User } from 'aztec2-sdk';
 import { Action, ActionSelect } from './action_select';
 
 const debug = createDebug('bb:join_split_form');
+const NOTE_SCALE = 100;
 
 interface JoinSplitFormProps {
   app: App;
@@ -31,6 +32,7 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
   const [depositAccount, setDepositAccount] = useState('');
   const [withdrawAccount, setWithdrawAccount] = useState('');
   const [action, setAction] = useState(Action.DEPOSIT);
+  const [isApproving, setApproving] = useState(false);
 
   useEffect(() => {}, []);
 
@@ -66,6 +68,7 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
     app.on(SdkEvent.UPDATED_ACCOUNT, setUser);
     app.on(SdkEvent.UPDATED_BALANCE, setBalance);
     app.on(AppEvent.UPDATED_PROOF_STATE, setCurrentProof);
+    app.on(AppEvent.APPROVED, setApproving);
 
     return () => {
       app.off(SdkEvent.UPDATED_INIT_STATE, onInitStateChange);
@@ -73,6 +76,7 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
       app.off(SdkEvent.UPDATED_ACCOUNT, setUser);
       app.off(SdkEvent.UPDATED_BALANCE, setBalance);
       app.off(AppEvent.UPDATED_PROOF_STATE, setCurrentProof);
+      app.off(AppEvent.APPROVED, setApproving);
     };
   }, [app]);
 
@@ -105,22 +109,26 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
       {initState === SdkInitState.INITIALIZED && !!user && (
         <Block padding="xs 0">
           <UserSelect users={users} user={user!} onSelect={selectUser} />
-          <FormField label="Balance">{`${balance}`}</FormField>
+          <FormField label="Balance">{`${balance / NOTE_SCALE}`}</FormField>
           <ActionSelect action={action} onSelect={setAction} />
           {action === Action.DEPOSIT && (
-            <Deposit
-              initialValue={100}
-              onSubmit={async (value: number) => app.deposit(value, depositAccount)}
-              account={depositAccount}
-              accounts={accounts}
-              onAccountSelect={setDepositAccount}
-              isLoading={isRunning && currentProof.action === 'DEPOSIT'}
-              disabled={isRunning && currentProof.action !== 'DEPOSIT'}
-            />
+            <Block padding="xs 0">
+              <Deposit
+                initialValue={100}
+                onDepositSubmit={async (value: number) => app.deposit(value * NOTE_SCALE, depositAccount)}
+                account={depositAccount}
+                accounts={accounts}
+                onAccountSelect={setDepositAccount}
+                isLoading={isRunning && currentProof.action === 'DEPOSIT'}
+                disabled={isRunning && currentProof.action !== 'DEPOSIT'}
+                onApproveSubmit={async (value: number) => app.approve(BigInt(value) * BigInt(NOTE_SCALE))}
+                isLoadingApproval={isApproving}
+              />
+            </Block>
           )}
           {action === Action.WITHDRAW && (
             <Withdraw
-              onSubmit={async (value: number) => app.withdraw(value, withdrawAccount)}
+              onSubmit={async (value: number) => app.withdraw(value * NOTE_SCALE, withdrawAccount)}
               account={withdrawAccount}
               accounts={accounts}
               onAccountSelect={setWithdrawAccount}
@@ -131,7 +139,7 @@ export const JoinSplitForm = ({ app }: JoinSplitFormProps) => {
           {action === Action.TRANSFER && (
             <Transfer
               initialRecipient={user.publicKey.toString('hex')}
-              onSubmit={async (value: number, recipient: string) => app.transfer(value, recipient)}
+              onSubmit={async (value: number, recipient: string) => app.transfer(value * NOTE_SCALE, recipient)}
               isLoading={isRunning && currentProof.action === 'TRANSFER'}
               disabled={isRunning && currentProof.action !== 'TRANSFER'}
             />
