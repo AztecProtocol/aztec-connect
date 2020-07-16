@@ -9,5 +9,8 @@ module.exports = {
     deviceBreakpointMap: {
       s: '600px',
     },
+    colorMap: {
+      'primary-lightest': '#f1f5fc',
+    },
   },
 };

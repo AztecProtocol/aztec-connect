@@ -1,7 +1,6 @@
 import createDebug from 'debug';
 import { JoinSplitProver, JoinSplitTx, JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { Note, encryptNote, createNoteSecret } from 'barretenberg/client_proofs/note';
-import { Proof } from 'barretenberg/rollup_provider';
 import { WorldState } from 'barretenberg/world_state';
 import { UserState } from '../user_state';
 import { randomBytes } from 'crypto';
@@ -12,52 +11,42 @@ import { Signer } from '../sdk';
 
 const debug = createDebug('bb:join_split_proof');
 
-export type JoinSplitProofOutput = {
-  proof: Proof;
-  inputNote1?: number;
-  inputNote2?: number;
-  outputNote1?: Buffer;
-  outputNote2?: Buffer;
-};
-
 export class JoinSplitProofCreator {
   constructor(private joinSplitProver: JoinSplitProver, private worldState: WorldState, private grumpkin: Grumpkin) {}
 
   public async createProof(
     userState: UserState,
-    deposit: number,
-    withdraw: number,
-    transfer: number,
+    publicInput: number,
+    publicOutput: number,
+    newNoteValue: number,
     sender: User,
-    receiverPubKey: Buffer,
+    receiverPubKey?: Buffer,
+    outputOwnerAddress?: Buffer,
     signer?: Signer,
   ) {
-    const requiredInputNoteValue = Math.max(0, transfer + withdraw - deposit);
+    const requiredInputNoteValue = Math.max(0, newNoteValue + publicOutput - publicInput);
     const notes = userState.pickNotes(requiredInputNoteValue);
     if (!notes) {
       throw new Error(`Failed to find no more than 2 notes that sum to ${requiredInputNoteValue}.`);
     }
     const numInputNotes = notes.length;
 
-    while (notes.length < 2) {
-      notes.push({
-        index: notes.length,
-        note: new Note(sender.publicKey, createNoteSecret(), 0),
-      });
-    }
-
-    const totalNoteInputValue = notes.reduce((sum, note) => sum + note.note.value, 0);
+    const totalNoteInputValue = notes.reduce((sum, note) => sum + note.value, 0);
     const inputNoteIndices = notes.map(n => n.index);
-    const inputNotes = notes.map(n => n.note);
+    const inputNotes = notes.map(n => new Note(sender.publicKey, n.viewingKey, n.value));
+    for (let i = notes.length; i < 2; ++i) {
+      inputNoteIndices.push(i);
+      inputNotes.push(new Note(sender.publicKey, createNoteSecret(), 0));
+    }
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
-    const sendValue = transfer + deposit;
-    const changeValue = totalNoteInputValue - transfer - withdraw;
-    const outputNoteOwner1 = sendValue ? receiverPubKey : undefined;
-    const outputNoteOwner2 = changeValue ? sender.publicKey : undefined;
+    const changeValue = Math.max(0, totalNoteInputValue - newNoteValue - publicOutput);
+    const isPublicTx = publicInput && publicOutput;
+    const outputNoteOwner1 = receiverPubKey || randomBytes(64);
+    const outputNoteOwner2 = changeValue || isPublicTx ? sender.publicKey : randomBytes(64);
     const outputNotes = [
-      new Note(outputNoteOwner1 || randomBytes(64), createNoteSecret(), sendValue),
-      new Note(outputNoteOwner2 || randomBytes(64), createNoteSecret(), changeValue),
+      new Note(outputNoteOwner1, createNoteSecret(), newNoteValue),
+      new Note(outputNoteOwner2, createNoteSecret(), changeValue),
     ];
 
     const encViewingKey1 = encryptNote(outputNotes[0], this.grumpkin);
@@ -68,8 +57,8 @@ export class JoinSplitProofCreator {
 
     const tx = new JoinSplitTx(
       sender.publicKey,
-      deposit,
-      withdraw,
+      publicInput,
+      publicOutput,
       numInputNotes,
       inputNoteIndices,
       dataRoot,
@@ -78,6 +67,7 @@ export class JoinSplitProofCreator {
       outputNotes,
       signature,
       signer?.getAddress() || Buffer.alloc(20),
+      outputOwnerAddress || Buffer.alloc(20),
     );
 
     debug('creating proof...');
@@ -89,16 +79,18 @@ export class JoinSplitProofCreator {
     const viewingKeys = [encViewingKey1, encViewingKey2];
     const joinSplitProof = new JoinSplitProof(proofData, viewingKeys);
     const { newNote1, newNote2 } = joinSplitProof;
-    const depositSignature = deposit ? await this.ethSign(joinSplitProof.getDepositSigningData(), signer) : undefined;
+    const depositSignature = publicInput
+      ? await this.ethSign(joinSplitProof.getDepositSigningData(), signer)
+      : undefined;
 
     // Only return notes that belong to the user.
     return {
       proof: { proofData, viewingKeys, depositSignature },
       inputNote1: numInputNotes > 0 ? notes[0].index : undefined,
       inputNote2: numInputNotes > 1 ? notes[1].index : undefined,
-      outputNote1: outputNoteOwner1?.equals(sender.publicKey) ? newNote1 : undefined,
-      outputNote2: outputNoteOwner2?.equals(sender.publicKey) ? newNote2 : undefined,
-    } as JoinSplitProofOutput;
+      outputNote1: outputNoteOwner1.equals(sender.publicKey) ? newNote1 : undefined,
+      outputNote2: outputNoteOwner2.equals(sender.publicKey) ? newNote2 : undefined,
+    };
   }
 
   private async ethSign(txPublicInputs: Buffer, signer?: Signer) {

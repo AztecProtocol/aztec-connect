@@ -13,7 +13,7 @@ module.exports = {
         test: /\.tsx?$/,
         use: [
           {
-            loader: 'ts-loader',
+            loader: 'babel-loader',
           },
         ],
         exclude: /node_modules/,

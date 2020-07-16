@@ -6,22 +6,14 @@ interface FormFieldProps {
   children: React.ReactNode;
 }
 
-export function FormField({
-  label,
-  children,
-}: FormFieldProps) {
+export function FormField({ label, children }: FormFieldProps) {
   return (
-    <Block padding="m">
+    <Block padding="m 0">
       <FlexBox valign="center">
         <Block className="flex-fixed" right="s">
-          <Text
-            text={`${label}:`}
-            size="xs"
-          />
+          <Text text={`${label}:`} size="xs" />
         </Block>
-        <div className="flex-free-expand">
-          {children}
-        </div>
+        <div className="flex-free-expand">{children}</div>
       </FlexBox>
     </Block>
   );

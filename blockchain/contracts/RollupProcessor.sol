@@ -26,7 +26,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     IERC20 public linkedToken;
 
     uint256 public scalingFactor; // scale between Aztec note units and ERC20 units
-    uint256 public constant txPubInputLength = 0x120; // public inputs length for of each inner proof tx
+    uint256 public constant txPubInputLength = 0x140; // public inputs length for of each inner proof tx
 
     event RollupProcessed(uint256 indexed rollupId, bytes32 dataRoot, bytes32 nullRoot);
     event Deposit(address depositorAddress, uint256 depositValue);
@@ -197,18 +197,20 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
             bytes calldata proof = innerProofData[i.mul(txPubInputLength):i.mul(txPubInputLength).add(
                 txPubInputLength
             )];
-            (uint256 publicInput, uint256 publicOutput, address publicOwner) = extractTxComponents(proof);
+            (uint256 publicInput, uint256 publicOutput, address inputOwner, address outputOwner) = extractTxComponents(
+                proof
+            );
 
             // scope block to avoid stack too deep errors
             {
                 if (publicInput > 0) {
                     bytes memory signature = extractSignature(signatures, findSigIndex(sigIndexes, i));
-                    validateSignature(proof, signature, publicOwner);
-                    deposit(publicInput, publicOwner);
+                    validateSignature(proof, signature, inputOwner);
+                    deposit(publicInput, inputOwner);
                 }
 
                 if (publicOutput > 0) {
-                    withdraw(publicOutput, publicOwner);
+                    withdraw(publicOutput, outputOwner);
                 }
             }
         }

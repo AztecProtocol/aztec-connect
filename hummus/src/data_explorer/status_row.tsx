@@ -12,14 +12,13 @@ const statusColorMapping: { [key: string]: string } = {
 
 interface TmpRowProps {
   iconName: string;
-  iconColor: string;
   created: Date;
   status: string;
   statusColor?: string;
   children: React.ReactNode;
 }
 
-export const TmpRow = ({ iconName, iconColor, children, status, statusColor, created }: TmpRowProps) => (
+export const TmpRow = ({ iconName, children, status, statusColor, created }: TmpRowProps) => (
   <ThemeContext.Consumer>
     {({ theme, colorLight }) => (
       <Row valign="center">
@@ -31,7 +30,7 @@ export const TmpRow = ({ iconName, iconColor, children, status, statusColor, cre
                 shape="square"
                 iconName={iconName}
                 iconBackground={theme === 'light' ? 'primary-lightest' : 'grey-dark'}
-                color={iconColor}
+                color={theme === 'light' ? 'grey-light' : 'white-lighter'}
               />
               <Block left="s">
                 <Block padding="xxs 0">

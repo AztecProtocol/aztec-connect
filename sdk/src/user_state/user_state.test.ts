@@ -22,6 +22,7 @@ describe('User State', () => {
 
   const user = {
     id: 123,
+    address: randomBytes(20),
     privateKey: randomBytes(32),
     publicKey: randomBytes(64),
   };
@@ -61,14 +62,14 @@ describe('User State', () => {
       nullifiers: [],
       viewingKeys: [randomBytes(20)],
     };
-    const noteNullifier = randomBytes(16);
+    const nullifier = randomBytes(16);
     const noteSecret = randomBytes(10);
 
     decryptNoteSpy.mockImplementationOnce(() => new Note(user.publicKey, noteSecret, 100));
-    computeNullifierSpy.mockImplementationOnce(() => noteNullifier);
+    computeNullifierSpy.mockImplementationOnce(() => nullifier);
 
-    let dbNote = await db.getNoteByNullifier(user.id, noteNullifier);
-    expect(dbNote).toBe(undefined);
+    let note = await db.getNoteByNullifier(user.id, nullifier);
+    expect(note).toBe(undefined);
 
     expect(decryptNoteSpy).toHaveBeenCalledTimes(0);
 
@@ -76,16 +77,16 @@ describe('User State', () => {
 
     expect(decryptNoteSpy).toHaveBeenCalledTimes(1);
 
-    dbNote = await db.getNoteByNullifier(user.id, noteNullifier);
-    expect(dbNote).toEqual({
-      id: 0,
+    note = await db.getNoteByNullifier(user.id, nullifier);
+    expect(note).toEqual({
+      index: 0,
       owner: user.id,
       value: 100,
-      dataEntry: new Uint8Array(block.dataEntries[0]),
-      encrypted: new Uint8Array(block.viewingKeys[0]),
-      viewingKey: new Uint8Array(noteSecret),
-      nullifier: new Uint8Array(noteNullifier),
-      nullified: 0,
+      dataEntry: block.dataEntries[0],
+      encrypted: block.viewingKeys[0],
+      viewingKey: noteSecret,
+      nullifier,
+      nullified: false,
     });
 
     expect(updated).toBe(true);

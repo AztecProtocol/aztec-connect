@@ -297,7 +297,7 @@ export class Server {
     const proof = new JoinSplitProof(proofData, viewingKeys, depositSignature);
     const nullifier1 = toBigIntBE(proof.nullifier1);
     const nullifier2 = toBigIntBE(proof.nullifier2);
-    const { publicInput, publicOwner } = proof;
+    const { publicInput, inputOwner } = proof;
 
     // Check nullifiers don't exist in the db.
     const emptyValue = Buffer.alloc(64, 0);
@@ -325,11 +325,11 @@ export class Server {
         throw new Error('No deposit signature provided.');
       }
 
-      if (!(await this.blockchain.validateSignature(publicOwner, depositSignature, proof.getDepositSigningData()))) {
+      if (!(await this.blockchain.validateSignature(inputOwner, depositSignature, proof.getDepositSigningData()))) {
         throw new Error('Invalid deposit signature.');
       }
 
-      if (!(await this.blockchain.validateDepositFunds(publicOwner, publicInput))) {
+      if (!(await this.blockchain.validateDepositFunds(inputOwner, publicInput))) {
         throw new Error('User has insufficient or unapproved deposit balance.');
       }
     }

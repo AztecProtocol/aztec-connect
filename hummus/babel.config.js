@@ -1,3 +1,4 @@
 module.exports = {
-  plugins: ['@babel/plugin-transform-modules-commonjs'],
+  presets: ['@babel/preset-react', '@babel/preset-typescript'],
+  plugins: ['@babel/plugin-proposal-class-properties', '@babel/plugin-proposal-optional-chaining'],
 };

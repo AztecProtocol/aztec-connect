@@ -7,14 +7,14 @@ export const pick = (sortedNotes: SortedNotes, value: number) => {
     return null;
   }
 
-  let sum = left.note.value;
+  let sum = left.value;
   let j = sortedNotes.length - 1;
   if (i === j) {
     return sum >= value ? [left] : null;
   }
 
   const right = sortedNotes.nth(j);
-  sum += right.note.value;
+  sum += right.value;
   let tmpSum = sum;
   let pair = [left, right];
   while (i < j - 1) {
@@ -30,7 +30,7 @@ export const pick = (sortedNotes: SortedNotes, value: number) => {
     }
 
     const thisPair = [sortedNotes.nth(i), sortedNotes.nth(j)];
-    tmpSum = thisPair[0].note.value + thisPair[1].note.value;
+    tmpSum = thisPair[0].value + thisPair[1].value;
     if (tmpSum === value || (sum !== value && tmpSum > value)) {
       sum = tmpSum;
       pair = thisPair;

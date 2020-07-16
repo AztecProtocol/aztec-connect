@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "es2020",
     "module": "es6",
-    "lib": ["es2019"],
+    "lib": ["es2020"],
     "moduleResolution": "node",
     "jsx": "react",
     "outDir": "dest",

@@ -1,16 +1,108 @@
-import { Database, DbUser, DbUserTx, DbNote, DbKey } from './database';
 import Dexie from 'dexie';
+import { Database } from './database';
+import { Note } from '../note';
+import { User } from '../user';
+import { UserTx, UserTxAction } from '../user_tx';
 
 const MAX_BYTE_LENGTH = 100000000;
 
 const toSubKeyName = (name: string, index: number) => `${name}__${index}`;
 
+class DexieNote {
+  constructor(
+    public id: number,
+    public value: number,
+    public dataEntry: Uint8Array,
+    public viewingKey: Uint8Array,
+    public encrypted: Uint8Array,
+    public nullifier: Uint8Array,
+    public nullified: 0 | 1,
+    public owner: number,
+  ) {}
+}
+
+const noteToDexieNote = (note: Note) =>
+  new DexieNote(
+    note.index,
+    note.value,
+    note.dataEntry,
+    note.viewingKey,
+    note.encrypted,
+    note.nullifier,
+    note.nullified ? 1 : 0,
+    note.owner,
+  );
+
+const dexieNoteToNote = ({ id, dataEntry, viewingKey, encrypted, nullifier, nullified, ...rest }: DexieNote): Note => ({
+  ...rest,
+  index: id,
+  dataEntry: Buffer.from(dataEntry),
+  viewingKey: Buffer.from(viewingKey),
+  encrypted: Buffer.from(encrypted),
+  nullifier: Buffer.from(nullifier),
+  nullified: !!nullified,
+});
+
+class DexieKey {
+  constructor(public name: string, public value: Uint8Array, public size: number, public count?: number) {}
+}
+
+class DexieUser {
+  constructor(public id: number, public publicKey: Uint8Array, public privateKey?: Uint8Array, public alias?: string) {}
+}
+
+const dexieUserToUser = (dexieUser: DexieUser): User => ({
+  ...dexieUser,
+  publicKey: Buffer.from(dexieUser.publicKey),
+  privateKey: dexieUser.privateKey ? Buffer.from(dexieUser.privateKey) : undefined,
+});
+
+class DexieUserTx {
+  constructor(
+    public txHash: Uint8Array,
+    public userId: number,
+    public action: UserTxAction,
+    public value: number,
+    public recipient: Uint8Array,
+    public settled: 0 | 1, // boolean is non-indexable
+    public created: Date,
+    public inputNote1?: number,
+    public inputNote2?: number,
+    public outputNote1?: Uint8Array,
+    public outputNote2?: Uint8Array,
+  ) {}
+}
+
+const userTxToDexieUserTx = (userTx: UserTx) =>
+  new DexieUserTx(
+    new Uint8Array(userTx.txHash),
+    userTx.userId,
+    userTx.action,
+    userTx.value,
+    new Uint8Array(userTx.recipient),
+    userTx.settled ? 1 : 0,
+    userTx.created,
+    userTx.inputNote1,
+    userTx.inputNote2,
+    userTx.outputNote1 ? new Uint8Array(userTx.outputNote1) : undefined,
+    userTx.outputNote2 ? new Uint8Array(userTx.outputNote2) : undefined,
+  );
+
+const dexieUserTxToUserTx = (dexieUserTx: DexieUserTx): UserTx => ({
+  ...dexieUserTx,
+  txHash: Buffer.from(dexieUserTx.txHash),
+  settled: !!dexieUserTx.settled,
+  recipient: Buffer.from(dexieUserTx.recipient),
+  outputNote1: dexieUserTx.outputNote1 ? Buffer.from(dexieUserTx.outputNote1) : undefined,
+  outputNote2: dexieUserTx.outputNote2 ? Buffer.from(dexieUserTx.outputNote2) : undefined,
+});
+
 export class DexieDatabase implements Database {
   private dexie = new Dexie('hummus');
-  private user: Dexie.Table<DbUser, number>;
-  private userTx: Dexie.Table<DbUserTx, string>;
-  private note: Dexie.Table<DbNote, number>;
-  private key: Dexie.Table<DbKey, string>;
+  private user: Dexie.Table<DexieUser, number>;
+  private userTx: Dexie.Table<DexieUserTx, string>;
+  private note: Dexie.Table<DexieNote, number>;
+  private key: Dexie.Table<DexieKey, string>;
 
   constructor() {
     this.dexie.version(2).stores({
@@ -24,25 +116,30 @@ export class DexieDatabase implements Database {
     this.note = this.dexie.table('note');
     this.userTx = this.dexie.table('user_tx');
     this.key = this.dexie.table('key');
-    this.user.mapToClass(DbUser);
-    this.note.mapToClass(DbNote);
-    this.key.mapToClass(DbKey);
+    this.user.mapToClass(DexieUser);
+    this.userTx.mapToClass(DexieUserTx);
+    this.note.mapToClass(DexieNote);
+    this.key.mapToClass(DexieKey);
   }
 
   close() {
     this.dexie.close();
   }
 
-  async addNote(note: DbNote) {
-    await this.note.put(note);
+  async addNote(note: Note) {
+    await this.note.put(noteToDexieNote(note));
   }
 
   async getNote(treeIndex: number) {
-    return await this.note.get(treeIndex);
+    const note = await this.note.get(treeIndex);
+    return note ? dexieNoteToNote(note) : undefined;
   }
 
   async getNoteByNullifier(userId: number, nullifier: Buffer) {
-    return (await this.note.filter(n => nullifier.equals(Buffer.from(n.nullifier)) && n.owner === userId).toArray())[0];
+    const note = (
+      await this.note.filter(n => nullifier.equals(Buffer.from(n.nullifier)) && n.owner === userId).toArray()
+    )[0];
+    return note ? dexieNoteToNote(note) : undefined;
   }
 
   async nullifyNote(index: number) {
@@ -50,43 +147,48 @@ export class DexieDatabase implements Database {
   }
 
   async getUserNotes(userId: number) {
-    return await this.note.filter(n => !n.nullified && n.owner === userId).toArray();
+    return (await this.note.filter(n => !n.nullified && n.owner === userId).toArray()).map(dexieNoteToNote);
   }
 
   async getUser(userId: number) {
-    return await this.user.get(userId);
+    const user = await this.user.get(userId);
+    return user ? dexieUserToUser(user) : undefined;
   }
 
   async getUsers() {
-    return await this.user.toArray();
+    return (await this.user.toArray()).map(dexieUserToUser);
   }
 
-  async addUser(user: DbUser) {
+  async addUser(user: User) {
     await this.user.put(user);
   }
 
-  async getUserTx(txHash: Uint8Array) {
-    return await this.userTx.get(txHash);
+  async getUserTx(txHash: Buffer) {
+    const userTx = await this.userTx.get(new Uint8Array(txHash));
+    return userTx ? dexieUserTxToUserTx(userTx) : undefined;
   }
 
   async getUserTxs(userId: number) {
-    return this.userTx.where({ userId }).reverse().sortBy('created');
+    return (await this.userTx.where({ userId }).reverse().sortBy('created')).map(dexieUserTxToUserTx);
   }
 
-  async addUserTx(userTx: DbUserTx) {
-    await this.userTx.put(userTx);
+  async addUserTx(userTx: UserTx) {
+    await this.userTx.put(userTxToDexieUserTx(userTx));
   }
 
-  async settleUserTx(txHash: Uint8Array) {
-    await this.userTx.where({ txHash }).modify({ settled: 1 });
+  async settleUserTx(txHash: Buffer) {
+    await this.userTx.where({ txHash: new Uint8Array(txHash) }).modify({ settled: 1 });
   }
 
-  async deleteUserTx(txHash: Uint8Array) {
-    await this.userTx.where({ txHash }).delete();
+  async deleteUserTx(txHash: Buffer) {
+    await this.userTx.where({ txHash: new Uint8Array(txHash) }).delete();
   }
 
   async clearUserTxState() {
-    // await this.userTx.where({ settled: 1 }).modify({ settled: 0 });
+    await this.userTx.where({ settled: 1 }).modify({ settled: 0 });
+  }
+
+  async clearUserTx() {
     await this.userTx.clear();
   }
 

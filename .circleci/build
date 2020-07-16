@@ -17,14 +17,14 @@ ensure_repo $REPOSITORY $ECR_REGION
 check_rebuild || { echo "No rebuild necessary." && exit 0; }
 
 # Pull latest parents that are not ours.
-PARENTS=$(cat $DOCKERFILE | sed -n -e 's/FROM \([^[:space:]]\+\).*/\1/p' | grep -v $ECR_DEPLOY_URL | sort | uniq)
+PARENTS=$(cat $DOCKERFILE | sed -n -e 's/^FROM \([^[:space:]]\+\).*/\1/p' | grep -v $ECR_DEPLOY_URL | sort | uniq)
 for PARENT in $PARENTS; do
   echo "Pulling parent: $PARENT"
   docker pull $PARENT > /dev/null 2>&1
 done
 
 # For each parent that's ours, pull in the newly rebuilt image if it's present.
-PARENTS=$(cat $DOCKERFILE | sed -n -e "s/FROM $ECR_DEPLOY_URL\/\([^[:space:]]\+\)/\1/p")
+PARENTS=$(cat $DOCKERFILE | sed -n -e "s/^FROM $ECR_DEPLOY_URL\/\([^[:space:]]\+\)/\1/p")
 for PARENT in $PARENTS; do
   [[ "$PARENT" =~ ":" ]] || PARENT="$PARENT:latest"
   echo "Pulling parent: $PARENT"
@@ -53,7 +53,7 @@ CACHE_FROM="--cache-from $IMAGE_BRANCH_URI --cache-from $IMAGE_MASTER_URI"
 echo
 
 # Pull, build and push each named stage to cache.
-STAGES=$(cat $DOCKERFILE | sed -n -e 's/FROM .* AS \(.*\)/\1/p')
+STAGES=$(cat $DOCKERFILE | sed -n -e 's/^FROM .* AS \(.*\)/\1/p')
 for STAGE in $STAGES; do
   echo "Pulling stage: $STAGE"
   STAGE_IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:cache-master-$TAG-$STAGE

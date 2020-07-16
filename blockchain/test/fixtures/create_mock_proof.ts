@@ -105,21 +105,33 @@ function publicInputData(id: number, isFirstProof: boolean, numInner: number) {
 async function innerProofData(isDeposit: boolean, transferAmount: number, publicOwnerUnformatted: string) {
   let publicInput;
   let publicOutput;
+  let inputOwner = Buffer.alloc(32);
+  let outputOwner = Buffer.alloc(32);
 
   if (isDeposit) {
     publicInput = numToBuffer(transferAmount);
     publicOutput = numToBuffer(0);
+    inputOwner = Buffer.concat([Buffer.alloc(12), Buffer.from(publicOwnerUnformatted.slice(2), 'hex')]);
   } else {
     publicInput = numToBuffer(0);
     publicOutput = numToBuffer(transferAmount);
+    outputOwner = Buffer.concat([Buffer.alloc(12), Buffer.from(publicOwnerUnformatted.slice(2), 'hex')]);
   }
   const newNote1 = randomBytes(dataNoteSize);
   const newNote2 = randomBytes(dataNoteSize);
   const nullifier1 = Buffer.concat([Buffer.alloc(16), randomBytes(16)]);
   const nullifier2 = Buffer.concat([Buffer.alloc(16), randomBytes(16)]);
-  const publicOwner = Buffer.concat([Buffer.alloc(12), Buffer.from(publicOwnerUnformatted.slice(2), 'hex')]);
 
-  return Buffer.concat([publicInput, publicOutput, newNote1, newNote2, nullifier1, nullifier2, publicOwner]);
+  return Buffer.concat([
+    publicInput,
+    publicOutput,
+    newNote1,
+    newNote2,
+    nullifier1,
+    nullifier2,
+    inputOwner,
+    outputOwner,
+  ]);
 }
 
 export async function createDepositProof(amount: number, depositorAddress: string, user: Signer) {

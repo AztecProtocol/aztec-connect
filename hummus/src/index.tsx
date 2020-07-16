@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { BrowserRouter, Switch, Route, Link, useLocation, RouteComponentProps } from 'react-router-dom';
 import { History } from 'history';
 import styled, { createGlobalStyle } from 'styled-components';
-import { FlexBox, Block, SwitchInput, TextButton, Icon, PageSteps } from '@aztec/guacamole-ui';
+import { FlexBox, Block, SwitchInput, Text, TextButton, Icon, PageSteps } from '@aztec/guacamole-ui';
 import { App } from './app';
 import { JoinSplitForm } from './join_split_form';
 import { LocalState, GlobalState, RollupDetails, TxDetails } from './data_explorer';
@@ -98,26 +98,31 @@ function ThemedContent({ app }: { app: App }) {
                 <GlobalState app={app} />
               </Route>
               <Route>
-                <JoinSplitForm app={app} theme={theme} />
+                <JoinSplitForm app={app} />
               </Route>
             </Switch>
-            <Block top="xl">
+            <Block padding="xl 0">
               <FlexBox valign="center" align="space-between">
+                <FlexBox valign="center">
+                  <SwitchInput
+                    theme={theme.theme}
+                    onClick={() => {
+                      const nextTheme = theme.theme === 'light' ? 'dark' : 'light';
+                      window.localStorage.setItem('theme', nextTheme);
+                      setTheme(themes[nextTheme]);
+                    }}
+                    checked={theme.theme === 'light'}
+                  />
+                  <Block left="m">
+                    <Text text={theme.theme === 'light' ? 'Light Mode' : 'Dark Mode'} />
+                  </Block>
+                </FlexBox>
                 <TextButton theme="implicit" color={theme.link} href="/terminal" Link={Link}>
                   <FlexBox valign="center">
                     <Block right="xs">Terminal Mode</Block>
                     <Icon name="chevron_right" />
                   </FlexBox>
                 </TextButton>
-                <SwitchInput
-                  theme={theme.theme}
-                  onClick={() => {
-                    const nextTheme = theme.theme === 'light' ? 'dark' : 'light';
-                    window.localStorage.setItem('theme', nextTheme);
-                    setTheme(themes[nextTheme]);
-                  }}
-                  checked={theme.theme === 'light'}
-                />
               </FlexBox>
             </Block>
           </StyledContent>

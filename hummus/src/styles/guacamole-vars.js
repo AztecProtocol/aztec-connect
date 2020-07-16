@@ -37,7 +37,7 @@ export const colorMap = {
   primary: 'rgb(18,38,63)',
   'primary-light': 'rgba(18,38,63, 0.8)',
   'primary-lighter': 'rgba(18,38,63, 0.5)',
-  'primary-lightest': 'rgba(18,38,63, 0.1)',
+  'primary-lightest': '#f1f5fc',
   black: '#000000',
   'grey-darker': 'rgba(0, 0, 0, 0.85)',
   'grey-dark': 'rgba(0, 0, 0, 0.7)',

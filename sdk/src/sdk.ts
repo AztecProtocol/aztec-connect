@@ -55,11 +55,13 @@ export interface Sdk extends EventEmitter {
 
   getStatus(): Promise<RollupProviderStatus>;
 
-  deposit(value: number, signer: Signer): Promise<TxHash>;
+  deposit(value: number, signer: Signer, noteRecipient?: Buffer): Promise<TxHash>;
 
-  withdraw(value: number, signer: Signer): Promise<TxHash>;
+  withdraw(value: number, tokenRecipient: Buffer): Promise<TxHash>;
 
-  transfer(value: number, recipient: Buffer): Promise<TxHash>;
+  transfer(value: number, noteRecipient: Buffer): Promise<TxHash>;
+
+  publicTransfer(value: number, signer: Signer, tokenRecipient: Buffer): Promise<TxHash>;
 
   awaitSynchronised(): Promise<void>;
 

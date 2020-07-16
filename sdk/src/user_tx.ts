@@ -1,5 +1,4 @@
-import { UserTxAction } from './database';
-export { UserTxAction } from './database';
+export type UserTxAction = 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'PUBLIC_TRANSFER' | 'RECEIVE';
 
 export interface UserTx {
   txHash: Buffer;

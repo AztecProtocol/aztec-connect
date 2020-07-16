@@ -6,32 +6,23 @@ import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { PooledProver } from 'barretenberg/client_proofs/prover/pooled_prover';
-import { RollupProvider, RollupProviderExplorer, Proof } from 'barretenberg/rollup_provider';
+import { RollupProvider, RollupProviderExplorer } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
-import { DbUser, UserTxAction, Database } from './database';
+import { Database } from './database';
 import { JoinSplitProofCreator } from './join_split_proof';
 import { TxsState } from './txs_state';
 import { User, UserFactory } from './user';
 import { UserState, UserStateFactory } from './user_state';
 import { Sdk, SdkEvent, SdkInitState, TxHash } from './sdk';
-import { UserTx } from './user_tx';
+import { UserTx, UserTxAction } from './user_tx';
 import Mutex from 'idb-mutex';
 import { Signer } from './sdk';
 
 const debug = createDebug('bb:core_sdk');
-
-function dbUserToUser(dbUser: DbUser): User {
-  return {
-    id: dbUser.id,
-    privateKey: dbUser.privateKey ? Buffer.from(dbUser.privateKey) : undefined,
-    publicKey: Buffer.from(dbUser.publicKey),
-    alias: dbUser.alias,
-  };
-}
 
 /**
  * These are events that are only emitted due to changes triggered within the current execution context.
@@ -132,7 +123,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
    * Public so it can be called when externally notified of new users.
    */
   public async initUsers() {
-    this.users = (await this.db.getUsers()).map(dbUserToUser);
+    this.users = await this.db.getUsers();
     if (!this.users.length) {
       const user = this.userFactory.createUser(0);
       this.db.addUser(user);
@@ -185,7 +176,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     await this.deinit();
     await this.leveldb.clear();
     await this.db.clearNote();
-    await this.db.clearUserTxState();
+    await this.db.clearUserTx();
     await this.init();
     this.emit(CoreSdkEvent.RESTART);
   }
@@ -270,22 +261,28 @@ export class CoreSdk extends EventEmitter implements Sdk {
     );
   }
 
-  private async createProof(action: UserTxAction, value: number, recipient: Buffer, signer?: Signer) {
+  private async createProof(
+    action: UserTxAction,
+    value: number,
+    noteRecipient?: Buffer,
+    outputOwner?: Buffer,
+    signer?: Signer,
+  ) {
     const created = Date.now();
     const user = this.getUser();
     const userState = this.getUserState(user.id)!;
-    const input = { userId: user.id, value, recipient, created: new Date(created) };
-    const deposit = action === 'DEPOSIT' ? value : 0;
-    const withdraw = action === 'WITHDRAW' ? value : 0;
-    const transfer = action === 'TRANSFER' ? value : 0;
+    const publicInput = ['DEPOSIT', 'PUBLIC_TRANSFER'].indexOf(action) >= 0 ? value : 0;
+    const publicOutput = ['WITHDRAW', 'PUBLIC_TRANSFER'].indexOf(action) >= 0 ? value : 0;
+    const newNoteValue = ['DEPOSIT', 'TRANSFER'].indexOf(action) >= 0 ? value : 0;
 
     const proofOutput = await this.joinSplitProofCreator.createProof(
       userState,
-      deposit,
-      withdraw,
-      transfer,
+      publicInput,
+      publicOutput,
+      newNoteValue,
       user,
-      recipient,
+      noteRecipient,
+      outputOwner,
       signer,
     );
     const { txHash } = await this.rollupProvider.sendProof(proofOutput.proof);
@@ -294,12 +291,15 @@ export class CoreSdk extends EventEmitter implements Sdk {
     const userTx: UserTx = {
       action,
       txHash,
+      userId: user.id,
+      value,
+      recipient: noteRecipient || outputOwner || this.user.publicKey,
       inputNote1,
       inputNote2,
       outputNote1: action !== 'TRANSFER' ? outputNote1 : undefined,
       outputNote2,
       settled: false,
-      ...input,
+      created: new Date(created),
     };
     await userState.addUserTx(userTx);
     this.emit(SdkEvent.NEW_USER_TX, userTx.userId);
@@ -307,16 +307,20 @@ export class CoreSdk extends EventEmitter implements Sdk {
     return txHash;
   }
 
-  public async deposit(value: number, signer: Signer) {
-    return await this.createProof('DEPOSIT', value, this.user.publicKey, signer);
+  public async deposit(value: number, signer: Signer, noteRecipient?: Buffer) {
+    return await this.createProof('DEPOSIT', value, noteRecipient || this.user.publicKey, undefined, signer);
   }
 
-  public async withdraw(value: number, signer: Signer) {
-    return await this.createProof('WITHDRAW', value, this.user.publicKey, signer);
+  public async withdraw(value: number, tokenRecipient: Buffer) {
+    return await this.createProof('WITHDRAW', value, undefined, tokenRecipient);
   }
 
-  public async transfer(value: number, recipient: Buffer) {
-    return await this.createProof('TRANSFER', value, recipient);
+  public async transfer(value: number, noteRecipient: Buffer) {
+    return await this.createProof('TRANSFER', value, noteRecipient);
+  }
+
+  public async publicTransfer(value: number, signer: Signer, tokenRecipient: Buffer) {
+    return await this.createProof('PUBLIC_TRANSFER', value, undefined, tokenRecipient, signer);
   }
 
   private async isSynchronised() {

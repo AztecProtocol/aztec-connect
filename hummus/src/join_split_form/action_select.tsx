@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { FlexBox, SelectInput } from '@aztec/guacamole-ui';
 import { FormField } from '../components';
 import { ThemeContext } from '../config/context';
 
 export enum Action {
   DEPOSIT = 'Deposit',
+  PUBLIC_TRANSFER = 'Public Transfer',
+  MINT = 'Mint',
   TRANSFER = 'Transfer',
   WITHDRAW = 'Withdraw',
 }
@@ -15,7 +17,7 @@ interface AccountSelectProps {
 }
 
 export const ActionSelect = ({ action, onSelect }: AccountSelectProps) => {
-  const items = [Action.DEPOSIT, Action.TRANSFER, Action.WITHDRAW].map(action => ({
+  const items = [Action.DEPOSIT, Action.WITHDRAW, Action.TRANSFER, Action.PUBLIC_TRANSFER, Action.MINT].map(action => ({
     value: action,
     title: action,
   }));

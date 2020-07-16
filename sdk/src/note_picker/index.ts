@@ -1,13 +1,11 @@
-import { TrackedNote } from './tracked_note';
 import { SortedNotes } from './sorted_notes';
 import { pick } from './pick';
-
-export * from './tracked_note';
+import { Note } from '../note';
 
 export class NotePicker {
   private sortedNotes: SortedNotes;
 
-  constructor(notes: TrackedNote[] = []) {
+  constructor(notes: Note[] = []) {
     this.sortedNotes = new SortedNotes(notes);
   }
 
@@ -15,11 +13,11 @@ export class NotePicker {
     this.sortedNotes.reset();
   }
 
-  addNote(note: TrackedNote) {
+  addNote(note: Note) {
     this.sortedNotes.add(note);
   }
 
-  addNotes(notes: TrackedNote[]) {
+  addNotes(notes: Note[]) {
     this.sortedNotes.bulkAdd(notes);
   }
 
@@ -35,7 +33,7 @@ export class NotePicker {
     return !!this.sortedNotes.find(n => n.index === index);
   }
 
-  findNote(callback: (note: TrackedNote, i?: number) => boolean) {
+  findNote(callback: (note: Note, i?: number) => boolean) {
     return this.sortedNotes.find(callback);
   }
 
@@ -48,7 +46,7 @@ export class NotePicker {
 
   getNoteSum() {
     let sum = 0;
-    this.sortedNotes.each((n: TrackedNote) => (sum += n.note.value));
+    this.sortedNotes.each((n: Note) => (sum += n.value));
     return sum;
   }
 }

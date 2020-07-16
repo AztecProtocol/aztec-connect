@@ -16,14 +16,18 @@ const actionTextMapping = {
   DEPOSIT: 'Deposited',
   WITHDRAW: 'Withdrew',
   TRANSFER: 'Transferred',
+  PUBLIC_TRANSFER: 'Public Sent',
   RECEIVE: 'Received',
+  MINT: 'Minted',
 };
 
 const actionIconMapping = {
   DEPOSIT: 'play_for_work',
   WITHDRAW: 'call_merge',
   TRANSFER: 'import_export',
-  RECEIVE: 'add',
+  PUBLIC_TRANSFER: 'import_export',
+  RECEIVE: 'flare',
+  MINT: 'play_for_work',
   NADA: '',
 };
 
@@ -31,7 +35,9 @@ const actionIconColorMapping = {
   DEPOSIT: 'green',
   WITHDRAW: 'yellow',
   TRANSFER: 'secondary',
-  RECEIVE: 'white',
+  PUBLIC_TRANSFER: 'white',
+  RECEIVE: 'orange',
+  MINT: 'white',
   NADA: '',
 };
 
@@ -39,7 +45,9 @@ const actionIconBackgroundMapping = {
   DEPOSIT: '',
   WITHDRAW: '',
   TRANSFER: '',
-  RECEIVE: 'blue',
+  PUBLIC_TRANSFER: 'secondary',
+  RECEIVE: '',
+  MINT: 'green',
   NADA: '',
 };
 
@@ -76,8 +84,7 @@ export const UserTxs = ({ userId, app }: UserTxsProps) => {
     };
   }, [app]);
 
-  const hasPendingProof = currentProof?.state == ProofState.RUNNING;
-  // !!currentProof?.input && currentProof!.txHash && !txs.find(tx => tx.txHash.equals(currentProof.txHash!));
+  const hasPendingProof = currentProof?.state === ProofState.RUNNING;
 
   if (!hasPendingProof && !txs.length) {
     return (
@@ -120,7 +127,7 @@ export const UserTxs = ({ userId, app }: UserTxsProps) => {
                 <FlexBox direction="column">
                   <span>
                     <Text text={`${actionTextMapping[action]}: `} size="xxs" color={colorLight} />
-                    <Text text={value} size="xxs" />
+                    <Text text={app.toTokenValueString(BigInt(value))} size="xxs" />
                   </span>
                   {action !== 'RECEIVE' && (
                     <FlexBox>
@@ -157,7 +164,6 @@ export const UserTxs = ({ userId, app }: UserTxsProps) => {
           <Block key="pending" padding="xs 0">
             <TmpRow
               iconName={actionIconMapping[proofAction]}
-              iconColor={actionIconColorMapping[proofAction]}
               status={currentProof!.state === ProofState.FAILED ? 'FAILED' : 'PENDING'}
               statusColor={currentProof!.state === ProofState.FAILED ? 'red' : colorLight}
               created={proofInput.created}
@@ -165,7 +171,7 @@ export const UserTxs = ({ userId, app }: UserTxsProps) => {
               <FlexBox direction="column">
                 <span>
                   <Text text={`${actionTextMapping[proofAction]}: `} size="xxs" color={colorLight} />
-                  <Text text={proofInput.value} size="xxs" />
+                  <Text text={app.toTokenValueString(proofInput.value)} size="xxs" />
                 </span>
                 <FlexBox>
                   <Text text="To:" size="xxs" color={colorLight} />

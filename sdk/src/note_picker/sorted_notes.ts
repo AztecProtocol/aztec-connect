@@ -1,10 +1,10 @@
-import { TrackedNote } from './tracked_note';
+import { Note } from '../note';
 
 export class SortedNotes {
-  private sortedNotes: TrackedNote[] = [];
+  private sortedNotes: Note[] = [];
 
-  constructor(notes: TrackedNote[] = []) {
-    this.sortedNotes = [...notes].sort((a, b) => a.note.value - b.note.value);
+  constructor(notes: Note[] = []) {
+    this.sortedNotes = [...notes].sort((a, b) => a.value - b.value);
   }
 
   get length(): number {
@@ -15,10 +15,10 @@ export class SortedNotes {
     this.sortedNotes = [];
   }
 
-  add(note: TrackedNote) {
+  add(note: Note) {
     let i = this.sortedNotes.length;
     for (; i > 0; i--) {
-      if (this.nth(i - 1).note.value <= note.note.value) {
+      if (this.nth(i - 1).value <= note.value) {
         break;
       }
     }
@@ -26,46 +26,46 @@ export class SortedNotes {
     this.sortedNotes.splice(i, 0, note);
   }
 
-  bulkAdd(notes: TrackedNote[]) {
+  bulkAdd(notes: Note[]) {
     if (!this.sortedNotes.length) {
-      this.sortedNotes = [...notes].sort((a, b) => a.note.value - b.note.value);
+      this.sortedNotes = [...notes].sort((a, b) => a.value - b.value);
     } else {
       notes.forEach(n => this.add(n));
     }
   }
 
-  remove(note: TrackedNote) {
+  remove(note: Note) {
     const idx = this.sortedNotes.findIndex(n => n.index === note.index);
     this.sortedNotes.splice(idx, 1);
   }
 
-  each(callback: (note: TrackedNote, i: number) => void) {
+  each(callback: (note: Note, i: number) => void) {
     this.sortedNotes.forEach((note, i) => callback(note, i));
   }
 
-  find(callback: (note: TrackedNote, i?: number) => boolean) {
+  find(callback: (note: Note, i?: number) => boolean) {
     return this.sortedNotes.find(callback);
   }
 
-  first(count: number): TrackedNote[] {
+  first(count: number): Note[] {
     return this.sortedNotes.slice(0, count);
   }
 
-  last(count: number): TrackedNote[] {
+  last(count: number): Note[] {
     return this.sortedNotes.slice(-count);
   }
 
-  nth(idx: number): TrackedNote {
+  nth(idx: number): Note {
     return this.sortedNotes[idx];
   }
 
   indexOfValue(value: number, start?: number): number {
-    return this.sortedNotes.findIndex((note, i) => (start === undefined || i >= start) && note.note.value === value);
+    return this.sortedNotes.findIndex((note, i) => (start === undefined || i >= start) && note.value === value);
   }
 
   lastIndexOfValue(value: number): number {
     for (let i = this.sortedNotes.length - 1; i >= 0; i--) {
-      if (this.nth(i).note.value === value) {
+      if (this.nth(i).value === value) {
         return i;
       }
     }
