@@ -131,8 +131,11 @@ export class Server {
     console.log(`Root root: ${this.worldStateDb.getRoot(2).toString('hex')}`);
   }
 
-  public status() {
+  public async status() {
+    const { chainId, networkOrHost } = await this.blockchain.getNetworkInfo();
     return {
+      chainId,
+      networkOrHost,
       rollupContractAddress: this.blockchain.getRollupContractAddress(),
       tokenContractAddress: this.blockchain.getTokenContractAddress(),
       dataSize: Number(this.worldStateDb.getSize(0)),

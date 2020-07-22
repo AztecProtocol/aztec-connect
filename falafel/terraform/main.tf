@@ -166,7 +166,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": "0xe01ebd139C602118D40dD7466e75954D84Dc6A73"
+        "value": "0x009540b3b3B7770d3998bE54B44fCac59A27d00F"
       }
     ],
     "mountPoints": [

@@ -126,13 +126,13 @@ export class TerminalHandler {
 
   private async deposit(value: string, account: string) {
     this.printQueue.put(`generating deposit proof...\n`);
-    await this.app.deposit(BigInt(value), account);
+    await this.app.deposit(this.app.toNoteValue(value), account);
     this.printQueue.put(`deposit proof sent.\n`);
   }
 
   private async withdraw(value: string, account: string) {
     this.printQueue.put(`generating withdrawl proof...\n`);
-    await this.app.withdraw(BigInt(value), account);
+    await this.app.withdraw(this.app.toNoteValue(value), account);
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
 
@@ -142,7 +142,7 @@ export class TerminalHandler {
       throw new Error('User not found.');
     }
     this.printQueue.put(`generating transfer proof...\n`);
-    await this.app.transfer(BigInt(value), user.publicKey.toString('hex'));
+    await this.app.transfer(this.app.toNoteValue(value), user.publicKey.toString('hex'));
     this.printQueue.put(`transfer proof sent.\n`);
   }
 
@@ -150,7 +150,7 @@ export class TerminalHandler {
     await this.terminal.putString(`${this.getBalance(userIdOrAlias)}\n`);
   }
 
-  private async getBalance(userIdOrAlias?: string) {
+  private getBalance(userIdOrAlias?: string) {
     return this.app.getBalance(userIdOrAlias) / 100;
   }
 

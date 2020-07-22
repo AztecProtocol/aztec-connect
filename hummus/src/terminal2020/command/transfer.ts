@@ -71,7 +71,7 @@ const run = async (buf: TerminalBuffer, app: App) => {
 
   const loader = loading(buf);
   loader.start();
-  await app.transfer(BigInt(amount), publicKey);
+  await app.transfer(app.toNoteValue(amount), publicKey);
   await loader.stop();
 };
 

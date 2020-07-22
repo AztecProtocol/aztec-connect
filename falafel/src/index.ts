@@ -26,17 +26,17 @@ const {
   MIN_ROLLUP_INTERVAL = '0',
 } = process.env;
 
-function getSigner() {
+function getEthereumBlockchainConfig() {
   if (INFURA_API_KEY && NETWORK && PRIVATE_KEY && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Infura network: ${NETWORK}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
     const provider = new ethers.providers.InfuraProvider(NETWORK, INFURA_API_KEY);
-    return new ethers.Wallet(PRIVATE_KEY, provider) as Signer;
+    return { signer: new ethers.Wallet(PRIVATE_KEY, provider) as Signer, networkOrHost: NETWORK };
   } else if (ETHEREUM_HOST && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Ethereum host: ${ETHEREUM_HOST}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
     const provider = new ethers.providers.WebSocketProvider(ETHEREUM_HOST);
-    return provider.getSigner(0);
+    return { signer: provider.getSigner(0), networkOrHost: ETHEREUM_HOST };
   }
 }
 
@@ -48,9 +48,9 @@ async function main() {
   };
 
   const connection = await createConnection();
-  const signer = getSigner();
-  const blockchain = signer
-    ? new PersistentEthereumBlockchain(new EthereumBlockchain(signer, ROLLUP_CONTRACT_ADDRESS!), connection)
+  const ethConfig = getEthereumBlockchainConfig();
+  const blockchain = ethConfig
+    ? new PersistentEthereumBlockchain(new EthereumBlockchain(ethConfig, ROLLUP_CONTRACT_ADDRESS!), connection)
     : new LocalBlockchain(connection, serverConfig.rollupSize);
   const rollupDb = new RollupDb(connection);
 

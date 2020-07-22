@@ -45,7 +45,7 @@ describe('ethereum_blockchain', () => {
     rollupProcessor = await RollupProcessor.deploy(erc20.address, scalingFactor);
     await erc20.mint(userAAddress, mintAmount);
 
-    ethereumBlockchain = new EthereumBlockchain(userA, rollupProcessor.address);
+    ethereumBlockchain = new EthereumBlockchain({ signer: userA, networkOrHost: '' }, rollupProcessor.address);
     await ethereumBlockchain.start();
     waitOnBlockProcessed = createWaitOnBlockProcessed(ethereumBlockchain);
   });

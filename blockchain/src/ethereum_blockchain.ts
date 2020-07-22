@@ -12,6 +12,11 @@ import { RollupProof } from './rollup_proof';
 
 const debug = createDebug('bb:ethereum_blockchain');
 
+export interface EthereumBlockchainConfig {
+  signer: Signer;
+  networkOrHost: string;
+}
+
 export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private rollupProcessor!: Contract;
   private erc20!: Contract;
@@ -19,9 +24,9 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private erc20Address!: string;
   private scalingFactor = 10000000000000000n;
 
-  constructor(private signer: Signer, private rollupContractAddress: string) {
+  constructor(private config: EthereumBlockchainConfig, private rollupContractAddress: string) {
     super();
-    this.rollupProcessor = new ethers.Contract(rollupContractAddress, RollupABI, this.signer);
+    this.rollupProcessor = new ethers.Contract(rollupContractAddress, RollupABI, this.config.signer);
   }
 
   /**
@@ -29,7 +34,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public async start(fromBlock: number = 0) {
     this.erc20Address = await this.rollupProcessor.linkedToken();
-    this.erc20 = new ethers.Contract(this.erc20Address, ERC20ABI, this.signer);
+    this.erc20 = new ethers.Contract(this.erc20Address, ERC20ABI, this.config.signer);
 
     const filter = this.rollupProcessor.filters.RollupProcessed();
 
@@ -61,6 +66,13 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   public stop() {
     this.eventQueue.cancel();
     this.rollupProcessor.removeAllListeners('RollupProcessed');
+  }
+
+  public async getNetworkInfo() {
+    const { provider } = this.config.signer;
+    const { networkOrHost } = this.config;
+    const { chainId } = await provider!.getNetwork();
+    return { chainId, networkOrHost };
   }
 
   public getRollupContractAddress() {
@@ -130,7 +142,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public async getTransactionReceipt(txHash: Buffer) {
     const txHashStr = `0x${txHash.toString('hex')}`;
-    const tx = await this.signer.provider!.getTransaction(txHashStr);
+    const tx = await this.config.signer.provider!.getTransaction(txHashStr);
     const txReceipt = await tx.wait();
     if (!txReceipt.blockNumber) {
       throw new Error(`Failed to get valid receipt for {: $ }{txHashStr}`);

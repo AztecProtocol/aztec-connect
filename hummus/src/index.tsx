@@ -12,7 +12,15 @@ import { Terminal2020 } from './terminal2020';
 import './styles/guacamole.css';
 import debug from 'debug';
 import { Terminal, TerminalComponent } from './terminal';
+import { EthProvider } from './eth_provider';
 require('barretenberg/wasm/barretenberg.wasm');
+
+declare global {
+  interface Window {
+    web3: any;
+    ethereum: any;
+  }
+}
 
 const GlobalStyle = createGlobalStyle`
   #root {
@@ -155,7 +163,8 @@ function LandingPage({ app }: { app: App }) {
 
 async function main() {
   debug.enable('bb:*');
-  const app = new App();
+  const ethProvider = new EthProvider(window.ethereum);
+  const app = new App(ethProvider);
   ReactDOM.render(
     <BrowserRouter>
       <GlobalStyle />

@@ -58,6 +58,8 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
 
   async status() {
     return {
+      chainId: 0,
+      networkOrHost: '',
       rollupContractAddress: '',
       tokenContractAddress: '',
       dataSize: this.dataTreeSize,

@@ -158,7 +158,7 @@ export function appFactory(server: Server, prefix: string) {
   });
 
   router.get('/status', async (ctx: Koa.Context) => {
-    ctx.body = server.status();
+    ctx.body = await server.status();
   });
 
   const app = new Koa();

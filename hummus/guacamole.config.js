@@ -11,6 +11,7 @@ module.exports = {
     },
     colorMap: {
       'primary-lightest': '#f1f5fc',
+      red: '#ff8272',
     },
   },
 };

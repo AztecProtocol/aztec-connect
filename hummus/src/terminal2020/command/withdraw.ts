@@ -21,7 +21,7 @@ const run = async (buf: TerminalBuffer, app: App) => {
 
   const loader = loading(buf);
   loader.start();
-  await app.withdraw(BigInt(option), '');
+  await app.withdraw(app.toNoteValue(option), app.ethProvider.getAccount());
   await loader.stop();
 };
 

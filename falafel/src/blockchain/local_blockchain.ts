@@ -16,6 +16,13 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     super();
   }
 
+  public async getNetworkInfo() {
+    return {
+      chainId: 0,
+      networkOrHost: 'development',
+    };
+  }
+
   public getRollupContractAddress() {
     return '';
   }

@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import { Proof, RollupProvider } from './rollup_provider';
+import { Proof, RollupProvider, RollupProviderStatus } from './rollup_provider';
 
 const debug = createDebug('bb:server_rollup_provider');
 
@@ -24,7 +24,7 @@ export class ServerRollupProvider implements RollupProvider {
     };
   }
 
-  async status() {
+  async status(): Promise<RollupProviderStatus> {
     const url = new URL(`/api/status`, this.host);
     const response = await fetch(url.toString());
     if (response.status !== 200) {

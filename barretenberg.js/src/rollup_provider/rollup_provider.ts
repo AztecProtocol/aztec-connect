@@ -5,6 +5,8 @@ export interface Proof {
 }
 
 export interface RollupProviderStatus {
+  chainId: number;
+  networkOrHost: string;
   rollupContractAddress: string;
   tokenContractAddress: string;
   dataSize: number;

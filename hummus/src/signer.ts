@@ -1,12 +1,5 @@
 import { Signer } from 'aztec2-sdk';
 
-declare global {
-  interface Window {
-    web3: any;
-    ethereum: any;
-  }
-}
-
 export class MetamaskSigner implements Signer {
   constructor(private account: string) {}
 

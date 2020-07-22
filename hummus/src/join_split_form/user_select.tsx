@@ -30,7 +30,7 @@ export const UserSelect = ({ users, user, onSelect }: UserSelectProps) => {
   return (
     <ThemeContext.Consumer>
       {({ theme, link }) => (
-        <FormField label="User">
+        <FormField label="Private Account">
           <FlexBox valign="center">
             <SelectInput
               className="flex-free-expand"

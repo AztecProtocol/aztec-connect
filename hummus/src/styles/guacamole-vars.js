@@ -55,7 +55,7 @@ export const colorMap = {
   'secondary-lighter': 'rgba(74,144,226, 0.3)',
   'secondary-lightest': 'rgba(74,144,226, 0.1)',
   pink: '#F7B2D1',
-  red: '#F23A5B',
+  red: '#ff8272',
   purple: '#49098A',
   blue: '#2772CE',
   green: '#41BA00',
@@ -175,7 +175,7 @@ export const inlineInputValueColor = 'rgba(0, 0, 0, 0.7)';
 export const inlineInputPlaceholderColorName = 'grey-light';
 export const inlineInputPlaceholderColor = 'rgba(0, 0, 0, 0.2)';
 export const errorInputColorName = 'red';
-export const errorInputColor = '#F23A5B';
+export const errorInputColor = '#ff8272';
 export const focusInputColorName = 'secondary-light';
 export const focusInputColor = 'rgba(74, 144, 226, 0.7)';
 export const deviceBreakpointMap = {

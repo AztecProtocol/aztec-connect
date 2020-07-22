@@ -1,6 +1,15 @@
-import { Sdk, SdkEvent, SdkInitState, UserTxAction, createSdk, RollupProviderExplorer } from 'aztec2-sdk';
+import {
+  Sdk,
+  SdkEvent,
+  SdkInitState,
+  UserTxAction,
+  createSdk,
+  RollupProviderExplorer,
+  RollupProviderStatus,
+} from 'aztec2-sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
+import { EthProvider, chainIdToNetwork, EthProviderEvent, Network } from './eth_provider';
 import { MetamaskSigner } from './signer';
 import { TokenContract } from './token_contract';
 
@@ -12,7 +21,7 @@ const NOTE_SCALE = 10000000000000000n;
 export enum AppEvent {
   UPDATED_PROOF_STATE = 'UPDATED_PROOF_STATE',
   UPDATED_TOKEN_BALANCE = 'UPDATED_TOKEN_BALANCE',
-  UPDATED_ETH_ACCOUNTS = 'UPDATED_ETH_ACCOUNTS',
+  UPDATED_NETWORK_AND_CONTRACTS = 'UPDATED_NETWORK_AND_CONTRACTS',
   APPROVED = 'APPROVED',
 }
 
@@ -43,21 +52,17 @@ export class App extends EventEmitter implements RollupProviderExplorer {
   private proofState: ProofEvent = { state: ProofState.NADA };
   private sdk!: Sdk;
   private tokenContract!: TokenContract;
-  private ethAccounts: string[] = [];
+  private providerStatus!: RollupProviderStatus;
+
+  constructor(public ethProvider: EthProvider) {
+    super();
+
+    ethProvider.on(EthProviderEvent.UPDATED_NETWORK, this.updateNetworkAndContracts);
+  }
 
   public async init(serverUrl: string) {
     if (this.isInitialized()) {
       await this.sdk.destroy();
-    }
-
-    window.ethereum.autoRefreshOnNetworkChange = false;
-    let accounts = [];
-    try {
-      // TODO - show messages in the UI while waiting for user to grant access
-      accounts = await window.ethereum.enable();
-    } catch (error) {
-      debug(error);
-      return;
     }
 
     this.sdk = await createSdk(serverUrl);
@@ -66,16 +71,11 @@ export class App extends EventEmitter implements RollupProviderExplorer {
       this.sdk.on((SdkEvent as any)[e], (...args: any[]) => this.emit((SdkEvent as any)[e], ...args));
     }
 
+    this.providerStatus = await this.sdk.getStatus();
+
+    this.requestEthProviderAccess();
+
     await this.sdk.init();
-
-    const { tokenContractAddress } = await this.sdk.getStatus();
-    this.tokenContract = new TokenContract(tokenContractAddress, NOTE_SCALE);
-    await this.tokenContract.init();
-
-    // emit UPDATED_ETH_ACCOUNTS after token contract has been created so that we can immediately fetch token balance for the account.
-    this.updateEthAccounts(accounts);
-    window.ethereum.off('accountsChanged', this.updateEthAccounts);
-    window.ethereum.on('accountsChanged', this.updateEthAccounts);
   }
 
   public async destroy() {
@@ -84,7 +84,7 @@ export class App extends EventEmitter implements RollupProviderExplorer {
     }
 
     await this.sdk.destroy();
-    window.ethereum.off('accountsChanged', this.updateEthAccounts);
+    this.ethProvider.off(EthProviderEvent.UPDATED_NETWORK, this.updateNetworkAndContracts);
   }
 
   public async clearData() {
@@ -94,15 +94,18 @@ export class App extends EventEmitter implements RollupProviderExplorer {
     await this.sdk.clearData();
   }
 
+  private updateNetworkAndContracts = async (network: Network) => {
+    if (this.providerStatus && this.isCorrectNetwork()) {
+      this.tokenContract = new TokenContract(network, this.providerStatus.tokenContractAddress, NOTE_SCALE);
+      await this.tokenContract.init();
+    }
+    this.emit(AppEvent.UPDATED_NETWORK_AND_CONTRACTS, network);
+  };
+
   private updateProofState(proof: ProofEvent) {
     this.proofState = proof;
     this.emit(AppEvent.UPDATED_PROOF_STATE, proof);
   }
-
-  private updateEthAccounts = (accounts: string[]) => {
-    this.ethAccounts = accounts;
-    this.emit(AppEvent.UPDATED_ETH_ACCOUNTS, accounts);
-  };
 
   private updateApprovalState(approval: boolean) {
     this.emit(AppEvent.APPROVED, approval);
@@ -110,6 +113,10 @@ export class App extends EventEmitter implements RollupProviderExplorer {
 
   public isInitialized() {
     return this.getInitState() === SdkInitState.INITIALIZED;
+  }
+
+  public isCorrectNetwork() {
+    return chainIdToNetwork(this.providerStatus.chainId) === this.ethProvider.getNetwork();
   }
 
   public getInitState() {
@@ -130,6 +137,17 @@ export class App extends EventEmitter implements RollupProviderExplorer {
 
   public async getStatus() {
     return await this.sdk.getStatus();
+  }
+
+  public getProviderStatus() {
+    return this.providerStatus;
+  }
+
+  public async requestEthProviderAccess() {
+    await this.ethProvider.requestAccess(async () => {
+      const network = this.ethProvider.getNetwork();
+      await this.updateNetworkAndContracts(network);
+    });
   }
 
   public async approve(value: bigint) {
@@ -313,10 +331,6 @@ export class App extends EventEmitter implements RollupProviderExplorer {
     this.sdk.stopTrackingGlobalState();
   }
 
-  public getEthAccounts() {
-    return this.ethAccounts;
-  }
-
   public async getTokenBalance(account: string) {
     return this.tokenContract.balanceOf(account);
   }
@@ -327,14 +341,25 @@ export class App extends EventEmitter implements RollupProviderExplorer {
   }
 
   public async mintToken(account: string, value: bigint) {
-    this.updateProofState({ action: 'MINT', state: ProofState.RUNNING });
+    const action = 'MINT';
+    this.updateProofState({ action, state: ProofState.RUNNING });
 
-    await this.tokenContract.mint(account, value);
+    try {
+      await this.tokenContract.mint(account, value);
+    } catch (err) {
+      debug(err);
+      this.updateProofState({
+        action,
+        state: ProofState.FAILED,
+        error: err.message,
+      });
+      return;
+    }
 
     const balance = await this.getTokenBalance(account);
     this.emit(AppEvent.UPDATED_TOKEN_BALANCE, balance);
 
-    this.updateProofState({ action: 'MINT', state: ProofState.FINISHED });
+    this.updateProofState({ action, state: ProofState.FINISHED });
   }
 
   private subscribeToTokenBalance() {

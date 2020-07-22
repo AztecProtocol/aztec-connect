@@ -1,4 +1,5 @@
 import { Contract, ethers } from 'ethers';
+import { Network } from '../eth_provider';
 
 const minimalERC20ABI = [
   'function decimals() public view returns (uint8)',
@@ -9,12 +10,17 @@ const minimalERC20ABI = [
 ];
 
 export class TokenContract {
-  private contract: Contract;
+  private contract!: Contract;
   public decimals = 0;
+  private requiredConfirmation = 1;
 
-  constructor(contractAddress: string, private noteScalingFactor: bigint) {
+  constructor(network: Network, contractAddress: string, private noteScalingFactor: bigint) {
     const provider = new ethers.providers.Web3Provider(window.web3.currentProvider);
     this.contract = new Contract(contractAddress, minimalERC20ABI, provider.getSigner());
+
+    if (network.network !== 'ganache') {
+      this.requiredConfirmation = 2;
+    }
   }
 
   async init() {
@@ -38,12 +44,12 @@ export class TokenContract {
 
   async approve(spender: string, value: bigint) {
     const res = await this.contract.approve(spender, this.toScaledTokenValue(value));
-    await res.wait();
+    await res.wait(this.requiredConfirmation);
   }
 
   async mint(account: string, value: bigint) {
     const res = await this.contract.mint(account, this.toScaledTokenValue(value));
-    await res.wait();
+    await res.wait(this.requiredConfirmation);
   }
 
   public toScaledTokenValue(noteValue: bigint) {

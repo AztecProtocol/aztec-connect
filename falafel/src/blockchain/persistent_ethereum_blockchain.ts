@@ -17,9 +17,14 @@ export class PersistentEthereumBlockchain implements Blockchain {
     this.blockQueue.process(b => this.saveBlock(b));
   }
 
+  public async getNetworkInfo() {
+    return this.ethereumBlockchain.getNetworkInfo();
+  }
+
   public getRollupContractAddress() {
     return this.ethereumBlockchain.getRollupContractAddress();
   }
+
   public getTokenContractAddress() {
     return this.ethereumBlockchain.getTokenContractAddress();
   }

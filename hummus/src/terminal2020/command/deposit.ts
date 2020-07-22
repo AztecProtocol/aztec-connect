@@ -21,7 +21,7 @@ const run = async (buf: TerminalBuffer, app: App) => {
 
   const loader = loading(buf);
   loader.start();
-  await app.deposit(BigInt(option), '');
+  await app.deposit(app.toNoteValue(option), app.ethProvider.getAccount());
   await loader.stop();
 };
 
