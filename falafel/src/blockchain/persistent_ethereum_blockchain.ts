@@ -30,6 +30,11 @@ export class PersistentEthereumBlockchain implements Blockchain {
   }
 
   public async getBlocks(from: number) {
+    // To ensure we return any blocks outstanding in the queue, wait until the queue is flushed.
+    if (this.blockQueue.length()) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
     return (await this.blockRep.find({ where: { id: MoreThanOrEqual(from) } })).map(blockDaoToBlock);
   }
 

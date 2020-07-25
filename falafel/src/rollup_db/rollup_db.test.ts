@@ -46,7 +46,6 @@ describe('Rollup DB', () => {
       logging: false,
     });
     rollupDb = new RollupDb(connection);
-    rollupDb.init();
   });
 
   afterEach(async () => {
@@ -172,7 +171,8 @@ describe('Rollup DB', () => {
     expect(rollupDao.status).toBe('PUBLISHED');
 
     const ethBlock = 123;
-    await rollupDb.confirmRollup(rollupId, ethBlock);
+    const ethTxHash = randomBytes(32);
+    await rollupDb.confirmRollup(rollupId, ethBlock, ethTxHash);
 
     const updatedRollupDao = (await rollupDb.getRollup(rollupId)) as RollupDao;
     expect(updatedRollupDao).toEqual({

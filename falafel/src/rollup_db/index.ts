@@ -6,19 +6,17 @@ import { TxDao } from '../entity/tx';
 import { Rollup } from '../rollup';
 
 export class RollupDb {
-  private rollupTxRep!: Repository<TxDao>;
-  private rollupRep!: Repository<RollupDao>;
+  private rollupTxRep: Repository<TxDao>;
+  private rollupRep: Repository<RollupDao>;
 
-  constructor(private connection: Connection) {}
+  constructor(private connection: Connection) {
+    this.rollupTxRep = this.connection.getRepository(TxDao);
+    this.rollupRep = this.connection.getRepository(RollupDao);
+  }
 
   private getTxId = (proofData: Buffer) => {
     return createHash('sha256').update(proofData).digest();
   };
-
-  public init() {
-    this.rollupTxRep = this.connection.getRepository(TxDao);
-    this.rollupRep = this.connection.getRepository(RollupDao);
-  }
 
   public async addTx(tx: JoinSplitProof) {
     const txId = this.getTxId(tx.proofData);
@@ -69,6 +67,10 @@ export class RollupDb {
     await this.rollupRep.save(rollupDao);
   }
 
+  public async addRollupDao(rollupDao: RollupDao) {
+    await this.rollupRep.save(rollupDao);
+  }
+
   public async setRollupProof(rollupId: number, proofData: Buffer) {
     const rollupDao = await this.getRollup(rollupId);
     if (!rollupDao) {
@@ -104,14 +106,20 @@ export class RollupDb {
     await this.rollupRep.save(rollupDao);
   }
 
-  public async confirmRollup(rollupId: number, ethBlock: number) {
-    const rollup = await this.rollupRep.findOne(rollupId);
-    if (!rollup) {
-      throw new Error(`Rollup not found: ${rollupId}`);
-    }
+  public async confirmRollup(rollupId: number, ethBlock: number, ethTxHash: Buffer) {
+    let rollup = await this.rollupRep.findOne(rollupId);
 
-    rollup.ethBlock = ethBlock;
-    rollup.status = 'SETTLED';
+    if (!rollup) {
+      rollup = new RollupDao();
+      rollup.created = new Date();
+      rollup.id = rollupId;
+      rollup.ethBlock = ethBlock;
+      rollup.ethTxHash = ethTxHash;
+      rollup.status = 'SETTLED';
+    } else {
+      rollup.ethBlock = ethBlock;
+      rollup.status = 'SETTLED';
+    }
     await this.rollupRep.save(rollup);
   }
 
@@ -192,6 +200,8 @@ export class RollupDb {
     return latestRollup ? latestRollup.id + 1 : 0;
   }
 
+  // get the last block number that was synced into the database
+  // will return -1 if the last block is undefined, in which case we need to do a full restore
   public async getLastBlockNum() {
     const latest = await this.rollupRep.findOne(undefined, { order: { ethBlock: 'DESC' } });
     return latest && latest.ethBlock !== undefined ? latest.ethBlock : -1;

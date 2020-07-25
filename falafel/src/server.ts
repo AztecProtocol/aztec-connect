@@ -9,6 +9,7 @@ import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { Blockchain } from 'blockchain';
 import moment, { Duration } from 'moment';
+import { RollupDao } from './entity/rollup';
 import { readFileAsync } from './fs_async';
 import { ProofGenerator } from './proof_generator';
 import { Rollup } from './rollup';
@@ -55,12 +56,13 @@ export class Server {
 
   public async start() {
     await this.proofGenerator.run();
-    this.blockchain.start();
-    this.rollupDb.init();
     await this.worldStateDb.start();
-    this.printState();
-    await this.createJoinSplitVerifier();
+    // We know all historical blocks will be available in a call to restoreState once this returns.
+    await this.blockchain.start();
     await this.restoreState();
+    await this.createJoinSplitVerifier();
+    this.printState();
+
     this.processTxQueue(this.config.maxRollupWaitTime, this.config.minRollupInterval);
     this.processRollupQueue();
     this.processPublishQueue();
@@ -77,9 +79,16 @@ export class Server {
 
   private async restoreState() {
     // Ensure we confirm any rollups that we have missed while not running.
+    const lastBlockNum = await this.rollupDb.getLastBlockNum();
+
+    // If lastBlockNum = -1, db is empty and we should attempt a restore from chain.
+    if (lastBlockNum === -1) {
+      await this.restoreWorldStateDb();
+    }
+
     const newBlocks = await this.getBlocks((await this.rollupDb.getLastBlockNum()) + 1);
     for (const block of newBlocks) {
-      await this.rollupDb.confirmRollup(block.rollupId, block.blockNum);
+      await this.rollupDb.confirmRollup(block.rollupId, block.blockNum, block.txHash);
     }
 
     // If there is a CREATING rollup, we need to detect if it's been committed.
@@ -122,6 +131,20 @@ export class Server {
       this.pendingNullifiers.add(nullifier2);
       this.txQueue.put(proof);
     }
+  }
+
+  private async restoreWorldStateDb() {
+    const allBlocks = await this.getBlocks(0);
+
+    for (const block of allBlocks) {
+      let nextDataIndex = BigInt(block.dataStartIndex);
+      await this.worldStateDb.put(0, nextDataIndex++, block.dataEntries[0]);
+      await this.worldStateDb.put(0, nextDataIndex++, block.dataEntries[1]);
+      await this.worldStateDb.put(1, toBigIntBE(block.nullifiers[0]), toBufferBE(1n, 64));
+      await this.worldStateDb.put(1, toBigIntBE(block.nullifiers[1]), toBufferBE(1n, 64));
+    }
+
+    await this.worldStateDb.commit();
   }
 
   private printState() {
@@ -247,7 +270,7 @@ export class Server {
 
           const receipt = await this.blockchain.getTransactionReceipt(txHash);
 
-          await this.rollupDb.confirmRollup(rollupId, receipt.blockNum);
+          await this.rollupDb.confirmRollup(rollupId, receipt.blockNum, txHash);
           break;
         } catch (err) {
           // Could have failed due to not sending (network error), or not getting mined (gas too low?).
