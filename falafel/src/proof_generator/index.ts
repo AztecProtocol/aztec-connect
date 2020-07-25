@@ -16,9 +16,11 @@ export class ProofGenerator {
   public async run() {
     await this.ensureCrs();
     this.launch();
-    if (!await this.stdout.read(1)) {
-      throw new Error("Failed to initialize rollup_cli.")
+    const result = await this.stdout.read(1);
+    if (!result) {
+      throw new Error('Failed to initialize rollup_cli.');
     }
+    console.log('Proof generator initialized.');
   }
 
   public cancel() {
@@ -59,7 +61,7 @@ export class ProofGenerator {
     if (await existsAsync('./data/crs/transcript00.dat')) {
       return;
     }
-    console.log('Downloading crs...')
+    console.log('Downloading crs...');
     await mkdirAsync('./data/crs', { recursive: true });
     const response = await fetch('http://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript00.dat');
     if (response.status !== 200) {

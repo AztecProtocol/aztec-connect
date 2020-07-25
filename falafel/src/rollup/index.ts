@@ -24,6 +24,7 @@ export class Rollup {
     public newNullRoots: Buffer[],
     public oldNullPaths: HashPath[],
     public newNullPaths: HashPath[],
+    public accountNullPaths: HashPath[],
 
     public oldDataRootsRoot: Buffer,
     public newDataRootsRoot: Buffer,
@@ -53,6 +54,7 @@ export class Rollup {
       serializeBufferArrayToVector(this.newNullRoots),
       serializeBufferArrayToVector(this.oldNullPaths.map(path => path.toBuffer())),
       serializeBufferArrayToVector(this.newNullPaths.map(path => path.toBuffer())),
+      serializeBufferArrayToVector(this.accountNullPaths.map(path => path.toBuffer())),
 
       this.oldDataRootsRoot,
       this.newDataRootsRoot,
@@ -93,6 +95,8 @@ export class Rollup {
     offset += oldNullPaths.adv;
     const newNullPaths = deserializeArrayFromVector(HashPath.deserialize, buf, offset);
     offset += newNullPaths.adv;
+    const accountNullPaths = deserializeArrayFromVector(HashPath.deserialize, buf, offset);
+    offset += accountNullPaths.adv;
     const oldDataRootsRoot = deserializeField(buf, offset);
     offset += oldDataRootsRoot.adv;
     const newDataRootsRoot = deserializeField(buf, offset);
@@ -118,6 +122,7 @@ export class Rollup {
       newNullRoots.elem,
       oldNullPaths.elem,
       newNullPaths.elem,
+      accountNullPaths.elem,
       oldDataRootsRoot.elem,
       newDataRootsRoot.elem,
       oldDataRootsPath.elem,

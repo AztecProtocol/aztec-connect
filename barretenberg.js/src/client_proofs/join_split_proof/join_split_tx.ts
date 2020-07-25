@@ -1,10 +1,10 @@
 import { Note } from '../note';
 import { Signature } from '../signature';
 import { HashPath } from '../../merkle_tree';
+import { numToUInt32BE } from '../../serialize';
 
 export class JoinSplitTx {
   constructor(
-    public ownerPubKey: Buffer,
     public publicInput: number,
     public publicOutput: number,
     public numInputNotes: number,
@@ -16,16 +16,12 @@ export class JoinSplitTx {
     public signature: Signature,
     public inputOwner: Buffer,
     public outputOwner: Buffer,
+    public accountIndex: number,
+    public accountPath: HashPath,
+    public signingPubKey: Buffer,
   ) {}
 
   toBuffer() {
-    const numBuffer = Buffer.alloc(20);
-    numBuffer.writeUInt32BE(this.publicInput, 0);
-    numBuffer.writeUInt32BE(this.publicOutput, 4);
-    numBuffer.writeUInt32BE(this.numInputNotes, 8);
-    numBuffer.writeUInt32BE(this.inputNoteIndices[0], 12);
-    numBuffer.writeUInt32BE(this.inputNoteIndices[1], 16);
-
     const pathBuffer = Buffer.concat(this.inputNotePaths.map(p => p.toBuffer()));
     const noteBuffer = Buffer.concat([...this.inputNotes, ...this.outputNotes].map(n => n.toBuffer()));
 
@@ -33,14 +29,20 @@ export class JoinSplitTx {
     const outputOwnerBuffer = Buffer.concat([Buffer.alloc(12, 0), this.outputOwner]);
 
     return Buffer.concat([
-      this.ownerPubKey,
-      numBuffer,
+      numToUInt32BE(this.publicInput),
+      numToUInt32BE(this.publicOutput),
+      numToUInt32BE(this.numInputNotes),
+      numToUInt32BE(this.inputNoteIndices[0]),
+      numToUInt32BE(this.inputNoteIndices[1]),
       this.merkleRoot,
       pathBuffer,
       noteBuffer,
       this.signature.toBuffer(),
       inputOwnerBuffer,
       outputOwnerBuffer,
+      numToUInt32BE(this.accountIndex),
+      this.accountPath.toBuffer(),
+      this.signingPubKey,
     ]);
   }
 }

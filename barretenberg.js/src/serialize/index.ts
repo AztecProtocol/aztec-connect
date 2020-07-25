@@ -1,3 +1,10 @@
+// For serializing numbers to 32 bit big-endian form.
+export function numToUInt32BE(n: number) {
+  const buf = Buffer.allocUnsafe(4);
+  buf.writeUInt32BE(n, 0);
+  return buf;
+}
+
 // For serializing a buffer as a vector.
 export function serializeBufferToVector(buf: Buffer) {
   const lengthBuf = Buffer.alloc(4);

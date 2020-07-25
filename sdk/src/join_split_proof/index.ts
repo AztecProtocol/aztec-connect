@@ -55,8 +55,12 @@ export class JoinSplitProofCreator {
 
     const dataRoot = this.worldState.getRoot();
 
+    // For now, we will use the account key as the signing key (no account note required).
+    const accountIndex = 0;
+    const accountPath = await this.worldState.getHashPath(0);
+    const signingPubKey = sender.publicKey;
+
     const tx = new JoinSplitTx(
-      sender.publicKey,
       publicInput,
       publicOutput,
       numInputNotes,
@@ -68,6 +72,9 @@ export class JoinSplitProofCreator {
       signature,
       signer?.getAddress() || Buffer.alloc(20),
       outputOwnerAddress || Buffer.alloc(20),
+      accountIndex,
+      accountPath,
+      signingPubKey,
     );
 
     debug('creating proof...');

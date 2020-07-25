@@ -23,6 +23,7 @@ const randomRollup = (rollupId: number, txs: JoinSplitProof[]) =>
     [randomBytes(32)],
     [new HashPath([[randomBytes(32)]])],
     [new HashPath([[randomBytes(32)]])],
+    [new HashPath([[randomBytes(32)]])],
     randomBytes(32),
     randomBytes(32),
     new HashPath([[randomBytes(28)]]),

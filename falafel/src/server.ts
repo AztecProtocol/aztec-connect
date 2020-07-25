@@ -365,6 +365,7 @@ export class Server {
     const newNullRoots: Buffer[] = [];
     const oldNullPaths: HashPath[] = [];
     const newNullPaths: HashPath[] = [];
+    const accountNullPaths: HashPath[] = [];
     const dataRootsPaths: HashPath[] = [];
     const dataRootsIndicies: number[] = [];
 
@@ -389,6 +390,11 @@ export class Server {
 
       this.pendingNullifiers.delete(nullifier1);
       this.pendingNullifiers.delete(nullifier2);
+    }
+
+    for (const proof of txs) {
+      const accountNullifier = toBigIntBE(proof.accountNullifier);
+      accountNullPaths.push(await this.worldStateDb.getHashPath(1, accountNullifier));
     }
 
     if (txs.length < rollupSize) {
@@ -425,6 +431,7 @@ export class Server {
       newNullRoots,
       oldNullPaths,
       newNullPaths,
+      accountNullPaths,
 
       oldDataRootsRoot,
       newDataRootsRoot,
