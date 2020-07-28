@@ -1,0 +1,82 @@
+import { EventEmitter } from 'events';
+import 'fake-indexeddb/auto';
+import request from 'supertest';
+import { mocked } from 'ts-jest/utils';
+import { appFactory } from './api';
+import Server from './server';
+import { WorldStateDb } from './world_state_db';
+
+jest.mock('./world_state_db');
+const MockedWorldStateDb = WorldStateDb as jest.Mock<WorldStateDb>;
+const mockedWorldStateDb = new MockedWorldStateDb() as jest.Mocked<WorldStateDb>;
+
+EventEmitter.defaultMaxListeners = 30;
+
+describe('Route tests', () => {
+  let api: any;
+  let server: Server;
+
+  beforeAll(async () => {
+    server = new Server(mockedWorldStateDb);
+    jest.mock('./world_state_db');
+
+    await server.start();
+    const app = appFactory(server, '/api');
+    api = app.listen(8080);
+  });
+  beforeEach(async () => {});
+
+  afterEach(async () => {
+    jest.clearAllMocks();
+  });
+  afterAll(async () => {
+    await server.stop();
+    await api.close();
+  });
+
+  describe('Success cases', () => {
+    it('should return true if the queue is empty', async () => {
+      const res = await (request(api) as any).get('/api/status');
+
+      expect(res.body).toHaveProperty('itemsRemaining');
+    });
+
+    it('should call the world state db sequentially', async () => {
+      const nullifier1Hex = await generateNullifier();
+      const nullifier2Hex = await generateNullifier();
+      const res = await (request(api) as any).get(`/api/getSequentialPaths/${nullifier1Hex}/${nullifier2Hex}`);
+
+      expect(mocked(server.worldState.put).mock.calls).toHaveLength(2);
+
+      expect(mocked(server.worldState.getHashPath).mock.calls).toHaveLength(4);
+      expect(mocked(server.worldState.put).mock.calls[0][1]).toEqual(
+        mocked(server.worldState.getHashPath).mock.calls[0][1],
+      );
+      expect(mocked(server.worldState.put).mock.calls[0][1]).toEqual(
+        mocked(server.worldState.getHashPath).mock.calls[1][1],
+      );
+      expect(mocked(server.worldState.put).mock.calls[1][1]).toEqual(
+        mocked(server.worldState.getHashPath).mock.calls[2][1],
+      );
+      expect(mocked(server.worldState.put).mock.calls[1][1]).toEqual(
+        mocked(server.worldState.getHashPath).mock.calls[3][1],
+      );
+    });
+
+    // it('should use fetch to get data', async () => {
+    //   const nullifier1Hex = await getNulliferHex();
+    //   const nullifier2Hex = await getNulliferHex();
+    //   const res = await fetch(`/api/getSequentialPaths/${nullifier1Hex}/${nullifier2Hex}`);
+
+    //   const jsonData = await res.json();
+    //   console.log('json data: ', jsonData);
+    //   console.log({ res });
+    // });
+
+    it('should call the world state and fetch the hash path for a given index', async () => {
+      const nullifier1Hex = await generateNullifier();
+      const res = await (request(api) as any).get(`/api/getHashPath/${nullifier1Hex}`);
+      expect(mocked(server.worldState.getHashPath).mock.calls).toHaveLength(1);
+    });
+  });
+});

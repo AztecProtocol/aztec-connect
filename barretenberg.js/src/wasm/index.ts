@@ -27,7 +27,7 @@ export class BarretenbergWasm extends EventEmitter {
   }
 
   public async init(module?: WebAssembly.Module) {
-    this.memory = new WebAssembly.Memory({ initial: 256, maximum: 32768 });
+    this.memory = new WebAssembly.Memory({ initial: 256, maximum: 65536 });
     this.heap = new Uint8Array(this.memory.buffer);
 
     const importObj = {
