@@ -71,6 +71,21 @@ interface TxRouteParams {
 
 interface TxRouteProps extends RouteComponentProps<TxRouteParams> {}
 
+const Unsupported = () => {
+  const [theme] = useState(themes.dark);
+  return (
+    <ThemeContext.Provider value={theme}>
+      <StyledContainer background={theme.background}>
+        <FlexBox align="center">
+          <StyledContent>
+            <Block padding="m 0 xl">This application requires Chrome with the MetaMask extension installed.</Block>
+          </StyledContent>
+        </FlexBox>
+      </StyledContainer>
+    </ThemeContext.Provider>
+  );
+};
+
 function ThemedContent({ app }: { app: App }) {
   const [theme, setTheme] = useState(themes[window.localStorage.getItem('theme') === 'light' ? 'light' : 'dark']);
   const { pathname } = useLocation();
@@ -163,15 +178,25 @@ function LandingPage({ app }: { app: App }) {
 
 async function main() {
   debug.enable('bb:*');
-  const ethProvider = new EthProvider(window.ethereum);
-  const app = new App(ethProvider);
-  ReactDOM.render(
-    <BrowserRouter>
-      <GlobalStyle />
-      <LandingPage app={app} />
-    </BrowserRouter>,
-    document.getElementById('root'),
-  );
+  if (!window.ethereum) {
+    ReactDOM.render(
+      <BrowserRouter>
+        <GlobalStyle />
+        <Unsupported />
+      </BrowserRouter>,
+      document.getElementById('root'),
+    );
+  } else {
+    const ethProvider = new EthProvider(window.ethereum);
+    const app = new App(ethProvider);
+    ReactDOM.render(
+      <BrowserRouter>
+        <GlobalStyle />
+        <LandingPage app={app} />
+      </BrowserRouter>,
+      document.getElementById('root'),
+    );
+  }
 }
 
 // tslint:disable-next-line:no-console
