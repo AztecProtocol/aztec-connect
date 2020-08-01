@@ -18,8 +18,8 @@ export const ActionForm = ({ app }: ActionFormProps) => {
   const [user, setUser] = useState(app.getUser());
   const [users, setUsers] = useState(app.getUsers());
   const [balance, setBalance] = useState(app.getBalance());
-  const [tokenBalance, setTokenBalance] = useState(0n);
-  const [allowance, setAllowance] = useState(-1n);
+  const [tokenBalance, setTokenBalance] = useState(BigInt(0));
+  const [allowance, setAllowance] = useState(BigInt(-1));
   const [currentProof, setCurrentProof] = useState(app.getProofState());
   const [network, setNetwork] = useState(app.ethProvider.getNetwork());
   const [account, setAccount] = useState<string>(app.ethProvider.getAccount() || '');
@@ -51,12 +51,12 @@ export const ActionForm = ({ app }: ActionFormProps) => {
   useEffect(() => {
     const isContractQueryable = isCorrectNetwork && ethProviderAccessState === EthProviderAccessState.APPROVED;
     const refreshTokenBalance = async () => {
-      const tokenBalance = isContractQueryable ? await app.getTokenBalance(account) : 0n;
+      const tokenBalance = isContractQueryable ? await app.getTokenBalance(account) : BigInt(0);
       setTokenBalance(tokenBalance);
     };
 
     const refreshAllowance = async () => {
-      const allowance = isContractQueryable ? await app.getRollupContractAllowance(account) : 0n;
+      const allowance = isContractQueryable ? await app.getRollupContractAllowance(account) : BigInt(0);
       setAllowance(allowance);
     };
 

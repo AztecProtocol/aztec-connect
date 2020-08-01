@@ -15,9 +15,6 @@ import { TokenContract } from './token_contract';
 
 const debug = createDebug('bb:app');
 
-// TODO - fetch this value from the sdk
-const NOTE_SCALE = 10000000000000000n;
-
 export enum AppEvent {
   UPDATED_PROOF_STATE = 'UPDATED_PROOF_STATE',
   UPDATED_TOKEN_BALANCE = 'UPDATED_TOKEN_BALANCE',
@@ -95,6 +92,7 @@ export class App extends EventEmitter implements RollupProviderExplorer {
   }
 
   private updateNetworkAndContracts = async (network: Network) => {
+    const NOTE_SCALE = BigInt(10000000000000000);
     if (this.providerStatus && this.isCorrectNetwork()) {
       this.tokenContract = new TokenContract(network, this.providerStatus.tokenContractAddress, NOTE_SCALE);
       await this.tokenContract.init();
@@ -378,8 +376,8 @@ export class App extends EventEmitter implements RollupProviderExplorer {
   public toNoteValue = (tokenValueString: string) => {
     const [integer, decimalStr] = `${tokenValueString}`.split('.');
     const decimal = (decimalStr || '').replace(/0+$/, '');
-    const scalingFactor = 10n ** BigInt(this.tokenContract.getDecimals());
-    const decimalScale = scalingFactor / 10n ** BigInt(decimal?.length || 0);
+    const scalingFactor = BigInt(10) ** BigInt(this.tokenContract.getDecimals());
+    const decimalScale = scalingFactor / BigInt(10) ** BigInt(decimal?.length || 0);
     const scaledTokenValue = BigInt(decimal || 0) * decimalScale + BigInt(integer || 0) * scalingFactor;
     return this.tokenContract.toNoteValue(scaledTokenValue);
   };

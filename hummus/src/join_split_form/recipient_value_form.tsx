@@ -34,7 +34,7 @@ export const RecipientValueForm = ({
   const [value, setValue] = useState(initialValue);
   const [recipient, setRecipient] = useState(initialRecipient);
 
-  const requireApproval = !!onApprove && (!allowance || (allowance >= 0n && allowance < toNoteValue(value)));
+  const requireApproval = !!onApprove && (!allowance || (allowance >= BigInt(0) && allowance < toNoteValue(value)));
 
   // TODO - value's decimal length should be limited to log10(TOKEN_SCALE / NOTE_SCALE);
 
