@@ -78,7 +78,6 @@ export class Server {
   }
 
   private async restoreState() {
-    // Ensure we confirm any rollups that we have missed while not running.
     const lastBlockNum = await this.rollupDb.getLastBlockNum();
 
     // If lastBlockNum = -1, db is empty and we should attempt a restore from chain.
@@ -86,6 +85,7 @@ export class Server {
       await this.restoreWorldStateDb();
     }
 
+    // Ensure we confirm any rollups that we have missed while not running.
     const newBlocks = await this.getBlocks((await this.rollupDb.getLastBlockNum()) + 1);
     for (const block of newBlocks) {
       await this.rollupDb.confirmRollup(block.rollupId, block.blockNum, block.txHash);
