@@ -82,6 +82,8 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       txHash,
       blockNum: this.blockNum,
       rollupId,
+      dataRoot: tx.newDataRoot,
+      nullRoot: tx.newNullRoot,
       dataStartIndex: tx.dataStartIndex,
       numDataEntries,
       dataEntries,

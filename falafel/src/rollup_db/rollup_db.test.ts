@@ -144,16 +144,18 @@ describe('Rollup DB', () => {
     await rollupDb.addTx(tx);
 
     const rollupId = 3;
+    const ethTxHash = randomBytes(32);
     await rollupDb.addRollup(randomRollup(rollupId, [tx]));
 
     const rollupDao = await rollupDb.getRollup(rollupId);
     expect(rollupDao!.status).toBe('CREATING');
 
-    await rollupDb.confirmSent(rollupId);
+    await rollupDb.confirmSent(rollupId, ethTxHash);
 
     const updatedRollupDao = await rollupDb.getRollup(rollupId);
     expect(updatedRollupDao).toEqual({
       ...rollupDao,
+      ethTxHash,
       status: 'PUBLISHED',
     });
   });
@@ -163,16 +165,16 @@ describe('Rollup DB', () => {
     await rollupDb.addTx(tx);
 
     const rollupId = 3;
+    const ethTxHash = randomBytes(32);
     await rollupDb.addRollup(randomRollup(rollupId, [tx]));
-    await rollupDb.confirmSent(rollupId);
+    await rollupDb.confirmSent(rollupId, ethTxHash);
 
     const rollupDao = (await rollupDb.getRollup(rollupId)) as RollupDao;
     expect(rollupDao.ethBlock).toBe(null);
     expect(rollupDao.status).toBe('PUBLISHED');
 
     const ethBlock = 123;
-    const ethTxHash = randomBytes(32);
-    await rollupDb.confirmRollup(rollupId, ethBlock, ethTxHash);
+    await rollupDb.confirmRollup(rollupId, ethBlock);
 
     const updatedRollupDao = (await rollupDb.getRollup(rollupId)) as RollupDao;
     expect(updatedRollupDao).toEqual({

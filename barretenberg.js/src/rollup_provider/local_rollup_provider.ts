@@ -31,6 +31,8 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
       throw new Error('Proof not verified.');
     }
 
+    const dataRoot = proofData.slice(96, 128);
+    const nullRoot = proofData.slice(160, 192);
     const outputNote1 = proofData.slice(2 * 32, 2 * 32 + 64);
     const outputNote2 = proofData.slice(4 * 32, 4 * 32 + 64);
     const nullifer1 = proofData.slice(7 * 32 + 16, 7 * 32 + 32);
@@ -39,6 +41,8 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
       txHash: randomBytes(32),
       blockNum: this.blockNum,
       rollupId: this.blockNum,
+      dataRoot,
+      nullRoot,
       dataStartIndex: this.dataTreeSize,
       numDataEntries: 2,
       dataEntries: [outputNote1, outputNote2],

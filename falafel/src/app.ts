@@ -84,8 +84,10 @@ export function appFactory(server: Server, prefix: string) {
 
   router.get('/get-blocks', async (ctx: Koa.Context) => {
     const blocks = await server.getBlocks(+ctx.query.from);
-    ctx.body = blocks.map(({ dataEntries, nullifiers, viewingKeys, ...rest }) => ({
+    ctx.body = blocks.map(({ dataRoot, nullRoot, dataEntries, nullifiers, viewingKeys, ...rest }) => ({
       ...rest,
+      dataRoot: dataRoot.toString('hex'),
+      nullRoot: nullRoot.toString('hex'),
       dataEntries: dataEntries.map(b => b.toString('hex')),
       nullifiers: nullifiers.map(b => b.toString('hex')),
       viewingKeys: viewingKeys.map(b => b.toString('hex')),

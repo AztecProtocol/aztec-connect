@@ -33,6 +33,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Start polling for RollupProcessed events
    */
   public async start(fromBlock: number = 0) {
+    console.log(`Ethereum blockchain starting from block: ${fromBlock}`);
     this.erc20Address = await this.rollupProcessor.linkedToken();
     this.erc20 = new ethers.Contract(this.erc20Address, ERC20ABI, this.config.signer);
 
@@ -182,6 +183,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private async createRollupBlock(tx: TransactionResponse) {
     const {
       rollupId,
+      newDataRoot,
+      newNullRoot,
       numDataEntries,
       dataEntries,
       nullifiers,
@@ -193,6 +196,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       txHash: Buffer.from(tx.hash.slice(2), 'hex'),
       blockNum: tx.blockNumber!,
       rollupId,
+      dataRoot: newDataRoot,
+      nullRoot: newNullRoot,
       dataStartIndex,
       numDataEntries,
       dataEntries,
@@ -213,9 +218,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     const rollupSize = result.args.rollupSize.toNumber();
 
     const rollupProof = new RollupProof(Buffer.from(proofData));
-    const rollupId = rollupProof.rollupId;
+    const { rollupId, newDataRoot, newNullRoot } = rollupProof;
     const dataStartIndex = rollupProof.dataStartIndex;
-
     const nullifiers: Buffer[] = [];
     const dataEntries: Buffer[] = [];
 
@@ -232,6 +236,15 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       viewingKeysArray.push(viewingData.slice(i, i + 176));
     }
 
-    return { rollupId, numDataEntries, dataEntries, dataStartIndex, nullifiers, viewingKeys: viewingKeysArray };
+    return {
+      rollupId,
+      newDataRoot,
+      newNullRoot,
+      numDataEntries,
+      dataEntries,
+      dataStartIndex,
+      nullifiers,
+      viewingKeys: viewingKeysArray,
+    };
   }
 }

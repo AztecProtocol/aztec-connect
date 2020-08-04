@@ -91,7 +91,7 @@ export class RollupDb {
     await this.rollupRep.save(rollupDao);
   }
 
-  public async confirmSent(rollupId: number) {
+  public async confirmSent(rollupId: number, ethTxHash: Buffer) {
     const rollupDao = await this.getRollup(rollupId);
     if (!rollupDao) {
       throw new Error(`Rollup not found: ${rollupId}`);
@@ -103,10 +103,11 @@ export class RollupDb {
     }
 
     rollupDao.status = 'PUBLISHED';
+    rollupDao.ethTxHash = ethTxHash;
     await this.rollupRep.save(rollupDao);
   }
 
-  public async confirmRollup(rollupId: number, ethBlock: number, ethTxHash: Buffer) {
+  public async confirmRollup(rollupId: number, ethBlock: number) {
     let rollup = await this.rollupRep.findOne(rollupId);
 
     if (!rollup) {
@@ -114,7 +115,6 @@ export class RollupDb {
       rollup.created = new Date();
       rollup.id = rollupId;
       rollup.ethBlock = ethBlock;
-      rollup.ethTxHash = ethTxHash;
       rollup.status = 'SETTLED';
     } else {
       rollup.ethBlock = ethBlock;

@@ -2,6 +2,8 @@ export interface Block {
   txHash: Buffer;
   blockNum: number;
   rollupId: number;
+  dataRoot: Buffer;
+  nullRoot: Buffer;
   dataStartIndex: number;
   numDataEntries: number;
   dataEntries: Buffer[];

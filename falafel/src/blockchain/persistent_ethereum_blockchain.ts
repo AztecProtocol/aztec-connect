@@ -48,8 +48,8 @@ export class PersistentEthereumBlockchain implements Blockchain {
 
   public async start() {
     const latest = await this.blockRep.findOne(undefined, { order: { id: 'DESC' } });
-    const fromBlock = latest ? latest.id : 0;
-    await this.ethereumBlockchain.start(fromBlock + 1);
+    const fromBlock = latest ? latest.id + 1 : 0;
+    await this.ethereumBlockchain.start(fromBlock);
   }
 
   public stop() {

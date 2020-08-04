@@ -16,8 +16,7 @@ export class ProofGenerator {
   public async run() {
     await this.ensureCrs();
     this.launch();
-    const result = await this.stdout.read(1);
-    if (!result) {
+    if (!(await this.stdout.read(1))) {
       throw new Error('Failed to initialize rollup_cli.');
     }
     console.log('Proof generator initialized.');

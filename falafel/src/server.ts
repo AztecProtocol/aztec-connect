@@ -55,6 +55,7 @@ export class Server {
   }
 
   public async start() {
+    console.log('Server start...');
     await this.proofGenerator.run();
     await this.worldStateDb.start();
     // We know all historical blocks will be available in a call to restoreState once this returns.
@@ -88,7 +89,20 @@ export class Server {
     // Ensure we confirm any rollups that we have missed while not running.
     const newBlocks = await this.getBlocks((await this.rollupDb.getLastBlockNum()) + 1);
     for (const block of newBlocks) {
-      await this.rollupDb.confirmRollup(block.rollupId, block.blockNum, block.txHash);
+      if (await this.rollupDb.getRollup(block.rollupId)) {
+        await this.rollupDb.confirmRollup(block.rollupId, block.blockNum);
+      } else {
+        const rollup = new RollupDao();
+        rollup.created = new Date();
+        rollup.id = block.rollupId;
+        rollup.ethBlock = block.blockNum;
+        rollup.ethTxHash = block.txHash;
+        rollup.status = 'SETTLED';
+        rollup.dataRoot = block.dataRoot;
+        rollup.nullRoot = block.nullRoot;
+        console.log(`Restoring rollup ${rollup.id} with data root: ${block.dataRoot.toString('hex')}`);
+        await this.rollupDb.addRollupDao(rollup);
+      }
     }
 
     // If there is a CREATING rollup, we need to detect if it's been committed.
@@ -123,7 +137,7 @@ export class Server {
     const txs = await this.rollupDb.getPendingTxs();
     for (const tx of txs) {
       console.log(`Tx restored: ${tx.txId.toString('hex')}`);
-      const proof = new JoinSplitProof(tx.proofData, [tx.viewingKey1, tx.viewingKey2]);
+      const proof = new JoinSplitProof(tx.proofData, [tx.viewingKey1, tx.viewingKey2], tx.signature);
       proof.dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
       const nullifier1 = toBigIntBE(proof.nullifier1);
       const nullifier2 = toBigIntBE(proof.nullifier2);
@@ -135,16 +149,25 @@ export class Server {
 
   private async restoreWorldStateDb() {
     const allBlocks = await this.getBlocks(0);
+    console.log('Restoring world state db...');
 
-    for (const block of allBlocks) {
-      let nextDataIndex = BigInt(block.dataStartIndex);
-      await this.worldStateDb.put(0, nextDataIndex++, block.dataEntries[0]);
-      await this.worldStateDb.put(0, nextDataIndex++, block.dataEntries[1]);
-      await this.worldStateDb.put(1, toBigIntBE(block.nullifiers[0]), toBufferBE(1n, 64));
-      await this.worldStateDb.put(1, toBigIntBE(block.nullifiers[1]), toBufferBE(1n, 64));
+    for (let i = 0; i < allBlocks.length; ++i) {
+      const block = allBlocks[i];
+      for (let i = 0; i < block.dataEntries.length; ++i) {
+        await this.worldStateDb.put(0, BigInt(block.dataStartIndex + i), block.dataEntries[i]);
+      }
+      if (block.dataEntries.length < block.numDataEntries) {
+        await this.worldStateDb.put(0, BigInt(block.dataStartIndex + block.numDataEntries - 1), Buffer.alloc(64, 0));
+      }
+      for (const nullifier of block.nullifiers) {
+        await this.worldStateDb.put(1, toBigIntBE(nullifier), toBufferBE(1n, 64));
+      }
+      await this.worldStateDb.put(2, BigInt(i + 1), this.worldStateDb.getRoot(0));
     }
 
     await this.worldStateDb.commit();
+
+    console.log('World state db restoration complete.');
   }
 
   private printState() {
@@ -266,17 +289,17 @@ export class Server {
         try {
           const txHash = await this.blockchain.sendProof(proof, signatures, sigIndexes, viewingKeys, rollupSize);
 
-          await this.rollupDb.confirmSent(rollupId);
+          await this.rollupDb.confirmSent(rollupId, txHash);
 
           const receipt = await this.blockchain.getTransactionReceipt(txHash);
 
-          await this.rollupDb.confirmRollup(rollupId, receipt.blockNum, txHash);
+          await this.rollupDb.confirmRollup(rollupId, receipt.blockNum);
           break;
         } catch (err) {
           // Could have failed due to not sending (network error), or not getting mined (gas too low?).
           // But, the proof is assumed to always be valid. So let's try again.
           console.log(err);
-          await new Promise(resolve => setTimeout(resolve, 10000));
+          await new Promise(resolve => setTimeout(resolve, 60000));
         }
       }
     }

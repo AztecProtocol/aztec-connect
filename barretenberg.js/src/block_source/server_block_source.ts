@@ -24,9 +24,11 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
         const jsonBlocks = await response.json();
 
         const blocks = jsonBlocks.map(
-          ({ dataEntries, nullifiers, viewingKeys, ...rest }) =>
+          ({ dataRoot, nullRoot, dataEntries, nullifiers, viewingKeys, ...rest }) =>
             ({
               ...rest,
+              dataRoot: Buffer.from(dataRoot),
+              nullRoot: Buffer.from(nullRoot),
               dataEntries: dataEntries.map(str => Buffer.from(str, 'hex')),
               nullifiers: nullifiers.map(str => Buffer.from(str, 'hex')),
               viewingKeys: viewingKeys.map(str => Buffer.from(str, 'hex')),

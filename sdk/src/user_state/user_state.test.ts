@@ -9,6 +9,7 @@ import Dexie from 'dexie';
 import { DexieDatabase } from '../database';
 import { UserState } from './index';
 import { UserTx } from '../user_tx';
+import { Block } from 'barretenberg/block_source';
 
 const { Note } = client_proofs_note;
 
@@ -52,10 +53,12 @@ describe('User State', () => {
   });
 
   it('process block and sync the notes to indexedDB', async () => {
-    const block = {
+    const block: Block = {
       txHash: randomBytes(16),
       blockNum: 0,
       rollupId: 0,
+      dataRoot: randomBytes(32),
+      nullRoot: randomBytes(32),
       dataStartIndex: 0,
       numDataEntries: 2,
       dataEntries: [randomBytes(64)],

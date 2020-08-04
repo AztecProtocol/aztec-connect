@@ -16,6 +16,12 @@ export class BlockDao {
   public rollupId!: number;
 
   @Column()
+  public dataRoot!: Buffer;
+
+  @Column()
+  public nullRoot!: Buffer;
+
+  @Column()
   public dataStartIndex!: number;
 
   @Column()

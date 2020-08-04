@@ -6,6 +6,8 @@ export function blockDaoToBlock(b: BlockDao) {
     txHash: b.txHash,
     blockNum: b.id,
     rollupId: b.rollupId,
+    dataRoot: b.dataRoot,
+    nullRoot: b.nullRoot,
     dataStartIndex: b.dataStartIndex,
     numDataEntries: b.numDataEntries,
     dataEntries: [],
@@ -30,6 +32,8 @@ export function blockToBlockDao(block: Block) {
   blockDao.id = block.blockNum;
   blockDao.txHash = block.txHash;
   blockDao.rollupId = block.rollupId;
+  blockDao.dataRoot = block.dataRoot;
+  blockDao.nullRoot = block.nullRoot;
   blockDao.dataStartIndex = block.dataStartIndex;
   blockDao.numDataEntries = block.numDataEntries;
   blockDao.dataEntries = Buffer.concat(block.dataEntries);
