@@ -1,20 +1,27 @@
+import { MemoryFifo } from 'barretenberg/fifo';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
+import { mkdirAsync } from '../fs_async';
 
 export class WorldStateDb {
   private proc?: ChildProcess;
   private stdout!: { read: (size: number) => Promise<Buffer> };
+  private stdioQueue = new MemoryFifo<() => Promise<void>>();
   private roots: Buffer[] = [];
   private sizes: bigint[] = [];
   private binPath = '../barretenberg/build/src/aztec/rollup/db_cli/db_cli';
 
+  constructor(private dbPath: string = './data/world_state.db') {}
+
   public async start() {
     await this.launch();
+    this.processStdioQueue();
   }
 
   public stop() {
+    this.stdioQueue.cancel();
     if (this.proc) {
       this.proc.kill('SIGINT');
     }
@@ -28,30 +35,42 @@ export class WorldStateDb {
     return this.sizes[treeId];
   }
 
-  public async get(treeId: number, index: bigint) {
+  public async get(treeId: number, index: bigint): Promise<Buffer> {
+    return new Promise(resolve => this.stdioQueue.put(async () => resolve(await this.get_(treeId, index))));
+  }
+
+  private async get_(treeId: number, index: bigint) {
     const buffer = Buffer.alloc(18);
     buffer.writeInt8(0, 0);
     buffer.writeInt8(treeId, 1);
     const indexBuf = toBufferBE(index, 16);
     indexBuf.copy(buffer, 2);
+
     this.proc!.stdin!.write(buffer);
 
-    const lengthBuf = (await this.stdout.read(4)) as Buffer | undefined;
+    const lengthBuf = await this.stdout.read(4);
     if (!lengthBuf) {
       throw new Error('Failed to read length.');
     }
+
     const length = lengthBuf.readUInt32BE(0);
 
     const result = await this.stdout.read(length);
-    return result as Buffer;
+
+    return result;
   }
 
-  public async getHashPath(treeId: number, index: bigint) {
+  public async getHashPath(treeId: number, index: bigint): Promise<HashPath> {
+    return new Promise(resolve => this.stdioQueue.put(async () => resolve(await this.getHashPath_(treeId, index))));
+  }
+
+  private async getHashPath_(treeId: number, index: bigint) {
     const buffer = Buffer.alloc(18);
     buffer.writeInt8(4, 0);
     buffer.writeInt8(treeId, 1);
     const indexBuf = toBufferBE(index, 16);
     indexBuf.copy(buffer, 2);
+
     this.proc!.stdin!.write(buffer);
 
     const depth = (await this.stdout.read(4)).readUInt32BE(0);
@@ -66,13 +85,18 @@ export class WorldStateDb {
     return path;
   }
 
-  public async put(treeId: number, index: bigint, value: Buffer) {
+  public async put(treeId: number, index: bigint, value: Buffer): Promise<Buffer> {
+    return new Promise(resolve => this.stdioQueue.put(async () => resolve(await this.put_(treeId, index, value))));
+  }
+
+  private async put_(treeId: number, index: bigint, value: Buffer) {
     const buffer = Buffer.alloc(22);
     buffer.writeInt8(1, 0);
     buffer.writeInt8(treeId, 1);
     const indexBuf = toBufferBE(index, 16);
     indexBuf.copy(buffer, 2);
     buffer.writeUInt32BE(value.length, 18);
+
     this.proc!.stdin!.write(Buffer.concat([buffer, value]));
 
     this.roots[treeId] = await this.stdout.read(32);
@@ -85,23 +109,34 @@ export class WorldStateDb {
   }
 
   public async commit() {
-    const buffer = Buffer.from([0x02]);
-    this.proc!.stdin!.write(buffer);
-    await this.readMetadata();
+    await new Promise(resolve => {
+      this.stdioQueue.put(async () => {
+        const buffer = Buffer.from([0x02]);
+        this.proc!.stdin!.write(buffer);
+        await this.readMetadata();
+        resolve();
+      });
+    });
   }
 
   public async rollback() {
-    const buffer = Buffer.from([0x03]);
-    this.proc!.stdin!.write(buffer);
-    await this.readMetadata();
+    await new Promise(resolve => {
+      this.stdioQueue.put(async () => {
+        const buffer = Buffer.from([0x03]);
+        this.proc!.stdin!.write(buffer);
+        await this.readMetadata();
+        resolve();
+      });
+    });
   }
 
-  public async destroy() {
-    execSync(`${this.binPath} reset`);
+  public destroy() {
+    execSync(`${this.binPath} reset ${this.dbPath}`);
   }
 
   private async launch() {
-    const proc = (this.proc = spawn(this.binPath));
+    await mkdirAsync('./data', { recursive: true });
+    const proc = (this.proc = spawn(this.binPath, [this.dbPath]));
 
     proc.stderr.on('data', data => {});
     // proc.stderr.on('data', data => console.log(data.toString().trim()));
@@ -129,5 +164,16 @@ export class WorldStateDb {
     this.sizes[0] = toBigIntBE(dataSize);
     this.sizes[1] = toBigIntBE(nullifierSize);
     this.sizes[2] = toBigIntBE(rootSize);
+  }
+
+  private async processStdioQueue() {
+    while (true) {
+      const fn = await this.stdioQueue.get();
+      if (!fn) {
+        break;
+      }
+
+      await fn();
+    }
   }
 }

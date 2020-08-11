@@ -1,5 +1,5 @@
 import { LevelUp, LevelUpChain } from 'levelup';
-import { serializeVector } from '../serialize';
+import { serializeBufferArrayToVector, deserializeArrayFromVector } from '../serialize';
 
 const MAX_DEPTH = 32;
 const LEAF_BYTES = 64;
@@ -32,7 +32,21 @@ export class HashPath {
 
   public toBuffer() {
     const elements = this.data.map(nodes => Buffer.concat([nodes[0], nodes[1]]));
-    return serializeVector(elements);
+    return serializeBufferArrayToVector(elements);
+  }
+
+  static fromBuffer(buf: Buffer, offset = 0) {
+    const { elem } = HashPath.deserialize(buf, offset);
+    return elem;
+  }
+
+  static deserialize(buf: Buffer, offset = 0) {
+    const deserializePath = (buf, offset) => ({
+      elem: [buf.slice(offset, offset + 32), buf.slice(offset + 32, offset + 64)],
+      adv: 64,
+    });
+    const { elem, adv } = deserializeArrayFromVector(deserializePath, buf, offset);
+    return { elem: new HashPath(elem), adv };
   }
 }
 
@@ -80,6 +94,13 @@ export class MerkleTree {
 
   async destroy() {
     await this.db.clear();
+  }
+
+  public async syncFromDb() {
+    const meta: Buffer = await this.db.get(Buffer.from(this.name));
+    this.root = meta.slice(0, 32);
+    this.depth = meta.readUInt32LE(32);
+    this.size = meta.readUInt32LE(36);
   }
 
   private async writeMeta(batch?: LevelUpChain<string, Buffer>) {

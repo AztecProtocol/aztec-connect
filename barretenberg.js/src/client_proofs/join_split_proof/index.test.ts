@@ -108,27 +108,32 @@ describe('join_split_proof', () => {
 
     it('should construct join split proof', async () => {
       const pubKey = schnorr.computePublicKey(privateKey);
+
       const inputNote1 = new Note(pubKey, createNoteSecret(), 100);
       const inputNote2 = new Note(pubKey, createNoteSecret(), 50);
-      const outputNote1 = new Note(pubKey, randomBytes(32), 70);
-      const outputNote2 = new Note(pubKey, randomBytes(32), 80);
+      const outputNote1 = new Note(pubKey, createNoteSecret(), 80);
+      const outputNote2 = new Note(pubKey, createNoteSecret(), 70);
 
       const inputNote1Enc = await joinSplitProver.encryptNote(inputNote1);
       const inputNote2Enc = await joinSplitProver.encryptNote(inputNote2);
+
       const tree = new MerkleTree(levelup(memdown()), pedersen, blake2s, 'data', 32);
       await tree.updateElement(0, inputNote1Enc);
       await tree.updateElement(1, inputNote2Enc);
 
       const inputNote1Path = await tree.getHashPath(0);
       const inputNote2Path = await tree.getHashPath(1);
+      const accountNotePath = await tree.getHashPath(2);
 
       const signature = await joinSplitProver.sign4Notes(
         [inputNote1, inputNote2, outputNote1, outputNote2],
         privateKey,
       );
 
+      const inputOwner = randomBytes(20);
+      const outputOwner = randomBytes(20);
+
       const tx = new JoinSplitTx(
-        pubKey,
         0,
         0,
         2,
@@ -138,6 +143,11 @@ describe('join_split_proof', () => {
         [inputNote1, inputNote2],
         [outputNote1, outputNote2],
         signature,
+        inputOwner,
+        outputOwner,
+        2,
+        accountNotePath,
+        pubKey,
       );
 
       debug('creating proof...');
@@ -155,6 +165,8 @@ describe('join_split_proof', () => {
       const expectedNullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, blake2s);
       expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
       expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
+      expect(joinSplitProof.inputOwner).toEqual(inputOwner);
+      expect(joinSplitProof.outputOwner).toEqual(outputOwner);
     });
   });
 });

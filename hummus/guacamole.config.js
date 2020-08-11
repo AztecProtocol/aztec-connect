@@ -6,5 +6,12 @@ module.exports = {
   },
   theme: {
     defaultFontFamily: 'Arial, Helvetica, sans-serif',
+    deviceBreakpointMap: {
+      s: '600px',
+    },
+    colorMap: {
+      'primary-lightest': '#f1f5fc',
+      red: '#ff8272',
+    },
   },
 };

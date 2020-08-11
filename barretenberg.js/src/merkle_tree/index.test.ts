@@ -116,4 +116,54 @@ describe('merkle_tree', () => {
       })(),
     ).rejects.toThrow();
   });
+
+  it('should be able to sync the latest status from db', async () => {
+    const levelDown = memdown();
+
+    const db1 = levelup(levelDown);
+    const tree1 = await MerkleTree.new(db1, pedersen, blake2s, 'test', 10);
+
+    const db2 = levelup(levelDown);
+    const tree2 = await MerkleTree.new(db2, pedersen, blake2s, 'test', 10);
+
+    expect(tree1.getRoot()).toEqual(tree2.getRoot());
+    expect(tree1.getSize()).toBe(0);
+    expect(tree2.getSize()).toBe(0);
+
+    for (let i = 0; i < 4; ++i) {
+      await tree1.updateElement(i, values[i]);
+    }
+
+    const newRoot = tree1.getRoot();
+    expect(tree1.getSize()).toBe(4);
+    expect(tree2.getRoot()).not.toEqual(newRoot);
+    expect(tree2.getSize()).toBe(0);
+
+    await tree2.syncFromDb();
+
+    expect(tree2.getRoot()).toEqual(newRoot);
+    expect(tree2.getSize()).toBe(4);
+  });
+
+  it('should serialize hash path data to a buffer and be able to deserialize it back', async () => {
+    const db = levelup(memdown());
+    const tree = await MerkleTree.new(db, pedersen, blake2s, 'test', 10);
+    tree.updateElement(0, values[0]);
+
+    const hashPath = await tree.getHashPath(0);
+    const buf = hashPath.toBuffer();
+    const recovered = HashPath.fromBuffer(buf);
+    expect(recovered).toEqual(hashPath);
+    const deserialized = HashPath.deserialize(buf);
+    expect(deserialized.elem).toEqual(hashPath);
+    expect(deserialized.adv).toBe(4 + 10 * 64);
+
+    const dummyData = Buffer.alloc(23, 1);
+    const paddedBuf = Buffer.concat([dummyData, buf]);
+    const recovered2 = HashPath.fromBuffer(paddedBuf, 23);
+    expect(recovered2).toEqual(hashPath);
+    const deserialized2 = HashPath.deserialize(buf);
+    expect(deserialized2.elem).toEqual(hashPath);
+    expect(deserialized2.adv).toBe(4 + 10 * 64);
+  });
 });

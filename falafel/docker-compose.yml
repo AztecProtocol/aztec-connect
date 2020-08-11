@@ -1,13 +1,13 @@
 version: '3'
 services:
-  setup-mpc-server:
+  falafel:
     build: .
-    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/setup-mpc-server
-    command: yarn start
+    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest
+    tty: true
+    stdin_open: true
     environment:
       NODE_ENV: production
     ports:
-      - '8081:80'
+      - '80:80'
     volumes:
-      - .:/usr/src/setup-mpc-server
-      - ../setup-mpc-common:/usr/src/setup-mpc-server/node_modules/setup-mpc-common
+      - ./data:/usr/src/falafel/data

@@ -1,336 +1,384 @@
-import { BlockSource, Block } from 'barretenberg-es/block_source';
-import { LocalRollupProvider, RollupProvider, ServerRollupProvider, Proof } from 'barretenberg-es/rollup_provider';
-import { ServerBlockSource } from 'barretenberg-es/block_source/server_block_source';
-import { JoinSplitProver, JoinSplitVerifier } from 'barretenberg-es/client_proofs/join_split_proof';
-import { Prover } from 'barretenberg-es/client_proofs/prover';
-import { Crs } from 'barretenberg-es/crs';
-import { Blake2s } from 'barretenberg-es/crypto/blake2s';
-import { Pedersen } from 'barretenberg-es/crypto/pedersen';
-import { PooledFft } from 'barretenberg-es/fft';
-import { PooledPippenger } from 'barretenberg-es/pippenger';
-import { BarretenbergWasm } from 'barretenberg-es/wasm';
-import { WorkerPool } from 'barretenberg-es/wasm/worker_pool';
-import { WorldState } from 'barretenberg-es/world_state';
+import {
+  Sdk,
+  SdkEvent,
+  SdkInitState,
+  UserTxAction,
+  createSdk,
+  RollupProviderExplorer,
+  RollupProviderStatus,
+} from 'aztec2-sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import leveljs from 'level-js';
-import levelup from 'levelup';
-import { DbUser, DexieDatabase } from './database';
-import { JoinSplitProofCreator } from './join_split_proof';
-import { UserState } from './user_state';
-import { Grumpkin } from 'barretenberg-es/ecc/grumpkin';
-import { MemoryFifo } from 'barretenberg-es/fifo';
-import { User, createUser } from './user';
+import { EthProvider, chainIdToNetwork, EthProviderEvent, Network } from './eth_provider';
+import { MetamaskSigner } from './signer';
+import { TokenContract } from './token_contract';
 
 const debug = createDebug('bb:app');
 
-function dbUserToUser(dbUser: DbUser): User {
-  return {
-    id: dbUser.id,
-    privateKey: dbUser.privateKey ? Buffer.from(dbUser.privateKey) : undefined,
-    publicKey: Buffer.from(dbUser.publicKey),
-    alias: dbUser.alias,
-  };
+export enum AppEvent {
+  UPDATED_PROOF_STATE = 'UPDATED_PROOF_STATE',
+  UPDATED_TOKEN_BALANCE = 'UPDATED_TOKEN_BALANCE',
+  UPDATED_NETWORK_AND_CONTRACTS = 'UPDATED_NETWORK_AND_CONTRACTS',
+  APPROVED = 'APPROVED',
 }
 
-export class App extends EventEmitter {
-  private pool!: WorkerPool;
-  private joinSplitProver!: JoinSplitProver;
-  private joinSplitVerifier!: JoinSplitVerifier;
-  private user!: User;
-  private worldState!: WorldState;
-  private users: User[] = [];
-  private userStates: UserState[] = [];
-  private joinSplitProofCreator!: JoinSplitProofCreator;
-  private rollupProviderUrl = '';
-  private rollupProvider!: RollupProvider;
-  private blockSource!: BlockSource;
-  private blockQueue!: MemoryFifo<Block>;
-  private grumpkin!: Grumpkin;
-  private blake2s!: Blake2s;
-  private pedersen!: Pedersen;
-  private db = new DexieDatabase();
-  private leveldb = levelup(leveljs('hummus'));
-  private initialized = false;
+export enum ProofState {
+  NADA = 'Nada',
+  RUNNING = 'Running',
+  FAILED = 'Failed',
+  FINISHED = 'Finished',
+}
+
+interface ProofInput {
+  userId: number;
+  value: bigint;
+  recipient: Buffer;
+  created: Date;
+}
+
+export interface ProofEvent {
+  state: ProofState;
+  action?: UserTxAction | 'MINT';
+  txHash?: Buffer;
+  input?: ProofInput;
+  error?: string;
+  time?: number;
+}
+
+export class App extends EventEmitter implements RollupProviderExplorer {
+  private proofState: ProofEvent = { state: ProofState.NADA };
+  private sdk!: Sdk;
+  private tokenContract!: TokenContract;
+  private providerStatus!: RollupProviderStatus;
+
+  constructor(public ethProvider: EthProvider) {
+    super();
+
+    ethProvider.on(EthProviderEvent.UPDATED_NETWORK, this.updateNetworkAndContracts);
+  }
 
   public async init(serverUrl: string) {
-    this.rollupProviderUrl = serverUrl;
-    const circuitSize = 128 * 1024;
-
-    let crsData = await this.db.getKey(`crs-${circuitSize}`);
-    let g2Data = await this.db.getKey(`crs-g2-${circuitSize}`);
-    if (!crsData || !g2Data) {
-      debug('downloading crs data...');
-      const crs = new Crs(circuitSize);
-      await crs.download();
-      crsData = crs.getData();
-      await this.db.addKey(`crs-${circuitSize}`, Buffer.from(crsData));
-      g2Data = crs.getG2Data();
-      await this.db.addKey(`crs-g2-${circuitSize}`, Buffer.from(g2Data));
-      debug('done.');
+    if (this.isInitialized()) {
+      await this.sdk.destroy();
     }
 
-    const barretenberg = await BarretenbergWasm.new();
+    this.sdk = await createSdk(serverUrl);
 
-    this.pool = new WorkerPool();
-    await this.pool.init(barretenberg.module, Math.min(navigator.hardwareConcurrency, 8));
-
-    const barretenbergWorker = this.pool.workers[0];
-
-    const pippenger = new PooledPippenger();
-    await pippenger.init(crsData, this.pool);
-
-    const fft = new PooledFft(this.pool);
-    await fft.init(circuitSize);
-
-    const prover = new Prover(barretenbergWorker, pippenger, fft);
-
-    this.pedersen = new Pedersen(barretenberg);
-    this.blake2s = new Blake2s(barretenberg);
-    this.joinSplitProver = new JoinSplitProver(barretenberg, prover);
-    this.joinSplitVerifier = new JoinSplitVerifier();
-    this.grumpkin = new Grumpkin(barretenberg);
-
-    await this.startNewSession();
-
-    const start = new Date().getTime();
-    const provingKey = await this.db.getKey('join-split-proving-key');
-    if (provingKey) {
-      await this.joinSplitProver.loadKey(provingKey);
-    } else {
-      this.logAndDebug('computing proving key...');
-      await this.joinSplitProver.computeKey();
-      debug('saving...');
-      const newProvingKey = await this.joinSplitProver.getKey();
-      await this.db.addKey('join-split-proving-key', newProvingKey);
-      this.logAndDebug(`complete: ${new Date().getTime() - start}ms`);
+    for (const e in SdkEvent) {
+      this.sdk.on((SdkEvent as any)[e], (...args: any[]) => this.emit((SdkEvent as any)[e], ...args));
     }
 
-    if (!serverUrl) {
-      debug('creating verification key...');
-      const verificationKey = await this.db.getKey('join-split-verification-key');
-      if (verificationKey) {
-        await this.joinSplitVerifier.loadKey(barretenbergWorker, verificationKey, g2Data);
-      } else {
-        debug('computing...');
-        await this.joinSplitVerifier.computeKey(pippenger.pool[0], g2Data);
-        debug('saving...');
-        const newVerificationKey = await this.joinSplitVerifier.getKey();
-        await this.db.addKey('join-split-verification-key', newVerificationKey);
-      }
-    }
+    this.providerStatus = await this.sdk.getStatus();
 
-    this.initialized = true;
-  }
+    this.requestEthProviderAccess();
 
-  public isInitialized() {
-    return this.initialized;
-  }
-
-  public getDataRoot() {
-    return this.worldState.getRoot();
-  }
-
-  public getDataSize() {
-    return this.worldState.getSize();
-  }
-
-  private log(str: string) {
-    this.emit('log', str + '\n');
-  }
-
-  private logAndDebug(str: string) {
-    debug(str);
-    this.log(str);
+    await this.sdk.init();
   }
 
   public async destroy() {
-    await this.pool.destroy();
-    this.blockSource.stop();
-    this.blockSource.removeAllListeners();
-    this.blockQueue.cancel();
+    if (!this.isInitialized()) {
+      return;
+    }
+
+    await this.sdk.destroy();
+    this.ethProvider.off(EthProviderEvent.UPDATED_NETWORK, this.updateNetworkAndContracts);
   }
 
-  private async startNewSession(userId: number = 0) {
-    this.blockQueue = new MemoryFifo<Block>();
+  public async clearData() {
+    if (!this.isInitialized()) {
+      return;
+    }
+    await this.sdk.clearData();
+  }
 
-    this.initRollupProvider();
+  private updateNetworkAndContracts = async (network: Network) => {
+    const NOTE_SCALE = BigInt(10000000000000000);
+    if (this.providerStatus && this.isCorrectNetwork()) {
+      this.tokenContract = new TokenContract(network, this.providerStatus.tokenContractAddress, NOTE_SCALE);
+      await this.tokenContract.init();
+    }
+    this.emit(AppEvent.UPDATED_NETWORK_AND_CONTRACTS, network);
+  };
 
-    this.worldState = new WorldState(this.leveldb, this.pedersen, this.blake2s);
-    await this.worldState.init();
+  private updateProofState(proof: ProofEvent) {
+    this.proofState = proof;
+    this.emit(AppEvent.UPDATED_PROOF_STATE, proof);
+  }
 
-    await this.initUsers();
-    this.switchToUser(userId);
+  private updateApprovalState(approval: boolean) {
+    this.emit(AppEvent.APPROVED, approval);
+  }
 
-    this.processBlockQueue();
+  public isInitialized() {
+    return this.getInitState() === SdkInitState.INITIALIZED;
+  }
+
+  public isCorrectNetwork() {
+    return chainIdToNetwork(this.providerStatus.chainId) === this.ethProvider.getNetwork();
+  }
+
+  public getInitState() {
+    return this.sdk ? this.sdk.getInitState() : SdkInitState.UNINITIALIZED;
+  }
+
+  public getProofState() {
+    return this.proofState;
+  }
+
+  public getDataRoot() {
+    return this.sdk.getDataRoot();
+  }
+
+  public getDataSize() {
+    return this.sdk.getDataSize();
   }
 
   public async getStatus() {
-      return await this.rollupProvider.status();
+    return await this.sdk.getStatus();
   }
 
-  private async initUsers() {
-    this.users = (await this.db.getUsers()).map(dbUserToUser);
-    if (!this.users.length) {
-      this.user = await this.createUser();
-      debug(`created new user:`, this.user);
-    } else {
-      this.userStates = this.users
-        .filter(u => u.privateKey)
-        .map(u => new UserState(u, this.grumpkin, this.blake2s, this.db));
-      await Promise.all(this.userStates.map(us => us.init()));
-    }
-    this.user = this.users[0];
+  public getProviderStatus() {
+    return this.providerStatus;
   }
 
-  private initRollupProvider() {
-    if (this.rollupProviderUrl) {
-      this.initServerRollupProvider(this.rollupProviderUrl);
-    } else {
-      this.initLocalRollupProvider();
-    }
-    this.blockSource.on('block', b => this.blockQueue.put(b));
-    this.blockSource.start();
+  public async requestEthProviderAccess() {
+    await this.ethProvider.requestAccess(async () => {
+      const network = this.ethProvider.getNetwork();
+      await this.updateNetworkAndContracts(network);
+    });
   }
 
-  private initLocalRollupProvider() {
-    debug('No server url provided. Use local rollup provider.');
-    const lrp = new LocalRollupProvider(this.joinSplitVerifier);
-    this.blockSource = lrp;
-    this.rollupProvider = lrp;
-  }
-
-  private initServerRollupProvider(serverUrl: string) {
-    const url = new URL(serverUrl);
-    const fromBlock = window.localStorage.getItem('syncedToBlock') || -1;
-    this.blockSource = new ServerBlockSource(url, +fromBlock + 1);
-    this.rollupProvider = new ServerRollupProvider(url);
-  }
-
-  private async processBlockQueue() {
-    while (true) {
-      const block = await this.blockQueue.get();
-      if (!block) {
-        break;
-      }
-
-      const balanceBefore = this.getBalance();
-
-      await this.worldState.processBlock(block);
-
-      const updates = await Promise.all(this.userStates.map(us => us.processBlock(block)));
-      if (updates.some(x => x)) {
-        this.emit('updated');
-      }
-
-      window.localStorage.setItem('syncedToBlock', block.blockNum.toString());
-
-      const diff = this.getBalance() - balanceBefore;
-      if (this.initialized && diff !== 0) {
-        this.log(`balance updated: ${this.getBalance()} (${diff >= 0 ? '+' : ''}${diff})`);
-      }
+  public async approve(value: bigint) {
+    this.updateApprovalState(true);
+    try {
+      const { rollupContractAddress } = await this.sdk.getStatus();
+      await this.tokenContract.approve(rollupContractAddress, value);
+      this.updateApprovalState(false);
+    } catch (err) {
+      debug(err);
+      this.updateApprovalState(false);
     }
   }
 
-  public async deposit(value: number) {
-    const user = this.getUser();
-    const proof = await this.joinSplitProofCreator.createProof(value, 0, 0, user, user.publicKey);
-    await this.rollupProvider.sendProof(proof);
+  public async deposit(value: bigint, account: string) {
+    const created = Date.now();
+    const action = 'DEPOSIT';
+    const user = this.sdk.getUser();
+    const input = { userId: user.id, value, recipient: user.publicKey, created: new Date(created) };
+    this.updateProofState({ action, state: ProofState.RUNNING, input });
+    try {
+      const tokenBalance = await this.tokenContract.balanceOf(account);
+      if (tokenBalance < value) {
+        this.updateProofState({
+          action,
+          state: ProofState.FAILED,
+          input,
+          error: `Token balance is insufficient for a deposit of ${value}.`,
+          time: Date.now() - created,
+        });
+        return;
+      }
+
+      const signer = new MetamaskSigner(account);
+      const txHash = await this.sdk.deposit(Number(value), signer);
+      this.updateProofState({ action, state: ProofState.FINISHED, txHash, input, time: Date.now() - created });
+    } catch (err) {
+      debug(err);
+      this.updateProofState({
+        action,
+        state: ProofState.FAILED,
+        input,
+        error: err.message,
+        time: Date.now() - created,
+      });
+    }
   }
 
-  public async withdraw(value: number) {
-    const user = this.getUser();
-    const proof = await this.joinSplitProofCreator.createProof(0, value, 0, user, user.publicKey);
-    await this.rollupProvider.sendProof(proof);
+  public async withdraw(value: bigint, recipientStr: string) {
+    const created = Date.now();
+    const action = 'WITHDRAW';
+    const user = this.sdk.getUser();
+    const recipient = Buffer.from(recipientStr.replace(/^0x/, ''), 'hex');
+    const input = { userId: user.id, value, recipient, created: new Date(created) };
+    this.updateProofState({ action, state: ProofState.RUNNING, input });
+    try {
+      const txHash = await this.sdk.withdraw(Number(value), recipient);
+      this.updateProofState({ action, state: ProofState.FINISHED, txHash, input, time: Date.now() - created });
+    } catch (err) {
+      debug(err);
+      this.updateProofState({
+        action,
+        state: ProofState.FAILED,
+        input,
+        error: err.message,
+        time: Date.now() - created,
+      });
+    }
   }
 
-  public async transfer(value: number, receiverPubKey: Buffer) {
-    const user = this.getUser();
-    const proof = await this.joinSplitProofCreator.createProof(0, 0, value, user, receiverPubKey);
-    await this.rollupProvider.sendProof(proof);
+  public async transfer(value: bigint, recipientStr: string) {
+    const created = Date.now();
+    const action = 'TRANSFER';
+    const user = this.sdk.getUser();
+    const recipient = Buffer.from(recipientStr, 'hex');
+    const input = { userId: user.id, value, recipient, created: new Date(created) };
+    this.updateProofState({ action, state: ProofState.RUNNING, input });
+    try {
+      const txHash = await this.sdk.transfer(Number(value), recipient);
+      this.updateProofState({ action, state: ProofState.FINISHED, txHash, input, time: Date.now() - created });
+    } catch (err) {
+      debug(err);
+      this.updateProofState({
+        action,
+        state: ProofState.FAILED,
+        input,
+        error: err.message,
+        time: Date.now() - created,
+      });
+    }
   }
 
-  private getUserState(userId: number) {
-    return this.userStates.find(us => us.getUser().id === userId)!;
+  public async publicTransfer(value: bigint, account: string, recipientStr: string) {
+    const created = Date.now();
+    const action = 'PUBLIC_TRANSFER';
+    const user = this.sdk.getUser();
+    const recipient = Buffer.from(recipientStr.replace(/^0x/, ''), 'hex');
+    const input = { userId: user.id, value, recipient, created: new Date(created) };
+    this.updateProofState({ action, state: ProofState.RUNNING, input });
+    try {
+      const tokenBalance = await this.tokenContract.balanceOf(account);
+      if (tokenBalance < value) {
+        this.updateProofState({
+          action,
+          state: ProofState.FAILED,
+          input,
+          error: `Token balance is insufficient to transfer ${value}.`,
+          time: Date.now() - created,
+        });
+        return;
+      }
+
+      const signer = new MetamaskSigner(account);
+      const txHash = await this.sdk.publicTransfer(Number(value), signer, recipient);
+      this.updateProofState({ action, state: ProofState.FINISHED, txHash, input, time: Date.now() - created });
+    } catch (err) {
+      debug(err);
+      this.updateProofState({
+        action,
+        state: ProofState.FAILED,
+        input,
+        error: err.message,
+        time: Date.now() - created,
+      });
+    }
   }
 
   public getUser() {
-    return this.user;
+    return this.sdk.getUser();
   }
 
-  public getUsers() {
-    return this.users;
+  public getUsers(localOnly: boolean = true) {
+    return this.sdk ? this.sdk.getUsers(localOnly) : [];
   }
 
   public async createUser(alias?: string) {
-    const users = await this.db.getUsers();
-    const user = createUser(users.length, this.grumpkin, alias);
-    this.users.push(user);
-    this.db.addUser(user);
-    const userState = new UserState(user, this.grumpkin, this.blake2s, this.db);
-    await userState.init();
-    this.userStates.push(userState);
-    return user;
+    return this.sdk.createUser(alias);
   }
 
   public async addUser(alias: string, publicKey: Buffer) {
-    if (this.users.find(u => u.alias === alias)) {
-      throw new Error('Alias already exists.');
-    }
-    const users = await this.db.getUsers();
-    const user: User = { id: users.length, publicKey, alias };
-    this.users.push(user);
-    this.db.addUser(user);
-    return user;
+    return this.sdk.addUser(alias, publicKey);
   }
 
   public switchToUser(userIdOrAlias: string | number) {
-    userIdOrAlias = userIdOrAlias.toString();
-    const user = this.findUser(userIdOrAlias);
-    if (!user) {
-      throw new Error('Local user not found.');
-    }
-    this.user = user;
-    debug(`switching to user id: ${user.id}`);
-    this.joinSplitProofCreator = new JoinSplitProofCreator(
-      this.joinSplitProver,
-      this.userStates.find(us => us.getUser().id === user.id)!,
-      this.worldState,
-      this.grumpkin,
-    );
-    this.emit('updated');
-    return user;
+    return this.sdk.switchToUser(userIdOrAlias);
   }
 
   public getBalance(userIdOrAlias?: string | number) {
-    const user = userIdOrAlias ? this.findUser(userIdOrAlias) || this.user : this.user;
-    return this.getUserState(user.id).getBalance();
+    return this.sdk.getBalance(userIdOrAlias);
+  }
+
+  public getLatestRollups() {
+    return this.sdk.getLatestRollups();
+  }
+
+  public getLatestTxs() {
+    return this.sdk.getLatestTxs();
+  }
+
+  public async getRollup(rollupId: number) {
+    return this.sdk.getRollup(rollupId);
+  }
+
+  public async getTx(txHash: Buffer) {
+    return this.sdk.getTx(txHash);
+  }
+
+  public getUserTxs(userId: number) {
+    return this.sdk.getUserTxs(userId);
   }
 
   public findUser(userIdOrAlias: string | number, remote: boolean = false) {
-    userIdOrAlias = userIdOrAlias.toString();
-    const user = this.users
-      .filter(u => remote || u.privateKey)
-      .find(u => {
-        return u.id.toString() === userIdOrAlias || u.alias === userIdOrAlias;
+    return this.sdk.findUser(userIdOrAlias, remote);
+  }
+
+  public startTrackingGlobalState() {
+    this.sdk.startTrackingGlobalState();
+  }
+
+  public stopTrackingGlobalState() {
+    this.sdk.stopTrackingGlobalState();
+  }
+
+  public async getTokenBalance(account: string) {
+    return this.tokenContract.balanceOf(account);
+  }
+
+  public async getRollupContractAllowance(account: string) {
+    const { rollupContractAddress } = await this.sdk.getStatus();
+    return this.tokenContract.allowance(account, rollupContractAddress);
+  }
+
+  public async mintToken(account: string, value: bigint) {
+    const action = 'MINT';
+    this.updateProofState({ action, state: ProofState.RUNNING });
+
+    try {
+      await this.tokenContract.mint(account, value);
+    } catch (err) {
+      debug(err);
+      this.updateProofState({
+        action,
+        state: ProofState.FAILED,
+        error: err.message,
       });
-    return user;
-  }
-
-  public async clearNoteData() {
-    if (this.initialized) {
-      this.blockSource.stop();
-      this.blockSource.removeAllListeners();
-      this.blockQueue.cancel();
+      return;
     }
 
-    await this.leveldb.clear();
-    localStorage.removeItem('syncedToBlock');
-    await this.db.clearNote();
+    const balance = await this.getTokenBalance(account);
+    this.emit(AppEvent.UPDATED_TOKEN_BALANCE, balance);
 
-    if (this.initialized) {
-      const userId = this.user.id;
-      await this.startNewSession(userId);
-    }
+    this.updateProofState({ action, state: ProofState.FINISHED });
   }
+
+  private subscribeToTokenBalance() {
+    // TODO
+  }
+
+  public toTokenValueString = (noteValue: bigint) => {
+    const scaledTokenValue = this.tokenContract.toScaledTokenValue(noteValue);
+    const decimals = this.tokenContract.getDecimals();
+    const valStr = scaledTokenValue.toString().padStart(decimals + 1, '0');
+    const integer = valStr.slice(0, valStr.length - decimals);
+    const mantissa = valStr.slice(-decimals).replace(/0+$/, '');
+    return mantissa ? `${integer}.${mantissa}` : integer;
+  };
+
+  public toNoteValue = (tokenValueString: string) => {
+    const [integer, decimalStr] = `${tokenValueString}`.split('.');
+    const decimal = (decimalStr || '').replace(/0+$/, '');
+    const scalingFactor = BigInt(10) ** BigInt(this.tokenContract.getDecimals());
+    const decimalScale = scalingFactor / BigInt(10) ** BigInt(decimal?.length || 0);
+    const scaledTokenValue = BigInt(decimal || 0) * decimalScale + BigInt(integer || 0) * scalingFactor;
+    return this.tokenContract.toNoteValue(scaledTokenValue);
+  };
 }

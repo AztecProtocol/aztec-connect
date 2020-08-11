@@ -51,7 +51,7 @@ const Logo = styled.div`
 const StyledTerminal = styled.div`
   font-family: 'Courier new';
   color: rgba(255, 255, 255, 0.8);
-  font-size: 60px;
+  font-size: 50px;
   font-weight: bold;
   font-style: normal;
   white-space: pre;

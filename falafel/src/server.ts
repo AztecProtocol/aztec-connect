@@ -1,72 +1,173 @@
-import { Block } from 'barretenberg/block_source';
 import { JoinSplitProof, JoinSplitVerifier } from 'barretenberg/client_proofs/join_split_proof';
 import { Crs } from 'barretenberg/crs';
+import { MemoryFifo } from 'barretenberg/fifo';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { Proof } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { Blockchain } from 'blockchain';
 import moment, { Duration } from 'moment';
-import { createConnection } from 'typeorm';
-import { LocalBlockchain } from './blockchain';
-import { MemoryFifo } from './fifo';
+import { RollupDao } from './entity/rollup';
 import { readFileAsync } from './fs_async';
 import { ProofGenerator } from './proof_generator';
 import { Rollup } from './rollup';
 import { RollupDb } from './rollup_db';
 import { WorldStateDb } from './world_state_db';
 
-interface ServerConfig {
+export interface ServerConfig {
   readonly rollupSize: number;
   readonly maxRollupWaitTime: Duration;
   readonly minRollupInterval: Duration;
 }
 
+interface PublishQueueItem {
+  rollupId: number;
+  proof: Buffer;
+  signatures: Buffer[];
+  sigIndexes: number[];
+  viewingKeys: Buffer[];
+  rollupSize: number;
+}
+
 export class Server {
   private worldStateDb: WorldStateDb;
   private joinSplitVerifier!: JoinSplitVerifier;
-  private blockchain!: LocalBlockchain;
   private worker!: BarretenbergWorker;
-  private rollupDb!: RollupDb;
   private rollupQueue = new MemoryFifo<JoinSplitProof[]>();
+  private publishQueue = new MemoryFifo<PublishQueueItem>();
   private txQueue = new MemoryFifo<JoinSplitProof | undefined>();
   private proofGenerator: ProofGenerator;
   private pendingNullifiers = new Set<bigint>();
 
-  constructor(private config: ServerConfig) {
+  constructor(private config: ServerConfig, private blockchain: Blockchain, private rollupDb: RollupDb) {
     if (!this.config.rollupSize) {
       throw new Error('Rollup size must be greater than 0.');
     }
+
+    if (config.minRollupInterval.asSeconds() > config.maxRollupWaitTime.asSeconds()) {
+      throw new Error('minRollupInterval must be <= maxRollupWaitTime');
+    }
+
     this.worldStateDb = new WorldStateDb();
     this.proofGenerator = new ProofGenerator(this.config.rollupSize);
   }
 
   public async start() {
+    console.log('Server start...');
     await this.proofGenerator.run();
-    const connection = await createConnection();
-    this.blockchain = new LocalBlockchain(connection, this.config.rollupSize);
-    this.rollupDb = new RollupDb(connection);
-    await this.blockchain.start();
-    await this.rollupDb.init();
     await this.worldStateDb.start();
-    this.printState();
+    // We know all historical blocks will be available in a call to restoreState once this returns.
+    await this.blockchain.start();
+    await this.restoreState();
     await this.createJoinSplitVerifier();
-    const newBlocks = this.getBlocks((await this.rollupDb.getLastBlockNum()) + 1);
-    for (const block of newBlocks) {
-      await this.handleNewBlock(block);
-    }
-    this.blockchain.on('block', b => this.handleNewBlock(b));
+    this.printState();
+
     this.processTxQueue(this.config.maxRollupWaitTime, this.config.minRollupInterval);
     this.processRollupQueue();
+    this.processPublishQueue();
   }
 
   public stop() {
     this.blockchain.stop();
     this.proofGenerator.cancel();
+    this.publishQueue.cancel();
     this.rollupQueue.cancel();
     this.txQueue.cancel();
     destroyWorker(this.worker);
+  }
+
+  private async restoreState() {
+    const lastBlockNum = await this.rollupDb.getLastBlockNum();
+
+    // If lastBlockNum = -1, db is empty and we should attempt a restore from chain.
+    if (lastBlockNum === -1) {
+      await this.restoreWorldStateDb();
+    }
+
+    // Ensure we confirm any rollups that we have missed while not running.
+    const newBlocks = await this.getBlocks((await this.rollupDb.getLastBlockNum()) + 1);
+    for (const block of newBlocks) {
+      if (await this.rollupDb.getRollup(block.rollupId)) {
+        await this.rollupDb.confirmRollup(block.rollupId, block.blockNum);
+      } else {
+        const rollup = new RollupDao();
+        rollup.created = new Date();
+        rollup.id = block.rollupId;
+        rollup.ethBlock = block.blockNum;
+        rollup.ethTxHash = block.txHash;
+        rollup.status = 'SETTLED';
+        rollup.dataRoot = block.dataRoot;
+        rollup.nullRoot = block.nullRoot;
+        console.log(`Restoring rollup ${rollup.id} with data root: ${block.dataRoot.toString('hex')}`);
+        await this.rollupDb.addRollupDao(rollup);
+      }
+    }
+
+    // If there is a CREATING rollup, we need to detect if it's been committed.
+    //    If the world state db root matches the newRoot of the rollup, set it to CREATED.
+    //    Else remove CREATING rollups.
+    const pendingRollups = await this.rollupDb.getPendingRollups();
+    if (pendingRollups.length) {
+      const dataRoot = await this.worldStateDb.getRoot(0);
+      const lastCommittedIndex = pendingRollups.findIndex(r => r.dataRoot.equals(dataRoot));
+      for (let i = 0; i < lastCommittedIndex + 1; ++i) {
+        await this.rollupDb.confirmRollupCreated(pendingRollups[i].id);
+      }
+      await this.rollupDb.deletePendingRollups();
+    }
+
+    // Find all CREATED rollups and reinsert to publisher queue.
+    const createdRollups = await this.rollupDb.getCreatedRollups();
+    createdRollups.forEach(({ id, proofData, txs }) => {
+      const signatures = txs.reduce((acc, tx) => (tx.signature ? [...acc, tx.signature] : acc), [] as Buffer[]);
+      const sigIndexes = txs.reduce((acc, tx, i) => (tx.signature ? [...acc, i] : acc), [] as number[]);
+      this.publishQueue.put({
+        rollupId: id,
+        proof: proofData!,
+        signatures,
+        sigIndexes,
+        viewingKeys: txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat(),
+        rollupSize: this.config.rollupSize,
+      });
+    });
+
+    // Find all txs without rollup ids and insert into tx queue.
+    const txs = await this.rollupDb.getPendingTxs();
+    for (const tx of txs) {
+      console.log(`Tx restored: ${tx.txId.toString('hex')}`);
+      const proof = new JoinSplitProof(tx.proofData, [tx.viewingKey1, tx.viewingKey2], tx.signature);
+      proof.dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
+      const nullifier1 = toBigIntBE(proof.nullifier1);
+      const nullifier2 = toBigIntBE(proof.nullifier2);
+      this.pendingNullifiers.add(nullifier1);
+      this.pendingNullifiers.add(nullifier2);
+      this.txQueue.put(proof);
+    }
+  }
+
+  private async restoreWorldStateDb() {
+    const allBlocks = await this.getBlocks(0);
+    console.log('Restoring world state db...');
+
+    for (let i = 0; i < allBlocks.length; ++i) {
+      const block = allBlocks[i];
+      for (let i = 0; i < block.dataEntries.length; ++i) {
+        await this.worldStateDb.put(0, BigInt(block.dataStartIndex + i), block.dataEntries[i]);
+      }
+      if (block.dataEntries.length < block.numDataEntries) {
+        await this.worldStateDb.put(0, BigInt(block.dataStartIndex + block.numDataEntries - 1), Buffer.alloc(64, 0));
+      }
+      for (const nullifier of block.nullifiers) {
+        await this.worldStateDb.put(1, toBigIntBE(nullifier), toBufferBE(1n, 64));
+      }
+      await this.worldStateDb.put(2, BigInt(i + 1), this.worldStateDb.getRoot(0));
+    }
+
+    await this.worldStateDb.commit();
+
+    console.log('World state db restoration complete.');
   }
 
   private printState() {
@@ -76,8 +177,13 @@ export class Server {
     console.log(`Root root: ${this.worldStateDb.getRoot(2).toString('hex')}`);
   }
 
-  public status() {
+  public async status() {
+    const { chainId, networkOrHost } = await this.blockchain.getNetworkInfo();
     return {
+      chainId,
+      networkOrHost,
+      rollupContractAddress: this.blockchain.getRollupContractAddress(),
+      tokenContractAddress: this.blockchain.getTokenContractAddress(),
       dataSize: Number(this.worldStateDb.getSize(0)),
       dataRoot: this.worldStateDb.getRoot(0).toString('hex'),
       nullRoot: this.worldStateDb.getRoot(1).toString('hex'),
@@ -89,10 +195,6 @@ export class Server {
     let flushTimeout!: NodeJS.Timeout;
     let lastTxReceivedTime = moment.unix(0);
     let txs: JoinSplitProof[] = [];
-
-    if (minRollupInterval.asSeconds() > maxRollupWaitTime.asSeconds()) {
-      throw new Error('minRollupInterval must be <= maxRollupWaitTime');
-    }
 
     while (true) {
       const tx = await this.txQueue.get();
@@ -142,35 +244,89 @@ export class Server {
 
       console.log(`Creating rollup with ${txs.length} txs...`);
       const rollup = await this.createRollup(txs);
-      await this.rollupDb.deleteRollup(rollup.rollupId);
       await this.rollupDb.addRollup(rollup);
 
-      try {
-        const proof = await this.proofGenerator.createProof(rollup);
-        if (!proof) {
-          throw new Error('Invalid proof.');
-        }
+      const proof = await this.proofGenerator.createProof(rollup);
 
-        const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
-        await this.blockchain.sendProof(proof, rollup.rollupId, this.config.rollupSize, viewingKeys);
-        await this.worldStateDb.commit();
-        this.printState();
-      } catch (err) {
-        console.log(err.message);
+      if (!proof) {
+        // This shouldn't happen!? What happens to the txs?
+        // Perhaps need to extract the troublemaker, and then reinsert all txs into queue?
         await this.worldStateDb.rollback();
         await this.rollupDb.deleteRollup(rollup.rollupId);
+        continue;
+      }
+
+      await this.rollupDb.setRollupProof(rollup.rollupId, proof);
+      await this.worldStateDb.commit();
+      await this.rollupDb.confirmRollupCreated(rollup.rollupId);
+
+      const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
+      const signatures = txs.reduce((acc, tx) => (tx.signature ? [...acc, tx.signature] : acc), [] as Buffer[]);
+      const sigIndexes = txs.reduce((acc, tx, i) => (tx.signature ? [...acc, i] : acc), [] as number[]);
+
+      this.publishQueue.put({
+        rollupId: rollup.rollupId,
+        proof,
+        signatures,
+        sigIndexes,
+        viewingKeys,
+        rollupSize: this.config.rollupSize,
+      });
+
+      this.printState();
+    }
+  }
+
+  private async processPublishQueue() {
+    while (true) {
+      const item = await this.publishQueue.get();
+      if (!item) {
+        break;
+      }
+      const { rollupId, proof, signatures, sigIndexes, viewingKeys, rollupSize } = item;
+
+      while (true) {
+        try {
+          const txHash = await this.blockchain.sendProof(proof, signatures, sigIndexes, viewingKeys, rollupSize);
+
+          await this.rollupDb.confirmSent(rollupId, txHash);
+
+          const receipt = await this.blockchain.getTransactionReceipt(txHash);
+
+          await this.rollupDb.confirmRollup(rollupId, receipt.blockNum);
+          break;
+        } catch (err) {
+          // Could have failed due to not sending (network error), or not getting mined (gas too low?).
+          // But, the proof is assumed to always be valid. So let's try again.
+          console.log(err);
+          await new Promise(resolve => setTimeout(resolve, 60000));
+        }
       }
     }
   }
 
-  private async handleNewBlock(block: Block) {
-    console.log(`Block received: ${block.blockNum}`);
-    await this.rollupDb.confirmRollup(block.blockNum, block.rollupId);
-    console.log(`Confirmed rollup: ${block.rollupId}`);
+  public async getBlocks(from: number) {
+    return await this.blockchain.getBlocks(from);
   }
 
-  public getBlocks(from: number) {
-    return this.blockchain.getBlocks(from);
+  public async getLatestRollups(count: number) {
+    return this.rollupDb.getLatestRollups(count);
+  }
+
+  public async getLatestTxs(count: number) {
+    return this.rollupDb.getLatestTxs(count);
+  }
+
+  public async getRollup(id: number) {
+    return this.rollupDb.getRollupWithTxs(id);
+  }
+
+  public async getTxs(txIds: Buffer[]) {
+    return this.rollupDb.getTxsByTxIds(txIds);
+  }
+
+  public async getTx(txId: Buffer) {
+    return this.rollupDb.getTxByTxId(txId);
   }
 
   private async createJoinSplitVerifier() {
@@ -186,10 +342,11 @@ export class Server {
     await this.joinSplitVerifier.loadKey(this.worker, key, crs.getG2Data());
   }
 
-  public async receiveTx({ proofData, viewingKeys }: Proof) {
-    const proof = new JoinSplitProof(proofData, viewingKeys);
+  public async receiveTx({ proofData, depositSignature, viewingKeys }: Proof) {
+    const proof = new JoinSplitProof(proofData, viewingKeys, depositSignature);
     const nullifier1 = toBigIntBE(proof.nullifier1);
     const nullifier2 = toBigIntBE(proof.nullifier2);
+    const { publicInput, inputOwner } = proof;
 
     // Check nullifiers don't exist in the db.
     const emptyValue = Buffer.alloc(64, 0);
@@ -212,23 +369,28 @@ export class Server {
       throw new Error('Proof verification failed.');
     }
 
-    // Lookup and save the proofs data root index (for old root support).
-    // prettier-ignore
-    const emptyDataRoot = Buffer.from([
-      0x1d, 0xf6, 0xbd, 0xe5, 0x05, 0x16, 0xdd, 0x12, 0x01, 0x08, 0x8f, 0xd8, 0xdd, 0xa8, 0x4c, 0x97,
-      0xed, 0xa5, 0x65, 0x24, 0x28, 0xd1, 0xc7, 0xe8, 0x6a, 0xf5, 0x29, 0xcc, 0x5e, 0x0e, 0xb8, 0x21,
-    ]);
-    if (!proof.noteTreeRoot.equals(emptyDataRoot)) {
-      const rollup = await this.rollupDb.getRollupByDataRoot(proof.noteTreeRoot);
-      if (!rollup) {
-        throw new Error(`Rollup not found for merkle root: ${proof.noteTreeRoot.toString('hex')}`);
+    if (toBigIntBE(publicInput) > 0n) {
+      if (!depositSignature) {
+        throw new Error('No deposit signature provided.');
       }
-      proof.dataRootsIndex = rollup.id + 1;
+
+      if (!(await this.blockchain.validateSignature(inputOwner, depositSignature, proof.getDepositSigningData()))) {
+        throw new Error('Invalid deposit signature.');
+      }
+
+      if (!(await this.blockchain.validateDepositFunds(inputOwner, publicInput))) {
+        throw new Error('User has insufficient or unapproved deposit balance.');
+      }
     }
+
+    proof.dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
     this.pendingNullifiers.add(nullifier1);
     this.pendingNullifiers.add(nullifier2);
+    const txId = await this.rollupDb.addTx(proof);
     this.txQueue.put(proof);
+
+    return txId;
   }
 
   public flushTxs() {
@@ -243,13 +405,13 @@ export class Server {
     const oldDataRoot = this.worldStateDb.getRoot(0);
     const oldDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
     const oldNullRoot = this.worldStateDb.getRoot(1);
-    const dataRootsRoot = this.worldStateDb.getRoot(2);
 
     // Insert each txs elements into the db (modified state will be thrown away).
     let nextDataIndex = dataStartIndex;
     const newNullRoots: Buffer[] = [];
     const oldNullPaths: HashPath[] = [];
     const newNullPaths: HashPath[] = [];
+    const accountNullPaths: HashPath[] = [];
     const dataRootsPaths: HashPath[] = [];
     const dataRootsIndicies: number[] = [];
 
@@ -276,6 +438,11 @@ export class Server {
       this.pendingNullifiers.delete(nullifier2);
     }
 
+    for (const proof of txs) {
+      const accountNullifier = toBigIntBE(proof.accountNullifier);
+      accountNullPaths.push(await this.worldStateDb.getHashPath(1, accountNullifier));
+    }
+
     if (txs.length < rollupSize) {
       this.worldStateDb.put(0, dataStartIndex + BigInt(rollupSize) * 2n - 1n, Buffer.alloc(64, 0));
     }
@@ -287,8 +454,13 @@ export class Server {
     const rollupRoot = newDataPath.data[rollupRootHeight][rootIndex];
     const newDataRoot = this.worldStateDb.getRoot(0);
 
+    // Get root tree data.
+    const oldDataRootsRoot = this.worldStateDb.getRoot(2);
     const rootTreeSize = this.worldStateDb.getSize(2);
+    const oldDataRootsPath = await this.worldStateDb.getHashPath(2, rootTreeSize);
     await this.worldStateDb.put(2, rootTreeSize, newDataRoot);
+    const newDataRootsRoot = this.worldStateDb.getRoot(2);
+    const newDataRootsPath = await this.worldStateDb.getHashPath(2, rootTreeSize);
 
     return new Rollup(
       await this.rollupDb.getNextRollupId(),
@@ -305,8 +477,12 @@ export class Server {
       newNullRoots,
       oldNullPaths,
       newNullPaths,
+      accountNullPaths,
 
-      dataRootsRoot,
+      oldDataRootsRoot,
+      newDataRootsRoot,
+      oldDataRootsPath,
+      newDataRootsPath,
       dataRootsPaths,
       dataRootsIndicies,
     );

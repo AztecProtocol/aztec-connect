@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "es2020",
     "module": "es6",
+    "lib": ["es2020"],
     "moduleResolution": "node",
     "jsx": "react",
     "outDir": "dest",
@@ -9,7 +10,7 @@
     "noImplicitAny": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "typeRoots" : ["./node_modules/@types", "./src/@types"],
+    "typeRoots": ["./node_modules/@types", "./src/@types"],
     "inlineSourceMap": true
   }
 }

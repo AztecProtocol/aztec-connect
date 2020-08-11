@@ -12,6 +12,7 @@
     "no-shadowed-variable": false,
     "max-classes-per-file": false,
     "no-var-requires": false,
+    "forin": false,
     "array-type": [true, "array"]
   }
 }

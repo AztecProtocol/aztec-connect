@@ -12,7 +12,8 @@
     "declaration": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "inlineSourceMap": true
+    "inlineSourceMap": true,
+    "types": ["node", "jest"]
   },
   "include": ["src"]
 }

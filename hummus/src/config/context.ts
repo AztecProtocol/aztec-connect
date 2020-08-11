@@ -4,22 +4,25 @@ export interface ThemeContext {
   theme: string;
   background: string;
   color: string;
+  colorLight: string;
   link: string;
-};
+}
 
 export const themes: { [key: string]: ThemeContext } = {
-  lightTheme: {
+  light: {
     theme: 'light',
     background: 'white',
     color: 'grey-dark',
+    colorLight: 'grey',
     link: 'secondary',
   },
-  darkTheme: {
+  dark: {
     theme: 'dark',
     background: 'grey-darker',
     color: 'white',
+    colorLight: 'white-lighter',
     link: 'white',
-  }
+  },
 };
 
-export const ThemeContext = createContext(themes.darkTheme);
+export const ThemeContext = createContext(themes.dark);

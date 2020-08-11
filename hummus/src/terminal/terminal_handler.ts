@@ -1,6 +1,5 @@
 import { App } from '../app';
-import { MemoryFifo } from 'barretenberg-es/fifo';
-import { User } from '../user';
+import { MemoryFifo, User, SdkEvent } from 'aztec2-sdk';
 import { Terminal } from './terminal';
 import copy from 'copy-to-clipboard';
 
@@ -30,7 +29,12 @@ export class TerminalHandler {
     this.printQueue.put("\x01\x01\x01\x01aztec zero knowledge terminal.\x01\ntype command or 'help'\n");
     this.printQueue.put(undefined);
     this.terminal.on('cmd', (cmd: string) => this.cmdQueue.put(cmd));
-    this.app.on('log', (str: string) => this.printQueue.put(str));
+    this.app.on(SdkEvent.LOG, (str: string) => this.printQueue.put(str + '\n'));
+    this.app.on(SdkEvent.UPDATED_BALANCE, (balance: number, diff?: number) => {
+      if (diff !== undefined) {
+        this.printQueue.put(`balance updated: ${balance / 100} (${diff >= 0 ? '+' : ''}${diff / 100})\n`);
+      }
+    });
   }
 
   public stop() {
@@ -91,8 +95,8 @@ export class TerminalHandler {
       this.printQueue.put('init [server]\nexit\n');
     } else {
       this.printQueue.put(
-        'deposit <amount>\n' +
-          'withdraw <amount>\n' +
+        'deposit <amount> <from address>\n' +
+          'withdraw <amount> <to address>\n' +
           'transfer <to> <amount>\n' +
           'balance [id/alias]\n' +
           'user [id/alias]\n' +
@@ -106,7 +110,7 @@ export class TerminalHandler {
 
   private async init(server: string) {
     this.printQueue.put('initializing...\n');
-    await this.app.init(server || 'http://localhost');
+    await this.app.init(server || window.location.protocol + '//' + window.location.hostname);
 
     try {
       const { dataSize, dataRoot, nullRoot } = await this.app.getStatus();
@@ -117,18 +121,18 @@ export class TerminalHandler {
       this.printQueue.put('Failed to get server status.\n');
     }
     this.printQueue.put(`user: ${this.app.getUser().publicKey.slice(0, 4).toString('hex')}...\n`);
-    this.printQueue.put(`balance: ${this.app.getBalance()}\n`);
+    this.printQueue.put(`balance: ${this.getBalance()}\n`);
   }
 
-  private async deposit(value: string) {
+  private async deposit(value: string, account: string) {
     this.printQueue.put(`generating deposit proof...\n`);
-    await this.app.deposit(+value);
+    await this.app.deposit(this.app.toNoteValue(value), account);
     this.printQueue.put(`deposit proof sent.\n`);
   }
 
-  private async withdraw(value: string) {
+  private async withdraw(value: string, account: string) {
     this.printQueue.put(`generating withdrawl proof...\n`);
-    await this.app.withdraw(+value);
+    await this.app.withdraw(this.app.toNoteValue(value), account);
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
 
@@ -138,22 +142,26 @@ export class TerminalHandler {
       throw new Error('User not found.');
     }
     this.printQueue.put(`generating transfer proof...\n`);
-    await this.app.transfer(+value, user.publicKey);
+    await this.app.transfer(this.app.toNoteValue(value), user.publicKey.toString('hex'));
     this.printQueue.put(`transfer proof sent.\n`);
   }
 
   private async balance(userIdOrAlias: string) {
-    await this.terminal.putString(`${this.app.getBalance(userIdOrAlias)}\n`);
+    await this.terminal.putString(`${this.getBalance(userIdOrAlias)}\n`);
+  }
+
+  private getBalance(userIdOrAlias?: string) {
+    return this.app.getBalance(userIdOrAlias) / 100;
   }
 
   private async user(userIdOrAlias?: string) {
     if (userIdOrAlias) {
       const user = this.app.switchToUser(userIdOrAlias);
       this.printQueue.put(
-        `switched to ${user.publicKey.toString('hex').slice(0, 8)}...\nbalance ${this.app.getBalance()}\n`,
+        `switched to ${user.publicKey.toString('hex').slice(0, 8)}...\nbalance ${this.getBalance()}\n`,
       );
     } else {
-      const str = this.app.getUsers().map(this.userStr).join('');
+      const str = this.app.getUsers(false).map(this.userStr).join('');
       this.printQueue.put(str);
     }
   }
@@ -182,7 +190,7 @@ export class TerminalHandler {
   }
 
   private async clearData() {
-    await this.app.clearNoteData();
+    await this.app.clearData();
   }
 
   private userStr(u: User) {

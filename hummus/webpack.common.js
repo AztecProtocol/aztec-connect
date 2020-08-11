@@ -13,7 +13,7 @@ module.exports = {
         test: /\.tsx?$/,
         use: [
           {
-            loader: 'ts-loader',
+            loader: 'babel-loader',
           },
         ],
         exclude: /node_modules/,
@@ -26,39 +26,6 @@ module.exports = {
           name: 'barretenberg.wasm',
           publicPath: 'dist/',
         },
-      },
-      {
-        test: /\.scss$/,
-        use: [
-          {
-            loader: MiniCssExtractPlugin.loader,
-          },
-          {
-            loader: 'css-loader',
-            options: {
-              importLoaders: 1,
-              modules: {
-                localIdentName: '[name]_[local]__[hash:base64:3]',
-              },
-            },
-          },
-          {
-            loader: 'postcss-loader',
-            options: {
-              plugins: () => [require('autoprefixer')],
-              sourceMap: true,
-            },
-          },
-          {
-            loader: 'sass-loader',
-            options: {
-              sassOptions: {
-                includePaths: [path.resolve(__dirname, 'src')],
-                sourceMap: true,
-              },
-            },
-          },
-        ],
       },
       {
         test: /\.css$/,
@@ -100,6 +67,7 @@ module.exports = {
   },
   output: {
     globalObject: 'this',
+    publicPath: '/',
   },
   plugins: [
     new HtmlWebpackPlugin({ template: './src/index.html' }),

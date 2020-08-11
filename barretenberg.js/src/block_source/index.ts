@@ -1,6 +1,9 @@
 export interface Block {
+  txHash: Buffer;
   blockNum: number;
   rollupId: number;
+  dataRoot: Buffer;
+  nullRoot: Buffer;
   dataStartIndex: number;
   numDataEntries: number;
   dataEntries: Buffer[];
@@ -11,7 +14,7 @@ export interface Block {
 export interface BlockSource {
   on(event: 'block', fn: (block: Block) => void);
   removeAllListeners();
-  start();
+  start(fromBlock?: number);
   stop();
 }
 

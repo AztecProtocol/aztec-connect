@@ -73,7 +73,7 @@ export class UserInput {
       ];
     }
 
-    let text;
+    let text: Text[];
     if (this.cursorPosition === this.value.length) {
       text = [
         {

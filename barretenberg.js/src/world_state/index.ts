@@ -23,7 +23,7 @@ export class WorldState {
   }
 
   public async processBlock(block: Block) {
-    debug('processing block...', block);
+    debug(`processing block ${block.blockNum} with rollup ${block.rollupId}...`);
     for (let i = 0; i < block.dataEntries.length; ++i) {
       await this.tree.updateElement(block.dataStartIndex + i, block.dataEntries[i]);
     }
@@ -33,6 +33,10 @@ export class WorldState {
 
     debug(`data size: ${this.tree.getSize()}`);
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);
+  }
+
+  public async syncFromDb() {
+    await this.tree.syncFromDb();
   }
 
   public async getHashPath(index: number) {

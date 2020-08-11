@@ -17,7 +17,7 @@ export class Note {
 
 export function createNoteSecret() {
   const key = randomBytes(32);
-  key[0] &= 0x1f;
+  key[0] &= 0x0f;
   return key;
 }
 

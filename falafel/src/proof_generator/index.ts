@@ -1,6 +1,9 @@
+import { fetch } from 'barretenberg/iso_fetch';
 import { ChildProcess, spawn } from 'child_process';
+import { createWriteStream } from 'fs';
 import { PromiseReadable } from 'promise-readable';
 import { createInterface } from 'readline';
+import { existsAsync, mkdirAsync } from '../fs_async';
 import { Rollup } from '../rollup';
 
 export class ProofGenerator {
@@ -11,8 +14,12 @@ export class ProofGenerator {
   constructor(private rollupSize: number) {}
 
   public async run() {
+    await this.ensureCrs();
     this.launch();
-    await this.stdout.read(1);
+    if (!(await this.stdout.read(1))) {
+      throw new Error('Failed to initialize rollup_cli.');
+    }
+    console.log('Proof generator initialized.');
   }
 
   public cancel() {
@@ -49,9 +56,26 @@ export class ProofGenerator {
     return verified ? data.slice(0, -1) : undefined;
   }
 
+  private async ensureCrs() {
+    if (await existsAsync('./data/crs/transcript00.dat')) {
+      return;
+    }
+    console.log('Downloading crs...');
+    await mkdirAsync('./data/crs', { recursive: true });
+    const response = await fetch('http://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript00.dat');
+    if (response.status !== 200) {
+      throw new Error('Failed to download crs.');
+    }
+    const out = createWriteStream('./data/crs/transcript00.dat');
+    return new Promise(resolve => {
+      out.once('close', resolve);
+      (response.body as any).pipe(out);
+    });
+  }
+
   private launch() {
     const binPath = '../barretenberg/build/src/aztec/rollup/rollup_cli/rollup_cli';
-    const proc = (this.proc = spawn(binPath, [this.rollupSize.toString(), '../barretenberg/srs_db/ignition']));
+    const proc = (this.proc = spawn(binPath, [this.rollupSize.toString(), './data/crs']));
     this.stdout = new PromiseReadable(proc!.stdout!);
 
     const rl = createInterface({

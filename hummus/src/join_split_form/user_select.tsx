@@ -3,7 +3,7 @@ import CopyToClipboard from 'react-copy-to-clipboard';
 import { FlexBox, Block, SelectInput, Icon, Text } from '@aztec/guacamole-ui';
 import { FormField } from '../components';
 import { ThemeContext } from '../config/context';
-import { User } from '../user';
+import { User } from 'aztec2-sdk';
 
 interface UserSelectProps {
   users: User[];
@@ -30,7 +30,7 @@ export const UserSelect = ({ users, user, onSelect }: UserSelectProps) => {
   return (
     <ThemeContext.Consumer>
       {({ theme, link }) => (
-        <FormField label="User">
+        <FormField label="Private Account">
           <FlexBox valign="center">
             <SelectInput
               className="flex-free-expand"

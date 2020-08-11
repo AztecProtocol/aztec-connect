@@ -37,7 +37,7 @@ export const colorMap = {
   primary: 'rgb(18,38,63)',
   'primary-light': 'rgba(18,38,63, 0.8)',
   'primary-lighter': 'rgba(18,38,63, 0.5)',
-  'primary-lightest': 'rgba(18,38,63, 0.1)',
+  'primary-lightest': '#f1f5fc',
   black: '#000000',
   'grey-darker': 'rgba(0, 0, 0, 0.85)',
   'grey-dark': 'rgba(0, 0, 0, 0.7)',
@@ -55,7 +55,7 @@ export const colorMap = {
   'secondary-lighter': 'rgba(74,144,226, 0.3)',
   'secondary-lightest': 'rgba(74,144,226, 0.1)',
   pink: '#F7B2D1',
-  red: '#F23A5B',
+  red: '#ff8272',
   purple: '#49098A',
   blue: '#2772CE',
   green: '#41BA00',
@@ -175,7 +175,7 @@ export const inlineInputValueColor = 'rgba(0, 0, 0, 0.7)';
 export const inlineInputPlaceholderColorName = 'grey-light';
 export const inlineInputPlaceholderColor = 'rgba(0, 0, 0, 0.2)';
 export const errorInputColorName = 'red';
-export const errorInputColor = '#F23A5B';
+export const errorInputColor = '#ff8272';
 export const focusInputColorName = 'secondary-light';
 export const focusInputColor = 'rgba(74, 144, 226, 0.7)';
 export const deviceBreakpointMap = {
@@ -183,7 +183,7 @@ export const deviceBreakpointMap = {
   xl: '1690px',
   l: '1248px',
   m: '960px',
-  s: '768px',
+  s: '600px',
   xs: '480px',
   xxs: '0',
 };
@@ -191,7 +191,7 @@ export const minDeviceWidthXxl = '2000px';
 export const minDeviceWidthXl = '1690px';
 export const minDeviceWidthL = '1248px';
 export const minDeviceWidthM = '960px';
-export const minDeviceWidthS = '768px';
+export const minDeviceWidthS = '600px';
 export const minDeviceWidthXs = '480px';
 export const minDeviceWidthXxs = '0';
 export const spacingMap = {

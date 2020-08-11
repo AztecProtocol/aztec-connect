@@ -1,0 +1,47 @@
+{
+  "name": "blockchain",
+  "version": "0.0.0",
+  "main": "index.js",
+  "license": "GPLv2",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.prod.json && node ./package.js",
+    "build:dev": "tsc -p tsconfig.prod.json --watch",
+    "compile": "yarn buidler compile",
+    "clean": "rm -rf ./cache ./dest",
+    "test": "yarn buidler test",
+    "test:ganache": "yarn buidler --network ganache test",
+    "lint:sol": "solhint contracts/**/*.sol",
+    "deploy:ropsten": "buidler run --network ropsten scripts/deploy.ts",
+    "deploy:ganache": "buidler run --network ganache scripts/deploy_ganache.ts",
+    "docs": "solidity-docgen -i ./contracts -o ./docs"
+  },
+  "bin": {
+    "deploy_rollup_processor": "./deploy/index.js"
+  },
+  "dependencies": {
+    "barretenberg": "../barretenberg.js/dest",
+    "bigint-buffer": "^1.1.5",
+    "debug": "^4.1.1",
+    "dotenv": "^8.2.0",
+    "ethers": "5.0.3",
+    "typescript": "^3.5.3"
+  },
+  "devDependencies": {
+    "@nomiclabs/buidler": "^1.3.8",
+    "@nomiclabs/buidler-ethers": "^2.0.0",
+    "@nomiclabs/buidler-waffle": "^2.0.0",
+    "@openzeppelin/contracts": "^3.0.1",
+    "@types/debug": "^4.1.5",
+    "@types/mocha": "^7.0.2",
+    "chai": "^4.2.0",
+    "crypto": "^1.0.1",
+    "ethereum-waffle": "3.0.0",
+    "sinon": "^9.0.2",
+    "solidity-docgen": "^0.5.3",
+    "ts-node": "^8.9.1",
+    "tsc-watch": "^2.2.1",
+    "tslint": "^5.18.0",
+    "tslint-config-prettier": "^1.18.0"
+  }
+}

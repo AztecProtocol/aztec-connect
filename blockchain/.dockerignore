@@ -1,0 +1,8 @@
+Dockerfile
+node_modules
+dest
+build
+artifacts
+cache
+.env*
+docs

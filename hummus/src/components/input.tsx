@@ -3,16 +3,13 @@ import { TextInput, MaskedNumberInput } from '@aztec/guacamole-ui';
 import { ThemeContext } from '../config/context';
 
 interface InputProps {
-  type?: 'text' | 'number',
-  value: string,
-  onChange: (value: string) => void,
+  type?: 'text' | 'number';
+  value: string;
+  allowDecimal?: boolean;
+  onChange: (value: string) => void;
 }
 
-export function Input({
-  type = 'text',
-  value,
-  onChange,
-}: InputProps) {
+export function Input({ type = 'text', value, allowDecimal = false, onChange }: InputProps) {
   const InputTag = type === 'text' ? TextInput : MaskedNumberInput;
   return (
     <ThemeContext.Consumer>
@@ -22,6 +19,7 @@ export function Input({
           theme={theme === 'light' ? 'default' : theme}
           size="s"
           value={value}
+          allowDecimal={type === 'number' ? allowDecimal : undefined}
           onChange={onChange}
         />
       )}
