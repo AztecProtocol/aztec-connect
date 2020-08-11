@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
 
+import { mock } from 'sinon';
 import { createDepositProof, createWithdrawProof } from '../fixtures/create_mock_proof';
 import { solidityFormatSignatures } from '../signingUtils/solidityFormatSigs';
 
@@ -30,8 +31,11 @@ describe('rollup_processor: scaling factor', () => {
     const ERC20 = await ethers.getContractFactory('ERC20Mintable');
     erc20 = await ERC20.deploy();
 
+    const MockVerifier = await ethers.getContractFactory('MockVerifier');
+    const mockVerifier = await MockVerifier.deploy();
+
     const RollupProcessor = await ethers.getContractFactory('RollupProcessor');
-    rollupProcessor = await RollupProcessor.deploy(erc20.address, scalingFactor);
+    rollupProcessor = await RollupProcessor.deploy(erc20.address, scalingFactor, mockVerifier.address);
 
     await erc20.mint(userAAddress, mintAmount);
   });

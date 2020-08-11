@@ -41,8 +41,11 @@ describe('rollup_processor: core', () => {
     const ERC20 = await ethers.getContractFactory('ERC20Mintable');
     erc20 = await ERC20.deploy();
 
+    const MockVerifier = await ethers.getContractFactory('MockVerifier');
+    const mockVerifier = await MockVerifier.deploy();
+
     const RollupProcessor = await ethers.getContractFactory('RollupProcessor');
-    rollupProcessor = await RollupProcessor.deploy(erc20.address, scalingFactor);
+    rollupProcessor = await RollupProcessor.deploy(erc20.address, scalingFactor, mockVerifier.address);
 
     // mint users tokens for testing
     await erc20.mint(userAAddress, mintAmount);

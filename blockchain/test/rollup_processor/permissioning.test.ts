@@ -3,7 +3,7 @@ import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
-import { fake } from 'sinon';
+import { fake, mock } from 'sinon';
 import { createDepositProof } from '../fixtures/create_mock_proof';
 import { ethSign } from '../signingUtils/ethSign';
 import { solidityFormatSignatures } from '../signingUtils/solidityFormatSigs';
@@ -32,8 +32,11 @@ describe('rollup_processor: permissioning', () => {
     const ERC20 = await ethers.getContractFactory('ERC20Mintable');
     erc20 = await ERC20.deploy();
 
+    const MockVerifier = await ethers.getContractFactory('MockVerifier');
+    const mockVerifier = await MockVerifier.deploy();
+    
     const RollupProcessor = await ethers.getContractFactory('RollupProcessor');
-    rollupProcessor = await RollupProcessor.deploy(erc20.address, scalingFactor);
+    rollupProcessor = await RollupProcessor.deploy(erc20.address, scalingFactor, mockVerifier.address);
 
     // mint users tokens for testing
     await erc20.mint(userAAddress, mintAmount);
