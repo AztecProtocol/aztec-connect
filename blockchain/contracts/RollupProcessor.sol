@@ -9,7 +9,6 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {IVerifier} from './interfaces/IVerifier.sol';
 import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
-import {Verifier} from './Verifier.sol';
 import {Decoder} from './Decoder.sol';
 
 contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
@@ -32,13 +31,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     event Deposit(address depositorAddress, uint256 depositValue);
     event Withdraw(address withdrawAddress, uint256 withdrawValue);
 
-    constructor(address _linkedToken, uint256 _scalingFactor) public {
+    constructor(
+        address _linkedToken,
+        uint256 _scalingFactor,
+        address _verifierAddress
+    ) public {
         require(_linkedToken != address(0x0), 'Rollup Processor: ZERO_ADDRESS');
         require(_scalingFactor != uint256(0), 'Rollup Processor: ZERO_SCALING_FACTOR');
 
         linkedToken = IERC20(_linkedToken);
         scalingFactor = _scalingFactor;
-        verifier = new Verifier();
+        verifier = IVerifier(_verifierAddress);
     }
 
     /**
@@ -85,7 +88,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
             uint256 numTxs
         ) = validateMerkleRoots(_proofData);
 
-        verifier.verify(_proofData);
+        verifier.verify(_proofData, rollupSize);
 
         // update state variables
         dataRoot = newDataRoot;
