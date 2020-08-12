@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 export class JoinSplitProof {
   public publicInput: Buffer;
   public publicOutput: Buffer;
@@ -16,12 +18,20 @@ export class JoinSplitProof {
     this.publicOutput = proofData.slice(32, 64);
     this.newNote1 = proofData.slice(2 * 32, 2 * 32 + 64);
     this.newNote2 = proofData.slice(4 * 32, 4 * 32 + 64);
-    this.nullifier1 = proofData.slice(6 * 32 + 16, 6 * 32 + 32);
-    this.nullifier2 = proofData.slice(7 * 32 + 16, 7 * 32 + 32);
+    this.nullifier1 = proofData.slice(6 * 32, 6 * 32 + 32);
+    this.nullifier2 = proofData.slice(7 * 32, 7 * 32 + 32);
     this.inputOwner = proofData.slice(8 * 32 + 12, 8 * 32 + 32);
     this.outputOwner = proofData.slice(9 * 32 + 12, 9 * 32 + 32);
+
+    // Not published as part of inner proofs.
     this.noteTreeRoot = proofData.slice(10 * 32, 10 * 32 + 32);
-    this.accountNullifier = proofData.slice(11 * 32 + 16, 11 * 32 + 32);
+    this.accountNullifier = proofData.slice(11 * 32, 11 * 32 + 32);
+  }
+
+  getTxId() {
+    return createHash('sha256')
+      .update(this.proofData.slice(0, 10 * 32))
+      .digest();
   }
 
   /**

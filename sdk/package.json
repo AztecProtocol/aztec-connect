@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "barretenberg": "file:../barretenberg.js/dest",
+    "bigint-buffer": "^1.1.5",
     "broadcast-channel": "^3.1.0",
     "detect-node": "^2.0.4",
     "dexie": "^3.0.1",

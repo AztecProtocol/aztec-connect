@@ -12,9 +12,6 @@ export class RollupDao {
   @Column()
   public dataRoot!: Buffer;
 
-  @Column()
-  public nullRoot!: Buffer;
-
   @OneToMany(type => TxDao, tx => tx.rollup, { cascade: true })
   public txs!: TxDao[];
 

@@ -18,7 +18,7 @@ import { TxsState } from './txs_state';
 import { User, UserFactory } from './user';
 import { UserState, UserStateFactory } from './user_state';
 import { Sdk, SdkEvent, SdkInitState, TxHash } from './sdk';
-import { UserTx, UserTxAction } from './user_tx';
+import { UserTxAction } from './user_tx';
 import Mutex from 'idb-mutex';
 import { Signer } from './sdk';
 
@@ -220,12 +220,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
       // be for only one tab to process the block, and to alert the others to sync.
       await this.mutex.lock();
       await this.worldState.syncFromDb().catch(() => {});
-      const dataSize = this.worldState.getSize();
-      if (dataSize === block.dataStartIndex) {
-        await this.worldState.processBlock(block);
-      } else {
-        debug(`skipping block ${block.rollupId}, dataSize != dataStartIndex: ${dataSize} != ${block.dataStartIndex}.`);
-      }
+      await this.worldState.processBlock(block);
       await this.mutex.unlock();
       await this.handleBlock(block);
       await this.leveldb.put('syncedToBlock', block.blockNum.toString());
@@ -274,8 +269,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     const publicInput = ['DEPOSIT', 'PUBLIC_TRANSFER'].indexOf(action) >= 0 ? value : 0;
     const publicOutput = ['WITHDRAW', 'PUBLIC_TRANSFER'].indexOf(action) >= 0 ? value : 0;
     const newNoteValue = ['DEPOSIT', 'TRANSFER'].indexOf(action) >= 0 ? value : 0;
-
-    const proofOutput = await this.joinSplitProofCreator.createProof(
+    const proof = await this.joinSplitProofCreator.createProof(
       userState,
       publicInput,
       publicOutput,
@@ -285,25 +279,22 @@ export class CoreSdk extends EventEmitter implements Sdk {
       outputOwner,
       signer,
     );
-    const { txHash } = await this.rollupProvider.sendProof(proofOutput.proof);
 
-    const { inputNote1, inputNote2, outputNote1, outputNote2 } = proofOutput;
-    const userTx: UserTx = {
+    const { txHash } = await this.rollupProvider.sendProof(proof);
+
+    await userState.addUserTx({
       action,
       txHash,
       userId: user.id,
       value,
       recipient: noteRecipient || outputOwner || this.user.publicKey,
-      inputNote1,
-      inputNote2,
-      outputNote1: action !== 'TRANSFER' ? outputNote1 : undefined,
-      outputNote2,
       settled: false,
       created: new Date(created),
-    };
-    await userState.addUserTx(userTx);
-    this.emit(SdkEvent.NEW_USER_TX, userTx.userId);
-    this.emit(CoreSdkEvent.NEW_USER_TX, userTx.userId);
+    });
+
+    this.emit(SdkEvent.NEW_USER_TX, user.id);
+    this.emit(CoreSdkEvent.NEW_USER_TX, user.id);
+
     return txHash;
   }
 

@@ -13,26 +13,11 @@ export class BlockDao {
   public created!: Date;
 
   @Column()
-  public rollupId!: number;
+  public rollupSize!: number;
 
   @Column()
-  public dataRoot!: Buffer;
+  public rollupProofData!: Buffer;
 
   @Column()
-  public nullRoot!: Buffer;
-
-  @Column()
-  public dataStartIndex!: number;
-
-  @Column()
-  public numDataEntries!: number;
-
-  @Column()
-  public dataEntries!: Buffer;
-
-  @Column()
-  public nullifiers!: Buffer;
-
-  @Column()
-  public viewingKeys!: Buffer;
+  public viewingKeysData!: Buffer;
 }

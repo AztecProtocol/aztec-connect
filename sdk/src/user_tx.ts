@@ -5,11 +5,7 @@ export interface UserTx {
   userId: number;
   action: UserTxAction;
   value: number;
-  recipient: Buffer;
+  recipient?: Buffer;
   settled: boolean;
   created: Date;
-  inputNote1?: number;
-  inputNote2?: number;
-  outputNote1?: Buffer;
-  outputNote2?: Buffer;
 }

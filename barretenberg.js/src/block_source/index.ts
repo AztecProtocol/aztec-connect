@@ -1,17 +1,23 @@
 export interface Block {
-  txHash: Buffer;
   blockNum: number;
-  rollupId: number;
-  dataRoot: Buffer;
-  nullRoot: Buffer;
-  dataStartIndex: number;
-  numDataEntries: number;
-  dataEntries: Buffer[];
-  nullifiers: Buffer[];
-  viewingKeys: Buffer[];
+  txHash: Buffer;
+  created: Date;
+  rollupSize: number;
+  rollupProofData: Buffer;
+  viewingKeysData: Buffer;
+}
+
+export interface BlockServerResponse {
+  blockNum: number;
+  txHash: string;
+  created: string;
+  rollupSize: number;
+  rollupProofData: string;
+  viewingKeysData: string;
 }
 
 export interface BlockSource {
+  getBlocks(from: number): Promise<Block[]>;
   on(event: 'block', fn: (block: Block) => void);
   removeAllListeners();
   start(fromBlock?: number);

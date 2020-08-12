@@ -1,4 +1,6 @@
 import { ethers } from '@nomiclabs/buidler';
+import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
+import { RollupProofData } from 'barretenberg/rollup_proof';
 import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
@@ -123,14 +125,11 @@ describe('ethereum_blockchain', () => {
     expect(numBlockEvents).to.equal(1);
 
     const blockEvent = spy.getCall(0);
-    expect(blockEvent.args[0].rollupId).to.equal(0);
     expect(blockEvent.args[0].blockNum).to.be.above(0);
     expect(blockEvent.args[0].txHash).to.have.lengthOf(32);
-    expect(blockEvent.args[0].dataStartIndex).to.equal(0);
-    expect(blockEvent.args[0].numDataEntries).to.equal(4);
-    expect(blockEvent.args[0].dataEntries).to.have.lengthOf(2);
-    expect(blockEvent.args[0].nullifiers).to.have.lengthOf(2);
-    expect(blockEvent.args[0].viewingKeys).to.deep.equal(viewingKeys);
+    expect(blockEvent.args[0].rollupSize).to.equal(2);
+    expect(blockEvent.args[0].rollupProofData).to.deep.equal(proofData);
+    expect(blockEvent.args[0].viewingKeysData).to.deep.equal(Buffer.concat(viewingKeys));
     ethereumBlockchain.off('block', spy);
   });
 
@@ -162,37 +161,25 @@ describe('ethereum_blockchain', () => {
     const blockNumStart = 0;
     const blocks = await ethereumBlockchain.getBlocks(blockNumStart);
 
-    const dataStart = 288 + 64;
-    const nullifierStart = dataStart + 64 * 2 + 16;
-    expect(blocks[0].rollupId).to.equal(0);
+    const rollup0 = RollupProofData.fromBuffer(blocks[0].rollupProofData, blocks[0].viewingKeysData);
     expect(blocks[0].blockNum).to.be.above(0);
     expect(blocks[0].txHash).to.have.lengthOf(32);
-    expect(blocks[0].dataStartIndex).to.equal(0);
-    expect(blocks[0].numDataEntries).to.equal(4);
-    expect(blocks[0].dataEntries).to.deep.equal([
-      depositProofData.slice(dataStart, dataStart + 64),
-      depositProofData.slice(dataStart + 64, dataStart + 64 * 2),
-    ]);
-    expect(blocks[0].nullifiers).to.deep.equal([
-      depositProofData.slice(nullifierStart, nullifierStart + 16),
-      depositProofData.slice(nullifierStart + 32, nullifierStart + 32 + 16),
-    ]);
-    expect(blocks[0].viewingKeys).to.deep.equal(viewingKeys);
+    expect(blocks[0].rollupSize).to.equal(2);
+    expect(rollup0.rollupId).to.equal(0);
+    expect(rollup0.dataStartIndex).to.equal(0);
+    expect(rollup0.innerProofData[0].publicInput.readInt32BE(28)).to.equal(depositAmount);
+    expect(rollup0.innerProofData[0].publicOutput.readInt32BE(28)).to.equal(0);
+    expect(rollup0.innerProofData[0].inputOwner.toString('hex')).to.equal(userAAddress.slice(2).toLowerCase());
 
-    expect(blocks[1].rollupId).to.equal(1);
+    const rollup1 = RollupProofData.fromBuffer(blocks[1].rollupProofData, blocks[1].viewingKeysData);
     expect(blocks[1].blockNum).to.be.above(0);
     expect(blocks[1].txHash).to.have.lengthOf(32);
-    expect(blocks[1].dataStartIndex).to.equal(4);
-    expect(blocks[1].numDataEntries).to.equal(4);
-    expect(blocks[1].dataEntries).to.deep.equal([
-      withdrawProofData.slice(dataStart, dataStart + 64),
-      withdrawProofData.slice(dataStart + 64, dataStart + 64 * 2),
-    ]);
-    expect(blocks[1].nullifiers).to.deep.equal([
-      withdrawProofData.slice(nullifierStart, nullifierStart + 16),
-      withdrawProofData.slice(nullifierStart + 32, nullifierStart + 32 + 16),
-    ]);
-    expect(blocks[1].viewingKeys).to.deep.equal(viewingKeys);
+    expect(blocks[1].rollupSize).to.equal(2);
+    expect(rollup1.rollupId).to.equal(1);
+    expect(rollup1.dataStartIndex).to.equal(4);
+    expect(rollup1.innerProofData[0].publicInput.readInt32BE(28)).to.equal(0);
+    expect(rollup1.innerProofData[0].publicOutput.readInt32BE(28)).to.equal(withdrawalAmount);
+    expect(rollup1.innerProofData[0].outputOwner.toString('hex')).to.equal(userAAddress.slice(2).toLowerCase());
   });
 
   it('should reject sending proof if depositor has insufficient approval ', async () => {

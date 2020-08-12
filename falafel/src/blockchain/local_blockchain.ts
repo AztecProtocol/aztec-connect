@@ -1,4 +1,5 @@
-import { Block, Blockchain, Receipt, RollupProof } from 'blockchain';
+import { RollupProofData } from 'barretenberg/rollup_proof';
+import { Block, Blockchain, Receipt } from 'blockchain';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { Connection, Repository } from 'typeorm';
@@ -40,9 +41,8 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
     const [lastBlock] = this.blockchain.slice(-1);
     if (lastBlock) {
-      const prevRollupSize = lastBlock.numDataEntries / 2;
-      if (prevRollupSize !== this.rollupSize) {
-        throw new Error(`Previous data on chain has a rollup size of ${prevRollupSize}.`);
+      if (lastBlock.rollupSize !== this.rollupSize) {
+        throw new Error(`Previous data on chain has a rollup size of ${lastBlock.rollupSize}.`);
       }
       this.blockNum = lastBlock.blockNum + 1;
       this.dataStartIndex = this.blockchain.length * this.rollupSize * 2;
@@ -66,33 +66,25 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       throw new Error('Blockchain is not accessible.');
     }
 
-    const tx = new RollupProof(proofData);
-    const rollupId = tx.rollupId;
+    const viewingKeysData = Buffer.concat(viewingKeys);
+    const rollup = RollupProofData.fromBuffer(proofData, viewingKeysData);
 
-    if (tx.dataStartIndex !== this.dataStartIndex) {
-      throw new Error(`Incorrect dataStartIndex. Expecting ${this.dataStartIndex}. Got ${tx.dataStartIndex}.`);
+    if (rollup.dataStartIndex !== this.dataStartIndex) {
+      throw new Error(`Incorrect dataStartIndex. Expecting ${this.dataStartIndex}. Got ${rollup.dataStartIndex}.`);
     }
 
     const txHash = randomBytes(32);
-    const dataEntries = tx.innerProofData.map(p => [p.newNote1, p.newNote2]).flat();
-    const nullifiers = tx.innerProofData.map(p => [p.nullifier1, p.nullifier2]).flat();
-    const numDataEntries = this.rollupSize * 2;
-
     const block: Block = {
       txHash,
       blockNum: this.blockNum,
-      rollupId,
-      dataRoot: tx.newDataRoot,
-      nullRoot: tx.newNullRoot,
-      dataStartIndex: tx.dataStartIndex,
-      numDataEntries,
-      dataEntries,
-      nullifiers,
-      viewingKeys,
+      rollupSize,
+      rollupProofData: proofData,
+      viewingKeysData,
+      created: new Date(),
     };
 
     this.blockNum++;
-    this.dataStartIndex += numDataEntries;
+    this.dataStartIndex += rollupSize * 2;
     this.blockchain.push(block);
 
     await this.saveBlock(block);

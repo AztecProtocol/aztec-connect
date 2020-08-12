@@ -8,7 +8,6 @@ import { EventEmitter } from 'events';
 import { abi as ERC20ABI } from './artifacts/ERC20Mintable.json';
 import { abi as RollupABI } from './artifacts/RollupProcessor.json';
 import { Blockchain, Receipt } from './blockchain';
-import { RollupProof } from './rollup_proof';
 
 const debug = createDebug('bb:ethereum_blockchain');
 
@@ -56,7 +55,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       if (tx.blockNumber! <= startFrom) {
         return;
       }
-      const block = await this.createRollupBlock(tx);
+      const block = this.createRollupBlock(tx);
       this.emit('block', block);
     });
   }
@@ -133,7 +132,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return Promise.all(
       rollupEvents.map(async event => {
         const tx = await event.getTransaction();
-        return await this.createRollupBlock(tx);
+        return this.createRollupBlock(tx);
       }),
     );
   }
@@ -180,29 +179,15 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Create a rollup block, by pulling the transaction and associated data from a transaction hash
    * in which the 'RollupProcessed' event was emitted
    */
-  private async createRollupBlock(tx: TransactionResponse) {
-    const {
-      rollupId,
-      newDataRoot,
-      newNullRoot,
-      numDataEntries,
-      dataEntries,
-      nullifiers,
-      dataStartIndex,
-      viewingKeys,
-    } = this.decodeTransactionData(tx);
-
+  private createRollupBlock(tx: TransactionResponse) {
+    const { rollupSize, rollupProofData, viewingKeysData, created } = this.decodeTransactionData(tx);
     const rollupBlock: Block = {
       txHash: Buffer.from(tx.hash.slice(2), 'hex'),
       blockNum: tx.blockNumber!,
-      rollupId,
-      dataRoot: newDataRoot,
-      nullRoot: newNullRoot,
-      dataStartIndex,
-      numDataEntries,
-      dataEntries,
-      nullifiers,
-      viewingKeys,
+      rollupSize,
+      rollupProofData,
+      viewingKeysData,
+      created,
     };
     return rollupBlock;
   }
@@ -213,38 +198,15 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private decodeTransactionData(txObject: TransactionResponse) {
     const rollupAbi = new ethers.utils.Interface(RollupABI);
     const result = rollupAbi.parseTransaction(txObject);
-    const proofData = Buffer.from(result.args.proofData.slice(2), 'hex');
-    const viewingData = Buffer.from(result.args.viewingKeys.slice(2), 'hex');
     const rollupSize = result.args.rollupSize.toNumber();
-
-    const rollupProof = new RollupProof(Buffer.from(proofData));
-    const { rollupId, newDataRoot, newNullRoot } = rollupProof;
-    const dataStartIndex = rollupProof.dataStartIndex;
-    const nullifiers: Buffer[] = [];
-    const dataEntries: Buffer[] = [];
-
-    rollupProof.innerProofData.forEach(dataSet => {
-      nullifiers.push(dataSet.nullifier1);
-      nullifiers.push(dataSet.nullifier2);
-      dataEntries.push(dataSet.newNote1);
-      dataEntries.push(dataSet.newNote2);
-    });
-    const numDataEntries = rollupSize * 2;
-
-    const viewingKeysArray: Buffer[] = [];
-    for (let i: number = 0; i < rollupProof.numTxs * 2 * 176; i += 176) {
-      viewingKeysArray.push(viewingData.slice(i, i + 176));
-    }
+    const rollupProofData = Buffer.from(result.args.proofData.slice(2), 'hex');
+    const viewingKeysData = Buffer.from(result.args.viewingKeys.slice(2), 'hex');
 
     return {
-      rollupId,
-      newDataRoot,
-      newNullRoot,
-      numDataEntries,
-      dataEntries,
-      dataStartIndex,
-      nullifiers,
-      viewingKeys: viewingKeysArray,
+      rollupSize,
+      rollupProofData,
+      viewingKeysData,
+      created: new Date(), // TODO - should be the time the block was created
     };
   }
 }

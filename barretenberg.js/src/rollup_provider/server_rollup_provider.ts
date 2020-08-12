@@ -1,7 +1,18 @@
 import createDebug from 'debug';
-import { Proof, RollupProvider, RollupProviderStatus } from './rollup_provider';
+import { Proof, RollupProvider, RollupProviderStatus, ProofResponse } from './rollup_provider';
+import { ProofServerResponse, RollupProviderStatusServerResponse } from './server_response';
 
 const debug = createDebug('bb:server_rollup_provider');
+
+const toProof = ({ txHash }: ProofServerResponse): ProofResponse => ({
+  txHash: Buffer.from(txHash, 'hex'),
+});
+
+const toRollupProviderStatus = (status: RollupProviderStatusServerResponse): RollupProviderStatus => ({
+  ...status,
+  dataRoot: Buffer.from(status.dataRoot, 'hex'),
+  nullRoot: Buffer.from(status.nullRoot, 'hex'),
+});
 
 export class ServerRollupProvider implements RollupProvider {
   constructor(private host: URL) {}
@@ -19,22 +30,16 @@ export class ServerRollupProvider implements RollupProvider {
       throw new Error(`Bad response code ${response.status}.`);
     }
     const body = await response.json();
-    return {
-      txHash: Buffer.from(body.txId, 'hex'),
-    };
+    return toProof(body);
   }
 
-  async status(): Promise<RollupProviderStatus> {
+  async status() {
     const url = new URL(`/api/status`, this.host);
     const response = await fetch(url.toString());
     if (response.status !== 200) {
       throw new Error(`Bad response code ${response.status}.`);
     }
     const body = await response.json();
-    return {
-      ...body,
-      dataRoot: Buffer.from(body.dataRoot, 'hex'),
-      nullRoot: Buffer.from(body.nullRoot, 'hex'),
-    };
+    return toRollupProviderStatus(body);
   }
 }

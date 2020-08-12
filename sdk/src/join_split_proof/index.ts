@@ -41,12 +41,10 @@ export class JoinSplitProofCreator {
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
     const changeValue = Math.max(0, totalNoteInputValue - newNoteValue - publicOutput);
-    const isPublicTx = publicInput && publicOutput;
-    const outputNoteOwner1 = receiverPubKey || randomBytes(64);
-    const outputNoteOwner2 = changeValue || isPublicTx ? sender.publicKey : randomBytes(64);
+    const newNoteOwner = receiverPubKey || randomBytes(64);
     const outputNotes = [
-      new Note(outputNoteOwner1, createNoteSecret(), newNoteValue),
-      new Note(outputNoteOwner2, createNoteSecret(), changeValue),
+      new Note(newNoteOwner, createNoteSecret(), newNoteValue),
+      new Note(sender.publicKey, createNoteSecret(), changeValue),
     ];
 
     const encViewingKey1 = encryptNote(outputNotes[0], this.grumpkin);
@@ -85,19 +83,11 @@ export class JoinSplitProofCreator {
 
     const viewingKeys = [encViewingKey1, encViewingKey2];
     const joinSplitProof = new JoinSplitProof(proofData, viewingKeys);
-    const { newNote1, newNote2 } = joinSplitProof;
     const depositSignature = publicInput
       ? await this.ethSign(joinSplitProof.getDepositSigningData(), signer)
       : undefined;
 
-    // Only return notes that belong to the user.
-    return {
-      proof: { proofData, viewingKeys, depositSignature },
-      inputNote1: numInputNotes > 0 ? notes[0].index : undefined,
-      inputNote2: numInputNotes > 1 ? notes[1].index : undefined,
-      outputNote1: outputNoteOwner1.equals(sender.publicKey) ? newNote1 : undefined,
-      outputNote2: outputNoteOwner2.equals(sender.publicKey) ? newNote2 : undefined,
-    };
+    return { proofData, viewingKeys, depositSignature };
   }
 
   private async ethSign(txPublicInputs: Buffer, signer?: Signer) {

@@ -77,7 +77,6 @@ export const RollupDetails = ({ id, app }: RollupDetailsProps) => {
         <DetailRow title="Status" content={rollup.status} />
         <DetailRow title="Txs" content={<TxList txHashes={rollup.txHashes} />} />
         <DetailRow title="Data Root" content={`0x${rollup.dataRoot.toString('hex')}`} />
-        <DetailRow title="Nullifier Root" content={`0x${rollup.nullRoot.toString('hex')}`} />
         <DetailRow title="Eth Block" content={typeof rollup.ethBlock === 'number' ? `${rollup.ethBlock}` : '-'} />
         <DetailRow title="Eth Tx Hash" content={rollup.ethTxHash ? `0x${rollup.ethTxHash.toString('hex')}` : '-'} />
         <DetailRow title="Created At" content={moment(new Date(rollup.created).toUTCString()).format('ll LTS +UTC')} />

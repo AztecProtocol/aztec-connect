@@ -11,7 +11,7 @@ export interface Database {
   getUser(userId: number): Promise<User | undefined>;
   getUsers(): Promise<User[]>;
   addUser(user: User): Promise<void>;
-  getUserTx(txHash: Buffer): Promise<UserTx | undefined>;
+  getUserTx(userId: number, txHash: Buffer): Promise<UserTx | undefined>;
   getUserTxs(userId: number): Promise<UserTx[]>;
   addUserTx(userTx: UserTx): Promise<void>;
   settleUserTx(txHash: Buffer): Promise<void>;

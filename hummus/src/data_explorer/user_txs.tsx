@@ -110,16 +110,7 @@ export const UserTxs = ({ userId, app }: UserTxsProps) => {
                 iconBackground={actionIconBackgroundMapping[action]}
                 iconShape="square"
                 id={
-                  action === 'RECEIVE' ? (
-                    'Anonymous'
-                  ) : (
-                    <TextButton
-                      text={`0x${txHashStr.slice(0, 10)}`}
-                      href={`/tx/${txHashStr}`}
-                      color={link}
-                      Link={Link}
-                    />
-                  )
+                  <TextButton text={`0x${txHashStr.slice(0, 10)}`} href={`/tx/${txHashStr}`} color={link} Link={Link} />
                 }
                 status={settled ? 'SETTLED' : 'PENDING'}
                 created={created}
@@ -133,11 +124,14 @@ export const UserTxs = ({ userId, app }: UserTxsProps) => {
                     <FlexBox>
                       <Text text="To:" size="xxs" color={colorLight} />
                       <Block left="xs">
-                        <CopyToClipboard text={recipient.toString('hex')}>
-                          <span style={{ position: 'relative', cursor: 'pointer' }} title="Click to copy">
-                            <Text text={`0x${recipient.slice(0, 5).toString('hex')}...`} size="xxs" />
-                          </span>
-                        </CopyToClipboard>
+                        {!recipient && <Text text="unknown" size="xxs" color={colorLight} />}
+                        {!!recipient && (
+                          <CopyToClipboard text={recipient.toString('hex')}>
+                            <span style={{ position: 'relative', cursor: 'pointer' }} title="Click to copy">
+                              <Text text={`0x${recipient.slice(0, 5).toString('hex')}...`} size="xxs" />
+                            </span>
+                          </CopyToClipboard>
+                        )}
                       </Block>
                     </FlexBox>
                   )}
