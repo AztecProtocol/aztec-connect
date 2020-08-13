@@ -9,13 +9,13 @@ import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { Blockchain } from 'blockchain';
-import moment, { Duration } from 'moment';
-import { TxDao } from './entity/tx';
+import { Duration } from 'moment';
 import { RollupDao } from './entity/rollup';
+import { TxDao } from './entity/tx';
 import { readFileAsync } from './fs_async';
 import { ProofGenerator } from './proof_generator';
 import { Rollup } from './rollup';
-import { RollupDb, innerProofDataToTxDao } from './rollup_db';
+import { innerProofDataToTxDao, RollupDb } from './rollup_db';
 import { WorldStateDb } from './world_state_db';
 
 export interface ServerConfig {
@@ -209,44 +209,40 @@ export class Server {
 
   private async processTxQueue(maxRollupWaitTime: Duration, minRollupInterval: Duration) {
     let flushTimeout!: NodeJS.Timeout;
-    let lastTxReceivedTime = moment.unix(0);
     let txs: JoinSplitProof[] = [];
 
-    while (true) {
-      const tx = await this.txQueue.get();
-      if (tx === null) {
-        break;
-      }
-
-      if (tx) {
-        txs.push(tx);
-        if (txs.length < this.config.rollupSize && this.txQueue.length() > 0) {
-          continue;
-        }
+    const emitRollup = async () => {
+      if (txs.length === 0) {
+        return;
       }
 
       clearTimeout(flushTimeout);
-      flushTimeout = setTimeout(() => this.flushTxs(), maxRollupWaitTime.asMilliseconds());
+      const rollupTxs = txs;
+      txs = [];
+      this.rollupQueue.put(rollupTxs);
 
-      const shouldRollup =
-        txs.length &&
-        (tx === undefined ||
-          txs.length === this.config.rollupSize ||
-          lastTxReceivedTime.isBefore(moment().subtract(maxRollupWaitTime)));
+      // Throttle.
+      await new Promise(resolve => setTimeout(resolve, minRollupInterval.asMilliseconds()));
+    };
 
-      if (tx) {
-        lastTxReceivedTime = moment();
+    await this.txQueue.process(async tx => {
+      // Flush received.
+      if (tx === undefined) {
+        await emitRollup();
+        return;
       }
 
-      if (shouldRollup) {
-        const rollupTxs = txs;
-        txs = [];
-        this.rollupQueue.put(rollupTxs);
-
-        // Throttle.
-        await new Promise(resolve => setTimeout(resolve, minRollupInterval.asMilliseconds()));
+      // First transaction of the rollup, set the flush timeout.
+      if (txs.length === 0) {
+        flushTimeout = setTimeout(() => this.flushTxs(), maxRollupWaitTime.asMilliseconds());
       }
-    }
+
+      txs.push(tx);
+
+      if (txs.length === this.config.rollupSize) {
+        await emitRollup();
+      }
+    });
 
     clearInterval(flushTimeout);
   }

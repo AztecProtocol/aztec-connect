@@ -1,9 +1,8 @@
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { Block } from 'barretenberg/block_source';
-import { MemoryFifo } from 'barretenberg/fifo';
 import { toBigIntBE } from 'bigint-buffer';
 import createDebug from 'debug';
-import { Contract, ethers, Event, Signer } from 'ethers';
+import { Contract, ethers, Signer } from 'ethers';
 import { EventEmitter } from 'events';
 import { abi as ERC20ABI } from './artifacts/ERC20Mintable.json';
 import { abi as RollupABI } from './artifacts/RollupProcessor.json';
@@ -19,9 +18,9 @@ export interface EthereumBlockchainConfig {
 export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private rollupProcessor!: Contract;
   private erc20!: Contract;
-  private eventQueue = new MemoryFifo<Event>();
   private erc20Address!: string;
   private scalingFactor = 10000000000000000n;
+  private running = false;
 
   constructor(private config: EthereumBlockchainConfig, private rollupContractAddress: string) {
     super();
@@ -36,36 +35,32 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     this.erc20Address = await this.rollupProcessor.linkedToken();
     this.erc20 = new ethers.Contract(this.erc20Address, ERC20ABI, this.config.signer);
 
-    const filter = this.rollupProcessor.filters.RollupProcessed();
-
-    // Start queueing any blocks from present onwards.
-    this.rollupProcessor.on(filter, (rollupId, newDataRoot, newNullRoot, event: Event) => this.eventQueue.put(event));
-
-    // Load and emit all historical blocks starting `fromBlock`.
-    const blocks = await this.getBlocks(fromBlock);
-    for (const block of blocks) {
-      this.emit('block', block);
-    }
-    const startFrom = blocks.length ? blocks[blocks.length - 1].blockNum : 0;
-
-    // Start processing enqueued blocks.
-    this.eventQueue.process(async event => {
-      const tx = await event.getTransaction();
-      // Discard any duplicates we may have received while emitting historical blocks.
-      if (tx.blockNumber! <= startFrom) {
-        return;
+    // We must have emitted all historical blocks before returning.
+    const emitBlocks = async () => {
+      const blocks = await this.getBlocks(fromBlock);
+      for (const block of blocks) {
+        console.log(`Block received: ${block.blockNum}`);
+        this.emit('block', block);
+        fromBlock = block.blockNum + 1;
       }
-      const block = this.createRollupBlock(tx);
-      this.emit('block', block);
-    });
+    };
+    await emitBlocks();
+
+    // After which, we asynchronously kick off a polling loop for the latest blocks.
+    this.running = true;
+    (async () => {
+      while (this.running) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await emitBlocks();
+      }
+    })();
   }
 
   /**
    * Stop polling for RollupProcessed events
    */
   public stop() {
-    this.eventQueue.cancel();
-    this.rollupProcessor.removeAllListeners('RollupProcessed');
+    this.running = false;
   }
 
   public async getNetworkInfo() {
@@ -129,12 +124,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   public async getBlocks(from: number) {
     const filter = this.rollupProcessor.filters.RollupProcessed();
     const rollupEvents = await this.rollupProcessor.queryFilter(filter, from);
-    return Promise.all(
-      rollupEvents.map(async event => {
-        const tx = await event.getTransaction();
-        return this.createRollupBlock(tx);
-      }),
-    );
+    const txs = await Promise.all(rollupEvents.map(event => event.getTransaction()));
+    return txs.filter(tx => tx.blockNumber).map(tx => this.createRollupBlock(tx));
   }
 
   /**
@@ -142,10 +133,19 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public async getTransactionReceipt(txHash: Buffer) {
     const txHashStr = `0x${txHash.toString('hex')}`;
-    const tx = await this.config.signer.provider!.getTransaction(txHashStr);
-    const txReceipt = await tx.wait();
+    let txReceipt = await this.config.signer.provider!.getTransactionReceipt(txHashStr);
+    if (!txReceipt) {
+      console.log(`Waiting for tx receipt for ${txHashStr}...`);
+      while (!txReceipt) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        txReceipt = await this.config.signer.provider!.getTransactionReceipt(txHashStr);
+      }
+    }
+    if (!txReceipt.status) {
+      throw new Error(`Transaction rejected for ${txHashStr}.`);
+    }
     if (!txReceipt.blockNumber) {
-      throw new Error(`Failed to get valid receipt for {: $ }{txHashStr}`);
+      throw new Error(`Failed to get block number in receipt for ${txHashStr}.`);
     }
     return { blockNum: txReceipt.blockNumber } as Receipt;
   }
