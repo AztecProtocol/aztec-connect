@@ -1,0 +1,46 @@
+@font-face {
+  font-family: 'soehne';
+  font-weight: 300;
+  font-style: normal;
+  src: url('../fonts/soehne-web-leicht.ttf');
+}
+
+@font-face {
+  font-family: 'soehne';
+  font-weight: 400;
+  font-style: normal;
+  src: url('../fonts/soehne-web-buch.ttf');
+}
+
+@font-face {
+  font-family: 'soehne';
+  font-weight: 500;
+  font-style: normal;
+  src: url('../fonts/soehne-web-kraftig.ttf');
+}
+
+@font-face {
+  font-family: 'soehne';
+  font-weight: 600;
+  font-style: normal;
+  src: url('../fonts/soehne-web-halbfett.ttf');
+}
+
+@font-face {
+  font-family: 'soehne';
+  font-weight: 700;
+  font-style: normal;
+  src: url('../fonts/soehne-web-fett.ttf');
+}
+
+@font-face {
+  font-family: 'soehne mono';
+  font-weight: 400;
+  font-style: monospace;
+  src: url('../fonts/soehne-mono-web-buch.ttf');
+}
+
+body {
+  font-family: 'soehne', sans-serif !important;
+  word-break: break-word !important;
+}
