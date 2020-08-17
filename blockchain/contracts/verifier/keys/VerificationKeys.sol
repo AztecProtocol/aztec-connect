@@ -4,7 +4,7 @@
 pragma solidity >=0.6.0 <0.7.0;
 pragma experimental ABIEncoderV2;
 
-import {Types} from './Types.sol';
+import {Types} from '../cryptography/Types.sol';
 import {Rollup1Vk} from '../keys/Rollup1Vk.sol';
 import {Rollup2Vk} from '../keys/Rollup2Vk.sol';
 

@@ -4,8 +4,8 @@
 pragma solidity >=0.6.0 <0.7.0;
 pragma experimental ABIEncoderV2;
 
-import {Types} from '../library/Types.sol';
-import {PairingsBn254} from '../library/PairingsBn254.sol';
+import {Types} from '../cryptography/Types.sol';
+import {PairingsBn254} from '../cryptography/PairingsBn254.sol';
 
 library Rollup2Vk {
     using PairingsBn254 for Types.G1Point;

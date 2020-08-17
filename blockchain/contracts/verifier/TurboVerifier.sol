@@ -4,13 +4,13 @@
 pragma solidity >=0.6.0 <0.7.0;
 pragma experimental ABIEncoderV2;
 
-import {PairingsBn254} from './library/PairingsBn254.sol';
-import {TurboPlonk} from './library/TurboPlonk.sol';
-import {PolynomialEval} from './library/PolynomialEval.sol';
-import {Types} from './library/Types.sol';
-import {VerificationKeys} from './library/VerificationKeys.sol';
-import {TranscriptLibrary} from './library/TranscriptLibrary.sol';
-import {IVerifier} from './interfaces/IVerifier.sol';
+import {PairingsBn254} from './cryptography/PairingsBn254.sol';
+import {TurboPlonk} from './cryptography/TurboPlonk.sol';
+import {PolynomialEval} from './cryptography/PolynomialEval.sol';
+import {Types} from './cryptography/Types.sol';
+import {VerificationKeys} from './keys/VerificationKeys.sol';
+import {TranscriptLibrary} from './cryptography/TranscriptLibrary.sol';
+import {IVerifier} from '../interfaces/IVerifier.sol';
 
 /**
  * @title Plonk proof verification contract
