@@ -7,6 +7,10 @@ pragma experimental ABIEncoderV2;
 import {Types} from '../cryptography/Types.sol';
 import {PairingsBn254} from '../cryptography/PairingsBn254.sol';
 
+/**
+ * @title Rollup2VK
+ * @dev Verification key used to validate a rollup of size 2 - a rollup with 2 transactions
+ */
 library Rollup2Vk {
     using PairingsBn254 for Types.G1Point;
     using PairingsBn254 for Types.G2Point;

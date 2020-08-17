@@ -388,13 +388,6 @@ library PairingsBn254 {
         self.Y = q_mod - self.Y;
     }
 
-    // function is_infinity(G1Point memory p) internal pure returns (bool) {
-    //     if (p.X == 0 && p.Y == 0) {
-    //         return true;
-    //     }
-    //     return false;
-    // }
-
     function point_add(Types.G1Point memory p1, Types.G1Point memory p2)
         internal
         view

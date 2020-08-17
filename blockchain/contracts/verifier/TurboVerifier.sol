@@ -37,6 +37,7 @@ contract TurboVerifier is IVerifier {
     /**
      * @dev Verify a Plonk proof
      * @param serialized_proof - array of serialized proof data
+     * @param rollup_size - number of transactions in the rollup
      */
     function verify(bytes memory serialized_proof, uint256 rollup_size) public override view {
         Types.VerificationKey memory vk = VerificationKeys.getKeyById(rollup_size);
@@ -76,14 +77,6 @@ contract TurboVerifier is IVerifier {
         );
         require(result, 'Proof failed');
     }
-
-    /**
-     * @dev Deserialize a proof into a Proof struct
-     * @param num_public_inputs - number of public inputs in the proof
-     * @param public_inputs - array of the proof's public inputs
-     * @param serialized_proof - serialized Plonk proof
-     * @return proof - proof deserialized into the proof struct
-     */
 
     /**
      * @dev Deserialize a proof into a Proof struct

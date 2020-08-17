@@ -8,7 +8,15 @@ import {Types} from '../cryptography/Types.sol';
 import {Rollup1Vk} from '../keys/Rollup1Vk.sol';
 import {Rollup2Vk} from '../keys/Rollup2Vk.sol';
 
+/**
+ * @title Verification keys library
+ * @dev Used to select the appropriate verification key for the proof in question
+ */
 library VerificationKeys {
+    /**
+     * @param _keyId - verification key identifier used to select the appropriate proof's key
+     * @return Verification key
+     */
     function getKeyById(uint256 _keyId) external pure returns (Types.VerificationKey memory) {
         // added in order: qL, qR, qO, qC, qM. x coord first, followed by y coord
         Types.VerificationKey memory vk;

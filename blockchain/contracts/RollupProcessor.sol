@@ -11,6 +11,11 @@ import {IVerifier} from './interfaces/IVerifier.sol';
 import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
 import {Decoder} from './Decoder.sol';
 
+/**
+* @title Rollup Processor
+* @dev Smart contract responsible for processing Aztec zkRollups, including relaying them to a verifier
+* contract for validation and performing all relevant ERC20 token transfers
+ */
 contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     using SafeMath for uint256;
 
@@ -65,7 +70,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
      * signature[0] corresponds to innerProof[0]
      * signature[1] corresponds to innerProof[2]
      * signature[2] corresponds to innerProof[3]
-     * @param viewingKeys - viewingKeys for the notes submitted in the rollup
+     * @param viewingKeys - viewingKeys for the notes submitted in the rollup. Note: not used in the logic
+     * of the rollupProcessor contract, but called here as a convenient to place data on chain
      * @param rollupSize - number of transactions included in the rollup
      */
     function processRollup(
@@ -79,6 +85,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         processTransactions(proofData[0x120:], numTxs, signatures, sigIndexes);
     }
 
+
+    /**
+    * @dev Validate that the supplied Merkle roots are correct, verify the zk proof and update the contract state
+    * variables with those provided by the rollup
+    *
+    * @param _proofData - cryptographic zk proof data. Passed to the verifier for verification
+    * @param rollupSize - number of transactions included in the zkRollup
+     */
     function updateAndVerifyProof(bytes memory _proofData, uint256 rollupSize) internal returns (uint256) {
         (
             bytes32 newDataRoot,
