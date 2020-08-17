@@ -4,11 +4,11 @@
 pragma solidity >=0.6.0 <0.7.0;
 pragma experimental ABIEncoderV2;
 
-import {PolynomialEval} from "./PolynomialEval.sol";
+import {PolynomialEval} from './PolynomialEval.sol';
 
-import {TranscriptLibrary} from "./TranscriptLibrary.sol";
-import {PairingsBn254} from "./PairingsBn254.sol";
-import {Types} from "./Types.sol";
+import {TranscriptLibrary} from './TranscriptLibrary.sol';
+import {PairingsBn254} from './PairingsBn254.sol';
+import {Types} from './Types.sol';
 
 /**
  * @title TurboPlonk verification algo implementation
@@ -51,13 +51,8 @@ library TurboPlonk {
         Types.VerificationKey memory vk,
         Types.ChallengeTranscript memory challenges,
         Types.Fr memory L1
-    )
-        internal
-        view
-        returns (Types.G1Point memory, Types.G1Point memory)
-    {
-        Types.G1Point memory partial_opening_commitment = PolynomialEval
-            .compute_partial_opening_commitment(
+    ) internal view returns (Types.G1Point memory, Types.G1Point memory) {
+        Types.G1Point memory partial_opening_commitment = PolynomialEval.compute_partial_opening_commitment(
             challenges,
             L1,
             vk.sigma_commitments[2],
@@ -65,18 +60,14 @@ library TurboPlonk {
             decoded_proof
         );
 
-        Types.G1Point memory batch_opening_commitment = PolynomialEval
-            .compute_batch_opening_commitment(
+        Types.G1Point memory batch_opening_commitment = PolynomialEval.compute_batch_opening_commitment(
             challenges,
             vk,
             partial_opening_commitment,
             decoded_proof
         );
 
-        (
-            Types.G1Point memory batch_evaluation_commitment,
-
-        ) = PolynomialEval.compute_batch_evaluation_commitment(
+        (Types.G1Point memory batch_evaluation_commitment, ) = PolynomialEval.compute_batch_evaluation_commitment(
             decoded_proof,
             challenges
         );
@@ -117,19 +108,14 @@ library TurboPlonk {
         {
             Types.PartialStateFractions memory partial_state_fractions;
 
-            // scope to avoid stack too deep errors
-
-            Types.Fraction memory public_input_delta_fraction = PolynomialEval
-                .compute_public_input_delta(
+            Types.Fraction memory public_input_delta_fraction = PolynomialEval.compute_public_input_delta(
                 decoded_proof.public_input_values,
                 challenges,
                 vk
             );
-            partial_state_fractions
-                .public_input_delta = public_input_delta_fraction;
+            partial_state_fractions.public_input_delta = public_input_delta_fraction;
 
-            Types.Fraction memory zero_poly_fraction = PolynomialEval
-                .compute_zero_polynomial(
+            Types.Fraction memory zero_poly_fraction = PolynomialEval.compute_zero_polynomial(
                 challenges.zeta,
                 vk.circuit_size,
                 vk.work_root_inverse
@@ -138,18 +124,14 @@ library TurboPlonk {
 
             // lagrange_evals[0] = L1, lagrange_evals[1] = Ln
 
-            Types.Fraction[] memory lagrange_eval_fractions = PolynomialEval
-                .compute_lagrange_evaluations(vk, challenges.zeta);
-            partial_state_fractions
-                .lagrange_1_fraction = lagrange_eval_fractions[0];
-            partial_state_fractions
-                .lagrange_n_fraction = lagrange_eval_fractions[1];
+            Types.Fraction[] memory lagrange_eval_fractions = PolynomialEval.compute_lagrange_evaluations(
+                vk,
+                challenges.zeta
+            );
+            partial_state_fractions.lagrange_1_fraction = lagrange_eval_fractions[0];
+            partial_state_fractions.lagrange_n_fraction = lagrange_eval_fractions[1];
 
-            (
-                zero_polynomial_eval,
-                public_input_delta,
-                lagrange_evals
-            ) = PolynomialEval.compute_batch_inversions(
+            (zero_polynomial_eval, public_input_delta, lagrange_evals) = PolynomialEval.compute_batch_inversions(
                 partial_state_fractions
             );
         }
@@ -189,45 +171,27 @@ library TurboPlonk {
         // lhs
         Types.G1Point memory lhsTerm1 = PairingsBn254.point_add(
             decoded_proof.opening_at_z_proof,
-            PairingsBn254.point_mul(
-                decoded_proof.opening_at_z_omega_proof,
-                challenges.u
-            )
+            PairingsBn254.point_mul(decoded_proof.opening_at_z_omega_proof, challenges.u)
         );
 
         lhsTerm1.negate();
 
         // rhs
         // first term
-        Types.G1Point memory first_term = PairingsBn254.point_mul(
-            decoded_proof.opening_at_z_proof,
-            challenges.zeta
-        );
+        Types.G1Point memory first_term = PairingsBn254.point_mul(decoded_proof.opening_at_z_proof, challenges.zeta);
 
         // second term
         Types.Fr memory scalars = PairingsBn254.mul_fr(
             challenges.u,
             (PairingsBn254.mul_fr(challenges.zeta, vk.work_root))
         );
-        Types.G1Point memory second_term = PairingsBn254.point_mul(
-            decoded_proof.opening_at_z_omega_proof,
-            scalars
-        );
+        Types.G1Point memory second_term = PairingsBn254.point_mul(decoded_proof.opening_at_z_omega_proof, scalars);
 
-        Types.G1Point memory rhsTerm1 = PairingsBn254.point_add(
-            first_term,
-            second_term
-        );
+        Types.G1Point memory rhsTerm1 = PairingsBn254.point_add(first_term, second_term);
         rhsTerm1.point_add_assign(batch_opening_commitment);
         rhsTerm1.point_sub_assign(batch_evaluation_commitment);
 
-        return
-            PairingsBn254.pairingProd2(
-                rhsTerm1,
-                PairingsBn254.P2(),
-                lhsTerm1,
-                vk.g2_x
-            );
+        return PairingsBn254.pairingProd2(rhsTerm1, PairingsBn254.P2(), lhsTerm1, vk.g2_x);
     }
 
     /**
@@ -241,24 +205,18 @@ library TurboPlonk {
     function construct_alpha_beta_gamma_zeta_challenges(
         Types.Proof memory decoded_proof,
         Types.VerificationKey memory vk
-    )
-        internal
-        pure
-        returns (
-            Types.ChallengeTranscript memory,
-            TranscriptLibrary.Transcript memory
-        )
-    {
+    ) internal pure returns (Types.ChallengeTranscript memory, TranscriptLibrary.Transcript memory) {
+        // TODO: do these need acting on?
         // require(decoded_proof.public_input_values.length == vk.num_inputs);
         // require(vk.num_inputs >= 1);
-        TranscriptLibrary.Transcript memory transcript = TranscriptLibrary
-            .new_transcript(vk.circuit_size, vk.num_inputs);
+        TranscriptLibrary.Transcript memory transcript = TranscriptLibrary.new_transcript(
+            vk.circuit_size,
+            vk.num_inputs
+        );
 
         Types.ChallengeTranscript memory challenges;
 
-        challenges.init = Types.Fr({
-            value: uint256(transcript.current_challenge) % Types.r_mod
-        });
+        challenges.init = Types.Fr({value: uint256(transcript.current_challenge) % Types.r_mod});
 
         for (uint256 i = 0; i < vk.num_inputs; i++) {
             transcript.update_with_u256(decoded_proof.public_input_values[i]);
@@ -278,9 +236,7 @@ library TurboPlonk {
         challenges.alpha_base = PairingsBn254.new_fr(challenges.alpha.value);
 
         for (uint256 i = 0; i < Types.STATE_WIDTH; i += 1) {
-            transcript.update_with_g1(
-                decoded_proof.quotient_poly_commitments[i]
-            );
+            transcript.update_with_g1(decoded_proof.quotient_poly_commitments[i]);
         }
         challenges.zeta = transcript.get_challenge();
 
@@ -309,14 +265,8 @@ library TurboPlonk {
             transcript.update_with_fr(decoded_proof.wire_values_at_z[i]);
         }
 
-        for (
-            uint256 i = 0;
-            i < decoded_proof.permutation_polynomials_at_z.length;
-            i++
-        ) {
-            transcript.update_with_fr(
-                decoded_proof.permutation_polynomials_at_z[i]
-            );
+        for (uint256 i = 0; i < decoded_proof.permutation_polynomials_at_z.length; i++) {
+            transcript.update_with_fr(decoded_proof.permutation_polynomials_at_z[i]);
         }
 
         transcript.update_with_fr(decoded_proof.q_arith_at_z);

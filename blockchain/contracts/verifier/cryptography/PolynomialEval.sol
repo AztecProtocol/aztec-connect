@@ -481,21 +481,8 @@ library PolynomialEval {
         (Types.G1Point memory logic_term, ) = compute_logic_gate_opening_scalar(proof, vk, challenges);
 
         accumulator.point_add_assign(arithmetic_term);
-        // accumulator.point_add_assign(pedersen_term);
         accumulator.point_add_assign(range_term);
         accumulator.point_add_assign(logic_term);
-
-        // (
-        //     Types.G1Point memory seventh_term,
-
-        // ) = compute_partial_opening_seventh_term(
-        //     proof,
-        //     challenges,
-        //     sigma3
-        // );
-
-        // // already negated, so just need to add it
-        // accumulator = PairingsBn254.point_add(accumulator, seventh_term);
         return accumulator;
     }
 
@@ -734,8 +721,6 @@ library PolynomialEval {
         scalar_multipliers[5].add_assign(multiplicands[5].mul_fr(challenges.v[10]));
 
         challenges.alpha_base = alpha_powers[6].mul_fr(challenges.alpha);
-
-        // scalar_multipliers[6].mul_assign(q_c_multiplicand);
     }
 
     // Compute kate opening scalar for arithmetic gate selectors

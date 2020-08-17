@@ -3,7 +3,6 @@ import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
-import { fake, mock } from 'sinon';
 import { createDepositProof } from '../fixtures/create_mock_proof';
 import { ethSign } from '../signingUtils/ethSign';
 import { solidityFormatSignatures } from '../signingUtils/solidityFormatSigs';
@@ -34,7 +33,7 @@ describe('rollup_processor: permissioning', () => {
 
     const MockVerifier = await ethers.getContractFactory('MockVerifier');
     const mockVerifier = await MockVerifier.deploy();
-    
+
     const RollupProcessor = await ethers.getContractFactory('RollupProcessor');
     rollupProcessor = await RollupProcessor.deploy(erc20.address, scalingFactor, mockVerifier.address);
 

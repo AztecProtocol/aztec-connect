@@ -1,10 +1,7 @@
 import { ethers } from '@nomiclabs/buidler';
 import { expect, use } from 'chai';
-import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
-
-import { mock } from 'sinon';
 import { createDepositProof, createWithdrawProof } from '../fixtures/create_mock_proof';
 import { solidityFormatSignatures } from '../signingUtils/solidityFormatSigs';
 
