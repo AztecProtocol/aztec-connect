@@ -91,14 +91,14 @@ describe('end-to-end tests', () => {
 
     // Deposit to user 0.
     const initialTokenBalance = BigInt(await erc20.methods.balanceOf(users[0]).call());
-    expect(initialTokenBalance).toBe(1000n * scalingFactor);
+    expect(initialTokenBalance.toString()).toBe((1000n * scalingFactor).toString());
     expect(sdk.getBalance(0)).toBe(0);
 
     const txHash = await sdk.deposit(1000, signers[0]);
     await sdk.awaitSettlement(txHash);
 
     const user0TokenBalance = BigInt(await erc20.methods.balanceOf(users[0]).call());
-    expect(user0TokenBalance).toBe(0n);
+    expect(user0TokenBalance.toString()).toBe(BigInt(0).toString());
     expect(sdk.getBalance(0)).toBe(1000);
 
     // Transfer to user 1.
@@ -118,7 +118,7 @@ describe('end-to-end tests', () => {
     await sdk.awaitSettlement(withdrawTxHash);
 
     const user1TokenBalance = BigInt(await erc20.methods.balanceOf(users[1]).call());
-    expect(user1TokenBalance).toBe(1000n * scalingFactor);
+    expect(user1TokenBalance.toString()).toBe((1000n * scalingFactor).toString());
     expect(sdk.getBalance(1)).toBe(0);
   });
 
@@ -133,12 +133,12 @@ describe('end-to-end tests', () => {
       .getReceipt();
 
     const initialTokenBalance = BigInt(await erc20.methods.balanceOf(users[3]).call());
-    expect(initialTokenBalance).toBe(0n);
+    expect(initialTokenBalance.toString()).toBe(BigInt(0).toString());
 
     const publicTransferTxHash = await sdk.publicTransfer(1000, signers[2], users[3].toBuffer());
     await sdk.awaitSettlement(publicTransferTxHash);
 
     const finalTokenBalance = BigInt(await erc20.methods.balanceOf(users[3]).call());
-    expect(finalTokenBalance).toBe(1000n * scalingFactor);
+    expect(finalTokenBalance.toString()).toBe((1000n * scalingFactor).toString());
   });
 });
