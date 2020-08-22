@@ -1,10 +1,12 @@
+import { EthAddress } from 'barretenberg/address';
+
 export interface Note {
   index: number;
-  value: number;
+  value: bigint;
   dataEntry: Buffer;
   viewingKey: Buffer;
   encrypted: Buffer;
   nullifier: Buffer;
   nullified: boolean;
-  owner: number;
+  owner: EthAddress;
 }

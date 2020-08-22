@@ -4,7 +4,7 @@ export class SortedNotes {
   private sortedNotes: Note[] = [];
 
   constructor(notes: Note[] = []) {
-    this.sortedNotes = [...notes].sort((a, b) => a.value - b.value);
+    this.sortedNotes = [...notes].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   }
 
   get length(): number {
@@ -28,7 +28,7 @@ export class SortedNotes {
 
   bulkAdd(notes: Note[]) {
     if (!this.sortedNotes.length) {
-      this.sortedNotes = [...notes].sort((a, b) => a.value - b.value);
+      this.sortedNotes = [...notes].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
     } else {
       notes.forEach(n => this.add(n));
     }
@@ -59,11 +59,11 @@ export class SortedNotes {
     return this.sortedNotes[idx];
   }
 
-  indexOfValue(value: number, start?: number): number {
+  indexOfValue(value: bigint, start?: number): number {
     return this.sortedNotes.findIndex((note, i) => (start === undefined || i >= start) && note.value === value);
   }
 
-  lastIndexOfValue(value: number): number {
+  lastIndexOfValue(value: bigint): number {
     for (let i = this.sortedNotes.length - 1; i >= 0; i--) {
       if (this.nth(i).value === value) {
         return i;

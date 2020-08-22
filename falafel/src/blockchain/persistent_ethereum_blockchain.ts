@@ -1,4 +1,5 @@
 import { MemoryFifo } from 'barretenberg/fifo';
+import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Block, Blockchain, EthereumBlockchain } from 'blockchain';
 import createDebug from 'debug';
 import { Connection, MoreThanOrEqual, Repository } from 'typeorm';
@@ -10,11 +11,16 @@ const debug = createDebug('bb:persistent_ethereum_blockchain');
 export class PersistentEthereumBlockchain implements Blockchain {
   private blockRep!: Repository<BlockDao>;
   private blockQueue = new MemoryFifo<Block>();
+  private latestRollupId = -1;
 
   constructor(private ethereumBlockchain: EthereumBlockchain, connection: Connection) {
     this.blockRep = connection.getRepository(BlockDao);
     this.ethereumBlockchain.on('block', b => this.blockQueue.put(b));
     this.blockQueue.process(b => this.saveBlock(b));
+  }
+
+  public getLatestRollupId() {
+    return this.latestRollupId;
   }
 
   public async getNetworkInfo() {
@@ -80,5 +86,6 @@ export class PersistentEthereumBlockchain implements Blockchain {
   }
   private async saveBlock(block: Block) {
     await this.blockRep.save(blockToBlockDao(block));
+    this.latestRollupId = RollupProofData.getRollupIdFromBuffer(block.rollupProofData);
   }
 }

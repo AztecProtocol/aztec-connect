@@ -1,7 +1,9 @@
 import { App } from '../app';
-import { MemoryFifo, User, SdkEvent } from 'aztec2-sdk';
+import { MemoryFifo, SdkEvent, AssetId } from 'aztec2-sdk';
 import { Terminal } from './terminal';
 import copy from 'copy-to-clipboard';
+import { GrumpkinAddress, EthAddress } from 'barretenberg/address';
+import { EthProviderEvent } from '../eth_provider';
 
 export class TerminalHandler {
   private cmdQueue = new MemoryFifo<string>();
@@ -9,12 +11,12 @@ export class TerminalHandler {
   private preInitCmds = { help: this.help, init: this.init, exit: this.onExit, cleardata: this.clearData };
   private postInitCmds = {
     help: this.help,
+    approve: this.approve,
     deposit: this.deposit,
     withdraw: this.withdraw,
     transfer: this.transfer,
+    pubtransfer: this.publicTransfer,
     balance: this.balance,
-    user: this.user,
-    adduser: this.addUser,
     copykey: this.copyKey,
     status: this.status,
     exit: this.onExit,
@@ -30,10 +32,14 @@ export class TerminalHandler {
     this.printQueue.put(undefined);
     this.terminal.on('cmd', (cmd: string) => this.cmdQueue.put(cmd));
     this.app.on(SdkEvent.LOG, (str: string) => this.printQueue.put(str + '\n'));
-    this.app.on(SdkEvent.UPDATED_BALANCE, (balance: number, diff?: number) => {
-      if (diff !== undefined) {
+    this.app.on(SdkEvent.UPDATED_USER_STATE, (account: EthAddress, balance: number, diff: number) => {
+      if (diff) {
         this.printQueue.put(`balance updated: ${balance / 100} (${diff >= 0 ? '+' : ''}${diff / 100})\n`);
       }
+    });
+    this.app.on(EthProviderEvent.UPDATED_ACCOUNT, (account: EthAddress) => {
+      this.printQueue.put(`user: ${account}\n`);
+      this.printQueue.put(`balance: ${this.getBalance()}\n`);
     });
   }
 
@@ -90,17 +96,16 @@ export class TerminalHandler {
   }
 
   private async help() {
-    this.printQueue.put('[]optional <>required\n');
     if (!this.app.isInitialized()) {
       this.printQueue.put('init [server]\nexit\n');
     } else {
       this.printQueue.put(
-        'deposit <amount> <from address>\n' +
-          'withdraw <amount> <to address>\n' +
+        'approve <amount>\n' +
+          'deposit <amount>\n' +
+          'withdraw <amount>\n' +
           'transfer <to> <amount>\n' +
-          'balance [id/alias]\n' +
-          'user [id/alias]\n' +
-          'adduser <alias> [pubkey]\n' +
+          'pubtransfer <to> <amount>\n' +
+          'balance\n' +
           'copykey\n' +
           'status\n' +
           'exit\n',
@@ -111,94 +116,82 @@ export class TerminalHandler {
   private async init(server: string) {
     this.printQueue.put('initializing...\n');
     await this.app.init(server || window.location.protocol + '//' + window.location.hostname);
+    const sdk = this.app.getSdk()!;
 
     try {
-      const { dataSize, dataRoot, nullRoot } = await this.app.getStatus();
+      const { dataSize, dataRoot, nullRoot } = await sdk.getRemoteStatus();
       this.printQueue.put(`data size: ${dataSize}\n`);
       this.printQueue.put(`data root: ${dataRoot.slice(0, 8).toString('hex')}...\n`);
       this.printQueue.put(`null root: ${nullRoot.slice(0, 8).toString('hex')}...\n`);
     } catch (err) {
       this.printQueue.put('Failed to get server status.\n');
     }
-    this.printQueue.put(`user: ${this.app.getUser().publicKey.slice(0, 4).toString('hex')}...\n`);
+    this.printQueue.put(`user: ${this.app.getAccount()}...\n`);
     this.printQueue.put(`balance: ${this.getBalance()}\n`);
   }
 
-  private async deposit(value: string, account: string) {
+  private async approve(value: string) {
+    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
+    this.printQueue.put('requesting approval...');
+    await userAsset.approve(userAsset.toErc20Units(value));
+    this.printQueue.put('approval complete.');
+  }
+
+  private async deposit(value: string) {
+    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
     this.printQueue.put(`generating deposit proof...\n`);
-    await this.app.deposit(this.app.toNoteValue(value), account);
+    await userAsset.deposit(userAsset.toErc20Units(value));
     this.printQueue.put(`deposit proof sent.\n`);
   }
 
-  private async withdraw(value: string, account: string) {
+  private async withdraw(value: string) {
+    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
     this.printQueue.put(`generating withdrawl proof...\n`);
-    await this.app.withdraw(this.app.toNoteValue(value), account);
+    await userAsset.withdraw(userAsset.toErc20Units(value));
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
 
-  private async transfer(userIdOrAlias: string, value: string) {
-    const user = this.app.findUser(userIdOrAlias, true);
-    if (!user) {
-      throw new Error('User not found.');
-    }
+  private async transfer(addressOrAlias: string, value: string) {
+    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
     this.printQueue.put(`generating transfer proof...\n`);
-    await this.app.transfer(this.app.toNoteValue(value), user.publicKey.toString('hex'));
+    // TODO: Lookup alias.
+    // const to = GrumpkinAddress.isAddress(addressOrAlias)
+    //   ? GrumpkinAddress.fromString(addressOrAlias)
+    //   : GrumpkinAddress.ZERO;
+    const to = GrumpkinAddress.fromString(addressOrAlias);
+    await userAsset.transfer(userAsset.toErc20Units(value), to);
     this.printQueue.put(`transfer proof sent.\n`);
   }
 
-  private async balance(userIdOrAlias: string) {
-    await this.terminal.putString(`${this.getBalance(userIdOrAlias)}\n`);
+  private async publicTransfer(ethAddress: string, value: string) {
+    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
+    this.printQueue.put(`generating transfer proof...\n`);
+    const to = EthAddress.fromString(ethAddress);
+    await userAsset.publicTransfer(userAsset.toErc20Units(value), to);
+    this.printQueue.put(`transfer proof sent.\n`);
   }
 
-  private getBalance(userIdOrAlias?: string) {
-    return this.app.getBalance(userIdOrAlias) / 100;
+  private async balance() {
+    await this.terminal.putString(`${this.getBalance()}\n`);
   }
 
-  private async user(userIdOrAlias?: string) {
-    if (userIdOrAlias) {
-      const user = this.app.switchToUser(userIdOrAlias);
-      this.printQueue.put(
-        `switched to ${user.publicKey.toString('hex').slice(0, 8)}...\nbalance ${this.getBalance()}\n`,
-      );
-    } else {
-      const str = this.app.getUsers(false).map(this.userStr).join('');
-      this.printQueue.put(str);
-    }
-  }
-
-  private async addUser(alias: string, publicKeyStr?: string) {
-    if (!publicKeyStr) {
-      const user = await this.app.createUser(alias);
-      this.printQueue.put(this.userStr(user));
-    } else {
-      const publicKey = Buffer.from(publicKeyStr, 'hex');
-      if (publicKey.length !== 64) {
-        throw new Error('Bad public key.');
-      }
-      const user = await this.app.addUser(alias, publicKey);
-      this.printQueue.put(this.userStr(user));
-    }
+  private getBalance() {
+    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
+    return userAsset.fromErc20Units(userAsset.balance());
   }
 
   private async copyKey() {
-    copy(this.app.getUser().publicKey.toString('hex'));
+    const userData = this.app.getUser().getUserData();
+    copy(userData.publicKey.toString());
   }
 
   private async status() {
-    this.printQueue.put(`data size: ${this.app.getDataSize()}\n`);
-    this.printQueue.put(`data root: ${this.app.getDataRoot().slice(0, 8).toString('hex')}...\n`);
+    const { dataSize, dataRoot } = this.app.getSdk()!.getLocalStatus();
+    this.printQueue.put(`data size: ${dataSize}\n`);
+    this.printQueue.put(`data root: ${dataRoot.slice(0, 8).toString('hex')}...\n`);
   }
 
   private async clearData() {
-    await this.app.clearData();
-  }
-
-  private userStr(u: User) {
-    return (
-      `${u.id}: ${u.publicKey.slice(0, 4).toString('hex')}...` +
-      (u.alias ? ` (${u.alias})` : '') +
-      (u.privateKey ? ' *' : '') +
-      '\n'
-    );
+    await this.app.getSdk()!.clearData();
   }
 }

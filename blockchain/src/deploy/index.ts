@@ -21,7 +21,6 @@ function getSigner() {
 
 async function main() {
   const [, , erc20Address = 'dev', mint, approve] = process.argv;
-  const scalingFactor = 10000000000000000n;
 
   const signer = getSigner();
   if (!signer) {
@@ -32,16 +31,16 @@ async function main() {
     const erc20Factory = new ContractFactory(ERC20Mintable.abi, ERC20Mintable.bytecode, signer);
     const erc20 = await erc20Factory.deploy();
     const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
-    const rollup = await rollupFactory.deploy(erc20.address, scalingFactor);
+    const rollup = await rollupFactory.deploy(erc20.address);
 
     console.error(`Awaiting deployment...`);
     await rollup.deployed();
 
     if (mint) {
-      await erc20.mint(signer.getAddress(), BigInt(mint) * scalingFactor * 100n);
+      await erc20.mint(signer.getAddress(), BigInt(mint));
     }
     if (approve) {
-      await erc20.approve(rollup.address, BigInt(approve) * scalingFactor * 100n);
+      await erc20.approve(rollup.address, BigInt(approve));
     }
 
     console.error(`ERC20 contract address: ${erc20.address}`);
@@ -50,7 +49,7 @@ async function main() {
     console.log(`export ROLLUP_CONTRACT_ADDRESS=${rollup.address}`);
   } else {
     const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
-    const rollup = await rollupFactory.deploy(erc20Address, scalingFactor);
+    const rollup = await rollupFactory.deploy(erc20Address);
 
     console.error(`Awaiting deployment...`);
     await rollup.deployed();

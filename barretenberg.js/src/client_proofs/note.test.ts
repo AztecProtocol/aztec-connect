@@ -2,6 +2,7 @@ import { Grumpkin } from '../ecc/grumpkin';
 import { Note, encryptNote, decryptNote } from './note';
 import { randomBytes } from 'crypto';
 import { BarretenbergWasm } from '../wasm';
+import { GrumpkinAddress } from '../address';
 
 describe('note', () => {
   it('should correctly encrypt and decrypt note', async () => {
@@ -9,10 +10,10 @@ describe('note', () => {
     const grumpkin = new Grumpkin(wasm);
 
     const receiverPrivKey = randomBytes(32);
-    const receiverPubKey = grumpkin.mul(Grumpkin.one, receiverPrivKey);
+    const receiverPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, receiverPrivKey));
 
     const secret = randomBytes(32);
-    const note = new Note(receiverPubKey, secret, 100);
+    const note = new Note(receiverPubKey, secret, BigInt(100));
     const encryptedNote = encryptNote(note, grumpkin);
 
     const note2 = decryptNote(encryptedNote, receiverPrivKey, grumpkin)!;
@@ -28,10 +29,10 @@ describe('note', () => {
     const grumpkin = new Grumpkin(wasm);
 
     const receiverPrivKey = randomBytes(32);
-    const receiverPubKey = grumpkin.mul(Grumpkin.one, receiverPrivKey);
+    const receiverPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, receiverPrivKey));
 
     const secret = randomBytes(32);
-    const note = new Note(receiverPubKey, secret, 100);
+    const note = new Note(receiverPubKey, secret, BigInt(100));
     const encryptedNote = encryptNote(note, grumpkin);
 
     const note2 = decryptNote(encryptedNote, randomBytes(32), grumpkin)!;

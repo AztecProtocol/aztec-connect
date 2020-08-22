@@ -18,6 +18,8 @@ import { Prover } from '../prover';
 import { JoinSplitProof } from './join_split_proof';
 import { computeNullifier } from './compute_nullifier';
 import { randomBytes } from 'crypto';
+import { Grumpkin } from '../../ecc/grumpkin';
+import { GrumpkinAddress, EthAddress } from '../../address';
 
 const debug = createDebug('bb:join_split_proof');
 
@@ -33,6 +35,8 @@ describe('join_split_proof', () => {
   let schnorr!: Schnorr;
   let crs!: Crs;
   let pippenger!: PooledPippenger;
+  let grumpkin!: Grumpkin;
+  let pubKey!: GrumpkinAddress;
 
   // prettier-ignore
   const privateKey = Buffer.from([
@@ -64,6 +68,9 @@ describe('join_split_proof', () => {
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
     schnorr = new Schnorr(barretenberg);
+    grumpkin = new Grumpkin(barretenberg);
+
+    pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
   });
 
   afterAll(async () => {
@@ -71,9 +78,8 @@ describe('join_split_proof', () => {
   });
 
   it('should decrypt note', () => {
-    const pubKey = schnorr.computePublicKey(privateKey);
     const secret = randomBytes(32);
-    const note = new Note(pubKey, secret, 100);
+    const note = new Note(pubKey, secret, BigInt(100));
     const encryptedNote = joinSplitProver.encryptNote(note);
     const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, secret);
     expect(success).toBe(true);
@@ -81,9 +87,8 @@ describe('join_split_proof', () => {
   });
 
   it('should not decrypt note', () => {
-    const pubKey = schnorr.computePublicKey(privateKey);
     const secret = randomBytes(32);
-    const note = new Note(pubKey, secret, 2000);
+    const note = new Note(pubKey, secret, BigInt(2000));
     const encryptedNote = joinSplitProver.encryptNote(note);
     const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, secret);
     expect(success).toBe(false);
@@ -107,12 +112,10 @@ describe('join_split_proof', () => {
     });
 
     it('should construct join split proof', async () => {
-      const pubKey = schnorr.computePublicKey(privateKey);
-
-      const inputNote1 = new Note(pubKey, createNoteSecret(), 100);
-      const inputNote2 = new Note(pubKey, createNoteSecret(), 50);
-      const outputNote1 = new Note(pubKey, createNoteSecret(), 80);
-      const outputNote2 = new Note(pubKey, createNoteSecret(), 70);
+      const inputNote1 = new Note(pubKey, createNoteSecret(), BigInt(100));
+      const inputNote2 = new Note(pubKey, createNoteSecret(), BigInt(50));
+      const outputNote1 = new Note(pubKey, createNoteSecret(), BigInt(80));
+      const outputNote2 = new Note(pubKey, createNoteSecret(), BigInt(70));
 
       const inputNote1Enc = await joinSplitProver.encryptNote(inputNote1);
       const inputNote2Enc = await joinSplitProver.encryptNote(inputNote2);
@@ -130,8 +133,8 @@ describe('join_split_proof', () => {
         privateKey,
       );
 
-      const inputOwner = randomBytes(20);
-      const outputOwner = randomBytes(20);
+      const inputOwner = EthAddress.randomAddress();
+      const outputOwner = EthAddress.randomAddress();
 
       const tx = new JoinSplitTx(
         0,
@@ -165,8 +168,8 @@ describe('join_split_proof', () => {
       const expectedNullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, blake2s);
       expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
       expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
-      expect(joinSplitProof.inputOwner).toEqual(inputOwner);
-      expect(joinSplitProof.outputOwner).toEqual(outputOwner);
+      expect(joinSplitProof.inputOwner).toEqual(inputOwner.toBuffer());
+      expect(joinSplitProof.outputOwner).toEqual(outputOwner.toBuffer());
     });
   });
 });

@@ -25,19 +25,16 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     IVerifier public verifier;
     IERC20 public linkedToken;
 
-    uint256 public scalingFactor; // scale between Aztec note units and ERC20 units
     uint256 public constant txPubInputLength = 0x140; // public inputs length for of each inner proof tx
 
     event RollupProcessed(uint256 indexed rollupId, bytes32 dataRoot, bytes32 nullRoot);
     event Deposit(address depositorAddress, uint256 depositValue);
     event Withdraw(address withdrawAddress, uint256 withdrawValue);
 
-    constructor(address _linkedToken, uint256 _scalingFactor) public {
+    constructor(address _linkedToken) public {
         require(_linkedToken != address(0x0), 'Rollup Processor: ZERO_ADDRESS');
-        require(_scalingFactor != uint256(0), 'Rollup Processor: ZERO_SCALING_FACTOR');
 
         linkedToken = IERC20(_linkedToken);
-        scalingFactor = _scalingFactor;
         verifier = new Verifier();
     }
 
@@ -73,7 +70,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         uint256 rollupSize
     ) external override onlyOwner {
         uint256 numTxs = updateAndVerifyProof(proofData, rollupSize);
-        processTransactions(proofData[0x120:], numTxs, signatures, sigIndexes);
+        processTransactions(proofData[0x140:], numTxs, signatures, sigIndexes);
     }
 
     function updateAndVerifyProof(bytes memory _proofData, uint256 rollupSize) internal returns (uint256) {
@@ -159,14 +156,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         assembly {
             let dataStart := add(proofData, 0x20) // jump over first word, it's length of data
             rollupId := mload(dataStart)
-            dataStartIndex := mload(add(dataStart, 0x20))
-            oldDataRoot := mload(add(dataStart, 0x40))
-            newDataRoot := mload(add(dataStart, 0x60))
-            oldNullRoot := mload(add(dataStart, 0x80))
-            newNullRoot := mload(add(dataStart, 0xa0))
-            oldRootRoot := mload(add(dataStart, 0xc0))
-            newRootRoot := mload(add(dataStart, 0xe0))
-            numTxs := mload(add(dataStart, 0x100))
+            dataStartIndex := mload(add(dataStart, 0x40))
+            oldDataRoot := mload(add(dataStart, 0x60))
+            newDataRoot := mload(add(dataStart, 0x80))
+            oldNullRoot := mload(add(dataStart, 0xa0))
+            newNullRoot := mload(add(dataStart, 0xc0))
+            oldRootRoot := mload(add(dataStart, 0xe0))
+            newRootRoot := mload(add(dataStart, 0x100))
+            numTxs := mload(add(dataStart, 0x120))
         }
     }
 
@@ -254,7 +251,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         require(rollupAllowance >= depositValue, 'Rollup Processor: INSUFFICIENT_TOKEN_APPROVAL');
 
         // scaling factor to convert between Aztec notes and DAI
-        linkedToken.transferFrom(depositorAddress, address(this), depositValue.mul(scalingFactor));
+        linkedToken.transferFrom(depositorAddress, address(this), depositValue);
         emit Deposit(depositorAddress, depositValue);
     }
 
@@ -270,7 +267,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         require(withdrawValue <= rollupBalance, 'Rollup Processor: INSUFFICIENT_FUNDS');
 
         // scaling factor to convert between Aztec notes and DAI
-        linkedToken.transfer(receiverAddress, withdrawValue.mul(scalingFactor));
+        linkedToken.transfer(receiverAddress, withdrawValue);
         emit Withdraw(receiverAddress, withdrawValue);
     }
 }

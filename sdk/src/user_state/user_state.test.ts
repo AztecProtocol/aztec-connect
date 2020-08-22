@@ -7,8 +7,9 @@ import { computeNullifier } from 'barretenberg/client_proofs/join_split_proof/co
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { numToUInt32BE } from 'barretenberg/serialize';
 import { Database } from '../database';
-import { UserFactory, User } from '../user';
+import { UserData } from '../user';
 import { UserState } from './index';
+import { GrumpkinAddress, EthAddress } from 'barretenberg/address';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -19,14 +20,20 @@ describe('User State', () => {
   let blake2s: Blake2s;
   let db: Mockify<Database>;
   let userState: UserState;
-  let user: User;
+  let user: UserData;
 
   beforeAll(async () => {
     const barretenberg = await BarretenbergWasm.new();
     grumpkin = new Grumpkin(barretenberg);
     blake2s = new Blake2s(barretenberg);
-    const userFactory = new UserFactory(grumpkin);
-    user = userFactory.createUser(0);
+    const privateKey = randomBytes(32);
+    user = {
+      ethAddress: EthAddress.randomAddress(),
+      privateKey,
+      publicKey: new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey)),
+      syncedToBlock: -1,
+      syncedToRollup: -1,
+    };
   });
 
   beforeEach(async () => {
@@ -39,16 +46,22 @@ describe('User State', () => {
       nullifyNote: jest.fn(),
       getNoteByNullifier: jest.fn(),
       getUserNotes: jest.fn(),
+      updateUser: jest.fn(),
     } as any;
 
-    userState = new UserState(user, grumpkin, blake2s, db as any);
+    const blockSource = {
+      getBlocks: jest.fn().mockResolvedValue([]),
+    };
+
+    userState = new UserState(user, grumpkin, blake2s, db as any, blockSource as any);
+    await userState.startSync();
   });
 
   const generateRollup = (validNewNote = true, validChangeNote = true, publicInput = 0, publicOutput = 0) => {
     const secret = createNoteSecret();
-    const note1 = new Note(user.publicKey, secret, 100);
-    const note2 = new Note(user.publicKey, secret, 0);
-    const gibberishNote = new Note(randomBytes(64), secret, 0);
+    const note1 = new Note(user.publicKey, secret, BigInt(100));
+    const note2 = new Note(user.publicKey, secret, BigInt(0));
+    const gibberishNote = new Note(GrumpkinAddress.randomAddress(), secret, 0n);
     const encryptedNote1 = randomBytes(64);
     const encryptedNote2 = randomBytes(64);
     const nullifier1 = computeNullifier(randomBytes(64), 0, secret, blake2s);
@@ -70,6 +83,7 @@ describe('User State', () => {
     );
     return new RollupProofData(
       0,
+      1,
       0,
       randomBytes(32),
       randomBytes(32),
@@ -99,14 +113,14 @@ describe('User State', () => {
     db.getNoteByNullifier.mockResolvedValueOnce({ index: 123 });
     db.getUserNotes.mockResolvedValue([]);
 
-    const updated = await userState.processBlock(block);
-    expect(updated).toBe(true);
+    userState.processBlock(block);
+    await userState.stopSync(true);
 
     const innerProofData = rollupProofData.innerProofData[0];
     expect(db.settleUserTx).toHaveBeenCalledTimes(1);
     expect(db.settleUserTx).toHaveBeenCalledWith(innerProofData.getTxId());
     expect(db.addNote).toHaveBeenCalledTimes(1);
-    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote1, value: 100 });
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote1, value: 100n });
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);
     expect(db.nullifyNote).toHaveBeenCalledWith(123);
   });
@@ -115,8 +129,9 @@ describe('User State', () => {
     const rollupProofData = generateRollup(false, false);
     const block = createBlock(rollupProofData);
 
-    const updated = await userState.processBlock(block);
-    expect(updated).toBe(false);
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
     expect(db.settleUserTx).toHaveBeenCalledTimes(0);
     expect(db.addUserTx).toHaveBeenCalledTimes(0);
   });
@@ -127,8 +142,9 @@ describe('User State', () => {
 
     db.getUserTx.mockResolvedValue({ settled: true });
 
-    const updated = await userState.processBlock(block);
-    expect(updated).toBe(false);
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
     expect(db.settleUserTx).toHaveBeenCalledTimes(0);
     expect(db.addUserTx).toHaveBeenCalledTimes(0);
   });
@@ -139,11 +155,11 @@ describe('User State', () => {
 
     db.getUserNotes.mockResolvedValue([]);
 
-    const updated = await userState.processBlock(block);
-    expect(updated).toBe(true);
+    userState.processBlock(block);
+    await userState.stopSync(true);
 
     expect(db.addUserTx).toHaveBeenCalledTimes(1);
-    expect(db.addUserTx.mock.calls[0][0]).toMatchObject({ action: 'RECEIVE', value: 100 });
+    expect(db.addUserTx.mock.calls[0][0]).toMatchObject({ action: 'RECEIVE', value: 100n });
   });
 
   it('should restore a TRANSFER tx', async () => {
@@ -151,13 +167,13 @@ describe('User State', () => {
     const block = createBlock(rollupProofData);
 
     db.getUserNotes.mockResolvedValue([]);
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: 123, value: 100 });
+    db.getNoteByNullifier.mockResolvedValueOnce({ index: 123, value: 100n });
 
-    const updated = await userState.processBlock(block);
-    expect(updated).toBe(true);
+    userState.processBlock(block);
+    await userState.stopSync(true);
 
     expect(db.addUserTx).toHaveBeenCalledTimes(1);
-    expect(db.addUserTx.mock.calls[0][0]).toMatchObject({ action: 'TRANSFER', value: 100 });
+    expect(db.addUserTx.mock.calls[0][0]).toMatchObject({ action: 'TRANSFER', value: 100n });
   });
 
   it('should restore a PUBLIC_TRANSFER tx', async () => {
@@ -166,11 +182,11 @@ describe('User State', () => {
 
     db.getUserNotes.mockResolvedValue([]);
 
-    const updated = await userState.processBlock(block);
-    expect(updated).toBe(true);
+    userState.processBlock(block);
+    await userState.stopSync(true);
 
     expect(db.addUserTx).toHaveBeenCalledTimes(1);
-    expect(db.addUserTx.mock.calls[0][0]).toMatchObject({ action: 'PUBLIC_TRANSFER', value: 60 });
+    expect(db.addUserTx.mock.calls[0][0]).toMatchObject({ action: 'PUBLIC_TRANSFER', value: 60n });
   });
 
   it('should restore a DEPOSIT tx', async () => {
@@ -179,11 +195,11 @@ describe('User State', () => {
 
     db.getUserNotes.mockResolvedValue([]);
 
-    const updated = await userState.processBlock(block);
-    expect(updated).toBe(true);
+    userState.processBlock(block);
+    await userState.stopSync(true);
 
     expect(db.addUserTx).toHaveBeenCalledTimes(1);
-    expect(db.addUserTx.mock.calls[0][0]).toMatchObject({ action: 'DEPOSIT', value: 100 });
+    expect(db.addUserTx.mock.calls[0][0]).toMatchObject({ action: 'DEPOSIT', value: 100n });
   });
 
   it('should restore a WITHDRAW tx', async () => {
@@ -191,12 +207,12 @@ describe('User State', () => {
     const block = createBlock(rollupProofData);
 
     db.getUserNotes.mockResolvedValue([]);
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: 123, value: 100 });
+    db.getNoteByNullifier.mockResolvedValueOnce({ index: 123, value: 100n });
 
-    const updated = await userState.processBlock(block);
-    expect(updated).toBe(true);
+    userState.processBlock(block);
+    await userState.stopSync(true);
 
     expect(db.addUserTx).toHaveBeenCalledTimes(1);
-    expect(db.addUserTx.mock.calls[0][0]).toMatchObject({ action: 'WITHDRAW', value: 40 });
+    expect(db.addUserTx.mock.calls[0][0]).toMatchObject({ action: 'WITHDRAW', value: 40n });
   });
 });

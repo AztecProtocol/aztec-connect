@@ -1,3 +1,5 @@
+import { EthAddress } from '../address';
+
 export interface Proof {
   proofData: Buffer;
   viewingKeys: Buffer[];
@@ -7,8 +9,8 @@ export interface Proof {
 export interface RollupProviderStatus {
   chainId: number;
   networkOrHost: string;
-  rollupContractAddress: string;
-  tokenContractAddress: string;
+  rollupContractAddress: EthAddress;
+  tokenContractAddress: EthAddress;
   dataSize: number;
   dataRoot: Buffer;
   nullRoot: Buffer;

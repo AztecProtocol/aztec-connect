@@ -1,4 +1,4 @@
-import { Block } from 'barretenberg/block_source';
+import { Block, BlockSource } from 'barretenberg/block_source';
 import { computeNullifier } from 'barretenberg/client_proofs/join_split_proof/compute_nullifier';
 import { decryptNote } from 'barretenberg/client_proofs/note';
 import { RollupProofData, InnerProofData } from 'barretenberg/rollup_proof';
@@ -9,33 +9,95 @@ import createDebug from 'debug';
 import { Database } from '../database';
 import { Note } from '../note';
 import { NotePicker } from '../note_picker';
-import { User } from '../user';
 import { UserTx, UserTxAction } from '../user_tx';
+import { EventEmitter } from 'events';
+import { MemoryFifo } from 'barretenberg/fifo';
+import { UserData } from '../user';
 
 const debug = createDebug('bb:user_state');
 
-export class UserState {
-  private notePicker!: NotePicker;
+export enum UserStateEvent {
+  UPDATED_USER_STATE = 'UPDATED_USER_STATE',
+}
 
-  constructor(private user: User, private grumpkin: Grumpkin, private blake2s: Blake2s, private db: Database) {}
+export class UserState extends EventEmitter {
+  private notePicker = new NotePicker();
+  private blockQueue = new MemoryFifo<Block>();
+  private syncing = false;
+  private syncingPromise!: Promise<void>;
+
+  constructor(
+    private user: UserData,
+    private grumpkin: Grumpkin,
+    private blake2s: Blake2s,
+    private db: Database,
+    private blockSource: BlockSource,
+  ) {
+    super();
+  }
 
   public async init() {
+    this.user = (await this.db.getUser(this.user.ethAddress))!;
     await this.refreshNotePicker();
+  }
+
+  /**
+   * First handles all historical blocks.
+   * Then starts processing blocks added to queue via `processBlock()`.
+   */
+  public async startSync() {
+    debug(`starting sync for ${this.user.ethAddress} from block ${this.user.syncedToBlock + 1}...`);
+    this.syncing = true;
+    const blocks = await this.blockSource.getBlocks(this.user.syncedToBlock + 1);
+    for (const block of blocks) {
+      if (!this.syncing) {
+        return;
+      }
+      await this.handleBlock(block);
+    }
+    await this.db.updateUser(this.user);
+    this.syncingPromise = this.blockQueue.process(async block => this.handleBlock(block));
+  }
+
+  /**
+   * Stops processing queued blocks. Blocks until any processing is complete.
+   */
+  public stopSync(flush = false) {
+    if (!this.syncing) {
+      return;
+    }
+    flush ? this.blockQueue.end() : this.blockQueue.cancel();
+    this.syncing = false;
+    return this.syncingPromise;
+  }
+
+  public isSyncing() {
+    return this.syncing;
   }
 
   public getUser() {
     return this.user;
   }
 
-  public async processBlock(block: Block) {
+  public processBlock(block: Block) {
+    this.blockQueue.put(block);
+  }
+
+  private async handleBlock(block: Block) {
+    if (block.blockNum < this.user.syncedToBlock) {
+      return;
+    }
+
     let updated = false;
+    const { ethAddress } = this.user;
+    const balanceBefore = this.getBalance();
 
     const { rollupProofData, viewingKeysData } = block;
-    const { dataStartIndex, innerProofData } = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
+    const { rollupId, dataStartIndex, innerProofData } = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
     for (let i = 0; i < innerProofData.length; ++i) {
       const proof = innerProofData[i];
       const txId = proof.getTxId();
-      const savedUserTx = await this.db.getUserTx(this.user.id, txId);
+      const savedUserTx = await this.db.getUserTx(ethAddress, txId);
       if (savedUserTx && savedUserTx.settled) {
         continue;
       }
@@ -49,8 +111,8 @@ export class UserState {
         continue;
       }
 
-      const destroyedNote1 = await this.nullifiyNote(nullifier1);
-      const destroyedNote2 = await this.nullifiyNote(nullifier2);
+      const destroyedNote1 = await this.nullifyNote(nullifier1);
+      const destroyedNote2 = await this.nullifyNote(nullifier2);
 
       if (savedUserTx) {
         await this.db.settleUserTx(txId);
@@ -66,13 +128,21 @@ export class UserState {
       await this.refreshNotePicker();
     }
 
-    return updated;
+    this.user.syncedToBlock = block.blockNum;
+    this.user.syncedToRollup = rollupId;
+    await this.db.updateUser(this.user);
+
+    const balanceAfter = this.getBalance();
+    const diff = balanceAfter - balanceBefore;
+    this.emit(UserStateEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff);
+
+    return;
   }
 
   private async processNewNote(index: number, dataEntry: Buffer, viewingKey: Buffer) {
     const savedNote = await this.db.getNote(index);
     if (savedNote) {
-      return savedNote.owner === this.user.id ? savedNote : undefined;
+      return savedNote.owner.equals(this.user.ethAddress) ? savedNote : undefined;
     }
 
     const decryptedNote = decryptNote(viewingKey, this.user.privateKey!, this.grumpkin);
@@ -90,20 +160,20 @@ export class UserState {
       encrypted: viewingKey,
       nullifier,
       nullified: false,
-      owner: this.user.id,
+      owner: this.user.ethAddress,
     };
     if (value) {
       await this.db.addNote(note);
-      debug(`user ${this.user.id} successfully decrypted note at index ${index} with value ${value}.`);
+      debug(`user ${this.user.ethAddress} successfully decrypted note at index ${index} with value ${value}.`);
     }
     return note;
   }
 
-  private async nullifiyNote(nullifier: Buffer) {
-    const note = await this.db.getNoteByNullifier(this.user.id, nullifier);
+  private async nullifyNote(nullifier: Buffer) {
+    const note = await this.db.getNoteByNullifier(this.user.ethAddress, nullifier);
     if (note) {
       await this.db.nullifyNote(note.index);
-      debug(`user ${this.user.id} nullified note at index ${note.index} with value ${note.value}.`);
+      debug(`user ${this.user.ethAddress} nullified note at index ${note.index} with value ${note.value}.`);
     }
     return note;
   }
@@ -114,75 +184,64 @@ export class UserState {
     changeNote?: Note,
     destroyedNote1?: Note,
     destroyedNote2?: Note,
-  ) {
-    const createTx = (action: UserTxAction, value: number, recipient?: Buffer) => ({
+  ): UserTx {
+    const createTx = (action: UserTxAction, value: bigint, recipient?: Buffer) => ({
       txHash: proof.getTxId(),
       action,
       value,
       recipient,
-      userId: this.user.id,
+      ethAddress: this.user.ethAddress,
       settled: true,
       created: new Date(),
     });
 
     if (!changeNote) {
-      return createTx('RECEIVE', newNote!.value, this.user.publicKey);
+      return createTx('RECEIVE', newNote!.value, this.user.publicKey.toBuffer());
     }
 
     const publicInput = toBigIntBE(proof.publicInput);
     const publicOutput = toBigIntBE(proof.publicOutput);
 
     if (!publicInput && !publicOutput) {
-      const value = destroyedNote1!.value + (destroyedNote2 ? destroyedNote2.value : 0) - changeNote.value;
-      return createTx('TRANSFER', value, newNote ? this.user.publicKey : undefined);
+      const value = destroyedNote1!.value + (destroyedNote2 ? destroyedNote2.value : BigInt(0)) - changeNote.value;
+      return createTx('TRANSFER', value, newNote ? this.user.publicKey.toBuffer() : undefined);
     }
 
     if (publicInput === publicOutput) {
-      return createTx('PUBLIC_TRANSFER', Number(publicInput), proof.outputOwner);
+      return createTx('PUBLIC_TRANSFER', publicInput, proof.outputOwner);
     }
 
     if (publicInput > publicOutput) {
-      return createTx('DEPOSIT', Number(publicInput), this.user.publicKey);
+      return createTx('DEPOSIT', publicInput, this.user.publicKey.toBuffer());
     }
 
-    return createTx('WITHDRAW', Number(publicOutput), proof.outputOwner);
+    return createTx('WITHDRAW', publicOutput, proof.outputOwner);
   }
 
   private async refreshNotePicker() {
-    const notes = await this.db.getUserNotes(this.user.id);
+    const notes = await this.db.getUserNotes(this.user.ethAddress);
     this.notePicker = new NotePicker();
     this.notePicker.addNotes(notes);
   }
 
-  public pickNotes(value: number) {
+  public pickNotes(value: bigint) {
     return this.notePicker.pick(value);
   }
 
   public getBalance() {
     return this.notePicker.getNoteSum();
   }
-
-  public async addUserTx(userTx: UserTx) {
-    await this.db.addUserTx(userTx);
-  }
-
-  public async removeUserTx(txHash: Buffer) {
-    await this.db.deleteUserTx(txHash);
-  }
-
-  public async getUserTx(txHash: Buffer) {
-    return this.db.getUserTx(this.user.id, txHash);
-  }
-
-  public async getUserTxs() {
-    return this.db.getUserTxs(this.user.id);
-  }
 }
 
 export class UserStateFactory {
-  constructor(private grumpkin: Grumpkin, private blake2s: Blake2s, private db: Database) {}
+  constructor(
+    private grumpkin: Grumpkin,
+    private blake2s: Blake2s,
+    private db: Database,
+    private blockSource: BlockSource,
+  ) {}
 
-  createUserState(user: User) {
-    return new UserState(user, this.grumpkin, this.blake2s, this.db);
+  createUserState(user: UserData) {
+    return new UserState(user, this.grumpkin, this.blake2s, this.db, this.blockSource);
   }
 }

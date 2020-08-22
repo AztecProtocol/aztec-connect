@@ -37,6 +37,7 @@ describe('RollupProofData', () => {
     );
     const rollupProofData = new RollupProofData(
       70,
+      2,
       150,
       randomBytes(32),
       randomBytes(32),

@@ -3,11 +3,11 @@ import CopyToClipboard from 'react-copy-to-clipboard';
 import { FlexBox, Block, SelectInput, Icon, Text } from '@aztec/guacamole-ui';
 import { FormField } from '../components';
 import { ThemeContext } from '../config/context';
-import { User } from 'aztec2-sdk';
+import { UserData } from 'aztec2-sdk';
 
 interface UserSelectProps {
-  users: User[];
-  user: User;
+  users: UserData[];
+  user: UserData;
   onSelect: (value: string) => void;
 }
 
@@ -15,9 +15,9 @@ export const UserSelect = ({ users, user, onSelect }: UserSelectProps) => {
   const [justCopied, setJustCopied] = useState(false);
 
   const userItems = users
-    .map(({ id, publicKey }) => ({
-      value: `${id}`,
-      title: publicKey.toString('hex').replace(/^(.{58})(.+)(.{4})$/, '$1...$3'),
+    .map(({ ethAddress, publicKey }) => ({
+      value: ethAddress.toString(),
+      title: ethAddress.toString(),
     }))
     .concat([
       {
@@ -43,13 +43,13 @@ export const UserSelect = ({ users, user, onSelect }: UserSelectProps) => {
                   items: userItems,
                 },
               ]}
-              value={`${user!.id}`}
+              value={`${user!.ethAddress}`}
               onSelect={(v: string) => onSelect(v)}
               highlightSelected={theme === 'light'}
             />
             <Block left="m">
               <CopyToClipboard
-                text={user!.publicKey.toString('hex')}
+                text={user!.ethAddress.toString()}
                 onCopy={() => {
                   if (justCopied) return;
                   setJustCopied(true);

@@ -4,6 +4,8 @@ import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import { JoinSplitProof, JoinSplitVerifier } from '../client_proofs/join_split_proof';
 import { RollupProvider, Proof } from './rollup_provider';
+import { EthAddress } from '../address';
+import { RollupProofData } from '../rollup_proof';
 
 const debug = createDebug('bb:local_rollup_provider');
 
@@ -17,6 +19,12 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
 
   constructor(private joinSplitVerifier: JoinSplitVerifier) {
     super();
+  }
+
+  getLatestRollupId() {
+    return this.blocks.length
+      ? RollupProofData.getRollupIdFromBuffer(this.blocks[this.blocks.length - 1].rollupProofData)
+      : -1;
   }
 
   start() {
@@ -68,8 +76,8 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
     return {
       chainId: 0,
       networkOrHost: '',
-      rollupContractAddress: '',
-      tokenContractAddress: '',
+      rollupContractAddress: EthAddress.ZERO,
+      tokenContractAddress: EthAddress.ZERO,
       dataSize: this.dataTreeSize,
       dataRoot: this.dataRoot,
       nullRoot: this.nullRoot,

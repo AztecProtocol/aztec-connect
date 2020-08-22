@@ -1,6 +1,6 @@
 import { SortedNotes } from './sorted_notes';
 
-export const pick = (sortedNotes: SortedNotes, value: number) => {
+export const pick = (sortedNotes: SortedNotes, value: bigint) => {
   let i = 0;
   const left = sortedNotes.nth(i);
   if (!left) {

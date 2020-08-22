@@ -5,11 +5,11 @@
   "license": "GPL-2.0",
   "scripts": {
     "build": "webpack --config webpack.prod.js",
+    "test": "tsc --noEmit",
     "generate:styles": "guacamole generateStyles",
-    "lint": "tslint './src/**/*.ts?(x)'",
     "start": "node ./server",
     "start:dev": "webpack-dev-server --config webpack.dev.js",
-    "test": "true"
+    "symlinks": "mkdir -p ./dest/node_modules && ln -s ../../../barretenberg.js/dest && ./dest-es/node_modules/barretenberg && mkdir -p ./dest-es/node_modules && ln -s ../../../barretenberg.js/dest-es ./dest-es/node_modules/barretenberg"
   },
   "jest": {
     "transform": {

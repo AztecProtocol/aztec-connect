@@ -13,7 +13,7 @@ import {
   newDataRootsRoot,
   newNullifierRoot,
 } from '../fixtures/create_mock_proof';
-import { solidityFormatSignatures } from '../signingUtils/solidityFormatSigs';
+import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
 
 use(solidity);
 
@@ -28,7 +28,6 @@ describe('rollup_processor: core', () => {
   const mintAmount = 100;
   const depositAmount = 60;
   const withdrawalAmount = 20;
-  const scalingFactor = 1;
 
   const viewingKeys = [Buffer.alloc(32, 1), Buffer.alloc(32, 2)];
   const rollupSize = 2;
@@ -42,7 +41,7 @@ describe('rollup_processor: core', () => {
     erc20 = await ERC20.deploy();
 
     const RollupProcessor = await ethers.getContractFactory('RollupProcessor');
-    rollupProcessor = await RollupProcessor.deploy(erc20.address, scalingFactor);
+    rollupProcessor = await RollupProcessor.deploy(erc20.address);
 
     // mint users tokens for testing
     await erc20.mint(userAAddress, mintAmount);

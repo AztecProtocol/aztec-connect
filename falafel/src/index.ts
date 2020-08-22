@@ -22,8 +22,9 @@ const {
   NETWORK,
   PRIVATE_KEY,
   ROLLUP_SIZE = '2',
-  MAX_ROLLUP_WAIT_TIME = '120',
+  MAX_ROLLUP_WAIT_TIME = '10',
   MIN_ROLLUP_INTERVAL = '0',
+  LOCAL_BLOCKCHAIN_INIT_SIZE = '0',
 } = process.env;
 
 function getEthereumBlockchainConfig() {
@@ -51,7 +52,7 @@ async function main() {
   const ethConfig = getEthereumBlockchainConfig();
   const blockchain = ethConfig
     ? new PersistentEthereumBlockchain(new EthereumBlockchain(ethConfig, ROLLUP_CONTRACT_ADDRESS!), connection)
-    : new LocalBlockchain(connection, serverConfig.rollupSize);
+    : new LocalBlockchain(connection, serverConfig.rollupSize, +LOCAL_BLOCKCHAIN_INIT_SIZE);
   const rollupDb = new RollupDb(connection);
 
   const shutdown = async () => {

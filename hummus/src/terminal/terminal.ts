@@ -8,7 +8,7 @@ export class Terminal extends EventEmitter {
   private cursor!: Cursor;
   private inputLocked = true;
   private stateCounter = 0;
-  private interval!: number;
+  private interval!: NodeJS.Timeout;
   private cmd: string = '';
 
   constructor(private rows: number, private cols: number) {
