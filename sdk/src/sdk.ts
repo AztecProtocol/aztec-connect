@@ -5,8 +5,6 @@ import { UserTx } from './user_tx';
 import { EthAddress, GrumpkinAddress, Address } from 'barretenberg/address';
 
 export enum SdkEvent {
-  // For emitting interesting log info during long running operations.
-  LOG = 'SDKEVENT_LOG',
   // Initialization state changes.
   UPDATED_INIT_STATE = 'SDKEVENT_UPDATED_INIT_STATE',
   // The sdk action state has changed.

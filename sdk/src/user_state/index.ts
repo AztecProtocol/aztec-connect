@@ -13,6 +13,7 @@ import { UserTx, UserTxAction } from '../user_tx';
 import { EventEmitter } from 'events';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { UserData } from '../user';
+import { AssetId } from '../sdk';
 
 const debug = createDebug('bb:user_state');
 
@@ -134,7 +135,7 @@ export class UserState extends EventEmitter {
 
     const balanceAfter = this.getBalance();
     const diff = balanceAfter - balanceBefore;
-    this.emit(UserStateEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff);
+    this.emit(UserStateEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff, AssetId.DAI);
 
     return;
   }

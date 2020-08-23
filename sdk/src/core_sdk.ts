@@ -93,7 +93,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
       throw new Error('Sdk is not UNINITIALIZED.');
     }
 
-    this.emit(SdkEvent.UPDATED_INIT_STATE, (this.sdkStatus.initState = SdkInitState.INITIALIZING));
+    this.updateInitState(SdkInitState.INITIALIZING);
 
     const { chainId, networkOrHost, rollupContractAddress, tokenContractAddress } = await this.getRemoteStatus();
 
@@ -140,11 +140,10 @@ export class CoreSdk extends EventEmitter implements Sdk {
     await this.initUserStates();
     await this.createJoinSplitProvingKey(joinSplitProver);
 
-    this.emit(SdkEvent.UPDATED_INIT_STATE, (this.sdkStatus.initState = SdkInitState.INITIALIZED));
+    this.updateInitState(SdkInitState.INITIALIZED);
   }
 
   private async getCrsData(circuitSize: number) {
-    this.emit(SdkEvent.UPDATED_INIT_STATE, SdkInitState.INITIALIZING, 'Downloading CRS...');
     let crsData = await this.db.getKey(`crs-${circuitSize}`);
     if (!crsData) {
       this.logInitMsgAndDebug('Downloading CRS data...');
@@ -180,10 +179,13 @@ export class CoreSdk extends EventEmitter implements Sdk {
     for (const us of this.userStates) {
       this.emit(SdkEvent.UPDATED_USER_STATE, us.getUser().ethAddress);
 
-      us.on(UserStateEvent.UPDATED_USER_STATE, (ethAddress: EthAddress, balanceAfter: bigint, diff: bigint) => {
-        this.emit(CoreSdkEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff);
-        this.emit(SdkEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff);
-      });
+      us.on(
+        UserStateEvent.UPDATED_USER_STATE,
+        (ethAddress: EthAddress, balanceAfter: bigint, diff: bigint, assetId: AssetId) => {
+          this.emit(CoreSdkEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff, assetId);
+          this.emit(SdkEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff, assetId);
+        },
+      );
 
       if (this.processBlocksPromise) {
         us.startSync();
@@ -202,6 +204,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     const start = new Date().getTime();
     const provingKey = await this.db.getKey('join-split-proving-key');
     if (provingKey) {
+      this.logInitMsgAndDebug('Loading proving key...');
       await joinSplitProver.loadKey(provingKey);
     } else {
       this.logInitMsgAndDebug('Computing proving key...');
@@ -219,9 +222,13 @@ export class CoreSdk extends EventEmitter implements Sdk {
     await this.pooledProver?.destroy();
     await this.stopReceivingBlocks();
     this.stopTrackingGlobalState();
-    this.emit(SdkEvent.UPDATED_INIT_STATE, (this.sdkStatus.initState = SdkInitState.UNINITIALIZED));
-    this.emit(SdkEvent.UPDATED_INIT_STATE, (this.sdkStatus.initState = SdkInitState.DESTROYED));
+    this.updateInitState(SdkInitState.DESTROYED);
     this.removeAllListeners();
+  }
+
+  private updateInitState(initState: SdkInitState, msg?: string) {
+    this.sdkStatus.initState = initState;
+    this.emit(SdkEvent.UPDATED_INIT_STATE, initState, msg);
   }
 
   public async clearData() {
@@ -253,7 +260,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
   }
 
   private logInitMsgAndDebug(msg: string) {
-    this.emit(SdkEvent.UPDATED_INIT_STATE, SdkInitState.INITIALIZING, msg);
+    this.updateInitState(SdkInitState.INITIALIZING, msg);
     debug(msg.toLowerCase());
   }
 
@@ -406,12 +413,17 @@ export class CoreSdk extends EventEmitter implements Sdk {
 
   public async approve(assetId: AssetId, value: bigint, from: EthAddress) {
     const action = () => this.getTokenContract(assetId).approve(from, value);
-    return this.performAction(Action.APPROVE, value, from, this.sdkStatus.rollupContractAddress, action);
+    const txHash = await this.performAction(Action.APPROVE, value, from, this.sdkStatus.rollupContractAddress, action);
+    this.emit(SdkEvent.UPDATED_USER_STATE, from);
+    return txHash;
   }
 
   public async mint(assetId: AssetId, value: bigint, to: EthAddress) {
+    debug('minting ', value);
     const action = () => this.getTokenContract(assetId).mint(to, value);
-    return this.performAction(Action.MINT, value, this.sdkStatus.rollupContractAddress, to, action);
+    const txHash = await this.performAction(Action.MINT, value, this.sdkStatus.rollupContractAddress, to, action);
+    this.emit(SdkEvent.UPDATED_USER_STATE, to);
+    return txHash;
   }
 
   public async deposit(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
@@ -442,7 +454,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     const tokenContract = this.getTokenContract(assetId);
     const tokenBalance = await tokenContract.balanceOf(from);
     if (tokenBalance < value) {
-      throw new Error(`Insufficient public token balance: ${tokenContract.fromErc20Units(tokenBalance)}.`);
+      throw new Error(`Insufficient public token balance: ${tokenContract.fromErc20Units(tokenBalance)}`);
     }
     const allowance = await tokenContract.allowance(from);
     if (allowance < value) {

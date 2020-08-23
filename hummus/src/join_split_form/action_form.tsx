@@ -25,23 +25,21 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
   const [worldSyncedToRollup, setWorldSyncedToRollup] = useState(-1);
   const [latestRollup, setLatestRollup] = useState(-1);
   const [tokenBalance, setTokenBalance] = useState(BigInt(0));
-  const [allowance, setAllowance] = useState(BigInt(0));
+  const [allowance, setAllowance] = useState(BigInt(-1));
   const [balance, setBalance] = useState(userAsset.balance());
   const [actionState, setActionState] = useState(sdk.getActionState());
   const [action, setAction] = useState(userAsset.balance() ? Action.TRANSFER : Action.DEPOSIT);
 
   useEffect(() => {
-    const handleUserStateChange = async (ethAddress: EthAddress, balance: bigint, diff: bigint) => {
+    const handleUserStateChange = async (ethAddress: EthAddress) => {
       if (!ethAddress.equals(account)) {
         return;
       }
       setSyncedToRollup(user.getUserData().syncedToRollup);
       setLatestRollup(sdk.getLocalStatus().latestRollupId);
       setBalance(userAsset.balance());
-      if (diff) {
-        setTokenBalance(await userAsset.publicBalance());
-        setAllowance(await userAsset.publicAllowance());
-      }
+      setTokenBalance(await userAsset.publicBalance());
+      setAllowance(await userAsset.publicAllowance());
     };
 
     const handleWorldStateChange = (syncedToRollup: number, latestRollupId: number) => {
@@ -49,7 +47,7 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
       setLatestRollup(latestRollupId);
     };
 
-    handleUserStateChange(account, userAsset.balance(), BigInt(1));
+    handleUserStateChange(account);
     handleWorldStateChange(sdk.getLocalStatus().syncedToRollup, sdk.getLocalStatus().latestRollupId);
 
     app.on(SdkEvent.UPDATED_ACTION_STATE, setActionState);

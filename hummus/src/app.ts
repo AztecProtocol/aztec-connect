@@ -13,15 +13,28 @@ export enum AppInitState {
   INITIALIZED = 'INITIALIZED',
 }
 
+export enum AppInitAction {
+  LINK_PROVIDER_ACCOUNT,
+  LINK_AZTEC_ACCOUNT,
+  CHANGE_NETWORK,
+}
+
 export enum AppEvent {
   UPDATED_INIT_STATE = 'APPEVENT_UPDATED_INIT_STATE',
   UPDATED_ACCOUNT = 'APPEVENT_UPDATED_ACCOUNT',
 }
 
+export interface AppInitStatus {
+  initState: AppInitState;
+  initAction?: AppInitAction;
+  network?: string;
+  message?: string;
+}
+
 export class App extends EventEmitter {
   private sdk!: Sdk;
   private ethProvider!: EthProvider;
-  private initState = AppInitState.UNINITIALIZED;
+  private initStatus: AppInitStatus = { initState: AppInitState.UNINITIALIZED };
 
   constructor(private ethereumProvider: EthereumProvider) {
     super();
@@ -31,18 +44,16 @@ export class App extends EventEmitter {
     debug('initializing app...');
 
     try {
-      this.updateInitState(AppInitState.INITIALIZING);
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_PROVIDER_ACCOUNT);
 
       this.ethProvider = new Web3EthProvider(this.ethereumProvider);
       await this.ethProvider.init();
 
       // If our network doesn't match that of the rollup provider, request it be changed until it does.
       const { chainId: rollupProviderChainId } = await getRollupProviderStatus(serverUrl);
+      this.initStatus.network = chainIdToNetwork(rollupProviderChainId);
       if (rollupProviderChainId !== this.ethProvider.getChainId()) {
-        this.updateInitState(
-          AppInitState.INITIALIZING,
-          `Change network to ${chainIdToNetwork(rollupProviderChainId)}...`,
-        );
+        this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.CHANGE_NETWORK);
         while (rollupProviderChainId !== this.ethProvider.getChainId()) {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
@@ -59,76 +70,69 @@ export class App extends EventEmitter {
       // Handle SDK init messages.
       this.sdk.on(SdkEvent.UPDATED_INIT_STATE, (initState: SdkInitState, msg?: string) => {
         if (initState === SdkInitState.INITIALIZING) {
-          this.emit(AppEvent.UPDATED_INIT_STATE, AppInitState.INITIALIZING, msg);
+          this.updateInitStatus(AppInitState.INITIALIZING, undefined, msg);
         }
       });
 
       // Handle account change.
       this.ethProvider.on(EthProviderEvent.UPDATED_ACCOUNT, (account?: EthAddress) =>
-        this.accountChanged(account).catch(debug),
+        this.accountChanged(account).catch(err => this.destroy()),
       );
 
       // Handle network change.
       this.ethProvider.on(EthProviderEvent.UPDATED_NETWORK, () => this.networkChanged());
 
-      this.updateInitState(AppInitState.INITIALIZING, 'Initializing SDK...');
       await this.sdk.init();
 
       await this.accountChanged(this.ethProvider.getAccount());
 
-      this.updateInitState(AppInitState.INITIALIZED);
+      this.updateInitStatus(AppInitState.INITIALIZED);
       debug('initialization complete.');
     } catch (err) {
-      debug(err.message);
-      await this.sdk?.destroy();
-      this.ethProvider?.destroy();
-      this.updateInitState(AppInitState.UNINITIALIZED);
-    }
-  }
-
-  private updateInitState(state: AppInitState, msg?: string) {
-    this.initState = state;
-    this.emit(AppEvent.UPDATED_INIT_STATE, state, msg);
-  }
-
-  private async accountChanged(account?: EthAddress) {
-    try {
-      if (!account) {
-        // If the user withdraws access, destroy everything and return to uninitialized state.
-        throw new Error('Account access withdrawn.');
-      }
-
-      // Otherwise, we are initializing until the first account is added to sdk.
-      const user = this.sdk.getUser(account);
-      if (!user) {
-        this.updateInitState(AppInitState.INITIALIZING, 'Adding account, check MetaMask for signature...');
-        await this.sdk.addUser(account);
-        this.updateInitState(AppInitState.INITIALIZED);
-      }
-
-      this.emit(AppEvent.UPDATED_ACCOUNT, account);
-    } catch (err) {
-      await this.destroy();
+      this.destroy();
       throw err;
     }
   }
 
+  private updateInitStatus(initState: AppInitState, initAction?: AppInitAction, message?: string) {
+    this.initStatus = {
+      initState,
+      initAction,
+      message,
+    };
+    this.emit(AppEvent.UPDATED_INIT_STATE, this.initStatus);
+  }
+
+  private async accountChanged(account?: EthAddress) {
+    if (!account) {
+      // If the user withdraws access, destroy everything and return to uninitialized state.
+      throw new Error('Account access withdrawn.');
+    }
+
+    // Otherwise, we are initializing until the account is added to sdk.
+    const user = this.sdk.getUser(account);
+    if (!user) {
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_AZTEC_ACCOUNT);
+      await this.sdk.addUser(account);
+      this.updateInitStatus(AppInitState.INITIALIZED);
+    }
+
+    this.emit(AppEvent.UPDATED_ACCOUNT, account);
+  }
+
   private networkChanged() {
     if (!this.isCorrectNetwork()) {
-      this.updateInitState(
-        AppInitState.INITIALIZING,
-        `Change network to ${chainIdToNetwork(this.sdk.getLocalStatus().chainId)}...`,
-      );
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.CHANGE_NETWORK);
     } else {
-      this.updateInitState(AppInitState.INITIALIZED);
+      this.updateInitStatus(AppInitState.INITIALIZED);
     }
   }
 
   public async destroy() {
     debug('destroying app...');
     await this.sdk?.destroy();
-    this.ethProvider.destroy();
-    this.updateInitState(AppInitState.UNINITIALIZED);
+    this.ethProvider?.destroy();
+    this.updateInitStatus(AppInitState.UNINITIALIZED);
   }
 
   public getSdk() {
@@ -136,7 +140,7 @@ export class App extends EventEmitter {
   }
 
   public isInitialized() {
-    return this.getInitState() === AppInitState.INITIALIZED;
+    return this.getInitStatus().initState === AppInitState.INITIALIZED;
   }
 
   public isCorrectNetwork() {
@@ -144,8 +148,8 @@ export class App extends EventEmitter {
     return this.ethProvider.getChainId() === chainId;
   }
 
-  public getInitState() {
-    return this.initState;
+  public getInitStatus() {
+    return this.initStatus;
   }
 
   public getUser() {

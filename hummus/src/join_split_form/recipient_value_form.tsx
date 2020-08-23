@@ -32,7 +32,7 @@ export const RecipientValueForm = ({
   const [value, setValue] = useState(initialValue);
   const [recipient, setRecipient] = useState(initialRecipient);
 
-  const requireApproval = allowance !== undefined && allowance < toNoteValue(value);
+  const requireApproval = allowance !== undefined && allowance > BigInt(0) && allowance < toNoteValue(value);
 
   return (
     <Block padding="xs 0">

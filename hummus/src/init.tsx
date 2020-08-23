@@ -1,8 +1,11 @@
 import React, { useState, useEffect, FunctionComponent } from 'react';
 import { Text, Block } from '@aztec/guacamole-ui';
 import { Button, FormField, Input, FormSection, Form } from './components';
-import { App, AppInitState, AppEvent } from './app';
-import { chainIdToNetwork, EthProviderEvent } from './eth_provider';
+import { App, AppInitState, AppEvent, AppInitAction, AppInitStatus } from './app';
+import { EthProviderEvent } from './eth_provider';
+import createDebug from 'debug';
+
+const debug = createDebug('bb::init_form');
 
 interface InitProps {
   app: App;
@@ -10,22 +13,17 @@ interface InitProps {
 }
 
 export const Init: FunctionComponent<InitProps> = ({ app, initialServerUrl = '', children }) => {
-  const sdk = app.getSdk()!;
-  const [initState, setInitState] = useState(app.getInitState());
-  const [initMsg, setInitMsg] = useState<string | undefined>();
+  const [initStatus, setInitStatus] = useState(app.getInitStatus());
   const [serverUrl, setServerUrl] = useState(initialServerUrl);
   const [, setChainId] = useState(-1);
-  const isLoading = initState === AppInitState.INITIALIZING;
+  const { initState } = initStatus;
 
   useEffect(() => {
-    app.on(AppEvent.UPDATED_INIT_STATE, (state, msg) => {
-      setInitState(state);
-      setInitMsg(msg);
-    });
+    app.on(AppEvent.UPDATED_INIT_STATE, setInitStatus);
     app.on(EthProviderEvent.UPDATED_NETWORK, setChainId);
 
     return () => {
-      app.off(AppEvent.UPDATED_INIT_STATE, setInitState);
+      app.off(AppEvent.UPDATED_INIT_STATE, setInitStatus);
       app.off(EthProviderEvent.UPDATED_NETWORK, setChainId);
     };
   }, [app]);
@@ -41,13 +39,13 @@ export const Init: FunctionComponent<InitProps> = ({ app, initialServerUrl = '',
                   <Input value={serverUrl} onChange={setServerUrl} />
                 </FormField>
                 <FormField label="Press the button">
-                  <Button text="The Button" onSubmit={() => app.init(serverUrl)} isLoading={isLoading} />
+                  <Button text="The Button" onSubmit={() => app.init(serverUrl).catch(err => debug(err.message))} />
                 </FormField>
               </Block>
             )}
             {initState === AppInitState.INITIALIZING && (
               <Block padding="m 0" align="center">
-                <Text text={initMsg || 'Initializing...'} />
+                <Text text={getInitString(initStatus)} />
               </Block>
             )}
           </FormSection>
@@ -57,3 +55,16 @@ export const Init: FunctionComponent<InitProps> = ({ app, initialServerUrl = '',
     </>
   );
 };
+
+function getInitString({ initAction, network, message }: AppInitStatus) {
+  switch (initAction) {
+    case undefined:
+      return message || 'Initializing...';
+    case AppInitAction.CHANGE_NETWORK:
+      return `Change MetaMask network to ${network}...`;
+    case AppInitAction.LINK_PROVIDER_ACCOUNT:
+      return `Check MetaMask to link Ethereum account...`;
+    case AppInitAction.LINK_AZTEC_ACCOUNT:
+      return `Check for MetaMask signature request to link Aztec account...`;
+  }
+}

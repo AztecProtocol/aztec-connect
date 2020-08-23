@@ -2,8 +2,9 @@ import { Contract } from 'ethers';
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { ContractTransaction } from '@ethersproject/contracts';
-import { parseUnits, formatUnits } from '@ethersproject/units';
+import { parseUnits } from '@ethersproject/units';
 import { TokenContract } from '.';
+import { fromErc20Units } from './units';
 
 const minimalERC20ABI = [
   'function decimals() public view returns (uint8)',
@@ -16,6 +17,7 @@ const minimalERC20ABI = [
 export class Web3TokenContract implements TokenContract {
   private contract!: Contract;
   private decimals = 0;
+  private precision = 2;
   private confirmations = 2;
 
   constructor(
@@ -90,12 +92,10 @@ export class Web3TokenContract implements TokenContract {
   }
 
   public fromErc20Units(value: bigint) {
-    const decimals = this.getDecimals();
-    return formatUnits(value.toString(), decimals);
+    return fromErc20Units(value, this.decimals, this.precision);
   }
 
   public toErc20Units(value: string) {
-    const decimals = this.getDecimals();
-    return BigInt(parseUnits(value, decimals).toString());
+    return BigInt(parseUnits(value, this.decimals).toString());
   }
 }

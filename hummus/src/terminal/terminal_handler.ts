@@ -1,16 +1,29 @@
-import { App } from '../app';
+import { App, AppEvent, AppInitState, AppInitStatus, AppInitAction } from '../app';
 import { MemoryFifo, SdkEvent, AssetId } from 'aztec2-sdk';
 import { Terminal } from './terminal';
 import copy from 'copy-to-clipboard';
 import { GrumpkinAddress, EthAddress } from 'barretenberg/address';
 import { EthProviderEvent } from '../eth_provider';
 
+enum TermControl {
+  PROMPT,
+  LOCK,
+}
+
+/**
+ * The terminal handler is composed of two queues. A command queue and a print queue.
+ * Commands are executed in sequence, and prints are printed in sequence.
+ * The print queue also accepts terminal control codes for enabling and disabling the prompt.
+ * When the terminal emits a command, it will have already locked the terminal (disabled the prompt)
+ * and it is the job of the handler to reenable the prompt once the command is handled.
+ */
 export class TerminalHandler {
   private cmdQueue = new MemoryFifo<string>();
-  private printQueue = new MemoryFifo<string | undefined>();
+  private printQueue = new MemoryFifo<string | TermControl>();
   private preInitCmds = { help: this.help, init: this.init, exit: this.onExit, cleardata: this.clearData };
   private postInitCmds = {
     help: this.help,
+    mint: this.mint,
     approve: this.approve,
     deposit: this.deposit,
     withdraw: this.withdraw,
@@ -29,18 +42,70 @@ export class TerminalHandler {
     this.processCommands();
     this.processPrint();
     this.printQueue.put("\x01\x01\x01\x01aztec zero knowledge terminal.\x01\ntype command or 'help'\n");
-    this.printQueue.put(undefined);
+    this.printQueue.put(TermControl.PROMPT);
     this.terminal.on('cmd', (cmd: string) => this.cmdQueue.put(cmd));
-    this.app.on(SdkEvent.LOG, (str: string) => this.printQueue.put(str + '\n'));
-    this.app.on(SdkEvent.UPDATED_USER_STATE, (account: EthAddress, balance: number, diff: number) => {
-      if (diff) {
-        this.printQueue.put(`balance updated: ${balance / 100} (${diff >= 0 ? '+' : ''}${diff / 100})\n`);
+  }
+
+  /**
+   * Registered before the app has been initialized, unregistered after.
+   */
+  private initProgressHandler = (initStatus: AppInitStatus) => {
+    const msg = this.getInitString(initStatus);
+    if (msg) {
+      this.printQueue.put(msg + '\n');
+    }
+  };
+
+  /**
+   * Called after the app has been initialized.
+   */
+  private registerHandlers() {
+    // If the app transitions to initializing state, lock the terminal until it is initialized again.
+    this.app.on(AppEvent.UPDATED_INIT_STATE, (initStatus: AppInitStatus) => {
+      switch (initStatus.initState) {
+        case AppInitState.INITIALIZING:
+          this.printQueue.put(TermControl.LOCK);
+          const msg = this.getInitString(initStatus);
+          if (msg) {
+            this.printQueue.put('\r' + msg + '\n');
+          }
+          break;
+        case AppInitState.INITIALIZED:
+          this.printQueue.put(TermControl.PROMPT);
+          break;
       }
     });
-    this.app.on(EthProviderEvent.UPDATED_ACCOUNT, (account: EthAddress) => {
-      this.printQueue.put(`user: ${account}\n`);
-      this.printQueue.put(`balance: ${this.getBalance()}\n`);
+
+    // If the users balance updates, print an update.
+    this.app.on(SdkEvent.UPDATED_USER_STATE, (account: EthAddress, balance: bigint, diff: bigint, assetId: AssetId) => {
+      const user = this.app.getUser();
+      if (user.getUserData().ethAddress.equals(account) && diff) {
+        const userAsset = user.getAsset(assetId);
+        this.printQueue.put(
+          `balance updated: ${userAsset.fromErc20Units(balance)} (${diff >= 0 ? '+' : ''}${userAsset.fromErc20Units(
+            diff,
+          )})\n`,
+        );
+      }
     });
+
+    // If the account changes, print an update.
+    this.app.on(AppEvent.UPDATED_ACCOUNT, (account: EthAddress) => {
+      this.printQueue.put(`user: ${account.toString().slice(0, 12)}...\n`);
+    });
+  }
+
+  private getInitString({ initAction, network, message }: AppInitStatus) {
+    switch (initAction) {
+      case undefined:
+        return message;
+      case AppInitAction.CHANGE_NETWORK:
+        return `set network to ${network}...`;
+      case AppInitAction.LINK_PROVIDER_ACCOUNT:
+        return `requesting account access...`;
+      case AppInitAction.LINK_AZTEC_ACCOUNT:
+        return `linking Aztec account...`;
+    }
   }
 
   public stop() {
@@ -49,20 +114,31 @@ export class TerminalHandler {
     this.printQueue.cancel();
   }
 
+  private isTermControl(toBeDetermined: any): toBeDetermined is TermControl {
+    return !isNaN(toBeDetermined);
+  }
+
   private async processPrint() {
     while (true) {
-      const str = await this.printQueue.get();
-      if (str === null) {
+      const item = await this.printQueue.get();
+      if (item === null) {
         break;
       }
-      if (str === undefined) {
-        await this.terminal.prompt();
+      if (this.isTermControl(item)) {
+        switch (item) {
+          case TermControl.PROMPT:
+            await this.terminal.prompt();
+            break;
+          case TermControl.LOCK:
+            this.terminal.lock();
+            break;
+        }
       } else {
         if (this.terminal.isPrompting()) {
-          await this.terminal.putString('\r' + str);
-          this.printQueue.put(undefined);
+          await this.terminal.putString('\r' + item);
+          this.printQueue.put(TermControl.PROMPT);
         } else {
-          await this.terminal.putString(str);
+          await this.terminal.putString(item);
         }
       }
     }
@@ -84,7 +160,7 @@ export class TerminalHandler {
       } catch (err) {
         this.printQueue.put(err.message + '\n');
       }
-      this.printQueue.put(undefined);
+      this.printQueue.put(TermControl.PROMPT);
     }
   }
 
@@ -114,7 +190,9 @@ export class TerminalHandler {
   }
 
   private async init(server: string) {
-    this.printQueue.put('initializing...\n');
+    this.app.removeAllListeners(AppEvent.UPDATED_INIT_STATE);
+    this.app.on(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
+
     await this.app.init(server || window.location.protocol + '//' + window.location.hostname);
     const sdk = this.app.getSdk()!;
 
@@ -124,23 +202,42 @@ export class TerminalHandler {
       this.printQueue.put(`data root: ${dataRoot.slice(0, 8).toString('hex')}...\n`);
       this.printQueue.put(`null root: ${nullRoot.slice(0, 8).toString('hex')}...\n`);
     } catch (err) {
-      this.printQueue.put('Failed to get server status.\n');
+      this.printQueue.put('failed to get server status.\n');
     }
-    this.printQueue.put(`user: ${this.app.getAccount()}...\n`);
-    this.printQueue.put(`balance: ${this.getBalance()}\n`);
+    this.printQueue.put(`user: ${this.app.getAccount().toString().slice(0, 12)}...\n`);
+    await this.balance();
+
+    this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
+    this.registerHandlers();
+  }
+
+  private async mint(value: string) {
+    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
+    this.printQueue.put('requesting mint...\n');
+    await userAsset.mint(userAsset.toErc20Units(value));
+    await this.balance();
   }
 
   private async approve(value: string) {
     const userAsset = this.app.getUser().getAsset(AssetId.DAI);
-    this.printQueue.put('requesting approval...');
+    this.printQueue.put('requesting approval...\n');
     await userAsset.approve(userAsset.toErc20Units(value));
-    this.printQueue.put('approval complete.');
+    this.printQueue.put('approval complete.\n');
   }
 
-  private async deposit(value: string) {
+  private async deposit(valueStr: string) {
     const userAsset = this.app.getUser().getAsset(AssetId.DAI);
+    const value = userAsset.toErc20Units(valueStr);
+    const tokenBalance = await userAsset.publicBalance();
+    if (tokenBalance < value) {
+      throw new Error(`insufficient public balance: ${userAsset.fromErc20Units(tokenBalance)}`);
+    }
+    const tokenAllowance = await userAsset.publicAllowance();
+    if (tokenAllowance < value) {
+      throw new Error(`insufficient allowance: ${userAsset.fromErc20Units(tokenAllowance)}`);
+    }
     this.printQueue.put(`generating deposit proof...\n`);
-    await userAsset.deposit(userAsset.toErc20Units(value));
+    await userAsset.deposit(value);
     this.printQueue.put(`deposit proof sent.\n`);
   }
 
@@ -172,12 +269,9 @@ export class TerminalHandler {
   }
 
   private async balance() {
-    await this.terminal.putString(`${this.getBalance()}\n`);
-  }
-
-  private getBalance() {
     const userAsset = this.app.getUser().getAsset(AssetId.DAI);
-    return userAsset.fromErc20Units(userAsset.balance());
+    await this.printQueue.put(`public: ${userAsset.fromErc20Units(await userAsset.publicBalance())}\n`);
+    await this.printQueue.put(`private: ${userAsset.fromErc20Units(userAsset.balance())}\n`);
   }
 
   private async copyKey() {

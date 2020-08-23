@@ -29,7 +29,10 @@ export class ServerRollupProvider implements RollupProvider {
       depositSignature: depositSignature ? depositSignature.toString('hex') : undefined,
       ...rest,
     };
-    const response = await fetch(url.toString(), { method: 'POST', body: JSON.stringify(data) });
+    const response = await fetch(url.toString(), { method: 'POST', body: JSON.stringify(data) }).catch(() => undefined);
+    if (!response) {
+      throw new Error('Failed to contact rollup provider.');
+    }
     if (response.status === 400) {
       const body = await response.json();
       throw new Error(body.error);
@@ -43,7 +46,10 @@ export class ServerRollupProvider implements RollupProvider {
 
   async status() {
     const url = new URL(`/api/status`, this.host);
-    const response = await fetch(url.toString());
+    const response = await fetch(url.toString()).catch(() => undefined);
+    if (!response) {
+      throw new Error('Failed to contact rollup provider.');
+    }
     if (response.status !== 200) {
       throw new Error(`Bad response code ${response.status}.`);
     }

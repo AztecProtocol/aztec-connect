@@ -36,8 +36,11 @@ export class Web3EthProvider extends EventEmitter implements EthProvider {
   public async init() {
     const ethersProvider = new Web3Provider(this.provider);
     await this.provider.request({ method: 'eth_requestAccounts' });
-    this.chainId = (await ethersProvider.getNetwork()).chainId;
-    this.accounts = (await ethersProvider.listAccounts()).map(EthAddress.fromString);
+
+    await this.updateNetwork();
+
+    const accounts = await ethersProvider.listAccounts();
+    this.updateAccounts(accounts);
 
     this.provider.on('chainChanged', this.updateNetwork);
     this.provider.on('accountsChanged', this.updateAccounts);
@@ -53,7 +56,7 @@ export class Web3EthProvider extends EventEmitter implements EthProvider {
     const ethersProvider = new Web3Provider(this.provider);
     this.chainId = (await ethersProvider.getNetwork()).chainId;
     const network = chainIdToNetwork(this.chainId);
-    debug(`chainId changed: ${this.chainId}`);
+    debug(`chainId set to: ${this.chainId}`);
     this.emit(EthProviderEvent.UPDATED_NETWORK, network, this.chainId);
   };
 
