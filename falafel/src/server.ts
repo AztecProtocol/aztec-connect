@@ -62,8 +62,8 @@ export class Server {
     await this.worldStateDb.start();
     // We know all historical blocks will be available in a call to restoreState once this returns.
     await this.blockchain.start();
-    await this.restoreState();
     await this.createJoinSplitVerifier();
+    await this.restoreState();
     this.printState();
 
     this.processTxQueue(this.config.maxRollupWaitTime, this.config.minRollupInterval);
@@ -321,6 +321,10 @@ export class Server {
     return await this.blockchain.getBlocks(from);
   }
 
+  public getLatestRollupId() {
+    return this.blockchain.getLatestRollupId();
+  }
+
   public async getLatestRollups(count: number) {
     return this.rollupDb.getLatestRollups(count);
   }
@@ -359,6 +363,8 @@ export class Server {
     const nullifier1 = nullifierBufferToIndex(proof.nullifier1);
     const nullifier2 = nullifierBufferToIndex(proof.nullifier2);
     const { publicInput, inputOwner } = proof;
+
+    console.log(`Received tx: ${proof.getTxId().toString('hex')}`);
 
     // Check nullifiers don't exist in the db.
     const emptyValue = Buffer.alloc(64, 0);

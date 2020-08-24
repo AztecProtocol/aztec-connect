@@ -3,11 +3,10 @@ import { JoinSplitProver, JoinSplitTx, JoinSplitProof } from 'barretenberg/clien
 import { Note, encryptNote, createNoteSecret } from 'barretenberg/client_proofs/note';
 import { WorldState } from 'barretenberg/world_state';
 import { UserState } from '../user_state';
-import { randomBytes } from 'crypto';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
-import { ethers } from 'ethers';
-import { User } from '../user';
-import { Signer } from '../sdk';
+import { ethers, Signer } from 'ethers';
+import { UserData } from '../user';
+import { GrumpkinAddress, EthAddress } from 'barretenberg/address';
 
 const debug = createDebug('bb:join_split_proof');
 
@@ -16,32 +15,33 @@ export class JoinSplitProofCreator {
 
   public async createProof(
     userState: UserState,
-    publicInput: number,
-    publicOutput: number,
-    newNoteValue: number,
-    sender: User,
-    receiverPubKey?: Buffer,
-    outputOwnerAddress?: Buffer,
+    publicInput: bigint,
+    publicOutput: bigint,
+    newNoteValue: bigint,
+    sender: UserData,
+    receiverPubKey?: GrumpkinAddress,
+    outputOwnerAddress?: EthAddress,
     signer?: Signer,
   ) {
-    const requiredInputNoteValue = Math.max(0, newNoteValue + publicOutput - publicInput);
+    const max = (a: bigint, b: bigint) => (a > b ? a : b);
+    const requiredInputNoteValue = max(BigInt(0), newNoteValue + publicOutput - publicInput);
     const notes = userState.pickNotes(requiredInputNoteValue);
     if (!notes) {
       throw new Error(`Failed to find no more than 2 notes that sum to ${requiredInputNoteValue}.`);
     }
     const numInputNotes = notes.length;
 
-    const totalNoteInputValue = notes.reduce((sum, note) => sum + note.value, 0);
+    const totalNoteInputValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
     const inputNoteIndices = notes.map(n => n.index);
     const inputNotes = notes.map(n => new Note(sender.publicKey, n.viewingKey, n.value));
     for (let i = notes.length; i < 2; ++i) {
       inputNoteIndices.push(i);
-      inputNotes.push(new Note(sender.publicKey, createNoteSecret(), 0));
+      inputNotes.push(new Note(sender.publicKey, createNoteSecret(), BigInt(0)));
     }
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
-    const changeValue = Math.max(0, totalNoteInputValue - newNoteValue - publicOutput);
-    const newNoteOwner = receiverPubKey || randomBytes(64);
+    const changeValue = max(BigInt(0), totalNoteInputValue - newNoteValue - publicOutput);
+    const newNoteOwner = receiverPubKey || GrumpkinAddress.randomAddress();
     const outputNotes = [
       new Note(newNoteOwner, createNoteSecret(), newNoteValue),
       new Note(sender.publicKey, createNoteSecret(), changeValue),
@@ -59,8 +59,9 @@ export class JoinSplitProofCreator {
     const signingPubKey = sender.publicKey;
 
     const tx = new JoinSplitTx(
-      publicInput,
-      publicOutput,
+      // TODO: Bigint...
+      Number(publicInput),
+      Number(publicOutput),
       numInputNotes,
       inputNoteIndices,
       dataRoot,
@@ -68,8 +69,8 @@ export class JoinSplitProofCreator {
       inputNotes,
       outputNotes,
       signature,
-      signer?.getAddress() || Buffer.alloc(20),
-      outputOwnerAddress || Buffer.alloc(20),
+      signer ? EthAddress.fromString(await signer.getAddress()) : EthAddress.ZERO,
+      outputOwnerAddress || EthAddress.ZERO,
       accountIndex,
       accountPath,
       signingPubKey,
@@ -94,7 +95,19 @@ export class JoinSplitProofCreator {
     if (!signer) {
       throw new Error('Signer undefined.');
     }
+
     const msgHash = ethers.utils.keccak256(txPublicInputs);
-    return await signer.signMessage(Buffer.from(msgHash.slice(2), 'hex'));
+    const digest = ethers.utils.arrayify(msgHash);
+    const sig = await signer.signMessage(digest);
+    let signature = Buffer.from(sig.slice(2), 'hex');
+
+    // Ganache is not signature standard compliant. Returns 00 or 01 as v.
+    // Need to adjust to make v 27 or 28.
+    const v = signature[signature.length - 1];
+    if (v <= 1) {
+      signature = Buffer.concat([signature.slice(0, -1), Buffer.from([v + 27])]);
+    }
+
+    return signature;
   }
 }

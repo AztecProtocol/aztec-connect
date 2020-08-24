@@ -58,6 +58,7 @@ export class InnerProofData {
 export class RollupProofData {
   constructor(
     public rollupId: number,
+    public rollupSize: number,
     public dataStartIndex: number,
     public oldDataRoot: Buffer,
     public newDataRoot: Buffer,
@@ -72,6 +73,7 @@ export class RollupProofData {
   toBuffer() {
     return Buffer.concat([
       numToUInt32BE(this.rollupId, 32),
+      numToUInt32BE(this.rollupSize, 32),
       numToUInt32BE(this.dataStartIndex, 32),
       this.oldDataRoot,
       this.newDataRoot,
@@ -88,16 +90,21 @@ export class RollupProofData {
     return Buffer.concat(this.innerProofData.map(p => p.viewingKeys).flat());
   }
 
+  public static getRollupIdFromBuffer(proofData: Buffer) {
+    return proofData.readUInt32BE(28);
+  }
+
   public static fromBuffer(proofData: Buffer, viewingKeyData?: Buffer) {
-    const rollupId = proofData.readUInt32BE(28);
-    const dataStartIndex = proofData.readUInt32BE(60);
-    const oldDataRoot = proofData.slice(64, 96);
-    const newDataRoot = proofData.slice(96, 128);
-    const oldNullRoot = proofData.slice(128, 160);
-    const newNullRoot = proofData.slice(160, 192);
-    const oldDataRootsRoot = proofData.slice(192, 224);
-    const newDataRootsRoot = proofData.slice(224, 256);
-    const numTxs = proofData.readUInt32BE(284);
+    const rollupId = RollupProofData.getRollupIdFromBuffer(proofData);
+    const rollupSize = proofData.readUInt32BE(1 * 32 + 28);
+    const dataStartIndex = proofData.readUInt32BE(2 * 32 + 28);
+    const oldDataRoot = proofData.slice(3 * 32, 3 * 32 + 32);
+    const newDataRoot = proofData.slice(4 * 32, 4 * 32 + 32);
+    const oldNullRoot = proofData.slice(5 * 32, 5 * 32 + 32);
+    const newNullRoot = proofData.slice(6 * 32, 6 * 32 + 32);
+    const oldDataRootsRoot = proofData.slice(7 * 32, 7 * 32 + 32);
+    const newDataRootsRoot = proofData.slice(8 * 32, 8 * 32 + 32);
+    const numTxs = proofData.readUInt32BE(9 * 32 + 28);
 
     const viewingKeys: Buffer[] = [];
     if (viewingKeyData) {
@@ -109,13 +116,14 @@ export class RollupProofData {
     const innerProofData: InnerProofData[] = [];
     const innerLength = 32 * 10;
     for (let i = 0; i < numTxs; ++i) {
-      const startIndex = 288 + i * innerLength;
+      const startIndex = 10 * 32 + i * innerLength;
       const innerData = proofData.slice(startIndex, startIndex + innerLength);
       innerProofData[i] = InnerProofData.fromBuffer(innerData, viewingKeys.slice(i * 2, i * 2 + 2));
     }
 
     return new RollupProofData(
       rollupId,
+      rollupSize,
       dataStartIndex,
       oldDataRoot,
       newDataRoot,

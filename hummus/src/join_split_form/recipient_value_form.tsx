@@ -12,7 +12,6 @@ interface FormProps {
   onApprove?: (value: bigint) => void;
   onSubmit: (value: bigint, to: string) => void;
   toNoteValue: (tokenStringValue: string) => bigint;
-  isApproving?: boolean;
   isLoading: boolean;
   error?: string;
 }
@@ -27,16 +26,13 @@ export const RecipientValueForm = ({
   onApprove,
   onSubmit,
   toNoteValue,
-  isApproving,
   isLoading,
   error,
 }: FormProps) => {
   const [value, setValue] = useState(initialValue);
   const [recipient, setRecipient] = useState(initialRecipient);
 
-  const requireApproval = !!onApprove && (!allowance || (allowance >= BigInt(0) && allowance < toNoteValue(value)));
-
-  // TODO - value's decimal length should be limited to log10(TOKEN_SCALE / NOTE_SCALE);
+  const requireApproval = allowance !== undefined && allowance > BigInt(0) && allowance < toNoteValue(value);
 
   return (
     <Block padding="xs 0">
@@ -54,7 +50,7 @@ export const RecipientValueForm = ({
           <Block padding="xs 0">
             <FlexBox valign="center">
               <Block right="s" style={{ lineHeight: '0' }}>
-                <Icon name={requireApproval ? 'warning' : 'check'} size="xs" />
+                <Icon name="warning" size="xs" />
               </Block>
               <Text text={`Insufficient allowance. Approve the contract to deposit the funds.`} size="xs" />
             </FlexBox>
@@ -66,7 +62,7 @@ export const RecipientValueForm = ({
             onSubmit={() =>
               requireApproval ? onApprove!(toNoteValue(value)) : onSubmit(toNoteValue(value), recipient)
             }
-            isLoading={isLoading || isApproving}
+            isLoading={isLoading}
           />
         </Block>
       </FlexBox>

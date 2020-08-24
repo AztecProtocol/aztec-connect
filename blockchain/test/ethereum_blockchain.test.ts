@@ -1,5 +1,4 @@
 import { ethers } from '@nomiclabs/buidler';
-import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
@@ -27,7 +26,6 @@ describe('ethereum_blockchain', () => {
   let userBAddress: string;
 
   const mintAmount = 100;
-  const scalingFactor = 1;
   const depositAmount = 30;
   const withdrawalAmount = 10;
   const viewingKeys = [Buffer.alloc(176, 1), Buffer.alloc(176, 2)];

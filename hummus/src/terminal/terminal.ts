@@ -1,6 +1,10 @@
 import { EventEmitter } from 'events';
 import { Cursor, blockCursor, spinnerCursor } from './cursor';
 
+export enum EscapeChars {
+  PAUSE = '\x01',
+}
+
 export class Terminal extends EventEmitter {
   private charBuf: Buffer;
   private cursorX = 0;
@@ -8,7 +12,7 @@ export class Terminal extends EventEmitter {
   private cursor!: Cursor;
   private inputLocked = true;
   private stateCounter = 0;
-  private interval!: number;
+  private interval!: NodeJS.Timeout;
   private cmd: string = '';
 
   constructor(private rows: number, private cols: number) {
@@ -63,6 +67,11 @@ export class Terminal extends EventEmitter {
     this.inputLocked = false;
   }
 
+  public async lock() {
+    this.setCursor(spinnerCursor());
+    this.inputLocked = true;
+  }
+
   private updated() {
     this.emit('updated', ++this.stateCounter);
   }
@@ -80,9 +89,10 @@ export class Terminal extends EventEmitter {
     const savedCursor = this.cursor;
     this.inputLocked = true;
     for (const char of str.toUpperCase()) {
-      if (char === '\x01') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        continue;
+      switch (char) {
+        case EscapeChars.PAUSE:
+          await new Promise(resolve => setTimeout(resolve, 500));
+          continue;
       }
 
       // Reset blink.
@@ -158,9 +168,8 @@ export class Terminal extends EventEmitter {
         case 13:
           const cmd = this.cmd;
           this.cmd = '';
-          this.inputLocked = true;
           this.newLine();
-          this.setCursor(spinnerCursor());
+          this.lock();
           this.emit('cmd', cmd);
           break;
         default:

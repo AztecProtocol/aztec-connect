@@ -1,4 +1,6 @@
-import { RollupProofData } from 'barretenberg/rollup_proof';
+import { EthAddress } from 'barretenberg/address';
+import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
+import { numToUInt32BE } from 'barretenberg/serialize';
 import { Block, Blockchain, Receipt } from 'blockchain';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
@@ -6,30 +8,69 @@ import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
 import { blockDaoToBlock, blockToBlockDao } from './blockdao_convert';
 
+const generateRollup = (rollupId: number, rollupSize: number) => {
+  const innerProofs = new Array(rollupSize)
+    .fill(0)
+    .map(
+      () =>
+        new InnerProofData(
+          numToUInt32BE(0, 32),
+          numToUInt32BE(0, 32),
+          randomBytes(64),
+          randomBytes(64),
+          randomBytes(32),
+          randomBytes(32),
+          Buffer.alloc(20),
+          Buffer.alloc(20),
+          [randomBytes(176), randomBytes(176)],
+        ),
+    );
+  return new RollupProofData(
+    rollupId,
+    rollupSize,
+    rollupId * rollupSize * 2,
+    randomBytes(32),
+    randomBytes(32),
+    randomBytes(32),
+    randomBytes(32),
+    randomBytes(32),
+    randomBytes(32),
+    rollupSize,
+    innerProofs,
+  );
+};
+
 export class LocalBlockchain extends EventEmitter implements Blockchain {
   private blockNum = 0;
   private dataStartIndex = 0;
   private blockRep!: Repository<BlockDao>;
-  private blockchain: Block[] = [];
+  private blocks: Block[] = [];
   private running = false;
 
-  constructor(private connection: Connection, private rollupSize: number) {
+  constructor(private connection: Connection, private rollupSize: number, private initialBlocks = 0) {
     super();
   }
 
+  public getLatestRollupId() {
+    return this.blocks.length
+      ? RollupProofData.getRollupIdFromBuffer(this.blocks[this.blocks.length - 1].rollupProofData)
+      : -1;
+  }
+
   public async getNetworkInfo() {
+    // Pretend to be ropsten (chainId = 3).
     return {
-      chainId: 0,
+      chainId: 3,
       networkOrHost: 'development',
     };
   }
 
   public getRollupContractAddress() {
-    return '';
+    return EthAddress.ZERO.toString();
   }
 
   public getTokenContractAddress() {
-    return '';
+    return EthAddress.ZERO.toString();
   }
 
   public async start() {
@@ -37,15 +78,21 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
     this.blockRep = this.connection.getRepository(BlockDao);
 
-    this.blockchain = await this.loadBlocks();
+    this.blocks = await this.loadBlocks();
 
-    const [lastBlock] = this.blockchain.slice(-1);
+    // Preload some random data if required.
+    for (let i = this.blocks.length; i < this.initialBlocks; ++i) {
+      const rollup = generateRollup(i, this.rollupSize);
+      await this.createBlockFromRollup(this.rollupSize, rollup.toBuffer(), rollup.getViewingKeyData());
+    }
+
+    const [lastBlock] = this.blocks.slice(-1);
     if (lastBlock) {
       if (lastBlock.rollupSize !== this.rollupSize) {
         throw new Error(`Previous data on chain has a rollup size of ${lastBlock.rollupSize}.`);
       }
       this.blockNum = lastBlock.blockNum + 1;
-      this.dataStartIndex = this.blockchain.length * this.rollupSize * 2;
+      this.dataStartIndex = this.blocks.length * this.rollupSize * 2;
     }
 
     console.log(`Local blockchain restored: (blocks: ${this.blockNum})`);
@@ -73,6 +120,14 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       throw new Error(`Incorrect dataStartIndex. Expecting ${this.dataStartIndex}. Got ${rollup.dataStartIndex}.`);
     }
 
+    const txHash = await this.createBlockFromRollup(rollupSize, proofData, viewingKeysData);
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    return txHash;
+  }
+
+  private async createBlockFromRollup(rollupSize: number, proofData: Buffer, viewingKeysData: Buffer) {
     const txHash = randomBytes(32);
     const block: Block = {
       txHash,
@@ -85,11 +140,9 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
     this.blockNum++;
     this.dataStartIndex += rollupSize * 2;
-    this.blockchain.push(block);
+    this.blocks.push(block);
 
     await this.saveBlock(block);
-
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
     return txHash;
   }
@@ -115,7 +168,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async getBlocks(from: number): Promise<Block[]> {
-    return this.blockchain.slice(from);
+    return this.blocks.slice(from);
   }
 
   public async validateDepositFunds(publicOwner: Buffer, publicInput: Buffer) {

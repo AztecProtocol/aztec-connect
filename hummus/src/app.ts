@@ -1,384 +1,162 @@
-import {
-  Sdk,
-  SdkEvent,
-  SdkInitState,
-  UserTxAction,
-  createSdk,
-  RollupProviderExplorer,
-  RollupProviderStatus,
-} from 'aztec2-sdk';
+import { Sdk, createSdk, SdkEvent, getRollupProviderStatus, SdkInitState } from 'aztec2-sdk';
 import createDebug from 'debug';
+import { EthProvider, Web3EthProvider, EthProviderEvent, chainIdToNetwork } from './eth_provider';
+import { EthereumProvider } from 'aztec2-sdk/ethereum_provider';
 import { EventEmitter } from 'events';
-import { EthProvider, chainIdToNetwork, EthProviderEvent, Network } from './eth_provider';
-import { MetamaskSigner } from './signer';
-import { TokenContract } from './token_contract';
+import { EthAddress } from 'barretenberg/address';
 
 const debug = createDebug('bb:app');
 
+export enum AppInitState {
+  UNINITIALIZED = 'UNINITIALIZED',
+  INITIALIZING = 'INITIALIZING',
+  INITIALIZED = 'INITIALIZED',
+}
+
+export enum AppInitAction {
+  LINK_PROVIDER_ACCOUNT,
+  LINK_AZTEC_ACCOUNT,
+  CHANGE_NETWORK,
+}
+
 export enum AppEvent {
-  UPDATED_PROOF_STATE = 'UPDATED_PROOF_STATE',
-  UPDATED_TOKEN_BALANCE = 'UPDATED_TOKEN_BALANCE',
-  UPDATED_NETWORK_AND_CONTRACTS = 'UPDATED_NETWORK_AND_CONTRACTS',
-  APPROVED = 'APPROVED',
+  UPDATED_INIT_STATE = 'APPEVENT_UPDATED_INIT_STATE',
+  UPDATED_ACCOUNT = 'APPEVENT_UPDATED_ACCOUNT',
 }
 
-export enum ProofState {
-  NADA = 'Nada',
-  RUNNING = 'Running',
-  FAILED = 'Failed',
-  FINISHED = 'Finished',
+export interface AppInitStatus {
+  initState: AppInitState;
+  initAction?: AppInitAction;
+  network?: string;
+  message?: string;
 }
 
-interface ProofInput {
-  userId: number;
-  value: bigint;
-  recipient: Buffer;
-  created: Date;
-}
-
-export interface ProofEvent {
-  state: ProofState;
-  action?: UserTxAction | 'MINT';
-  txHash?: Buffer;
-  input?: ProofInput;
-  error?: string;
-  time?: number;
-}
-
-export class App extends EventEmitter implements RollupProviderExplorer {
-  private proofState: ProofEvent = { state: ProofState.NADA };
+export class App extends EventEmitter {
   private sdk!: Sdk;
-  private tokenContract!: TokenContract;
-  private providerStatus!: RollupProviderStatus;
+  private ethProvider!: EthProvider;
+  private initStatus: AppInitStatus = { initState: AppInitState.UNINITIALIZED };
 
-  constructor(public ethProvider: EthProvider) {
+  constructor(private ethereumProvider: EthereumProvider) {
     super();
-
-    ethProvider.on(EthProviderEvent.UPDATED_NETWORK, this.updateNetworkAndContracts);
   }
 
-  public async init(serverUrl: string) {
-    if (this.isInitialized()) {
-      await this.sdk.destroy();
+  public async init(serverUrl: string, clearDb = false) {
+    debug('initializing app...');
+
+    try {
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_PROVIDER_ACCOUNT);
+
+      this.ethProvider = new Web3EthProvider(this.ethereumProvider);
+      await this.ethProvider.init();
+
+      // If our network doesn't match that of the rollup provider, request it be changed until it does.
+      const { chainId: rollupProviderChainId } = await getRollupProviderStatus(serverUrl);
+      this.initStatus.network = chainIdToNetwork(rollupProviderChainId);
+      if (rollupProviderChainId !== this.ethProvider.getChainId()) {
+        this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.CHANGE_NETWORK);
+        while (rollupProviderChainId !== this.ethProvider.getChainId()) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      this.sdk = await createSdk(serverUrl, this.ethereumProvider, { clearDb });
+
+      // Forward all sdk events. This allows subscribing to the events on the App, before we have called init().
+      for (const e in SdkEvent) {
+        const event = (SdkEvent as any)[e];
+        this.sdk.on(event, (...args: any[]) => this.emit(event, ...args));
+      }
+
+      // Handle SDK init messages.
+      this.sdk.on(SdkEvent.UPDATED_INIT_STATE, (initState: SdkInitState, msg?: string) => {
+        if (initState === SdkInitState.INITIALIZING) {
+          this.updateInitStatus(AppInitState.INITIALIZING, undefined, msg);
+        }
+      });
+
+      // Handle account change.
+      this.ethProvider.on(EthProviderEvent.UPDATED_ACCOUNT, (account?: EthAddress) =>
+        this.accountChanged(account).catch(err => this.destroy()),
+      );
+
+      // Handle network change.
+      this.ethProvider.on(EthProviderEvent.UPDATED_NETWORK, () => this.networkChanged());
+
+      await this.sdk.init();
+
+      await this.accountChanged(this.ethProvider.getAccount());
+
+      this.updateInitStatus(AppInitState.INITIALIZED);
+      debug('initialization complete.');
+    } catch (err) {
+      this.destroy();
+      throw err;
+    }
+  }
+
+  private updateInitStatus(initState: AppInitState, initAction?: AppInitAction, message?: string) {
+    this.initStatus = {
+      initState,
+      initAction,
+      message,
+    };
+    this.emit(AppEvent.UPDATED_INIT_STATE, this.initStatus);
+  }
+
+  private async accountChanged(account?: EthAddress) {
+    if (!account) {
+      // If the user withdraws access, destroy everything and return to uninitialized state.
+      throw new Error('Account access withdrawn.');
     }
 
-    this.sdk = await createSdk(serverUrl);
-
-    for (const e in SdkEvent) {
-      this.sdk.on((SdkEvent as any)[e], (...args: any[]) => this.emit((SdkEvent as any)[e], ...args));
+    // Otherwise, we are initializing until the account is added to sdk.
+    const user = this.sdk.getUser(account);
+    if (!user) {
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_AZTEC_ACCOUNT);
+      await this.sdk.addUser(account);
+      this.updateInitStatus(AppInitState.INITIALIZED);
     }
 
-    this.providerStatus = await this.sdk.getStatus();
+    this.emit(AppEvent.UPDATED_ACCOUNT, account);
+  }
 
-    this.requestEthProviderAccess();
-
-    await this.sdk.init();
+  private networkChanged() {
+    if (!this.isCorrectNetwork()) {
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.CHANGE_NETWORK);
+    } else {
+      this.updateInitStatus(AppInitState.INITIALIZED);
+    }
   }
 
   public async destroy() {
-    if (!this.isInitialized()) {
-      return;
-    }
-
-    await this.sdk.destroy();
-    this.ethProvider.off(EthProviderEvent.UPDATED_NETWORK, this.updateNetworkAndContracts);
+    debug('destroying app...');
+    await this.sdk?.destroy();
+    this.ethProvider?.destroy();
+    this.updateInitStatus(AppInitState.UNINITIALIZED);
   }
 
-  public async clearData() {
-    if (!this.isInitialized()) {
-      return;
-    }
-    await this.sdk.clearData();
-  }
-
-  private updateNetworkAndContracts = async (network: Network) => {
-    const NOTE_SCALE = BigInt(10000000000000000);
-    if (this.providerStatus && this.isCorrectNetwork()) {
-      this.tokenContract = new TokenContract(network, this.providerStatus.tokenContractAddress, NOTE_SCALE);
-      await this.tokenContract.init();
-    }
-    this.emit(AppEvent.UPDATED_NETWORK_AND_CONTRACTS, network);
-  };
-
-  private updateProofState(proof: ProofEvent) {
-    this.proofState = proof;
-    this.emit(AppEvent.UPDATED_PROOF_STATE, proof);
-  }
-
-  private updateApprovalState(approval: boolean) {
-    this.emit(AppEvent.APPROVED, approval);
+  public getSdk() {
+    return this.sdk;
   }
 
   public isInitialized() {
-    return this.getInitState() === SdkInitState.INITIALIZED;
+    return this.getInitStatus().initState === AppInitState.INITIALIZED;
   }
 
   public isCorrectNetwork() {
-    return chainIdToNetwork(this.providerStatus.chainId) === this.ethProvider.getNetwork();
+    const { chainId } = this.sdk.getLocalStatus();
+    return this.ethProvider.getChainId() === chainId;
   }
 
-  public getInitState() {
-    return this.sdk ? this.sdk.getInitState() : SdkInitState.UNINITIALIZED;
-  }
-
-  public getProofState() {
-    return this.proofState;
-  }
-
-  public getDataRoot() {
-    return this.sdk.getDataRoot();
-  }
-
-  public getDataSize() {
-    return this.sdk.getDataSize();
-  }
-
-  public async getStatus() {
-    return await this.sdk.getStatus();
-  }
-
-  public getProviderStatus() {
-    return this.providerStatus;
-  }
-
-  public async requestEthProviderAccess() {
-    await this.ethProvider.requestAccess(async () => {
-      const network = this.ethProvider.getNetwork();
-      await this.updateNetworkAndContracts(network);
-    });
-  }
-
-  public async approve(value: bigint) {
-    this.updateApprovalState(true);
-    try {
-      const { rollupContractAddress } = await this.sdk.getStatus();
-      await this.tokenContract.approve(rollupContractAddress, value);
-      this.updateApprovalState(false);
-    } catch (err) {
-      debug(err);
-      this.updateApprovalState(false);
-    }
-  }
-
-  public async deposit(value: bigint, account: string) {
-    const created = Date.now();
-    const action = 'DEPOSIT';
-    const user = this.sdk.getUser();
-    const input = { userId: user.id, value, recipient: user.publicKey, created: new Date(created) };
-    this.updateProofState({ action, state: ProofState.RUNNING, input });
-    try {
-      const tokenBalance = await this.tokenContract.balanceOf(account);
-      if (tokenBalance < value) {
-        this.updateProofState({
-          action,
-          state: ProofState.FAILED,
-          input,
-          error: `Token balance is insufficient for a deposit of ${value}.`,
-          time: Date.now() - created,
-        });
-        return;
-      }
-
-      const signer = new MetamaskSigner(account);
-      const txHash = await this.sdk.deposit(Number(value), signer);
-      this.updateProofState({ action, state: ProofState.FINISHED, txHash, input, time: Date.now() - created });
-    } catch (err) {
-      debug(err);
-      this.updateProofState({
-        action,
-        state: ProofState.FAILED,
-        input,
-        error: err.message,
-        time: Date.now() - created,
-      });
-    }
-  }
-
-  public async withdraw(value: bigint, recipientStr: string) {
-    const created = Date.now();
-    const action = 'WITHDRAW';
-    const user = this.sdk.getUser();
-    const recipient = Buffer.from(recipientStr.replace(/^0x/, ''), 'hex');
-    const input = { userId: user.id, value, recipient, created: new Date(created) };
-    this.updateProofState({ action, state: ProofState.RUNNING, input });
-    try {
-      const txHash = await this.sdk.withdraw(Number(value), recipient);
-      this.updateProofState({ action, state: ProofState.FINISHED, txHash, input, time: Date.now() - created });
-    } catch (err) {
-      debug(err);
-      this.updateProofState({
-        action,
-        state: ProofState.FAILED,
-        input,
-        error: err.message,
-        time: Date.now() - created,
-      });
-    }
-  }
-
-  public async transfer(value: bigint, recipientStr: string) {
-    const created = Date.now();
-    const action = 'TRANSFER';
-    const user = this.sdk.getUser();
-    const recipient = Buffer.from(recipientStr, 'hex');
-    const input = { userId: user.id, value, recipient, created: new Date(created) };
-    this.updateProofState({ action, state: ProofState.RUNNING, input });
-    try {
-      const txHash = await this.sdk.transfer(Number(value), recipient);
-      this.updateProofState({ action, state: ProofState.FINISHED, txHash, input, time: Date.now() - created });
-    } catch (err) {
-      debug(err);
-      this.updateProofState({
-        action,
-        state: ProofState.FAILED,
-        input,
-        error: err.message,
-        time: Date.now() - created,
-      });
-    }
-  }
-
-  public async publicTransfer(value: bigint, account: string, recipientStr: string) {
-    const created = Date.now();
-    const action = 'PUBLIC_TRANSFER';
-    const user = this.sdk.getUser();
-    const recipient = Buffer.from(recipientStr.replace(/^0x/, ''), 'hex');
-    const input = { userId: user.id, value, recipient, created: new Date(created) };
-    this.updateProofState({ action, state: ProofState.RUNNING, input });
-    try {
-      const tokenBalance = await this.tokenContract.balanceOf(account);
-      if (tokenBalance < value) {
-        this.updateProofState({
-          action,
-          state: ProofState.FAILED,
-          input,
-          error: `Token balance is insufficient to transfer ${value}.`,
-          time: Date.now() - created,
-        });
-        return;
-      }
-
-      const signer = new MetamaskSigner(account);
-      const txHash = await this.sdk.publicTransfer(Number(value), signer, recipient);
-      this.updateProofState({ action, state: ProofState.FINISHED, txHash, input, time: Date.now() - created });
-    } catch (err) {
-      debug(err);
-      this.updateProofState({
-        action,
-        state: ProofState.FAILED,
-        input,
-        error: err.message,
-        time: Date.now() - created,
-      });
-    }
+  public getInitStatus() {
+    return this.initStatus;
   }
 
   public getUser() {
-    return this.sdk.getUser();
+    return this.sdk.getUser(this.ethProvider.getAccount())!;
   }
 
-  public getUsers(localOnly: boolean = true) {
-    return this.sdk ? this.sdk.getUsers(localOnly) : [];
+  public getAccount() {
+    return this.ethProvider.getAccount();
   }
-
-  public async createUser(alias?: string) {
-    return this.sdk.createUser(alias);
-  }
-
-  public async addUser(alias: string, publicKey: Buffer) {
-    return this.sdk.addUser(alias, publicKey);
-  }
-
-  public switchToUser(userIdOrAlias: string | number) {
-    return this.sdk.switchToUser(userIdOrAlias);
-  }
-
-  public getBalance(userIdOrAlias?: string | number) {
-    return this.sdk.getBalance(userIdOrAlias);
-  }
-
-  public getLatestRollups() {
-    return this.sdk.getLatestRollups();
-  }
-
-  public getLatestTxs() {
-    return this.sdk.getLatestTxs();
-  }
-
-  public async getRollup(rollupId: number) {
-    return this.sdk.getRollup(rollupId);
-  }
-
-  public async getTx(txHash: Buffer) {
-    return this.sdk.getTx(txHash);
-  }
-
-  public getUserTxs(userId: number) {
-    return this.sdk.getUserTxs(userId);
-  }
-
-  public findUser(userIdOrAlias: string | number, remote: boolean = false) {
-    return this.sdk.findUser(userIdOrAlias, remote);
-  }
-
-  public startTrackingGlobalState() {
-    this.sdk.startTrackingGlobalState();
-  }
-
-  public stopTrackingGlobalState() {
-    this.sdk.stopTrackingGlobalState();
-  }
-
-  public async getTokenBalance(account: string) {
-    return this.tokenContract.balanceOf(account);
-  }
-
-  public async getRollupContractAllowance(account: string) {
-    const { rollupContractAddress } = await this.sdk.getStatus();
-    return this.tokenContract.allowance(account, rollupContractAddress);
-  }
-
-  public async mintToken(account: string, value: bigint) {
-    const action = 'MINT';
-    this.updateProofState({ action, state: ProofState.RUNNING });
-
-    try {
-      await this.tokenContract.mint(account, value);
-    } catch (err) {
-      debug(err);
-      this.updateProofState({
-        action,
-        state: ProofState.FAILED,
-        error: err.message,
-      });
-      return;
-    }
-
-    const balance = await this.getTokenBalance(account);
-    this.emit(AppEvent.UPDATED_TOKEN_BALANCE, balance);
-
-    this.updateProofState({ action, state: ProofState.FINISHED });
-  }
-
-  private subscribeToTokenBalance() {
-    // TODO
-  }
-
-  public toTokenValueString = (noteValue: bigint) => {
-    const scaledTokenValue = this.tokenContract.toScaledTokenValue(noteValue);
-    const decimals = this.tokenContract.getDecimals();
-    const valStr = scaledTokenValue.toString().padStart(decimals + 1, '0');
-    const integer = valStr.slice(0, valStr.length - decimals);
-    const mantissa = valStr.slice(-decimals).replace(/0+$/, '');
-    return mantissa ? `${integer}.${mantissa}` : integer;
-  };
-
-  public toNoteValue = (tokenValueString: string) => {
-    const [integer, decimalStr] = `${tokenValueString}`.split('.');
-    const decimal = (decimalStr || '').replace(/0+$/, '');
-    const scalingFactor = BigInt(10) ** BigInt(this.tokenContract.getDecimals());
-    const decimalScale = scalingFactor / BigInt(10) ** BigInt(decimal?.length || 0);
-    const scaledTokenValue = BigInt(decimal || 0) * decimalScale + BigInt(integer || 0) * scalingFactor;
-    return this.tokenContract.toNoteValue(scaledTokenValue);
-  };
 }

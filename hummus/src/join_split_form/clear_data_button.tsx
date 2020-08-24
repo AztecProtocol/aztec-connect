@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import styled from 'styled-components';
 import { TextButton, FlexBox, Block, Icon } from '@aztec/guacamole-ui';
 import { ThemeContext } from '../config/context';
@@ -19,7 +19,7 @@ export const ClearDataButton = ({ onClearData, disabled }: ClearDataButtonProps)
 
   return (
     <ThemeContext.Consumer>
-      {({ theme, link }) => (
+      {({ link }) => (
         <InlineBlockTextButton theme="implicit" size="xxs" color={link} onClick={clearData} disabled={disabled}>
           <FlexBox valign="center">
             <Icon name={'delete_outline'} color={''} size="xs" />

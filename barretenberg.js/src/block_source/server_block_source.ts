@@ -1,7 +1,22 @@
-import { BlockSource, Block, BlockServerResponse } from '.';
+import { BlockSource, Block } from '.';
 import { EventEmitter } from 'events';
 import { fetch } from '../iso_fetch';
 import createDebug from 'debug';
+import { RollupProofData } from '../rollup_proof';
+
+export interface BlockServerResponse {
+  blockNum: number;
+  txHash: string;
+  created: string;
+  rollupSize: number;
+  rollupProofData: string;
+  viewingKeysData: string;
+}
+
+export interface GetBlocksServerResponse {
+  latestRollupId: number;
+  blocks: BlockServerResponse[];
+}
 
 const debug = createDebug('bb:server_block_source');
 
@@ -15,15 +30,20 @@ const toBlock = (block: BlockServerResponse): Block => ({
 
 export class ServerBlockSource extends EventEmitter implements BlockSource {
   private running = false;
+  private latestRollupId = -1;
 
   constructor(private host: URL) {
     super();
   }
 
+  getLatestRollupId() {
+    return this.latestRollupId;
+  }
+
   public async start(fromBlock: number = 0) {
     this.running = true;
 
-    while (this.running) {
+    const emitBlocks = async () => {
       try {
         const blocks = await this.getBlocks(fromBlock);
         for (const block of blocks) {
@@ -33,9 +53,17 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
       } catch (err) {
         // debug(err);
       }
+    };
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+    await emitBlocks();
+
+    const poll = async () => {
+      while (this.running) {
+        await emitBlocks();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    };
+    poll();
   }
 
   public stop() {
@@ -47,7 +75,8 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     url.searchParams.append('from', from.toString());
 
     const response = await fetch(url.toString());
-    const jsonBlocks = (await response.json()) as BlockServerResponse[];
-    return jsonBlocks.map(toBlock);
+    const result = (await response.json()) as GetBlocksServerResponse;
+    this.latestRollupId = result.latestRollupId;
+    return result.blocks.map(toBlock);
   }
 }

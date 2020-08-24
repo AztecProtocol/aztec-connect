@@ -1,5 +1,6 @@
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { Block } from 'barretenberg/block_source';
+import { RollupProofData } from 'barretenberg/rollup_proof';
 import { toBigIntBE } from 'bigint-buffer';
 import createDebug from 'debug';
 import { Contract, ethers, Signer } from 'ethers';
@@ -19,8 +20,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private rollupProcessor!: Contract;
   private erc20!: Contract;
   private erc20Address!: string;
-  private scalingFactor = 10000000000000000n;
   private running = false;
+  private latestRollupId = -1;
 
   constructor(private config: EthereumBlockchainConfig, private rollupContractAddress: string) {
     super();
@@ -28,22 +29,25 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   /**
-   * Start polling for RollupProcessed events
+   * Start polling for RollupProcessed events.
+   * All historical blocks will have been emitted before this function returns.
    */
   public async start(fromBlock: number = 0) {
     console.log(`Ethereum blockchain starting from block: ${fromBlock}`);
     this.erc20Address = await this.rollupProcessor.linkedToken();
     this.erc20 = new ethers.Contract(this.erc20Address, ERC20ABI, this.config.signer);
 
-    // We must have emitted all historical blocks before returning.
     const emitBlocks = async () => {
       const blocks = await this.getBlocks(fromBlock);
       for (const block of blocks) {
         console.log(`Block received: ${block.blockNum}`);
+        this.latestRollupId = RollupProofData.getRollupIdFromBuffer(block.rollupProofData);
         this.emit('block', block);
         fromBlock = block.blockNum + 1;
       }
     };
+
+    // We must have emitted all historical blocks before returning.
     await emitBlocks();
 
     // After which, we asynchronously kick off a polling loop for the latest blocks.
@@ -61,6 +65,10 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public stop() {
     this.running = false;
+  }
+
+  public getLatestRollupId() {
+    return this.latestRollupId;
   }
 
   public async getNetworkInfo() {
@@ -125,6 +133,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     const filter = this.rollupProcessor.filters.RollupProcessed();
     const rollupEvents = await this.rollupProcessor.queryFilter(filter, from);
     const txs = await Promise.all(rollupEvents.map(event => event.getTransaction()));
+    // When using infura, we get an inconsistent view of the chain, hence filtering pending blocks. Great service.
     return txs.filter(tx => tx.blockNumber).map(tx => this.createRollupBlock(tx));
   }
 
@@ -159,7 +168,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public async validateDepositFunds(publicOwnerBuf: Buffer, publicInputBuf: Buffer) {
     const publicOwner = `0x${publicOwnerBuf.toString('hex')}`;
-    const publicInput = toBigIntBE(publicInputBuf) * this.scalingFactor;
+    const publicInput = toBigIntBE(publicInputBuf);
     const erc20Balance = BigInt(await this.erc20.balanceOf(publicOwner));
     const erc20Approval = BigInt(await this.erc20.allowance(publicOwner, this.rollupProcessor.address));
     return erc20Balance >= publicInput && erc20Approval >= publicInput;

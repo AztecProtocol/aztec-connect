@@ -1,5 +1,5 @@
-import { Block, BlockServerResponse } from 'barretenberg/block_source';
-import { Proof, RollupServerResponse, TxServerResponse, ProofServerResponse } from 'barretenberg/rollup_provider';
+import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
+import { Proof, ProofServerResponse, RollupServerResponse, TxServerResponse } from 'barretenberg/rollup_provider';
 import Koa from 'koa';
 import compress from 'koa-compress';
 import Router from 'koa-router';
@@ -15,7 +15,7 @@ const toBlockResponse = (block: Block): BlockServerResponse => ({
   txHash: block.txHash.toString('hex'),
   rollupProofData: block.rollupProofData.toString('hex'),
   viewingKeysData: block.viewingKeysData.toString('hex'),
-  created: block.created.toString(),
+  created: block.created.toISOString(),
 });
 
 const toRollupResponse = ({
@@ -35,7 +35,7 @@ const toRollupResponse = ({
   txHashes: txs.map(tx => tx.txId.toString('hex')),
   ethBlock,
   ethTxHash: ethTxHash ? ethTxHash.toString('hex') : undefined,
-  created: created.toString(),
+  created: created.toISOString(),
 });
 
 const toTxResponse = ({ txId, rollup, proofData, viewingKey1, viewingKey2, created }: TxDao): TxServerResponse => ({
@@ -48,7 +48,7 @@ const toTxResponse = ({ txId, rollup, proofData, viewingKey1, viewingKey2, creat
       },
   proofData: proofData.toString('hex'),
   viewingKeys: [viewingKey1, viewingKey2].map(vk => vk.toString('hex')),
-  created: created.toString(),
+  created: created.toISOString(),
 });
 
 export function appFactory(server: Server, prefix: string) {
@@ -82,7 +82,11 @@ export function appFactory(server: Server, prefix: string) {
 
   router.get('/get-blocks', async (ctx: Koa.Context) => {
     const blocks = await server.getBlocks(+ctx.query.from);
-    ctx.body = blocks.map(toBlockResponse);
+    const response: GetBlocksServerResponse = {
+      latestRollupId: server.getLatestRollupId(),
+      blocks: blocks.map(toBlockResponse),
+    };
+    ctx.body = response;
   });
 
   router.get('/get-rollups', async (ctx: Koa.Context) => {

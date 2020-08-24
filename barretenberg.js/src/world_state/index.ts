@@ -17,7 +17,7 @@ export class WorldState {
     try {
       this.tree = await MerkleTree.fromName(this.db, this.pedersen, this.blake2s, 'data');
     } catch (e) {
-      this.tree = new MerkleTree(this.db, this.pedersen, this.blake2s, 'data', 32);
+      this.tree = await MerkleTree.new(this.db, this.pedersen, this.blake2s, 'data', 32);
     }
     debug(`data size: ${this.tree.getSize()}`);
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);

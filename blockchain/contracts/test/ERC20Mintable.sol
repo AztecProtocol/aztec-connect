@@ -9,7 +9,9 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
  * ERC20 contract where anybody is able to mint
  */
 contract ERC20Mintable is ERC20 {
-    constructor() public ERC20('Test', 'test') {}
+    constructor() public ERC20('Test', 'test') {
+        _setupDecimals(2);
+    }
 
     function mint(address _to, uint256 _value) public returns (bool) {
         _mint(_to, _value);

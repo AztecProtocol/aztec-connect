@@ -22,16 +22,17 @@ interface RollupDetailsProps {
 }
 
 export const RollupDetails = ({ id, app }: RollupDetailsProps) => {
+  const sdk = app.getSdk()!;
   const [rollup, setRollup] = useState<Rollup | undefined>();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unmounted = false;
-    let fetchReq: number;
+    let fetchReq: NodeJS.Timer;
 
     const fetchAsync = async () => {
       try {
-        const rollupData = await app.getRollup(id);
+        const rollupData = await sdk.getRollup(id);
         if (unmounted) return;
 
         if (rollupData) {
@@ -44,7 +45,9 @@ export const RollupDetails = ({ id, app }: RollupDetailsProps) => {
             }, 1000);
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        /* swallow */
+      }
       if (loading) {
         setLoading(false);
       }

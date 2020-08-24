@@ -1,19 +1,28 @@
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
-import { randomBytes } from 'crypto';
+import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { Web3Provider } from '@ethersproject/providers';
 
-export interface User {
-  id: number;
-  privateKey?: Buffer;
-  publicKey: Buffer;
+export interface UserData {
+  ethAddress: EthAddress;
+  privateKey: Buffer;
+  publicKey: GrumpkinAddress;
   alias?: string;
+  syncedToBlock: number;
+  syncedToRollup: number;
 }
 
-export class UserFactory {
-  constructor(private grumpkin: Grumpkin) {}
+export class UserDataFactory {
+  constructor(private grumpkin: Grumpkin, private ethersProvider: Web3Provider) {}
 
-  createUser(id: number, alias?: string): User {
-    const privateKey = randomBytes(32);
-    const publicKey = this.grumpkin.mul(Grumpkin.one, privateKey);
-    return { id, privateKey, publicKey, alias };
+  private async deriveGrumpkinPrivateKey(ethAddress: EthAddress) {
+    const signer = this.ethersProvider.getSigner(ethAddress.toString());
+    const sig = await signer.signMessage('Link Aztec account.');
+    return Buffer.from(sig.slice(2)).slice(0, 32);
+  }
+
+  async createUser(ethAddress: EthAddress): Promise<UserData> {
+    const privateKey = await this.deriveGrumpkinPrivateKey(ethAddress);
+    const publicKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
+    return { ethAddress, privateKey, publicKey, syncedToBlock: -1, syncedToRollup: -1 };
   }
 }

@@ -1,5 +1,5 @@
 import { BlockSource, Block } from 'barretenberg/block_source';
-import { JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
+import { JoinSplitProver, JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { Crs } from 'barretenberg/crs';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
@@ -15,29 +15,36 @@ import { LevelUp } from 'levelup';
 import { Database } from './database';
 import { JoinSplitProofCreator } from './join_split_proof';
 import { TxsState } from './txs_state';
-import { User, UserFactory } from './user';
-import { UserState, UserStateFactory } from './user_state';
-import { Sdk, SdkEvent, SdkInitState, TxHash } from './sdk';
-import { UserTxAction } from './user_tx';
+import { UserDataFactory } from './user';
+import { UserState, UserStateFactory, UserStateEvent } from './user_state';
+import { Sdk, SdkEvent, SdkInitState, TxHash, AssetId, SdkStatus, Action, ActionState } from './sdk';
+import { UserTx, UserTxAction } from './user_tx';
 import Mutex from 'idb-mutex';
-import { Signer } from './sdk';
+import { EthereumProvider } from './ethereum_provider';
+import { EthAddress, GrumpkinAddress, Address } from 'barretenberg/address';
+import { TokenContract, Web3TokenContract } from './token_contract';
+import { Web3Provider } from '@ethersproject/providers';
+import { Signer } from 'ethers';
+import { CoreSdkUser } from './core_sdk_user';
+import { RollupProofData } from 'barretenberg/rollup_proof';
+import { MockTokenContract } from './token_contract/mock_token_contract';
 
 const debug = createDebug('bb:core_sdk');
 
 /**
  * These are events that are only emitted due to changes triggered within the current execution context.
- * i.e. Do not emit these events, if responding to an external trigger to refresh our internal state.
  * Primarily, these are hooked into a broadcast channel to notify other instances of state changes.
+ * Treat CoreSdkEvents as events for synchronising state between SDK instances, and SdkEvents for notifying UI changes.
  */
 export enum CoreSdkEvent {
-  // A user is added.
+  // The world state db has been updated.
+  UPDATED_WORLD_STATE = 'CORESDKEVENT_UPDATED_WORLD_STATE',
+  // The set of users changed.
   UPDATED_USERS = 'CORESDKEVENT_UPDATED_USERS',
-  // A transaction has been created.
-  NEW_USER_TX = 'CORESDKEVENT_NEW_USER_TX',
-  // A block has been processed.
-  BLOCK_PROCESSED = 'CORESDKEVENT_BLOCK_PROCESSED',
+  // The state of a user has changed.
+  UPDATED_USER_STATE = 'CORESDKEVENT_UPDATED_USER_STATE',
   // The instance must restart.
-  RESTART = 'CORESDKEVENT_RESTART',
+  CLEAR_DATA = 'CORESDKEVENT_RESTART',
 }
 
 export interface CoreSdkOptions {
@@ -45,20 +52,31 @@ export interface CoreSdkOptions {
 }
 
 export class CoreSdk extends EventEmitter implements Sdk {
-  private initState = SdkInitState.UNINITIALIZED;
-  private user!: User;
+  private ethersProvider: Web3Provider;
   private worldState!: WorldState;
-  private users: User[] = [];
   private userStates: UserState[] = [];
+  private tokenContracts: TokenContract[] = [];
   private pooledProver!: PooledProver;
   private joinSplitProofCreator!: JoinSplitProofCreator;
   private blockQueue!: MemoryFifo<Block>;
-  private userFactory!: UserFactory;
+  private userFactory!: UserDataFactory;
   private userStateFactory!: UserStateFactory;
   private txsState!: TxsState;
   private mutex = new Mutex('world-state-mutex');
+  private sdkStatus: SdkStatus = {
+    chainId: -1,
+    rollupContractAddress: EthAddress.ZERO,
+    syncedToRollup: -1,
+    latestRollupId: -1,
+    initState: SdkInitState.UNINITIALIZED,
+    dataRoot: Buffer.alloc(0),
+    dataSize: 0,
+  };
+  private actionState?: ActionState;
+  private processBlocksPromise?: Promise<void>;
 
   constructor(
+    ethereumProvider: EthereumProvider,
     private leveldb: LevelUp,
     private db: Database,
     private rollupProvider: RollupProvider,
@@ -67,14 +85,30 @@ export class CoreSdk extends EventEmitter implements Sdk {
     private options: CoreSdkOptions,
   ) {
     super();
+    this.ethersProvider = new Web3Provider(ethereumProvider);
   }
 
   public async init() {
-    if (this.initState !== SdkInitState.UNINITIALIZED) {
+    if (this.sdkStatus.initState !== SdkInitState.UNINITIALIZED) {
       throw new Error('Sdk is not UNINITIALIZED.');
     }
 
-    this.emit(SdkEvent.UPDATED_INIT_STATE, (this.initState = SdkInitState.INITIALIZING));
+    this.updateInitState(SdkInitState.INITIALIZING);
+
+    const { chainId, networkOrHost, rollupContractAddress, tokenContractAddress } = await this.getRemoteStatus();
+
+    const { chainId: ethProviderChainId } = await this.ethersProvider.getNetwork();
+    if (chainId !== ethProviderChainId) {
+      throw new Error(
+        `Ethereum provider chainId ${ethProviderChainId} does not match rollup provider chainId ${chainId}.`,
+      );
+    }
+
+    this.tokenContracts[AssetId.DAI] =
+      networkOrHost !== 'development'
+        ? new Web3TokenContract(this.ethersProvider, tokenContractAddress, rollupContractAddress, chainId)
+        : new MockTokenContract();
+    await Promise.all(this.tokenContracts.map(tc => tc.init()));
 
     const barretenberg = await BarretenbergWasm.new();
     const pedersen = new Pedersen(barretenberg);
@@ -86,29 +120,33 @@ export class CoreSdk extends EventEmitter implements Sdk {
     const pooledProver = await PooledProver.new(barretenberg, crsData, circuitSize, numWorkers);
     const joinSplitProver = new JoinSplitProver(barretenberg, pooledProver);
 
-    this.userFactory = new UserFactory(grumpkin);
-    this.userStateFactory = new UserStateFactory(grumpkin, blake2s, this.db);
+    this.userFactory = new UserDataFactory(grumpkin, this.ethersProvider);
+    this.userStateFactory = new UserStateFactory(grumpkin, blake2s, this.db, this.blockSource);
     this.pooledProver = pooledProver;
     this.txsState = new TxsState(this.rollupProviderExplorer);
     this.worldState = new WorldState(this.leveldb, pedersen, blake2s);
     this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, grumpkin);
 
     await this.worldState.init();
-    await this.initUsers();
-    this.switchToUser(0);
-    await this.createProvingKey(joinSplitProver);
 
-    this.blockQueue = new MemoryFifo<Block>();
-    this.blockSource.on('block', b => this.blockQueue.put(b));
-    this.processBlockQueue();
+    // If chainId is 0 (falafel is using simulated blockchain) pretend it needs to be ropsten.
+    this.sdkStatus.chainId = chainId || 3;
+    this.sdkStatus.rollupContractAddress = rollupContractAddress;
+    this.sdkStatus.dataSize = this.worldState.getSize();
+    this.sdkStatus.dataRoot = this.worldState.getRoot();
+    this.sdkStatus.syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
+    this.sdkStatus.latestRollupId = +(await this.leveldb.get('latestRollupId').catch(() => -1));
 
-    this.emit(SdkEvent.UPDATED_INIT_STATE, (this.initState = SdkInitState.INITIALIZED));
+    await this.initUserStates();
+    await this.createJoinSplitProvingKey(joinSplitProver);
+
+    this.updateInitState(SdkInitState.INITIALIZED);
   }
 
   private async getCrsData(circuitSize: number) {
     let crsData = await this.db.getKey(`crs-${circuitSize}`);
     if (!crsData) {
-      debug('downloading crs data...');
+      this.logInitMsgAndDebug('Downloading CRS data...');
       const crs = new Crs(circuitSize);
       await crs.download();
       crsData = crs.getData();
@@ -119,93 +157,145 @@ export class CoreSdk extends EventEmitter implements Sdk {
   }
 
   /**
-   * Load the users from the database and initialize their corresponding user states.
-   * Public so it can be called when externally notified of new users.
+   * Shutdown any existing `UserState` instances and wait for them to complete any processing.
+   * Load the users from the database and create and initialize their new user states.
+   * Emit SdkEvent.UPDATED_USERS to update the UI containing and user lists.
+   * Emit SdkEvent.UPDATED_USER_STATE to update the UI for each user.
+   * Register for changes to each user state an emit appropriate events.
+   * If this SDK instance is handling blocks, start syncing the user states.
+   *
+   * Public, as it will be called in the event of another instance emitting CoreSdkEvent.UPDATED_USERS.
    */
-  public async initUsers() {
-    this.users = await this.db.getUsers();
-    if (!this.users.length) {
-      const user = this.userFactory.createUser(0);
-      this.db.addUser(user);
-      this.users = [user];
-      debug(`created new user ${user.id}.`);
-    }
-    this.userStates = this.users.filter(u => u.privateKey).map(u => this.userStateFactory.createUserState(u));
+  public async initUserStates() {
+    debug('initializing user states...');
+    await this.stopSyncingUserStates();
+
+    const users = await this.db.getUsers();
+    this.userStates = users.map(u => this.userStateFactory.createUserState(u));
     await Promise.all(this.userStates.map(us => us.init()));
-    this.user = this.users[0];
-    this.emit(SdkEvent.UPDATED_USERS, this.users);
+
+    this.emit(SdkEvent.UPDATED_USERS);
+
+    for (const us of this.userStates) {
+      this.emit(SdkEvent.UPDATED_USER_STATE, us.getUser().ethAddress);
+
+      us.on(
+        UserStateEvent.UPDATED_USER_STATE,
+        (ethAddress: EthAddress, balanceAfter: bigint, diff: bigint, assetId: AssetId) => {
+          this.emit(CoreSdkEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff, assetId);
+          this.emit(SdkEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff, assetId);
+        },
+      );
+
+      if (this.processBlocksPromise) {
+        us.startSync();
+      }
+    }
   }
 
-  private async createProvingKey(joinSplitProver: JoinSplitProver) {
+  private async stopSyncingUserStates() {
+    for (const us of this.userStates) {
+      us.removeAllListeners();
+      await us.stopSync();
+    }
+  }
+
+  private async createJoinSplitProvingKey(joinSplitProver: JoinSplitProver) {
     const start = new Date().getTime();
     const provingKey = await this.db.getKey('join-split-proving-key');
     if (provingKey) {
+      this.logInitMsgAndDebug('Loading proving key...');
       await joinSplitProver.loadKey(provingKey);
     } else {
-      this.logAndDebug('computing proving key...');
+      this.logInitMsgAndDebug('Computing proving key...');
       await joinSplitProver.computeKey();
       if (this.options.saveProvingKey) {
-        debug('saving...');
+        this.logInitMsgAndDebug('Saving proving key...');
         const newProvingKey = await joinSplitProver.getKey();
         await this.db.addKey('join-split-proving-key', newProvingKey);
       }
-      this.logAndDebug(`complete: ${new Date().getTime() - start}ms`);
+      this.logInitMsgAndDebug(`Complete: ${new Date().getTime() - start}ms`);
     }
   }
 
-  private async deinit() {
-    await this.pooledProver.destroy();
-    this.blockSource.stop();
-    this.blockSource.removeAllListeners();
-    this.blockQueue.cancel();
-    this.stopTrackingGlobalState();
-    this.emit(SdkEvent.UPDATED_INIT_STATE, (this.initState = SdkInitState.UNINITIALIZED));
-  }
-
-  public async restart() {
-    await this.deinit();
-    await this.init();
-  }
-
   public async destroy() {
-    await this.deinit();
-    this.emit(SdkEvent.UPDATED_INIT_STATE, (this.initState = SdkInitState.DESTROYED));
+    await this.pooledProver?.destroy();
+    await this.stopReceivingBlocks();
+    this.stopTrackingGlobalState();
+    this.updateInitState(SdkInitState.DESTROYED);
+    this.removeAllListeners();
+  }
+
+  private updateInitState(initState: SdkInitState, msg?: string) {
+    this.sdkStatus.initState = initState;
+    this.emit(SdkEvent.UPDATED_INIT_STATE, initState, msg);
   }
 
   public async clearData() {
-    await this.deinit();
+    if (this.processBlocksPromise) {
+      await this.notifiedClearData();
+    } else {
+      // Emit event requesting the primary instance clears the data.
+      this.emit(CoreSdkEvent.CLEAR_DATA);
+    }
+  }
+
+  public async notifiedClearData() {
+    if (!this.processBlocksPromise) {
+      return;
+    }
+    await this.stopSyncingUserStates();
+    await this.stopReceivingBlocks();
     await this.leveldb.clear();
-    await this.db.clearNote();
-    await this.db.clearUserTx();
-    await this.init();
-    this.emit(CoreSdkEvent.RESTART);
+    await this.db.resetUsers();
+
+    await this.worldState.init();
+    await this.notifyWorldStateUpdated();
+    await this.initUserStates();
+    await this.startReceivingBlocks();
   }
 
-  public getInitState() {
-    return this.initState;
+  public getLocalStatus() {
+    return this.sdkStatus;
   }
 
-  public getDataRoot() {
-    return this.worldState.getRoot();
+  private logInitMsgAndDebug(msg: string) {
+    this.updateInitState(SdkInitState.INITIALIZING, msg);
+    debug(msg.toLowerCase());
   }
 
-  public getDataSize() {
-    return this.worldState.getSize();
-  }
-
-  private logAndDebug(str: string) {
-    debug(str);
-    this.emit(SdkEvent.LOG, str);
-  }
-
-  public async getStatus() {
+  public async getRemoteStatus() {
     return await this.rollupProvider.status();
   }
 
+  public getTokenContract(assetId: AssetId) {
+    return this.tokenContracts[assetId];
+  }
+
   public async startReceivingBlocks() {
+    if (this.processBlocksPromise) {
+      return;
+    }
+
+    this.blockQueue = new MemoryFifo<Block>();
+    this.blockSource.on('block', b => this.blockQueue.put(b));
+    this.processBlocksPromise = this.processBlockQueue();
+
+    const syncedToBlock = await this.leveldb.get('syncedToBlock').catch(() => -1);
+    await this.blockSource.start(+syncedToBlock + 1);
+    this.sdkStatus.latestRollupId = this.blockSource.getLatestRollupId();
+
+    this.userStates.forEach(us => us.startSync());
+
     debug('started processing blocks.');
-    const fromBlock = await this.leveldb.get('syncedToBlock').catch(() => {});
-    this.blockSource.start(fromBlock ? +fromBlock + 1 : 0);
+  }
+
+  private async stopReceivingBlocks() {
+    this.blockSource.stop();
+    this.blockSource.removeAllListeners();
+    this.blockQueue?.cancel();
+    await this.processBlocksPromise;
+    this.processBlocksPromise = undefined;
   }
 
   private async processBlockQueue() {
@@ -221,55 +311,73 @@ export class CoreSdk extends EventEmitter implements Sdk {
       await this.mutex.lock();
       await this.worldState.syncFromDb().catch(() => {});
       await this.worldState.processBlock(block);
-      await this.mutex.unlock();
-      await this.handleBlock(block);
+
+      const rollupId = RollupProofData.getRollupIdFromBuffer(block.rollupProofData);
+      const latestRollupId = this.blockSource.getLatestRollupId();
+      await this.leveldb.put('syncedToRollup', rollupId.toString());
+      await this.leveldb.put('latestRollupId', latestRollupId.toString());
       await this.leveldb.put('syncedToBlock', block.blockNum.toString());
-      this.emit(CoreSdkEvent.BLOCK_PROCESSED, block);
+
+      this.sdkStatus.syncedToRollup = rollupId;
+      this.sdkStatus.latestRollupId = latestRollupId;
+      this.sdkStatus.dataRoot = this.worldState.getRoot();
+      this.sdkStatus.dataSize = this.worldState.getSize();
+      await this.mutex.unlock();
+
+      // Forward the block on to each UserState for processing.
+      this.userStates.forEach(us => us.processBlock(block));
+
+      this.emit(CoreSdkEvent.UPDATED_WORLD_STATE, rollupId, this.sdkStatus.latestRollupId);
+      this.emit(SdkEvent.UPDATED_WORLD_STATE, rollupId, this.sdkStatus.latestRollupId);
     }
   }
 
-  public async handleBlockEvent(block: Block) {
+  /**
+   * Called when another instance of the sdk has updated the world state db.
+   */
+  public async notifyWorldStateUpdated() {
     await this.worldState.syncFromDb();
-    this.handleBlock(block);
+    this.sdkStatus.dataRoot = this.worldState.getRoot();
+    this.sdkStatus.dataSize = this.worldState.getSize();
+    this.sdkStatus.syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
+    this.sdkStatus.latestRollupId = +(await this.leveldb.get('latestRollupId').catch(() => -1));
+    this.emit(SdkEvent.UPDATED_WORLD_STATE, this.sdkStatus.syncedToRollup, this.sdkStatus.latestRollupId);
   }
 
-  private async handleBlock(block: Block) {
-    await Promise.all(
-      this.userStates.map(async userState => {
-        const userId = userState.getUser().id;
-        const balanceBefore = userState.getBalance();
-
-        if (!(await userState.processBlock(block))) {
-          return;
-        }
-
-        if (userId === this.user.id) {
-          const balanceAfter = userState.getBalance();
-          const diff = balanceAfter - balanceBefore;
-          if (diff !== 0) {
-            this.emit(SdkEvent.UPDATED_BALANCE, balanceAfter, diff);
-          }
-        }
-
-        this.emit(SdkEvent.UPDATED_USER_TX, userId);
-      }),
-    );
+  /**
+   * Called when another instance of the sdk has updated a users state.
+   * Call the user state init function to refresh users internal state.
+   * Emit an SdkEvent to update the UI.
+   */
+  public async notifyUserStateUpdated(ethAddress: EthAddress) {
+    await this.getUserState(ethAddress)?.init();
+    this.emit(SdkEvent.UPDATED_USER_STATE, ethAddress);
   }
 
   private async createProof(
+    assetId: AssetId,
+    proofSender: EthAddress,
     action: UserTxAction,
-    value: number,
-    noteRecipient?: Buffer,
-    outputOwner?: Buffer,
+    value: bigint,
+    noteRecipient?: GrumpkinAddress,
+    outputOwner?: EthAddress,
     signer?: Signer,
   ) {
+    if (!noteRecipient && !outputOwner) {
+      throw new Error('Must provide either a note recipient or an output eth address.');
+    }
+
     const created = Date.now();
-    const user = this.getUser();
-    const userState = this.getUserState(user.id)!;
-    const publicInput = ['DEPOSIT', 'PUBLIC_TRANSFER'].indexOf(action) >= 0 ? value : 0;
-    const publicOutput = ['WITHDRAW', 'PUBLIC_TRANSFER'].indexOf(action) >= 0 ? value : 0;
-    const newNoteValue = ['DEPOSIT', 'TRANSFER'].indexOf(action) >= 0 ? value : 0;
-    const proof = await this.joinSplitProofCreator.createProof(
+    const user = await this.db.getUser(proofSender);
+    if (!user) {
+      throw new Error(`Unknown user: ${proofSender}`);
+    }
+    const userState = this.getUserState(proofSender)!;
+    const publicInput = ['DEPOSIT', 'PUBLIC_TRANSFER'].includes(action) ? value : BigInt(0);
+    const publicOutput = ['WITHDRAW', 'PUBLIC_TRANSFER'].includes(action) ? value : BigInt(0);
+    const newNoteValue = ['DEPOSIT', 'TRANSFER'].includes(action) ? value : BigInt(0);
+
+    const proofOutput = await this.joinSplitProofCreator.createProof(
       userState,
       publicInput,
       publicOutput,
@@ -280,38 +388,108 @@ export class CoreSdk extends EventEmitter implements Sdk {
       signer,
     );
 
-    const { txHash } = await this.rollupProvider.sendProof(proof);
+    await this.rollupProvider.sendProof(proofOutput);
 
-    await userState.addUserTx({
+    const proofData = new JoinSplitProof(proofOutput.proofData, proofOutput.viewingKeys);
+    const txHash = proofData.getTxId();
+    const userTx: UserTx = {
       action,
       txHash,
-      userId: user.id,
+      ethAddress: user.ethAddress,
       value,
-      recipient: noteRecipient || outputOwner || this.user.publicKey,
+      recipient: noteRecipient ? noteRecipient.toBuffer() : outputOwner!.toBuffer(),
       settled: false,
       created: new Date(created),
-    });
-
-    this.emit(SdkEvent.NEW_USER_TX, user.id);
-    this.emit(CoreSdkEvent.NEW_USER_TX, user.id);
-
+    };
+    await this.db.addUserTx(userTx);
+    this.emit(CoreSdkEvent.UPDATED_USER_STATE, userTx.ethAddress);
+    this.emit(SdkEvent.UPDATED_USER_STATE, userTx.ethAddress);
     return txHash;
   }
 
-  public async deposit(value: number, signer: Signer, noteRecipient?: Buffer) {
-    return await this.createProof('DEPOSIT', value, noteRecipient || this.user.publicKey, undefined, signer);
+  public getAddressFromAlias(alias: string) {
+    return GrumpkinAddress.ZERO;
   }
 
-  public async withdraw(value: number, tokenRecipient: Buffer) {
-    return await this.createProof('WITHDRAW', value, undefined, tokenRecipient);
+  public async approve(assetId: AssetId, value: bigint, from: EthAddress) {
+    const action = () => this.getTokenContract(assetId).approve(from, value);
+    const txHash = await this.performAction(Action.APPROVE, value, from, this.sdkStatus.rollupContractAddress, action);
+    this.emit(SdkEvent.UPDATED_USER_STATE, from);
+    return txHash;
   }
 
-  public async transfer(value: number, noteRecipient: Buffer) {
-    return await this.createProof('TRANSFER', value, noteRecipient);
+  public async mint(assetId: AssetId, value: bigint, to: EthAddress) {
+    debug('minting ', value);
+    const action = () => this.getTokenContract(assetId).mint(to, value);
+    const txHash = await this.performAction(Action.MINT, value, this.sdkStatus.rollupContractAddress, to, action);
+    this.emit(SdkEvent.UPDATED_USER_STATE, to);
+    return txHash;
   }
 
-  public async publicTransfer(value: number, signer: Signer, tokenRecipient: Buffer) {
-    return await this.createProof('PUBLIC_TRANSFER', value, undefined, tokenRecipient, signer);
+  public async deposit(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
+    await this.checkPublicBalanceAndAllowance(assetId, value, from);
+    const signer = this.ethersProvider.getSigner(from.toString());
+    const action = () => this.createProof(assetId, from, 'DEPOSIT', value, to, undefined, signer);
+    return this.performAction(Action.DEPOSIT, value, from, to, action);
+  }
+
+  public async withdraw(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
+    const action = () => this.createProof(assetId, from, 'WITHDRAW', value, undefined, to);
+    return this.performAction(Action.WITHDRAW, value, from, to, action);
+  }
+
+  public async transfer(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
+    const action = () => this.createProof(assetId, from, 'TRANSFER', value, to);
+    return this.performAction(Action.TRANSFER, value, from, to, action);
+  }
+
+  public async publicTransfer(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
+    await this.checkPublicBalanceAndAllowance(assetId, value, from);
+    const signer = this.ethersProvider.getSigner(from.toString());
+    const action = () => this.createProof(assetId, from, 'PUBLIC_TRANSFER', value, undefined, to, signer);
+    return this.performAction(Action.PUBLIC_TRANSFER, value, from, to, action);
+  }
+
+  private async checkPublicBalanceAndAllowance(assetId: AssetId, value: bigint, from: EthAddress) {
+    const tokenContract = this.getTokenContract(assetId);
+    const tokenBalance = await tokenContract.balanceOf(from);
+    if (tokenBalance < value) {
+      throw new Error(`Insufficient public token balance: ${tokenContract.fromErc20Units(tokenBalance)}`);
+    }
+    const allowance = await tokenContract.allowance(from);
+    if (allowance < value) {
+      throw new Error(`Insufficient allowance: ${tokenContract.fromErc20Units(allowance)}`);
+    }
+  }
+
+  private async performAction(
+    action: Action,
+    value: bigint,
+    sender: EthAddress,
+    recipient: Address,
+    fn: () => Promise<Buffer>,
+  ) {
+    this.actionState = {
+      action,
+      value,
+      sender,
+      recipient,
+      created: new Date(),
+    };
+    this.emit(SdkEvent.UPDATED_ACTION_STATE, { ...this.actionState });
+    try {
+      this.actionState.txHash = await fn();
+    } catch (err) {
+      this.actionState.error = err;
+      throw err;
+    } finally {
+      this.emit(SdkEvent.UPDATED_ACTION_STATE, { ...this.actionState });
+    }
+    return this.actionState.txHash;
+  }
+
+  public isBusy() {
+    return this.actionState ? !this.actionState.txHash && !this.actionState.error : false;
   }
 
   private async isSynchronised() {
@@ -326,9 +504,9 @@ export class CoreSdk extends EventEmitter implements Sdk {
     }
   }
 
-  public async awaitSettlement(txHash: TxHash) {
+  public async awaitSettlement(address: EthAddress, txHash: TxHash) {
     while (true) {
-      const tx = await this.getUserState(this.user.id)!.getUserTx(txHash);
+      const tx = await this.db.getUserTx(address, txHash);
       if (!tx) {
         throw new Error(`Transaction hash not found: ${txHash.toString('hex')}`);
       }
@@ -339,54 +517,53 @@ export class CoreSdk extends EventEmitter implements Sdk {
     }
   }
 
-  private getUserState(userId: number) {
-    return this.userStates.find(us => us.getUser().id === userId);
+  public getUserState(ethAddress: EthAddress) {
+    return this.userStates.find(us => us.getUser().ethAddress.equals(ethAddress));
   }
 
-  public getUser() {
-    return this.user;
+  public getUserData(ethAddress: EthAddress) {
+    return this.getUserState(ethAddress)?.getUser();
   }
 
-  public getUsers(localOnly: boolean = true) {
-    return this.users.filter(u => !localOnly || u.privateKey);
+  public getUsersData() {
+    return this.userStates.map(us => us.getUser());
   }
 
-  public async createUser(alias?: string) {
-    const user = this.userFactory.createUser(this.users.length, alias);
-    this.db.addUser(user);
-    await this.initUsers();
-    this.emit(CoreSdkEvent.UPDATED_USERS, this.users);
-    return user;
-  }
+  public async addUser(ethAddress: EthAddress) {
+    if (await this.db.getUser(ethAddress)) {
+      throw new Error(`User already exists: ${ethAddress}`);
+    }
+    const user = await this.userFactory.createUser(ethAddress);
+    await this.db.addUser(user);
 
-  public async addUser(alias: string, publicKey: Buffer) {
-    if (this.users.find(u => u.alias === alias)) {
-      throw new Error('Alias already exists.');
+    const userState = this.userStateFactory.createUserState(user);
+    await userState.init();
+    this.userStates.push(userState);
+
+    if (this.processBlocksPromise) {
+      userState.startSync();
     }
 
-    const user: User = { id: this.users.length, publicKey, alias };
-    this.db.addUser(user);
-    await this.initUsers();
-    this.emit(CoreSdkEvent.UPDATED_USERS, this.users);
-    return user;
+    this.emit(SdkEvent.UPDATED_USER_STATE, user.ethAddress);
+    this.emit(CoreSdkEvent.UPDATED_USERS);
+    this.emit(SdkEvent.UPDATED_USERS);
+
+    return new CoreSdkUser(ethAddress, this);
   }
 
-  public switchToUser(userIdOrAlias: string | number) {
-    const user = this.findUser(userIdOrAlias);
-    if (!user) {
-      throw new Error('Local user not found.');
+  public getUser(address: EthAddress) {
+    if (!this.getUserData(address)) {
+      return;
     }
-
-    this.user = user;
-    debug(`switching to user id: ${user.id}`);
-    this.emit(SdkEvent.UPDATED_ACCOUNT, this.user);
-    this.emit(SdkEvent.UPDATED_BALANCE, this.getBalance());
-    return user;
+    return new CoreSdkUser(address, this);
   }
 
-  public getBalance(userIdOrAlias?: string | number) {
-    const user = (userIdOrAlias !== undefined && this.findUser(userIdOrAlias)) || this.user;
-    return this.getUserState(user.id)!.getBalance();
+  public getBalance(ethAddress: EthAddress) {
+    const userState = this.getUserState(ethAddress);
+    if (!userState) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    return userState.getBalance();
   }
 
   public async getLatestRollups() {
@@ -405,15 +582,12 @@ export class CoreSdk extends EventEmitter implements Sdk {
     return await this.txsState.getTx(txHash);
   }
 
-  public async getUserTxs(userId: number) {
-    const userState = this.getUserState(userId);
-    return userState ? await userState.getUserTxs() : [];
+  public async getUserTxs(ethAddress: EthAddress) {
+    return this.db.getUserTxs(ethAddress);
   }
 
-  public findUser(userIdOrAlias: string | number, remote: boolean = false) {
-    return this.users
-      .filter(u => remote || u.privateKey)
-      .find(u => u.id.toString() === userIdOrAlias.toString() || u.alias === userIdOrAlias);
+  public getActionState() {
+    return this.actionState;
   }
 
   public startTrackingGlobalState() {
@@ -423,7 +597,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
   }
 
   public stopTrackingGlobalState() {
-    this.txsState.removeAllListeners();
-    this.txsState.stop();
+    this.txsState?.removeAllListeners();
+    this.txsState?.stop();
   }
 }

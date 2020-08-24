@@ -22,7 +22,6 @@ function getSigner() {
 
 async function main() {
   const [, , erc20Address = 'dev', mint, approve] = process.argv;
-  const scalingFactor = 10000000000000000n;
 
   const signer = getSigner();
   if (!signer) {
@@ -41,10 +40,10 @@ async function main() {
     await rollup.deployed();
 
     if (mint) {
-      await erc20.mint(signer.getAddress(), BigInt(mint) * scalingFactor * 100n);
+      await erc20.mint(signer.getAddress(), BigInt(mint));
     }
     if (approve) {
-      await erc20.approve(rollup.address, BigInt(approve) * scalingFactor * 100n);
+      await erc20.approve(rollup.address, BigInt(approve));
     }
 
     console.error(`ERC20 contract address: ${erc20.address}`);
