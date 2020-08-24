@@ -35,15 +35,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     event Deposit(address depositorAddress, uint256 depositValue);
     event Withdraw(address withdrawAddress, uint256 withdrawValue);
 
-    constructor(
-        address _linkedToken,
-        uint256 _scalingFactor,
-        address _verifierAddress
-    ) public {
+    constructor(address _linkedToken, address _verifierAddress) public {
         require(_linkedToken != address(0x0), 'Rollup Processor: ZERO_ADDRESS');
-
         linkedToken = IERC20(_linkedToken);
-        scalingFactor = _scalingFactor;
         verifier = IVerifier(_verifierAddress);
     }
 
@@ -267,7 +261,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         uint256 rollupAllowance = linkedToken.allowance(depositorAddress, address(this));
         require(rollupAllowance >= depositValue, 'Rollup Processor: INSUFFICIENT_TOKEN_APPROVAL');
 
-        // scaling factor to convert between Aztec notes and DAI
         linkedToken.transferFrom(depositorAddress, address(this), depositValue);
         emit Deposit(depositorAddress, depositValue);
     }
@@ -283,7 +276,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         uint256 rollupBalance = linkedToken.balanceOf(address(this));
         require(withdrawValue <= rollupBalance, 'Rollup Processor: INSUFFICIENT_FUNDS');
 
-        // scaling factor to convert between Aztec notes and DAI
         linkedToken.transfer(receiverAddress, withdrawValue);
         emit Withdraw(receiverAddress, withdrawValue);
     }

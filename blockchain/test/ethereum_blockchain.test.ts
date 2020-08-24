@@ -45,7 +45,7 @@ describe('ethereum_blockchain', () => {
     const mockVerifier = await MockVerifier.deploy();
 
     const RollupProcessor = await ethers.getContractFactory('RollupProcessor');
-    rollupProcessor = await RollupProcessor.deploy(erc20.address, scalingFactor, mockVerifier.address);
+    rollupProcessor = await RollupProcessor.deploy(erc20.address, mockVerifier.address);
     await erc20.mint(userAAddress, mintAmount);
 
     ethereumBlockchain = new EthereumBlockchain({ signer: userA, networkOrHost: '' }, rollupProcessor.address);

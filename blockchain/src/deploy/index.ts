@@ -34,7 +34,7 @@ async function main() {
 
     const verifier = await deployVerifier(signer);
     const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
-    const rollup = await rollupFactory.deploy(erc20.address, scalingFactor, verifier.address);
+    const rollup = await rollupFactory.deploy(erc20.address, verifier.address);
 
     console.error(`Awaiting deployment...`);
     await rollup.deployed();
@@ -53,7 +53,7 @@ async function main() {
   } else {
     const verifier = await deployVerifier(signer);
     const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
-    const rollup = await rollupFactory.deploy(erc20Address, scalingFactor, verifier.address);
+    const rollup = await rollupFactory.deploy(erc20Address, verifier.address);
 
     console.error(`Awaiting deployment...`);
     await rollup.deployed();

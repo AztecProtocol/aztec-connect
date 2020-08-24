@@ -34,7 +34,7 @@ describe('rollup_processor: permissioning', () => {
     const mockVerifier = await MockVerifier.deploy();
 
     const RollupProcessor = await ethers.getContractFactory('RollupProcessor');
-    rollupProcessor = await RollupProcessor.deploy(erc20.address, scalingFactor, mockVerifier.address);
+    rollupProcessor = await RollupProcessor.deploy(erc20.address, mockVerifier.address);
 
     // mint users tokens for testing
     await erc20.mint(userAAddress, mintAmount);
