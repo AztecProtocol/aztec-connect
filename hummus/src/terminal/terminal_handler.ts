@@ -1,9 +1,8 @@
-import { App, AppEvent, AppInitState, AppInitStatus, AppInitAction } from '../app';
+import { WebSdk, AppEvent, AppInitState, AppInitStatus, AppInitAction } from 'aztec2-sdk';
 import { MemoryFifo, SdkEvent, AssetId } from 'aztec2-sdk';
 import { Terminal } from './terminal';
 import copy from 'copy-to-clipboard';
 import { GrumpkinAddress, EthAddress } from 'barretenberg/address';
-import { EthProviderEvent } from '../eth_provider';
 
 enum TermControl {
   PROMPT,
@@ -18,7 +17,7 @@ enum TermControl {
  * and it is the job of the handler to reenable the prompt once the command is handled.
  */
 export class TerminalHandler {
-  private cmdQueue = new MemoryFifo<string>();
+  private controlQueue = new MemoryFifo<() => Promise<void>>();
   private printQueue = new MemoryFifo<string | TermControl>();
   private preInitCmds = { help: this.help, init: this.init, exit: this.onExit, cleardata: this.clearData };
   private postInitCmds = {
@@ -36,18 +35,44 @@ export class TerminalHandler {
     cleardata: this.clearData,
   };
 
-  constructor(private app: App, private terminal: Terminal, private onExit: () => void) {}
+  constructor(private app: WebSdk, private terminal: Terminal, private onExit: () => void) {}
 
   public start() {
     this.processCommands();
     this.processPrint();
     this.printQueue.put("\x01\x01\x01\x01aztec zero knowledge terminal.\x01\ntype command or 'help'\n");
     this.printQueue.put(TermControl.PROMPT);
-    this.terminal.on('cmd', (cmd: string) => this.cmdQueue.put(cmd));
+    this.terminal.on('cmd', this.queueCommand);
+
+    if (this.app.isInitialized()) {
+      this.registerHandlers();
+    }
   }
 
   /**
+   * Called when a command is entered in the terminal.
+   * The terminal is locked when this is called.
+   * Run the command, and then restore the prompt.
+   */
+  private queueCommand = (cmdStr: string) => {
+    this.controlQueue.put(async () => {
+      try {
+        const [cmd, ...args] = cmdStr.toLowerCase().split(/ +/g);
+        if (!this.app.isInitialized()) {
+          await this.handleCommand(cmd, args, this.preInitCmds);
+        } else {
+          await this.handleCommand(cmd, args, this.postInitCmds);
+        }
+      } catch (err) {
+        this.printQueue.put(err.message + '\n');
+      }
+      this.printQueue.put(TermControl.PROMPT);
+    });
+  };
+
+  /**
    * Registered before the app has been initialized, unregistered after.
+   * Any initialization messages are added to the print queue.
    */
   private initProgressHandler = (initStatus: AppInitStatus) => {
     const msg = this.getInitString(initStatus);
@@ -62,24 +87,37 @@ export class TerminalHandler {
   private registerHandlers() {
     // If the app transitions to initializing state, lock the terminal until it is initialized again.
     this.app.on(AppEvent.UPDATED_INIT_STATE, (initStatus: AppInitStatus) => {
-      switch (initStatus.initState) {
-        case AppInitState.INITIALIZING:
+      if (initStatus.initState === AppInitState.INITIALIZING) {
+        this.controlQueue.put(async () => {
           this.printQueue.put(TermControl.LOCK);
           const msg = this.getInitString(initStatus);
           if (msg) {
             this.printQueue.put('\r' + msg + '\n');
           }
-          break;
-        case AppInitState.INITIALIZED:
+        });
+      }
+      if (initStatus.initState === AppInitState.INITIALIZED) {
+        this.controlQueue.put(async () => {
+          this.printQueue.put(TermControl.LOCK);
+          this.printQueue.put(`\ruser: ${initStatus.account!.toString().slice(0, 12)}...\n`);
+          await this.balance();
           this.printQueue.put(TermControl.PROMPT);
-          break;
+        });
+      }
+      if (initStatus.initState === AppInitState.UNINITIALIZED) {
+        this.controlQueue.put(async () => {
+          this.printQueue.put(TermControl.LOCK);
+          this.printQueue.put('logged out. reinitialize.\n');
+          this.printQueue.put(TermControl.PROMPT);
+        });
       }
     });
 
     // If the users balance updates, print an update.
     this.app.on(SdkEvent.UPDATED_USER_STATE, (account: EthAddress, balance: bigint, diff: bigint, assetId: AssetId) => {
       const user = this.app.getUser();
-      if (user.getUserData().ethAddress.equals(account) && diff) {
+      const userIsSynced = user.getUserData().syncedToRollup === this.app.getSdk().getLocalStatus().syncedToRollup;
+      if (user.getUserData().ethAddress.equals(account) && diff && userIsSynced) {
         const userAsset = user.getAsset(assetId);
         this.printQueue.put(
           `balance updated: ${userAsset.fromErc20Units(balance)} (${diff >= 0 ? '+' : ''}${userAsset.fromErc20Units(
@@ -87,11 +125,6 @@ export class TerminalHandler {
           )})\n`,
         );
       }
-    });
-
-    // If the account changes, print an update.
-    this.app.on(AppEvent.UPDATED_ACCOUNT, (account: EthAddress) => {
-      this.printQueue.put(`user: ${account.toString().slice(0, 12)}...\n`);
     });
   }
 
@@ -104,14 +137,15 @@ export class TerminalHandler {
       case AppInitAction.LINK_PROVIDER_ACCOUNT:
         return `requesting account access...`;
       case AppInitAction.LINK_AZTEC_ACCOUNT:
-        return `linking Aztec account...`;
+        return `check provider to link aztec account...`;
     }
   }
 
   public stop() {
     this.terminal.stop();
-    this.cmdQueue.cancel();
+    this.controlQueue.cancel();
     this.printQueue.cancel();
+    this.app.removeAllListeners();
   }
 
   private isTermControl(toBeDetermined: any): toBeDetermined is TermControl {
@@ -146,21 +180,11 @@ export class TerminalHandler {
 
   private async processCommands() {
     while (true) {
-      const cmdStr = await this.cmdQueue.get();
-      if (cmdStr === null) {
+      const fn = await this.controlQueue.get();
+      if (fn === null) {
         break;
       }
-      try {
-        const [cmd, ...args] = cmdStr.toLowerCase().split(/ +/g);
-        if (!this.app.isInitialized()) {
-          await this.handleCommand(cmd, args, this.preInitCmds);
-        } else {
-          await this.handleCommand(cmd, args, this.postInitCmds);
-        }
-      } catch (err) {
-        this.printQueue.put(err.message + '\n');
-      }
-      this.printQueue.put(TermControl.PROMPT);
+      await fn();
     }
   }
 
@@ -190,12 +214,12 @@ export class TerminalHandler {
   }
 
   private async init(server: string) {
-    this.app.removeAllListeners(AppEvent.UPDATED_INIT_STATE);
+    this.app.removeAllListeners();
     this.app.on(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
-
     await this.app.init(server || window.location.protocol + '//' + window.location.hostname);
-    const sdk = this.app.getSdk()!;
+    this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
 
+    const sdk = this.app.getSdk()!;
     try {
       const { dataSize, dataRoot, nullRoot } = await sdk.getRemoteStatus();
       this.printQueue.put(`data size: ${dataSize}\n`);
@@ -204,10 +228,9 @@ export class TerminalHandler {
     } catch (err) {
       this.printQueue.put('failed to get server status.\n');
     }
-    this.printQueue.put(`user: ${this.app.getAccount().toString().slice(0, 12)}...\n`);
+    this.printQueue.put(`user: ${this.app.getInitStatus().account!.toString().slice(0, 12)}...\n`);
     await this.balance();
 
-    this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
     this.registerHandlers();
   }
 

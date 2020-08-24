@@ -1,30 +1,26 @@
 import React, { useState, useEffect, FunctionComponent } from 'react';
 import { Text, Block } from '@aztec/guacamole-ui';
 import { Button, FormField, Input, FormSection, Form } from './components';
-import { App, AppInitState, AppEvent, AppInitAction, AppInitStatus } from './app';
-import { EthProviderEvent } from './eth_provider';
+import { WebSdk, AppInitState, AppEvent, AppInitAction, AppInitStatus } from 'aztec2-sdk';
 import createDebug from 'debug';
 
 const debug = createDebug('bb::init_form');
 
 interface InitProps {
-  app: App;
+  app: WebSdk;
   initialServerUrl?: string;
 }
 
 export const Init: FunctionComponent<InitProps> = ({ app, initialServerUrl = '', children }) => {
   const [initStatus, setInitStatus] = useState(app.getInitStatus());
   const [serverUrl, setServerUrl] = useState(initialServerUrl);
-  const [, setChainId] = useState(-1);
   const { initState } = initStatus;
 
   useEffect(() => {
     app.on(AppEvent.UPDATED_INIT_STATE, setInitStatus);
-    app.on(EthProviderEvent.UPDATED_NETWORK, setChainId);
 
     return () => {
       app.off(AppEvent.UPDATED_INIT_STATE, setInitStatus);
-      app.off(EthProviderEvent.UPDATED_NETWORK, setChainId);
     };
   }, [app]);
 

@@ -1,14 +1,14 @@
 import { ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
 import { ServerBlockSource } from 'barretenberg/block_source';
-import { DexieDatabase } from './database';
+import { DexieDatabase } from '../database';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
 import levelup from 'levelup';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
-import { SdkEvent, SdkInitState } from './sdk';
+import { SdkEvent, SdkInitState } from '../sdk';
 import createDebug from 'debug';
 import isNode from 'detect-node';
 import { mkdirSync } from 'fs';
-import { EthereumProvider } from './ethereum_provider';
+import { EthereumProvider } from '../ethereum_provider';
 import { EthAddress } from 'barretenberg/address';
 
 const debug = createDebug('bb:create_sdk');

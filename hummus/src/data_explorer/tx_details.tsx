@@ -2,12 +2,12 @@ import { Tx } from 'aztec2-sdk';
 import moment from 'moment';
 import React, { useState, useEffect } from 'react';
 import { Form, FormSection } from '../components';
-import { App } from '../app';
+import { WebSdk } from 'aztec2-sdk';
 import { DetailRow, ContentLink } from './detail_row';
 
 interface TxDetailsProps {
   txHash: Buffer;
-  app: App;
+  app: WebSdk;
 }
 
 export const TxDetails = ({ txHash, app }: TxDetailsProps) => {

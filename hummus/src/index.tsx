@@ -4,8 +4,7 @@ import { BrowserRouter, Switch, Route, Link, useLocation, RouteComponentProps } 
 import { History } from 'history';
 import styled, { createGlobalStyle } from 'styled-components';
 import { FlexBox, Block, SwitchInput, Text, TextButton, Icon, PageSteps } from '@aztec/guacamole-ui';
-import { App } from './app';
-import { JoinSplitForm } from './join_split_form';
+import { WebSdk } from 'aztec2-sdk';
 import { LocalState, GlobalState, RollupDetails, TxDetails } from './data_explorer';
 import { ThemeContext, themes } from './config/context';
 // import { Terminal2020 } from './terminal2020';
@@ -13,6 +12,7 @@ import './styles/guacamole.css';
 import debug from 'debug';
 import { Terminal, TerminalComponent } from './terminal';
 import { Init } from './init';
+import { ActionForm } from './action_form';
 require('barretenberg/wasm/barretenberg.wasm');
 
 declare global {
@@ -86,7 +86,7 @@ const Unsupported = () => {
   );
 };
 
-function ThemedContent({ app }: { app: App }) {
+function ThemedContent({ app }: { app: WebSdk }) {
   const [theme, setTheme] = useState(themes[window.localStorage.getItem('theme') === 'light' ? 'light' : 'dark']);
   const { pathname } = useLocation();
   const serverUrl = window.location.protocol + '//' + window.location.hostname;
@@ -123,7 +123,7 @@ function ThemedContent({ app }: { app: App }) {
                   <GlobalState app={app} />
                 </Route>
                 <Route>
-                  <JoinSplitForm app={app} />
+                  <ActionForm app={app} />
                 </Route>
               </Switch>
             </Init>
@@ -158,7 +158,7 @@ function ThemedContent({ app }: { app: App }) {
   );
 }
 
-function LandingPage({ app }: { app: App }) {
+function LandingPage({ app }: { app: WebSdk }) {
   return (
     <Switch>
       {/* <Route
@@ -196,7 +196,7 @@ async function main() {
     // Have to do this early to silence warning.
     window.ethereum.autoRefreshOnNetworkChange = false;
 
-    const app = new App(window.ethereum);
+    const app = new WebSdk(window.ethereum);
     ReactDOM.render(
       <BrowserRouter>
         <GlobalStyle />

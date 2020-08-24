@@ -6,10 +6,10 @@ import { ThemeContext } from '../config/context';
 import { StatusRow, TmpRow } from './status_row';
 import { SdkEvent, UserTx, ActionState, AssetId, Action, Sdk } from 'aztec2-sdk';
 import { EthAddress } from 'barretenberg/address';
-import { App } from '../app';
+import { WebSdk } from 'aztec2-sdk';
 
 interface UserTxsProps {
-  app: App;
+  app: WebSdk;
   account: EthAddress;
 }
 

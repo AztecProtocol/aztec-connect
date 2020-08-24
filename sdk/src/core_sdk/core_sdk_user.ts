@@ -1,4 +1,4 @@
-import { SdkUser, SdkUserAsset, AssetId } from './sdk';
+import { SdkUser, SdkUserAsset, AssetId } from '../sdk';
 import { EthAddress } from 'barretenberg/address';
 import { CoreSdk } from './core_sdk';
 import { CoreSdkUserAsset } from './core_sdk_user_asset';
