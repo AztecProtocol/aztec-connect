@@ -89,7 +89,6 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    let updated = false;
     const { ethAddress } = this.user;
     const balanceBefore = this.getBalance();
 
@@ -116,17 +115,12 @@ export class UserState extends EventEmitter {
       const destroyedNote2 = await this.nullifyNote(nullifier2);
 
       if (savedUserTx) {
+        await this.refreshNotePicker();
         await this.db.settleUserTx(txId);
       } else {
         const userTx = await this.recoverUserTx(proof, newNote, changeNote, destroyedNote1, destroyedNote2);
         await this.db.addUserTx(userTx);
       }
-
-      updated = true;
-    }
-
-    if (updated) {
-      await this.refreshNotePicker();
     }
 
     this.user.syncedToBlock = block.blockNum;

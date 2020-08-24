@@ -75,6 +75,7 @@ describe('end-to-end tests', () => {
 
     const transferTxHash = await user0Asset.transfer(800n, users[1].getUserData().publicKey);
     await sdk.awaitSettlement(userAddresses[0], transferTxHash);
+    await sdk.awaitSettlement(userAddresses[1], transferTxHash);
 
     expect(user0Asset.balance()).toBe(200n);
     expect(user1Asset.balance()).toBe(800n);
