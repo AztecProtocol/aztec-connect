@@ -1,9 +1,9 @@
-import { Sdk, createSdk, SdkEvent, getRollupProviderStatus, SdkInitState } from 'aztec2-sdk';
-import createDebug from 'debug';
-import { EthProvider, Web3EthProvider, EthProviderEvent, chainIdToNetwork } from './eth_provider';
-import { EthereumProvider } from 'aztec2-sdk/ethereum_provider';
+import { Sdk, SdkEvent, SdkInitState } from '../sdk';
+import { createSdk, getRollupProviderStatus } from '../core_sdk/create_sdk';
+import { EthProvider, EthProviderEvent, chainIdToNetwork } from './eth_provider';
 import { EventEmitter } from 'events';
 import { EthAddress } from 'barretenberg/address';
+import createDebug from 'debug';
 
 const debug = createDebug('bb:app');
 
@@ -21,22 +21,38 @@ export enum AppInitAction {
 
 export enum AppEvent {
   UPDATED_INIT_STATE = 'APPEVENT_UPDATED_INIT_STATE',
-  UPDATED_ACCOUNT = 'APPEVENT_UPDATED_ACCOUNT',
 }
 
 export interface AppInitStatus {
   initState: AppInitState;
   initAction?: AppInitAction;
+  account?: EthAddress;
   network?: string;
   message?: string;
 }
 
-export class App extends EventEmitter {
+/**
+ * Simplifies integration of the CoreSdk with a provider such as MetaMask.
+ * The event stream will always be ordered like, but may not always include, the following:
+ *
+ * Initialization starts:
+ * UPDATED_INIT_STATE => INITIALIZING, LINK_PROVIDER_ACCOUNT
+ * UPDATED_INIT_STATE => INITIALIZING, CHANGE_NETWORK
+ * UPDATED_INIT_STATE => INITIALIZING, "info message 1"
+ * UPDATED_INIT_STATE => INITIALIZING, "info message 2"
+ * UPDATED_INIT_STATE => INITIALIZING, LINK_AZTEC_ACCOUNT
+ * UPDATED_INIT_STATE => INITIALIZED, address 1
+ * UPDATED_INIT_STATE => INITIALIZING, LINK_AZTEC_ACCOUNT
+ * UPDATED_INIT_STATE => INITIALIZED, address 2
+ * UPDATED_INIT_STATE => INITIALIZED, address 1
+ * UPDATED_INIT_STATE => DESTROYED
+ */
+export class WebSdk extends EventEmitter {
   private sdk!: Sdk;
   private ethProvider!: EthProvider;
   private initStatus: AppInitStatus = { initState: AppInitState.UNINITIALIZED };
 
-  constructor(private ethereumProvider: EthereumProvider) {
+  constructor(private provider: any) {
     super();
   }
 
@@ -46,7 +62,7 @@ export class App extends EventEmitter {
     try {
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_PROVIDER_ACCOUNT);
 
-      this.ethProvider = new Web3EthProvider(this.ethereumProvider);
+      this.ethProvider = new EthProvider(this.provider);
       await this.ethProvider.init();
 
       // If our network doesn't match that of the rollup provider, request it be changed until it does.
@@ -59,7 +75,7 @@ export class App extends EventEmitter {
         }
       }
 
-      this.sdk = await createSdk(serverUrl, this.ethereumProvider, { clearDb });
+      this.sdk = await createSdk(serverUrl, this.provider, { clearDb });
 
       // Forward all sdk events. This allows subscribing to the events on the App, before we have called init().
       for (const e in SdkEvent) {
@@ -74,19 +90,21 @@ export class App extends EventEmitter {
         }
       });
 
-      // Handle account change.
-      this.ethProvider.on(EthProviderEvent.UPDATED_ACCOUNT, (account?: EthAddress) =>
-        this.accountChanged(account).catch(err => this.destroy()),
-      );
-
-      // Handle network change.
-      this.ethProvider.on(EthProviderEvent.UPDATED_NETWORK, () => this.networkChanged());
-
       await this.sdk.init();
 
+      // Link account. Will be INITIALZED once complete.
       await this.accountChanged(this.ethProvider.getAccount());
 
-      this.updateInitStatus(AppInitState.INITIALIZED);
+      // Handle account changes.
+      this.ethProvider.on(EthProviderEvent.UPDATED_ACCOUNT, (account?: EthAddress) => {
+        this.accountChanged(account).catch(() => this.destroy());
+      });
+
+      // Ensure we're still on correct network, and attach handler.
+      // Any network changes at this point result in destruction.
+      this.networkChanged();
+      this.ethProvider.on(EthProviderEvent.UPDATED_NETWORK, this.networkChanged);
+
       debug('initialization complete.');
     } catch (err) {
       this.destroy();
@@ -96,42 +114,44 @@ export class App extends EventEmitter {
 
   private updateInitStatus(initState: AppInitState, initAction?: AppInitAction, message?: string) {
     this.initStatus = {
+      ...this.initStatus,
       initState,
       initAction,
       message,
     };
-    this.emit(AppEvent.UPDATED_INIT_STATE, this.initStatus);
+    this.emit(AppEvent.UPDATED_INIT_STATE, { ...this.initStatus });
   }
 
-  private async accountChanged(account?: EthAddress) {
+  private accountChanged = (account?: EthAddress) => {
+    this.initStatus.account = account;
     if (!account) {
       // If the user withdraws access, destroy everything and return to uninitialized state.
       throw new Error('Account access withdrawn.');
     }
-
-    // Otherwise, we are initializing until the account is added to sdk.
     const user = this.sdk.getUser(account);
     if (!user) {
+      // We are initializing until the account is added to sdk.
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_AZTEC_ACCOUNT);
-      await this.sdk.addUser(account);
-      this.updateInitStatus(AppInitState.INITIALIZED);
-    }
-
-    this.emit(AppEvent.UPDATED_ACCOUNT, account);
-  }
-
-  private networkChanged() {
-    if (!this.isCorrectNetwork()) {
-      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.CHANGE_NETWORK);
+      return this.sdk.addUser(account).then(() => {
+        this.updateInitStatus(AppInitState.INITIALIZED);
+      });
     } else {
       this.updateInitStatus(AppInitState.INITIALIZED);
     }
-  }
+    return Promise.resolve();
+  };
+
+  private networkChanged = () => {
+    if (!this.isCorrectNetwork()) {
+      this.destroy();
+    }
+  };
 
   public async destroy() {
     debug('destroying app...');
     await this.sdk?.destroy();
     this.ethProvider?.destroy();
+    this.initStatus.account === undefined;
     this.updateInitStatus(AppInitState.UNINITIALIZED);
   }
 
@@ -153,10 +173,6 @@ export class App extends EventEmitter {
   }
 
   public getUser() {
-    return this.sdk.getUser(this.ethProvider.getAccount())!;
-  }
-
-  public getAccount() {
-    return this.ethProvider.getAccount();
+    return this.sdk.getUser(this.initStatus.account!)!;
   }
 }

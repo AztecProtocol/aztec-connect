@@ -59,9 +59,8 @@ export class JoinSplitProofCreator {
     const signingPubKey = sender.publicKey;
 
     const tx = new JoinSplitTx(
-      // TODO: Bigint...
-      Number(publicInput),
-      Number(publicOutput),
+      publicInput,
+      publicOutput,
       numInputNotes,
       inputNoteIndices,
       dataRoot,

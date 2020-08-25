@@ -136,7 +136,7 @@ export interface Sdk extends EventEmitter {
    * We need to specify the eth address as we record each tx for each user.
    * TODO: Fix this to only have one tx record.
    */
-  awaitSettlement(address: EthAddress, txHash: TxHash): Promise<void>;
+  awaitSettlement(address: EthAddress, txHash: TxHash, allowUnknown?: boolean): Promise<void>;
 
   // Explorer
   getLatestRollups(num: number): Promise<Rollup[]>;

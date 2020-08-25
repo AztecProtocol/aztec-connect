@@ -219,12 +219,16 @@ export class DexieDatabase implements Database {
     await this.userTx.put(userTxToDexieUserTx(id, userTx));
   }
 
-  async settleUserTx(txHash: Buffer) {
-    await this.userTx.where({ txHash: new Uint8Array(txHash) }).modify({ settled: 1 });
+  async settleUserTx(ethAddress: EthAddress, txHash: Buffer) {
+    await this.userTx
+      .where({ ethAddress: new Uint8Array(ethAddress.toBuffer()), txHash: new Uint8Array(txHash) })
+      .modify({ settled: 1 });
   }
 
-  async deleteUserTx(txHash: Buffer) {
-    await this.userTx.where({ txHash: new Uint8Array(txHash) }).delete();
+  async deleteUserTx(ethAddress: EthAddress, txHash: Buffer) {
+    await this.userTx
+      .where({ ethAddress: new Uint8Array(ethAddress.toBuffer()), txHash: new Uint8Array(txHash) })
+      .delete();
   }
 
   async clearUserTxState() {

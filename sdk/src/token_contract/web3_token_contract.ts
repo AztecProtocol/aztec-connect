@@ -49,7 +49,6 @@ export class Web3TokenContract implements TokenContract {
   }
 
   async balanceOf(account: EthAddress) {
-    await this.checkProviderChain();
     const balance = await this.contract.balanceOf(account.toString());
     return BigInt(balance);
   }

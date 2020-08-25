@@ -12,22 +12,22 @@ import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
-import { Database } from './database';
-import { JoinSplitProofCreator } from './join_split_proof';
-import { TxsState } from './txs_state';
-import { UserDataFactory } from './user';
-import { UserState, UserStateFactory, UserStateEvent } from './user_state';
-import { Sdk, SdkEvent, SdkInitState, TxHash, AssetId, SdkStatus, Action, ActionState } from './sdk';
-import { UserTx, UserTxAction } from './user_tx';
+import { Database } from '../database';
+import { JoinSplitProofCreator } from '../join_split_proof';
+import { TxsState } from '../txs_state';
+import { UserDataFactory } from '../user';
+import { UserState, UserStateFactory, UserStateEvent } from '../user_state';
+import { Sdk, SdkEvent, SdkInitState, TxHash, AssetId, SdkStatus, Action, ActionState } from '../sdk';
+import { UserTx, UserTxAction } from '../user_tx';
 import Mutex from 'idb-mutex';
-import { EthereumProvider } from './ethereum_provider';
+import { EthereumProvider } from '../ethereum_provider';
 import { EthAddress, GrumpkinAddress, Address } from 'barretenberg/address';
-import { TokenContract, Web3TokenContract } from './token_contract';
+import { TokenContract, Web3TokenContract } from '../token_contract';
 import { Web3Provider } from '@ethersproject/providers';
 import { Signer } from 'ethers';
 import { CoreSdkUser } from './core_sdk_user';
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { MockTokenContract } from './token_contract/mock_token_contract';
+import { MockTokenContract } from '../token_contract/mock_token_contract';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -504,13 +504,13 @@ export class CoreSdk extends EventEmitter implements Sdk {
     }
   }
 
-  public async awaitSettlement(address: EthAddress, txHash: TxHash) {
+  public async awaitSettlement(address: EthAddress, txHash: TxHash, allowUnknown = false) {
     while (true) {
       const tx = await this.db.getUserTx(address, txHash);
-      if (!tx) {
+      if (!tx && !allowUnknown) {
         throw new Error(`Transaction hash not found: ${txHash.toString('hex')}`);
       }
-      if (tx.settled === true) {
+      if (tx?.settled === true) {
         break;
       }
       await new Promise(resolve => setTimeout(resolve, 1000));

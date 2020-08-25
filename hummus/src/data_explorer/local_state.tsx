@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Form, FormSection } from '../components';
 import { UserTxs } from './user_txs';
 import { SdkEvent, UserData } from 'aztec2-sdk';
-import { App } from '../app';
+import { WebSdk } from 'aztec2-sdk';
 
 interface DataExplorerProps {
-  app: App;
+  app: WebSdk;
 }
 
 export const LocalState = ({ app }: DataExplorerProps) => {

@@ -1,6 +1,8 @@
 import { createHash } from 'crypto';
 import { numToUInt32BE } from '../serialize';
 
+export const VIEWING_KEY_SIZE = 208;
+
 export class InnerProofData {
   constructor(
     public publicInput: Buffer,
@@ -108,8 +110,8 @@ export class RollupProofData {
 
     const viewingKeys: Buffer[] = [];
     if (viewingKeyData) {
-      for (let i: number = 0; i < numTxs * 2 * 176; i += 176) {
-        viewingKeys.push(viewingKeyData.slice(i, i + 176));
+      for (let i: number = 0; i < numTxs * 2 * VIEWING_KEY_SIZE; i += VIEWING_KEY_SIZE) {
+        viewingKeys.push(viewingKeyData.slice(i, i + VIEWING_KEY_SIZE));
       }
     }
 

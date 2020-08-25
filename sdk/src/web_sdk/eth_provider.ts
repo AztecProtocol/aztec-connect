@@ -1,11 +1,15 @@
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
-import { EthProvider, EthProviderEvent } from './index';
 import { EthAddress } from 'barretenberg/address';
-import { EthereumProvider } from 'aztec2-sdk/ethereum_provider';
+import { EthereumProvider } from '../ethereum_provider';
 import { Web3Provider } from '@ethersproject/providers';
 
 const debug = createDebug('bb:eth_provider');
+
+export enum EthProviderEvent {
+  UPDATED_NETWORK = 'UPDATED_NETWORK',
+  UPDATED_ACCOUNT = 'UPDATED_ACCOUNT',
+}
 
 interface Network {
   chainId: number;
@@ -25,7 +29,7 @@ export const chainIdToNetwork = (chainId: number) => {
   return networks.find(network => network.chainId === chainId)?.network || 'unknown';
 };
 
-export class Web3EthProvider extends EventEmitter implements EthProvider {
+export class EthProvider extends EventEmitter {
   private chainId = -1;
   private accounts: EthAddress[] = [];
 
@@ -44,6 +48,8 @@ export class Web3EthProvider extends EventEmitter implements EthProvider {
 
     this.provider.on('chainChanged', this.updateNetwork);
     this.provider.on('accountsChanged', this.updateAccounts);
+
+    return this.getAccount();
   }
 
   public destroy() {
@@ -77,7 +83,7 @@ export class Web3EthProvider extends EventEmitter implements EthProvider {
     return this.accounts;
   }
 
-  public getAccount() {
+  public getAccount(): EthAddress | undefined {
     return this.accounts[0];
   }
 }

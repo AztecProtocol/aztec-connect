@@ -1,10 +1,10 @@
 import { randomBytes } from 'crypto';
 import { JoinSplitProof } from '../client_proofs/join_split_proof';
-import { RollupProofData, InnerProofData } from './';
+import { RollupProofData, InnerProofData, VIEWING_KEY_SIZE } from './';
 
 describe('RollupProofData', () => {
   it('can convert a inner proof object to buffer and back', () => {
-    const viewingKeys = [randomBytes(176), randomBytes(176)];
+    const viewingKeys = [randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)];
     const innerProofData = new InnerProofData(
       randomBytes(32),
       randomBytes(32),
@@ -23,7 +23,7 @@ describe('RollupProofData', () => {
   });
 
   it('can convert a rollup proof object to buffer and back', () => {
-    const viewingKeys = [randomBytes(176), randomBytes(176)];
+    const viewingKeys = [randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)];
     const innerProofData = new InnerProofData(
       randomBytes(32),
       randomBytes(32),
@@ -55,7 +55,7 @@ describe('RollupProofData', () => {
   });
 
   it('should generate the same txId from inner proof as from join split proof', () => {
-    const viewingKeys = [randomBytes(176), randomBytes(176)];
+    const viewingKeys = [randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)];
     const innerProofData = new InnerProofData(
       randomBytes(32),
       randomBytes(32),

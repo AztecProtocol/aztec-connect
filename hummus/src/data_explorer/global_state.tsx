@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
-import { App } from '../app';
 import { Form, FormSection } from '../components';
 import { LatestRollups } from './latest_rollups';
 import { LatestTxs } from './latest_txs';
-import { SdkEvent } from 'aztec2-sdk';
+import { WebSdk, SdkEvent } from 'aztec2-sdk';
 
 interface GlobalStateProps {
-  app: App;
+  app: WebSdk;
 }
 
 export const GlobalState = ({ app }: GlobalStateProps) => {

@@ -3,7 +3,7 @@ import moment from 'moment';
 import React, { useState, useEffect } from 'react';
 import { Form, FormSection } from '../components';
 import { Block, Offset } from '@aztec/guacamole-ui';
-import { App } from '../app';
+import { WebSdk } from 'aztec2-sdk';
 import { DetailRow, ContentLink } from './detail_row';
 
 const TxList = ({ txHashes }: { txHashes: Buffer[] }) => (
@@ -18,7 +18,7 @@ const TxList = ({ txHashes }: { txHashes: Buffer[] }) => (
 
 interface RollupDetailsProps {
   id: number;
-  app: App;
+  app: WebSdk;
 }
 
 export const RollupDetails = ({ id, app }: RollupDetailsProps) => {
