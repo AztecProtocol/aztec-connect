@@ -114,9 +114,10 @@ export class UserState extends EventEmitter {
       const destroyedNote1 = await this.nullifyNote(nullifier1);
       const destroyedNote2 = await this.nullifyNote(nullifier2);
 
+      await this.refreshNotePicker();
+
       if (savedUserTx) {
-        await this.refreshNotePicker();
-        await this.db.settleUserTx(txId);
+        await this.db.settleUserTx(ethAddress, txId);
       } else {
         const userTx = await this.recoverUserTx(proof, newNote, changeNote, destroyedNote1, destroyedNote2);
         await this.db.addUserTx(userTx);

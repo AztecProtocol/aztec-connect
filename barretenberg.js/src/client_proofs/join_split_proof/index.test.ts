@@ -83,14 +83,14 @@ describe('join_split_proof', () => {
     const encryptedNote = joinSplitProver.encryptNote(note);
     const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, secret);
     expect(success).toBe(true);
-    expect(value).toBe(100);
+    expect(value).toBe(BigInt(100));
   });
 
   it('should not decrypt note', () => {
     const secret = randomBytes(32);
     const note = new Note(pubKey, secret, BigInt(2000));
     const encryptedNote = joinSplitProver.encryptNote(note);
-    const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, secret);
+    const { success } = joinSplitProver.decryptNote(encryptedNote, privateKey, secret);
     expect(success).toBe(false);
   });
 
@@ -137,8 +137,8 @@ describe('join_split_proof', () => {
       const outputOwner = EthAddress.randomAddress();
 
       const tx = new JoinSplitTx(
-        0,
-        0,
+        BigInt(0),
+        BigInt(0),
         2,
         [0, 1],
         tree.getRoot(),

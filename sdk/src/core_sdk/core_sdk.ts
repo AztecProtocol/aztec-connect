@@ -504,13 +504,13 @@ export class CoreSdk extends EventEmitter implements Sdk {
     }
   }
 
-  public async awaitSettlement(address: EthAddress, txHash: TxHash) {
+  public async awaitSettlement(address: EthAddress, txHash: TxHash, allowUnknown = false) {
     while (true) {
       const tx = await this.db.getUserTx(address, txHash);
-      if (!tx) {
+      if (!tx && !allowUnknown) {
         throw new Error(`Transaction hash not found: ${txHash.toString('hex')}`);
       }
-      if (tx.settled === true) {
+      if (tx?.settled === true) {
         break;
       }
       await new Promise(resolve => setTimeout(resolve, 1000));

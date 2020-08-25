@@ -1,5 +1,4 @@
 import 'fake-indexeddb/auto';
-
 import { AssetId, createSdk, Sdk, SdkUser } from 'aztec2-sdk';
 import { EthAddress } from 'barretenberg/address';
 import { EventEmitter } from 'events';
@@ -54,55 +53,61 @@ describe('end-to-end tests', () => {
     const user0Asset = users[0].getAsset(assetId);
     const user1Asset = users[1].getAsset(assetId);
 
-    await user0Asset.mint(1000n);
-    await user0Asset.approve(1000n);
-
     // Deposit to user 0.
-    const initialTokenBalance = await user0Asset.publicBalance();
-    expect(initialTokenBalance).toBe(1000n);
-    expect(await user0Asset.publicAllowance()).toBe(1000n);
+    const depositValue = user0Asset.toErc20Units('1000');
+
+    await user0Asset.mint(depositValue);
+    await user0Asset.approve(depositValue);
+    expect(await user0Asset.publicBalance()).toBe(depositValue);
+    expect(await user0Asset.publicAllowance()).toBe(depositValue);
     expect(user0Asset.balance()).toBe(0n);
 
-    const txHash = await user0Asset.deposit(1000n);
+    const txHash = await user0Asset.deposit(depositValue);
     await sdk.awaitSettlement(userAddresses[0], txHash);
 
-    const user0TokenBalance = await user0Asset.publicBalance();
-    expect(user0TokenBalance).toBe(0n);
-    expect(user0Asset.balance()).toBe(1000n);
+    expect(await user0Asset.publicBalance()).toBe(0n);
+    const user0BalanceAfterDeposit = user0Asset.balance();
+    expect(user0BalanceAfterDeposit).toBe(depositValue);
 
     // Transfer to user 1.
+    const transferValue = user0Asset.toErc20Units('800');
+
     expect(user1Asset.balance()).toBe(0n);
 
-    const transferTxHash = await user0Asset.transfer(800n, users[1].getUserData().publicKey);
+    const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().publicKey);
     await sdk.awaitSettlement(userAddresses[0], transferTxHash);
-    await sdk.awaitSettlement(userAddresses[1], transferTxHash);
+    expect(user0Asset.balance()).toBe(user0BalanceAfterDeposit - transferValue);
 
-    expect(user0Asset.balance()).toBe(200n);
-    expect(user1Asset.balance()).toBe(800n);
+    await sdk.awaitSettlement(userAddresses[1], transferTxHash, true);
+    const user1BalanceAfterTransfer = user1Asset.balance();
+    expect(user1BalanceAfterTransfer).toBe(transferValue);
 
     // Withdraw to user 1.
-    const withdrawTxHash = await user1Asset.withdraw(300n);
+    const withdrawValue = user0Asset.toErc20Units('300');
+
+    const withdrawTxHash = await user1Asset.withdraw(withdrawValue);
     await sdk.awaitSettlement(users[1].getUserData().ethAddress, withdrawTxHash);
 
-    const user1TokenBalance = await user1Asset.publicBalance();
-    expect(user1TokenBalance).toBe(300n);
-    expect(user1Asset.balance()).toBe(500n);
+    expect(await user1Asset.publicBalance()).toBe(withdrawValue);
+    expect(user1Asset.balance()).toBe(user1BalanceAfterTransfer - withdrawValue);
   });
 
   it('should transfer public tokens', async () => {
     const user2Asset = users[2].getAsset(assetId);
     const user3Asset = users[3].getAsset(assetId);
 
-    await user2Asset.mint(1000n);
-    await user2Asset.approve(1000n);
+    const transferValue = user2Asset.toErc20Units('1000');
 
-    const initialTokenBalance = await user3Asset.publicBalance();
-    expect(initialTokenBalance).toBe(0n);
+    await user2Asset.mint(transferValue);
+    await user2Asset.approve(transferValue);
 
-    const publicTransferTxHash = await user2Asset.publicTransfer(1000n, userAddresses[3]);
+    expect(await user2Asset.publicBalance()).toBe(transferValue);
+    expect(await user3Asset.publicBalance()).toBe(0n);
+
+    const publicTransferTxHash = await user2Asset.publicTransfer(transferValue, userAddresses[3]);
     await sdk.awaitSettlement(userAddresses[2], publicTransferTxHash);
 
-    const finalTokenBalance = await user3Asset.publicBalance();
-    expect(finalTokenBalance).toBe(1000n);
+    expect(await user2Asset.publicBalance()).toBe(0n);
+    expect(await user3Asset.publicBalance()).toBe(transferValue);
   });
 });

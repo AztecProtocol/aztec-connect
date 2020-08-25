@@ -1,5 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
-import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
+import { InnerProofData, RollupProofData, VIEWING_KEY_SIZE } from 'barretenberg/rollup_proof';
 import { numToUInt32BE } from 'barretenberg/serialize';
 import { Block, Blockchain, Receipt } from 'blockchain';
 import { randomBytes } from 'crypto';
@@ -22,7 +22,7 @@ const generateRollup = (rollupId: number, rollupSize: number) => {
           randomBytes(32),
           Buffer.alloc(20),
           Buffer.alloc(20),
-          [randomBytes(176), randomBytes(176)],
+          [randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)],
         ),
     );
   return new RollupProofData(

@@ -1,3 +1,4 @@
+import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 import { Grumpkin } from '../ecc/grumpkin';
 import { GrumpkinAddress } from '../address';
@@ -7,14 +8,11 @@ export class Note {
 
   static fromBuffer(buf: Buffer) {
     // TODO: Read 16 bytes value.
-    return new Note(new GrumpkinAddress(buf.slice(0, 64)), buf.slice(68, 100), BigInt(buf.readUInt32BE(64)));
+    return new Note(new GrumpkinAddress(buf.slice(0, 64)), buf.slice(96, 128), toBigIntBE(buf.slice(64, 96)));
   }
 
   toBuffer() {
-    const vbuf = Buffer.alloc(4);
-    // TODO: Bigint...
-    vbuf.writeUInt32BE(Number(this.value), 0);
-    return Buffer.concat([this.ownerPubKey.toBuffer(), vbuf, this.secret]);
+    return Buffer.concat([this.ownerPubKey.toBuffer(), toBufferBE(this.value, 32), this.secret]);
   }
 }
 

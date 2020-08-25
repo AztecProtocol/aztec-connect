@@ -118,7 +118,7 @@ describe('User State', () => {
 
     const innerProofData = rollupProofData.innerProofData[0];
     expect(db.settleUserTx).toHaveBeenCalledTimes(1);
-    expect(db.settleUserTx).toHaveBeenCalledWith(innerProofData.getTxId());
+    expect(db.settleUserTx).toHaveBeenCalledWith(user.ethAddress, innerProofData.getTxId());
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote1, value: 100n });
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);

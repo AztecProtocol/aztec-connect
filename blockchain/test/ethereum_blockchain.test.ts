@@ -1,5 +1,5 @@
 import { ethers } from '@nomiclabs/buidler';
-import { RollupProofData } from 'barretenberg/rollup_proof';
+import { RollupProofData, VIEWING_KEY_SIZE } from 'barretenberg/rollup_proof';
 import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
@@ -28,7 +28,7 @@ describe('ethereum_blockchain', () => {
   const mintAmount = 100;
   const depositAmount = 30;
   const withdrawalAmount = 10;
-  const viewingKeys = [Buffer.alloc(176, 1), Buffer.alloc(176, 2)];
+  const viewingKeys = [Buffer.alloc(VIEWING_KEY_SIZE, 1), Buffer.alloc(VIEWING_KEY_SIZE, 2)];
   let waitOnBlockProcessed: any;
 
   const rollupSize = 2;
