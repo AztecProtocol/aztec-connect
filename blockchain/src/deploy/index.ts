@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import { ContractFactory, ethers, Signer } from 'ethers';
 import ERC20Mintable from '../artifacts/ERC20Mintable.json';
 import RollupProcessor from '../artifacts/RollupProcessor.json';
-import { deployVerifier } from './deployVerifier';
+import { deployVerifier } from './deploy_verifier';
 
 dotenv.config();
 const { ETHEREUM_HOST, INFURA_API_KEY, NETWORK, PRIVATE_KEY } = process.env;
