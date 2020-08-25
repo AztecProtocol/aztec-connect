@@ -16,5 +16,5 @@ contract MockVerifier is IVerifier {
      * @dev Mock verify a Plonk proof
      * @param serialized_proof - array of serialized proof data
      */
-    function verify(bytes memory serialized_proof, uint256 rollup_size) public override view {}
+    function verify(bytes memory serialized_proof, uint256 rollup_size) public override {}
 }
