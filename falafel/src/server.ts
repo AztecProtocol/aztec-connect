@@ -299,7 +299,6 @@ export class Server {
 
       while (true) {
         try {
-          console.log({ proof: proof.toString('hex') });
           const txHash = await this.blockchain.sendProof(proof, signatures, sigIndexes, viewingKeys, rollupSize);
 
           await this.rollupDb.confirmSent(rollupId, txHash);
@@ -361,7 +360,6 @@ export class Server {
 
   public async receiveTx({ proofData, depositSignature, viewingKeys }: Proof) {
     const proof = new JoinSplitProof(proofData, viewingKeys, depositSignature);
-    console.log({ proof });
     const nullifier1 = nullifierBufferToIndex(proof.nullifier1);
     const nullifier2 = nullifierBufferToIndex(proof.nullifier2);
     const { publicInput, inputOwner } = proof;
@@ -385,8 +383,6 @@ export class Server {
     }
 
     // Check the proof is valid.
-    console.log({ proofDataLength: proofData.length });
-    console.log('verifier: ', this.joinSplitVerifier);
     if (!(await this.joinSplitVerifier.verifyProof(proofData))) {
       throw new Error('Proof verification failed.');
     }

@@ -8,7 +8,7 @@ import { proof } from './fixtures/proof';
 
 use(solidity);
 
-describe.skip('verifier', () => {
+describe('verifier', () => {
   let verifier: Contract;
   const rollupSize = 1;
   const numPublicInputs = 36;
@@ -21,12 +21,5 @@ describe.skip('verifier', () => {
   it('verifier should verify a proof', async () => {
     const result = await verifier.verify(proof, rollupSize);
     expect(result).to.equal(true);
-  });
-
-  it('should decode a proof', async () => {
-    const decodedProof = await verifier.deserialize_proof(proof, numPublicInputs);
-    const publicInputs = decodedProof.public_input_values;
-    const publicInputsLength = publicInputs.length;
-    expect(publicInputsLength).to.equal(numPublicInputs);
   });
 });

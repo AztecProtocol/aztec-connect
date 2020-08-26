@@ -91,6 +91,7 @@ contract TurboVerifier is IVerifier {
      */
     function deserialize_proof(bytes memory raw_data, uint256 num_public_inputs)
         internal
+        view
         returns (Types.Proof memory proof)
     {
         uint256 data_ptr;
