@@ -12,8 +12,6 @@ import {VerificationKeys} from './keys/VerificationKeys.sol';
 import {TranscriptLibrary} from './cryptography/TranscriptLibrary.sol';
 import {IVerifier} from '../interfaces/IVerifier.sol';
 
-import '@nomiclabs/buidler/console.sol';
-
 /**
  * @title Plonk proof verification contract
  * @dev Top level Plonk proof verification contract, which allows Plonk proof to be verified
@@ -42,7 +40,6 @@ contract TurboVerifier is IVerifier {
      * @param rollup_size - number of transactions in the rollup
      */
     function verify(bytes memory serialized_proof, uint256 rollup_size) public override {
-        console.log('rollup_size: ', rollup_size);
         Types.VerificationKey memory vk = VerificationKeys.getKeyById(rollup_size);
         uint256 num_public_inputs = vk.num_inputs;
 
@@ -78,8 +75,6 @@ contract TurboVerifier is IVerifier {
             decoded_proof,
             vk
         );
-
-        console.log('result: ', result);
         require(result, 'Proof failed');
     }
 
@@ -91,7 +86,7 @@ contract TurboVerifier is IVerifier {
      */
     function deserialize_proof(bytes memory raw_data, uint256 num_public_inputs)
         internal
-        view
+        pure
         returns (Types.Proof memory proof)
     {
         uint256 data_ptr;
@@ -102,8 +97,6 @@ contract TurboVerifier is IVerifier {
             data_ptr := add(raw_data, 0x20)
         }
 
-        console.log('num_public_inputs: ', num_public_inputs);
-
         proof.public_input_values = new uint256[](num_public_inputs);
 
         for (uint256 i = 0; i < num_public_inputs; ++i) {
@@ -111,8 +104,6 @@ contract TurboVerifier is IVerifier {
                 x := mload(data_ptr)
             }
             proof.public_input_values[i] = x;
-            console.log('public input x');
-            console.log(x);
             data_ptr += 0x20;
         }
 
