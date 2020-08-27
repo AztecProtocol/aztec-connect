@@ -176,20 +176,22 @@ export class CoreSdk extends EventEmitter implements Sdk {
 
     this.emit(SdkEvent.UPDATED_USERS);
 
-    for (const us of this.userStates) {
-      this.emit(SdkEvent.UPDATED_USER_STATE, us.getUser().ethAddress);
+    this.userStates.forEach(us => this.startSyncingUserState(us));
+  }
 
-      us.on(
-        UserStateEvent.UPDATED_USER_STATE,
-        (ethAddress: EthAddress, balanceAfter: bigint, diff: bigint, assetId: AssetId) => {
-          this.emit(CoreSdkEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff, assetId);
-          this.emit(SdkEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff, assetId);
-        },
-      );
+  private startSyncingUserState(userState: UserState) {
+    this.emit(SdkEvent.UPDATED_USER_STATE, userState.getUser().ethAddress);
 
-      if (this.processBlocksPromise) {
-        us.startSync();
-      }
+    userState.on(
+      UserStateEvent.UPDATED_USER_STATE,
+      (ethAddress: EthAddress, balanceAfter: bigint, diff: bigint, assetId: AssetId) => {
+        this.emit(CoreSdkEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff, assetId);
+        this.emit(SdkEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff, assetId);
+      },
+    );
+
+    if (this.processBlocksPromise) {
+      userState.startSync();
     }
   }
 
@@ -427,10 +429,10 @@ export class CoreSdk extends EventEmitter implements Sdk {
   }
 
   public async deposit(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
-    await this.checkPublicBalanceAndAllowance(assetId, value, from);
     const signer = this.ethersProvider.getSigner(from.toString());
+    const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
     const action = () => this.createProof(assetId, from, 'DEPOSIT', value, to, undefined, signer);
-    return this.performAction(Action.DEPOSIT, value, from, to, action);
+    return this.performAction(Action.DEPOSIT, value, from, to, action, validation);
   }
 
   public async withdraw(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
@@ -444,10 +446,10 @@ export class CoreSdk extends EventEmitter implements Sdk {
   }
 
   public async publicTransfer(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
-    await this.checkPublicBalanceAndAllowance(assetId, value, from);
     const signer = this.ethersProvider.getSigner(from.toString());
+    const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
     const action = () => this.createProof(assetId, from, 'PUBLIC_TRANSFER', value, undefined, to, signer);
-    return this.performAction(Action.PUBLIC_TRANSFER, value, from, to, action);
+    return this.performAction(Action.PUBLIC_TRANSFER, value, from, to, action, validation);
   }
 
   private async checkPublicBalanceAndAllowance(assetId: AssetId, value: bigint, from: EthAddress) {
@@ -468,6 +470,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     sender: EthAddress,
     recipient: Address,
     fn: () => Promise<Buffer>,
+    validation = async () => {},
   ) {
     this.actionState = {
       action,
@@ -478,6 +481,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     };
     this.emit(SdkEvent.UPDATED_ACTION_STATE, { ...this.actionState });
     try {
+      await validation();
       this.actionState.txHash = await fn();
     } catch (err) {
       this.actionState.error = err;
@@ -540,15 +544,26 @@ export class CoreSdk extends EventEmitter implements Sdk {
     await userState.init();
     this.userStates.push(userState);
 
-    if (this.processBlocksPromise) {
-      userState.startSync();
-    }
-
-    this.emit(SdkEvent.UPDATED_USER_STATE, user.ethAddress);
     this.emit(CoreSdkEvent.UPDATED_USERS);
     this.emit(SdkEvent.UPDATED_USERS);
 
+    this.startSyncingUserState(userState);
+
     return new CoreSdkUser(ethAddress, this);
+  }
+
+  public async removeUser(ethAddress: EthAddress) {
+    const userState = this.getUserState(ethAddress);
+    if (!userState) {
+      throw new Error(`User does not exist: ${ethAddress}`);
+    }
+
+    this.userStates = this.userStates.filter(us => us !== userState);
+    userState.stopSync();
+    await this.db.removeUser(ethAddress);
+
+    this.emit(CoreSdkEvent.UPDATED_USERS);
+    this.emit(SdkEvent.UPDATED_USERS);
   }
 
   public getUser(address: EthAddress) {

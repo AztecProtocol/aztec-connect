@@ -18,6 +18,7 @@ export interface Database {
   addUserTx(userTx: UserTx): Promise<void>;
   settleUserTx(userId: EthAddress, txHash: Buffer): Promise<void>;
   deleteUserTx(userId: EthAddress, txHash: Buffer): Promise<void>;
+  removeUser(userId: EthAddress): Promise<void>;
   resetUsers(): Promise<void>;
   deleteKey(name: string): Promise<void>;
   addKey(name: string, value: Buffer): Promise<void>;

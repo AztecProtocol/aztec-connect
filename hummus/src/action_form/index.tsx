@@ -1,4 +1,4 @@
-import { SdkEvent, AssetId, Action, AppEvent, AppInitState, AppInitStatus } from 'aztec2-sdk';
+import { SdkEvent, AssetId, Action } from 'aztec2-sdk';
 import React, { useState, useEffect } from 'react';
 import { Block, FlexBox } from '@aztec/guacamole-ui';
 import { WebSdk } from 'aztec2-sdk';
@@ -11,13 +11,13 @@ import { Copy } from './copy';
 
 interface ActionFormProps {
   app: WebSdk;
+  account: EthAddress;
 }
 
-export const ActionForm = ({ app }: ActionFormProps) => {
+export const ActionForm = ({ app, account }: ActionFormProps) => {
   const sdk = app.getSdk()!;
   const asset = AssetId.DAI;
 
-  const [account, setAccount] = useState(app.getInitStatus().account!);
   const user = sdk.getUser(account)!;
   const userAsset = user.getAsset(asset);
 
@@ -47,27 +47,19 @@ export const ActionForm = ({ app }: ActionFormProps) => {
       setLatestRollup(latestRollupId);
     };
 
-    const handleInitStateChange = ({ initState, account }: AppInitStatus) => {
-      if (initState === AppInitState.INITIALIZED) {
-        setAccount(account!);
-      }
-    };
-
     handleUserStateChange(account);
     handleWorldStateChange(sdk.getLocalStatus().syncedToRollup, sdk.getLocalStatus().latestRollupId);
 
-    app.on(AppEvent.UPDATED_INIT_STATE, handleInitStateChange);
     app.on(SdkEvent.UPDATED_ACTION_STATE, setActionState);
     app.on(SdkEvent.UPDATED_USER_STATE, handleUserStateChange);
     app.on(SdkEvent.UPDATED_WORLD_STATE, handleWorldStateChange);
 
     return () => {
-      app.off(AppEvent.UPDATED_INIT_STATE, handleInitStateChange);
       app.off(SdkEvent.UPDATED_ACTION_STATE, setActionState);
       app.off(SdkEvent.UPDATED_USER_STATE, handleUserStateChange);
       app.off(SdkEvent.UPDATED_WORLD_STATE, handleWorldStateChange);
     };
-  }, [app]);
+  }, [app, account]);
 
   const isRunning = actionState !== undefined && !actionState.txHash && !actionState.error;
   const isLoading = (action: Action) => isRunning && actionState!.action === action;

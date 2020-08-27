@@ -235,6 +235,13 @@ export class DexieDatabase implements Database {
     await this.userTx.where({ settled: 1 }).modify({ settled: 0 });
   }
 
+  async removeUser(ethAddress: EthAddress) {
+    const address = new Uint8Array(ethAddress.toBuffer());
+    await this.userTx.where({ ethAddress: address }).delete();
+    await this.note.where({ owner: address }).delete();
+    await this.user.where({ ethAddress: address }).delete();
+  }
+
   async resetUsers() {
     await this.note.clear();
     await this.userTx.clear();

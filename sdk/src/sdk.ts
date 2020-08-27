@@ -126,6 +126,8 @@ export interface Sdk extends EventEmitter {
 
   getUsersData(): UserData[];
 
+  removeUser(address: EthAddress): Promise<void>;
+
   /**
    * Returns the current action state, from which you can determine what the sdk is currently doing.
    */
