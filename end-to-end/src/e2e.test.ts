@@ -6,7 +6,7 @@ import { EventEmitter } from 'events';
 import { Eth } from 'web3x/eth';
 import { HttpProvider } from 'web3x/providers';
 
-jest.setTimeout(10 * 100 * 1000);
+jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
 const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:80' } = process.env;

@@ -31,8 +31,8 @@ async function main() {
   if (erc20Address === 'dev') {
     const erc20Factory = new ContractFactory(ERC20Mintable.abi, ERC20Mintable.bytecode, signer);
     const erc20 = await erc20Factory.deploy();
-
     const verifier = await deployVerifier(signer);
+
     const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
     const rollup = await rollupFactory.deploy(erc20.address, verifier.address);
 

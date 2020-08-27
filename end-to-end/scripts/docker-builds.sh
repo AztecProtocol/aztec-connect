@@ -4,7 +4,14 @@ set -e
 # Move to root
 cd ../../
 
-cd ./barretenberg.js
+cd ./barretenberg
+echo "Building barretenberg"
+docker build --file ./dockerfiles/Dockerfile.x86_64-linux-clang . -t 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg:x86_64-linux-clang
+
+echo "Building barretenberg"
+docker build --file ./dockerfiles/Dockerfile.wasm-linux-clang . -t 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg:wasm-linux-clang
+
+cd ../barretenberg.js
 echo "Building barretenberg.js"
 docker build -t 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg.js:latest .
 
