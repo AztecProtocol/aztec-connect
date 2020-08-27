@@ -8,6 +8,7 @@ describe('RollupProofData', () => {
     const innerProofData = new InnerProofData(
       randomBytes(32),
       randomBytes(32),
+      randomBytes(32),
       randomBytes(64),
       randomBytes(64),
       randomBytes(32),
@@ -25,6 +26,7 @@ describe('RollupProofData', () => {
   it('can convert a rollup proof object to buffer and back', () => {
     const viewingKeys = [randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)];
     const innerProofData = new InnerProofData(
+      randomBytes(32),
       randomBytes(32),
       randomBytes(32),
       randomBytes(64),
@@ -57,6 +59,7 @@ describe('RollupProofData', () => {
   it('should generate the same txId from inner proof as from join split proof', () => {
     const viewingKeys = [randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)];
     const innerProofData = new InnerProofData(
+      randomBytes(32),
       randomBytes(32),
       randomBytes(32),
       randomBytes(64),

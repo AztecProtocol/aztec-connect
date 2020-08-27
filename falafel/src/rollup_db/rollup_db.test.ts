@@ -5,12 +5,12 @@ import { Connection, createConnection } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { Rollup } from '../rollup';
-import { RollupDb, joinSplitProofToTxDao } from './';
+import { joinSplitProofToTxDao, RollupDb } from './';
 
 const randomTx = (signature?: Buffer) =>
   new JoinSplitProof(
     Buffer.concat([
-      randomBytes(8 * 32),
+      randomBytes(9 * 32),
       Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
       Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
     ]),

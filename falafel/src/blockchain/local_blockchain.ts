@@ -16,6 +16,7 @@ const generateRollup = (rollupId: number, rollupSize: number) => {
         new InnerProofData(
           numToUInt32BE(0, 32),
           numToUInt32BE(0, 32),
+          numToUInt32BE(0, 32),
           randomBytes(64),
           randomBytes(64),
           randomBytes(32),

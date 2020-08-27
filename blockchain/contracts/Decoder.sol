@@ -41,10 +41,10 @@ contract Decoder {
         address inputOwner;
         address outputOwner;
         assembly {
-            publicInput := mload(add(proof, 0x20))
-            publicOutput := mload(add(proof, 0x40))
-            inputOwner := mload(add(proof, 0x120))
-            outputOwner := mload(add(proof, 0x140))
+            publicInput := mload(add(proof, 0x40))
+            publicOutput := mload(add(proof, 0x60))
+            inputOwner := mload(add(proof, 0x140))
+            outputOwner := mload(add(proof, 0x160))
         }
 
         return (publicInput, publicOutput, inputOwner, outputOwner);

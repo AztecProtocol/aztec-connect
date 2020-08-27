@@ -1,4 +1,5 @@
 import 'fake-indexeddb/auto';
+
 import { AssetId, createSdk, Sdk, SdkUser } from 'aztec2-sdk';
 import { EthAddress } from 'barretenberg/address';
 import { EventEmitter } from 'events';
