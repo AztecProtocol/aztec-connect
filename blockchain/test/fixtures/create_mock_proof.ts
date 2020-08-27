@@ -111,6 +111,7 @@ function publicInputData(id: number, isFirstProof: boolean, numInner: number, ro
  * @param ethPrivateKey
  */
 async function innerProofData(isDeposit: boolean, transferAmount: number, publicOwnerUnformatted: string) {
+  const proofId = Buffer.alloc(32);
   let publicInput;
   let publicOutput;
   let inputOwner = Buffer.alloc(32);
@@ -131,6 +132,7 @@ async function innerProofData(isDeposit: boolean, transferAmount: number, public
   const nullifier2 = Buffer.concat([Buffer.alloc(16), randomBytes(16)]);
 
   return Buffer.concat([
+    proofId,
     publicInput,
     publicOutput,
     newNote1,

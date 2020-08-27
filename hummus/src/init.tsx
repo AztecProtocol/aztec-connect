@@ -1,19 +1,27 @@
 import React, { useState, useEffect, FunctionComponent } from 'react';
-import { Text, Block } from '@aztec/guacamole-ui';
-import { Button, FormField, Input, FormSection, Form } from './components';
+import { Text, TextButton, Block } from '@aztec/guacamole-ui';
+import { EthAddress } from 'barretenberg/address';
+import { Button, Input, FormSection, Form } from './components';
 import { WebSdk, AppInitState, AppEvent, AppInitAction, AppInitStatus } from 'aztec2-sdk';
 import createDebug from 'debug';
 
 const debug = createDebug('bb::init_form');
 
+export interface InitChildrenProps {
+  app: WebSdk;
+  account: EthAddress;
+}
+
 interface InitProps {
   app: WebSdk;
   initialServerUrl?: string;
+  children: (props: InitChildrenProps) => JSX.Element;
 }
 
 export const Init: FunctionComponent<InitProps> = ({ app, initialServerUrl = '', children }) => {
   const [initStatus, setInitStatus] = useState(app.getInitStatus());
   const [serverUrl, setServerUrl] = useState(initialServerUrl);
+  const [showServerUrl, setShowServerUrl] = useState(false);
   const { initState } = initStatus;
 
   useEffect(() => {
@@ -28,31 +36,46 @@ export const Init: FunctionComponent<InitProps> = ({ app, initialServerUrl = '',
     <>
       {initState !== AppInitState.INITIALIZED && (
         <Form>
-          <FormSection>
-            {initState === AppInitState.UNINITIALIZED && (
-              <Block padding="xs 0">
-                <FormField label="Server url">
-                  <Input value={serverUrl} onChange={setServerUrl} />
-                </FormField>
-                <FormField label="Press the button">
-                  <Button text="The Button" onSubmit={() => app.init(serverUrl).catch(err => debug(err.message))} />
-                </FormField>
-              </Block>
-            )}
-            {initState === AppInitState.INITIALIZING && (
-              <Block padding="m 0" align="center">
-                <Text text={getInitString(initStatus)} />
-              </Block>
-            )}
+          <FormSection align="center">
+            <Block padding="m 0">
+              <Text text={initState === AppInitState.INITIALIZING ? getInitString(initStatus) : 'Press the button'} />
+            </Block>
+            <Block padding="m 0">
+              {initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT ? (
+                <Button text="Link Account" onSubmit={() => app.linkAccount().catch(err => debug(err.message))} />
+              ) : (
+                <Button
+                  text="The Button"
+                  onSubmit={() => app.init(serverUrl).catch(err => debug(err.message))}
+                  isLoading={initState === AppInitState.INITIALIZING}
+                />
+              )}
+            </Block>
           </FormSection>
+          {initState === AppInitState.UNINITIALIZED && (
+            <FormSection align="center">
+              <TextButton
+                theme="implicit"
+                text="change server url"
+                size="xs"
+                color="white-lighter"
+                onClick={() => setShowServerUrl(!showServerUrl)}
+              />
+              {showServerUrl && (
+                <Block padding="m 0">
+                  <Input value={serverUrl} onChange={setServerUrl} />
+                </Block>
+              )}
+            </FormSection>
+          )}
         </Form>
       )}
-      {initState === AppInitState.INITIALIZED && children}
+      {initState === AppInitState.INITIALIZED && children({ app, account: initStatus.account! })}
     </>
   );
 };
 
-function getInitString({ initAction, network, message }: AppInitStatus) {
+function getInitString({ initAction, network, account, message }: AppInitStatus) {
   switch (initAction) {
     case undefined:
       return message || 'Initializing...';
@@ -62,5 +85,7 @@ function getInitString({ initAction, network, message }: AppInitStatus) {
       return `Check MetaMask to link Ethereum account...`;
     case AppInitAction.LINK_AZTEC_ACCOUNT:
       return `Check for MetaMask signature request to link Aztec account...`;
+    case AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT:
+      return `Link ${account!.toString().slice(0, 6)}...${account!.toString().slice(-4)} to Aztec.`;
   }
 }

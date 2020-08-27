@@ -29,7 +29,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     IVerifier public verifier;
     IERC20 public linkedToken;
 
-    uint256 public constant txPubInputLength = 0x140; // public inputs length for of each inner proof tx
+    uint256 public constant txPubInputLength = 11 * 32; // public inputs length for of each inner proof tx
+    uint256 public constant rollupPubInputLength = 10 * 32;
 
     event RollupProcessed(uint256 indexed rollupId, bytes32 dataRoot, bytes32 nullRoot);
     event Deposit(address depositorAddress, uint256 depositValue);
@@ -74,7 +75,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         uint256 rollupSize
     ) external override onlyOwner {
         uint256 numTxs = updateAndVerifyProof(proofData, rollupSize);
-        processTransactions(proofData[0x140:], numTxs, signatures, sigIndexes);
+        processTransactions(proofData[rollupPubInputLength:], numTxs, signatures, sigIndexes);
     }
 
     /**

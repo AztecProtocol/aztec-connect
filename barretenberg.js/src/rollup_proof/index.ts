@@ -4,7 +4,11 @@ import { numToUInt32BE } from '../serialize';
 export const VIEWING_KEY_SIZE = 208;
 
 export class InnerProofData {
+  static NUM_PUBLIC_INPUTS = 11;
+  static LENGTH = InnerProofData.NUM_PUBLIC_INPUTS * 32;
+
   constructor(
+    public proofId: Buffer,
     public publicInput: Buffer,
     public publicOutput: Buffer,
     public newNote1: Buffer,
@@ -22,6 +26,7 @@ export class InnerProofData {
 
   toBuffer() {
     return Buffer.concat([
+      this.proofId,
       this.publicInput,
       this.publicOutput,
       this.newNote1,
@@ -34,16 +39,18 @@ export class InnerProofData {
   }
 
   static fromBuffer(innerPublicInputs: Buffer, viewingKeys: Buffer[] = []) {
-    const publicInput = innerPublicInputs.slice(0, 32);
-    const publicOutput = innerPublicInputs.slice(32, 64);
-    const newNote1 = innerPublicInputs.slice(2 * 32, 2 * 32 + 64);
-    const newNote2 = innerPublicInputs.slice(4 * 32, 4 * 32 + 64);
-    const nullifier1 = innerPublicInputs.slice(6 * 32, 6 * 32 + 32);
-    const nullifier2 = innerPublicInputs.slice(7 * 32, 7 * 32 + 32);
-    const inputOwner = innerPublicInputs.slice(8 * 32 + 12, 8 * 32 + 32);
-    const outputOwner = innerPublicInputs.slice(9 * 32 + 12, 9 * 32 + 32);
+    const proofId = innerPublicInputs.slice(0 * 32, 0 * 32 + 32);
+    const publicInput = innerPublicInputs.slice(1 * 32, 1 * 32 + 32);
+    const publicOutput = innerPublicInputs.slice(2 * 32, 2 * 32 + 32);
+    const newNote1 = innerPublicInputs.slice(3 * 32, 3 * 32 + 64);
+    const newNote2 = innerPublicInputs.slice(5 * 32, 5 * 32 + 64);
+    const nullifier1 = innerPublicInputs.slice(7 * 32, 7 * 32 + 32);
+    const nullifier2 = innerPublicInputs.slice(8 * 32, 8 * 32 + 32);
+    const inputOwner = innerPublicInputs.slice(9 * 32 + 12, 9 * 32 + 32);
+    const outputOwner = innerPublicInputs.slice(10 * 32 + 12, 10 * 32 + 32);
 
     return new InnerProofData(
+      proofId,
       publicInput,
       publicOutput,
       newNote1,
@@ -58,6 +65,9 @@ export class InnerProofData {
 }
 
 export class RollupProofData {
+  static NUM_ROLLUP_PUBLIC_INPUTS = 10;
+  static LENGTH_ROLLUP_PUBLIC = RollupProofData.NUM_ROLLUP_PUBLIC_INPUTS * 32;
+
   constructor(
     public rollupId: number,
     public rollupSize: number,
@@ -116,10 +126,9 @@ export class RollupProofData {
     }
 
     const innerProofData: InnerProofData[] = [];
-    const innerLength = 32 * 10;
     for (let i = 0; i < numTxs; ++i) {
-      const startIndex = 10 * 32 + i * innerLength;
-      const innerData = proofData.slice(startIndex, startIndex + innerLength);
+      const startIndex = RollupProofData.LENGTH_ROLLUP_PUBLIC + i * InnerProofData.LENGTH;
+      const innerData = proofData.slice(startIndex, startIndex + InnerProofData.LENGTH);
       innerProofData[i] = InnerProofData.fromBuffer(innerData, viewingKeys.slice(i * 2, i * 2 + 2));
     }
 

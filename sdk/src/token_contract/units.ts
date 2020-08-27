@@ -12,3 +12,16 @@ export function fromErc20Units(value: bigint, decimals: number, precision: numbe
   const fractional = valStr.slice(-decimals);
   return fractional ? `${integer}.${fractional.slice(0, precision)}` : integer;
 }
+
+/**
+ * Converts the value from a decimal string to bigint token value.
+ * @param valueString to convert to bigint
+ * @param decimals the number of least significant digits of value that represent the decimal
+ */
+export function toErc20Units(valueString: string, decimals: number) {
+  const [integer, decimal] = valueString.split('.');
+  const fractional = (decimal || '').replace(/0+$/, '').slice(0, decimals);
+  const scalingFactor = BigInt(10) ** BigInt(decimals);
+  const fractionalScale = scalingFactor / BigInt(10) ** BigInt(fractional.length || 0);
+  return BigInt(fractional || 0) * fractionalScale + BigInt(integer || 0) * scalingFactor;
+}

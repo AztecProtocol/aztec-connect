@@ -71,6 +71,7 @@ describe('User State', () => {
       encryptNote(validChangeNote ? note2 : gibberishNote, grumpkin),
     ];
     const innerProofData = new InnerProofData(
+      Buffer.alloc(32),
       numToUInt32BE(publicInput, 32),
       numToUInt32BE(publicOutput, 32),
       encryptedNote1,

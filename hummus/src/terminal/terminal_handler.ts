@@ -74,7 +74,7 @@ export class TerminalHandler {
    * Registered before the app has been initialized, unregistered after.
    * Any initialization messages are added to the print queue.
    */
-  private initProgressHandler = (initStatus: AppInitStatus) => {
+  private initProgressHandler = (initStatus: AppInitStatus, previousStatus: AppInitStatus) => {
     const msg = this.getInitString(initStatus);
     if (msg) {
       this.printQueue.put(msg + '\n');
@@ -86,15 +86,24 @@ export class TerminalHandler {
    */
   private registerHandlers() {
     // If the app transitions to initializing state, lock the terminal until it is initialized again.
-    this.app.on(AppEvent.UPDATED_INIT_STATE, (initStatus: AppInitStatus) => {
+    this.app.on(AppEvent.UPDATED_INIT_STATE, (initStatus: AppInitStatus, previousStatus: AppInitStatus) => {
       if (initStatus.initState === AppInitState.INITIALIZING) {
-        this.controlQueue.put(async () => {
-          this.printQueue.put(TermControl.LOCK);
-          const msg = this.getInitString(initStatus);
-          if (msg) {
-            this.printQueue.put('\r' + msg + '\n');
-          }
-        });
+        if (
+          previousStatus.initAction === AppInitAction.LINK_AZTEC_ACCOUNT &&
+          initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT
+        ) {
+          this.app.destroy();
+        } else if (initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT) {
+          this.app.linkAccount();
+        } else {
+          this.controlQueue.put(async () => {
+            this.printQueue.put(TermControl.LOCK);
+            const msg = this.getInitString(initStatus);
+            if (msg) {
+              this.printQueue.put('\r' + msg + '\n');
+            }
+          });
+        }
       }
       if (initStatus.initState === AppInitState.INITIALIZED) {
         this.controlQueue.put(async () => {

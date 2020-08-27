@@ -105,27 +105,29 @@ function ThemedContent({ app }: { app: WebSdk }) {
               />
             </Block>
             <Init initialServerUrl={serverUrl} app={app}>
-              <Switch>
-                <Route
-                  path="/rollup/:id"
-                  component={({ match }: RollupRouteProps) => <RollupDetails app={app} id={+match.params.id} />}
-                />
-                <Route
-                  path="/tx/:txHash"
-                  component={({ match }: TxRouteProps) => (
-                    <TxDetails app={app} txHash={Buffer.from(match.params.txHash, 'hex')} />
-                  )}
-                />
-                <Route exact path="/transactions">
-                  <LocalState app={app} />
-                </Route>
-                <Route exact path="/explorer">
-                  <GlobalState app={app} />
-                </Route>
-                <Route>
-                  <ActionForm app={app} />
-                </Route>
-              </Switch>
+              {({ account }) => (
+                <Switch>
+                  <Route
+                    path="/rollup/:id"
+                    component={({ match }: RollupRouteProps) => <RollupDetails app={app} id={+match.params.id} />}
+                  />
+                  <Route
+                    path="/tx/:txHash"
+                    component={({ match }: TxRouteProps) => (
+                      <TxDetails app={app} txHash={Buffer.from(match.params.txHash, 'hex')} />
+                    )}
+                  />
+                  <Route exact path="/transactions">
+                    <LocalState app={app} />
+                  </Route>
+                  <Route exact path="/explorer">
+                    <GlobalState app={app} />
+                  </Route>
+                  <Route>
+                    <ActionForm app={app} account={account} />
+                  </Route>
+                </Switch>
+              )}
             </Init>
             <Block padding="xl 0">
               <FlexBox valign="center" align="space-between">

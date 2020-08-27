@@ -16,6 +16,7 @@ export enum AppInitState {
 export enum AppInitAction {
   LINK_PROVIDER_ACCOUNT,
   LINK_AZTEC_ACCOUNT,
+  AWAIT_LINK_AZTEC_ACCOUNT,
   CHANGE_NETWORK,
 }
 
@@ -40,11 +41,14 @@ export interface AppInitStatus {
  * UPDATED_INIT_STATE => INITIALIZING, CHANGE_NETWORK
  * UPDATED_INIT_STATE => INITIALIZING, "info message 1"
  * UPDATED_INIT_STATE => INITIALIZING, "info message 2"
- * UPDATED_INIT_STATE => INITIALIZING, LINK_AZTEC_ACCOUNT
+ * UPDATED_INIT_STATE => INITIALIZING, LINK_AZTEC_ACCOUNT (user accepts, otherwise destroy)
  * UPDATED_INIT_STATE => INITIALIZED, address 1
- * UPDATED_INIT_STATE => INITIALIZING, LINK_AZTEC_ACCOUNT
+ * UPDATED_INIT_STATE => INITIALIZING, AWAIT_LINK_AZTEC_ACCOUNT (user changes to unlinked account)
+ * UPDATED_INIT_STATE => INITIALIZING, LINK_AZTEC_ACCOUNT (user rejects)
+ * UPDATED_INIT_STATE => INITIALIZING, AWAIT_LINK_AZTEC_ACCOUNT
+ * UPDATED_INIT_STATE => INITIALIZING, LINK_AZTEC_ACCOUNT (user accepts)
  * UPDATED_INIT_STATE => INITIALIZED, address 2
- * UPDATED_INIT_STATE => INITIALIZED, address 1
+ * UPDATED_INIT_STATE => INITIALIZED, address 1 (user changes to linked account)
  * UPDATED_INIT_STATE => DESTROYED
  */
 export class WebSdk extends EventEmitter {
@@ -93,12 +97,13 @@ export class WebSdk extends EventEmitter {
       await this.sdk.init();
 
       // Link account. Will be INITIALZED once complete.
-      await this.accountChanged(this.ethProvider.getAccount());
+      await this.initLinkAccount();
 
       // Handle account changes.
-      this.ethProvider.on(EthProviderEvent.UPDATED_ACCOUNT, (account?: EthAddress) => {
-        this.accountChanged(account).catch(() => this.destroy());
-      });
+      this.ethProvider.on(EthProviderEvent.UPDATED_ACCOUNT, this.accountChanged);
+
+      // Handle users changes.
+      this.sdk.on(SdkEvent.UPDATED_USERS, this.usersChanged);
 
       // Ensure we're still on correct network, and attach handler.
       // Any network changes at this point result in destruction.
@@ -113,38 +118,84 @@ export class WebSdk extends EventEmitter {
   }
 
   private updateInitStatus(initState: AppInitState, initAction?: AppInitAction, message?: string) {
+    const previous = this.initStatus;
     this.initStatus = {
       ...this.initStatus,
       initState,
       initAction,
       message,
     };
-    this.emit(AppEvent.UPDATED_INIT_STATE, { ...this.initStatus });
+    this.emit(AppEvent.UPDATED_INIT_STATE, { ...this.initStatus }, previous);
   }
 
   private accountChanged = (account?: EthAddress) => {
     this.initStatus.account = account;
     if (!account) {
-      // If the user withdraws access, destroy everything and return to uninitialized state.
-      throw new Error('Account access withdrawn.');
+      this.destroy();
+      return;
     }
+
     const user = this.sdk.getUser(account);
     if (!user) {
       // We are initializing until the account is added to sdk.
-      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_AZTEC_ACCOUNT);
-      return this.sdk.addUser(account).then(() => {
-        this.updateInitStatus(AppInitState.INITIALIZED);
-      });
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT);
     } else {
       this.updateInitStatus(AppInitState.INITIALIZED);
     }
-    return Promise.resolve();
+  };
+
+  private usersChanged = () => {
+    const account = this.ethProvider.getAccount()!;
+    const user = this.sdk.getUser(account);
+    if (!user) {
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT);
+    }
   };
 
   private networkChanged = () => {
     if (!this.isCorrectNetwork()) {
       this.destroy();
     }
+  };
+
+  private async initLinkAccount() {
+    const account = this.ethProvider.getAccount();
+    this.initStatus.account = account;
+    if (!account) {
+      throw new Error('Account access withdrawn.');
+    }
+
+    const user = this.sdk.getUser(account);
+    if (!user) {
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_AZTEC_ACCOUNT);
+      try {
+        await this.sdk.addUser(account);
+      } catch (e) {
+        throw new Error('Account link rejected.');
+      }
+    }
+    this.updateInitStatus(AppInitState.INITIALIZED);
+  }
+
+  public linkAccount = async () => {
+    const account = this.ethProvider.getAccount();
+    this.initStatus.account = account;
+    if (!account) {
+      this.destroy();
+      return;
+    }
+
+    const user = this.sdk.getUser(account);
+    if (!user) {
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_AZTEC_ACCOUNT);
+      try {
+        await this.sdk.addUser(account);
+      } catch (e) {
+        this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT);
+        return;
+      }
+    }
+    this.updateInitStatus(AppInitState.INITIALIZED);
   };
 
   public async destroy() {
