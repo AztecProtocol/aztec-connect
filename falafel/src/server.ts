@@ -67,7 +67,7 @@ export class Server {
     this.printState();
 
     this.processTxQueue(this.config.maxRollupWaitTime, this.config.minRollupInterval);
-    this.processRollupQueue();
+    this.rollupQueue.process(this.rollupQueueHandler);
     this.processPublishQueue();
   }
 
@@ -247,13 +247,8 @@ export class Server {
     clearInterval(flushTimeout);
   }
 
-  private async processRollupQueue() {
-    while (true) {
-      const txs = await this.rollupQueue.get();
-      if (!txs) {
-        break;
-      }
-
+  private async rollupQueueHandler(txs: JoinSplitProof[]) {
+    try {
       console.log(`Creating rollup with ${txs.length} txs...`);
       const rollup = await this.createRollup(txs);
       await this.rollupDb.addRollup(rollup);
@@ -265,7 +260,7 @@ export class Server {
         // Perhaps need to extract the troublemaker, and then reinsert all txs into queue?
         await this.worldStateDb.rollback();
         await this.rollupDb.deleteRollup(rollup.rollupId);
-        continue;
+        return;
       }
 
       await this.rollupDb.setRollupProof(rollup.rollupId, proof);
@@ -286,6 +281,9 @@ export class Server {
       });
 
       this.printState();
+    } catch (err) {
+      console.error('Rollup queue handler exception, did rollup_cli die?');
+      throw err;
     }
   }
 

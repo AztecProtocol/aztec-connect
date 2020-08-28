@@ -73,12 +73,17 @@ export class MemoryFifo<T> {
    * Helper method that can be used to continously consume and process items on the queue.
    */
   public async process(handler: (item: T) => Promise<void>) {
-    while (true) {
-      const item = await this.get();
-      if (item === null) {
-        break;
+    try {
+      while (true) {
+        const item = await this.get();
+        if (item === null) {
+          break;
+        }
+        await handler(item);
       }
-      await handler(item);
+    } catch (err) {
+      // tslint:disable:no-console
+      console.error('Queue handler exception:', err);
     }
   }
 }
