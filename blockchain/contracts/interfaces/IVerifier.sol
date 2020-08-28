@@ -3,5 +3,5 @@
 pragma solidity >=0.6.10 <0.7.0;
 
 interface IVerifier {
-    function verify(bytes calldata proofData) external returns (bool);
+    function verify(bytes memory serialized_proof, uint256 _keyId) external;
 }

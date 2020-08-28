@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { ContractFactory, ethers, Signer } from 'ethers';
 import ERC20Mintable from '../artifacts/ERC20Mintable.json';
 import RollupProcessor from '../artifacts/RollupProcessor.json';
+import { deployVerifier } from './deploy_verifier';
 
 dotenv.config();
 const { ETHEREUM_HOST, INFURA_API_KEY, NETWORK, PRIVATE_KEY } = process.env;
@@ -30,8 +31,10 @@ async function main() {
   if (erc20Address === 'dev') {
     const erc20Factory = new ContractFactory(ERC20Mintable.abi, ERC20Mintable.bytecode, signer);
     const erc20 = await erc20Factory.deploy();
+    const verifier = await deployVerifier(signer);
+
     const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
-    const rollup = await rollupFactory.deploy(erc20.address);
+    const rollup = await rollupFactory.deploy(erc20.address, verifier.address);
 
     console.error(`Awaiting deployment...`);
     await rollup.deployed();
@@ -48,8 +51,9 @@ async function main() {
     console.log(`export ERC20_CONTRACT_ADDRESS=${erc20.address}`);
     console.log(`export ROLLUP_CONTRACT_ADDRESS=${rollup.address}`);
   } else {
+    const verifier = await deployVerifier(signer);
     const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
-    const rollup = await rollupFactory.deploy(erc20Address);
+    const rollup = await rollupFactory.deploy(erc20Address, verifier.address);
 
     console.error(`Awaiting deployment...`);
     await rollup.deployed();

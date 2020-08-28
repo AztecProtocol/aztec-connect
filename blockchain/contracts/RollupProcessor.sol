@@ -9,9 +9,13 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {IVerifier} from './interfaces/IVerifier.sol';
 import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
-import {Verifier} from './Verifier.sol';
 import {Decoder} from './Decoder.sol';
 
+/**
+ * @title Rollup Processor
+ * @dev Smart contract responsible for processing Aztec zkRollups, including relaying them to a verifier
+ * contract for validation and performing all relevant ERC20 token transfers
+ */
 contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     using SafeMath for uint256;
 
@@ -32,11 +36,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     event Deposit(address depositorAddress, uint256 depositValue);
     event Withdraw(address withdrawAddress, uint256 withdrawValue);
 
-    constructor(address _linkedToken) public {
+    constructor(address _linkedToken, address _verifierAddress) public {
         require(_linkedToken != address(0x0), 'Rollup Processor: ZERO_ADDRESS');
-
         linkedToken = IERC20(_linkedToken);
-        verifier = new Verifier();
+        verifier = IVerifier(_verifierAddress);
     }
 
     /**
@@ -60,7 +63,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
      * signature[0] corresponds to innerProof[0]
      * signature[1] corresponds to innerProof[2]
      * signature[2] corresponds to innerProof[3]
-     * @param viewingKeys - viewingKeys for the notes submitted in the rollup
+     * @param viewingKeys - viewingKeys for the notes submitted in the rollup. Note: not used in the logic
+     * of the rollupProcessor contract, but called here as a convenient to place data on chain
      * @param rollupSize - number of transactions included in the rollup
      */
     function processRollup(
@@ -74,7 +78,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         processTransactions(proofData[rollupPubInputLength:], numTxs, signatures, sigIndexes);
     }
 
-    function updateAndVerifyProof(bytes calldata _proofData, uint256 rollupSize) internal returns (uint256) {
+    /**
+     * @dev Validate that the supplied Merkle roots are correct, verify the zk proof and update the contract state
+     * variables with those provided by the rollup
+     *
+     * @param _proofData - cryptographic zk proof data. Passed to the verifier for verification
+     * @param rollupSize - number of transactions included in the zkRollup
+     */
+    function updateAndVerifyProof(bytes memory _proofData, uint256 rollupSize) internal returns (uint256) {
         (
             bytes32 newDataRoot,
             bytes32 newNullRoot,
@@ -83,7 +94,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
             uint256 numTxs
         ) = validateMerkleRoots(_proofData);
 
-        verifier.verify(_proofData);
+        verifier.verify(_proofData, rollupSize);
 
         // update state variables
         dataRoot = newDataRoot;
@@ -251,7 +262,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         uint256 rollupAllowance = linkedToken.allowance(depositorAddress, address(this));
         require(rollupAllowance >= depositValue, 'Rollup Processor: INSUFFICIENT_TOKEN_APPROVAL');
 
-        // scaling factor to convert between Aztec notes and DAI
         linkedToken.transferFrom(depositorAddress, address(this), depositValue);
         emit Deposit(depositorAddress, depositValue);
     }
@@ -267,7 +277,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         uint256 rollupBalance = linkedToken.balanceOf(address(this));
         require(withdrawValue <= rollupBalance, 'Rollup Processor: INSUFFICIENT_FUNDS');
 
-        // scaling factor to convert between Aztec notes and DAI
         linkedToken.transfer(receiverAddress, withdrawValue);
         emit Withdraw(receiverAddress, withdrawValue);
     }
