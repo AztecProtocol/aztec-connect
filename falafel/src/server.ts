@@ -67,7 +67,7 @@ export class Server {
     this.printState();
 
     this.processTxQueue(this.config.maxRollupWaitTime, this.config.minRollupInterval);
-    this.rollupQueue.process(this.rollupQueueHandler);
+    this.rollupQueue.process(this.rollupQueueHandler.bind(this));
     this.processPublishQueue();
   }
 
