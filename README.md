@@ -16,4 +16,5 @@ The Aztec 2.0 system consists of the following sub projects.
 
 The following documents outline how best to contribute:
 
+- [Getting Started](./markdown/getting_started.md)
 - [PR Checklist](./markdown/pr_checklist.md)

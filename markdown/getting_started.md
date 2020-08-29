@@ -1,0 +1,71 @@
+# Getting Started
+
+There are quite a few moving parts to the system. Getting them all working together is a little involved. The quickest
+way to get started is to just run the `bootstrap.sh` script in the root of the repository.
+
+The script will run the bootstrap scripts in each relevant subdirectory.
+Each script will build it's project, and where relevant use `yarn link` to link TypeScript repositories together.
+
+Some TypeScript projects have two builds. Standard Commonjs imports and ES6 module imports. The later is required by
+webpack. For development purposes, you can mostly ignore the existence of the ES6 builds. Projects will all be linked
+together using the Commonjs builds.
+
+Webpack projects should still `yarn link` to the Commonjs builds, but use `alias` configurations in development
+configurations to then replace imports of libraries with their ES6 versions, and be sure to import ES6 version
+in `package.json` for production builds.
+
+### Barretenberg
+
+This is our C++ codebase. The script will create two build directories `build` and `build-wasm`.
+The relevant binaries are:
+
+- `./build/src/aztec/rollup/rollup_cli/rollup_cli`
+- `./build/src/aztec/rollup/db_cli/db_cli`
+- `./build-wasm/src/aztec/barretenberg.wasm`
+
+`rollup_cli` is the rollup proof generator. `db_cli` is the merkle tree database.
+
+During development you may find yourself needing to rebuild these binaries as they change.
+
+### Barrentenberg.js
+
+TypeScript wrapper around `barretenberg.wasm`. There is a symlink to the built WASM file at
+`./src/wasm/barretenberg.wasm`. The build directories `dest` and `dest-es` by default will end up with copies of the
+actual artifact. Running `yarn symlink-wasm` replaces them with symlinks. The bootstrap script does this as default.
+
+During development you'll want to run `yarn build:dev` to watch and rebuild both builds as files change.
+
+### Blockchain
+
+Contains smart contracts, deployment scripts, and TypeScript wrappers. It exposes a script `deploy_rollup_processor`
+to any dependent projects. This script will deploy the contracts, and output text to standard output, which when
+executed in a shell, exports environment variables containing the contract addresses.
+
+During development you'll want to run `yarn build:dev` to watch and rebuild both builds as files change. If you change
+the contracts, you'll need to run `yarn compile`.
+
+### Falafel
+
+The rollup server.
+
+During development you'll want to run `yarn start:dev` to watch and rebuild as files change.
+
+If running against a real blockchain such as ganache, you'll want to deploy to ganache first:
+
+```
+yarn clean_db && `yarn -s deploy_rollup_processor` && ROLLUP_SIZE=1 MAX_ROLLUP_WAIT_TIME=0 yarn start:dev
+```
+
+This is useful for running the end to end tests.
+
+### Sdk
+
+During development you'll want to run `yarn build:dev` to watch and rebuild both builds as files change.
+
+### End-to-end
+
+Run a local ganache instance. Run `falafel` as above. Run `yarn test` to run the tests.
+
+### Hummus
+
+Run `falafel`. It doesn't need to be against a real blockchain. Run `yarn start:dev` to launch the dev server.
