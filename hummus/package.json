@@ -8,8 +8,7 @@
     "test": "tsc --noEmit",
     "generate:styles": "guacamole generateStyles",
     "start": "node ./server",
-    "start:dev": "webpack-dev-server --config webpack.dev.js",
-    "symlinks": "mkdir -p ./dest/node_modules && ln -s ../../../barretenberg.js/dest && ./dest-es/node_modules/barretenberg && mkdir -p ./dest-es/node_modules && ln -s ../../../barretenberg.js/dest-es ./dest-es/node_modules/barretenberg"
+    "start:dev": "webpack-dev-server --config webpack.dev.js"
   },
   "jest": {
     "transform": {

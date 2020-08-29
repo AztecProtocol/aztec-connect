@@ -6,7 +6,6 @@
   "scripts": {
     "build": "yarn clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js",
     "clean": "rm -rf ./dest ./dest-es",
-    "symlink": "mkdir -p ./dest/node_modules && ln -sfn ../../../barretenberg.js/dest ./dest/node_modules/barretenberg && mkdir -p ./dest-es/node_modules && ln -sfn ../../../barretenberg.js/dest-es ./dest-es/node_modules/blockchain",
     "test": "jest",
     "build:dev": "yarn build:dev:cjs & yarn build:dev:es",
     "build:dev:cjs": "tsc -p tsconfig.cjs.json --watch",
