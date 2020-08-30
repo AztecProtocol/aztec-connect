@@ -47,9 +47,13 @@ export async function deployVerifier(signer: Signer) {
   const rollupVk2LibFactory = new ContractFactory(Rollup2Vk.abi, Rollup2Vk.bytecode, signer);
   const rollupVk2Lib = await rollupVk2LibFactory.deploy();
 
+  const rollupVk3LibFactory = new ContractFactory(Rollup2Vk.abi, Rollup2Vk.bytecode, signer);
+  const rollupVk3Lib = await rollupVk3LibFactory.deploy();
+
   const linkedVerificationKeyBytecode = linkBytecode(VerificationKeys, {
     Rollup1Vk: rollupVk1Lib.address,
     Rollup2Vk: rollupVk2Lib.address,
+    Rollup3Vk: rollupVk3Lib.address,
   });
 
   const verificationKeysLibrary = new ContractFactory(VerificationKeys.abi, linkedVerificationKeyBytecode, signer);

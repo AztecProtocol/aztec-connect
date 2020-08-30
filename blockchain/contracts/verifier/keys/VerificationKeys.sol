@@ -7,6 +7,7 @@ pragma experimental ABIEncoderV2;
 import {Types} from '../cryptography/Types.sol';
 import {Rollup1Vk} from '../keys/Rollup1Vk.sol';
 import {Rollup2Vk} from '../keys/Rollup2Vk.sol';
+import {Rollup3Vk} from '../keys/Rollup3Vk.sol';
 
 /**
  * @title Verification keys library
@@ -25,6 +26,8 @@ library VerificationKeys {
             vk = Rollup1Vk.get_verification_key();
         } else if (_keyId == 2) {
             vk = Rollup2Vk.get_verification_key();
+        } else if (_keyId == 3) {
+            vk = Rollup3Vk.get_verification_key();
         }
         return vk;
     }
