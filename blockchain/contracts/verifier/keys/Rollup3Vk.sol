@@ -31,8 +31,8 @@ library Rollup3Vk {
       0x24e0af2df8c098616b89c4f939c747ce44567bfb530b64f3a948cebfc0e7fa3e
     );
     vk.Q2 = PairingsBn254.new_g1(
-      0x1258ff459c278386b99adb8533c462e3a7056996fa5ad02fb156cf860b472e22,
-      0x04b13dcb18a52cf79019df8365a41eb9a51aaea9eb86544e176356d6b6722366
+      0x22aca7f09f1d25c861ee00d51c86913e27beccd484276b7409e1a1761f4df236,
+      0x016bb6bcd5412cd4616f826ef32d3ee61dd1d19eacf4b24c60384785b47c74de
     );
     vk.Q3 = PairingsBn254.new_g1(
       0x0a0daaeb01ab5f99f46890c27bbcccf4912bed2ea319d44e13089fadb57ce8a3,
@@ -75,8 +75,8 @@ library Rollup3Vk {
       0x26129f12ce9c167bcbbf8d39a9918a3d1c39d82ef4de5c6f853d2b593fa2f3ba
     );
     vk.sigma_commitments[1] = PairingsBn254.new_g1(
-      0x0fcad26244893894dc169464698a131c28cbad730a5f00b1b6669e908903d839,
-      0x1f3f04c9532dffda97b017447ff784638f6eeffef673d9bd65a916203ef724f0
+      0x137f5d7cb0dc5a12b1e68ab8908c4cfcffc4cf836a63dd53f6fb99c1e140068f,
+      0x0b1c65b198d3f55acafabf781fb8da73beaf9464800d6398e5578c69fa836c01
     );
     vk.sigma_commitments[2] = PairingsBn254.new_g1(
       0x301c8a7817e601c9ca814d6e0ec0424a5fa2c0f94834854dd2e39ca93f10a6d1,

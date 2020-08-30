@@ -1,6 +1,6 @@
 import { toBigIntBE } from 'bigint-buffer';
 import { Transfer } from 'threads';
-import { Prover } from '../prover';
+import { Prover } from '../prover/prover';
 import { JoinSplitTx } from './join_split_tx';
 import { Note } from '../note';
 import { Signature } from '../signature';

@@ -79,7 +79,7 @@ describe('end-to-end tests', () => {
     await sdk.awaitSettlement(userAddresses[0], transferTxHash);
     expect(user0Asset.balance()).toBe(user0BalanceAfterDeposit - transferValue);
 
-    await sdk.awaitSettlement(userAddresses[1], transferTxHash, true);
+    await sdk.awaitSettlement(userAddresses[1], transferTxHash);
     const user1BalanceAfterTransfer = user1Asset.balance();
     expect(user1BalanceAfterTransfer).toBe(transferValue);
 
@@ -110,5 +110,13 @@ describe('end-to-end tests', () => {
 
     expect(await user2Asset.publicBalance()).toBe(0n);
     expect(await user3Asset.publicBalance()).toBe(transferValue);
+  });
+
+  it('should create account', async () => {
+    const keyPair = sdk.newKeyPair();
+    const txHash = await users[0].createAccount('pebble', keyPair.publicKey);
+    await sdk.awaitSettlement(userAddresses[0], txHash);
+
+    expect(await sdk.getAddressFromAlias('pebble')).toEqual(users[0].getUserData().publicKey);
   });
 });

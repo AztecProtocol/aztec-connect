@@ -154,7 +154,7 @@ jobs:
             if check_rebuild; then
               build end-to-end:latest
               docker tag $ECR_URL/end-to-end:cache-$CIRCLE_SHA1-latest $ECR_DEPLOY_URL/end-to-end:latest
-              docker-compose run --rm end-to-end
+              docker-compose up --exit-code-from end-to-end
             fi
 
   deploy:

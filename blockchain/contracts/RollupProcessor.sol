@@ -206,12 +206,15 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
             bytes calldata proof = innerProofData[i.mul(txPubInputLength):i.mul(txPubInputLength).add(
                 txPubInputLength
             )];
-            (uint256 publicInput, uint256 publicOutput, address inputOwner, address outputOwner) = extractTxComponents(
-                proof
-            );
+            (
+                uint256 proofId,
+                uint256 publicInput,
+                uint256 publicOutput,
+                address inputOwner,
+                address outputOwner
+            ) = extractTxComponents(proof);
 
-            // scope block to avoid stack too deep errors
-            {
+            if (proofId == 0) {
                 if (publicInput > 0) {
                     bytes memory signature = extractSignature(signatures, findSigIndex(sigIndexes, i));
                     validateSignature(proof, signature, inputOwner);

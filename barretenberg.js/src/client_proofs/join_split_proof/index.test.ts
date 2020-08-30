@@ -14,7 +14,7 @@ import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
 import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
-import { Prover } from '../prover';
+import { Prover } from '../prover/prover';
 import { JoinSplitProof } from './join_split_proof';
 import { computeNullifier } from './compute_nullifier';
 import { randomBytes } from 'crypto';

@@ -20,6 +20,7 @@ const actionTextMapping = {
   PUBLIC_TRANSFER: 'Public Sent',
   RECEIVE: 'Received',
   MINT: 'Minted',
+  ACCOUNT: 'Account',
 };
 
 const actionIconMapping = {
@@ -29,7 +30,7 @@ const actionIconMapping = {
   PUBLIC_TRANSFER: 'import_export',
   RECEIVE: 'flare',
   MINT: 'play_for_work',
-  NADA: '',
+  ACCOUNT: '',
 };
 
 const actionIconColorMapping = {
@@ -39,7 +40,7 @@ const actionIconColorMapping = {
   PUBLIC_TRANSFER: 'white',
   RECEIVE: 'orange',
   MINT: 'white',
-  NADA: '',
+  ACCOUNT: '',
 };
 
 const actionIconBackgroundMapping = {
@@ -49,7 +50,7 @@ const actionIconBackgroundMapping = {
   PUBLIC_TRANSFER: 'secondary',
   RECEIVE: '',
   MINT: 'green',
-  NADA: '',
+  ACCOUNT: '',
 };
 
 export const UserTxs = ({ account, app }: UserTxsProps) => {

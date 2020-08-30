@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import Dexie from 'dexie';
-import { Database } from './database';
+import { Database, SigningKey } from './database';
 import { Note } from '../note';
 import { UserData } from '../user';
 import { UserTx, UserTxAction } from '../user_tx';
@@ -121,29 +121,45 @@ const dexieUserTxToUserTx = ({ id, txHash, settled, recipient, ...dexieUserTx }:
   recipient: recipient ? Buffer.from(recipient) : undefined,
 });
 
+class DexieUserKey {
+  constructor(public owner: Uint8Array, public key: Uint8Array, public treeIndex: number) {}
+}
+
+class DexieAlias {
+  constructor(public aliasHash: Uint8Array, public key: Uint8Array) {}
+}
+
 export class DexieDatabase implements Database {
   private dexie = new Dexie('hummus');
   private user: Dexie.Table<DexieUser, number>;
+  private userKeys: Dexie.Table<DexieUserKey, string>;
   private userTx: Dexie.Table<DexieUserTx, string>;
   private note: Dexie.Table<DexieNote, number>;
   private key: Dexie.Table<DexieKey, string>;
+  private alias: Dexie.Table<DexieAlias, number>;
 
   constructor() {
     this.dexie.version(3).stores({
       user: '&ethAddress',
+      user_keys: '&[owner+key], owner',
       user_tx: '&[txHash+ethAddress], txHash, ethAddress, settled, created',
       note: '++id, nullified, owner',
       key: '&name',
+      alias: '&aliasHash',
     });
 
     this.user = this.dexie.table('user');
     this.note = this.dexie.table('note');
     this.userTx = this.dexie.table('user_tx');
+    this.userKeys = this.dexie.table('user_keys');
     this.key = this.dexie.table('key');
+    this.alias = this.dexie.table('alias');
     this.user.mapToClass(DexieUser);
-    this.userTx.mapToClass(DexieUserTx);
     this.note.mapToClass(DexieNote);
+    this.userTx.mapToClass(DexieUserTx);
+    this.userKeys.mapToClass(DexieUserKey);
     this.key.mapToClass(DexieKey);
+    this.alias.mapToClass(DexieAlias);
   }
 
   close() {
@@ -304,5 +320,27 @@ export class DexieDatabase implements Database {
     }
 
     return value;
+  }
+
+  async getUserSigningKeys(owner: EthAddress) {
+    const userKeys = await this.userKeys.where({ owner: new Uint8Array(owner.toBuffer()) }).toArray();
+    return userKeys.map(uk => ({ ...uk, owner: new EthAddress(Buffer.from(uk.owner)), key: Buffer.from(uk.key) }));
+  }
+
+  async addUserSigningKey({ owner, key, treeIndex }: SigningKey) {
+    this.userKeys.add({ owner: new Uint8Array(owner.toBuffer()), key: new Uint8Array(key), treeIndex });
+  }
+
+  async removeUserSigningKey({ owner, key }: SigningKey) {
+    this.userKeys.where({ owner: new Uint8Array(owner.toBuffer()), key: new Uint8Array(key) }).delete();
+  }
+
+  async addAlias(aliasHash: Buffer, address: GrumpkinAddress) {
+    this.alias.add({ aliasHash: new Uint8Array(aliasHash), key: new Uint8Array(address.toBuffer()) });
+  }
+
+  async getAliasAddress(aliasHash: Buffer) {
+    const alias = await this.alias.get(new Uint8Array(aliasHash));
+    return alias ? new GrumpkinAddress(Buffer.from(alias.key)) : undefined;
   }
 }

@@ -42,11 +42,11 @@ export const Init: FunctionComponent<InitProps> = ({ app, initialServerUrl = '',
             </Block>
             <Block padding="m 0">
               {initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT ? (
-                <Button text="Link Account" onSubmit={() => app.linkAccount().catch(err => debug(err.message))} />
+                <Button text="Link Account" onSubmit={() => app.linkAccount().catch(err => debug(err))} />
               ) : (
                 <Button
                   text="The Button"
-                  onSubmit={() => app.init(serverUrl).catch(err => debug(err.message))}
+                  onSubmit={() => app.init(serverUrl).catch(err => debug(err))}
                   isLoading={initState === AppInitState.INITIALIZING}
                 />
               )}

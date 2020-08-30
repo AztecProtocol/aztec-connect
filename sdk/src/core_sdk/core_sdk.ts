@@ -1,11 +1,11 @@
 import { BlockSource, Block } from 'barretenberg/block_source';
-import { JoinSplitProver, JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
+import { JoinSplitProver, JoinSplitProof, computeAliasNullifier } from 'barretenberg/client_proofs/join_split_proof';
 import { Crs } from 'barretenberg/crs';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
+import { PooledProverFactory } from 'barretenberg/client_proofs/prover';
 import { MemoryFifo } from 'barretenberg/fifo';
-import { PooledProver } from 'barretenberg/client_proofs/prover/pooled_prover';
 import { RollupProvider, RollupProviderExplorer } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { WorldState } from 'barretenberg/world_state';
@@ -15,7 +15,7 @@ import { LevelUp } from 'levelup';
 import { Database } from '../database';
 import { JoinSplitProofCreator } from '../join_split_proof';
 import { TxsState } from '../txs_state';
-import { UserDataFactory } from '../user';
+import { UserDataFactory, KeyPair } from '../user';
 import { UserState, UserStateFactory, UserStateEvent } from '../user_state';
 import { Sdk, SdkEvent, SdkInitState, TxHash, AssetId, SdkStatus, Action, ActionState } from '../sdk';
 import { UserTx, UserTxAction } from '../user_tx';
@@ -28,6 +28,9 @@ import { Signer } from 'ethers';
 import { CoreSdkUser } from './core_sdk_user';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { MockTokenContract } from '../token_contract/mock_token_contract';
+import { AccountProofCreator } from '../account_proof_creator';
+import { AccountProver } from 'barretenberg/client_proofs/account_proof';
+import { WorkerPool } from 'barretenberg/wasm/worker_pool';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -56,8 +59,9 @@ export class CoreSdk extends EventEmitter implements Sdk {
   private worldState!: WorldState;
   private userStates: UserState[] = [];
   private tokenContracts: TokenContract[] = [];
-  private pooledProver!: PooledProver;
+  private workerPool!: WorkerPool;
   private joinSplitProofCreator!: JoinSplitProofCreator;
+  private accountProofCreator!: AccountProofCreator;
   private blockQueue!: MemoryFifo<Block>;
   private userFactory!: UserDataFactory;
   private userStateFactory!: UserStateFactory;
@@ -74,6 +78,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
   };
   private actionState?: ActionState;
   private processBlocksPromise?: Promise<void>;
+  private blake2s!: Blake2s;
 
   constructor(
     ethereumProvider: EthereumProvider,
@@ -114,18 +119,21 @@ export class CoreSdk extends EventEmitter implements Sdk {
     const pedersen = new Pedersen(barretenberg);
     const blake2s = new Blake2s(barretenberg);
     const grumpkin = new Grumpkin(barretenberg);
-    const circuitSize = 128 * 1024;
-    const crsData = await this.getCrsData(circuitSize);
+    const crsData = await this.getCrsData(128 * 1024);
     const numWorkers = Math.min(navigator.hardwareConcurrency || 1, 8);
-    const pooledProver = await PooledProver.new(barretenberg, crsData, circuitSize, numWorkers);
-    const joinSplitProver = new JoinSplitProver(barretenberg, pooledProver);
+    const workerPool = await WorkerPool.new(barretenberg, numWorkers);
+    const pooledProverFactory = new PooledProverFactory(workerPool, crsData);
+    const joinSplitProver = new JoinSplitProver(barretenberg, await pooledProverFactory.createProver(128 * 1024));
+    const accountProver = new AccountProver(await pooledProverFactory.createProver(64 * 1024));
 
+    this.blake2s = blake2s;
     this.userFactory = new UserDataFactory(grumpkin, this.ethersProvider);
     this.userStateFactory = new UserStateFactory(grumpkin, blake2s, this.db, this.blockSource);
-    this.pooledProver = pooledProver;
+    this.workerPool = workerPool;
     this.txsState = new TxsState(this.rollupProviderExplorer);
     this.worldState = new WorldState(this.leveldb, pedersen, blake2s);
     this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, grumpkin);
+    this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, blake2s);
 
     await this.worldState.init();
 
@@ -139,6 +147,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
 
     await this.initUserStates();
     await this.createJoinSplitProvingKey(joinSplitProver);
+    await this.createAccountProvingKey(accountProver);
 
     this.updateInitState(SdkInitState.INITIALIZED);
   }
@@ -206,13 +215,13 @@ export class CoreSdk extends EventEmitter implements Sdk {
     const start = new Date().getTime();
     const provingKey = await this.db.getKey('join-split-proving-key');
     if (provingKey) {
-      this.logInitMsgAndDebug('Loading proving key...');
+      this.logInitMsgAndDebug('Loading join-split proving key...');
       await joinSplitProver.loadKey(provingKey);
     } else {
-      this.logInitMsgAndDebug('Computing proving key...');
+      this.logInitMsgAndDebug('Computing join-split proving key...');
       await joinSplitProver.computeKey();
       if (this.options.saveProvingKey) {
-        this.logInitMsgAndDebug('Saving proving key...');
+        this.logInitMsgAndDebug('Saving join-split proving key...');
         const newProvingKey = await joinSplitProver.getKey();
         await this.db.addKey('join-split-proving-key', newProvingKey);
       }
@@ -220,8 +229,26 @@ export class CoreSdk extends EventEmitter implements Sdk {
     }
   }
 
+  private async createAccountProvingKey(accountProver: AccountProver) {
+    const start = new Date().getTime();
+    const provingKey = await this.db.getKey('account-proving-key');
+    if (provingKey) {
+      this.logInitMsgAndDebug('Loading account proving key...');
+      await accountProver.loadKey(provingKey);
+    } else {
+      this.logInitMsgAndDebug('Computing account proving key...');
+      await accountProver.computeKey();
+      if (this.options.saveProvingKey) {
+        this.logInitMsgAndDebug('Saving account proving key...');
+        const newProvingKey = await accountProver.getKey();
+        await this.db.addKey('account-proving-key', newProvingKey);
+      }
+      this.logInitMsgAndDebug(`Complete: ${new Date().getTime() - start}ms`);
+    }
+  }
+
   public async destroy() {
-    await this.pooledProver?.destroy();
+    await this.workerPool?.destroy();
     await this.stopReceivingBlocks();
     this.stopTrackingGlobalState();
     this.updateInitState(SdkInitState.DESTROYED);
@@ -314,7 +341,8 @@ export class CoreSdk extends EventEmitter implements Sdk {
       await this.worldState.syncFromDb().catch(() => {});
       await this.worldState.processBlock(block);
 
-      const rollupId = RollupProofData.getRollupIdFromBuffer(block.rollupProofData);
+      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollupId = rollup.rollupId;
       const latestRollupId = this.blockSource.getLatestRollupId();
       await this.leveldb.put('syncedToRollup', rollupId.toString());
       await this.leveldb.put('latestRollupId', latestRollupId.toString());
@@ -329,8 +357,21 @@ export class CoreSdk extends EventEmitter implements Sdk {
       // Forward the block on to each UserState for processing.
       this.userStates.forEach(us => us.processBlock(block));
 
+      await this.processAliases(rollup);
+
       this.emit(CoreSdkEvent.UPDATED_WORLD_STATE, rollupId, this.sdkStatus.latestRollupId);
       this.emit(SdkEvent.UPDATED_WORLD_STATE, rollupId, this.sdkStatus.latestRollupId);
+    }
+  }
+
+  private async processAliases(rollup: RollupProofData) {
+    for (const { proofId, publicInput, publicOutput, nullifier1 } of rollup.innerProofData) {
+      if (proofId !== 1) {
+        continue;
+      }
+      const publicKey = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
+      debug(`adding alias: ${nullifier1.toString('hex')} -> ${publicKey.toString()}.`);
+      this.db.addAlias(nullifier1, publicKey);
     }
   }
 
@@ -409,8 +450,9 @@ export class CoreSdk extends EventEmitter implements Sdk {
     return txHash;
   }
 
-  public getAddressFromAlias(alias: string) {
-    return GrumpkinAddress.ZERO;
+  public async getAddressFromAlias(alias: string) {
+    const aliasHash = computeAliasNullifier(alias, this.blake2s);
+    return await this.db.getAliasAddress(aliasHash);
   }
 
   public async approve(assetId: AssetId, value: bigint, from: EthAddress) {
@@ -421,7 +463,6 @@ export class CoreSdk extends EventEmitter implements Sdk {
   }
 
   public async mint(assetId: AssetId, value: bigint, to: EthAddress) {
-    debug('minting ', value);
     const action = () => this.getTokenContract(assetId).mint(to, value);
     const txHash = await this.performAction(Action.MINT, value, this.sdkStatus.rollupContractAddress, to, action);
     this.emit(SdkEvent.UPDATED_USER_STATE, to);
@@ -496,6 +537,52 @@ export class CoreSdk extends EventEmitter implements Sdk {
     return this.actionState ? !this.actionState.txHash && !this.actionState.error : false;
   }
 
+  public newKeyPair(): KeyPair {
+    return this.userFactory.newKeyPair();
+  }
+
+  public async createAccount(ethAddress: EthAddress, alias: string, newSigningPublicKey: GrumpkinAddress) {
+    const action = async () => {
+      const userState = this.getUserState(ethAddress);
+      if (!userState) {
+        throw new Error(`Unknown user: ${ethAddress}`);
+      }
+      const { publicKey } = userState.getUser();
+
+      const rawProofData = await this.accountProofCreator.createProof(
+        userState,
+        newSigningPublicKey,
+        undefined,
+        publicKey,
+        alias,
+      );
+
+      await this.rollupProvider.sendProof({ proofData: rawProofData, viewingKeys: [] });
+
+      // It *looks* like a join split...
+      const proofData = new JoinSplitProof(rawProofData, []);
+      const txHash = proofData.getTxId();
+
+      const userTx: UserTx = {
+        action: 'ACCOUNT',
+        txHash,
+        ethAddress,
+        value: BigInt(0),
+        recipient: ethAddress.toBuffer(),
+        settled: false,
+        created: new Date(),
+      };
+      await this.db.addUserTx(userTx);
+
+      this.emit(CoreSdkEvent.UPDATED_USER_STATE, userTx.ethAddress);
+      this.emit(SdkEvent.UPDATED_USER_STATE, userTx.ethAddress);
+
+      return txHash;
+    };
+
+    return this.performAction(Action.ACCOUNT, BigInt(0), ethAddress, ethAddress, action);
+  }
+
   private async isSynchronised() {
     const providerStatus = await this.rollupProvider.status();
     const localDataRoot = await this.worldState.getRoot();
@@ -508,12 +595,13 @@ export class CoreSdk extends EventEmitter implements Sdk {
     }
   }
 
-  public async awaitSettlement(address: EthAddress, txHash: TxHash, allowUnknown = false) {
+  public async awaitSettlement(address: EthAddress, txHash: TxHash, timeout = 120) {
+    const started = new Date().getTime();
     while (true) {
-      const tx = await this.db.getUserTx(address, txHash);
-      if (!tx && !allowUnknown) {
-        throw new Error(`Transaction hash not found: ${txHash.toString('hex')}`);
+      if (timeout && new Date().getTime() - started > timeout * 1000) {
+        throw new Error(`Timeout awaiting tx settlement: ${txHash.toString('hex')}`);
       }
+      const tx = await this.db.getUserTx(address, txHash);
       if (tx?.settled === true) {
         break;
       }

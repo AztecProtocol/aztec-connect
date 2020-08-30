@@ -33,6 +33,14 @@ export class GrumpkinAddress implements Address {
     return this.buffer;
   }
 
+  x() {
+    return this.buffer.slice(0, 32);
+  }
+
+  y() {
+    return this.buffer.slice(32);
+  }
+
   toString() {
     return `0x${this.buffer.toString('hex')}`;
   }

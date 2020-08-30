@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { constants, Signer, utils } from 'ethers';
 import { ethSign } from '../signing/eth_sign';
+import { EthAddress } from 'barretenberg/address';
 
 const dataNoteSize = 64;
 
@@ -107,10 +108,10 @@ function publicInputData(id: number, isFirstProof: boolean, numInner: number, ro
  *
  * @param isDeposit
  * @param transferAmount
- * @param publicOwnerUnformatted
+ * @param publicOwner
  * @param ethPrivateKey
  */
-async function innerProofData(isDeposit: boolean, transferAmount: number, publicOwnerUnformatted: string) {
+async function innerProofData(isDeposit: boolean, transferAmount: number, publicOwner: EthAddress) {
   const proofId = Buffer.alloc(32);
   let publicInput;
   let publicOutput;
@@ -120,11 +121,11 @@ async function innerProofData(isDeposit: boolean, transferAmount: number, public
   if (isDeposit) {
     publicInput = numToBuffer(transferAmount);
     publicOutput = numToBuffer(0);
-    inputOwner = Buffer.concat([Buffer.alloc(12), Buffer.from(publicOwnerUnformatted.slice(2), 'hex')]);
+    inputOwner = publicOwner.toBuffer32();
   } else {
     publicInput = numToBuffer(0);
     publicOutput = numToBuffer(transferAmount);
-    outputOwner = Buffer.concat([Buffer.alloc(12), Buffer.from(publicOwnerUnformatted.slice(2), 'hex')]);
+    outputOwner = publicOwner.toBuffer32();
   }
   const newNote1 = randomBytes(dataNoteSize);
   const newNote2 = randomBytes(dataNoteSize);
@@ -144,7 +145,7 @@ async function innerProofData(isDeposit: boolean, transferAmount: number, public
   ]);
 }
 
-export async function createDepositProof(amount: number, depositorAddress: string, user: Signer) {
+export async function createDepositProof(amount: number, depositorAddress: EthAddress, user: Signer) {
   const id: number = 0x00;
   const numInner: number = 0x01;
 
@@ -161,10 +162,10 @@ export async function createDepositProof(amount: number, depositorAddress: strin
 
 export async function createTwoDepositsProof(
   firstDepositAmount: number,
-  firstDepositorAddress: string,
+  firstDepositorAddress: EthAddress,
   firstUser: Signer,
   secondDepositAmount: number,
-  secondDepositorAddress: string,
+  secondDepositorAddress: EthAddress,
   secondUser: Signer,
 ) {
   const id: number = 0x00;
@@ -182,7 +183,7 @@ export async function createTwoDepositsProof(
   };
 }
 
-export async function createWithdrawProof(amount: number, withdrawalAddress: string) {
+export async function createWithdrawProof(amount: number, withdrawalAddress: EthAddress) {
   const id: number = 0x01;
   const numInner: number = 0x01;
   const innerProof = await innerProofData(false, amount, withdrawalAddress);
@@ -202,7 +203,7 @@ export async function createSendProof() {
   const id: number = 0x00;
   const numInner: number = 0x01;
   const transferAmount: number = 0;
-  const publicOwner: string = constants.AddressZero;
+  const publicOwner = EthAddress.ZERO;
   const innerProof = await innerProofData(true, transferAmount, publicOwner);
   const signature: Buffer = Buffer.alloc(32);
   const sigIndexes = [0];

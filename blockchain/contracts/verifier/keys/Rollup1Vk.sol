@@ -31,8 +31,8 @@ library Rollup1Vk {
       0x091194168b7285d680cd6ac553cfa3c1b1810f74f9d9eb7cb17d93c513c7c75d
     );
     vk.Q2 = PairingsBn254.new_g1(
-      0x3060e597cf2856e9b6926e8b0fecb5d3301fe9f605ae90f694a59bec861c1b92,
-      0x137ece946f73c659e148e04995dfd0f24ecc3dbc75dc8602f9f401eeac6f5571
+      0x2fb4e2c2df05e17d368c4af2f599e097cd4f2ac51e91edf1e372b995ec7d3756,
+      0x2b1b1f18f1e96c5edc9a66061c35c99d21f262bb6605a69b43c1e97d06e469e9
     );
     vk.Q3 = PairingsBn254.new_g1(
       0x21aec925d7e8e82be455dd5360e74ed3b208de6825f02e3d0c74ba2906cb6dc5,
@@ -75,8 +75,8 @@ library Rollup1Vk {
       0x2c0fdff8310c6325b48461a0395f34c45893dd4f9bec1710df3a104677935416
     );
     vk.sigma_commitments[1] = PairingsBn254.new_g1(
-      0x1cc62f629a20a87781b880c84cc0ae6a3947636cfd73c801b8af24f693c51e95,
-      0x1174b9bf4208b1d5678ebea3e164884f5868cabd9cf00a6889400ffa8e5e9fe9
+      0x1d998d788b4fa1d95d4b5c97673063088ff21dcebf038e715d41c5ea95bae74b,
+      0x015dde2acc3cc540ec40c0dad1f9eb6ad01857b03e51be1b91e191aa101d5fe8
     );
     vk.sigma_commitments[2] = PairingsBn254.new_g1(
       0x0c0c5f9026ce71ac8a15fcb43ef2dd7ac50e543e88e69d8f2f3bcbfc75caa250,

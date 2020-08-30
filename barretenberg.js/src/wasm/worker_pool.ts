@@ -2,11 +2,18 @@ import { BarretenbergWorker } from './worker';
 import { ModuleThread } from 'threads';
 import createDebug from 'debug';
 import { createWorker, destroyWorker } from './worker_factory';
+import { BarretenbergWasm } from '.';
 
 const debug = createDebug('bb:worker_pool');
 
 export class WorkerPool {
   public workers: ModuleThread<BarretenbergWorker>[] = [];
+
+  static async new(barretenberg: BarretenbergWasm, poolSize: number) {
+    const pool = new WorkerPool();
+    await pool.init(barretenberg.module, poolSize);
+    return pool;
+  }
 
   public async init(module: WebAssembly.Module, poolSize: number) {
     debug(`creating ${poolSize} workers...`);

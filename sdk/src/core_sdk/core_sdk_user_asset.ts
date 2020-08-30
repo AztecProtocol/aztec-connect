@@ -27,7 +27,11 @@ export class CoreSdkUserAsset implements SdkUserAsset {
       return userData!.publicKey;
     }
     if (typeof addr === 'string') {
-      return this.sdk.getAddressFromAlias(addr);
+      const address = await this.sdk.getAddressFromAlias(addr);
+      if (!address) {
+        throw new Error(`No address found for alias: ${addr}`);
+      }
+      return address;
     }
     return addr;
   }

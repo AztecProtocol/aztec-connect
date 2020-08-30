@@ -1,6 +1,6 @@
 import { EthAddress } from 'barretenberg/address';
 
-export type UserTxAction = 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'PUBLIC_TRANSFER' | 'RECEIVE';
+export type UserTxAction = 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'PUBLIC_TRANSFER' | 'RECEIVE' | 'ACCOUNT';
 
 export interface UserTx {
   txHash: Buffer;

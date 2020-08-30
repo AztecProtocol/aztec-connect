@@ -1,20 +1,21 @@
 import { randomBytes } from 'crypto';
 import { JoinSplitProof } from '../client_proofs/join_split_proof';
 import { RollupProofData, InnerProofData, VIEWING_KEY_SIZE } from './';
+import { EthAddress } from '../address';
 
 describe('RollupProofData', () => {
   it('can convert a inner proof object to buffer and back', () => {
     const viewingKeys = [randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)];
     const innerProofData = new InnerProofData(
-      randomBytes(32),
+      0,
       randomBytes(32),
       randomBytes(32),
       randomBytes(64),
       randomBytes(64),
       randomBytes(32),
       randomBytes(32),
-      randomBytes(20),
-      randomBytes(20),
+      EthAddress.randomAddress(),
+      EthAddress.randomAddress(),
       viewingKeys,
     );
 
@@ -26,15 +27,15 @@ describe('RollupProofData', () => {
   it('can convert a rollup proof object to buffer and back', () => {
     const viewingKeys = [randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)];
     const innerProofData = new InnerProofData(
-      randomBytes(32),
+      0,
       randomBytes(32),
       randomBytes(32),
       randomBytes(64),
       randomBytes(64),
       randomBytes(32),
       randomBytes(32),
-      randomBytes(20),
-      randomBytes(20),
+      EthAddress.randomAddress(),
+      EthAddress.randomAddress(),
       viewingKeys,
     );
     const rollupProofData = new RollupProofData(
@@ -59,15 +60,15 @@ describe('RollupProofData', () => {
   it('should generate the same txId from inner proof as from join split proof', () => {
     const viewingKeys = [randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)];
     const innerProofData = new InnerProofData(
-      randomBytes(32),
+      0,
       randomBytes(32),
       randomBytes(32),
       randomBytes(64),
       randomBytes(64),
       randomBytes(32),
       randomBytes(32),
-      randomBytes(20),
-      randomBytes(20),
+      EthAddress.randomAddress(),
+      EthAddress.randomAddress(),
       viewingKeys,
     );
 

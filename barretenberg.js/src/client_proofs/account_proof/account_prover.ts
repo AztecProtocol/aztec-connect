@@ -1,5 +1,5 @@
 import { Transfer } from 'threads';
-import { Prover } from '../prover';
+import { Prover } from '../prover/prover';
 import { AccountTx } from './account_tx';
 
 export class AccountProver {
@@ -34,7 +34,7 @@ export class AccountProver {
     await worker.transferToHeap(buf, txPtr);
     const pkPtr = await worker.call('bbmalloc', privateKey.length);
     await worker.transferToHeap(privateKey, pkPtr);
-    const proverPtr = await worker.call('account__new_prover', txPtr, pkPtr, buf.length + privateKey.length);
+    const proverPtr = await worker.call('account__new_prover', txPtr, pkPtr);
     await worker.call('bbfree', txPtr);
     await worker.call('bbfree', pkPtr);
     const proof = await this.prover.createProof(proverPtr);

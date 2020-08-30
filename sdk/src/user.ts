@@ -1,6 +1,7 @@
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Web3Provider } from '@ethersproject/providers';
+import { randomBytes } from 'crypto';
 
 export interface UserData {
   ethAddress: EthAddress;
@@ -9,6 +10,11 @@ export interface UserData {
   alias?: string;
   syncedToBlock: number;
   syncedToRollup: number;
+}
+
+export interface KeyPair {
+  publicKey: GrumpkinAddress;
+  privateKey: Buffer;
 }
 
 export class UserDataFactory {
@@ -24,5 +30,11 @@ export class UserDataFactory {
     const privateKey = await this.deriveGrumpkinPrivateKey(ethAddress);
     const publicKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
     return { ethAddress, privateKey, publicKey, syncedToBlock: -1, syncedToRollup: -1 };
+  }
+
+  public newKeyPair(): KeyPair {
+    const privateKey = randomBytes(32);
+    const publicKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
+    return { publicKey, privateKey };
   }
 }

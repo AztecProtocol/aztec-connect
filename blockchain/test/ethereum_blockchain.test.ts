@@ -7,6 +7,7 @@ import sinon from 'sinon';
 import { Blockchain } from '../src/blockchain';
 import { EthereumBlockchain } from '../src/ethereum_blockchain';
 import { createDepositProof, createSendProof, createWithdrawProof } from './fixtures/create_mock_proof';
+import { EthAddress } from 'barretenberg/address';
 
 use(solidity);
 
@@ -22,8 +23,8 @@ describe('ethereum_blockchain', () => {
   let ethereumBlockchain!: EthereumBlockchain;
   let userA: Signer;
   let userB: Signer;
-  let userAAddress: string;
-  let userBAddress: string;
+  let userAAddress: EthAddress;
+  let userBAddress: EthAddress;
 
   const mintAmount = 100;
   const depositAmount = 30;
@@ -35,8 +36,8 @@ describe('ethereum_blockchain', () => {
 
   beforeEach(async () => {
     [userA, userB] = await ethers.getSigners();
-    userAAddress = await userA.getAddress();
-    userBAddress = await userB.getAddress();
+    userAAddress = EthAddress.fromString(await userA.getAddress());
+    userBAddress = EthAddress.fromString(await userB.getAddress());
 
     const ERC20 = await ethers.getContractFactory('ERC20Mintable');
     erc20 = await ERC20.deploy();
@@ -46,7 +47,7 @@ describe('ethereum_blockchain', () => {
 
     const RollupProcessor = await ethers.getContractFactory('RollupProcessor');
     rollupProcessor = await RollupProcessor.deploy(erc20.address, mockVerifier.address);
-    await erc20.mint(userAAddress, mintAmount);
+    await erc20.mint(userAAddress.toString(), mintAmount);
 
     ethereumBlockchain = new EthereumBlockchain({ signer: userA, networkOrHost: '' }, rollupProcessor.address);
     await ethereumBlockchain.start();
@@ -170,7 +171,7 @@ describe('ethereum_blockchain', () => {
     expect(rollup0.dataStartIndex).to.equal(0);
     expect(rollup0.innerProofData[0].publicInput.readInt32BE(28)).to.equal(depositAmount);
     expect(rollup0.innerProofData[0].publicOutput.readInt32BE(28)).to.equal(0);
-    expect(rollup0.innerProofData[0].inputOwner.toString('hex')).to.equal(userAAddress.slice(2).toLowerCase());
+    expect(rollup0.innerProofData[0].inputOwner.toString()).to.equal(userAAddress.toString());
 
     const rollup1 = RollupProofData.fromBuffer(blocks[1].rollupProofData, blocks[1].viewingKeysData);
     expect(blocks[1].blockNum).to.be.above(0);
@@ -180,7 +181,7 @@ describe('ethereum_blockchain', () => {
     expect(rollup1.dataStartIndex).to.equal(4);
     expect(rollup1.innerProofData[0].publicInput.readInt32BE(28)).to.equal(0);
     expect(rollup1.innerProofData[0].publicOutput.readInt32BE(28)).to.equal(withdrawalAmount);
-    expect(rollup1.innerProofData[0].outputOwner.toString('hex')).to.equal(userAAddress.slice(2).toLowerCase());
+    expect(rollup1.innerProofData[0].outputOwner.toString()).to.equal(userAAddress.toString());
   });
 
   it('should reject sending proof if depositor has insufficient approval ', async () => {

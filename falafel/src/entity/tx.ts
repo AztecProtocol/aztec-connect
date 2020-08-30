@@ -12,10 +12,10 @@ export class TxDao {
   @Column()
   public proofData!: Buffer;
 
-  @Column()
+  @Column({ nullable: true })
   public viewingKey1!: Buffer;
 
-  @Column()
+  @Column({ nullable: true })
   public viewingKey2!: Buffer;
 
   @Column({ nullable: true })

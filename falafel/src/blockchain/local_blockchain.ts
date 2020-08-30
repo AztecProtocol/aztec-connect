@@ -14,15 +14,15 @@ const generateRollup = (rollupId: number, rollupSize: number) => {
     .map(
       () =>
         new InnerProofData(
-          numToUInt32BE(0, 32),
+          0,
           numToUInt32BE(0, 32),
           numToUInt32BE(0, 32),
           randomBytes(64),
           randomBytes(64),
           randomBytes(32),
           randomBytes(32),
-          Buffer.alloc(20),
-          Buffer.alloc(20),
+          EthAddress.ZERO,
+          EthAddress.ZERO,
           [randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)],
         ),
     );

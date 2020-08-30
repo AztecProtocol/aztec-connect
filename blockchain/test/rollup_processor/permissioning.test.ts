@@ -6,6 +6,7 @@ import { Contract, Signer } from 'ethers';
 import { createDepositProof } from '../fixtures/create_mock_proof';
 import { ethSign } from '../signing/eth_sign';
 import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
+import { EthAddress } from 'barretenberg/address';
 
 use(solidity);
 
@@ -14,7 +15,7 @@ describe('rollup_processor: permissioning', () => {
   let erc20: Contract;
   let userA: Signer;
   let userB: Signer;
-  let userAAddress: string;
+  let userAAddress: EthAddress;
 
   const mintAmount = 100;
   const depositAmount = 60;
@@ -25,7 +26,7 @@ describe('rollup_processor: permissioning', () => {
 
   beforeEach(async () => {
     [userA, userB] = await ethers.getSigners();
-    userAAddress = await userA.getAddress();
+    userAAddress = EthAddress.fromString(await userA.getAddress());
 
     const ERC20 = await ethers.getContractFactory('ERC20Mintable');
     erc20 = await ERC20.deploy();
@@ -37,7 +38,7 @@ describe('rollup_processor: permissioning', () => {
     rollupProcessor = await RollupProcessor.deploy(erc20.address, mockVerifier.address);
 
     // mint users tokens for testing
-    await erc20.mint(userAAddress, mintAmount);
+    await erc20.mint(userAAddress.toString(), mintAmount);
   });
 
   it('should deposit funds, which requires a successfull sig validation', async () => {

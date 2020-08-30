@@ -14,6 +14,7 @@ import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
 import { Prover } from '../prover';
 import { AccountProver, AccountVerifier, AccountTx } from './index';
+import { GrumpkinAddress } from '../../address';
 
 const debug = createDebug('bb:join_split_proof');
 
@@ -67,7 +68,7 @@ describe('account proof', () => {
 
   const createKeyPair = () => {
     const privateKey = randomBytes(32);
-    const publicKey = schnorr.computePublicKey(privateKey);
+    const publicKey = new GrumpkinAddress(schnorr.computePublicKey(privateKey));
     return { privateKey, publicKey };
   };
 

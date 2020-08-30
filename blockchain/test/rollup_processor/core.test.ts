@@ -14,6 +14,7 @@ import {
   newNullifierRoot,
 } from '../fixtures/create_mock_proof';
 import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
+import { EthAddress } from 'barretenberg/address';
 
 use(solidity);
 
@@ -22,8 +23,8 @@ describe('rollup_processor: core', () => {
   let erc20: Contract;
   let userA: Signer;
   let userB: Signer;
-  let userAAddress: string;
-  let userBAddress: string;
+  let userAAddress: EthAddress;
+  let userBAddress: EthAddress;
 
   const mintAmount = 100;
   const depositAmount = 60;
@@ -34,8 +35,8 @@ describe('rollup_processor: core', () => {
 
   beforeEach(async () => {
     [userA, userB] = await ethers.getSigners();
-    userAAddress = await userA.getAddress();
-    userBAddress = await userB.getAddress();
+    userAAddress = EthAddress.fromString(await userA.getAddress());
+    userBAddress = EthAddress.fromString(await userB.getAddress());
 
     const ERC20 = await ethers.getContractFactory('ERC20Mintable');
     erc20 = await ERC20.deploy();
@@ -47,8 +48,8 @@ describe('rollup_processor: core', () => {
     rollupProcessor = await RollupProcessor.deploy(erc20.address, mockVerifier.address);
 
     // mint users tokens for testing
-    await erc20.mint(userAAddress, mintAmount);
-    await erc20.mint(userBAddress, mintAmount);
+    await erc20.mint(userAAddress.toString(), mintAmount);
+    await erc20.mint(userBAddress.toString(), mintAmount);
   });
 
   describe('Deposit, transfer and withdrawal', async () => {
@@ -83,7 +84,7 @@ describe('rollup_processor: core', () => {
       const postDepositRollupBalance = await erc20.balanceOf(rollupProcessor.address);
       expect(postDepositRollupBalance).to.equal(initialRollupBalance + depositAmount);
 
-      const postDepositUserBalance = await erc20.balanceOf(userAAddress);
+      const postDepositUserBalance = await erc20.balanceOf(userAAddress.toString());
       expect(postDepositUserBalance).to.equal(mintAmount - depositAmount);
     });
 
@@ -118,7 +119,7 @@ describe('rollup_processor: core', () => {
       const postWithdrawalRollupBalance = await erc20.balanceOf(rollupProcessor.address);
       expect(postWithdrawalRollupBalance).to.equal(depositAmount - withdrawalAmount);
 
-      const postWithdrawalBalance = await erc20.balanceOf(userAAddress);
+      const postWithdrawalBalance = await erc20.balanceOf(userAAddress.toString());
       expect(postWithdrawalBalance).to.equal(mintAmount - depositAmount + withdrawalAmount);
     });
 
@@ -153,10 +154,10 @@ describe('rollup_processor: core', () => {
       const postWithdrawalRollupBalance = await erc20.balanceOf(rollupProcessor.address);
       expect(postWithdrawalRollupBalance).to.equal(depositAmount - withdrawalAmount);
 
-      const userAPostWithdrawal = await erc20.balanceOf(userAAddress);
+      const userAPostWithdrawal = await erc20.balanceOf(userAAddress.toString());
       expect(userAPostWithdrawal).to.equal(mintAmount - depositAmount);
 
-      const userBPostWithdrawal = await erc20.balanceOf(userBAddress);
+      const userBPostWithdrawal = await erc20.balanceOf(userBAddress.toString());
       expect(userBPostWithdrawal).to.equal(mintAmount + withdrawalAmount);
     });
 
@@ -178,10 +179,10 @@ describe('rollup_processor: core', () => {
 
   describe('Multi transaction rollup', async () => {
     it('should process user A deposit tx and user B deposit tx in one rollup', async () => {
-      const initialUserABalance = await erc20.balanceOf(userAAddress);
+      const initialUserABalance = await erc20.balanceOf(userAAddress.toString());
       expect(initialUserABalance).to.equal(mintAmount);
 
-      const initialUserBBalance = await erc20.balanceOf(userAAddress);
+      const initialUserBBalance = await erc20.balanceOf(userAAddress.toString());
       expect(initialUserBBalance).to.equal(mintAmount);
 
       const initialContractBalance = await erc20.balanceOf(rollupProcessor.address);
@@ -211,10 +212,10 @@ describe('rollup_processor: core', () => {
         rollupSize,
       );
 
-      const postDepositUserABalance = await erc20.balanceOf(userAAddress);
+      const postDepositUserABalance = await erc20.balanceOf(userAAddress.toString());
       expect(postDepositUserABalance).to.equal(initialUserABalance - depositAmount);
 
-      const postDepositUserBBalance = await erc20.balanceOf(userBAddress);
+      const postDepositUserBBalance = await erc20.balanceOf(userBAddress.toString());
       expect(postDepositUserBBalance).to.equal(initialUserBBalance - userBDepositAmount);
 
       const postDepositContractBalance = await erc20.balanceOf(rollupProcessor.address);

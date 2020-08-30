@@ -1,4 +1,5 @@
 import { JoinSplitProof, JoinSplitVerifier, nullifierBufferToIndex } from 'barretenberg/client_proofs/join_split_proof';
+import { AccountVerifier } from 'barretenberg/client_proofs/account_proof';
 import { Crs } from 'barretenberg/crs';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { HashPath } from 'barretenberg/merkle_tree';
@@ -36,6 +37,7 @@ interface PublishQueueItem {
 export class Server {
   private worldStateDb: WorldStateDb;
   private joinSplitVerifier!: JoinSplitVerifier;
+  private accountVerifier!: AccountVerifier;
   private worker!: BarretenbergWorker;
   private rollupQueue = new MemoryFifo<JoinSplitProof[]>();
   private publishQueue = new MemoryFifo<PublishQueueItem>();
@@ -62,7 +64,7 @@ export class Server {
     await this.worldStateDb.start();
     // We know all historical blocks will be available in a call to restoreState once this returns.
     await this.blockchain.start();
-    await this.createJoinSplitVerifier();
+    await this.createVerifiers();
     await this.restoreState();
     this.printState();
 
@@ -343,24 +345,28 @@ export class Server {
     return this.rollupDb.getTxByTxId(txId);
   }
 
-  private async createJoinSplitVerifier() {
+  private async createVerifiers() {
     const crs = new Crs(0);
     await crs.downloadG2Data();
 
     const barretenberg = await BarretenbergWasm.new();
     this.worker = await createWorker('0', barretenberg.module);
 
-    const key = await readFileAsync('./data/join_split/verification_key');
+    const jsKey = await readFileAsync('./data/join_split/verification_key');
 
     this.joinSplitVerifier = new JoinSplitVerifier();
-    await this.joinSplitVerifier.loadKey(this.worker, key, crs.getG2Data());
+    await this.joinSplitVerifier.loadKey(this.worker, jsKey, crs.getG2Data());
+
+    const accountKey = await readFileAsync('./data/account/verification_key');
+
+    this.accountVerifier = new AccountVerifier();
+    await this.accountVerifier.loadKey(this.worker, accountKey, crs.getG2Data());
   }
 
   public async receiveTx({ proofData, depositSignature, viewingKeys }: Proof) {
     const proof = new JoinSplitProof(proofData, viewingKeys, depositSignature);
     const nullifier1 = nullifierBufferToIndex(proof.nullifier1);
     const nullifier2 = nullifierBufferToIndex(proof.nullifier2);
-    const { publicInput, inputOwner } = proof;
 
     console.log(`Received tx: ${proof.getTxId().toString('hex')}`);
 
@@ -381,22 +387,13 @@ export class Server {
     }
 
     // Check the proof is valid.
-    if (!(await this.joinSplitVerifier.verifyProof(proofData))) {
-      throw new Error('Proof verification failed.');
-    }
-
-    if (toBigIntBE(publicInput) > 0n) {
-      if (!depositSignature) {
-        throw new Error('No deposit signature provided.');
-      }
-
-      if (!(await this.blockchain.validateSignature(inputOwner, depositSignature, proof.getDepositSigningData()))) {
-        throw new Error('Invalid deposit signature.');
-      }
-
-      if (!(await this.blockchain.validateDepositFunds(inputOwner, publicInput))) {
-        throw new Error('User has insufficient or unapproved deposit balance.');
-      }
+    switch (proof.proofId) {
+      case 0:
+        await this.validateJoinSplitTx(proof);
+        break;
+      case 1:
+        await this.validateAccountTx(proof);
+        break;
     }
 
     proof.dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
@@ -407,6 +404,33 @@ export class Server {
     this.txQueue.put(proof);
 
     return txDao;
+  }
+
+  private async validateJoinSplitTx(proof: JoinSplitProof) {
+    const { publicInput, inputOwner } = proof;
+    if (!(await this.joinSplitVerifier.verifyProof(proof.proofData))) {
+      throw new Error('Join-split proof verification failed.');
+    }
+
+    if (toBigIntBE(publicInput) > 0n) {
+      if (!proof.signature) {
+        throw new Error('No deposit signature provided.');
+      }
+
+      if (!(await this.blockchain.validateSignature(inputOwner, proof.signature, proof.getDepositSigningData()))) {
+        throw new Error('Invalid deposit signature.');
+      }
+
+      if (!(await this.blockchain.validateDepositFunds(inputOwner, publicInput))) {
+        throw new Error('User has insufficient or unapproved deposit balance.');
+      }
+    }
+  }
+
+  private async validateAccountTx(proof: JoinSplitProof) {
+    if (!(await this.accountVerifier.verifyProof(proof.proofData))) {
+      throw new Error('Account proof verification failed.');
+    }
   }
 
   public flushTxs() {
@@ -432,6 +456,11 @@ export class Server {
     const dataRootsIndicies: number[] = [];
 
     for (const proof of txs) {
+      const accountNullifier = nullifierBufferToIndex(proof.accountNullifier);
+      accountNullPaths.push(await this.worldStateDb.getHashPath(1, accountNullifier));
+    }
+
+    for (const proof of txs) {
       await this.worldStateDb.put(0, nextDataIndex++, proof.newNote1);
       await this.worldStateDb.put(0, nextDataIndex++, proof.newNote2);
       const nullifier1 = nullifierBufferToIndex(proof.nullifier1);
@@ -452,11 +481,6 @@ export class Server {
 
       this.pendingNullifiers.delete(nullifier1);
       this.pendingNullifiers.delete(nullifier2);
-    }
-
-    for (const proof of txs) {
-      const accountNullifier = nullifierBufferToIndex(proof.accountNullifier);
-      accountNullPaths.push(await this.worldStateDb.getHashPath(1, accountNullifier));
     }
 
     if (txs.length < rollupSize) {

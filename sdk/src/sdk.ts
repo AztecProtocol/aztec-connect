@@ -1,6 +1,6 @@
 import { RollupProviderStatus, Rollup, Tx } from 'barretenberg/rollup_provider';
 import { EventEmitter } from 'events';
-import { UserData } from './user';
+import { UserData, KeyPair } from './user';
 import { UserTx } from './user_tx';
 import { EthAddress, GrumpkinAddress, Address } from 'barretenberg/address';
 
@@ -39,6 +39,7 @@ export enum Action {
   PUBLIC_TRANSFER = 'PUBLIC_TRANSFER',
   WITHDRAW = 'WITHDRAW',
   MINT = 'MINT',
+  ACCOUNT = 'ACCOUNT',
 }
 
 export interface ActionState {
@@ -70,7 +71,7 @@ export interface SdkUserAsset {
 }
 
 export interface SdkUser {
-  createAccount(alias: string, newSigningPublicKey: Buffer): Promise<void>;
+  createAccount(alias: string, newSigningPublicKey: GrumpkinAddress): Promise<TxHash>;
   addSigningKey(signingPublicKey: Buffer): Promise<void>;
   removeSigningKey(signingPublicKey: Buffer): Promise<void>;
   getUserData(): UserData;
@@ -128,6 +129,10 @@ export interface Sdk extends EventEmitter {
 
   removeUser(address: EthAddress): Promise<void>;
 
+  newKeyPair(): KeyPair;
+
+  getAddressFromAlias(alias: string): Promise<GrumpkinAddress | undefined>;
+
   /**
    * Returns the current action state, from which you can determine what the sdk is currently doing.
    */
@@ -136,9 +141,8 @@ export interface Sdk extends EventEmitter {
   /**
    * Will block until the given tx hash is settled.
    * We need to specify the eth address as we record each tx for each user.
-   * TODO: Fix this to only have one tx record.
    */
-  awaitSettlement(address: EthAddress, txHash: TxHash, allowUnknown?: boolean): Promise<void>;
+  awaitSettlement(address: EthAddress, txHash: TxHash, timeout?: number): Promise<void>;
 
   // Explorer
   getLatestRollups(num: number): Promise<Rollup[]>;

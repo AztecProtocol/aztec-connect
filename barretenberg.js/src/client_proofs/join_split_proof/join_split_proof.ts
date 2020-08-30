@@ -4,7 +4,7 @@ export class JoinSplitProof {
   static NUM_PUBLIC_INPUTS = 13;
   static NUM_PUBLISHED_PUBLIC_INPUTS = 11;
 
-  public proofId: Buffer;
+  public proofId: number;
   public publicInput: Buffer;
   public publicOutput: Buffer;
   public newNote1: Buffer;
@@ -18,7 +18,7 @@ export class JoinSplitProof {
   public dataRootsIndex = 0;
 
   constructor(public proofData: Buffer, public viewingKeys: Buffer[], public signature?: Buffer) {
-    this.proofId = proofData.slice(0 * 32, 0 * 32 + 32);
+    this.proofId = proofData.readUInt32BE(0 * 32 + 28);
     this.publicInput = proofData.slice(1 * 32, 1 * 32 + 32);
     this.publicOutput = proofData.slice(2 * 32, 2 * 32 + 32);
     this.newNote1 = proofData.slice(3 * 32, 3 * 32 + 64);

@@ -32,22 +32,25 @@ contract Decoder {
         returns (
             uint256,
             uint256,
+            uint256,
             address,
             address
         )
     {
+        uint256 proofId;
         uint256 publicInput;
         uint256 publicOutput;
         address inputOwner;
         address outputOwner;
         assembly {
+            proofId := mload(add(proof, 0x20))
             publicInput := mload(add(proof, 0x40))
             publicOutput := mload(add(proof, 0x60))
             inputOwner := mload(add(proof, 0x140))
             outputOwner := mload(add(proof, 0x160))
         }
 
-        return (publicInput, publicOutput, inputOwner, outputOwner);
+        return (proofId, publicInput, publicOutput, inputOwner, outputOwner);
     }
 
     /**
