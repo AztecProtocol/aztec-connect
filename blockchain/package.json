@@ -6,14 +6,13 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.prod.json && node ./package.js",
-    "build:dev": "tsc -p tsconfig.prod.json --watch",
+    "build:dev": "yarn symlink && tsc -p tsconfig.prod.json --watch",
+    "symlink": "mkdir -p ./dest/node_modules && ln -sfn ../../../barretenberg.js/dest ./dest/node_modules/barretenberg",
     "compile": "yarn buidler compile",
     "clean": "rm -rf ./cache ./dest",
     "test": "yarn buidler test",
     "test:ganache": "yarn buidler --network ganache test",
     "lint:sol": "solhint contracts/**/*.sol",
-    "deploy:ropsten": "buidler run --network ropsten scripts/deploy.ts",
-    "deploy:ganache": "buidler run --network ganache scripts/deploy_ganache.ts",
     "docs": "solidity-docgen -i ./contracts -o ./docs"
   },
   "bin": {

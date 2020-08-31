@@ -37,15 +37,15 @@ export class NotePicker {
     return this.sortedNotes.find(callback);
   }
 
-  pick(value: number) {
-    if (value === 0) {
+  pick(value: bigint) {
+    if (!value) {
       return [];
     }
     return pick(this.sortedNotes, value);
   }
 
   getNoteSum() {
-    let sum = 0;
+    let sum = BigInt(0);
     this.sortedNotes.each((n: Note) => (sum += n.value));
     return sum;
   }

@@ -1,4 +1,4 @@
-import { Tx, RollupProviderExplorer } from 'aztec2-sdk';
+import { Tx, Sdk } from 'aztec2-sdk';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Block, Text, TextButton } from '@aztec/guacamole-ui';
@@ -8,16 +8,16 @@ import { StatusRow } from './status_row';
 interface LatestTxsProps {
   bindSetter: (setter: (tx: Tx[]) => void) => void;
   unbindSetter: (setter: (tx: Tx[]) => void) => void;
-  explorer: RollupProviderExplorer;
+  sdk: Sdk;
 }
 
-export const LatestTxs = ({ bindSetter, unbindSetter, explorer }: LatestTxsProps) => {
+export const LatestTxs = ({ bindSetter, unbindSetter, sdk }: LatestTxsProps) => {
   const [txs, setTxs] = useState<Tx[]>([]);
 
   useEffect(() => {
     bindSetter(setTxs);
 
-    explorer.getLatestTxs(5).then(setTxs);
+    sdk.getLatestTxs(5).then(setTxs);
 
     return () => {
       unbindSetter(setTxs);

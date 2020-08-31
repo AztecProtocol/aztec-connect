@@ -5,9 +5,18 @@ import { Connection, createConnection } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { Rollup } from '../rollup';
-import { RollupDb } from './';
+import { joinSplitProofToTxDao, RollupDb } from './';
 
-const randomTx = () => new JoinSplitProof(randomBytes(9 * 32), [randomBytes(32), randomBytes(32)], randomBytes(65));
+const randomTx = (signature?: Buffer) =>
+  new JoinSplitProof(
+    Buffer.concat([
+      randomBytes(9 * 32),
+      Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
+      Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
+    ]),
+    [randomBytes(32), randomBytes(32)],
+    signature,
+  );
 
 const randomRollup = (rollupId: number, txs: JoinSplitProof[]) =>
   new Rollup(
@@ -54,50 +63,75 @@ describe('Rollup DB', () => {
 
   it('should add raw data and tx with no rollup', async () => {
     const tx = randomTx();
-    const txId = await rollupDb.addTx(tx);
-    const txDao = (await rollupDb.getTxByTxId(txId)) as TxDao;
-    expect(txId.length).toBe(32);
-    expect(txDao.txId).toEqual(txId);
-    expect(txDao.rollup).toBe(null);
-    expect(txDao.merkleRoot).toEqual(tx.noteTreeRoot);
-    expect(txDao.newNote1).toEqual(tx.newNote1);
-    expect(txDao.newNote2).toEqual(tx.newNote2);
-    expect(txDao.nullifier1).toEqual(tx.nullifier1);
-    expect(txDao.nullifier2).toEqual(tx.nullifier2);
-    expect(txDao.publicInput).toEqual(tx.publicInput);
-    expect(txDao.publicOutput).toEqual(tx.publicOutput);
+    const txDao = await rollupDb.addTx(tx);
+    expect(txDao.txId).toEqual(tx.getTxId());
     expect(txDao.proofData).toEqual(tx.proofData);
     expect(txDao.viewingKey1).toEqual(tx.viewingKeys[0]);
     expect(txDao.viewingKey2).toEqual(tx.viewingKeys[1]);
-    expect(txDao.signature).toEqual(tx.signature);
+    expect(txDao.signature).toEqual(null);
+    expect(txDao.rollup).toBe(undefined);
+
+    const txDaoInDb = await rollupDb.getTxByTxId(txDao.txId);
+    expect(txDaoInDb!.rollup).toBe(null); // typeorm should return undefined!?
+
+    const signature = randomBytes(32);
+    const tx2 = randomTx(signature);
+    const txDao2 = await rollupDb.addTx(tx2);
+    expect(txDao2.signature).toEqual(signature);
   });
 
   it('should add rollup and update the rollup for all its txs', async () => {
     const tx0 = randomTx();
     const tx1 = randomTx();
-    const txId0 = await rollupDb.addTx(tx0);
-    const txId1 = await rollupDb.addTx(tx1);
-
-    let txDao0 = await rollupDb.getTxByTxId(txId0);
-    expect(txDao0!.rollup).toBe(null);
+    const txDao0 = await rollupDb.addTx(tx0);
+    const txDao1 = await rollupDb.addTx(tx1);
+    expect(txDao0.rollup).toBe(undefined);
+    expect(txDao1.rollup).toBe(undefined);
 
     const rollup = randomRollup(0, [tx0]);
     await rollupDb.addRollup(rollup);
 
-    const rollupDao = (await rollupDb.getRollup(0)) as RollupDao;
+    const rollupDao = (await rollupDb.getRollup(0))!;
     expect(rollupDao.id).toBe(0);
     expect(rollupDao.dataRoot).toEqual(rollup.newDataRoot);
-    expect(rollupDao.nullRoot).toEqual(rollup.newNullRoots[rollup.newNullRoots.length - 1]);
     expect(rollupDao.proofData).toBe(null);
     expect(rollupDao.ethBlock).toBe(null);
     expect(rollupDao.ethTxHash).toBe(null);
     expect(rollupDao.status).toBe('CREATING');
 
-    txDao0 = await rollupDb.getTxByTxId(txId0);
-    expect(txDao0!.rollup).toEqual(rollupDao);
+    const newTxDao0 = await rollupDb.getTxByTxId(txDao0.txId);
+    expect(newTxDao0!.rollup).toEqual(rollupDao);
+    const newTxDao1 = await rollupDb.getTxByTxId(txDao1.txId);
+    expect(newTxDao1!.rollup).toBe(null);
+  });
 
-    const txDao1 = await rollupDb.getTxByTxId(txId1);
-    expect(txDao1!.rollup).toBe(null);
+  it('add rollupDao and its txDao in one go', async () => {
+    const tx0 = randomTx();
+    const tx1 = randomTx();
+    await rollupDb.addTx(tx0);
+
+    const txDao0 = joinSplitProofToTxDao(tx0);
+    const txDao1 = joinSplitProofToTxDao(tx1);
+
+    const rollup = randomRollup(0, [tx0, tx1]);
+    const rollupDao = new RollupDao();
+    rollupDao.id = rollup.rollupId;
+    rollupDao.ethBlock = 1;
+    rollupDao.ethTxHash = randomBytes(32);
+    rollupDao.dataRoot = rollup.newDataRoot;
+    rollupDao.proofData = randomBytes(100);
+    rollupDao.status = 'SETTLED';
+    rollupDao.created = new Date();
+
+    txDao0.rollup = rollupDao;
+    txDao1.rollup = rollupDao;
+    rollupDao.txs = [txDao0, txDao1];
+
+    await rollupDb.addRollupDao(rollupDao);
+
+    const savedRollup = await rollupDb.getRollupWithTxs(rollupDao.id);
+    expect(savedRollup!.txs[0].txId).toEqual(txDao0.txId);
+    expect(savedRollup!.txs[1].txId).toEqual(txDao1.txId);
   });
 
   it('add proof data to rollup', async () => {
@@ -169,14 +203,14 @@ describe('Rollup DB', () => {
     await rollupDb.addRollup(randomRollup(rollupId, [tx]));
     await rollupDb.confirmSent(rollupId, ethTxHash);
 
-    const rollupDao = (await rollupDb.getRollup(rollupId)) as RollupDao;
+    const rollupDao = (await rollupDb.getRollup(rollupId))!;
     expect(rollupDao.ethBlock).toBe(null);
     expect(rollupDao.status).toBe('PUBLISHED');
 
     const ethBlock = 123;
     await rollupDb.confirmRollup(rollupId, ethBlock);
 
-    const updatedRollupDao = (await rollupDb.getRollup(rollupId)) as RollupDao;
+    const updatedRollupDao = (await rollupDb.getRollup(rollupId))!;
     expect(updatedRollupDao).toEqual({
       ...rollupDao,
       ethBlock,
@@ -187,37 +221,39 @@ describe('Rollup DB', () => {
   it('should delete rollup and unlink from its txs', async () => {
     const tx0 = randomTx();
     const tx1 = randomTx();
-    const txId0 = await rollupDb.addTx(tx0);
-    const txId1 = await rollupDb.addTx(tx1);
+    await rollupDb.addTx(tx0);
+    await rollupDb.addTx(tx1);
 
     await rollupDb.addRollup(randomRollup(0, [tx0]));
     await rollupDb.addRollup(randomRollup(1, [tx1]));
 
     const rollupDao = await rollupDb.getRollup(0);
-    const txDao0 = await rollupDb.getTxByTxId(txId0);
     expect(rollupDao!.id).toBe(0);
+
+    const txDao0 = await rollupDb.getTxByTxId(tx0.getTxId());
     expect(txDao0!.rollup).toEqual(rollupDao);
 
     await rollupDb.deleteRollup(0);
 
     const rollupDao0After = await rollupDb.getRollup(0);
-    const txDao0After = await rollupDb.getTxByTxId(txId0);
+    const txDao0After = await rollupDb.getTxByTxId(tx0.getTxId());
     expect(rollupDao0After).toBe(undefined);
     expect(txDao0After!.rollup).toBe(null);
 
     const rollupDao1 = await rollupDb.getRollup(1);
-    const txDao1 = await rollupDb.getTxByTxId(txId1);
+    const txDao1After = await rollupDb.getTxByTxId(tx1.getTxId());
     expect(rollupDao1!.id).toBe(1);
-    expect(txDao1!.rollup).toEqual(rollupDao1);
+    expect(txDao1After!.rollup).toEqual(rollupDao1);
   });
 
   it('should delete all pending rollups', async () => {
     const tx0 = randomTx();
     const tx1 = randomTx();
     const tx2 = randomTx();
-    const txId0 = await rollupDb.addTx(tx0);
-    const txId1 = await rollupDb.addTx(tx1);
-    const txId2 = await rollupDb.addTx(tx2);
+
+    await rollupDb.addTx(tx0);
+    await rollupDb.addTx(tx1);
+    await rollupDb.addTx(tx2);
 
     await rollupDb.addRollup(randomRollup(0, [tx0]));
     await rollupDb.addRollup(randomRollup(1, [tx1]));
@@ -230,9 +266,9 @@ describe('Rollup DB', () => {
     const rollupDao0 = await rollupDb.getRollup(0);
     const rollupDao1 = await rollupDb.getRollup(1);
     const rollupDao2 = await rollupDb.getRollup(2);
-    const txDao0 = await rollupDb.getTxByTxId(txId0);
-    const txDao1 = await rollupDb.getTxByTxId(txId1);
-    const txDao2 = await rollupDb.getTxByTxId(txId2);
+    const txDao0 = await rollupDb.getTxByTxId(tx0.getTxId());
+    const txDao1 = await rollupDb.getTxByTxId(tx1.getTxId());
+    const txDao2 = await rollupDb.getTxByTxId(tx2.getTxId());
     expect(rollupDao0).toBe(undefined);
     expect(rollupDao1).not.toBe(undefined);
     expect(rollupDao2).toBe(undefined);
@@ -269,8 +305,8 @@ describe('Rollup DB', () => {
     const tx1 = randomTx();
     const tx2 = randomTx();
     await rollupDb.addTx(tx0);
-    const txId1 = await rollupDb.addTx(tx1);
-    const txId2 = await rollupDb.addTx(tx2);
+    const txDao1 = await rollupDb.addTx(tx1);
+    const txDao2 = await rollupDb.addTx(tx2);
 
     const rollup0 = randomRollup(0, [tx0]);
     await rollupDb.addRollup(rollup0);
@@ -292,58 +328,54 @@ describe('Rollup DB', () => {
       expect(r.txs.length).toBe(1);
       pendingTxsIds.push(r.txs[0].txId);
     });
-    expect(pendingTxsIds).toEqual([txId1, txId2]);
+    expect(pendingTxsIds).toEqual([txDao1.txId, txDao2.txId]);
   });
 
   it('get tx and its rollup by txId', async () => {
     const tx0 = randomTx();
-    const txId0 = await rollupDb.addTx(tx0);
-    const txId1 = await rollupDb.addTx(randomTx());
+    const txId = tx0.getTxId();
+    await rollupDb.addTx(tx0);
 
     const randomtxDao = await rollupDb.getTxByTxId(Buffer.alloc(32, 1));
     expect(randomtxDao).toBe(undefined);
 
-    let txDao0 = await rollupDb.getTxByTxId(txId0);
-    expect(txDao0!.txId).toEqual(txId0);
+    let txDao0 = await rollupDb.getTxByTxId(txId);
+    expect(txDao0!.txId).toEqual(txId);
     expect(txDao0!.rollup).toBe(null);
 
     const rollupId = 3;
     await rollupDb.addRollup(randomRollup(rollupId, [tx0]));
 
-    txDao0 = await rollupDb.getTxByTxId(txId0);
-    expect(txDao0!.txId).toEqual(txId0);
+    txDao0 = await rollupDb.getTxByTxId(txId);
+    expect(txDao0!.txId).toEqual(txId);
     expect(txDao0!.rollup!.id).toBe(rollupId);
-
-    const txDao1 = await rollupDb.getTxByTxId(txId1);
-    expect(txDao1!.txId).toEqual(txId1);
-    expect(txDao1!.rollup).toBe(null);
   });
 
   it('get txs and their rollups by txIds', async () => {
     let txs = await rollupDb.getTxsByTxIds([randomBytes(32)]);
     expect(txs).toEqual([]);
 
-    const txId0 = await rollupDb.addTx(randomTx());
-    const txId1 = await rollupDb.addTx(randomTx());
+    const txDao0 = await rollupDb.addTx(randomTx());
+    const txDao1 = await rollupDb.addTx(randomTx());
 
-    txs = await rollupDb.getTxsByTxIds([txId0, txId1]);
+    txs = await rollupDb.getTxsByTxIds([txDao0.txId, txDao1.txId]);
     let txIds = txs.map(tx => tx.txId);
     expect(txIds.length).toBe(2);
-    expect(txIds).toEqual(expect.arrayContaining([txId0, txId1]));
+    expect(txIds).toEqual(expect.arrayContaining([txDao0.txId, txDao1.txId]));
 
     const tx2 = randomTx();
-    const txId2 = await rollupDb.addTx(tx2);
+    const txDao2 = await rollupDb.addTx(tx2);
 
     await rollupDb.addRollup(randomRollup(0, [tx2]));
 
-    txs = await rollupDb.getTxsByTxIds([txId0, txId2]);
+    txs = await rollupDb.getTxsByTxIds([txDao0.txId, txDao2.txId]);
     txIds = txs.map(tx => tx.txId);
     expect(txIds.length).toBe(2);
-    expect(txIds).toEqual(expect.arrayContaining([txId0, txId2]));
+    expect(txIds).toEqual(expect.arrayContaining([txDao0.txId, txDao2.txId]));
 
     const rollupDao = await rollupDb.getRollup(0);
     txs.forEach(tx => {
-      if (tx.txId.equals(txId2)) {
+      if (tx.txId.equals(txDao2.txId)) {
         expect(tx.rollup).toEqual(rollupDao);
       } else {
         expect(tx.rollup).toBe(null);
@@ -359,14 +391,14 @@ describe('Rollup DB', () => {
     const tx0 = randomTx();
     const tx1 = randomTx();
     const tx2 = randomTx();
-    const txId0 = await rollupDb.addTx(tx0);
+    const txDao0 = await rollupDb.addTx(tx0);
     await rollupDb.addTx(tx1);
-    const txId2 = await rollupDb.addTx(tx2);
+    const txDao2 = await rollupDb.addTx(tx2);
     await rollupDb.addRollup(randomRollup(1, [tx1]));
 
     pendingTxs = await rollupDb.getPendingTxs();
     txIds = pendingTxs.map(tx => tx.txId);
-    expect(txIds).toEqual([txId0, txId2]);
+    expect(txIds).toEqual([txDao0.txId, txDao2.txId]);
   });
 
   it('get latest txs and their rollups in descending order', async () => {
@@ -374,22 +406,22 @@ describe('Rollup DB', () => {
     let txIds = txs.map(tx => tx.txId);
     expect(txIds).toEqual([]);
 
-    const txId0 = await rollupDb.addTx(randomTx());
-    const txId1 = await rollupDb.addTx(randomTx());
+    const txDao0 = await rollupDb.addTx(randomTx());
+    const txDao1 = await rollupDb.addTx(randomTx());
 
     txs = await rollupDb.getLatestTxs(5);
     txIds = txs.map(tx => tx.txId);
-    expect(txIds).toEqual([txId1, txId0]);
+    expect(txIds).toEqual([txDao1.txId, txDao0.txId]);
 
-    const txId2 = await rollupDb.addTx(randomTx());
+    const txDao2 = await rollupDb.addTx(randomTx());
     const tx3 = randomTx();
-    const txId3 = await rollupDb.addTx(tx3);
+    const txDao3 = await rollupDb.addTx(tx3);
 
     await rollupDb.addRollup(randomRollup(0, [tx3]));
 
     txs = await rollupDb.getLatestTxs(3);
     txIds = txs.map(tx => tx.txId);
-    expect(txIds).toEqual([txId3, txId2, txId1]);
+    expect(txIds).toEqual([txDao3.txId, txDao2.txId, txDao1.txId]);
 
     const rollupDao = await rollupDb.getRollup(0);
     expect(txs[0].rollup).toEqual(rollupDao);
@@ -406,8 +438,8 @@ describe('Rollup DB', () => {
     const tx1 = randomTx();
     const tx2 = randomTx();
     await rollupDb.addTx(tx0);
-    const txId1 = await rollupDb.addTx(tx1);
-    const txId2 = await rollupDb.addTx(tx2);
+    const txDao1 = await rollupDb.addTx(tx1);
+    const txDao2 = await rollupDb.addTx(tx2);
 
     await rollupDb.addRollup(randomRollup(0, [tx0]));
 
@@ -422,9 +454,9 @@ describe('Rollup DB', () => {
     rollupIds = rollups.map(r => r.id);
     expect(rollupIds).toEqual([2, 1]);
     expect(rollups[0].txs.length).toBe(1);
-    expect(rollups[0].txs[0].txId).toEqual(txId2);
+    expect(rollups[0].txs[0].txId).toEqual(txDao2.txId);
     expect(rollups[1].txs.length).toBe(1);
-    expect(rollups[1].txs[0].txId).toEqual(txId1);
+    expect(rollups[1].txs[0].txId).toEqual(txDao1.txId);
   });
 
   it('find data roots index by merkle root', async () => {

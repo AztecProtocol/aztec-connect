@@ -1,0 +1,48 @@
+import { Transfer } from 'threads';
+import { Prover } from '../prover';
+import { AccountTx } from './account_tx';
+
+export class AccountProver {
+  constructor(private prover: Prover) {}
+
+  public async computeKey() {
+    const worker = this.prover.getWorker();
+    await worker.call('account__init_proving_key');
+  }
+
+  public async loadKey(keyBuf: Uint8Array) {
+    const worker = this.prover.getWorker();
+    const keyPtr = await worker.call('bbmalloc', keyBuf.length);
+    await worker.transferToHeap(Transfer(keyBuf, [keyBuf.buffer]) as any, keyPtr);
+    await worker.call('account__init_proving_key_from_buffer', keyPtr);
+    await worker.call('bbfree', keyPtr);
+  }
+
+  public async getKey() {
+    const worker = this.prover.getWorker();
+    const keySize = await worker.call('account__get_new_proving_key_data', 0);
+    const keyPtr = Buffer.from(await worker.sliceMemory(0, 4)).readUInt32LE(0);
+    const buf = Buffer.from(await worker.sliceMemory(keyPtr, keyPtr + keySize));
+    await worker.call('bbfree', keyPtr);
+    return buf;
+  }
+
+  public async createAccountProof(tx: AccountTx, privateKey: Buffer) {
+    const worker = this.prover.getWorker();
+    const buf = tx.toBuffer();
+    const txPtr = await worker.call('bbmalloc', buf.length);
+    await worker.transferToHeap(buf, txPtr);
+    const pkPtr = await worker.call('bbmalloc', privateKey.length);
+    await worker.transferToHeap(privateKey, pkPtr);
+    const proverPtr = await worker.call('account__new_prover', txPtr, pkPtr, buf.length + privateKey.length);
+    await worker.call('bbfree', txPtr);
+    await worker.call('bbfree', pkPtr);
+    const proof = await this.prover.createProof(proverPtr);
+    await worker.call('account__delete_prover', proverPtr);
+    return proof;
+  }
+
+  public getProver() {
+    return this.prover;
+  }
+}

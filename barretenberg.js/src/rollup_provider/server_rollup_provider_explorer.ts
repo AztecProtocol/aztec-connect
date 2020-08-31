@@ -1,52 +1,37 @@
-import { RollupProviderExplorer, LinkedRollup, RollupStatus, Rollup, Tx } from './rollup_provider_explorer';
+import { JoinSplitProof } from '../client_proofs/join_split_proof';
+import { RollupProviderExplorer, Rollup, Tx } from './rollup_provider_explorer';
+import { RollupServerResponse, TxServerResponse } from './server_response';
 
 export * from './rollup_provider_explorer';
 
-export interface TxResponse {
-  txHash: string;
-  rollup?: LinkedRollup;
-  merkleRoot: string;
-  newNote1: string;
-  newNote2: string;
-  nullifier1: string;
-  nullifier2: string;
-  publicInput: string;
-  publicOutput: string;
-  created: Date;
-}
-
-export interface RollupResponse {
-  id: number;
-  status: RollupStatus;
-  dataRoot: string;
-  nullRoot: string;
-  txHashes: string[];
-  ethBlock?: number;
-  ethTxHash?: string;
-  created: Date;
-}
-
-const toRollup = (res: RollupResponse): Rollup => ({
-  ...res,
-  dataRoot: Buffer.from(res.dataRoot, 'hex'),
-  nullRoot: Buffer.from(res.nullRoot, 'hex'),
-  txHashes: res.txHashes.map(txHash => Buffer.from(txHash, 'hex')),
-  ethTxHash: res.ethTxHash ? Buffer.from(res.ethTxHash, 'hex') : undefined,
-  created: new Date(res.created),
+const toRollup = ({ id, status, dataRoot, proofData, txHashes, ethTxHash, created }: RollupServerResponse): Rollup => ({
+  id,
+  status,
+  dataRoot: Buffer.from(dataRoot, 'hex'),
+  proofData: proofData ? Buffer.from(proofData, 'hex') : undefined,
+  txHashes: txHashes.map(txHash => Buffer.from(txHash, 'hex')),
+  ethTxHash: ethTxHash ? Buffer.from(ethTxHash, 'hex') : undefined,
+  created: new Date(created),
 });
 
-const toTx = (res: TxResponse): Tx => ({
-  ...res,
-  txHash: Buffer.from(res.txHash, 'hex'),
-  merkleRoot: Buffer.from(res.merkleRoot, 'hex'),
-  newNote1: Buffer.from(res.newNote1, 'hex'),
-  newNote2: Buffer.from(res.newNote2, 'hex'),
-  nullifier1: Buffer.from(res.nullifier1, 'hex'),
-  nullifier2: Buffer.from(res.nullifier2, 'hex'),
-  publicInput: Buffer.from(res.publicInput, 'hex'),
-  publicOutput: Buffer.from(res.publicOutput, 'hex'),
-  created: new Date(res.created),
-});
+const toTx = ({ txHash, proofData, viewingKeys, rollup, created }: TxServerResponse): Tx => {
+  const { newNote1, newNote2, nullifier1, nullifier2, publicInput, publicOutput, noteTreeRoot } = new JoinSplitProof(
+    Buffer.from(proofData),
+    viewingKeys.map(vk => Buffer.from(vk, 'hex')),
+  );
+  return {
+    txHash: Buffer.from(txHash, 'hex'),
+    merkleRoot: noteTreeRoot,
+    newNote1,
+    newNote2,
+    nullifier1,
+    nullifier2,
+    publicInput,
+    publicOutput,
+    rollup,
+    created: new Date(created),
+  };
+};
 
 export class ServerRollupProviderExplorer implements RollupProviderExplorer {
   constructor(private host: URL) {}
@@ -60,8 +45,8 @@ export class ServerRollupProviderExplorer implements RollupProviderExplorer {
       throw new Error(`Bad response code ${response.status}.`);
     }
 
-    const rollups = (await response.json()) as RollupResponse[];
-    return rollups.map(rollupResp => toRollup(rollupResp));
+    const rollups = (await response.json()) as RollupServerResponse[];
+    return rollups.map(toRollup);
   }
 
   async getLatestTxs(count: number) {
@@ -73,8 +58,8 @@ export class ServerRollupProviderExplorer implements RollupProviderExplorer {
       throw new Error(`Bad response code ${response.status}.`);
     }
 
-    const txs = (await response.json()) as TxResponse[];
-    return txs.map(tx => toTx(tx));
+    const txs = (await response.json()) as TxServerResponse[];
+    return txs.map(toTx);
   }
 
   async getRollup(id: number) {

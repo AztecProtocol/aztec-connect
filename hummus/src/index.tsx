@@ -4,15 +4,15 @@ import { BrowserRouter, Switch, Route, Link, useLocation, RouteComponentProps } 
 import { History } from 'history';
 import styled, { createGlobalStyle } from 'styled-components';
 import { FlexBox, Block, SwitchInput, Text, TextButton, Icon, PageSteps } from '@aztec/guacamole-ui';
-import { App } from './app';
-import { JoinSplitForm } from './join_split_form';
+import { WebSdk } from 'aztec2-sdk';
 import { LocalState, GlobalState, RollupDetails, TxDetails } from './data_explorer';
 import { ThemeContext, themes } from './config/context';
-import { Terminal2020 } from './terminal2020';
+// import { Terminal2020 } from './terminal2020';
 import './styles/guacamole.css';
 import debug from 'debug';
 import { Terminal, TerminalComponent } from './terminal';
-import { EthProvider } from './eth_provider';
+import { Init } from './init';
+import { ActionForm } from './action_form';
 require('barretenberg/wasm/barretenberg.wasm');
 
 declare global {
@@ -86,9 +86,10 @@ const Unsupported = () => {
   );
 };
 
-function ThemedContent({ app }: { app: App }) {
+function ThemedContent({ app }: { app: WebSdk }) {
   const [theme, setTheme] = useState(themes[window.localStorage.getItem('theme') === 'light' ? 'light' : 'dark']);
   const { pathname } = useLocation();
+  const serverUrl = window.location.protocol + '//' + window.location.hostname;
 
   return (
     <ThemeContext.Provider value={theme}>
@@ -103,27 +104,31 @@ function ThemedContent({ app }: { app: App }) {
                 withoutIndex
               />
             </Block>
-            <Switch>
-              <Route
-                path="/rollup/:id"
-                component={({ match }: RollupRouteProps) => <RollupDetails app={app} id={+match.params.id} />}
-              />
-              <Route
-                path="/tx/:txHash"
-                component={({ match }: TxRouteProps) => (
-                  <TxDetails app={app} txHash={Buffer.from(match.params.txHash, 'hex')} />
-                )}
-              />
-              <Route exact path="/transactions">
-                <LocalState app={app} />
-              </Route>
-              <Route exact path="/explorer">
-                <GlobalState app={app} />
-              </Route>
-              <Route>
-                <JoinSplitForm app={app} />
-              </Route>
-            </Switch>
+            <Init initialServerUrl={serverUrl} app={app}>
+              {({ account }) => (
+                <Switch>
+                  <Route
+                    path="/rollup/:id"
+                    component={({ match }: RollupRouteProps) => <RollupDetails app={app} id={+match.params.id} />}
+                  />
+                  <Route
+                    path="/tx/:txHash"
+                    component={({ match }: TxRouteProps) => (
+                      <TxDetails app={app} txHash={Buffer.from(match.params.txHash, 'hex')} />
+                    )}
+                  />
+                  <Route exact path="/transactions">
+                    <LocalState app={app} />
+                  </Route>
+                  <Route exact path="/explorer">
+                    <GlobalState app={app} />
+                  </Route>
+                  <Route>
+                    <ActionForm app={app} account={account} />
+                  </Route>
+                </Switch>
+              )}
+            </Init>
             <Block padding="xl 0">
               <FlexBox valign="center" align="space-between">
                 <FlexBox valign="center">
@@ -155,14 +160,14 @@ function ThemedContent({ app }: { app: App }) {
   );
 }
 
-function LandingPage({ app }: { app: App }) {
+function LandingPage({ app }: { app: WebSdk }) {
   return (
     <Switch>
-      <Route
+      {/* <Route
         exact
         path="/terminal/2020"
         component={({ history }: { history: History }) => <Terminal2020 app={app} onExit={() => history.push('/')} />}
-      />
+      /> */}
       <Route
         path="/terminal"
         component={({ history }: { history: History }) => (
@@ -177,7 +182,10 @@ function LandingPage({ app }: { app: App }) {
 }
 
 async function main() {
-  debug.enable('bb:*');
+  if (!debug.enabled('bb:')) {
+    debug.enable('bb:*');
+    location.reload();
+  }
   if (!window.ethereum) {
     ReactDOM.render(
       <BrowserRouter>
@@ -187,8 +195,10 @@ async function main() {
       document.getElementById('root'),
     );
   } else {
-    const ethProvider = new EthProvider(window.ethereum);
-    const app = new App(ethProvider);
+    // Have to do this early to silence warning.
+    window.ethereum.autoRefreshOnNetworkChange = false;
+
+    const app = new WebSdk(window.ethereum);
     ReactDOM.render(
       <BrowserRouter>
         <GlobalStyle />

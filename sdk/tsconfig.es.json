@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "target": "es2019",
     "module": "es6",
     "outDir": "dest-es"
   },

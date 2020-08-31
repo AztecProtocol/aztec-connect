@@ -1,144 +1,114 @@
 import 'fake-indexeddb/auto';
 
-import { createSdk, Sdk, Signer } from 'aztec2-sdk';
+import { AssetId, createSdk, Sdk, SdkUser } from 'aztec2-sdk';
+import { EthAddress } from 'barretenberg/address';
 import { EventEmitter } from 'events';
-import { Address } from 'web3x/address';
 import { Eth } from 'web3x/eth';
-import { WebsocketProvider } from 'web3x/providers';
-import { recoverFromSigString } from 'web3x/utils';
-import { ERC20Mintable } from './contracts/ERC20Mintable';
+import { HttpProvider } from 'web3x/providers';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
 const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:80' } = process.env;
 
-class RemoteSigner implements Signer {
-  constructor(private eth: Eth, private account: Address) {}
-
-  public getAddress() {
-    return this.account.toBuffer();
-  }
-
-  public async signMessage(data: Buffer) {
-    const message = `0x${data.toString('hex')}`;
-    const signatureStr = await this.eth.sign(this.account, message);
-    let signature = Buffer.from(signatureStr.slice(2), 'hex');
-
-    // Ganache is not signature standard compliant. Returns 00 or 01 as v.
-    // Need to adjust to make v 27 or 28.
-    const v = signature[signature.length - 1];
-    if (v <= 1) {
-      signature = Buffer.concat([signature.slice(0, -1), Buffer.from([v + 27])]);
-    }
-
-    return signature;
-  }
-}
-
 describe('end-to-end tests', () => {
-  let provider: WebsocketProvider;
+  let provider: HttpProvider;
   let sdk: Sdk;
-  let users: Address[];
-  let signers: Signer[];
-  let erc20: ERC20Mintable;
-  let rollupContractAddress: Address;
-  let tokenContractAddress: Address;
-  const scalingFactor = 10000000000000000n;
+  let userAddresses: EthAddress[];
+  let users: SdkUser[];
+  let rollupContractAddress: EthAddress;
+  let tokenContractAddress: EthAddress;
+  const assetId = AssetId.DAI;
 
   beforeAll(async () => {
     // Init sdk.
-    sdk = await createSdk(ROLLUP_HOST, { syncInstances: false, saveProvingKey: false, clearDb: true });
+    provider = new HttpProvider(ETHEREUM_HOST);
+    sdk = await createSdk(ROLLUP_HOST, (provider as any).provider, {
+      syncInstances: false,
+      saveProvingKey: false,
+      clearDb: true,
+    });
     await sdk.init();
     await sdk.awaitSynchronised();
 
     // Get contract addresses.
-    const status = await sdk.getStatus();
-    rollupContractAddress = Address.fromString(status.rollupContractAddress);
-    tokenContractAddress = Address.fromString(status.tokenContractAddress);
+    const status = await sdk.getRemoteStatus();
+    rollupContractAddress = EthAddress.fromString(status.rollupContractAddress.toString());
+    tokenContractAddress = EthAddress.fromString(status.tokenContractAddress.toString());
 
     // Get accounts and signers.
-    provider = new WebsocketProvider(ETHEREUM_HOST);
     const eth = new Eth(provider);
-    users = await eth.getAccounts();
-    eth.defaultFromAddress = users[0];
-    signers = users.map(u => new RemoteSigner(eth, u));
-
-    erc20 = new ERC20Mintable(eth, tokenContractAddress, { gas: 5000000 });
+    userAddresses = (await eth.getAccounts()).slice(0, 4).map(a => new EthAddress(a.toBuffer()));
+    users = await Promise.all(
+      userAddresses.map(async address => {
+        return sdk.addUser(address);
+      }),
+    );
   });
 
   afterAll(async () => {
     await sdk.destroy();
-    provider.disconnect();
-  });
-
-  it('should sign data', async () => {
-    const data = Buffer.alloc(100, 1);
-    const signature = await signers[0].signMessage(data);
-    const recoveredSigner = recoverFromSigString(`0x${data.toString('hex')}`, `0x${signature.toString('hex')}`);
-    expect(recoveredSigner).toEqual(users[0]);
   });
 
   it('should deposit, transfer and withdraw funds', async () => {
-    await erc20.methods
-      .mint(users[0], (1000n * scalingFactor).toString())
-      .send()
-      .getReceipt();
-    await erc20.methods
-      .approve(rollupContractAddress, (1000n * scalingFactor).toString())
-      .send()
-      .getReceipt();
+    const user0Asset = users[0].getAsset(assetId);
+    const user1Asset = users[1].getAsset(assetId);
 
     // Deposit to user 0.
-    const initialTokenBalance = BigInt(await erc20.methods.balanceOf(users[0]).call());
-    expect(initialTokenBalance).toBe(1000n * scalingFactor);
-    expect(sdk.getBalance(0)).toBe(0);
+    const depositValue = user0Asset.toErc20Units('1000');
 
-    const txHash = await sdk.deposit(1000, signers[0]);
-    await sdk.awaitSettlement(txHash);
+    await user0Asset.mint(depositValue);
+    await user0Asset.approve(depositValue);
+    expect(await user0Asset.publicBalance()).toBe(depositValue);
+    expect(await user0Asset.publicAllowance()).toBe(depositValue);
+    expect(user0Asset.balance()).toBe(0n);
 
-    const user0TokenBalance = BigInt(await erc20.methods.balanceOf(users[0]).call());
-    expect(user0TokenBalance).toBe(0n);
-    expect(sdk.getBalance(0)).toBe(1000);
+    const txHash = await user0Asset.deposit(depositValue);
+    await sdk.awaitSettlement(userAddresses[0], txHash);
+
+    expect(await user0Asset.publicBalance()).toBe(0n);
+    const user0BalanceAfterDeposit = user0Asset.balance();
+    expect(user0BalanceAfterDeposit).toBe(depositValue);
 
     // Transfer to user 1.
-    const user1 = await sdk.createUser();
-    expect(sdk.getBalance(0)).toBe(1000);
-    expect(sdk.getBalance(1)).toBe(0);
+    const transferValue = user0Asset.toErc20Units('800');
 
-    const transferTxHash = await sdk.transfer(1000, user1.publicKey);
-    await sdk.awaitSettlement(transferTxHash);
+    expect(user1Asset.balance()).toBe(0n);
 
-    expect(sdk.getBalance(0)).toBe(0);
-    expect(sdk.getBalance(1)).toBe(1000);
+    const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().publicKey);
+    await sdk.awaitSettlement(userAddresses[0], transferTxHash);
+    expect(user0Asset.balance()).toBe(user0BalanceAfterDeposit - transferValue);
+
+    await sdk.awaitSettlement(userAddresses[1], transferTxHash, true);
+    const user1BalanceAfterTransfer = user1Asset.balance();
+    expect(user1BalanceAfterTransfer).toBe(transferValue);
 
     // Withdraw to user 1.
-    sdk.switchToUser(1);
-    const withdrawTxHash = await sdk.withdraw(1000, users[1].toBuffer());
-    await sdk.awaitSettlement(withdrawTxHash);
+    const withdrawValue = user0Asset.toErc20Units('300');
 
-    const user1TokenBalance = BigInt(await erc20.methods.balanceOf(users[1]).call());
-    expect(user1TokenBalance).toBe(1000n * scalingFactor);
-    expect(sdk.getBalance(1)).toBe(0);
+    const withdrawTxHash = await user1Asset.withdraw(withdrawValue);
+    await sdk.awaitSettlement(users[1].getUserData().ethAddress, withdrawTxHash);
+
+    expect(await user1Asset.publicBalance()).toBe(withdrawValue);
+    expect(user1Asset.balance()).toBe(user1BalanceAfterTransfer - withdrawValue);
   });
 
   it('should transfer public tokens', async () => {
-    await erc20.methods
-      .mint(users[2], (1000n * scalingFactor).toString())
-      .send()
-      .getReceipt();
-    await erc20.methods
-      .approve(rollupContractAddress, (1000n * scalingFactor).toString())
-      .send({ from: users[2] })
-      .getReceipt();
+    const user2Asset = users[2].getAsset(assetId);
+    const user3Asset = users[3].getAsset(assetId);
 
-    const initialTokenBalance = BigInt(await erc20.methods.balanceOf(users[3]).call());
-    expect(initialTokenBalance).toBe(0n);
+    const transferValue = user2Asset.toErc20Units('1000');
 
-    const publicTransferTxHash = await sdk.publicTransfer(1000, signers[2], users[3].toBuffer());
-    await sdk.awaitSettlement(publicTransferTxHash);
+    await user2Asset.mint(transferValue);
+    await user2Asset.approve(transferValue);
 
-    const finalTokenBalance = BigInt(await erc20.methods.balanceOf(users[3]).call());
-    expect(finalTokenBalance).toBe(1000n * scalingFactor);
+    expect(await user2Asset.publicBalance()).toBe(transferValue);
+    expect(await user3Asset.publicBalance()).toBe(0n);
+
+    const publicTransferTxHash = await user2Asset.publicTransfer(transferValue, userAddresses[3]);
+    await sdk.awaitSettlement(userAddresses[2], publicTransferTxHash);
+
+    expect(await user2Asset.publicBalance()).toBe(0n);
+    expect(await user3Asset.publicBalance()).toBe(transferValue);
   });
 });

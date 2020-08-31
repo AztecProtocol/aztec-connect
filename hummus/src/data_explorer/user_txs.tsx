@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
 import { Link } from 'react-router-dom';
 import { Block, Text, FlexBox, TextButton } from '@aztec/guacamole-ui';
-import { ProofEvent, ProofState, App, AppEvent } from '../app';
 import { ThemeContext } from '../config/context';
 import { StatusRow, TmpRow } from './status_row';
-import { SdkEvent, UserTx } from 'aztec2-sdk';
+import { SdkEvent, UserTx, ActionState, AssetId, Action, Sdk } from 'aztec2-sdk';
+import { EthAddress } from 'barretenberg/address';
+import { WebSdk } from 'aztec2-sdk';
 
 interface UserTxsProps {
-  userId: number;
-  app: App;
+  app: WebSdk;
+  account: EthAddress;
 }
 
 const actionTextMapping = {
@@ -51,42 +52,41 @@ const actionIconBackgroundMapping = {
   NADA: '',
 };
 
-export const UserTxs = ({ userId, app }: UserTxsProps) => {
+export const UserTxs = ({ account, app }: UserTxsProps) => {
+  const sdk = app.getSdk();
+  const user = sdk.getUser(account)!;
+  const userAsset = user.getAsset(AssetId.DAI);
   const [txs, setTxs] = useState<UserTx[]>([]);
-  const [currentProof, setCurrentProof] = useState<ProofEvent | undefined>(undefined);
+  const [actionState, setActionState] = useState<ActionState | undefined>(undefined);
 
   useEffect(() => {
-    const updatedUserTx = async (updatedUserId: number) => {
-      if (updatedUserId !== userId) {
+    const updatedUserState = async (updatedAccount: EthAddress) => {
+      if (!updatedAccount.equals(account)) {
         return;
       }
-      setTxs(await app.getUserTxs(updatedUserId));
+      setTxs(await user.getTxs());
 
-      const proof = app.getProofState();
-      const isOwnedByUser = proof.input && proof.input.userId === userId;
+      const actionState = sdk.getActionState();
+      const isOwnedByUser = actionState && actionState.sender.equals(account);
       if (isOwnedByUser) {
-        setCurrentProof(proof);
-      } else if (currentProof) {
-        setCurrentProof(undefined);
+        setActionState(actionState);
+      } else if (actionState) {
+        setActionState(undefined);
       }
     };
 
-    const updatedProofState = (proof: ProofEvent) => updatedUserTx(proof.input!.userId);
+    updatedUserState(account);
 
-    updatedUserTx(userId);
-
-    app.on(AppEvent.UPDATED_PROOF_STATE, updatedProofState);
-    app.on(SdkEvent.UPDATED_USER_TX, updatedUserTx);
+    sdk.on(SdkEvent.UPDATED_USER_STATE, updatedUserState);
 
     return () => {
-      app.off(AppEvent.UPDATED_PROOF_STATE, updatedProofState);
-      app.off(SdkEvent.UPDATED_USER_TX, updatedUserTx);
+      sdk.off(SdkEvent.UPDATED_USER_STATE, updatedUserState);
     };
-  }, [app]);
+  }, [sdk]);
 
-  const hasPendingProof = currentProof?.state === ProofState.RUNNING;
+  const hasPendingAction = actionState?.txHash === undefined && !actionState?.error === undefined;
 
-  if (!hasPendingProof && !txs.length) {
+  if (!hasPendingAction && !txs.length) {
     return (
       <ThemeContext.Consumer>{({ colorLight }) => <Text text="No data." color={colorLight} />}</ThemeContext.Consumer>
     );
@@ -101,7 +101,7 @@ export const UserTxs = ({ userId, app }: UserTxsProps) => {
             <Block
               key={txHashStr}
               padding="xs 0"
-              hasBorderTop={i > 0 || hasPendingProof}
+              hasBorderTop={i > 0 || hasPendingAction}
               borderColor={theme === 'light' ? 'grey-lighter' : 'white-lightest'}
             >
               <StatusRow
@@ -110,16 +110,7 @@ export const UserTxs = ({ userId, app }: UserTxsProps) => {
                 iconBackground={actionIconBackgroundMapping[action]}
                 iconShape="square"
                 id={
-                  action === 'RECEIVE' ? (
-                    'Anonymous'
-                  ) : (
-                    <TextButton
-                      text={`0x${txHashStr.slice(0, 10)}`}
-                      href={`/tx/${txHashStr}`}
-                      color={link}
-                      Link={Link}
-                    />
-                  )
+                  <TextButton text={`0x${txHashStr.slice(0, 10)}`} href={`/tx/${txHashStr}`} color={link} Link={Link} />
                 }
                 status={settled ? 'SETTLED' : 'PENDING'}
                 created={created}
@@ -127,17 +118,20 @@ export const UserTxs = ({ userId, app }: UserTxsProps) => {
                 <FlexBox direction="column">
                   <span>
                     <Text text={`${actionTextMapping[action]}: `} size="xxs" color={colorLight} />
-                    <Text text={app.toTokenValueString(BigInt(value))} size="xxs" />
+                    <Text text={userAsset.fromErc20Units(value)} size="xxs" />
                   </span>
                   {action !== 'RECEIVE' && (
                     <FlexBox>
                       <Text text="To:" size="xxs" color={colorLight} />
                       <Block left="xs">
-                        <CopyToClipboard text={recipient.toString('hex')}>
-                          <span style={{ position: 'relative', cursor: 'pointer' }} title="Click to copy">
-                            <Text text={`0x${recipient.slice(0, 5).toString('hex')}...`} size="xxs" />
-                          </span>
-                        </CopyToClipboard>
+                        {!recipient && <Text text="unknown" size="xxs" color={colorLight} />}
+                        {!!recipient && (
+                          <CopyToClipboard text={recipient.toString('hex')}>
+                            <span style={{ position: 'relative', cursor: 'pointer' }} title="Click to copy">
+                              <Text text={`0x${recipient.slice(0, 5).toString('hex')}...`} size="xxs" />
+                            </span>
+                          </CopyToClipboard>
+                        )}
                       </Block>
                     </FlexBox>
                   )}
@@ -150,12 +144,13 @@ export const UserTxs = ({ userId, app }: UserTxsProps) => {
     </ThemeContext.Consumer>
   );
 
-  if (!hasPendingProof) {
+  if (!hasPendingAction || !actionState) {
     return txsNodes;
   }
-
-  const proofInput = currentProof!.input!;
-  const proofAction = currentProof!.action!;
+  const action = actionState.action;
+  if (action === Action.APPROVE) {
+    return txsNodes;
+  }
 
   return (
     <>
@@ -163,22 +158,25 @@ export const UserTxs = ({ userId, app }: UserTxsProps) => {
         {({ colorLight }) => (
           <Block key="pending" padding="xs 0">
             <TmpRow
-              iconName={actionIconMapping[proofAction]}
-              status={currentProof!.state === ProofState.FAILED ? 'FAILED' : 'PENDING'}
-              statusColor={currentProof!.state === ProofState.FAILED ? 'red' : colorLight}
-              created={proofInput.created}
+              iconName={actionIconMapping[action]}
+              status={actionState.error ? 'FAILED' : 'PENDING'}
+              statusColor={actionState.error ? 'red' : colorLight}
+              created={actionState.created}
             >
               <FlexBox direction="column">
                 <span>
-                  <Text text={`${actionTextMapping[proofAction]}: `} size="xxs" color={colorLight} />
-                  <Text text={app.toTokenValueString(proofInput.value)} size="xxs" />
+                  <Text text={`${actionTextMapping[action]}: `} size="xxs" color={colorLight} />
+                  <Text text={userAsset.fromErc20Units(actionState.value)} size="xxs" />
                 </span>
                 <FlexBox>
                   <Text text="To:" size="xxs" color={colorLight} />
                   <Block left="xs">
-                    <CopyToClipboard text={proofInput.recipient.toString('hex')}>
+                    <CopyToClipboard text={actionState.recipient.toString()}>
                       <span style={{ position: 'relative', cursor: 'pointer' }} title="Click to copy">
-                        <Text text={`0x${proofInput.recipient.slice(0, 5).toString('hex')}...`} size="xxs" />
+                        <Text
+                          text={`0x${actionState.recipient.toBuffer().slice(0, 5).toString('hex')}...`}
+                          size="xxs"
+                        />
                       </span>
                     </CopyToClipboard>
                   </Block>

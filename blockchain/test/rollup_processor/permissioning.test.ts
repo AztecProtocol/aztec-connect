@@ -5,8 +5,8 @@ import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
 import { fake } from 'sinon';
 import { createDepositProof } from '../fixtures/create_mock_proof';
-import { ethSign } from '../signingUtils/ethSign';
-import { solidityFormatSignatures } from '../signingUtils/solidityFormatSigs';
+import { ethSign } from '../signing/eth_sign';
+import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
 
 use(solidity);
 
@@ -19,7 +19,6 @@ describe('rollup_processor: permissioning', () => {
 
   const mintAmount = 100;
   const depositAmount = 60;
-  const scalingFactor = 1;
 
   const soliditySignatureLength = 32 * 3;
   const viewingKeys = [Buffer.alloc(32, 1), Buffer.alloc(32, 2)];
@@ -33,7 +32,7 @@ describe('rollup_processor: permissioning', () => {
     erc20 = await ERC20.deploy();
 
     const RollupProcessor = await ethers.getContractFactory('RollupProcessor');
-    rollupProcessor = await RollupProcessor.deploy(erc20.address, scalingFactor);
+    rollupProcessor = await RollupProcessor.deploy(erc20.address);
 
     // mint users tokens for testing
     await erc20.mint(userAAddress, mintAmount);

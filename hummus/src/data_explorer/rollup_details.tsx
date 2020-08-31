@@ -3,7 +3,7 @@ import moment from 'moment';
 import React, { useState, useEffect } from 'react';
 import { Form, FormSection } from '../components';
 import { Block, Offset } from '@aztec/guacamole-ui';
-import { App } from '../app';
+import { WebSdk } from 'aztec2-sdk';
 import { DetailRow, ContentLink } from './detail_row';
 
 const TxList = ({ txHashes }: { txHashes: Buffer[] }) => (
@@ -18,20 +18,21 @@ const TxList = ({ txHashes }: { txHashes: Buffer[] }) => (
 
 interface RollupDetailsProps {
   id: number;
-  app: App;
+  app: WebSdk;
 }
 
 export const RollupDetails = ({ id, app }: RollupDetailsProps) => {
+  const sdk = app.getSdk()!;
   const [rollup, setRollup] = useState<Rollup | undefined>();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unmounted = false;
-    let fetchReq: number;
+    let fetchReq: NodeJS.Timer;
 
     const fetchAsync = async () => {
       try {
-        const rollupData = await app.getRollup(id);
+        const rollupData = await sdk.getRollup(id);
         if (unmounted) return;
 
         if (rollupData) {
@@ -44,7 +45,9 @@ export const RollupDetails = ({ id, app }: RollupDetailsProps) => {
             }, 1000);
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        /* swallow */
+      }
       if (loading) {
         setLoading(false);
       }
@@ -77,7 +80,6 @@ export const RollupDetails = ({ id, app }: RollupDetailsProps) => {
         <DetailRow title="Status" content={rollup.status} />
         <DetailRow title="Txs" content={<TxList txHashes={rollup.txHashes} />} />
         <DetailRow title="Data Root" content={`0x${rollup.dataRoot.toString('hex')}`} />
-        <DetailRow title="Nullifier Root" content={`0x${rollup.nullRoot.toString('hex')}`} />
         <DetailRow title="Eth Block" content={typeof rollup.ethBlock === 'number' ? `${rollup.ethBlock}` : '-'} />
         <DetailRow title="Eth Tx Hash" content={rollup.ethTxHash ? `0x${rollup.ethTxHash.toString('hex')}` : '-'} />
         <DetailRow title="Created At" content={moment(new Date(rollup.created).toUTCString()).format('ll LTS +UTC')} />

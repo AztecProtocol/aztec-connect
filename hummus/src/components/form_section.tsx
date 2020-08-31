@@ -4,9 +4,10 @@ import { Block, Text } from '@aztec/guacamole-ui';
 interface FormSectionProps {
   title?: string | React.ReactNode;
   children: React.ReactNode;
+  align?: 'left' | 'right' | 'center';
 }
 
-export function FormSection({ title, children }: FormSectionProps) {
+export function FormSection({ title, children, align }: FormSectionProps) {
   return (
     <Block padding="s m">
       {!!title && (
@@ -14,7 +15,9 @@ export function FormSection({ title, children }: FormSectionProps) {
           <Text text={title} size="xs" weight="semibold" />
         </Block>
       )}
-      <Block padding="s 0">{children}</Block>
+      <Block padding="s 0" align={align}>
+        {children}
+      </Block>
     </Block>
   );
 }

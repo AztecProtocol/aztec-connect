@@ -4,6 +4,8 @@ import { BarretenbergWasm } from '../../wasm';
 import { Blake2s } from '../../crypto/blake2s';
 import { Note } from '../note';
 import { computeNullifier } from './compute_nullifier';
+import { Grumpkin } from '../../ecc/grumpkin';
+import { GrumpkinAddress } from '../../address';
 
 describe('compute_nullifier', () => {
   // prettier-ignore
@@ -19,11 +21,12 @@ describe('compute_nullifier', () => {
     const barretenberg = await BarretenbergWasm.new();
     const schnorr = new Schnorr(barretenberg);
     const blake2s = new Blake2s(barretenberg);
+    const grumpkin = new Grumpkin(barretenberg);
     const joinSplitProver = new JoinSplitProver(barretenberg, undefined as any);
 
-    const pubKey = schnorr.computePublicKey(privateKey);
-    const inputNote1 = new Note(pubKey, viewingKey, 100);
-    const inputNote2 = new Note(pubKey, viewingKey, 50);
+    const pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
+    const inputNote1 = new Note(pubKey, viewingKey, BigInt(100));
+    const inputNote2 = new Note(pubKey, viewingKey, BigInt(50));
 
     const inputNote1Enc = await joinSplitProver.encryptNote(inputNote1);
     const inputNote2Enc = await joinSplitProver.encryptNote(inputNote2);
@@ -31,8 +34,8 @@ describe('compute_nullifier', () => {
     const nullifier1 = computeNullifier(inputNote1Enc, 0, inputNote1.secret, blake2s);
     const nullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, blake2s);
 
-    const expected1 = Buffer.from('399b009a31f9429332e2cb79408289dd', 'hex');
-    const expected2 = Buffer.from('d262255dc9c92f1a5915f536f2a7f5d8', 'hex');
+    const expected1 = Buffer.from('2e756ba73e3f5db066cc08dafcd2205f399b009a31f9429332e2cb79408289dd', 'hex');
+    const expected2 = Buffer.from('1493f13591935fd461a991492b004809d262255dc9c92f1a5915f536f2a7f5d8', 'hex');
 
     expect(nullifier1).toEqual(expected1);
     expect(nullifier2).toEqual(expected2);

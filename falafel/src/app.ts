@@ -1,4 +1,5 @@
-import { Proof, RollupResponse, TxResponse } from 'barretenberg/rollup_provider';
+import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
+import { Proof, ProofServerResponse, RollupServerResponse, TxServerResponse } from 'barretenberg/rollup_provider';
 import Koa from 'koa';
 import compress from 'koa-compress';
 import Router from 'koa-router';
@@ -9,52 +10,46 @@ import { Server } from './server';
 
 const cors = require('@koa/cors');
 
-const toRollupResponse = (rollup: RollupDao): RollupResponse => {
-  const { id, status, dataRoot, nullRoot, txs, ethBlock, ethTxHash, created } = rollup;
-  return {
-    id,
-    status,
-    dataRoot: dataRoot.toString('hex'),
-    nullRoot: nullRoot.toString('hex'),
-    txHashes: txs.map(tx => tx.txId.toString('hex')),
-    ethBlock,
-    ethTxHash: ethTxHash ? ethTxHash.toString('hex') : undefined,
-    created,
-  };
-};
+const toBlockResponse = (block: Block): BlockServerResponse => ({
+  ...block,
+  txHash: block.txHash.toString('hex'),
+  rollupProofData: block.rollupProofData.toString('hex'),
+  viewingKeysData: block.viewingKeysData.toString('hex'),
+  created: block.created.toISOString(),
+});
 
-const toTxResponse = (tx: TxDao): TxResponse => {
-  const {
-    txId,
-    rollup,
-    merkleRoot,
-    newNote1,
-    newNote2,
-    nullifier1,
-    nullifier2,
-    publicInput,
-    publicOutput,
-    created,
-  } = tx;
-  const linkedRollup = !rollup
+const toRollupResponse = ({
+  id,
+  status,
+  dataRoot,
+  proofData,
+  txs,
+  ethBlock,
+  ethTxHash,
+  created,
+}: RollupDao): RollupServerResponse => ({
+  id,
+  status,
+  dataRoot: dataRoot.toString('hex'),
+  proofData: proofData ? proofData.toString('hex') : undefined,
+  txHashes: txs.map(tx => tx.txId.toString('hex')),
+  ethBlock,
+  ethTxHash: ethTxHash ? ethTxHash.toString('hex') : undefined,
+  created: created.toISOString(),
+});
+
+const toTxResponse = ({ txId, rollup, proofData, viewingKey1, viewingKey2, created }: TxDao): TxServerResponse => ({
+  txHash: txId.toString('hex'),
+  rollup: !rollup
     ? undefined
     : {
         id: rollup.id,
         status: rollup.status,
-      };
-  return {
-    txHash: txId.toString('hex'),
-    rollup: linkedRollup,
-    merkleRoot: merkleRoot.toString('hex'),
-    newNote1: newNote1.toString('hex'),
-    newNote2: newNote2.toString('hex'),
-    nullifier1: nullifier1.toString('hex'),
-    nullifier2: nullifier2.toString('hex'),
-    publicInput: publicInput.toString('hex'),
-    publicOutput: publicOutput.toString('hex'),
-    created,
-  };
-};
+      },
+  proofData: proofData.toString('hex'),
+  viewingKeys: [viewingKey1, viewingKey2].map(vk => vk.toString('hex')),
+  created: created.toISOString(),
+});
 
 export function appFactory(server: Server, prefix: string) {
   const router = new Router({ prefix });
@@ -72,9 +67,12 @@ export function appFactory(server: Server, prefix: string) {
         viewingKeys: viewingKeys.map((v: string) => Buffer.from(v, 'hex')),
         depositSignature: depositSignature ? Buffer.from(depositSignature, 'hex') : undefined,
       };
-      const txId = await server.receiveTx(tx);
+      const txDao = await server.receiveTx(tx);
+      const response: ProofServerResponse = {
+        txHash: txDao.txId.toString('hex'),
+      };
       ctx.status = 200;
-      ctx.body = { txId: txId.toString('hex') };
+      ctx.body = response;
     } catch (err) {
       console.log(err);
       ctx.status = 400;
@@ -84,21 +82,18 @@ export function appFactory(server: Server, prefix: string) {
 
   router.get('/get-blocks', async (ctx: Koa.Context) => {
     const blocks = await server.getBlocks(+ctx.query.from);
-    ctx.body = blocks.map(({ dataRoot, nullRoot, dataEntries, nullifiers, viewingKeys, ...rest }) => ({
-      ...rest,
-      dataRoot: dataRoot.toString('hex'),
-      nullRoot: nullRoot.toString('hex'),
-      dataEntries: dataEntries.map(b => b.toString('hex')),
-      nullifiers: nullifiers.map(b => b.toString('hex')),
-      viewingKeys: viewingKeys.map(b => b.toString('hex')),
-    }));
+    const response: GetBlocksServerResponse = {
+      latestRollupId: server.getLatestRollupId(),
+      blocks: blocks.map(toBlockResponse),
+    };
+    ctx.body = response;
   });
 
   router.get('/get-rollups', async (ctx: Koa.Context) => {
     try {
       const rollups = await server.getLatestRollups(+ctx.query.count);
       ctx.status = 200;
-      ctx.body = rollups.map(rollup => toRollupResponse(rollup));
+      ctx.body = rollups.map(toRollupResponse);
     } catch (err) {
       console.log(err);
       ctx.status = 400;
@@ -128,7 +123,7 @@ export function appFactory(server: Server, prefix: string) {
         txs = await server.getLatestTxs(+ctx.query.count);
       }
       ctx.status = 200;
-      ctx.body = txs.map(tx => toTxResponse(tx));
+      ctx.body = txs.map(toTxResponse);
     } catch (err) {
       console.log(err);
       ctx.status = 400;

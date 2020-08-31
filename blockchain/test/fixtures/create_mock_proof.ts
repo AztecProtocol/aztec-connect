@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto';
 import { constants, Signer, utils } from 'ethers';
-import { ethSign } from '../signingUtils/ethSign';
+import { ethSign } from '../signing/eth_sign';
 
 const dataNoteSize = 64;
 
@@ -50,12 +50,18 @@ export const newDataRootsRoot = newDataRoot;
 
 // Note: creates publicInputData, so that the 'new' values for the deposit proof map onto the 'old'
 // values for the subsequent withdraw proof
-function publicInputData(id: number, isFirstProof: boolean, numInner: number) {
+function publicInputData(id: number, isFirstProof: boolean, numInner: number, rollupSize = 2) {
   // prettier-ignore
   const rollupId = Buffer.from([
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, id,
-]);
+  ]);
+
+  // prettier-ignore
+  const rollupSizeBuf = Buffer.from([
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, rollupSize,
+  ]);
 
   // prettier-ignore
   const numTxs = Buffer.from([
@@ -67,6 +73,7 @@ function publicInputData(id: number, isFirstProof: boolean, numInner: number) {
   if (isFirstProof) {
     allPublicInputs = [
       rollupId,
+      rollupSizeBuf,
       dataStartIndex(0x00),
       oldDataRoot,
       newDataRoot,
@@ -79,6 +86,7 @@ function publicInputData(id: number, isFirstProof: boolean, numInner: number) {
   } else {
     allPublicInputs = [
       rollupId,
+      rollupSizeBuf,
       dataStartIndex(0x04),
       newDataRoot,
       randomBytes(32),
@@ -103,6 +111,7 @@ function publicInputData(id: number, isFirstProof: boolean, numInner: number) {
  * @param ethPrivateKey
  */
 async function innerProofData(isDeposit: boolean, transferAmount: number, publicOwnerUnformatted: string) {
+  const proofId = Buffer.alloc(32);
   let publicInput;
   let publicOutput;
   let inputOwner = Buffer.alloc(32);
@@ -123,6 +132,7 @@ async function innerProofData(isDeposit: boolean, transferAmount: number, public
   const nullifier2 = Buffer.concat([Buffer.alloc(16), randomBytes(16)]);
 
   return Buffer.concat([
+    proofId,
     publicInput,
     publicOutput,
     newNote1,

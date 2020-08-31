@@ -6,6 +6,7 @@
   "scripts": {
     "build": "yarn clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js",
     "clean": "rm -rf ./dest ./dest-es",
+    "symlink": "mkdir -p ./dest/node_modules && ln -sfn ../../../barretenberg.js/dest ./dest/node_modules/barretenberg && mkdir -p ./dest-es/node_modules && ln -sfn ../../../barretenberg.js/dest-es ./dest-es/node_modules/blockchain",
     "test": "jest",
     "build:dev": "yarn build:dev:cjs & yarn build:dev:es",
     "build:dev:cjs": "tsc -p tsconfig.cjs.json --watch",
@@ -23,6 +24,7 @@
   },
   "dependencies": {
     "barretenberg": "file:../barretenberg.js/dest",
+    "bigint-buffer": "^1.1.5",
     "broadcast-channel": "^3.1.0",
     "detect-node": "^2.0.4",
     "dexie": "^3.0.1",

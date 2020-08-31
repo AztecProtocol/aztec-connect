@@ -24,17 +24,17 @@
   },
   "dependencies": {
     "@types/levelup": "^4.3.0",
-    "bn.js": "^5.1.1",
+    "bigint-buffer": "^1.1.5",
     "debug": "^4.1.1",
     "detect-node": "^2.0.4",
     "levelup": "^4.4.0",
     "memdown": "^5.1.0",
     "node-fetch": "^2.6.0",
+    "sha3": "^2.1.3",
     "threads": "1.3.1",
     "tslib": "^2.0.0"
   },
   "devDependencies": {
-    "@types/bn.js": "^4.11.6",
     "@types/debug": "^4.1.5",
     "@types/jest": "^25.1.3",
     "@types/memdown": "^3.0.0",

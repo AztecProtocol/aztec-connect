@@ -22,8 +22,8 @@ export interface Rollup {
   id: number;
   status: RollupStatus;
   dataRoot: Buffer;
-  nullRoot: Buffer;
   txHashes: Buffer[];
+  proofData?: Buffer;
   ethBlock?: number;
   ethTxHash?: Buffer;
   created: Date;

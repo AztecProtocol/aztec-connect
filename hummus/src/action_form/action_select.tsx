@@ -2,14 +2,7 @@ import React from 'react';
 import { FlexBox, SelectInput } from '@aztec/guacamole-ui';
 import { FormField } from '../components';
 import { ThemeContext } from '../config/context';
-
-export enum Action {
-  DEPOSIT = 'Deposit',
-  PUBLIC_TRANSFER = 'Public Transfer',
-  MINT = 'Mint',
-  TRANSFER = 'Transfer',
-  WITHDRAW = 'Withdraw',
-}
+import { Action } from 'aztec2-sdk';
 
 interface AccountSelectProps {
   action: Action;

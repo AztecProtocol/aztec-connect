@@ -2,25 +2,26 @@ import { Tx } from 'aztec2-sdk';
 import moment from 'moment';
 import React, { useState, useEffect } from 'react';
 import { Form, FormSection } from '../components';
-import { App } from '../app';
+import { WebSdk } from 'aztec2-sdk';
 import { DetailRow, ContentLink } from './detail_row';
 
 interface TxDetailsProps {
   txHash: Buffer;
-  app: App;
+  app: WebSdk;
 }
 
 export const TxDetails = ({ txHash, app }: TxDetailsProps) => {
+  const sdk = app.getSdk()!;
   const [tx, setTx] = useState<Tx | undefined>();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unmounted = false;
-    let fetchReq: number;
+    let fetchReq: NodeJS.Timer;
 
     const fetchTxAsync = async () => {
       try {
-        const txData = await app.getTx(txHash);
+        const txData = await sdk.getTx(txHash);
         if (unmounted) return;
 
         if (txData) {
@@ -33,7 +34,9 @@ export const TxDetails = ({ txHash, app }: TxDetailsProps) => {
             }, 1000);
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        /* swallow */
+      }
       if (loading) {
         setLoading(false);
       }

@@ -1,3 +1,4 @@
+import { toBigIntBE } from 'bigint-buffer';
 import { Transfer } from 'threads';
 import { Prover } from '../prover';
 import { JoinSplitTx } from './join_split_tx';
@@ -41,7 +42,7 @@ export class JoinSplitProver {
     this.wasm.transferToHeap(privateKey, 64);
     this.wasm.transferToHeap(viewingKey, 96);
     const success = this.wasm.call('join_split__decrypt_note', 0, 64, 96, 128) ? true : false;
-    const value = Buffer.from(this.wasm.sliceMemory(128, 132)).readUInt32BE(0);
+    const value = toBigIntBE(Buffer.from(this.wasm.sliceMemory(128, 160)));
     return { success, value };
   }
 

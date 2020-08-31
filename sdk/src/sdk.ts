@@ -1,95 +1,153 @@
 import { RollupProviderStatus, Rollup, Tx } from 'barretenberg/rollup_provider';
 import { EventEmitter } from 'events';
-import { User } from './user';
+import { UserData } from './user';
 import { UserTx } from './user_tx';
+import { EthAddress, GrumpkinAddress, Address } from 'barretenberg/address';
 
 export enum SdkEvent {
-  // For emitting interesting log info during long running operations.
-  LOG = 'SDKEVENT_LOG',
   // Initialization state changes.
   UPDATED_INIT_STATE = 'SDKEVENT_UPDATED_INIT_STATE',
-  // Balance for a user changes.
-  UPDATED_BALANCE = 'SDKEVENT_UPDATED_BALANCE',
-  // Accounts are switched.
-  UPDATED_ACCOUNT = 'SDKEVENT_UPDATED_ACCOUNT',
-  // A user is added.
+  // The sdk action state has changed.
+  UPDATED_ACTION_STATE = 'SDKEVENT_UPDATED_ACTION_STATE',
+  // The set of users has changed.
   UPDATED_USERS = 'SDKEVENT_UPDATED_USERS',
-  // A transaction has been created within the current context.
-  NEW_USER_TX = 'SDKEVENT_NEW_USER_TX',
-  // A transaction has been added/updated (could be from a remote update).
-  UPDATED_USER_TX = 'SDKEVENT_UPDATED_USER_TX',
+  // A users state has changed.
+  UPDATED_USER_STATE = 'SDKEVENT_UPDATED_USER_STATE',
+  // The world state has updated. Used for displaying sync progress.
+  UPDATED_WORLD_STATE = 'SDKEVENT_UPDATED_WORLD_STATE',
   // Explorer rollups have updated.
   UPDATED_EXPLORER_ROLLUPS = 'SDKEVENT_UPDATED_EXPLORER_ROLLUPS',
   // Explorer txs have updated.
   UPDATED_EXPLORER_TXS = 'SDKEVENT_UPDATED_EXPLORER_TXS',
 }
 
-export enum SdkInitState {
-  UNINITIALIZED = 'Uninitialized',
-  INITIALIZING = 'Initializing',
-  INITIALIZED = 'Initialized',
-  DESTROYED = 'Destroyed',
+export enum AssetId {
+  DAI,
 }
 
-export interface Signer {
-  getAddress(): Buffer;
-  signMessage(data: Buffer): Promise<Buffer>;
+export enum SdkInitState {
+  UNINITIALIZED = 'UNINITIALIZED',
+  INITIALIZING = 'INITIALIZING',
+  INITIALIZED = 'INITIALIZED',
+  DESTROYED = 'DESTROYED',
+}
+
+export enum Action {
+  APPROVE = 'APPROVE',
+  DEPOSIT = 'DEPOSIT',
+  TRANSFER = 'TRANSFER',
+  PUBLIC_TRANSFER = 'PUBLIC_TRANSFER',
+  WITHDRAW = 'WITHDRAW',
+  MINT = 'MINT',
+}
+
+export interface ActionState {
+  action: Action;
+  value: bigint;
+  sender: EthAddress;
+  recipient: Address;
+  created: Date;
+  txHash?: Buffer;
+  error?: Error;
 }
 
 export type TxHash = Buffer;
 
+export interface SdkUserAsset {
+  publicBalance(): Promise<bigint>;
+  publicAllowance(): Promise<bigint>;
+  balance(): bigint;
+
+  mint(value: bigint): Promise<TxHash>;
+  approve(value: bigint): Promise<TxHash>;
+  deposit(value: bigint, to?: GrumpkinAddress | string): Promise<TxHash>;
+  withdraw(value: bigint, to?: EthAddress): Promise<TxHash>;
+  transfer(value: bigint, to: GrumpkinAddress | string): Promise<TxHash>;
+  publicTransfer(value: bigint, to: EthAddress): Promise<TxHash>;
+
+  fromErc20Units(value: bigint): string;
+  toErc20Units(value: string): bigint;
+}
+
+export interface SdkUser {
+  createAccount(alias: string, newSigningPublicKey: Buffer): Promise<void>;
+  addSigningKey(signingPublicKey: Buffer): Promise<void>;
+  removeSigningKey(signingPublicKey: Buffer): Promise<void>;
+  getUserData(): UserData;
+  getTxs(): Promise<UserTx[]>;
+  getAsset(assetId: AssetId): SdkUserAsset;
+}
+
+export interface SdkStatus {
+  chainId: number;
+  rollupContractAddress: EthAddress;
+  syncedToRollup: number;
+  latestRollupId: number;
+  initState: SdkInitState;
+  dataSize: number;
+  dataRoot: Buffer;
+}
+
 export interface Sdk extends EventEmitter {
   init(): Promise<void>;
 
+  /**
+   * Destroys the sdk. Cannot be used afterwards.
+   */
   destroy(): Promise<void>;
 
-  restart(): Promise<void>;
-
+  /**
+   * Erases all sdk cache data and reinitializes.
+   */
   clearData(): Promise<void>;
 
-  getInitState(): SdkInitState;
+  getLocalStatus(): SdkStatus;
 
-  getDataRoot(): Buffer;
+  getRemoteStatus(): Promise<RollupProviderStatus>;
 
-  getDataSize(): number;
-
-  getStatus(): Promise<RollupProviderStatus>;
-
-  deposit(value: number, signer: Signer, noteRecipient?: Buffer): Promise<TxHash>;
-
-  withdraw(value: number, tokenRecipient: Buffer): Promise<TxHash>;
-
-  transfer(value: number, noteRecipient: Buffer): Promise<TxHash>;
-
-  publicTransfer(value: number, signer: Signer, tokenRecipient: Buffer): Promise<TxHash>;
-
+  /**
+   * Blocks until local state is synchronised with rollup provider state.
+   * Effectively waits until the local and remote data roots match.
+   */
   awaitSynchronised(): Promise<void>;
 
-  awaitSettlement(txHash: TxHash): Promise<void>;
+  /**
+   * Return true if the sdk is busy performing an action.
+   */
+  isBusy(): boolean;
 
-  getUser(): User;
+  /**
+   * Add a user with the given ethereum address.
+   * Will prompt the user to sign a message with `address`, from which we generate the grumpkin key.
+   */
+  addUser(address: EthAddress): Promise<SdkUser>;
 
-  getUsers(localOnly: boolean): User[];
+  getUser(address: EthAddress): SdkUser | undefined;
 
-  createUser(alias?: string): Promise<User>;
+  getUsersData(): UserData[];
 
-  addUser(alias: string, publicKey: Buffer): Promise<User>;
+  removeUser(address: EthAddress): Promise<void>;
 
-  switchToUser(userIdOrAlias: string | number): User;
+  /**
+   * Returns the current action state, from which you can determine what the sdk is currently doing.
+   */
+  getActionState(): ActionState | undefined;
 
-  getBalance(userIdOrAlias?: string | number): number;
+  /**
+   * Will block until the given tx hash is settled.
+   * We need to specify the eth address as we record each tx for each user.
+   * TODO: Fix this to only have one tx record.
+   */
+  awaitSettlement(address: EthAddress, txHash: TxHash, allowUnknown?: boolean): Promise<void>;
 
-  getLatestRollups(): Promise<Rollup[]>;
+  // Explorer
+  getLatestRollups(num: number): Promise<Rollup[]>;
 
-  getLatestTxs(): Promise<Tx[]>;
-
-  getRollup(rollupId: number): Promise<Rollup | undefined>;
+  getLatestTxs(num: number): Promise<Tx[]>;
 
   getTx(txHash: Buffer): Promise<Tx | undefined>;
 
-  getUserTxs(userId: number): Promise<UserTx[]>;
-
-  findUser(userIdOrAlias: string | number, remote: boolean): User | undefined;
+  getRollup(rollupId: number): Promise<Rollup | undefined>;
 
   startTrackingGlobalState(): void;
 

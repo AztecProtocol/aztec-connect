@@ -64,10 +64,10 @@ const Scanline = styled.div`
   width: 100%;
   display: block;
   background: #000;
-  height: 4px;
+  height: 3px;
   position: relative;
   z-index: 3;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   opacity: 0.1;
 `;
 

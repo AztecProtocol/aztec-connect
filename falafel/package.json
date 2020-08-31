@@ -4,12 +4,14 @@
   "main": "dest/index.js",
   "license": "GPL-2.0",
   "scripts": {
-    "build": "tsc -p tsconfig.prod.json",
+    "build": "rm -rf ./dest && tsc -p tsconfig.prod.json",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
+    "symlink": "mkdir -p ./dest/node_modules && ln -sfn ../../../barretenberg.js/dest ./dest/node_modules/barretenberg && ln -sfn ../../../blockchain/dest ./dest/node_modules/blockchain",
     "test": "jest",
     "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db",
-    "clean_data": "rm -rf ./data"
+    "clean_data": "rm -rf ./data",
+    "clean": "yarn clean_db && yarn clean_data"
   },
   "jest": {
     "transform": {

@@ -3,6 +3,7 @@ import { LevelUp } from 'levelup';
 import { Blake2s } from '../crypto/blake2s';
 import { Pedersen } from '../crypto/pedersen';
 import { Block } from '../block_source';
+import { RollupProofData } from '../rollup_proof';
 import createDebug from 'debug';
 
 const debug = createDebug('bb:world_state');
@@ -16,19 +17,31 @@ export class WorldState {
     try {
       this.tree = await MerkleTree.fromName(this.db, this.pedersen, this.blake2s, 'data');
     } catch (e) {
-      this.tree = new MerkleTree(this.db, this.pedersen, this.blake2s, 'data', 32);
+      this.tree = await MerkleTree.new(this.db, this.pedersen, this.blake2s, 'data', 32);
     }
     debug(`data size: ${this.tree.getSize()}`);
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);
   }
 
   public async processBlock(block: Block) {
-    debug(`processing block ${block.blockNum} with rollup ${block.rollupId}...`);
-    for (let i = 0; i < block.dataEntries.length; ++i) {
-      await this.tree.updateElement(block.dataStartIndex + i, block.dataEntries[i]);
+    const { rollupSize, rollupProofData, viewingKeysData } = block;
+    const rollup = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
+    const { rollupId, dataStartIndex, innerProofData } = rollup;
+
+    const dataSize = this.getSize();
+    if (dataSize !== dataStartIndex) {
+      debug(`skipping block ${rollupId}, dataSize != dataStartIndex: ${dataSize} != ${dataStartIndex}.`);
+      return;
     }
-    if (block.dataEntries.length < block.numDataEntries) {
-      await this.tree.updateElement(block.dataStartIndex + block.numDataEntries - 1, Buffer.alloc(64, 0));
+
+    debug(`processing block ${block.blockNum} with rollup ${rollupId}...`);
+
+    for (let i = 0; i < innerProofData.length; ++i) {
+      await this.tree.updateElement(dataStartIndex + i * 2, innerProofData[i].newNote1);
+      await this.tree.updateElement(dataStartIndex + i * 2 + 1, innerProofData[i].newNote2);
+    }
+    if (innerProofData.length < rollupSize) {
+      await this.tree.updateElement(dataStartIndex + rollupSize * 2 - 1, Buffer.alloc(64, 0));
     }
 
     debug(`data size: ${this.tree.getSize()}`);
