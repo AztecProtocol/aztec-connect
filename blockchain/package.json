@@ -5,7 +5,7 @@
   "license": "GPLv2",
   "private": true,
   "scripts": {
-    "build": "yarn clean && yarn compile && tsc -p tsconfig.prod.json && node ./package.js",
+    "build": "yarn clean && yarn compile && tsc -p tsconfig.prod.json && node ./package.js && chmod +x ./dest/deploy/index.js",
     "build:dev": "tsc -p tsconfig.prod.json --watch",
     "compile": "yarn buidler compile",
     "clean": "rm -rf ./cache ./dest",

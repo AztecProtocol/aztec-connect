@@ -153,6 +153,10 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "production"
       },
       {
+        "name": "PORT",
+        "value": "80"
+      },
+      {
         "name": "NETWORK",
         "value": "ropsten"
       },

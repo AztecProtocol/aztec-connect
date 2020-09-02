@@ -16,7 +16,7 @@ const toRollup = ({ id, status, dataRoot, proofData, txHashes, ethTxHash, create
 
 const toTx = ({ txHash, proofData, viewingKeys, rollup, created }: TxServerResponse): Tx => {
   const { newNote1, newNote2, nullifier1, nullifier2, publicInput, publicOutput, noteTreeRoot } = new JoinSplitProof(
-    Buffer.from(proofData),
+    Buffer.from(proofData, 'hex'),
     viewingKeys.map(vk => Buffer.from(vk, 'hex')),
   );
   return {

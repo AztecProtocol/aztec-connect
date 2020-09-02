@@ -225,7 +225,7 @@ export class TerminalHandler {
   private async init(server: string) {
     this.app.removeAllListeners();
     this.app.on(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
-    await this.app.init(server || window.location.protocol + '//' + window.location.hostname);
+    await this.app.init(server || window.location.origin);
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
 
     const sdk = this.app.getSdk()!;

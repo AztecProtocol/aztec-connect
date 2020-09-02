@@ -7,8 +7,14 @@ module.exports = merge(common, {
   mode: 'development',
   devtool: 'inline-source-map',
   devServer: {
+    host: '0.0.0.0',
     hot: true,
     historyApiFallback: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+      },
+    },
   },
   plugins: [new webpack.HotModuleReplacementPlugin()],
   resolve: {

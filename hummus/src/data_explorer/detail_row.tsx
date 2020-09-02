@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { Row, Col, Block, Text, TextButton } from '@aztec/guacamole-ui';
 import { ThemeContext } from '../config/context';
+import { MonospacedText } from '../components';
 
 const ContentText = styled(Text)`
   overflow-wrap: anywhere;
+  font-family: Courier, monospace;
 `;
 
 interface ContentLinkProps {
@@ -38,7 +40,7 @@ export const DetailRow = ({ title, content }: DetailRowProps) => (
       {({ colorLight }) => (
         <Row>
           <Col column={3}>
-            <Text text={title} size="xs" color={colorLight} />
+            <MonospacedText text={title} size="xs" color={colorLight} />
           </Col>
           <Col column={9}>
             <ContentText text={content} size="xs" />

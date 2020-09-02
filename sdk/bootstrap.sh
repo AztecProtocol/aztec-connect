@@ -1,3 +1,6 @@
+#!/bin/bash
+set -e
+
 yarn install
 yarn link barretenberg
 yarn build

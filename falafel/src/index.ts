@@ -15,7 +15,7 @@ import { Server, ServerConfig } from './server';
 dotenv.config();
 
 const {
-  PORT = 80,
+  PORT = '8080',
   ROLLUP_CONTRACT_ADDRESS,
   ETHEREUM_HOST,
   INFURA_API_KEY,

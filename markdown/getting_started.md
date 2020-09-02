@@ -25,6 +25,11 @@ The relevant binaries are:
 
 `rollup_cli` is the rollup proof generator. `db_cli` is the merkle tree database.
 
+It is currently essential that the same compilier is used to build `rollup_cli` and `barretenberg.wasm`, as `rollup_cli`
+independently computes the verification key for the inner proofs, and gcc and clang will actually produce different
+circuits due to them differing in expression evaluation orders. As we can currently only build the WASM with clang,
+you must use clang to build `rollup_cli` as well. The bootstrap script will use clang as default.
+
 During development you may find yourself needing to rebuild these binaries as they change.
 
 ### Barrentenberg.js
@@ -53,6 +58,7 @@ During development you'll want to run `yarn start:dev` to watch and rebuild as f
 If running against a real blockchain such as ganache, you'll want to deploy to ganache first:
 
 ```
+export ETHEREUM_HOST=http://localhost:8545
 yarn clean_db && `yarn -s deploy_rollup_processor` && ROLLUP_SIZE=1 MAX_ROLLUP_WAIT_TIME=0 yarn start:dev
 ```
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Form, FormSection } from '../components';
 import { WebSdk } from 'aztec2-sdk';
 import { DetailRow, ContentLink } from './detail_row';
+import { toBigIntBE } from 'bigint-buffer';
 
 interface TxDetailsProps {
   txHash: Buffer;
@@ -76,8 +77,8 @@ export const TxDetails = ({ txHash, app }: TxDetailsProps) => {
         <DetailRow title="New Note 2" content={`0x${tx.newNote2.toString('hex')}`} />
         <DetailRow title="Nullifier 1" content={`0x${tx.nullifier1.toString('hex')}`} />
         <DetailRow title="Nullifier 2" content={`0x${tx.nullifier2.toString('hex')}`} />
-        <DetailRow title="Public Input" content={tx.publicInput.readUInt32BE(28)} />
-        <DetailRow title="Public Output" content={tx.publicOutput.readUInt32BE(28)} />
+        <DetailRow title="Public Input" content={toBigIntBE(tx.publicInput).toString()} />
+        <DetailRow title="Public Output" content={toBigIntBE(tx.publicOutput).toString()} />
         <DetailRow title="Created At" content={moment(new Date(tx.created).toUTCString()).format('ll LTS +UTC')} />
       </FormSection>
     </Form>

@@ -1,3 +1,6 @@
+#!/bin/bash
+set -e
+
 yarn install
 yarn build
 yarn symlink-wasm
