@@ -6,7 +6,7 @@ services:
       NODE_OPTIONS: --max_old_space_size=3072
     command: ['-a=10', '-h=0.0.0.0']
     ports:
-      - "8545:8545"
+      - '8545:8545'
 
   falafel:
     build: ../falafel
@@ -25,18 +25,18 @@ services:
       yarn start
       "
     ports:
-      - "80:8080"
+      - '8080:8080'
 
   end-to-end:
     build: .
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/end-to-end:latest
     environment:
       ETHEREUM_HOST: http://ganache:8545
-      ROLLUP_HOST: http://falafel
+      ROLLUP_HOST: http://falafel:8080
     depends_on:
       - falafel
     command: >
       sh -c "
-      while ! nc -z falafel 80; do sleep 1; done;
+      while ! nc -z falafel 8080; do sleep 1; done;
       CI=true yarn -s test
       "
