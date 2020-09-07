@@ -11,6 +11,7 @@ fi
 
 git config --global user.name "Charlie Lye"
 git config --global user.email "karl.lye@gmail.com"
+git config --global core.editor "vim"
 
 mkdir -p .vimdirs/swap
 mkdir -p .vimdirs/undo
