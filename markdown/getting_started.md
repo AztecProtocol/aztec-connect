@@ -1,5 +1,27 @@
 # Getting Started
 
+### Dependencies
+
+- nvm
+- yarn
+- node >= 14
+- cmake >= 3.16
+- clang >= 9
+
+On MacOS:
+
+```
+brew install llvm cmake
+```
+
+On Ubuntu >= 20:
+
+```
+apt-get update && apt-get install -y gcc g++ clang cmake zsh python
+```
+
+### Building
+
 There are quite a few moving parts to the system. Getting them all working together is a little involved. The quickest
 way to get started is to just run the `bootstrap.sh` script in the root of the repository.
 
@@ -32,6 +54,18 @@ you must use clang to build `rollup_cli` as well. The bootstrap script will use 
 
 During development you may find yourself needing to rebuild these binaries as they change.
 
+In `./build`
+
+```
+make -j$(nproc) rollup_cli db_cli
+```
+
+In `./build-wasm`
+
+```
+make -j$(nproc) barretenberg.wasm
+```
+
 ### Barrentenberg.js
 
 TypeScript wrapper around `barretenberg.wasm`. There is a symlink to the built WASM file at
@@ -46,8 +80,11 @@ Contains smart contracts, deployment scripts, and TypeScript wrappers. It expose
 to any dependent projects. This script will deploy the contracts, and output text to standard output, which when
 executed in a shell, exports environment variables containing the contract addresses.
 
-During development you'll want to run `yarn build:dev` to watch and rebuild both builds as files change. If you change
-the contracts, you'll need to run `yarn compile`.
+During development you'll want to run `yarn build:dev` to watch and rebuild both builds as files change.
+
+If you change the contracts, you'll need to run `yarn compile` to recompile.
+
+If you change the circuits in barretenberg, you'll need to run `generate_vks.sh` to regenerate the verification key contracts.
 
 ### Falafel
 
@@ -70,7 +107,13 @@ During development you'll want to run `yarn build:dev` to watch and rebuild both
 
 ### End-to-end
 
-Run a local ganache instance. Run `falafel` as above. Run `yarn test` to run the tests.
+Ensure you've installed ganache globally:
+
+```
+yarn global add ganache-cli
+```
+
+Run a local ganache instance (currently requires Node 12). Run `falafel` as above. Run `yarn test` to run the tests.
 
 ### Hummus
 

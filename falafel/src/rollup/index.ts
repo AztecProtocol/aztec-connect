@@ -14,7 +14,6 @@ export class Rollup {
     public dataStartIndex: number,
     public proofs: Buffer[],
 
-    public rollupRoot: Buffer,
     public oldDataRoot: Buffer,
     public newDataRoot: Buffer,
     public oldDataPath: HashPath,
@@ -44,7 +43,6 @@ export class Rollup {
       numBuf,
       serializeBufferArrayToVector(this.proofs.map(p => serializeBufferToVector(p))),
 
-      this.rollupRoot,
       this.oldDataRoot,
       this.newDataRoot,
       this.oldDataPath.toBuffer(),
@@ -77,8 +75,6 @@ export class Rollup {
     let offset = 12;
     const proofs = deserializeArrayFromVector(deserializeBufferFromVector, buf, offset);
     offset += proofs.adv;
-    const rollupRoot = deserializeField(buf, offset);
-    offset += rollupRoot.adv;
     const oldDataRoot = deserializeField(buf, offset);
     offset += oldDataRoot.adv;
     const newDataRoot = deserializeField(buf, offset);
@@ -113,7 +109,6 @@ export class Rollup {
       rollupId,
       dataStartIndex,
       proofs.elem,
-      rollupRoot.elem,
       oldDataRoot.elem,
       newDataRoot.elem,
       oldDataPath.elem,
