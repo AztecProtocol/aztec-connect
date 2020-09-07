@@ -9,7 +9,7 @@ import { HttpProvider } from 'web3x/providers';
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
-const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8080' } = process.env;
+const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
 
 describe('end-to-end tests', () => {
   let provider: HttpProvider;

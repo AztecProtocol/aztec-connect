@@ -225,7 +225,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
         const newProvingKey = await joinSplitProver.getKey();
         await this.db.addKey('join-split-proving-key', newProvingKey);
       }
-      this.logInitMsgAndDebug(`Complete: ${new Date().getTime() - start}ms`);
+      debug(`complete: ${new Date().getTime() - start}ms`);
     }
   }
 
@@ -243,7 +243,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
         const newProvingKey = await accountProver.getKey();
         await this.db.addKey('account-proving-key', newProvingKey);
       }
-      this.logInitMsgAndDebug(`Complete: ${new Date().getTime() - start}ms`);
+      debug(`complete: ${new Date().getTime() - start}ms`);
     }
   }
 
@@ -541,7 +541,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     return this.userFactory.newKeyPair();
   }
 
-  public async createAccount(ethAddress: EthAddress, alias: string, newSigningPublicKey: GrumpkinAddress) {
+  public async createAccount(ethAddress: EthAddress, alias: string, newSigningPublicKey?: GrumpkinAddress) {
     const action = async () => {
       const userState = this.getUserState(ethAddress);
       if (!userState) {
@@ -553,7 +553,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
         userState,
         newSigningPublicKey,
         undefined,
-        publicKey,
+        newSigningPublicKey ? publicKey : undefined,
         alias,
       );
 

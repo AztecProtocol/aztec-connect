@@ -6,7 +6,7 @@ import { CoreSdkUserAsset } from './core_sdk_user_asset';
 export class CoreSdkUser implements SdkUser {
   constructor(private ethAddress: EthAddress, private sdk: CoreSdk) {}
 
-  createAccount(alias: string, newSigningPublicKey: GrumpkinAddress) {
+  createAccount(alias: string, newSigningPublicKey?: GrumpkinAddress) {
     return this.sdk.createAccount(this.ethAddress, alias, newSigningPublicKey);
   }
 

@@ -25,18 +25,18 @@ services:
       yarn start
       "
     ports:
-      - '8080:8080'
+      - '8081:8081'
 
   end-to-end:
     build: .
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/end-to-end:latest
     environment:
       ETHEREUM_HOST: http://ganache:8545
-      ROLLUP_HOST: http://falafel:8080
+      ROLLUP_HOST: http://falafel:8081
     depends_on:
       - falafel
     command: >
       sh -c "
-      while ! nc -z falafel 8080; do sleep 1; done;
+      while ! nc -z falafel 8081; do sleep 1; done;
       CI=true yarn -s test
       "

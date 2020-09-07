@@ -71,7 +71,7 @@ export interface SdkUserAsset {
 }
 
 export interface SdkUser {
-  createAccount(alias: string, newSigningPublicKey: GrumpkinAddress): Promise<TxHash>;
+  createAccount(alias: string, newSigningPublicKey?: GrumpkinAddress): Promise<TxHash>;
   addSigningKey(signingPublicKey: Buffer): Promise<void>;
   removeSigningKey(signingPublicKey: Buffer): Promise<void>;
   getUserData(): UserData;

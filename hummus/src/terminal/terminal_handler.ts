@@ -28,6 +28,7 @@ export class TerminalHandler {
     withdraw: this.withdraw,
     transfer: this.transfer,
     pubtransfer: this.publicTransfer,
+    register: this.registerAlias,
     balance: this.balance,
     copykey: this.copyKey,
     status: this.status,
@@ -214,6 +215,7 @@ export class TerminalHandler {
           'withdraw <amount>\n' +
           'transfer <to> <amount>\n' +
           'pubtransfer <to> <amount>\n' +
+          'register <alias>\n' +
           'balance\n' +
           'copykey\n' +
           'status\n' +
@@ -281,13 +283,14 @@ export class TerminalHandler {
   }
 
   private async transfer(addressOrAlias: string, value: string) {
+    const to = GrumpkinAddress.isAddress(addressOrAlias)
+      ? GrumpkinAddress.fromString(addressOrAlias)
+      : await this.app.getSdk().getAddressFromAlias(addressOrAlias);
+    if (!to) {
+      throw new Error(`unknown user: ${addressOrAlias}`);
+    }
     const userAsset = this.app.getUser().getAsset(AssetId.DAI);
     this.printQueue.put(`generating transfer proof...\n`);
-    // TODO: Lookup alias.
-    // const to = GrumpkinAddress.isAddress(addressOrAlias)
-    //   ? GrumpkinAddress.fromString(addressOrAlias)
-    //   : GrumpkinAddress.ZERO;
-    const to = GrumpkinAddress.fromString(addressOrAlias);
     await userAsset.transfer(userAsset.toErc20Units(value), to);
     this.printQueue.put(`transfer proof sent.\n`);
   }
@@ -298,6 +301,14 @@ export class TerminalHandler {
     const to = EthAddress.fromString(ethAddress);
     await userAsset.publicTransfer(userAsset.toErc20Units(value), to);
     this.printQueue.put(`transfer proof sent.\n`);
+  }
+
+  private async registerAlias(alias: string) {
+    this.printQueue.put(`generating registration proof...\n`);
+    const txHash = await this.app.getUser().createAccount(alias);
+    this.printQueue.put(`awaiting registration...\n`);
+    await this.app.getSdk().awaitSettlement(this.app.getUser().getUserData().ethAddress, txHash);
+    this.printQueue.put(`registration complete.\n`);
   }
 
   private async balance() {
