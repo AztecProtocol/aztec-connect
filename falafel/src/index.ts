@@ -69,7 +69,7 @@ async function main() {
   const server = new Server(serverConfig, blockchain, rollupDb);
   await server.start();
 
-  const app = appFactory(server, '/api');
+  const app = appFactory(server, '/api', connection);
 
   const httpServer = http.createServer(app.callback());
   httpServer.listen(PORT);

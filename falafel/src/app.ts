@@ -1,11 +1,17 @@
+import { ApolloServer } from 'apollo-server-koa';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
-import { Proof, ProofServerResponse, RollupServerResponse, TxServerResponse } from 'barretenberg/rollup_provider';
+import { RollupServerResponse, TxServerResponse, Proof, ProofServerResponse } from 'barretenberg/rollup_provider';
+import graphqlPlayground from 'graphql-playground-middleware-koa';
 import Koa from 'koa';
 import compress from 'koa-compress';
 import Router from 'koa-router';
 import { PromiseReadable } from 'promise-readable';
+import { buildSchemaSync } from 'type-graphql';
+import { Container } from 'typedi';
+import { Connection } from 'typeorm';
 import { RollupDao } from './entity/rollup';
 import { TxDao } from './entity/tx';
+import { BlockResolver, RollupResolver, TxResolver } from './resolver';
 import { Server } from './server';
 
 const cors = require('@koa/cors');
@@ -51,7 +57,7 @@ const toTxResponse = ({ txId, rollup, proofData, viewingKey1, viewingKey2, creat
   created: created.toISOString(),
 });
 
-export function appFactory(server: Server, prefix: string) {
+export function appFactory(server: Server, prefix: string, connection: Connection) {
   const router = new Router({ prefix });
 
   router.get('/', async (ctx: Koa.Context) => {
@@ -158,12 +164,22 @@ export function appFactory(server: Server, prefix: string) {
     ctx.body = await server.status();
   });
 
+  router.all('/grpahql', graphqlPlayground({ endpoint: '/grpahql' }));
+
   const app = new Koa();
   app.proxy = true;
   app.use(compress());
   app.use(cors());
   app.use(router.routes());
   app.use(router.allowedMethods());
+
+  Container.set({ id: 'connection', factory: () => connection });
+  const schema = buildSchemaSync({
+    resolvers: [BlockResolver, RollupResolver, TxResolver],
+    container: Container,
+  });
+  const appServer = new ApolloServer({ schema });
+  appServer.applyMiddleware({ app });
 
   return app;
 }
