@@ -1,5 +1,5 @@
 import { Max } from 'class-validator';
-import { Arg, Args, ArgsType, Field, InputType, Query, Resolver } from 'type-graphql';
+import { Arg, Args, ArgsType, Field, Int, InputType, Query, Resolver } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
@@ -112,5 +112,10 @@ export class BlockResolver {
         take: count,
       })
     ).map(toBlockType);
+  }
+
+  @Query(() => Int)
+  async totalBlocks() {
+    return this.blockRep.count();
   }
 }

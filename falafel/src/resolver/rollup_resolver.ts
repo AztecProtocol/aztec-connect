@@ -1,6 +1,6 @@
 import { RollupStatus } from 'barretenberg/rollup_provider';
 import { Max } from 'class-validator';
-import { Arg, Args, ArgsType, Field, FieldResolver, InputType, Query, Resolver, Root } from 'type-graphql';
+import { Arg, Args, ArgsType, Field, FieldResolver, Int, InputType, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
@@ -150,5 +150,13 @@ export class RollupResolver {
       where: { rollup: rollup.id },
     });
     return txs ? txs.map(toTxType) : [];
+  }
+
+  @Query(() => Int)
+  async totalRollups(@Arg('status', { nullable: true }) status?: RollupStatus) {
+    if (!status) {
+      return this.rollupRep.count();
+    }
+    return this.rollupRep.count({ status });
   }
 }

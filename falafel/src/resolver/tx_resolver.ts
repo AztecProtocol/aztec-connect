@@ -1,7 +1,8 @@
 import { Max } from 'class-validator';
-import { Arg, Args, ArgsType, Field, FieldResolver, InputType, Query, Resolver, Root } from 'type-graphql';
+import { Arg, Args, ArgsType, Field, FieldResolver, Int, InputType, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
-import { Connection, Repository } from 'typeorm';
+import { Connection, Repository, Not } from 'typeorm';
+import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { buildFilters, MAX_COUNT, Sort } from './filter';
 import { toRollupType } from './rollup_type';
@@ -47,11 +48,13 @@ export class TxsArgs {
   order_by?: TxOrderBy;
 }
 
-@Resolver(of => TxType)
+@Resolver(() => TxType)
 export class TxResolver {
+  private readonly rollupRep: Repository<RollupDao>;
   private readonly txRep: Repository<TxDao>;
 
   constructor(@Inject('connection') connection: Connection) {
+    this.rollupRep = connection.getRepository(RollupDao);
     this.txRep = connection.getRepository(TxDao);
   }
 
@@ -86,6 +89,19 @@ export class TxResolver {
         take: count,
       })
     ).map(toTxType);
+  }
+
+  @Query(() => Int)
+  async totalTxs() {
+    const pendingTxs = await this.totalPendingTxs();
+    const totalTxs = await this.txRep.count();
+    return totalTxs - pendingTxs;
+  }
+
+  @Query(() => Int)
+  async totalPendingTxs() {
+    const pendingRollups = await this.rollupRep.find({ where: { status: Not('SETTLED') }, relations: ['txs'] });
+    return pendingRollups.reduce((accum, { txs }) => accum + txs.length, 0);
   }
 
   @FieldResolver()
