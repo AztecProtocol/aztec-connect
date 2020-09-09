@@ -7,7 +7,7 @@ import { RollupType, toRollupType } from './rollup_type';
 export class TxType {
   @Field()
   @Length(32)
-  id!: string;
+  txId!: string;
 
   @Field(() => RollupType, { nullable: true })
   rollup?: RollupType;
@@ -29,7 +29,7 @@ export class TxType {
 }
 
 export const toTxType = ({ txId, rollup, proofData, viewingKey1, viewingKey2, created }: TxDao): TxType => ({
-  id: txId.toString('hex'),
+  txId: txId.toString('hex'),
   rollup: rollup ? toRollupType(rollup) : undefined,
   proofData: proofData.toString('hex'),
   viewingKey1: viewingKey1.toString('hex'),

@@ -11,7 +11,7 @@ import { TxType, toTxType } from './tx_type';
 @InputType()
 export class TxFilter {
   @Field({ nullable: true })
-  id?: string;
+  txId?: string;
 
   @Field({ nullable: true })
   txId_not?: string;
@@ -26,7 +26,7 @@ export class TxFilter {
 @InputType()
 class TxOrder {
   @Field({ nullable: true })
-  id?: Sort;
+  txId?: Sort;
 
   @Field({ nullable: true })
   created?: Sort;
@@ -59,8 +59,8 @@ export class TxResolver {
   }
 
   @Query(() => TxType, { nullable: true })
-  async tx(@Arg('id') id: string) {
-    const tx = await this.txRep.findOne({ txId: Buffer.from(id, 'hex') });
+  async tx(@Arg('txId') txId: string) {
+    const tx = await this.txRep.findOne({ txId: Buffer.from(txId, 'hex') });
     return tx ? toTxType(tx) : undefined;
   }
 
