@@ -3,7 +3,7 @@ import { Arg, Args, ArgsType, Field, Int, InputType, Query, Resolver } from 'typ
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
-import { buildFilters, MAX_COUNT, Sort } from './filter';
+import { buildFilters, MAX_COUNT, Sort, toFindConditions } from './filter';
 import { BlockType, toBlockType } from './block_type';
 
 @InputType()
@@ -74,12 +74,14 @@ export class BlockResolver {
     @Arg('id', () => Int, { nullable: true }) id?: number,
     @Arg('txHash', { nullable: true }) txHash?: string,
   ) {
-    const block =
-      id !== undefined
-        ? await this.blockRep.findOne(id)
-        : txHash
-        ? await this.blockRep.findOne({ txHash: Buffer.from(txHash, 'hex') })
-        : undefined;
+    const filters = buildFilters(
+      [
+        { field: 'id', type: 'Int' },
+        { field: 'txHash', type: 'Buffer' },
+      ],
+      { id, txHash },
+    );
+    const block = filters.length ? await this.blockRep.findOne(toFindConditions(filters)) : undefined;
     return block ? toBlockType(block) : undefined;
   }
 
@@ -96,13 +98,7 @@ export class BlockResolver {
     if (filters.length) {
       return (
         await this.blockRep.find({
-          where: filters.reduce(
-            (accum, { field, filter }) => ({
-              ...accum,
-              [field]: filter,
-            }),
-            {} as any,
-          ),
+          where: toFindConditions(filters),
           order: order_by,
           take: count,
         })

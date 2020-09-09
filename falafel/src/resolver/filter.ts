@@ -1,8 +1,24 @@
-import { Between, MoreThanOrEqual, LessThanOrEqual, Raw } from 'typeorm';
+import { Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 
 export const MAX_COUNT = 100;
 
 export type Sort = 'ASC' | 'DESC';
+
+export interface Filter {
+  field: string;
+  filter: any;
+}
+
+export type Where = { [key: string]: any };
+
+export const toFindConditions = (filters: Filter[]) =>
+  filters.reduce(
+    (accum, { field, filter }) => ({
+      ...accum,
+      [field]: filter,
+    }),
+    {} as any,
+  );
 
 const buildRangeFilter = (gte?: number | Date, lte?: number | Date) => {
   if (gte !== undefined && lte !== undefined) {
@@ -18,7 +34,7 @@ const buildRangeFilter = (gte?: number | Date, lte?: number | Date) => {
   }
 };
 
-export const buildIntFieldFilter = (field: string, where: any) => {
+export const buildIntFieldFilter = (field: string, where: Where) => {
   const value = where[field];
   if (value !== undefined) {
     return value;
@@ -33,7 +49,7 @@ export const buildIntFieldFilter = (field: string, where: any) => {
   return buildRangeFilter(gteValue, lteValue);
 };
 
-export const buildDateFieldFilter = (field: string, where: any) => {
+export const buildDateFieldFilter = (field: string, where: Where) => {
   const value = where[field];
   if (value !== undefined) {
     return value;
@@ -48,15 +64,13 @@ export const buildDateFieldFilter = (field: string, where: any) => {
   return buildRangeFilter(gteValue, lteValue);
 };
 
-export interface FilterInput {
+export interface FilterDef {
   field: string;
   type: 'Int' | 'Date' | 'Buffer' | 'String';
 }
 
-const notUndefined = <T>(value: T | undefined): value is T => value !== undefined;
-
-export const buildFilters = (inputs: FilterInput[], where: any) => {
-  return inputs
+export const buildFilters = (defs: FilterDef[], where: Where) => {
+  return defs
     .map(({ field, type }) => {
       switch (type) {
         case 'Int': {
@@ -92,5 +106,5 @@ export const buildFilters = (inputs: FilterInput[], where: any) => {
         }
       }
     })
-    .filter(notUndefined);
+    .filter(f => f && f.filter !== undefined) as Filter[];
 };

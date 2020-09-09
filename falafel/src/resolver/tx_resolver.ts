@@ -4,7 +4,7 @@ import { Inject } from 'typedi';
 import { Connection, Repository, Not } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
-import { buildFilters, MAX_COUNT, Sort } from './filter';
+import { buildFilters, MAX_COUNT, Sort, toFindConditions } from './filter';
 import { toRollupType } from './rollup_type';
 import { TxType, toTxType } from './tx_type';
 
@@ -58,13 +58,7 @@ export class TxResolver {
     if (filters.length) {
       return (
         await this.txRep.find({
-          where: filters.reduce(
-            (accum, { field, filter }) => ({
-              ...accum,
-              [field]: filter,
-            }),
-            {} as any,
-          ),
+          where: toFindConditions(filters),
           order: order_by,
           take: count,
         })

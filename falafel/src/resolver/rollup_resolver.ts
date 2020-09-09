@@ -5,7 +5,7 @@ import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
-import { buildFilters, MAX_COUNT, Sort } from './filter';
+import { buildFilters, MAX_COUNT, Sort, toFindConditions } from './filter';
 import { RollupType, toRollupType } from './rollup_type';
 import { toTxType } from './tx_type';
 
@@ -101,9 +101,23 @@ export class RollupResolver {
     this.rollupTxRep = connection.getRepository(TxDao);
   }
 
-  async rollup(@Arg('id', () => Int) id: number) {
-    const rollup = await this.rollupRep.findOne(id);
   @Query(() => RollupType, { nullable: true })
+  async rollup(
+    @Arg('id', () => Int, { nullable: true }) id?: number,
+    @Arg('dataRoot', { nullable: true }) dataRoot?: string,
+    @Arg('ethBlock', () => Int, { nullable: true }) ethBlock?: number,
+    @Arg('ethTxHash', { nullable: true }) ethTxHash?: string,
+  ) {
+    const filters = buildFilters(
+      [
+        { field: 'id', type: 'Int' },
+        { field: 'dataRoot', type: 'Buffer' },
+        { field: 'ethBlock', type: 'Int' },
+        { field: 'ethTxHash', type: 'Buffer' },
+      ],
+      { id, dataRoot, ethBlock, ethTxHash },
+    );
+    const rollup = filters.length ? await this.rollupRep.findOne(toFindConditions(filters)) : undefined;
     return rollup ? toRollupType(rollup) : undefined;
   }
 
@@ -123,13 +137,7 @@ export class RollupResolver {
     if (filters.length) {
       return (
         await this.rollupRep.find({
-          where: filters.reduce(
-            (accum, { field, filter }) => ({
-              ...accum,
-              [field]: filter,
-            }),
-            {} as any,
-          ),
+          where: toFindConditions(filters),
           order: order_by,
           take: count,
         })
