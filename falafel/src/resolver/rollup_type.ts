@@ -1,11 +1,11 @@
 import { RollupStatus } from 'barretenberg/rollup_provider';
-import { Field, ObjectType } from 'type-graphql';
+import { Field, Int, ObjectType } from 'type-graphql';
 import { RollupDao } from '../entity/rollup';
 import { TxType, toTxType } from './tx_type';
 
 @ObjectType()
 export class RollupType {
-  @Field()
+  @Field(() => Int)
   id!: number;
 
   @Field()
@@ -17,7 +17,7 @@ export class RollupType {
   @Field(() => [TxType!])
   txs!: TxType[];
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   ethBlock?: number;
 
   @Field({ nullable: true })

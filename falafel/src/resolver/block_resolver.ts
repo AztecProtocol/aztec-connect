@@ -8,19 +8,19 @@ import { BlockType, toBlockType } from './block_type';
 
 @InputType()
 export class BlockFilter {
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   id?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   id_gt?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   id_gte?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   id_lt?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   id_lte?: number;
 
   @Field({ nullable: true })
@@ -53,7 +53,7 @@ export class BlocksArgs {
   @Field(() => BlockFilter, { nullable: true })
   where?: BlockFilter;
 
-  @Field({ defaultValue: MAX_COUNT })
+  @Field(() => Int, { defaultValue: MAX_COUNT })
   @Max(MAX_COUNT)
   count?: number;
 
@@ -70,7 +70,10 @@ export class BlockResolver {
   }
 
   @Query(() => BlockType)
-  async block(@Arg('id', { nullable: true }) id?: number, @Arg('txHash', { nullable: true }) txHash?: string) {
+  async block(
+    @Arg('id', () => Int, { nullable: true }) id?: number,
+    @Arg('txHash', { nullable: true }) txHash?: string,
+  ) {
     const block =
       id !== undefined
         ? await this.blockRep.findOne(id)

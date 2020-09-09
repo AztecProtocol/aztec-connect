@@ -1,15 +1,15 @@
-import { Field, ObjectType } from 'type-graphql';
+import { Field, Int, ObjectType } from 'type-graphql';
 import { BlockDao } from '../entity/block';
 
 @ObjectType()
 export class BlockType {
-  @Field()
+  @Field(() => Int)
   id!: number;
 
   @Field({ nullable: true })
   txHash!: string;
 
-  @Field()
+  @Field(() => Int)
   rollupSize!: number;
 
   @Field()

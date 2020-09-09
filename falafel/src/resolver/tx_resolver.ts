@@ -12,18 +12,6 @@ import { TxType, toTxType } from './tx_type';
 export class TxFilter {
   @Field({ nullable: true })
   id?: string;
-
-  @Field({ nullable: true })
-  id_gt?: number;
-
-  @Field({ nullable: true })
-  id_gte?: number;
-
-  @Field({ nullable: true })
-  id_lt?: number;
-
-  @Field({ nullable: true })
-  id_lte?: number;
 }
 
 @InputType()
@@ -40,7 +28,7 @@ export class TxsArgs {
   @Field(() => TxFilter, { nullable: true })
   where?: TxFilter;
 
-  @Field({ defaultValue: MAX_COUNT })
+  @Field(() => Int, { defaultValue: MAX_COUNT })
   @Max(MAX_COUNT)
   count?: number;
 
@@ -66,7 +54,7 @@ export class TxResolver {
 
   @Query(() => [TxType])
   async txs(@Args() { where, count, order_by }: TxsArgs) {
-    const filters = buildFilters([{ field: 'id', type: 'Int' }], where || {});
+    const filters = buildFilters([{ field: 'id', type: 'String' }], where || {});
     if (filters.length) {
       return (
         await this.txRep.find({

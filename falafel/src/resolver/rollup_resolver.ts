@@ -11,34 +11,34 @@ import { toTxType } from './tx_type';
 
 @InputType()
 export class RollupFilter {
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   id?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   id_gt?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   id_gte?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   id_lt?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   id_lte?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   ethBlock?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   ethBlock_gt?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   ethBlock_gte?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   ethBlock_lt?: number;
 
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   ethBlock_lte?: number;
 
   @Field({ nullable: true })
@@ -83,7 +83,7 @@ export class RollupsArgs {
   @Field(() => RollupFilter, { nullable: true })
   where?: RollupFilter;
 
-  @Field({ defaultValue: MAX_COUNT })
+  @Field(() => Int, { defaultValue: MAX_COUNT })
   @Max(MAX_COUNT)
   count?: number;
 
@@ -102,7 +102,7 @@ export class RollupResolver {
   }
 
   @Query(() => RollupType)
-  async rollup(@Arg('id') id: number) {
+  async rollup(@Arg('id', () => Int) id: number) {
     const rollup = await this.rollupRep.findOne(id);
     return rollup ? toRollupType(rollup) : undefined;
   }
