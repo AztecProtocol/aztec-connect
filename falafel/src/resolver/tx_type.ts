@@ -9,7 +9,7 @@ export class TxType {
   @Length(32)
   id!: string;
 
-  @Field(() => RollupType)
+  @Field(() => RollupType, { nullable: true })
   rollup?: RollupType;
 
   @Field()

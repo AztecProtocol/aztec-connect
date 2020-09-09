@@ -106,9 +106,10 @@ export class TxResolver {
     return pendingRollups.reduce((accum, { txs }) => accum + txs.length, 0);
   }
 
-  @FieldResolver()
+  @FieldResolver({ nullable: true })
   async rollup(@Root() tx: TxType) {
-    const { rollup } = (await this.txRep.findOne({ txId: Buffer.from(tx.id, 'hex') }, { relations: ['rollup'] })) || {};
+    const { rollup } =
+      (await this.txRep.findOne({ txId: Buffer.from(tx.txId, 'hex') }, { relations: ['rollup'] })) || {};
     return rollup ? toRollupType(rollup) : undefined;
   }
 }
