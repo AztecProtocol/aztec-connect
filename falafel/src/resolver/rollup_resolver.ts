@@ -67,7 +67,7 @@ export class RollupFilter {
 }
 
 @InputType()
-class RollupOrderBy {
+class RollupOrder {
   @Field({ nullable: true })
   id?: Sort;
 
@@ -85,10 +85,13 @@ export class RollupsArgs {
 
   @Field(() => Int, { defaultValue: MAX_COUNT })
   @Max(MAX_COUNT)
-  count?: number;
+  take?: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  skip?: number;
 
   @Field({ defaultValue: { id: 'DESC' } })
-  order_by?: RollupOrderBy;
+  order?: RollupOrder;
 }
 
 @Resolver(() => RollupType)
@@ -122,7 +125,7 @@ export class RollupResolver {
   }
 
   @Query(() => [RollupType!])
-  async rollups(@Args() { where, count, order_by }: RollupsArgs) {
+  async rollups(@Args() { where, take, skip, order }: RollupsArgs) {
     const filters = buildFilters(
       [
         { field: 'id', type: 'Int' },
@@ -138,16 +141,18 @@ export class RollupResolver {
       return (
         await this.rollupRep.find({
           where: toFindConditions(filters),
-          order: order_by,
-          take: count,
+          order,
+          skip,
+          take,
         })
       ).map(toRollupType);
     }
 
     return (
       await this.rollupRep.find({
-        order: order_by,
-        take: count,
+        order,
+        skip,
+        take,
       })
     ).map(toRollupType);
   }

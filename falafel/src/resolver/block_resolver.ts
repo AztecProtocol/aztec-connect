@@ -40,7 +40,7 @@ export class BlockFilter {
 }
 
 @InputType()
-class BlockOrderBy {
+class BlockOrder {
   @Field({ nullable: true })
   id?: Sort;
 
@@ -55,10 +55,13 @@ export class BlocksArgs {
 
   @Field(() => Int, { defaultValue: MAX_COUNT })
   @Max(MAX_COUNT)
-  count?: number;
+  take?: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  skip?: number;
 
   @Field({ defaultValue: { id: 'DESC' } })
-  order_by?: BlockOrderBy;
+  order?: BlockOrder;
 }
 
 @Resolver(() => BlockType)
@@ -86,7 +89,7 @@ export class BlockResolver {
   }
 
   @Query(() => [BlockType!])
-  async blocks(@Args() { where, count, order_by }: BlocksArgs) {
+  async blocks(@Args() { where, take, skip, order }: BlocksArgs) {
     const filters = buildFilters(
       [
         { field: 'id', type: 'Int' },
@@ -99,16 +102,18 @@ export class BlockResolver {
       return (
         await this.blockRep.find({
           where: toFindConditions(filters),
-          order: order_by,
-          take: count,
+          order,
+          take,
+          skip,
         })
       ).map(toBlockType);
     }
 
     return (
       await this.blockRep.find({
-        order: order_by,
-        take: count,
+        order,
+        take,
+        skip,
       })
     ).map(toBlockType);
   }

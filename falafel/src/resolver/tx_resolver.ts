@@ -15,7 +15,7 @@ export class TxFilter {
 }
 
 @InputType()
-class TxOrderBy {
+class TxOrder {
   @Field({ nullable: true })
   id?: Sort;
 
@@ -30,10 +30,13 @@ export class TxsArgs {
 
   @Field(() => Int, { defaultValue: MAX_COUNT })
   @Max(MAX_COUNT)
-  count?: number;
+  take?: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  skip?: number;
 
   @Field({ defaultValue: { id: 'DESC' } })
-  order_by?: TxOrderBy;
+  order?: TxOrder;
 }
 
 @Resolver(() => TxType)
@@ -53,22 +56,24 @@ export class TxResolver {
   }
 
   @Query(() => [TxType!])
-  async txs(@Args() { where, count, order_by }: TxsArgs) {
+  async txs(@Args() { where, take, skip, order }: TxsArgs) {
     const filters = buildFilters([{ field: 'id', type: 'String' }], where || {});
     if (filters.length) {
       return (
         await this.txRep.find({
           where: toFindConditions(filters),
-          order: order_by,
-          take: count,
+          order,
+          take,
+          skip,
         })
       ).map(toTxType);
     }
 
     return (
       await this.txRep.find({
-        order: order_by,
-        take: count,
+        order,
+        take,
+        skip,
       })
     ).map(toTxType);
   }
