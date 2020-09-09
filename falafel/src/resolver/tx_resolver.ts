@@ -46,13 +46,13 @@ export class TxResolver {
     this.txRep = connection.getRepository(TxDao);
   }
 
-  @Query(() => TxType)
+  @Query(() => TxType, { nullable: true })
   async tx(@Arg('id') id: string) {
     const tx = await this.txRep.findOne({ txId: Buffer.from(id, 'hex') });
     return tx ? toTxType(tx) : undefined;
   }
 
-  @Query(() => [TxType])
+  @Query(() => [TxType!])
   async txs(@Args() { where, count, order_by }: TxsArgs) {
     const filters = buildFilters([{ field: 'id', type: 'String' }], where || {});
     if (filters.length) {

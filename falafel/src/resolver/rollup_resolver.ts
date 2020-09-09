@@ -101,13 +101,13 @@ export class RollupResolver {
     this.rollupTxRep = connection.getRepository(TxDao);
   }
 
-  @Query(() => RollupType)
   async rollup(@Arg('id', () => Int) id: number) {
     const rollup = await this.rollupRep.findOne(id);
+  @Query(() => RollupType, { nullable: true })
     return rollup ? toRollupType(rollup) : undefined;
   }
 
-  @Query(() => [RollupType])
+  @Query(() => [RollupType!])
   async rollups(@Args() { where, count, order_by }: RollupsArgs) {
     const filters = buildFilters(
       [

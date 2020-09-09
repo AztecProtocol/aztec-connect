@@ -69,7 +69,7 @@ export class BlockResolver {
     this.blockRep = connection.getRepository(BlockDao);
   }
 
-  @Query(() => BlockType)
+  @Query(() => BlockType, { nullable: true })
   async block(
     @Arg('id', () => Int, { nullable: true }) id?: number,
     @Arg('txHash', { nullable: true }) txHash?: string,
@@ -83,7 +83,7 @@ export class BlockResolver {
     return block ? toBlockType(block) : undefined;
   }
 
-  @Query(() => [BlockType])
+  @Query(() => [BlockType!])
   async blocks(@Args() { where, count, order_by }: BlocksArgs) {
     const filters = buildFilters(
       [
