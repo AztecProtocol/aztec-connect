@@ -12,6 +12,15 @@ import { TxType, toTxType } from './tx_type';
 export class TxFilter {
   @Field({ nullable: true })
   id?: string;
+
+  @Field({ nullable: true })
+  txId_not?: string;
+
+  @Field(() => Int, { nullable: true })
+  rollup?: number;
+
+  @Field(() => Int, { nullable: true })
+  rollup_not?: number;
 }
 
 @InputType()
@@ -57,7 +66,13 @@ export class TxResolver {
 
   @Query(() => [TxType!])
   async txs(@Args() { where, take, skip, order }: TxsArgs) {
-    const filters = buildFilters([{ field: 'id', type: 'String' }], where || {});
+    const filters = buildFilters(
+      [
+        { field: 'txId', type: 'String' },
+        { field: 'rollup', type: 'Int' },
+      ],
+      where || {},
+    );
     if (filters.length) {
       return (
         await this.txRep.find({

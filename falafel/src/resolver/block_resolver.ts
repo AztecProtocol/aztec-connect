@@ -23,8 +23,14 @@ export class BlockFilter {
   @Field(() => Int, { nullable: true })
   id_lte?: number;
 
+  @Field(() => Int, { nullable: true })
+  id_not?: number;
+
   @Field({ nullable: true })
   txHash?: string;
+
+  @Field({ nullable: true })
+  txHash_not?: string;
 
   @Field({ nullable: true })
   created_gt?: Date;
@@ -37,6 +43,9 @@ export class BlockFilter {
 
   @Field({ nullable: true })
   created_lte?: Date;
+
+  @Field({ nullable: true })
+  created_not?: Date;
 }
 
 @InputType()

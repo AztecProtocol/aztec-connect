@@ -27,6 +27,9 @@ export class RollupFilter {
   id_lte?: number;
 
   @Field(() => Int, { nullable: true })
+  id_not?: number;
+
+  @Field(() => Int, { nullable: true })
   ethBlock?: number;
 
   @Field(() => Int, { nullable: true })
@@ -41,14 +44,26 @@ export class RollupFilter {
   @Field(() => Int, { nullable: true })
   ethBlock_lte?: number;
 
+  @Field(() => Int, { nullable: true })
+  ethBlock_not?: number;
+
   @Field({ nullable: true })
   dataRoot?: string;
+
+  @Field({ nullable: true })
+  dataRoot_not?: string;
 
   @Field({ nullable: true })
   ethTxHash?: string;
 
   @Field({ nullable: true })
+  ethTxHash_not?: string;
+
+  @Field({ nullable: true })
   status?: RollupStatus;
+
+  @Field({ nullable: true })
+  status_not?: RollupStatus;
 
   @Field({ nullable: true })
   created?: Date;
@@ -64,6 +79,9 @@ export class RollupFilter {
 
   @Field({ nullable: true })
   created_lte?: Date;
+
+  @Field({ nullable: true })
+  created_not?: Date;
 }
 
 @InputType()
