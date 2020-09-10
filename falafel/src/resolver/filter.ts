@@ -116,7 +116,7 @@ export const buildFilters = (defs: FilterDef[], where: Where) => {
   return defs
     .map(({ field, type }) => {
       const filter = fieldFilterMapping[type](field, where);
-      return filter
+      return filter !== undefined
         ? {
             field,
             filter,
