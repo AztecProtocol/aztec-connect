@@ -1,7 +1,7 @@
 import { Length } from 'class-validator';
 import { Field, ObjectType } from 'type-graphql';
 import { TxDao } from '../entity/tx';
-import { RollupType, toRollupType } from './rollup_type';
+import { RollupType, fromRollupDao } from './rollup_type';
 
 @ObjectType()
 export class TxType {
@@ -30,7 +30,7 @@ export class TxType {
 
 export const toTxType = ({ txId, rollup, proofData, viewingKey1, viewingKey2, created }: TxDao): TxType => ({
   txId: txId.toString('hex'),
-  rollup: rollup ? toRollupType(rollup) : undefined,
+  rollup: rollup ? (fromRollupDao(rollup) as RollupType) : undefined,
   proofData: proofData.toString('hex'),
   viewingKey1: viewingKey1.toString('hex'),
   viewingKey2: viewingKey2.toString('hex'),

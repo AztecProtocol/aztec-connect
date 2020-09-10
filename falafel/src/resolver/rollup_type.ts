@@ -8,11 +8,29 @@ export class RollupType {
   @Field(() => Int)
   id!: number;
 
+  @Field({ nullable: true })
+  proofData?: string;
+
   @Field()
   dataRoot!: string;
 
   @Field({ nullable: true })
-  proofData?: string;
+  oldDataRoot?: string;
+
+  @Field({ nullable: true })
+  nullifierRoot?: string;
+
+  @Field({ nullable: true })
+  oldNullifierRoot?: string;
+
+  @Field({ nullable: true })
+  dataRootsRoot?: string;
+
+  @Field({ nullable: true })
+  oldDataRootsRoot?: string;
+
+  @Field(() => Int)
+  numTxs!: number;
 
   @Field(() => [TxType!])
   txs!: TxType[];
@@ -30,20 +48,10 @@ export class RollupType {
   created!: Date;
 }
 
-export const toRollupType = ({
+export const fromRollupDao = ({ id, dataRoot, proofData, ethBlock, ethTxHash, status, created }: RollupDao) => ({
   id,
-  dataRoot,
-  proofData,
-  txs,
-  ethBlock,
-  ethTxHash,
-  status,
-  created,
-}: RollupDao): RollupType => ({
-  id,
-  dataRoot: dataRoot.toString('hex'),
   proofData: proofData ? proofData.toString('hex') : undefined,
-  txs: txs ? txs.map(toTxType) : [],
+  dataRoot: dataRoot.toString('hex'),
   ethBlock,
   ethTxHash: ethTxHash ? ethTxHash.toString('hex') : undefined,
   status,

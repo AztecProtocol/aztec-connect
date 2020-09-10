@@ -5,7 +5,7 @@ import { Connection, Repository, Not } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { buildFilters, MAX_COUNT, Sort, toFindConditions } from './filter';
-import { toRollupType } from './rollup_type';
+import { fromRollupDao } from './rollup_type';
 import { TxType, toTxType } from './tx_type';
 
 @InputType()
@@ -110,6 +110,6 @@ export class TxResolver {
   async rollup(@Root() tx: TxType) {
     const { rollup } =
       (await this.txRep.findOne({ txId: Buffer.from(tx.txId, 'hex') }, { relations: ['rollup'] })) || {};
-    return rollup ? toRollupType(rollup) : undefined;
+    return rollup ? fromRollupDao(rollup) : undefined;
   }
 }

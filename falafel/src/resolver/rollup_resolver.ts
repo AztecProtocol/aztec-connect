@@ -6,7 +6,7 @@ import { Connection, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { buildFilters, MAX_COUNT, Sort, toFindConditions } from './filter';
-import { RollupType, toRollupType } from './rollup_type';
+import { RollupType, fromRollupDao } from './rollup_type';
 import { toTxType } from './tx_type';
 
 @InputType()
@@ -139,7 +139,7 @@ export class RollupResolver {
       { id, dataRoot, ethBlock, ethTxHash },
     );
     const rollup = filters.length ? await this.rollupRep.findOne(toFindConditions(filters)) : undefined;
-    return rollup ? toRollupType(rollup) : undefined;
+    return rollup ? fromRollupDao(rollup) : undefined;
   }
 
   @Query(() => [RollupType!])
@@ -163,7 +163,7 @@ export class RollupResolver {
           skip,
           take,
         })
-      ).map(toRollupType);
+      ).map(fromRollupDao);
     }
 
     return (
@@ -172,7 +172,45 @@ export class RollupResolver {
         skip,
         take,
       })
-    ).map(toRollupType);
+    ).map(fromRollupDao);
+  }
+
+  @FieldResolver()
+  async oldDataRoot(@Root() { proofData }: RollupType) {
+    return proofData ? proofData.slice(3 * 32 * 2, (3 * 32 + 32) * 2) : undefined;
+  }
+
+  @FieldResolver()
+  async oldNullifierRoot(@Root() { proofData }: RollupType) {
+    return proofData ? proofData.slice(5 * 32 * 2, (5 * 32 + 32) * 2) : undefined;
+  }
+
+  @FieldResolver()
+  async nullifierRoot(@Root() { proofData }: RollupType) {
+    return proofData ? proofData.slice(6 * 32 * 2, (6 * 32 + 32) * 2) : undefined;
+  }
+
+  @FieldResolver()
+  async oldDataRootsRoot(@Root() { proofData }: RollupType) {
+    return proofData ? proofData.slice(7 * 32 * 2, (7 * 32 + 32) * 2) : undefined;
+  }
+
+  @FieldResolver()
+  async dataRootsRoot(@Root() { proofData }: RollupType) {
+    return proofData ? proofData.slice(8 * 32 * 2, (8 * 32 + 32) * 2) : undefined;
+  }
+
+  @FieldResolver(() => Int)
+  async numTxs(@Root() rollup: RollupType) {
+    const { proofData } = rollup;
+    if (proofData) {
+      return Buffer.from(proofData.slice((9 * 32 + 28) * 2, 10 * 32 * 2), 'hex').readUInt32BE(0);
+    }
+
+    const txs = await this.rollupTxRep.find({
+      where: { rollup: rollup.id },
+    });
+    return txs.length;
   }
 
   @FieldResolver()
@@ -180,7 +218,7 @@ export class RollupResolver {
     const txs = await this.rollupTxRep.find({
       where: { rollup: rollup.id },
     });
-    return txs ? txs.map(toTxType) : [];
+    return txs.map(toTxType);
   }
 
   @Query(() => Int)
