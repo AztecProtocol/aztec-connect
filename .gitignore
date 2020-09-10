@@ -7,5 +7,4 @@ node_modules
 .env
 yarn.lock
 *.log
-world_state.db*
 *.swp

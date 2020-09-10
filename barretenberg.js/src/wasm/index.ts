@@ -76,11 +76,14 @@ export class BarretenbergWasm extends EventEmitter {
     return this.instance.exports;
   }
 
+  /**
+   * When returning values from the WASM, use >>> operator to convert signed representation to unsigned representation.
+   */
   public call(name: string, ...args: any) {
     if (!this.exports()[name]) {
       throw new Error(`WASM function ${name} not found.`);
     }
-    return this.exports()[name](...args);
+    return this.exports()[name](...args) >>> 0;
   }
 
   public getMemory() {

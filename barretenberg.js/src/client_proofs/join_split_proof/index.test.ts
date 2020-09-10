@@ -155,10 +155,6 @@ describe('join_split_proof', () => {
 
       debug('creating proof...');
       const start = new Date().getTime();
-      // barretenberg is generating the nullifier for the account notes
-      // pass it tx object, it returns accountNullifier in the proof buffer.
-      // proof buffer is then deserialised back to a javascript object,
-      // with the nullifier included
       const proof = await joinSplitProver.createJoinSplitProof(tx);
       debug(`created proof: ${new Date().getTime() - start}ms`);
       debug(`proof size: ${proof.length}`);

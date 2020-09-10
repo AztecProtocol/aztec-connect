@@ -12,8 +12,6 @@
     "test": "yarn buidler test",
     "test:ganache": "yarn buidler --network ganache test",
     "lint:sol": "solhint contracts/**/*.sol",
-    "deploy:ropsten": "buidler run --network ropsten src/deploy/index.ts",
-    "deploy:ganache": "buidler run --network ganache src/deploy/index.ts",
     "docs": "solidity-docgen -i ./contracts -o ./docs"
   },
   "bin": {
@@ -24,6 +22,7 @@
     "bigint-buffer": "^1.1.5",
     "debug": "^4.1.1",
     "dotenv": "^8.2.0",
+    "ethers": "5.0.3",
     "typescript": "^3.5.3"
   },
   "devDependencies": {
@@ -40,7 +39,6 @@
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",
     "ethereum-waffle": "3.0.0",
-    "ethers": "^5.0.7",
     "sinon": "^9.0.2",
     "solidity-docgen": "^0.5.3",
     "ts-node": "^8.9.1",

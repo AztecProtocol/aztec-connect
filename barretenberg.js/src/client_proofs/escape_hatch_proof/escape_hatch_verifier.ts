@@ -9,7 +9,6 @@ export class EscapeHatchVerifier {
 
   public async computeKey(pippenger: SinglePippenger, g2Data: Uint8Array) {
     this.worker = pippenger.getWorker();
-    debug('escape hatch verifier, computing key: ');
     await this.worker.transferToHeap(g2Data, 0);
     debug('escape hatch verifier, starting key compute');
     await this.worker.call('escape_hatch__init_verification_key', pippenger.getPointer(), 0);

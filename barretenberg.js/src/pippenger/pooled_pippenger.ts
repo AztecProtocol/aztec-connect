@@ -11,7 +11,6 @@ export class PooledPippenger implements Pippenger {
   public async init(crsData: Uint8Array, pool: WorkerPool) {
     const start = new Date().getTime();
     debug(`initializing: ${new Date().getTime() - start}ms`);
-    debug('crs data length: ', crsData.length);
     this.pool = await Promise.all(
       pool.workers.map(async w => {
         const p = new SinglePippenger(w);

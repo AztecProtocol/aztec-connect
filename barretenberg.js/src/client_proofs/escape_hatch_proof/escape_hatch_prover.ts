@@ -6,15 +6,20 @@ import { Note } from '../note';
 import { Signature } from '../signature';
 import { BarretenbergWasm } from '../../wasm';
 import createDebug from 'debug';
+import { SinglePippenger } from '../../pippenger';
+import { Crs } from '../../crs';
 
 const debug = createDebug('bb:escape hatch proof construct');
 
 export class EscapeHatchProver {
   constructor(private wasm: BarretenbergWasm, private prover: Prover) {}
 
-  public async computeKey() {
+  public async computeKey(crs: Crs) {
     const worker = this.prover.getWorker();
-    await worker.call('escape_hatch__init_proving_key');
+    const pippenger = new SinglePippenger(worker);
+    await pippenger.init(crs.getData());
+    await worker.transferToHeap(crs.getG2Data(), 0);
+    await worker.call('escape_hatch__init_proving_key', pippenger.getPointer(), 0);
   }
 
   public async loadKey(keyBuf: Uint8Array) {
@@ -61,14 +66,26 @@ export class EscapeHatchProver {
   public async createEscapeHatchProof(tx: EscapeHatchTx) {
     const worker = this.prover.getWorker();
     const buf = tx.toBuffer();
-    debug('buf: ', buf);
     const mem = await worker.call('bbmalloc', buf.length);
     await worker.transferToHeap(buf, mem);
-    const proverPtr = await worker.call('escape_hatch__new_prover', mem, buf.length);
+    const proverPtr = await worker.call('escape_hatch__new_prover', mem);
     await worker.call('bbfree', mem);
     const proof = await this.prover.createProof(proverPtr);
     await worker.call('escape_hatch__delete_prover', proverPtr);
     return proof;
+  }
+
+  public async createEscapeHatchProofNative(tx: EscapeHatchTx) {
+    const worker = this.prover.getWorker();
+    const buf = tx.toBuffer();
+    const mem = await worker.call('bbmalloc', buf.length);
+    await worker.transferToHeap(buf, mem);
+    const proofLen = await worker.call('escape_hatch__create_escape_hatch_proof', mem, 0);
+    await worker.call('bbfree', mem);
+    const proofPtr = Buffer.from(await worker.sliceMemory(0, 4)).readUInt32LE(0);
+    const proof = await worker.sliceMemory(proofPtr, proofPtr + proofLen);
+    await worker.call('bbfree', proofPtr);
+    return Buffer.from(proof);
   }
 
   public getProver() {

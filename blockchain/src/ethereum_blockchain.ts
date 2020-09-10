@@ -3,7 +3,7 @@ import { Block } from 'barretenberg/block_source';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { toBigIntBE } from 'bigint-buffer';
 import createDebug from 'debug';
-import { Contract, ethers, Event, Signer, EventFilter } from 'ethers';
+import { Contract, ethers, Event, EventFilter, Signer } from 'ethers';
 import { EventEmitter } from 'events';
 import { abi as ERC20ABI } from './artifacts/ERC20Mintable.json';
 import { abi as RollupABI } from './artifacts/RollupProcessor.json';
@@ -32,7 +32,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Start polling for RollupProcessed events.
    * All historical blocks will have been emitted before this function returns.
    */
-
   public async start(fromBlock: number = 0) {
     console.log(`Ethereum blockchain starting from block: ${fromBlock}`);
     this.erc20Address = await this.rollupProcessor.linkedToken();
@@ -128,25 +127,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return Buffer.concat(paddedSignatures);
   }
 
-  private async getLogs(filter: EventFilter, from: number, to: number) {
-    let logs: any[] = [];
-    try {
-      logs = await this.rollupProcessor.queryFilter(filter, from, to);
-    } catch ({ code }) {
-      if (code === 32005) {
-        logs = [...(await this.getLogs(filter, from, to / 2)), ...(await this.getLogs(filter, to / 2 + 1, to))];
-      }
-    }
-    return logs;
-  }
-
   /**
    * Get all created rollup blocks from block number 'from'.
    */
-  public async getBlocks(from: number, to?: number) {
+  public async getBlocks(from: number) {
     const filter = this.rollupProcessor.filters.RollupProcessed();
-    const blockNumber = await this.config.signer.provider!.getBlockNumber();
-    const rollupEvents = await this.rollupProcessor.queryFilter(filter, from, to || blockNumber);
+    const rollupEvents = await this.rollupProcessor.queryFilter(filter, from);
     const txs = await Promise.all(rollupEvents.map(event => event.getTransaction()));
     // When using infura, we get an inconsistent view of the chain, hence filtering pending blocks. Great service.
     return txs.filter(tx => tx.blockNumber).map(tx => this.createRollupBlock(tx));
