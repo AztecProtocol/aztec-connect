@@ -116,6 +116,18 @@ jobs:
           working_directory: falafel
           command: build falafel:latest
 
+  sriracha:
+    machine:
+      image: ubuntu-1604:201903-01
+    resource_class: large
+    steps:
+      - *setup_env
+      - checkout
+      - run:
+          name: 'Build and test'
+          working_directory: sriracha
+          command: build sriracha:latest
+
   sdk:
     docker:
       - image: aztecprotocol/build-image
@@ -152,6 +164,10 @@ jobs:
           working_directory: end-to-end
           command: |
             if check_rebuild; then
+              sudo fallocate -l 4G /swapfile
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
               build end-to-end:latest
               docker tag $ECR_URL/end-to-end:cache-$CIRCLE_SHA1-latest $ECR_DEPLOY_URL/end-to-end:latest
               docker-compose up --exit-code-from end-to-end
@@ -215,6 +231,9 @@ workflows:
       - falafel:
           requires:
             - x86_64-linux-clang
+            - blockchain
+      - sriracha:
+          requires:
             - blockchain
       - sdk:
           requires:

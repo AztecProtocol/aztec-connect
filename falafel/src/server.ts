@@ -1,7 +1,8 @@
-import { JoinSplitProof, JoinSplitVerifier, nullifierBufferToIndex } from 'barretenberg/client_proofs/join_split_proof';
 import { AccountVerifier } from 'barretenberg/client_proofs/account_proof';
+import { JoinSplitProof, JoinSplitVerifier, nullifierBufferToIndex } from 'barretenberg/client_proofs/join_split_proof';
 import { Crs } from 'barretenberg/crs';
 import { MemoryFifo } from 'barretenberg/fifo';
+import { readFileAsync } from 'barretenberg/fs_async';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Proof } from 'barretenberg/rollup_provider';
@@ -13,7 +14,6 @@ import { Blockchain } from 'blockchain';
 import { Duration } from 'moment';
 import { RollupDao } from './entity/rollup';
 import { TxDao } from './entity/tx';
-import { readFileAsync } from './fs_async';
 import { ProofGenerator } from './proof_generator';
 import { Rollup } from './rollup';
 import { innerProofDataToTxDao, RollupDb } from './rollup_db';
