@@ -3,8 +3,10 @@ import { Max } from 'class-validator';
 import { Arg, Args, ArgsType, Field, FieldResolver, Int, InputType, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
+import { BlockDao } from '../entity/block';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
+import { fromBlockDao } from './block_type';
 import { buildFilters, MAX_COUNT, Sort, toFindConditions } from './filter';
 import { RollupType, fromRollupDao } from './rollup_type';
 import { fromTxDao } from './tx_type';
@@ -116,10 +118,12 @@ export class RollupsArgs {
 export class RollupResolver {
   private readonly rollupRep: Repository<RollupDao>;
   private readonly rollupTxRep: Repository<TxDao>;
+  private readonly blockRep: Repository<BlockDao>;
 
   constructor(@Inject('connection') connection: Connection) {
     this.rollupRep = connection.getRepository(RollupDao);
     this.rollupTxRep = connection.getRepository(TxDao);
+    this.blockRep = connection.getRepository(BlockDao);
   }
 
   @Query(() => RollupType, { nullable: true })
@@ -219,6 +223,16 @@ export class RollupResolver {
       where: { rollup: rollup.id },
     });
     return txs.map(fromTxDao);
+  }
+
+  @FieldResolver()
+  async block(@Root() { ethBlock }: RollupType) {
+    const block = ethBlock
+      ? await this.blockRep.findOne({
+          where: { id: ethBlock },
+        })
+      : undefined;
+    return block ? fromBlockDao(block) : undefined;
   }
 
   @Query(() => Int)

@@ -22,14 +22,7 @@ export class BlockType {
   created!: Date;
 }
 
-export const toBlockType = ({
-  id,
-  txHash,
-  rollupSize,
-  rollupProofData,
-  viewingKeysData,
-  created,
-}: BlockDao): BlockType => ({
+export const fromBlockDao = ({ id, txHash, rollupSize, rollupProofData, viewingKeysData, created }: BlockDao) => ({
   id,
   txHash: txHash.toString('hex'),
   rollupSize,

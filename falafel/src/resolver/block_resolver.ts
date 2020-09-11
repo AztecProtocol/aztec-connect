@@ -4,7 +4,7 @@ import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
 import { buildFilters, MAX_COUNT, Sort, toFindConditions } from './filter';
-import { BlockType, toBlockType } from './block_type';
+import { BlockType, fromBlockDao } from './block_type';
 
 @InputType()
 export class BlockFilter {
@@ -94,7 +94,7 @@ export class BlockResolver {
       { id, txHash },
     );
     const block = filters.length ? await this.blockRep.findOne(toFindConditions(filters)) : undefined;
-    return block ? toBlockType(block) : undefined;
+    return block ? fromBlockDao(block) : undefined;
   }
 
   @Query(() => [BlockType!])
@@ -115,7 +115,7 @@ export class BlockResolver {
           take,
           skip,
         })
-      ).map(toBlockType);
+      ).map(fromBlockDao);
     }
 
     return (
@@ -124,7 +124,7 @@ export class BlockResolver {
         take,
         skip,
       })
-    ).map(toBlockType);
+    ).map(fromBlockDao);
   }
 
   @Query(() => Int)
