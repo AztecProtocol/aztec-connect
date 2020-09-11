@@ -93,6 +93,7 @@ export class WorldStateDb {
     const buffer = Buffer.alloc(22);
     buffer.writeInt8(1, 0);
     buffer.writeInt8(treeId, 1);
+
     const indexBuf = toBufferBE(index, 16);
     indexBuf.copy(buffer, 2);
     buffer.writeUInt32BE(value.length, 18);

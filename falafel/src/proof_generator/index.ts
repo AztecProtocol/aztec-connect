@@ -1,9 +1,9 @@
+import { existsAsync, mkdirAsync } from 'barretenberg/fs_async';
 import { fetch } from 'barretenberg/iso_fetch';
 import { ChildProcess, spawn } from 'child_process';
 import { createWriteStream } from 'fs';
 import { PromiseReadable } from 'promise-readable';
 import { createInterface } from 'readline';
-import { existsAsync, mkdirAsync } from '../fs_async';
 import { Rollup } from '../rollup';
 
 export class ProofGenerator {
@@ -84,10 +84,10 @@ export class ProofGenerator {
     });
     rl.on('line', (line: string) => console.log('rollup_cli: ' + line.trim()));
 
-    proc.on('close', code => {
+    proc.on('close', (code, signal) => {
       this.proc = undefined;
       if (code !== 0) {
-        console.log(`rollup_proof exited with unexpected code ${code}.`);
+        console.log(`rollup_proof exited with unexpected code or signal ${code || signal}.`);
       }
     });
 
