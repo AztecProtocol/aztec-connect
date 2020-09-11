@@ -6,7 +6,7 @@ import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { buildFilters, MAX_COUNT, Sort, toFindConditions } from './filter';
 import { fromRollupDao } from './rollup_type';
-import { TxType, toTxType } from './tx_type';
+import { TxType, fromTxDao } from './tx_type';
 
 @InputType()
 export class TxFilter {
@@ -61,7 +61,7 @@ export class TxResolver {
   @Query(() => TxType, { nullable: true })
   async tx(@Arg('txId') txId: string) {
     const tx = await this.txRep.findOne({ txId: Buffer.from(txId, 'hex') });
-    return tx ? toTxType(tx) : undefined;
+    return tx ? fromTxDao(tx) : undefined;
   }
 
   @Query(() => [TxType!])
@@ -81,7 +81,7 @@ export class TxResolver {
           take,
           skip,
         })
-      ).map(toTxType);
+      ).map(fromTxDao);
     }
 
     return (
@@ -90,7 +90,52 @@ export class TxResolver {
         take,
         skip,
       })
-    ).map(toTxType);
+    ).map(fromTxDao);
+  }
+
+  @FieldResolver(() => Int)
+  async proofId(@Root() { proofData }: TxType) {
+    return Buffer.from(proofData.slice(28 * 2, 32 * 2), 'hex').readUInt32BE(0);
+  }
+
+  @FieldResolver()
+  async publicInput(@Root() { proofData }: TxType) {
+    return proofData.slice(1 * 32 * 2, 2 * 32 * 2);
+  }
+
+  @FieldResolver()
+  async publicOutput(@Root() { proofData }: TxType) {
+    return proofData.slice(2 * 32 * 2, 3 * 32 * 2);
+  }
+
+  @FieldResolver()
+  async newNote1(@Root() { proofData }: TxType) {
+    return proofData.slice(3 * 32 * 2, 5 * 32 * 2);
+  }
+
+  @FieldResolver()
+  async newNote2(@Root() { proofData }: TxType) {
+    return proofData.slice(5 * 32 * 2, 7 * 32 * 2);
+  }
+
+  @FieldResolver()
+  async nullifier1(@Root() { proofData }: TxType) {
+    return proofData.slice(7 * 32 * 2, 8 * 32 * 2);
+  }
+
+  @FieldResolver()
+  async nullifier2(@Root() { proofData }: TxType) {
+    return proofData.slice(8 * 32 * 2, 9 * 32 * 2);
+  }
+
+  @FieldResolver()
+  async inputOwner(@Root() { proofData }: TxType) {
+    return proofData.slice((9 * 32 + 12) * 2, 10 * 32 * 2);
+  }
+
+  @FieldResolver()
+  async outputOwner(@Root() { proofData }: TxType) {
+    return proofData.slice((10 * 32 + 12) * 2, 11 * 32 * 2);
   }
 
   @Query(() => Int)

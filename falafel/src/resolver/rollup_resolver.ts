@@ -7,7 +7,7 @@ import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { buildFilters, MAX_COUNT, Sort, toFindConditions } from './filter';
 import { RollupType, fromRollupDao } from './rollup_type';
-import { toTxType } from './tx_type';
+import { fromTxDao } from './tx_type';
 
 @InputType()
 export class RollupFilter {
@@ -218,7 +218,7 @@ export class RollupResolver {
     const txs = await this.rollupTxRep.find({
       where: { rollup: rollup.id },
     });
-    return txs.map(toTxType);
+    return txs.map(fromTxDao);
   }
 
   @Query(() => Int)

@@ -1,7 +1,7 @@
 import { RollupStatus } from 'barretenberg/rollup_provider';
 import { Field, Int, ObjectType } from 'type-graphql';
 import { RollupDao } from '../entity/rollup';
-import { TxType, toTxType } from './tx_type';
+import { TxType } from './tx_type';
 
 @ObjectType()
 export class RollupType {
