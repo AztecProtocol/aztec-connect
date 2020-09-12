@@ -23,7 +23,6 @@ describe('Rollup', () => {
       proofs,
       randomRoot(),
       randomRoot(),
-      randomRoot(),
       oldDataPath,
       newDataPath,
       randomRoot(),

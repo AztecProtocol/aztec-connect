@@ -489,9 +489,6 @@ export class Server {
 
     // Get new data.
     const newDataPath = await this.worldStateDb.getHashPath(0, dataStartIndex);
-    const rollupRootHeight = Math.log2(this.config.rollupSize) + 1;
-    const rootIndex = (Number(dataStartIndex) / (this.config.rollupSize * 2)) % 2;
-    const rollupRoot = newDataPath.data[rollupRootHeight][rootIndex];
     const newDataRoot = this.worldStateDb.getRoot(0);
 
     // Get root tree data.
@@ -507,7 +504,6 @@ export class Server {
       Number(dataStartIndex),
       txs.map(tx => tx.proofData),
 
-      rollupRoot,
       oldDataRoot,
       newDataRoot,
       oldDataPath,
