@@ -4,9 +4,9 @@ import { Inject } from 'typedi';
 import { Connection, Repository, Not } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
-import { buildFilters, MAX_COUNT, Sort, toFindConditions } from './filter';
 import { fromRollupDao } from './rollup_type';
 import { TxType, fromTxDao } from './tx_type';
+import { getQuery, MAX_COUNT, Sort } from './query_builder';
 
 @InputType()
 export class TxFilter {
@@ -65,32 +65,17 @@ export class TxResolver {
   }
 
   @Query(() => [TxType!])
-  async txs(@Args() { where, take, skip, order }: TxsArgs) {
-    const filters = buildFilters(
+  async txs(@Args() args: TxsArgs) {
+    const query = getQuery(
+      this.txRep,
       [
         { field: 'txId', type: 'String' },
         { field: 'rollup', type: 'Int' },
       ],
-      where || {},
+      args,
     );
-    if (filters.length) {
-      return (
-        await this.txRep.find({
-          where: toFindConditions(filters),
-          order,
-          take,
-          skip,
-        })
-      ).map(fromTxDao);
-    }
 
-    return (
-      await this.txRep.find({
-        order,
-        take,
-        skip,
-      })
-    ).map(fromTxDao);
+    return (await query.getMany()).map(fromTxDao);
   }
 
   @FieldResolver(() => Int)

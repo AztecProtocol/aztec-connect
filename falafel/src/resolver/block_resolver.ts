@@ -3,8 +3,8 @@ import { Arg, Args, ArgsType, Field, Int, InputType, Query, Resolver } from 'typ
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
-import { buildFilters, MAX_COUNT, Sort, toFindConditions } from './filter';
 import { BlockType, fromBlockDao } from './block_type';
+import { getQuery, MAX_COUNT, Sort } from './query_builder';
 
 @InputType()
 export class BlockFilter {
@@ -86,45 +86,30 @@ export class BlockResolver {
     @Arg('id', () => Int, { nullable: true }) id?: number,
     @Arg('txHash', { nullable: true }) txHash?: string,
   ) {
-    const filters = buildFilters(
+    const query = getQuery(
+      this.blockRep,
       [
         { field: 'id', type: 'Int' },
         { field: 'txHash', type: 'Buffer' },
       ],
-      { id, txHash },
+      { where: { id, txHash } },
     );
-    const block = filters.length ? await this.blockRep.findOne(toFindConditions(filters)) : undefined;
+    const block = await query.getOne();
     return block ? fromBlockDao(block) : undefined;
   }
 
   @Query(() => [BlockType!])
-  async blocks(@Args() { where, take, skip, order }: BlocksArgs) {
-    const filters = buildFilters(
+  async blocks(@Args() args: BlocksArgs) {
+    const query = getQuery(
+      this.blockRep,
       [
         { field: 'id', type: 'Int' },
         { field: 'txHash', type: 'Buffer' },
         { field: 'created', type: 'Date' },
       ],
-      where || {},
+      args,
     );
-    if (filters.length) {
-      return (
-        await this.blockRep.find({
-          where: toFindConditions(filters),
-          order,
-          take,
-          skip,
-        })
-      ).map(fromBlockDao);
-    }
-
-    return (
-      await this.blockRep.find({
-        order,
-        take,
-        skip,
-      })
-    ).map(fromBlockDao);
+    return (await query.getMany()).map(fromBlockDao);
   }
 
   @Query(() => Int)

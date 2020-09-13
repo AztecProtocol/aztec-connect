@@ -7,9 +7,9 @@ import { BlockDao } from '../entity/block';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { fromBlockDao } from './block_type';
-import { buildFilters, MAX_COUNT, Sort, toFindConditions } from './filter';
 import { RollupType, fromRollupDao } from './rollup_type';
 import { fromTxDao } from './tx_type';
+import { getQuery, MAX_COUNT, Sort } from './query_builder';
 
 @InputType()
 export class RollupFilter {
@@ -133,22 +133,24 @@ export class RollupResolver {
     @Arg('ethBlock', () => Int, { nullable: true }) ethBlock?: number,
     @Arg('ethTxHash', { nullable: true }) ethTxHash?: string,
   ) {
-    const filters = buildFilters(
+    const query = getQuery(
+      this.rollupRep,
       [
         { field: 'id', type: 'Int' },
         { field: 'dataRoot', type: 'Buffer' },
         { field: 'ethBlock', type: 'Int' },
         { field: 'ethTxHash', type: 'Buffer' },
       ],
-      { id, dataRoot, ethBlock, ethTxHash },
+      { where: { id, dataRoot, ethBlock, ethTxHash } },
     );
-    const rollup = filters.length ? await this.rollupRep.findOne(toFindConditions(filters)) : undefined;
+    const rollup = await query.getOne();
     return rollup ? fromRollupDao(rollup) : undefined;
   }
 
   @Query(() => [RollupType!])
-  async rollups(@Args() { where, take, skip, order }: RollupsArgs) {
-    const filters = buildFilters(
+  async rollups(@Args() args: RollupsArgs) {
+    const query = getQuery(
+      this.rollupRep,
       [
         { field: 'id', type: 'Int' },
         { field: 'ethBlock', type: 'Int' },
@@ -157,26 +159,9 @@ export class RollupResolver {
         { field: 'status', type: 'String' },
         { field: 'created', type: 'Date' },
       ],
-      where || {},
+      args,
     );
-    if (filters.length) {
-      return (
-        await this.rollupRep.find({
-          where: toFindConditions(filters),
-          order,
-          skip,
-          take,
-        })
-      ).map(fromRollupDao);
-    }
-
-    return (
-      await this.rollupRep.find({
-        order,
-        skip,
-        take,
-      })
-    ).map(fromRollupDao);
+    return (await query.getMany()).map(fromRollupDao);
   }
 
   @FieldResolver()
