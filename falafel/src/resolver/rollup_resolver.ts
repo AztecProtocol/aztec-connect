@@ -24,20 +24,18 @@ export class RollupResolver {
   @Query(() => RollupType, { nullable: true })
   async rollup(
     @Arg('id', () => Int, { nullable: true }) id?: number,
-    @Arg('dataRoot', () => HexString, { nullable: true }) dataRoot?: string,
+    @Arg('dataRoot', () => HexString, { nullable: true }) dataRoot?: Buffer,
     @Arg('ethBlock', () => Int, { nullable: true }) ethBlock?: number,
-    @Arg('ethTxHash', () => HexString, { nullable: true }) ethTxHash?: string,
+    @Arg('ethTxHash', () => HexString, { nullable: true }) ethTxHash?: Buffer,
   ) {
-    const query = getQuery(this.rollupRep, {
+    return getQuery(this.rollupRep, {
       where: { id, dataRoot, ethBlock, ethTxHash },
-    });
-    return query.getOne();
+    }).getOne();
   }
 
   @Query(() => [RollupType!])
   async rollups(@Args() args: RollupsArgs) {
-    const query = getQuery(this.rollupRep, args);
-    return query.getMany();
+    return getQuery(this.rollupRep, args).getMany();
   }
 
   @FieldResolver()

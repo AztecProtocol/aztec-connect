@@ -18,8 +18,8 @@ export class TxResolver {
   }
 
   @Query(() => TxType, { nullable: true })
-  async tx(@Arg('txId', () => HexString) txId: string) {
-    return this.txRep.findOne({ txId: Buffer.from(txId, 'hex') });
+  async tx(@Arg('txId', () => HexString) txId: Buffer) {
+    return this.txRep.findOne({ txId });
   }
 
   @Query(() => [TxType!])

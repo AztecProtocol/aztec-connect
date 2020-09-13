@@ -17,16 +17,14 @@ export class BlockResolver {
   @Query(() => BlockType, { nullable: true })
   async block(
     @Arg('id', () => Int, { nullable: true }) id?: number,
-    @Arg('txHash', () => HexString, { nullable: true }) txHash?: string,
+    @Arg('txHash', () => HexString, { nullable: true }) txHash?: Buffer,
   ) {
-    const query = getQuery(this.blockRep, { where: { id, txHash } });
-    return query.getOne();
+    return getQuery(this.blockRep, { where: { id, txHash } }).getOne();
   }
 
   @Query(() => [BlockType!])
   async blocks(@Args() args: BlocksArgs) {
-    const query = getQuery(this.blockRep, args);
-    return query.getMany();
+    return getQuery(this.blockRep, args).getMany();
   }
 
   @Query(() => Int)
