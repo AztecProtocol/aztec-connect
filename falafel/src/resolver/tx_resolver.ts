@@ -26,7 +26,7 @@ export class TxResolver {
 
   @Query(() => [TxType!])
   async txs(@Args() args: TxsArgs) {
-    const query = getQuery(this.txRep, ['txId', 'rollup'], args);
+    const query = getQuery(this.txRep, args);
 
     return (await query.getMany()).map(fromTxDao);
   }

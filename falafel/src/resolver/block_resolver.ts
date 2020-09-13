@@ -19,14 +19,14 @@ export class BlockResolver {
     @Arg('id', () => Int, { nullable: true }) id?: number,
     @Arg('txHash', () => HexString, { nullable: true }) txHash?: string,
   ) {
-    const query = getQuery(this.blockRep, ['id', 'txHash'], { where: { id, txHash } });
+    const query = getQuery(this.blockRep, { where: { id, txHash } });
     const block = await query.getOne();
     return block ? fromBlockDao(block) : undefined;
   }
 
   @Query(() => [BlockType!])
   async blocks(@Args() args: BlocksArgs) {
-    const query = getQuery(this.blockRep, ['id', 'txHash', 'created'], args);
+    const query = getQuery(this.blockRep, args);
     return (await query.getMany()).map(fromBlockDao);
   }
 

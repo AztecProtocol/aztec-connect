@@ -30,7 +30,7 @@ export class RollupResolver {
     @Arg('ethBlock', () => Int, { nullable: true }) ethBlock?: number,
     @Arg('ethTxHash', () => HexString, { nullable: true }) ethTxHash?: string,
   ) {
-    const query = getQuery(this.rollupRep, ['id', 'dataRoot', 'ethBlock', 'ethTxHash'], {
+    const query = getQuery(this.rollupRep, {
       where: { id, dataRoot, ethBlock, ethTxHash },
     });
     const rollup = await query.getOne();
@@ -39,7 +39,7 @@ export class RollupResolver {
 
   @Query(() => [RollupType!])
   async rollups(@Args() args: RollupsArgs) {
-    const query = getQuery(this.rollupRep, ['id', 'ethBlock', 'dataRoot', 'ethTxHash', 'status', 'created'], args);
+    const query = getQuery(this.rollupRep, args);
     return (await query.getMany()).map(fromRollupDao);
   }
 
