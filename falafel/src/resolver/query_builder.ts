@@ -6,13 +6,6 @@ export type Sort = 'ASC' | 'DESC';
 
 export type Where = { [key: string]: any };
 
-type FieldType = 'Int' | 'Date' | 'Buffer' | 'String';
-
-export interface Field {
-  field: string;
-  type: FieldType;
-}
-
 interface Condition {
   cond: string;
   parameters?: { [key: string]: any };
@@ -25,21 +18,15 @@ interface QueryArgs {
   skip?: number;
 }
 
-const transformValueTypeMapping: { [key in FieldType]: (value: any) => any } = {
-  Buffer: (value: string) => (value ? Buffer.from(value.replace(/^0x/i, ''), 'hex') : value),
-  Date: (value: Date) => (value ? value.toISOString().replace(/T/, ' ').slice(0, -1) : value),
-  Int: (value: string) => value,
-  String: (value: string) => value,
-};
-
-const getFieldConditions = ({ field, type }: Field, where: Where) => {
+const getFieldConditions = (field: string, where: Where) => {
   const conditions: Condition[] = [];
 
   const fieldValue = (suffix = '') => {
     const value = where[`${field}${suffix}`];
     if (value === undefined) return;
 
-    const transformValue = transformValueTypeMapping[type];
+    // const transformValue = transformValueTypeMapping[type];
+    const transformValue = (v: any) => v;
     if (Array.isArray(value)) {
       return value.map(transformValue);
     }
@@ -49,20 +36,12 @@ const getFieldConditions = ({ field, type }: Field, where: Where) => {
 
   const eq = fieldValue();
   if (eq !== undefined) {
-    if (!eq && type === 'Buffer') {
-      conditions.push({ cond: `obj.${field} IS NULL` });
-    } else {
-      conditions.push({ cond: `obj.${field} = :${field}`, parameters: { [field]: eq } });
-    }
+    conditions.push({ cond: `obj.${field} = :${field}`, parameters: { [field]: eq } });
   }
 
   const not = fieldValue('_not');
   if (not !== undefined) {
-    if (!not && type === 'Buffer') {
-      conditions.push({ cond: `obj.${field} IS NOT NULL` });
-    } else {
-      conditions.push({ cond: `obj.${field} != :${field}_not`, parameters: { [`${field}_not`]: not } });
-    }
+    conditions.push({ cond: `obj.${field} != :${field}_not`, parameters: { [`${field}_not`]: not } });
   }
 
   const isNull = fieldValue('_null');
@@ -109,7 +88,7 @@ const getFieldConditions = ({ field, type }: Field, where: Where) => {
   return conditions;
 };
 
-export const getQuery = <T>(rep: Repository<T>, fields: Field[], { where, order, take, skip }: QueryArgs) => {
+export const getQuery = <T>(rep: Repository<T>, fields: string[], { where, order, take, skip }: QueryArgs) => {
   const query = rep.createQueryBuilder('obj').select('obj');
   if (where) {
     const conds = fields.map(field => getFieldConditions(field, where)).flat();

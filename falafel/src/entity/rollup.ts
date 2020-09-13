@@ -1,7 +1,9 @@
 import { Column, Entity, Index, OneToMany, PrimaryColumn } from 'typeorm';
 import { TxDao } from './tx';
 
-export type RollupStatus = 'CREATING' | 'CREATED' | 'PUBLISHED' | 'SETTLED';
+export const rollupStatus = <const>['CREATING', 'CREATED', 'PUBLISHED', 'SETTLED'];
+
+export type RollupStatus = typeof rollupStatus[number];
 
 @Entity({ name: 'rollup' })
 export class RollupDao {

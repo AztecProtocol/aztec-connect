@@ -1,52 +1,12 @@
-import { Max } from 'class-validator';
-import { Arg, Args, ArgsType, Field, FieldResolver, Int, InputType, Query, Resolver, Root } from 'type-graphql';
+import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository, Not } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
+import { getQuery } from './query_builder';
 import { fromRollupDao } from './rollup_type';
-import { TxType, fromTxDao } from './tx_type';
-import { getQuery, MAX_COUNT, Sort } from './query_builder';
-
-@InputType()
-export class TxFilter {
-  @Field({ nullable: true })
-  txId?: string;
-
-  @Field({ nullable: true })
-  txId_not?: string;
-
-  @Field(() => Int, { nullable: true })
-  rollup?: number;
-
-  @Field(() => Int, { nullable: true })
-  rollup_not?: number;
-}
-
-@InputType()
-class TxOrder {
-  @Field({ nullable: true })
-  txId?: Sort;
-
-  @Field({ nullable: true })
-  created?: Sort;
-}
-
-@ArgsType()
-export class TxsArgs {
-  @Field(() => TxFilter, { nullable: true })
-  where?: TxFilter;
-
-  @Field(() => Int, { defaultValue: MAX_COUNT })
-  @Max(MAX_COUNT)
-  take?: number;
-
-  @Field(() => Int, { defaultValue: 0 })
-  skip?: number;
-
-  @Field({ defaultValue: { id: 'DESC' } })
-  order?: TxOrder;
-}
+import { HexString } from './scalar_type';
+import { TxType, TxsArgs, fromTxDao } from './tx_type';
 
 @Resolver(() => TxType)
 export class TxResolver {
@@ -59,21 +19,14 @@ export class TxResolver {
   }
 
   @Query(() => TxType, { nullable: true })
-  async tx(@Arg('txId') txId: string) {
+  async tx(@Arg('txId', () => HexString) txId: string) {
     const tx = await this.txRep.findOne({ txId: Buffer.from(txId, 'hex') });
     return tx ? fromTxDao(tx) : undefined;
   }
 
   @Query(() => [TxType!])
   async txs(@Args() args: TxsArgs) {
-    const query = getQuery(
-      this.txRep,
-      [
-        { field: 'txId', type: 'String' },
-        { field: 'rollup', type: 'Int' },
-      ],
-      args,
-    );
+    const query = getQuery(this.txRep, ['txId', 'rollup'], args);
 
     return (await query.getMany()).map(fromTxDao);
   }
