@@ -1,7 +1,6 @@
 import { RollupStatus } from 'barretenberg/rollup_provider';
 import { Max } from 'class-validator';
 import { Field, Int, ObjectType, ArgsType, InputType } from 'type-graphql';
-import { RollupDao } from '../entity/rollup';
 import { BlockType } from './block_type';
 import { TxType } from './tx_type';
 import { MAX_COUNT, Sort } from './query_builder';
@@ -54,16 +53,6 @@ export class RollupType {
   @Field(() => ISODateTime)
   created!: Date;
 }
-
-export const fromRollupDao = ({ id, dataRoot, proofData, ethBlock, ethTxHash, status, created }: RollupDao) => ({
-  id,
-  proofData: proofData ? proofData.toString('hex') : undefined,
-  dataRoot: dataRoot.toString('hex'),
-  ethBlock,
-  ethTxHash: ethTxHash ? ethTxHash.toString('hex') : undefined,
-  status,
-  created,
-});
 
 @InputType()
 class RollupFilter {

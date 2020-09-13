@@ -2,7 +2,7 @@ import { Arg, Args, Int, Query, Resolver } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
-import { BlockType, BlocksArgs, fromBlockDao } from './block_type';
+import { BlockType, BlocksArgs } from './block_type';
 import { getQuery } from './query_builder';
 import { HexString } from './scalar_type';
 
@@ -20,14 +20,13 @@ export class BlockResolver {
     @Arg('txHash', () => HexString, { nullable: true }) txHash?: string,
   ) {
     const query = getQuery(this.blockRep, { where: { id, txHash } });
-    const block = await query.getOne();
-    return block ? fromBlockDao(block) : undefined;
+    return query.getOne();
   }
 
   @Query(() => [BlockType!])
   async blocks(@Args() args: BlocksArgs) {
     const query = getQuery(this.blockRep, args);
-    return (await query.getMany()).map(fromBlockDao);
+    return query.getMany();
   }
 
   @Query(() => Int)

@@ -1,6 +1,5 @@
 import { Max } from 'class-validator';
 import { Field, Int, ObjectType, ArgsType, InputType } from 'type-graphql';
-import { BlockDao } from '../entity/block';
 import { MAX_COUNT, Sort } from './query_builder';
 import { HexString, ISODateTime } from './scalar_type';
 
@@ -9,30 +8,21 @@ export class BlockType {
   @Field(() => Int)
   id!: number;
 
-  @Field({ nullable: true })
+  @Field(() => HexString, { nullable: true })
   txHash!: string;
 
   @Field(() => Int)
   rollupSize!: number;
 
-  @Field()
+  @Field(() => HexString)
   rollupProofData!: string;
 
-  @Field()
+  @Field(() => HexString)
   viewingKeysData!: string;
 
-  @Field()
+  @Field(() => ISODateTime)
   created!: Date;
 }
-
-export const fromBlockDao = ({ id, txHash, rollupSize, rollupProofData, viewingKeysData, created }: BlockDao) => ({
-  id,
-  txHash: txHash.toString('hex'),
-  rollupSize,
-  rollupProofData: rollupProofData.toString('hex'),
-  viewingKeysData: viewingKeysData.toString('hex'),
-  created,
-});
 
 @InputType()
 class BlockFilter {

@@ -1,69 +1,60 @@
 import { Length, Max } from 'class-validator';
 import { Field, Int, ObjectType, InputType, ArgsType } from 'type-graphql';
-import { TxDao } from '../entity/tx';
 import { Sort, MAX_COUNT } from './query_builder';
 import { RollupType } from './rollup_type';
 import { HexString, ISODateTime } from './scalar_type';
 
 @ObjectType()
 export class TxType {
-  @Field()
+  @Field(() => HexString)
   @Length(32)
   txId!: string;
 
   @Field(() => RollupType, { nullable: true })
   rollup?: RollupType;
 
-  @Field()
+  @Field(() => HexString)
   proofData!: string;
 
   @Field(() => Int)
   proofId!: number;
 
-  @Field()
+  @Field(() => HexString)
   publicInput!: string;
 
-  @Field()
+  @Field(() => HexString)
   publicOutput!: string;
 
-  @Field()
+  @Field(() => HexString)
   newNote1!: string;
 
-  @Field()
+  @Field(() => HexString)
   newNote2!: string;
 
-  @Field()
+  @Field(() => HexString)
   nullifier1!: string;
 
-  @Field()
+  @Field(() => HexString)
   nullifier2!: string;
 
-  @Field()
+  @Field(() => HexString)
   inputOwner!: string;
 
-  @Field()
+  @Field(() => HexString)
   outputOwner!: string;
 
-  @Field()
+  @Field(() => HexString)
   viewingKey1!: string;
 
-  @Field()
+  @Field(() => HexString)
   viewingKey2!: string;
 
-  @Field({ nullable: true })
+  @Field(() => HexString, { nullable: true })
   signature?: string;
 
-  @Field()
+  @Field(() => ISODateTime)
   created!: Date;
 }
-
-export const fromTxDao = ({ txId, proofData, viewingKey1, viewingKey2, created }: TxDao) => ({
-  txId: txId.toString('hex'),
-  proofData: proofData.toString('hex'),
-  viewingKey1: viewingKey1.toString('hex'),
-  viewingKey2: viewingKey2.toString('hex'),
-  created,
-});
 
 @InputType()
 class TxFilter {

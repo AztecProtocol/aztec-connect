@@ -38,6 +38,7 @@
     "class-validator": "^0.12.2",
     "dotenv": "^8.2.0",
     "ethers": "5.0.3",
+    "graphql": "^15.3.0",
     "graphql-playground-middleware-koa": "^1.6.19",
     "koa": "^2.7.0",
     "koa-compress": "^3.0.0",

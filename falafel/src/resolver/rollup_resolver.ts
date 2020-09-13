@@ -5,11 +5,9 @@ import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
-import { fromBlockDao } from './block_type';
 import { getQuery } from './query_builder';
-import { RollupType, RollupsArgs, fromRollupDao } from './rollup_type';
+import { RollupType, RollupsArgs } from './rollup_type';
 import { HexString } from './scalar_type';
-import { fromTxDao } from './tx_type';
 
 @Resolver(() => RollupType)
 export class RollupResolver {
@@ -33,46 +31,45 @@ export class RollupResolver {
     const query = getQuery(this.rollupRep, {
       where: { id, dataRoot, ethBlock, ethTxHash },
     });
-    const rollup = await query.getOne();
-    return rollup ? fromRollupDao(rollup) : undefined;
+    return query.getOne();
   }
 
   @Query(() => [RollupType!])
   async rollups(@Args() args: RollupsArgs) {
     const query = getQuery(this.rollupRep, args);
-    return (await query.getMany()).map(fromRollupDao);
+    return query.getMany();
   }
 
   @FieldResolver()
-  async oldDataRoot(@Root() { proofData }: RollupType) {
-    return proofData ? proofData.slice(3 * 32 * 2, (3 * 32 + 32) * 2) : undefined;
+  async oldDataRoot(@Root() { proofData }: RollupDao) {
+    return proofData ? proofData.slice(3 * 32, 3 * 32 + 32) : undefined;
   }
 
   @FieldResolver()
-  async oldNullifierRoot(@Root() { proofData }: RollupType) {
-    return proofData ? proofData.slice(5 * 32 * 2, (5 * 32 + 32) * 2) : undefined;
+  async oldNullifierRoot(@Root() { proofData }: RollupDao) {
+    return proofData ? proofData.slice(5 * 32, 5 * 32 + 32) : undefined;
   }
 
   @FieldResolver()
-  async nullifierRoot(@Root() { proofData }: RollupType) {
-    return proofData ? proofData.slice(6 * 32 * 2, (6 * 32 + 32) * 2) : undefined;
+  async nullifierRoot(@Root() { proofData }: RollupDao) {
+    return proofData ? proofData.slice(6 * 32, 6 * 32 + 32) : undefined;
   }
 
   @FieldResolver()
-  async oldDataRootsRoot(@Root() { proofData }: RollupType) {
-    return proofData ? proofData.slice(7 * 32 * 2, (7 * 32 + 32) * 2) : undefined;
+  async oldDataRootsRoot(@Root() { proofData }: RollupDao) {
+    return proofData ? proofData.slice(7 * 32, 7 * 32 + 32) : undefined;
   }
 
   @FieldResolver()
-  async dataRootsRoot(@Root() { proofData }: RollupType) {
-    return proofData ? proofData.slice(8 * 32 * 2, (8 * 32 + 32) * 2) : undefined;
+  async dataRootsRoot(@Root() { proofData }: RollupDao) {
+    return proofData ? proofData.slice(8 * 32, 8 * 32 + 32) : undefined;
   }
 
   @FieldResolver(() => Int)
-  async numTxs(@Root() rollup: RollupType) {
+  async numTxs(@Root() rollup: RollupDao) {
     const { proofData } = rollup;
     if (proofData) {
-      return Buffer.from(proofData.slice((9 * 32 + 28) * 2, 10 * 32 * 2), 'hex').readUInt32BE(0);
+      return proofData.slice(9 * 32 + 28, 10 * 32).readUInt32BE(0);
     }
 
     const txs = await this.rollupTxRep.find({
@@ -82,21 +79,19 @@ export class RollupResolver {
   }
 
   @FieldResolver()
-  async txs(@Root() rollup: RollupType) {
-    const txs = await this.rollupTxRep.find({
+  async txs(@Root() rollup: RollupDao) {
+    return this.rollupTxRep.find({
       where: { rollup: rollup.id },
     });
-    return txs.map(fromTxDao);
   }
 
   @FieldResolver()
-  async block(@Root() { ethBlock }: RollupType) {
-    const block = ethBlock
-      ? await this.blockRep.findOne({
+  async block(@Root() { ethBlock }: RollupDao) {
+    return ethBlock
+      ? this.blockRep.findOne({
           where: { id: ethBlock },
         })
       : undefined;
-    return block ? fromBlockDao(block) : undefined;
   }
 
   @Query(() => Int)
