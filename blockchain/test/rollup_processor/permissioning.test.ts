@@ -1,12 +1,13 @@
 import { ethers } from '@nomiclabs/buidler';
+import { EthAddress } from 'barretenberg/address';
 import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
 import { createDepositProof } from '../fixtures/create_mock_proof';
+import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 import { ethSign } from '../signing/eth_sign';
 import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
-import { EthAddress } from 'barretenberg/address';
 
 use(solidity);
 
@@ -16,29 +17,16 @@ describe('rollup_processor: permissioning', () => {
   let userA: Signer;
   let userB: Signer;
   let userAAddress: EthAddress;
+  let viewingKeys: Buffer[];
 
   const mintAmount = 100;
   const depositAmount = 60;
-
   const soliditySignatureLength = 32 * 3;
-  const viewingKeys = [Buffer.alloc(32, 1), Buffer.alloc(32, 2)];
-  const rollupSize = 2;
 
   beforeEach(async () => {
     [userA, userB] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
-
-    const ERC20 = await ethers.getContractFactory('ERC20Mintable');
-    erc20 = await ERC20.deploy();
-
-    const MockVerifier = await ethers.getContractFactory('MockVerifier');
-    const mockVerifier = await MockVerifier.deploy();
-
-    const RollupProcessor = await ethers.getContractFactory('RollupProcessor');
-    rollupProcessor = await RollupProcessor.deploy(erc20.address, mockVerifier.address);
-
-    // mint users tokens for testing
-    await erc20.mint(userAAddress.toString(), mintAmount);
+    ({ erc20, rollupProcessor, viewingKeys } = await setupRollupProcessor([userA, userB], mintAmount));
   });
 
   it('should deposit funds, which requires a successfull sig validation', async () => {
@@ -49,7 +37,6 @@ describe('rollup_processor: permissioning', () => {
       solidityFormatSignatures(signatures),
       sigIndexes,
       viewingKeys,
-      rollupSize,
     );
     const receipt = await tx.wait();
     expect(receipt.status).to.equal(1);
@@ -64,13 +51,7 @@ describe('rollup_processor: permissioning', () => {
 
     await erc20.approve(rollupProcessor.address, depositAmount);
     await expect(
-      rollupProcessor.processRollup(
-        proofData,
-        solidityFormatSignatures([fakeSignature]),
-        sigIndexes,
-        viewingKeys,
-        rollupSize,
-      ),
+      rollupProcessor.processRollup(proofData, solidityFormatSignatures([fakeSignature]), sigIndexes, viewingKeys),
     ).to.be.revertedWith('Rollup Processor: INVALID_TRANSFER_SIGNATURE');
   });
 
@@ -78,7 +59,6 @@ describe('rollup_processor: permissioning', () => {
     const { proofData, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
     const zeroSignatures = Buffer.alloc(soliditySignatureLength);
     await erc20.approve(rollupProcessor.address, depositAmount);
-    await expect(rollupProcessor.processRollup(proofData, zeroSignatures, sigIndexes, viewingKeys, rollupSize)).to.be
-      .reverted;
+    await expect(rollupProcessor.processRollup(proofData, zeroSignatures, sigIndexes, viewingKeys)).to.be.reverted;
   });
 });

@@ -93,20 +93,13 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Appends viewingKeys to the proofData, so that they can later be fetched from the tx calldata
    * and added to the emitted rollupBlock.
    */
-  public async sendProof(
-    proofData: Buffer,
-    signatures: Buffer[],
-    sigIndexes: number[],
-    viewingKeys: Buffer[],
-    rollupSize: number,
-  ) {
+  public async sendProof(proofData: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
     const formattedSignatures = this.solidityFormatSignatures(signatures);
     const tx = await this.rollupProcessor.processRollup(
       `0x${proofData.toString('hex')}`,
       formattedSignatures,
       sigIndexes,
       Buffer.concat(viewingKeys),
-      rollupSize,
     );
     return Buffer.from(tx.hash.slice(2), 'hex');
   }
@@ -207,9 +200,9 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private decodeTransactionData(txObject: TransactionResponse) {
     const rollupAbi = new ethers.utils.Interface(RollupABI);
     const result = rollupAbi.parseTransaction(txObject);
-    const rollupSize = result.args.rollupSize.toNumber();
     const rollupProofData = Buffer.from(result.args.proofData.slice(2), 'hex');
     const viewingKeysData = Buffer.from(result.args.viewingKeys.slice(2), 'hex');
+    const rollupSize = Buffer.from(result.args.proofData.slice(2), 'hex').slice(0x20, 0x40).readInt32BE(28);
 
     return {
       rollupSize,

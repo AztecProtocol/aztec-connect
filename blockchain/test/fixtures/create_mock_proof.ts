@@ -1,7 +1,7 @@
-import { randomBytes } from 'crypto';
-import { constants, Signer, utils } from 'ethers';
-import { ethSign } from '../signing/eth_sign';
 import { EthAddress } from 'barretenberg/address';
+import { randomBytes } from 'crypto';
+import { Signer, utils } from 'ethers';
+import { ethSign } from '../signing/eth_sign';
 
 const dataNoteSize = 64;
 

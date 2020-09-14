@@ -8,13 +8,7 @@ export interface NetworkInfo {
 }
 
 export interface ProofReceiver {
-  sendProof(
-    proof: Buffer,
-    signatures: Buffer[],
-    sigIndexes: number[],
-    viewingKeys: Buffer[],
-    rollupSize: number,
-  ): Promise<Buffer>;
+  sendProof(proof: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]): Promise<Buffer>;
 }
 
 export interface Receipt {
