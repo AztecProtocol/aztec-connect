@@ -1,9 +1,9 @@
 import { ethers } from '@nomiclabs/buidler';
+import { EthAddress } from 'barretenberg/address';
 import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
-
 import {
   createDepositProof,
   createSendProof,
@@ -13,10 +13,14 @@ import {
   newDataRootsRoot,
   newNullifierRoot,
 } from '../fixtures/create_mock_proof';
+import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
-import { EthAddress } from 'barretenberg/address';
 
 use(solidity);
+
+const randInt = () => {
+  return Math.floor(Math.random() * 1000);
+};
 
 describe('rollup_processor: core', () => {
   let rollupProcessor: Contract;
@@ -25,31 +29,17 @@ describe('rollup_processor: core', () => {
   let userB: Signer;
   let userAAddress: EthAddress;
   let userBAddress: EthAddress;
+  let viewingKeys: Buffer[];
 
   const mintAmount = 100;
   const depositAmount = 60;
   const withdrawalAmount = 20;
 
-  const viewingKeys = [Buffer.alloc(32, 1), Buffer.alloc(32, 2)];
-  const rollupSize = 2;
-
   beforeEach(async () => {
     [userA, userB] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
     userBAddress = EthAddress.fromString(await userB.getAddress());
-
-    const ERC20 = await ethers.getContractFactory('ERC20Mintable');
-    erc20 = await ERC20.deploy();
-
-    const MockVerifier = await ethers.getContractFactory('MockVerifier');
-    const mockVerifier = await MockVerifier.deploy();
-
-    const RollupProcessor = await ethers.getContractFactory('RollupProcessor');
-    rollupProcessor = await RollupProcessor.deploy(erc20.address, mockVerifier.address);
-
-    // mint users tokens for testing
-    await erc20.mint(userAAddress.toString(), mintAmount);
-    await erc20.mint(userBAddress.toString(), mintAmount);
+    ({ erc20, rollupProcessor, viewingKeys } = await setupRollupProcessor([userA, userB], mintAmount));
   });
 
   describe('Deposit, transfer and withdrawal', async () => {
@@ -61,7 +51,6 @@ describe('rollup_processor: core', () => {
         solidityFormatSignatures(signatures),
         sigIndexes,
         viewingKeys,
-        rollupSize,
       );
       const receipt = await tx.wait();
       expect(receipt.status).to.equal(1);
@@ -73,13 +62,7 @@ describe('rollup_processor: core', () => {
 
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
       await erc20.approve(rollupProcessor.address, depositAmount);
-      await rollupProcessor.processRollup(
-        proofData,
-        solidityFormatSignatures(signatures),
-        sigIndexes,
-        viewingKeys,
-        rollupSize,
-      );
+      await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys);
 
       const postDepositRollupBalance = await erc20.balanceOf(rollupProcessor.address);
       expect(postDepositRollupBalance).to.equal(initialRollupBalance + depositAmount);
@@ -100,7 +83,6 @@ describe('rollup_processor: core', () => {
         solidityFormatSignatures(depositSignatures),
         depositSigIndexes,
         viewingKeys,
-        rollupSize,
       );
 
       const {
@@ -113,7 +95,6 @@ describe('rollup_processor: core', () => {
         solidityFormatSignatures(withdrawalSignatures),
         withdrawalSigIndexes,
         viewingKeys,
-        rollupSize,
       );
 
       const postWithdrawalRollupBalance = await erc20.balanceOf(rollupProcessor.address);
@@ -135,7 +116,6 @@ describe('rollup_processor: core', () => {
         solidityFormatSignatures(depositSignatures),
         depositSigIndexes,
         viewingKeys,
-        rollupSize,
       );
 
       const {
@@ -148,7 +128,6 @@ describe('rollup_processor: core', () => {
         solidityFormatSignatures(withdrawalSignatures),
         withdrawalSigIndexes,
         viewingKeys,
-        rollupSize,
       );
 
       const postWithdrawalRollupBalance = await erc20.balanceOf(rollupProcessor.address);
@@ -163,7 +142,7 @@ describe('rollup_processor: core', () => {
 
     it('should process private send proof without requiring signatures', async () => {
       const { proofData } = await createSendProof();
-      const tx = await rollupProcessor.processRollup(proofData, Buffer.alloc(32), [], viewingKeys, rollupSize);
+      const tx = await rollupProcessor.processRollup(proofData, Buffer.alloc(32), [], viewingKeys);
       const receipt = await tx.wait();
       expect(receipt.status).to.equal(1);
     });
@@ -172,7 +151,7 @@ describe('rollup_processor: core', () => {
       // owner is address that deployed contract - userA
       const { proofData } = await createSendProof();
       await expect(
-        rollupProcessor.connect(userB).processRollup(proofData, Buffer.alloc(32), [], viewingKeys, rollupSize),
+        rollupProcessor.connect(userB).processRollup(proofData, Buffer.alloc(32), [], viewingKeys),
       ).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
@@ -204,13 +183,7 @@ describe('rollup_processor: core', () => {
 
       await erc20.approve(rollupProcessor.address, depositAmount);
       await erc20.connect(userB).approve(rollupProcessor.address, userBDepositAmount);
-      await rollupProcessor.processRollup(
-        proofData,
-        solidityFormatSignatures(signatures),
-        sigIndexes,
-        fourViewingKeys,
-        rollupSize,
-      );
+      await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, fourViewingKeys);
 
       const postDepositUserABalance = await erc20.balanceOf(userAAddress.toString());
       expect(postDepositUserABalance).to.equal(initialUserABalance - depositAmount);
@@ -230,13 +203,7 @@ describe('rollup_processor: core', () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
 
       await erc20.approve(rollupProcessor.address, depositAmount);
-      await rollupProcessor.processRollup(
-        proofData,
-        solidityFormatSignatures(signatures),
-        sigIndexes,
-        viewingKeys,
-        rollupSize,
-      );
+      await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys);
 
       const dataRoot = await rollupProcessor.dataRoot();
       const nullRoot = await rollupProcessor.nullRoot();
@@ -249,57 +216,41 @@ describe('rollup_processor: core', () => {
 
     it('should reject for non-sequential rollupId', async () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
-      proofData.write(randomBytes(32).toString('hex'), 0); // make ID non-sequential
+      proofData.writeUInt32BE(randInt(), 0); // make ID non-sequential
       await expect(
-        rollupProcessor.processRollup(
-          proofData,
-          solidityFormatSignatures(signatures),
-          sigIndexes,
-          viewingKeys,
-          rollupSize,
-        ),
+        rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
       ).to.be.revertedWith('Rollup Processor: ID_NOT_SEQUENTIAL');
+    });
+
+    it('should reject for malformed data start index', async () => {
+      const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
+      proofData.writeUInt32BE(randInt(), 32 * 2); // malform data start index
+      await expect(
+        rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
+      ).to.be.revertedWith('Rollup Processor: INCORRECT_DATA_START_INDEX');
     });
 
     it('should reject for malformed old data root', async () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
-      proofData.write(randomBytes(32).toString('hex'), 32 * 2); // malform oldDataRoot
+      proofData.writeUInt32BE(randInt(), 32 * 3); // malform data start index
       await expect(
-        rollupProcessor.processRollup(
-          proofData,
-          solidityFormatSignatures(signatures),
-          sigIndexes,
-          viewingKeys,
-          rollupSize,
-        ),
+        rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_DATA_ROOT');
     });
 
     it('should reject for malformed old nullifier root', async () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
-      proofData.write(randomBytes(32).toString('hex'), 32 * 4); // malform oldNullRoot
+      proofData.writeUInt32BE(randInt(), 32 * 5); // malform oldNullRoot
       await expect(
-        rollupProcessor.processRollup(
-          proofData,
-          solidityFormatSignatures(signatures),
-          sigIndexes,
-          viewingKeys,
-          rollupSize,
-        ),
+        rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_NULL_ROOT');
     });
 
     it('should reject for malformed root root', async () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
-      proofData.write(randomBytes(32).toString('hex'), 32 * 6); // malform oldNullRoot
+      proofData.writeUInt32BE(randInt(), 32 * 7); // malform oldRootRoot
       await expect(
-        rollupProcessor.processRollup(
-          proofData,
-          solidityFormatSignatures(signatures),
-          sigIndexes,
-          viewingKeys,
-          rollupSize,
-        ),
+        rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_ROOT_ROOT');
     });
   });

@@ -7,7 +7,6 @@ interface IRollupProcessor {
         bytes calldata proofData,
         bytes calldata signatures,
         uint256[] calldata sigIndexes,
-        bytes calldata viewingKeys,
-        uint256 rollupSize
+        bytes calldata viewingKeys
     ) external;
 }

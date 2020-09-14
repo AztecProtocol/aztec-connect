@@ -32,6 +32,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     uint256 public constant txPubInputLength = 11 * 32; // public inputs length for of each inner proof tx
     uint256 public constant rollupPubInputLength = 10 * 32;
 
+    uint256 public constant escapeBlockRateLimit = 240;
+    mapping(address => uint256) public escapeeBlock;
+
     event RollupProcessed(uint256 indexed rollupId, bytes32 dataRoot, bytes32 nullRoot);
     event Deposit(address depositorAddress, uint256 depositValue);
     event Withdraw(address withdrawAddress, uint256 withdrawValue);
@@ -65,16 +68,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
      * signature[2] corresponds to innerProof[3]
      * @param viewingKeys - viewingKeys for the notes submitted in the rollup. Note: not used in the logic
      * of the rollupProcessor contract, but called here as a convenient to place data on chain
-     * @param rollupSize - number of transactions included in the rollup
      */
     function processRollup(
         bytes calldata proofData,
         bytes calldata signatures,
         uint256[] calldata sigIndexes,
-        bytes calldata viewingKeys,
-        uint256 rollupSize
+        bytes calldata viewingKeys
     ) external override onlyOwner {
-        uint256 numTxs = updateAndVerifyProof(proofData, rollupSize);
+        uint256 numTxs = updateAndVerifyProof(proofData);
         processTransactions(proofData[rollupPubInputLength:], numTxs, signatures, sigIndexes);
     }
 
@@ -82,26 +83,40 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
      * @dev Validate that the supplied Merkle roots are correct, verify the zk proof and update the contract state
      * variables with those provided by the rollup
      *
-     * @param _proofData - cryptographic zk proof data. Passed to the verifier for verification
-     * @param rollupSize - number of transactions included in the zkRollup
+     * @param proofData - cryptographic zk proof data. Passed to the verifier for verification
      */
-    function updateAndVerifyProof(bytes memory _proofData, uint256 rollupSize) internal returns (uint256) {
+    function updateAndVerifyProof(bytes memory proofData) internal returns (uint256) {
         (
             bytes32 newDataRoot,
             bytes32 newNullRoot,
             uint256 rollupId,
+            uint256 rollupSize,
             bytes32 newRootRoot,
-            uint256 numTxs
-        ) = validateMerkleRoots(_proofData);
+            uint256 numTxs,
+            uint256 newDataSize
+        ) = validateMerkleRoots(proofData);
 
-        verifier.verify(_proofData, rollupSize);
+        verifier.verify(proofData, rollupSize);
+
+        // rollupSize = 0 indicates an escape hatch proof
+        if (rollupSize == 0) {
+            // Ensure an escaper, can only escape within last 20 of every 100 blocks.
+            require(block.number % 100 >= 80, 'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT');
+
+            // Ensure an escaper, can only escape once every number of blocks set by rate limit (240 blocks = 1hr).
+            uint256 lastEscapedBlock = escapeeBlock[msg.sender];
+            if (lastEscapedBlock != 0) {
+                require((block.number - lastEscapedBlock > escapeBlockRateLimit), 'Rollup Processor: ESCAPE_LIMITED');
+            }
+            escapeeBlock[msg.sender] = block.number;
+        }
 
         // update state variables
         dataRoot = newDataRoot;
         nullRoot = newNullRoot;
         nextRollupId = rollupId.add(1);
         rootRoot = newRootRoot;
-        dataSize = dataSize.add(rollupSize.mul(2));
+        dataSize = newDataSize;
 
         emit RollupProcessed(rollupId, newDataRoot, newNullRoot);
         return numTxs;
@@ -119,64 +134,44 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
             bytes32,
             bytes32,
             uint256,
+            uint256,
             bytes32,
+            uint256,
             uint256
         )
     {
         (
-            uint256 rollupId,
-            uint256 dataStartIndex,
+            // Stack to deep workaround:
+            // 0: rollupId
+            // 1: rollupSize
+            // 2: dataStartIndex
+            // 3: numTxs
+            uint256[4] memory nums,
             bytes32 oldDataRoot,
             bytes32 newDataRoot,
             bytes32 oldNullRoot,
             bytes32 newNullRoot,
             bytes32 oldRootRoot,
-            bytes32 newRootRoot,
-            uint256 numTxs
+            bytes32 newRootRoot
         ) = decodeProof(proofData);
+
+        // Escape hatch denominated by a rollup size of 0, which means inserting 2 new entries.
+        uint256 toInsert = nums[1] == 0 ? 2 : nums[1].mul(2);
+        if (dataSize % toInsert == 0) {
+            require(nums[2] == dataSize, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
+        } else {
+            uint256 expected = dataSize + toInsert - (dataSize % toInsert);
+            require(nums[2] == expected, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
+        }
 
         // data validation checks
         require(oldDataRoot == dataRoot, 'Rollup Processor: INCORRECT_DATA_ROOT');
         require(oldNullRoot == nullRoot, 'Rollup Processor: INCORRECT_NULL_ROOT');
         require(oldRootRoot == rootRoot, 'Rollup Processor: INCORRECT_ROOT_ROOT');
-        require(rollupId == nextRollupId, 'Rollup Processor: ID_NOT_SEQUENTIAL');
-        require(dataStartIndex >= 0, 'Rollup Processor: DATA_START_NOT_GREATER_ZERO');
-        require(numTxs > 0, 'Rollup Processor: NUM_TX_IS_ZERO');
+        require(nums[0] == nextRollupId, 'Rollup Processor: ID_NOT_SEQUENTIAL');
+        require(nums[3] > 0, 'Rollup Processor: NUM_TX_IS_ZERO');
 
-        return (newDataRoot, newNullRoot, rollupId, newRootRoot, numTxs);
-    }
-
-    /**
-     * @dev Decode the public inputs component of proofData. Required to update state variables
-     * @param proofData - cryptographic proofData associated with a rollup
-     */
-    function decodeProof(bytes memory proofData)
-        internal
-        pure
-        returns (
-            uint256 rollupId,
-            uint256 dataStartIndex,
-            bytes32 oldDataRoot,
-            bytes32 newDataRoot,
-            bytes32 oldNullRoot,
-            bytes32 newNullRoot,
-            bytes32 oldRootRoot,
-            bytes32 newRootRoot,
-            uint256 numTxs
-        )
-    {
-        assembly {
-            let dataStart := add(proofData, 0x20) // jump over first word, it's length of data
-            rollupId := mload(dataStart)
-            dataStartIndex := mload(add(dataStart, 0x40))
-            oldDataRoot := mload(add(dataStart, 0x60))
-            newDataRoot := mload(add(dataStart, 0x80))
-            oldNullRoot := mload(add(dataStart, 0xa0))
-            newNullRoot := mload(add(dataStart, 0xc0))
-            oldRootRoot := mload(add(dataStart, 0xe0))
-            newRootRoot := mload(add(dataStart, 0x100))
-            numTxs := mload(add(dataStart, 0x120))
-        }
+        return (newDataRoot, newNullRoot, nums[0], nums[1], newRootRoot, nums[3], nums[2] + toInsert);
     }
 
     /**

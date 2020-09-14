@@ -103,13 +103,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     this.running = false;
   }
 
-  public async sendProof(
-    proofData: Buffer,
-    signatures: Buffer[],
-    sigIndexes: number[],
-    viewingKeys: Buffer[],
-    rollupSize: number,
-  ) {
+  public async sendProof(proofData: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
     if (!this.running) {
       throw new Error('Blockchain is not accessible.');
     }
@@ -121,7 +115,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       throw new Error(`Incorrect dataStartIndex. Expecting ${this.dataStartIndex}. Got ${rollup.dataStartIndex}.`);
     }
 
-    const txHash = await this.createBlockFromRollup(rollupSize, proofData, viewingKeysData);
+    const txHash = await this.createBlockFromRollup(rollup.rollupSize, proofData, viewingKeysData);
 
     await new Promise(resolve => setTimeout(resolve, 1000));
 
