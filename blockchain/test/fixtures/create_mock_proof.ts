@@ -47,11 +47,15 @@ export const oldDataRootsRoot = Buffer.from([
     0x34, 0x7b, 0xd2, 0xde, 0xe4, 0x4c, 0x84, 0x61, 0x81, 0xb7, 0x05, 0x12, 0x85, 0xc3, 0x2c, 0x0a,
 ]);
 
+export const secondProofNewDataRoot = randomBytes(32);
+export const secondProofNewNullifierRoot = randomBytes(32);
+export const secondProofNewDataRootsRoot = randomBytes(32);
+
 export const newDataRootsRoot = newDataRoot;
 
 // Note: creates publicInputData, so that the 'new' values for the deposit proof map onto the 'old'
 // values for the subsequent withdraw proof
-function publicInputData(id: number, isFirstProof: boolean, numInner: number, rollupSize = 2) {
+function publicInputData(id: number, proofNum: number, numInner: number, rollupSize = 2) {
   // prettier-ignore
   const rollupId = Buffer.from([
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -71,7 +75,7 @@ function publicInputData(id: number, isFirstProof: boolean, numInner: number, ro
 ]);
 
   let allPublicInputs;
-  if (isFirstProof) {
+  if (proofNum === 1) {
     allPublicInputs = [
       rollupId,
       rollupSizeBuf,
@@ -84,19 +88,34 @@ function publicInputData(id: number, isFirstProof: boolean, numInner: number, ro
       newDataRootsRoot,
       numTxs,
     ];
-  } else {
+  } else if (proofNum === 2) {
     allPublicInputs = [
       rollupId,
       rollupSizeBuf,
       dataStartIndex(0x04),
       newDataRoot,
-      randomBytes(32),
+      secondProofNewDataRoot,
       newNullifierRoot,
-      randomBytes(32),
+      secondProofNewNullifierRoot,
       newDataRootsRoot,
+      secondProofNewDataRootsRoot,
+      numTxs,
+    ];
+  } else if (proofNum === 3) {
+    allPublicInputs = [
+      rollupId,
+      rollupSizeBuf,
+      dataStartIndex(0x06),
+      secondProofNewDataRoot,
+      randomBytes(32),
+      secondProofNewNullifierRoot,
+      randomBytes(32),
+      secondProofNewDataRootsRoot,
       randomBytes(32),
       numTxs,
     ];
+  } else {
+    allPublicInputs = [Buffer.alloc(32)];
   }
   return allPublicInputs;
 }
@@ -154,7 +173,7 @@ export async function createDepositProof(amount: number, depositorAddress: EthAd
   const sigIndexes = [0]; // first index corresponds to first innerProof
 
   return {
-    proofData: Buffer.concat([...publicInputData(id, true, numInner), innerProof]),
+    proofData: Buffer.concat([...publicInputData(id, 1, numInner), innerProof]),
     signatures: [signature],
     sigIndexes,
   };
@@ -177,7 +196,7 @@ export async function createTwoDepositsProof(
   const { signature: secondSignature } = await ethSign(secondUser, secondInnerProof);
 
   return {
-    proofData: Buffer.concat([...publicInputData(id, true, numInner), firstInnerProof, secondInnerProof]),
+    proofData: Buffer.concat([...publicInputData(id, 1, numInner), firstInnerProof, secondInnerProof]),
     signatures: [secondSignature, firstSignature],
     sigIndexes: [1, 0], // deliberately reverse sig order to more thoroughly test
   };
@@ -193,7 +212,7 @@ export async function createWithdrawProof(amount: number, withdrawalAddress: Eth
   const sigIndexes = [0]; // first index corresponds to first tx
 
   return {
-    proofData: Buffer.concat([...publicInputData(id, false, numInner), innerProof]),
+    proofData: Buffer.concat([...publicInputData(id, 2, numInner), innerProof]),
     signatures: [signature],
     sigIndexes,
   };
@@ -208,7 +227,39 @@ export async function createSendProof() {
   const signature: Buffer = Buffer.alloc(32);
   const sigIndexes = [0];
   return {
-    proofData: Buffer.concat([...publicInputData(id, true, numInner), innerProof]),
+    proofData: Buffer.concat([...publicInputData(id, 1, numInner), innerProof]),
+    signatures: [signature],
+    sigIndexes,
+  };
+}
+
+// same as withdraw proof, except rollupSize in publicInputData set to 0 - indicating
+// that it's an escape proof
+export async function createEscapeProof(amount: number, withdrawalAddress: EthAddress) {
+  const id: number = 0x01;
+  const numInner: number = 0x01;
+  const innerProof = await innerProofData(false, amount, withdrawalAddress);
+
+  // withdraws do not require signature
+  const signature: Buffer = Buffer.alloc(32);
+  const sigIndexes = [0]; // first index corresponds to first tx
+  return {
+    proofData: Buffer.concat([...publicInputData(id, 2, numInner, 0), innerProof]),
+    signatures: [signature],
+    sigIndexes,
+  };
+}
+
+export async function createSecondEscapeProof(amount: number, withdrawalAddress: EthAddress) {
+  const id: number = 0x02;
+  const numInner: number = 0x01;
+  const innerProof = await innerProofData(false, amount, withdrawalAddress);
+
+  // withdraws do not require signature
+  const signature: Buffer = Buffer.alloc(32);
+  const sigIndexes = [0]; // first index corresponds to first tx
+  return {
+    proofData: Buffer.concat([...publicInputData(id, 3, numInner, 0), innerProof]),
     signatures: [signature],
     sigIndexes,
   };

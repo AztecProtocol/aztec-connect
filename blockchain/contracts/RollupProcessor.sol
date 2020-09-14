@@ -9,7 +9,6 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {IVerifier} from './interfaces/IVerifier.sol';
 import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
-import {Types} from './verifier/cryptography/Types.sol';
 import {Decoder} from './Decoder.sol';
 
 /**
@@ -32,7 +31,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
 
     uint256 public constant txPubInputLength = 11 * 32; // public inputs length for of each inner proof tx
     uint256 public constant rollupPubInputLength = 10 * 32;
-    mapping(address => uint256) escapees;
+
+    uint256 public constant escapeBlockRateLimit = 240;
+    mapping(address => uint256) public escapeeBlock;
 
     event RollupProcessed(uint256 indexed rollupId, bytes32 dataRoot, bytes32 nullRoot);
     event Deposit(address depositorAddress, uint256 depositValue);
@@ -97,17 +98,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
 
         verifier.verify(proofData, rollupSize);
 
-        if (rollupSize != 0) {
-            // If not the escape hatch.
-            verifyInnerProofs(proofData, rollupSize);
-        } else {
+        // rollupSize = 0 indicates an escape hatch proof
+        if (rollupSize == 0) {
             // Ensure an escaper, can only escape within last 20 of every 100 blocks.
             require(block.number % 100 >= 80, 'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT');
 
-            // Ensure an escaper, can only escape once every 240 blocks (1hr).
-            uint256 lastEscapedBlock = escapees[msg.sender];
-            require(lastEscapedBlock != 0 && block.num - lastEscapedBlock < 240, 'Rollup Processor: ESCAPE_LIMITED');
-            escapees[msg.sender] = block.num;
+            // Ensure an escaper, can only escape once every number of blocks set by rate limit (240 blocks = 1hr).
+            uint256 lastEscapedBlock = escapeeBlock[msg.sender];
+            if (lastEscapedBlock != 0) {
+                require((block.number - lastEscapedBlock > escapeBlockRateLimit), 'Rollup Processor: ESCAPE_LIMITED');
+            }
+            escapeeBlock[msg.sender] = block.number;
         }
 
         // update state variables
@@ -156,7 +157,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
 
         // Escape hatch denominated by a rollup size of 0, which means inserting 2 new entries.
         uint256 toInsert = nums[1] == 0 ? 2 : nums[1].mul(2);
-
         if (dataSize % toInsert == 0) {
             require(nums[2] == dataSize, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
         } else {
@@ -172,22 +172,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         require(nums[3] > 0, 'Rollup Processor: NUM_TX_IS_ZERO');
 
         return (newDataRoot, newNullRoot, nums[0], nums[1], newRootRoot, nums[3], nums[2] + toInsert);
-    }
-
-    function verifyInnerProofs(bytes memory proofData, uint256 rollupSize) internal pure {
-        Types.G2Point g2_x = PairingsBn254.new_g2(
-            [
-                0x260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1,
-                0x0118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b0
-            ],
-            [
-                0x04fc6369f7110fe3d25156c1bb9a72859cf2a04641f99ba4ee413c80da6a5fe4,
-                0x22febda3c0c0632a56475b4214e5615e11e6dd3f96e6cea2854a87d4dacc5e55
-            ]
-        );
-        Types.G1Point[2] memory P = decodePairingPoint(proofData, rollupSize);
-        bool verified = PairingsBn254.pairingProd2(P[0], PairingsBn254.P2(), P[1], g2_x);
-        require(verified == true, 'Rollup Processor: PAIRING_CHECK_FAILED');
     }
 
     /**

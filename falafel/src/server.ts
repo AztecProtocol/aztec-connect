@@ -299,7 +299,7 @@ export class Server {
 
       while (true) {
         try {
-          const txHash = await this.blockchain.sendProof(proof, signatures, sigIndexes, viewingKeys, rollupSize);
+          const txHash = await this.blockchain.sendProof(proof, signatures, sigIndexes, viewingKeys);
 
           await this.rollupDb.confirmSent(rollupId, txHash);
 

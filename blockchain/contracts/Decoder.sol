@@ -54,32 +54,6 @@ contract Decoder {
         );
     }
 
-    function decodePairingPoint(bytes memory proofData, uint256 rollupSize)
-        internal
-        pure
-        returns (Types.G1Point[2] memory P)
-    {
-        uint256 offset = 0x140 + rollupSize * 0x0b * 0x20;
-        uint256[4] memory coords;
-        for (uint256 i = 0; i <= 4; i += 1) {
-            uint256 l0;
-            uint256 l1;
-            uint256 l2;
-            uint256 l3;
-            assembly {
-                let dataStart := add(proofData, offset)
-                l0 := mload(dataStart)
-                l1 := mload(add(dataStart, 0x20))
-                l2 := mload(add(dataStart, 0x40))
-                l3 := mload(add(dataStart, 0x60))
-            }
-            offset += 0x80;
-            coords[i] = l0 + (1 << 68) * l1 + (1 << 136) * l2 + (1 << 204) * l3;
-        }
-        P[0] = PairingsBn254.new_g1(coords[0], coords[1]);
-        P[1] = PairingsBn254.new_g1(coords[2], coords[3]);
-    }
-
     /**
      * @dev Find the signature index
      * @param sigIndexes - array specifying whic transaction each signature corresponds to

@@ -18,6 +18,10 @@ import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
 
 use(solidity);
 
+const randInt = () => {
+  return Math.floor(Math.random() * 1000);
+};
+
 describe('rollup_processor: core', () => {
   let rollupProcessor: Contract;
   let erc20: Contract;
@@ -212,7 +216,7 @@ describe('rollup_processor: core', () => {
 
     it('should reject for non-sequential rollupId', async () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
-      proofData.write(randomBytes(32).toString('hex'), 0); // make ID non-sequential
+      proofData.writeUInt32BE(randInt(), 0); // make ID non-sequential
       await expect(
         rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
       ).to.be.revertedWith('Rollup Processor: ID_NOT_SEQUENTIAL');
@@ -220,7 +224,7 @@ describe('rollup_processor: core', () => {
 
     it('should reject for malformed data start index', async () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
-      proofData.write(randomBytes(32).toString('hex'), 32 * 2); // malform data start index
+      proofData.writeUInt32BE(randInt(), 32 * 2); // malform data start index
       await expect(
         rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_DATA_START_INDEX');
@@ -228,7 +232,7 @@ describe('rollup_processor: core', () => {
 
     it('should reject for malformed old data root', async () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
-      proofData.write(randomBytes(32).toString('hex'), 32 * 3); // malform data start index
+      proofData.writeUInt32BE(randInt(), 32 * 3); // malform data start index
       await expect(
         rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_DATA_ROOT');
@@ -236,7 +240,7 @@ describe('rollup_processor: core', () => {
 
     it('should reject for malformed old nullifier root', async () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
-      proofData.write(randomBytes(32).toString('hex'), 32 * 5); // malform oldNullRoot
+      proofData.writeUInt32BE(randInt(), 32 * 5); // malform oldNullRoot
       await expect(
         rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_NULL_ROOT');
@@ -244,7 +248,7 @@ describe('rollup_processor: core', () => {
 
     it('should reject for malformed root root', async () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
-      proofData.write(randomBytes(32).toString('hex'), 32 * 7); // malform oldNullRoot
+      proofData.writeUInt32BE(randInt(), 32 * 7); // malform oldRootRoot
       await expect(
         rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_ROOT_ROOT');
