@@ -3,9 +3,82 @@
 pragma solidity >=0.6.10 <0.7.0;
 
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {Types} from './verifier/cryptography/Types.sol';
+import {PairingsBn254} from './verifier/cryptography/PairingsBn254.sol';
 
 contract Decoder {
     using SafeMath for uint256;
+
+    /**
+     * @dev Decode the public inputs component of proofData. Required to update state variables
+     * @param proofData - cryptographic proofData associated with a rollup
+     */
+    function decodeProof(bytes memory proofData)
+        internal
+        pure
+        returns (
+            uint256[4] memory nums,
+            bytes32 oldDataRoot,
+            bytes32 newDataRoot,
+            bytes32 oldNullRoot,
+            bytes32 newNullRoot,
+            bytes32 oldRootRoot,
+            bytes32 newRootRoot
+        )
+    {
+        uint256 rollupId;
+        uint256 rollupSize;
+        uint256 dataStartIndex;
+        uint256 numTxs;
+        assembly {
+            let dataStart := add(proofData, 0x20) // jump over first word, it's length of data
+            rollupId := mload(dataStart)
+            rollupSize := mload(add(dataStart, 0x20))
+            dataStartIndex := mload(add(dataStart, 0x40))
+            oldDataRoot := mload(add(dataStart, 0x60))
+            newDataRoot := mload(add(dataStart, 0x80))
+            oldNullRoot := mload(add(dataStart, 0xa0))
+            newNullRoot := mload(add(dataStart, 0xc0))
+            oldRootRoot := mload(add(dataStart, 0xe0))
+            newRootRoot := mload(add(dataStart, 0x100))
+            numTxs := mload(add(dataStart, 0x120))
+        }
+        return (
+            [rollupId, rollupSize, dataStartIndex, numTxs],
+            oldDataRoot,
+            newDataRoot,
+            oldNullRoot,
+            newNullRoot,
+            oldRootRoot,
+            newRootRoot
+        );
+    }
+
+    function decodePairingPoint(bytes memory proofData, uint256 rollupSize)
+        internal
+        pure
+        returns (Types.G1Point[2] memory P)
+    {
+        uint256 offset = 0x140 + rollupSize * 0x0b * 0x20;
+        uint256[4] memory coords;
+        for (uint256 i = 0; i <= 4; i += 1) {
+            uint256 l0;
+            uint256 l1;
+            uint256 l2;
+            uint256 l3;
+            assembly {
+                let dataStart := add(proofData, offset)
+                l0 := mload(dataStart)
+                l1 := mload(add(dataStart, 0x20))
+                l2 := mload(add(dataStart, 0x40))
+                l3 := mload(add(dataStart, 0x60))
+            }
+            offset += 0x80;
+            coords[i] = l0 + (1 << 68) * l1 + (1 << 136) * l2 + (1 << 204) * l3;
+        }
+        P[0] = PairingsBn254.new_g1(coords[0], coords[1]);
+        P[1] = PairingsBn254.new_g1(coords[2], coords[3]);
+    }
 
     /**
      * @dev Find the signature index
