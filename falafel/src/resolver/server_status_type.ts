@@ -24,6 +24,6 @@ export class ServerStatusType {
   @Field(() => HexString)
   rootRoot!: string;
 
-  @Field(() => ISODateTime)
-  nextPublishTime!: Date;
+  @Field(() => ISODateTime, { nullable: true })
+  nextPublishTime?: Date;
 }

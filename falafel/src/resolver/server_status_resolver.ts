@@ -60,9 +60,8 @@ export class ServerStatusResolver {
     return this.worldStateDb.getRoot(2);
   }
 
-  @FieldResolver(() => ISODateTime)
+  @FieldResolver(() => ISODateTime, { nullable: true })
   async nextPublishTime() {
-    const avgNewTxTime = 30 * 60 * 1000;
     const avgProofTime = 30 * 1000;
     const avgSettleTime = 60 * 1000;
 
@@ -76,7 +75,7 @@ export class ServerStatusResolver {
         order: { id: 'ASC' },
       });
       const remainingSettleTime = publishedRollup
-        ? publishedRollup.created.getTime() + avgProofTime + avgSettleTime - Date.now()
+        ? Math.max(0, publishedRollup.created.getTime() + avgProofTime + avgSettleTime - Date.now())
         : 0;
 
       return new Date(pendingRollup.created.getTime() + avgProofTime + remainingSettleTime);
@@ -92,13 +91,6 @@ export class ServerStatusResolver {
       );
     }
 
-    const latestTx = await this.rollupTxRep.findOne({
-      order: { created: 'DESC' },
-    });
-    if (latestTx) {
-      return new Date(latestTx.created.getTime() + avgNewTxTime + avgProofTime);
-    }
-
-    return new Date(Date.now() + avgNewTxTime + avgProofTime);
+    return undefined;
   }
 }
