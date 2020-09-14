@@ -202,7 +202,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     const result = rollupAbi.parseTransaction(txObject);
     const rollupProofData = Buffer.from(result.args.proofData.slice(2), 'hex');
     const viewingKeysData = Buffer.from(result.args.viewingKeys.slice(2), 'hex');
-    const rollupSize = Buffer.from(result.args.proofData.slice(2), 'hex').slice(0x20, 0x40).readInt32BE(28);
+    const rollupSize = RollupProofData.getRollupSizeFromBuffer(rollupProofData);
 
     return {
       rollupSize,

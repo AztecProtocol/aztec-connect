@@ -107,6 +107,10 @@ export class RollupProofData {
     return proofData.readUInt32BE(28);
   }
 
+  public static getRollupSizeFromBuffer(proofData: Buffer) {
+    return proofData.readUInt32BE(32 + 28);
+  }
+
   public static fromBuffer(proofData: Buffer, viewingKeyData?: Buffer) {
     const rollupId = RollupProofData.getRollupIdFromBuffer(proofData);
     const rollupSize = proofData.readUInt32BE(1 * 32 + 28);
