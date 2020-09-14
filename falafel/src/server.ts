@@ -25,6 +25,17 @@ export interface ServerConfig {
   readonly minRollupInterval: Duration;
 }
 
+export interface ServerStatus {
+  chainId: number;
+  networkOrHost: string;
+  rollupContractAddress: string;
+  tokenContractAddress: string;
+  dataSize: number;
+  dataRoot: string;
+  nullRoot: string;
+  rootRoot: string;
+}
+
 interface PublishQueueItem {
   rollupId: number;
   proof: Buffer;
@@ -34,7 +45,6 @@ interface PublishQueueItem {
 }
 
 export class Server {
-  private worldStateDb: WorldStateDb;
   private joinSplitVerifier!: JoinSplitVerifier;
   private accountVerifier!: AccountVerifier;
   private worker!: BarretenbergWorker;
@@ -44,7 +54,12 @@ export class Server {
   private proofGenerator: ProofGenerator;
   private pendingNullifiers = new Set<bigint>();
 
-  constructor(private config: ServerConfig, private blockchain: Blockchain, private rollupDb: RollupDb) {
+  constructor(
+    private config: ServerConfig,
+    private blockchain: Blockchain,
+    private rollupDb: RollupDb,
+    private worldStateDb: WorldStateDb,
+  ) {
     if (!this.config.rollupSize) {
       throw new Error('Rollup size must be greater than 0.');
     }
@@ -53,7 +68,6 @@ export class Server {
       throw new Error('minRollupInterval must be <= maxRollupWaitTime');
     }
 
-    this.worldStateDb = new WorldStateDb();
     this.proofGenerator = new ProofGenerator(this.config.rollupSize);
   }
 

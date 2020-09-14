@@ -12,6 +12,7 @@ import { LocalBlockchain } from './blockchain/local_blockchain';
 import { PersistentEthereumBlockchain } from './blockchain/persistent_ethereum_blockchain';
 import { RollupDb } from './rollup_db';
 import { Server, ServerConfig } from './server';
+import { WorldStateDb } from './world_state_db';
 
 dotenv.config();
 
@@ -66,10 +67,12 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  const server = new Server(serverConfig, blockchain, rollupDb);
+  const worldStateDb = new WorldStateDb();
+  const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb);
   await server.start();
 
-  const app = appFactory(server, '/api', connection);
+  const serverStatus = await server.status();
+  const app = appFactory(server, '/api', connection, worldStateDb, serverConfig, serverStatus);
 
   const httpServer = http.createServer(app.callback());
   httpServer.listen(PORT);
