@@ -1,5 +1,5 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/rollup_provider/asset';
+import { AssetId } from '../sdk';
 import { EthereumSdk } from './';
 
 export class EthereumSdkUserAsset {
