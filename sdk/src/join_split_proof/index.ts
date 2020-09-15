@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import { JoinSplitProver, JoinSplitTx, JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
+import { JoinSplitTx, JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { Note, encryptNote, createNoteSecret } from 'barretenberg/client_proofs/note';
 import { WorldState } from 'barretenberg/world_state';
 import { UserState } from '../user_state';
@@ -8,12 +8,13 @@ import { ethers, Signer } from 'ethers';
 import { UserData } from '../user';
 import { GrumpkinAddress, EthAddress } from 'barretenberg/address';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
+import { BoundWasmProver } from 'barretenberg/client_proofs/bound_wasm_prover';
 
 const debug = createDebug('bb:join_split_proof');
 
 export class JoinSplitProofCreator {
   constructor(
-    private joinSplitProver: JoinSplitProver,
+    private joinSplitProver: BoundWasmProver,
     private worldState: WorldState,
     private grumpkin: Grumpkin,
     private noteAlgos: NoteAlgorithms,
@@ -83,7 +84,7 @@ export class JoinSplitProofCreator {
 
     debug('creating proof...');
     const start = new Date().getTime();
-    const proofData = await this.joinSplitProver.createJoinSplitProof(tx);
+    const proofData = await this.joinSplitProver.createProof(tx.toBuffer());
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
 

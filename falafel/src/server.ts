@@ -31,7 +31,6 @@ interface PublishQueueItem {
   signatures: Buffer[];
   sigIndexes: number[];
   viewingKeys: Buffer[];
-  rollupSize: number;
 }
 
 export class Server {
@@ -145,7 +144,6 @@ export class Server {
         signatures,
         sigIndexes,
         viewingKeys: txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat(),
-        rollupSize: this.config.rollupSize,
       });
     });
 
@@ -279,7 +277,6 @@ export class Server {
         signatures,
         sigIndexes,
         viewingKeys,
-        rollupSize: this.config.rollupSize,
       });
 
       this.printState();
@@ -295,7 +292,7 @@ export class Server {
       if (!item) {
         break;
       }
-      const { rollupId, proof, signatures, sigIndexes, viewingKeys, rollupSize } = item;
+      const { rollupId, proof, signatures, sigIndexes, viewingKeys } = item;
 
       while (true) {
         try {

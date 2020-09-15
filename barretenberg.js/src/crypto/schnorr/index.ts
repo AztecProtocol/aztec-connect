@@ -1,9 +1,5 @@
+import { Signature } from '../../client_proofs/signature';
 import { BarretenbergWasm } from '../../wasm';
-
-export interface Signature {
-  s: Buffer;
-  e: Buffer;
-}
 
 export class Schnorr {
   constructor(private wasm: BarretenbergWasm) {}
@@ -15,7 +11,7 @@ export class Schnorr {
     const m = this.wasm.sliceMemory(0, 64);
     const s = Buffer.from(m.slice(0, 32));
     const e = Buffer.from(m.slice(32, 64));
-    return { s, e };
+    return new Signature(s, e);
   }
 
   public computePublicKey(pk: Uint8Array) {

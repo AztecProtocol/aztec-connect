@@ -153,6 +153,57 @@ export class CoreSdk extends EventEmitter {
     this.updateInitState(SdkInitState.INITIALIZED);
   }
 
+  public async initEscape(rollupContractAddress: EthAddress, tokenContractAddress: EthAddress) {
+    if (this.sdkStatus.initState !== SdkInitState.UNINITIALIZED) {
+      throw new Error('Sdk is not UNINITIALIZED.');
+    }
+
+    this.updateInitState(SdkInitState.INITIALIZING);
+
+    const { chainId } = await this.ethersProvider.getNetwork();
+
+    this.tokenContracts[AssetId.DAI] =
+      chainId !== 1337
+        ? new Web3TokenContract(this.ethersProvider, tokenContractAddress, rollupContractAddress, chainId)
+        : new MockTokenContract();
+    await Promise.all(this.tokenContracts.map(tc => tc.init()));
+
+    const barretenberg = await BarretenbergWasm.new();
+    const pedersen = new Pedersen(barretenberg);
+    const blake2s = new Blake2s(barretenberg);
+    const grumpkin = new Grumpkin(barretenberg);
+    const crsData = await this.getCrsData(512 * 1024);
+    const numWorkers = Math.min(navigator.hardwareConcurrency || 1, 8);
+    const workerPool = await WorkerPool.new(barretenberg, numWorkers);
+    const pooledProverFactory = new PooledProverFactory(workerPool, crsData);
+    // const escapeHatchProver = new EscapeHatchProver(barretenberg, await pooledProverFactory.createProver(512 * 1024));
+
+    this.blake2s = blake2s;
+    this.userFactory = new UserDataFactory(grumpkin, this.ethersProvider);
+    this.userStateFactory = new UserStateFactory(grumpkin, blake2s, this.db, this.blockSource);
+    this.workerPool = workerPool;
+    this.txsState = new TxsState(this.rollupProviderExplorer);
+    this.worldState = new WorldState(this.leveldb, pedersen, blake2s);
+    // this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, grumpkin);
+    // this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, blake2s);
+
+    await this.worldState.init();
+
+    // If chainId is 0 (falafel is using simulated blockchain) pretend it needs to be ropsten.
+    this.sdkStatus.chainId = chainId || 3;
+    this.sdkStatus.rollupContractAddress = rollupContractAddress;
+    this.sdkStatus.dataSize = this.worldState.getSize();
+    this.sdkStatus.dataRoot = this.worldState.getRoot();
+    this.sdkStatus.syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
+    this.sdkStatus.latestRollupId = +(await this.leveldb.get('latestRollupId').catch(() => -1));
+
+    await this.initUserStates();
+    // await this.createJoinSplitProvingKey(joinSplitProver);
+    // await this.createAccountProvingKey(accountProver);
+
+    this.updateInitState(SdkInitState.INITIALIZED);
+  }
+
   private async getCrsData(circuitSize: number) {
     let crsData = await this.db.getKey(`crs-${circuitSize}`);
     if (!crsData) {
