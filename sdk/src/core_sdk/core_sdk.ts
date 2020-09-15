@@ -466,14 +466,14 @@ export class CoreSdk extends EventEmitter implements Sdk {
       this.sdkStatus.rollupContractAddress,
       action,
     );
-    this.emit(SdkEvent.UPDATED_USER_STATE, from);
+    this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     return txHash;
   }
 
   public async mint(assetId: AssetId, userId: Buffer, value: bigint, to: EthAddress) {
     const action = () => this.getTokenContract(assetId).mint(to, value);
     const txHash = await this.performAction(Action.MINT, value, userId, to, action);
-    this.emit(SdkEvent.UPDATED_USER_STATE, to);
+    this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     return txHash;
   }
 
