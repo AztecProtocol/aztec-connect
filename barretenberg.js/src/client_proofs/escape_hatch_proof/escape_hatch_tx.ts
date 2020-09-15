@@ -1,30 +1,11 @@
 import { toBufferBE } from 'bigint-buffer';
-import { Note } from '../note';
-import { Signature } from '../signature';
 import { HashPath } from '../../merkle_tree';
 import { numToUInt32BE, serializeBufferArrayToVector } from '../../serialize';
-import { GrumpkinAddress, EthAddress } from '../../address';
-import createDebug from 'debug';
-
-const debug = createDebug('bb:escape-hatch-tx');
+import { JoinSplitTx } from '../join_split_proof';
 
 export class EscapeHatchTx {
   constructor(
-    public publicInput: bigint,
-    public publicOutput: bigint,
-    public numInputNotes: number,
-    public inputNoteIndices: number[],
-
-    public oldDataRoot: Buffer,
-    public inputNotePaths: HashPath[],
-    public inputNotes: Note[],
-    public outputNotes: Note[],
-    public signature: Signature,
-    public inputOwner: EthAddress,
-    public outputOwner: EthAddress,
-    public accountIndex: number,
-    public accountPath: HashPath,
-    public signingPubKey: GrumpkinAddress,
+    public joinSplitTx: JoinSplitTx,
 
     public rollupId: number,
     public dataStartIndex: number,
@@ -45,29 +26,31 @@ export class EscapeHatchTx {
   ) {}
 
   toBuffer() {
-    const notePathBuffer = Buffer.concat(this.inputNotePaths.map(p => p.toBuffer()));
-    const noteBuffer = Buffer.concat([...this.inputNotes, ...this.outputNotes].map(n => n.toBuffer()));
+    const notePathBuffer = Buffer.concat(this.joinSplitTx.inputNotePaths.map(p => p.toBuffer()));
+    const noteBuffer = Buffer.concat(
+      [...this.joinSplitTx.inputNotes, ...this.joinSplitTx.outputNotes].map(n => n.toBuffer()),
+    );
 
     const numBuf = Buffer.alloc(8);
     numBuf.writeUInt32BE(this.rollupId, 0);
     numBuf.writeUInt32BE(this.dataStartIndex, 4);
 
     return Buffer.concat([
-      toBufferBE(this.publicInput, 32),
-      toBufferBE(this.publicOutput, 32),
-      numToUInt32BE(this.numInputNotes),
-      numToUInt32BE(this.inputNoteIndices[0]),
-      numToUInt32BE(this.inputNoteIndices[1]),
+      toBufferBE(this.joinSplitTx.publicInput, 32),
+      toBufferBE(this.joinSplitTx.publicOutput, 32),
+      numToUInt32BE(this.joinSplitTx.numInputNotes),
+      numToUInt32BE(this.joinSplitTx.inputNoteIndices[0]),
+      numToUInt32BE(this.joinSplitTx.inputNoteIndices[1]),
 
-      this.oldDataRoot,
+      this.joinSplitTx.merkleRoot,
       notePathBuffer,
       noteBuffer,
-      this.signature.toBuffer(),
-      this.inputOwner.toBuffer32(),
-      this.outputOwner.toBuffer32(),
-      numToUInt32BE(this.accountIndex),
-      this.accountPath.toBuffer(),
-      this.signingPubKey.toBuffer(),
+      this.joinSplitTx.signature.toBuffer(),
+      this.joinSplitTx.inputOwner.toBuffer32(),
+      this.joinSplitTx.outputOwner.toBuffer32(),
+      numToUInt32BE(this.joinSplitTx.accountIndex),
+      this.joinSplitTx.accountPath.toBuffer(),
+      this.joinSplitTx.signingPubKey.toBuffer(),
 
       numBuf,
       this.newDataRoot,
@@ -82,7 +65,7 @@ export class EscapeHatchTx {
 
       this.oldDataRootsRoot,
       this.newDataRootsRoot,
-      this.oldDataRootPath.toBuffer(), // should there be multiple?
+      this.oldDataRootPath.toBuffer(),
       this.newDataRootsPath.toBuffer(),
     ]);
   }

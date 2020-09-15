@@ -5,13 +5,6 @@ export function numToUInt32BE(n: number, bufferSize: number = 4) {
   return buf;
 }
 
-// For serializing numbers to 128 bit big-endian form.
-export function numToUInt128BE(n: number, bufferSize: number = 16) {
-  const buf = Buffer.alloc(bufferSize);
-  buf.writeUInt32BE(n, bufferSize - 16);
-  return buf;
-}
-
 // For serializing a buffer as a vector.
 export function serializeBufferToVector(buf: Buffer) {
   const lengthBuf = Buffer.alloc(4);

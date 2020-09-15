@@ -3,7 +3,7 @@ import { Block } from 'barretenberg/block_source';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { toBigIntBE } from 'bigint-buffer';
 import createDebug from 'debug';
-import { Contract, ethers, Event, EventFilter, Signer } from 'ethers';
+import { Contract, ethers, Signer } from 'ethers';
 import { EventEmitter } from 'events';
 import { abi as ERC20ABI } from './artifacts/ERC20Mintable.json';
 import { abi as RollupABI } from './artifacts/RollupProcessor.json';
@@ -80,14 +80,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public getRollupContractAddress() {
     return this.rollupContractAddress;
-  }
-
-  /**
-   * Get the next rollup id
-   */
-
-  public async getRollupId() {
-    return await this.rollupProcessor.nextRollupId();
   }
 
   public getTokenContractAddress() {

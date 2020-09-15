@@ -66,10 +66,6 @@ export default class Server implements HashPathSource {
     });
   }
 
-  // TODO: provide an array of objects that is index and data value
-  // for nullifier just give 63 zeros and 1, that's data value
-  // with root tree, send over root index inserting into rollupId + 1
-  // data inserting into tree
   public async getHashPaths(treeIndex: number, nullifiers: Buffer[]) {
     const nullifierIndices = nullifiers.map(n => nullifierBufferToIndex(n));
     return new Promise<GetHashPathsResponse>(resolve => {
