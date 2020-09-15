@@ -90,14 +90,6 @@ describe('escape_hatch_proof', () => {
     await pool.destroy();
   });
 
-  it('escape hatch should construct keys', async () => {
-    debug('creating keys...');
-    const start = new Date().getTime();
-    await escapeHatchProver.computeKey(crs);
-    await escapeHatchVerifier.computeKey(pippenger.pool[0], crs.getG2Data());
-    debug(`created circuit keys: ${new Date().getTime() - start}ms`);
-  });
-
   it('should construct and verify an escape hatch proof', async () => {
     const inputNote1 = new Note(pubKey, createNoteSecret(), BigInt(100));
     const inputNote2 = new Note(pubKey, createNoteSecret(), BigInt(50));
