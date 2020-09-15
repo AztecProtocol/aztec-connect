@@ -6,6 +6,7 @@ import { Note } from '../note';
 import { computeNullifier } from './compute_nullifier';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { GrumpkinAddress } from '../../address';
+import { NoteAlgorithms } from '../note_algorithms';
 
 describe('compute_nullifier', () => {
   // prettier-ignore
@@ -22,14 +23,15 @@ describe('compute_nullifier', () => {
     const schnorr = new Schnorr(barretenberg);
     const blake2s = new Blake2s(barretenberg);
     const grumpkin = new Grumpkin(barretenberg);
-    const joinSplitProver = new JoinSplitProver(barretenberg, undefined as any);
+    const noteAlgos = new NoteAlgorithms(barretenberg);
+    const joinSplitProver = new JoinSplitProver(undefined as any);
 
     const pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
     const inputNote1 = new Note(pubKey, viewingKey, BigInt(100));
     const inputNote2 = new Note(pubKey, viewingKey, BigInt(50));
 
-    const inputNote1Enc = await joinSplitProver.encryptNote(inputNote1);
-    const inputNote2Enc = await joinSplitProver.encryptNote(inputNote2);
+    const inputNote1Enc = await noteAlgos.encryptNote(inputNote1);
+    const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);
 
     const nullifier1 = computeNullifier(inputNote1Enc, 0, inputNote1.secret, blake2s);
     const nullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, blake2s);
