@@ -152,11 +152,11 @@ export class EthereumSdk extends EventEmitter {
     return this.core.getBalance(ethAddress);
   }
 
-  public async getLatestRollups() {
+  public async getLatestRollups(count: number) {
     return this.core.getLatestRollups();
   }
 
-  public async getLatestTxs() {
+  public async getLatestTxs(count: number) {
     return this.core.getLatestTxs();
   }
 
