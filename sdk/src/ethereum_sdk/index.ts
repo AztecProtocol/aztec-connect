@@ -1,11 +1,10 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/rollup_provider/asset';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
-import { SdkEvent, TxHash } from '../sdk';
+import { AssetId, SdkEvent, TxHash } from '../sdk';
 import { KeyPair } from '../user';
 
 const debug = createDebug('bb:ethereum_sdk');
