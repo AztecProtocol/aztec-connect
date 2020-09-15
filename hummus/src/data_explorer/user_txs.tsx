@@ -66,13 +66,8 @@ export const UserTxs = ({ account, app }: UserTxsProps) => {
       }
       setTxs(await user.getTxs());
 
-      const actionState = sdk.getActionState();
-      const isOwnedByUser = actionState && actionState.sender.equals(account);
-      if (isOwnedByUser) {
-        setActionState(actionState);
-      } else if (actionState) {
-        setActionState(undefined);
-      }
+      const actionState = sdk.getActionState(account);
+      setActionState(actionState);
     };
 
     updatedUserState(account);
