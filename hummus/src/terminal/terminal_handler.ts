@@ -1,8 +1,8 @@
-import { WebSdk, AppEvent, AppInitState, AppInitStatus, AppInitAction } from 'aztec2-sdk';
-import { MemoryFifo, SdkEvent, AssetId } from 'aztec2-sdk';
-import { Terminal } from './terminal';
+import { AppEvent, AppInitAction, AppInitState, AppInitStatus, WebSdk } from 'aztec2-sdk';
+import { AssetId, MemoryFifo, SdkEvent } from 'aztec2-sdk';
+import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import copy from 'copy-to-clipboard';
-import { GrumpkinAddress, EthAddress } from 'barretenberg/address';
+import { Terminal } from './terminal';
 
 enum TermControl {
   PROMPT,
@@ -75,7 +75,7 @@ export class TerminalHandler {
    * Registered before the app has been initialized, unregistered after.
    * Any initialization messages are added to the print queue.
    */
-  private initProgressHandler = (initStatus: AppInitStatus, previousStatus: AppInitStatus) => {
+  private initProgressHandler = (initStatus: AppInitStatus) => {
     const msg = this.getInitString(initStatus);
     if (msg) {
       this.printQueue.put(msg + '\n');

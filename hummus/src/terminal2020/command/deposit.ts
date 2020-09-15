@@ -1,5 +1,5 @@
 import { App } from '../../app';
-import { TerminalBuffer, loading } from './terminal_buffer';
+import { loading,TerminalBuffer } from './terminal_buffer';
 
 const run = async (buf: TerminalBuffer, app: App) => {
   const option = buf.argv[1];

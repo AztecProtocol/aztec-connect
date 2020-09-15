@@ -1,6 +1,6 @@
-import React from 'react';
+import { Avatar, Block, Col, FlexBox, Row, Text } from '@aztec/guacamole-ui';
 import moment from 'moment';
-import { Row, Col, Block, FlexBox, Avatar, Text } from '@aztec/guacamole-ui';
+import React from 'react';
 import { MonospacedText } from '../components';
 import { ThemeContext } from '../config/context';
 import { RelativeTime } from './relative_time';

@@ -1,6 +1,6 @@
+import { transparentize } from 'polished';
 import React from 'react';
 import styled, { keyframes } from 'styled-components';
-import { transparentize } from 'polished';
 
 const colors = {
   black: '#000000',

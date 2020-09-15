@@ -1,10 +1,10 @@
 import { App } from '../../app';
 import { Text } from '../display';
-import { TerminalBuffer, loading } from './terminal_buffer';
+import { loading,TerminalBuffer } from './terminal_buffer';
 
 const validOptions = ['-a', '-i', '-k'];
 
-const logUsage = async (buf: TerminalBuffer, msg: string = '') => {
+const logUsage = async (buf: TerminalBuffer, msg = '') => {
   let texts: Text[] = [];
   if (msg) {
     texts.push({ text: msg });

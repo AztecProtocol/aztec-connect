@@ -1,8 +1,8 @@
 import { App } from '../../app';
 import { Text } from '../display';
-import { TerminalBuffer, loading } from './terminal_buffer';
+import { loading,TerminalBuffer } from './terminal_buffer';
 
-const logUsage = async (buf: TerminalBuffer, unknown: string = '') => {
+const logUsage = async (buf: TerminalBuffer, unknown = '') => {
   let texts: Text[] = [];
   if (unknown.startsWith('-')) {
     texts.push({ text: `Unknown option: ${unknown}` });

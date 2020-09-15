@@ -1,13 +1,13 @@
-import { SdkEvent, AssetId, Action } from 'aztec2-sdk';
-import React, { useState, useEffect } from 'react';
 import { Block, FlexBox } from '@aztec/guacamole-ui';
+import { Action,AssetId, SdkEvent } from 'aztec2-sdk';
 import { WebSdk } from 'aztec2-sdk';
-import { FormSection, FormField, Form } from '../components';
-import { RecipientValueForm } from './recipient_value_form';
-import { ClearDataButton } from './clear_data_button';
+import { EthAddress,GrumpkinAddress } from 'barretenberg/address';
+import React, { useEffect,useState } from 'react';
+import { Form,FormField, FormSection } from '../components';
 import { ActionSelect } from './action_select';
-import { GrumpkinAddress, EthAddress } from 'barretenberg/address';
+import { ClearDataButton } from './clear_data_button';
 import { Copy } from './copy';
+import { RecipientValueForm } from './recipient_value_form';
 
 interface ActionFormProps {
   app: WebSdk;

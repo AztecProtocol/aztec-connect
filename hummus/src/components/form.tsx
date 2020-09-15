@@ -1,5 +1,5 @@
-import React from 'react';
 import { Block } from '@aztec/guacamole-ui';
+import React from 'react';
 import { ThemeContext } from '../config/context';
 
 interface FormProps {

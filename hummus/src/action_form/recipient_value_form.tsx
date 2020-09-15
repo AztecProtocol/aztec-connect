@@ -1,5 +1,5 @@
+import { Block, FlexBox, Icon,Text } from '@aztec/guacamole-ui';
 import React, { useState } from 'react';
-import { Block, FlexBox, Text, Icon } from '@aztec/guacamole-ui';
 import { Button, FormField, Input } from '../components';
 
 interface FormProps {

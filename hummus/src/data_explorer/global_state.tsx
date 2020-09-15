@@ -1,8 +1,8 @@
+import { SdkEvent,WebSdk } from 'aztec2-sdk';
 import React, { useEffect } from 'react';
 import { Form, FormSection } from '../components';
 import { LatestRollups } from './latest_rollups';
 import { LatestTxs } from './latest_txs';
-import { WebSdk, SdkEvent } from 'aztec2-sdk';
 
 interface GlobalStateProps {
   app: WebSdk;

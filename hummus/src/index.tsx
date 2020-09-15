@@ -1,18 +1,17 @@
+import './styles/guacamole.css';
+import { Block, FlexBox, Icon, PageSteps, SwitchInput, Text, TextButton } from '@aztec/guacamole-ui';
+import { WebSdk } from 'aztec2-sdk';
+import debug from 'debug';
+import { History } from 'history';
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import { BrowserRouter, Switch, Route, Link, useLocation, RouteComponentProps } from 'react-router-dom';
-import { History } from 'history';
+import { BrowserRouter, Link, Route, RouteComponentProps, Switch, useLocation } from 'react-router-dom';
 import styled, { createGlobalStyle } from 'styled-components';
-import { FlexBox, Block, SwitchInput, Text, TextButton, Icon, PageSteps } from '@aztec/guacamole-ui';
-import { WebSdk } from 'aztec2-sdk';
-import { LocalState, GlobalState, RollupDetails, TxDetails } from './data_explorer';
-import { ThemeContext, themes } from './config/context';
-// import { Terminal2020 } from './terminal2020';
-import './styles/guacamole.css';
-import debug from 'debug';
-import { Terminal, TerminalComponent } from './terminal';
-import { Init } from './init';
 import { ActionForm } from './action_form';
+import { ThemeContext, themes } from './config/context';
+import { GlobalState, LocalState, RollupDetails, TxDetails } from './data_explorer';
+import { Init } from './init';
+import { Terminal, TerminalComponent } from './terminal';
 require('barretenberg/wasm/barretenberg.wasm');
 
 declare global {
@@ -63,13 +62,13 @@ interface RollupRouteParams {
   id: string;
 }
 
-interface RollupRouteProps extends RouteComponentProps<RollupRouteParams> {}
+type RollupRouteProps = RouteComponentProps<RollupRouteParams>;
 
 interface TxRouteParams {
   txHash: string;
 }
 
-interface TxRouteProps extends RouteComponentProps<TxRouteParams> {}
+type TxRouteProps = RouteComponentProps<TxRouteParams>;
 
 const Unsupported = () => {
   const [theme] = useState(themes.dark);

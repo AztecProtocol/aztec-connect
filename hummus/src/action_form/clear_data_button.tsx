@@ -1,6 +1,6 @@
+import { Block, FlexBox, Icon,TextButton } from '@aztec/guacamole-ui';
 import React from 'react';
 import styled from 'styled-components';
-import { TextButton, FlexBox, Block, Icon } from '@aztec/guacamole-ui';
 import { ThemeContext } from '../config/context';
 
 const InlineBlockTextButton = styled(TextButton)`

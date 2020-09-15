@@ -1,6 +1,6 @@
+import { Block, Icon, Text } from '@aztec/guacamole-ui';
 import React, { useState } from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
-import { Block, Icon, Text } from '@aztec/guacamole-ui';
 import { ThemeContext } from '../config/context';
 
 interface CopyProps {
