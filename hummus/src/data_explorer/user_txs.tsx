@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { Action, ActionState, AssetId, SdkEvent, UserTx, WebSdk } from 'aztec2-sdk';
+import { EthAddress } from 'barretenberg/address';
+import React, { useEffect, useState } from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
 import { Link } from 'react-router-dom';
-import { Block, Text, FlexBox, TextButton } from '@aztec/guacamole-ui';
+import { Block, FlexBox, Text, TextButton } from '@aztec/guacamole-ui';
 import { ThemeContext } from '../config/context';
 import { StatusRow, TmpRow } from './status_row';
-import { SdkEvent, UserTx, ActionState, AssetId, Action, Sdk } from 'aztec2-sdk';
-import { EthAddress } from 'barretenberg/address';
-import { WebSdk } from 'aztec2-sdk';
 
 interface UserTxsProps {
   app: WebSdk;

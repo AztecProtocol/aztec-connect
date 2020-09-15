@@ -1,9 +1,10 @@
-import { Sdk, SdkEvent, SdkInitState } from '../sdk';
-import { createSdk, getRollupProviderStatus } from '../core_sdk/create_sdk';
-import { EthProvider, EthProviderEvent, chainIdToNetwork } from './eth_provider';
-import { EventEmitter } from 'events';
 import { EthAddress } from 'barretenberg/address';
 import createDebug from 'debug';
+import { EventEmitter } from 'events';
+import { getRollupProviderStatus } from '../core_sdk/create_sdk';
+import { EthereumSdk } from '../ethereum_sdk';
+import { SdkEvent, SdkInitState } from '../sdk';
+import { chainIdToNetwork, EthProvider, EthProviderEvent } from './eth_provider';
 
 const debug = createDebug('bb:app');
 
@@ -52,12 +53,13 @@ export interface AppInitStatus {
  * UPDATED_INIT_STATE => DESTROYED
  */
 export class WebSdk extends EventEmitter {
-  private sdk!: Sdk;
+  private sdk!: EthereumSdk;
   private ethProvider!: EthProvider;
   private initStatus: AppInitStatus = { initState: AppInitState.UNINITIALIZED };
 
   constructor(private provider: any) {
     super();
+    this.sdk = new EthereumSdk(provider);
   }
 
   public async init(serverUrl: string, clearDb = false) {
@@ -79,8 +81,6 @@ export class WebSdk extends EventEmitter {
         }
       }
 
-      this.sdk = await createSdk(serverUrl, this.provider, { clearDb });
-
       // Forward all sdk events. This allows subscribing to the events on the App, before we have called init().
       for (const e in SdkEvent) {
         const event = (SdkEvent as any)[e];
@@ -94,7 +94,7 @@ export class WebSdk extends EventEmitter {
         }
       });
 
-      await this.sdk.init();
+      await this.sdk.init(serverUrl, clearDb);
 
       // Link account. Will be INITIALZED once complete.
       await this.initLinkAccount();
@@ -200,7 +200,7 @@ export class WebSdk extends EventEmitter {
 
   public async destroy() {
     debug('destroying app...');
-    await this.sdk?.destroy();
+    await this.sdk.destroy();
     this.ethProvider?.destroy();
     this.initStatus.account === undefined;
     this.updateInitStatus(AppInitState.UNINITIALIZED);

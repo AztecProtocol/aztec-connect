@@ -1,5 +1,5 @@
-import { Rollup, Sdk } from 'aztec2-sdk';
-import React, { useState, useEffect } from 'react';
+import { EthereumSdk, Rollup } from 'aztec2-sdk';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Block, Text, TextButton } from '@aztec/guacamole-ui';
 import { ThemeContext } from '../config/context';
@@ -8,7 +8,7 @@ import { StatusRow } from './status_row';
 interface LatestRollupsProps {
   bindSetter: (setter: (tx: Rollup[]) => void) => void;
   unbindSetter: (setter: (tx: Rollup[]) => void) => void;
-  sdk: Sdk;
+  sdk: EthereumSdk;
 }
 
 export const LatestRollups = ({ bindSetter, unbindSetter, sdk }: LatestRollupsProps) => {
