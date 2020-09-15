@@ -1,3 +1,4 @@
+import { Web3Provider } from '@ethersproject/providers';
 import { Address, EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block, BlockSource } from 'barretenberg/block_source';
 import { AccountProver } from 'barretenberg/client_proofs/account_proof';
@@ -19,7 +20,6 @@ import { Signer } from 'ethers';
 import { EventEmitter } from 'events';
 import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
-import { Web3Provider } from '@ethersproject/providers';
 import { AccountProofCreator } from '../account_proof_creator';
 import { Database } from '../database';
 import { EthereumProvider } from '../ethereum_provider';
@@ -179,7 +179,7 @@ export class CoreSdk extends EventEmitter {
     // const escapeHatchProver = new EscapeHatchProver(barretenberg, await pooledProverFactory.createProver(512 * 1024));
 
     this.blake2s = blake2s;
-    this.userFactory = new UserDataFactory(grumpkin, this.ethersProvider);
+    this.userFactory = new UserDataFactory(grumpkin);
     this.userStateFactory = new UserStateFactory(grumpkin, blake2s, this.db, this.blockSource);
     this.workerPool = workerPool;
     this.txsState = new TxsState(this.rollupProviderExplorer);

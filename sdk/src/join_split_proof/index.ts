@@ -1,34 +1,33 @@
-import createDebug from 'debug';
-import { JoinSplitTx, JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
-import { Note, encryptNote, createNoteSecret } from 'barretenberg/client_proofs/note';
-import { WorldState } from 'barretenberg/world_state';
-import { UserState } from '../user_state';
+import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { JoinSplitProof, JoinSplitProver, JoinSplitTx } from 'barretenberg/client_proofs/join_split_proof';
+import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
+import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
+import { WorldState } from 'barretenberg/world_state';
+import createDebug from 'debug';
 import { ethers, Signer } from 'ethers';
 import { UserData } from '../user';
-import { GrumpkinAddress, EthAddress } from 'barretenberg/address';
-import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
-import { BoundWasmProver } from 'barretenberg/client_proofs/bound_wasm_prover';
+import { UserState } from '../user_state';
 
 const debug = createDebug('bb:join_split_proof');
 
 export class JoinSplitProofCreator {
   constructor(
-    private joinSplitProver: BoundWasmProver,
+    private joinSplitProver: JoinSplitProver,
     private worldState: WorldState,
     private grumpkin: Grumpkin,
     private noteAlgos: NoteAlgorithms,
   ) {}
 
-  public async createProof(
+  public async createJoinSplitTx(
     userState: UserState,
     publicInput: bigint,
     publicOutput: bigint,
     newNoteValue: bigint,
     sender: UserData,
     receiverPubKey?: GrumpkinAddress,
+    inputOwnerAddress?: EthAddress,
     outputOwnerAddress?: EthAddress,
-    signer?: Signer,
   ) {
     const max = (a: bigint, b: bigint) => (a > b ? a : b);
     const requiredInputNoteValue = max(BigInt(0), newNoteValue + publicOutput - publicInput);
@@ -54,8 +53,6 @@ export class JoinSplitProofCreator {
       new Note(sender.publicKey, createNoteSecret(), changeValue),
     ];
 
-    const encViewingKey1 = encryptNote(outputNotes[0], this.grumpkin);
-    const encViewingKey2 = encryptNote(outputNotes[1], this.grumpkin);
     const signature = this.noteAlgos.sign4Notes([...inputNotes, ...outputNotes], sender.privateKey!);
 
     const dataRoot = this.worldState.getRoot();
@@ -75,12 +72,43 @@ export class JoinSplitProofCreator {
       inputNotes,
       outputNotes,
       signature,
-      signer ? EthAddress.fromString(await signer.getAddress()) : EthAddress.ZERO,
+      inputOwnerAddress || EthAddress.ZERO,
       outputOwnerAddress || EthAddress.ZERO,
       accountIndex,
       accountPath,
       signingPubKey,
     );
+
+    return tx;
+  }
+
+  public createViewingKeys(notes: Note[]) {
+    const encViewingKey1 = encryptNote(notes[0], this.grumpkin);
+    const encViewingKey2 = encryptNote(notes[1], this.grumpkin);
+    return [encViewingKey1, encViewingKey2];
+  }
+
+  public async createProof(
+    userState: UserState,
+    publicInput: bigint,
+    publicOutput: bigint,
+    newNoteValue: bigint,
+    sender: UserData,
+    receiverPubKey?: GrumpkinAddress,
+    outputOwnerAddress?: EthAddress,
+    signer?: Signer,
+  ) {
+    const tx = await this.createJoinSplitTx(
+      userState,
+      publicInput,
+      publicOutput,
+      newNoteValue,
+      sender,
+      receiverPubKey,
+      signer ? EthAddress.fromString(await signer.getAddress()) : undefined,
+      outputOwnerAddress,
+    );
+    const viewingKeys = this.createViewingKeys(tx.outputNotes);
 
     debug('creating proof...');
     const start = new Date().getTime();
@@ -88,7 +116,6 @@ export class JoinSplitProofCreator {
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
 
-    const viewingKeys = [encViewingKey1, encViewingKey2];
     const joinSplitProof = new JoinSplitProof(proofData, viewingKeys);
     const depositSignature = publicInput
       ? await this.ethSign(joinSplitProof.getDepositSigningData(), signer)

@@ -1,7 +1,7 @@
 export class MemoryFifo<T> {
   private waiting: ((item: T | null) => void)[] = [];
   private items: T[] = [];
-  private flushing: boolean = false;
+  private flushing = false;
 
   public length() {
     return this.items.length;
