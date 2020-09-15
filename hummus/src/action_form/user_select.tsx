@@ -1,13 +1,13 @@
 import { Block, FlexBox, Icon, SelectInput, Text } from '@aztec/guacamole-ui';
-import { UserData } from 'aztec2-sdk';
+import { EthUserData } from 'aztec2-sdk';
 import React, { useState } from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
 import { FormField } from '../components';
 import { ThemeContext } from '../config/context';
 
 interface UserSelectProps {
-  users: UserData[];
-  user: UserData;
+  users: EthUserData[];
+  user: EthUserData;
   onSelect: (value: string) => void;
 }
 
