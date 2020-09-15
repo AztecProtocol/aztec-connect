@@ -1,19 +1,80 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
+import { Web3Provider } from '@ethersproject/providers';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
 import { AssetId, SdkEvent, TxHash } from '../sdk';
-import { KeyPair } from '../user';
+import { deriveGrumpkinPrivateKey, KeyPair, UserData } from '../user';
+import { Database, DbAccount } from './database';
+import { EthereumSdkUser } from './ethereum_sdk_user';
 
 const debug = createDebug('bb:ethereum_sdk');
 
+export interface EthUserData extends UserData {
+  ethAddress: EthAddress;
+}
+
+const toEthUserData = (ethAddress: EthAddress, userData: UserData): EthUserData => ({
+  ...userData,
+  ethAddress,
+});
+
 export class EthereumSdk extends EventEmitter {
+  private db = new Database('aztec2-sdk-eth');
   private core!: CoreSdk;
+  private web3Provider: Web3Provider;
+  private localAccounts: DbAccount[] = [];
+  private pausedEvent: Map<SdkEvent, any[][]> = new Map();
 
   constructor(private ethereumProvider: EthereumProvider) {
     super();
+    this.web3Provider = new Web3Provider(ethereumProvider);
+  }
+
+  private async updateLocalAccounts() {
+    this.localAccounts = await this.db.getAccounts();
+  }
+
+  private getUserIdByEthAddress(ethAddress: EthAddress) {
+    const ethAddressBuf = ethAddress.toBuffer();
+    const account = this.localAccounts.find(a => a.ethAddress.toBuffer().equals(ethAddressBuf));
+    return account?.userId;
+  }
+
+  private getEthAddressByUserId(userId: Buffer) {
+    const account = this.localAccounts.find(a => a.userId.equals(userId));
+    return account?.ethAddress;
+  }
+
+  private forwardEvent(event: SdkEvent, args: any[]) {
+    if (this.pausedEvent.has(event)) {
+      const queued = this.pausedEvent.get(event);
+      this.pausedEvent.set(event, [...queued!, args]);
+      return;
+    }
+
+    switch (event) {
+      case SdkEvent.UPDATED_USER_STATE: {
+        const [userId, ...rest] = args;
+        const ethAddress = this.getEthAddressByUserId(userId);
+        this.emit(event, ethAddress, ...rest);
+        break;
+      }
+      default:
+        this.emit(event, ...args);
+    }
+  }
+
+  private pauseEvent(event: SdkEvent) {
+    this.pausedEvent.set(event, []);
+  }
+
+  private resumeEvent(event: SdkEvent) {
+    const queued = this.pausedEvent.get(event);
+    this.pausedEvent.delete(event);
+    queued?.forEach(args => this.forwardEvent(event, args));
   }
 
   public async init(serverUrl: string, clearDb = false) {
@@ -22,8 +83,10 @@ export class EthereumSdk extends EventEmitter {
     // Forward all core sdk events.
     for (const e in SdkEvent) {
       const event = (SdkEvent as any)[e];
-      this.core.on(event, (...args: any[]) => this.emit(event, ...args));
+      this.core.on(event, (...args: any[]) => this.forwardEvent(event, args));
     }
+
+    await this.updateLocalAccounts();
 
     await this.core.init();
   }
@@ -73,7 +136,11 @@ export class EthereumSdk extends EventEmitter {
    * Emit an SdkEvent to update the UI.
    */
   public async notifyUserStateUpdated(ethAddress: EthAddress) {
-    return this.core.notifyUserStateUpdated(ethAddress);
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    return this.core.notifyUserStateUpdated(userId);
   }
 
   public async getAddressFromAlias(alias: string) {
@@ -81,27 +148,51 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public async approve(assetId: AssetId, value: bigint, from: EthAddress) {
-    return this.core.approve(assetId, value, from);
+    const userId = this.getUserIdByEthAddress(from);
+    if (!userId) {
+      throw new Error(`User not found: ${from}`);
+    }
+    return this.core.approve(assetId, userId, value, from);
   }
 
-  public async mint(assetId: AssetId, value: bigint, to: EthAddress) {
-    return this.core.mint(assetId, value, to);
+  public async mint(assetId: AssetId, value: bigint, from: EthAddress) {
+    const userId = this.getUserIdByEthAddress(from);
+    if (!userId) {
+      throw new Error(`User not found: ${from}`);
+    }
+    return this.core.mint(assetId, userId, value, from);
   }
 
   public async deposit(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
-    return this.core.deposit(assetId, value, from, to);
+    const userId = this.getUserIdByEthAddress(from);
+    if (!userId) {
+      throw new Error(`User not found: ${from}`);
+    }
+    return this.core.deposit(assetId, userId, value, from, to);
   }
 
   public async withdraw(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
-    return this.core.withdraw(assetId, value, from, to);
+    const userId = this.getUserIdByEthAddress(from);
+    if (!userId) {
+      throw new Error(`User not found: ${from}`);
+    }
+    return this.core.withdraw(assetId, userId, value, to);
   }
 
   public async transfer(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
-    return this.core.transfer(assetId, value, from, to);
+    const userId = this.getUserIdByEthAddress(from);
+    if (!userId) {
+      throw new Error(`User not found: ${from}`);
+    }
+    return this.core.transfer(assetId, userId, value, to);
   }
 
   public async publicTransfer(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
-    return this.core.publicTransfer(assetId, value, from, to);
+    const userId = this.getUserIdByEthAddress(from);
+    if (!userId) {
+      throw new Error(`User not found: ${from}`);
+    }
+    return this.core.publicTransfer(assetId, userId, value, from, to);
   }
 
   public isBusy() {
@@ -113,43 +204,86 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public async createAccount(ethAddress: EthAddress, alias: string, newSigningPublicKey?: GrumpkinAddress) {
-    return this.core.createAccount(ethAddress, alias, newSigningPublicKey);
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    return this.core.createAccount(userId, alias, newSigningPublicKey);
   }
 
   public async awaitSynchronised() {
     return this.core.awaitSynchronised();
   }
 
-  public async awaitSettlement(address: EthAddress, txHash: TxHash, timeout = 120) {
-    return this.core.awaitSettlement(address, txHash, timeout);
+  public async awaitSettlement(ethAddress: EthAddress, txHash: TxHash, timeout = 120) {
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    return this.core.awaitSettlement(userId, txHash, timeout);
   }
 
   public getUserState(ethAddress: EthAddress) {
-    return this.core.getUserState(ethAddress);
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    return this.core.getUserState(userId);
   }
 
   public getUserData(ethAddress: EthAddress) {
-    return this.core.getUserData(ethAddress);
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    const userData = this.core.getUserData(userId);
+    return userData ? toEthUserData(ethAddress, userData) : undefined;
   }
 
   public getUsersData() {
-    return this.core.getUsersData();
+    return this.core.getUsersData().map(userData => {
+      const ethAddress = this.getEthAddressByUserId(userData.id)!;
+      return toEthUserData(ethAddress, userData);
+    });
   }
 
   public async addUser(ethAddress: EthAddress) {
-    return this.core.addUser(ethAddress);
+    const privateKey = await deriveGrumpkinPrivateKey(ethAddress, this.web3Provider);
+    this.pauseEvent(SdkEvent.UPDATED_USERS);
+    try {
+      const coreUser = await this.core.addUser(privateKey);
+      await this.db.addAccount({ ethAddress, userId: coreUser.getUserData().id });
+      await this.updateLocalAccounts();
+      this.resumeEvent(SdkEvent.UPDATED_USERS);
+      return new EthereumSdkUser(ethAddress, this);
+    } catch (err) {
+      this.resumeEvent(SdkEvent.UPDATED_USERS);
+      throw err;
+    }
   }
 
   public async removeUser(ethAddress: EthAddress) {
-    return this.core.removeUser(ethAddress);
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+
+    await this.db.deleteAccount(ethAddress);
+    await this.updateLocalAccounts();
+    return this.core.removeUser(userId);
   }
 
-  public getUser(address: EthAddress) {
-    return this.core.getUser(address);
+  public getUser(ethAddress: EthAddress) {
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    return userId ? new EthereumSdkUser(ethAddress, this) : undefined;
   }
 
   public getBalance(ethAddress: EthAddress) {
-    return this.core.getBalance(ethAddress);
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    return this.core.getBalance(userId);
   }
 
   public async getLatestRollups(count: number) {
@@ -169,11 +303,23 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public async getUserTxs(ethAddress: EthAddress) {
-    return this.core.getUserTxs(ethAddress);
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    return this.core.getUserTxs(userId);
   }
 
-  public getActionState() {
-    return this.core.getActionState();
+  public getActionState(ethAddress?: EthAddress) {
+    if (!ethAddress) {
+      return this.core.getActionState();
+    }
+
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    return this.core.getActionState(userId);
   }
 
   public startTrackingGlobalState() {
