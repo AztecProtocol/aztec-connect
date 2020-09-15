@@ -31,6 +31,7 @@ import { MockTokenContract } from '../token_contract/mock_token_contract';
 import { AccountProofCreator } from '../account_proof_creator';
 import { AccountProver } from 'barretenberg/client_proofs/account_proof';
 import { WorkerPool } from 'barretenberg/wasm/worker_pool';
+import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -119,11 +120,12 @@ export class CoreSdk extends EventEmitter implements Sdk {
     const pedersen = new Pedersen(barretenberg);
     const blake2s = new Blake2s(barretenberg);
     const grumpkin = new Grumpkin(barretenberg);
+    const noteAlgos = new NoteAlgorithms(barretenberg);
     const crsData = await this.getCrsData(128 * 1024);
     const numWorkers = Math.min(navigator.hardwareConcurrency || 1, 8);
     const workerPool = await WorkerPool.new(barretenberg, numWorkers);
     const pooledProverFactory = new PooledProverFactory(workerPool, crsData);
-    const joinSplitProver = new JoinSplitProver(barretenberg, await pooledProverFactory.createProver(128 * 1024));
+    const joinSplitProver = new JoinSplitProver(await pooledProverFactory.createProver(128 * 1024));
     const accountProver = new AccountProver(await pooledProverFactory.createProver(64 * 1024));
 
     this.blake2s = blake2s;
@@ -132,7 +134,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     this.workerPool = workerPool;
     this.txsState = new TxsState(this.rollupProviderExplorer);
     this.worldState = new WorldState(this.leveldb, pedersen, blake2s);
-    this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, grumpkin);
+    this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, grumpkin, noteAlgos);
     this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, blake2s);
 
     await this.worldState.init();

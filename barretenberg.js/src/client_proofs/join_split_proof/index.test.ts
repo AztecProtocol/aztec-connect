@@ -19,6 +19,7 @@ import { JoinSplitProof } from './join_split_proof';
 import { computeNullifier } from './compute_nullifier';
 import { randomBytes } from 'crypto';
 import { Grumpkin } from '../../ecc/grumpkin';
+import { NoteAlgorithms } from '../note_algorithms';
 import { GrumpkinAddress, EthAddress } from '../../address';
 
 const debug = createDebug('bb:join_split_proof');
@@ -36,6 +37,7 @@ describe('join_split_proof', () => {
   let crs!: Crs;
   let pippenger!: PooledPippenger;
   let grumpkin!: Grumpkin;
+  let noteAlgos!: NoteAlgorithms;
   let pubKey!: GrumpkinAddress;
 
   // prettier-ignore
@@ -63,12 +65,13 @@ describe('join_split_proof', () => {
 
     const prover = new Prover(pool.workers[0], pippenger, fft);
 
-    joinSplitProver = new JoinSplitProver(barretenberg, prover);
+    joinSplitProver = new JoinSplitProver(prover);
     joinSplitVerifier = new JoinSplitVerifier();
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
     schnorr = new Schnorr(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
+    noteAlgos = new NoteAlgorithms(barretenberg);
 
     pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
   });
@@ -80,8 +83,8 @@ describe('join_split_proof', () => {
   it('should decrypt note', () => {
     const secret = randomBytes(32);
     const note = new Note(pubKey, secret, BigInt(100));
-    const encryptedNote = joinSplitProver.encryptNote(note);
-    const { success, value } = joinSplitProver.decryptNote(encryptedNote, privateKey, secret);
+    const encryptedNote = noteAlgos.encryptNote(note);
+    const { success, value } = noteAlgos.decryptNote(encryptedNote, privateKey, secret);
     expect(success).toBe(true);
     expect(value).toBe(BigInt(100));
   });
@@ -89,8 +92,8 @@ describe('join_split_proof', () => {
   it('should not decrypt note', () => {
     const secret = randomBytes(32);
     const note = new Note(pubKey, secret, BigInt(2000));
-    const encryptedNote = joinSplitProver.encryptNote(note);
-    const { success } = joinSplitProver.decryptNote(encryptedNote, privateKey, secret);
+    const encryptedNote = noteAlgos.encryptNote(note);
+    const { success } = noteAlgos.decryptNote(encryptedNote, privateKey, secret);
     expect(success).toBe(false);
   });
 
@@ -117,8 +120,8 @@ describe('join_split_proof', () => {
       const outputNote1 = new Note(pubKey, createNoteSecret(), BigInt(80));
       const outputNote2 = new Note(pubKey, createNoteSecret(), BigInt(70));
 
-      const inputNote1Enc = await joinSplitProver.encryptNote(inputNote1);
-      const inputNote2Enc = await joinSplitProver.encryptNote(inputNote2);
+      const inputNote1Enc = await noteAlgos.encryptNote(inputNote1);
+      const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);
 
       const tree = new MerkleTree(levelup(memdown()), pedersen, blake2s, 'data', 32);
       await tree.updateElement(0, inputNote1Enc);
@@ -128,10 +131,7 @@ describe('join_split_proof', () => {
       const inputNote2Path = await tree.getHashPath(1);
       const accountNotePath = await tree.getHashPath(2);
 
-      const signature = await joinSplitProver.sign4Notes(
-        [inputNote1, inputNote2, outputNote1, outputNote2],
-        privateKey,
-      );
+      const signature = await noteAlgos.sign4Notes([inputNote1, inputNote2, outputNote1, outputNote2], privateKey);
 
       const inputOwner = EthAddress.randomAddress();
       const outputOwner = EthAddress.randomAddress();

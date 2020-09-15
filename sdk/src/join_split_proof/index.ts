@@ -7,11 +7,17 @@ import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { ethers, Signer } from 'ethers';
 import { UserData } from '../user';
 import { GrumpkinAddress, EthAddress } from 'barretenberg/address';
+import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 
 const debug = createDebug('bb:join_split_proof');
 
 export class JoinSplitProofCreator {
-  constructor(private joinSplitProver: JoinSplitProver, private worldState: WorldState, private grumpkin: Grumpkin) {}
+  constructor(
+    private joinSplitProver: JoinSplitProver,
+    private worldState: WorldState,
+    private grumpkin: Grumpkin,
+    private noteAlgos: NoteAlgorithms,
+  ) {}
 
   public async createProof(
     userState: UserState,
@@ -49,7 +55,7 @@ export class JoinSplitProofCreator {
 
     const encViewingKey1 = encryptNote(outputNotes[0], this.grumpkin);
     const encViewingKey2 = encryptNote(outputNotes[1], this.grumpkin);
-    const signature = this.joinSplitProver.sign4Notes([...inputNotes, ...outputNotes], sender.privateKey!);
+    const signature = this.noteAlgos.sign4Notes([...inputNotes, ...outputNotes], sender.privateKey!);
 
     const dataRoot = this.worldState.getRoot();
 
