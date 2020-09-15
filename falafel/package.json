@@ -56,14 +56,17 @@
     "@types/koa-router": "^7.0.42",
     "@types/node": "^12.6.8",
     "@types/supertest": "^2.0.8",
+    "@typescript-eslint/eslint-plugin": "^4.1.1",
+    "@typescript-eslint/parser": "^4.1.1",
     "debug": "^4.1.1",
+    "eslint": "^7.9.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-simple-import-sort": "^5.0.3",
     "jest": "^24.8.0",
     "prettier": "^2.0.5",
     "supertest": "^4.0.2",
     "ts-jest": "^24.0.2",
     "ts-node": "^8.9.1",
-    "tsc-watch": "^2.2.1",
-    "tslint": "^5.18.0",
-    "tslint-config-prettier": "^1.18.0"
+    "tsc-watch": "^2.2.1"
   }
 }
