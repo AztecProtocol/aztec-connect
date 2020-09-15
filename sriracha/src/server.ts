@@ -4,10 +4,10 @@ import { MemoryFifo } from 'barretenberg/fifo';
 import { existsAsync, readFileAsync, writeFileAsync } from 'barretenberg/fs_async';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { RollupProofData } from 'barretenberg/rollup_proof';
+import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBufferBE } from 'bigint-buffer';
 import { Blockchain } from 'blockchain';
 import { GetHashPathsResponse, HashPathSource } from './hash_path_source';
-import { WorldStateDb } from './world_state_db';
 
 interface ServerState {
   lastBlock: number;
@@ -66,6 +66,10 @@ export default class Server implements HashPathSource {
     });
   }
 
+  // TODO: provide an array of objects that is index and data value
+  // for nullifier just give 63 zeros and 1, that's data value
+  // with root tree, send over root index inserting into rollupId + 1
+  // data inserting into tree
   public async getHashPaths(treeIndex: number, nullifiers: Buffer[]) {
     const nullifierIndices = nullifiers.map(n => nullifierBufferToIndex(n));
     return new Promise<GetHashPathsResponse>(resolve => {

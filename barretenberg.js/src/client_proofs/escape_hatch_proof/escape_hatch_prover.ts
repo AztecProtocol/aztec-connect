@@ -41,7 +41,7 @@ export class EscapeHatchProver {
 
   public encryptNote(note: Note) {
     this.wasm.transferToHeap(note.toBuffer(), 0);
-    this.wasm.call('escape_hatch__encrypt_note', 0, 100);
+    this.wasm.call('join_split__encrypt_note', 0, 100);
     return Buffer.from(this.wasm.sliceMemory(100, 164));
   }
 
@@ -49,16 +49,16 @@ export class EscapeHatchProver {
     this.wasm.transferToHeap(encryptedNote, 0);
     this.wasm.transferToHeap(privateKey, 64);
     this.wasm.transferToHeap(viewingKey, 96);
-    const success = this.wasm.call('escape_hatch__decrypt_note', 0, 64, 96, 128) ? true : false;
+    const success = this.wasm.call('join_split__decrypt_note', 0, 64, 96, 128) ? true : false;
     const value = toBigIntBE(Buffer.from(this.wasm.sliceMemory(128, 160)));
     return { success, value };
   }
 
-  public sign2Notes(notes: Note[], pk: Buffer) {
+  public sign4Notes(notes: Note[], pk: Buffer) {
     const buf = Buffer.concat(notes.map(n => n.toBuffer()));
     this.wasm.transferToHeap(pk, 0);
     this.wasm.transferToHeap(buf, 32);
-    this.wasm.call('escape_hatch__sign_2_notes', 32, 0, 0);
+    this.wasm.call('join_split__sign_4_notes', 32, 0, 0);
     const sig = Buffer.from(this.wasm.sliceMemory(0, 64));
     return new Signature(sig.slice(0, 32), sig.slice(32, 64));
   }

@@ -9,6 +9,7 @@ import { Proof } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
+import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { Blockchain } from 'blockchain';
 import { Duration } from 'moment';
@@ -17,7 +18,6 @@ import { TxDao } from './entity/tx';
 import { ProofGenerator } from './proof_generator';
 import { Rollup } from './rollup';
 import { innerProofDataToTxDao, RollupDb } from './rollup_db';
-import { WorldStateDb } from './world_state_db';
 
 export interface ServerConfig {
   readonly rollupSize: number;
