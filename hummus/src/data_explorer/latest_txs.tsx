@@ -1,5 +1,5 @@
-import { Tx, Sdk } from 'aztec2-sdk';
-import React, { useState, useEffect } from 'react';
+import { EthereumSdk, Tx } from 'aztec2-sdk';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Block, Text, TextButton } from '@aztec/guacamole-ui';
 import { ThemeContext } from '../config/context';
@@ -8,7 +8,7 @@ import { StatusRow } from './status_row';
 interface LatestTxsProps {
   bindSetter: (setter: (tx: Tx[]) => void) => void;
   unbindSetter: (setter: (tx: Tx[]) => void) => void;
-  sdk: Sdk;
+  sdk: EthereumSdk;
 }
 
 export const LatestTxs = ({ bindSetter, unbindSetter, sdk }: LatestTxsProps) => {
