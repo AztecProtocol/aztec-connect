@@ -1,19 +1,19 @@
-import { Blake2s } from 'barretenberg/crypto/blake2s';
-import { Grumpkin } from 'barretenberg/ecc/grumpkin';
-import { BarretenbergWasm } from 'barretenberg/wasm';
-import { randomBytes } from 'crypto';
-import { Note, createNoteSecret, encryptNote } from 'barretenberg/client_proofs/note';
+import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import {
-  computeNullifier,
   computeAliasNullifier,
+  computeNullifier,
   computeRemoveSigningKeyNullifier,
 } from 'barretenberg/client_proofs/join_split_proof/compute_nullifier';
+import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
+import { Blake2s } from 'barretenberg/crypto/blake2s';
+import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { numToUInt32BE } from 'barretenberg/serialize';
+import { BarretenbergWasm } from 'barretenberg/wasm';
+import { randomBytes } from 'crypto';
 import { Database, SigningKey } from '../database';
 import { UserData } from '../user';
 import { UserState } from './index';
-import { GrumpkinAddress, EthAddress } from 'barretenberg/address';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -32,7 +32,7 @@ describe('user state', () => {
     blake2s = new Blake2s(barretenberg);
     const privateKey = randomBytes(32);
     user = {
-      ethAddress: EthAddress.randomAddress(),
+      id: randomBytes(64),
       privateKey,
       publicKey: new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey)),
       syncedToBlock: -1,
@@ -165,7 +165,7 @@ describe('user state', () => {
 
     const innerProofData = rollupProofData.innerProofData[0];
     expect(db.settleUserTx).toHaveBeenCalledTimes(1);
-    expect(db.settleUserTx).toHaveBeenCalledWith(user.ethAddress, innerProofData.getTxId());
+    expect(db.settleUserTx).toHaveBeenCalledWith(user.id, innerProofData.getTxId());
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote1, value: 100n });
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);
@@ -285,8 +285,8 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    expect(db.addUserSigningKey).toHaveBeenCalledWith({ owner: user.ethAddress, key: key1.x(), treeIndex: 0 });
-    expect(db.addUserSigningKey).toHaveBeenCalledWith({ owner: user.ethAddress, key: key2.x(), treeIndex: 1 });
+    expect(db.addUserSigningKey).toHaveBeenCalledWith({ owner: user.id, key: key1.x(), treeIndex: 0 });
+    expect(db.addUserSigningKey).toHaveBeenCalledWith({ owner: user.id, key: key2.x(), treeIndex: 1 });
     expect(db.removeUserSigningKey).not.toHaveBeenCalled();
   });
 
@@ -294,7 +294,7 @@ describe('user state', () => {
     const key1 = GrumpkinAddress.ZERO;
     const key2 = GrumpkinAddress.ZERO;
     const toNullify = GrumpkinAddress.randomAddress();
-    const existingKey: SigningKey = { owner: user.ethAddress, key: toNullify.x(), treeIndex: 0 };
+    const existingKey: SigningKey = { owner: user.id, key: toNullify.x(), treeIndex: 0 };
 
     db.getUserSigningKeys.mockResolvedValue([existingKey]);
 

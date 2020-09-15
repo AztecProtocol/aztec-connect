@@ -1,5 +1,3 @@
-import { EthAddress } from 'barretenberg/address';
-
 export interface Note {
   index: number;
   value: bigint;
@@ -8,5 +6,5 @@ export interface Note {
   encrypted: Buffer;
   nullifier: Buffer;
   nullified: boolean;
-  owner: EthAddress;
+  owner: Buffer;
 }

@@ -1,24 +1,23 @@
-import { createHash } from 'crypto';
+import { GrumpkinAddress } from 'barretenberg/address';
 import { Block, BlockSource } from 'barretenberg/block_source';
 import {
   computeNullifier,
   computeRemoveSigningKeyNullifier,
 } from 'barretenberg/client_proofs/join_split_proof/compute_nullifier';
 import { decryptNote } from 'barretenberg/client_proofs/note';
-import { RollupProofData, InnerProofData } from 'barretenberg/rollup_proof';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
+import { MemoryFifo } from 'barretenberg/fifo';
+import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { toBigIntBE } from 'bigint-buffer';
 import createDebug from 'debug';
+import { EventEmitter } from 'events';
 import { Database } from '../database';
 import { Note } from '../note';
 import { NotePicker } from '../note_picker';
-import { UserTx, UserTxAction } from '../user_tx';
-import { EventEmitter } from 'events';
-import { MemoryFifo } from 'barretenberg/fifo';
-import { UserData } from '../user';
 import { AssetId } from '../sdk';
-import { GrumpkinAddress } from 'barretenberg/address';
+import { UserData } from '../user';
+import { UserTx, UserTxAction } from '../user_tx';
 
 const debug = createDebug('bb:user_state');
 
@@ -43,7 +42,7 @@ export class UserState extends EventEmitter {
   }
 
   public async init() {
-    this.user = (await this.db.getUser(this.user.ethAddress))!;
+    this.user = (await this.db.getUser(this.user.id))!;
     await this.refreshNotePicker();
   }
 
@@ -52,7 +51,7 @@ export class UserState extends EventEmitter {
    * Then starts processing blocks added to queue via `processBlock()`.
    */
   public async startSync() {
-    debug(`starting sync for ${this.user.ethAddress} from block ${this.user.syncedToBlock + 1}...`);
+    debug(`starting sync for ${this.user.id.toString('hex')} from block ${this.user.syncedToBlock + 1}...`);
     this.syncing = true;
     const blocks = await this.blockSource.getBlocks(this.user.syncedToBlock + 1);
     for (const block of blocks) {
@@ -94,7 +93,6 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    const { ethAddress } = this.user;
     const balanceBefore = this.getBalance();
 
     const { rollupProofData, viewingKeysData } = block;
@@ -119,7 +117,7 @@ export class UserState extends EventEmitter {
 
     const balanceAfter = this.getBalance();
     const diff = balanceAfter - balanceBefore;
-    this.emit(UserStateEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff, AssetId.DAI);
+    this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id, balanceAfter, diff, AssetId.DAI);
 
     return;
   }
@@ -133,31 +131,33 @@ export class UserState extends EventEmitter {
 
     const key1 = newNote1.slice(32);
     if (!key1.equals(Buffer.alloc(32))) {
-      debug(`user ${this.user.ethAddress} add signing key ${key1.toString('hex')}.`);
-      this.db.addUserSigningKey({ owner: this.user.ethAddress, key: key1, treeIndex: noteStartIndex });
+      debug(`user ${this.user.id.toString('hex')} add signing key ${key1.toString('hex')}.`);
+      this.db.addUserSigningKey({ owner: this.user.id, key: key1, treeIndex: noteStartIndex });
     }
 
     const key2 = newNote2.slice(32);
     if (!key2.equals(Buffer.alloc(32))) {
-      debug(`user ${this.user.ethAddress} add signing key ${key2.toString('hex')}.`);
-      this.db.addUserSigningKey({ owner: this.user.ethAddress, key: key2, treeIndex: noteStartIndex + 1 });
+      debug(`user ${this.user.id.toString('hex')} add signing key ${key2.toString('hex')}.`);
+      this.db.addUserSigningKey({ owner: this.user.id, key: key2, treeIndex: noteStartIndex + 1 });
     }
 
-    const signingKeys = await this.db.getUserSigningKeys(this.user.ethAddress);
+    const signingKeys = await this.db.getUserSigningKeys(this.user.id);
     const nullifiers = signingKeys.map(sk => computeRemoveSigningKeyNullifier(publicKey, sk.key, this.blake2s));
     const nullifyIndex = nullifiers.findIndex(n => nullifier2.equals(n));
     if (nullifyIndex >= 0) {
-      debug(`user ${this.user.ethAddress} removed signing key ${signingKeys[nullifyIndex].key.toString('hex')}.`);
+      debug(
+        `user ${this.user.id.toString('hex')} removed signing key ${signingKeys[nullifyIndex].key.toString('hex')}.`,
+      );
       this.db.removeUserSigningKey(signingKeys[nullifyIndex]);
     }
 
-    await this.db.settleUserTx(this.user.ethAddress, proofData.getTxId());
+    await this.db.settleUserTx(this.user.id, proofData.getTxId());
   }
 
   private async handleJoinSplitTx(proof: InnerProofData, noteStartIndex: number) {
-    const { ethAddress } = this.user;
+    const { id } = this.user;
     const txId = proof.getTxId();
-    const savedUserTx = await this.db.getUserTx(ethAddress, txId);
+    const savedUserTx = await this.db.getUserTx(id, txId);
     if (savedUserTx && savedUserTx.settled) {
       return;
     }
@@ -176,7 +176,7 @@ export class UserState extends EventEmitter {
     await this.refreshNotePicker();
 
     if (savedUserTx) {
-      await this.db.settleUserTx(ethAddress, txId);
+      await this.db.settleUserTx(id, txId);
     } else {
       const userTx = await this.recoverUserTx(proof, newNote, changeNote, destroyedNote1, destroyedNote2);
       await this.db.addUserTx(userTx);
@@ -186,7 +186,7 @@ export class UserState extends EventEmitter {
   private async processNewNote(index: number, dataEntry: Buffer, viewingKey: Buffer) {
     const savedNote = await this.db.getNote(index);
     if (savedNote) {
-      return savedNote.owner.equals(this.user.ethAddress) ? savedNote : undefined;
+      return savedNote.owner.equals(this.user.id) ? savedNote : undefined;
     }
 
     const decryptedNote = decryptNote(viewingKey, this.user.privateKey!, this.grumpkin);
@@ -204,20 +204,20 @@ export class UserState extends EventEmitter {
       encrypted: viewingKey,
       nullifier,
       nullified: false,
-      owner: this.user.ethAddress,
+      owner: this.user.id,
     };
     if (value) {
       await this.db.addNote(note);
-      debug(`user ${this.user.ethAddress} successfully decrypted note at index ${index} with value ${value}.`);
+      debug(`user ${this.user.id.toString('hex')} successfully decrypted note at index ${index} with value ${value}.`);
     }
     return note;
   }
 
   private async nullifyNote(nullifier: Buffer) {
-    const note = await this.db.getNoteByNullifier(this.user.ethAddress, nullifier);
+    const note = await this.db.getNoteByNullifier(this.user.id, nullifier);
     if (note) {
       await this.db.nullifyNote(note.index);
-      debug(`user ${this.user.ethAddress} nullified note at index ${note.index} with value ${note.value}.`);
+      debug(`user ${this.user.id.toString('hex')} nullified note at index ${note.index} with value ${note.value}.`);
     }
     return note;
   }
@@ -234,7 +234,7 @@ export class UserState extends EventEmitter {
       action,
       value,
       recipient,
-      ethAddress: this.user.ethAddress,
+      userId: this.user.id,
       settled: true,
       created: new Date(),
     });
@@ -263,7 +263,7 @@ export class UserState extends EventEmitter {
   }
 
   private async refreshNotePicker() {
-    const notes = await this.db.getUserNotes(this.user.ethAddress);
+    const notes = await this.db.getUserNotes(this.user.id);
     this.notePicker = new NotePicker();
     this.notePicker.addNotes(notes);
   }

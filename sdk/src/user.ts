@@ -1,10 +1,10 @@
-import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { Web3Provider } from '@ethersproject/providers';
+import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { randomBytes } from 'crypto';
+import { Web3Provider } from '@ethersproject/providers';
 
 export interface UserData {
-  ethAddress: EthAddress;
+  id: Buffer;
   privateKey: Buffer;
   publicKey: GrumpkinAddress;
   alias?: string;
@@ -17,19 +17,18 @@ export interface KeyPair {
   privateKey: Buffer;
 }
 
+export const deriveGrumpkinPrivateKey = async (ethAddress: EthAddress, provider: Web3Provider) => {
+  const signer = provider.getSigner(ethAddress.toString());
+  const sig = await signer.signMessage('Link Aztec account.');
+  return Buffer.from(sig.slice(2)).slice(0, 32);
+};
+
 export class UserDataFactory {
-  constructor(private grumpkin: Grumpkin, private ethersProvider: Web3Provider) {}
+  constructor(private grumpkin: Grumpkin) {}
 
-  private async deriveGrumpkinPrivateKey(ethAddress: EthAddress) {
-    const signer = this.ethersProvider.getSigner(ethAddress.toString());
-    const sig = await signer.signMessage('Link Aztec account.');
-    return Buffer.from(sig.slice(2)).slice(0, 32);
-  }
-
-  async createUser(ethAddress: EthAddress): Promise<UserData> {
-    const privateKey = await this.deriveGrumpkinPrivateKey(ethAddress);
+  async createUser(privateKey: Buffer): Promise<UserData> {
     const publicKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
-    return { ethAddress, privateKey, publicKey, syncedToBlock: -1, syncedToRollup: -1 };
+    return { id: publicKey.toBuffer(), privateKey, publicKey, syncedToBlock: -1, syncedToRollup: -1 };
   }
 
   public newKeyPair(): KeyPair {

@@ -45,7 +45,7 @@ export enum Action {
 export interface ActionState {
   action: Action;
   value: bigint;
-  sender: EthAddress;
+  sender: Buffer;
   recipient: Address;
   created: Date;
   txHash?: Buffer;
@@ -55,16 +55,16 @@ export interface ActionState {
 export type TxHash = Buffer;
 
 export interface SdkUserAsset {
-  publicBalance(): Promise<bigint>;
-  publicAllowance(): Promise<bigint>;
+  publicBalance(ethAddress: EthAddress): Promise<bigint>;
+  publicAllowance(ethAddress: EthAddress): Promise<bigint>;
   balance(): bigint;
 
-  mint(value: bigint): Promise<TxHash>;
-  approve(value: bigint): Promise<TxHash>;
-  deposit(value: bigint, to?: GrumpkinAddress | string): Promise<TxHash>;
-  withdraw(value: bigint, to?: EthAddress): Promise<TxHash>;
+  mint(value: bigint, from: EthAddress): Promise<TxHash>;
+  approve(value: bigint, from: EthAddress): Promise<TxHash>;
+  deposit(value: bigint, from: EthAddress, to?: GrumpkinAddress | string): Promise<TxHash>;
+  withdraw(value: bigint, to: EthAddress): Promise<TxHash>;
   transfer(value: bigint, to: GrumpkinAddress | string): Promise<TxHash>;
-  publicTransfer(value: bigint, to: EthAddress): Promise<TxHash>;
+  publicTransfer(value: bigint, from: EthAddress, to: EthAddress): Promise<TxHash>;
 
   fromErc20Units(value: bigint): string;
   toErc20Units(value: string): bigint;
@@ -121,13 +121,13 @@ export interface Sdk extends EventEmitter {
    * Add a user with the given ethereum address.
    * Will prompt the user to sign a message with `address`, from which we generate the grumpkin key.
    */
-  addUser(address: EthAddress): Promise<SdkUser>;
+  addUser(privateKey: Buffer): Promise<SdkUser>;
 
-  getUser(address: EthAddress): SdkUser | undefined;
+  getUser(userId: Buffer): SdkUser | undefined;
 
   getUsersData(): UserData[];
 
-  removeUser(address: EthAddress): Promise<void>;
+  removeUser(userId: Buffer): Promise<void>;
 
   newKeyPair(): KeyPair;
 
@@ -136,13 +136,13 @@ export interface Sdk extends EventEmitter {
   /**
    * Returns the current action state, from which you can determine what the sdk is currently doing.
    */
-  getActionState(): ActionState | undefined;
+  getActionState(userId?: Buffer): ActionState | undefined;
 
   /**
    * Will block until the given tx hash is settled.
    * We need to specify the eth address as we record each tx for each user.
    */
-  awaitSettlement(address: EthAddress, txHash: TxHash, timeout?: number): Promise<void>;
+  awaitSettlement(userId: Buffer, txHash: TxHash, timeout?: number): Promise<void>;
 
   // Explorer
   getLatestRollups(num: number): Promise<Rollup[]>;
