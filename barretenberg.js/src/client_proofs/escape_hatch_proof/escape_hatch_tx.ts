@@ -7,56 +7,73 @@ import { GrumpkinAddress, EthAddress } from '../../address';
 
 export class EscapeHatchTx {
   constructor(
+    public publicInput: bigint,
     public publicOutput: bigint,
     public numInputNotes: number,
     public inputNoteIndices: number[],
-    public merkleRoot: Buffer,
+    public oldDataRoot: Buffer,
     public inputNotePaths: HashPath[],
     public inputNotes: Note[],
+    public outputNotes: Note[],
     public signature: Signature,
+    public inputOwner: EthAddress,
     public outputOwner: EthAddress,
     public accountIndex: number,
     public accountPath: HashPath,
-    public accountNullifierPath: HashPath,
     public signingPubKey: GrumpkinAddress,
-    public nullifierMerkleRoot: Buffer,
-    public newNullifierRoots: Buffer[],
-    public currentNullifierPaths: HashPath[],
-    public newNullifierPaths: HashPath[],
+    public rollupId: bigint,
+    public dataStartIndex: bigint,
     public newDataRoot: Buffer,
+    public oldDataPath: HashPath,
+    public newDataPath: HashPath,
+    public oldNullifierRoot: Buffer,
+    public newNullifierRoots: Buffer[],
+    public oldNullifierPaths: HashPath[],
+    public newNullifierPaths: HashPath[],
+    public accountNullifierPath: HashPath,
     public oldDataRootsRoot: Buffer,
     public newDataRootsRoot: Buffer,
+    public oldDataRootPath: HashPath,
+    public newDataRootsPath: HashPath,
   ) {}
 
   toBuffer() {
-    const inputNotePathBuffer = Buffer.concat(this.inputNotePaths.map(p => p.toBuffer()));
-    const noteBuffer = Buffer.concat([...this.inputNotes].map(n => n.toBuffer()));
+    const notePathBuffer = Buffer.concat(this.inputNotePaths.map(p => p.toBuffer()));
+    const noteBuffer = Buffer.concat([...this.inputNotes, ...this.outputNotes].map(n => n.toBuffer()));
     const newNullifierRootsBuffer = Buffer.concat(this.newNullifierRoots);
 
-    const currentNullifierPathsBuffer = Buffer.concat(this.currentNullifierPaths.map(p => p.toBuffer()));
+    const oldNullifierPathsBuffer = Buffer.concat(this.oldNullifierPaths.map(p => p.toBuffer()));
     const newNullifierPathsBuffer = Buffer.concat(this.newNullifierPaths.map(p => p.toBuffer()));
 
     return Buffer.concat([
+      toBufferBE(this.publicInput, 32),
       toBufferBE(this.publicOutput, 32),
       numToUInt32BE(this.numInputNotes),
       numToUInt32BE(this.inputNoteIndices[0]),
       numToUInt32BE(this.inputNoteIndices[1]),
-      this.merkleRoot,
-      inputNotePathBuffer,
+      this.oldDataRoot,
+      notePathBuffer,
       noteBuffer,
       this.signature.toBuffer(),
+      this.inputOwner.toBuffer32(),
       this.outputOwner.toBuffer32(),
-      this.nullifierMerkleRoot,
-      newNullifierRootsBuffer,
-      currentNullifierPathsBuffer,
-      newNullifierPathsBuffer,
       numToUInt32BE(this.accountIndex),
       this.accountPath.toBuffer(),
-      this.accountNullifierPath.toBuffer(),
       this.signingPubKey.toBuffer(),
+      toBufferBE(this.rollupId, 32),
+      toBufferBE(this.dataStartIndex, 32),
       this.newDataRoot,
+      this.oldDataPath.toBuffer(),
+      this.newDataPath.toBuffer(),
+      this.oldNullifierRoot,
+      newNullifierRootsBuffer,
+      oldNullifierPathsBuffer,
+      newNullifierPathsBuffer,
+      this.accountNullifierPath.toBuffer(),
       this.oldDataRootsRoot,
       this.newDataRootsRoot,
+      this.oldDataRootPath.toBuffer(),
+      this.newDataRootsPath.toBuffer(),
     ]);
   }
 }

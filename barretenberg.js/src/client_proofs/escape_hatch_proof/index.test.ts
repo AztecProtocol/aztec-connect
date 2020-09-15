@@ -91,7 +91,7 @@ describe('escape_hatch_proof', () => {
   it('should construct keys', async () => {
     debug('creating keys...');
     const start = new Date().getTime();
-    await escapeHatchProver.computeKey();
+    await escapeHatchProver.computeKey(crs);
     await escapeHatchVerifier.computeKey(pippenger.pool[0], crs.getG2Data());
     debug(`created circuit keys: ${new Date().getTime() - start}ms`);
   });
