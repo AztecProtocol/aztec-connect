@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { Web3Provider } from '@ethersproject/providers';
 import { CoreSdk } from '../core_sdk/core_sdk';
-import { createSdk } from '../core_sdk/create_sdk';
+import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
 import { AssetId, SdkEvent, TxHash } from '../sdk';
 import { deriveGrumpkinPrivateKey, KeyPair, UserData } from '../user';
@@ -77,8 +77,8 @@ export class EthereumSdk extends EventEmitter {
     queued?.forEach(args => this.forwardEvent(event, args));
   }
 
-  public async init(serverUrl: string, clearDb = false) {
-    this.core = await createSdk(serverUrl, this.ethereumProvider, { clearDb });
+  public async init(serverUrl: string, sdkOptions: SdkOptions) {
+    this.core = await createSdk(serverUrl, this.ethereumProvider, sdkOptions);
 
     // Forward all core sdk events.
     for (const e in SdkEvent) {
@@ -252,7 +252,7 @@ export class EthereumSdk extends EventEmitter {
     this.pauseEvent(SdkEvent.UPDATED_USERS);
     try {
       const coreUser = await this.core.addUser(privateKey);
-      await this.db.addAccount({ ethAddress, userId: coreUser.getUserData().id });
+      await this.db.addAccount({ ethAddress, userId: coreUser.id });
       await this.updateLocalAccounts();
       this.resumeEvent(SdkEvent.UPDATED_USERS);
       return new EthereumSdkUser(ethAddress, this);

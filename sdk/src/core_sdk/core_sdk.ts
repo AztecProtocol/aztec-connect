@@ -24,14 +24,13 @@ import { AccountProofCreator } from '../account_proof_creator';
 import { Database } from '../database';
 import { EthereumProvider } from '../ethereum_provider';
 import { JoinSplitProofCreator } from '../join_split_proof';
-import { Action, ActionState, AssetId, Sdk, SdkEvent, SdkInitState, SdkStatus, TxHash } from '../sdk';
+import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus, TxHash } from '../sdk';
 import { TokenContract, Web3TokenContract } from '../token_contract';
 import { MockTokenContract } from '../token_contract/mock_token_contract';
 import { TxsState } from '../txs_state';
 import { KeyPair, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
-import { CoreSdkUser } from './core_sdk_user';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -55,7 +54,7 @@ export interface CoreSdkOptions {
   saveProvingKey?: boolean;
 }
 
-export class CoreSdk extends EventEmitter implements Sdk {
+export class CoreSdk extends EventEmitter {
   private ethersProvider: Web3Provider;
   private worldState!: WorldState;
   private userStates: UserState[] = [];
@@ -647,7 +646,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
 
     this.startSyncingUserState(userState);
 
-    return new CoreSdkUser(user.id, this);
+    return user;
   }
 
   public async removeUser(userId: Buffer) {
@@ -662,13 +661,6 @@ export class CoreSdk extends EventEmitter implements Sdk {
 
     this.emit(CoreSdkEvent.UPDATED_USERS);
     this.emit(SdkEvent.UPDATED_USERS);
-  }
-
-  public getUser(userId: Buffer) {
-    if (!this.getUserData(userId)) {
-      return;
-    }
-    return new CoreSdkUser(userId, this);
   }
 
   public getBalance(userId: Buffer) {

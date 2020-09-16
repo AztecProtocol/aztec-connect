@@ -94,7 +94,7 @@ export class WebSdk extends EventEmitter {
         }
       });
 
-      await this.sdk.init(serverUrl, clearDb);
+      await this.sdk.init(serverUrl, { clearDb });
 
       // Link account. Will be INITIALZED once complete.
       await this.initLinkAccount();

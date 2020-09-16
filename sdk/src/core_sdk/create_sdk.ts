@@ -15,13 +15,15 @@ const debug = createDebug('bb:create_sdk');
 function getLevelDb() {
   if (isNode) {
     mkdirSync('./data', { recursive: true });
+    // eslint-disable-next-line
     return levelup(require('leveldown')('./data/aztec2-sdk.db'));
   } else {
+    // eslint-disable-next-line
     return levelup(require('level-js')('aztec2-sdk'));
   }
 }
 
-type SdkOptions = { syncInstances?: boolean; clearDb?: boolean } & CoreSdkOptions;
+export type SdkOptions = { syncInstances?: boolean; clearDb?: boolean } & CoreSdkOptions;
 
 /**
  * Construct an SDK instance. If passed the `syncInstances` option, will bind a channel to various events to
