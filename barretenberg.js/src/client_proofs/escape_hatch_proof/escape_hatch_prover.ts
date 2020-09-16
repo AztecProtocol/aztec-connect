@@ -14,7 +14,7 @@ export class EscapeHatchProver {
     await worker.call('escape_hatch__init_proving_key', pippenger.getPointer(), 0);
   }
 
-  public async createEscapeHatchProof(tx: EscapeHatchTx) {
+  public async createProof(tx: EscapeHatchTx) {
     const worker = this.prover.getWorker();
     const buf = tx.toBuffer();
     const mem = await worker.call('bbmalloc', buf.length);

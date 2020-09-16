@@ -4,7 +4,7 @@
   "main": "dest/index.js",
   "license": "GPL-2.0",
   "scripts": {
-    "build": "rm -rf ./dest && tsc -p tsconfig.prod.json",
+    "build": "rm -rf ./dest && tsc -p tsconfig.prod.json && node package.js",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
     "test": "jest --passWithNoTests",

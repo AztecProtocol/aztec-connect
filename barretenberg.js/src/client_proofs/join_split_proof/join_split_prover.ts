@@ -1,8 +1,9 @@
 import { Transfer } from 'threads';
 import { BoundWasmProver } from '../bound_wasm_prover';
 import { Prover } from '../prover/prover';
+import { JoinSplitTx } from './join_split_tx';
 
-export class JoinSplitProver implements BoundWasmProver {
+export class JoinSplitProver {
   constructor(private prover: Prover) {}
 
   public async computeKey() {
@@ -27,7 +28,8 @@ export class JoinSplitProver implements BoundWasmProver {
     return buf;
   }
 
-  public async createProof(buf: Buffer) {
+  public async createProof(tx: JoinSplitTx) {
+    const buf = tx.toBuffer();
     const worker = this.prover.getWorker();
     const mem = await worker.call('bbmalloc', buf.length);
     await worker.transferToHeap(buf, mem);

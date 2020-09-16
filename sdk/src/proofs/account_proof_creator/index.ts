@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import { AccountProver, AccountTx } from 'barretenberg/client_proofs/account_proof';
 import { WorldState } from 'barretenberg/world_state';
-import { UserState } from '../user_state';
+import { UserState } from '../../user_state';
 import { GrumpkinAddress } from 'barretenberg/address';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { randomBytes } from 'crypto';
