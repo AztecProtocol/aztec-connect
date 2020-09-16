@@ -1,6 +1,6 @@
-import { MemoryFifo } from 'barretenberg/fifo';
-import { mkdirAsync } from 'barretenberg/fs_async';
-import { HashPath } from 'barretenberg/merkle_tree';
+import { MemoryFifo } from '../fifo';
+import { mkdirAsync } from '../fs_async';
+import { HashPath } from '../merkle_tree';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
@@ -101,8 +101,8 @@ export class WorldStateDb {
 
     this.roots[treeId] = await this.stdout.read(32);
 
-    if (index + 1n > this.sizes[treeId]) {
-      this.sizes[treeId] = index + 1n;
+    if (index + BigInt(1) > this.sizes[treeId]) {
+      this.sizes[treeId] = index + BigInt(1);
     }
 
     return this.roots[treeId];

@@ -4,10 +4,10 @@ import { MemoryFifo } from 'barretenberg/fifo';
 import { existsAsync, readFileAsync, writeFileAsync } from 'barretenberg/fs_async';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { RollupProofData } from 'barretenberg/rollup_proof';
+import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBufferBE } from 'bigint-buffer';
 import { Blockchain } from 'blockchain';
 import { GetHashPathsResponse, HashPathSource } from './hash_path_source';
-import { WorldStateDb } from './world_state_db';
 
 interface ServerState {
   lastBlock: number;

@@ -7,7 +7,7 @@
     "build": "rm -rf ./dest && tsc -p tsconfig.prod.json",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "clean_data": "rm -rf ./data"
   },
   "jest": {

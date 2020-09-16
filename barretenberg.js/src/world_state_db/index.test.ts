@@ -37,18 +37,18 @@ describe('world_state_db', () => {
     expect(worldStateDb.getRoot(0)).toEqual(expectedDataRoot);
     expect(worldStateDb.getRoot(1)).toEqual(expectedNullifierRoot);
     expect(worldStateDb.getRoot(2)).toEqual(expectedRootRoot);
-    expect(worldStateDb.getSize(0)).toBe(0n);
-    expect(worldStateDb.getSize(1)).toBe(0n);
-    expect(worldStateDb.getSize(2)).toBe(1n);
+    expect(worldStateDb.getSize(0)).toBe(BigInt(0));
+    expect(worldStateDb.getSize(1)).toBe(BigInt(0));
+    expect(worldStateDb.getSize(2)).toBe(BigInt(1));
   });
 
   it('should get correct value', async () => {
-    const buffer = await worldStateDb.get(0, 0n);
+    const buffer = await worldStateDb.get(0, BigInt(0));
     expect(buffer).toEqual(Buffer.alloc(64, 0));
   });
 
   it('should get correct hash path', async () => {
-    const path = (await worldStateDb.getHashPath(0, 0n)).data;
+    const path = (await worldStateDb.getHashPath(0, BigInt(0))).data;
 
     const expectedFirst = Buffer.from('1cdcf02431ba623767fe389337d011df1048dcc24b98ed81cec97627bab454a0', 'hex');
     const expectedLast = Buffer.from('10ae15eed66d2b5fa24239d72aa47d1bfd7f37eb0a1a55baf69e363c4808fc14', 'hex');
@@ -59,15 +59,15 @@ describe('world_state_db', () => {
     expect(path[31][0]).toEqual(expectedLast);
     expect(path[31][1]).toEqual(expectedLast);
 
-    const nullPath = (await worldStateDb.getHashPath(1, 0n)).data;
+    const nullPath = (await worldStateDb.getHashPath(1, BigInt(0))).data;
     expect(nullPath.length).toEqual(128);
   });
 
   it('should update value', async () => {
     const value = Buffer.alloc(64, 5);
-    const root = await worldStateDb.put(0, 0n, value);
+    const root = await worldStateDb.put(0, BigInt(0), value);
 
-    const result = await worldStateDb.get(0, 0n);
+    const result = await worldStateDb.get(0, BigInt(0));
     expect(result).toEqual(value);
 
     // prettier-ignore
@@ -77,7 +77,7 @@ describe('world_state_db', () => {
     ]));
 
     expect(worldStateDb.getRoot(0)).toEqual(root);
-    expect(worldStateDb.getSize(0)).toEqual(1n);
+    expect(worldStateDb.getSize(0)).toEqual(BigInt(1));
   });
 
   it('should update multiple values', async () => {
@@ -98,11 +98,11 @@ describe('world_state_db', () => {
   it('should update same value in both trees', async () => {
     const value1 = Buffer.alloc(64, 5);
     const value2 = Buffer.alloc(64, 6);
-    await worldStateDb.put(0, 10n, value1);
-    await worldStateDb.put(1, 10n, value2);
+    await worldStateDb.put(0, BigInt(10), value1);
+    await worldStateDb.put(1, BigInt(10), value2);
 
-    const result1 = await worldStateDb.get(0, 10n);
-    const result2 = await worldStateDb.get(1, 10n);
+    const result1 = await worldStateDb.get(0, BigInt(10));
+    const result2 = await worldStateDb.get(1, BigInt(10));
 
     expect(result1).toEqual(value1);
     expect(result2).toEqual(value2);
