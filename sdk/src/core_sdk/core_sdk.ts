@@ -1,37 +1,36 @@
-import { BlockSource, Block } from 'barretenberg/block_source';
-import { JoinSplitProver, JoinSplitProof, computeAliasNullifier } from 'barretenberg/client_proofs/join_split_proof';
+import { Address, EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { Block, BlockSource } from 'barretenberg/block_source';
+import { AccountProver } from 'barretenberg/client_proofs/account_proof';
+import { computeAliasNullifier, JoinSplitProof, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
+import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
+import { PooledProverFactory } from 'barretenberg/client_proofs/prover';
 import { Crs } from 'barretenberg/crs';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
-import { PooledProverFactory } from 'barretenberg/client_proofs/prover';
 import { MemoryFifo } from 'barretenberg/fifo';
+import { RollupProofData } from 'barretenberg/rollup_proof';
 import { RollupProvider, RollupProviderExplorer } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
+import { WorkerPool } from 'barretenberg/wasm/worker_pool';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
-import { EventEmitter } from 'events';
-import { LevelUp } from 'levelup';
-import { Database } from '../database';
-import { JoinSplitProofCreator } from '../join_split_proof';
-import { TxsState } from '../txs_state';
-import { UserDataFactory, KeyPair } from '../user';
-import { UserState, UserStateFactory, UserStateEvent } from '../user_state';
-import { Sdk, SdkEvent, SdkInitState, TxHash, AssetId, SdkStatus, Action, ActionState } from '../sdk';
-import { UserTx, UserTxAction } from '../user_tx';
-import Mutex from 'idb-mutex';
-import { EthereumProvider } from '../ethereum_provider';
-import { EthAddress, GrumpkinAddress, Address } from 'barretenberg/address';
-import { TokenContract, Web3TokenContract } from '../token_contract';
-import { Web3Provider } from '@ethersproject/providers';
 import { Signer } from 'ethers';
-import { CoreSdkUser } from './core_sdk_user';
-import { RollupProofData } from 'barretenberg/rollup_proof';
-import { MockTokenContract } from '../token_contract/mock_token_contract';
+import { EventEmitter } from 'events';
+import Mutex from 'idb-mutex';
+import { LevelUp } from 'levelup';
+import { Web3Provider } from '@ethersproject/providers';
 import { AccountProofCreator } from '../account_proof_creator';
-import { AccountProver } from 'barretenberg/client_proofs/account_proof';
-import { WorkerPool } from 'barretenberg/wasm/worker_pool';
-import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
+import { Database } from '../database';
+import { EthereumProvider } from '../ethereum_provider';
+import { JoinSplitProofCreator } from '../join_split_proof';
+import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus, TxHash } from '../sdk';
+import { TokenContract, Web3TokenContract } from '../token_contract';
+import { MockTokenContract } from '../token_contract/mock_token_contract';
+import { TxsState } from '../txs_state';
+import { KeyPair, UserDataFactory } from '../user';
+import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
+import { UserTx, UserTxAction } from '../user_tx';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -55,7 +54,7 @@ export interface CoreSdkOptions {
   saveProvingKey?: boolean;
 }
 
-export class CoreSdk extends EventEmitter implements Sdk {
+export class CoreSdk extends EventEmitter {
   private ethersProvider: Web3Provider;
   private worldState!: WorldState;
   private userStates: UserState[] = [];
@@ -129,7 +128,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     const accountProver = new AccountProver(await pooledProverFactory.createProver(64 * 1024));
 
     this.blake2s = blake2s;
-    this.userFactory = new UserDataFactory(grumpkin, this.ethersProvider);
+    this.userFactory = new UserDataFactory(grumpkin);
     this.userStateFactory = new UserStateFactory(grumpkin, blake2s, this.db, this.blockSource);
     this.workerPool = workerPool;
     this.txsState = new TxsState(this.rollupProviderExplorer);
@@ -191,13 +190,13 @@ export class CoreSdk extends EventEmitter implements Sdk {
   }
 
   private startSyncingUserState(userState: UserState) {
-    this.emit(SdkEvent.UPDATED_USER_STATE, userState.getUser().ethAddress);
+    this.emit(SdkEvent.UPDATED_USER_STATE, userState.getUser().id);
 
     userState.on(
       UserStateEvent.UPDATED_USER_STATE,
-      (ethAddress: EthAddress, balanceAfter: bigint, diff: bigint, assetId: AssetId) => {
-        this.emit(CoreSdkEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff, assetId);
-        this.emit(SdkEvent.UPDATED_USER_STATE, ethAddress, balanceAfter, diff, assetId);
+      (id: Buffer, balanceAfter: bigint, diff: bigint, assetId: AssetId) => {
+        this.emit(CoreSdkEvent.UPDATED_USER_STATE, id, balanceAfter, diff, assetId);
+        this.emit(SdkEvent.UPDATED_USER_STATE, id, balanceAfter, diff, assetId);
       },
     );
 
@@ -394,14 +393,14 @@ export class CoreSdk extends EventEmitter implements Sdk {
    * Call the user state init function to refresh users internal state.
    * Emit an SdkEvent to update the UI.
    */
-  public async notifyUserStateUpdated(ethAddress: EthAddress) {
-    await this.getUserState(ethAddress)?.init();
-    this.emit(SdkEvent.UPDATED_USER_STATE, ethAddress);
+  public async notifyUserStateUpdated(userId: Buffer) {
+    await this.getUserState(userId)?.init();
+    this.emit(SdkEvent.UPDATED_USER_STATE, userId);
   }
 
   private async createProof(
     assetId: AssetId,
-    proofSender: EthAddress,
+    userId: Buffer,
     action: UserTxAction,
     value: bigint,
     noteRecipient?: GrumpkinAddress,
@@ -413,11 +412,11 @@ export class CoreSdk extends EventEmitter implements Sdk {
     }
 
     const created = Date.now();
-    const user = await this.db.getUser(proofSender);
+    const user = await this.db.getUser(userId);
     if (!user) {
-      throw new Error(`Unknown user: ${proofSender}`);
+      throw new Error(`Unknown user: ${userId.toString('hex')}`);
     }
-    const userState = this.getUserState(proofSender)!;
+    const userState = this.getUserState(userId)!;
     const publicInput = ['DEPOSIT', 'PUBLIC_TRANSFER'].includes(action) ? value : BigInt(0);
     const publicOutput = ['WITHDRAW', 'PUBLIC_TRANSFER'].includes(action) ? value : BigInt(0);
     const newNoteValue = ['DEPOSIT', 'TRANSFER'].includes(action) ? value : BigInt(0);
@@ -440,15 +439,15 @@ export class CoreSdk extends EventEmitter implements Sdk {
     const userTx: UserTx = {
       action,
       txHash,
-      ethAddress: user.ethAddress,
+      userId,
       value,
       recipient: noteRecipient ? noteRecipient.toBuffer() : outputOwner!.toBuffer(),
       settled: false,
       created: new Date(created),
     };
     await this.db.addUserTx(userTx);
-    this.emit(CoreSdkEvent.UPDATED_USER_STATE, userTx.ethAddress);
-    this.emit(SdkEvent.UPDATED_USER_STATE, userTx.ethAddress);
+    this.emit(CoreSdkEvent.UPDATED_USER_STATE, userTx.userId);
+    this.emit(SdkEvent.UPDATED_USER_STATE, userTx.userId);
     return txHash;
   }
 
@@ -457,42 +456,48 @@ export class CoreSdk extends EventEmitter implements Sdk {
     return await this.db.getAliasAddress(aliasHash);
   }
 
-  public async approve(assetId: AssetId, value: bigint, from: EthAddress) {
+  public async approve(assetId: AssetId, userId: Buffer, value: bigint, from: EthAddress) {
     const action = () => this.getTokenContract(assetId).approve(from, value);
-    const txHash = await this.performAction(Action.APPROVE, value, from, this.sdkStatus.rollupContractAddress, action);
-    this.emit(SdkEvent.UPDATED_USER_STATE, from);
+    const txHash = await this.performAction(
+      Action.APPROVE,
+      value,
+      userId,
+      this.sdkStatus.rollupContractAddress,
+      action,
+    );
+    this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     return txHash;
   }
 
-  public async mint(assetId: AssetId, value: bigint, to: EthAddress) {
+  public async mint(assetId: AssetId, userId: Buffer, value: bigint, to: EthAddress) {
     const action = () => this.getTokenContract(assetId).mint(to, value);
-    const txHash = await this.performAction(Action.MINT, value, this.sdkStatus.rollupContractAddress, to, action);
-    this.emit(SdkEvent.UPDATED_USER_STATE, to);
+    const txHash = await this.performAction(Action.MINT, value, userId, to, action);
+    this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     return txHash;
   }
 
-  public async deposit(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
+  public async deposit(assetId: AssetId, userId: Buffer, value: bigint, from: EthAddress, to: GrumpkinAddress) {
     const signer = this.ethersProvider.getSigner(from.toString());
     const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
-    const action = () => this.createProof(assetId, from, 'DEPOSIT', value, to, undefined, signer);
-    return this.performAction(Action.DEPOSIT, value, from, to, action, validation);
+    const action = () => this.createProof(assetId, userId, 'DEPOSIT', value, to, undefined, signer);
+    return this.performAction(Action.DEPOSIT, value, userId, to, action, validation);
   }
 
-  public async withdraw(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
-    const action = () => this.createProof(assetId, from, 'WITHDRAW', value, undefined, to);
-    return this.performAction(Action.WITHDRAW, value, from, to, action);
+  public async withdraw(assetId: AssetId, userId: Buffer, value: bigint, to: EthAddress) {
+    const action = () => this.createProof(assetId, userId, 'WITHDRAW', value, undefined, to);
+    return this.performAction(Action.WITHDRAW, value, userId, to, action);
   }
 
-  public async transfer(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
-    const action = () => this.createProof(assetId, from, 'TRANSFER', value, to);
-    return this.performAction(Action.TRANSFER, value, from, to, action);
+  public async transfer(assetId: AssetId, userId: Buffer, value: bigint, to: GrumpkinAddress) {
+    const action = () => this.createProof(assetId, userId, 'TRANSFER', value, to);
+    return this.performAction(Action.TRANSFER, value, userId, to, action);
   }
 
-  public async publicTransfer(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
+  public async publicTransfer(assetId: AssetId, userId: Buffer, value: bigint, from: EthAddress, to: EthAddress) {
     const signer = this.ethersProvider.getSigner(from.toString());
     const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
-    const action = () => this.createProof(assetId, from, 'PUBLIC_TRANSFER', value, undefined, to, signer);
-    return this.performAction(Action.PUBLIC_TRANSFER, value, from, to, action, validation);
+    const action = () => this.createProof(assetId, userId, 'PUBLIC_TRANSFER', value, undefined, to, signer);
+    return this.performAction(Action.PUBLIC_TRANSFER, value, userId, to, action, validation);
   }
 
   private async checkPublicBalanceAndAllowance(assetId: AssetId, value: bigint, from: EthAddress) {
@@ -510,7 +515,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
   private async performAction(
     action: Action,
     value: bigint,
-    sender: EthAddress,
+    userId: Buffer,
     recipient: Address,
     fn: () => Promise<Buffer>,
     validation = async () => {},
@@ -518,7 +523,7 @@ export class CoreSdk extends EventEmitter implements Sdk {
     this.actionState = {
       action,
       value,
-      sender,
+      sender: userId,
       recipient,
       created: new Date(),
     };
@@ -543,14 +548,14 @@ export class CoreSdk extends EventEmitter implements Sdk {
     return this.userFactory.newKeyPair();
   }
 
-  public async createAccount(ethAddress: EthAddress, alias: string, newSigningPublicKey?: GrumpkinAddress) {
-    const action = async () => {
-      const userState = this.getUserState(ethAddress);
-      if (!userState) {
-        throw new Error(`Unknown user: ${ethAddress}`);
-      }
-      const { publicKey } = userState.getUser();
+  public async createAccount(userId: Buffer, alias: string, newSigningPublicKey?: GrumpkinAddress) {
+    const userState = this.getUserState(userId);
+    if (!userState) {
+      throw new Error(`Unknown user: ${userId.toString('hex')}`);
+    }
+    const { publicKey } = userState.getUser();
 
+    const action = async () => {
       const rawProofData = await this.accountProofCreator.createProof(
         userState,
         newSigningPublicKey,
@@ -568,21 +573,21 @@ export class CoreSdk extends EventEmitter implements Sdk {
       const userTx: UserTx = {
         action: 'ACCOUNT',
         txHash,
-        ethAddress,
+        userId,
         value: BigInt(0),
-        recipient: ethAddress.toBuffer(),
+        recipient: userId,
         settled: false,
         created: new Date(),
       };
       await this.db.addUserTx(userTx);
 
-      this.emit(CoreSdkEvent.UPDATED_USER_STATE, userTx.ethAddress);
-      this.emit(SdkEvent.UPDATED_USER_STATE, userTx.ethAddress);
+      this.emit(CoreSdkEvent.UPDATED_USER_STATE, userTx.userId);
+      this.emit(SdkEvent.UPDATED_USER_STATE, userTx.userId);
 
       return txHash;
     };
 
-    return this.performAction(Action.ACCOUNT, BigInt(0), ethAddress, ethAddress, action);
+    return this.performAction(Action.ACCOUNT, BigInt(0), userId, publicKey, action);
   }
 
   private async isSynchronised() {
@@ -597,13 +602,13 @@ export class CoreSdk extends EventEmitter implements Sdk {
     }
   }
 
-  public async awaitSettlement(address: EthAddress, txHash: TxHash, timeout = 120) {
+  public async awaitSettlement(userId: Buffer, txHash: TxHash, timeout = 120) {
     const started = new Date().getTime();
     while (true) {
       if (timeout && new Date().getTime() - started > timeout * 1000) {
         throw new Error(`Timeout awaiting tx settlement: ${txHash.toString('hex')}`);
       }
-      const tx = await this.db.getUserTx(address, txHash);
+      const tx = await this.db.getUserTx(userId, txHash);
       if (tx?.settled === true) {
         break;
       }
@@ -611,23 +616,25 @@ export class CoreSdk extends EventEmitter implements Sdk {
     }
   }
 
-  public getUserState(ethAddress: EthAddress) {
-    return this.userStates.find(us => us.getUser().ethAddress.equals(ethAddress));
+  public getUserState(userId: Buffer) {
+    return this.userStates.find(us => us.getUser().id.equals(userId));
   }
 
-  public getUserData(ethAddress: EthAddress) {
-    return this.getUserState(ethAddress)?.getUser();
+  public getUserData(userId: Buffer) {
+    return this.getUserState(userId)?.getUser();
   }
 
   public getUsersData() {
     return this.userStates.map(us => us.getUser());
   }
 
-  public async addUser(ethAddress: EthAddress) {
-    if (await this.db.getUser(ethAddress)) {
-      throw new Error(`User already exists: ${ethAddress}`);
+  public async addUser(privateKey: Buffer) {
+    let user = await this.db.getUserByPrivateKey(privateKey);
+    if (user) {
+      throw new Error(`User already exists: ${user.id.toString('hex')}`);
     }
-    const user = await this.userFactory.createUser(ethAddress);
+
+    user = await this.userFactory.createUser(privateKey);
     await this.db.addUser(user);
 
     const userState = this.userStateFactory.createUserState(user);
@@ -639,34 +646,27 @@ export class CoreSdk extends EventEmitter implements Sdk {
 
     this.startSyncingUserState(userState);
 
-    return new CoreSdkUser(ethAddress, this);
+    return user;
   }
 
-  public async removeUser(ethAddress: EthAddress) {
-    const userState = this.getUserState(ethAddress);
+  public async removeUser(userId: Buffer) {
+    const userState = this.getUserState(userId);
     if (!userState) {
-      throw new Error(`User does not exist: ${ethAddress}`);
+      throw new Error(`User does not exist: ${userId.toString('hex')}`);
     }
 
     this.userStates = this.userStates.filter(us => us !== userState);
     userState.stopSync();
-    await this.db.removeUser(ethAddress);
+    await this.db.removeUser(userId);
 
     this.emit(CoreSdkEvent.UPDATED_USERS);
     this.emit(SdkEvent.UPDATED_USERS);
   }
 
-  public getUser(address: EthAddress) {
-    if (!this.getUserData(address)) {
-      return;
-    }
-    return new CoreSdkUser(address, this);
-  }
-
-  public getBalance(ethAddress: EthAddress) {
-    const userState = this.getUserState(ethAddress);
+  public getBalance(userId: Buffer) {
+    const userState = this.getUserState(userId);
     if (!userState) {
-      throw new Error(`User not found: ${ethAddress}`);
+      throw new Error(`User not found: ${userId.toString('hex')}`);
     }
     return userState.getBalance();
   }
@@ -687,12 +687,12 @@ export class CoreSdk extends EventEmitter implements Sdk {
     return await this.txsState.getTx(txHash);
   }
 
-  public async getUserTxs(ethAddress: EthAddress) {
-    return this.db.getUserTxs(ethAddress);
+  public async getUserTxs(userId: Buffer) {
+    return this.db.getUserTxs(userId);
   }
 
-  public getActionState() {
-    return this.actionState;
+  public getActionState(userId?: Buffer) {
+    return !userId || this.actionState?.sender.equals(userId) ? this.actionState : undefined;
   }
 
   public startTrackingGlobalState() {

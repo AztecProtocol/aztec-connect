@@ -1,10 +1,10 @@
-import { SdkUser, SdkUserAsset, AssetId } from '../sdk';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { CoreSdk } from './core_sdk';
-import { CoreSdkUserAsset } from './core_sdk_user_asset';
+import { AssetId } from '../sdk';
+import { EthereumSdk } from './';
+import { EthereumSdkUserAsset } from './ethereum_sdk_user_asset';
 
-export class CoreSdkUser implements SdkUser {
-  constructor(private ethAddress: EthAddress, private sdk: CoreSdk) {}
+export class EthereumSdkUser {
+  constructor(private ethAddress: EthAddress, private sdk: EthereumSdk) {}
 
   createAccount(alias: string, newSigningPublicKey?: GrumpkinAddress) {
     return this.sdk.createAccount(this.ethAddress, alias, newSigningPublicKey);
@@ -26,7 +26,7 @@ export class CoreSdkUser implements SdkUser {
     return this.sdk.getUserTxs(this.ethAddress);
   }
 
-  getAsset(assetId: AssetId): SdkUserAsset {
-    return new CoreSdkUserAsset(this.ethAddress, assetId, this.sdk);
+  getAsset(assetId: AssetId) {
+    return new EthereumSdkUserAsset(this.ethAddress, assetId, this.sdk);
   }
 }

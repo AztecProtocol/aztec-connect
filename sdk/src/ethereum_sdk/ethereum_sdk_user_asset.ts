@@ -1,9 +1,9 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { CoreSdk } from './core_sdk';
-import { AssetId, SdkUserAsset } from '../sdk';
+import { AssetId } from '../sdk';
+import { EthereumSdk } from './';
 
-export class CoreSdkUserAsset implements SdkUserAsset {
-  constructor(private ethAddress: EthAddress, private assetId: AssetId, private sdk: CoreSdk) {}
+export class EthereumSdkUserAsset {
+  constructor(private ethAddress: EthAddress, private assetId: AssetId, private sdk: EthereumSdk) {}
 
   publicBalance() {
     return this.sdk.getTokenContract(this.assetId).balanceOf(this.ethAddress);

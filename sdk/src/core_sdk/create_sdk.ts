@@ -1,28 +1,29 @@
-import { ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
 import { ServerBlockSource } from 'barretenberg/block_source';
-import { DexieDatabase } from '../database';
-import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
-import levelup from 'levelup';
+import { ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
-import { SdkEvent, SdkInitState } from '../sdk';
 import createDebug from 'debug';
 import isNode from 'detect-node';
 import { mkdirSync } from 'fs';
+import levelup from 'levelup';
+import { DexieDatabase } from '../database';
 import { EthereumProvider } from '../ethereum_provider';
-import { EthAddress } from 'barretenberg/address';
+import { SdkEvent, SdkInitState } from '../sdk';
+import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
 
 const debug = createDebug('bb:create_sdk');
 
 function getLevelDb() {
   if (isNode) {
     mkdirSync('./data', { recursive: true });
+    // eslint-disable-next-line
     return levelup(require('leveldown')('./data/aztec2-sdk.db'));
   } else {
+    // eslint-disable-next-line
     return levelup(require('level-js')('aztec2-sdk'));
   }
 }
 
-type SdkOptions = { syncInstances?: boolean; clearDb?: boolean } & CoreSdkOptions;
+export type SdkOptions = { syncInstances?: boolean; clearDb?: boolean } & CoreSdkOptions;
 
 /**
  * Construct an SDK instance. If passed the `syncInstances` option, will bind a channel to various events to
@@ -74,8 +75,8 @@ export async function createSdk(hostStr: string, ethereumProvider: EthereumProvi
 
     sdk.on(CoreSdkEvent.UPDATED_WORLD_STATE, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_WORLD_STATE }));
     sdk.on(CoreSdkEvent.UPDATED_USERS, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_USERS }));
-    sdk.on(CoreSdkEvent.UPDATED_USER_STATE, (ethAddress: EthAddress) =>
-      channel.postMessage({ name: CoreSdkEvent.UPDATED_USER_STATE, ethAddress: ethAddress.toString() }),
+    sdk.on(CoreSdkEvent.UPDATED_USER_STATE, (userId: Buffer) =>
+      channel.postMessage({ name: CoreSdkEvent.UPDATED_USER_STATE, ethAddress: userId.toString('hex') }),
     );
     sdk.on(CoreSdkEvent.CLEAR_DATA, () => channel.postMessage({ name: CoreSdkEvent.CLEAR_DATA }));
 
@@ -91,7 +92,7 @@ export async function createSdk(hostStr: string, ethereumProvider: EthereumProvi
           sdk.initUserStates();
           break;
         case CoreSdkEvent.UPDATED_USER_STATE:
-          sdk.notifyUserStateUpdated(EthAddress.fromString(msg.ethAddress));
+          sdk.notifyUserStateUpdated(Buffer.from(msg.userId, 'hex'));
           break;
         case CoreSdkEvent.CLEAR_DATA:
           sdk.notifiedClearData();

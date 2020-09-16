@@ -1,13 +1,12 @@
 import 'fake-indexeddb/auto';
 
-import { DexieDatabase } from './dexie_database';
-import { EthAddress } from 'barretenberg/address';
 import { randomBytes } from 'crypto';
+import { DexieDatabase } from './dexie_database';
 
 describe('dexie database', () => {
   it('should get all user signing keys', async () => {
     const db = new DexieDatabase();
-    const owner = EthAddress.randomAddress();
+    const owner = randomBytes(64);
     const key = randomBytes(32);
     await db.addUserSigningKey({ owner, key, treeIndex: 0 });
     const keys = await db.getUserSigningKeys(owner);

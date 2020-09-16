@@ -1,10 +1,11 @@
 import 'fake-indexeddb/auto';
 
-import { AssetId, createSdk, Sdk, SdkUser } from 'aztec2-sdk';
+import { AssetId, EthereumSdk } from 'aztec2-sdk';
 import { EthAddress } from 'barretenberg/address';
 import { EventEmitter } from 'events';
 import { Eth } from 'web3x/eth';
 import { HttpProvider } from 'web3x/providers';
+import { EthereumSdkUser } from 'aztec2-sdk/ethereum_sdk/ethereum_sdk_user';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -13,9 +14,9 @@ const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost
 
 describe('end-to-end tests', () => {
   let provider: HttpProvider;
-  let sdk: Sdk;
+  let sdk: EthereumSdk;
   let userAddresses: EthAddress[];
-  let users: SdkUser[];
+  let users: EthereumSdkUser[];
   let rollupContractAddress: EthAddress;
   let tokenContractAddress: EthAddress;
   const assetId = AssetId.DAI;
@@ -23,12 +24,12 @@ describe('end-to-end tests', () => {
   beforeAll(async () => {
     // Init sdk.
     provider = new HttpProvider(ETHEREUM_HOST);
-    sdk = await createSdk(ROLLUP_HOST, (provider as any).provider, {
+    sdk = new EthereumSdk((provider as any).provider);
+    await sdk.init(ROLLUP_HOST, {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
     });
-    await sdk.init();
     await sdk.awaitSynchronised();
 
     // Get contract addresses.
