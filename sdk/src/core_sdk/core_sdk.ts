@@ -2,8 +2,8 @@ import { Web3Provider } from '@ethersproject/providers';
 import { Address, EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
 import { AccountProver } from 'barretenberg/client_proofs/account_proof';
-import { computeAliasNullifier, JoinSplitProof, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
 import { EscapeHatchProver } from 'barretenberg/client_proofs/escape_hatch_proof';
+import { computeAliasNullifier, JoinSplitProof, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { PooledProverFactory } from 'barretenberg/client_proofs/prover';
 import { Crs } from 'barretenberg/crs';
@@ -21,9 +21,11 @@ import { Signer } from 'ethers';
 import { EventEmitter } from 'events';
 import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
-import { AccountProofCreator } from '../proofs/account_proof_creator';
+import { HashPathSource } from 'sriracha/hash_path_source';
 import { Database } from '../database';
 import { EthereumProvider } from '../ethereum_provider';
+import { AccountProofCreator } from '../proofs/account_proof_creator';
+import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
 import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus } from '../sdk';
 import { TokenContract, Web3TokenContract } from '../token_contract';
@@ -32,8 +34,6 @@ import { TxsState } from '../txs_state';
 import { KeyPair, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
-import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
-import { HashPathSource } from 'sriracha/hash_path_source';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -502,8 +502,8 @@ export class CoreSdk extends EventEmitter {
     return txHash;
   }
 
-  public async deposit(assetId: AssetId, userId: Buffer, value: bigint, from: EthAddress, to: GrumpkinAddress) {
-    const signer = this.ethersProvider.getSigner(from.toString());
+  public async deposit(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: GrumpkinAddress) {
+    const from = EthAddress.fromString(await signer.getAddress());
     const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
     const action = () => this.createProof(assetId, userId, 'DEPOSIT', value, to, undefined, signer);
     return this.performAction(Action.DEPOSIT, value, userId, to, action, validation);
@@ -519,8 +519,8 @@ export class CoreSdk extends EventEmitter {
     return this.performAction(Action.TRANSFER, value, userId, to, action);
   }
 
-  public async publicTransfer(assetId: AssetId, userId: Buffer, value: bigint, from: EthAddress, to: EthAddress) {
-    const signer = this.ethersProvider.getSigner(from.toString());
+  public async publicTransfer(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: EthAddress) {
+    const from = EthAddress.fromString(await signer.getAddress());
     const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
     const action = () => this.createProof(assetId, userId, 'PUBLIC_TRANSFER', value, undefined, to, signer);
     return this.performAction(Action.PUBLIC_TRANSFER, value, userId, to, action, validation);

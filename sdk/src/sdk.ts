@@ -1,4 +1,4 @@
-import { EthAddress, Address } from 'barretenberg/address';
+import { Address, EthAddress } from 'barretenberg/address';
 
 export enum SdkEvent {
   // Initialization state changes.

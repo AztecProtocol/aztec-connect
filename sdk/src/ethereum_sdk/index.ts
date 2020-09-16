@@ -1,8 +1,8 @@
+import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { TxHash } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { Web3Provider } from '@ethersproject/providers';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
@@ -169,7 +169,9 @@ export class EthereumSdk extends EventEmitter {
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
-    return this.core.deposit(assetId, userId, value, from, to);
+
+    const signer = this.web3Provider.getSigner(from.toString());
+    return this.core.deposit(assetId, userId, value, signer, to);
   }
 
   public async withdraw(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
@@ -193,7 +195,9 @@ export class EthereumSdk extends EventEmitter {
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
-    return this.core.publicTransfer(assetId, userId, value, from, to);
+
+    const signer = this.web3Provider.getSigner(from.toString());
+    return this.core.publicTransfer(assetId, userId, value, signer, to);
   }
 
   public isBusy() {
