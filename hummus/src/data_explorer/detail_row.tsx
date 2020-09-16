@@ -1,9 +1,9 @@
+import { Block, Col, Row, Text, TextButton } from '@aztec/guacamole-ui';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
-import { Row, Col, Block, Text, TextButton } from '@aztec/guacamole-ui';
-import { ThemeContext } from '../config/context';
 import { MonospacedText } from '../components';
+import { ThemeContext } from '../config/context';
 
 const ContentText = styled(Text)`
   overflow-wrap: anywhere;

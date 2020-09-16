@@ -1,9 +1,9 @@
-import { createGlobalStyle } from 'styled-components';
-import { useEffect } from 'react';
 import { WebSdk } from 'aztec2-sdk';
+import { useEffect } from 'react';
+import React from 'react';
+import { createGlobalStyle } from 'styled-components';
 import { Terminal } from './terminal';
 import { TerminalHandler } from './terminal_handler';
-import React from 'react';
 import { TerminalPage } from './terminal_page';
 
 const GlobalStyle = createGlobalStyle`

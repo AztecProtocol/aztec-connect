@@ -1,9 +1,9 @@
+import { Block, FlexBox, Text, TextButton } from '@aztec/guacamole-ui';
 import { Action, ActionState, AssetId, SdkEvent, UserTx, WebSdk } from 'aztec2-sdk';
 import { EthAddress } from 'barretenberg/address';
 import React, { useEffect, useState } from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
 import { Link } from 'react-router-dom';
-import { Block, FlexBox, Text, TextButton } from '@aztec/guacamole-ui';
 import { ThemeContext } from '../config/context';
 import { StatusRow, TmpRow } from './status_row';
 

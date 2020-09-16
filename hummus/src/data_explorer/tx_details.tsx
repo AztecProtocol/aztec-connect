@@ -1,10 +1,10 @@
 import { Tx } from 'aztec2-sdk';
-import moment from 'moment';
-import React, { useState, useEffect } from 'react';
-import { Form, FormSection } from '../components';
 import { WebSdk } from 'aztec2-sdk';
-import { DetailRow, ContentLink } from './detail_row';
 import { toBigIntBE } from 'bigint-buffer';
+import moment from 'moment';
+import React, { useEffect,useState } from 'react';
+import { Form, FormSection } from '../components';
+import { ContentLink,DetailRow } from './detail_row';
 
 interface TxDetailsProps {
   txHash: Buffer;

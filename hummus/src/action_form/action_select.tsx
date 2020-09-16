@@ -1,8 +1,8 @@
-import React from 'react';
 import { FlexBox, SelectInput } from '@aztec/guacamole-ui';
+import { Action } from 'aztec2-sdk';
+import React from 'react';
 import { FormField } from '../components';
 import { ThemeContext } from '../config/context';
-import { Action } from 'aztec2-sdk';
 
 interface AccountSelectProps {
   action: Action;

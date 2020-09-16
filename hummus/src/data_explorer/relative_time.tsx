@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import moment, { Moment } from 'moment';
 import { Text } from '@aztec/guacamole-ui';
+import moment, { Moment } from 'moment';
+import React, { useEffect,useState } from 'react';
 
 interface RelativeTimeProps {
   time: Moment;

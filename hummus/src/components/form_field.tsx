@@ -1,5 +1,5 @@
+import { Block, FlexBox, Text } from '@aztec/guacamole-ui';
 import React from 'react';
-import { FlexBox, Block, Text } from '@aztec/guacamole-ui';
 
 interface FormFieldProps {
   label: string;

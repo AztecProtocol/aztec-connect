@@ -1,10 +1,10 @@
-import { Rollup } from 'aztec2-sdk';
-import moment from 'moment';
-import React, { useState, useEffect } from 'react';
-import { Form, FormSection } from '../components';
 import { Block, Offset } from '@aztec/guacamole-ui';
+import { Rollup } from 'aztec2-sdk';
 import { WebSdk } from 'aztec2-sdk';
-import { DetailRow, ContentLink } from './detail_row';
+import moment from 'moment';
+import React, { useEffect,useState } from 'react';
+import { Form, FormSection } from '../components';
+import { ContentLink,DetailRow } from './detail_row';
 
 const TxList = ({ txHashes }: { txHashes: Buffer[] }) => (
   <Offset top="xs" bottom="xs">

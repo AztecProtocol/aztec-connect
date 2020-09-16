@@ -1,5 +1,5 @@
+import React, { useEffect,useState } from 'react';
 import styled, { keyframes } from 'styled-components';
-import React, { useState, useEffect } from 'react';
 import { Terminal } from './terminal';
 
 const glitch = keyframes`

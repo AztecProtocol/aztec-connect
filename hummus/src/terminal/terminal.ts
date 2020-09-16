@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { Cursor, blockCursor, spinnerCursor } from './cursor';
+import { blockCursor, Cursor, spinnerCursor } from './cursor';
 
 export enum EscapeChars {
   PAUSE = '\x01',
@@ -13,7 +13,7 @@ export class Terminal extends EventEmitter {
   private inputLocked = true;
   private stateCounter = 0;
   private interval!: NodeJS.Timeout;
-  private cmd: string = '';
+  private cmd = '';
 
   constructor(private rows: number, private cols: number) {
     super();
@@ -165,13 +165,14 @@ export class Terminal extends EventEmitter {
           this.backspace();
           this.cmd = this.cmd.slice(0, -1);
           break;
-        case 13:
+        case 13: {
           const cmd = this.cmd;
           this.cmd = '';
           this.newLine();
           this.lock();
           this.emit('cmd', cmd);
           break;
+        }
         default:
           return;
       }

@@ -1,5 +1,5 @@
+import { MaskedNumberInput,TextInput } from '@aztec/guacamole-ui';
 import React from 'react';
-import { TextInput, MaskedNumberInput } from '@aztec/guacamole-ui';
 import { ThemeContext } from '../config/context';
 
 interface InputProps {
