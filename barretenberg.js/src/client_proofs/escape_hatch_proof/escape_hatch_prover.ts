@@ -6,12 +6,9 @@ import { Crs } from '../../crs';
 export class EscapeHatchProver {
   constructor(private prover: Prover) {}
 
-  public async computeKey(crs: Crs) {
+  public async computeKey() {
     const worker = this.prover.getWorker();
-    const pippenger = new SinglePippenger(worker);
-    await pippenger.init(crs.getData());
-    await worker.transferToHeap(crs.getG2Data(), 0);
-    await worker.call('escape_hatch__init_proving_key', pippenger.getPointer(), 0);
+    await worker.call('escape_hatch__init_proving_key', 0, 0);
   }
 
   public async createProof(tx: EscapeHatchTx) {

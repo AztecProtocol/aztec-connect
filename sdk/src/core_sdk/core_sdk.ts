@@ -32,6 +32,8 @@ import { TxsState } from '../txs_state';
 import { KeyPair, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
+import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
+import { HashPathSource } from 'sriracha/hash_path_source';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -63,6 +65,7 @@ export class CoreSdk extends EventEmitter {
   private workerPool!: WorkerPool;
   private joinSplitProofCreator!: JoinSplitProofCreator;
   private accountProofCreator!: AccountProofCreator;
+  private escapeHatchProofCreator!: EscapeHatchProofCreator;
   private blockQueue!: MemoryFifo<Block>;
   private userFactory!: UserDataFactory;
   private userStateFactory!: UserStateFactory;
@@ -80,21 +83,29 @@ export class CoreSdk extends EventEmitter {
   private actionState?: ActionState;
   private processBlocksPromise?: Promise<void>;
   private blake2s!: Blake2s;
+  private rollupProvider!: RollupProvider;
+  private rollupProviderExplorer!: RollupProviderExplorer;
+  private blockSource!: BlockSource;
 
   constructor(
     ethereumProvider: EthereumProvider,
     private leveldb: LevelUp,
     private db: Database,
-    private rollupProvider: RollupProvider,
-    private rollupProviderExplorer: RollupProviderExplorer,
-    private blockSource: BlockSource,
     private options: CoreSdkOptions,
   ) {
     super();
     this.ethersProvider = new Web3Provider(ethereumProvider);
   }
 
-  public async init() {
+  public async init(
+    rollupProvider: RollupProvider,
+    rollupProviderExplorer: RollupProviderExplorer,
+    blockSource: BlockSource,
+  ) {
+    this.rollupProvider = rollupProvider;
+    this.rollupProviderExplorer = rollupProviderExplorer;
+    this.blockSource = blockSource;
+
     if (this.sdkStatus.initState !== SdkInitState.UNINITIALIZED) {
       throw new Error('Sdk is not UNINITIALIZED.');
     }
@@ -154,7 +165,11 @@ export class CoreSdk extends EventEmitter {
     this.updateInitState(SdkInitState.INITIALIZED);
   }
 
-  public async initEscape(rollupContractAddress: EthAddress, tokenContractAddress: EthAddress) {
+  public async initEscape(
+    rollupContractAddress: EthAddress,
+    tokenContractAddress: EthAddress,
+    hashPathSource: HashPathSource,
+  ) {
     if (this.sdkStatus.initState !== SdkInitState.UNINITIALIZED) {
       throw new Error('Sdk is not UNINITIALIZED.');
     }
@@ -173,6 +188,7 @@ export class CoreSdk extends EventEmitter {
     const pedersen = new Pedersen(barretenberg);
     const blake2s = new Blake2s(barretenberg);
     const grumpkin = new Grumpkin(barretenberg);
+    const noteAlgos = new NoteAlgorithms(barretenberg);
     const crsData = await this.getCrsData(512 * 1024);
     const numWorkers = Math.min(navigator.hardwareConcurrency || 1, 8);
     const workerPool = await WorkerPool.new(barretenberg, numWorkers);
@@ -185,8 +201,14 @@ export class CoreSdk extends EventEmitter {
     this.workerPool = workerPool;
     this.txsState = new TxsState(this.rollupProviderExplorer);
     this.worldState = new WorldState(this.leveldb, pedersen, blake2s);
-    // this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, grumpkin);
-    // this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, blake2s);
+    this.escapeHatchProofCreator = new EscapeHatchProofCreator(
+      escapeHatchProver,
+      this.worldState,
+      grumpkin,
+      blake2s,
+      noteAlgos,
+      hashPathSource,
+    );
 
     await this.worldState.init();
 
@@ -199,8 +221,7 @@ export class CoreSdk extends EventEmitter {
     this.sdkStatus.latestRollupId = +(await this.leveldb.get('latestRollupId').catch(() => -1));
 
     await this.initUserStates();
-    // await this.createJoinSplitProvingKey(joinSplitProver);
-    // await this.createAccountProvingKey(accountProver);
+    await this.createEscapeHatchProvingKey(escapeHatchProver);
 
     this.updateInitState(SdkInitState.INITIALIZED);
   }
@@ -298,6 +319,13 @@ export class CoreSdk extends EventEmitter {
       }
       debug(`complete: ${new Date().getTime() - start}ms`);
     }
+  }
+
+  private async createEscapeHatchProvingKey(escapeProver: EscapeHatchProver) {
+    const start = new Date().getTime();
+    this.logInitMsgAndDebug('Computing escape hatch proving key...');
+    await escapeProver.computeKey();
+    debug(`complete: ${new Date().getTime() - start}ms`);
   }
 
   public async destroy() {
@@ -529,6 +557,7 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async deposit(assetId: AssetId, userId: Buffer, value: bigint, from: EthAddress, to: GrumpkinAddress) {
+    // TODO: If in escape mode throw.
     const signer = this.ethersProvider.getSigner(from.toString());
     const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
     const action = () => this.createProof(assetId, userId, 'DEPOSIT', value, to, undefined, signer);

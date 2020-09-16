@@ -206,7 +206,7 @@ describe('escape_hatch_proof', () => {
       oldDataRootsPath,
       newDataRootsPath,
     );
-    await escapeHatchProver.computeKey(crs);
+    await escapeHatchProver.computeKey();
     debug('creating proof...');
     const start = new Date().getTime();
     const proof = await escapeHatchProver.createEscapeHatchProof(tx);

@@ -5,6 +5,7 @@
   "license": "GPL-2.0",
   "scripts": {
     "build": "rm -rf ./dest && tsc -p tsconfig.prod.json && node package.js",
+    "build:dev": "rm -rf ./dest && tsc -p tsconfig.prod.json --watch && node package.js",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
     "test": "jest --passWithNoTests",
