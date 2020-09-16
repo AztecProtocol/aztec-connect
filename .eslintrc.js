@@ -12,13 +12,6 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-empty-function': 'off',
     'no-constant-condition': 'off',
-    'simple-import-sort/sort': [
-      'error',
-      {
-        // The default grouping, but with no blank lines.
-        groups: [['^\\u0000', '^@?\\w', '^[^.]', '^\\.']],
-      },
-    ],
   },
   ignorePatterns: ['node_modules', 'dest*', 'dist', '*.js', '.eslintrc'],
 };

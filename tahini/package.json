@@ -61,7 +61,6 @@
     "@typescript-eslint/parser": "^4.1.1",
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",
-    "eslint-plugin-simple-import-sort": "^5.0.3",
     "eth-sig-util": "^2.5.3",
     "jest": "^25.0.0",
     "koa-bodyparser": "^4.3.0",
