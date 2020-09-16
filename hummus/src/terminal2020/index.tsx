@@ -1,11 +1,11 @@
+import createDebug from 'debug';
 import React, { PureComponent } from 'react';
 import styled from 'styled-components';
-import createDebug from 'debug';
 import { App } from '../app';
+import { command, toArgv, toOptions } from './command';
 import { Display, Text } from './display';
 import { header } from './header';
 import { UserInput } from './user_input';
-import { command, toArgv, toOptions } from './command';
 
 const debug = createDebug('bb:terminal');
 
@@ -300,7 +300,7 @@ export class Terminal2020 extends PureComponent<TerminalProps, State> {
     });
   };
 
-  removeLog = async (numberOfLines: number = 1) => {
+  removeLog = async (numberOfLines = 1) => {
     return new Promise(resolve => {
       const { staticContent: prevStaticContent } = this.state;
       const staticContent = prevStaticContent.slice(0, prevStaticContent.length - numberOfLines);

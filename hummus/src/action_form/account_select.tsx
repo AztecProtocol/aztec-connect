@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
 import { FlexBox, SelectInput } from '@aztec/guacamole-ui';
+import React from 'react';
 import { FormField } from '../components';
 import { ThemeContext } from '../config/context';
 

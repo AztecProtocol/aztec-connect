@@ -1,4 +1,4 @@
-import { Text, Cursor } from './display';
+import { Cursor,Text } from './display';
 
 export class UserInput {
   public historyRoot = '';

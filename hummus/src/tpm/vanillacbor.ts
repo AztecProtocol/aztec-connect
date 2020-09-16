@@ -1,3 +1,4 @@
+/* eslint-disable */
 /*
  * vanilla CBOR decoder / encoder
  * https://github.com/herrjemand/vanillaCBOR

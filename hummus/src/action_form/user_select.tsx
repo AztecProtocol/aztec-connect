@@ -1,9 +1,9 @@
+import { Block, FlexBox, Icon, SelectInput, Text } from '@aztec/guacamole-ui';
+import { UserData } from 'aztec2-sdk';
 import React, { useState } from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
-import { FlexBox, Block, SelectInput, Icon, Text } from '@aztec/guacamole-ui';
 import { FormField } from '../components';
 import { ThemeContext } from '../config/context';
-import { UserData } from 'aztec2-sdk';
 
 interface UserSelectProps {
   users: UserData[];
@@ -14,18 +14,14 @@ interface UserSelectProps {
 export const UserSelect = ({ users, user, onSelect }: UserSelectProps) => {
   const [justCopied, setJustCopied] = useState(false);
 
-  const userItems = users
-    .map(({ ethAddress, publicKey }) => ({
-      value: ethAddress.toString(),
-      title: ethAddress.toString(),
-    }))
-    .concat([
-      {
-        value: 'new',
-        // @ts-ignore
-        title: <Text text="Create new user" color="secondary" size="xs" />,
-      },
-    ]);
+  const userItems: { value: string; title: React.ReactNode }[] = users.map(({ ethAddress }) => ({
+    value: ethAddress.toString(),
+    title: ethAddress.toString(),
+  }));
+  userItems.push({
+    value: 'new',
+    title: <Text text="Create new user" color="secondary" size="xs" />,
+  });
 
   return (
     <ThemeContext.Consumer>

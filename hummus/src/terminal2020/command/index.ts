@@ -1,11 +1,11 @@
 import { App } from '../../app';
-import { TerminalBuffer } from './terminal_buffer';
+import { deposit } from './deposit';
 import { help } from './help';
 import { init } from './init';
-import { user } from './user';
-import { deposit } from './deposit';
-import { withdraw } from './withdraw';
+import { TerminalBuffer } from './terminal_buffer';
 import { transfer } from './transfer';
+import { user } from './user';
+import { withdraw } from './withdraw';
 
 export interface Command {
   run: (buf: TerminalBuffer, app: App) => Promise<void>;

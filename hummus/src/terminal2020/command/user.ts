@@ -10,7 +10,7 @@ const requireInit = async (buf: TerminalBuffer, app: App) => {
   return false;
 };
 
-const logUsage = async (buf: TerminalBuffer, unknown: string = '') => {
+const logUsage = async (buf: TerminalBuffer, unknown = '') => {
   let texts: Text[] = [];
   if (unknown) {
     if (unknown.startsWith('-')) {

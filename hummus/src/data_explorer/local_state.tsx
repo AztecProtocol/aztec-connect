@@ -1,9 +1,9 @@
 import { Block, FlexBox, TextButton } from '@aztec/guacamole-ui';
+import { SdkEvent, WebSdk } from 'aztec2-sdk';
 import { EthAddress } from 'barretenberg/address';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect,useState } from 'react';
 import { Form, FormSection } from '../components';
 import { UserTxs } from './user_txs';
-import { SdkEvent, WebSdk } from 'aztec2-sdk';
 
 const UserTitle = ({ app, account, alias }: { app: WebSdk; account: EthAddress; alias?: string }) => (
   <FlexBox valign="center">

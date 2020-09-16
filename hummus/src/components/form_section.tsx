@@ -1,5 +1,5 @@
-import React from 'react';
 import { Block, Text } from '@aztec/guacamole-ui';
+import React from 'react';
 
 interface FormSectionProps {
   title?: string | React.ReactNode;

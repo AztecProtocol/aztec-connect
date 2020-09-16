@@ -5,6 +5,7 @@
   "license": "GPL-2.0",
   "scripts": {
     "build": "webpack --config webpack.prod.js",
+    "lint": "eslint ./",
     "test": "tsc --noEmit",
     "generate:styles": "guacamole generateStyles",
     "start": "node ./server",

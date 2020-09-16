@@ -1,9 +1,9 @@
-import React, { useState, useEffect, FunctionComponent } from 'react';
-import { Text, TextButton, Block } from '@aztec/guacamole-ui';
+import { Block,Text, TextButton } from '@aztec/guacamole-ui';
+import { AppEvent, AppInitAction, AppInitState, AppInitStatus,WebSdk } from 'aztec2-sdk';
 import { EthAddress } from 'barretenberg/address';
-import { Button, Input, FormSection, Form } from './components';
-import { WebSdk, AppInitState, AppEvent, AppInitAction, AppInitStatus } from 'aztec2-sdk';
 import createDebug from 'debug';
+import React, { FunctionComponent,useEffect, useState } from 'react';
+import { Button, Form,FormSection, Input } from './components';
 
 const debug = createDebug('bb::init_form');
 

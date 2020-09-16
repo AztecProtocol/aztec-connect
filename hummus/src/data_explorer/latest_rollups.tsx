@@ -1,7 +1,7 @@
+import { Block, Text, TextButton } from '@aztec/guacamole-ui';
 import { EthereumSdk, Rollup } from 'aztec2-sdk';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Block, Text, TextButton } from '@aztec/guacamole-ui';
 import { ThemeContext } from '../config/context';
 import { StatusRow } from './status_row';
 
