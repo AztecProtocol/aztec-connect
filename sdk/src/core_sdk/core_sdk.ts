@@ -400,7 +400,7 @@ export class CoreSdk extends EventEmitter {
     this.emit(SdkEvent.UPDATED_USER_STATE, userId);
   }
 
-  private async createProof(
+  public async createProof(
     assetId: AssetId,
     userId: Buffer,
     action: UserTxAction,

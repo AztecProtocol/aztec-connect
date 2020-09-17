@@ -198,7 +198,9 @@ export class EthereumSdk extends EventEmitter {
     }
 
     const signer = this.web3Provider.getSigner(from.toString());
-    return this.core.deposit(assetId, userId, value, signer, to);
+    const action = () => this.core.createProof(assetId, userId, 'DEPOSIT', value, to, undefined, signer);
+    const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
+    return this.core.performAction(Action.DEPOSIT, value, userId, to, action, validation);
   }
 
   public async withdraw(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
@@ -206,7 +208,9 @@ export class EthereumSdk extends EventEmitter {
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
-    return this.core.withdraw(assetId, userId, value, to);
+
+    const action = () => this.core.createProof(assetId, userId, 'WITHDRAW', value, undefined, to);
+    return this.core.performAction(Action.WITHDRAW, value, userId, to, action);
   }
 
   public async transfer(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
@@ -214,7 +218,9 @@ export class EthereumSdk extends EventEmitter {
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
-    return this.core.transfer(assetId, userId, value, to);
+
+    const action = () => this.core.createProof(assetId, userId, 'TRANSFER', value, to);
+    return this.core.performAction(Action.TRANSFER, value, userId, to, action);
   }
 
   public async publicTransfer(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
@@ -224,7 +230,9 @@ export class EthereumSdk extends EventEmitter {
     }
 
     const signer = this.web3Provider.getSigner(from.toString());
-    return this.core.publicTransfer(assetId, userId, value, signer, to);
+    const action = () => this.core.createProof(assetId, userId, 'PUBLIC_TRANSFER', value, undefined, to, signer);
+    const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
+    return this.core.performAction(Action.PUBLIC_TRANSFER, value, userId, to, action, validation);
   }
 
   private async checkPublicBalanceAndAllowance(assetId: AssetId, value: bigint, from: EthAddress) {
