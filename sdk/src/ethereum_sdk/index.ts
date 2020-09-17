@@ -32,7 +32,7 @@ export class EthereumSdk extends EventEmitter {
   private localAccounts: DbAccount[] = [];
   private pausedEvent: Map<SdkEvent, any[][]> = new Map();
 
-  constructor(private ethereumProvider: EthereumProvider) {
+  constructor(ethereumProvider: EthereumProvider) {
     super();
     this.web3Provider = new Web3Provider(ethereumProvider);
   }
@@ -82,7 +82,7 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public async init(serverUrl: string, sdkOptions: SdkOptions) {
-    this.core = await createSdk(serverUrl, this.ethereumProvider, sdkOptions);
+    this.core = await createSdk(serverUrl, sdkOptions);
 
     // Forward all core sdk events.
     for (const e in SdkEvent) {
