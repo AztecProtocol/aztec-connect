@@ -1,4 +1,3 @@
-import { Web3Provider } from '@ethersproject/providers';
 import { Address, EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
 import { AccountProver } from 'barretenberg/client_proofs/account_proof';
@@ -22,7 +21,6 @@ import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
 import { HashPathSource } from 'sriracha/hash_path_source';
 import { Database } from '../database';
-import { EthereumProvider } from '../ethereum_provider';
 import { AccountProofCreator } from '../proofs/account_proof_creator';
 import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
@@ -57,7 +55,6 @@ export interface CoreSdkOptions {
 }
 
 export class CoreSdk extends EventEmitter {
-  private ethersProvider: Web3Provider;
   private worldState!: WorldState;
   private userStates: UserState[] = [];
   private workerPool!: WorkerPool;
@@ -83,7 +80,6 @@ export class CoreSdk extends EventEmitter {
   private blake2s!: Blake2s;
 
   constructor(
-    ethereumProvider: EthereumProvider,
     private leveldb: LevelUp,
     private db: Database,
     private rollupProvider: RollupProvider,
@@ -92,7 +88,6 @@ export class CoreSdk extends EventEmitter {
     private options: CoreSdkOptions,
   ) {
     super();
-    this.ethersProvider = new Web3Provider(ethereumProvider);
   }
 
   public async init() {

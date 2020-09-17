@@ -1,16 +1,16 @@
 import { ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
+import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import createDebug from 'debug';
 import isNode from 'detect-node';
+import { ethers } from 'ethers';
 import { mkdirSync } from 'fs';
 import levelup from 'levelup';
+import { SrirachaProvider } from 'sriracha/hash_path_source';
 import { DexieDatabase } from '../database';
 import { EthereumProvider } from '../ethereum_provider';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
-import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
-import { SrirachaProvider } from 'sriracha/hash_path_source';
-import { ethers } from 'ethers';
 
 const debug = createDebug('bb:create_sdk');
 
@@ -43,14 +43,14 @@ async function sdkFactory(hostStr: string, ethereumProvider: EthereumProvider, o
   if (!options.escapeHatchMode) {
     const rollupProvider = new ServerRollupProvider(host);
     const rollupProviderExplorer = new ServerRollupProviderExplorer(host);
-    return new CoreSdk(ethereumProvider, leveldb, db, rollupProvider, rollupProviderExplorer, undefined, options);
+    return new CoreSdk(leveldb, db, rollupProvider, rollupProviderExplorer, undefined, options);
   } else {
     const srirachaProvider = new SrirachaProvider(hostStr);
     const provider = new ethers.providers.Web3Provider(ethereumProvider);
     const { rollupContractAddress } = await srirachaProvider.status();
     const config = { signer: provider.getSigner(0), networkOrHost: hostStr, console: false };
     const blockchain = await EthereumBlockchain.new(config, rollupContractAddress);
-    return new CoreSdk(ethereumProvider, leveldb, db, blockchain, undefined, srirachaProvider, options);
+    return new CoreSdk(leveldb, db, blockchain, undefined, srirachaProvider, options);
   }
 }
 
