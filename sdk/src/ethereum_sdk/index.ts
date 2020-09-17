@@ -6,7 +6,9 @@ import { EventEmitter } from 'events';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
-import { AssetId, SdkEvent } from '../sdk';
+import { Action, AssetId, SdkEvent } from '../sdk';
+import { TokenContract, Web3TokenContract } from '../token_contract';
+import { MockTokenContract } from '../token_contract/mock_token_contract';
 import { deriveGrumpkinPrivateKey, KeyPair, UserData } from '../user';
 import { Database, DbAccount } from './database';
 import { EthereumSdkUser } from './ethereum_sdk_user';
@@ -26,6 +28,7 @@ export class EthereumSdk extends EventEmitter {
   private db = new Database('aztec2-sdk-eth');
   private core!: CoreSdk;
   private web3Provider: Web3Provider;
+  private tokenContracts: TokenContract[] = [];
   private localAccounts: DbAccount[] = [];
   private pausedEvent: Map<SdkEvent, any[][]> = new Map();
 
@@ -89,6 +92,21 @@ export class EthereumSdk extends EventEmitter {
 
     await this.updateLocalAccounts();
 
+    const { chainId, networkOrHost, rollupContractAddress, tokenContractAddress } = await this.core.getRemoteStatus();
+
+    const { chainId: ethProviderChainId } = await this.web3Provider.getNetwork();
+    if (chainId !== ethProviderChainId) {
+      throw new Error(
+        `Ethereum provider chainId ${ethProviderChainId} does not match rollup provider chainId ${chainId}.`,
+      );
+    }
+
+    this.tokenContracts[AssetId.DAI] =
+      networkOrHost !== 'development'
+        ? new Web3TokenContract(this.web3Provider, tokenContractAddress, rollupContractAddress, chainId)
+        : new MockTokenContract();
+    await Promise.all(this.tokenContracts.map(tc => tc.init()));
+
     await this.core.init();
   }
 
@@ -117,7 +135,7 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public getTokenContract(assetId: AssetId) {
-    return this.core.getTokenContract(assetId);
+    return this.tokenContracts[assetId];
   }
 
   public async startReceivingBlocks() {
@@ -153,15 +171,24 @@ export class EthereumSdk extends EventEmitter {
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
-    return this.core.approve(assetId, userId, value, from);
+
+    const action = () => this.getTokenContract(assetId).approve(from, value);
+    const { rollupContractAddress } = this.core.getLocalStatus();
+    const txHash = await this.core.performAction(Action.APPROVE, value, userId, rollupContractAddress, action);
+    this.emit(SdkEvent.UPDATED_USER_STATE, from);
+    return txHash;
   }
 
-  public async mint(assetId: AssetId, value: bigint, from: EthAddress) {
-    const userId = this.getUserIdByEthAddress(from);
+  public async mint(assetId: AssetId, value: bigint, to: EthAddress) {
+    const userId = this.getUserIdByEthAddress(to);
     if (!userId) {
-      throw new Error(`User not found: ${from}`);
+      throw new Error(`User not found: ${to}`);
     }
-    return this.core.mint(assetId, userId, value, from);
+
+    const action = () => this.getTokenContract(assetId).mint(to, value);
+    const txHash = await this.core.performAction(Action.MINT, value, userId, to, action);
+    this.emit(SdkEvent.UPDATED_USER_STATE, to);
+    return txHash;
   }
 
   public async deposit(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
@@ -198,6 +225,18 @@ export class EthereumSdk extends EventEmitter {
 
     const signer = this.web3Provider.getSigner(from.toString());
     return this.core.publicTransfer(assetId, userId, value, signer, to);
+  }
+
+  private async checkPublicBalanceAndAllowance(assetId: AssetId, value: bigint, from: EthAddress) {
+    const tokenContract = this.getTokenContract(assetId);
+    const tokenBalance = await tokenContract.balanceOf(from);
+    if (tokenBalance < value) {
+      throw new Error(`Insufficient public token balance: ${tokenContract.fromErc20Units(tokenBalance)}`);
+    }
+    const allowance = await tokenContract.allowance(from);
+    if (allowance < value) {
+      throw new Error(`Insufficient allowance: ${tokenContract.fromErc20Units(allowance)}`);
+    }
   }
 
   public isBusy() {
