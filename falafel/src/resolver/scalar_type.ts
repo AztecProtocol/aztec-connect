@@ -2,7 +2,7 @@ import { GraphQLScalarType, Kind } from 'graphql';
 import { rollupStatus, RollupStatus } from '../entity/rollup';
 
 // The date format stored in SQLite is 'YYYY-MM-DD HH:mm:ss.sss' instead of 'YYYY-MM-DDTHH:mm:ss.sssZ'.
-const toSQLIteDateTime = (value: string | Date) => new Date(value).toISOString().replace(/T/, ' ').slice(0, -1);
+export const toSQLIteDateTime = (value: string | Date) => new Date(value).toISOString().replace(/T/, ' ').slice(0, -1);
 
 export const ISODateTime = new GraphQLScalarType({
   name: 'ISODateTime',

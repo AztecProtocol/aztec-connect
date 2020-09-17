@@ -1,10 +1,10 @@
 import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
-import { Connection, Repository, Not } from 'typeorm';
+import { Connection, Repository, Not, LessThanOrEqual } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { getQuery } from './query_builder';
-import { HexString } from './scalar_type';
+import { HexString, toSQLIteDateTime } from './scalar_type';
 import { TxType, TxsArgs } from './tx_type';
 
 @Resolver(() => TxType)
@@ -25,6 +25,11 @@ export class TxResolver {
   @Query(() => [TxType!])
   async txs(@Args() args: TxsArgs) {
     return getQuery(this.txRep, args).getMany();
+  }
+
+  @FieldResolver(() => Int)
+  async txNo(@Root() { created }: TxDao) {
+    return this.txRep.count({ created: LessThanOrEqual(toSQLIteDateTime(created)) });
   }
 
   @FieldResolver(() => Int)
@@ -72,6 +77,13 @@ export class TxResolver {
     return proofData.slice(10 * 32 + 12, 11 * 32);
   }
 
+  @FieldResolver({ nullable: true })
+  async rollup(@Root() tx: TxDao) {
+    const { rollup } = (await this.txRep.findOne({ txId: tx.txId }, { relations: ['rollup'] })) || {};
+    return rollup;
+  }
+
+  // TODO - should take filters
   @Query(() => Int)
   async totalTxs() {
     const pendingTxs = await this.totalPendingTxs();
@@ -79,15 +91,10 @@ export class TxResolver {
     return totalTxs - pendingTxs;
   }
 
+  // TODO - deprecate this
   @Query(() => Int)
   async totalPendingTxs() {
     const pendingRollups = await this.rollupRep.find({ where: { status: Not('SETTLED') }, relations: ['txs'] });
     return pendingRollups.reduce((accum, { txs }) => accum + txs.length, 0);
-  }
-
-  @FieldResolver({ nullable: true })
-  async rollup(@Root() tx: TxDao) {
-    const { rollup } = (await this.txRep.findOne({ txId: tx.txId }, { relations: ['rollup'] })) || {};
-    return rollup;
   }
 }
