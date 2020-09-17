@@ -1,11 +1,12 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { TxHash } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { Web3Provider } from '@ethersproject/providers';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
-import { AssetId, SdkEvent, TxHash } from '../sdk';
+import { AssetId, SdkEvent } from '../sdk';
 import { deriveGrumpkinPrivateKey, KeyPair, UserData } from '../user';
 import { Database, DbAccount } from './database';
 import { EthereumSdkUser } from './ethereum_sdk_user';

@@ -10,9 +10,13 @@ import { EthereumSdkUser } from 'aztec2-sdk/ethereum_sdk/ethereum_sdk_user';
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
-const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
+const {
+  ETHEREUM_HOST = 'http://localhost:8545',
+  ROLLUP_HOST = 'http://localhost:8081',
+  ROLLUP_CONTRACT_ADDRESS = '',
+} = process.env;
 
-describe('end-to-end tests', () => {
+describe('end-to-end escape tests', () => {
   let provider: HttpProvider;
   let sdk: EthereumSdk;
   let userAddresses: EthAddress[];
@@ -23,14 +27,18 @@ describe('end-to-end tests', () => {
     // Init sdk.
     provider = new HttpProvider(ETHEREUM_HOST);
     sdk = new EthereumSdk((provider as any).provider);
+
+    console.log({ ROLLUP_CONTRACT_ADDRESS });
+
     await sdk.init(ROLLUP_HOST, {
       syncInstances: false,
-      saveProvingKey: false,
       clearDb: true,
+      escapeHatchMode: true,
+      rollupContractAddress: EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS),
     });
     await sdk.awaitSynchronised();
 
-    // Get accounts and signers.
+    // Get contract addresses.
     const eth = new Eth(provider);
     userAddresses = (await eth.getAccounts()).slice(0, 4).map(a => new EthAddress(a.toBuffer()));
     users = await Promise.all(
@@ -104,13 +112,5 @@ describe('end-to-end tests', () => {
 
     expect(await user2Asset.publicBalance()).toBe(0n);
     expect(await user3Asset.publicBalance()).toBe(transferValue);
-  });
-
-  it('should create account', async () => {
-    const keyPair = sdk.newKeyPair();
-    const txHash = await users[0].createAccount('pebble', keyPair.publicKey);
-    await sdk.awaitSettlement(userAddresses[0], txHash);
-
-    expect(await sdk.getAddressFromAlias('pebble')).toEqual(users[0].getUserData().publicKey);
   });
 });

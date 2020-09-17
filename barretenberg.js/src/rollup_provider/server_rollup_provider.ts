@@ -1,14 +1,12 @@
 import createDebug from 'debug';
-import { Proof, RollupProvider, RollupProviderStatus, ProofResponse } from './rollup_provider';
-import { ProofServerResponse, RollupProviderStatusServerResponse } from './server_response';
+import { RollupProvider, RollupProviderStatus } from './rollup_provider';
+import { RollupProviderStatusServerResponse } from './server_response';
 import { EthAddress } from '../address';
 import { fetch } from '../iso_fetch';
+import { ServerBlockSource } from '../block_source';
+import { Proof } from '../rollup_provider';
 
 const debug = createDebug('bb:server_rollup_provider');
-
-const toProof = ({ txHash }: ProofServerResponse): ProofResponse => ({
-  txHash: Buffer.from(txHash, 'hex'),
-});
 
 const toRollupProviderStatus = (status: RollupProviderStatusServerResponse): RollupProviderStatus => ({
   ...status,
@@ -18,8 +16,10 @@ const toRollupProviderStatus = (status: RollupProviderStatusServerResponse): Rol
   nullRoot: Buffer.from(status.nullRoot, 'hex'),
 });
 
-export class ServerRollupProvider implements RollupProvider {
-  constructor(private host: URL) {}
+export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
+  constructor(host: URL) {
+    super(host);
+  }
 
   async sendProof({ proofData, viewingKeys, depositSignature, ...rest }: Proof) {
     const url = new URL(`/api/tx`, this.host);
@@ -41,7 +41,7 @@ export class ServerRollupProvider implements RollupProvider {
       throw new Error(`Bad response code ${response.status}.`);
     }
     const body = await response.json();
-    return toProof(body);
+    return Buffer.from(body.txHash, 'hex');
   }
 
   async status() {

@@ -33,7 +33,6 @@ describe('join_split_proof', () => {
   let joinSplitVerifier!: JoinSplitVerifier;
   let blake2s!: Blake2s;
   let pedersen!: Pedersen;
-  let schnorr!: Schnorr;
   let crs!: Crs;
   let pippenger!: PooledPippenger;
   let grumpkin!: Grumpkin;
@@ -69,7 +68,6 @@ describe('join_split_proof', () => {
     joinSplitVerifier = new JoinSplitVerifier();
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
-    schnorr = new Schnorr(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
     noteAlgos = new NoteAlgorithms(barretenberg);
 
@@ -155,7 +153,7 @@ describe('join_split_proof', () => {
 
       debug('creating proof...');
       const start = new Date().getTime();
-      const proof = await joinSplitProver.createJoinSplitProof(tx);
+      const proof = await joinSplitProver.createProof(tx);
       debug(`created proof: ${new Date().getTime() - start}ms`);
       debug(`proof size: ${proof.length}`);
 

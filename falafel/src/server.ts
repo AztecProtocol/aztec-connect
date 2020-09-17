@@ -198,8 +198,8 @@ export class Server {
     return {
       chainId,
       networkOrHost,
-      rollupContractAddress: this.blockchain.getRollupContractAddress(),
-      tokenContractAddress: this.blockchain.getTokenContractAddress(),
+      rollupContractAddress: this.blockchain.getRollupContractAddress().toString(),
+      tokenContractAddress: this.blockchain.getTokenContractAddress().toString(),
       dataSize: Number(this.worldStateDb.getSize(0)),
       dataRoot: this.worldStateDb.getRoot(0).toString('hex'),
       nullRoot: this.worldStateDb.getRoot(1).toString('hex'),
@@ -296,7 +296,7 @@ export class Server {
 
       while (true) {
         try {
-          const txHash = await this.blockchain.sendProof(proof, signatures, sigIndexes, viewingKeys);
+          const txHash = await this.blockchain.sendRollupProof(proof, signatures, sigIndexes, viewingKeys);
 
           await this.rollupDb.confirmSent(rollupId, txHash);
 

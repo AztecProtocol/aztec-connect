@@ -1,5 +1,7 @@
 import { TransactionResponse } from '@ethersproject/abstract-provider';
+import { EthAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
+import { Proof } from 'barretenberg/block_source_proof_receiver';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { toBigIntBE } from 'bigint-buffer';
 import createDebug from 'debug';
@@ -19,13 +21,24 @@ export interface EthereumBlockchainConfig {
 export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private rollupProcessor!: Contract;
   private erc20!: Contract;
-  private erc20Address!: string;
+  private erc20Address!: EthAddress;
   private running = false;
   private latestRollupId = -1;
 
-  constructor(private config: EthereumBlockchainConfig, private rollupContractAddress: string) {
+  constructor(private config: EthereumBlockchainConfig, private rollupContractAddress: EthAddress) {
     super();
-    this.rollupProcessor = new ethers.Contract(rollupContractAddress, RollupABI, this.config.signer);
+    this.rollupProcessor = new ethers.Contract(rollupContractAddress.toString(), RollupABI, this.config.signer);
+  }
+
+  static async new(config: EthereumBlockchainConfig, rollupContractAddress: EthAddress) {
+    const eb = new EthereumBlockchain(config, rollupContractAddress);
+    await eb.init();
+    return eb;
+  }
+
+  public async init() {
+    this.erc20Address = await this.rollupProcessor.linkedToken();
+    this.erc20 = new ethers.Contract(this.erc20Address.toString(), ERC20ABI, this.config.signer);
   }
 
   /**
@@ -34,8 +47,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public async start(fromBlock: number = 0) {
     console.log(`Ethereum blockchain starting from block: ${fromBlock}`);
-    this.erc20Address = await this.rollupProcessor.linkedToken();
-    this.erc20 = new ethers.Contract(this.erc20Address, ERC20ABI, this.config.signer);
 
     const emitBlocks = async () => {
       const blocks = await this.getBlocks(fromBlock);
@@ -67,6 +78,26 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     this.running = false;
   }
 
+  /**
+   * Get the status of the rollup contract
+   */
+  public async status() {
+    const { chainId, networkOrHost } = await this.getNetworkInfo();
+    const dataSize = +(await this.rollupProcessor.dataSize());
+    const dataRoot = Buffer.from((await this.rollupProcessor.dataRoot()).slice(2), 'hex');
+    const nullRoot = Buffer.from((await this.rollupProcessor.nullRoot()).slice(2), 'hex');
+
+    return {
+      chainId,
+      networkOrHost,
+      tokenContractAddress: this.getTokenContractAddress(),
+      rollupContractAddress: this.getRollupContractAddress(),
+      dataRoot,
+      nullRoot,
+      dataSize,
+    };
+  }
+
   public getLatestRollupId() {
     return this.latestRollupId;
   }
@@ -93,7 +124,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Appends viewingKeys to the proofData, so that they can later be fetched from the tx calldata
    * and added to the emitted rollupBlock.
    */
-  public async sendProof(proofData: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
+  public async sendRollupProof(proofData: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
     const formattedSignatures = this.solidityFormatSignatures(signatures);
     const tx = await this.rollupProcessor.processRollup(
       `0x${proofData.toString('hex')}`,
@@ -102,6 +133,13 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       Buffer.concat(viewingKeys),
     );
     return Buffer.from(tx.hash.slice(2), 'hex');
+  }
+
+  /**
+   * This is called by the client side when in escape hatch mode. Hence it doesn't take deposit signatures.
+   */
+  public async sendProof({ proofData, viewingKeys }: Proof) {
+    return this.sendRollupProof(proofData, [], [], viewingKeys);
   }
 
   /**

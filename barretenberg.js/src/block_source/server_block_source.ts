@@ -32,7 +32,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
   private running = false;
   private latestRollupId = -1;
 
-  constructor(private host: URL) {
+  constructor(protected host: URL) {
     super();
   }
 

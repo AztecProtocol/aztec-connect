@@ -25,6 +25,10 @@ export class InnerProofData {
     return createHash('sha256').update(this.toBuffer()).digest();
   }
 
+  getDepositSigningData() {
+    return this.toBuffer();
+  }
+
   toBuffer() {
     return Buffer.concat([
       numToUInt32BE(this.proofId, 32),

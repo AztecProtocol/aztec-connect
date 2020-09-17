@@ -11,6 +11,8 @@ import { JoinSplitTxFactory } from '../join_split_proof_creator/join_split_tx_fa
 import { HashPathSource } from 'sriracha/hash_path_source';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { toBufferBE } from 'bigint-buffer';
+import { RollupProofData } from 'barretenberg/rollup_proof';
+import { Signer, utils } from 'ethers';
 
 const debug = createDebug('bb:join_split_proof');
 
@@ -31,22 +33,22 @@ export class EscapeHatchProofCreator {
 
   public async createProof(
     userState: UserState,
-    // publicInput: bigint,
+    publicInput: bigint,
     publicOutput: bigint,
     newNoteValue: bigint,
     sender: UserData,
     receiverPubKey?: GrumpkinAddress,
     outputOwnerAddress?: EthAddress,
-    // signer?: Signer,
+    signer?: Signer,
   ) {
     const joinSplitTx = await this.joinSplitTxFactory.createJoinSplitTx(
       userState,
-      BigInt(0), // publicInput,
+      publicInput,
       publicOutput,
       newNoteValue,
       sender,
       receiverPubKey,
-      undefined, //signer ? EthAddress.fromString(await signer.getAddress()) : undefined,
+      signer ? EthAddress.fromString(await signer.getAddress()) : undefined,
       outputOwnerAddress,
     );
     const viewingKeys = this.joinSplitTxFactory.createViewingKeys(joinSplitTx.outputNotes);
@@ -110,23 +112,23 @@ export class EscapeHatchProofCreator {
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
 
-    // Should be possible to support deposits by slicing the j/s part of proof data below to perform correct signing.
-    // const joinSplitProof = new JoinSplitProof(proofData, viewingKeys);
-    // const depositSignature = publicInput
-    //   ? await this.ethSign(joinSplitProof.getDepositSigningData(), signer)
-    //   : undefined;
+    const rollupProofData = RollupProofData.fromBuffer(proofData);
+    const txId = rollupProofData.innerProofData[0].getTxId();
 
-    return { proofData, viewingKeys };
+    const depositSignature = publicInput
+      ? await this.ethSign(rollupProofData.innerProofData[0].getDepositSigningData(), signer)
+      : undefined;
+
+    return { proofData, viewingKeys, txId };
   }
 
-  /*
   private async ethSign(txPublicInputs: Buffer, signer?: Signer) {
     if (!signer) {
       throw new Error('Signer undefined.');
     }
 
-    const msgHash = ethers.utils.keccak256(txPublicInputs);
-    const digest = ethers.utils.arrayify(msgHash);
+    const msgHash = utils.keccak256(txPublicInputs);
+    const digest = utils.arrayify(msgHash);
     const sig = await signer.signMessage(digest);
     let signature = Buffer.from(sig.slice(2), 'hex');
 
@@ -139,5 +141,4 @@ export class EscapeHatchProofCreator {
 
     return signature;
   }
-*/
 }

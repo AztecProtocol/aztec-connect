@@ -1,4 +1,5 @@
 import { EthereumBlockchain } from 'blockchain';
+import { EthAddress } from 'barretenberg/address';
 import dotenv from 'dotenv';
 import { ethers, Signer } from 'ethers';
 import http from 'http';
@@ -21,7 +22,7 @@ const {
   INFURA_API_KEY,
   NETWORK,
   PRIVATE_KEY,
-  ROLLUP_SIZE = '2',
+  ROLLUP_SIZE = '1',
   MAX_ROLLUP_WAIT_TIME = '10',
   MIN_ROLLUP_INTERVAL = '0',
   LOCAL_BLOCKCHAIN_INIT_SIZE = '0',
@@ -51,7 +52,10 @@ async function main() {
   const connection = await createConnection();
   const ethConfig = getEthereumBlockchainConfig();
   const blockchain = ethConfig
-    ? new PersistentEthereumBlockchain(new EthereumBlockchain(ethConfig, ROLLUP_CONTRACT_ADDRESS!), connection)
+    ? new PersistentEthereumBlockchain(
+        await EthereumBlockchain.new(ethConfig, EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS!)),
+        connection,
+      )
     : new LocalBlockchain(connection, serverConfig.rollupSize, +LOCAL_BLOCKCHAIN_INIT_SIZE);
   const rollupDb = new RollupDb(connection);
 

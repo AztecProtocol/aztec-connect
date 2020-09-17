@@ -3,13 +3,14 @@ import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import { JoinSplitProof, JoinSplitVerifier } from '../client_proofs/join_split_proof';
-import { RollupProvider, Proof } from './rollup_provider';
+import { RollupProvider } from './rollup_provider';
 import { EthAddress } from '../address';
 import { RollupProofData } from '../rollup_proof';
+import { Proof } from '../rollup_provider';
 
 const debug = createDebug('bb:local_rollup_provider');
 
-export class LocalRollupProvider extends EventEmitter implements BlockSource, RollupProvider {
+export class LocalRollupProvider extends EventEmitter implements RollupProvider {
   private blockNum = 0;
   private dataTreeSize = 0;
   private running = false;
@@ -67,9 +68,7 @@ export class LocalRollupProvider extends EventEmitter implements BlockSource, Ro
 
     this.emit('block', block);
 
-    return {
-      txHash: randomBytes(32),
-    };
+    return randomBytes(32);
   }
 
   async status() {

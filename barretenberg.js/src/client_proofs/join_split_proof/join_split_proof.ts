@@ -40,6 +40,7 @@ export class JoinSplitProof {
   }
 
   /**
+   * TODO: Get rid of this in favor of just signing tx id.
    * The data we sign over for authorizing deposits, consists of the data that is published on chain.
    * This excludes the last two fields, the noteTreeRoot and the accountNullifier.
    */

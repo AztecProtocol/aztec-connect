@@ -209,7 +209,7 @@ describe('escape_hatch_proof', () => {
     await escapeHatchProver.computeKey();
     debug('creating proof...');
     const start = new Date().getTime();
-    const proof = await escapeHatchProver.createEscapeHatchProof(tx);
+    const proof = await escapeHatchProver.createProof(tx);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
     await escapeHatchVerifier.computeKey(pippenger.pool[0], crs.getG2Data());

@@ -1,4 +1,5 @@
 import { EthAddress } from '../address';
+import { BlockSource } from '../block_source';
 
 export interface Proof {
   proofData: Buffer;
@@ -16,11 +17,9 @@ export interface RollupProviderStatus {
   nullRoot: Buffer;
 }
 
-export interface ProofResponse {
-  txHash: Buffer;
-}
+export type TxHash = Buffer;
 
-export interface RollupProvider {
-  sendProof(proof: Proof): Promise<ProofResponse>;
+export interface RollupProvider extends BlockSource {
+  sendProof(proof: Proof): Promise<TxHash>;
   status(): Promise<RollupProviderStatus>;
 }

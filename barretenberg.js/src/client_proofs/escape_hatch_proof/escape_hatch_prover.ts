@@ -1,7 +1,5 @@
 import { Prover } from '../prover';
 import { EscapeHatchTx } from './escape_hatch_tx';
-import { SinglePippenger } from '../../pippenger';
-import { Crs } from '../../crs';
 
 export class EscapeHatchProver {
   constructor(private prover: Prover) {}
