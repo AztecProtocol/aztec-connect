@@ -11,11 +11,10 @@ import { abi as ERC20ABI } from './artifacts/ERC20Mintable.json';
 import { abi as RollupABI } from './artifacts/RollupProcessor.json';
 import { Blockchain, Receipt } from './blockchain';
 
-const debug = process?.version ? console.log : createDebug('bb:ethereum_blockchain');
-
 export interface EthereumBlockchainConfig {
   signer: Signer;
   networkOrHost: string;
+  console?: boolean;
 }
 
 export class EthereumBlockchain extends EventEmitter implements Blockchain {
@@ -24,10 +23,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private erc20Address!: EthAddress;
   private running = false;
   private latestRollupId = -1;
+  private debug: any;
 
   constructor(private config: EthereumBlockchainConfig, private rollupContractAddress: EthAddress) {
     super();
     this.rollupProcessor = new ethers.Contract(rollupContractAddress.toString(), RollupABI, this.config.signer);
+    this.debug = config.console === false ? createDebug('bb:ethereum_blockchain') : console.log;
   }
 
   static async new(config: EthereumBlockchainConfig, rollupContractAddress: EthAddress) {
@@ -46,12 +47,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * All historical blocks will have been emitted before this function returns.
    */
   public async start(fromBlock: number = 0) {
-    debug(`Ethereum blockchain starting from block: ${fromBlock}`);
+    this.debug(`Ethereum blockchain starting from block: ${fromBlock}`);
 
     const emitBlocks = async () => {
       const blocks = await this.getBlocks(fromBlock);
       for (const block of blocks) {
-        debug(`Block received: ${block.blockNum}`);
+        this.debug(`Block received: ${block.blockNum}`);
         this.latestRollupId = RollupProofData.getRollupIdFromBuffer(block.rollupProofData);
         this.emit('block', block);
         fromBlock = block.blockNum + 1;
@@ -180,7 +181,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     const txHashStr = `0x${txHash.toString('hex')}`;
     let txReceipt = await this.config.signer.provider!.getTransactionReceipt(txHashStr);
     if (!txReceipt) {
-      debug(`Waiting for tx receipt for ${txHashStr}...`);
+      this.debug(`Waiting for tx receipt for ${txHashStr}...`);
       while (!txReceipt) {
         await new Promise(resolve => setTimeout(resolve, 3000));
         txReceipt = await this.config.signer.provider!.getTransactionReceipt(txHashStr);

@@ -50,7 +50,7 @@ async function sdkFactory(hostStr: string, ethereumProvider: EthereumProvider, o
   } else {
     const srirachaProvider = new SrirachaProvider(hostStr);
     const provider = new ethers.providers.Web3Provider(ethereumProvider);
-    const config = { signer: provider.getSigner(0), networkOrHost: hostStr };
+    const config = { signer: provider.getSigner(0), networkOrHost: hostStr, console: false };
     const blockchain = await EthereumBlockchain.new(config, options.rollupContractAddress!);
     return new CoreSdk(ethereumProvider, leveldb, db, blockchain, undefined, srirachaProvider, options);
   }
