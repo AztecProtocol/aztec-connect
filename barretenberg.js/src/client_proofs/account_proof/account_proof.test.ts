@@ -12,11 +12,11 @@ import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
 import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
-import { Prover } from '../prover';
+import { UnrolledProver } from '../prover';
 import { AccountProver, AccountVerifier, AccountTx } from './index';
 import { GrumpkinAddress } from '../../address';
 
-const debug = createDebug('bb:join_split_proof');
+const debug = createDebug('bb:account_proof_test');
 
 jest.setTimeout(120000);
 
@@ -49,7 +49,7 @@ describe('account proof', () => {
     const fft = new PooledFft(pool);
     await fft.init(circuitSize);
 
-    const prover = new Prover(pool.workers[0], pippenger, fft);
+    const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
 
     accountProver = new AccountProver(prover);
     accountVerifier = new AccountVerifier();

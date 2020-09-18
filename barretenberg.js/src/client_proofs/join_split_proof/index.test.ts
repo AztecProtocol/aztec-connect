@@ -1,5 +1,4 @@
 import { JoinSplitProver, JoinSplitVerifier } from './index';
-import { Schnorr } from '../../crypto/schnorr';
 import createDebug from 'debug';
 import { BarretenbergWasm } from '../../wasm';
 import { JoinSplitTx } from './join_split_tx';
@@ -14,15 +13,15 @@ import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
 import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
-import { Prover } from '../prover/prover';
 import { JoinSplitProof } from './join_split_proof';
 import { computeNullifier } from './compute_nullifier';
 import { randomBytes } from 'crypto';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { NoteAlgorithms } from '../note_algorithms';
 import { GrumpkinAddress, EthAddress } from '../../address';
+import { UnrolledProver } from '../prover';
 
-const debug = createDebug('bb:join_split_proof');
+const debug = createDebug('bb:join_split_proof_test');
 
 jest.setTimeout(120000);
 
@@ -62,7 +61,7 @@ describe('join_split_proof', () => {
     const fft = new PooledFft(pool);
     await fft.init(circuitSize);
 
-    const prover = new Prover(pool.workers[0], pippenger, fft);
+    const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
 
     joinSplitProver = new JoinSplitProver(prover);
     joinSplitVerifier = new JoinSplitVerifier();

@@ -1,9 +1,9 @@
 import { Transfer } from 'threads';
-import { Prover } from '../prover/prover';
+import { UnrolledProver } from '../prover';
 import { AccountTx } from './account_tx';
 
 export class AccountProver {
-  constructor(private prover: Prover) {}
+  constructor(private prover: UnrolledProver) {}
 
   public async computeKey() {
     const worker = this.prover.getWorker();

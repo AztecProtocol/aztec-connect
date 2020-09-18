@@ -1,10 +1,9 @@
 import { Transfer } from 'threads';
-import { BoundWasmProver } from '../bound_wasm_prover';
-import { Prover } from '../prover/prover';
+import { UnrolledProver } from '../prover';
 import { JoinSplitTx } from './join_split_tx';
 
 export class JoinSplitProver {
-  constructor(private prover: Prover) {}
+  constructor(private prover: UnrolledProver) {}
 
   public async computeKey() {
     const worker = this.prover.getWorker();
