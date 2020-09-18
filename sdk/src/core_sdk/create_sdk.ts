@@ -95,7 +95,7 @@ export async function createSdk(hostStr: string, ethereumProvider: EthereumProvi
     sdk.on(CoreSdkEvent.UPDATED_WORLD_STATE, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_WORLD_STATE }));
     sdk.on(CoreSdkEvent.UPDATED_USERS, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_USERS }));
     sdk.on(CoreSdkEvent.UPDATED_USER_STATE, (userId: Buffer) =>
-      channel.postMessage({ name: CoreSdkEvent.UPDATED_USER_STATE, ethAddress: userId.toString('hex') }),
+      channel.postMessage({ name: CoreSdkEvent.UPDATED_USER_STATE, userId: userId.toString('hex') }),
     );
     sdk.on(CoreSdkEvent.CLEAR_DATA, () => channel.postMessage({ name: CoreSdkEvent.CLEAR_DATA }));
 
