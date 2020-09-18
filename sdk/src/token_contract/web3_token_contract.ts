@@ -1,7 +1,7 @@
-import { Contract } from 'ethers';
+import { ContractTransaction } from '@ethersproject/contracts';
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
-import { ContractTransaction } from '@ethersproject/contracts';
+import { Contract, Signer } from 'ethers';
 import { TokenContract } from '.';
 import { fromErc20Units, toErc20Units } from './units';
 
@@ -58,26 +58,19 @@ export class Web3TokenContract implements TokenContract {
     return BigInt(allowance);
   }
 
-  async approve(account: EthAddress, value: bigint) {
+  async approve(value: bigint, signer: Signer) {
     await this.checkProviderChain();
-    const contract = new Contract(
-      this.contractAddress.toString(),
-      minimalERC20ABI,
-      this.ethersProvider.getSigner(account.toString()),
-    );
+    const contract = new Contract(this.contractAddress.toString(), minimalERC20ABI, signer);
     const res = (await contract.approve(this.rollupContractAddress.toString(), value)) as ContractTransaction;
     const receipt = await res.wait(this.confirmations);
     return Buffer.from(receipt.transactionHash.slice(2), 'hex');
   }
 
-  async mint(account: EthAddress, value: bigint) {
+  async mint(value: bigint, signer: Signer) {
     await this.checkProviderChain();
-    const contract = new Contract(
-      this.contractAddress.toString(),
-      minimalERC20ABI,
-      this.ethersProvider.getSigner(account.toString()),
-    );
-    const res = await contract.mint(account.toString(), value);
+    const contract = new Contract(this.contractAddress.toString(), minimalERC20ABI, signer);
+    const account = await signer.getAddress();
+    const res = await contract.mint(account, value);
     const receipt = await res.wait(this.confirmations);
     return Buffer.from(receipt.transactionHash.slice(2), 'hex');
   }

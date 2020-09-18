@@ -1,7 +1,8 @@
+import { formatUnits, parseUnits } from '@ethersproject/units';
 import { EthAddress } from 'barretenberg/address';
-import { parseUnits, formatUnits } from '@ethersproject/units';
-import { TokenContract } from '.';
 import { randomBytes } from 'crypto';
+import { Signer } from 'ethers';
+import { TokenContract } from '.';
 
 export class MockTokenContract implements TokenContract {
   private balances: { [key: string]: bigint } = {};
@@ -27,12 +28,13 @@ export class MockTokenContract implements TokenContract {
     return this.balances[account.toString()] || BigInt(0);
   }
 
-  async approve(spender: EthAddress, value: bigint) {
+  async approve(value: bigint, signer: Signer) {
     return randomBytes(32);
   }
 
-  async mint(account: EthAddress, value: bigint) {
-    this.balances[account.toString()] += value;
+  async mint(value: bigint, signer: Signer) {
+    const account = await signer.getAddress();
+    this.balances[account] += value;
     return randomBytes(32);
   }
 

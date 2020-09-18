@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { Signer } from 'ethers';
 
 export * from './web3_token_contract';
 export * from './mock_token_contract';
@@ -16,9 +17,9 @@ export interface TokenContract {
 
   allowance(owner: EthAddress): Promise<bigint>;
 
-  approve(spender: EthAddress, value: bigint): Promise<TxHash>;
+  approve(value: bigint, signer: Signer): Promise<TxHash>;
 
-  mint(account: EthAddress, value: bigint): Promise<TxHash>;
+  mint(value: bigint, signer: Signer): Promise<TxHash>;
 
   fromErc20Units(value: bigint): string;
 

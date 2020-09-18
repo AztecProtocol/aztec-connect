@@ -172,22 +172,28 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${from}`);
     }
 
-    const action = () => this.getTokenContract(assetId).approve(from, value);
+    const action = () => {
+      const signer = this.web3Provider.getSigner(from.toString());
+      return this.getTokenContract(assetId).approve(value, signer);
+    };
     const { rollupContractAddress } = this.core.getLocalStatus();
     const txHash = await this.core.performAction(Action.APPROVE, value, userId, rollupContractAddress, action);
     this.emit(SdkEvent.UPDATED_USER_STATE, from);
     return txHash;
   }
 
-  public async mint(assetId: AssetId, value: bigint, to: EthAddress) {
-    const userId = this.getUserIdByEthAddress(to);
+  public async mint(assetId: AssetId, value: bigint, account: EthAddress) {
+    const userId = this.getUserIdByEthAddress(account);
     if (!userId) {
-      throw new Error(`User not found: ${to}`);
+      throw new Error(`User not found: ${account}`);
     }
 
-    const action = () => this.getTokenContract(assetId).mint(to, value);
-    const txHash = await this.core.performAction(Action.MINT, value, userId, to, action);
-    this.emit(SdkEvent.UPDATED_USER_STATE, to);
+    const action = () => {
+      const signer = this.web3Provider.getSigner(account.toString());
+      return this.getTokenContract(assetId).mint(value, signer);
+    };
+    const txHash = await this.core.performAction(Action.MINT, value, userId, account, action);
+    this.emit(SdkEvent.UPDATED_USER_STATE, account);
     return txHash;
   }
 
@@ -197,8 +203,10 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${from}`);
     }
 
-    const signer = this.web3Provider.getSigner(from.toString());
-    const action = () => this.core.createProof(assetId, userId, 'DEPOSIT', value, to, undefined, signer);
+    const action = () => {
+      const signer = this.web3Provider.getSigner(from.toString());
+      return this.core.createProof(assetId, userId, 'DEPOSIT', value, to, undefined, signer);
+    };
     const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
     return this.core.performAction(Action.DEPOSIT, value, userId, to, action, validation);
   }
@@ -229,8 +237,10 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${from}`);
     }
 
-    const signer = this.web3Provider.getSigner(from.toString());
-    const action = () => this.core.createProof(assetId, userId, 'PUBLIC_TRANSFER', value, undefined, to, signer);
+    const action = () => {
+      const signer = this.web3Provider.getSigner(from.toString());
+      return this.core.createProof(assetId, userId, 'PUBLIC_TRANSFER', value, undefined, to, signer);
+    };
     const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
     return this.core.performAction(Action.PUBLIC_TRANSFER, value, userId, to, action, validation);
   }
