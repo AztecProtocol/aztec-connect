@@ -14,7 +14,7 @@ import { toBufferBE } from 'bigint-buffer';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Signer, utils } from 'ethers';
 
-const debug = createDebug('bb:join_split_proof');
+const debug = createDebug('bb:escape_hatch_proof_creator');
 
 export class EscapeHatchProofCreator {
   private joinSplitTxFactory: JoinSplitTxFactory;
@@ -22,8 +22,8 @@ export class EscapeHatchProofCreator {
   constructor(
     private escapeHatchProver: EscapeHatchProver,
     // TODO: Make WorldState and HashPathSource unify into a WorldStateSource.
-    private worldState: WorldState,
-    private grumpkin: Grumpkin,
+    worldState: WorldState,
+    grumpkin: Grumpkin,
     private blake2s: Blake2s,
     private noteAlgos: NoteAlgorithms,
     private hashPathSource: HashPathSource,
@@ -59,29 +59,46 @@ export class EscapeHatchProofCreator {
     const dataStartIndex = dataTreeState.size;
 
     const oldDataPath = await this.hashPathSource.getHashPath(0, dataStartIndex);
+    const [output1, output2] = joinSplitTx.outputNotes;
+    const encryptedOutput1 = this.noteAlgos.encryptNote(output1);
+    const encryptedOutput2 = this.noteAlgos.encryptNote(output2);
+
+    const dataResponse = await this.hashPathSource.getHashPaths(0, [
+      { index: dataStartIndex, value: encryptedOutput1 },
+      { index: dataStartIndex + BigInt(1), value: encryptedOutput2 },
+    ]);
+
+    const newDataRoot = dataResponse.newRoots[1];
+    const newDataPath = dataResponse.newHashPaths[1];
+
+    const nullTreeState = await this.hashPathSource.getTreeState(1);
+    const oldNullifierRoot = nullTreeState.root;
     const [input1, input2] = joinSplitTx.inputNotes;
     const encryptedInput1 = this.noteAlgos.encryptNote(input1);
     const encryptedInput2 = this.noteAlgos.encryptNote(input2);
-    const dataResponse = await this.hashPathSource.getHashPaths(0, [
-      { index: dataStartIndex, value: encryptedInput1 },
-      { index: dataStartIndex + BigInt(1), value: encryptedInput2 },
-    ]);
-    const newDataRoot = dataResponse.newRoots[1];
-    const newDataPath = dataResponse.newHashPaths[0];
-
-    const nullTreeState = await this.hashPathSource.getTreeState(1);
     const nullifier1 = nullifierBufferToIndex(
-      computeNullifier(encryptedInput1, Number(dataStartIndex), input1.secret, this.blake2s),
+      computeNullifier(
+        encryptedInput1,
+        Number(dataStartIndex),
+        input1.secret,
+        this.blake2s,
+        joinSplitTx.numInputNotes > 0,
+      ),
     );
     const nullifier2 = nullifierBufferToIndex(
-      computeNullifier(encryptedInput2, Number(dataStartIndex) + 1, input2.secret, this.blake2s),
+      computeNullifier(
+        encryptedInput2,
+        Number(dataStartIndex) + 1,
+        input2.secret,
+        this.blake2s,
+        joinSplitTx.numInputNotes > 1,
+      ),
     );
     const nullifierValue = toBufferBE(BigInt(1), 64);
     const nullResponse = await this.hashPathSource.getHashPaths(1, [
       { index: nullifier1, value: nullifierValue },
       { index: nullifier2, value: nullifierValue },
     ]);
-    const oldNullifierRoot = nullTreeState.root;
 
     const rootResponse = await this.hashPathSource.getHashPaths(2, [{ index: rootTreeState.size, value: newDataRoot }]);
 
@@ -119,7 +136,7 @@ export class EscapeHatchProofCreator {
       ? await this.ethSign(rollupProofData.innerProofData[0].getDepositSigningData(), signer)
       : undefined;
 
-    return { proofData, viewingKeys, txId };
+    return { proofData, viewingKeys, depositSignature, txId };
   }
 
   private async ethSign(txPublicInputs: Buffer, signer?: Signer) {

@@ -25,7 +25,6 @@ export class Web3TokenContract implements TokenContract {
     private rollupContractAddress: EthAddress,
     private chainId: number,
   ) {
-    console.log({ contractAddress });
     this.contract = new Contract(contractAddress.toString(), minimalERC20ABI, ethersProvider);
   }
 

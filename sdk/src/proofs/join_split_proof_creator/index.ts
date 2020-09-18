@@ -9,7 +9,7 @@ import { UserData } from '../../user';
 import { UserState } from '../../user_state';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
 
-const debug = createDebug('bb:join_split_proof');
+const debug = createDebug('bb:join_split_proof_creator');
 
 export class JoinSplitProofCreator {
   private txFactory: JoinSplitTxFactory;

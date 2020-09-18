@@ -2,8 +2,13 @@ import { Web3Provider } from '@ethersproject/providers';
 import { Address, EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
 import { AccountProver } from 'barretenberg/client_proofs/account_proof';
-import { computeAliasNullifier, JoinSplitProof, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
-import { EscapeHatchProver } from 'barretenberg/client_proofs/escape_hatch_proof';
+import {
+  computeAliasNullifier,
+  JoinSplitProof,
+  JoinSplitProver,
+  JoinSplitVerifier,
+} from 'barretenberg/client_proofs/join_split_proof';
+import { EscapeHatchProver, EscapeHatchVerifier } from 'barretenberg/client_proofs/escape_hatch_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { PooledProverFactory } from 'barretenberg/client_proofs/prover';
 import { Crs } from 'barretenberg/crs';
@@ -34,6 +39,7 @@ import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
 import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { HashPathSource } from 'sriracha/hash_path_source';
+import { PooledPippenger, SinglePippenger } from 'barretenberg/pippenger';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -84,6 +90,7 @@ export class CoreSdk extends EventEmitter {
   private actionState?: ActionState;
   private processBlocksPromise?: Promise<void>;
   private blake2s!: Blake2s;
+  private escapeHatchVerifier!: EscapeHatchVerifier;
 
   constructor(
     ethereumProvider: EthereumProvider,
@@ -106,7 +113,7 @@ export class CoreSdk extends EventEmitter {
     this.updateInitState(SdkInitState.INITIALIZING);
 
     const { chainId, networkOrHost, rollupContractAddress, tokenContractAddress } = await this.getRemoteStatus();
-    console.log({});
+
     const { chainId: ethProviderChainId } = await this.ethersProvider.getNetwork();
     if (chainId !== ethProviderChainId) {
       throw new Error(
@@ -129,8 +136,8 @@ export class CoreSdk extends EventEmitter {
     const numWorkers = Math.min(navigator.hardwareConcurrency || 1, 8);
     const workerPool = await WorkerPool.new(barretenberg, numWorkers);
     const pooledProverFactory = new PooledProverFactory(workerPool, crsData);
-    const joinSplitProver = new JoinSplitProver(await pooledProverFactory.createProver(128 * 1024));
-    const accountProver = new AccountProver(await pooledProverFactory.createProver(64 * 1024));
+    const joinSplitProver = new JoinSplitProver(await pooledProverFactory.createUnrolledProver(128 * 1024));
+    const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(64 * 1024));
     const escapeHatchProver = new EscapeHatchProver(await pooledProverFactory.createProver(512 * 1024));
 
     this.blake2s = blake2s;
@@ -172,6 +179,11 @@ export class CoreSdk extends EventEmitter {
     }
 
     this.updateInitState(SdkInitState.INITIALIZED);
+
+    const crs = new Crs(512 * 1024);
+    await crs.download();
+    this.escapeHatchVerifier = new EscapeHatchVerifier();
+    await this.escapeHatchVerifier.computeKey(pooledProverFactory.pippenger!.pool[0], crs.getG2Data());
   }
 
   private async getCrsData(circuitSize: number) {
@@ -460,6 +472,11 @@ export class CoreSdk extends EventEmitter {
       outputOwner,
       signer,
     );
+
+    const verified = await this.escapeHatchVerifier.verifyProof(proofOutput.proofData);
+    if (!verified) {
+      throw new Error('Proof failed');
+    }
 
     await this.rollupProvider.sendProof(proofOutput);
     const userTx: UserTx = {

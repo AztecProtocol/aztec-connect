@@ -1,4 +1,5 @@
 import cors from '@koa/cors';
+import { toBigIntBE } from 'bigint-buffer';
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import compress from 'koa-compress';
@@ -35,7 +36,7 @@ export function appFactory(server: Server, prefix: string) {
 
   router.post('/get-hash-paths/:treeIndex', async (ctx: Koa.Context) => {
     const additions = ctx.request.body.map((addition: any) => {
-      return { index: Buffer.from(addition.index, 'hex'), value: Buffer.from(addition.value, 'hex') };
+      return { index: toBigIntBE(Buffer.from(addition.index, 'hex')), value: Buffer.from(addition.value, 'hex') };
     });
     const treeIndex = +ctx.params.treeIndex;
     const { oldRoot, newRoots, newHashPaths, oldHashPaths } = await server.getHashPaths(treeIndex, additions);

@@ -85,13 +85,13 @@ export default class Server implements HashPathSource {
     const oldRoot: Buffer = this.worldStateDb.getRoot(treeIndex);
 
     const additions_ = additions.map(({ index, value }) => ({
-      index: nullifierBufferToIndex(toBufferBE(index, 128)),
+      index: nullifierBufferToIndex(toBufferBE(index, 32)),
       value,
     }));
     for (const { index, value } of additions_) {
       const oldHashPath = await this.worldStateDb.getHashPath(treeIndex, index);
       oldHashPaths.push(oldHashPath);
-      await this.worldStateDb.put(1, index, value);
+      await this.worldStateDb.put(treeIndex, index, value);
       const newHashPath = await this.worldStateDb.getHashPath(treeIndex, index);
       newHashPaths.push(newHashPath);
       newRoots.push(this.worldStateDb.getRoot(treeIndex));
