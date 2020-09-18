@@ -5,7 +5,7 @@
   "main": "dest/index.js",
   "license": "GPL-2.0",
   "scripts": {
-    "test": "DEBUG=bb:* jest"
+    "test": "DEBUG=bb:* jest --runInBand"
   },
   "jest": {
     "transform": {

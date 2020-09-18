@@ -79,7 +79,7 @@ export class EscapeHatchProofCreator {
     const nullifier1 = nullifierBufferToIndex(
       computeNullifier(
         encryptedInput1,
-        Number(dataStartIndex),
+        joinSplitTx.inputNoteIndices[0],
         input1.secret,
         this.blake2s,
         joinSplitTx.numInputNotes > 0,
@@ -88,7 +88,7 @@ export class EscapeHatchProofCreator {
     const nullifier2 = nullifierBufferToIndex(
       computeNullifier(
         encryptedInput2,
-        Number(dataStartIndex) + 1,
+        joinSplitTx.inputNoteIndices[1],
         input2.secret,
         this.blake2s,
         joinSplitTx.numInputNotes > 1,
@@ -102,8 +102,9 @@ export class EscapeHatchProofCreator {
 
     const rootResponse = await this.hashPathSource.getHashPaths(2, [{ index: rootTreeState.size, value: newDataRoot }]);
 
-    // For now we are always using the main key to sign, so this can be nonsense path.
-    const accountNullifierPath = await this.hashPathSource.getHashPath(1, BigInt(0));
+    const accountNote = Buffer.concat([joinSplitTx.inputNotes[0].ownerPubKey.x(), joinSplitTx.signingPubKey.x()]);
+    const accountNullifier = nullifierBufferToIndex(this.blake2s.hashToField(accountNote));
+    const accountNullifierPath = await this.hashPathSource.getHashPath(1, accountNullifier);
 
     const tx = new EscapeHatchTx(
       joinSplitTx,

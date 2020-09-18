@@ -66,9 +66,8 @@ export default class Server implements HashPathSource {
   }
 
   public async getHashPath(treeIndex: number, index: bigint) {
-    const nullBigInt = nullifierBufferToIndex(toBufferBE(index, 128));
     return new Promise<HashPath>(resolve => {
-      this.queue.put(async () => resolve(await this.worldStateDb.getHashPath(treeIndex, nullBigInt)));
+      this.queue.put(async () => resolve(await this.worldStateDb.getHashPath(treeIndex, index)));
     });
   }
 
@@ -84,11 +83,7 @@ export default class Server implements HashPathSource {
     const newRoots: Buffer[] = [];
     const oldRoot: Buffer = this.worldStateDb.getRoot(treeIndex);
 
-    const additions_ = additions.map(({ index, value }) => ({
-      index: nullifierBufferToIndex(toBufferBE(index, 32)),
-      value,
-    }));
-    for (const { index, value } of additions_) {
+    for (const { index, value } of additions) {
       const oldHashPath = await this.worldStateDb.getHashPath(treeIndex, index);
       oldHashPaths.push(oldHashPath);
       await this.worldStateDb.put(treeIndex, index, value);

@@ -6,7 +6,6 @@ import {
   GetHashPathsServerResponse,
   GetTreeStateServerResponse,
   HashPathSource,
-  TreeState,
 } from './hash_path_source';
 
 export class SrirachaProvider implements HashPathSource {
@@ -19,9 +18,7 @@ export class SrirachaProvider implements HashPathSource {
   }
 
   public async getHashPath(treeIndex: number, index: bigint) {
-    const response = await fetch(
-      `${this.host}/sriracha/get-hash-path/${treeIndex}/${toBufferBE(index, 32).toString('hex')}`,
-    );
+    const response = await fetch(`${this.host}/sriracha/get-hash-path/${treeIndex}/${index.toString()}`);
     const { hashPath } = (await response.json()) as GetHashPathServerResponse;
     return HashPath.fromBuffer(Buffer.from(hashPath, 'hex'));
   }

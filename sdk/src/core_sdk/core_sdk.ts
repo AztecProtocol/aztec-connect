@@ -2,13 +2,8 @@ import { Web3Provider } from '@ethersproject/providers';
 import { Address, EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
 import { AccountProver } from 'barretenberg/client_proofs/account_proof';
-import {
-  computeAliasNullifier,
-  JoinSplitProof,
-  JoinSplitProver,
-  JoinSplitVerifier,
-} from 'barretenberg/client_proofs/join_split_proof';
-import { EscapeHatchProver, EscapeHatchVerifier } from 'barretenberg/client_proofs/escape_hatch_proof';
+import { computeAliasNullifier, JoinSplitProof, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
+import { EscapeHatchProver } from 'barretenberg/client_proofs/escape_hatch_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { PooledProverFactory } from 'barretenberg/client_proofs/prover';
 import { Crs } from 'barretenberg/crs';
@@ -39,7 +34,6 @@ import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
 import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { HashPathSource } from 'sriracha/hash_path_source';
-import { PooledPippenger, SinglePippenger } from 'barretenberg/pippenger';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -90,7 +84,6 @@ export class CoreSdk extends EventEmitter {
   private actionState?: ActionState;
   private processBlocksPromise?: Promise<void>;
   private blake2s!: Blake2s;
-  private escapeHatchVerifier!: EscapeHatchVerifier;
 
   constructor(
     ethereumProvider: EthereumProvider,
@@ -179,11 +172,6 @@ export class CoreSdk extends EventEmitter {
     }
 
     this.updateInitState(SdkInitState.INITIALIZED);
-
-    const crs = new Crs(512 * 1024);
-    await crs.download();
-    this.escapeHatchVerifier = new EscapeHatchVerifier();
-    await this.escapeHatchVerifier.computeKey(pooledProverFactory.pippenger!.pool[0], crs.getG2Data());
   }
 
   private async getCrsData(circuitSize: number) {
@@ -472,11 +460,6 @@ export class CoreSdk extends EventEmitter {
       outputOwner,
       signer,
     );
-
-    const verified = await this.escapeHatchVerifier.verifyProof(proofOutput.proofData);
-    if (!verified) {
-      throw new Error('Proof failed');
-    }
 
     await this.rollupProvider.sendProof(proofOutput);
     const userTx: UserTx = {

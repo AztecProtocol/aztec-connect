@@ -1,8 +1,8 @@
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { EthAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
-import { Proof } from 'barretenberg/block_source_proof_receiver';
 import { RollupProofData } from 'barretenberg/rollup_proof';
+import { Proof } from 'barretenberg/rollup_provider';
 import { toBigIntBE } from 'bigint-buffer';
 import createDebug from 'debug';
 import { Contract, ethers, Signer } from 'ethers';
@@ -11,7 +11,7 @@ import { abi as ERC20ABI } from './artifacts/ERC20Mintable.json';
 import { abi as RollupABI } from './artifacts/RollupProcessor.json';
 import { Blockchain, Receipt } from './blockchain';
 
-const debug = createDebug('bb:ethereum_blockchain');
+const debug = process?.version ? console.log : createDebug('bb:ethereum_blockchain');
 
 export interface EthereumBlockchainConfig {
   signer: Signer;
@@ -46,12 +46,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * All historical blocks will have been emitted before this function returns.
    */
   public async start(fromBlock: number = 0) {
-    console.log(`Ethereum blockchain starting from block: ${fromBlock}`);
+    debug(`Ethereum blockchain starting from block: ${fromBlock}`);
 
     const emitBlocks = async () => {
       const blocks = await this.getBlocks(fromBlock);
       for (const block of blocks) {
-        console.log(`Block received: ${block.blockNum}`);
+        debug(`Block received: ${block.blockNum}`);
         this.latestRollupId = RollupProofData.getRollupIdFromBuffer(block.rollupProofData);
         this.emit('block', block);
         fromBlock = block.blockNum + 1;
@@ -138,8 +138,13 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   /**
    * This is called by the client side when in escape hatch mode. Hence it doesn't take deposit signatures.
    */
-  public async sendProof({ proofData, viewingKeys }: Proof) {
-    return this.sendRollupProof(proofData, [], [], viewingKeys);
+  public async sendProof({ proofData, viewingKeys, depositSignature }: Proof) {
+    return this.sendRollupProof(
+      proofData,
+      depositSignature ? [depositSignature] : [],
+      depositSignature ? [0] : [],
+      viewingKeys,
+    );
   }
 
   /**
@@ -175,7 +180,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     const txHashStr = `0x${txHash.toString('hex')}`;
     let txReceipt = await this.config.signer.provider!.getTransactionReceipt(txHashStr);
     if (!txReceipt) {
-      console.log(`Waiting for tx receipt for ${txHashStr}...`);
+      debug(`Waiting for tx receipt for ${txHashStr}...`);
       while (!txReceipt) {
         await new Promise(resolve => setTimeout(resolve, 3000));
         txReceipt = await this.config.signer.provider!.getTransactionReceipt(txHashStr);

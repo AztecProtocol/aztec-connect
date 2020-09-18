@@ -6,13 +6,14 @@ import { EventEmitter } from 'events';
 import { Eth } from 'web3x/eth';
 import { HttpProvider } from 'web3x/providers';
 import { EthereumSdkUser } from 'aztec2-sdk/ethereum_sdk/ethereum_sdk_user';
+import { advanceBlocks, blocksToAdvance } from './manipulate_block';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
 const {
   ETHEREUM_HOST = 'http://localhost:8545',
-  ROLLUP_HOST = 'http://localhost:8081',
+  SRIRACHA_HOST = 'http://localhost:8082',
   ROLLUP_CONTRACT_ADDRESS = '',
 } = process.env;
 
@@ -28,9 +29,7 @@ describe('end-to-end escape tests', () => {
     provider = new HttpProvider(ETHEREUM_HOST);
     sdk = new EthereumSdk((provider as any).provider);
 
-    console.log({ ROLLUP_CONTRACT_ADDRESS });
-
-    await sdk.init(ROLLUP_HOST, {
+    await sdk.init(SRIRACHA_HOST, {
       syncInstances: false,
       clearDb: true,
       escapeHatchMode: true,
@@ -46,6 +45,9 @@ describe('end-to-end escape tests', () => {
         return sdk.addUser(address);
       }),
     );
+
+    const nextEscapeBlock = await blocksToAdvance(81, 100, provider);
+    await advanceBlocks(nextEscapeBlock, provider);
   });
 
   afterAll(async () => {
