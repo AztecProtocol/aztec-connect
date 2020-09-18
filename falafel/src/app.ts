@@ -1,6 +1,7 @@
 import { ApolloServer } from 'apollo-server-koa';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
 import { RollupServerResponse, TxServerResponse, Proof, ProofServerResponse } from 'barretenberg/rollup_provider';
+import { WorldStateDb } from 'barretenberg/world_state_db';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
 import Koa from 'koa';
 import compress from 'koa-compress';
@@ -13,7 +14,6 @@ import { RollupDao } from './entity/rollup';
 import { TxDao } from './entity/tx';
 import { BlockResolver, RollupResolver, TxResolver, ServerStatusResolver } from './resolver';
 import { Server, ServerConfig, ServerStatus } from './server';
-import { WorldStateDb } from './world_state_db';
 
 const cors = require('@koa/cors');
 

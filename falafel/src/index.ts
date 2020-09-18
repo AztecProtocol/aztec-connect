@@ -1,3 +1,4 @@
+import { WorldStateDb } from 'barretenberg/world_state_db';
 import { EthereumBlockchain } from 'blockchain';
 import { EthAddress } from 'barretenberg/address';
 import dotenv from 'dotenv';
@@ -12,7 +13,6 @@ import { LocalBlockchain } from './blockchain/local_blockchain';
 import { PersistentEthereumBlockchain } from './blockchain/persistent_ethereum_blockchain';
 import { RollupDb } from './rollup_db';
 import { Server, ServerConfig } from './server';
-import { WorldStateDb } from './world_state_db';
 
 dotenv.config();
 

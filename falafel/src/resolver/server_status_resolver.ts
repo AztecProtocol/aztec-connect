@@ -1,10 +1,10 @@
+import { WorldStateDb } from 'barretenberg/world_state_db';
 import { Int, Resolver, FieldResolver, Query } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { ServerConfig, ServerStatus } from '../server';
-import { WorldStateDb } from '../world_state_db';
 import { HexString, ISODateTime } from './scalar_type';
 import { ServerStatusType } from './server_status_type';
 
