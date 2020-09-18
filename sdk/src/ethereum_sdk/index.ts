@@ -82,7 +82,7 @@ export class EthereumSdk extends EventEmitter {
     queued?.forEach(args => this.forwardEvent(event, args));
   }
 
-  public async init(serverUrl: string, sdkOptions: SdkOptions) {
+  public async init(serverUrl: string, sdkOptions?: SdkOptions) {
     // Forward all core sdk events.
     for (const e in SdkEvent) {
       const event = (SdkEvent as any)[e];

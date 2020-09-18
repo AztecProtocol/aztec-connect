@@ -27,7 +27,7 @@ export class WalletSdk extends EventEmitter {
     this.web3Provider = new Web3Provider(ethereumProvider);
   }
 
-  public async init(serverUrl: string, sdkOptions: SdkOptions) {
+  public async init(serverUrl: string, sdkOptions?: SdkOptions) {
     this.core = await createSdk(serverUrl, sdkOptions);
 
     // Forward all core sdk events.
