@@ -58,10 +58,10 @@ export class WalletSdkUserAsset {
   }
 
   public fromErc20Units(value: bigint) {
-    return this.sdk.getTokenContract(this.id).fromErc20Units(value);
+    return this.sdk.fromErc20Units(this.id, value);
   }
 
   public toErc20Units(value: string) {
-    return this.sdk.getTokenContract(this.id).toErc20Units(value);
+    return this.sdk.toErc20Units(this.id, value);
   }
 }

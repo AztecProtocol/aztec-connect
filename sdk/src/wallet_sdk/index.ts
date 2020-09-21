@@ -194,6 +194,22 @@ export class WalletSdk extends EventEmitter {
     return this.core.getBalance(userId);
   }
 
+  public async getPublicBalance(assetId: AssetId, ethAddress: EthAddress) {
+    return this.getTokenContract(assetId).balanceOf(ethAddress);
+  }
+
+  public async getPublicAllowance(assetId: AssetId, ethAddress: EthAddress) {
+    return this.getTokenContract(assetId).allowance(ethAddress);
+  }
+
+  public fromErc20Units(assetId: AssetId, value: bigint) {
+    return this.getTokenContract(assetId).fromErc20Units(value);
+  }
+
+  public toErc20Units(assetId: AssetId, value: string) {
+    return this.getTokenContract(assetId).toErc20Units(value);
+  }
+
   public async getLatestRollups(count: number) {
     return this.core.getLatestRollups();
   }
