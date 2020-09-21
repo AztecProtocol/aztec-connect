@@ -1,5 +1,3 @@
-import { ServerBlockSource } from 'barretenberg/block_source';
-import { EthAddress } from 'barretenberg/address';
 import { ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import createDebug from 'debug';
@@ -30,7 +28,6 @@ function getLevelDb() {
 export type SdkOptions = {
   syncInstances?: boolean;
   clearDb?: boolean;
-  rollupContractAddress?: EthAddress;
 } & CoreSdkOptions;
 
 async function sdkFactory(hostStr: string, ethereumProvider: EthereumProvider, options: SdkOptions) {
@@ -50,8 +47,9 @@ async function sdkFactory(hostStr: string, ethereumProvider: EthereumProvider, o
   } else {
     const srirachaProvider = new SrirachaProvider(hostStr);
     const provider = new ethers.providers.Web3Provider(ethereumProvider);
+    const { rollupContractAddress } = await srirachaProvider.status();
     const config = { signer: provider.getSigner(0), networkOrHost: hostStr, console: false };
-    const blockchain = await EthereumBlockchain.new(config, options.rollupContractAddress!);
+    const blockchain = await EthereumBlockchain.new(config, rollupContractAddress);
     return new CoreSdk(ethereumProvider, leveldb, db, blockchain, undefined, srirachaProvider, options);
   }
 }
@@ -125,7 +123,12 @@ export async function createSdk(hostStr: string, ethereumProvider: EthereumProvi
   return sdk;
 }
 
-export async function getRollupProviderStatus(hostStr: string) {
-  const rollupProvider = new ServerRollupProvider(new URL(hostStr));
-  return rollupProvider.status();
+export async function getProviderStatus(hostStr: string, escapeHatchMode: boolean | undefined) {
+  if (escapeHatchMode) {
+    const srirachaProvider = new SrirachaProvider(hostStr);
+    return srirachaProvider.status();
+  } else {
+    const rollupProvider = new ServerRollupProvider(new URL(hostStr));
+    return rollupProvider.status();
+  }
 }

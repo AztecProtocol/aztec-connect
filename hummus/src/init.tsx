@@ -1,9 +1,9 @@
-import { Block,Text, TextButton } from '@aztec/guacamole-ui';
-import { AppEvent, AppInitAction, AppInitState, AppInitStatus,WebSdk } from 'aztec2-sdk';
+import { Block, Text, TextButton } from '@aztec/guacamole-ui';
+import { AppEvent, AppInitAction, AppInitState, AppInitStatus, WebSdk } from 'aztec2-sdk';
 import { EthAddress } from 'barretenberg/address';
 import createDebug from 'debug';
-import React, { FunctionComponent,useEffect, useState } from 'react';
-import { Button, Form,FormSection, Input } from './components';
+import React, { FunctionComponent, useEffect, useState } from 'react';
+import { Button, Form, FormSection, Input } from './components';
 
 const debug = createDebug('bb::init_form');
 
@@ -38,17 +38,25 @@ export const Init: FunctionComponent<InitProps> = ({ app, initialServerUrl = '',
         <Form>
           <FormSection align="center">
             <Block padding="m 0">
-              <Text text={initState === AppInitState.INITIALIZING ? getInitString(initStatus) : 'Press the button'} />
+              <Text text={initState === AppInitState.INITIALIZING ? getInitString(initStatus) : 'Initialise mode:'} />
             </Block>
             <Block padding="m 0">
               {initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT ? (
                 <Button text="Link Account" onSubmit={() => app.linkAccount().catch(err => debug(err))} />
               ) : (
-                <Button
-                  text="The Button"
-                  onSubmit={() => app.init(serverUrl).catch(err => debug(err))}
-                  isLoading={initState === AppInitState.INITIALIZING}
-                />
+                <React.Fragment>
+                  <Button
+                    text="Standard"
+                    onSubmit={() => app.init(serverUrl).catch(err => debug(err))}
+                    isLoading={initState === AppInitState.INITIALIZING}
+                  />
+                  <Button
+                    text="Emergency"
+                    // need to tell the app what to initalise
+                    onSubmit={() => app.init(serverUrl, { escapeHatchMode: true }).catch(err => debug(err))}
+                    isLoading={initState === AppInitState.INITIALIZING}
+                  />
+                </React.Fragment>
               )}
             </Block>
           </FormSection>

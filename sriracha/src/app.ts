@@ -25,7 +25,6 @@ export function appFactory(server: Server, prefix: string) {
       dataRoot,
       nullRoot,
     } = await server.status();
-    console.log({ rollupContractAddress, tokenContractAddress, chainId, networkOrHost, dataSize, dataRoot, nullRoot });
     const response: GetStatusServerResponse = {
       rollupContractAddress: rollupContractAddress.toString(),
       tokenContractAddress: tokenContractAddress.toString(),
