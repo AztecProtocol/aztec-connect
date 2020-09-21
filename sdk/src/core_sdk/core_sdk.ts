@@ -31,7 +31,7 @@ import { Signer } from '../signer';
 import { TokenContract, Web3TokenContract } from '../token_contract';
 import { MockTokenContract } from '../token_contract/mock_token_contract';
 import { TxsState } from '../txs_state';
-import { KeyPair, UserDataFactory } from '../user';
+import { KeyPair, Signer, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
 
