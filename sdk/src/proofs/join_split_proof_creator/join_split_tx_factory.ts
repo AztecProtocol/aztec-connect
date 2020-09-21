@@ -44,7 +44,11 @@ export class JoinSplitTxFactory {
       new Note(sender.publicKey, createNoteSecret(), changeValue),
     ];
 
-    const signature = this.noteAlgos.sign4Notes([...inputNotes, ...outputNotes], sender.privateKey!);
+    const signature = this.noteAlgos.sign4Notes(
+      [...inputNotes, ...outputNotes],
+      sender.privateKey!,
+      outputOwnerAddress?.toBuffer(),
+    );
 
     const dataRoot = this.worldState.getRoot();
 
