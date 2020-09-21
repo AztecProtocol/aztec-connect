@@ -8,7 +8,7 @@ LIFECYCLE_POLICY='{
       "description": "Master branch images should not expire.",
       "selection": {
         "tagStatus": "tagged",
-        "tagPrefixList": ["cache-master-"],
+        "tagPrefixList": ["master-"],
         "countType": "imageCountMoreThan",
         "countNumber": 100
       },

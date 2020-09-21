@@ -1,17 +1,7 @@
 setup_env: &setup_env
   run:
     name: 'Setup environment'
-    command: |
-      [ -n "$CIRCLE_TOKEN" ] || (echo "No CIRCLE_TOKEN available." && exit 1)
-      LAST_SUCCESSFUL_BUILD_URL="https://circleci.com/api/v1.1/project/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/tree/master?filter=successful&limit=30"
-      echo export LAST_SUCCESSFUL_COMMIT=`curl -Ss -u "$CIRCLE_TOKEN:" $LAST_SUCCESSFUL_BUILD_URL | jq -r '[.[] | select(.build_parameters.CIRCLE_JOB == "deploy")][0].vcs_revision'` >> $BASH_ENV
-      echo export PATH=$PATH:$(pwd)/.circleci >> $BASH_ENV
-      echo export AWS_DEFAULT_REGION=eu-west-2 >> $BASH_ENV
-      echo export ECR_REGION=us-east-2 >> $BASH_ENV
-      echo export ECR_URL=278380418400.dkr.ecr.us-east-2.amazonaws.com >> $BASH_ENV
-      echo export ECR_DEPLOY_REGION=eu-west-2 >> $BASH_ENV
-      echo export ECR_DEPLOY_URL=278380418400.dkr.ecr.eu-west-2.amazonaws.com >> $BASH_ENV
-      cat $BASH_ENV
+    command: .circleci/setup_env
 
 version: 2.1
 jobs:

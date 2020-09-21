@@ -5,7 +5,7 @@ IMAGE=$1
 REPOSITORY=${IMAGE%:*}
 TAG=${IMAGE#*:}
 BRANCH=${CIRCLE_BRANCH/\//_}
-IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:cache-master-$TAG
+IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$TAG
 IMAGE_BRANCH_URI=$ECR_URL/$REPOSITORY:cache-$BRANCH-$TAG
 IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1-$TAG
 DOCKERFILE=${2:-./Dockerfile}
@@ -14,7 +14,7 @@ DOCKERFILE=${2:-./Dockerfile}
 ensure_repo $REPOSITORY $ECR_REGION
 
 # Check if we should rebuild.
-check_rebuild || { echo "No rebuild necessary." && exit 0; }
+check_rebuild || ! image_exists $REPOSITORY master-$TAG || { echo "No rebuild necessary." && exit 0; }
 
 # Pull latest parents that are not ours.
 PARENTS=$(cat $DOCKERFILE | sed -n -e 's/^FROM \([^[:space:]]\+\).*/\1/p' | grep -v $ECR_DEPLOY_URL | sort | uniq)
@@ -24,6 +24,7 @@ for PARENT in $PARENTS; do
 done
 
 # For each parent that's ours, pull in the newly rebuilt image if it's present.
+# If it's not present, there must be a master image to use.
 PARENTS=$(cat $DOCKERFILE | sed -n -e "s/^FROM $ECR_DEPLOY_URL\/\([^[:space:]]\+\)/\1/p")
 for PARENT in $PARENTS; do
   [[ "$PARENT" =~ ":" ]] || PARENT="$PARENT:latest"
@@ -32,7 +33,7 @@ for PARENT in $PARENTS; do
   PARENT_TAG=${PARENT#*:}
   PARENT_IMAGE_URI=$ECR_URL/$PARENT_REPO:cache-$CIRCLE_SHA1-$PARENT_TAG
   if ! docker pull $PARENT_IMAGE_URI > /dev/null 2>&1; then
-    PARENT_IMAGE_URI=$ECR_URL/$PARENT_REPO:cache-master-$PARENT_TAG
+    PARENT_IMAGE_URI=$ECR_URL/$PARENT_REPO:master-$PARENT_TAG
     docker pull $PARENT_IMAGE_URI > /dev/null 2>&1
   fi
   docker tag $PARENT_IMAGE_URI $ECR_DEPLOY_URL/$PARENT
@@ -56,7 +57,7 @@ echo
 STAGES=$(cat $DOCKERFILE | sed -n -e 's/^FROM .* AS \(.*\)/\1/p')
 for STAGE in $STAGES; do
   echo "Pulling stage: $STAGE"
-  STAGE_IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:cache-master-$TAG-$STAGE
+  STAGE_IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$TAG-$STAGE
   STAGE_IMAGE_BRANCH_URI=$ECR_URL/$REPOSITORY:cache-$BRANCH-$TAG-$STAGE
 
   fetch_cache $STAGE_IMAGE_BRANCH_URI || fetch_cache $STAGE_IMAGE_MASTER_URI || true
