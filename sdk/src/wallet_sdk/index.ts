@@ -106,13 +106,21 @@ export class WalletSdk extends EventEmitter {
     return txHash;
   }
 
-  public async deposit(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: GrumpkinAddress) {
-    const action = () => this.core.createProof(assetId, userId, 'DEPOSIT', value, to, undefined, signer);
+  public async deposit(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to?: GrumpkinAddress | string) {
+    const recipient = !to
+      ? this.getUserData(userId)!.publicKey
+      : typeof to === 'string'
+      ? await this.getAddressFromAlias(to)
+      : to;
+    const action = () => this.core.createProof(assetId, userId, 'DEPOSIT', value, recipient, undefined, signer);
     const validation = async () => {
+      if (!recipient) {
+        throw new Error(`No address found for alias: ${to}`);
+      }
       const account = await signer.getAddress();
       return this.checkPublicBalanceAndAllowance(assetId, value, EthAddress.fromString(account));
     };
-    return this.core.performAction(Action.DEPOSIT, value, userId, to, action, validation);
+    return this.core.performAction(Action.DEPOSIT, value, userId, to || recipient!, action, validation);
   }
 
   public async withdraw(assetId: AssetId, userId: Buffer, value: bigint, to: EthAddress) {
@@ -120,8 +128,9 @@ export class WalletSdk extends EventEmitter {
     return this.core.performAction(Action.WITHDRAW, value, userId, to, action);
   }
 
-  public async transfer(assetId: AssetId, userId: Buffer, value: bigint, to: GrumpkinAddress) {
-    const action = () => this.core.createProof(assetId, userId, 'TRANSFER', value, to);
+  public async transfer(assetId: AssetId, userId: Buffer, value: bigint, to: GrumpkinAddress | string) {
+    const recipient = typeof to === 'string' ? await this.getAddressFromAlias(to) : to;
+    const action = () => this.core.createProof(assetId, userId, 'TRANSFER', value, recipient);
     return this.core.performAction(Action.TRANSFER, value, userId, to, action);
   }
 

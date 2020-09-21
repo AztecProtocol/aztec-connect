@@ -6,35 +6,20 @@ import { WalletSdk } from '.';
 export class WalletSdkUserAsset {
   constructor(private userId: Buffer, public id: AssetId, private sdk: WalletSdk) {}
 
-  publicBalance(ethAddress: EthAddress) {
+  async publicBalance(ethAddress: EthAddress) {
     return this.sdk.getTokenContract(this.id).balanceOf(ethAddress);
   }
 
-  publicAllowance(ethAddress: EthAddress) {
+  async publicAllowance(ethAddress: EthAddress) {
     return this.sdk.getTokenContract(this.id).allowance(ethAddress);
   }
 
-  publicTransfer(value: bigint, signer: Signer, to: EthAddress) {
+  async publicTransfer(value: bigint, signer: Signer, to: EthAddress) {
     return this.sdk.publicTransfer(this.id, this.userId, value, signer, to);
   }
 
   balance() {
     return this.sdk.getBalance(this.userId);
-  }
-
-  private async getGrumpkinAddress(addr?: GrumpkinAddress | string) {
-    if (!addr) {
-      const userData = await this.sdk.getUserData(this.userId);
-      return userData!.publicKey;
-    }
-    if (typeof addr === 'string') {
-      const address = await this.sdk.getAddressFromAlias(addr);
-      if (!address) {
-        throw new Error(`No address found for alias: ${addr}`);
-      }
-      return address;
-    }
-    return addr;
   }
 
   async mint(value: bigint, signer: Signer) {
@@ -46,7 +31,7 @@ export class WalletSdkUserAsset {
   }
 
   async deposit(value: bigint, signer: Signer, to?: GrumpkinAddress | string) {
-    return this.sdk.deposit(this.id, this.userId, value, signer, await this.getGrumpkinAddress(to));
+    return this.sdk.deposit(this.id, this.userId, value, signer, to);
   }
 
   async withdraw(value: bigint, to: EthAddress) {
@@ -54,7 +39,7 @@ export class WalletSdkUserAsset {
   }
 
   async transfer(value: bigint, to: GrumpkinAddress | string) {
-    return this.sdk.transfer(this.id, this.userId, value, await this.getGrumpkinAddress(to));
+    return this.sdk.transfer(this.id, this.userId, value, to);
   }
 
   public fromErc20Units(value: bigint) {

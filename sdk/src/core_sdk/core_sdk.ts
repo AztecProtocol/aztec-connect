@@ -480,7 +480,7 @@ export class CoreSdk extends EventEmitter {
     action: Action,
     value: bigint,
     userId: Buffer,
-    recipient: Address,
+    recipient: Address | string,
     fn: () => Promise<Buffer>,
     validation = async () => {},
   ) {
