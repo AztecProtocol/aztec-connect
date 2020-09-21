@@ -28,12 +28,17 @@ function getLevelDb() {
 export type SdkOptions = {
   syncInstances?: boolean;
   clearDb?: boolean;
+  debug?: boolean;
 } & CoreSdkOptions;
 
 async function sdkFactory(hostStr: string, ethereumProvider: EthereumProvider, options: SdkOptions) {
   const host = new URL(hostStr);
   const leveldb = getLevelDb();
   const db = new DexieDatabase();
+
+  if (options.debug) {
+    createDebug.enable('bb:*');
+  }
 
   if (options.clearDb) {
     await leveldb.clear();
