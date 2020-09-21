@@ -17,7 +17,6 @@ import { BarretenbergWasm } from 'barretenberg/wasm';
 import { WorkerPool } from 'barretenberg/wasm/worker_pool';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
-import { Signer } from 'ethers';
 import { EventEmitter } from 'events';
 import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
@@ -31,7 +30,7 @@ import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus } from 
 import { TokenContract, Web3TokenContract } from '../token_contract';
 import { MockTokenContract } from '../token_contract/mock_token_contract';
 import { TxsState } from '../txs_state';
-import { KeyPair, UserDataFactory } from '../user';
+import { KeyPair, Signer, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
 

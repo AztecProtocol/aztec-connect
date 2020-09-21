@@ -4,8 +4,8 @@ import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
-import { ethers, Signer } from 'ethers';
-import { UserData } from '../../user';
+import { ethers } from 'ethers';
+import { Signer, UserData } from '../../user';
 import { UserState } from '../../user_state';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
 

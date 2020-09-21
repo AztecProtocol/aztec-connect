@@ -253,7 +253,8 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public async addUser(ethAddress: EthAddress) {
-    const privateKey = await deriveGrumpkinPrivateKey(ethAddress, this.web3Provider);
+    const signer = this.web3Provider.getSigner(ethAddress.toString());
+    const privateKey = await deriveGrumpkinPrivateKey(signer);
     this.pauseEvent(SdkEvent.UPDATED_USERS);
     try {
       const coreUser = await this.core.addUser(privateKey);
