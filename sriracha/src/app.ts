@@ -4,11 +4,41 @@ import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import compress from 'koa-compress';
 import Router from 'koa-router';
-import { GetHashPathServerResponse, GetHashPathsServerResponse, GetTreeStateServerResponse } from './hash_path_source';
+import {
+  GetHashPathServerResponse,
+  GetHashPathsServerResponse,
+  GetStatusServerResponse,
+  GetTreeStateServerResponse,
+} from './hash_path_source';
 import Server from './server';
 
 export function appFactory(server: Server, prefix: string) {
   const router = new Router({ prefix });
+
+  router.get('/get-status', async (ctx: Koa.Context) => {
+    const {
+      rollupContractAddress,
+      tokenContractAddress,
+      chainId,
+      networkOrHost,
+      dataSize,
+      dataRoot,
+      nullRoot,
+    } = await server.status();
+    console.log({ rollupContractAddress, tokenContractAddress, chainId, networkOrHost, dataSize, dataRoot, nullRoot });
+    const response: GetStatusServerResponse = {
+      rollupContractAddress: rollupContractAddress.toString(),
+      tokenContractAddress: tokenContractAddress.toString(),
+      chainId,
+      networkOrHost,
+      dataSize: dataSize.toString(),
+      dataRoot: dataRoot.toString('hex'),
+      nullRoot: nullRoot.toString('hex'),
+    };
+    ctx.set('content-type', 'application/json');
+    ctx.body = response;
+    ctx.response.status = 200;
+  });
 
   router.get('/get-tree-state/:treeIndex', async (ctx: Koa.Context) => {
     const treeIndex = +ctx.params.treeIndex;

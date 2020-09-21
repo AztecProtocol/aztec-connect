@@ -59,6 +59,10 @@ export default class Server implements HashPathSource {
     await writeFileAsync('./data/state', JSON.stringify(this.serverState));
   }
 
+  public async status() {
+    return this.blockchain.status();
+  }
+
   public async getTreeState(treeIndex: number) {
     const size = this.worldStateDb.getSize(treeIndex);
     const root = this.worldStateDb.getRoot(treeIndex);

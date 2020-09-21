@@ -49,6 +49,12 @@ describe('ethereum_blockchain', () => {
     ethereumBlockchain.stop();
   });
 
+  it('should get status', async () => {
+    const { rollupContractAddress, tokenContractAddress } = await ethereumBlockchain.status();
+    expect(rollupContractAddress.toString().length).to.be.greaterThan(0);
+    expect(tokenContractAddress.toString().length).to.be.greaterThan(0);
+  });
+
   it('should process a deposit proof', async () => {
     const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
     await erc20.approve(rollupProcessor.address, depositAmount);

@@ -43,6 +43,8 @@ async function main() {
   }
 
   const ethereumBlockchain = new EthereumBlockchain(ethConfig, EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS!));
+  await ethereumBlockchain.init();
+
   const server = new Server(worldStateDb, ethereumBlockchain);
   await server.start();
 
