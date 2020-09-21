@@ -10,8 +10,8 @@ jobs:
       image: ubuntu-1604:201903-01
     resource_class: large
     steps:
-      - *setup_env
       - checkout
+      - *setup_env
       - run:
           name: 'cmake'
           working_directory: barretenberg
@@ -39,8 +39,8 @@ jobs:
       image: ubuntu-1604:201903-01
     resource_class: large
     steps:
-      - *setup_env
       - checkout
+      - *setup_env
       - run:
           name: 'Build and test'
           working_directory: barretenberg
@@ -51,8 +51,8 @@ jobs:
       image: ubuntu-1604:201903-01
     resource_class: large
     steps:
-      - *setup_env
       - checkout
+      - *setup_env
       - run:
           name: 'Build and test'
           working_directory: barretenberg
@@ -63,8 +63,8 @@ jobs:
       image: ubuntu-1604:201903-01
     resource_class: large
     steps:
-      - *setup_env
       - checkout
+      - *setup_env
       - run:
           name: 'Build and test'
           working_directory: barretenberg
@@ -74,8 +74,8 @@ jobs:
     docker:
       - image: aztecprotocol/build-image
     steps:
-      - *setup_env
       - checkout
+      - *setup_env
       - setup_remote_docker
       - run:
           name: 'Build and test'
@@ -86,8 +86,8 @@ jobs:
     docker:
       - image: aztecprotocol/build-image
     steps:
-      - *setup_env
       - checkout
+      - *setup_env
       - setup_remote_docker
       - run:
           name: 'Build and test'
@@ -99,8 +99,8 @@ jobs:
       image: ubuntu-1604:201903-01
     resource_class: large
     steps:
-      - *setup_env
       - checkout
+      - *setup_env
       - run:
           name: 'Build and test'
           working_directory: falafel
@@ -111,8 +111,8 @@ jobs:
       image: ubuntu-1604:201903-01
     resource_class: large
     steps:
-      - *setup_env
       - checkout
+      - *setup_env
       - run:
           name: 'Build and test'
           working_directory: sriracha
@@ -122,8 +122,8 @@ jobs:
     docker:
       - image: aztecprotocol/build-image
     steps:
-      - *setup_env
       - checkout
+      - *setup_env
       - setup_remote_docker
       - run:
           name: 'Build and test'
@@ -134,8 +134,8 @@ jobs:
     docker:
       - image: aztecprotocol/build-image
     steps:
-      - *setup_env
       - checkout
+      - *setup_env
       - setup_remote_docker
       - run:
           name: 'Build and test'
@@ -147,8 +147,8 @@ jobs:
       image: ubuntu-1604:201903-01
     resource_class: large
     steps:
-      - *setup_env
       - checkout
+      - *setup_env
       - run:
           name: 'Build and test'
           working_directory: end-to-end
@@ -167,8 +167,8 @@ jobs:
     docker:
       - image: aztecprotocol/build-image
     steps:
-      - *setup_env
       - checkout
+      - *setup_env
       - setup_remote_docker
       - run:
           name: 'barretenberg:x86_64-linux-gcc'
