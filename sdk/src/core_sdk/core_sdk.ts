@@ -28,7 +28,7 @@ import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
 import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus } from '../sdk';
 import { Signer } from '../signer';
 import { TxsState } from '../txs_state';
-import { KeyPair, UserDataFactory } from '../user';
+import { KeyPair, Signer, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
 
