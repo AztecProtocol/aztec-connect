@@ -30,6 +30,7 @@ module.exports = merge(common, {
     // If you must get a valid local production artifact, copy these lines to webpack.common.js. Just don't commit them.
     alias: {
       barretenberg: path.resolve(__dirname, '../barretenberg.js/dest-es'),
+      sriracha: path.resolve(__dirname, '../sriracha/dest-es'),
       'aztec2-sdk': path.resolve(__dirname, '../sdk/dest-es'),
     },
     extensions: ['.ts', '.tsx', '.js', '.wasm'],

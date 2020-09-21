@@ -58,7 +58,7 @@ describe('end-to-end tests', () => {
     expect(user0Asset.balance()).toBe(0n);
 
     const txHash = await user0Asset.deposit(depositValue);
-    await sdk.awaitSettlement(userAddresses[0], txHash);
+    await sdk.awaitSettlement(userAddresses[0], txHash, 300);
 
     expect(await user0Asset.publicBalance()).toBe(0n);
     const user0BalanceAfterDeposit = user0Asset.balance();
@@ -70,10 +70,10 @@ describe('end-to-end tests', () => {
     expect(user1Asset.balance()).toBe(0n);
 
     const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().publicKey);
-    await sdk.awaitSettlement(userAddresses[0], transferTxHash);
+    await sdk.awaitSettlement(userAddresses[0], transferTxHash, 300);
     expect(user0Asset.balance()).toBe(user0BalanceAfterDeposit - transferValue);
 
-    await sdk.awaitSettlement(userAddresses[1], transferTxHash);
+    await sdk.awaitSettlement(userAddresses[1], transferTxHash, 300);
     const user1BalanceAfterTransfer = user1Asset.balance();
     expect(user1BalanceAfterTransfer).toBe(transferValue);
 
@@ -81,7 +81,7 @@ describe('end-to-end tests', () => {
     const withdrawValue = user0Asset.toErc20Units('300');
 
     const withdrawTxHash = await user1Asset.withdraw(withdrawValue);
-    await sdk.awaitSettlement(users[1].getUserData().ethAddress, withdrawTxHash);
+    await sdk.awaitSettlement(users[1].getUserData().ethAddress, withdrawTxHash, 300);
 
     expect(await user1Asset.publicBalance()).toBe(withdrawValue);
     expect(user1Asset.balance()).toBe(user1BalanceAfterTransfer - withdrawValue);
@@ -100,7 +100,7 @@ describe('end-to-end tests', () => {
     expect(await user3Asset.publicBalance()).toBe(0n);
 
     const publicTransferTxHash = await user2Asset.publicTransfer(transferValue, userAddresses[3]);
-    await sdk.awaitSettlement(userAddresses[2], publicTransferTxHash);
+    await sdk.awaitSettlement(userAddresses[2], publicTransferTxHash, 300);
 
     expect(await user2Asset.publicBalance()).toBe(0n);
     expect(await user3Asset.publicBalance()).toBe(transferValue);
@@ -109,7 +109,7 @@ describe('end-to-end tests', () => {
   it('should create account', async () => {
     const keyPair = sdk.newKeyPair();
     const txHash = await users[0].createAccount('pebble', keyPair.publicKey);
-    await sdk.awaitSettlement(userAddresses[0], txHash);
+    await sdk.awaitSettlement(userAddresses[0], txHash, 300);
 
     expect(await sdk.getAddressFromAlias('pebble')).toEqual(users[0].getUserData().publicKey);
   });

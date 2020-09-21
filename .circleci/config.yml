@@ -71,12 +71,12 @@ jobs:
           command: build barretenberg:wasm-linux-clang ./dockerfiles/Dockerfile.wasm-linux-clang
 
   barretenberg-js:
-    docker:
-      - image: aztecprotocol/build-image
+    machine:
+      image: ubuntu-1604:201903-01
+    resource_class: large
     steps:
       - checkout
       - *setup_env
-      - setup_remote_docker
       - run:
           name: 'Build and test'
           working_directory: barretenberg.js
@@ -227,7 +227,7 @@ workflows:
             - blockchain
       - sdk:
           requires:
-            - barretenberg-js
+            - sriracha
       - hummus:
           requires:
             - sdk

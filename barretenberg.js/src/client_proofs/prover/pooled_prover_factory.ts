@@ -5,7 +5,7 @@ import { Fft, PooledFft } from '../../fft';
 import { UnrolledProver } from './unrolled_prover';
 
 export class PooledProverFactory {
-  public pippenger?: PooledPippenger;
+  private pippenger?: PooledPippenger;
   private fft: { [key: number]: Fft } = {};
 
   constructor(private pool: WorkerPool, private crsData: Uint8Array) {}

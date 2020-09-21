@@ -5,10 +5,10 @@
   "license": "GPLv2",
   "private": true,
   "scripts": {
-    "build": "yarn clean && yarn compile && tsc -p tsconfig.prod.json && node ./package.js && chmod +x ./dest/deploy/index.js",
-    "build:dev": "tsc -p tsconfig.prod.json --watch",
+    "build": "yarn clean && yarn compile && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js && chmod +x ./dest/deploy/index.js",
+    "build:dev": "tsc -p tsconfig.cjs.json --watch & tsc -p tsconfig.es.json",
     "compile": "yarn buidler compile",
-    "clean": "rm -rf ./cache ./dest",
+    "clean": "rm -rf ./cache ./dest ./dest-es",
     "test": "yarn buidler test",
     "test:ganache": "yarn buidler --network ganache test",
     "lint:sol": "solhint contracts/**/*.sol",

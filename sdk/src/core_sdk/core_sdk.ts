@@ -138,8 +138,6 @@ export class CoreSdk extends EventEmitter {
     this.userStateFactory = new UserStateFactory(grumpkin, blake2s, this.db, this.rollupProvider);
     this.workerPool = workerPool;
     this.worldState = new WorldState(this.leveldb, pedersen, blake2s);
-    this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, grumpkin, noteAlgos);
-    this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, blake2s);
     if (this.rollupProviderExplorer) {
       this.txsState = new TxsState(this.rollupProviderExplorer);
     }
@@ -157,10 +155,11 @@ export class CoreSdk extends EventEmitter {
     await this.initUserStates();
 
     if (!this.options.escapeHatchMode) {
+      this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, grumpkin, noteAlgos);
+      this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, blake2s);
       await this.createJoinSplitProvingKey(joinSplitProver);
       await this.createAccountProvingKey(accountProver);
     } else {
-      await this.createEscapeHatchProvingKey(escapeHatchProver);
       this.escapeHatchProofCreator = new EscapeHatchProofCreator(
         escapeHatchProver,
         this.worldState,
@@ -169,6 +168,7 @@ export class CoreSdk extends EventEmitter {
         noteAlgos,
         this.hashPathSource!,
       );
+      await this.createEscapeHatchProvingKey(escapeHatchProver);
     }
 
     this.updateInitState(SdkInitState.INITIALIZED);

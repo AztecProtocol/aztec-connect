@@ -4,11 +4,12 @@
   "main": "dest/index.js",
   "license": "GPL-2.0",
   "scripts": {
-    "build": "rm -rf ./dest && tsc -p tsconfig.prod.json && node package.js",
-    "build:dev": "tsc -p tsconfig.prod.json --watch",
+    "build": "yarn clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node package.js",
+    "build:dev": "tsc -p tsconfig.cjs.json --watch & tsc -p tsconfig.es.json --watch",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
     "test": "jest --passWithNoTests",
+    "clean": "rm -rf ./dest ./dest-es",
     "clean_data": "rm -rf ./data"
   },
   "jest": {
