@@ -20,7 +20,7 @@ check_rebuild || ! image_exists $REPOSITORY master-$TAG || { echo "No rebuild ne
 PARENTS=$(cat $DOCKERFILE | sed -n -e 's/^FROM \([^[:space:]]\+\).*/\1/p' | grep -v $ECR_DEPLOY_URL | sort | uniq)
 for PARENT in $PARENTS; do
   echo "Pulling parent: $PARENT"
-  docker pull $PARENT > /dev/null 2>&1
+  docker pull $PARENT > /dev/null
 done
 
 # For each parent that's ours, pull in the newly rebuilt image if it's present.
@@ -34,7 +34,7 @@ for PARENT in $PARENTS; do
   PARENT_IMAGE_URI=$ECR_URL/$PARENT_REPO:cache-$CIRCLE_SHA1-$PARENT_TAG
   if ! docker pull $PARENT_IMAGE_URI > /dev/null 2>&1; then
     PARENT_IMAGE_URI=$ECR_URL/$PARENT_REPO:master-$PARENT_TAG
-    docker pull $PARENT_IMAGE_URI > /dev/null 2>&1
+    docker pull $PARENT_IMAGE_URI > /dev/null
   fi
   docker tag $PARENT_IMAGE_URI $ECR_DEPLOY_URL/$PARENT
 done

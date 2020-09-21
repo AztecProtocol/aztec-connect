@@ -215,12 +215,12 @@ workflows:
       - barretenberg-js:
           requires:
             - wasm-linux-clang
+            - x86_64-linux-clang
       - blockchain:
           requires:
             - barretenberg-js
       - falafel:
           requires:
-            - x86_64-linux-clang
             - blockchain
       - sriracha:
           requires:
