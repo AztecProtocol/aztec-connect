@@ -64,7 +64,7 @@ export function appFactory(
   connection: Connection,
   worldStateDb: WorldStateDb,
   serverConfig: ServerConfig,
-  serverStauts: ServerStatus,
+  serverStatus: ServerStatus,
 ) {
   const router = new Router({ prefix });
 
@@ -172,7 +172,7 @@ export function appFactory(
     ctx.body = await server.status();
   });
 
-  router.all('/grpahql', graphqlPlayground({ endpoint: '/grpahql' }));
+  router.all('/falafel', graphqlPlayground({ endpoint: '/graphql' }));
 
   const app = new Koa();
   app.proxy = true;
@@ -184,7 +184,7 @@ export function appFactory(
   Container.set({ id: 'connection', factory: () => connection });
   Container.set({ id: 'worldStateDb', factory: () => worldStateDb });
   Container.set({ id: 'serverConfig', factory: () => serverConfig });
-  Container.set({ id: 'serverStatus', factory: () => serverStauts });
+  Container.set({ id: 'serverStatus', factory: () => serverStatus });
   const schema = buildSchemaSync({
     resolvers: [BlockResolver, RollupResolver, TxResolver, ServerStatusResolver],
     container: Container,
