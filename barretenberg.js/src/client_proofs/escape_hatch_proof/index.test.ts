@@ -138,8 +138,8 @@ describe('escape_hatch_proof', () => {
     const outputOwner = EthAddress.randomAddress();
 
     const accountIndex = 0;
-    const accountNote = Buffer.concat([inputNotes[0].ownerPubKey.x(), pubKey.x()]);
     const accountNotePath = await worldStateDb.getHashPath(dataTreeId, BigInt(accountIndex));
+    const accountNote = Buffer.concat([inputNotes[0].ownerPubKey.x(), pubKey.x()]);
     const accountNullifier = nullifierBufferToIndex(blake2s.hashToField(accountNote));
     const accountNullifierPath = await worldStateDb.getHashPath(1, accountNullifier);
 

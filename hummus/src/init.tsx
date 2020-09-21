@@ -22,6 +22,9 @@ export const Init: FunctionComponent<InitProps> = ({ app, initialServerUrl = '',
   const [initStatus, setInitStatus] = useState(app.getInitStatus());
   const [serverUrl, setServerUrl] = useState(initialServerUrl);
   const [showServerUrl, setShowServerUrl] = useState(false);
+  const [showStandardButton, setShowStandardButton] = useState(true);
+  const [showEmergencyButton, setShowEmergencyButton] = useState(true);
+
   const { initState } = initStatus;
 
   useEffect(() => {
@@ -47,14 +50,21 @@ export const Init: FunctionComponent<InitProps> = ({ app, initialServerUrl = '',
                 <React.Fragment>
                   <Button
                     text="Standard"
-                    onSubmit={() => app.init(serverUrl).catch(err => debug(err))}
-                    isLoading={initState === AppInitState.INITIALIZING}
+                    onSubmit={() => {
+                      app.init(serverUrl).catch(err => debug(err));
+                      setShowEmergencyButton(false);
+                    }}
+                    isLoading={initState === AppInitState.INITIALIZING && showStandardButton}
+                    disabled={!showStandardButton}
                   />
                   <Button
                     text="Emergency"
-                    // need to tell the app what to initalise
-                    onSubmit={() => app.init(serverUrl, { escapeHatchMode: true }).catch(err => debug(err))}
-                    isLoading={initState === AppInitState.INITIALIZING}
+                    onSubmit={() => {
+                      app.init(serverUrl, { escapeHatchMode: true }).catch(err => debug(err));
+                      setShowStandardButton(false);
+                    }}
+                    isLoading={initState === AppInitState.INITIALIZING && showEmergencyButton}
+                    disabled={!showEmergencyButton}
                   />
                 </React.Fragment>
               )}
