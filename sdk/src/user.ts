@@ -1,7 +1,7 @@
-import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { GrumpkinAddress } from 'barretenberg/address';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { randomBytes } from 'crypto';
-import { Web3Provider } from '@ethersproject/providers';
+import { Signer } from './signer';
 
 export interface UserData {
   id: Buffer;
@@ -17,8 +17,7 @@ export interface KeyPair {
   privateKey: Buffer;
 }
 
-export const deriveGrumpkinPrivateKey = async (ethAddress: EthAddress, provider: Web3Provider) => {
-  const signer = provider.getSigner(ethAddress.toString());
+export const deriveGrumpkinPrivateKey = async (signer: Signer) => {
   const sig = await signer.signMessage('Link Aztec account.');
   return Buffer.from(sig.slice(2)).slice(0, 32);
 };

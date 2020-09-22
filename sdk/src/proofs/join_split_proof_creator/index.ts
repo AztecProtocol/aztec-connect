@@ -4,7 +4,8 @@ import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
-import { ethers, Signer } from 'ethers';
+import { ethers } from 'ethers';
+import { Signer } from '../../signer';
 import { UserData } from '../../user';
 import { UserState } from '../../user_state';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
@@ -68,7 +69,7 @@ export class JoinSplitProofCreator {
 
     const msgHash = ethers.utils.keccak256(txPublicInputs);
     const digest = ethers.utils.arrayify(msgHash);
-    const sig = await signer.signMessage(digest);
+    const sig = await signer.signMessage(Buffer.from(digest));
     let signature = Buffer.from(sig.slice(2), 'hex');
 
     // Ganache is not signature standard compliant. Returns 00 or 01 as v.
