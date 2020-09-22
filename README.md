@@ -18,3 +18,4 @@ The following documents outline how best to contribute:
 
 - [Getting Started](./markdown/getting_started.md)
 - [PR Checklist](./markdown/pr_checklist.md)
+- [Build System](./markdown/build_system.md)
