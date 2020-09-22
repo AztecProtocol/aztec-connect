@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { Signer } from 'ethers';
 import { AssetId } from '../sdk';
+import { Signer } from '../signer';
 import { WalletSdk } from '.';
 
 export class WalletSdkUserAsset {

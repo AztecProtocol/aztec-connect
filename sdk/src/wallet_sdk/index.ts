@@ -1,12 +1,12 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import createDebug from 'debug';
-import { Signer } from 'ethers';
 import { EventEmitter } from 'events';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
 import { Action, AssetId, SdkEvent, TxHash } from '../sdk';
+import { Signer } from '../signer';
 import { TokenContract, Web3TokenContract } from '../token_contract';
 import { MockTokenContract } from '../token_contract/mock_token_contract';
 import { KeyPair } from '../user';
