@@ -1,5 +1,5 @@
 import { ContractTransaction } from '@ethersproject/contracts';
-import { Web3Provider } from '@ethersproject/providers';
+import { Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { Contract } from 'ethers';
 import { Signer } from '../signer';
@@ -21,7 +21,7 @@ export class Web3TokenContract implements TokenContract {
   private confirmations = 2;
 
   constructor(
-    private ethersProvider: Web3Provider,
+    private ethersProvider: Provider,
     private contractAddress: EthAddress,
     private rollupContractAddress: EthAddress,
     private chainId: number,
