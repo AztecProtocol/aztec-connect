@@ -42,7 +42,8 @@ async function main() {
     throw new Error('No ethereum config.');
   }
 
-  const ethereumBlockchain = new EthereumBlockchain(ethConfig, EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS!));
+  const ethereumBlockchain = await EthereumBlockchain.new(ethConfig, EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS!));
+
   const server = new Server(worldStateDb, ethereumBlockchain);
   await server.start();
 

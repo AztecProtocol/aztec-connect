@@ -1,15 +1,39 @@
+import { EthAddress } from 'barretenberg/address';
 import { fetch } from 'barretenberg/iso_fetch';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { toBufferBE } from 'bigint-buffer';
 import {
   GetHashPathServerResponse,
   GetHashPathsServerResponse,
+  GetStatusServerResponse,
   GetTreeStateServerResponse,
   HashPathSource,
 } from './hash_path_source';
 
 export class SrirachaProvider implements HashPathSource {
   constructor(private host: string) {}
+
+  public async status() {
+    const response = await fetch(`${this.host}/sriracha/get-status`);
+    const {
+      rollupContractAddress,
+      tokenContractAddress,
+      chainId,
+      dataRoot,
+      nullRoot,
+      dataSize,
+      networkOrHost,
+    } = (await response.json()) as GetStatusServerResponse;
+    return {
+      rollupContractAddress: EthAddress.fromString(rollupContractAddress),
+      tokenContractAddress: EthAddress.fromString(tokenContractAddress),
+      chainId,
+      dataRoot: Buffer.from(dataRoot, 'hex'),
+      nullRoot: Buffer.from(nullRoot, 'hex'),
+      dataSize: parseInt(dataSize, 10),
+      networkOrHost,
+    };
+  }
 
   public async getTreeState(treeIndex: number) {
     const response = await fetch(`${this.host}/sriracha/get-tree-state/${treeIndex}`);

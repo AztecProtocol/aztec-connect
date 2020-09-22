@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "build": "yarn clean && yarn compile && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js && chmod +x ./dest/deploy/index.js",
-    "build:dev": "tsc -p tsconfig.cjs.json --watch & tsc -p tsconfig.es.json",
+    "build:dev": "tsc -p tsconfig.cjs.json --watch & tsc -p tsconfig.es.json --watch",
     "compile": "yarn buidler compile",
     "clean": "rm -rf ./cache ./dest ./dest-es",
     "test": "yarn buidler test",

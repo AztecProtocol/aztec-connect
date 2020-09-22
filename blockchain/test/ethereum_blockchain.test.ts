@@ -37,7 +37,7 @@ describe('ethereum_blockchain', () => {
     userAAddress = EthAddress.fromString(await userA.getAddress());
     ({ erc20, rollupProcessor, viewingKeys } = await setupRollupProcessor([userA, userB], mintAmount));
 
-    ethereumBlockchain = new EthereumBlockchain(
+    ethereumBlockchain = await EthereumBlockchain.new(
       { signer: userA, networkOrHost: '' },
       EthAddress.fromString(rollupProcessor.address),
     );
@@ -47,6 +47,12 @@ describe('ethereum_blockchain', () => {
 
   afterEach(async () => {
     ethereumBlockchain.stop();
+  });
+
+  it('should get status', async () => {
+    const { rollupContractAddress, tokenContractAddress } = await ethereumBlockchain.status();
+    expect(rollupContractAddress.toString().length).to.be.greaterThan(0);
+    expect(tokenContractAddress.toString().length).to.be.greaterThan(0);
   });
 
   it('should process a deposit proof', async () => {
