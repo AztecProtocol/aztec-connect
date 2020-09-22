@@ -4,7 +4,7 @@ import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
 import { advanceBlocks, blocksToAdvance } from '../fixtures/advance_block';
-import { createDepositProof, createEscapeProof, createSecondEscapeProof } from '../fixtures/create_mock_proof';
+import { createDepositProof, createEscapeProof } from '../fixtures/create_mock_proof';
 import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
 
@@ -45,9 +45,6 @@ describe('rollup_processor: core', () => {
     await advanceBlocks(nextEscapeBlock, provider);
     await rollupProcessor.processRollup(proofData, [], [], viewingKeys);
 
-    const escapeBlockNum = await rollupProcessor.escapeeBlock(userAAddress.toString());
-    expect(escapeBlockNum).to.equal(provider.blockNumber + 1);
-
     // check balances
     const finalContractBalance = await erc20.balanceOf(rollupProcessor.address);
     expect(finalContractBalance).to.equal(BigInt(initialContractBalance) - BigInt(withdrawalAmount));
@@ -62,18 +59,6 @@ describe('rollup_processor: core', () => {
     await advanceBlocks(escapeBlock, provider);
     await expect(rollupProcessor.processRollup(proofData, [], [], viewingKeys)).to.be.revertedWith(
       'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT',
-    );
-  });
-
-  it('should reject same user escaping within rate limit', async () => {
-    const { proofData } = await createEscapeProof(withdrawalAmount, userAAddress);
-    const nextEscapeBlock = await blocksToAdvance(81, 100, provider);
-    await advanceBlocks(nextEscapeBlock, provider);
-    await rollupProcessor.processRollup(proofData, [], [], viewingKeys);
-
-    const { proofData: secondProofData } = await createSecondEscapeProof(withdrawalAmount, userAAddress);
-    await expect(rollupProcessor.processRollup(secondProofData, [], [], viewingKeys)).to.be.revertedWith(
-      'Rollup Processor: ESCAPE_LIMIT',
     );
   });
 });

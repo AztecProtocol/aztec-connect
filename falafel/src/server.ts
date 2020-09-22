@@ -31,7 +31,6 @@ interface PublishQueueItem {
   signatures: Buffer[];
   sigIndexes: number[];
   viewingKeys: Buffer[];
-  rollupSize: number;
 }
 
 export class Server {
@@ -145,7 +144,6 @@ export class Server {
         signatures,
         sigIndexes,
         viewingKeys: txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat(),
-        rollupSize: this.config.rollupSize,
       });
     });
 
@@ -200,8 +198,8 @@ export class Server {
     return {
       chainId,
       networkOrHost,
-      rollupContractAddress: this.blockchain.getRollupContractAddress(),
-      tokenContractAddress: this.blockchain.getTokenContractAddress(),
+      rollupContractAddress: this.blockchain.getRollupContractAddress().toString(),
+      tokenContractAddress: this.blockchain.getTokenContractAddress().toString(),
       dataSize: Number(this.worldStateDb.getSize(0)),
       dataRoot: this.worldStateDb.getRoot(0).toString('hex'),
       nullRoot: this.worldStateDb.getRoot(1).toString('hex'),
@@ -279,7 +277,6 @@ export class Server {
         signatures,
         sigIndexes,
         viewingKeys,
-        rollupSize: this.config.rollupSize,
       });
 
       this.printState();
@@ -295,11 +292,11 @@ export class Server {
       if (!item) {
         break;
       }
-      const { rollupId, proof, signatures, sigIndexes, viewingKeys, rollupSize } = item;
+      const { rollupId, proof, signatures, sigIndexes, viewingKeys } = item;
 
       while (true) {
         try {
-          const txHash = await this.blockchain.sendProof(proof, signatures, sigIndexes, viewingKeys);
+          const txHash = await this.blockchain.sendRollupProof(proof, signatures, sigIndexes, viewingKeys);
 
           await this.rollupDb.confirmSent(rollupId, txHash);
 

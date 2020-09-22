@@ -1,0 +1,8 @@
+{
+  "extends": ".",
+  "compilerOptions": {
+    "module": "commonjs",
+    "outDir": "dest"
+  },
+  "include": ["src"]
+}

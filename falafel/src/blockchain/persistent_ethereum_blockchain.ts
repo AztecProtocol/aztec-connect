@@ -1,5 +1,6 @@
 import { MemoryFifo } from 'barretenberg/fifo';
 import { RollupProofData } from 'barretenberg/rollup_proof';
+import { Proof } from 'barretenberg/rollup_provider/rollup_provider';
 import { Block, Blockchain, EthereumBlockchain } from 'blockchain';
 import createDebug from 'debug';
 import { Connection, MoreThanOrEqual, Repository } from 'typeorm';
@@ -63,12 +64,20 @@ export class PersistentEthereumBlockchain implements Blockchain {
     this.blockQueue.cancel();
   }
 
+  public async status() {
+    return this.ethereumBlockchain.status();
+  }
+
+  public async sendProof(proof: Proof) {
+    return this.ethereumBlockchain.sendProof(proof);
+  }
+
   public getTransactionReceipt(txHash: Buffer) {
     return this.ethereumBlockchain.getTransactionReceipt(txHash);
   }
 
-  public sendProof(proof: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
-    return this.ethereumBlockchain.sendProof(proof, signatures, sigIndexes, viewingKeys);
+  public sendRollupProof(proof: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
+    return this.ethereumBlockchain.sendRollupProof(proof, signatures, sigIndexes, viewingKeys);
   }
 
   public async validateDepositFunds(publicOwner: Buffer, publicInput: Buffer) {

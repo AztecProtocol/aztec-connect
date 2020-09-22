@@ -38,5 +38,5 @@ services:
     command: >
       sh -c "
       while ! nc -z falafel 8081; do sleep 1; done;
-      CI=true yarn -s test
+      yarn test --bail --testPathIgnorePatterns=e2e_escape
       "

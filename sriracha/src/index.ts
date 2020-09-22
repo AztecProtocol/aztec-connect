@@ -1,3 +1,4 @@
+import { EthAddress } from 'barretenberg/address';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { EthereumBlockchain } from 'blockchain';
 import { ethers, Signer } from 'ethers';
@@ -41,7 +42,7 @@ async function main() {
     throw new Error('No ethereum config.');
   }
 
-  const ethereumBlockchain = new EthereumBlockchain(ethConfig, ROLLUP_CONTRACT_ADDRESS!);
+  const ethereumBlockchain = new EthereumBlockchain(ethConfig, EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS!));
   const server = new Server(worldStateDb, ethereumBlockchain);
   await server.start();
 

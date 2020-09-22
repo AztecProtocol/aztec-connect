@@ -37,7 +37,10 @@ describe('ethereum_blockchain', () => {
     userAAddress = EthAddress.fromString(await userA.getAddress());
     ({ erc20, rollupProcessor, viewingKeys } = await setupRollupProcessor([userA, userB], mintAmount));
 
-    ethereumBlockchain = new EthereumBlockchain({ signer: userA, networkOrHost: '' }, rollupProcessor.address);
+    ethereumBlockchain = new EthereumBlockchain(
+      { signer: userA, networkOrHost: '' },
+      EthAddress.fromString(rollupProcessor.address),
+    );
     await ethereumBlockchain.start();
     waitOnBlockProcessed = createWaitOnBlockProcessed(ethereumBlockchain);
   });
@@ -49,7 +52,7 @@ describe('ethereum_blockchain', () => {
   it('should process a deposit proof', async () => {
     const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
     await erc20.approve(rollupProcessor.address, depositAmount);
-    const txHash = await ethereumBlockchain.sendProof(proofData, signatures, sigIndexes, viewingKeys);
+    const txHash = await ethereumBlockchain.sendRollupProof(proofData, signatures, sigIndexes, viewingKeys);
     expect(txHash).to.have.lengthOf(32);
     const receipt = await ethereumBlockchain.getTransactionReceipt(txHash);
     expect(receipt.blockNum).to.be.above(0);
@@ -57,7 +60,7 @@ describe('ethereum_blockchain', () => {
 
   it('should process send proof', async () => {
     const { proofData } = await createSendProof();
-    const txHash = await ethereumBlockchain.sendProof(proofData, [], [], viewingKeys);
+    const txHash = await ethereumBlockchain.sendRollupProof(proofData, [], [], viewingKeys);
     expect(txHash).to.have.lengthOf(32);
     const receipt = await ethereumBlockchain.getTransactionReceipt(txHash);
     expect(receipt.blockNum).to.be.above(0);
@@ -70,7 +73,7 @@ describe('ethereum_blockchain', () => {
       sigIndexes: depositSigIndexes,
     } = await createDepositProof(depositAmount, userAAddress, userA);
     await erc20.approve(rollupProcessor.address, depositAmount);
-    const depositTxHash = await ethereumBlockchain.sendProof(
+    const depositTxHash = await ethereumBlockchain.sendRollupProof(
       depositProofData,
       depositSignatures,
       depositSigIndexes,
@@ -88,7 +91,7 @@ describe('ethereum_blockchain', () => {
       sigIndexes: withdrawSigIndexes,
     } = await createWithdrawProof(withdrawalAmount, userAAddress);
     await erc20.approve(rollupProcessor.address, depositAmount);
-    const withdrawTxHash = await ethereumBlockchain.sendProof(
+    const withdrawTxHash = await ethereumBlockchain.sendRollupProof(
       withdrawProofData,
       withdrawalSignatures,
       withdrawSigIndexes,
@@ -106,7 +109,7 @@ describe('ethereum_blockchain', () => {
     ethereumBlockchain.on('block', spy);
 
     await erc20.approve(rollupProcessor.address, depositAmount);
-    await ethereumBlockchain.sendProof(proofData, signatures, sigIndexes, viewingKeys);
+    await ethereumBlockchain.sendRollupProof(proofData, signatures, sigIndexes, viewingKeys);
     await waitOnBlockProcessed;
 
     const numBlockEvents = spy.callCount;
@@ -128,7 +131,7 @@ describe('ethereum_blockchain', () => {
       sigIndexes: depositSigIndexes,
     } = await createDepositProof(depositAmount, userAAddress, userA);
     await erc20.approve(rollupProcessor.address, depositAmount);
-    await ethereumBlockchain.sendProof(depositProofData, depositSignatures, depositSigIndexes, viewingKeys);
+    await ethereumBlockchain.sendRollupProof(depositProofData, depositSignatures, depositSigIndexes, viewingKeys);
     await waitOnBlockProcessed;
 
     const {
@@ -137,7 +140,7 @@ describe('ethereum_blockchain', () => {
       sigIndexes: withdrawSigIndexes,
     } = await createWithdrawProof(withdrawalAmount, userAAddress);
     await erc20.approve(rollupProcessor.address, depositAmount);
-    await ethereumBlockchain.sendProof(withdrawProofData, withdrawalSignatures, withdrawSigIndexes, viewingKeys);
+    await ethereumBlockchain.sendRollupProof(withdrawProofData, withdrawalSignatures, withdrawSigIndexes, viewingKeys);
     await waitOnBlockProcessed;
 
     const blockNumStart = 0;
@@ -168,7 +171,7 @@ describe('ethereum_blockchain', () => {
     const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
 
     // no erc20 approval
-    await expect(ethereumBlockchain.sendProof(proofData, signatures, sigIndexes, viewingKeys)).to.be.revertedWith(
+    await expect(ethereumBlockchain.sendRollupProof(proofData, signatures, sigIndexes, viewingKeys)).to.be.revertedWith(
       'Rollup Processor: INSUFFICIENT_TOKEN_APPROVAL',
     );
   });

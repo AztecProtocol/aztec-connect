@@ -18,7 +18,18 @@ export interface GetHashPathsServerResponse {
   newHashPaths: string[];
 }
 
+export interface GetTreeStateServerResponse {
+  root: string;
+  size: string;
+}
+
+export interface TreeState {
+  root: Buffer;
+  size: bigint;
+}
+
 export interface HashPathSource {
-  getHashPath(treeIndex: number, index: Buffer): Promise<HashPath>;
-  getHashPaths(treeIndex: number, indicies: Buffer[]): Promise<GetHashPathsResponse>;
+  getTreeState(treeIndex: number): Promise<TreeState>;
+  getHashPath(treeIndex: number, index: bigint): Promise<HashPath>;
+  getHashPaths(treeIndex: number, additions: { index: bigint; value: Buffer }[]): Promise<GetHashPathsResponse>;
 }

@@ -32,9 +32,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     uint256 public constant txPubInputLength = 11 * 32; // public inputs length for of each inner proof tx
     uint256 public constant rollupPubInputLength = 10 * 32;
 
-    uint256 public constant escapeBlockRateLimit = 240;
-    mapping(address => uint256) public escapeeBlock;
-
     event RollupProcessed(uint256 indexed rollupId, bytes32 dataRoot, bytes32 nullRoot);
     event Deposit(address depositorAddress, uint256 depositValue);
     event Withdraw(address withdrawAddress, uint256 withdrawValue);
@@ -102,13 +99,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         if (rollupSize == 0) {
             // Ensure an escaper, can only escape within last 20 of every 100 blocks.
             require(block.number % 100 >= 80, 'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT');
-
-            // Ensure an escaper, can only escape once every number of blocks set by rate limit (240 blocks = 1hr).
-            uint256 lastEscapedBlock = escapeeBlock[msg.sender];
-            if (lastEscapedBlock != 0) {
-                require((block.number - lastEscapedBlock > escapeBlockRateLimit), 'Rollup Processor: ESCAPE_LIMITED');
-            }
-            escapeeBlock[msg.sender] = block.number;
         }
 
         // update state variables

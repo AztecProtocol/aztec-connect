@@ -41,6 +41,7 @@ export class BarretenbergWasm extends EventEmitter {
         path_open: () => {},
         path_filestat_get: () => {},
         random_get: (arr, length) => {
+          arr = arr >>> 0;
           const heap = new Uint8Array(this.memory.buffer);
           for (let i = arr; i < arr + length; ++i) {
             heap[i] = Math.floor(Math.random() * 256);
@@ -50,6 +51,7 @@ export class BarretenbergWasm extends EventEmitter {
       module: {},
       env: {
         logstr: (addr: number) => {
+          addr = addr >>> 0;
           const m = this.getMemory();
           let i = addr;
           for (; m[i] !== 0; ++i);

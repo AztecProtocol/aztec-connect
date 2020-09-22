@@ -1,0 +1,11 @@
+const package = require('./package.json');
+const { writeFileSync } = require('fs');
+
+const { jest, scripts, devDependencies, ...pkg } = package;
+package.dependencies.barretenberg = 'file:../../barretenberg.js/dest';
+package.dependencies.blockchain = 'file:../../blockchain/dest';
+writeFileSync('./dest/package.json', JSON.stringify(pkg, null, '  '));
+
+package.dependencies.barretenberg = 'file:../../barretenberg.js/dest-es';
+package.dependencies.blockchain = 'file:../../blockchain/dest-es';
+writeFileSync('./dest-es/package.json', JSON.stringify(pkg, null, '  '));

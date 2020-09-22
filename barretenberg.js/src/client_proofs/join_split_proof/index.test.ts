@@ -1,5 +1,4 @@
 import { JoinSplitProver, JoinSplitVerifier } from './index';
-import { Schnorr } from '../../crypto/schnorr';
 import createDebug from 'debug';
 import { BarretenbergWasm } from '../../wasm';
 import { JoinSplitTx } from './join_split_tx';
@@ -14,15 +13,15 @@ import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
 import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
-import { Prover } from '../prover/prover';
 import { JoinSplitProof } from './join_split_proof';
 import { computeNullifier } from './compute_nullifier';
 import { randomBytes } from 'crypto';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { NoteAlgorithms } from '../note_algorithms';
 import { GrumpkinAddress, EthAddress } from '../../address';
+import { UnrolledProver } from '../prover';
 
-const debug = createDebug('bb:join_split_proof');
+const debug = createDebug('bb:join_split_proof_test');
 
 jest.setTimeout(120000);
 
@@ -33,7 +32,6 @@ describe('join_split_proof', () => {
   let joinSplitVerifier!: JoinSplitVerifier;
   let blake2s!: Blake2s;
   let pedersen!: Pedersen;
-  let schnorr!: Schnorr;
   let crs!: Crs;
   let pippenger!: PooledPippenger;
   let grumpkin!: Grumpkin;
@@ -63,13 +61,12 @@ describe('join_split_proof', () => {
     const fft = new PooledFft(pool);
     await fft.init(circuitSize);
 
-    const prover = new Prover(pool.workers[0], pippenger, fft);
+    const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
 
     joinSplitProver = new JoinSplitProver(prover);
     joinSplitVerifier = new JoinSplitVerifier();
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
-    schnorr = new Schnorr(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
     noteAlgos = new NoteAlgorithms(barretenberg);
 
@@ -155,7 +152,7 @@ describe('join_split_proof', () => {
 
       debug('creating proof...');
       const start = new Date().getTime();
-      const proof = await joinSplitProver.createJoinSplitProof(tx);
+      const proof = await joinSplitProver.createProof(tx);
       debug(`created proof: ${new Date().getTime() - start}ms`);
       debug(`proof size: ${proof.length}`);
 

@@ -1,7 +1,9 @@
+import { Web3Provider } from '@ethersproject/providers';
 import { Address, EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { Block, BlockSource } from 'barretenberg/block_source';
+import { Block } from 'barretenberg/block_source';
 import { AccountProver } from 'barretenberg/client_proofs/account_proof';
 import { computeAliasNullifier, JoinSplitProof, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
+import { EscapeHatchProver } from 'barretenberg/client_proofs/escape_hatch_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { PooledProverFactory } from 'barretenberg/client_proofs/prover';
 import { Crs } from 'barretenberg/crs';
@@ -10,7 +12,7 @@ import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { RollupProvider, RollupProviderExplorer } from 'barretenberg/rollup_provider';
+import { RollupProvider, RollupProviderExplorer, TxHash } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { WorkerPool } from 'barretenberg/wasm/worker_pool';
 import { WorldState } from 'barretenberg/world_state';
@@ -19,18 +21,19 @@ import { Signer } from 'ethers';
 import { EventEmitter } from 'events';
 import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
-import { Web3Provider } from '@ethersproject/providers';
-import { AccountProofCreator } from '../account_proof_creator';
+import { AccountProofCreator } from '../proofs/account_proof_creator';
 import { Database } from '../database';
 import { EthereumProvider } from '../ethereum_provider';
-import { JoinSplitProofCreator } from '../join_split_proof';
-import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus, TxHash } from '../sdk';
+import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
+import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus } from '../sdk';
 import { TokenContract, Web3TokenContract } from '../token_contract';
 import { MockTokenContract } from '../token_contract/mock_token_contract';
 import { TxsState } from '../txs_state';
 import { KeyPair, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
+import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
+import { HashPathSource } from 'sriracha/hash_path_source';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -52,6 +55,7 @@ export enum CoreSdkEvent {
 
 export interface CoreSdkOptions {
   saveProvingKey?: boolean;
+  escapeHatchMode?: boolean;
 }
 
 export class CoreSdk extends EventEmitter {
@@ -62,6 +66,7 @@ export class CoreSdk extends EventEmitter {
   private workerPool!: WorkerPool;
   private joinSplitProofCreator!: JoinSplitProofCreator;
   private accountProofCreator!: AccountProofCreator;
+  private escapeHatchProofCreator!: EscapeHatchProofCreator;
   private blockQueue!: MemoryFifo<Block>;
   private userFactory!: UserDataFactory;
   private userStateFactory!: UserStateFactory;
@@ -85,8 +90,8 @@ export class CoreSdk extends EventEmitter {
     private leveldb: LevelUp,
     private db: Database,
     private rollupProvider: RollupProvider,
-    private rollupProviderExplorer: RollupProviderExplorer,
-    private blockSource: BlockSource,
+    private rollupProviderExplorer: RollupProviderExplorer | undefined,
+    private hashPathSource: HashPathSource | undefined,
     private options: CoreSdkOptions,
   ) {
     super();
@@ -120,21 +125,22 @@ export class CoreSdk extends EventEmitter {
     const blake2s = new Blake2s(barretenberg);
     const grumpkin = new Grumpkin(barretenberg);
     const noteAlgos = new NoteAlgorithms(barretenberg);
-    const crsData = await this.getCrsData(128 * 1024);
+    const crsData = await this.getCrsData(this.options.escapeHatchMode ? 512 * 1024 : 128 * 1024);
     const numWorkers = Math.min(navigator.hardwareConcurrency || 1, 8);
     const workerPool = await WorkerPool.new(barretenberg, numWorkers);
     const pooledProverFactory = new PooledProverFactory(workerPool, crsData);
-    const joinSplitProver = new JoinSplitProver(await pooledProverFactory.createProver(128 * 1024));
-    const accountProver = new AccountProver(await pooledProverFactory.createProver(64 * 1024));
+    const joinSplitProver = new JoinSplitProver(await pooledProverFactory.createUnrolledProver(128 * 1024));
+    const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(64 * 1024));
+    const escapeHatchProver = new EscapeHatchProver(await pooledProverFactory.createProver(512 * 1024));
 
     this.blake2s = blake2s;
     this.userFactory = new UserDataFactory(grumpkin);
-    this.userStateFactory = new UserStateFactory(grumpkin, blake2s, this.db, this.blockSource);
+    this.userStateFactory = new UserStateFactory(grumpkin, blake2s, this.db, this.rollupProvider);
     this.workerPool = workerPool;
-    this.txsState = new TxsState(this.rollupProviderExplorer);
     this.worldState = new WorldState(this.leveldb, pedersen, blake2s);
-    this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, grumpkin, noteAlgos);
-    this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, blake2s);
+    if (this.rollupProviderExplorer) {
+      this.txsState = new TxsState(this.rollupProviderExplorer);
+    }
 
     await this.worldState.init();
 
@@ -147,8 +153,23 @@ export class CoreSdk extends EventEmitter {
     this.sdkStatus.latestRollupId = +(await this.leveldb.get('latestRollupId').catch(() => -1));
 
     await this.initUserStates();
-    await this.createJoinSplitProvingKey(joinSplitProver);
-    await this.createAccountProvingKey(accountProver);
+
+    if (!this.options.escapeHatchMode) {
+      this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, grumpkin, noteAlgos);
+      this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, blake2s);
+      await this.createJoinSplitProvingKey(joinSplitProver);
+      await this.createAccountProvingKey(accountProver);
+    } else {
+      this.escapeHatchProofCreator = new EscapeHatchProofCreator(
+        escapeHatchProver,
+        this.worldState,
+        grumpkin,
+        blake2s,
+        noteAlgos,
+        this.hashPathSource!,
+      );
+      await this.createEscapeHatchProvingKey(escapeHatchProver);
+    }
 
     this.updateInitState(SdkInitState.INITIALIZED);
   }
@@ -248,6 +269,13 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
+  private async createEscapeHatchProvingKey(escapeProver: EscapeHatchProver) {
+    const start = new Date().getTime();
+    this.logInitMsgAndDebug('Computing escape hatch proving key...');
+    await escapeProver.computeKey();
+    debug(`complete: ${new Date().getTime() - start}ms`);
+  }
+
   public async destroy() {
     await this.workerPool?.destroy();
     await this.stopReceivingBlocks();
@@ -308,12 +336,12 @@ export class CoreSdk extends EventEmitter {
     }
 
     this.blockQueue = new MemoryFifo<Block>();
-    this.blockSource.on('block', b => this.blockQueue.put(b));
+    this.rollupProvider.on('block', b => this.blockQueue.put(b));
     this.processBlocksPromise = this.processBlockQueue();
 
     const syncedToBlock = await this.leveldb.get('syncedToBlock').catch(() => -1);
-    await this.blockSource.start(+syncedToBlock + 1);
-    this.sdkStatus.latestRollupId = this.blockSource.getLatestRollupId();
+    await this.rollupProvider.start(+syncedToBlock + 1);
+    this.sdkStatus.latestRollupId = this.rollupProvider.getLatestRollupId();
 
     this.userStates.forEach(us => us.startSync());
 
@@ -321,8 +349,8 @@ export class CoreSdk extends EventEmitter {
   }
 
   private async stopReceivingBlocks() {
-    this.blockSource.stop();
-    this.blockSource.removeAllListeners();
+    this.rollupProvider.stop();
+    this.rollupProvider.removeAllListeners();
     this.blockQueue?.cancel();
     await this.processBlocksPromise;
     this.processBlocksPromise = undefined;
@@ -344,7 +372,7 @@ export class CoreSdk extends EventEmitter {
 
       const rollup = RollupProofData.fromBuffer(block.rollupProofData);
       const rollupId = rollup.rollupId;
-      const latestRollupId = this.blockSource.getLatestRollupId();
+      const latestRollupId = this.rollupProvider.getLatestRollupId();
       await this.leveldb.put('syncedToRollup', rollupId.toString());
       await this.leveldb.put('latestRollupId', latestRollupId.toString());
       await this.leveldb.put('syncedToBlock', block.blockNum.toString());
@@ -421,7 +449,8 @@ export class CoreSdk extends EventEmitter {
     const publicOutput = ['WITHDRAW', 'PUBLIC_TRANSFER'].includes(action) ? value : BigInt(0);
     const newNoteValue = ['DEPOSIT', 'TRANSFER'].includes(action) ? value : BigInt(0);
 
-    const proofOutput = await this.joinSplitProofCreator.createProof(
+    const proofCreator = this.options.escapeHatchMode ? this.escapeHatchProofCreator : this.joinSplitProofCreator;
+    const proofOutput = await proofCreator.createProof(
       userState,
       publicInput,
       publicOutput,
@@ -433,12 +462,9 @@ export class CoreSdk extends EventEmitter {
     );
 
     await this.rollupProvider.sendProof(proofOutput);
-
-    const proofData = new JoinSplitProof(proofOutput.proofData, proofOutput.viewingKeys);
-    const txHash = proofData.getTxId();
     const userTx: UserTx = {
       action,
-      txHash,
+      txHash: proofOutput.txId,
       userId,
       value,
       recipient: noteRecipient ? noteRecipient.toBuffer() : outputOwner!.toBuffer(),
@@ -448,7 +474,7 @@ export class CoreSdk extends EventEmitter {
     await this.db.addUserTx(userTx);
     this.emit(CoreSdkEvent.UPDATED_USER_STATE, userTx.userId);
     this.emit(SdkEvent.UPDATED_USER_STATE, userTx.userId);
-    return txHash;
+    return proofOutput.txId;
   }
 
   public async getAddressFromAlias(alias: string) {
@@ -549,6 +575,9 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async createAccount(userId: Buffer, alias: string, newSigningPublicKey?: GrumpkinAddress) {
+    if (this.options.escapeHatchMode) {
+      throw new Error('Account modifications not supported in escape hatch mode.');
+    }
     const userState = this.getUserState(userId);
     if (!userState) {
       throw new Error(`Unknown user: ${userId.toString('hex')}`);

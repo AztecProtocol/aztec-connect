@@ -249,18 +249,3 @@ export async function createEscapeProof(amount: number, withdrawalAddress: EthAd
     sigIndexes,
   };
 }
-
-export async function createSecondEscapeProof(amount: number, withdrawalAddress: EthAddress) {
-  const id: number = 0x02;
-  const numInner: number = 0x01;
-  const innerProof = await innerProofData(false, amount, withdrawalAddress);
-
-  // withdraws do not require signature
-  const signature: Buffer = Buffer.alloc(32);
-  const sigIndexes = [0]; // first index corresponds to first tx
-  return {
-    proofData: Buffer.concat([...publicInputData(id, 3, numInner, 0), innerProof]),
-    signatures: [signature],
-    sigIndexes,
-  };
-}

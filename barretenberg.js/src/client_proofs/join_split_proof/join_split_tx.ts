@@ -1,9 +1,9 @@
 import { toBufferBE } from 'bigint-buffer';
-import { Note } from '../note';
-import { Signature } from '../signature';
+import { EthAddress, GrumpkinAddress } from '../../address';
 import { HashPath } from '../../merkle_tree';
 import { numToUInt32BE } from '../../serialize';
-import { EthAddress, GrumpkinAddress } from '../../address';
+import { Note } from '../note';
+import { Signature } from '../signature';
 
 export class JoinSplitTx {
   constructor(

@@ -48,8 +48,6 @@ export interface ActionState {
   error?: Error;
 }
 
-export type TxHash = Buffer;
-
 export interface SdkStatus {
   chainId: number;
   rollupContractAddress: EthAddress;

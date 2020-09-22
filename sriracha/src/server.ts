@@ -59,31 +59,35 @@ export default class Server implements HashPathSource {
     await writeFileAsync('./data/state', JSON.stringify(this.serverState));
   }
 
-  public async getHashPath(treeIndex: number, index: Buffer) {
-    const nullBigInt = nullifierBufferToIndex(index);
+  public async getTreeState(treeIndex: number) {
+    const size = this.worldStateDb.getSize(treeIndex);
+    const root = this.worldStateDb.getRoot(treeIndex);
+    return { size, root };
+  }
+
+  public async getHashPath(treeIndex: number, index: bigint) {
     return new Promise<HashPath>(resolve => {
-      this.queue.put(async () => resolve(await this.worldStateDb.getHashPath(treeIndex, nullBigInt)));
+      this.queue.put(async () => resolve(await this.worldStateDb.getHashPath(treeIndex, index)));
     });
   }
 
-  public async getHashPaths(treeIndex: number, nullifiers: Buffer[]) {
-    const nullifierIndices = nullifiers.map(n => nullifierBufferToIndex(n));
+  public async getHashPaths(treeIndex: number, additions: { index: bigint; value: Buffer }[]) {
     return new Promise<GetHashPathsResponse>(resolve => {
-      this.queue.put(async () => resolve(await this.computeTempHashPaths(treeIndex, nullifierIndices)));
+      this.queue.put(async () => resolve(await this.computeTempHashPaths(treeIndex, additions)));
     });
   }
 
-  public async computeTempHashPaths(treeIndex: number, nullifiers: bigint[]) {
+  public async computeTempHashPaths(treeIndex: number, additions: { index: bigint; value: Buffer }[]) {
     const oldHashPaths: HashPath[] = [];
     const newHashPaths: HashPath[] = [];
     const newRoots: Buffer[] = [];
     const oldRoot: Buffer = this.worldStateDb.getRoot(treeIndex);
 
-    for (const nullifier of nullifiers) {
-      const oldHashPath = await this.worldStateDb.getHashPath(treeIndex, nullifier);
+    for (const { index, value } of additions) {
+      const oldHashPath = await this.worldStateDb.getHashPath(treeIndex, index);
       oldHashPaths.push(oldHashPath);
-      await this.addNullifier(nullifier);
-      const newHashPath = await this.worldStateDb.getHashPath(treeIndex, nullifier);
+      await this.worldStateDb.put(treeIndex, index, value);
+      const newHashPath = await this.worldStateDb.getHashPath(treeIndex, index);
       newHashPaths.push(newHashPath);
       newRoots.push(this.worldStateDb.getRoot(treeIndex));
     }
@@ -91,10 +95,6 @@ export default class Server implements HashPathSource {
     await this.worldStateDb.rollback();
 
     return { oldHashPaths, newHashPaths, newRoots, oldRoot };
-  }
-
-  private async addNullifier(nullifier: bigint) {
-    await this.worldStateDb.put(1, nullifier, toBufferBE(1n, 64));
   }
 
   private async handleBlock(block: Block) {

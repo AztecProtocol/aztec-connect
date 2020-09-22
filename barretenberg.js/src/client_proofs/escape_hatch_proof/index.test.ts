@@ -137,15 +137,11 @@ describe('escape_hatch_proof', () => {
     const inputOwner = EthAddress.randomAddress();
     const outputOwner = EthAddress.randomAddress();
 
-    const accountIndex = 2; // index at which will be inserted into data tree
+    const accountIndex = 0;
+    const accountNote = Buffer.concat([inputNotes[0].ownerPubKey.x(), pubKey.x()]);
     const accountNotePath = await worldStateDb.getHashPath(dataTreeId, BigInt(accountIndex));
-    const accountNote = new Note(pubKey, createNoteSecret(), BigInt(0));
-    const accountNoteEnc = await noteAlgos.encryptNote(accountNote);
-    const accountNullifier = nullifierBufferToIndex(
-      computeNullifier(accountNoteEnc, accountIndex, accountNote.secret, blake2s, true),
-    );
-
-    const accountNullifierPath = await worldStateDb.getHashPath(nullifierTreeId, accountNullifier);
+    const accountNullifier = nullifierBufferToIndex(blake2s.hashToField(accountNote));
+    const accountNullifierPath = await worldStateDb.getHashPath(1, accountNullifier);
 
     // Get value note nullifier data
     const oldNullifierRoot = worldStateDb.getRoot(nullifierTreeId);
@@ -206,10 +202,10 @@ describe('escape_hatch_proof', () => {
       oldDataRootsPath,
       newDataRootsPath,
     );
-    await escapeHatchProver.computeKey(crs);
+    await escapeHatchProver.computeKey();
     debug('creating proof...');
     const start = new Date().getTime();
-    const proof = await escapeHatchProver.createEscapeHatchProof(tx);
+    const proof = await escapeHatchProver.createProof(tx);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
     await escapeHatchVerifier.computeKey(pippenger.pool[0], crs.getG2Data());

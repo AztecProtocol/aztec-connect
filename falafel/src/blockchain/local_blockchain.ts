@@ -1,5 +1,6 @@
 import { EthAddress } from 'barretenberg/address';
 import { InnerProofData, RollupProofData, VIEWING_KEY_SIZE } from 'barretenberg/rollup_proof';
+import { Proof } from 'barretenberg/rollup_provider';
 import { numToUInt32BE } from 'barretenberg/serialize';
 import { Block, Blockchain, Receipt } from 'blockchain';
 import { randomBytes } from 'crypto';
@@ -67,11 +68,11 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
   }
 
   public getRollupContractAddress() {
-    return EthAddress.ZERO.toString();
+    return EthAddress.ZERO;
   }
 
   public getTokenContractAddress() {
-    return EthAddress.ZERO.toString();
+    return EthAddress.ZERO;
   }
 
   public async start() {
@@ -103,7 +104,25 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     this.running = false;
   }
 
-  public async sendProof(proofData: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
+  public async status() {
+    const { chainId, networkOrHost } = await this.getNetworkInfo();
+
+    return {
+      chainId,
+      networkOrHost,
+      tokenContractAddress: this.getTokenContractAddress(),
+      rollupContractAddress: this.getRollupContractAddress(),
+      dataRoot: Buffer.alloc(32),
+      nullRoot: Buffer.alloc(32),
+      dataSize: this.dataStartIndex,
+    };
+  }
+
+  public async sendProof({ proofData, viewingKeys }: Proof) {
+    return this.sendRollupProof(proofData, [], [], viewingKeys);
+  }
+
+  public async sendRollupProof(proofData: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
     if (!this.running) {
       throw new Error('Blockchain is not accessible.');
     }

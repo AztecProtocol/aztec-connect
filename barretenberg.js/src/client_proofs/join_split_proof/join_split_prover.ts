@@ -1,9 +1,9 @@
 import { Transfer } from 'threads';
-import { Prover } from '../prover/prover';
+import { UnrolledProver } from '../prover';
 import { JoinSplitTx } from './join_split_tx';
 
 export class JoinSplitProver {
-  constructor(private prover: Prover) {}
+  constructor(private prover: UnrolledProver) {}
 
   public async computeKey() {
     const worker = this.prover.getWorker();
@@ -27,9 +27,9 @@ export class JoinSplitProver {
     return buf;
   }
 
-  public async createJoinSplitProof(tx: JoinSplitTx) {
-    const worker = this.prover.getWorker();
+  public async createProof(tx: JoinSplitTx) {
     const buf = tx.toBuffer();
+    const worker = this.prover.getWorker();
     const mem = await worker.call('bbmalloc', buf.length);
     await worker.transferToHeap(buf, mem);
     const proverPtr = await worker.call('join_split__new_prover', mem, buf.length);
