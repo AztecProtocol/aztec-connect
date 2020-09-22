@@ -1,7 +1,7 @@
 import { formatUnits, parseUnits } from '@ethersproject/units';
 import { EthAddress } from 'barretenberg/address';
 import { randomBytes } from 'crypto';
-import { Signer } from 'ethers';
+import { Signer } from '../signer';
 import { TokenContract } from '.';
 
 export class MockTokenContract implements TokenContract {

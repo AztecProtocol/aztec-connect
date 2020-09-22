@@ -1,7 +1,8 @@
 import { ContractTransaction } from '@ethersproject/contracts';
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
-import { Contract, Signer } from 'ethers';
+import { Contract } from 'ethers';
+import { Signer } from '../signer';
 import { TokenContract } from '.';
 import { fromErc20Units, toErc20Units } from './units';
 
@@ -60,7 +61,7 @@ export class Web3TokenContract implements TokenContract {
 
   async approve(value: bigint, signer: Signer) {
     await this.checkProviderChain();
-    const contract = new Contract(this.contractAddress.toString(), minimalERC20ABI, signer);
+    const contract = new Contract(this.contractAddress.toString(), minimalERC20ABI, signer as any);
     const res = (await contract.approve(this.rollupContractAddress.toString(), value)) as ContractTransaction;
     const receipt = await res.wait(this.confirmations);
     return Buffer.from(receipt.transactionHash.slice(2), 'hex');
@@ -68,7 +69,7 @@ export class Web3TokenContract implements TokenContract {
 
   async mint(value: bigint, signer: Signer) {
     await this.checkProviderChain();
-    const contract = new Contract(this.contractAddress.toString(), minimalERC20ABI, signer);
+    const contract = new Contract(this.contractAddress.toString(), minimalERC20ABI, signer as any);
     const account = await signer.getAddress();
     const res = await contract.mint(account, value);
     const receipt = await res.wait(this.confirmations);

@@ -1,5 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
-import { Signer } from 'ethers';
+import { Signer } from '../signer';
 
 export * from './web3_token_contract';
 export * from './mock_token_contract';
