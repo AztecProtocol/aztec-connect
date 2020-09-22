@@ -27,15 +27,14 @@ export class Web3TokenContract implements TokenContract {
     private chainId: number,
   ) {
     this.contract = new Contract(contractAddress.toString(), minimalERC20ABI, ethersProvider);
-  }
 
-  async init() {
     // If ganache, just 1 confirmation.
-    const { chainId } = await this.ethersProvider.getNetwork();
     if (chainId === 1337) {
       this.confirmations = 1;
     }
+  }
 
+  async init() {
     const decimals = await this.contract.decimals();
     this.decimals = +decimals;
   }
