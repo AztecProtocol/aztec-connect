@@ -1,11 +1,7 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { randomBytes } from 'crypto';
-
-export interface Signer {
-  signMessage(message: string | Buffer): Promise<string>;
-  getAddress(): Promise<string>;
-}
+import { Signer } from './signer';
 
 export interface UserData {
   id: Buffer;
