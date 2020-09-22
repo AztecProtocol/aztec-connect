@@ -21,14 +21,12 @@ export class NoteAlgorithms {
     return { success, value };
   }
 
-  public sign4Notes(notes: Note[], pk: Buffer, outputOwner: Buffer | undefined) {
+  public sign(notes: Note[], pk: Buffer, outputOwner: Buffer) {
     const buf = Buffer.concat(notes.map(n => n.toBuffer()));
     this.wasm.transferToHeap(pk, 0);
-    this.wasm.transferToHeap(buf, 32);
-    if (outputOwner) {
-      this.wasm.transferToHeap(outputOwner, 0);
-    }
-    this.wasm.call('notes__sign_4_notes', 32, 0, 0);
+    this.wasm.transferToHeap(Buffer.concat([Buffer.alloc(12), outputOwner]), 32);
+    this.wasm.transferToHeap(buf, 64);
+    this.wasm.call('notes__sign_4_notes', 0, 32, 64);
     const sig = Buffer.from(this.wasm.sliceMemory(0, 64));
     return new Signature(sig.slice(0, 32), sig.slice(32, 64));
   }
