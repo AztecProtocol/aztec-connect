@@ -31,7 +31,7 @@ export type SdkOptions = {
   debug?: boolean;
 } & CoreSdkOptions;
 
-async function sdkFactory(hostStr: string, ethereumProvider: EthereumProvider, options: SdkOptions) {
+async function sdkFactory(hostStr: string, options: SdkOptions, ethereumProvider?: EthereumProvider) {
   const host = new URL(hostStr);
   const leveldb = getLevelDb();
   const db = new DexieDatabase();
@@ -50,6 +50,9 @@ async function sdkFactory(hostStr: string, ethereumProvider: EthereumProvider, o
     const rollupProviderExplorer = new ServerRollupProviderExplorer(host);
     return new CoreSdk(leveldb, db, rollupProvider, rollupProviderExplorer, undefined, options);
   } else {
+    if (!ethereumProvider) {
+      throw new Error('Please provide an ethereum provider.');
+    }
     const srirachaProvider = new SrirachaProvider(hostStr);
     const provider = new ethers.providers.Web3Provider(ethereumProvider);
     const { rollupContractAddress } = await srirachaProvider.status();
@@ -64,10 +67,10 @@ async function sdkFactory(hostStr: string, ethereumProvider: EthereumProvider, o
  * share events and synchronise instances. Only one instance will be the "leader" and that instance will receive
  * blocks from the block source and update the (shared) world state.
  */
-export async function createSdk(hostStr: string, ethereumProvider: EthereumProvider, options: SdkOptions = {}) {
+export async function createSdk(hostStr: string, options: SdkOptions = {}, ethereumProvider?: EthereumProvider) {
   options = { syncInstances: true, saveProvingKey: true, ...options };
 
-  const sdk = await sdkFactory(hostStr, ethereumProvider, options);
+  const sdk = await sdkFactory(hostStr, options, ethereumProvider);
 
   if (!options.syncInstances) {
     // We're not going to sync across multiple instances. We should start recieving blocks once initialized.
