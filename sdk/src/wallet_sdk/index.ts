@@ -1,10 +1,9 @@
-import { Web3Provider } from '@ethersproject/providers';
+import { Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
-import { EthereumProvider } from '../ethereum_provider';
 import { Action, AssetId, SdkEvent, TxHash } from '../sdk';
 import { Signer } from '../signer';
 import { TokenContract, Web3TokenContract } from '../token_contract';
@@ -19,12 +18,10 @@ const debug = createDebug('bb:wallet_sdk');
 
 export class WalletSdk extends EventEmitter {
   private core!: CoreSdk;
-  private web3Provider: Web3Provider;
   private tokenContracts: TokenContract[] = [];
 
-  constructor(ethereumProvider: EthereumProvider) {
+  constructor(private provider: Provider) {
     super();
-    this.web3Provider = new Web3Provider(ethereumProvider);
   }
 
   public async init(serverUrl: string, sdkOptions?: SdkOptions) {
@@ -38,16 +35,14 @@ export class WalletSdk extends EventEmitter {
 
     const { chainId, networkOrHost, rollupContractAddress, tokenContractAddress } = await this.core.getRemoteStatus();
 
-    const { chainId: ethProviderChainId } = await this.web3Provider.getNetwork();
+    const { chainId: ethProviderChainId } = await this.provider.getNetwork();
     if (chainId !== ethProviderChainId) {
-      throw new Error(
-        `Ethereum provider chainId ${ethProviderChainId} does not match rollup provider chainId ${chainId}.`,
-      );
+      throw new Error(`Provider chainId ${ethProviderChainId} does not match rollup provider chainId ${chainId}.`);
     }
 
     this.tokenContracts[AssetId.DAI] =
       networkOrHost !== 'development'
-        ? new Web3TokenContract(this.web3Provider, tokenContractAddress, rollupContractAddress, chainId)
+        ? new Web3TokenContract(this.provider, tokenContractAddress, rollupContractAddress, chainId)
         : new MockTokenContract();
     await Promise.all(this.tokenContracts.map(tc => tc.init()));
 

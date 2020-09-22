@@ -34,8 +34,8 @@ export class EthereumSdk extends EventEmitter {
 
   constructor(ethereumProvider: EthereumProvider) {
     super();
-    this.core = new WalletSdk(ethereumProvider);
     this.web3Provider = new Web3Provider(ethereumProvider);
+    this.core = new WalletSdk(this.web3Provider);
   }
 
   private async updateLocalAccounts() {
