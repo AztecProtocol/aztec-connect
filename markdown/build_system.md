@@ -17,6 +17,13 @@ Circle CI is only needed to orchestrate the workflow. There are scripts that are
 
 There are two ECR (elastic container repository) instances used in two regions (`eu-west2` and `us-east2`). As containers are built, the results are stored in `us-east2` (deemed to be generally close to Circle CI) and these are considered to be caches that can be reused in subsequent builds. In the event of a deploy, the containers are published in `eu-west2` where all infrastructure is currently hosted. These are considered our live production builds.
 
+We do not use Circle CI's "docker layer caching" feature, because:
+
+- There is no guarantee the cache will be available between workflow steps or builds.
+- There is not one single cache, but multiple caches which are randomly attached to your job.
+
+For this reason it's impossible to use it for anything useful.
+
 ### config.yml
 
 The Circle CI config file. Each project has its own entry and will call one or more of the scripts, usually `build`. There is a deploy stage that calls the `deploy` script for each project. A workflow graph is established ensuring that dependent projects are built in the right order, and allowing the developer to see the build graph in the dashboard.
@@ -25,7 +32,7 @@ The Circle CI config file. Each project has its own entry and will call one or m
 
 Each project will call this after checking out the code. It writes several environment varables to a bash script that is executed at the start of each step in a job. An important variable is determining the base commit from which we can establish which files have changed.
 
-### changed <path>
+### changed \<path>
 
 Returns true if the file at path has changed since the base commit.
 
@@ -35,7 +42,7 @@ Run inside a given project, will return true if any of the files changed since t
 
 This could be improved in the future.
 
-### ensure_repo <repository name> <region>
+### ensure_repo \<repository name> \<region>
 
 Logs the shell into the ECR instance at the given region, establishes if the given repository exists and creates it if it doesn't. If the lifecycle policy changed (determines when images should be automatically deleted), reapplies the policy.
 
@@ -43,11 +50,11 @@ Logs the shell into the ECR instance at the given region, establishes if the giv
 
 Downloads and installs `terraform` if it's not installed.
 
-### image_exists <repository> <tag>
+### image_exists \<repository> \<tag>
 
 Returns true if the given image exists in the current ECR.
 
-### build <image>
+### build \<image>
 
 - Logs into cache ECR, and ensures repository exists.
 - Checks if current project needs to be rebuilt as per `.rebuild_patterns`, or if no master build exists.
@@ -59,7 +66,7 @@ Returns true if the given image exists in the current ECR.
 - Push the image with two tags, one associated with the branch (used for priming caches in subsequent builds), and one associated with the commit (used for deploying).
 - Validate any terraform that may exist.
 
-### deploy <image>
+### deploy \<image>
 
 - Logs into cache ECR.
 - Pushes new master build to cache.
