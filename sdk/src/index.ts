@@ -5,5 +5,6 @@ export * from './user';
 export * from './user_tx';
 export * from './wallet_sdk';
 export * from './web_sdk';
+export * from 'barretenberg/address';
 export * from 'barretenberg/rollup_provider';
 export * from 'barretenberg/fifo';
