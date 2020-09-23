@@ -70,7 +70,7 @@ export class Web3TokenContract implements TokenContract {
     await this.checkProviderChain();
     const signer = this.ethersProvider.getSigner(account.toString());
     const contract = new Contract(this.contractAddress.toString(), minimalERC20ABI, signer);
-    const res = await contract.mint(account, value);
+    const res = await contract.mint(account.toString(), value);
     const receipt = await res.wait(this.confirmations);
     return Buffer.from(receipt.transactionHash.slice(2), 'hex');
   }
