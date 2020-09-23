@@ -8,6 +8,7 @@ import { PooledProverFactory } from 'barretenberg/client_proofs/prover';
 import { Crs } from 'barretenberg/crs';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
+import { Schnorr } from 'barretenberg/crypto/schnorr';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { RollupProofData } from 'barretenberg/rollup_proof';
@@ -25,7 +26,8 @@ import { AccountProofCreator } from '../proofs/account_proof_creator';
 import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
 import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus } from '../sdk';
-import { Signer } from '../signer';
+import { EthereumSigner, Signer } from '../signer';
+import { SchnorrSigner } from '../signer';
 import { TxsState } from '../txs_state';
 import { KeyPair, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
@@ -78,6 +80,7 @@ export class CoreSdk extends EventEmitter {
   private actionState?: ActionState;
   private processBlocksPromise?: Promise<void>;
   private blake2s!: Blake2s;
+  private schnorr!: Schnorr;
 
   constructor(
     private leveldb: LevelUp,
@@ -106,11 +109,16 @@ export class CoreSdk extends EventEmitter {
     const numWorkers = Math.min(navigator.hardwareConcurrency || 1, 8);
     const workerPool = await WorkerPool.new(barretenberg, numWorkers);
     const pooledProverFactory = new PooledProverFactory(workerPool, crsData);
-    const joinSplitProver = new JoinSplitProver(await pooledProverFactory.createUnrolledProver(128 * 1024));
-    const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(64 * 1024));
+    const joinSplitProver = new JoinSplitProver(
+      await pooledProverFactory.createUnrolledProver(128 * 1024),
+      pedersen,
+      noteAlgos,
+    );
+    const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(64 * 1024), pedersen);
     const escapeHatchProver = new EscapeHatchProver(await pooledProverFactory.createProver(512 * 1024));
 
     this.blake2s = blake2s;
+    this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(grumpkin);
     this.userStateFactory = new UserStateFactory(grumpkin, blake2s, this.db, this.rollupProvider);
     this.workerPool = workerPool;
@@ -133,7 +141,12 @@ export class CoreSdk extends EventEmitter {
     await this.initUserStates();
 
     if (!this.options.escapeHatchMode) {
-      this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, grumpkin, noteAlgos);
+      this.joinSplitProofCreator = new JoinSplitProofCreator(
+        joinSplitProver,
+        this.worldState,
+        grumpkin,
+        joinSplitProver,
+      );
       this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, blake2s);
       await this.createJoinSplitProvingKey(joinSplitProver);
       await this.createAccountProvingKey(accountProver);
@@ -143,6 +156,7 @@ export class CoreSdk extends EventEmitter {
         this.worldState,
         grumpkin,
         blake2s,
+        joinSplitProver,
         noteAlgos,
         this.hashPathSource!,
       );
@@ -408,9 +422,10 @@ export class CoreSdk extends EventEmitter {
     userId: Buffer,
     action: UserTxAction,
     value: bigint,
+    signer: Signer,
+    ethSigner?: EthereumSigner,
     noteRecipient?: GrumpkinAddress,
     outputOwner?: EthAddress,
-    signer?: Signer,
   ) {
     if (!noteRecipient && !outputOwner) {
       throw new Error('Must provide either a note recipient or an output eth address.');
@@ -432,10 +447,11 @@ export class CoreSdk extends EventEmitter {
       publicInput,
       publicOutput,
       newNoteValue,
-      user,
+      signer,
+      user.publicKey,
       noteRecipient,
       outputOwner,
-      signer,
+      ethSigner,
     );
 
     await this.rollupProvider.sendProof(proofOutput);
@@ -457,26 +473,6 @@ export class CoreSdk extends EventEmitter {
   public async getAddressFromAlias(alias: string) {
     const aliasHash = computeAliasNullifier(alias, this.blake2s);
     return await this.db.getAliasAddress(aliasHash);
-  }
-
-  public async deposit(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: GrumpkinAddress) {
-    const action = () => this.createProof(assetId, userId, 'DEPOSIT', value, to, undefined, signer);
-    return this.performAction(Action.DEPOSIT, value, userId, to, action);
-  }
-
-  public async withdraw(assetId: AssetId, userId: Buffer, value: bigint, to: EthAddress) {
-    const action = () => this.createProof(assetId, userId, 'WITHDRAW', value, undefined, to);
-    return this.performAction(Action.WITHDRAW, value, userId, to, action);
-  }
-
-  public async transfer(assetId: AssetId, userId: Buffer, value: bigint, to: GrumpkinAddress) {
-    const action = () => this.createProof(assetId, userId, 'TRANSFER', value, to);
-    return this.performAction(Action.TRANSFER, value, userId, to, action);
-  }
-
-  public async publicTransfer(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: EthAddress) {
-    const action = () => this.createProof(assetId, userId, 'PUBLIC_TRANSFER', value, undefined, to, signer);
-    return this.performAction(Action.PUBLIC_TRANSFER, value, userId, to, action);
   }
 
   public async performAction(
@@ -511,11 +507,15 @@ export class CoreSdk extends EventEmitter {
     return this.actionState ? !this.actionState.txHash && !this.actionState.error : false;
   }
 
+  public createSchnorrSigner(privateKey: Buffer) {
+    return new SchnorrSigner(this.schnorr, privateKey);
+  }
+
   public newKeyPair(): KeyPair {
     return this.userFactory.newKeyPair();
   }
 
-  public async createAccount(userId: Buffer, alias: string, newSigningPublicKey?: GrumpkinAddress) {
+  public async createAccount(userId: Buffer, signer: Signer, alias: string, newSigningPublicKey?: GrumpkinAddress) {
     if (this.options.escapeHatchMode) {
       throw new Error('Account modifications not supported in escape hatch mode.');
     }
@@ -527,7 +527,8 @@ export class CoreSdk extends EventEmitter {
 
     const action = async () => {
       const rawProofData = await this.accountProofCreator.createProof(
-        userState,
+        signer,
+        publicKey,
         newSigningPublicKey,
         undefined,
         newSigningPublicKey ? publicKey : undefined,
@@ -601,7 +602,7 @@ export class CoreSdk extends EventEmitter {
   public async addUser(privateKey: Buffer) {
     let user = await this.db.getUserByPrivateKey(privateKey);
     if (user) {
-      throw new Error(`User already exists: ${user.id.toString('hex')}`);
+      return user;
     }
 
     user = await this.userFactory.createUser(privateKey);

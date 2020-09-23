@@ -8,10 +8,7 @@ export class Schnorr {
     this.wasm.transferToHeap(pk, 64);
     this.wasm.transferToHeap(msg, 96);
     this.wasm.call('construct_signature', 96, msg.length, 64, 0, 32);
-    const m = this.wasm.sliceMemory(0, 64);
-    const s = Buffer.from(m.slice(0, 32));
-    const e = Buffer.from(m.slice(32, 64));
-    return new Signature(s, e);
+    return new Signature(Buffer.from(this.wasm.sliceMemory(0, 64)));
   }
 
   public computePublicKey(pk: Uint8Array) {
@@ -20,10 +17,10 @@ export class Schnorr {
     return Buffer.from(this.wasm.sliceMemory(32, 96));
   }
 
-  public verifySignature(msg: Uint8Array, pubKey: Uint8Array, sig: { s: Uint8Array; e: Uint8Array }) {
+  public verifySignature(msg: Uint8Array, pubKey: Uint8Array, sig: Signature) {
     this.wasm.transferToHeap(pubKey, 0);
-    this.wasm.transferToHeap(sig.s, 64);
-    this.wasm.transferToHeap(sig.e, 96);
+    this.wasm.transferToHeap(sig.s(), 64);
+    this.wasm.transferToHeap(sig.e(), 96);
     this.wasm.transferToHeap(msg, 128);
     return this.wasm.call('verify_signature', 128, msg.length, 0, 64, 96) ? true : false;
   }

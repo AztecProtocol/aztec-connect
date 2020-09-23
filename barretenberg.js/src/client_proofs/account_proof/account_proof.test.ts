@@ -51,12 +51,12 @@ describe('account proof', () => {
 
     const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
 
-    accountProver = new AccountProver(prover);
-    accountVerifier = new AccountVerifier();
-
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
     schnorr = new Schnorr(barretenberg);
+
+    accountProver = new AccountProver(prover, pedersen);
+    accountVerifier = new AccountVerifier();
 
     await accountProver.computeKey();
     await accountVerifier.computeKey(pippenger.pool[0], crs.getG2Data());
@@ -93,7 +93,16 @@ describe('account proof', () => {
     const alias = Buffer.from('user_zero');
     const aliasField = blake2s.hashToField(alias);
 
-    const accountRoot = await tree.getHashPath(0);
+    const accountPath = await tree.getHashPath(0);
+
+    const message = accountProver.getSignatureMessage(
+      user.publicKey,
+      signingKey0.publicKey,
+      signingKey1.publicKey,
+      aliasField,
+      user.publicKey,
+    );
+    const signature = schnorr.constructSignature(message, user.privateKey);
 
     const tx = new AccountTx(
       merkleRoot,
@@ -107,12 +116,13 @@ describe('account proof', () => {
       user.publicKey,
       0,
       user.publicKey,
-      accountRoot,
+      accountPath,
+      signature,
     );
 
     debug('creating proof...');
     const start = new Date().getTime();
-    const proof = await accountProver.createAccountProof(tx, user.privateKey);
+    const proof = await accountProver.createAccountProof(tx);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
 

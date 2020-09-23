@@ -1,7 +1,7 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { randomBytes } from 'crypto';
-import { Signer } from './signer';
+import { EthereumSigner } from './signer';
 
 export interface UserData {
   id: Buffer;
@@ -17,7 +17,7 @@ export interface KeyPair {
   privateKey: Buffer;
 }
 
-export const deriveGrumpkinPrivateKey = async (signer: Signer) => {
+export const deriveGrumpkinPrivateKey = async (signer: EthereumSigner) => {
   const sig = await signer.signMessage('Link Aztec account.');
   return Buffer.from(sig.slice(2)).slice(0, 32);
 };

@@ -27,7 +27,6 @@ export class NoteAlgorithms {
     this.wasm.transferToHeap(Buffer.concat([Buffer.alloc(12), outputOwner]), 32);
     this.wasm.transferToHeap(buf, 64);
     this.wasm.call('notes__sign_4_notes', 0, 32, 64);
-    const sig = Buffer.from(this.wasm.sliceMemory(0, 64));
-    return new Signature(sig.slice(0, 32), sig.slice(32, 64));
+    return new Signature(Buffer.from(this.wasm.sliceMemory(0, 64)));
   }
 }

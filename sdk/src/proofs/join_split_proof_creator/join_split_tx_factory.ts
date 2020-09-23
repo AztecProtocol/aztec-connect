@@ -1,14 +1,13 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { JoinSplitTx } from 'barretenberg/client_proofs/join_split_proof';
+import { JoinSplitTx, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
 import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
-import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
-import { UserData } from '../../user';
+import { Signer } from '../../signer';
 import { UserState } from '../../user_state';
 
 export class JoinSplitTxFactory {
-  constructor(private worldState: WorldState, private grumpkin: Grumpkin, private noteAlgos: NoteAlgorithms) {}
+  constructor(private worldState: WorldState, private grumpkin: Grumpkin, private prover: JoinSplitProver) {}
 
   public async createJoinSplitTx(
     userState: UserState,
@@ -16,7 +15,8 @@ export class JoinSplitTxFactory {
     publicOutput: bigint,
     assetId: number,
     newNoteValue: bigint,
-    sender: UserData,
+    signer: Signer,
+    senderPubKey: GrumpkinAddress,
     receiverPubKey?: GrumpkinAddress,
     inputOwnerAddress?: EthAddress,
     outputOwnerAddress?: EthAddress,
@@ -31,10 +31,10 @@ export class JoinSplitTxFactory {
 
     const totalNoteInputValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
     const inputNoteIndices = notes.map(n => n.index);
-    const inputNotes = notes.map(n => new Note(sender.publicKey, n.viewingKey, n.value, assetId));
+    const inputNotes = notes.map(n => new Note(senderPubKey, n.viewingKey, n.value, assetId));
     for (let i = notes.length; i < 2; ++i) {
       inputNoteIndices.push(i);
-      inputNotes.push(new Note(sender.publicKey, createNoteSecret(), BigInt(0), assetId));
+      inputNotes.push(new Note(senderPubKey, createNoteSecret(), BigInt(0), assetId));
     }
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
@@ -42,21 +42,21 @@ export class JoinSplitTxFactory {
     const newNoteOwner = receiverPubKey || GrumpkinAddress.randomAddress();
     const outputNotes = [
       new Note(newNoteOwner, createNoteSecret(), newNoteValue, assetId),
-      new Note(sender.publicKey, createNoteSecret(), changeValue, assetId),
+      new Note(senderPubKey, createNoteSecret(), changeValue, assetId),
     ];
 
-    const signature = this.noteAlgos.sign(
-      [...inputNotes, ...outputNotes],
-      sender.privateKey!,
-      outputOwnerAddress?.toBuffer() || EthAddress.ZERO.toBuffer(),
-    );
-
     const dataRoot = this.worldState.getRoot();
+
+    const inputOwner = inputOwnerAddress || EthAddress.ZERO;
+    const outputOwner = outputOwnerAddress || EthAddress.ZERO;
+
+    const message = this.prover.getSignatureMessage([...inputNotes, ...outputNotes], outputOwner);
+    const signature = await signer.signMessage(message);
 
     // For now, we will use the account key as the signing key (no account note required).
     const accountIndex = 0;
     const accountPath = await this.worldState.getHashPath(0);
-    const signingPubKey = sender.publicKey;
+    const signingPubKey = senderPubKey;
 
     const tx = new JoinSplitTx(
       publicInput,
@@ -69,8 +69,8 @@ export class JoinSplitTxFactory {
       inputNotes,
       outputNotes,
       signature,
-      inputOwnerAddress || EthAddress.ZERO,
-      outputOwnerAddress || EthAddress.ZERO,
+      inputOwner,
+      outputOwner,
       accountIndex,
       accountPath,
       signingPubKey,

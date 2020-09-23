@@ -1,9 +1,11 @@
 import { Transfer } from 'threads';
+import { GrumpkinAddress } from '../../address';
+import { Pedersen } from '../../crypto/pedersen';
 import { UnrolledProver } from '../prover';
 import { AccountTx } from './account_tx';
 
 export class AccountProver {
-  constructor(private prover: UnrolledProver) {}
+  constructor(private prover: UnrolledProver, private pedersen: Pedersen) {}
 
   public async computeKey() {
     const worker = this.prover.getWorker();
@@ -27,16 +29,13 @@ export class AccountProver {
     return buf;
   }
 
-  public async createAccountProof(tx: AccountTx, privateKey: Buffer) {
+  public async createAccountProof(tx: AccountTx) {
     const worker = this.prover.getWorker();
     const buf = tx.toBuffer();
     const txPtr = await worker.call('bbmalloc', buf.length);
     await worker.transferToHeap(buf, txPtr);
-    const pkPtr = await worker.call('bbmalloc', privateKey.length);
-    await worker.transferToHeap(privateKey, pkPtr);
-    const proverPtr = await worker.call('account__new_prover', txPtr, pkPtr);
+    const proverPtr = await worker.call('account__new_prover', txPtr);
     await worker.call('bbfree', txPtr);
-    await worker.call('bbfree', pkPtr);
     const proof = await this.prover.createProof(proverPtr);
     await worker.call('account__delete_prover', proverPtr);
     return proof;
@@ -44,5 +43,16 @@ export class AccountProver {
 
   public getProver() {
     return this.prover;
+  }
+
+  public getSignatureMessage(
+    ownerPublicKey: GrumpkinAddress,
+    newSigningPubKey1: GrumpkinAddress,
+    newSigningPubKey2: GrumpkinAddress,
+    alias: Buffer,
+    nullifiedKey: GrumpkinAddress,
+  ) {
+    const toCompress = [ownerPublicKey.x(), newSigningPubKey1.x(), newSigningPubKey2.x(), alias, nullifiedKey.x()];
+    return this.pedersen.compress_inputs(toCompress);
   }
 }

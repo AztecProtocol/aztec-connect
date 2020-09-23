@@ -17,7 +17,7 @@ export class AccountTx {
     public accountIndex: number,
     public signingPubKey: GrumpkinAddress,
     public accountPath: HashPath,
-    public signature?: Signature,
+    public signature: Signature,
   ) {}
 
   toBuffer() {
@@ -34,7 +34,7 @@ export class AccountTx {
       numToUInt32BE(this.accountIndex),
       this.signingPubKey.toBuffer(),
       this.accountPath.toBuffer(),
-      this.signature ? this.signature.toBuffer() : Buffer.alloc(64),
+      this.signature.toBuffer(),
     ]);
   }
 }

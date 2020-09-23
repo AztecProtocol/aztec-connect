@@ -1,9 +1,13 @@
 import { Transfer } from 'threads';
+import { EthAddress } from '../../address';
+import { Pedersen } from '../../crypto/pedersen';
+import { Note } from '../note';
+import { NoteAlgorithms } from '../note_algorithms';
 import { UnrolledProver } from '../prover';
 import { JoinSplitTx } from './join_split_tx';
 
 export class JoinSplitProver {
-  constructor(private prover: UnrolledProver) {}
+  constructor(private prover: UnrolledProver, private pedersen: Pedersen, private noteAlgos: NoteAlgorithms) {}
 
   public async computeKey() {
     const worker = this.prover.getWorker();
@@ -37,6 +41,15 @@ export class JoinSplitProver {
     const proof = await this.prover.createProof(proverPtr);
     await worker.call('join_split__delete_prover', proverPtr);
     return proof;
+  }
+
+  public getSignatureMessage(notes: Note[], outputOwner: EthAddress) {
+    const encryptedNotes = notes.map(note => this.noteAlgos.encryptNote(note));
+    const toCompress = [
+      ...encryptedNotes.map(note => [note.slice(0, 32), note.slice(32, 64)]).flat(),
+      Buffer.concat([Buffer.alloc(12), outputOwner.toBuffer()]),
+    ];
+    return this.pedersen.compress_inputs(toCompress);
   }
 
   public getProver() {

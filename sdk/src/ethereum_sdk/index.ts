@@ -160,8 +160,9 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${from}`);
     }
 
-    const signer = this.web3Provider.getSigner(from.toString());
-    return this.walletSdk.deposit(assetId, userId, value, signer, to);
+    const signer = this.createSchnorrSigner(from);
+    const ethSigner = this.web3Provider.getSigner(from.toString());
+    return this.walletSdk.deposit(assetId, userId, value, signer, ethSigner, to);
   }
 
   public async withdraw(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
@@ -170,7 +171,8 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${from}`);
     }
 
-    return this.walletSdk.withdraw(assetId, userId, value, to);
+    const signer = this.createSchnorrSigner(from);
+    return this.walletSdk.withdraw(assetId, userId, value, signer, to);
   }
 
   public async transfer(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
@@ -179,7 +181,8 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${from}`);
     }
 
-    return this.walletSdk.transfer(assetId, userId, value, to);
+    const signer = this.createSchnorrSigner(from);
+    return this.walletSdk.transfer(assetId, userId, value, signer, to);
   }
 
   public async publicTransfer(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
@@ -188,8 +191,9 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${from}`);
     }
 
-    const signer = this.web3Provider.getSigner(from.toString());
-    return this.walletSdk.publicTransfer(assetId, userId, value, signer, to);
+    const signer = this.createSchnorrSigner(from);
+    const ethSigner = this.web3Provider.getSigner(from.toString());
+    return this.walletSdk.publicTransfer(assetId, userId, value, signer, ethSigner, to);
   }
 
   public isBusy() {
@@ -205,7 +209,8 @@ export class EthereumSdk extends EventEmitter {
     if (!userId) {
       throw new Error(`User not found: ${ethAddress}`);
     }
-    return this.walletSdk.createAccount(userId, alias, newSigningPublicKey);
+    const signer = this.createSchnorrSigner(ethAddress);
+    return this.walletSdk.createAccount(userId, signer, alias, newSigningPublicKey);
   }
 
   public async awaitSynchronised() {
@@ -242,6 +247,16 @@ export class EthereumSdk extends EventEmitter {
       const ethAddress = this.getEthAddressByUserId(userData.id)!;
       return toEthUserData(ethAddress, userData);
     });
+  }
+
+  public createSchnorrSigner(ethAddress: EthAddress) {
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+
+    const userData = this.walletSdk.getUserData(userId);
+    return this.walletSdk.createSchnorrSigner(userData!.privateKey);
   }
 
   public async addUser(ethAddress: EthAddress) {

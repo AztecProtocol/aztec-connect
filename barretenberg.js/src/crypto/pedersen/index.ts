@@ -1,3 +1,4 @@
+import { serializeBufferArrayToVector } from '../../serialize';
 import { BarretenbergWasm } from '../../wasm';
 
 export class Pedersen {
@@ -8,5 +9,12 @@ export class Pedersen {
     this.wasm.transferToHeap(rhs, 32);
     this.wasm.call('pedersen_compress_fields', 0, 32, 64);
     return Buffer.from(this.wasm.sliceMemory(64, 96));
+  }
+
+  public compress_inputs(inputs: Buffer[]) {
+    const inputVectors = serializeBufferArrayToVector(inputs);
+    this.wasm.transferToHeap(inputVectors, 0);
+    this.wasm.call('pedersen_compress', 0, 0);
+    return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 }

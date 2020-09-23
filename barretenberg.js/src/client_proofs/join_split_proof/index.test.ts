@@ -19,6 +19,7 @@ import { randomBytes } from 'crypto';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { NoteAlgorithms } from '../note_algorithms';
 import { GrumpkinAddress, EthAddress } from '../../address';
+import { Schnorr } from '../../crypto/schnorr';
 import { UnrolledProver } from '../prover';
 
 const debug = createDebug('bb:join_split_proof_test');
@@ -32,6 +33,7 @@ describe('join_split_proof', () => {
   let joinSplitVerifier!: JoinSplitVerifier;
   let blake2s!: Blake2s;
   let pedersen!: Pedersen;
+  let schnorr!: Schnorr;
   let crs!: Crs;
   let pippenger!: PooledPippenger;
   let grumpkin!: Grumpkin;
@@ -63,12 +65,13 @@ describe('join_split_proof', () => {
 
     const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
 
-    joinSplitProver = new JoinSplitProver(prover);
-    joinSplitVerifier = new JoinSplitVerifier();
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
+    schnorr = new Schnorr(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
     noteAlgos = new NoteAlgorithms(barretenberg);
+    joinSplitProver = new JoinSplitProver(prover, pedersen, noteAlgos);
+    joinSplitVerifier = new JoinSplitVerifier();
 
     pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
   });
@@ -128,14 +131,14 @@ describe('join_split_proof', () => {
       const inputNote2Path = await tree.getHashPath(1);
       const accountNotePath = await tree.getHashPath(2);
 
-      const outputOwner = EthAddress.randomAddress();
       const inputOwner = EthAddress.randomAddress();
+      const outputOwner = EthAddress.randomAddress();
 
-      const signature = await noteAlgos.sign(
+      const sigMsg = joinSplitProver.getSignatureMessage(
         [inputNote1, inputNote2, outputNote1, outputNote2],
-        privateKey,
-        outputOwner.toBuffer(),
+        outputOwner,
       );
+      const signature = schnorr.constructSignature(sigMsg, privateKey);
 
       const tx = new JoinSplitTx(
         BigInt(0),
