@@ -1,16 +1,16 @@
 import { ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
+import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import createDebug from 'debug';
 import isNode from 'detect-node';
+import { ethers } from 'ethers';
 import { mkdirSync } from 'fs';
 import levelup from 'levelup';
+import { SrirachaProvider } from 'sriracha/hash_path_source';
 import { DexieDatabase } from '../database';
 import { EthereumProvider } from '../ethereum_provider';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
-import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
-import { SrirachaProvider } from 'sriracha/hash_path_source';
-import { ethers } from 'ethers';
 
 const debug = createDebug('bb:create_sdk');
 
@@ -28,12 +28,17 @@ function getLevelDb() {
 export type SdkOptions = {
   syncInstances?: boolean;
   clearDb?: boolean;
+  debug?: boolean;
 } & CoreSdkOptions;
 
-async function sdkFactory(hostStr: string, ethereumProvider: EthereumProvider, options: SdkOptions) {
+async function sdkFactory(hostStr: string, options: SdkOptions, ethereumProvider?: EthereumProvider) {
   const host = new URL(hostStr);
   const leveldb = getLevelDb();
   const db = new DexieDatabase();
+
+  if (options.debug) {
+    createDebug.enable('bb:*');
+  }
 
   if (options.clearDb) {
     await leveldb.clear();
@@ -43,14 +48,17 @@ async function sdkFactory(hostStr: string, ethereumProvider: EthereumProvider, o
   if (!options.escapeHatchMode) {
     const rollupProvider = new ServerRollupProvider(host);
     const rollupProviderExplorer = new ServerRollupProviderExplorer(host);
-    return new CoreSdk(ethereumProvider, leveldb, db, rollupProvider, rollupProviderExplorer, undefined, options);
+    return new CoreSdk(leveldb, db, rollupProvider, rollupProviderExplorer, undefined, options);
   } else {
+    if (!ethereumProvider) {
+      throw new Error('Please provide an ethereum provider.');
+    }
     const srirachaProvider = new SrirachaProvider(hostStr);
     const provider = new ethers.providers.Web3Provider(ethereumProvider);
     const { rollupContractAddress } = await srirachaProvider.status();
     const config = { signer: provider.getSigner(0), networkOrHost: hostStr, console: false };
     const blockchain = await EthereumBlockchain.new(config, rollupContractAddress);
-    return new CoreSdk(ethereumProvider, leveldb, db, blockchain, undefined, srirachaProvider, options);
+    return new CoreSdk(leveldb, db, blockchain, undefined, srirachaProvider, options);
   }
 }
 
@@ -59,10 +67,10 @@ async function sdkFactory(hostStr: string, ethereumProvider: EthereumProvider, o
  * share events and synchronise instances. Only one instance will be the "leader" and that instance will receive
  * blocks from the block source and update the (shared) world state.
  */
-export async function createSdk(hostStr: string, ethereumProvider: EthereumProvider, options: SdkOptions = {}) {
+export async function createSdk(hostStr: string, options: SdkOptions = {}, ethereumProvider?: EthereumProvider) {
   options = { syncInstances: true, saveProvingKey: true, ...options };
 
-  const sdk = await sdkFactory(hostStr, ethereumProvider, options);
+  const sdk = await sdkFactory(hostStr, options, ethereumProvider);
 
   if (!options.syncInstances) {
     // We're not going to sync across multiple instances. We should start recieving blocks once initialized.
@@ -95,7 +103,7 @@ export async function createSdk(hostStr: string, ethereumProvider: EthereumProvi
     sdk.on(CoreSdkEvent.UPDATED_WORLD_STATE, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_WORLD_STATE }));
     sdk.on(CoreSdkEvent.UPDATED_USERS, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_USERS }));
     sdk.on(CoreSdkEvent.UPDATED_USER_STATE, (userId: Buffer) =>
-      channel.postMessage({ name: CoreSdkEvent.UPDATED_USER_STATE, ethAddress: userId.toString('hex') }),
+      channel.postMessage({ name: CoreSdkEvent.UPDATED_USER_STATE, userId: userId.toString('hex') }),
     );
     sdk.on(CoreSdkEvent.CLEAR_DATA, () => channel.postMessage({ name: CoreSdkEvent.CLEAR_DATA }));
 

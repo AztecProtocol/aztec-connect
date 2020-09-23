@@ -3,13 +3,16 @@ import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { TxHash } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { CoreSdk } from '../core_sdk/core_sdk';
-import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
+import { SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
 import { AssetId, SdkEvent } from '../sdk';
 import { deriveGrumpkinPrivateKey, KeyPair, UserData } from '../user';
+import { WalletSdk } from '../wallet_sdk';
 import { Database, DbAccount } from './database';
 import { EthereumSdkUser } from './ethereum_sdk_user';
+
+export * from './ethereum_sdk_user';
+export * from './ethereum_sdk_user_asset';
 
 const debug = createDebug('bb:ethereum_sdk');
 
@@ -24,14 +27,15 @@ const toEthUserData = (ethAddress: EthAddress, userData: UserData): EthUserData 
 
 export class EthereumSdk extends EventEmitter {
   private db = new Database('aztec2-sdk-eth');
-  private core!: CoreSdk;
+  private core!: WalletSdk;
   private web3Provider: Web3Provider;
   private localAccounts: DbAccount[] = [];
   private pausedEvent: Map<SdkEvent, any[][]> = new Map();
 
-  constructor(private ethereumProvider: EthereumProvider) {
+  constructor(ethereumProvider: EthereumProvider) {
     super();
     this.web3Provider = new Web3Provider(ethereumProvider);
+    this.core = new WalletSdk(ethereumProvider);
   }
 
   private async updateLocalAccounts() {
@@ -78,9 +82,7 @@ export class EthereumSdk extends EventEmitter {
     queued?.forEach(args => this.forwardEvent(event, args));
   }
 
-  public async init(serverUrl: string, sdkOptions: SdkOptions) {
-    this.core = await createSdk(serverUrl, this.ethereumProvider, sdkOptions);
-
+  public async init(serverUrl: string, sdkOptions?: SdkOptions) {
     // Forward all core sdk events.
     for (const e in SdkEvent) {
       const event = (SdkEvent as any)[e];
@@ -89,7 +91,7 @@ export class EthereumSdk extends EventEmitter {
 
     await this.updateLocalAccounts();
 
-    await this.core.init();
+    await this.core.init(serverUrl, sdkOptions);
   }
 
   public async initUserStates() {
@@ -124,26 +126,6 @@ export class EthereumSdk extends EventEmitter {
     return this.core.startReceivingBlocks();
   }
 
-  /**
-   * Called when another instance of the sdk has updated the world state db.
-   */
-  public async notifyWorldStateUpdated() {
-    return this.core.notifyWorldStateUpdated();
-  }
-
-  /**
-   * Called when another instance of the sdk has updated a users state.
-   * Call the user state init function to refresh users internal state.
-   * Emit an SdkEvent to update the UI.
-   */
-  public async notifyUserStateUpdated(ethAddress: EthAddress) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
-      throw new Error(`User not found: ${ethAddress}`);
-    }
-    return this.core.notifyUserStateUpdated(userId);
-  }
-
   public async getAddressFromAlias(alias: string) {
     return this.core.getAddressFromAlias(alias);
   }
@@ -153,15 +135,17 @@ export class EthereumSdk extends EventEmitter {
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
+
     return this.core.approve(assetId, userId, value, from);
   }
 
-  public async mint(assetId: AssetId, value: bigint, from: EthAddress) {
-    const userId = this.getUserIdByEthAddress(from);
+  public async mint(assetId: AssetId, value: bigint, account: EthAddress) {
+    const userId = this.getUserIdByEthAddress(account);
     if (!userId) {
-      throw new Error(`User not found: ${from}`);
+      throw new Error(`User not found: ${account}`);
     }
-    return this.core.mint(assetId, userId, value, from);
+
+    return this.core.mint(assetId, userId, value, account);
   }
 
   public async deposit(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
@@ -179,6 +163,7 @@ export class EthereumSdk extends EventEmitter {
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
+
     return this.core.withdraw(assetId, userId, value, to);
   }
 
@@ -187,6 +172,7 @@ export class EthereumSdk extends EventEmitter {
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
+
     return this.core.transfer(assetId, userId, value, to);
   }
 
@@ -293,11 +279,11 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public async getLatestRollups(count: number) {
-    return this.core.getLatestRollups();
+    return this.core.getLatestRollups(count);
   }
 
   public async getLatestTxs(count: number) {
-    return this.core.getLatestTxs();
+    return this.core.getLatestTxs(count);
   }
 
   public async getRollup(rollupId: number) {

@@ -1,4 +1,3 @@
-import { Web3Provider } from '@ethersproject/providers';
 import { Address, EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
 import { AccountProver } from 'barretenberg/client_proofs/account_proof';
@@ -22,14 +21,11 @@ import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
 import { HashPathSource } from 'sriracha/hash_path_source';
 import { Database } from '../database';
-import { EthereumProvider } from '../ethereum_provider';
 import { AccountProofCreator } from '../proofs/account_proof_creator';
 import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
 import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus } from '../sdk';
 import { Signer } from '../signer';
-import { TokenContract, Web3TokenContract } from '../token_contract';
-import { MockTokenContract } from '../token_contract/mock_token_contract';
 import { TxsState } from '../txs_state';
 import { KeyPair, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
@@ -59,10 +55,8 @@ export interface CoreSdkOptions {
 }
 
 export class CoreSdk extends EventEmitter {
-  private ethersProvider: Web3Provider;
   private worldState!: WorldState;
   private userStates: UserState[] = [];
-  private tokenContracts: TokenContract[] = [];
   private workerPool!: WorkerPool;
   private joinSplitProofCreator!: JoinSplitProofCreator;
   private accountProofCreator!: AccountProofCreator;
@@ -86,7 +80,6 @@ export class CoreSdk extends EventEmitter {
   private blake2s!: Blake2s;
 
   constructor(
-    ethereumProvider: EthereumProvider,
     private leveldb: LevelUp,
     private db: Database,
     private rollupProvider: RollupProvider,
@@ -95,7 +88,6 @@ export class CoreSdk extends EventEmitter {
     private options: CoreSdkOptions,
   ) {
     super();
-    this.ethersProvider = new Web3Provider(ethereumProvider);
   }
 
   public async init() {
@@ -104,21 +96,6 @@ export class CoreSdk extends EventEmitter {
     }
 
     this.updateInitState(SdkInitState.INITIALIZING);
-
-    const { chainId, networkOrHost, rollupContractAddress, tokenContractAddress } = await this.getRemoteStatus();
-
-    const { chainId: ethProviderChainId } = await this.ethersProvider.getNetwork();
-    if (chainId !== ethProviderChainId) {
-      throw new Error(
-        `Ethereum provider chainId ${ethProviderChainId} does not match rollup provider chainId ${chainId}.`,
-      );
-    }
-
-    this.tokenContracts[AssetId.DAI] =
-      networkOrHost !== 'development'
-        ? new Web3TokenContract(this.ethersProvider, tokenContractAddress, rollupContractAddress, chainId)
-        : new MockTokenContract();
-    await Promise.all(this.tokenContracts.map(tc => tc.init()));
 
     const barretenberg = await BarretenbergWasm.new();
     const pedersen = new Pedersen(barretenberg);
@@ -144,6 +121,7 @@ export class CoreSdk extends EventEmitter {
 
     await this.worldState.init();
 
+    const { chainId, rollupContractAddress } = await this.getRemoteStatus();
     // If chainId is 0 (falafel is using simulated blockchain) pretend it needs to be ropsten.
     this.sdkStatus.chainId = chainId || 3;
     this.sdkStatus.rollupContractAddress = rollupContractAddress;
@@ -326,10 +304,6 @@ export class CoreSdk extends EventEmitter {
     return await this.rollupProvider.status();
   }
 
-  public getTokenContract(assetId: AssetId) {
-    return this.tokenContracts[assetId];
-  }
-
   public async startReceivingBlocks() {
     if (this.processBlocksPromise) {
       return;
@@ -426,7 +400,7 @@ export class CoreSdk extends EventEmitter {
     this.emit(SdkEvent.UPDATED_USER_STATE, userId);
   }
 
-  private async createProof(
+  public async createProof(
     assetId: AssetId,
     userId: Buffer,
     action: UserTxAction,
@@ -482,31 +456,9 @@ export class CoreSdk extends EventEmitter {
     return await this.db.getAliasAddress(aliasHash);
   }
 
-  public async approve(assetId: AssetId, userId: Buffer, value: bigint, from: EthAddress) {
-    const action = () => this.getTokenContract(assetId).approve(from, value);
-    const txHash = await this.performAction(
-      Action.APPROVE,
-      value,
-      userId,
-      this.sdkStatus.rollupContractAddress,
-      action,
-    );
-    this.emit(SdkEvent.UPDATED_USER_STATE, userId);
-    return txHash;
-  }
-
-  public async mint(assetId: AssetId, userId: Buffer, value: bigint, to: EthAddress) {
-    const action = () => this.getTokenContract(assetId).mint(to, value);
-    const txHash = await this.performAction(Action.MINT, value, userId, to, action);
-    this.emit(SdkEvent.UPDATED_USER_STATE, userId);
-    return txHash;
-  }
-
   public async deposit(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: GrumpkinAddress) {
-    const from = EthAddress.fromString(await signer.getAddress());
-    const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
     const action = () => this.createProof(assetId, userId, 'DEPOSIT', value, to, undefined, signer);
-    return this.performAction(Action.DEPOSIT, value, userId, to, action, validation);
+    return this.performAction(Action.DEPOSIT, value, userId, to, action);
   }
 
   public async withdraw(assetId: AssetId, userId: Buffer, value: bigint, to: EthAddress) {
@@ -520,29 +472,15 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async publicTransfer(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: EthAddress) {
-    const from = EthAddress.fromString(await signer.getAddress());
-    const validation = () => this.checkPublicBalanceAndAllowance(assetId, value, from);
     const action = () => this.createProof(assetId, userId, 'PUBLIC_TRANSFER', value, undefined, to, signer);
-    return this.performAction(Action.PUBLIC_TRANSFER, value, userId, to, action, validation);
+    return this.performAction(Action.PUBLIC_TRANSFER, value, userId, to, action);
   }
 
-  private async checkPublicBalanceAndAllowance(assetId: AssetId, value: bigint, from: EthAddress) {
-    const tokenContract = this.getTokenContract(assetId);
-    const tokenBalance = await tokenContract.balanceOf(from);
-    if (tokenBalance < value) {
-      throw new Error(`Insufficient public token balance: ${tokenContract.fromErc20Units(tokenBalance)}`);
-    }
-    const allowance = await tokenContract.allowance(from);
-    if (allowance < value) {
-      throw new Error(`Insufficient allowance: ${tokenContract.fromErc20Units(allowance)}`);
-    }
-  }
-
-  private async performAction(
+  public async performAction(
     action: Action,
     value: bigint,
     userId: Buffer,
-    recipient: Address,
+    recipient: Address | string,
     fn: () => Promise<Buffer>,
     validation = async () => {},
   ) {
@@ -550,7 +488,7 @@ export class CoreSdk extends EventEmitter {
       action,
       value,
       sender: userId,
-      recipient,
+      recipient: recipient.toString(),
       created: new Date(),
     };
     this.emit(SdkEvent.UPDATED_ACTION_STATE, { ...this.actionState });

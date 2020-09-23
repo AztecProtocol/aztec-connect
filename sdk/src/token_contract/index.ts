@@ -16,9 +16,9 @@ export interface TokenContract {
 
   allowance(owner: EthAddress): Promise<bigint>;
 
-  approve(spender: EthAddress, value: bigint): Promise<TxHash>;
+  approve(value: bigint, account: EthAddress): Promise<TxHash>;
 
-  mint(account: EthAddress, value: bigint): Promise<TxHash>;
+  mint(value: bigint, account: EthAddress): Promise<TxHash>;
 
   fromErc20Units(value: bigint): string;
 
