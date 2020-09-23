@@ -32,7 +32,7 @@ export class EthereumSdk extends EventEmitter {
   private localAccounts: DbAccount[] = [];
   private pausedEvent: Map<SdkEvent, any[][]> = new Map();
 
-  constructor(ethereumProvider: EthereumProvider) {
+  constructor(private ethereumProvider: EthereumProvider) {
     super();
     this.web3Provider = new Web3Provider(ethereumProvider);
     this.core = new WalletSdk(this.web3Provider);
@@ -91,7 +91,7 @@ export class EthereumSdk extends EventEmitter {
 
     await this.updateLocalAccounts();
 
-    await this.core.init(serverUrl, sdkOptions);
+    await this.core.init(serverUrl, sdkOptions, this.ethereumProvider);
   }
 
   public async initUserStates() {

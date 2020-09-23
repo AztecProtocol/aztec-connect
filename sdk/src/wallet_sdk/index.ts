@@ -5,6 +5,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
+import { EthereumProvider } from '../ethereum_provider';
 import { Action, AssetId, SdkEvent } from '../sdk';
 import { Signer } from '../signer';
 import { TokenContract, Web3TokenContract } from '../token_contract';
@@ -25,8 +26,8 @@ export class WalletSdk extends EventEmitter {
     super();
   }
 
-  public async init(serverUrl: string, sdkOptions?: SdkOptions) {
-    this.core = await createSdk(serverUrl, sdkOptions);
+  public async init(serverUrl: string, sdkOptions?: SdkOptions, ethereumProvider?: EthereumProvider) {
+    this.core = await createSdk(serverUrl, sdkOptions, ethereumProvider);
 
     // Forward all core sdk events.
     for (const e in SdkEvent) {
