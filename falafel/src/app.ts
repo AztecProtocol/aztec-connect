@@ -10,6 +10,7 @@ import { PromiseReadable } from 'promise-readable';
 import { buildSchemaSync } from 'type-graphql';
 import { Container } from 'typedi';
 import { Connection } from 'typeorm';
+import { DefaultState, Context } from 'koa';
 import { RollupDao } from './entity/rollup';
 import { TxDao } from './entity/tx';
 import { BlockResolver, RollupResolver, TxResolver, ServerStatusResolver } from './resolver';
@@ -66,7 +67,7 @@ export function appFactory(
   serverConfig: ServerConfig,
   serverStatus: ServerStatus,
 ) {
-  const router = new Router({ prefix });
+  const router = new Router<DefaultState, Context>({ prefix });
 
   router.get('/', async (ctx: Koa.Context) => {
     ctx.body = 'OK\n';

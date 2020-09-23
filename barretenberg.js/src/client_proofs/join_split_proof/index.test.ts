@@ -128,10 +128,14 @@ describe('join_split_proof', () => {
       const inputNote2Path = await tree.getHashPath(1);
       const accountNotePath = await tree.getHashPath(2);
 
-      const signature = await noteAlgos.sign4Notes([inputNote1, inputNote2, outputNote1, outputNote2], privateKey);
-
-      const inputOwner = EthAddress.randomAddress();
       const outputOwner = EthAddress.randomAddress();
+      const inputOwner = EthAddress.randomAddress();
+
+      const signature = await noteAlgos.sign(
+        [inputNote1, inputNote2, outputNote1, outputNote2],
+        privateKey,
+        outputOwner.toBuffer(),
+      );
 
       const tx = new JoinSplitTx(
         BigInt(0),

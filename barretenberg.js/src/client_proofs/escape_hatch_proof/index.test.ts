@@ -133,9 +133,9 @@ describe('escape_hatch_proof', () => {
     const newDataPath = await worldStateDb.getHashPath(dataTreeId, BigInt(dataStartIndex));
     const newDataRoot = await worldStateDb.getRoot(dataTreeId);
 
-    const signature = await noteAlgos.sign4Notes([...inputNotes, ...outputNotes], privateKey);
     const inputOwner = EthAddress.randomAddress();
     const outputOwner = EthAddress.randomAddress();
+    const signature = await noteAlgos.sign([...inputNotes, ...outputNotes], privateKey, outputOwner.toBuffer());
 
     const accountIndex = 0;
     const accountNotePath = await worldStateDb.getHashPath(dataTreeId, BigInt(accountIndex));
