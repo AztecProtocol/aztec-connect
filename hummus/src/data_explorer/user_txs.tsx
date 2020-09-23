@@ -168,10 +168,7 @@ export const UserTxs = ({ account, app }: UserTxsProps) => {
                   <Block left="xs">
                     <CopyToClipboard text={actionState.recipient.toString()}>
                       <span style={{ position: 'relative', cursor: 'pointer' }} title="Click to copy">
-                        <Text
-                          text={`0x${actionState.recipient.toBuffer().slice(0, 5).toString('hex')}...`}
-                          size="xxs"
-                        />
+                        <Text text={`0x${actionState.recipient.toString().slice(0, 10)}...`} size="xxs" />
                       </span>
                     </CopyToClipboard>
                   </Block>
