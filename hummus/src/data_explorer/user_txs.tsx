@@ -166,9 +166,9 @@ export const UserTxs = ({ account, app }: UserTxsProps) => {
                 <FlexBox>
                   <Text text="To:" size="xxs" color={colorLight} />
                   <Block left="xs">
-                    <CopyToClipboard text={actionState.recipient.toString()}>
+                    <CopyToClipboard text={actionState.recipient}>
                       <span style={{ position: 'relative', cursor: 'pointer' }} title="Click to copy">
-                        <Text text={`0x${actionState.recipient.toString().slice(0, 10)}...`} size="xxs" />
+                        <Text text={`0x${actionState.recipient.slice(0, 10)}...`} size="xxs" />
                       </span>
                     </CopyToClipboard>
                   </Block>

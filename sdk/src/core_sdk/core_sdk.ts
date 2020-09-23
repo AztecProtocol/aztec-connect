@@ -488,7 +488,7 @@ export class CoreSdk extends EventEmitter {
       action,
       value,
       sender: userId,
-      recipient,
+      recipient: recipient.toString(),
       created: new Date(),
     };
     this.emit(SdkEvent.UPDATED_ACTION_STATE, { ...this.actionState });

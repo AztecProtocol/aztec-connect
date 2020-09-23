@@ -42,7 +42,7 @@ export interface ActionState {
   action: Action;
   value: bigint;
   sender: Buffer;
-  recipient: Address | string;
+  recipient: string;
   created: Date;
   txHash?: Buffer;
   error?: Error;
