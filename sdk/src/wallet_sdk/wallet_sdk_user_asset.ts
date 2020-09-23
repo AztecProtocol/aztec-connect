@@ -22,12 +22,12 @@ export class WalletSdkUserAsset {
     return this.sdk.getBalance(this.userId);
   }
 
-  async mint(value: bigint, signer: Signer) {
-    return this.sdk.mint(this.id, this.userId, value, signer);
+  async mint(value: bigint, account: EthAddress) {
+    return this.sdk.mint(this.id, this.userId, value, account);
   }
 
-  async approve(value: bigint, signer: Signer) {
-    return this.sdk.approve(this.id, this.userId, value, signer);
+  async approve(value: bigint, account: EthAddress) {
+    return this.sdk.approve(this.id, this.userId, value, account);
   }
 
   async deposit(value: bigint, signer: Signer, to?: GrumpkinAddress | string) {

@@ -136,8 +136,7 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${from}`);
     }
 
-    const signer = this.web3Provider.getSigner(from.toString());
-    return this.core.approve(assetId, userId, value, signer);
+    return this.core.approve(assetId, userId, value, from);
   }
 
   public async mint(assetId: AssetId, value: bigint, account: EthAddress) {
@@ -146,8 +145,7 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${account}`);
     }
 
-    const signer = this.web3Provider.getSigner(account.toString());
-    return this.core.mint(assetId, userId, value, signer);
+    return this.core.mint(assetId, userId, value, account);
   }
 
   public async deposit(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {

@@ -8,8 +8,7 @@ import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
 import { Action, AssetId, SdkEvent } from '../sdk';
 import { Signer } from '../signer';
-import { TokenContract, Web3TokenContract } from '../token_contract';
-import { MockTokenContract } from '../token_contract/mock_token_contract';
+import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';
 import { KeyPair } from '../user';
 import { WalletSdkUser } from './wallet_sdk_user';
 
@@ -89,18 +88,17 @@ export class WalletSdk extends EventEmitter {
     return this.core.getAddressFromAlias(alias);
   }
 
-  public async approve(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer) {
-    const action = () => this.getTokenContract(assetId).approve(value, signer);
+  public async approve(assetId: AssetId, userId: Buffer, value: bigint, account: EthAddress) {
+    const action = () => this.getTokenContract(assetId).approve(value, account);
     const { rollupContractAddress } = this.core.getLocalStatus();
     const txHash = await this.core.performAction(Action.APPROVE, value, userId, rollupContractAddress, action);
     this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     return txHash;
   }
 
-  public async mint(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer) {
-    const action = () => this.getTokenContract(assetId).mint(value, signer);
-    const to = await signer.getAddress();
-    const txHash = await this.core.performAction(Action.MINT, value, userId, EthAddress.fromString(to), action);
+  public async mint(assetId: AssetId, userId: Buffer, value: bigint, account: EthAddress) {
+    const action = () => this.getTokenContract(assetId).mint(value, account);
+    const txHash = await this.core.performAction(Action.MINT, value, userId, account, action);
     this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     return txHash;
   }
