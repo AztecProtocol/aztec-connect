@@ -1,4 +1,4 @@
-import { Provider } from '@ethersproject/providers';
+import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { TxHash } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
@@ -20,14 +20,16 @@ const debug = createDebug('bb:wallet_sdk');
 
 export class WalletSdk extends EventEmitter {
   private core!: CoreSdk;
+  private provider!: Web3Provider;
   private tokenContracts: TokenContract[] = [];
 
-  constructor(private provider: Provider) {
+  constructor(private ethereumProvider: EthereumProvider) {
     super();
+    this.provider = new Web3Provider(ethereumProvider);
   }
 
-  public async init(serverUrl: string, sdkOptions?: SdkOptions, ethereumProvider?: EthereumProvider) {
-    this.core = await createSdk(serverUrl, sdkOptions, ethereumProvider);
+  public async init(serverUrl: string, sdkOptions?: SdkOptions) {
+    this.core = await createSdk(serverUrl, sdkOptions, this.ethereumProvider);
 
     // Forward all core sdk events.
     for (const e in SdkEvent) {
