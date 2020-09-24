@@ -39,7 +39,7 @@ export class Database {
   }
 
   async addAccount({ ethAddress, userId }: DbAccount) {
-    await this.user.add(new DexieAccount(new Uint8Array(ethAddress.toBuffer()), new Uint8Array(userId)));
+    await this.user.put(new DexieAccount(new Uint8Array(ethAddress.toBuffer()), new Uint8Array(userId)));
   }
 
   async getAccount(ethAddress: EthAddress) {

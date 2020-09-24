@@ -7,7 +7,8 @@ import { SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
 import { AssetId, SdkEvent } from '../sdk';
 import { Web3Signer } from '../signer/web3_signer';
-import { deriveGrumpkinPrivateKey, KeyPair, UserData } from '../user';
+import { Signer } from '../signer';
+import { deriveGrumpkinPrivateKey, RecoveryPayload, UserData } from '../user';
 import { WalletSdk } from '../wallet_sdk';
 import { Database, DbAccount } from './database';
 import { EthereumSdkUser } from './ethereum_sdk_user';
@@ -155,63 +156,109 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.mint(assetId, userId, value, account);
   }
 
-  public async deposit(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
+  public async deposit(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress, signer?: Signer) {
     const userId = this.getUserIdByEthAddress(from);
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
 
-    const signer = this.createSchnorrSigner(from);
+    const aztecSigner = signer || this.getSchnorrSigner(from);
     const ethSigner = new Web3Signer(this.web3Provider, from);
-    return this.walletSdk.deposit(assetId, userId, value, signer, ethSigner, to);
+    return this.walletSdk.deposit(assetId, userId, value, aztecSigner, ethSigner, to);
   }
 
-  public async withdraw(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
+  public async withdraw(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress, signer?: Signer) {
     const userId = this.getUserIdByEthAddress(from);
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
 
-    const signer = this.createSchnorrSigner(from);
-    return this.walletSdk.withdraw(assetId, userId, value, signer, to);
+    const aztecSigner = signer || this.getSchnorrSigner(from);
+    return this.walletSdk.withdraw(assetId, userId, value, aztecSigner, to);
   }
 
-  public async transfer(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress) {
+  public async transfer(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress, signer?: Signer) {
     const userId = this.getUserIdByEthAddress(from);
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
 
-    const signer = this.createSchnorrSigner(from);
-    return this.walletSdk.transfer(assetId, userId, value, signer, to);
+    const aztecSigner = signer || this.getSchnorrSigner(from);
+    return this.walletSdk.transfer(assetId, userId, value, aztecSigner, to);
   }
 
-  public async publicTransfer(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress) {
+  public async publicTransfer(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress, signer?: Signer) {
     const userId = this.getUserIdByEthAddress(from);
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
 
-    const signer = this.createSchnorrSigner(from);
+    const aztecSigner = signer || this.getSchnorrSigner(from);
     const ethSigner = new Web3Signer(this.web3Provider, from);
-    return this.walletSdk.publicTransfer(assetId, userId, value, signer, ethSigner, to);
+    return this.walletSdk.publicTransfer(assetId, userId, value, aztecSigner, ethSigner, to);
   }
 
   public isBusy() {
     return this.walletSdk.isBusy();
   }
 
-  public newKeyPair(): KeyPair {
-    return this.walletSdk.newKeyPair();
-  }
-
-  public async createAccount(ethAddress: EthAddress, alias: string, newSigningPublicKey?: GrumpkinAddress) {
+  public async generateAccountRecoveryData(ethAddress: EthAddress, trustedThirdPartyPublicKeys: GrumpkinAddress[]) {
     const userId = this.getUserIdByEthAddress(ethAddress);
     if (!userId) {
       throw new Error(`User not found: ${ethAddress}`);
     }
-    const signer = this.createSchnorrSigner(ethAddress);
-    return this.walletSdk.createAccount(userId, signer, alias, newSigningPublicKey);
+
+    return this.walletSdk.generateAccountRecoveryData(userId, trustedThirdPartyPublicKeys);
+  }
+
+  public async createAccount(
+    ethAddress: EthAddress,
+    newSigningPublicKey: GrumpkinAddress,
+    recoveryPublicKey: GrumpkinAddress,
+    alias: string,
+  ) {
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+
+    return this.walletSdk.createAccount(userId, newSigningPublicKey, recoveryPublicKey, alias);
+  }
+
+  async recoverAccount(ethAddress: EthAddress, recoveryPayload: RecoveryPayload) {
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+
+    return this.walletSdk.recoverAccount(userId, recoveryPayload);
+  }
+
+  async addAlias(ethAddress: EthAddress, alias: string, signer: Signer) {
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+
+    return this.walletSdk.addAlias(userId, alias, signer);
+  }
+
+  async addSigningKey(ethAddress: EthAddress, signingPublicKey: GrumpkinAddress, signer: Signer) {
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+
+    return this.walletSdk.addSigningKey(userId, signingPublicKey, signer);
+  }
+
+  async removeSigningKey(ethAddress: EthAddress, signingPublicKey: GrumpkinAddress, signer: Signer) {
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+
+    return this.walletSdk.removeSigningKey(userId, signingPublicKey, signer);
   }
 
   public async awaitSynchronised() {
@@ -250,14 +297,13 @@ export class EthereumSdk extends EventEmitter {
     });
   }
 
-  public createSchnorrSigner(ethAddress: EthAddress) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
-      throw new Error(`User not found: ${ethAddress}`);
-    }
+  public getSchnorrSigner(ethAddress: EthAddress) {
+    const userData = this.getUserData(ethAddress)!;
+    return this.walletSdk.createSchnorrSigner(userData.privateKey);
+  }
 
-    const userData = this.walletSdk.getUserData(userId);
-    return this.walletSdk.createSchnorrSigner(userData!.privateKey);
+  public createSchnorrSigner(privateKey: Buffer) {
+    return this.walletSdk.createSchnorrSigner(privateKey);
   }
 
   public async addUser(ethAddress: EthAddress) {

@@ -24,23 +24,28 @@ export class AccountProofCreator {
     newSigningPubKey2?: GrumpkinAddress,
     nullifiedKey?: GrumpkinAddress,
     alias?: string,
+    isDummyAlias?: boolean,
+    accountIndex = 0,
   ) {
     const merkleRoot = this.worldState.getRoot();
     const numNewKeys = [newSigningPubKey1, newSigningPubKey2].filter(k => !!k).length;
 
-    // For now, we will use the account key as the signing key (no account note required).
-    const accountIndex = 0;
-    const accountPath = await this.worldState.getHashPath(0);
-    const signingPubKey = ownerPublicKey;
+    const signingPubKey = signer.getPublicKey();
+    const accountPath = await this.worldState.getHashPath(accountIndex);
 
-    const aliasField = alias ? this.blake2s.hashToField(Buffer.from(alias)) : randomBytes(32);
+    const aliasField = alias
+      ? !isDummyAlias
+        ? this.blake2s.hashToField(Buffer.from(alias))
+        : Buffer.from(alias, 'hex')
+      : randomBytes(32);
+    const nullifiedPubKey = nullifiedKey || GrumpkinAddress.randomAddress();
 
     const sigMsg = computeSigningData(
       ownerPublicKey,
       newSigningPubKey1 || GrumpkinAddress.ZERO,
       newSigningPubKey2 || GrumpkinAddress.ZERO,
       aliasField,
-      nullifiedKey || GrumpkinAddress.ZERO,
+      nullifiedPubKey,
       this.pedersen,
     );
     const signature = await signer.signMessage(sigMsg);
@@ -51,10 +56,10 @@ export class AccountProofCreator {
       numNewKeys,
       newSigningPubKey1 || GrumpkinAddress.ZERO,
       newSigningPubKey2 || GrumpkinAddress.ZERO,
-      !!alias,
+      !!alias && !isDummyAlias,
       aliasField,
       !!nullifiedKey,
-      nullifiedKey || GrumpkinAddress.ZERO,
+      nullifiedPubKey,
       accountIndex,
       signingPubKey,
       accountPath,
@@ -69,6 +74,8 @@ export class AccountProofCreator {
     newSigningPubKey2?: GrumpkinAddress,
     nullifiedKey?: GrumpkinAddress,
     alias?: string,
+    isDummyAlias?: boolean,
+    accountIndex?: number,
   ) {
     const tx = await this.createAccountTx(
       signer,
@@ -77,6 +84,8 @@ export class AccountProofCreator {
       newSigningPubKey2,
       nullifiedKey,
       alias,
+      isDummyAlias,
+      accountIndex,
     );
 
     debug('creating proof...');

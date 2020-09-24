@@ -1,15 +1,17 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { Signature } from 'barretenberg/client_proofs/signature';
 import { TxHash } from 'barretenberg/rollup_provider';
+import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
 import { Action, AssetId, SdkEvent } from '../sdk';
-import { EthereumSigner, Signer } from '../signer';
+import { EthereumSigner, RecoverSignatureSigner, Signer } from '../signer';
 import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';
-import { KeyPair } from '../user';
+import { RecoveryPayload } from '../user';
 import { WalletSdkUser } from './wallet_sdk_user';
 
 export * from './wallet_sdk_user';
@@ -172,12 +174,70 @@ export class WalletSdk extends EventEmitter {
     return this.core.isBusy();
   }
 
-  public newKeyPair(): KeyPair {
-    return this.core.newKeyPair();
+  public async generateAccountRecoveryData(userId: Buffer, trustedThirdPartyPublicKeys: GrumpkinAddress[]) {
+    const user = this.getUserData(userId);
+    if (!user) {
+      throw new Error(`User not found: ${userId.toString('hex')}`);
+    }
+
+    const socialRecoverySigner = this.core.createSchnorrSigner(randomBytes(32));
+    const recoveryPublicKey = socialRecoverySigner.getPublicKey();
+    return Promise.all(
+      trustedThirdPartyPublicKeys.map(async trustedThirdPartyPublicKey => {
+        const { signature, alias, nullifiedKey } = await this.core.createAccountTx(
+          user.id,
+          socialRecoverySigner,
+          user.publicKey,
+          trustedThirdPartyPublicKey,
+        );
+        const recoveryData = Buffer.concat([alias, nullifiedKey.toBuffer(), signature.toBuffer()]);
+        return new RecoveryPayload(trustedThirdPartyPublicKey, recoveryPublicKey, recoveryData);
+      }),
+    );
   }
 
-  public async createAccount(userId: Buffer, signer: Signer, alias: string, newSigningPublicKey?: GrumpkinAddress) {
-    return this.core.createAccount(userId, signer, alias, newSigningPublicKey);
+  public async createAccount(
+    userId: Buffer,
+    newSigningPublicKey: GrumpkinAddress,
+    recoveryPublicKey: GrumpkinAddress,
+    alias: string,
+  ) {
+    const user = this.getUserData(userId);
+    if (!user) {
+      throw new Error(`User not found: ${userId.toString('hex')}`);
+    }
+
+    const signer = this.core.createSchnorrSigner(user.privateKey);
+    return this.core.createAccountProof(user.id, signer, newSigningPublicKey, recoveryPublicKey, user.publicKey, alias);
+  }
+
+  public async recoverAccount(userId: Buffer, recoveryPayload: RecoveryPayload) {
+    const { recoveryData } = recoveryPayload;
+    const alias = recoveryData.slice(0, 32).toString('hex');
+    const nullifiedKey = new GrumpkinAddress(recoveryData.slice(32, 32 + 64));
+    const signature = new Signature(recoveryData.slice(32 + 64, 32 + 64 + 64));
+    const recoverySigner = new RecoverSignatureSigner(recoveryPayload.recoveryPublicKey, signature);
+    return this.core.createAccountProof(
+      userId,
+      recoverySigner,
+      recoveryPayload.trustedThirdPartyPublicKey,
+      undefined,
+      nullifiedKey,
+      alias,
+      true,
+    );
+  }
+
+  public async addAlias(userId: Buffer, alias: string, signer: Signer) {
+    return this.core.createAccountProof(userId, signer, undefined, undefined, undefined, alias);
+  }
+
+  public async addSigningKey(userId: Buffer, signingPublicKey: GrumpkinAddress, signer: Signer) {
+    return this.core.createAccountProof(userId, signer, signingPublicKey);
+  }
+
+  public async removeSigningKey(userId: Buffer, signingPublicKey: GrumpkinAddress, signer: Signer) {
+    return this.core.createAccountProof(userId, signer, undefined, undefined, signingPublicKey);
   }
 
   public async awaitSynchronised() {

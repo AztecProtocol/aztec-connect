@@ -339,6 +339,14 @@ export class DexieDatabase implements Database {
     this.userKeys.where({ owner: new Uint8Array(owner), key: new Uint8Array(key) }).delete();
   }
 
+  async getUserSigningKeyIndex(owner: Buffer, signingKey: GrumpkinAddress) {
+    const userKey = await this.userKeys.get({
+      owner: new Uint8Array(owner),
+      key: new Uint8Array(signingKey.toBuffer().slice(0, 32)),
+    });
+    return userKey ? userKey.treeIndex : undefined;
+  }
+
   async addAlias(aliasHash: Buffer, address: GrumpkinAddress) {
     this.alias.add({ aliasHash: new Uint8Array(aliasHash), key: new Uint8Array(address.toBuffer()) });
   }

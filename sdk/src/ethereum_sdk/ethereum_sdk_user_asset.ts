@@ -1,5 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AssetId } from '../sdk';
+import { Signer } from '../signer';
 import { EthereumSdk } from './';
 
 export class EthereumSdkUserAsset {
@@ -13,8 +14,8 @@ export class EthereumSdkUserAsset {
     return this.sdk.getTokenContract(this.assetId).allowance(this.ethAddress);
   }
 
-  publicTransfer(value: bigint, to: EthAddress) {
-    return this.sdk.publicTransfer(this.assetId, value, this.ethAddress, to);
+  publicTransfer(value: bigint, to: EthAddress, signer?: Signer) {
+    return this.sdk.publicTransfer(this.assetId, value, this.ethAddress, to, signer);
   }
 
   balance() {
@@ -44,16 +45,16 @@ export class EthereumSdkUserAsset {
     return this.sdk.approve(this.assetId, value, this.ethAddress);
   }
 
-  async deposit(value: bigint, to?: GrumpkinAddress | string) {
-    return this.sdk.deposit(this.assetId, value, this.ethAddress, await this.getGrumpkinAddress(to));
+  async deposit(value: bigint, to?: GrumpkinAddress | string, signer?: Signer) {
+    return this.sdk.deposit(this.assetId, value, this.ethAddress, await this.getGrumpkinAddress(to), signer);
   }
 
-  async withdraw(value: bigint, to?: EthAddress) {
-    return this.sdk.withdraw(this.assetId, value, this.ethAddress, to || this.ethAddress);
+  async withdraw(value: bigint, to?: EthAddress, signer?: Signer) {
+    return this.sdk.withdraw(this.assetId, value, this.ethAddress, to || this.ethAddress, signer);
   }
 
-  async transfer(value: bigint, to: GrumpkinAddress | string) {
-    return this.sdk.transfer(this.assetId, value, this.ethAddress, await this.getGrumpkinAddress(to));
+  async transfer(value: bigint, to: GrumpkinAddress | string, signer?: Signer) {
+    return this.sdk.transfer(this.assetId, value, this.ethAddress, await this.getGrumpkinAddress(to), signer);
   }
 
   public fromErc20Units(value: bigint) {

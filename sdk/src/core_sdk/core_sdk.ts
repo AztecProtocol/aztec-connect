@@ -29,7 +29,7 @@ import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus } from 
 import { EthereumSigner, Signer } from '../signer';
 import { SchnorrSigner } from '../signer';
 import { TxsState } from '../txs_state';
-import { KeyPair, UserDataFactory } from '../user';
+import { UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
 
@@ -81,6 +81,7 @@ export class CoreSdk extends EventEmitter {
   private processBlocksPromise?: Promise<void>;
   private blake2s!: Blake2s;
   private schnorr!: Schnorr;
+  private grumpkin!: Grumpkin;
 
   constructor(
     private leveldb: LevelUp,
@@ -103,7 +104,7 @@ export class CoreSdk extends EventEmitter {
     const barretenberg = await BarretenbergWasm.new();
     const pedersen = new Pedersen(barretenberg);
     const blake2s = new Blake2s(barretenberg);
-    const grumpkin = new Grumpkin(barretenberg);
+    this.grumpkin = new Grumpkin(barretenberg);
     const noteAlgos = new NoteAlgorithms(barretenberg);
     const crsData = await this.getCrsData(this.options.escapeHatchMode ? 512 * 1024 : 128 * 1024);
     const numWorkers = Math.min(navigator.hardwareConcurrency || 1, 8);
@@ -115,8 +116,8 @@ export class CoreSdk extends EventEmitter {
 
     this.blake2s = blake2s;
     this.schnorr = new Schnorr(barretenberg);
-    this.userFactory = new UserDataFactory(grumpkin);
-    this.userStateFactory = new UserStateFactory(grumpkin, blake2s, this.db, this.rollupProvider);
+    this.userFactory = new UserDataFactory(this.grumpkin);
+    this.userStateFactory = new UserStateFactory(this.grumpkin, blake2s, this.db, this.rollupProvider);
     this.workerPool = workerPool;
     this.worldState = new WorldState(this.leveldb, pedersen, blake2s);
     if (this.rollupProviderExplorer) {
@@ -140,7 +141,7 @@ export class CoreSdk extends EventEmitter {
       this.joinSplitProofCreator = new JoinSplitProofCreator(
         joinSplitProver,
         this.worldState,
-        grumpkin,
+        this.grumpkin,
         pedersen,
         noteAlgos,
       );
@@ -151,7 +152,7 @@ export class CoreSdk extends EventEmitter {
       this.escapeHatchProofCreator = new EscapeHatchProofCreator(
         escapeHatchProver,
         this.worldState,
-        grumpkin,
+        this.grumpkin,
         blake2s,
         pedersen,
         noteAlgos,
@@ -306,7 +307,7 @@ export class CoreSdk extends EventEmitter {
   }
 
   public getLocalStatus() {
-    return this.sdkStatus;
+    return { ...this.sdkStatus };
   }
 
   private logInitMsgAndDebug(msg: string) {
@@ -505,14 +506,43 @@ export class CoreSdk extends EventEmitter {
   }
 
   public createSchnorrSigner(privateKey: Buffer) {
-    return new SchnorrSigner(this.schnorr, privateKey);
+    const publicKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
+    return new SchnorrSigner(this.schnorr, publicKey, privateKey);
   }
 
-  public newKeyPair(): KeyPair {
-    return this.userFactory.newKeyPair();
+  public async createAccountTx(
+    userId: Buffer,
+    signer: Signer,
+    ownerPublicKey: GrumpkinAddress,
+    newSigningPubKey1?: GrumpkinAddress,
+    newSigningPubKey2?: GrumpkinAddress,
+    nullifiedKey?: GrumpkinAddress,
+    alias?: string,
+    isDummyAlias?: boolean,
+  ) {
+    const signerPublicKey = signer.getPublicKey();
+    const accountIndex = await this.db.getUserSigningKeyIndex(userId, signerPublicKey);
+    return this.accountProofCreator.createAccountTx(
+      signer,
+      ownerPublicKey,
+      newSigningPubKey1,
+      newSigningPubKey2,
+      nullifiedKey,
+      alias,
+      isDummyAlias,
+      accountIndex,
+    );
   }
 
-  public async createAccount(userId: Buffer, signer: Signer, alias: string, newSigningPublicKey?: GrumpkinAddress) {
+  public async createAccountProof(
+    userId: Buffer,
+    signer: Signer,
+    newSigningPublicKey1?: GrumpkinAddress,
+    newSigningPublicKey2?: GrumpkinAddress,
+    nullifiedKey?: GrumpkinAddress,
+    alias?: string,
+    isDummyAlias?: boolean,
+  ) {
     if (this.options.escapeHatchMode) {
       throw new Error('Account modifications not supported in escape hatch mode.');
     }
@@ -523,13 +553,17 @@ export class CoreSdk extends EventEmitter {
     const { publicKey } = userState.getUser();
 
     const action = async () => {
+      const signerPublicKey = signer.getPublicKey();
+      const accountIndex = await this.db.getUserSigningKeyIndex(userId, signerPublicKey);
       const rawProofData = await this.accountProofCreator.createProof(
         signer,
         publicKey,
-        newSigningPublicKey,
-        undefined,
-        newSigningPublicKey ? publicKey : undefined,
+        newSigningPublicKey1,
+        newSigningPublicKey2,
+        nullifiedKey,
         alias,
+        isDummyAlias,
+        accountIndex,
       );
 
       await this.rollupProvider.sendProof({ proofData: rawProofData, viewingKeys: [] });

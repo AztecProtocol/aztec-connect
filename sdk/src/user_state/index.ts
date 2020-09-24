@@ -135,13 +135,13 @@ export class UserState extends EventEmitter {
     const key1 = newNote1.slice(32);
     if (!key1.equals(Buffer.alloc(32))) {
       debug(`user ${this.user.id.toString('hex')} add signing key ${key1.toString('hex')}.`);
-      this.db.addUserSigningKey({ owner: this.user.id, key: key1, treeIndex: noteStartIndex });
+      await this.db.addUserSigningKey({ owner: this.user.id, key: key1, treeIndex: noteStartIndex });
     }
 
     const key2 = newNote2.slice(32);
     if (!key2.equals(Buffer.alloc(32))) {
       debug(`user ${this.user.id.toString('hex')} add signing key ${key2.toString('hex')}.`);
-      this.db.addUserSigningKey({ owner: this.user.id, key: key2, treeIndex: noteStartIndex + 1 });
+      await this.db.addUserSigningKey({ owner: this.user.id, key: key2, treeIndex: noteStartIndex + 1 });
     }
 
     const signingKeys = await this.db.getUserSigningKeys(this.user.id);
@@ -151,7 +151,7 @@ export class UserState extends EventEmitter {
       debug(
         `user ${this.user.id.toString('hex')} removed signing key ${signingKeys[nullifyIndex].key.toString('hex')}.`,
       );
-      this.db.removeUserSigningKey(signingKeys[nullifyIndex]);
+      await this.db.removeUserSigningKey(signingKeys[nullifyIndex]);
     }
 
     await this.db.settleUserTx(this.user.id, proofData.getTxId());
