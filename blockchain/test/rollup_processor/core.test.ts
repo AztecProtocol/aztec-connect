@@ -1,7 +1,6 @@
 import { ethers } from '@nomiclabs/buidler';
 import { EthAddress } from 'barretenberg/address';
 import { expect, use } from 'chai';
-import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
 import {

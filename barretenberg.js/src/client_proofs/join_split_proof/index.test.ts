@@ -79,7 +79,7 @@ describe('join_split_proof', () => {
 
   it('should decrypt note', () => {
     const secret = randomBytes(32);
-    const note = new Note(pubKey, secret, BigInt(100));
+    const note = new Note(pubKey, secret, BigInt(100), 0);
     const encryptedNote = noteAlgos.encryptNote(note);
     const { success, value } = noteAlgos.decryptNote(encryptedNote, privateKey, secret);
     expect(success).toBe(true);
@@ -88,7 +88,7 @@ describe('join_split_proof', () => {
 
   it('should not decrypt note', () => {
     const secret = randomBytes(32);
-    const note = new Note(pubKey, secret, BigInt(2000));
+    const note = new Note(pubKey, secret, BigInt(2000), 0);
     const encryptedNote = noteAlgos.encryptNote(note);
     const { success } = noteAlgos.decryptNote(encryptedNote, privateKey, secret);
     expect(success).toBe(false);
@@ -112,10 +112,10 @@ describe('join_split_proof', () => {
     });
 
     it('should construct join split proof', async () => {
-      const inputNote1 = new Note(pubKey, createNoteSecret(), BigInt(100));
-      const inputNote2 = new Note(pubKey, createNoteSecret(), BigInt(50));
-      const outputNote1 = new Note(pubKey, createNoteSecret(), BigInt(80));
-      const outputNote2 = new Note(pubKey, createNoteSecret(), BigInt(70));
+      const inputNote1 = new Note(pubKey, createNoteSecret(), BigInt(100), 0);
+      const inputNote2 = new Note(pubKey, createNoteSecret(), BigInt(50), 0);
+      const outputNote1 = new Note(pubKey, createNoteSecret(), BigInt(80), 0);
+      const outputNote2 = new Note(pubKey, createNoteSecret(), BigInt(70), 0);
 
       const inputNote1Enc = await noteAlgos.encryptNote(inputNote1);
       const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);
@@ -140,6 +140,7 @@ describe('join_split_proof', () => {
       const tx = new JoinSplitTx(
         BigInt(0),
         BigInt(0),
+        0,
         2,
         [0, 1],
         tree.getRoot(),

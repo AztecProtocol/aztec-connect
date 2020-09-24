@@ -33,8 +33,6 @@ describe('escape_hatch_proof', () => {
   let crs!: Crs;
   let grumpkin!: Grumpkin;
   let pippenger!: PooledPippenger;
-  let pedersen!: Pedersen;
-  let schnorr!: Schnorr;
   let pubKey!: GrumpkinAddress;
   let noteAlgos!: NoteAlgorithms;
 
@@ -72,8 +70,6 @@ describe('escape_hatch_proof', () => {
     escapeHatchProver = new EscapeHatchProver(prover);
     escapeHatchVerifier = new EscapeHatchVerifier();
     blake2s = new Blake2s(barretenberg);
-    pedersen = new Pedersen(barretenberg);
-    schnorr = new Schnorr(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
     noteAlgos = new NoteAlgorithms(barretenberg);
 
@@ -91,8 +87,8 @@ describe('escape_hatch_proof', () => {
   });
 
   it('should construct and verify an escape hatch proof', async () => {
-    const inputNote1 = new Note(pubKey, createNoteSecret(), BigInt(100));
-    const inputNote2 = new Note(pubKey, createNoteSecret(), BigInt(50));
+    const inputNote1 = new Note(pubKey, createNoteSecret(), BigInt(100), 0);
+    const inputNote2 = new Note(pubKey, createNoteSecret(), BigInt(50), 0);
     const inputNotes = [inputNote1, inputNote2];
 
     const inputIndexes = [0, 1];
@@ -105,8 +101,8 @@ describe('escape_hatch_proof', () => {
       );
     });
 
-    const outputNote1 = new Note(pubKey, createNoteSecret(), BigInt(20));
-    const outputNote2 = new Note(pubKey, createNoteSecret(), BigInt(10));
+    const outputNote1 = new Note(pubKey, createNoteSecret(), BigInt(20), 0);
+    const outputNote2 = new Note(pubKey, createNoteSecret(), BigInt(10), 0);
     const outputNotes = [outputNote1, outputNote2];
 
     // Setup state, simulate inputs notes already being in
@@ -169,6 +165,7 @@ describe('escape_hatch_proof', () => {
     const joinSplitTx = new JoinSplitTx(
       BigInt(0),
       BigInt(120),
+      0,
       2,
       inputIndexes,
       oldDataRoot,
@@ -186,7 +183,7 @@ describe('escape_hatch_proof', () => {
     const tx = new EscapeHatchTx(
       joinSplitTx,
       rollupId,
-      parseInt(dataStartIndex.toString(), 10),
+      Number(dataStartIndex),
       newDataRoot,
       oldDataPath,
       newDataPath,

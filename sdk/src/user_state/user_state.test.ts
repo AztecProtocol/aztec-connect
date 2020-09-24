@@ -66,9 +66,9 @@ describe('user state', () => {
 
   const generateRollup = (validNewNote = true, validChangeNote = true, publicInput = 0, publicOutput = 0) => {
     const secret = createNoteSecret();
-    const note1 = new Note(user.publicKey, secret, BigInt(100));
-    const note2 = new Note(user.publicKey, secret, BigInt(0));
-    const gibberishNote = new Note(GrumpkinAddress.randomAddress(), secret, 0n);
+    const note1 = new Note(user.publicKey, secret, BigInt(100), 0);
+    const note2 = new Note(user.publicKey, secret, BigInt(0), 0);
+    const gibberishNote = new Note(GrumpkinAddress.randomAddress(), secret, 0n, 0);
     const encryptedNote1 = randomBytes(64);
     const encryptedNote2 = randomBytes(64);
     const nullifier1 = computeNullifier(randomBytes(64), 0, secret, blake2s);
@@ -81,6 +81,7 @@ describe('user state', () => {
       0,
       numToUInt32BE(publicInput, 32),
       numToUInt32BE(publicOutput, 32),
+      0,
       encryptedNote1,
       encryptedNote2,
       nullifier1,
@@ -120,6 +121,7 @@ describe('user state', () => {
       1,
       publicKey.x(),
       publicKey.y(),
+      0,
       note1,
       note2,
       nullifier1,

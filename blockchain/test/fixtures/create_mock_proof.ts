@@ -132,6 +132,7 @@ function publicInputData(id: number, proofNum: number, numInner: number, rollupS
  */
 async function innerProofData(isDeposit: boolean, transferAmount: number, publicOwner: EthAddress) {
   const proofId = Buffer.alloc(32);
+  const assetId = Buffer.alloc(32);
   let publicInput;
   let publicOutput;
   let inputOwner = Buffer.alloc(32);
@@ -155,6 +156,7 @@ async function innerProofData(isDeposit: boolean, transferAmount: number, public
     proofId,
     publicInput,
     publicOutput,
+    assetId,
     newNote1,
     newNote2,
     nullifier1,

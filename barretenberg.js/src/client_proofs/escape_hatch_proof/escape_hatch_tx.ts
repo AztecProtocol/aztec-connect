@@ -1,6 +1,5 @@
-import { toBufferBE } from 'bigint-buffer';
 import { HashPath } from '../../merkle_tree';
-import { numToUInt32BE, serializeBufferArrayToVector } from '../../serialize';
+import { serializeBufferArrayToVector } from '../../serialize';
 import { JoinSplitTx } from '../join_split_proof';
 
 export class EscapeHatchTx {
@@ -26,31 +25,12 @@ export class EscapeHatchTx {
   ) {}
 
   toBuffer() {
-    const notePathBuffer = Buffer.concat(this.joinSplitTx.inputNotePaths.map(p => p.toBuffer()));
-    const noteBuffer = Buffer.concat(
-      [...this.joinSplitTx.inputNotes, ...this.joinSplitTx.outputNotes].map(n => n.toBuffer()),
-    );
-
     const numBuf = Buffer.alloc(8);
     numBuf.writeUInt32BE(this.rollupId, 0);
     numBuf.writeUInt32BE(this.dataStartIndex, 4);
 
     return Buffer.concat([
-      toBufferBE(this.joinSplitTx.publicInput, 32),
-      toBufferBE(this.joinSplitTx.publicOutput, 32),
-      numToUInt32BE(this.joinSplitTx.numInputNotes),
-      numToUInt32BE(this.joinSplitTx.inputNoteIndices[0]),
-      numToUInt32BE(this.joinSplitTx.inputNoteIndices[1]),
-
-      this.joinSplitTx.merkleRoot,
-      notePathBuffer,
-      noteBuffer,
-      this.joinSplitTx.signature.toBuffer(),
-      this.joinSplitTx.inputOwner.toBuffer32(),
-      this.joinSplitTx.outputOwner.toBuffer32(),
-      numToUInt32BE(this.joinSplitTx.accountIndex),
-      this.joinSplitTx.accountPath.toBuffer(),
-      this.joinSplitTx.signingPubKey.toBuffer(),
+      this.joinSplitTx.toBuffer(),
 
       numBuf,
       this.newDataRoot,

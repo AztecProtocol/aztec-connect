@@ -38,6 +38,7 @@ export class JoinSplitProofCreator {
       userState,
       publicInput,
       publicOutput,
+      0,
       newNoteValue,
       sender,
       receiverPubKey,

@@ -18,6 +18,7 @@ const generateRollup = (rollupId: number, rollupSize: number) => {
           0,
           numToUInt32BE(0, 32),
           numToUInt32BE(0, 32),
+          0,
           randomBytes(64),
           randomBytes(64),
           randomBytes(32),

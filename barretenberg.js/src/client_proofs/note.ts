@@ -2,17 +2,33 @@ import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 import { Grumpkin } from '../ecc/grumpkin';
 import { GrumpkinAddress } from '../address';
+import { numToUInt32BE } from '../serialize';
 
 export class Note {
-  constructor(public ownerPubKey: GrumpkinAddress, public secret: Buffer, public value: bigint) {}
+  constructor(
+    public ownerPubKey: GrumpkinAddress,
+    public secret: Buffer,
+    public value: bigint,
+    public assetId: number,
+  ) {}
 
   static fromBuffer(buf: Buffer) {
     // TODO: Read 16 bytes value.
-    return new Note(new GrumpkinAddress(buf.slice(0, 64)), buf.slice(96, 128), toBigIntBE(buf.slice(64, 96)));
+    return new Note(
+      new GrumpkinAddress(buf.slice(0, 64)),
+      buf.slice(96, 128),
+      toBigIntBE(buf.slice(64, 96)),
+      buf.readUInt32BE(96),
+    );
   }
 
   toBuffer() {
-    return Buffer.concat([this.ownerPubKey.toBuffer(), toBufferBE(this.value, 32), this.secret]);
+    return Buffer.concat([
+      this.ownerPubKey.toBuffer(),
+      toBufferBE(this.value, 32),
+      this.secret,
+      numToUInt32BE(this.assetId),
+    ]);
   }
 }
 
@@ -22,6 +38,10 @@ export function createNoteSecret() {
   return key;
 }
 
+/**
+ * Returns the AES encrypted "viewing key".
+ * [AES:[64 bytes owner public key][32 bytes value][32 bytes secret]][64 bytes ephemeral public key]
+ */
 export function encryptNote(note: Note, grumpkin: Grumpkin) {
   const ephPrivKey = randomBytes(32);
   const ephPubKey = grumpkin.mul(Grumpkin.one, ephPrivKey);

@@ -33,7 +33,6 @@ describe('end-to-end escape tests', () => {
       syncInstances: false,
       clearDb: true,
       escapeHatchMode: true,
-      rollupContractAddress: EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS),
     });
     await sdk.awaitSynchronised();
 

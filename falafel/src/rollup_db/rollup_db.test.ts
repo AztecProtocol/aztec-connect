@@ -10,8 +10,14 @@ import { joinSplitProofToTxDao, RollupDb } from './';
 const randomTx = (signature?: Buffer) =>
   new JoinSplitProof(
     Buffer.concat([
-      Buffer.alloc(32),
-      randomBytes(8 * 32),
+      Buffer.alloc(32), // proofId
+      randomBytes(32), // publicInput
+      randomBytes(32), // publicOutput
+      Buffer.alloc(32), // assetId
+      randomBytes(64), // note1
+      randomBytes(64), // note2
+      randomBytes(32), // nullifier1
+      randomBytes(32), // nullifier2
       Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
       Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
     ]),

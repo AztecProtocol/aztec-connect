@@ -46,6 +46,7 @@ export class EscapeHatchProofCreator {
       userState,
       publicInput,
       publicOutput,
+      0,
       newNoteValue,
       sender,
       receiverPubKey,
