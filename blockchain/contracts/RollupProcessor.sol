@@ -29,7 +29,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     IVerifier public verifier;
     IERC20 public linkedToken;
 
-    uint256 public constant txPubInputLength = 11 * 32; // public inputs length for of each inner proof tx
+    uint256 public constant txPubInputLength = 12 * 32; // public inputs length for of each inner proof tx
     uint256 public constant rollupPubInputLength = 10 * 32;
 
     event RollupProcessed(uint256 indexed rollupId, bytes32 dataRoot, bytes32 nullRoot);
@@ -195,6 +195,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
                 uint256 proofId,
                 uint256 publicInput,
                 uint256 publicOutput,
+                uint256 assetId,
                 address inputOwner,
                 address outputOwner
             ) = extractTxComponents(proof);

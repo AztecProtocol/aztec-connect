@@ -14,6 +14,7 @@ export class JoinSplitTxFactory {
     userState: UserState,
     publicInput: bigint,
     publicOutput: bigint,
+    assetId: number,
     newNoteValue: bigint,
     sender: UserData,
     receiverPubKey?: GrumpkinAddress,
@@ -30,18 +31,18 @@ export class JoinSplitTxFactory {
 
     const totalNoteInputValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
     const inputNoteIndices = notes.map(n => n.index);
-    const inputNotes = notes.map(n => new Note(sender.publicKey, n.viewingKey, n.value));
+    const inputNotes = notes.map(n => new Note(sender.publicKey, n.viewingKey, n.value, assetId));
     for (let i = notes.length; i < 2; ++i) {
       inputNoteIndices.push(i);
-      inputNotes.push(new Note(sender.publicKey, createNoteSecret(), BigInt(0)));
+      inputNotes.push(new Note(sender.publicKey, createNoteSecret(), BigInt(0), assetId));
     }
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
     const changeValue = max(BigInt(0), totalNoteInputValue - newNoteValue - publicOutput);
     const newNoteOwner = receiverPubKey || GrumpkinAddress.randomAddress();
     const outputNotes = [
-      new Note(newNoteOwner, createNoteSecret(), newNoteValue),
-      new Note(sender.publicKey, createNoteSecret(), changeValue),
+      new Note(newNoteOwner, createNoteSecret(), newNoteValue, assetId),
+      new Note(sender.publicKey, createNoteSecret(), changeValue, assetId),
     ];
 
     const signature = this.noteAlgos.sign(
@@ -60,6 +61,7 @@ export class JoinSplitTxFactory {
     const tx = new JoinSplitTx(
       publicInput,
       publicOutput,
+      assetId,
       numInputNotes,
       inputNoteIndices,
       dataRoot,

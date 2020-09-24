@@ -13,7 +13,7 @@ describe('note', () => {
     const receiverPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, receiverPrivKey));
 
     const secret = randomBytes(32);
-    const note = new Note(receiverPubKey, secret, BigInt(100));
+    const note = new Note(receiverPubKey, secret, BigInt(100), 0);
     const encryptedNote = encryptNote(note, grumpkin);
 
     const note2 = decryptNote(encryptedNote, receiverPrivKey, grumpkin)!;
@@ -32,7 +32,7 @@ describe('note', () => {
     const receiverPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, receiverPrivKey));
 
     const secret = randomBytes(32);
-    const note = new Note(receiverPubKey, secret, BigInt(100));
+    const note = new Note(receiverPubKey, secret, BigInt(100), 0);
     const encryptedNote = encryptNote(note, grumpkin);
 
     const note2 = decryptNote(encryptedNote, randomBytes(32), grumpkin)!;

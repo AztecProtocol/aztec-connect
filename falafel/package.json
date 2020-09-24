@@ -9,8 +9,8 @@
     "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
     "test": "jest",
     "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db",
-    "clean_data": "rm -rf ./data",
-    "clean": "yarn clean_db && yarn clean_data"
+    "clean_keys": "rm -rf ./data/account ./data/join_split ./data/rollup*",
+    "clean": "rm -rf ./data"
   },
   "jest": {
     "transform": {

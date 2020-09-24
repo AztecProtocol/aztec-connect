@@ -31,6 +31,8 @@ library VerificationKeys {
             vk = Rollup2Vk.get_verification_key();
         } else if (_keyId == 3) {
             vk = Rollup3Vk.get_verification_key();
+        } else {
+            require(false, "UNKNOWN_KEY_ID");
         }
         return vk;
     }

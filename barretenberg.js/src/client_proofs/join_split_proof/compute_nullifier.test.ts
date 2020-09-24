@@ -1,5 +1,3 @@
-import { JoinSplitProver } from './index';
-import { Schnorr } from '../../crypto/schnorr';
 import { BarretenbergWasm } from '../../wasm';
 import { Blake2s } from '../../crypto/blake2s';
 import { Note } from '../note';
@@ -20,15 +18,13 @@ describe('compute_nullifier', () => {
 
   it('should compute correct nullifier', async () => {
     const barretenberg = await BarretenbergWasm.new();
-    const schnorr = new Schnorr(barretenberg);
     const blake2s = new Blake2s(barretenberg);
     const grumpkin = new Grumpkin(barretenberg);
     const noteAlgos = new NoteAlgorithms(barretenberg);
-    const joinSplitProver = new JoinSplitProver(undefined as any);
 
     const pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
-    const inputNote1 = new Note(pubKey, viewingKey, BigInt(100));
-    const inputNote2 = new Note(pubKey, viewingKey, BigInt(50));
+    const inputNote1 = new Note(pubKey, viewingKey, BigInt(100), 0);
+    const inputNote2 = new Note(pubKey, viewingKey, BigInt(50), 0);
 
     const inputNote1Enc = await noteAlgos.encryptNote(inputNote1);
     const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);

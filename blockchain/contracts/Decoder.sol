@@ -80,6 +80,7 @@ contract Decoder {
             uint256,
             uint256,
             uint256,
+            uint256,
             address,
             address
         )
@@ -87,17 +88,19 @@ contract Decoder {
         uint256 proofId;
         uint256 publicInput;
         uint256 publicOutput;
+        uint256 assetId;
         address inputOwner;
         address outputOwner;
         assembly {
             proofId := mload(add(proof, 0x20))
             publicInput := mload(add(proof, 0x40))
             publicOutput := mload(add(proof, 0x60))
-            inputOwner := mload(add(proof, 0x140))
-            outputOwner := mload(add(proof, 0x160))
+            assetId := mload(add(proof, 0x80))
+            inputOwner := mload(add(proof, 0x160))
+            outputOwner := mload(add(proof, 0x180))
         }
 
-        return (proofId, publicInput, publicOutput, inputOwner, outputOwner);
+        return (proofId, publicInput, publicOutput, assetId, inputOwner, outputOwner);
     }
 
     /**
