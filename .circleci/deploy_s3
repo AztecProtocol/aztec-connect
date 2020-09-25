@@ -1,0 +1,34 @@
+#!/bin/bash
+set -e
+
+if [ ! -d ./terraform ]; then
+   echo "No terraform found."
+   exit 0
+fi
+
+IMAGE=$1
+REPOSITORY=${IMAGE%:*}
+TAG=${IMAGE#*:}
+IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1-$TAG
+IMAGE_DEPLOY_COMMIT_URI=$ECR_URL/$REPOSITORY:$CIRCLE_SHA1-$TAG
+IMAGE_DEPLOY_URI=$ECR_DEPLOY_URL/$REPOSITORY:$TAG
+
+# Pull the built image, do nothing if this wasn't rebuilt.
+docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." && exit 0; }
+TEMP_CONTAINER=$(docker create $IMAGE_COMMIT_URI)
+docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY/dist temp/$REPOSITORY
+docker rm -v $TEMP_CONTAINER
+
+# Apply terraform.
+ensure_terraform
+export TF_IN_AUTOMATION=1
+cd terraform
+terraform init -input=false
+terraform apply -input=false -auto-approve
+
+AWS_BUCKET_NAME=terraform output s3
+AWS_CLOUDFRONT_DISTRIBUTION=terraform output cloudfront
+
+aws s3 rm s3://${AWS_BUCKET_NAME} --recursive
+aws s3 cp temp/$REPOSITORY s3://${AWS_BUCKET_NAME} --recursive --metadata-directive REPLACE --cache-control "max-age=3600" --acl public-read
+aws cloudfront create-invalidation --distribution-id ${AWS_CLOUDFRONT_DISTRIBUTION} --paths "/*"
