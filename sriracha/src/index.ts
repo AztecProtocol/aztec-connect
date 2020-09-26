@@ -6,6 +6,7 @@ import http from 'http';
 import 'reflect-metadata';
 import { appFactory } from './app';
 import Server from './server';
+import 'log-timestamp';
 
 const {
   PORT = '8082',

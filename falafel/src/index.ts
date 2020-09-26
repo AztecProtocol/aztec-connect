@@ -13,6 +13,7 @@ import { LocalBlockchain } from './blockchain/local_blockchain';
 import { PersistentEthereumBlockchain } from './blockchain/persistent_ethereum_blockchain';
 import { RollupDb } from './rollup_db';
 import { Server, ServerConfig } from './server';
+import 'log-timestamp';
 
 dotenv.config();
 

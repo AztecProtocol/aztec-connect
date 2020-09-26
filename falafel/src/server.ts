@@ -150,6 +150,8 @@ export class Server {
     console.log(`Processing rollup ${rollup.rollupId}: ${rollup.rollupHash.toString('hex')}...`);
     await this.addRollupToWorldState(rollup);
     await this.confirmOrAddRollupToDb(rollup, block);
+
+    this.printState();
   }
 
   private async confirmOrAddRollupToDb(rollup: RollupProofData, block: Block) {
@@ -298,6 +300,7 @@ export class Server {
       await this.worldStateDb.commit();
       await this.rollupDb.confirmRollup(rollup.rollupId, blockNum);
 
+      this.printState();
       break;
     }
   }
@@ -478,7 +481,7 @@ export class Server {
   private async createRollup(txs: JoinSplitProof[]) {
     const { rollupSize } = this.config;
     const dataSize = this.worldStateDb.getSize(0);
-    const toInsert = BigInt(txs.length * 2);
+    const toInsert = BigInt(rollupSize * 2);
     const dataStartIndex = dataSize % toInsert === 0n ? dataSize : dataSize + toInsert - (dataSize % toInsert);
 
     // Get old data.

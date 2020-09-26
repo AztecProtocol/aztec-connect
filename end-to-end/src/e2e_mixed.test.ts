@@ -29,7 +29,7 @@ describe('end-to-end falafel recovery tests', () => {
     userAddress = new EthAddress(account.toBuffer());
   });
 
-  it('should perform emergency mode deposit and then standard mode withdrawal', async () => {
+  it('should succesfully mix normal and escape mode transactions', async () => {
     // Run a normal sdk and deposit.
     {
       const sdk = new EthereumSdk((provider as any).provider);
