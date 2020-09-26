@@ -1,6 +1,7 @@
 import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
-import { InnerProofData } from 'barretenberg/rollup_proof';
-import { Connection, In, Repository } from 'typeorm';
+import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
+import { createHash } from 'crypto';
+import { Connection, In, Not, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { Rollup } from '../rollup';
@@ -58,6 +59,9 @@ export class RollupDb {
       }),
     );
 
+    const txIds = Buffer.concat(txs.map(tx => tx.txId));
+    const rollupHash = createHash('sha256').update(txIds).digest();
+    rollupDao.hash = rollupHash;
     rollupDao.created = new Date();
     rollupDao.id = rollup.rollupId;
     rollupDao.dataRoot = rollup.newDataRoot;
@@ -71,7 +75,7 @@ export class RollupDb {
   }
 
   public async setRollupProof(rollupId: number, proofData: Buffer) {
-    const rollupDao = await this.getRollup(rollupId);
+    const rollupDao = await this.getRollupFromId(rollupId);
     if (!rollupDao) {
       throw new Error(`Rollup not found: ${rollupId}`);
     }
@@ -81,7 +85,7 @@ export class RollupDb {
   }
 
   public async confirmRollupCreated(rollupId: number) {
-    const rollupDao = await this.getRollup(rollupId);
+    const rollupDao = await this.getRollupFromId(rollupId);
     if (!rollupDao) {
       throw new Error(`Rollup not found: ${rollupId}`);
     }
@@ -91,7 +95,7 @@ export class RollupDb {
   }
 
   public async confirmSent(rollupId: number, ethTxHash: Buffer) {
-    const rollupDao = await this.getRollup(rollupId);
+    const rollupDao = await this.getRollupFromId(rollupId);
     if (!rollupDao) {
       throw new Error(`Rollup not found: ${rollupId}`);
     }
@@ -128,6 +132,10 @@ export class RollupDb {
 
   public async deletePendingRollups() {
     await this.rollupRep.delete({ status: 'CREATING' });
+  }
+
+  public async deleteUnsettledRollups() {
+    await this.rollupRep.delete({ status: Not('SETTLED') });
   }
 
   public getPendingRollups() {
@@ -171,8 +179,12 @@ export class RollupDb {
     });
   }
 
-  public async getRollup(id: number) {
+  public async getRollupFromId(id: number) {
     return this.rollupRep.findOne({ id });
+  }
+
+  public async getRollupFromHash(hash: Buffer) {
+    return this.rollupRep.findOne({ hash });
   }
 
   public async getRollupWithTxs(id: number) {

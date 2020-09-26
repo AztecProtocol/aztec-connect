@@ -77,6 +77,7 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
       networkOrHost: '',
       rollupContractAddress: EthAddress.ZERO,
       tokenContractAddress: EthAddress.ZERO,
+      nextRollupId: this.blockNum,
       dataSize: this.dataTreeSize,
       dataRoot: this.dataRoot,
       nullRoot: this.nullRoot,

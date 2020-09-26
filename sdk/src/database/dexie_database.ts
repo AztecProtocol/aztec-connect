@@ -162,8 +162,13 @@ export class DexieDatabase implements Database {
     this.alias.mapToClass(DexieAlias);
   }
 
-  close() {
+  async close() {
     this.dexie.close();
+  }
+
+  static async clear() {
+    const dexie = new Dexie('hummus');
+    await dexie.delete();
   }
 
   async addNote(note: Note) {

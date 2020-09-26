@@ -32,18 +32,19 @@ export type SdkOptions = {
 } & CoreSdkOptions;
 
 async function sdkFactory(hostStr: string, options: SdkOptions, ethereumProvider?: EthereumProvider) {
-  const host = new URL(hostStr);
-  const leveldb = getLevelDb();
-  const db = new DexieDatabase();
-
   if (options.debug) {
     createDebug.enable('bb:*');
   }
 
+  const host = new URL(hostStr);
+  const leveldb = getLevelDb();
+
   if (options.clearDb) {
     await leveldb.clear();
-    await db.resetUsers();
+    await DexieDatabase.clear();
   }
+
+  const db = new DexieDatabase();
 
   if (!options.escapeHatchMode) {
     const rollupProvider = new ServerRollupProvider(host);

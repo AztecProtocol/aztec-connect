@@ -12,6 +12,7 @@ export interface RollupProviderStatus {
   networkOrHost: string;
   rollupContractAddress: EthAddress;
   tokenContractAddress: EthAddress;
+  nextRollupId: number;
   dataSize: number;
   dataRoot: Buffer;
   nullRoot: Buffer;

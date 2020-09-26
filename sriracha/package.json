@@ -7,11 +7,10 @@
     "build": "yarn clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node package.js",
     "build:dev": "tsc -p tsconfig.cjs.json --watch & tsc -p tsconfig.es.json --watch",
     "start": "node ./dest",
-    "start:dev": "yarn clean_db && tsc-watch -p tsconfig.cjs.json --onSuccess 'yarn start'",
+    "start:dev": "tsc-watch -p tsconfig.cjs.json --onSuccess 'yarn start'",
     "test": "jest --passWithNoTests",
     "clean": "rm -rf ./dest ./dest-es",
-    "clean_data": "rm -rf ./data",
-    "clean_db": "rm -rf ./data"
+    "clean_data": "rm -rf ./data"
   },
   "jest": {
     "transform": {

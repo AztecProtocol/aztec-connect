@@ -123,5 +123,13 @@ export default class Server implements HashPathSource {
 
     this.serverState.lastBlock = blockNum;
     await this.writeState();
+    this.printState();
+  }
+
+  private printState() {
+    console.log(`Data size: ${this.worldStateDb.getSize(0)}`);
+    console.log(`Data root: ${this.worldStateDb.getRoot(0).toString('hex')}`);
+    console.log(`Null root: ${this.worldStateDb.getRoot(1).toString('hex')}`);
+    console.log(`Root root: ${this.worldStateDb.getRoot(2).toString('hex')}`);
   }
 }

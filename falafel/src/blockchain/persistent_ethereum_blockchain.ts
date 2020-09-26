@@ -16,8 +16,22 @@ export class PersistentEthereumBlockchain implements Blockchain {
 
   constructor(private ethereumBlockchain: EthereumBlockchain, connection: Connection) {
     this.blockRep = connection.getRepository(BlockDao);
-    this.ethereumBlockchain.on('block', b => this.blockQueue.put(b));
-    this.blockQueue.process(b => this.saveBlock(b));
+  }
+
+  public static async new(ethereumBlockchain: EthereumBlockchain, connection: Connection) {
+    const instance = new PersistentEthereumBlockchain(ethereumBlockchain, connection);
+    await instance.init();
+    return instance;
+  }
+
+  public async init() {
+    // Make sure all historical blocks are inserted.
+    const latest = await this.blockRep.findOne(undefined, { order: { id: 'DESC' } });
+    const fromBlock = latest ? latest.id + 1 : 0;
+    const blocks = await this.ethereumBlockchain.getBlocks(fromBlock);
+    for (const block of blocks) {
+      await this.saveBlock(block);
+    }
   }
 
   public getLatestRollupId() {
@@ -37,11 +51,6 @@ export class PersistentEthereumBlockchain implements Blockchain {
   }
 
   public async getBlocks(from: number) {
-    // To ensure we return any blocks outstanding in the queue, wait until the queue is flushed.
-    if (this.blockQueue.length()) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
     return (await this.blockRep.find({ where: { id: MoreThanOrEqual(from) } })).map(blockDaoToBlock);
   }
 
@@ -54,6 +63,8 @@ export class PersistentEthereumBlockchain implements Blockchain {
   }
 
   public async start() {
+    this.ethereumBlockchain.on('block', b => this.blockQueue.put(b));
+    this.blockQueue.process(b => this.saveBlock(b));
     const latest = await this.blockRep.findOne(undefined, { order: { id: 'DESC' } });
     const fromBlock = latest ? latest.id + 1 : 0;
     await this.ethereumBlockchain.start(fromBlock);
@@ -87,6 +98,7 @@ export class PersistentEthereumBlockchain implements Blockchain {
   public validateSignature(publicOwnerBuf: Buffer, signature: Buffer, proof: Buffer) {
     return this.ethereumBlockchain.validateSignature(publicOwnerBuf, signature, proof);
   }
+
   private async saveBlock(block: Block) {
     await this.blockRep.save(blockToBlockDao(block));
     this.latestRollupId = RollupProofData.getRollupIdFromBuffer(block.rollupProofData);

@@ -25,26 +25,6 @@ export interface GetTreeStateServerResponse {
   size: string;
 }
 
-export interface GetStatusServerResponse {
-  chainId: number;
-  networkOrHost: string;
-  rollupContractAddress: string;
-  tokenContractAddress: string;
-  dataSize: string;
-  dataRoot: string;
-  nullRoot: string;
-}
-
-export interface GetStatusResponse {
-  chainId: number;
-  networkOrHost: string;
-  rollupContractAddress: EthAddress;
-  tokenContractAddress: EthAddress;
-  dataSize: bigint;
-  dataRoot: Buffer;
-  nullRoot: Buffer;
-}
-
 export interface TreeState {
   root: Buffer;
   size: bigint;

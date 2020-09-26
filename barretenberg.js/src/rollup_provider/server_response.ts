@@ -5,6 +5,7 @@ export interface RollupProviderStatusServerResponse {
   networkOrHost: string;
   rollupContractAddress: string;
   tokenContractAddress: string;
+  nextRollupId: number;
   dataSize: number;
   dataRoot: string;
   nullRoot: string;

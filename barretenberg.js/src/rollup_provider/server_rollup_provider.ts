@@ -14,6 +14,7 @@ const toRollupProviderStatus = (status: RollupProviderStatusServerResponse): Rol
   rollupContractAddress: EthAddress.fromString(status.rollupContractAddress),
   dataRoot: Buffer.from(status.dataRoot, 'hex'),
   nullRoot: Buffer.from(status.nullRoot, 'hex'),
+  nextRollupId: status.nextRollupId,
 });
 
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {

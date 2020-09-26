@@ -11,11 +11,7 @@ import { advanceBlocks, blocksToAdvance } from './manipulate_block';
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
-const {
-  ETHEREUM_HOST = 'http://localhost:8545',
-  SRIRACHA_HOST = 'http://localhost:8082',
-  ROLLUP_CONTRACT_ADDRESS = '',
-} = process.env;
+const { ETHEREUM_HOST = 'http://localhost:8545', SRIRACHA_HOST = 'http://localhost:8082' } = process.env;
 
 describe('end-to-end escape tests', () => {
   let provider: HttpProvider;
