@@ -84,6 +84,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public async status() {
     const { chainId, networkOrHost } = await this.getNetworkInfo();
+    const nextRollupId = +(await this.rollupProcessor.nextRollupId());
     const dataSize = +(await this.rollupProcessor.dataSize());
     const dataRoot = Buffer.from((await this.rollupProcessor.dataRoot()).slice(2), 'hex');
     const nullRoot = Buffer.from((await this.rollupProcessor.nullRoot()).slice(2), 'hex');
@@ -93,6 +94,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       networkOrHost,
       tokenContractAddress: this.getTokenContractAddress(),
       rollupContractAddress: this.getRollupContractAddress(),
+      nextRollupId,
       dataRoot,
       nullRoot,
       dataSize,
@@ -182,18 +184,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     let txReceipt = await this.config.signer.provider!.getTransactionReceipt(txHashStr);
     if (!txReceipt) {
       this.debug(`Waiting for tx receipt for ${txHashStr}...`);
-      while (!txReceipt) {
+      while (!txReceipt || txReceipt.blockNumber === null) {
         await new Promise(resolve => setTimeout(resolve, 3000));
         txReceipt = await this.config.signer.provider!.getTransactionReceipt(txHashStr);
       }
     }
-    if (!txReceipt.status) {
-      throw new Error(`Transaction rejected for ${txHashStr}.`);
-    }
-    if (!txReceipt.blockNumber) {
-      throw new Error(`Failed to get block number in receipt for ${txHashStr}.`);
-    }
-    return { blockNum: txReceipt.blockNumber } as Receipt;
+    return { status: !!txReceipt.status, blockNum: txReceipt.blockNumber } as Receipt;
   }
 
   /**

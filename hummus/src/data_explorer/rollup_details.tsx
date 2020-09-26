@@ -2,9 +2,9 @@ import { Block, Offset } from '@aztec/guacamole-ui';
 import { Rollup } from 'aztec2-sdk';
 import { WebSdk } from 'aztec2-sdk';
 import moment from 'moment';
-import React, { useEffect,useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Form, FormSection } from '../components';
-import { ContentLink,DetailRow } from './detail_row';
+import { ContentLink, DetailRow } from './detail_row';
 
 const TxList = ({ txHashes }: { txHashes: Buffer[] }) => (
   <Offset top="xs" bottom="xs">
@@ -32,7 +32,7 @@ export const RollupDetails = ({ id, app }: RollupDetailsProps) => {
 
     const fetchAsync = async () => {
       try {
-        const rollupData = await sdk.getRollup(id);
+        const rollupData = await sdk.getRollupFromId(id);
         if (unmounted) return;
 
         if (rollupData) {

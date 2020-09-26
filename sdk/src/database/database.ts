@@ -10,6 +10,8 @@ export interface SigningKey {
 }
 
 export interface Database {
+  close(): Promise<void>;
+
   addNote(note: Note): Promise<void>;
   getNote(treeIndex: number): Promise<Note | undefined>;
   getNoteByNullifier(userId: Buffer, nullifier: Buffer): Promise<Note | undefined>;

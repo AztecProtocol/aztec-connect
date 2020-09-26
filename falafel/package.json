@@ -43,6 +43,7 @@
     "koa": "^2.7.0",
     "koa-compress": "^3.0.0",
     "koa-router": "^7.4.0",
+    "log-timestamp": "^0.3.0",
     "moment": "^2.25.3",
     "promise-readable": "^5.0.4",
     "source-map-support": "^0.5.19",

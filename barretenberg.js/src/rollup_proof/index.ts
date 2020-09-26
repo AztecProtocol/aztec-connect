@@ -76,6 +76,7 @@ export class InnerProofData {
 export class RollupProofData {
   static NUM_ROLLUP_PUBLIC_INPUTS = 10;
   static LENGTH_ROLLUP_PUBLIC = RollupProofData.NUM_ROLLUP_PUBLIC_INPUTS * 32;
+  public rollupHash: Buffer;
 
   constructor(
     public rollupId: number,
@@ -89,7 +90,10 @@ export class RollupProofData {
     public newDataRootsRoot: Buffer,
     public numTxs: number,
     public innerProofData: InnerProofData[],
-  ) {}
+  ) {
+    const allTxIds = this.innerProofData.map(innerProof => innerProof.getTxId());
+    this.rollupHash = createHash('sha256').update(Buffer.concat(allTxIds)).digest();
+  }
 
   toBuffer() {
     return Buffer.concat([

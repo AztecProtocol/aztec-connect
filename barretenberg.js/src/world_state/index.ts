@@ -28,12 +28,6 @@ export class WorldState {
     const rollup = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
     const { rollupId, dataStartIndex, innerProofData } = rollup;
 
-    const dataSize = this.getSize();
-    if (dataSize !== dataStartIndex) {
-      debug(`skipping block ${rollupId}, dataSize != dataStartIndex: ${dataSize} != ${dataStartIndex}.`);
-      return;
-    }
-
     debug(`processing block ${block.blockNum} with rollup ${rollupId}...`);
 
     for (let i = 0; i < innerProofData.length; ++i) {

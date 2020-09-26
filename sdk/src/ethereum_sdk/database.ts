@@ -19,8 +19,8 @@ export class Database {
   private db: Dexie;
   private user: Dexie.Table<DexieAccount, Uint8Array>;
 
-  constructor(name: string) {
-    this.db = new Dexie(name);
+  constructor() {
+    this.db = new Dexie('aztec2-sdk-eth');
     this.db.version(1).stores({
       user: '&ethAddress',
     });
@@ -29,12 +29,13 @@ export class Database {
     this.user.mapToClass(DexieAccount);
   }
 
-  close() {
-    this.db.close();
+  static async clear() {
+    const db = new Dexie('aztec2-sdk-eth');
+    await db.delete();
   }
 
-  async clear() {
-    await this.user.clear();
+  close() {
+    this.db.close();
   }
 
   async addAccount({ ethAddress, userId }: DbAccount) {

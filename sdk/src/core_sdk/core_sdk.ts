@@ -255,9 +255,12 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async destroy() {
-    await this.workerPool?.destroy();
+    await this.stopSyncingUserStates();
     await this.stopReceivingBlocks();
     this.stopTrackingGlobalState();
+    await this.workerPool?.destroy();
+    await this.leveldb.close();
+    await this.db.close();
     this.updateInitState(SdkInitState.DESTROYED);
     this.removeAllListeners();
   }
@@ -311,13 +314,13 @@ export class CoreSdk extends EventEmitter {
 
     this.blockQueue = new MemoryFifo<Block>();
     this.rollupProvider.on('block', b => this.blockQueue.put(b));
-    this.processBlocksPromise = this.processBlockQueue();
 
     const syncedToBlock = await this.leveldb.get('syncedToBlock').catch(() => -1);
     await this.rollupProvider.start(+syncedToBlock + 1);
     this.sdkStatus.latestRollupId = this.rollupProvider.getLatestRollupId();
 
     this.userStates.forEach(us => us.startSync());
+    this.processBlocksPromise = this.processBlockQueue();
 
     debug('started processing blocks.');
   }

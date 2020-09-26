@@ -36,8 +36,8 @@ rebasing against master.
 
 You should also avoid merging master into your branch as that will likely result in conflicts once rebasing.
 
-Of course, the world is imperfect, and in the event that rebasing becomes unfeasible we should fall back on standard
-merges.
+Of course, the world is imperfect, and in the event that rebasing becomes unfeasible, you can create a new fresh branch
+off master, and perform a `git merge --squash <old_branch>` to create a new branch off head with a new single commit.
 
 ### Interactive Rebases
 

@@ -10,6 +10,9 @@ export class RollupDao {
   @PrimaryColumn()
   public id!: number;
 
+  @Column()
+  public hash!: Buffer;
+
   @Index({ unique: true })
   @Column()
   public dataRoot!: Buffer;

@@ -9,6 +9,7 @@ export interface NetworkInfo {
 }
 
 export interface Receipt {
+  status: boolean;
   blockNum: number;
 }
 

@@ -37,10 +37,17 @@ export default class Server implements HashPathSource {
     await this.writeState();
 
     // Subscribe for new blocks.
-    this.blockchain.on('block', (b: Block) => this.queue.put(() => this.handleBlock(b)));
+    this.blockchain.on('block', (b: Block) =>
+      this.queue.put(async () => {
+        await this.handleBlock(b);
+        this.printState();
+      }),
+    );
     this.blockchain.start(this.serverState.lastBlock + 1);
 
     this.queue.process(fn => fn());
+
+    this.printState();
   }
 
   public async stop() {
@@ -123,5 +130,12 @@ export default class Server implements HashPathSource {
 
     this.serverState.lastBlock = blockNum;
     await this.writeState();
+  }
+
+  private printState() {
+    console.log(`Data size: ${this.worldStateDb.getSize(0)}`);
+    console.log(`Data root: ${this.worldStateDb.getRoot(0).toString('hex')}`);
+    console.log(`Null root: ${this.worldStateDb.getRoot(1).toString('hex')}`);
+    console.log(`Root root: ${this.worldStateDb.getRoot(2).toString('hex')}`);
   }
 }

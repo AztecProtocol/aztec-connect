@@ -1,5 +1,5 @@
 import { WorldStateDb } from 'barretenberg/world_state_db';
-import { EthereumBlockchain } from 'blockchain';
+import { EthereumBlockchain, EthereumBlockchainConfig } from 'blockchain';
 import { EthAddress } from 'barretenberg/address';
 import dotenv from 'dotenv';
 import { ethers, Signer } from 'ethers';
@@ -7,12 +7,13 @@ import http from 'http';
 import moment from 'moment';
 import 'reflect-metadata';
 import 'source-map-support/register';
-import { createConnection } from 'typeorm';
+import { Connection, createConnection } from 'typeorm';
 import { appFactory } from './app';
 import { LocalBlockchain } from './blockchain/local_blockchain';
 import { PersistentEthereumBlockchain } from './blockchain/persistent_ethereum_blockchain';
 import { RollupDb } from './rollup_db';
 import { Server, ServerConfig } from './server';
+import 'log-timestamp';
 
 dotenv.config();
 
@@ -43,6 +44,11 @@ function getEthereumBlockchainConfig() {
   }
 }
 
+async function blockchainFactory(ethConfig: EthereumBlockchainConfig, connection: Connection) {
+  const ethereumBlockchain = await EthereumBlockchain.new(ethConfig, EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS!));
+  return PersistentEthereumBlockchain.new(ethereumBlockchain, connection);
+}
+
 async function main() {
   const serverConfig: ServerConfig = {
     rollupSize: +ROLLUP_SIZE,
@@ -53,10 +59,7 @@ async function main() {
   const connection = await createConnection();
   const ethConfig = getEthereumBlockchainConfig();
   const blockchain = ethConfig
-    ? new PersistentEthereumBlockchain(
-        await EthereumBlockchain.new(ethConfig, EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS!)),
-        connection,
-      )
+    ? await blockchainFactory(ethConfig, connection)
     : new LocalBlockchain(connection, serverConfig.rollupSize, +LOCAL_BLOCKCHAIN_INIT_SIZE);
   const rollupDb = new RollupDb(connection);
 

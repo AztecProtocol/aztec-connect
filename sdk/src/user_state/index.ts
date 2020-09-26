@@ -51,6 +51,9 @@ export class UserState extends EventEmitter {
    * Then starts processing blocks added to queue via `processBlock()`.
    */
   public async startSync() {
+    if (this.syncing) {
+      return;
+    }
     debug(`starting sync for ${this.user.id.toString('hex')} from block ${this.user.syncedToBlock + 1}...`);
     this.syncing = true;
     const blocks = await this.blockSource.getBlocks(this.user.syncedToBlock + 1);

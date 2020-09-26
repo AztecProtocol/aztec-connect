@@ -57,7 +57,7 @@ echo
 STAGES=$(cat $DOCKERFILE | sed -n -e 's/^FROM .* AS \(.*\)/\1/p')
 for STAGE in $STAGES; do
   echo "Pulling stage: $STAGE"
-  STAGE_IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$TAG-$STAGE
+  STAGE_IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:cache-master-$TAG-$STAGE
   STAGE_IMAGE_BRANCH_URI=$ECR_URL/$REPOSITORY:cache-$BRANCH-$TAG-$STAGE
 
   fetch_cache $STAGE_IMAGE_BRANCH_URI || fetch_cache $STAGE_IMAGE_MASTER_URI || true
