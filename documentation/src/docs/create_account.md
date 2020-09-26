@@ -5,7 +5,7 @@ import { GrumpkinAddress } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 
 async function demoCreateAccount(aztecSdk) {
-  // define the private key used for encrypting user data
+  // define the privacy key used for decrypting data
   const privacyKey = randomBytes(32);
   const user = await aztecSdk.addUser(privacyKey);
 
@@ -13,12 +13,13 @@ async function demoCreateAccount(aztecSdk) {
   const signingPublicKey = GrumpkinAddress.randomAddress();
 
   // define the public key that the account will be recovered to for social recovery
-  const recoveryPublicKey = GrumpkinAddress.randomAddress();
+  const recoveryPayloads = await aztecSdk.generateAccountRecoveryData(user.id, [GrumpkinAddress.randomAddress()]);
+  const { recoveryPublicKey } = recoveryPayloads[0];
 
   const alias = randomBytes(5).toString();
 
-  console.info('Creating account proof...');
-  const txHash = await aztecSdk.createAccount(privacyKey, signingPublicKey, recoveryPublicKey, alias);
+  console.info('Creating proof...');
+  const txHash = await aztecSdk.createAccount(user.id, signingPublicKey, recoveryPublicKey, alias);
   console.info('Proof accepted by server. Tx hash:', txHash.toString('hex'));
 
   console.info('Waiting for tx to settle...');
@@ -32,5 +33,6 @@ async function demoCreateAccount(aztecSdk) {
 
 ## See Also
 
-- **[Initialize the SDK](/#/SDK/Initialize%20the%20SDK)**
-- **[Generate account recovery data](/#/SDK/API/generateAccountRecoveryData)**
+- **[Generate account recovery data](/#/User/generateAccountRecoveryData)**
+- **[Recover account](/#/User/recoverAccount)**
+- **[Add a new signing key](/#/User/addSigningKey)**

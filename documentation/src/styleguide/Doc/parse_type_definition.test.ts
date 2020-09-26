@@ -1,4 +1,81 @@
-import { parseType, parseTypeDefinition } from './parse_type_definition';
+import {
+  destructParamsStr,
+  destructFunctionStr,
+  parseFunction,
+  parseType,
+  parseTypeDefinition,
+} from './parse_type_definition';
+
+describe('destructParamsStr', () => {
+  it('parse params and return an array of strings', () => {
+    expect(destructParamsStr('param: string')).toEqual(['param: string']);
+
+    expect(destructParamsStr('param1: string, param2: number')).toEqual(['param1: string', 'param2: number']);
+
+    expect(destructParamsStr('param1: string, param2: { key1: number, key2: bigint }, param3: Buffer')).toEqual([
+      'param1: string',
+      'param2: { key1: number, key2: bigint }',
+      'param3: Buffer',
+    ]);
+
+    expect(destructParamsStr('param1: string, param2: () => number, param3: Buffer')).toEqual([
+      'param1: string',
+      'param2: () => number',
+      'param3: Buffer',
+    ]);
+
+    expect(
+      destructParamsStr('param1: string, param2: (arg1: string, arg2: bigint) => number, param3: Buffer'),
+    ).toEqual(['param1: string', 'param2: (arg1: string, arg2: bigint) => number', 'param3: Buffer']);
+
+    expect(
+      destructParamsStr(
+        'param1: string, param2: (arg1: string, arg2: { key1: string, key2: (listener: (e: Event) => void) => boolean }) => number, param3: Buffer',
+      ),
+    ).toEqual([
+      'param1: string',
+      'param2: (arg1: string, arg2: { key1: string, key2: (listener: (e: Event) => void) => boolean }) => number',
+      'param3: Buffer',
+    ]);
+  });
+});
+
+describe('destructFunctionStr', () => {
+  it('take a function definition and return its params part and returns part', () => {
+    expect(destructFunctionStr('() => void')).toEqual({
+      paramsStr: '',
+      returnsStr: 'void',
+    });
+
+    expect(destructFunctionStr('(p1: string, p2: number) => void')).toEqual({
+      paramsStr: 'p1: string, p2: number',
+      returnsStr: 'void',
+    });
+
+    expect(destructFunctionStr('(p1: string, p2: number) => (e: Event) => void')).toEqual({
+      paramsStr: 'p1: string, p2: number',
+      returnsStr: '(e: Event) => void',
+    });
+
+    expect(
+      destructFunctionStr('(p1: string, p2: (config: { key1: string, key2: number }) => bigint) => (e: Event) => void'),
+    ).toEqual({
+      paramsStr: 'p1: string, p2: (config: { key1: string, key2: number }) => bigint',
+      returnsStr: '(e: Event) => void',
+    });
+  });
+});
+
+describe('parseFunction', () => {
+  it('parse function definition and return a Type object', () => {
+    expect(parseFunction('() => void')).toEqual({
+      name: '',
+      type: 'function',
+      params: [],
+      returns: 'void',
+    });
+  });
+});
 
 describe('parseType', () => {
   it('parse definition that has name and type', () => {
@@ -13,7 +90,6 @@ describe('parseType', () => {
       name: 'isSynchronised',
       type: 'any',
       isPrivate: true,
-      isStatic: false,
     });
   });
 
@@ -21,8 +97,15 @@ describe('parseType', () => {
     expect(parseType('static ZERO: GrumpkinAddress;')).toEqual({
       name: 'ZERO',
       type: 'GrumpkinAddress',
-      isPrivate: false,
       isStatic: true,
+    });
+  });
+
+  it('parse a readonly value', () => {
+    expect(parseType('readonly chainId: string;')).toEqual({
+      name: 'chainId',
+      type: 'string',
+      isReadonly: true,
     });
   });
 
@@ -142,7 +225,6 @@ describe('parseType', () => {
         },
       ],
       returns: 'GrumpkinAddress',
-      isPrivate: false,
       isStatic: true,
     });
   });
@@ -175,8 +257,43 @@ describe('parseType', () => {
           },
         ],
       },
-      isPrivate: false,
       isStatic: true,
+    });
+  });
+
+  it('parse function that has function as param', () => {
+    expect(
+      parseType(
+        'on(event: SdkEvent.UPDATED_INIT_STATE, listener: (initState: SdkInitState, message?: string) => void): this;',
+      ),
+    ).toEqual({
+      name: 'on',
+      type: 'function',
+      params: [
+        {
+          name: 'event',
+          type: 'SdkEvent.UPDATED_INIT_STATE',
+        },
+        {
+          name: 'listener',
+          type: {
+            name: '',
+            type: 'function',
+            params: [
+              {
+                name: 'initState',
+                type: 'SdkInitState',
+              },
+              {
+                name: 'message?',
+                type: 'string',
+              },
+            ],
+            returns: 'void',
+          },
+        },
+      ],
+      returns: 'this',
     });
   });
 
@@ -276,7 +393,6 @@ describe('parseTypeDefinition', () => {
         ],
         returns: 'boolean',
         isStatic: true,
-        isPrivate: false,
       },
     ]);
   });
@@ -347,6 +463,45 @@ describe('parseTypeDefinition', () => {
     ]);
   });
 
+  it('can find the correct type definition by decorator and name', () => {
+    const content = `
+      export interface WalletSdk {
+          on(event: SdkEvent): this;
+      }
+      export declare class WalletSdk extends EventEmitter {
+          constructor(ethereumProvider: EthereumProvider);
+      };
+    `;
+
+    expect(parseTypeDefinition(content, 'WalletSdk', 'interface')).toEqual([
+      {
+        name: 'on',
+        type: 'function',
+        params: [
+          {
+            name: 'event',
+            type: 'SdkEvent',
+          },
+        ],
+        returns: 'this',
+      },
+    ]);
+
+    expect(parseTypeDefinition(content, 'WalletSdk', 'class')).toEqual([
+      {
+        name: 'constructor',
+        type: 'function',
+        params: [
+          {
+            name: 'ethereumProvider',
+            type: 'EthereumProvider',
+          },
+        ],
+        returns: 'void',
+      },
+    ]);
+  });
+
   it('return empty array if type is not found', () => {
     const content = `
       export declare class Address {
@@ -410,7 +565,6 @@ describe('parseTypeDefinition', () => {
           ],
         },
         isStatic: true,
-        isPrivate: false,
       },
     ]);
   });

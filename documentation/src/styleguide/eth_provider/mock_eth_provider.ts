@@ -1,4 +1,4 @@
-import { EthAddress } from 'aztec2-sdk';
+import { EthAddress } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { EthProvider, ganache, EthProviderAccessState } from './eth_provider';
 

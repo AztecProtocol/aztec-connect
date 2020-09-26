@@ -1,7 +1,6 @@
 import { createHash } from 'crypto';
 import PropTypes from 'prop-types';
 import React from 'react';
-import cx from 'clsx';
 import Markdown from 'react-styleguidist/lib/client/rsg-components/Markdown';
 import prismTheme from 'react-styleguidist/lib/client/styles/prismTheme';
 import Styled from 'react-styleguidist/lib/client/rsg-components/Styled';
@@ -22,6 +21,9 @@ export const styles = ({ space, color, fontFamily, fontSize }: Rsg.Theme) => ({
   },
   examples: {
     padding: [[space[2], 0]],
+  },
+  docSpec: {
+    padding: [[space[3], 0]],
   },
   markdown: {
     '& *': {
@@ -156,9 +158,6 @@ export const styles = ({ space, color, fontFamily, fontSize }: Rsg.Theme) => ({
       }),
     },
   },
-  padAfter: {
-    paddingBottom: space[5],
-  },
 });
 
 export interface ExamplesProps extends JssInjectedProps {
@@ -172,7 +171,7 @@ const Examples: React.FunctionComponent<ExamplesProps> = ({ classes, examples })
     <AppContext.Consumer>
       {app => (
         <div className={classes.examples}>
-          {examples.map((example, index) => {
+          {examples.map(example => {
             let contentNode;
             switch (example.type) {
               case 'code': {
@@ -185,38 +184,50 @@ const Examples: React.FunctionComponent<ExamplesProps> = ({ classes, examples })
                 break;
               }
               case 'markdown': {
-                const [docDef, srcName, isType, isEnum, name] =
-                  example.content.match(/@spec\s+([\w-_\/]+(.d)?.ts)\s+(enum\s+)?([a-zA-Z]+)/) || [];
-                if (docDef) {
-                  const [contentBefore, contentAfter] = example.content.split(docDef).map(t => t.trim());
-                  contentNode = (
-                    <div key={`md-${+index}`}>
-                      {!!contentBefore && (
-                        <div key={`md-${+index}-before`} className={cx(classes.markdown, classes.padAfter)}>
-                          <Markdown text={contentBefore} />
-                        </div>
-                      )}
-                      {isEnum ? (
-                        <div key={`md-${+index}-enum`} className={classes.markdown}>
-                          <Enum srcName={srcName} enumName={name} />
-                        </div>
-                      ) : isType ? (
-                        <TypeDefinition key={`type-${+index}`} srcName={srcName} typeName={name} />
-                      ) : (
-                        <DocRenderer key={`doc-${+index}`} srcName={srcName} apiName={name} />
-                      )}
-                      {!!contentAfter && (
-                        <div key={`md-${+index}-after`} className={classes.markdown}>
-                          <Markdown text={contentAfter} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                } else {
-                  contentNode = (
-                    <div key={`md-${+index}`} className={classes.markdown}>
-                      <Markdown text={example.content} />
-                    </div>
+                contentNode = [];
+                const specPattern = /@spec\s+([\w@-_\/]+(.d)?.ts)\s+(enum|class|interface)?\s*([a-zA-Z]+)/;
+                const reg = new RegExp(specPattern, 'g');
+                let lastIndex = 0;
+                let res;
+                while ((res = reg.exec(example.content)) !== null) {
+                  if (res.index > lastIndex) {
+                    const normalContent = example.content.substring(lastIndex, res.index).trim();
+                    if (normalContent) {
+                      contentNode.push(
+                        <div key={`md_${contentNode.length}`} className={classes.markdown}>
+                          <Markdown text={normalContent} />
+                        </div>,
+                      );
+                    }
+                    lastIndex = res.index;
+                  }
+                  const [spec, srcName, isType, decorator, name] =
+                    example.content.substr(res.index).match(specPattern) || [];
+                  if (decorator === 'enum') {
+                    contentNode.push(
+                      <div key={`spec_${contentNode.length}`} className={classes.markdown}>
+                        <Enum srcName={srcName} enumName={name} />
+                      </div>,
+                    );
+                  } else {
+                    contentNode.push(
+                      <div key={`spec_${contentNode.length}`} className={classes.docSpec}>
+                        {(() => {
+                          if (isType) {
+                            return <TypeDefinition srcName={srcName} typeName={name} decorator={decorator} />;
+                          }
+                          return <DocRenderer srcName={srcName} apiName={name} />;
+                        })()}
+                      </div>,
+                    );
+                  }
+                  lastIndex += spec.length;
+                }
+                if (lastIndex < example.content.length) {
+                  contentNode.push(
+                    <div key={`md_${contentNode.length}`} className={classes.markdown}>
+                      <Markdown text={example.content.substr(lastIndex)} />
+                    </div>,
                   );
                 }
                 break;

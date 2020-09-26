@@ -1,1 +1,1 @@
-@spec aztec2-sdk/user_tx.d.ts enum UserTxAction
+@spec @aztec/sdk/user_tx.d.ts enum UserTxAction

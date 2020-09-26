@@ -1,5 +1,5 @@
 import { formatUnits } from '@ethersproject/units';
-import { EthAddress } from 'aztec2-sdk';
+import { EthAddress } from '@aztec/sdk';
 import React, { useState, useEffect } from 'react';
 import Link from 'react-styleguidist/lib/client/rsg-components/Link';
 import Styled from 'react-styleguidist/lib/client/rsg-components/Styled';

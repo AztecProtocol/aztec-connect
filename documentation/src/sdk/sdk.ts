@@ -99,22 +99,30 @@ export interface Sdk extends EventEmitter {
 
   /**
    * Generate Account Recovery Data
-   * @param privacyKey - [Buffer] The 32byte private key to be used for encrypting private user state.
+   * @param userId - [Buffer] Id of the proof sender.
    * @param trustedThirdPartyPublicKeys - [GrumpkinAddress[]] The 32-byte public keys of trusted third parties.
-   * @returns Promise\<\{ recoveryPublicKey: GrumpkinAddress; recoveryPayloads: RecoveryPayload[]; \}\> - Resolves to an object containing the public key and the recovery info for that user.
+   * @returns Promise\<RecoveryPayload[]\> - Resolves to an object containing the public key and the recovery info for that user.
    */
-  generateAccountRecoveryData(privacyKey: Buffer, trustedThirdPartyPublicKeys: GrumpkinAddress[]): Promise<{ recoveryPublicKey: GrumpkinAddress; recoveryPayloads: RecoveryPayload[]; }>;
+  generateAccountRecoveryData(userId: Buffer, trustedThirdPartyPublicKeys: GrumpkinAddress[]): Promise<RecoveryPayload[]>;
 
   /**
    * Create Account
-   * @param privacyKey - [Buffer] The 32byte private key to be used for encrypting private user state.
+   * @param userId - [Buffer] Id of the proof sender.
    * @param newSigningPublicKey - [GrumpkinAddress] The 32-byte public key of the private key the user wishes to use to update state.
    * @param recoveryPublicKey - [GrumpkinAddress] The 32-byte public key generated along with user's recovery data.
    * @param alias - [string] The user's alias they wish to be identified by.
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/SDK/Types/TxHash).
    */
-  createAccount(privacyKey: Buffer, newSigningPublicKey: GrumpkinAddress, recoveryPublicKey: GrumpkinAddress, alias: string): Promise<Buffer>;
+  createAccount(userId: Buffer, newSigningPublicKey: GrumpkinAddress, recoveryPublicKey: GrumpkinAddress, alias: string): Promise<Buffer>;
  
+  /**
+   * Recover Acocunt
+   * @param userId - [Buffer] Id of the proof sender.
+   * @param recoveryPayload - [RecoveryPayload] The data created at account creation that authorises the key addition.
+   * @returns Promise<TxHash> - Resolves to [TxHash](/#/SDK/Types/TxHash).
+   */
+  recoverAccount(userId: Buffer, recoveryPayload: RecoveryPayload): Promise<Buffer>;
+  
   /**
    * Add Signing Key
    * @param userId - [Buffer] Id of the proof sender.
@@ -124,16 +132,6 @@ export interface Sdk extends EventEmitter {
    */
   addSigningKey(userId: Buffer, signingPublicKey: GrumpkinAddress, signer: Signer): Promise<Buffer>;
 
-  /**
-   * Recover Acocunt
-   * @param userId - [Buffer] Id of the proof sender.
-   * @param trustedThirdPartyPublicKey - [GrumpkinAddress] The 32-byte public key of a trusted third party.
-   * @param recoveryPublicKey - [GrumpkinAddress] The 32-byte public key returned from [generateAccountRecoveryData](/#/SDK/API/generateAccountRecoveryData).
-   * @param recoveryData - [Buffer] The data created at account creation that authorises the key addition.
-   * @returns Promise<TxHash> - Resolves to [TxHash](/#/SDK/Types/TxHash).
-   */
-  recoverAccount(userId: Buffer, trustedThirdPartyPublicKey: GrumpkinAddress, recoveryPublicKey: GrumpkinAddress, recoveryData: Buffer): Promise<Buffer>;
-    
   /**
    * Remove Signing Key
    * @param userId - [Buffer] Id of the proof sender.

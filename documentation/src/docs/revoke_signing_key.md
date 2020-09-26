@@ -10,25 +10,18 @@ This method allows a user to remove a signing key on their account. This is usef
 import { GrumpkinAddress } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 
-async function demoAddSigningKey(aztecSdk) {
-  // create a new user
+async function demoRemoveSigningKey(aztecSdk) {
   const privacyKey = randomBytes(32);
   const user = await aztecSdk.addUser(privacyKey);
 
-  // create recovery data
-  const trustedThirdParties = [GrumpkinAddress.randomAddress()];
-  const { recoveryPublicKey, recoveryPayloads } = await aztecSdk.generateAccountRecoveryData(
-    privacyKey,
-    trustedThirdParties,
-  );
-
-  // create a new account
-  const userKeys = aztecSdk.newKeyPair();
-  const signer = aztecSdk.createSchnorrSigner(userKeys.publicKey, userKeys.privateKey);
+  // create new account
+  const signer = aztecSdk.createSchnorrSigner(randomBytes(32));
+  const signingKey = signer.getPublicKey();
+  const recoveryPublicKey = GrumpkinAddress.randomAddress();
   const alias = randomBytes(5).toString();
 
-  console.info('Creating account proof...');
-  const txHash = await aztecSdk.createAccount(privacyKey, userKeys.publicKey, recoveryPublicKey, alias);
+  console.info('Creating proof...');
+  const txHash = await aztecSdk.createAccount(user.id, signingKey, recoveryPublicKey, alias);
   console.info('Proof accepted by server. Tx hash:', txHash.toString('hex'));
 
   console.info('Waiting for tx to settle...');
@@ -36,12 +29,12 @@ async function demoAddSigningKey(aztecSdk) {
   console.info('Account created!');
 
   // revoke recoveryPublicKey
-  console.info('Creating account proof...');
-  const newKeyTxHash = await aztecSdk.removeSigningKey(user.id, recoveryPublicKey, signer);
-  console.info('Proof accepted by server. Tx hash:', newKeyTxHash.toString('hex'));
+  console.info('Creating proof...');
+  const revokeTxHash = await aztecSdk.removeSigningKey(user.id, recoveryPublicKey, signer);
+  console.info('Proof accepted by server. Tx hash:', revokeTxHash.toString('hex'));
 
   console.info('Waiting for tx to settle...');
-  await aztecSdk.awaitSettlement(user.id, newKeyTxHash);
+  await aztecSdk.awaitSettlement(user.id, revokeTxHash);
   console.info('Signing key revoked!');
 
   // remove this demo user from your account
@@ -51,7 +44,5 @@ async function demoAddSigningKey(aztecSdk) {
 
 ## See Also
 
-- **[Initialize the SDK](/#/SDK/Initialize%20the%20SDK)**
-- **[Generate account recovery data](/#/SDK/API/generateAccountRecoveryData)**
-- **[Create an account](/#/SDK/API/createAccount)**
-- **[Add a new signing key](/#/SDK/API/addSigningKey)**
+- **[Create account](/#/User/createAccount)**
+- **[Add a new signing key](/#/User/addSigningKey)**

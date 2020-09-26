@@ -1,1 +1,1 @@
-@spec aztec2-sdk/signer/index.d.ts Signer
+@spec @aztec/sdk/signer/index.d.ts Signer

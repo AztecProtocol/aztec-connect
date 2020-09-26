@@ -1,6 +1,6 @@
 import { TSDocParser, ParserContext } from '@microsoft/tsdoc';
 import React from 'react';
-import { parseApiCommnet } from './parse_api_comment';
+import { parseComment } from './parse_comment';
 import { parseDocNode } from './parse_doc_node';
 import { parseType } from './parse_type_definition';
 import { SpecTable, Spec, SpecType } from './spec_table';
@@ -24,7 +24,7 @@ export const DocRenderer: React.FunctionComponent<DocProps> = ({ srcName, apiNam
   let parserContext: ParserContext;
   try {
     const inputBuffer: string = require(`!!raw-loader!../../sdk/${srcName}`).default;
-    const comment = parseApiCommnet(inputBuffer, apiName);
+    const comment = parseComment(inputBuffer, apiName);
     if (!comment) {
       return null;
     }

@@ -1,4 +1,4 @@
-import { AppEvent, AppInitState, AppInitStatus, EthAddress, WebSdk } from 'aztec2-sdk';
+import { AppEvent, AppInitState, AppInitStatus, EthAddress, WebSdk } from '@aztec/sdk';
 import React, { useEffect, useState } from 'react';
 import { App } from './app';
 

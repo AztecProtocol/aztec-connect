@@ -32,6 +32,7 @@
     "barretenberg": "file:../barretenberg.js/dest",
     "bigint-buffer": "^1.1.5",
     "blockchain": "file:../blockchain/dest",
+    "ethers": "^5.0.14",
     "koa": "^2.7.0",
     "koa-bodyparser": "^4.3.0",
     "koa-compress": "^3.0.0",

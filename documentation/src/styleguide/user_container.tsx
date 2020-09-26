@@ -1,4 +1,4 @@
-import { AssetId, WebSdk, EthAddress, EthereumSdkUser, EthereumSdkUserAsset, SdkEvent } from 'aztec2-sdk';
+import { AssetId, WebSdk, EthAddress, EthereumSdkUser, EthereumSdkUserAsset, SdkEvent } from '@aztec/sdk';
 import { useState, useEffect } from 'react';
 import { App } from './app';
 
@@ -29,7 +29,7 @@ export const PrivateAssetContainer = ({ sdk, user, assetId, children }: PrivateA
       setBalance(asset.balance());
     };
 
-    handleUserStateChanged(user.getUserData().ethAddress);
+    handleUserStateChanged(user.getUserData()?.ethAddress);
 
     sdk.on(SdkEvent.UPDATED_USER_STATE, handleUserStateChanged);
 
@@ -73,7 +73,7 @@ export const PublicAssetContainer = ({ sdk, user, assetId, children }: PublicAss
       setAllowance(allowance);
     };
 
-    handleUserStateChanged(user.getUserData().ethAddress);
+    handleUserStateChanged(user.getUserData()?.ethAddress);
 
     // TODO - should subscribe to contract event
     sdk.on(SdkEvent.UPDATED_USER_STATE, handleUserStateChanged);

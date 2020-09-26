@@ -5,4 +5,5 @@ export interface Type {
   returns?: string | Type;
   isStatic?: boolean;
   isPrivate?: boolean;
+  isReadonly?: boolean;
 }

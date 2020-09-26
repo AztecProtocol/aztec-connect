@@ -49,7 +49,7 @@ export const styles = ({ space, fontSize, fontFamily, color }: Rsg.Theme) => ({
       },
     },
     '& pre': {
-      padding: space[3],
+      padding: space[2],
     },
   },
 });

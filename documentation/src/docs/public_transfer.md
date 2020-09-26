@@ -84,4 +84,6 @@ async function demoPublicTransfer(aztecSdk, userId, signer) {
 
 ## See Also
 
-- **[Initialize the SDK](/#/SDK/Initialize%20the%20SDK)**
+- **[Deposit](/#/ERC20%20Tokens/deposit)**
+- **[Withdraw](/#/ERC20%20Tokens/withdraw)**
+- **[Transfer](/#/ERC20%20Tokens/transfer)**

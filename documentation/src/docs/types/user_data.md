@@ -1,1 +1,1 @@
-@spec aztec2-sdk/user.d.ts UserData
+@spec @aztec/sdk/user/index.d.ts UserData

@@ -1,17 +1,16 @@
-import { WebSdk, WalletSdk } from 'aztec2-sdk';
-import { EthereumProvider } from 'aztec2-sdk/ethereum_provider';
+import { EthereumProvider, WebSdk, WalletSdk } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createContext } from 'react';
 import { EthProvider, MockEthProvider, Web3EthProvider } from './eth_provider';
 // For use in live code editor.
-import * as aztecSdk from 'aztec2-sdk';
+import * as aztecSdk from '@aztec/sdk';
 import * as crypto from 'crypto';
 import ethers from 'ethers';
 
 const SERVER_URL =
   process.env.NODE_ENV === 'development'
     ? `${window.location.protocol}//${window.location.hostname}:8081`
-    : window.location.origin;
+    : 'https://aztec.network/falafel';
 
 export enum LinkAccountState {
   LINKING = 'Linking',
@@ -48,9 +47,7 @@ export class App extends EventEmitter {
 
   getAvailableArgs() {
     const userData = this.webSdk.getUser().getUserData();
-    const signer = userData.alias
-      ? undefined
-      : this.webSdk.getSdk().createSchnorrSigner(userData.publicKey, userData.privateKey);
+    const signer = userData.alias ? undefined : this.webSdk.getSdk().createSchnorrSigner(userData.privateKey);
     return {
       aztecSdk: this.walletSdk,
       userId: userData.id,
@@ -71,9 +68,9 @@ export class App extends EventEmitter {
     return {
       SERVER_URL,
       USER_ETH_ADDRESS: account ? account.toString() : 'USER_ETH_ADDRESS',
-      RECIPIENT_ETH_ADDRESS: '0x1E11a16335E410EB5f4e7A781C6f069609E5946A',
+      RECIPIENT_ETH_ADDRESS: '0xcF217475D84997E9c0EbA3052E1F818916fE3eEC',
       RECIPIENT_PUBLIC_KEY:
-        '0x0548c797a06b701f8d1e93981cbe15fd4e38bd1eef5f6b51fc1c387eeca89c9c2d8a15127cdd03b6d89acea877dc34a21278ca60865bbec2df5596a532a5e051',
+        '0x110b33f1659d950d264e4e3678f2032beccd371ff2129658cf04ac0ad5376249225947147ca67adee95f170602f290e9ac097902bf3af8f83b270ea0ed779c86',
       RECIPIENT_ALIAS: 'aztec',
     };
   }

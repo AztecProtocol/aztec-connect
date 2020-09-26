@@ -3,31 +3,21 @@ import { Constructor } from './constructor';
 import { parseTypeDefinition } from './parse_type_definition';
 import { SpecTable, SpecType } from './spec_table';
 import { Type } from './type';
-import { Tag } from './tag';
+import { fetchTypeDeclaration } from './fetch_type_declaration';
+import { parseCommentContent } from './parse_comment';
 
 interface TypeDefinitionProps extends React.HTMLAttributes<HTMLHeadingElement> {
   srcName: string;
   typeName: string;
+  decorator?: string;
 }
 
-export const TypeDefinition: React.FunctionComponent<TypeDefinitionProps> = ({ srcName, typeName }) => {
+export const TypeDefinition: React.FunctionComponent<TypeDefinitionProps> = ({ srcName, typeName, decorator }) => {
   let types: Type[] = [];
+  let inputBuffer = '';
   try {
-    const [packageName, ...filePath] = srcName.split('/');
-    // Need to specify module name and file extension in require() or it will import all the files in node_modules.
-    let inputBuffer = '';
-    switch (packageName) {
-      case 'aztec2-sdk':
-        inputBuffer = require(`!!raw-loader!../../../node_modules/aztec2-sdk/${filePath.join('/').slice(0, -5)}.d.ts`)
-          .default;
-        break;
-      case 'barretenberg':
-        inputBuffer = require(`!!raw-loader!../../../node_modules/barretenberg/${filePath.join('/').slice(0, -5)}.d.ts`)
-          .default;
-        break;
-      default:
-    }
-    types = parseTypeDefinition(inputBuffer, typeName);
+    inputBuffer = fetchTypeDeclaration(srcName);
+    types = parseTypeDefinition(inputBuffer, typeName, decorator);
   } catch (e) {
     console.error(e);
     return null;
@@ -44,7 +34,7 @@ export const TypeDefinition: React.FunctionComponent<TypeDefinitionProps> = ({ s
     .map(({ name, type }) => ({
       name,
       type,
-      description: '',
+      description: parseCommentContent(inputBuffer, name),
     }));
 
   const staticMethods = types
@@ -53,7 +43,7 @@ export const TypeDefinition: React.FunctionComponent<TypeDefinitionProps> = ({ s
       name,
       type: returns!,
       params,
-      description: '',
+      description: parseCommentContent(inputBuffer, name),
     }));
 
   const vars = types
@@ -61,7 +51,7 @@ export const TypeDefinition: React.FunctionComponent<TypeDefinitionProps> = ({ s
     .map(({ name, type }) => ({
       name,
       type,
-      description: '',
+      description: parseCommentContent(inputBuffer, name),
     }));
 
   const methods = types
@@ -70,17 +60,16 @@ export const TypeDefinition: React.FunctionComponent<TypeDefinitionProps> = ({ s
       name,
       type: returns!,
       params,
-      description: '',
+      description: parseCommentContent(inputBuffer, name),
     }));
 
   return (
     <>
-      {!constructorType && <Tag text="interface" />}
       {constructorType && <Constructor name={typeName} params={constructorType.params!} />}
-      {staticVars.length > 0 && <SpecTable type={SpecType.STATIC_VAR} rows={staticVars} />}
-      {staticMethods.length > 0 && <SpecTable type={SpecType.STATIC_METHOD} rows={staticMethods} />}
       {vars.length > 0 && <SpecTable type={SpecType.VARIABLE} rows={vars} />}
       {methods.length > 0 && <SpecTable type={SpecType.METHOD} rows={methods} />}
+      {staticVars.length > 0 && <SpecTable type={SpecType.STATIC_VAR} rows={staticVars} />}
+      {staticMethods.length > 0 && <SpecTable type={SpecType.STATIC_METHOD} rows={staticMethods} />}
     </>
   );
 };

@@ -44,10 +44,10 @@ async function demoTransfer(aztecSdk, userId, signer) {
 
   const value = asset.toErc20Units('2');
 
-  const recipientPublicKey = GrumpkinAddress.fromString('RECIPIENT_PUBLIC_KEY');
+  const recipientAlias = 'RECIPIENT_ALIAS';
 
   console.info('Creating transfer proof...');
-  const txHash = await asset.transfer(value, signer, recipientPublicKey);
+  const txHash = await asset.transfer(value, signer, recipientAlias);
   console.info('Proof accepted by server. Tx hash:', txHash.toString('hex'));
 
   console.info('Waiting for tx to settle...');
@@ -60,4 +60,6 @@ async function demoTransfer(aztecSdk, userId, signer) {
 
 ## See Also
 
-- **[Initialize the SDK](/#/SDK/Initialize%20the%20SDK)**
+- **[Deposit](/#/ERC20%20Tokens/deposit)**
+- **[Withdraw](/#/ERC20%20Tokens/withdraw)**
+- **[Public Transfer](/#/ERC20%20Tokens/publicTransfer)**
