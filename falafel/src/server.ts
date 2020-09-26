@@ -77,7 +77,12 @@ export class Server {
 
     await this.restoreState();
 
-    this.blockchain.on('block', block => this.serialQueue.put(() => this.handleBlock(block)));
+    this.blockchain.on('block', block =>
+      this.serialQueue.put(async () => {
+        await this.handleBlock(block);
+        this.printState();
+      }),
+    );
     const lastBlockNum = await this.rollupDb.getLastBlockNum();
     await this.blockchain.start(lastBlockNum + 1);
 
@@ -85,6 +90,8 @@ export class Server {
 
     this.processTxQueue(this.config.maxRollupWaitTime, this.config.minRollupInterval);
     this.serialQueue.process(async (fn: () => Promise<void>) => await fn());
+
+    this.printState();
   }
 
   public stop() {
@@ -134,8 +141,6 @@ export class Server {
     }
 
     await this.rollupDb.deleteUnsettledRollups();
-
-    this.printState();
   }
 
   private async handleBlock(block: Block) {
@@ -150,8 +155,6 @@ export class Server {
     console.log(`Processing rollup ${rollup.rollupId}: ${rollup.rollupHash.toString('hex')}...`);
     await this.addRollupToWorldState(rollup);
     await this.confirmOrAddRollupToDb(rollup, block);
-
-    this.printState();
   }
 
   private async confirmOrAddRollupToDb(rollup: RollupProofData, block: Block) {
@@ -294,6 +297,7 @@ export class Server {
         console.log('Contract changed underfoot.');
         await this.worldStateDb.rollback();
         await this.syncDb();
+        this.printState();
         continue;
       }
 
