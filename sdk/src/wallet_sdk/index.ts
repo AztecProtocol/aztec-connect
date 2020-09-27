@@ -7,7 +7,7 @@ import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
 import { Action, AssetId, SdkEvent } from '../sdk';
-import { Signer } from '../signer';
+import { EthereumSigner, Signer } from '../signer';
 import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';
 import { KeyPair } from '../user';
 import { WalletSdkUser } from './wallet_sdk_user';
@@ -103,39 +103,55 @@ export class WalletSdk extends EventEmitter {
     return txHash;
   }
 
-  public async deposit(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to?: GrumpkinAddress | string) {
+  public async deposit(
+    assetId: AssetId,
+    userId: Buffer,
+    value: bigint,
+    signer: Signer,
+    ethSigner: EthereumSigner,
+    to?: GrumpkinAddress | string,
+  ) {
     const recipient = !to
       ? this.getUserData(userId)!.publicKey
       : typeof to === 'string'
       ? await this.getAddressFromAlias(to)
       : to;
-    const action = () => this.core.createProof(assetId, userId, 'DEPOSIT', value, recipient, undefined, signer);
+    const action = () =>
+      this.core.createProof(assetId, userId, 'DEPOSIT', value, signer, ethSigner, recipient, undefined);
     const validation = async () => {
       if (!recipient) {
         throw new Error(`No address found for alias: ${to}`);
       }
-      const account = await signer.getAddress();
-      return this.checkPublicBalanceAndAllowance(assetId, value, EthAddress.fromString(account));
+      const account = await ethSigner.getAddress();
+      return this.checkPublicBalanceAndAllowance(assetId, value, account);
     };
     return this.core.performAction(Action.DEPOSIT, value, userId, to || recipient!, action, validation);
   }
 
-  public async withdraw(assetId: AssetId, userId: Buffer, value: bigint, to: EthAddress) {
-    const action = () => this.core.createProof(assetId, userId, 'WITHDRAW', value, undefined, to);
+  public async withdraw(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: EthAddress) {
+    const action = () => this.core.createProof(assetId, userId, 'WITHDRAW', value, signer, undefined, undefined, to);
     return this.core.performAction(Action.WITHDRAW, value, userId, to, action);
   }
 
-  public async transfer(assetId: AssetId, userId: Buffer, value: bigint, to: GrumpkinAddress | string) {
+  public async transfer(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: GrumpkinAddress | string) {
     const recipient = typeof to === 'string' ? await this.getAddressFromAlias(to) : to;
-    const action = () => this.core.createProof(assetId, userId, 'TRANSFER', value, recipient);
+    const action = () => this.core.createProof(assetId, userId, 'TRANSFER', value, signer, undefined, recipient);
     return this.core.performAction(Action.TRANSFER, value, userId, to, action);
   }
 
-  public async publicTransfer(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: EthAddress) {
-    const action = () => this.core.createProof(assetId, userId, 'PUBLIC_TRANSFER', value, undefined, to, signer);
+  public async publicTransfer(
+    assetId: AssetId,
+    userId: Buffer,
+    value: bigint,
+    signer: Signer,
+    ethSigner: EthereumSigner,
+    to: EthAddress,
+  ) {
+    const action = () =>
+      this.core.createProof(assetId, userId, 'PUBLIC_TRANSFER', value, signer, ethSigner, undefined, to);
     const validation = async () => {
-      const account = await signer.getAddress();
-      return this.checkPublicBalanceAndAllowance(assetId, value, EthAddress.fromString(account));
+      const account = ethSigner.getAddress();
+      return this.checkPublicBalanceAndAllowance(assetId, value, account);
     };
     return this.core.performAction(Action.PUBLIC_TRANSFER, value, userId, to, action, validation);
   }
@@ -160,8 +176,8 @@ export class WalletSdk extends EventEmitter {
     return this.core.newKeyPair();
   }
 
-  public async createAccount(userId: Buffer, alias: string, newSigningPublicKey?: GrumpkinAddress) {
-    return this.core.createAccount(userId, alias, newSigningPublicKey);
+  public async createAccount(userId: Buffer, signer: Signer, alias: string, newSigningPublicKey?: GrumpkinAddress) {
+    return this.core.createAccount(userId, signer, alias, newSigningPublicKey);
   }
 
   public async awaitSynchronised() {
@@ -182,6 +198,10 @@ export class WalletSdk extends EventEmitter {
 
   public getUsersData() {
     return this.core.getUsersData();
+  }
+
+  public createSchnorrSigner(privateKey: Buffer) {
+    return this.core.createSchnorrSigner(privateKey);
   }
 
   public async addUser(privateKey: Buffer) {
