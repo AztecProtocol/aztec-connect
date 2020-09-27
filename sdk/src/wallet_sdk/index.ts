@@ -123,7 +123,7 @@ export class WalletSdk extends EventEmitter {
         throw new Error(`No address found for alias: ${to}`);
       }
       const account = await ethSigner.getAddress();
-      return this.checkPublicBalanceAndAllowance(assetId, value, EthAddress.fromString(account));
+      return this.checkPublicBalanceAndAllowance(assetId, value, account);
     };
     return this.core.performAction(Action.DEPOSIT, value, userId, to || recipient!, action, validation);
   }
@@ -150,8 +150,8 @@ export class WalletSdk extends EventEmitter {
     const action = () =>
       this.core.createProof(assetId, userId, 'PUBLIC_TRANSFER', value, signer, ethSigner, undefined, to);
     const validation = async () => {
-      const account = await ethSigner.getAddress();
-      return this.checkPublicBalanceAndAllowance(assetId, value, EthAddress.fromString(account));
+      const account = ethSigner.getAddress();
+      return this.checkPublicBalanceAndAllowance(assetId, value, account);
     };
     return this.core.performAction(Action.PUBLIC_TRANSFER, value, userId, to, action, validation);
   }

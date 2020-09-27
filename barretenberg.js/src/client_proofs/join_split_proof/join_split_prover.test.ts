@@ -21,6 +21,7 @@ import { NoteAlgorithms } from '../note_algorithms';
 import { GrumpkinAddress, EthAddress } from '../../address';
 import { Schnorr } from '../../crypto/schnorr';
 import { UnrolledProver } from '../prover';
+import { computeSigningData } from './compute_signing_data';
 
 const debug = createDebug('bb:join_split_proof_test');
 
@@ -70,7 +71,7 @@ describe('join_split_proof', () => {
     schnorr = new Schnorr(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
     noteAlgos = new NoteAlgorithms(barretenberg);
-    joinSplitProver = new JoinSplitProver(prover, pedersen, noteAlgos);
+    joinSplitProver = new JoinSplitProver(prover);
     joinSplitVerifier = new JoinSplitVerifier();
 
     pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
@@ -134,9 +135,11 @@ describe('join_split_proof', () => {
       const inputOwner = EthAddress.randomAddress();
       const outputOwner = EthAddress.randomAddress();
 
-      const sigMsg = joinSplitProver.getSignatureMessage(
+      const sigMsg = computeSigningData(
         [inputNote1, inputNote2, outputNote1, outputNote2],
         outputOwner,
+        pedersen,
+        noteAlgos,
       );
       const signature = schnorr.constructSignature(sigMsg, privateKey);
 

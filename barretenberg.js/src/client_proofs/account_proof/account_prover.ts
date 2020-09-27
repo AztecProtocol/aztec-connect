@@ -1,11 +1,9 @@
 import { Transfer } from 'threads';
-import { GrumpkinAddress } from '../../address';
-import { Pedersen } from '../../crypto/pedersen';
 import { UnrolledProver } from '../prover';
 import { AccountTx } from './account_tx';
 
 export class AccountProver {
-  constructor(private prover: UnrolledProver, private pedersen: Pedersen) {}
+  constructor(private prover: UnrolledProver) {}
 
   public async computeKey() {
     const worker = this.prover.getWorker();
@@ -43,16 +41,5 @@ export class AccountProver {
 
   public getProver() {
     return this.prover;
-  }
-
-  public getSignatureMessage(
-    ownerPublicKey: GrumpkinAddress,
-    newSigningPubKey1: GrumpkinAddress,
-    newSigningPubKey2: GrumpkinAddress,
-    alias: Buffer,
-    nullifiedKey: GrumpkinAddress,
-  ) {
-    const toCompress = [ownerPublicKey.x(), newSigningPubKey1.x(), newSigningPubKey2.x(), alias, nullifiedKey.x()];
-    return this.pedersen.compress_inputs(toCompress);
   }
 }

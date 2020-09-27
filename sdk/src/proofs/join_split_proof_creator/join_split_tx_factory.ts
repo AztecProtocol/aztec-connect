@@ -1,13 +1,20 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { JoinSplitTx, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
+import { JoinSplitTx, computeSigningData } from 'barretenberg/client_proofs/join_split_proof';
 import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
+import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
+import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
 import { Signer } from '../../signer';
 import { UserState } from '../../user_state';
 
 export class JoinSplitTxFactory {
-  constructor(private worldState: WorldState, private grumpkin: Grumpkin, private prover: JoinSplitProver) {}
+  constructor(
+    private worldState: WorldState,
+    private grumpkin: Grumpkin,
+    private pedersen: Pedersen,
+    private noteAlgos: NoteAlgorithms,
+  ) {}
 
   public async createJoinSplitTx(
     userState: UserState,
@@ -50,7 +57,7 @@ export class JoinSplitTxFactory {
     const inputOwner = inputOwnerAddress || EthAddress.ZERO;
     const outputOwner = outputOwnerAddress || EthAddress.ZERO;
 
-    const message = this.prover.getSignatureMessage([...inputNotes, ...outputNotes], outputOwner);
+    const message = computeSigningData([...inputNotes, ...outputNotes], outputOwner, this.pedersen, this.noteAlgos);
     const signature = await signer.signMessage(message);
 
     // For now, we will use the account key as the signing key (no account note required).

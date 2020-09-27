@@ -6,6 +6,7 @@ import { EventEmitter } from 'events';
 import { SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
 import { AssetId, SdkEvent } from '../sdk';
+import { Web3Signer } from '../signer/web3_signer';
 import { deriveGrumpkinPrivateKey, KeyPair, UserData } from '../user';
 import { WalletSdk } from '../wallet_sdk';
 import { Database, DbAccount } from './database';
@@ -161,7 +162,7 @@ export class EthereumSdk extends EventEmitter {
     }
 
     const signer = this.createSchnorrSigner(from);
-    const ethSigner = this.web3Provider.getSigner(from.toString());
+    const ethSigner = new Web3Signer(this.web3Provider, from);
     return this.walletSdk.deposit(assetId, userId, value, signer, ethSigner, to);
   }
 
@@ -192,7 +193,7 @@ export class EthereumSdk extends EventEmitter {
     }
 
     const signer = this.createSchnorrSigner(from);
-    const ethSigner = this.web3Provider.getSigner(from.toString());
+    const ethSigner = new Web3Signer(this.web3Provider, from);
     return this.walletSdk.publicTransfer(assetId, userId, value, signer, ethSigner, to);
   }
 
@@ -260,7 +261,7 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public async addUser(ethAddress: EthAddress) {
-    const signer = this.web3Provider.getSigner(ethAddress.toString());
+    const signer = new Web3Signer(this.web3Provider, ethAddress);
     const privateKey = await deriveGrumpkinPrivateKey(signer);
     this.pauseEvent(SdkEvent.UPDATED_USERS);
     try {

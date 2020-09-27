@@ -3,6 +3,7 @@ import { EscapeHatchProver, EscapeHatchTx } from 'barretenberg/client_proofs/esc
 import { computeNullifier, nullifierBufferToIndex, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
+import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldState } from 'barretenberg/world_state';
@@ -25,11 +26,11 @@ export class EscapeHatchProofCreator {
     worldState: WorldState,
     grumpkin: Grumpkin,
     private blake2s: Blake2s,
-    private prover: JoinSplitProver,
+    pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
     private hashPathSource: HashPathSource,
   ) {
-    this.joinSplitTxFactory = new JoinSplitTxFactory(worldState, grumpkin, prover);
+    this.joinSplitTxFactory = new JoinSplitTxFactory(worldState, grumpkin, pedersen, noteAlgos);
   }
 
   public async createProof(
@@ -52,7 +53,7 @@ export class EscapeHatchProofCreator {
       signer,
       senderPubKey,
       receiverPubKey,
-      ethSigner ? EthAddress.fromString(await ethSigner.getAddress()) : undefined,
+      ethSigner ? ethSigner.getAddress() : undefined,
       outputOwnerAddress,
     );
     const viewingKeys = this.joinSplitTxFactory.createViewingKeys(joinSplitTx.outputNotes);
@@ -151,8 +152,7 @@ export class EscapeHatchProofCreator {
 
     const msgHash = utils.keccak256(txPublicInputs);
     const digest = utils.arrayify(msgHash);
-    const sig = await ethSigner.signMessage(Buffer.from(digest));
-    let signature = Buffer.from(sig.slice(2), 'hex');
+    let signature = await ethSigner.signMessage(Buffer.from(digest));
 
     // Ganache is not signature standard compliant. Returns 00 or 01 as v.
     // Need to adjust to make v 27 or 28.

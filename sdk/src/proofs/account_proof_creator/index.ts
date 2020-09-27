@@ -1,6 +1,7 @@
 import { GrumpkinAddress } from 'barretenberg/address';
-import { AccountProver, AccountTx } from 'barretenberg/client_proofs/account_proof';
+import { AccountProver, AccountTx, computeSigningData } from 'barretenberg/client_proofs/account_proof';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
+import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { WorldState } from 'barretenberg/world_state';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
@@ -9,7 +10,12 @@ import { Signer } from '../../signer';
 const debug = createDebug('bb:account_proof');
 
 export class AccountProofCreator {
-  constructor(private accountProver: AccountProver, private worldState: WorldState, private blake2s: Blake2s) {}
+  constructor(
+    private accountProver: AccountProver,
+    private worldState: WorldState,
+    private blake2s: Blake2s,
+    private pedersen: Pedersen,
+  ) {}
 
   public async createAccountTx(
     signer: Signer,
@@ -29,12 +35,13 @@ export class AccountProofCreator {
 
     const aliasField = alias ? this.blake2s.hashToField(Buffer.from(alias)) : randomBytes(32);
 
-    const sigMsg = this.accountProver.getSignatureMessage(
+    const sigMsg = computeSigningData(
       ownerPublicKey,
       newSigningPubKey1 || GrumpkinAddress.ZERO,
       newSigningPubKey2 || GrumpkinAddress.ZERO,
       aliasField,
       nullifiedKey || GrumpkinAddress.ZERO,
+      this.pedersen,
     );
     const signature = await signer.signMessage(sigMsg);
 

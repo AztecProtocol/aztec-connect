@@ -1,5 +1,7 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { JoinSplitProof, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
+import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
+import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
@@ -17,9 +19,10 @@ export class JoinSplitProofCreator {
     private joinSplitProver: JoinSplitProver,
     worldState: WorldState,
     grumpkin: Grumpkin,
-    prover: JoinSplitProver,
+    pedersen: Pedersen,
+    noteAlgos: NoteAlgorithms,
   ) {
-    this.txFactory = new JoinSplitTxFactory(worldState, grumpkin, prover);
+    this.txFactory = new JoinSplitTxFactory(worldState, grumpkin, pedersen, noteAlgos);
   }
 
   public async createProof(
@@ -42,7 +45,7 @@ export class JoinSplitProofCreator {
       signer,
       senderPubKey,
       receiverPubKey,
-      ethSigner ? EthAddress.fromString(await ethSigner.getAddress()) : undefined,
+      ethSigner ? ethSigner.getAddress() : undefined,
       outputOwnerAddress,
     );
     const viewingKeys = this.txFactory.createViewingKeys(tx.outputNotes);
@@ -70,8 +73,7 @@ export class JoinSplitProofCreator {
 
     const msgHash = ethers.utils.keccak256(txPublicInputs);
     const digest = ethers.utils.arrayify(msgHash);
-    const sig = await ethSigner.signMessage(Buffer.from(digest));
-    let signature = Buffer.from(sig.slice(2), 'hex');
+    let signature = await ethSigner.signMessage(Buffer.from(digest));
 
     // Ganache is not signature standard compliant. Returns 00 or 01 as v.
     // Need to adjust to make v 27 or 28.

@@ -15,6 +15,7 @@ import { PooledFft } from '../../fft';
 import { UnrolledProver } from '../prover';
 import { AccountProver, AccountVerifier, AccountTx } from './index';
 import { GrumpkinAddress } from '../../address';
+import { computeSigningData } from './compute_signing_data';
 
 const debug = createDebug('bb:account_proof_test');
 
@@ -55,7 +56,7 @@ describe('account proof', () => {
     pedersen = new Pedersen(barretenberg);
     schnorr = new Schnorr(barretenberg);
 
-    accountProver = new AccountProver(prover, pedersen);
+    accountProver = new AccountProver(prover);
     accountVerifier = new AccountVerifier();
 
     await accountProver.computeKey();
@@ -95,12 +96,13 @@ describe('account proof', () => {
 
     const accountPath = await tree.getHashPath(0);
 
-    const message = accountProver.getSignatureMessage(
+    const message = computeSigningData(
       user.publicKey,
       signingKey0.publicKey,
       signingKey1.publicKey,
       aliasField,
       user.publicKey,
+      pedersen,
     );
     const signature = schnorr.constructSignature(message, user.privateKey);
 

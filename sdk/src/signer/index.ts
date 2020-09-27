@@ -1,3 +1,4 @@
+import { EthAddress } from 'barretenberg/address';
 import { Signature } from 'barretenberg/client_proofs/signature';
 
 export * from './schnorr_signer';
@@ -7,6 +8,6 @@ export interface Signer {
 }
 
 export interface EthereumSigner {
-  getAddress(): Promise<string>;
-  signMessage(message: string | Buffer): Promise<string>;
+  getAddress(): EthAddress;
+  signMessage(message: Buffer): Promise<Buffer>;
 }

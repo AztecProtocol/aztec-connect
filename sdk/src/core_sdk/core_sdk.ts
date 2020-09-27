@@ -109,12 +109,8 @@ export class CoreSdk extends EventEmitter {
     const numWorkers = Math.min(navigator.hardwareConcurrency || 1, 8);
     const workerPool = await WorkerPool.new(barretenberg, numWorkers);
     const pooledProverFactory = new PooledProverFactory(workerPool, crsData);
-    const joinSplitProver = new JoinSplitProver(
-      await pooledProverFactory.createUnrolledProver(128 * 1024),
-      pedersen,
-      noteAlgos,
-    );
-    const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(64 * 1024), pedersen);
+    const joinSplitProver = new JoinSplitProver(await pooledProverFactory.createUnrolledProver(128 * 1024));
+    const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(64 * 1024));
     const escapeHatchProver = new EscapeHatchProver(await pooledProverFactory.createProver(512 * 1024));
 
     this.blake2s = blake2s;
@@ -145,9 +141,10 @@ export class CoreSdk extends EventEmitter {
         joinSplitProver,
         this.worldState,
         grumpkin,
-        joinSplitProver,
+        pedersen,
+        noteAlgos,
       );
-      this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, blake2s);
+      this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, blake2s, pedersen);
       await this.createJoinSplitProvingKey(joinSplitProver);
       await this.createAccountProvingKey(accountProver);
     } else {
@@ -156,7 +153,7 @@ export class CoreSdk extends EventEmitter {
         this.worldState,
         grumpkin,
         blake2s,
-        joinSplitProver,
+        pedersen,
         noteAlgos,
         this.hashPathSource!,
       );
@@ -602,7 +599,7 @@ export class CoreSdk extends EventEmitter {
   public async addUser(privateKey: Buffer) {
     let user = await this.db.getUserByPrivateKey(privateKey);
     if (user) {
-      return user;
+      throw new Error(`User already exists: ${user.id.toString('hex')}`);
     }
 
     user = await this.userFactory.createUser(privateKey);
