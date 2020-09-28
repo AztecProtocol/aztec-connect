@@ -12,6 +12,7 @@ const {
   PORT = '8082',
   ROLLUP_CONTRACT_ADDRESS,
   ETHEREUM_HOST = 'http://localhost:8545',
+  API_PREFIX = '',
   INFURA_API_KEY,
   NETWORK,
   PRIVATE_KEY,
@@ -48,7 +49,7 @@ async function main() {
   const server = new Server(worldStateDb, ethereumBlockchain);
   await server.start();
 
-  const app = appFactory(server, '/sriracha');
+  const app = appFactory(server, API_PREFIX);
 
   const httpServer = http.createServer(app.callback());
   httpServer.listen(PORT);

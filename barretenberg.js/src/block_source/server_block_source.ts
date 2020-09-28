@@ -2,7 +2,6 @@ import { BlockSource, Block } from '.';
 import { EventEmitter } from 'events';
 import { fetch } from '../iso_fetch';
 import createDebug from 'debug';
-import { RollupProofData } from '../rollup_proof';
 
 export interface BlockServerResponse {
   blockNum: number;
@@ -32,7 +31,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
   private running = false;
   private latestRollupId = -1;
 
-  constructor(protected host: URL) {
+  constructor(protected baseUrl: URL) {
     super();
   }
 
@@ -71,7 +70,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
   }
 
   public async getBlocks(from: number) {
-    const url = new URL(`/api/get-blocks`, this.host);
+    const url = new URL(`${this.baseUrl}/get-blocks`);
     url.searchParams.append('from', from.toString());
 
     const response = await fetch(url.toString());

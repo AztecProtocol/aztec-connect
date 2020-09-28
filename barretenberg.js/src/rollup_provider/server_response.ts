@@ -1,6 +1,7 @@
 import { LinkedRollup, RollupStatus } from './rollup_provider_explorer';
 
 export interface RollupProviderStatusServerResponse {
+  serviceName: string;
   chainId: number;
   networkOrHost: string;
   rollupContractAddress: string;

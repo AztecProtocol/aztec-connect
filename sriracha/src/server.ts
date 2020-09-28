@@ -67,7 +67,8 @@ export default class Server implements HashPathSource {
   }
 
   public async status() {
-    return this.blockchain.status();
+    const status = await this.blockchain.status();
+    return { ...status, serviceName: 'sriracha' };
   }
 
   public async getTreeState(treeIndex: number) {

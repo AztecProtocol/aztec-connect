@@ -90,6 +90,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     const nullRoot = Buffer.from((await this.rollupProcessor.nullRoot()).slice(2), 'hex');
 
     return {
+      serviceName: 'ethereum',
       chainId,
       networkOrHost,
       tokenContractAddress: this.getTokenContractAddress(),
