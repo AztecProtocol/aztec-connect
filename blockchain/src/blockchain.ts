@@ -15,10 +15,10 @@ export interface Receipt {
 
 export interface Blockchain extends RollupProvider {
   getTransactionReceipt(txHash: Buffer): Promise<Receipt>;
-  validateDepositFunds(publicOwner: Buffer, publicInput: Buffer): Promise<boolean>;
+  validateDepositFunds(publicOwner: Buffer, publicInput: Buffer, assetId: number): Promise<boolean>;
   validateSignature(publicOwnerBuf: Buffer, signature: Buffer, proof: Buffer): boolean;
   getNetworkInfo(): Promise<NetworkInfo>;
   getRollupContractAddress(): EthAddress;
-  getTokenContractAddress(): EthAddress;
+  getTokenContractAddresses(): EthAddress[];
   sendRollupProof(proof: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]): Promise<Buffer>;
 }

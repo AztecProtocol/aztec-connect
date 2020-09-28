@@ -38,7 +38,7 @@ export class WalletSdk extends EventEmitter {
       this.core.on(event, (...args: any[]) => this.emit(event, ...args));
     }
 
-    const { chainId, networkOrHost, rollupContractAddress, tokenContractAddress } = await this.core.getRemoteStatus();
+    const { chainId, networkOrHost, rollupContractAddress, tokenContractAddresses } = await this.core.getRemoteStatus();
 
     const { chainId: ethProviderChainId } = await this.provider.getNetwork();
     if (chainId !== ethProviderChainId) {
@@ -47,7 +47,7 @@ export class WalletSdk extends EventEmitter {
 
     this.tokenContracts[AssetId.DAI] =
       networkOrHost !== 'development'
-        ? new Web3TokenContract(this.provider, tokenContractAddress, rollupContractAddress, chainId)
+        ? new Web3TokenContract(this.provider, tokenContractAddresses[AssetId.DAI], rollupContractAddress, chainId)
         : new MockTokenContract();
     await Promise.all(this.tokenContracts.map(tc => tc.init()));
 

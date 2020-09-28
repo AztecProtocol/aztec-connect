@@ -5,7 +5,7 @@ import { MemoryFifo } from 'barretenberg/fifo';
 import { readFileAsync } from 'barretenberg/fs_async';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { Proof, RollupProvider } from 'barretenberg/rollup_provider';
+import { Proof } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
@@ -203,7 +203,7 @@ export class Server {
       chainId,
       networkOrHost,
       rollupContractAddress: this.blockchain.getRollupContractAddress(),
-      tokenContractAddress: this.blockchain.getTokenContractAddress(),
+      tokenContractAddresses: this.blockchain.getTokenContractAddresses(),
       dataSize: Number(this.worldStateDb.getSize(0)),
       dataRoot: this.worldStateDb.getRoot(0),
       nullRoot: this.worldStateDb.getRoot(1),
@@ -441,7 +441,7 @@ export class Server {
   }
 
   private async validateJoinSplitTx(proof: JoinSplitProof) {
-    const { publicInput, inputOwner } = proof;
+    const { publicInput, inputOwner, assetId } = proof;
     if (!(await this.joinSplitVerifier.verifyProof(proof.proofData))) {
       throw new Error('Join-split proof verification failed.');
     }
@@ -455,7 +455,7 @@ export class Server {
         throw new Error('Invalid deposit signature.');
       }
 
-      if (!(await this.blockchain.validateDepositFunds(inputOwner, publicInput))) {
+      if (!(await this.blockchain.validateDepositFunds(inputOwner, publicInput, assetId))) {
         throw new Error('User has insufficient or unapproved deposit balance.');
       }
     }

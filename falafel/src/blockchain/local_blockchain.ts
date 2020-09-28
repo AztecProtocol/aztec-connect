@@ -72,8 +72,8 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     return EthAddress.ZERO;
   }
 
-  public getTokenContractAddress() {
-    return EthAddress.ZERO;
+  public getTokenContractAddresses() {
+    return [EthAddress.ZERO];
   }
 
   public async start() {
@@ -112,7 +112,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       serviceName: 'falafel',
       chainId,
       networkOrHost,
-      tokenContractAddress: this.getTokenContractAddress(),
+      tokenContractAddresses: this.getTokenContractAddresses(),
       rollupContractAddress: this.getRollupContractAddress(),
       nextRollupId: this.blockNum,
       dataRoot: Buffer.alloc(32),

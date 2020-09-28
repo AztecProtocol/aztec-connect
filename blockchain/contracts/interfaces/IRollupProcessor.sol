@@ -9,4 +9,12 @@ interface IRollupProcessor {
         uint256[] calldata sigIndexes,
         bytes calldata viewingKeys
     ) external;
+
+    function getSupportedAssetAddress(uint256 assetId) external view returns (address);
+
+    function setSupportedAsset(address _linkedToken) external;
+
+    function getNumSupportedAssets() external view returns (uint256);
+
+    function getSupportedAssets() external view returns (address[] memory);
 }

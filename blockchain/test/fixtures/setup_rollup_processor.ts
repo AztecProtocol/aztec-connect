@@ -17,7 +17,10 @@ export async function setupRollupProcessor(users: Signer[], mintAmount: bigint |
   const mockVerifier = await MockVerifier.deploy();
 
   const RollupProcessor = await ethers.getContractFactory('RollupProcessor');
-  const rollupProcessor = await RollupProcessor.deploy(erc20.address, mockVerifier.address);
+
+  const erc20Adddresses = [erc20.address];
+  const assetId = 0;
+  const rollupProcessor = await RollupProcessor.deploy(erc20Adddresses, mockVerifier.address);
 
   // advance into block region where escapeHatch not active
   const blocks = await blocksToAdvance(15, 100, ethers.provider);
@@ -31,5 +34,6 @@ export async function setupRollupProcessor(users: Signer[], mintAmount: bigint |
     erc20,
     viewingKeys,
     rollupSize,
+    assetId,
   };
 }

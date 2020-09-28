@@ -1,6 +1,6 @@
 import { ethers } from '@nomiclabs/buidler';
 import { EthAddress } from 'barretenberg/address';
-import { RollupProofData, VIEWING_KEY_SIZE } from 'barretenberg/rollup_proof';
+import { RollupProofData } from 'barretenberg/rollup_proof';
 import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
@@ -50,9 +50,9 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should get status', async () => {
-    const { rollupContractAddress, tokenContractAddress } = await ethereumBlockchain.status();
+    const { rollupContractAddress, tokenContractAddresses } = await ethereumBlockchain.status();
     expect(rollupContractAddress.toString().length).to.be.greaterThan(0);
-    expect(tokenContractAddress.toString().length).to.be.greaterThan(0);
+    expect(tokenContractAddresses.length).to.be.greaterThan(0);
   });
 
   it('should process a deposit proof', async () => {

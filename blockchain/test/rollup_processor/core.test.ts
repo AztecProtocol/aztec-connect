@@ -11,6 +11,7 @@ import {
   newDataRoot,
   newDataRootsRoot,
   newNullifierRoot,
+  numToBuffer,
 } from '../fixtures/create_mock_proof';
 import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
@@ -29,6 +30,7 @@ describe('rollup_processor: core', () => {
   let userAAddress: EthAddress;
   let userBAddress: EthAddress;
   let viewingKeys: Buffer[];
+  let assetId: number;
 
   const mintAmount = 100;
   const depositAmount = 60;
@@ -38,7 +40,7 @@ describe('rollup_processor: core', () => {
     [userA, userB] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
     userBAddress = EthAddress.fromString(await userB.getAddress());
-    ({ erc20, rollupProcessor, viewingKeys } = await setupRollupProcessor([userA, userB], mintAmount));
+    ({ erc20, rollupProcessor, viewingKeys, assetId } = await setupRollupProcessor([userA, userB], mintAmount));
   });
 
   describe('Deposit, transfer and withdrawal', async () => {
@@ -160,7 +162,7 @@ describe('rollup_processor: core', () => {
       const initialUserABalance = await erc20.balanceOf(userAAddress.toString());
       expect(initialUserABalance).to.equal(mintAmount);
 
-      const initialUserBBalance = await erc20.balanceOf(userAAddress.toString());
+      const initialUserBBalance = await erc20.balanceOf(userBAddress.toString());
       expect(initialUserBBalance).to.equal(mintAmount);
 
       const initialContractBalance = await erc20.balanceOf(rollupProcessor.address);
@@ -174,10 +176,11 @@ describe('rollup_processor: core', () => {
         depositAmount,
         userAAddress,
         userA,
-
+        numToBuffer(assetId),
         userBDepositAmount,
         userBAddress,
         userB,
+        numToBuffer(assetId),
       );
 
       await erc20.approve(rollupProcessor.address, depositAmount);
