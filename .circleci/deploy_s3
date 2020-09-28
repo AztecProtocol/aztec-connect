@@ -16,6 +16,7 @@ IMAGE_DEPLOY_URI=$ECR_DEPLOY_URL/$REPOSITORY:$TAG
 # Pull the built image, do nothing if this wasn't rebuilt.
 docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." && exit 0; }
 TEMP_CONTAINER=$(docker create $IMAGE_COMMIT_URI)
+mkdir temp
 docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY/dist temp/$REPOSITORY
 docker rm -v $TEMP_CONTAINER
 
