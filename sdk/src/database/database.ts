@@ -35,6 +35,7 @@ export interface Database {
   getUserSigningKeys(userId: Buffer): Promise<SigningKey[]>;
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
   removeUserSigningKey(signingKey: SigningKey): Promise<void>;
+  getUserSigningKeyIndex(owner: Buffer, signingKey: GrumpkinAddress): Promise<number | undefined>;
 
   addAlias(aliasHash: Buffer, address: GrumpkinAddress): Promise<void>;
   getAliasAddress(aliasHash: Buffer): Promise<GrumpkinAddress | undefined>;

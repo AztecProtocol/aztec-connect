@@ -1,7 +1,8 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
-import { randomBytes } from 'crypto';
-import { EthereumSigner } from './signer';
+import { EthereumSigner } from '../signer';
+
+export * from './recovery_payload';
 
 export interface UserData {
   id: Buffer;
@@ -10,11 +11,6 @@ export interface UserData {
   alias?: string;
   syncedToBlock: number;
   syncedToRollup: number;
-}
-
-export interface KeyPair {
-  publicKey: GrumpkinAddress;
-  privateKey: Buffer;
 }
 
 export const deriveGrumpkinPrivateKey = async (signer: EthereumSigner) => {
@@ -28,11 +24,5 @@ export class UserDataFactory {
   async createUser(privateKey: Buffer): Promise<UserData> {
     const publicKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
     return { id: publicKey.toBuffer(), privateKey, publicKey, syncedToBlock: -1, syncedToRollup: -1 };
-  }
-
-  public newKeyPair(): KeyPair {
-    const privateKey = randomBytes(32);
-    const publicKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
-    return { publicKey, privateKey };
   }
 }

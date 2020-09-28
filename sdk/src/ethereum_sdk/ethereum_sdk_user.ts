@@ -1,21 +1,35 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AssetId } from '../sdk';
+import { Signer } from '../signer';
+import { RecoveryPayload } from '../user';
 import { EthereumSdk } from './';
 import { EthereumSdkUserAsset } from './ethereum_sdk_user_asset';
 
 export class EthereumSdkUser {
   constructor(private ethAddress: EthAddress, private sdk: EthereumSdk) {}
 
-  createAccount(alias: string, newSigningPublicKey?: GrumpkinAddress) {
-    return this.sdk.createAccount(this.ethAddress, alias, newSigningPublicKey);
+  public async generateAccountRecoveryData(trustedThirdPartyPublicKeys: GrumpkinAddress[]) {
+    return this.sdk.generateAccountRecoveryData(this.ethAddress, trustedThirdPartyPublicKeys);
   }
 
-  addSigningKey(signingPublicKey: Buffer): Promise<void> {
-    throw new Error('Method not implemented.');
+  createAccount(newSigningPublicKey: GrumpkinAddress, recoveryPublicKey: GrumpkinAddress, alias: string) {
+    return this.sdk.createAccount(this.ethAddress, newSigningPublicKey, recoveryPublicKey, alias);
   }
 
-  removeSigningKey(signingPublicKey: Buffer): Promise<void> {
-    throw new Error('Method not implemented.');
+  async recoverAccount(recoveryPayload: RecoveryPayload) {
+    return this.sdk.recoverAccount(this.ethAddress, recoveryPayload);
+  }
+
+  async addAlias(alias: string, signer: Signer) {
+    return this.sdk.addAlias(this.ethAddress, alias, signer);
+  }
+
+  async addSigningKey(signingPublicKey: GrumpkinAddress, signer: Signer) {
+    return this.sdk.addSigningKey(this.ethAddress, signingPublicKey, signer);
+  }
+
+  async removeSigningKey(signingPublicKey: GrumpkinAddress, signer: Signer) {
+    return this.sdk.removeSigningKey(this.ethAddress, signingPublicKey, signer);
   }
 
   getUserData() {

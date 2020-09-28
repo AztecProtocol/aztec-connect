@@ -1,11 +1,11 @@
 import 'fake-indexeddb/auto';
 
-import { AssetId, EthereumSdk } from 'aztec2-sdk';
+import { AssetId, EthereumSdk, EthereumSdkUser } from 'aztec2-sdk';
 import { EthAddress } from 'barretenberg/address';
+import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { Eth } from 'web3x/eth';
 import { HttpProvider } from 'web3x/providers';
-import { EthereumSdkUser } from 'aztec2-sdk/ethereum_sdk/ethereum_sdk_user';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -106,11 +106,34 @@ describe('end-to-end tests', () => {
     expect(await user3Asset.publicBalance()).toBe(transferValue);
   });
 
-  it('should create account', async () => {
-    const keyPair = sdk.newKeyPair();
-    const txHash = await users[0].createAccount('pebble', keyPair.publicKey);
+  it('should create and recover account, add and remove signing keys.', async () => {
+    const thirdPartySigner = sdk.createSchnorrSigner(randomBytes(32));
+    const recoveryPayloads = await users[0].generateAccountRecoveryData([thirdPartySigner.getPublicKey()]);
+
+    // Create a new account.
+    const alias = 'pebble';
+    const userSigner = sdk.createSchnorrSigner(randomBytes(32));
+    const { recoveryPublicKey } = recoveryPayloads[0];
+    const txHash = await users[0].createAccount(userSigner.getPublicKey(), recoveryPublicKey, alias);
     await sdk.awaitSettlement(userAddresses[0], txHash, 300);
 
-    expect(await sdk.getAddressFromAlias('pebble')).toEqual(users[0].getUserData().publicKey);
+    expect(await sdk.getAddressFromAlias(alias)).toEqual(users[0].getUserData().publicKey);
+
+    // Recover account.
+    const recoverTxHash = await users[0].recoverAccount(recoveryPayloads[0]);
+    await sdk.awaitSettlement(userAddresses[0], recoverTxHash, 300);
+
+    // Add new signing key.
+    const newSigner = sdk.createSchnorrSigner(randomBytes(32));
+    const addKeyTxHash = await users[0].addSigningKey(newSigner.getPublicKey(), thirdPartySigner);
+    await sdk.awaitSettlement(userAddresses[0], addKeyTxHash, 300);
+
+    // Remove 3rd party's signing key.
+    const removeTxHash = await users[0].removeSigningKey(thirdPartySigner.getPublicKey(), newSigner);
+    await sdk.awaitSettlement(userAddresses[0], removeTxHash, 300);
+
+    // Should not be able to do anything if key is removed.
+    const anotherSigner = sdk.createSchnorrSigner(randomBytes(32));
+    await expect(users[0].addSigningKey(anotherSigner.getPublicKey(), thirdPartySigner)).rejects.toThrow();
   });
 });
