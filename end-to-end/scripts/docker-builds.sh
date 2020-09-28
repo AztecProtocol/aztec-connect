@@ -19,6 +19,10 @@ cd ../blockchain
 echo "Building blockchain"
 docker build -t 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:latest .
 
+cd ../sriracha
+echo "Building sriracha"
+docker build -t 278380418400.dkr.ecr.eu-west-2.amazonaws.com/sriracha:latest .
+
 cd ../sdk
 echo "Building sdk"
 docker build -t 278380418400.dkr.ecr.eu-west-2.amazonaws.com/sdk:latest .
