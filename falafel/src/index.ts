@@ -28,6 +28,7 @@ const {
   MAX_ROLLUP_WAIT_TIME = '10',
   MIN_ROLLUP_INTERVAL = '0',
   LOCAL_BLOCKCHAIN_INIT_SIZE = '0',
+  API_PREFIX = '',
 } = process.env;
 
 function getEthereumBlockchainConfig() {
@@ -75,7 +76,7 @@ async function main() {
   await server.start();
 
   const serverStatus = await server.status();
-  const app = appFactory(server, '/api', connection, worldStateDb, serverConfig, serverStatus);
+  const app = appFactory(server, API_PREFIX, connection, worldStateDb, serverConfig, serverStatus);
 
   const httpServer = http.createServer(app.callback());
   httpServer.listen(PORT);
