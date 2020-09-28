@@ -30,9 +30,11 @@ const toBlock = (block: BlockServerResponse): Block => ({
 export class ServerBlockSource extends EventEmitter implements BlockSource {
   private running = false;
   private latestRollupId = -1;
+  protected baseUrl: string;
 
-  constructor(protected baseUrl: URL) {
+  constructor(baseUrl: URL) {
     super();
+    this.baseUrl = baseUrl.toString().replace(/\/$/, '');
   }
 
   getLatestRollupId() {

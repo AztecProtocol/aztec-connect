@@ -72,7 +72,7 @@ export class WebSdk extends EventEmitter {
       await this.ethProvider.init();
 
       // If our network doesn't match that of the rollup provider, request it be changed until it does.
-      const { chainId: rollupProviderChainId, serviceName } = await getProviderStatus(new URL(serverBaseUrl));
+      const { chainId: rollupProviderChainId, serviceName } = await getProviderStatus(serverBaseUrl);
       this.initStatus.network = chainIdToNetwork(rollupProviderChainId);
       if (rollupProviderChainId !== this.ethProvider.getChainId()) {
         this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.CHANGE_NETWORK);

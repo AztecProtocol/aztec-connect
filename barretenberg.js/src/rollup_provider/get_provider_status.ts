@@ -1,7 +1,7 @@
 import { EthAddress } from '../address';
 import { RollupProviderStatusServerResponse } from './server_response';
 
-export async function getProviderStatus(baseUrl: URL) {
+export async function getProviderStatus(baseUrl: string) {
   const response = await fetch(`${baseUrl}/status`);
   const body = (await response.json()) as RollupProviderStatusServerResponse;
   const { rollupContractAddress, tokenContractAddress, dataRoot, nullRoot } = body;

@@ -34,7 +34,11 @@ const toTx = ({ txHash, proofData, viewingKeys, rollup, created }: TxServerRespo
 };
 
 export class ServerRollupProviderExplorer implements RollupProviderExplorer {
-  constructor(private baseUrl: URL) {}
+  private baseUrl: string;
+
+  constructor(baseUrl: URL) {
+    this.baseUrl = baseUrl.toString().replace(/\/$/, '');
+  }
 
   async getLatestRollups(count: number) {
     const url = new URL(`${this.baseUrl}/get-rollups`);

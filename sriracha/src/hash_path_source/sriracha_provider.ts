@@ -10,7 +10,11 @@ import {
 } from './hash_path_source';
 
 export class SrirachaProvider implements HashPathSource {
-  constructor(private baseUrl: URL) {}
+  private baseUrl: string;
+
+  constructor(baseUrl: URL) {
+    this.baseUrl = baseUrl.toString().replace(/\/$/, '');
+  }
 
   public async status() {
     return getProviderStatus(this.baseUrl);
