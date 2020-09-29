@@ -154,6 +154,18 @@ jobs:
           working_directory: block-explorer
           command: build block-explorer:latest
 
+  documentation:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker
+      - run:
+          name: 'Build and test'
+          working_directory: documentation
+          command: build documentation:latest
+
   end-to-end:
     machine:
       image: ubuntu-1604:201903-01
@@ -214,6 +226,10 @@ jobs:
           name: 'block-explorer'
           working_directory: block-explorer
           command: deploy_s3 block-explorer:latest
+      - run:
+          name: 'documentation'
+          working_directory: documentation
+          command: deploy_s3 documentation:latest
 
 workflows:
   build:
@@ -251,6 +267,9 @@ workflows:
           requires:
             - sdk
             - falafel
+      - documentation:
+          requires:
+            - sdk
       - end-to-end:
           requires:
             - falafel
