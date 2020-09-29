@@ -73,6 +73,7 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
 
   async status() {
     return {
+      serviceName: 'local',
       chainId: 0,
       networkOrHost: '',
       rollupContractAddress: EthAddress.ZERO,

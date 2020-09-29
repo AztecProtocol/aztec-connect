@@ -109,6 +109,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     const { chainId, networkOrHost } = await this.getNetworkInfo();
 
     return {
+      serviceName: 'falafel',
       chainId,
       networkOrHost,
       tokenContractAddress: this.getTokenContractAddress(),

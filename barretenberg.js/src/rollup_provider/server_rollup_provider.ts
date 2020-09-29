@@ -1,29 +1,19 @@
 import createDebug from 'debug';
-import { RollupProvider, RollupProviderStatus } from './rollup_provider';
-import { RollupProviderStatusServerResponse } from './server_response';
-import { EthAddress } from '../address';
+import { RollupProvider } from './rollup_provider';
 import { fetch } from '../iso_fetch';
 import { ServerBlockSource } from '../block_source';
 import { Proof } from '../rollup_provider';
+import { getProviderStatus } from './get_provider_status';
 
 const debug = createDebug('bb:server_rollup_provider');
 
-const toRollupProviderStatus = (status: RollupProviderStatusServerResponse): RollupProviderStatus => ({
-  ...status,
-  tokenContractAddress: EthAddress.fromString(status.tokenContractAddress),
-  rollupContractAddress: EthAddress.fromString(status.rollupContractAddress),
-  dataRoot: Buffer.from(status.dataRoot, 'hex'),
-  nullRoot: Buffer.from(status.nullRoot, 'hex'),
-  nextRollupId: status.nextRollupId,
-});
-
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
-  constructor(host: URL) {
-    super(host);
+  constructor(baseUrl: URL) {
+    super(baseUrl);
   }
 
   async sendProof({ proofData, viewingKeys, depositSignature, ...rest }: Proof) {
-    const url = new URL(`/api/tx`, this.host);
+    const url = new URL(`${this.baseUrl}/tx`);
     const data = {
       proofData: proofData.toString('hex'),
       viewingKeys: viewingKeys.map(v => v.toString('hex')),
@@ -46,15 +36,6 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
   }
 
   async status() {
-    const url = new URL(`/api/status`, this.host);
-    const response = await fetch(url.toString()).catch(() => undefined);
-    if (!response) {
-      throw new Error('Failed to contact rollup provider.');
-    }
-    if (response.status !== 200) {
-      throw new Error(`Bad response code ${response.status}.`);
-    }
-    const body = await response.json();
-    return toRollupProviderStatus(body);
+    return getProviderStatus(this.baseUrl);
   }
 }

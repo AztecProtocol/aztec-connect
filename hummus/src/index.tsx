@@ -88,7 +88,7 @@ const Unsupported = () => {
 function ThemedContent({ app }: { app: WebSdk }) {
   const [theme, setTheme] = useState(themes[window.localStorage.getItem('theme') === 'light' ? 'light' : 'dark']);
   const { pathname } = useLocation();
-  const serverUrl = window.location.origin;
+  const serverUrl = window.location.origin + '/api';
 
   return (
     <ThemeContext.Provider value={theme}>

@@ -1,7 +1,7 @@
 import { EthAddress } from 'barretenberg/address';
+import { getProviderStatus } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { getProviderStatus, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumSdk } from '../ethereum_sdk';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { chainIdToNetwork, EthProvider, EthProviderEvent } from './eth_provider';
@@ -62,7 +62,7 @@ export class WebSdk extends EventEmitter {
     this.sdk = new EthereumSdk(provider);
   }
 
-  public async init(serverUrl: string, sdkOptions: SdkOptions = { clearDb: false }) {
+  public async init(serverBaseUrl: string) {
     debug('initializing app...');
 
     try {
@@ -72,7 +72,7 @@ export class WebSdk extends EventEmitter {
       await this.ethProvider.init();
 
       // If our network doesn't match that of the rollup provider, request it be changed until it does.
-      const { chainId: rollupProviderChainId } = await getProviderStatus(serverUrl, sdkOptions.escapeHatchMode);
+      const { chainId: rollupProviderChainId, serviceName } = await getProviderStatus(serverBaseUrl);
       this.initStatus.network = chainIdToNetwork(rollupProviderChainId);
       if (rollupProviderChainId !== this.ethProvider.getChainId()) {
         this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.CHANGE_NETWORK);
@@ -94,7 +94,7 @@ export class WebSdk extends EventEmitter {
         }
       });
 
-      await this.sdk.init(serverUrl, sdkOptions);
+      await this.sdk.init(serverBaseUrl, { escapeHatchMode: serviceName === 'sriracha' });
 
       // Link account. Will be INITIALZED once complete.
       await this.initLinkAccount();

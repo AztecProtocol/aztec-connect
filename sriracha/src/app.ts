@@ -11,7 +11,7 @@ import Server from './server';
 export function appFactory(server: Server, prefix: string) {
   const router = new Router({ prefix });
 
-  router.get('/get-status', async (ctx: Koa.Context) => {
+  router.get('/status', async (ctx: Koa.Context) => {
     const status = await server.status();
     const { rollupContractAddress, tokenContractAddress, dataRoot, nullRoot } = status;
     const response: RollupProviderStatusServerResponse = {

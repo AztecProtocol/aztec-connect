@@ -34,10 +34,14 @@ const toTx = ({ txHash, proofData, viewingKeys, rollup, created }: TxServerRespo
 };
 
 export class ServerRollupProviderExplorer implements RollupProviderExplorer {
-  constructor(private host: URL) {}
+  private baseUrl: string;
+
+  constructor(baseUrl: URL) {
+    this.baseUrl = baseUrl.toString().replace(/\/$/, '');
+  }
 
   async getLatestRollups(count: number) {
-    const url = new URL(`/api/get-rollups`, this.host);
+    const url = new URL(`${this.baseUrl}/get-rollups`);
     url.searchParams.append('count', `${count}`);
 
     const response = await fetch(url.toString());
@@ -50,7 +54,7 @@ export class ServerRollupProviderExplorer implements RollupProviderExplorer {
   }
 
   async getLatestTxs(count: number) {
-    const url = new URL(`/api/get-txs`, this.host);
+    const url = new URL(`${this.baseUrl}/get-txs`);
     url.searchParams.append('count', `${count}`);
 
     const response = await fetch(url.toString());
@@ -63,7 +67,7 @@ export class ServerRollupProviderExplorer implements RollupProviderExplorer {
   }
 
   async getRollup(id: number) {
-    const url = new URL(`/api/get-rollup`, this.host);
+    const url = new URL(`${this.baseUrl}/get-rollup`);
     url.searchParams.append('id', `${id}`);
 
     const response = await fetch(url.toString());
@@ -76,7 +80,7 @@ export class ServerRollupProviderExplorer implements RollupProviderExplorer {
   }
 
   async getTx(txHash: Buffer) {
-    const url = new URL(`/api/get-tx`, this.host);
+    const url = new URL(`${this.baseUrl}/get-tx`);
     url.searchParams.append('txHash', txHash.toString('hex'));
 
     const response = await fetch(url.toString());

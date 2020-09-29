@@ -171,6 +171,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",
         "value": "0x009540b3b3B7770d3998bE54B44fCac59A27d00F"
+      },
+      {
+        "name": "API_PREFIX",
+        "value": "/falafel"
       }
     ],
     "mountPoints": [
@@ -236,7 +240,7 @@ resource "aws_cloudwatch_log_group" "falafel_logs" {
   retention_in_days = "14"
 }
 
-# Configure ALB to route /api to server.
+# Configure ALB to route /falafel to server.
 resource "aws_alb_target_group" "falafel" {
   name                 = "falafel"
   port                 = "80"
@@ -246,7 +250,7 @@ resource "aws_alb_target_group" "falafel" {
   deregistration_delay = 5
 
   health_check {
-    path              = "/api"
+    path              = "/falafel"
     matcher           = "200"
     interval          = 60
     healthy_threshold = 2
@@ -269,7 +273,7 @@ resource "aws_lb_listener_rule" "api" {
 
   condition {
     path_pattern {
-      values = ["/api/*"]
+      values = ["/falafel/*"]
     }
   }
 }

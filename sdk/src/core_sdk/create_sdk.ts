@@ -1,4 +1,8 @@
-import { ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
+import {
+  RollupProviderStatusServerResponse,
+  ServerRollupProvider,
+  ServerRollupProviderExplorer,
+} from 'barretenberg/rollup_provider';
 import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import createDebug from 'debug';
@@ -54,7 +58,7 @@ async function sdkFactory(hostStr: string, options: SdkOptions, ethereumProvider
     if (!ethereumProvider) {
       throw new Error('Please provide an ethereum provider.');
     }
-    const srirachaProvider = new SrirachaProvider(hostStr);
+    const srirachaProvider = new SrirachaProvider(host);
     const provider = new ethers.providers.Web3Provider(ethereumProvider);
     const { rollupContractAddress } = await srirachaProvider.status();
     const config = { signer: provider.getSigner(0), networkOrHost: hostStr, console: false };
@@ -130,14 +134,4 @@ export async function createSdk(hostStr: string, options: SdkOptions = {}, ether
   }
 
   return sdk;
-}
-
-export async function getProviderStatus(hostStr: string, escapeHatchMode: boolean | undefined) {
-  if (escapeHatchMode) {
-    const srirachaProvider = new SrirachaProvider(hostStr);
-    return srirachaProvider.status();
-  } else {
-    const rollupProvider = new ServerRollupProvider(new URL(hostStr));
-    return rollupProvider.status();
-  }
 }

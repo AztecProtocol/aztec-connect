@@ -1,6 +1,13 @@
 import { ApolloServer } from 'apollo-server-koa';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
-import { RollupServerResponse, TxServerResponse, Proof, ProofServerResponse } from 'barretenberg/rollup_provider';
+import {
+  RollupServerResponse,
+  TxServerResponse,
+  Proof,
+  ProofServerResponse,
+  RollupProviderStatusServerResponse,
+  RollupProviderStatus,
+} from 'barretenberg/rollup_provider';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
 import Koa from 'koa';
@@ -14,7 +21,7 @@ import { DefaultState, Context } from 'koa';
 import { RollupDao } from './entity/rollup';
 import { TxDao } from './entity/tx';
 import { BlockResolver, RollupResolver, TxResolver, ServerStatusResolver } from './resolver';
-import { Server, ServerConfig, ServerStatus } from './server';
+import { Server, ServerConfig } from './server';
 
 const cors = require('@koa/cors');
 
@@ -65,7 +72,7 @@ export function appFactory(
   connection: Connection,
   worldStateDb: WorldStateDb,
   serverConfig: ServerConfig,
-  serverStatus: ServerStatus,
+  serverStatus: RollupProviderStatus,
 ) {
   const router = new Router<DefaultState, Context>({ prefix });
 
@@ -170,7 +177,18 @@ export function appFactory(
   });
 
   router.get('/status', async (ctx: Koa.Context) => {
-    ctx.body = await server.status();
+    const status = await server.status();
+    const { rollupContractAddress, tokenContractAddress, dataRoot, nullRoot } = status;
+    const response: RollupProviderStatusServerResponse = {
+      ...status,
+      rollupContractAddress: rollupContractAddress.toString(),
+      tokenContractAddress: tokenContractAddress.toString(),
+      dataRoot: dataRoot.toString('hex'),
+      nullRoot: nullRoot.toString('hex'),
+    };
+    ctx.set('content-type', 'application/json');
+    ctx.body = response;
+    ctx.response.status = 200;
   });
 
   router.all('/falafel', graphqlPlayground({ endpoint: '/graphql' }));

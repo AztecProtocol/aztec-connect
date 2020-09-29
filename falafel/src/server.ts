@@ -5,7 +5,7 @@ import { MemoryFifo } from 'barretenberg/fifo';
 import { readFileAsync } from 'barretenberg/fs_async';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { Proof } from 'barretenberg/rollup_provider';
+import { Proof, RollupProvider } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
@@ -23,17 +23,6 @@ export interface ServerConfig {
   readonly rollupSize: number;
   readonly maxRollupWaitTime: Duration;
   readonly minRollupInterval: Duration;
-}
-
-export interface ServerStatus {
-  chainId: number;
-  networkOrHost: string;
-  rollupContractAddress: string;
-  tokenContractAddress: string;
-  dataSize: number;
-  dataRoot: string;
-  nullRoot: string;
-  rootRoot: string;
 }
 
 interface PublishItem {
@@ -77,12 +66,7 @@ export class Server {
 
     await this.restoreState();
 
-    this.blockchain.on('block', block =>
-      this.serialQueue.put(async () => {
-        await this.handleBlock(block);
-        this.printState();
-      }),
-    );
+    this.blockchain.on('block', block => this.serialQueue.put(() => this.handleBlock(block)));
     const lastBlockNum = await this.rollupDb.getLastBlockNum();
     await this.blockchain.start(lastBlockNum + 1);
 
@@ -155,6 +139,8 @@ export class Server {
     console.log(`Processing rollup ${rollup.rollupId}: ${rollup.rollupHash.toString('hex')}...`);
     await this.addRollupToWorldState(rollup);
     await this.confirmOrAddRollupToDb(rollup, block);
+
+    await this.printState();
   }
 
   private async confirmOrAddRollupToDb(rollup: RollupProofData, block: Block) {
@@ -211,15 +197,18 @@ export class Server {
 
   public async status() {
     const { chainId, networkOrHost } = await this.blockchain.getNetworkInfo();
+    const nextRollupId = this.blockchain.getLatestRollupId() + 1;
     return {
+      serviceName: 'falafel',
       chainId,
       networkOrHost,
-      rollupContractAddress: this.blockchain.getRollupContractAddress().toString(),
-      tokenContractAddress: this.blockchain.getTokenContractAddress().toString(),
+      rollupContractAddress: this.blockchain.getRollupContractAddress(),
+      tokenContractAddress: this.blockchain.getTokenContractAddress(),
       dataSize: Number(this.worldStateDb.getSize(0)),
-      dataRoot: this.worldStateDb.getRoot(0).toString('hex'),
-      nullRoot: this.worldStateDb.getRoot(1).toString('hex'),
-      rootRoot: this.worldStateDb.getRoot(2).toString('hex'),
+      dataRoot: this.worldStateDb.getRoot(0),
+      nullRoot: this.worldStateDb.getRoot(1),
+      rootRoot: this.worldStateDb.getRoot(2),
+      nextRollupId,
     };
   }
 

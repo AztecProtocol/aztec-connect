@@ -1,10 +1,11 @@
+import { RollupProviderStatus } from 'barretenberg/rollup_provider';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { Int, Resolver, FieldResolver, Query } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
-import { ServerConfig, ServerStatus } from '../server';
+import { ServerConfig } from '../server';
 import { HexString, ISODateTime } from './scalar_type';
 import { ServerStatusType } from './server_status_type';
 
@@ -24,14 +25,14 @@ export class ServerStatusResolver {
     @Inject('connection') connection: Connection,
     @Inject('worldStateDb') private readonly worldStateDb: WorldStateDb,
     @Inject('serverConfig') private readonly serverConfig: ServerConfig,
-    @Inject('serverStatus') serverStatus: ServerStatus,
+    @Inject('serverStatus') serverStatus: RollupProviderStatus,
   ) {
     this.rollupRep = connection.getRepository(RollupDao);
     this.rollupTxRep = connection.getRepository(TxDao);
     this.staticServerStatus = {
       chainId: serverStatus.chainId,
       networkOrHost: serverStatus.networkOrHost,
-      rollupContractAddress: serverStatus.rollupContractAddress,
+      rollupContractAddress: serverStatus.rollupContractAddress.toString(),
     };
   }
 
