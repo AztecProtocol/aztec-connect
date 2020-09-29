@@ -11,6 +11,7 @@ terraform {
     region = "eu-west-2"
   }
 }
+
 data "terraform_remote_state" "setup_iac" {
   backend = "s3"
   config = {
@@ -19,6 +20,7 @@ data "terraform_remote_state" "setup_iac" {
     region = "eu-west-2"
   }
 }
+
 data "terraform_remote_state" "aztec2_iac" {
   backend = "s3"
   config = {
@@ -28,18 +30,16 @@ data "terraform_remote_state" "aztec2_iac" {
   }
 }
 
-
 # AWS S3 bucket for static hosting
 resource "aws_s3_bucket" "block_explorer" {
   bucket = "dashboard.aztec.network"
-  acl = "public-read"
-
+  acl    = "public-read"
 
   cors_rule {
     allowed_headers = ["*"]
-    allowed_methods = ["PUT","POST"]
+    allowed_methods = ["PUT", "POST"]
     allowed_origins = ["*"]
-    expose_headers = ["ETag"]
+    expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }
 
@@ -54,7 +54,7 @@ resource "aws_s3_bucket" "block_explorer" {
         "AWS": "*"
       },
       "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::block-explorer.aztec.network/*"
+      "Resource": "arn:aws:s3:::dashboard.aztec.network/*"
     }
   ]
 }
@@ -66,11 +66,10 @@ EOF
   }
 }
 
-
 # AWS Cloudfront for caching
 resource "aws_cloudfront_distribution" "block_explorer_distribution" {
   origin {
-    domain_name = "${aws_s3_bucket.block_explorer.bucket}.s3.amazonaws.com"
+    domain_name = aws_s3_bucket.block_explorer.bucket_regional_domain_name
     origin_id   = "website"
   }
 
@@ -94,7 +93,7 @@ resource "aws_cloudfront_distribution" "block_explorer_distribution" {
       }
     }
 
-    viewer_protocol_policy = "allow-all"
+    viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
     default_ttl            = 3600
     max_ttl                = 86400
@@ -110,15 +109,17 @@ resource "aws_cloudfront_distribution" "block_explorer_distribution" {
 
   viewer_certificate {
     acm_certificate_arn = data.terraform_remote_state.aztec2_iac.outputs.aws_acm_certificate_aztec_network_arn
-    ssl_support_method = "sni-only"
+    ssl_support_method  = "sni-only"
   }
 }
 
-
-resource "aws_route53_record" "main-c-name" {
+resource "aws_route53_record" "dashboard_record" {
   zone_id = data.terraform_remote_state.aztec2_iac.outputs.aws_route53_zone_id
-  name = "dashboard"
-  type = "CNAME"
-  ttl = "300"
-  records = ["${aws_cloudfront_distribution.block_explorer_distribution.domain_name}"]
+  name    = "dashboard"
+  type    = "A"
+  alias {
+    name                   = aws_cloudfront_distribution.block_explorer_distribution.domain_name
+    zone_id                = aws_cloudfront_distribution.block_explorer_distribution.hosted_zone_id
+    evaluate_target_health = true
+  }
 }
