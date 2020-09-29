@@ -259,6 +259,7 @@ workflows:
             - blockchain
       - sdk:
           requires:
+            - falafel
             - sriracha
       - hummus:
           requires:
@@ -266,19 +267,19 @@ workflows:
       - block-explorer:
           requires:
             - sdk
-            - falafel
       - documentation:
           requires:
             - sdk
       - end-to-end:
           requires:
-            - falafel
             - sdk
       - deploy:
           requires:
             - x86_64-linux-gcc
             - end-to-end
             - hummus
+            - block-explorer
+            - documentation
           filters:
             branches:
               only: master
