@@ -1,7 +1,7 @@
 
 provider "aws" {
   profile = "default"
-  region  = "us-east-1"
+  region  = "eu-west-2"
 }
 
 terraform {
@@ -109,21 +109,16 @@ resource "aws_cloudfront_distribution" "block_explorer_distribution" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = data.aws_acm_certificate.block_explorer_cert.arn
+    acm_certificate_arn = data.terraform_remote_state.aztec2_iac.outputs.aws_acm_certificate_aztec_network_arn
     ssl_support_method = "sni-only"
   }
 }
 
 
 resource "aws_route53_record" "main-c-name" {
-  zone_id = data.terraform_remote_state.setup_iac.outputs.aws_route53_zone_id
-  name = "developers"
+  zone_id = data.terraform_remote_state.aztec2_iac.outputs.aws_route53_zone_id
+  name = "dashboard"
   type = "CNAME"
   ttl = "300"
   records = ["${aws_cloudfront_distribution.block_explorer_distribution.domain_name}"]
-}
-
-data "aws_acm_certificate" "block_explorer_cert" {
-  domain   = "*.aztec.network"
-  statuses = ["ISSUED"]
 }
