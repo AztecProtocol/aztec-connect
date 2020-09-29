@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+if [ ! -d "$HOME/.dein" ]; then
+	curl https://raw.githubusercontent.com/Shougo/dein.vim/master/bin/installer.sh | bash -s ~/.dein
+fi
+
+if [ ! -d "$HOME/.zgen" ]; then
+	git clone https://github.com/tarjoilija/zgen.git "${HOME}/.zgen"
+fi
+
+git config --global user.name "arielgabizon"
+git config --global user.email "ariel.gabizon@gmail.com"
+git config --global core.editor "vim"
+
+mkdir -p .vimdirs/swap
+mkdir -p .vimdirs/undo

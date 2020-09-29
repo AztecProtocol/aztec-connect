@@ -170,7 +170,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": "0x009540b3b3B7770d3998bE54B44fCac59A27d00F"
+        "value": "0xdA7A8093927deC164abFf658B65a16735F0Ed1c9"
       },
       {
         "name": "API_PREFIX",
@@ -250,11 +250,12 @@ resource "aws_alb_target_group" "falafel" {
   deregistration_delay = 5
 
   health_check {
-    path              = "/falafel"
-    matcher           = "200"
-    interval          = 60
-    healthy_threshold = 2
-    timeout           = 3
+    path                = "/falafel"
+    matcher             = "200"
+    interval            = 60
+    healthy_threshold   = 2
+    unhealthy_threshold = 5
+    timeout             = 3
   }
 
   tags = {
