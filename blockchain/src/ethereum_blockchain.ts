@@ -19,8 +19,8 @@ export interface EthereumBlockchainConfig {
 
 export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private rollupProcessor!: Contract;
-  private erc20!: Contract;
-  private erc20Address!: EthAddress;
+  private erc20Contracts: Contract[] = [];
+  private assetAddresses!: EthAddress[];
   private running = false;
   private latestRollupId = -1;
   private debug: any;
@@ -38,8 +38,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async init() {
-    this.erc20Address = await this.rollupProcessor.linkedToken();
-    this.erc20 = new ethers.Contract(this.erc20Address.toString(), ERC20ABI, this.config.signer);
+    this.assetAddresses = await this.rollupProcessor.getSupportedAssets();
+
+    for (let i = 0; i < this.assetAddresses.length; i += 1) {
+      this.erc20Contracts[i] = new ethers.Contract(this.assetAddresses[i].toString(), ERC20ABI, this.config.signer);
+    }
   }
 
   /**
@@ -93,7 +96,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       serviceName: 'ethereum',
       chainId,
       networkOrHost,
-      tokenContractAddress: this.getTokenContractAddress(),
+      tokenContractAddresses: this.getTokenContractAddresses(),
       rollupContractAddress: this.getRollupContractAddress(),
       nextRollupId,
       dataRoot,
@@ -117,8 +120,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.rollupContractAddress;
   }
 
-  public getTokenContractAddress() {
-    return this.erc20Address;
+  public getTokenContractAddresses() {
+    return this.assetAddresses;
   }
 
   /**
@@ -200,11 +203,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Note: `publicOwner` corresponds to either the deposit or withdraw address, depending
    * on the tx
    */
-  public async validateDepositFunds(publicOwnerBuf: Buffer, publicInputBuf: Buffer) {
+  public async validateDepositFunds(publicOwnerBuf: Buffer, publicInputBuf: Buffer, assetId: number) {
     const publicOwner = `0x${publicOwnerBuf.toString('hex')}`;
     const publicInput = toBigIntBE(publicInputBuf);
-    const erc20Balance = BigInt(await this.erc20.balanceOf(publicOwner));
-    const erc20Approval = BigInt(await this.erc20.allowance(publicOwner, this.rollupProcessor.address));
+    const erc20 = this.erc20Contracts[assetId];
+    const erc20Balance = BigInt(await erc20.balanceOf(publicOwner));
+    const erc20Approval = BigInt(await erc20.allowance(publicOwner, this.rollupProcessor.address));
     return erc20Balance >= publicInput && erc20Approval >= publicInput;
   }
 

@@ -46,8 +46,8 @@ export class PersistentEthereumBlockchain implements Blockchain {
     return this.ethereumBlockchain.getRollupContractAddress();
   }
 
-  public getTokenContractAddress() {
-    return this.ethereumBlockchain.getTokenContractAddress();
+  public getTokenContractAddresses() {
+    return this.ethereumBlockchain.getTokenContractAddresses();
   }
 
   public async getBlocks(from: number) {
@@ -91,8 +91,8 @@ export class PersistentEthereumBlockchain implements Blockchain {
     return this.ethereumBlockchain.sendRollupProof(proof, signatures, sigIndexes, viewingKeys);
   }
 
-  public async validateDepositFunds(publicOwner: Buffer, publicInput: Buffer) {
-    return this.ethereumBlockchain.validateDepositFunds(publicOwner, publicInput);
+  public async validateDepositFunds(publicOwner: Buffer, publicInput: Buffer, assetId: number) {
+    return this.ethereumBlockchain.validateDepositFunds(publicOwner, publicInput, assetId);
   }
 
   public validateSignature(publicOwnerBuf: Buffer, signature: Buffer, proof: Buffer) {

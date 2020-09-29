@@ -130,9 +130,8 @@ function publicInputData(id: number, proofNum: number, numInner: number, rollupS
  * @param publicOwner
  * @param ethPrivateKey
  */
-async function innerProofData(isDeposit: boolean, transferAmount: number, publicOwner: EthAddress) {
+async function innerProofData(isDeposit: boolean, transferAmount: number, publicOwner: EthAddress, assetId: Buffer) {
   const proofId = Buffer.alloc(32);
-  const assetId = Buffer.alloc(32);
   let publicInput;
   let publicOutput;
   let inputOwner = Buffer.alloc(32);
@@ -166,11 +165,16 @@ async function innerProofData(isDeposit: boolean, transferAmount: number, public
   ]);
 }
 
-export async function createDepositProof(amount: number, depositorAddress: EthAddress, user: Signer) {
+export async function createDepositProof(
+  amount: number,
+  depositorAddress: EthAddress,
+  user: Signer,
+  assetId: number = 0,
+) {
   const id: number = 0x00;
   const numInner: number = 0x01;
 
-  const innerProof = await innerProofData(true, amount, depositorAddress);
+  const innerProof = await innerProofData(true, amount, depositorAddress, numToBuffer(assetId));
   const { signature } = await ethSign(user, innerProof);
   const sigIndexes = [0]; // first index corresponds to first innerProof
 
@@ -185,14 +189,16 @@ export async function createTwoDepositsProof(
   firstDepositAmount: number,
   firstDepositorAddress: EthAddress,
   firstUser: Signer,
+  firstAssetId: Buffer,
   secondDepositAmount: number,
   secondDepositorAddress: EthAddress,
   secondUser: Signer,
+  secondAssetId: Buffer,
 ) {
   const id: number = 0x00;
   const numInner: number = 0x02;
-  const firstInnerProof = await innerProofData(true, firstDepositAmount, firstDepositorAddress);
-  const secondInnerProof = await innerProofData(true, secondDepositAmount, secondDepositorAddress);
+  const firstInnerProof = await innerProofData(true, firstDepositAmount, firstDepositorAddress, firstAssetId);
+  const secondInnerProof = await innerProofData(true, secondDepositAmount, secondDepositorAddress, secondAssetId);
 
   const { signature: firstSignature } = await ethSign(firstUser, firstInnerProof);
   const { signature: secondSignature } = await ethSign(secondUser, secondInnerProof);
@@ -204,10 +210,10 @@ export async function createTwoDepositsProof(
   };
 }
 
-export async function createWithdrawProof(amount: number, withdrawalAddress: EthAddress) {
+export async function createWithdrawProof(amount: number, withdrawalAddress: EthAddress, assetId: number = 0) {
   const id: number = 0x01;
   const numInner: number = 0x01;
-  const innerProof = await innerProofData(false, amount, withdrawalAddress);
+  const innerProof = await innerProofData(false, amount, withdrawalAddress, numToBuffer(assetId));
 
   // withdraws do not require signature
   const signature: Buffer = Buffer.alloc(32);
@@ -220,12 +226,12 @@ export async function createWithdrawProof(amount: number, withdrawalAddress: Eth
   };
 }
 
-export async function createSendProof() {
+export async function createSendProof(assetId: number = 0) {
   const id: number = 0x00;
   const numInner: number = 0x01;
   const transferAmount: number = 0;
   const publicOwner = EthAddress.ZERO;
-  const innerProof = await innerProofData(true, transferAmount, publicOwner);
+  const innerProof = await innerProofData(true, transferAmount, publicOwner, numToBuffer(assetId));
   const signature: Buffer = Buffer.alloc(32);
   const sigIndexes = [0];
   return {
@@ -237,10 +243,10 @@ export async function createSendProof() {
 
 // same as withdraw proof, except rollupSize in publicInputData set to 0 - indicating
 // that it's an escape proof
-export async function createEscapeProof(amount: number, withdrawalAddress: EthAddress) {
+export async function createEscapeProof(amount: number, withdrawalAddress: EthAddress, assetId: number = 0) {
   const id: number = 0x01;
   const numInner: number = 0x01;
-  const innerProof = await innerProofData(false, amount, withdrawalAddress);
+  const innerProof = await innerProofData(false, amount, withdrawalAddress, numToBuffer(assetId));
 
   // withdraws do not require signature
   const signature: Buffer = Buffer.alloc(32);

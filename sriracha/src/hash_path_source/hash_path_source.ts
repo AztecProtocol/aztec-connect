@@ -1,4 +1,3 @@
-import { EthAddress } from 'barretenberg/address';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { RollupProviderStatus } from 'barretenberg/rollup_provider';
 
