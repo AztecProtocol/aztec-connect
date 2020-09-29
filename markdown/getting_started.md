@@ -43,9 +43,11 @@ The relevant binaries are:
 
 - `./build/src/aztec/rollup/rollup_cli/rollup_cli`
 - `./build/src/aztec/rollup/db_cli/db_cli`
+- `./build/src/aztec/rollup/keygen/keygen`
 - `./build-wasm/src/aztec/barretenberg.wasm`
 
-`rollup_cli` is the rollup proof generator. `db_cli` is the merkle tree database.
+`rollup_cli` is the rollup proof generator. `db_cli` is the merkle tree database. `keygen` is used to create the
+solidity verification key contracts.
 
 It is currently essential that the same compilier is used to build `rollup_cli` and `barretenberg.wasm`, as `rollup_cli`
 independently computes the verification key for the inner proofs, and gcc and clang will actually produce different
@@ -57,7 +59,7 @@ During development you may find yourself needing to rebuild these binaries as th
 In `./build`
 
 ```
-make -j$(nproc) rollup_cli db_cli
+make -j$(nproc) rollup_cli db_cli keygen
 ```
 
 In `./build-wasm`
@@ -113,7 +115,14 @@ Ensure you've installed ganache globally:
 yarn global add ganache-cli
 ```
 
-Run a local ganache instance (currently requires Node 12). Run `falafel` as above. Run `yarn test` to run the tests.
+Run a local ganache instance (currently requires Node 12).
+
+```
+nvm use 12
+ganache-cli -d
+```
+
+Run `falafel` as above. Run `yarn test` to run the tests.
 
 ### Hummus
 
