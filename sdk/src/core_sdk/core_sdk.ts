@@ -480,7 +480,7 @@ export class CoreSdk extends EventEmitter {
     recipient: Address | string,
     fn: () => Promise<Buffer>,
     validation = async () => {},
-  ) {
+  ): Promise<TxHash> {
     this.actionState = {
       action,
       value,
@@ -542,7 +542,7 @@ export class CoreSdk extends EventEmitter {
     nullifiedKey?: GrumpkinAddress,
     alias?: string,
     isDummyAlias?: boolean,
-  ) {
+  ): Promise<TxHash> {
     if (this.options.escapeHatchMode) {
       throw new Error('Account modifications not supported in escape hatch mode.');
     }

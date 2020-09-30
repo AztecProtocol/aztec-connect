@@ -138,7 +138,7 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getAddressFromAlias(alias);
   }
 
-  public async approve(assetId: AssetId, value: bigint, from: EthAddress) {
+  public async approve(assetId: AssetId, value: bigint, from: EthAddress): Promise<TxHash> {
     const userId = this.getUserIdByEthAddress(from);
     if (!userId) {
       throw new Error(`User not found: ${from}`);
@@ -147,7 +147,7 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.approve(assetId, userId, value, from);
   }
 
-  public async mint(assetId: AssetId, value: bigint, account: EthAddress) {
+  public async mint(assetId: AssetId, value: bigint, account: EthAddress): Promise<TxHash> {
     const userId = this.getUserIdByEthAddress(account);
     if (!userId) {
       throw new Error(`User not found: ${account}`);
@@ -156,7 +156,13 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.mint(assetId, userId, value, account);
   }
 
-  public async deposit(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress, signer?: Signer) {
+  public async deposit(
+    assetId: AssetId,
+    value: bigint,
+    from: EthAddress,
+    to: GrumpkinAddress,
+    signer?: Signer,
+  ): Promise<TxHash> {
     const userId = this.getUserIdByEthAddress(from);
     if (!userId) {
       throw new Error(`User not found: ${from}`);
@@ -167,7 +173,13 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.deposit(assetId, userId, value, aztecSigner, ethSigner, to);
   }
 
-  public async withdraw(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress, signer?: Signer) {
+  public async withdraw(
+    assetId: AssetId,
+    value: bigint,
+    from: EthAddress,
+    to: EthAddress,
+    signer?: Signer,
+  ): Promise<TxHash> {
     const userId = this.getUserIdByEthAddress(from);
     if (!userId) {
       throw new Error(`User not found: ${from}`);
@@ -177,7 +189,13 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.withdraw(assetId, userId, value, aztecSigner, to);
   }
 
-  public async transfer(assetId: AssetId, value: bigint, from: EthAddress, to: GrumpkinAddress, signer?: Signer) {
+  public async transfer(
+    assetId: AssetId,
+    value: bigint,
+    from: EthAddress,
+    to: GrumpkinAddress,
+    signer?: Signer,
+  ): Promise<TxHash> {
     const userId = this.getUserIdByEthAddress(from);
     if (!userId) {
       throw new Error(`User not found: ${from}`);
@@ -187,7 +205,13 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.transfer(assetId, userId, value, aztecSigner, to);
   }
 
-  public async publicTransfer(assetId: AssetId, value: bigint, from: EthAddress, to: EthAddress, signer?: Signer) {
+  public async publicTransfer(
+    assetId: AssetId,
+    value: bigint,
+    from: EthAddress,
+    to: EthAddress,
+    signer?: Signer,
+  ): Promise<TxHash> {
     const userId = this.getUserIdByEthAddress(from);
     if (!userId) {
       throw new Error(`User not found: ${from}`);
@@ -216,7 +240,7 @@ export class EthereumSdk extends EventEmitter {
     newSigningPublicKey: GrumpkinAddress,
     recoveryPublicKey: GrumpkinAddress,
     alias: string,
-  ) {
+  ): Promise<TxHash> {
     const userId = this.getUserIdByEthAddress(ethAddress);
     if (!userId) {
       throw new Error(`User not found: ${ethAddress}`);
@@ -225,7 +249,7 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.createAccount(userId, newSigningPublicKey, recoveryPublicKey, alias);
   }
 
-  async recoverAccount(ethAddress: EthAddress, recoveryPayload: RecoveryPayload) {
+  async recoverAccount(ethAddress: EthAddress, recoveryPayload: RecoveryPayload): Promise<TxHash> {
     const userId = this.getUserIdByEthAddress(ethAddress);
     if (!userId) {
       throw new Error(`User not found: ${ethAddress}`);
@@ -234,7 +258,7 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.recoverAccount(userId, recoveryPayload);
   }
 
-  async addAlias(ethAddress: EthAddress, alias: string, signer: Signer) {
+  async addAlias(ethAddress: EthAddress, alias: string, signer: Signer): Promise<TxHash> {
     const userId = this.getUserIdByEthAddress(ethAddress);
     if (!userId) {
       throw new Error(`User not found: ${ethAddress}`);
@@ -243,7 +267,7 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.addAlias(userId, alias, signer);
   }
 
-  async addSigningKey(ethAddress: EthAddress, signingPublicKey: GrumpkinAddress, signer: Signer) {
+  async addSigningKey(ethAddress: EthAddress, signingPublicKey: GrumpkinAddress, signer: Signer): Promise<TxHash> {
     const userId = this.getUserIdByEthAddress(ethAddress);
     if (!userId) {
       throw new Error(`User not found: ${ethAddress}`);
@@ -252,7 +276,7 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.addSigningKey(userId, signingPublicKey, signer);
   }
 
-  async removeSigningKey(ethAddress: EthAddress, signingPublicKey: GrumpkinAddress, signer: Signer) {
+  async removeSigningKey(ethAddress: EthAddress, signingPublicKey: GrumpkinAddress, signer: Signer): Promise<TxHash> {
     const userId = this.getUserIdByEthAddress(ethAddress);
     if (!userId) {
       throw new Error(`User not found: ${ethAddress}`);
@@ -271,14 +295,6 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${ethAddress}`);
     }
     return this.walletSdk.awaitSettlement(userId, txHash, timeout);
-  }
-
-  public getUserState(ethAddress: EthAddress) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
-      throw new Error(`User not found: ${ethAddress}`);
-    }
-    return this.walletSdk.getUserState(userId);
   }
 
   public getUserData(ethAddress: EthAddress) {

@@ -14,11 +14,19 @@ export class RecoveryPayload {
     return new RecoveryPayload(trustedThirdPartyPublicKey, recoveryPublicKey, recoveryData);
   }
 
+  static fromString(data: string) {
+    return RecoveryPayload.FromBuffer(Buffer.from(data.replace(/^0x/i, ''), 'hex'));
+  }
+
   toBuffer() {
     return Buffer.concat([
       this.trustedThirdPartyPublicKey.toBuffer(),
       this.recoveryPublicKey.toBuffer(),
       this.recoveryData,
     ]);
+  }
+
+  toString() {
+    return `0x${this.toBuffer().toString('hex')}`;
   }
 }

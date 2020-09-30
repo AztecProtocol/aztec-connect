@@ -1,4 +1,5 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { AssetId } from '../sdk';
 import { Signer } from '../signer';
 import { RecoveryPayload } from '../user';
@@ -12,23 +13,27 @@ export class EthereumSdkUser {
     return this.sdk.generateAccountRecoveryData(this.ethAddress, trustedThirdPartyPublicKeys);
   }
 
-  createAccount(newSigningPublicKey: GrumpkinAddress, recoveryPublicKey: GrumpkinAddress, alias: string) {
+  createAccount(
+    newSigningPublicKey: GrumpkinAddress,
+    recoveryPublicKey: GrumpkinAddress,
+    alias: string,
+  ): Promise<TxHash> {
     return this.sdk.createAccount(this.ethAddress, newSigningPublicKey, recoveryPublicKey, alias);
   }
 
-  async recoverAccount(recoveryPayload: RecoveryPayload) {
+  async recoverAccount(recoveryPayload: RecoveryPayload): Promise<TxHash> {
     return this.sdk.recoverAccount(this.ethAddress, recoveryPayload);
   }
 
-  async addAlias(alias: string, signer: Signer) {
+  async addAlias(alias: string, signer: Signer): Promise<TxHash> {
     return this.sdk.addAlias(this.ethAddress, alias, signer);
   }
 
-  async addSigningKey(signingPublicKey: GrumpkinAddress, signer: Signer) {
+  async addSigningKey(signingPublicKey: GrumpkinAddress, signer: Signer): Promise<TxHash> {
     return this.sdk.addSigningKey(this.ethAddress, signingPublicKey, signer);
   }
 
-  async removeSigningKey(signingPublicKey: GrumpkinAddress, signer: Signer) {
+  async removeSigningKey(signingPublicKey: GrumpkinAddress, signer: Signer): Promise<TxHash> {
     return this.sdk.removeSigningKey(this.ethAddress, signingPublicKey, signer);
   }
 

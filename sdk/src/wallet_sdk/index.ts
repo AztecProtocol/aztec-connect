@@ -1,14 +1,14 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Signature } from 'barretenberg/client_proofs/signature';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
-import { Action, AssetId, SdkEvent } from '../sdk';
+import { Action, ActionState, AssetId, SdkEvent, SdkInitState } from '../sdk';
 import { EthereumSigner, RecoverSignatureSigner, Signer } from '../signer';
 import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';
 import { RecoveryPayload } from '../user';
@@ -18,6 +18,16 @@ export * from './wallet_sdk_user';
 export * from './wallet_sdk_user_asset';
 
 const debug = createDebug('bb:wallet_sdk');
+
+export interface WalletSdk {
+  on(event: SdkEvent.UPDATED_ACTION_STATE, listener: (actionState: ActionState) => void): this;
+  on(event: SdkEvent.UPDATED_EXPLORER_ROLLUPS, listener: (rollups: Rollup[]) => void): this;
+  on(event: SdkEvent.UPDATED_EXPLORER_TXS, listener: (txs: Tx[]) => void): this;
+  on(event: SdkEvent.UPDATED_INIT_STATE, listener: (initState: SdkInitState, message?: string) => void): this;
+  on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
+  on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: Buffer) => void): this;
+  on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (rollupId: number, latestRollupId: number) => void): this;
+}
 
 export class WalletSdk extends EventEmitter {
   private core!: CoreSdk;
@@ -90,7 +100,7 @@ export class WalletSdk extends EventEmitter {
     return this.core.getAddressFromAlias(alias);
   }
 
-  public async approve(assetId: AssetId, userId: Buffer, value: bigint, account: EthAddress) {
+  public async approve(assetId: AssetId, userId: Buffer, value: bigint, account: EthAddress): Promise<TxHash> {
     const action = () => this.getTokenContract(assetId).approve(value, account);
     const { rollupContractAddress } = this.core.getLocalStatus();
     const txHash = await this.core.performAction(Action.APPROVE, value, userId, rollupContractAddress, action);
@@ -98,7 +108,7 @@ export class WalletSdk extends EventEmitter {
     return txHash;
   }
 
-  public async mint(assetId: AssetId, userId: Buffer, value: bigint, account: EthAddress) {
+  public async mint(assetId: AssetId, userId: Buffer, value: bigint, account: EthAddress): Promise<TxHash> {
     const action = () => this.getTokenContract(assetId).mint(value, account);
     const txHash = await this.core.performAction(Action.MINT, value, userId, account, action);
     this.emit(SdkEvent.UPDATED_USER_STATE, userId);
@@ -112,7 +122,7 @@ export class WalletSdk extends EventEmitter {
     signer: Signer,
     ethSigner: EthereumSigner,
     to?: GrumpkinAddress | string,
-  ) {
+  ): Promise<TxHash> {
     const recipient = !to
       ? this.getUserData(userId)!.publicKey
       : typeof to === 'string'
@@ -130,12 +140,24 @@ export class WalletSdk extends EventEmitter {
     return this.core.performAction(Action.DEPOSIT, value, userId, to || recipient!, action, validation);
   }
 
-  public async withdraw(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: EthAddress) {
+  public async withdraw(
+    assetId: AssetId,
+    userId: Buffer,
+    value: bigint,
+    signer: Signer,
+    to: EthAddress,
+  ): Promise<TxHash> {
     const action = () => this.core.createProof(assetId, userId, 'WITHDRAW', value, signer, undefined, undefined, to);
     return this.core.performAction(Action.WITHDRAW, value, userId, to, action);
   }
 
-  public async transfer(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: GrumpkinAddress | string) {
+  public async transfer(
+    assetId: AssetId,
+    userId: Buffer,
+    value: bigint,
+    signer: Signer,
+    to: GrumpkinAddress | string,
+  ): Promise<TxHash> {
     const recipient = typeof to === 'string' ? await this.getAddressFromAlias(to) : to;
     const action = () => this.core.createProof(assetId, userId, 'TRANSFER', value, signer, undefined, recipient);
     return this.core.performAction(Action.TRANSFER, value, userId, to, action);
@@ -148,7 +170,7 @@ export class WalletSdk extends EventEmitter {
     signer: Signer,
     ethSigner: EthereumSigner,
     to: EthAddress,
-  ) {
+  ): Promise<TxHash> {
     const action = () =>
       this.core.createProof(assetId, userId, 'PUBLIC_TRANSFER', value, signer, ethSigner, undefined, to);
     const validation = async () => {
@@ -211,7 +233,7 @@ export class WalletSdk extends EventEmitter {
     return this.core.createAccountProof(user.id, signer, newSigningPublicKey, recoveryPublicKey, user.publicKey, alias);
   }
 
-  public async recoverAccount(userId: Buffer, recoveryPayload: RecoveryPayload) {
+  public async recoverAccount(userId: Buffer, recoveryPayload: RecoveryPayload): Promise<TxHash> {
     const { recoveryData } = recoveryPayload;
     const alias = recoveryData.slice(0, 32).toString('hex');
     const nullifiedKey = new GrumpkinAddress(recoveryData.slice(32, 32 + 64));
@@ -228,15 +250,15 @@ export class WalletSdk extends EventEmitter {
     );
   }
 
-  public async addAlias(userId: Buffer, alias: string, signer: Signer) {
+  public async addAlias(userId: Buffer, alias: string, signer: Signer): Promise<TxHash> {
     return this.core.createAccountProof(userId, signer, undefined, undefined, undefined, alias);
   }
 
-  public async addSigningKey(userId: Buffer, signingPublicKey: GrumpkinAddress, signer: Signer) {
+  public async addSigningKey(userId: Buffer, signingPublicKey: GrumpkinAddress, signer: Signer): Promise<TxHash> {
     return this.core.createAccountProof(userId, signer, signingPublicKey);
   }
 
-  public async removeSigningKey(userId: Buffer, signingPublicKey: GrumpkinAddress, signer: Signer) {
+  public async removeSigningKey(userId: Buffer, signingPublicKey: GrumpkinAddress, signer: Signer): Promise<TxHash> {
     return this.core.createAccountProof(userId, signer, undefined, undefined, signingPublicKey);
   }
 
@@ -246,10 +268,6 @@ export class WalletSdk extends EventEmitter {
 
   public async awaitSettlement(userId: Buffer, txHash: TxHash, timeout = 120) {
     return this.core.awaitSettlement(userId, txHash, timeout);
-  }
-
-  public getUserState(userId: Buffer) {
-    return this.core.getUserState(userId);
   }
 
   public getUserData(userId: Buffer) {
