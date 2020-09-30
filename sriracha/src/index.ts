@@ -15,20 +15,19 @@ const {
   API_PREFIX = '',
   INFURA_API_KEY,
   NETWORK,
-  PRIVATE_KEY,
 } = process.env;
 
 function getEthereumBlockchainConfig() {
-  if (INFURA_API_KEY && NETWORK && PRIVATE_KEY && ROLLUP_CONTRACT_ADDRESS) {
+  if (INFURA_API_KEY && NETWORK && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Infura network: ${NETWORK}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
     const provider = new ethers.providers.InfuraProvider(NETWORK, INFURA_API_KEY);
-    return { signer: new ethers.Wallet(PRIVATE_KEY, provider) as Signer, networkOrHost: NETWORK };
+    return { provider, networkOrHost: NETWORK };
   } else if (ETHEREUM_HOST && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Ethereum host: ${ETHEREUM_HOST}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
     const provider = new ethers.providers.WebSocketProvider(ETHEREUM_HOST);
-    return { signer: provider.getSigner(0), networkOrHost: ETHEREUM_HOST };
+    return { provider, networkOrHost: ETHEREUM_HOST };
   }
 }
 

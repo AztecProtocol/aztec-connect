@@ -219,6 +219,10 @@ jobs:
           working_directory: falafel
           command: deploy falafel:latest
       - run:
+          name: 'sriracha'
+          working_directory: sriracha
+          command: deploy sriracha:latest
+      - run:
           name: 'hummus'
           working_directory: hummus
           command: deploy hummus:latest
