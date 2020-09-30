@@ -26,6 +26,7 @@ export TF_IN_AUTOMATION=1
 cd terraform
 terraform init -input=false
 terraform apply -input=false -auto-approve
+cd .. 
 
 AWS_BUCKET_NAME=$(terraform output s3)
 AWS_CLOUDFRONT_DISTRIBUTION=$(terraform output cloudfront)
