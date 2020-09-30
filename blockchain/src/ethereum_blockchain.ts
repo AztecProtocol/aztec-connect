@@ -1,4 +1,4 @@
-import { TransactionResponse } from '@ethersproject/abstract-provider';
+import { Provider, TransactionResponse } from '@ethersproject/abstract-provider';
 import { EthAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
 import { RollupProofData } from 'barretenberg/rollup_proof';
@@ -12,7 +12,8 @@ import { abi as RollupABI } from './artifacts/RollupProcessor.json';
 import { Blockchain, Receipt } from './blockchain';
 
 export interface EthereumBlockchainConfig {
-  signer: Signer;
+  provider: Provider;
+  signer?: Signer;
   networkOrHost: string;
   console?: boolean;
 }
@@ -110,9 +111,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async getNetworkInfo() {
-    const { provider } = this.config.signer;
     const { networkOrHost } = this.config;
-    const { chainId } = await provider!.getNetwork();
+    const { chainId } = await this.config.provider!.getNetwork();
     return { chainId, networkOrHost };
   }
 
@@ -185,12 +185,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public async getTransactionReceipt(txHash: Buffer) {
     const txHashStr = `0x${txHash.toString('hex')}`;
-    let txReceipt = await this.config.signer.provider!.getTransactionReceipt(txHashStr);
+    let txReceipt = await this.config.provider.getTransactionReceipt(txHashStr);
     if (!txReceipt) {
       this.debug(`Waiting for tx receipt for ${txHashStr}...`);
       while (!txReceipt || txReceipt.blockNumber === null) {
         await new Promise(resolve => setTimeout(resolve, 3000));
-        txReceipt = await this.config.signer.provider!.getTransactionReceipt(txHashStr);
+        txReceipt = await this.config.provider.getTransactionReceipt(txHashStr);
       }
     }
     return { status: !!txReceipt.status, blockNum: txReceipt.blockNumber } as Receipt;

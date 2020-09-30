@@ -38,7 +38,7 @@ describe('ethereum_blockchain', () => {
     ({ erc20, rollupProcessor, viewingKeys } = await setupRollupProcessor([userA, userB], mintAmount));
 
     ethereumBlockchain = await EthereumBlockchain.new(
-      { signer: userA, networkOrHost: '' },
+      { signer: userA, networkOrHost: '', provider: userA.provider! },
       EthAddress.fromString(rollupProcessor.address),
     );
     await ethereumBlockchain.start();

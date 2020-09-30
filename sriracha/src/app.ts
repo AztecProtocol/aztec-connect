@@ -11,6 +11,11 @@ import Server from './server';
 export function appFactory(server: Server, prefix: string) {
   const router = new Router({ prefix });
 
+  router.get('/', async (ctx: Koa.Context) => {
+    ctx.body = 'OK\n';
+    ctx.response.status = 200;
+  });
+
   router.get('/status', async (ctx: Koa.Context) => {
     const status = await server.status();
     const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot } = status;
