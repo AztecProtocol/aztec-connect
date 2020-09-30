@@ -1,5 +1,5 @@
 output "cloudfront" {
-  value = "${aws_cloudfront_distribution.documentation_distribution.domain_name}"
+  value = "${aws_cloudfront_distribution.documentation_distribution.id}"
 }
 
 output "s3" {
