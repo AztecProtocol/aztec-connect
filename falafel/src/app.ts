@@ -191,7 +191,7 @@ export function appFactory(
     ctx.response.status = 200;
   });
 
-  router.all('/falafel', graphqlPlayground({ endpoint: '/graphql' }));
+  router.all('/graphql', graphqlPlayground({ endpoint: `${prefix}/graphql` }));
 
   const app = new Koa();
   app.proxy = true;
@@ -209,7 +209,7 @@ export function appFactory(
     container: Container,
   });
   const appServer = new ApolloServer({ schema });
-  appServer.applyMiddleware({ app });
+  appServer.applyMiddleware({ app, path: `${prefix}/graphql` });
 
   return app;
 }
