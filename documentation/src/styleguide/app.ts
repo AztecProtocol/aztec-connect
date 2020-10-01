@@ -10,7 +10,7 @@ import ethers from 'ethers';
 const SERVER_URL =
   process.env.NODE_ENV === 'development'
     ? `${window.location.protocol}//${window.location.hostname}:8081`
-    : 'https://aztec.network/falafel';
+    : 'https://api.aztec.network/falafel';
 
 export enum LinkAccountState {
   LINKING = 'Linking',
