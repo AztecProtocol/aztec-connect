@@ -8,5 +8,5 @@ WalletSdk also implements <a href="https://nodejs.org/api/events.html" target="_
 
 ## See also
 
-- [`WalletSdkUser`](/#/SDK/Types/WalletSdkUser)
-- [`WalletSdkUserAsset`](/#/SDK/Types/WalletSdkUserAsset)
+- [`WalletSdkUser`](/#/Types/WalletSdkUser)
+- [`WalletSdkUserAsset`](/#/Types/WalletSdkUserAsset)

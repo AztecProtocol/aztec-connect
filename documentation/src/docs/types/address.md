@@ -2,5 +2,5 @@
 
 ## Classes that implement Address
 
-- [`EthAddress`](/#/SDK/Types/EthAddress)
-- [`GrumpkinAddress`](/#/SDK/Types/GrumpkinAddress)
+- [`EthAddress`](/#/Types/EthAddress)
+- [`GrumpkinAddress`](/#/Types/GrumpkinAddress)

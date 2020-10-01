@@ -1,4 +1,4 @@
-A TokenContract instance can be created from _[`WalletSdk`](/#/SDK/Types/WalletSdk).getTokenContract([AssetId](/#/SDK/Types/AssetId))_.
+A TokenContract instance can be created from _[`WalletSdk`](/#/Types/WalletSdk).getTokenContract([AssetId](/#/Types/AssetId))_.
 
 @spec @aztec/sdk/token_contract/index.d.ts TokenContract
 
@@ -8,4 +8,4 @@ A TokenContract instance can be created from _[`WalletSdk`](/#/SDK/Types/WalletS
 
 ## See also
 
-- [`WalletSdk`](/#/SDK/Types/WalletSdk)
+- [`WalletSdk`](/#/Types/WalletSdk)

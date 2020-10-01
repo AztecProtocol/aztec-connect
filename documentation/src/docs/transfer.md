@@ -30,7 +30,7 @@ async function demoTransfer(aztecSdk, userId, signer) {
 
 ## Usage with UserAsset
 
-Each [UserAsset](/#/SDK/Types/WalletSdkUserAsset) is bound to a user id and an asset id so that we don't have to pass these values around when we call the methods on it.
+Each [UserAsset](/#/Types/WalletSdkUserAsset) is bound to a user id and an asset id so that we don't have to pass these values around when we call the methods on it.
 
 ```js
 import { AssetId, GrumpkinAddress } from '@aztec/sdk';
