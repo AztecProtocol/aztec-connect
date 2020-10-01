@@ -32,8 +32,8 @@ describe('compute_nullifier', () => {
     const nullifier1 = computeNullifier(inputNote1Enc, 0, inputNote1.secret, blake2s);
     const nullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, blake2s);
 
-    const expected1 = Buffer.from('2e756ba73e3f5db066cc08dafcd2205f399b009a31f9429332e2cb79408289dd', 'hex');
-    const expected2 = Buffer.from('1493f13591935fd461a991492b004809d262255dc9c92f1a5915f536f2a7f5d8', 'hex');
+    const expected1 = Buffer.from('127fc1c9a473d1b8e696d3cdbab8b1880bcc15185f3a13919880bfe00d44d819', 'hex');
+    const expected2 = Buffer.from('0915f79d51b5721414bdff57db50db28da170648efba1cb084d14fcbb16a1e59', 'hex');
 
     expect(nullifier1).toEqual(expected1);
     expect(nullifier2).toEqual(expected2);
