@@ -96,6 +96,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     const dataSize = +(await this.rollupProcessor.dataSize());
     const dataRoot = Buffer.from((await this.rollupProcessor.dataRoot()).slice(2), 'hex');
     const nullRoot = Buffer.from((await this.rollupProcessor.nullRoot()).slice(2), 'hex');
+    const [escapeOpen, numEscapeBlocksRemaining] = await this.rollupProcessor.getEscapeHatchStatus();
 
     return {
       serviceName: 'ethereum',
@@ -107,7 +108,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       dataRoot,
       nullRoot,
       dataSize,
-      blockNumber,
+      escapeOpen,
+      numEscapeBlocksRemaining,
     };
   }
 

@@ -17,7 +17,8 @@ export interface RollupProviderStatus {
   dataSize: number;
   dataRoot: Buffer;
   nullRoot: Buffer;
-  blockNumber: number;
+  escapeOpen: boolean;
+  numEscapeBlocksRemaining: number;
 }
 
 export type TxHash = Buffer;

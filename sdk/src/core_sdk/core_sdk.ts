@@ -471,12 +471,9 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async validateEscapeOpen() {
-    const { blockNumber } = await this.rollupProvider.status();
-    // Escape hatch window is open for the last 20 blocks of every 100 blocks
-    const windowOpen = blockNumber % 100 > 80;
-    const blockEscapeOpens = blockNumber + 80 - (blockNumber % 100);
-    if (!windowOpen) {
-      throw new Error(`Escape hatch window closed. Current block num: ${blockNumber}. Opens at ${blockEscapeOpens}`);
+    const { escapeOpen, numEscapeBlocksRemaining } = await this.rollupProvider.status();
+    if (!escapeOpen) {
+      throw new Error(`Escape hatch window closed. Opens in ${numEscapeBlocksRemaining} blocks`);
     }
   }
 
