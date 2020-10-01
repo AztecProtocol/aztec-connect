@@ -185,7 +185,7 @@ const Examples: React.FunctionComponent<ExamplesProps> = ({ classes, examples })
               }
               case 'markdown': {
                 contentNode = [];
-                const specPattern = /@spec\s+([\w@-_\/]+(.d)?.ts)\s+(enum|class|interface)?\s*([a-zA-Z]+)/;
+                const specPattern = /@spec\s+([\w@-_\/]+(.d)?.ts)\s+(enum|class|interface)?\s*([a-zA-Z][a-zA-Z0-9]+)/;
                 const reg = new RegExp(specPattern, 'g');
                 let lastIndex = 0;
                 let res;

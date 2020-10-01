@@ -39,18 +39,6 @@ const generateFullCode = (code: string, demoArgs: { [key: string]: any }) => {
   const asyncCompiledCode = `
     ${entry ? executableCode : ''}
     const runCode = async () => {
-      ${
-        !!(entry && argsList.indexOf('aztecSdk') >= 0) &&
-        `
-        const isAztecSdkInitialized = () => window.demoArgs.aztecSdk.getLocalStatus().initState === 'INITIALIZED';
-        if (!isAztecSdkInitialized()) {
-          console.info('Initializing aztecSdk...');
-          while (!isAztecSdkInitialized()) {
-            await new Promise(resolve => setTimeout(() => resolve(), 1000));
-          }
-        }
-      `
-      }
       try {
         ${entry ? `await ${entry}(${args})` : executableCode}
       } catch(err) {

@@ -40,6 +40,10 @@ module.exports = {
           rel: 'manifest',
           href: '/manifest.json',
         },
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/icon?family=Material+Icons',
+        },
       ],
       meta: [
         {
@@ -339,6 +343,11 @@ module.exports = {
             {
               name: 'WalletSdkUserAsset',
               content: 'src/docs/types/wallet_sdk_user_asset.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'Web3Signer',
+              content: 'src/docs/types/web3_signer.md',
               exampleMode: 'hide',
             },
           ],

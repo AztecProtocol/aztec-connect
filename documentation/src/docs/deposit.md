@@ -3,7 +3,7 @@ This method deposits assets from layer 1.
 @spec sdk.ts deposit
 
 ```js
-import { AssetId, EthAddress } from '@aztec/sdk';
+import { AssetId, EthAddress, Web3Signer } from '@aztec/sdk';
 import { ethers } from 'ethers';
 
 async function demoDeposit(aztecSdk, userId, signer) {
@@ -12,16 +12,16 @@ async function demoDeposit(aztecSdk, userId, signer) {
   const balanceBefore = aztecSdk.getBalance(userId);
   console.info('Balance before deposit:', aztecSdk.fromErc20Units(assetId, balanceBefore));
 
+  const senderEthAddress = EthAddress.fromString(window.ethereum.selectedAddress);
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-  const ethSigner = await provider.getSigner();
+  const ethSigner = new Web3Signer(provider, senderEthAddress);
 
   const value = aztecSdk.toErc20Units(assetId, '10');
 
-  const senderEthereumAddress = EthAddress.fromString(window.ethereum.selectedAddress);
-  const allowance = await aztecSdk.getPublicAllowance(assetId, senderEthereumAddress);
+  const allowance = await aztecSdk.getPublicAllowance(assetId, senderEthAddress);
   if (allowance < value) {
     console.info('Approve rollup contract to spend your token...');
-    await aztecSdk.approve(assetId, userId, value, senderEthereumAddress);
+    await aztecSdk.approve(assetId, userId, value, senderEthAddress);
     console.info('Approved!');
   }
 
@@ -43,7 +43,7 @@ async function demoDeposit(aztecSdk, userId, signer) {
 Each [UserAsset](/#/Types/WalletSdkUserAsset) is bound to a user id and an asset id so that we don't have to pass these values around when we call the methods on it.
 
 ```js
-import { AssetId, EthAddress } from '@aztec/sdk';
+import { AssetId, EthAddress, Web3Signer } from '@aztec/sdk';
 import { ethers } from 'ethers';
 
 async function demoDeposit(aztecSdk, userId, signer) {
@@ -53,16 +53,16 @@ async function demoDeposit(aztecSdk, userId, signer) {
   const balanceBefore = asset.balance();
   console.info('Balance before deposit:', asset.fromErc20Units(balanceBefore));
 
+  const senderEthAddress = EthAddress.fromString(window.ethereum.selectedAddress);
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-  const ethSigner = await provider.getSigner();
+  const ethSigner = new Web3Signer(provider, senderEthAddress);
 
   const value = asset.toErc20Units('10');
 
-  const senderEthereumAddress = EthAddress.fromString(window.ethereum.selectedAddress);
-  const allowance = await asset.publicAllowance(senderEthereumAddress);
+  const allowance = await asset.publicAllowance(senderEthAddress);
   if (allowance < value) {
     console.info('Approve rollup contract to spend your token...');
-    await asset.approve(value, senderEthereumAddress);
+    await asset.approve(value, senderEthAddress);
     console.info('Approved!');
   }
 

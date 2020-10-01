@@ -1,5 +1,5 @@
 import { formatUnits } from '@ethersproject/units';
-import { EthAddress } from '@aztec/sdk';
+import { ActionState, EthAddress, SdkEvent } from '@aztec/sdk';
 import React, { useState, useEffect } from 'react';
 import Link from 'react-styleguidist/lib/client/rsg-components/Link';
 import Styled from 'react-styleguidist/lib/client/rsg-components/Styled';
@@ -19,12 +19,24 @@ const EthBalance = ({ classes, app, address }: EthBalanceProps) => {
 
   useEffect(() => {
     const refreshBalance = async () => {
-      const balance = await app.ethProvider.getBalance(address);
+      const balance = await app.getEthBalance(address);
       setBalance(balance);
     };
 
     refreshBalance();
     setInitialized(true);
+
+    const handleActionState = (actionState: ActionState) => {
+      if (['APPROVE', 'MINT'].indexOf(actionState.action) >= 0) {
+        refreshBalance();
+      }
+    };
+
+    app.walletSdk.on(SdkEvent.UPDATED_ACTION_STATE, handleActionState);
+
+    return () => {
+      app.walletSdk.off(SdkEvent.UPDATED_ACTION_STATE, handleActionState);
+    };
   }, [app, address]);
 
   if (!initialized) {

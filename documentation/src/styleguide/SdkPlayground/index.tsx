@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Editor from 'react-styleguidist/lib/client/rsg-components/Editor';
 import Link from 'react-styleguidist/lib/client/rsg-components/Link';
 import Styled from 'react-styleguidist/lib/client/rsg-components/Styled';
 import { JssInjectedProps } from 'react-styleguidist/lib/client/rsg-components/Styled/Styled';
 import * as Rsg from 'react-styleguidist/lib/typings';
 import { App } from '../app';
-import { EthProviderEvent } from '../eth_provider';
 import { CodeConsole } from './code_console';
 import { Controls } from './controls';
 import { Header } from './header';
@@ -34,6 +33,7 @@ export const styles = ({ space, fontSize, fontFamily, color }: Rsg.Theme) => ({
     position: 'relative',
     pointerEvents: 'all',
     background: color.codeBackground,
+    borderTop: [[1, color.border, 'solid']],
     borderLeft: [[1, color.border, 'solid']],
     borderRight: [[1, color.border, 'solid']],
     fontFamily: fontFamily.monospace,
@@ -65,20 +65,6 @@ export const SdkPlayground: React.FunctionComponent<SdkPlaygroundProps> = ({ cla
   const [codeModified, setCodeModified] = useState(false);
   const [codeRan, setCodeRan] = useState(0);
   const [running, setRunning] = useState(false);
-
-  useEffect(() => {
-    const replaceAddressInCode = () => {
-      setLiveCode(replaceConstInCode(code, app));
-    };
-
-    if (!codeModified) {
-      app.ethProvider.on(EthProviderEvent.UPDATED_ACCOUNT, replaceAddressInCode);
-    }
-
-    return () => {
-      app.ethProvider.off(EthProviderEvent.UPDATED_ACCOUNT, replaceAddressInCode);
-    };
-  }, [app, codeModified]);
 
   const runCode = () => {
     if (running) return;

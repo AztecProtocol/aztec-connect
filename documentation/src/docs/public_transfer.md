@@ -3,27 +3,27 @@ This method sends funds publicaly on layer 1.
 @spec sdk.ts publicTransfer
 
 ```js
-import { AssetId, EthAddress } from '@aztec/sdk';
+import { AssetId, EthAddress, Web3Signer } from '@aztec/sdk';
 import { ethers } from 'ethers';
 
 async function demoPublicTransfer(aztecSdk, userId, signer) {
   const assetId = AssetId.DAI;
-  const senderEthereumAddress = EthAddress.fromString(window.ethereum.selectedAddress);
+  const senderEthAddress = EthAddress.fromString(window.ethereum.selectedAddress);
 
-  const balanceBefore = await aztecSdk.getPublicBalance(assetId, senderEthereumAddress);
+  const balanceBefore = await aztecSdk.getPublicBalance(assetId, senderEthAddress);
   console.info('Public balance before transfer:', aztecSdk.fromErc20Units(assetId, balanceBefore));
 
   const value = aztecSdk.toErc20Units(assetId, '1.5');
 
-  const allowance = await aztecSdk.getPublicAllowance(assetId, senderEthereumAddress);
+  const allowance = await aztecSdk.getPublicAllowance(assetId, senderEthAddress);
   if (allowance < value) {
     console.info('Approve rollup contract to spend your token...');
-    await aztecSdk.approve(assetId, userId, value, senderEthereumAddress);
+    await aztecSdk.approve(assetId, userId, value, senderEthAddress);
     console.info('Approved!');
   }
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-  const ethSigner = await provider.getSigner();
+  const ethSigner = new Web3Signer(provider, senderEthAddress);
 
   const recipientEthereumAddress = EthAddress.fromString('RECIPIENT_ETH_ADDRESS');
 
@@ -35,7 +35,7 @@ async function demoPublicTransfer(aztecSdk, userId, signer) {
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(userId, txHash);
 
-  const balanceAfter = await aztecSdk.getPublicBalance(assetId, senderEthereumAddress);
+  const balanceAfter = await aztecSdk.getPublicBalance(assetId, senderEthAddress);
   console.info('Public balance after transfer:', aztecSdk.fromErc20Units(assetId, balanceAfter));
 }
 ```
@@ -45,30 +45,30 @@ async function demoPublicTransfer(aztecSdk, userId, signer) {
 Each [UserAsset](/#/Types/WalletSdkUserAsset) is bound to a user id and an asset id so that we don't have to pass these values around when we call the methods on it.
 
 ```js
-import { AssetId, EthAddress } from '@aztec/sdk';
+import { AssetId, EthAddress, Web3Signer } from '@aztec/sdk';
 import { ethers } from 'ethers';
 
 async function demoPublicTransfer(aztecSdk, userId, signer) {
   const user = aztecSdk.getUser(userId);
   const asset = user.getAsset(AssetId.DAI);
-  const senderEthereumAddress = EthAddress.fromString(window.ethereum.selectedAddress);
+  const senderEthAddress = EthAddress.fromString(window.ethereum.selectedAddress);
 
-  const balanceBefore = await asset.publicBalance(senderEthereumAddress);
+  const balanceBefore = await asset.publicBalance(senderEthAddress);
   console.info('Public balance before transfer:', asset.fromErc20Units(balanceBefore));
 
   const value = asset.toErc20Units('1.5');
 
-  const allowance = await asset.publicAllowance(senderEthereumAddress);
+  const allowance = await asset.publicAllowance(senderEthAddress);
   if (allowance < value) {
     console.info('Approve rollup contract to spend your token...');
-    await asset.approve(value, senderEthereumAddress);
+    await asset.approve(value, senderEthAddress);
     console.info('Approved!');
   }
 
   const recipientEthereumAddress = EthAddress.fromString('RECIPIENT_ETH_ADDRESS');
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-  const ethSigner = await provider.getSigner();
+  const ethSigner = new Web3Signer(provider, senderEthAddress);
 
   console.info('Creating transfer proof...');
   const txHash = await asset.publicTransfer(value, signer, ethSigner, recipientEthereumAddress);
@@ -77,7 +77,7 @@ async function demoPublicTransfer(aztecSdk, userId, signer) {
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(userId, txHash);
 
-  const balanceAfter = await asset.publicBalance(senderEthereumAddress);
+  const balanceAfter = await asset.publicBalance(senderEthAddress);
   console.info('Public balance after transfer:', asset.fromErc20Units(balanceAfter));
 }
 ```

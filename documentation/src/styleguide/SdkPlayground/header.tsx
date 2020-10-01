@@ -5,6 +5,7 @@ import * as Rsg from 'react-styleguidist/lib/typings';
 import { App } from '../app';
 import { EthFaucet } from './eth_faucet';
 import { EnsureLogin } from '../ensure_login';
+import { lineHeightMap } from '../../styles/typography';
 
 export const styles = ({ space, color, fontSize }: Rsg.Theme) => ({
   head: {
@@ -13,8 +14,11 @@ export const styles = ({ space, color, fontSize }: Rsg.Theme) => ({
     justifyContent: 'space-between',
     padding: [[space[2], space[3]]],
     borderRadius: [[4, 4, 0, 0]],
-    border: [[1, color.border, 'solid']],
+    borderWidth: [[1, 1, 0, 1]],
+    borderStyle: 'solid',
+    borderColor: color.border,
     fontSize: fontSize.h6,
+    lineHeight: lineHeightMap.xs,
   },
 });
 
@@ -24,16 +28,14 @@ interface HeaderRendererProps extends JssInjectedProps {
 
 const HeaderRenderer: React.FunctionComponent<HeaderRendererProps> = ({ classes, app }) => {
   return (
-    <div className={classes.head}>
-      <EnsureLogin app={app} DefaultContent={() => <>{'Account not linked.'}</>}>
-        {({ account }) => (
-          <>
-            <EthFaucet app={app} account={account} />
-            <div>{`${account.toString().slice(0, 10)}...${account.toString().slice(-4)}`}</div>
-          </>
-        )}
-      </EnsureLogin>
-    </div>
+    <EnsureLogin app={app} DefaultContent={() => <div className={classes.head}>{'Account not linked.'}</div>}>
+      {({ account }) => (
+        <div className={classes.head}>
+          <EthFaucet app={app} account={account} />
+          <div>{`${account.toString().slice(0, 10)}...${account.toString().slice(-4)}`}</div>
+        </div>
+      )}
+    </EnsureLogin>
   );
 };
 
