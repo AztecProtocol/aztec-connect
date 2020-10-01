@@ -84,15 +84,9 @@ resource "aws_ecs_task_definition" "sriracha" {
 
   volume {
     name = "sriracha-efs-data-store"
-    docker_volume_configuration {
-      scope         = "shared"
-      autoprovision = true
-      driver        = "local"
-      driver_opts = {
-        type   = "nfs"
-        device = "${aws_efs_file_system.sriracha_data_store.dns_name}:/"
-        o      = "addr=${aws_efs_file_system.sriracha_data_store.dns_name},nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2"
-      }
+    efs_volume_configuration {
+      file_system_id = aws_efs_file_system.sriracha_data_store.id
+      root_directory = "/"
     }
   }
 
@@ -164,6 +158,7 @@ resource "aws_ecs_service" "sriracha" {
   desired_count                      = "1"
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
+  platform_version                   = "1.4.0"
 
   network_configuration {
     subnets = [
@@ -216,7 +211,7 @@ resource "aws_alb_target_group" "sriracha" {
 
 resource "aws_lb_listener_rule" "sriracha" {
   listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
-  priority     = 100
+  priority     = 200
 
   action {
     type             = "forward"

@@ -28,7 +28,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   constructor(private config: EthereumBlockchainConfig, private rollupContractAddress: EthAddress) {
     super();
-    this.rollupProcessor = new ethers.Contract(rollupContractAddress.toString(), RollupABI, this.config.signer);
+    this.rollupProcessor = new ethers.Contract(
+      rollupContractAddress.toString(),
+      RollupABI,
+      this.config.signer || this.config.provider,
+    );
     this.debug = config.console === false ? createDebug('bb:ethereum_blockchain') : console.log;
   }
 
