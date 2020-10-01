@@ -50,9 +50,10 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should get status', async () => {
-    const { rollupContractAddress, tokenContractAddresses } = await ethereumBlockchain.status();
+    const { rollupContractAddress, tokenContractAddresses, blockNumber } = await ethereumBlockchain.status();
     expect(rollupContractAddress.toString().length).to.be.greaterThan(0);
     expect(tokenContractAddresses.length).to.be.greaterThan(0);
+    expect(blockNumber).to.be.greaterThan(0);
   });
 
   it('should process a deposit proof', async () => {

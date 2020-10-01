@@ -6,6 +6,7 @@ export { Block } from 'barretenberg/block_source';
 export interface NetworkInfo {
   chainId: number;
   networkOrHost: string;
+  blockNumber: number;
 }
 
 export interface Receipt {

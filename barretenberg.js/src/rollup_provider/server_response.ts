@@ -10,6 +10,7 @@ export interface RollupProviderStatusServerResponse {
   dataSize: number;
   dataRoot: string;
   nullRoot: string;
+  blockNumber: number;
 }
 
 export interface RollupServerResponse {

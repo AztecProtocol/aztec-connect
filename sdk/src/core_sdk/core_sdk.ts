@@ -452,6 +452,8 @@ export class CoreSdk extends EventEmitter {
       ethSigner,
     );
 
+    this.options.escapeHatchMode ? await this.validateEscapeOpen() : undefined;
+
     await this.rollupProvider.sendProof(proofOutput);
     const userTx: UserTx = {
       action,
@@ -466,6 +468,16 @@ export class CoreSdk extends EventEmitter {
     this.emit(CoreSdkEvent.UPDATED_USER_STATE, userTx.userId);
     this.emit(SdkEvent.UPDATED_USER_STATE, userTx.userId);
     return proofOutput.txId;
+  }
+
+  public async validateEscapeOpen() {
+    const { blockNumber } = await this.rollupProvider.status();
+    // Escape hatch window is open for the last 20 blocks of every 100 blocks
+    const windowOpen = blockNumber % 100 > 80;
+    const blockEscapeOpens = blockNumber + 80 - (blockNumber % 100);
+    if (!windowOpen) {
+      throw new Error(`Escape hatch window closed. Current block num: ${blockNumber}. Opens at ${blockEscapeOpens}`);
+    }
   }
 
   public async getAddressFromAlias(alias: string) {
