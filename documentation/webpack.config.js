@@ -1,5 +1,6 @@
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const ThreadsPlugin = require('threads-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = env => ({
   mode: env,
@@ -31,28 +32,39 @@ module.exports = env => ({
           'css-loader',
         ],
       },
-      {
-        test: /barretenberg\.wasm$/,
-        type: 'javascript/auto',
-        loader: 'file-loader',
-        options: {
-          name: 'barretenberg.wasm',
-          publicPath: 'dist/',
-        },
-      },
     ],
   },
   plugins: [
     new MiniCssExtractPlugin({
       filename: '[name].css',
     }),
-    new ThreadsPlugin(),
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: 'src/assets',
+        },
+        {
+          from: 'node_modules/@aztec/sdk/*.(wasm|worker.js)',
+          to: '[name].[ext]',
+        },
+      ],
+    }),
   ],
+  optimization:
+    env === 'production'
+      ? {
+          minimize: false,
+          minimizer: [
+            new TerserPlugin({
+              terserOptions: {
+                keep_fnames: true,
+              },
+            }),
+          ],
+        }
+      : undefined,
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.wasm'],
-    alias: {
-      '@aztec/sdk': 'aztec2-sdk',
-    },
   },
   devServer:
     env === 'development'

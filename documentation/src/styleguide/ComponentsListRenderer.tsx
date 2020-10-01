@@ -8,7 +8,11 @@ import { getHash } from 'react-styleguidist/lib/client/utils/handleHash';
 import * as Rsg from 'react-styleguidist/lib/typings';
 import { fontWeightMap } from '../styles/typography';
 
-const sectionsConfig: { [key: string]: { isStatic?: boolean; disableToggle?: boolean; visibleName?: string } } = {};
+const sectionsConfig: { [key: string]: { isStatic?: boolean; disableToggle?: boolean; visibleName?: string } } = {
+  Types: {
+    isStatic: true,
+  },
+};
 
 const styles = ({ space, fontSize }: Rsg.Theme) => ({
   root: {
@@ -27,11 +31,8 @@ const styles = ({ space, fontSize }: Rsg.Theme) => ({
     cursor: 'default',
   },
   staticButton: {
-    '&:hover': {
-      cursor: 'pointer',
-      padding: [[space[1], space[2]]],
-      borderRadius: 6,
-    },
+    display: 'inline-block',
+    cursor: 'pointer',
   },
   link: {
     wordBreak: 'break-word !important',
@@ -92,7 +93,7 @@ export const ComponentsListRenderer: React.FunctionComponent<ComponentsListRende
         const handleClick = !isAbleToToggle
           ? () => {}
           : () => {
-              if (isOpen[defaultVisibleName] && !isItemSelected) return;
+              if (isOpen[defaultVisibleName] && !isItemSelected && !isStatic) return;
               toggleOpen({
                 ...isOpen,
                 [defaultVisibleName]: defaultVisibleName in isOpen ? !isOpen[defaultVisibleName] : !initialOpen,
@@ -100,7 +101,7 @@ export const ComponentsListRenderer: React.FunctionComponent<ComponentsListRende
             };
 
         const linkNode = isStatic ? (
-          <div className={classes.link} onClick={handleClick}>
+          <div className={cx(classes.link, classes.staticButton)} onClick={handleClick}>
             {displayName}
           </div>
         ) : (

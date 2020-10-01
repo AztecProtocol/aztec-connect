@@ -1,4 +1,4 @@
-import { EthAddress } from 'aztec2-sdk';
+import { EthAddress } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 
 export interface Network {

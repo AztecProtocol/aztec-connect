@@ -10,9 +10,7 @@ const styles = ({ space, color, fontFamily, fontSize }: Rsg.Theme) => ({
     fontFamily: fontFamily.base,
   },
   logo: {
-    paddingTop: space[2],
-    paddingLeft: space[2],
-    paddingRight: space[2],
+    padding: [[space[3], space[2]]],
   },
   search: {
     padding: [[space[3], space[2]]],

@@ -13,9 +13,16 @@ export interface Spec {
   optional?: boolean;
 }
 
+interface Column {
+  caption: string;
+  render: (spec: Spec) => JSX.Element;
+  required?: (keyof Spec)[];
+  optional?: boolean;
+}
+
 const getRowKey = (row: { name: string }) => row.name;
 
-const paramColumns = [
+const paramColumns: Column[] = [
   {
     caption: 'Arguments',
     render: ({ name }: Spec) => <Name>{name}</Name>,
@@ -32,7 +39,7 @@ const paramColumns = [
   },
 ];
 
-export const returnColumns = [
+export const returnColumns: Column[] = [
   {
     caption: 'Return Type',
     render: ({ type }: Spec) => <TypeRenderer type={type} />,
@@ -40,10 +47,12 @@ export const returnColumns = [
   {
     caption: 'Description',
     render: ({ description }: Spec) => <Description description={description} />,
+    optional: true,
+    required: ['description'],
   },
 ];
 
-export const staticVariableColumns = [
+export const staticVariableColumns: Column[] = [
   {
     caption: 'Static Variable',
     render: ({ name }: Spec) => <Name>{name}</Name>,
@@ -52,9 +61,15 @@ export const staticVariableColumns = [
     caption: 'Type',
     render: ({ type }: Spec) => <TypeRenderer type={type} />,
   },
+  {
+    caption: 'Description',
+    render: ({ description }: Spec) => <Description description={description} />,
+    optional: true,
+    required: ['description'],
+  },
 ];
 
-export const staticMethodColumns = [
+export const staticMethodColumns: Column[] = [
   {
     caption: 'Static Method',
     render: ({ name, params }: Spec) => <TypeRenderer type={{ type: 'function', name, params }} />,
@@ -63,9 +78,15 @@ export const staticMethodColumns = [
     caption: 'Return Type',
     render: ({ type }: Spec) => <TypeRenderer type={type} />,
   },
+  {
+    caption: 'Description',
+    render: ({ description }: Spec) => <Description description={description} />,
+    optional: true,
+    required: ['description'],
+  },
 ];
 
-export const variableColumns = [
+export const variableColumns: Column[] = [
   {
     caption: 'Variable',
     render: ({ name }: Spec) => <Name>{name}</Name>,
@@ -74,9 +95,15 @@ export const variableColumns = [
     caption: 'Type',
     render: ({ type }: Spec) => <TypeRenderer type={type} />,
   },
+  {
+    caption: 'Description',
+    render: ({ description }: Spec) => <Description description={description} />,
+    optional: true,
+    required: ['description'],
+  },
 ];
 
-export const methodColumns = [
+export const methodColumns: Column[] = [
   {
     caption: 'Method',
     render: ({ name, params }: Spec) => <TypeRenderer type={{ type: 'function', name, params }} />,
@@ -84,6 +111,12 @@ export const methodColumns = [
   {
     caption: 'Return Type',
     render: ({ type }: Spec) => <TypeRenderer type={type} />,
+  },
+  {
+    caption: 'Description',
+    render: ({ description }: Spec) => <Description description={description} />,
+    optional: true,
+    required: ['description'],
   },
 ];
 
@@ -96,7 +129,7 @@ export enum SpecType {
   METHOD = 'METHOD',
 }
 
-const specColumnsMapping: { [key in SpecType]: any } = {
+const specColumnsMapping: { [key in SpecType]: Column[] } = {
   PARAM: paramColumns,
   RETURN: returnColumns,
   STATIC_VAR: staticVariableColumns,
@@ -105,12 +138,17 @@ const specColumnsMapping: { [key in SpecType]: any } = {
   METHOD: methodColumns,
 };
 
+const removeEmptyColumns = (columns: Column[], specs: Spec[]) =>
+  columns.filter(
+    ({ optional, required }) => !optional || (required && specs.some(spec => required.every(field => spec[field]))),
+  );
+
 interface SpecTableProps extends React.HTMLAttributes<HTMLHeadingElement> {
   type: SpecType;
   rows: Spec[];
 }
 
 export const SpecTable: React.FunctionComponent<SpecTableProps> = ({ type, rows }) => {
-  const columns = specColumnsMapping[type];
+  const columns = removeEmptyColumns(specColumnsMapping[type], rows);
   return <Table columns={columns} rows={rows} getRowKey={getRowKey} />;
 };

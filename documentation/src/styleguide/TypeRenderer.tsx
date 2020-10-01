@@ -31,8 +31,12 @@ const typeSection = findSection(config.sections as any, 'Types');
 
 const availableTypes = typeSection!.sections!.reduce((types, s) => [...types, s.name], [] as string[]);
 
-const linkStyles = () => ({
+const linkStyles = ({ color }: Rsg.Theme) => ({
+  text: {
+    color: color.type,
+  },
   link: {
+    color: `${color.type} !important`,
     borderBottom: '1px dashed !important',
   },
 });
@@ -43,11 +47,11 @@ interface TypeLinkProps extends JssInjectedProps {
 
 const TypeLinkRenderer: React.FunctionComponent<TypeLinkProps> = ({ classes, name }) => {
   if (availableTypes.indexOf(name) < 0) {
-    return <>{name}</>;
+    return <span className={classes.text}>{name}</span>;
   }
 
   return (
-    <Link className={classes.link} href={`/#/SDK/Types/${name}`}>
+    <Link className={classes.link} href={`/#/Types/${name}`}>
       {name}
     </Link>
   );
@@ -55,7 +59,7 @@ const TypeLinkRenderer: React.FunctionComponent<TypeLinkProps> = ({ classes, nam
 
 const TypeLink = Styled<TypeProps>(linkStyles)(TypeLinkRenderer);
 
-const paramsStyles = ({ space, color }: Rsg.Theme) => ({
+const paramsStyles = ({ space }: Rsg.Theme) => ({
   inline: {
     display: 'flex',
     alignItems: 'center',
@@ -67,16 +71,26 @@ const paramsStyles = ({ space, color }: Rsg.Theme) => ({
     paddingLeft: '13px', // width of 2 chars
     '& > $param': {
       padding: [[space[1], space[0]]],
+      whiteSpace: 'nowrap',
     },
   },
   param: {
     display: 'flex',
     alignItems: 'center',
     padding: [[0, space[0]]],
+    whiteSpace: 'nowrap',
+  },
+  paramBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    padding: [[space[1], space[0]]],
   },
   label: {
     marginRight: space[1],
-    color: color.codeComment,
+    whiteSpace: 'nowrap',
+  },
+  symbol: {
+    whiteSpace: 'nowrap',
   },
 });
 
@@ -89,56 +103,66 @@ const ParamsRenderer: React.FunctionComponent<ParamsRendererProps> = ({ classes,
   const inlineParams = params.length <= maxInlineItems;
   return (
     <div className={classes[inlineParams ? 'inline' : 'block']}>
-      {params.map(({ name, type }, i) => (
-        <div key={name} className={classes.param}>
-          <span className={classes.label}>{`${name}: `}</span>
-          <TypeContent type={type} maxInlineItems={maxInlineItems} />
-          {(i < params.length - 1 || !inlineParams) && ','}
-        </div>
-      ))}
+      {params.map(({ name, type }, i) => {
+        // TODO - deal with object type and more complicated return type
+        if (typeof type === 'object' && type.type === 'function') {
+          return (
+            <div
+              key={`${name}_${i}`}
+              className={classes[type.params!.length <= maxInlineItems ? 'param' : 'paramBlock']}
+            >
+              <span className={classes.label}>{`${name}: (`}</span>
+              <Params params={type.params} maxInlineItems={maxInlineItems} />
+              <span className={classes.symbol}>
+                {') => '}
+                <TypeContent type={type.returns} maxInlineItems={maxInlineItems} />
+                {(i < params.length - 1 || !inlineParams) && ','}
+              </span>
+            </div>
+          );
+        }
+        return (
+          <div key={`${name}_${i}`} className={classes.param}>
+            <span className={classes.label}>{`${name}: `}</span>
+            <TypeContent type={type} maxInlineItems={maxInlineItems} />
+            {(i < params.length - 1 || !inlineParams) && <span className={classes.symbol}>{','}</span>}
+          </div>
+        );
+      })}
     </div>
   );
 };
 
 const Params = Styled<TypeProps>(paramsStyles)(ParamsRenderer);
 
-const contentStyles = ({ space, color }: Rsg.Theme) => ({
-  method: {
-    padding: [[space[1], 0]],
-  },
+const contentStyles = ({ space }: Rsg.Theme) => ({
   inline: {
     display: 'flex',
     alignItems: 'center',
   },
   or: {
     padding: [[0, space[1]]],
-    color: color.codeComment,
   },
 });
 
 interface TypeContentProps extends JssInjectedProps {
   type: string | Type;
   maxInlineItems: number;
+  showReturnType?: boolean;
 }
 
-const TypeContentRenderer: React.FunctionComponent<TypeContentProps> = ({ classes, type, maxInlineItems }) => {
+const TypeContentRenderer: React.FunctionComponent<TypeContentProps> = ({
+  classes,
+  type,
+  maxInlineItems,
+  showReturnType = true,
+}) => {
   if (typeof type === 'string') {
-    const [, isPromise, promiseContent] = `${type}`.match(/^(Promise<)(.+)>$/) || [];
-    if (isPromise) {
-      return (
-        <>
-          {'Promise<'}
-          <TypeContent type={promiseContent} maxInlineItems={maxInlineItems} />
-          {'>'}
-        </>
-      );
-    }
-
-    let [, arrayType, isArray] = `${type}`.match(/^(\w+)(\[\])$/) || [];
+    let [, arrayType, isArray] = `${type}`.match(/^(.+)(\[\])$/) || [];
     if (isArray) {
       return (
         <>
-          <TypeLink name={arrayType} />
+          <TypeContent type={arrayType} />
           {'[]'}
         </>
       );
@@ -150,12 +174,12 @@ const TypeContentRenderer: React.FunctionComponent<TypeContentProps> = ({ classe
       subTypes.forEach((name, i) => {
         if (i > 0) {
           childTypes.push(
-            <span key={`or-${i}`} className={classes.or}>
+            <span key={`or_${i}`} className={classes.or}>
               {'|'}
             </span>,
           );
         }
-        childTypes.push(<TypeContent key={name} type={name} maxInlineItems={maxInlineItems} />);
+        childTypes.push(<TypeContent key={`${name}_${i}`} type={name} maxInlineItems={maxInlineItems} />);
       });
 
       return <>{childTypes}</>;
@@ -188,11 +212,17 @@ const TypeContentRenderer: React.FunctionComponent<TypeContentProps> = ({ classe
     const params = type.params!;
     const inlineParams = params.length <= maxInlineItems;
     return (
-      <div className={cx(classes.method, { [classes.inline]: inlineParams })}>
+      <div className={cx({ [classes.inline]: inlineParams })}>
         <Name>{type.name}</Name>
         {'('}
         <Params params={params} maxInlineItems={maxInlineItems} />
         {')'}
+        {showReturnType && (
+          <>
+            {' => '}
+            <TypeContent type={type.returns} maxInlineItems={maxInlineItems} showReturnType />
+          </>
+        )}
       </div>
     );
   }
@@ -206,7 +236,7 @@ const styles = ({ fontFamily, fontSize, color }: Rsg.Theme) => ({
   type: {
     fontFamily: fontFamily.monospace,
     fontSize: fontSize.small,
-    color: color.type,
+    color: color.codeComment,
     whiteSpace: 'nowrap',
   },
 });
@@ -216,6 +246,7 @@ interface TypeProps extends JssInjectedProps {
   type?: string | Type;
   children?: React.ReactNode;
   maxInlineItems?: number;
+  showReturnType: boolean;
 }
 
 export const TypeRenderer: React.FunctionComponent<TypeProps> = ({
@@ -224,10 +255,11 @@ export const TypeRenderer: React.FunctionComponent<TypeProps> = ({
   type,
   children,
   maxInlineItems = 1,
+  showReturnType = false,
 }) => {
   return type || children ? (
     <span className={cx(className, classes.type)}>
-      <TypeContent type={type || children} maxInlineItems={maxInlineItems} />
+      <TypeContent type={type || children} maxInlineItems={maxInlineItems} showReturnType={showReturnType} />
     </span>
   ) : null;
 };

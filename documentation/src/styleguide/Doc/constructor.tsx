@@ -39,6 +39,7 @@ const styles = ({ space, fontSize, fontFamily, color }: Rsg.Theme) => ({
     display: 'flex',
     alignItems: 'center',
     padding: space[1],
+    whiteSpace: 'nowrap',
   },
   label: {
     marginRight: space[2],

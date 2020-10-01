@@ -9,7 +9,7 @@ import { lineHeightMap } from '../styles/typography';
 const styles = ({ fontSize, fontFamily, space }: Rsg.Theme) => ({
   heading: {
     display: 'flex',
-    padding: [[space[3], 0]],
+    padding: [[space[5], 0]],
     fontFamily,
   },
   'level-1': {

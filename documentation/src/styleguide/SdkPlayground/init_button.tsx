@@ -1,4 +1,4 @@
-import { AppInitState, AppInitAction } from 'aztec2-sdk';
+import { AppInitState, AppInitAction } from '@aztec/sdk';
 import cx from 'clsx';
 import React from 'react';
 import Styled from 'react-styleguidist/lib/client/rsg-components/Styled';

@@ -9,7 +9,7 @@ import { EnsureLogin } from '../ensure_login';
 import { Spinner } from '../spinner';
 import { UserContainer, PrivateAssetContainer, PublicAssetContainer } from '../user_container';
 import { InitButton } from './init_button';
-import { AssetId } from 'aztec2-sdk';
+import { AssetId } from '@aztec/sdk';
 
 export const styles = ({ space, fontSize }: Rsg.Theme) => ({
   controls: {

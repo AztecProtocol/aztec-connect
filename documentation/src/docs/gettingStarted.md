@@ -10,11 +10,45 @@ The SDK requires a JavaScript context (Web Browser, WebView or NodeJs) with acce
 
 To install the SDK from NPM use the following command.
 
-`yarn add @aztec/sdk`
+```bash
+yarn add @aztec/sdk
+```
 
 ```js
-const activeSdk = await sdk.init();
-console.info(activeSdk);
+import { WalletSdk } from '@aztec/sdk';
+
+const aztecSdk = new WalletSdk(window.ethereum);
+
+const rollupProviderUrl = 'SERVER_URL';
+await aztecSdk.init(rollupProviderUrl);
+
+console.info(aztecSdk.getLocalStatus());
+
+await aztecSdk.destroy();
+
+console.info(aztecSdk.getLocalStatus());
+```
+
+## Developing Web Apps
+
+If your app runs in the browsers, you'll need to host the wasm file and worker file within the same domain as your app. If you are using webpack, simply include the following code to your webpack config:
+
+```js static
+// webpack.config.js
+const CopyPlugin = require('copy-webpack-plugin');
+
+module.exports = {
+  plugins: [
+    new CopyPlugin({
+      patterns: [
+        {
+          from: 'node_modules/@aztec/sdk/*.(wasm|worker.js)',
+          to: '[name].[ext]',
+        },
+      ],
+    }),
+  ],
+};
 ```
 
 ## Custom Proofs & Transactions

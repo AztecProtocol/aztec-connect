@@ -62,16 +62,16 @@ export const TableRenderer: React.FunctionComponent<TableProps> = ({ classes, co
       <table id="table-test" className={classes.table}>
         <thead className={classes.tableHead}>
           <tr>
-            {columns.map(({ caption }) => (
-              <th key={caption} className={classes.cellHeading}>
+            {columns.map(({ caption }, i) => (
+              <th key={`${caption}_${i}`} className={classes.cellHeading}>
                 {caption}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {rows.map(row => (
-            <tr key={getRowKey(row)}>
+          {rows.map((row, i) => (
+            <tr key={`${getRowKey(row)}_${i}`}>
               {columns.map(({ render }, index) => (
                 <td key={+index} className={classes.cell}>
                   {render(row)}

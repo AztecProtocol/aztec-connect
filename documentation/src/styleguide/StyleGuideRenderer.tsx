@@ -4,7 +4,6 @@ import { JssInjectedProps } from 'react-styleguidist/lib/client/rsg-components/S
 import * as Rsg from 'react-styleguidist/lib/typings';
 import { colours } from '../styles/colours';
 import { AppContext, App } from './app';
-require('barretenberg/wasm/barretenberg.wasm');
 
 declare global {
   interface Window {
@@ -44,7 +43,14 @@ const styles = ({ sidebarWidth, mq, space, color }: Rsg.Theme) => ({
   'content-with-sidebar': {
     marginLeft: sidebarWidth,
     width: `calc(100vw - ${sidebarWidth}px)`,
-    padding: [[0, space[5], 0, space[7]]],
+    padding: [
+      [
+        '9px', // ugly hack, so that the title can be aligned with logo.
+        space[5],
+        0,
+        space[7],
+      ],
+    ],
     overflow: 'auto',
     [mq.small]: {
       padding: space[3],

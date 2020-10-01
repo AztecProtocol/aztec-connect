@@ -60,4 +60,6 @@ async function demoWithdraw(aztecSdk, userId, signer) {
 
 ## See Also
 
-- **[Initialize the SDK](/#/SDK/Initialize%20the%20SDK)**
+- **[Deposit](/#/ERC20%20Tokens/deposit)**
+- **[Transfer](/#/ERC20%20Tokens/transfer)**
+- **[Public Transfer](/#/ERC20%20Tokens/publicTransfer)**

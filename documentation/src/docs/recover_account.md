@@ -16,20 +16,14 @@ async function demoRecoveryData(aztecSdk) {
   const user = await aztecSdk.addUser(privacyKey);
 
   // create recovery data
-  const trustedThirdParties = [GrumpkinAddress.randomAddress(), GrumpkinAddress.randomAddress()];
-  const { recoveryPublicKey, recoveryPayloads } = await aztecSdk.generateAccountRecoveryData(
-    privacyKey,
-    trustedThirdParties,
-  );
-  console.info('Recovery public key:', recoveryPublicKey);
-  console.info('Recovery payloads:', recoveryPayloads);
+  const trustedThirdParties = [GrumpkinAddress.randomAddress()];
+  const [recoveryPayload] = await aztecSdk.generateAccountRecoveryData(user.id, trustedThirdParties);
 
   // create a new account
   const signingPublicKey = GrumpkinAddress.randomAddress();
   const alias = randomBytes(5).toString();
-
-  console.info('Creating account proof...');
-  const txHash = await aztecSdk.createAccount(privacyKey, signingPublicKey, recoveryPublicKey, alias);
+  console.info('Creating proof...');
+  const txHash = await aztecSdk.createAccount(user.id, signingPublicKey, recoveryPayload.recoveryPublicKey, alias);
   console.info('Proof accepted by server. Tx hash:', txHash.toString('hex'));
 
   console.info('Waiting for tx to settle...');
@@ -37,14 +31,8 @@ async function demoRecoveryData(aztecSdk) {
   console.info('Account created!');
 
   // recover the account
-  const { trustedThirdPartyPublicKey, recoveryData } = recoveryPayloads[0];
-  console.info('Creating account proof...');
-  const recoverTxHash = await aztecSdk.recoverAccount(
-    user.id,
-    trustedThirdPartyPublicKey,
-    recoveryPublicKey,
-    recoveryData,
-  );
+  console.info('Creating proof...');
+  const recoverTxHash = await aztecSdk.recoverAccount(user.id, recoveryPayload);
   console.info('Proof accepted by server. Tx hash:', recoverTxHash.toString('hex'));
 
   console.info('Waiting for tx to settle...');
@@ -58,6 +46,5 @@ async function demoRecoveryData(aztecSdk) {
 
 ## See Also
 
-- **[Initialize the SDK](/#/SDK/Initialize%20the%20SDK)**
-- **[Generate account recovery data](/#/SDK/API/generateAccountRecoveryData)**
-- **[Create an account](/#/SDK/API/createAccount)**
+- **[Generate account recovery data](/#/User/generateAccountRecoveryData)**
+- **[Create account](/#/User/createAccount)**

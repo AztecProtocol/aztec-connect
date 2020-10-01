@@ -1,5 +1,5 @@
 import { Web3Provider } from '@ethersproject/providers';
-import { EthAddress } from 'aztec2-sdk';
+import { EthAddress } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { EthProvider, EthProviderEvent, EthProviderAccessState, chainIdToNetwork } from './eth_provider';
 
