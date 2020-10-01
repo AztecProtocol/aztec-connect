@@ -1,0 +1,21 @@
+#!/bin/bash
+set -e
+
+IMAGE=$1
+REPOSITORY=${IMAGE%:*}
+TAG=${IMAGE#*:}
+IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1-$TAG
+IMAGE_DEPLOY_URI=aztecprotocol/$IMAGE
+
+# Login.
+ensure_repo $REPOSITORY $ECR_REGION
+
+# Do nothing if this wasn't rebuilt.
+docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." && exit 0; }
+
+# Login to dockerhub.
+docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+
+# Push image to dockerhub.
+docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_URI
+docker push $IMAGE_DEPLOY_URI

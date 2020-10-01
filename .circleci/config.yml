@@ -223,7 +223,9 @@ jobs:
       - run:
           name: 'sriracha'
           working_directory: sriracha
-          command: deploy sriracha:latest
+          command: |
+            deploy sriracha:latest
+            deploy_dockerhub sriracha:latest
       - run:
           name: 'hummus'
           working_directory: hummus
