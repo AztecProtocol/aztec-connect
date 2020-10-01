@@ -16,18 +16,26 @@
   },
   "jest": {
     "transform": {
+      "^.+\\.js$": "babel-jest",
       "^.+\\.tsx?$": "ts-jest"
     },
     "testRegex": ".*\\.test\\.ts$",
     "moduleFileExtensions": [
       "ts",
-      "js"
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ],
+    "transformIgnorePatterns": [
+      "/node_modules/(?!barretenberg).+\\.js$"
     ]
   },
   "dependencies": {
-    "barretenberg": "file:../barretenberg.js/dest",
+    "barretenberg": "file:../barretenberg.js/dest-es",
     "bigint-buffer": "^1.1.5",
-    "blockchain": "file:../blockchain/dest",
+    "blockchain": "file:../blockchain/dest-es",
     "broadcast-channel": "^3.1.0",
     "detect-node": "^2.0.4",
     "dexie": "^3.0.1",
@@ -36,12 +44,14 @@
     "level-js": "^5.0.2",
     "leveldown": "^5.6.0",
     "levelup": "^4.4.0",
-    "sriracha": "file:../sriracha/dest",
+    "sriracha": "file:../sriracha/dest-es",
     "tslib": "^2.0.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.11.6",
     "@babel/plugin-proposal-class-properties": "^7.10.4",
     "@babel/plugin-proposal-optional-chaining": "^7.11.0",
+    "@babel/preset-env": "^7.11.5",
     "@babel/preset-typescript": "^7.10.4",
     "@types/jest": "^26.0.0",
     "@types/level-js": "^4.0.1",

@@ -5,9 +5,8 @@ const path = require('path');
 const webpack = require('webpack');
 const { merge } = require('webpack-merge');
 
-const commen = {
+const common = {
   mode: 'production',
-  devtool: 'source-map',
   entry: './src/index.ts',
   module: {
     rules: [
@@ -20,22 +19,10 @@ const commen = {
         ],
         exclude: /node_modules/,
       },
-      {
-        test: /barretenberg\.wasm$/,
-        type: 'javascript/auto',
-        loader: 'file-loader',
-        options: {
-          name: 'barretenberg.wasm',
-          publicPath: '/',
-        },
-      },
     ],
   },
   resolve: {
-    extensions: ['.ts', '.js', '.wasm'],
-    alias: {
-      barretenberg: path.resolve(__dirname, '../barretenberg.js/dest-es'),
-    },
+    extensions: ['.ts', '.js'],
   },
   optimization: {
     minimize: true,
@@ -77,7 +64,7 @@ const commen = {
   ],
 };
 
-const nodeConfig = merge(commen, {
+const nodeConfig = merge(common, {
   output: { filename: 'aztec-sdk.node.js' },
   plugins: [new webpack.ExternalsPlugin('commonjs', ['leveldown', 'threads'])],
   target: 'node',
@@ -87,7 +74,7 @@ const nodeConfig = merge(commen, {
   },
 });
 
-const webConfig = merge(commen, {
+const webConfig = merge(common, {
   output: { filename: 'aztec-sdk.web.js' },
   target: 'web',
   node: {

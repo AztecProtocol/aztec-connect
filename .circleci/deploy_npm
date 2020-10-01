@@ -4,33 +4,26 @@ set -e
 readonly IMAGE=$1
 readonly REPOSITORY=${IMAGE%:*}
 readonly IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1-$TAG
-readonly LOCAL_REPO=$REPOSITORY
 
 # Pull the built image, do nothing if this wasn't rebuilt.
 docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." && exit 0; }
 
 # Copy docker container to local file system.
 readonly TEMP_CONTAINER=$(docker create $IMAGE_COMMIT_URI)
-docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY/dist $LOCAL_REPO
+docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY/dist $REPOSITORY
 docker rm -v $TEMP_CONTAINER
 
-cd $LOCAL_REPO
+cd $REPOSITORY
 
 # Check package version, publish if it has changed.
 readonly LOCAL_VERSION=$(node -pe "require('./package.json').version")
-readonly PUBLISHED_VERSION=$(npm show ./ version 2>/dev/null)
+readonly PUBLISHED_VERSION=$(npm show ./ version 2> /dev/null)
 readonly HIGHER_VERSION=$(echo $(npx semver ${LOCAL_VERSION} ${PUBLISHED_VERSION}) | cut -d ' ' -f 2)
 if [ "$(npx semver ${LOCAL_VERSION})" == "" ]; then
   echo "'${LOCAL_VERSION}' is not a semantic version."
 elif [ "$LOCAL_VERSION" != "$PUBLISHED_VERSION" ] && [ "$LOCAL_VERSION" == "$HIGHER_VERSION" ]; then
-  # TODO - enable 2fa
-  # Publish to npm
   echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
   npm publish
 else
   echo "'${LOCAL_VERSION}' is <= published version."
 fi
-
-# Cleanup
-cd -
-rm -rf $LOCAL_REPO

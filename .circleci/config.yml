@@ -213,11 +213,9 @@ jobs:
       - run:
           name: 'sdk'
           working_directory: sdk
-          command: deploy sdk:latest
-      - run:
-          name: 'sdk-npm'
-          working_directory: sdk
-          command: deploy_npm sdk:latest
+          command: |
+            deploy sdk:latest
+            deploy_npm sdk:latest
       - run:
           name: 'falafel'
           working_directory: falafel
