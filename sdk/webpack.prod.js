@@ -5,7 +5,7 @@ const path = require('path');
 const webpack = require('webpack');
 const { merge } = require('webpack-merge');
 
-const commen = {
+const common = {
   mode: 'production',
   devtool: 'source-map',
   entry: './src/index.ts',
@@ -68,7 +68,7 @@ const commen = {
   ],
 };
 
-const nodeConfig = merge(commen, {
+const nodeConfig = merge(common, {
   output: { filename: 'aztec-sdk.node.js' },
   plugins: [new webpack.ExternalsPlugin('commonjs', ['leveldown', 'threads'])],
   target: 'node',
@@ -78,7 +78,7 @@ const nodeConfig = merge(commen, {
   },
 });
 
-const webConfig = merge(commen, {
+const webConfig = merge(common, {
   output: { filename: 'aztec-sdk.web.js' },
   target: 'web',
   node: {
