@@ -17,4 +17,6 @@ interface IRollupProcessor {
     function getNumSupportedAssets() external view returns (uint256);
 
     function getSupportedAssets() external view returns (address[] memory);
+
+    function getEscapeHatchStatus() external view returns (bool, uint256);
 }

@@ -70,6 +70,26 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     }
 
     /**
+     * @dev Get the status of the escape hatch, specifically retrieve whether the
+     * hatch is open and also the number of blocks until the hatch will switch from
+     * open to closed or vice versa
+     */
+    function getEscapeHatchStatus() external override view returns (bool, uint256) {
+        uint256 blockNum = block.number;
+
+        bool isOpen = blockNum % 100 >= 80;
+        uint256 blocksRemaining = 0;
+        if (isOpen) {
+            // num blocks escape hatch will remain open for
+            blocksRemaining = blockNum == 0 ? 20 : 100 - (blockNum % 100);
+        } else {
+            // num blocks until escape hatch will be opened
+            blocksRemaining = 80 - (blockNum % 100);
+        }
+        return (isOpen, blocksRemaining);
+    }
+
+    /**
      * @dev Set the mapping between an assetId and the address of the linked asset.
      * Protected by onlyOwner
      * @param _linkedToken - address of the asset

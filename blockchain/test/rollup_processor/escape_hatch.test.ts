@@ -35,6 +35,21 @@ describe('rollup_processor: core', () => {
     await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys);
   });
 
+  it('should get escape hatch closed status', async () => {
+    const [isOpen, blocksRemaining] = await rollupProcessor.getEscapeHatchStatus();
+    expect(isOpen).to.equal(false);
+    expect(parseInt(blocksRemaining)).to.lessThan(81);
+  });
+
+  it('should get escape hatch open status', async () => {
+    const nextEscapeBlock = await blocksToAdvance(81, 100, provider);
+    await advanceBlocks(nextEscapeBlock, provider);
+
+    const [isOpen, blocksRemaining] = await rollupProcessor.getEscapeHatchStatus();
+    expect(isOpen).to.equal(true);
+    expect(parseInt(blocksRemaining)).to.be.lessThan(21);
+  });
+
   it('should process an escape inside valid block window', async () => {
     const initialContractBalance = await erc20.balanceOf(rollupProcessor.address);
     expect(initialContractBalance).to.equal(depositAmount);
