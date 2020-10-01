@@ -82,6 +82,9 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
       dataSize: this.dataTreeSize,
       dataRoot: this.dataRoot,
       nullRoot: this.nullRoot,
+      blockNumber: this.blockNum,
+      escapeOpen: false,
+      numEscapeBlocksRemaining: 0,
     };
   }
 

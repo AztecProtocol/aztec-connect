@@ -91,11 +91,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Get the status of the rollup contract
    */
   public async status() {
-    const { chainId, networkOrHost } = await this.getNetworkInfo();
+    const { chainId, networkOrHost, blockNumber } = await this.getNetworkInfo();
     const nextRollupId = +(await this.rollupProcessor.nextRollupId());
     const dataSize = +(await this.rollupProcessor.dataSize());
     const dataRoot = Buffer.from((await this.rollupProcessor.dataRoot()).slice(2), 'hex');
     const nullRoot = Buffer.from((await this.rollupProcessor.nullRoot()).slice(2), 'hex');
+    const [escapeOpen, numEscapeBlocksRemaining] = await this.rollupProcessor.getEscapeHatchStatus();
 
     return {
       serviceName: 'ethereum',
@@ -107,6 +108,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       dataRoot,
       nullRoot,
       dataSize,
+      escapeOpen,
+      numEscapeBlocksRemaining,
     };
   }
 
@@ -117,7 +120,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   public async getNetworkInfo() {
     const { networkOrHost } = this.config;
     const { chainId } = await this.config.provider!.getNetwork();
-    return { chainId, networkOrHost };
+    const blockNumber = await this.config.provider!.getBlockNumber();
+    return { chainId, networkOrHost, blockNumber };
   }
 
   public getRollupContractAddress() {

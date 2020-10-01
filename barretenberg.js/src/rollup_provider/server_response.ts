@@ -10,6 +10,8 @@ export interface RollupProviderStatusServerResponse {
   dataSize: number;
   dataRoot: string;
   nullRoot: string;
+  escapeOpen: boolean;
+  numEscapeBlocksRemaining: number;
 }
 
 export interface RollupServerResponse {

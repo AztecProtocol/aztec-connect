@@ -65,6 +65,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     return {
       chainId: 3,
       networkOrHost: 'development',
+      blockNumber: this.blockNum,
     };
   }
 
@@ -118,6 +119,8 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       dataRoot: Buffer.alloc(32),
       nullRoot: Buffer.alloc(32),
       dataSize: this.dataStartIndex,
+      escapeOpen: false,
+      numEscapeBlocksRemaining: 0,
     };
   }
 

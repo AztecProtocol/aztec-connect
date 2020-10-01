@@ -68,6 +68,10 @@ export class WalletSdk extends EventEmitter {
     return this.core.initUserStates();
   }
 
+  public getConfig() {
+    return this.core.getConfig();
+  }
+
   public async destroy() {
     return this.core?.destroy();
   }

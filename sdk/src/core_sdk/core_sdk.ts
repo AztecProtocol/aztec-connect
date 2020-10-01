@@ -164,6 +164,10 @@ export class CoreSdk extends EventEmitter {
     this.updateInitState(SdkInitState.INITIALIZED);
   }
 
+  public getConfig() {
+    return this.options;
+  }
+
   private async getCrsData(circuitSize: number) {
     let crsData = await this.db.getKey(`crs-${circuitSize}`);
     if (!crsData) {
@@ -452,6 +456,8 @@ export class CoreSdk extends EventEmitter {
       ethSigner,
     );
 
+    this.options.escapeHatchMode ? await this.validateEscapeOpen() : undefined;
+
     await this.rollupProvider.sendProof(proofOutput);
     const userTx: UserTx = {
       action,
@@ -466,6 +472,13 @@ export class CoreSdk extends EventEmitter {
     this.emit(CoreSdkEvent.UPDATED_USER_STATE, userTx.userId);
     this.emit(SdkEvent.UPDATED_USER_STATE, userTx.userId);
     return proofOutput.txId;
+  }
+
+  public async validateEscapeOpen() {
+    const { escapeOpen, numEscapeBlocksRemaining } = await this.rollupProvider.status();
+    if (!escapeOpen) {
+      throw new Error(`Escape hatch window closed. Opens in ${numEscapeBlocksRemaining} blocks`);
+    }
   }
 
   public async getAddressFromAlias(alias: string) {

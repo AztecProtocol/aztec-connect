@@ -196,7 +196,8 @@ export class Server {
   }
 
   public async status() {
-    const { chainId, networkOrHost } = await this.blockchain.getNetworkInfo();
+    const { chainId, networkOrHost, blockNumber } = await this.blockchain.getNetworkInfo();
+    const { escapeOpen, numEscapeBlocksRemaining } = await this.blockchain.status();
     const nextRollupId = this.blockchain.getLatestRollupId() + 1;
     return {
       serviceName: 'falafel',
@@ -209,6 +210,8 @@ export class Server {
       nullRoot: this.worldStateDb.getRoot(1),
       rootRoot: this.worldStateDb.getRoot(2),
       nextRollupId,
+      escapeOpen,
+      numEscapeBlocksRemaining,
     };
   }
 

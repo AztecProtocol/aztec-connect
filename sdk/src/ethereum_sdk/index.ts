@@ -118,6 +118,10 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.notifiedClearData();
   }
 
+  public getConfig() {
+    return this.walletSdk.getConfig();
+  }
+
   public getLocalStatus() {
     return this.walletSdk.getLocalStatus();
   }

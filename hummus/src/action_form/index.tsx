@@ -1,12 +1,13 @@
 import { Block, FlexBox } from '@aztec/guacamole-ui';
-import { Action,AssetId, SdkEvent } from 'aztec2-sdk';
+import { Action, AssetId, SdkEvent } from 'aztec2-sdk';
 import { WebSdk } from 'aztec2-sdk';
-import { EthAddress,GrumpkinAddress } from 'barretenberg/address';
-import React, { useEffect,useState } from 'react';
-import { Form,FormField, FormSection } from '../components';
+import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import React, { useEffect, useState } from 'react';
+import { Form, FormField, FormSection } from '../components';
 import { ActionSelect } from './action_select';
 import { ClearDataButton } from './clear_data_button';
 import { Copy } from './copy';
+import { EscapeHatchIndicator } from './escape_hatch_indicator';
 import { RecipientValueForm } from './recipient_value_form';
 
 interface ActionFormProps {
@@ -82,6 +83,7 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
             <FormField label="Tree Synced">{`${worldSyncedToRollup + 1} / ${latestRollup + 1}`}</FormField>
             <FormField label="Public Balance">{`${userAsset.fromErc20Units(tokenBalance)}`}</FormField>
             <FormField label="Private Balance">{`${userAsset.fromErc20Units(balance)}`}</FormField>
+            <EscapeHatchIndicator sdk={sdk} />
             <ActionSelect action={action} onSelect={setAction} />
             {action === Action.DEPOSIT && (
               <RecipientValueForm
