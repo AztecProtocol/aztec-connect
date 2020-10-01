@@ -164,6 +164,10 @@ export class CoreSdk extends EventEmitter {
     this.updateInitState(SdkInitState.INITIALIZED);
   }
 
+  public getConfig() {
+    return this.options;
+  }
+
   private async getCrsData(circuitSize: number) {
     let crsData = await this.db.getKey(`crs-${circuitSize}`);
     if (!crsData) {
