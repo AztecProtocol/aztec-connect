@@ -7,7 +7,6 @@ const { merge } = require('webpack-merge');
 
 const common = {
   mode: 'production',
-  devtool: 'source-map',
   entry: './src/index.ts',
   module: {
     rules: [
@@ -23,10 +22,7 @@ const common = {
     ],
   },
   resolve: {
-    extensions: ['.ts', '.js', '.wasm'],
-    alias: {
-      barretenberg: path.resolve(__dirname, '../barretenberg.js/dest-es'),
-    },
+    extensions: ['.ts', '.js'],
   },
   optimization: {
     minimize: true,
