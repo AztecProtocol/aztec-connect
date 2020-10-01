@@ -6,7 +6,6 @@ const OUTPUT_PATH = './dist';
 // Create package.json.
 const { jest, scripts, devDependencies, ...pkg } = package;
 pkg.name = '@aztec/sdk';
-pkg.version = '0.0.1';
 pkg.main = 'aztec-sdk.node.js';
 pkg.browser = 'aztec-sdk.web.js';
 pkg.types = 'index.d.ts';
