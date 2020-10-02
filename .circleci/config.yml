@@ -229,7 +229,7 @@ jobs:
       - run:
           name: 'hummus'
           working_directory: hummus
-          command: deploy hummus:latest
+          command: deploy_s3 hummus:latest
       - run:
           name: 'block-explorer'
           working_directory: block-explorer
