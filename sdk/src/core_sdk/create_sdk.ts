@@ -1,8 +1,4 @@
-import {
-  RollupProviderStatusServerResponse,
-  ServerRollupProvider,
-  ServerRollupProviderExplorer,
-} from 'barretenberg/rollup_provider';
+import { ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
 import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import createDebug from 'debug';

@@ -563,6 +563,9 @@ export class CoreSdk extends EventEmitter {
     if (!userState) {
       throw new Error(`Unknown user: ${userId.toString('hex')}`);
     }
+    if (alias && this.getAddressFromAlias(alias)) {
+      throw new Error(`Alias already registered: ${alias}`);
+    }
     const { publicKey } = userState.getUser();
 
     const action = async () => {

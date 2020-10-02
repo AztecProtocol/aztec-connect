@@ -306,12 +306,13 @@ export class TerminalHandler {
   }
 
   private async registerAlias(alias: string) {
+    if (await this.app.getSdk().getAddressFromAlias(alias)) {
+      throw new Error('alias already registered.');
+    }
     this.printQueue.put(`generating registration proof...\n`);
     const signer = this.app.getSdk().getSchnorrSigner(this.app.getUser().getUserData().ethAddress);
     const txHash = await this.app.getUser().addAlias(alias, signer);
-    this.printQueue.put(`awaiting registration...\n`);
-    await this.app.getSdk().awaitSettlement(this.app.getUser().getUserData().ethAddress, txHash);
-    this.printQueue.put(`registration complete.\n`);
+    this.printQueue.put(`registration proof sent.\n`);
   }
 
   private async balance() {
