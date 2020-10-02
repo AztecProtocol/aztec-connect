@@ -166,18 +166,6 @@ jobs:
           working_directory: documentation
           command: build documentation:latest
 
-  website:
-    docker:
-      - image: aztecprotocol/build-image
-    steps:
-      - checkout
-      - *setup_env
-      - setup_remote_docker
-      - run:
-          name: 'Build and test'
-          working_directory: website
-          command: build website:latest
-
   end-to-end:
     machine:
       image: ubuntu-1604:201903-01
@@ -198,6 +186,18 @@ jobs:
               docker tag $ECR_URL/end-to-end:cache-$CIRCLE_SHA1-latest $ECR_DEPLOY_URL/end-to-end:latest
               docker-compose up --exit-code-from end-to-end
             fi
+
+  website:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker
+      - run:
+          name: 'Build and test'
+          working_directory: website
+          command: build website:latest
 
   deploy:
     docker:
@@ -297,6 +297,7 @@ workflows:
       - end-to-end:
           requires:
             - sdk
+      - website
       - deploy:
           requires:
             - x86_64-linux-gcc
@@ -304,6 +305,7 @@ workflows:
             - hummus
             - block-explorer
             - documentation
+            - website
           filters:
             branches:
               only: master
