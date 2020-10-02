@@ -108,6 +108,7 @@ export class EthereumSdk extends EventEmitter {
   public async destroy() {
     await this.walletSdk?.destroy();
     await this.db?.close();
+    this.removeAllListeners();
   }
 
   public async clearData() {

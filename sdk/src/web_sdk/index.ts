@@ -171,6 +171,7 @@ export class WebSdk extends EventEmitter {
       try {
         await this.sdk.addUser(account);
       } catch (e) {
+        debug(e);
         throw new Error('Account link rejected.');
       }
     }

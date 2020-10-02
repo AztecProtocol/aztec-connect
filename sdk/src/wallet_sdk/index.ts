@@ -73,7 +73,8 @@ export class WalletSdk extends EventEmitter {
   }
 
   public async destroy() {
-    return this.core?.destroy();
+    await this.core?.destroy();
+    this.removeAllListeners();
   }
 
   public async clearData() {
