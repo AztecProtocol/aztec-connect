@@ -31,7 +31,7 @@ data "terraform_remote_state" "aztec2_iac" {
 
 # AWS S3 bucket for static hosting
 resource "aws_s3_bucket" "block_explorer" {
-  bucket = "dashboard.aztec.network"
+  bucket = "explorer.aztec.network"
   acl    = "public-read"
 
   cors_rule {
@@ -53,7 +53,7 @@ resource "aws_s3_bucket" "block_explorer" {
         "AWS": "*"
       },
       "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::dashboard.aztec.network/*"
+      "Resource": "arn:aws:s3:::explorer.aztec.network/*"
     }
   ]
 }
@@ -77,7 +77,7 @@ resource "aws_cloudfront_distribution" "block_explorer_distribution" {
   comment             = "Managed by Terraform"
   default_root_object = "index.html"
 
-  aliases = ["dashboard.aztec.network"]
+  aliases = ["explorer.aztec.network"]
 
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
@@ -114,7 +114,7 @@ resource "aws_cloudfront_distribution" "block_explorer_distribution" {
 
 resource "aws_route53_record" "dashboard_record" {
   zone_id = data.terraform_remote_state.aztec2_iac.outputs.aws_route53_zone_id
-  name    = "dashboard"
+  name    = "explorer"
   type    = "A"
   alias {
     name                   = aws_cloudfront_distribution.block_explorer_distribution.domain_name
