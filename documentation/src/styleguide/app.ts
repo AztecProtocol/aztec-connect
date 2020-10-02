@@ -70,6 +70,7 @@ export class App extends EventEmitter {
       RECIPIENT_PUBLIC_KEY:
         '0x110b33f1659d950d264e4e3678f2032beccd371ff2129658cf04ac0ad5376249225947147ca67adee95f170602f290e9ac097902bf3af8f83b270ea0ed779c86',
       RECIPIENT_ALIAS: 'aztec',
+      SRIRACHA_URL: 'https://api.aztec.network/sriracha',
     };
   }
 

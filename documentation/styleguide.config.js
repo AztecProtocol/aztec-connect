@@ -200,7 +200,7 @@ module.exports = {
             },
             {
               name: 'emergencyWithdraw',
-              content: 'src/docs/use_hatch.md',
+              content: 'src/docs/emergency_withdraw.md',
               exampleMode: 'hide',
             },
           ],
