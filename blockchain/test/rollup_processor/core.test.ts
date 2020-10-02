@@ -148,12 +148,12 @@ describe('rollup_processor: core', () => {
       expect(receipt.status).to.equal(1);
     });
 
-    it('should reject processrollup() if not owner', async () => {
-      // owner is address that deployed contract - userA
+    it('should allow any address to send processRollup() tx', async () => {
+      // owner is address that deployed contract - userA. Send with user B
       const { proofData } = await createSendProof();
-      await expect(
-        rollupProcessor.connect(userB).processRollup(proofData, Buffer.alloc(32), [], viewingKeys),
-      ).to.be.revertedWith('Ownable: caller is not the owner');
+      const tx = await rollupProcessor.connect(userB).processRollup(proofData, Buffer.alloc(32), [], viewingKeys);
+      const receipt = await tx.wait();
+      expect(receipt.status).to.equal(1);
     });
   });
 

@@ -131,7 +131,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         bytes calldata signatures,
         uint256[] calldata sigIndexes,
         bytes calldata viewingKeys
-    ) external override onlyOwner {
+    ) external override {
         uint256 numTxs = updateAndVerifyProof(proofData);
         processTransactions(proofData[rollupPubInputLength:], numTxs, signatures, sigIndexes);
     }
