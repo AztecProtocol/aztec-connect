@@ -82,8 +82,8 @@ export class Web3TokenContract implements TokenContract {
     }
   }
 
-  public fromErc20Units(value: bigint) {
-    return fromErc20Units(value, this.decimals, this.precision);
+  public fromErc20Units(value: bigint, precision = this.precision) {
+    return fromErc20Units(value, this.decimals, precision);
   }
 
   public toErc20Units(value: string) {

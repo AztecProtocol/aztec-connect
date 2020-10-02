@@ -310,8 +310,8 @@ export class WalletSdk extends EventEmitter {
     return this.getTokenContract(assetId).allowance(ethAddress);
   }
 
-  public fromErc20Units(assetId: AssetId, value: bigint) {
-    return this.getTokenContract(assetId).fromErc20Units(value);
+  public fromErc20Units(assetId: AssetId, value: bigint, precision?: number) {
+    return this.getTokenContract(assetId).fromErc20Units(value, precision);
   }
 
   public toErc20Units(assetId: AssetId, value: string) {

@@ -58,8 +58,8 @@ export class EthereumSdkUserAsset {
     return this.sdk.transfer(this.assetId, value, this.ethAddress, await this.getGrumpkinAddress(to), signer);
   }
 
-  public fromErc20Units(value: bigint) {
-    return this.sdk.getTokenContract(this.assetId).fromErc20Units(value);
+  public fromErc20Units(value: bigint, precision?: number) {
+    return this.sdk.getTokenContract(this.assetId).fromErc20Units(value, precision);
   }
 
   public toErc20Units(value: string) {

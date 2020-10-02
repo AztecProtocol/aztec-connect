@@ -24,7 +24,7 @@ export interface TokenContract {
 
   mint(value: bigint, account: EthAddress): Promise<TransactionHash>;
 
-  fromErc20Units(value: bigint): string;
+  fromErc20Units(value: bigint, precision?: number): string;
 
   toErc20Units(value: string): bigint;
 }

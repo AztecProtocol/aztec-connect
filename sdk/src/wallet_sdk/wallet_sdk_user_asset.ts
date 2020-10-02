@@ -48,8 +48,8 @@ export class WalletSdkUserAsset {
     return this.sdk.transfer(this.id, this.userId, value, signer, to);
   }
 
-  public fromErc20Units(value: bigint) {
-    return this.sdk.fromErc20Units(this.id, value);
+  public fromErc20Units(value: bigint, precision?: number) {
+    return this.sdk.fromErc20Units(this.id, value, precision);
   }
 
   public toErc20Units(value: string) {
