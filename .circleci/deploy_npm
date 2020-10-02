@@ -27,5 +27,4 @@ elif [ "$LOCAL_VERSION" != "$PUBLISHED_VERSION" ] && [ "$LOCAL_VERSION" == "$HIG
   npm publish
 else
   echo "$LOCAL_VERSION is <= published version."
-  exit 1
 fi
