@@ -170,7 +170,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": "0x71f7D95582953D14Dc2956f2A49961E258d013A0"
+        "value": "0x5dBc80672e253fd8DEBE59C5deD82E855BC7d88A"
       },
       {
         "name": "API_PREFIX",

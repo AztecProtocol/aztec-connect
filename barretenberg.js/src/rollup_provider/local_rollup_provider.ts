@@ -17,6 +17,7 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
   private blocks: Block[] = [];
   private dataRoot = Buffer.alloc(32, 0);
   private nullRoot = Buffer.alloc(32, 0);
+  private rootRoot = Buffer.alloc(32, 0);
 
   constructor(private joinSplitVerifier: JoinSplitVerifier) {
     super();
@@ -82,6 +83,7 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
       dataSize: this.dataTreeSize,
       dataRoot: this.dataRoot,
       nullRoot: this.nullRoot,
+      rootRoot: this.rootRoot,
       blockNumber: this.blockNum,
       escapeOpen: false,
       numEscapeBlocksRemaining: 0,

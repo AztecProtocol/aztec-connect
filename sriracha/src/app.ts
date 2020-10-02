@@ -18,13 +18,14 @@ export function appFactory(server: Server, prefix: string) {
 
   router.get('/status', async (ctx: Koa.Context) => {
     const status = await server.status();
-    const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot } = status;
+    const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot } = status;
     const response: RollupProviderStatusServerResponse = {
       ...status,
       rollupContractAddress: rollupContractAddress.toString(),
       tokenContractAddresses: tokenContractAddresses.map(address => address.toString()),
       dataRoot: dataRoot.toString('hex'),
       nullRoot: nullRoot.toString('hex'),
+      rootRoot: rootRoot.toString('hex'),
     };
     ctx.set('content-type', 'application/json');
     ctx.body = response;

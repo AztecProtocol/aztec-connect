@@ -38,7 +38,7 @@ describe('rollup_processor: core', () => {
   it('should get escape hatch closed status', async () => {
     const [isOpen, blocksRemaining] = await rollupProcessor.getEscapeHatchStatus();
     expect(isOpen).to.equal(false);
-    expect(parseInt(blocksRemaining)).to.lessThan(81);
+    expect(blocksRemaining.toNumber()).to.lessThan(81);
   });
 
   it('should get escape hatch open status', async () => {
@@ -47,7 +47,7 @@ describe('rollup_processor: core', () => {
 
     const [isOpen, blocksRemaining] = await rollupProcessor.getEscapeHatchStatus();
     expect(isOpen).to.equal(true);
-    expect(parseInt(blocksRemaining)).to.be.lessThan(21);
+    expect(blocksRemaining.toNumber()).to.be.lessThan(21);
   });
 
   it('should process an escape inside valid block window', async () => {

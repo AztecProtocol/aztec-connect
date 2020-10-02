@@ -17,6 +17,7 @@ export interface RollupProviderStatus {
   dataSize: number;
   dataRoot: Buffer;
   nullRoot: Buffer;
+  rootRoot: Buffer;
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
 }

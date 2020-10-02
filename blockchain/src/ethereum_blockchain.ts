@@ -2,7 +2,7 @@ import { Provider, TransactionResponse } from '@ethersproject/abstract-provider'
 import { EthAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { Proof } from 'barretenberg/rollup_provider';
+import { Proof, RollupProviderStatus } from 'barretenberg/rollup_provider';
 import { toBigIntBE } from 'bigint-buffer';
 import createDebug from 'debug';
 import { Contract, ethers, Signer } from 'ethers';
@@ -25,6 +25,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private running = false;
   private latestRollupId = -1;
   private debug: any;
+  private status_!: RollupProviderStatus;
 
   constructor(private config: EthereumBlockchainConfig, private rollupContractAddress: EthAddress) {
     super();
@@ -48,6 +49,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     for (let i = 0; i < this.assetAddresses.length; i += 1) {
       this.erc20Contracts[i] = new ethers.Contract(this.assetAddresses[i].toString(), ERC20ABI, this.config.signer);
     }
+
+    await this.updateStatus();
   }
 
   /**
@@ -64,6 +67,10 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
         this.latestRollupId = RollupProofData.getRollupIdFromBuffer(block.rollupProofData);
         this.emit('block', block);
         fromBlock = block.blockNum + 1;
+      }
+      if (blocks.length) {
+        // If new blocks were received, update our status.
+        await this.updateStatus();
       }
     };
 
@@ -91,14 +98,19 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Get the status of the rollup contract
    */
   public async status() {
-    const { chainId, networkOrHost, blockNumber } = await this.getNetworkInfo();
+    return this.status_;
+  }
+
+  private async updateStatus() {
+    const { chainId, networkOrHost } = await this.getNetworkInfo();
     const nextRollupId = +(await this.rollupProcessor.nextRollupId());
     const dataSize = +(await this.rollupProcessor.dataSize());
     const dataRoot = Buffer.from((await this.rollupProcessor.dataRoot()).slice(2), 'hex');
     const nullRoot = Buffer.from((await this.rollupProcessor.nullRoot()).slice(2), 'hex');
+    const rootRoot = Buffer.from((await this.rollupProcessor.rootRoot()).slice(2), 'hex');
     const [escapeOpen, numEscapeBlocksRemaining] = await this.rollupProcessor.getEscapeHatchStatus();
 
-    return {
+    this.status_ = {
       serviceName: 'ethereum',
       chainId,
       networkOrHost,
@@ -107,9 +119,10 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       nextRollupId,
       dataRoot,
       nullRoot,
+      rootRoot,
       dataSize,
       escapeOpen,
-      numEscapeBlocksRemaining,
+      numEscapeBlocksRemaining: numEscapeBlocksRemaining.toNumber(),
     };
   }
 
