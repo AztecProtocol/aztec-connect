@@ -69,10 +69,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
         this.emit('block', block);
         fromBlock = block.blockNum + 1;
       }
-      if (blocks.length) {
-        // If new blocks were received, update our status.
-        await this.updateStatus();
-      }
     };
 
     // We must have emitted all historical blocks before returning.
@@ -86,6 +82,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
         await emitBlocks();
       }
     })();
+
+    this.config.provider.on('block', this.updateStatus);
   }
 
   /**
@@ -93,6 +91,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public stop() {
     this.running = false;
+    this.config.provider.off('block', this.updateStatus);
   }
 
   /**
@@ -102,7 +101,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.status_;
   }
 
-  private async updateStatus() {
+  private updateStatus = async () => {
     const { chainId, networkOrHost } = await this.getNetworkInfo();
     const nextRollupId = +(await this.rollupProcessor.nextRollupId());
     const dataSize = +(await this.rollupProcessor.dataSize());
@@ -125,7 +124,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       escapeOpen,
       numEscapeBlocksRemaining: numEscapeBlocksRemaining.toNumber(),
     };
-  }
+  };
 
   public getLatestRollupId() {
     return this.latestRollupId;
