@@ -118,6 +118,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       nextRollupId: this.blockNum,
       dataRoot: Buffer.alloc(32),
       nullRoot: Buffer.alloc(32),
+      rootRoot: Buffer.alloc(32),
       dataSize: this.dataStartIndex,
       escapeOpen: false,
       numEscapeBlocksRemaining: 0,

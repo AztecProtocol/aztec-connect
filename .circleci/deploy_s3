@@ -28,8 +28,17 @@ terraform init -input=false
 terraform apply -input=false -auto-approve
 AWS_BUCKET_NAME=$(terraform output s3)
 AWS_CLOUDFRONT_DISTRIBUTION=$(terraform output cloudfront)
-cd .. 
+cd ..
 
-aws s3 rm s3://${AWS_BUCKET_NAME} --recursive
-aws s3 cp $REPOSITORY s3://${AWS_BUCKET_NAME} --recursive --metadata-directive REPLACE --cache-control "max-age=3600" --acl public-read
-aws cloudfront create-invalidation --distribution-id ${AWS_CLOUDFRONT_DISTRIBUTION} --paths "/*"
+aws s3 rm s3://$AWS_BUCKET_NAME --recursive
+aws s3 cp $REPOSITORY s3://$AWS_BUCKET_NAME --recursive --metadata-directive REPLACE --cache-control "max-age=3600" --acl public-read
+aws s3 cp \
+       s3://$AWS_BUCKET_NAME \
+       s3://$AWS_BUCKET_NAME \
+       --exclude '*' \
+       --include '*.js' \
+       --no-guess-mime-type \
+       --content-type="application/javascript; charset=utf-8" \
+       --metadata-directive="REPLACE" \
+       --recursive
+aws cloudfront create-invalidation --distribution-id $AWS_CLOUDFRONT_DISTRIBUTION --paths "/*"
