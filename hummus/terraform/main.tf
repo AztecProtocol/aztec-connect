@@ -29,133 +29,96 @@ provider "aws" {
   region  = "eu-west-2"
 }
 
-resource "aws_service_discovery_service" "hummus" {
-  name = "hummus"
+# AWS S3 bucket for static hosting.
+resource "aws_s3_bucket" "hummus" {
+  bucket = "terminal.aztec.network"
+  acl    = "public-read"
 
-  health_check_custom_config {
-    failure_threshold = 1
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["PUT", "POST"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
   }
 
-  dns_config {
-    namespace_id = data.terraform_remote_state.setup_iac.outputs.local_service_discovery_id
-
-    dns_records {
-      ttl  = 10
-      type = "A"
-    }
-
-    routing_policy = "MULTIVALUE"
-  }
-}
-
-resource "aws_ecs_task_definition" "hummus" {
-  family                   = "hummus"
-  requires_compatibilities = ["FARGATE"]
-  network_mode             = "awsvpc"
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
-
-  container_definitions = <<DEFINITIONS
-[
-  {
-    "name": "hummus",
-    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/hummus:latest",
-    "essential": true,
-    "portMappings": [
-      {
-        "containerPort": 80
-      }
-    ],
-    "environment": [
-      {
-        "name": "NODE_ENV",
-        "value": "production"
+  policy = <<EOF
+{
+  "Version": "2008-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadForGetBucketObjects",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "*"
       },
-      {
-        "name": "PORT",
-        "value": "80"
-      }
-    ],
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "/fargate/service/hummus",
-        "awslogs-region": "eu-west-2",
-        "awslogs-stream-prefix": "ecs"
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::terminal.aztec.network/*"
+    }
+  ]
+}
+EOF
+
+  website {
+    index_document = "index.html"
+    error_document = "error.html"
+  }
+}
+
+# AWS Cloudfront for caching.
+resource "aws_cloudfront_distribution" "hummus_distribution" {
+  origin {
+    domain_name = aws_s3_bucket.hummus.bucket_regional_domain_name
+    origin_id   = "website"
+  }
+
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "Managed by Terraform"
+  default_root_object = "index.html"
+
+  aliases = ["terminal.aztec.network"]
+
+  default_cache_behavior {
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "website"
+
+    forwarded_values {
+      query_string = false
+
+      cookies {
+        forward = "none"
       }
     }
-  }
-]
-DEFINITIONS
-}
 
-data "aws_ecs_task_definition" "hummus" {
-  task_definition = aws_ecs_task_definition.hummus.family
-}
-
-resource "aws_ecs_service" "hummus" {
-  name          = "hummus"
-  cluster       = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
-  launch_type   = "FARGATE"
-  desired_count = "1"
-
-  network_configuration {
-    subnets = [
-      data.terraform_remote_state.setup_iac.outputs.subnet_az1_private_id,
-      data.terraform_remote_state.setup_iac.outputs.subnet_az2_private_id
-    ]
-    security_groups = [data.terraform_remote_state.setup_iac.outputs.security_group_private_id]
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 3600
+    max_ttl                = 86400
   }
 
-  load_balancer {
-    target_group_arn = aws_alb_target_group.hummus.arn
-    container_name   = "hummus"
-    container_port   = 80
-  }
+  price_class = "PriceClass_100"
 
-  service_registries {
-    registry_arn = aws_service_discovery_service.hummus.arn
-  }
-
-  # Track the latest ACTIVE revision
-  task_definition = "${aws_ecs_task_definition.hummus.family}:${max("${aws_ecs_task_definition.hummus.revision}", "${data.aws_ecs_task_definition.hummus.revision}")}"
-
-  lifecycle {
-    ignore_changes = [task_definition]
-  }
-}
-
-# Logs
-resource "aws_cloudwatch_log_group" "hummus" {
-  name              = "/fargate/service/hummus"
-  retention_in_days = "14"
-}
-
-# Configure ALB route.
-resource "aws_alb_target_group" "hummus" {
-  name        = "hummus"
-  port        = "80"
-  protocol    = "HTTP"
-  target_type = "ip"
-  vpc_id      = data.terraform_remote_state.setup_iac.outputs.vpc_id
-  tags = {
-    name = "hummus"
-  }
-}
-
-resource "aws_lb_listener_rule" "hummus" {
-  listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
-  priority     = 300
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_alb_target_group.hummus.arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["*"]
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
     }
+  }
+
+  viewer_certificate {
+    acm_certificate_arn = data.terraform_remote_state.aztec2_iac.outputs.aws_acm_certificate_aztec_network_arn
+    ssl_support_method  = "sni-only"
+  }
+}
+
+resource "aws_route53_record" "a_record" {
+  zone_id = data.terraform_remote_state.aztec2_iac.outputs.aws_route53_zone_id
+  name    = "terminal"
+  type    = "A"
+  alias {
+    name                   = aws_cloudfront_distribution.hummus_distribution.domain_name
+    zone_id                = aws_cloudfront_distribution.hummus_distribution.hosted_zone_id
+    evaluate_target_health = true
   }
 }

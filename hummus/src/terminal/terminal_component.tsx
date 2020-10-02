@@ -12,9 +12,9 @@ const GlobalStyle = createGlobalStyle`
   }
 `;
 
-export function TerminalComponent({ app, terminal, onExit }: { app: WebSdk; terminal: Terminal; onExit: () => void }) {
+export function TerminalComponent({ app, terminal }: { app: WebSdk; terminal: Terminal }) {
   useEffect(() => {
-    const terminalHandler = new TerminalHandler(app, terminal, onExit);
+    const terminalHandler = new TerminalHandler(app, terminal);
     terminalHandler.start();
     return () => {
       terminalHandler.stop();

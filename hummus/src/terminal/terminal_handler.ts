@@ -19,7 +19,7 @@ enum TermControl {
 export class TerminalHandler {
   private controlQueue = new MemoryFifo<() => Promise<void>>();
   private printQueue = new MemoryFifo<string | TermControl>();
-  private preInitCmds = { help: this.help, init: this.init, exit: this.onExit, cleardata: this.clearData };
+  private preInitCmds = { help: this.help, init: this.init, cleardata: this.clearData };
   private postInitCmds = {
     help: this.help,
     mint: this.mint,
@@ -32,11 +32,10 @@ export class TerminalHandler {
     balance: this.balance,
     copykey: this.copyKey,
     status: this.status,
-    exit: this.onExit,
     cleardata: this.clearData,
   };
 
-  constructor(private app: WebSdk, private terminal: Terminal, private onExit: () => void) {}
+  constructor(private app: WebSdk, private terminal: Terminal) {}
 
   public start() {
     this.processCommands();
@@ -207,7 +206,7 @@ export class TerminalHandler {
 
   private async help() {
     if (!this.app.isInitialized()) {
-      this.printQueue.put('init [server]\nexit\n');
+      this.printQueue.put('init [server]\n');
     } else {
       this.printQueue.put(
         'approve <amount>\n' +
@@ -218,8 +217,7 @@ export class TerminalHandler {
           'register <alias>\n' +
           'balance\n' +
           'copykey\n' +
-          'status\n' +
-          'exit\n',
+          'status\n',
       );
     }
   }

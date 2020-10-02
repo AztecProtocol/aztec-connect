@@ -1,8 +1,7 @@
 import './styles/guacamole.css';
-import { Block, FlexBox, Icon, PageSteps, SwitchInput, Text, TextButton } from '@aztec/guacamole-ui';
+import { Block, FlexBox, PageSteps, SwitchInput, Text, TextButton } from '@aztec/guacamole-ui';
 import { WebSdk } from 'aztec2-sdk';
 import debug from 'debug';
-import { History } from 'history';
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { BrowserRouter, Link, Route, RouteComponentProps, Switch, useLocation } from 'react-router-dom';
@@ -144,12 +143,6 @@ function ThemedContent({ app }: { app: WebSdk }) {
                     <Text text={theme.theme === 'light' ? 'Light Mode' : 'Dark Mode'} />
                   </Block>
                 </FlexBox>
-                <TextButton theme="implicit" color={theme.link} href="/terminal" Link={Link}>
-                  <FlexBox valign="center">
-                    <Block right="xs">Terminal Mode</Block>
-                    <Icon name="chevron_right" />
-                  </FlexBox>
-                </TextButton>
               </FlexBox>
             </Block>
           </StyledContent>
@@ -162,19 +155,9 @@ function ThemedContent({ app }: { app: WebSdk }) {
 function LandingPage({ app }: { app: WebSdk }) {
   return (
     <Switch>
-      {/* <Route
-        exact
-        path="/terminal/2020"
-        component={({ history }: { history: History }) => <Terminal2020 app={app} onExit={() => history.push('/')} />}
-      /> */}
-      <Route
-        path="/terminal"
-        component={({ history }: { history: History }) => (
-          <TerminalComponent app={app} terminal={new Terminal(12, 40)} onExit={() => history.push('/')} />
-        )}
-      />
+      <Route path="/form" component={() => <ThemedContent app={app} />} />
       <Route>
-        <ThemedContent app={app} />
+        <TerminalComponent app={app} terminal={new Terminal(12, 40)} />
       </Route>
     </Switch>
   );
