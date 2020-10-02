@@ -99,6 +99,9 @@ export class CoreSdk extends EventEmitter {
       throw new Error('Sdk is not UNINITIALIZED.');
     }
 
+    const { chainId, rollupContractAddress } = await this.getRemoteStatus();
+    await this.checkDataSource(rollupContractAddress);
+
     this.updateInitState(SdkInitState.INITIALIZING);
 
     const barretenberg = await BarretenbergWasm.new();
@@ -126,7 +129,6 @@ export class CoreSdk extends EventEmitter {
 
     await this.worldState.init();
 
-    const { chainId, rollupContractAddress } = await this.getRemoteStatus();
     // If chainId is 0 (falafel is using simulated blockchain) pretend it needs to be ropsten.
     this.sdkStatus.chainId = chainId || 3;
     this.sdkStatus.rollupContractAddress = rollupContractAddress;
@@ -162,6 +164,16 @@ export class CoreSdk extends EventEmitter {
     }
 
     this.updateInitState(SdkInitState.INITIALIZED);
+  }
+
+  private async checkDataSource(rollupContractAddress: EthAddress) {
+    const prevAddress = await this.leveldb.get('rollupContractAddress').catch(() => '');
+    if (prevAddress && !prevAddress.equals(rollupContractAddress.toBuffer())) {
+      debug('clear local data...');
+      await this.leveldb.clear();
+      await this.db.clear();
+    }
+    await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
   }
 
   public getConfig() {

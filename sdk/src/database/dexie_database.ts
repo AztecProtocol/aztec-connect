@@ -171,6 +171,12 @@ export class DexieDatabase implements Database {
     await dexie.delete();
   }
 
+  async clear() {
+    for (const table of this.dexie.tables) {
+      await table.clear();
+    }
+  }
+
   async addNote(note: Note) {
     await this.note.put(noteToDexieNote(note));
   }

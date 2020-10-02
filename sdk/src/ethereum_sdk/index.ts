@@ -5,7 +5,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
-import { AssetId, SdkEvent } from '../sdk';
+import { AssetId, SdkEvent, SdkInitState } from '../sdk';
 import { Web3Signer } from '../signer/web3_signer';
 import { Signer } from '../signer';
 import { deriveGrumpkinPrivateKey, RecoveryPayload, UserData } from '../user';
@@ -63,6 +63,13 @@ export class EthereumSdk extends EventEmitter {
     }
 
     switch (event) {
+      case SdkEvent.UPDATED_INIT_STATE: {
+        const [initState] = args[0] as SdkInitState;
+        if (initState !== SdkInitState.INITIALIZED) {
+          this.emit(event, ...args);
+        }
+        break;
+      }
       case SdkEvent.UPDATED_USER_STATE: {
         const [userId, ...rest] = args;
         const ethAddress = this.getEthAddressByUserId(userId);
@@ -83,17 +90,31 @@ export class EthereumSdk extends EventEmitter {
     if (sdkOptions?.clearDb) {
       await Database.clear();
     }
+
     this.db = new Database();
 
-    // Forward all core sdk events.
+    // Forward all walletSdk events.
     for (const e in SdkEvent) {
       const event = (SdkEvent as any)[e];
       this.walletSdk.on(event, (...args: any[]) => this.forwardEvent(event, args));
     }
 
+    await this.walletSdk.init(serverUrl, sdkOptions);
+
+    const { rollupContractAddress } = await this.getRemoteStatus();
+    await this.checkDataSource(rollupContractAddress);
+
     await this.updateLocalAccounts();
 
-    await this.walletSdk.init(serverUrl, sdkOptions);
+    this.emit(SdkEvent.UPDATED_INIT_STATE, SdkInitState.INITIALIZED);
+  }
+
+  private async checkDataSource(rollupContractAddress: EthAddress) {
+    const prevAddress = await this.db.getValue('rollupContractAddress');
+    if (prevAddress && !prevAddress.equals(rollupContractAddress.toBuffer())) {
+      await this.db.clear();
+    }
+    await this.db.addValue('rollupContractAddress', rollupContractAddress.toBuffer());
   }
 
   public async initUserStates() {
