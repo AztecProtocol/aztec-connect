@@ -16,7 +16,7 @@ export interface EthereumBlockchainConfig {
   signer?: Signer;
   networkOrHost: string;
   console?: boolean;
-  gasLimit: number;
+  gasLimit?: number;
 }
 
 export class EthereumBlockchain extends EventEmitter implements Blockchain {
