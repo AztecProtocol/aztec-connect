@@ -223,6 +223,10 @@ jobs:
           working_directory: barretenberg.js
           command: deploy barretenberg.js:latest
       - run:
+          name: 'blockchain'
+          working_directory: blockchain
+          command: deploy blockchain:latest
+      - run:
           name: 'sdk'
           working_directory: sdk
           command: |
@@ -241,19 +245,27 @@ jobs:
       - run:
           name: 'hummus'
           working_directory: hummus
-          command: deploy_s3 hummus:latest
+          command: |
+            deploy hummus:latest
+            deploy_s3 hummus:latest
       - run:
           name: 'block-explorer'
           working_directory: block-explorer
-          command: deploy_s3 block-explorer:latest
+          command: |
+            deploy block-explorer:latest
+            deploy_s3 block-explorer:latest
       - run:
           name: 'documentation'
           working_directory: documentation
-          command: deploy_s3 documentation:latest
+          command: |
+            deploy documentation:latest
+            deploy_s3 documentation:latest
       - run:
           name: 'website'
           working_directory: website
-          command: deploy_s3 website:latest
+          command: |
+            deploy website:latest
+            deploy_s3 website:latest
 
 workflows:
   build:
