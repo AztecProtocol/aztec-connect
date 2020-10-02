@@ -95,6 +95,23 @@ library Rollup2Vk {
     vk.permutation_non_residues[2] = PairingsBn254.new_fr(
       0x0000000000000000000000000000000000000000000000000000000000000007
     );
+    vk.contains_recursive_proof = true;
+    vk.recursive_proof_indices[0] = 34;
+    vk.recursive_proof_indices[1] = 35;
+    vk.recursive_proof_indices[2] = 36;
+    vk.recursive_proof_indices[3] = 37;
+    vk.recursive_proof_indices[4] = 38;
+    vk.recursive_proof_indices[5] = 39;
+    vk.recursive_proof_indices[6] = 40;
+    vk.recursive_proof_indices[7] = 41;
+    vk.recursive_proof_indices[8] = 42;
+    vk.recursive_proof_indices[9] = 43;
+    vk.recursive_proof_indices[10] = 44;
+    vk.recursive_proof_indices[11] = 45;
+    vk.recursive_proof_indices[12] = 46;
+    vk.recursive_proof_indices[13] = 47;
+    vk.recursive_proof_indices[14] = 48;
+    vk.recursive_proof_indices[15] = 49;
     vk.g2_x = PairingsBn254.new_g2([
       0x260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1,
       0x0118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b0

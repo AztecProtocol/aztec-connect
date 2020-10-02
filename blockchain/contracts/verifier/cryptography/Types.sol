@@ -63,6 +63,7 @@ library Types {
         G1Point opening_at_z_proof;
         G1Point opening_at_z_omega_proof;
         G1Point[28] kate_group_elements;
+        G1Point[2] recursive_proof_outputs;
         Fr[NUM_KATE_OPENING_ELEMENTS] kate_field_elements;
         uint256 kate_array_indexer;
         Fr debug_challenge;
@@ -113,6 +114,8 @@ library Types {
         G1Point[STATE_WIDTH] sigma_commitments;
         Fr[STATE_WIDTH - 1] permutation_non_residues;
         G2Point g2_x;
+        bool contains_recursive_proof;
+        uint256[16] recursive_proof_indices;
     }
 
     struct BatchInversions {

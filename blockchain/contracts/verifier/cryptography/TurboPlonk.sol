@@ -191,6 +191,14 @@ library TurboPlonk {
         rhsTerm1.point_add_assign(batch_opening_commitment);
         rhsTerm1.point_sub_assign(batch_evaluation_commitment);
 
+
+        if (vk.contains_recursive_proof)
+        {
+            Types.Fr memory separator_challenge = challenges.u.sqr_fr();
+
+            rhsTerm1.point_add_assign(decoded_proof.recursive_proof_outputs[0].point_mul(separator_challenge));
+            lhsTerm1.point_add_assign(decoded_proof.recursive_proof_outputs[1].point_mul(separator_challenge));
+        }
         return PairingsBn254.pairingProd2(rhsTerm1, PairingsBn254.P2(), lhsTerm1, vk.g2_x);
     }
 

@@ -52,6 +52,7 @@ describe('RollupProofData', () => {
       randomBytes(32),
       1,
       [innerProofData],
+      randomBytes(32 * 16),
     );
 
     const buffer = rollupProofData.toBuffer();

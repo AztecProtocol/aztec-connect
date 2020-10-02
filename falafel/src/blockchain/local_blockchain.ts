@@ -40,6 +40,7 @@ const generateRollup = (rollupId: number, rollupSize: number) => {
     randomBytes(32),
     rollupSize,
     innerProofs,
+    randomBytes(16 * 32),
   );
 };
 

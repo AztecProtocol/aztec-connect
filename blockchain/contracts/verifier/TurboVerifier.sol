@@ -43,7 +43,7 @@ contract TurboVerifier is IVerifier {
         Types.VerificationKey memory vk = VerificationKeys.getKeyById(rollup_size);
         uint256 num_public_inputs = vk.num_inputs;
 
-        Types.Proof memory decoded_proof = deserialize_proof(serialized_proof, num_public_inputs);
+        Types.Proof memory decoded_proof = deserialize_proof(serialized_proof, num_public_inputs, vk);
         (Types.ChallengeTranscript memory challenges, TranscriptLibrary.Transcript memory transcript) = TurboPlonk
             .construct_alpha_beta_gamma_zeta_challenges(decoded_proof, vk);
 
@@ -67,7 +67,7 @@ contract TurboVerifier is IVerifier {
 
         (Types.G1Point memory batch_opening_commitment, Types.G1Point memory batch_evaluation_commitment) = TurboPlonk
             .evaluate_polynomials(decoded_proof, vk, challenges, L1);
-
+    
         bool result = TurboPlonk.perform_pairing(
             batch_opening_commitment,
             batch_evaluation_commitment,
@@ -84,7 +84,7 @@ contract TurboVerifier is IVerifier {
      * @param num_public_inputs - number of public inputs in the proof. Taken from verification key
      * @return proof - proof deserialized into the proof struct
      */
-    function deserialize_proof(bytes memory raw_data, uint256 num_public_inputs)
+    function deserialize_proof(bytes memory raw_data, uint256 num_public_inputs, Types.VerificationKey memory vk)
         internal
         pure
         returns (Types.Proof memory proof)
@@ -107,6 +107,31 @@ contract TurboVerifier is IVerifier {
             data_ptr += 0x20;
         }
 
+        if (vk.contains_recursive_proof)
+        {
+            uint256 x0 = proof.public_input_values[vk.recursive_proof_indices[0]]
+            + (proof.public_input_values[vk.recursive_proof_indices[1]] << 68)
+            + (proof.public_input_values[vk.recursive_proof_indices[2]] << 136)
+            + (proof.public_input_values[vk.recursive_proof_indices[3]] << 204);
+            uint256 y0 = proof.public_input_values[vk.recursive_proof_indices[4]]
+            + (proof.public_input_values[vk.recursive_proof_indices[5]] << 68)
+            + (proof.public_input_values[vk.recursive_proof_indices[6]] << 136)
+            + (proof.public_input_values[vk.recursive_proof_indices[7]] << 204);
+            uint256 x1 = proof.public_input_values[vk.recursive_proof_indices[8]]
+            + (proof.public_input_values[vk.recursive_proof_indices[9]] << 68)
+            + (proof.public_input_values[vk.recursive_proof_indices[10]] << 136)
+            + (proof.public_input_values[vk.recursive_proof_indices[11]] << 204);
+            uint256 y1 = proof.public_input_values[vk.recursive_proof_indices[12]]
+            + (proof.public_input_values[vk.recursive_proof_indices[13]] << 68)
+            + (proof.public_input_values[vk.recursive_proof_indices[14]] << 136)
+            + (proof.public_input_values[vk.recursive_proof_indices[15]] << 204);
+            proof.recursive_proof_outputs[0] = PairingsBn254.new_g1(
+                x0, y0
+            );
+            proof.recursive_proof_outputs[1] = PairingsBn254.new_g1(
+                x1, y1
+            );
+        }
         for (uint256 i = 0; i < Types.STATE_WIDTH; ++i) {
             assembly {
                 y := mload(data_ptr)

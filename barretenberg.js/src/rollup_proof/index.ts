@@ -90,6 +90,7 @@ export class RollupProofData {
     public newDataRootsRoot: Buffer,
     public numTxs: number,
     public innerProofData: InnerProofData[],
+    public recursiveProofOutput: Buffer,
   ) {
     const allTxIds = this.innerProofData.map(innerProof => innerProof.getTxId());
     this.rollupHash = createHash('sha256').update(Buffer.concat(allTxIds)).digest();
@@ -108,6 +109,7 @@ export class RollupProofData {
       this.newDataRootsRoot,
       numToUInt32BE(this.numTxs, 32),
       ...this.innerProofData.map(p => p.toBuffer()),
+      this.recursiveProofOutput,
     ]);
   }
 
@@ -149,6 +151,8 @@ export class RollupProofData {
       innerProofData[i] = InnerProofData.fromBuffer(innerData, viewingKeys.slice(i * 2, i * 2 + 2));
     }
 
+    const recursiveStartIndex = RollupProofData.LENGTH_ROLLUP_PUBLIC + numTxs * InnerProofData.LENGTH;
+    const recursiveProofOutput = proofData.slice(recursiveStartIndex, recursiveStartIndex + (16 * 32));
     return new RollupProofData(
       rollupId,
       rollupSize,
@@ -161,6 +165,7 @@ export class RollupProofData {
       newDataRootsRoot,
       numTxs,
       innerProofData,
+      recursiveProofOutput,
     );
   }
 }
