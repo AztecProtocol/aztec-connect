@@ -15,6 +15,7 @@ const {
   API_PREFIX = '',
   INFURA_API_KEY,
   NETWORK,
+  GAS_LIMIT = '7000000',
 } = process.env;
 
 function getEthereumBlockchainConfig() {
@@ -22,12 +23,12 @@ function getEthereumBlockchainConfig() {
     console.log(`Infura network: ${NETWORK}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
     const provider = new ethers.providers.InfuraProvider(NETWORK, INFURA_API_KEY);
-    return { provider, networkOrHost: NETWORK };
+    return { provider, networkOrHost: NETWORK, gasLimit: +GAS_LIMIT };
   } else if (ETHEREUM_HOST && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Ethereum host: ${ETHEREUM_HOST}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
     const provider = new ethers.providers.WebSocketProvider(ETHEREUM_HOST);
-    return { provider, networkOrHost: ETHEREUM_HOST };
+    return { provider, networkOrHost: ETHEREUM_HOST, gasLimit: +GAS_LIMIT };
   }
 }
 

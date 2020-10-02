@@ -16,6 +16,7 @@ export interface EthereumBlockchainConfig {
   signer?: Signer;
   networkOrHost: string;
   console?: boolean;
+  gasLimit: number;
 }
 
 export class EthereumBlockchain extends EventEmitter implements Blockchain {
@@ -159,6 +160,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       formattedSignatures,
       sigIndexes,
       Buffer.concat(viewingKeys),
+      { gasLimit: this.config.gasLimit },
     );
     return Buffer.from(tx.hash.slice(2), 'hex');
   }
