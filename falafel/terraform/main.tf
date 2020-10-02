@@ -173,6 +173,10 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "0x5dBc80672e253fd8DEBE59C5deD82E855BC7d88A"
       },
       {
+        "name": "GAS_LIMIT",
+        "value": "7000000"
+      },
+      {
         "name": "API_PREFIX",
         "value": "/falafel"
       }

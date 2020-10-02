@@ -87,7 +87,8 @@ const Unsupported = () => {
 function ThemedContent({ app }: { app: WebSdk }) {
   const [theme, setTheme] = useState(themes[window.localStorage.getItem('theme') === 'light' ? 'light' : 'dark']);
   const { pathname } = useLocation();
-  const serverUrl = window.location.origin + '/falafel';
+  const serverUrl =
+    process.env.NODE_ENV === 'production' ? 'https://api.aztec.network/falafel' : window.location.origin + '/falafel';
 
   return (
     <ThemeContext.Provider value={theme}>
@@ -164,7 +165,7 @@ function LandingPage({ app }: { app: WebSdk }) {
 }
 
 async function main() {
-  if (!debug.enabled('bb:')) {
+  if (!debug.enabled('bb:') && process.env.NODE_ENV !== 'production') {
     debug.enable('bb:*');
     location.reload();
   }

@@ -21,5 +21,5 @@ describe('Verifier', () => {
     const tx = await verifier.verify(proof, rollupSize);
     const receipt = await tx.wait();
     expect(receipt.status).to.equal(1);
-  }).timeout(60000);
+  }).timeout(120000);
 });

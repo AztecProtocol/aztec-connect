@@ -225,7 +225,11 @@ export class TerminalHandler {
   private async init(server: string) {
     this.app.removeAllListeners();
     this.app.on(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
-    await this.app.init(server || window.location.origin + '/falafel');
+    const serverUrl =
+      server || process.env.NODE_ENV === 'production'
+        ? 'https://api.aztec.network/falafel'
+        : window.location.origin + '/falafel';
+    await this.app.init(serverUrl);
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
 
     const sdk = this.app.getSdk()!;
