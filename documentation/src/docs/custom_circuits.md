@@ -17,4 +17,4 @@ The rollup architecture has been designed to support custom circuits written in 
 
 ```
 
-Aztec is currently working with leading protocols to develop scalable and private versions of DeFi, if you would like to work with us, please reach out to joe@aztecprotocol.com.
+Aztec is currently working to develop scalable and private versions of DeFi, if you require custom circuits for your layer 2 intergation and would like to work with us, please reach out to joe@aztecprotocol.com to be added to the Noir developer preview.

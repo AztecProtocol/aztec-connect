@@ -1,4 +1,4 @@
-This method sends funds publicaly on layer 1.
+This method sends funds publicly on layer 1.
 
 @spec sdk.ts publicTransfer
 

@@ -1,4 +1,4 @@
-Aztec's SDK is the gateway for developers to access the Aztec network, and benefit from low gas fees and privacy on Ethereum. The SDK connects to our ZkRollup service and can be integrated with one line of code.
+Aztec's SDK is the gateway for developers to access the Aztec network. The SDK let's end users benifit from low gas fees and privacy on Ethereum. The SDK connects to our ZkRollup service and can be integrated with one line of code.
 
 The SDK is designed to abstract away the complexities of Zero-knowledge proofs from the developer and end users. It provides a simple API for creating accounts, depositing and withdrawing tokens anonymously. The core transfer inside the SDK is private by default.
 
@@ -53,7 +53,9 @@ module.exports = {
 
 ## Custom Proofs & Transactions
 
-The SDK will be upgraded in Q4 to support custom proofs. Developers can write their own Stealth Contracts using our programming language Noir. The SDK handles compilation, proovers and calling of custom circuits. To join the alpha test list or for more information on custom proofs / cicuits please contact us here.
+The SDK will be upgraded in Q1 2020 to support custom proofs, that can interact with Layer 1. Developers can write their own private contracts using our programming language Noir. The SDK handles the compilation and generating proofs as well as sending txs to the rollup provider To join the alpha test list or for more information on custom proofs / cicuits please contact us.
+
+- **[Custom Circuits](/#/Custom%20Circuits)**
 
 ## Gas Costs & API Keys
 

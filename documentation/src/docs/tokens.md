@@ -1,4 +1,4 @@
-The SDK supports all major ERC20 tokens as well as native ETH transfers. The test network uses a mintable ERC20 Token `TestDai`. The mainnet launch will include all major ERC20 tokes.
+The SDK supports all major ERC20 tokens as well as native ETH transfers. The test network uses a mintable ERC20 Token `TestDai`. The mainnet launch will include all major ERC20 tokens.
 
 ## The Aztec privacy shield
 

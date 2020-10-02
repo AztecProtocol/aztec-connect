@@ -1,4 +1,4 @@
-This method allows a user to add a signing key to their account. This is usefull for multiple devices, or for device recovery. Today all signing keys are on the Grumpkin Elliptic curve. In the next 6 months we will support SCEPK256K1 signatures and Curve25519 signatures.
+This method allows a user to add a signing key to their account. This is usefull for multiple devices, or for device recovery. Today all signing keys are on the `Grumpkin` Elliptic curve. In the next 3 months we will support `SCEPK256K1` signatures and `Curve25519` signatures.
 
 @spec sdk.ts addSigningKey
 
