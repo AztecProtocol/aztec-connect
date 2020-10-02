@@ -166,6 +166,18 @@ jobs:
           working_directory: documentation
           command: build documentation:latest
 
+  website:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker
+      - run:
+          name: 'Build and test'
+          working_directory: website
+          command: build website:latest
+
   end-to-end:
     machine:
       image: ubuntu-1604:201903-01
@@ -238,6 +250,10 @@ jobs:
           name: 'documentation'
           working_directory: documentation
           command: deploy_s3 documentation:latest
+      - run:
+          name: 'website'
+          working_directory: website
+          command: deploy_s3 website:latest
 
 workflows:
   build:
