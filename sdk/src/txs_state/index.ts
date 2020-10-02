@@ -57,12 +57,12 @@ export class TxsState extends EventEmitter {
     this.running = false;
   }
 
-  public getLatestRollups() {
-    return this.rollups;
+  public async getLatestRollups(count: number) {
+    return this.explorer.getLatestRollups(count);
   }
 
-  public getLatestTxs() {
-    return this.txs;
+  public async getLatestTxs(count: number) {
+    return this.explorer.getLatestTxs(count);
   }
 
   public async getRollup(id: number) {

@@ -686,12 +686,12 @@ export class CoreSdk extends EventEmitter {
     return userState.getBalance();
   }
 
-  public async getLatestRollups() {
-    return this.txsState.getLatestRollups();
+  public async getLatestRollups(count: number) {
+    return this.txsState.getLatestRollups(count);
   }
 
-  public async getLatestTxs() {
-    return this.txsState.getLatestTxs();
+  public async getLatestTxs(count: number) {
+    return this.txsState.getLatestTxs(count);
   }
 
   public async getRollup(rollupId: number) {

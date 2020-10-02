@@ -319,11 +319,11 @@ export class WalletSdk extends EventEmitter {
   }
 
   public async getLatestRollups(count: number) {
-    return this.core.getLatestRollups();
+    return this.core.getLatestRollups(count);
   }
 
   public async getLatestTxs(count: number) {
-    return this.core.getLatestTxs();
+    return this.core.getLatestTxs(count);
   }
 
   public async getRollup(rollupId: number) {
