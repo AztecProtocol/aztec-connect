@@ -62,21 +62,26 @@ EOF
 
   website {
     index_document = "index.html"
-    error_document = "error.html"
+    error_document = "index.html"
   }
 }
 
 # AWS Cloudfront for caching
 resource "aws_cloudfront_distribution" "documentation_distribution" {
   origin {
-    domain_name = aws_s3_bucket.documentation.bucket_regional_domain_name
+    domain_name = aws_s3_bucket.documentation.website_endpoint
     origin_id   = "website"
+    custom_origin_config {
+      http_port              = "80"
+      https_port             = "443"
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1", "TLSv1.1", "TLSv1.2"]
+    }
   }
 
   enabled             = true
   is_ipv6_enabled     = true
   comment             = "Managed by Terraform"
-  default_root_object = "index.html"
 
   aliases = ["developers.aztec.network"]
 
