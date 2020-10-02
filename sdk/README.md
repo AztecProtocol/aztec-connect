@@ -18,4 +18,4 @@ yarn add @aztec/sdk
 
 ## Docs
 
-Please see the documentation site [here](https://developers.aztecprotocol.com).
+Please see the documentation site [here](https://developers.aztec.network/).
