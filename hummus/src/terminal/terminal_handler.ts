@@ -85,57 +85,70 @@ export class TerminalHandler {
    * Called after the app has been initialized.
    */
   private registerHandlers() {
-    // If the app transitions to initializing state, lock the terminal until it is initialized again.
-    this.app.on(AppEvent.UPDATED_INIT_STATE, (initStatus: AppInitStatus, previousStatus: AppInitStatus) => {
-      if (initStatus.initState === AppInitState.INITIALIZING) {
-        if (
-          previousStatus.initAction === AppInitAction.LINK_AZTEC_ACCOUNT &&
-          initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT
-        ) {
-          this.app.destroy();
-        } else if (initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT) {
-          this.app.linkAccount();
-        } else {
-          this.controlQueue.put(async () => {
-            this.printQueue.put(TermControl.LOCK);
-            const msg = this.getInitString(initStatus);
-            if (msg) {
-              this.printQueue.put('\r' + msg + '\n');
-            }
-          });
-        }
-      }
-      if (initStatus.initState === AppInitState.INITIALIZED) {
-        this.controlQueue.put(async () => {
-          this.printQueue.put(TermControl.LOCK);
-          this.printQueue.put(`\ruser: ${initStatus.account!.toString().slice(0, 12)}...\n`);
-          await this.balance();
-          this.printQueue.put(TermControl.PROMPT);
-        });
-      }
-      if (initStatus.initState === AppInitState.UNINITIALIZED) {
-        this.controlQueue.put(async () => {
-          this.printQueue.put(TermControl.LOCK);
-          this.printQueue.put('logged out. reinitialize.\n');
-          this.printQueue.put(TermControl.PROMPT);
-        });
-      }
-    });
-
-    // If the users balance updates, print an update.
-    this.app.on(SdkEvent.UPDATED_USER_STATE, (account: EthAddress, balance: bigint, diff: bigint, assetId: AssetId) => {
-      const user = this.app.getUser();
-      const userIsSynced = user.getUserData().syncedToRollup === this.app.getSdk().getLocalStatus().syncedToRollup;
-      if (user.getUserData().ethAddress.equals(account) && diff && userIsSynced) {
-        const userAsset = user.getAsset(assetId);
-        this.printQueue.put(
-          `balance updated: ${userAsset.fromErc20Units(balance)} (${diff >= 0 ? '+' : ''}${userAsset.fromErc20Units(
-            diff,
-          )})\n`,
-        );
-      }
-    });
+    this.app.on(AppEvent.UPDATED_INIT_STATE, this.handleInitStateChange);
+    this.app.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
   }
+
+  private unregisterHandlers() {
+    this.app.off(AppEvent.UPDATED_INIT_STATE, this.handleInitStateChange);
+    this.app.off(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
+  }
+
+  /**
+   * If the app transitions to initializing state, lock the terminal until it is initialized again.
+   */
+  private handleInitStateChange = (initStatus: AppInitStatus, previousStatus: AppInitStatus) => {
+    if (initStatus.initState === AppInitState.INITIALIZING) {
+      if (
+        previousStatus.initAction === AppInitAction.LINK_AZTEC_ACCOUNT &&
+        initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT
+      ) {
+        this.app.destroy();
+      } else if (initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT) {
+        this.app.linkAccount();
+      } else {
+        this.controlQueue.put(async () => {
+          this.printQueue.put(TermControl.LOCK);
+          const msg = this.getInitString(initStatus);
+          if (msg) {
+            this.printQueue.put('\r' + msg + '\n');
+          }
+        });
+      }
+    }
+    if (initStatus.initState === AppInitState.INITIALIZED) {
+      this.controlQueue.put(async () => {
+        this.printQueue.put(TermControl.LOCK);
+        this.printQueue.put(`\ruser: ${initStatus.account!.toString().slice(0, 12)}...\n`);
+        await this.balance();
+        this.printQueue.put(TermControl.PROMPT);
+      });
+    }
+    if (initStatus.initState === AppInitState.UNINITIALIZED) {
+      this.controlQueue.put(async () => {
+        this.printQueue.put(TermControl.LOCK);
+        this.printQueue.put('\rlogged out. reinitialize.\n');
+        this.printQueue.put(TermControl.PROMPT);
+        this.unregisterHandlers();
+      });
+    }
+  };
+
+  /**
+   * If the users balance updates, print an update.
+   */
+  private handleUserStateChange = (account: EthAddress, balance: bigint, diff: bigint, assetId: AssetId) => {
+    const user = this.app.getUser();
+    const userIsSynced = user.getUserData().syncedToRollup === this.app.getSdk().getLocalStatus().syncedToRollup;
+    if (user.getUserData().ethAddress.equals(account) && diff && userIsSynced) {
+      const userAsset = user.getAsset(assetId);
+      this.printQueue.put(
+        `balance updated: ${userAsset.fromErc20Units(balance)} (${diff >= 0 ? '+' : ''}${userAsset.fromErc20Units(
+          diff,
+        )})\n`,
+      );
+    }
+  };
 
   private getInitString({ initAction, network, message }: AppInitStatus) {
     switch (initAction) {
@@ -154,7 +167,7 @@ export class TerminalHandler {
     this.terminal.stop();
     this.controlQueue.cancel();
     this.printQueue.cancel();
-    this.app.removeAllListeners();
+    this.unregisterHandlers();
   }
 
   private isTermControl(toBeDetermined: any): toBeDetermined is TermControl {
@@ -223,12 +236,9 @@ export class TerminalHandler {
   }
 
   private async init(server: string) {
-    this.app.removeAllListeners();
     this.app.on(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
     const serverUrl =
-      server || process.env.NODE_ENV === 'production'
-        ? 'https://api.aztec.network/falafel'
-        : window.location.origin + '/falafel';
+      server || process.env.NODE_ENV === 'production' ? 'https://api.aztec.network/falafel' : 'http://localhost:8081';
     await this.app.init(serverUrl);
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
 

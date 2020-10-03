@@ -88,7 +88,7 @@ function ThemedContent({ app }: { app: WebSdk }) {
   const [theme, setTheme] = useState(themes[window.localStorage.getItem('theme') === 'light' ? 'light' : 'dark']);
   const { pathname } = useLocation();
   const serverUrl =
-    process.env.NODE_ENV === 'production' ? 'https://api.aztec.network/falafel' : window.location.origin + '/falafel';
+    process.env.NODE_ENV === 'production' ? 'https://api.aztec.network/falafel' : 'http://localhost:8081';
 
   return (
     <ThemeContext.Provider value={theme}>

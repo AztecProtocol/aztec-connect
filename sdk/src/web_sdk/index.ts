@@ -6,7 +6,7 @@ import { EthereumSdk } from '../ethereum_sdk';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { chainIdToNetwork, EthProvider, EthProviderEvent } from './eth_provider';
 
-const debug = createDebug('bb:app');
+const debug = createDebug('bb:websdk');
 
 export enum AppInitState {
   UNINITIALIZED = 'UNINITIALIZED',
@@ -192,6 +192,7 @@ export class WebSdk extends EventEmitter {
       try {
         await this.sdk.addUser(account);
       } catch (e) {
+        debug(e);
         this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT);
         return;
       }

@@ -32,7 +32,8 @@ export class EthereumSdk extends EventEmitter {
   private walletSdk!: WalletSdk;
   private web3Provider: Web3Provider;
   private localAccounts: DbAccount[] = [];
-  private pausedEvent: Map<SdkEvent, any[][]> = new Map();
+  private pauseWalletEvents = false;
+  private pausedEvents: IArguments[] = [];
 
   constructor(ethereumProvider: EthereumProvider) {
     super();
@@ -56,9 +57,8 @@ export class EthereumSdk extends EventEmitter {
   }
 
   private forwardEvent(event: SdkEvent, args: any[]) {
-    if (this.pausedEvent.has(event)) {
-      const queued = this.pausedEvent.get(event);
-      this.pausedEvent.set(event, [...queued!, args]);
+    if (this.pauseWalletEvents) {
+      this.pausedEvents.push(arguments);
       return;
     }
 
@@ -74,14 +74,9 @@ export class EthereumSdk extends EventEmitter {
     }
   }
 
-  private pauseEvent(event: SdkEvent) {
-    this.pausedEvent.set(event, []);
-  }
-
-  private resumeEvent(event: SdkEvent) {
-    const queued = this.pausedEvent.get(event);
-    this.pausedEvent.delete(event);
-    queued?.forEach(args => this.forwardEvent(event, args));
+  private resumeEvents() {
+    this.pauseWalletEvents = false;
+    this.pausedEvents.forEach(args => this.forwardEvent.apply(this, args as any));
   }
 
   public async init(serverUrl: string, sdkOptions?: SdkOptions) {
@@ -330,16 +325,14 @@ export class EthereumSdk extends EventEmitter {
   public async addUser(ethAddress: EthAddress) {
     const signer = new Web3Signer(this.web3Provider, ethAddress);
     const privateKey = await deriveGrumpkinPrivateKey(signer);
-    this.pauseEvent(SdkEvent.UPDATED_USERS);
+    this.pauseWalletEvents = true;
     try {
       const coreUser = await this.walletSdk.addUser(privateKey);
       await this.db.addAccount({ ethAddress, userId: coreUser.id });
       await this.updateLocalAccounts();
-      this.resumeEvent(SdkEvent.UPDATED_USERS);
       return new EthereumSdkUser(ethAddress, this);
-    } catch (err) {
-      this.resumeEvent(SdkEvent.UPDATED_USERS);
-      throw err;
+    } finally {
+      this.resumeEvents();
     }
   }
 
