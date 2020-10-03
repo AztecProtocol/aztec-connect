@@ -11,7 +11,7 @@ module.exports = merge(common, {
     hot: true,
     historyApiFallback: true,
     proxy: {
-      '/api': {
+      '/falafel': {
         target: 'http://localhost:8081',
       },
     },

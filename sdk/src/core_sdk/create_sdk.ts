@@ -109,8 +109,14 @@ export async function createSdk(hostStr: string, options: SdkOptions = {}, ether
 
     sdk.on(CoreSdkEvent.UPDATED_WORLD_STATE, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_WORLD_STATE }));
     sdk.on(CoreSdkEvent.UPDATED_USERS, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_USERS }));
-    sdk.on(CoreSdkEvent.UPDATED_USER_STATE, (userId: Buffer) =>
-      channel.postMessage({ name: CoreSdkEvent.UPDATED_USER_STATE, userId: userId.toString('hex') }),
+    sdk.on(CoreSdkEvent.UPDATED_USER_STATE, (userId: Buffer, balanceAfter: bigint, diff: bigint, assetId: number) =>
+      channel.postMessage({
+        name: CoreSdkEvent.UPDATED_USER_STATE,
+        userId: userId.toString('hex'),
+        balanceAfter: balanceAfter.toString(),
+        diff: diff.toString(),
+        assetId,
+      }),
     );
     sdk.on(CoreSdkEvent.CLEAR_DATA, () => channel.postMessage({ name: CoreSdkEvent.CLEAR_DATA }));
 
@@ -126,7 +132,12 @@ export async function createSdk(hostStr: string, options: SdkOptions = {}, ether
           sdk.initUserStates();
           break;
         case CoreSdkEvent.UPDATED_USER_STATE:
-          sdk.notifyUserStateUpdated(Buffer.from(msg.userId, 'hex'));
+          sdk.notifyUserStateUpdated(
+            Buffer.from(msg.userId, 'hex'),
+            BigInt(msg.balanceAfter),
+            BigInt(msg.diff),
+            msg.assetId,
+          );
           break;
         case CoreSdkEvent.CLEAR_DATA:
           sdk.notifiedClearData();

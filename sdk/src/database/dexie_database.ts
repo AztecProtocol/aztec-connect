@@ -265,6 +265,8 @@ export class DexieDatabase implements Database {
   async resetUsers() {
     await this.note.clear();
     await this.userTx.clear();
+    await this.key.clear();
+    await this.alias.clear();
     await this.user.toCollection().modify({ syncedToBlock: -1, syncedToRollup: -1 });
   }
 
