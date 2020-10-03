@@ -1,17 +1,18 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { getProviderStatus, TxHash } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { SdkOptions } from '../core_sdk/create_sdk';
+import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
-import { AssetId, SdkEvent, SdkInitState } from '../sdk';
+import { AssetId, SdkEvent } from '../sdk';
 import { Web3Signer } from '../signer/web3_signer';
 import { Signer } from '../signer';
 import { deriveGrumpkinPrivateKey, RecoveryPayload, UserData } from '../user';
 import { WalletSdk } from '../wallet_sdk';
 import { Database, DbAccount } from './database';
 import { EthereumSdkUser } from './ethereum_sdk_user';
+import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';
 
 export * from './ethereum_sdk_user';
 export * from './ethereum_sdk_user_asset';
@@ -27,71 +28,46 @@ const toEthUserData = (ethAddress: EthAddress, userData: UserData): EthUserData 
   ethAddress,
 });
 
+export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl: string, sdkOptions: SdkOptions = {}) {
+  const status = await getProviderStatus(serverUrl);
+  const core = await createSdk(serverUrl, sdkOptions, status, ethereumProvider);
+  const db = new Database();
+  const { rollupContractAddress, tokenContractAddresses, chainId, networkOrHost } = status;
+
+  // Set erase flag if requested or contract changed.
+  if (sdkOptions.clearDb || !(await core.getRollupContractAddress())?.equals(rollupContractAddress)) {
+    debug('erasing database');
+    await db.clear();
+    await core.eraseDb();
+  }
+
+  const web3Provider = new Web3Provider(ethereumProvider);
+  const { chainId: providerChainId } = await web3Provider.getNetwork();
+  if (chainId !== providerChainId) {
+    throw new Error(`Provider chainId ${providerChainId} does not match rollup provider chainId ${chainId}.`);
+  }
+
+  const tokenContracts: TokenContract[] =
+    networkOrHost !== 'development'
+      ? tokenContractAddresses.map(a => new Web3TokenContract(this.provider, a, rollupContractAddress, chainId))
+      : [new MockTokenContract()];
+  await Promise.all(tokenContracts.map(tc => tc.init()));
+
+  const walletSdk = new WalletSdk(core, tokenContracts);
+  return new EthereumSdk(web3Provider, walletSdk, db);
+}
+
 export class EthereumSdk extends EventEmitter {
-  private db!: Database;
-  private walletSdk!: WalletSdk;
-  private web3Provider: Web3Provider;
   private localAccounts: DbAccount[] = [];
   private pauseWalletEvents = false;
   private pausedEvents: IArguments[] = [];
 
-  constructor(ethereumProvider: EthereumProvider) {
+  constructor(private web3Provider: Web3Provider, private walletSdk: WalletSdk, private db: Database) {
     super();
-    this.web3Provider = new Web3Provider(ethereumProvider);
-    this.walletSdk = new WalletSdk(ethereumProvider);
   }
 
-  private async updateLocalAccounts() {
-    this.localAccounts = await this.db.getAccounts();
-  }
-
-  private getUserIdByEthAddress(ethAddress: EthAddress) {
-    const ethAddressBuf = ethAddress.toBuffer();
-    const account = this.localAccounts.find(a => a.ethAddress.toBuffer().equals(ethAddressBuf));
-    return account?.userId;
-  }
-
-  private getEthAddressByUserId(userId: Buffer) {
-    const account = this.localAccounts.find(a => a.userId.equals(userId));
-    return account?.ethAddress;
-  }
-
-  private forwardEvent(event: SdkEvent, args: any[]) {
-    if (this.pauseWalletEvents) {
-      this.pausedEvents.push(arguments);
-      return;
-    }
-
-    switch (event) {
-      case SdkEvent.UPDATED_INIT_STATE: {
-        const [initState] = args[0] as SdkInitState;
-        if (initState !== SdkInitState.INITIALIZED) {
-          this.emit(event, ...args);
-        }
-        break;
-      }
-      case SdkEvent.UPDATED_USER_STATE: {
-        const [userId, ...rest] = args;
-        const ethAddress = this.getEthAddressByUserId(userId);
-        this.emit(event, ethAddress, ...rest);
-        break;
-      }
-      default:
-        this.emit(event, ...args);
-    }
-  }
-
-  private resumeEvents() {
-    this.pauseWalletEvents = false;
-    this.pausedEvents.forEach(args => this.forwardEvent.apply(this, args as any));
-  }
-
-  public async init(serverUrl: string, sdkOptions?: SdkOptions) {
-    if (sdkOptions?.clearDb) {
-      await Database.clear();
-    }
-
-    this.db = new Database();
+  public async init() {
+    await this.updateLocalAccounts();
 
     // Forward all walletSdk events.
     for (const e in SdkEvent) {
@@ -99,22 +75,7 @@ export class EthereumSdk extends EventEmitter {
       this.walletSdk.on(event, (...args: any[]) => this.forwardEvent(event, args));
     }
 
-    await this.walletSdk.init(serverUrl, sdkOptions);
-
-    const { rollupContractAddress } = await this.getRemoteStatus();
-    await this.checkDataSource(rollupContractAddress);
-
-    await this.updateLocalAccounts();
-
-    this.emit(SdkEvent.UPDATED_INIT_STATE, SdkInitState.INITIALIZED);
-  }
-
-  private async checkDataSource(rollupContractAddress: EthAddress) {
-    const prevAddress = await this.db.getValue('rollupContractAddress');
-    if (prevAddress && !prevAddress.equals(rollupContractAddress.toBuffer())) {
-      await this.db.clear();
-    }
-    await this.db.addValue('rollupContractAddress', rollupContractAddress.toBuffer());
+    await this.walletSdk.init();
   }
 
   public async initUserStates() {
@@ -135,8 +96,8 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.notifiedClearData();
   }
 
-  public getConfig() {
-    return this.walletSdk.getConfig();
+  public getSdkOptions() {
+    return this.walletSdk.getSdkOptions();
   }
 
   public getLocalStatus() {
@@ -423,5 +384,43 @@ export class EthereumSdk extends EventEmitter {
 
   public stopTrackingGlobalState() {
     return this.walletSdk.stopTrackingGlobalState();
+  }
+
+  private async updateLocalAccounts() {
+    this.localAccounts = await this.db.getAccounts();
+  }
+
+  private getUserIdByEthAddress(ethAddress: EthAddress) {
+    const ethAddressBuf = ethAddress.toBuffer();
+    const account = this.localAccounts.find(a => a.ethAddress.toBuffer().equals(ethAddressBuf));
+    return account?.userId;
+  }
+
+  private getEthAddressByUserId(userId: Buffer) {
+    const account = this.localAccounts.find(a => a.userId.equals(userId));
+    return account?.ethAddress;
+  }
+
+  private forwardEvent(event: SdkEvent, args: any[]) {
+    if (this.pauseWalletEvents) {
+      this.pausedEvents.push(arguments);
+      return;
+    }
+
+    switch (event) {
+      case SdkEvent.UPDATED_USER_STATE: {
+        const [userId, ...rest] = args;
+        const ethAddress = this.getEthAddressByUserId(userId);
+        this.emit(event, ethAddress, ...rest);
+        break;
+      }
+      default:
+        this.emit(event, ...args);
+    }
+  }
+
+  private resumeEvents() {
+    this.pauseWalletEvents = false;
+    this.pausedEvents.forEach(args => this.forwardEvent.apply(this, args as any));
   }
 }

@@ -1,4 +1,4 @@
-import { ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
+import { RollupProviderStatus, ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
 import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import createDebug from 'debug';
@@ -31,32 +31,34 @@ export type SdkOptions = {
   debug?: boolean;
 } & CoreSdkOptions;
 
-async function sdkFactory(hostStr: string, options: SdkOptions, ethereumProvider?: EthereumProvider) {
+async function sdkFactory(
+  hostStr: string,
+  options: SdkOptions,
+  status: RollupProviderStatus,
+  ethereumProvider: EthereumProvider,
+) {
   if (options.debug) {
     createDebug.enable('bb:*');
   }
 
   const host = new URL(hostStr);
   const leveldb = getLevelDb();
+  const db = new DexieDatabase();
 
   if (options.clearDb) {
     await leveldb.clear();
-    await DexieDatabase.clear();
+    await db.clear();
   }
 
-  const db = new DexieDatabase();
+  const escapeHatchMode = status.serviceName === 'sriracha';
 
-  if (!options.escapeHatchMode) {
+  if (!escapeHatchMode) {
     const rollupProvider = new ServerRollupProvider(host);
     const rollupProviderExplorer = new ServerRollupProviderExplorer(host);
-    return new CoreSdk(leveldb, db, rollupProvider, rollupProviderExplorer, undefined, options);
+    return new CoreSdk(leveldb, db, rollupProvider, rollupProviderExplorer, undefined, options, escapeHatchMode);
   } else {
-    if (!ethereumProvider) {
-      throw new Error('Please provide an ethereum provider.');
-    }
     const srirachaProvider = new SrirachaProvider(host);
     const provider = new ethers.providers.Web3Provider(ethereumProvider);
-    const { rollupContractAddress } = await srirachaProvider.status();
     const config = {
       provider,
       signer: provider.getSigner(0),
@@ -64,8 +66,8 @@ async function sdkFactory(hostStr: string, options: SdkOptions, ethereumProvider
       console: false,
       gasLimit: 7000000,
     };
-    const blockchain = await EthereumBlockchain.new(config, rollupContractAddress);
-    return new CoreSdk(leveldb, db, blockchain, undefined, srirachaProvider, options);
+    const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress);
+    return new CoreSdk(leveldb, db, blockchain, undefined, srirachaProvider, options, escapeHatchMode);
   }
 }
 
@@ -74,10 +76,15 @@ async function sdkFactory(hostStr: string, options: SdkOptions, ethereumProvider
  * share events and synchronise instances. Only one instance will be the "leader" and that instance will receive
  * blocks from the block source and update the (shared) world state.
  */
-export async function createSdk(hostStr: string, options: SdkOptions = {}, ethereumProvider?: EthereumProvider) {
+export async function createSdk(
+  hostStr: string,
+  options: SdkOptions = {},
+  status: RollupProviderStatus,
+  ethereumProvider: EthereumProvider,
+) {
   options = { syncInstances: true, saveProvingKey: true, ...options };
 
-  const sdk = await sdkFactory(hostStr, options, ethereumProvider);
+  const sdk = await sdkFactory(hostStr, options, status, ethereumProvider);
 
   if (!options.syncInstances) {
     // We're not going to sync across multiple instances. We should start recieving blocks once initialized.
