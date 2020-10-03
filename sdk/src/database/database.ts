@@ -11,6 +11,7 @@ export interface SigningKey {
 
 export interface Database {
   close(): Promise<void>;
+  clear(): Promise<void>;
 
   addNote(note: Note): Promise<void>;
   getNote(treeIndex: number): Promise<Note | undefined>;

@@ -29,9 +29,10 @@ export class Database {
     this.user.mapToClass(DexieAccount);
   }
 
-  static async clear() {
-    const db = new Dexie('aztec2-sdk-eth');
-    await db.delete();
+  async clear() {
+    for (const table of this.db.tables) {
+      await table.clear();
+    }
   }
 
   close() {

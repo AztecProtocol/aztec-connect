@@ -1,7 +1,7 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Signature } from 'barretenberg/client_proofs/signature';
-import { Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
+import { getProviderStatus, Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -19,6 +19,36 @@ export * from './wallet_sdk_user_asset';
 
 const debug = createDebug('bb:wallet_sdk');
 
+export async function createWalletSdk(
+  ethereumProvider: EthereumProvider,
+  serverUrl: string,
+  sdkOptions: SdkOptions = {},
+) {
+  const status = await getProviderStatus(serverUrl);
+  const core = await createSdk(serverUrl, sdkOptions, status, ethereumProvider);
+  const { rollupContractAddress, tokenContractAddresses, chainId, networkOrHost } = status;
+
+  // Set erase flag if requested or contract changed.
+  if (sdkOptions.clearDb || !(await core.getRollupContractAddress())?.equals(rollupContractAddress)) {
+    debug('erasing database');
+    await core.eraseDb();
+  }
+
+  const web3Provider = new Web3Provider(ethereumProvider);
+  const { chainId: providerChainId } = await web3Provider.getNetwork();
+  if (chainId !== providerChainId) {
+    throw new Error(`Provider chainId ${providerChainId} does not match rollup provider chainId ${chainId}.`);
+  }
+
+  const tokenContracts: TokenContract[] =
+    networkOrHost !== 'development'
+      ? tokenContractAddresses.map(a => new Web3TokenContract(web3Provider, a, rollupContractAddress, chainId))
+      : [new MockTokenContract()];
+  await Promise.all(tokenContracts.map(tc => tc.init()));
+
+  return new WalletSdk(core, tokenContracts);
+}
+
 export interface WalletSdk {
   on(event: SdkEvent.UPDATED_ACTION_STATE, listener: (actionState: ActionState) => void): this;
   on(event: SdkEvent.UPDATED_EXPLORER_ROLLUPS, listener: (rollups: Rollup[]) => void): this;
@@ -30,36 +60,16 @@ export interface WalletSdk {
 }
 
 export class WalletSdk extends EventEmitter {
-  private core!: CoreSdk;
-  private provider!: Web3Provider;
-  private tokenContracts: TokenContract[] = [];
-
-  constructor(private ethereumProvider: EthereumProvider) {
+  constructor(private core: CoreSdk, private tokenContracts: TokenContract[]) {
     super();
-    this.provider = new Web3Provider(ethereumProvider);
   }
 
-  public async init(serverUrl: string, sdkOptions?: SdkOptions) {
-    this.core = await createSdk(serverUrl, sdkOptions, this.ethereumProvider);
-
+  public async init() {
     // Forward all core sdk events.
     for (const e in SdkEvent) {
       const event = (SdkEvent as any)[e];
       this.core.on(event, (...args: any[]) => this.emit(event, ...args));
     }
-
-    const { chainId, networkOrHost, rollupContractAddress, tokenContractAddresses } = await this.core.getRemoteStatus();
-
-    const { chainId: ethProviderChainId } = await this.provider.getNetwork();
-    if (chainId !== ethProviderChainId) {
-      throw new Error(`Provider chainId ${ethProviderChainId} does not match rollup provider chainId ${chainId}.`);
-    }
-
-    this.tokenContracts[AssetId.DAI] =
-      networkOrHost !== 'development'
-        ? new Web3TokenContract(this.provider, tokenContractAddresses[AssetId.DAI], rollupContractAddress, chainId)
-        : new MockTokenContract();
-    await Promise.all(this.tokenContracts.map(tc => tc.init()));
 
     await this.core.init();
   }
@@ -68,8 +78,8 @@ export class WalletSdk extends EventEmitter {
     return this.core.initUserStates();
   }
 
-  public getConfig() {
-    return this.core.getConfig();
+  public isEscapeHatchMode() {
+    return this.core.isEscapeHatchMode();
   }
 
   public async destroy() {

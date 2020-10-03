@@ -2,7 +2,8 @@ import { EthAddress } from 'barretenberg/address';
 import { getProviderStatus } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { EthereumSdk } from '../ethereum_sdk';
+import { SdkOptions } from '../core_sdk/create_sdk';
+import { createEthSdk, EthereumSdk } from '../ethereum_sdk';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { chainIdToNetwork, EthProvider, EthProviderEvent } from './eth_provider';
 
@@ -57,22 +58,21 @@ export class WebSdk extends EventEmitter {
   private ethProvider!: EthProvider;
   private initStatus: AppInitStatus = { initState: AppInitState.UNINITIALIZED };
 
-  constructor(private provider: any) {
+  constructor(private ethereumProvider: any) {
     super();
-    this.sdk = new EthereumSdk(provider);
   }
 
-  public async init(serverBaseUrl: string) {
+  public async init(serverUrl: string, sdkOptions: SdkOptions = {}) {
     debug('initializing app...');
 
     try {
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_PROVIDER_ACCOUNT);
 
-      this.ethProvider = new EthProvider(this.provider);
+      this.ethProvider = new EthProvider(this.ethereumProvider);
       await this.ethProvider.init();
 
       // If our network doesn't match that of the rollup provider, request it be changed until it does.
-      const { chainId: rollupProviderChainId, serviceName } = await getProviderStatus(serverBaseUrl);
+      const { chainId: rollupProviderChainId, serviceName } = await getProviderStatus(serverUrl);
       this.initStatus.network = chainIdToNetwork(rollupProviderChainId);
       if (rollupProviderChainId !== this.ethProvider.getChainId()) {
         this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.CHANGE_NETWORK);
@@ -80,6 +80,8 @@ export class WebSdk extends EventEmitter {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
+
+      this.sdk = await createEthSdk(this.ethereumProvider, serverUrl, sdkOptions);
 
       // Forward all sdk events. This allows subscribing to the events on the App, before we have called init().
       for (const e in SdkEvent) {
@@ -94,7 +96,7 @@ export class WebSdk extends EventEmitter {
         }
       });
 
-      await this.sdk.init(serverBaseUrl, { escapeHatchMode: serviceName === 'sriracha' });
+      await this.sdk.init();
 
       // Link account. Will be INITIALZED once complete.
       await this.initLinkAccount();
@@ -202,7 +204,7 @@ export class WebSdk extends EventEmitter {
 
   public async destroy() {
     debug('destroying app...');
-    await this.sdk.destroy();
+    await this.sdk?.destroy();
     this.ethProvider?.destroy();
     this.initStatus.account === undefined;
     this.updateInitStatus(AppInitState.UNINITIALIZED);
