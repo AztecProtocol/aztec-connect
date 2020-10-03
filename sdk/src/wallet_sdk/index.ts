@@ -42,7 +42,7 @@ export async function createWalletSdk(
 
   const tokenContracts: TokenContract[] =
     networkOrHost !== 'development'
-      ? tokenContractAddresses.map(a => new Web3TokenContract(this.provider, a, rollupContractAddress, chainId))
+      ? tokenContractAddresses.map(a => new Web3TokenContract(web3Provider, a, rollupContractAddress, chainId))
       : [new MockTokenContract()];
   await Promise.all(tokenContracts.map(tc => tc.init()));
 
@@ -78,8 +78,8 @@ export class WalletSdk extends EventEmitter {
     return this.core.initUserStates();
   }
 
-  public getSdkOptions() {
-    return this.core.getSdkOptions();
+  public isEscapeHatchMode() {
+    return this.core.isEscapeHatchMode();
   }
 
   public async destroy() {

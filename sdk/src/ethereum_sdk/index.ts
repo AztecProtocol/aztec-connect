@@ -49,7 +49,7 @@ export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl
 
   const tokenContracts: TokenContract[] =
     networkOrHost !== 'development'
-      ? tokenContractAddresses.map(a => new Web3TokenContract(this.provider, a, rollupContractAddress, chainId))
+      ? tokenContractAddresses.map(a => new Web3TokenContract(web3Provider, a, rollupContractAddress, chainId))
       : [new MockTokenContract()];
   await Promise.all(tokenContracts.map(tc => tc.init()));
 
@@ -96,8 +96,8 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.notifiedClearData();
   }
 
-  public getSdkOptions() {
-    return this.walletSdk.getSdkOptions();
+  public isEscapeHatchMode() {
+    return this.walletSdk.isEscapeHatchMode();
   }
 
   public getLocalStatus() {

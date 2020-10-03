@@ -7,7 +7,7 @@ interface EscapeHatchIndicatorProps {
 }
 
 export const EscapeHatchIndicator = ({ sdk }: EscapeHatchIndicatorProps) => {
-  const { escapeHatchMode } = sdk.getSdkOptions();
+  const escapeHatchMode = sdk.isEscapeHatchMode();
   const [time, setTime] = useState(new Date().getTime());
   const [isEscapeOpen, setIsEscapeOpen] = useState(false);
   const [numBlocksRemaining, setNumBlocksRemaining] = useState(0);

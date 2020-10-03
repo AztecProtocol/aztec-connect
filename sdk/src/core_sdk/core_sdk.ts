@@ -170,8 +170,8 @@ export class CoreSdk extends EventEmitter {
     return result ? new EthAddress(result) : undefined;
   }
 
-  public getSdkOptions() {
-    return this.options;
+  public isEscapeHatchMode() {
+    return this.escapeHatchMode;
   }
 
   public async eraseDb() {

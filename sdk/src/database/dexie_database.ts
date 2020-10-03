@@ -166,11 +166,6 @@ export class DexieDatabase implements Database {
     this.dexie.close();
   }
 
-  static async clear() {
-    const dexie = new Dexie('hummus');
-    await dexie.delete();
-  }
-
   async clear() {
     for (const table of this.dexie.tables) {
       await table.clear();

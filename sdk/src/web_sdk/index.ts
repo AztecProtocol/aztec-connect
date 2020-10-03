@@ -204,7 +204,7 @@ export class WebSdk extends EventEmitter {
 
   public async destroy() {
     debug('destroying app...');
-    await this.sdk.destroy();
+    await this.sdk?.destroy();
     this.ethProvider?.destroy();
     this.initStatus.account === undefined;
     this.updateInitStatus(AppInitState.UNINITIALIZED);
