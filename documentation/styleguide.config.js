@@ -88,9 +88,9 @@ module.exports = {
       base: '#000',
       light: colours.grey,
       lightest: colours['grey-lightest'],
-      link: colours['primary'],
-      linkHover: 'rgba(255,255,255,0.8)',
-      border: colours['grey-lighter'],
+      link: colours.purple,
+      linkHover: '#6C47FF',
+      border: colours['grey-light'],
       sidebarBackground: colours.primary,
       codeBackground: colours['grey-lightest'],
       codeBase: '#333',
@@ -98,13 +98,13 @@ module.exports = {
       type: colours.purple,
       codeComment: colours.grey,
       codePunctuation: '#999',
-      codeProperty: colours.orange,
+      codeProperty: colours.pink,
       codeDeleted: colours.red,
-      codeString: colours.blue,
-      codeInserted: colours.purple,
-      codeOperator: '#9a6e3a',
-      codeKeyword: colours.red,
-      codeFunction: colours.purple,
+      codeString: colours.orange,
+      codeInserted: colours.green,
+      codeOperator: '#999',
+      codeKeyword: colours.purpleDark,
+      codeFunction: colours.blue,
       codeVariable: colours.orange,
     },
   },
@@ -218,7 +218,6 @@ module.exports = {
         {
           name: 'Types',
           pagePerSection: true,
-          content: 'src/docs/types.md',
           sections: [
             {
               name: 'Action',
@@ -248,6 +247,21 @@ module.exports = {
             {
               name: 'EthereumProvider',
               content: 'src/docs/types/ethereum_provider.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'EthereumSdk',
+              content: 'src/docs/types/ethereum_sdk.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'EthereumSdkUser',
+              content: 'src/docs/types/ethereum_sdk_user.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'EthereumSdkUserAsset',
+              content: 'src/docs/types/ethereum_sdk_user_asset.md',
               exampleMode: 'hide',
             },
             {

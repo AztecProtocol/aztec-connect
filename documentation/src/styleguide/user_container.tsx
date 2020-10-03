@@ -102,5 +102,5 @@ interface UserContainerProps {
 }
 
 export const UserContainer = ({ app, account, children }: UserContainerProps) => {
-  return children({ user: account ? app.webSdk.getUser() : undefined });
+  return children({ user: account ? app.getWebSdk().getUser() : undefined });
 };

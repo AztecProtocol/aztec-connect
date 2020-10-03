@@ -16,6 +16,7 @@ interface EthBalanceProps extends JssInjectedProps {
 const EthBalance = ({ classes, app, address }: EthBalanceProps) => {
   const [initialized, setInitialized] = useState(false);
   const [balance, setBalance] = useState(BigInt(0));
+  const sdk = app.getWebSdk();
 
   useEffect(() => {
     const refreshBalance = async () => {
@@ -32,12 +33,12 @@ const EthBalance = ({ classes, app, address }: EthBalanceProps) => {
       }
     };
 
-    app.walletSdk.on(SdkEvent.UPDATED_ACTION_STATE, handleActionState);
+    sdk.on(SdkEvent.UPDATED_ACTION_STATE, handleActionState);
 
     return () => {
-      app.walletSdk.off(SdkEvent.UPDATED_ACTION_STATE, handleActionState);
+      sdk.off(SdkEvent.UPDATED_ACTION_STATE, handleActionState);
     };
-  }, [app, address]);
+  }, [sdk, address]);
 
   if (!initialized) {
     return <></>;

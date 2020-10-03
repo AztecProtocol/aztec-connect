@@ -1,5 +1,4 @@
-import { EthereumProvider, WebSdk, WalletSdk, EthAddress } from '@aztec/sdk';
-import { Web3Provider } from '@ethersproject/providers';
+import { EthereumProvider, WebSdk, EthAddress } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createContext } from 'react';
 // For use in live code editor.
@@ -7,33 +6,23 @@ import * as aztecSdk from '@aztec/sdk';
 import * as crypto from 'crypto';
 import ethers from 'ethers';
 
-const SERVER_URL =
+export const SERVER_URL =
   process.env.NODE_ENV === 'development'
     ? `${window.location.protocol}//${window.location.hostname}:8081`
     : 'https://api.aztec.network/falafel';
 
-export enum LinkAccountState {
-  LINKING = 'Linking',
-  LINKED = 'Linked',
-  UNLINKED = 'Unlinked',
-}
-
-export enum AppEvent {
-  UPDATED_LINK_ACCOUNT_STATE = 'UPDATED_LINK_ACCOUNT_STATE',
-}
+export const BLOCK_EXPLORER_URL =
+  process.env.NODE_ENV === 'development'
+    ? `${window.location.protocol}//${window.location.hostname}:3000`
+    : 'https://explorer.aztec.network';
 
 export class App extends EventEmitter {
-  public webSdk!: WebSdk;
-  public walletSdk!: WalletSdk;
-  private web3Provider!: Web3Provider;
+  private webSdk!: WebSdk;
 
   constructor(private ethereumProvider?: EthereumProvider) {
     super();
     if (ethereumProvider) {
-      this.web3Provider = new Web3Provider(ethereumProvider);
       this.webSdk = new WebSdk(ethereumProvider);
-      // @ts-ignore
-      this.walletSdk = this.webSdk.getSdk().walletSdk;
     }
   }
 
@@ -42,14 +31,32 @@ export class App extends EventEmitter {
   }
 
   async createSdk(serverUrl = SERVER_URL) {
-    await this.webSdk!.init(serverUrl);
+    await this.webSdk.init(serverUrl, { debug: true });
+  }
+
+  getWeb3Provider() {
+    // @ts-ignore
+    return this.webSdk.getSdk().web3Provider;
+  }
+
+  getWebSdk() {
+    return this.webSdk;
+  }
+
+  getEthereumSdk() {
+    return this.webSdk.getSdk();
+  }
+
+  getWalletSdk() {
+    // @ts-ignore
+    return this.webSdk.getSdk().walletSdk;
   }
 
   getAvailableArgs() {
     const userData = this.webSdk.getUser().getUserData();
     const signer = userData.alias ? undefined : this.webSdk.getSdk().createSchnorrSigner(userData.privateKey);
     return {
-      aztecSdk: this.walletSdk,
+      aztecSdk: this.getWalletSdk(),
       userId: userData.id,
       signer,
     };
@@ -66,6 +73,7 @@ export class App extends EventEmitter {
   getVarReplacements() {
     return {
       SERVER_URL,
+      BLOCK_EXPLORER_URL,
       RECIPIENT_ETH_ADDRESS: '0xcF217475D84997E9c0EbA3052E1F818916fE3eEC',
       RECIPIENT_PUBLIC_KEY:
         '0x110b33f1659d950d264e4e3678f2032beccd371ff2129658cf04ac0ad5376249225947147ca67adee95f170602f290e9ac097902bf3af8f83b270ea0ed779c86',
@@ -75,7 +83,7 @@ export class App extends EventEmitter {
   }
 
   public async getEthBalance(address: EthAddress) {
-    const balance = await this.web3Provider.getBalance(address.toString());
+    const balance = await this.getWeb3Provider().getBalance(address.toString());
     return BigInt(balance.toString());
   }
 

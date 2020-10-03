@@ -15,4 +15,5 @@ Once the tokens are inside the Aztec network, all subsequent transfers are confi
 
 - **[Deposit](/#/ERC20%20Tokens/deposit)**
 - **[Withdraw](/#/ERC20%20Tokens/withdraw)**
+- **[Transfer](/#/ERC20%20Tokens/transfer)**
 - **[Public Transfer](/#/ERC20%20Tokens/publicTransfer)**

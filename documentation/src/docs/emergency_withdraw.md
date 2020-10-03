@@ -17,33 +17,37 @@ For the purposes of the demo code below, the SDK is using a Sriracha instance th
 1. Install docker
 2. Pull the Aztec Sriracha Docker image: docker pull aztecprotocol/sriracha:latest
 3. Prepare environment variables that are required by the image:
+   - `INFURA_API_KEY`: used to send Ethereum data queries via Infura nodes
+   - `NETWORK`: Ethereum network you are withdrawing to. Aztec is currently deployed on the ropsten testnet
+   - `ROLLUP_CONTRACT_ADDRESS`: address of the RollupProcessor.sol deployed Rollup contract
 
-- INFURA_API_KEY: used to send Ethereum data queries via Infura nodes
-- NETWORK: Ethereum network you are withdrawing to. Aztec is currently deployed on the ropsten testnet
-- ROLLUP_CONTRACT_ADDRESS: address of the RollupProcessor.sol deployed Rollup contract
-
-Alternatively, instead of an INFURA_API_KEY and NETWORK you can pass an ETHEREUM_HOST - a URL to your local node.
+Alternatively, instead of an `INFURA_API_KEY` and `NETWORK` you can pass an `ETHEREUM_HOST` - a URL to your local node.
 
 4. Start up the server:
 
+```bash static
 docker run -ti -e INFURA_API_KEY=01234 -e NETWORK=ropsten -e ROLLUP_CONTRACT_ADDRESS=0x1234 -p 8082:8082 aztecprotocol/sriracha:latest
+```
+
+<br/>
 
 ## Activate the emergency withdraw
 
 ```js
-import { AssetId, EthAddress, WalletSdk, Web3Signer } from '@aztec/sdk';
+import { AssetId, EthAddress, createWalletSdk, Web3Signer } from '@aztec/sdk';
 import { ethers } from 'ethers';
-
-const srirachaURL = 'SRIRACHA_URL';
 
 // First we do a deposit, followed by a withdraw
 async function demoEmergencyWithdraw(userId, signer) {
-  const aztecSdkEmergency = new WalletSdk(window.ethereum);
+  const srirachaURL = 'SRIRACHA_URL';
+  const aztecSdkEmergency = await createWalletSdk(window.ethereum, srirachaURL);
+  console.info('Is escape hatch mode?', aztecSdkEmergency.isEscapeHatchMode());
+
   console.info('initialising sdk and constructing escape proving key');
-  await aztecSdkEmergency.init(srirachaURL, { escapeHatchMode: true });
-  const assetId = AssetId.DAI;
+  await aztecSdkEmergency.init();
 
   // Deposit
+  const assetId = AssetId.DAI;
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const value = aztecSdkEmergency.toErc20Units(assetId, '10');
 
@@ -82,5 +86,8 @@ async function demoEmergencyWithdraw(userId, signer) {
 
   const finalBalance = aztecSdkEmergency.getBalance(userId);
   console.info('Balance after withdraw:', aztecSdkEmergency.fromErc20Units(assetId, finalBalance));
+
+  // Destroy this demo sdk
+  await aztecSdkEmergency.destroy();
 }
 ```
