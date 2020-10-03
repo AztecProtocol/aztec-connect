@@ -271,6 +271,8 @@ export class Server {
         return;
       }
 
+      await this.rollupDb.setRollupProof(rollup.rollupId, proof);
+
       const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
       const signatures = txs.reduce((acc, tx) => (tx.signature ? [...acc, tx.signature] : acc), [] as Buffer[]);
       const sigIndexes = txs.reduce((acc, tx, i) => (tx.signature ? [...acc, i] : acc), [] as number[]);
