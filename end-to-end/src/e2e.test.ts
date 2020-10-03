@@ -21,7 +21,11 @@ describe('end-to-end tests', () => {
   beforeAll(async () => {
     // Init sdk.
     provider = new HttpProvider(ETHEREUM_HOST);
-    sdk = await createEthSdk((provider as any).provider, ROLLUP_HOST);
+    sdk = await createEthSdk((provider as any).provider, ROLLUP_HOST, {
+      syncInstances: false,
+      saveProvingKey: false,
+      clearDb: true,
+    });
     await sdk.init();
     await sdk.awaitSynchronised();
 
