@@ -22,6 +22,7 @@ describe('note', () => {
     expect(note2.secret).toEqual(note.secret);
     expect(note2.ownerPubKey).toEqual(note.ownerPubKey);
     expect(note2.value).toEqual(note.value);
+    expect(note2.assetId).toEqual(note.assetId);
   });
 
   it('should not decrypt note', async () => {

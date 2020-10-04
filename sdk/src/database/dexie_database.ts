@@ -14,6 +14,7 @@ const toDexieUserTxId = (userTx: UserTx) => `${userTx.txHash.toString('hex')}__$
 class DexieNote {
   constructor(
     public id: number,
+    public assetId: number,
     public value: string,
     public dataEntry: Uint8Array,
     public viewingKey: Uint8Array,
@@ -27,6 +28,7 @@ class DexieNote {
 const noteToDexieNote = (note: Note) =>
   new DexieNote(
     note.index,
+    note.assetId,
     note.value.toString(),
     note.dataEntry,
     note.viewingKey,
@@ -93,6 +95,7 @@ class DexieUserTx {
     public txHash: Uint8Array,
     public userId: Uint8Array,
     public action: UserTxAction,
+    public assetId: number,
     public value: string,
     public settled: 0 | 1, // boolean is non-indexable
     public created: Date,
@@ -106,6 +109,7 @@ const userTxToDexieUserTx = (id: string, userTx: UserTx) =>
     new Uint8Array(userTx.txHash),
     new Uint8Array(userTx.userId),
     userTx.action,
+    userTx.assetId,
     userTx.value.toString(),
     userTx.settled ? 1 : 0,
     userTx.created,

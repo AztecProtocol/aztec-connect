@@ -1,5 +1,6 @@
 export interface Note {
   index: number;
+  assetId: number;
   value: bigint;
   dataEntry: Buffer;
   viewingKey: Buffer;

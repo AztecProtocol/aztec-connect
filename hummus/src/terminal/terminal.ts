@@ -130,6 +130,10 @@ export class Terminal extends EventEmitter {
     if (this.cursorX > 0) {
       this.putChar(this.cursorX - 1, this.cursorY, ' ');
       this.cursorX--;
+    } else {
+      this.putChar(this.getCols() - 1, this.cursorY - 1, ' ');
+      this.cursorX = this.getCols() - 1;
+      this.cursorY--;
     }
   }
 

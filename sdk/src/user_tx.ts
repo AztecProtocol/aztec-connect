@@ -4,6 +4,7 @@ export interface UserTx {
   txHash: Buffer;
   userId: Buffer;
   action: UserTxAction;
+  assetId: number;
   value: bigint;
   recipient?: Buffer;
   settled: boolean;

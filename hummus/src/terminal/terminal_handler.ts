@@ -124,6 +124,7 @@ export class TerminalHandler {
       this.controlQueue.put(async () => {
         this.printQueue.put(TermControl.LOCK);
         this.printQueue.put(`\ruser: ${initStatus.account!.toString().slice(0, 12)}...\n`);
+        await this.app.getUser().awaitSynchronised();
         await this.balance();
         this.printQueue.put(TermControl.PROMPT);
       });
@@ -235,7 +236,7 @@ export class TerminalHandler {
           'register <alias>\n' +
           'balance\n' +
           'copykey\n' +
-          'status\n',
+          'status [num] [from]\n',
       );
     }
   }
@@ -348,11 +349,17 @@ export class TerminalHandler {
     copy(userData.publicKey.toString());
   }
 
-  private async status() {
-    const txs = await this.app.getUser().getTxs();
-    for (const tx of txs.slice(0, 5)) {
+  private async status(num = '1', from = '0') {
+    const user = this.app.getUser();
+    const txs = await user.getTxs();
+    const f = Math.max(0, +from);
+    const n = Math.min(Math.max(+num, 0), 5);
+    for (const tx of txs.slice(f, f + n)) {
+      const asset = user.getAsset(tx.assetId);
       this.printQueue.put(
-        `${tx.txHash.toString('hex').slice(0, 8)}: ${tx.action} ${tx.settled ? 'settled' : 'pending'}\n`,
+        `${tx.txHash.toString('hex').slice(0, 8)}: ${tx.action} ${
+          tx.action === 'ACCOUNT' ? '' : `${asset.fromErc20Units(tx.value)} ${asset.symbol()} `
+        }${tx.settled ? 'settled' : 'pending'}\n`,
       );
     }
   }

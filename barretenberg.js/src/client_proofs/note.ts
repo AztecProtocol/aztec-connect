@@ -18,7 +18,7 @@ export class Note {
       new GrumpkinAddress(buf.slice(0, 64)),
       buf.slice(96, 128),
       toBigIntBE(buf.slice(64, 96)),
-      buf.readUInt32BE(96),
+      buf.readUInt32BE(128),
     );
   }
 

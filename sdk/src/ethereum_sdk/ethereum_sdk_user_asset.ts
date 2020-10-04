@@ -7,6 +7,10 @@ import { EthereumSdk } from './';
 export class EthereumSdkUserAsset {
   constructor(private ethAddress: EthAddress, private assetId: AssetId, private sdk: EthereumSdk) {}
 
+  symbol() {
+    return 'DAI';
+  }
+
   publicBalance() {
     return this.sdk.getTokenContract(this.assetId).balanceOf(this.ethAddress);
   }

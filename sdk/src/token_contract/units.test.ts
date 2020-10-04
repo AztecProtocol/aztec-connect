@@ -10,6 +10,7 @@ describe('units', () => {
     expect(fromErc20Units(199999n, 4, 2)).toBe('19.99');
     expect(fromErc20Units(199000n, 4, 2)).toBe('19.90');
     expect(fromErc20Units(198765n, 4)).toBe('19.8765');
+    expect(fromErc20Units(-100n, 4, 2)).toBe('-0.01');
   });
 
   it('should convert string to bigint correctly', () => {

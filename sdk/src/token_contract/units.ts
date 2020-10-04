@@ -7,10 +7,14 @@
  * @param precision the number of decimal places to return
  */
 export function fromErc20Units(value: bigint, decimals: number, precision: number = decimals) {
-  const valStr = value.toString().padStart(decimals + 1, '0');
+  const neg = value < BigInt(0);
+  const valStr = value
+    .toString()
+    .slice(neg ? 1 : 0)
+    .padStart(decimals + 1, '0');
   const integer = valStr.slice(0, valStr.length - decimals);
   const fractional = valStr.slice(-decimals);
-  return fractional ? `${integer}.${fractional.slice(0, precision)}` : integer;
+  return (neg ? '-' : '') + (fractional ? `${integer}.${fractional.slice(0, precision)}` : integer);
 }
 
 /**

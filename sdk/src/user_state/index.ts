@@ -216,10 +216,11 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    const { secret, value } = decryptedNote;
+    const { secret, value, assetId } = decryptedNote;
     const nullifier = computeNullifier(dataEntry, index, secret, this.blake2s);
     const note = {
       index,
+      assetId,
       value,
       dataEntry,
       viewingKey: secret,
@@ -251,9 +252,10 @@ export class UserState extends EventEmitter {
     destroyedNote1?: Note,
     destroyedNote2?: Note,
   ): UserTx {
-    const createTx = (action: UserTxAction, value: bigint, recipient?: Buffer) => ({
+    const createTx = (action: UserTxAction, assetId: number, value: bigint, recipient?: Buffer) => ({
       txHash: proof.getTxId(),
       action,
+      assetId,
       value,
       recipient,
       userId: this.user.id,
@@ -262,11 +264,11 @@ export class UserState extends EventEmitter {
     });
 
     if (proof.proofId === 1) {
-      return createTx('ACCOUNT', BigInt(0), this.user.publicKey.toBuffer());
+      return createTx('ACCOUNT', 0, BigInt(0), this.user.publicKey.toBuffer());
     }
 
     if (!changeNote) {
-      return createTx('RECEIVE', newNote!.value, this.user.publicKey.toBuffer());
+      return createTx('RECEIVE', newNote!.assetId, newNote!.value, this.user.publicKey.toBuffer());
     }
 
     const publicInput = toBigIntBE(proof.publicInput);
@@ -274,18 +276,18 @@ export class UserState extends EventEmitter {
 
     if (!publicInput && !publicOutput) {
       const value = destroyedNote1!.value + (destroyedNote2 ? destroyedNote2.value : BigInt(0)) - changeNote.value;
-      return createTx('TRANSFER', value, newNote ? this.user.publicKey.toBuffer() : undefined);
+      return createTx('TRANSFER', changeNote!.assetId, value, newNote ? this.user.publicKey.toBuffer() : undefined);
     }
 
     if (publicInput === publicOutput) {
-      return createTx('PUBLIC_TRANSFER', publicInput, proof.outputOwner.toBuffer());
+      return createTx('PUBLIC_TRANSFER', proof.assetId, publicInput, proof.outputOwner.toBuffer());
     }
 
     if (publicInput > publicOutput) {
-      return createTx('DEPOSIT', publicInput, this.user.publicKey.toBuffer());
+      return createTx('DEPOSIT', proof.assetId, publicInput, this.user.publicKey.toBuffer());
     }
 
-    return createTx('WITHDRAW', publicOutput, proof.outputOwner.toBuffer());
+    return createTx('WITHDRAW', proof.assetId, publicOutput, proof.outputOwner.toBuffer());
   }
 
   private async refreshNotePicker() {
