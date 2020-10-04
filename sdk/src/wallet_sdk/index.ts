@@ -74,14 +74,6 @@ export class WalletSdk extends EventEmitter {
     await this.core.init();
   }
 
-  public async initUserStates() {
-    return this.core.initUserStates();
-  }
-
-  public isEscapeHatchMode() {
-    return this.core.isEscapeHatchMode();
-  }
-
   public async destroy() {
     await this.core?.destroy();
     this.removeAllListeners();
@@ -91,8 +83,24 @@ export class WalletSdk extends EventEmitter {
     return this.core.clearData();
   }
 
-  public async notifiedClearData() {
-    return this.core.notifiedClearData();
+  public isBusy() {
+    return this.core.isBusy();
+  }
+
+  public async awaitSynchronised() {
+    return this.core.awaitSynchronised();
+  }
+
+  public async awaitUserSynchronised(userId: Buffer) {
+    return this.core.awaitUserSynchronised(userId);
+  }
+
+  public async awaitSettlement(userId: Buffer, txHash: TxHash, timeout = 120) {
+    return this.core.awaitSettlement(userId, txHash, timeout);
+  }
+
+  public isEscapeHatchMode() {
+    return this.core.isEscapeHatchMode();
   }
 
   public getLocalStatus() {
@@ -107,12 +115,12 @@ export class WalletSdk extends EventEmitter {
     return this.tokenContracts[assetId];
   }
 
-  public async startReceivingBlocks() {
-    return this.core.startReceivingBlocks();
-  }
-
   public async getAddressFromAlias(alias: string) {
     return this.core.getAddressFromAlias(alias);
+  }
+
+  public getActionState(userId?: Buffer) {
+    return this.core.getActionState(userId);
   }
 
   public async approve(assetId: AssetId, userId: Buffer, value: bigint, account: EthAddress): Promise<TxHash> {
@@ -207,10 +215,6 @@ export class WalletSdk extends EventEmitter {
     }
   }
 
-  public isBusy() {
-    return this.core.isBusy();
-  }
-
   public async generateAccountRecoveryData(userId: Buffer, trustedThirdPartyPublicKeys: GrumpkinAddress[]) {
     const user = this.getUserData(userId);
     if (!user) {
@@ -277,18 +281,6 @@ export class WalletSdk extends EventEmitter {
     return this.core.createAccountProof(userId, signer, undefined, undefined, signingPublicKey);
   }
 
-  public async awaitSynchronised() {
-    return this.core.awaitSynchronised();
-  }
-
-  public async awaitUserSynchronised(userId: Buffer) {
-    return this.core.awaitUserSynchronised(userId);
-  }
-
-  public async awaitSettlement(userId: Buffer, txHash: TxHash, timeout = 120) {
-    return this.core.awaitSettlement(userId, txHash, timeout);
-  }
-
   public getUserData(userId: Buffer) {
     return this.core.getUserData(userId);
   }
@@ -351,10 +343,6 @@ export class WalletSdk extends EventEmitter {
 
   public async getUserTxs(userId: Buffer) {
     return this.core.getUserTxs(userId);
-  }
-
-  public getActionState(userId?: Buffer) {
-    return this.core.getActionState(userId);
   }
 
   public startTrackingGlobalState() {

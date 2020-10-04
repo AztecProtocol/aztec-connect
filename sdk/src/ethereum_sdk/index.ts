@@ -78,10 +78,6 @@ export class EthereumSdk extends EventEmitter {
     await this.walletSdk.init();
   }
 
-  public async initUserStates() {
-    return this.walletSdk.initUserStates();
-  }
-
   public async destroy() {
     await this.walletSdk?.destroy();
     await this.db?.close();
@@ -92,8 +88,28 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.clearData();
   }
 
-  public async notifiedClearData() {
-    return this.walletSdk.notifiedClearData();
+  public isBusy() {
+    return this.walletSdk.isBusy();
+  }
+
+  public async awaitSynchronised() {
+    return this.walletSdk.awaitSynchronised();
+  }
+
+  public async awaitUserSynchronised(ethAddress: EthAddress) {
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    return this.walletSdk.awaitUserSynchronised(userId);
+  }
+
+  public async awaitSettlement(ethAddress: EthAddress, txHash: TxHash, timeout = 120) {
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    return this.walletSdk.awaitSettlement(userId, txHash, timeout);
   }
 
   public isEscapeHatchMode() {
@@ -112,12 +128,20 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getTokenContract(assetId);
   }
 
-  public async startReceivingBlocks() {
-    return this.walletSdk.startReceivingBlocks();
-  }
-
   public async getAddressFromAlias(alias: string) {
     return this.walletSdk.getAddressFromAlias(alias);
+  }
+
+  public getActionState(ethAddress?: EthAddress) {
+    if (!ethAddress) {
+      return this.walletSdk.getActionState();
+    }
+
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    return this.walletSdk.getActionState(userId);
   }
 
   public async approve(assetId: AssetId, value: bigint, from: EthAddress): Promise<TxHash> {
@@ -204,10 +228,6 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.publicTransfer(assetId, userId, value, aztecSigner, ethSigner, to);
   }
 
-  public isBusy() {
-    return this.walletSdk.isBusy();
-  }
-
   public async generateAccountRecoveryData(ethAddress: EthAddress, trustedThirdPartyPublicKeys: GrumpkinAddress[]) {
     const userId = this.getUserIdByEthAddress(ethAddress);
     if (!userId) {
@@ -265,18 +285,6 @@ export class EthereumSdk extends EventEmitter {
     }
 
     return this.walletSdk.removeSigningKey(userId, signingPublicKey, signer);
-  }
-
-  public async awaitSynchronised() {
-    return this.walletSdk.awaitSynchronised();
-  }
-
-  public async awaitSettlement(ethAddress: EthAddress, txHash: TxHash, timeout = 120) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
-      throw new Error(`User not found: ${ethAddress}`);
-    }
-    return this.walletSdk.awaitSettlement(userId, txHash, timeout);
   }
 
   public getUserData(ethAddress: EthAddress) {
@@ -364,26 +372,6 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${ethAddress}`);
     }
     return this.walletSdk.getUserTxs(userId);
-  }
-
-  public async awaitUserSynchronised(ethAddress: EthAddress) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
-      throw new Error(`User not found: ${ethAddress}`);
-    }
-    return this.walletSdk.awaitUserSynchronised(userId);
-  }
-
-  public getActionState(ethAddress?: EthAddress) {
-    if (!ethAddress) {
-      return this.walletSdk.getActionState();
-    }
-
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
-      throw new Error(`User not found: ${ethAddress}`);
-    }
-    return this.walletSdk.getActionState(userId);
   }
 
   public startTrackingGlobalState() {
