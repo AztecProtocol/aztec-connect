@@ -63,6 +63,10 @@ export class WebSdk extends EventEmitter {
   }
 
   public async init(serverUrl: string, sdkOptions: SdkOptions = {}) {
+    if (sdkOptions.debug) {
+      createDebug.enable('bb:*');
+    }
+
     debug('initializing app...');
 
     try {
