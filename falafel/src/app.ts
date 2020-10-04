@@ -209,7 +209,7 @@ export function appFactory(
     resolvers: [BlockResolver, RollupResolver, TxResolver, ServerStatusResolver],
     container: Container,
   });
-  const appServer = new ApolloServer({ schema });
+  const appServer = new ApolloServer({ schema, introspection: true });
   appServer.applyMiddleware({ app, path: `${prefix}/graphql` });
 
   return app;
