@@ -30,6 +30,9 @@ describe('user state', () => {
     const barretenberg = await BarretenbergWasm.new();
     grumpkin = new Grumpkin(barretenberg);
     blake2s = new Blake2s(barretenberg);
+  });
+
+  beforeEach(async () => {
     const privateKey = randomBytes(32);
     user = {
       id: randomBytes(64),
@@ -38,9 +41,7 @@ describe('user state', () => {
       syncedToBlock: -1,
       syncedToRollup: -1,
     };
-  });
 
-  beforeEach(async () => {
     db = {
       getUserTx: jest.fn(),
       settleUserTx: jest.fn(),

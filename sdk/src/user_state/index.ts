@@ -64,21 +64,21 @@ export class UserState extends EventEmitter {
     this.syncState = SyncState.SYNCHING;
     const blocks = await this.blockSource.getBlocks(this.user.syncedToBlock + 1);
     for (const block of blocks) {
-      if (!this.syncState) {
+      if (this.syncState !== SyncState.SYNCHING) {
         return;
       }
       await this.handleBlock(block);
     }
     await this.db.updateUser(this.user);
-    this.syncState = SyncState.MONITORING;
     this.syncingPromise = this.blockQueue.process(async block => this.handleBlock(block));
+    this.syncState = SyncState.MONITORING;
   }
 
   /**
    * Stops processing queued blocks. Blocks until any processing is complete.
    */
   public stopSync(flush = false) {
-    if (!this.syncState) {
+    if (this.syncState === SyncState.OFF) {
       return;
     }
     flush ? this.blockQueue.end() : this.blockQueue.cancel();
@@ -171,7 +171,7 @@ export class UserState extends EventEmitter {
     if (savedUserTx) {
       await this.db.settleUserTx(this.user.id, proof.getTxId());
     } else {
-      const userTx = await this.recoverUserTx(proof);
+      const userTx = this.recoverUserTx(proof);
       await this.db.addUserTx(userTx);
     }
   }
@@ -198,7 +198,7 @@ export class UserState extends EventEmitter {
     if (savedUserTx) {
       await this.db.settleUserTx(id, txId);
     } else {
-      const userTx = await this.recoverUserTx(proof, newNote, changeNote, destroyedNote1, destroyedNote2);
+      const userTx = this.recoverUserTx(proof, newNote, changeNote, destroyedNote1, destroyedNote2);
       await this.db.addUserTx(userTx);
     }
 
