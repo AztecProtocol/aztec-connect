@@ -259,6 +259,10 @@ export class TerminalHandler {
     } catch (err) {
       this.printQueue.put('failed to get server status.\n');
     }
+
+    this.printQueue.put(`synching user state...\n`);
+    await this.app.getUser().awaitSynchronised();
+
     this.printQueue.put(`user: ${this.app.getInitStatus().account!.toString().slice(0, 12)}...\n`);
     await this.balance();
 
@@ -329,7 +333,7 @@ export class TerminalHandler {
     }
     this.printQueue.put(`generating registration proof...\n`);
     const signer = this.app.getSdk().getSchnorrSigner(this.app.getUser().getUserData().ethAddress);
-    const txHash = await this.app.getUser().addAlias(alias, signer);
+    await this.app.getUser().addAlias(alias, signer);
     this.printQueue.put(`registration proof sent.\n`);
   }
 

@@ -366,6 +366,14 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getUserTxs(userId);
   }
 
+  public async awaitUserSynchronised(ethAddress: EthAddress) {
+    const userId = this.getUserIdByEthAddress(ethAddress);
+    if (!userId) {
+      throw new Error(`User not found: ${ethAddress}`);
+    }
+    return this.walletSdk.awaitUserSynchronised(userId);
+  }
+
   public getActionState(ethAddress?: EthAddress) {
     if (!ethAddress) {
       return this.walletSdk.getActionState();

@@ -281,6 +281,10 @@ export class WalletSdk extends EventEmitter {
     return this.core.awaitSynchronised();
   }
 
+  public async awaitUserSynchronised(userId: Buffer) {
+    return this.core.awaitUserSynchronised(userId);
+  }
+
   public async awaitSettlement(userId: Buffer, txHash: TxHash, timeout = 120) {
     return this.core.awaitSettlement(userId, txHash, timeout);
   }

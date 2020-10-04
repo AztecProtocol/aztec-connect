@@ -25,10 +25,16 @@ export enum UserStateEvent {
   UPDATED_USER_STATE = 'UPDATED_USER_STATE',
 }
 
+enum SyncState {
+  OFF,
+  SYNCHING,
+  MONITORING,
+}
+
 export class UserState extends EventEmitter {
   private notePicker = new NotePicker();
   private blockQueue = new MemoryFifo<Block>();
-  private syncing = false;
+  private syncState = SyncState.OFF;
   private syncingPromise!: Promise<void>;
 
   constructor(
@@ -51,19 +57,20 @@ export class UserState extends EventEmitter {
    * Then starts processing blocks added to queue via `processBlock()`.
    */
   public async startSync() {
-    if (this.syncing) {
+    if (this.syncState !== SyncState.OFF) {
       return;
     }
     debug(`starting sync for ${this.user.id.toString('hex')} from block ${this.user.syncedToBlock + 1}...`);
-    this.syncing = true;
+    this.syncState = SyncState.SYNCHING;
     const blocks = await this.blockSource.getBlocks(this.user.syncedToBlock + 1);
     for (const block of blocks) {
-      if (!this.syncing) {
+      if (!this.syncState) {
         return;
       }
       await this.handleBlock(block);
     }
     await this.db.updateUser(this.user);
+    this.syncState = SyncState.MONITORING;
     this.syncingPromise = this.blockQueue.process(async block => this.handleBlock(block));
   }
 
@@ -71,16 +78,16 @@ export class UserState extends EventEmitter {
    * Stops processing queued blocks. Blocks until any processing is complete.
    */
   public stopSync(flush = false) {
-    if (!this.syncing) {
+    if (!this.syncState) {
       return;
     }
     flush ? this.blockQueue.end() : this.blockQueue.cancel();
-    this.syncing = false;
+    this.syncState = SyncState.OFF;
     return this.syncingPromise;
   }
 
   public isSyncing() {
-    return this.syncing;
+    return this.syncState === SyncState.SYNCHING;
   }
 
   public getUser() {
@@ -92,7 +99,7 @@ export class UserState extends EventEmitter {
   }
 
   private async handleBlock(block: Block) {
-    if (block.blockNum < this.user.syncedToBlock) {
+    if (block.blockNum <= this.user.syncedToBlock) {
       return;
     }
 
@@ -125,8 +132,15 @@ export class UserState extends EventEmitter {
     return;
   }
 
-  private async handleAccountTx(proofData: InnerProofData, noteStartIndex: number) {
-    const { publicInput, publicOutput, newNote1, newNote2, nullifier2 } = proofData;
+  private async handleAccountTx(proof: InnerProofData, noteStartIndex: number) {
+    const { id } = this.user;
+    const txId = proof.getTxId();
+    const savedUserTx = await this.db.getUserTx(id, txId);
+    if (savedUserTx && savedUserTx.settled) {
+      return;
+    }
+
+    const { publicInput, publicOutput, newNote1, newNote2, nullifier2 } = proof;
     const publicKey = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
     if (!publicKey.equals(this.user.publicKey)) {
       return;
@@ -154,7 +168,12 @@ export class UserState extends EventEmitter {
       await this.db.removeUserSigningKey(signingKeys[nullifyIndex]);
     }
 
-    await this.db.settleUserTx(this.user.id, proofData.getTxId());
+    if (savedUserTx) {
+      await this.db.settleUserTx(this.user.id, proof.getTxId());
+    } else {
+      const userTx = await this.recoverUserTx(proof);
+      await this.db.addUserTx(userTx);
+    }
   }
 
   private async handleJoinSplitTx(proof: InnerProofData, noteStartIndex: number) {
@@ -176,14 +195,14 @@ export class UserState extends EventEmitter {
     const destroyedNote1 = await this.nullifyNote(nullifier1);
     const destroyedNote2 = await this.nullifyNote(nullifier2);
 
-    await this.refreshNotePicker();
-
     if (savedUserTx) {
       await this.db.settleUserTx(id, txId);
     } else {
       const userTx = await this.recoverUserTx(proof, newNote, changeNote, destroyedNote1, destroyedNote2);
       await this.db.addUserTx(userTx);
     }
+
+    await this.refreshNotePicker();
   }
 
   private async processNewNote(index: number, dataEntry: Buffer, viewingKey: Buffer) {
@@ -242,6 +261,10 @@ export class UserState extends EventEmitter {
       created: new Date(),
     });
 
+    if (proof.proofId === 1) {
+      return createTx('ACCOUNT', BigInt(0), this.user.publicKey.toBuffer());
+    }
+
     if (!changeNote) {
       return createTx('RECEIVE', newNote!.value, this.user.publicKey.toBuffer());
     }
@@ -277,6 +300,12 @@ export class UserState extends EventEmitter {
 
   public getBalance() {
     return this.notePicker.getNoteSum();
+  }
+
+  public async awaitSynchronised() {
+    while (this.syncState === SyncState.SYNCHING) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }
 }
 

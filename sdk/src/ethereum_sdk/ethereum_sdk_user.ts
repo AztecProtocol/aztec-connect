@@ -37,6 +37,10 @@ export class EthereumSdkUser {
     return this.sdk.removeSigningKey(this.ethAddress, signingPublicKey, signer);
   }
 
+  async awaitSynchronised() {
+    return this.sdk.awaitUserSynchronised(this.ethAddress);
+  }
+
   getUserData() {
     return this.sdk.getUserData(this.ethAddress)!;
   }

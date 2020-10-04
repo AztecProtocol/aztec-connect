@@ -632,6 +632,10 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
+  public async awaitUserSynchronised(userId: Buffer) {
+    await this.getUserState(userId)?.awaitSynchronised();
+  }
+
   public async awaitSettlement(userId: Buffer, txHash: TxHash, timeout = 120) {
     const started = new Date().getTime();
     while (true) {
