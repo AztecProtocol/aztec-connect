@@ -425,7 +425,7 @@ export class CoreSdk extends EventEmitter {
    * Call the user state init function to refresh users internal state.
    * Emit an SdkEvent to update the UI.
    */
-  public async notifyUserStateUpdated(userId: Buffer, balanceAfter: bigint, diff: bigint, assetId: number) {
+  public async notifyUserStateUpdated(userId: Buffer, balanceAfter?: bigint, diff?: bigint, assetId?: number) {
     await this.getUserState(userId)?.init();
     this.emit(SdkEvent.UPDATED_USER_STATE, userId, balanceAfter, diff, assetId);
   }
@@ -459,6 +459,7 @@ export class CoreSdk extends EventEmitter {
       userState,
       publicInput,
       publicOutput,
+      assetId,
       newNoteValue,
       signer,
       user.publicKey,

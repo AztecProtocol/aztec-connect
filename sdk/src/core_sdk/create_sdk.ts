@@ -116,12 +116,12 @@ export async function createSdk(
 
     sdk.on(CoreSdkEvent.UPDATED_WORLD_STATE, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_WORLD_STATE }));
     sdk.on(CoreSdkEvent.UPDATED_USERS, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_USERS }));
-    sdk.on(CoreSdkEvent.UPDATED_USER_STATE, (userId: Buffer, balanceAfter: bigint, diff: bigint, assetId: number) =>
+    sdk.on(CoreSdkEvent.UPDATED_USER_STATE, (userId: Buffer, balanceAfter?: bigint, diff?: bigint, assetId?: number) =>
       channel.postMessage({
         name: CoreSdkEvent.UPDATED_USER_STATE,
         userId: userId.toString('hex'),
-        balanceAfter: balanceAfter.toString(),
-        diff: diff.toString(),
+        balanceAfter: balanceAfter?.toString(),
+        diff: diff?.toString(),
         assetId,
       }),
     );
@@ -141,8 +141,8 @@ export async function createSdk(
         case CoreSdkEvent.UPDATED_USER_STATE:
           sdk.notifyUserStateUpdated(
             Buffer.from(msg.userId, 'hex'),
-            BigInt(msg.balanceAfter),
-            BigInt(msg.diff),
+            msg.balanceAfter ? BigInt(msg.balanceAfter) : undefined,
+            msg.diff ? BigInt(msg.diff) : undefined,
             msg.assetId,
           );
           break;

@@ -3,6 +3,9 @@ import { AssetId, MemoryFifo, SdkEvent } from 'aztec2-sdk';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import copy from 'copy-to-clipboard';
 import { Terminal } from './terminal';
+import createDebug from 'debug';
+
+const debug = createDebug('bb:terminal_handler');
 
 enum TermControl {
   PROMPT,
@@ -64,6 +67,7 @@ export class TerminalHandler {
           await this.handleCommand(cmd, args, this.postInitCmds);
         }
       } catch (err) {
+        debug(err);
         this.printQueue.put(err.message + '\n');
       }
       this.printQueue.put(TermControl.PROMPT);
@@ -222,7 +226,8 @@ export class TerminalHandler {
       this.printQueue.put('init [server]\n');
     } else {
       this.printQueue.put(
-        'approve <amount>\n' +
+        'mint <amount>\n' +
+          'approve <amount>\n' +
           'deposit <amount>\n' +
           'withdraw <amount>\n' +
           'transfer <to> <amount>\n' +
@@ -236,9 +241,12 @@ export class TerminalHandler {
   }
 
   private async init(server: string) {
+    this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
+    this.unregisterHandlers();
+
     this.app.on(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
     const serverUrl =
-      server || process.env.NODE_ENV === 'production' ? 'https://api.aztec.network/falafel' : 'http://localhost:8081';
+      server || (process.env.NODE_ENV === 'production' ? 'https://api.aztec.network/falafel' : 'http://localhost:8081');
     await this.app.init(serverUrl);
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
 
