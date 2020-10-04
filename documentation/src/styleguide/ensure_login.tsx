@@ -20,23 +20,24 @@ interface SdkPermissionHandlerProps {
 }
 
 const SdkPermissionHandler = ({ app, children, DefaultContent }: SdkPermissionHandlerProps) => {
-  const [initStatus, setInitStatus] = useState(app.webSdk.getInitStatus());
+  const sdk = app.getWebSdk();
+  const [initStatus, setInitStatus] = useState(sdk.getInitStatus());
 
   useEffect(() => {
     const handleInitStatusChanged = (status: AppInitStatus) => {
       setInitStatus(status);
     };
 
-    app.webSdk.on(AppEvent.UPDATED_INIT_STATE, handleInitStatusChanged);
+    sdk.on(AppEvent.UPDATED_INIT_STATE, handleInitStatusChanged);
 
     return () => {
-      app.webSdk.off(AppEvent.UPDATED_INIT_STATE, handleInitStatusChanged);
+      sdk.off(AppEvent.UPDATED_INIT_STATE, handleInitStatusChanged);
     };
-  }, [app]);
+  }, [sdk]);
 
   if (initStatus?.initState === AppInitState.INITIALIZED) {
     if (typeof children === 'function') {
-      return children({ app, sdk: app.webSdk, account: initStatus!.account! });
+      return children({ app, sdk, account: initStatus!.account! });
     }
 
     return <>{children}</>;

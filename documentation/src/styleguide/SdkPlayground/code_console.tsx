@@ -4,26 +4,37 @@ import Styled from 'react-styleguidist/lib/client/rsg-components/Styled';
 import { JssInjectedProps } from 'react-styleguidist/lib/client/rsg-components/Styled/Styled';
 import * as Rsg from 'react-styleguidist/lib/typings';
 import { colours } from '../../styles/colours';
-import { App } from '../app';
+import { App, BLOCK_EXPLORER_URL } from '../app';
 
-const PERMITTED_LOGS = ['error', 'info'];
+const PERMITTED_LOGS = ['error', 'info', 'warn'];
 
 const CONSOLE_STYLES = {
-  LOG_BACKGROUND: 'transparent',
-  LOG_INFO_BACKGROUND: 'transparent',
-  LOG_RESULT_BACKGROUND: 'transparent',
-  LOG_WARN_BACKGROUND: 'transparent',
-  LOG_ERROR_BACKGROUND: 'transparent',
   BASE_BACKGROUND_COLOR: 'transparent',
   TABLE_TH_BACKGROUND_COLOR: 'transparent',
-  LOG_INFO_BORDER: 'none',
-  LOG_RESULT_BORDER: 'none',
-  LOG_ERROR_BORDER: 'none',
+  LOG_BACKGROUND: 'transparent',
   LOG_BORDER: 'none',
+  LOG_INFO_BACKGROUND: 'transparent',
+  LOG_INFO_BORDER: 'none',
+  LOG_WARN_ICON: "url('/images/aztec.png')",
+  LOG_WARN_COLOR: colours.white,
+  LOG_WARN_BACKGROUND: 'transparent',
+  LOG_WARN_BORDER: 'none',
+  LOG_ERROR_BACKGROUND: 'transparent',
+  LOG_ERROR_BORDER: 'none',
 };
 
+const slipInExplorerLink = (code: string) =>
+  code.replace(
+    /await\s+aztecSdk\.awaitSettlement\((?:\n\s)*([^,]+),([^\)]+)\)\s*;/g,
+    (awaitSettlement, userId, txHash) =>
+      [
+        `console.warn('In the meantime, check out the block explorer for more details:', \`${BLOCK_EXPLORER_URL}/tx/$\{${txHash.trim()}.toString('hex')}\`);`,
+        awaitSettlement,
+      ].join('\n'),
+  );
+
 const generateFullCode = (code: string, demoArgs: { [key: string]: any }) => {
-  const executableCode = code.replace(
+  const executableCode = slipInExplorerLink(code).replace(
     /import\s+\{([\w\s,]+)\}\s+from\s+'([\w@-_\/]+)';/g,
     (_, modules, name) => `const {${modules}} = window.demoModules['${name}']`,
   );
@@ -75,6 +86,13 @@ export const styles = ({ space, fontSize }: Rsg.Theme) => ({
     fontSize: fontSize.small,
     overflowY: 'scroll',
     borderBottom: [[1, 'solid', 'rgba(0, 0, 0, 0.7)']],
+    '& a': {
+      color: `${colours['primary-light']} !important`,
+      cursor: 'pointer',
+    },
+    '& *': {
+      backgroundSize: 'contain',
+    },
   },
 });
 

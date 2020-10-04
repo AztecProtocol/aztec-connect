@@ -1,9 +1,32 @@
 import React from 'react';
+import Styled from 'react-styleguidist/lib/client/rsg-components/Styled';
+import { JssInjectedProps } from 'react-styleguidist/lib/client/rsg-components/Styled/Styled';
 import Table from 'react-styleguidist/lib/client/rsg-components/Table';
 import Name from 'react-styleguidist/lib/client/rsg-components/Name';
 import TypeRenderer from 'react-styleguidist/lib/client/rsg-components/Type';
+import * as Rsg from 'react-styleguidist/lib/typings';
 import Description from './description';
 import { Type } from './type';
+
+const typeColumnStyles = ({ space, fontSize, color }: Rsg.Theme) => ({
+  typeCol: {
+    paddingBottom: space[2],
+    fontSize: fontSize.small,
+    color: color.codeComment,
+  },
+});
+
+interface TypeColumnProps extends JssInjectedProps {
+  type: Type;
+}
+
+const TypeColumnRenderer: React.FunctionComponent<TypeColumnProps> = ({ classes, type }) => (
+  <div className={classes.typeCol}>
+    <TypeRenderer type={type} />
+  </div>
+);
+
+const TypeColumn = Styled<TypeColumnProps>(typeColumnStyles)(TypeColumnRenderer);
 
 export interface Spec {
   name: string;
@@ -29,7 +52,7 @@ const paramColumns: Column[] = [
   },
   {
     caption: 'Type',
-    render: ({ type }: Spec) => <TypeRenderer type={type} />,
+    render: ({ type }: Spec) => <TypeColumn type={type} />,
   },
   {
     caption: 'Description',
@@ -42,7 +65,7 @@ const paramColumns: Column[] = [
 export const returnColumns: Column[] = [
   {
     caption: 'Return Type',
-    render: ({ type }: Spec) => <TypeRenderer type={type} />,
+    render: ({ type }: Spec) => <TypeColumn type={type} />,
   },
   {
     caption: 'Description',
@@ -59,7 +82,7 @@ export const staticVariableColumns: Column[] = [
   },
   {
     caption: 'Type',
-    render: ({ type }: Spec) => <TypeRenderer type={type} />,
+    render: ({ type }: Spec) => <TypeColumn type={type} />,
   },
   {
     caption: 'Description',
@@ -72,11 +95,11 @@ export const staticVariableColumns: Column[] = [
 export const staticMethodColumns: Column[] = [
   {
     caption: 'Static Method',
-    render: ({ name, params }: Spec) => <TypeRenderer type={{ type: 'function', name, params }} />,
+    render: ({ name, params }: Spec) => <TypeColumn type={{ type: 'function', name, params }} />,
   },
   {
     caption: 'Return Type',
-    render: ({ type }: Spec) => <TypeRenderer type={type} />,
+    render: ({ type }: Spec) => <TypeColumn type={type} />,
   },
   {
     caption: 'Description',
@@ -93,7 +116,7 @@ export const variableColumns: Column[] = [
   },
   {
     caption: 'Type',
-    render: ({ type }: Spec) => <TypeRenderer type={type} />,
+    render: ({ type }: Spec) => <TypeColumn type={type} />,
   },
   {
     caption: 'Description',
@@ -106,11 +129,11 @@ export const variableColumns: Column[] = [
 export const methodColumns: Column[] = [
   {
     caption: 'Method',
-    render: ({ name, params }: Spec) => <TypeRenderer type={{ type: 'function', name, params }} />,
+    render: ({ name, params }: Spec) => <TypeColumn type={{ type: 'function', name, params }} />,
   },
   {
     caption: 'Return Type',
-    render: ({ type }: Spec) => <TypeRenderer type={type} />,
+    render: ({ type }: Spec) => <TypeColumn type={type} />,
   },
   {
     caption: 'Description',

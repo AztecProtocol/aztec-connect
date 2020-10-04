@@ -5,6 +5,7 @@ import Styled from 'react-styleguidist/lib/client/rsg-components/Styled';
 import { JssInjectedProps } from 'react-styleguidist/lib/client/rsg-components/Styled/Styled';
 import * as Rsg from 'react-styleguidist/lib/typings';
 import { colours } from '../../styles/colours';
+import { lineHeightMap } from '../../styles/typography';
 import { DefaultContentProps } from '../ensure_login';
 import { Spinner } from '../spinner';
 
@@ -15,7 +16,7 @@ const styles = ({ fontSize, space }: Rsg.Theme) => ({
       alignItems: 'center',
       justifyContent: 'center',
       width: '100%',
-      height: 36,
+      height: lineHeightMap.l,
       color: colours.white,
       fontSize: fontSize.h6,
     },
@@ -89,7 +90,7 @@ const InitButtonRenderer: React.FunctionComponent<InitButtonProps> = ({ classes,
         text={`Link ${initStatus.account!.toString().slice(0, 6)}...${initStatus
           .account!.toString()
           .slice(-4)} to Aztec.`}
-        onClick={() => app.webSdk.linkAccount()}
+        onClick={() => app.getWebSdk().linkAccount()}
       />
     );
   }

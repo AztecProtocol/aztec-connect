@@ -19,7 +19,7 @@ const styles = ({ space, fontSize }: Rsg.Theme) => ({
     paddingLeft: space[3],
   },
   item: {
-    padding: space[1],
+    padding: [[space[1], 0, space[1], space[1]]],
     fontSize: fontSize.h6,
     fontWeight: fontWeightMap.light,
     color: 'white !important',

@@ -6,13 +6,21 @@ import { Type } from './type';
 import { fetchTypeDeclaration } from './fetch_type_declaration';
 import { parseCommentContent } from './parse_comment';
 
+type TypeDefinitionOptions = 'AS_INTERFACE';
+
 interface TypeDefinitionProps extends React.HTMLAttributes<HTMLHeadingElement> {
   srcName: string;
   typeName: string;
   decorator?: string;
+  options?: TypeDefinitionOptions[];
 }
 
-export const TypeDefinition: React.FunctionComponent<TypeDefinitionProps> = ({ srcName, typeName, decorator }) => {
+export const TypeDefinition: React.FunctionComponent<TypeDefinitionProps> = ({
+  srcName,
+  typeName,
+  decorator,
+  options = [],
+}) => {
   let types: Type[] = [];
   let inputBuffer = '';
   try {
@@ -26,6 +34,8 @@ export const TypeDefinition: React.FunctionComponent<TypeDefinitionProps> = ({ s
   if (!types.length) {
     return null;
   }
+
+  const hasOption = (option: TypeDefinitionOptions) => options.indexOf(option) >= 0;
 
   const constructorType = types.find(t => t.name === 'constructor');
 
@@ -65,7 +75,9 @@ export const TypeDefinition: React.FunctionComponent<TypeDefinitionProps> = ({ s
 
   return (
     <>
-      {constructorType && <Constructor name={typeName} params={constructorType.params!} />}
+      {constructorType && !hasOption('AS_INTERFACE') && (
+        <Constructor name={typeName} params={constructorType.params!} />
+      )}
       {vars.length > 0 && <SpecTable type={SpecType.VARIABLE} rows={vars} />}
       {methods.length > 0 && <SpecTable type={SpecType.METHOD} rows={methods} />}
       {staticVars.length > 0 && <SpecTable type={SpecType.STATIC_VAR} rows={staticVars} />}

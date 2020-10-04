@@ -4,6 +4,7 @@ import Styled from 'react-styleguidist/lib/client/rsg-components/Styled';
 import { JssInjectedProps } from 'react-styleguidist/lib/client/rsg-components/Styled/Styled';
 import * as Rsg from 'react-styleguidist/lib/typings';
 import { colours } from '../../styles/colours';
+import { lineHeightMap } from '../../styles/typography';
 import { App } from '../app';
 import { EnsureLogin } from '../ensure_login';
 import { Spinner } from '../spinner';
@@ -17,31 +18,35 @@ export const styles = ({ space, fontSize }: Rsg.Theme) => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 36,
+    minHeight: lineHeightMap.l,
     background: colours['grey-darker'],
     color: colours.white,
     fontSize: fontSize.h6,
   },
+  message: {
+    padding: space[2],
+  },
   buttons: {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     width: '100%',
   },
   info: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingLeft: space[2],
+    justifyContent: 'flex-start',
+    flexWrap: 'wrap',
+    padding: [[space[0], space[2]]],
   },
   run: {
-    position: 'relative',
     '&, &:hover': {
       display: 'flex',
+      flexShrink: 0,
       alignItems: 'center',
       justifyContent: 'center',
-      padding: [[space[0], space[3]]],
-      height: 36,
+      padding: [[space[0], space[4]]],
+      height: lineHeightMap.l,
       background: colours['primary-dark'],
       cursor: 'pointer !important',
     },
@@ -69,7 +74,7 @@ export const styles = ({ space, fontSize }: Rsg.Theme) => ({
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: [[0, space[2]]],
+    padding: space[2],
   },
   label: {
     paddingRight: space[1],
@@ -98,9 +103,11 @@ interface ControlsRendererProps extends JssInjectedProps {
   running: boolean;
 }
 
-const UnsupportedContent = () => <>Switch to a browser that has MetaMask installed to use the interactive docs.</>;
-
 const ControlsRenderer: React.FunctionComponent<ControlsRendererProps> = ({ classes, app, runCode, running }) => {
+  const UnsupportedContent = () => (
+    <div className={classes.message}>Switch to a browser that has MetaMask installed to use the interactive docs.</div>
+  );
+
   return (
     <div className={classes.controls}>
       <EnsureLogin app={app} DefaultContent={InitButton} UnsupportedContent={UnsupportedContent}>

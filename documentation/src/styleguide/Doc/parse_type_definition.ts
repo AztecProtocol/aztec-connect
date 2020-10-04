@@ -130,10 +130,18 @@ export const parseType = (def: string): Type | undefined => {
 
 export const parseTypeDefinition = (content: string, typeName: string, decorator?: string) => {
   const lines = content.split(/\r?\n/).map(l => l.trim());
-  const defReg = RegExp(`^export.*\\s${decorator ? `${decorator}\\s` : ''}${typeName}\\s.*{$`);
+  const isSingleLine = decorator === 'function';
+  const defReg = RegExp(
+    `^export.*\\s${decorator ? `${decorator}\\s` : ''}${typeName}${isSingleLine ? '\\(.*;' : '\\s.*{'}$`,
+  );
   const startAt = lines.findIndex(line => defReg.exec(line));
   const types: Type[] = [];
   if (startAt < 0) return types;
+
+  if (isSingleLine) {
+    const type = parseType(lines[startAt].replace(new RegExp(`.*${decorator}`), '').trim());
+    return type ? [type] : types;
+  }
 
   let nested = 0;
   const accumTypes = [];

@@ -10,7 +10,9 @@ import { fontWeightMap, lineHeightMap } from '../styles/typography';
 import { colours } from '../styles/colours';
 import { AppContext } from './app';
 import { DocRenderer, Enum, TypeDefinition } from './Doc';
+import { specPattern, parseSpec } from './Doc/parse_spec';
 import SdkPlayground from './SdkPlayground';
+import { FunctionType } from './Doc/function_type';
 
 export const styles = ({ space, color, fontFamily, fontSize }: Rsg.Theme) => ({
   code: {
@@ -32,18 +34,25 @@ export const styles = ({ space, color, fontFamily, fontSize }: Rsg.Theme) => ({
     '& ul, ol': {
       margin: '0 !important',
       padding: `${space[3]}px 0 ${space[3]}px ${space[4]}px !important`,
-    },
-    '& li': {
-      padding: [[space[1], 0]],
-      fontWeight: fontWeightMap.light,
       '& ul, ol': {
-        paddingTop: space[1],
-        paddingBottom: space[1],
+        paddingTop: `${space[1]}px !important`,
+        paddingBottom: `${space[1]}px !important`,
       },
     },
+    '& li': {
+      padding: `${space[2]}px 0 !important`,
+      fontFamily: `${fontFamily.base} !important`,
+      fontSize: `${fontSize.h5}px !important`,
+      fontWeight: `${fontWeightMap.light} !important`,
+    },
     '& ol': {
-      '& li': {
+      '& > li': {
         listStyle: 'decimal',
+      },
+    },
+    '& ul': {
+      '& > li': {
+        listStyle: 'disc',
       },
     },
     '& em': {
@@ -142,7 +151,7 @@ export const styles = ({ space, color, fontFamily, fontSize }: Rsg.Theme) => ({
       marginTop: space[4],
       marginBottom: space[4],
       padding: [[space[2], space[3]]],
-      backgroundColor: color.codeBackground,
+      backgroundColor: colours['grey-lighter'],
       borderRadius: 4,
       border: 'none',
       fontFamily: fontFamily.monospace,
@@ -185,7 +194,6 @@ const Examples: React.FunctionComponent<ExamplesProps> = ({ classes, examples })
               }
               case 'markdown': {
                 contentNode = [];
-                const specPattern = /@spec\s+([\w@-_\/]+(.d)?.ts)\s+(enum|class|interface)?\s*([a-zA-Z][a-zA-Z0-9]+)/;
                 const reg = new RegExp(specPattern, 'g');
                 let lastIndex = 0;
                 let res;
@@ -201,27 +209,34 @@ const Examples: React.FunctionComponent<ExamplesProps> = ({ classes, examples })
                     }
                     lastIndex = res.index;
                   }
-                  const [spec, srcName, isType, decorator, name] =
-                    example.content.substr(res.index).match(specPattern) || [];
-                  if (decorator === 'enum') {
+                  const { srcName, name, isDeclaration, type, options } = parseSpec(example.content.substr(res.index))!;
+                  if (type === 'enum') {
                     contentNode.push(
                       <div key={`spec_${contentNode.length}`} className={classes.markdown}>
                         <Enum srcName={srcName} enumName={name} />
+                      </div>,
+                    );
+                  } else if (type === 'function') {
+                    contentNode.push(
+                      <div key={`spec_${contentNode.length}`} className={classes.markdown}>
+                        <FunctionType srcName={srcName} name={name} />
                       </div>,
                     );
                   } else {
                     contentNode.push(
                       <div key={`spec_${contentNode.length}`} className={classes.docSpec}>
                         {(() => {
-                          if (isType) {
-                            return <TypeDefinition srcName={srcName} typeName={name} decorator={decorator} />;
+                          if (isDeclaration) {
+                            return (
+                              <TypeDefinition srcName={srcName} typeName={name} decorator={type} options={options} />
+                            );
                           }
                           return <DocRenderer srcName={srcName} apiName={name} />;
                         })()}
                       </div>,
                     );
                   }
-                  lastIndex += spec.length;
+                  lastIndex += res[0].length;
                 }
                 if (lastIndex < example.content.length) {
                   contentNode.push(

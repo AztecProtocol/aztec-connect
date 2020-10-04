@@ -471,6 +471,7 @@ describe('parseTypeDefinition', () => {
       export declare class WalletSdk extends EventEmitter {
           constructor(ethereumProvider: EthereumProvider);
       };
+      export declare function createWalletSdk(ethereumProvider: EthereumProvider, serverUrl: string): Promise<WalletSdk>;
     `;
 
     expect(parseTypeDefinition(content, 'WalletSdk', 'interface')).toEqual([
@@ -498,6 +499,28 @@ describe('parseTypeDefinition', () => {
           },
         ],
         returns: 'void',
+      },
+    ]);
+
+    expect(parseTypeDefinition(content, 'createWalletSdk', 'function')).toEqual([
+      {
+        name: 'createWalletSdk',
+        type: 'function',
+        params: [
+          {
+            name: 'ethereumProvider',
+            type: 'EthereumProvider',
+          },
+          {
+            name: 'serverUrl',
+            type: 'string',
+          },
+        ],
+        returns: {
+          name: '',
+          type: 'promise',
+          returns: 'WalletSdk',
+        },
       },
     ]);
   });

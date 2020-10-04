@@ -232,11 +232,9 @@ const TypeContentRenderer: React.FunctionComponent<TypeContentProps> = ({
 
 const TypeContent = Styled<TypeContentProps>(contentStyles)(TypeContentRenderer);
 
-const styles = ({ fontFamily, fontSize, color }: Rsg.Theme) => ({
+const styles = ({ fontFamily }: Rsg.Theme) => ({
   type: {
     fontFamily: fontFamily.monospace,
-    fontSize: fontSize.small,
-    color: color.codeComment,
     whiteSpace: 'nowrap',
   },
 });

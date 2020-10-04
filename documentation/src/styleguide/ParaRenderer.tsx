@@ -7,7 +7,7 @@ import { lineHeightMap, fontWeightMap } from '../styles/typography';
 
 export const styles = ({ fontSize, space, color, fontFamily }: Rsg.Theme) => ({
   para: {
-    padding: [[space[1], 0]],
+    padding: [[space[2], 0]],
     color: color.base,
     fontFamily: fontFamily.base,
     fontWeight: fontWeightMap.light,

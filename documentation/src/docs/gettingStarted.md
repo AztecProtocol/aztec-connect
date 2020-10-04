@@ -14,19 +14,28 @@ To install the SDK from NPM use the following command.
 yarn add @aztec/sdk
 ```
 
-```js
-import { WalletSdk } from '@aztec/sdk';
+<br/>
 
-const aztecSdk = new WalletSdk(window.ethereum);
+## Creating Wallet SDK
+
+```js
+import { createWalletSdk } from '@aztec/sdk';
 
 const rollupProviderUrl = 'SERVER_URL';
-await aztecSdk.init(rollupProviderUrl);
+const aztecSdk = await createWalletSdk(window.ethereum, rollupProviderUrl);
 
 console.info(aztecSdk.getLocalStatus());
+// initState: 'UNINITIALIZED'
+
+await aztecSdk.init();
+
+console.info(aztecSdk.getLocalStatus());
+// initState: 'INITIALIZED'
 
 await aztecSdk.destroy();
 
 console.info(aztecSdk.getLocalStatus());
+// initState: 'DESTROYED'
 ```
 
 ## Developing Web Apps
@@ -62,3 +71,9 @@ The SDK will be upgraded in Q1 2020 to support custom proofs, that can interact 
 The SDK uses a ZkRollup to bundle transactions together and relay to the blockchain. This saves gas and increases throughput. There is no fee for using the rollup and we will currently cover all gas costs. The free version of the rollup targets a 1 hour finality.
 
 Users can pay a transaction fee to decrease the finality to the next block. Please contact us for a fee schedule.
+
+## See Also
+
+- **[WalletSDK Interface](/#/Types/WalletSdk)**
+- **[User](/#/User)**
+- **[ERC20 Tokens](/#/ERC20%20Tokens)**

@@ -13,3 +13,11 @@ Each account in the SDK is defined by an `alias`, a `privacyKey` and a set of `s
 Accounts support social recovery out of the gate. A on-time temporary recovery key can be added on account creation. This key signs a pre-crafted message, authorising a trusted party as an admin who can recover the account.
 
 The recovery signature can be used at a later date to add in the trusted admin key and give the user back control of their account. The recovery signature can be split between trusted parties to make account recovery more secure. More than one signature can also be generated to ensure redundancy between trusted parties.
+
+## See Also
+
+- **[Create account](/#/User/createAccount)**
+- **[Generate account recovery data](/#/User/generateAccountRecoveryData)**
+- **[Recover account](/#/User/recoverAccount)**
+- **[Add a new signing key](/#/User/addSigningKey)**
+- **[Remove a signing key](/#/User/removeSigningKey)**

@@ -1,4 +1,6 @@
-@spec @aztec/sdk/wallet_sdk/index.d.ts class WalletSdk
+@spec @aztec/sdk/wallet_sdk/index.d.ts function createWalletSdk
+
+@spec @aztec/sdk/wallet_sdk/index.d.ts class WalletSdk [AS_INTERFACE]
 
 ## Events
 
