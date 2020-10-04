@@ -1,4 +1,4 @@
-import React, { useEffect,useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { Terminal } from './terminal';
 
@@ -17,15 +17,13 @@ const flicker = keyframes`
   100% { opacity: 0.9; }
 `;
 
-const jerk = keyframes`
-  50% { padding-top: 1px; }
-  51% { padding-top: 0px; }
-`;
-
 const Monitor = styled.div`
+  position: absolute;
+  top: 0px;
+  width: 100%;
   margin: 50px auto;
   text-align: center;
-  animation: ${flicker} 32ms infinite/*, ${jerk} 50ms infinite*/;
+  animation: ${flicker} 32ms infinite;
 `;
 
 const Display = styled.div`
@@ -60,6 +58,24 @@ const StyledTerminal = styled.div`
   text-shadow: 0 0 30px rgba(255, 255, 255, 0.4);
 `;
 
+const StyledTerminalSelectionText = styled.div`
+  position: absolute;
+  top: 0px;
+  width: 100%;
+  margin: 50px auto;
+  text-align: center;
+
+  padding: 30px;
+
+  font-family: 'Courier new';
+  color: rgba(255, 255, 255, 0);
+  font-size: 50px;
+  font-weight: bold;
+  font-style: normal;
+  white-space: pre;
+  text-align: center;
+`;
+
 const Scanline = styled.div`
   width: 100%;
   display: block;
@@ -71,16 +87,16 @@ const Scanline = styled.div`
   opacity: 0.1;
 `;
 
-interface TerminalProps {
-  terminal: Terminal;
-}
-
 const ScanlineContainer = styled.div`
   position: absolute;
   top: 0px;
   width: 100%;
   padding-top: 30px;
 `;
+
+interface TerminalProps {
+  terminal: Terminal;
+}
 
 export function TerminalPage({ terminal }: TerminalProps) {
   const [, setCount] = useState(0);
@@ -97,32 +113,37 @@ export function TerminalPage({ terminal }: TerminalProps) {
   }, [terminal]);
 
   return (
-    <Monitor>
-      <Display onPaste={async e => terminal.pasteString(e.clipboardData.getData('text'))}>
-        <Logo>
-          <svg viewBox="500 80 135 138">
-            <g>
-              <path
-                fillRule="evenodd"
-                clipRule="evenodd"
-                d="M 573.12 83.536 L 632.518 142.933 C 635.642 146.057 635.642 151.123 632.518 154.247 L 573.12 213.643 C 569.996 216.768 564.931 216.768 561.807 213.643 L 502.41 154.247 C 499.286 151.123 499.286 146.057 502.41 142.933 L 561.807 83.536 C 564.931 80.412 569.996 80.412 573.12 83.536 Z M 573.12 104.749 C 569.996 101.625 564.931 101.625 561.807 104.749 L 523.623 142.933 C 520.499 146.057 520.499 151.123 523.623 154.247 L 561.807 192.43 C 564.931 195.554 569.996 195.554 573.12 192.43 L 611.304 154.247 C 614.428 151.123 614.428 146.057 611.304 142.933 L 573.12 104.749 Z"
-              ></path>
-              <path
-                opacity="1"
-                d="M 590.091 142.933 L 573.12 125.963 C 569.996 122.838 564.931 122.838 561.807 125.963 L 544.836 142.933 C 541.712 146.057 541.712 151.123 544.836 154.247 L 561.807 171.217 C 564.931 174.342 569.996 174.342 573.12 171.217 L 590.091 154.247 C 593.215 151.123 593.215 146.057 590.091 142.933 Z"
-              ></path>
-            </g>
-          </svg>
-        </Logo>
-        <StyledTerminal>{terminal.asString()}</StyledTerminal>
-        <ScanlineContainer>
-          {Array(8 * terminal.getRows())
-            .fill(0)
-            .map((_, i) => (
-              <Scanline key={i}></Scanline>
-            ))}
-        </ScanlineContainer>
-      </Display>
-    </Monitor>
+    <>
+      <Monitor>
+        <Display onPaste={async e => terminal.pasteString(e.clipboardData.getData('text'))}>
+          <Logo>
+            <svg viewBox="500 80 135 138">
+              <g>
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M 573.12 83.536 L 632.518 142.933 C 635.642 146.057 635.642 151.123 632.518 154.247 L 573.12 213.643 C 569.996 216.768 564.931 216.768 561.807 213.643 L 502.41 154.247 C 499.286 151.123 499.286 146.057 502.41 142.933 L 561.807 83.536 C 564.931 80.412 569.996 80.412 573.12 83.536 Z M 573.12 104.749 C 569.996 101.625 564.931 101.625 561.807 104.749 L 523.623 142.933 C 520.499 146.057 520.499 151.123 523.623 154.247 L 561.807 192.43 C 564.931 195.554 569.996 195.554 573.12 192.43 L 611.304 154.247 C 614.428 151.123 614.428 146.057 611.304 142.933 L 573.12 104.749 Z"
+                ></path>
+                <path
+                  opacity="1"
+                  d="M 590.091 142.933 L 573.12 125.963 C 569.996 122.838 564.931 122.838 561.807 125.963 L 544.836 142.933 C 541.712 146.057 541.712 151.123 544.836 154.247 L 561.807 171.217 C 564.931 174.342 569.996 174.342 573.12 171.217 L 590.091 154.247 C 593.215 151.123 593.215 146.057 590.091 142.933 Z"
+                ></path>
+              </g>
+            </svg>
+          </Logo>
+          <StyledTerminal>{terminal.asString()}</StyledTerminal>
+          <ScanlineContainer>
+            {Array(8 * terminal.getRows())
+              .fill(0)
+              .map((_, i) => (
+                <Scanline key={i}></Scanline>
+              ))}
+          </ScanlineContainer>
+        </Display>
+      </Monitor>
+      <StyledTerminalSelectionText onPaste={async e => terminal.pasteString(e.clipboardData.getData('text'))}>
+        {terminal.asString(false).toLowerCase()}
+      </StyledTerminalSelectionText>
+    </>
   );
 }

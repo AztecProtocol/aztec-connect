@@ -192,7 +192,7 @@ export function appFactory(
     ctx.response.status = 200;
   });
 
-  router.all('/graphql', graphqlPlayground({ endpoint: `${prefix}/graphql` }));
+  router.all('/playground', graphqlPlayground({ endpoint: `${prefix}/graphql` }));
 
   const app = new Koa();
   app.proxy = true;

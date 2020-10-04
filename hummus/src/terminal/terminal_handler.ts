@@ -345,9 +345,12 @@ export class TerminalHandler {
   }
 
   private async status() {
-    const { dataSize, dataRoot } = this.app.getSdk()!.getLocalStatus();
-    this.printQueue.put(`data size: ${dataSize}\n`);
-    this.printQueue.put(`data root: ${dataRoot.slice(0, 8).toString('hex')}...\n`);
+    const txs = await this.app.getUser().getTxs();
+    for (const tx of txs.slice(0, 5)) {
+      this.printQueue.put(
+        `${tx.txHash.toString('hex').slice(0, 8)}: ${tx.action} ${tx.settled ? 'settled' : 'pending'}\n`,
+      );
+    }
   }
 
   private async clearData() {

@@ -181,11 +181,11 @@ export class Terminal extends EventEmitter {
     this.updated();
   }
 
-  asString() {
+  asString(includeCursor = true) {
     let data = '';
     for (let i = 0; i < this.rows; ++i) {
       const row = this.charBuf.slice(i * this.cols, i * this.cols + this.cols).toString('ascii');
-      if (i === this.cursorY) {
+      if (i === this.cursorY && includeCursor) {
         data += row.slice(0, this.cursorX) + this.cursor.getChar() + row.slice(this.cursorX + 1) + '\n';
       } else {
         data += row + '\n';
