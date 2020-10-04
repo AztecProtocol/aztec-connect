@@ -23,7 +23,6 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({ page, block
     variables: {
       take: blocksPerPage,
       skip: Math.max(0, blocksPerPage * (page - 1)),
-      where: { ethTxHash_not_null: true },
     },
     pollInterval: BLOCKS_POLL_INTERVAL,
   });
@@ -44,7 +43,7 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({ page, block
 
   return (
     <BlockRowRoot>
-      {data.blocks.map((block) => (
+      {data.blocks.map(block => (
         <BlockRow key={block.id}>
           <BlockItem block={block} />
         </BlockRow>

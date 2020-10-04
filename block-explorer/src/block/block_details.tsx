@@ -61,7 +61,7 @@ interface BlockDetailsProps {
 }
 
 export const BlockDetails: React.FunctionComponent<BlockDetailsProps> = ({ block }) => {
-  const { ethTxHash, dataRoot, proofData, nullifierRoot, ethBlock } = block;
+  const { hash, ethTxHash, dataRoot, proofData, nullifierRoot, ethBlock } = block;
 
   const summaryNode = (
     <BlockSummary title="Block Header">
@@ -76,7 +76,7 @@ export const BlockDetails: React.FunctionComponent<BlockDetailsProps> = ({ block
         )}
         {!ethTxHash && 'Pending...'}
       </InfoRow>
-      <InfoRow title="BLOCK HASH">{ethTxHash ? <HashValue value={`0x${ethTxHash}`} /> : <Value text="0x" />}</InfoRow>
+      <InfoRow title="BLOCK HASH">{<HashValue value={`0x${hash}`} />}</InfoRow>
       <InfoRow title="DATA ROOT">
         <HashValue value={`0x${dataRoot}`} />
       </InfoRow>

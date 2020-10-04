@@ -76,6 +76,7 @@ export const NetworkStats: React.FunctionComponent = () => (
                       time={moment(data.serverStatus.nextPublishTime)}
                       size={statSize}
                       unitSize={statSize === 'l' ? 'm' : 'xs'}
+                      gaps={[86400, 3600, 120, 0]}
                     />
                   )
                 }

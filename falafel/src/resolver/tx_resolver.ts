@@ -1,3 +1,4 @@
+import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository, Not, LessThanOrEqual } from 'typeorm';
@@ -34,47 +35,56 @@ export class TxResolver {
 
   @FieldResolver(() => Int)
   async proofId(@Root() { proofData }: TxDao) {
-    return proofData.slice(28, 32).readUInt32BE(0);
+    const joinSplit = new JoinSplitProof(proofData, []);
+    return joinSplit.proofId;
   }
 
   @FieldResolver()
   async publicInput(@Root() { proofData }: TxDao) {
-    return proofData.slice(1 * 32, 2 * 32);
+    const joinSplit = new JoinSplitProof(proofData, []);
+    return joinSplit.publicInput;
   }
 
   @FieldResolver()
   async publicOutput(@Root() { proofData }: TxDao) {
-    return proofData.slice(2 * 32, 3 * 32);
+    const joinSplit = new JoinSplitProof(proofData, []);
+    return joinSplit.publicOutput;
   }
 
   @FieldResolver()
   async newNote1(@Root() { proofData }: TxDao) {
-    return proofData.slice(3 * 32, 5 * 32);
+    const joinSplit = new JoinSplitProof(proofData, []);
+    return joinSplit.newNote1;
   }
 
   @FieldResolver()
   async newNote2(@Root() { proofData }: TxDao) {
-    return proofData.slice(5 * 32, 7 * 32);
+    const joinSplit = new JoinSplitProof(proofData, []);
+    return joinSplit.newNote2;
   }
 
   @FieldResolver()
   async nullifier1(@Root() { proofData }: TxDao) {
-    return proofData.slice(7 * 32, 8 * 32);
+    const joinSplit = new JoinSplitProof(proofData, []);
+    return joinSplit.nullifier1;
   }
 
   @FieldResolver()
   async nullifier2(@Root() { proofData }: TxDao) {
-    return proofData.slice(8 * 32, 9 * 32);
+    const joinSplit = new JoinSplitProof(proofData, []);
+    return joinSplit.nullifier2;
   }
 
   @FieldResolver()
   async inputOwner(@Root() { proofData }: TxDao) {
-    return proofData.slice(9 * 32 + 12, 10 * 32);
+    const joinSplit = new JoinSplitProof(proofData, []);
+    return joinSplit.inputOwner;
   }
 
   @FieldResolver()
   async outputOwner(@Root() { proofData }: TxDao) {
-    return proofData.slice(10 * 32 + 12, 11 * 32);
+    const joinSplit = new JoinSplitProof(proofData, []);
+    return joinSplit.outputOwner;
   }
 
   @FieldResolver({ nullable: true })

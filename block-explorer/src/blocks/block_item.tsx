@@ -116,9 +116,12 @@ const LineBreak = styled.div`
 const StatusTag = styled(BlockStatusText)`
   ${blockElemStyle}
   letter-spacing: 1px;
+  min-width: 100px;
+  text-align: center;
 
   @media (max-width: ${breakpoints.xs}) {
     order: 3;
+    text-align: left;
   }
 `;
 
@@ -184,7 +187,7 @@ interface BlockProps {
 }
 
 export const BlockItem: React.FunctionComponent<BlockProps> = ({ block }) => {
-  const { id, ethTxHash, numTxs, status, created } = block;
+  const { id, hash, numTxs, status, created } = block;
   const statusColour = blockStatusColourNames[status];
 
   return (
@@ -193,15 +196,15 @@ export const BlockItem: React.FunctionComponent<BlockProps> = ({ block }) => {
         <Root to={`/block/${id}`}>
           <BlockNo text={`${id}`} color={statusColour} size="m" weight="semibold" monospace />
           {(() => {
-            let hash = ethTxHash;
+            let hashStr = hash;
             if (breakpoint === 'l') {
-              hash = `${ethTxHash.slice(0, 40)}...${ethTxHash.slice(-6)}`;
+              hashStr = `${hash.slice(0, 40)}...${hash.slice(-6)}`;
             } else if (breakpoint === 'm') {
-              hash = `${ethTxHash.slice(0, 24)}...${ethTxHash.slice(-6)}`;
+              hashStr = `${hash.slice(0, 24)}...${hash.slice(-6)}`;
             } else if (sizeLte(breakpoint, 's')) {
-              hash = `${ethTxHash.slice(0, 8)}...${ethTxHash.slice(-6)}`;
+              hashStr = `${hash.slice(0, 8)}...${hash.slice(-6)}`;
             }
-            return <BlockHash text={`0x${hash}`} weight="light" monospace />;
+            return <BlockHash text={`0x${hashStr}`} weight="light" monospace />;
           })()}
           {breakpoint === 'xs' && <LineBreak />}
           {breakpoint !== 'xs' && <Divider />}

@@ -2,7 +2,7 @@ import { RollupProviderStatus } from 'barretenberg/rollup_provider';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { Int, Resolver, FieldResolver, Query } from 'type-graphql';
 import { Inject } from 'typedi';
-import { Connection, Repository } from 'typeorm';
+import { Connection, Not, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { ServerConfig } from '../server';
@@ -67,19 +67,11 @@ export class ServerStatusResolver {
     const avgSettleTime = 60 * 1000;
 
     const pendingRollup = await this.rollupRep.findOne({
-      where: { status: 'CREATING' },
+      where: { status: Not('SETTLED') },
       order: { id: 'ASC' },
     });
     if (pendingRollup) {
-      const publishedRollup = await this.rollupRep.findOne({
-        where: { status: 'PUBLISHED' },
-        order: { id: 'ASC' },
-      });
-      const remainingSettleTime = publishedRollup
-        ? Math.max(0, publishedRollup.created.getTime() + avgProofTime + avgSettleTime - Date.now())
-        : 0;
-
-      return new Date(pendingRollup.created.getTime() + avgProofTime + remainingSettleTime);
+      return new Date(pendingRollup.created.getTime() + avgProofTime + avgSettleTime);
     }
 
     const pendingTx = await this.rollupTxRep.findOne({
@@ -88,7 +80,10 @@ export class ServerStatusResolver {
     });
     if (pendingTx) {
       return new Date(
-        pendingTx.created.getTime() + this.serverConfig.maxRollupWaitTime.asMilliseconds() + avgProofTime,
+        pendingTx.created.getTime() +
+          this.serverConfig.maxRollupWaitTime.asMilliseconds() +
+          avgProofTime +
+          avgSettleTime,
       );
     }
 

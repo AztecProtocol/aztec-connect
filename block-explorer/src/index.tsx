@@ -5,9 +5,9 @@ import ReactDOM from 'react-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { GlobalStyle } from './global_style';
 import { App } from './app';
-import { SERVER_URL } from './queries';
+import { ENDPOINT } from './queries';
 
-const client = new ApolloClient({ uri: `${SERVER_URL}/graphql` });
+const client = new ApolloClient({ uri: ENDPOINT });
 
 ReactDOM.render(
   <React.StrictMode>

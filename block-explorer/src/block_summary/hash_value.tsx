@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { contentPlaceholderStyle, ContentSize, CopyButton, Text } from '../components';
-import { fontSizes, lineHeights, spacings } from '../styles';
+import { fontSizes, spacings } from '../styles';
 
 const WIDTH_PER_MONO_CHAR = 8.5;
 
@@ -13,13 +13,13 @@ const truncateValue = (value: string, width: number) => {
 export const HashValuePlaceholder = styled.div`
   position: relative;
   width: 100%;
-  height: ${lineHeights.s};
+  height: 28px;
 
   &:after {
     ${contentPlaceholderStyle}
     content: '';
     position: absolute;
-    top: ${(parseInt(lineHeights.s) - parseInt(fontSizes.s)) / 2}px;
+    top: ${(28 - parseInt(fontSizes.s)) / 2}px;
     width: 100%;
     height: ${fontSizes.s};
   }
@@ -28,7 +28,7 @@ export const HashValuePlaceholder = styled.div`
 const Root = styled.div`
   display: flex;
   align-items: center;
-  padding: 2px 0;
+  padding: ${spacings.xxs} 0;
   line-height: 1;
 `;
 

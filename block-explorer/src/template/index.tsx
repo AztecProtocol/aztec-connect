@@ -49,7 +49,7 @@ const CookiesFormRoot = styled.div`
 `;
 
 const CookiesFormWrapper = styled(ContentWrapper)`
-  background: #1f2325;
+  background: ${colours.greyDark};
 `;
 
 interface TemplateProps {

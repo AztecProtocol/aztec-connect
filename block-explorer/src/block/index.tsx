@@ -62,7 +62,6 @@ export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
     pollInterval: BLOCK_POLL_INTERVAL,
   });
 
-
   if (data?.block?.status === 'SETTLED') {
     stopPolling();
   }

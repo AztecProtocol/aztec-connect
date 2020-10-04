@@ -2,7 +2,7 @@ import Cookie from 'js-cookie';
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { Button, Text } from '../components';
-import { borderRadius, breakpoints, fontSizes, gradients, lineHeights, spacings } from '../styles';
+import { borderRadius, breakpoints, colours, fontSizes, gradients, lineHeights, spacings } from '../styles';
 
 const Form = styled.div`
   display: flex;
@@ -78,7 +78,7 @@ export const CookiesForm: React.FunctionComponent = () => {
       </Col>
       <ButtonCol>
         <ElemWrapper>
-          <Button theme="outlined" parentBackground="#1f2325" href="#">
+          <Button theme="outlined" parentBackground={colours.greyDark} href="#">
             <GradientText text="LEARN MORE" />
           </Button>
         </ElemWrapper>
