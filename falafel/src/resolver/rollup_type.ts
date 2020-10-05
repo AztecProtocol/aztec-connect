@@ -11,6 +11,9 @@ export class RollupType {
   @Field(() => Int)
   id!: number;
 
+  @Field(() => HexString)
+  hash!: string;
+
   @Field(() => HexString, { nullable: true })
   proofData?: string;
 
@@ -79,6 +82,18 @@ class RollupFilter {
 
   @Field(() => Int, { nullable: true })
   id_lte?: number;
+
+  @Field(() => HexString, { nullable: true })
+  hash?: string;
+
+  @Field(() => HexString, { nullable: true })
+  hash_not?: string;
+
+  @Field(() => [HexString!], { nullable: true })
+  hash_in?: string[];
+
+  @Field(() => [HexString!], { nullable: true })
+  hash_not_in?: string[];
 
   @Field(() => HexString, { nullable: true })
   dataRoot?: string;

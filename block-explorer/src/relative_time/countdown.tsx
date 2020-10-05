@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import moment, { Moment } from 'moment';
 import { Text, TextProps } from '../components';
-import { FontSize } from '../styles';
+import { fontFamily, FontSize } from '../styles';
 
 const Root = styled(Text)`
   display: flex;
   align-items: flex-end;
   line-height: 1;
+  font-family: ${fontFamily.monospace};
 `;
 
 const Unit = styled(Text)`
   transform: translateY(-8%);
   line-height: 1;
+  font-family: ${fontFamily.base};
 `;
 
 const timeGaps = [
@@ -42,7 +44,7 @@ const defaultGaps = timeGaps.reduce((accum, { gap }) => [...accum, gap], [] as n
 
 export const getDiff = (time: Moment, baseTime = moment(), gaps = defaultGaps) => {
   const diff = time.diff(baseTime, 'seconds');
-  const group = gaps.findIndex((gap) => Math.abs(diff) >= gap);
+  const group = gaps.findIndex(gap => Math.abs(diff) >= gap);
   const { base, unit } = timeGaps[group] || timeGaps[timeGaps.length - 1];
   const value = Math.floor(Math.abs(diff) / base);
   const updateIn = Math.max(1, diff >= 0 ? diff % base : base - (-diff % base));

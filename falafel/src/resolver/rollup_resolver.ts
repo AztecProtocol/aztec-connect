@@ -1,3 +1,4 @@
+import { RollupProofData } from 'barretenberg/rollup_proof';
 import { RollupStatus } from 'barretenberg/rollup_provider';
 import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
@@ -24,12 +25,13 @@ export class RollupResolver {
   @Query(() => RollupType, { nullable: true })
   async rollup(
     @Arg('id', () => Int, { nullable: true }) id?: number,
+    @Arg('hash', () => HexString, { nullable: true }) hash?: Buffer,
     @Arg('dataRoot', () => HexString, { nullable: true }) dataRoot?: Buffer,
     @Arg('ethBlock', () => Int, { nullable: true }) ethBlock?: number,
     @Arg('ethTxHash', () => HexString, { nullable: true }) ethTxHash?: Buffer,
   ) {
     return getQuery(this.rollupRep, {
-      where: { id, dataRoot, ethBlock, ethTxHash },
+      where: { id, hash, dataRoot, ethBlock, ethTxHash },
     }).getOne();
   }
 
@@ -40,38 +42,43 @@ export class RollupResolver {
 
   @FieldResolver()
   async oldDataRoot(@Root() { proofData }: RollupDao) {
-    return proofData ? proofData.slice(3 * 32, 3 * 32 + 32) : undefined;
+    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+    return rollup ? rollup.oldDataRoot : undefined;
   }
 
   @FieldResolver()
   async oldNullifierRoot(@Root() { proofData }: RollupDao) {
-    return proofData ? proofData.slice(5 * 32, 5 * 32 + 32) : undefined;
+    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+    return rollup ? rollup.oldNullRoot : undefined;
   }
 
   @FieldResolver()
   async nullifierRoot(@Root() { proofData }: RollupDao) {
-    return proofData ? proofData.slice(6 * 32, 6 * 32 + 32) : undefined;
+    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+    return rollup ? rollup.newNullRoot : undefined;
   }
 
   @FieldResolver()
   async oldDataRootsRoot(@Root() { proofData }: RollupDao) {
-    return proofData ? proofData.slice(7 * 32, 7 * 32 + 32) : undefined;
+    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+    return rollup ? rollup.oldDataRootsRoot : undefined;
   }
 
   @FieldResolver()
   async dataRootsRoot(@Root() { proofData }: RollupDao) {
-    return proofData ? proofData.slice(8 * 32, 8 * 32 + 32) : undefined;
+    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+    return rollup ? rollup.newDataRootsRoot : undefined;
   }
 
   @FieldResolver(() => Int)
-  async numTxs(@Root() rollup: RollupDao) {
-    const { proofData } = rollup;
-    if (proofData) {
-      return proofData.slice(9 * 32 + 28, 10 * 32).readUInt32BE(0);
+  async numTxs(@Root() { id, proofData }: RollupDao) {
+    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+    if (rollup) {
+      return rollup.numTxs;
     }
 
     const txs = await this.rollupTxRep.find({
-      where: { rollup: rollup.id },
+      where: { rollup: id },
     });
     return txs.length;
   }
@@ -84,10 +91,10 @@ export class RollupResolver {
   }
 
   @FieldResolver()
-  async block(@Root() { ethBlock }: RollupDao) {
-    return ethBlock
+  async block(@Root() { ethTxHash }: RollupDao) {
+    return ethTxHash
       ? this.blockRep.findOne({
-          where: { id: ethBlock },
+          where: { txHash: ethTxHash },
         })
       : undefined;
   }

@@ -69,9 +69,40 @@ export const TxDetails: React.FunctionComponent<TxDetailsProps> = ({ tx }) => {
   const { created } = block;
   const proofType = proofIdToType(proofId);
   const statusTag = <StyledProofTypeTag proofType={proofType} />;
-  const publicInputBn = new BN(publicInput, 16);
-  const publicOutputBn = new BN(publicOutput, 16);
-  const zero = new BN(0);
+
+  const proofProperties = [];
+  let proofDataHeight = 384;
+  switch (proofType) {
+    case 'JOIN_SPLIT': {
+      const publicInputBn = new BN(publicInput, 16);
+      proofProperties.push(
+        <InfoRow key="public_input" title="PUBLIC INPUT">
+          <Value text={`${formatNumber(publicInputBn.toString())}`} monospace />
+          <HashValue value={`0x${inputOwner}`} />
+        </InfoRow>,
+      );
+      proofDataHeight += 96;
+
+      const publicOutputBn = new BN(publicOutput, 16);
+      proofProperties.push(
+        <InfoRow key="public_output" title="PUBLIC OUTPUT">
+          <Value text={`${formatNumber(publicOutputBn.toString())}`} monospace />
+          <HashValue value={`0x${outputOwner}`} />
+        </InfoRow>,
+      );
+      proofDataHeight += 96;
+      break;
+    }
+    case 'ACCOUNT':
+      proofProperties.push(
+        <InfoRow key="account_id" title="ACCOUNT ID">
+          <HashValue value={`0x${publicInput}${publicOutput}`} />
+        </InfoRow>,
+      );
+      proofDataHeight += 72;
+      break;
+    default:
+  }
 
   const summaryNode = (
     <BlockSummary title="Transaction" titleContent={statusTag}>
@@ -87,22 +118,11 @@ export const TxDetails: React.FunctionComponent<TxDetailsProps> = ({ tx }) => {
         <HashValue value={`0x${newNote1}`} />
         <HashValue value={`0x${newNote2}`} />
       </InfoRow>
-      {(publicInputBn.gt(zero) || !isEmptyHash(inputOwner)) && (
-        <InfoRow title="PUBLIC INPUT">
-          <Value text={`${formatNumber(publicInputBn.toString())}`} monospace />
-          <HashValue value={`0x${inputOwner}`} />
-        </InfoRow>
-      )}
-      {(publicOutputBn.gt(zero) || !isEmptyHash(outputOwner)) && (
-        <InfoRow title="PUBLIC OUTPUT">
-          <Value text={`${formatNumber(publicOutputBn.toString())}`} monospace />
-          <HashValue value={`0x${outputOwner}`} />
-        </InfoRow>
-      )}
+      {proofProperties}
     </BlockSummary>
   );
 
-  const proofNode = <ProofData proofData={`0x${proofData}`} />;
+  const proofNode = <ProofData proofData={`0x${proofData}`} height={proofDataHeight} />;
 
   return <DetailsSection lhsContent={summaryNode} rhsContent={proofNode} />;
 };

@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import proofDataIcon from '../images/cube.svg';
 import { CopyButton, Text } from '../components';
-import { spacings } from '../styles';
+import { breakpoints, spacings } from '../styles';
 import { InfoContent } from '../template';
 
 const ContentRoot = styled.div`
@@ -19,6 +19,10 @@ const ProofContent = styled.div`
   ${({ height }: ProofContentProps) => !!height && `height: ${height}px;`}
   word-break: break-all;
   overflow: scroll;
+
+  @media (max-width: ${breakpoints.s}) {
+    overflow: hidden;
+  }
 `;
 
 // This will make sure the copy button won't overlap with proof data.
@@ -35,6 +39,12 @@ const InlineCopyButtonRoot = styled.div`
 
 const CopyButtonRoot = styled(InlineCopyButtonRoot)`
   bottom: -24px;
+
+  @media (max-width: ${breakpoints.s}) {
+    position: relative;
+    bottom: 0;
+    text-align: right;
+  }
 `;
 
 interface ProofDataPlaceholderProps {

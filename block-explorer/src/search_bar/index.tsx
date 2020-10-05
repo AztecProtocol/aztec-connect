@@ -18,7 +18,10 @@ const SEARCH_BY_HASH = gql`
     tx(txId: $hash) {
       txId
     }
-    rollup(ethTxHash: $hash) {
+    rollup(hash: $hash) {
+      id
+    }
+    publishedRollup: rollup(ethTxHash: $hash) {
       id
     }
   }
@@ -38,8 +41,8 @@ export const SearchBar: React.FunctionComponent = () => {
       history.push(`/block/${idData.rollup.id}`);
     } else if (hashData?.tx) {
       history.push(`/tx/${hashData.tx.txId}`);
-    } else if (hashData?.rollup) {
-      history.push(`/block/${hashData.rollup.id}`);
+    } else if (hashData?.rollup || hashData?.publishedRollup) {
+      history.push(`/block/${(hashData.rollup || hashData.publishedRollup).id}`);
     } else {
       history.push(`/search?q=${encodeURIComponent(searchTerm)}`);
     }

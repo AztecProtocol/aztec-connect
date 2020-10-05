@@ -13,6 +13,7 @@ export interface EthBlock {
 
 export interface Block {
   id: number;
+  hash: string;
   dataRoot: string;
   txs: Tx[];
   status: BlockStatus;
@@ -36,6 +37,7 @@ export const GET_BLOCK = gql`
   query Block($id: Int!) {
     block: rollup(id: $id) {
       id
+      hash
       ethTxHash
       proofData
       dataRoot
