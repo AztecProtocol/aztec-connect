@@ -119,7 +119,6 @@ export const styles = ({ space, color, fontFamily, fontSize }: Rsg.Theme) => ({
     '& a': {
       '&, &:active, &:visited': {
         color: `${color.link} !important`,
-        fontSize: fontSize.h6,
         cursor: 'pointer !important',
         opacity: 1,
       },

@@ -1,4 +1,4 @@
-This EthereumProvider interface is specified by [EIP-1193](https://eips.ethereum.org/EIPS/eip-1193).
+This EthereumProvider interface is specified by <a href="https://eips.ethereum.org/EIPS/eip-1193" target="_blank">EIP-1193</a>.
 
 @spec @aztec/sdk/ethereum_provider.d.ts EthereumProvider
 
