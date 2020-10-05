@@ -91,10 +91,10 @@ export class RollupResolver {
   }
 
   @FieldResolver()
-  async block(@Root() { ethBlock }: RollupDao) {
-    return ethBlock
+  async block(@Root() { ethTxHash }: RollupDao) {
+    return ethTxHash
       ? this.blockRep.findOne({
-          where: { id: ethBlock },
+          where: { txHash: ethTxHash },
         })
       : undefined;
   }
