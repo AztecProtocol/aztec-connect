@@ -71,16 +71,16 @@ library EscapeHatchVk {
       0x1d6a2276e98f9a22be8dfdec8b90c49d77352dc455e45f6c9a69c0486025b115
     );
     vk.sigma_commitments[0] = PairingsBn254.new_g1(
-      0x0f87d3787afa17117c2f19c36d39bf319d984312fc3170648ee2a6c8aae3fb7c,
-      0x0f4365b47578e1b68f32a193d82236c8bc793a1eca5e9c246fa4fb3a03b1f94c
+      0x003e5bf6634e70c73b99834499cd09b1039477428bc8a0f6e65020481f74d0a5,
+      0x27c9cb8a82be2a23f392eefb2ec6b444fd3db28de4e8f7231a409311d4b2e1c7
     );
     vk.sigma_commitments[1] = PairingsBn254.new_g1(
       0x18f574094e8c5df74dcc06239ed90269b1ed2cf9c652e299259919088bc28cc1,
       0x0c594cb2889624dbc57d40dd986561d75222a93f0f12aa2dfb14883df5464023
     );
     vk.sigma_commitments[2] = PairingsBn254.new_g1(
-      0x083cb4daf31019df987bd5ae322042a788895e8b14788bb4eec3e69c80215e9a,
-      0x02e4d2bc08b0d22bcf395de55c694442975e71480fac16180bae20c69cc3e885
+      0x1022682ca61535800c8be3b511cfe0063d3dca08bcf5f0276b5fa700ccbb4a51,
+      0x030fe8ac720677dae50cfbe69144b0367a87a2c9f584ca77af8b52a35b4ec826
     );
     vk.sigma_commitments[3] = PairingsBn254.new_g1(
       0x0704420d6551be7fceb25c36362076dbac72ac1744ae94b7901ad37a8ae70eec,
