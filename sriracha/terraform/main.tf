@@ -121,7 +121,7 @@ resource "aws_ecs_task_definition" "sriracha" {
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": "0x743a2E227eD3185aDD62Fa80422c484871e36c5B"
+        "value": "0x916d31c0497acCd1a3d51f1c160668f6F57A1954"
       },
       {
         "name": "API_PREFIX",
