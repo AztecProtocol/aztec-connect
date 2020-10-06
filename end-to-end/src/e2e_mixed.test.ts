@@ -1,7 +1,4 @@
-import 'fake-indexeddb/auto';
-
-import { AssetId, EthereumSdk } from 'aztec2-sdk';
-import { EthAddress } from 'barretenberg/address';
+import { AssetId, createEthSdk, EthAddress } from 'aztec2-sdk';
 import { EventEmitter } from 'events';
 import { Eth } from 'web3x/eth';
 import { HttpProvider } from 'web3x/providers';
@@ -32,13 +29,13 @@ describe('end-to-end falafel recovery tests', () => {
   it('should succesfully mix normal and escape mode transactions', async () => {
     // Run a normal sdk and deposit.
     {
-      const sdk = new EthereumSdk((provider as any).provider);
-
-      await sdk.init(ROLLUP_HOST, {
+      const sdk = await createEthSdk((provider as any).provider, ROLLUP_HOST, {
         syncInstances: false,
-        clearDb: true,
         saveProvingKey: false,
+        clearDb: true,
+        dbPath: ':memory:',
       });
+      await sdk.init();
       const user = await sdk.addUser(userAddress);
       await sdk.awaitSynchronised();
 
@@ -60,13 +57,13 @@ describe('end-to-end falafel recovery tests', () => {
       const nextEscapeBlock = await blocksToAdvance(81, 100, provider);
       await advanceBlocks(nextEscapeBlock, provider);
 
-      const sdk = new EthereumSdk((provider as any).provider);
-      await sdk.init(SRIRACHA_HOST, {
+      const sdk = await createEthSdk((provider as any).provider, SRIRACHA_HOST, {
         syncInstances: false,
-        clearDb: true,
-        escapeHatchMode: true,
         saveProvingKey: false,
+        clearDb: true,
+        dbPath: ':memory:',
       });
+      await sdk.init();
       const user = await sdk.addUser(userAddress);
       await sdk.awaitSynchronised();
 
@@ -83,13 +80,13 @@ describe('end-to-end falafel recovery tests', () => {
 
     {
       // Run a normal sdk and withdraw half.
-      const sdk = new EthereumSdk((provider as any).provider);
-      await sdk.init(ROLLUP_HOST, {
+      const sdk = await createEthSdk((provider as any).provider, ROLLUP_HOST, {
         syncInstances: false,
-        clearDb: true,
-        escapeHatchMode: false,
         saveProvingKey: false,
+        clearDb: true,
+        dbPath: ':memory:',
       });
+      await sdk.init();
       const user = await sdk.addUser(userAddress);
       await sdk.awaitSynchronised();
 

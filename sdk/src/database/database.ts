@@ -31,7 +31,6 @@ export interface Database {
   getUserTxs(userId: Buffer): Promise<UserTx[]>;
   addUserTx(userTx: UserTx): Promise<void>;
   settleUserTx(userId: Buffer, txHash: Buffer): Promise<void>;
-  deleteUserTx(userId: Buffer, txHash: Buffer): Promise<void>;
 
   getUserSigningKeys(userId: Buffer): Promise<SigningKey[]>;
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
@@ -43,5 +42,5 @@ export interface Database {
 
   deleteKey(name: string): Promise<void>;
   addKey(name: string, value: Buffer): Promise<void>;
-  getKey(name: string): Promise<Uint8Array | undefined>;
+  getKey(name: string): Promise<Buffer | undefined>;
 }

@@ -2,6 +2,7 @@ import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { getProviderStatus, TxHash } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
+import isNode from 'detect-node';
 import { EventEmitter } from 'events';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
@@ -10,9 +11,10 @@ import { Web3Signer } from '../signer/web3_signer';
 import { Signer } from '../signer';
 import { deriveGrumpkinPrivateKey, RecoveryPayload, UserData } from '../user';
 import { WalletSdk } from '../wallet_sdk';
-import { Database, DbAccount } from './database';
+import { Database, DbAccount, DexieDatabase, SQLDatabase, getOrmConfig } from './database';
 import { EthereumSdkUser } from './ethereum_sdk_user';
 import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';
+import { createConnection } from 'typeorm';
 
 export * from './ethereum_sdk_user';
 export * from './ethereum_sdk_user_asset';
@@ -28,10 +30,20 @@ const toEthUserData = (ethAddress: EthAddress, userData: UserData): EthUserData 
   ethAddress,
 });
 
+async function getDb(dbPath = 'data') {
+  if (isNode) {
+    const config = getOrmConfig(dbPath);
+    const connection = await createConnection(config);
+    return new SQLDatabase(connection);
+  } else {
+    return new DexieDatabase();
+  }
+}
+
 export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl: string, sdkOptions: SdkOptions = {}) {
   const status = await getProviderStatus(serverUrl);
   const core = await createSdk(serverUrl, sdkOptions, status, ethereumProvider);
-  const db = new Database();
+  const db = await getDb(sdkOptions.dbPath);
   const { rollupContractAddress, tokenContractAddresses, chainId, networkOrHost } = status;
 
   // Set erase flag if requested or contract changed.

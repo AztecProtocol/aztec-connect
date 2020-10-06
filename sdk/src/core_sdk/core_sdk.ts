@@ -17,6 +17,7 @@ import { BarretenbergWasm } from 'barretenberg/wasm';
 import { WorkerPool } from 'barretenberg/wasm/worker_pool';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
+import isNode from 'detect-node';
 import { EventEmitter } from 'events';
 import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
@@ -66,7 +67,7 @@ export class CoreSdk extends EventEmitter {
   private userFactory!: UserDataFactory;
   private userStateFactory!: UserStateFactory;
   private txsState!: TxsState;
-  private mutex = new Mutex('world-state-mutex');
+  private mutex = !isNode ? new Mutex('world-state-mutex') : undefined;
   private sdkStatus: SdkStatus = {
     chainId: -1,
     rollupContractAddress: EthAddress.ZERO,
@@ -185,8 +186,8 @@ export class CoreSdk extends EventEmitter {
       this.logInitMsgAndDebug('Downloading CRS data...');
       const crs = new Crs(circuitSize);
       await crs.download();
-      crsData = crs.getData();
-      await this.db.addKey(`crs-${circuitSize}`, Buffer.from(crsData));
+      crsData = Buffer.from(crs.getData());
+      await this.db.addKey(`crs-${circuitSize}`, crsData);
       debug('done.');
     }
     return crsData;
@@ -370,7 +371,7 @@ export class CoreSdk extends EventEmitter {
       // We use a mutex to ensure only one tab will process a block at a time (to prevent merkle tree corruption).
       // This is only a safety mechanism for if two tabs are processing blocks at once. Correct behaviour would
       // be for only one tab to process the block, and to alert the others to sync.
-      await this.mutex.lock();
+      await this.mutex?.lock();
       await this.worldState.syncFromDb().catch(() => {});
       await this.worldState.processBlock(block);
 
@@ -385,7 +386,7 @@ export class CoreSdk extends EventEmitter {
       this.sdkStatus.latestRollupId = latestRollupId;
       this.sdkStatus.dataRoot = this.worldState.getRoot();
       this.sdkStatus.dataSize = this.worldState.getSize();
-      await this.mutex.unlock();
+      await this.mutex?.unlock();
 
       // Forward the block on to each UserState for processing.
       this.userStates.forEach(us => us.processBlock(block));

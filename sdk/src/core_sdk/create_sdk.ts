@@ -7,7 +7,8 @@ import { ethers } from 'ethers';
 import { mkdirSync } from 'fs';
 import levelup from 'levelup';
 import { SrirachaProvider } from 'sriracha/hash_path_source';
-import { DexieDatabase } from '../database';
+import { createConnection } from 'typeorm';
+import { DexieDatabase, SQLDatabase, getOrmConfig } from '../database';
 import { EthereumProvider } from '../ethereum_provider';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
@@ -25,10 +26,21 @@ function getLevelDb() {
   }
 }
 
+async function getDb(dbPath = 'data') {
+  if (isNode) {
+    const config = getOrmConfig(dbPath);
+    const connection = await createConnection(config);
+    return new SQLDatabase(connection);
+  } else {
+    return new DexieDatabase();
+  }
+}
+
 export type SdkOptions = {
   syncInstances?: boolean;
   clearDb?: boolean;
   debug?: boolean;
+  dbPath?: string;
 } & CoreSdkOptions;
 
 async function sdkFactory(
@@ -43,7 +55,7 @@ async function sdkFactory(
 
   const host = new URL(hostStr);
   const leveldb = getLevelDb();
-  const db = new DexieDatabase();
+  const db = await getDb(options.dbPath);
 
   if (options.clearDb) {
     await leveldb.clear();

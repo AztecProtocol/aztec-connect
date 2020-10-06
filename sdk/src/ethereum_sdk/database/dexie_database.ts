@@ -1,10 +1,6 @@
 import { EthAddress } from 'barretenberg/address';
 import Dexie from 'dexie';
-
-export interface DbAccount {
-  ethAddress: EthAddress;
-  userId: Buffer;
-}
+import { Database, DbAccount } from './database';
 
 class DexieAccount {
   constructor(public ethAddress: Uint8Array, public userId: Uint8Array) {}
@@ -15,7 +11,7 @@ const dexieAccountToDbAccount = ({ ethAddress, userId }: DexieAccount): DbAccoun
   userId: Buffer.from(userId),
 });
 
-export class Database {
+export class DexieDatabase implements Database {
   private db: Dexie;
   private user: Dexie.Table<DexieAccount, Uint8Array>;
 
@@ -35,8 +31,8 @@ export class Database {
     }
   }
 
-  close() {
-    this.db.close();
+  async close() {
+    await this.db.close();
   }
 
   async addAccount({ ethAddress, userId }: DbAccount) {

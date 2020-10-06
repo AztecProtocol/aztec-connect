@@ -1,7 +1,4 @@
-import 'fake-indexeddb/auto';
-
-import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser } from 'aztec2-sdk';
-import { EthAddress } from 'barretenberg/address';
+import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser, EthAddress } from 'aztec2-sdk';
 import { EventEmitter } from 'events';
 import { Eth } from 'web3x/eth';
 import { HttpProvider } from 'web3x/providers';
@@ -25,6 +22,7 @@ describe('end-to-end tests', () => {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
+      dbPath: ':memory:',
     });
     await sdk.init();
     await sdk.awaitSynchronised();

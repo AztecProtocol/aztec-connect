@@ -8,5 +8,6 @@
     "inlineSourceMap": false,
     "declarationMap": false,
     "emitDeclarationOnly": true
-  }
+  },
+  "exclude": ["src/**/*.test.ts", "src/**/mock-*.ts", "src/**/fixtures/*", "src/**/test/*"]
 }

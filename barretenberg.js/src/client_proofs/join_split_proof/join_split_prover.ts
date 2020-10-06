@@ -10,7 +10,7 @@ export class JoinSplitProver {
     await worker.call('join_split__init_proving_key');
   }
 
-  public async loadKey(keyBuf: Uint8Array) {
+  public async loadKey(keyBuf: Buffer) {
     const worker = this.prover.getWorker();
     const keyPtr = await worker.call('bbmalloc', keyBuf.length);
     await worker.transferToHeap(Transfer(keyBuf, [keyBuf.buffer]) as any, keyPtr);

@@ -18,7 +18,7 @@ export class JoinSplitVerifier {
     return buf;
   }
 
-  public async loadKey(worker: BarretenbergWorker, keyBuf: Uint8Array, g2Data: Uint8Array) {
+  public async loadKey(worker: BarretenbergWorker, keyBuf: Buffer, g2Data: Uint8Array) {
     this.worker = worker;
     const keyPtr = await this.worker.call('bbmalloc', keyBuf.length);
     await this.worker.transferToHeap(g2Data, 0);

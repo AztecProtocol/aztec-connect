@@ -7,6 +7,7 @@ const { merge } = require('webpack-merge');
 
 const common = {
   mode: 'production',
+  devtool: 'nosources-source-map',
   entry: './src/index.ts',
   module: {
     rules: [
@@ -66,7 +67,7 @@ const common = {
 
 const nodeConfig = merge(common, {
   output: { filename: 'aztec-sdk.node.js' },
-  plugins: [new webpack.ExternalsPlugin('commonjs', ['leveldown', 'threads'])],
+  plugins: [new webpack.ExternalsPlugin('commonjs', ['leveldown', 'typeorm', 'threads'])],
   target: 'node',
   node: {
     __dirname: false,

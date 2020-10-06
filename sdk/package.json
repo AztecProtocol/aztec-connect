@@ -44,12 +44,15 @@
     "level-js": "^5.0.2",
     "leveldown": "^5.6.0",
     "levelup": "^4.4.0",
+    "sqlite3": "^5.0.0",
     "sriracha": "file:../sriracha/dest-es",
-    "tslib": "^2.0.0"
+    "tslib": "^2.0.0",
+    "typeorm": "^0.2.28"
   },
   "devDependencies": {
     "@babel/core": "^7.11.6",
     "@babel/plugin-proposal-class-properties": "^7.10.4",
+    "@babel/plugin-proposal-decorators": "^7.10.5",
     "@babel/plugin-proposal-optional-chaining": "^7.11.0",
     "@babel/preset-env": "^7.11.5",
     "@babel/preset-typescript": "^7.10.4",
@@ -60,6 +63,7 @@
     "@typescript-eslint/eslint-plugin": "^4.1.1",
     "@typescript-eslint/parser": "^4.1.1",
     "babel-loader": "^8.1.0",
+    "babel-plugin-transform-typescript-metadata": "^0.3.0",
     "copy-webpack-plugin": "^6.1.1",
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",

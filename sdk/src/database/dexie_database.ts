@@ -167,7 +167,7 @@ export class DexieDatabase implements Database {
   }
 
   async close() {
-    this.dexie.close();
+    await this.dexie.close();
   }
 
   async clear() {
@@ -252,14 +252,6 @@ export class DexieDatabase implements Database {
     await this.userTx.where({ userId: new Uint8Array(userId), txHash: new Uint8Array(txHash) }).modify({ settled: 1 });
   }
 
-  async deleteUserTx(userId: Buffer, txHash: Buffer) {
-    await this.userTx.where({ userId: new Uint8Array(userId), txHash: new Uint8Array(txHash) }).delete();
-  }
-
-  async clearUserTxState() {
-    await this.userTx.where({ settled: 1 }).modify({ settled: 0 });
-  }
-
   async removeUser(userId: Buffer) {
     const id = new Uint8Array(userId);
     await this.userTx.where({ userId: id }).delete();
@@ -270,7 +262,7 @@ export class DexieDatabase implements Database {
   async resetUsers() {
     await this.note.clear();
     await this.userTx.clear();
-    await this.key.clear();
+    await this.userKeys.clear();
     await this.alias.clear();
     await this.user.toCollection().modify({ syncedToBlock: -1, syncedToRollup: -1 });
   }
@@ -314,7 +306,7 @@ export class DexieDatabase implements Database {
     }
 
     if (!key.count) {
-      return key.value;
+      return Buffer.from(key.value);
     }
 
     const subKeyNames = [...Array(key.count)].map((_, i) => toSubKeyName(name, i));
@@ -323,7 +315,7 @@ export class DexieDatabase implements Database {
       return undefined;
     }
 
-    const value = new Uint8Array(key.size);
+    const value = Buffer.alloc(key.size);
     let prevSize = 0;
     for (let i = 0; i < key.count; ++i) {
       value.set(subKeys[i]!.value, prevSize);
@@ -339,11 +331,11 @@ export class DexieDatabase implements Database {
   }
 
   async addUserSigningKey({ owner, key, treeIndex }: SigningKey) {
-    this.userKeys.add({ owner: new Uint8Array(owner), key: new Uint8Array(key), treeIndex });
+    await this.userKeys.add({ owner: new Uint8Array(owner), key: new Uint8Array(key), treeIndex });
   }
 
   async removeUserSigningKey({ owner, key }: SigningKey) {
-    this.userKeys.where({ owner: new Uint8Array(owner), key: new Uint8Array(key) }).delete();
+    await this.userKeys.where({ owner: new Uint8Array(owner), key: new Uint8Array(key) }).delete();
   }
 
   async getUserSigningKeyIndex(owner: Buffer, signingKey: GrumpkinAddress) {
@@ -355,7 +347,7 @@ export class DexieDatabase implements Database {
   }
 
   async addAlias(aliasHash: Buffer, address: GrumpkinAddress) {
-    this.alias.add({ aliasHash: new Uint8Array(aliasHash), key: new Uint8Array(address.toBuffer()) });
+    await this.alias.add({ aliasHash: new Uint8Array(aliasHash), key: new Uint8Array(address.toBuffer()) });
   }
 
   async getAliasAddress(aliasHash: Buffer) {

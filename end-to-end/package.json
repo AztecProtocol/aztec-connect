@@ -26,7 +26,6 @@
     "aztec2-sdk": "file:../sdk/dest",
     "blockchain": "file:../blockchain/dest",
     "bn.js": "^5.0.0",
-    "fake-indexeddb": "^3.0.2",
     "level": "^6.0.1",
     "source-map-support": "^0.5.19",
     "typescript": "^3.5.3",

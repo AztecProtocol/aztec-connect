@@ -5,5 +5,5 @@
     "module": "es6",
     "outDir": "dest-es"
   },
-  "exclude": ["src/**/*.test.ts", "src/**/mock-*.ts", "src/**/fixtures/*"]
+  "exclude": ["src/**/*.test.ts", "src/**/mock-*.ts", "src/**/fixtures/*", "src/**/test/*"]
 }

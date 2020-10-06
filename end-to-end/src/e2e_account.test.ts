@@ -1,7 +1,4 @@
-import 'fake-indexeddb/auto';
-
-import { EthereumSdk, EthereumSdkUser } from 'aztec2-sdk';
-import { EthAddress } from 'barretenberg/address';
+import { createEthSdk, EthereumSdk, EthereumSdkUser, EthAddress } from 'aztec2-sdk';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { Eth } from 'web3x/eth';
@@ -21,12 +18,13 @@ describe('end-to-end tests', () => {
   beforeAll(async () => {
     // Init sdk.
     provider = new HttpProvider(ETHEREUM_HOST);
-    sdk = new EthereumSdk((provider as any).provider);
-    await sdk.init(ROLLUP_HOST, {
+    sdk = await createEthSdk((provider as any).provider, ROLLUP_HOST, {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
+      dbPath: ':memory:',
     });
+    await sdk.init();
     await sdk.awaitSynchronised();
 
     // Get accounts and signers.

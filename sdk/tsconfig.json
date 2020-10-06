@@ -12,7 +12,9 @@
     "downlevelIteration": true,
     "inlineSourceMap": true,
     "declarationMap": true,
-    "importHelpers": true
+    "importHelpers": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": ["src"]
 }
