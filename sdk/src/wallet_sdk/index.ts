@@ -278,7 +278,8 @@ export class WalletSdk extends EventEmitter {
   }
 
   public async removeSigningKey(userId: Buffer, signingPublicKey: GrumpkinAddress, signer: Signer): Promise<TxHash> {
-    return this.core.createAccountProof(userId, signer, undefined, undefined, signingPublicKey);
+    throw new Error('Signing key revokation not yet implemented.');
+    // return this.core.createAccountProof(userId, signer, undefined, undefined, signingPublicKey);
   }
 
   public getUserData(userId: Buffer) {
