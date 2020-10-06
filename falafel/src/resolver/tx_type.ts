@@ -73,6 +73,15 @@ class TxFilter {
   @Field(() => [HexString!], { nullable: true })
   txId_not_in?: string[];
 
+  @Field(() => HexString, { nullable: true })
+  txId_starts_with?: string;
+
+  @Field(() => HexString, { nullable: true })
+  txId_ends_with?: string;
+
+  @Field(() => HexString, { nullable: true })
+  txId_contains?: string;
+
   @Field(() => Int, { nullable: true })
   rollup?: number;
 

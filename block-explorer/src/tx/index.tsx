@@ -48,7 +48,7 @@ export const Tx: React.FunctionComponent<TxProps> = ({ txId }) => {
     pollInterval: TX_POLL_INTERVAL,
   });
 
-  if (data?.tx?.block.status === 'SETTLED') {
+  if (data?.tx?.block?.status === 'SETTLED') {
     stopPolling();
   }
 
@@ -99,13 +99,12 @@ export const Tx: React.FunctionComponent<TxProps> = ({ txId }) => {
     );
   }
 
-  const { block } = tx;
-  const { status } = block;
+  const { status } = tx.block || {};
 
   const titleNode = (
     <TxTitle>
       {txTitleNode}
-      <StyledBlockStatusIndicator status={status} size="s" />
+      {status && <StyledBlockStatusIndicator status={status} size="s" />}
     </TxTitle>
   );
 

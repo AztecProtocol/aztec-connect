@@ -96,6 +96,15 @@ class RollupFilter {
   hash_not_in?: string[];
 
   @Field(() => HexString, { nullable: true })
+  hash_starts_with?: string;
+
+  @Field(() => HexString, { nullable: true })
+  hash_ends_with?: string;
+
+  @Field(() => HexString, { nullable: true })
+  hash_contains?: string;
+
+  @Field(() => HexString, { nullable: true })
   dataRoot?: string;
 
   @Field(() => HexString, { nullable: true })
@@ -112,6 +121,15 @@ class RollupFilter {
 
   @Field(() => [HexString!], { nullable: true })
   dataRoot_not_in?: string[];
+
+  @Field(() => HexString, { nullable: true })
+  dataRoot_starts_with?: string;
+
+  @Field(() => HexString, { nullable: true })
+  dataRoot_ends_with?: string;
+
+  @Field(() => HexString, { nullable: true })
+  dataRoot_contains?: string;
 
   @Field(() => Int, { nullable: true })
   ethBlock?: number;
@@ -160,6 +178,15 @@ class RollupFilter {
 
   @Field(() => [HexString!], { nullable: true })
   ethTxHash_not_in?: string[];
+
+  @Field(() => HexString, { nullable: true })
+  ethTxHash_starts_with?: string;
+
+  @Field(() => HexString, { nullable: true })
+  ethTxHash_ends_with?: string;
+
+  @Field(() => HexString, { nullable: true })
+  ethTxHash_contains?: string;
 
   @Field(() => RollupStatusScalarType, { nullable: true })
   status?: RollupStatus;

@@ -17,8 +17,6 @@ import { Tx } from './query';
 
 const formatNumber = (num: string) => num.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-const isEmptyHash = (hash: string) => !!hash.match(/^(0x)?0*$/);
-
 const StyledProofTypeTag = styled(ProofTypeTag)`
   position: absolute;
   right: 0;
@@ -66,7 +64,7 @@ export const TxDetails: React.FunctionComponent<TxDetailsProps> = ({ tx }) => {
     outputOwner,
     block,
   } = tx;
-  const { created } = block;
+  const created = block?.created;
   const proofType = proofIdToType(proofId);
   const statusTag = <StyledProofTypeTag proofType={proofType} />;
 
@@ -107,9 +105,7 @@ export const TxDetails: React.FunctionComponent<TxDetailsProps> = ({ tx }) => {
   const summaryNode = (
     <BlockSummary title="Transaction" titleContent={statusTag}>
       <InfoRow title="TRANSACTION NUMBER">{`${txNo}`}</InfoRow>
-      <InfoRow title="TIMESTAMP">
-        <Timestamp time={created} />
-      </InfoRow>
+      <InfoRow title="TIMESTAMP">{created ? <Timestamp time={created} /> : 'Pending...'}</InfoRow>
       <InfoRow title="NULLIFIERS">
         <HashValue value={`0x${nullifier1}`} />
         <HashValue value={`0x${nullifier2}`} />

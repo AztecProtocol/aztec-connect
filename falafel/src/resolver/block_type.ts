@@ -62,6 +62,15 @@ class BlockFilter {
   @Field(() => [HexString!], { nullable: true })
   txHash_not_in?: string[];
 
+  @Field(() => HexString, { nullable: true })
+  txHash_starts_with?: string;
+
+  @Field(() => HexString, { nullable: true })
+  txHash_ends_with?: string;
+
+  @Field(() => HexString, { nullable: true })
+  txHash_contains?: string;
+
   @Field(() => Int, { nullable: true })
   rollupSize?: number;
 

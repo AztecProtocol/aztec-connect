@@ -10,14 +10,14 @@ import { ENDPOINT } from './queries';
 const client = new ApolloClient({ uri: ENDPOINT });
 
 ReactDOM.render(
-  <React.StrictMode>
+  <>
     <GlobalStyle />
     <ApolloProvider client={client}>
       <BrowserRouter>
         <App />
       </BrowserRouter>
     </ApolloProvider>
-  </React.StrictMode>,
+  </>,
   document.getElementById('root'),
 );
 

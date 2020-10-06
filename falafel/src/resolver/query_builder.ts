@@ -11,9 +11,7 @@ interface QueryArgs {
   skip?: number;
 }
 
-const getConstraint = (key: string) => {
-  const [field, cond] = key.split(/_(.+)/);
-
+const getConstraint = (key: string, field: string, cond: string) => {
   switch (cond) {
     case 'not':
       return `obj.${field} != :${key}`;
@@ -33,18 +31,36 @@ const getConstraint = (key: string) => {
       return `obj.${field} IN (:...${key})`;
     case 'not_in':
       return `obj.${field} NOT IN (:...${key})`;
+    case 'starts_with':
+    case 'ends_with':
+    case 'contains':
+      return `hex(obj.${field}) LIKE :${key}`;
   }
 
   return `obj.${field} = :${key}`;
+};
+
+const getConstraintValue = (cond: string, value: any) => {
+  switch (cond) {
+    case 'starts_with':
+      return `${value.toString('hex')}%`;
+    case 'ends_with':
+      return `%${value.toString('hex')}`;
+    case 'contains':
+      return `%${value.toString('hex')}%`;
+  }
+
+  return value;
 };
 
 export const getQuery = <T>(rep: Repository<T>, { where, order, take, skip }: QueryArgs) => {
   const query = rep.createQueryBuilder('obj').select('obj');
   if (where) {
     Object.keys(where).forEach(key => {
+      const [field, cond] = key.split(/_(.+)/);
       const value = where[key];
       if (value !== undefined && value !== null) {
-        query.andWhere(getConstraint(key), { [key]: value });
+        query.andWhere(getConstraint(key, field, cond), { [key]: getConstraintValue(cond, value) });
       }
     });
   }
