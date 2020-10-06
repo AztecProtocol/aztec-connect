@@ -3,18 +3,19 @@ The rollup architecture has been designed to support custom circuits written in 
 ## Noir sha256 hash circuit
 
 ```rust
-   fn main(x : Witness,low : Witness, high: Witness) {
 
-        let digest = std::hash::sha256(x as u8);
+fn main(x : Witness, low : Witness, high: Witness) {
 
-        constrain digest[0] == low;
-        constrain digest[1] == high;
-    }
+    let digest = std::hash::sha256(x as u8);
 
-    fn add(x : Witness, y : Witness) {
-        x + y
-    }
+    constrain digest[0] == low;
+    constrain digest[1] == high;
+}
+
+fn add(x : Witness, y : Witness) {
+    x + y
+}
 
 ```
 
-Aztec is currently working to develop scalable and private versions of DeFi, if you require custom circuits for your layer 2 intergation and would like to work with us, please reach out to joe@aztecprotocol.com to be added to the Noir developer preview.
+Aztec is currently working with leading protocols to develop scalable and private versions of DeFi, if you would like to work with us, please reach out to joe@aztecprotocol.com.

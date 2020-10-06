@@ -1,4 +1,4 @@
-This method allows a user to recover their account to the trusted third party they selected during account creation. It is the responsability of the third party to construct a new proof that returns the account control to a public key the user controls and revokes the third party access.
+This method allows a user to recover their account to the trusted third party they selected during account creation. It is the responsibility of the third party to construct a new proof that returns the account control to a public key the user controls and revokes the third party access.
 
 @spec sdk.ts recoverAccount
 

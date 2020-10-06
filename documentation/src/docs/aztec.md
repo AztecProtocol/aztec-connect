@@ -1,4 +1,4 @@
-Aztec is an open source layer 2 network, design code that acts as a privacy shield for blockchains. Aztec uses advanced zero-knowledge proofs to provide privacy and scaling via our ZkRollup service. To read more about our ZK Rollup and the underlying PLONK technology please see the links below.
+Aztec is an open source layer 2 network bringing scalability and privacy too Ethereum. Aztec uses zkSNARK proofs to provide privacy and scaling via our zkRollup service. To read more about our zkRollup and the underlying PLONK technology please see the links below.
 
 - <a href="https://medium.com/aztec-protocol/aztec-zkrollup-scaling-solution-with-privacy-31d9010c55bd" target="_blank">ZkRollup Introduction</a>
 
@@ -6,7 +6,7 @@ Aztec is an open source layer 2 network, design code that acts as a privacy shie
 
 ## Test Network
 
-Our rollup is deployed on the Ropsten testnet with an un-audited use at your own risk main-net version availble shortly. On test networks we submit rollups every 1 minute, our main-net transaction schedule will be dependant on volume, with a 1 hour longstop.
+Our rollup is deployed on the Ropsten testnet with an un-audited use at your own risk main-net version available shortly. On test networks we submit rollups every 1 minute, our main-net transaction schedule will be dependant on volume, with a 1 hour long-stop.
 
 This code is made available free to developers via our SDK.
 

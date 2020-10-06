@@ -9,7 +9,7 @@ The Aztec network acts as a privacy shield for ERC20 Token transfers and other D
 <img src="/images/tokens.jpg" style="width:100%;" />
 <br/><br/>
 
-Once the tokens are inside the Aztec network, all subsequent transfers are confidenital and anonymous and conducted via the SDK's `.transfer()` method. Under the hood the SDK will pick the most appropriate UTXO's for the transaction and construct a proof that is relayed to the rollup provider.
+Once the tokens are inside the Aztec network, all subsequent transfers are confidential and anonymous and conducted via the SDK's `.transfer()` method. Under the hood the SDK will pick the most appropriate UTXO's for the transaction and construct a proof that is relayed to the rollup provider.
 
 ## See Also
 

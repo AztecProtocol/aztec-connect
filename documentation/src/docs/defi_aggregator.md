@@ -1,4 +1,4 @@
-The Aztec netowrk allows DeFi users to save gas and participate anonymously in DeFi transactions. This functionality is currently being developed to work out of the box with leading DeFi protocols.
+The Aztec network allows DeFi users to save gas and participate anonymously in DeFi transactions. This functionality is currently being developed to work out of the box with leading DeFi protocols.
 
 <img src="/images/defi-aggregator.png" style="width:60%;" />
 

@@ -1,4 +1,4 @@
-This method allows a user to remove a signing key on their account. This is usefull for managing multiple devices, or for device recovery.
+This method allows a user to remove a signing key on their account. This is useful for managing multiple devices, or for device recovery.
 
 @spec sdk.ts removeSigningKey
 

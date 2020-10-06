@@ -8,7 +8,7 @@ In emergency mode, the proofs are constructed in browser and sent directly to th
 
 This data querying role is performed by a stand-alone server, Sriracha. Sriracha is open source and is intended to be run by the user locally themselves.
 
-The Aztec L2 system reserves the last 20 blocks of every 100 Ethereum blocks for use by the escape hatch system. During this time, no standard Rollups can be processed.
+The Aztec L2 system reserves the last 20 blocks of every 100 Ethereum blocks for use by the escape hatch system. During this time, no standard rollups can be processed.
 
 For the purposes of the demo code below, the SDK is using a Sriracha instance that we have deployed on cloud computing resources. However, for real use, Sriracha is distributed as a docker container from the official Aztec docker repository. To replicate the setting up of the server, follow the setup steps:
 
