@@ -1,6 +1,6 @@
 Aztec is an open source layer 2 network bringing scalability and privacy too Ethereum. Aztec uses zkSNARK proofs to provide privacy and scaling via our zkRollup service. To read more about our zkRollup and the underlying PLONK technology please see the links below.
 
-- <a href="https://medium.com/aztec-protocol/aztec-zkrollup-scaling-solution-with-privacy-31d9010c55bd" target="_blank">ZkRollup Introduction</a>
+- <a href="https://medium.com/aztec-protocol/aztec-zkrollup-layer-2-privacy-1978e90ee3b6" target="_blank">ZkRollup Introduction</a>
 
 - <a href="https://aztec.network/research" target="_blank">AZTEC Content Library</a>
 
