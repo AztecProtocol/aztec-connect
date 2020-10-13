@@ -9,7 +9,6 @@ export interface UserData {
   privateKey: Buffer;
   publicKey: GrumpkinAddress;
   alias?: string;
-  syncedToBlock: number;
   syncedToRollup: number;
 }
 
@@ -23,6 +22,6 @@ export class UserDataFactory {
 
   async createUser(privateKey: Buffer): Promise<UserData> {
     const publicKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
-    return { id: publicKey.toBuffer(), privateKey, publicKey, syncedToBlock: -1, syncedToRollup: -1 };
+    return { id: publicKey.toBuffer(), privateKey, publicKey, syncedToRollup: -1 };
   }
 }

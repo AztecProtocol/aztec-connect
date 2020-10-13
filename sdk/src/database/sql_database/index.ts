@@ -100,7 +100,7 @@ export class SQLDatabase implements Database {
     await this.noteRep.clear();
     await this.userKeyRep.clear();
     await this.userTxRep.clear();
-    await this.userDataRep.update({ syncedToBlock: MoreThan(-1) }, { syncedToBlock: -1, syncedToRollup: -1 });
+    await this.userDataRep.update({ syncedToRollup: MoreThan(-1) }, { syncedToRollup: -1 });
   }
 
   async getUserTx(userId: Buffer, txHash: Buffer) {

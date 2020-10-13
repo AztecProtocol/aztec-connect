@@ -4,9 +4,9 @@ import { fetch } from '../iso_fetch';
 // import createDebug from 'debug';
 
 export interface BlockServerResponse {
-  blockNum: number;
   txHash: string;
   created: string;
+  rollupId: number;
   rollupSize: number;
   rollupProofData: string;
   viewingKeysData: string;
@@ -41,15 +41,15 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     return this.latestRollupId;
   }
 
-  public async start(fromBlock = 0) {
+  public async start(from = 0) {
     this.running = true;
 
     const emitBlocks = async () => {
       try {
-        const blocks = await this.getBlocks(fromBlock);
+        const blocks = await this.getBlocks(from);
         for (const block of blocks) {
           this.emit('block', block);
-          fromBlock = block.blockNum + 1;
+          from = block.rollupId + 1;
         }
       } catch (err) {
         // debug(err);

@@ -17,14 +17,14 @@ export class RollupDao {
   @Column()
   public dataRoot!: Buffer;
 
-  @OneToMany(type => TxDao, tx => tx.rollup, { cascade: true })
+  @OneToMany(() => TxDao, tx => tx.rollup, { cascade: true })
   public txs!: TxDao[];
 
   @Column({ nullable: true })
   public proofData?: Buffer;
 
   @Column({ nullable: true })
-  public ethBlock?: number;
+  public viewingKeys?: Buffer;
 
   @Column({ nullable: true })
   public ethTxHash?: Buffer;

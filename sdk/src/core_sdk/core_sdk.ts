@@ -332,7 +332,7 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async getRemoteStatus() {
-    return await this.rollupProvider.status();
+    return await this.rollupProvider.getStatus();
   }
 
   public async startReceivingBlocks() {
@@ -343,8 +343,8 @@ export class CoreSdk extends EventEmitter {
     this.blockQueue = new MemoryFifo<Block>();
     this.rollupProvider.on('block', b => this.blockQueue.put(b));
 
-    const syncedToBlock = await this.leveldb.get('syncedToBlock').catch(() => -1);
-    await this.rollupProvider.start(+syncedToBlock + 1);
+    const syncedToRollup = await this.leveldb.get('syncedToRollup').catch(() => -1);
+    await this.rollupProvider.start(+syncedToRollup + 1);
     this.sdkStatus.latestRollupId = this.rollupProvider.getLatestRollupId();
 
     this.userStates.forEach(us => us.startSync());
@@ -380,7 +380,6 @@ export class CoreSdk extends EventEmitter {
       const latestRollupId = this.rollupProvider.getLatestRollupId();
       await this.leveldb.put('syncedToRollup', rollupId.toString());
       await this.leveldb.put('latestRollupId', latestRollupId.toString());
-      await this.leveldb.put('syncedToBlock', block.blockNum.toString());
 
       this.sdkStatus.syncedToRollup = rollupId;
       this.sdkStatus.latestRollupId = latestRollupId;
@@ -489,7 +488,7 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async validateEscapeOpen() {
-    const { escapeOpen, numEscapeBlocksRemaining } = await this.rollupProvider.status();
+    const { escapeOpen, numEscapeBlocksRemaining } = await this.rollupProvider.getStatus();
     if (!escapeOpen) {
       throw new Error(`Escape hatch window closed. Opens in ${numEscapeBlocksRemaining} blocks`);
     }
@@ -624,7 +623,7 @@ export class CoreSdk extends EventEmitter {
   }
 
   private async isSynchronised() {
-    const providerStatus = await this.rollupProvider.status();
+    const providerStatus = await this.rollupProvider.getStatus();
     const localDataRoot = await this.worldState.getRoot();
     return localDataRoot.equals(providerStatus.dataRoot);
   }

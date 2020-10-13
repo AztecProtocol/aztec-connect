@@ -12,6 +12,10 @@ export class BlockDao {
   @Column()
   public created!: Date;
 
+  @Index({ unique: true })
+  @Column()
+  public rollupId!: number;
+
   @Column()
   public rollupSize!: number;
 

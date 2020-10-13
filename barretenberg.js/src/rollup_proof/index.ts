@@ -139,7 +139,7 @@ export class RollupProofData {
 
     const viewingKeys: Buffer[] = [];
     if (viewingKeyData) {
-      for (let i: number = 0; i < numTxs * 2 * VIEWING_KEY_SIZE; i += VIEWING_KEY_SIZE) {
+      for (let i = 0; i < numTxs * 2 * VIEWING_KEY_SIZE; i += VIEWING_KEY_SIZE) {
         viewingKeys.push(viewingKeyData.slice(i, i + VIEWING_KEY_SIZE));
       }
     }

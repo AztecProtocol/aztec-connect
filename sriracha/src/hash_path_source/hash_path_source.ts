@@ -30,7 +30,7 @@ export interface TreeState {
 }
 
 export interface HashPathSource {
-  status(): Promise<RollupProviderStatus>;
+  getStatus(): Promise<RollupProviderStatus>;
   getTreeState(treeIndex: number): Promise<TreeState>;
   getHashPath(treeIndex: number, index: bigint): Promise<HashPath>;
   getHashPaths(treeIndex: number, additions: { index: bigint; value: Buffer }[]): Promise<GetHashPathsResponse>;

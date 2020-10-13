@@ -6,7 +6,6 @@ export { Block } from 'barretenberg/block_source';
 export interface NetworkInfo {
   chainId: number;
   networkOrHost: string;
-  blockNumber: number;
 }
 
 export interface Receipt {
@@ -16,8 +15,8 @@ export interface Receipt {
 
 export interface Blockchain extends RollupProvider {
   getTransactionReceipt(txHash: Buffer): Promise<Receipt>;
-  validateDepositFunds(publicOwner: Buffer, publicInput: Buffer, assetId: number): Promise<boolean>;
-  validateSignature(publicOwnerBuf: Buffer, signature: Buffer, proof: Buffer): boolean;
+  validateDepositFunds(publicOwner: EthAddress, publicInput: bigint, assetId: number): Promise<boolean>;
+  validateSignature(publicOwner: EthAddress, signature: Buffer, proof: Buffer): boolean;
   getNetworkInfo(): Promise<NetworkInfo>;
   getRollupContractAddress(): EthAddress;
   getTokenContractAddresses(): EthAddress[];

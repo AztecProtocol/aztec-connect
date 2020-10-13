@@ -18,8 +18,9 @@ export class BlockResolver {
   async block(
     @Arg('id', () => Int, { nullable: true }) id?: number,
     @Arg('txHash', () => HexString, { nullable: true }) txHash?: Buffer,
+    @Arg('rollupId', () => Int, { nullable: true }) rollupId?: number,
   ) {
-    return getQuery(this.blockRep, { where: { id, txHash } }).getOne();
+    return getQuery(this.blockRep, { where: { id, txHash, rollupId } }).getOne();
   }
 
   @Query(() => [BlockType!])

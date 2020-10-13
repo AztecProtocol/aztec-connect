@@ -1,5 +1,5 @@
 import { WorldStateDb } from 'barretenberg/world_state_db';
-import { EthereumBlockchain, EthereumBlockchainConfig } from 'blockchain';
+import { EthereumBlockchain } from 'blockchain';
 import { EthAddress } from 'barretenberg/address';
 import dotenv from 'dotenv';
 import { ethers, Signer } from 'ethers';
@@ -7,10 +7,9 @@ import http from 'http';
 import moment from 'moment';
 import 'reflect-metadata';
 import 'source-map-support/register';
-import { Connection, createConnection } from 'typeorm';
+import { createConnection } from 'typeorm';
 import { appFactory } from './app';
 import { LocalBlockchain } from './blockchain/local_blockchain';
-import { PersistentEthereumBlockchain } from './blockchain/persistent_ethereum_blockchain';
 import { RollupDb } from './rollup_db';
 import { Server, ServerConfig } from './server';
 import 'log-timestamp';
@@ -27,6 +26,8 @@ const {
   ROLLUP_SIZE = '2',
   MAX_ROLLUP_WAIT_TIME = '10',
   MIN_ROLLUP_INTERVAL = '0',
+  MIN_CONFIRMATION = '1',
+  MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW = '12',
   LOCAL_BLOCKCHAIN_INIT_SIZE = '0',
   API_PREFIX = '',
   GAS_LIMIT = '',
@@ -34,6 +35,8 @@ const {
 
 async function getEthereumBlockchainConfig() {
   const gasLimit = GAS_LIMIT ? +GAS_LIMIT : undefined;
+  const minConfirmation = +MIN_CONFIRMATION;
+  const minConfirmationEHW = +MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW;
   if (INFURA_API_KEY && NETWORK && PRIVATE_KEY && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Infura network: ${NETWORK}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
@@ -43,29 +46,22 @@ async function getEthereumBlockchainConfig() {
       signer: new ethers.Wallet(PRIVATE_KEY, provider) as Signer,
       networkOrHost: NETWORK,
       gasLimit,
+      minConfirmation,
+      minConfirmationEHW,
     };
   } else if (ETHEREUM_HOST && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Ethereum host: ${ETHEREUM_HOST}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
     const provider = new ethers.providers.JsonRpcProvider(ETHEREUM_HOST);
+    const config = { provider, networkOrHost: ETHEREUM_HOST, gasLimit, minConfirmation, minConfirmationEHW };
     if (PRIVATE_KEY) {
-      return {
-        provider,
-        signer: new ethers.Wallet(PRIVATE_KEY, provider) as Signer,
-        networkOrHost: ETHEREUM_HOST,
-        gasLimit,
-      };
+      return { ...config, signer: new ethers.Wallet(PRIVATE_KEY, provider) as Signer };
     } else if ((await provider.listAccounts()).length) {
-      return { provider, signer: provider.getSigner(0), networkOrHost: ETHEREUM_HOST, gasLimit };
+      return { ...config, signer: provider.getSigner(0) };
     } else {
-      return { provider, networkOrHost: ETHEREUM_HOST, gasLimit };
+      return config;
     }
   }
-}
-
-async function blockchainFactory(ethConfig: EthereumBlockchainConfig, connection: Connection) {
-  const ethereumBlockchain = await EthereumBlockchain.new(ethConfig, EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS!));
-  return PersistentEthereumBlockchain.new(ethereumBlockchain, connection);
 }
 
 async function main() {
@@ -78,7 +74,7 @@ async function main() {
   const connection = await createConnection();
   const ethConfig = await getEthereumBlockchainConfig();
   const blockchain = ethConfig
-    ? await blockchainFactory(ethConfig, connection)
+    ? await EthereumBlockchain.new(ethConfig, EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS!))
     : new LocalBlockchain(connection, serverConfig.rollupSize, +LOCAL_BLOCKCHAIN_INIT_SIZE);
   const rollupDb = new RollupDb(connection);
 
@@ -93,8 +89,8 @@ async function main() {
   const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb);
   await server.start();
 
-  const serverStatus = await server.status();
-  const app = appFactory(server, API_PREFIX, connection, worldStateDb, serverConfig, serverStatus);
+  const serverStatus = await server.getStatus();
+  const app = appFactory(server, API_PREFIX, connection, worldStateDb, serverStatus);
 
   const httpServer = http.createServer(app.callback());
   httpServer.listen(PORT);

@@ -1,5 +1,4 @@
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { RollupStatus } from 'barretenberg/rollup_provider';
 import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';

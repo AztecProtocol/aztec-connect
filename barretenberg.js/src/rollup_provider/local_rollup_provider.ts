@@ -1,4 +1,4 @@
-import { BlockSource, Block } from '../block_source';
+import { Block } from '../block_source';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
@@ -48,13 +48,10 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
       throw new Error('Proof not verified.');
     }
 
-    // TODO - should construct a rollup proof
     const proof = new JoinSplitProof(proofData, viewingKeys);
-    const dataRoot = proofData.slice(96, 128);
-    const nullRoot = proofData.slice(160, 192);
     const block: Block = {
       txHash: randomBytes(32),
-      blockNum: this.blockNum,
+      rollupId: this.blockNum,
       rollupSize: 1,
       rollupProofData: proofData,
       viewingKeysData: Buffer.concat(viewingKeys),
@@ -64,15 +61,13 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
     this.blocks.push(block);
     this.blockNum++;
     this.dataTreeSize += 2;
-    this.dataRoot = dataRoot;
-    this.nullRoot = nullRoot;
-
+    this.dataRoot = proof.noteTreeRoot;
     this.emit('block', block);
 
     return randomBytes(32);
   }
 
-  async status() {
+  async getStatus() {
     return {
       serviceName: 'local',
       chainId: 0,
@@ -84,7 +79,6 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
       dataRoot: this.dataRoot,
       nullRoot: this.nullRoot,
       rootRoot: this.rootRoot,
-      blockNumber: this.blockNum,
       escapeOpen: false,
       numEscapeBlocksRemaining: 0,
     };

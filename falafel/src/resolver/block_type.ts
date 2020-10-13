@@ -12,6 +12,9 @@ export class BlockType {
   txHash!: string;
 
   @Field(() => Int)
+  rollupId!: number;
+
+  @Field(() => Int)
   rollupSize!: number;
 
   @Field(() => HexString)
@@ -72,6 +75,30 @@ class BlockFilter {
   txHash_contains?: string;
 
   @Field(() => Int, { nullable: true })
+  rollupId?: number;
+
+  @Field(() => Int, { nullable: true })
+  rollupId_not?: number;
+
+  @Field(() => [Int!], { nullable: true })
+  rollupId_in?: number[];
+
+  @Field(() => [Int!], { nullable: true })
+  rollupId_not_in?: number[];
+
+  @Field(() => Int, { nullable: true })
+  rollupId_gt?: number;
+
+  @Field(() => Int, { nullable: true })
+  rollupId_gte?: number;
+
+  @Field(() => Int, { nullable: true })
+  rollupId_lt?: number;
+
+  @Field(() => Int, { nullable: true })
+  rollupId_lte?: number;
+
+  @Field(() => Int, { nullable: true })
   rollupSize?: number;
 
   @Field(() => Int, { nullable: true })
@@ -124,6 +151,9 @@ class BlockFilter {
 class BlockOrder {
   @Field({ nullable: true })
   id?: Sort;
+
+  @Field({ nullable: true })
+  rollupId?: Sort;
 
   @Field({ nullable: true })
   rollupSize?: Sort;
