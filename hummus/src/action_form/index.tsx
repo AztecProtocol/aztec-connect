@@ -27,9 +27,11 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
   const [latestRollup, setLatestRollup] = useState(-1);
   const [tokenBalance, setTokenBalance] = useState(BigInt(0));
   const [allowance, setAllowance] = useState(BigInt(-1));
+  const [pendingDepositFunds, setPendingDepositFunds] = useState(BigInt(-1));
   const [balance, setBalance] = useState(userAsset.balance());
   const [actionState, setActionState] = useState(sdk.getActionState());
   const [action, setAction] = useState(userAsset.balance() ? Action.TRANSFER : Action.DEPOSIT);
+  const [logMsg, setLogMsg] = useState('');
 
   useEffect(() => {
     const handleUserStateChange = async (ethAddress: EthAddress) => {
@@ -41,6 +43,7 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
       setBalance(userAsset.balance());
       setTokenBalance(await userAsset.publicBalance());
       setAllowance(await userAsset.publicAllowance());
+      setPendingDepositFunds(await userAsset.getUserPendingDeposit());
     };
 
     const handleWorldStateChange = (syncedToRollup: number, latestRollupId: number) => {
@@ -52,6 +55,7 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
     handleWorldStateChange(sdk.getLocalStatus().syncedToRollup, sdk.getLocalStatus().latestRollupId);
 
     app.on(SdkEvent.UPDATED_ACTION_STATE, setActionState);
+    app.on(SdkEvent.LOG, setLogMsg);
     app.on(SdkEvent.UPDATED_USER_STATE, handleUserStateChange);
     app.on(SdkEvent.UPDATED_WORLD_STATE, handleWorldStateChange);
 
@@ -62,6 +66,7 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
     };
   }, [app, account]);
 
+  const escapeHatchMode = sdk.isEscapeHatchMode();
   const isRunning = actionState !== undefined && !actionState.txHash && !actionState.error;
   const isLoading = (action: Action) => isRunning && actionState!.action === action;
   const errorMsg = (action: Action) => (actionState?.action === action && actionState?.error?.message) || '';
@@ -82,20 +87,35 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
             <FormField label="User Synced">{`${syncedToRollup + 1} / ${latestRollup + 1}`}</FormField>
             <FormField label="Tree Synced">{`${worldSyncedToRollup + 1} / ${latestRollup + 1}`}</FormField>
             <FormField label="Public Balance">{`${userAsset.fromErc20Units(tokenBalance)}`}</FormField>
+            {pendingDepositFunds > 0 && (
+              <FormField label="Pending Deposit">{`${userAsset.fromErc20Units(pendingDepositFunds)}`}</FormField>
+            )}
             <FormField label="Private Balance">{`${userAsset.fromErc20Units(balance)}`}</FormField>
-            <EscapeHatchIndicator sdk={sdk} />
+            {escapeHatchMode && <EscapeHatchIndicator sdk={sdk} />}
             <ActionSelect action={action} onSelect={setAction} />
+            {action === Action.APPROVE && (
+              <RecipientValueForm
+                valueLabel="Approve Value"
+                buttonText="Approve"
+                initialValue="100"
+                onSubmit={async (value: bigint) => userAsset.approve(value)}
+                toNoteValue={(value: string) => userAsset.toErc20Units(value)}
+                isLoading={isLoading(Action.APPROVE)}
+                error={errorMsg(Action.APPROVE)}
+                logMsg={logMsg}
+              />
+            )}
             {action === Action.DEPOSIT && (
               <RecipientValueForm
                 valueLabel="Deposit Value"
                 buttonText="Deposit"
                 initialValue="100"
                 allowance={allowance}
-                onApprove={async (value: bigint) => userAsset.approve(value)}
                 onSubmit={async (value: bigint) => userAsset.deposit(value)}
                 toNoteValue={(value: string) => userAsset.toErc20Units(value)}
                 isLoading={isLoading(Action.DEPOSIT) || isLoading(Action.APPROVE)}
                 error={errorMsg(Action.DEPOSIT)}
+                logMsg={logMsg}
               />
             )}
             {action === Action.WITHDRAW && (
@@ -106,6 +126,7 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
                 toNoteValue={(value: string) => userAsset.toErc20Units(value)}
                 isLoading={isLoading(Action.WITHDRAW)}
                 error={errorMsg(Action.WITHDRAW)}
+                logMsg={logMsg}
               />
             )}
             {action === Action.TRANSFER && (
@@ -119,6 +140,7 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
                 toNoteValue={(value: string) => userAsset.toErc20Units(value)}
                 isLoading={isLoading(Action.TRANSFER)}
                 error={errorMsg(Action.TRANSFER)}
+                logMsg={logMsg}
               />
             )}
             {action === Action.MINT && (
@@ -130,21 +152,7 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
                 toNoteValue={(value: string) => userAsset.toErc20Units(value)}
                 isLoading={isLoading(Action.MINT)}
                 error={errorMsg(Action.TRANSFER)}
-              />
-            )}
-            {action === Action.PUBLIC_TRANSFER && (
-              <RecipientValueForm
-                valueLabel="Transfer Value"
-                recipientLabel="To"
-                buttonText="Public Send"
-                allowance={allowance}
-                onApprove={async (value: bigint) => userAsset.approve(value)}
-                onSubmit={async (value: bigint, recipient: string) =>
-                  userAsset.publicTransfer(value, EthAddress.fromString(recipient))
-                }
-                toNoteValue={(value: string) => userAsset.toErc20Units(value)}
-                isLoading={isLoading(Action.PUBLIC_TRANSFER) || isLoading(Action.APPROVE)}
-                error={errorMsg(Action.PUBLIC_TRANSFER)}
+                logMsg={logMsg}
               />
             )}
           </Block>

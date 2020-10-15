@@ -10,7 +10,7 @@ interface AccountSelectProps {
 }
 
 export const ActionSelect = ({ action, onSelect }: AccountSelectProps) => {
-  const items = [Action.DEPOSIT, Action.WITHDRAW, Action.TRANSFER, Action.PUBLIC_TRANSFER, Action.MINT].map(action => ({
+  const items = [Action.DEPOSIT, Action.WITHDRAW, Action.TRANSFER, Action.MINT, Action.APPROVE].map(action => ({
     value: action,
     title: action,
   }));

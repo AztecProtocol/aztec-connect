@@ -119,7 +119,7 @@ export function appFactory(
   router.get('/get-blocks', async (ctx: Koa.Context) => {
     const blocks = await server.getBlocks(+ctx.query.from);
     const response: GetBlocksServerResponse = {
-      latestRollupId: server.getLatestRollupId(),
+      latestRollupId: await server.getLatestRollupId(),
       blocks: blocks.map(toBlockResponse),
     };
     ctx.body = response;

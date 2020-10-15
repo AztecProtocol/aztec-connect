@@ -27,15 +27,18 @@ describe('ethereum_blockchain', () => {
   beforeEach(async () => {
     contracts = {
       getSupportedAssets: jest.fn(),
-      getRollupStatus: jest.fn(),
-      getEscapeHatchStatus: jest.fn(),
+      getRollupStatus: jest.fn().mockResolvedValue({ nextRollupId: 0 }),
+      getEscapeHatchStatus: jest.fn().mockResolvedValue({
+        escapeOpen: false,
+        numEscapeBlocksRemaining: 100,
+      }),
       getRollupBlocksFrom: jest.fn().mockResolvedValue(blocks),
       getTokenContractAddresses: jest.fn().mockReturnValue([EthAddress.randomAddress()]),
       getRollupContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
     } as any;
 
     provider = {
-      getBlockNumber: jest.fn(),
+      getBlockNumber: jest.fn().mockResolvedValue(blocks.length),
       getNetwork: jest.fn().mockResolvedValue({ chainId: 999 }),
       getTransactionReceipt: jest.fn(),
     } as any;
@@ -46,15 +49,6 @@ describe('ethereum_blockchain', () => {
       networkOrHost: 'test',
       console: false,
     };
-
-    contracts.getEscapeHatchStatus.mockResolvedValue({
-      escapeOpen: false,
-      numEscapeBlocksRemaining: 100,
-    });
-
-    contracts.getRollupStatus.mockResolvedValue({ nextRollupId: 0 });
-
-    provider.getBlockNumber.mockResolvedValue(blocks.length);
 
     blockchain = new EthereumBlockchain(config, contracts as any);
     await blockchain.init();

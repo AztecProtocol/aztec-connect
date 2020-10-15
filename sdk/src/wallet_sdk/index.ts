@@ -2,6 +2,7 @@ import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Signature } from 'barretenberg/client_proofs/signature';
 import { getProviderStatus, Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
+import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -34,19 +35,29 @@ export async function createWalletSdk(
     await core.eraseDb();
   }
 
-  const web3Provider = new Web3Provider(ethereumProvider);
-  const { chainId: providerChainId } = await web3Provider.getNetwork();
+  const provider = new Web3Provider(ethereumProvider);
+  const { chainId: providerChainId } = await provider.getNetwork();
   if (chainId !== providerChainId) {
     throw new Error(`Provider chainId ${providerChainId} does not match rollup provider chainId ${chainId}.`);
   }
 
   const tokenContracts: TokenContract[] =
     networkOrHost !== 'development'
-      ? tokenContractAddresses.map(a => new Web3TokenContract(web3Provider, a, rollupContractAddress, chainId))
+      ? tokenContractAddresses.map(a => new Web3TokenContract(provider, a, rollupContractAddress, chainId))
       : [new MockTokenContract()];
+
+  const config = {
+    provider,
+    signer: provider.getSigner(0),
+    networkOrHost: serverUrl,
+    console: false,
+    gasLimit: 7000000,
+  };
+  const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress);
+
   await Promise.all(tokenContracts.map(tc => tc.init()));
 
-  return new WalletSdk(core, tokenContracts);
+  return new WalletSdk(core, blockchain, tokenContracts);
 }
 
 export interface WalletSdk {
@@ -60,7 +71,7 @@ export interface WalletSdk {
 }
 
 export class WalletSdk extends EventEmitter {
-  constructor(private core: CoreSdk, private tokenContracts: TokenContract[]) {
+  constructor(private core: CoreSdk, private blockchain: EthereumBlockchain, private tokenContracts: TokenContract[]) {
     super();
   }
 
@@ -115,6 +126,10 @@ export class WalletSdk extends EventEmitter {
     return this.tokenContracts[assetId];
   }
 
+  public getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
+    return this.blockchain.getUserPendingDeposit(assetId, account);
+  }
+
   public async getAddressFromAlias(alias: string) {
     return this.core.getAddressFromAlias(alias);
   }
@@ -151,15 +166,36 @@ export class WalletSdk extends EventEmitter {
       : typeof to === 'string'
       ? await this.getAddressFromAlias(to)
       : to;
-    const action = () =>
-      this.core.createProof(assetId, userId, 'DEPOSIT', value, signer, ethSigner, recipient, undefined);
+    const userPendingDeposit = await this.getUserPendingDeposit(assetId, ethSigner.getAddress());
+    const amountToTransfer = BigInt(value) - BigInt(userPendingDeposit);
+
+    const action = async () => {
+      if (amountToTransfer > 0) {
+        const allowance = await this.getTokenContract(assetId).allowance(ethSigner.getAddress());
+        if (allowance < amountToTransfer) {
+          this.emit(SdkEvent.LOG, 'Approving deposit...');
+          const txHash = await this.getTokenContract(assetId).approve(value, ethSigner.getAddress());
+          await this.blockchain.getTransactionReceipt(txHash);
+          this.emit(SdkEvent.UPDATED_USER_STATE, userId);
+        }
+
+        this.emit(SdkEvent.LOG, 'Depositing funds to contract...');
+        const txHash = await this.blockchain.depositPendingFunds(assetId, amountToTransfer, ethSigner.getAddress());
+        await this.blockchain.getTransactionReceipt(txHash);
+        this.emit(SdkEvent.UPDATED_USER_STATE, userId);
+      }
+
+      this.emit(SdkEvent.LOG, 'Creating deposit proof...');
+      return await this.core.createProof(assetId, userId, 'DEPOSIT', value, signer, ethSigner, recipient, undefined);
+    };
+
     const validation = async () => {
+      await this.checkPublicBalance(assetId, amountToTransfer, ethSigner.getAddress());
       if (!recipient) {
         throw new Error(`No address found for alias: ${to}`);
       }
-      const account = await ethSigner.getAddress();
-      return this.checkPublicBalanceAndAllowance(assetId, value, account);
     };
+
     return this.core.performAction(Action.DEPOSIT, value, userId, to || recipient!, action, validation);
   }
 
@@ -186,32 +222,12 @@ export class WalletSdk extends EventEmitter {
     return this.core.performAction(Action.TRANSFER, value, userId, to, action);
   }
 
-  public async publicTransfer(
-    assetId: AssetId,
-    userId: Buffer,
-    value: bigint,
-    signer: Signer,
-    ethSigner: EthereumSigner,
-    to: EthAddress,
-  ): Promise<TxHash> {
-    const action = () =>
-      this.core.createProof(assetId, userId, 'PUBLIC_TRANSFER', value, signer, ethSigner, undefined, to);
-    const validation = async () => {
-      const account = ethSigner.getAddress();
-      return this.checkPublicBalanceAndAllowance(assetId, value, account);
-    };
-    return this.core.performAction(Action.PUBLIC_TRANSFER, value, userId, to, action, validation);
-  }
-
-  private async checkPublicBalanceAndAllowance(assetId: AssetId, value: bigint, from: EthAddress) {
+  private async checkPublicBalance(assetId: AssetId, value: bigint, from: EthAddress) {
     const tokenContract = this.getTokenContract(assetId);
     const tokenBalance = await tokenContract.balanceOf(from);
-    if (tokenBalance < value) {
+    const pendingTokenBalance = await this.blockchain.getUserPendingDeposit(assetId, from);
+    if (tokenBalance + pendingTokenBalance < value) {
       throw new Error(`Insufficient public token balance: ${tokenContract.fromErc20Units(tokenBalance)}`);
-    }
-    const allowance = await tokenContract.allowance(from);
-    if (allowance < value) {
-      throw new Error(`Insufficient allowance: ${tokenContract.fromErc20Units(allowance)}`);
     }
   }
 

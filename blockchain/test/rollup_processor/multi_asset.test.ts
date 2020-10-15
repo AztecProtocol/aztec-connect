@@ -22,6 +22,7 @@ describe('rollup_processor: multi assets', () => {
   let userB: Signer;
   let userAAddress: EthAddress;
   let userBAddress: EthAddress;
+  let assetAId!: number;
 
   const mintAmount = 100;
   const userADepositAmount = 60;
@@ -31,7 +32,7 @@ describe('rollup_processor: multi assets', () => {
     [userA, userB] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
     userBAddress = EthAddress.fromString(await userB.getAddress());
-    ({ erc20: erc20A, rollupProcessor } = await setupRollupProcessor([userA, userB], mintAmount));
+    ({ erc20: erc20A, rollupProcessor, assetId: assetAId } = await setupRollupProcessor([userA, userB], mintAmount));
 
     // create second erc20
     const ERC20B = await ethers.getContractFactory('ERC20Mintable');
@@ -50,10 +51,10 @@ describe('rollup_processor: multi assets', () => {
     const tx = await rollupProcessor.setSupportedAsset(erc20B.address);
     const receipt = await tx.wait();
 
-    const assetId = rollupProcessor.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId;
-    const assetAddress = rollupProcessor.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetAddress;
-    expect(assetId).to.equal(1);
-    expect(assetAddress).to.equal(erc20B.address);
+    const assetBId = rollupProcessor.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId;
+    const assetBAddress = rollupProcessor.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetAddress;
+    expect(assetBId).to.equal(1);
+    expect(assetBAddress).to.equal(erc20B.address);
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedAssetAddress(1);
     expect(supportedAssetBAddress).to.equal(erc20B.address);
@@ -84,6 +85,8 @@ describe('rollup_processor: multi assets', () => {
 
     await erc20A.approve(rollupProcessor.address, userADepositAmount);
     await erc20B.connect(userB).approve(rollupProcessor.address, userBDepositAmount);
+    await rollupProcessor.connect(userA).depositPendingFunds(assetAId, userADepositAmount, userAAddress.toString());
+    await rollupProcessor.connect(userB).depositPendingFunds(assetBId, userBDepositAmount, userBAddress.toString());
 
     await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, fourViewingKeys);
 
@@ -107,7 +110,9 @@ describe('rollup_processor: multi assets', () => {
 
     const tx = await rollupProcessor.setSupportedAsset(faultyERC20.address);
     const receipt = await tx.wait();
-    const assetBId = Number(rollupProcessor.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId);
+    const faultyERC20Id = Number(
+      rollupProcessor.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId,
+    );
 
     // deposit funds from assetB
     const fourViewingKeys = [Buffer.alloc(32, 1), Buffer.alloc(32, 2), Buffer.alloc(32, 3), Buffer.alloc(32, 4)];
@@ -115,17 +120,20 @@ describe('rollup_processor: multi assets', () => {
       userBDepositAmount,
       userBAddress,
       userB,
-      assetBId,
+      faultyERC20Id,
     );
 
     await faultyERC20.approve(rollupProcessor.address, userBDepositAmount);
     await faultyERC20.connect(userB).approve(rollupProcessor.address, userBDepositAmount);
+    await rollupProcessor
+      .connect(userB)
+      .depositPendingFunds(faultyERC20Id, userBDepositAmount, userBAddress.toString());
     await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, fourViewingKeys);
 
     // withdraw funds to userB - this is not expected to perform a transfer (as the ERC20 is faulty)
     // so we don't expect the withdraw funds to be transferred, and expect an error event emission
     const withdrawAmount = 5;
-    const { proofData: withdrawProofData } = await createWithdrawProof(withdrawAmount, userBAddress, assetBId);
+    const { proofData: withdrawProofData } = await createWithdrawProof(withdrawAmount, userBAddress, faultyERC20Id);
     const withdrawTx = await rollupProcessor.processRollup(withdrawProofData, [], [], fourViewingKeys);
 
     const rollupReceipt = await withdrawTx.wait();

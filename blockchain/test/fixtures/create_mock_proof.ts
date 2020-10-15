@@ -165,14 +165,9 @@ async function innerProofData(isDeposit: boolean, transferAmount: number, public
   ]);
 }
 
-export async function createDepositProof(
-  amount: number,
-  depositorAddress: EthAddress,
-  user: Signer,
-  assetId: number = 0,
-) {
-  const id: number = 0x00;
-  const numInner: number = 0x01;
+export async function createDepositProof(amount: number, depositorAddress: EthAddress, user: Signer, assetId = 0) {
+  const id = 0x00;
+  const numInner = 0x01;
 
   const innerProof = await innerProofData(true, amount, depositorAddress, numToBuffer(assetId));
   const { signature } = await ethSign(user, innerProof);
@@ -195,8 +190,8 @@ export async function createTwoDepositsProof(
   secondUser: Signer,
   secondAssetId: Buffer,
 ) {
-  const id: number = 0x00;
-  const numInner: number = 0x02;
+  const id = 0x00;
+  const numInner = 0x02;
   const firstInnerProof = await innerProofData(true, firstDepositAmount, firstDepositorAddress, firstAssetId);
   const secondInnerProof = await innerProofData(true, secondDepositAmount, secondDepositorAddress, secondAssetId);
 
@@ -210,9 +205,9 @@ export async function createTwoDepositsProof(
   };
 }
 
-export async function createWithdrawProof(amount: number, withdrawalAddress: EthAddress, assetId: number = 0) {
-  const id: number = 0x01;
-  const numInner: number = 0x01;
+export async function createWithdrawProof(amount: number, withdrawalAddress: EthAddress, assetId = 0) {
+  const id = 0x01;
+  const numInner = 0x01;
   const innerProof = await innerProofData(false, amount, withdrawalAddress, numToBuffer(assetId));
 
   // withdraws do not require signature
@@ -226,10 +221,10 @@ export async function createWithdrawProof(amount: number, withdrawalAddress: Eth
   };
 }
 
-export async function createSendProof(assetId: number = 0) {
-  const id: number = 0x00;
-  const numInner: number = 0x01;
-  const transferAmount: number = 0;
+export async function createSendProof(assetId = 0) {
+  const id = 0x00;
+  const numInner = 0x01;
+  const transferAmount = 0;
   const publicOwner = EthAddress.ZERO;
   const innerProof = await innerProofData(true, transferAmount, publicOwner, numToBuffer(assetId));
   const signature: Buffer = Buffer.alloc(32);
@@ -243,9 +238,9 @@ export async function createSendProof(assetId: number = 0) {
 
 // same as withdraw proof, except rollupSize in publicInputData set to 0 - indicating
 // that it's an escape proof
-export async function createEscapeProof(amount: number, withdrawalAddress: EthAddress, assetId: number = 0) {
-  const id: number = 0x01;
-  const numInner: number = 0x01;
+export async function createEscapeProof(amount: number, withdrawalAddress: EthAddress, assetId = 0) {
+  const id = 0x01;
+  const numInner = 0x01;
   const innerProof = await innerProofData(false, amount, withdrawalAddress, numToBuffer(assetId));
 
   // withdraws do not require signature

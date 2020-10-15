@@ -63,7 +63,7 @@ export WASMTIME_HOME="$HOME/.wasmtime"
 export PATH="$WASMTIME_HOME/bin:$PATH"
 
 # If this shell is not in isolated namespace, launch isolated shell.
-if ! lsns -t net -p $$ -o command -n -r | grep -q "zsh"; then
+if ! ip link show | grep -q vpeer_${USER}; then
   sudo -E netns $USER
   exit 0
 fi

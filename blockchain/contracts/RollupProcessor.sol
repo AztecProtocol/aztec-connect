@@ -39,7 +39,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     event WithdrawError(bytes errorReason);
     event AssetAdded(uint256 indexed assetId, address indexed assetAddress);
 
+    // Array of supported ERC20 token address. The array index of the ERC20 token address
+    // corresponds to the assetId of the asset
     address[] public supportedAssets;
+
+    // Mapping from assetId to mapping of userAddress to public userBalance stored on this contract
+    mapping(uint256 => mapping(address => uint256)) public userPendingDeposits;
 
     constructor(
         address[] memory _supportedTokens,
@@ -99,6 +104,43 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     }
 
     /**
+     * @dev Get the balance of a user, for a particular asset, held on the user's behalf
+     * by this contract
+     * @param assetId - unique identifier of the asset
+     * @param userAddress - Ethereum address of the user who's balance is being queried
+     */
+    function getUserPendingDeposit(uint256 assetId, address userAddress) external override view returns (uint256) {
+        return userPendingDeposits[assetId][userAddress];
+    }
+
+    /**
+     * @dev Increase the userPendingDeposits mapping
+     */
+    function increasePendingDepositBalance(
+        uint256 assetId,
+        address depositorAddress,
+        uint256 amount
+    ) internal {
+        userPendingDeposits[assetId][depositorAddress] = userPendingDeposits[assetId][depositorAddress].add(amount);
+    }
+
+    /**
+     * @dev Decrease the userPendingDeposits mapping
+     */
+    function decreasePendingDepositBalance(
+        uint256 assetId,
+        address transferFromAddress,
+        uint256 amount
+    ) internal {
+        uint256 userBalance = userPendingDeposits[assetId][transferFromAddress];
+        require(userBalance >= amount, 'Rollup Processor: INSUFFICIENT_DEPOSIT');
+
+        userPendingDeposits[assetId][transferFromAddress] = userPendingDeposits[assetId][transferFromAddress].sub(
+            amount
+        );
+    }
+
+    /**
      * @dev Set the mapping between an assetId and the address of the linked asset.
      * Protected by onlyOwner
      * @param _linkedToken - address of the asset
@@ -109,6 +151,32 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
 
         uint256 assetId = supportedAssets.length.sub(1);
         emit AssetAdded(assetId, _linkedToken);
+    }
+
+    /**
+     * @dev Deposit ERC20 tokens to the contract, the first stage of the two part
+     * deposit flow.
+     * @param assetId - unique identifier for the asset being deposited
+     * @param amount - number of ERC20 tokens to transfer to the contract from the user's
+     * address
+     */
+    // depositor address needs to be selected/input, as now it's the ethereum_blockchain sending
+    function depositPendingFunds(
+        uint256 assetId,
+        uint256 amount,
+        address depositorAddress
+    ) external override {
+        address assetAddress = getSupportedAssetAddress(assetId);
+
+        // update userPendingDeposits to keep track of deposit
+        increasePendingDepositBalance(assetId, depositorAddress, amount);
+
+        // check user approved contract to transfer funds, so can throw helpful error to user
+        uint256 rollupAllowance = IERC20(assetAddress).allowance(depositorAddress, address(this));
+        require(rollupAllowance >= amount, 'Rollup Processor: INSUFFICIENT_TOKEN_APPROVAL');
+
+        IERC20(assetAddress).transferFrom(depositorAddress, address(this), amount);
+        emit Deposit(depositorAddress, amount);
     }
 
     /**
@@ -270,17 +338,15 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
                 address outputOwner
             ) = extractTxComponents(proof);
 
-            address assetAddress = getSupportedAssetAddress(assetId);
-
             if (proofId == 0) {
                 if (publicInput > 0) {
                     bytes memory signature = extractSignature(signatures, findSigIndex(sigIndexes, i));
                     validateSignature(proof, signature, inputOwner);
-                    deposit(publicInput, inputOwner, assetAddress);
+                    decreasePendingDepositBalance(assetId, inputOwner, publicInput);
                 }
 
                 if (publicOutput > 0) {
-                    withdraw(publicOutput, outputOwner, assetAddress);
+                    withdraw(publicOutput, outputOwner, assetId);
                 }
             }
         }
@@ -310,40 +376,20 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     }
 
     /**
-     * @dev Internal utility function to deposit funds into the contract
-     * @param depositValue - value being deposited into the contract, in return for
-     * zk notes
-     * @param depositorAddress - address which is depositing into the contract
-     * and receiving zk notes. ERC20s are transferred from this address
-     */
-    function deposit(
-        uint256 depositValue,
-        address depositorAddress,
-        address linkedToken
-    ) internal {
-        require(depositorAddress != address(0), 'Rollup Processor: ZERO_ADDRESS');
-
-        // check user approved contract to transfer funds, so can throw helpful error to user
-        uint256 rollupAllowance = IERC20(linkedToken).allowance(depositorAddress, address(this));
-        require(rollupAllowance >= depositValue, 'Rollup Processor: INSUFFICIENT_TOKEN_APPROVAL');
-
-        IERC20(linkedToken).transferFrom(depositorAddress, address(this), depositValue);
-        emit Deposit(depositorAddress, depositValue);
-    }
-
-    /**
      * @dev Internal utility function to withdraw funds from the contract to a receiver address
      * @param withdrawValue - value being withdrawn from the contract
      * @param receiverAddress - address receiving public ERC20 tokens
+     * @param assetId - ID of the asset for which a withdrawl is being performed
      */
     function withdraw(
         uint256 withdrawValue,
         address receiverAddress,
-        address linkedToken
+        uint256 assetId
     ) internal {
         require(receiverAddress != address(0), 'Rollup Processor: ZERO_ADDRESS');
+        address assetAddress = getSupportedAssetAddress(assetId);
 
-        try IERC20(linkedToken).transfer(receiverAddress, withdrawValue)  {
+        try IERC20(assetAddress).transfer(receiverAddress, withdrawValue)  {
             emit Withdraw(receiverAddress, withdrawValue);
         } catch (bytes memory reason) {
             emit WithdrawError(reason);

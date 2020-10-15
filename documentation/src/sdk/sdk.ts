@@ -78,18 +78,6 @@ export interface Sdk extends EventEmitter {
   transfer(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, to: GrumpkinAddress | string): Promise<Buffer>;
 
   /**
-   * Public Transfer
-   * @param assetId - [number] See the list of assets we currently support [here](/#/Types/AssetId).
-   * @param userId - [Buffer] Id of the proof sender.
-   * @param value - [bigint] The amount to transfer in ERC20 units.
-   * @param signer - [Signer] An ethers signer used to create signatures to authorize the tx
-   * @param ethSigner - [EthereumSigner] An ethereum signer used to create signatures to authorize the tx.
-   * @param to - [EthAddress] The Ethereum address of the user receiving funds.
-   * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
-   */
-  publicTransfer(assetId: AssetId, userId: Buffer, value: bigint, signer: Signer, ethSigner: EthereumSigner, to: EthAddress): Promise<Buffer>;
-
-  /**
    * Await Settlement 
    * @remarks This method is useful to wait for a transaction to settle on layer 1.
    * @param txHash - [TxHash] object containing the TxHash.

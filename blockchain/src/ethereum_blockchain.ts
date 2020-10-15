@@ -157,6 +157,24 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.contracts.getTokenContractAddresses();
   }
 
+  public async getUserPendingDeposit(assetId: number, account: EthAddress) {
+    return (await this.contracts.getUserPendingDeposit(assetId, account)) as bigint;
+  }
+
+  /**
+   * Deposit funds into the RollupProcessor contract. First stage of the two part deposit flow
+   */
+  public async depositPendingFunds(assetId: number, amount: bigint, depositorAddress: EthAddress) {
+    return await this.contracts.depositPendingFunds(assetId, amount, depositorAddress);
+  }
+
+  /**
+   * Send a proof to the rollup processor, which processes the proof and passes it to the verifier to
+   * be verified.
+   *
+   * Appends viewingKeys to the proofData, so that they can later be fetched from the tx calldata
+   * and added to the emitted rollupBlock.
+   */
   public async sendRollupProof(proofData: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
     return await this.contracts.sendRollupProof(proofData, signatures, sigIndexes, viewingKeys, this.config.gasLimit);
   }
@@ -202,16 +220,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   /**
-   * Check users have sufficient balance and have sufficiently approved, for rollup deposits
+   * Check users have deposited sufficient numbers of tokens , for rollup deposits
    * to succeed
-   *
-   * Note: `publicOwner` corresponds to either the deposit or withdraw address, depending
-   * on the tx
    */
-  public async validateDepositFunds(publicOwner: EthAddress, publicInput: bigint, assetId: number) {
-    const erc20Balance = await this.contracts.getAssetBalance(assetId, publicOwner);
-    const erc20Approval = await this.contracts.getAssetAllowance(assetId, publicOwner);
-    return erc20Balance >= publicInput && erc20Approval >= publicInput;
+  public async validateDepositFunds(inputOwner: EthAddress, publicInput: bigint, assetId: number) {
+    const depositedBalance = BigInt(await this.contracts.getUserPendingDeposit(assetId, inputOwner));
+    return depositedBalance >= publicInput;
   }
 
   /**

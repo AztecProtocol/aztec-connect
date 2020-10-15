@@ -19,8 +19,8 @@ export class EthereumSdkUserAsset {
     return this.sdk.getTokenContract(this.assetId).allowance(this.ethAddress);
   }
 
-  publicTransfer(value: bigint, to: EthAddress, signer?: Signer): Promise<TxHash> {
-    return this.sdk.publicTransfer(this.assetId, value, this.ethAddress, to, signer);
+  getUserPendingDeposit() {
+    return this.sdk.getUserPendingDeposit(this.assetId, this.ethAddress);
   }
 
   balance() {

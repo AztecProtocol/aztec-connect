@@ -136,6 +136,7 @@ export class CoreSdk extends EventEmitter {
     this.sdkStatus.dataRoot = this.worldState.getRoot();
     this.sdkStatus.syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
     this.sdkStatus.latestRollupId = +(await this.leveldb.get('latestRollupId').catch(() => -1));
+    debug('local status:', this.sdkStatus);
 
     await this.initUserStates();
 

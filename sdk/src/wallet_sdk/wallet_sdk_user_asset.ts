@@ -15,10 +15,6 @@ export class WalletSdkUserAsset {
     return this.sdk.getTokenContract(this.id).allowance(ethAddress);
   }
 
-  async publicTransfer(value: bigint, signer: Signer, ethSigner: EthereumSigner, to: EthAddress): Promise<TxHash> {
-    return this.sdk.publicTransfer(this.id, this.userId, value, signer, ethSigner, to);
-  }
-
   balance() {
     return this.sdk.getBalance(this.userId);
   }

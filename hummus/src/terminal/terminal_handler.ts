@@ -30,7 +30,6 @@ export class TerminalHandler {
     deposit: this.deposit,
     withdraw: this.withdraw,
     transfer: this.transfer,
-    pubtransfer: this.publicTransfer,
     register: this.registerAlias,
     balance: this.balance,
     copykey: this.copyKey,
@@ -85,12 +84,17 @@ export class TerminalHandler {
     }
   };
 
+  private logHandler = (msg: string) => {
+    this.printQueue.put(msg + '\n');
+  };
+
   /**
    * Called after the app has been initialized.
    */
   private registerHandlers() {
     this.app.on(AppEvent.UPDATED_INIT_STATE, this.handleInitStateChange);
     this.app.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
+    this.app.on(SdkEvent.LOG, this.logHandler);
   }
 
   private unregisterHandlers() {
@@ -232,7 +236,6 @@ export class TerminalHandler {
           'deposit <amount>\n' +
           'withdraw <amount>\n' +
           'transfer <to> <amount>\n' +
-          'pubtransfer <to> <amount>\n' +
           'register <alias>\n' +
           'balance\n' +
           'copykey\n' +
@@ -291,11 +294,6 @@ export class TerminalHandler {
     if (tokenBalance < value) {
       throw new Error(`insufficient public balance: ${userAsset.fromErc20Units(tokenBalance)}`);
     }
-    const tokenAllowance = await userAsset.publicAllowance();
-    if (tokenAllowance < value) {
-      throw new Error(`insufficient allowance: ${userAsset.fromErc20Units(tokenAllowance)}`);
-    }
-    this.printQueue.put(`generating deposit proof...\n`);
     await userAsset.deposit(value);
     this.printQueue.put(`deposit proof sent.\n`);
   }
@@ -320,14 +318,6 @@ export class TerminalHandler {
     this.printQueue.put(`transfer proof sent.\n`);
   }
 
-  private async publicTransfer(ethAddress: string, value: string) {
-    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
-    this.printQueue.put(`generating transfer proof...\n`);
-    const to = EthAddress.fromString(ethAddress);
-    await userAsset.publicTransfer(userAsset.toErc20Units(value), to);
-    this.printQueue.put(`transfer proof sent.\n`);
-  }
-
   private async registerAlias(alias: string) {
     if (await this.app.getSdk().getAddressFromAlias(alias)) {
       throw new Error('alias already registered.');
@@ -342,6 +332,12 @@ export class TerminalHandler {
     const userAsset = this.app.getUser().getAsset(AssetId.DAI);
     await this.printQueue.put(`public: ${userAsset.fromErc20Units(await userAsset.publicBalance())}\n`);
     await this.printQueue.put(`private: ${userAsset.fromErc20Units(userAsset.balance())}\n`);
+    const fundsPendingDeposit = await userAsset.getUserPendingDeposit();
+    if (fundsPendingDeposit > 0) {
+      await this.printQueue.put(
+        `funds held, pending deposit proof: ${userAsset.fromErc20Units(fundsPendingDeposit)}\n`,
+      );
+    }
   }
 
   private async copyKey() {

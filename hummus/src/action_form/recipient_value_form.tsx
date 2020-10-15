@@ -1,4 +1,4 @@
-import { Block, FlexBox, Icon,Text } from '@aztec/guacamole-ui';
+import { Block, FlexBox, Text } from '@aztec/guacamole-ui';
 import React, { useState } from 'react';
 import { Button, FormField, Input } from '../components';
 
@@ -9,10 +9,10 @@ interface FormProps {
   initialValue?: string;
   initialRecipient?: string;
   allowance?: bigint;
-  onApprove?: (value: bigint) => void;
   onSubmit: (value: bigint, to: string) => void;
   toNoteValue: (tokenStringValue: string) => bigint;
   isLoading: boolean;
+  logMsg: string;
   error?: string;
 }
 
@@ -22,17 +22,14 @@ export const RecipientValueForm = ({
   buttonText,
   initialValue = '0',
   initialRecipient = '',
-  allowance,
-  onApprove,
   onSubmit,
   toNoteValue,
   isLoading,
+  logMsg,
   error,
 }: FormProps) => {
   const [value, setValue] = useState(initialValue);
   const [recipient, setRecipient] = useState(initialRecipient);
-
-  const requireApproval = allowance !== undefined && allowance >= BigInt(0) && allowance < toNoteValue(value);
 
   return (
     <Block padding="xs 0">
@@ -45,23 +42,20 @@ export const RecipientValueForm = ({
         <Input type="number" value={value} onChange={setValue} allowDecimal />
       </FormField>
       <FlexBox align="space-between" valign="center">
-        {!requireApproval && <Block padding="xxs 0">{!!error && <Text text={error} color="red" size="xs" />}</Block>}
-        {requireApproval && (
+        <Block padding="xxs 0">{!!error && <Text text={error} color="red" size="xs" />}</Block>
+        {isLoading && (
           <Block padding="xs 0">
             <FlexBox valign="center">
-              <Block right="s" style={{ lineHeight: '0' }}>
-                <Icon name="warning" size="xs" />
-              </Block>
-              <Text text={`Insufficient allowance. Approve the contract to deposit the funds.`} size="xs" />
+              <Text text={logMsg} size="xs" />
             </FlexBox>
           </Block>
         )}
         <Block padding="xs 0">
           <Button
-            text={requireApproval ? 'Approve' : buttonText}
-            onSubmit={() =>
-              requireApproval ? onApprove!(toNoteValue(value)) : onSubmit(toNoteValue(value), recipient)
-            }
+            text={buttonText}
+            onSubmit={() => {
+              onSubmit(toNoteValue(value), recipient);
+            }}
             isLoading={isLoading}
           />
         </Block>
