@@ -58,11 +58,22 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Start polling for RollupProcessed events.
    * All historical blocks will have been emitted before this function returns.
    */
-  public async start(fromBlock: number = 0) {
+  public async start(fromBlock = 0) {
     this.debug(`Ethereum blockchain starting from block: ${fromBlock}`);
 
+    const getBlocks = async (fromBlock: number) => {
+      while (true) {
+        try {
+          return await this.getBlocks(fromBlock);
+        } catch (err) {
+          console.log(`getBlocks failed, will retry: ${err.message}`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+      }
+    };
+
     const emitBlocks = async () => {
-      const blocks = await this.getBlocks(fromBlock);
+      const blocks = await getBlocks(fromBlock);
       for (const block of blocks) {
         this.debug(`Block received: ${block.blockNum}`);
         this.latestRollupId = RollupProofData.getRollupIdFromBuffer(block.rollupProofData);

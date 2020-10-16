@@ -186,6 +186,7 @@ export class Server {
       await this.worldStateDb.put(0, BigInt(dataStartIndex + rollupSize * 2 - 1), Buffer.alloc(64, 0));
     }
     await this.worldStateDb.put(2, BigInt(rollupId + 1), this.worldStateDb.getRoot(0));
+    await this.worldStateDb.commit();
   }
 
   private printState() {
@@ -196,7 +197,7 @@ export class Server {
   }
 
   public async status() {
-    const { chainId, networkOrHost, blockNumber } = await this.blockchain.getNetworkInfo();
+    const { chainId, networkOrHost } = await this.blockchain.getNetworkInfo();
     const { escapeOpen, numEscapeBlocksRemaining } = await this.blockchain.status();
     const nextRollupId = this.blockchain.getLatestRollupId() + 1;
     return {
@@ -257,10 +258,10 @@ export class Server {
 
   private async createAndPublishRollup(txs: JoinSplitProof[]) {
     while (true) {
-      console.log(`Creating rollup with ${txs.length} txs...`);
       const rollup = await this.createRollup(txs);
       await this.rollupDb.addRollup(rollup);
 
+      console.log(`Creating rollup ${rollup.rollupId} with ${txs.length} txs...`);
       const proof = await this.proofGenerator.createProof(rollup);
 
       if (!proof) {

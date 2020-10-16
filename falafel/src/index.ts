@@ -32,7 +32,7 @@ const {
   GAS_LIMIT = '',
 } = process.env;
 
-function getEthereumBlockchainConfig() {
+async function getEthereumBlockchainConfig() {
   const gasLimit = GAS_LIMIT ? +GAS_LIMIT : undefined;
   if (INFURA_API_KEY && NETWORK && PRIVATE_KEY && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Infura network: ${NETWORK}`);
@@ -47,8 +47,19 @@ function getEthereumBlockchainConfig() {
   } else if (ETHEREUM_HOST && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Ethereum host: ${ETHEREUM_HOST}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
-    const provider = new ethers.providers.WebSocketProvider(ETHEREUM_HOST);
-    return { provider, signer: provider.getSigner(0), networkOrHost: ETHEREUM_HOST, gasLimit };
+    const provider = new ethers.providers.JsonRpcProvider(ETHEREUM_HOST);
+    if (PRIVATE_KEY) {
+      return {
+        provider,
+        signer: new ethers.Wallet(PRIVATE_KEY, provider) as Signer,
+        networkOrHost: ETHEREUM_HOST,
+        gasLimit,
+      };
+    } else if ((await provider.listAccounts()).length) {
+      return { provider, signer: provider.getSigner(0), networkOrHost: ETHEREUM_HOST, gasLimit };
+    } else {
+      return { provider, networkOrHost: ETHEREUM_HOST, gasLimit };
+    }
   }
 }
 
@@ -65,7 +76,7 @@ async function main() {
   };
 
   const connection = await createConnection();
-  const ethConfig = getEthereumBlockchainConfig();
+  const ethConfig = await getEthereumBlockchainConfig();
   const blockchain = ethConfig
     ? await blockchainFactory(ethConfig, connection)
     : new LocalBlockchain(connection, serverConfig.rollupSize, +LOCAL_BLOCKCHAIN_INIT_SIZE);

@@ -157,12 +157,8 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "80"
       },
       {
-        "name": "NETWORK",
-        "value": "ropsten"
-      },
-      {
-        "name": "INFURA_API_KEY",
-        "value": "${var.INFURA_API_KEY}"
+        "name": "ETHEREUM_HOST",
+        "value": "ethereum.aztec.network:9545"
       },
       {
         "name": "PRIVATE_KEY",

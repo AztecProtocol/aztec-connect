@@ -2,12 +2,9 @@ import { MemoryFifo } from 'barretenberg/fifo';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Proof } from 'barretenberg/rollup_provider/rollup_provider';
 import { Block, Blockchain, EthereumBlockchain } from 'blockchain';
-import createDebug from 'debug';
 import { Connection, MoreThanOrEqual, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
 import { blockDaoToBlock, blockToBlockDao } from './blockdao_convert';
-
-const debug = createDebug('bb:persistent_ethereum_blockchain');
 
 export class PersistentEthereumBlockchain implements Blockchain {
   private blockRep!: Repository<BlockDao>;
@@ -28,6 +25,7 @@ export class PersistentEthereumBlockchain implements Blockchain {
     // Make sure all historical blocks are inserted.
     const latest = await this.blockRep.findOne(undefined, { order: { id: 'DESC' } });
     const fromBlock = latest ? latest.id + 1 : 0;
+    console.log(`Persisting blocks from ${fromBlock}...`);
     const blocks = await this.ethereumBlockchain.getBlocks(fromBlock);
     for (const block of blocks) {
       await this.saveBlock(block);
