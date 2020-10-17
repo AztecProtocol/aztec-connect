@@ -1,7 +1,7 @@
 import { BlockSource, Block } from '.';
 import { EventEmitter } from 'events';
 import { fetch } from '../iso_fetch';
-import createDebug from 'debug';
+// import createDebug from 'debug';
 
 export interface BlockServerResponse {
   blockNum: number;
@@ -17,7 +17,7 @@ export interface GetBlocksServerResponse {
   blocks: BlockServerResponse[];
 }
 
-const debug = createDebug('bb:server_block_source');
+// const debug = createDebug('bb:server_block_source');
 
 const toBlock = (block: BlockServerResponse): Block => ({
   ...block,
@@ -41,7 +41,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     return this.latestRollupId;
   }
 
-  public async start(fromBlock: number = 0) {
+  public async start(fromBlock = 0) {
     this.running = true;
 
     const emitBlocks = async () => {

@@ -101,4 +101,7 @@ async function main() {
   console.log(`Server listening on port ${PORT}.`);
 }
 
-main().catch(console.log);
+main().catch(err => {
+  console.log(err);
+  process.exit(1);
+});

@@ -158,7 +158,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "ethereum.aztec.network:9545"
+        "value": "http://ethereum.aztec.network:9545"
       },
       {
         "name": "PRIVATE_KEY",

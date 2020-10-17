@@ -72,7 +72,18 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       }
     };
 
+    let latestEthBlock = -1;
     const emitBlocks = async () => {
+      const latestBlock = await this.config.provider.getBlockNumber().catch(err => {
+        console.log(`getBlockNumber failed: ${err.code}`);
+        return latestEthBlock;
+      });
+      if (latestBlock === latestEthBlock) {
+        return;
+      }
+      latestEthBlock = latestBlock;
+      await this.updateStatus();
+
       const blocks = await getBlocks(fromBlock);
       for (const block of blocks) {
         this.debug(`Block received: ${block.blockNum}`);
@@ -93,8 +104,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
         await emitBlocks();
       }
     })();
-
-    this.config.provider.on('block', this.updateStatus);
   }
 
   /**
@@ -102,7 +111,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public stop() {
     this.running = false;
-    this.config.provider.off('block', this.updateStatus);
   }
 
   /**
