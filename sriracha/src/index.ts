@@ -1,7 +1,7 @@
 import { EthAddress } from 'barretenberg/address';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { EthereumBlockchain } from 'blockchain';
-import { ethers, Signer } from 'ethers';
+import { ethers } from 'ethers';
 import http from 'http';
 import 'reflect-metadata';
 import { appFactory } from './app';

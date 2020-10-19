@@ -1,7 +1,8 @@
+import { EthAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
 import { nullifierBufferToIndex } from 'barretenberg/client_proofs/join_split_proof';
 import { MemoryFifo } from 'barretenberg/fifo';
-import { existsAsync, readFileAsync, writeFileAsync } from 'barretenberg/fs_async';
+import { existsAsync, readFileAsync, writeFileAsync, rmdirAsync } from 'barretenberg/fs_async';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldStateDb } from 'barretenberg/world_state_db';
@@ -11,11 +12,12 @@ import { GetHashPathsResponse, HashPathSource } from './hash_path_source';
 
 interface ServerState {
   lastBlock: number;
+  rollupContractAddress: EthAddress;
 }
 
 export default class Server implements HashPathSource {
   private queue = new MemoryFifo<() => Promise<void>>();
-  private serverState: ServerState = { lastBlock: -1 };
+  private serverState: ServerState = { lastBlock: -1, rollupContractAddress: EthAddress.ZERO };
 
   public constructor(private worldStateDb: WorldStateDb, private blockchain: Blockchain) {}
 
@@ -58,12 +60,25 @@ export default class Server implements HashPathSource {
   private async readState() {
     if (await existsAsync('./data/state')) {
       const state = await readFileAsync('./data/state');
-      this.serverState = JSON.parse(state.toString('utf8'));
+      const { lastBlock, rollupContractAddress } = JSON.parse(state.toString('utf-8'));
+      this.serverState = { lastBlock, rollupContractAddress: EthAddress.fromString(rollupContractAddress) };
+
+      // if rollupContractAddress has changed, wipe the data dir and initiate full re-sync
+      const providedContractAddress = this.blockchain.getRollupContractAddress();
+      if (this.serverState.rollupContractAddress.toString() !== providedContractAddress.toString()) {
+        await rmdirAsync('./data', { recursive: true });
+        this.serverState.rollupContractAddress = providedContractAddress;
+        this.serverState.lastBlock = -1;
+      }
     }
   }
 
   private async writeState() {
-    await writeFileAsync('./data/state', JSON.stringify(this.serverState));
+    const dataToWrite = {
+      lastBlock: this.serverState.lastBlock,
+      rollupContractAddress: this.serverState.rollupContractAddress.toString(),
+    };
+    await writeFileAsync('./data/state', JSON.stringify(dataToWrite));
   }
 
   public async status() {

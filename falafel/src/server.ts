@@ -2,7 +2,7 @@ import { AccountVerifier } from 'barretenberg/client_proofs/account_proof';
 import { JoinSplitProof, JoinSplitVerifier, nullifierBufferToIndex } from 'barretenberg/client_proofs/join_split_proof';
 import { Crs } from 'barretenberg/crs';
 import { MemoryFifo } from 'barretenberg/fifo';
-import { readFileAsync } from 'barretenberg/fs_async';
+import { existsAsync, readFileAsync, rmdirAsync, writeFileAsync } from 'barretenberg/fs_async';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Proof } from 'barretenberg/rollup_provider';
@@ -61,6 +61,7 @@ export class Server {
 
   public async start() {
     console.log('Server start...');
+    await this.readServerState();
     await this.proofGenerator.run();
     await this.worldStateDb.start();
 
@@ -71,6 +72,7 @@ export class Server {
     await this.blockchain.start(lastBlockNum + 1);
 
     await this.createVerifiers();
+    await this.writeServerState();
 
     this.processTxQueue(this.config.maxRollupWaitTime, this.config.minRollupInterval);
     this.serialQueue.process(async (fn: () => Promise<void>) => await fn());
@@ -84,6 +86,26 @@ export class Server {
     this.serialQueue.cancel();
     this.txQueue.cancel();
     destroyWorker(this.worker);
+  }
+
+  private async readServerState() {
+    if (await existsAsync('./data/state')) {
+      const state = await readFileAsync('./data/state');
+      const { rollupContractAddress: storedRollupAddress } = JSON.parse(state.toString('utf-8'));
+
+      // if rollupContractAddress has changed, wipe the keys in the db
+      const providedContractAddress = this.blockchain.getRollupContractAddress();
+      if (storedRollupAddress !== providedContractAddress.toString()) {
+        await rmdirAsync('./data', { recursive: true });
+      }
+    }
+  }
+
+  private async writeServerState() {
+    const dataToWrite = {
+      rollupContractAddress: this.blockchain.getRollupContractAddress().toString(),
+    };
+    await writeFileAsync('./data/state', JSON.stringify(dataToWrite));
   }
 
   /**
