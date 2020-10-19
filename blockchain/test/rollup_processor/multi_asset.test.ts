@@ -14,7 +14,7 @@ import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
 
 use(solidity);
 
-describe('rollup_processor: core', () => {
+describe('rollup_processor: multi assets', () => {
   let rollupProcessor: Contract;
   let erc20A: Contract;
   let erc20B: Contract;

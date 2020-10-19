@@ -20,7 +20,15 @@ export async function setupRollupProcessor(users: Signer[], mintAmount: bigint |
 
   const erc20Adddresses = [erc20.address];
   const assetId = 0;
-  const rollupProcessor = await RollupProcessor.deploy(erc20Adddresses, mockVerifier.address);
+
+  const escapeBlockLowerBound = 80;
+  const escapeBlockUpperBound = 100;
+  const rollupProcessor = await RollupProcessor.deploy(
+    erc20Adddresses,
+    mockVerifier.address,
+    escapeBlockLowerBound,
+    escapeBlockUpperBound,
+  );
 
   // advance into block region where escapeHatch not active
   const blocks = await blocksToAdvance(15, 100, ethers.provider);

@@ -30,6 +30,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
 
     uint256 public constant txPubInputLength = 12 * 32; // public inputs length for of each inner proof tx
     uint256 public constant rollupPubInputLength = 10 * 32;
+    uint256 public immutable escapeBlockLowerBound;
+    uint256 public immutable escapeBlockUpperBound;
 
     event RollupProcessed(uint256 indexed rollupId, bytes32 dataRoot, bytes32 nullRoot);
     event Deposit(address depositorAddress, uint256 depositValue);
@@ -39,12 +41,19 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
 
     address[] public supportedAssets;
 
-    constructor(address[] memory _supportedTokens, address _verifierAddress) public {
+    constructor(
+        address[] memory _supportedTokens,
+        address _verifierAddress,
+        uint256 _escapeBlockLowerBound,
+        uint256 _escapeBlockUpperBound
+    ) public {
         verifier = IVerifier(_verifierAddress);
 
         for (uint256 i = 0; i < _supportedTokens.length; i += 1) {
             setSupportedAsset(_supportedTokens[i]);
         }
+        escapeBlockLowerBound = _escapeBlockLowerBound;
+        escapeBlockUpperBound = _escapeBlockUpperBound;
     }
 
     /**
@@ -74,17 +83,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
      * hatch is open and also the number of blocks until the hatch will switch from
      * open to closed or vice versa
      */
-    function getEscapeHatchStatus() external override view returns (bool, uint256) {
+    function getEscapeHatchStatus() public override view returns (bool, uint256) {
         uint256 blockNum = block.number;
 
-        bool isOpen = blockNum % 100 >= 80;
+        bool isOpen = blockNum % escapeBlockUpperBound >= escapeBlockLowerBound;
         uint256 blocksRemaining = 0;
         if (isOpen) {
             // num blocks escape hatch will remain open for
-            blocksRemaining = blockNum == 0 ? 20 : 100 - (blockNum % 100);
+            blocksRemaining = escapeBlockUpperBound - (blockNum % escapeBlockUpperBound);
         } else {
             // num blocks until escape hatch will be opened
-            blocksRemaining = 80 - (blockNum % 100);
+            blocksRemaining = escapeBlockLowerBound - (blockNum % escapeBlockUpperBound);
         }
         return (isOpen, blocksRemaining);
     }
@@ -157,8 +166,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
 
         // rollupSize = 0 indicates an escape hatch proof
         if (rollupSize == 0) {
-            // Ensure an escaper, can only escape within last 20 of every 100 blocks.
-            require(block.number % 100 >= 80, 'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT');
+            // Ensure an escaper, can only escape within last the set escape hatch window
+            (bool isOpen, ) = getEscapeHatchStatus();
+            require(isOpen, 'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT');
         }
 
         // update state variables

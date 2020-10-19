@@ -6,7 +6,14 @@ import RollupProcessor from '../artifacts/RollupProcessor.json';
 import { deployVerifier } from './deploy_verifier';
 
 dotenv.config();
-const { ETHEREUM_HOST, INFURA_API_KEY, NETWORK, PRIVATE_KEY } = process.env;
+const {
+  ETHEREUM_HOST,
+  INFURA_API_KEY,
+  NETWORK,
+  PRIVATE_KEY,
+  ESCAPE_BLOCK_LOWER = '4560', // window of 1hr every 20hrs (escape in last 240 blocks of every 4800)
+  ESCAPE_BLOCK_UPPER = '4800',
+} = process.env;
 
 function getSigner() {
   if (INFURA_API_KEY && NETWORK && PRIVATE_KEY) {
@@ -34,7 +41,12 @@ async function main() {
     const verifier = await deployVerifier(signer);
 
     const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
-    const rollup = await rollupFactory.deploy([erc20.address], verifier.address);
+    const rollup = await rollupFactory.deploy(
+      [erc20.address],
+      verifier.address,
+      ESCAPE_BLOCK_LOWER,
+      ESCAPE_BLOCK_UPPER,
+    );
 
     console.error(`Awaiting deployment...`);
     await rollup.deployed();
@@ -53,7 +65,8 @@ async function main() {
   } else {
     const verifier = await deployVerifier(signer);
     const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
-    const rollup = await rollupFactory.deploy([erc20Address], verifier.address);
+    console.log({ erc20Address, verifier: verifier.address, ESCAPE_BLOCK_LOWER, ESCAPE_BLOCK_UPPER });
+    const rollup = await rollupFactory.deploy([erc20Address], verifier.address, ESCAPE_BLOCK_LOWER, ESCAPE_BLOCK_UPPER);
 
     console.error(`Awaiting deployment...`);
     await rollup.deployed();

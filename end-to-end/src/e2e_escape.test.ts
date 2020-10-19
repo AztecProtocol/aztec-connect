@@ -37,7 +37,7 @@ describe('end-to-end escape tests', () => {
       }),
     );
 
-    const nextEscapeBlock = await blocksToAdvance(81, 100, provider);
+    const nextEscapeBlock = await blocksToAdvance(4560, 4800, provider);
     await advanceBlocks(nextEscapeBlock, provider);
   });
 

@@ -10,13 +10,12 @@ import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
 
 use(solidity);
 
-describe('rollup_processor: core', () => {
+describe('rollup_processor: escape hatch', () => {
   let rollupProcessor: Contract;
   let erc20: Contract;
   let userA: Signer;
   let userB: Signer;
   let userAAddress: EthAddress;
-  let userBAddress: EthAddress;
   let viewingKeys: Buffer[];
 
   const provider = ethers.provider;
@@ -27,7 +26,6 @@ describe('rollup_processor: core', () => {
   beforeEach(async () => {
     [userA, userB] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
-    userBAddress = EthAddress.fromString(await userB.getAddress());
     ({ erc20, rollupProcessor, viewingKeys } = await setupRollupProcessor([userA, userB], mintAmount));
 
     const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
@@ -42,7 +40,7 @@ describe('rollup_processor: core', () => {
   });
 
   it('should get escape hatch open status', async () => {
-    const nextEscapeBlock = await blocksToAdvance(81, 100, provider);
+    const nextEscapeBlock = await blocksToAdvance(80, 100, provider);
     await advanceBlocks(nextEscapeBlock, provider);
 
     const [isOpen, blocksRemaining] = await rollupProcessor.getEscapeHatchStatus();
@@ -56,7 +54,7 @@ describe('rollup_processor: core', () => {
     const initialUserBalance = await erc20.balanceOf(userAAddress.toString());
 
     const { proofData } = await createEscapeProof(withdrawalAmount, userAAddress);
-    const nextEscapeBlock = await blocksToAdvance(81, 100, provider);
+    const nextEscapeBlock = await blocksToAdvance(80, 100, provider);
     await advanceBlocks(nextEscapeBlock, provider);
     await rollupProcessor.processRollup(proofData, [], [], viewingKeys);
 
@@ -70,7 +68,7 @@ describe('rollup_processor: core', () => {
 
   it('should reject escape hatch outside valid block window', async () => {
     const { proofData } = await createEscapeProof(withdrawalAmount, userAAddress);
-    const escapeBlock = await blocksToAdvance(1, 100, provider);
+    const escapeBlock = await blocksToAdvance(101, 100, provider);
     await advanceBlocks(escapeBlock, provider);
     await expect(rollupProcessor.processRollup(proofData, [], [], viewingKeys)).to.be.revertedWith(
       'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT',
