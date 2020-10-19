@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from 'react-apollo';
 import styled from 'styled-components';
+import { Text } from '../components';
 import { spacings } from '../styles';
 import { BlockItem, BlockItemPlaceholder } from './block_item';
 import { GET_BLOCKS, BLOCKS_POLL_INTERVAL, BlocksQueryData, BlocksQueryVars } from './query';
@@ -11,6 +12,10 @@ const BlockRowRoot = styled.div`
 
 const BlockRow = styled.div`
   padding: ${spacings.s} 0;
+`;
+
+const BlockMessage = styled(Text)`
+  padding: ${spacings.xs} 0;
 `;
 
 interface BlockListProps {
@@ -39,7 +44,20 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({ page, block
     );
   }
 
-  if (error) return <div>Error</div>;
+  if (error) {
+    return (
+      <BlockRowRoot>
+        <BlockRow>
+          <BlockMessage text="Connecting to rollup server..." size="m" weight="light" />
+        </BlockRow>
+        {[...Array(blocksPerPage - 1)].map((_, i) => (
+          <BlockRow key={+i}>
+            <BlockItemPlaceholder />
+          </BlockRow>
+        ))}
+      </BlockRowRoot>
+    );
+  }
 
   return (
     <BlockRowRoot>

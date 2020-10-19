@@ -6,7 +6,7 @@ import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { getQuery } from './query_builder';
 import { HexString, toSQLIteDateTime } from './scalar_type';
-import { TxType, TxsArgs } from './tx_type';
+import { TxType, TxsArgs, TxCountArgs } from './tx_type';
 
 @Resolver(() => TxType)
 export class TxResolver {
@@ -93,18 +93,8 @@ export class TxResolver {
     return rollup;
   }
 
-  // TODO - should take filters
   @Query(() => Int)
-  async totalTxs() {
-    const pendingTxs = await this.totalPendingTxs();
-    const totalTxs = await this.txRep.count();
-    return totalTxs - pendingTxs;
-  }
-
-  // TODO - deprecate this
-  @Query(() => Int)
-  async totalPendingTxs() {
-    const pendingRollups = await this.rollupRep.find({ where: { status: Not('SETTLED') }, relations: ['txs'] });
-    return pendingRollups.reduce((accum, { txs }) => accum + txs.length, 0);
+  async totalTxs(@Args() args: TxCountArgs) {
+    return getQuery(this.txRep, args).getCount();
   }
 }

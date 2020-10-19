@@ -23,8 +23,7 @@ export const TOTAL_BLOCKS_POLL_INTERVAL = POLL_INTERVAL;
 
 export const GET_TOTAL_BLOCKS = gql`
   {
-    settledBlocks: totalRollups(status: "SETTLED")
-    publishedBlocks: totalRollups(status: "PUBLISHED")
+    totalBlocks: totalRollups
   }
 `;
 

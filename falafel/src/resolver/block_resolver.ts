@@ -2,7 +2,7 @@ import { Arg, Args, Int, Query, Resolver } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
-import { BlockType, BlocksArgs } from './block_type';
+import { BlockType, BlocksArgs, BlockCountArgs } from './block_type';
 import { getQuery } from './query_builder';
 import { HexString } from './scalar_type';
 
@@ -28,7 +28,7 @@ export class BlockResolver {
   }
 
   @Query(() => Int)
-  async totalBlocks() {
-    return this.blockRep.count();
+  async totalBlocks(@Args() args: BlockCountArgs) {
+    return getQuery(this.blockRep, args).getCount();
   }
 }

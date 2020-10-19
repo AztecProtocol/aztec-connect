@@ -147,3 +147,9 @@ export class BlocksArgs {
   @Max(MAX_COUNT)
   take?: number;
 }
+
+@ArgsType()
+export class BlockCountArgs {
+  @Field(() => BlockFilter, { nullable: true })
+  where?: BlockFilter;
+}

@@ -164,3 +164,9 @@ export class TxsArgs {
   @Max(MAX_COUNT)
   take?: number;
 }
+
+@ArgsType()
+export class TxCountArgs {
+  @Field(() => TxFilter, { nullable: true })
+  where?: TxFilter;
+}

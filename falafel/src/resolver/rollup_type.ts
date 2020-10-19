@@ -252,3 +252,9 @@ export class RollupsArgs {
   @Max(MAX_COUNT)
   take?: number;
 }
+
+@ArgsType()
+export class RollupCountArgs {
+  @Field(() => RollupFilter, { nullable: true })
+  where?: RollupFilter;
+}

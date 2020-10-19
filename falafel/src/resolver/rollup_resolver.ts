@@ -7,7 +7,7 @@ import { BlockDao } from '../entity/block';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { getQuery } from './query_builder';
-import { RollupType, RollupsArgs } from './rollup_type';
+import { RollupType, RollupsArgs, RollupCountArgs } from './rollup_type';
 import { HexString } from './scalar_type';
 
 @Resolver(() => RollupType)
@@ -100,10 +100,7 @@ export class RollupResolver {
   }
 
   @Query(() => Int)
-  async totalRollups(@Arg('status', { nullable: true }) status?: RollupStatus) {
-    if (!status) {
-      return this.rollupRep.count();
-    }
-    return this.rollupRep.count({ status });
+  async totalRollups(@Args() args: RollupCountArgs) {
+    return getQuery(this.rollupRep, args).getCount();
   }
 }

@@ -78,7 +78,12 @@ export const CookiesForm: React.FunctionComponent = () => {
       </Col>
       <ButtonCol>
         <ElemWrapper>
-          <Button theme="outlined" parentBackground={colours.greyDark} href="#">
+          <Button
+            theme="outlined"
+            parentBackground={colours.greyDark}
+            href="https://aztec.network/privacy/"
+            target="_blank"
+          >
             <GradientText text="LEARN MORE" />
           </Button>
         </ElemWrapper>

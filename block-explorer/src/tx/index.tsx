@@ -80,7 +80,13 @@ export const Tx: React.FunctionComponent<TxProps> = ({ txId }) => {
   }
 
   if (error) {
-    return <div>Error</div>;
+    return (
+      <Sections>
+        <Section title={txTitleNode}>
+          <Text text="Connecting to rollup server..." size="m" weight="light" />
+        </Section>
+      </Sections>
+    );
   }
 
   const { tx } = data;

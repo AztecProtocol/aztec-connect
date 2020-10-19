@@ -5,9 +5,9 @@ export const NETWORK_STAT_POLL_INTERVAL = POLL_INTERVAL;
 
 export const GET_NETWORK_STAT = gql`
   {
-    totalBlocks
+    totalBlocks: totalRollups
     totalTxs
-    totalPendingTxs
+    totalPendingTxs: totalTxs(where: { rollup_null: true })
     serverStatus {
       nextPublishTime
     }

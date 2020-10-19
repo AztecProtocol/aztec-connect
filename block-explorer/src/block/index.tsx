@@ -92,7 +92,13 @@ export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
   }
 
   if (error) {
-    return <div>Error</div>;
+    return (
+      <Sections>
+        <Section title={blockTitle}>
+          <Text text="Connecting to rollup server..." weight="light" />
+        </Section>
+      </Sections>
+    );
   }
 
   const { block } = data;

@@ -32,7 +32,7 @@ export const Blocks: React.FunctionComponent<BlocksProps> = ({ blocksPerPage = 5
               <DeviceWidth>
                 {({ breakpoint }) => (
                   <Pagination
-                    totalItems={data.settledBlocks + data.publishedBlocks}
+                    totalItems={data.totalBlocks}
                     page={page}
                     itemsPerPage={blocksPerPage}
                     visibleEndPages={sizeLte(breakpoint, 'xs') ? 1 : 2}
