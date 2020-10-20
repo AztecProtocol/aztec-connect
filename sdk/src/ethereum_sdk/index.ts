@@ -7,8 +7,8 @@ import { EventEmitter } from 'events';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../ethereum_provider';
 import { AssetId, SdkEvent } from '../sdk';
-import { Web3Signer } from '../signer/web3_signer';
-import { Signer } from '../signer';
+import { EthersEthereumSigner, Web3Signer } from '../signer/web3_signer';
+import { EthereumSigner, Signer } from '../signer';
 import { deriveGrumpkinPrivateKey, RecoveryPayload, UserData } from '../user';
 import { WalletSdk } from '../wallet_sdk';
 import { Database, DbAccount, DexieDatabase, SQLDatabase, getOrmConfig } from './database';
@@ -16,6 +16,7 @@ import { EthereumSdkUser } from './ethereum_sdk_user';
 import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';
 import { createConnection } from 'typeorm';
 import { EthereumBlockchain } from 'blockchain';
+import { createPermitData } from '../wallet_sdk/create_permit_data';
 
 export * from './ethereum_sdk_user';
 export * from './ethereum_sdk_user_asset';
@@ -147,6 +148,10 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getRemoteStatus();
   }
 
+  public getAssetPermitSupport(assetId: AssetId) {
+    return this.walletSdk.getAssetPermitSupport(assetId);
+  }
+
   public getTokenContract(assetId: AssetId) {
     return this.walletSdk.getTokenContract(assetId);
   }
@@ -200,10 +205,62 @@ export class EthereumSdk extends EventEmitter {
     if (!userId) {
       throw new Error(`User not found: ${from}`);
     }
-
     const aztecSigner = signer || this.getSchnorrSigner(from);
     const ethSigner = new Web3Signer(this.web3Provider, from);
-    return this.walletSdk.deposit(assetId, userId, value, aztecSigner, ethSigner, to);
+
+    const userPendingDeposit = await this.getUserPendingDeposit(assetId, ethSigner.getAddress());
+    const amountToTransfer = BigInt(value) - BigInt(userPendingDeposit);
+    const assetSupportsPermit = await this.getAssetPermitSupport(assetId);
+
+    // Determine if any approval is required.
+    const existingAllowance = await this.getTokenContract(assetId).allowance(ethSigner.getAddress());
+    const approvalAmount = amountToTransfer - existingAllowance;
+
+    if (approvalAmount > 0) {
+      if (assetSupportsPermit) {
+        try {
+          const deadline = BigInt(300);
+          const signature = await this.createPermitSignature(assetId, ethSigner, approvalAmount, deadline);
+          const permitArgs = { approvalAmount, deadline, signature };
+          return this.walletSdk.deposit(assetId, userId, value, aztecSigner, ethSigner, permitArgs, to);
+        } catch {
+          this.emit(SdkEvent.LOG, 'Approving deposit...');
+          await this.approve(assetId, approvalAmount, from);
+        }
+      } else {
+        this.emit(SdkEvent.LOG, 'Approving deposit...');
+        await this.approve(assetId, approvalAmount, from);
+      }
+    }
+
+    return this.walletSdk.deposit(assetId, userId, value, aztecSigner, ethSigner, undefined, to);
+  }
+
+  private async createPermitSignature(
+    assetId: AssetId,
+    ethSigner: EthereumSigner,
+    amountToTransfer: bigint,
+    permitDeadline: bigint,
+  ) {
+    const currentTimeInt = parseInt((new Date().getTime() / 1000).toString());
+    const deadline = BigInt(currentTimeInt) + permitDeadline;
+    const nonce = await this.walletSdk.getUserNonce(assetId, await ethSigner.getAddress());
+    const { rollupContractAddress, chainId } = this.walletSdk.getLocalStatus();
+    const tokenContract = await this.walletSdk.getTokenContract(assetId);
+    const tokenName = await this.walletSdk.getTokenContract(assetId).name();
+
+    const permitData = createPermitData(
+      tokenName,
+      ethSigner.getAddress(),
+      rollupContractAddress,
+      amountToTransfer,
+      nonce,
+      deadline,
+      chainId,
+      tokenContract.getAddress(),
+    );
+
+    return ethSigner.signTypedData(permitData);
   }
 
   public async withdraw(

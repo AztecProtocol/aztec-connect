@@ -9,7 +9,7 @@ EventEmitter.defaultMaxListeners = 30;
 
 const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
 
-describe('end-to-end tests', () => {
+describe('end-to-end account tests', () => {
   let provider: HttpProvider;
   let sdk: EthereumSdk;
   let userAddress: EthAddress;

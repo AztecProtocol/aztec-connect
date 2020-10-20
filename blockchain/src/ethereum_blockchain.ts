@@ -1,10 +1,10 @@
-import { Provider } from '@ethersproject/abstract-provider';
+import { Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { Proof, RollupProviderStatus } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
 import { ethers, Signer } from 'ethers';
 import { EventEmitter } from 'events';
-import { Blockchain, Receipt } from './blockchain';
+import { Blockchain, PermitArgs, Receipt } from './blockchain';
 import { Contracts } from './contracts';
 
 export interface EthereumBlockchainConfig {
@@ -158,14 +158,32 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {
-    return (await this.contracts.getUserPendingDeposit(assetId, account)) as bigint;
+    return this.contracts.getUserPendingDeposit(assetId, account);
+  }
+
+  public async getUserNonce(assetId: number, account: EthAddress) {
+    return this.contracts.getUserNonce(assetId, account);
+  }
+
+  public async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean) {
+    return this.contracts.setSupportedAsset(assetAddress, supportsPermit);
+  }
+
+  public async getAssetPermitSupport(assetId: number) {
+    return this.contracts.getAssetPermitSupport(assetId);
   }
 
   /**
-   * Deposit funds into the RollupProcessor contract. First stage of the two part deposit flow
+   * Deposit funds into the RollupProcessor contract. First stage of the two part deposit flow.
+   * If the asset supports the permit() flow, deposit via the permit signature flow
    */
-  public async depositPendingFunds(assetId: number, amount: bigint, depositorAddress: EthAddress) {
-    return await this.contracts.depositPendingFunds(assetId, amount, depositorAddress);
+  public async depositPendingFunds(
+    assetId: number,
+    amount: bigint,
+    depositorAddress: EthAddress,
+    permitArgs?: PermitArgs,
+  ) {
+    return this.contracts.depositPendingFunds(assetId, amount, depositorAddress, permitArgs);
   }
 
   /**

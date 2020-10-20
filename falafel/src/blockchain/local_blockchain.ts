@@ -2,7 +2,7 @@ import { EthAddress } from 'barretenberg/address';
 import { InnerProofData, RollupProofData, VIEWING_KEY_SIZE } from 'barretenberg/rollup_proof';
 import { Proof } from 'barretenberg/rollup_provider';
 import { numToUInt32BE } from 'barretenberg/serialize';
-import { Block, Blockchain, Receipt } from 'blockchain';
+import { Block, Blockchain, PermitArgs, Receipt } from 'blockchain';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { Connection, Repository } from 'typeorm';
@@ -161,6 +161,15 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     await this.saveBlock(block);
 
     return txHash;
+  }
+
+  public async depositPendingFunds(
+    assetId: number,
+    amount: bigint,
+    depositorAddress: EthAddress,
+    permitArgs?: PermitArgs,
+  ) {
+    return randomBytes(32);
   }
 
   public async getTransactionReceipt(txHash: Buffer) {

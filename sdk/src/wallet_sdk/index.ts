@@ -2,6 +2,7 @@ import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Signature } from 'barretenberg/client_proofs/signature';
 import { getProviderStatus, Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
+import { PermitArgs } from 'blockchain';
 import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
@@ -17,6 +18,7 @@ import { WalletSdkUser } from './wallet_sdk_user';
 
 export * from './wallet_sdk_user';
 export * from './wallet_sdk_user_asset';
+export * from './create_permit_data';
 
 const debug = createDebug('bb:wallet_sdk');
 
@@ -46,16 +48,17 @@ export async function createWalletSdk(
       ? tokenContractAddresses.map(a => new Web3TokenContract(provider, a, rollupContractAddress, chainId))
       : [new MockTokenContract()];
 
+  await Promise.all(tokenContracts.map(tc => tc.init()));
+
   const config = {
     provider,
+    // TODO: broken.
     signer: provider.getSigner(0),
     networkOrHost: serverUrl,
     console: false,
     gasLimit: 7000000,
   };
   const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress);
-
-  await Promise.all(tokenContracts.map(tc => tc.init()));
 
   return new WalletSdk(core, blockchain, tokenContracts);
 }
@@ -130,8 +133,20 @@ export class WalletSdk extends EventEmitter {
     return this.blockchain.getUserPendingDeposit(assetId, account);
   }
 
+  public getUserNonce(assetId: AssetId, account: EthAddress) {
+    return this.blockchain.getUserNonce(assetId, account);
+  }
+
+  public async getTransactionReceipt(txHash: TxHash) {
+    return this.blockchain.getTransactionReceipt(txHash);
+  }
+
   public async getAddressFromAlias(alias: string) {
     return this.core.getAddressFromAlias(alias);
+  }
+
+  public getAssetPermitSupport(assetId) {
+    return this.blockchain.getAssetPermitSupport(assetId);
   }
 
   public getActionState(userId?: Buffer) {
@@ -159,38 +174,29 @@ export class WalletSdk extends EventEmitter {
     value: bigint,
     signer: Signer,
     ethSigner: EthereumSigner,
+    permitArgs?: PermitArgs,
     to?: GrumpkinAddress | string,
   ): Promise<TxHash> {
-    const recipient = !to
-      ? this.getUserData(userId)!.publicKey
-      : typeof to === 'string'
-      ? await this.getAddressFromAlias(to)
-      : to;
-    const userPendingDeposit = await this.getUserPendingDeposit(assetId, ethSigner.getAddress());
-    const amountToTransfer = BigInt(value) - BigInt(userPendingDeposit);
+    const toAddr = typeof to === 'string' ? await this.getAddressFromAlias(to) : (to as GrumpkinAddress);
+    const recipient = toAddr || this.getUserData(userId)!.publicKey;
 
     const action = async () => {
-      if (amountToTransfer > 0) {
-        const allowance = await this.getTokenContract(assetId).allowance(ethSigner.getAddress());
-        if (allowance < amountToTransfer) {
-          this.emit(SdkEvent.LOG, 'Approving deposit...');
-          const txHash = await this.getTokenContract(assetId).approve(value, ethSigner.getAddress());
-          await this.blockchain.getTransactionReceipt(txHash);
-          this.emit(SdkEvent.UPDATED_USER_STATE, userId);
-        }
-
-        this.emit(SdkEvent.LOG, 'Depositing funds to contract...');
-        const txHash = await this.blockchain.depositPendingFunds(assetId, amountToTransfer, ethSigner.getAddress());
-        await this.blockchain.getTransactionReceipt(txHash);
-        this.emit(SdkEvent.UPDATED_USER_STATE, userId);
-      }
-
+      this.emit(SdkEvent.LOG, 'Depositing funds to contract...');
+      const depositTxHash = await this.blockchain.depositPendingFunds(
+        assetId,
+        value,
+        ethSigner.getAddress(),
+        permitArgs,
+      );
+      await this.blockchain.getTransactionReceipt(depositTxHash);
+      this.emit(SdkEvent.UPDATED_USER_STATE, userId);
       this.emit(SdkEvent.LOG, 'Creating deposit proof...');
       return await this.core.createProof(assetId, userId, 'DEPOSIT', value, signer, ethSigner, recipient, undefined);
     };
 
     const validation = async () => {
-      await this.checkPublicBalance(assetId, amountToTransfer, ethSigner.getAddress());
+      const isPermit = !!permitArgs;
+      await this.checkPublicBalanceAndApproval(assetId, value, ethSigner.getAddress(), isPermit);
       if (!recipient) {
         throw new Error(`No address found for alias: ${to}`);
       }
@@ -228,12 +234,18 @@ export class WalletSdk extends EventEmitter {
     return this.core.performAction(Action.TRANSFER, value, userId, to, action, validation);
   }
 
-  private async checkPublicBalance(assetId: AssetId, value: bigint, from: EthAddress) {
+  private async checkPublicBalanceAndApproval(assetId: AssetId, value: bigint, from: EthAddress, isPermit: boolean) {
     const tokenContract = this.getTokenContract(assetId);
     const tokenBalance = await tokenContract.balanceOf(from);
     const pendingTokenBalance = await this.blockchain.getUserPendingDeposit(assetId, from);
     if (tokenBalance + pendingTokenBalance < value) {
       throw new Error(`Insufficient public token balance: ${tokenContract.fromErc20Units(tokenBalance)}`);
+    }
+    if (!isPermit) {
+      const allowance = await tokenContract.allowance(from);
+      if (allowance < value) {
+        throw new Error(`Insufficient allowance: ${tokenContract.fromErc20Units(allowance)}`);
+      }
     }
   }
 

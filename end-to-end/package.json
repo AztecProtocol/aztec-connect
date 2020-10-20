@@ -41,6 +41,7 @@
     "@typescript-eslint/parser": "^4.1.1",
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",
+    "ethereumjs-util": "^7.0.7",
     "jest": "^24.8.0",
     "prettier": "^2.0.5",
     "ts-jest": "^24.0.2",
