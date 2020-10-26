@@ -38,7 +38,6 @@ describe('user state', () => {
       id: randomBytes(64),
       privateKey,
       publicKey: new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey)),
-      syncedToBlock: -1,
       syncedToRollup: -1,
     };
 
@@ -151,6 +150,7 @@ describe('user state', () => {
   const createBlock = (rollupProofData: RollupProofData) => ({
     txHash: randomBytes(32),
     blockNum: 0,
+    rollupId: 0,
     rollupSize: 1,
     rollupProofData: rollupProofData.toBuffer(),
     viewingKeysData: rollupProofData.getViewingKeyData(),

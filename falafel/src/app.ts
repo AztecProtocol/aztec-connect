@@ -21,8 +21,9 @@ import { DefaultState, Context } from 'koa';
 import { RollupDao } from './entity/rollup';
 import { TxDao } from './entity/tx';
 import { BlockResolver, RollupResolver, TxResolver, ServerStatusResolver } from './resolver';
-import { Server, ServerConfig } from './server';
+import { Server } from './server';
 
+// eslint-disable-next-line
 const cors = require('@koa/cors');
 
 const toBlockResponse = (block: Block): BlockServerResponse => ({
@@ -39,7 +40,6 @@ const toRollupResponse = ({
   dataRoot,
   proofData,
   txs,
-  ethBlock,
   ethTxHash,
   created,
 }: RollupDao): RollupServerResponse => ({
@@ -48,7 +48,6 @@ const toRollupResponse = ({
   dataRoot: dataRoot.toString('hex'),
   proofData: proofData ? proofData.toString('hex') : undefined,
   txHashes: txs.map(tx => tx.txId.toString('hex')),
-  ethBlock,
   ethTxHash: ethTxHash ? ethTxHash.toString('hex') : undefined,
   created: created.toISOString(),
 });
@@ -71,7 +70,6 @@ export function appFactory(
   prefix: string,
   connection: Connection,
   worldStateDb: WorldStateDb,
-  serverConfig: ServerConfig,
   serverStatus: RollupProviderStatus,
 ) {
   const router = new Router<DefaultState, Context>({ prefix });
@@ -177,7 +175,7 @@ export function appFactory(
   });
 
   router.get('/status', async (ctx: Koa.Context) => {
-    const status = await server.status();
+    const status = await server.getStatus();
     const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot } = status;
     const response: RollupProviderStatusServerResponse = {
       ...status,
@@ -203,8 +201,8 @@ export function appFactory(
 
   Container.set({ id: 'connection', factory: () => connection });
   Container.set({ id: 'worldStateDb', factory: () => worldStateDb });
-  Container.set({ id: 'serverConfig', factory: () => serverConfig });
   Container.set({ id: 'serverStatus', factory: () => serverStatus });
+  Container.set({ id: 'server', factory: () => server });
   const schema = buildSchemaSync({
     resolvers: [BlockResolver, RollupResolver, TxResolver, ServerStatusResolver],
     container: Container,

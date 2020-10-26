@@ -2,7 +2,9 @@
   "extends": ".",
   "compilerOptions": {
     "module": "commonjs",
-    "outDir": "dest"
+    "outDir": "dest",
+    "types": []
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["**/*.test.*"]
 }

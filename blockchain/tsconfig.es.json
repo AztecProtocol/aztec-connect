@@ -2,7 +2,9 @@
   "extends": ".",
   "compilerOptions": {
     "module": "es6",
-    "outDir": "dest-es"
+    "outDir": "dest-es",
+    "types": []
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["**/*.test.*"]
 }

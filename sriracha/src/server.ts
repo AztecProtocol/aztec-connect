@@ -81,8 +81,8 @@ export default class Server implements HashPathSource {
     await writeFileAsync('./data/state', JSON.stringify(dataToWrite));
   }
 
-  public async status() {
-    const status = await this.blockchain.status();
+  public async getStatus() {
+    const status = await this.blockchain.getStatus();
     return { ...status, serviceName: 'sriracha' };
   }
 
@@ -125,10 +125,10 @@ export default class Server implements HashPathSource {
   }
 
   private async handleBlock(block: Block) {
-    const { rollupSize, rollupProofData, viewingKeysData, blockNum } = block;
-    const { dataStartIndex, innerProofData, rollupId } = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
+    const { rollupSize, rollupProofData, viewingKeysData, rollupId } = block;
+    const { dataStartIndex, innerProofData } = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
 
-    console.log(`Processing rollup ${rollupId} in block ${blockNum}...`);
+    console.log(`Processing rollup ${rollupId}...`);
 
     for (let i = 0; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];
@@ -144,7 +144,7 @@ export default class Server implements HashPathSource {
 
     await this.worldStateDb.commit();
 
-    this.serverState.lastBlock = blockNum;
+    this.serverState.lastBlock = rollupId;
     await this.writeState();
   }
 

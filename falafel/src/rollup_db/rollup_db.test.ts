@@ -101,7 +101,6 @@ describe('Rollup DB', () => {
     expect(rollupDao.id).toBe(0);
     expect(rollupDao.dataRoot).toEqual(rollup.newDataRoot);
     expect(rollupDao.proofData).toBe(null);
-    expect(rollupDao.ethBlock).toBe(null);
     expect(rollupDao.ethTxHash).toBe(null);
     expect(rollupDao.status).toBe('CREATING');
 
@@ -127,7 +126,6 @@ describe('Rollup DB', () => {
     expect(rollupDao.id).toBe(0);
     expect(rollupDao.dataRoot).toEqual(rollup.newDataRoot);
     expect(rollupDao.proofData).toBe(null);
-    expect(rollupDao.ethBlock).toBe(null);
     expect(rollupDao.ethTxHash).toBe(null);
     expect(rollupDao.status).toBe('CREATING');
 
@@ -156,7 +154,6 @@ describe('Rollup DB', () => {
     expect(rollupDao2.id).toBe(0);
     expect(rollupDao2.dataRoot).toEqual(rollup2.newDataRoot);
     expect(rollupDao2.proofData).toBe(null);
-    expect(rollupDao2.ethBlock).toBe(null);
     expect(rollupDao2.ethTxHash).toBe(null);
     expect(rollupDao2.status).toBe('CREATING');
 
@@ -183,7 +180,6 @@ describe('Rollup DB', () => {
 
     rollupDao.hash = rollupHash;
     rollupDao.id = rollup.rollupId;
-    rollupDao.ethBlock = 1;
     rollupDao.ethTxHash = randomBytes(32);
     rollupDao.dataRoot = rollup.newDataRoot;
     rollupDao.proofData = randomBytes(100);
@@ -212,12 +208,13 @@ describe('Rollup DB', () => {
     expect(rollupDao!.proofData).toBe(null);
 
     const proofData = randomBytes(100);
-    await rollupDb.setRollupProof(rollupId, proofData);
+    await rollupDb.setRollupProof(rollupId, proofData, Buffer.alloc(0));
 
     const updatedRollupDao = await rollupDb.getRollupFromId(rollupId);
     expect(updatedRollupDao).toEqual({
       ...rollupDao,
       proofData,
+      viewingKeys: Buffer.alloc(0),
     });
   });
 
@@ -271,16 +268,13 @@ describe('Rollup DB', () => {
     await rollupDb.confirmSent(rollupId, ethTxHash);
 
     const rollupDao = (await rollupDb.getRollupFromId(rollupId))!;
-    expect(rollupDao.ethBlock).toBe(null);
     expect(rollupDao.status).toBe('PUBLISHED');
 
-    const ethBlock = 123;
-    await rollupDb.confirmRollup(rollupId, ethBlock);
+    await rollupDb.confirmRollup(rollupId);
 
     const updatedRollupDao = (await rollupDb.getRollupFromId(rollupId))!;
     expect(updatedRollupDao).toEqual({
       ...rollupDao,
-      ethBlock,
       status: 'SETTLED',
     });
   });

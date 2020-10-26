@@ -25,7 +25,6 @@ export const randomUser = (): UserData => ({
   id: randomBytes(64),
   privateKey: randomBytes(32),
   publicKey: GrumpkinAddress.randomAddress(),
-  syncedToBlock: randomInt(),
   syncedToRollup: randomInt(),
 });
 

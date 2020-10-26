@@ -16,9 +16,6 @@ export class UserDataDao implements UserData {
   public publicKey!: GrumpkinAddress;
 
   @Column()
-  public syncedToBlock!: number;
-
-  @Column()
   public syncedToRollup!: number;
 
   @Column({ nullable: true })

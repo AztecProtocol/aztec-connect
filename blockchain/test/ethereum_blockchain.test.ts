@@ -38,7 +38,7 @@ describe('ethereum_blockchain', () => {
     ({ erc20, rollupProcessor, viewingKeys } = await setupRollupProcessor([userA, userB], mintAmount));
 
     ethereumBlockchain = await EthereumBlockchain.new(
-      { signer: userA, networkOrHost: '', provider: userA.provider!, gasLimit: 5000000 },
+      { signer: userA, networkOrHost: '', provider: userA.provider!, gasLimit: 5000000, console: false },
       EthAddress.fromString(rollupProcessor.address),
     );
     await ethereumBlockchain.start();
@@ -50,7 +50,7 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should get status', async () => {
-    const { rollupContractAddress, tokenContractAddresses } = await ethereumBlockchain.status();
+    const { rollupContractAddress, tokenContractAddresses } = await ethereumBlockchain.getStatus();
     expect(rollupContractAddress.toString().length).to.be.greaterThan(0);
     expect(tokenContractAddresses.length).to.be.greaterThan(0);
   });
@@ -122,7 +122,6 @@ describe('ethereum_blockchain', () => {
     expect(numBlockEvents).to.equal(1);
 
     const blockEvent = spy.getCall(0);
-    expect(blockEvent.args[0].blockNum).to.be.above(0);
     expect(blockEvent.args[0].txHash).to.have.lengthOf(32);
     expect(blockEvent.args[0].rollupSize).to.equal(2);
     expect(blockEvent.args[0].rollupProofData).to.deep.equal(proofData);
@@ -149,11 +148,10 @@ describe('ethereum_blockchain', () => {
     await ethereumBlockchain.sendRollupProof(withdrawProofData, withdrawalSignatures, withdrawSigIndexes, viewingKeys);
     await waitOnBlockProcessed;
 
-    const blockNumStart = 0;
-    const blocks = await ethereumBlockchain.getBlocks(blockNumStart);
+    const rollupIdStart = 0;
+    const blocks = await ethereumBlockchain.getBlocks(rollupIdStart);
 
     const rollup0 = RollupProofData.fromBuffer(blocks[0].rollupProofData, blocks[0].viewingKeysData);
-    expect(blocks[0].blockNum).to.be.above(0);
     expect(blocks[0].txHash).to.have.lengthOf(32);
     expect(blocks[0].rollupSize).to.equal(2);
     expect(rollup0.rollupId).to.equal(0);
@@ -163,7 +161,6 @@ describe('ethereum_blockchain', () => {
     expect(rollup0.innerProofData[0].inputOwner.toString()).to.equal(userAAddress.toString());
 
     const rollup1 = RollupProofData.fromBuffer(blocks[1].rollupProofData, blocks[1].viewingKeysData);
-    expect(blocks[1].blockNum).to.be.above(0);
     expect(blocks[1].txHash).to.have.lengthOf(32);
     expect(blocks[1].rollupSize).to.equal(2);
     expect(rollup1.rollupId).to.equal(1);

@@ -9,13 +9,29 @@
     "build:dev": "tsc -p tsconfig.cjs.json --watch & tsc -p tsconfig.es.json --watch",
     "compile": "yarn buidler compile",
     "clean": "rm -rf ./cache ./dest ./dest-es",
-    "test": "yarn buidler test",
+    "test": "yarn test:src && buidler test",
+    "test:src": "jest",
     "test:ganache": "yarn buidler --network ganache test",
     "lint:sol": "solhint contracts/**/*.sol",
     "docs": "solidity-docgen -i ./contracts -o ./docs"
   },
   "bin": {
     "deploy_rollup_processor": "./deploy/index.js"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "testRegex": ".*\\.test\\.(tsx?|js)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ],
+    "rootDir": "./src"
   },
   "dependencies": {
     "barretenberg": "../barretenberg.js/dest",
@@ -31,7 +47,8 @@
     "@nomiclabs/buidler-waffle": "^2.0.0",
     "@openzeppelin/contracts": "^3.0.1",
     "@types/debug": "^4.1.5",
-    "@types/mocha": "^7.0.2",
+    "@types/jest": "^26.0.15",
+    "@types/mocha": "^8.0.3",
     "@typescript-eslint/eslint-plugin": "^4.1.1",
     "@typescript-eslint/parser": "^4.1.1",
     "chai": "^4.2.0",
@@ -39,8 +56,10 @@
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",
     "ethereum-waffle": "3.0.0",
+    "jest": "^26.6.1",
     "sinon": "^9.0.2",
     "solidity-docgen": "^0.5.3",
+    "ts-jest": "^26.4.2",
     "ts-node": "^8.9.1",
     "tsc-watch": "^2.2.1"
   }

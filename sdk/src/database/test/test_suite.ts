@@ -110,7 +110,7 @@ export const databaseTestSuite = (
       const user = randomUser();
       await db.addUser(user);
 
-      const newUser = { ...user, syncedToBlock: user.syncedToBlock + 1 };
+      const newUser = { ...user, syncedToRollup: user.syncedToRollup + 1 };
       await db.updateUser(newUser);
 
       const updatedUser = await db.getUser(user.id);
@@ -299,7 +299,6 @@ export const databaseTestSuite = (
 
       expect(await db.getUser(user.id)).toEqual({
         ...user,
-        syncedToBlock: -1,
         syncedToRollup: -1,
       });
 

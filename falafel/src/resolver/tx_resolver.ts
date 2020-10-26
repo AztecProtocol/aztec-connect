@@ -1,8 +1,7 @@
 import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
-import { Connection, Repository, Not, LessThanOrEqual } from 'typeorm';
-import { RollupDao } from '../entity/rollup';
+import { Connection, Repository, LessThanOrEqual } from 'typeorm';
 import { TxDao } from '../entity/tx';
 import { getQuery } from './query_builder';
 import { HexString, toSQLIteDateTime } from './scalar_type';
@@ -10,11 +9,9 @@ import { TxType, TxsArgs, TxCountArgs } from './tx_type';
 
 @Resolver(() => TxType)
 export class TxResolver {
-  private readonly rollupRep: Repository<RollupDao>;
   private readonly txRep: Repository<TxDao>;
 
   constructor(@Inject('connection') connection: Connection) {
-    this.rollupRep = connection.getRepository(RollupDao);
     this.txRep = connection.getRepository(TxDao);
   }
 

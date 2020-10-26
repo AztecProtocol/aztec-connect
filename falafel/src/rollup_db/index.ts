@@ -1,7 +1,7 @@
 import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
-import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
+import { InnerProofData } from 'barretenberg/rollup_proof';
 import { createHash } from 'crypto';
-import { Connection, In, Not, Repository } from 'typeorm';
+import { Connection, In, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { Rollup } from '../rollup';
@@ -74,13 +74,14 @@ export class RollupDb {
     await this.rollupRep.save(rollupDao);
   }
 
-  public async setRollupProof(rollupId: number, proofData: Buffer) {
+  public async setRollupProof(rollupId: number, proofData: Buffer, viewingKeys: Buffer) {
     const rollupDao = await this.getRollupFromId(rollupId);
     if (!rollupDao) {
       throw new Error(`Rollup not found: ${rollupId}`);
     }
 
     rollupDao.proofData = proofData;
+    rollupDao.viewingKeys = viewingKeys;
     await this.rollupRep.save(rollupDao);
   }
 
@@ -110,17 +111,15 @@ export class RollupDb {
     await this.rollupRep.save(rollupDao);
   }
 
-  public async confirmRollup(rollupId: number, ethBlock: number) {
+  public async confirmRollup(rollupId: number) {
     let rollup = await this.rollupRep.findOne(rollupId);
 
     if (!rollup) {
       rollup = new RollupDao();
       rollup.created = new Date();
       rollup.id = rollupId;
-      rollup.ethBlock = ethBlock;
       rollup.status = 'SETTLED';
     } else {
-      rollup.ethBlock = ethBlock;
       rollup.status = 'SETTLED';
     }
     await this.rollupRep.save(rollup);
@@ -149,6 +148,13 @@ export class RollupDb {
     return this.rollupRep.find({
       where: { status: 'CREATED' },
       relations: ['txs'],
+      order: { id: 'ASC' },
+    });
+  }
+
+  public getUnsettledRollups() {
+    return this.rollupRep.find({
+      where: { status: Not('SETTLED') },
       order: { id: 'ASC' },
     });
   }
@@ -183,6 +189,10 @@ export class RollupDb {
     return this.rollupRep.findOne({ id });
   }
 
+  public async getSettledRollupsFromId(id: number) {
+    return this.rollupRep.find({ where: { id: MoreThanOrEqual(id), status: 'SETTLED' } });
+  }
+
   public async getRollupFromHash(hash: Buffer) {
     return this.rollupRep.findOne({ hash });
   }
@@ -209,13 +219,6 @@ export class RollupDb {
   public async getNextRollupId() {
     const latestRollup = await this.rollupRep.findOne(undefined, { order: { id: 'DESC' } });
     return latestRollup ? latestRollup.id + 1 : 0;
-  }
-
-  // get the last block number that was synced into the database
-  // will return -1 if the last block is undefined, in which case we need to do a full restore
-  public async getLastBlockNum() {
-    const latest = await this.rollupRep.findOne(undefined, { order: { ethBlock: 'DESC' } });
-    return latest && latest.ethBlock !== undefined ? latest.ethBlock : -1;
   }
 
   public async getDataRootsIndex(root: Buffer) {

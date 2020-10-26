@@ -16,7 +16,7 @@ export class SrirachaProvider implements HashPathSource {
     this.baseUrl = baseUrl.toString().replace(/\/$/, '');
   }
 
-  public async status() {
+  public async getStatus() {
     return getProviderStatus(this.baseUrl);
   }
 

@@ -28,7 +28,7 @@ export class WorldState {
     const rollup = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
     const { rollupId, dataStartIndex, innerProofData } = rollup;
 
-    debug(`processing block ${block.blockNum} with rollup ${rollupId}...`);
+    debug(`processing rollup ${rollupId}...`);
 
     for (let i = 0; i < innerProofData.length; ++i) {
       await this.tree.updateElement(dataStartIndex + i * 2, innerProofData[i].newNote1);

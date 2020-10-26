@@ -45,7 +45,6 @@ const generateRollup = (rollupId: number, rollupSize: number) => {
 };
 
 export class LocalBlockchain extends EventEmitter implements Blockchain {
-  private blockNum = 0;
   private dataStartIndex = 0;
   private blockRep!: Repository<BlockDao>;
   private blocks: Block[] = [];
@@ -56,9 +55,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
   }
 
   public getLatestRollupId() {
-    return this.blocks.length
-      ? RollupProofData.getRollupIdFromBuffer(this.blocks[this.blocks.length - 1].rollupProofData)
-      : -1;
+    return this.blocks.length ? this.blocks[this.blocks.length - 1].rollupId : -1;
   }
 
   public async getNetworkInfo() {
@@ -66,7 +63,6 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     return {
       chainId: 3,
       networkOrHost: 'development',
-      blockNumber: this.blockNum,
     };
   }
 
@@ -88,7 +84,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     // Preload some random data if required.
     for (let i = this.blocks.length; i < this.initialBlocks; ++i) {
       const rollup = generateRollup(i, this.rollupSize);
-      await this.createBlockFromRollup(this.rollupSize, rollup.toBuffer(), rollup.getViewingKeyData());
+      await this.addBlock(rollup, rollup.toBuffer(), rollup.getViewingKeyData());
     }
 
     const [lastBlock] = this.blocks.slice(-1);
@@ -96,18 +92,17 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       if (lastBlock.rollupSize !== this.rollupSize) {
         throw new Error(`Previous data on chain has a rollup size of ${lastBlock.rollupSize}.`);
       }
-      this.blockNum = lastBlock.blockNum + 1;
       this.dataStartIndex = this.blocks.length * this.rollupSize * 2;
     }
 
-    console.log(`Local blockchain restored: (blocks: ${this.blockNum})`);
+    console.log(`Local blockchain restored: (blocks: ${this.blocks.length})`);
   }
 
   public stop() {
     this.running = false;
   }
 
-  public async status() {
+  public async getStatus() {
     const { chainId, networkOrHost } = await this.getNetworkInfo();
 
     return {
@@ -116,7 +111,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       networkOrHost,
       tokenContractAddresses: this.getTokenContractAddresses(),
       rollupContractAddress: this.getRollupContractAddress(),
-      nextRollupId: this.blockNum,
+      nextRollupId: this.blocks.length,
       dataRoot: Buffer.alloc(32),
       nullRoot: Buffer.alloc(32),
       rootRoot: Buffer.alloc(32),
@@ -142,26 +137,25 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       throw new Error(`Incorrect dataStartIndex. Expecting ${this.dataStartIndex}. Got ${rollup.dataStartIndex}.`);
     }
 
-    const txHash = await this.createBlockFromRollup(rollup.rollupSize, proofData, viewingKeysData);
+    const txHash = await this.addBlock(rollup, proofData, viewingKeysData);
 
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     return txHash;
   }
 
-  private async createBlockFromRollup(rollupSize: number, proofData: Buffer, viewingKeysData: Buffer) {
+  private async addBlock(rollup: RollupProofData, proofData: Buffer, viewingKeysData: Buffer) {
     const txHash = randomBytes(32);
     const block: Block = {
       txHash,
-      blockNum: this.blockNum,
-      rollupSize,
+      rollupId: rollup.rollupId,
+      rollupSize: rollup.rollupSize,
       rollupProofData: proofData,
       viewingKeysData,
       created: new Date(),
     };
 
-    this.blockNum++;
-    this.dataStartIndex += rollupSize * 2;
+    this.dataStartIndex += rollup.rollupSize * 2;
     this.blocks.push(block);
 
     await this.saveBlock(block);
@@ -193,11 +187,11 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     return this.blocks.slice(from);
   }
 
-  public async validateDepositFunds(publicOwner: Buffer, publicInput: Buffer) {
+  public async validateDepositFunds() {
     return true;
   }
 
-  public validateSignature(publicOwnerBuf: Buffer, signature: Buffer, proof: Buffer) {
+  public validateSignature() {
     return true;
   }
 }

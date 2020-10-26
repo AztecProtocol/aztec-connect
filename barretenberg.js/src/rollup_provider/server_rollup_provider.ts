@@ -35,7 +35,7 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     return Buffer.from(body.txHash, 'hex');
   }
 
-  async status() {
+  async getStatus() {
     return getProviderStatus(this.baseUrl);
   }
 }

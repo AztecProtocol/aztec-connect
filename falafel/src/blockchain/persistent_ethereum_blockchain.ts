@@ -1,5 +1,5 @@
+import { EthAddress } from 'barretenberg/address';
 import { MemoryFifo } from 'barretenberg/fifo';
-import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Proof } from 'barretenberg/rollup_provider/rollup_provider';
 import { Block, Blockchain, EthereumBlockchain } from 'blockchain';
 import { Connection, MoreThanOrEqual, Repository } from 'typeorm';
@@ -24,9 +24,9 @@ export class PersistentEthereumBlockchain implements Blockchain {
   public async init() {
     // Make sure all historical blocks are inserted.
     const latest = await this.blockRep.findOne(undefined, { order: { id: 'DESC' } });
-    const fromBlock = latest ? latest.id + 1 : 0;
-    console.log(`Persisting blocks from ${fromBlock}...`);
-    const blocks = await this.ethereumBlockchain.getBlocks(fromBlock);
+    const fromRollup = latest ? latest.rollupId + 1 : 0;
+    console.log(`Persisting blocks from ${fromRollup}...`);
+    const blocks = await this.ethereumBlockchain.getBlocks(fromRollup);
     for (const block of blocks) {
       await this.saveBlock(block);
     }
@@ -49,7 +49,7 @@ export class PersistentEthereumBlockchain implements Blockchain {
   }
 
   public async getBlocks(from: number) {
-    return (await this.blockRep.find({ where: { id: MoreThanOrEqual(from) } })).map(blockDaoToBlock);
+    return (await this.blockRep.find({ where: { rollupId: MoreThanOrEqual(from) } })).map(blockDaoToBlock);
   }
 
   public on(event: string, fn: (block: Block) => void) {
@@ -64,8 +64,8 @@ export class PersistentEthereumBlockchain implements Blockchain {
     this.ethereumBlockchain.on('block', b => this.blockQueue.put(b));
     this.blockQueue.process(b => this.saveBlock(b));
     const latest = await this.blockRep.findOne(undefined, { order: { id: 'DESC' } });
-    const fromBlock = latest ? latest.id + 1 : 0;
-    await this.ethereumBlockchain.start(fromBlock);
+    const fromRollup = latest ? latest.rollupId + 1 : 0;
+    await this.ethereumBlockchain.start(fromRollup);
   }
 
   public stop() {
@@ -73,8 +73,8 @@ export class PersistentEthereumBlockchain implements Blockchain {
     this.blockQueue.cancel();
   }
 
-  public async status() {
-    return this.ethereumBlockchain.status();
+  public async getStatus() {
+    return this.ethereumBlockchain.getStatus();
   }
 
   public async sendProof(proof: Proof) {
@@ -89,16 +89,16 @@ export class PersistentEthereumBlockchain implements Blockchain {
     return this.ethereumBlockchain.sendRollupProof(proof, signatures, sigIndexes, viewingKeys);
   }
 
-  public async validateDepositFunds(publicOwner: Buffer, publicInput: Buffer, assetId: number) {
+  public async validateDepositFunds(publicOwner: EthAddress, publicInput: bigint, assetId: number) {
     return this.ethereumBlockchain.validateDepositFunds(publicOwner, publicInput, assetId);
   }
 
-  public validateSignature(publicOwnerBuf: Buffer, signature: Buffer, proof: Buffer) {
-    return this.ethereumBlockchain.validateSignature(publicOwnerBuf, signature, proof);
+  public validateSignature(publicOwner: EthAddress, signature: Buffer, proof: Buffer) {
+    return this.ethereumBlockchain.validateSignature(publicOwner, signature, proof);
   }
 
   private async saveBlock(block: Block) {
     await this.blockRep.save(blockToBlockDao(block));
-    this.latestRollupId = RollupProofData.getRollupIdFromBuffer(block.rollupProofData);
+    this.latestRollupId = block.rollupId;
   }
 }

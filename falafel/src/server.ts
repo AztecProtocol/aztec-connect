@@ -1,3 +1,4 @@
+import { EthAddress } from 'barretenberg/address';
 import { AccountVerifier } from 'barretenberg/client_proofs/account_proof';
 import { JoinSplitProof, JoinSplitVerifier, nullifierBufferToIndex } from 'barretenberg/client_proofs/join_split_proof';
 import { Crs } from 'barretenberg/crs';
@@ -68,8 +69,7 @@ export class Server {
     await this.restoreState();
 
     this.blockchain.on('block', block => this.serialQueue.put(() => this.handleBlock(block)));
-    const lastBlockNum = await this.rollupDb.getLastBlockNum();
-    await this.blockchain.start(lastBlockNum + 1);
+    await this.blockchain.start(await this.rollupDb.getNextRollupId());
 
     await this.createVerifiers();
     await this.writeServerState();
@@ -139,8 +139,8 @@ export class Server {
    */
   private async syncDb() {
     console.log('Syncing db...');
-    const lastBlockNum = await this.rollupDb.getLastBlockNum();
-    const blocks = await this.getBlocks(lastBlockNum + 1);
+    const nextRollupId = await this.rollupDb.getNextRollupId();
+    const blocks = await this.getBlocks(nextRollupId);
 
     for (const block of blocks) {
       await this.handleBlock(block);
@@ -166,9 +166,9 @@ export class Server {
   }
 
   private async confirmOrAddRollupToDb(rollup: RollupProofData, block: Block) {
-    const { blockNum, txHash, rollupProofData } = block;
+    const { txHash, rollupProofData } = block;
     if (await this.rollupDb.getRollupFromHash(rollup.rollupHash)) {
-      await this.rollupDb.confirmRollup(rollup.rollupId, blockNum);
+      await this.rollupDb.confirmRollup(rollup.rollupId);
     } else {
       const rollupDao = new RollupDao();
 
@@ -184,13 +184,12 @@ export class Server {
       // we want to overrwrite the rollup in the db local to this rollupProcessor.
       rollupDao.hash = rollup.rollupHash;
       rollupDao.id = rollup.rollupId;
-      rollupDao.ethBlock = blockNum;
       rollupDao.ethTxHash = txHash;
       rollupDao.dataRoot = rollup.newDataRoot;
       rollupDao.proofData = rollupProofData;
       rollupDao.txs = txs;
       rollupDao.status = 'SETTLED';
-      rollupDao.created = new Date();
+      rollupDao.created = block.created;
       await this.rollupDb.addRollupDao(rollupDao);
     }
   }
@@ -218,16 +217,23 @@ export class Server {
     console.log(`Root root: ${this.worldStateDb.getRoot(2).toString('hex')}`);
   }
 
-  public async status() {
-    const { chainId, networkOrHost } = await this.blockchain.getNetworkInfo();
-    const { escapeOpen, numEscapeBlocksRemaining } = await this.blockchain.status();
-    const nextRollupId = this.blockchain.getLatestRollupId() + 1;
+  public async getStatus() {
+    const {
+      chainId,
+      networkOrHost,
+      rollupContractAddress,
+      tokenContractAddresses,
+      nextRollupId,
+      escapeOpen,
+      numEscapeBlocksRemaining,
+    } = await this.blockchain.getStatus();
+
     return {
       serviceName: 'falafel',
       chainId,
       networkOrHost,
-      rollupContractAddress: this.blockchain.getRollupContractAddress(),
-      tokenContractAddresses: this.blockchain.getTokenContractAddresses(),
+      rollupContractAddress,
+      tokenContractAddresses,
       dataSize: Number(this.worldStateDb.getSize(0)),
       dataRoot: this.worldStateDb.getRoot(0),
       nullRoot: this.worldStateDb.getRoot(1),
@@ -236,6 +242,28 @@ export class Server {
       escapeOpen,
       numEscapeBlocksRemaining,
     };
+  }
+
+  public async getNextPublishTime() {
+    // TODO: Replace horror show with time till flushTimeout completes?
+    const { escapeOpen } = await this.blockchain.getStatus();
+    const confirmations = escapeOpen ? 12 : 1;
+    const avgSettleTime = (30 + confirmations * 15) * 1000;
+    const avgProofTime = 30 * 1000;
+
+    const [pendingRollup] = await this.rollupDb.getUnsettledRollups();
+    if (pendingRollup) {
+      return new Date(pendingRollup.created.getTime() + avgProofTime + avgSettleTime);
+    }
+
+    const [pendingTx] = await this.rollupDb.getPendingTxs();
+    if (pendingTx) {
+      return new Date(
+        pendingTx.created.getTime() + this.config.maxRollupWaitTime.asMilliseconds() + avgProofTime + avgSettleTime,
+      );
+    }
+
+    return undefined;
   }
 
   private async processTxQueue(maxRollupWaitTime: Duration, minRollupInterval: Duration) {
@@ -294,11 +322,11 @@ export class Server {
         return;
       }
 
-      await this.rollupDb.setRollupProof(rollup.rollupId, proof);
-
       const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
       const signatures = txs.reduce((acc, tx) => (tx.signature ? [...acc, tx.signature] : acc), [] as Buffer[]);
       const sigIndexes = txs.reduce((acc, tx, i) => (tx.signature ? [...acc, i] : acc), [] as number[]);
+
+      await this.rollupDb.setRollupProof(rollup.rollupId, proof, Buffer.concat(viewingKeys));
 
       const publishItem = {
         rollupId: rollup.rollupId,
@@ -319,7 +347,7 @@ export class Server {
       }
 
       await this.worldStateDb.commit();
-      await this.rollupDb.confirmRollup(rollup.rollupId, blockNum);
+      await this.rollupDb.confirmRollup(rollup.rollupId);
 
       this.printState();
       break;
@@ -357,9 +385,8 @@ export class Server {
 
       const { status, blockNum } = await this.getTransactionReceipt(txHash);
       if (!status) {
-        const { nextRollupId } = await this.blockchain.status();
+        const { nextRollupId } = await this.blockchain.getStatus();
         if (nextRollupId > item.rollupId) {
-          console.log('nextRollupId: ', nextRollupId, 'item.rollupId: ', item.rollupId);
           return;
         } else {
           console.log(`Transaction status failed: ${txHash.toString('hex')}`);
@@ -372,8 +399,16 @@ export class Server {
     }
   }
 
-  public async getBlocks(from: number) {
-    return await this.blockchain.getBlocks(from);
+  public async getBlocks(from: number): Promise<Block[]> {
+    const rollups = await this.rollupDb.getSettledRollupsFromId(from);
+    return rollups.map(dao => ({
+      txHash: dao.ethTxHash!,
+      created: dao.created,
+      rollupId: dao.id,
+      rollupSize: RollupProofData.getRollupSizeFromBuffer(dao.proofData!),
+      rollupProofData: dao.proofData!,
+      viewingKeysData: dao.viewingKeys!,
+    }));
   }
 
   public getLatestRollupId() {
@@ -451,13 +486,6 @@ export class Server {
         break;
     }
 
-    // at point of receiving joinsplit tx, if escape hatch activated, the db will be out of sync
-    // where does the sdk get it's note tree stuff when it constructs the proof
-    // it gets the data from falafel - queries falafel when it constructs the joinsplit
-    // Flow
-    // 1) Escape hatch happens, roots on the contract change
-    // 2) Client constructs a joinSplit proof. It queries the falafel db to do so
-    // 3) These roots will be incorrect,
     proof.dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
     this.pendingNullifiers.add(nullifier1);
@@ -479,11 +507,17 @@ export class Server {
         throw new Error('No deposit signature provided.');
       }
 
-      if (!(await this.blockchain.validateSignature(inputOwner, proof.signature, proof.getDepositSigningData()))) {
+      if (
+        !(await this.blockchain.validateSignature(
+          new EthAddress(inputOwner),
+          proof.signature,
+          proof.getDepositSigningData(),
+        ))
+      ) {
         throw new Error('Invalid deposit signature.');
       }
 
-      if (!(await this.blockchain.validateDepositFunds(inputOwner, publicInput, assetId))) {
+      if (!(await this.blockchain.validateDepositFunds(new EthAddress(inputOwner), toBigIntBE(publicInput), assetId))) {
         throw new Error('User has insufficient or unapproved deposit balance.');
       }
     }

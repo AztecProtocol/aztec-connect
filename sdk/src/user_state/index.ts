@@ -60,9 +60,9 @@ export class UserState extends EventEmitter {
     if (this.syncState !== SyncState.OFF) {
       return;
     }
-    debug(`starting sync for ${this.user.id.toString('hex')} from block ${this.user.syncedToBlock + 1}...`);
+    debug(`starting sync for ${this.user.id.toString('hex')} from rollup block ${this.user.syncedToRollup + 1}...`);
     this.syncState = SyncState.SYNCHING;
-    const blocks = await this.blockSource.getBlocks(this.user.syncedToBlock + 1);
+    const blocks = await this.blockSource.getBlocks(this.user.syncedToRollup + 1);
     for (const block of blocks) {
       if (this.syncState !== SyncState.SYNCHING) {
         return;
@@ -99,7 +99,7 @@ export class UserState extends EventEmitter {
   }
 
   private async handleBlock(block: Block) {
-    if (block.blockNum <= this.user.syncedToBlock) {
+    if (block.rollupId <= this.user.syncedToRollup) {
       return;
     }
 
@@ -121,7 +121,6 @@ export class UserState extends EventEmitter {
       }
     }
 
-    this.user.syncedToBlock = block.blockNum;
     this.user.syncedToRollup = rollupId;
     await this.db.updateUser(this.user);
 

@@ -69,7 +69,6 @@ class DexieUser {
     public id: Uint8Array,
     public publicKey: Uint8Array,
     public privateKey: Uint8Array,
-    public syncedToBlock: number,
     public syncedToRollup: number,
     public alias?: string,
   ) {}
@@ -264,7 +263,7 @@ export class DexieDatabase implements Database {
     await this.userTx.clear();
     await this.userKeys.clear();
     await this.alias.clear();
-    await this.user.toCollection().modify({ syncedToBlock: -1, syncedToRollup: -1 });
+    await this.user.toCollection().modify({ syncedToRollup: -1 });
   }
 
   async deleteKey(name: string) {

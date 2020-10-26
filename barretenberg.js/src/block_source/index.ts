@@ -1,7 +1,7 @@
 export interface Block {
-  blockNum: number;
   txHash: Buffer;
   created: Date;
+  rollupId: number;
   rollupSize: number;
   rollupProofData: Buffer;
   viewingKeysData: Buffer;
@@ -14,7 +14,7 @@ export interface GetBlocksResponse {
 
 export interface BlockSource {
   /**
-   * Returns all blocks from Ethereum block number `block`.
+   * Returns all blocks from rollup id `from`.
    * In the future this will *not* guarantee *all* blocks are returned. It may return a subset, and the
    * client should use `getLatestRollupId()` to determine if it needs to make further requests.
    */
@@ -32,9 +32,6 @@ export interface BlockSource {
 
   removeAllListeners();
 
-  /**
-   * Only guaranteed to return correct value after a call to start() or getBlocks().
-   */
   getLatestRollupId(): number;
 }
 
