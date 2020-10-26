@@ -139,11 +139,19 @@ library PolynomialEval {
 
         Types.Fr memory secondTerm = PairingsBn254.new_fr(1);
 
-        Types.Fr memory thirdTerm = zeta;
-        Types.Fr memory fourthTerm = work_root_inverse;
+        Types.Fr memory denominator = PairingsBn254.new_fr(1);
+        Types.Fr memory work_root = work_root_inverse.copy();
+        Types.Fr memory T0 = PairingsBn254.new_fr(1);
+        for (uint256 i = 0; i < 4; ++i)
+        {
+            // T0 = z - w^{n-i}
+            T0 = PairingsBn254.sub_fr(zeta, work_root);
+            // denominator = PairingsBn254.mul_fr(denominator, T0);
+            denominator.mul_assign(T0);
+            work_root.mul_assign(work_root_inverse);
+        }
 
         Types.Fr memory numerator = PairingsBn254.sub_fr(firstTerm, secondTerm);
-        Types.Fr memory denominator = PairingsBn254.sub_fr(thirdTerm, fourthTerm);
 
         return Types.Fraction({numerator: numerator, denominator: denominator});
     }
@@ -199,15 +207,17 @@ library PolynomialEval {
 
         Types.Fr memory denominator1 = PairingsBn254.sub_fr(zeta_copy, PairingsBn254.new_fr(1));
 
-        Types.Fr memory T0 = PairingsBn254.mul_fr(zeta_copy, vk.work_root.pow_2());
-        Types.Fr memory denominatorN = PairingsBn254.sub_fr(T0, PairingsBn254.new_fr(1));
+        Types.Fr memory w_pow_5 = PairingsBn254.mul_fr(vk.work_root, vk.work_root.pow_4()); 
+        Types.Fr memory T0 = PairingsBn254.mul_fr(zeta_copy, w_pow_5);
+
+        Types.Fr memory denominatorEnd = PairingsBn254.sub_fr(T0, PairingsBn254.new_fr(1));
 
         Types.Fraction memory L1 = Types.Fraction({numerator: numerator, denominator: denominator1});
-        Types.Fraction memory Ln = Types.Fraction({numerator: numerator, denominator: denominatorN});
+        Types.Fraction memory Lend = Types.Fraction({numerator: numerator, denominator: denominatorEnd});
 
         Types.Fraction[] memory lagrange_evals = new Types.Fraction[](2);
         lagrange_evals[0] = L1;
-        lagrange_evals[1] = Ln;
+        lagrange_evals[1] = Lend;
 
         return lagrange_evals;
     }
