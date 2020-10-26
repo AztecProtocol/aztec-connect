@@ -13,6 +13,7 @@ import { LocalBlockchain } from './blockchain/local_blockchain';
 import { RollupDb } from './rollup_db';
 import { Server, ServerConfig } from './server';
 import 'log-timestamp';
+import { randomBytes } from 'crypto';
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ const {
   LOCAL_BLOCKCHAIN_INIT_SIZE = '0',
   API_PREFIX = '',
   GAS_LIMIT = '',
+  SERVER_AUTH_TOKEN = randomBytes(32).toString('hex'),
 } = process.env;
 
 async function getEthereumBlockchainConfig() {
@@ -78,19 +80,21 @@ async function main() {
     : new LocalBlockchain(connection, serverConfig.rollupSize, +LOCAL_BLOCKCHAIN_INIT_SIZE);
   const rollupDb = new RollupDb(connection);
 
+  const worldStateDb = new WorldStateDb();
+  const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb);
+
   const shutdown = async () => {
+    server.stop();
     await connection.close();
     process.exit(0);
   };
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  const worldStateDb = new WorldStateDb();
-  const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb);
   await server.start();
 
   const serverStatus = await server.getStatus();
-  const app = appFactory(server, API_PREFIX, connection, worldStateDb, serverStatus);
+  const app = appFactory(server, API_PREFIX, connection, worldStateDb, serverStatus, SERVER_AUTH_TOKEN);
 
   const httpServer = http.createServer(app.callback());
   httpServer.listen(PORT);

@@ -71,33 +71,49 @@ export function appFactory(
   connection: Connection,
   worldStateDb: WorldStateDb,
   serverStatus: RollupProviderStatus,
+  serverAuthToken: string,
 ) {
   const router = new Router<DefaultState, Context>({ prefix });
+
+  const validateAuth = async (ctx: Koa.Context, next: () => Promise<void>) => {
+    const authToken = ctx.request.headers['server-auth-token'];
+
+    if (authToken !== serverAuthToken) {
+      ctx.status = 401;
+      ctx.body = { error: 'Invalid server auth token.' };
+    } else {
+      await next();
+    }
+  };
+
+  const exceptionHandler = async (ctx: Koa.Context, next: () => Promise<void>) => {
+    try {
+      await next();
+    } catch (err) {
+      console.log(err);
+      ctx.status = 400;
+      ctx.body = { error: err.message };
+    }
+  };
 
   router.get('/', async (ctx: Koa.Context) => {
     ctx.body = 'OK\n';
   });
 
   router.post('/tx', async (ctx: Koa.Context) => {
-    try {
-      const stream = new PromiseReadable(ctx.req);
-      const { proofData, viewingKeys, depositSignature } = JSON.parse((await stream.readAll()) as string);
-      const tx: Proof = {
-        proofData: Buffer.from(proofData, 'hex'),
-        viewingKeys: viewingKeys.map((v: string) => Buffer.from(v, 'hex')),
-        depositSignature: depositSignature ? Buffer.from(depositSignature, 'hex') : undefined,
-      };
-      const txDao = await server.receiveTx(tx);
-      const response: ProofServerResponse = {
-        txHash: txDao.txId.toString('hex'),
-      };
-      ctx.status = 200;
-      ctx.body = response;
-    } catch (err) {
-      console.log(err);
-      ctx.status = 400;
-      ctx.body = { error: err.message };
-    }
+    const stream = new PromiseReadable(ctx.req);
+    const { proofData, viewingKeys, depositSignature } = JSON.parse((await stream.readAll()) as string);
+    const tx: Proof = {
+      proofData: Buffer.from(proofData, 'hex'),
+      viewingKeys: viewingKeys.map((v: string) => Buffer.from(v, 'hex')),
+      depositSignature: depositSignature ? Buffer.from(depositSignature, 'hex') : undefined,
+    };
+    const txDao = await server.receiveTx(tx);
+    const response: ProofServerResponse = {
+      txHash: txDao.txId.toString('hex'),
+    };
+    ctx.body = response;
+    ctx.status = 200;
   });
 
   router.get('/get-blocks', async (ctx: Koa.Context) => {
@@ -107,71 +123,47 @@ export function appFactory(
       blocks: blocks.map(toBlockResponse),
     };
     ctx.body = response;
+    ctx.status = 200;
   });
 
   router.get('/get-rollups', async (ctx: Koa.Context) => {
-    try {
-      const rollups = await server.getLatestRollups(+ctx.query.count);
-      ctx.status = 200;
-      ctx.body = rollups.map(toRollupResponse);
-    } catch (err) {
-      console.log(err);
-      ctx.status = 400;
-      ctx.body = { error: err.message };
-    }
+    const rollups = await server.getLatestRollups(+ctx.query.count);
+    ctx.body = rollups.map(toRollupResponse);
+    ctx.status = 200;
   });
 
   router.get('/get-rollup', async (ctx: Koa.Context) => {
-    try {
-      const rollup = await server.getRollup(+ctx.query.id);
-      ctx.status = 200;
-      ctx.body = rollup ? toRollupResponse(rollup) : undefined;
-    } catch (err) {
-      console.log(err);
-      ctx.status = 400;
-      ctx.body = { error: err.message };
-    }
+    const rollup = await server.getRollup(+ctx.query.id);
+    ctx.body = rollup ? toRollupResponse(rollup) : undefined;
+    ctx.status = 200;
   });
 
   router.get('/get-txs', async (ctx: Koa.Context) => {
-    try {
-      let txs;
-      if (ctx.query.txIds) {
-        const txIds = (ctx.query.txIds as string).split(',').map(txId => Buffer.from(txId, 'hex'));
-        txs = await server.getTxs(txIds);
-      } else {
-        txs = await server.getLatestTxs(+ctx.query.count);
-      }
-      ctx.status = 200;
-      ctx.body = txs.map(toTxResponse);
-    } catch (err) {
-      console.log(err);
-      ctx.status = 400;
-      ctx.body = { error: err.message };
+    let txs;
+    if (ctx.query.txIds) {
+      const txIds = (ctx.query.txIds as string).split(',').map(txId => Buffer.from(txId, 'hex'));
+      txs = await server.getTxs(txIds);
+    } else {
+      txs = await server.getLatestTxs(+ctx.query.count);
     }
+    ctx.body = txs.map(toTxResponse);
+    ctx.status = 200;
   });
 
   router.get('/get-tx', async (ctx: Koa.Context) => {
-    try {
-      const tx = await server.getTx(Buffer.from(ctx.query.txHash, 'hex'));
-      ctx.status = 200;
-      ctx.body = tx ? toTxResponse(tx) : undefined;
-    } catch (err) {
-      console.log(err);
-      ctx.status = 400;
-      ctx.body = { error: err.message };
-    }
+    const tx = await server.getTx(Buffer.from(ctx.query.txHash, 'hex'));
+    ctx.body = tx ? toTxResponse(tx) : undefined;
+    ctx.status = 200;
   });
 
-  router.post('/flush', async (ctx: Koa.Context) => {
-    try {
-      await server.flushTxs();
-      ctx.status = 200;
-    } catch (err) {
-      console.log(err);
-      ctx.body = { error: err.message };
-      ctx.status = 400;
-    }
+  router.get('/remove-data', validateAuth, async (ctx: Koa.Context) => {
+    await server.removeData();
+    ctx.status = 200;
+  });
+
+  router.get('/flush', validateAuth, async (ctx: Koa.Context) => {
+    await server.flushTxs();
+    ctx.status = 200;
   });
 
   router.get('/status', async (ctx: Koa.Context) => {
@@ -187,7 +179,7 @@ export function appFactory(
     };
     ctx.set('content-type', 'application/json');
     ctx.body = response;
-    ctx.response.status = 200;
+    ctx.status = 200;
   });
 
   router.all('/playground', graphqlPlayground({ endpoint: `${prefix}/graphql` }));
@@ -196,6 +188,7 @@ export function appFactory(
   app.proxy = true;
   app.use(compress());
   app.use(cors());
+  app.use(exceptionHandler);
   app.use(router.routes());
   app.use(router.allowedMethods());
 

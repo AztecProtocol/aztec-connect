@@ -93,9 +93,10 @@ export class Server {
       const state = await readFileAsync('./data/state');
       const { rollupContractAddress: storedRollupAddress } = JSON.parse(state.toString('utf-8'));
 
-      // if rollupContractAddress has changed, wipe the keys in the db
-      const providedContractAddress = this.blockchain.getRollupContractAddress();
-      if (storedRollupAddress !== providedContractAddress.toString()) {
+      // Erase all data if rollup contract changes.
+      const providedContractAddress = this.blockchain.getRollupContractAddress().toString();
+      if (storedRollupAddress !== providedContractAddress) {
+        console.log(`Rollup contract changed, erasing data: ${storedRollupAddress} -> ${providedContractAddress}`);
         await rmdirAsync('./data', { recursive: true });
       }
     }
@@ -131,6 +132,12 @@ export class Server {
 
       this.txQueue.put(proof);
     }
+  }
+
+  public async removeData() {
+    console.log('Removing data dir and signal to shutdown...');
+    await rmdirAsync('./data', { recursive: true });
+    process.kill(process.pid, 'SIGINT');
   }
 
   /**
@@ -530,6 +537,7 @@ export class Server {
   }
 
   public flushTxs() {
+    console.log('Flushing queued transactions...');
     this.txQueue.put(undefined);
   }
 
