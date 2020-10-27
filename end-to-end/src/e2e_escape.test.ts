@@ -87,23 +87,4 @@ describe('end-to-end escape tests', () => {
     expect(await user1Asset.publicBalance()).toBe(withdrawValue);
     expect(user1Asset.balance()).toBe(user1BalanceAfterTransfer - withdrawValue);
   });
-
-  it('should transfer public tokens', async () => {
-    const user2Asset = users[2].getAsset(assetId);
-    const user3Asset = users[3].getAsset(assetId);
-
-    const transferValue = user2Asset.toErc20Units('1000');
-
-    await user2Asset.mint(transferValue);
-    await user2Asset.approve(transferValue);
-
-    expect(await user2Asset.publicBalance()).toBe(transferValue);
-    expect(await user3Asset.publicBalance()).toBe(0n);
-
-    const publicTransferTxHash = await user2Asset.publicTransfer(transferValue, userAddresses[3]);
-    await sdk.awaitSettlement(userAddresses[2], publicTransferTxHash);
-
-    expect(await user2Asset.publicBalance()).toBe(0n);
-    expect(await user3Asset.publicBalance()).toBe(transferValue);
-  });
 });

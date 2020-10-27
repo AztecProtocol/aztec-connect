@@ -17,6 +17,7 @@ describe('rollup_processor: escape hatch', () => {
   let userB: Signer;
   let userAAddress: EthAddress;
   let viewingKeys: Buffer[];
+  let assetId!: number;
 
   const provider = ethers.provider;
   const mintAmount = 100;
@@ -26,10 +27,12 @@ describe('rollup_processor: escape hatch', () => {
   beforeEach(async () => {
     [userA, userB] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
-    ({ erc20, rollupProcessor, viewingKeys } = await setupRollupProcessor([userA, userB], mintAmount));
+    ({ erc20, rollupProcessor, viewingKeys, assetId } = await setupRollupProcessor([userA, userB], mintAmount));
 
     const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
     await erc20.approve(rollupProcessor.address, depositAmount);
+    await rollupProcessor.depositPendingFunds(assetId, depositAmount, userAAddress.toString());
+
     await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys);
   });
 

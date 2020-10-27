@@ -166,7 +166,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": "0x0d49C1c3eB8887D88E2B12A0EFAc47Cf6e06b21A"
+        "value": "0xfABE6169696114AAf2c101cC9214d7D73Af74Aad"
       },
       {
         "name": "GAS_LIMIT",

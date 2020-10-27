@@ -86,6 +86,11 @@ export class Contracts {
     return Buffer.from(tx.hash.slice(2), 'hex');
   }
 
+  public async depositPendingFunds(assetId: number, amount: bigint, depositorAddress: EthAddress) {
+    const tx = await this.rollupProcessor.depositPendingFunds(assetId, amount, depositorAddress.toString());
+    return Buffer.from(tx.hash.slice(2), 'hex');
+  }
+
   public async getRollupBlocksFrom(rollupId: number, minConfirmations: number) {
     const rollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId);
     const [rollupEvent] = await this.rollupProcessor.queryFilter(rollupFilter);
@@ -96,6 +101,10 @@ export class Contracts {
     const rollupEvents = await this.rollupProcessor.queryFilter(filter, rollupEvent.blockNumber);
     const txs = await Promise.all(rollupEvents.map(event => event.getTransaction()));
     return txs.filter(tx => tx.confirmations >= minConfirmations).map(tx => this.decodeBlock(tx));
+  }
+
+  public async getUserPendingDeposit(assetId: number, account: EthAddress) {
+    return this.rollupProcessor.getUserPendingDeposit(assetId, account.toString()) as bigint;
   }
 
   /**
@@ -125,7 +134,7 @@ export class Contracts {
 
   private decodeBlock(tx: TransactionResponse): Block {
     const rollupAbi = new ethers.utils.Interface(RollupABI);
-    const result = rollupAbi.parseTransaction(tx);
+    const result = rollupAbi.parseTransaction({ data: tx.data });
     const rollupProofData = Buffer.from(result.args.proofData.slice(2), 'hex');
     const viewingKeysData = Buffer.from(result.args.viewingKeys.slice(2), 'hex');
 

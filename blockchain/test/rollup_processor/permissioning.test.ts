@@ -18,6 +18,7 @@ describe('rollup_processor: permissioning', () => {
   let userB: Signer;
   let userAAddress: EthAddress;
   let viewingKeys: Buffer[];
+  let assetId!: number;
 
   const mintAmount = 100;
   const depositAmount = 60;
@@ -26,12 +27,13 @@ describe('rollup_processor: permissioning', () => {
   beforeEach(async () => {
     [userA, userB] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
-    ({ erc20, rollupProcessor, viewingKeys } = await setupRollupProcessor([userA, userB], mintAmount));
+    ({ erc20, rollupProcessor, viewingKeys, assetId } = await setupRollupProcessor([userA, userB], mintAmount));
   });
 
   it('should deposit funds, which requires a successfull sig validation', async () => {
     const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
     await erc20.approve(rollupProcessor.address, depositAmount);
+    await rollupProcessor.depositPendingFunds(assetId, depositAmount, userAAddress.toString());
     const tx = await rollupProcessor.processRollup(
       proofData,
       solidityFormatSignatures(signatures),
@@ -50,6 +52,8 @@ describe('rollup_processor: permissioning', () => {
     const { signature: fakeSignature } = await ethSign(userB, randomDigest);
 
     await erc20.approve(rollupProcessor.address, depositAmount);
+    await rollupProcessor.depositPendingFunds(assetId, depositAmount, userAAddress.toString());
+
     await expect(
       rollupProcessor.processRollup(proofData, solidityFormatSignatures([fakeSignature]), sigIndexes, viewingKeys),
     ).to.be.revertedWith('Rollup Processor: INVALID_TRANSFER_SIGNATURE');

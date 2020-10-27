@@ -194,11 +194,6 @@ module.exports = {
               exampleMode: 'hide',
             },
             {
-              name: 'publicTransfer',
-              content: 'src/docs/public_transfer.md',
-              exampleMode: 'hide',
-            },
-            {
               name: 'emergencyWithdraw',
               content: 'src/docs/emergency_withdraw.md',
               exampleMode: 'hide',

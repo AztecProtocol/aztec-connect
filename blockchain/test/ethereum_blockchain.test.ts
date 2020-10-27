@@ -7,7 +7,7 @@ import { Contract, Signer } from 'ethers';
 import sinon from 'sinon';
 import { Blockchain } from '../src/blockchain';
 import { EthereumBlockchain } from '../src/ethereum_blockchain';
-import { createDepositProof, createSendProof, createWithdrawProof } from './fixtures/create_mock_proof';
+import { createDepositProof, createSendProof, createWithdrawProof, numToBuffer } from './fixtures/create_mock_proof';
 import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
 
 use(solidity);
@@ -55,13 +55,33 @@ describe('ethereum_blockchain', () => {
     expect(tokenContractAddresses.length).to.be.greaterThan(0);
   });
 
+  it('should get user pending deposit', async () => {
+    await erc20.approve(rollupProcessor.address, 50);
+    await ethereumBlockchain.depositPendingFunds(0, BigInt(50), userAAddress);
+    const pendingDeposit = await ethereumBlockchain.getUserPendingDeposit(0, userAAddress);
+    expect(pendingDeposit).to.equal(50);
+  });
+
+  it('should validate user has deposited sufficient funds', async () => {
+    await erc20.approve(rollupProcessor.address, depositAmount);
+    await ethereumBlockchain.depositPendingFunds(0, BigInt(depositAmount), userAAddress);
+    const sufficientDeposit = await ethereumBlockchain.validateDepositFunds(userAAddress, BigInt(depositAmount), 0);
+    expect(sufficientDeposit).to.equal(true);
+  });
+
   it('should process a deposit proof', async () => {
     const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
     await erc20.approve(rollupProcessor.address, depositAmount);
+
+    const depositTxHash = await ethereumBlockchain.depositPendingFunds(0, BigInt(depositAmount), userAAddress);
+    expect(depositTxHash).to.have.lengthOf(32);
+    const depositReceipt = await ethereumBlockchain.getTransactionReceipt(depositTxHash);
+    expect(depositReceipt.blockNum).to.be.above(0);
+
     const txHash = await ethereumBlockchain.sendRollupProof(proofData, signatures, sigIndexes, viewingKeys);
     expect(txHash).to.have.lengthOf(32);
     const receipt = await ethereumBlockchain.getTransactionReceipt(txHash);
-    expect(receipt.blockNum).to.be.above(0);
+    expect(receipt.blockNum).to.be.above(depositReceipt.blockNum);
   });
 
   it('should process send proof', async () => {
@@ -79,6 +99,7 @@ describe('ethereum_blockchain', () => {
       sigIndexes: depositSigIndexes,
     } = await createDepositProof(depositAmount, userAAddress, userA);
     await erc20.approve(rollupProcessor.address, depositAmount);
+    await ethereumBlockchain.depositPendingFunds(0, BigInt(depositAmount), userAAddress);
     const depositTxHash = await ethereumBlockchain.sendRollupProof(
       depositProofData,
       depositSignatures,
@@ -115,6 +136,7 @@ describe('ethereum_blockchain', () => {
     ethereumBlockchain.on('block', spy);
 
     await erc20.approve(rollupProcessor.address, depositAmount);
+    await ethereumBlockchain.depositPendingFunds(0, BigInt(depositAmount), userAAddress);
     await ethereumBlockchain.sendRollupProof(proofData, signatures, sigIndexes, viewingKeys);
     await waitOnBlockProcessed;
 
@@ -136,6 +158,7 @@ describe('ethereum_blockchain', () => {
       sigIndexes: depositSigIndexes,
     } = await createDepositProof(depositAmount, userAAddress, userA);
     await erc20.approve(rollupProcessor.address, depositAmount);
+    await ethereumBlockchain.depositPendingFunds(0, BigInt(depositAmount), userAAddress);
     await ethereumBlockchain.sendRollupProof(depositProofData, depositSignatures, depositSigIndexes, viewingKeys);
     await waitOnBlockProcessed;
 
@@ -175,7 +198,7 @@ describe('ethereum_blockchain', () => {
 
     // no erc20 approval
     await expect(ethereumBlockchain.sendRollupProof(proofData, signatures, sigIndexes, viewingKeys)).to.be.revertedWith(
-      'Rollup Processor: INSUFFICIENT_TOKEN_APPROVAL',
+      'Rollup Processor: INSUFFICIENT_DEPOSIT',
     );
   });
 });

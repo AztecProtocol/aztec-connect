@@ -10,6 +10,12 @@ interface IRollupProcessor {
         bytes calldata viewingKeys
     ) external;
 
+    function depositPendingFunds(
+        uint256 assetId,
+        uint256 amount,
+        address depositorAddress
+    ) external;
+
     function getSupportedAssetAddress(uint256 assetId) external view returns (address);
 
     function setSupportedAsset(address _linkedToken) external;
@@ -19,4 +25,6 @@ interface IRollupProcessor {
     function getSupportedAssets() external view returns (address[] memory);
 
     function getEscapeHatchStatus() external view returns (bool, uint256);
+
+    function getUserPendingDeposit(uint256 assetId, address userAddress) external view returns (uint256);
 }

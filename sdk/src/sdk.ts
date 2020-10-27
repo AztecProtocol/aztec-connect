@@ -1,4 +1,4 @@
-import { Address, EthAddress } from 'barretenberg/address';
+import { EthAddress } from 'barretenberg/address';
 
 export enum SdkEvent {
   // Initialization state changes.
@@ -15,6 +15,8 @@ export enum SdkEvent {
   UPDATED_EXPLORER_ROLLUPS = 'SDKEVENT_UPDATED_EXPLORER_ROLLUPS',
   // Explorer txs have updated.
   UPDATED_EXPLORER_TXS = 'SDKEVENT_UPDATED_EXPLORER_TXS',
+  // Log messages for long running operations.
+  LOG = 'SDKEVENT_LOG',
 }
 
 export enum AssetId {

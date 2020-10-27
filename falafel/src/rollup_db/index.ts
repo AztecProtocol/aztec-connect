@@ -216,6 +216,11 @@ export class RollupDb {
     });
   }
 
+  public async getLatestSettledRollupId() {
+    const latestRollup = await this.rollupRep.findOne({ status: 'SETTLED' }, { order: { id: 'DESC' } });
+    return latestRollup ? latestRollup.id : -1;
+  }
+
   public async getNextRollupId() {
     const latestRollup = await this.rollupRep.findOne(undefined, { order: { id: 'DESC' } });
     return latestRollup ? latestRollup.id + 1 : 0;

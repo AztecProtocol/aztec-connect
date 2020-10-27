@@ -15,6 +15,7 @@ import { Database, DbAccount, DexieDatabase, SQLDatabase, getOrmConfig } from '.
 import { EthereumSdkUser } from './ethereum_sdk_user';
 import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';
 import { createConnection } from 'typeorm';
+import { EthereumBlockchain } from 'blockchain';
 
 export * from './ethereum_sdk_user';
 export * from './ethereum_sdk_user_asset';
@@ -53,20 +54,30 @@ export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl
     await core.eraseDb();
   }
 
-  const web3Provider = new Web3Provider(ethereumProvider);
-  const { chainId: providerChainId } = await web3Provider.getNetwork();
+  const provider = new Web3Provider(ethereumProvider);
+  const { chainId: providerChainId } = await provider.getNetwork();
   if (chainId !== providerChainId) {
     throw new Error(`Provider chainId ${providerChainId} does not match rollup provider chainId ${chainId}.`);
   }
 
   const tokenContracts: TokenContract[] =
     networkOrHost !== 'development'
-      ? tokenContractAddresses.map(a => new Web3TokenContract(web3Provider, a, rollupContractAddress, chainId))
+      ? tokenContractAddresses.map(a => new Web3TokenContract(provider, a, rollupContractAddress, chainId))
       : [new MockTokenContract()];
+
   await Promise.all(tokenContracts.map(tc => tc.init()));
 
-  const walletSdk = new WalletSdk(core, tokenContracts);
-  return new EthereumSdk(web3Provider, walletSdk, db);
+  const config = {
+    provider,
+    signer: provider.getSigner(0),
+    networkOrHost: serverUrl,
+    console: false,
+    gasLimit: 7000000,
+  };
+  const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress);
+
+  const walletSdk = new WalletSdk(core, blockchain, tokenContracts);
+  return new EthereumSdk(provider, walletSdk, db);
 }
 
 export class EthereumSdk extends EventEmitter {
@@ -138,6 +149,10 @@ export class EthereumSdk extends EventEmitter {
 
   public getTokenContract(assetId: AssetId) {
     return this.walletSdk.getTokenContract(assetId);
+  }
+
+  public getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
+    return this.walletSdk.getUserPendingDeposit(assetId, account);
   }
 
   public async getAddressFromAlias(alias: string) {
@@ -221,23 +236,6 @@ export class EthereumSdk extends EventEmitter {
 
     const aztecSigner = signer || this.getSchnorrSigner(from);
     return this.walletSdk.transfer(assetId, userId, value, aztecSigner, to);
-  }
-
-  public async publicTransfer(
-    assetId: AssetId,
-    value: bigint,
-    from: EthAddress,
-    to: EthAddress,
-    signer?: Signer,
-  ): Promise<TxHash> {
-    const userId = this.getUserIdByEthAddress(from);
-    if (!userId) {
-      throw new Error(`User not found: ${from}`);
-    }
-
-    const aztecSigner = signer || this.getSchnorrSigner(from);
-    const ethSigner = new Web3Signer(this.web3Provider, from);
-    return this.walletSdk.publicTransfer(assetId, userId, value, aztecSigner, ethSigner, to);
   }
 
   public async generateAccountRecoveryData(ethAddress: EthAddress, trustedThirdPartyPublicKeys: GrumpkinAddress[]) {
@@ -411,6 +409,7 @@ export class EthereumSdk extends EventEmitter {
 
   private forwardEvent(event: SdkEvent, args: any[]) {
     if (this.pauseWalletEvents) {
+      // eslint-disable-next-line
       this.pausedEvents.push(arguments);
       return;
     }
@@ -429,6 +428,7 @@ export class EthereumSdk extends EventEmitter {
 
   private resumeEvents() {
     this.pauseWalletEvents = false;
+    // eslint-disable-next-line
     this.pausedEvents.forEach(args => this.forwardEvent.apply(this, args as any));
   }
 }

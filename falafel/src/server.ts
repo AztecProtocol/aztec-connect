@@ -62,7 +62,6 @@ export class Server {
 
   public async start() {
     console.log('Server start...');
-    await this.readServerState();
     await this.proofGenerator.run();
     await this.worldStateDb.start();
 
@@ -72,7 +71,6 @@ export class Server {
     await this.blockchain.start(await this.rollupDb.getNextRollupId());
 
     await this.createVerifiers();
-    await this.writeServerState();
 
     this.processTxQueue(this.config.maxRollupWaitTime, this.config.minRollupInterval);
     this.serialQueue.process(async (fn: () => Promise<void>) => await fn());
@@ -86,27 +84,6 @@ export class Server {
     this.serialQueue.cancel();
     this.txQueue.cancel();
     destroyWorker(this.worker);
-  }
-
-  private async readServerState() {
-    if (await existsAsync('./data/state')) {
-      const state = await readFileAsync('./data/state');
-      const { rollupContractAddress: storedRollupAddress } = JSON.parse(state.toString('utf-8'));
-
-      // Erase all data if rollup contract changes.
-      const providedContractAddress = this.blockchain.getRollupContractAddress().toString();
-      if (storedRollupAddress !== providedContractAddress) {
-        console.log(`Rollup contract changed, erasing data: ${storedRollupAddress} -> ${providedContractAddress}`);
-        await rmdirAsync('./data', { recursive: true });
-      }
-    }
-  }
-
-  private async writeServerState() {
-    const dataToWrite = {
-      rollupContractAddress: this.blockchain.getRollupContractAddress().toString(),
-    };
-    await writeFileAsync('./data/state', JSON.stringify(dataToWrite));
   }
 
   /**
@@ -418,8 +395,8 @@ export class Server {
     }));
   }
 
-  public getLatestRollupId() {
-    return this.blockchain.getLatestRollupId();
+  public async getLatestRollupId() {
+    return await this.rollupDb.getLatestSettledRollupId();
   }
 
   public async getLatestRollups(count: number) {
@@ -493,6 +470,7 @@ export class Server {
         break;
     }
 
+    console.log('get data roots index');
     proof.dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
     this.pendingNullifiers.add(nullifier1);

@@ -44,26 +44,41 @@ describe('rollup_processor: core', () => {
   });
 
   describe('Deposit, transfer and withdrawal', async () => {
-    it('should process a rollup', async () => {
-      const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
+    it('should deposit funds into the rollup contract', async () => {
+      const initialRollupBalance = await erc20.balanceOf(rollupProcessor.address);
+      expect(initialRollupBalance).to.equal(0);
+
       await erc20.approve(rollupProcessor.address, depositAmount);
-      const tx = await rollupProcessor.processRollup(
-        proofData,
-        solidityFormatSignatures(signatures),
-        sigIndexes,
-        viewingKeys,
-      );
-      const receipt = await tx.wait();
-      expect(receipt.status).to.equal(1);
+      await rollupProcessor.depositPendingFunds(assetId, depositAmount, userAAddress.toString());
+
+      const postDepositRollupBalance = await erc20.balanceOf(rollupProcessor.address);
+      expect(postDepositRollupBalance).to.equal(depositAmount);
+
+      const userPublicBalance = await rollupProcessor.getUserPendingDeposit(assetId, userAAddress.toString());
+      expect(userPublicBalance).to.equal(depositAmount);
     });
 
-    it('should deposit value into rollup', async () => {
+    it('should deposit value via a rollup', async () => {
       const initialRollupBalance = await erc20.balanceOf(rollupProcessor.address);
       expect(initialRollupBalance).to.equal(ethers.BigNumber.from(0));
 
+      const initialUserPublicBalance = await rollupProcessor.getUserPendingDeposit(assetId, userAAddress.toString());
+      expect(initialUserPublicBalance).to.equal(0);
+
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
       await erc20.approve(rollupProcessor.address, depositAmount);
+      await rollupProcessor.depositPendingFunds(assetId, depositAmount, userAAddress.toString());
+
+      const postDepositUserPublicBalance = await rollupProcessor.getUserPendingDeposit(
+        assetId,
+        userAAddress.toString(),
+      );
+      expect(postDepositUserPublicBalance).to.equal(depositAmount);
+
       await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys);
+
+      const postRollupUserPublicBalance = await rollupProcessor.getUserPendingDeposit(assetId, userAAddress.toString());
+      expect(postRollupUserPublicBalance).to.equal(0);
 
       const postDepositRollupBalance = await erc20.balanceOf(rollupProcessor.address);
       expect(postDepositRollupBalance).to.equal(initialRollupBalance + depositAmount);
@@ -79,6 +94,7 @@ describe('rollup_processor: core', () => {
         sigIndexes: depositSigIndexes,
       } = await createDepositProof(depositAmount, userAAddress, userA);
       await erc20.approve(rollupProcessor.address, depositAmount);
+      await rollupProcessor.depositPendingFunds(assetId, depositAmount, userAAddress.toString());
       await rollupProcessor.processRollup(
         depositProofData,
         solidityFormatSignatures(depositSignatures),
@@ -98,6 +114,12 @@ describe('rollup_processor: core', () => {
         viewingKeys,
       );
 
+      const postWithdrawUserPublicBalance = await rollupProcessor.getUserPendingDeposit(
+        assetId,
+        userAAddress.toString(),
+      );
+      expect(postWithdrawUserPublicBalance).to.equal(0);
+
       const postWithdrawalRollupBalance = await erc20.balanceOf(rollupProcessor.address);
       expect(postWithdrawalRollupBalance).to.equal(depositAmount - withdrawalAmount);
 
@@ -112,6 +134,7 @@ describe('rollup_processor: core', () => {
         sigIndexes: depositSigIndexes,
       } = await createDepositProof(depositAmount, userAAddress, userA);
       await erc20.approve(rollupProcessor.address, depositAmount);
+      await rollupProcessor.depositPendingFunds(assetId, depositAmount, userAAddress.toString());
       await rollupProcessor.processRollup(
         depositProofData,
         solidityFormatSignatures(depositSignatures),
@@ -133,10 +156,8 @@ describe('rollup_processor: core', () => {
 
       const postWithdrawalRollupBalance = await erc20.balanceOf(rollupProcessor.address);
       expect(postWithdrawalRollupBalance).to.equal(depositAmount - withdrawalAmount);
-
       const userAPostWithdrawal = await erc20.balanceOf(userAAddress.toString());
       expect(userAPostWithdrawal).to.equal(mintAmount - depositAmount);
-
       const userBPostWithdrawal = await erc20.balanceOf(userBAddress.toString());
       expect(userBPostWithdrawal).to.equal(mintAmount + withdrawalAmount);
     });
@@ -154,6 +175,15 @@ describe('rollup_processor: core', () => {
       const tx = await rollupProcessor.connect(userB).processRollup(proofData, Buffer.alloc(32), [], viewingKeys);
       const receipt = await tx.wait();
       expect(receipt.status).to.equal(1);
+    });
+
+    it('should reject rollup if sufficient deposit not performed', async () => {
+      const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
+      await erc20.approve(rollupProcessor.address, depositAmount);
+      await rollupProcessor.depositPendingFunds(assetId, depositAmount - 1, userAAddress.toString());
+      await expect(
+        rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
+      ).to.be.revertedWith('Rollup Processor: INSUFFICIENT_DEPOSIT');
     });
   });
 
@@ -184,7 +214,11 @@ describe('rollup_processor: core', () => {
       );
 
       await erc20.approve(rollupProcessor.address, depositAmount);
+      await rollupProcessor.depositPendingFunds(assetId, depositAmount, userAAddress.toString());
+
       await erc20.connect(userB).approve(rollupProcessor.address, userBDepositAmount);
+      await rollupProcessor.connect(userB).depositPendingFunds(assetId, userBDepositAmount, userBAddress.toString());
+
       await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, fourViewingKeys);
 
       const postDepositUserABalance = await erc20.balanceOf(userAAddress.toString());
@@ -205,6 +239,7 @@ describe('rollup_processor: core', () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
 
       await erc20.approve(rollupProcessor.address, depositAmount);
+      await rollupProcessor.depositPendingFunds(assetId, depositAmount, userAAddress.toString());
       await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys);
 
       const dataRoot = await rollupProcessor.dataRoot();
