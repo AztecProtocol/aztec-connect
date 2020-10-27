@@ -1,5 +1,5 @@
 import { MemoryFifo } from '../fifo';
-import { mkdirAsync } from '../fs_async';
+import { mkdirp } from 'fs-extra';
 import { HashPath } from '../merkle_tree';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
@@ -135,7 +135,7 @@ export class WorldStateDb {
   }
 
   private async launch() {
-    await mkdirAsync('./data', { recursive: true });
+    await mkdirp('./data');
     const proc = (this.proc = spawn(this.binPath, [this.dbPath]));
 
     proc.stderr.on('data', data => {});

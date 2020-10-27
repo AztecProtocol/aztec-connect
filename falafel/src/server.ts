@@ -3,7 +3,7 @@ import { AccountVerifier } from 'barretenberg/client_proofs/account_proof';
 import { JoinSplitProof, JoinSplitVerifier, nullifierBufferToIndex } from 'barretenberg/client_proofs/join_split_proof';
 import { Crs } from 'barretenberg/crs';
 import { MemoryFifo } from 'barretenberg/fifo';
-import { existsAsync, readFileAsync, rmdirAsync, writeFileAsync } from 'barretenberg/fs_async';
+import { readFile, emptyDir } from 'fs-extra';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Proof } from 'barretenberg/rollup_provider';
@@ -113,7 +113,7 @@ export class Server {
 
   public async removeData() {
     console.log('Removing data dir and signal to shutdown...');
-    await rmdirAsync('./data', { recursive: true });
+    await emptyDir('./data');
     process.kill(process.pid, 'SIGINT');
   }
 
@@ -426,12 +426,12 @@ export class Server {
     const barretenberg = await BarretenbergWasm.new();
     this.worker = await createWorker('0', barretenberg.module);
 
-    const jsKey = await readFileAsync('./data/join_split/verification_key');
+    const jsKey = await readFile('./data/join_split/verification_key');
 
     this.joinSplitVerifier = new JoinSplitVerifier();
     await this.joinSplitVerifier.loadKey(this.worker, jsKey, crs.getG2Data());
 
-    const accountKey = await readFileAsync('./data/account/verification_key');
+    const accountKey = await readFile('./data/account/verification_key');
 
     this.accountVerifier = new AccountVerifier();
     await this.accountVerifier.loadKey(this.worker, accountKey, crs.getG2Data());

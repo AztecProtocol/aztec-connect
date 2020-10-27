@@ -7,6 +7,7 @@ import 'reflect-metadata';
 import { appFactory } from './app';
 import Server from './server';
 import 'log-timestamp';
+import { emptyDir, mkdirp, pathExists, readJson, writeJson } from 'fs-extra';
 
 const {
   PORT = '8082',
@@ -31,7 +32,24 @@ function getEthereumBlockchainConfig() {
   }
 }
 
+async function checkState() {
+  if (await pathExists('./data/state')) {
+    const { rollupContractAddress: storedRollupAddress } = await readJson('./data/state');
+
+    // Erase all data if rollup contract changes.
+    if (storedRollupAddress !== ROLLUP_CONTRACT_ADDRESS) {
+      console.log(`Rollup contract changed, erasing data: ${storedRollupAddress} -> ${ROLLUP_CONTRACT_ADDRESS}`);
+      await emptyDir('./data');
+    }
+  }
+
+  await mkdirp('./data');
+  await writeJson('./data/state', { rollupContractAddress: ROLLUP_CONTRACT_ADDRESS });
+}
+
 async function main() {
+  await checkState();
+
   const shutdown = async () => process.exit(0);
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);

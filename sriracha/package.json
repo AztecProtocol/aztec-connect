@@ -32,7 +32,8 @@
     "barretenberg": "file:../barretenberg.js/dest",
     "bigint-buffer": "^1.1.5",
     "blockchain": "file:../blockchain/dest",
-    "ethers": "^5.0.14",
+    "ethers": "5.0.19",
+    "fs-extra": "^9.0.1",
     "koa": "^2.7.0",
     "koa-bodyparser": "^4.3.0",
     "koa-compress": "^3.0.0",
@@ -43,6 +44,7 @@
     "typescript": "^3.5.3"
   },
   "devDependencies": {
+    "@types/fs-extra": "^9.0.2",
     "@types/jest": "^26.0.10",
     "@types/koa": "^2.0.49",
     "@types/koa-bodyparser": "^4.3.0",

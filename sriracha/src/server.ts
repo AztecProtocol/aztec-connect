@@ -2,12 +2,12 @@ import { EthAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
 import { nullifierBufferToIndex } from 'barretenberg/client_proofs/join_split_proof';
 import { MemoryFifo } from 'barretenberg/fifo';
-import { existsAsync, readFileAsync, writeFileAsync, rmdirAsync } from 'barretenberg/fs_async';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBufferBE } from 'bigint-buffer';
 import { Blockchain } from 'blockchain';
+import { pathExists, readJson, writeJson } from 'fs-extra';
 import { GetHashPathsResponse, HashPathSource } from './hash_path_source';
 
 interface ServerState {
@@ -58,27 +58,13 @@ export default class Server implements HashPathSource {
   }
 
   private async readState() {
-    if (await existsAsync('./data/state')) {
-      const state = await readFileAsync('./data/state');
-      const { lastBlock, rollupContractAddress } = JSON.parse(state.toString('utf-8'));
-      this.serverState = { lastBlock, rollupContractAddress: EthAddress.fromString(rollupContractAddress) };
-
-      // if rollupContractAddress has changed, wipe the data dir and initiate full re-sync
-      const providedContractAddress = this.blockchain.getRollupContractAddress();
-      if (this.serverState.rollupContractAddress.toString() !== providedContractAddress.toString()) {
-        await rmdirAsync('./data', { recursive: true });
-        this.serverState.rollupContractAddress = providedContractAddress;
-        this.serverState.lastBlock = -1;
-      }
+    if (await pathExists('./data/server_state')) {
+      this.serverState = await readJson('./data/server_state');
     }
   }
 
   private async writeState() {
-    const dataToWrite = {
-      lastBlock: this.serverState.lastBlock,
-      rollupContractAddress: this.serverState.rollupContractAddress.toString(),
-    };
-    await writeFileAsync('./data/state', JSON.stringify(dataToWrite));
+    await writeJson('./data/server_state', this.serverState);
   }
 
   public async getStatus() {

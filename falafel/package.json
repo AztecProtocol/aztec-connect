@@ -37,7 +37,8 @@
     "bn.js": "^5.0.0",
     "class-validator": "^0.12.2",
     "dotenv": "^8.2.0",
-    "ethers": "5.0.3",
+    "ethers": "5.0.19",
+    "fs-extra": "^9.0.1",
     "graphql": "^15.3.0",
     "graphql-playground-middleware-koa": "^1.6.19",
     "koa": "^2.7.0",
@@ -56,6 +57,7 @@
   "devDependencies": {
     "@types/bn.js": "^4.11.5",
     "@types/debug": "^4.1.5",
+    "@types/fs-extra": "^9.0.2",
     "@types/isomorphic-fetch": "^0.0.35",
     "@types/jest": "^24.0.15",
     "@types/koa": "^2.0.49",

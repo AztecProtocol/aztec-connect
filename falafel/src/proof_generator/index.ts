@@ -1,4 +1,4 @@
-import { existsAsync, mkdirAsync } from 'barretenberg/fs_async';
+import { pathExists, mkdirp } from 'fs-extra';
 import { fetch } from 'barretenberg/iso_fetch';
 import { ChildProcess, spawn } from 'child_process';
 import { createWriteStream } from 'fs';
@@ -57,11 +57,11 @@ export class ProofGenerator {
   }
 
   private async ensureCrs() {
-    if (await existsAsync('./data/crs/transcript00.dat')) {
+    if (await pathExists('./data/crs/transcript00.dat')) {
       return;
     }
     console.log('Downloading crs...');
-    await mkdirAsync('./data/crs', { recursive: true });
+    await mkdirp('./data/crs');
     const response = await fetch('http://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript00.dat');
     if (response.status !== 200) {
       throw new Error('Failed to download crs.');

@@ -14,7 +14,7 @@ import { RollupDb } from './rollup_db';
 import { Server, ServerConfig } from './server';
 import 'log-timestamp';
 import { randomBytes } from 'crypto';
-import { existsAsync, mkdirAsync, readFileAsync, rmdirAsync, writeFileAsync } from 'barretenberg/fs_async';
+import { emptyDir, mkdirp, pathExists, readJson, writeJson } from 'fs-extra';
 
 dotenv.config();
 
@@ -68,22 +68,18 @@ async function getEthereumBlockchainConfig() {
 }
 
 async function checkState() {
-  if (await existsAsync('./data/state')) {
-    const state = await readFileAsync('./data/state');
-    const { rollupContractAddress: storedRollupAddress } = JSON.parse(state.toString('utf-8'));
+  if (await pathExists('./data/state')) {
+    const { rollupContractAddress: storedRollupAddress } = await readJson('./data/state');
 
     // Erase all data if rollup contract changes.
     if (storedRollupAddress !== ROLLUP_CONTRACT_ADDRESS) {
       console.log(`Rollup contract changed, erasing data: ${storedRollupAddress} -> ${ROLLUP_CONTRACT_ADDRESS}`);
-      await rmdirAsync('./data', { recursive: true });
+      await emptyDir('./data');
     }
   }
 
-  const dataToWrite = {
-    rollupContractAddress: ROLLUP_CONTRACT_ADDRESS,
-  };
-  await mkdirAsync('./data', { recursive: true });
-  await writeFileAsync('./data/state', JSON.stringify(dataToWrite));
+  await mkdirp('./data');
+  await writeJson('./data/state', { rollupContractAddress: ROLLUP_CONTRACT_ADDRESS });
 }
 
 async function main() {
