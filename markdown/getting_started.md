@@ -1,6 +1,11 @@
 # Getting Started
 
-### Dependencies
+The simplest way to get started is to first get connected to the development mainframe which has all requisite
+toolchains installed, and will be updated if newer versions of tools are required etc.
+
+Instructions for getting connected to mainframe are [here](../mainframe/README.md).
+
+If however, you wish to be able to develop without the mainframe, you can install the following dependencies:
 
 - nvm
 - yarn
