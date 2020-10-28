@@ -19,9 +19,9 @@ import {Decoder} from './Decoder.sol';
 contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     using SafeMath for uint256;
 
-    bytes32 public dataRoot = 0x1df6bde50516dd1201088fd8dda84c97eda5652428d1c7e86af529cc5e0eb821;
-    bytes32 public nullRoot = 0x152175cffcb23dfbd80262802e32efe7db5fdcb91ba0a0527ab1ffb323bf3fc0;
-    bytes32 public rootRoot = 0x1b22ef607ae08588bc83a79ffacec507347bd2dee44c846181b7051285c32c0a;
+    bytes32 public dataRoot = 0x2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39;
+    bytes32 public nullRoot = 0x15ab517d8b278111e4bb51486fcb14e6ab5729215892cb1a4bdbe873c2b69798;
+    bytes32 public rootRoot = 0x2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851;
 
     uint256 public dataSize;
     uint256 public nextRollupId;

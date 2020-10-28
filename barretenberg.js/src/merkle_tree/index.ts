@@ -19,11 +19,8 @@ function keepNLsb(input: number, numBits: number) {
   return numBits >= MAX_DEPTH ? input : input & ((1 << numBits) - 1);
 }
 
-export interface FieldCompressor {
-  compress(lhs: Uint8Array, rhs: Uint8Array): Buffer;
-}
-
 export interface LeafHasher {
+  compress(lhs: Uint8Array, rhs: Uint8Array): Buffer;
   hashToField(data: Uint8Array): Buffer;
 }
 
@@ -56,7 +53,6 @@ export class MerkleTree {
 
   constructor(
     private db: LevelUp,
-    private fieldCompressor: FieldCompressor,
     private leafHasher: LeafHasher,
     private name: string,
     private depth: number,
@@ -71,25 +67,25 @@ export class MerkleTree {
     let current = this.leafHasher.hashToField(Buffer.alloc(LEAF_BYTES, 0));
     for (let i = 0; i < depth; ++i) {
       this.zeroHashes[i] = current;
-      current = fieldCompressor.compress(current, current);
+      current = leafHasher.compress(current, current);
     }
 
     this.root = root ? root : current;
   }
 
-  static async new(db: LevelUp, fieldCompressor: FieldCompressor, leafHasher: LeafHasher, name: string, depth: number) {
-    const tree = new MerkleTree(db, fieldCompressor, leafHasher, name, depth);
+  static async new(db: LevelUp, leafHasher: LeafHasher, name: string, depth: number) {
+    const tree = new MerkleTree(db, leafHasher, name, depth);
     await tree.writeMeta();
 
     return tree;
   }
 
-  static async fromName(db: LevelUp, fieldCompressor: FieldCompressor, leafHasher: LeafHasher, name: string) {
+  static async fromName(db: LevelUp, leafHasher: LeafHasher, name: string) {
     const meta: Buffer = await db.get(Buffer.from(name));
     const root = meta.slice(0, 32);
     const depth = meta.readUInt32LE(32);
     const size = meta.readUInt32LE(36);
-    return new MerkleTree(db, fieldCompressor, leafHasher, name, depth, size, root);
+    return new MerkleTree(db, leafHasher, name, depth, size, root);
   }
 
   async destroy() {
@@ -209,7 +205,7 @@ export class MerkleTree {
     } else {
       left = newSubtreeRoot;
     }
-    const newRoot = this.fieldCompressor.compress(left, right);
+    const newRoot = this.leafHasher.compress(left, right);
     batch.put(newRoot, Buffer.concat([left, right]));
     if (!root.equals(newRoot)) {
       await batch.del(root);

@@ -6,6 +6,7 @@ import {
 } from 'barretenberg/client_proofs/join_split_proof/compute_nullifier';
 import { decryptNote } from 'barretenberg/client_proofs/note';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
+import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
@@ -41,6 +42,7 @@ export class UserState extends EventEmitter {
     private user: UserData,
     private grumpkin: Grumpkin,
     private blake2s: Blake2s,
+    private pedersen: Pedersen,
     private db: Database,
     private blockSource: BlockSource,
   ) {
@@ -158,7 +160,7 @@ export class UserState extends EventEmitter {
     }
 
     const signingKeys = await this.db.getUserSigningKeys(this.user.id);
-    const nullifiers = signingKeys.map(sk => computeRemoveSigningKeyNullifier(publicKey, sk.key, this.blake2s));
+    const nullifiers = signingKeys.map(sk => computeRemoveSigningKeyNullifier(publicKey, sk.key, this.pedersen));
     const nullifyIndex = nullifiers.findIndex(n => nullifier2.equals(n));
     if (nullifyIndex >= 0) {
       debug(
@@ -216,7 +218,7 @@ export class UserState extends EventEmitter {
     }
 
     const { secret, value, assetId } = decryptedNote;
-    const nullifier = computeNullifier(dataEntry, index, secret, this.blake2s);
+    const nullifier = computeNullifier(dataEntry, index, secret, this.pedersen);
     const note = {
       index,
       assetId,
@@ -314,11 +316,12 @@ export class UserStateFactory {
   constructor(
     private grumpkin: Grumpkin,
     private blake2s: Blake2s,
+    private pedersen: Pedersen,
     private db: Database,
     private blockSource: BlockSource,
   ) {}
 
   createUserState(user: UserData) {
-    return new UserState(user, this.grumpkin, this.blake2s, this.db, this.blockSource);
+    return new UserState(user, this.grumpkin, this.blake2s, this.pedersen, this.db, this.blockSource);
   }
 }

@@ -14,5 +14,5 @@ export function computeSigningData(
     ...encryptedNotes.map(note => [note.slice(0, 32), note.slice(32, 64)]).flat(),
     Buffer.concat([Buffer.alloc(12), outputOwner.toBuffer()]),
   ];
-  return pedersen.compress_inputs(toCompress);
+  return pedersen.compressInputs(toCompress);
 }

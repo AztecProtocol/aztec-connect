@@ -1,5 +1,5 @@
 // For serializing numbers to 32 bit big-endian form.
-export function numToUInt32BE(n: number, bufferSize: number = 4) {
+export function numToUInt32BE(n: number, bufferSize = 4) {
   const buf = Buffer.alloc(bufferSize);
   buf.writeUInt32BE(n, bufferSize - 4);
   return buf;

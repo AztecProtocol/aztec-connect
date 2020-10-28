@@ -41,7 +41,6 @@ describe('pippenger', () => {
     const crsData = crs.getData();
     const crsPtr = await wasm.call('bbmalloc', crsData.length);
     await wasm.transferToHeap(crsData, crsPtr);
-    const pippengerPtr = await wasm.call('new_pippenger', crsPtr, numPoints);
     await wasm.call('bbfree', crsPtr);
 
     const scalars = Buffer.alloc(numPoints * 32);

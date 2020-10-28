@@ -80,6 +80,7 @@ export class CoreSdk extends EventEmitter {
   private actionState?: ActionState;
   private processBlocksPromise?: Promise<void>;
   private blake2s!: Blake2s;
+  private pedersen!: Pedersen;
   private schnorr!: Schnorr;
   private grumpkin!: Grumpkin;
 
@@ -103,7 +104,6 @@ export class CoreSdk extends EventEmitter {
     this.updateInitState(SdkInitState.INITIALIZING);
 
     const barretenberg = await BarretenbergWasm.new();
-    const pedersen = new Pedersen(barretenberg);
     const noteAlgos = new NoteAlgorithms(barretenberg);
     const crsData = await this.getCrsData(this.escapeHatchMode ? 512 * 1024 : 128 * 1024);
     const numWorkers = Math.min(navigator.hardwareConcurrency || 1, 8);
@@ -114,12 +114,13 @@ export class CoreSdk extends EventEmitter {
     const escapeHatchProver = new EscapeHatchProver(await pooledProverFactory.createProver(512 * 1024));
 
     this.blake2s = new Blake2s(barretenberg);
+    this.pedersen = new Pedersen(barretenberg);
     this.grumpkin = new Grumpkin(barretenberg);
     this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(this.grumpkin);
-    this.userStateFactory = new UserStateFactory(this.grumpkin, this.blake2s, this.db, this.rollupProvider);
+    this.userStateFactory = new UserStateFactory(this.grumpkin, this.blake2s, this.pedersen, this.db, this.rollupProvider);
     this.workerPool = workerPool;
-    this.worldState = new WorldState(this.leveldb, pedersen, this.blake2s);
+    this.worldState = new WorldState(this.leveldb, this.pedersen, this.blake2s);
     if (this.rollupProviderExplorer) {
       this.txsState = new TxsState(this.rollupProviderExplorer);
     }
@@ -145,10 +146,10 @@ export class CoreSdk extends EventEmitter {
         joinSplitProver,
         this.worldState,
         this.grumpkin,
-        pedersen,
+        this.pedersen,
         noteAlgos,
       );
-      this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.blake2s, pedersen);
+      this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.blake2s, this.pedersen);
       await this.createJoinSplitProvingKey(joinSplitProver);
       await this.createAccountProvingKey(accountProver);
     } else {
@@ -157,7 +158,7 @@ export class CoreSdk extends EventEmitter {
         this.worldState,
         this.grumpkin,
         this.blake2s,
-        pedersen,
+        this.pedersen,
         noteAlgos,
         this.hashPathSource!,
       );
@@ -209,6 +210,7 @@ export class CoreSdk extends EventEmitter {
     await this.stopSyncingUserStates();
 
     const users = await this.db.getUsers();
+    debug('users length = ', users.length);
     this.userStates = users.map(u => this.userStateFactory.createUserState(u));
     await Promise.all(this.userStates.map(us => us.init()));
 
@@ -496,7 +498,7 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async getAddressFromAlias(alias: string) {
-    const aliasHash = computeAliasNullifier(alias, this.blake2s);
+    const aliasHash = computeAliasNullifier(alias, this.pedersen);
     return await this.db.getAliasAddress(aliasHash);
   }
 

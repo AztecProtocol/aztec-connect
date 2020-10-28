@@ -5,7 +5,6 @@ import { JoinSplitTx } from './join_split_tx';
 import { MerkleTree } from '../../merkle_tree';
 import levelup from 'levelup';
 import memdown from 'memdown';
-import { Blake2s } from '../../crypto/blake2s';
 import { Pedersen } from '../../crypto/pedersen';
 import { Note, createNoteSecret } from '../note';
 import { EventEmitter } from 'events';
@@ -15,7 +14,6 @@ import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
 import { JoinSplitProof } from './join_split_proof';
 import { computeNullifier } from './compute_nullifier';
-import { randomBytes } from 'crypto';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { NoteAlgorithms } from '../note_algorithms';
 import { GrumpkinAddress, EthAddress } from '../../address';
@@ -32,7 +30,6 @@ describe('join_split_proof', () => {
   let pool!: WorkerPool;
   let joinSplitProver!: JoinSplitProver;
   let joinSplitVerifier!: JoinSplitVerifier;
-  let blake2s!: Blake2s;
   let pedersen!: Pedersen;
   let schnorr!: Schnorr;
   let crs!: Crs;
@@ -66,7 +63,6 @@ describe('join_split_proof', () => {
 
     const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
 
-    blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
     schnorr = new Schnorr(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
@@ -125,7 +121,7 @@ describe('join_split_proof', () => {
       const inputNote1Enc = await noteAlgos.encryptNote(inputNote1);
       const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);
 
-      const tree = new MerkleTree(levelup(memdown()), pedersen, blake2s, 'data', 32);
+      const tree = new MerkleTree(levelup(memdown()), pedersen, 'data', 32);
       await tree.updateElement(0, inputNote1Enc);
       await tree.updateElement(1, inputNote2Enc);
 
@@ -173,8 +169,8 @@ describe('join_split_proof', () => {
 
       const joinSplitProof = new JoinSplitProof(proof, []);
 
-      const expectedNullifier1 = computeNullifier(inputNote1Enc, 0, inputNote1.secret, blake2s);
-      const expectedNullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, blake2s);
+      const expectedNullifier1 = computeNullifier(inputNote1Enc, 0, inputNote1.secret, pedersen);
+      const expectedNullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, pedersen);
       expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
       expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
       expect(joinSplitProof.inputOwner).toEqual(inputOwner.toBuffer());

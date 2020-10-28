@@ -95,9 +95,7 @@ export async function createSdk(
   ethereumProvider: EthereumProvider,
 ) {
   options = { syncInstances: true, saveProvingKey: true, ...options };
-
   const sdk = await sdkFactory(hostStr, options, status, ethereumProvider);
-
   if (!options.syncInstances) {
     // We're not going to sync across multiple instances. We should start recieving blocks once initialized.
     sdk.on(SdkEvent.UPDATED_INIT_STATE, state => {
@@ -164,6 +162,5 @@ export async function createSdk(
       }
     };
   }
-
   return sdk;
 }

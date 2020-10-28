@@ -1,5 +1,4 @@
 import { BarretenbergWasm } from '../wasm';
-import { Blake2s } from '../crypto/blake2s';
 import { Pedersen } from '../crypto/pedersen';
 import { MerkleTree, HashPath } from '.';
 import levelup from 'levelup';
@@ -7,14 +6,12 @@ import memdown from 'memdown';
 
 describe('merkle_tree', () => {
   let barretenberg!: BarretenbergWasm;
-  let blake2s!: Blake2s;
   let pedersen!: Pedersen;
   const values: Buffer[] = [];
 
   beforeAll(async () => {
     barretenberg = new BarretenbergWasm();
     await barretenberg.init();
-    blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
 
     for (let i = 0; i < 10; ++i) {
@@ -27,15 +24,15 @@ describe('merkle_tree', () => {
   it('should have correct root', async () => {
     const db = levelup(memdown());
 
-    const e00 = blake2s.hashToField(values[0]);
-    const e01 = blake2s.hashToField(values[1]);
-    const e02 = blake2s.hashToField(values[2]);
-    const e03 = blake2s.hashToField(values[3]);
+    const e00 = pedersen.hashToField(values[0]);
+    const e01 = pedersen.hashToField(values[1]);
+    const e02 = pedersen.hashToField(values[2]);
+    const e03 = pedersen.hashToField(values[3]);
     const e10 = pedersen.compress(e00, e01);
     const e11 = pedersen.compress(e02, e03);
     const root = pedersen.compress(e10, e11);
 
-    const tree = await MerkleTree.new(db, pedersen, blake2s, 'test', 2);
+    const tree = await MerkleTree.new(db, pedersen, 'test', 2);
 
     for (let i = 0; i < 4; ++i) {
       await tree.updateElement(i, values[i]);
@@ -64,19 +61,20 @@ describe('merkle_tree', () => {
     expect(tree.getSize()).toBe(4);
 
     // Lifted from memory_store.test.cpp to ensure consistency.
-    expect(root).toEqual(Buffer.from('2fa6d2259d22e6992f4824d80cd2ef803c54b83b885d611a6b37c138b119d08b', 'hex'));
+    expect(root).toEqual(Buffer.from('28b8173e6d85156fbc33826f1905d42f524f5f77ad5f7433fa1091aa06b52441', 'hex'));
   });
 
   it('should have correct empty tree root for depth 10', async () => {
     const db = levelup(memdown());
-    const tree = await MerkleTree.new(db, pedersen, blake2s, 'test', 10);
+    const tree = await MerkleTree.new(db, pedersen, 'test', 10);
     const root = tree.getRoot();
-    expect(root).toEqual(Buffer.from('28703b88327e4d75dca124b208f36f39915714fe14cb9bb2f852afc1aa9244be', 'hex'));
+
+    expect(root).toEqual(Buffer.from('2d5a54bd09fb2f40e03689cbe46bcbc42a7b64632fa4ebb76d351c558a51be53', 'hex'));
   });
 
   it('should have same result when setting same values', async () => {
     const db = levelup(memdown());
-    const tree = await MerkleTree.new(db, pedersen, blake2s, 'test', 10);
+    const tree = await MerkleTree.new(db, pedersen, 'test', 10);
 
     for (let i = 0; i < 10; ++i) {
       await tree.updateElement(i, values[i]);
@@ -94,13 +92,13 @@ describe('merkle_tree', () => {
   it('should be able to restore from previous data', async () => {
     const levelDown = memdown();
     const db = levelup(levelDown);
-    const tree = await MerkleTree.new(db, pedersen, blake2s, 'test', 10);
+    const tree = await MerkleTree.new(db, pedersen, 'test', 10);
     for (let i = 0; i < 4; ++i) {
       await tree.updateElement(i, values[i]);
     }
 
     const db2 = levelup(levelDown);
-    const tree2 = await MerkleTree.fromName(db2, pedersen, blake2s, 'test');
+    const tree2 = await MerkleTree.fromName(db2, pedersen, 'test');
 
     expect(tree.getRoot()).toEqual(tree2.getRoot());
     for (let i = 0; i < 4; ++i) {
@@ -112,7 +110,7 @@ describe('merkle_tree', () => {
     const db = levelup(memdown());
     await expect(
       (async () => {
-        await MerkleTree.fromName(db, pedersen, blake2s, 'a_whole_new_tree');
+        await MerkleTree.fromName(db, pedersen, 'a_whole_new_tree');
       })(),
     ).rejects.toThrow();
   });
@@ -121,10 +119,10 @@ describe('merkle_tree', () => {
     const levelDown = memdown();
 
     const db1 = levelup(levelDown);
-    const tree1 = await MerkleTree.new(db1, pedersen, blake2s, 'test', 10);
+    const tree1 = await MerkleTree.new(db1, pedersen, 'test', 10);
 
     const db2 = levelup(levelDown);
-    const tree2 = await MerkleTree.new(db2, pedersen, blake2s, 'test', 10);
+    const tree2 = await MerkleTree.new(db2, pedersen, 'test', 10);
 
     expect(tree1.getRoot()).toEqual(tree2.getRoot());
     expect(tree1.getSize()).toBe(0);
@@ -147,7 +145,7 @@ describe('merkle_tree', () => {
 
   it('should serialize hash path data to a buffer and be able to deserialize it back', async () => {
     const db = levelup(memdown());
-    const tree = await MerkleTree.new(db, pedersen, blake2s, 'test', 10);
+    const tree = await MerkleTree.new(db, pedersen, 'test', 10);
     tree.updateElement(0, values[0]);
 
     const hashPath = await tree.getHashPath(0);

@@ -1,29 +1,39 @@
 import { toBigIntBE } from 'bigint-buffer';
-import { Blake2s } from '../../crypto/blake2s';
+import { Pedersen } from '../../crypto/pedersen';
 import { GrumpkinAddress } from '../../address';
+import { numToUInt32BE } from "../../serialize";
+
 
 // [256 bits of encrypted note x coord][32 least sig bits of index][223 bits of note viewing key][1 bit is_real]
 export function computeNullifier(
   encryptedNote: Buffer,
   index: number,
   noteSecret: Buffer,
-  blake2s: Blake2s,
-  real: boolean = true,
+  pedersen: Pedersen,
+  real = true,
 ) {
-  const indexBuf = Buffer.alloc(4);
-  indexBuf.writeUInt32BE(index, 0);
-  const nullifier = Buffer.concat([encryptedNote.slice(0, 32), indexBuf, noteSecret.slice(4, 32)]);
-  const lastByte = nullifier.readUInt8(63);
-  nullifier.writeUInt8(real ? lastByte | 1 : lastByte & 0xfe, 63);
-  return blake2s.hashToField(nullifier);
+  /**
+   * nullifier is pedersen hash of the following 32 byte buffers:
+   * [note.x, note secret, modified index]
+   * the modified index field is the index of the tree, with the 8th
+   * byte set to 1 iff the note is a real note
+   * (`real` is incorporated into `index` as it makes the circuit a bit more efficient)
+   */
+  const indexBuf = numToUInt32BE(index, 32);
+  const lastByte = indexBuf.readUInt8(8);
+  indexBuf.writeUInt8(real ? lastByte | 1 : lastByte & 0xfe, 23);
+
+  const nullifier = [encryptedNote.slice(0, 32), noteSecret, indexBuf.slice(0, 32)];
+  return pedersen.computeNoteNullifier(nullifier);
 }
 
-export function computeAliasNullifier(alias: string, blake2s: Blake2s) {
-  return blake2s.hashToField(Buffer.concat([Buffer.alloc(1, 3), blake2s.hashToField(Buffer.from(alias))]));
+export function computeAliasNullifier(alias: string, pedersen: Pedersen) {
+  const prefixBuf = numToUInt32BE(3, 32);
+  return pedersen.computeAliasNullifier([ prefixBuf, Buffer.from(alias) ]);
 }
 
-export function computeRemoveSigningKeyNullifier(owner: GrumpkinAddress, signingKey: Buffer, blake2s: Blake2s) {
-  return blake2s.hashToField(Buffer.concat([owner.x(), signingKey]));
+export function computeRemoveSigningKeyNullifier(owner: GrumpkinAddress, signingKey: Buffer, pedersen: Pedersen) {
+    return pedersen.computeAccountNullifier([owner.x(), signingKey]);
 }
 
 export function nullifierBufferToIndex(nullifier: Buffer) {

@@ -139,7 +139,6 @@ export class WorldStateDb {
     const proc = (this.proc = spawn(this.binPath, [this.dbPath]));
 
     proc.stderr.on('data', data => {});
-    // proc.stderr.on('data', data => console.log(data.toString().trim()));
     proc.on('close', code => {
       this.proc = undefined;
       if (code) {

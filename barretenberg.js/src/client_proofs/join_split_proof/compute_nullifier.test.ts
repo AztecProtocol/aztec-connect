@@ -1,5 +1,5 @@
 import { BarretenbergWasm } from '../../wasm';
-import { Blake2s } from '../../crypto/blake2s';
+import { Pedersen } from '../../crypto/pedersen';
 import { Note } from '../note';
 import { computeNullifier } from './compute_nullifier';
 import { Grumpkin } from '../../ecc/grumpkin';
@@ -16,9 +16,9 @@ describe('compute_nullifier', () => {
     0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
     0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11 ]);
 
-  it('should compute correct nullifier', async () => {
+ it('should compute correct nullifier', async () => {
     const barretenberg = await BarretenbergWasm.new();
-    const blake2s = new Blake2s(barretenberg);
+    const pedersen = new Pedersen(barretenberg);
     const grumpkin = new Grumpkin(barretenberg);
     const noteAlgos = new NoteAlgorithms(barretenberg);
 
@@ -29,11 +29,11 @@ describe('compute_nullifier', () => {
     const inputNote1Enc = await noteAlgos.encryptNote(inputNote1);
     const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);
 
-    const nullifier1 = computeNullifier(inputNote1Enc, 0, inputNote1.secret, blake2s);
-    const nullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, blake2s);
+    const nullifier1 = computeNullifier(inputNote1Enc, 1, viewingKey, pedersen);
+    const nullifier2 = computeNullifier(inputNote2Enc, 0, inputNote2.secret, pedersen);
 
-    const expected1 = Buffer.from('127fc1c9a473d1b8e696d3cdbab8b1880bcc15185f3a13919880bfe00d44d819', 'hex');
-    const expected2 = Buffer.from('0915f79d51b5721414bdff57db50db28da170648efba1cb084d14fcbb16a1e59', 'hex');
+    const expected1 = Buffer.from('1118758dfaa8f47c3f18438fa46117d417cc715a8a4da3a91120ea8ec136fa12', 'hex');
+    const expected2 = Buffer.from('274bb51174ca4e8873a01b41ade057b2563c6ea250d7950daf26545970347e40', 'hex');
 
     expect(nullifier1).toEqual(expected1);
     expect(nullifier2).toEqual(expected2);

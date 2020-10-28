@@ -26,7 +26,7 @@ export class EscapeHatchProofCreator {
     worldState: WorldState,
     grumpkin: Grumpkin,
     private blake2s: Blake2s,
-    pedersen: Pedersen,
+    private pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
     private hashPathSource: HashPathSource,
   ) {
@@ -87,7 +87,7 @@ export class EscapeHatchProofCreator {
         encryptedInput1,
         joinSplitTx.inputNoteIndices[0],
         input1.secret,
-        this.blake2s,
+        this.pedersen,
         joinSplitTx.numInputNotes > 0,
       ),
     );
@@ -96,7 +96,7 @@ export class EscapeHatchProofCreator {
         encryptedInput2,
         joinSplitTx.inputNoteIndices[1],
         input2.secret,
-        this.blake2s,
+        this.pedersen,
         joinSplitTx.numInputNotes > 1,
       ),
     );
@@ -109,7 +109,7 @@ export class EscapeHatchProofCreator {
     const rootResponse = await this.hashPathSource.getHashPaths(2, [{ index: rootTreeState.size, value: newDataRoot }]);
 
     const accountNote = Buffer.concat([joinSplitTx.inputNotes[0].ownerPubKey.x(), joinSplitTx.signingPubKey.x()]);
-    const accountNullifier = nullifierBufferToIndex(this.blake2s.hashToField(accountNote));
+    const accountNullifier = nullifierBufferToIndex(this.pedersen.computeAccountNullifier([joinSplitTx.inputNotes[0].ownerPubKey.x(), joinSplitTx.signingPubKey.x()]));
     const accountNullifierPath = await this.hashPathSource.getHashPath(1, accountNullifier);
 
     const tx = new EscapeHatchTx(

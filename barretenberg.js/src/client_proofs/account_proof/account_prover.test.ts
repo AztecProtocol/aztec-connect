@@ -82,7 +82,7 @@ describe('account proof', () => {
   });
 
   it('create and verify an account proof', async () => {
-    const tree = new MerkleTree(levelup(memdown()), pedersen, blake2s, 'data', 32);
+    const tree = new MerkleTree(levelup(memdown()), pedersen, 'data', 32);
 
     const user = createKeyPair();
 

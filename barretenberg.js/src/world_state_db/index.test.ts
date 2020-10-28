@@ -16,23 +16,9 @@ describe('world_state_db', () => {
   });
 
   it('should be initialized with correct metadata', async () => {
-    // prettier-ignore
-    const expectedDataRoot = Buffer.from([
-      0x1d, 0xf6, 0xbd, 0xe5, 0x05, 0x16, 0xdd, 0x12, 0x01, 0x08, 0x8f, 0xd8, 0xdd, 0xa8, 0x4c, 0x97,
-      0xed, 0xa5, 0x65, 0x24, 0x28, 0xd1, 0xc7, 0xe8, 0x6a, 0xf5, 0x29, 0xcc, 0x5e, 0x0e, 0xb8, 0x21,
-    ]);
-
-    // prettier-ignore
-    const expectedNullifierRoot = Buffer.from([
-      0x15, 0x21, 0x75, 0xcf, 0xfc, 0xb2, 0x3d, 0xfb, 0xd8, 0x02, 0x62, 0x80, 0x2e, 0x32, 0xef, 0xe7,
-      0xdb, 0x5f, 0xdc, 0xb9, 0x1b, 0xa0, 0xa0, 0x52, 0x7a, 0xb1, 0xff, 0xb3, 0x23, 0xbf, 0x3f, 0xc0,
-    ]);
-
-    // prettier-ignore
-    const expectedRootRoot = Buffer.from([
-      0x1b, 0x22, 0xef, 0x60, 0x7a, 0xe0, 0x85, 0x88, 0xbc, 0x83, 0xa7, 0x9f, 0xfa, 0xce, 0xc5, 0x07,
-      0x34, 0x7b, 0xd2, 0xde, 0xe4, 0x4c, 0x84, 0x61, 0x81, 0xb7, 0x05, 0x12, 0x85, 0xc3, 0x2c, 0x0a,
-    ]);
+    const expectedDataRoot = Buffer.from('2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39', 'hex');
+    const expectedNullifierRoot = Buffer.from('15ab517d8b278111e4bb51486fcb14e6ab5729215892cb1a4bdbe873c2b69798', 'hex');
+    const expectedRootRoot = Buffer.from('2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851', 'hex');
 
     expect(worldStateDb.getRoot(0)).toEqual(expectedDataRoot);
     expect(worldStateDb.getRoot(1)).toEqual(expectedNullifierRoot);
@@ -50,8 +36,8 @@ describe('world_state_db', () => {
   it('should get correct hash path', async () => {
     const path = (await worldStateDb.getHashPath(0, BigInt(0))).data;
 
-    const expectedFirst = Buffer.from('1cdcf02431ba623767fe389337d011df1048dcc24b98ed81cec97627bab454a0', 'hex');
-    const expectedLast = Buffer.from('10ae15eed66d2b5fa24239d72aa47d1bfd7f37eb0a1a55baf69e363c4808fc14', 'hex');
+    const expectedFirst = Buffer.from('0000000000000000000000000000000000000000000000000000000000000040', 'hex');
+    const expectedLast = Buffer.from('0a4feb3207e1113f42f22232e53b13da0624a46b3779338e7f2ed9dfde4a5ba8', 'hex');
 
     expect(path.length).toEqual(32);
     expect(path[0][0]).toEqual(expectedFirst);
@@ -71,10 +57,7 @@ describe('world_state_db', () => {
     expect(result).toEqual(value);
 
     // prettier-ignore
-    expect(root).toEqual(Buffer.from([
-      0x27, 0xdf, 0xb6, 0xc9, 0x95, 0x54, 0x24, 0xd3, 0x45, 0x7b, 0x19, 0x5d, 0x62, 0xc5, 0x3c, 0xdd,
-      0x20, 0xe9, 0x27, 0xb5, 0x07, 0xa6, 0xbf, 0xc3, 0x47, 0x2c, 0xe5, 0xd8, 0xc3, 0x7c, 0x2c, 0x25
-    ]));
+    expect(root).toEqual(Buffer.from('0b8df4d2715e0cca64c24d704b58de179ac2c3ca8162f5e78f59c1443d922bc5', 'hex'));
 
     expect(worldStateDb.getRoot(0)).toEqual(root);
     expect(worldStateDb.getSize(0)).toEqual(BigInt(1));

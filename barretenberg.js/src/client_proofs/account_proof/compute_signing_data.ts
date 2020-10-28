@@ -10,5 +10,5 @@ export function computeSigningData(
   pedersen: Pedersen,
 ) {
   const toCompress = [ownerPublicKey.x(), newSigningPubKey1.x(), newSigningPubKey2.x(), alias, nullifiedKey.x()];
-  return pedersen.compress_inputs(toCompress);
+  return pedersen.compressInputs(toCompress);
 }

@@ -1,8 +1,6 @@
 import { EscapeHatchProver, EscapeHatchTx, EscapeHatchVerifier } from './index';
-import { Schnorr } from '../../crypto/schnorr';
 import createDebug from 'debug';
 import { BarretenbergWasm } from '../../wasm';
-import { Blake2s } from '../../crypto/blake2s';
 import { Pedersen } from '../../crypto/pedersen';
 import { createNoteSecret, Note } from '../note';
 import { EventEmitter } from 'events';
@@ -29,7 +27,7 @@ describe('escape_hatch_proof', () => {
   let pool!: WorkerPool;
   let escapeHatchProver!: EscapeHatchProver;
   let escapeHatchVerifier!: EscapeHatchVerifier;
-  let blake2s!: Blake2s;
+  let pedersen!: Pedersen;
   let crs!: Crs;
   let grumpkin!: Grumpkin;
   let pippenger!: PooledPippenger;
@@ -69,7 +67,7 @@ describe('escape_hatch_proof', () => {
 
     escapeHatchProver = new EscapeHatchProver(prover);
     escapeHatchVerifier = new EscapeHatchVerifier();
-    blake2s = new Blake2s(barretenberg);
+    pedersen = new Pedersen(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
     noteAlgos = new NoteAlgorithms(barretenberg);
 
@@ -97,7 +95,7 @@ describe('escape_hatch_proof', () => {
     const encryptedNotes = [inputNote1Enc, inputNote2Enc];
     const nullifiers = encryptedNotes.map((encNote, index) => {
       return nullifierBufferToIndex(
-        computeNullifier(encNote, inputIndexes[index], inputNotes[index].secret, blake2s, true),
+        computeNullifier(encNote, inputIndexes[index], inputNotes[index].secret, pedersen, true),
       );
     });
 
@@ -135,8 +133,7 @@ describe('escape_hatch_proof', () => {
 
     const accountIndex = 0;
     const accountNotePath = await worldStateDb.getHashPath(dataTreeId, BigInt(accountIndex));
-    const accountNote = Buffer.concat([inputNotes[0].ownerPubKey.x(), pubKey.x()]);
-    const accountNullifier = nullifierBufferToIndex(blake2s.hashToField(accountNote));
+    const accountNullifier = nullifierBufferToIndex(pedersen.computeAccountNullifier([inputNotes[0].ownerPubKey.x(), pubKey.x()]));
     const accountNullifierPath = await worldStateDb.getHashPath(1, accountNullifier);
 
     // Get value note nullifier data

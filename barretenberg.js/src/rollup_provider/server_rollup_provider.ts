@@ -1,11 +1,9 @@
-import createDebug from 'debug';
 import { RollupProvider } from './rollup_provider';
 import { fetch } from '../iso_fetch';
 import { ServerBlockSource } from '../block_source';
 import { Proof } from '../rollup_provider';
 import { getProviderStatus } from './get_provider_status';
 
-const debug = createDebug('bb:server_rollup_provider');
 
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
   constructor(baseUrl: URL) {
