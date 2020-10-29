@@ -99,7 +99,7 @@ const EthFaucetRenderer: React.FunctionComponent<EthFaucetRendererProps> = ({ cl
   return (
     <div className={classes.root}>
       <EthBalance classes={classes} app={app} address={account} />
-      <Link className={classes.button} href="https://faucet.ropsten.be/" target="_blank">
+      <Link className={classes.button} href="https://goerli-faucet.slock.it/" target="_blank">
         <Icon name="local_gas_station" size="small" />
         <div className={classes.text}>Get ETH</div>
       </Link>

@@ -18,7 +18,7 @@ For the purposes of the demo code below, the SDK is using a Sriracha instance th
 2. Pull the Aztec Sriracha Docker image: docker pull aztecprotocol/sriracha:latest
 3. Prepare environment variables that are required by the image:
    - `INFURA_API_KEY`: used to send Ethereum data queries via Infura nodes
-   - `NETWORK`: Ethereum network you are withdrawing to. Aztec is currently deployed on the ropsten testnet
+   - `NETWORK`: Ethereum network you are withdrawing to. Aztec is currently deployed on the goerli testnet
    - `ROLLUP_CONTRACT_ADDRESS`: address of the RollupProcessor.sol deployed Rollup contract
 
 Alternatively, instead of an `INFURA_API_KEY` and `NETWORK` you can pass an `ETHEREUM_HOST` - a URL to your local node.
@@ -26,7 +26,7 @@ Alternatively, instead of an `INFURA_API_KEY` and `NETWORK` you can pass an `ETH
 4. Start up the server:
 
 ```bash static
-docker run -ti -e INFURA_API_KEY=01234 -e NETWORK=ropsten -e ROLLUP_CONTRACT_ADDRESS=0x1234 -p 8082:8082 aztecprotocol/sriracha:latest
+docker run -ti -e INFURA_API_KEY=01234 -e NETWORK=goerli -e ROLLUP_CONTRACT_ADDRESS=0x1234 -p 8082:8082 aztecprotocol/sriracha:latest
 ```
 
 <br/>

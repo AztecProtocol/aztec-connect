@@ -17,7 +17,7 @@ export class Web3TokenContract implements TokenContract {
   private contract!: Contract;
   private decimals = 0;
   private precision = 2;
-  private confirmations = 2;
+  private confirmations = 1;
 
   constructor(
     private ethersProvider: Web3Provider,

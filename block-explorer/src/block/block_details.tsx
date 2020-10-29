@@ -14,7 +14,7 @@ import etherscanIcon from '../images/etherscan.svg';
 import { ProofData, ProofDataPlaceholder } from '../proof_data';
 import { Block } from './query';
 
-export const getEtherscanLink = (ethTxHash: string) => `https://ropsten.etherscan.io/tx/0x${ethTxHash}`;
+export const getEtherscanLink = (ethTxHash: string) => `https://goerli.etherscan.io/tx/0x${ethTxHash}`;
 
 const TimestampRoot = styled.div`
   display: flex;

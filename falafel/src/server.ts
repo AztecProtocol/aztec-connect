@@ -124,7 +124,7 @@ export class Server {
   private async syncDb() {
     console.log('Syncing db...');
     const nextRollupId = await this.rollupDb.getNextRollupId();
-    const blocks = await this.getBlocks(nextRollupId);
+    const blocks = await this.blockchain.getBlocks(nextRollupId);
 
     for (const block of blocks) {
       await this.handleBlock(block);
@@ -470,7 +470,6 @@ export class Server {
         break;
     }
 
-    console.log('get data roots index');
     proof.dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
     this.pendingNullifiers.add(nullifier1);

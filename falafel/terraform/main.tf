@@ -158,19 +158,23 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "http://ethereum.aztec.network:9545"
+        "value": "http://ethereum.aztec.network:10545"
+      },
+      {
+        "name": "ROLLUP_CONTRACT_ADDRESS",
+        "value": "0x3B7B3b57b6fD54C60Dc26ee71e6B353A815e944A"
+      },
+      {
+        "name": "GAS_LIMIT",
+        "value": "7000000"
       },
       {
         "name": "PRIVATE_KEY",
         "value": "${var.PRIVATE_KEY}"
       },
       {
-        "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": "0xfABE6169696114AAf2c101cC9214d7D73Af74Aad"
-      },
-      {
-        "name": "GAS_LIMIT",
-        "value": "7000000"
+        "name": "SERVER_AUTH_TOKEN",
+        "value": "${var.SERVER_AUTH_TOKEN}"
       },
       {
         "name": "API_PREFIX",

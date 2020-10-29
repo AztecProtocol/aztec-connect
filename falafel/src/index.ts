@@ -55,6 +55,7 @@ async function getEthereumBlockchainConfig() {
   } else if (ETHEREUM_HOST && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Ethereum host: ${ETHEREUM_HOST}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
+    console.log(`Gas limit: ${gasLimit}`);
     const provider = new ethers.providers.JsonRpcProvider(ETHEREUM_HOST);
     const config = { provider, networkOrHost: ETHEREUM_HOST, gasLimit, minConfirmation, minConfirmationEHW };
     if (PRIVATE_KEY) {

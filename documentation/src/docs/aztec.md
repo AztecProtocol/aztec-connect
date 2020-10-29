@@ -6,7 +6,7 @@ Aztec is an open source layer 2 network bringing scalability and privacy too Eth
 
 ## Test Network
 
-Our rollup is deployed on the Ropsten testnet with an un-audited use at your own risk main-net version available shortly. On test networks we submit rollups every 1 minute, our main-net transaction schedule will be dependant on volume, with a 1 hour long-stop.
+Our rollup is deployed on the Goerli testnet with an un-audited use at your own risk main-net version available shortly. On test networks we submit rollups every 1 minute, our main-net transaction schedule will be dependant on volume, with a 1 hour long-stop.
 
 This code is made available free to developers via our SDK.
 

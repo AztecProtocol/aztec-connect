@@ -112,16 +112,12 @@ resource "aws_ecs_task_definition" "sriracha" {
         "value": "80"
       },
       {
-        "name": "NETWORK",
-        "value": "ropsten"
-      },
-      {
-        "name": "INFURA_API_KEY",
-        "value": "${var.INFURA_API_KEY}"
+        "name": "ETHEREUM_HOST",
+        "value": "http://ethereum.aztec.network:10545"
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": "0xfABE6169696114AAf2c101cC9214d7D73Af74Aad"
+        "value": "0x3B7B3b57b6fD54C60Dc26ee71e6B353A815e944A"
       },
       {
         "name": "API_PREFIX",

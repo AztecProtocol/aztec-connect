@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Text } from '../components';
-import ropstenLogo from '../images/ropsten.svg';
+import logo from '../images/logo.svg';
 import { borderRadius, spacings, gradients } from '../styles';
 
 const Root = styled.div`
@@ -23,7 +23,7 @@ const Name = styled(Text)`
 
 export const NetworkIndicator: React.FunctionComponent = () => (
   <Root>
-    <Name text="ROPSTEN" size="xs" weight="light" />
-    <Logo src={ropstenLogo} />
+    <Name text="GOERLI" size="xs" weight="light" />
+    <Logo src={logo} />
   </Root>
 );

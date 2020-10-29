@@ -1,7 +1,7 @@
-variable "INFURA_API_KEY" {
+variable "PRIVATE_KEY" {
   type = string
 }
 
-variable "PRIVATE_KEY" {
+variable "SERVER_AUTH_TOKEN" {
   type = string
 }

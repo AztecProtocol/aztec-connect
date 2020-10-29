@@ -118,7 +118,13 @@ export class CoreSdk extends EventEmitter {
     this.grumpkin = new Grumpkin(barretenberg);
     this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(this.grumpkin);
-    this.userStateFactory = new UserStateFactory(this.grumpkin, this.blake2s, this.pedersen, this.db, this.rollupProvider);
+    this.userStateFactory = new UserStateFactory(
+      this.grumpkin,
+      this.blake2s,
+      this.pedersen,
+      this.db,
+      this.rollupProvider,
+    );
     this.workerPool = workerPool;
     this.worldState = new WorldState(this.leveldb, this.pedersen, this.blake2s);
     if (this.rollupProviderExplorer) {
@@ -130,14 +136,13 @@ export class CoreSdk extends EventEmitter {
     const { chainId, rollupContractAddress } = await this.getRemoteStatus();
     await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
 
-    // If chainId is 0 (falafel is using simulated blockchain) pretend it needs to be ropsten.
-    this.sdkStatus.chainId = chainId || 3;
+    // If chainId is 0 (falafel is using simulated blockchain) pretend it needs to be goerli.
+    this.sdkStatus.chainId = chainId || 5;
     this.sdkStatus.rollupContractAddress = rollupContractAddress;
     this.sdkStatus.dataSize = this.worldState.getSize();
     this.sdkStatus.dataRoot = this.worldState.getRoot();
     this.sdkStatus.syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
     this.sdkStatus.latestRollupId = +(await this.leveldb.get('latestRollupId').catch(() => -1));
-    debug('local status:', this.sdkStatus);
 
     await this.initUserStates();
 
@@ -210,7 +215,6 @@ export class CoreSdk extends EventEmitter {
     await this.stopSyncingUserStates();
 
     const users = await this.db.getUsers();
-    debug('users length = ', users.length);
     this.userStates = users.map(u => this.userStateFactory.createUserState(u));
     await Promise.all(this.userStates.map(us => us.init()));
 

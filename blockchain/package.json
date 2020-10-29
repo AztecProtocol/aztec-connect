@@ -34,6 +34,7 @@
     "rootDir": "./src"
   },
   "dependencies": {
+    "@ethersproject/experimental": "^5.0.5",
     "barretenberg": "../barretenberg.js/dest",
     "bigint-buffer": "^1.1.5",
     "debug": "^4.1.1",
