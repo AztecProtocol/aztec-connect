@@ -45,7 +45,7 @@ describe('join_split_proof', () => {
 
   beforeAll(async () => {
     EventEmitter.defaultMaxListeners = 32;
-    const circuitSize = 128 * 1024;
+    const circuitSize = JoinSplitProver.circuitSize;
 
     crs = new Crs(circuitSize);
     await crs.download();

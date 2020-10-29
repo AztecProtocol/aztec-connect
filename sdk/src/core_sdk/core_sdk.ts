@@ -105,13 +105,13 @@ export class CoreSdk extends EventEmitter {
 
     const barretenberg = await BarretenbergWasm.new();
     const noteAlgos = new NoteAlgorithms(barretenberg);
-    const crsData = await this.getCrsData(this.escapeHatchMode ? 512 * 1024 : 128 * 1024);
+    const crsData = await this.getCrsData(this.escapeHatchMode ? EscapeHatchProver.circuitSize : JoinSplitProver.circuitSize);
     const numWorkers = Math.min(navigator.hardwareConcurrency || 1, 8);
     const workerPool = await WorkerPool.new(barretenberg, numWorkers);
     const pooledProverFactory = new PooledProverFactory(workerPool, crsData);
-    const joinSplitProver = new JoinSplitProver(await pooledProverFactory.createUnrolledProver(128 * 1024));
-    const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(64 * 1024));
-    const escapeHatchProver = new EscapeHatchProver(await pooledProverFactory.createProver(512 * 1024));
+    const joinSplitProver = new JoinSplitProver(await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize));
+    const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize));
+    const escapeHatchProver = new EscapeHatchProver(await pooledProverFactory.createProver(EscapeHatchProver.circuitSize));
 
     this.blake2s = new Blake2s(barretenberg);
     this.pedersen = new Pedersen(barretenberg);

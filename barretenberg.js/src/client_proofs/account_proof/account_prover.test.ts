@@ -34,7 +34,7 @@ describe('account proof', () => {
 
   beforeAll(async () => {
     EventEmitter.defaultMaxListeners = 32;
-    const circuitSize = 64 * 1024;
+    const circuitSize = AccountProver.circuitSize;
 
     crs = new Crs(circuitSize);
     await crs.download();
