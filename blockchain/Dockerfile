@@ -7,5 +7,7 @@ WORKDIR /usr/src/blockchain
 COPY . .
 RUN yarn install && yarn compile && yarn build && yarn test && rm -rf node_modules && yarn install --production && yarn cache clean
 
-FROM alpine:latest
+FROM node:10-alpine
 COPY --from=builder /usr/src/blockchain /usr/src/blockchain
+WORKDIR /usr/src/blockchain
+CMD ["yarn", "-s", "deploy"]

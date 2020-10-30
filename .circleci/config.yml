@@ -225,7 +225,13 @@ jobs:
       - run:
           name: 'blockchain'
           working_directory: blockchain
-          command: deploy blockchain:latest
+          command: |
+            deploy_ecr blockchain:latest
+            if [ changed '.*\.sol$' ]; then
+              `docker run --env INFURA_API_KEY --env PRIVATE_KEY --env NETWORK=goerli 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:latest`
+              export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$ROLLUP_CONTRACT_ADDRESS
+              deploy_terraform
+            fi
       - run:
           name: 'sdk'
           working_directory: sdk

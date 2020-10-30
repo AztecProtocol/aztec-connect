@@ -1,44 +1,6 @@
 #!/bin/bash
 set -e
 
-IMAGE=$1
-REPOSITORY=${IMAGE%:*}
-TAG=${IMAGE#*:}
-IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1-$TAG
-IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$TAG
-IMAGE_DEPLOY_URI=$ECR_DEPLOY_URL/$REPOSITORY:$TAG
-
-# Login.
-ensure_repo $REPOSITORY $ECR_REGION
-
-# Do nothing if this wasn't rebuilt.
-docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." && exit 0; }
-
-# Tag as master in cache region.
-docker tag $IMAGE_COMMIT_URI $IMAGE_MASTER_URI
-docker push $IMAGE_MASTER_URI
-
-# Ensure ECR repository exists in deployment region.
-ensure_repo $REPOSITORY $ECR_DEPLOY_REGION
-
-# Push image to deployment repo.
-docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_URI
-docker push $IMAGE_DEPLOY_URI
-
-# Apply terraform.
-if [ -d ./terraform ]; then
-  ensure_terraform
-  export TF_IN_AUTOMATION=1
-  cd terraform
-  terraform init -input=false
-  terraform apply -input=false -auto-approve
-fi
-
-# Don't trigger service restart if argument 2 is -.
-[ "$2" != "-" ] || exit 0
-
-# Restart with latest image.
-SERVICE_NAME=$REPOSITORY
-if aws ecs list-services --region $ECR_DEPLOY_REGION --cluster setup | grep "/$SERVICE_NAME\"" > /dev/null; then
-  aws ecs update-service --region $ECR_DEPLOY_REGION --cluster setup --service $SERVICE_NAME --force-new-deployment
-fi
+deploy_ecr $1
+deploy_terraform
+deploy_service $1

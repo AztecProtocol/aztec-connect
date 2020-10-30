@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+# Apply terraform.
+if [ -d ./terraform ]; then
+  ensure_terraform
+  export TF_IN_AUTOMATION=1
+  cd terraform
+  terraform init -input=false
+  terraform apply -input=false -auto-approve
+fi

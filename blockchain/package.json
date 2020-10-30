@@ -12,8 +12,7 @@
     "test": "yarn test:src && buidler test",
     "test:src": "jest",
     "test:ganache": "yarn buidler --network ganache test",
-    "lint:sol": "solhint contracts/**/*.sol",
-    "docs": "solidity-docgen -i ./contracts -o ./docs"
+    "deploy": "node ./dest/deploy/index.js"
   },
   "bin": {
     "deploy_rollup_processor": "./deploy/index.js"

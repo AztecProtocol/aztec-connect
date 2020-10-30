@@ -24,6 +24,15 @@ data "terraform_remote_state" "aztec2_iac" {
   }
 }
 
+data "terraform_remote_state" "blockchain" {
+  backend = "s3"
+  config = {
+    bucket = "aztec-terraform"
+    key    = "aztec2/blockchain"
+    region = "eu-west-2"
+  }
+}
+
 provider "aws" {
   profile = "default"
   region  = "eu-west-2"
@@ -162,7 +171,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": "0x3B7B3b57b6fD54C60Dc26ee71e6B353A815e944A"
+        "value": "${data.terraform_remote_state.blockchain.outputs.rollup_contract_address}"
       },
       {
         "name": "GAS_LIMIT",
